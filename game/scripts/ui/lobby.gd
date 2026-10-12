@@ -1,5 +1,8 @@
 extends Node3D
-## Lobby : choix de la classe, équipement, lancement d'une run.
+## Lobby : choix de la classe et de la zone, archive, infos, lancement d'une run.
+## Lancer la run : page Équipement (préréglage ou à la main ; l'arme portée décide du
+## combo d'auto-attaque) → Valider → page Expertise & talents (talents, 7 certificats
+## de maîtrise au plus) → Valider → la run démarre.
 ## Les arguments de test (--autoplay, --dungeon, --shots...) lancent la run directement.
 
 const ACCENT := Color(0.98, 0.78, 0.35)
@@ -13,15 +16,18 @@ const ROSTER := [
 var _hero_root: Node3D
 var _cam_pivot: Node3D
 var _equip_screen: PageScreen
+var _prep: PageScreen  # préparation de la run : Équipement puis Expertise & talents
+var _prep_button: Button
+var _talents: PageScreen
+var _archive: PageScreen
+var _info: PageScreen
 var _class_dirty := false
+var _launching := false
 var _gold: Label
 var _reset_button: Button
 var _zone_box: GridContainer
-var _weapon_box: HBoxContainer
 var _grimoire: Grimoire
-var _open_grimoire := false
-var _talents: TalentsUi
-var _open_talents := false
+var _open_screen := ""  # test : écran ouvert au démarrage (--talents, --prep=1, --archive=1, --info)
 var _run_button: Button
 var _reset_armed_at := -10.0
 var _settings: SettingsMenu
@@ -36,16 +42,15 @@ func _ready() -> void:
 			Profile.selected_zone = arg.trim_prefix("--zone=")
 		elif arg.begins_with("--weapon="):
 			Profile.select_weapon_type(arg.trim_prefix("--weapon="))
-		elif arg == "--grimoire":
-			_open_grimoire = true
-		elif arg == "--talents":
-			_open_talents = true
+		elif arg in ["--grimoire", "--talents", "--info"] or arg.begins_with("--prep=") or arg.begins_with("--archive="):
+			_open_screen = arg.trim_prefix("--")
 		elif arg.begins_with("--expertise="):
 			# test : expertise donnée à toutes les classes (profil de test uniquement)
 			for cid in GameData.classes:
 				Profile.expertise[cid] = int(arg.trim_prefix("--expertise="))
 	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in ["--grimoire", "--talents"] or arg.begins_with("--expertise="):
+		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in ["--grimoire", "--talents", "--info"] \
+				or arg.begins_with("--prep=") or arg.begins_with("--archive=") or arg.begins_with("--expertise="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -55,18 +60,39 @@ func _ready() -> void:
 	_build_scene()
 	_grimoire = Grimoire.new()
 	add_child(_grimoire)
-	_talents = TalentsUi.new()
-	add_child(_talents)
 	_build_ui()
-	if _open_grimoire:
+	if _open_screen == "grimoire":
 		_grimoire.open(Profile.selected_class)
-	if _open_talents:
-		_talents.open(Profile.selected_class)
+	elif _open_screen == "talents":
+		_talents.open(0)
+	elif _open_screen == "info":
+		_info.open(0)
+	elif _open_screen.begins_with("prep="):
+		_prepare_run()
+		_prep.show_page(int(_open_screen.trim_prefix("prep=")))
+	elif _open_screen.begins_with("archive="):
+		_archive.open(int(_open_screen.trim_prefix("archive=")))
 	if shot > 0.0:
 		await get_tree().create_timer(shot).timeout
 		DirAccess.make_dir_recursive_absolute("user://shots")
 		get_viewport().get_texture().get_image().save_png("user://shots/lobby.png")
 		get_tree().quit()
+
+
+## Lancer la run : d'abord l'équipement, puis l'expertise.
+func _prepare_run() -> void:
+	_class_dirty = false
+	_prep.set_title("Préparer la run", "%s · %s" % [GameData.class_data(Profile.selected_class).get("name_fr", ""), GameData.zone(Profile.selected_zone).name])
+	_prep.open(0)
+
+
+func _on_prep_validate() -> void:
+	if _prep.current_page() == 0:
+		_prep.show_page(1)
+		return
+	_launching = true
+	_prep.close_ui()
+	_start_run()
 
 
 func _start_run() -> void:
@@ -178,11 +204,7 @@ func _build_ui() -> void:
 	var lore := Hud._label(v, cls.get("lore", ""), 15, Color(0.9, 0.9, 0.95))
 	lore.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lore.custom_minimum_size = Vector2(560, 0)
-	Hud._label(v, "Arme  (le combo d'auto-attaque suit l'arme, les sorts suivent la classe)", 18, ACCENT)
-	_weapon_box = HBoxContainer.new()
-	_weapon_box.add_theme_constant_override("separation", 6)
-	v.add_child(_weapon_box)
-	_refresh_weapons()
+	Hud._label(v, "Les sorts suivent la classe ; le combo d'auto-attaque suit l'arme équipée (choisie au lancement de la run).", 14, UiTheme.MUTED)
 	Hud._label(v, "Zone", 22, ACCENT)
 	var zones := GridContainer.new()
 	zones.columns = 3
@@ -191,7 +213,7 @@ func _build_ui() -> void:
 	v.add_child(zones)
 	_zone_box = zones
 	_refresh_zones()
-	_run_button = _big_button(v, "", _start_run)
+	_run_button = _big_button(v, "", _prepare_run)
 	_refresh_run_button()
 	# boutons secondaires sur deux colonnes
 	var grid := GridContainer.new()
@@ -199,8 +221,9 @@ func _build_ui() -> void:
 	grid.add_theme_constant_override("h_separation", 8)
 	grid.add_theme_constant_override("v_separation", 7)
 	v.add_child(grid)
-	for spec in [["Personnage & équipement", _open_panel], ["Grimoire (sorts, combos)", func(): _grimoire.open(Profile.selected_class)],
-			["Expertise & talents", func(): _talents.open(Profile.selected_class)], ["Paramètres", func(): _settings.open()],
+	for spec in [["Équipement", _open_panel], ["Grimoire (sorts, combos)", func(): _grimoire.open(Profile.selected_class)],
+			["Expertise & talents", func(): _talents.open(0)], ["Archive (collection, apparences)", func(): _archive.open(0)],
+			["Infos : statistiques et dégâts", func(): _info.open(0)], ["Paramètres", func(): _settings.open()],
 			["Nouvelle partie (tout effacer)", _on_reset], ["Quitter", func(): get_tree().quit()]]:
 		var b := _big_button(grid, spec[0], spec[1])
 		b.custom_minimum_size = Vector2(276, 42)
@@ -213,25 +236,57 @@ func _build_ui() -> void:
 	help.position = Vector2(60, -34)
 	layer.add_child(root)
 
-	# personnage & équipement : page plein écran (préréglages par classe, coffre commun)
-	_equip_screen = PageScreen.new("Personnage & équipement", 5)
-	add_child(_equip_screen)
-	var page := EquipmentPage.new()
-	page.class_changed.connect(func(): _class_dirty = true)
-	_equip_screen.add_page("Équipement", page)
-	_equip_screen.closed.connect(func():
-		if _class_dirty:
-			get_tree().reload_current_scene()  # classe changée : tout le lobby suit
-		else:
-			_refresh_weapons()
-			_show_hero())
+	# équipement : page plein écran (préréglages par classe, coffre commun)
+	_equip_screen = _screen("Équipement", [["Équipement", _equipment_page()]])
+	# préparation de la run : Équipement → Valider → Expertise & talents → Valider → run
+	_prep = _screen("Préparer la run", [["1 · Équipement", _equipment_page()], ["2 · Expertise & talents", TalentsPage.new()]])
+	_prep_button = Button.new()
+	_prep_button.focus_mode = Control.FOCUS_NONE
+	_prep_button.custom_minimum_size = Vector2(300, 44)
+	_prep_button.add_theme_font_size_override("font_size", 18)
+	_prep_button.add_theme_font_override("font", UiTheme.title_font())
+	_prep_button.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.42, 0.28, 0.08, 1.0), UiTheme.GOLD, 2, 8))
+	_prep_button.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.55, 0.37, 0.1, 1.0), Color(1, 0.9, 0.6), 2, 8))
+	_prep_button.add_theme_color_override("font_color", Color(1, 0.95, 0.85))
+	_prep_button.pressed.connect(_on_prep_validate)
+	_prep.add_header_control(_prep_button)
+	_prep.page_changed.connect(func(i):
+		_prep_button.text = "Valider l'équipement  ▶" if i == 0 else "Valider et lancer la run  ▶")
+	_talents = _screen("Expertise & talents", [["Talents et certificats", TalentsPage.new()]])
+	_talents.set_title("Expertise & talents", "Talents de classe et certificats de maîtrise (7 au plus)")
+	_archive = _screen("Archive", [["Collection", ArchivePages.CollectionPage.new()], ["Apparences", ArchivePages.SkinsPage.new()]])
+	_archive.set_title("Archive", "Range tes objets rares, épiques et légendaires : bonus permanents pour toutes les classes")
+	_info = _screen("Infos", [["Guide des statistiques", InfoPage.new()]])
+	_info.set_title("Infos", "Comment chaque statistique est calculée, ce que vaut un point, formule des dégâts et de la défense")
 	_settings = SettingsMenu.new()
 	add_child(_settings)
 
 
+func _equipment_page() -> EquipmentPage:
+	var page := EquipmentPage.new()
+	page.class_changed.connect(func(): _class_dirty = true)
+	return page
+
+
+## Écran plein écran du lobby ; à sa fermeture, le lobby suit (classe, arme, apparence).
+func _screen(t: String, pages: Array) -> PageScreen:
+	var s := PageScreen.new(t, 5)
+	add_child(s)
+	for p in pages:
+		s.add_page(p[0], p[1])
+	s.closed.connect(func():
+		if _launching:
+			return
+		if _class_dirty:
+			get_tree().reload_current_scene()  # classe changée : tout le lobby suit
+		else:
+			_show_hero())
+	return s
+
+
 func _open_panel() -> void:
 	_class_dirty = false
-	_equip_screen.set_title("Personnage & équipement", "Coffre commun à toutes les classes · 3 préréglages d'équipement par classe")
+	_equip_screen.set_title("Équipement", "Coffre commun à toutes les classes · 3 préréglages d'équipement par classe · l'arme portée décide du combo d'auto-attaque")
 	_equip_screen.open(0)
 
 
@@ -257,37 +312,6 @@ func _class_card(id: String, label: String) -> Control:
 		Profile.save_profile()
 		_show_hero())
 	return b
-
-
-## Choix de l'arme de départ : la meilleure de l'héritage de ce type, sinon une arme commune.
-func _refresh_weapons() -> void:
-	for c in _weapon_box.get_children():
-		c.queue_free()
-	var current := Items.weapon_type_of(Profile.equipped.get("weapon", {})) if Profile.equipped.has("weapon") else ""
-	for wt in GameData.weapon_types:
-		var w: Dictionary = GameData.weapon_types[wt]
-		var b := Button.new()
-		b.text = String(w.name)
-		b.icon = UiTheme.texture(String(w.get("icon", "")))
-		b.add_theme_constant_override("icon_max_width", 26)
-		b.custom_minimum_size = Vector2(88, 40)
-		b.add_theme_font_size_override("font_size", 13)
-		b.focus_mode = Control.FOCUS_NONE
-		b.tooltip_text = "%s : combo du %s, %s%s" % [w.name, GameData.class_data(String(w["class"])).get("name_fr", ""),
-			"dégâts magiques" if w.get("dmg_type", "phys") == "mag" else "dégâts physiques",
-			", à distance (%d m)" % int(w.attack_range) if w.has("attack_range") else ", corps à corps"]
-		var sb := Hud.style(Color(0.12, 0.1, 0.2, 0.95))
-		if wt == current:
-			sb.border_color = ACCENT
-			sb.set_border_width_all(3)
-		b.add_theme_stylebox_override("normal", sb)
-		b.add_theme_stylebox_override("hover", Hud.style(Color(0.22, 0.18, 0.34)))
-		var id: String = wt
-		b.pressed.connect(func():
-			Profile.select_weapon_type(id)
-			_refresh_weapons()
-			_show_hero())
-		_weapon_box.add_child(b)
 
 
 ## Zones : débloquées dans l'ordre en battant le boss de la précédente.

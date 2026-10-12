@@ -10,11 +10,17 @@ extends RefCounted
 ## - pièces de set (rares et épiques) : bonus à 2 / 4 / 6 pièces portées, dont des
 ##   effets déclenchés façon Eden (foudre, gel, buffs temporaires...).
 
-const SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "back"]
+const SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "necklace", "ring", "trophy"]
 const SLOT_NAMES := {
 	"weapon": "Arme", "head": "Tête", "chest": "Torse", "legs": "Jambes",
 	"gloves": "Gants", "boots": "Bottes", "back": "Cape",
+	"necklace": "Collier", "ring": "Bague", "trophy": "Trophée",
 }
+## Pièces d'armure et accessoires (bijoux et trophée, comme dans Eden).
+const ARMOR := ["head", "chest", "legs", "gloves", "boots", "back"]
+const ACCESSORIES := ["necklace", "ring", "trophy"]
+## Le trophée ne tombe que des élites et des boss (butin rare ou mieux).
+const TROPHY_CHANCE := 0.2
 ## Types de base : nom, stats de base (niveau 1, qualité 100 %).
 const BASES := {
 	"weapon": {"name": "Katana", "stats": {"patk": 14.0, "matk": 6.0, "crit": 0.02}},
@@ -24,6 +30,9 @@ const BASES := {
 	"gloves": {"name": "Kote", "stats": {"patk": 4.0, "matk": 4.0, "atk_speed": 0.02}},
 	"boots": {"name": "Suneate", "stats": {"hp": 20.0, "move_speed": 0.04, "agi": 1.0}},
 	"back": {"name": "Haori", "stats": {"hp": 30.0, "crit": 0.02, "lck": 2.0}},
+	"necklace": {"name": "Collier", "stats": {"hp": 25.0, "matk": 3.0, "wis": 2.0}},
+	"ring": {"name": "Bague", "stats": {"patk": 3.0, "crit": 0.015, "lck": 2.0}},
+	"trophy": {"name": "Trophée", "stats": {"str": 1.5, "agi": 1.5, "int": 1.5, "wis": 1.5, "lck": 1.5}},
 }
 ## Armes selon la classe (comme dans Eden : attaque physique ET magique, attribut principal).
 const WEAPON_BASES := {
@@ -40,7 +49,10 @@ const RARITIES := [
 	{"name": "Magique", "color": Color(0.45, 0.7, 1.0), "affixes": 1},
 	{"name": "Rare", "color": Color(1.0, 0.85, 0.3), "affixes": 2},
 	{"name": "Épique", "color": Color(0.8, 0.45, 1.0), "affixes": 3},
+	{"name": "Légendaire", "color": Color(1.0, 0.55, 0.15), "affixes": 4},
 ]
+## Raretés archivables (or, violet, orange).
+const ARCHIVE_MIN_RARITY := 2
 const STAT_NAMES := {
 	"atk": "Attaque", "patk": "Attaque physique", "matk": "Attaque magique",
 	"str": "Force", "agi": "Agilité", "int": "Intelligence", "wis": "Sagesse", "lck": "Chance",
@@ -139,17 +151,23 @@ static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai",
 	if wtype == "":
 		# en run : le butin d'armes suit l'arme en main ; sinon l'arme de la classe
 		wtype = Run.weapon_type() if Run.active and class_id == Run.class_id else default_weapon_type(class_id)
-	if slot == "":
-		slot = SLOTS.pick_random()
 	var roll := randf() + luck
 	var rarity := 0
-	if roll > 1.15:
+	if roll > 1.42:
+		rarity = 4
+	elif roll > 1.15:
 		rarity = 3
 	elif roll > 0.92:
 		rarity = 2
 	elif roll > 0.6:
 		rarity = 1
 	rarity = maxi(rarity, min_rarity)
+	if slot == "":
+		# trophée : seulement sur le butin rare des élites et des boss
+		if rarity >= 2 and luck >= 0.3 and randf() < TROPHY_CHANCE:
+			slot = "trophy"
+		else:
+			slot = SLOTS.filter(func(x): return x != "trophy").pick_random()
 	var item := {
 		"uid": "%d_%d" % [Time.get_ticks_usec(), randi() % 100000],
 		"slot": slot, "level": level, "rarity": rarity,
@@ -180,7 +198,7 @@ static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai",
 ## Transforme l'objet en pièce du set [param set_id].
 static func make_set_piece(item: Dictionary, set_id: String) -> void:
 	item["set"] = set_id
-	item["name"] = "%s %s" % [BASES[item.slot].name, SETS[set_id].suffix]
+	item["name"] = "%s %s" % [_base_name(String(item.slot), "", weapon_type_of(item) if item.slot == "weapon" else ""), SETS[set_id].suffix]
 
 
 ## Nombre de pièces portées par set (emplacement -> objet).
@@ -334,8 +352,8 @@ static func disassemble_yield(item: Dictionary) -> Dictionary:
 	var out := {"fragment": (2 + int(item.level) / 3) * (r + 1)}
 	if r >= 2:
 		out["essence"] = r - 1
-	if r == 3:
-		out["crystal"] = 1
+	if r >= 3:
+		out["crystal"] = r - 2
 	return _merge(out, upgrade_refund(item))
 
 

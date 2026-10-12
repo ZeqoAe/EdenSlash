@@ -19,3 +19,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.8 | Sorts complets (14 à 15 par classe), talents, artisanat, fournitures gardées à l'extraction | session locale |
 | 0.1.9 | Icônes des effets de classe (Mur du titan, Ange gardien…) reprises du sort d'Eden qui les donne | session cloud |
 | 0.1.10 | Écrans plein écran : Personnage (3 préréglages par classe, coffre commun, aperçu 3D), menu pause, village à 4 métiers (réforge, conversion, fusion de gemmes) | session cloud |
+| 0.1.11 | Archive (collection or / violet / orange, bijoux, trophées, apparences d'armes), rareté Légendaire, collier / bague / trophée, carte d'objet au survol, page Infos (stats et dégâts), lancement de run Équipement → Expertise (7 certificats) | session cloud |

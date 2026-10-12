@@ -38,11 +38,23 @@ dans le dépôt sont dessinées par `tools/make_ui_assets.py` (`game/assets/ui/s
 icône d'Eden déposée sous le même nom (`freeze.png`, `burn.png`…) les remplace automatiquement.
 
 Écrans plein écran (style du grimoire) :
-- **Personnage & équipement** (lobby, et menu pause pendant la run) : chaque classe a son propre
+- **Lancer la run** : page **Équipement** (préréglage ou à la main ; l'arme portée décide du combo
+  d'auto-attaque, plus de choix d'arme au lobby) → *Valider* → page **Expertise & talents** (talents
+  de classe, **7 certificats de maîtrise** au plus) → *Valider* → la run démarre.
+- **Équipement** (lobby, et menu pause pendant la run) : chaque classe a son propre
   équipement en **3 préréglages** nommés ; le **coffre est commun** à toutes les classes (★ = objet
-  utilisé par un préréglage) ; glisser-déposer, double-clic ou clic droit pour équiper / retirer ;
-  aperçu 3D du héros, statistiques, bonus de set.
-- **Menu pause** : page Run (compétences, cartes, sac, bilan, actions) et page Personnage.
+  utilisé par un préréglage) ; 10 emplacements dont **collier, bague et trophée** ; glisser-déposer,
+  double-clic ou clic droit pour équiper / retirer ; aperçu 3D du héros, statistiques, bonus de set.
+- **Carte d'objet au survol** partout (coffre, sac, poupée, village, archive) : stats et bonus de
+  qualité, affixes, amélioration, gemmes, enchantement, set et ses effets, comparaison avec la pièce
+  portée.
+- **Archive** (lobby) : catalogue de tout l'équipement du jeu ; on y archive (définitivement) les
+  objets **rares (or), épiques (violet) et légendaires (orange)**, bijoux et trophées compris :
+  +1 / +2 / +4 points d'attribut par entrée, +1 % de dégâts par set, paliers de collection ; les armes
+  archivées débloquent leurs **apparences** (skins).
+- **Infos** (lobby et pause) : ce que rapporte un point de chaque attribut, formules de chaque
+  statistique, calcul des dégâts et de la défense (héros et monstres), et en run tes valeurs.
+- **Menu pause** : pages Run (compétences, cartes, sac, bilan, actions), Équipement et Infos.
 - **Village**, un PNJ par métier : Alec (acheter, vendre), Bryson le forgeron (améliorer, enchanter,
   réforger une stat, polir la qualité), Starnoc le recycleur (désassembler, convertir les matériaux),
   Lertia la joaillière (percer et sertir, fusionner 3 gemmes en une gemme supérieure).
@@ -113,7 +125,7 @@ Options de test : `--seed=N` (même map), `--dungeon` (arène du boss), `--rage`
 `--class=warrior|thief|hunter|cleric|magician|samurai`, `--zone=limestone|rainbowfall|beluga|wetlands|avila|arid`.
 Classes : `.venv/Scripts/python -I tools/build_classes.py` ; biomes : `.venv/Scripts/python -I tools/build_biomes.py`
 (aperçu d'une map d'Eden : `tools/scan_biome.py s004`).
-Talents d'Eden : `.venv/Scripts/python -I tools/build_talents.py` (après build_classes) ; bancs : `res://tests/test_skills.tscn -- <classe>` (tous les sorts), `res://tests/test_combo.tscn -- <classe> 0.3,0.7` (combo + captures), `--expertise=N --talents` (écran d'expertise).
+Talents d'Eden : `.venv/Scripts/python -I tools/build_talents.py` (après build_classes) ; bancs : `res://tests/test_skills.tscn -- <classe>` (tous les sorts), `res://tests/test_combo.tscn -- <classe> 0.3,0.7` (combo + captures), `--expertise=N --talents` (écran d'expertise), `--prep=0|1` (préparation de la run), `--archive=0|1`, `--info` (écrans du lobby).
 `--weapon=katana|axe|dagger|bow|scepter|staff`, `--extract-at=N` (lance l'extraction à N s).
 Cycle héritage / remboursement : `Godot --headless --path game res://tests/test_progress.tscn`.
 Choix de cartes (sélection puis Valider) : `Godot --headless --path game res://tests/test_cards.tscn`.

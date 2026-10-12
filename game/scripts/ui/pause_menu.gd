@@ -1,7 +1,8 @@
 class_name PauseMenu
 extends CanvasLayer
 ## Menu pause (Échap), plein écran : page « Run » (compétences, cartes, sac, bilan,
-## actions) et page « Personnage » (équipement, statistiques, sac de la run).
+## actions), page « Équipement » (équipement, statistiques, sac de la run) et page
+## « Infos » (formules des statistiques et des dégâts, valeurs du héros).
 ## Grimoire et paramètres s'ouvrent par-dessus.
 
 signal abandon_requested
@@ -13,6 +14,7 @@ var grimoire: Grimoire
 var _screen: PageScreen
 var _run: RunPage
 var _equip: EquipmentPage
+var _info: InfoPage
 var _confirm: ConfirmationDialog
 
 
@@ -28,7 +30,10 @@ func setup(p: Player) -> void:
 	_screen.add_page("Run", _run)
 	_equip = EquipmentPage.new()
 	_equip.player = player
-	_screen.add_page("Personnage", _equip)
+	_screen.add_page("Équipement", _equip)
+	_info = InfoPage.new()
+	_info.player = player
+	_screen.add_page("Infos", _info)
 	_run.resume_requested.connect(close)
 	_run.extract_requested.connect(func():
 		close()

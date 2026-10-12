@@ -113,6 +113,28 @@ static func action_button(parent: Control, text: String, cb: Callable, min_w := 
 	return b
 
 
+## Carte d'objet affichée au survol : description complète (stats, affixes, amélioration,
+## gemmes, enchantement, set et ses effets), comparaison avec la pièce portée, [param extra].
+static func item_card(item: Dictionary, extra := "") -> Control:
+	var p := PanelContainer.new()
+	var sb := UiTheme.flat_box(Color(0.05, 0.04, 0.09, 0.97), Items.color_of(item), 2, 10)
+	sb.set_content_margin_all(14)
+	p.add_theme_stylebox_override("panel", sb)
+	var r := RichTextLabel.new()
+	r.bbcode_enabled = true
+	r.fit_content = true
+	r.scroll_active = false
+	r.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	r.custom_minimum_size = Vector2(400, 0)
+	r.size = Vector2(400, 0)
+	r.add_theme_font_size_override("normal_font_size", 15)
+	r.add_theme_font_size_override("bold_font_size", 16)
+	var worn = Profile.equipped.get(String(item.get("slot", "")), null)
+	r.text = Items.describe(item) + compare_text(item, worn) + extra
+	p.add_child(r)
+	return p
+
+
 # --- bourse --------------------------------------------------------------------------------
 class Wallet extends HBoxContainer:
 	var _labels := {}
@@ -139,12 +161,21 @@ class Wallet extends HBoxContainer:
 			_labels[k].text = str(Profile.gold if k == "gold" else int(Profile.materials.get(k, 0)))
 
 
+## Bouton d'objet (listes) avec la carte d'objet au survol.
+class CardButton extends Button:
+	var item: Dictionary = {}
+
+	func _make_custom_tooltip(_for_text: String) -> Object:
+		return ItemWidgets.item_card(item) if not item.is_empty() else null
+
+
 # --- case d'objet ---------------------------------------------------------------------------
 class ItemSlot extends Button:
 	signal activated  # double-clic ou clic droit
 
 	var item: Dictionary = {}
 	var placeholder := ""  # emplacement vide : nom de la pièce
+	var ghost := ""  # emplacement vide : icône fantôme (entrée d'archive non remplie)
 	var slot_id := ""  # emplacement d'équipement (cases de la poupée)
 	var selected := false
 	var dim := false  # objet non disponible (filtre, prix trop élevé...)
@@ -152,6 +183,7 @@ class ItemSlot extends Button:
 	var source := ""  # "equipped", "inventory"... (glisser-déposer)
 	var can_drop: Callable  # func(data) -> bool
 	var on_drop: Callable  # func(data)
+	var card_extra: Callable  # func(item) -> String : lignes ajoutées à la carte au survol
 
 	func _init(size_px := 64.0) -> void:
 		custom_minimum_size = Vector2(size_px, size_px)
@@ -161,7 +193,17 @@ class ItemSlot extends Button:
 
 	func set_item(it: Dictionary) -> void:
 		item = it
+		if not it.is_empty():
+			tooltip_text = Items.display_name(it)  # déclenche la carte d'objet au survol
 		queue_redraw()
+
+	func _make_custom_tooltip(for_text: String) -> Object:
+		if item.is_empty():
+			return null
+		var extra := String(card_extra.call(item)) if card_extra.is_valid() else ""
+		if for_text != Items.display_name(item):
+			extra += "\n\n[color=#c8c8d4]%s[/color]" % for_text  # consigne propre à la case
+		return ItemWidgets.item_card(item, extra)
 
 	func _gui_input(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.pressed:
@@ -182,6 +224,9 @@ class ItemSlot extends Button:
 			bg.shadow_size = 8
 		draw_style_box(bg, r)
 		if item.is_empty():
+			var gt := UiTheme.texture(ghost) if ghost != "" else null
+			if gt:
+				draw_texture_rect(gt, r.grow(-8.0), false, Color(0.45, 0.42, 0.55, 0.35))
 			if placeholder != "":
 				HudWidgets.text_center(self, placeholder, r.get_center(), UiTheme.bold_font(), 12, Color(1, 1, 1, 0.35), 0)
 			return
@@ -240,6 +285,7 @@ class ItemGrid extends VBoxContainer:
 	var dim_fn: Callable  # func(item) -> bool
 	var can_drop: Callable
 	var on_drop: Callable
+	var card_extra: Callable  # func(item) -> String : ajout à la carte au survol
 	var _items: Array = []
 	var _shown: Array = []
 	var _selection: Array = []
@@ -352,7 +398,7 @@ class ItemGrid extends VBoxContainer:
 			s.dim = bool(dim_fn.call(it)) if dim_fn.is_valid() else false
 			s.can_drop = can_drop
 			s.on_drop = on_drop
-			s.tooltip_text = Items.display_name(it)
+			s.card_extra = card_extra
 			s.pressed.connect(_on_pressed.bind(it, i))
 			s.activated.connect(func(): item_activated.emit(it))
 			_grid.add_child(s)

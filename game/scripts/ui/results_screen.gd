@@ -100,7 +100,9 @@ func _score(it: Dictionary) -> float:
 
 
 func _item_button(item: Dictionary) -> Button:
-	var b := Button.new()
+	var b := ItemWidgets.CardButton.new()
+	b.item = item
+	b.tooltip_text = Items.display_name(item)
 	b.custom_minimum_size = Vector2(312, 62)
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.focus_mode = Control.FOCUS_NONE

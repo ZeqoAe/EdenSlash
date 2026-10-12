@@ -141,6 +141,9 @@ func _weapon_type() -> Dictionary:
 # --- statistiques -------------------------------------------------------------------
 func recalc_stats() -> void:
 	var eq := Profile.equipment_stats()
+	var arc := Archive.bonus()  # bonus permanents de l'archive
+	for k in arc:
+		eq[k] = float(eq.get(k, 0.0)) + float(arc[k])
 	var ps := Run.passive_stats()
 	var ratio := hp / max_hp if max_hp > 0.0 else 1.0
 	var base: Dictionary = cls.get("base", {})

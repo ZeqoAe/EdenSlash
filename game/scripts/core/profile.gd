@@ -34,6 +34,8 @@ var stash := {}  # réserve de fournitures gardées (extraction, victoire), empo
 var expertise := {}  # classe -> points d'expertise (gagnés à chaque run)
 var talents := {}  # classe -> {id talent (String): niveau}
 var certificates: Array = []  # certificats équipés : "classe/id_passif"
+var archive := {}  # entrée de l'archive ("katana:4", "set:storm"...) -> copie de l'objet archivé
+var skins := {}  # type d'arme -> code du modèle choisi (apparence débloquée par l'archive)
 var unlocked_zones := 1  # zones jouables (dans l'ordre de data/zones.json)
 var selected_zone := "limestone"
 var runs_done := 0
@@ -75,6 +77,8 @@ func load_profile() -> void:
 	stash = d.get("stash", {})
 	talents = d.get("talents", {})
 	certificates = d.get("certificates", [])
+	archive = d.get("archive", {})
+	skins = d.get("skins", {})
 	selected_zone = String(d.get("selected_zone", "limestone"))
 	if d.has("vault"):
 		vault = d.get("vault", []).map(_migrate)
@@ -121,6 +125,7 @@ func save_profile() -> void:
 	var d := {"selected_class": selected_class, "vault": vault, "loadout": loadout, "presets": presets,
 		"unlocked_zones": unlocked_zones, "selected_zone": selected_zone,
 		"expertise": expertise, "talents": talents, "certificates": certificates, "stash": stash,
+		"archive": archive, "skins": skins,
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(d))
@@ -359,6 +364,8 @@ func reset_all() -> void:
 	expertise = {}
 	talents = {}
 	certificates = []
+	archive = {}
+	skins = {}
 	stash = {}
 	_lobby_view()
 	_ensure_starter()
@@ -468,12 +475,15 @@ func unlocked_certificates() -> Array:
 	return out
 
 
-## Emplacements de certificats : 1, +1 tous les 10 niveaux d'expertise cumulés (4 max).
+## Emplacements de certificats : 2, +1 tous les 8 niveaux d'expertise cumulés (7 max).
+const CERT_MAX := 7
+
+
 func certificate_slots() -> int:
 	var total := 0
 	for cls in GameData.talents:
 		total += expertise_level(cls) - 1
-	return clampi(1 + total / 10, 1, 4)
+	return clampi(2 + total / 8, 2, CERT_MAX)
 
 
 func toggle_certificate(key: String) -> void:
@@ -670,8 +680,49 @@ func equipment_procs() -> Array:
 	return out
 
 
+## Modèle de l'arme portée : son apparence choisie dans l'archive, sinon le sien.
 func weapon_code() -> String:
-	return String(equipped.get("weapon", {}).get("weapon", ""))
+	var w: Dictionary = equipped.get("weapon", {})
+	if w.is_empty():
+		return ""
+	var skin := String(skins.get(Items.weapon_type_of(w), ""))
+	return skin if skin != "" else String(w.get("weapon", ""))
+
+
+## Apparence du type d'arme [param wtype] ("" : celle de l'arme).
+func set_skin(wtype: String, code: String) -> void:
+	if code == "":
+		skins.erase(wtype)
+	else:
+		skins[wtype] = code
+	save_profile()
+
+
+## Archive l'objet (hors run) : il quitte le coffre et les préréglages, et remplit
+## ses entrées vides de la collection. Renvoie les entrées remplies.
+func archive_item(item: Dictionary) -> Array:
+	if Archive.refusal(item) != "":
+		return []
+	_sync_vault()
+	var uid := String(item.uid)
+	for i in vault.size():
+		if String(vault[i].uid) == uid:
+			vault.remove_at(i)
+			break
+	for cls in presets:
+		for st in presets[cls].sets:
+			for slot in st.slots.keys():
+				if String(st.slots[slot]) == uid:
+					st.slots.erase(slot)
+	var filled: Array = []
+	for k in Archive.keys_for(item):
+		if not archive.has(k):
+			archive[k] = item.duplicate(true)
+			filled.append(k)
+	_lobby_view()
+	_ensure_starter()
+	save_profile()
+	return filled
 
 
 func all_items() -> Array:

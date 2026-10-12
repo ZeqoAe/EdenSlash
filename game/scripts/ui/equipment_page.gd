@@ -1,6 +1,7 @@
 class_name EquipmentPage
 extends HBoxContainer
-## Page Personnage : équipement porté autour d'un aperçu 3D du héros, statistiques,
+## Page Équipement : équipement porté autour d'un aperçu 3D du héros (bijoux et trophée
+## en dessous), statistiques,
 ## bonus de set, et coffre (hors run : commun à toutes les classes, avec 3 préréglages
 ## d'équipement par classe ; pendant la run : le sac de la run).
 ## Équiper : glisser un objet sur sa case, double-clic ou clic droit ; retirer : glisser
@@ -10,6 +11,7 @@ signal class_changed
 
 const DOLL_LEFT := ["head", "chest", "legs", "boots"]
 const DOLL_RIGHT := ["weapon", "gloves", "back"]
+const DOLL_BOTTOM := ["necklace", "ring", "trophy"]
 
 var player: Player  # null hors run
 
@@ -63,6 +65,12 @@ func _ready() -> void:
 	doll.add_child(_preview)
 	_doll_column(doll, DOLL_RIGHT)
 	lcol.alignment = BoxContainer.ALIGNMENT_CENTER
+	var acc := HBoxContainer.new()  # accessoires : collier, bague, trophée
+	acc.alignment = BoxContainer.ALIGNMENT_CENTER
+	acc.add_theme_constant_override("separation", 22)
+	mid.add_child(acc)
+	for slot in DOLL_BOTTOM:
+		_doll_cell(acc, slot, 66.0)
 	_power = Label.new()
 	UiTheme.title(_power, 18)
 	_power.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -77,6 +85,7 @@ func _ready() -> void:
 	_grid = ItemWidgets.ItemGrid.new(false, 9, 62.0)
 	_grid.source = "inventory"
 	_grid.badge_fn = _badge
+	_grid.card_extra = _users_text
 	_grid.can_drop = func(data): return data.source == "equipped"
 	_grid.on_drop = func(data): _unequip(String(data.slot))
 	_grid.selection_changed.connect(func(): _select(_grid.first_selected()))
@@ -108,20 +117,30 @@ func _doll_column(parent: Control, slots: Array) -> VBoxContainer:
 	col.add_theme_constant_override("separation", 12)
 	parent.add_child(col)
 	for slot in slots:
-		var s := ItemWidgets.ItemSlot.new(78.0)
-		s.slot_id = slot
-		s.source = "equipped"
-		s.placeholder = Items.SLOT_NAMES[slot]
-		s.can_drop = func(data): return data.source == "inventory" and data.item.slot == slot
-		s.on_drop = func(data): _equip(data.item)
-		s.pressed.connect(func():
-			_select(Profile.equipped.get(slot, {})))
-		s.activated.connect(func(): _unequip(slot))
-		col.add_child(s)
-		var cap := Hud._label(col, Items.SLOT_NAMES[slot], 12, UiTheme.MUTED)
-		cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_doll_slots[slot] = s
+		_doll_cell(col, slot, 78.0)
 	return col
+
+
+## Case d'équipement de la poupée et sa légende.
+func _doll_cell(parent: Control, slot: String, px: float) -> void:
+	var cell := VBoxContainer.new()
+	cell.add_theme_constant_override("separation", 0)
+	parent.add_child(cell)
+	var s := ItemWidgets.ItemSlot.new(px)
+	s.slot_id = slot
+	s.source = "equipped"
+	s.placeholder = Items.SLOT_NAMES[slot]
+	s.can_drop = func(data): return data.source == "inventory" and data.item.slot == slot
+	s.on_drop = func(data): _equip(data.item)
+	s.card_extra = _users_text
+	s.pressed.connect(func():
+		_select(Profile.equipped.get(slot, {})))
+	s.activated.connect(func(): _unequip(slot))
+	s.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	cell.add_child(s)
+	var cap := Hud._label(cell, Items.SLOT_NAMES[slot], 12, UiTheme.MUTED)
+	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_doll_slots[slot] = s
 
 
 func refresh() -> void:
@@ -236,6 +255,12 @@ func _refresh_stats(in_run: bool) -> void:
 			lines.append(Items.stat_text(k, eq[k]))
 		if keys.is_empty():
 			lines.append("[color=#c8c8d4]aucun[/color]")
+		var arc := Archive.bonus()
+		if not arc.is_empty():
+			lines.append("")
+			lines.append("[color=#c8c8d4]Bonus permanent de l'archive :[/color]")
+			for k in arc:
+				lines.append("[color=#7fe08a]%s[/color]" % Items.stat_text(k, arc[k]))
 	_stats.text = "\n".join(lines)
 	var power := 0
 	for it in Profile.equipped.values():
@@ -256,6 +281,14 @@ func _badge(it: Dictionary) -> String:
 		return ""
 	var users := Profile.item_users(String(it.uid))
 	return "★" if not users.is_empty() else ""
+
+
+## Carte au survol : classes dont un préréglage utilise l'objet.
+func _users_text(it: Dictionary) -> String:
+	if Profile.in_run:
+		return ""
+	var users := Profile.item_users(String(it.get("uid", "")))
+	return "\n\n[color=#f5c75a]★ Utilisé par :[/color] " + ", ".join(users) if not users.is_empty() else ""
 
 
 func _is_equipped(it: Dictionary) -> bool:
@@ -280,11 +313,7 @@ func _refresh_detail() -> void:
 	var txt := Items.describe(_selected)
 	if not equipped:
 		txt += ItemWidgets.compare_text(_selected, Profile.equipped.get(_selected.slot))
-	if not Profile.in_run:
-		var users := Profile.item_users(String(_selected.uid))
-		if not users.is_empty():
-			txt += "\n\n[color=#f5c75a]★ Utilisé par :[/color] " + ", ".join(users)
-	_detail.text = txt
+	_detail.text = txt + _users_text(_selected)
 	_equip_btn.disabled = false
 	_equip_btn.text = "Retirer" if equipped else "Équiper"
 

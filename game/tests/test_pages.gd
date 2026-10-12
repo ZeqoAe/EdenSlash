@@ -1,6 +1,8 @@
 extends Node
 ## Écrans plein écran : préréglages d'équipement par classe et coffre commun,
-## menu pause (Run, Personnage), village (marchand, forgeron, recycleur, joaillier).
+## menu pause (Run, Équipement, Infos), village (marchand, forgeron, recycleur, joaillier),
+## légendaires et accessoires, carte d'objet au survol, archive et apparences,
+## certificats (7 au plus), lancement de run Équipement → Expertise.
 ## godot --headless --path game res://tests/test_pages.tscn  (profil de test uniquement)
 
 var fails := 0
@@ -22,6 +24,9 @@ func _ready() -> void:
 	check("profil de test", Profile.save_path == Profile.TEST_SAVE_PATH)
 	Profile.reset_all()
 	_test_presets()
+	_test_items()
+	_test_archive()
+	await _test_lobby()
 	await _test_run_screens()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit(1 if fails > 0 else 0)
@@ -71,6 +76,101 @@ func _test_presets() -> void:
 	check("préréglages relus du disque", Profile.preset_names("warrior")[2] == "Boss" and _uid("head") == helm.uid)
 
 
+func _test_items() -> void:
+	var rar := {}
+	var trophies := 0
+	for i in 400:
+		var it := Items.generate(10, 1.0)
+		rar[int(it.rarity)] = true
+		trophies += 1 if it.slot == "trophy" else 0
+	check("butin chanceux : des légendaires (orange)", rar.has(4) and Items.RARITIES[4].name == "Légendaire")
+	check("trophées sur le butin rare des élites et boss", trophies > 0)
+	check("pas de trophée sur le butin courant", range(200).all(func(_i): return Items.generate(5, 0.0).slot != "trophy"))
+	var ring := Items.generate(5, 0.5, "ring")
+	check("bague : icône et stats", String(ring.icon).contains("a1001") and Items.stats(ring).has("lck"))
+	Profile.inventory.append(ring)
+	Profile.equip(ring)
+	check("bague équipée (nouvel emplacement)", _uid("ring") == ring.uid and Profile.equipment_stats().has("lck"))
+	# carte d'objet au survol
+	var slot := ItemWidgets.ItemSlot.new()
+	slot.set_item(ring)
+	var card: Control = slot._make_custom_tooltip(slot.tooltip_text)
+	add_child(card)
+	var rtl: RichTextLabel = card.get_child(0)
+	check("carte au survol : nom, stats, qualité", rtl.text.contains(String(ring.name)) and rtl.text.contains("Qualité") and rtl.text.contains("Chance"))
+	card.queue_free()
+	slot.free()
+
+
+func _test_archive() -> void:
+	var common := Items.generate(5, -1.0, "head")
+	var rare := Items.generate(5, 0.0, "weapon", "samurai", 2, "katana")
+	rare.rarity = 2
+	Items.make_set_piece(rare, "storm")
+	var legend := Items.generate(5, 0.0, "chest", "samurai", 4)
+	for it in [common, rare, legend]:
+		Profile.inventory.append(it)
+	Profile.equip(rare)
+	Profile.save_profile()
+	check("archive : objet commun refusé", Archive.refusal(common) != "")
+	check("archive : katana rare accepté", Archive.refusal(rare) == "")
+	var str0 := float(Archive.bonus().get("str", 0.0))
+	var filled := Profile.archive_item(rare)
+	check("archivé : entrées katana rare + set Tempête", "katana:2" in filled and "set:storm" in filled)
+	check("archivé : quitte le coffre et les préréglages", not Profile.vault.any(func(x): return x.uid == rare.uid) and Profile.item_users(rare.uid).is_empty())
+	check("archivé : une arme reste équipée", Profile.equipped.has("weapon"))
+	check("bonus permanent : +1 Force, +1 % dégâts", float(Archive.bonus().get("str", 0.0)) == str0 + 1.0 and float(Archive.bonus().get("dmg_pct", 0.0)) >= 0.01)
+	var again := rare.duplicate(true)
+	check("même entrée : déjà archivé", Archive.refusal(again) != "")
+	Profile.archive_item(legend)
+	check("légendaire (torse) : +4 Force", float(Archive.bonus().get("str", 0.0)) == str0 + 5.0)
+	check("collection %d / %d" % [Archive.count(), Archive.total()], Archive.count() == 3 and Archive.total() == 51)
+	# apparences
+	check("skin : 3e katana débloqué par le katana rare", Archive.skin_unlocked("katana", 2) and not Archive.skin_unlocked("katana", 3))
+	var code := String(Archive.skins("katana")[2].code)
+	Profile.set_skin("katana", code)
+	var wt := Items.weapon_type_of(Profile.equipped.weapon)
+	check("skin appliqué à l'arme portée", wt != "katana" or Profile.weapon_code() == code)
+	Profile.load_profile()
+	check("archive et apparences relues du disque", Archive.count() == 3 and String(Profile.skins.get("katana", "")) == code)
+	# certificats : 7 au plus
+	for cid in GameData.classes:
+		Profile.expertise[cid] = 999999
+	check("certificats : 7 emplacements au maximum", Profile.certificate_slots() == 7)
+	Profile.certificates.clear()
+	for c in Profile.unlocked_certificates():
+		Profile.toggle_certificate(c.key)
+	check("certificats : on ne peut pas en équiper plus de 7", Profile.certificates.size() == mini(7, Profile.unlocked_certificates().size()))
+	Profile.expertise = {}
+	Profile.certificates.clear()
+	Profile.save_profile()
+
+
+func _test_lobby() -> void:
+	var lobby: Node = load("res://scenes/lobby.tscn").instantiate()
+	add_child(lobby)
+	await _frames()
+	lobby._prepare_run()
+	await _frames()
+	check("lancer la run : page Équipement d'abord", lobby._prep.is_open() and lobby._prep.current_page() == 0 and lobby._prep_button.text.begins_with("Valider l'équipement"))
+	lobby._on_prep_validate()
+	await _frames()
+	check("valider : page Expertise & talents", lobby._prep.current_page() == 1 and lobby._prep_button.text.contains("lancer la run") and lobby._prep.page(1) is TalentsPage)
+	lobby._prep.close_ui()
+	lobby._archive.open(0)
+	await _frames()
+	check("archive : catalogue affiché", lobby._archive.is_open() and lobby._archive.page(0)._catalog.get_child_count() > 0)
+	lobby._archive.show_page(1)
+	await _frames()
+	lobby._archive.close_ui()
+	lobby._info.open(0)
+	for i in InfoPage.SECTIONS.size():
+		lobby._info.page(0).show_section(i)
+	check("infos : toutes les sections", lobby._info.page(0)._text.text.length() > 50)
+	lobby._info.close_ui()
+	lobby.free()
+
+
 func _test_run_screens() -> void:
 	world = load("res://scenes/world.tscn").instantiate()
 	get_tree().root.add_child.call_deferred(world)
@@ -100,6 +200,10 @@ func _test_run_screens() -> void:
 	check("équiper depuis la page", is_same(Profile.equipped.get(it.slot), it))
 	eq._unequip(it.slot)
 	check("retirer depuis la page", not Profile.equipped.has(it.slot) or not is_same(Profile.equipped.get(it.slot), it))
+	screen.show_page(2)
+	var info: InfoPage = screen.page(2)
+	info.show_section(InfoPage.SECTIONS.size() - 1)
+	check("pause : page Infos avec les valeurs du héros", info._text.text.contains("PV effectifs"))
 	world.pause_menu.close()
 	await _frames()
 	check("pause fermée, jeu repris", not world.pause_menu.is_open() and not get_tree().paused)

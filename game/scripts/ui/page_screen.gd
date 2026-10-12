@@ -38,7 +38,7 @@ func _ready() -> void:
 	grad.fill_from = Vector2(0.5, 0.35)
 	grad.fill_to = Vector2(1.1, 1.1)
 	grad.gradient = Gradient.new()
-	grad.gradient.set_color(0, Color(0.13, 0.09, 0.22, 0.97))
+	grad.gradient.set_color(0, Color(0.13, 0.09, 0.22, 1.0))
 	grad.gradient.set_color(1, Color(0.02, 0.01, 0.05, 0.99))
 	bg.texture = grad
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
