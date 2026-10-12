@@ -36,12 +36,15 @@ var _debug_open := ""
 var _goto := ""
 
 
-## Test : ouvre un écran pour la capture (--open=pause|cards|map).
+## Test : ouvre un écran pour la capture (--open=pause|cards|map|settings0..5).
 func _open_for_test() -> void:
 	if _debug_open == "pause":
 		pause_menu.open()
 	elif _debug_open == "cards":
 		cards.offer("Niveau 2 ! Choisis une carte", Run.roll_cards(3))
+	elif _debug_open.begins_with("settings"):
+		pause_menu.open()
+		pause_menu.settings.open(int(_debug_open.trim_prefix("settings")))
 	elif _debug_open == "map":
 		hud._big_map.visible = true
 	elif _debug_open in ["merchant", "smith", "trader"]:

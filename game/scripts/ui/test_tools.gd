@@ -9,23 +9,40 @@ var player: Player
 var director: RunDirector
 
 var _help: PanelContainer
+var _help_label: RichTextLabel
 var _overlay: Label
 var _report_box: PanelContainer
 var _report_edit: LineEdit
 var _toast: Label
 var _pending_shot: Image
 
-const HELP_TEXT := """[b]Contrôles[/b]
-ZQSD / flèches : se déplacer      Espace : sauter      Maj : esquive (invulnérable)
-Clic gauche : attaquer (sur un monstre : auto-attaque)      Clic droit maintenu : tourner la caméra
-A E R T (ou 1 2 3 4) : compétences      F : interagir (coffre, PNJ, donjon)      M : carte      Échap : menu
+## Aide : reflète les touches et le mode de jeu choisis dans les Paramètres.
+static func help_text() -> String:
+	var k := func(a: String) -> String: return Settings.action_label(a)
+	var move: String = {
+		"click": "%s (maintenu) : se déplacer vers le curseur / attaquer le monstre cliqué" % Settings.action_label("attack", 1),
+		"rts": "%s : se déplacer / attaquer le monstre cliqué" % Settings.action_label("move_order", 1),
+	}.get(Settings.move_mode(), "%s : attaquer (sur un monstre : auto-attaque)" % k.call("attack"))
+	var skills: PackedStringArray = []
+	for i in 4:
+		skills.append(Settings.action_label("skill_%d" % (i + 1), 1))
+	var mask := Settings.camera_rotate_mask()
+	var cam := "Clic molette" if mask == MOUSE_BUTTON_MASK_MIDDLE else Settings.action_label("camera_rotate", 1)
+	return """[b]Contrôles[/b]  (Échap > Paramètres pour les changer)
+%s / %s / %s / %s : se déplacer      %s : sauter      %s : esquive (invulnérable)
+%s      %s maintenu : tourner la caméra
+%s : compétences      %s : interagir (coffre, PNJ, donjon)      %s : carte      %s : menu
 Molette : zoom
 
 [b]Tests et retours[/b]
 F9 : signaler un problème (capture + position + ta note, envoyés dans le dossier feedback)
 F4 : se débloquer      F2 : infos de débogage (position, FPS...)
 F5 : +1 niveau      F6 : aller à l'entrée du donjon      F7 : arène du boss      F8 : déclencher la rage
-F1 : afficher / masquer cette aide"""
+F1 : afficher / masquer cette aide""" % [
+		Settings.action_label("move_forward", 1), Settings.action_label("move_left", 1),
+		Settings.action_label("move_back", 1), Settings.action_label("move_right", 1),
+		k.call("jump"), k.call("dodge"), move, cam, " ".join(skills), k.call("interact"),
+		k.call("map"), Settings.action_label("pause", 1)]
 
 
 func setup(p: Player, d: RunDirector) -> void:
@@ -45,7 +62,8 @@ func _build() -> void:
 	var rt := RichTextLabel.new()
 	rt.bbcode_enabled = true
 	rt.fit_content = true
-	rt.text = HELP_TEXT
+	rt.text = help_text()
+	_help_label = rt
 	rt.add_theme_font_size_override("normal_font_size", 17)
 	rt.add_theme_font_size_override("bold_font_size", 19)
 	_help.add_child(rt)
@@ -102,6 +120,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			_close_report()
 		return
 	if event.is_action_pressed("help"):
+		_help_label.text = help_text()
 		_help.visible = not _help.visible
 	elif event.is_action_pressed("debug_overlay"):
 		_overlay.visible = not _overlay.visible

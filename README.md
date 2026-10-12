@@ -22,6 +22,11 @@ Double-clic sur **`Jouer.bat`** (ou `Editeur.bat` pour ouvrir le projet dans God
 | Carte / menu (stats, équipement, passifs) | M / Échap |
 | Zoom | Molette |
 
+Tout se règle dans **Échap > Paramètres** (ou depuis le lobby) : modes de jeu (Classique, Visée au
+curseur, Souris ARPG, RTS / MOBA, Détente), déplacement clavier / clic gauche / clic droit, visée,
+attaque et compétences automatiques, touches, plein écran / fenêtré, résolution, VSync, FPS, son,
+caméra, chiffres de dégâts. Les réglages sont dans `user://settings.cfg`.
+
 ### Tester et faire des retours
 
 | Touche | Rôle |
@@ -81,6 +86,7 @@ Options de test : `--seed=N` (même map), `--dungeon` (arène du boss), `--rage`
 `--teleport=x,z`, `--cam-dist=N`, `--seals=N` (sceaux du donjon), `--start-level=N`, `--end-at=N` (fin de run → choix de l'héritage).
 Cycle héritage / remboursement : `Godot --headless --path game res://tests/test_progress.tscn`.
 Choix de cartes (sélection puis Valider) : `Godot --headless --path game res://tests/test_cards.tscn`.
+Paramètres et modes de jeu : `Godot --headless --path game res://tests/test_controls.tscn`.
 Les lancements de test (arguments après `--`, scènes `res://tests`) utilisent `user://profile_test.json`,
 jamais le profil du joueur.
 Saut et esquive mesurés : `Godot --path game res://tests/test_jump.tscn`.

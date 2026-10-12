@@ -1,7 +1,7 @@
 class_name PauseMenu
 extends CanvasLayer
 ## Menu pause (Échap) : reprendre, fiche du personnage (stats, équipement,
-## compétences, passifs), bilan de la run, retour au lobby.
+## compétences, passifs), paramètres, bilan de la run, retour au lobby.
 
 signal abandon_requested
 
@@ -10,6 +10,7 @@ var _root: Control
 var _panel: CharacterPanel
 var _run_label: Label
 var _confirm: ConfirmationDialog
+var settings: SettingsMenu
 
 
 func setup(p: Player) -> void:
@@ -35,6 +36,7 @@ func setup(p: Player) -> void:
 	var title := Hud._label(menu, "PAUSE", 34, Hud.ACCENT)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_button(menu, "Reprendre", close)
+	_button(menu, "Paramètres", func(): settings.open())
 	_button(menu, "Retour au lobby", func(): _confirm.popup_centered())
 	_button(menu, "Quitter le jeu", func(): get_tree().quit())
 	_run_label = Hud._label(menu, "", 14, Color(0.85, 0.85, 0.9))
@@ -52,6 +54,8 @@ func setup(p: Player) -> void:
 	_confirm.cancel_button_text = "Annuler"
 	_confirm.confirmed.connect(func(): abandon_requested.emit())
 	add_child(_confirm)
+	settings = SettingsMenu.new()
+	add_child(settings)
 	_root.visible = false
 	add_child(_root)
 
@@ -82,5 +86,7 @@ func open() -> void:
 
 
 func close() -> void:
+	if settings.is_open():
+		settings.close()
 	_root.visible = false
 	get_tree().paused = false

@@ -51,6 +51,8 @@ var _hits: Array = []  # instants d'impact restants de l'action en cours
 var _action: Dictionary = {}  # compétence / attaque en cours
 var _combo_index := 0
 var _target: Combatant  # cible verrouillée par clic (auto-attaque)
+var _move_goal := Vector3.INF  # point visé par un clic de déplacement (modes souris)
+var _click_moving := false  # clic de déplacement maintenu : on suit le curseur
 var _dodge_dir := Vector3.ZERO
 var _dodge_ready_at := 0.0
 var _last_combat := -100.0
@@ -214,6 +216,7 @@ func _physics_process(delta: float) -> void:
 		velocity.z = 0.0
 		move_and_slide()
 		return
+	_pointer_input()
 	var input_dir := _read_move_input()
 	if input_dir.length() > 0.1:
 		_target = null  # se déplacer annule l'auto-attaque
@@ -258,6 +261,15 @@ func _read_move_input() -> Vector3:
 	var v := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	if autoplay:
 		v = _autoplay_input()
+	if v != Vector2.ZERO:
+		_move_goal = Vector3.INF  # le clavier reprend la main
+	elif _move_goal != Vector3.INF:
+		var to := _move_goal - global_position
+		to.y = 0.0
+		if to.length() < 0.35:
+			_move_goal = Vector3.INF
+		else:
+			return to.normalized()
 	var cam := get_viewport().get_camera_3d()
 	if cam == null or v == Vector2.ZERO:
 		return Vector3(v.x, 0, v.y)
@@ -276,14 +288,17 @@ func _update_idle(input_dir: Vector3, delta: float) -> void:
 			move = to.normalized()
 		else:
 			face_direction(to, delta, 30.0)
-			_start_attack(_target.global_position)
+			if not _try_skill_input():
+				_start_attack(_target.global_position)
 			return
 	velocity.x = move.x * _speed()
 	velocity.z = move.z * _speed()
+	var look := _cursor_dir() if _aims_at_cursor() and _target == null else move
 	if move.length() > 0.1:
-		face_direction(move, delta)
+		face_direction(look if look != Vector3.ZERO else move, delta)
 		play(_anim("run"), 0.12, move_mult)
 	else:
+		face_direction(look, delta, 20.0)
 		play(_anim("battle") if _time - _last_combat < 4.0 else _anim("idle"), 0.25)
 	if _time - _last_combat > 1.2:
 		_combo_index = 0
@@ -293,12 +308,21 @@ func _update_idle(input_dir: Vector3, delta: float) -> void:
 	elif _wants("dodge") and _time >= _dodge_ready_at:
 		_start_dodge(input_dir)
 	else:
-		for i in 4:
-			if _wants("skill_%d" % (i + 1)):
-				use_skill(i)
-				return
-		if _wants("attack"):
+		if _try_skill_input():
+			return
+		if _wants("attack") and Settings.attack_button_attacks():
 			_on_attack_pressed()
+		else:
+			_try_auto_attack(move.length() > 0.1)
+
+
+## Compétence demandée au clavier (prête), sinon compétence automatique.
+func _try_skill_input() -> bool:
+	for i in 4:
+		if _wants("skill_%d" % (i + 1)) and cooldown_left(i) <= 0.0:
+			use_skill(i)
+			return true
+	return _try_auto_skill()
 
 
 func _wants(action: String) -> bool:
@@ -314,18 +338,127 @@ func _ui_has_mouse() -> bool:
 
 
 ## Clic gauche : verrouille le monstre sous le curseur (auto-attaque),
-## sinon frappe en direction du curseur.
+## sinon frappe en direction du curseur. Visée au curseur : frappe toujours vers la souris.
 func _on_attack_pressed() -> void:
-	if Input.is_action_just_pressed("attack"):
+	if Input.is_action_just_pressed("attack") and (autoplay or Settings.aim_mode() != "cursor"):
 		var m := monster_under_mouse()
 		if m:
 			_target = m
 			return
 	var aim := mouse_ground_point() if not autoplay else Vector3.INF
+	if not autoplay and Settings.aim_mode() == "nearest":
+		var near := nearest_monster(6.0)
+		if near:
+			aim = near.global_position
 	if aim == Vector3.INF:
 		var n := nearest_monster(6.0)
 		aim = n.global_position if n else global_position + forward()
 	_start_attack(aim)
+
+
+## Modes souris (Paramètres > Contrôles) : clic sur le sol = se déplacer (maintenu :
+## suivre le curseur), clic sur un monstre = le verrouiller et l'attaquer.
+func _pointer_input() -> void:
+	var act := Settings.move_click_action()
+	if autoplay or act == "" or is_dead:
+		_click_moving = false
+		return
+	if Input.is_action_just_pressed(act) and not _ui_has_mouse():
+		var m := monster_under_mouse()
+		if m:
+			_target = m
+			_move_goal = Vector3.INF
+			_click_moving = false
+			return
+		_click_moving = true
+		_set_move_goal(true)
+	elif _click_moving and Input.is_action_pressed(act):
+		_set_move_goal(false)
+	else:
+		_click_moving = false
+
+
+func _set_move_goal(marker: bool) -> void:
+	var p := mouse_world_point()
+	if p == Vector3.INF:
+		return
+	_move_goal = p
+	_target = null
+	if marker and Settings.get_v("interface", "move_marker"):
+		Vfx.ring(self, p + Vector3.UP * 0.05, 0.7, Color(0.5, 1.0, 0.6, 0.85))
+
+
+## Le héros regarde le curseur en permanence (visée au curseur).
+func _aims_at_cursor() -> bool:
+	return not autoplay and Settings.aim_mode() == "cursor"
+
+
+func _cursor_dir() -> Vector3:
+	var p := mouse_ground_point()
+	if p == Vector3.INF:
+		return Vector3.ZERO
+	var d := p - global_position
+	d.y = 0.0
+	return d if d.length() > 0.3 else Vector3.ZERO
+
+
+## Attaque automatique (Paramètres > Combat) : frappe seule un monstre à portée
+## quand on ne se déplace pas.
+func _try_auto_attack(moving: bool) -> bool:
+	if autoplay or moving or not Settings.auto_attack():
+		return false
+	var m := _monster_in_reach(ATTACK_RANGE, false)
+	if m == null:
+		return false
+	_start_attack(m.global_position)
+	return true
+
+
+## Compétences automatiques : lancées dès qu'elles sont prêtes et qu'un monstre
+## (ou la cible verrouillée, selon le réglage) est à leur portée.
+func _try_auto_skill() -> bool:
+	if autoplay:
+		return false
+	for i in 4:
+		if not Settings.auto_skill(i) or cooldown_left(i) > 0.0:
+			continue
+		var s := skill_in_slot(i)
+		if s.is_empty():
+			continue
+		var m := _monster_in_reach(skill_reach(s), Settings.get_v("game", "auto_target") == "locked")
+		if m:
+			use_skill(i, m.global_position)
+			return true
+	return false
+
+
+## Portée d'une compétence pour le lancement automatique (zone + élan).
+func skill_reach(s: Dictionary) -> float:
+	if s.get("kind", "") == "buff":
+		return 6.0
+	return maxf(float(s.get("radius", 0.0)), ATTACK_RANGE) + float(s.get("dash", 0.0)) * 0.8
+
+
+func _monster_in_reach(reach: float, locked_only: bool) -> Combatant:
+	if locked_only:
+		var t := current_target()
+		return t if t and _edge_dist(t) <= reach else null
+	var best: Combatant = null
+	var best_d := reach
+	for node in get_tree().get_nodes_in_group("monsters"):
+		var m := node as Combatant
+		if m and not m.is_dead:
+			var d := _edge_dist(m)
+			if d <= best_d:
+				best_d = d
+				best = m
+	return best
+
+
+func _edge_dist(m: Combatant) -> float:
+	var to := m.global_position - global_position
+	to.y = 0.0
+	return to.length() - m.radius
 
 
 func monster_under_mouse() -> Combatant:
@@ -408,6 +541,10 @@ func _update_action(input_dir: Vector3, delta: float) -> void:
 				_perfect_cancel()
 			_start_dodge(input_dir, perfect)
 			return
+	# une compétence annule l'attaque de base : l'appui n'est plus perdu pendant l'auto-attaque
+	if _state == "attack" and _try_skill_input():
+		_trail_on = false
+		return
 	# le saut annule l'attaque de base à tout moment, une compétence après son impact
 	var cancel_ok: bool = _state == "attack" or _action.get("hit_done", false)
 	if cancel_ok and _wants("jump") and can_jump():
@@ -484,6 +621,8 @@ func _hit_monster(m: Monster, dir: Vector3) -> void:
 
 ## Micro-arrêt sur impact : donne du poids aux coups.
 func _hit_pause(duration: float) -> void:
+	if not Settings.get_v("interface", "hit_stop"):
+		return
 	Engine.time_scale = 0.15
 	await get_tree().create_timer(duration, true, false, true).timeout
 	Engine.time_scale = 1.0
@@ -507,17 +646,16 @@ func cooldown_left(slot: int) -> float:
 	return maxf(0.0, float(skill_ready_at.get(int(s.id), 0.0)) - _time)
 
 
-func use_skill(slot: int) -> void:
+## Lance la compétence de l'emplacement [param slot], vers [param forced_aim] si donné,
+## sinon selon la visée choisie (Paramètres > Contrôles).
+func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 	var s := skill_in_slot(slot)
 	if s.is_empty() or cooldown_left(slot) > 0.0:
 		return
 	skill_ready_at[int(s.id)] = _time + skill_cooldown(s)
-	var aim := mouse_ground_point() if not autoplay else Vector3.INF
-	if _target and is_instance_valid(_target):
-		aim = _target.global_position
-	elif aim == Vector3.INF or aim.distance_to(global_position) > 14.0:
-		var n := nearest_monster(10.0)
-		aim = n.global_position if n else global_position + forward()
+	var aim := forced_aim if forced_aim != Vector3.INF else _skill_aim()
+	if aim == Vector3.INF:
+		aim = global_position + forward()
 	face_direction(aim - global_position, 1.0, 100.0)
 	var action := {
 		"kind": s.kind, "mult": float(s.mult) * Run.skill_damage_mult(int(s.id)),
@@ -539,6 +677,23 @@ func use_skill(slot: int) -> void:
 	action["hit_fx"] = String(fx.get("hit", "")) if String(fx.get("hit", "")) != "" else "s00341"
 	EdenFx.play(self, String(fx.get("cast", "")), global_position, rotation.y, GameData.HERO_SCALE, self)
 	_begin_action("skill", String(s.anim), 1.15 * atk_speed, action)
+
+
+func _skill_aim() -> Vector3:
+	var cursor := mouse_ground_point() if not autoplay else Vector3.INF
+	var mode := "smart" if autoplay else Settings.aim_mode()
+	if mode == "cursor":
+		return cursor
+	if mode == "nearest":
+		var near := nearest_monster(14.0)
+		return near.global_position if near else cursor
+	# intelligente : cible verrouillée, sinon curseur proche, sinon monstre le plus proche
+	if _target and is_instance_valid(_target):
+		return _target.global_position
+	if cursor == Vector3.INF or cursor.distance_to(global_position) > 14.0:
+		var n := nearest_monster(10.0)
+		return n.global_position if n else Vector3.INF
+	return cursor
 
 
 # --- déplacements spéciaux ----------------------------------------------------------
@@ -632,7 +787,7 @@ func _update_jump(input_dir: Vector3, delta: float) -> void:
 			use_skill(i)
 			return
 	# piqué : attaque en l'air si la carte « Frappe plongeante » est prise
-	if _wants_pressed("attack") and int(Run.passives.get("dive_strike", 0)) > 0 and _state_time > 0.1:
+	if _wants_pressed("attack") and Settings.attack_button_attacks() and int(Run.passives.get("dive_strike", 0)) > 0 and _state_time > 0.1:
 		_state = "dive"
 		_state_time = 0.0
 		velocity.y = -26.0
@@ -819,6 +974,7 @@ func _on_death(_killer: Combatant) -> void:
 
 func respawn(at: Vector3) -> void:
 	is_dead = false
+	_move_goal = Vector3.INF
 	_state = "idle"
 	statuses.clear()
 	global_position = at
@@ -876,6 +1032,9 @@ func _handle_obstacles(input_dir: Vector3, before: Vector3, delta: float) -> voi
 		_stuck_time += delta
 	else:
 		_stuck_time = maxf(0.0, _stuck_time - delta * 2.0)
+	if _stuck_time > 1.2 and _move_goal != Vector3.INF:
+		_move_goal = Vector3.INF  # clic de déplacement vers un obstacle : on abandonne
+		_click_moving = false
 	if _stuck_time > 0.8 and is_on_floor() and _state == "idle":
 		_start_jump()
 	if _stuck_time > 2.0:
@@ -906,6 +1065,23 @@ func mouse_ground_point() -> Vector3:
 		return Vector3.INF
 	var t := (global_position.y - from.y) / dir.y
 	return from + dir * t if t > 0.0 else Vector3.INF
+
+
+## Point du décor sous le curseur (sol en relief), sinon plan à hauteur du héros.
+func mouse_world_point() -> Vector3:
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		return Vector3.INF
+	var mp := get_viewport().get_mouse_position()
+	var from := cam.project_ray_origin(mp)
+	var q := PhysicsRayQueryParameters3D.create(from, from + cam.project_ray_normal(mp) * 200.0, GameData.PHYS_WORLD)
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	return hit.position if not hit.is_empty() else mouse_ground_point()
+
+
+## Point visé par un clic de déplacement (INF si aucun).
+func move_goal() -> Vector3:
+	return _move_goal
 
 
 func nearest_monster(max_dist: float) -> Combatant:

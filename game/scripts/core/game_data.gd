@@ -32,7 +32,6 @@ func _ready() -> void:
 	classes = _load_json("res://data/classes.json")
 	motion_keys = _load_json("res://data/motion_keys.json")
 	minimaps = _load_json("res://data/minimaps.json")
-	_setup_input()
 
 
 func class_data(id: String) -> Dictionary:
@@ -77,49 +76,3 @@ func player_max_hp(level: int) -> float:
 
 func player_atk(level: int) -> float:
 	return 45.0 * pow(1.1, level - 1)
-
-
-func _setup_input() -> void:
-	# Touches physiques : ZQSD sur AZERTY, WASD sur QWERTY.
-	_bind_keys("move_forward", [KEY_W, KEY_UP])
-	_bind_keys("move_back", [KEY_S, KEY_DOWN])
-	_bind_keys("move_left", [KEY_A, KEY_LEFT])
-	_bind_keys("move_right", [KEY_D, KEY_RIGHT])
-	_bind_keys("attack", [KEY_J])
-	_bind_mouse("attack", MOUSE_BUTTON_LEFT)
-	_bind_mouse("camera_rotate", MOUSE_BUTTON_RIGHT)
-	_bind_keys("jump", [KEY_SPACE])
-	_bind_keys("dodge", [KEY_SHIFT])
-	# compétences : 1-4, ou A E R T sur AZERTY (Q E R T sur QWERTY)
-	_bind_keys("skill_1", [KEY_1, KEY_Q])
-	_bind_keys("skill_2", [KEY_2, KEY_E])
-	_bind_keys("skill_3", [KEY_3, KEY_R])
-	_bind_keys("skill_4", [KEY_4, KEY_T])
-	_bind_keys("interact", [KEY_F])
-	_bind_keys("map", [KEY_M])
-	_bind_keys("pause", [KEY_ESCAPE])
-	_bind_keys("unstuck", [KEY_F4])
-	_bind_keys("help", [KEY_F1])
-	_bind_keys("feedback", [KEY_F9])
-	_bind_keys("debug_level", [KEY_F5])
-	_bind_keys("debug_gateway", [KEY_F6])
-	_bind_keys("debug_dungeon", [KEY_F7])
-	_bind_keys("debug_overlay", [KEY_F2])
-	_bind_keys("debug_rage", [KEY_F8])
-
-
-func _bind_keys(action: String, keys: Array) -> void:
-	if not InputMap.has_action(action):
-		InputMap.add_action(action)
-	for k in keys:
-		var ev := InputEventKey.new()
-		ev.physical_keycode = k
-		InputMap.action_add_event(action, ev)
-
-
-func _bind_mouse(action: String, button: MouseButton) -> void:
-	if not InputMap.has_action(action):
-		InputMap.add_action(action)
-	var ev := InputEventMouseButton.new()
-	ev.button_index = button
-	InputMap.action_add_event(action, ev)

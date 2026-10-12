@@ -17,6 +17,7 @@ config/features=PackedStringArray("4.7", "Forward Plus")
 
 [autoload]
 
+Settings="*res://scripts/core/settings.gd"
 GameData="*res://scripts/core/game_data.gd"
 Profile="*res://scripts/core/profile.gd"
 Run="*res://scripts/core/run.gd"

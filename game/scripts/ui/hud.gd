@@ -5,7 +5,6 @@ extends CanvasLayer
 
 const ACCENT := Color(0.98, 0.78, 0.35)
 const PANEL := Color(0.07, 0.06, 0.12, 0.82)
-const SKILL_KEYS := ["A", "E", "R", "T"]
 
 var player: Player
 var director: RunDirector
@@ -38,6 +37,7 @@ func setup(p: Player, d: RunDirector) -> void:
 	player.health_changed.connect(_on_hp)
 	player.xp_changed.connect(_on_xp)
 	player.skills_changed.connect(_refresh_skills)
+	Settings.changed.connect(_refresh_skills)
 	director.zone_changed.connect(func(z): _zone_label.text = "%s · Nv %d-%d" % [z.name, z.levels[0], z.levels[1]])
 	director.objective_changed.connect(func(t):
 		_objective_label.text = t
@@ -193,11 +193,13 @@ func _make_slot(i: int) -> Control:
 	t.set_anchors_preset(Control.PRESET_FULL_RECT)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	t.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	var key := _label(box, SKILL_KEYS[i], 12, ACCENT)
+	var key := _label(box, "", 12, ACCENT)
 	key.position = Vector2(4, 44)
 	var rank := _label(box, "", 11, Color(0.6, 0.85, 1.0))
 	rank.position = Vector2(44, 2)
-	_slots.append({"icon": icon, "shade": shade, "time": t, "rank": rank})
+	var auto := _label(box, "", 10, Color(0.55, 1.0, 0.6))
+	auto.position = Vector2(4, 2)
+	_slots.append({"icon": icon, "shade": shade, "time": t, "rank": rank, "key": key, "auto": auto})
 	return box
 
 
@@ -205,6 +207,8 @@ func _refresh_skills() -> void:
 	for i in 4:
 		var s := player.skill_in_slot(i)
 		var slot: Dictionary = _slots[i]
+		slot.key.text = Settings.action_label("skill_%d" % (i + 1), 1)
+		slot.auto.text = "AUTO" if Settings.auto_skill(i) else ""
 		if s.is_empty():
 			slot.icon.texture = null
 			slot.rank.text = ""
@@ -217,6 +221,7 @@ func _refresh_skills() -> void:
 func _process(_delta: float) -> void:
 	if player == null:
 		return
+	_fps_label.visible = Settings.get_v("interface", "show_fps")
 	_fps_label.text = "%d FPS" % Engine.get_frames_per_second()
 	# recharges
 	for i in 4:

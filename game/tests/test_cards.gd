@@ -18,6 +18,14 @@ func _key(code: Key) -> InputEventKey:
 	return e
 
 
+## Attend la fin du délai anti-rafale (temps réel, pas le temps de jeu).
+func _wait_delay(picker: CardPicker) -> void:
+	var until := picker._opened_at + CardPicker.CONFIRM_DELAY_MS + 50
+	while Time.get_ticks_msec() < until:
+		await get_tree().process_frame
+	await get_tree().process_frame
+
+
 func _ready() -> void:
 	Run.start("samurai")
 	var picker := CardPicker.new()
@@ -35,7 +43,7 @@ func _ready() -> void:
 	picker._confirm_choice()
 	check("Valider ignoré pendant le délai anti-rafale", got.is_empty())
 
-	await get_tree().create_timer(0.5, true, false, true).timeout
+	await _wait_delay(picker)
 	check("Valider actif après le délai", not picker._confirm.disabled)
 	var first_cards: Array = picker._cards
 	picker._buttons[2].pressed.emit()
@@ -43,7 +51,7 @@ func _ready() -> void:
 	check("Valider confirme la carte sélectionnée", got.size() == 1 and got[0] == first_cards[2])
 	check("choix suivant affiché, rien de sélectionné", picker.is_open() and picker._selected == -1 and picker._confirm.disabled)
 
-	await get_tree().create_timer(0.5, true, false, true).timeout
+	await _wait_delay(picker)
 	picker._unhandled_input(_key(KEY_2))
 	check("touche 2 : sélection seulement", got.size() == 1 and picker._selected == 1)
 	var expected: Dictionary = picker._cards[1]

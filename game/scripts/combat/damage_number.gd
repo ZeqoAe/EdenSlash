@@ -28,6 +28,9 @@ static func spawn_text(target: Node3D, text: String, color: Color) -> void:
 static func spawn(target: Node3D, amount: float, crit: bool, on_player: bool) -> void:
 	if not target.is_inside_tree():
 		return
+	var mode := String(Settings.get_v("interface", "damage_numbers"))
+	if mode == "off" or (mode == "dealt" and on_player):
+		return
 	var label := DamageNumber.new()
 	label.text = str(int(amount)) + ("!" if crit else "")
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED

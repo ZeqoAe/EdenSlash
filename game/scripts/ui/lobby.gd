@@ -16,6 +16,7 @@ var _panel_layer: CanvasLayer
 var _gold: Label
 var _reset_button: Button
 var _reset_armed_at := -10.0
+var _settings: SettingsMenu
 
 
 func _ready() -> void:
@@ -148,6 +149,7 @@ func _build_ui() -> void:
 	Hud._label(v, " ", 6, Color.WHITE)
 	_big_button(v, "▶  Lancer la run — Limestone Mtn.", _start_run)
 	_big_button(v, "Personnage & équipement", _open_panel)
+	_big_button(v, "Paramètres (contrôles, touches, affichage…)", func(): _settings.open())
 	_reset_button = _big_button(v, "Nouvelle partie (tout effacer)", _on_reset)
 	_big_button(v, "Quitter", func(): get_tree().quit())
 	_gold = Hud._label(v, "", 15, ACCENT)
@@ -176,6 +178,8 @@ func _build_ui() -> void:
 		_show_hero())
 	box.add_child(close)
 	_panel_layer.visible = false
+	_settings = SettingsMenu.new()
+	add_child(_settings)
 
 
 func _open_panel() -> void:

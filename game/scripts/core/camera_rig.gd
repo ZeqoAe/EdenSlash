@@ -12,6 +12,7 @@ var _shake := 0.0
 
 
 func _ready() -> void:
+	distance = float(Settings.get_v("camera", "distance"))
 	camera = Camera3D.new()
 	camera.fov = 45.0
 	camera.far = 400.0
@@ -33,15 +34,18 @@ func _unhandled_input(event: InputEvent) -> void:
 			distance = maxf(7.0, distance - 1.0)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			distance = minf(28.0, distance + 1.0)
-	# clic droit maintenu : rotation (gauche/droite) et inclinaison (haut/bas)
-	elif event is InputEventMouseMotion and (event.button_mask & MOUSE_BUTTON_MASK_RIGHT):
-		yaw_deg = wrapf(yaw_deg - event.relative.x * ROTATE_SPEED, -180.0, 180.0)
-		pitch_deg = clampf(pitch_deg + event.relative.y * ROTATE_SPEED * 0.6, 25.0, 75.0)
+	# clic droit maintenu (réglable ; clic molette si le clic droit sert à se déplacer) :
+	# rotation (gauche/droite) et inclinaison (haut/bas)
+	elif event is InputEventMouseMotion and (event.button_mask & Settings.camera_rotate_mask()):
+		var speed := ROTATE_SPEED * float(Settings.get_v("camera", "rotate_speed"))
+		var inv := -1.0 if Settings.get_v("camera", "invert_y") else 1.0
+		yaw_deg = wrapf(yaw_deg - event.relative.x * speed, -180.0, 180.0)
+		pitch_deg = clampf(pitch_deg + event.relative.y * speed * 0.6 * inv, 25.0, 75.0)
 
 
 
 func shake(amount: float) -> void:
-	_shake = maxf(_shake, amount)
+	_shake = maxf(_shake, amount * float(Settings.get_v("camera", "shake")))
 
 
 func _process(delta: float) -> void:
