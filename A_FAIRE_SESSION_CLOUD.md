@@ -1,5 +1,22 @@
 # Chantier suivant — consignes pour la session cloud
 
+> **État au 12/10/2026 (versions 0.1.22 à 0.1.26, session cloud, branche
+> `claude/great-mayer-uin0gh`)** : les 4 parties sont faites.
+> 1. Menus : Jouer, Héros, Coffres, Collection, Paramètres, Quitter ; écran Héros unique
+>    (Équipement, Talents, Apparence, Grimoire, Classe, aide « ? ») ; Collection sans onglets ;
+>    run lancée en un clic ; pause Run / Héros / Aide. **Reste : validation du joueur sur
+>    captures.**
+> 2. Mode dev : écran F10 (Paramètres > Caméra & interface > Mode dev) : Objets, Ressources,
+>    Progression, Run.
+> 3. Trophées : trophée de départ, buffs sous condition (`scripts/core/trophies.gd`, familles
+>    par `tools/rework_trophies.py`), 25 objets parasites retirés du butin.
+> 4. Zones / monnaies : réponses du joueur appliquées (voir le tableau dans `DESIGN.md`,
+>    « Monnaies, coffres et zones ») : marchands ambulants à la place du village, coffres
+>    payants (or ou clé), 10 sanctuaires, clés sur les élites, or seul pour +1 → +10, cristaux
+>    (démontage, gardés) pour réforger et polir, or et clés perdus en fin de run, menu Coffres
+>    (coffres de récompense hors run).
+> Pour la session locale : rien à extraire du client pour ce chantier.
+
 Rédigé par la session locale à la version 0.1.20 (12/10/2026). Le joueur a validé ces
 objectifs ; la session locale ne code plus rien sur ce chantier. Lire d'abord `CLAUDE.md`
 (branche, numéro de version, pull/push), puis ce fichier en entier avant de commencer.

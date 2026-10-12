@@ -4,8 +4,8 @@ Deux sessions travaillent sur ce dépôt : une **locale** (sur le PC, avec le cl
 extraction des assets) et une **cloud** (sans le client). Le joueur ne connaît pas git.
 
 ## Chantier en cours
-Session cloud : lire `A_FAIRE_SESSION_CLOUD.md` (refonte des menus, mode dev, trophées,
-zones / monnaies / coffres) avant de commencer.
+Refonte des menus, mode dev, trophées, zones / monnaies / coffres : faite (0.1.22 à 0.1.26,
+état en tête de `A_FAIRE_SESSION_CLOUD.md`) ; reste la validation des menus par le joueur.
 
 ## Branche
 Tout se passe sur la branche `claude/optimistic-gauss-p2g2pq`. Ne pas travailler sur `master`.
