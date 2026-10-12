@@ -15,6 +15,11 @@ static func stat_choices() -> Array:
 	return out
 
 
+## Stat exprimée en pourcentage (objets et cartes).
+static func is_pct(k: String) -> bool:
+	return k in Items.PERCENT_STATS or (Cards.STAT_FR.has(k) and String(Cards.STAT_FR[k][1]) == "%")
+
+
 ## Liste des familles de buff sous condition (trophées) : "" = aucun.
 static func kind_option(current: String) -> OptionButton:
 	var o := OptionButton.new()
@@ -99,9 +104,9 @@ class StatEditor extends VBoxContainer:
 	var _rows: VBoxContainer
 	var _choices: Array
 
-	func _init(is_ratio := false) -> void:
+	func _init(is_ratio := false, extra: Array = []) -> void:
 		ratio = is_ratio
-		_choices = DevEditor.stat_choices()
+		_choices = DevEditor.stat_choices() + extra
 		add_theme_constant_override("separation", 4)
 		_rows = VBoxContainer.new()
 		_rows.add_theme_constant_override("separation", 4)
@@ -127,7 +132,7 @@ class StatEditor extends VBoxContainer:
 			var sp: SpinBox = r.get_child(1)
 			var k := String(_choices[o.selected][0])
 			var v := float(sp.value)
-			if not ratio and k in Items.PERCENT_STATS:
+			if not ratio and DevEditor.is_pct(k):
 				v /= 100.0
 			if absf(v) > 0.00001:
 				out[k] = float(out.get(k, 0.0)) + v
@@ -146,14 +151,14 @@ class StatEditor extends VBoxContainer:
 			if String(_choices[i][0]) == key:
 				o.select(i)
 		h.add_child(o)
-		var pct := not ratio and key in Items.PERCENT_STATS
+		var pct := not ratio and DevEditor.is_pct(key)
 		var sp := DevEditor.spin(-100000.0, 100000.0, 0.01 if ratio else (0.5 if pct else 1.0), value * (100.0 if pct else 1.0), 130.0)
 		sp.suffix = "×" if ratio else ("%" if pct else "")
 		h.add_child(sp)
 		o.item_selected.connect(func(i):
 			# passage d'une stat fixe à une stat en % (ou l'inverse) : l'unité change
 			if not ratio:
-				sp.suffix = "%" if String(_choices[i][0]) in Items.PERCENT_STATS else ""
+				sp.suffix = "%" if DevEditor.is_pct(String(_choices[i][0])) else ""
 				sp.step = 0.5 if sp.suffix == "%" else 1.0
 			changed.emit())
 		sp.value_changed.connect(func(_v): changed.emit())

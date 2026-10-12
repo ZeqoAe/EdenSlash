@@ -78,6 +78,7 @@ var _fog_timer := 0.0
 var _roster: Array = []  # monstres normaux de la zone, par niveau
 var _elites: Array = []
 var _seed := 0
+var orbs: XpOrbs  # orbes d'expérience au sol
 
 
 func start(p: Player) -> void:
@@ -88,12 +89,29 @@ func start(p: Player) -> void:
 	_seed = Run.seed if Run.seed != 0 else randi()
 	map = world.new_run_map(_seed)
 	_place_player(map.start)
+	orbs = XpOrbs.new()
+	add_child(orbs)
+	if not Run.instant_card.is_connected(_on_instant_card):
+		Run.instant_card.connect(_on_instant_card)
 	_fog = Image.create(FOG_RES, FOG_RES, false, Image.FORMAT_LA8)
 	_fog.fill(Color(0, 0, 0, 1))
 	_fog_tex = ImageTexture.create_from_image(_fog)
 	zone_changed.emit({"name": zone.name, "levels": [1 + int(zone.get("level_bonus", 0)), max_level()]})
 	message.emit("%s\nCoffres, sanctuaires, marchands : renforce ta run, puis trouve le donjon" % zone.name, 3.5)
 	_refresh_chest_labels()
+
+
+## Carte à effet immédiat. Rappel : orbes et objets de toute la carte reviennent au héros.
+func _on_instant_card(id: String) -> void:
+	if id != "recall":
+		return
+	if orbs:
+		orbs.recall()
+	var n := 0
+	for d in get_tree().get_nodes_in_group("loot"):
+		(d as Node3D).global_position = player.global_position + Vector3(randf_range(-0.4, 0.4), 0.2, randf_range(-0.4, 0.4))
+		n += 1
+	message.emit("Rappel : %d orbes et %d objets reviennent !" % [orbs.count() if orbs else 0, n], 2.5)
 
 
 func _place_player(pos: Vector3) -> void:
@@ -418,7 +436,11 @@ func _ring_point(min_d: float, max_d: float) -> Vector3:
 func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 	kills += 1
 	var m := who as Monster
-	player.gain_xp(m.xp_reward)
+	# l'expérience tombe en orbe sous le monstre (à ramasser) ; le boss la donne d'un coup
+	if m.is_boss or orbs == null:
+		player.gain_xp(m.xp_reward)
+	else:
+		orbs.spawn(m.global_position, m.xp_reward)
 	Run.kills += 1
 	Profile.record_add("kills", 1)
 	if m.is_elite or m.is_boss:
@@ -517,6 +539,8 @@ func _clear_monsters() -> void:
 func _enter_arena() -> void:
 	print("[run] entrée dans l'arène à %.0f s, niveau %d" % [time, player.level])
 	state = "boss"
+	if orbs:
+		orbs.collect_all_now()  # orbes restées dehors : gagnées en entrant
 	_clear_monsters()
 	map = world.new_arena_map(_seed)
 	_place_player(map.start)

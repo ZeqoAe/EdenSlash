@@ -60,17 +60,17 @@ func _test_cards() -> void:
 			ids[str(c.id)] = c
 	check("cartes de build proposées", ids.has("static_blade") and ids.has("wide_arc"))
 	check("évolution absente sans prérequis", not ids.has("storm_lord"))
-	Run.apply_card(Run._describe_card({"type": "passive", "id": "static_blade"}))
+	Run.apply_card(_common_card("static_blade"))
 	var found := false
 	for i in 300:
 		for c in Run.roll_cards(3):
 			found = found or str(c.id) == "storm_lord"
 	check("évolution proposée avec son prérequis", found)
-	check("carte de rareté rare", Run._describe_card({"type": "passive", "id": "static_blade"}).rarity == "rare")
+	check("carte de base rare, rareté tirée à l'offre", Run.passive_def("static_blade").rarity == "rare" and Run._describe_card({"type": "passive", "id": "static_blade"}).has("tier"))
 	check("1 relance par run", Run.rerolls_left() == 1)
-	Run.apply_card(Run._describe_card({"type": "passive", "id": "fortune"}))
+	Run.apply_card(_common_card("fortune"))
 	check("Bonne étoile : +1 relance", Run.rerolls_left() == 2)
-	Run.apply_card(Run._describe_card({"type": "passive", "id": "static_blade"}))
+	Run.apply_card(_common_card("static_blade"))
 	var p: Dictionary = Run.passive_procs().filter(func(x): return x.id == "static_blade_0")[0]
 	check("proc cumulé (2 cartes) : plus de chances et de rebonds", is_equal_approx(float(p.chance), 0.5) and int(p.chain) == 4)
 	Run.passives.clear()
@@ -114,7 +114,7 @@ func _test_world() -> void:
 	# zone et portée
 	var sk: Dictionary = Run.class_data().skills[1]  # tourbillon (cercle)
 	var r0 := player.skill_radius(sk)
-	Run.apply_card(Run._describe_card({"type": "passive", "id": "wide_arc"}))
+	Run.apply_card(_common_card("wide_arc"))
 	check("Lame large : rayon des zones +15 %", is_equal_approx(player.skill_radius(sk), r0 * 1.15))
 
 	# procs : foudre en chaîne
@@ -191,6 +191,7 @@ func _test_world() -> void:
 		and float(Trophies.proc_for("agi", Items.LEGENDARY).chance) > float(Trophies.proc_for("agi", 0).chance))
 	Run.passives.clear()
 	player.recalc_stats()
+	await _test_card_tiers()
 	world.queue_free()
 
 
@@ -212,3 +213,62 @@ func _dummy(dist: float, side := 0.0, hp := 1e7) -> Monster:
 	m.set_physics_process(false)
 	m.set_process(false)
 	return m
+
+
+## Cartes à rareté, 10 niveaux, totaux cumulés, sorts améliorés, orbes d'expérience.
+func _test_card_tiers() -> void:
+	Run.passives.clear()
+	Run.passive_power.clear()
+	var c := _common_card("sharpened")
+	c["tier"] = "legendary"
+	c["mult"] = Cards.tier_mult("legendary")
+	Run.apply_card(c)
+	check("carte légendaire : ×3 (+24 % de dégâts)", is_equal_approx(float(Run.passive_stats().get("dmg_pct", 0.0)), 0.24))
+	var next := Run._describe_card({"type": "passive", "id": "sharpened"})
+	check("carte suivante : total avant → après (« +24 % → »)", String(next.desc).contains("+24 % →") and String(next.subtitle).contains("niv. 1 → 2"))
+	for i in 9:
+		Run.apply_card(_common_card("sharpened"))
+	check("passif au niveau 10 : plus proposé", Run.roll_cards(3).all(func(x): return str(x.id) != "sharpened") and int(Run.passives.sharpened) == 10)
+	# sort de soin amélioré : plus de soins, pas seulement moins de recharge
+	var heal_skill := {"id": 9001, "kind": "heal", "heal": 0.3, "cooldown": 10}
+	var up := Cards.skill_upgrade(heal_skill, "epic")
+	check("amélioration d'un sort de soin : +33 % de soins et -11 % de recharge (épique)", is_equal_approx(float(up.heal), 0.33) and is_equal_approx(float(up.cd), 0.11) and not up.has("dmg"))
+	Run.skills.append({"id": 9001, "rank": 1})
+	up["rider"] = {"stat": "int", "value": 0.2, "duration": 6.0}
+	Run.apply_card({"type": "upgrade", "id": 9001, "up": up})
+	check("sort amélioré : soins x1,33, bonus d'Intelligence au lancement", is_equal_approx(Run.skill_heal_mult(9001), 1.33) and Run.skill_riders(9001).size() == 1 and int(Run.skill_entry(9001).rank) == 2)
+	Run.skills.pop_back()
+	# effets sur la durée plus longs (Venin tenace)
+	Run.apply_card(_common_card("lingering"))
+	player.recalc_stats()
+	var mob := Monster.new()
+	mob.configure(GameData.monster(GameData.zone("limestone").monsters[0]))
+	add_child(mob)
+	mob.add_status("poison", 4.0, player)
+	check("Venin tenace : poison 4 s -> 4,6 s", is_equal_approx(float(mob.statuses.poison) - mob.clock, 4.6))
+	mob.queue_free()
+	# orbes d'expérience : lâchées au sol, ramassées dans la zone de collecte, Rappel
+	var orbs := XpOrbs.new()
+	add_child(orbs)
+	var xp0 := player.xp
+	var lvl0 := player.level
+	orbs.spawn(player.global_position + Vector3(30, 0, 0), 5.0)
+	orbs.spawn(player.global_position + Vector3(1, 0, 0), 5.0)
+	player.autoplay = false
+	await get_tree().create_timer(0.6).timeout
+	check("orbe proche ramassée, orbe lointaine restée au sol", orbs.count() == 1 and (player.xp > xp0 or player.level > lvl0))
+	orbs.recall()
+	await get_tree().create_timer(1.5).timeout
+	check("Rappel : l'orbe lointaine revient", orbs.count() == 0)
+	orbs.queue_free()
+	Run.passives.clear()
+	Run.passive_power.clear()
+	player.recalc_stats()
+
+
+## Carte de passif tirée en rareté commune (puissance +1), pour des tests déterministes.
+func _common_card(id: String) -> Dictionary:
+	var c := Run._describe_card({"type": "passive", "id": id})
+	c["tier"] = "common"
+	c["mult"] = 1.0
+	return c

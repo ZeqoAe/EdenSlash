@@ -17,7 +17,8 @@ const EDEN_ICONS := {
 }
 const BUFFS := ["solar", "shrine", "marduk", "frenzy", "keen", "haste", "barrier", "fury", "flow", "regen", "invisible", "evasion",
 	"titan", "survival", "might", "swift", "grace", "vitality", "hunter_stance", "angel", "thorns", "resolve",
-	"t_agi", "t_mind", "t_str", "t_arcane", "t_all", "t_luck", "t_crit", "t_speed", "t_power", "t_guard", "t_evade"]
+	"t_agi", "t_mind", "t_str", "t_arcane", "t_all", "t_luck", "t_crit", "t_speed", "t_power", "t_guard", "t_evade",
+	"spell_str", "spell_agi", "spell_int", "spell_wis"]
 const DESC := {
 	"bleed": "Perd 15 % de l'attaque de la source en PV chaque seconde.",
 	"burn": "Perd 25 % de l'attaque de la source en PV chaque seconde.",
@@ -55,6 +56,10 @@ const DESC := {
 	"fear": "Terreur : fuit sans attaquer.",
 	"thorns": "Renvoie 30 % des dégâts reçus à l'attaquant.",
 	"resolve": "Insensible aux contrôles, dégâts subis réduits de 15 %.",
+	"spell_str": "Sort amélioré : Force accrue.",
+	"spell_agi": "Sort amélioré : Agilité accrue.",
+	"spell_int": "Sort amélioré : Intelligence accrue.",
+	"spell_wis": "Sort amélioré : Sagesse accrue.",
 	"t_agi": "Trophée : Agilité accrue.",
 	"t_mind": "Trophée : Agilité et Intelligence accrues.",
 	"t_str": "Trophée : Force accrue.",
@@ -72,9 +77,14 @@ const DESC := {
 static var _skill_icons := {}
 
 
+const SPELL_ICONS := {"spell_str": "fury", "spell_agi": "haste", "spell_int": "keen", "spell_wis": "regen"}
+
+
 static func icon(status: String) -> Texture2D:
 	if Trophies.STATUSES.has(status):  # buffs des trophées : icône du buff le plus proche
 		status = String(Trophies.STATUSES[status].icon)
+	if SPELL_ICONS.has(status):  # bonus d'attribut des sorts améliorés
+		status = String(SPELL_ICONS[status])
 	var own := STATUS_DIR % status
 	if FileAccess.file_exists(own):
 		return UiTheme.texture(own)

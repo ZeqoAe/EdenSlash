@@ -162,7 +162,8 @@ func _do_reroll() -> void:
 
 
 func _make_card(card: Dictionary, i: int) -> Button:
-	var col: Color = Boons.RARITY[card.rarity].color if card.has("rarity") and card.rarity != "common" else TYPE_COLORS.get(card.type, ACCENT)
+	# couleur : rareté tirée de la carte (Cards), sinon type de carte
+	var col: Color = Cards.tier(String(card.tier)).color if card.has("tier") and card.tier != "common" 		else (Boons.RARITY[card.rarity].color if card.has("rarity") and card.rarity != "common" else TYPE_COLORS.get(card.type, ACCENT))
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(320, 380)
 	b.focus_mode = Control.FOCUS_NONE
@@ -216,10 +217,15 @@ func _make_card(card: Dictionary, i: int) -> Button:
 	t.add_theme_font_size_override("font_size", 22)
 	t.add_theme_font_override("font", UiTheme.bold_font())
 	v.add_child(t)
-	var d := Label.new()
+	# description et totaux avant → après (texte enrichi)
+	var d := RichTextLabel.new()
+	d.bbcode_enabled = true
 	d.text = card.desc
-	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	d.add_theme_font_size_override("font_size", 15)
+	d.scroll_active = false
+	d.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	d.add_theme_font_size_override("normal_font_size", 14)
+	d.add_theme_font_size_override("bold_font_size", 15)
+	d.add_theme_font_override("bold_font", UiTheme.bold_font())
 	d.modulate = Color(0.92, 0.92, 0.95)
 	d.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(d)

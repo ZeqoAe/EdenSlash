@@ -13,6 +13,7 @@ var _icon: Sprite3D
 
 
 func _ready() -> void:
+	add_to_group("loot")
 	_player = get_tree().get_first_node_in_group("player") as Player
 	var color: Color = Items.color_of(item)
 	_icon = Sprite3D.new()
@@ -43,7 +44,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_t += delta
 	_icon.position.y = 1.0 + sin(_t * 3.0) * 0.15
-	if _player and not _player.is_dead and _player.global_position.distance_to(global_position) < PICKUP_RADIUS:
+	if _player and not _player.is_dead and _player.global_position.distance_to(global_position) < PICKUP_RADIUS * _player.pickup_mult:
 		if Run.pick_up(item):
 			Sfx.play_at(self, global_position, "atks001.wav", -12.0, 0.3)
 			if on_picked.is_valid():

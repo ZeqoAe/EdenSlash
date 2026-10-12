@@ -149,11 +149,12 @@ func _test_eden_levels() -> void:
 	# niveau affiché = niveau d'Eden ; chronologie des zones (pas d'objet d'une zone plus avancée)
 	Profile.selected_zone = "limestone"
 	var lv0: Array = []
-	for i in 60:
+	for i in 120:
 		lv0.append(int(Items.generate(5, 0.5).level))
 	var b0: Array = GameData.eden_bands[0]
-	lv0.sort()
-	check("Limestone : objets d'Eden de niveau %d à %d (médiane %d)" % [int(b0[0]), int(b0[1]), lv0[30]], int(lv0[30]) <= int(b0[1]))
+	# certaines pièces (capes, armes de certaines classes) n'existent pas sous le niveau 20 dans Eden
+	var inside := lv0.filter(func(l): return l <= int(b0[1])).size()
+	check("Limestone : objets d'Eden de niveau %d à %d (%d / 120 dans la tranche)" % [int(b0[0]), int(b0[1]), inside], inside >= 48)
 	Profile.selected_zone = "blackflame"
 	var top := GameData.zone_run_levels(GameData.zone_index("blackflame")).y
 	var lv7: Array = []
@@ -384,7 +385,7 @@ func _test_lobby() -> void:
 	Dev.toggle()
 	await _frames()
 	var dev: DevScreen = Dev.screen
-	check("mode dev : écran ouvert (Objets, Éditer, Sets, Ressources, Progression ; pas de Run au lobby)", dev.is_open() and dev._pages.size() == 5)
+	check("mode dev : écran ouvert (Objets, Éditer, Sets, Cartes, Ressources, Progression ; pas de Run au lobby)", dev.is_open() and dev._pages.size() == 6)
 	var items: DevPages.ItemsPage = dev.page(0)
 	var tpl: Dictionary = GameData.eden_items.filter(func(e): return e.slot == "ring")[0]
 	items._selected = tpl
@@ -396,10 +397,20 @@ func _test_lobby() -> void:
 	check("mode dev : ×5 au coffre, rareté et puissance choisies", got.size() == 5 and got.all(func(it): return int(it.rarity) == Items.LEGENDARY and int(it.plevel) == 30))
 	for it in got:
 		Profile.vault.erase(it)
-	for i in 5:
+	for i in 6:
 		dev.show_page(i)
 		await _frames()
-	check("mode dev : pages Ressources et Progression", dev.page(3).get_child_count() > 0 and dev.page(4)._msg.text.contains("Classes débloquées"))
+	check("mode dev : pages Ressources et Progression", dev.page(4).get_child_count() > 0 and dev.page(5)._msg.text.contains("Classes débloquées"))
+	# éditeur de cartes : modifier Lame large (+20 % au lieu de +15 %), puis rétablir
+	var cp: DevCards.CardsPage = dev.page(3)
+	cp._open("wide_arc")
+	cp._stats.set_values({"area": 0.2})
+	cp._save()
+	check("éditeur de cartes : Lame large modifiée (+20 % de rayon par carte commune)", is_equal_approx(float(Boons.get_def("wide_arc").stat.area), 0.2) and DevEdits.data.cards.has("wide_arc"))
+	cp._reset()
+	check("éditeur de cartes : carte rétablie", is_equal_approx(float(Boons.get_def("wide_arc").stat.area), 0.15) and not DevEdits.data.cards.has("wide_arc"))
+	cp._open("")
+	check("éditeur de cartes : règles des raretés", cp._rule_spins.has("tier_legendary") and cp._rule_spins.has("heal"))
 	await _test_dev_editor(dev)
 	Dev.toggle()
 	check("mode dev : F10 referme", not dev.is_open())
@@ -497,10 +508,10 @@ func _test_run_screens() -> void:
 	await _frames()
 	# mode dev en run : page Run
 	Settings.set_v("interface", "dev_mode", true)
-	Dev.open(5)
+	Dev.open(6)
 	await _frames()
-	var rp: DevPages.RunActionsPage = Dev.screen.page(5)
-	check("mode dev en run : page Run, jeu en pause", Dev.screen._pages.size() == 6 and rp.visible and get_tree().paused)
+	var rp: DevPages.RunActionsPage = Dev.screen.page(6)
+	check("mode dev en run : page Run, jeu en pause", Dev.screen._pages.size() == 7 and rp.visible and get_tree().paused)
 	var lv := player.level
 	rp._box.get_child(1).get_child(1).pressed.emit()
 	check("mode dev : niveau +5", player.level == lv + 5)

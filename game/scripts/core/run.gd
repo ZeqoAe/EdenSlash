@@ -3,6 +3,7 @@ extends Node
 ## cartes au passage de niveau, butin et bilan.
 
 signal changed
+signal instant_card(id: String)  # carte à effet immédiat (Rappel)
 
 const MAX_SKILLS := 4
 const MAX_RANK := 5
@@ -10,7 +11,8 @@ const MAX_RANK := 5
 var active := false
 var class_id := "samurai"
 var skills: Array = []  # [{id, rank}]
-var passives: Dictionary = {}  # id -> nombre de cartes prises
+var passives: Dictionary = {}  # id -> nombre de cartes prises (niveau du passif)
+var passive_power: Dictionary = {}  # id -> puissance : somme des multiplicateurs de rareté des cartes prises
 var kills := 0
 var elites := 0
 var loot: Array = []
@@ -34,6 +36,7 @@ func start(cid: String) -> void:
 	class_id = cid
 	skills.clear()
 	passives.clear()
+	passive_power.clear()
 	loot.clear()
 	kills = 0
 	elites = 0
@@ -122,12 +125,26 @@ func rerolls_left() -> int:
 	return maxi(0, 1 + int(passive_stats().get("rerolls", 0)) - rerolls_used)
 
 
+## Puissance d'un passif : somme des multiplicateurs de rareté (Cards) des cartes prises
+## (une carte commune = 1) ; à défaut (tests, mode dev), le nombre de cartes.
+func power(pid: String) -> float:
+	return float(passive_power.get(pid, passives.get(pid, 0)))
+
+
 ## Effets déclenchés apportés par les cartes de la run.
 func passive_procs() -> Array:
 	var out: Array = []
 	for pid in passives:
-		out.append_array(Boons.procs_of(passive_def(pid), int(passives[pid])))
+		out.append_array(Boons.procs_of(passive_def(pid), power(pid)))
 	return out
+
+
+## Compétence prise : {id, rank, dmg, cd, heal, dur, riders}.
+func skill_entry(id: int) -> Dictionary:
+	for s in skills:
+		if int(s.id) == id:
+			return s
+	return {}
 
 
 func skill_rank(id: int) -> int:
@@ -137,14 +154,32 @@ func skill_rank(id: int) -> int:
 	return 0
 
 
-## Bonus de dégâts et de recharge apportés par le rang d'une compétence.
+## Bonus de dégâts et de recharge apportés par les cartes d'amélioration de la compétence
+## (à défaut : +20 % / -8 % par rang, anciennes runs et tests).
 func skill_damage_mult(id: int) -> float:
 	var t := skill_talent(id)
-	return (1.0 + 0.2 * (skill_rank(id) - 1)) * (1.0 + float(t.dmg) + float(t.power))
+	var s := skill_entry(id)
+	return (1.0 + float(s.get("dmg", 0.2 * (skill_rank(id) - 1)))) * (1.0 + float(t.dmg) + float(t.power))
 
 
 func skill_cooldown_mult(id: int) -> float:
-	return (1.0 - 0.08 * (skill_rank(id) - 1)) * (1.0 - minf(float(skill_talent(id).cd), 0.6))
+	var s := skill_entry(id)
+	return (1.0 - minf(float(s.get("cd", 0.08 * (skill_rank(id) - 1))), 0.6)) * (1.0 - minf(float(skill_talent(id).cd), 0.6))
+
+
+## Soins de la compétence (cartes d'amélioration des sorts de soin).
+func skill_heal_mult(id: int) -> float:
+	return 1.0 + float(skill_entry(id).get("heal", 0.0))
+
+
+## Durée des effets de la compétence (buffs, états infligés).
+func skill_duration_mult(id: int) -> float:
+	return 1.0 + float(skill_entry(id).get("dur", 0.0))
+
+
+## Bonus d'attribut au lancement : [{stat, value, duration}].
+func skill_riders(id: int) -> Array:
+	return skill_entry(id).get("riders", [])
 
 
 ## Statistiques cumulées des passifs de la run.
@@ -153,7 +188,7 @@ func passive_stats() -> Dictionary:
 	for pid in passives:
 		var p := passive_def(pid)
 		for s in p.get("stat", {}):
-			total[s] = total.get(s, 0.0) + float(p.stat[s]) * int(passives[pid])
+			total[s] = total.get(s, 0.0) + float(p.stat[s]) * power(pid)
 	# talents de la classe jouée (arbre d'Eden)
 	var tree: Dictionary = GameData.talents.get(class_id, {}).get("talents", {})
 	for id in Profile.talents.get(class_id, {}):
@@ -206,17 +241,17 @@ func roll_cards(n := 3, skills_only := false) -> Array:
 				pool.append({"type": "skill", "id": int(s.id), "weight": 3.0 if skills.size() < 2 else 2.0})
 	if not skills_only:
 		for s in skills:
-			if int(s.rank) < MAX_RANK:
+			if int(s.rank) < int(Cards.rules().max_rank):
 				pool.append({"type": "upgrade", "id": int(s.id), "weight": 1.5})
-		for p in class_data().get("passives", []) + Boons.LIST:
+		for p in class_data().get("passives", []) + Boons.all():
 			if p.has("eden") and not p.get("shared", false):
 				continue  # certificat : se choisit avant la run (expertise) ; les certificats partagés sont des cartes
-			if int(passives.get(p.id, 0)) >= int(p.max):
+			if int(passives.get(p.id, 0)) >= mini(int(p.get("max", 1)), 99 if p.get("instant", false) else Cards.MAX_LEVEL):
 				continue
 			if not p.get("requires", []).all(func(r): return passives.has(r)):
 				continue
 			var rar: Dictionary = Boons.RARITY[String(p.get("rarity", "common"))]
-			pool.append({"type": "passive", "id": p.id, "weight": 1.2 * float(rar.weight)})
+			pool.append({"type": "passive", "id": p.id, "weight": 1.2 * float(rar.weight) * (0.5 if p.get("instant", false) else 1.0)})
 	var picks: Array = []
 	# tant que les 4 emplacements ne sont pas remplis, au moins une nouvelle compétence
 	var skill_cards := pool.filter(func(c): return c.type == "skill")
@@ -247,16 +282,33 @@ func _describe_card(c: Dictionary) -> Dictionary:
 		"upgrade":
 			var s := skill_def(int(c.id))
 			var rank := skill_rank(int(c.id)) + 1
-			return {"type": "upgrade", "id": c.id, "title": "%s — rang %d" % [s.name, rank],
-				"subtitle": "Amélioration", "desc": "+20 % de dégâts, -8 % de recharge.", "icon": s.icon}
+			var tier := Cards.roll_tier()
+			var magic := String(class_data().get("dmg_type", "phys")) == "magic"
+			var up := Cards.skill_upgrade(s, tier, (["int", "wis"] if magic else ["str", "agi"]).pick_random())
+			return {"type": "upgrade", "id": c.id, "tier": tier, "up": up, "title": "%s — rang %d" % [s.name, rank],
+				"subtitle": "Amélioration %s" % String(Cards.tier(tier).name).to_lower(),
+				"desc": "\n".join(Cards.skill_upgrade_lines(skill_entry(int(c.id)), up)), "icon": s.icon}
 		_:
 			var p := passive_def(String(c.id))
 			var stacks := int(passives.get(p.id, 0))
 			var rarity := String(p.get("rarity", "common"))
-			var kind := "Évolution" if rarity == "legendary" else ("Passif" if p.get("procs", []).is_empty() else "Effet")
-			return {"type": "passive", "id": p.id, "title": p.name, "rarity": rarity,
-				"subtitle": "%s %s" % [kind, String(Boons.RARITY[rarity].name).to_lower()] + (" (%d/%d)" % [stacks + 1, int(p.max)] if int(p.max) > 1 else ""),
-				"desc": p.desc, "icon": p.get("icon", Boons.ICONS.get(p.id, ""))}
+			var icon := String(p.get("icon", Boons.ICONS.get(p.id, "")))
+			if p.get("instant", false):
+				return {"type": "passive", "id": p.id, "title": p.name, "tier": "rare", "mult": 1.0,
+					"subtitle": "Effet immédiat", "desc": p.desc, "icon": icon}
+			# rareté tirée (les évolutions sont toujours légendaires, sans multiplicateur)
+			var evo: bool = rarity == "legendary" and not (p.get("requires", []) as Array).is_empty()
+			var tier := "legendary" if evo else Cards.roll_tier()
+			var m := 1.0 if evo else Cards.tier_mult(tier)
+			var before := power(p.id)
+			var lines := Cards.stat_lines(p, before, before + m)
+			if before > 0.0:  # 1re carte : la description donne déjà les valeurs de l'effet
+				lines.append_array(Cards.proc_lines(p, before, before + m))
+			var kind := "Évolution" if evo else ("Passif" if p.get("procs", []).is_empty() else "Effet")
+			var mx := mini(int(p.get("max", 1)), Cards.MAX_LEVEL)
+			return {"type": "passive", "id": p.id, "title": p.name, "tier": tier, "mult": m,
+				"subtitle": "%s %s" % [kind, String(Cards.tier(tier).name).to_lower()] + (" · niv. %d → %d" % [stacks, stacks + 1] if mx > 1 else ""),
+				"desc": p.desc + ("\n[color=#9fd0ff]%s[/color]" % "\n".join(lines) if not lines.is_empty() else ""), "icon": icon}
 
 
 func apply_card(card: Dictionary) -> void:
@@ -267,9 +319,30 @@ func apply_card(card: Dictionary) -> void:
 		"upgrade":
 			for s in skills:
 				if int(s.id) == int(card.id):
-					s.rank = mini(int(s.rank) + 1, MAX_RANK)
+					s.rank = mini(int(s.rank) + 1, int(Cards.rules().max_rank))
+					var up: Dictionary = card.get("up", {"dmg": 0.2, "cd": 0.08})
+					for k in ["dmg", "cd", "heal", "dur"]:
+						if up.has(k):
+							s[k] = float(s.get(k, 0.2 * (int(s.rank) - 2) if k == "dmg" else (0.08 * (int(s.rank) - 2) if k == "cd" else 0.0))) + float(up[k])
+					if up.has("rider"):
+						var riders: Array = s.get("riders", [])
+						var merged := false
+						for r in riders:
+							if String(r.stat) == String(up.rider.stat):
+								r.value = float(r.value) + float(up.rider.value)
+								r.duration = maxf(float(r.duration), float(up.rider.duration))
+								merged = true
+						if not merged:
+							riders.append(up.rider.duplicate())
+						s["riders"] = riders
 		"passive":
+			if passive_def(String(card.id)).get("instant", false):
+				instant_card.emit(String(card.id))
+				changed.emit()
+				return
+			var before := power(String(card.id))
 			passives[card.id] = int(passives.get(card.id, 0)) + 1
+			passive_power[card.id] = before + float(card.get("mult", 1.0))
 		"trophy":
 			pick_up(card.item)  # carte de choix de trophée : le trophée va dans le sac
 	changed.emit()

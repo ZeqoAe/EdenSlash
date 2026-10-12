@@ -62,6 +62,9 @@ var finisher_area := 1.0
 var finisher_hits := 1
 var combo_window := COMBO_WINDOW
 var dot_bonus := 1.0
+var dot_duration := 1.0  # durée des effets sur la durée infligés (cartes)
+var pickup_mult := 1.0  # zone de collecte des orbes d'expérience et des objets (carte Aimant)
+var xp_mult := 1.0  # expérience gagnée par orbe (carte Érudit)
 var execute := 0.0
 var procs: Array = []  # effets déclenchés actifs
 var timed_stats := {}  # statut -> stats ajoutées tant qu'il est actif (buffs des trophées)
@@ -205,6 +208,9 @@ func recalc_stats() -> void:
 	finisher_hits = 1 + int(ps.get("finisher_hits", 0))
 	combo_window = COMBO_WINDOW + ps.get("combo_window", 0.0)
 	dot_bonus = 1.0 + ps.get("dot_pct", 0.0) + eq.get("dot_pct", 0.0)
+	dot_duration = 1.0 + ps.get("dot_dur", 0.0)
+	pickup_mult = 1.0 + ps.get("pickup", 0.0)
+	xp_mult = 1.0 + ps.get("xp_pct", 0.0)
 	execute = minf(ps.get("execute", 0.0), 0.3)
 	procs = Run.passive_procs() + Profile.equipment_procs()
 	hp = clampf(max_hp * ratio, 1.0, max_hp)
@@ -245,6 +251,10 @@ func dot_power() -> float:
 
 func dot_mult() -> float:
 	return dot_bonus
+
+
+func dot_duration_mult() -> float:
+	return dot_duration
 
 
 func _on_profile_changed() -> void:
@@ -1138,7 +1148,7 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 		"skill_id": int(s.id), "aerial": not is_on_floor(),
 		"range": float(s.get("range", 0.0)) * reach_mult, "pierce": int(s.get("pierce", 0)),
 		"projectile": String(s.get("projectile", "magic")), "volley": int(s.get("volley", 1)),
-		"spread": float(s.get("spread", 0.0)), "heal": float(s.get("heal", 0.0)),
+		"spread": float(s.get("spread", 0.0)), "heal": float(s.get("heal", 0.0)) * Run.skill_heal_mult(int(s.id)),
 		"crit_bonus": float(s.get("crit_bonus", 0.0)), "cleanse": s.get("cleanse", false),
 		"dmg_type": String(s.get("dmg_type", cls.get("dmg_type", "phys"))),
 	}
@@ -1156,10 +1166,15 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 	if _state == "dodge":
 		_end_dodge()
 	var tal := Run.skill_talent(int(s.id))
-	var dur_k := 1.0 + float(tal.power)
+	var dur_k := (1.0 + float(tal.power)) * Run.skill_duration_mult(int(s.id))
 	for b in s.get("buff", {}):
 		add_status(b, float(s.buff[b]) * dur_k + float(tal.duration), self)
-	if float(tal.duration) > 0.0 or float(tal.power) > 0.0:
+	# bonus d'attribut au lancement (cartes d'amélioration rares et mieux)
+	for r in Run.skill_riders(int(s.id)):
+		var st := String(Cards.RIDER_STATUS.get(String(r.stat), "spell_str"))
+		timed_stats[st] = {String(r.stat) + "_pct": float(r.value)}
+		add_status(st, float(r.duration), self)
+	if float(tal.duration) > 0.0 or dur_k != 1.0:
 		var ap: Dictionary = (s.get("applies", {}) as Dictionary).duplicate()
 		for st in ap:
 			ap[st] = float(ap[st]) * dur_k + float(tal.duration)

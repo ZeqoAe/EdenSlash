@@ -103,6 +103,8 @@ func _ready() -> void:
 					ed._select(ed._entries[0])
 				2:  # sets : un set d'Eden
 					Dev.screen.page(2)._open(String(GameData.eden_sets.keys()[0]))
+				3:  # cartes : Lame statique (stats et effets déclenchés)
+					Dev.screen.page(3)._open("static_blade")
 		"chests":
 			# test (profil de test) : un coffre de chaque type, la proposition d'un coffre de set ouverte
 			if Profile.reward_chests.is_empty():

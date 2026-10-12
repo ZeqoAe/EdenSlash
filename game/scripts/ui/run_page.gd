@@ -80,7 +80,9 @@ func refresh() -> void:
 		var p := Run.passive_def(pid)
 		var rar := String(p.get("rarity", "common"))
 		var col: Color = Boons.RARITY.get(rar, Boons.RARITY.common).color
-		_row(_cards, String(p.get("icon", Boons.ICONS.get(pid, ""))), "%s ×%d" % [p.get("name", pid), int(Run.passives[pid])], String(p.get("desc", "")), col)
+		_row(_cards, String(p.get("icon", Boons.ICONS.get(pid, ""))), "%s · niv. %d" % [p.get("name", pid), int(Run.passives[pid])],
+			String(p.get("desc", "")) + ("
+Total : " + Cards.total_text(p, Run.power(pid)) if not (p.get("stat", {}) as Dictionary).is_empty() else ""), col)
 	var lines: PackedStringArray = [
 		"Classe : [b]%s[/b]   ·   niveau [b]%d[/b]" % [Run.class_data().get("name_fr", ""), player.level if player else Run.max_level],
 		"Durée : [b]%s[/b]" % Run.duration_text(),

@@ -9,6 +9,8 @@ extends Node3D
 ##   --quit-at=13          quitte après N secondes
 ##   --god                 héros invincible (mesures de performance)
 ##   --idle                héros immobile qui ne frappe pas (avec --god : foule maximale)
+##   --card-shot           ouvre un choix de cartes de démonstration (avec --shots)
+##   --orbs-shot           sème des orbes d'expérience autour du héros (avec --idle --shots)
 ##   --start-level=8       niveau de départ
 ##   --dungeon             entre directement dans le donjon
 ##   --teleport=x,z        place le héros
@@ -210,6 +212,31 @@ func _parse_args() -> void:
 			_shot_prefix = arg.trim_prefix("--shot-prefix=") + "_"
 		elif arg.begins_with("--goto="):
 			_goto = arg.trim_prefix("--goto=")
+		elif arg == "--orbs-shot":
+			# test : orbes d'expérience de toutes tailles autour du héros immobile
+			get_tree().create_timer(1.0).timeout.connect(func():
+				for i in 40:
+					var a := randf() * TAU
+					var r := randf_range(4.0, 12.0)
+					var p := player.global_position + Vector3(cos(a) * r, 0, sin(a) * r)
+					director.orbs.spawn(p, [2.0, 8.0, 60.0].pick_random()))
+		elif arg == "--card-shot":
+			# test : choix de cartes avec un passif déjà pris (totaux avant → après), une
+			# amélioration de sort et une nouvelle carte
+			get_tree().create_timer(1.5).timeout.connect(func():
+				Run.passives["wide_arc"] = 1
+				Run.passive_power["wide_arc"] = 1.0
+				Run.passives["static_blade"] = 2
+				Run.passive_power["static_blade"] = 2.5
+				if Run.skills.is_empty():
+					var heal: Array = Run.class_data().get("skills", []).filter(func(x): return String(x.get("kind", "")) == "heal" or float(x.get("heal", 0.0)) > 0.0)
+					var first: Dictionary = heal[0] if not heal.is_empty() else Run.class_data().get("skills", [{"id": 0}])[0]
+					Run.skills.append({"id": int(first.id), "rank": 1})
+				var picks: Array = [Run._describe_card({"type": "passive", "id": "wide_arc"})]
+				if not Run.skills.is_empty():
+					picks.append(Run._describe_card({"type": "upgrade", "id": int(Run.skills[0].id)}))
+				picks.append(Run._describe_card({"type": "passive", "id": "static_blade"}))
+				cards.offer("Niveau 5 ! Choisis une carte", picks))
 		elif arg == "--god":
 			# test : héros invincible (mesures de performance sur une longue run)
 			get_tree().create_timer(0.5).timeout.connect(func(): player.dev_invincible = true)

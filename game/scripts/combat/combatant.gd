@@ -66,6 +66,11 @@ const STATUS_INFO := {
 	"fear": {"name": "Terreur", "color": Color(0.7, 0.4, 0.8)},
 	"thorns": {"name": "Épines", "color": Color(0.6, 0.9, 0.4)},
 	"resolve": {"name": "Résolution", "color": Color(1.0, 0.9, 0.6)},
+	# bonus d'attribut au lancement des sorts (cartes d'amélioration)
+	"spell_str": {"name": "Force du sort", "color": Color(1.0, 0.65, 0.45)},
+	"spell_agi": {"name": "Agilité du sort", "color": Color(0.6, 1.0, 0.8)},
+	"spell_int": {"name": "Intelligence du sort", "color": Color(0.6, 0.75, 1.0)},
+	"spell_wis": {"name": "Sagesse du sort", "color": Color(0.85, 0.7, 1.0)},
 	# buffs des trophées (Trophies.STATUSES)
 	"t_agi": {"name": "Vivacité", "color": Color(0.6, 1.0, 0.9)},
 	"t_mind": {"name": "Esprit vif", "color": Color(0.7, 0.9, 1.0)},
@@ -91,6 +96,8 @@ var _dots := {}  # effet -> {dps, source, tick}
 func add_status(status: String, duration: float, source: Combatant = null) -> void:
 	if duration <= 0.0:
 		return
+	if DOT_FACTOR.has(status) and source:
+		duration *= source.dot_duration_mult()
 	statuses[status] = maxf(float(statuses.get(status, 0.0)), clock + duration)
 	if DOT_FACTOR.has(status) and source:
 		var dps := source.dot_power() * float(DOT_FACTOR[status]) * source.dot_mult()
@@ -106,6 +113,11 @@ func dot_power() -> float:
 
 ## Multiplicateur des dégâts sur la durée infligés (cartes du héros).
 func dot_mult() -> float:
+	return 1.0
+
+
+## Multiplicateur de la durée des effets sur la durée infligés (cartes du héros).
+func dot_duration_mult() -> float:
 	return 1.0
 
 

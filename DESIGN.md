@@ -374,3 +374,15 @@ Un proc = déclencheur + chance + recharge interne + effet (`scripts/combat/proc
 2. Équipement à jets, matériaux, marchand (vendre / désassembler / améliorer), boutique.
 3. Arène du boss, attaques annoncées, invocations.
 4. Performance pour des vagues de centaines de monstres.
+
+## Cartes de build (0.1.30)
+
+- Chaque carte proposée a une **rareté tirée** (commune ×1, rare ×1,5, épique ×2,2,
+  légendaire ×3, poids 60 / 27 / 10 / 3) qui multiplie ce qu'elle apporte ; un passif se
+  prend jusqu'à **10 fois** ; la carte affiche le total avant → après.
+- **Améliorations de sort** : dégâts (sorts d'attaque), soins (sorts de soin) ou durée des
+  effets (buffs), moins de recharge, et à partir de rare un bonus d'attribut au lancement.
+- **Orbes d'expérience** : l'expérience tombe sous le monstre ; zone de collecte (carte
+  Aimant), Rappel (tout revient), Érudit (+XP), Venin tenace (effets sur la durée).
+- Tout se règle dans le mode dev, page **Cartes** (Cards, Boons, DevCards ;
+  data/dev_edits.json -> cards, card_rules).
