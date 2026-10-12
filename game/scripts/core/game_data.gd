@@ -31,6 +31,8 @@ var eden_by_slot: Dictionary = {}
 var eden_by_id: Dictionary = {}
 var eden_by_code: Dictionary = {}
 var cosmetics: Array = []
+var eden_sets: Dictionary = {}  # "e<id>" -> {name, pieces, bonus}
+var eden_bands: Array = []  # niveaux d'Eden de chaque zone (dans l'ordre de zones.json)
 
 
 func _ready() -> void:
@@ -48,8 +50,11 @@ func _ready() -> void:
 	classes = _load_json("res://data/classes.json")
 	motion_keys = _load_json("res://data/motion_keys.json")
 	minimaps = _load_json("res://data/minimaps.json")
-	if FileAccess.file_exists("res://data/eden_items.json"):
-		var ei: Dictionary = _load_json("res://data/eden_items.json")
+	var cat_path := "res://data/eden_catalog.json" if FileAccess.file_exists("res://data/eden_catalog.json") else "res://data/eden_items.json"
+	if FileAccess.file_exists(cat_path):
+		var ei: Dictionary = _load_json(cat_path)
+		eden_sets = ei.get("sets", {})
+		eden_bands = ei.get("bands", [])
 		eden_items = ei.get("items", [])
 		cosmetics = ei.get("cosmetics", [])
 		for e: Dictionary in eden_items:

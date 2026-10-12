@@ -279,7 +279,7 @@ func _refresh_stats(in_run: bool) -> void:
 	_power.text = "Puissance d'équipement : %d" % power
 	var sl: PackedStringArray = []
 	for b in Items.active_set_bonuses(Profile.equipped):
-		sl.append("[color=#%s]%s · %d pièces[/color] : %s" % [Items.SET_COLOR.to_html(false), Items.SETS[b.set].name, int(b.pieces), " ; ".join(Items.bonus_lines(b))])
+		sl.append("[color=#%s]%s · %d pièces[/color] : %s" % [Items.SET_COLOR.to_html(false), Items.set_def(b.set).get("name", ""), int(b.pieces), " ; ".join(Items.bonus_lines(b))])
 	_sets.text = "\n".join(sl) if not sl.is_empty() else "[color=#c8c8d4]Aucun bonus actif : porte 2, 4 ou 6 pièces d'un même set (cadre vert).[/color]"
 
 
@@ -409,7 +409,7 @@ class HeroPreview extends SubViewportContainer:
 		_vp.add_child(disk)
 
 	func show_hero(class_id: String, weapon_code: String) -> void:
-		var key := class_id + "|" + weapon_code + "|" + Profile.outfit_of(class_id)
+		var key := class_id + "|" + weapon_code + "|" + Profile.outfit_of(class_id) + "|" + "|".join(Profile.worn_parts(class_id))
 		if key == _shown:
 			return
 		_shown = key
@@ -418,7 +418,7 @@ class HeroPreview extends SubViewportContainer:
 		var cls := GameData.class_data(class_id)
 		if cls.is_empty() or not ResourceLoader.exists(String(cls.get("model", ""))):
 			return
-		var model := EdenModel.instantiate_hero(cls, Profile.outfit_of(class_id))
+		var model := EdenModel.instantiate_hero(cls, Profile.outfit_of(class_id), Profile.worn_parts(class_id))
 		model.scale = Vector3.ONE * GameData.HERO_SCALE
 		_pivot.add_child(model)
 		EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, weapon_code))

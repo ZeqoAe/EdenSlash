@@ -390,6 +390,11 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		count = 1
 	if m.enraged:
 		luck += 0.2
+	if m.is_boss:
+		# objet d'archive garanti : mythique, ou légendaire (30 %, 50 % si le boss est enragé)
+		var top := Items.LEGENDARY if randf() < (0.5 if m.enraged else 0.3) else Items.MYTHIC
+		_drop_item(m.global_position, m.level, luck, top, top)
+		count -= 1
 	for i in count:
 		_drop_item(m.global_position, m.level, luck)
 	# consommables : gemmes, parchemins, ciseaux, pierres (adaptés au niveau)
@@ -400,9 +405,9 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		_on_boss_killed()
 
 
-func _drop_item(pos: Vector3, level: int, luck: float) -> void:
+func _drop_item(pos: Vector3, level: int, luck: float, min_r := 0, max_r := 3) -> void:
 	var drop := LootDrop.new()
-	drop.item = Items.generate(loot_level(level), luck, "", Run.class_id)
+	drop.item = Items.generate(loot_level(level), luck, "", Run.class_id, min_r, "", max_r)
 	drop.on_picked = func(item): message.emit("Butin : %s" % item.name, 1.5)
 	add_child(drop)
 	var p := pos + Vector3(randf_range(-1.5, 1.5), 0, randf_range(-1.5, 1.5))

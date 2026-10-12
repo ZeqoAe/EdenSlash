@@ -45,7 +45,8 @@ var cert_board: Array = ["", "", "", "", "", "", ""]  # plateau des certificats 
 var archive := {}  # entrée de l'archive ("katana:4", "set:storm"...) -> copie de l'objet archivé
 var skins := {}  # type d'arme -> code du modèle choisi (apparence débloquée par l'archive)
 var outfits := {}  # classe -> tenue portée (skin cosmétique, .glb de assets/player/outfits)
-var owned_outfits: Array = []  # cosmétiques d'Eden débloqués (identifiants de data/eden_items.json -> cosmetics)
+var owned_outfits: Array = []
+var worn := {}  # classe -> {"head": .glb, "back": .glb} : accessoires cosmétiques portés  # cosmétiques d'Eden débloqués (identifiants de data/eden_items.json -> cosmetics)
 ## Mode dev (archive) : activé, or et matériaux donnés au départ de chaque run.
 var dev := {"enabled": false, "gold": 0, "fragment": 0, "essence": 0, "crystal": 0}
 var unlocked_zones := 1  # zones jouables (dans l'ordre de data/zones.json)
@@ -109,9 +110,21 @@ func load_profile() -> void:
 			cert_board[CertBoard.OPEN_ORDER[i]] = String(certificates[i])
 	_sync_certificates()
 	archive = d.get("archive", {})
+	# ancienne archive (type × rareté) -> une entrée par objet d'Eden mythique ou légendaire
+	for k in archive.keys():
+		if String(k).begins_with("e"):
+			continue
+		var old: Dictionary = archive[k]
+		archive.erase(k)
+		if old is Dictionary:
+			_migrate(old)
+			for nk in Archive.keys_for(old):
+				if not archive.has(nk):
+					archive[nk] = old
 	skins = d.get("skins", {})
 	outfits = d.get("outfits", {})
 	owned_outfits = d.get("owned_outfits", [])
+	worn = d.get("worn", {})
 	dev = {"enabled": false, "gold": 0, "fragment": 0, "essence": 0, "crystal": 0}
 	dev.merge(d.get("dev", {}), true)
 	selected_zone = String(d.get("selected_zone", "limestone"))
@@ -138,6 +151,10 @@ func load_profile() -> void:
 func _migrate(item: Dictionary) -> Dictionary:
 	if not item.has("uid"):
 		item["uid"] = "%d_%d" % [Time.get_ticks_usec(), randi() % 100000]
+	if not item.has("rv") and item.has("rarity"):
+		# anciennes raretés (commun, magique, rare or, épique, légendaire orange) -> raretés d'Eden
+		item["rarity"] = [0, 2, 3, 3, 4][clampi(int(item.rarity), 0, 4)]
+		item["rv"] = 2
 	if item.has("quality"):
 		return item
 	item["quality"] = 1.0
@@ -161,7 +178,7 @@ func save_profile() -> void:
 		"unlocked_zones": unlocked_zones, "selected_zone": selected_zone,
 		"expertise": expertise, "talents": talents, "certificates": certificates, "stash": stash,
 		"unlocked_classes": unlocked_classes, "records": records, "cert_board": cert_board,
-		"archive": archive, "skins": skins, "outfits": outfits, "owned_outfits": owned_outfits, "dev": dev, "saved_at": Time.get_datetime_string_from_system(false, true),
+		"archive": archive, "skins": skins, "outfits": outfits, "owned_outfits": owned_outfits, "worn": worn, "dev": dev, "saved_at": Time.get_datetime_string_from_system(false, true),
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(d))
@@ -480,6 +497,7 @@ func _clear() -> void:
 	skins = {}
 	outfits = {}
 	owned_outfits = []
+	worn = {}
 	stash = {}
 	bag = {}
 
@@ -505,6 +523,7 @@ func reset_all() -> void:
 	skins = {}
 	outfits = {}
 	owned_outfits = []
+	worn = {}
 	stash = {}
 	_lobby_view()
 	_ensure_starter()
@@ -877,6 +896,14 @@ func equipment_procs() -> Array:
 	var out: Array = []
 	for b in Items.active_set_bonuses(equipped):
 		out.append_array(b.procs)
+	# passifs des armes mythiques et légendaires d'Eden
+	for slot in equipped:
+		var i := 0
+		for p: Dictionary in equipped[slot].get("passive", {}).get("procs", []):
+			var q := p.duplicate(true)
+			q["id"] = "passive_%s_%d" % [slot, i]
+			out.append(q)
+			i += 1
 	return out
 
 
@@ -950,3 +977,18 @@ func outfit_unlocked(id: String) -> bool:
 func unlock_outfit(id: String) -> void:
 	if not id in owned_outfits:
 		owned_outfits.append(id)
+
+
+## Accessoires cosmétiques portés par la classe (chapeau, dos/ailes) : chemins .glb.
+func worn_parts(cls: String) -> Array:
+	var w: Dictionary = worn.get(cls, {})
+	return [w.get("head", ""), w.get("back", "")].filter(func(p): return String(p) != "" and ResourceLoader.exists(String(p)))
+
+
+func set_worn(cls: String, cat: String, path: String) -> void:
+	if not worn.has(cls):
+		worn[cls] = {}
+	if path == "":
+		worn[cls].erase(cat)
+	else:
+		worn[cls][cat] = path

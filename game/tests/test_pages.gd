@@ -86,57 +86,79 @@ func _test_items() -> void:
 		var it := Items.generate(10, 1.0)
 		rar[int(it.rarity)] = true
 		trophies += 1 if it.slot == "trophy" else 0
-	check("butin chanceux : des légendaires (orange)", rar.has(4) and Items.RARITIES[4].name == "Légendaire")
+	check("butin courant : jusqu'à épique, jamais mythique ni légendaire", rar.has(3) and not rar.has(4) and not rar.has(5))
+	check("6 raretés d'Eden (mythique orange, légendaire or)", Items.RARITIES.size() == 6 and Items.RARITIES[4].name == "Mythique" and Items.RARITIES[5].name == "Légendaire")
 	check("trophées sur le butin rare des élites et boss", trophies > 0)
 	check("pas de trophée sur le butin courant", range(200).all(func(_i): return Items.generate(5, 0.0).slot != "trophy"))
+	var boss := Items.generate(10, 0.5, "", "samurai", Items.MYTHIC, "", Items.LEGENDARY)
+	check("butin de boss : mythique ou légendaire", int(boss.rarity) >= Items.MYTHIC)
+	var myth := Items.generate(10, 0.0, "chest", "samurai", Items.MYTHIC, "", Items.MYTHIC)
+	var leg := Items.generate(10, 0.0, "chest", "samurai", Items.LEGENDARY, "", Items.LEGENDARY)
+	var com := Items.generate(10, -2.0, "chest")
+	check("qualité : mythique 100 %%, légendaire %d %%, commun %d %%" % [roundi(float(leg.quality) * 100), roundi(float(com.quality) * 100)],
+		is_equal_approx(float(myth.quality), 1.0) and float(leg.quality) >= 1.01 and float(leg.quality) <= 1.2 and float(com.quality) <= 0.9)
+	check("objet d'Eden : nom, stats connues", myth.has("eden") and not (myth.base as Dictionary).is_empty() and not Items.stats(myth).is_empty())
 	var ring := Items.generate(5, 0.5, "ring")
-	check("bague : icône d'Eden et stats", String(ring.icon) != "" and ring.has("eden") and Items.stats(ring).has("lck"))
+	check("bague : icône d'Eden et stats", String(ring.icon) != "" and ring.has("eden") and not Items.stats(ring).is_empty())
 	Profile.inventory.append(ring)
 	Profile.equip(ring)
-	check("bague équipée (nouvel emplacement)", _uid("ring") == ring.uid and Profile.equipment_stats().has("lck"))
+	check("bague équipée (nouvel emplacement)", _uid("ring") == ring.uid and not Profile.equipment_stats().is_empty())
+	# passif d'arme légendaire
+	var tpl: Dictionary = GameData.eden_items.filter(func(e): return e.has("passive") and not (e.passive.procs as Array).is_empty())[0]
+	var w := Items.from_template(tpl, 10)
+	check("arme %s : passif « %s »" % [w.name, w.passive.name], w.has("passive") and Items.describe(w).contains("Passif"))
+	# set d'Eden : 2 pièces mythiques portées -> bonus
+	var sid: String = GameData.eden_sets.keys().filter(func(k): return (GameData.eden_sets[k].pieces as Array).size() >= 2 and Items.set_tiers(k).has(2))[0]
+	var pieces: Array = GameData.eden_sets[sid].pieces
+	for pid in pieces.slice(0, 2):
+		var e: Dictionary = GameData.eden_by_id.get(int(pid), {})
+		if not e.is_empty():
+			var p := Items.from_template(e, 10, Items.MYTHIC)
+			Profile.inventory.append(p)
+			Profile.equip(p)
+	check("set d'Eden %s : bonus 2 pièces actif" % Items.set_def(sid).name, Items.active_set_bonuses(Profile.equipped).any(func(b): return b.set == sid))
 	# carte d'objet au survol
 	var slot := ItemWidgets.ItemSlot.new()
 	slot.set_item(ring)
 	var card: Control = slot._make_custom_tooltip(slot.tooltip_text)
 	add_child(card)
 	var rtl: RichTextLabel = card.get_child(0)
-	check("carte au survol : nom, stats, qualité", rtl.text.contains(String(ring.name)) and rtl.text.contains("Qualité") and rtl.text.contains("Chance"))
+	check("carte au survol : nom, stats, qualité", rtl.text.contains(String(ring.name)) and rtl.text.contains("Qualité"))
 	card.queue_free()
 	slot.free()
 
 
 func _test_archive() -> void:
 	var common := Items.generate(5, -1.0, "head")
-	var rare := Items.generate(5, 0.0, "weapon", "samurai", 2, "katana")
-	rare.rarity = 2
-	Items.make_set_piece(rare, "storm")
-	var legend := Items.generate(5, 0.0, "chest", "samurai", 4)
-	legend.erase("set")  # pas de pièce de set : 1 seule entrée
-	for it in [common, rare, legend]:
+	var wtpl: Dictionary = GameData.eden_items.filter(func(e): return e.slot == "weapon" and e.get("wtype", "") == "katana" and int(e.rarity) == Items.MYTHIC and e.has("model"))[0]
+	var myth := Items.from_template(wtpl, 5)
+	var ltpl: Dictionary = GameData.eden_items.filter(func(e): return e.slot == "chest" and int(e.rarity) == Items.LEGENDARY)[0]
+	var legend := Items.from_template(ltpl, 5)
+	for it in [common, myth, legend]:
 		Profile.inventory.append(it)
-	Profile.equip(rare)
+	Profile.equip(myth)
 	Profile.save_profile()
 	check("archive : objet commun refusé", Archive.refusal(common) != "")
-	check("archive : katana rare accepté", Archive.refusal(rare) == "")
+	check("archive : katana mythique accepté", Archive.refusal(myth) == "")
 	var str0 := float(Archive.bonus().get("str", 0.0))
-	var filled := Profile.archive_item(rare)
-	check("archivé : entrées katana rare + set Tempête", "katana:2" in filled and "set:storm" in filled)
-	check("archivé : quitte le coffre et les préréglages", not Profile.vault.any(func(x): return x.uid == rare.uid) and Profile.item_users(rare.uid).is_empty())
+	var filled := Profile.archive_item(myth)
+	check("archivé : entrée de l'objet d'Eden", filled == ["e%d" % int(wtpl.id)])
+	check("archivé : quitte le coffre et les préréglages", not Profile.vault.any(func(x): return x.uid == myth.uid) and Profile.item_users(myth.uid).is_empty())
 	check("archivé : une arme reste équipée", Profile.equipped.has("weapon"))
-	check("bonus permanent : +1 Force, +1 % dégâts", float(Archive.bonus().get("str", 0.0)) == str0 + 1.0 and float(Archive.bonus().get("dmg_pct", 0.0)) >= 0.01)
-	var again := rare.duplicate(true)
-	check("même entrée : déjà archivé", Archive.refusal(again) != "")
+	check("bonus permanent : +1 Force (mythique)", float(Archive.bonus().get("str", 0.0)) == str0 + 1.0)
+	check("même entrée : déjà archivé", Archive.refusal(myth.duplicate(true)) != "")
 	Profile.archive_item(legend)
-	check("légendaire (torse) : +4 Force", float(Archive.bonus().get("str", 0.0)) == str0 + 5.0)
-	check("collection %d / %d" % [Archive.count(), Archive.total()], Archive.count() == 3 and Archive.total() == (GameData.weapon_types.size() + 9) * 3 + Items.SETS.size())
-	# apparences
-	check("skin : 3e katana débloqué par le katana rare", Archive.skin_unlocked("katana", 2) and not Archive.skin_unlocked("katana", 3))
-	var code := String(Archive.skins("katana")[2].code)
+	check("légendaire (torse) : +2 Force", float(Archive.bonus().get("str", 0.0)) == str0 + 3.0)
+	check("collection %d / %d, score %d" % [Archive.count(), Archive.total(), Archive.score()], Archive.count() == 2 and Archive.total() > 1000 and Archive.score() == 3)
+	# apparences : l'arme archivée ajoute son modèle
+	var skins := Archive.skins("katana")
+	check("skin : l'arme archivée ajoute son apparence", skins.any(func(sk): return String(sk.code) == String(wtpl.code)))
+	var code := String(wtpl.code)
 	Profile.set_skin("katana", code)
-	var wt := Items.weapon_type_of(Profile.equipped.weapon)
-	check("skin appliqué à l'arme portée", wt != "katana" or Profile.weapon_code() == code)
 	Profile.load_profile()
-	check("archive et apparences relues du disque", Archive.count() == 3 and String(Profile.skins.get("katana", "")) == code)
+	check("archive et apparences relues du disque", Archive.count() == 2 and String(Profile.skins.get("katana", "")) == code)
+	var back := Archive.withdraw("e%d" % int(ltpl.id))
+	check("retrait de l'archive : l'objet revient au coffre", not back.is_empty() and Archive.count() == 1 and Profile.vault.any(func(x): return x.uid == back.uid))
 	# certificats : 7 au plus
 	for cid in GameData.classes:
 		Profile.expertise[cid] = 999999
@@ -262,7 +284,7 @@ func _test_lobby() -> void:
 	lobby._prep.close_ui()
 	lobby._archive.open(0)
 	await _frames()
-	check("archive : catalogue affiché", lobby._archive.is_open() and lobby._archive.page(0)._catalog.get_child_count() > 0)
+	check("archive : catalogue affiché", lobby._archive.is_open() and lobby._archive.page(0)._grid.get_child_count() > 0)
 	lobby._archive.show_page(1)
 	await _frames()
 	lobby._archive.close_ui()

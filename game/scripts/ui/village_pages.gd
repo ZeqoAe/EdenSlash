@@ -450,3 +450,93 @@ static func bag_text(prefix: String, empty_text: String) -> String:
 	for k in keys:
 		parts.append("[img=20x20]%s[/img] %s ×%d" % [Craft.icon(k), Craft.label(k), Profile.bag_count(k)])
 	return "\n".join(parts)
+
+
+# --- forgeron : fabrication des objets mythiques -------------------------------------------
+## Plans d'Eden : les objets mythiques (orange, dont les pièces de set) de la zone se
+## fabriquent ici (les légendaires ne tombent que des boss).
+class CraftPage extends HBoxContainer:
+	var ui: VillageUI
+	var _filter: OptionButton
+	var _keys: Array = []
+	var _grid: GridContainer
+	var _detail: RichTextLabel
+	var _btn: Button
+	var _selected: Dictionary = {}
+	var _demo: Dictionary = {}
+
+	func _ready() -> void:
+		add_theme_constant_override("separation", 16)
+		var left := ItemWidgets.panel(self, 0, true)
+		ItemWidgets.section(left, "Fabrication d'objets mythiques")
+		Hud._label(left, "Plans d'Eden de cette zone : objets mythiques (orange), pièces de set comprises. Toujours 100 % de qualité.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_filter = OptionButton.new()
+		_keys = [""]
+		_filter.add_item("Tous les plans")
+		for wt in GameData.weapon_types:
+			_keys.append(String(wt))
+			_filter.add_item(String(GameData.weapon_types[wt].name))
+		for s in Items.ARMOR + Items.ACCESSORIES:
+			_keys.append(String(s))
+			_filter.add_item(String(Items.SLOT_NAMES[s]))
+		_filter.item_selected.connect(func(_i): refresh())
+		left.add_child(_filter)
+		var sc := ScrollContainer.new()
+		sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		left.add_child(sc)
+		_grid = GridContainer.new()
+		_grid.columns = 9
+		_grid.add_theme_constant_override("h_separation", 6)
+		_grid.add_theme_constant_override("v_separation", 6)
+		sc.add_child(_grid)
+		var right := ItemWidgets.panel(self, 520)
+		_detail = ItemWidgets.rich(right, 14)
+		_btn = ItemWidgets.action_button(right, "Fabriquer", _craft, 0, true)
+
+	static func cost(level: int) -> Dictionary:
+		return {"gold": 300 + 60 * level, "fragment": 30 + 2 * level, "essence": 6 + level / 6, "crystal": 2 + level / 15}
+
+	func _plans() -> Array:
+		var band := Items.zone_band()
+		var key := String(_keys[maxi(_filter.selected, 0)])
+		return GameData.eden_items.filter(func(e):
+			return int(e.rarity) == Items.MYTHIC and int(e.band) in [band, band - 1] \
+				and (key == "" or String(e.get("wtype", e.slot)) == key))
+
+	func refresh() -> void:
+		for c in _grid.get_children():
+			c.queue_free()
+		for e in _plans():
+			var s := ItemWidgets.ItemSlot.new(58.0)
+			s.set_item(ArchivePages.demo_item(e))
+			var ee: Dictionary = e
+			s.pressed.connect(func():
+				_selected = ee
+				_demo = ArchivePages.demo_item(ee)
+				_show())
+			_grid.add_child(s)
+		_show()
+
+	func _level() -> int:
+		return ui.director.loot_level(ui.player.level) if ui and ui.director and ui.player else 1
+
+	func _show() -> void:
+		if _selected.is_empty():
+			_detail.text = "[b]Fabrication[/b]\n\nChoisis un plan. Coût au niveau %d : %s" % [_level(), ItemWidgets.cost_text(cost(_level()))]
+			_btn.disabled = true
+			return
+		var c := cost(_level())
+		_detail.text = Items.describe(_demo) + "\n\n[b]Coût :[/b] " + ItemWidgets.cost_text(c)
+		_btn.disabled = not Profile.can_afford(c)
+
+	func _craft() -> void:
+		if _selected.is_empty():
+			return
+		var c := cost(_level())
+		if not Profile.pay(c):
+			return
+		var item := Items.from_template(_selected, _level(), Items.MYTHIC)
+		Profile.add_item(item)
+		_detail.text = "[color=#7fe08a]Fabriqué : %s[/color]\n\n" % Items.display_name(item) + Items.describe(item)
+		_btn.disabled = not Profile.can_afford(c)

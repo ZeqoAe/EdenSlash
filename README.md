@@ -74,10 +74,18 @@ triangle de 3 couleurs (*Prisme*) ou losange de 4 de même couleur donnent des b
 - **Carte d'objet au survol** partout (coffre, sac, poupée, village, archive) : stats et bonus de
   qualité, affixes, amélioration, gemmes, enchantement, set et ses effets, comparaison avec la pièce
   portée.
-- **Archive** (lobby) : catalogue de tout l'équipement du jeu ; on y archive (définitivement) les
-  objets **rares (or), épiques (violet) et légendaires (orange)**, bijoux et trophées compris :
-  +1 / +2 / +4 points d'attribut par entrée, +1 % de dégâts par set, paliers de collection ; les armes
-  archivées débloquent leurs **apparences** (skins).
+- **Raretés d'Eden** : commun (blanc), spécial (vert), rare (bleu), épique (violet), **mythique
+  (orange)** et **légendaire (or)**. Du commun à l'épique, tout tombe partout, avec un jet aléatoire
+  des stats et de la qualité ; mythique (qualité toujours 100 %) et légendaire (101 à 120 %) ne
+  tombent que des **boss** (un garanti par boss) ou se **fabriquent** chez le forgeron (mythiques).
+  Les armes mythiques et légendaires portent leur **passif d'Eden**, les pièces de set leurs vrais
+  **effets de set** (2, 3, 4… pièces).
+- **Archive des trésors** (lobby, comme dans Eden) : les 2 182 objets mythiques et légendaires
+  d'Eden, rangés par arme, type d'armure et accessoire, avec taux de complétion, recherche et
+  « archivés uniquement » ; archiver un objet du coffre donne +1 (mythique) ou +2 (légendaire)
+  points d'attribut et des paliers de collection ; on peut le retirer plus tard. Les armes
+  archivées débloquent leurs **apparences** (skins). Onglets **Encyclopédie** (tous les objets,
+  mode dev), **Tenues** (tenues, chapeaux et masques, ailes et dos) et **Apparences d'armes**.
 - **Infos** (lobby et pause) : ce que rapporte un point de chaque attribut, formules de chaque
   statistique, calcul des dégâts et de la défense (héros et monstres), et en run tes valeurs.
 - **Menu pause** : pages Run (compétences, cartes, sac, bilan, actions), Équipement et Infos.
@@ -136,8 +144,8 @@ Les captures arrivent dans `%APPDATA%/Godot/app_userdata/Eden Slash/shots/`.
 | `blender_preview.py` | rendu de contrôle d'un `.glb` avec Blender en ligne de commande |
 | `build_classes.py` | les 60 classes : 6 réglées à la main + `auto_classes.py` / `auto_spells.py` (conversion automatique des sorts d'Eden, noms français dans `eden_fr.py`), corps animé commun, tenues et cheveux, armes, effets |
 | `build_talents.py` | arbres de talents et certificats de toutes les classes |
-| `build_items.py` | catalogue des 3 880 équipements d'Eden (`data/eden_items.json`, icônes, modèles des armes épiques et légendaires) |
-| `build_cosmetics.py` | costumes d'Eden → tenues (skins) de `assets/player/outfits/cos_*.glb` |
+| `build_items.py` | catalogue des 3 881 équipements d'Eden (`data/eden_catalog.json` : raretés, stats relatives, 204 sets et leurs effets, 595 passifs d'armes, niveaux d'Eden répartis sur les zones, icônes, 683 modèles d'armes) |
+| `build_cosmetics.py` | cosmétiques d'Eden (table `[TableLoli]` de `4pequip.ini`) → tenues, accessoires de tête, ailes et dos (`assets/player/outfits/`) |
 
 ```bash
 python -m venv .venv && .venv/Scripts/python -m pip install numpy pillow

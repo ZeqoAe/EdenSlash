@@ -33,7 +33,7 @@ func setup(p: Player, d: RunDirector) -> void:
 	layer = 16
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build("merchant", [["Acheter", VillagePages.ShopPage.new()], ["Vendre", VillagePages.SellPage.new(false)]])
-	_build("smith", [["Améliorer", VillagePages.UpgradePage.new()], ["Enchanter", VillagePages.EnchantPage.new()], ["Réforger", VillagePages.ReforgePage.new()]])
+	_build("smith", [["Améliorer", VillagePages.UpgradePage.new()], ["Enchanter", VillagePages.EnchantPage.new()], ["Réforger", VillagePages.ReforgePage.new()], ["Fabriquer", VillagePages.CraftPage.new()]])
 	_build("recycler", [["Recycler", VillagePages.SellPage.new(true)], ["Convertir", VillagePages.ConvertPage.new()]])
 	_build("jeweler", [["Sertissage", VillagePages.SocketPage.new()], ["Fusion de gemmes", VillagePages.FusePage.new()]])
 

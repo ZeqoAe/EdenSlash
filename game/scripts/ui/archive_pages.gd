@@ -4,181 +4,260 @@ extends RefCounted
 ## objets archivés, bonus et paliers, archivage depuis le coffre) et les apparences
 ## d'armes débloquées.
 
-const TIER_LABELS := {2: "Rare", 3: "Épique", 4: "Légendaire"}
+const TIER_LABELS := {4: "Mythique", 5: "Légendaire"}
 
 
 # --- collection --------------------------------------------------------------------------------
+## Archive des trésors (comme dans Eden) : à gauche les catégories et leur taux, au centre
+## toutes les entrées de la catégorie (mythiques et légendaires d'Eden), à droite la liste
+## de l'archive (score, taux par groupe, bonus) et le dépôt depuis le coffre.
 class CollectionPage extends HBoxContainer:
-	var _catalog: VBoxContainer
-	var _count: Label
-	var _bar: ProgressBar
-	var _bonus: RichTextLabel
-	var _grid: ItemWidgets.ItemGrid
+	const PER_PAGE := 120
+	var _tree: VBoxContainer
+	var _cat := ""
+	var _head: Label
+	var _rate: Label
+	var _owned_only: CheckBox
+	var _reverse: CheckBox
+	var _search: LineEdit
+	var _grid: GridContainer
+	var _page := 0
+	var _page_lbl: Label
+	var _list_text: RichTextLabel
+	var _vault_grid: ItemWidgets.ItemGrid
 	var _detail: RichTextLabel
 	var _btn: Button
-	var _selected: Dictionary = {}
+	var _selected_item: Dictionary = {}
+	var _selected_entry: Dictionary = {}
 	var _armed := false
 
 	func _ready() -> void:
-		add_theme_constant_override("separation", 16)
-		var left := ItemWidgets.panel(self, 0, true)
-		var lh := HBoxContainer.new()
-		lh.add_theme_constant_override("separation", 12)
-		left.add_child(lh)
-		ItemWidgets.section(lh, "Catalogue de l'équipement")
-		Hud._label(lh, "Survole une case : carte complète de l'objet archivé, ou où le trouver.", 13, UiTheme.MUTED).size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var scroll := ScrollContainer.new()
-		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-		left.add_child(scroll)
-		_catalog = VBoxContainer.new()
-		_catalog.add_theme_constant_override("separation", 8)
-		_catalog.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		scroll.add_child(_catalog)
-
-		var right := ItemWidgets.panel(self, 560)
-		var ch := HBoxContainer.new()
-		ch.add_theme_constant_override("separation", 12)
-		right.add_child(ch)
-		ItemWidgets.section(ch, "Collection")
-		_bar = ProgressBar.new()
-		_bar.show_percentage = false
-		_bar.custom_minimum_size = Vector2(200, 18)
-		_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		ch.add_child(_bar)
-		_count = Hud._label(ch, "", 16, UiTheme.GOLD)
-		_bonus = ItemWidgets.rich(right, 14)
-		_bonus.custom_minimum_size = Vector2(0, 270)
-		_bonus.size_flags_vertical = Control.SIZE_FILL
-		ItemWidgets.section(right, "Archiver depuis le coffre", 16)
-		_grid = ItemWidgets.ItemGrid.new(false, 7, 58.0)
-		_grid.source = ""
-		_grid.dim_fn = func(it): return Archive.refusal(it) != ""
-		_grid.badge_fn = func(it): return "✔" if Archive.refusal(it) != "" else ""
-		_grid.card_extra = _archive_extra
-		_grid.selection_changed.connect(func():
-			_selected = _grid.first_selected()
-			_armed = false
-			_refresh_detail())
-		right.add_child(_grid)
-		_detail = ItemWidgets.rich(right, 14)
-		_detail.custom_minimum_size = Vector2(0, 96)
+		add_theme_constant_override("separation", 14)
+		# catégories
+		var left := ItemWidgets.panel(self, 250)
+		ItemWidgets.section(left, "Archive des trésors")
+		var ts := ScrollContainer.new()
+		ts.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		ts.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		left.add_child(ts)
+		_tree = VBoxContainer.new()
+		_tree.add_theme_constant_override("separation", 2)
+		_tree.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ts.add_child(_tree)
+		# entrées de la catégorie
+		var mid := ItemWidgets.panel(self, 0, true)
+		var mh := HBoxContainer.new()
+		mh.add_theme_constant_override("separation", 10)
+		mid.add_child(mh)
+		_head = Hud._label(mh, "", 20, UiTheme.GOLD)
+		_head.add_theme_font_override("font", UiTheme.title_font())
+		_head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_rate = Hud._label(mh, "", 15, UiTheme.TEXT)
+		var fl := HBoxContainer.new()
+		fl.add_theme_constant_override("separation", 12)
+		mid.add_child(fl)
+		_owned_only = CheckBox.new()
+		_owned_only.text = "Archivés uniquement"
+		_owned_only.focus_mode = Control.FOCUS_NONE
+		_owned_only.toggled.connect(func(_on): _refresh_grid(0))
+		fl.add_child(_owned_only)
+		_reverse = CheckBox.new()
+		_reverse.text = "Ordre inversé"
+		_reverse.focus_mode = Control.FOCUS_NONE
+		_reverse.toggled.connect(func(_on): _refresh_grid(0))
+		fl.add_child(_reverse)
+		_search = LineEdit.new()
+		_search.placeholder_text = "Recherche…"
+		_search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_search.text_changed.connect(func(_t): _refresh_grid(0))
+		fl.add_child(_search)
+		var prev := Button.new()
+		prev.text = "◀"
+		prev.focus_mode = Control.FOCUS_NONE
+		prev.pressed.connect(func(): _refresh_grid(_page - 1))
+		fl.add_child(prev)
+		_page_lbl = Hud._label(fl, "", 13, UiTheme.MUTED)
+		var nxt := Button.new()
+		nxt.text = "▶"
+		nxt.focus_mode = Control.FOCUS_NONE
+		nxt.pressed.connect(func(): _refresh_grid(_page + 1))
+		fl.add_child(nxt)
+		var gs := ScrollContainer.new()
+		gs.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		gs.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		mid.add_child(gs)
+		_grid = GridContainer.new()
+		_grid.columns = 10
+		_grid.add_theme_constant_override("h_separation", 6)
+		_grid.add_theme_constant_override("v_separation", 6)
+		gs.add_child(_grid)
+		_detail = ItemWidgets.rich(mid, 13)
+		_detail.custom_minimum_size = Vector2(0, 90)
 		_detail.size_flags_vertical = Control.SIZE_FILL
-		_btn = ItemWidgets.action_button(right, "Archiver", _on_archive, 0, true)
+		# liste de l'archive et dépôt
+		var right := ItemWidgets.panel(self, 400)
+		ItemWidgets.section(right, "Liste de l'archive")
+		_list_text = ItemWidgets.rich(right, 13)
+		_list_text.custom_minimum_size = Vector2(0, 250)
+		_list_text.size_flags_vertical = Control.SIZE_FILL
+		ItemWidgets.section(right, "Archiver depuis le coffre", 16)
+		_vault_grid = ItemWidgets.ItemGrid.new(false, 6, 56.0)
+		_vault_grid.source = ""
+		_vault_grid.dim_fn = func(it): return Archive.refusal(it) != ""
+		_vault_grid.selection_changed.connect(func():
+			_selected_item = _vault_grid.first_selected()
+			_selected_entry = {}
+			_armed = false
+			_refresh_action())
+		right.add_child(_vault_grid)
+		_btn = ItemWidgets.action_button(right, "Archiver", _on_action, 0, true)
 
 	func refresh() -> void:
 		if not is_inside_tree():
 			return
-		_build_catalog()
-		var n := Archive.count()
-		_bar.max_value = Archive.total()
-		_bar.value = n
-		_count.text = "%d / %d" % [n, Archive.total()]
+		if _cat == "":
+			_cat = String(Archive.categories()[0].id)
+		_build_tree()
+		_refresh_grid(_page)
+		_refresh_list()
+		_vault_grid.set_items(Profile.all_items().filter(func(it): return int(it.rarity) >= Items.ARCHIVE_MIN_RARITY))
+		_vault_grid.set_empty_text("Aucun objet mythique ou légendaire dans le coffre : ils tombent des boss (et les mythiques se fabriquent).")
+		_refresh_action()
+
+	func _build_tree() -> void:
+		for c in _tree.get_children():
+			c.queue_free()
+		var group := ""
+		for c in Archive.categories():
+			if String(c.group) != group:
+				group = String(c.group)
+				var g := Hud._label(_tree, "▼ " + group, 15, UiTheme.GOLD)
+				g.add_theme_font_override("font", UiTheme.bold_font())
+			var r := Archive.rate(String(c.id))
+			var b := Button.new()
+			b.text = "   %s  %d/%d" % [c.name, int(r.x), int(r.y)]
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.toggle_mode = true
+			b.button_pressed = String(c.id) == _cat
+			b.focus_mode = Control.FOCUS_NONE
+			b.add_theme_font_size_override("font_size", 13)
+			b.custom_minimum_size = Vector2(0, 28)
+			var id := String(c.id)
+			b.pressed.connect(func():
+				_cat = id
+				_build_tree()
+				_refresh_grid(0))
+			_tree.add_child(b)
+
+	func _refresh_grid(p: int) -> void:
+		var cat_name := ""
+		for c in Archive.categories():
+			if String(c.id) == _cat:
+				cat_name = String(c.name)
+		var r := Archive.rate(_cat)
+		_head.text = "Archive : " + cat_name
+		_rate.text = "Taux : %.1f %%  (%d / %d)" % [100.0 * r.x / maxf(r.y, 1.0), int(r.x), int(r.y)]
+		var q := _search.text.strip_edges().to_lower()
+		var list := Archive.entries(_cat).filter(func(e):
+			return (not _owned_only.button_pressed or Profile.archive.has(Archive.key_of(e))) and (q == "" or String(e.name).to_lower().contains(q)))
+		if _reverse.button_pressed:
+			list.reverse()
+		var pages := maxi(1, ceili(float(list.size()) / PER_PAGE))
+		_page = clampi(p, 0, pages - 1)
+		_page_lbl.text = "%d / %d" % [_page + 1, pages]
+		for c in _grid.get_children():
+			c.queue_free()
+		for e in list.slice(_page * PER_PAGE, (_page + 1) * PER_PAGE):
+			_grid.add_child(_cell(e))
+
+	func _cell(e: Dictionary) -> Control:
+		var k := Archive.key_of(e)
+		var s := ItemWidgets.ItemSlot.new(58.0)
+		var owned := Profile.archive.has(k)
+		var item: Dictionary = Profile.archive[k] if owned else ArchivePages.demo_item(e)
+		s.set_item(item)
+		s.dim = not owned
+		s.badge = "✔" if owned else ""
+		var info := "\n\n%s\n[color=#9a98a8]%s[/color]\n[color=#7fe08a]Bonus d'archive : %s[/color]" % [
+			"[color=#7fe08a]Archivé[/color]" if owned else "[color=#ff9a7a]Pas encore archivé[/color]", Archive.source_text(e), Archive.bonus_text(Archive.entry_bonus(k))]
+		s.card_extra = func(_it): return info
+		s.pressed.connect(func():
+			_selected_entry = e
+			_selected_item = {}
+			_armed = false
+			_refresh_action())
+		return s
+
+	func _refresh_list() -> void:
 		var lines: PackedStringArray = []
+		lines.append("[b]Score total de l'archive : %d[/b]" % Archive.score())
+		lines.append("Entrées : [b]%d[/b] / %d" % [Archive.count(), Archive.total()])
+		var groups := {}
+		for c in Archive.categories():
+			var r := Archive.rate(String(c.id))
+			var g: Vector2 = groups.get(c.group, Vector2.ZERO)
+			groups[c.group] = g + r
+		for g in groups:
+			var v: Vector2 = groups[g]
+			lines.append("%s : %d / %d  (%.1f %%)" % [g, int(v.x), int(v.y), 100.0 * v.x / maxf(v.y, 1.0)])
 		var b := Archive.bonus()
-		lines.append("[color=#c8c8d4]Bonus permanent, pour toutes les classes :[/color]")
-		lines.append("[b]%s[/b]" % (Archive.bonus_text(b) if not b.is_empty() else "aucun pour l'instant"))
 		lines.append("")
-		lines.append("[color=#c8c8d4]Chaque entrée : +1 / +2 / +4 points d'attribut (rare / épique / légendaire), +1 % de dégâts par set.[/color]")
+		lines.append("[color=#c8c8d4]Bonus permanent, toutes classes :[/color] [b]%s[/b]" % (Archive.bonus_text(b) if not b.is_empty() else "aucun pour l'instant"))
+		lines.append("[color=#c8c8d4]Chaque entrée : +1 point d'attribut (mythique) ou +2 (légendaire).[/color]")
+		var n := Archive.count()
 		for m in Archive.MILESTONES:
 			var ok := n >= int(m[0])
 			lines.append("[color=%s]%s %d entrées : %s[/color]" % ["#7fe08a" if ok else "#8a86a0", "✔" if ok else "○", int(m[0]), Archive.bonus_text(m[1])])
-		_bonus.text = "\n".join(lines)
-		_grid.set_items(Profile.all_items().filter(func(it): return int(it.rarity) >= Items.ARCHIVE_MIN_RARITY))
-		_grid.set_empty_text("Aucun objet rare, épique ou légendaire dans le coffre : garde-en en fin de run pour les archiver.")
-		_refresh_detail()
+		_list_text.text = "\n".join(lines)
 
-	func _build_catalog() -> void:
-		for c in _catalog.get_children():
-			c.queue_free()
-		for g in Archive.groups():
-			Hud._label(_catalog, String(g.name), 17, UiTheme.GOLD)
-			var grid := GridContainer.new()
-			grid.columns = 8
-			grid.add_theme_constant_override("h_separation", 6)
-			grid.add_theme_constant_override("v_separation", 6)
-			_catalog.add_child(grid)
-			for i in 2:
-				Hud._label(grid, "", 12, UiTheme.MUTED)
-				for t in Archive.TIERS:
-					var l := Hud._label(grid, ArchivePages.TIER_LABELS[t], 12, Items.RARITIES[t].color)
-					l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			for r in g.rows:
-				var lbl := Hud._label(grid, String(r.name), 15, Color(0.92, 0.9, 1.0))
-				lbl.custom_minimum_size = Vector2(96, 0)
-				lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-				for t in Archive.TIERS:
-					grid.add_child(_entry_cell(String(r.id), String(r.name), String(r.slot), t))
-		Hud._label(_catalog, "Sets", 17, Items.SET_COLOR)
-		var sets := HFlowContainer.new()
-		sets.add_theme_constant_override("h_separation", 10)
-		sets.add_theme_constant_override("v_separation", 6)
-		_catalog.add_child(sets)
-		for sid in Items.SETS:
-			var cell := VBoxContainer.new()
-			cell.add_theme_constant_override("separation", 0)
-			sets.add_child(cell)
-			var k := Archive.set_key(sid)
-			var s := ItemWidgets.ItemSlot.new(58.0)
-			s.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	func _refresh_action() -> void:
+		_btn.disabled = true
+		if not _selected_item.is_empty():
+			var why := Archive.refusal(_selected_item)
+			_detail.text = "[b][color=#%s]%s[/color][/b]  %s" % [Items.color_of(_selected_item).to_html(false), Items.display_name(_selected_item),
+				("[color=#ff9a7a]%s[/color]" % why) if why != "" else "[color=#7fe08a]Archiver : %s[/color]" % Archive.bonus_text(Archive.entry_bonus(Archive.keys_for(_selected_item)[0]))]
+			_btn.text = "Confirmer : l'objet rejoint l'archive" if _armed else "Archiver"
+			_btn.disabled = why != ""
+			return
+		if not _selected_entry.is_empty():
+			var k := Archive.key_of(_selected_entry)
 			if Profile.archive.has(k):
-				s.set_item(Profile.archive[k])
-				s.card_extra = func(_it): return "\n\n[color=#7fe08a]Archivé · %s[/color]" % Archive.bonus_text(Archive.SET_BONUS)
+				_detail.text = "[b]%s[/b] est archivé. Tu peux le retirer : il revient dans le coffre (son bonus est perdu)." % _selected_entry.name
+				_btn.text = "Retirer de l'archive"
+				_btn.disabled = Profile.in_run
 			else:
-				s.ghost = Archive.entry_icon("chest", "chest", 3)
-				s.tooltip_text = "Set %s : pas encore archivé.\nArchive n'importe quelle pièce de ce set (cadre vert).\nBonus : %s" % [Items.SETS[sid].name, Archive.bonus_text(Archive.SET_BONUS)]
-			cell.add_child(s)
-			var l := Hud._label(cell, String(Items.SETS[sid].name), 12, Items.SET_COLOR if Profile.archive.has(k) else UiTheme.MUTED)
-			l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			l.custom_minimum_size = Vector2(96, 0)
-
-	func _entry_cell(base: String, base_name: String, slot: String, t: int) -> Control:
-		var k := Archive.key(base, t)
-		var s := ItemWidgets.ItemSlot.new(58.0)
-		if Profile.archive.has(k):
-			s.set_item(Profile.archive[k])
-			s.card_extra = func(_it): return "\n\n[color=#7fe08a]Archivé · %s[/color]" % Archive.bonus_text(Archive.entry_bonus(k))
-		else:
-			s.ghost = Archive.entry_icon(base, slot, t)
-			s.tooltip_text = "%s : pas encore archivé.\n%s\nBonus à l'archivage : %s" % [Archive.entry_name(base_name, t), Archive.source_text(slot, t), Archive.bonus_text(Archive.entry_bonus(k))]
-		return s
-
-	func _archive_extra(it: Dictionary) -> String:
-		var why := Archive.refusal(it)
-		if why != "":
-			return "\n\n[color=#ff9a7a]%s[/color]" % why
-		var parts: PackedStringArray = []
-		for k in Archive.keys_for(it):
-			if not Profile.archive.has(k):
-				parts.append(Archive.bonus_text(Archive.entry_bonus(k)))
-		return "\n\n[color=#7fe08a]Archiver : %s[/color]" % ", ".join(parts)
-
-	func _refresh_detail() -> void:
-		if _selected.is_empty():
-			_detail.text = "[color=#c8c8d4]Choisis un objet rare, épique ou légendaire du coffre. Archiver le consomme (il quitte le coffre et tes préréglages) et remplit son entrée du catalogue pour toujours.[/color]"
-			_btn.disabled = true
-			_btn.text = "Archiver"
+				_detail.text = "[b]%s[/b] (niveau %d dans Eden) — %s" % [_selected_entry.name, int(_selected_entry.level), Archive.source_text(_selected_entry)]
+				_btn.text = "Archiver"
 			return
-		var why := Archive.refusal(_selected)
-		var users := Profile.item_users(String(_selected.get("uid", "")))
-		_detail.text = "[b][color=#%s]%s[/color][/b]%s%s" % [Items.color_of(_selected).to_html(false), Items.display_name(_selected),
-			_archive_extra(_selected), ("\n[color=#f5c75a]★ Utilisé par : %s (il sera retiré)[/color]" % ", ".join(users)) if not users.is_empty() else ""]
-		_btn.disabled = why != ""
-		_btn.text = "Confirmer : l'objet sera consommé" if _armed else "Archiver"
+		_detail.text = "[color=#c8c8d4]Choisis une entrée (survol : fiche complète) ou un objet mythique / légendaire du coffre. Archiver retire l'objet du coffre et des préréglages ; on peut le retirer plus tard.[/color]"
+		_btn.text = "Archiver"
 
-	func _on_archive() -> void:
-		if _selected.is_empty() or Archive.refusal(_selected) != "":
+	func _on_action() -> void:
+		if not _selected_item.is_empty():
+			if Archive.refusal(_selected_item) != "":
+				return
+			if not _armed:
+				_armed = true
+				_refresh_action()
+				return
+			_armed = false
+			Profile.archive_item(_selected_item)
+			_selected_item = {}
+			_vault_grid.clear_selection()
+			refresh()
 			return
-		if not _armed:
-			_armed = true
-			_refresh_detail()
-			return
-		_armed = false
-		Profile.archive_item(_selected)
-		_selected = {}
-		_grid.clear_selection()
-		refresh()
+		if not _selected_entry.is_empty() and Profile.archive.has(Archive.key_of(_selected_entry)):
+			Archive.withdraw(Archive.key_of(_selected_entry))
+			_selected_entry = {}
+			refresh()
+
+
+## Objet de démonstration (toujours le même) pour une entrée d'Eden.
+static func demo_item(e: Dictionary) -> Dictionary:
+	seed(int(e.id))
+	var it := Items.from_eden(e)
+	randomize()
+	return it
 
 
 # --- apparences ------------------------------------------------------------------------------
@@ -192,7 +271,7 @@ class SkinsPage extends HBoxContainer:
 		add_theme_constant_override("separation", 16)
 		var left := ItemWidgets.panel(self, 0, true)
 		ItemWidgets.section(left, "Apparences d'armes")
-		Hud._label(left, "Les 2 premiers modèles de chaque arme sont libres ; archiver une arme rare débloque le 3e, une arme épique ou légendaire le 4e. L'apparence s'applique à toutes les armes de ce type, quelle que soit la classe.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		Hud._label(left, "Les 4 modèles de base de chaque arme sont libres ; chaque arme mythique ou légendaire archivée ajoute sa propre apparence. L'apparence s'applique à toutes les armes de ce type, quelle que soit la classe.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		var scroll := ScrollContainer.new()
 		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -576,6 +655,9 @@ class EncyclopediaPage extends HBoxContainer:
 ## Costumes d'Eden débloqués (butin des boss, mode dev) : n'importe quelle classe peut
 ## porter n'importe quelle tenue ; « Tenue de la classe » revient à l'apparence d'origine.
 class CostumesPage extends HBoxContainer:
+	const CATS := [["body", "Tenues"], ["head", "Tête et visage"], ["back", "Ailes et dos"]]
+	var _cat := "body"
+	var _cat_buttons := {}
 	var _grid: GridContainer
 	var _preview: EquipmentPage.HeroPreview
 	var _info: RichTextLabel
@@ -587,14 +669,29 @@ class CostumesPage extends HBoxContainer:
 		var head := HBoxContainer.new()
 		head.add_theme_constant_override("separation", 10)
 		left.add_child(head)
-		ItemWidgets.section(head, "Tenues")
+		ItemWidgets.section(head, "Cosmétiques")
 		_count = Hud._label(head, "", 14, UiTheme.MUTED)
 		_count.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		head.add_child(ClassPicker.button(func(): return Profile.selected_class, func(cid):
 			Profile.selected_class = cid
 			Profile.save_profile()
 			refresh(), false, Vector2(240, 40)))
-		Hud._label(left, "Les costumes d'Eden se débloquent sur les boss (1 chance sur 4, plus s'ils sont enragés). Une tenue débloquée se porte avec n'importe quelle classe.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var tabs := HBoxContainer.new()
+		tabs.add_theme_constant_override("separation", 6)
+		left.add_child(tabs)
+		for c in CATS:
+			var b := Button.new()
+			b.text = String(c[1])
+			b.toggle_mode = true
+			b.focus_mode = Control.FOCUS_NONE
+			b.custom_minimum_size = Vector2(150, 36)
+			var id := String(c[0])
+			b.pressed.connect(func():
+				_cat = id
+				refresh())
+			tabs.add_child(b)
+			_cat_buttons[id] = b
+		Hud._label(left, "Les cosmétiques d'Eden se débloquent sur les boss (1 chance sur 4, plus s'ils sont enragés) ou en mode dev. Ils se portent avec n'importe quelle classe.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		var scroll := ScrollContainer.new()
 		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -609,33 +706,49 @@ class CostumesPage extends HBoxContainer:
 		_preview = EquipmentPage.HeroPreview.new()
 		_preview.custom_minimum_size = Vector2(380, 460)
 		_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_preview.idle_pose = true
 		right.add_child(_preview)
 		_info = ItemWidgets.rich(right, 14)
 		_info.custom_minimum_size = Vector2(0, 80)
 		_info.size_flags_vertical = Control.SIZE_FILL
 
+	static func cat_of(c: Dictionary) -> String:
+		return String(c.get("cat", "body"))
+
+	func _current(cid: String) -> String:
+		if _cat == "body":
+			return Profile.outfit_of(cid)
+		return String(Profile.worn.get(cid, {}).get(_cat, ""))
+
 	func refresh() -> void:
 		if not is_inside_tree():
 			return
+		for id in _cat_buttons:
+			_cat_buttons[id].set_pressed_no_signal(id == _cat)
 		for c in _grid.get_children():
 			c.queue_free()
 		var cid := Profile.selected_class
-		var owned := GameData.cosmetics.filter(func(c): return Profile.outfit_unlocked(String(c.id)))
-		_count.text = "%d / %d débloquées" % [owned.size(), GameData.cosmetics.size()]
+		var list := GameData.cosmetics.filter(func(c): return cat_of(c) == _cat)
+		var owned := list.filter(func(c): return Profile.outfit_unlocked(String(c.id)))
+		var all_owned := GameData.cosmetics.filter(func(c): return Profile.outfit_unlocked(String(c.id))).size()
+		_count.text = "%d / %d débloqués (toutes catégories : %d / %d)" % [owned.size(), list.size(), all_owned, GameData.cosmetics.size()]
 		_grid.add_child(_cell({}, cid))
-		for c in GameData.cosmetics:
+		for c in list:
 			_grid.add_child(_cell(c, cid))
 		_preview.show_hero(cid, Profile.weapon_code())
-		var cur := Profile.outfit_of(cid)
-		var name := "tenue de la classe"
-		for c in GameData.cosmetics:
-			if String(c.outfit) == cur:
-				name = String(c.name)
-		_info.text = "[b]%s[/b] porte : %s" % [GameData.class_data(cid).get("name_fr", cid), name]
+		var lines: PackedStringArray = []
+		for k in [["body", "Tenue"], ["head", "Tête"], ["back", "Dos"]]:
+			var path := Profile.outfit_of(cid) if k[0] == "body" else String(Profile.worn.get(cid, {}).get(k[0], ""))
+			var name := "tenue de la classe" if k[0] == "body" else "aucun"
+			for c in GameData.cosmetics:
+				if String(c.outfit) == path and path != "":
+					name = String(c.name)
+			lines.append("%s : [b]%s[/b]" % [k[1], name])
+		_info.text = "[b]%s[/b]\n%s" % [GameData.class_data(cid).get("name_fr", cid), "\n".join(lines)]
 
 	func _cell(c: Dictionary, cid: String) -> Control:
 		var ok := c.is_empty() or Profile.outfit_unlocked(String(c.id))
-		var on := Profile.outfit_of(cid) == String(c.get("outfit", ""))
+		var on := _current(cid) == String(c.get("outfit", ""))
 		var b := Button.new()
 		b.custom_minimum_size = Vector2(110, 96)
 		b.focus_mode = Control.FOCUS_NONE
@@ -647,21 +760,25 @@ class CostumesPage extends HBoxContainer:
 		b.add_theme_font_size_override("font_size", 11)
 		b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.08, 0.06, 0.13, 0.95), UiTheme.GOLD if on else (UiTheme.GOLD_DIM if ok else Color(0.25, 0.23, 0.3)), 3 if on else 2, 8))
 		if c.is_empty():
-			b.text = "Tenue de la classe"
+			b.text = "Tenue de la classe" if _cat == "body" else "Aucun"
 			b.icon = UiTheme.texture(String(GameData.class_data(cid).get("icon", "")))
 		else:
 			b.text = String(c.name) if ok else "🔒 " + String(c.name)
 			b.icon = UiTheme.texture(String(c.get("icon", "")))
-			b.tooltip_text = String(c.name) + ("" if ok else "\nVerrouillée : butin des boss")
+			b.tooltip_text = String(c.name) + ("" if ok else "\nVerrouillé : butin des boss")
 			if not ok:
 				b.modulate = Color(0.6, 0.6, 0.65)
 		b.pressed.connect(func():
 			if not ok:
 				return
-			if c.is_empty():
-				Profile.outfits.erase(cid)
+			var path := String(c.get("outfit", ""))
+			if _cat == "body":
+				if path == "":
+					Profile.outfits.erase(cid)
+				else:
+					Profile.outfits[cid] = path
 			else:
-				Profile.outfits[cid] = String(c.outfit)
+				Profile.set_worn(cid, _cat, path)
 			Profile.save_profile()
 			refresh())
 		return b

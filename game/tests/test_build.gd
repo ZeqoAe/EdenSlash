@@ -33,7 +33,7 @@ func _test_sets() -> void:
 		var it := Items.generate(10, 1.0, slot, "samurai", 2)
 		Items.make_set_piece(it, "storm")
 		pieces.append(it)
-	check("pièce de set : nom et couleur", String(pieces[0].name).ends_with("de la Tempête") and Items.color_of(pieces[0]) == Items.SET_COLOR)
+	check("pièce de set : nom", String(pieces[0].name).ends_with("de la Tempête"))
 	var eq := {"head": pieces[0], "chest": pieces[1]}
 	check("2 pièces : 1 bonus actif", Items.active_set_bonuses(eq).size() == 1)
 	for i in 4:
@@ -44,10 +44,11 @@ func _test_sets() -> void:
 	check("proc de set (foudre) actif", Profile.equipment_procs().size() == 1 and Profile.equipment_procs()[0].effect == "lightning")
 	check("infobulle : bonus de set", Items.describe(pieces[0]).contains("4 pièces"))
 	var n_sets := 0
-	for i in 400:
-		if Items.generate(5, 1.0).has("set"):
+	for i in 200:
+		if Items.generate(5, 0.5, "", "samurai", Items.MYTHIC, "", Items.MYTHIC).has("set"):
 			n_sets += 1
-	check("des pièces de set tombent (rares et épiques) : %d / 400" % n_sets, n_sets > 20 and n_sets < 200)
+	check("pièces de set d'Eden sur les mythiques (boss) : %d / 200" % n_sets, n_sets > 10)
+	check("pas de set sur le butin courant", range(200).all(func(_i): return not Items.generate(5, 1.0).has("set")))
 	for i in 4:
 		Profile.equipped.erase(pieces[i].slot)
 

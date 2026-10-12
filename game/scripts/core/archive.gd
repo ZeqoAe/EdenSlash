@@ -1,13 +1,12 @@
 class_name Archive
 extends RefCounted
-## Archive (comme dans Eden Eternal) : on y range définitivement les objets rares (or),
-## épiques (violet) et légendaires (orange), bijoux et trophées compris. Chaque entrée
-## remplie donne un bonus permanent à toutes les classes, des paliers récompensent la
-## collection, et les armes archivées débloquent leur apparence (skin).
-## Le catalogue montre tout l'équipement qui existe dans le jeu.
+## Archive façon Eden (« Treasure Archive ») : chaque objet mythique (orange) ou légendaire
+## (or) d'Eden a son entrée, rangée par catégorie (armes par type, armures de plates / cuir /
+## tissu, capes, colliers, bagues, trophées). On y dépose l'objet (il quitte le coffre ; on
+## peut le retirer). Chaque entrée remplie donne un bonus permanent à toutes les classes,
+## des paliers récompensent la collection, et chaque arme archivée débloque son apparence.
 
-## Raretés archivées (colonnes du catalogue).
-const TIERS := [2, 3, 4]
+const TIERS := [4, 5]
 ## Attribut renforcé par chaque type d'objet archivé.
 const ATTR := {
 	"katana": "str", "axe": "str", "dagger": "agi", "bow": "agi", "scepter": "wis", "staff": "int",
@@ -16,64 +15,73 @@ const ATTR := {
 	"head": "int", "chest": "str", "legs": "agi", "gloves": "str", "boots": "agi", "back": "lck",
 	"necklace": "wis", "ring": "lck",
 }
-## Points d'attribut par rareté archivée (le trophée donne la moitié à chaque attribut).
-const TIER_POINTS := {2: 1.0, 3: 2.0, 4: 4.0}
-## Paliers de collection : nombre d'entrées -> bonus.
+## Points d'attribut par entrée : mythique 1, légendaire 2 (le trophée donne la moitié à chaque attribut).
+const TIER_POINTS := {4: 1.0, 5: 2.0}
+## Paliers de collection : nombre d'entrées remplies -> bonus.
 const MILESTONES := [
-	[5, {"hp_pct": 0.03}],
-	[10, {"dmg_pct": 0.02}],
-	[15, {"crit": 0.02, "mcrit": 0.02}],
-	[25, {"atk_speed": 0.04}],
-	[35, {"dmg_pct": 0.04}],
-	[45, {"cdr": 0.05}],
-	[51, {"dmg_pct": 0.1}],
+	[10, {"hp_pct": 0.03}],
+	[25, {"dmg_pct": 0.02}],
+	[50, {"crit": 0.02, "mcrit": 0.02}],
+	[100, {"atk_speed": 0.04}],
+	[200, {"dmg_pct": 0.04}],
+	[400, {"cdr": 0.05}],
+	[800, {"hp_pct": 0.06}],
+	[1500, {"dmg_pct": 0.1}],
 ]
-## Bonus d'une pièce de set archivée.
-const SET_BONUS := {"dmg_pct": 0.01}
+const ARMOR_CLASS_FR := {"plates": "Armures de plates", "cuir": "Armures de cuir", "tissu": "Armures de tissu"}
+
+static var _cache_cats: Array = []
+static var _cache_entries: Dictionary = {}  # catégorie -> entrées d'Eden
 
 
-## Groupes du catalogue : [{name, rows: [{id, name, slot}]}].
-static func groups() -> Array:
-	var weapons: Array = []
-	for wt in GameData.weapon_types:
-		weapons.append({"id": wt, "name": String(GameData.weapon_types[wt].name), "slot": "weapon"})
-	var armor: Array = Items.ARMOR.map(func(s): return {"id": s, "name": Items.SLOT_NAMES[s], "slot": s})
-	var acc: Array = Items.ACCESSORIES.map(func(s): return {"id": s, "name": Items.SLOT_NAMES[s], "slot": s})
-	return [{"name": "Armes", "rows": weapons}, {"name": "Armures", "rows": armor}, {"name": "Bijoux et trophées", "rows": acc}]
+## Catégories : [{id, name, group}] (groupes : Armes, Armures, Accessoires).
+static func categories() -> Array:
+	if _cache_cats.is_empty():
+		for wt in GameData.weapon_types:
+			_cache_cats.append({"id": "w:" + String(wt), "name": String(GameData.weapon_types[wt].name), "group": "Armes"})
+		for c in ARMOR_CLASS_FR:
+			_cache_cats.append({"id": "a:" + c, "name": ARMOR_CLASS_FR[c], "group": "Armures"})
+		_cache_cats.append({"id": "s:back", "name": "Capes", "group": "Armures"})
+		for s in ["necklace", "ring", "trophy"]:
+			_cache_cats.append({"id": "s:" + s, "name": {"necklace": "Colliers", "ring": "Bagues", "trophy": "Trophées"}[s], "group": "Accessoires"})
+		# catégories sans objet mythique ou légendaire dans Eden (ex. faux-fusil) : masquées
+		_cache_cats = _cache_cats.filter(func(c): return not entries(String(c.id)).is_empty())
+	return _cache_cats
 
 
-## Type d'objet dans l'archive : type d'arme (katana...) ou emplacement.
-static func base_id(item: Dictionary) -> String:
-	return Items.weapon_type_of(item) if item.get("slot", "") == "weapon" else String(item.get("slot", ""))
+## Catégorie d'un objet d'Eden.
+static func cat_of(e: Dictionary) -> String:
+	if String(e.get("slot", "")) == "weapon":
+		return "w:" + String(e.get("wtype", ""))
+	if e.has("armor"):
+		return "a:" + String(e.armor)
+	return "s:" + String(e.get("slot", ""))
 
 
-static func key(base: String, tier: int) -> String:
-	return "%s:%d" % [base, tier]
+## Entrées (objets d'Eden mythiques et légendaires) d'une catégorie, par niveau.
+static func entries(cat_id: String) -> Array:
+	if _cache_entries.is_empty():
+		for e: Dictionary in GameData.eden_items:
+			if int(e.rarity) >= Items.ARCHIVE_MIN_RARITY:
+				var c := cat_of(e)
+				if not _cache_entries.has(c):
+					_cache_entries[c] = []
+				_cache_entries[c].append(e)
+	return _cache_entries.get(cat_id, [])
 
 
-static func set_key(sid: String) -> String:
-	return "set:%s" % sid
+static func key_of(e: Dictionary) -> String:
+	return "e%d" % int(e.id)
 
 
 ## Entrées que l'objet remplirait.
 static func keys_for(item: Dictionary) -> Array:
-	if int(item.get("rarity", 0)) < Items.ARCHIVE_MIN_RARITY:
+	if int(item.get("rarity", 0)) < Items.ARCHIVE_MIN_RARITY or not item.has("eden"):
 		return []
-	var out := [key(base_id(item), int(item.rarity))]
-	if Items.SETS.has(String(item.get("set", ""))):
-		out.append(set_key(String(item.set)))
-	return out
-
-
-static func all_keys() -> Array:
-	var out: Array = []
-	for g in groups():
-		for r in g.rows:
-			for t in TIERS:
-				out.append(key(String(r.id), t))
-	for sid in Items.SETS:
-		out.append(set_key(sid))
-	return out
+	var e: Dictionary = GameData.eden_by_id.get(int(item.eden), {})
+	if e.is_empty() or int(e.rarity) < Items.ARCHIVE_MIN_RARITY:
+		return []
+	return [key_of(e)]
 
 
 static func is_archived(k: String) -> bool:
@@ -81,11 +89,29 @@ static func is_archived(k: String) -> bool:
 
 
 static func count() -> int:
-	return all_keys().filter(func(k): return Profile.archive.has(k)).size()
+	return Profile.archive.keys().filter(func(k): return String(k).begins_with("e")).size()
 
 
 static func total() -> int:
-	return all_keys().size()
+	var n := 0
+	for c in categories():
+		n += entries(String(c.id)).size()
+	return n
+
+
+## Avancement d'une catégorie : Vector2(remplies, total).
+static func rate(cat_id: String) -> Vector2:
+	var es := entries(cat_id)
+	return Vector2(es.filter(func(e): return Profile.archive.has(key_of(e))).size(), es.size())
+
+
+## Score d'archive (comme Eden) : 1 par mythique, 2 par légendaire.
+static func score() -> int:
+	var s := 0
+	for k in Profile.archive:
+		var e: Dictionary = GameData.eden_by_id.get(int(String(k).trim_prefix("e")), {}) if String(k).begins_with("e") else {}
+		s += 2 if int(e.get("rarity", 4)) >= Items.LEGENDARY else 1
+	return s
 
 
 ## Pourquoi l'objet ne peut pas être archivé ("" : il peut l'être).
@@ -95,24 +121,28 @@ static func refusal(item: Dictionary) -> String:
 	if Profile.in_run:
 		return "On n'archive qu'entre les runs (au lobby)."
 	if int(item.get("rarity", 0)) < Items.ARCHIVE_MIN_RARITY:
-		return "Seuls les objets rares (or), épiques (violet) et légendaires (orange) s'archivent."
-	if keys_for(item).all(func(k): return Profile.archive.has(k)):
-		return "Déjà archivé : cette entrée de la collection est remplie."
+		return "Seuls les objets mythiques (orange) et légendaires (or) s'archivent, comme dans Eden."
+	var keys := keys_for(item)
+	if keys.is_empty():
+		return "Cet objet n'a pas d'entrée dans l'archive."
+	if keys.all(func(k): return Profile.archive.has(k)):
+		return "Déjà archivé : cette entrée est remplie."
 	return ""
 
 
 ## Bonus d'une entrée (stats).
 static func entry_bonus(k: String) -> Dictionary:
-	if k.begins_with("set:"):
-		return SET_BONUS
-	var p := k.split(":")
-	var pts := float(TIER_POINTS.get(int(p[1]), 1.0))
-	if p[0] == "trophy":
+	var e: Dictionary = GameData.eden_by_id.get(int(k.trim_prefix("e")), {}) if k.begins_with("e") else {}
+	if e.is_empty():
+		return {}
+	var pts := float(TIER_POINTS.get(mini(int(e.rarity), Items.LEGENDARY), 1.0))
+	var base := String(e.get("wtype", e.get("slot", "")))
+	if base == "trophy":
 		var out := {}
 		for a in Items.ATTRIBUTES:
 			out[a] = pts * 0.5
 		return out
-	return {String(ATTR.get(p[0], "str")): pts}
+	return {String(ATTR.get(base, "str")): pts}
 
 
 ## Bonus permanent de l'archive (entrées + paliers atteints), pour toutes les classes.
@@ -137,47 +167,42 @@ static func bonus_text(b: Dictionary) -> String:
 	return ", ".join(parts)
 
 
-## Icône d'une entrée (modèle d'arme de la rareté, ou icône d'armure représentative).
-static func entry_icon(base: String, slot: String, tier: int) -> String:
-	if slot == "weapon":
-		var ws: Array = GameData.weapon_type(base).get("weapons", [])
-		return String(ws[mini(tier, ws.size() - 1)].icon) if not ws.is_empty() else ""
-	var list: Array = Items.icons().get(slot, [])
-	return String(list[(tier * 7 + 3) % list.size()]) if not list.is_empty() else ""
-
-
-static func entry_name(base_name: String, tier: int) -> String:
-	return "%s %s" % [base_name, String(Items.RARITIES[tier].name).to_lower()]
-
-
-## Où trouver une rareté.
-static func source_text(slot: String, tier: int) -> String:
-	if slot == "trophy":
-		return "Trophée : butin rare des élites et des boss."
-	match tier:
-		2:
-			return "Rare (or) : butin courant des élites, boutique du marchand."
-		3:
-			return "Épique (violet) : élites enragées, coffres et boss."
-	return "Légendaire (orange) : surtout sur les boss (plus encore s'ils sont enragés)."
+## Où trouver l'objet.
+static func source_text(e: Dictionary) -> String:
+	var zi := clampi(int(e.get("band", 0)), 0, GameData.zones.size() - 1)
+	var zone := String(GameData.zones[zi].get("name", "")) if not GameData.zones.is_empty() else ""
+	if int(e.rarity) >= Items.LEGENDARY:
+		return "Légendaire : butin du boss de %s (30 %%, 50 %% s'il est enragé)." % zone
+	return "Mythique : butin du boss de %s, ou fabrication à la forge du village de cette zone." % zone
 
 
 # --- apparences (skins d'arme) ----------------------------------------------------------------
-## Modèles d'un type d'arme : [{code, icon, model}].
+## Modèles d'un type d'arme : les 4 modèles de base (libres), puis l'apparence de chaque arme
+## mythique ou légendaire archivée de ce type : [{code, icon, model, texture, name}].
 static func skins(wtype: String) -> Array:
-	return GameData.weapon_type(wtype).get("weapons", [])
+	var out: Array = []
+	for w in GameData.weapon_type(wtype).get("weapons", []):
+		out.append(w)
+	for e in entries("w:" + wtype):
+		if Profile.archive.has(key_of(e)) and e.has("model"):
+			out.append({"code": e.code, "icon": e.icon, "model": e.model, "texture": e.texture, "name": e.name})
+	return out
 
 
-## Les 2 premiers modèles sont libres ; les suivants s'obtiennent en archivant une arme
-## de ce type de rareté suffisante (rare : 3e modèle, épique ou légendaire : 4e).
-static func skin_unlocked(wtype: String, index: int) -> bool:
-	if index <= 1:
-		return true
-	for t in TIERS:
-		if Profile.archive.has(key(wtype, t)) and mini(t, 3) >= index:
-			return true
-	return false
+static func skin_unlocked(_wtype: String, _index: int) -> bool:
+	return true  # les apparences listées sont toutes disponibles
 
 
 static func skin_hint(index: int) -> String:
-	return "libre" if index <= 1 else ("archive une arme rare de ce type" if index == 2 else "archive une arme épique ou légendaire de ce type")
+	return "modèle de base" if index < 4 else "arme archivée"
+
+
+## Retire l'objet [param k] de l'archive : il revient dans le coffre (le bonus est perdu).
+static func withdraw(k: String) -> Dictionary:
+	if Profile.in_run or not Profile.archive.has(k):
+		return {}
+	var item: Dictionary = Profile.archive[k]
+	Profile.archive.erase(k)
+	Profile.add_item(item)
+	Profile.save_profile()
+	return item

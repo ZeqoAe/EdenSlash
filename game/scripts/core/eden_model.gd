@@ -96,7 +96,7 @@ static func _character_material(src: BaseMaterial3D, texture: Texture2D) -> Shad
 ## Héros d'une classe : corps animé commun (squelette, visage, animations) habillé de
 ## pièces séparées (tenue, cheveux) ; [param outfit] remplace la tenue de la classe (skin).
 ## Les anciennes classes à modèle complet (data/classes.json -> model) restent gérées.
-static func instantiate_hero(cls: Dictionary, outfit := "") -> Node3D:
+static func instantiate_hero(cls: Dictionary, outfit := "", extra: Array = []) -> Node3D:
 	var body := String(cls.get("body_model", ""))
 	if body == "" or not ResourceLoader.exists(body):
 		return instantiate(String(cls.get("model", "")))
@@ -105,7 +105,7 @@ static func instantiate_hero(cls: Dictionary, outfit := "") -> Node3D:
 	var parts: Array = cls.get("parts", [])
 	if outfit != "" and ResourceLoader.exists(outfit):
 		parts = [outfit] + parts.slice(1)
-	for p in parts:
+	for p in parts + extra:
 		dress(node, String(p))
 	return node
 
@@ -129,6 +129,18 @@ static func dress(model: Node3D, glb_path: String, group := "") -> void:
 		return
 	var part: Node = (load(glb_path) as PackedScene).instantiate()
 	stylize(part)
+	if part.find_child("Skeleton3D", true, false) == null and skel.find_bone("Bip01 Head") >= 0:
+		# accessoire rigide (chapeau, lunettes, masque) : accroché à l'os de la tête comme dans
+		# Eden ; il est déjà exprimé dans le repère de l'os (on annule la conversion Z-up)
+		var att := BoneAttachment3D.new()
+		att.bone_name = "Bip01 Head"
+		att.set_meta("part", glb_path)
+		skel.add_child(att)
+		var root := part.find_child("EdenRoot", true, false) as Node3D
+		if root:
+			root.transform = Transform3D.IDENTITY
+		att.add_child(part)
+		return
 	# os propres à la pièce (manches, rubans...) : ajoutés au squelette, au repos
 	var src := part.find_child("Skeleton3D", true, false) as Skeleton3D
 	var added := false
@@ -170,7 +182,7 @@ static func change_outfit(model: Node3D, old_path: String, glb_path: String) -> 
 	if skel == null:
 		return
 	for mi in skel.get_children():
-		if mi is MeshInstance3D and String(mi.get_meta("part", "")) == old_path:
+		if (mi is MeshInstance3D or mi is BoneAttachment3D) and String(mi.get_meta("part", "")) == old_path:
 			mi.queue_free()
 	dress(model, glb_path)
 

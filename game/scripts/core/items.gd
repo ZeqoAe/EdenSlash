@@ -44,15 +44,33 @@ const WEAPON_BASES := {
 	"staff": {"patk": 5.0, "matk": 16.0, "int": 3.0},
 }
 const ATTRIBUTES := ["str", "agi", "int", "wis", "lck"]
+## Raretés d'Eden : blanc commun, vert spécial, bleu rare, violet épique, orange mythique,
+## or légendaire. Seuls les mythiques et légendaires vont dans l'archive ; ils ne tombent
+## que des boss (ou se fabriquent, pour les mythiques).
 const RARITIES := [
-	{"name": "Commun", "color": Color(0.85, 0.85, 0.85), "affixes": 0},
-	{"name": "Magique", "color": Color(0.45, 0.7, 1.0), "affixes": 1},
-	{"name": "Rare", "color": Color(1.0, 0.85, 0.3), "affixes": 2},
-	{"name": "Épique", "color": Color(0.8, 0.45, 1.0), "affixes": 3},
-	{"name": "Légendaire", "color": Color(1.0, 0.55, 0.15), "affixes": 4},
+	{"name": "Commun", "color": Color(0.86, 0.86, 0.86), "affixes": 0},
+	{"name": "Spécial", "color": Color(0.42, 0.9, 0.42), "affixes": 1},
+	{"name": "Rare", "color": Color(0.4, 0.66, 1.0), "affixes": 2},
+	{"name": "Épique", "color": Color(0.78, 0.45, 1.0), "affixes": 3},
+	{"name": "Mythique", "color": Color(1.0, 0.55, 0.15), "affixes": 3},
+	{"name": "Légendaire", "color": Color(1.0, 0.84, 0.25), "affixes": 4},
 ]
-## Raretés archivables (or, violet, orange).
-const ARCHIVE_MIN_RARITY := 2
+const MYTHIC := 4
+const LEGENDARY := 5
+## Raretés archivées (orange et or).
+const ARCHIVE_MIN_RARITY := 4
+## Jet de qualité (% des stats connues de l'objet d'Eden) : de commun à épique au hasard,
+## mythique toujours 100 %, légendaire entre 101 et 120 %.
+const QUALITY := [[0.7, 0.9], [0.75, 0.95], [0.8, 1.0], [0.85, 1.0], [1.0, 1.0], [1.01, 1.2]]
+const RARITY_MULT := [0.85, 0.93, 1.0, 1.1, 1.22, 1.32]
+## Valeurs de référence au niveau 1 d'une stat d'objet d'Eden « moyen » (r = 1).
+const REF_FLAT := {"patk": 15.0, "matk": 15.0, "str": 2.5, "agi": 2.5, "int": 2.5, "wis": 2.5, "lck": 2.5}
+const REF_SLOT := {"head": {"hp": 35.0, "def": 2.0}, "chest": {"hp": 60.0, "def": 4.0}, "legs": {"hp": 45.0, "def": 3.0},
+	"gloves": {"hp": 20.0, "def": 1.5}, "boots": {"hp": 20.0, "def": 1.5}, "back": {"hp": 30.0, "def": 1.5},
+	"necklace": {"hp": 25.0, "def": 1.5}, "ring": {"hp": 20.0, "def": 1.0}, "trophy": {"hp": 20.0, "def": 1.0},
+	"weapon": {"hp": 30.0, "def": 1.5}}
+const REF_PCT := {"crit": 0.03, "mcrit": 0.03, "crit_dmg": 0.1, "eva": 0.02, "parry": 0.03, "atk_speed": 0.04,
+	"move_speed": 0.03, "def_pct": 0.03, "cdr": 0.03, "dmg_pct": 0.03}
 const STAT_NAMES := {
 	"atk": "Attaque", "patk": "Attaque physique", "matk": "Attaque magique",
 	"str": "Force", "agi": "Agilité", "int": "Intelligence", "wis": "Sagesse", "lck": "Chance",
@@ -61,11 +79,14 @@ const STAT_NAMES := {
 	"move_speed": "Vitesse", "cdr": "Recharge", "lifesteal": "Vol de vie",
 }
 const PERCENT_STATS := ["crit", "mcrit", "crit_dmg", "atk_speed", "move_speed", "cdr", "lifesteal",
-	"hp_pct", "dmg_pct", "area", "reach", "elite_dmg", "dot_pct", "def_pct", "atk_pct"]
+	"hp_pct", "dmg_pct", "area", "reach", "elite_dmg", "dot_pct", "def_pct", "atk_pct", "eva", "parry", "matk_pct",
+	"cast_speed", "heal_pct", "str_pct", "agi_pct", "int_pct", "wis_pct", "lck_pct"]
 const EXTRA_STAT_NAMES := {
 	"hp_pct": "PV max", "dmg_pct": "Dégâts", "area": "Zone d'effet", "reach": "Portée",
 	"elite_dmg": "Dégâts contre élites et boss", "dot_pct": "Dégâts sur la durée",
-	"def_pct": "Défense", "atk_pct": "Attaque",
+	"def_pct": "Défense", "atk_pct": "Attaque", "eva": "Esquive", "parry": "Parade", "matk_pct": "Attaque magique",
+	"cast_speed": "Vitesse d'incantation", "heal_pct": "Soins", "str_pct": "Force", "agi_pct": "Agilité",
+	"int_pct": "Intelligence", "wis_pct": "Sagesse", "lck_pct": "Chance",
 }
 ## Couleur des pièces de set (vert, comme dans Eden).
 const SET_COLOR := Color(0.4, 0.95, 0.55)
@@ -148,30 +169,25 @@ static func weapon_type_of(item: Dictionary) -> String:
 	return default_weapon_type(String(item.get("wclass", "samurai")))
 
 
-static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai", min_rarity := 0, wtype := "") -> Dictionary:
+static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai", min_rarity := 0, wtype := "", max_rarity := 3) -> Dictionary:
 	if wtype == "":
 		# en run : le butin d'armes suit l'arme en main ; sinon l'arme de la classe
 		wtype = Run.weapon_type() if Run.active and class_id == Run.class_id else default_weapon_type(class_id)
-	var roll := randf() + luck
-	var rarity := 0
-	if roll > 1.42:
-		rarity = 4
-	elif roll > 1.15:
-		rarity = 3
-	elif roll > 0.92:
-		rarity = 2
-	elif roll > 0.6:
-		rarity = 1
-	rarity = maxi(rarity, min_rarity)
+	var rarity := roll_rarity(luck, min_rarity, max_rarity)
 	if slot == "":
 		# trophée : seulement sur le butin rare des élites et des boss
 		if rarity >= 2 and luck >= 0.3 and randf() < TROPHY_CHANCE:
 			slot = "trophy"
 		else:
 			slot = SLOTS.filter(func(x): return x != "trophy").pick_random()
+	# objet d'Eden de la zone : nom, icône, stats connues, set, passif
+	if not GameData.eden_by_slot.is_empty():
+		var tpl := eden_template(slot, wtype, zone_band(), rarity)
+		if not tpl.is_empty():
+			return from_template(tpl, level, rarity)
 	var item := {
 		"uid": "%d_%d" % [Time.get_ticks_usec(), randi() % 100000],
-		"slot": slot, "level": level, "rarity": rarity,
+		"slot": slot, "level": level, "rarity": rarity, "rv": 2,
 		"quality": snappedf(randf_range(0.9, 1.2), 0.01),
 		"upgrade": 0,
 		"affixes": {},
@@ -204,6 +220,96 @@ static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai",
 	return item
 
 
+## Rareté tirée : 0 commun … 3 épique (butin courant) ; 4 mythique et 5 légendaire
+## seulement si [param max_r] le permet (boss, fabrication).
+static func roll_rarity(luck: float, min_r := 0, max_r := 3) -> int:
+	var roll := randf() + luck
+	var r := 0
+	for t in [[1.6, 5], [1.38, 4], [1.12, 3], [0.85, 2], [0.55, 1]]:
+		if roll > float(t[0]):
+			r = int(t[1])
+			break
+	return clampi(maxi(r, min_r), 0, maxi(max_r, min_r))
+
+
+## Bande de niveaux d'Eden de la zone jouée (data/eden_catalog.json -> bands).
+static func zone_band() -> int:
+	var zi := GameData.zone_index(Run.zone_id if Run.active else Profile.selected_zone)
+	return clampi(zi, 0, maxi(GameData.eden_bands.size() - 1, 0))
+
+
+## Modèle d'Eden : même emplacement (ou type d'arme), bande de la zone (sinon la plus
+## proche), même rareté (l'épique reprend un modèle bleu, plus fort).
+static func eden_template(slot: String, wtype: String, band: int, rarity: int) -> Dictionary:
+	var list: Array = GameData.eden_by_slot.get(wtype if slot == "weapon" else slot, [])
+	if list.is_empty():
+		return {}
+	var want := 2 if rarity == 3 else rarity
+	for d in [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6, -7, 7]:
+		var cands := list.filter(func(e): return int(e.band) == band + d and int(e.rarity) == want)
+		if not cands.is_empty():
+			return cands.pick_random()
+	var any := list.filter(func(e): return int(e.rarity) <= want)
+	return any.pick_random() if not any.is_empty() else list.pick_random()
+
+
+static func _ref(slot: String, stat: String) -> float:
+	if REF_PCT.has(stat):
+		return float(REF_PCT[stat])
+	if stat == "hp" or stat == "def":
+		return float(REF_SLOT.get(slot, REF_SLOT.weapon).get(stat, 0.0))
+	return float(REF_FLAT.get(stat, 0.0))
+
+
+## Objet du jeu tiré d'un objet d'Eden : stats connues (rapportées au niveau [param level]),
+## × rareté × jet de qualité ; set et passif d'arme pour les mythiques et légendaires.
+static func from_template(e: Dictionary, level: int, rarity := -1) -> Dictionary:
+	var r := int(e.rarity) if rarity < 0 else rarity
+	var slot := String(e.slot)
+	var q: Array = QUALITY[r]
+	var item := {"uid": "%d_%d" % [Time.get_ticks_usec(), randi() % 100000], "slot": slot, "level": level, "rarity": r,
+		"quality": snappedf(randf_range(float(q[0]), float(q[1])), 0.01), "upgrade": 0, "affixes": {},
+		"name": String(e.name), "icon": String(e.icon), "eden": int(e.id), "rv": 2}
+	if slot == "weapon":
+		item["wtype"] = String(e.wtype)
+		if e.has("model"):
+			item["weapon"] = String(e.code)
+		else:
+			var ws: Array = GameData.weapon_type(String(e.wtype)).get("weapons", [])
+			if not ws.is_empty():
+				item["weapon"] = String(ws[mini(r, ws.size() - 1)].code)
+	var base := {}
+	for s in e.get("r", {}):
+		var ref := _ref(slot, String(s))
+		if ref > 0.0:
+			base[s] = ref * float(e.r[s]) * float(RARITY_MULT[r]) * (randf_range(0.92, 1.08) if r < MYTHIC else 1.0)
+	item["base"] = base
+	if e.has("set") and r >= MYTHIC:
+		item["set"] = String(e.set)
+	if e.has("passive") and r >= MYTHIC:
+		item["passive"] = e.passive
+	return item
+
+
+## Définition d'un set : sets d'Eden (data/eden_catalog.json) ou anciens sets du jeu.
+static func set_def(sid: String) -> Dictionary:
+	return SETS.get(sid, GameData.eden_sets.get(sid, {}))
+
+
+## Paliers d'un set (nombre de pièces), dans l'ordre.
+static func set_tiers(sid: String) -> Array:
+	var out: Array = []
+	for n in set_def(sid).get("bonus", {}):
+		out.append(int(n))
+	out.sort()
+	return out
+
+
+static func set_bonus(sid: String, n: int) -> Dictionary:
+	var b: Dictionary = set_def(sid).get("bonus", {})
+	return b.get(n, b.get(str(n), {}))
+
+
 ## Objet d'Eden qui sert de modèle à un objet généré : même emplacement (ou type d'arme),
 ## même rareté si possible, niveau d'Eden le plus proche (le niveau du jeu × 1,5).
 static func eden_base(slot: String, wtype: String, level: int, rarity: int) -> Dictionary:
@@ -220,20 +326,17 @@ static func eden_base(slot: String, wtype: String, level: int, rarity: int) -> D
 
 ## Objet d'Eden donné (archive, mode dev) : nouvel objet du jeu à son image.
 static func from_eden(e: Dictionary, level := 0) -> Dictionary:
-	var slot := String(e.slot)
-	var lvl := level if level > 0 else clampi(roundi(float(e.level) / 1.5), 1, 60)
-	var item := generate(lvl, 0.0, slot, Profile.selected_class, int(e.rarity), String(e.get("wtype", "")))
-	item["rarity"] = int(e.rarity)
-	item["eden"] = int(e.id)
-	item["name"] = String(e.name)
-	item["icon"] = String(e.icon)
-	if slot == "weapon" and e.has("model"):
-		item["weapon"] = String(e.code)
-	return item
+	var lvl := level
+	if lvl <= 0:
+		# niveau du début de la zone de la bande de l'objet
+		var zones: Array = GameData.zones
+		var zi := clampi(int(e.get("band", 0)), 0, zones.size() - 1)
+		lvl = 1 + int(zones[zi].get("level_bonus", 0)) + 5 if not zones.is_empty() else 10
+	return from_template(e, lvl)
 
 
 ## Transforme l'objet en pièce du set [param set_id].
-static func make_set_piece(item: Dictionary, set_id: String) -> void:
+static func make_set_piece(item: Dictionary, set_id: String) -> void:  # anciens sets du jeu
 	item["set"] = set_id
 	var base := String(GameData.eden_by_id.get(int(item.get("eden", 0)), {}).get("name", ""))
 	if base == "":
@@ -256,10 +359,9 @@ static func active_set_bonuses(equipped: Dictionary) -> Array:
 	var out: Array = []
 	var counts := set_counts(equipped)
 	for sid in counts:
-		var bonus: Dictionary = SETS.get(sid, {}).get("bonus", {})
-		for n in [2, 4, 6]:
-			if int(counts[sid]) >= n and bonus.has(n):
-				var b: Dictionary = bonus[n]
+		for n in set_tiers(sid):
+			if int(counts[sid]) >= n:
+				var b: Dictionary = set_bonus(sid, n)
 				var procs: Array = []
 				var i := 0
 				for p: Dictionary in b.get("procs", []):
@@ -296,6 +398,8 @@ static func _add_affix(item: Dictionary, stat: String) -> void:
 ## Statistiques finales : base × niveau × qualité × amélioration + affixes.
 ## Stats du type de base de l'objet (l'arme dépend de la classe pour laquelle elle a été créée).
 static func base_stats(item: Dictionary) -> Dictionary:
+	if item.has("base"):
+		return item.base  # stats connues de l'objet d'Eden (niveau 1, rareté comprise)
 	if item.get("slot", "weapon") == "weapon":
 		return WEAPON_BASES.get(weapon_type_of(item), WEAPON_BASES.katana)
 	return BASES.get(item.get("slot", "weapon"), BASES.weapon).stats
@@ -315,6 +419,8 @@ static func stats(item: Dictionary, with_extras := true) -> Dictionary:
 			out["matk"] = out.get("matk", 0.0) + float(aff[s])
 		else:
 			out[s] = out.get(s, 0.0) + float(aff[s])
+	for s in item.get("passive", {}).get("stat", {}):
+		out[s] = out.get(s, 0.0) + float(item.passive.stat[s])
 	if with_extras:
 		# gemmes serties, enchantement, bonus aléatoires des améliorations
 		var ex := Craft.extra_stats(item)
@@ -424,7 +530,7 @@ static func stat_text(stat: String, value) -> String:
 
 ## Couleur d'affichage : vert pour une pièce de set, sinon celle de la rareté.
 static func color_of(item: Dictionary) -> Color:
-	return SET_COLOR if item.has("set") else RARITIES[int(item.rarity)].color
+	return RARITIES[clampi(int(item.get("rarity", 0)), 0, RARITIES.size() - 1)].color
 
 
 ## Type affiché : nom de l'arme de la classe (Katana, Arc...) ou emplacement.
@@ -447,10 +553,14 @@ static func describe(item: Dictionary) -> String:
 		"Qualité [color=%s]%d %%[/color]%s" % ["#7fe08a" if q >= 1.0 else "#ff9a7a", roundi(q * 100.0),
 			"   ·   Amélioration [color=#ffcf6b]+%d[/color] / %d" % [up, MAX_UPGRADE] if up > 0 else ""],
 		"[color=#5a5470]────────────────────────[/color]"]
-	# stats de base du type : valeur finale, (bonus de qualité, amélioration et affixes) entre parenthèses
+	# stats connues : valeur finale, (écart dû à la qualité et à l'amélioration) entre parenthèses
 	var base := base_stats(item)
 	var st := stats(item, false)
-	var ref := stats({"slot": item.slot, "wtype": weapon_type_of(item) if item.slot == "weapon" else "", "level": item.level, "quality": 1.0, "upgrade": 0, "affixes": {}})
+	var ref_item := item.duplicate()
+	ref_item["quality"] = 1.0
+	ref_item["upgrade"] = 0
+	ref_item.erase("passive")
+	var ref := stats(ref_item, false)
 	for s in base:
 		if not st.has(s):
 			continue
@@ -460,7 +570,9 @@ static func describe(item: Dictionary) -> String:
 		var shown := roundi(bonus * (100.0 if pct else 1.0))
 		if shown != 0:
 			bonus_txt = "  [color=%s](%s%d%s)[/color]" % ["#7fe08a" if bonus > 0 else "#ff7a7a", "+" if bonus > 0 else "", shown, " %" if pct else ""]
-		lines.append("%s  [b]%s[/b]%s" % [STAT_NAMES.get(s, s), ("%d %%" % roundi(float(st[s]) * 100.0)) if pct else str(roundi(float(st[s]))), bonus_txt])
+		lines.append("%s  [b]%s[/b]%s" % [STAT_NAMES.get(s, EXTRA_STAT_NAMES.get(s, s)), ("%d %%" % roundi(float(st[s]) * 100.0)) if pct else str(roundi(float(st[s]))), bonus_txt])
+	if item.has("passive"):
+		lines.append("[color=#ffd76a]✶ Passif — %s : %s[/color]" % [item.passive.get("name", ""), item.passive.get("desc", "")])
 	# affixes (stats hors type de base)
 	var aff_lines: PackedStringArray = []
 	for s in st:
@@ -493,14 +605,16 @@ static func describe(item: Dictionary) -> String:
 	if up < MAX_UPGRADE:
 		lines.append("[color=#aaaaaa]Prochaine amélioration : %d %% de réussite[/color]" % roundi(Craft.success_chance(item, 0) * 100))
 	var sid := String(item.get("set", ""))
-	if SETS.has(sid):
+	var sdef := set_def(sid)
+	if not sdef.is_empty():
 		var worn := int(set_counts(Profile.equipped).get(sid, 0))
 		lines.append("")
-		lines.append("[color=#%s]Set %s (%d pièce%s portée%s)[/color]" % [SET_COLOR.to_html(false), SETS[sid].name, worn, "s" if worn > 1 else "", "s" if worn > 1 else ""])
-		for n in [2, 4, 6]:
-			var b: Dictionary = SETS[sid].bonus.get(n, {})
-			if b.is_empty():
-				continue
+		lines.append("[color=#%s]%s (%d pièce%s portée%s)[/color]" % [SET_COLOR.to_html(false), sdef.name, worn, "s" if worn > 1 else "", "s" if worn > 1 else ""])
+		for n in set_tiers(sid):
+			var bn := set_bonus(sid, n)
 			var set_col := SET_COLOR.to_html(false) if worn >= n else "888888"
-			lines.append("[color=#%s]%d pièces : %s[/color]" % [set_col, n, " ; ".join(bonus_lines(b))])
+			lines.append("[color=#%s]%d pièces : %s[/color]" % [set_col, n, " ; ".join(bonus_lines(bn))])
+	var eden: Dictionary = GameData.eden_by_id.get(int(item.get("eden", 0)), {})
+	if not eden.is_empty():
+		lines.append("[color=#8a86a0]Objet d'Eden · niveau %d dans le jeu d'origine[/color]" % int(eden.level))
 	return "\n".join(lines)

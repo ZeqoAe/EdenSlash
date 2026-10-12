@@ -138,7 +138,7 @@ func _show_hero() -> void:
 	var cls := GameData.class_data(Profile.selected_class)
 	if cls.is_empty() or not ResourceLoader.exists(cls.model):
 		return
-	var model := EdenModel.instantiate_hero(cls, Profile.outfit_of(Profile.selected_class))
+	var model := EdenModel.instantiate_hero(cls, Profile.outfit_of(Profile.selected_class), Profile.worn_parts(Profile.selected_class))
 	model.scale = Vector3.ONE * GameData.HERO_SCALE
 	model.rotation.y = -0.45  # trois-quarts, tourné vers le menu
 	backdrop.hero_root.add_child(model)

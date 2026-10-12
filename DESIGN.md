@@ -281,8 +281,14 @@ aériens / mages), **Pas aérien** (+1 esquive en l'air, ×2).
 ## Équipement
 
 - Chaque objet a un **type de base** (ex. katana : orienté physique) avec des stats de base.
-- À la création (butin, achat, craft), un **jet de qualité entre 90 % et 120 %** des stats
-  de base, plus des **affixes aléatoires** selon la rareté (valeurs tirées dans une fourchette).
+- **Objets d'Eden** (`data/eden_catalog.json`) : chaque objet du jeu est un vrai objet d'Eden
+  (nom, icône, stats connues, set, passif), choisi dans la tranche de niveaux de la zone
+  (niveaux 1-25 → première zone … 69-99 → dernière). Ses stats valent la référence du jeu × le
+  rapport de l'objet dans Eden × la rareté.
+- **6 raretés** : commun, spécial, rare, épique (jets aléatoires : qualité 70-90 %, 75-95 %,
+  80-100 %, 85-100 %), **mythique** (toujours 100 %) et **légendaire** (101-120 %). Mythiques et
+  légendaires : seulement sur les boss (garanti, 30 % de légendaire, 50 % si enragé) ou par
+  fabrication (mythiques) ; ils portent le passif d'arme et les effets de set d'Eden.
 - **Amélioration +1 → +10** : augmente les stats de base à chaque niveau ; aux paliers
   **+4, +6, +8, +10**, une stat aléatoire de l'objet est en plus augmentée (ou un affixe ajouté).
 - **Désassemblage** → matériaux selon la rareté et le niveau, **+ 70 % des pierres** dépensées

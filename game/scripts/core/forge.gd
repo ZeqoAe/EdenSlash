@@ -23,6 +23,9 @@ static func reforge_cost(item: Dictionary) -> Dictionary:
 
 ## Stats de l'objet qu'on peut réforger (affixes ayant une fourchette).
 static func reforgeable(item: Dictionary) -> Array:
+	if item.has("base"):
+		# objet d'Eden : ses stats connues (sauf mythiques et légendaires, aux stats fixes)
+		return item.base.keys() if int(item.get("rarity", 0)) < Items.MYTHIC else []
 	return item.get("affixes", {}).keys().filter(func(s): return Items.AFFIX_RANGES.has(s))
 
 
@@ -30,6 +33,15 @@ static func reforgeable(item: Dictionary) -> Array:
 static func reforge(item: Dictionary, stat: String) -> String:
 	if not Profile.pay(reforge_cost(item)):
 		return "Pas assez d'or ou d'essences."
+	if item.has("base"):
+		var e: Dictionary = GameData.eden_by_id.get(int(item.get("eden", 0)), {})
+		var ratio := float(e.get("r", {}).get(stat, 1.0))
+		var nv := Items._ref(String(item.slot), stat) * ratio * float(Items.RARITY_MULT[int(item.rarity)]) * randf_range(0.92, 1.08)
+		var b0 := float(item.base[stat])
+		item.base[stat] = nv
+		Profile.save_profile()
+		var k := 1.0 if stat in Items.PERCENT_STATS else Items._level_k(int(item.level))
+		return "%s : %s → %s" % [Items.STAT_NAMES.get(stat, Items.EXTRA_STAT_NAMES.get(stat, stat)), Items.stat_text(stat, b0 * k), Items.stat_text(stat, nv * k)]
 	var r: Array = Items.AFFIX_RANGES[stat]
 	var v := randf_range(float(r[0]), float(r[1]))
 	if not stat in Items.PERCENT_STATS:
@@ -49,7 +61,9 @@ static func polish(item: Dictionary) -> String:
 	if not Profile.pay(polish_cost(item)):
 		return "Pas assez d'or ou de cristaux."
 	var before := float(item.get("quality", 1.0))
-	var roll := snappedf(randf_range(0.9, 1.2), 0.01)
+	# nouveau jet dans la fourchette de la rareté (mythique : toujours 100 %)
+	var q: Array = Items.QUALITY[clampi(int(item.get("rarity", 0)), 0, Items.QUALITY.size() - 1)] if item.has("rv") else [0.9, 1.2]
+	var roll := snappedf(randf_range(float(q[0]), float(q[1])), 0.01)
 	Profile.save_profile()
 	if roll > before:
 		item.quality = roll

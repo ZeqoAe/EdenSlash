@@ -146,6 +146,10 @@ func recalc_stats() -> void:
 	for k in arc:
 		eq[k] = float(eq.get(k, 0.0)) + float(arc[k])
 	var ps := Run.passive_stats()
+	# bonus en % de l'équipement (objets et sets d'Eden) : mêmes effets que les passifs
+	for k in ["def_pct", "atk_pct", "matk_pct", "parry", "cast_speed", "heal_pct", "str_pct", "agi_pct", "int_pct", "wis_pct", "lck_pct"]:
+		if eq.has(k):
+			ps[k] = float(ps.get(k, 0.0)) + float(eq[k])
 	var ratio := hp / max_hp if max_hp > 0.0 else 1.0
 	var base: Dictionary = cls.get("base", {})
 	# attributs d'Eden : base de la classe + croissance par niveau + équipement, × talents
@@ -261,6 +265,8 @@ func _dress_model() -> void:
 	var outfit := Profile.outfit_of(class_id)
 	for i in parts.size():
 		EdenModel.dress(model, outfit if i == 0 and outfit != "" and ResourceLoader.exists(outfit) else String(parts[i]))
+	for p in Profile.worn_parts(class_id):
+		EdenModel.dress(model, String(p))
 
 
 func _attach_weapon(code: String) -> void:

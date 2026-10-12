@@ -594,7 +594,7 @@ func refresh() -> void:
 		power += EquipmentPage._power_of(it)
 	_power.text = str(power)
 	var sets := Items.active_set_bonuses(Profile.equipped)
-	_set_text.text = ("%s · %d pièces" % [Items.SETS[sets[0].set].name, int(sets[0].pieces)]) if not sets.is_empty() else "Aucun bonus actif"
+	_set_text.text = ("%s · %d pièces" % [Items.set_def(sets[-1].set).get("name", ""), int(sets[-1].pieces)]) if not sets.is_empty() else "Aucun bonus actif"
 	var p := _stats_player()
 	var mag := String(cd.get("dmg_type", "phys")) == "mag"
 	_stat_vals.hp.text = str(roundi(p.max_hp))
@@ -805,17 +805,20 @@ func _stats_compare(it: Dictionary, equipped: bool) -> String:
 
 func _set_bbcode(it: Dictionary) -> String:
 	var sid := String(it.get("set", ""))
-	if sid == "" or not Items.SETS.has(sid):
+	var s := Items.set_def(sid)
+	if s.is_empty():
 		return "[b]Bonus de set[/b]\n[color=#9a98a8]Cet objet n'appartient à aucun set.[/color]"
-	var s: Dictionary = Items.SETS[sid]
 	var worn := int(Items.set_counts(Profile.equipped).get(sid, 0))
 	var lines: PackedStringArray = ["[b][color=#%s]%s[/color][/b]  (%d pièce(s) portée(s))" % [Items.SET_COLOR.to_html(false), s.name, worn]]
-	for n in [2, 4, 6]:
-		if not s.bonus.has(n):
-			continue
+	for n in Items.set_tiers(sid):
 		var ok: bool = worn >= n
-		lines.append("[color=%s](%d pièces) %s[/color]" % ["#7fe08a" if ok else "#c8c8d4", n,
-			" ; ".join(Items.bonus_lines({"set": sid, "pieces": n, "stat": s.bonus[n].get("stat", {}), "procs": s.bonus[n].get("procs", [])}))])
+		lines.append("[color=%s](%d pièces) %s[/color]" % ["#7fe08a" if ok else "#c8c8d4", n, " ; ".join(Items.bonus_lines(Items.set_bonus(sid, n)))])
+	var pieces: Array = s.get("pieces", [])
+	if not pieces.is_empty():
+		var names: PackedStringArray = []
+		for pid in pieces:
+			names.append(String(GameData.eden_by_id.get(int(pid), {}).get("name", "?")))
+		lines.append("[color=#8a86a0]Pièces : %s[/color]" % ", ".join(names))
 	return "\n".join(lines)
 
 
@@ -906,16 +909,23 @@ func _show_stat_detail() -> void:
 func _show_sets() -> void:
 	var lines: PackedStringArray = []
 	var counts := Items.set_counts(Profile.equipped)
-	for sid in Items.SETS:
-		var s: Dictionary = Items.SETS[sid]
+	# sets des objets que tu possèdes (portés ou dans l'inventaire)
+	var owned := {}
+	for it in Profile.equipped.values() + Profile.inventory:
+		if String(it.get("set", "")) != "":
+			owned[String(it.set)] = true
+	for sid in owned:
+		var s := Items.set_def(sid)
+		if s.is_empty():
+			continue
 		var worn := int(counts.get(sid, 0))
 		lines.append("[b][color=#%s]%s[/color][/b]  — %d pièce(s) portée(s)" % [Items.SET_COLOR.to_html(false), s.name, worn])
-		for n in [2, 4, 6]:
-			if s.bonus.has(n):
-				lines.append("   [color=%s](%d) %s[/color]" % ["#7fe08a" if worn >= n else "#c8c8d4", n,
-					" ; ".join(Items.bonus_lines({"set": sid, "pieces": n, "stat": s.bonus[n].get("stat", {}), "procs": s.bonus[n].get("procs", [])}))])
+		for n in Items.set_tiers(sid):
+			lines.append("   [color=%s](%d) %s[/color]" % ["#7fe08a" if worn >= n else "#c8c8d4", n, " ; ".join(Items.bonus_lines(Items.set_bonus(sid, n)))])
 		lines.append("")
-	InfoDialog.open(self, "Sets d'équipement", "[color=#c8c8d4]Les pièces de set ont un cadre vert et se trouvent sur les objets rares ou mieux.[/color]\n\n" + "\n".join(lines))
+	if lines.is_empty():
+		lines.append("[color=#9a98a8]Aucune pièce de set pour l'instant.[/color]")
+	InfoDialog.open(self, "Sets d'équipement", "[color=#c8c8d4]Les sets d'Eden sont des pièces mythiques (orange) : boss et fabrication. Bonus à 2 et 5 pièces portées.[/color]\n\n" + "\n".join(lines))
 
 
 # --- widgets ---------------------------------------------------------------------------------
