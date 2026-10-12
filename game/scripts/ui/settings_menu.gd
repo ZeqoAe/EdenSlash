@@ -162,7 +162,7 @@ func _build_combat_tab() -> void:
 		["manual", "Manuel : clic pour attaquer"], ["auto", "Automatique : frappe seul les monstres au contact"]])
 	_note(v, "Automatique : quand tu ne te déplaces pas, le héros frappe le monstre le plus proche à portée. Se déplacer arrête l'attaque (pour esquiver).")
 	_section(v, "Compétences automatiques")
-	_note(v, "Une compétence cochée se lance toute seule dès qu'elle est rechargée et qu'un monstre est à sa portée (« AUTO » sur la barre). Les autres restent au clavier.")
+	_note(v, "Une compétence en AUTO (clique sur son bouton) se lance toute seule dès qu'elle est rechargée et qu'un monstre est à sa portée (« AUTO » sur la barre). Les autres restent au clavier.")
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 18)
 	v.add_child(row)
