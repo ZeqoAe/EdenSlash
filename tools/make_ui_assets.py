@@ -173,6 +173,46 @@ def hourglass(d, col, k, extra, n):
         d.polygon([P(n, 32, 40), P(n, 42, 50), P(n, 22, 50)], fill=(120, 170, 230, 255))
 
 
+def drop(d, col, k, extra, n):
+    e = extra / S
+    pts = []
+    for i in range(40):
+        t = i / 39 * math.pi * 2
+        x = 32 + math.sin(t) * (13 + e)
+        y = 38 + math.cos(t) * (13 + e)
+        if math.cos(t) < -0.2:
+            y -= (1 - abs(math.sin(t))) * 22
+        pts.append(P(n, x, y))
+    d.polygon(pts, fill=col)
+    if extra == 0:
+        d.ellipse([P(n, 25, 34), P(n, 31, 42)], fill=(40, 90, 20, 255))
+        d.ellipse([P(n, 33, 34), P(n, 39, 42)], fill=(40, 90, 20, 255))
+        d.rectangle([P(n, 28, 45), P(n, 36, 48)], fill=(40, 90, 20, 255))
+
+
+def cross(d, col, k, extra, n):
+    e = extra / S
+    d.rounded_rectangle([P(n, 25 - e, 10 - e), P(n, 39 + e, 54 + e)], radius=3 * S, fill=col)
+    d.rounded_rectangle([P(n, 10 - e, 25 - e), P(n, 54 + e, 39 + e)], radius=3 * S, fill=col)
+
+
+def ghost(d, col, k, extra, n):
+    e = extra / S
+    pts = [P(n, 32 + math.cos(t) * (16 + e), 28 + math.sin(t) * (16 + e)) for t in [math.pi + i / 20 * math.pi for i in range(21)]]
+    pts += [P(n, 48 + e, 54 + e), P(n, 42, 48), P(n, 37, 54 + e), P(n, 32, 48), P(n, 27, 54 + e), P(n, 22, 48), P(n, 16 - e, 54 + e)]
+    d.polygon(pts, fill=col)
+    if extra == 0:
+        d.ellipse([P(n, 24, 24), P(n, 30, 32)], fill=(40, 40, 70, 255))
+        d.ellipse([P(n, 34, 24), P(n, 40, 32)], fill=(40, 40, 70, 255))
+
+
+def feather(d, col, k, extra, n):
+    e = extra / S
+    pts = [P(n, 48 + e, 10 - e), P(n, 54 + e, 18), P(n, 30, 46 + e), P(n, 18 - e, 50 + e), P(n, 22, 38 - e)]
+    d.polygon(pts, fill=col)
+    d.line([P(n, 50, 14), P(n, 12, 54)], fill=col if extra else (60, 110, 120, 255), width=2 * S + extra)
+
+
 ICONS = {
     # effet : (haut, bas, symbole)
     'freeze': ((120, 210, 255), (20, 60, 140), lambda d, c, k, e, n: snowflake(d, c, k, e, n)),
@@ -186,6 +226,10 @@ ICONS = {
     'fury': ((255, 110, 100), (120, 10, 20), fury),
     'stun': ((255, 240, 120), (150, 110, 10), stars),
     'flow': ((120, 240, 255), (10, 80, 130), waves),
+    'poison': ((170, 240, 90), (40, 110, 20), drop),
+    'regen': ((150, 255, 160), (20, 120, 50), cross),
+    'invisible': ((200, 200, 230), (60, 60, 100), ghost),
+    'evasion': ((170, 240, 240), (30, 110, 120), feather),
 }
 
 
