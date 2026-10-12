@@ -296,8 +296,10 @@ func _test_run_screens() -> void:
 	var screen: PageScreen = world.pause_menu._screen
 	screen.show_page(1)
 	await _frames()
-	var eq: EquipmentPage = screen.page(1)
-	check("page Personnage : sac de la run affiché", eq._grid.shown().size() == Profile.inventory.size())
+	var eq: InventoryPage = screen.page(1)
+	var shown := eq._grid.get_children().filter(func(c): return c is InventoryPage.StackSlot and c.entry.kind == "item").size()
+	check("inventaire : sac de la run affiché (%d)" % shown, shown == Profile.inventory.size())
+	check("inventaire : fournitures et matériaux en piles", eq._grid.get_children().any(func(c): return c is InventoryPage.StackSlot and c.entry.kind == "stack"))
 	var it: Dictionary = Profile.inventory.filter(func(x): return x.slot != "weapon")[0]
 	eq._equip(it)
 	check("équiper depuis la page", is_same(Profile.equipped.get(it.slot), it))

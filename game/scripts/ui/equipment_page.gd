@@ -359,6 +359,9 @@ class HeroPreview extends SubViewportContainer:
 	var _pivot: Node3D
 	var _shown := ""
 	var _drag := false
+	var spin := true  # rotation automatique lente
+	var idle_pose := false  # posture de repos (debout) plutôt que de combat
+	var cam: Camera3D
 
 	func _init() -> void:
 		stretch = true
@@ -385,7 +388,7 @@ class HeroPreview extends SubViewportContainer:
 		rim.light_energy = 1.5
 		rim.omni_range = 6.0
 		_vp.add_child(rim)
-		var cam := Camera3D.new()
+		cam = Camera3D.new()
 		cam.fov = 34.0
 		cam.transform = Transform3D(Basis(), Vector3(0, 1.25, 4.6)).looking_at(Vector3(0, 1.05, 0))
 		_vp.add_child(cam)
@@ -420,13 +423,13 @@ class HeroPreview extends SubViewportContainer:
 		_pivot.add_child(model)
 		EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, weapon_code))
 		var ap := EdenModel.find_anim_player(model)
-		var battle: String = cls.get("anims", {}).get("battle", "stand01")
+		var battle: String = cls.get("anims", {}).get("idle" if idle_pose else "battle", "stand01")
 		if ap and ap.has_animation(battle):
 			ap.get_animation(battle).loop_mode = Animation.LOOP_LINEAR
 			ap.play(battle)
 
 	func _process(delta: float) -> void:
-		if is_visible_in_tree() and not _drag:
+		if is_visible_in_tree() and not _drag and spin:
 			_pivot.rotation.y += delta * 0.35
 
 	func _gui_input(event: InputEvent) -> void:
@@ -434,3 +437,10 @@ class HeroPreview extends SubViewportContainer:
 			_drag = event.pressed
 		elif event is InputEventMouseMotion and _drag:
 			_pivot.rotation.y += event.relative.x * 0.01
+
+
+
+	## Cadrage : distance de la caméra et hauteur visée (héros en pied).
+	func frame(distance: float, look_y: float, yaw := 0.0) -> void:
+		cam.transform = Transform3D(Basis(), Vector3(0, look_y + 0.25, distance)).looking_at(Vector3(0, look_y, 0))
+		_pivot.rotation.y = yaw

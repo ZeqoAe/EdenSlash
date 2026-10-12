@@ -13,7 +13,7 @@ var settings: SettingsMenu
 var grimoire: Grimoire
 var _screen: PageScreen
 var _run: RunPage
-var _equip: EquipmentPage
+var _equip: InventoryPage
 var _info: InfoPage
 var _confirm: ConfirmationDialog
 
@@ -28,7 +28,7 @@ func setup(p: Player) -> void:
 	_run = RunPage.new()
 	_run.player = player
 	_screen.add_page("Run", _run)
-	_equip = EquipmentPage.new()
+	_equip = InventoryPage.new()
 	_equip.player = player
 	_screen.add_page("Équipement", _equip)
 	_info = InfoPage.new()

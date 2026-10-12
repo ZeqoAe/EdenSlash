@@ -18,7 +18,7 @@ const MENU := [
 ]
 
 var backdrop: MapBackdrop
-var _equip_screen: PageScreen
+var _equip_screen: InventoryScreen
 var _prep: PageScreen  # préparation de la run : Équipement puis Expertise & talents
 var _prep_button: Button
 var _talents: PageScreen
@@ -54,7 +54,7 @@ func _ready() -> void:
 			Profile.selected_zone = arg.trim_prefix("--zone=")
 		elif arg.begins_with("--weapon="):
 			Profile.select_weapon_type(arg.trim_prefix("--weapon="))
-		elif arg in ["--grimoire", "--talents", "--info"] or arg.begins_with("--prep=") or arg.begins_with("--archive="):
+		elif arg in ["--grimoire", "--talents", "--info", "--inventory"] or arg.begins_with("--prep=") or arg.begins_with("--archive="):
 			_open_screen = arg.trim_prefix("--")
 		elif arg.begins_with("--expertise="):
 			# test : expertise donnée à toutes les classes (profil de test uniquement)
@@ -63,7 +63,7 @@ func _ready() -> void:
 	if not Profile.in_run:
 		Profile.save_profile()  # classe choisie en argument : son préréglage (et son arme)
 	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in ["--grimoire", "--talents", "--info"] \
+		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in ["--grimoire", "--talents", "--info", "--inventory"] \
 				or arg.begins_with("--prep=") or arg.begins_with("--archive=") or arg.begins_with("--expertise="):
 			continue
 		if arg.begins_with("--lobby-shot="):
@@ -84,6 +84,8 @@ func _ready() -> void:
 	elif _open_screen.begins_with("prep="):
 		_prepare_run()
 		_prep.show_page(int(_open_screen.trim_prefix("prep=")))
+	elif _open_screen == "inventory":
+		_open_panel()
 	elif _open_screen.begins_with("archive="):
 		_archive.open(int(_open_screen.trim_prefix("archive=")))
 	if shot > 0.0:
@@ -295,9 +297,26 @@ func _build_ui() -> void:
 	_clock = Hud._label(ih, "", 14, UiTheme.TEXT)
 
 	# écrans plein écran
-	_equip_screen = _screen("Équipement", [["Équipement", _equipment_page()]])
+	# inventaire plein écran (maquette) : raccourcis vers les autres écrans à gauche
+	_equip_screen = InventoryScreen.new(6)
+	add_child(_equip_screen)
+	_equip_screen.closed.connect(func():
+		if _launching:
+			return
+		_class_dirty = false
+		_show_hero()
+		_refresh_ui())
+	_equip_screen.shortcuts = [
+		["Talents", "expertise", func(): _from_inventory(func(): _talents.open(0))],
+		["Classe", "class", func(): _equip_screen.page._pick_class()],
+		["Grimoire", "grimoire", func(): _from_inventory(func(): _grimoire.open(Profile.selected_class))],
+		["Statistiques", "stats", func(): _equip_screen.page._show_stat_detail()],
+		["Collection", "collection", func(): _from_inventory(func(): _archive.open(0))],
+	]
 	# préparation de la run : Équipement → Valider → Expertise & talents → Valider → run
-	_prep = _screen("Préparer la run", [["1 · Équipement", _equipment_page()], ["2 · Expertise & talents", TalentsPage.new()]])
+	var prep_inv := InventoryPage.new()
+	prep_inv.class_changed.connect(func(): _class_dirty = true)
+	_prep = _screen("Préparer la run", [["1 · Équipement", prep_inv], ["2 · Expertise & talents", TalentsPage.new()]])
 	_prep_button = Button.new()
 	_prep_button.focus_mode = Control.FOCUS_NONE
 	_prep_button.custom_minimum_size = Vector2(300, 44)
@@ -536,12 +555,6 @@ func _refresh_ui() -> void:
 	_show_menu(_current)
 
 
-func _equipment_page() -> EquipmentPage:
-	var page := EquipmentPage.new()
-	page.class_changed.connect(func(): _class_dirty = true)
-	return page
-
-
 ## Écran plein écran du lobby ; à sa fermeture, le lobby suit (classe, arme, apparence).
 func _screen(t: String, pages: Array) -> PageScreen:
 	var s := PageScreen.new(t, 5)
@@ -559,5 +572,11 @@ func _screen(t: String, pages: Array) -> PageScreen:
 
 func _open_panel() -> void:
 	_class_dirty = false
-	_equip_screen.set_title("Équipement", "Coffre commun à toutes les classes · 3 préréglages d'équipement par classe · l'arme portée décide du combo d'auto-attaque")
-	_equip_screen.open(0)
+	_equip_screen.zone_texture = _snapshot
+	_equip_screen.open()
+
+
+## Raccourci de l'inventaire : ferme l'inventaire puis ouvre l'autre écran.
+func _from_inventory(cb: Callable) -> void:
+	_equip_screen.close_ui()
+	cb.call()

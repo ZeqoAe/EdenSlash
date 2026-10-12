@@ -706,7 +706,9 @@ def main():
     body_rel = os.path.join('assets', 'player', 'body', 'body_m.glb')
     if a.rebuild_body and os.path.exists(os.path.join(GAME, body_rel)):
         os.remove(os.path.join(GAME, body_rel))
-    export_part(['#LFACE'], body_rel, {}, '^(%s)$' % body_filter)
+    # tenue complète + cheveux longs : tous les os du corps deviennent de vrais os animés
+    # (retirés au chargement par EdenModel.strip_body)
+    export_part(['#LFACE', '#L205', 'SL205', '#L107'], body_rel, {}, '^(%s)$' % body_filter)
     for cid, e in out_classes.items():
         ap_ = e['appearance']
         o_res, o_rel = auto_classes.part_path('outfit', ap_['outfit'].lstrip('#'), ap_['dye'].get('outfit'))

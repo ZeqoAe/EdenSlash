@@ -101,12 +101,22 @@ static func instantiate_hero(cls: Dictionary, outfit := "") -> Node3D:
 	if body == "" or not ResourceLoader.exists(body):
 		return instantiate(String(cls.get("model", "")))
 	var node := instantiate(body)
+	strip_body(node)
 	var parts: Array = cls.get("parts", [])
 	if outfit != "" and ResourceLoader.exists(outfit):
 		parts = [outfit] + parts.slice(1)
 	for p in parts:
 		dress(node, String(p))
 	return node
+
+
+## Le corps commun est exporté avec une tenue complète (pour que tous ses os soient de
+## vrais os animés) : on ne garde que le visage avant d'habiller le héros.
+static func strip_body(model: Node3D) -> void:
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if mi.name != "#LFACE" and not mi.has_meta("part"):
+			mi.get_parent().remove_child(mi)
+			mi.free()
 
 
 ## Habille le modèle d'une pièce (.glb exporté sur le même squelette) : ses maillages

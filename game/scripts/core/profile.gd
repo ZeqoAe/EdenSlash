@@ -16,8 +16,8 @@ const LAST_SLOT_PATH := "user://last_slot.txt"
 ## Les lancements de test (arguments après --, scènes res://tests) ont leur propre
 ## sauvegarde : ils ne touchent jamais au profil du joueur.
 const TEST_SAVE_PATH := "user://profile_test.json"
-const INVENTORY_MAX := 40
-const VAULT_MAX := 80
+const INVENTORY_MAX := 100000  # inventaire sans limite de place
+const VAULT_MAX := 100000
 const PRESETS_PER_CLASS := 3
 
 signal changed

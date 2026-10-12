@@ -256,6 +256,7 @@ func gain_xp(amount: int) -> void:
 # --- arme et traînée --------------------------------------------------------------
 ## Tenue et cheveux de la classe (ou skin choisi) sur le corps commun.
 func _dress_model() -> void:
+	EdenModel.strip_body(model)
 	var parts: Array = cls.get("parts", [])
 	var outfit := Profile.outfit_of(class_id)
 	for i in parts.size():
