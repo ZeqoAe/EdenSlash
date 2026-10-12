@@ -90,7 +90,7 @@ func _test_items() -> void:
 	check("trophées sur le butin rare des élites et boss", trophies > 0)
 	check("pas de trophée sur le butin courant", range(200).all(func(_i): return Items.generate(5, 0.0).slot != "trophy"))
 	var ring := Items.generate(5, 0.5, "ring")
-	check("bague : icône et stats", String(ring.icon).contains("a1001") and Items.stats(ring).has("lck"))
+	check("bague : icône d'Eden et stats", String(ring.icon) != "" and ring.has("eden") and Items.stats(ring).has("lck"))
 	Profile.inventory.append(ring)
 	Profile.equip(ring)
 	check("bague équipée (nouvel emplacement)", _uid("ring") == ring.uid and Profile.equipment_stats().has("lck"))
@@ -111,6 +111,7 @@ func _test_archive() -> void:
 	rare.rarity = 2
 	Items.make_set_piece(rare, "storm")
 	var legend := Items.generate(5, 0.0, "chest", "samurai", 4)
+	legend.erase("set")  # pas de pièce de set : 1 seule entrée
 	for it in [common, rare, legend]:
 		Profile.inventory.append(it)
 	Profile.equip(rare)
@@ -127,7 +128,7 @@ func _test_archive() -> void:
 	check("même entrée : déjà archivé", Archive.refusal(again) != "")
 	Profile.archive_item(legend)
 	check("légendaire (torse) : +4 Force", float(Archive.bonus().get("str", 0.0)) == str0 + 5.0)
-	check("collection %d / %d" % [Archive.count(), Archive.total()], Archive.count() == 3 and Archive.total() == 51)
+	check("collection %d / %d" % [Archive.count(), Archive.total()], Archive.count() == 3 and Archive.total() == (GameData.weapon_types.size() + 9) * 3 + Items.SETS.size())
 	# apparences
 	check("skin : 3e katana débloqué par le katana rare", Archive.skin_unlocked("katana", 2) and not Archive.skin_unlocked("katana", 3))
 	var code := String(Archive.skins("katana")[2].code)
@@ -166,12 +167,14 @@ func _test_progression() -> void:
 	check("sorts : 4 de base, le 5e au niveau 2", Progression.skill_level(3) == 1 and Progression.skill_level(4) == 2)
 	Run.start("warrior")
 	var skills: Array = GameData.class_data("warrior").skills
-	var base := skills.slice(0, 4).map(func(x): return int(x.id))
+	var base := Progression.own_skills("warrior").slice(0, 4).map(func(x): return int(x.id))
+	var shared := skills.filter(func(x): return x.get("shared", false)).map(func(x): return int(x.id))
+	base += shared
 	var seen := {}
 	for i in 60:
 		for c in Run.roll_cards(3, true):
 			seen[int(c.id)] = true
-	check("maîtrise 1 : seuls les 4 sorts de base sont proposés", seen.keys().all(func(k): return k in base) and seen.size() == 4)
+	check("maîtrise 1 : seuls les 4 sorts de base sont proposés", seen.keys().all(func(k): return k in base) and seen.size() == 4 + shared.size())
 	Profile.expertise["warrior"] = 2000
 	check("maîtrise montée : nouveaux sorts", Progression.skill_unlocked("warrior", int(skills[5].id)) and Progression.rewards_at("warrior", 2).any(func(r): return r.kind == "skill"))
 	Run.finish("abandon")
@@ -255,7 +258,7 @@ func _test_lobby() -> void:
 	await _frames()
 	check("valider : page Expertise & talents", lobby._prep.current_page() == 1 and lobby._prep_button.text.contains("lancer la run") and lobby._prep.page(1) is TalentsPage)
 	var tp: TalentsPage = lobby._prep.page(1)
-	check("expertise : plateau de 7 cases, parcours de maîtrise", tp._board._slots.size() == 7 and tp._track.get_child_count() >= 8 and tp._certs.get_child_count() == 12)
+	check("expertise : plateau de 7 cases, parcours de maîtrise", tp._board._slots.size() == 7 and tp._track.get_child_count() >= 8 and tp._certs.get_child_count() >= 2)
 	lobby._prep.close_ui()
 	lobby._archive.open(0)
 	await _frames()

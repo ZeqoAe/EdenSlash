@@ -134,6 +134,10 @@ Les captures arrivent dans `%APPDATA%/Godot/app_userdata/Eden Slash/shots/`.
 | `build_assets.py` | génère monstres, textures et `game/data/*.json` pour les zones jouables (rosters lus dans les camps des maps) |
 | `scan_orphans.py` | cherche dans les pkg les fichiers absents de l'index |
 | `blender_preview.py` | rendu de contrôle d'un `.glb` avec Blender en ligne de commande |
+| `build_classes.py` | les 60 classes : 6 réglées à la main + `auto_classes.py` / `auto_spells.py` (conversion automatique des sorts d'Eden, noms français dans `eden_fr.py`), corps animé commun, tenues et cheveux, armes, effets |
+| `build_talents.py` | arbres de talents et certificats de toutes les classes |
+| `build_items.py` | catalogue des 3 880 équipements d'Eden (`data/eden_items.json`, icônes, modèles des armes épiques et légendaires) |
+| `build_cosmetics.py` | costumes d'Eden → tenues (skins) de `assets/player/outfits/cos_*.glb` |
 
 ```bash
 python -m venv .venv && .venv/Scripts/python -m pip install numpy pillow

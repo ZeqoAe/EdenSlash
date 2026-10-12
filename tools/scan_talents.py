@@ -16,7 +16,7 @@ def talent_rows(class_ids):
     out = {}
     for r in rows:
         k = int(r[0])
-        if k > 200 or k // 10 not in class_ids:
+        if k > 1000 or k // 10 not in class_ids:  # 11..613 : classes 1 à 61
             continue
         cells = []
         for col, cell in enumerate(r[2:]):

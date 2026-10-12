@@ -111,7 +111,8 @@ func _ready() -> void:
 	cls = GameData.class_data(class_id)
 	display_name = cls.get("name_fr", "Héros")
 	kfm = "m"
-	setup_model(cls.get("model", "res://assets/player/samurai/samurai.glb"), "", GameData.HERO_SCALE)
+	setup_model(cls.get("body_model", cls.get("model", "res://assets/player/body/body_m.glb")), "", GameData.HERO_SCALE)
+	_dress_model()
 	_slim_collision()
 	floor_max_angle = deg_to_rad(55.0)
 	floor_snap_length = 0.7
@@ -253,6 +254,14 @@ func gain_xp(amount: int) -> void:
 
 
 # --- arme et traînée --------------------------------------------------------------
+## Tenue et cheveux de la classe (ou skin choisi) sur le corps commun.
+func _dress_model() -> void:
+	var parts: Array = cls.get("parts", [])
+	var outfit := Profile.outfit_of(class_id)
+	for i in parts.size():
+		EdenModel.dress(model, outfit if i == 0 and outfit != "" and ResourceLoader.exists(outfit) else String(parts[i]))
+
+
 func _attach_weapon(code: String) -> void:
 	if _weapon:
 		_weapon.queue_free()
@@ -1411,7 +1420,8 @@ func _afterimage() -> void:
 		if not mi.is_visible_in_tree() or mi.mesh == null:
 			continue
 		var copy := MeshInstance3D.new()
-		copy.mesh = mi.bake_mesh_from_current_skeleton_pose() if mi.skin else mi.mesh
+		var sref := mi.get_skin_reference() if mi.skin else null
+		copy.mesh = mi.bake_mesh_from_current_skeleton_pose() if sref and sref.get_skeleton().is_valid() and mi.get_node_or_null(mi.skeleton) is Skeleton3D else mi.mesh
 		copy.material_override = mat
 		copy.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		ghost.add_child(copy)
@@ -1449,12 +1459,22 @@ func take_damage(amount: float, source: Combatant = null, is_crit := false, dot 
 		return
 	_last_combat = _time
 	super.take_damage(amount, source, is_crit, dot)
+	# Épines (sorts d'Eden « renvoie les dégâts ») : 30 % du coup reçu renvoyé à l'attaquant
+	if not dot and has_status("thorns") and source and is_instance_valid(source) and not source.is_dead:
+		source.take_damage(amount * 0.3 * dmg_mult, self, false, true)
 	if not dot:
 		_shake(clampf(amount / max_hp * 8.0, 0.3, 1.4))
 	if not is_dead:
 		Procs.fire(self, "hurt", source)
 		if hp < max_hp * 0.3:
 			Procs.fire(self, "low_hp", source)
+
+
+## Résolution : insensible aux contrôles des monstres.
+func add_status(status: String, duration: float, source: Combatant = null) -> void:
+	if status in ["stun", "freeze", "chill", "root", "sleep", "fear", "disarm"] and has_status("resolve"):
+		return
+	super.add_status(status, duration, source)
 
 
 func _on_death(_killer: Combatant) -> void:

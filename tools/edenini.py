@@ -41,3 +41,12 @@ def read_text(name):
             out[int(rec[0])] = rec[1:]
         i += nfields
     return out
+
+
+def read_rows(name, encoding='big5'):
+    """Comme read_table, mais découpe les lignes sur « |\r\n<nombre>| » : résiste aux
+    lignes qui n'ont pas exactement ncols champs (c_enchant)."""
+    import re
+    raw = open(os.path.join(DB, name + '.ini'), 'rb').read().decode(encoding, 'replace')
+    _head, _, body = raw.partition('\r\n')
+    return [chunk.split('|') for chunk in re.split(r'\|\r\n(?=\d+\|)', body) if chunk]

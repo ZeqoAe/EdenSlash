@@ -36,7 +36,7 @@ func _ready() -> void:
 	var left := ItemWidgets.panel(self, 330)
 	ItemWidgets.section(left, "Classe")
 	_class_box = GridContainer.new()
-	_class_box.columns = 3
+	_class_box.columns = 1
 	_class_box.add_theme_constant_override("h_separation", 6)
 	_class_box.add_theme_constant_override("v_separation", 6)
 	left.add_child(_class_box)
@@ -168,7 +168,16 @@ func refresh() -> void:
 func _refresh_classes(cid: String, in_run: bool) -> void:
 	for c in _class_box.get_children():
 		c.queue_free()
-	for id in GameData.classes:
+	if not in_run:
+		_class_box.add_child(ClassPicker.button(func(): return Profile.selected_class, func(cls_id):
+			if cls_id == Profile.selected_class:
+				return
+			Profile.selected_class = cls_id
+			Profile.save_profile()
+			_selected = {}
+			class_changed.emit()
+			refresh(), false, Vector2(300, 44)))
+	for id in ([cid] if in_run else []):
 		var cls := GameData.class_data(id)
 		var b := Button.new()
 		b.focus_mode = Control.FOCUS_NONE
@@ -397,7 +406,7 @@ class HeroPreview extends SubViewportContainer:
 		_vp.add_child(disk)
 
 	func show_hero(class_id: String, weapon_code: String) -> void:
-		var key := class_id + "|" + weapon_code
+		var key := class_id + "|" + weapon_code + "|" + Profile.outfit_of(class_id)
 		if key == _shown:
 			return
 		_shown = key
@@ -406,7 +415,7 @@ class HeroPreview extends SubViewportContainer:
 		var cls := GameData.class_data(class_id)
 		if cls.is_empty() or not ResourceLoader.exists(String(cls.get("model", ""))):
 			return
-		var model := EdenModel.instantiate(cls.model)
+		var model := EdenModel.instantiate_hero(cls, Profile.outfit_of(class_id))
 		model.scale = Vector3.ONE * GameData.HERO_SCALE
 		_pivot.add_child(model)
 		EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, weapon_code))

@@ -44,6 +44,10 @@ var records := {}  # records cumulés de toutes les runs (missions) : kills, hea
 var cert_board: Array = ["", "", "", "", "", "", ""]  # plateau des certificats (CertBoard)
 var archive := {}  # entrée de l'archive ("katana:4", "set:storm"...) -> copie de l'objet archivé
 var skins := {}  # type d'arme -> code du modèle choisi (apparence débloquée par l'archive)
+var outfits := {}  # classe -> tenue portée (skin cosmétique, .glb de assets/player/outfits)
+var owned_outfits: Array = []  # cosmétiques d'Eden débloqués (identifiants de data/eden_items.json -> cosmetics)
+## Mode dev (archive) : activé, or et matériaux donnés au départ de chaque run.
+var dev := {"enabled": false, "gold": 0, "fragment": 0, "essence": 0, "crystal": 0}
 var unlocked_zones := 1  # zones jouables (dans l'ordre de data/zones.json)
 var selected_zone := "limestone"
 var runs_done := 0
@@ -106,6 +110,10 @@ func load_profile() -> void:
 	_sync_certificates()
 	archive = d.get("archive", {})
 	skins = d.get("skins", {})
+	outfits = d.get("outfits", {})
+	owned_outfits = d.get("owned_outfits", [])
+	dev = {"enabled": false, "gold": 0, "fragment": 0, "essence": 0, "crystal": 0}
+	dev.merge(d.get("dev", {}), true)
 	selected_zone = String(d.get("selected_zone", "limestone"))
 	if d.has("vault"):
 		vault = d.get("vault", []).map(_migrate)
@@ -153,7 +161,7 @@ func save_profile() -> void:
 		"unlocked_zones": unlocked_zones, "selected_zone": selected_zone,
 		"expertise": expertise, "talents": talents, "certificates": certificates, "stash": stash,
 		"unlocked_classes": unlocked_classes, "records": records, "cert_board": cert_board,
-		"archive": archive, "skins": skins, "saved_at": Time.get_datetime_string_from_system(false, true),
+		"archive": archive, "skins": skins, "outfits": outfits, "owned_outfits": owned_outfits, "dev": dev, "saved_at": Time.get_datetime_string_from_system(false, true),
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(d))
@@ -289,6 +297,10 @@ func begin_run() -> void:
 	gold = 0
 	for m in materials:
 		materials[m] = 0
+	if dev.get("enabled", false):
+		gold = int(dev.get("gold", 0))
+		for m in materials:
+			materials[m] = int(dev.get(m, 0))
 	# la réserve de fournitures part avec le héros : perdue s'il tombe
 	bag = stash.duplicate()
 	stash = {}
@@ -466,6 +478,8 @@ func _clear() -> void:
 	records = {}
 	archive = {}
 	skins = {}
+	outfits = {}
+	owned_outfits = []
 	stash = {}
 	bag = {}
 
@@ -489,6 +503,8 @@ func reset_all() -> void:
 	records = {}
 	archive = {}
 	skins = {}
+	outfits = {}
+	owned_outfits = []
 	stash = {}
 	_lobby_view()
 	_ensure_starter()
@@ -532,6 +548,8 @@ func expertise_progress(cls: String) -> Vector2:
 func add_expertise(cls: String, amount: int) -> int:
 	var before := expertise_level(cls)
 	expertise[cls] = int(expertise.get(cls, 0)) + amount
+	if expertise_level(cls) > before:
+		_check_missions()  # la maîtrise débloque les classes vertes et orange qui en dépendent
 	return expertise_level(cls) - before
 
 
@@ -909,3 +927,26 @@ func archive_item(item: Dictionary) -> Array:
 
 func all_items() -> Array:
 	return equipped.values() + inventory
+
+
+## Tenue (skin) portée par la classe ("" : tenue de la classe).
+func outfit_of(cls: String) -> String:
+	return String(outfits.get(cls, ""))
+
+
+## Mode dev : niveau de maîtrise [param lvl] pour la classe (points d'expertise ajustés).
+func set_expertise_level(cls: String, lvl: int) -> void:
+	var pts := 0
+	for l in range(1, clampi(lvl, 1, EXPERTISE_MAX)):
+		pts += expertise_need(l)
+	expertise[cls] = pts
+	_check_missions()
+
+
+func outfit_unlocked(id: String) -> bool:
+	return id in owned_outfits
+
+
+func unlock_outfit(id: String) -> void:
+	if not id in owned_outfits:
+		owned_outfits.append(id)

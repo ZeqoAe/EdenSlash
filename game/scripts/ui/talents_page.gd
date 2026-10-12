@@ -133,27 +133,7 @@ func refresh() -> void:
 	var c := _cls()
 	for b in _tabs.get_children():
 		b.queue_free()
-	for id in GameData.classes:
-		var cd: Dictionary = GameData.classes[id]
-		var open := Progression.class_unlocked(id)
-		var b := ItemWidgets.TipButton.new()
-		b.text = "%s  %d" % [cd.get("name_fr", id), Profile.expertise_level(id)] if open else "🔒 %s" % cd.get("name_fr", id)
-		b.icon = UiTheme.texture(String(cd.get("icon", "")))
-		b.expand_icon = false
-		b.add_theme_constant_override("icon_max_width", 26)
-		b.custom_minimum_size = Vector2(150, 40)
-		b.toggle_mode = true
-		b.button_pressed = id == c
-		b.focus_mode = Control.FOCUS_NONE
-		b.tooltip_text = " "
-		b.tip = ("[b]%s[/b] · maîtrise niveau %d" % [cd.get("name_fr", id), Profile.expertise_level(id)]) if open else \
-			"[b]%s[/b] — classe verrouillée\n[color=#ffcf6b]Mission : %s[/color]\nTu peux déjà voir ses talents et ses certificats." % [cd.get("name_fr", id), Progression.mission_line(id)]
-		if not open:
-			b.modulate = Color(0.75, 0.75, 0.8)
-		var cid: String = id
-		b.pressed.connect(func():
-			show_class(cid))
-		_tabs.add_child(b)
+	_tabs.add_child(ClassPicker.button(func(): return _cls(), func(cid): show_class(cid), true))
 	var lvl := Profile.expertise_level(c)
 	var prog := Profile.expertise_progress(c)
 	_level_label.text = "%s — maîtrise niveau %d / %d" % [GameData.class_data(c).get("name_fr", c), lvl, Profile.EXPERTISE_MAX]
@@ -326,10 +306,13 @@ func _refresh_certs() -> void:
 	for x in _certs.get_children():
 		x.queue_free()
 	var unlocked := Profile.unlocked_certificates().map(func(x): return x.key)
+	# 60 classes : on liste les certificats débloqués et ceux de la classe affichée
 	for c in GameData.talents:
 		var certs: Array = GameData.talents[c].get("certificates", [])
 		for i in certs.size():
 			var key := "%s/%s" % [c, certs[i]]
+			if not key in unlocked and c != _cls():
+				continue
 			_certs.add_child(CertChip.new(self, key, key in unlocked, int(Profile.CERT_LEVELS[mini(i, Profile.CERT_LEVELS.size() - 1)])))
 
 

@@ -150,7 +150,9 @@ func add_status(status: String, duration: float, source: Combatant = null) -> vo
 	if is_boss and status == "freeze":
 		duration *= 0.35  # le boss résiste au gel
 	super.add_status(status, duration, source)
-	if status in ["freeze", "stun"] and _state == "attack" and not is_boss:
+	if is_boss and status in ["sleep", "fear", "root"]:
+		duration *= 0.35
+	if status in ["freeze", "stun", "sleep", "fear"] and _state == "attack" and not is_boss:
 		if is_instance_valid(_telegraph):
 			_telegraph.queue_free()
 		_pending_shot = {}
@@ -229,6 +231,14 @@ func _physics_process(delta: float) -> void:
 	desired += _separation() * 1.8
 	if has_status("chill"):
 		desired *= 0.55
+	if has_status("root"):
+		desired = Vector3.ZERO
+	elif has_status("fear") and _player_alive():
+		# terreur : fuit le héros sans attaquer
+		var away := global_position - _player.global_position
+		away.y = 0.0
+		desired = away.normalized() * move_speed * 0.9
+		face_direction(away, delta, 8.0)
 	_knock = _knock.move_toward(Vector3.ZERO, 14.0 * delta)
 	velocity.x = desired.x + _knock.x
 	velocity.z = desired.z + _knock.z
@@ -287,7 +297,7 @@ func _update_chase(delta: float) -> Vector3:
 	to.y = 0.0
 	face_direction(to, delta, 10.0)
 	if to.length() <= _attack_range():
-		if _time >= _attack_ready_at and not _attacks.is_empty() and not has_status("disarm"):
+		if _time >= _attack_ready_at and not _attacks.is_empty() and not has_status("disarm") and not has_status("fear"):
 			_start_attack()
 			return Vector3.ZERO
 		# les tireurs gardent leurs distances, les autres collent le héros

@@ -33,6 +33,10 @@ PY = sys.executable
 MOTION_ID = {3001: 'shoot23', 3002: 'shoot24', 3003: 'shoot25', 3004: 'shoot54', 412: 'shoot12',
              401: 'shoot01', 402: 'shoot02', 3091: 'shoot50', 3092: 'shoot51', 3094: 'shoot63'}
 
+MOTION_IDS = os.path.join(ROOT, 'extracted', 'm_motion_ids.json')
+# famille d'Eden des classes réglées à la main (c_class col. 11)
+FAMILY = {'warrior': 1, 'thief': 2, 'samurai': 2, 'hunter': 3, 'cleric': 4, 'magician': 5}
+
 # Calage des mini-cartes officielles (tools : ajustement eau / sol, voir journal)
 MINIMAPS = {
     's002': {'image': 'res://assets/ui/maps/s002m.png', 'ppm': 1.0971, 'ox': 12, 'oy': 8},
@@ -560,6 +564,7 @@ def parse_motion(path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--skip-models', action='store_true')
+    ap.add_argument('--rebuild-body', action='store_true', help="réexporte le corps commun (nouvelles animations)")
     a = ap.parse_args()
     if edenpkg.kit_mode(nif2gltf.PKG):
         print('mode kit : pas de client Eden, modèles et effets déjà exportés réutilisés')
@@ -640,22 +645,90 @@ def main():
         entry['weapons'] = weapons
         out_classes[cid] = entry
 
-        if not a.skip_models:
-            ap_ = c['appearance']
-            dye = dict(nif2gltf.DEFAULT_DYE)
-            dye.update(ap_['dye'])
-            subprocess.run([PY, '-I', os.path.join(os.path.dirname(__file__), 'nif2gltf.py'),
-                            'char/%s.kfm' % c['body'], os.path.join(GAME, 'assets', 'player', cid),
-                            '--name', cid, '--only', ','.join([ap_['outfit'], ap_['skin'], ap_['hair'], ap_['face']]),
-                            '--anims', ANIM_FILTER, '--dye', json.dumps(dye),
-                            '--tex-dir', os.path.join(GAME, 'assets', 'player', 'textures')], check=True)
-            conv = nif2gltf.Converter(idx, os.path.join(wdir, 'textures'), 'textures/')
-            for w in sorted({x[:4].lower() for x in c['weapons']}):
-                conv.convert('item/model/%s.nif' % w, [], os.path.join(wdir, w + '.glb'))
-            for w in c['weapons']:
-                p = conv.find_texture(w.lower() + '.dds', 'item/')
-                if p:
-                    conv.export_texture(p)
+        entry.update({'tier': 'green', 'family': FAMILY.get(cid, 1), 'parent': cid})
+        for sk in entry['skills']:
+            if 50011 <= int(sk['id']) <= 50035:
+                sk['shared'] = True  # sorts de novice : jouables directement
+
+    # --- classes importées automatiquement : 14 vertes (base) et 40 orange (ascensions) -----
+    import auto_classes
+    mids = json.load(open(MOTION_IDS, encoding='utf-8'))
+
+    def motion_anim(code):
+        c = int(code) if str(code).isdigit() else 0
+        return MOTION_ID.get(c) or mids.get(str(c)) or 'shoot24'
+
+    crow_all = {int(r[0]): r for r in edenini.read_table('c_class') if r[0].isdigit()}
+    # le samouraï (famille du voleur dans Eden) reçoit aussi les sorts de novice du voleur
+    out_classes['samurai']['skills'] = [dict(s, shared=True) for s in out_classes['thief']['skills']
+                                        if 50016 <= int(s['id']) <= 50020] + out_classes['samurai']['skills']
+    auto_classes.build({
+        'crow': crow_all, 'cspell': {str(k): v for k, v in cspell.items()}, 'tspell': tspell, 'tclass': tclass,
+        'export_icon': export_icon, 'motion': motion_anim, 'classes': out_classes,
+        'fx_ok': lambda n: bool(n) and 'effect/model/%s.nif' % n in idx,
+        'common_passives': COMMON_PASSIVES, 'weapon_types': WEAPON_TYPES, 'combos': COMBOS,
+    })
+    for cid, e in out_classes.items():
+        for sk in e['skills']:
+            used_anims.add(sk.get('anim', ''))
+            fx_names.update(v for v in sk.get('fx', {}).values() if v)
+        for step in e.get('combo', []):
+            used_anims.add(step.get('anim', ''))
+    all_weapon_types = dict(WEAPON_TYPES)
+    all_weapon_types.update(auto_classes.weapon_type_entries())
+    for w in all_weapon_types.values():
+        used_anims.add(w['battle'])
+        for step in w.get('combo', COMBOS.get(w.get('class', ''), [])):
+            used_anims.add(step.get('anim', ''))
+    used_anims.discard('')
+
+    # --- modèles : corps animé commun + tenue et cheveux de chaque classe -------------------
+    tex_dir = os.path.join(GAME, 'assets', 'player', 'textures')
+
+    def export_part(only, rel_glb, dye, anims=None):
+        out = os.path.join(GAME, rel_glb)
+        if os.path.exists(out) or a.skip_models:
+            return
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        conv = nif2gltf.Converter(idx, tex_dir, '../textures/', only)
+        conv.anim_filter = anims or '^$'
+        conv.dye = dict(nif2gltf.DEFAULT_DYE)
+        conv.dye.update(dye or {})
+        nifs, kfs = nif2gltf.kfm_files(conv.read('char/m.kfm'))
+        kf_paths = [k for k in dict.fromkeys(nif2gltf.resolve('char', k) for k in kfs) if k in idx] if anims else []
+        info = conv.convert(nif2gltf.resolve('char', nifs[0]), kf_paths, out)
+        if anims:
+            with open(out[:-4] + '.anims.json', 'w', encoding='utf-8') as f:
+                json.dump(info, f, indent=1, ensure_ascii=False)
+        print('  modèle', rel_glb)
+
+    body_filter = ANIM_FILTER + '|' + '|'.join(sorted(used_anims))
+    body_rel = os.path.join('assets', 'player', 'body', 'body_m.glb')
+    if a.rebuild_body and os.path.exists(os.path.join(GAME, body_rel)):
+        os.remove(os.path.join(GAME, body_rel))
+    export_part(['#LFACE'], body_rel, {}, '^(%s)$' % body_filter)
+    for cid, e in out_classes.items():
+        ap_ = e['appearance']
+        o_res, o_rel = auto_classes.part_path('outfit', ap_['outfit'].lstrip('#'), ap_['dye'].get('outfit'))
+        h_res, h_rel = auto_classes.part_path('hair', ap_['hair'].lstrip('#'), ap_['dye'].get('hair'))
+        export_part([ap_['outfit'], ap_['skin']], o_rel, {'outfit': ap_['dye'].get('outfit')} if ap_['dye'].get('outfit') else {})
+        export_part([ap_['hair']], h_rel, {'hair': ap_['dye'].get('hair')} if ap_['dye'].get('hair') else {})
+        e['body_model'] = 'res://assets/player/body/body_m.glb'
+        e['parts'] = [o_res, h_res]
+        e['model'] = e['body_model']
+    # armes de tous les types (modèles, textures)
+    if not a.skip_models:
+        wdir = os.path.join(GAME, 'assets', 'weapons')
+        conv = nif2gltf.Converter(idx, os.path.join(wdir, 'textures'), 'textures/')
+        for w in all_weapon_types.values():
+            for code in w['codes']:
+                glb = os.path.join(wdir, code[:4].lower() + '.glb')
+                if not os.path.exists(glb):
+                    conv.convert('item/model/%s.nif' % code[:4].lower(), [], glb)
+                if not os.path.exists(os.path.join(wdir, 'textures', code.lower() + '.png')):
+                    p = conv.find_texture(code.lower() + '.dds', 'item/')
+                    if p:
+                        conv.export_texture(p)
 
     import fx2godot
     fx2godot.convert(sorted(n for n in fx_names
@@ -698,9 +771,9 @@ def main():
         json.dump(item_icons, f, indent=1)
     # types d'arme : combo (celui de la classe d'origine de l'arme), posture, portée, modèles
     weapon_types = {}
-    for wt, w in WEAPON_TYPES.items():
+    for wt, w in all_weapon_types.items():
         entry = {k: v for k, v in w.items() if k != 'codes'}
-        entry['combo'] = COMBOS[w['class']]
+        entry['combo'] = w.get('combo') or COMBOS[w['class']]
         entry['weapons'] = []
         for code in w['codes']:
             we = {'code': code, 'model': 'res://assets/weapons/%s.glb' % code[:4].lower(),

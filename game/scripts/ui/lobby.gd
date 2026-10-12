@@ -60,6 +60,8 @@ func _ready() -> void:
 			# test : expertise donnée à toutes les classes (profil de test uniquement)
 			for cid in GameData.classes:
 				Profile.expertise[cid] = int(arg.trim_prefix("--expertise="))
+	if not Profile.in_run:
+		Profile.save_profile()  # classe choisie en argument : son préréglage (et son arme)
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in ["--grimoire", "--talents", "--info"] \
 				or arg.begins_with("--prep=") or arg.begins_with("--archive=") or arg.begins_with("--expertise="):
@@ -134,7 +136,7 @@ func _show_hero() -> void:
 	var cls := GameData.class_data(Profile.selected_class)
 	if cls.is_empty() or not ResourceLoader.exists(cls.model):
 		return
-	var model := EdenModel.instantiate(cls.model)
+	var model := EdenModel.instantiate_hero(cls, Profile.outfit_of(Profile.selected_class))
 	model.scale = Vector3.ONE * GameData.HERO_SCALE
 	model.rotation.y = -0.45  # trois-quarts, tourné vers le menu
 	backdrop.hero_root.add_child(model)
@@ -310,8 +312,8 @@ func _build_ui() -> void:
 		_prep_button.text = "Valider l'équipement  ▶" if i == 0 else "Valider et lancer la run  ▶")
 	_talents = _screen("Expertise & talents", [["Talents et certificats", TalentsPage.new()]])
 	_talents.set_title("Expertise & talents", "Talents de classe et certificats de maîtrise (7 au plus)")
-	_archive = _screen("Archive", [["Collection", ArchivePages.CollectionPage.new()], ["Apparences", ArchivePages.SkinsPage.new()]])
-	_archive.set_title("Collection", "Archive : range tes objets rares, épiques et légendaires pour des bonus permanents ; apparences d'armes")
+	_archive = _screen("Archive", [["Collection", ArchivePages.CollectionPage.new()], ["Encyclopédie", ArchivePages.EncyclopediaPage.new()], ["Tenues", ArchivePages.CostumesPage.new()], ["Apparences d'armes", ArchivePages.SkinsPage.new()]])
+	_archive.set_title("Collection", "Archive : collection à bonus permanents, encyclopédie de tous les objets d'Eden (mode dev), apparences")
 	_info = _screen("Infos", [["Guide des statistiques", InfoPage.new()]])
 	_info.set_title("Infos", "Comment chaque statistique est calculée, ce que vaut un point, formule des dégâts et de la défense")
 	_settings = SettingsMenu.new()
@@ -442,16 +444,25 @@ func _menu_play() -> void:
 
 func _menu_class() -> void:
 	_sub_title("Classe")
+	var pick := ClassPicker.button(func(): return Profile.selected_class, _select_class, false, Vector2(420, 54))
+	_sub.add_child(pick)
+	# classes débloquées (raccourcis) puis prochaines classes à débloquer
+	var shown := 0
 	for id in GameData.classes:
+		if not Progression.class_unlocked(id) or shown >= 6:
+			continue
+		shown += 1
 		var cd := GameData.class_data(id)
 		var wt := String(GameData.weapon_type(Items.default_weapon_type(id)).get("name", ""))
-		var open := Progression.class_unlocked(id)
-		var r := _row(String(cd.get("name_fr", id)) if open else "🔒 %s" % cd.get("name_fr", id),
-			("Maîtrise niv. %d · arme d'origine : %s" % [Profile.expertise_level(id), wt]) if open else "Mission : " + Progression.mission_line(id),
-			String(cd.get("icon", "")), _select_class.bind(String(id)), 60.0)
+		var r := _row(String(cd.get("name_fr", id)), "Maîtrise niv. %d · arme d'origine : %s" % [Profile.expertise_level(id), wt],
+			String(cd.get("icon", "")), _select_class.bind(String(id)), 54.0)
 		r.mark(id == Profile.selected_class)
-		if not open:
-			r.modulate = Color(1, 1, 1, 0.6)
+	var locked := GameData.classes.keys().filter(func(id): return not Progression.class_unlocked(id))
+	locked.sort_custom(func(a, b): return Progression.mission_progress(a).x / Progression.mission_progress(a).y > Progression.mission_progress(b).x / Progression.mission_progress(b).y)
+	for id in locked.slice(0, 3):
+		var cd := GameData.class_data(id)
+		var r := _row("🔒 %s" % cd.get("name_fr", id), Progression.mission_line(id), String(cd.get("icon", "")), _select_class.bind(String(id)), 50.0)
+		r.modulate = Color(1, 1, 1, 0.6)
 	var lore := Hud._label(_sub, String(GameData.class_data(Profile.selected_class).get("lore", "")), 14, UiTheme.MUTED)
 	lore.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lore.custom_minimum_size = Vector2(420, 0)

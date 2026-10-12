@@ -21,7 +21,8 @@ import nif2gltf  # noqa: E402
 from scan_talents import describe, talent_rows  # noqa: E402
 
 GAME = os.path.join(os.path.dirname(__file__), '..', 'game')
-CLASS_IDS = {'warrior': 1, 'magician': 2, 'hunter': 3, 'cleric': 4, 'thief': 5, 'samurai': 16}
+# toutes les classes de data/classes.json (numéro de classe d'Eden : class_id)
+CLASS_IDS = {}
 
 # code d'effet d'Eden -> (type, stat du jeu, facteur appliqué au nombre de la description)
 STAT_CODES = {
@@ -88,8 +89,9 @@ def main():
     idx = {e['path']: e for e in edenpkg.load_index(nif2gltf.PKG)}
     from PIL import Image
     te = edenini.read_text('t_enchant')
-    ce = {int(r[0]): r for r in edenini.read_table('c_enchant') if r[0].isdigit()}
+    ce = {int(r[0]): r for r in edenini.read_rows('c_enchant') if r[0].isdigit()}
     classes = json.load(open(os.path.join(GAME, 'data', 'classes.json'), encoding='utf-8'))
+    CLASS_IDS.update({cid: int(c['class_id']) for cid, c in classes.items()})
     out_dir = os.path.join(GAME, 'assets', 'ui', 'talents')
     os.makedirs(out_dir, exist_ok=True)
 

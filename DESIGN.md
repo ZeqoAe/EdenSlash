@@ -4,7 +4,34 @@ Direction artistique : celle d'Eden Eternal (textures de sol, arbres, rochers, m
 coffres, PNJ, monstres, armes et tenues du jeu d'origine). Les maps de combat sont
 générées à chaque run, avec nos propres collisions simples.
 
-## Classes (6 jouables)
+## Toutes les classes d'Eden (60 jouables)
+
+Les 6 classes ci-dessous sont réglées à la main ; les **54 autres** sont importées
+automatiquement (`tools/auto_classes.py`, `tools/auto_spells.py`, noms français dans
+`tools/eden_fr.py`) :
+
+- **14 classes vertes** (classes de base d'Eden) : Barde, Chevalier, Ingénieur, Artiste martial,
+  Illusionniste, Danseuse de lames, Chaman, Templier, Rôdeur, Démoniste, Sage, Chevalier dragon,
+  Luminaire, Inquisiteur ;
+- **40 classes orange** (ascensions : Berserker, Protecteur, Paladin, Kage, Asura…).
+- Sorts partagés, **jouables d'emblée** (sans attendre la maîtrise) : une classe verte reçoit
+  les 5 sorts de novice de sa famille d'Eden ; une classe orange garde **tous les sorts de sa
+  classe d'origine** (comme dans Eden) et le certificat qu'elle partage avec elle (proposé en
+  carte pendant la run). Les sorts propres se débloquent par la maîtrise (4 au départ).
+- Déblocage : maîtrise de la classe de base de la famille (vertes, niveau 2 à 8 selon le niveau
+  exigé par Eden) ou de la classe parente (orange, niveau 8). Les 5 classes de départ gardent
+  leurs missions.
+- Conversion d'un sort : cible, forme, portée, rayon, recharge (c_spell col. 32) et puissance
+  (col. 35) d'Eden ; effets lus dans le texte anglais (renversement, gel, immobilisation,
+  sommeil, terreur, poison, saignement, brûlure, vulnérabilité, affaiblissement, buffs…).
+- 11 nouvelles armes avec leur combo : épée, rapière, espadon, marteau, bâton de métal,
+  gantelets, canon, lance, guitare, grimoire, faux-fusil.
+- Sélecteur de classe plein écran (5 familles en colonnes, vertes puis leurs orange en retrait).
+- Modèles **modulaires** : un corps animé commun (`assets/player/body/body_m.glb`, toutes les
+  postures et animations de sorts) habillé d'une tenue et de cheveux séparés
+  (`assets/player/outfits`, `assets/player/hairs`) : changer de tenue = un skin.
+
+## Classes réglées à la main (6)
 
 Données : `tools/build_classes.py` (sorts, icônes et effets d'Eden, tenues, armes, postures).
 

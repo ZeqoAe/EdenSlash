@@ -8,6 +8,10 @@ const STYLES := {
 	"arrow": {"color": Color(1.0, 0.92, 0.7), "size": Vector3(0.07, 0.07, 1.1), "speed": 34.0},
 	"magic": {"color": Color(0.55, 0.75, 1.0), "size": Vector3(0.38, 0.38, 0.38), "speed": 24.0},
 	"fire": {"color": Color(1.0, 0.5, 0.2), "size": Vector3(0.42, 0.42, 0.42), "speed": 24.0},
+	"ice": {"color": Color(0.6, 0.9, 1.0), "size": Vector3(0.18, 0.18, 0.9), "speed": 28.0},
+	"lightning": {"color": Color(0.85, 0.8, 1.0), "size": Vector3(0.14, 0.14, 1.3), "speed": 40.0},
+	"dark": {"color": Color(0.6, 0.3, 0.85), "size": Vector3(0.4, 0.4, 0.4), "speed": 22.0},
+	"nature": {"color": Color(0.5, 1.0, 0.45), "size": Vector3(0.34, 0.34, 0.34), "speed": 24.0},
 	"holy": {"color": Color(1.0, 0.95, 0.6), "size": Vector3(0.3, 0.3, 0.8), "speed": 28.0},
 	"shadow": {"color": Color(0.7, 0.45, 1.0), "size": Vector3(0.1, 0.1, 0.8), "speed": 34.0},
 }

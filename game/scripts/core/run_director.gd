@@ -354,6 +354,13 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 	if m.is_boss:
 		count = 3
 		luck = 0.5
+		# costume d'Eden (skin de tenue) : 1 chance sur 4, 1 sur 2 si le boss est enragé
+		var locked := GameData.cosmetics.filter(func(c): return not Profile.outfit_unlocked(String(c.id)))
+		if not locked.is_empty() and randf() < (0.5 if m.enraged else 0.25):
+			var c: Dictionary = locked.pick_random()
+			Profile.unlock_outfit(String(c.id))
+			Run.new_costumes.append(String(c.name))
+			message.emit("Costume débloqué : %s !" % c.name, 3.5)
 	elif m.is_elite:
 		count = 1
 		luck = 0.3

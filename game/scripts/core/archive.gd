@@ -11,6 +11,8 @@ const TIERS := [2, 3, 4]
 ## Attribut renforcé par chaque type d'objet archivé.
 const ATTR := {
 	"katana": "str", "axe": "str", "dagger": "agi", "bow": "agi", "scepter": "wis", "staff": "int",
+	"sword": "str", "rapier": "agi", "greatsword": "str", "hammer": "str", "rod": "int", "cestus": "agi",
+	"cannon": "agi", "spear": "str", "guitar": "wis", "grimoire": "int", "gunscythe": "agi",
 	"head": "int", "chest": "str", "legs": "agi", "gloves": "str", "boots": "agi", "back": "lck",
 	"necklace": "wis", "ring": "lck",
 }

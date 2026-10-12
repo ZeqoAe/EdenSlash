@@ -93,6 +93,78 @@ static func _character_material(src: BaseMaterial3D, texture: Texture2D) -> Shad
 	return m
 
 
+## Héros d'une classe : corps animé commun (squelette, visage, animations) habillé de
+## pièces séparées (tenue, cheveux) ; [param outfit] remplace la tenue de la classe (skin).
+## Les anciennes classes à modèle complet (data/classes.json -> model) restent gérées.
+static func instantiate_hero(cls: Dictionary, outfit := "") -> Node3D:
+	var body := String(cls.get("body_model", ""))
+	if body == "" or not ResourceLoader.exists(body):
+		return instantiate(String(cls.get("model", "")))
+	var node := instantiate(body)
+	var parts: Array = cls.get("parts", [])
+	if outfit != "" and ResourceLoader.exists(outfit):
+		parts = [outfit] + parts.slice(1)
+	for p in parts:
+		dress(node, String(p))
+	return node
+
+
+## Habille le modèle d'une pièce (.glb exporté sur le même squelette) : ses maillages
+## passent sous le squelette du modèle et suivent ses animations.
+static func dress(model: Node3D, glb_path: String, group := "") -> void:
+	if not ResourceLoader.exists(glb_path):
+		return
+	var skel := model.find_child("Skeleton3D", true, false) as Skeleton3D
+	if skel == null:
+		return
+	var part: Node = (load(glb_path) as PackedScene).instantiate()
+	stylize(part)
+	# os propres à la pièce (manches, rubans...) : ajoutés au squelette, au repos
+	var src := part.find_child("Skeleton3D", true, false) as Skeleton3D
+	var added := false
+	if src:
+		for b in src.get_bone_count():
+			var bname := src.get_bone_name(b)
+			if skel.find_bone(bname) >= 0:
+				continue
+			var idx := skel.get_bone_count()
+			skel.add_bone(bname)
+			var parent := src.get_bone_parent(b)
+			if parent >= 0:
+				skel.set_bone_parent(idx, skel.find_bone(src.get_bone_name(parent)))
+			skel.set_bone_rest(idx, src.get_bone_rest(b))
+			skel.reset_bone_pose(idx)
+			added = true
+	if added:
+		# nouveaux os : les maillages déjà habillés réenregistrent leur peau sur le squelette
+		for old in skel.get_children():
+			if old is MeshInstance3D and old.skin:
+				old.skeleton = NodePath("")
+				old.skeleton = NodePath("..")
+	for mi: MeshInstance3D in part.find_children("*", "MeshInstance3D", true, false):
+		var xf := mi.transform
+		mi.owner = null
+		mi.get_parent().remove_child(mi)
+		skel.add_child(mi)
+		mi.transform = xf
+		mi.skeleton = NodePath("..")
+		mi.set_meta("part", glb_path)
+		if group != "":
+			mi.add_to_group(group)
+	part.free()
+
+
+## Remplace la tenue portée (skin) par [param glb_path].
+static func change_outfit(model: Node3D, old_path: String, glb_path: String) -> void:
+	var skel := model.find_child("Skeleton3D", true, false) as Skeleton3D
+	if skel == null:
+		return
+	for mi in skel.get_children():
+		if mi is MeshInstance3D and String(mi.get_meta("part", "")) == old_path:
+			mi.queue_free()
+	dress(model, glb_path)
+
+
 ## Met une arme d'Eden (data/classes.json -> weapons) dans la main du modèle.
 ## Renvoie le nœud attaché à l'os (ou null).
 static func attach_weapon(model: Node3D, weapon: Dictionary) -> BoneAttachment3D:
@@ -122,6 +194,13 @@ static func attach_weapon(model: Node3D, weapon: Dictionary) -> BoneAttachment3D
 
 
 static func weapon_entry(cls: Dictionary, code: String) -> Dictionary:
+	var eden: Dictionary = GameData.eden_by_code.get(code, {})
+	if eden.has("model"):
+		var we := {"code": code, "model": eden.model, "texture": eden.texture}
+		var bone := String(GameData.weapon_type(String(eden.get("wtype", ""))).get("bone", ""))
+		if bone != "":
+			we["bone"] = bone
+		return we
 	for wt in GameData.weapon_types.values():
 		for w in wt.get("weapons", []):
 			if w.code == code:

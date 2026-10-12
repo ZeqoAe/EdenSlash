@@ -12,6 +12,14 @@
   "res://assets/ui/items/a10010.png",
   "res://assets/ui/items/a10011.png",
   "res://assets/ui/items/a10012.png",
+  "res://assets/ui/items/a10013.png",
+  "res://assets/ui/items/a10014.png",
+  "res://assets/ui/items/a10015.png",
+  "res://assets/ui/items/a10016.png",
+  "res://assets/ui/items/a10017.png",
+  "res://assets/ui/items/a10018.png",
+  "res://assets/ui/items/a10019.png",
+  "res://assets/ui/items/a10020.png",
   "res://assets/ui/items/a10021.png",
   "res://assets/ui/items/a10022.png",
   "res://assets/ui/items/a10023.png",
@@ -260,23 +268,5 @@
   "scroll5": "res://assets/ui/items/i00327.png",
   "scroll6": "res://assets/ui/items/i00328.png",
   "scroll7": "res://assets/ui/items/i00329.png"
- },
- "ring": [
-  "res://assets/ui/items/a10013.png",
-  "res://assets/ui/items/a10014.png",
-  "res://assets/ui/items/a10015.png",
-  "res://assets/ui/items/a10016.png"
- ],
- "necklace": [
-  "res://assets/ui/items/a10017.png",
-  "res://assets/ui/items/a10018.png",
-  "res://assets/ui/items/a10019.png",
-  "res://assets/ui/items/a10020.png"
- ],
- "trophy": [
-  "res://assets/ui/items/t00001.png",
-  "res://assets/ui/items/t00002.png",
-  "res://assets/ui/items/t00003.png",
-  "res://assets/ui/items/t00004.png"
- ]
+ }
 }

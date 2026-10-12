@@ -16,7 +16,7 @@ const EDEN_ICONS := {
 	"shrine": "res://assets/ui/skills/e0467.png",
 }
 const BUFFS := ["solar", "shrine", "marduk", "frenzy", "keen", "haste", "barrier", "fury", "flow", "regen", "invisible", "evasion",
-	"titan", "survival", "might", "swift", "grace", "vitality", "hunter_stance", "angel"]
+	"titan", "survival", "might", "swift", "grace", "vitality", "hunter_stance", "angel", "thorns", "resolve"]
 const DESC := {
 	"bleed": "Perd 15 % de l'attaque de la source en PV chaque seconde.",
 	"burn": "Perd 25 % de l'attaque de la source en PV chaque seconde.",
@@ -49,6 +49,11 @@ const DESC := {
 	"hunter_stance": "Les attaques de base ont 20 % de chances d'électrocuter la cible.",
 	"disarm": "Ne peut plus attaquer.",
 	"angel": "Te relève une fois à 30 % des PV si tu tombes.",
+	"root": "Immobilisé : ne peut plus se déplacer, mais attaque encore.",
+	"sleep": "Endormi : ne peut plus agir ; un coup le réveille.",
+	"fear": "Terreur : fuit sans attaquer.",
+	"thorns": "Renvoie 30 % des dégâts reçus à l'attaquant.",
+	"resolve": "Insensible aux contrôles, dégâts subis réduits de 15 %.",
 }
 
 

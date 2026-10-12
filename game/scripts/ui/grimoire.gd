@@ -162,22 +162,10 @@ func _refresh() -> void:
 	var cls := GameData.class_data(_class_id)
 	for c in _class_bar.get_children():
 		c.queue_free()
-	for id in GameData.classes:
-		var cd: Dictionary = GameData.classes[id]
-		var b := Button.new()
-		b.text = String(cd.get("name_fr", id))
-		b.icon = UiTheme.texture(String(cd.get("icon", "")))
-		b.expand_icon = true
-		b.custom_minimum_size = Vector2(150, 40)
-		b.toggle_mode = true
-		b.button_pressed = id == _class_id
-		b.focus_mode = Control.FOCUS_NONE
-		var cid: String = id
-		b.pressed.connect(func():
-			_class_id = cid
-			_skill = {}
-			_refresh())
-		_class_bar.add_child(b)
+	_class_bar.add_child(ClassPicker.button(func(): return _class_id, func(cid):
+		_class_id = cid
+		_skill = {}
+		_refresh(), true))
 	_header_icon.texture = UiTheme.texture(String(cls.get("icon", "")))
 	_header_name.text = String(cls.get("name_fr", ""))
 	_header_lore.text = String(cls.get("lore", ""))

@@ -433,5 +433,781 @@
    }
   ],
   "icon": "res://assets/weapons/icons/w60401.png"
+ },
+ "sword": {
+  "name": "Épée",
+  "battle": "battle01",
+  "dmg_type": "phys",
+  "combo": [
+   {
+    "name": "Taille",
+    "anim": "attack01",
+    "mult": 1.0,
+    "arc": 150,
+    "hit_fx": "s00141",
+    "desc": "Coup d'épée horizontal."
+   },
+   {
+    "name": "Revers",
+    "anim": "attack02",
+    "mult": 1.1,
+    "arc": 150,
+    "hit_fx": "s00241",
+    "desc": "Revers rapide."
+   },
+   {
+    "name": "Estoc tournoyant",
+    "anim": "attack03",
+    "mult": 0.8,
+    "hits": 2,
+    "spin_turns": 1,
+    "arc": 360,
+    "radius": 3.4,
+    "finisher": true,
+    "applies": {
+     "bleed": 4.0
+    },
+    "hit_fx": "s00541",
+    "desc": "Tour complet lame tendue : 2 coups tout autour et Saignement."
+   }
+  ],
+  "class": "blade_dancer",
+  "weapons": [
+   {
+    "code": "W10101",
+    "model": "res://assets/weapons/w101.glb",
+    "texture": "res://assets/weapons/textures/w10101.png",
+    "icon": "res://assets/weapons/icons/w10101.png"
+   },
+   {
+    "code": "W10201",
+    "model": "res://assets/weapons/w102.glb",
+    "texture": "res://assets/weapons/textures/w10201.png",
+    "icon": "res://assets/weapons/icons/w10201.png"
+   },
+   {
+    "code": "W10301",
+    "model": "res://assets/weapons/w103.glb",
+    "texture": "res://assets/weapons/textures/w10301.png",
+    "icon": "res://assets/weapons/icons/w10301.png"
+   },
+   {
+    "code": "W10401",
+    "model": "res://assets/weapons/w104.glb",
+    "texture": "res://assets/weapons/textures/w10401.png",
+    "icon": "res://assets/weapons/icons/w10401.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w10401.png"
+ },
+ "rapier": {
+  "name": "Rapière",
+  "battle": "battle11",
+  "dmg_type": "phys",
+  "combo": [
+   {
+    "name": "Estoc",
+    "anim": "attack17",
+    "mult": 1.0,
+    "arc": 60,
+    "radius": 3.8,
+    "speed": 1.2,
+    "hit_fx": "s00141",
+    "desc": "Estocade longue et précise."
+   },
+   {
+    "name": "Double estoc",
+    "anim": "attack18",
+    "mult": 0.65,
+    "hits": 2,
+    "arc": 60,
+    "radius": 3.8,
+    "speed": 1.2,
+    "hit_fx": "s00141",
+    "desc": "Deux estocades éclair."
+   },
+   {
+    "name": "Fente",
+    "anim": "attack19",
+    "mult": 2.0,
+    "arc": 30,
+    "radius": 5.5,
+    "dash": 3.0,
+    "finisher": true,
+    "applies": {
+     "purgatory": 4.0
+    },
+    "hit_fx": "s00541",
+    "desc": "Fente de 3 m qui transperce la ligne d'ennemis."
+   }
+  ],
+  "class": "knight",
+  "weapons": [
+   {
+    "code": "W11401",
+    "model": "res://assets/weapons/w114.glb",
+    "texture": "res://assets/weapons/textures/w11401.png",
+    "icon": "res://assets/weapons/icons/w11401.png"
+   },
+   {
+    "code": "W11501",
+    "model": "res://assets/weapons/w115.glb",
+    "texture": "res://assets/weapons/textures/w11501.png",
+    "icon": "res://assets/weapons/icons/w11501.png"
+   },
+   {
+    "code": "W11601",
+    "model": "res://assets/weapons/w116.glb",
+    "texture": "res://assets/weapons/textures/w11601.png",
+    "icon": "res://assets/weapons/icons/w11601.png"
+   },
+   {
+    "code": "W11701",
+    "model": "res://assets/weapons/w117.glb",
+    "texture": "res://assets/weapons/textures/w11701.png",
+    "icon": "res://assets/weapons/icons/w11701.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w11701.png"
+ },
+ "greatsword": {
+  "name": "Espadon",
+  "battle": "battle03",
+  "dmg_type": "phys",
+  "combo": [
+   {
+    "name": "Taille lourde",
+    "anim": "attack08",
+    "mult": 1.3,
+    "arc": 170,
+    "radius": 3.4,
+    "hit_fx": "s00241",
+    "desc": "Large taille à deux mains."
+   },
+   {
+    "name": "Revers lourd",
+    "anim": "attack09",
+    "mult": 1.4,
+    "arc": 170,
+    "radius": 3.4,
+    "hit_fx": "s00241",
+    "desc": "Le revers balaie tout devant."
+   },
+   {
+    "name": "Fracas",
+    "anim": "shoot25",
+    "mult": 2.7,
+    "arc": 360,
+    "radius": 4.0,
+    "leap": 6.0,
+    "leap_forward": 2.5,
+    "land_hit": true,
+    "finisher": true,
+    "applies": {
+     "stun": 0.8
+    },
+    "hit_fx": "s00541",
+    "desc": "Bond puis l'espadon s'abat : onde de choc et renversement."
+   }
+  ],
+  "class": "luminary",
+  "weapons": [
+   {
+    "code": "W20801",
+    "model": "res://assets/weapons/w208.glb",
+    "texture": "res://assets/weapons/textures/w20801.png",
+    "icon": "res://assets/weapons/icons/w20801.png"
+   },
+   {
+    "code": "W20901",
+    "model": "res://assets/weapons/w209.glb",
+    "texture": "res://assets/weapons/textures/w20901.png",
+    "icon": "res://assets/weapons/icons/w20901.png"
+   },
+   {
+    "code": "W21001",
+    "model": "res://assets/weapons/w210.glb",
+    "texture": "res://assets/weapons/textures/w21001.png",
+    "icon": "res://assets/weapons/icons/w21001.png"
+   },
+   {
+    "code": "W21101",
+    "model": "res://assets/weapons/w211.glb",
+    "texture": "res://assets/weapons/textures/w21101.png",
+    "icon": "res://assets/weapons/icons/w21101.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w21101.png"
+ },
+ "hammer": {
+  "name": "Marteau",
+  "battle": "battle03",
+  "dmg_type": "phys",
+  "combo": [
+   {
+    "name": "Coup de marteau",
+    "anim": "attack08",
+    "mult": 1.3,
+    "arc": 140,
+    "radius": 3.2,
+    "hit_fx": "s00241",
+    "desc": "Coup écrasant."
+   },
+   {
+    "name": "Revers écrasant",
+    "anim": "attack09",
+    "mult": 1.4,
+    "arc": 140,
+    "radius": 3.2,
+    "applies": {
+     "stun": 0.5
+    },
+    "hit_fx": "s00241",
+    "desc": "Le revers sonne la cible."
+   },
+   {
+    "name": "Séisme",
+    "anim": "shoot24",
+    "mult": 2.6,
+    "arc": 360,
+    "radius": 4.4,
+    "leap": 5.0,
+    "land_hit": true,
+    "finisher": true,
+    "applies": {
+     "stun": 1.0
+    },
+    "hit_fx": "s00541",
+    "desc": "Le marteau frappe le sol : séisme tout autour."
+   }
+  ],
+  "class": "sage",
+  "weapons": [
+   {
+    "code": "W40101",
+    "model": "res://assets/weapons/w401.glb",
+    "texture": "res://assets/weapons/textures/w40101.png",
+    "icon": "res://assets/weapons/icons/w40101.png"
+   },
+   {
+    "code": "W40201",
+    "model": "res://assets/weapons/w402.glb",
+    "texture": "res://assets/weapons/textures/w40201.png",
+    "icon": "res://assets/weapons/icons/w40201.png"
+   },
+   {
+    "code": "W40301",
+    "model": "res://assets/weapons/w403.glb",
+    "texture": "res://assets/weapons/textures/w40301.png",
+    "icon": "res://assets/weapons/icons/w40301.png"
+   },
+   {
+    "code": "W40401",
+    "model": "res://assets/weapons/w404.glb",
+    "texture": "res://assets/weapons/textures/w40401.png",
+    "icon": "res://assets/weapons/icons/w40401.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w40401.png"
+ },
+ "rod": {
+  "name": "Bâton de métal",
+  "battle": "battle04",
+  "dmg_type": "mag",
+  "attack_range": 9.0,
+  "combo": [
+   {
+    "name": "Trait d'ombre",
+    "anim": "attack10",
+    "mult": 1.0,
+    "bolt": true,
+    "projectile": "dark",
+    "hit_fx": "s00341",
+    "desc": "Projectile des ténèbres."
+   },
+   {
+    "name": "Double trait",
+    "anim": "attack11",
+    "mult": 0.7,
+    "bolt": true,
+    "volley": 2,
+    "spread": 14,
+    "projectile": "dark",
+    "hit_fx": "s00341",
+    "desc": "Deux projectiles des ténèbres."
+   },
+   {
+    "name": "Puits maudit",
+    "anim": "shoot01",
+    "kind": "ground",
+    "range": 9.0,
+    "mult": 1.6,
+    "radius": 3.5,
+    "arc": 360,
+    "finisher": true,
+    "applies": {
+     "poison": 4.0
+    },
+    "hit_fx": "s00541",
+    "desc": "Zone maudite sur la cible : dégâts et Poison."
+   }
+  ],
+  "class": "warlock",
+  "weapons": [
+   {
+    "code": "W30801",
+    "model": "res://assets/weapons/w308.glb",
+    "texture": "res://assets/weapons/textures/w30801.png",
+    "icon": "res://assets/weapons/icons/w30801.png"
+   },
+   {
+    "code": "W30901",
+    "model": "res://assets/weapons/w309.glb",
+    "texture": "res://assets/weapons/textures/w30901.png",
+    "icon": "res://assets/weapons/icons/w30901.png"
+   },
+   {
+    "code": "W31001",
+    "model": "res://assets/weapons/w310.glb",
+    "texture": "res://assets/weapons/textures/w31001.png",
+    "icon": "res://assets/weapons/icons/w31001.png"
+   },
+   {
+    "code": "W31101",
+    "model": "res://assets/weapons/w311.glb",
+    "texture": "res://assets/weapons/textures/w31101.png",
+    "icon": "res://assets/weapons/icons/w31101.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w31101.png"
+ },
+ "cestus": {
+  "name": "Gantelets",
+  "battle": "battle10",
+  "dmg_type": "phys",
+  "combo": [
+   {
+    "name": "Direct",
+    "anim": "attack21",
+    "mult": 0.8,
+    "arc": 120,
+    "radius": 2.8,
+    "speed": 1.35,
+    "hit_fx": "s00141",
+    "desc": "Coup de poing rapide."
+   },
+   {
+    "name": "Crochet",
+    "anim": "attack22",
+    "mult": 0.9,
+    "arc": 140,
+    "radius": 2.8,
+    "speed": 1.35,
+    "hit_fx": "s00141",
+    "desc": "Crochet du gauche."
+   },
+   {
+    "name": "Rafale",
+    "anim": "attack21",
+    "mult": 0.45,
+    "hits": 3,
+    "arc": 120,
+    "radius": 2.8,
+    "speed": 1.4,
+    "hit_fx": "s00241",
+    "desc": "Trois coups enchaînés."
+   },
+   {
+    "name": "Uppercut du dragon",
+    "anim": "shoot23",
+    "mult": 2.0,
+    "arc": 360,
+    "radius": 3.2,
+    "leap": 6.0,
+    "finisher": true,
+    "applies": {
+     "stun": 0.8
+    },
+    "hit_fx": "s00541",
+    "desc": "Uppercut sauté : projette et renverse les ennemis proches."
+   }
+  ],
+  "class": "martial_artist",
+  "weapons": [
+   {
+    "code": "W31301",
+    "model": "res://assets/weapons/w313.glb",
+    "texture": "res://assets/weapons/textures/w31301.png",
+    "icon": "res://assets/weapons/icons/w31301.png"
+   },
+   {
+    "code": "W31401",
+    "model": "res://assets/weapons/w314.glb",
+    "texture": "res://assets/weapons/textures/w31401.png",
+    "icon": "res://assets/weapons/icons/w31401.png"
+   },
+   {
+    "code": "W31501",
+    "model": "res://assets/weapons/w315.glb",
+    "texture": "res://assets/weapons/textures/w31501.png",
+    "icon": "res://assets/weapons/icons/w31501.png"
+   },
+   {
+    "code": "W31601",
+    "model": "res://assets/weapons/w316.glb",
+    "texture": "res://assets/weapons/textures/w31601.png",
+    "icon": "res://assets/weapons/icons/w31601.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w31601.png"
+ },
+ "cannon": {
+  "name": "Canon",
+  "battle": "battle06",
+  "dmg_type": "phys",
+  "attack_range": 12.0,
+  "combo": [
+   {
+    "name": "Obus",
+    "anim": "attack13",
+    "mult": 1.1,
+    "bolt": true,
+    "projectile": "fire",
+    "hit_fx": "s00341",
+    "desc": "Obus explosif."
+   },
+   {
+    "name": "Mitraille",
+    "anim": "attack13",
+    "mult": 0.6,
+    "bolt": true,
+    "volley": 3,
+    "spread": 22,
+    "projectile": "arrow",
+    "hit_fx": "s00141",
+    "desc": "3 balles en éventail."
+   },
+   {
+    "name": "Bombardement",
+    "anim": "shoot50",
+    "kind": "ground",
+    "range": 12.0,
+    "mult": 1.6,
+    "radius": 4.0,
+    "arc": 360,
+    "drop": "rain",
+    "finisher": true,
+    "applies": {
+     "burn": 3.0
+    },
+    "hit_fx": "s00541",
+    "desc": "Une salve d'obus retombe sur la zone visée."
+   }
+  ],
+  "class": "engineer",
+  "weapons": [
+   {
+    "code": "W50801",
+    "model": "res://assets/weapons/w508.glb",
+    "texture": "res://assets/weapons/textures/w50801.png",
+    "icon": "res://assets/weapons/icons/w50801.png"
+   },
+   {
+    "code": "W50901",
+    "model": "res://assets/weapons/w509.glb",
+    "texture": "res://assets/weapons/textures/w50901.png",
+    "icon": "res://assets/weapons/icons/w50901.png"
+   },
+   {
+    "code": "W51001",
+    "model": "res://assets/weapons/w510.glb",
+    "texture": "res://assets/weapons/textures/w51001.png",
+    "icon": "res://assets/weapons/icons/w51001.png"
+   },
+   {
+    "code": "W51101",
+    "model": "res://assets/weapons/w511.glb",
+    "texture": "res://assets/weapons/textures/w51101.png",
+    "icon": "res://assets/weapons/icons/w51101.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w51101.png"
+ },
+ "spear": {
+  "name": "Lance",
+  "battle": "battle12",
+  "dmg_type": "phys",
+  "combo": [
+   {
+    "name": "Estoc de lance",
+    "anim": "attack07",
+    "mult": 1.1,
+    "arc": 40,
+    "radius": 4.6,
+    "hit_fx": "s00141",
+    "desc": "Estoc à longue portée."
+   },
+   {
+    "name": "Balayage",
+    "anim": "attack07",
+    "mult": 1.0,
+    "arc": 220,
+    "radius": 3.8,
+    "hit_fx": "s00241",
+    "desc": "La hampe balaie largement."
+   },
+   {
+    "name": "Plongeon du dragon",
+    "anim": "shoot24",
+    "mult": 2.5,
+    "arc": 360,
+    "radius": 3.8,
+    "leap": 14.0,
+    "leap_forward": 5.0,
+    "land_hit": true,
+    "finisher": true,
+    "applies": {
+     "stun": 0.8
+    },
+    "hit_fx": "s00541",
+    "desc": "Saut très haut puis plongeon lance en avant : impact tout autour."
+   }
+  ],
+  "class": "dragon_knight",
+  "weapons": [
+   {
+    "code": "W52101",
+    "model": "res://assets/weapons/w521.glb",
+    "texture": "res://assets/weapons/textures/w52101.png",
+    "icon": "res://assets/weapons/icons/w52101.png"
+   },
+   {
+    "code": "W52201",
+    "model": "res://assets/weapons/w522.glb",
+    "texture": "res://assets/weapons/textures/w52201.png",
+    "icon": "res://assets/weapons/icons/w52201.png"
+   },
+   {
+    "code": "W52301",
+    "model": "res://assets/weapons/w523.glb",
+    "texture": "res://assets/weapons/textures/w52301.png",
+    "icon": "res://assets/weapons/icons/w52301.png"
+   },
+   {
+    "code": "W52401",
+    "model": "res://assets/weapons/w524.glb",
+    "texture": "res://assets/weapons/textures/w52401.png",
+    "icon": "res://assets/weapons/icons/w52401.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w52401.png"
+ },
+ "guitar": {
+  "name": "Guitare",
+  "battle": "battle08",
+  "dmg_type": "mag",
+  "attack_range": 10.0,
+  "combo": [
+   {
+    "name": "Note de feu",
+    "anim": "attack15",
+    "mult": 1.0,
+    "bolt": true,
+    "projectile": "fire",
+    "hit_fx": "s00341",
+    "desc": "Une note brûlante."
+   },
+   {
+    "name": "Accord",
+    "anim": "attack15",
+    "mult": 0.65,
+    "bolt": true,
+    "volley": 3,
+    "spread": 30,
+    "projectile": "magic",
+    "hit_fx": "s00341",
+    "desc": "3 notes en éventail."
+   },
+   {
+    "name": "Onde sonore",
+    "anim": "shoot01",
+    "mult": 1.5,
+    "arc": 360,
+    "radius": 4.6,
+    "finisher": true,
+    "applies": {
+     "chill": 2.0
+    },
+    "self_status": {
+     "regen": 2.0
+    },
+    "hit_fx": "s00541",
+    "desc": "Riff assourdissant tout autour : ralentit les ennemis et te soigne un peu."
+   }
+  ],
+  "class": "bard",
+  "weapons": [
+   {
+    "code": "W60801",
+    "model": "res://assets/weapons/w608.glb",
+    "texture": "res://assets/weapons/textures/w60801.png",
+    "icon": "res://assets/weapons/icons/w60801.png"
+   },
+   {
+    "code": "W60901",
+    "model": "res://assets/weapons/w609.glb",
+    "texture": "res://assets/weapons/textures/w60901.png",
+    "icon": "res://assets/weapons/icons/w60901.png"
+   },
+   {
+    "code": "W61001",
+    "model": "res://assets/weapons/w610.glb",
+    "texture": "res://assets/weapons/textures/w61001.png",
+    "icon": "res://assets/weapons/icons/w61001.png"
+   },
+   {
+    "code": "W61101",
+    "model": "res://assets/weapons/w611.glb",
+    "texture": "res://assets/weapons/textures/w61101.png",
+    "icon": "res://assets/weapons/icons/w61101.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w61101.png"
+ },
+ "grimoire": {
+  "name": "Grimoire",
+  "battle": "battle09",
+  "dmg_type": "mag",
+  "attack_range": 11.0,
+  "combo": [
+   {
+    "name": "Page arcanique",
+    "anim": "attack16",
+    "mult": 1.0,
+    "bolt": true,
+    "projectile": "magic",
+    "hit_fx": "s00341",
+    "desc": "Projectile arcanique."
+   },
+   {
+    "name": "Glyphe",
+    "anim": "attack16",
+    "kind": "ground",
+    "range": 11.0,
+    "mult": 1.1,
+    "radius": 2.8,
+    "arc": 360,
+    "hit_fx": "s12141",
+    "desc": "Un glyphe explose sur la zone visée."
+   },
+   {
+    "name": "Salve de pages",
+    "anim": "shoot01",
+    "mult": 0.8,
+    "bolt": true,
+    "volley": 5,
+    "spread": 40,
+    "pierce": 1,
+    "projectile": "magic",
+    "finisher": true,
+    "hit_fx": "s00541",
+    "desc": "5 projectiles perçants en éventail."
+   }
+  ],
+  "class": "illusionist",
+  "weapons": [
+   {
+    "code": "W61401",
+    "model": "res://assets/weapons/w614.glb",
+    "texture": "res://assets/weapons/textures/w61401.png",
+    "icon": "res://assets/weapons/icons/w61401.png"
+   },
+   {
+    "code": "W61601",
+    "model": "res://assets/weapons/w616.glb",
+    "texture": "res://assets/weapons/textures/w61601.png",
+    "icon": "res://assets/weapons/icons/w61601.png"
+   },
+   {
+    "code": "W61701",
+    "model": "res://assets/weapons/w617.glb",
+    "texture": "res://assets/weapons/textures/w61701.png",
+    "icon": "res://assets/weapons/icons/w61701.png"
+   },
+   {
+    "code": "W61801",
+    "model": "res://assets/weapons/w618.glb",
+    "texture": "res://assets/weapons/textures/w61801.png",
+    "icon": "res://assets/weapons/icons/w61801.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w61801.png"
+ },
+ "gunscythe": {
+  "name": "Faux-fusil",
+  "battle": "battle03",
+  "dmg_type": "phys",
+  "combo": [
+   {
+    "name": "Faux",
+    "anim": "attack08",
+    "mult": 1.2,
+    "arc": 200,
+    "radius": 3.6,
+    "hit_fx": "s00241",
+    "desc": "Large coup de faux."
+   },
+   {
+    "name": "Moisson",
+    "anim": "attack09",
+    "mult": 1.1,
+    "arc": 200,
+    "radius": 4.2,
+    "pull": 2.5,
+    "hit_fx": "s00241",
+    "desc": "La lame attire les ennemis vers toi."
+   },
+   {
+    "name": "Rafale de la faux",
+    "anim": "shoot50",
+    "mult": 0.9,
+    "bolt": true,
+    "volley": 3,
+    "spread": 26,
+    "pierce": 1,
+    "projectile": "dark",
+    "finisher": true,
+    "hit_fx": "s00541",
+    "desc": "Le canon de la faux tire 3 balles perçantes."
+   }
+  ],
+  "class": "inquisitor",
+  "weapons": [
+   {
+    "code": "W55401",
+    "model": "res://assets/weapons/w554.glb",
+    "texture": "res://assets/weapons/textures/w55401.png",
+    "icon": "res://assets/weapons/icons/w55401.png"
+   },
+   {
+    "code": "W55402",
+    "model": "res://assets/weapons/w554.glb",
+    "texture": "res://assets/weapons/textures/w55402.png",
+    "icon": "res://assets/weapons/icons/w55402.png"
+   },
+   {
+    "code": "W55501",
+    "model": "res://assets/weapons/w555.glb",
+    "texture": "res://assets/weapons/textures/w55501.png",
+    "icon": "res://assets/weapons/icons/w55501.png"
+   },
+   {
+    "code": "W55502",
+    "model": "res://assets/weapons/w555.glb",
+    "texture": "res://assets/weapons/textures/w55502.png",
+    "icon": "res://assets/weapons/icons/w55502.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w55502.png"
  }
 }

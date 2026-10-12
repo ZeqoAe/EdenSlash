@@ -24,6 +24,7 @@ var unlocked_name := ""  # zone débloquée par la victoire (bilan)
 var expertise_gain := 0
 var expertise_levels := 0
 var new_classes: Array = []  # classes débloquées pendant la run (bilan)
+var new_costumes: Array = []  # costumes (skins de tenue) débloqués pendant la run
 var rerolls_used := 0  # relances de cartes utilisées (1 par run + cartes « Bonne étoile »)
 
 
@@ -39,6 +40,7 @@ func start(cid: String) -> void:
 	max_level = 1
 	rerolls_used = 0
 	new_classes = []
+	new_costumes = []
 	result = ""
 	started_at = Time.get_ticks_msec()
 	zone_id = Profile.selected_zone
@@ -201,8 +203,8 @@ func roll_cards(n := 3, skills_only := false) -> Array:
 			if int(s.rank) < MAX_RANK:
 				pool.append({"type": "upgrade", "id": int(s.id), "weight": 1.5})
 		for p in class_data().get("passives", []) + Boons.LIST:
-			if p.has("eden"):
-				continue  # certificat : se choisit avant la run (expertise)
+			if p.has("eden") and not p.get("shared", false):
+				continue  # certificat : se choisit avant la run (expertise) ; les certificats partagés sont des cartes
 			if int(passives.get(p.id, 0)) >= int(p.max):
 				continue
 			if not p.get("requires", []).all(func(r): return passives.has(r)):

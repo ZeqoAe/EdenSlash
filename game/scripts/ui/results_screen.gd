@@ -54,6 +54,8 @@ func show_results() -> void:
 				gained.append(String(r.name) if r.kind == "cert" else "Sort : " + String(r.name))
 	for c in Run.new_classes:
 		gained.append("Nouvelle classe : " + String(GameData.class_data(c).get("name_fr", c)))
+	for c in Run.new_costumes:
+		gained.append("Costume : " + String(c))
 	if not gained.is_empty():
 		var g := Hud._label(v, "Débloqué : " + "  ·  ".join(gained), 18, Color(0.55, 1.0, 0.6))
 		g.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

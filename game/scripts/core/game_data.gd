@@ -24,6 +24,13 @@ var levels: Array = []
 var classes: Dictionary = {}  # id -> classe (compétences, passifs, apparence...)
 var motion_keys: Dictionary = {}  # kfm -> animation -> {hit, sounds, trail, len}
 var minimaps: Dictionary = {}  # map -> {image, ppm, ox, oy}
+## Tous les équipements d'Eden (tools/build_items.py) : par type (emplacement ou type
+## d'arme), par identifiant et par code de modèle.
+var eden_items: Array = []
+var eden_by_slot: Dictionary = {}
+var eden_by_id: Dictionary = {}
+var eden_by_code: Dictionary = {}
+var cosmetics: Array = []
 
 
 func _ready() -> void:
@@ -41,6 +48,17 @@ func _ready() -> void:
 	classes = _load_json("res://data/classes.json")
 	motion_keys = _load_json("res://data/motion_keys.json")
 	minimaps = _load_json("res://data/minimaps.json")
+	if FileAccess.file_exists("res://data/eden_items.json"):
+		var ei: Dictionary = _load_json("res://data/eden_items.json")
+		eden_items = ei.get("items", [])
+		cosmetics = ei.get("cosmetics", [])
+		for e: Dictionary in eden_items:
+			var key := String(e.get("wtype", e.slot))
+			if not eden_by_slot.has(key):
+				eden_by_slot[key] = []
+			eden_by_slot[key].append(e)
+			eden_by_id[int(e.id)] = e
+			eden_by_code[String(e.code)] = e
 
 
 func weapon_type(id: String) -> Dictionary:

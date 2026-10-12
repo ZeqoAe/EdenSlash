@@ -123,7 +123,7 @@ func _ready() -> void:
 	Run.start("magician")
 	check("en run : le combo suit l'arme", Run.weapon_type() == "axe" and GameData.weapon_type(Run.weapon_type()).combo[0].name == "Coup de hache")
 	var loot_w := Items.generate(4, 0.0, "weapon", "magician")
-	check("le butin d'armes suit l'arme en main", Items.weapon_type_of(loot_w) == "axe" and String(loot_w.name).begins_with("Hache"))
+	check("le butin d'armes suit l'arme en main (objet d'Eden : %s)" % loot_w.name, Items.weapon_type_of(loot_w) == "axe" and GameData.eden_by_id.get(int(loot_w.get("eden", 0)), {}).get("wtype", "") == "axe")
 	check("ancienne arme sans type : type de sa classe", Items.weapon_type_of({"slot": "weapon", "wclass": "hunter"}) == "bow")
 	# extraction : tout l'inventaire est gardé
 	for i in 4:

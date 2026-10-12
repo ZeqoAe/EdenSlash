@@ -60,6 +60,12 @@ const STATUS_INFO := {
 	"disarm": {"name": "Désarmé", "color": Color(0.8, 0.8, 0.8)},
 	"angel": {"name": "Ange gardien", "color": Color(1.0, 0.95, 0.7)},
 	"evasion": {"name": "Évasion", "color": Color(0.7, 1.0, 0.7)},
+	# effets des classes importées d'Eden
+	"root": {"name": "Immobilisé", "color": Color(0.55, 0.8, 0.45)},
+	"sleep": {"name": "Endormi", "color": Color(0.75, 0.7, 1.0)},
+	"fear": {"name": "Terreur", "color": Color(0.7, 0.4, 0.8)},
+	"thorns": {"name": "Épines", "color": Color(0.6, 0.9, 0.4)},
+	"resolve": {"name": "Résolution", "color": Color(1.0, 0.9, 0.6)},
 }
 ## Dégâts par seconde des effets sur la durée, en part de l'attaque de la source.
 const DOT_FACTOR := {"bleed": 0.15, "burn": 0.25, "poison": 0.2}
@@ -135,6 +141,8 @@ func damage_taken_mult() -> float:
 		m *= 0.6
 	if has_status("titan"):
 		m *= 0.5
+	if has_status("resolve"):
+		m *= 0.85
 	return m
 
 
@@ -142,9 +150,9 @@ func damage_dealt_mult() -> float:
 	return (0.7 if has_status("scar") else 1.0) * (1.25 if has_status("fury") else 1.0)
 
 
-## Immobilisé (renversé ou gelé) : ni déplacement ni attaque.
+## Immobilisé (renversé, gelé ou endormi) : ni déplacement ni attaque.
 func is_disabled() -> bool:
-	return has_status("stun") or has_status("freeze")
+	return has_status("stun") or has_status("freeze") or has_status("sleep")
 
 
 ## Clés d'animation d'Eden (impacts, sons, traînée) de l'animation [param anim_name].
@@ -211,6 +219,9 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 	var dmg := maxf(1.0, round(amount * damage_taken_mult() * (1.0 if dot else 100.0 / (100.0 + maxf(defense, 0.0)))))
 	hp = maxf(0.0, hp - dmg)
 	health_changed.emit(hp, max_hp)
+	if not dot and has_status("sleep"):
+		statuses.erase("sleep")  # un coup réveille
+		statuses_changed.emit()
 	DamageNumber.spawn(self, dmg, crit, team == Team.PLAYER)
 	_on_damaged(dmg, source)
 	if hp <= 0.0:

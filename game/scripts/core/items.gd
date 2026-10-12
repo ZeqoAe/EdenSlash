@@ -184,6 +184,14 @@ static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai",
 			var w: Dictionary = weapons[mini(rarity, weapons.size() - 1)]
 			item["weapon"] = w.code
 			item["icon"] = w.icon
+	# identité d'un vrai objet d'Eden (nom, icône, modèle d'arme pour les épiques et légendaires)
+	var base := eden_base(slot, wtype, level, rarity)
+	if not base.is_empty():
+		item["eden"] = int(base.id)
+		item["name"] = String(base.name)
+		item["icon"] = String(base.icon)
+		if slot == "weapon" and base.has("model"):
+			item["weapon"] = String(base.code)
 	if not item.has("icon"):
 		var list: Array = icons().get(slot, [])
 		item["icon"] = list[(level * 3 + rarity * 7 + randi() % 4) % maxi(list.size(), 1)] if not list.is_empty() else ""
@@ -196,10 +204,41 @@ static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai",
 	return item
 
 
+## Objet d'Eden qui sert de modèle à un objet généré : même emplacement (ou type d'arme),
+## même rareté si possible, niveau d'Eden le plus proche (le niveau du jeu × 1,5).
+static func eden_base(slot: String, wtype: String, level: int, rarity: int) -> Dictionary:
+	var list: Array = GameData.eden_by_slot.get(wtype if slot == "weapon" else slot, [])
+	if list.is_empty():
+		return {}
+	var target := float(level) * 1.5 + 1.0
+	var cands := list.filter(func(e): return int(e.rarity) == rarity)
+	if cands.size() < 3:
+		cands = list.duplicate()
+	cands.sort_custom(func(a, b): return absf(float(a.level) - target) < absf(float(b.level) - target))
+	return cands[randi() % mini(6, cands.size())]
+
+
+## Objet d'Eden donné (archive, mode dev) : nouvel objet du jeu à son image.
+static func from_eden(e: Dictionary, level := 0) -> Dictionary:
+	var slot := String(e.slot)
+	var lvl := level if level > 0 else clampi(roundi(float(e.level) / 1.5), 1, 60)
+	var item := generate(lvl, 0.0, slot, Profile.selected_class, int(e.rarity), String(e.get("wtype", "")))
+	item["rarity"] = int(e.rarity)
+	item["eden"] = int(e.id)
+	item["name"] = String(e.name)
+	item["icon"] = String(e.icon)
+	if slot == "weapon" and e.has("model"):
+		item["weapon"] = String(e.code)
+	return item
+
+
 ## Transforme l'objet en pièce du set [param set_id].
 static func make_set_piece(item: Dictionary, set_id: String) -> void:
 	item["set"] = set_id
-	item["name"] = "%s %s" % [_base_name(String(item.slot), "", weapon_type_of(item) if item.slot == "weapon" else ""), SETS[set_id].suffix]
+	var base := String(GameData.eden_by_id.get(int(item.get("eden", 0)), {}).get("name", ""))
+	if base == "":
+		base = _base_name(String(item.slot), "", weapon_type_of(item) if item.slot == "weapon" else "")
+	item["name"] = "%s %s" % [base, SETS[set_id].suffix]
 
 
 ## Nombre de pièces portées par set (emplacement -> objet).
