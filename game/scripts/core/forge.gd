@@ -1,24 +1,18 @@
 class_name Forge
 extends RefCounted
-## Services du village en plus de l'amélioration et de la joaillerie (Craft) :
-## - forgeron : réforger une stat (nouveau jet dans sa fourchette) et polir la qualité
-##   (nouveau jet 90-120 %, gardé seulement s'il est meilleur) ;
-## - recycleur : conversion des matériaux ;
-## - joaillier : fusion de 3 gemmes identiques en une gemme de qualité supérieure.
+## Forge (fiche d'un objet, pendant la run) en plus de l'amélioration à l'or et de la
+## joaillerie (Craft) :
+## - réforger une stat bonus (nouveau jet dans sa fourchette) : des cristaux ;
+## - polir la qualité (nouveau jet, gardé seulement s'il est meilleur) : des cristaux ;
+## - fusion de 3 gemmes identiques en une gemme de qualité supérieure.
+## Les cristaux viennent du désassemblage et se gardent entre les runs.
 
-## Conversions du recycleur : [matériau donné, quantité, matériau reçu, quantité].
-const CONVERSIONS := [
-	["fragment", 10, "essence", 1],
-	["essence", 5, "crystal", 1],
-	["crystal", 1, "essence", 3],
-	["essence", 1, "fragment", 6],
-]
 const FUSE_COUNT := 3
 
 
 # --- forgeron --------------------------------------------------------------------------------
 static func reforge_cost(item: Dictionary) -> Dictionary:
-	return {"gold": 30 + 6 * Items.power_level(item), "essence": 1 + int(item.rarity)}
+	return {"crystal": 1 + int(item.rarity) / 2}
 
 
 ## Stats de l'objet qu'on peut réforger (affixes ayant une fourchette).
@@ -32,7 +26,7 @@ static func reforgeable(item: Dictionary) -> Array:
 ## Nouveau jet de l'affixe [param stat] dans sa fourchette. Renvoie le texte du résultat.
 static func reforge(item: Dictionary, stat: String) -> String:
 	if not Profile.pay(reforge_cost(item)):
-		return "Pas assez d'or ou d'essences."
+		return "Pas assez de cristaux."
 	if item.has("base"):
 		var e: Dictionary = GameData.eden_by_id.get(int(item.get("eden", 0)), {})
 		var ratio := float(e.get("r", {}).get(stat, 1.0))
@@ -53,13 +47,13 @@ static func reforge(item: Dictionary, stat: String) -> String:
 
 
 static func polish_cost(item: Dictionary) -> Dictionary:
-	return {"gold": 50 + 8 * Items.power_level(item), "crystal": 1}
+	return {"crystal": 2 + int(item.get("rarity", 0)) / 3}
 
 
 ## Nouveau jet de qualité (90-120 %), gardé seulement s'il est meilleur.
 static func polish(item: Dictionary) -> String:
 	if not Profile.pay(polish_cost(item)):
-		return "Pas assez d'or ou de cristaux."
+		return "Pas assez de cristaux."
 	var before := float(item.get("quality", 1.0))
 	# nouveau jet dans la fourchette de la rareté (mythique : toujours 100 %)
 	var q: Array = Items.QUALITY[clampi(int(item.get("rarity", 0)), 0, Items.QUALITY.size() - 1)] if item.has("rv") else [0.9, 1.2]
@@ -72,23 +66,7 @@ static func polish(item: Dictionary) -> String:
 	return "Jet de %d %% : pas mieux que %d %%, la qualité ne change pas." % [roundi(roll * 100), roundi(before * 100)]
 
 
-# --- recycleur -------------------------------------------------------------------------------
-static func can_convert(i: int, times := 1) -> bool:
-	var c: Array = CONVERSIONS[i]
-	return int(Profile.materials.get(c[0], 0)) >= int(c[1]) * times
-
-
-static func convert(i: int, times := 1) -> String:
-	if not can_convert(i, times):
-		return "Pas assez de %s." % Items.MATERIALS[CONVERSIONS[i][0]].to_lower()
-	var c: Array = CONVERSIONS[i]
-	Profile.materials[c[0]] = int(Profile.materials[c[0]]) - int(c[1]) * times
-	Profile.materials[c[2]] = int(Profile.materials.get(c[2], 0)) + int(c[3]) * times
-	Profile.save_profile()
-	return "%d %s → %d %s" % [int(c[1]) * times, Items.MATERIALS[c[0]], int(c[3]) * times, Items.MATERIALS[c[2]]]
-
-
-# --- joaillier -------------------------------------------------------------------------------
+# --- joaillerie ------------------------------------------------------------------------------
 static func fuse_cost(tier: int) -> int:
 	return 40 * (tier + 1)
 

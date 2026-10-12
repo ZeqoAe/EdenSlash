@@ -1,6 +1,7 @@
 extends Node
 ## Écrans plein écran : préréglages d'équipement par classe et coffre commun,
-## menu pause (Run, Héros, Aide), village (marchand, forgeron, recycleur, joaillier),
+## menu pause (Run, Héros, Aide), marchands ambulants, forge, coffres payants, sanctuaires,
+## coffres de récompense,
 ## légendaires et accessoires, carte d'objet au survol, archive et apparences,
 ## certificats (7 au plus), menu principal et écran Héros.
 ## godot --headless --path game res://tests/test_pages.tscn  (profil de test uniquement)
@@ -330,7 +331,7 @@ func _test_lobby() -> void:
 	var lobby: Node = load("res://scenes/lobby.tscn").instantiate()
 	add_child(lobby)
 	await _frames()
-	check("menu principal : 5 entrées (Jouer, Héros, Collection, Paramètres, Quitter)", lobby._menu.keys() == ["play", "hero", "collection", "settings", "quit"])
+	check("menu principal : Jouer, Héros, Coffres, Collection, Paramètres, Quitter", lobby._menu.keys() == ["play", "hero", "chests", "collection", "settings", "quit"])
 	check("menu principal : Jouer choisi, sous-menu rempli", lobby._menu.play.selected and lobby._sub.get_child_count() >= 3)
 	lobby._show_menu("zones")
 	await _frames()
@@ -417,7 +418,7 @@ func _test_run_screens() -> void:
 	var player: Player = world.player
 	for i in 8:
 		Profile.add_item(Items.generate(5, 1.0 if i < 3 else -0.5))
-	Profile.gain({"gold": 5000, "fragment": 300, "essence": 60, "crystal": 6})
+	Profile.gain({"gold": 5000, "crystal": 6})
 	for k in ["drill", "drill", "luck", "protect", Craft.gem_key("ruby", 0), Craft.gem_key("ruby", 0), Craft.gem_key("ruby", 0), Craft.scroll_key("violence", 1)]:
 		Profile.add_bag(k)
 	# menu pause
@@ -466,54 +467,59 @@ func _test_run_screens() -> void:
 	Settings.set_v("interface", "dev_mode", false)
 	await _frames()
 	check("pause fermée, jeu repris", not world.pause_menu.is_open() and not get_tree().paused)
-	# village
-	var v: VillageUI = world.village_ui
-	for kind in ["merchant", "smith", "recycler", "jeweler", "trader"]:
-		v.open(kind)
-		await _frames()
-		check("village : %s ouvert" % kind, v.is_open())
-		v.close_ui()
-		await _frames()
-	# marchand : vendre
-	v.open("merchant")
-	var ms: PageScreen = v._screens.merchant
-	ms.show_page(1)
+	# marchand ambulant (le village n'existe plus)
+	var map = world.director.map
+	check("carte : 3 marchands ambulants, ~10 coffres, ~10 sanctuaires", map.interactables.filter(func(i): return i.kind == "merchant").size() == 3
+		and map.chests.size() >= 8 and map.shrines.size() >= 8 and map.interactables.all(func(i): return not i.kind in ["smith", "recycler", "jeweler"]))
+	var v: MerchantUI = world.merchant_ui
+	var npc: Interactable = map.interactables.filter(func(i): return i.kind == "merchant")[0]
+	v.open(npc)
 	await _frames()
-	var sell: VillagePages.SellPage = ms.page(1)
+	check("marchand : boutique ouverte (3 pages : Boutique, Vendre, Fabriquer)", v.is_open() and v._screen._pages.size() == 3)
+	check("marchand : cartes, clé, fournitures, équipement", v.offers.any(func(o): return o.has("card") and o.card.type in ["skill", "upgrade", "passive"]) and v.offers.any(func(o): return o.has("keys"))
+		and v.offers.any(func(o): return o.has("bag")) and v.offers.any(func(o): return o.has("item")))
+	var offers_first: Array = v.offers
+	v.close_ui()
+	v.open(npc)
+	check("marchand : mêmes offres à la 2e visite", is_same(v.offers, offers_first))
+	# vendre
+	v._screen.show_page(1)
+	await _frames()
+	var sell: MerchantPages.SellPage = v._screen.page(1)
 	sell.grid.select_up_to_rarity(1)
 	var n_before := Profile.inventory.size()
 	var gold_before := Profile.gold
 	var picked := sell.grid.selection().size()
 	Profile.sell_many(sell.grid.selection().duplicate())
 	check("vendre : %d objet(s), or reçu" % picked, picked > 0 and Profile.inventory.size() == n_before - picked and Profile.gold > gold_before)
-	# marchand : acheter
-	ms.show_page(0)
-	await _frames()
+	# acheter : fourniture, clé
 	var offer: Dictionary = v.offers.filter(func(o): return o.has("bag"))[0]
 	v.buy(offer)
 	check("acheter une fourniture", offer.get("sold", false))
+	var keys0 := Profile.keys
+	v.buy(v.offers.filter(func(o): return o.has("keys"))[0])
+	check("acheter une clé", Profile.keys == keys0 + 1)
 	v.close_ui()
-	# forgeron : améliorer, réforger, polir
+	# forge : améliorer à l'or seulement, réforger et polir avec des cristaux
 	var piece: Dictionary = Profile.equipped.weapon
+	check("amélioration : de l'or seulement", Items.upgrade_cost(piece).keys() == ["gold"])
 	var up0 := int(piece.get("upgrade", 0))
+	var g0 := Profile.gold
 	Profile.upgrade_item(piece)
-	check("améliorer (+1 sûr)", int(piece.upgrade) == up0 + 1)
+	check("améliorer (+1 sûr, or payé)", int(piece.upgrade) == up0 + 1 and Profile.gold < g0)
+	var crys0 := Profile.amount("crystal")
+	var junk: Dictionary = Profile.inventory.filter(func(x): return x.slot != "trophy")[0]
+	Profile.disassemble_many([junk])
+	check("démonter : des cristaux (%d → %d)" % [crys0, Profile.amount("crystal")], Profile.amount("crystal") > crys0)
+	Profile.materials.crystal = 50
 	var rare: Dictionary = Profile.inventory.filter(func(x): return not Forge.reforgeable(x).is_empty())[0]
 	var stat: String = Forge.reforgeable(rare)[0]
-	var ess := int(Profile.materials.essence)
 	var txt := Forge.reforge(rare, stat)
-	check("réforger une stat (%s)" % txt, int(Profile.materials.essence) < ess and txt.contains("→"))
+	check("réforger une stat : des cristaux (%s)" % txt, Profile.amount("crystal") < 50 and txt.contains("→") and Forge.reforge_cost(rare).keys() == ["crystal"])
 	var q0 := float(rare.get("quality", 1.0))
 	Forge.polish(rare)
-	check("polir : la qualité ne baisse jamais", float(rare.quality) >= q0)
-	# recycleur : désassembler et convertir
-	var frag := int(Profile.materials.fragment)
-	Profile.disassemble_many([Profile.inventory[0]])
-	check("recycler un objet", int(Profile.materials.fragment) > frag)
-	var e0 := int(Profile.materials.essence)
-	Forge.convert(0, 1)
-	check("convertir 10 fragments → 1 essence", int(Profile.materials.essence) == e0 + 1)
-	# joaillier : percer, sertir, fusionner
+	check("polir : cristaux, la qualité ne baisse jamais", float(rare.quality) >= q0 and Forge.polish_cost(rare).keys() == ["crystal"])
+	# joaillerie (dans la forge) : percer, fusionner, sertir
 	var jewel: Dictionary = Profile.inventory[0]
 	Craft.drill(jewel)
 	check("percer un emplacement", jewel.get("sockets", []).size() == 1)
@@ -521,13 +527,86 @@ func _test_run_screens() -> void:
 	check("fusion : 3 rubis bruts → 1 rubis taillé", Profile.bag_count(Craft.gem_key("ruby", 1)) == 1 and Profile.bag_count(Craft.gem_key("ruby", 0)) == 0)
 	Craft.insert_gem(jewel, Craft.gem_key("ruby", 1), 0)
 	check("sertir la gemme fusionnée", jewel.sockets[0] != null)
-	# pages : rafraîchissement sans erreur
-	for kind in ["smith", "recycler", "jeweler"]:
-		v.open(kind)
-		var s: PageScreen = v._screens[kind]
-		for i in s._pages.size():
-			s.show_page(i)
-			await _frames(1)
-		v.close_ui()
-	check("toutes les pages du village s'affichent", true)
+	v.open_forge(jewel)
+	await _frames()
+	var fp: MerchantPages.ForgePage = v._forge.page(0)
+	check("forge : une seule page, l'objet choisi et ses sections", v._forge._pages.size() == 1 and fp.grid.selection().size() == 1 and fp.actions.get_child_count() >= 6)
+	fp.grid.clear_selection()
+	await _frames()
+	check("forge sans objet : fusion des gemmes", fp.detail.text.contains("cristaux"))
+	v.close_ui()
+	for i in v._screen._pages.size():
+		v.open(npc, i)
+		await _frames(1)
+	v.close_ui()
+	check("toutes les pages du marchand s'affichent", true)
+	# coffres de la carte : or (prix qui monte) ou clé
+	var d: RunDirector = world.director
+	var chest: Interactable = map.interactables.filter(func(i): return i.kind == "chest" and not i.used)[0]
+	Profile.keys = 0
+	Profile.gold = 0
+	var p0 := d.chest_price()
+	d._interact(chest)
+	check("coffre : refusé sans or ni clé (%d or)" % p0, not chest.used)
+	Profile.gold = 1000
+	world.cards._queue.clear()
+	d._interact(chest)
+	check("coffre : payé en or, choix de cartes, prix suivant plus cher", chest.used and Profile.gold == 1000 - p0 and d.chest_price() > p0 and (world.cards.is_open() or not world.cards._queue.is_empty()))
+	world.cards._queue.clear()
+	world.cards._show_next()
+	var chest2: Interactable = map.interactables.filter(func(i): return i.kind == "chest" and not i.used)[0]
+	Profile.keys = 1
+	var gold2 := Profile.gold
+	d._interact(chest2)
+	check("coffre : une clé à la place de l'or", chest2.used and Profile.keys == 0 and Profile.gold == gold2)
+	world.cards._queue.clear()
+	world.cards._show_next()
+	# sanctuaire : capture → récompense de la run
+	var sh: Shrine = map.shrines.filter(func(x): return x.reward == "trophy")[0]
+	player.global_position = sh.global_position + Vector3.UP * 0.5
+	var bag0 := Profile.inventory.size()
+	for i in 20:
+		d._update_shrines(1.0)
+	check("sanctuaire capturé en restant dans le cercle", sh.captured and d.shrines_captured >= 1)
+	check("sanctuaire des trophées : choix de 3 trophées", world.cards.is_open() and world.cards._cards.size() == 3 and world.cards._cards.all(func(c): return c.type == "trophy"))
+	world.cards._select(0)
+	world.cards._opened_at = 0
+	world.cards._confirm_choice()
+	check("trophée choisi : dans le sac", Profile.inventory.size() == bag0 + 1 and Profile.inventory[-1].slot == "trophy")
+	world.cards._queue.clear()
+	world.cards._show_next()
+	# élite : une clé ; coffres de récompense gardés à l'extraction
+	var keys1 := Profile.keys
+	world.director.dev_spawn_elite()
+	await _frames()
+	var elite: Monster = get_tree().get_nodes_in_group("monsters").filter(func(m): return m.is_elite)[-1]
+	elite.take_damage(1e9, player)
+	check("élite vaincue : une clé", Profile.keys == keys1 + 1)
+	world.cards._queue.clear()
+	world.cards._show_next()
+	Run.pick_up(Rewards.loot_item(Rewards.make("trophy", 10)))
+	Run.pick_up(Rewards.loot_item(Rewards.make("forge", 10)))
+	check("coffres de récompense ramassés", Run.chests_found.size() == 2)
 	world.queue_free()
+	await _frames()
+	Run.finish("extraction")
+	Profile.end_run_extract()
+	check("extraction : coffres gardés, or et clés perdus", Profile.reward_chests.size() >= 2 and Profile.gold == 0 and Profile.keys == 0)
+	check("cristaux gardés entre les runs", Profile.amount("crystal") > 0)
+	# menu Coffres : ouvrir, choisir
+	var forge_chest: Dictionary = Profile.reward_chests.filter(func(c): return c.type == "forge")[0]
+	var st0 := Profile.stash_count()
+	var got := Rewards.open(forge_chest)
+	check("coffre de forge ouvert : fournitures et cristaux", Profile.stash_count() > st0 and int(got.crystal) > 0 and not Profile.reward_chests.has(forge_chest))
+	var tc: Dictionary = Profile.reward_chests.filter(func(c): return c.type == "trophy")[0]
+	var offer3 := Rewards.offer(tc)
+	check("coffre de trophées : 3 propositions gardées", offer3.size() == 3 and is_same(Rewards.offer(tc), offer3))
+	var vault0 := Profile.vault.size()
+	var chosen := Rewards.choose(tc, 1)
+	check("trophée choisi : au coffre commun", Profile.vault.size() == vault0 + 1 and chosen.slot == "trophy" and not Profile.reward_chests.has(tc))
+	var sc := Rewards.make("set", 30)
+	Profile.reward_chests.append(sc)
+	var pieces := Rewards.offer(sc)
+	check("coffre de set : 3 pièces mythiques au choix", pieces.size() == 3 and pieces.all(func(it): return int(it.rarity) == Items.MYTHIC))
+	Profile.reward_chests.erase(sc)
+	Profile.save_profile()

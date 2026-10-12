@@ -243,10 +243,9 @@
   "res://assets/ui/items/a60031.png"
  ],
  "materials": {
-  "fragment": "res://assets/ui/items/i00206.png",
-  "essence": "res://assets/ui/items/i00222.png",
   "crystal": "res://assets/ui/items/i00232.png",
-  "gold": "res://assets/ui/items/i00228.png"
+  "gold": "res://assets/ui/items/i00228.png",
+  "keys": "res://assets/ui/items/k30112.png"
  },
  "craft": {
   "drill": "res://assets/ui/items/i00690.png",

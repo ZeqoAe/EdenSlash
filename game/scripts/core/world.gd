@@ -11,6 +11,8 @@ extends Node3D
 ##   --dungeon             entre directement dans le donjon
 ##   --teleport=x,z        place le héros
 ##   --cam-dist=N          distance de la caméra
+##   --goto=dungeon|shrine|merchant|chest   place le héros près de ce lieu
+##   --shot-prefix=nom     préfixe des captures (lancements en parallèle)
 
 const REVIVES_PER_RUN := 1
 
@@ -23,11 +25,12 @@ var sun: DirectionalLight3D
 var tools: TestTools
 var cards: CardPicker
 var pause_menu: PauseMenu
-var village_ui: VillageUI
+var merchant_ui: MerchantUI
 
 var revives_left := REVIVES_PER_RUN
 var autoplay_boss_after := 99999.0  # bot de test : temps avant d'aller au boss
 var _shots: Array = []
+var _shot_prefix := ""
 var _teleport := Vector2.INF
 var _debug_dungeon := false
 var _quit_at := -1.0
@@ -48,27 +51,23 @@ func _open_for_test() -> void:
 		pause_menu.settings.open(int(_debug_open.trim_prefix("settings")))
 	elif _debug_open == "map":
 		hud._big_map.visible = true
-	elif _debug_open in ["merchant", "smith", "trader", "jeweler"]:
+	elif _debug_open in ["merchant", "forge"]:
 		# profil de test (user://profile_test.json) : jamais celui du joueur
 		cards._queue.clear()
 		cards._show_next()
 		for i in 14:
 			Profile.add_item(Items.generate(player.level + randi_range(0, 3), randf_range(-0.5, 1.0)))
-		Profile.materials.fragment += 40
+		Profile.materials.crystal = int(Profile.materials.get("crystal", 0)) + 40
 		Profile.add_gold(800)
-		# fournitures de test pour la forge et le joaillier
+		# fournitures de test pour la forge
 		for k in ["drill", "drill", "luck", "luck", "luck", "protect", Craft.gem_key("ruby", 1), Craft.gem_key("garnet", 2),
 				Craft.gem_key("amethyst", 0), Craft.scroll_key("violence", 1), Craft.scroll_key("rehab", 1)]:
 			Profile.add_bag(k)
-		village_ui.open(_debug_open, "Test")
-		if _debug_open in ["smith", "jeweler"]:
-			get_tree().create_timer(1.5, true, false, true).timeout.connect(func():
-				var it = village_ui._shown[0]
-				if _debug_open == "jeweler":
-					Craft.drill(it)
-				village_ui._on_entry_pressed(it, 0))
-		if _debug_open == "merchant":
-			get_tree().create_timer(1.5, true, false, true).timeout.connect(func(): village_ui._on_entry_pressed(village_ui._shown[0], 0))
+		if _debug_open == "forge":
+			merchant_ui.open_forge(Profile.inventory[0])
+		else:
+			merchant_ui.open()
+			get_tree().create_timer(1.5, true, false, true).timeout.connect(func(): merchant_ui._on_entry_pressed(merchant_ui._shown[0], 0) if not merchant_ui._shown.is_empty() else null)
 
 
 func _ready() -> void:
@@ -105,9 +104,9 @@ func _ready() -> void:
 	add_child(pause_menu)
 	pause_menu.setup(player)
 	pause_menu.abandon_requested.connect(func(): end_run("abandon"))
-	village_ui = VillageUI.new()
-	add_child(village_ui)
-	village_ui.setup(player, director)
+	merchant_ui = MerchantUI.new()
+	add_child(merchant_ui)
+	merchant_ui.setup(player, director)
 
 	player.health_changed.connect(_on_player_hp)
 	player.leveled_up.connect(_on_level_up)
@@ -118,7 +117,7 @@ func _ready() -> void:
 	_parse_args()
 	# captures et arrêt programmés indépendamment de la pause
 	for t in _shots:
-		get_tree().create_timer(t, true).timeout.connect(_save_screenshot.bind("shot_%02d.png" % int(t)))
+		get_tree().create_timer(t, true).timeout.connect(_save_screenshot.bind("%sshot_%02d.png" % [_shot_prefix, int(t)]))
 	if _quit_at > 0.0:
 		get_tree().create_timer(_quit_at, true).timeout.connect(get_tree().quit)
 	var zone_bonus := int(GameData.zone(Run.zone_id).get("level_bonus", 0))
@@ -134,14 +133,28 @@ func _ready() -> void:
 		player.global_position = Vector3(_teleport.x, h + 0.5, _teleport.y)
 	if _goto != "":
 		var target: Vector3 = {"village": map.village, "dungeon": map.dungeon}.get(_goto, map.start)
-		player.global_position = target + Vector3(6, 1, 6)
+		var off := Vector3(6, 1, 6)
+		match _goto:  # tests : sanctuaire, marchand ambulant, coffre
+			"shrine":
+				target = map.shrines[0].global_position
+				off = Vector3(0, 1, 3.0)
+			"merchant", "chest":
+				for it in map.interactables:
+					if it.kind == _goto:
+						target = it.global_position
+						off = Vector3(0, 1, 4.5)
+						break
+		player.global_position = target + off
 	rig.global_position = player.global_position
 	director.prompt_changed.connect(hud.show_prompt)
 	director.npc_opened.connect(_on_npc_opened)
 	# première compétence : choix parmi 3 cartes de compétence
 	if Run.skills.is_empty():
 		var n := int(Run.class_data().get("start_skills", 3))
-		_offer("Choisis ta première compétence", Run.roll_cards(n, true), func(): return Run.roll_cards(n, true))
+		if _goto != "":
+			Run.apply_card(Run.roll_cards(n, true)[0])  # captures (--goto) : pas de choix à l'écran
+		else:
+			_offer("Choisis ta première compétence", Run.roll_cards(n, true), func(): return Run.roll_cards(n, true))
 
 
 func _parse_args() -> void:
@@ -187,6 +200,8 @@ func _parse_args() -> void:
 			Run.seed = int(arg.trim_prefix("--seed="))
 		elif arg.begins_with("--boss-after="):
 			autoplay_boss_after = float(arg.trim_prefix("--boss-after="))
+		elif arg.begins_with("--shot-prefix="):
+			_shot_prefix = arg.trim_prefix("--shot-prefix=") + "_"
 		elif arg.begins_with("--goto="):
 			_goto = arg.trim_prefix("--goto=")
 		elif arg == "--rage":
@@ -228,7 +243,7 @@ func _on_level_up(lvl: int) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if village_ui.is_open():
+	if merchant_ui.is_open():
 		return
 	if event.is_action_pressed("extract") and not _ended and not pause_menu.is_open() and not cards.is_open():
 		director.start_extraction()
@@ -361,8 +376,8 @@ func new_arena_map(seed_value: int) -> ProcMap:
 	return m
 
 
-func _on_npc_opened(kind: String, npc: Interactable) -> void:
-	village_ui.open(kind, npc.title)
+func _on_npc_opened(_kind: String, npc: Interactable) -> void:
+	merchant_ui.open(npc)
 
 
 var _base_fog := Color(0.85, 0.89, 0.91)

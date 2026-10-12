@@ -18,7 +18,6 @@ var extract_left := 0.0
 var _extract_tick := 0.0
 
 const RUN_TIME := 600.0
-const DISCOVER_VILLAGE := 45.0
 const DISCOVER_DUNGEON := 32.0
 const DISCOVER_CHEST := 18.0
 const CAMP_ACTIVATE := 55.0
@@ -38,9 +37,17 @@ var state := "explore"  # explore, rage, boss, cleared
 var zone: Dictionary
 var kills := 0
 var time := 0.0
-var village_found := false
 var dungeon_found := false
 var chests_opened := 0
+var shrines_captured := 0
+var _found := {}  # marchands et sanctuaires découverts (instance -> true)
+var _shrine_timer := 0.0
+## Coffres de la carte : prix en or qui monte à chaque coffre ouvert (ou une clé).
+const CHEST_BASE := 25
+const CHEST_STEP := 20
+const DISCOVER_POI := 45.0
+const SHRINE_PRESSURE := 3.5  # secondes entre deux groupes de monstres pendant une capture
+const MERCHANT_ROAM := 14.0  # rayon de promenade des marchands ambulants
 var route := PackedVector3Array()
 
 var _camp_ready_at := {}  # index de camp -> instant
@@ -79,7 +86,8 @@ func start(p: Player) -> void:
 	_fog.fill(Color(0, 0, 0, 1))
 	_fog_tex = ImageTexture.create_from_image(_fog)
 	zone_changed.emit({"name": zone.name, "levels": [1 + int(zone.get("level_bonus", 0)), max_level()]})
-	message.emit("%s\nTrouve le village et l'entrée du donjon" % zone.name, 3.5)
+	message.emit("%s\nCoffres, sanctuaires, marchands : renforce ta run, puis trouve le donjon" % zone.name, 3.5)
+	_refresh_chest_labels()
 
 
 func _place_player(pos: Vector3) -> void:
@@ -108,6 +116,8 @@ func _process(delta: float) -> void:
 		"explore", "rage":
 			_update_discovery()
 			_update_spawns(delta)
+			_update_shrines(delta)
+			_update_merchants(delta)
 		"boss":
 			_update_boss(delta)
 	_update_interactions()
@@ -127,9 +137,8 @@ func _objective_text() -> String:
 		return "Boss vaincu !"
 	var t := time_left()
 	var clock := "RAGE !" if state == "rage" else "%02d:%02d avant la rage" % [int(t) / 60, int(t) % 60]
-	return "%s\nVillage %s   ·   Donjon %s   ·   Sceaux %d/%d   ·   Coffres %d/%d" % [clock,
-		"✔" if village_found else "?", "✔" if dungeon_found else "?", seals, SEALS_NEEDED,
-		chests_opened, map.chests.size()]
+	return "%s\nDonjon %s   ·   Sceaux %d/%d   ·   Coffres %d/%d   ·   Sanctuaires %d/%d" % [clock,
+		"✔" if dungeon_found else "?", seals, SEALS_NEEDED, chests_opened, map.chests.size(), shrines_captured, map.shrines.size()]
 
 
 func _start_rage() -> void:
@@ -143,9 +152,13 @@ func _start_rage() -> void:
 # --- découvertes et interactions ---------------------------------------------------------
 func _update_discovery() -> void:
 	var p := player.global_position
-	if not village_found and _flat(p, map.village) < DISCOVER_VILLAGE:
-		village_found = true
-		message.emit("Village découvert !\nMarchand, forgeron et boutique", 3.0)
+	for it in map.interactables:
+		if is_instance_valid(it) and it.kind == "merchant" and not _found.has(it) and _flat(p, it.global_position) < DISCOVER_POI:
+			_found[it] = true
+			message.emit("Marchand ambulant !\nCartes, clés et équipement contre de l'or", 2.5)
+	for sh in map.shrines:
+		if not _found.has(sh) and _flat(p, sh.global_position) < DISCOVER_POI:
+			_found[sh] = true
 	if not dungeon_found and _flat(p, map.dungeon) < DISCOVER_DUNGEON:
 		dungeon_found = true
 		message.emit("Entrée du donjon découverte !\n[F] pour affronter le boss quand tu es prêt", 3.5)
@@ -173,15 +186,26 @@ func _update_interactions() -> void:
 func _interact(it: Interactable) -> void:
 	match it.kind:
 		"chest":
+			# une clé si on en a, sinon le prix en or (qui monte à chaque coffre ouvert)
+			var price := chest_price()
+			var how := ""
+			if Profile.keys > 0:
+				Profile.keys -= 1
+				how = "une clé"
+			elif Profile.gold >= price:
+				Profile.gold -= price
+				how = "%d or" % price
+			else:
+				message.emit("Ce coffre coûte %d or (ou une clé)\nTu as %d or" % [price, Profile.gold], 2.5)
+				_near = null
+				return
+			Profile.changed.emit()
 			it.open_chest()
 			chests_opened += 1
-			var luck := 0.25 + (0.25 if state == "rage" else 0.0)
-			for k in 2:
-				_drop_item(it.global_position, _monster_level(1), luck)
-			# coffre : un consommable, meilleur pendant la rage
 			_drop_consumable(it.global_position, _monster_level(1), 2 if state == "rage" else 1)
-			Run.add_gold(15 + player.level * 4)
-			message.emit("Coffre ouvert !", 1.5)
+			message.emit("Coffre ouvert (%s)" % how, 1.5)
+			world._offer("Coffre ouvert ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
+			_refresh_chest_labels()
 		"dungeon":
 			# le bot de test (--boss-after) ignore les sceaux
 			if seals < SEALS_NEEDED and not (player.autoplay and time > _autoplay_dungeon_time()):
@@ -367,7 +391,17 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		Profile.record_add("elite_kills", 1)
 	if m.is_elite:
 		Run.elites += 1
+		# élite : une clé, et un choix de cartes pour les gardiens des camps
+		Profile.keys += 1
+		Profile.changed.emit()
+		message.emit("Clé obtenue (%d)" % Profile.keys, 1.8)
+		if m.carries_seal:
+			world._offer("Gardien vaincu ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
 	Run.add_gold(2 + m.level * (3 if m.is_elite else 1))
+	# coffres de récompense (ouverts hors run) : boss, parfois les élites, rarement les autres
+	var n_chests := 2 if m.is_boss else (1 if (m.is_elite and randf() < 0.15) or randf() < 0.006 else 0)
+	for i in n_chests:
+		_drop_reward_chest(m.global_position, m.level, m.is_boss)
 	if seals < SEALS_NEEDED and (m.carries_seal or (m.is_elite and randf() < 0.3)):
 		seals += 1
 		message.emit("Sceau du donjon obtenu (%d/%d)" % [seals, SEALS_NEEDED], 2.5)
@@ -413,6 +447,16 @@ func _drop_item(pos: Vector3, level: int, luck: float, min_r := 0, max_r := 3) -
 	var drop := LootDrop.new()
 	drop.item = Items.generate(loot_level(level), luck, "", Run.class_id, min_r, "", max_r)
 	drop.on_picked = func(item): message.emit("Butin : %s" % item.name, 1.5)
+	add_child(drop)
+	var p := pos + Vector3(randf_range(-1.5, 1.5), 0, randf_range(-1.5, 1.5))
+	var g: Vector3 = map.ground_at(p.x, p.z)
+	drop.global_position = (g if g != Vector3.INF else pos) + Vector3.UP * 0.2
+
+
+func _drop_reward_chest(pos: Vector3, level: int, boss: bool) -> void:
+	var drop := LootDrop.new()
+	drop.item = Rewards.loot_item(Rewards.make(Rewards.roll_type(boss), loot_level(level)))
+	drop.on_picked = func(item): message.emit("%s ! À ouvrir au menu Coffres (gardé si tu t'en sors)" % item.name, 2.5)
 	add_child(drop)
 	var p := pos + Vector3(randf_range(-1.5, 1.5), 0, randf_range(-1.5, 1.5))
 	var g: Vector3 = map.ground_at(p.x, p.z)
@@ -534,10 +578,7 @@ func _on_boss_killed() -> void:
 func revive_point() -> Vector3:
 	if state in ["boss", "cleared"]:
 		return map.start + Vector3.UP * 0.6
-	var best: Vector3 = map.start
-	if village_found and _flat(player.global_position, map.village) < _flat(player.global_position, best):
-		best = map.village + Vector3(4, 0, 0)
-	return best + Vector3.UP * 0.6
+	return map.start + Vector3.UP * 0.6
 
 
 func objective_target() -> Vector3:
@@ -638,8 +679,11 @@ func markers() -> Array:
 	var out: Array = []
 	if state in ["boss", "cleared"]:
 		return out
-	if village_found:
-		out.append([map.village, "village"])
+	for k in _found:
+		if is_instance_valid(k) and k is Interactable:
+			out.append([k.global_position, "merchant"])
+		elif is_instance_valid(k) and k is Shrine and not k.captured:
+			out.append([k.global_position, "shrine"])
 	if dungeon_found:
 		out.append([map.dungeon, "dungeon"])
 	for it in map.interactables:
@@ -687,6 +731,99 @@ func debug_start_rage() -> void:
 		time = RUN_TIME
 
 
+# --- coffres payants, sanctuaires, marchands ambulants --------------------------------------
+## Prix du prochain coffre de la carte (monte à chaque coffre ouvert).
+func chest_price() -> int:
+	return CHEST_BASE + CHEST_STEP * chests_opened + 2 * (player.level if player else 1)
+
+
+func _refresh_chest_labels() -> void:
+	var t := "Coffre · %d or ou 1 clé" % chest_price()
+	for it in map.interactables:
+		if is_instance_valid(it) and it.kind == "chest" and not it.used:
+			it.set_title(t)
+
+
+## Zones à capturer : rester dans le cercle sous la pression des monstres.
+func _update_shrines(delta: float) -> void:
+	for sh: Shrine in map.shrines:
+		if sh.captured:
+			continue
+		var before := sh.progress
+		if not player.is_dead and sh.contains(player.global_position):
+			if before == 0.0:
+				message.emit("Capture du sanctuaire : reste dans le cercle !", 2.0)
+			sh.progress = minf(1.0, sh.progress + delta / Shrine.CAPTURE_TIME)
+			_shrine_timer -= delta
+			if _shrine_timer <= 0.0:
+				_shrine_timer = SHRINE_PRESSURE
+				var lvl := _monster_level(1)
+				var c := sh.global_position + Vector3.FORWARD.rotated(Vector3.UP, randf() * TAU) * randf_range(12.0, 16.0)
+				for i in 3 + int(time / 120.0):
+					_spawn_monster(_pick_monster(lvl), _around(c, 4.0), lvl)
+			if sh.progress >= 1.0:
+				_capture(sh)
+		elif before > 0.0:
+			sh.progress = maxf(0.0, sh.progress - delta / (Shrine.CAPTURE_TIME * 3.0))
+		if sh.progress != before:
+			sh.update_visual()
+
+
+func _capture(sh: Shrine) -> void:
+	sh.captured = true
+	shrines_captured += 1
+	sh.update_visual()
+	match sh.reward:
+		"trophy":
+			world._offer("Sanctuaire capturé ! Choisis un trophée", trophy_cards(3))
+		"keys":
+			Profile.keys += 2
+			Run.add_gold(40 + 10 * player.level)
+			Profile.changed.emit()
+			message.emit("Sanctuaire capturé : 2 clés et de l'or !", 2.5)
+		_:
+			world._offer("Sanctuaire capturé ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
+
+
+## Cartes de choix de trophée : 3 trophées du niveau de la run (le choisi va dans le sac).
+func trophy_cards(n: int) -> Array:
+	var out: Array = []
+	for i in n:
+		var it := Items.generate(loot_level(player.level), 0.7, "trophy", Run.class_id, 2, "", Items.MYTHIC)
+		out.append({"type": "trophy", "id": String(it.uid), "item": it, "title": Items.display_name(it),
+			"subtitle": "Trophée %s" % String(Items.RARITIES[int(it.rarity)].name).to_lower(),
+			"desc": String(it.get("passive", {}).get("desc", "")), "icon": String(it.icon)})
+	return out
+
+
+## Marchands ambulants : ils se promènent autour de leur place, et s'arrêtent face au héros.
+func _update_merchants(delta: float) -> void:
+	for it: Interactable in map.interactables:
+		if not is_instance_valid(it) or it.kind != "merchant":
+			continue
+		var to_player: Vector3 = player.global_position - it.global_position
+		to_player.y = 0.0
+		if to_player.length() < 7.0:
+			it.rotation.y = lerp_angle(it.rotation.y, atan2(to_player.x, to_player.z), minf(1.0, delta * 5.0))
+			continue
+		var target: Vector3 = it.get_meta("target", it.global_position)
+		var to: Vector3 = target - it.global_position
+		to.y = 0.0
+		if to.length() < 0.5:
+			var wait := float(it.get_meta("wait", 0.0)) - delta
+			it.set_meta("wait", wait)
+			if wait <= 0.0:
+				var home: Vector3 = it.get_meta("home", it.global_position)
+				var p := home + Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)).normalized() * randf_range(3.0, MERCHANT_ROAM)
+				it.set_meta("target", ground_point(p, home))
+				it.set_meta("wait", randf_range(4.0, 9.0))
+			continue
+		var step: Vector3 = to.normalized() * minf(1.6 * delta, to.length())
+		var np: Vector3 = it.global_position + step
+		it.global_position = ground_point(np, np)
+		it.rotation.y = lerp_angle(it.rotation.y, atan2(to.x, to.z), minf(1.0, delta * 6.0))
+
+
 # --- mode dev (écran F10) ----------------------------------------------------------------
 func _near_player(d := 7.0) -> Vector3:
 	var p := player.global_position + player.forward() * d
@@ -722,6 +859,29 @@ func dev_spawn_chest() -> void:
 	map.add_child(chest)
 	chest.global_position = _near_player(4.0)
 	map.interactables.append(chest)
+	_refresh_chest_labels()
+
+
+func dev_spawn_merchant() -> void:
+	var npcs: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/npcs.json"))
+	var data: Dictionary = npcs.get("merchant", {})
+	var npc := Interactable.new()
+	npc.setup("merchant", "Marchand ambulant", "res://assets/monsters/%s/%s.glb" % [data.model, data.model],
+		"res://assets/monsters/textures/%s.png" % data.texture, float(data.get("scale", 1.0)), 4.0)
+	map.add_child(npc)
+	npc.global_position = _near_player(5.0)
+	npc.set_meta("home", npc.global_position)
+	map.interactables.append(npc)
+	_found[npc] = true
+
+
+func dev_capture_nearest() -> void:
+	var best: Shrine = null
+	for sh: Shrine in map.shrines:
+		if not sh.captured and (best == null or _flat(player.global_position, sh.global_position) < _flat(player.global_position, best.global_position)):
+			best = sh
+	if best:
+		_capture(best)
 
 
 func dev_kill_all() -> int:

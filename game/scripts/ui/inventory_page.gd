@@ -6,7 +6,7 @@ extends HBoxContainer
 ##   principales et un bouton « Détail » (toutes les statistiques) ;
 ## - à droite, l'inventaire sans limite de place : familles (Tous, Armes, Armures,
 ##   Accessoires, Consommables, Matériaux, Divers), recherche, tri, et la fiche de l'objet
-##   choisi avec ses raccourcis (Équiper, Améliorer, Démonter).
+##   choisi avec ses raccourcis (Équiper, Forge, Démonter).
 ## Hors run : coffre commun et préréglage de la classe affichée. Pendant la run : sac de la
 ## run, or, matériaux et fournitures (la forge et le recyclage n'existent qu'en run).
 
@@ -21,8 +21,8 @@ const SORTS := ["Rareté", "Niveau", "Nom", "Type", "Amélioration"]
 const COLUMNS := 9
 const CELL := 66.0
 const ICON_GOLD := Color(0.98, 0.8, 0.42)
-const MAT_NAMES := {"fragment": "Fragments d'amélioration", "essence": "Essences", "crystal": "Cristaux"}
-const MAT_RARITY := {"fragment": 1, "essence": 2, "crystal": 3}
+const MAT_NAMES := {"crystal": "Cristaux", "keys": "Clés"}
+const MAT_RARITY := {"crystal": 3, "keys": 2}
 
 var player: Player  # null hors run
 var class_card := true  # carte « Classe affichée » (non dans l'écran Héros : la classe y est en haut)
@@ -420,7 +420,7 @@ func _build_detail(parent: Control) -> void:
 	spacer.size_flags_stretch_ratio = 0.6
 	acts.add_child(spacer)
 	_b_equip = _action(acts, "Équiper", "", _on_equip, true)
-	_b_upgrade = _action(acts, "Améliorer", "upgrade", _on_upgrade)
+	_b_upgrade = _action(acts, "Forge", "upgrade", _on_upgrade)
 	_b_dismantle = _action(acts, "Démonter", "dismantle", _on_dismantle)
 
 
@@ -487,10 +487,12 @@ func _entries() -> Array:
 	for k in sup:
 		if int(sup[k]) > 0:
 			out.append({"kind": "stack", "key": String(k), "count": int(sup[k])})
+	for m in Profile.materials:  # cristaux : gardés entre les runs
+		if int(Profile.materials[m]) > 0:
+			out.append({"kind": "mat", "key": String(m), "count": int(Profile.materials[m])})
 	if Profile.in_run:
-		for m in Profile.materials:
-			if int(Profile.materials[m]) > 0:
-				out.append({"kind": "mat", "key": String(m), "count": int(Profile.materials[m])})
+		if Profile.keys > 0:
+			out.append({"kind": "mat", "key": "keys", "count": Profile.keys})
 		if Profile.gold > 0:
 			out.append({"kind": "gold", "key": "gold", "count": Profile.gold})
 	return out
@@ -737,13 +739,20 @@ func _refresh_detail() -> void:
 	if String(e.kind) != "item":
 		_d_type.text = {"stack": "Fourniture", "mat": "Matériau", "gold": "Monnaie"}.get(String(e.kind), "")
 		_d_level.text = "Quantité : %d" % int(e.count)
-		_d_stats.text = Craft.describe_key(String(e.key)) if String(e.kind) == "stack" else \
-			("Sert à améliorer l'équipement à la forge du village." if String(e.kind) == "mat" else "Monnaie de la run : boutique, forge.")
+		var key := String(e.key)
+		_d_stats.text = Craft.describe_key(key) if String(e.kind) == "stack" else String({
+			"crystal": "Réforger une stat bonus d'un objet et polir sa qualité (Forge).",
+			"keys": "Ouvre un coffre de la carte sans payer.",
+			"gold": "Coffres de la carte, marchands ambulants, amélioration +1 à +10 (Forge)."}.get(key, ""))
 		_d_next.text = ""
-		_d_flavor.text = "[color=#9a98a8]%s[/color]" % ("Fournitures : gardées à l'extraction ou à la victoire, perdues si le héros tombe." if String(e.kind) == "stack" else "Remis à zéro au début de chaque run.")
-		_d_set.text = "[b]Utilisation[/b]\n[color=#c8c8d4]%s[/color]" % ("Joaillier (sertissage, enchantement) et forge (pierres de chance et de protection) du village." if String(e.kind) == "stack" else "Village de la run.")
-		for b in [_b_equip, _b_upgrade, _b_dismantle]:
+		_d_flavor.text = "[color=#9a98a8]%s[/color]" % ("Fournitures : gardées à l'extraction ou à la victoire, perdues si le héros tombe." if String(e.kind) == "stack" else
+			("Gardés entre les runs (on les obtient en démontant des objets)." if key == "crystal" else "Perdu(es) en fin de run : à dépenser !"))
+		_d_set.text = "[b]Utilisation[/b]\n[color=#c8c8d4]%s[/color]" % ("Forge : gemmes, parchemins, pierres de chance et de protection ; fusion de 3 gemmes identiques." if String(e.kind) == "stack" else "Voir l'aide « ? » : Monnaies.")
+		for b in [_b_equip, _b_dismantle]:
 			b.disabled = true
+		# gemmes : la Forge propose la fusion
+		_b_upgrade.disabled = not (Profile.in_run and String(e.kind) == "stack" and key.begins_with("gem"))
+		_b_upgrade.tooltip_text = "Fusion de 3 gemmes identiques (Forge)"
 		return
 	var it: Dictionary = e.item
 	var equipped := _is_equipped(it)
@@ -770,9 +779,9 @@ func _refresh_detail() -> void:
 	_b_equip.disabled = false
 	_b_equip.text = "Retirer" if equipped else "Équiper"
 	var forge_ok := Profile.in_run
-	_b_upgrade.disabled = not forge_ok or int(it.get("upgrade", 0)) >= Items.MAX_UPGRADE
+	_b_upgrade.disabled = not forge_ok
 	_b_dismantle.disabled = not forge_ok or equipped
-	var why := "La forge et le recyclage sont au village, pendant la run (ou depuis ce menu en pause)."
+	var why := "La Forge et le démontage se font pendant la run, depuis ce menu (Échap > Héros)."
 	_b_upgrade.tooltip_text = "" if forge_ok else why
 	_b_dismantle.tooltip_text = ("Retire d'abord l'objet." if equipped else "") if forge_ok else why
 	_b_dismantle.text = "Confirmer ?" if _armed_dismantle else "Démonter"
@@ -872,14 +881,16 @@ func _on_dismantle() -> void:
 	_msg.text = "%s démonté : %s" % [Items.display_name(it), ItemWidgets.materials_text(got, true)]
 
 
+## Forge (pendant la run) : améliorer, réforger, polir, sertir, enchanter l'objet choisi ;
+## sur une gemme : la fusion.
 func _on_upgrade() -> void:
-	if _selected.get("kind", "") != "item" or not Profile.in_run:
+	var w := get_tree().get_first_node_in_group("world")
+	if not Profile.in_run or w == null:
 		return
-	UpgradeDialog.open(self, _selected.item, func(text):
-		_msg.text = text
-		if player:
-			player.recalc_stats()
-		refresh())
+	var mu: MerchantUI = w.merchant_ui
+	mu.open_forge(_selected.item if _selected.get("kind", "") == "item" else {})
+	if not mu._forge.closed.is_connected(refresh):
+		mu._forge.closed.connect(refresh)
 
 
 func _pick_class() -> void:
@@ -1022,108 +1033,3 @@ class InfoDialog extends CanvasLayer:
 
 ## Amélioration rapide depuis l'inventaire (pendant la run) : coût, chances, pierres de
 ## chance et de protection, comme la forge du village.
-class UpgradeDialog extends CanvasLayer:
-	var item: Dictionary
-	var done: Callable
-	var _info: RichTextLabel
-	var _luck: SpinBox
-	var _protect: CheckBox
-	var _go: Button
-
-	static func open(host: Node, it: Dictionary, on_done: Callable) -> void:
-		var d := UpgradeDialog.new()
-		d.item = it
-		d.done = on_done
-		d.layer = 95
-		d.process_mode = Node.PROCESS_MODE_ALWAYS
-		host.get_tree().root.add_child(d)
-
-	func _ready() -> void:
-		var dim := ColorRect.new()
-		dim.color = Color(0, 0, 0, 0.6)
-		dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-		add_child(dim)
-		var panel := PanelContainer.new()
-		panel.add_theme_stylebox_override("panel", InventoryPage.frame_box(12, 0.98))
-		panel.set_anchors_preset(Control.PRESET_CENTER)
-		panel.custom_minimum_size = Vector2(520, 380)
-		panel.position = Vector2(-260, -190)
-		add_child(panel)
-		var v := VBoxContainer.new()
-		v.add_theme_constant_override("separation", 10)
-		panel.add_child(v)
-		var t := Label.new()
-		t.text = "Améliorer"
-		UiTheme.title(t, 24)
-		v.add_child(t)
-		_info = ItemWidgets.rich(v, 15)
-		_info.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 10)
-		v.add_child(row)
-		Hud._label(row, "Pierres de chance :", 14, UiTheme.TEXT)
-		_luck = SpinBox.new()
-		_luck.min_value = 0
-		_luck.max_value = mini(Craft.MAX_LUCK, Profile.bag_count("luck"))
-		_luck.value_changed.connect(func(_v): _refresh())
-		row.add_child(_luck)
-		_protect = CheckBox.new()
-		_protect.text = "Pierre de protection (%d)" % Profile.bag_count("protect")
-		_protect.disabled = Profile.bag_count("protect") <= 0
-		_protect.focus_mode = Control.FOCUS_NONE
-		row.add_child(_protect)
-		var acts := HBoxContainer.new()
-		acts.add_theme_constant_override("separation", 10)
-		v.add_child(acts)
-		_go = Button.new()
-		_go.text = "Améliorer"
-		_go.custom_minimum_size = Vector2(0, 44)
-		_go.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_go.focus_mode = Control.FOCUS_NONE
-		_go.pressed.connect(_upgrade)
-		acts.add_child(_go)
-		var close := Button.new()
-		close.text = "Fermer"
-		close.custom_minimum_size = Vector2(0, 44)
-		close.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		close.focus_mode = Control.FOCUS_NONE
-		close.pressed.connect(queue_free)
-		acts.add_child(close)
-		_refresh()
-
-	func _refresh(result := "") -> void:
-		var up := int(item.get("upgrade", 0))
-		var lines: PackedStringArray = ["[b][color=#%s]%s[/color][/b]  +%d → +%d" % [Items.color_of(item).to_html(false), Items.display_name(item), up, up + 1]]
-		if up >= Items.MAX_UPGRADE:
-			lines.append("Amélioration maximale atteinte.")
-			_go.disabled = true
-		else:
-			var cost := Items.upgrade_cost(item)
-			lines.append("Coût : " + ItemWidgets.cost_text(cost))
-			lines.append("Réussite : [b]%d %%[/b]" % roundi(Craft.success_chance(item, int(_luck.value)) * 100.0))
-			var fail := Craft.failure_text(item)
-			if fail != "":
-				lines.append("[color=#ff9a7a]%s[/color]" % fail)
-			lines.append("[color=#c8c8d4]Tu as %d or, %d fragments, %d essences, %d cristaux.[/color]" % [Profile.gold, int(Profile.materials.fragment), int(Profile.materials.essence), int(Profile.materials.crystal)])
-			_go.disabled = not Profile.can_afford(cost)
-		if result != "":
-			lines.append("")
-			lines.append(result)
-		_info.text = "\n".join(lines)
-
-	func _upgrade() -> void:
-		var r := Profile.upgrade_item(item, int(_luck.value), _protect.button_pressed)
-		var txt := String(r.get("text", ""))
-		_luck.max_value = mini(Craft.MAX_LUCK, Profile.bag_count("luck"))
-		_protect.text = "Pierre de protection (%d)" % Profile.bag_count("protect")
-		_protect.disabled = Profile.bag_count("protect") <= 0
-		if _protect.disabled:
-			_protect.button_pressed = false
-		_refresh(("[color=#7fe08a]%s[/color]" if r.get("ok", false) else "[color=#ff9a7a]%s[/color]") % txt)
-		if done.is_valid():
-			done.call(txt)
-
-	func _unhandled_input(event: InputEvent) -> void:
-		if event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel"):
-			get_viewport().set_input_as_handled()
-			queue_free()

@@ -114,9 +114,18 @@ triangle de 3 couleurs (*Prisme*) ou losange de 4 de même couleur donnent des b
   niveau de puissance choisis ; **Ressources** (or, matériaux, fournitures, en run ou au départ des
   runs) ; **Progression** (maîtrise, classes, zones, tenues, trésors — avec confirmation) ; **Run**
   (niveau, invincible, soins, tuer les monstres, faire apparaître élite / boss / coffre, rage, donjon).
-- **Village**, un PNJ par métier : Alec (acheter, vendre), Bryson le forgeron (améliorer, enchanter,
-  réforger une stat, polir la qualité), Starnoc le recycleur (désassembler, convertir les matériaux),
-  Lertia la joaillière (percer et sertir, fusionner 3 gemmes en une gemme supérieure).
+- **Sur la carte** (le village n'existe plus) : 10 **coffres** payants (or, prix qui monte à chaque
+  coffre, ou une **clé**) → un choix de cartes ; 10 **sanctuaires** à capturer (rester dans le
+  cercle 14 s pendant que les monstres affluent) → cartes, trophée au choix ou clés ; 3 **marchands
+  ambulants** (Boutique : cartes, clé, fournitures, équipement ; Vendre ; Fabriquer) ; les **élites**
+  donnent une clé. **Forge** depuis la fiche d'un objet (Échap > Héros) : améliorer +1 → +10 (or
+  seulement), réforger une stat et polir la qualité (**cristaux**, obtenus en démontant, gardés entre
+  les runs), percer, sertir, enchanter, fusionner des gemmes.
+- **Monnaies** : or et clés perdus en fin de run, cristaux gardés ; tableau complet dans l'aide « ? »
+  (Monnaies et coffres) et dans `DESIGN.md`.
+- **Coffres** (menu principal) : coffres de récompense rapportés des runs (boss, élites, rarement
+  les monstres ; gardés après une victoire ou une extraction) : équipement, forge, joaillier,
+  **set au choix** (1 pièce mythique parmi 3), **trophée au choix**.
 
 ### Tester et faire des retours
 

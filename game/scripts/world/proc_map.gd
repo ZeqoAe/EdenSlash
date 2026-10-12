@@ -2,7 +2,8 @@ class_name ProcMap
 extends Node3D
 ## Map générée pour une run, dans la DA d'Eden Eternal :
 ## relief doux bordé de falaises, chemins entre les lieux, forêts et rochers,
-## village (marchand, forgeron, négociant), entrée du donjon, coffres, camps.
+## entrée du donjon, coffres payants, marchands ambulants, zones à capturer, camps.
+## Le village n'existe plus que dans le décor des menus (generate_scenery).
 ## Collisions simples maîtrisées (sol en heightmap, cylindres pour le décor).
 ##
 ## Repère : la map couvre x ∈ [0, size], z ∈ [0, size].
@@ -37,6 +38,9 @@ var village := Vector3.INF
 var dungeon := Vector3.INF
 var chests: Array[Vector3] = []
 var camps: Array = []  # [{pos, tier, elite}]
+var merchant_spots: Array[Vector3] = []  # marchands ambulants (le premier : la clairière de l'ancien village)
+var shrine_spots: Array = []  # [{pos, reward}] zones à capturer
+var shrines: Array = []  # Shrine (run seulement)
 var interactables: Array[Interactable] = []
 
 var _splat: Image
@@ -56,9 +60,10 @@ func generate_run(seed_value: int) -> void:
 	_flatten_pois()
 	_paint_splat()
 	_build_terrain()
-	_build_village()
 	_build_dungeon_entrance()
 	_build_chests()
+	_build_merchants()
+	_build_shrines()
 	_scatter_props()
 	GrassField.create(self)
 	_build_minimap()
@@ -187,11 +192,25 @@ func _place_pois() -> void:
 	dungeon = Vector3(d2.x, 0, d2.y)
 	village = Vector3(v2.x, 0, v2.y)
 	_occupied = [[s2, 16.0], [d2, 18.0], [v2, 42.0]]
-	for k in 11:
+	for k in 10:
 		var p := _free_point(48.0, 55.0)
 		if p != Vector2.INF:
 			chests.append(Vector3(p.x, 0, p.y))
 			_occupied.append([p, 6.0])
+	# marchands ambulants : la clairière de l'ancien village, puis deux autres
+	merchant_spots.append(Vector3(v2.x, 0, v2.y))
+	for k in 2:
+		var p := _free_point(60.0, 60.0)
+		if p != Vector2.INF:
+			merchant_spots.append(Vector3(p.x, 0, p.y))
+			_occupied.append([p, 8.0])
+	# zones à capturer : surtout des cartes, quelques trophées et clés
+	var kinds := ["card", "card", "trophy", "card", "keys", "card", "trophy", "card", "card", "trophy"]
+	for k in kinds.size():
+		var p := _free_point(40.0, 55.0)
+		if p != Vector2.INF:
+			shrine_spots.append({"pos": Vector3(p.x, 0, p.y), "reward": kinds[k]})
+			_occupied.append([p, 18.0])
 	for k in 16:
 		var p := _free_point(36.0, 60.0)
 		if p == Vector2.INF:
@@ -276,6 +295,8 @@ func _flatten_pois() -> void:
 	_flatten_disk(Vector2(dungeon.x, dungeon.z), 16.0, _raw_height(dungeon.x, dungeon.z), 1.0)
 	for c in chests:
 		_flatten_disk(Vector2(c.x, c.z), 4.0, _raw_height(c.x, c.z), 0.8)
+	for sh in shrine_spots:
+		_flatten_disk(Vector2(sh.pos.x, sh.pos.z), 8.0, _raw_height(sh.pos.x, sh.pos.z), 0.9)
 	for camp in camps:
 		_flatten_disk(Vector2(camp.pos.x, camp.pos.z), 9.0, _raw_height(camp.pos.x, camp.pos.z), 0.7)
 	start.y = height_at(start.x, start.z)
@@ -283,6 +304,10 @@ func _flatten_pois() -> void:
 	dungeon.y = height_at(dungeon.x, dungeon.z)
 	for k in chests.size():
 		chests[k].y = height_at(chests[k].x, chests[k].z)
+	for k in merchant_spots.size():
+		merchant_spots[k].y = height_at(merchant_spots[k].x, merchant_spots[k].z)
+	for sh in shrine_spots:
+		sh.pos.y = height_at(sh.pos.x, sh.pos.z)
 	for camp in camps:
 		camp.pos.y = height_at(camp.pos.x, camp.pos.z)
 
@@ -340,6 +365,8 @@ func _paint_splat() -> void:
 				dirt = maxf(dirt, 0.85)
 			for camp in camps:
 				dirt = maxf(dirt, 0.7 * (1.0 - smoothstep(4.0, 9.0, p.distance_to(Vector2(camp.pos.x, camp.pos.z)))))
+			for sh in shrine_spots:
+				dirt = maxf(dirt, 0.6 * (1.0 - smoothstep(6.0, 8.0, p.distance_to(Vector2(sh.pos.x, sh.pos.z)))))
 			_splat.set_pixel(i, j, Color(g2, dirt, road_mask[j * (n - 1) + i], 0.0))
 
 
@@ -703,6 +730,36 @@ func _torch(p: Vector3) -> void:
 	l.omni_range = 10.0
 	l.position = p + Vector3.UP * 2.2
 	add_child(l)
+
+
+## Marchands ambulants : un PNJ par emplacement (le directeur les fait se promener).
+func _build_merchants() -> void:
+	var npcs: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/npcs.json"))
+	var models := ["merchant", "trader", "smith"]
+	for k in merchant_spots.size():
+		var data: Dictionary = npcs.get(models[k % models.size()], {})
+		var npc := Interactable.new()
+		npc.setup("merchant", "Marchand ambulant", "res://assets/monsters/%s/%s.glb" % [data.get("model", ""), data.get("model", "")],
+			"res://assets/monsters/textures/%s.png" % data.get("texture", ""), float(data.get("scale", 1.0)), 4.0)
+		add_child(npc)
+		npc.global_position = merchant_spots[k]
+		npc.rotation.y = rng.randf() * TAU
+		npc.set_meta("home", merchant_spots[k])
+		interactables.append(npc)
+
+
+## Zones à capturer (sanctuaires) : un puits d'Eden au centre du cercle.
+func _build_shrines() -> void:
+	var batch := {}
+	for sh in shrine_spots:
+		_add_instance(batch, {"model": "uc405", "scale": [0.8, 0.8], "col": 1.0}, sh.pos, true)
+	_flush_batches(batch, self)
+	for sh in shrine_spots:
+		var node := Shrine.new()
+		add_child(node)
+		node.global_position = sh.pos
+		node.setup(String(sh.reward))
+		shrines.append(node)
 
 
 func _build_chests() -> void:

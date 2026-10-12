@@ -5,7 +5,7 @@ extends HBoxContainer
 ## En run, montre aussi les valeurs du héros et ce que vaut un point de plus.
 ## Les formules reprennent Player.recalc_stats, Player._hit_monster et Combatant.take_damage.
 
-const SECTIONS := ["Attributs", "Statistiques du héros", "Calcul des dégâts", "Défense", "Survie", "Équipement", "Tes valeurs"]
+const SECTIONS := ["Monnaies et coffres", "Attributs", "Statistiques du héros", "Calcul des dégâts", "Défense", "Survie", "Équipement", "Tes valeurs"]
 
 var player: Player  # null hors run
 var _nav: VBoxContainer
@@ -47,13 +47,14 @@ func show_section(i: int) -> void:
 		(_nav.get_child(k) as Button).set_pressed_no_signal(k == _current)
 	var txt := ""
 	match _current:
-		0: txt = _attributes()
-		1: txt = _hero()
-		2: txt = _damage()
-		3: txt = _defense()
-		4: txt = _survival()
-		5: txt = _gear()
-		6: txt = _live()
+		0: txt = _money()
+		1: txt = _attributes()
+		2: txt = _hero()
+		3: txt = _damage()
+		4: txt = _defense()
+		5: txt = _survival()
+		6: txt = _gear()
+		7: txt = _live()
 	_text.text = txt
 	_text.scroll_to_line(0)
 
@@ -78,6 +79,22 @@ static func _table(head: Array, rows: Array) -> String:
 		for c in r:
 			s += "[cell]%s[/cell]" % c
 	return s + "[/table]\n"
+
+
+func _money() -> String:
+	var t := _h("Monnaies : où les obtenir, à quoi elles servent")
+	t += _note("Les monstres donnent l'équipement (objets au sol, or, coffres de récompense). Les coffres de la carte, sanctuaires, élites et marchands donnent les cartes d'amélioration de la run.")
+	t += _table(["Monnaie", "Où l'obtenir", "À quoi elle sert", "En fin de run"], [
+		["[b]Or[/b]", "Monstres, vente d'objets aux marchands, sanctuaires des clés", "Coffres de la carte (le prix monte à chaque coffre), marchands, amélioration +1 → +10, fusion de gemmes", "[color=#ff9a7a]perdu[/color]"],
+		["[b]Clés[/b]", "Élites (1 chacune), sanctuaires des clés, marchands", "Ouvrir un coffre de la carte sans payer", "[color=#ff9a7a]perdues[/color]"],
+		["[b]Cristaux[/b]", "Démonter un objet", "Réforger une stat bonus, polir la qualité, fabrication", "[color=#7fe08a]gardés[/color]"],
+		["[b]Fournitures[/b]", "Butin, coffres, marchands, coffres de forge et du joaillier", "Forge : sertir des gemmes, enchanter, améliorer sans risque", "gardées si tu t'en sors"],
+		["[b]Cartes[/b]", "Niveaux, coffres de la carte, sanctuaires, gardiens d'élite, marchands", "Ton build de la run", "la run seulement"],
+		["[b]Coffres de récompense[/b]", "Boss, parfois les élites, rarement les monstres", "Menu Coffres : équipement, forge, joaillier, set au choix, trophée au choix", "gardés si tu t'en sors"],
+	])
+	t += _sub("Sur la carte")
+	t += _note("• 10 coffres : or ou une clé, un choix de cartes.\n• 10 sanctuaires : reste dans le cercle (14 s) pendant que les monstres affluent ; cartes, trophées ou clés.\n• 3 marchands ambulants : cartes, clé, fournitures, équipement ; ils rachètent ton butin.\n• Élites : une clé ; les gardiens des camps portent un sceau du donjon et donnent un choix de cartes.\n• Forge (Échap > Héros, fiche d'un objet) : améliorer (or), réforger et polir (cristaux), percer, sertir, enchanter.")
+	return t
 
 
 func _attributes() -> String:

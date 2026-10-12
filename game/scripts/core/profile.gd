@@ -25,7 +25,8 @@ signal class_unlocked(cls: String)  # mission remplie : nouvelle classe jouable
 
 var selected_class := "warrior"
 var gold := 0
-var materials := {"fragment": 0, "essence": 0, "crystal": 0}
+var materials := {"crystal": 0}  # cristaux (désassemblage) : gardés entre les runs
+var keys := 0  # clés de la run (élites, sanctuaires, marchands) : ouvrent un coffre sans payer, perdues en fin de run
 var inventory: Array = []  # objets (Dictionary)
 var equipped: Dictionary = {}  # emplacement -> objet
 var vault: Array = []  # objets gardés entre les runs
@@ -51,10 +52,11 @@ var collection: Array = []
 var worn := {}  # classe -> {"head": .glb, "back": .glb} : accessoires cosmétiques portés  # cosmétiques d'Eden débloqués (identifiants de data/eden_items.json -> cosmetics)
 ## Mode dev (écran F10) : or et matériaux donnés au départ de chaque run tant que le mode dev
 ## est activé dans les Paramètres (« enabled » : ancien interrupteur, repris par les Paramètres).
-var dev := {"enabled": false, "gold": 0, "fragment": 0, "essence": 0, "crystal": 0}
+var dev := {"enabled": false, "gold": 0, "keys": 0}
 var unlocked_zones := 1  # zones jouables (dans l'ordre de data/zones.json)
 var selected_zone := "limestone"
 var starter_trophy := ""  # uid du trophée de départ (donné une fois par sauvegarde)
+var reward_chests: Array = []  # coffres de récompense à ouvrir hors run (Rewards)
 var runs_done := 0
 var runs_won := 0
 var best_level := 1
@@ -148,13 +150,15 @@ func load_profile() -> void:
 	owned_outfits = d.get("owned_outfits", [])
 	collection = (d.get("collection", []) as Array).map(func(x): return str(int(x)) if typeof(x) == TYPE_FLOAT else String(x))
 	worn = d.get("worn", {})
-	dev = {"enabled": false, "gold": 0, "fragment": 0, "essence": 0, "crystal": 0}
+	materials = {"crystal": int(d.get("crystals", 0))}
+	dev = {"enabled": false, "gold": 0, "keys": 0}
 	dev.merge(d.get("dev", {}), true)
 	if dev.enabled:  # ancien interrupteur de l'encyclopédie : repris par les Paramètres
 		Settings.set_v("interface", "dev_mode", true)
 		dev.enabled = false
 	selected_zone = String(d.get("selected_zone", "limestone"))
 	starter_trophy = String(d.get("starter_trophy", ""))
+	reward_chests = d.get("reward_chests", [])
 	if d.has("vault"):
 		vault = d.get("vault", []).map(_migrate)
 		loadout = d.get("loadout", {})
@@ -217,6 +221,7 @@ func save_profile() -> void:
 		_lobby_view()  # autre classe choisie : on affiche son préréglage
 	var d := {"selected_class": selected_class, "vault": vault, "loadout": loadout, "presets": presets,
 		"unlocked_zones": unlocked_zones, "selected_zone": selected_zone, "starter_trophy": starter_trophy,
+		"crystals": int(materials.get("crystal", 0)), "reward_chests": reward_chests,
 		"expertise": expertise, "talents": talents, "certificates": certificates, "stash": stash,
 		"unlocked_classes": unlocked_classes, "records": records, "cert_board": cert_board,
 		"archive": archive, "skins": skins, "outfits": outfits, "owned_outfits": owned_outfits, "collection": collection, "worn": worn, "dev": dev, "saved_at": Time.get_datetime_string_from_system(false, true),
@@ -243,8 +248,7 @@ func _lobby_view() -> void:
 		else:
 			inventory.append(it)
 	gold = 0
-	for m in materials:
-		materials[m] = 0
+	keys = 0
 	bag = {}
 
 
@@ -355,12 +359,10 @@ func begin_run() -> void:
 	equipped = start
 	inventory = []
 	gold = 0
-	for m in materials:
-		materials[m] = 0
+	keys = 0
 	if Settings.get_v("interface", "dev_mode"):
 		gold = int(dev.get("gold", 0))
-		for m in materials:
-			materials[m] = int(dev.get(m, 0))
+		keys = int(dev.get("keys", 0))
 	# la réserve de fournitures part avec le héros : perdue s'il tombe
 	bag = stash.duplicate()
 	stash = {}
@@ -418,11 +420,14 @@ func end_run_extract() -> int:
 	return kept
 
 
-## Les fournitures du sac rejoignent la réserve (extraction réussie, victoire).
+## Les fournitures du sac rejoignent la réserve, les coffres trouvés le menu Coffres
+## (extraction réussie, victoire).
 func keep_supplies() -> void:
 	for k in bag:
 		stash[k] = int(stash.get(k, 0)) + int(bag[k])
 	bag = {}
+	reward_chests.append_array(Run.chests_found)
+	Run.chests_found = []
 
 
 func stash_count() -> int:
@@ -521,6 +526,8 @@ func delete_slot(i: int) -> void:
 func _clear() -> void:
 	in_run = false
 	starter_trophy = ""
+	reward_chests = []
+	materials = {"crystal": 0}
 	selected_class = Progression.START_CLASS
 	vault = []
 	loadout = {}
@@ -550,6 +557,8 @@ func _clear() -> void:
 func reset_all() -> void:
 	in_run = false
 	starter_trophy = ""
+	reward_chests = []
+	materials = {"crystal": 0}
 	vault = []
 	loadout = {}
 	presets = {}
@@ -864,10 +873,28 @@ func _convert(items: Array, selling: bool) -> Dictionary:
 
 func gain(res: Dictionary) -> void:
 	for k in res:
-		if k == "gold":
-			gold += int(res[k])
-		else:
-			materials[k] = int(materials.get(k, 0)) + int(res[k])
+		set_amount(k, amount(k) + int(res[k]))
+	changed.emit()
+
+
+## Quantité d'une ressource : or, clés ou matériau (cristaux).
+func amount(k: String) -> int:
+	match k:
+		"gold":
+			return gold
+		"keys":
+			return keys
+	return int(materials.get(k, 0))
+
+
+func set_amount(k: String, v: int) -> void:
+	match k:
+		"gold":
+			gold = v
+		"keys":
+			keys = v
+		_:
+			materials[k] = v
 
 
 ## Retire exactement cet objet (et pas un autre identique) de l'inventaire.
@@ -880,8 +907,7 @@ func _remove(item: Dictionary) -> void:
 
 func can_afford(cost: Dictionary) -> bool:
 	for k in cost:
-		var have := gold if k == "gold" else int(materials.get(k, 0))
-		if have < int(cost[k]):
+		if amount(k) < int(cost[k]):
 			return false
 	return true
 
@@ -890,10 +916,8 @@ func pay(cost: Dictionary) -> bool:
 	if not can_afford(cost):
 		return false
 	for k in cost:
-		if k == "gold":
-			gold -= int(cost[k])
-		else:
-			materials[k] = int(materials[k]) - int(cost[k])
+		set_amount(k, amount(k) - int(cost[k]))
+	changed.emit()
 	return true
 
 

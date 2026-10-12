@@ -112,6 +112,34 @@ Arcs de lame épais et lumineux (cœur blanc, bloom), ondes de choc au sol avec 
 Salto du Samouraï : bond de ~4 m avec rotation complète, onde de choc à la retombée.
 Toupie du Guerrier : 3 tours réels du modèle, un coup par tour, annulable par esquive ou saut.
 
+## Monnaies, coffres et zones (refonte 0.1.25)
+
+Deux boucles : les **monstres** donnent les ressources d'équipement (objets au sol, or,
+coffres de récompense) ; les **coffres de la carte, sanctuaires, élites et marchands**
+donnent les **cartes d'amélioration de la run** (on repart toujours niveau 1 : l'équipement,
+les trophées et les sorts se combinent aux cartes de la run, c'est la boucle rejouable).
+
+| Monnaie / ressource | Où l'obtenir | À quoi elle sert | Fin de run |
+|---|---|---|---|
+| **Or** (pièces) | monstres, vente d'objets aux marchands, sanctuaires des clés | coffres de la carte (prix qui monte à chaque coffre), marchands ambulants, amélioration +1 → +10 (seulement de l'or), fusion de gemmes, fabrication | **perdu** |
+| **Clés** | élites (1 chacune), sanctuaires des clés (2), marchands | ouvrir un coffre de la carte sans payer (utilisée en priorité) | **perdues** |
+| **Cristaux** | démonter un objet (selon la rareté) | réforger une stat bonus, polir la qualité ; fabrication | **gardés** |
+| **Fournitures** (gemmes, parchemins, ciseaux, pierres de chance / protection) | butin, coffres de la carte, marchands, coffres de forge et du joaillier | forge : sertir, enchanter, améliorer sans risque | réserve gardée (victoire, extraction), perdues si le héros tombe |
+| **Cartes d'amélioration** | passage de niveau, coffres de la carte, sanctuaires des cartes, gardiens d'élite, marchands | build de la run (sorts, améliorations, passifs) | la run seulement |
+| **Choix de trophée** (3 au choix) | sanctuaires des trophées, coffres de trophées | un trophée (buff sous condition) qui rejoint le sac / le coffre | gardé comme tout objet |
+| **Coffres de récompense** | boss (2), élites (15 %), monstres (0,6 %) | menu **Coffres** hors run : équipement, forge, joaillier, set au choix, trophée au choix | gardés (victoire, extraction), perdus si le héros tombe |
+| **Points d'expertise** | fin de run | maîtrise de la classe (talents, sorts, certificats) | gardés |
+| **Archive et trésors de collection** | mythiques / légendaires archivés, boss | bonus permanents, apparences | gardés |
+
+**Sur la carte** (512 × 512 m) : 10 **coffres** payants (25 or + 20 par coffre déjà ouvert,
+ou une clé) qui donnent un choix de cartes ; 10 **sanctuaires** à capturer (rester 14 s dans
+le cercle pendant que les monstres affluent ; hors du cercle la capture redescend) : cartes,
+trophées ou clés ; 3 **marchands ambulants** qui se promènent (cartes, clé, fournitures,
+équipement, rachat du butin, fabrication) ; les **élites** donnent une clé, les gardiens des
+camps un choix de cartes en plus de leur sceau. Le village n'existe plus (décor du menu
+seulement). La **Forge** (fiche d'un objet, Échap > Héros) : améliorer à l'or, réforger et
+polir aux cristaux, percer, sertir, enchanter, fusionner des gemmes.
+
 ## Joaillerie et forge (comme dans Eden)
 
 - **Emplacements de gemmes** : 2 max par objet, percés aux **ciseaux de sertissage**
@@ -128,10 +156,10 @@ Toupie du Guerrier : 3 tours réels du modèle, un coup par tour, annulable par 
   30 % jusqu'à +10. Chaque réussite : stats de base +10 % et **une stat aléatoire** (doublée
   aux paliers +4, +6, +8, +10). Échec : matériaux perdus ; vers +6 et au-delà, l'objet perd un
   niveau (et sa dernière stat aléatoire). **Pierre de chance** : +10 % (3 max par essai).
-  **Pierre de protection** : pas de perte de niveau.
+  **Pierre de protection** : pas de perte de niveau. Coût : **de l'or seulement**.
 - Les fournitures tombent des monstres (4 %, 7 % en rage), des élites (35 %), des boss (3),
-  des coffres (1, meilleur en rage) et se vendent à la boutique ; elles sont perdues en fin de
-  run comme l'or et les matériaux. Onglet **Joaillier** chez le marchand.
+  des coffres (1, meilleur en rage) et se vendent chez les marchands ambulants. Tout se fait
+  dans la **Forge** (fiche d'un objet pendant la run).
 
 ## Classe + arme (builds exotiques)
 
@@ -209,7 +237,7 @@ Les costumes d'Eden tombent sur les boss (1 chance sur 4, 1 sur 2 s'il est enrag
 
 | Phase | Ce qui se passe |
 |---|---|
-| 0:00 → 10:00 | Exploration d'une map générée : farmer, trouver le **village**, l'**entrée du donjon**, les **coffres** et les **PNJ**. Monstres de la zone, élites ponctuelles. |
+| 0:00 → 10:00 | Exploration d'une map générée : farmer, ouvrir les **coffres** (or ou clé), capturer les **sanctuaires**, trouver les **marchands ambulants** et l'**entrée du donjon**. Monstres de la zone, élites ponctuelles (clés). |
 | 10:00 → … | **Rage** : monstres plus forts, monstres de niveau supérieur, élites en masse. Plus d'XP et de butin. |
 | N'importe quand | Si l'entrée du donjon est découverte **et 3 sceaux réunis** : entrer → **arène du boss**. |
 | Boss | Combat direct dans une arène dédiée. Attaques annoncées par des **zones rouges au sol** (cercle, ligne, cône au corps à corps, projectiles à distance) + monstres invoqués autour. Être touché = **étourdi** 1 à 1,5 s. **Miroir** toutes les 12–17 s pendant 3 s : frapper le boss renvoie 60 % des dégâts. L'onde circulaire (bord jaune) se **saute**. |
@@ -232,7 +260,7 @@ Les costumes d'Eden tombent sur les boss (1 chance sur 4, 1 sur 2 s'il est enrag
 - L'entrée du donjon est **scellée** : il faut **3 sceaux**.
 - Chaque camp d'élite a un **gardien** (élite + 4 gardes) qui porte un sceau ; les autres
   élites ont 30 % de chances d'en lâcher un.
-- Le village est du côté du départ, à ~200 m de l'entrée du donjon.
+- La clairière de l'ancien village (un marchand ambulant y démarre) est du côté du départ.
 
 ## Maniabilité (hard to master)
 
@@ -262,21 +290,18 @@ aériens / mages), **Pas aérien** (+1 esquive en l'air, ×2).
 ## Map générée
 
 - Terrain ~512 × 512 m, relief doux, bordure de falaises, chemins qui relient les lieux.
-- Lieux placés aléatoirement à bonne distance : départ, village, entrée du donjon,
-  8 à 12 coffres, PNJ, camps de monstres, camps d'élites.
+- Lieux placés aléatoirement à bonne distance : départ, entrée du donjon, 10 coffres payants,
+  10 sanctuaires, 3 marchands ambulants, camps de monstres, camps d'élites.
 - Décor Eden (arbres, rochers, buissons, ruines) dispersé hors des chemins et clairières.
   Collisions simples (cylindre / boîte), petits objets sans collision.
 - Brouillard de guerre : la mini-carte se révèle en explorant ; les lieux découverts y restent.
 
-## Village (dans la run)
+## Marchands ambulants (remplacent le village)
 
-- **Marchand** : vendre (or), désassembler (matériaux), améliorer (or + matériaux).
-  Filtres par rareté et type de pièce, tri (rareté, niveau, type, valeur), sélection multiple
-  (clic, Ctrl+clic, Maj+clic, Ctrl+A), sélection rapide (communs, jusqu'à magique), bouton
-  « tout vendre / désassembler » sur le filtre (2 clics pour confirmer), comparaison avec la
-  pièce portée et aperçu du gain d'une amélioration.
-- **Boutique** : 6 offres aléatoires — compétences (tant que les 4 ne sont pas trouvées),
-  améliorations de compétence, passifs, équipement de rareté supérieure de la zone.
+- 3 par carte, ils se promènent autour de leur place et s'arrêtent face au héros.
+- Un seul écran par marchand : **Boutique** (3 cartes, 1 clé, fournitures, équipement rare ou
+  épique, parfois un trophée ; offres tirées pour ce marchand), **Vendre** (filtres, sélection
+  multiple, sélections rapides), **Fabriquer** (mythiques de la zone, or + cristaux).
 
 ## Équipement
 
@@ -294,8 +319,8 @@ aériens / mages), **Pas aérien** (+1 esquive en l'air, ×2).
   fabrication (mythiques) ; ils portent le passif d'arme et les effets de set d'Eden.
 - **Amélioration +1 → +10** : augmente les stats de base à chaque niveau ; aux paliers
   **+4, +6, +8, +10**, une stat aléatoire de l'objet est en plus augmentée (ou un affixe ajouté).
-- **Désassemblage** → matériaux selon la rareté et le niveau, **+ 70 % des pierres** dépensées
-  en améliorations. **Vente** → or **+ 70 % des pierres** d'amélioration.
+- **Désassemblage** → des **cristaux** selon la rareté (gardés entre les runs). **Vente** → or
+  **+ la moitié de l'or** investi dans les améliorations.
 
 ## Combo d'auto-attaque
 

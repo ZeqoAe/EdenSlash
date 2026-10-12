@@ -1,6 +1,6 @@
 class_name PageScreen
 extends CanvasLayer
-## Écran plein écran à pages (menu pause, personnage, village) dans le style du
+## Écran plein écran à pages (menu pause, marchand, collection) dans le style du
 ## grimoire : fond sombre, en-tête doré (titre, onglets, bourse, fermer), pages.
 ## Une page est un Control ; si elle a une méthode refresh(), elle est appelée à
 ## l'ouverture et au changement d'onglet.

@@ -199,7 +199,7 @@ func _update_objectives() -> void:
 	var need: int = director.SEALS_NEEDED
 	_seal_label.text = "Sceaux  " + "◆ ".repeat(mini(director.seals, need)) + "◇ ".repeat(maxi(0, need - director.seals))
 	var chests_total: int = director.map.chests.size() if director.map and "chests" in director.map else 0
-	var sig := "%s|%s|%s|%d|%d" % [director.state, director.village_found, director.dungeon_found, director.seals, director.chests_opened]
+	var sig := "%s|%s|%d|%d|%d" % [director.state, director.dungeon_found, director.seals, director.chests_opened, director.shrines_captured]
 	if _obj_signature != "" and sig != _obj_signature:
 		_obj_show_until = _clock + OBJECTIVE_AUTO_SHOW  # nouvelle découverte : on déplie un instant
 	_obj_signature = sig
@@ -216,10 +216,10 @@ func _update_objectives() -> void:
 		"cleared":
 			lines = ["✔ Boss vaincu : ramasse le butin"]
 		_:
-			lines.append("✔ Village trouvé" if director.village_found else "◇ Trouve le village (marchands, boutique)")
 			lines.append("✔ Entrée du donjon trouvée" if director.dungeon_found else "◇ Trouve l'entrée du donjon")
 			lines.append("✔ Sceaux réunis : le donjon est ouvert" if director.seals >= need else "◇ Sceaux du donjon : %d / %d (gardiens d'élite)" % [director.seals, need])
-			lines.append("◇ Coffres ouverts : %d / %d" % [director.chests_opened, chests_total])
+			lines.append("◇ Coffres : %d / %d · prochain : %d or ou 1 clé (clés : %d)" % [director.chests_opened, chests_total, director.chest_price(), Profile.keys])
+			lines.append("◇ Sanctuaires capturés : %d / %d (cartes, trophées, clés)" % [director.shrines_captured, director.map.shrines.size() if director.map else 0])
 			lines.append("La rage arrive dans %02d:%02d : monstres plus forts, plus de butin" % [int(t) / 60, int(t) % 60] if not rage else "Rage : monstres plus forts, plus d'XP et de butin")
 	for i in _obj_lines.size():
 		var shown := i < lines.size()
@@ -469,12 +469,12 @@ func _update_target() -> void:
 	_target_row.sync(effects)
 
 
-## Menu pause, village ou bilan ouvert : le HUD laisse la place (le choix de cartes le garde).
+## Menu pause, marchand ou bilan ouvert : le HUD laisse la place (le choix de cartes le garde).
 func _menu_open() -> bool:
 	if not get_tree().paused:
 		return false
 	var w := get_parent()
-	for key in ["pause_menu", "village_ui"]:
+	for key in ["pause_menu", "merchant_ui"]:
 		var menu = w.get(key) if w else null
 		if menu and menu.has_method("is_open") and menu.is_open():
 			return true

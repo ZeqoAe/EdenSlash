@@ -3,6 +3,7 @@ extends Node3D
 ## à gauche, une fonction = un seul endroit :
 ## - Jouer : lancer la run (un clic), résumé du héros (ouvre l'écran Héros), zone de farm ;
 ## - Héros : écran HeroScreen (équipement, talents, apparence, grimoire, classe, aide « ? ») ;
+## - Coffres : les coffres de récompense rapportés des runs, à ouvrir (Rewards) ;
 ## - Collection : l'archive des trésors (une seule page) ;
 ## - Paramètres, Quitter.
 ## Badge de la classe en haut à droite, zone et prochaine récompense en bas.
@@ -12,15 +13,16 @@ const RUN_SCENE := "res://scenes/world.tscn"
 const TITLE_SCENE := "res://scenes/title.tscn"
 ## Menu de gauche : identifiant, texte, icône.
 const MENU := [
-	["play", "Jouer", "play"], ["hero", "Héros", "class"], ["collection", "Collection", "collection"],
+	["play", "Jouer", "play"], ["hero", "Héros", "class"], ["chests", "Coffres", "chest"], ["collection", "Collection", "collection"],
 	["settings", "Paramètres", "settings"], ["quit", "Quitter", "quit"],
 ]
 ## Arguments de test qui ouvrent un écran au démarrage (captures, tests).
-const SCREEN_ARGS := ["--grimoire", "--talents", "--info", "--inventory", "--appearance"]
+const SCREEN_ARGS := ["--grimoire", "--talents", "--info", "--inventory", "--appearance", "--chests"]
 
 var backdrop: MapBackdrop
 var _hero: HeroScreen
 var _archive: PageScreen
+var _chests: PageScreen
 var _launching := false
 var _open_screen := ""  # test : écran ouvert au démarrage (--inventory, --talents, --appearance, --archive=0...)
 var _settings: SettingsMenu
@@ -95,6 +97,13 @@ func _ready() -> void:
 			# test : écran du mode dev, page N (paramètres de test uniquement)
 			Settings.set_v("interface", "dev_mode", true)
 			Dev.open(int(_open_screen.get_slice("=", 1)))
+		"chests":
+			# test (profil de test) : un coffre de chaque type, la proposition d'un coffre de set ouverte
+			if Profile.reward_chests.is_empty():
+				for t in Rewards.ORDER:
+					Profile.reward_chests.append(Rewards.make(t, 25))
+			_chests.open(0)
+			_chests.page(0).open_chest(Profile.reward_chests.filter(func(c): return c.type == "set")[0])
 		"archive":
 			_archive.open(0)
 			for arg in OS.get_cmdline_user_args():
@@ -326,6 +335,8 @@ func _build_ui() -> void:
 		_refresh_ui())
 	_archive = _screen("Collection", [["Collection", ArchivePages.CollectionPage.new()]])
 	_archive.set_title("Collection", "Archive des trésors : chaque entrée donne un bonus permanent à tous les héros")
+	_chests = _screen("Coffres", [["Coffres", ChestsPage.new()]])
+	_chests.set_title("Coffres", "Coffres de récompense rapportés des runs : équipement, forge, joaillier, set au choix, trophée au choix")
 	_settings = SettingsMenu.new()
 	add_child(_settings)
 	_refresh_ui()
@@ -349,6 +360,8 @@ func _on_menu(id: String) -> void:
 			_open_hero()
 		"collection":
 			_archive.open(0)
+		"chests":
+			_chests.open(0)
 		"settings":
 			_settings.open()
 		_:
@@ -516,6 +529,7 @@ func _refresh_ui() -> void:
 	var next := Progression.rewards_at(cid, lvl + 1).filter(func(r): return r.kind != "talent")
 	_reward_text.text = ("Maîtrise %s niv. %d : %s" % [cd.get("name_fr", cid), lvl + 1, String(next[0].name) if not next.is_empty() else "+2 points de talent"]) if lvl < Profile.EXPERTISE_MAX else "Maîtrise maximale"
 	_dev_button.visible = Dev.enabled()
+	_menu.chests._label.text = "Coffres" + ("  (%d)" % Profile.reward_chests.size() if not Profile.reward_chests.is_empty() else "")
 	_footer.text = "Sauvegarde %d · héritage %d objet(s) · %d run(s), %d victoire(s)" % [Profile.slot, Profile.vault.size(), Profile.runs_done, Profile.runs_won]
 	_show_menu(_current)
 

@@ -21,10 +21,10 @@ func _ready() -> void:
 	check("run : katana copié", Profile.equipped.weapon.uid == w_uid and not is_same(Profile.equipped.weapon, Profile.vault[0]))
 	for i in 5:
 		Profile.add_item(Items.generate(3, 0.5))
-	Profile.gain({"gold": 5000, "fragment": 200, "essence": 50, "crystal": 5})
+	Profile.gain({"gold": 5000, "crystal": 5})
 	var w: Dictionary = Profile.equipped.weapon
 	# amélioration à risque : avec 3 pierres de chance et une protection à chaque essai
-	Profile.gain({"gold": 200000, "fragment": 5000, "essence": 500, "crystal": 50})
+	Profile.gain({"gold": 200000, "crystal": 50})
 	Profile.add_bag("luck", 300)
 	Profile.add_bag("protect", 100)
 	var tries := 0
@@ -68,22 +68,23 @@ func _ready() -> void:
 	check("parchemin Lv5 refusé sur un objet niveau 12", Craft.can_enchant(armor, Craft.scroll_key("rehab", 5)) != "")
 	var spent := {}
 	for u in 8:
-		var c := Items.upgrade_cost({"level": int(w.level), "upgrade": u})
+		var c := Items.upgrade_cost({"level": Items.power_level(w), "upgrade": u})
 		for k in c:
 			spent[k] = int(spent.get(k, 0)) + int(c[k])
 	var refund := Items.upgrade_refund(w)
-	print("  pierres dépensées ", spent, "  rendues ", refund)
-	check("remboursement 70 % des pierres", int(refund.fragment) == roundi(spent.fragment * 0.7) and not refund.has("gold"))
+	print("  or dépensé ", spent, "  rendu ", refund)
+	check("amélioration : de l'or seulement, la moitié rendue à la vente", spent.keys() == ["gold"] and int(refund.gold) == roundi(spent.gold * 0.5))
 	var sv := Items.sell_value(w)
-	check("vente : or + pierres", sv.has("gold") and int(sv.fragment) == int(refund.fragment))
+	check("vente : or (prix + or investi)", sv.keys() == ["gold"] and int(sv.gold) > int(refund.gold))
 	var item: Dictionary = Profile.inventory[0]
-	var before := int(Profile.materials.fragment)
+	var before := Profile.amount("crystal")
 	var got := Profile.disassemble(item)
-	check("désassemblage crédité", int(Profile.materials.fragment) == before + int(got.fragment) and Profile.inventory.size() == 4)
+	check("désassemblage : des cristaux", got.keys() == ["crystal"] and Profile.amount("crystal") == before + int(got.crystal) and Profile.inventory.size() == 4)
+	var crystals_end := Profile.amount("crystal")
 	Run.finish("defaite")
 	Profile.end_run(w)
 	check("fin de run : héritage mis à jour (+8), rien d'autre", Profile.vault.size() == 2 and int(Profile.vault.filter(func(it): return it.slot == "weapon")[0].upgrade) == 8)
-	check("lobby : or et matériaux remis à zéro", Profile.gold == 0 and int(Profile.materials.fragment) == 0)
+	check("lobby : or et clés perdus, cristaux gardés", Profile.gold == 0 and Profile.keys == 0 and Profile.amount("crystal") == crystals_end)
 	Run.start("samurai")
 	var loot := Items.generate(4, 1.0, "head")
 	Profile.add_item(loot)

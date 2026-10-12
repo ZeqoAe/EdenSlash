@@ -4,9 +4,10 @@ extends Control
 ## lieux découverts, monstres, chemin vers le donjon. Grande carte avec [M].
 
 const ICONS := {
-	"village": Color(0.4, 0.85, 1.0),
+	"merchant": Color(0.4, 0.85, 1.0),
 	"dungeon": Color(0.85, 0.35, 1.0),
 	"chest": Color(1.0, 0.85, 0.3),
+	"shrine": Color(0.55, 1.0, 0.6),
 }
 
 var player: Player
@@ -65,9 +66,12 @@ func _draw() -> void:
 		if not _inside(sp):
 			if m[1] == "chest":
 				continue
-			sp = _clamp_edge(sp, c)  # village / donjon : au bord dans la bonne direction
+			sp = _clamp_edge(sp, c)  # marchands, sanctuaires, donjon : au bord dans la bonne direction
 		if m[1] == "chest":
 			draw_rect(Rect2(sp - Vector2(3, 3), Vector2(6, 6)), col)
+		elif m[1] == "shrine":
+			draw_arc(sp, 6.0, 0.0, TAU, 20, Color(0, 0, 0, 0.6), 3.5)
+			draw_arc(sp, 6.0, 0.0, TAU, 20, col, 2.0)
 		else:
 			draw_circle(sp, 7.0, Color(0, 0, 0, 0.6))
 			draw_circle(sp, 5.5, col)

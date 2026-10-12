@@ -39,23 +39,26 @@ static func icon_bb(k: String) -> String:
 
 ## Matériaux en texte : court pour les boutons, avec icônes d'Eden pour le détail.
 static func materials_text(m: Dictionary, short := false) -> String:
-	const SHORT := {"fragment": "frag.", "essence": "ess.", "crystal": "crist.", "gold": "or"}
+	const SHORT := {"crystal": "crist.", "gold": "or", "keys": "clé(s)"}
 	var parts: PackedStringArray = []
 	for k in m:
 		if short:
 			parts.append("%d %s" % [int(m[k]), SHORT.get(k, k)])
 		else:
-			parts.append("%s%d %s" % [icon_bb(k), int(m[k]), "or" if k == "gold" else Items.MATERIALS.get(k, k)])
+			parts.append("%s%d %s" % [icon_bb(k), int(m[k]), res_name(k)])
 	return (" " if short else ", ").join(parts)
+
+
+static func res_name(k: String) -> String:
+	return {"gold": "or", "keys": "clé(s)"}.get(k, Items.MATERIALS.get(k, k))
 
 
 ## Coût avec ce qui manque en rouge.
 static func cost_text(cost: Dictionary) -> String:
 	var parts: PackedStringArray = []
 	for k in cost:
-		var have := Profile.gold if k == "gold" else int(Profile.materials.get(k, 0))
-		var ok := have >= int(cost[k])
-		parts.append("%s[color=%s]%d %s[/color]" % [icon_bb(k), "#ffffff" if ok else "#ff7a7a", int(cost[k]), "or" if k == "gold" else Items.MATERIALS.get(k, k)])
+		var ok := Profile.amount(k) >= int(cost[k])
+		parts.append("%s[color=%s]%d %s[/color]" % [icon_bb(k), "#ffffff" if ok else "#ff7a7a", int(cost[k]), res_name(k)])
 	return ", ".join(parts)
 
 
@@ -142,13 +145,13 @@ class Wallet extends HBoxContainer:
 	func _init() -> void:
 		add_theme_constant_override("separation", 6)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		for k in ["gold", "fragment", "essence", "crystal"]:
+		for k in ["gold", "keys", "crystal"]:
 			var ic := TextureRect.new()
 			ic.texture = UiTheme.texture(Items.material_icon(k))
 			ic.custom_minimum_size = Vector2(26, 26)
 			ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			ic.tooltip_text = "Or" if k == "gold" else Items.MATERIALS[k]
+			ic.tooltip_text = {"gold": "Or (perdu en fin de run)", "keys": "Clés (perdues en fin de run)", "crystal": "Cristaux (gardés)"}[k]
 			ic.mouse_filter = Control.MOUSE_FILTER_PASS
 			add_child(ic)
 			var l := Hud._label(self, "0", 16, Color.WHITE)
@@ -158,7 +161,7 @@ class Wallet extends HBoxContainer:
 
 	func refresh() -> void:
 		for k in _labels:
-			_labels[k].text = str(Profile.gold if k == "gold" else int(Profile.materials.get(k, 0)))
+			_labels[k].text = str(Profile.amount(k))
 
 
 ## Carte d'infobulle riche (texte BBCode, cadre de couleur).

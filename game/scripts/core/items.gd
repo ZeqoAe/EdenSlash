@@ -133,7 +133,7 @@ const AFFIX_RANGES := {
 }
 const MAX_UPGRADE := 10
 const MILESTONES := [4, 6, 8, 10]
-const MATERIALS := {"fragment": "Fragments", "essence": "Essences", "crystal": "Cristaux"}
+const MATERIALS := {"crystal": "Cristaux"}
 const ADJECTIVES := ["du Vent", "de Cendre", "du Lotus", "de l'Aube", "du Crépuscule", "de Fer",
 	"du Dragon", "de la Grue", "du Renard", "de la Lune", "du Tonnerre", "de Sakura"]
 
@@ -490,36 +490,25 @@ static func upgrade(item: Dictionary) -> String:
 	return ""
 
 
+## Amélioration +1 → +10 : seulement de l'or (de plus en plus cher).
 static func upgrade_cost(item: Dictionary) -> Dictionary:
 	var up := int(item.get("upgrade", 0))
-	var cost := {"gold": int(20.0 * pow(up + 1, 1.5) * (1.0 + power_level(item) / 5.0)), "fragment": 3 * (up + 1)}
-	if up >= 4:
-		cost["essence"] = up - 3
-	if up >= 7:
-		cost["crystal"] = 1
-	return cost
+	return {"gold": int(30.0 * pow(up + 1, 1.6) * (1.0 + power_level(item) / 5.0))}
 
 
-## Part des pierres investies dans les améliorations rendue à la vente et au désassemblage.
-const UPGRADE_REFUND := 0.7
+## Part de l'or investi dans les améliorations rendue à la vente.
+const UPGRADE_REFUND := 0.5
 
 
-## Pierres (sans l'or) dépensées pour amener l'objet à son niveau d'amélioration, × 70 %.
+## Or dépensé pour amener l'objet à son niveau d'amélioration, × 50 %.
 static func upgrade_refund(item: Dictionary) -> Dictionary:
-	var spent := {}
+	var spent := 0
 	var tmp := {"level": power_level(item), "upgrade": 0}
 	for u in int(item.get("upgrade", 0)):
 		tmp.upgrade = u
-		var c := upgrade_cost(tmp)
-		for k in c:
-			if k != "gold":
-				spent[k] = int(spent.get(k, 0)) + int(c[k])
-	var out := {}
-	for k in spent:
-		var n := roundi(float(spent[k]) * UPGRADE_REFUND)
-		if n > 0:
-			out[k] = n
-	return out
+		spent += int(upgrade_cost(tmp).gold)
+	var n := roundi(float(spent) * UPGRADE_REFUND)
+	return {"gold": n} if n > 0 else {}
 
 
 static func _merge(a: Dictionary, b: Dictionary) -> Dictionary:
@@ -529,15 +518,10 @@ static func _merge(a: Dictionary, b: Dictionary) -> Dictionary:
 	return out
 
 
-## Désassemblage : matériaux selon rareté et niveau + 70 % des pierres d'amélioration.
+## Désassemblage : des cristaux selon la rareté (et l'amélioration de l'objet).
 static func disassemble_yield(item: Dictionary) -> Dictionary:
 	var r := int(item.rarity)
-	var out := {"fragment": (2 + power_level(item) / 3) * (r + 1)}
-	if r >= 2:
-		out["essence"] = r - 1
-	if r >= 3:
-		out["crystal"] = r - 2
-	return _merge(out, upgrade_refund(item))
+	return {"crystal": 1 + r + r / 3 * 2 + int(item.get("upgrade", 0)) / 3}
 
 
 static func sell_price(item: Dictionary) -> int:

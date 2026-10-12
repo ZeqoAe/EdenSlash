@@ -1,14 +1,15 @@
-class_name VillagePages
+class_name MerchantPages
 extends RefCounted
-## Pages des PNJ du village (voir VillageUI) :
-## marchand (Acheter, Vendre), forgeron (Améliorer, Enchanter, Réforger),
-## recycleur (Recycler, Convertir), joaillier (Sertissage, Fusion de gemmes).
+## Pages du marchand ambulant (voir MerchantUI) : Boutique, Vendre, Fabriquer ; et la Forge
+## (ForgePage), ouverte depuis la fiche d'un objet pendant la run : améliorer à l'or,
+## réforger et polir avec des cristaux, percer, sertir, enchanter, fusionner des gemmes.
 
 
 ## Base : grille d'objets à gauche, détail et actions à droite.
 class ItemPage extends HBoxContainer:
-	var ui: VillageUI
+	var ui  # hôte : message(text, duration) et player (MerchantUI, ForgeScreen)
 	var multi := false
+	var scroll_actions := false  # actions nombreuses : colonne de droite défilante
 	var include_equipped := true
 	var title := ""
 	var hint := ""
@@ -31,7 +32,18 @@ class ItemPage extends HBoxContainer:
 		detail = ItemWidgets.rich(right, 15)
 		actions = VBoxContainer.new()
 		actions.add_theme_constant_override("separation", 8)
-		right.add_child(actions)
+		if scroll_actions:
+			detail.fit_content = false
+			detail.scroll_active = true
+			detail.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			var sc := ScrollContainer.new()
+			sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+			right.add_child(sc)
+			actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			sc.add_child(actions)
+		else:
+			right.add_child(actions)
 
 	func items() -> Array:
 		return (Profile.equipped.values() + Profile.inventory) if include_equipped else Profile.inventory.duplicate()
@@ -55,9 +67,10 @@ class ItemPage extends HBoxContainer:
 		pass
 
 	func done(msg: String, duration := 2.0) -> void:
-		ui.message(msg, duration)
-		if ui.player:
-			ui.player.recalc_stats()
+		if ui:
+			ui.message(msg, duration)
+			if ui.player:
+				ui.player.recalc_stats()
 		refresh()
 
 	func button(text: String, cb: Callable, enabled := true, accent := false) -> Button:
@@ -95,8 +108,8 @@ class SellPage extends ItemPage:
 			b.add_theme_font_size_override("font_size", 14)
 		if sel.is_empty():
 			detail.text = "[b]%s[/b]\n\n%s\n\nChoisis des objets dans la grille, ou utilise les sélections rapides ci-dessous (les pièces de set ne sont jamais sélectionnées automatiquement)." % [verb,
-				"Le recycleur rend des [b]fragments[/b], des [b]essences[/b] et des [b]cristaux[/b] selon la rareté, plus 70 % des pierres d'amélioration." if recycle else
-				"Le marchand paie en [b]or[/b], plus 70 % des pierres d'amélioration investies."]
+				"Le démontage rend des [b]cristaux[/b] selon la rareté (réforge et polissage)." if recycle else
+				"Le marchand paie en [b]or[/b], plus la moitié de l'or investi dans les améliorations."]
 			button("Choisis des objets", func(): pass, false)
 			return
 		var mats := {}
@@ -132,230 +145,9 @@ class SellPage extends ItemPage:
 				done("%d objet(s) %s : %s" % [items.size(), "désassemblé(s)" if recycle else "vendu(s)", ItemWidgets.materials_text(got, true)]), true, true)
 
 
-# --- forgeron : améliorer --------------------------------------------------------------------
-class UpgradePage extends ItemPage:
-	var luck := 0
-	var protect := false
-
-	func _init() -> void:
-		title = "Amélioration (+1 à +10)"
-		hint = "Chaque niveau renforce les stats de base (+10 %) et ajoute une stat aléatoire. Au-delà de +3, la réussite n'est plus garantie : pierres de chance (+10 % chacune) et de protection (pas de perte de niveau)."
-
-	func show_detail(sel: Array) -> void:
-		if sel.is_empty():
-			detail.text = "[b]Forge de Bryson[/b]\n\nChoisis une pièce (portée ou dans ton sac)."
-			return
-		var it: Dictionary = sel[0]
-		var up := int(it.get("upgrade", 0))
-		if up >= Items.MAX_UPGRADE:
-			detail.text = Items.describe(it) + "\n\n[b]Amélioration maximale atteinte.[/b]"
-			return
-		var cost := Items.upgrade_cost(it)
-		luck = mini(luck, mini(Profile.bag_count("luck"), Craft.MAX_LUCK))
-		var chance := Craft.success_chance(it, luck)
-		var risky: bool = float(Craft.UPGRADE_CHANCE[up]) < 1.0
-		detail.text = Items.describe(it) + "\n\n[b]+%d → +%d[/b]   [color=%s]%d %% de réussite[/color]\n%s\n\nCoût : %s" % [up, up + 1,
-			"#7fe08a" if chance >= 0.8 else ("#ffcf6b" if chance >= 0.5 else "#ff7a7a"), roundi(chance * 100),
-			("[color=#ff9a7a]En cas d'échec : %s.[/color]" % Craft.failure_text(it)) if risky else "[color=#7fe08a]Sans risque.[/color]",
-			ItemWidgets.cost_text(cost)]
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6)
-		actions.add_child(row)
-		var minus := ItemWidgets.action_button(row, "−", func():
-			luck = maxi(0, luck - 1)
-			_on_selection(), 44)
-		minus.disabled = luck <= 0
-		Hud._label(row, "Pierres de chance : %d / %d (possédées %d)" % [luck, Craft.MAX_LUCK, Profile.bag_count("luck")], 14, Color.WHITE).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var plus := ItemWidgets.action_button(row, "+", func():
-			luck = mini(luck + 1, mini(Craft.MAX_LUCK, Profile.bag_count("luck")))
-			_on_selection(), 44)
-		plus.disabled = luck >= mini(Craft.MAX_LUCK, Profile.bag_count("luck"))
-		var can_protect := Profile.bag_count("protect") > 0 and up + 1 >= Craft.DOWNGRADE_FROM
-		protect = protect and can_protect
-		button("%s Pierre de protection (possédées %d)" % ["☑" if protect else "☐", Profile.bag_count("protect")], func():
-			protect = not protect
-			_on_selection(), can_protect)
-		button("Tenter +%d (%d %%)" % [up + 1, roundi(chance * 100)], func():
-			var r := Profile.upgrade_item(it, luck, protect)
-			if Profile.bag_count("protect") <= 0:
-				protect = false
-			done("%s\n%s" % [Items.display_name(it), r.text], 2.4), Profile.can_afford(cost), true)
-
-
-# --- forgeron : enchanter --------------------------------------------------------------------
-class EnchantPage extends ItemPage:
-	func _init() -> void:
-		title = "Enchantement"
-		hint = "Applique un parchemin d'enchantement à une pièce (un enchantement par objet ; le parchemin doit convenir au niveau de l'objet)."
-
-	func show_detail(sel: Array) -> void:
-		var scrolls := Profile.bag_keys("scroll")
-		if sel.is_empty():
-			detail.text = "[b]Enchantement[/b]\n\nChoisis une pièce.\n\n" + VillagePages.bag_text("scroll", "Aucun parchemin : ils tombent des monstres et des coffres, et se vendent chez le marchand.")
-			return
-		var it: Dictionary = sel[0]
-		detail.text = Items.describe(it)
-		for k in scrolls:
-			var key: String = k
-			var why := Craft.can_enchant(it, key)
-			var b := button("Appliquer %s ×%d" % [Craft.label(key), Profile.bag_count(key)], func(): done(Craft.apply_scroll(it, key)), why == "")
-			b.icon = UiTheme.texture(Craft.icon(key))
-			b.add_theme_constant_override("icon_max_width", 26)
-			b.tooltip_text = why if why != "" else Craft.describe_key(key)
-		if scrolls.is_empty():
-			Hud._label(actions, "Aucun parchemin dans ton sac.", 14, UiTheme.MUTED)
-
-
-# --- forgeron : réforger / polir -------------------------------------------------------------
-class ReforgePage extends ItemPage:
-	func _init() -> void:
-		title = "Réforge et polissage"
-		hint = "Optimise une pièce : nouveau jet d'une stat dans sa fourchette (essences), ou polissage de la qualité (cristal, gardé seulement s'il est meilleur)."
-
-	func show_detail(sel: Array) -> void:
-		if sel.is_empty():
-			detail.text = "[b]Optimiser une pièce[/b]\n\nChoisis une pièce : tu pourras retirer une de ses stats bonus (affixes) ou polir sa qualité."
-			return
-		var it: Dictionary = sel[0]
-		var rc := Forge.reforge_cost(it)
-		var pc := Forge.polish_cost(it)
-		detail.text = Items.describe(it) + "\n\nRéforge d'une stat : %s\nPolissage : %s" % [ItemWidgets.cost_text(rc), ItemWidgets.cost_text(pc)]
-		for stat in Forge.reforgeable(it):
-			var s: String = stat
-			var r: Array = Items.AFFIX_RANGES[s]
-			var lo := float(r[0]) * (1.0 if s in Items.PERCENT_STATS else Items._level_k(Items.power_level(it)))
-			var hi := float(r[1]) * (1.0 if s in Items.PERCENT_STATS else Items._level_k(Items.power_level(it)))
-			button("Réforger %s (%s, fourchette %s à %s)" % [Items.STAT_NAMES.get(s, s), Items.stat_text(s, it.affixes[s]), Items.stat_text(s, lo), Items.stat_text(s, hi)],
-				func(): done(Forge.reforge(it, s)), Profile.can_afford(rc))
-		if Forge.reforgeable(it).is_empty():
-			Hud._label(actions, "Pas de stat bonus à réforger sur cette pièce (les objets magiques et plus en ont).", 14, UiTheme.MUTED)
-		button("Polir la qualité (%d %% actuellement)" % roundi(float(it.get("quality", 1.0)) * 100), func(): done(Forge.polish(it)),
-			Profile.can_afford(pc) and float(it.get("quality", 1.0)) < 1.2, true)
-
-
-# --- recycleur : convertir -------------------------------------------------------------------
-class ConvertPage extends HBoxContainer:
-	var ui: VillageUI
-	var _rows: VBoxContainer
-	var _info: RichTextLabel
-
-	func _ready() -> void:
-		add_theme_constant_override("separation", 16)
-		var left := ItemWidgets.panel(self, 0, true)
-		ItemWidgets.section(left, "Conversion des matériaux")
-		var h := Hud._label(left, "Le recycleur échange tes matériaux : monter de catégorie coûte cher, redescendre en rend moins.", 13, UiTheme.MUTED)
-		h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_rows = VBoxContainer.new()
-		_rows.add_theme_constant_override("separation", 10)
-		left.add_child(_rows)
-		var right := ItemWidgets.panel(self, 520)
-		_info = ItemWidgets.rich(right, 15)
-
-	func refresh() -> void:
-		for c in _rows.get_children():
-			c.queue_free()
-		for i in Forge.CONVERSIONS.size():
-			var conv: Array = Forge.CONVERSIONS[i]
-			var row := HBoxContainer.new()
-			row.add_theme_constant_override("separation", 8)
-			_rows.add_child(row)
-			var l := RichTextLabel.new()
-			l.bbcode_enabled = true
-			l.fit_content = true
-			l.scroll_active = false
-			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			l.text = "%s%d %s  →  %s%d %s" % [ItemWidgets.icon_bb(conv[0]), conv[1], Items.MATERIALS[conv[0]], ItemWidgets.icon_bb(conv[2]), conv[3], Items.MATERIALS[conv[2]]]
-			row.add_child(l)
-			for times in [1, 5]:
-				var t: int = times
-				var b := ItemWidgets.action_button(row, "×%d" % t, func():
-					ui.message(Forge.convert(i, t), 1.6)
-					refresh(), 70)
-				b.disabled = not Forge.can_convert(i, t)
-		_info.text = "[b]Tes matériaux[/b]\n\n%s" % ItemWidgets.materials_text({"fragment": Profile.materials.fragment, "essence": Profile.materials.essence, "crystal": Profile.materials.crystal})
-
-
-# --- joaillier : sertissage ------------------------------------------------------------------
-class SocketPage extends ItemPage:
-	func _init() -> void:
-		title = "Sertissage"
-		hint = "Perce jusqu'à 2 emplacements avec des ciseaux de sertissage (le 2e : 70 % de réussite), puis serti tes gemmes."
-
-	func show_detail(sel: Array) -> void:
-		if sel.is_empty():
-			detail.text = "[b]Atelier de Lertia[/b]\n\nChoisis une pièce.\n\n" + VillagePages.bag_text("", "Ton sac est vide : ciseaux et gemmes tombent des monstres et des coffres, et se vendent chez le marchand.")
-			return
-		var it: Dictionary = sel[0]
-		var sockets: Array = it.get("sockets", [])
-		detail.text = Items.describe(it)
-		if sockets.size() < Craft.MAX_SOCKETS:
-			var b := button("Percer un emplacement (%s) · ciseaux ×%d" % ["sûr" if sockets.is_empty() else "70 %", Profile.bag_count("drill")], func(): done(Craft.drill(it)), Profile.bag_count("drill") > 0)
-			b.icon = UiTheme.texture(Craft.icon("drill"))
-			b.add_theme_constant_override("icon_max_width", 26)
-		var slot := sockets.find(null)
-		for k in Profile.bag_keys("gem"):
-			var key: String = k
-			var target := slot if slot >= 0 else 0
-			var b := button("Sertir %s ×%d%s" % [Craft.label(key), Profile.bag_count(key), "" if slot >= 0 else " (remplace l'emplacement 1)"],
-				func(): done(Craft.insert_gem(it, key, target)), not sockets.is_empty())
-			b.icon = UiTheme.texture(Craft.icon(key))
-			b.add_theme_constant_override("icon_max_width", 26)
-			b.tooltip_text = Craft.describe_key(key)
-
-
-# --- joaillier : fusion ----------------------------------------------------------------------
-class FusePage extends HBoxContainer:
-	var ui: VillageUI
-	var _rows: VBoxContainer
-	var _info: RichTextLabel
-
-	func _ready() -> void:
-		add_theme_constant_override("separation", 16)
-		var left := ItemWidgets.panel(self, 0, true)
-		ItemWidgets.section(left, "Fusion de gemmes")
-		var h := Hud._label(left, "%d gemmes identiques donnent une gemme de la qualité supérieure (brut → taillé → pur → parfait → royal)." % Forge.FUSE_COUNT, 13, UiTheme.MUTED)
-		h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		var sc := ScrollContainer.new()
-		sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-		left.add_child(sc)
-		_rows = VBoxContainer.new()
-		_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_rows.add_theme_constant_override("separation", 8)
-		sc.add_child(_rows)
-		var right := ItemWidgets.panel(self, 520)
-		_info = ItemWidgets.rich(right, 15)
-
-	func refresh() -> void:
-		for c in _rows.get_children():
-			c.queue_free()
-		var list := Forge.fusable()
-		for g in list:
-			var row := HBoxContainer.new()
-			row.add_theme_constant_override("separation", 8)
-			_rows.add_child(row)
-			var ic := TextureRect.new()
-			ic.texture = UiTheme.texture(Craft.icon(g.key))
-			ic.custom_minimum_size = Vector2(40, 40)
-			ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			row.add_child(ic)
-			var l := Hud._label(row, "%s ×%d  →  %s" % [Craft.label(g.key), int(g.count), Craft.label(Craft.gem_key(g.type, int(g.tier) + 1))], 15, Color.WHITE)
-			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-			var type: String = g.type
-			var tier: int = g.tier
-			var b := ItemWidgets.action_button(row, "Fusionner (%d or)" % Forge.fuse_cost(tier), func():
-				ui.message(Forge.fuse(type, tier), 1.8)
-				refresh(), 190)
-			b.disabled = int(g.count) < Forge.FUSE_COUNT or Profile.gold < Forge.fuse_cost(tier)
-		if list.is_empty():
-			Hud._label(_rows, "Aucune gemme dans ton sac.", 14, UiTheme.MUTED)
-		_info.text = "[b]Gemmes du sac[/b]\n\n" + VillagePages.bag_text("gem", "Aucune gemme.")
-
-
 # --- marchand : acheter ----------------------------------------------------------------------
 class ShopPage extends HBoxContainer:
-	var ui: VillageUI
+	var ui: MerchantUI
 	var _grid: GridContainer
 	var _detail: RichTextLabel
 	var _actions: VBoxContainer
@@ -364,8 +156,8 @@ class ShopPage extends HBoxContainer:
 	func _ready() -> void:
 		add_theme_constant_override("separation", 16)
 		var left := ItemWidgets.panel(self, 0, true)
-		ItemWidgets.section(left, "Boutique d'Alec")
-		var h := Hud._label(left, "Offres de cette run : compétences, améliorations et cartes, équipement rare ou épique, fournitures de joaillier.", 13, UiTheme.MUTED)
+		ItemWidgets.section(left, "Boutique du marchand ambulant")
+		var h := Hud._label(left, "Ses offres : cartes d'amélioration de la run, clés, équipement rare ou épique, fournitures. Payées en or (perdu en fin de run : dépense-le !).", 13, UiTheme.MUTED)
 		h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_grid = GridContainer.new()
 		_grid.columns = 3
@@ -452,11 +244,11 @@ static func bag_text(prefix: String, empty_text: String) -> String:
 	return "\n".join(parts)
 
 
-# --- forgeron : fabrication des objets mythiques -------------------------------------------
+# --- fabrication des objets mythiques -------------------------------------------
 ## Plans d'Eden : les objets mythiques (orange, dont les pièces de set) de la zone se
 ## fabriquent ici (les légendaires ne tombent que des boss).
 class CraftPage extends HBoxContainer:
-	var ui: VillageUI
+	var ui: MerchantUI
 	var _filter: OptionButton
 	var _keys: Array = []
 	var _grid: GridContainer
@@ -495,7 +287,7 @@ class CraftPage extends HBoxContainer:
 		_btn = ItemWidgets.action_button(right, "Fabriquer", _craft, 0, true)
 
 	static func cost(level: int) -> Dictionary:
-		return {"gold": 300 + 60 * level, "fragment": 30 + 2 * level, "essence": 6 + level / 6, "crystal": 2 + level / 15}
+		return {"gold": 300 + 60 * level, "crystal": 4 + level / 8}
 
 	## Plans : mythiques d'Eden de la zone et de la précédente, jusqu'au niveau d'Eden atteint
 	## dans la run (chronologie) ; au moins les premiers mythiques qui existent (niveau 25).
@@ -544,3 +336,133 @@ class CraftPage extends HBoxContainer:
 		Profile.add_item(item)
 		_detail.text = "[color=#7fe08a]Fabriqué : %s[/color]\n\n" % Items.display_name(item) + Items.describe(item)
 		_btn.disabled = not Profile.can_afford(c)
+
+
+# --- forge : tout ce qui se fait sur un objet ----------------------------------------------
+## Une page, l'objet choisi au centre et ses actions en sections : améliorer (or), réforger
+## une stat bonus et polir (cristaux), percer et sertir (joaillerie), enchanter. Sans objet
+## choisi : la fusion des gemmes du sac.
+class ForgePage extends ItemPage:
+	var luck := 0
+	var protect := false
+
+	func _init() -> void:
+		title = "Forge"
+		hint = "Choisis une pièce (portée ou dans ton sac). Améliorer : or seulement (+1 à +10, risque au-delà de +3). Réforger une stat et polir la qualité : cristaux (démontage, gardés entre les runs)."
+		scroll_actions = true
+
+	func show_detail(sel: Array) -> void:
+		if sel.is_empty():
+			detail.text = "[b]Forge[/b]\n\nChoisis une pièce dans la grille.\n\nTes cristaux : [b]%d[/b] · ton or : [b]%d[/b]" % [Profile.amount("crystal"), Profile.gold]
+			_fusion()
+			return
+		var it: Dictionary = sel[0]
+		detail.text = Items.describe(it)
+		_upgrade(it)
+		_crystals(it)
+		_gems(it)
+		_enchant(it)
+
+	func _head(text: String) -> void:
+		var l := ItemWidgets.section(actions, text, 16)
+		l.add_theme_constant_override("line_spacing", 0)
+
+	func _note(text: String) -> void:
+		var l := Hud._label(actions, text, 13, UiTheme.MUTED)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+	func _upgrade(it: Dictionary) -> void:
+		var up := int(it.get("upgrade", 0))
+		_head("Améliorer (or)")
+		if up >= Items.MAX_UPGRADE:
+			_note("Amélioration maximale atteinte (+%d)." % up)
+			return
+		var cost := Items.upgrade_cost(it)
+		luck = mini(luck, mini(Profile.bag_count("luck"), Craft.MAX_LUCK))
+		var chance := Craft.success_chance(it, luck)
+		var risky: bool = float(Craft.UPGRADE_CHANCE[up]) < 1.0
+		_note("+%d → +%d · %d %% de réussite · coût %d or%s" % [up, up + 1, roundi(chance * 100), int(cost.gold),
+			(" · échec : %s" % Craft.failure_text(it)) if risky else " · sans risque"])
+		if risky:
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 6)
+			actions.add_child(row)
+			var minus := ItemWidgets.action_button(row, "−", func():
+				luck = maxi(0, luck - 1)
+				_on_selection(), 44)
+			minus.disabled = luck <= 0
+			Hud._label(row, "Pierres de chance : %d / %d (sac : %d)" % [luck, Craft.MAX_LUCK, Profile.bag_count("luck")], 14, Color.WHITE).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			var plus := ItemWidgets.action_button(row, "+", func():
+				luck = mini(luck + 1, mini(Craft.MAX_LUCK, Profile.bag_count("luck")))
+				_on_selection(), 44)
+			plus.disabled = luck >= mini(Craft.MAX_LUCK, Profile.bag_count("luck"))
+			var can_protect := Profile.bag_count("protect") > 0 and up + 1 >= Craft.DOWNGRADE_FROM
+			protect = protect and can_protect
+			button("%s Pierre de protection (sac : %d)" % ["☑" if protect else "☐", Profile.bag_count("protect")], func():
+				protect = not protect
+				_on_selection(), can_protect)
+		button("Tenter +%d (%d %%) · %d or" % [up + 1, roundi(chance * 100), int(cost.gold)], func():
+			var r := Profile.upgrade_item(it, luck, protect)
+			if Profile.bag_count("protect") <= 0:
+				protect = false
+			done("%s\n%s" % [Items.display_name(it), r.text], 2.4), Profile.can_afford(cost), true)
+
+	func _crystals(it: Dictionary) -> void:
+		var rc := Forge.reforge_cost(it)
+		var pc := Forge.polish_cost(it)
+		_head("Cristaux : réforger, polir (tu en as %d)" % Profile.amount("crystal"))
+		for stat in Forge.reforgeable(it):
+			var s: String = stat
+			var cur := float(it.base[s]) if it.has("base") else float(it.affixes[s])
+			var k := 1.0 if s in Items.PERCENT_STATS or not it.has("base") else Items._level_k(Items.power_level(it))
+			button("Réforger %s (%s) · %s" % [Items.STAT_NAMES.get(s, Items.EXTRA_STAT_NAMES.get(s, s)), Items.stat_text(s, cur * k), ItemWidgets.materials_text(rc, true)],
+				func(): done(Forge.reforge(it, s)), Profile.can_afford(rc))
+		if Forge.reforgeable(it).is_empty():
+			_note("Pas de stat bonus à réforger (les mythiques et légendaires ont des stats fixes).")
+		button("Polir la qualité (%d %%) · %s" % [roundi(float(it.get("quality", 1.0)) * 100), ItemWidgets.materials_text(pc, true)], func(): done(Forge.polish(it)),
+			Profile.can_afford(pc) and float(it.get("quality", 1.0)) < float(Items.QUALITY[clampi(int(it.get("rarity", 0)), 0, Items.QUALITY.size() - 1)][1]))
+
+	func _gems(it: Dictionary) -> void:
+		var sockets: Array = it.get("sockets", [])
+		_head("Gemmes (%d / %d emplacements)" % [sockets.size(), Craft.MAX_SOCKETS])
+		if sockets.size() < Craft.MAX_SOCKETS:
+			var b := button("Percer un emplacement (%s) · ciseaux ×%d" % ["sûr" if sockets.is_empty() else "70 %", Profile.bag_count("drill")], func(): done(Craft.drill(it)), Profile.bag_count("drill") > 0)
+			b.icon = UiTheme.texture(Craft.icon("drill"))
+			b.add_theme_constant_override("icon_max_width", 26)
+		var slot := sockets.find(null)
+		for k in Profile.bag_keys("gem"):
+			var key: String = k
+			var target := slot if slot >= 0 else 0
+			var b := button("Sertir %s ×%d%s" % [Craft.label(key), Profile.bag_count(key), "" if slot >= 0 else " (remplace l'emplacement 1)"],
+				func(): done(Craft.insert_gem(it, key, target)), not sockets.is_empty())
+			b.icon = UiTheme.texture(Craft.icon(key))
+			b.add_theme_constant_override("icon_max_width", 26)
+			b.tooltip_text = Craft.describe_key(key)
+		if Profile.bag_keys("gem").is_empty():
+			_note("Aucune gemme dans ton sac (butin, coffres, marchands).")
+
+	func _enchant(it: Dictionary) -> void:
+		var scrolls := Profile.bag_keys("scroll")
+		_head("Enchantement")
+		for k in scrolls:
+			var key: String = k
+			var why := Craft.can_enchant(it, key)
+			var b := button("Appliquer %s ×%d" % [Craft.label(key), Profile.bag_count(key)], func(): done(Craft.apply_scroll(it, key)), why == "")
+			b.icon = UiTheme.texture(Craft.icon(key))
+			b.add_theme_constant_override("icon_max_width", 26)
+			b.tooltip_text = why if why != "" else Craft.describe_key(key)
+		if scrolls.is_empty():
+			_note("Aucun parchemin dans ton sac.")
+
+	func _fusion() -> void:
+		_head("Fusion de gemmes (%d identiques → qualité supérieure)" % Forge.FUSE_COUNT)
+		var list := Forge.fusable()
+		for g in list:
+			var type: String = g.type
+			var tier: int = g.tier
+			var b := button("%s ×%d → %s · %d or" % [Craft.label(g.key), int(g.count), Craft.label(Craft.gem_key(type, tier + 1)), Forge.fuse_cost(tier)], func():
+				done(Forge.fuse(type, tier), 1.8), int(g.count) >= Forge.FUSE_COUNT and Profile.gold >= Forge.fuse_cost(tier))
+			b.icon = UiTheme.texture(Craft.icon(g.key))
+			b.add_theme_constant_override("icon_max_width", 26)
+		if list.is_empty():
+			_note("Aucune gemme dans ton sac.")

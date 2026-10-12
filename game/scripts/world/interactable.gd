@@ -1,9 +1,9 @@
 class_name Interactable
 extends Node3D
-## Élément avec lequel le héros interagit avec [F] : PNJ du village, coffre,
+## Élément avec lequel le héros interagit avec [F] : marchand ambulant, coffre (payant),
 ## entrée du donjon. Le directeur de run gère l'invite et l'action.
 
-var kind := ""  # merchant, smith, trader, chest, dungeon
+var kind := ""  # merchant, chest, dungeon
 var title := ""
 var radius := 3.5
 var used := false
@@ -45,10 +45,16 @@ func setup(p_kind: String, p_title: String, model_path := "", texture_path := ""
 	add_child(_label)
 
 
+func set_title(t: String) -> void:
+	title = t
+	if _label:
+		_label.text = t
+
+
 func prompt() -> String:
 	match kind:
 		"chest":
-			return "[F] Ouvrir le coffre"
+			return "[F] Ouvrir — %s" % title
 		"dungeon":
 			return "[F] Entrer dans le donjon"
 		_:

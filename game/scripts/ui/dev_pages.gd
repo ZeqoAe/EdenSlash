@@ -433,7 +433,7 @@ class ResourcesPage extends HBoxContainer:
 
 	func _ready() -> void:
 		add_theme_constant_override("separation", 16)
-		_box = DevPages.column(self, "Or et matériaux", 520)
+		_box = DevPages.column(self, "Or, clés, cristaux, coffres", 560)
 		_supplies = DevPages.column(self, "Fournitures")
 		_msg = Hud._label(_supplies, "", 14, UiTheme.BUFF)
 
@@ -445,9 +445,9 @@ class ResourcesPage extends HBoxContainer:
 		for c in _supplies.get_children().slice(1):
 			if c != _msg:
 				c.queue_free()
-		Hud._label(_box, ("Valeurs de la run en cours." if Profile.in_run else "Données au départ de chaque run tant que le mode dev est activé.") + " Molette ou saisie.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		var names := {"gold": "Or", "fragment": "Fragments", "essence": "Essences", "crystal": "Cristaux"}
-		for k in ["gold", "fragment", "essence", "crystal"]:
+		Hud._label(_box, ("Valeurs de la run en cours." if Profile.in_run else "Or et clés : donnés au départ de chaque run tant que le mode dev est activé.") + " Cristaux : ceux de la sauvegarde (gardés entre les runs).", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var names := {"gold": "Or", "keys": "Clés", "crystal": "Cristaux"}
+		for k in ["gold", "keys", "crystal"]:
 			var row := HBoxContainer.new()
 			row.add_theme_constant_override("separation", 10)
 			_box.add_child(row)
@@ -457,13 +457,27 @@ class ResourcesPage extends HBoxContainer:
 			sp.max_value = 10000000
 			sp.step = 1
 			sp.custom_minimum_size = Vector2(180, 0)
-			sp.value = (Profile.gold if k == "gold" else int(Profile.materials.get(k, 0))) if Profile.in_run else int(Profile.dev.get(k, 0))
+			sp.value = Profile.amount(k) if Profile.in_run or k == "crystal" else int(Profile.dev.get(k, 0))
 			var key: String = k
 			sp.value_changed.connect(func(v): _set_res(key, int(v)))
 			row.add_child(sp)
-			for add in [100, 1000] if k == "gold" else [10, 100]:
+			for add in [100, 1000] if k == "gold" else ([1, 5] if k == "keys" else [10, 100]):
 				var a: int = add
 				DevPages.button(row, "+%d" % a, func(): sp.value += a, 70)
+		ItemWidgets.section(_box, "Coffres de récompense (hors run)", 15)
+		var cg := GridContainer.new()
+		cg.columns = 2
+		_box.add_child(cg)
+		for t in Rewards.ORDER:
+			var tt: String = t
+			DevPages.button(cg, "+1 %s" % Rewards.TYPES[t].name, func():
+				var ch := Rewards.make(tt, 20)
+				if Profile.in_run:
+					Run.chests_found.append(ch)
+				else:
+					Profile.reward_chests.append(ch)
+					Profile.save_profile()
+				_msg.text = "%s ajouté %s" % [Rewards.TYPES[tt].name, "(gardé si tu t'en sors)" if Profile.in_run else "au menu Coffres"], 250)
 		var sv := HBoxContainer.new()
 		_supplies.add_child(sv)
 		_supplies.move_child(_msg, -1)
@@ -504,15 +518,12 @@ class ResourcesPage extends HBoxContainer:
 					l.text = "%s  (%d)" % [Craft.label(kk), int(Profile.bag.get(kk, 0)) if Profile.in_run else int(Profile.stash.get(kk, 0))], 54)
 
 	func _set_res(key: String, v: int) -> void:
-		if Profile.in_run:
-			if key == "gold":
-				Profile.gold = v
-			else:
-				Profile.materials[key] = v
+		if Profile.in_run or key == "crystal":
+			Profile.set_amount(key, v)
 			Profile.changed.emit()
 		else:
 			Profile.dev[key] = v
-			Profile.save_profile()
+		Profile.save_profile()
 
 
 # --- progression ------------------------------------------------------------------------------
@@ -625,6 +636,8 @@ class RunActionsPage extends HBoxContainer:
 		for a in [["Faire apparaître une élite", func(): d.dev_spawn_elite(), "Élite"],
 				["Faire apparaître le boss de la zone", func(): d.dev_spawn_boss(), "Boss"],
 				["Faire apparaître un coffre", func(): d.dev_spawn_chest(), "Coffre"],
+				["Faire apparaître un marchand ambulant", func(): d.dev_spawn_merchant(), "Marchand"],
+				["Capturer le sanctuaire le plus proche", func(): d.dev_capture_nearest(), "Sanctuaire capturé"],
 				["Passer en rage", func(): d.debug_start_rage(), "Rage dans un instant"],
 				["Téléporter à l'entrée du donjon", func(): d.teleport_to_gateway(), "Téléporté"],
 				["Entrer dans le donjon (salle du boss)", func(): d.debug_enter_dungeon(), "Donjon"]]:

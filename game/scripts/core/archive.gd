@@ -228,7 +228,7 @@ static func source_text(e: Dictionary) -> String:
 	if int(e.rarity) >= Items.LEGENDARY:
 		return "Niveau %d d'Eden. Légendaire : butin du boss de %s (30 %%, 50 %% s'il est enragé).%s" % [int(e.level), zone, eden]
 	if int(e.rarity) >= Items.MYTHIC:
-		return "Niveau %d d'Eden. Mythique : butin du boss de %s, ou fabrication à la forge du village de cette zone.%s" % [int(e.level), zone, eden]
+		return "Niveau %d d'Eden. Mythique : butin du boss de %s, ou fabrication chez un marchand ambulant de cette zone.%s" % [int(e.level), zone, eden]
 	return "Niveau %d d'Eden : tombe dans %s.%s" % [int(e.level), zone, eden]
 
 

@@ -26,6 +26,7 @@ var expertise_levels := 0
 var new_classes: Array = []  # classes débloquées pendant la run (bilan)
 var new_costumes: Array = []  # costumes (skins de tenue) débloqués pendant la run
 var rerolls_used := 0  # relances de cartes utilisées (1 par run + cartes « Bonne étoile »)
+var chests_found: Array = []  # coffres de récompense ramassés (gardés si victoire ou extraction)
 
 
 func start(cid: String) -> void:
@@ -41,6 +42,7 @@ func start(cid: String) -> void:
 	rerolls_used = 0
 	new_classes = []
 	new_costumes = []
+	chests_found = []
 	result = ""
 	started_at = Time.get_ticks_msec()
 	zone_id = Profile.selected_zone
@@ -64,7 +66,7 @@ func finish(res: String) -> void:
 	Profile.save_profile()
 
 
-## Or gagné : crédité tout de suite (utilisable au village), compté pour le bilan.
+## Or gagné : crédité tout de suite (coffres, marchands, forge), compté pour le bilan.
 func add_gold(amount: int) -> void:
 	gold += amount
 	Profile.add_gold(amount)
@@ -74,6 +76,10 @@ func add_gold(amount: int) -> void:
 func pick_up(item: Dictionary) -> bool:
 	if item.has("consumable"):
 		Profile.add_bag(String(item.consumable))
+		return true
+	if item.has("chest"):
+		chests_found.append(item.chest)
+		changed.emit()
 		return true
 	if not Profile.add_item(item):
 		return false
@@ -264,4 +270,6 @@ func apply_card(card: Dictionary) -> void:
 					s.rank = mini(int(s.rank) + 1, MAX_RANK)
 		"passive":
 			passives[card.id] = int(passives.get(card.id, 0)) + 1
+		"trophy":
+			pick_up(card.item)  # carte de choix de trophée : le trophée va dans le sac
 	changed.emit()
