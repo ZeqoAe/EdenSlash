@@ -20,12 +20,22 @@ Double-clic sur **`Jouer.bat`** (ou `Editeur.bat` pour ouvrir le projet dans God
 | Esquive aérienne / saut-esquive | Maj en l'air / Espace pendant l'esquive |
 | Interagir (coffre, PNJ, donjon) | F |
 | Carte / menu (stats, équipement, passifs) | M / Échap |
+| Objectifs détaillés (repliés par défaut) | Tab |
 | Zoom | Molette |
 
 Tout se règle dans **Échap > Paramètres** (ou depuis le lobby) : modes de jeu (Classique, Visée au
 curseur, Souris ARPG, RTS / MOBA, Détente), déplacement clavier / clic gauche / clic droit, visée,
 attaque et compétences automatiques, touches, plein écran / fenêtré, résolution, VSync, FPS, son,
 caméra, chiffres de dégâts. Les réglages sont dans `user://settings.cfg`.
+
+Interface : orbe de vie et orbe d'expérience (niveau au centre), compétences avec recharge
+circulaire, recharge de l'esquive, indicateur de combo, buffs (à gauche) et debuffs (à droite)
+avec leur durée — ils clignotent pendant les 3 dernières secondes, survol = détail —, effets de la
+cible sous sa barre de vie, mini-carte ronde, objectifs repliés (Tab pour les déplier, dépliés
+quelques secondes à chaque découverte), bords rouges quand la vie est basse.
+Polices Cinzel et Nunito (licence OFL, `game/assets/fonts/`). Les icônes d'effets sans équivalent
+dans le dépôt sont dessinées par `tools/make_ui_assets.py` (`game/assets/ui/status/`) : une vraie
+icône d'Eden déposée sous le même nom (`freeze.png`, `burn.png`…) les remplace automatiquement.
 
 ### Tester et faire des retours
 
@@ -94,6 +104,7 @@ Cycle héritage / remboursement : `Godot --headless --path game res://tests/test
 Choix de cartes (sélection puis Valider) : `Godot --headless --path game res://tests/test_cards.tscn`.
 Paramètres et modes de jeu : `Godot --headless --path game res://tests/test_controls.tscn`.
 Combo, procs, sets, cartes de build et plafond de niveau : `Godot --headless --path game res://tests/test_build.tscn`.
+Interface (buffs / debuffs, objectifs, HUD sous les menus) : `Godot --headless --path game res://tests/test_hud.tscn`.
 Les lancements de test (arguments après `--`, scènes `res://tests`) utilisent `user://profile_test.json`,
 jamais le profil du joueur.
 Saut et esquive mesurés : `Godot --path game res://tests/test_jump.tscn`.

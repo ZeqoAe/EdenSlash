@@ -12,6 +12,7 @@ const ICONS := {
 var player: Player
 var director: RunDirector
 var big := false
+var round := false  # mini-carte ronde (découpée par son parent, voir Hud)
 var zoom := 2.0  # pixels écran par mètre (mini-carte)
 
 
@@ -88,7 +89,8 @@ func _draw() -> void:
 	var dir := xf.basis_xform(Vector2(f.x, f.z)).normalized()
 	var side := Vector2(-dir.y, dir.x)
 	draw_colored_polygon(PackedVector2Array([hp + dir * 8.0, hp - dir * 5.0 + side * 5.0, hp - dir * 2.0, hp - dir * 5.0 - side * 5.0]), Color.WHITE)
-	draw_rect(Rect2(Vector2.ONE, size - Vector2.ONE * 2.0), Color(0.98, 0.78, 0.35, 0.8), false, 2.0)
+	if not round:
+		draw_rect(Rect2(Vector2.ONE, size - Vector2.ONE * 2.0), Color(0.98, 0.78, 0.35, 0.8), false, 2.0)
 	if not big:
 		var north := c + xf.basis_xform(Vector2(0, -1)).normalized() * (minf(size.x, size.y) * 0.5 - 12.0)
 		draw_circle(north, 9.0, Color(0.1, 0.08, 0.14, 0.9))
@@ -96,9 +98,13 @@ func _draw() -> void:
 
 
 func _inside(p: Vector2) -> bool:
+	if round:
+		return p.distance_to(size * 0.5) < minf(size.x, size.y) * 0.5 - 4.0
 	return Rect2(Vector2.ONE * 3.0, size - Vector2.ONE * 6.0).has_point(p)
 
 
 func _clamp_edge(p: Vector2, c: Vector2) -> Vector2:
 	var d := p - c
+	if round:
+		return c + d.normalized() * (minf(size.x, size.y) * 0.5 - 12.0)
 	return c + d * minf((size.x * 0.5 - 10.0) / maxf(absf(d.x), 0.01), (size.y * 0.5 - 10.0) / maxf(absf(d.y), 0.01))

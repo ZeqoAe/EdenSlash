@@ -117,6 +117,24 @@ const LIST := [
 ]
 
 
+## Icône des cartes (icônes d'effets, assets/ui/status ; icônes d'Eden pour la zone et la portée).
+const ICONS := {
+	"wide_arc": "res://assets/ui/skills/e0460.png", "long_reach": "res://assets/ui/skills/e0466.png",
+	"sharpened": "res://assets/ui/skills/j615.png", "giant_slayer": "res://assets/ui/skills/e0465.png",
+	"combo_flow": "res://assets/ui/status/flow.png", "heavy_finisher": "res://assets/ui/skills/e0464.png",
+	"deep_wounds": "res://assets/ui/skills/e0459.png", "fortune": "res://assets/ui/skills/j616.png",
+	"static_blade": "res://assets/ui/status/shock.png", "frost_edge": "res://assets/ui/status/freeze.png",
+	"ember": "res://assets/ui/status/burn.png", "volatile": "res://assets/ui/status/fury.png",
+	"shockwave": "res://assets/ui/status/stun.png", "wind_step": "res://assets/ui/status/haste.png",
+	"battle_trance": "res://assets/ui/status/frenzy.png", "hunter_eye": "res://assets/ui/status/keen.png",
+	"second_wind": "res://assets/ui/status/barrier.png", "momentum": "res://assets/ui/status/chill.png",
+	"executioner": "res://assets/ui/skills/e0461.png", "echo": "res://assets/ui/skills/e0463.png",
+	"frost_nova": "res://assets/ui/status/freeze.png", "glass_cannon": "res://assets/ui/skills/e0462.png",
+	"storm_lord": "res://assets/ui/status/shock.png", "glacial_shatter": "res://assets/ui/status/freeze.png",
+	"phoenix_blade": "res://assets/ui/status/burn.png", "steel_tempest": "res://assets/ui/skills/e0460.png",
+}
+
+
 static func get_def(id: String) -> Dictionary:
 	for b in LIST:
 		if b.id == id:

@@ -43,10 +43,7 @@ func _ready() -> void:
 	_root.add_child(v)
 	_title = Label.new()
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title.add_theme_font_size_override("font_size", 40)
-	_title.add_theme_color_override("font_color", ACCENT)
-	_title.add_theme_constant_override("outline_size", 10)
-	_title.add_theme_color_override("font_outline_color", Color(0.1, 0.05, 0.15))
+	UiTheme.title(_title, 40, ACCENT)
 	v.add_child(_title)
 	_row = HBoxContainer.new()
 	_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -209,8 +206,7 @@ func _make_card(card: Dictionary, i: int) -> Button:
 	icon.custom_minimum_size = Vector2(96, 96)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	if String(card.get("icon", "")) != "" and ResourceLoader.exists(card.icon):
-		icon.texture = load(card.icon)
+	icon.texture = UiTheme.texture(String(card.get("icon", "")))
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(icon)
 	var t := Label.new()
@@ -218,6 +214,7 @@ func _make_card(card: Dictionary, i: int) -> Button:
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	t.add_theme_font_size_override("font_size", 22)
+	t.add_theme_font_override("font", UiTheme.bold_font())
 	v.add_child(t)
 	var d := Label.new()
 	d.text = card.desc

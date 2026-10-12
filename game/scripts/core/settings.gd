@@ -14,7 +14,8 @@ const ACTIONS := [
 	["move_right", "Aller à droite"], ["attack", "Attaquer (clic principal)"],
 	["move_order", "Déplacer / attaquer (mode RTS)"], ["jump", "Sauter"], ["dodge", "Esquive"],
 	["skill_1", "Compétence 1"], ["skill_2", "Compétence 2"], ["skill_3", "Compétence 3"],
-	["skill_4", "Compétence 4"], ["interact", "Interagir"], ["map", "Carte"], ["pause", "Menu / pause"],
+	["skill_4", "Compétence 4"], ["interact", "Interagir"], ["map", "Carte"],
+	["objectives", "Afficher les objectifs"], ["pause", "Menu / pause"],
 	["camera_rotate", "Tourner la caméra (maintenu)"], ["unstuck", "Se débloquer"], ["help", "Aide"],
 	["feedback", "Signaler un problème"],
 ]
@@ -39,6 +40,7 @@ const DEFAULT_BINDS := {
 	"skill_4": [{"k": KEY_4}, {"k": KEY_T}],
 	"interact": [{"k": KEY_F}],
 	"map": [{"k": KEY_M}],
+	"objectives": [{"k": KEY_TAB}],
 	"pause": [{"k": KEY_ESCAPE}],
 	"camera_rotate": [{"m": MOUSE_BUTTON_RIGHT}],
 	"unstuck": [{"k": KEY_F4}],
@@ -91,6 +93,7 @@ var save_path := SAVE_PATH
 func _ready() -> void:
 	if not OS.get_cmdline_user_args().is_empty() or " ".join(OS.get_cmdline_args()).contains("res://tests/"):
 		save_path = TEST_SAVE_PATH
+	UiTheme.apply_global()
 	reset_all(false)
 	load_settings()
 	apply_bindings()

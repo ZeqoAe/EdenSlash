@@ -187,7 +187,7 @@ func _describe_card(c: Dictionary) -> Dictionary:
 			var kind := "Évolution" if rarity == "legendary" else ("Passif" if p.get("procs", []).is_empty() else "Effet")
 			return {"type": "passive", "id": p.id, "title": p.name, "rarity": rarity,
 				"subtitle": "%s %s" % [kind, String(Boons.RARITY[rarity].name).to_lower()] + (" (%d/%d)" % [stacks + 1, int(p.max)] if int(p.max) > 1 else ""),
-				"desc": p.desc, "icon": p.get("icon", "")}
+				"desc": p.desc, "icon": p.get("icon", Boons.ICONS.get(p.id, ""))}
 
 
 func apply_card(card: Dictionary) -> void:

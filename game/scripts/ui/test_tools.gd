@@ -31,7 +31,7 @@ static func help_text() -> String:
 	return """[b]Contrôles[/b]  (Échap > Paramètres pour les changer)
 %s / %s / %s / %s : se déplacer      %s : sauter      %s : esquive (invulnérable)
 %s      %s maintenu : tourner la caméra
-%s : compétences      %s : interagir (coffre, PNJ, donjon)      %s : carte      %s : menu
+%s : compétences      %s : interagir (coffre, PNJ, donjon)      %s : carte      %s : objectifs      %s : menu
 Molette : zoom
 
 [b]Tests et retours[/b]
@@ -42,7 +42,7 @@ F1 : afficher / masquer cette aide""" % [
 		Settings.action_label("move_forward", 1), Settings.action_label("move_left", 1),
 		Settings.action_label("move_back", 1), Settings.action_label("move_right", 1),
 		k.call("jump"), k.call("dodge"), move, cam, " ".join(skills), k.call("interact"),
-		k.call("map"), Settings.action_label("pause", 1)]
+		k.call("map"), Settings.action_label("objectives", 1), Settings.action_label("pause", 1)]
 
 
 func setup(p: Player, d: RunDirector) -> void:

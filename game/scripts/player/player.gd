@@ -1248,6 +1248,21 @@ func nearest_monster(max_dist: float) -> Combatant:
 	return best
 
 
+## Recharge restante de l'esquive au sol et sa durée totale (HUD).
+func dodge_cooldown() -> Vector2:
+	return Vector2(maxf(0.0, _dodge_ready_at - _time), DODGE_COOLDOWN)
+
+
+## Étourdissement restant (s), 0 si le héros n'est pas étourdi (HUD).
+func stun_left() -> float:
+	return maxf(0.0, _stun_len - _state_time) if _state == "stun" else 0.0
+
+
+## Paliers de Fluidité actifs et temps restant (HUD).
+func flow_state() -> Vector2:
+	return Vector2(flow_stacks, _flow_until - _time) if flow_stacks > 0 and _time <= _flow_until else Vector2.ZERO
+
+
 func current_target() -> Combatant:
 	return _target if _target and is_instance_valid(_target) and not _target.is_dead else null
 

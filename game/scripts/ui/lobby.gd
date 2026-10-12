@@ -126,8 +126,8 @@ func _build_ui() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var v := VBoxContainer.new()
-	v.position = Vector2(60, 60)
-	v.add_theme_constant_override("separation", 14)
+	v.position = Vector2(60, 50)
+	v.add_theme_constant_override("separation", 10)
 	root.add_child(v)
 	var title := Hud._label(v, "EDEN SLASH", 64, ACCENT)
 	title.add_theme_constant_override("outline_size", 12)
@@ -155,7 +155,7 @@ func _build_ui() -> void:
 	_gold = Hud._label(v, "", 15, ACCENT)
 	var help := Hud._label(root, "Run : chaque run repart de zéro. Monte de niveau, réunis 3 sceaux, affronte le boss. À la fin, garde 1 objet en héritage (avec son amélioration).", 14, Color(1, 1, 1, 0.7))
 	help.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	help.position = Vector2(60, -50)
+	help.position = Vector2(60, -34)
 	layer.add_child(root)
 
 	_panel_layer = CanvasLayer.new()

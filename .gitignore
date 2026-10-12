@@ -10,3 +10,8 @@ __pycache__/
 feedback/
 # Captures de travail
 previews/
+
+# éléments générés au premier import Godot (le jeu sait les charger sans import)
+game/assets/fonts/*.import
+game/assets/ui/status/*.import
+game/assets/ui/frame/*.import

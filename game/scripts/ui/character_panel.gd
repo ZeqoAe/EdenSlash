@@ -174,7 +174,7 @@ func _refresh_skills() -> void:
 			Hud._label(_skills_box, "Aucun pour l'instant : ils s'obtiennent avec les cartes de niveau.", 14, Color(0.8, 0.8, 0.85))
 		for pid in Run.passives:
 			var p := Run.passive_def(pid)
-			_skill_row(p.get("icon", ""), "%s ×%d" % [p.name, int(Run.passives[pid])], p.desc)
+			_skill_row(p.get("icon", Boons.ICONS.get(pid, "")), "%s ×%d" % [p.name, int(Run.passives[pid])], p.desc)
 		_set_rows()
 	else:
 		_title(_skills_box, "Compétences du %s (à débloquer par cartes pendant la run)" % cls.get("name_fr", ""))
@@ -203,8 +203,7 @@ func _skill_row(icon_path: String, title: String, desc: String) -> void:
 	var icon := TextureRect.new()
 	icon.custom_minimum_size = Vector2(44, 44)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	if icon_path != "" and ResourceLoader.exists(icon_path):
-		icon.texture = load(icon_path)
+	icon.texture = UiTheme.texture(icon_path)
 	h.add_child(icon)
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
