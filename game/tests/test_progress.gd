@@ -14,7 +14,7 @@ func check(label: String, ok: bool) -> void:
 func _ready() -> void:
 	check("profil de test", Profile.save_path == Profile.TEST_SAVE_PATH)
 	Profile.reset_all()
-	check("nouvelle partie : 1 katana d'héritage", Profile.vault.size() == 1 and Profile.equipped.has("weapon"))
+	check("nouvelle partie : 1 katana et le trophée de départ", Profile.vault.size() == 2 and Profile.equipped.has("weapon") and Profile.equipped.has("trophy"))
 	var w_uid: String = Profile.equipped.weapon.uid
 	Run.start("samurai")
 	check("run : or et butin à zéro", Profile.gold == 0 and Profile.inventory.is_empty() and Profile.in_run)
@@ -82,16 +82,16 @@ func _ready() -> void:
 	check("désassemblage crédité", int(Profile.materials.fragment) == before + int(got.fragment) and Profile.inventory.size() == 4)
 	Run.finish("defaite")
 	Profile.end_run(w)
-	check("fin de run : héritage mis à jour (+8), rien d'autre", Profile.vault.size() == 1 and int(Profile.vault[0].upgrade) == 8)
+	check("fin de run : héritage mis à jour (+8), rien d'autre", Profile.vault.size() == 2 and int(Profile.vault.filter(func(it): return it.slot == "weapon")[0].upgrade) == 8)
 	check("lobby : or et matériaux remis à zéro", Profile.gold == 0 and int(Profile.materials.fragment) == 0)
 	Run.start("samurai")
 	var loot := Items.generate(4, 1.0, "head")
 	Profile.add_item(loot)
 	Run.finish("victoire")
 	Profile.end_run(loot)
-	check("nouvel objet gardé et porté (emplacement libre)", Profile.vault.size() == 2 and Profile.equipped.has("head"))
+	check("nouvel objet gardé et porté (emplacement libre)", Profile.vault.size() == 3 and Profile.equipped.has("head"))
 	Profile.load_profile()
-	check("rechargé du disque", Profile.vault.size() == 2 and int(Profile.equipped.weapon.upgrade) == 8 and Profile.runs_done == 2)
+	check("rechargé du disque", Profile.vault.size() == 3 and int(Profile.equipped.weapon.upgrade) == 8 and Profile.runs_done == 2)
 	# zones : la victoire débloque la suivante, la nouvelle partie remet à zéro
 	check("une seule zone au départ", Profile.unlocked_zones >= 1 and Profile.zone_unlocked("limestone"))
 	Profile.unlocked_zones = 1
@@ -131,7 +131,7 @@ func _ready() -> void:
 	var n_before := Profile.vault.size()
 	Run.finish("extraction")
 	var kept := Profile.end_run_extract()
-	check("extraction : %d objets gardés" % kept, kept == 5 and Profile.vault.size() == n_before + 4 and not Profile.in_run)
+	check("extraction : %d objets gardés" % kept, kept == 6 and Profile.vault.size() == n_before + 4 and not Profile.in_run)
 	check("extraction : l'arme portée reste l'arme de départ", Items.weapon_type_of(Profile.equipped.weapon) == "axe")
 	# fournitures : gardées par l'extraction, emportées à la run suivante, perdues à la mort
 	Run.start("magician")

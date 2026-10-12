@@ -16,7 +16,8 @@ const EDEN_ICONS := {
 	"shrine": "res://assets/ui/skills/e0467.png",
 }
 const BUFFS := ["solar", "shrine", "marduk", "frenzy", "keen", "haste", "barrier", "fury", "flow", "regen", "invisible", "evasion",
-	"titan", "survival", "might", "swift", "grace", "vitality", "hunter_stance", "angel", "thorns", "resolve"]
+	"titan", "survival", "might", "swift", "grace", "vitality", "hunter_stance", "angel", "thorns", "resolve",
+	"t_agi", "t_mind", "t_str", "t_arcane", "t_all", "t_luck", "t_crit", "t_speed", "t_power", "t_guard", "t_evade"]
 const DESC := {
 	"bleed": "Perd 15 % de l'attaque de la source en PV chaque seconde.",
 	"burn": "Perd 25 % de l'attaque de la source en PV chaque seconde.",
@@ -54,6 +55,17 @@ const DESC := {
 	"fear": "Terreur : fuit sans attaquer.",
 	"thorns": "Renvoie 30 % des dégâts reçus à l'attaquant.",
 	"resolve": "Insensible aux contrôles, dégâts subis réduits de 15 %.",
+	"t_agi": "Trophée : Agilité accrue.",
+	"t_mind": "Trophée : Agilité et Intelligence accrues.",
+	"t_str": "Trophée : Force accrue.",
+	"t_arcane": "Trophée : Intelligence et Sagesse accrues.",
+	"t_all": "Trophée : tous les attributs accrus.",
+	"t_luck": "Trophée : Chance accrue.",
+	"t_crit": "Trophée : chances et dégâts critiques accrus.",
+	"t_speed": "Trophée : vitesse d'attaque et d'incantation accrues.",
+	"t_power": "Trophée : dégâts accrus.",
+	"t_guard": "Trophée : défense accrue.",
+	"t_evade": "Trophée : esquive et vitesse de déplacement accrues.",
 }
 
 
@@ -61,6 +73,8 @@ static var _skill_icons := {}
 
 
 static func icon(status: String) -> Texture2D:
+	if Trophies.STATUSES.has(status):  # buffs des trophées : icône du buff le plus proche
+		status = String(Trophies.STATUSES[status].icon)
 	var own := STATUS_DIR % status
 	if FileAccess.file_exists(own):
 		return UiTheme.texture(own)

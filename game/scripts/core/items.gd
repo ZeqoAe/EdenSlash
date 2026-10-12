@@ -252,7 +252,7 @@ static func eden_target(level: int) -> int:
 ## zones), le plus bas qui existe. Les trophées sans niveau (0) conviennent partout.
 static func eden_template(slot: String, wtype: String, target: int, rarity: int) -> Dictionary:
 	var list: Array = GameData.eden_by_slot.get(wtype if slot == "weapon" else slot, []).filter(
-		func(e): return not (e.get("r", {}) as Dictionary).is_empty() or e.has("passive"))
+		func(e): return (not (e.get("r", {}) as Dictionary).is_empty() or e.has("passive") or e.has("trophy")) and Trophies.in_pool(e))
 	if list.is_empty():
 		return {}
 	var archive := rarity >= MYTHIC
@@ -320,7 +320,9 @@ static func from_template(e: Dictionary, level: int, rarity := -1) -> Dictionary
 	item["base"] = base
 	if e.has("set") and r >= MYTHIC:
 		item["set"] = String(e.set)
-	if e.has("passive") and r >= MYTHIC:
+	if slot == "trophy":
+		item["passive"] = Trophies.passive_for(e, r)  # buff sous condition, force selon la rareté
+	elif e.has("passive") and r >= MYTHIC:
 		item["passive"] = e.passive
 	return item
 
@@ -347,7 +349,7 @@ static func set_bonus(sid: String, n: int) -> Dictionary:
 ## Objet d'Eden qui sert de modèle à un objet généré : même emplacement (ou type d'arme),
 ## même rareté si possible, niveau d'Eden le plus proche (le niveau du jeu × 1,5).
 static func eden_base(slot: String, wtype: String, level: int, rarity: int) -> Dictionary:
-	var list: Array = GameData.eden_by_slot.get(wtype if slot == "weapon" else slot, [])
+	var list: Array = GameData.eden_by_slot.get(wtype if slot == "weapon" else slot, []).filter(Trophies.in_pool)
 	if list.is_empty():
 		return {}
 	var target := float(level) * 1.5 + 1.0

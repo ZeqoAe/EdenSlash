@@ -192,10 +192,7 @@ static func entry_bonus(k: String) -> Dictionary:
 	var pts := float(TIER_POINTS.get(mini(int(e.rarity), Items.LEGENDARY), 1.0))
 	var base := String(e.get("wtype", e.get("slot", "")))
 	if base == "trophy":
-		var out := {}
-		for a in Items.ATTRIBUTES:
-			out[a] = pts * 0.5
-		return out
+		return {"lck": pts}  # trophées : de la chance (les trophées n'ont presque plus de stats fixes)
 	return {String(ATTR.get(base, "str")): pts}
 
 

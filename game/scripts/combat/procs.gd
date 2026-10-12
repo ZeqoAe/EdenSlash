@@ -6,9 +6,10 @@ extends RefCounted
 ## Déclencheurs : hit (chaque monstre touché), skill_hit (impact d'une compétence),
 ## crit, kill, finisher (3e coup du combo), dodge, perfect (annulation parfaite),
 ## hurt (dégâts subis), low_hp (sous 30 % de PV).
-## Effets : lightning (foudre en chaîne), freeze, chill, burn, shock (sur les monstres
+## Effets : lightning (foudre en chaîne), freeze, chill, burn, shock, stun (sur les monstres
 ## autour de la cible), explosion, nova (gel autour du héros), buff (état temporaire
-## du héros), heal, cdr (recharges réduites), echo (la compétence frappe une 2e fois).
+## du héros), stat_buff (bonus de stats temporaire, trophées), heal, cdr (recharges
+## réduites), echo (la compétence frappe une 2e fois), double_hit (le coup frappe 2 fois).
 
 const TRIGGER_TEXT := {
 	"hit": "à l'impact", "skill_hit": "à l'impact d'une compétence", "crit": "sur un coup critique",
@@ -49,10 +50,12 @@ static func run(player: Player, p: Dictionary, target: Combatant, pos: Vector3) 
 	match String(p.effect):
 		"lightning":
 			_lightning(player, target, pos, float(p.get("mult", 1.0)), int(p.get("chain", 2)), r)
-		"freeze", "chill", "burn", "shock":
+		"freeze", "chill", "burn", "shock", "stun":
 			var color := Combatant.STATUS_INFO[p.effect].color as Color
 			Vfx.ring(player, pos, r, Color(color, 0.85))
 			for m in monsters_near(player, pos, r):
+				if p.effect == "stun" and (m as Monster) and (m as Monster).is_boss:
+					continue
 				m.add_status(String(p.effect), dur, player)
 				if p.has("mult"):
 					player.proc_hit(m, float(p.mult))
@@ -73,6 +76,16 @@ static func run(player: Player, p: Dictionary, target: Combatant, pos: Vector3) 
 			player.add_status(st, dur, player)
 			var info: Dictionary = Combatant.STATUS_INFO.get(st, {"name": st, "color": Color.WHITE})
 			DamageNumber.spawn_text(player, info.name, info.color)
+		"stat_buff":
+			var sid := String(p.status)
+			player.timed_stats[sid] = p.get("stats", {})
+			player.add_status(sid, dur, player)
+			var sinfo: Dictionary = Combatant.STATUS_INFO.get(sid, {"name": sid, "color": Color.WHITE})
+			DamageNumber.spawn_text(player, sinfo.name, sinfo.color)
+		"double_hit":
+			if target and is_instance_valid(target) and not target.is_dead:
+				DamageNumber.spawn_text(target, "DOUBLE !", Color(1.0, 0.85, 0.4))
+				player.proc_hit(target, float(p.get("mult", 0.8)), true)
 		"heal":
 			player.heal(player.max_hp * float(p.get("amount", 0.2)))
 			DamageNumber.spawn_text(player, "+%d %% PV" % roundi(float(p.get("amount", 0.2)) * 100), Color(0.5, 1.0, 0.55))

@@ -64,6 +64,7 @@ var combo_window := COMBO_WINDOW
 var dot_bonus := 1.0
 var execute := 0.0
 var procs: Array = []  # effets déclenchés actifs
+var timed_stats := {}  # statut -> stats ajoutées tant qu'il est actif (buffs des trophées)
 var proc_ready_at := {}  # id du proc -> instant (clock) de fin de recharge
 
 var skill_ready_at := {}  # id compétence -> instant
@@ -150,6 +151,10 @@ func recalc_stats() -> void:
 	for k in aura:
 		eq[k] = float(eq.get(k, 0.0)) + float(aura[k])
 	var ps := Run.passive_stats()
+	for st in timed_stats:  # buffs temporaires des trophées
+		if has_status(st):
+			for k in timed_stats[st]:
+				ps[k] = float(ps.get(k, 0.0)) + float(timed_stats[st][k])
 	# bonus en % de l'équipement (objets et sets d'Eden) : mêmes effets que les passifs
 	for k in ["def_pct", "atk_pct", "matk_pct", "parry", "cast_speed", "heal_pct", "str_pct", "agi_pct", "int_pct", "wis_pct", "lck_pct"]:
 		if eq.has(k):

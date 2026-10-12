@@ -92,6 +92,20 @@ func _test_items() -> void:
 	check("6 raretés d'Eden (mythique orange, légendaire or)", Items.RARITIES.size() == 6 and Items.RARITIES[4].name == "Mythique" and Items.RARITIES[5].name == "Légendaire")
 	check("trophées sur le butin rare des élites et boss", trophies > 0)
 	check("pas de trophée sur le butin courant", range(200).all(func(_i): return Items.generate(5, 0.0).slot != "trophy"))
+	# trophées : buff sous condition, pas de stats fixes, objets parasites hors du butin
+	var tros: Array = []
+	for i in 300:
+		tros.append(Items.generate(20, 1.0, "trophy", "samurai", 2))
+	check("trophées : un buff sous condition, sans stats fixes", tros.all(func(t): return t.get("passive", {}).has("trophy") and Items.stats(t).is_empty() and not (t.passive.procs as Array).is_empty()))
+	check("trophées : jamais de familier, d'objet de test ni de bonus de sort", tros.all(func(t): return not GameData.eden_by_id.get(int(t.eden), {}).has("nopool")))
+	check("trophées retirés du butin toujours dans l'archive", Archive.entries("s:trophy").any(func(e): return e.has("nopool")))
+	check("carte du trophée : le buff en clair", Items.describe(tros[0]).contains(String(tros[0].passive.desc)))
+	var st_uid := Profile.starter_trophy
+	check("trophée de départ équipé", st_uid != "" and String(Profile.equipped.get("trophy", {}).get("uid", "")) == st_uid)
+	var old_t := {"uid": "old_t", "slot": "trophy", "eden": 34164, "rarity": 5, "rv": 3, "level": 59, "plevel": 20, "quality": 1.0, "upgrade": 0, "affixes": {},
+		"base": {"str": 30.0}, "passive": {"name": "Banks", "desc": "x", "procs": []}}
+	Profile._migrate(old_t)
+	check("ancien trophée : buff sous condition, stats fixes retirées", (old_t.base as Dictionary).is_empty() and old_t.passive.has("trophy"))
 	var boss := Items.generate(10, 0.5, "", "samurai", Items.MYTHIC, "", Items.LEGENDARY)
 	check("butin de boss : mythique ou légendaire", int(boss.rarity) >= Items.MYTHIC)
 	var myth := Items.generate(10, 0.0, "chest", "samurai", Items.MYTHIC, "", Items.MYTHIC)

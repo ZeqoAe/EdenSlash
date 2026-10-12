@@ -41,7 +41,7 @@ func _test_sets() -> void:
 	var b := Items.active_set_bonuses(Profile.equipped)
 	check("4 pièces : bonus 2 et 4 actifs", b.size() == 2)
 	check("stats de set ajoutées à l'équipement", Profile.equipment_stats().get("atk_speed", 0.0) >= 0.08)
-	check("proc de set (foudre) actif", Profile.equipment_procs().size() == 1 and Profile.equipment_procs()[0].effect == "lightning")
+	check("proc de set (foudre) actif", Profile.equipment_procs().filter(func(p): return p.effect == "lightning").size() == 1)
 	check("infobulle : bonus de set", Items.describe(pieces[0]).contains("4 pièces"))
 	var n_sets := 0
 	for i in 200:
@@ -165,6 +165,30 @@ func _test_world() -> void:
 	player.statuses.erase("haste")
 	Procs.fire(player, "dodge")
 	check("recharge interne respectée", not player.has_status("haste"))
+	# trophées : buff sous condition (stats temporaires), double frappe
+	for st in Trophies.STATUSES:
+		player.statuses.erase(st)
+	player.recalc_stats()
+	var agi0 := float(player.attrs.agi)
+	var crit0 := player.crit
+	var tp := Trophies.proc_for("agi", Items.LEGENDARY)
+	Procs.run(player, tp, null, player.global_position)
+	check("trophée Vivacité : +%d %% d'Agilité pendant %d s" % [roundi(float(tp.stats.agi_pct) * 100), roundi(float(tp.duration))],
+		player.has_status("t_agi") and float(player.attrs.agi) > agi0 * 1.2)
+	var crit1 := player.crit
+	var cd0 := player.crit_dmg
+	Procs.run(player, Trophies.proc_for("crit", 3), null, player.global_position)
+	check("trophée Instinct : critique et dégâts critiques", player.crit > crit1 + 0.1 and player.crit_dmg > cd0 + 0.2)
+	player.statuses.erase("t_agi")
+	player.statuses.erase("t_crit")
+	player.recalc_stats()
+	check("buffs de trophée retirés à la fin", is_equal_approx(float(player.attrs.agi), agi0) and is_equal_approx(player.crit, crit0))
+	var dbl := _dummy(2.0, 0.0)
+	var hp_before := dbl.hp
+	Procs.run(player, Trophies.proc_for("double", 2), dbl, dbl.global_position)
+	check("trophée Double frappe : coup supplémentaire", dbl.hp < hp_before)
+	check("rareté : buff plus fort sur un légendaire", float(Trophies.proc_for("agi", Items.LEGENDARY).stats.agi_pct) > float(Trophies.proc_for("agi", 2).stats.agi_pct)
+		and float(Trophies.proc_for("agi", Items.LEGENDARY).chance) > float(Trophies.proc_for("agi", 0).chance))
 	Run.passives.clear()
 	player.recalc_stats()
 	world.queue_free()

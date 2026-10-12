@@ -48,6 +48,15 @@ Grimoire, Classe, et « ? » pour le guide des statistiques), **Collection** (l'
 (expertise) en bas. En run, le menu pause suit la même structure : Run, Héros, Aide.
 Icônes de menu : `tools/make_menu_icons.py` ; trophées : `tools/make_trophy_icons.py`.
 
+**Trophées** : tout le monde commence avec un trophée de départ (Éveil) ; les autres tombent des
+élites et des boss. Un trophée n'a plus de stats fixes mais un **buff sous condition** inspiré de
+son texte d'Eden (ex. « 5 % de chances à l'impact : +30 % d'Agilité pendant 8 s », Agi + Int,
+critique et dégâts critiques, double frappe, vitesse d'attaque sur un critique, carapace quand
+on est touché, orage, givre…) ; la rareté règle la chance et la force du buff
+(`scripts/core/trophies.gd`, familles écrites par `tools/rework_trophies.py`). Les familiers,
+objets de test et bonus de sorts d'autres classes glissés parmi les trophées ne tombent plus
+(ils restent dans l'archive).
+
 **Graphismes** (Paramètres → Affichage → *Qualité graphique* : basse, moyenne, haute, ultra) :
 herbe 3D animée par le vent et couchée par le héros (`GrassField`), sol sans motif répété avec
 relief et variations de teinte, éclairage stylisé des personnages et du décor (ombres douces et

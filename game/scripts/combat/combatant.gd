@@ -66,6 +66,18 @@ const STATUS_INFO := {
 	"fear": {"name": "Terreur", "color": Color(0.7, 0.4, 0.8)},
 	"thorns": {"name": "Épines", "color": Color(0.6, 0.9, 0.4)},
 	"resolve": {"name": "Résolution", "color": Color(1.0, 0.9, 0.6)},
+	# buffs des trophées (Trophies.STATUSES)
+	"t_agi": {"name": "Vivacité", "color": Color(0.6, 1.0, 0.9)},
+	"t_mind": {"name": "Esprit vif", "color": Color(0.7, 0.9, 1.0)},
+	"t_str": {"name": "Rage du guerrier", "color": Color(1.0, 0.6, 0.4)},
+	"t_arcane": {"name": "Arcanes", "color": Color(0.7, 0.8, 1.0)},
+	"t_all": {"name": "Éveil", "color": Color(1.0, 0.95, 0.6)},
+	"t_luck": {"name": "Bonne étoile", "color": Color(1.0, 0.9, 0.4)},
+	"t_crit": {"name": "Instinct du prédateur", "color": Color(1.0, 0.95, 0.5)},
+	"t_speed": {"name": "Frénésie", "color": Color(1.0, 0.6, 0.3)},
+	"t_power": {"name": "Puissance", "color": Color(1.0, 0.35, 0.35)},
+	"t_guard": {"name": "Carapace", "color": Color(0.7, 0.85, 1.0)},
+	"t_evade": {"name": "Pas de l'ombre", "color": Color(0.7, 1.0, 0.7)},
 }
 ## Dégâts par seconde des effets sur la durée, en part de l'attaque de la source.
 const DOT_FACTOR := {"bleed": 0.15, "burn": 0.25, "poison": 0.2}

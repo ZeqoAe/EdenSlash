@@ -54,6 +54,7 @@ var worn := {}  # classe -> {"head": .glb, "back": .glb} : accessoires cosmétiq
 var dev := {"enabled": false, "gold": 0, "fragment": 0, "essence": 0, "crystal": 0}
 var unlocked_zones := 1  # zones jouables (dans l'ordre de data/zones.json)
 var selected_zone := "limestone"
+var starter_trophy := ""  # uid du trophée de départ (donné une fois par sauvegarde)
 var runs_done := 0
 var runs_won := 0
 var best_level := 1
@@ -73,15 +74,31 @@ func _ready() -> void:
 	_ensure_starter()
 
 
-## Équipement de départ : un katana commun si l'héritage n'a pas d'arme.
+## Équipement de départ : un katana commun si l'héritage n'a pas d'arme, et le trophée de
+## départ (une seule fois par sauvegarde), porté par toutes les classes.
 func _ensure_starter() -> void:
-	if in_run or vault.any(func(it): return it.slot == "weapon"):
+	if in_run:
 		return
-	var w := Items.generate(1, -1.0, "weapon")
-	vault.append(w)
-	loadout["weapon"] = w.uid
-	_lobby_view()
-	save_profile()
+	var changed := false
+	if not vault.any(func(it): return it.slot == "weapon"):
+		var w := Items.generate(1, -1.0, "weapon")
+		vault.append(w)
+		loadout["weapon"] = w.uid
+		changed = true
+	if starter_trophy == "" and GameData.eden_by_id.has(Trophies.STARTER_ID):
+		var t := Items.from_template(GameData.eden_by_id[Trophies.STARTER_ID], 1, Trophies.STARTER_RARITY)
+		vault.append(t)
+		starter_trophy = String(t.uid)
+		for cls in presets:
+			for st in presets[cls].sets:
+				if not st.slots.has("trophy"):
+					st.slots["trophy"] = starter_trophy
+		if not loadout.has("trophy"):
+			loadout["trophy"] = starter_trophy
+		changed = true
+	if changed:
+		_lobby_view()
+		save_profile()
 
 
 func load_profile() -> void:
@@ -137,6 +154,7 @@ func load_profile() -> void:
 		Settings.set_v("interface", "dev_mode", true)
 		dev.enabled = false
 	selected_zone = String(d.get("selected_zone", "limestone"))
+	starter_trophy = String(d.get("starter_trophy", ""))
 	if d.has("vault"):
 		vault = d.get("vault", []).map(_migrate)
 		loadout = d.get("loadout", {})
@@ -171,6 +189,13 @@ func _migrate(item: Dictionary) -> Dictionary:
 		if not e.is_empty():
 			item["level"] = int(e.level)
 		item["rv"] = 3
+	if item.get("slot", "") == "trophy" and item.has("eden") and not item.get("passive", {}).has("trophy"):
+		# trophée d'avant la refonte : plus de stats fixes, un buff sous condition
+		var te: Dictionary = GameData.eden_by_id.get(int(item.eden), {})
+		if te.has("trophy"):
+			item["base"] = {}
+			item["affixes"] = {}
+			item["passive"] = Trophies.passive_for(te, int(item.get("rarity", 0)))
 	if item.has("quality"):
 		return item
 	item["quality"] = 1.0
@@ -191,7 +216,7 @@ func save_profile() -> void:
 	if not in_run and selected_class != _view_class:
 		_lobby_view()  # autre classe choisie : on affiche son préréglage
 	var d := {"selected_class": selected_class, "vault": vault, "loadout": loadout, "presets": presets,
-		"unlocked_zones": unlocked_zones, "selected_zone": selected_zone,
+		"unlocked_zones": unlocked_zones, "selected_zone": selected_zone, "starter_trophy": starter_trophy,
 		"expertise": expertise, "talents": talents, "certificates": certificates, "stash": stash,
 		"unlocked_classes": unlocked_classes, "records": records, "cert_board": cert_board,
 		"archive": archive, "skins": skins, "outfits": outfits, "owned_outfits": owned_outfits, "collection": collection, "worn": worn, "dev": dev, "saved_at": Time.get_datetime_string_from_system(false, true),
@@ -241,6 +266,8 @@ func _class_presets(cls: String) -> Dictionary:
 		for i in PRESETS_PER_CLASS:
 			# ancienne sauvegarde : l'équipement unique devient le préréglage 1 de la classe choisie
 			var first: Dictionary = loadout.duplicate() if i == 0 and cls == selected_class and presets.is_empty() else {}
+			if i == 0 and not first.has("trophy") and vault.any(func(it): return String(it.uid) == starter_trophy):
+				first["trophy"] = starter_trophy  # nouvelle classe : le trophée de départ
 			sets.append({"name": "Préréglage %d" % (i + 1), "slots": first})
 		presets[cls] = {"active": 0, "sets": sets}
 	var p: Dictionary = presets[cls]
@@ -493,6 +520,7 @@ func delete_slot(i: int) -> void:
 ## Remet le profil en mémoire à zéro, sans rien écrire.
 func _clear() -> void:
 	in_run = false
+	starter_trophy = ""
 	selected_class = Progression.START_CLASS
 	vault = []
 	loadout = {}
@@ -521,6 +549,7 @@ func _clear() -> void:
 
 func reset_all() -> void:
 	in_run = false
+	starter_trophy = ""
 	vault = []
 	loadout = {}
 	presets = {}
