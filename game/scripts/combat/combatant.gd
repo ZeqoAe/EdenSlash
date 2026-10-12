@@ -47,9 +47,13 @@ const STATUS_INFO := {
 	"haste": {"name": "Hâte", "color": Color(0.6, 1.0, 0.8)},
 	"barrier": {"name": "Barrière", "color": Color(0.7, 0.85, 1.0)},
 	"fury": {"name": "Fureur", "color": Color(1.0, 0.35, 0.35)},
+	"poison": {"name": "Poison", "color": Color(0.55, 0.9, 0.3)},
+	"regen": {"name": "Régénération", "color": Color(0.5, 1.0, 0.6)},
+	"invisible": {"name": "Invisible", "color": Color(0.75, 0.75, 0.95)},
+	"evasion": {"name": "Évasion", "color": Color(0.7, 1.0, 0.7)},
 }
 ## Dégâts par seconde des effets sur la durée, en part de l'attaque de la source.
-const DOT_FACTOR := {"bleed": 0.15, "burn": 0.25}
+const DOT_FACTOR := {"bleed": 0.15, "burn": 0.25, "poison": 0.2}
 signal statuses_changed
 
 var statuses := {}  # nom -> instant de fin

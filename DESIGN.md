@@ -4,6 +4,66 @@ Direction artistique : celle d'Eden Eternal (textures de sol, arbres, rochers, m
 coffres, PNJ, monstres, armes et tenues du jeu d'origine). Les maps de combat sont
 générées à chaque run, avec nos propres collisions simples.
 
+## Classes (6 jouables)
+
+Données : `tools/build_classes.py` (sorts, icônes et effets d'Eden, tenues, armes, postures).
+
+| Classe | Arme (Eden) | Jeu | Points forts |
+|---|---|---|---|
+| Samouraï | Katana W213–216 | corps à corps, combos d'états | saignement → cicatrice → Marduk |
+| Guerrier | Hache W201–204 | corps à corps lourd, PV ×1,25, +6 déf | renversements, provocation, Fureur, Barrière |
+| Voleur | Dague W108–111 | rapide (+15 % vit. d'attaque, +10 % crit) | poison, embuscade (×2 sur empoisonné), pas de l'ombre (téléportation) |
+| Chasseur | Arc W501–504 | **à distance** (tir de base 13 m) | flèches perçantes, volées en éventail, bombe flash |
+| Clerc | Sceptre W301–304 | hybride, PV ×1,1 | zones sacrées, **soins**, régénération, barrière |
+| Magicien | Bâton W601–604 | **à distance** (projectile 12 m), attaque ×1,15, PV ×0,8 | zones de feu/glace/foudre, téléportation |
+
+Types de compétences du moteur : `dash`, `spin`, `cone`, `fan`, `flurry`, `line`, `buff`, et
+`bolt` (projectile : volée, dispersion, perforation), `ground` (zone au sol à l'endroit visé),
+`heal` (soin en % des PV), `blink` (téléportation sans traverser les murs).
+Chaque classe : 9 compétences d'Eden adaptées, 2 passifs propres (icônes d'Eden) + passifs communs.
+
+## Combos d'auto-attaque (3 coups, le 3e = coup final)
+
+| Classe | Coup 1 | Coup 2 | Coup 3 |
+|---|---|---|---|
+| Samouraï | taille ascendante 100 % | taille descendante 115 % | salto avant 220 %, impact à la retombée, renverse 1 s |
+| Guerrier | hache 130 %, 3 cibles max | crochet 100 % : attire de 3 m, renverse 1 s | tour complet 180 % (4,2 m) |
+| Voleur | tourbillon 80 % | ruée de 4 m + tourbillon 100 % | bond de 5 m + fumigène 140 % : invisible 2 s, Évasion 4 s (40 % d'esquive) |
+| Chasseur | flèche 100 % | 3 flèches 70 % | pluie de flèches 150 % (zone 4 m à 12 m) |
+| Clerc | éclat sacré 90 % (zone 2,5 m) | marteau céleste 130 %, renverse 1 s | prière : soin 6 % + Régénération 3 s |
+| Magicien | explosion arcanique 100 % | puits gravitationnel 80 % : aspire vers le centre, ralentit | pas éthéré : repli de 6 m + invisible 2,5 s |
+
+Invisibilité : les monstres perdent ta trace ; attaquer ou lancer un sort la rompt.
+
+## Grimoire et infobulles
+
+- **Grimoire** (lobby et menu pause) : par classe, statistiques de base, passifs, combo coup par
+  coup, 9 compétences avec infobulle détaillée générée depuis les vraies valeurs (type de dégâts
+  physique / magique, % de l'attaque et valeur chiffrée, bonus de critique, cibles, effets et
+  durées, combos d'états) et tableau des rangs 1 → 5 (+20 % de dégâts, -8 % de recharge par rang).
+- **Cartes d'objet** : icône d'Eden, nom à la couleur de la rareté, qualité, stats du type de base
+  avec le bonus (qualité, amélioration) entre parenthèses, affixes en bleu, bonus de set.
+
+## Zones et biomes (progression)
+
+Données : `tools/build_biomes.py` lit une map d'Eden par biome (textures du sol, décors les plus
+fréquents, monstres des camps, élites, boss) ; le terrain reste généré.
+
+| Zone | Map d'Eden | Héros au départ | Ambiance |
+|---|---|---|---|
+| Limestone Mtn. | s002 | niv. 1 | prairies, roches calcaires |
+| Rainbowfall Forest | s004 | niv. 4 | forêt luxuriante, brume verte |
+| Beluga Bay | s006 | niv. 7 | côte, palmiers, sable |
+| Wetlands | s007 | niv. 10 | marais sombre, brouillard |
+| Avila Volcano | s009 | niv. 13 | roche noire, arbres morts, ciel rougeâtre |
+| Arid Wilds | s011 | niv. 16 | désert de sable |
+
+- Une zone se **débloque en battant le boss de la précédente** (choix dans le lobby).
+- Le héros commence la run au niveau de la zone ; les monstres d'Eden sont ramenés au niveau
+  de la run (dans les deux sens), +½ niveau par palier de zone ; butin plafonné plus haut.
+- Le roster de la zone se dévoile avec la progression (monstres les plus forts en fin de run).
+- « Nouvelle partie » reverrouille les zones.
+
 ## Roguelite : héritage
 
 - Chaque run **repart de zéro** : pas d'or, pas de matériaux, pas de butin.

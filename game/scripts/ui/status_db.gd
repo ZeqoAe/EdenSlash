@@ -15,7 +15,7 @@ const EDEN_ICONS := {
 	"marduk": "res://assets/ui/skills/e0464.png",
 	"shrine": "res://assets/ui/skills/e0467.png",
 }
-const BUFFS := ["solar", "shrine", "marduk", "frenzy", "keen", "haste", "barrier", "fury", "flow"]
+const BUFFS := ["solar", "shrine", "marduk", "frenzy", "keen", "haste", "barrier", "fury", "flow", "regen", "invisible", "evasion"]
 const DESC := {
 	"bleed": "Perd 15 % de l'attaque de la source en PV chaque seconde.",
 	"burn": "Perd 25 % de l'attaque de la source en PV chaque seconde.",
@@ -35,6 +35,10 @@ const DESC := {
 	"barrier": "Dégâts subis réduits de 40 %.",
 	"fury": "+25 % de dégâts infligés.",
 	"flow": "Annulations parfaites : +10 % de dégâts par palier.",
+	"poison": "Perd 20 % de l'attaque de la source en PV chaque seconde.",
+	"regen": "Rend 3 % des PV max chaque seconde.",
+	"invisible": "Les monstres perdent ta trace ; attaquer ou lancer un sort la rompt.",
+	"evasion": "40 % de chances d'éviter complètement un coup.",
 }
 
 

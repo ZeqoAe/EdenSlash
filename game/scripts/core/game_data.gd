@@ -17,6 +17,7 @@ const MONSTER_SCALE := 0.7
 
 var monsters: Dictionary = {}  # id (int) -> Dictionary
 var zones: Array = []
+var biomes: Dictionary = {}  # id -> textures, ambiance, décors (tools/build_biomes.py)
 var levels: Array = []
 var classes: Dictionary = {}  # id -> classe (compétences, passifs, apparence...)
 var motion_keys: Dictionary = {}  # kfm -> animation -> {hit, sounds, trail, len}
@@ -28,10 +29,27 @@ func _ready() -> void:
 	for key in raw:
 		monsters[int(key)] = raw[key]
 	zones = _load_json("res://data/zones.json")
+	if FileAccess.file_exists("res://data/biomes.json"):
+		biomes = _load_json("res://data/biomes.json")
 	levels = _load_json("res://data/levels.json")
 	classes = _load_json("res://data/classes.json")
 	motion_keys = _load_json("res://data/motion_keys.json")
 	minimaps = _load_json("res://data/minimaps.json")
+
+
+## Zone [param id] (Limestone par défaut).
+func zone(id: String) -> Dictionary:
+	for z in zones:
+		if z.id == id:
+			return z
+	return zones[0]
+
+
+func zone_index(id: String) -> int:
+	for i in zones.size():
+		if zones[i].id == id:
+			return i
+	return 0
 
 
 func class_data(id: String) -> Dictionary:

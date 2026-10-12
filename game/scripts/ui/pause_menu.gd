@@ -11,6 +11,7 @@ var _panel: CharacterPanel
 var _run_label: Label
 var _confirm: ConfirmationDialog
 var settings: SettingsMenu
+var grimoire: Grimoire
 
 
 func setup(p: Player) -> void:
@@ -36,6 +37,7 @@ func setup(p: Player) -> void:
 	var title := Hud._label(menu, "PAUSE", 34, Hud.ACCENT)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_button(menu, "Reprendre", close)
+	_button(menu, "Grimoire (sorts, combo)", func(): grimoire.open())
 	_button(menu, "Paramètres", func(): settings.open())
 	_button(menu, "Retour au lobby", func(): _confirm.popup_centered())
 	_button(menu, "Quitter le jeu", func(): get_tree().quit())
@@ -56,6 +58,8 @@ func setup(p: Player) -> void:
 	add_child(_confirm)
 	settings = SettingsMenu.new()
 	add_child(settings)
+	grimoire = Grimoire.new()
+	add_child(grimoire)
 	_root.visible = false
 	add_child(_root)
 
@@ -88,5 +92,7 @@ func open() -> void:
 func close() -> void:
 	if settings.is_open():
 		settings.close()
+	if grimoire.is_open():
+		grimoire.close_ui()
 	_root.visible = false
 	get_tree().paused = false

@@ -41,7 +41,8 @@ func configure(monster_data: Dictionary, boss := false, at_level := 0) -> void:
 	display_name = data.name
 	level = int(data.level)
 	var k := 1.0
-	if at_level > level:
+	if at_level > 0 and at_level != level:
+		# niveau effectif de la run (les monstres des zones avancées sont ramenés au niveau voulu)
 		k = pow(1.1, at_level - level)
 		level = at_level
 	# l'auto-attaque seule ne doit pas suffire : il faut kiter et placer ses compétences
@@ -243,9 +244,14 @@ func _player_alive() -> bool:
 	return _player != null and not _player.is_dead
 
 
+## Le héros peut être pris pour cible (vivant et pas invisible).
+func _can_target() -> bool:
+	return _player_alive() and not _player.has_status("invisible")
+
+
 func _update_idle(_delta: float) -> Vector3:
 	# tous les monstres de la run traquent le héros : pression constante
-	if _player_alive():
+	if _can_target():
 		_set_state("chase")
 	else:
 		play("stand01" if has_anim("stand01") else "battle01", 0.3)
@@ -274,7 +280,7 @@ func _attack_range() -> float:
 
 
 func _update_chase(delta: float) -> Vector3:
-	if not _player_alive():
+	if not _can_target():
 		_set_state("idle")
 		return Vector3.ZERO
 	var to := _player.global_position - global_position

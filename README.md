@@ -100,6 +100,9 @@ Options de test : `--seed=N` (même map), `--dungeon` (arène du boss), `--rage`
 `--goto=village|dungeon`, `--boss-after=N` (le bot va au boss après N s), `--open=pause|cards|map|smith|trader`,
 `--teleport=x,z`, `--cam-dist=N`, `--seals=N` (sceaux du donjon), `--start-level=N`, `--end-at=N` (fin de run → choix de l'héritage),
 `--cards=static_blade:2,volatile` (cartes de build au départ), `--gear=storm` (panoplie d'un set : storm, frost, blood, falcon, phoenix, wind).
+`--class=warrior|thief|hunter|cleric|magician|samurai`, `--zone=limestone|rainbowfall|beluga|wetlands|avila|arid`.
+Classes : `.venv/Scripts/python -I tools/build_classes.py` ; biomes : `.venv/Scripts/python -I tools/build_biomes.py`
+(aperçu d'une map d'Eden : `tools/scan_biome.py s004`).
 Cycle héritage / remboursement : `Godot --headless --path game res://tests/test_progress.tscn`.
 Choix de cartes (sélection puis Valider) : `Godot --headless --path game res://tests/test_cards.tscn`.
 Paramètres et modes de jeu : `Godot --headless --path game res://tests/test_controls.tscn`.

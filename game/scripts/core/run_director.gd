@@ -63,7 +63,7 @@ var _seed := 0
 
 func start(p: Player) -> void:
 	player = p
-	zone = GameData.zones[0]
+	zone = GameData.zone(Run.zone_id)
 	_roster = zone.monsters.map(func(x): return int(x))
 	_elites = zone.get("elites", []).map(func(x): return int(x))
 	_seed = Run.seed if Run.seed != 0 else randi()
@@ -72,7 +72,7 @@ func start(p: Player) -> void:
 	_fog = Image.create(FOG_RES, FOG_RES, false, Image.FORMAT_LA8)
 	_fog.fill(Color(0, 0, 0, 1))
 	_fog_tex = ImageTexture.create_from_image(_fog)
-	zone_changed.emit({"name": zone.name, "levels": [int(zone.levels[0]), max_level()]})
+	zone_changed.emit({"name": zone.name, "levels": [1 + int(zone.get("level_bonus", 0)), max_level()]})
 	message.emit("%s\nTrouve le village et l'entrée du donjon" % zone.name, 3.5)
 
 
@@ -189,9 +189,12 @@ func _interact(it: Interactable) -> void:
 # --- monstres --------------------------------------------------------------------------
 ## Niveau des monstres : monte avec le temps, +3 en rage, +palier du camp.
 func _monster_level(tier: int) -> int:
-	var base := 1.0 + time / 60.0 * 0.9 + (float(RAGE_LEVEL_BONUS) if state == "rage" else 0.0)
+	# les zones suivantes : monstres de plus haut niveau (+1 par palier de zone en plus)
+	var bonus := float(zone.get("level_bonus", 0))
+	var tier_extra := float(GameData.zone_index(String(zone.get("id", "")))) * 0.5
+	var base := 1.0 + bonus + time / 60.0 * 0.9 + (float(RAGE_LEVEL_BONUS) if state == "rage" else 0.0)
 	var cap := max_level() + (RAGE_LEVEL_BONUS if state in ["rage", "boss"] else 0)
-	return clampi(roundi(maxf(base, player.level - 1.0) + tier), 1, cap)
+	return clampi(roundi(maxf(base, player.level - 1.0 + tier_extra) + tier), 1, cap)
 
 
 ## Niveau maximal du butin et des monstres (hors rage) de la zone en cours.
@@ -205,9 +208,10 @@ func loot_level(level: int) -> int:
 
 
 func _pick_monster(level: int) -> int:
-	var options := _roster.filter(func(id): return int(GameData.monster(id).level) <= level)
-	if options.is_empty():
-		options = [_roster[0]]
+	# le roster (trié par niveau d'origine) se dévoile avec la progression dans la zone
+	var start := 1 + int(zone.get("level_bonus", 0))
+	var n := clampi(2 + int((level - start) * _roster.size() / 10.0), 2, _roster.size())
+	var options := _roster.slice(0, n)
 	# on privilégie les monstres les plus forts disponibles
 	return options[mini(options.size() - 1, options.size() - 1 - randi() % mini(3, options.size()))]
 

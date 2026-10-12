@@ -23,6 +23,8 @@ var equipped: Dictionary = {}  # emplacement -> objet
 var vault: Array = []  # objets gardés entre les runs
 var loadout: Dictionary = {}  # emplacement -> uid de l'objet d'héritage porté au départ
 var in_run := false
+var unlocked_zones := 1  # zones jouables (dans l'ordre de data/zones.json)
+var selected_zone := "limestone"
 var runs_done := 0
 var runs_won := 0
 var best_level := 1
@@ -57,6 +59,8 @@ func load_profile() -> void:
 		return
 	selected_class = d.get("selected_class", selected_class)
 	runs_done = int(d.get("runs_done", 0))
+	unlocked_zones = maxi(1, int(d.get("unlocked_zones", 1)))
+	selected_zone = String(d.get("selected_zone", "limestone"))
 	if d.has("vault"):
 		vault = d.get("vault", []).map(_migrate)
 		loadout = d.get("loadout", {})
@@ -97,6 +101,7 @@ func save_profile() -> void:
 	if not in_run:
 		_sync_vault()
 	var d := {"selected_class": selected_class, "vault": vault, "loadout": loadout,
+		"unlocked_zones": unlocked_zones, "selected_zone": selected_zone,
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(d))
@@ -174,9 +179,27 @@ func reset_all() -> void:
 	runs_done = 0
 	runs_won = 0
 	best_level = 1
+	unlocked_zones = 1
+	selected_zone = "limestone"
 	_lobby_view()
 	_ensure_starter()
 	save_profile()
+
+
+## Zone jouable ? (la suivante se débloque en battant le boss de la précédente)
+func zone_unlocked(id: String) -> bool:
+	return GameData.zone_index(id) < unlocked_zones
+
+
+## Victoire dans [param zone_id] : débloque la zone suivante. Renvoie son nom (ou "").
+func unlock_after(zone_id: String) -> String:
+	var next := GameData.zone_index(zone_id) + 1
+	if next >= GameData.zones.size() or next < unlocked_zones:
+		return ""
+	unlocked_zones = next + 1
+	selected_zone = String(GameData.zones[next].id)
+	save_profile()
+	return String(GameData.zones[next].name)
 
 
 func add_item(item: Dictionary) -> bool:

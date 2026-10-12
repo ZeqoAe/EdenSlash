@@ -38,6 +38,9 @@ func show_results() -> void:
 	var s := Hud._label(v, "%s · niveau atteint %d · %s   ·   Monstres vaincus : %d   ·   Élites : %d   ·   Or gagné : %d" % [
 		cls.get("name_fr", ""), Run.max_level, Run.duration_text(), Run.kills, Run.elites, Run.gold], 16, Color(0.9, 0.9, 0.95))
 	s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if Run.unlocked_name != "":
+		var u := Hud._label(v, "Nouvelle zone débloquée : %s !" % Run.unlocked_name, 22, Color(0.55, 1.0, 0.6))
+		u.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var head := Hud._label(v, "Choisis l'objet à garder en héritage", 24, Hud.ACCENT)
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var sub := Hud._label(v, "Il garde son amélioration et pourra être porté au départ des prochaines runs. Tout le reste (or, matériaux, butin) est perdu.", 14, MUTED)

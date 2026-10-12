@@ -19,7 +19,8 @@ const JUMP_BUFFER := 0.15  # un saut demandé juste avant d'atterrir part à l'a
 ## donne une esquive plus longue et gratuite, rend 25 % de la recharge et monte la
 ## « Fluidité » (+10 % de dégâts par palier, 4 max, 3 s sans annulation parfaite = 0).
 const PERFECT_WINDOW := 0.28
-const AIR_SKILL_BONUS := 0.1  # compétences lancées en l'air : +10 % de dégâts
+const AIR_SKILL_BONUS := 0.1
+const EVASION_CHANCE := 0.4  # statut « Évasion » (fumigène du voleur)  # compétences lancées en l'air : +10 % de dégâts
 const STEP_HEIGHT := 0.6
 const HERO_RADIUS := 0.33
 const BASE_SPEED := 6.5
@@ -109,6 +110,7 @@ func _ready() -> void:
 	_build_trail()
 	Run.changed.connect(recalc_stats)
 	statuses_changed.connect(recalc_stats)
+	statuses_changed.connect(_update_stealth_visual)
 	Profile.changed.connect(_on_profile_changed)
 	recalc_stats()
 	hp = max_hp
@@ -125,15 +127,16 @@ func recalc_stats() -> void:
 	var eq := Profile.equipment_stats()
 	var ps := Run.passive_stats()
 	var ratio := hp / max_hp if max_hp > 0.0 else 1.0
-	max_hp = maxf(1.0, GameData.player_max_hp(level) * (1.0 + ps.get("hp_pct", 0.0) + eq.get("hp_pct", 0.0)) + eq.get("hp", 0.0))
-	atk = (GameData.player_atk(level) + eq.get("atk", 0.0)) * (1.0 + ps.get("atk_pct", 0.0))
+	var base: Dictionary = cls.get("base", {})
+	max_hp = maxf(1.0, GameData.player_max_hp(level) * float(base.get("hp", 1.0)) * (1.0 + ps.get("hp_pct", 0.0) + eq.get("hp_pct", 0.0)) + eq.get("hp", 0.0))
+	atk = (GameData.player_atk(level) * float(base.get("atk", 1.0)) + eq.get("atk", 0.0)) * (1.0 + ps.get("atk_pct", 0.0))
 	if has_status("marduk"):
 		atk *= 1.3
-	defense = 4.0 + level * 2.0 + eq.get("def", 0.0)
-	crit = 0.05 + eq.get("crit", 0.0) + ps.get("crit", 0.0) + (0.25 if has_status("keen") else 0.0)
+	defense = 4.0 + level * 2.0 + eq.get("def", 0.0) + float(base.get("def", 0.0))
+	crit = 0.05 + float(base.get("crit", 0.0)) + eq.get("crit", 0.0) + ps.get("crit", 0.0) + (0.25 if has_status("keen") else 0.0)
 	crit_dmg = 0.5 + eq.get("crit_dmg", 0.0) + ps.get("crit_dmg", 0.0)
-	atk_speed = 1.0 + eq.get("atk_speed", 0.0) + ps.get("atk_speed", 0.0) + (0.3 if has_status("marduk") else 0.0) + (0.3 if has_status("frenzy") else 0.0)
-	move_mult = 1.0 + eq.get("move_speed", 0.0) + ps.get("move_speed", 0.0) + (0.3 if has_status("shrine") else 0.0) + (0.3 if has_status("haste") else 0.0)
+	atk_speed = 1.0 + float(base.get("atk_speed", 0.0)) + eq.get("atk_speed", 0.0) + ps.get("atk_speed", 0.0) + (0.3 if has_status("marduk") else 0.0) + (0.3 if has_status("frenzy") else 0.0)
+	move_mult = 1.0 + float(base.get("move_speed", 0.0)) + eq.get("move_speed", 0.0) + ps.get("move_speed", 0.0) + (0.3 if has_status("shrine") else 0.0) + (0.3 if has_status("haste") else 0.0)
 	cdr = clampf(eq.get("cdr", 0.0) + ps.get("cdr", 0.0), 0.0, 0.5)
 	lifesteal = eq.get("lifesteal", 0.0) + ps.get("lifesteal", 0.0)
 	area_mult = 1.0 + ps.get("area", 0.0) + eq.get("area", 0.0)
@@ -283,6 +286,8 @@ func _physics_process(delta: float) -> void:
 			_dive_impact()
 	_handle_obstacles(input_dir, before, delta)
 	_update_trail()
+	if has_status("regen") and hp < max_hp:
+		heal(max_hp * 0.03 * delta)
 	# régénération lente, seulement après 6 s sans combat
 	if _time - _last_combat > 6.0 and hp < max_hp:
 		heal(max_hp * 0.015 * delta)
@@ -319,7 +324,7 @@ func _update_idle(input_dir: Vector3, delta: float) -> void:
 	if _target and move.length() < 0.1:
 		var to := _target.global_position - global_position
 		to.y = 0.0
-		if to.length() > ATTACK_RANGE + _target.radius:
+		if to.length() > attack_reach() + _target.radius:
 			move = to.normalized()
 		else:
 			face_direction(to, delta, 30.0)
@@ -440,7 +445,7 @@ func _cursor_dir() -> Vector3:
 func _try_auto_attack(moving: bool) -> bool:
 	if autoplay or moving or not Settings.auto_attack():
 		return false
-	var m := _monster_in_reach(ATTACK_RANGE, false)
+	var m := _monster_in_reach(attack_reach(), false)
 	if m == null:
 		return false
 	_start_attack(m.global_position)
@@ -465,10 +470,17 @@ func _try_auto_skill() -> bool:
 	return false
 
 
+## Portée de l'attaque de base : corps à corps, ou tir pour l'archer et le mage.
+func attack_reach() -> float:
+	return float(cls.get("attack_range", ATTACK_RANGE)) * (reach_mult if cls.has("attack_range") else 1.0)
+
+
 ## Portée d'une compétence pour le lancement automatique (zone + élan).
 func skill_reach(s: Dictionary) -> float:
-	if s.get("kind", "") == "buff":
+	if s.get("kind", "") in ["buff", "heal"]:
 		return 6.0
+	if s.get("kind", "") in ["bolt", "ground", "blink"]:
+		return float(s.get("range", 10.0)) * reach_mult
 	return maxf(skill_radius(s), ATTACK_RANGE) + float(s.get("dash", 0.0)) * reach_mult * 0.8
 
 
@@ -548,12 +560,33 @@ func _start_attack(aim: Vector3) -> void:
 		"arc": float(step.get("arc", 150.0)), "hit_fx": String(step.get("hit_fx", "s00141")),
 		"applies": step.get("applies", {}), "dash": float(step.get("dash", 0.0)), "finisher": finisher,
 	}
+	for k in ["max_targets", "pull", "heal", "crit_bonus", "land_hit", "leap_forward", "self_status", "move", "drop", "spread", "volley"]:
+		if step.has(k):
+			action[k] = step[k]
+	_break_stealth()
+	match String(step.get("kind", "")):
+		"ground":
+			# zone au sol à l'endroit visé (pluie de flèches, marteau, zones du mage)
+			var to_aim := aim - global_position
+			to_aim.y = 0.0
+			action["kind"] = "ground"
+			action["target"] = global_position + to_aim.limit_length(float(step.get("range", attack_reach())) * reach_mult)
+		"heal":
+			action["kind"] = "heal"
+	if step.has("move"):
+		action["move_dir"] = _evade_dir() if step.get("move_dir", "forward") == "evade" else forward()
+	if step.get("bolt", false):
+		action["kind"] = "bolt"
+		action["range"] = attack_reach()
+		action["projectile"] = String(step.get("projectile", "arrow"))
+		action["pierce"] = int(step.get("pierce", 0)) + (1 if finisher else 0)
+		action["volley"] = int(step.get("volley", 1))
 	if finisher and finisher_hits > 1:
 		action["hits"] = finisher_hits
 		action["arc"] = 360.0
 	_begin_action("attack", String(step.anim), atk_speed * 1.25 * float(step.get("speed", 1.0)), action)
-	if finisher and is_on_floor():
-		velocity.y = float(step.get("leap", 0.0))  # saut automatique du coup final
+	if is_on_floor() and float(step.get("leap", 0.0)) > 0.0:
+		velocity.y = float(step.get("leap", 0.0))  # saut automatique (salto du samouraï)
 	_combo_expire = _time + _state_len + combo_window
 
 
@@ -567,6 +600,8 @@ func _begin_action(state: String, anim_name: String, speed: float, action: Dicti
 	_hits = []
 	var key_hits: Array = keys.get("hit", [])
 	var n_hits := int(action.get("hits", maxi(key_hits.size(), 1)))
+	if action.get("land_hit", false):
+		key_hits = []
 	if key_hits.size() >= n_hits:
 		for t in key_hits.slice(key_hits.size() - n_hits):
 			_hits.append(float(t) / speed)
@@ -587,7 +622,14 @@ func _begin_action(state: String, anim_name: String, speed: float, action: Dicti
 func _update_action(input_dir: Vector3, delta: float) -> void:
 	var dash: float = _action.get("dash", 0.0)
 	var push := Vector3.ZERO
-	if dash > 0.0 and not _hits.is_empty():
+	var land_hit: bool = _action.get("land_hit", false)
+	if land_hit and not _action.get("hit_done", false):
+		# salto : élan vers l'avant, impact (et étourdissement) à la retombée
+		_hits.clear()
+		push = forward() * float(_action.get("leap_forward", 0.0))
+		if _state_time > 0.15 and is_on_floor():
+			_resolve_hit()
+	elif dash > 0.0 and not _hits.is_empty():
 		push = forward() * (dash / maxf(_hits[0], 0.1))
 	elif _state == "attack" and _state_time < _state_len * 0.35:
 		push = forward() * 1.2
@@ -622,7 +664,7 @@ func _update_action(input_dir: Vector3, delta: float) -> void:
 		_start_jump()
 		return
 	var end := _state_len * (0.75 if _state == "attack" else 0.92)
-	if _state_time >= end and _hits.is_empty():
+	if _state_time >= end and _hits.is_empty() and (not land_hit or _action.get("hit_done", false) or _state_time > 2.0):
 		_trail_on = false
 		if is_on_floor():
 			_state = "idle"
@@ -641,7 +683,32 @@ func _resolve_hit() -> void:
 		Vfx.ring(self, global_position, float(_action.radius), Color(1.0, 0.85, 0.4, 0.9))
 		EdenFx.play(self, "s00541", global_position, rotation.y, GameData.HERO_SCALE * 1.3)
 		_shake(0.5)
-	var hit := _resolve_area(_action, global_position, forward(), is_skill)
+	var hit: Combatant = null
+	if float(_action.get("move", 0.0)) > 0.0:
+		_quick_move(_action.get("move_dir", forward()), float(_action.move) * reach_mult)
+	if _action.has("self_status"):
+		for st in _action.self_status:
+			add_status(st, float(_action.self_status[st]), self)
+	if _action.has("drop"):
+		_sky_drop(_action.get("target", global_position), float(_action.radius), String(_action.drop))
+	match String(_action.get("kind", "")):
+		"bolt":
+			_fire_bolts(_action, is_skill)
+			return
+		"heal":
+			_heal_action(_action)
+			hit = _resolve_area(_action, global_position, forward(), is_skill) if float(_action.get("radius", 0.0)) > 0.0 else null
+		"move":
+			hit = _resolve_area(_action, global_position, forward(), is_skill) if float(_action.get("radius", 0.0)) > 0.0 else null
+		"ground":
+			var a := _action.duplicate()
+			a["arc"] = 360.0
+			var at: Vector3 = _action.get("target", global_position)
+			Vfx.ring(self, at, float(_action.radius), Color(1.0, 0.6, 0.3, 0.9))
+			EdenFx.play(self, String(_action.get("hit_fx", "")), at, rotation.y, GameData.HERO_SCALE * 1.2)
+			hit = _resolve_area(a, at, forward(), is_skill)
+		_:
+			hit = _resolve_area(_action, global_position, forward(), is_skill)
 	if is_skill and not _action.get("echo", false) and _action.get("kind", "") != "buff":
 		_last_skill = {"action": _action.duplicate(true), "pos": global_position, "fwd": forward()}
 		if hit:
@@ -662,6 +729,7 @@ func _resolve_area(action: Dictionary, origin: Vector3, fwd: Vector3, is_skill: 
 		if action.get("echo", false):
 			col = Color(0.75, 0.5, 1.0, 0.9)
 		Vfx.slash(self, origin, fwd, radius, arc, col)
+	var targets: Array = []
 	for node in get_tree().get_nodes_in_group("monsters"):
 		var m := node as Monster
 		if m == null or m.is_dead:
@@ -673,14 +741,142 @@ func _resolve_area(action: Dictionary, origin: Vector3, fwd: Vector3, is_skill: 
 			continue
 		if arc < 360.0 and dist > 0.6 and rad_to_deg(fwd.angle_to(to.normalized())) > arc * 0.5:
 			continue
+		targets.append([dist, m, to.normalized()])
+	var max_t := int(action.get("max_targets", 0))
+	if max_t > 0 and targets.size() > max_t:
+		targets.sort_custom(func(a, b): return a[0] < b[0])
+		targets = targets.slice(0, max_t)
+	for t in targets:
 		if first == null:
-			first = m
-		_hit_monster(m, to.normalized(), action, is_skill)
+			first = t[1]
+		_hit_monster(t[1], t[2], action, is_skill)
 		hits += 1
 	if hits > 0:
 		_last_combat = _time
 		_hit_pause(0.04 if hits < 4 else 0.06)
 	return first
+
+
+# --- tirs, soins, téléportation (archer, mage, clerc, voleur) ----------------------
+## Tire la volée de l'action en cours (attaque de base ou compétence).
+func _fire_bolts(action: Dictionary, is_skill: bool) -> void:
+	var n := maxi(1, int(action.get("volley", 1)))
+	var spread := deg_to_rad(float(action.get("spread", 0.0)) if n > 1 else 0.0)
+	var fwd := forward()
+	var a := action.duplicate()
+	a["is_skill"] = is_skill
+	for i in n:
+		var off := (float(i) / float(n - 1) - 0.5) * spread if n > 1 else 0.0
+		HeroBolt.fire(self, global_position + Vector3.UP * 1.1 + fwd * 0.6, fwd.rotated(Vector3.UP, off), a)
+	_last_combat = _time
+
+
+## Déplacement instantané d'un coup (fond en avant, repli du mage, sortie de fumigène).
+func _quick_move(dir: Vector3, dist: float) -> void:
+	_afterimage()
+	var mask := collision_mask
+	collision_mask = GameData.PHYS_WORLD
+	move_and_collide(Vector3(dir.x, 0.0, dir.z).normalized() * dist)
+	collision_mask = mask
+
+
+## Direction de repli : la direction de déplacement, sinon à l'opposé du monstre le plus proche.
+func _evade_dir() -> Vector3:
+	var input := _read_move_input()
+	if input.length() > 0.1:
+		return input.normalized()
+	var n := nearest_monster(15.0)
+	if n:
+		var away := global_position - n.global_position
+		away.y = 0.0
+		if away.length() > 0.1:
+			return away.normalized()
+	return -forward()
+
+
+## Projectiles tombant du ciel sur une zone (pluie de flèches, marteau sacré).
+func _sky_drop(at: Vector3, radius: float, kind: String) -> void:
+	var n := 9 if kind == "rain" else 1
+	for i in n:
+		var mi := MeshInstance3D.new()
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.emission_enabled = true
+		if kind == "rain":
+			var bx := BoxMesh.new()
+			bx.size = Vector3(0.07, 1.2, 0.07)
+			mi.mesh = bx
+			mat.albedo_color = Color(1.0, 0.92, 0.7)
+			mat.emission = Color(1.0, 0.85, 0.5)
+		else:
+			var hm := CylinderMesh.new()
+			hm.top_radius = radius * 0.35
+			hm.bottom_radius = radius * 0.35
+			hm.height = radius * 0.5
+			mi.mesh = hm
+			mat.albedo_color = Color(1.0, 0.95, 0.65)
+			mat.emission = Color(1.0, 0.9, 0.5)
+			mat.emission_energy_multiplier = 2.0
+		mi.material_override = mat
+		get_tree().current_scene.add_child(mi)
+		var off := Vector3(randf_range(-1, 1), 0, randf_range(-1, 1)).limit_length(1.0) * radius * (0.85 if n > 1 else 0.0)
+		var ground := at + off
+		mi.global_position = ground + Vector3.UP * 9.0
+		var tw := mi.create_tween()
+		tw.tween_interval(0.03 * i)
+		tw.tween_property(mi, "global_position", ground, 0.16).set_ease(Tween.EASE_IN)
+		tw.tween_callback(mi.queue_free)
+	if kind == "hammer":
+		_shake(0.6)
+
+
+## Invisibilité : les monstres perdent le héros de vue ; frapper la rompt.
+func _break_stealth() -> void:
+	if statuses.has("invisible"):
+		statuses.erase("invisible")
+		statuses_changed.emit()
+
+
+func _update_stealth_visual() -> void:
+	if model == null:
+		return
+	var t := 0.5 if has_status("invisible") else 0.0
+	for n in model.find_children("*", "GeometryInstance3D", true, false):
+		(n as GeometryInstance3D).transparency = t
+
+
+## Impact d'un projectile du héros.
+func bolt_hit(m: Monster, dir: Vector3, action: Dictionary) -> void:
+	var is_skill: bool = action.get("is_skill", false)
+	_hit_monster(m, dir, action, is_skill)
+	_last_combat = _time
+	if is_skill and not action.get("proc_done", false):
+		action["proc_done"] = true
+		Procs.fire(self, "skill_hit", m, m.global_position)
+
+
+func _heal_action(action: Dictionary) -> void:
+	var amount := max_hp * float(action.get("heal", 0.0))
+	if amount <= 0.0:
+		return
+	heal(amount)
+	DamageNumber.spawn_text(self, "+%d" % roundi(amount), Color(0.5, 1.0, 0.55))
+	Vfx.ring(self, global_position, 2.4, Color(0.5, 1.0, 0.6, 0.9))
+
+
+## Téléportation vers [param aim] (au plus [param dist] m), sans traverser les murs.
+func _blink(aim: Vector3, dist: float) -> void:
+	var to := aim - global_position
+	to.y = 0.0
+	if to.length() < 0.5:
+		to = forward() * dist
+	var motion := to.limit_length(dist)
+	_afterimage()
+	var mask := collision_mask
+	collision_mask = GameData.PHYS_WORLD
+	move_and_collide(motion)
+	collision_mask = mask
+	Vfx.ring(self, global_position, 2.0, Color(0.7, 0.6, 1.0, 0.9))
 
 
 ## Écho : la dernière compétence frappe une seconde fois, au même endroit.
@@ -728,7 +924,7 @@ func _hit_monster(m: Monster, dir: Vector3, action: Dictionary, is_skill: bool) 
 	var combo_ok: bool = not combo.is_empty() and m.has_status(String(combo.get("requires", "")))
 	if combo_ok and combo.get("double", false):
 		mult *= 2.0
-	var is_crit := randf() < crit
+	var is_crit := randf() < crit + float(action.get("crit_bonus", 0.0))
 	var dmg := atk * mult * randf_range(0.92, 1.08) * damage_dealt_mult() * (1.0 + crit_dmg if is_crit else 1.0) * flow_mult() * dmg_mult
 	if m.is_elite or m.is_boss:
 		dmg *= elite_mult
@@ -748,7 +944,12 @@ func _hit_monster(m: Monster, dir: Vector3, action: Dictionary, is_skill: bool) 
 	if lifesteal > 0.0:
 		heal(dmg * lifesteal)
 	Vfx.spark(self, m.global_position + Vector3.UP * 1.0, Color(1.0, 0.85, 0.5), is_crit)
-	m.knockback(dir * (2.5 if is_skill else (3.0 if action.get("finisher", false) else 1.0)))
+	var pull := float(action.get("pull", 0.0))
+	if pull > 0.0:
+		# attraction vers le héros (grappin) ou le centre de la zone (vortex)
+		m.knockback(-dir * sqrt(28.0 * pull))
+	else:
+		m.knockback(dir * (2.5 if is_skill else (3.0 if action.get("finisher", false) else 1.0)))
 	for s in action.get("applies", {}):
 		m.add_status(s, float(action.applies[s]), self)
 	if combo_ok:
@@ -798,6 +999,7 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 	if s.is_empty() or cooldown_left(slot) > 0.0:
 		return
 	skill_ready_at[int(s.id)] = _time + skill_cooldown(s)
+	_break_stealth()
 	var aim := forced_aim if forced_aim != Vector3.INF else _skill_aim()
 	if aim == Vector3.INF:
 		aim = global_position + forward()
@@ -807,7 +1009,19 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 		"radius": skill_radius(s), "arc": float(s.arc), "hits": int(s.get("hits", 1)),
 		"dash": float(s.get("dash", 0.0)) * reach_mult, "applies": s.get("applies", {}), "combo": s.get("combo", {}),
 		"skill_id": int(s.id), "aerial": not is_on_floor(),
+		"range": float(s.get("range", 0.0)) * reach_mult, "pierce": int(s.get("pierce", 0)),
+		"projectile": String(s.get("projectile", "magic")), "volley": int(s.get("volley", 1)),
+		"spread": float(s.get("spread", 0.0)), "heal": float(s.get("heal", 0.0)),
+		"crit_bonus": float(s.get("crit_bonus", 0.0)),
 	}
+	if s.kind == "ground":
+		# zone au sol à l'endroit visé, dans la limite de la portée
+		var to_aim := aim - global_position
+		to_aim.y = 0.0
+		action["target"] = global_position + to_aim.limit_length(float(action.range))
+		Vfx.ring(self, action.target, float(action.radius), Color(0.6, 0.85, 1.0, 0.6))
+	elif s.kind == "blink":
+		_blink(aim, float(action.range))
 	if action.aerial:
 		action.mult *= 1.0 + AIR_SKILL_BONUS
 		_carry = Vector3.ZERO
@@ -1105,6 +1319,9 @@ func is_invulnerable() -> bool:
 
 func take_damage(amount: float, source: Combatant = null, is_crit := false, dot := false) -> void:
 	if is_invulnerable():
+		return
+	if not dot and has_status("evasion") and randf() < EVASION_CHANCE:
+		DamageNumber.spawn_text(self, "ESQUIVE !", Color(0.7, 1.0, 0.7))
 		return
 	_last_combat = _time
 	super.take_damage(amount, source, is_crit, dot)

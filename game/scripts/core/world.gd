@@ -58,7 +58,7 @@ func _open_for_test() -> void:
 		Profile.add_gold(800)
 		village_ui.open(_debug_open, "Test")
 		if _debug_open == "merchant":
-			get_tree().create_timer(1.5, true, false, true).timeout.connect(func(): village_ui._select_max_rarity(1))
+			get_tree().create_timer(1.5, true, false, true).timeout.connect(func(): village_ui._on_entry_pressed(village_ui._shown[0], 0))
 
 
 func _ready() -> void:
@@ -107,6 +107,11 @@ func _ready() -> void:
 		get_tree().create_timer(t, true).timeout.connect(_save_screenshot.bind("shot_%02d.png" % int(t)))
 	if _quit_at > 0.0:
 		get_tree().create_timer(_quit_at, true).timeout.connect(get_tree().quit)
+	var zone_bonus := int(GameData.zone(Run.zone_id).get("level_bonus", 0))
+	if zone_bonus > 0 and player.level < 1 + zone_bonus:
+		player.level = 1 + zone_bonus
+		player.recalc_stats()
+		player.hp = player.max_hp
 	director.start(player)
 	if _debug_dungeon:
 		director.debug_enter_dungeon()
@@ -281,6 +286,7 @@ func _build_environment() -> void:
 	env.fog_light_color = Color(0.85, 0.89, 0.91)
 	env.fog_density = 0.0018
 	env.fog_sky_affect = 0.15
+	_apply_biome_env()
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
@@ -293,6 +299,7 @@ func _build_environment() -> void:
 	sun.shadow_opacity = 0.65
 	sun.directional_shadow_max_distance = 80.0
 	add_child(sun)
+	sun.light_color = _base_sun
 
 
 var map: Node3D
@@ -309,6 +316,7 @@ func _swap_map(m: Node3D) -> void:
 ## Génère la map d'une run (graine [param seed_value]).
 func new_run_map(seed_value: int) -> ProcMap:
 	var m := ProcMap.new()
+	m.biome = String(GameData.zone(Run.zone_id).get("biome", "limestone"))
 	m.name = "RunMap"
 	_swap_map(m)
 	m.generate_run(seed_value)
@@ -318,6 +326,7 @@ func new_run_map(seed_value: int) -> ProcMap:
 ## Génère l'arène du boss.
 func new_arena_map(seed_value: int) -> ProcMap:
 	var m := ProcMap.new()
+	m.biome = String(GameData.zone(Run.zone_id).get("biome", "limestone"))
 	m.name = "Arena"
 	_swap_map(m)
 	m.generate_arena(seed_value)
@@ -328,17 +337,45 @@ func _on_npc_opened(kind: String, npc: Interactable) -> void:
 	village_ui.open(kind, npc.title)
 
 
+var _base_fog := Color(0.85, 0.89, 0.91)
+var _base_fog_density := 0.0018
+var _base_sun := Color(1.0, 0.96, 0.88)
+
+
+## Ambiance du biome de la zone (ciel, brouillard, lumière) : data/biomes.json -> env.
+func _apply_biome_env() -> void:
+	var b: Dictionary = GameData.biomes.get(String(GameData.zone(Run.zone_id).get("biome", "")), {})
+	var e: Dictionary = b.get("env", {})
+	if e.is_empty():
+		return
+	var c := func(k: String) -> Color:
+		var a: Array = e[k]
+		return Color(a[0], a[1], a[2])
+	var sky_mat := env.sky.sky_material as ProceduralSkyMaterial
+	sky_mat.sky_top_color = c.call("sky_top")
+	sky_mat.sky_horizon_color = c.call("horizon")
+	sky_mat.ground_horizon_color = c.call("horizon").darkened(0.15)
+	_base_fog = c.call("fog")
+	_base_fog_density = float(e.get("fog_density", 0.0018))
+	_base_sun = c.call("sun")
+	env.fog_light_color = _base_fog
+	env.fog_density = _base_fog_density
+	env.ambient_light_color = c.call("ambient")
+	if sun:
+		sun.light_color = _base_sun
+
+
 ## Après 10 minutes : ciel et brouillard rougeâtres.
 func set_rage_mood(on: bool) -> void:
-	env.fog_light_color = Color(0.75, 0.35, 0.3) if on else Color(0.85, 0.89, 0.91)
-	env.fog_density = 0.004 if on else 0.0018
-	sun.light_color = Color(1.0, 0.6, 0.45) if on else Color(1.0, 0.96, 0.88)
+	env.fog_light_color = Color(0.75, 0.35, 0.3) if on else _base_fog
+	env.fog_density = 0.004 if on else _base_fog_density
+	sun.light_color = Color(1.0, 0.6, 0.45) if on else _base_sun
 
 
 ## Ambiance plus sombre dans les donjons.
 func set_dungeon_mood(on: bool) -> void:
-	env.fog_light_color = Color(0.35, 0.28, 0.42) if on else Color(0.85, 0.89, 0.91)
-	env.fog_density = 0.01 if on else 0.0018
+	env.fog_light_color = Color(0.35, 0.28, 0.42) if on else _base_fog
+	env.fog_density = 0.01 if on else _base_fog_density
 	env.ambient_light_energy = 0.45 if on else 0.75
 	sun.light_energy = 0.35 if on else 1.25
 	# hors de la grotte : du noir plutôt que le ciel

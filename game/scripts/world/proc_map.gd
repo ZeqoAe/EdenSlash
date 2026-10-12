@@ -22,6 +22,10 @@ var map_id := "run"
 var size := 512.0
 var n := 257  # sommets par côté
 var theme: Dictionary
+var biome := "limestone"
+var _trees: Array = PropCatalog.TREES
+var _rocks: Array = PropCatalog.ROCKS
+var _plants: Array = PropCatalog.PLANTS
 var rng := RandomNumberGenerator.new()
 var heights := PackedFloat32Array()
 var bounds := Rect2()  # x, z
@@ -45,7 +49,7 @@ var _noise2 := FastNoiseLite.new()
 
 # --- génération ----------------------------------------------------------------------
 func generate_run(seed_value: int) -> void:
-	_setup("limestone", 512.0, seed_value)
+	_setup(biome, 512.0, seed_value)
 	_place_pois()
 	_build_heights(true)
 	_build_roads()
@@ -64,7 +68,7 @@ func generate_run(seed_value: int) -> void:
 
 ## Arène du boss : cuvette circulaire fermée par des falaises.
 func generate_arena(seed_value: int) -> void:
-	_setup("mine", 96.0, seed_value)
+	_setup("mine" if biome == "limestone" else biome, 96.0, seed_value)
 	map_id = "arena"
 	start = Vector3(size * 0.5, 0, size * 0.5 + 18.0)
 	_build_heights(false)
@@ -87,7 +91,7 @@ func generate_arena(seed_value: int) -> void:
 		var a := TAU * k / 18.0
 		var p := Vector3(c.x + cos(a) * 30.0, 0, c.y + sin(a) * 30.0)
 		p.y = height_at(p.x, p.z)
-		_add_instance(batch, PropCatalog.pick(PropCatalog.ROCKS.slice(0, 6), rng), p, false)
+		_add_instance(batch, PropCatalog.pick(_rocks.slice(0, 6), rng), p, false)
 	for k in 6:
 		var a := TAU * k / 6.0 + 0.3
 		var t := Vector3(c.x + cos(a) * 22.0, 0, c.y + sin(a) * 22.0)
@@ -100,7 +104,18 @@ func generate_arena(seed_value: int) -> void:
 
 func _setup(theme_name: String, p_size: float, seed_value: int) -> void:
 	add_to_group("map")
-	theme = THEMES[theme_name]
+	if THEMES.has(theme_name):
+		theme = THEMES[theme_name]
+	else:
+		# biome d'Eden (data/biomes.json) : textures du sol, teinte, décors de la map d'origine
+		var b: Dictionary = GameData.biomes.get(theme_name, {})
+		theme = (b.get("textures", {}) as Dictionary).duplicate()
+		var t: Array = b.get("tint", [0.86, 0.86, 0.84])
+		theme["tint"] = Color(t[0], t[1], t[2])
+		for key in ["trees", "rocks", "plants"]:
+			if (b.get(key, []) as Array).is_empty():
+				continue
+			set("_" + key, b[key])
 	size = p_size
 	n = int(size / STEP) + 1
 	rng.seed = seed_value
@@ -490,7 +505,7 @@ func _scatter_props() -> void:
 		if _slope(p.x, p.y) > 0.55:
 			continue
 		placed.append(p)
-		_add_instance(batch, PropCatalog.pick(PropCatalog.TREES, rng), pos)
+		_add_instance(batch, PropCatalog.pick(_trees, rng), pos)
 		if placed.size() > 520:
 			break
 	# rochers
@@ -499,7 +514,7 @@ func _scatter_props() -> void:
 		if not _is_free(p, 4.0) or _near(placed, p, 6.0):
 			continue
 		placed.append(p)
-		_add_instance(batch, PropCatalog.pick(PropCatalog.ROCKS, rng), Vector3(p.x, height_at(p.x, p.y) - 0.4, p.y))
+		_add_instance(batch, PropCatalog.pick(_rocks, rng), Vector3(p.x, height_at(p.x, p.y) - 0.4, p.y))
 	# plantes et fleurs (pas de collision), y compris en bord de chemin
 	for k in 2600:
 		var p := Vector2(rng.randf_range(6, size - 6), rng.randf_range(6, size - 6))
@@ -513,7 +528,7 @@ func _scatter_props() -> void:
 					break
 		if on_road:
 			continue
-		_add_instance(batch, PropCatalog.pick(PropCatalog.PLANTS, rng), Vector3(p.x, height_at(p.x, p.y), p.y), false)
+		_add_instance(batch, PropCatalog.pick(_plants, rng), Vector3(p.x, height_at(p.x, p.y), p.y), false)
 	_flush_batches(batch, holder)
 	_refresh_splat()
 
@@ -616,7 +631,7 @@ func _build_dungeon_entrance() -> void:
 		var a := yaw + PI + rng.randf_range(-1.6, 1.6)
 		var p := dungeon + Vector3(sin(a), 0, cos(a)) * rng.randf_range(9.0, 14.0)
 		p.y = height_at(p.x, p.z) - 0.5
-		_add_instance(batch, PropCatalog.pick(PropCatalog.ROCKS.slice(0, 6), rng), p)
+		_add_instance(batch, PropCatalog.pick(_rocks.slice(0, 6), rng), p)
 	_flush_batches(batch, holder)
 	for side: float in [-1.0, 1.0]:
 		var t := dungeon + to_center * 2.0 + to_center.cross(Vector3.UP) * 4.0 * side

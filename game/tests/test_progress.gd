@@ -52,5 +52,13 @@ func _ready() -> void:
 	check("nouvel objet gardé et porté (emplacement libre)", Profile.vault.size() == 2 and Profile.equipped.has("head"))
 	Profile.load_profile()
 	check("rechargé du disque", Profile.vault.size() == 2 and int(Profile.equipped.weapon.upgrade) == 8 and Profile.runs_done == 2)
+	# zones : la victoire débloque la suivante, la nouvelle partie remet à zéro
+	check("une seule zone au départ", Profile.unlocked_zones >= 1 and Profile.zone_unlocked("limestone"))
+	Profile.unlocked_zones = 1
+	var next := Profile.unlock_after("limestone")
+	check("victoire Limestone -> %s" % next, next != "" and Profile.zone_unlocked(GameData.zones[1].id) and not Profile.zone_unlocked(GameData.zones[2].id))
+	check("rejouer une zone déjà battue ne débloque rien", Profile.unlock_after("limestone") == "")
+	Profile.reset_all()
+	check("nouvelle partie : zones verrouillées", Profile.unlocked_zones == 1 and Profile.selected_zone == "limestone")
 	print("échecs : ", fails)
 	get_tree().quit(fails)

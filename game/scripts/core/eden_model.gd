@@ -77,7 +77,8 @@ static func attach_weapon(model: Node3D, weapon: Dictionary) -> BoneAttachment3D
 	if skel == null:
 		return null
 	var bone := ""
-	for b in ["Bip01 Prop1", "Bip01 R Hand"]:
+	var bones: Array = [weapon.bone] if weapon.has("bone") else []
+	for b in bones + ["Bip01 Prop1", "Bip01 R Hand"]:
 		if skel.find_bone(b) >= 0:
 			bone = b
 			break

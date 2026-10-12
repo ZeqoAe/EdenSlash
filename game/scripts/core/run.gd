@@ -19,6 +19,8 @@ var started_at := 0
 var result := ""  # victoire, defaite, abandon
 var max_level := 1
 var seed := 0  # graine de la map (0 = aléatoire)
+var zone_id := "limestone"
+var unlocked_name := ""  # zone débloquée par la victoire (bilan)
 var rerolls_used := 0  # relances de cartes utilisées (1 par run + cartes « Bonne étoile »)
 
 
@@ -35,6 +37,8 @@ func start(cid: String) -> void:
 	rerolls_used = 0
 	result = ""
 	started_at = Time.get_ticks_msec()
+	zone_id = Profile.selected_zone
+	unlocked_name = ""
 	Profile.begin_run()
 	changed.emit()
 
@@ -47,6 +51,7 @@ func finish(res: String) -> void:
 	Profile.runs_done += 1
 	if res == "victoire":
 		Profile.runs_won += 1
+		unlocked_name = Profile.unlock_after(zone_id)
 	Profile.best_level = maxi(Profile.best_level, max_level)
 	Profile.save_profile()
 

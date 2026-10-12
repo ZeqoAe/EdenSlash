@@ -15,6 +15,10 @@ var _cam_pivot: Node3D
 var _panel_layer: CanvasLayer
 var _gold: Label
 var _reset_button: Button
+var _zone_box: GridContainer
+var _grimoire: Grimoire
+var _open_grimoire := false
+var _run_button: Button
 var _reset_armed_at := -10.0
 var _settings: SettingsMenu
 
@@ -22,13 +26,26 @@ var _settings: SettingsMenu
 func _ready() -> void:
 	var shot := -1.0
 	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--class="):
+			Profile.selected_class = arg.trim_prefix("--class=")
+		elif arg.begins_with("--zone="):
+			Profile.selected_zone = arg.trim_prefix("--zone=")
+		elif arg == "--grimoire":
+			_open_grimoire = true
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg == "--grimoire":
+			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
 		elif arg.begins_with("--"):
 			_start_run()
 			return
 	_build_scene()
+	_grimoire = Grimoire.new()
+	add_child(_grimoire)
 	_build_ui()
+	if _open_grimoire:
+		_grimoire.open(Profile.selected_class)
 	if shot > 0.0:
 		await get_tree().create_timer(shot).timeout
 		DirAccess.make_dir_recursive_absolute("user://shots")
@@ -126,14 +143,13 @@ func _build_ui() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var v := VBoxContainer.new()
-	v.position = Vector2(60, 50)
-	v.add_theme_constant_override("separation", 10)
+	v.position = Vector2(60, 30)
+	v.add_theme_constant_override("separation", 7)
 	root.add_child(v)
-	var title := Hud._label(v, "EDEN SLASH", 64, ACCENT)
+	var title := Hud._label(v, "EDEN SLASH", 52, ACCENT)
 	title.add_theme_constant_override("outline_size", 12)
 	title.add_theme_color_override("font_outline_color", Color(0.1, 0.05, 0.15))
 	Hud._label(v, "Hack and slash dans l'univers d'Eden Eternal", 18, Color(0.95, 0.92, 1.0))
-	Hud._label(v, " ", 10, Color.WHITE)
 	Hud._label(v, "Classe", 22, ACCENT)
 	var classes := GridContainer.new()
 	classes.columns = 3
@@ -146,9 +162,18 @@ func _build_ui() -> void:
 	var lore := Hud._label(v, cls.get("lore", ""), 15, Color(0.9, 0.9, 0.95))
 	lore.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lore.custom_minimum_size = Vector2(560, 0)
-	Hud._label(v, " ", 6, Color.WHITE)
-	_big_button(v, "▶  Lancer la run — Limestone Mtn.", _start_run)
+	Hud._label(v, "Zone", 22, ACCENT)
+	var zones := GridContainer.new()
+	zones.columns = 3
+	zones.add_theme_constant_override("h_separation", 10)
+	zones.add_theme_constant_override("v_separation", 10)
+	v.add_child(zones)
+	_zone_box = zones
+	_refresh_zones()
+	_run_button = _big_button(v, "", _start_run)
+	_refresh_run_button()
 	_big_button(v, "Personnage & équipement", _open_panel)
+	_big_button(v, "Grimoire des classes (sorts, combos, passifs)", func(): _grimoire.open(Profile.selected_class))
 	_big_button(v, "Paramètres (contrôles, touches, affichage…)", func(): _settings.open())
 	_reset_button = _big_button(v, "Nouvelle partie (tout effacer)", _on_reset)
 	_big_button(v, "Quitter", func(): get_tree().quit())
@@ -189,7 +214,7 @@ func _open_panel() -> void:
 func _class_card(id: String, label: String) -> Control:
 	var available := not GameData.class_data(id).is_empty()
 	var b := Button.new()
-	b.custom_minimum_size = Vector2(180, 64)
+	b.custom_minimum_size = Vector2(180, 52)
 	b.text = label if available else "%s\n(bientôt)" % label
 	b.disabled = not available
 	b.add_theme_font_size_override("font_size", 17)
@@ -208,6 +233,42 @@ func _class_card(id: String, label: String) -> Control:
 		Profile.save_profile()
 		_show_hero())
 	return b
+
+
+## Zones : débloquées dans l'ordre en battant le boss de la précédente.
+func _refresh_zones() -> void:
+	for c in _zone_box.get_children():
+		c.queue_free()
+	if not Profile.zone_unlocked(Profile.selected_zone):
+		Profile.selected_zone = "limestone"
+	for i in GameData.zones.size():
+		var z: Dictionary = GameData.zones[i]
+		var open := i < Profile.unlocked_zones
+		var b := Button.new()
+		b.custom_minimum_size = Vector2(180, 50)
+		b.text = "%s\nNiv. %d+" % [z.name, 1 + int(z.get("level_bonus", 0))] if open else "🔒 %s" % z.name
+		b.disabled = not open
+		b.tooltip_text = "" if open else "Bats le boss de %s pour débloquer cette zone." % GameData.zones[i - 1].name
+		b.add_theme_font_size_override("font_size", 15)
+		var sb := Hud.style(Color(0.12, 0.1, 0.2, 0.95))
+		if z.id == Profile.selected_zone:
+			sb.border_color = ACCENT
+			sb.set_border_width_all(3)
+		b.add_theme_stylebox_override("normal", sb)
+		b.add_theme_stylebox_override("disabled", Hud.style(Color(0.08, 0.08, 0.1, 0.8)))
+		b.add_theme_stylebox_override("hover", Hud.style(Color(0.22, 0.18, 0.34)))
+		var zid: String = z.id
+		b.pressed.connect(func():
+			Profile.selected_zone = zid
+			Profile.save_profile()
+			_refresh_zones()
+			_refresh_run_button())
+		_zone_box.add_child(b)
+
+
+func _refresh_run_button() -> void:
+	if _run_button:
+		_run_button.text = "▶  Lancer la run — %s" % GameData.zone(Profile.selected_zone).name
 
 
 func _now() -> float:
@@ -229,7 +290,7 @@ func _on_reset() -> void:
 func _big_button(parent: Control, text: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
-	b.custom_minimum_size = Vector2(560, 54)
+	b.custom_minimum_size = Vector2(560, 44)
 	b.add_theme_font_size_override("font_size", 20)
 	b.add_theme_stylebox_override("normal", Hud.style(Color(0.16, 0.12, 0.26, 0.95)))
 	var hover := Hud.style(Color(0.28, 0.2, 0.42, 1.0))

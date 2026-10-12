@@ -33,8 +33,11 @@ static func sweep(ci: CanvasItem, rect: Rect2, fraction: float, color: Color, ro
 		var p := c + Vector2(cos(a), sin(a)) * r
 		if not round:
 			p = p.clamp(rect.position, rect.end)
-		pts.append(p)
-	ci.draw_colored_polygon(pts, color)
+		# points confondus (coins du carré) : un polygone dégénéré ne se triangule pas
+		if pts[pts.size() - 1].distance_to(p) > 0.5:
+			pts.append(p)
+	if pts.size() >= 3:
+		ci.draw_colored_polygon(pts, color)
 
 
 # --- orbe (vie, expérience) -----------------------------------------------------------------
@@ -103,6 +106,11 @@ class Orb extends Control:
 		var level_y := c.y + r - 2.0 * r * minf(v, 0.999)
 		var dy := level_y - c.y
 		var w := sqrt(maxf(r * r - dy * dy, 0.0))
+		if w < maxf(4.0, r * 0.3):
+			# liquide presque vide (rien à dessiner) ou plein (disque entier)
+			if v > 0.5:
+				draw_circle(c, r, top.lerp(bottom, 0.5))
+			return
 		var pts := PackedVector2Array()
 		for i in 25:
 			var x := c.x - w + 2.0 * w * i / 24.0

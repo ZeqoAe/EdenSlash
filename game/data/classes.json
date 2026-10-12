@@ -83,12 +83,45 @@
    "jump": "jump01",
    "dodge": "jump02"
   },
+  "combo": [
+   {
+    "name": "Taille ascendante",
+    "anim": "attack25",
+    "mult": 1.0,
+    "arc": 150,
+    "hit_fx": "s00141"
+   },
+   {
+    "name": "Taille descendante",
+    "anim": "attack26",
+    "mult": 1.15,
+    "arc": 150,
+    "hit_fx": "s00241"
+   },
+   {
+    "name": "Salto du faucon",
+    "anim": "shoot24",
+    "mult": 2.2,
+    "arc": 360,
+    "radius": 3.4,
+    "leap": 8.0,
+    "leap_forward": 6.0,
+    "land_hit": true,
+    "finisher": true,
+    "applies": {
+     "stun": 1.0
+    },
+    "hit_fx": "s00541",
+    "desc": "Salto avant ; l'impact à la retombée frappe tout autour."
+   }
+  ],
   "start_skills": 3,
   "lore_fr": "Un samouraï ne se fie qu'à son katana. Après des années d'entraînement, même la lame la plus lourde lui paraît légère comme une plume.",
+  "weapon_name": "Katana",
   "name": "Samurai",
   "name_fr": "Samouraï",
   "lore": "Un samouraï ne se fie qu'à son katana. Après des années d'entraînement, même la lame la plus lourde lui paraît légère comme une plume.",
-  "icon": "",
+  "icon": "res://assets/ui/classes/j039.png",
   "model": "res://assets/player/samurai/samurai.glb",
   "skills": [
    {
@@ -103,9 +136,11 @@
      "bleed": 8.0
     },
     "desc": "Fond sur l'ennemi (6 m) : 180 % de dégâts et Saignement (8 s, 15 % de l'attaque par seconde).",
-    "name": "Fallen Swallow",
+    "name": "Hirondelle déchue",
     "icon": "res://assets/ui/skills/e0459.png",
     "anim": "shoot24",
+    "dmg_type": "phys",
+    "eden_name": "Fallen Swallow",
     "fx": {
      "cast": "s36021",
      "hit": "s36041"
@@ -123,9 +158,11 @@
      "solar": 8.0
     },
     "desc": "Tourbillon solaire autour de toi : 2 coups de 110 %. Bénédiction solaire : -25 % de dégâts subis (8 s).",
-    "name": "Solar Wind",
+    "name": "Vent solaire",
     "icon": "res://assets/ui/skills/e0460.png",
     "anim": "shoot23",
+    "dmg_type": "phys",
+    "eden_name": "Solar Wind",
     "fx": {
      "cast": "s36421",
      "hit": "s36441"
@@ -145,9 +182,11 @@
      }
     },
     "desc": "Entaille en croix : 200 %. Sur une cible en Saignement : Cicatrice (ses dégâts -30 %, 8 s).",
-    "name": "Crosswise Cut",
+    "name": "Entaille en croix",
     "icon": "res://assets/ui/skills/e0461.png",
     "anim": "shoot23",
+    "dmg_type": "phys",
+    "eden_name": "Crosswise Cut",
     "fx": {
      "cast": "s36121",
      "hit": "s36141"
@@ -164,9 +203,11 @@
      "purgatory": 8.0
     },
     "desc": "Purgatoire en éventail (10 m) : 170 % et Purgatoire (dégâts subis +20 %, 8 s).",
-    "name": "Purgatory",
+    "name": "Purgatoire",
     "icon": "res://assets/ui/skills/e0462.png",
     "anim": "shoot25",
+    "dmg_type": "phys",
+    "eden_name": "Purgatory",
     "fx": {
      "cast": "s123421",
      "hit": ""
@@ -187,9 +228,11 @@
      }
     },
     "desc": "Danse des grues : 3 coups de 90 %. Sur Saignement : Mille grues (dégâts subis +15 %, 8 s).",
-    "name": "Dance of Cranes",
+    "name": "Danse des grues",
     "icon": "res://assets/ui/skills/e0463.png",
     "anim": "shoot25",
+    "dmg_type": "phys",
+    "eden_name": "Dance of Cranes",
     "fx": {
      "cast": "s36621",
      "hit": "s36241"
@@ -209,9 +252,12 @@
      }
     },
     "desc": "Frappe éclair : 280 %. Sur Cicatrice : Langue de Marduk (+30 % d'attaque et de vitesse, 8 s).",
-    "name": "Marduk's Tongue",
+    "name": "Langue de Marduk",
     "icon": "res://assets/ui/skills/e0464.png",
     "anim": "shoot24",
+    "dmg_type": "phys",
+    "eden_name": "Marduk's Tongue",
+    "crit_bonus": 0.15,
     "fx": {
      "cast": "s36521",
      "hit": "s36541"
@@ -229,9 +275,11 @@
      "double": true
     },
     "desc": "Lame d'Asura en éventail (10 m) : 220 %, doublé sur les cibles en Purgatoire.",
-    "name": "Asura Slash",
+    "name": "Lame d'Asura",
     "icon": "res://assets/ui/skills/e0465.png",
     "anim": "shoot24",
+    "dmg_type": "phys",
+    "eden_name": "Asura Slash",
     "fx": {
      "cast": "s123321",
      "hit": ""
@@ -251,9 +299,12 @@
      }
     },
     "desc": "Estoc en ligne (8 m) : 230 %. Sur Mille grues : renverse la cible (2 s).",
-    "name": "Protrusion",
+    "name": "Estoc",
     "icon": "res://assets/ui/skills/e0466.png",
     "anim": "shoot23",
+    "dmg_type": "phys",
+    "eden_name": "Protrusion",
+    "crit_bonus": 0.1,
     "fx": {
      "cast": "s36821",
      "hit": "s36841"
@@ -270,9 +321,11 @@
      "shrine": 10.0
     },
     "desc": "Volonté du sanctuaire : +30 % de vitesse et -30 % de dégâts subis (10 s). Sous Bénédiction solaire : immunité au renversement.",
-    "name": "Shrine Belief",
+    "name": "Volonté du sanctuaire",
     "icon": "res://assets/ui/skills/e0467.png",
     "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Shrine Belief",
     "fx": {
      "cast": "s36721",
      "hit": ""
@@ -391,33 +444,2246 @@
     "max": 2,
     "desc": "+1 esquive en l'air avant de retoucher le sol."
    }
+  ]
+ },
+ "warrior": {
+  "class_id": 1,
+  "body": "m",
+  "appearance": {
+   "outfit": "#L210",
+   "skin": "SL210",
+   "hair": "#L103",
+   "face": "#LFACE",
+   "dye": {
+    "outfit": [
+     [
+      120,
+      125,
+      135
+     ],
+     [
+      170,
+      40,
+      35
+     ],
+     [
+      60,
+      55,
+      50
+     ]
+    ],
+    "hair": [
+     [
+      120,
+      60,
+      30
+     ],
+     [
+      90,
+      45,
+      25
+     ],
+     [
+      50,
+      30,
+      20
+     ]
+    ]
+   }
+  },
+  "weapons": [
+   {
+    "code": "W20101",
+    "model": "res://assets/weapons/w201.glb",
+    "texture": "res://assets/weapons/textures/w20101.png",
+    "icon": "res://assets/weapons/icons/w20101.png"
+   },
+   {
+    "code": "W20201",
+    "model": "res://assets/weapons/w202.glb",
+    "texture": "res://assets/weapons/textures/w20201.png",
+    "icon": "res://assets/weapons/icons/w20201.png"
+   },
+   {
+    "code": "W20301",
+    "model": "res://assets/weapons/w203.glb",
+    "texture": "res://assets/weapons/textures/w20301.png",
+    "icon": "res://assets/weapons/icons/w20301.png"
+   },
+   {
+    "code": "W20401",
+    "model": "res://assets/weapons/w204.glb",
+    "texture": "res://assets/weapons/textures/w20401.png",
+    "icon": "res://assets/weapons/icons/w20401.png"
+   }
   ],
+  "anims": {
+   "idle": "stand01",
+   "battle": "battle03",
+   "run": "move02",
+   "attacks": [
+    "attack08",
+    "attack09"
+   ],
+   "hurt": "hurt13",
+   "death": "death01",
+   "jump": "jump01",
+   "dodge": "jump02"
+  },
   "combo": [
    {
-    "anim": "attack25",
+    "name": "Coup de hache",
+    "anim": "attack08",
+    "mult": 1.3,
+    "arc": 140,
+    "radius": 3.2,
+    "max_targets": 3,
+    "hit_fx": "s00241",
+    "desc": "Large coup de hache qui touche les 3 ennemis les plus proches."
+   },
+   {
+    "name": "Crochet",
+    "anim": "attack09",
     "mult": 1.0,
-    "arc": 150,
-    "hit_fx": "s00141"
+    "arc": 120,
+    "radius": 4.5,
+    "pull": 3.0,
+    "applies": {
+     "stun": 1.0
+    },
+    "hit_fx": "s00241",
+    "desc": "La lame accroche les ennemis et les attire vers toi."
    },
    {
-    "anim": "attack26",
-    "mult": 1.15,
-    "arc": 150,
-    "hit_fx": "s00241"
-   },
-   {
-    "anim": "shoot24",
-    "mult": 2.2,
+    "name": "Tournoi de la hache",
+    "anim": "shoot25",
+    "mult": 1.8,
     "arc": 360,
+    "radius": 4.2,
+    "finisher": true,
+    "hit_fx": "s00541",
+    "desc": "Tour complet sur toi-même, hache tendue."
+   }
+  ],
+  "start_skills": 3,
+  "lore_fr": "Le guerrier encaisse en première ligne : sa hache lourde renverse et brise les rangs ennemis.",
+  "weapon_name": "Hache",
+  "base": {
+   "hp": 1.25,
+   "def": 6.0,
+   "atk": 1.0
+  },
+  "name": "Warrior",
+  "name_fr": "Guerrier",
+  "lore": "Le guerrier encaisse en première ligne : sa hache lourde renverse et brise les rangs ennemis.",
+  "icon": "res://assets/ui/classes/j009.png",
+  "model": "res://assets/player/warrior/warrior.glb",
+  "skills": [
+   {
+    "id": 50011,
+    "kind": "cone",
+    "mult": 2.0,
+    "radius": 3.6,
+    "arc": 120,
+    "cooldown": 5.0,
+    "applies": {
+     "stun": 0.8
+    },
+    "desc": "Impact profond : 200 % en cône et renverse (0,8 s).",
+    "name": "Impact profond",
+    "icon": "res://assets/ui/skills/e0001.png",
+    "anim": "shoot24",
+    "dmg_type": "phys",
+    "eden_name": "Deep Impact",
+    "fx": {
+     "cast": "s10121",
+     "hit": "s10141"
+    }
+   },
+   {
+    "id": 50012,
+    "kind": "cone",
+    "mult": 2.8,
     "radius": 3.4,
-    "leap": 7.5,
-    "dash": 2.0,
-    "speed": 1.15,
+    "arc": 80,
+    "cooldown": 8.0,
+    "applies": {
+     "scar": 6.0
+    },
+    "desc": "Coup destructeur : 280 %. Cicatrice : dégâts de la cible -30 % (6 s).",
+    "name": "Coup destructeur",
+    "icon": "res://assets/ui/skills/e0002.png",
+    "anim": "shoot25",
+    "dmg_type": "phys",
+    "eden_name": "Destroyer",
+    "crit_bonus": 0.1,
+    "fx": {
+     "cast": "s10221",
+     "hit": "s10241"
+    }
+   },
+   {
+    "id": 50015,
+    "kind": "spin",
+    "mult": 0.85,
+    "hits": 3,
+    "radius": 4.2,
+    "arc": 360,
+    "cooldown": 7.0,
+    "desc": "Cyclone de combat : 3 coups de 85 % tout autour.",
+    "name": "Cyclone de combat",
+    "icon": "res://assets/ui/skills/e0005.png",
+    "anim": "shoot54",
+    "dmg_type": "phys",
+    "eden_name": "Combat Cyclone",
+    "fx": {
+     "cast": "s10521",
+     "hit": "s10541"
+    }
+   },
+   {
+    "id": 50036,
+    "kind": "cone",
+    "mult": 1.8,
+    "radius": 3.6,
+    "arc": 140,
+    "cooldown": 6.0,
+    "applies": {
+     "bleed": 8.0
+    },
+    "desc": "Attaque sanglante : 180 % et Saignement (8 s).",
+    "name": "Attaque sanglante",
+    "icon": "res://assets/ui/skills/e0026.png",
+    "anim": "shoot25",
+    "dmg_type": "phys",
+    "eden_name": "Bloody Attack",
+    "fx": {
+     "cast": "s12621",
+     "hit": "s12641"
+    }
+   },
+   {
+    "id": 50037,
+    "kind": "dash",
+    "mult": 2.0,
+    "radius": 2.8,
+    "arc": 120,
+    "dash": 5.0,
+    "cooldown": 9.0,
+    "applies": {
+     "stun": 1.2
+    },
+    "desc": "Poing de colère : fonce (5 m), 200 % et renverse (1,2 s).",
+    "name": "Poing de colère",
+    "icon": "res://assets/ui/skills/e0027.png",
+    "anim": "shoot24",
+    "dmg_type": "phys",
+    "eden_name": "Angry Punch",
+    "fx": {
+     "cast": "s12721",
+     "hit": "s12741"
+    }
+   },
+   {
+    "id": 50013,
+    "kind": "spin",
+    "mult": 0.5,
+    "radius": 6.5,
+    "arc": 360,
+    "cooldown": 12.0,
+    "applies": {
+     "purgatory": 8.0
+    },
+    "desc": "Provocation : 50 % autour, les ennemis subissent +20 % de dégâts (8 s).",
+    "name": "Provocation",
+    "icon": "res://assets/ui/skills/e0003.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Provoke",
+    "fx": {
+     "cast": "s10321",
+     "hit": "s10341"
+    }
+   },
+   {
+    "id": 50042,
+    "kind": "spin",
+    "mult": 0.3,
+    "radius": 7.0,
+    "arc": 360,
+    "cooldown": 15.0,
+    "applies": {
+     "chill": 5.0,
+     "scar": 5.0
+    },
+    "desc": "Intimidation : ralentit et affaiblit tous les ennemis proches (5 s).",
+    "name": "Intimidation",
+    "icon": "res://assets/ui/skills/e0032.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Intimidation",
+    "fx": {
+     "cast": "s13221",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50014,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 20.0,
+    "buff": {
+     "fury": 8.0
+    },
+    "desc": "Déclaration de colère : Fureur, +25 % de dégâts (8 s).",
+    "name": "Déclaration de colère",
+    "icon": "res://assets/ui/skills/e0004.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Declaration of Anger",
+    "fx": {
+     "cast": "s10441",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50041,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 22.0,
+    "buff": {
+     "barrier": 8.0
+    },
+    "desc": "Rugissement de fer : Barrière, -40 % de dégâts subis (8 s).",
+    "name": "Rugissement de fer",
+    "icon": "res://assets/ui/skills/e0031.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Ironhide Roar",
+    "fx": {
+     "cast": "s13121",
+     "hit": ""
+    }
+   }
+  ],
+  "passives": [
+   {
+    "id": "unshakable",
+    "eden": 50201,
+    "name": "Inébranlable",
+    "stat": {
+     "hp_pct": 0.2
+    },
+    "max": 1,
+    "desc": "+20 % de PV max.",
+    "icon": "res://assets/ui/skills/j504.png"
+   },
+   {
+    "id": "double_cut",
+    "eden": 50202,
+    "name": "Double entaille",
+    "stat": {
+     "atk_pct": 0.12
+    },
+    "max": 2,
+    "desc": "+12 % d'attaque.",
+    "icon": "res://assets/ui/skills/j505.png"
+   },
+   {
+    "id": "vigor",
+    "name": "Corps aguerri",
+    "stat": {
+     "hp_pct": 0.15
+    },
+    "max": 3,
+    "desc": "+15 % de PV max."
+   },
+   {
+    "id": "swift_blade",
+    "name": "Lame du vent",
+    "stat": {
+     "atk_speed": 0.12
+    },
+    "max": 3,
+    "desc": "+12 % de vitesse d'attaque."
+   },
+   {
+    "id": "bloodthirst",
+    "name": "Soif de sang",
+    "stat": {
+     "lifesteal": 0.03
+    },
+    "max": 3,
+    "desc": "3 % des dégâts infligés rendent des PV."
+   },
+   {
+    "id": "light_step",
+    "name": "Pas léger",
+    "stat": {
+     "move_speed": 0.08
+    },
+    "max": 2,
+    "desc": "+8 % de vitesse de déplacement."
+   },
+   {
+    "id": "keen_edge",
+    "name": "Fil tranchant",
+    "stat": {
+     "crit_dmg": 0.3
+    },
+    "max": 3,
+    "desc": "+30 % de dégâts critiques."
+   },
+   {
+    "id": "focus",
+    "name": "Concentration",
+    "stat": {
+     "cdr": 0.08
+    },
+    "max": 3,
+    "desc": "-8 % de temps de recharge des compétences."
+   },
+   {
+    "id": "air_jump",
+    "name": "Saut aérien",
+    "stat": {},
+    "max": 2,
+    "desc": "+1 saut en l'air (double, puis triple saut)."
+   },
+   {
+    "id": "high_jump",
+    "name": "Bond puissant",
+    "stat": {},
+    "max": 2,
+    "desc": "+20 % de hauteur de saut : passe au-dessus de plus d'attaques."
+   },
+   {
+    "id": "dive_strike",
+    "name": "Frappe plongeante",
+    "stat": {},
+    "max": 3,
+    "desc": "Attaquer en l'air plonge au sol : dégâts de zone et étourdissement."
+   },
+   {
+    "id": "featherfall",
+    "name": "Apesanteur",
+    "stat": {},
+    "max": 2,
+    "desc": "Saut flottant : -25 % de gravité, plus de temps en l'air pour viser et esquiver."
+   },
+   {
+    "id": "air_dash",
+    "name": "Pas aérien",
+    "stat": {},
+    "max": 2,
+    "desc": "+1 esquive en l'air avant de retoucher le sol."
+   }
+  ]
+ },
+ "thief": {
+  "class_id": 5,
+  "body": "m",
+  "appearance": {
+   "outfit": "#L237",
+   "skin": "SL237",
+   "hair": "#L102",
+   "face": "#LFACE",
+   "dye": {
+    "outfit": [
+     [
+      45,
+      40,
+      55
+     ],
+     [
+      110,
+      30,
+      60
+     ],
+     [
+      25,
+      25,
+      30
+     ]
+    ],
+    "hair": [
+     [
+      200,
+      200,
+      210
+     ],
+     [
+      150,
+      150,
+      160
+     ],
+     [
+      90,
+      90,
+      100
+     ]
+    ]
+   }
+  },
+  "weapons": [
+   {
+    "code": "W10801",
+    "model": "res://assets/weapons/w108.glb",
+    "texture": "res://assets/weapons/textures/w10801.png",
+    "icon": "res://assets/weapons/icons/w10801.png"
+   },
+   {
+    "code": "W10901",
+    "model": "res://assets/weapons/w109.glb",
+    "texture": "res://assets/weapons/textures/w10901.png",
+    "icon": "res://assets/weapons/icons/w10901.png"
+   },
+   {
+    "code": "W11001",
+    "model": "res://assets/weapons/w110.glb",
+    "texture": "res://assets/weapons/textures/w11001.png",
+    "icon": "res://assets/weapons/icons/w11001.png"
+   },
+   {
+    "code": "W11101",
+    "model": "res://assets/weapons/w111.glb",
+    "texture": "res://assets/weapons/textures/w11101.png",
+    "icon": "res://assets/weapons/icons/w11101.png"
+   }
+  ],
+  "anims": {
+   "idle": "stand01",
+   "battle": "battle02",
+   "run": "move02",
+   "attacks": [
+    "attack05",
+    "attack06"
+   ],
+   "hurt": "hurt13",
+   "death": "death01",
+   "jump": "jump01",
+   "dodge": "jump02"
+  },
+  "combo": [
+   {
+    "name": "Tourbillon de lames",
+    "anim": "attack05",
+    "mult": 0.8,
+    "arc": 360,
+    "radius": 2.8,
+    "speed": 1.2,
+    "hit_fx": "s00141",
+    "desc": "Les dagues tournoient tout autour de toi."
+   },
+   {
+    "name": "Ruée tournoyante",
+    "anim": "attack06",
+    "mult": 1.0,
+    "arc": 360,
+    "radius": 3.0,
+    "dash": 4.0,
+    "speed": 1.2,
+    "hit_fx": "s00241",
+    "desc": "Fonce de 4 m puis tourbillonne."
+   },
+   {
+    "name": "Fumigène",
+    "anim": "shoot23",
+    "mult": 1.4,
+    "arc": 360,
+    "radius": 3.5,
+    "move": 5.0,
     "finisher": true,
     "applies": {
-     "stun": 0.4
+     "chill": 3.0
     },
-    "hit_fx": "s00541"
+    "self_status": {
+     "invisible": 2.0,
+     "evasion": 4.0
+    },
+    "hit_fx": "s00541",
+    "desc": "Bond de 5 m ; une bombe fumigène explose à l'arrivée : tu deviens invisible et insaisissable."
+   }
+  ],
+  "start_skills": 3,
+  "lore_fr": "Le voleur frappe vite et disparaît : dagues empoisonnées, pas de l'ombre et embuscades.",
+  "weapon_name": "Dague",
+  "base": {
+   "hp": 0.9,
+   "crit": 0.1,
+   "atk_speed": 0.15,
+   "move_speed": 0.08
+  },
+  "name": "Thief",
+  "name_fr": "Voleur",
+  "lore": "Le voleur frappe vite et disparaît : dagues empoisonnées, pas de l'ombre et embuscades.",
+  "icon": "res://assets/ui/classes/j015.png",
+  "model": "res://assets/player/thief/thief.glb",
+  "skills": [
+   {
+    "id": 50057,
+    "kind": "dash",
+    "mult": 1.5,
+    "radius": 2.4,
+    "arc": 120,
+    "dash": 7.0,
+    "cooldown": 5.0,
+    "desc": "Attaque éclair : bondit (7 m), 150 %.",
+    "name": "Attaque éclair",
+    "icon": "res://assets/ui/skills/e0047.png",
+    "anim": "shoot23",
+    "dmg_type": "phys",
+    "eden_name": "Swift Attack",
+    "crit_bonus": 0.15,
+    "fx": {
+     "cast": "s14621",
+     "hit": "s14641"
+    }
+   },
+   {
+    "id": 50016,
+    "kind": "cone",
+    "mult": 1.6,
+    "radius": 3.0,
+    "arc": 120,
+    "cooldown": 5.0,
+    "applies": {
+     "stun": 0.6
+    },
+    "desc": "Coup sec : 160 % et renverse (0,6 s).",
+    "name": "Coup sec",
+    "icon": "res://assets/ui/skills/e0006.png",
+    "anim": "shoot24",
+    "dmg_type": "phys",
+    "eden_name": "Slam",
+    "fx": {
+     "cast": "s10621",
+     "hit": "s10641"
+    }
+   },
+   {
+    "id": 50017,
+    "kind": "flurry",
+    "mult": 0.7,
+    "hits": 3,
+    "radius": 3.0,
+    "arc": 150,
+    "cooldown": 6.0,
+    "applies": {
+     "bleed": 6.0
+    },
+    "desc": "Coups résonnants : 3 × 70 % et Saignement (6 s).",
+    "name": "Coups résonnants",
+    "icon": "res://assets/ui/skills/e0007.png",
+    "anim": "shoot23",
+    "dmg_type": "phys",
+    "eden_name": "Resonating Blow",
+    "fx": {
+     "cast": "s10721",
+     "hit": "s10741"
+    }
+   },
+   {
+    "id": 50020,
+    "kind": "flurry",
+    "mult": 0.5,
+    "hits": 5,
+    "radius": 3.0,
+    "arc": 150,
+    "cooldown": 9.0,
+    "desc": "Frappe furieuse : 5 × 50 %.",
+    "name": "Frappe furieuse",
+    "icon": "res://assets/ui/skills/e0010.png",
+    "anim": "shoot54",
+    "dmg_type": "phys",
+    "eden_name": "Fury Hit",
+    "fx": {
+     "cast": "s11021",
+     "hit": "s11041"
+    }
+   },
+   {
+    "id": 50058,
+    "kind": "cone",
+    "mult": 3.0,
+    "radius": 3.0,
+    "arc": 70,
+    "cooldown": 10.0,
+    "combo": {
+     "requires": "poison",
+     "double": true
+    },
+    "desc": "Embuscade : 300 %, doublé sur une cible empoisonnée.",
+    "name": "Embuscade",
+    "icon": "res://assets/ui/skills/e0048.png",
+    "anim": "shoot25",
+    "dmg_type": "phys",
+    "eden_name": "Ambush",
+    "crit_bonus": 0.3,
+    "fx": {
+     "cast": "s14721",
+     "hit": "s14741"
+    }
+   },
+   {
+    "id": 50059,
+    "kind": "cone",
+    "mult": 1.4,
+    "radius": 3.2,
+    "arc": 120,
+    "cooldown": 12.0,
+    "applies": {
+     "poison": 8.0,
+     "freeze": 1.5
+    },
+    "desc": "Confinement mortel : 140 %, Poison (8 s) et immobilise (1,5 s).",
+    "name": "Confinement mortel",
+    "icon": "res://assets/ui/skills/e0049.png",
+    "anim": "shoot24",
+    "dmg_type": "phys",
+    "eden_name": "Deadly Containment",
+    "fx": {
+     "cast": "s14821",
+     "hit": "s14841"
+    }
+   },
+   {
+    "id": 50061,
+    "kind": "blink",
+    "mult": 1.2,
+    "radius": 3.0,
+    "arc": 360,
+    "range": 7.0,
+    "cooldown": 8.0,
+    "applies": {
+     "poison": 5.0
+    },
+    "desc": "Pas de l'ombre : se téléporte (7 m) puis 120 % autour et Poison (5 s).",
+    "name": "Pas de l'ombre",
+    "icon": "res://assets/ui/skills/e0051.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Sneak",
+    "fx": {
+     "cast": "s15021",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50019,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 15.0,
+    "buff": {
+     "haste": 6.0
+    },
+    "desc": "Ombre rapide : Hâte, +30 % de vitesse (6 s).",
+    "name": "Ombre rapide",
+    "icon": "res://assets/ui/skills/e0009.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Fast Shadow",
+    "fx": {
+     "cast": "s10921",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50060,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 18.0,
+    "buff": {
+     "keen": 8.0
+    },
+    "desc": "Force cachée : Œil acéré, +25 % de critique (8 s).",
+    "name": "Force cachée",
+    "icon": "res://assets/ui/skills/e0050.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Hidden Force",
+    "fx": {
+     "cast": "s14921",
+     "hit": ""
+    }
+   }
+  ],
+  "passives": [
+   {
+    "id": "quick_means",
+    "eden": 50207,
+    "name": "Moyens rapides",
+    "stat": {
+     "atk_speed": 0.15
+    },
+    "max": 2,
+    "desc": "+15 % de vitesse d'attaque.",
+    "icon": "res://assets/ui/skills/j519.png"
+   },
+   {
+    "id": "dagger_expert",
+    "eden": 50208,
+    "name": "Expert de la dague",
+    "stat": {
+     "crit": 0.15
+    },
+    "max": 1,
+    "desc": "+15 % de chances de critique.",
+    "icon": "res://assets/ui/skills/j520.png"
+   },
+   {
+    "id": "vigor",
+    "name": "Corps aguerri",
+    "stat": {
+     "hp_pct": 0.15
+    },
+    "max": 3,
+    "desc": "+15 % de PV max."
+   },
+   {
+    "id": "swift_blade",
+    "name": "Lame du vent",
+    "stat": {
+     "atk_speed": 0.12
+    },
+    "max": 3,
+    "desc": "+12 % de vitesse d'attaque."
+   },
+   {
+    "id": "bloodthirst",
+    "name": "Soif de sang",
+    "stat": {
+     "lifesteal": 0.03
+    },
+    "max": 3,
+    "desc": "3 % des dégâts infligés rendent des PV."
+   },
+   {
+    "id": "light_step",
+    "name": "Pas léger",
+    "stat": {
+     "move_speed": 0.08
+    },
+    "max": 2,
+    "desc": "+8 % de vitesse de déplacement."
+   },
+   {
+    "id": "keen_edge",
+    "name": "Fil tranchant",
+    "stat": {
+     "crit_dmg": 0.3
+    },
+    "max": 3,
+    "desc": "+30 % de dégâts critiques."
+   },
+   {
+    "id": "focus",
+    "name": "Concentration",
+    "stat": {
+     "cdr": 0.08
+    },
+    "max": 3,
+    "desc": "-8 % de temps de recharge des compétences."
+   },
+   {
+    "id": "air_jump",
+    "name": "Saut aérien",
+    "stat": {},
+    "max": 2,
+    "desc": "+1 saut en l'air (double, puis triple saut)."
+   },
+   {
+    "id": "high_jump",
+    "name": "Bond puissant",
+    "stat": {},
+    "max": 2,
+    "desc": "+20 % de hauteur de saut : passe au-dessus de plus d'attaques."
+   },
+   {
+    "id": "dive_strike",
+    "name": "Frappe plongeante",
+    "stat": {},
+    "max": 3,
+    "desc": "Attaquer en l'air plonge au sol : dégâts de zone et étourdissement."
+   },
+   {
+    "id": "featherfall",
+    "name": "Apesanteur",
+    "stat": {},
+    "max": 2,
+    "desc": "Saut flottant : -25 % de gravité, plus de temps en l'air pour viser et esquiver."
+   },
+   {
+    "id": "air_dash",
+    "name": "Pas aérien",
+    "stat": {},
+    "max": 2,
+    "desc": "+1 esquive en l'air avant de retoucher le sol."
+   }
+  ]
+ },
+ "hunter": {
+  "class_id": 3,
+  "body": "m",
+  "appearance": {
+   "outfit": "#L213",
+   "skin": "SL213",
+   "hair": "#L104",
+   "face": "#LFACE",
+   "dye": {
+    "outfit": [
+     [
+      70,
+      110,
+      60
+     ],
+     [
+      150,
+      110,
+      60
+     ],
+     [
+      60,
+      45,
+      35
+     ]
+    ],
+    "hair": [
+     [
+      150,
+      90,
+      40
+     ],
+     [
+      110,
+      65,
+      30
+     ],
+     [
+      60,
+      40,
+      20
+     ]
+    ]
+   }
+  },
+  "weapons": [
+   {
+    "code": "W50101",
+    "model": "res://assets/weapons/w501.glb",
+    "texture": "res://assets/weapons/textures/w50101.png",
+    "icon": "res://assets/weapons/icons/w50101.png",
+    "bone": "Bip01 L Hand"
+   },
+   {
+    "code": "W50201",
+    "model": "res://assets/weapons/w502.glb",
+    "texture": "res://assets/weapons/textures/w50201.png",
+    "icon": "res://assets/weapons/icons/w50201.png",
+    "bone": "Bip01 L Hand"
+   },
+   {
+    "code": "W50301",
+    "model": "res://assets/weapons/w503.glb",
+    "texture": "res://assets/weapons/textures/w50301.png",
+    "icon": "res://assets/weapons/icons/w50301.png",
+    "bone": "Bip01 L Hand"
+   },
+   {
+    "code": "W50401",
+    "model": "res://assets/weapons/w504.glb",
+    "texture": "res://assets/weapons/textures/w50401.png",
+    "icon": "res://assets/weapons/icons/w50401.png",
+    "bone": "Bip01 L Hand"
+   }
+  ],
+  "anims": {
+   "idle": "stand01",
+   "battle": "battle05",
+   "run": "move02",
+   "attacks": [
+    "attack12"
+   ],
+   "hurt": "hurt13",
+   "death": "death01",
+   "jump": "jump01",
+   "dodge": "jump02"
+  },
+  "combo": [
+   {
+    "name": "Flèche",
+    "anim": "attack12",
+    "mult": 1.0,
+    "bolt": true,
+    "projectile": "arrow",
+    "hit_fx": "s00141",
+    "desc": "Une flèche rapide."
+   },
+   {
+    "name": "Triple flèche",
+    "anim": "attack12",
+    "mult": 0.7,
+    "bolt": true,
+    "volley": 3,
+    "spread": 24,
+    "projectile": "arrow",
+    "hit_fx": "s00141",
+    "desc": "3 flèches en éventail."
+   },
+   {
+    "name": "Pluie de flèches",
+    "anim": "shoot50",
+    "kind": "ground",
+    "range": 12.0,
+    "mult": 1.5,
+    "radius": 4.0,
+    "arc": 360,
+    "drop": "rain",
+    "finisher": true,
+    "hit_fx": "s00241",
+    "desc": "Une volée retombe sur la zone visée (12 m)."
+   }
+  ],
+  "start_skills": 3,
+  "lore_fr": "Le chasseur tient l'ennemi à distance : flèches perçantes, volées et pièges aveuglants.",
+  "weapon_name": "Arc",
+  "weapon_bone": "Bip01 L Hand",
+  "attack_range": 13.0,
+  "base": {
+   "hp": 0.85,
+   "atk": 0.95
+  },
+  "name": "Hunter",
+  "name_fr": "Chasseur",
+  "lore": "Le chasseur tient l'ennemi à distance : flèches perçantes, volées et pièges aveuglants.",
+  "icon": "res://assets/ui/classes/j021.png",
+  "model": "res://assets/player/hunter/hunter.glb",
+  "skills": [
+   {
+    "id": 50021,
+    "kind": "bolt",
+    "mult": 2.2,
+    "radius": 0.0,
+    "arc": 0,
+    "range": 16.0,
+    "pierce": 1,
+    "projectile": "arrow",
+    "cooldown": 4.0,
+    "desc": "Tir précis : flèche de 220 % qui traverse une cible (16 m).",
+    "name": "Tir précis",
+    "icon": "res://assets/ui/skills/e0011.png",
+    "anim": "shoot51",
+    "dmg_type": "phys",
+    "eden_name": "Precise Shot",
+    "crit_bonus": 0.2,
+    "fx": {
+     "cast": "",
+     "hit": "s11141"
+    }
+   },
+   {
+    "id": 50022,
+    "kind": "bolt",
+    "mult": 1.8,
+    "radius": 0.0,
+    "arc": 0,
+    "range": 18.0,
+    "pierce": 99,
+    "projectile": "arrow",
+    "cooldown": 7.0,
+    "desc": "Perforation : flèche de 180 % qui traverse toute la ligne (18 m).",
+    "name": "Perforation",
+    "icon": "res://assets/ui/skills/e0012.png",
+    "anim": "shoot51",
+    "dmg_type": "phys",
+    "eden_name": "Perforation",
+    "fx": {
+     "cast": "",
+     "hit": "s11241"
+    }
+   },
+   {
+    "id": 50078,
+    "kind": "bolt",
+    "mult": 0.8,
+    "radius": 0.0,
+    "arc": 0,
+    "range": 14.0,
+    "volley": 5,
+    "spread": 50,
+    "projectile": "arrow",
+    "cooldown": 7.0,
+    "desc": "Tir en chaîne : 5 flèches de 80 % en éventail.",
+    "name": "Tir en chaîne",
+    "icon": "res://assets/ui/skills/e0068.png",
+    "anim": "shoot50",
+    "dmg_type": "phys",
+    "eden_name": "Chain Shot",
+    "fx": {
+     "cast": "",
+     "hit": "s16741"
+    }
+   },
+   {
+    "id": 50025,
+    "kind": "bolt",
+    "mult": 1.4,
+    "radius": 0.0,
+    "arc": 0,
+    "range": 15.0,
+    "projectile": "arrow",
+    "cooldown": 6.0,
+    "applies": {
+     "chill": 5.0
+    },
+    "desc": "Tir aux genoux : 140 % et ralentit (5 s).",
+    "name": "Tir aux genoux",
+    "icon": "res://assets/ui/skills/e0015.png",
+    "anim": "shoot51",
+    "dmg_type": "phys",
+    "eden_name": "Kneecapped",
+    "fx": {
+     "cast": "",
+     "hit": "s11541"
+    }
+   },
+   {
+    "id": 50079,
+    "kind": "bolt",
+    "mult": 1.6,
+    "radius": 0.0,
+    "arc": 0,
+    "range": 15.0,
+    "projectile": "arrow",
+    "cooldown": 9.0,
+    "applies": {
+     "bleed": 8.0,
+     "purgatory": 6.0
+    },
+    "desc": "Blessure perçante : 160 %, Saignement (8 s) et dégâts subis +20 % (6 s).",
+    "name": "Blessure perçante",
+    "icon": "res://assets/ui/skills/e0069.png",
+    "anim": "shoot63",
+    "dmg_type": "phys",
+    "eden_name": "Piercing Wound",
+    "fx": {
+     "cast": "s16821",
+     "hit": "s16841"
+    }
+   },
+   {
+    "id": 50081,
+    "kind": "bolt",
+    "mult": 1.5,
+    "radius": 0.0,
+    "arc": 0,
+    "range": 15.0,
+    "projectile": "arrow",
+    "cooldown": 10.0,
+    "applies": {
+     "stun": 1.5
+    },
+    "desc": "Tir étourdissant : 150 % et renverse (1,5 s).",
+    "name": "Tir étourdissant",
+    "icon": "res://assets/ui/skills/e0071.png",
+    "anim": "shoot51",
+    "dmg_type": "phys",
+    "eden_name": "Dazing Pierce",
+    "fx": {
+     "cast": "",
+     "hit": "s17041"
+    }
+   },
+   {
+    "id": 50082,
+    "kind": "ground",
+    "mult": 1.2,
+    "radius": 4.0,
+    "arc": 360,
+    "range": 12.0,
+    "cooldown": 12.0,
+    "applies": {
+     "stun": 1.0
+    },
+    "desc": "Bombe flash : 120 % dans une zone (4 m) à 12 m, renverse (1 s).",
+    "name": "Bombe flash",
+    "icon": "res://assets/ui/skills/e0072.png",
+    "anim": "shoot51",
+    "dmg_type": "phys",
+    "eden_name": "Flash Bomb",
+    "fx": {
+     "cast": "",
+     "hit": "s17141"
+    }
+   },
+   {
+    "id": 50083,
+    "kind": "bolt",
+    "mult": 0.9,
+    "hits": 3,
+    "radius": 0.0,
+    "arc": 0,
+    "range": 14.0,
+    "projectile": "fire",
+    "cooldown": 8.0,
+    "applies": {
+     "burn": 6.0
+    },
+    "desc": "Flèches ardentes : 3 tirs de 90 % et Brûlure (6 s).",
+    "name": "Flèches ardentes",
+    "icon": "res://assets/ui/skills/e1084.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Burning Arrow",
+    "fx": {
+     "cast": "",
+     "hit": "s17241"
+    }
+   },
+   {
+    "id": 50023,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 20.0,
+    "buff": {
+     "keen": 10.0
+    },
+    "desc": "Œil de faucon : Œil acéré, +25 % de critique (10 s).",
+    "name": "Œil de faucon",
+    "icon": "res://assets/ui/skills/e0013.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Falcon Eye",
+    "fx": {
+     "cast": "s11321",
+     "hit": ""
+    }
+   }
+  ],
+  "passives": [
+   {
+    "id": "hawkeye",
+    "eden": 50213,
+    "name": "Œil de lynx",
+    "stat": {
+     "reach": 0.2
+    },
+    "max": 2,
+    "desc": "+20 % de portée.",
+    "icon": "res://assets/ui/skills/j534.png"
+   },
+   {
+    "id": "bow_expert",
+    "eden": 50214,
+    "name": "Expert de l'arc",
+    "stat": {
+     "atk_pct": 0.15
+    },
+    "max": 1,
+    "desc": "+15 % d'attaque avec un arc.",
+    "icon": "res://assets/ui/skills/j535.png"
+   },
+   {
+    "id": "vigor",
+    "name": "Corps aguerri",
+    "stat": {
+     "hp_pct": 0.15
+    },
+    "max": 3,
+    "desc": "+15 % de PV max."
+   },
+   {
+    "id": "swift_blade",
+    "name": "Lame du vent",
+    "stat": {
+     "atk_speed": 0.12
+    },
+    "max": 3,
+    "desc": "+12 % de vitesse d'attaque."
+   },
+   {
+    "id": "bloodthirst",
+    "name": "Soif de sang",
+    "stat": {
+     "lifesteal": 0.03
+    },
+    "max": 3,
+    "desc": "3 % des dégâts infligés rendent des PV."
+   },
+   {
+    "id": "light_step",
+    "name": "Pas léger",
+    "stat": {
+     "move_speed": 0.08
+    },
+    "max": 2,
+    "desc": "+8 % de vitesse de déplacement."
+   },
+   {
+    "id": "keen_edge",
+    "name": "Fil tranchant",
+    "stat": {
+     "crit_dmg": 0.3
+    },
+    "max": 3,
+    "desc": "+30 % de dégâts critiques."
+   },
+   {
+    "id": "focus",
+    "name": "Concentration",
+    "stat": {
+     "cdr": 0.08
+    },
+    "max": 3,
+    "desc": "-8 % de temps de recharge des compétences."
+   },
+   {
+    "id": "air_jump",
+    "name": "Saut aérien",
+    "stat": {},
+    "max": 2,
+    "desc": "+1 saut en l'air (double, puis triple saut)."
+   },
+   {
+    "id": "high_jump",
+    "name": "Bond puissant",
+    "stat": {},
+    "max": 2,
+    "desc": "+20 % de hauteur de saut : passe au-dessus de plus d'attaques."
+   },
+   {
+    "id": "dive_strike",
+    "name": "Frappe plongeante",
+    "stat": {},
+    "max": 3,
+    "desc": "Attaquer en l'air plonge au sol : dégâts de zone et étourdissement."
+   },
+   {
+    "id": "featherfall",
+    "name": "Apesanteur",
+    "stat": {},
+    "max": 2,
+    "desc": "Saut flottant : -25 % de gravité, plus de temps en l'air pour viser et esquiver."
+   },
+   {
+    "id": "air_dash",
+    "name": "Pas aérien",
+    "stat": {},
+    "max": 2,
+    "desc": "+1 esquive en l'air avant de retoucher le sol."
+   }
+  ]
+ },
+ "cleric": {
+  "class_id": 4,
+  "body": "m",
+  "appearance": {
+   "outfit": "#L262",
+   "skin": "SL262",
+   "hair": "#L108",
+   "face": "#LFACE",
+   "dye": {
+    "outfit": [
+     [
+      235,
+      230,
+      220
+     ],
+     [
+      200,
+      165,
+      70
+     ],
+     [
+      120,
+      140,
+      190
+     ]
+    ],
+    "hair": [
+     [
+      230,
+      200,
+      120
+     ],
+     [
+      190,
+      160,
+      90
+     ],
+     [
+      120,
+      100,
+      60
+     ]
+    ]
+   }
+  },
+  "weapons": [
+   {
+    "code": "W30101",
+    "model": "res://assets/weapons/w301.glb",
+    "texture": "res://assets/weapons/textures/w30101.png",
+    "icon": "res://assets/weapons/icons/w30101.png"
+   },
+   {
+    "code": "W30201",
+    "model": "res://assets/weapons/w302.glb",
+    "texture": "res://assets/weapons/textures/w30201.png",
+    "icon": "res://assets/weapons/icons/w30201.png"
+   },
+   {
+    "code": "W30301",
+    "model": "res://assets/weapons/w303.glb",
+    "texture": "res://assets/weapons/textures/w30301.png",
+    "icon": "res://assets/weapons/icons/w30301.png"
+   },
+   {
+    "code": "W30401",
+    "model": "res://assets/weapons/w304.glb",
+    "texture": "res://assets/weapons/textures/w30401.png",
+    "icon": "res://assets/weapons/icons/w30401.png"
+   }
+  ],
+  "anims": {
+   "idle": "stand01",
+   "battle": "battle04",
+   "run": "move02",
+   "attacks": [
+    "attack10",
+    "attack11"
+   ],
+   "hurt": "hurt13",
+   "death": "death01",
+   "jump": "jump01",
+   "dodge": "jump02"
+  },
+  "combo": [
+   {
+    "name": "Éclat sacré",
+    "anim": "attack10",
+    "kind": "ground",
+    "range": 9.0,
+    "mult": 0.9,
+    "radius": 2.5,
+    "arc": 360,
+    "hit_fx": "s19141",
+    "desc": "Petite explosion de lumière sur la zone visée."
+   },
+   {
+    "name": "Marteau céleste",
+    "anim": "attack11",
+    "kind": "ground",
+    "range": 9.0,
+    "mult": 1.3,
+    "radius": 3.5,
+    "arc": 360,
+    "drop": "hammer",
+    "applies": {
+     "stun": 1.0
+    },
+    "hit_fx": "s11641",
+    "desc": "Un marteau de lumière tombe du ciel."
+   },
+   {
+    "name": "Prière de groupe",
+    "anim": "shoot12",
+    "kind": "heal",
+    "heal": 0.06,
+    "mult": 0.0,
+    "radius": 0.0,
+    "finisher": true,
+    "self_status": {
+     "regen": 3.0
+    },
+    "desc": "Soigne le clerc (et ses alliés à venir)."
+   }
+  ],
+  "start_skills": 3,
+  "lore_fr": "Le clerc soigne ses blessures et foudroie le mal : zones sacrées, soins et barrières.",
+  "weapon_name": "Sceptre",
+  "base": {
+   "hp": 1.1,
+   "def": 3.0,
+   "atk": 0.9
+  },
+  "attack_range": 9.0,
+  "dmg_type": "mag",
+  "name": "Cleric",
+  "name_fr": "Clerc",
+  "lore": "Le clerc soigne ses blessures et foudroie le mal : zones sacrées, soins et barrières.",
+  "icon": "res://assets/ui/classes/j027.png",
+  "model": "res://assets/player/cleric/cleric.glb",
+  "skills": [
+   {
+    "id": 50102,
+    "kind": "bolt",
+    "mult": 2.0,
+    "radius": 0.0,
+    "arc": 0,
+    "range": 14.0,
+    "pierce": 1,
+    "projectile": "holy",
+    "cooldown": 4.0,
+    "applies": {
+     "shock": 6.0
+    },
+    "desc": "Sanction de lumière : trait sacré de 200 %, dégâts subis +15 % (6 s).",
+    "name": "Sanction de lumière",
+    "icon": "res://assets/ui/skills/e0092.png",
+    "anim": "shoot01",
+    "dmg_type": "mag",
+    "eden_name": "Light's Sanction",
+    "fx": {
+     "cast": "s19121",
+     "hit": "s19141"
+    }
+   },
+   {
+    "id": 50026,
+    "kind": "ground",
+    "mult": 1.8,
+    "radius": 4.0,
+    "arc": 360,
+    "range": 10.0,
+    "cooldown": 6.0,
+    "applies": {
+     "stun": 0.8
+    },
+    "desc": "Séisme : 180 % dans une zone (4 m) et renverse (0,8 s).",
+    "name": "Séisme",
+    "icon": "res://assets/ui/skills/e0016.png",
+    "anim": "shoot01",
+    "dmg_type": "mag",
+    "eden_name": "Earth Shock",
+    "fx": {
+     "cast": "s11621",
+     "hit": "s11641"
+    }
+   },
+   {
+    "id": 50027,
+    "kind": "spin",
+    "mult": 0.8,
+    "hits": 3,
+    "radius": 4.5,
+    "arc": 360,
+    "cooldown": 8.0,
+    "desc": "Tornade : 3 × 80 % autour de toi.",
+    "name": "Tornade",
+    "icon": "res://assets/ui/skills/e0017.png",
+    "anim": "shoot01",
+    "dmg_type": "mag",
+    "eden_name": "Tornado",
+    "fx": {
+     "cast": "s11721",
+     "hit": "s11741"
+    }
+   },
+   {
+    "id": 50103,
+    "kind": "ground",
+    "mult": 2.6,
+    "radius": 5.0,
+    "arc": 360,
+    "range": 12.0,
+    "cooldown": 12.0,
+    "applies": {
+     "stun": 1.2
+    },
+    "desc": "Châtiment sacré : 260 % dans une large zone et renverse (1,2 s).",
+    "name": "Châtiment sacré",
+    "icon": "res://assets/ui/skills/e0093.png",
+    "anim": "shoot01",
+    "dmg_type": "mag",
+    "eden_name": "Holy Smite",
+    "crit_bonus": 0.1,
+    "fx": {
+     "cast": "s99999",
+     "hit": "s19241"
+    }
+   },
+   {
+    "id": 50028,
+    "kind": "heal",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "heal": 0.25,
+    "cooldown": 10.0,
+    "desc": "Soin : rend 25 % des PV max.",
+    "name": "Soin",
+    "icon": "res://assets/ui/skills/e0018.png",
+    "anim": "shoot12",
+    "dmg_type": "mag",
+    "eden_name": "Cure",
+    "fx": {
+     "cast": "s11821",
+     "hit": "s11841"
+    }
+   },
+   {
+    "id": 50106,
+    "kind": "heal",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "heal": 0.12,
+    "cooldown": 8.0,
+    "buff": {
+     "regen": 8.0
+    },
+    "desc": "Cure de vie : rend 12 % des PV et Régénération (3 %/s, 8 s).",
+    "name": "Cure de vie",
+    "icon": "res://assets/ui/skills/e0096.png",
+    "anim": "shoot12",
+    "dmg_type": "mag",
+    "eden_name": "Life Cure",
+    "fx": {
+     "cast": "s19521",
+     "hit": "s19541"
+    }
+   },
+   {
+    "id": 50109,
+    "kind": "heal",
+    "mult": 1.0,
+    "radius": 5.0,
+    "arc": 360,
+    "heal": 0.3,
+    "cooldown": 25.0,
+    "desc": "Rayonnement guérisseur : rend 30 % des PV et 100 % autour de toi.",
+    "name": "Rayonnement guérisseur",
+    "icon": "res://assets/ui/skills/e0099.png",
+    "anim": "shoot12",
+    "dmg_type": "mag",
+    "eden_name": "Healing Radiance",
+    "fx": {
+     "cast": "s19821",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50029,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 18.0,
+    "buff": {
+     "barrier": 8.0
+    },
+    "desc": "Prévention : Barrière, -40 % de dégâts subis (8 s).",
+    "name": "Prévention",
+    "icon": "res://assets/ui/skills/e0019.png",
+    "anim": "shoot12",
+    "dmg_type": "mag",
+    "eden_name": "Prevention",
+    "fx": {
+     "cast": "s11921",
+     "hit": "s11941"
+    }
+   },
+   {
+    "id": 50104,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 20.0,
+    "buff": {
+     "fury": 10.0
+    },
+    "desc": "Bénédiction de lumière : Fureur, +25 % de dégâts (10 s).",
+    "name": "Bénédiction de lumière",
+    "icon": "res://assets/ui/skills/e0094.png",
+    "anim": "shoot12",
+    "dmg_type": "mag",
+    "eden_name": "Light Blessing",
+    "fx": {
+     "cast": "s19321",
+     "hit": "s19341"
+    }
+   }
+  ],
+  "passives": [
+   {
+    "id": "iron_will",
+    "eden": 50205,
+    "name": "Volonté de fer",
+    "stat": {
+     "hp_pct": 0.15
+    },
+    "max": 2,
+    "desc": "+15 % de PV max.",
+    "icon": "res://assets/ui/skills/j514.png"
+   },
+   {
+    "id": "shield_expert",
+    "eden": 50206,
+    "name": "Foi protectrice",
+    "stat": {
+     "lifesteal": 0.03
+    },
+    "max": 2,
+    "desc": "3 % des dégâts infligés rendent des PV.",
+    "icon": "res://assets/ui/skills/j515.png"
+   },
+   {
+    "id": "vigor",
+    "name": "Corps aguerri",
+    "stat": {
+     "hp_pct": 0.15
+    },
+    "max": 3,
+    "desc": "+15 % de PV max."
+   },
+   {
+    "id": "swift_blade",
+    "name": "Lame du vent",
+    "stat": {
+     "atk_speed": 0.12
+    },
+    "max": 3,
+    "desc": "+12 % de vitesse d'attaque."
+   },
+   {
+    "id": "bloodthirst",
+    "name": "Soif de sang",
+    "stat": {
+     "lifesteal": 0.03
+    },
+    "max": 3,
+    "desc": "3 % des dégâts infligés rendent des PV."
+   },
+   {
+    "id": "light_step",
+    "name": "Pas léger",
+    "stat": {
+     "move_speed": 0.08
+    },
+    "max": 2,
+    "desc": "+8 % de vitesse de déplacement."
+   },
+   {
+    "id": "keen_edge",
+    "name": "Fil tranchant",
+    "stat": {
+     "crit_dmg": 0.3
+    },
+    "max": 3,
+    "desc": "+30 % de dégâts critiques."
+   },
+   {
+    "id": "focus",
+    "name": "Concentration",
+    "stat": {
+     "cdr": 0.08
+    },
+    "max": 3,
+    "desc": "-8 % de temps de recharge des compétences."
+   },
+   {
+    "id": "air_jump",
+    "name": "Saut aérien",
+    "stat": {},
+    "max": 2,
+    "desc": "+1 saut en l'air (double, puis triple saut)."
+   },
+   {
+    "id": "high_jump",
+    "name": "Bond puissant",
+    "stat": {},
+    "max": 2,
+    "desc": "+20 % de hauteur de saut : passe au-dessus de plus d'attaques."
+   },
+   {
+    "id": "dive_strike",
+    "name": "Frappe plongeante",
+    "stat": {},
+    "max": 3,
+    "desc": "Attaquer en l'air plonge au sol : dégâts de zone et étourdissement."
+   },
+   {
+    "id": "featherfall",
+    "name": "Apesanteur",
+    "stat": {},
+    "max": 2,
+    "desc": "Saut flottant : -25 % de gravité, plus de temps en l'air pour viser et esquiver."
+   },
+   {
+    "id": "air_dash",
+    "name": "Pas aérien",
+    "stat": {},
+    "max": 2,
+    "desc": "+1 esquive en l'air avant de retoucher le sol."
+   }
+  ]
+ },
+ "magician": {
+  "class_id": 2,
+  "body": "m",
+  "appearance": {
+   "outfit": "#L298",
+   "skin": "SL298",
+   "hair": "#L105",
+   "face": "#LFACE",
+   "dye": {
+    "outfit": [
+     [
+      60,
+      70,
+      140
+     ],
+     [
+      200,
+      170,
+      80
+     ],
+     [
+      40,
+      35,
+      60
+     ]
+    ],
+    "hair": [
+     [
+      90,
+      60,
+      140
+     ],
+     [
+      70,
+      45,
+      110
+     ],
+     [
+      40,
+      30,
+      70
+     ]
+    ]
+   }
+  },
+  "weapons": [
+   {
+    "code": "W60101",
+    "model": "res://assets/weapons/w601.glb",
+    "texture": "res://assets/weapons/textures/w60101.png",
+    "icon": "res://assets/weapons/icons/w60101.png"
+   },
+   {
+    "code": "W60201",
+    "model": "res://assets/weapons/w602.glb",
+    "texture": "res://assets/weapons/textures/w60201.png",
+    "icon": "res://assets/weapons/icons/w60201.png"
+   },
+   {
+    "code": "W60301",
+    "model": "res://assets/weapons/w603.glb",
+    "texture": "res://assets/weapons/textures/w60301.png",
+    "icon": "res://assets/weapons/icons/w60301.png"
+   },
+   {
+    "code": "W60401",
+    "model": "res://assets/weapons/w604.glb",
+    "texture": "res://assets/weapons/textures/w60401.png",
+    "icon": "res://assets/weapons/icons/w60401.png"
+   }
+  ],
+  "anims": {
+   "idle": "stand01",
+   "battle": "battle07",
+   "run": "move02",
+   "attacks": [
+    "attack14"
+   ],
+   "hurt": "hurt13",
+   "death": "death01",
+   "jump": "jump01",
+   "dodge": "jump02"
+  },
+  "combo": [
+   {
+    "name": "Explosion arcanique",
+    "anim": "attack14",
+    "kind": "ground",
+    "range": 10.0,
+    "mult": 1.0,
+    "radius": 2.5,
+    "arc": 360,
+    "hit_fx": "s12141",
+    "desc": "Explosion magique sur la zone visée."
+   },
+   {
+    "name": "Puits gravitationnel",
+    "anim": "shoot01",
+    "kind": "ground",
+    "range": 10.0,
+    "mult": 0.8,
+    "radius": 4.0,
+    "arc": 360,
+    "pull": 3.0,
+    "applies": {
+     "chill": 2.0
+    },
+    "hit_fx": "s12241",
+    "desc": "Une zone qui aspire les ennemis vers son centre."
+   },
+   {
+    "name": "Pas éthéré",
+    "anim": "jump02",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "move": 6.0,
+    "move_dir": "evade",
+    "finisher": true,
+    "self_status": {
+     "invisible": 2.5
+    },
+    "desc": "Glisse de 6 m (direction de déplacement, sinon loin du danger) et devient invisible pour se replacer."
+   }
+  ],
+  "start_skills": 3,
+  "lore_fr": "Le magicien plie les éléments : feu, glace et foudre ravagent des zones entières.",
+  "weapon_name": "Bâton",
+  "attack_range": 10.0,
+  "base": {
+   "hp": 0.8,
+   "atk": 1.15
+  },
+  "dmg_type": "mag",
+  "name": "Magician",
+  "name_fr": "Magicien",
+  "lore": "Le magicien plie les éléments : feu, glace et foudre ravagent des zones entières.",
+  "icon": "res://assets/ui/classes/j033.png",
+  "model": "res://assets/player/magician/magician.glb",
+  "skills": [
+   {
+    "id": 50031,
+    "kind": "ground",
+    "mult": 2.0,
+    "radius": 3.5,
+    "arc": 360,
+    "range": 12.0,
+    "cooldown": 4.0,
+    "applies": {
+     "burn": 6.0
+    },
+    "desc": "Bombe de feu : 200 % dans une zone (3,5 m) et Brûlure (6 s).",
+    "name": "Bombe de feu",
+    "icon": "res://assets/ui/skills/e0021.png",
+    "anim": "shoot01",
+    "dmg_type": "mag",
+    "eden_name": "Fire Bomb",
+    "fx": {
+     "cast": "s12121",
+     "hit": "s12141"
+    }
+   },
+   {
+    "id": 50126,
+    "kind": "bolt",
+    "mult": 2.4,
+    "radius": 0.0,
+    "arc": 0,
+    "range": 16.0,
+    "pierce": 2,
+    "projectile": "magic",
+    "cooldown": 5.0,
+    "applies": {
+     "shock": 5.0
+    },
+    "desc": "Éclair : 240 %, traverse 2 cibles, dégâts subis +15 % (5 s).",
+    "name": "Éclair",
+    "icon": "res://assets/ui/skills/e0116.png",
+    "anim": "shoot01",
+    "dmg_type": "mag",
+    "eden_name": "Lightning Bolt",
+    "crit_bonus": 0.1,
+    "fx": {
+     "cast": "s21521",
+     "hit": "s21541"
+    }
+   },
+   {
+    "id": 50033,
+    "kind": "cone",
+    "mult": 1.5,
+    "radius": 7.0,
+    "arc": 70,
+    "cooldown": 6.0,
+    "applies": {
+     "chill": 5.0
+    },
+    "desc": "Frisson de l'hiver : cône de givre (7 m), 150 % et ralentit (5 s).",
+    "name": "Frisson de l'hiver",
+    "icon": "res://assets/ui/skills/e0023.png",
+    "anim": "shoot01",
+    "dmg_type": "mag",
+    "eden_name": "Winter's Chill",
+    "fx": {
+     "cast": "s12321",
+     "hit": "s12341"
+    }
+   },
+   {
+    "id": 50032,
+    "kind": "ground",
+    "mult": 1.2,
+    "radius": 5.0,
+    "arc": 360,
+    "range": 12.0,
+    "cooldown": 8.0,
+    "applies": {
+     "shock": 6.0,
+     "chill": 3.0
+    },
+    "desc": "Toile d'éclairs : 120 % dans une zone (5 m), électrocute et ralentit.",
+    "name": "Toile d'éclairs",
+    "icon": "res://assets/ui/skills/e0022.png",
+    "anim": "shoot01",
+    "dmg_type": "mag",
+    "eden_name": "Lightning Web",
+    "fx": {
+     "cast": "s12221",
+     "hit": "s12241"
+    }
+   },
+   {
+    "id": 50127,
+    "kind": "ground",
+    "mult": 1.0,
+    "hits": 3,
+    "radius": 5.0,
+    "arc": 360,
+    "range": 12.0,
+    "cooldown": 12.0,
+    "applies": {
+     "burn": 6.0
+    },
+    "desc": "Feu de l'enfer : 3 × 100 % dans une zone et Brûlure (6 s).",
+    "name": "Feu de l'enfer",
+    "icon": "res://assets/ui/skills/e0117.png",
+    "anim": "shoot01",
+    "dmg_type": "mag",
+    "eden_name": "Hellfire",
+    "fx": {
+     "cast": "s21621",
+     "hit": "s21641"
+    }
+   },
+   {
+    "id": 50128,
+    "kind": "ground",
+    "mult": 0.7,
+    "hits": 4,
+    "radius": 6.0,
+    "arc": 360,
+    "range": 12.0,
+    "cooldown": 14.0,
+    "applies": {
+     "chill": 4.0,
+     "freeze": 1.0
+    },
+    "desc": "Tempête de neige : 4 × 70 % dans une large zone, gèle (1 s).",
+    "name": "Tempête de neige",
+    "icon": "res://assets/ui/skills/e0118.png",
+    "anim": "shoot01",
+    "dmg_type": "mag",
+    "eden_name": "Snow Storm",
+    "fx": {
+     "cast": "s99999",
+     "hit": "s21741"
+    }
+   },
+   {
+    "id": 50035,
+    "kind": "blink",
+    "mult": 0.6,
+    "radius": 3.0,
+    "arc": 360,
+    "range": 9.0,
+    "cooldown": 8.0,
+    "applies": {
+     "chill": 3.0
+    },
+    "desc": "Saut dimensionnel : se téléporte (9 m), 60 % et ralentit autour.",
+    "name": "Saut dimensionnel",
+    "icon": "res://assets/ui/skills/e0025.png",
+    "anim": "shoot12",
+    "dmg_type": "mag",
+    "eden_name": "Dimensional Jump",
+    "fx": {
+     "cast": "s12521",
+     "hit": "s12541"
+    }
+   },
+   {
+    "id": 50034,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 22.0,
+    "buff": {
+     "fury": 10.0
+    },
+    "desc": "Amplification magique : Fureur, +25 % de dégâts (10 s).",
+    "name": "Amplification magique",
+    "icon": "res://assets/ui/skills/e0024.png",
+    "anim": "shoot12",
+    "dmg_type": "mag",
+    "eden_name": "Magic Boost",
+    "fx": {
+     "cast": "s12421",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50133,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 22.0,
+    "buff": {
+     "barrier": 10.0
+    },
+    "desc": "Bouclier de glace : Barrière, -40 % de dégâts subis (10 s).",
+    "name": "Bouclier de glace",
+    "icon": "res://assets/ui/skills/e0123.png",
+    "anim": "shoot12",
+    "dmg_type": "mag",
+    "eden_name": "Ice Shield",
+    "fx": {
+     "cast": "s22221",
+     "hit": ""
+    }
+   }
+  ],
+  "passives": [
+   {
+    "id": "elemental_essence",
+    "eden": 50225,
+    "name": "Essence élémentaire",
+    "stat": {
+     "area": 0.15
+    },
+    "max": 2,
+    "desc": "+15 % de zone d'effet.",
+    "icon": "res://assets/ui/skills/j564.png"
+   },
+   {
+    "id": "staff_expert",
+    "eden": 50226,
+    "name": "Expert du bâton",
+    "stat": {
+     "atk_pct": 0.15
+    },
+    "max": 1,
+    "desc": "+15 % d'attaque avec un bâton.",
+    "icon": "res://assets/ui/skills/j565.png"
+   },
+   {
+    "id": "vigor",
+    "name": "Corps aguerri",
+    "stat": {
+     "hp_pct": 0.15
+    },
+    "max": 3,
+    "desc": "+15 % de PV max."
+   },
+   {
+    "id": "swift_blade",
+    "name": "Lame du vent",
+    "stat": {
+     "atk_speed": 0.12
+    },
+    "max": 3,
+    "desc": "+12 % de vitesse d'attaque."
+   },
+   {
+    "id": "bloodthirst",
+    "name": "Soif de sang",
+    "stat": {
+     "lifesteal": 0.03
+    },
+    "max": 3,
+    "desc": "3 % des dégâts infligés rendent des PV."
+   },
+   {
+    "id": "light_step",
+    "name": "Pas léger",
+    "stat": {
+     "move_speed": 0.08
+    },
+    "max": 2,
+    "desc": "+8 % de vitesse de déplacement."
+   },
+   {
+    "id": "keen_edge",
+    "name": "Fil tranchant",
+    "stat": {
+     "crit_dmg": 0.3
+    },
+    "max": 3,
+    "desc": "+30 % de dégâts critiques."
+   },
+   {
+    "id": "focus",
+    "name": "Concentration",
+    "stat": {
+     "cdr": 0.08
+    },
+    "max": 3,
+    "desc": "-8 % de temps de recharge des compétences."
+   },
+   {
+    "id": "air_jump",
+    "name": "Saut aérien",
+    "stat": {},
+    "max": 2,
+    "desc": "+1 saut en l'air (double, puis triple saut)."
+   },
+   {
+    "id": "high_jump",
+    "name": "Bond puissant",
+    "stat": {},
+    "max": 2,
+    "desc": "+20 % de hauteur de saut : passe au-dessus de plus d'attaques."
+   },
+   {
+    "id": "dive_strike",
+    "name": "Frappe plongeante",
+    "stat": {},
+    "max": 3,
+    "desc": "Attaquer en l'air plonge au sol : dégâts de zone et étourdissement."
+   },
+   {
+    "id": "featherfall",
+    "name": "Apesanteur",
+    "stat": {},
+    "max": 2,
+    "desc": "Saut flottant : -25 % de gravité, plus de temps en l'air pour viser et esquiver."
+   },
+   {
+    "id": "air_dash",
+    "name": "Pas aérien",
+    "stat": {},
+    "max": 2,
+    "desc": "+1 esquive en l'air avant de retoucher le sol."
    }
   ]
  }

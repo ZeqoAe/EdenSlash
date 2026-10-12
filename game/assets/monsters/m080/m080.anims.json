@@ -1,0 +1,242 @@
+{
+ "stand01": {
+  "duration": 2.0,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 2.0,
+    "text": "end"
+   }
+  ]
+ },
+ "stand02": {
+  "duration": 2.0,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 2.0,
+    "text": "end"
+   }
+  ]
+ },
+ "battle01": {
+  "duration": 1.3333,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.3333,
+    "text": "end"
+   }
+  ]
+ },
+ "move01": {
+  "duration": 1.3333,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.3333,
+    "text": "end"
+   }
+  ]
+ },
+ "move02": {
+  "duration": 1.3333,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.3333,
+    "text": "end"
+   }
+  ]
+ },
+ "hurt01": {
+  "duration": 0.3333,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.3333,
+    "text": "end"
+   }
+  ]
+ },
+ "hurt02": {
+  "duration": 0.5,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.5,
+    "text": "end"
+   }
+  ]
+ },
+ "death01": {
+  "duration": 3.0,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 3.0,
+    "text": "end"
+   }
+  ]
+ },
+ "attack01": {
+  "duration": 1.0,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.0,
+    "text": "end"
+   }
+  ]
+ },
+ "attack02": {
+  "duration": 1.5,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.5,
+    "text": "end"
+   }
+  ]
+ },
+ "attack03": {
+  "duration": 1.0,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.0,
+    "text": "end"
+   }
+  ]
+ },
+ "attack04": {
+  "duration": 1.5,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.5,
+    "text": "end"
+   }
+  ]
+ },
+ "magic01": {
+  "duration": 1.3333,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.3333,
+    "text": "end"
+   }
+  ]
+ },
+ "magic02": {
+  "duration": 1.3333,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.3333,
+    "text": "end"
+   }
+  ]
+ },
+ "shoot01": {
+  "duration": 2.0,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 2.0,
+    "text": "end"
+   }
+  ]
+ },
+ "shoot02": {
+  "duration": 2.0,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 2.0,
+    "text": "end"
+   }
+  ]
+ }
+}

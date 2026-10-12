@@ -102,6 +102,13 @@ static func material_icon(mat: String) -> String:
 
 ## Objet aléatoire de niveau [param level] ; [param luck] augmente la rareté.
 ## [param min_rarity] : rareté minimale (boutique).
+## Nom du type de base ; l'arme dépend de la classe (Katana, Hache, Arc...).
+static func _base_name(slot: String, class_id: String) -> String:
+	if slot == "weapon":
+		return String(GameData.class_data(class_id).get("weapon_name", BASES.weapon.name))
+	return String(BASES[slot].name)
+
+
 static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai", min_rarity := 0) -> Dictionary:
 	if slot == "":
 		slot = SLOTS.pick_random()
@@ -120,7 +127,7 @@ static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai",
 		"quality": snappedf(randf_range(0.9, 1.2), 0.01),
 		"upgrade": 0,
 		"affixes": {},
-		"name": "%s %s" % [BASES[slot].name, ADJECTIVES.pick_random()],
+		"name": "%s %s" % [_base_name(slot, class_id), ADJECTIVES.pick_random()],
 	}
 	if slot == "weapon":
 		var weapons: Array = GameData.class_data(class_id).get("weapons", [])
@@ -315,17 +322,48 @@ static func color_of(item: Dictionary) -> Color:
 	return SET_COLOR if item.has("set") else RARITIES[int(item.rarity)].color
 
 
+## Type affiché : nom de l'arme de la classe (Katana, Arc...) ou emplacement.
+static func _weapon_or_slot(item: Dictionary) -> String:
+	if item.slot == "weapon":
+		return "Arme (%s)" % _base_name("weapon", Run.class_id if Run.active else Profile.selected_class)
+	return String(SLOT_NAMES[item.slot])
+
+
 static func describe(item: Dictionary) -> String:
 	var r: Dictionary = RARITIES[int(item.rarity)]
-	var lines := ["[color=#%s]%s[/color]" % [color_of(item).to_html(false), display_name(item)],
-		"%s · %s%s · niveau %d" % [SLOT_NAMES[item.slot], r.name, " · pièce de set" if item.has("set") else "", int(item.level)],
-		"Qualité %d %%" % roundi(float(item.get("quality", 1.0)) * 100.0)]
+	var col := color_of(item).to_html(false)
+	var icon := String(item.get("icon", ""))
+	var q := float(item.get("quality", 1.0))
+	var up := int(item.get("upgrade", 0))
+	# carte d'objet : icône, nom à la couleur de la rareté, type, qualité
+	var lines := ["%s[font_size=21][b][color=#%s]%s[/color][/b][/font_size]" % [
+			"[img=52x52]%s[/img]  " % icon if icon != "" else "", col, display_name(item)],
+		"[color=#%s]%s[/color] · %s%s · niveau %d" % [col, r.name, _weapon_or_slot(item), " · pièce de set" if item.has("set") else "", int(item.level)],
+		"Qualité [color=%s]%d %%[/color]%s" % ["#7fe08a" if q >= 1.0 else "#ff9a7a", roundi(q * 100.0),
+			"   ·   Amélioration [color=#ffcf6b]+%d[/color] / %d" % [up, MAX_UPGRADE] if up > 0 else ""],
+		"[color=#5a5470]────────────────────────[/color]"]
+	# stats de base du type : valeur finale, (bonus de qualité, amélioration et affixes) entre parenthèses
 	var base: Dictionary = BASES.get(item.slot, {}).get("stats", {})
 	var st := stats(item)
+	var ref := stats({"slot": item.slot, "level": item.level, "quality": 1.0, "upgrade": 0, "affixes": {}})
+	for s in base:
+		if not st.has(s):
+			continue
+		var bonus := float(st[s]) - float(ref.get(s, 0.0))
+		var pct: bool = s in PERCENT_STATS
+		var bonus_txt := ""
+		var shown := roundi(bonus * (100.0 if pct else 1.0))
+		if shown != 0:
+			bonus_txt = "  [color=%s](%s%d%s)[/color]" % ["#7fe08a" if bonus > 0 else "#ff7a7a", "+" if bonus > 0 else "", shown, " %" if pct else ""]
+		lines.append("%s  [b]%s[/b]%s" % [STAT_NAMES.get(s, s), ("%d %%" % roundi(float(st[s]) * 100.0)) if pct else str(roundi(float(st[s]))), bonus_txt])
+	# affixes (stats hors type de base)
+	var aff_lines: PackedStringArray = []
 	for s in st:
-		var tag := "" if base.has(s) and not item.affixes.has(s) else ("  [color=#9fd0ff](affixe)[/color]" if not base.has(s) else "")
-		lines.append(stat_text(s, st[s]) + tag)
-	var up := int(item.get("upgrade", 0))
+		if not base.has(s):
+			aff_lines.append("[color=#9fd0ff]%s[/color]" % stat_text(s, st[s]))
+	if not aff_lines.is_empty():
+		lines.append("[color=#5a5470]────────────────────────[/color]")
+		lines.append_array(aff_lines)
 	if up < MAX_UPGRADE:
 		var next_m := -1
 		for m in MILESTONES:
@@ -343,6 +381,6 @@ static func describe(item: Dictionary) -> String:
 			var b: Dictionary = SETS[sid].bonus.get(n, {})
 			if b.is_empty():
 				continue
-			var col := SET_COLOR.to_html(false) if worn >= n else "888888"
-			lines.append("[color=#%s]%d pièces : %s[/color]" % [col, n, " ; ".join(bonus_lines(b))])
+			var set_col := SET_COLOR.to_html(false) if worn >= n else "888888"
+			lines.append("[color=#%s]%d pièces : %s[/color]" % [set_col, n, " ; ".join(bonus_lines(b))])
 	return "\n".join(lines)

@@ -40,7 +40,12 @@ static func _load(name: String) -> bool:
 	if not ResourceLoader.exists(glb) or not FileAccess.file_exists(js):
 		_cache[name] = null
 		return false
-	_cache[name] = [load(glb), JSON.parse_string(FileAccess.get_file_as_string(js))]
+	var scene := load(glb) as PackedScene
+	var data = JSON.parse_string(FileAccess.get_file_as_string(js))
+	if scene == null or typeof(data) != TYPE_DICTIONARY:
+		_cache[name] = null  # effet vide ou illisible : ignoré
+		return false
+	_cache[name] = [scene, data]
 	return true
 
 
