@@ -87,6 +87,17 @@ SAMURAI_PASSIVES = [
      'desc': '+30 % de dégâts critiques.'},
     {'id': 'focus', 'name': 'Concentration', 'stat': {'cdr': 0.08}, 'max': 3,
      'desc': '-8 % de temps de recharge des compétences.'},
+    # build « aérien » : le saut devient une arme
+    {'id': 'air_jump', 'name': 'Saut aérien', 'stat': {}, 'max': 2,
+     'desc': "+1 saut en l'air (double, puis triple saut)."},
+    {'id': 'high_jump', 'name': 'Bond puissant', 'stat': {}, 'max': 2,
+     'desc': "+20 % de hauteur de saut : passe au-dessus de plus d'attaques."},
+    {'id': 'dive_strike', 'name': 'Frappe plongeante', 'stat': {}, 'max': 3,
+     'desc': "Attaquer en l'air plonge au sol : dégâts de zone et étourdissement."},
+    {'id': 'featherfall', 'name': 'Apesanteur', 'stat': {}, 'max': 2,
+     'desc': "Saut flottant : -25 % de gravité, plus de temps en l'air pour viser et esquiver."},
+    {'id': 'air_dash', 'name': 'Pas aérien', 'stat': {}, 'max': 2,
+     'desc': "+1 esquive en l'air avant de retoucher le sol."},
 ]
 
 CLASSES = {
@@ -172,6 +183,7 @@ def main():
 
     out_classes = {}
     used_anims = set()
+    fx_names = {'s00141', 's00241', 's00341', 's00441', 's00541'}  # impacts des attaques de base
     for cid, c in CLASSES.items():
         crow = next(r for r in edenini.read_table('c_class') if r[0] == str(c['class_id']))
         entry = {k: v for k, v in c.items() if k not in ('skills', 'passives')}
@@ -190,6 +202,12 @@ def main():
             sk['icon'] = export_icon(r[1])
             sk['anim'] = anim
             sk['desc'] = s['desc'].format(dmg=int(round(s['mult'] * 100)))
+            # effets d'Eden : incantation (code E -> s), impact (colonne 10)
+            cast = ('s' + r[5][1:]).lower() if r[5].upper().startswith('E') else ''
+            hit = r[10].lower()
+            sk['fx'] = {'cast': cast if 'effect/model/%s.nif' % cast in idx else '',
+                        'hit': hit if 'effect/model/%s.nif' % hit in idx else ''}
+            fx_names.update(v for v in sk['fx'].values() if v)
             skills.append(sk)
         entry['skills'] = skills
         passives = []
@@ -227,6 +245,9 @@ def main():
                 if p:
                     conv.export_texture(p)
 
+    import fx2godot
+    fx2godot.convert(sorted(n for n in fx_names
+                            if not os.path.exists(os.path.join(fx2godot.OUT, n + '.fx.json'))), idx)
     # sons des animations du héros et des monstres utilisés
     snd_dir = os.path.join(GAME, 'assets', 'sound')
     os.makedirs(snd_dir, exist_ok=True)

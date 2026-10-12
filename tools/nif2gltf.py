@@ -183,6 +183,8 @@ class Converter:
         self.idx = idx
         self.only_shapes = set(only_shapes) if only_shapes else None
         self.anim_filter = None
+        self.fx = None  # dict : mode effet (pistes de contrôleurs exportées en JSON)
+        self._fx_names = set()
         self.collision = False
         self.dye = None
         self.by_name = {}
@@ -303,6 +305,8 @@ class Converter:
                 return
             t, R, s = vec3(b['Translation']), mat3(b['Rotation']), float(b['Scale'])
             node = {'name': b['Name'] or ('%s_%d' % (b.type, bi))}
+            if self.fx is not None:
+                node['name'] = self._fx_name(node['name'], bi)
             if np.linalg.norm(t) > 0:
                 node['translation'] = [float(x) for x in t]
             q = quat_from_mat(R)
@@ -325,6 +329,11 @@ class Converter:
                     return
                 textured = any(pp.type == 'NiTexturingProperty' for pp in props)
                 collider = self.collision and not textured
+                # forme cachée (bit 0 des drapeaux) ou repère sans texture d'un effet : ignorée
+                if (int(b.get('Flags', 0)) & 1 and not collider) or (self.fx is not None and not textured):
+                    g.j['nodes'][parent_node]['children'].remove(ni)
+                    g.j['nodes'][ni] = {'name': '_unused'}
+                    return
                 if collider and (b['Name'] or '').lower().startswith('camera'):
                     g.j['nodes'][parent_node]['children'].remove(ni)
                     g.j['nodes'][ni] = {'name': '_unused'}
@@ -332,11 +341,15 @@ class Converter:
                 mesh = self.mesh(g, b, blocks, props, model_path, collider)
                 if mesh is not None:
                     node['mesh'] = mesh
+                    if self.fx is not None:
+                        self._fx_material(node['name'], props, blocks, model_path, g)
                     if collider:
                         # convention d'import Godot : collision sans rendu
                         node['name'] = node['name'] + '-colonly'
                     if b.get('Skin Instance', -1) >= 0:
                         pending_skins.append((ni, bi))
+            if self.fx is not None:
+                self._fx_node(node['name'], b, blocks)
             for c in as_list(b.get('Children')):
                 if c >= 0:
                     visit(c, ni, W, props)
@@ -621,6 +634,194 @@ class Converter:
         if tr is None and rot is None and sc is None:
             return None
         return tr, rot, sc
+
+
+# --- effets (contrôleurs Gamebryo -> pistes échantillonnées) --------------------------
+FX_FPS = 30.0
+
+
+def _ctrl_chain(b, blocks):
+    out = []
+    c = b.get('Controller', -1)
+    seen = set()
+    while c is not None and c >= 0 and c not in seen:
+        seen.add(c)
+        cb = blocks[c]
+        if cb.error:
+            break
+        out.append(cb)
+        c = cb.get('Next Controller', -1)
+    return out
+
+
+def _ctrl_times(cb, times):
+    """Temps local du contrôleur (fréquence, phase, boucle / aller-retour / bloqué)."""
+    t0, t1 = float(cb.get('Start Time', 0.0)), float(cb.get('Stop Time', 0.0))
+    freq = float(cb.get('Frequency', 1.0)) or 1.0
+    ph = float(cb.get('Phase', 0.0))
+    cycle = (int(cb.get('Flags', 0)) >> 1) & 3
+    span = max(t1 - t0, 1e-6)
+    lt = times * freq + ph
+    if cycle == 0:
+        return t0 + np.mod(lt - t0, span)
+    if cycle == 1:
+        m = np.mod(lt - t0, 2 * span)
+        return t0 + np.where(m > span, 2 * span - m, m)
+    return np.clip(lt, t0, t1)
+
+
+def _sample_scalar(ip, blocks, lt):
+    if ip is None or ip.error:
+        return None
+    if ip.type == 'NiBoolInterpolator':
+        d = ip.get('Data', -1)
+        if d is not None and d >= 0 and not blocks[d].error and blocks[d]['Data'].get('Num Keys'):
+            keys = blocks[d]['Data']['Keys']
+            kt = np.array([k['Time'] for k in keys])
+            kv = np.array([float(k['Value']) for k in keys])
+            idx = np.clip(np.searchsorted(kt, lt, side='right') - 1, 0, len(kt) - 1)
+            return kv[idx]
+        v = int(ip.get('Value', 2))
+        return np.full(len(lt), 1.0 if v == 1 else 0.0) if v in (0, 1) else None
+    if ip.type == 'NiFloatInterpolator':
+        d = ip.get('Data', -1)
+        if d is not None and d >= 0 and not blocks[d].error and blocks[d]['Data'].get('Num Keys'):
+            keys = blocks[d]['Data']['Keys']
+            return interp_keys([(k['Time'], np.array([k['Value']])) for k in keys], lt)[:, 0]
+        v = float(ip.get('Value', -FLT_INVALID))
+        return np.full(len(lt), v) if valid(v) else None
+    return None
+
+
+def _sample_vec3(ip, blocks, lt):
+    if ip is None or ip.error or ip.type != 'NiPoint3Interpolator':
+        return None
+    d = ip.get('Data', -1)
+    if d is not None and d >= 0 and not blocks[d].error and blocks[d]['Data'].get('Num Keys'):
+        keys = blocks[d]['Data']['Keys']
+        return interp_keys([(k['Time'], vec3(k['Value'])) for k in keys], lt)
+    v = ip.get('Value')
+    return np.tile(vec3(v), (len(lt), 1)) if v and valid(v['x']) else None
+
+
+def _ctrl_duration(cb):
+    freq = float(cb.get('Frequency', 1.0)) or 1.0
+    return max(0.0, (float(cb.get('Stop Time', 0.0)) - float(cb.get('Phase', 0.0))) / freq)
+
+
+def _r(a, nd=4):
+    return np.round(np.asarray(a, dtype=np.float64), nd).tolist()
+
+
+def _fx_name(self, name, bi):
+    n = re.sub(r'[^A-Za-z0-9_]', '_', name) or 'node'
+    if n in self._fx_names:
+        n = '%s_%d' % (n, bi)
+    self._fx_names.add(n)
+    return n
+
+
+def _fx_node(self, name, b, blocks):
+    for cb in _ctrl_chain(b, blocks):
+        self.fx.setdefault('_ctrls', []).append((name, 'node', cb, None))
+
+
+def _fx_material(self, name, props, blocks, model_path, g):
+    info = {'blend': 'mix', 'alpha': 1.0, 'color': [1, 1, 1], 'vcol': True}
+    for p in props:
+        if p.type == 'NiVertexColorProperty':
+            # mode des couleurs de sommets : 0 = ignorées
+            info['vcol'] = ((int(p.get('Flags', 0)) >> 4) & 3) != 0  # bits 4-5 en 20.x
+        if p.type == 'NiAlphaProperty':
+            fl = int(p['Flags'])
+            dst = (fl >> 5) & 15
+            # destination ONE ou SRC_COLOR : effet lumineux additif
+            info['blend'] = 'add' if (fl & 1 and dst in (0, 2)) else ('mix' if fl & 1 else 'opaque')
+        elif p.type == 'NiMaterialProperty':
+            info['alpha'] = float(p.get('Alpha', 1.0))
+            info['_emis'] = p.get('Emissive Color')
+            info['_diff'] = p.get('Diffuse Color')
+        for cb in _ctrl_chain(p, blocks):
+            self.fx.setdefault('_ctrls', []).append((name, 'mat', cb, p))
+    # additif : la couleur émissive porte la teinte ; mélange : la diffuse
+    c = info.pop('_emis', None) if info['blend'] == 'add' else info.pop('_diff', None)
+    info.pop('_emis', None)
+    info.pop('_diff', None)
+    if c and max(c['r'], c['g'], c['b']) > 0.01:
+        info['color'] = [float(c['r']), float(c['g']), float(c['b'])]
+    self.fx.setdefault('materials', {})[name] = info
+
+
+def fx_finalize(conv, blocks):
+    """Échantillonne toutes les pistes à 30 i/s sur la durée de l'effet."""
+    ctrls = conv.fx.pop('_ctrls', [])
+    dur = 0.0
+    for _, _, cb, _ in ctrls:
+        if (int(cb.get('Flags', 0)) >> 1) & 3 == 2:
+            dur = max(dur, _ctrl_duration(cb))
+    if dur <= 0.0:
+        dur = max([_ctrl_duration(cb) for _, _, cb, _ in ctrls] or [1.0])
+    dur = min(max(dur, 0.2), 6.0)
+    times = np.arange(0.0, dur + 1e-6, 1.0 / FX_FPS)
+    nodes = {}
+    mats = conv.fx.setdefault('materials', {})
+    for name, kind, cb, prop in ctrls:
+        ii = cb.get('Interpolator', -1)
+        ip = blocks[ii] if ii is not None and ii >= 0 else None
+        lt = _ctrl_times(cb, times)
+        if kind == 'node':
+            if cb.type in ('NiTransformController', 'NiKeyframeController') and ip is not None and not ip.error:
+                res = conv.sample_interp(ip, blocks, lt)
+                if res:
+                    tr, rot, sc = res
+                    nd = nodes.setdefault(name, {})
+                    if tr is not None:
+                        nd['t'] = _r(tr)
+                    if rot is not None:
+                        nd['r'] = _r(fix_quat_signs(rot))
+                    if sc is not None:
+                        nd['s'] = _r(sc)
+            elif cb.type == 'NiVisController':
+                v = _sample_scalar(ip, blocks, lt)
+                if v is not None:
+                    nodes.setdefault(name, {})['vis'] = _r(v, 0)
+            continue
+        m = mats.setdefault(name, {})
+        if cb.type == 'NiAlphaController':
+            v = _sample_scalar(ip, blocks, lt)
+            if v is not None:
+                m['alpha_t'] = _r(v, 3)
+        elif cb.type == 'NiMaterialColorController':
+            v = _sample_vec3(ip, blocks, lt)
+            if v is not None and int(cb.get('Target Color', 1)) in (1, 3):
+                m['color_t'] = _r(v, 3)
+        elif cb.type == 'NiTextureTransformController':
+            v = _sample_scalar(ip, blocks, lt)
+            if v is not None:
+                op = int(cb.get('Operation', 0))
+                m[['uv_u', 'uv_v', 'uv_rot', 'uv_su', 'uv_sv'][min(op, 4)]] = _r(v, 4)
+        elif cb.type == 'NiFlipController':
+            v = _sample_scalar(ip, blocks, lt)
+            uris = []
+            for si in np.atleast_1d(cb.get('Sources', [])):
+                st = blocks[int(si)] if int(si) >= 0 else None
+                fname = st.get('File Name') if st is not None else None
+                if isinstance(fname, dict):
+                    fname = fname.get('Index') or ''
+                path = conv.find_texture(fname or '', 'effect/')
+                if path:
+                    uris.append(conv.export_texture(path))
+            if v is not None and uris:
+                m['flip'] = {'textures': uris, 'frames': [int(x) for x in np.clip(v, 0, len(uris) - 1)]}
+    conv.fx['nodes'] = nodes
+    conv.fx['duration'] = round(dur, 3)
+    conv.fx['fps'] = FX_FPS
+    return conv.fx
+
+
+Converter._fx_name = _fx_name
+Converter._fx_node = _fx_node
+Converter._fx_material = _fx_material
 
 
 def material_name(props):

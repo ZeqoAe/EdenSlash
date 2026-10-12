@@ -105,7 +105,11 @@
     "desc": "Fond sur l'ennemi (6 m) : 180 % de dégâts et Saignement (8 s, 15 % de l'attaque par seconde).",
     "name": "Fallen Swallow",
     "icon": "res://assets/ui/skills/e0459.png",
-    "anim": "shoot24"
+    "anim": "shoot24",
+    "fx": {
+     "cast": "s36021",
+     "hit": "s36041"
+    }
    },
    {
     "id": 50182,
@@ -121,7 +125,11 @@
     "desc": "Tourbillon solaire autour de toi : 2 coups de 110 %. Bénédiction solaire : -25 % de dégâts subis (8 s).",
     "name": "Solar Wind",
     "icon": "res://assets/ui/skills/e0460.png",
-    "anim": "shoot23"
+    "anim": "shoot23",
+    "fx": {
+     "cast": "s36421",
+     "hit": "s36441"
+    }
    },
    {
     "id": 50183,
@@ -139,7 +147,11 @@
     "desc": "Entaille en croix : 200 %. Sur une cible en Saignement : Cicatrice (ses dégâts -30 %, 8 s).",
     "name": "Crosswise Cut",
     "icon": "res://assets/ui/skills/e0461.png",
-    "anim": "shoot23"
+    "anim": "shoot23",
+    "fx": {
+     "cast": "s36121",
+     "hit": "s36141"
+    }
    },
    {
     "id": 50184,
@@ -154,7 +166,11 @@
     "desc": "Purgatoire en éventail (10 m) : 170 % et Purgatoire (dégâts subis +20 %, 8 s).",
     "name": "Purgatory",
     "icon": "res://assets/ui/skills/e0462.png",
-    "anim": "shoot25"
+    "anim": "shoot25",
+    "fx": {
+     "cast": "s123421",
+     "hit": ""
+    }
    },
    {
     "id": 50185,
@@ -173,7 +189,11 @@
     "desc": "Danse des grues : 3 coups de 90 %. Sur Saignement : Mille grues (dégâts subis +15 %, 8 s).",
     "name": "Dance of Cranes",
     "icon": "res://assets/ui/skills/e0463.png",
-    "anim": "shoot25"
+    "anim": "shoot25",
+    "fx": {
+     "cast": "s36621",
+     "hit": "s36241"
+    }
    },
    {
     "id": 50186,
@@ -191,7 +211,11 @@
     "desc": "Frappe éclair : 280 %. Sur Cicatrice : Langue de Marduk (+30 % d'attaque et de vitesse, 8 s).",
     "name": "Marduk's Tongue",
     "icon": "res://assets/ui/skills/e0464.png",
-    "anim": "shoot24"
+    "anim": "shoot24",
+    "fx": {
+     "cast": "s36521",
+     "hit": "s36541"
+    }
    },
    {
     "id": 50187,
@@ -207,7 +231,11 @@
     "desc": "Lame d'Asura en éventail (10 m) : 220 %, doublé sur les cibles en Purgatoire.",
     "name": "Asura Slash",
     "icon": "res://assets/ui/skills/e0465.png",
-    "anim": "shoot24"
+    "anim": "shoot24",
+    "fx": {
+     "cast": "s123321",
+     "hit": ""
+    }
    },
    {
     "id": 50188,
@@ -225,7 +253,11 @@
     "desc": "Estoc en ligne (8 m) : 230 %. Sur Mille grues : renverse la cible (2 s).",
     "name": "Protrusion",
     "icon": "res://assets/ui/skills/e0466.png",
-    "anim": "shoot23"
+    "anim": "shoot23",
+    "fx": {
+     "cast": "s36821",
+     "hit": "s36841"
+    }
    },
    {
     "id": 50189,
@@ -240,7 +272,11 @@
     "desc": "Volonté du sanctuaire : +30 % de vitesse et -30 % de dégâts subis (10 s). Sous Bénédiction solaire : immunité au renversement.",
     "name": "Shrine Belief",
     "icon": "res://assets/ui/skills/e0467.png",
-    "anim": "shoot12"
+    "anim": "shoot12",
+    "fx": {
+     "cast": "s36721",
+     "hit": ""
+    }
    }
   ],
   "passives": [
@@ -319,6 +355,41 @@
     },
     "max": 3,
     "desc": "-8 % de temps de recharge des compétences."
+   },
+   {
+    "id": "air_jump",
+    "name": "Saut aérien",
+    "stat": {},
+    "max": 2,
+    "desc": "+1 saut en l'air (double, puis triple saut)."
+   },
+   {
+    "id": "high_jump",
+    "name": "Bond puissant",
+    "stat": {},
+    "max": 2,
+    "desc": "+20 % de hauteur de saut : passe au-dessus de plus d'attaques."
+   },
+   {
+    "id": "dive_strike",
+    "name": "Frappe plongeante",
+    "stat": {},
+    "max": 3,
+    "desc": "Attaquer en l'air plonge au sol : dégâts de zone et étourdissement."
+   },
+   {
+    "id": "featherfall",
+    "name": "Apesanteur",
+    "stat": {},
+    "max": 2,
+    "desc": "Saut flottant : -25 % de gravité, plus de temps en l'air pour viser et esquiver."
+   },
+   {
+    "id": "air_dash",
+    "name": "Pas aérien",
+    "stat": {},
+    "max": 2,
+    "desc": "+1 esquive en l'air avant de retoucher le sol."
    }
   ]
  }

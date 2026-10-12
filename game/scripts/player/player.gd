@@ -8,13 +8,24 @@ signal leveled_up(level: int)
 signal skills_changed
 signal stats_changed
 
-const JUMP_VELOCITY := 9.5
+## Saut nerveux par défaut (~0,5 s en l'air) : montée rapide, chute plus rapide encore.
+## La carte « Apesanteur » rend le saut flottant (builds aériens, mages).
+const JUMP_VELOCITY := 14.0
+const GRAVITY_UP := 52.0
+const GRAVITY_DOWN := 72.0
+const COYOTE_TIME := 0.12  # on peut encore sauter juste après avoir quitté un rebord
+const JUMP_BUFFER := 0.15  # un saut demandé juste avant d'atterrir part à l'atterrissage
+## Annulation parfaite : esquiver dans cette fenêtre après l'impact d'une compétence
+## donne une esquive plus longue et gratuite, rend 25 % de la recharge et monte la
+## « Fluidité » (+10 % de dégâts par palier, 4 max, 3 s sans annulation parfaite = 0).
+const PERFECT_WINDOW := 0.28
+const AIR_SKILL_BONUS := 0.1  # compétences lancées en l'air : +10 % de dégâts
 const STEP_HEIGHT := 0.6
 const HERO_RADIUS := 0.33
 const BASE_SPEED := 6.5
 const DODGE_DISTANCE := 6.0
 const DODGE_TIME := 0.32
-const DODGE_COOLDOWN := 0.7
+const DODGE_COOLDOWN := 0.45
 const ATTACK_RANGE := 2.6
 
 var class_id := "samurai"
@@ -197,7 +208,7 @@ func _physics_process(delta: float) -> void:
 	_time += delta
 	_state_time += delta
 	tick_statuses(delta)
-	apply_gravity(delta)
+	_apply_hero_gravity(delta)
 	if is_dead:
 		velocity.x = 0.0
 		velocity.z = 0.0
@@ -215,12 +226,28 @@ func _physics_process(delta: float) -> void:
 			_update_dodge()
 		"jump":
 			_update_jump(input_dir, delta)
+		"dive":
+			_update_dive()
+		"stun":
+			velocity.x = move_toward(velocity.x, 0.0, 30.0 * delta)
+			velocity.z = move_toward(velocity.z, 0.0, 30.0 * delta)
+			if _state_time >= _stun_len:
+				_state = "idle"
+				_stun_fx.visible = false
+	var was_air := not is_on_floor()
 	var before := global_position
 	move_and_slide()
+	if is_on_floor():
+		_jumps_used = 0
+		_air_dashes = 0
+		_last_floor_time = _time
+		if was_air and _state == "dive":
+			_dive_impact()
 	_handle_obstacles(input_dir, before, delta)
 	_update_trail()
-	if _time - _last_combat > 5.0 and hp < max_hp:
-		heal(max_hp * 0.04 * delta)
+	# régénération lente, seulement après 6 s sans combat
+	if _time - _last_combat > 6.0 and hp < max_hp:
+		heal(max_hp * 0.015 * delta)
 
 
 func _speed() -> float:
@@ -261,7 +288,7 @@ func _update_idle(input_dir: Vector3, delta: float) -> void:
 	if _time - _last_combat > 1.2:
 		_combo_index = 0
 
-	if _wants("jump") and is_on_floor():
+	if (_wants("jump") or _time < _jump_buffer_until) and can_jump():
 		_start_jump()
 	elif _wants("dodge") and _time >= _dodge_ready_at:
 		_start_dodge(input_dir)
@@ -323,7 +350,8 @@ func _start_attack(aim: Vector3) -> void:
 	_combo_index += 1
 	face_direction(aim - global_position, 1.0, 100.0)
 	_begin_action("attack", anim_name, atk_speed * 1.25, {
-		"mult": 1.0 + 0.1 * ((_combo_index - 1) % attacks.size()), "radius": ATTACK_RANGE, "arc": 150.0})
+		"mult": 1.0 + 0.1 * ((_combo_index - 1) % attacks.size()), "radius": ATTACK_RANGE, "arc": 150.0,
+		"hit_fx": ["s00141", "s00241", "s00541"][(_combo_index - 1) % 3]})
 
 
 func _begin_action(state: String, anim_name: String, speed: float, action: Dictionary) -> void:
@@ -367,20 +395,39 @@ func _update_action(input_dir: Vector3, delta: float) -> void:
 	while not _hits.is_empty() and _state_time >= _hits[0]:
 		_hits.pop_front()
 		_resolve_hit()
-	# l'esquive annule l'action après le premier impact
-	if _wants("dodge") and _time >= _dodge_ready_at and _action.get("hit_done", false):
+	# l'esquive annule toute action (une compétence pas encore sortie est perdue) ;
+	# juste après l'impact d'une compétence : annulation parfaite
+	if _wants("dodge"):
+		var perfect: bool = _state == "skill" and _action.get("hit_done", false) and _time - _last_hit_at <= PERFECT_WINDOW
+		var air_ok := is_on_floor() or _air_dashes < max_air_dashes()
+		if perfect or (_time >= _dodge_ready_at and air_ok):
+			if not is_on_floor() and not perfect:
+				_air_dashes += 1
+			_trail_on = false
+			if perfect:
+				_perfect_cancel()
+			_start_dodge(input_dir, perfect)
+			return
+	# le saut annule l'attaque de base à tout moment, une compétence après son impact
+	var cancel_ok: bool = _state == "attack" or _action.get("hit_done", false)
+	if cancel_ok and _wants("jump") and can_jump():
 		_trail_on = false
-		_start_dodge(input_dir)
+		_start_jump()
 		return
 	var end := _state_len * (0.75 if _state == "attack" else 0.92)
 	if _state_time >= end and _hits.is_empty():
 		_trail_on = false
-		_state = "idle"
+		if is_on_floor():
+			_state = "idle"
+		else:
+			_state = "jump"  # fin d'une compétence aérienne : on retombe
+			_state_time = 0.3
 
 
 ## Applique les dégâts de l'action en cours à tous les monstres de la zone.
 func _resolve_hit() -> void:
 	_action["hit_done"] = true
+	_last_hit_at = _time
 	var radius: float = _action.get("radius", ATTACK_RANGE)
 	var arc: float = _action.get("arc", 150.0)
 	var fwd := forward()
@@ -413,8 +460,14 @@ func _hit_monster(m: Monster, dir: Vector3) -> void:
 	if combo_ok and combo.get("double", false):
 		mult *= 2.0
 	var is_crit := randf() < crit
-	var dmg := atk * mult * randf_range(0.92, 1.08) * damage_dealt_mult() * (1.0 + crit_dmg if is_crit else 1.0)
+	var dmg := atk * mult * randf_range(0.92, 1.08) * damage_dealt_mult() * (1.0 + crit_dmg if is_crit else 1.0) * flow_mult()
 	m.take_damage(dmg, self, is_crit)
+	# effet d'impact d'Eden (limité à quelques cibles par coup pour la lisibilité)
+	var fx_hits := int(_action.get("fx_count", 0))
+	if fx_hits < 3:
+		_action["fx_count"] = fx_hits + 1
+		var hit_fx: String = _action.get("hit_fx", "")
+		EdenFx.play(self, hit_fx, m.global_position + Vector3.UP * 0.2, rotation.y, GameData.HERO_SCALE)
 	if lifesteal > 0.0:
 		heal(dmg * lifesteal)
 	Vfx.spark(self, m.global_position + Vector3.UP * 1.0, Color(1.0, 0.85, 0.5), is_crit)
@@ -470,49 +523,278 @@ func use_skill(slot: int) -> void:
 		"kind": s.kind, "mult": float(s.mult) * Run.skill_damage_mult(int(s.id)),
 		"radius": float(s.radius), "arc": float(s.arc), "hits": int(s.get("hits", 1)),
 		"dash": float(s.get("dash", 0.0)), "applies": s.get("applies", {}), "combo": s.get("combo", {}),
+		"skill_id": int(s.id), "aerial": not is_on_floor(),
 	}
+	if action.aerial:
+		action.mult *= 1.0 + AIR_SKILL_BONUS
+		_carry = Vector3.ZERO
+	if _state == "dodge":
+		_end_dodge()
 	for b in s.get("buff", {}):
 		add_status(b, float(s.buff[b]), self)
 	if s.kind == "buff" or s.kind == "spin":
 		Vfx.ring(self, global_position, maxf(float(s.radius), 2.5), Color(1.0, 0.8, 0.35, 0.8))
 	recalc_stats()
+	var fx: Dictionary = s.get("fx", {})
+	action["hit_fx"] = String(fx.get("hit", "")) if String(fx.get("hit", "")) != "" else "s00341"
+	EdenFx.play(self, String(fx.get("cast", "")), global_position, rotation.y, GameData.HERO_SCALE, self)
 	_begin_action("skill", String(s.anim), 1.15 * atk_speed, action)
 
 
 # --- déplacements spéciaux ----------------------------------------------------------
+# --- saut (mécanique de build : sauts en l'air, hauteur, piqué) ------------------------
+var _jumps_used := 0
+var _stun_len := 0.0
+var _stun_fx: Label3D
+
+
+## Sauts disponibles : 1 au sol + les sauts aériens des cartes « Saut aérien ».
+func max_jumps() -> int:
+	return 1 + int(Run.passives.get("air_jump", 0))
+
+
+var _air_dashes := 0
+var _last_floor_time := 0.0
+var _jump_buffer_until := 0.0
+var _carry := Vector3.ZERO  # élan conservé (saut depuis une esquive)
+
+
+func can_jump() -> bool:
+	var grounded := is_on_floor() or _time - _last_floor_time < COYOTE_TIME
+	return _jumps_used < max_jumps() and (grounded or _jumps_used > 0 or max_jumps() > 1)
+
+
+## Esquives aériennes disponibles avant de retoucher le sol.
+func max_air_dashes() -> int:
+	return 1 + int(Run.passives.get("air_dash", 0))
+
+
+## Gravité du héros : plus forte en chute qu'en montée (saut sec) ; relâcher
+## le saut tôt coupe la montée (petit saut) ; « Apesanteur » allège le tout.
+func _apply_hero_gravity(delta: float) -> void:
+	if is_on_floor():
+		velocity.y = -0.5
+		return
+	if _state == "dodge":
+		velocity.y = 0.0  # l'esquive aérienne file à l'horizontale
+		return
+	if _state in ["skill", "attack"] and _action.get("aerial", false):
+		# suspension pendant une compétence aérienne, légère descente
+		velocity.y = move_toward(velocity.y, -1.2, 60.0 * delta)
+		return
+	var g := GRAVITY_UP if velocity.y > 0.0 else GRAVITY_DOWN
+	g *= 1.0 - 0.25 * int(Run.passives.get("featherfall", 0))
+	if velocity.y > 0.0 and _state == "jump" and not autoplay and not Input.is_action_pressed("jump"):
+		g *= 2.2
+	velocity.y -= g * delta
+
+
+func is_airborne() -> bool:
+	return not is_on_floor()
+
+
 func _start_jump() -> void:
+	var first := is_on_floor() or (_jumps_used == 0 and _time - _last_floor_time < COYOTE_TIME)
+	if _state == "dodge":
+		# saut depuis une esquive : on garde l'élan (saut-esquive très long)
+		_carry = Vector3(velocity.x, 0, velocity.z) * 0.75
+		_end_dodge()
+	_jump_buffer_until = 0.0
+	_jumps_used = 1 if first else _jumps_used + 1
 	_state = "jump"
 	_state_time = 0.0
-	velocity.y = JUMP_VELOCITY
-	play(_anim("jump"), 0.05, 1.25, true)
+	var height_bonus := 1.0 + 0.2 * int(Run.passives.get("high_jump", 0))
+	velocity.y = JUMP_VELOCITY * height_bonus * (1.0 if first else 0.9)
+	play(_anim("jump") if first else _anim("dodge"), 0.05, 1.8, true)
+	if not first:
+		Vfx.ring(self, global_position, 1.6, Color(0.7, 0.9, 1.0, 0.7))
 
 
 func _update_jump(input_dir: Vector3, delta: float) -> void:
-	velocity.x = input_dir.x * _speed()
-	velocity.z = input_dir.z * _speed()
+	_carry = _carry.move_toward(Vector3.ZERO, 18.0 * delta)
+	velocity.x = input_dir.x * _speed() + _carry.x
+	velocity.z = input_dir.z * _speed() + _carry.z
 	if input_dir.length() > 0.1:
 		face_direction(input_dir, delta)
-	if _state_time > 0.2 and is_on_floor():
+	if _wants_pressed("jump"):
+		if _jumps_used < max_jumps():
+			_start_jump()
+			return
+		_jump_buffer_until = _time + JUMP_BUFFER
+	# esquive aérienne : une par saut, sans délai
+	if _wants_pressed("dodge") and _air_dashes < max_air_dashes():
+		_air_dashes += 1
+		_start_dodge(input_dir)
+		return
+	# compétences en l'air
+	for i in 4:
+		if _wants("skill_%d" % (i + 1)) and cooldown_left(i) <= 0.0:
+			use_skill(i)
+			return
+	# piqué : attaque en l'air si la carte « Frappe plongeante » est prise
+	if _wants_pressed("attack") and int(Run.passives.get("dive_strike", 0)) > 0 and _state_time > 0.1:
+		_state = "dive"
+		_state_time = 0.0
+		velocity.y = -26.0
+		play(_anim("dodge"), 0.05, 1.6, true)
+		return
+	if _state_time > 0.1 and is_on_floor():
+		_carry = Vector3.ZERO
 		_state = "idle"
 
 
-func _start_dodge(input_dir: Vector3) -> void:
+func _update_dive() -> void:
+	velocity.x = move_toward(velocity.x, 0.0, 2.0)
+	velocity.z = move_toward(velocity.z, 0.0, 2.0)
+	velocity.y = minf(velocity.y, -20.0)
+	if _state_time > 1.2:
+		_state = "idle"
+
+
+## Atterrissage du piqué : onde de choc qui étourdit brièvement.
+func _dive_impact() -> void:
+	_state = "idle"
+	var r := 3.8 + 0.6 * int(Run.passives.get("dive_strike", 0))
+	Vfx.ring(self, global_position, r, Color(1.0, 0.85, 0.4, 0.9))
+	EdenFx.play(self, "s00541", global_position, rotation.y, GameData.HERO_SCALE * 1.4)
+	_shake(0.9)
+	_action = {"mult": 1.5 + 0.3 * int(Run.passives.get("dive_strike", 0)), "radius": r, "arc": 360.0,
+		"applies": {"stun": 0.6}, "hit_fx": "s00341"}
+	_resolve_hit()
+
+
+## Étourdissement (zones rouges du boss) : plus aucune action pendant [param t] s.
+func stun(t: float) -> void:
+	if is_dead:
+		return
+	_state = "stun"
+	_state_time = 0.0
+	_stun_len = t
+	_target = null
+	_trail_on = false
+	play(_anim("hurt"), 0.05, 0.6, true)
+	if _stun_fx == null:
+		_stun_fx = Label3D.new()
+		_stun_fx.text = "★ ÉTOURDI ★"
+		_stun_fx.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_stun_fx.no_depth_test = true
+		_stun_fx.fixed_size = true
+		_stun_fx.pixel_size = 0.0011
+		_stun_fx.font_size = 34
+		_stun_fx.outline_size = 10
+		_stun_fx.modulate = Color(1.0, 0.9, 0.3)
+		_stun_fx.position.y = 3.2
+		add_child(_stun_fx)
+	_stun_fx.visible = true
+
+
+func _shake(amount: float) -> void:
+	var rig := get_viewport().get_camera_3d().get_parent() as CameraRig if get_viewport().get_camera_3d() else null
+	if rig:
+		rig.shake(amount)
+
+
+func _wants_pressed(action: String) -> bool:
+	if autoplay:
+		return false
+	return Input.is_action_just_pressed(action)
+
+
+func _start_dodge(input_dir: Vector3, perfect := false) -> void:
 	_dodge_dir = input_dir.normalized() if input_dir.length() > 0.1 else forward()
 	face_direction(_dodge_dir, 1.0, 100.0)
 	_state = "dodge"
 	_state_time = 0.0
-	_dodge_ready_at = _time + DODGE_COOLDOWN
+	_dodge_mult = 1.35 if perfect else 1.0
+	if is_on_floor() and not perfect:
+		_dodge_ready_at = _time + DODGE_COOLDOWN
 	collision_mask = GameData.PHYS_WORLD
 	play(_anim("dodge"), 0.05, 1.8, true)
 
 
 func _update_dodge() -> void:
-	var v := _dodge_dir * (DODGE_DISTANCE / DODGE_TIME)
+	var v := _dodge_dir * (DODGE_DISTANCE * _dodge_mult / DODGE_TIME)
 	velocity.x = v.x
 	velocity.z = v.z
+	# saut sans délai pendant l'esquive (garde l'élan)
+	if _wants_pressed("jump") and can_jump():
+		_start_jump()
+		return
+	# compétence dès la seconde moitié de l'esquive (esquive -> sort)
+	if _state_time >= DODGE_TIME * 0.45:
+		for i in 4:
+			if _wants("skill_%d" % (i + 1)) and cooldown_left(i) <= 0.0:
+				use_skill(i)
+				return
 	if _state_time >= DODGE_TIME:
-		_state = "idle"
-		collision_mask = GameData.PHYS_WORLD | GameData.PHYS_MONSTER
+		_end_dodge()
+		if is_on_floor():
+			_state = "idle"
+		else:
+			# fin d'esquive aérienne : on retombe en gardant un peu d'élan
+			_carry = Vector3(v.x, 0, v.z) * 0.35
+			_state = "jump"
+			_state_time = 0.3
+
+
+func _end_dodge() -> void:
+	collision_mask = GameData.PHYS_WORLD | GameData.PHYS_MONSTER
+
+
+# --- annulation parfaite et fluidité ---------------------------------------------------
+var _last_hit_at := -10.0
+var _dodge_mult := 1.0
+var flow_stacks := 0
+var _flow_until := 0.0
+
+
+func flow_mult() -> float:
+	if _time > _flow_until:
+		flow_stacks = 0
+	return 1.0 + 0.1 * flow_stacks
+
+
+func _perfect_cancel() -> void:
+	flow_mult()
+	flow_stacks = mini(flow_stacks + 1, 4)
+	_flow_until = _time + 3.0
+	var sid := int(_action.get("skill_id", 0))
+	if skill_ready_at.has(sid):
+		skill_ready_at[sid] = _time + maxf(0.0, float(skill_ready_at[sid]) - _time) * 0.75
+	DamageNumber.spawn_text(self, "PARFAIT !  Fluidité ×%d" % flow_stacks, Color(0.55, 0.95, 1.0))
+	Vfx.ring(self, global_position, 2.2, Color(0.5, 0.9, 1.0, 0.9))
+	EdenFx.play(self, "s00141", global_position + Vector3.UP * 0.8, rotation.y, GameData.HERO_SCALE)
+	_shake(0.35)
+	for i in 4:
+		get_tree().create_timer(0.05 * i, false).timeout.connect(_afterimage)
+	_hit_pause(0.05)
+
+
+## Image rémanente : copie figée et translucide de la pose actuelle du héros.
+func _afterimage() -> void:
+	if model == null or not is_inside_tree():
+		return
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.albedo_color = Color(0.35, 0.75, 1.0, 0.55)
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var ghost := Node3D.new()
+	get_tree().current_scene.add_child(ghost)
+	for n in model.find_children("*", "MeshInstance3D", true, false):
+		var mi := n as MeshInstance3D
+		if not mi.is_visible_in_tree() or mi.mesh == null:
+			continue
+		var copy := MeshInstance3D.new()
+		copy.mesh = mi.bake_mesh_from_current_skeleton_pose() if mi.skin else mi.mesh
+		copy.material_override = mat
+		copy.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ghost.add_child(copy)
+		copy.global_transform = mi.global_transform
+	var tw := ghost.create_tween()
+	tw.tween_property(mat, "albedo_color:a", 0.0, 0.35)
+	tw.tween_callback(ghost.queue_free)
 
 
 func is_invulnerable() -> bool:
@@ -524,6 +806,8 @@ func take_damage(amount: float, source: Combatant = null, is_crit := false, dot 
 		return
 	_last_combat = _time
 	super.take_damage(amount, source, is_crit, dot)
+	if not dot:
+		_shake(clampf(amount / max_hp * 8.0, 0.3, 1.4))
 
 
 func _on_death(_killer: Combatant) -> void:

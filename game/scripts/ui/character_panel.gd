@@ -93,8 +93,11 @@ func refresh() -> void:
 	for row in sheet:
 		Hud._label(_stats_box, row[0], 15, Color(0.8, 0.8, 0.9))
 		Hud._label(_stats_box, row[1], 15, Color.WHITE)
-	_gold_label.text = "\nOr : %d\nFragments : %d · Essences : %d · Cristaux : %d" % [
-		Profile.gold, Profile.materials.fragment, Profile.materials.essence, Profile.materials.crystal]
+	if Run.active:
+		_gold_label.text = "\nOr : %d\nFragments : %d · Essences : %d · Cristaux : %d" % [
+			Profile.gold, Profile.materials.fragment, Profile.materials.essence, Profile.materials.crystal]
+	else:
+		_gold_label.text = "\nHéritage : %d objet(s) — clique pour choisir ton équipement de départ.\nÀ la fin de chaque run, tu gardes 1 objet (avec son amélioration)." % Profile.vault.size()
 	# équipement
 	for c in _equip_box.get_children():
 		c.queue_free()
@@ -109,9 +112,10 @@ func refresh() -> void:
 	for item in Profile.inventory:
 		var b := _item_button(item, "")
 		b.custom_minimum_size = Vector2(56, 56)
-		b.gui_input.connect(func(ev):
-			if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_RIGHT:
-				Profile.sell(item))
+		if Run.active:
+			b.gui_input.connect(func(ev):
+				if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_RIGHT:
+					Profile.sell(item))
 		b.pressed.connect(func(): Profile.equip(item))
 		_inv_box.add_child(b)
 	for i in Profile.INVENTORY_MAX - Profile.inventory.size():

@@ -33,7 +33,13 @@ var chests_opened := 0
 var route := PackedVector3Array()
 
 var _camp_ready_at := {}  # index de camp -> instant
-var _roam_timer := 3.0
+var _roam_timer := 2.0
+var _wave_timer := 60.0
+const EARLY_RAMP := 180.0  # durée de la montée en puissance du début de run (s)
+const EARLY_EASE := 0.6  # PV et dégâts des monstres au tout début (×)
+var _wave_hard := false
+var seals := 0
+const SEALS_NEEDED := 3
 var _elite_timer := 25.0
 var _adds_timer := BOSS_ADDS_EVERY
 var _route_timer := 0.0
@@ -109,8 +115,8 @@ func _objective_text() -> String:
 		return "Boss vaincu !"
 	var t := time_left()
 	var clock := "RAGE !" if state == "rage" else "%02d:%02d avant la rage" % [int(t) / 60, int(t) % 60]
-	return "%s\nVillage %s   ·   Donjon %s   ·   Coffres %d/%d" % [clock,
-		"✔" if village_found else "?", "✔" if dungeon_found else "?",
+	return "%s\nVillage %s   ·   Donjon %s   ·   Sceaux %d/%d   ·   Coffres %d/%d" % [clock,
+		"✔" if village_found else "?", "✔" if dungeon_found else "?", seals, SEALS_NEEDED,
 		chests_opened, map.chests.size()]
 
 
@@ -163,6 +169,11 @@ func _interact(it: Interactable) -> void:
 			Run.add_gold(15 + player.level * 4)
 			message.emit("Coffre ouvert !", 1.5)
 		"dungeon":
+			# le bot de test (--boss-after) ignore les sceaux
+			if seals < SEALS_NEEDED and not (player.autoplay and time > _autoplay_dungeon_time()):
+				message.emit("L'entrée est scellée : %d/%d sceaux\nLes gardiens d'élite les portent" % [seals, SEALS_NEEDED], 3.0)
+				_near = null
+				return
 			_enter_arena()
 		_:
 			npc_opened.emit(it.kind, it)
@@ -185,35 +196,57 @@ func _pick_monster(level: int) -> int:
 	return options[mini(options.size() - 1, options.size() - 1 - randi() % mini(3, options.size()))]
 
 
+## Pression constante : un flux de packs qui fonce sur le héros, des vagues qui
+## alternent faciles (nombreux et faibles) et dures (encerclement + élite), et
+## les gardiens d'élite des camps qui portent les sceaux du donjon.
 func _update_spawns(delta: float) -> void:
 	var rage := state == "rage"
+	var minutes := time / 60.0
 	var alive := get_tree().get_nodes_in_group("monsters").size()
-	var cap := 90 if rage else 32
-	# camps fixes de la map
+	var cap := 120 if rage else mini(18 + int(minutes * 4.0), 50)
+	# gardiens d'élite des camps (une fois chacun, puis toutes les 2 min)
 	for k in map.camps.size():
 		var camp: Dictionary = map.camps[k]
+		if not camp.elite or _elites.is_empty():
+			continue
 		if _flat(player.global_position, camp.pos) > CAMP_ACTIVATE or time < float(_camp_ready_at.get(k, 0.0)):
 			continue
-		_camp_ready_at[k] = time + CAMP_RESPAWN * (0.5 if rage else 1.0)
-		if alive >= cap:
-			continue
-		var lvl := _monster_level(int(camp.tier))
-		if camp.elite and not _elites.is_empty():
-			var e := _spawn_monster(_elites.pick_random(), camp.pos, lvl, false)
-			e.aggro_radius = 22.0
-		for i in randi_range(3, 5) + (3 if rage else 0):
+		_camp_ready_at[k] = time + 120.0
+		var lvl := _monster_level(int(camp.tier) + 1)
+		var e := _spawn_monster(_elites.pick_random(), camp.pos, lvl)
+		e.carries_seal = true
+		for i in 4:
 			_spawn_monster(_pick_monster(lvl), _around(camp.pos, 6.0), lvl)
-	# vagues errantes autour du héros
+		message.emit("Un gardien d'élite garde un sceau !", 2.0)
+	# flux continu
 	_roam_timer -= delta
 	if _roam_timer <= 0.0 and alive < cap:
-		_roam_timer = randf_range(1.6, 2.6) if rage else randf_range(4.0, 7.0)
-		var center := _ring_point(22.0, 32.0)
-		if center != Vector3.INF:
-			var lvl := _monster_level(0)
-			var id := _pick_monster(lvl)
-			for i in randi_range(6, 10) if rage else randi_range(2, 4):
-				var m := _spawn_monster(id, _around(center, 4.0), lvl)
-				m.aggro_radius = 60.0  # elles viennent chercher le héros
+		_roam_timer = randf_range(1.8, 2.6) if rage else maxf(3.5, 6.0 - minutes * 0.3)
+		var size := randi_range(8, 12) if rage else mini(4 + int(minutes), 9) + randi_range(0, 2)
+		_spawn_pack(size, _monster_level(0), 20.0, 28.0)
+	# vagues
+	_wave_timer -= delta
+	if _wave_timer <= 0.0:
+		_wave_timer = 30.0 if rage else 45.0
+		_wave_hard = not _wave_hard
+		var lvl := _monster_level(1)
+		if _wave_hard:
+			message.emit("Vague : encerclement !", 2.0)
+			# anneau complet autour du héros, plus une élite
+			var n := 10 + int(minutes * 2.0) + (8 if rage else 0)
+			for i in n:
+				var a := TAU * i / n
+				var p := player.global_position + Vector3(cos(a), 0, sin(a)) * 18.0
+				var g: Vector3 = map.ground_at(p.x, p.z)
+				if g != Vector3.INF:
+					_spawn_monster(_pick_monster(lvl), g, lvl)
+			var ep := _ring_point(18.0, 22.0)
+			if not _elites.is_empty() and ep != Vector3.INF:
+				_spawn_monster(_elites.pick_random(), ep, lvl)
+		else:
+			message.emit("Vague : horde !", 1.6)
+			for k in 3:
+				_spawn_pack(6 + int(minutes), maxi(1, lvl - 2), 22.0, 30.0)
 	# élites en masse pendant la rage
 	if rage and not _elites.is_empty():
 		_elite_timer -= delta
@@ -222,14 +255,29 @@ func _update_spawns(delta: float) -> void:
 			var c := _ring_point(24.0, 34.0)
 			if c != Vector3.INF:
 				for i in 3:
-					var e := _spawn_monster(_elites.pick_random(), _around(c, 5.0), _monster_level(1))
-					e.aggro_radius = 60.0
+					_spawn_monster(_elites.pick_random(), _around(c, 5.0), _monster_level(1))
 				message.emit("Des élites enragées arrivent !", 2.0)
+
+
+func _spawn_pack(count: int, level: int, min_d: float, max_d: float) -> void:
+	var center := _ring_point(min_d, max_d)
+	if center == Vector3.INF:
+		return
+	var id := _pick_monster(level)
+	for i in count:
+		_spawn_monster(id if randf() < 0.7 else _pick_monster(level), _around(center, 4.0), level)
 
 
 func _spawn_monster(id: int, pos: Vector3, level: int, boss := false) -> Monster:
 	var m := Monster.new()
 	m.configure(GameData.monster(id), boss, level)
+	if state == "explore":
+		# montée en puissance sur les 3 premières minutes : la run démarre sans
+		# équipement, le joueur doit pouvoir apprendre avant que ça devienne punitif
+		var k := lerpf(EARLY_EASE, 1.0, clampf(time / EARLY_RAMP, 0.0, 1.0))
+		m.max_hp *= k
+		m.hp = m.max_hp
+		m.atk *= k
 	add_child(m)
 	m.global_position = pos + Vector3.UP * 0.4
 	m.rotation.y = randf() * TAU
@@ -266,6 +314,9 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 	if m.is_elite:
 		Run.elites += 1
 	Run.add_gold(2 + m.level * (3 if m.is_elite else 1))
+	if seals < SEALS_NEEDED and (m.carries_seal or (m.is_elite and randf() < 0.3)):
+		seals += 1
+		message.emit("Sceau du donjon obtenu (%d/%d)" % [seals, SEALS_NEEDED], 2.5)
 	var luck := 0.0
 	var count := 0
 	if m.is_boss:
@@ -316,9 +367,9 @@ func _enter_arena() -> void:
 	c.y = map.height_at(c.x, c.z)
 	_boss = _spawn_monster(boss_id, c, maxi(player.level + 1, _monster_level(2)), true)
 	_boss.display_name = "<Boss> " + _boss.display_name
-	_boss.aggro_radius = 80.0
 	if _boss.brain:
 		_boss.brain.enraged_phase.connect(func(): message.emit("%s entre en fureur !" % _boss.display_name, 2.5))
+		_boss.reflect_started.connect(func(): message.emit("Miroir ! Ne frappe pas pendant 3 s", 2.0))
 	message.emit("BOSS : %s
 Évite les zones rouges (Maj : esquive)" % _boss.display_name, 3.5)
 
@@ -334,7 +385,6 @@ func _update_boss(delta: float) -> void:
 			var a := TAU * i / 4.0 + randf()
 			var p := _boss.global_position + Vector3(cos(a), 0, sin(a)) * 8.0
 			var m := _spawn_monster(_pick_monster(lvl), _around(p, 2.0), lvl)
-			m.aggro_radius = 80.0
 
 
 func _on_boss_killed() -> void:
@@ -486,6 +536,7 @@ func _keep_on_map() -> void:
 func debug_enter_dungeon() -> void:
 	if state in ["explore", "rage"]:
 		dungeon_found = true
+		seals = SEALS_NEEDED
 		_enter_arena()
 
 

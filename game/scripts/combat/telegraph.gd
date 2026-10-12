@@ -19,6 +19,9 @@ var angle := 90.0  # cone (degrés)
 var delay := 1.2
 var damage := 100.0
 var source: Combatant
+var stun_time := 0.0  # étourdit le héros touché
+var jumpable := false  # onde au sol : évitée si le héros est en l'air
+var small := false  # attaque de monstre ordinaire : annonce plus discrète
 
 var _t := 0.0
 var _fill: MeshInstance3D
@@ -37,7 +40,19 @@ static func spawn(parent: Node, pos: Vector3, yaw: float, props: Dictionary) -> 
 func _ready() -> void:
 	var outline := MeshInstance3D.new()
 	outline.mesh = _shape_mesh(1.0)
-	outline.material_override = _mat(0.28)
+	outline.material_override = _mat(0.18 if small else 0.28)
+	if jumpable:
+		# bord jaune : on peut l'éviter en sautant
+		var edge := MeshInstance3D.new()
+		var torus := TorusMesh.new()
+		torus.inner_radius = radius - 0.25
+		torus.outer_radius = radius
+		edge.mesh = torus
+		edge.scale = Vector3(1, 0.05, 1)
+		var em := _mat(0.9)
+		em.albedo_color = Color(1.0, 0.85, 0.2, 0.9)
+		edge.material_override = em
+		add_child(edge)
 	outline.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(outline)
 	_fill = MeshInstance3D.new()
@@ -112,8 +127,16 @@ func _resolve() -> void:
 	var hit := false
 	var player := get_tree().get_first_node_in_group("player") as Player
 	if damage > 0.0 and player and not player.is_dead and contains(player.global_position, player.radius):
-		player.take_damage(damage, source, false)
-		hit = true
+		var dodged_by_jump := jumpable and player.is_airborne() and player.global_position.y > global_position.y + 0.4
+		if dodged_by_jump:
+			DamageNumber.spawn_text(player, "SAUT !", Color(0.6, 0.9, 1.0))
+		elif player.is_invulnerable():
+			DamageNumber.spawn_text(player, "ESQUIVE !", Color(0.7, 1.0, 0.7))
+		else:
+			player.take_damage(damage, source, false)
+			if stun_time > 0.0:
+				player.stun(stun_time)
+			hit = true
 	resolved.emit(hit)
 	# éclat final puis disparition
 	var flash := MeshInstance3D.new()

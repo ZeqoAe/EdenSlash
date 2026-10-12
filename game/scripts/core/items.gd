@@ -157,19 +157,53 @@ static func upgrade_cost(item: Dictionary) -> Dictionary:
 	return cost
 
 
-static func disassemble_yield(item: Dictionary) -> Dictionary:
-	var r := int(item.rarity)
-	var up := int(item.get("upgrade", 0))
-	var out := {"fragment": (2 + int(item.level) / 3) * (r + 1) + up * 2}
-	if r >= 2:
-		out["essence"] = r - 1 + up / 3
-	if r == 3:
-		out["crystal"] = 1 + up / 5
+## Part des pierres investies dans les améliorations rendue à la vente et au désassemblage.
+const UPGRADE_REFUND := 0.7
+
+
+## Pierres (sans l'or) dépensées pour amener l'objet à son niveau d'amélioration, × 70 %.
+static func upgrade_refund(item: Dictionary) -> Dictionary:
+	var spent := {}
+	var tmp := {"level": int(item.level), "upgrade": 0}
+	for u in int(item.get("upgrade", 0)):
+		tmp.upgrade = u
+		var c := upgrade_cost(tmp)
+		for k in c:
+			if k != "gold":
+				spent[k] = int(spent.get(k, 0)) + int(c[k])
+	var out := {}
+	for k in spent:
+		var n := roundi(float(spent[k]) * UPGRADE_REFUND)
+		if n > 0:
+			out[k] = n
 	return out
 
 
+static func _merge(a: Dictionary, b: Dictionary) -> Dictionary:
+	var out := a.duplicate()
+	for k in b:
+		out[k] = int(out.get(k, 0)) + int(b[k])
+	return out
+
+
+## Désassemblage : matériaux selon rareté et niveau + 70 % des pierres d'amélioration.
+static func disassemble_yield(item: Dictionary) -> Dictionary:
+	var r := int(item.rarity)
+	var out := {"fragment": (2 + int(item.level) / 3) * (r + 1)}
+	if r >= 2:
+		out["essence"] = r - 1
+	if r == 3:
+		out["crystal"] = 1
+	return _merge(out, upgrade_refund(item))
+
+
 static func sell_price(item: Dictionary) -> int:
-	return int(5 * (int(item.level) + 1) * (int(item.rarity) + 1) * (1.0 + 0.2 * int(item.get("upgrade", 0))))
+	return int(5 * (int(item.level) + 1) * (int(item.rarity) + 1))
+
+
+## Vente : or + 70 % des pierres d'amélioration.
+static func sell_value(item: Dictionary) -> Dictionary:
+	return _merge({"gold": sell_price(item)}, upgrade_refund(item))
 
 
 static func buy_price(item: Dictionary) -> int:

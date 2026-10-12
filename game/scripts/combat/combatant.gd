@@ -152,7 +152,8 @@ func forward() -> Vector3:
 func take_damage(amount: float, source: Combatant = null, crit := false, dot := false) -> void:
 	if is_dead:
 		return
-	var dmg := maxf(1.0, round(amount * damage_taken_mult() - (0.0 if dot else defense * 0.5)))
+	# la défense réduit en pourcentage (100 déf = -50 %) : les petits coups restent dangereux
+	var dmg := maxf(1.0, round(amount * damage_taken_mult() * (1.0 if dot else 100.0 / (100.0 + maxf(defense, 0.0)))))
 	hp = maxf(0.0, hp - dmg)
 	health_changed.emit(hp, max_hp)
 	DamageNumber.spawn(self, dmg, crit, team == Team.PLAYER)

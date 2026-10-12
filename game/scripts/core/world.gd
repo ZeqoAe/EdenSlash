@@ -11,7 +11,7 @@ extends Node3D
 ##   --teleport=x,z        place le héros
 ##   --cam-dist=N          distance de la caméra
 
-const REVIVES_PER_RUN := 2
+const REVIVES_PER_RUN := 1
 
 var player: Player
 var director: RunDirector
@@ -45,11 +45,16 @@ func _open_for_test() -> void:
 	elif _debug_open == "map":
 		hud._big_map.visible = true
 	elif _debug_open in ["merchant", "smith", "trader"]:
-		for i in 6:
-			Profile.add_item(Items.generate(player.level + 2, 0.5))
+		# profil de test (user://profile_test.json) : jamais celui du joueur
+		cards._queue.clear()
+		cards._show_next()
+		for i in 14:
+			Profile.add_item(Items.generate(player.level + randi_range(0, 3), randf_range(-0.5, 1.0)))
 		Profile.materials.fragment += 40
 		Profile.add_gold(800)
 		village_ui.open(_debug_open, "Test")
+		if _debug_open == "merchant":
+			get_tree().create_timer(1.5, true, false, true).timeout.connect(func(): village_ui._select_max_rarity(1))
 
 
 func _ready() -> void:
@@ -139,6 +144,15 @@ func _parse_args() -> void:
 		elif arg.begins_with("--teleport="):
 			var xz := arg.trim_prefix("--teleport=").split(",")
 			_teleport = Vector2(float(xz[0]), float(xz[1]))
+		elif arg.begins_with("--end-at="):
+			var t_end := float(arg.trim_prefix("--end-at="))
+			get_tree().create_timer(t_end).timeout.connect(func():
+				for i in 6:
+					Profile.add_item(Items.generate(player.level + 1, randf()))
+				end_run("abandon"))
+		elif arg.begins_with("--seals="):
+			var n_seals := int(arg.trim_prefix("--seals="))
+			get_tree().create_timer(1.0).timeout.connect(func(): director.seals = n_seals)
 		elif arg.begins_with("--seed="):
 			Run.seed = int(arg.trim_prefix("--seed="))
 		elif arg.begins_with("--boss-after="):

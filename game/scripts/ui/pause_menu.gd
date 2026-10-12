@@ -47,7 +47,7 @@ func setup(p: Player) -> void:
 
 	_confirm = ConfirmationDialog.new()
 	_confirm.title = "Abandonner la run ?"
-	_confirm.dialog_text = "Tu gardes l'or et le butin ramassés.\nRetourner au lobby ?"
+	_confirm.dialog_text = "La run sera abandonnée : tu choisiras 1 objet à garder,\nle reste (or, matériaux, butin) est perdu.\nRetourner au lobby ?"
 	_confirm.ok_button_text = "Retour au lobby"
 	_confirm.cancel_button_text = "Annuler"
 	_confirm.confirmed.connect(func(): abandon_requested.emit())

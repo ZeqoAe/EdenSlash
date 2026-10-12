@@ -12,6 +12,9 @@ var _cooldown := 2.5
 var _nova_timer := 0.0
 var _phase2 := false
 var _busy := false
+var _reflect_timer := 12.0
+var reflecting := false
+var _reflect_ring: Node3D
 
 
 func _physics_process(delta: float) -> void:
@@ -27,6 +30,10 @@ func _physics_process(delta: float) -> void:
 		return
 	_cooldown -= delta
 	_nova_timer -= delta
+	_reflect_timer -= delta
+	if _reflect_timer <= 0.0:
+		_start_reflect()
+		return
 	if _cooldown > 0.0 or boss._state == "attack":
 		return
 	var d := boss.global_position.distance_to(player.global_position)
@@ -66,6 +73,33 @@ func _dmg(mult: float) -> float:
 	return boss.atk * mult
 
 
+# --- miroir : 3 s pendant lesquelles les coups reçus sont renvoyés ------------------------
+func _start_reflect() -> void:
+	_reflect_timer = 17.0 if not _phase2 else 12.0
+	reflecting = true
+	boss.message_reflect()
+	_reflect_ring = MeshInstance3D.new()
+	var t := TorusMesh.new()
+	t.inner_radius = boss.radius + 0.6
+	t.outer_radius = boss.radius + 1.0
+	(_reflect_ring as MeshInstance3D).mesh = t
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.albedo_color = Color(1.0, 0.85, 0.3, 0.9)
+	(_reflect_ring as MeshInstance3D).material_override = m
+	boss.add_child(_reflect_ring)
+	_reflect_ring.position.y = 1.2
+	var tw := _reflect_ring.create_tween().set_loops(6)
+	tw.tween_property(_reflect_ring, "scale", Vector3.ONE * 1.15, 0.25)
+	tw.tween_property(_reflect_ring, "scale", Vector3.ONE, 0.25)
+	await boss.get_tree().create_timer(3.0, false).timeout
+	reflecting = false
+	if is_instance_valid(_reflect_ring):
+		_reflect_ring.queue_free()
+
+
 # --- attaques -----------------------------------------------------------------------
 func _cast_slams() -> void:
 	var delay := 1.3 * _speed()
@@ -74,7 +108,7 @@ func _cast_slams() -> void:
 		if not is_instance_valid(boss) or boss.is_dead:
 			return
 		var p := boss._player.global_position
-		Telegraph.spawn(boss, p, 0.0, {"shape": "circle", "radius": 4.0, "delay": delay, "damage": _dmg(1.4), "source": boss})
+		Telegraph.spawn(boss, p, 0.0, {"shape": "circle", "radius": 4.0, "delay": delay, "damage": _dmg(1.4), "source": boss, "stun_time": 1.2})
 		await boss.get_tree().create_timer(0.5, false).timeout
 
 
@@ -84,7 +118,7 @@ func _cast_charge() -> void:
 	to.y = 0.0
 	var yaw := atan2(to.x, to.z)
 	boss.face_direction(to, 1.0, 100.0)
-	var t := Telegraph.spawn(boss, boss.global_position, yaw, {"shape": "line", "length": 18.0, "width": 3.5, "delay": delay, "damage": _dmg(1.8), "source": boss})
+	var t := Telegraph.spawn(boss, boss.global_position, yaw, {"shape": "line", "length": 18.0, "width": 3.5, "delay": delay, "damage": _dmg(1.8), "source": boss, "stun_time": 1.4})
 	_begin("move02", delay + 0.4)
 	await t.resolved
 	if is_instance_valid(boss) and not boss.is_dead:
@@ -96,7 +130,7 @@ func _cast_cleave() -> void:
 	var delay := 0.8 * _speed()
 	var to := boss._player.global_position - boss.global_position
 	boss.face_direction(to, 1.0, 100.0)
-	Telegraph.spawn(boss, boss.global_position, atan2(to.x, to.z), {"shape": "cone", "radius": 7.5, "angle": 110.0, "delay": delay, "damage": _dmg(1.7), "source": boss})
+	Telegraph.spawn(boss, boss.global_position, atan2(to.x, to.z), {"shape": "cone", "radius": 7.5, "angle": 110.0, "delay": delay, "damage": _dmg(1.7), "source": boss, "stun_time": 1.0})
 	_begin("attack02", delay + 0.3)
 
 
@@ -123,5 +157,5 @@ func _cast_barrage() -> void:
 func _cast_nova() -> void:
 	_nova_timer = 14.0
 	var delay := 1.6 * _speed()
-	Telegraph.spawn(boss, boss.global_position, 0.0, {"shape": "ring", "radius": 12.0, "inner": 3.0, "delay": delay, "damage": _dmg(2.0), "source": boss})
+	Telegraph.spawn(boss, boss.global_position, 0.0, {"shape": "ring", "radius": 12.0, "inner": 3.0, "delay": delay, "damage": _dmg(2.0), "source": boss, "jumpable": true, "stun_time": 1.5})
 	_begin("magic02", delay + 0.3)

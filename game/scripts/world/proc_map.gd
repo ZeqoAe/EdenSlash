@@ -118,7 +118,8 @@ func _place_pois() -> void:
 	var dir := Vector2(cos(ang), sin(ang))
 	var s2 := c + dir * 175.0
 	var d2 := c - dir.rotated(rng.randf_range(-0.6, 0.6)) * 170.0
-	var v2 := c + dir.rotated(PI / 2) * rng.randf_range(-60.0, 60.0)
+	# village du côté du départ, loin de l'entrée du donjon (~200 m)
+	var v2 := c + dir * rng.randf_range(25.0, 70.0) + dir.orthogonal() * rng.randf_range(-50.0, 50.0)
 	start = Vector3(s2.x, 0, s2.y)
 	dungeon = Vector3(d2.x, 0, d2.y)
 	village = Vector3(v2.x, 0, v2.y)

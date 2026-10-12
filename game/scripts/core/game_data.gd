@@ -7,10 +7,10 @@ const PHYS_PLAYER := 2
 const PHYS_MONSTER := 4
 
 ## Nombre de monstres de son niveau à tuer pour gagner un niveau.
-const KILLS_PER_LEVEL := 14
-## Les monstres d'Eden sont réglés pour du MMO : on adoucit leurs dégâts
-## car en hack and slash on en affronte beaucoup à la fois.
-const MONSTER_DAMAGE_FACTOR := 0.22
+const KILLS_PER_LEVEL := 20
+## Chaque coup de monstre est annoncé au sol et peut s'esquiver : il doit
+## donc faire mal (une meute de 6 tue en quelques secondes si on reste planté).
+const MONSTER_DAMAGE_FACTOR := 1.6
 ## Lisibilité hack and slash : le héros chibi d'Eden est agrandi, les monstres réduits.
 const HERO_SCALE := 1.3
 const MONSTER_SCALE := 0.7
@@ -76,7 +76,7 @@ func player_max_hp(level: int) -> float:
 
 
 func player_atk(level: int) -> float:
-	return 55.0 * pow(1.1, level - 1)
+	return 45.0 * pow(1.1, level - 1)
 
 
 func _setup_input() -> void:

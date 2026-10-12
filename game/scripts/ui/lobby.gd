@@ -14,6 +14,8 @@ var _hero_root: Node3D
 var _cam_pivot: Node3D
 var _panel_layer: CanvasLayer
 var _gold: Label
+var _reset_button: Button
+var _reset_armed_at := -10.0
 
 
 func _ready() -> void:
@@ -108,8 +110,11 @@ func _process(delta: float) -> void:
 	if _hero_root:
 		_hero_root.rotation.y += delta * 0.35
 	if _gold:
-		_gold.text = "Or : %d   ·   Runs : %d (%d victoires)   ·   Meilleur niveau : %d" % [
-			Profile.gold, Profile.runs_done, Profile.runs_won, Profile.best_level]
+		_gold.text = "Héritage : %d objet(s)   ·   Runs : %d (%d victoires)   ·   Meilleur niveau : %d" % [
+			Profile.vault.size(), Profile.runs_done, Profile.runs_won, Profile.best_level]
+	if _reset_button and _reset_armed_at > 0.0 and _now() - _reset_armed_at > 4.0:
+		_reset_armed_at = -10.0
+		_reset_button.text = "Nouvelle partie (tout effacer)"
 
 
 # --- interface ---------------------------------------------------------------------
@@ -143,9 +148,10 @@ func _build_ui() -> void:
 	Hud._label(v, " ", 6, Color.WHITE)
 	_big_button(v, "▶  Lancer la run — Limestone Mtn.", _start_run)
 	_big_button(v, "Personnage & équipement", _open_panel)
+	_reset_button = _big_button(v, "Nouvelle partie (tout effacer)", _on_reset)
 	_big_button(v, "Quitter", func(): get_tree().quit())
 	_gold = Hud._label(v, "", 15, ACCENT)
-	var help := Hud._label(root, "Run : monte de niveau sur Limestone Mtn., choisis une carte à chaque niveau (compétences, améliorations, passifs), puis affronte le donjon et son boss.", 14, Color(1, 1, 1, 0.7))
+	var help := Hud._label(root, "Run : chaque run repart de zéro. Monte de niveau, réunis 3 sceaux, affronte le boss. À la fin, garde 1 objet en héritage (avec son amélioration).", 14, Color(1, 1, 1, 0.7))
 	help.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	help.position = Vector2(60, -50)
 	layer.add_child(root)
@@ -200,7 +206,23 @@ func _class_card(id: String, label: String) -> Control:
 	return b
 
 
-func _big_button(parent: Control, text: String, cb: Callable) -> void:
+func _now() -> float:
+	return Time.get_ticks_msec() / 1000.0
+
+
+## Nouvelle partie : 2 clics en 4 s (héritage et statistiques effacés).
+func _on_reset() -> void:
+	if _reset_armed_at < 0.0:
+		_reset_armed_at = _now()
+		_reset_button.text = "Confirmer : effacer l'héritage et les statistiques ?"
+		return
+	_reset_armed_at = -10.0
+	_reset_button.text = "Nouvelle partie (tout effacer)"
+	Profile.reset_all()
+	_show_hero()
+
+
+func _big_button(parent: Control, text: String, cb: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(560, 54)
@@ -211,3 +233,4 @@ func _big_button(parent: Control, text: String, cb: Callable) -> void:
 	b.add_theme_stylebox_override("focus", hover)
 	b.pressed.connect(cb)
 	parent.add_child(b)
+	return b

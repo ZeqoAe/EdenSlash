@@ -33,6 +33,7 @@ func start(cid: String) -> void:
 	max_level = 1
 	result = ""
 	started_at = Time.get_ticks_msec()
+	Profile.begin_run()
 	changed.emit()
 
 

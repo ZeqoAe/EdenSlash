@@ -15,7 +15,9 @@ Double-clic sur **`Jouer.bat`** (ou `Editeur.bat` pour ouvrir le projet dans God
 | Attaquer (sur un monstre : auto-attaque) | Clic gauche (maintenu) |
 | Tourner / incliner la caméra | Clic droit maintenu |
 | Compétences | A E R T ou 1 2 3 4 |
-| Sauter / esquive (invulnérable) | Espace / Maj |
+| Sauter (sauts multiples avec le passif) / esquive (invulnérable) | Espace / Maj |
+| Frappe plongeante (avec le passif) | Clic gauche en l'air |
+| Esquive aérienne / saut-esquive | Maj en l'air / Espace pendant l'esquive |
 | Interagir (coffre, PNJ, donjon) | F |
 | Carte / menu (stats, équipement, passifs) | M / Échap |
 | Zoom | Molette |
@@ -75,6 +77,12 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path game --script tools/bake
 
 Options de test : `--seed=N` (même map), `--dungeon` (arène du boss), `--rage`,
 `--goto=village|dungeon`, `--boss-after=N` (le bot va au boss après N s), `--open=pause|cards|map|smith|trader`,
-`--teleport=x,z`, `--cam-dist=N`. Test des objets : `Godot --headless --path game res://tests/test_items.tscn`.
+`--teleport=x,z`, `--cam-dist=N`, `--seals=N` (sceaux du donjon), `--start-level=N`, `--end-at=N` (fin de run → choix de l'héritage).
+Cycle héritage / remboursement : `Godot --headless --path game res://tests/test_progress.tscn`.
+Les lancements de test (arguments après `--`, scènes `res://tests`) utilisent `user://profile_test.json`,
+jamais le profil du joueur.
+Saut et esquive mesurés : `Godot --path game res://tests/test_jump.tscn`.
+Effets d'Eden : `Godot --path game res://tests/test_fx.tscn -- s36041` (images dans `user://shots`) ;
+`.venv/Scripts/python -I tools/fx2godot.py <effets>` pour en convertir d'autres. Test des objets : `Godot --headless --path game res://tests/test_items.tscn`.
 
 Les données brutes extraites (`extracted/`, `index.csv`) ne sont pas versionnées.

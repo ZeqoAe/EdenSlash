@@ -3,6 +3,28 @@ extends Label3D
 ## Chiffre de dégâts flottant au-dessus d'un combattant.
 
 
+## Texte flottant (ESQUIVE, SAUT, RENVOI...).
+static func spawn_text(target: Node3D, text: String, color: Color) -> void:
+	if not target.is_inside_tree():
+		return
+	var label := DamageNumber.new()
+	label.text = text
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.no_depth_test = true
+	label.fixed_size = true
+	label.pixel_size = 0.0011
+	label.font_size = 40
+	label.outline_size = 12
+	label.outline_modulate = Color(0.1, 0.05, 0.1)
+	label.modulate = color
+	target.get_tree().current_scene.add_child(label)
+	label.global_position = target.global_position + Vector3.UP * 2.6
+	var tw := label.create_tween().set_parallel()
+	tw.tween_property(label, "global_position", label.global_position + Vector3.UP * 1.0, 0.7)
+	tw.tween_property(label, "modulate:a", 0.0, 0.3).set_delay(0.4)
+	tw.chain().tween_callback(label.queue_free)
+
+
 static func spawn(target: Node3D, amount: float, crit: bool, on_player: bool) -> void:
 	if not target.is_inside_tree():
 		return

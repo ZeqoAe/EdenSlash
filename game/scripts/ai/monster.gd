@@ -3,7 +3,6 @@ extends Combatant
 ## Monstre d'Eden Eternal piloté par une petite machine à états :
 ## errance -> poursuite -> attaque, avec recul et mort animée.
 
-const LEASH_RADIUS := 90.0
 const ATTACK_COOLDOWN := 1.8
 const HIT_FRACTION := 0.45
 
@@ -11,7 +10,7 @@ var data: Dictionary
 var is_boss := false
 var is_elite := false
 var enraged := false
-var aggro_radius := 16.0
+var carries_seal := false  # gardien d'élite : lâche un sceau du donjon
 var xp_reward := 0
 var move_speed := 3.2
 
@@ -45,12 +44,13 @@ func configure(monster_data: Dictionary, boss := false, at_level := 0) -> void:
 	if at_level > level:
 		k = pow(1.1, at_level - level)
 		level = at_level
-	max_hp = float(data.hp) * k * (14.0 if boss else 1.0)
+	# l'auto-attaque seule ne doit pas suffire : il faut kiter et placer ses compétences
+	max_hp = float(data.hp) * k * (14.0 if boss else (1.6 if is_elite else 2.4))
 	hp = max_hp
 	atk = float(data.atk) * k * GameData.MONSTER_DAMAGE_FACTOR * (1.5 if boss else (1.25 if is_elite else 1.0))
 	defense = float(data.get("def", 0)) * k
 	xp_reward = int(float(data.xp) * k * (8.0 if boss else (4.0 if is_elite else 1.0)))
-	move_speed = randf_range(2.6, 3.6) * (0.85 if boss else 1.0)
+	move_speed = randf_range(3.4, 4.6) * (0.85 if boss else 1.0)
 
 
 func _ready() -> void:
@@ -93,6 +93,22 @@ func _ready() -> void:
 
 
 var brain: BossBrain
+var _flash_mat: StandardMaterial3D
+
+
+## Éclair blanc sur tout le modèle à l'impact.
+func _flash() -> void:
+	if model == null:
+		return
+	if _flash_mat == null:
+		_flash_mat = StandardMaterial3D.new()
+		_flash_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		_flash_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_flash_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+			mi.material_overlay = _flash_mat
+	_flash_mat.albedo_color = Color(1, 0.95, 0.85, 0.4)
+	create_tween().tween_property(_flash_mat, "albedo_color:a", 0.0, 0.1)
 
 
 ## Attaque spéciale en cours (boss) : le monstre reste sur place.
@@ -113,7 +129,6 @@ func enrage() -> void:
 	atk *= 1.3
 	move_speed *= 1.25
 	xp_reward = int(xp_reward * 1.5)
-	aggro_radius = maxf(aggro_radius, 40.0)
 	var aura := OmniLight3D.new()
 	aura.light_color = Color(1.0, 0.15, 0.1)
 	aura.light_energy = 0.7
@@ -167,6 +182,8 @@ func _physics_process(delta: float) -> void:
 			if _state_time > 0.28:
 				_set_state("chase")
 
+	if _time < _dash_until:
+		desired = _dash_vel
 	desired += _separation() * 1.8
 	_knock = _knock.move_toward(Vector3.ZERO, 14.0 * delta)
 	velocity.x = desired.x + _knock.x
@@ -183,37 +200,51 @@ func _player_alive() -> bool:
 	return _player != null and not _player.is_dead
 
 
-func _update_idle(delta: float) -> Vector3:
-	if _player_alive() and global_position.distance_to(_player.global_position) < aggro_radius:
+func _update_idle(_delta: float) -> Vector3:
+	# tous les monstres de la run traquent le héros : pression constante
+	if _player_alive():
 		_set_state("chase")
-		return Vector3.ZERO
-	if global_position.distance_to(_wander_target) < 0.6 or _state_time > 5.0:
-		_wander_target = global_position + Vector3(randf_range(-5, 5), 0, randf_range(-5, 5))
-		_state_time = 0.0
-	var to := _wander_target - global_position
-	to.y = 0.0
-	if to.length() > 0.6 and _state_time > 1.2:
-		face_direction(to, delta, 6.0)
-		play("move01", 0.2)
-		return to.normalized() * move_speed * 0.4
-	play("stand01" if has_anim("stand01") else "battle01", 0.3)
+	else:
+		play("stand01" if has_anim("stand01") else "battle01", 0.3)
 	return Vector3.ZERO
 
 
+## Type d'attaque selon le modèle d'Eden.
+const ATTACK_KINDS := {"m018": "charge", "m075": "charge", "m020": "slam", "m024": "ranged", "m029": "ranged"}
+
+
+func attack_kind() -> String:
+	if is_boss:
+		return "melee"
+	return ATTACK_KINDS.get(String(data.get("model", "")), "melee")
+
+
+func _attack_range() -> float:
+	match attack_kind():
+		"ranged":
+			return 12.0
+		"charge":
+			return 8.5
+		"slam":
+			return radius + 2.4
+	return radius + _player.radius + 1.0
+
+
 func _update_chase(delta: float) -> Vector3:
-	if not _player_alive() or global_position.distance_to(_player.global_position) > LEASH_RADIUS:
+	if not _player_alive():
 		_set_state("idle")
 		return Vector3.ZERO
 	var to := _player.global_position - global_position
 	to.y = 0.0
-	var reach := radius + _player.radius + 0.9
 	face_direction(to, delta, 10.0)
-	if to.length() <= reach:
+	if to.length() <= _attack_range():
 		if _time >= _attack_ready_at and not _attacks.is_empty():
 			_start_attack()
-		else:
+			return Vector3.ZERO
+		# les tireurs gardent leurs distances, les autres collent le héros
+		if attack_kind() == "ranged" or to.length() <= radius + _player.radius + 0.8:
 			play("battle01" if has_anim("battle01") else "stand01", 0.2)
-		return Vector3.ZERO
+			return Vector3.ZERO
 	play("move02" if has_anim("move02") else "move01", 0.2)
 	var step := _path_step(_player.global_position)
 	face_direction(step, delta, 10.0)
@@ -238,30 +269,71 @@ func _path_step(goal: Vector3) -> Vector3:
 			return d.normalized()
 	return to.normalized()
 
+
+## Attaque annoncée : la zone rouge apparaît, se remplit, puis frappe.
+## Le héros qui sort de la zone ou esquive à temps ne prend rien.
 func _start_attack() -> void:
+	var kind := attack_kind()
 	var a: String = _attacks.pick_random()
+	if kind == "ranged" and has_anim("shoot01"):
+		a = "shoot01"
+	elif kind == "slam" and has_anim("magic01"):
+		a = "magic01"
 	_set_state("attack")
-	_state_len = anim_length(a)
-	_hit_done = false
 	var keys := keys_of(a)
 	var hits: Array = keys.get("hit", [])
-	_hit_time = float(hits[0]) if not hits.is_empty() else _state_len * HIT_FRACTION
+	var length := anim_length(a)
+	var hit_t := float(hits[0]) if not hits.is_empty() else length * HIT_FRACTION
+	# temps de réaction minimal : l'animation est ralentie pour coller à l'annonce
+	var delay := maxf(hit_t, 0.55 if not is_elite else 0.7)
+	var speed := hit_t / delay
+	_state_len = length / speed
+	_hit_time = delay
+	_hit_done = false
 	for snd in keys.get("sounds", []):
-		get_tree().create_timer(float(snd[0]), false).timeout.connect(
+		get_tree().create_timer(float(snd[0]) / speed, false).timeout.connect(
 			func(): Sfx.play_at(self, global_position, String(snd[1]), -8.0))
-	play(a, 0.1, 1.0, true)
+	play(a, 0.1, speed, true)
+	var to := _player.global_position - global_position
+	to.y = 0.0
+	var yaw := atan2(to.x, to.z)
+	face_direction(to, 1.0, 100.0)
+	var dmg := atk * damage_dealt_mult() * randf_range(0.9, 1.1)
+	var props := {"delay": delay, "damage": dmg, "source": self, "small": not is_elite}
+	match kind:
+		"ranged":
+			props.merge({"shape": "line", "length": 13.0, "width": 0.8, "damage": 0.0})
+			_pending_shot = {"yaw": yaw, "damage": dmg}
+		"charge":
+			props.merge({"shape": "line", "length": 9.0, "width": radius * 2.0 + 0.6, "damage": dmg * 1.3})
+			_pending_dash = to.normalized() * 8.0
+		"slam":
+			props.merge({"shape": "circle", "radius": radius + 2.6, "damage": dmg * 1.25})
+			yaw = 0.0
+		_:
+			props.merge({"shape": "cone", "radius": radius + 2.0 + (0.8 if is_elite else 0.0), "angle": 100.0})
+	_telegraph = Telegraph.spawn(self, global_position, yaw, props)
 
 
-func _update_attack(delta: float) -> void:
-	if _player_alive():
-		face_direction(_player.global_position - global_position, delta, 4.0)
+var _telegraph: Telegraph
+var _dash_vel := Vector3.ZERO
+var _dash_until := 0.0
+var _pending_shot := {}
+var _pending_dash := Vector3.ZERO
+
+
+func _update_attack(_delta: float) -> void:
 	if not _hit_done and _state_time >= _hit_time:
 		_hit_done = true
-		if _player_alive():
-			var d := global_position.distance_to(_player.global_position)
-			if d <= radius + _player.radius + 1.4:
-				var crit := randf() < 0.05
-				_player.take_damage(atk * damage_dealt_mult() * randf_range(0.85, 1.15) * (1.5 if crit else 1.0), self, crit)
+		if not _pending_shot.is_empty():
+			var y: float = _pending_shot.yaw
+			Projectile.fire(self, global_position + Vector3.UP * 1.0, Vector3(sin(y), 0, cos(y)), float(_pending_shot.damage))
+			_pending_shot = {}
+		if _pending_dash != Vector3.ZERO:
+			# charge physique (respecte les collisions)
+			_dash_vel = _pending_dash / 0.22
+			_dash_until = _time + 0.22
+			_pending_dash = Vector3.ZERO
 	if _state_time >= _state_len:
 		_attack_ready_at = _time + ATTACK_COOLDOWN * randf_range(0.8, 1.3)
 		_set_state("chase")
@@ -289,10 +361,28 @@ func knockback(impulse: Vector3) -> void:
 	_knock += Vector3(impulse.x, 0, impulse.z)
 
 
+signal reflect_started
+
+
+func message_reflect() -> void:
+	reflect_started.emit()
+	DamageNumber.spawn_text(self, "MIROIR !", Color(1.0, 0.85, 0.3))
+
+
+func take_damage(amount: float, source: Combatant = null, crit := false, dot := false) -> void:
+	# miroir du boss : renvoie 60 % des dégâts au héros
+	if brain and brain.reflecting and source is Player and not dot:
+		source.take_damage(amount * 0.6, self, false, true)
+		DamageNumber.spawn_text(source, "RENVOI", Color(1.0, 0.75, 0.3))
+		amount *= 0.2
+	super.take_damage(amount, source, crit, dot)
+
+
 func _on_damaged(_amount: float, _source: Combatant) -> void:
 	if randf() < 0.5:
 		for snd in keys_of("hurt01").get("sounds", []):
 			Sfx.play_at(self, global_position, String(snd[1]), -10.0)
+	_flash()
 	# petit gonflement à l'impact
 	if model:
 		model.scale = _base_scale * 1.08
@@ -305,6 +395,8 @@ func _on_damaged(_amount: float, _source: Combatant) -> void:
 
 
 func _on_death(_killer: Combatant) -> void:
+	if is_instance_valid(_telegraph):
+		_telegraph.queue_free()  # un monstre mort ne frappe plus
 	_set_state("dead")
 	remove_from_group("monsters")
 	collision_layer = 0
