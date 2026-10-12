@@ -134,6 +134,35 @@ static func apply_global() -> void:
 	t.default_font = body
 	t.default_font_size = 16
 	t.merge_with(build_theme())
+	_add_version_overlay()
+
+
+## Numéro de version discret en bas à droite de tous les écrans.
+static func _add_version_overlay() -> void:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return
+	var layer := CanvasLayer.new()
+	layer.layer = 100
+	layer.name = "VersionOverlay"
+	var l := Label.new()
+	l.text = Version.label()
+	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_color_override("font_color", Color(1, 1, 1, 0.75))
+	l.add_theme_constant_override("outline_size", 3)
+	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	l.anchor_left = 1.0
+	l.anchor_top = 1.0
+	l.anchor_right = 1.0
+	l.anchor_bottom = 1.0
+	l.offset_left = -220.0
+	l.offset_top = -22.0
+	l.offset_right = -8.0
+	l.offset_bottom = -4.0
+	layer.add_child(l)
+	tree.root.add_child.call_deferred(layer)
 
 
 static func build_theme() -> Theme:

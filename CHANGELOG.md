@@ -1,0 +1,18 @@
+# Versions d'Eden Slash
+
+Le numéro est affiché en bas à droite de tous les écrans du jeu. Si ce numéro n'est pas
+le même que la dernière ligne ci-dessous, ta copie n'est pas à jour (`Mettre_a_jour.bat`).
+
+Règle : **à chaque envoi sur GitHub, +1 sur le dernier chiffre** (0.1.7 → 0.1.8…),
+dans `game/scripts/core/version.gd` et ici.
+
+| Version | Contenu | Fait par |
+|---|---|---|
+| 0.1.0 | Premier prototype : run de 10 min, rage, boss, héritage roguelite | session locale |
+| 0.1.1 | Cartes de niveau : sélection puis bouton Valider | session cloud |
+| 0.1.2 | Paramètres : modes de jeu, touches, affichage, combat automatique | session cloud |
+| 0.1.3 | Build roguelite : combo d'auto-attaque, procs, sets, cartes à rareté, plafond niveau 15 | session cloud |
+| 0.1.4 | Interface : thème or sur indigo, orbes vie / XP, buffs et debuffs, objectifs (Tab) | session cloud |
+| 0.1.5 | Classes (Guerrier, Voleur, Chasseur, Clerc, Magicien), biomes, combos de classe, grimoire | session locale |
+| 0.1.6 | Icônes poison, régénération, invisibilité, évasion | session cloud |
+| 0.1.7 | Numéro de version à l'écran, CHANGELOG, `Envoyer.bat` / `Mettre_a_jour.bat` | session cloud |

@@ -174,6 +174,7 @@ func _save_report(note: String) -> void:
 	var p := player.global_position
 	var report := {
 		"note": note,
+		"version": Version.NUMBER,
 		"date": Time.get_datetime_string_from_system(),
 		"map": director.map.map_id if director.map else "",
 		"position_godot": [p.x, p.y, p.z],
