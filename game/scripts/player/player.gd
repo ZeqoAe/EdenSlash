@@ -70,6 +70,7 @@ var proc_ready_at := {}  # id du proc -> instant (clock) de fin de recharge
 var skill_ready_at := {}  # id compétence -> instant
 var dev_invincible := false  # mode dev : aucun dégât
 var autoplay := false
+var autoplay_idle := false  # test (--idle) : le pilote automatique ne bouge ni ne frappe
 var autoplay_target := Vector3.INF
 
 var _state := "idle"  # idle, attack, skill, dodge, jump, dead
@@ -384,7 +385,7 @@ func _speed() -> float:
 func _read_move_input() -> Vector3:
 	var v := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	if autoplay:
-		v = _autoplay_input()
+		v = Vector2.ZERO if autoplay_idle else _autoplay_input()
 	if v != Vector2.ZERO:
 		_move_goal = Vector3.INF  # le clavier reprend la main
 	elif _move_goal != Vector3.INF:
@@ -449,7 +450,7 @@ func _try_skill_input() -> bool:
 
 func _wants(action: String) -> bool:
 	if autoplay:
-		return _autoplay_wants(action)
+		return false if autoplay_idle else _autoplay_wants(action)
 	if action == "attack":
 		return Input.is_action_pressed(action) and not _ui_has_mouse()
 	return Input.is_action_just_pressed(action)

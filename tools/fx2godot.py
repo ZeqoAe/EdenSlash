@@ -70,10 +70,24 @@ def _node_vertex_counts(glb_path):
     return out
 
 
+_opaque_cache = {}
+
+
+def _opaque_share(uri):
+    """Part des pixels presque opaques de la texture (modèle plein vs voile translucide)."""
+    if uri not in _opaque_cache:
+        a = Image.open(os.path.join(OUT, uri)).convert('RGBA').getchannel('A')
+        hist = a.histogram()
+        _opaque_cache[uri] = sum(hist[205:]) / max(1, sum(hist))
+    return _opaque_cache[uri]
+
+
 def mark_hard_quads(name, quads_only=False):
     """Marque 'hide' les matériaux d'un effet converti dont le quad aurait des bords durs.
-    [quads_only] : seulement les vrais quads (4 à 8 sommets), pas les maillages (dragon,
-    papillons des auras) dont la texture touche le bord."""
+    [quads_only] (auras) : seulement les vrais quads (4 à 8 sommets), pas les maillages
+    (dragon, papillons) dont la texture touche le bord ; et les voiles translucides en
+    mélange normal (panneaux pâles rectangulaires autour du héros) sont masqués : on ne
+    garde que la lumière (additif) et les modèles pleins."""
     js = os.path.join(OUT, name + '.fx.json')
     fx = json.load(open(js, encoding='utf-8'))
     glb = os.path.join(OUT, fx.get('glb', name) + '.glb')
@@ -83,6 +97,10 @@ def mark_hard_quads(name, quads_only=False):
     for node, info in fx.get('materials', {}).items():
         uri = info.get('tex', tex.get(node))
         info.pop('hide', None)
+        if quads_only and uri and info.get('blend', 'mix') == 'mix' and os.path.exists(os.path.join(OUT, uri))                 and _opaque_share(uri) < 0.5:
+            info['hide'] = True
+            hidden.append(node)
+            continue
         if quads_only and verts.get(node, 4) > 8:
             continue
         if uri and os.path.exists(os.path.join(OUT, uri)) and _hard_edges(uri, info.get('blend', 'mix')):
@@ -163,6 +181,47 @@ def share_variants(names):
             if os.path.exists(glb + '.import'):
                 os.remove(glb + '.import')
     print('variantes partagées : %.1f Mo économisés' % (saved / 1e6))
+
+
+# Auras : pièces qui dessinent des boîtes ou des panneaux rectangulaires autour du héros
+# (relevées à l'œil sur tests/test_aura.tscn). Textures de l'effet de base de la famille
+# (5 premiers caractères) ; les pièces correspondantes sont masquées dans toutes les
+# variantes de couleur. "*" : textures de halo carré masquées dans toutes les auras.
+AURA_BAD = {'*': ['s0084104', 's0014104'],
+            's8071': ['s8071101', 's8071103'], 's8191': ['s8191115'], 's8281': ['s8281154', 's8071204'],
+            's8741': ['s8341101', 's12963107', 's8741151'], 's8521': ['s8521101']}
+AURA_BAD_NODES = {'s8311': ['Plane01', 'Plane13']}  # cône plein
+
+
+def hide_aura_parts(names):
+    """Masque les pièces rectangulaires des auras (voir AURA_BAD) ; renvoie le nombre."""
+    names = sorted(names)
+    fams = {}
+    for n in names:
+        fams.setdefault(n[:5], []).append(n)
+    total = 0
+    for fam, members in fams.items():
+        base = members[0]
+        fx0 = json.load(open(os.path.join(OUT, base + '.fx.json'), encoding='utf-8'))
+        tex0 = _node_textures(os.path.join(OUT, fx0.get('glb', base) + '.glb'))
+        bad = set(AURA_BAD['*']) | set(AURA_BAD.get(fam, []))
+        nodes = set(AURA_BAD_NODES.get(fam, []))
+        for node, info in fx0.get('materials', {}).items():
+            uri = info.get('tex', tex0.get(node, ''))
+            if os.path.basename(uri)[:-4] in bad:
+                nodes.add(node)
+        for n in members:
+            js = os.path.join(OUT, n + '.fx.json')
+            fx = json.load(open(js, encoding='utf-8'))
+            tex = _node_textures(os.path.join(OUT, fx.get('glb', n) + '.glb'))
+            for node, info in fx.get('materials', {}).items():
+                uri = info.get('tex', tex.get(node, ''))
+                if (node in nodes or os.path.basename(uri)[:-4] in AURA_BAD['*']) and not info.get('hide'):
+                    info['hide'] = True
+                    total += 1
+            with open(js, 'w', encoding='utf-8') as f:
+                json.dump(fx, f, separators=(',', ':'))
+    return total
 
 
 if __name__ == '__main__':

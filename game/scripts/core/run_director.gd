@@ -57,7 +57,13 @@ const EARLY_RAMP := 180.0  # durée de la montée en puissance du début de run 
 const EARLY_EASE := 0.6  # PV et dégâts des monstres au tout début (×)
 var _wave_hard := false
 var seals := 0
+var _despawn_timer := 2.0
 const SEALS_NEEDED := 3
+## Plafond de monstres vivants (vagues, hordes et escortes comprises) : au-delà, le jeu
+## ralentit sans rendre le combat plus intéressant. Les monstres restés loin derrière
+## sont retirés quand la foule approche du plafond (ils reviennent dans les vagues).
+const MAX_ALIVE := {"explore": 80, "rage": 110}
+const FAR_DESPAWN := 55.0
 var _elite_timer := 25.0
 var _adds_timer := BOSS_ADDS_EVERY
 var _route_timer := 0.0
@@ -278,6 +284,11 @@ func _update_spawns(delta: float) -> void:
 	var rage := state == "rage"
 	var minutes := time / 60.0
 	var alive := get_tree().get_nodes_in_group("monsters").size()
+	_despawn_timer -= delta
+	if _despawn_timer <= 0.0:
+		_despawn_timer = 2.0
+		if alive > int(_hard_cap() * 0.8):
+			alive -= _despawn_far()
 	var cap := 120 if rage else mini(18 + int(minutes * 4.0), 50)
 	# gardiens d'élite des camps (une fois chacun, puis toutes les 2 min)
 	for k in map.camps.size():
@@ -290,7 +301,7 @@ func _update_spawns(delta: float) -> void:
 		var lvl := _monster_level(int(camp.tier) + 1)
 		var e := _spawn_monster(_elites.pick_random(), camp.pos, lvl)
 		e.carries_seal = true
-		for i in 4:
+		for i in mini(4, _room()):
 			_spawn_monster(_pick_monster(lvl), _around(camp.pos, 6.0), lvl)
 		message.emit("Un gardien d'élite garde un sceau !", 2.0)
 	# flux continu
@@ -308,7 +319,7 @@ func _update_spawns(delta: float) -> void:
 		if _wave_hard:
 			message.emit("Vague : encerclement !", 2.0)
 			# anneau complet autour du héros, plus une élite
-			var n := 10 + int(minutes * 2.0) + (8 if rage else 0)
+			var n := mini(10 + int(minutes * 2.0) + (8 if rage else 0), _room())
 			for i in n:
 				var a := TAU * i / n
 				var p := player.global_position + Vector3(cos(a), 0, sin(a)) * 18.0
@@ -329,7 +340,7 @@ func _update_spawns(delta: float) -> void:
 			_elite_timer = 22.0
 			var c := _ring_point(24.0, 34.0)
 			if c != Vector3.INF:
-				for i in 3:
+				for i in clampi(_room(), 1, 3):
 					_spawn_monster(_elites.pick_random(), _around(c, 5.0), _monster_level(1))
 				message.emit("Des élites enragées arrivent !", 2.0)
 
@@ -339,8 +350,31 @@ func _spawn_pack(count: int, level: int, min_d: float, max_d: float) -> void:
 	if center == Vector3.INF:
 		return
 	var id := _pick_monster(level)
-	for i in count:
+	for i in mini(count, _room()):
 		_spawn_monster(id if randf() < 0.7 else _pick_monster(level), _around(center, 4.0), level)
+
+
+## Plafond de monstres vivants de l'état en cours.
+func _hard_cap() -> int:
+	return int(MAX_ALIVE.get(state, MAX_ALIVE.explore))
+
+
+## Places libres sous le plafond.
+func _room() -> int:
+	return maxi(0, _hard_cap() - get_tree().get_nodes_in_group("monsters").size())
+
+
+## Retire les monstres ordinaires restés très loin du héros (ni élite, ni boss, ni sceau).
+func _despawn_far() -> int:
+	var n := 0
+	for node in get_tree().get_nodes_in_group("monsters"):
+		var m := node as Monster
+		if m.is_boss or m.is_elite or m.carries_seal or m.is_dead:
+			continue
+		if _flat(m.global_position, player.global_position) > FAR_DESPAWN:
+			m.queue_free()
+			n += 1
+	return n
 
 
 func _spawn_monster(id: int, pos: Vector3, level: int, boss := false) -> Monster:

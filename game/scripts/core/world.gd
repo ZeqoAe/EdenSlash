@@ -7,6 +7,8 @@ extends Node3D
 ##   --cards=a,b:2         cartes de build au départ   --gear=storm  panoplie d'un set
 ##   --shots=4,8,12        captures d'écran à ces secondes (dans user://shots/)
 ##   --quit-at=13          quitte après N secondes
+##   --god                 héros invincible (mesures de performance)
+##   --idle                héros immobile qui ne frappe pas (avec --god : foule maximale)
 ##   --start-level=8       niveau de départ
 ##   --dungeon             entre directement dans le donjon
 ##   --teleport=x,z        place le héros
@@ -161,6 +163,10 @@ func _parse_args() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg == "--autoplay":
 			player.autoplay = true
+		elif arg == "--idle":
+			# test : pilote automatique immobile (encerclé, pour mesurer la foule)
+			player.autoplay = true
+			player.autoplay_idle = true
 		elif arg.begins_with("--shots="):
 			rig.allow_input = false  # la souris réelle ne doit pas perturber les captures
 			for s in arg.trim_prefix("--shots=").split(","):
@@ -204,6 +210,9 @@ func _parse_args() -> void:
 			_shot_prefix = arg.trim_prefix("--shot-prefix=") + "_"
 		elif arg.begins_with("--goto="):
 			_goto = arg.trim_prefix("--goto=")
+		elif arg == "--god":
+			# test : héros invincible (mesures de performance sur une longue run)
+			get_tree().create_timer(0.5).timeout.connect(func(): player.dev_invincible = true)
 		elif arg == "--rage":
 			get_tree().create_timer(2.0).timeout.connect(func(): director.debug_start_rage())
 		elif arg.begins_with("--cards="):
@@ -282,7 +291,9 @@ func end_run(result: String) -> void:
 
 
 func _save_screenshot(file_name: String) -> void:
-	print("[perf] monstres=", get_tree().get_nodes_in_group("monsters").size(), " fps=", Engine.get_frames_per_second(), " niveau=", player.level, " pv=", int(player.hp))
+	print("[perf] monstres=", get_tree().get_nodes_in_group("monsters").size(), " fps=", Engine.get_frames_per_second(), " niveau=", player.level, " pv=", int(player.hp),
+		" nœuds=", int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), " appels=", int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)),
+		" process=%.1fms physique=%.1fms" % [Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0, Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0])
 	DirAccess.make_dir_recursive_absolute("user://shots")
 	var img := get_viewport().get_texture().get_image()
 	img.save_png("user://shots/" + file_name)

@@ -123,6 +123,10 @@ func _ready() -> void:
 		var add: bool = info.get("blend", "mix") == "add"
 		m.set_shader_parameter("additive", 1.0 if add else 0.0)
 		m.set_shader_parameter("use_vertex_color", 1.0 if bool(info.get("vcol", true)) else 0.0)
+		if loop:
+			# auras : pas d'assombrissement du fond (il dessinait des rectangles sombres
+			# derrière les grands plans lumineux autour du héros)
+			m.set_shader_parameter("darken", 0.0)
 		if info.has("tex"):
 			m.set_shader_parameter("tex", _texture("res://assets/fx/" + String(info.tex)))
 		elif src:

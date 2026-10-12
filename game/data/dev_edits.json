@@ -1,0 +1,32 @@
+{
+	"items": {
+		"20614": {
+			"level": 90,
+			"name": "Ragnarok",
+			"nopool": "dev",
+			"passive": {
+				"eden": "",
+				"name": "",
+				"procs": [],
+				"stat": {
+					"atk_pct": 0.1,
+					"lifesteal": 0.1
+				}
+			},
+			"r": {
+				"crit": 2.16000000000349,
+				"crit_dmg": 1.0,
+				"def": 1.0,
+				"dmg_pct": 2.16000000000349,
+				"matk": 1.66000000000349,
+				"mcrit": 2.16000000000349,
+				"parry": 1.0,
+				"patk": 2.39999999999418
+			},
+			"rarity": 5,
+			"set": null,
+			"trophy": null
+		}
+	},
+	"sets": {}
+}

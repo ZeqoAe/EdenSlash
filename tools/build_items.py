@@ -367,6 +367,7 @@ def build_collection(coll, by_id, mall, ti, tm, tcol, icon, idx):
     fx2godot.share_variants(sorted(fxs & have))
     for f in sorted(fxs & have):
         fx2godot.mark_hard_quads(f, quads_only=True)  # auras : maillages (dragons, papillons) gardés
+    fx2godot.hide_aura_parts(fxs & have)  # boîtes et panneaux rectangulaires autour du héros
     for x in out:
         if 'aura' in x and x['aura']['fx'] not in have:
             del x['aura']

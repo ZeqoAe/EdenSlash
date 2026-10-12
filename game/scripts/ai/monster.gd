@@ -399,18 +399,38 @@ func _update_attack(_delta: float) -> void:
 
 
 ## Évite que les monstres s'empilent les uns sur les autres.
+## Écartement entre monstres : grille de cases construite une fois par image physique
+## (chaque monstre ne regarde que ses voisins, au lieu de toute la foule).
+const SEP_CELL := 3.0
+static var _sep_grid := {}
+static var _sep_frame := -1
+
+
 func _separation() -> Vector3:
+	var f := Engine.get_physics_frames()
+	if f != _sep_frame:
+		_sep_frame = f
+		_sep_grid.clear()
+		for node in get_tree().get_nodes_in_group("monsters"):
+			var p: Vector3 = (node as Node3D).global_position
+			var k := Vector2i(floori(p.x / SEP_CELL), floori(p.z / SEP_CELL))
+			if not _sep_grid.has(k):
+				_sep_grid[k] = []
+			_sep_grid[k].append(node)
 	var push := Vector3.ZERO
-	for node in get_tree().get_nodes_in_group("monsters"):
-		if node == self:
-			continue
-		var o := node as Monster
-		var to := global_position - o.global_position
-		to.y = 0.0
-		var min_d := radius + o.radius
-		var d := to.length()
-		if d < min_d and d > 0.001:
-			push += to / d * (min_d - d)
+	var c := Vector2i(floori(global_position.x / SEP_CELL), floori(global_position.z / SEP_CELL))
+	for dx in range(-1, 2):
+		for dz in range(-1, 2):
+			for node in _sep_grid.get(c + Vector2i(dx, dz), []):
+				if node == self or not is_instance_valid(node):
+					continue
+				var o := node as Monster
+				var to := global_position - o.global_position
+				to.y = 0.0
+				var min_d := radius + o.radius
+				var d := to.length()
+				if d < min_d and d > 0.001:
+					push += to / d * (min_d - d)
 	return push
 
 
