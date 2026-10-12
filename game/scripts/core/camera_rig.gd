@@ -62,6 +62,7 @@ func _process(delta: float) -> void:
 	var hero := target.global_position + Vector3.UP * 1.0
 	RenderingServer.global_shader_parameter_set("hero_screen", camera.unproject_position(hero) / vp)
 	RenderingServer.global_shader_parameter_set("hero_depth", camera.global_position.distance_to(hero))
+	RenderingServer.global_shader_parameter_set("hero_world", target.global_position)
 	if _shake > 0.0:
 		camera.position += Vector3(randf_range(-1, 1), randf_range(-1, 1), 0) * _shake * 0.15
 		_shake = maxf(0.0, _shake - delta * 4.0)

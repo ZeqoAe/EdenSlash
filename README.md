@@ -46,6 +46,14 @@ configuration de la classe (talents, certificats), armes & équipement, zone de 
 badge de la classe en haut à droite ; zone et prochaine récompense (expertise) en bas.
 Icônes de menu : `tools/make_menu_icons.py` ; trophées : `tools/make_trophy_icons.py`.
 
+**Graphismes** (Paramètres → Affichage → *Qualité graphique* : basse, moyenne, haute, ultra) :
+herbe 3D animée par le vent et couchée par le héros (`GrassField`), sol sans motif répété avec
+relief et variations de teinte, éclairage stylisé des personnages et du décor (ombres douces et
+teintées, contour lumineux), occlusion ambiante, ombres douces, lueur des effets d'attaque qui se
+fondent au contact du sol (`shaders/eden_fx.gdshader`). Banc de comparaison :
+`res://tests/bench_gfx.tscn -- <zone> [effet]` (captures `user://shots/gfx_<zone>*.png`, à lancer
+avec `--rendering-driver vulkan`).
+
 Écrans plein écran (style du grimoire) :
 - **Lancer la run** : page **Équipement** (préréglage ou à la main ; l'arme portée décide du combo
   d'auto-attaque, plus de choix d'arme au lobby) → *Valider* → page **Expertise & talents** (talents

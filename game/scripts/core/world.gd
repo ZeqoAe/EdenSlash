@@ -308,7 +308,9 @@ func _build_environment() -> void:
 	env.fog_light_color = Color(0.85, 0.89, 0.91)
 	env.fog_density = 0.0018
 	env.fog_sky_affect = 0.15
+	Gfx.style_sky(sky_mat)
 	_apply_biome_env()
+	Gfx.style_environment(env)
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
@@ -320,6 +322,8 @@ func _build_environment() -> void:
 	sun.shadow_enabled = true
 	sun.shadow_opacity = 0.65
 	sun.directional_shadow_max_distance = 80.0
+	Gfx.style_sun(sun)
+	Settings.changed.connect(_on_gfx_settings)
 	add_child(sun)
 	sun.light_color = _base_sun
 
@@ -362,6 +366,11 @@ func _on_npc_opened(kind: String, npc: Interactable) -> void:
 var _base_fog := Color(0.85, 0.89, 0.91)
 var _base_fog_density := 0.0018
 var _base_sun := Color(1.0, 0.96, 0.88)
+
+
+func _on_gfx_settings() -> void:
+	Gfx.style_environment(env)
+	Gfx.style_sun(sun)
 
 
 ## Ambiance du biome de la zone (ciel, brouillard, lumière) : data/biomes.json -> env.

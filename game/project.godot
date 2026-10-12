@@ -45,3 +45,7 @@ hero_depth={
 "type": "float",
 "value": 0.0
 }
+hero_world={
+"type": "vec3",
+"value": Vector3(0, -1000, 0)
+}

@@ -53,6 +53,8 @@ func _ready() -> void:
 	env.glow_hdr_threshold = 1.2
 	env.fog_enabled = true
 	env.fog_sky_affect = 0.2
+	Gfx.style_sky(sky_mat)
+	Gfx.style_environment(env)
 	var we := WorldEnvironment.new()
 	we.environment = env
 	add_child(we)
@@ -63,6 +65,7 @@ func _ready() -> void:
 	sun.shadow_opacity = 0.65
 	sun.directional_shadow_max_distance = 90.0
 	add_child(sun)
+	Gfx.style_sun(sun)
 	camera = Camera3D.new()
 	camera.fov = 50.0
 	camera.far = 900.0

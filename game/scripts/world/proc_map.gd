@@ -60,6 +60,7 @@ func generate_run(seed_value: int) -> void:
 	_build_dungeon_entrance()
 	_build_chests()
 	_scatter_props()
+	GrassField.create(self)
 	_build_minimap()
 	_setup_navigation()
 	info.events = [{"type": "REVIVE", "pos": [start.x, start.y, start.z]},
@@ -80,6 +81,7 @@ func generate_scenery(seed_value: int, with_minimap := false) -> void:
 	_build_dungeon_entrance()
 	_build_chests()
 	_scatter_props()
+	GrassField.create(self)
 	if with_minimap:
 		_build_minimap()
 

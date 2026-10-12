@@ -22,3 +22,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.11 | Archive (collection or / violet / orange, bijoux, trophées, apparences d'armes), rareté Légendaire, collier / bague / trophée, carte d'objet au survol, page Infos (stats et dégâts), lancement de run Équipement → Expertise (7 certificats) | session cloud |
 | 0.1.12 | Écran titre (maps 3D qui défilent, Jouer : continuer / charger / nouvelle partie sur 3 sauvegardes) et nouveau menu principal (menu à icônes, sous-menus, héros dans la map de la zone) | session cloud |
 | 0.1.13 | Mettre_a_jour.bat met de côté les fichiers modifiés par l'éditeur Godot (ils bloquaient la mise à jour) | session cloud |
+| 0.1.14 | Graphismes modernisés : herbe 3D animée, sol en relief sans motif répété, éclairage stylisé des personnages et du décor, occlusion ambiante, effets d'attaque lumineux et fondus, réglage Qualité graphique | session cloud |

@@ -291,6 +291,8 @@ func _build_display_tab() -> void:
 	_check(v, "Synchronisation verticale (VSync)", "display", "vsync")
 	_option(v, "Limite d'images par seconde", "display", "max_fps", [
 		[0, "Illimitée"], [30, "30"], [60, "60"], [120, "120"], [144, "144"], [165, "165"], [240, "240"]])
+	_option(v, "Qualité graphique", "display", "quality", [["low", "Basse (PC modeste)"], ["medium", "Moyenne"],
+		["high", "Haute"], ["ultra", "Ultra"]])
 	_option(v, "Anticrénelage (MSAA)", "display", "msaa", [[0, "Désactivé"], [2, "2×"], [4, "4×"], [8, "8×"]])
 	_option(v, "Taille de l'interface", "display", "ui_scale", [
 		[0.75, "75 %"], [0.85, "85 %"], [1.0, "100 %"], [1.1, "110 %"], [1.25, "125 %"], [1.5, "150 %"]])

@@ -56,7 +56,7 @@ const DEBUG_BINDS := {
 
 const DEFAULTS := {
 	"display": {"window_mode": "windowed", "resolution": "1600x900", "vsync": true, "max_fps": 0,
-		"msaa": 2, "ui_scale": 1.0},
+		"msaa": 2, "ui_scale": 1.0, "quality": "high"},
 	"audio": {"master": 0.8, "sfx": 1.0},
 	# move_mode : keyboard (ZQSD), click (clic gauche), rts (clic droit)
 	# aim_mode : smart (cible, sinon curseur, sinon monstre proche), cursor (le héros suit

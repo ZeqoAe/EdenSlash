@@ -42,7 +42,8 @@ static func _apply_anim_info(player: AnimationPlayer, json_path: String) -> void
 	_anim_info[json_path] = info
 
 
-## Passe tous les matériaux en ombrage toon, avec une texture de remplacement
+## Passe les matériaux en éclairage stylisé (shaders/eden_character.gdshader ; toon
+## standard pour les matériaux à transparence fondue), avec une texture de remplacement
 ## optionnelle (variantes de couleur d'un même monstre).
 static func stylize(root: Node, texture: Texture2D = null) -> void:
 	for mi: MeshInstance3D in root.find_children("*", "MeshInstance3D", true, false):
@@ -51,7 +52,10 @@ static func stylize(root: Node, texture: Texture2D = null) -> void:
 			if mat == null:
 				continue
 			var key := "%d|%s" % [mat.get_instance_id(), texture.resource_path if texture else ""]
-			var toon: BaseMaterial3D = _toon_cache.get(key)
+			var toon: Material = _toon_cache.get(key)
+			if toon == null and mat.transparency in [BaseMaterial3D.TRANSPARENCY_DISABLED, BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR]:
+				toon = _character_material(mat, texture)
+				_toon_cache[key] = toon
 			if toon == null:
 				toon = mat.duplicate()
 				toon.diffuse_mode = BaseMaterial3D.DIFFUSE_TOON
@@ -66,6 +70,27 @@ static func stylize(root: Node, texture: Texture2D = null) -> void:
 					toon.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
 				_toon_cache[key] = toon
 			mi.set_surface_override_material(s, toon)
+
+
+const CHARACTER_SHADER := preload("res://shaders/eden_character.gdshader")
+static var _character_2sided: Shader
+
+
+static func _character_material(src: BaseMaterial3D, texture: Texture2D) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	if src.cull_mode == BaseMaterial3D.CULL_DISABLED:
+		if _character_2sided == null:
+			_character_2sided = Shader.new()
+			_character_2sided.code = CHARACTER_SHADER.code.replace("cull_back", "cull_disabled")
+		m.shader = _character_2sided
+	else:
+		m.shader = CHARACTER_SHADER
+	m.set_shader_parameter("albedo_tex", texture if texture else src.albedo_texture)
+	m.set_shader_parameter("albedo_color", src.albedo_color)
+	m.set_shader_parameter("use_vertex_color", 1.0 if src.vertex_color_use_as_albedo else 0.0)
+	if src.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR:
+		m.set_shader_parameter("alpha_cut", maxf(src.alpha_scissor_threshold, 0.1))
+	return m
 
 
 ## Met une arme d'Eden (data/classes.json -> weapons) dans la main du modèle.

@@ -6,9 +6,11 @@ extends Node3D
 
 static var _cache := {}  # nom -> [PackedScene, Dictionary]
 ## Intensité des effets : les effets d'Eden, pensés pour un MMO, sont renforcés
-## (opacité et luminosité) pour des impacts bien marqués.
+## (opacité et luminosité) pour des impacts bien marqués ; shaders/eden_fx.gdshader
+## les fait briller (lueur) sans virer au blanc et les fond au contact du sol.
 const ALPHA_BOOST := 1.5
-const GLOW_BOOST := 1.3
+const GLOW_BOOST := 1.0
+const SHADER := preload("res://shaders/eden_fx.gdshader")
 static var _tex_cache := {}
 
 var fx_name := ""
@@ -16,7 +18,9 @@ var follow: Node3D  # l'effet suit ce nœud (effets d'incantation)
 var _data: Dictionary
 var _t := 0.0
 var _nodes := {}  # nom -> Node3D
-var _mats := {}  # nom -> [StandardMaterial3D, info]
+var _mats := {}  # nom -> [ShaderMaterial ou StandardMaterial3D, info]
+## Moteur de compatibilité (OpenGL) : matériaux standard (le shader n'y est pas fiable).
+static var _legacy := -1
 var _offset := Transform3D.IDENTITY
 
 
@@ -72,19 +76,23 @@ func _ready() -> void:
 			_nodes.erase(name)
 			continue
 		var src := mi.mesh.surface_get_material(0) as BaseMaterial3D
-		var m := StandardMaterial3D.new()
-		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD if info.get("blend", "mix") == "add" else BaseMaterial3D.BLEND_MODE_MIX
-		m.cull_mode = BaseMaterial3D.CULL_DISABLED
-		m.vertex_color_use_as_albedo = bool(info.get("vcol", true))
-		m.no_depth_test = false
-		if src:
-			m.albedo_texture = src.albedo_texture
-		var c: Array = info.get("color", [1, 1, 1])
+		if _legacy < 0:
+			_legacy = 1 if RenderingServer.get_current_rendering_method() == "gl_compatibility" else 0
+		if _legacy == 1:
+			_mats[name] = [_legacy_material(src, info), info]
+			mi.material_override = _mats[name][0]
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			continue
+		var m := ShaderMaterial.new()
+		m.shader = SHADER
 		var add: bool = info.get("blend", "mix") == "add"
+		m.set_shader_parameter("additive", 1.0 if add else 0.0)
+		m.set_shader_parameter("use_vertex_color", 1.0 if bool(info.get("vcol", true)) else 0.0)
+		if src:
+			m.set_shader_parameter("tex", src.albedo_texture)
+		var c: Array = info.get("color", [1, 1, 1])
 		var k := GLOW_BOOST if add else 1.0
-		m.albedo_color = Color(c[0] * k, c[1] * k, c[2] * k, minf(1.0, float(info.get("alpha", 1.0)) * ALPHA_BOOST))
+		m.set_shader_parameter("color", Color(c[0] * k, c[1] * k, c[2] * k, minf(1.0, float(info.get("alpha", 1.0)) * ALPHA_BOOST)))
 		mi.material_override = m
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_mats[name] = [m, info]
@@ -121,26 +129,71 @@ func _apply(i: int) -> void:
 		if tr.has("vis"):
 			n.visible = float(tr.vis[mini(i, tr.vis.size() - 1)]) > 0.5
 	for name in _mats:
-		var m: StandardMaterial3D = _mats[name][0]
+		var m: Material = _mats[name][0]
 		var info: Dictionary = _mats[name][1]
+		var col := _get_color(m)
 		if info.has("alpha_t"):
-			m.albedo_color.a = minf(1.0, float(info.alpha_t[mini(i, info.alpha_t.size() - 1)]) * ALPHA_BOOST)
+			col.a = minf(1.0, float(info.alpha_t[mini(i, info.alpha_t.size() - 1)]) * ALPHA_BOOST)
 		if info.has("color_t"):
 			var c: Array = info.color_t[mini(i, info.color_t.size() - 1)]
-			var k := GLOW_BOOST if info.get("blend", "mix") == "add" else 1.0
-			m.albedo_color = Color(c[0] * k, c[1] * k, c[2] * k, m.albedo_color.a)
+			var k := (GLOW_BOOST if _legacy == 0 else 1.3) if info.get("blend", "mix") == "add" else 1.0
+			col = Color(c[0] * k, c[1] * k, c[2] * k, col.a)
+		if info.has("alpha_t") or info.has("color_t"):
+			_set_color(m, col)
 		var su := float(_track(info, "uv_su", i, 1.0))
 		var sv := float(_track(info, "uv_sv", i, 1.0))
 		var u := float(_track(info, "uv_u", i, 0.0))
 		var v := float(_track(info, "uv_v", i, 0.0))
 		if info.has("uv_su") or info.has("uv_sv") or info.has("uv_u") or info.has("uv_v"):
 			# échelle autour du centre de la texture, comme Gamebryo
-			m.uv1_scale = Vector3(su, sv, 1.0)
-			m.uv1_offset = Vector3(0.5 * (1.0 - su) + u, 0.5 * (1.0 - sv) + v, 0.0)
+			_set_uv(m, Vector2(su, sv), Vector2(0.5 * (1.0 - su) + u, 0.5 * (1.0 - sv) + v))
 		if info.has("flip"):
 			var f: Dictionary = info.flip
 			var uri: String = f.textures[int(f.frames[mini(i, f.frames.size() - 1)])]
-			m.albedo_texture = _texture("res://assets/fx/" + uri)
+			_set_tex(m, _texture("res://assets/fx/" + uri))
+
+
+static func _legacy_material(src: BaseMaterial3D, info: Dictionary) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD if info.get("blend", "mix") == "add" else BaseMaterial3D.BLEND_MODE_MIX
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED
+	m.vertex_color_use_as_albedo = bool(info.get("vcol", true))
+	if src:
+		m.albedo_texture = src.albedo_texture
+	var c: Array = info.get("color", [1, 1, 1])
+	var k := 1.3 if info.get("blend", "mix") == "add" else 1.0
+	m.albedo_color = Color(c[0] * k, c[1] * k, c[2] * k, minf(1.0, float(info.get("alpha", 1.0)) * ALPHA_BOOST))
+	return m
+
+
+## Paramètres animés, quel que soit le matériau (shader ou standard).
+static func _set_color(m: Material, col: Color) -> void:
+	if m is ShaderMaterial:
+		m.set_shader_parameter("color", col)
+	else:
+		(m as StandardMaterial3D).albedo_color = col
+
+
+static func _get_color(m: Material) -> Color:
+	return m.get_shader_parameter("color") if m is ShaderMaterial else (m as StandardMaterial3D).albedo_color
+
+
+static func _set_uv(m: Material, sc: Vector2, off: Vector2) -> void:
+	if m is ShaderMaterial:
+		m.set_shader_parameter("uv_scale", sc)
+		m.set_shader_parameter("uv_offset", off)
+	else:
+		(m as StandardMaterial3D).uv1_scale = Vector3(sc.x, sc.y, 1.0)
+		(m as StandardMaterial3D).uv1_offset = Vector3(off.x, off.y, 0.0)
+
+
+static func _set_tex(m: Material, t: Texture2D) -> void:
+	if m is ShaderMaterial:
+		m.set_shader_parameter("tex", t)
+	else:
+		(m as StandardMaterial3D).albedo_texture = t
 
 
 static func _track(info: Dictionary, key: String, i: int, default: float) -> float:

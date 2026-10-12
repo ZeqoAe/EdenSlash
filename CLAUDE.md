@@ -29,3 +29,8 @@ s'il a la bonne version.
 `Godot --headless --path game res://tests/<test>.tscn` pour test_build, test_hud,
 test_controls, test_cards, test_progress (et ceux ajoutés depuis). Après l'ajout d'un
 script avec `class_name`, lancer une fois `--import` pour mettre à jour le cache des classes.
+
+## Graphismes
+Réglages d'image communs dans `game/scripts/world/gfx.gd` (qualité graphique), shaders dans
+`game/shaders/` (terrain, herbe, personnages, décor, effets). Pour comparer un changement de
+rendu : `res://tests/bench_gfx.tscn -- <zone> [effet]` (même vue à chaque fois).

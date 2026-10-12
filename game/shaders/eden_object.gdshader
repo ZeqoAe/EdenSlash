@@ -1,7 +1,10 @@
 shader_type spatial;
-render_mode diffuse_toon, specular_disabled, cull_back;
-// Décor d'Eden : texture + transparence par seuil, ombrage toon, et « trou »
-// tramé autour du héros quand l'objet se trouve entre lui et la caméra.
+render_mode cull_back;
+// Décor d'Eden : texture + transparence par seuil, éclairage stylisé (eden_light),
+// relief tiré de la texture, et « trou » tramé autour du héros quand l'objet se
+// trouve entre lui et la caméra.
+
+#include "res://shaders/eden_light.gdshaderinc"
 
 global uniform vec2 hero_screen;      // position du héros à l'écran (0..1)
 global uniform float hero_depth;      // distance caméra -> héros
@@ -11,6 +14,7 @@ uniform float alpha_cutoff = 0.0;     // 0 = opaque
 uniform float use_vertex_color = 0.0;
 uniform float hole_radius = 0.15;
 uniform float near_fade = 7.0;        // décor collé à la caméra : masqué
+uniform float bump = 0.06;            // relief tiré de la texture (m)
 
 float bayer4(vec2 p) {
 	int x = int(mod(p.x, 4.0));
@@ -41,6 +45,14 @@ void fragment() {
 			discard;
 		}
 	}
-	ALBEDO = tex.rgb;
-	ROUGHNESS = 1.0;
+	ALBEDO = mix(vec3(dot(tex.rgb, vec3(0.299, 0.587, 0.114))), tex.rgb, 1.08);
+	float h = dot(tex.rgb, vec3(0.299, 0.587, 0.114));
+	vec3 dpdx = dFdx(VERTEX);
+	vec3 dpdy = dFdy(VERTEX);
+	vec3 r1 = cross(dpdy, NORMAL);
+	vec3 r2 = cross(NORMAL, dpdx);
+	float det = dot(dpdx, r1);
+	float fade = 1.0 - smoothstep(15.0, 35.0, depth);
+	NORMAL = normalize(abs(det) * NORMAL - bump * fade * sign(det) * (dFdx(h) * r1 + dFdy(h) * r2));
+	ROUGHNESS = 0.85;
 }
