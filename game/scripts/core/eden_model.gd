@@ -152,9 +152,11 @@ static func dress(model: Node3D, glb_path: String, group := "") -> void:
 	var src := part.find_child("Skeleton3D", true, false) as Skeleton3D
 	var added := false
 	if src:
-		# ailes articulées : leurs os pendent d'un bassin « neutre » (repère de l'accessoire) ;
-		# leurs racines sont replacées dans le repère du haut du dos (comme les accessoires rigides)
-		var back := anchor == BACK_BONE
+		# accessoires articulés (ailes, chapeaux à pompons…) : leurs os pendent d'un bassin
+		# « neutre » (repère de l'accessoire) ; leurs racines sont replacées dans le repère de
+		# l'os d'accroche (haut du dos ou tête), comme les accessoires rigides
+		var file := glb_path.get_file()
+		var accessory := (file.begins_with("head_") or file.begins_with("back_")) and skel.find_bone(anchor) >= 0
 		var frame: Node = part.find_child("ANI0", true, false)
 		var to_frame := _relative_xform(frame as Node3D, src) if frame is Node3D else Transform3D.IDENTITY
 		var fresh := {}
@@ -167,8 +169,8 @@ static func dress(model: Node3D, glb_path: String, group := "") -> void:
 			fresh[bname] = true
 			var parent := src.get_bone_parent(b)
 			var pname := src.get_bone_name(parent) if parent >= 0 else ""
-			if back and not fresh.has(pname):
-				skel.set_bone_parent(idx, skel.find_bone(BACK_BONE))
+			if accessory and not fresh.has(pname):
+				skel.set_bone_parent(idx, skel.find_bone(anchor))
 				skel.set_bone_rest(idx, to_frame * src.get_bone_global_rest(b))
 				skel.reset_bone_pose(idx)
 				added = true

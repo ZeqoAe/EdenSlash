@@ -326,7 +326,8 @@ def build_collection(coll, by_id, mall, ti, tm, tcol, icon, idx):
         if not ic:
             continue
         seen.add(iid)
-        x = {'id': iid, 'cat': c, 'name': name, 'icon': ic, 'code': it[1].strip(),
+        # code du modèle (colonne 2 ; la colonne 1 est l'icône) : clé de 4pequip.ini et weapon.ini
+        x = {'id': iid, 'cat': c, 'name': name, 'icon': ic, 'code': (it[2] or it[1]).strip(),
              'rarity': RARITY.get(it[19].strip(), 0), 'mall': r[2] == '1', 'ord': int(r[4]) if r[4].isdigit() else 0}
         src = tcol.get(iid, ['', ''])
         if len(src) > 1 and src[1].strip() and src[1].strip() != '?':
@@ -551,6 +552,7 @@ def main():
         if e['slot'] == 'trophy' and r[23].strip().isdigit() and int(r[23]) in te:
             # trophée : ses bonus sont dans son effet d'Eden (texte), pas dans les colonnes
             traw, tpas = parse_trophy(te[int(r[23])][0].strip(), clean(' '.join(te[int(r[23])][1:3])))
+            e['eden_text'] = clean(' '.join(te[int(r[23])][1:3]))  # relu par tools/rework_trophies.py
             for k, v in traw.items():
                 raw[k] = raw.get(k, 0.0) + v
             if tpas:
@@ -640,6 +642,9 @@ def main():
     arch = collections.Counter(e.get('wtype', e['slot']) for e in items if e['rarity'] >= 4)
     print('archive (mythiques + légendaires) :', dict(arch))
     print('par zone :', dict(sorted(collections.Counter(e['band'] for e in items).items())))
+    # trophées : buffs sous condition (refonte de la session cloud), à rejouer après l'import
+    import rework_trophies
+    rework_trophies.main()
     print('archive : %d équipements, %d autres entrées %s, %d auras' % (
         sum(1 for e in items if 'arch' in e), len(collection),
         dict(sorted(collections.Counter(c['cat'] for c in collection).items())),

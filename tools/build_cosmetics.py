@@ -8,7 +8,8 @@ par morphologie ; le héros utilise la table « Loli ». Catégories :
          RGB565 de 4pequip ;
   head : chapeaux, lunettes, masques, accessoires de bouche (char/model/L1xxx.nif, colonne 1 = 2) ;
   back : ailes, auréoles, sacs, croix (char/model/X6xxA.nif, colonne 1 = 1).
-Noms : objets cosmétiques de c_item (catégorie 68 et skins d'arme) et entrées de l'archive
+Noms : objets cosmétiques de c_item / c_itemmall (catégorie 68 et skins d'arme), reliés par
+le code du **modèle** (colonne 2 ; la colonne 1 est l'icône), et entrées de l'archive
 d'Eden (t_collection) ; sinon un nom générique. Textures réduites à 512 px.
 Sortie : data/eden_catalog.json -> "cosmetics" : [{id, cat, name, icon, outfit, variants}].
 """
@@ -56,6 +57,7 @@ def loli_table(idx):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--max', type=int, default=0, help='nombre max de pièces exportées (test)')
+    ap.add_argument('--redo', default='', help='catégories à réexporter (ex. head,back)')
     a = ap.parse_args()
     sys.stdout.reconfigure(encoding='utf-8')
     from PIL import Image
@@ -63,7 +65,8 @@ def main():
     ti = edenini.read_text('t_item')
     tcol = edenini.read_text('t_collection')
     tm = edenini.read_text('t_itemmall')
-    names = {}  # code K -> (id objet, nom) : objets du jeu et de la boutique d'Eden
+    # code K du modèle (colonne 2 de c_item ; la colonne 1 est l'icône) -> (id, nom, icône)
+    names = {}  # objets du jeu et de la boutique d'Eden
     for table, texts in (('c_item', ti), ('c_itemmall', tm)):
         for r in edenini.read_rows(table):
             if len(r) < 20 or not r[0].isdigit() or not r[1].startswith(('K', 'A')):
@@ -74,7 +77,8 @@ def main():
             if name in ('', '?'):
                 name = tcol.get(int(r[0]), [''])[0].strip()
             if name and name != '?':
-                names.setdefault(r[1].strip(), (int(r[0]), name))
+                model = (r[2] or r[1]).strip()
+                names.setdefault(model, (int(r[0]), name, r[1].strip()))
     meshes = {}  # (catégorie, maillage) -> [(code, teinte)]
     for f in loli_table(idx):
         if len(f) < 6 or f[0][:1] not in ('K', 'A') or f[1] not in CAT_SLOT:
@@ -94,15 +98,19 @@ def main():
     icon_dir = os.path.join(GAME, 'assets', 'ui', 'items')
     cosmetics = []
     done = 0
+    redone = set()
     for (cat, mesh), variants in sorted(meshes.items()):
         named = [v for v in variants if v[0] in names]
         code, dye = named[0] if named else variants[0]
         if cat == 'head' and not named:
             continue  # chapeaux sans nom (boutique d'Eden) : trop nombreux, on garde les nommés
-        iid, name = names[code] if named else (0, GENERIC[cat] % mesh.lstrip('#'))
+        iid, name, icon_code = names[code] if named else (0, GENERIC[cat] % mesh.lstrip('#'), code)
         short = mesh.lstrip('#').lower()
         rel = ('cos_%s.glb' % short) if cat == 'body' else ('%s_%s.glb' % (cat, short))
         glb = os.path.join(out_dir, rel)
+        if cat in a.redo.split(',') and os.path.exists(glb) and glb not in redone:
+            os.remove(glb)
+            redone.add(glb)
         if not os.path.exists(glb):
             if a.max and done >= a.max:
                 continue
@@ -119,7 +127,10 @@ def main():
                 else:
                     conv = nif2gltf.Converter(idx, tex_dir, '../textures/')
                     conv.anim_filter = '^$'
-                    conv.dye = dict(nif2gltf.DEFAULT_DYE)
+                    # couleurs de la variante pour toute la pièce (les chapeaux « L1xxx » seraient
+                    # sinon teints comme des cheveux, en brun)
+                    pal = dye or nif2gltf.DEFAULT_DYE['outfit']
+                    conv.dye = {k: pal for k in nif2gltf.DEFAULT_DYE}
                     conv.convert('char/model/%s.nif' % mesh.lower(), [], glb)
             except Exception as ex:
                 print('  ! %s : %s' % (mesh, ex))
@@ -134,13 +145,13 @@ def main():
             done += 1
             print('  %s %s %s' % (cat, mesh, name))
         icon = ''
-        p = 'ui/itemicon/%s.dds' % code.lower()
-        dst = os.path.join(icon_dir, code.lower() + '.png')
+        p = 'ui/itemicon/%s.dds' % icon_code.lower()
+        dst = os.path.join(icon_dir, icon_code.lower() + '.png')
         if os.path.exists(dst):
-            icon = 'res://assets/ui/items/%s.png' % code.lower()
+            icon = 'res://assets/ui/items/%s.png' % icon_code.lower()
         elif p in idx and idx[p].get('pkg') is not None:
             Image.open(io.BytesIO(edenpkg.read_file(nif2gltf.PKG, idx[p]))).convert('RGBA').save(dst)
-            icon = 'res://assets/ui/items/%s.png' % code.lower()
+            icon = 'res://assets/ui/items/%s.png' % icon_code.lower()
         cosmetics.append({'id': short if cat == 'body' else '%s_%s' % (cat, short), 'cat': cat, 'name': name,
                           'eden_item': iid, 'icon': icon, 'rarity': 4, 'outfit': 'res://assets/player/outfits/' + rel,
                           'variants': len(variants), 'codes': sorted({v[0] for v in variants})})

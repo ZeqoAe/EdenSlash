@@ -54,6 +54,12 @@ func _ready() -> void:
 			Profile.select_weapon_type(arg.trim_prefix("--weapon="))
 		elif arg in SCREEN_ARGS or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--dev="):
 			_open_screen = arg.trim_prefix("--")
+		elif arg.begins_with("--wear-head="):
+			# test : porte l'accessoire de tête d'Eden de ce nom (profil de test uniquement)
+			for c in GameData.cosmetics:
+				if String(c.name) == arg.trim_prefix("--wear-head="):
+					Profile.unlock_outfit(String(c.id))
+					Profile.set_worn(Profile.selected_class, "head", String(c.outfit))
 		elif arg == "--wear-aura":
 			# test : une pierre étoilée et une pierre de lune portées (profil de test uniquement)
 			for kind in ["star", "luna"]:
@@ -70,7 +76,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
 				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
-				or arg == "--wear-aura" or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out="):
+				or arg == "--wear-aura" or arg.begins_with("--wear-head=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))

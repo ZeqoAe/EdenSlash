@@ -34,7 +34,7 @@ func _ready() -> void:
 		if cat == "skin":
 			EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, String(c.code)))
 		model.position = Vector3((i % cols) * 1.4, -float(i / cols) * 2.2, 0)
-		model.rotation.y = 0.5 if cat == "skin" else PI * 0.8
+		model.rotation.y = 0.5 if cat in ["skin", "head"] else PI * 0.8
 		var ap := EdenModel.find_anim_player(model)
 		var anim := String(cls.get("anims", {}).get("battle", "stand01")) if cat == "skin" else "stand01"
 		if ap and ap.has_animation(anim):
