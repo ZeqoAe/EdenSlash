@@ -52,11 +52,30 @@ const DESC := {
 }
 
 
+static var _skill_icons := {}
+
+
 static func icon(status: String) -> Texture2D:
 	var own := STATUS_DIR % status
 	if FileAccess.file_exists(own):
 		return UiTheme.texture(own)
-	return UiTheme.texture(String(EDEN_ICONS.get(status, "")))
+	if EDEN_ICONS.has(status):
+		return UiTheme.texture(String(EDEN_ICONS[status]))
+	return UiTheme.texture(String(_skill_icon_map().get(status, "")))
+
+
+## Icône d'Eden du sort qui donne l'effet (buff du sort ou effet appliqué aux monstres),
+## toutes classes confondues : chaque nouvel effet de classe a ainsi son icône.
+static func _skill_icon_map() -> Dictionary:
+	if _skill_icons.is_empty():
+		for cid in GameData.classes:
+			for sk: Dictionary in GameData.classes[cid].get("skills", []):
+				var effects: Array = sk.get("buff", {}).keys() + sk.get("applies", {}).keys()
+				effects += sk.get("combo", {}).get("applies", {}).keys() if sk.get("combo") is Dictionary else []
+				for st in effects:
+					if not _skill_icons.has(st) and String(sk.get("icon", "")) != "":
+						_skill_icons[st] = String(sk.icon)
+	return _skill_icons
 
 
 static func is_buff(status: String) -> bool:
