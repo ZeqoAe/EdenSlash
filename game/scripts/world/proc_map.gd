@@ -66,6 +66,24 @@ func generate_run(seed_value: int) -> void:
 		{"type": "REVIVE", "pos": [village.x, village.y, village.z]}]
 
 
+## Décor des menus : la même map, sans navigation (mini-carte au choix).
+func generate_scenery(seed_value: int, with_minimap := false) -> void:
+	_setup(biome, 512.0, seed_value)
+	remove_from_group("map")
+	_place_pois()
+	_build_heights(true)
+	_build_roads()
+	_flatten_pois()
+	_paint_splat()
+	_build_terrain()
+	_build_village()
+	_build_dungeon_entrance()
+	_build_chests()
+	_scatter_props()
+	if with_minimap:
+		_build_minimap()
+
+
 ## Arène du boss : cuvette circulaire fermée par des falaises.
 func generate_arena(seed_value: int) -> void:
 	_setup("mine" if biome == "limestone" else biome, 96.0, seed_value)

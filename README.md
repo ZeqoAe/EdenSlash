@@ -37,6 +37,15 @@ Polices Cinzel et Nunito (licence OFL, `game/assets/fonts/`). Les icônes d'effe
 dans le dépôt sont dessinées par `tools/make_ui_assets.py` (`game/assets/ui/status/`) : une vraie
 icône d'Eden déposée sous le même nom (`freeze.png`, `burn.png`…) les remplace automatiquement.
 
+Au lancement, **écran titre** : les maps des zones défilent en fond (survol 3D) ; **Jouer** propose
+*Continuer*, *Charger une partie* ou *Nouvelle partie* sur **3 emplacements de sauvegarde**
+(l'emplacement 1 reprend l'ancienne sauvegarde), puis Paramètres et Quitter.
+**Menu principal** : le héros posé dans la map de la zone choisie ; menu à icônes à gauche (Jouer,
+Classe, Équipement, Collection, Infos, Paramètres, Quitter) ; sous-menu Jouer : *Lancer une run*,
+configuration de la classe (talents, certificats), armes & équipement, zone de farm, grimoire ;
+badge de la classe en haut à droite ; zone et prochaine récompense (expertise) en bas.
+Icônes de menu : `tools/make_menu_icons.py` ; trophées : `tools/make_trophy_icons.py`.
+
 Écrans plein écran (style du grimoire) :
 - **Lancer la run** : page **Équipement** (préréglage ou à la main ; l'arme portée décide du combo
   d'auto-attaque, plus de choix d'arme au lobby) → *Valider* → page **Expertise & talents** (talents

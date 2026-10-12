@@ -7,8 +7,12 @@ extends Node
 ## les objets de la run (copies de l'équipement de départ + butin).
 ## L'héritage est un coffre commun à toutes les classes ; chaque classe a son propre
 ## équipement, en 3 préréglages nommés (presets) : changer de classe change d'équipement.
+## 3 emplacements de sauvegarde (écran titre : continuer, charger, nouvelle partie) ;
+## l'emplacement 1 est l'ancien fichier profile.json.
 
 const SAVE_PATH := "user://profile.json"
+const SLOT_COUNT := 3
+const LAST_SLOT_PATH := "user://last_slot.txt"
 ## Les lancements de test (arguments après --, scènes res://tests) ont leur propre
 ## sauvegarde : ils ne touchent jamais au profil du joueur.
 const TEST_SAVE_PATH := "user://profile_test.json"
@@ -44,11 +48,15 @@ var best_level := 1
 
 
 var save_path := SAVE_PATH
+var slot := 1  # emplacement de sauvegarde chargé
+var _test := false
 
 
 func _ready() -> void:
 	if not OS.get_cmdline_user_args().is_empty() or " ".join(OS.get_cmdline_args()).contains("res://tests/"):
-		save_path = TEST_SAVE_PATH
+		_test = true
+	slot = last_slot()
+	save_path = slot_path(slot)
 	load_profile()
 	_ensure_starter()
 
@@ -125,7 +133,7 @@ func save_profile() -> void:
 	var d := {"selected_class": selected_class, "vault": vault, "loadout": loadout, "presets": presets,
 		"unlocked_zones": unlocked_zones, "selected_zone": selected_zone,
 		"expertise": expertise, "talents": talents, "certificates": certificates, "stash": stash,
-		"archive": archive, "skins": skins,
+		"archive": archive, "skins": skins, "saved_at": Time.get_datetime_string_from_system(false, true),
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(d))
@@ -350,6 +358,95 @@ func select_weapon_type(wtype: String) -> void:
 
 
 ## Nouvelle partie : efface tout (héritage, statistiques) et redonne le katana de départ.
+# --- emplacements de sauvegarde ---------------------------------------------------------
+## Fichier de l'emplacement [param i] (les tests ont leurs propres fichiers).
+func slot_path(i: int) -> String:
+	if _test:
+		return TEST_SAVE_PATH if i == 1 else "user://profile_test_%d.json" % i
+	return SAVE_PATH if i == 1 else "user://profile_%d.json" % i
+
+
+func last_slot() -> int:
+	var p := LAST_SLOT_PATH if not _test else "user://last_slot_test.txt"
+	if FileAccess.file_exists(p):
+		return clampi(int(FileAccess.get_file_as_string(p).strip_edges()), 1, SLOT_COUNT)
+	return 1
+
+
+func _remember_slot() -> void:
+	var f := FileAccess.open(LAST_SLOT_PATH if not _test else "user://last_slot_test.txt", FileAccess.WRITE)
+	if f:
+		f.store_string(str(slot))
+
+
+func slot_exists(i: int) -> bool:
+	return FileAccess.file_exists(slot_path(i))
+
+
+## Résumé d'un emplacement pour l'écran titre ({} s'il est vide).
+func slot_summary(i: int) -> Dictionary:
+	if not slot_exists(i):
+		return {}
+	var d = JSON.parse_string(FileAccess.get_file_as_string(slot_path(i)))
+	if typeof(d) != TYPE_DICTIONARY:
+		return {}
+	var lv := 0
+	for cls in d.get("expertise", {}):
+		lv = maxi(lv, expertise_level_of(int(d.expertise[cls])))
+	return {"class": String(d.get("selected_class", "samurai")), "runs": int(d.get("runs_done", 0)),
+		"wins": int(d.get("runs_won", 0)), "best": int(d.get("best_level", 1)),
+		"zones": int(d.get("unlocked_zones", 1)), "items": (d.get("vault", []) as Array).size(),
+		"archive": (d.get("archive", {}) as Dictionary).size(), "expertise": maxi(lv, 1),
+		"saved_at": String(d.get("saved_at", ""))}
+
+
+## Charge l'emplacement [param i].
+func load_slot(i: int) -> void:
+	slot = clampi(i, 1, SLOT_COUNT)
+	save_path = slot_path(slot)
+	_clear()
+	load_profile()
+	_lobby_view()
+	_ensure_starter()
+	_remember_slot()
+
+
+## Nouvelle partie dans l'emplacement [param i] (l'ancienne sauvegarde est remplacée).
+func new_game(i: int) -> void:
+	slot = clampi(i, 1, SLOT_COUNT)
+	save_path = slot_path(slot)
+	selected_class = "samurai"
+	reset_all()
+	_remember_slot()
+
+
+func delete_slot(i: int) -> void:
+	if slot_exists(i):
+		DirAccess.remove_absolute(slot_path(i))
+
+
+## Remet le profil en mémoire à zéro, sans rien écrire.
+func _clear() -> void:
+	in_run = false
+	selected_class = "samurai"
+	vault = []
+	loadout = {}
+	presets = {}
+	_view_class = ""
+	runs_done = 0
+	runs_won = 0
+	best_level = 1
+	unlocked_zones = 1
+	selected_zone = "limestone"
+	expertise = {}
+	talents = {}
+	certificates = []
+	archive = {}
+	skins = {}
+	stash = {}
+	bag = {}
+
+
 func reset_all() -> void:
 	in_run = false
 	vault = []
@@ -383,7 +480,11 @@ static func expertise_need(lvl: int) -> int:
 
 
 func expertise_level(cls: String) -> int:
-	var xp := int(expertise.get(cls, 0))
+	return expertise_level_of(int(expertise.get(cls, 0)))
+
+
+static func expertise_level_of(points: int) -> int:
+	var xp := points
 	var lvl := 1
 	while lvl < EXPERTISE_MAX and xp >= expertise_need(lvl):
 		xp -= expertise_need(lvl)

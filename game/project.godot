@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Eden Slash"
 config/description="Hack and slash fan game dans l'univers d'Eden Eternal"
-run/main_scene="res://scenes/lobby.tscn"
+run/main_scene="res://scenes/title.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
 [autoload]

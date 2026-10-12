@@ -21,11 +21,13 @@ func _frames(n := 2) -> void:
 
 
 func _ready() -> void:
-	check("profil de test", Profile.save_path == Profile.TEST_SAVE_PATH)
+	check("profil de test", Profile.save_path.begins_with("user://profile_test"))
+	_test_slots()
 	Profile.reset_all()
 	_test_presets()
 	_test_items()
 	_test_archive()
+	await _test_title()
 	await _test_lobby()
 	await _test_run_screens()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
@@ -146,10 +148,58 @@ func _test_archive() -> void:
 	Profile.save_profile()
 
 
+func _test_slots() -> void:
+	for i in range(1, Profile.SLOT_COUNT + 1):
+		Profile.delete_slot(i)
+	Profile.new_game(2)
+	check("nouvelle partie : emplacement 2", Profile.slot == 2 and Profile.slot_exists(2) and Profile.last_slot() == 2)
+	Profile.selected_class = "warrior"
+	Profile.runs_done = 5
+	Profile.save_profile()
+	Profile.new_game(3)
+	check("nouvelle partie : profil vierge", Profile.runs_done == 0 and Profile.selected_class == "samurai")
+	Profile.load_slot(2)
+	check("charger l'emplacement 2", Profile.slot == 2 and Profile.runs_done == 5 and Profile.selected_class == "warrior" and Profile.equipped.has("weapon"))
+	var sm := Profile.slot_summary(2)
+	check("résumé de sauvegarde", int(sm.runs) == 5 and String(sm["class"]) == "warrior" and String(sm.saved_at) != "" and Profile.slot_summary(1).is_empty())
+	Profile.delete_slot(3)
+	check("supprimer un emplacement", not Profile.slot_exists(3))
+	Profile.new_game(1)
+	check("retour à l'emplacement 1 (fichier de test)", Profile.save_path == Profile.TEST_SAVE_PATH and Profile.last_slot() == 1)
+	Profile.delete_slot(2)
+
+
+func _test_title() -> void:
+	Profile.save_profile()
+	var title: Node = load("res://scenes/title.tscn").instantiate()
+	add_child(title)
+	await get_tree().create_timer(1.5).timeout
+	check("écran titre : map de fond générée", title.backdrop.map != null and title.backdrop.map.is_inside_tree())
+	title._open_saves()
+	await _frames()
+	check("Jouer : continuer, charger, nouvelle partie", title._saves.visible and title._saves_body.get_child_count() >= 3 and not title._center.visible)
+	title._show_slots(true)
+	await _frames()
+	check("nouvelle partie : 3 emplacements", title._saves_body.get_children().filter(func(c): return c is PanelContainer).size() == Profile.SLOT_COUNT)
+	title._close_saves()
+	title.queue_free()
+	await _frames()
+
+
 func _test_lobby() -> void:
 	var lobby: Node = load("res://scenes/lobby.tscn").instantiate()
 	add_child(lobby)
 	await _frames()
+	check("menu principal : Jouer choisi, sous-menu rempli", lobby._menu.play.selected and lobby._sub.get_child_count() >= 4)
+	lobby._show_menu("class")
+	lobby._select_class("warrior")
+	await _frames()
+	check("menu Classe : guerrier choisi", Profile.selected_class == "warrior" and lobby._badge_name.text == "Guerrier" and lobby._menu["class"].selected)
+	lobby._select_class("samurai")
+	lobby._show_menu("zones")
+	await _frames()
+	check("menu Zone de farm : 6 zones", lobby._sub.get_children().filter(func(c): return c is MenuWidgets.RowButton).size() == GameData.zones.size())
+	lobby._show_menu("play")
 	lobby._prepare_run()
 	await _frames()
 	check("lancer la run : page Équipement d'abord", lobby._prep.is_open() and lobby._prep.current_page() == 0 and lobby._prep_button.text.begins_with("Valider l'équipement"))

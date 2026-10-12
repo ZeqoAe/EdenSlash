@@ -15,3 +15,5 @@ previews/
 game/assets/fonts/*.import
 game/assets/ui/status/*.import
 game/assets/ui/frame/*.import
+
+game/assets/ui/icons/*.import
