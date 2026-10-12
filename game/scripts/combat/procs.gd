@@ -146,6 +146,8 @@ static func monsters_near(player: Node, pos: Vector3, r: float) -> Array:
 
 ## Texte lisible d'un proc (infobulles, cartes, fiche du personnage).
 static func describe(p: Dictionary) -> String:
+	if String(p.get("effect", "")) in ["stat_buff", "double_hit", "stun"]:
+		return Trophies.describe(p)  # buffs des trophées
 	var chance := float(p.get("chance", 1.0))
 	var trig := String(p.get("trigger", ""))
 	var head := ("%d %% de chances " % roundi(chance * 100) if chance < 1.0 else "") + String(TRIGGER_TEXT.get(trig, trig))

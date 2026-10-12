@@ -318,9 +318,14 @@ static func from_template(e: Dictionary, level: int, rarity := -1) -> Dictionary
 		if ref > 0.0:
 			base[s] = ref * float(e.r[s]) * float(RARITY_MULT[r]) * (randf_range(0.92, 1.08) if r < MYTHIC else 1.0)
 	item["base"] = base
-	if e.has("set") and r >= MYTHIC:
+	# sets : pièces mythiques et légendaires ; les sets créés en mode dev (« u… ») à toute rareté
+	if e.has("set") and (r >= MYTHIC or String(e.set).begins_with("u")):
 		item["set"] = String(e.set)
-	if slot == "trophy":
+	if e.has("dev") and (e.has("passive") or e.has("trophy")):
+		# modèle modifié en mode dev : bonus fixes + buff sous condition (force selon la rareté)
+		var pv: Dictionary = e.get("passive", {})
+		item["passive"] = DevEdits.make_passive(String(pv.get("name", "")), pv.get("stat", {}), String(e.get("trophy", "")), r, pv.get("procs", []))
+	elif slot == "trophy":
 		item["passive"] = Trophies.passive_for(e, r)  # buff sous condition, force selon la rareté
 	elif e.has("passive") and r >= MYTHIC:
 		item["passive"] = e.passive

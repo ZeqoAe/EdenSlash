@@ -114,6 +114,12 @@ triangle de 3 couleurs (*Prisme*) ou losange de 4 de même couleur donnent des b
   niveau de puissance choisis ; **Ressources** (or, matériaux, fournitures, en run ou au départ des
   runs) ; **Progression** (maîtrise, classes, zones, tenues, trésors — avec confirmation) ; **Run**
   (niveau, invincible, soins, tuer les monstres, faire apparaître élite / boss / coffre, rage, donjon).
+  **Éditer** : un objet possédé (nom, rareté, amélioration, qualité, puissance, set, stats bonus,
+  passif et buff sous condition, dupliquer) ou un modèle du catalogue (nom, rareté, niveau, stats
+  de base, set, passif, buff, « ne tombe jamais », appliquer aux objets possédés, annuler) ;
+  **Sets** : créer un set, choisir ses pièces (n'importe quels objets), bonus à 2 → 6 pièces (stats
+  et buff). Modèles et sets sont enregistrés dans `game/data/dev_edits.json` (Envoyer.bat l'envoie
+  sur GitHub).
 - **Sur la carte** (le village n'existe plus) : 10 **coffres** payants (or, prix qui monte à chaque
   coffre, ou une **clé**) → un choix de cartes ; 10 **sanctuaires** à capturer (rester dans le
   cercle 14 s pendant que les monstres affluent) → cartes, trophée au choix ou clés ; 3 **marchands

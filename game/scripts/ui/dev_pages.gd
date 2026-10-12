@@ -9,6 +9,7 @@ class_name DevPages
 ## par pièce ou regroupés par set et niveau ; ajoute n'importe quel objet au coffre (ou au
 ## sac pendant une run) ×1 / ×5, avec la rareté et le niveau de puissance choisis.
 class ItemsPage extends HBoxContainer:
+	signal edit_requested(e: Dictionary)
 	const PER_PAGE := 128
 	const GROUPS_PER_PAGE := 24
 	var _cat: OptionButton
@@ -175,6 +176,9 @@ class ItemsPage extends HBoxContainer:
 			g3.add_child(b)
 			_give_buttons.append(b)
 		Hud._label(right, "Double-clic sur un objet : ×1. Les trésors et tenues sont ajoutés à la collection.", 12, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		DevPages.button(right, "Éditer ce modèle (stats, bonus, set…)", func():
+			if not _selected.is_empty() and _selected.has("slot") and not Archive.is_collection(_selected):
+				edit_requested.emit(_selected))
 		_msg = Hud._label(right, "", 13, UiTheme.BUFF)
 
 	func _option(parent: Control, labels: Array) -> OptionButton:

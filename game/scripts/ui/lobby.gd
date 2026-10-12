@@ -97,6 +97,12 @@ func _ready() -> void:
 			# test : écran du mode dev, page N (paramètres de test uniquement)
 			Settings.set_v("interface", "dev_mode", true)
 			Dev.open(int(_open_screen.get_slice("=", 1)))
+			match int(_open_screen.get_slice("=", 1)):
+				1:  # éditeur : le premier objet possédé
+					var ed: DevEditor.EditPage = Dev.screen.page(1)
+					ed._select(ed._entries[0])
+				2:  # sets : un set d'Eden
+					Dev.screen.page(2)._open(String(GameData.eden_sets.keys()[0]))
 		"chests":
 			# test (profil de test) : un coffre de chaque type, la proposition d'un coffre de set ouverte
 			if Profile.reward_chests.is_empty():

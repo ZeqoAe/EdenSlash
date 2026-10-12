@@ -384,7 +384,7 @@ func _test_lobby() -> void:
 	Dev.toggle()
 	await _frames()
 	var dev: DevScreen = Dev.screen
-	check("mode dev : écran ouvert (Objets, Ressources, Progression ; pas de Run au lobby)", dev.is_open() and dev._pages.size() == 3)
+	check("mode dev : écran ouvert (Objets, Éditer, Sets, Ressources, Progression ; pas de Run au lobby)", dev.is_open() and dev._pages.size() == 5)
 	var items: DevPages.ItemsPage = dev.page(0)
 	var tpl: Dictionary = GameData.eden_items.filter(func(e): return e.slot == "ring")[0]
 	items._selected = tpl
@@ -396,14 +396,66 @@ func _test_lobby() -> void:
 	check("mode dev : ×5 au coffre, rareté et puissance choisies", got.size() == 5 and got.all(func(it): return int(it.rarity) == Items.LEGENDARY and int(it.plevel) == 30))
 	for it in got:
 		Profile.vault.erase(it)
-	for i in 3:
+	for i in 5:
 		dev.show_page(i)
 		await _frames()
-	check("mode dev : pages Ressources et Progression", dev.page(1).get_child_count() > 0 and dev.page(2)._msg.text.contains("Classes débloquées"))
+	check("mode dev : pages Ressources et Progression", dev.page(3).get_child_count() > 0 and dev.page(4)._msg.text.contains("Classes débloquées"))
+	await _test_dev_editor(dev)
 	Dev.toggle()
 	check("mode dev : F10 referme", not dev.is_open())
 	Settings.set_v("interface", "dev_mode", false)
 	lobby.free()
+
+
+## Éditeur du mode dev : objet possédé, modèle du catalogue, set créé (fichier de test).
+func _test_dev_editor(dev: DevScreen) -> void:
+	var ed: DevEditor.EditPage = dev.page(1)
+	dev.show_page(1)
+	await _frames()
+	# objet possédé : stats bonus, amélioration, buff sous condition
+	ed._mode.select(0)
+	ed._refresh_list()
+	var it: Dictionary = ed._entries.filter(func(x): return x.slot != "weapon")[0]
+	ed._select(it)
+	ed._up.value = 7
+	ed._stats.set_values({"agi": 50.0, "crit": 0.1})
+	ed._kind.select(1 + Trophies.KINDS.keys().find("double"))
+	ed._save_owned()
+	check("éditeur : objet possédé (+7, +50 Agilité, +10 % critique, double frappe)", int(it.upgrade) == 7 and is_equal_approx(float(it.affixes.agi), 50.0)
+		and is_equal_approx(float(it.affixes.crit), 0.1) and String(it.passive.trophy) == "double" and Items.stats(it).get("agi", 0.0) >= 50.0)
+	# modèle du catalogue : stats de base et rareté
+	var tpl: Dictionary = GameData.eden_items.filter(func(e): return e.slot == "chest" and int(e.rarity) == 2)[0]
+	ed.edit_template(tpl)
+	ed._stats.set_values({"str": 3.0, "hp": 2.0})
+	ed._rar.select(Items.LEGENDARY)
+	ed._save_template()
+	var made := Items.from_template(tpl, 20)
+	check("éditeur : modèle modifié (légendaire, Force ×3)", int(tpl.rarity) == Items.LEGENDARY and made.base.has("str") and DevEdits.is_edited(int(tpl.id)))
+	# set créé : 2 pièces, bonus à 2 pièces
+	var sp: DevEditor.SetsPage = dev.page(2)
+	dev.show_page(2)
+	await _frames()
+	sp._new_set()
+	var sid := sp._sid
+	var ring: Dictionary = GameData.eden_items.filter(func(e): return e.slot == "ring" and int(e.rarity) < Items.MYTHIC)[0]
+	sp._name.text = "Set de test"
+	sp._add_piece(int(tpl.id))
+	sp._add_piece(int(ring.id))
+	sp._tiers[2].on.button_pressed = true
+	sp._tiers[2].stats.set_values({"dmg_pct": 0.2})
+	sp._save()
+	var p1 := Items.from_template(tpl, 20)
+	var p2 := Items.from_template(ring, 20, 1)
+	check("éditeur : set créé (pièces à toute rareté)", String(p1.get("set", "")) == sid and String(p2.get("set", "")) == sid)
+	check("éditeur : bonus à 2 pièces actif", Items.active_set_bonuses({"chest": p1, "ring": p2}).any(func(b): return b.set == sid and float(b.stat.get("dmg_pct", 0.0)) > 0.19))
+	check("éditeur : enregistré (fichier de test, jamais le vrai)", FileAccess.file_exists(DevEdits.TEST_PATH) and DevEdits.paths() == [DevEdits.TEST_PATH])
+	# nettoyage : le fichier de modifications ne garde rien du test
+	DevEdits.delete_set(sid)
+	DevEdits.data.sets.erase(sid)
+	DevEdits.reset_item(int(tpl.id))
+	DevEdits.reset_item(int(ring.id))
+	check("éditeur : modèle d'origine retrouvé", int(tpl.rarity) == 2 and not tpl.has("set"))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(DevEdits.TEST_PATH))
 
 
 func _test_run_screens() -> void:
@@ -445,10 +497,10 @@ func _test_run_screens() -> void:
 	await _frames()
 	# mode dev en run : page Run
 	Settings.set_v("interface", "dev_mode", true)
-	Dev.open(3)
+	Dev.open(5)
 	await _frames()
-	var rp: DevPages.RunActionsPage = Dev.screen.page(3)
-	check("mode dev en run : page Run, jeu en pause", Dev.screen._pages.size() == 4 and rp.visible and get_tree().paused)
+	var rp: DevPages.RunActionsPage = Dev.screen.page(5)
+	check("mode dev en run : page Run, jeu en pause", Dev.screen._pages.size() == 6 and rp.visible and get_tree().paused)
 	var lv := player.level
 	rp._box.get_child(1).get_child(1).pressed.emit()
 	check("mode dev : niveau +5", player.level == lv + 5)
@@ -512,6 +564,7 @@ func _test_run_screens() -> void:
 	Profile.disassemble_many([junk])
 	check("démonter : des cristaux (%d → %d)" % [crys0, Profile.amount("crystal")], Profile.amount("crystal") > crys0)
 	Profile.materials.crystal = 50
+	Profile.add_item(Items.generate(10, 1.0, "chest", "samurai", 2))  # au moins une pièce rare (stats réforgeables)
 	var rare: Dictionary = Profile.inventory.filter(func(x): return not Forge.reforgeable(x).is_empty())[0]
 	var stat: String = Forge.reforgeable(rare)[0]
 	var txt := Forge.reforge(rare, stat)
@@ -562,7 +615,8 @@ func _test_run_screens() -> void:
 	world.cards._queue.clear()
 	world.cards._show_next()
 	# sanctuaire : capture → récompense de la run
-	var sh: Shrine = map.shrines.filter(func(x): return x.reward == "trophy")[0]
+	var sh: Shrine = map.shrines.filter(func(x): return not x.captured)[0]
+	sh.reward = "trophy"  # la carte en a presque toujours, mais le placement est aléatoire
 	player.global_position = sh.global_position + Vector3.UP * 0.5
 	var bag0 := Profile.inventory.size()
 	for i in 20:

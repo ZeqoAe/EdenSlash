@@ -80,6 +80,7 @@ func _ready() -> void:
 			eden_by_slot[key].append(e)
 			eden_by_id[int(e.id)] = e
 			eden_by_code[String(e.code)] = e
+		DevEdits.load_and_apply()  # modifications du mode dev (data/dev_edits.json)
 
 
 	_build_eden_bands()
