@@ -14,7 +14,7 @@ var _icon: Sprite3D
 
 func _ready() -> void:
 	_player = get_tree().get_first_node_in_group("player") as Player
-	var color: Color = Items.RARITIES[int(item.rarity)].color
+	var color: Color = Items.color_of(item)
 	_icon = Sprite3D.new()
 	if String(item.get("icon", "")) != "" and ResourceLoader.exists(item.icon):
 		_icon.texture = load(item.icon)

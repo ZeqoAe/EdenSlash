@@ -81,10 +81,11 @@ static func spark(parent: Node, pos: Vector3, color := Color(1.0, 0.9, 0.6), cri
 	p.initial_velocity_min = 3.0
 	p.initial_velocity_max = 7.0 if crit else 5.0
 	p.gravity = Vector3(0, -12, 0)
-	p.scale_amount_min = 0.06
-	p.scale_amount_max = 0.14
+	# taille portée par le quad (certains rendus ignorent scale_amount)
+	p.scale_amount_min = 0.6
+	p.scale_amount_max = 1.4
 	var quad := QuadMesh.new()
-	quad.size = Vector2(1, 1)
+	quad.size = Vector2(0.1, 0.1)
 	var m := _material(color)
 	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
 	quad.material = m
@@ -93,3 +94,22 @@ static func spark(parent: Node, pos: Vector3, color := Color(1.0, 0.9, 0.6), cri
 	p.global_position = pos
 	p.emitting = true
 	p.get_tree().create_timer(0.6).timeout.connect(p.queue_free)
+
+
+## Éclair en zigzag de [param from] à [param to] (foudre des procs).
+static func bolt(parent: Node, from: Vector3, to: Vector3, color := Color(0.75, 0.8, 1.0, 1.0)) -> void:
+	var mesh := ImmediateMesh.new()
+	var segs := 9
+	var dir := to - from
+	var side := dir.cross(Vector3.UP).normalized() if absf(dir.normalized().y) < 0.95 else Vector3.RIGHT
+	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
+	for i in segs + 1:
+		var t := float(i) / segs
+		var jitter := Vector3.ZERO if i == 0 or i == segs else (side * randf_range(-0.5, 0.5) + Vector3.UP * randf_range(-0.3, 0.3))
+		var p := dir * t + jitter
+		var w := 0.12 * (1.0 - t * 0.5)
+		mesh.surface_set_color(color)
+		mesh.surface_add_vertex(p - side * w)
+		mesh.surface_add_vertex(p + side * w)
+	mesh.surface_end()
+	_spawn(parent, mesh, from, color, 0.22, 1.0)

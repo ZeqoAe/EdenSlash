@@ -109,6 +109,14 @@ CLASSES = {
         'weapons': ['W21301', 'W21401', 'W21501', 'W21601'],
         'anims': {'idle': 'stand01', 'battle': 'battle13', 'run': 'move02', 'attacks': ['attack25', 'attack26'],
                   'hurt': 'hurt13', 'death': 'death01', 'jump': 'jump01', 'dodge': 'jump02'},
+        # combo d'auto-attaque : sabre dans un sens, dans l'autre, puis coup final en saut
+        # (zone, renversement) ; voir Player.combo_chain()
+        'combo': [
+            {'anim': 'attack25', 'mult': 1.0, 'arc': 150, 'hit_fx': 's00141'},
+            {'anim': 'attack26', 'mult': 1.15, 'arc': 150, 'hit_fx': 's00241'},
+            {'anim': 'shoot24', 'mult': 2.2, 'arc': 360, 'radius': 3.4, 'leap': 7.5, 'dash': 2.0, 'speed': 1.15,
+             'finisher': True, 'applies': {'stun': 0.4}, 'hit_fx': 's00541'},
+        ],
         'skills': SAMURAI_SKILLS,
         'passives': SAMURAI_PASSIVES,
         'start_skills': 3,  # cartes de compétence proposées au départ de la run

@@ -57,7 +57,12 @@ Les captures arrivent dans `%APPDATA%/Godot/app_userdata/Eden Slash/shots/`.
   cône, projectiles, onde), invocations, fureur sous 50 % de PV.
 - Compétences du Samouraï débloquées par **cartes** à chaque niveau (4 emplacements).
   Clic sur une carte (ou 1, 2, 3) pour la sélectionner, puis **Valider** (ou Entrée) pour confirmer.
-- Équipement à **jets** (qualité 90-120 %, affixes en fourchette, paliers +4/+6/+8/+10).
+- Équipement à **jets** (qualité 90-120 %, affixes en fourchette, paliers +4/+6/+8/+10),
+  **pièces de set** (bonus à 2 / 4 / 6 pièces : foudre, gel, buffs temporaires…), butin plafonné
+  au niveau 15 sur la map 1.
+- **Combo d'auto-attaque** en 3 coups, le dernier en saut et en zone.
+- **Cartes de build** à rareté : zone, portée, effets déclenchés (foudre, gel, brûlure, explosions,
+  Écho…), évolutions légendaires, 1 relance par run.
 
 ## Pipeline d'assets (`tools/`)
 
@@ -83,10 +88,12 @@ Godot_v4.7.2-stable_win64_console.exe --headless --path game --script tools/bake
 
 Options de test : `--seed=N` (même map), `--dungeon` (arène du boss), `--rage`,
 `--goto=village|dungeon`, `--boss-after=N` (le bot va au boss après N s), `--open=pause|cards|map|smith|trader`,
-`--teleport=x,z`, `--cam-dist=N`, `--seals=N` (sceaux du donjon), `--start-level=N`, `--end-at=N` (fin de run → choix de l'héritage).
+`--teleport=x,z`, `--cam-dist=N`, `--seals=N` (sceaux du donjon), `--start-level=N`, `--end-at=N` (fin de run → choix de l'héritage),
+`--cards=static_blade:2,volatile` (cartes de build au départ), `--gear=storm` (panoplie d'un set : storm, frost, blood, falcon, phoenix, wind).
 Cycle héritage / remboursement : `Godot --headless --path game res://tests/test_progress.tscn`.
 Choix de cartes (sélection puis Valider) : `Godot --headless --path game res://tests/test_cards.tscn`.
 Paramètres et modes de jeu : `Godot --headless --path game res://tests/test_controls.tscn`.
+Combo, procs, sets, cartes de build et plafond de niveau : `Godot --headless --path game res://tests/test_build.tscn`.
 Les lancements de test (arguments après `--`, scènes `res://tests`) utilisent `user://profile_test.json`,
 jamais le profil du joueur.
 Saut et esquive mesurés : `Godot --path game res://tests/test_jump.tscn`.

@@ -27,6 +27,9 @@ const DODGE_DISTANCE := 6.0
 const DODGE_TIME := 0.32
 const DODGE_COOLDOWN := 0.45
 const ATTACK_RANGE := 2.6
+## Combo d'auto-attaque : le coup suivant doit partir moins de COMBO_WINDOW s
+## après la fin du précédent ; le 3e coup (coup final) est un saut frappé en zone.
+const COMBO_WINDOW := 0.6
 
 var class_id := "samurai"
 var cls: Dictionary
@@ -39,6 +42,19 @@ var atk_speed := 1.0
 var move_mult := 1.0
 var cdr := 0.0
 var lifesteal := 0.0
+# cartes de build et sets (voir Boons, Items.SETS, Procs)
+var area_mult := 1.0  # rayon des zones
+var reach_mult := 1.0  # portée (attaque de base, compétences en ligne / éventail / élan)
+var dmg_mult := 1.0
+var elite_mult := 1.0
+var finisher_mult := 1.0
+var finisher_area := 1.0
+var finisher_hits := 1
+var combo_window := COMBO_WINDOW
+var dot_bonus := 1.0
+var execute := 0.0
+var procs: Array = []  # effets déclenchés actifs
+var proc_ready_at := {}  # id du proc -> instant (clock) de fin de recharge
 
 var skill_ready_at := {}  # id compétence -> instant
 var autoplay := false
@@ -49,7 +65,9 @@ var _state_time := 0.0
 var _state_len := 0.0
 var _hits: Array = []  # instants d'impact restants de l'action en cours
 var _action: Dictionary = {}  # compétence / attaque en cours
-var _combo_index := 0
+var _combo_step := 0  # coups du combo déjà portés
+var _combo_expire := 0.0
+var _last_skill := {}  # dernière compétence portée (pour l'Écho)
 var _target: Combatant  # cible verrouillée par clic (auto-attaque)
 var _move_goal := Vector3.INF  # point visé par un clic de déplacement (modes souris)
 var _click_moving := false  # clic de déplacement maintenu : on suit le curseur
@@ -107,17 +125,28 @@ func recalc_stats() -> void:
 	var eq := Profile.equipment_stats()
 	var ps := Run.passive_stats()
 	var ratio := hp / max_hp if max_hp > 0.0 else 1.0
-	max_hp = GameData.player_max_hp(level) * (1.0 + ps.get("hp_pct", 0.0)) + eq.get("hp", 0.0)
+	max_hp = maxf(1.0, GameData.player_max_hp(level) * (1.0 + ps.get("hp_pct", 0.0) + eq.get("hp_pct", 0.0)) + eq.get("hp", 0.0))
 	atk = (GameData.player_atk(level) + eq.get("atk", 0.0)) * (1.0 + ps.get("atk_pct", 0.0))
 	if has_status("marduk"):
 		atk *= 1.3
 	defense = 4.0 + level * 2.0 + eq.get("def", 0.0)
-	crit = 0.05 + eq.get("crit", 0.0) + ps.get("crit", 0.0)
+	crit = 0.05 + eq.get("crit", 0.0) + ps.get("crit", 0.0) + (0.25 if has_status("keen") else 0.0)
 	crit_dmg = 0.5 + eq.get("crit_dmg", 0.0) + ps.get("crit_dmg", 0.0)
-	atk_speed = 1.0 + eq.get("atk_speed", 0.0) + ps.get("atk_speed", 0.0) + (0.3 if has_status("marduk") else 0.0)
-	move_mult = 1.0 + eq.get("move_speed", 0.0) + ps.get("move_speed", 0.0) + (0.3 if has_status("shrine") else 0.0)
+	atk_speed = 1.0 + eq.get("atk_speed", 0.0) + ps.get("atk_speed", 0.0) + (0.3 if has_status("marduk") else 0.0) + (0.3 if has_status("frenzy") else 0.0)
+	move_mult = 1.0 + eq.get("move_speed", 0.0) + ps.get("move_speed", 0.0) + (0.3 if has_status("shrine") else 0.0) + (0.3 if has_status("haste") else 0.0)
 	cdr = clampf(eq.get("cdr", 0.0) + ps.get("cdr", 0.0), 0.0, 0.5)
 	lifesteal = eq.get("lifesteal", 0.0) + ps.get("lifesteal", 0.0)
+	area_mult = 1.0 + ps.get("area", 0.0) + eq.get("area", 0.0)
+	reach_mult = 1.0 + ps.get("reach", 0.0) + eq.get("reach", 0.0)
+	dmg_mult = maxf(0.1, 1.0 + ps.get("dmg_pct", 0.0) + eq.get("dmg_pct", 0.0))
+	elite_mult = 1.0 + ps.get("elite_dmg", 0.0) + eq.get("elite_dmg", 0.0)
+	finisher_mult = 1.0 + ps.get("finisher_dmg", 0.0)
+	finisher_area = 1.0 + ps.get("finisher_area", 0.0)
+	finisher_hits = 1 + int(ps.get("finisher_hits", 0))
+	combo_window = COMBO_WINDOW + ps.get("combo_window", 0.0)
+	dot_bonus = 1.0 + ps.get("dot_pct", 0.0) + eq.get("dot_pct", 0.0)
+	execute = minf(ps.get("execute", 0.0), 0.3)
+	procs = Run.passive_procs() + Profile.equipment_procs()
 	hp = clampf(max_hp * ratio, 1.0, max_hp)
 	health_changed.emit(hp, max_hp)
 	xp_changed.emit(xp, GameData.xp_to_next(level), level)
@@ -134,7 +163,13 @@ func stat_sheet() -> Array:
 		["Vitesse d'attaque", "%d %%" % roundi(atk_speed * 100)],
 		["Vitesse", "%d %%" % roundi(move_mult * 100)], ["Recharge", "-%d %%" % roundi(cdr * 100)],
 		["Vol de vie", "%d %%" % roundi(lifesteal * 100)],
+		["Dégâts", "+%d %%" % roundi((dmg_mult - 1.0) * 100)], ["Zone d'effet", "+%d %%" % roundi((area_mult - 1.0) * 100)],
+		["Portée", "+%d %%" % roundi((reach_mult - 1.0) * 100)],
 	]
+
+
+func dot_mult() -> float:
+	return dot_bonus
 
 
 func _on_profile_changed() -> void:
@@ -300,8 +335,6 @@ func _update_idle(input_dir: Vector3, delta: float) -> void:
 	else:
 		face_direction(look, delta, 20.0)
 		play(_anim("battle") if _time - _last_combat < 4.0 else _anim("idle"), 0.25)
-	if _time - _last_combat > 1.2:
-		_combo_index = 0
 
 	if (_wants("jump") or _time < _jump_buffer_until) and can_jump():
 		_start_jump()
@@ -436,7 +469,14 @@ func _try_auto_skill() -> bool:
 func skill_reach(s: Dictionary) -> float:
 	if s.get("kind", "") == "buff":
 		return 6.0
-	return maxf(float(s.get("radius", 0.0)), ATTACK_RANGE) + float(s.get("dash", 0.0)) * 0.8
+	return maxf(skill_radius(s), ATTACK_RANGE) + float(s.get("dash", 0.0)) * reach_mult * 0.8
+
+
+## Rayon d'une compétence : la portée allonge les lignes, éventails et élans,
+## la zone d'effet élargit les cercles et les cônes.
+func skill_radius(s: Dictionary) -> float:
+	var r := float(s.get("radius", 0.0))
+	return r * (reach_mult if String(s.get("kind", "")) in ["fan", "line", "dash"] else area_mult)
 
 
 func _monster_in_reach(reach: float, locked_only: bool) -> Combatant:
@@ -477,14 +517,44 @@ func monster_under_mouse() -> Combatant:
 
 
 # --- attaques de base ---------------------------------------------------------------
+## Coups du combo de la classe (classes.json « combo »), sinon les attaques de base.
+func combo_chain() -> Array:
+	var chain: Array = cls.get("combo", [])
+	if not chain.is_empty():
+		return chain
+	var out: Array = []
+	for a in cls.get("anims", {}).get("attacks", ["attack01"]):
+		out.append({"anim": a})
+	return out
+
+
+## Coup du combo en cours et taille du combo (HUD) ; Vector2i(0, n) hors combo.
+func combo_state() -> Vector2i:
+	var n := combo_chain().size()
+	return Vector2i(_combo_step if _time <= _combo_expire or _state == "attack" else 0, n)
+
+
 func _start_attack(aim: Vector3) -> void:
-	var attacks: Array = cls.get("anims", {}).get("attacks", ["attack01"])
-	var anim_name: String = attacks[_combo_index % attacks.size()]
-	_combo_index += 1
+	var chain := combo_chain()
+	if _time > _combo_expire or _combo_step >= chain.size():
+		_combo_step = 0
+	var step: Dictionary = chain[_combo_step]
+	_combo_step += 1
+	var finisher: bool = step.get("finisher", false)
 	face_direction(aim - global_position, 1.0, 100.0)
-	_begin_action("attack", anim_name, atk_speed * 1.25, {
-		"mult": 1.0 + 0.1 * ((_combo_index - 1) % attacks.size()), "radius": ATTACK_RANGE, "arc": 150.0,
-		"hit_fx": ["s00141", "s00241", "s00541"][(_combo_index - 1) % 3]})
+	var radius := float(step.get("radius", ATTACK_RANGE)) * (area_mult * finisher_area if finisher else reach_mult)
+	var action := {
+		"mult": float(step.get("mult", 1.0)) * (finisher_mult if finisher else 1.0), "radius": radius,
+		"arc": float(step.get("arc", 150.0)), "hit_fx": String(step.get("hit_fx", "s00141")),
+		"applies": step.get("applies", {}), "dash": float(step.get("dash", 0.0)), "finisher": finisher,
+	}
+	if finisher and finisher_hits > 1:
+		action["hits"] = finisher_hits
+		action["arc"] = 360.0
+	_begin_action("attack", String(step.anim), atk_speed * 1.25 * float(step.get("speed", 1.0)), action)
+	if finisher and is_on_floor():
+		velocity.y = float(step.get("leap", 0.0))  # saut automatique du coup final
+	_combo_expire = _time + _state_len + combo_window
 
 
 func _begin_action(state: String, anim_name: String, speed: float, action: Dictionary) -> void:
@@ -563,60 +633,135 @@ func _update_action(input_dir: Vector3, delta: float) -> void:
 
 ## Applique les dégâts de l'action en cours à tous les monstres de la zone.
 func _resolve_hit() -> void:
+	var first_hit: bool = not _action.get("hit_done", false)
 	_action["hit_done"] = true
 	_last_hit_at = _time
-	var radius: float = _action.get("radius", ATTACK_RANGE)
-	var arc: float = _action.get("arc", 150.0)
-	var fwd := forward()
+	var is_skill := _state == "skill"
+	if _action.get("finisher", false):
+		Vfx.ring(self, global_position, float(_action.radius), Color(1.0, 0.85, 0.4, 0.9))
+		EdenFx.play(self, "s00541", global_position, rotation.y, GameData.HERO_SCALE * 1.3)
+		_shake(0.5)
+	var hit := _resolve_area(_action, global_position, forward(), is_skill)
+	if is_skill and not _action.get("echo", false) and _action.get("kind", "") != "buff":
+		_last_skill = {"action": _action.duplicate(true), "pos": global_position, "fwd": forward()}
+		if hit:
+			Procs.fire(self, "skill_hit", hit, hit.global_position)
+	if _action.get("finisher", false) and first_hit:
+		Procs.fire(self, "finisher", hit, global_position)
+
+
+## Applique [param action] à tous les monstres de sa zone (rayon, arc) depuis
+## [param origin]. Renvoie le premier monstre touché.
+func _resolve_area(action: Dictionary, origin: Vector3, fwd: Vector3, is_skill: bool) -> Combatant:
+	var radius: float = action.get("radius", ATTACK_RANGE)
+	var arc: float = action.get("arc", 150.0)
 	var hits := 0
-	if _action.get("kind", "") != "buff":
-		Vfx.slash(self, global_position, fwd, radius, arc,
-			Color(1.0, 0.8, 0.5, 0.85) if _state == "attack" else Color(1.0, 0.45, 0.25, 0.9))
+	var first: Combatant = null
+	if action.get("kind", "") != "buff":
+		var col := Color(1.0, 0.8, 0.5, 0.85) if not is_skill else Color(1.0, 0.45, 0.25, 0.9)
+		if action.get("echo", false):
+			col = Color(0.75, 0.5, 1.0, 0.9)
+		Vfx.slash(self, origin, fwd, radius, arc, col)
 	for node in get_tree().get_nodes_in_group("monsters"):
 		var m := node as Monster
 		if m == null or m.is_dead:
 			continue
-		var to := m.global_position - global_position
+		var to := m.global_position - origin
 		to.y = 0.0
 		var dist := to.length() - m.radius
 		if dist > radius:
 			continue
 		if arc < 360.0 and dist > 0.6 and rad_to_deg(fwd.angle_to(to.normalized())) > arc * 0.5:
 			continue
-		_hit_monster(m, to.normalized())
+		if first == null:
+			first = m
+		_hit_monster(m, to.normalized(), action, is_skill)
 		hits += 1
 	if hits > 0:
 		_last_combat = _time
 		_hit_pause(0.04 if hits < 4 else 0.06)
+	return first
 
 
-func _hit_monster(m: Monster, dir: Vector3) -> void:
-	var mult: float = _action.get("mult", 1.0)
-	var combo: Dictionary = _action.get("combo", {})
+## Écho : la dernière compétence frappe une seconde fois, au même endroit.
+func echo_last_skill(mult: float) -> void:
+	if _last_skill.is_empty():
+		return
+	var a: Dictionary = _last_skill.action.duplicate(true)
+	a.mult = float(a.mult) * mult
+	a["echo"] = true
+	a.erase("fx_count")
+	var origin: Vector3 = _last_skill.pos
+	var fwd: Vector3 = _last_skill.fwd
+	await get_tree().create_timer(0.22, false).timeout
+	if is_dead or not is_inside_tree():
+		return
+	DamageNumber.spawn_text(self, "ÉCHO", Color(0.8, 0.6, 1.0))
+	_resolve_area(a, origin, fwd, true)
+
+
+## Dégâts d'un effet déclenché (foudre, explosion...) : ne relance pas les procs
+## d'impact, mais une mort peut déclencher les procs « kill ».
+func proc_hit(m: Combatant, mult: float, can_crit := false) -> void:
+	if m == null or not is_instance_valid(m) or m.is_dead:
+		return
+	var is_crit := can_crit and randf() < crit
+	var dmg := atk * mult * damage_dealt_mult() * dmg_mult * (1.0 + crit_dmg if is_crit else 1.0)
+	var mon := m as Monster
+	if mon and (mon.is_elite or mon.is_boss):
+		dmg *= elite_mult
+	m.take_damage(dmg, self, is_crit)
+	_last_combat = _time
+	if m.is_dead:
+		Procs.fire(self, "kill", m, m.global_position)
+
+
+## Recharges des compétences réduites de [param seconds] s.
+func reduce_cooldowns(seconds: float) -> void:
+	for id in skill_ready_at:
+		skill_ready_at[id] = maxf(_time, float(skill_ready_at[id]) - seconds)
+
+
+func _hit_monster(m: Monster, dir: Vector3, action: Dictionary, is_skill: bool) -> void:
+	var mult: float = action.get("mult", 1.0)
+	var combo: Dictionary = action.get("combo", {})
 	var combo_ok: bool = not combo.is_empty() and m.has_status(String(combo.get("requires", "")))
 	if combo_ok and combo.get("double", false):
 		mult *= 2.0
 	var is_crit := randf() < crit
-	var dmg := atk * mult * randf_range(0.92, 1.08) * damage_dealt_mult() * (1.0 + crit_dmg if is_crit else 1.0) * flow_mult()
-	m.take_damage(dmg, self, is_crit)
+	var dmg := atk * mult * randf_range(0.92, 1.08) * damage_dealt_mult() * (1.0 + crit_dmg if is_crit else 1.0) * flow_mult() * dmg_mult
+	if m.is_elite or m.is_boss:
+		dmg *= elite_mult
+	elif execute > 0.0 and m.hp - dmg <= m.max_hp * execute:
+		# exécution : coup fatal qui ignore la défense
+		DamageNumber.spawn_text(m, "EXÉCUTÉ", Color(1.0, 0.3, 0.3))
+		dmg = m.hp + 1.0
+		m.take_damage(dmg, self, is_crit, true)
+	if not m.is_dead:
+		m.take_damage(dmg, self, is_crit)
 	# effet d'impact d'Eden (limité à quelques cibles par coup pour la lisibilité)
-	var fx_hits := int(_action.get("fx_count", 0))
+	var fx_hits := int(action.get("fx_count", 0))
 	if fx_hits < 3:
-		_action["fx_count"] = fx_hits + 1
-		var hit_fx: String = _action.get("hit_fx", "")
+		action["fx_count"] = fx_hits + 1
+		var hit_fx: String = action.get("hit_fx", "")
 		EdenFx.play(self, hit_fx, m.global_position + Vector3.UP * 0.2, rotation.y, GameData.HERO_SCALE)
 	if lifesteal > 0.0:
 		heal(dmg * lifesteal)
 	Vfx.spark(self, m.global_position + Vector3.UP * 1.0, Color(1.0, 0.85, 0.5), is_crit)
-	m.knockback(dir * (2.5 if _state == "skill" else 1.0))
-	for s in _action.get("applies", {}):
-		m.add_status(s, float(_action.applies[s]), self)
+	m.knockback(dir * (2.5 if is_skill else (3.0 if action.get("finisher", false) else 1.0)))
+	for s in action.get("applies", {}):
+		m.add_status(s, float(action.applies[s]), self)
 	if combo_ok:
 		for s in combo.get("applies", {}):
 			m.add_status(s, float(combo.applies[s]), self)
 		for b in combo.get("buff", {}):
 			add_status(b, float(combo.buff[b]), self)
 			recalc_stats()
+	Procs.fire(self, "hit", m, m.global_position)
+	if is_crit:
+		Procs.fire(self, "crit", m, m.global_position)
+	if m.is_dead:
+		Procs.fire(self, "kill", m, m.global_position)
 
 
 ## Micro-arrêt sur impact : donne du poids aux coups.
@@ -659,8 +804,8 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 	face_direction(aim - global_position, 1.0, 100.0)
 	var action := {
 		"kind": s.kind, "mult": float(s.mult) * Run.skill_damage_mult(int(s.id)),
-		"radius": float(s.radius), "arc": float(s.arc), "hits": int(s.get("hits", 1)),
-		"dash": float(s.get("dash", 0.0)), "applies": s.get("applies", {}), "combo": s.get("combo", {}),
+		"radius": skill_radius(s), "arc": float(s.arc), "hits": int(s.get("hits", 1)),
+		"dash": float(s.get("dash", 0.0)) * reach_mult, "applies": s.get("applies", {}), "combo": s.get("combo", {}),
 		"skill_id": int(s.id), "aerial": not is_on_floor(),
 	}
 	if action.aerial:
@@ -671,7 +816,7 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 	for b in s.get("buff", {}):
 		add_status(b, float(s.buff[b]), self)
 	if s.kind == "buff" or s.kind == "spin":
-		Vfx.ring(self, global_position, maxf(float(s.radius), 2.5), Color(1.0, 0.8, 0.35, 0.8))
+		Vfx.ring(self, global_position, maxf(skill_radius(s), 2.5), Color(1.0, 0.8, 0.35, 0.8))
 	recalc_stats()
 	var fx: Dictionary = s.get("fx", {})
 	action["hit_fx"] = String(fx.get("hit", "")) if String(fx.get("hit", "")) != "" else "s00341"
@@ -856,6 +1001,7 @@ func _wants_pressed(action: String) -> bool:
 
 
 func _start_dodge(input_dir: Vector3, perfect := false) -> void:
+	Procs.fire(self, "dodge")
 	_dodge_dir = input_dir.normalized() if input_dir.length() > 0.1 else forward()
 	face_direction(_dodge_dir, 1.0, 100.0)
 	_state = "dodge"
@@ -923,6 +1069,7 @@ func _perfect_cancel() -> void:
 	for i in 4:
 		get_tree().create_timer(0.05 * i, false).timeout.connect(_afterimage)
 	_hit_pause(0.05)
+	Procs.fire(self, "perfect")
 
 
 ## Image rémanente : copie figée et translucide de la pose actuelle du héros.
@@ -963,6 +1110,10 @@ func take_damage(amount: float, source: Combatant = null, is_crit := false, dot 
 	super.take_damage(amount, source, is_crit, dot)
 	if not dot:
 		_shake(clampf(amount / max_hp * 8.0, 0.3, 1.4))
+	if not is_dead:
+		Procs.fire(self, "hurt", source)
+		if hp < max_hp * 0.3:
+			Procs.fire(self, "low_hp", source)
 
 
 func _on_death(_killer: Combatant) -> void:

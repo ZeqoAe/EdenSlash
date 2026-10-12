@@ -19,6 +19,11 @@ const CAMP_ACTIVATE := 55.0
 const CAMP_RESPAWN := 40.0
 const BOSS_ADDS_EVERY := 14.0
 const FOG_RES := 128
+## Niveau maximal du butin par zone : la map 1 ne donne pas d'équipement au-delà du
+## niveau 15 (les maps suivantes prendront le relais). Les monstres plafonnent au
+## même niveau, +3 pendant la rage (plus durs, mais le butin reste plafonné).
+const ZONE_MAX_LEVEL := {"limestone": 15}
+const RAGE_LEVEL_BONUS := 3
 
 var world: Node  # world.gd
 var map  # ProcMap
@@ -67,7 +72,7 @@ func start(p: Player) -> void:
 	_fog = Image.create(FOG_RES, FOG_RES, false, Image.FORMAT_LA8)
 	_fog.fill(Color(0, 0, 0, 1))
 	_fog_tex = ImageTexture.create_from_image(_fog)
-	zone_changed.emit({"name": zone.name, "levels": zone.levels})
+	zone_changed.emit({"name": zone.name, "levels": [int(zone.levels[0]), max_level()]})
 	message.emit("%s\nTrouve le village et l'entrée du donjon" % zone.name, 3.5)
 
 
@@ -184,8 +189,19 @@ func _interact(it: Interactable) -> void:
 # --- monstres --------------------------------------------------------------------------
 ## Niveau des monstres : monte avec le temps, +3 en rage, +palier du camp.
 func _monster_level(tier: int) -> int:
-	var base := 1.0 + time / 60.0 * 0.9 + (3.0 if state == "rage" else 0.0)
-	return clampi(roundi(maxf(base, player.level - 1.0) + tier), 1, 30)
+	var base := 1.0 + time / 60.0 * 0.9 + (float(RAGE_LEVEL_BONUS) if state == "rage" else 0.0)
+	var cap := max_level() + (RAGE_LEVEL_BONUS if state in ["rage", "boss"] else 0)
+	return clampi(roundi(maxf(base, player.level - 1.0) + tier), 1, cap)
+
+
+## Niveau maximal du butin et des monstres (hors rage) de la zone en cours.
+func max_level() -> int:
+	return int(zone.get("max_level", ZONE_MAX_LEVEL.get(String(zone.get("id", "")), 30)))
+
+
+## Niveau d'un objet donné dans cette zone (plafonné).
+func loot_level(level: int) -> int:
+	return clampi(level, 1, max_level())
 
 
 func _pick_monster(level: int) -> int:
@@ -337,7 +353,7 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 
 func _drop_item(pos: Vector3, level: int, luck: float) -> void:
 	var drop := LootDrop.new()
-	drop.item = Items.generate(level, luck, "", Run.class_id)
+	drop.item = Items.generate(loot_level(level), luck, "", Run.class_id)
 	drop.on_picked = func(item): message.emit("Butin : %s" % item.name, 1.5)
 	add_child(drop)
 	var p := pos + Vector3(randf_range(-1.5, 1.5), 0, randf_range(-1.5, 1.5))
@@ -365,7 +381,7 @@ func _enter_arena() -> void:
 	var boss_id := int(zone.dungeon.boss)
 	var c := Vector3(map.size * 0.5, 0, map.size * 0.5)
 	c.y = map.height_at(c.x, c.z)
-	_boss = _spawn_monster(boss_id, c, maxi(player.level + 1, _monster_level(2)), true)
+	_boss = _spawn_monster(boss_id, c, mini(maxi(player.level + 1, _monster_level(2)), max_level() + RAGE_LEVEL_BONUS), true)
 	_boss.display_name = "<Boss> " + _boss.display_name
 	if _boss.brain:
 		_boss.brain.enraged_phase.connect(func(): message.emit("%s entre en fureur !" % _boss.display_name, 2.5))

@@ -391,6 +391,34 @@
     "max": 2,
     "desc": "+1 esquive en l'air avant de retoucher le sol."
    }
+  ],
+  "combo": [
+   {
+    "anim": "attack25",
+    "mult": 1.0,
+    "arc": 150,
+    "hit_fx": "s00141"
+   },
+   {
+    "anim": "attack26",
+    "mult": 1.15,
+    "arc": 150,
+    "hit_fx": "s00241"
+   },
+   {
+    "anim": "shoot24",
+    "mult": 2.2,
+    "arc": 360,
+    "radius": 3.4,
+    "leap": 7.5,
+    "dash": 2.0,
+    "speed": 1.15,
+    "finisher": true,
+    "applies": {
+     "stun": 0.4
+    },
+    "hit_fx": "s00541"
+   }
   ]
  }
 }

@@ -6,7 +6,9 @@ extends RefCounted
 ##   et des affixes tirés dans une fourchette selon la rareté ;
 ## - amélioration +1 → +10 : +10 % de stats de base par niveau, et aux paliers
 ##   +4, +6, +8, +10 une stat aléatoire est renforcée (ou un affixe ajouté) ;
-## - désassemblage → matériaux, vente → or.
+## - désassemblage → matériaux, vente → or ;
+## - pièces de set (rares et épiques) : bonus à 2 / 4 / 6 pièces portées, dont des
+##   effets déclenchés façon Eden (foudre, gel, buffs temporaires...).
 
 const SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "back"]
 const SLOT_NAMES := {
@@ -34,7 +36,45 @@ const STAT_NAMES := {
 	"crit_dmg": "Dégâts critiques", "atk_speed": "Vitesse d'attaque",
 	"move_speed": "Vitesse", "cdr": "Recharge", "lifesteal": "Vol de vie",
 }
-const PERCENT_STATS := ["crit", "crit_dmg", "atk_speed", "move_speed", "cdr", "lifesteal"]
+const PERCENT_STATS := ["crit", "crit_dmg", "atk_speed", "move_speed", "cdr", "lifesteal",
+	"hp_pct", "dmg_pct", "area", "reach", "elite_dmg", "dot_pct"]
+const EXTRA_STAT_NAMES := {
+	"hp_pct": "PV max", "dmg_pct": "Dégâts", "area": "Zone d'effet", "reach": "Portée",
+	"elite_dmg": "Dégâts contre élites et boss", "dot_pct": "Dégâts sur la durée",
+}
+## Couleur des pièces de set (vert, comme dans Eden).
+const SET_COLOR := Color(0.4, 0.95, 0.55)
+## Chances qu'un objet rare ou épique soit une pièce de set.
+const SET_CHANCE := 0.3
+## Sets : nom, suffixe des objets, bonus à 2 / 4 / 6 pièces (stats et procs).
+const SETS := {
+	"storm": {"name": "Tempête", "suffix": "de la Tempête", "bonus": {
+		2: {"stat": {"atk_speed": 0.08}},
+		4: {"procs": [{"trigger": "hit", "chance": 0.12, "cd": 2.5, "effect": "lightning", "mult": 0.9, "chain": 2, "radius": 6.0}]},
+		6: {"stat": {"dmg_pct": 0.12}, "procs": [{"trigger": "finisher", "chance": 1.0, "cd": 3.0, "effect": "lightning", "mult": 2.0, "chain": 5, "radius": 8.0}]}}},
+	"frost": {"name": "Givre éternel", "suffix": "du Givre éternel", "bonus": {
+		2: {"stat": {"cdr": 0.06}},
+		4: {"procs": [{"trigger": "skill_hit", "chance": 0.35, "cd": 5.0, "effect": "freeze", "duration": 1.5, "radius": 3.5}]},
+		6: {"stat": {"area": 0.15}, "procs": [{"trigger": "perfect", "chance": 1.0, "cd": 0.0, "effect": "nova", "radius": 6.0, "duration": 2.5}]}}},
+	"blood": {"name": "Lame sanglante", "suffix": "de la Lame sanglante", "bonus": {
+		2: {"stat": {"lifesteal": 0.03}},
+		4: {"procs": [{"trigger": "crit", "chance": 1.0, "cd": 8.0, "effect": "buff", "status": "frenzy", "duration": 4.0}]},
+		6: {"stat": {"crit_dmg": 0.35}, "procs": [{"trigger": "kill", "chance": 0.25, "cd": 0.0, "effect": "heal", "amount": 0.03}]}}},
+	"falcon": {"name": "Œil du faucon", "suffix": "de l'Œil du faucon", "bonus": {
+		2: {"stat": {"crit": 0.06}},
+		4: {"procs": [{"trigger": "kill", "chance": 1.0, "cd": 8.0, "effect": "buff", "status": "keen", "duration": 5.0}]},
+		6: {"stat": {"reach": 0.2, "elite_dmg": 0.25}}}},
+	"phoenix": {"name": "Phénix", "suffix": "du Phénix", "bonus": {
+		2: {"stat": {"hp_pct": 0.1}},
+		4: {"procs": [{"trigger": "low_hp", "chance": 1.0, "cd": 60.0, "effect": "heal", "amount": 0.3,
+			"then": [{"effect": "explosion", "mult": 1.5, "radius": 5.0, "applies": {"burn": 5.0}}]}]},
+		6: {"stat": {"dot_pct": 0.4}, "procs": [{"trigger": "crit", "chance": 0.3, "cd": 1.0, "effect": "burn", "duration": 4.0, "radius": 2.5}]}}},
+	"wind": {"name": "Vent céleste", "suffix": "du Vent céleste", "bonus": {
+		2: {"stat": {"move_speed": 0.06}},
+		4: {"procs": [{"trigger": "dodge", "chance": 1.0, "cd": 5.0, "effect": "buff", "status": "haste", "duration": 3.0,
+			"then": [{"effect": "buff", "status": "fury", "duration": 3.0}]}]},
+		6: {"stat": {"atk_speed": 0.1}, "procs": [{"trigger": "perfect", "chance": 1.0, "cd": 0.0, "effect": "cdr", "amount": 1.0}]}}},
+}
 ## Fourchettes des affixes (niveau 1 pour les stats plates).
 const AFFIX_RANGES := {
 	"atk": [3.0, 7.0], "hp": [25.0, 50.0], "def": [2.0, 4.0],
@@ -95,7 +135,55 @@ static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai",
 	pool.shuffle()
 	for i in int(RARITIES[rarity].affixes):
 		_add_affix(item, pool[i])
+	if rarity >= 2 and randf() < SET_CHANCE:
+		make_set_piece(item, SETS.keys().pick_random())
 	return item
+
+
+## Transforme l'objet en pièce du set [param set_id].
+static func make_set_piece(item: Dictionary, set_id: String) -> void:
+	item["set"] = set_id
+	item["name"] = "%s %s" % [BASES[item.slot].name, SETS[set_id].suffix]
+
+
+## Nombre de pièces portées par set (emplacement -> objet).
+static func set_counts(equipped: Dictionary) -> Dictionary:
+	var out := {}
+	for slot in equipped:
+		var sid := String(equipped[slot].get("set", ""))
+		if sid != "":
+			out[sid] = int(out.get(sid, 0)) + 1
+	return out
+
+
+## Bonus de set actifs : [{set, pieces, stat, procs}].
+static func active_set_bonuses(equipped: Dictionary) -> Array:
+	var out: Array = []
+	var counts := set_counts(equipped)
+	for sid in counts:
+		var bonus: Dictionary = SETS.get(sid, {}).get("bonus", {})
+		for n in [2, 4, 6]:
+			if int(counts[sid]) >= n and bonus.has(n):
+				var b: Dictionary = bonus[n]
+				var procs: Array = []
+				var i := 0
+				for p: Dictionary in b.get("procs", []):
+					var q := p.duplicate(true)
+					q["id"] = "set_%s_%d_%d" % [sid, n, i]
+					procs.append(q)
+					i += 1
+				out.append({"set": sid, "pieces": n, "stat": b.get("stat", {}), "procs": procs})
+	return out
+
+
+## Lignes de description d'un bonus de set.
+static func bonus_lines(b: Dictionary) -> PackedStringArray:
+	var out: PackedStringArray = []
+	for s in b.get("stat", {}):
+		out.append(stat_text(s, b.stat[s]))
+	for p in b.get("procs", []):
+		out.append(Procs.describe(p))
+	return out
 
 
 static func _level_k(level: int) -> float:
@@ -216,16 +304,21 @@ static func display_name(item: Dictionary) -> String:
 
 
 static func stat_text(stat: String, value) -> String:
-	var n: String = STAT_NAMES.get(stat, stat)
+	var n: String = STAT_NAMES.get(stat, EXTRA_STAT_NAMES.get(stat, stat))
 	if stat in PERCENT_STATS:
 		return "+%d %% %s" % [roundi(float(value) * 100.0), n]
 	return "+%d %s" % [roundi(float(value)), n]
 
 
+## Couleur d'affichage : vert pour une pièce de set, sinon celle de la rareté.
+static func color_of(item: Dictionary) -> Color:
+	return SET_COLOR if item.has("set") else RARITIES[int(item.rarity)].color
+
+
 static func describe(item: Dictionary) -> String:
 	var r: Dictionary = RARITIES[int(item.rarity)]
-	var lines := ["[color=#%s]%s[/color]" % [Color(r.color).to_html(false), display_name(item)],
-		"%s · %s · niveau %d" % [SLOT_NAMES[item.slot], r.name, int(item.level)],
+	var lines := ["[color=#%s]%s[/color]" % [color_of(item).to_html(false), display_name(item)],
+		"%s · %s%s · niveau %d" % [SLOT_NAMES[item.slot], r.name, " · pièce de set" if item.has("set") else "", int(item.level)],
 		"Qualité %d %%" % roundi(float(item.get("quality", 1.0)) * 100.0)]
 	var base: Dictionary = BASES.get(item.slot, {}).get("stats", {})
 	var st := stats(item)
@@ -241,4 +334,15 @@ static func describe(item: Dictionary) -> String:
 				break
 		if next_m > 0:
 			lines.append("[color=#aaaaaa]Palier +%d : une stat renforcée[/color]" % next_m)
+	var sid := String(item.get("set", ""))
+	if SETS.has(sid):
+		var worn := int(set_counts(Profile.equipped).get(sid, 0))
+		lines.append("")
+		lines.append("[color=#%s]Set %s (%d pièce%s portée%s)[/color]" % [SET_COLOR.to_html(false), SETS[sid].name, worn, "s" if worn > 1 else "", "s" if worn > 1 else ""])
+		for n in [2, 4, 6]:
+			var b: Dictionary = SETS[sid].bonus.get(n, {})
+			if b.is_empty():
+				continue
+			var col := SET_COLOR.to_html(false) if worn >= n else "888888"
+			lines.append("[color=#%s]%d pièces : %s[/color]" % [col, n, " ; ".join(bonus_lines(b))])
 	return "\n".join(lines)

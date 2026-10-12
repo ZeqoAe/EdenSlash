@@ -328,7 +328,7 @@ func _entry_button(e: Dictionary, index: int) -> Button:
 	var color := Color(1, 1, 1)
 	var sub := ""
 	if not item.is_empty():
-		color = Items.RARITIES[int(item.rarity)].color
+		color = Items.color_of(item)
 		b.text = Items.display_name(item)
 		sub = "%s · %s · nv %d" % [Items.SLOT_NAMES[item.slot], Items.RARITIES[int(item.rarity)].name, int(item.level)]
 		if Profile.equipped.values().any(func(x): return is_same(x, item)):
@@ -614,5 +614,5 @@ func _roll_offers() -> void:
 		var base: int = {"skill": 60, "upgrade": 50, "passive": 70}.get(c.type, 60)
 		offers.append({"card": c, "price": int(base + 14 * lvl)})
 	while offers.size() < 6:
-		var item := Items.generate(lvl + 1, 0.4, "", Run.class_id, 2)
+		var item := Items.generate(director.loot_level(lvl + 1), 0.4, "", Run.class_id, 2)
 		offers.append({"item": item, "price": Items.buy_price(item)})

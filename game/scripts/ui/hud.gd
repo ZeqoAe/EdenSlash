@@ -23,6 +23,7 @@ var _target_bar: ProgressBar
 var _target_status: Label
 var _slots: Array = []  # [{icon, shade, time, rank}]
 var _buffs: Label
+var _combo: Label
 var _fps_label: Label
 var _arrow: Label
 var _big_map: Minimap
@@ -119,7 +120,11 @@ func _build() -> void:
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 6)
 	bh.add_child(col)
-	_buffs = _label(col, "", 12, Color(1, 0.9, 0.6))
+	var top_row := HBoxContainer.new()
+	col.add_child(top_row)
+	_buffs = _label(top_row, "", 12, Color(1, 0.9, 0.6))
+	_buffs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_combo = _label(top_row, "", 14, ACCENT)
 	_hp_bar = _bar(col, Color(0.86, 0.22, 0.3), 16)
 	_hp_label = _label(_hp_bar, "", 12, Color.WHITE)
 	_hp_label.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -236,6 +241,9 @@ func _process(_delta: float) -> void:
 		if Combatant.STATUS_INFO.has(st):
 			parts.append("%s %d s" % [Combatant.STATUS_INFO[st].name, ceili(float(player.statuses[st]) - player.clock)])
 	_buffs.text = "  ·  ".join(parts)
+	# combo d'auto-attaque : ◆ par coup porté, le dernier est le coup final
+	var cs := player.combo_state()
+	_combo.text = ("Combo " + "◆ ".repeat(cs.x) + "◇ ".repeat(cs.y - cs.x)).strip_edges() if cs.x > 0 else ""
 	# cible : verrouillée, sinon la plus proche
 	var t := player.current_target()
 	if t == null:

@@ -4,6 +4,7 @@ extends Node3D
 ##
 ## Arguments de test (après `--`) :
 ##   --autoplay            le héros combat tout seul (et choisit ses cartes)
+##   --cards=a,b:2         cartes de build au départ   --gear=storm  panoplie d'un set
 ##   --shots=4,8,12        captures d'écran à ces secondes (dans user://shots/)
 ##   --quit-at=13          quitte après N secondes
 ##   --start-level=8       niveau de départ
@@ -120,7 +121,8 @@ func _ready() -> void:
 	director.npc_opened.connect(_on_npc_opened)
 	# première compétence : choix parmi 3 cartes de compétence
 	if Run.skills.is_empty():
-		_offer("Choisis ta première compétence", Run.roll_cards(int(Run.class_data().get("start_skills", 3)), true))
+		var n := int(Run.class_data().get("start_skills", 3))
+		_offer("Choisis ta première compétence", Run.roll_cards(n, true), func(): return Run.roll_cards(n, true))
 
 
 func _parse_args() -> void:
@@ -164,6 +166,22 @@ func _parse_args() -> void:
 			_goto = arg.trim_prefix("--goto=")
 		elif arg == "--rage":
 			get_tree().create_timer(2.0).timeout.connect(func(): director.debug_start_rage())
+		elif arg.begins_with("--cards="):
+			# cartes de build données au départ (test) : --cards=static_blade,volatile:3
+			for entry in arg.trim_prefix("--cards=").split(","):
+				var parts := entry.split(":")
+				if not Run.passive_def(parts[0]).is_empty():
+					Run.passives[parts[0]] = int(parts[1]) if parts.size() > 1 else 1
+			Run.changed.emit()
+		elif arg.begins_with("--gear="):
+			# panoplie de test : --gear=storm (6 pièces du set, profil de test)
+			var sid := arg.trim_prefix("--gear=")
+			if Items.SETS.has(sid):
+				for slot in ["head", "chest", "legs", "gloves", "boots", "back"]:
+					var it := Items.generate(player.level, 1.0, slot, Run.class_id, 2)
+					Items.make_set_piece(it, sid)
+					Profile.equipped[slot] = it
+				Profile.changed.emit()
 		elif arg.begins_with("--start-level="):
 			player.level = int(arg.trim_prefix("--start-level="))
 			player.recalc_stats()
@@ -171,17 +189,17 @@ func _parse_args() -> void:
 
 
 ## Propose des cartes ; en mode bot, la première est choisie automatiquement.
-func _offer(title: String, options: Array) -> void:
+func _offer(title: String, options: Array, reroll := Callable()) -> void:
 	if options.is_empty():
 		return
 	if player.autoplay:
 		Run.apply_card(options[0])
 		return
-	cards.offer(title, options)
+	cards.offer(title, options, reroll)
 
 
 func _on_level_up(lvl: int) -> void:
-	_offer("Niveau %d ! Choisis une carte" % lvl, Run.roll_cards(3))
+	_offer("Niveau %d ! Choisis une carte" % lvl, Run.roll_cards(3), func(): return Run.roll_cards(3))
 
 
 func _unhandled_input(event: InputEvent) -> void:

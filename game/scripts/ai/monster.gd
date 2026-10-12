@@ -100,15 +100,21 @@ var _flash_mat: StandardMaterial3D
 func _flash() -> void:
 	if model == null:
 		return
-	if _flash_mat == null:
-		_flash_mat = StandardMaterial3D.new()
-		_flash_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_flash_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_flash_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-		for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
-			mi.material_overlay = _flash_mat
+	_ensure_flash_mat()
 	_flash_mat.albedo_color = Color(1, 0.95, 0.85, 0.4)
-	create_tween().tween_property(_flash_mat, "albedo_color:a", 0.0, 0.1)
+	create_tween().tween_property(_flash_mat, "albedo_color", _overlay_rest(), 0.1)
+
+
+func _ensure_flash_mat() -> void:
+	if _flash_mat != null:
+		return
+	_flash_mat = StandardMaterial3D.new()
+	_flash_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_flash_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_flash_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	_flash_mat.albedo_color = Color(1, 0.95, 0.85, 0.0)
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		mi.material_overlay = _flash_mat
 
 
 ## Attaque spéciale en cours (boss) : le monstre reste sur place.
@@ -138,7 +144,36 @@ func enrage() -> void:
 	add_child(aura)
 
 
+## Gel et renversement interrompent l'attaque annoncée (la zone rouge disparaît).
+func add_status(status: String, duration: float, source: Combatant = null) -> void:
+	if is_boss and status == "freeze":
+		duration *= 0.35  # le boss résiste au gel
+	super.add_status(status, duration, source)
+	if status in ["freeze", "stun"] and _state == "attack" and not is_boss:
+		if is_instance_valid(_telegraph):
+			_telegraph.queue_free()
+		_pending_shot = {}
+		_pending_dash = Vector3.ZERO
+		_attack_ready_at = _time + 0.6
+		_set_state("chase")
+	_update_tint()
+
+
+## Couleur de fond du calque d'impact : bleu sous le gel, transparent sinon.
+func _overlay_rest() -> Color:
+	return Color(0.35, 0.7, 1.0, 0.5) if has_status("freeze") else Color(1, 0.95, 0.85, 0.0)
+
+
+## Teinte bleue sous le gel (même calque que l'éclair d'impact).
+func _update_tint() -> void:
+	if model == null or (_flash_mat == null and not has_status("freeze")):
+		return
+	_ensure_flash_mat()
+	_flash_mat.albedo_color = _overlay_rest()
+
+
 func _refresh_status_label() -> void:
+	_update_tint()
 	var parts: PackedStringArray = []
 	for s in statuses:
 		if STATUS_INFO.has(s):
@@ -152,12 +187,18 @@ func _physics_process(delta: float) -> void:
 	_state_time += delta
 	tick_statuses(delta)
 	apply_gravity(delta)
-	if has_status("stun") and not is_dead:
+	if is_disabled() and not is_dead:
 		velocity.x = 0.0
 		velocity.z = 0.0
-		play("hurt01" if has_anim("hurt01") else "stand01", 0.1)
+		if has_status("freeze"):
+			if anim:
+				anim.speed_scale = 0.0  # figé dans la glace
+		else:
+			play("hurt01" if has_anim("hurt01") else "stand01", 0.1)
 		move_and_slide()
 		return
+	if anim and anim.speed_scale == 0.0:
+		anim.speed_scale = 1.0
 	if is_dead:
 		velocity.x = 0.0
 		velocity.z = 0.0
@@ -185,6 +226,8 @@ func _physics_process(delta: float) -> void:
 	if _time < _dash_until:
 		desired = _dash_vel
 	desired += _separation() * 1.8
+	if has_status("chill"):
+		desired *= 0.55
 	_knock = _knock.move_toward(Vector3.ZERO, 14.0 * delta)
 	velocity.x = desired.x + _knock.x
 	velocity.z = desired.z + _knock.z

@@ -93,7 +93,7 @@ func _item_button(item: Dictionary) -> Button:
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.focus_mode = Control.FOCUS_NONE
 	b.clip_text = true
-	var color: Color = Items.RARITIES[int(item.rarity)].color
+	var color: Color = Items.color_of(item)
 	var worn := Profile.equipped.values().any(func(x): return is_same(x, item))
 	b.text = "%s\n%s · %s · nv %d%s" % [Items.display_name(item), Items.SLOT_NAMES[item.slot],
 		Items.RARITIES[int(item.rarity)].name, int(item.level), " · porté" if worn else ""]

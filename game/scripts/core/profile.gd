@@ -292,14 +292,25 @@ func buy(item: Dictionary, price: int) -> bool:
 	return true
 
 
-## Somme des statistiques de l'équipement porté.
+## Somme des statistiques de l'équipement porté, bonus de set compris.
 func equipment_stats() -> Dictionary:
 	var total := {}
 	for slot in equipped:
 		var st := Items.stats(equipped[slot])
 		for s in st:
 			total[s] = total.get(s, 0.0) + float(st[s])
+	for b in Items.active_set_bonuses(equipped):
+		for s in b.stat:
+			total[s] = total.get(s, 0.0) + float(b.stat[s])
 	return total
+
+
+## Effets déclenchés des bonus de set actifs.
+func equipment_procs() -> Array:
+	var out: Array = []
+	for b in Items.active_set_bonuses(equipped):
+		out.append_array(b.procs)
+	return out
 
 
 func weapon_code() -> String:

@@ -12,7 +12,9 @@ const ACCENT := Color(0.98, 0.78, 0.35)
 const TYPE_COLORS := {"skill": Color(1.0, 0.55, 0.3), "upgrade": Color(0.45, 0.75, 1.0), "passive": Color(0.6, 0.95, 0.55)}
 const CONFIRM_DELAY_MS := 400  # Valider inactif juste après l'ouverture (clics en rafale)
 
-var _queue: Array = []  # [titre, cartes]
+var _queue: Array = []  # [titre, cartes, relance (Callable)]
+var _reroll_fn: Callable
+var _reroll: Button
 var _cards: Array = []
 var _root: Control
 var _title: Label
@@ -52,7 +54,6 @@ func _ready() -> void:
 	v.add_child(_row)
 	_confirm = Button.new()
 	_confirm.custom_minimum_size = Vector2(260, 56)
-	_confirm.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_confirm.focus_mode = Control.FOCUS_NONE
 	_confirm.add_theme_font_size_override("font_size", 24)
 	_confirm.add_theme_color_override("font_color", Color(0.1, 0.05, 0.15))
@@ -71,7 +72,28 @@ func _ready() -> void:
 	_confirm.add_theme_stylebox_override("pressed", ch)
 	_confirm.add_theme_stylebox_override("disabled", cd)
 	_confirm.pressed.connect(_confirm_choice)
-	v.add_child(_confirm)
+	_reroll = Button.new()
+	_reroll.custom_minimum_size = Vector2(200, 56)
+	_reroll.focus_mode = Control.FOCUS_NONE
+	_reroll.add_theme_font_size_override("font_size", 18)
+	var rs := StyleBoxFlat.new()
+	rs.bg_color = Color(0.16, 0.13, 0.26, 0.95)
+	rs.border_color = Color(0.6, 0.55, 0.85)
+	rs.set_border_width_all(2)
+	rs.set_corner_radius_all(10)
+	_reroll.add_theme_stylebox_override("normal", rs)
+	var rh := rs.duplicate() as StyleBoxFlat
+	rh.bg_color = Color(0.26, 0.2, 0.4)
+	_reroll.add_theme_stylebox_override("hover", rh)
+	_reroll.add_theme_stylebox_override("pressed", rh)
+	_reroll.add_theme_stylebox_override("disabled", cd)
+	_reroll.pressed.connect(_do_reroll)
+	var buttons := HBoxContainer.new()
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.add_theme_constant_override("separation", 20)
+	buttons.add_child(_confirm)
+	buttons.add_child(_reroll)
+	v.add_child(buttons)
 	var hint := Label.new()
 	hint.text = "Clique sur une carte (ou 1, 2, 3) puis sur Valider (ou Entrée)"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -82,10 +104,11 @@ func _ready() -> void:
 
 
 ## Ajoute un choix à la file (plusieurs niveaux d'un coup = plusieurs choix).
-func offer(title: String, cards: Array) -> void:
+## [param reroll] : tire de nouvelles cartes (bouton « Relancer », limité par run).
+func offer(title: String, cards: Array, reroll := Callable()) -> void:
 	if cards.is_empty():
 		return
-	_queue.append([title, cards])
+	_queue.append([title, cards, reroll])
 	if not _root.visible:
 		_show_next()
 
@@ -101,7 +124,14 @@ func _show_next() -> void:
 		return
 	var item: Array = _queue.pop_front()
 	_title.text = item[0]
-	_cards = item[1]
+	_reroll_fn = item[2] if item.size() > 2 else Callable()
+	_show_cards(item[1])
+	_root.visible = true
+	get_tree().paused = true
+
+
+func _show_cards(cards: Array) -> void:
+	_cards = cards
 	for c in _row.get_children():
 		c.queue_free()
 	_buttons.clear()
@@ -112,12 +142,30 @@ func _show_next() -> void:
 	_selected = -1
 	_opened_at = Time.get_ticks_msec()
 	_refresh_confirm()
-	_root.visible = true
-	get_tree().paused = true
+	_refresh_reroll()
+
+
+func _refresh_reroll() -> void:
+	_reroll.visible = _reroll_fn.is_valid()
+	var left := Run.rerolls_left()
+	_reroll.text = "Relancer (%d)" % left
+	_reroll.disabled = left <= 0
+
+
+## Nouvelles cartes à la place des cartes proposées (une relance consommée).
+func _do_reroll() -> void:
+	if not _reroll_fn.is_valid() or Run.rerolls_left() <= 0:
+		return
+	var cards: Array = _reroll_fn.call()
+	if cards.is_empty():
+		return
+	Run.rerolls_used += 1
+	_show_cards(cards)
+	_opened_at -= CONFIRM_DELAY_MS  # pas de délai anti-rafale après une relance volontaire
 
 
 func _make_card(card: Dictionary, i: int) -> Button:
-	var col: Color = TYPE_COLORS.get(card.type, ACCENT)
+	var col: Color = Boons.RARITY[card.rarity].color if card.has("rarity") and card.rarity != "common" else TYPE_COLORS.get(card.type, ACCENT)
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(320, 380)
 	b.focus_mode = Control.FOCUS_NONE

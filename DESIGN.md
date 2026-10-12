@@ -97,6 +97,52 @@ aériens / mages), **Pas aérien** (+1 esquive en l'air, ×2).
 - **Désassemblage** → matériaux selon la rareté et le niveau, **+ 70 % des pierres** dépensées
   en améliorations. **Vente** → or **+ 70 % des pierres** d'amélioration.
 
+## Combo d'auto-attaque
+
+- 3 coups enchaînés (le suivant doit partir moins de 0,6 s après la fin du précédent) :
+  coup de sabre dans un sens, dans l'autre (+15 %), puis **coup final** : saut automatique,
+  frappe en zone à 360° (220 %), renverse 0,4 s. Indicateur « Combo ◆◆◇ » sur la barre.
+- Défini par classe dans `classes.json` (`combo` : animation, multiplicateur, arc, rayon,
+  saut, élan, effets) : chaque future classe aura son propre enchaînement.
+- Cartes liées : Enchaînement fluide (fenêtre plus longue), Coup de grâce (+40 % au coup
+  final), Onde de choc, évolution Tempête d'acier (le coup final frappe deux fois en tourbillon).
+
+## Effets déclenchés (procs)
+
+Un proc = déclencheur + chance + recharge interne + effet (`scripts/combat/procs.gd`).
+- Déclencheurs : impact, impact d'une compétence, critique, monstre tué, coup final du combo,
+  esquive, annulation parfaite, dégâts subis, passage sous 30 % de PV.
+- Effets : foudre en chaîne, gel (immobilise, annule l'attaque annoncée ; le boss résiste),
+  ralenti, brûlure, électrocution (+15 % de dégâts subis), explosion, nova de givre, buffs
+  temporaires (Frénésie, Œil acéré, Hâte, Barrière, Fureur), soin, recharges réduites, Écho.
+- Réactions en chaîne limitées à 2 niveaux (une explosion qui tue peut en déclencher une autre).
+
+## Sets d'équipement (façon Eden)
+
+- 30 % des objets rares et épiques sont des **pièces de set** (nom et cadre verts).
+- 6 sets, bonus à **2 / 4 / 6 pièces** : Tempête (foudre), Givre éternel (gel), Lame sanglante
+  (Frénésie sur critique), Œil du faucon (critique, portée), Phénix (survie, brûlure),
+  Vent céleste (esquive → Hâte + Fureur).
+- Infobulle : bonus du set, ceux actifs en vert ; fiche du personnage : bonus de set actifs.
+
+## Cartes de build (roguelite)
+
+- En plus des passifs de classe, des cartes communes à toutes les classes (`scripts/core/boons.gd`)
+  avec une **rareté** (commune, rare, épique, légendaire) qui règle leur fréquence et leur couleur.
+- Stats de build : zone d'effet, portée, dégâts, dégâts contre élites, coup final, effets sur la
+  durée, exécution des monstres faibles, relances.
+- **Évolutions** (légendaires) : n'apparaissent qu'avec leurs cartes prérequises
+  (Lame statique → Seigneur de la tempête, Fil de givre → Éclat glacial, Braise + Cadavres
+  explosifs → Lame du phénix, Coup de grâce → Tempête d'acier).
+- **Relance** des cartes proposées : 1 par run, +1 par carte « Bonne étoile ».
+- Pistes suivantes : bannir une carte, cartes « malédiction » à fort bonus, reliques d'élite,
+  projectiles (lames fantômes), invocations, synergies entre classes.
+
+## Plafond de niveau par zone
+
+- Limestone (map 1) : butin au niveau 15 maximum, monstres plafonnés au niveau 15 (18 en rage
+  et pour le boss). Les maps suivantes prendront le relais (`RunDirector.ZONE_MAX_LEVEL`).
+
 ## Ordre de réalisation
 
 1. Générateur de map (DA Eden) + run de 10 min + rage + lieux à découvrir.

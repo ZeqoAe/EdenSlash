@@ -19,6 +19,7 @@ var started_at := 0
 var result := ""  # victoire, defaite, abandon
 var max_level := 1
 var seed := 0  # graine de la map (0 = aléatoire)
+var rerolls_used := 0  # relances de cartes utilisées (1 par run + cartes « Bonne étoile »)
 
 
 func start(cid: String) -> void:
@@ -31,6 +32,7 @@ func start(cid: String) -> void:
 	elites = 0
 	gold = 0
 	max_level = 1
+	rerolls_used = 0
 	result = ""
 	started_at = Time.get_ticks_msec()
 	Profile.begin_run()
@@ -80,11 +82,24 @@ func skill_def(id: int) -> Dictionary:
 	return {}
 
 
+## Passif de classe ou carte de build commune (Boons).
 func passive_def(id: String) -> Dictionary:
 	for p in class_data().get("passives", []):
 		if p.id == id:
 			return p
-	return {}
+	return Boons.get_def(id)
+
+
+func rerolls_left() -> int:
+	return maxi(0, 1 + int(passive_stats().get("rerolls", 0)) - rerolls_used)
+
+
+## Effets déclenchés apportés par les cartes de la run.
+func passive_procs() -> Array:
+	var out: Array = []
+	for pid in passives:
+		out.append_array(Boons.procs_of(passive_def(pid), int(passives[pid])))
+	return out
 
 
 func skill_rank(id: int) -> int:
@@ -126,9 +141,13 @@ func roll_cards(n := 3, skills_only := false) -> Array:
 		for s in skills:
 			if int(s.rank) < MAX_RANK:
 				pool.append({"type": "upgrade", "id": int(s.id), "weight": 1.5})
-		for p in class_data().get("passives", []):
-			if int(passives.get(p.id, 0)) < int(p.max):
-				pool.append({"type": "passive", "id": p.id, "weight": 1.2})
+		for p in class_data().get("passives", []) + Boons.LIST:
+			if int(passives.get(p.id, 0)) >= int(p.max):
+				continue
+			if not p.get("requires", []).all(func(r): return passives.has(r)):
+				continue
+			var rar: Dictionary = Boons.RARITY[String(p.get("rarity", "common"))]
+			pool.append({"type": "passive", "id": p.id, "weight": 1.2 * float(rar.weight)})
 	var picks: Array = []
 	# tant que les 4 emplacements ne sont pas remplis, au moins une nouvelle compétence
 	var skill_cards := pool.filter(func(c): return c.type == "skill")
@@ -164,8 +183,10 @@ func _describe_card(c: Dictionary) -> Dictionary:
 		_:
 			var p := passive_def(String(c.id))
 			var stacks := int(passives.get(p.id, 0))
-			return {"type": "passive", "id": p.id, "title": p.name,
-				"subtitle": "Passif" + (" (%d/%d)" % [stacks + 1, int(p.max)] if int(p.max) > 1 else ""),
+			var rarity := String(p.get("rarity", "common"))
+			var kind := "Évolution" if rarity == "legendary" else ("Passif" if p.get("procs", []).is_empty() else "Effet")
+			return {"type": "passive", "id": p.id, "title": p.name, "rarity": rarity,
+				"subtitle": "%s %s" % [kind, String(Boons.RARITY[rarity].name).to_lower()] + (" (%d/%d)" % [stacks + 1, int(p.max)] if int(p.max) > 1 else ""),
 				"desc": p.desc, "icon": p.get("icon", "")}
 
 

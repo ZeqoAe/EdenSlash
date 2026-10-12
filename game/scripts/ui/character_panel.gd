@@ -130,7 +130,7 @@ func _lobby_sheet() -> Array:
 	var eq := Profile.equipment_stats()
 	var rows := [["Classe", GameData.class_data(Profile.selected_class).get("name_fr", "?")]]
 	for s in eq:
-		rows.append([Items.STAT_NAMES.get(s, s), Items.stat_text(s, eq[s])])
+		rows.append([Items.STAT_NAMES.get(s, Items.EXTRA_STAT_NAMES.get(s, s)), Items.stat_text(s, eq[s])])
 	rows.append(["Runs", "%d (%d victoires)" % [Profile.runs_done, Profile.runs_won]])
 	rows.append(["Meilleur niveau", str(Profile.best_level)])
 	return rows
@@ -142,7 +142,7 @@ func _item_button(item: Dictionary, placeholder: String) -> Button:
 	b.focus_mode = Control.FOCUS_NONE
 	var sb := Hud.style(Color(0.12, 0.1, 0.18, 0.95))
 	if not item.is_empty():
-		sb.border_color = Items.RARITIES[int(item.rarity)].color
+		sb.border_color = Items.color_of(item)
 		sb.set_border_width_all(2)
 	b.add_theme_stylebox_override("normal", sb)
 	var hover := sb.duplicate() as StyleBoxFlat
@@ -175,6 +175,7 @@ func _refresh_skills() -> void:
 		for pid in Run.passives:
 			var p := Run.passive_def(pid)
 			_skill_row(p.get("icon", ""), "%s ×%d" % [p.name, int(Run.passives[pid])], p.desc)
+		_set_rows()
 	else:
 		_title(_skills_box, "Compétences du %s (à débloquer par cartes pendant la run)" % cls.get("name_fr", ""))
 		for d in cls.get("skills", []):
@@ -182,6 +183,17 @@ func _refresh_skills() -> void:
 		_title(_skills_box, "Passifs possibles")
 		for p in cls.get("passives", []):
 			_skill_row(p.get("icon", ""), p.name, p.desc)
+		_set_rows()
+
+
+## Bonus de set actifs de l'équipement porté.
+func _set_rows() -> void:
+	var bonuses := Items.active_set_bonuses(Profile.equipped)
+	if bonuses.is_empty():
+		return
+	_title(_skills_box, "Bonus de set")
+	for b in bonuses:
+		_skill_row("", "%s — %d pièces" % [Items.SETS[b.set].name, int(b.pieces)], "\n".join(Items.bonus_lines(b)))
 
 
 func _skill_row(icon_path: String, title: String, desc: String) -> void:
