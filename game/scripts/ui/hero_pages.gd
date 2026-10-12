@@ -126,32 +126,83 @@ class AppearancePage extends HBoxContainer:
 			if not Profile.collected(x):
 				_grid.add_child(_aura_cell(x, cid, String(x.aura.kind)))
 
-	## Apparence de l'arme : le type de l'arme portée d'abord, puis les autres types.
+	## Apparence de l'arme : l'arme portée (modèles de base, armes archivées), puis les
+	## apparences d'armes d'Eden (trésors de collection, pour n'importe quelle arme), puis
+	## les modèles de base des autres types d'armes.
 	func _refresh_weapon(cid: String) -> void:
 		_grid.columns = 1
-		_hint.text = "Les 4 modèles de base de chaque arme sont libres ; chaque arme mythique ou légendaire archivée ajoute sa propre apparence. L'apparence vaut pour toutes les armes de ce type, quelle que soit la classe. « Auto » : le modèle de l'arme elle-même."
+		_hint.text = "Arme portée : « Auto » garde son propre modèle ; les modèles de base et les armes mythiques ou légendaires archivées de ce type sont libres. Les apparences d'armes d'Eden (trésors de collection des boss) se portent avec n'importe quelle arme. Le choix vaut pour toutes les armes de ce type, quelle que soit la classe."
 		var w: Dictionary = Profile.equipped.get("weapon", {})
 		var mine := Items.weapon_type_of(w) if not w.is_empty() else String(GameData.class_data(cid).get("weapon_type", ""))
-		var order: Array = [mine]
+		var n := 0
+		if GameData.weapon_types.has(mine):
+			n += _weapon_row(mine, true)
+		# apparences d'armes d'Eden : obtenues d'abord, puis les autres (verrouillées)
+		var skins := GameData.collection.filter(func(x): return x.has("skin"))
+		var got := skins.filter(func(x): return Profile.collected(x))
+		var t := Hud._label(_grid, "Apparences d'armes d'Eden : %d / %d obtenues (pour %s)" % [got.size(), skins.size(), String(GameData.weapon_type(mine).get("name", "l'arme portée")).to_lower()], 16, UiTheme.GOLD)
+		t.add_theme_font_override("font", UiTheme.bold_font())
+		var flow := HFlowContainer.new()
+		flow.add_theme_constant_override("h_separation", 8)
+		flow.add_theme_constant_override("v_separation", 8)
+		_grid.add_child(flow)
+		for x in got:
+			flow.add_child(_eden_skin_cell(mine, x, true))
+		for x in skins:
+			if not Profile.collected(x):
+				flow.add_child(_eden_skin_cell(mine, x, false))
+		n += got.size()
+		var o := Hud._label(_grid, "Autres types d'armes", 16, UiTheme.GOLD)
+		o.add_theme_font_override("font", UiTheme.bold_font())
 		for wt in GameData.weapon_types:
 			if wt != mine:
-				order.append(wt)
-		var n := 0
-		for wt in order:
-			if not GameData.weapon_types.has(wt):
-				continue
-			var row := HBoxContainer.new()
-			row.add_theme_constant_override("separation", 8)
-			_grid.add_child(row)
-			var lbl := Hud._label(row, String(GameData.weapon_types[wt].name) + ("  (portée)" if wt == mine else ""), 16, UiTheme.GOLD if wt == mine else Color(0.92, 0.9, 1.0))
-			lbl.custom_minimum_size = Vector2(150, 0)
-			lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-			row.add_child(_skin_cell(wt, -1, {}))
-			var ws := Archive.skins(wt)
-			n += ws.size()
-			for i in ws.size():
-				row.add_child(_skin_cell(wt, i, ws[i]))
+				n += _weapon_row(String(wt), false)
 		_count.text = "%d modèles disponibles" % n
+
+	## Ligne d'un type d'arme : « Auto », modèles de base et armes archivées.
+	func _weapon_row(wt: String, worn: bool) -> int:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		_grid.add_child(row)
+		var lbl := Hud._label(row, String(GameData.weapon_types[wt].name) + ("  (portée)" if worn else ""), 16, UiTheme.GOLD if worn else Color(0.92, 0.9, 1.0))
+		lbl.custom_minimum_size = Vector2(150, 0)
+		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		row.add_child(_skin_cell(wt, -1, {}))
+		var ws := Archive.skins(wt).filter(func(sk): return not GameData.skin_by_code.has(String(sk.code)))
+		for i in ws.size():
+			row.add_child(_skin_cell(wt, i, ws[i]))
+		return ws.size()
+
+	## Case d'une apparence d'arme d'Eden (appliquée au type de l'arme portée).
+	func _eden_skin_cell(wt: String, x: Dictionary, ok: bool) -> Control:
+		var code := String(x.code)
+		var on := String(Profile.skins.get(wt, "")) == code
+		var b := ItemWidgets.TipButton.new()
+		b.custom_minimum_size = Vector2(68, 68)
+		b.focus_mode = Control.FOCUS_NONE
+		b.add_theme_stylebox_override("normal", _box(on, ok))
+		b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.15, 0.11, 0.24, 1.0), UiTheme.GOLD, 2, 8))
+		var ic := TextureRect.new()
+		ic.texture = UiTheme.texture(String(x.icon))
+		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ic.set_anchors_preset(Control.PRESET_FULL_RECT)
+		ic.offset_left = 7
+		ic.offset_top = 7
+		ic.offset_right = -7
+		ic.offset_bottom = -7
+		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ic.modulate = Color.WHITE if ok else Color(0.35, 0.35, 0.4, 0.8)
+		b.add_child(ic)
+		b.tip = Archive.collection_text(x) + ("" if ok else "
+[color=#ff9a7a]Verrouillée : trésor de collection des boss[/color]") 			+ ("
+[color=#9a98a8]Clique pour l'aperçu.[/color]" if not ok else "")
+		b.pressed.connect(func():
+			_shown_code = code  # aperçu même verrouillée
+			if ok:
+				Profile.set_skin(wt, "" if on else code)
+			refresh())
+		return b
 
 	## Ce que porte la classe et le bonus des auras.
 	func _worn_text(cid: String) -> String:

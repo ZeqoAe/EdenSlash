@@ -575,10 +575,15 @@ class ProgressPage extends HBoxContainer:
 			["Débloquer toutes les zones", "Débloquer les %d zones ?" % GameData.zones.size(), func():
 				Profile.unlocked_zones = GameData.zones.size()
 				return "Toutes les zones sont débloquées."],
-			["Débloquer toutes les tenues", "Débloquer les %d tenues, chapeaux et dos ?" % GameData.cosmetics.size(), func():
+			["Débloquer toutes les apparences", "Débloquer les %d tenues, chapeaux et dos, les %d auras et les apparences d'armes ?" % [GameData.cosmetics.size(), GameData.auras.size()], func():
 				for c in GameData.cosmetics:
 					Profile.unlock_outfit(String(c.id))
-				return "%d tenues débloquées." % GameData.cosmetics.size()],
+				var n := 0
+				for x in GameData.collection:
+					if x.has("aura") or x.has("skin"):
+						Profile.collect(x)
+						n += 1
+				return "%d tenues, chapeaux et dos, %d auras et apparences d'armes débloqués." % [GameData.cosmetics.size(), n]],
 			["Obtenir tous les trésors de collection", "Obtenir les %d trésors (auras, apparences…) ?" % GameData.collection.size(), func():
 				for x in GameData.collection:
 					Profile.collect(x)

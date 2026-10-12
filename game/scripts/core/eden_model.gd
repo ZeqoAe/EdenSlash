@@ -121,6 +121,10 @@ static func strip_body(model: Node3D) -> void:
 
 ## Habille le modèle d'une pièce (.glb exporté sur le même squelette) : ses maillages
 ## passent sous le squelette du modèle et suivent ses animations.
+## Os du haut du dos du héros : point d'accroche des ailes et accessoires de dos.
+const BACK_BONE := "Bip01 Spine1"
+
+
 static func dress(model: Node3D, glb_path: String, group := "") -> void:
 	if not ResourceLoader.exists(glb_path):
 		return
@@ -129,11 +133,14 @@ static func dress(model: Node3D, glb_path: String, group := "") -> void:
 		return
 	var part: Node = (load(glb_path) as PackedScene).instantiate()
 	stylize(part)
-	if part.find_child("Skeleton3D", true, false) == null and skel.find_bone("Bip01 Head") >= 0:
-		# accessoire rigide (chapeau, lunettes, masque) : accroché à l'os de la tête comme dans
-		# Eden ; il est déjà exprimé dans le repère de l'os (on annule la conversion Z-up)
+	# accessoires cosmétiques : la tête pour les chapeaux, le haut du dos pour les ailes
+	# (les modèles « L » rangés dans le dos par Eden sont de petits accessoires de tête)
+	var anchor := BACK_BONE if glb_path.get_file().begins_with("back_x") and skel.find_bone(BACK_BONE) >= 0 else "Bip01 Head"
+	if part.find_child("Skeleton3D", true, false) == null and skel.find_bone(anchor) >= 0:
+		# accessoire rigide (chapeau, lunettes, masque, croix, sac) : accroché à son os comme
+		# dans Eden ; il est déjà exprimé dans le repère de l'os (on annule la conversion Z-up)
 		var att := BoneAttachment3D.new()
-		att.bone_name = "Bip01 Head"
+		att.bone_name = anchor
 		att.set_meta("part", glb_path)
 		skel.add_child(att)
 		var root := part.find_child("EdenRoot", true, false) as Node3D
@@ -145,15 +152,29 @@ static func dress(model: Node3D, glb_path: String, group := "") -> void:
 	var src := part.find_child("Skeleton3D", true, false) as Skeleton3D
 	var added := false
 	if src:
+		# ailes articulées : leurs os pendent d'un bassin « neutre » (repère de l'accessoire) ;
+		# leurs racines sont replacées dans le repère du haut du dos (comme les accessoires rigides)
+		var back := anchor == BACK_BONE
+		var frame: Node = part.find_child("ANI0", true, false)
+		var to_frame := _relative_xform(frame as Node3D, src) if frame is Node3D else Transform3D.IDENTITY
+		var fresh := {}
 		for b in src.get_bone_count():
 			var bname := src.get_bone_name(b)
 			if skel.find_bone(bname) >= 0:
 				continue
 			var idx := skel.get_bone_count()
 			skel.add_bone(bname)
+			fresh[bname] = true
 			var parent := src.get_bone_parent(b)
+			var pname := src.get_bone_name(parent) if parent >= 0 else ""
+			if back and not fresh.has(pname):
+				skel.set_bone_parent(idx, skel.find_bone(BACK_BONE))
+				skel.set_bone_rest(idx, to_frame * src.get_bone_global_rest(b))
+				skel.reset_bone_pose(idx)
+				added = true
+				continue
 			if parent >= 0:
-				skel.set_bone_parent(idx, skel.find_bone(src.get_bone_name(parent)))
+				skel.set_bone_parent(idx, skel.find_bone(pname))
 			skel.set_bone_rest(idx, src.get_bone_rest(b))
 			skel.reset_bone_pose(idx)
 			added = true
