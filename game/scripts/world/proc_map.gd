@@ -86,8 +86,14 @@ func generate_scenery(seed_value: int, with_minimap := false) -> void:
 		_build_minimap()
 
 
-## Arène du boss : cuvette circulaire fermée par des falaises.
-func generate_arena(seed_value: int) -> void:
+## Dangers permanents de la salle du boss : [{pos, style, radius}] (posés par le directeur).
+var arena_hazards: Array = []
+
+
+## Arène du boss : cuvette circulaire fermée par des falaises. [param layout] :
+## ring (vide), pillars (piliers pour s'abriter des tirs), lava (bassins de lave et bord
+## brûlant), swamp (mares de poison), frost (plaques de givre), crystal (piliers + foudre).
+func generate_arena(seed_value: int, layout := "ring") -> void:
 	_setup("mine" if biome == "limestone" else biome, 96.0, seed_value)
 	map_id = "arena"
 	start = Vector3(size * 0.5, 0, size * 0.5 + 18.0)
@@ -117,6 +123,28 @@ func generate_arena(seed_value: int) -> void:
 		var t := Vector3(c.x + cos(a) * 22.0, 0, c.y + sin(a) * 22.0)
 		t.y = height_at(t.x, t.z)
 		_torch(t)
+	match layout:
+		"pillars", "crystal":
+			# piliers : abris contre les tirs et les rayons
+			for k in 6:
+				var a := TAU * k / 6.0
+				var p := Vector3(c.x + cos(a) * 13.0, 0, c.y + sin(a) * 13.0)
+				p.y = height_at(p.x, p.z)
+				_add_instance(batch, PropCatalog.pick(_rocks.slice(0, 6), rng), p, true)
+			if layout == "crystal":
+				for k in 3:
+					var a := TAU * k / 3.0 + 0.5
+					arena_hazards.append({"pos": Vector3(c.x + cos(a) * 18.0, 0, c.y + sin(a) * 18.0), "style": "shock", "radius": 2.6})
+		"lava", "swamp", "frost":
+			var style: String = {"lava": "lava", "swamp": "poison", "frost": "frost"}[layout]
+			for k in 4:
+				var a := TAU * k / 4.0 + rng.randf() * 0.6
+				var r := rng.randf_range(11.0, 19.0)
+				arena_hazards.append({"pos": Vector3(c.x + cos(a) * r, 0, c.y + sin(a) * r), "style": style, "radius": rng.randf_range(2.4, 3.6)})
+	for hz in arena_hazards:
+		var hp: Vector3 = hz.pos
+		hp.y = height_at(hp.x, hp.z)
+		hz["pos"] = hp
 	_flush_batches(batch, props)
 	_build_minimap()
 	_setup_navigation()

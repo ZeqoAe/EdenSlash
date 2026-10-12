@@ -216,6 +216,28 @@ func loot_level(level: int) -> int:
 	return clampi(level, 1, max_level())
 
 
+## Invocation pendant le combat de boss (renforts, illusions, totems, compagnon).
+## [param id] = 0 : un monstre de la salle.
+func summon_for_boss(id: int, pos: Vector3, elite := false) -> Monster:
+	if not is_instance_valid(_boss):
+		return null
+	var pool: Array = zone.get("dungeon", {}).get("monsters", [])
+	var mid := id if id > 0 and not GameData.monster(id).is_empty() else (int(pool.pick_random()) if not pool.is_empty() else _pick_monster(_boss.level))
+	var lvl := maxi(1, _boss.level - (0 if elite else 2))
+	var m := _spawn_monster(mid, ground_point(pos, _boss.global_position), lvl)
+	if elite:
+		m.max_hp *= 3.0
+		m.hp = m.max_hp
+		m.atk *= 1.3
+	return m
+
+
+## Point au sol le plus proche de [param p] (sinon [param fallback]).
+func ground_point(p: Vector3, fallback: Vector3) -> Vector3:
+	var g: Vector3 = map.ground_at(p.x, p.z)
+	return g if g != Vector3.INF else fallback
+
+
 func _pick_monster(level: int) -> int:
 	# le roster (trié par niveau d'origine) se dévoile avec la progression dans la zone
 	var start := 1 + int(zone.get("level_bonus", 0))
@@ -420,6 +442,15 @@ func _enter_arena() -> void:
 	c.y = map.height_at(c.x, c.z)
 	_boss = _spawn_monster(boss_id, c, mini(maxi(player.level + 1, _monster_level(2)), max_level() + RAGE_LEVEL_BONUS), true)
 	_boss.display_name = "<Boss> " + _boss.display_name
+	var dungeon: Dictionary = zone.get("dungeon", {})
+	if _boss.brain:
+		_boss.brain.announce.connect(func(t): message.emit(t, 2.5))
+		_boss.brain.setup(dungeon, self)
+	# dangers permanents de la salle (lave, poison, givre...)
+	for hz in map.arena_hazards:
+		Hazard.spawn(self, hz.pos, {"style": hz.style, "radius": hz.radius, "lifetime": 0.0, "dps": _boss.atk * 0.3, "source": _boss})
+	if String(dungeon.get("intro", "")) != "":
+		message.emit(String(dungeon.intro), 4.0)
 	if _boss.brain:
 		_boss.brain.enraged_phase.connect(func(): message.emit("%s entre en fureur !" % _boss.display_name, 2.5))
 		_boss.reflect_started.connect(func(): message.emit("Miroir ! Ne frappe pas pendant 3 s", 2.0))

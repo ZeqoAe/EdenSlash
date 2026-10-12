@@ -19,7 +19,14 @@
    "monsters": [
     56211
    ],
-   "boss": 58392
+   "boss": 58470,
+   "arena": "pillars",
+   "mechanics": [
+    "adds",
+    "puddles"
+   ],
+   "hazard": "poison",
+   "intro": "Mori, roi des champignons, répand ses spores : évite les flaques vertes !"
   },
   "monsters": [
    56001,
@@ -84,13 +91,21 @@
   "dungeon": {
    "id": "rainbowfall_lair",
    "name": "Antre de la sorcière",
-   "boss": 58351,
+   "boss": 58475,
    "monsters": [
     56034,
     56036,
     56035,
     56037
-   ]
+   ],
+   "arena": "swamp",
+   "mechanics": [
+    "clones",
+    "puddles",
+    "lasers"
+   ],
+   "hazard": "shadow",
+   "intro": "Angela, sorcière du marais noir, se dédouble : trouve la vraie !"
   }
  },
  {
@@ -137,13 +152,20 @@
   "dungeon": {
    "id": "beluga_lair",
    "name": "Repaire des Vileshark",
-   "boss": 58358,
+   "boss": 58480,
    "monsters": [
     56066,
     56064,
     56065,
     56067
-   ]
+   ],
+   "arena": "frost",
+   "mechanics": [
+    "stomp",
+    "adds"
+   ],
+   "hazard": "frost",
+   "intro": "Ulicul l'ogre sauvage fait trembler le sol : saute par-dessus ses ondes !"
   }
  },
  {
@@ -189,13 +211,21 @@
   "dungeon": {
    "id": "wetlands_lair",
    "name": "Marais maudit",
-   "boss": 57543,
+   "boss": 58484,
    "monsters": [
     56079,
     56080,
     56081,
     56082
-   ]
+   ],
+   "arena": "crystal",
+   "mechanics": [
+    "totems",
+    "lasers",
+    "puddles"
+   ],
+   "hazard": "poison",
+   "intro": "Doubledoor, hôte de la magie, se protège derrière des totems : détruis-les !"
   }
  },
  {
@@ -246,13 +276,20 @@
   "dungeon": {
    "id": "avila_lair",
    "name": "Cœur du volcan",
-   "boss": 57561,
+   "boss": 58488,
    "monsters": [
     56112,
     56111,
     56113,
     56114
-   ]
+   ],
+   "arena": "lava",
+   "mechanics": [
+    "meteors",
+    "stomp"
+   ],
+   "hazard": "lava",
+   "intro": "Miller, bête de flammes géante : la lave monte, reste mobile !"
   }
  },
  {
@@ -300,13 +337,156 @@
   "dungeon": {
    "id": "arid_lair",
    "name": "Fosse du fourmilion",
-   "boss": 58372,
+   "boss": 58486,
    "monsters": [
     56143,
     56145,
     56146,
     56144
-   ]
+   ],
+   "arena": "pillars",
+   "mechanics": [
+    "adds",
+    "vortex",
+    "puddles"
+   ],
+   "hazard": "poison",
+   "intro": "La reine des insectes appelle sa nichée et t'attire dans sa fosse !"
+  }
+ },
+ {
+  "id": "delphi",
+  "biome": "delphi",
+  "node": 12,
+  "name": "Delphi Forest",
+  "levels": [
+   49,
+   51
+  ],
+  "level_bonus": 18,
+  "max_level": 33,
+  "monsters": [
+   56148,
+   56147,
+   56150,
+   56149,
+   56153,
+   56152,
+   56151,
+   56155,
+   56156,
+   56154,
+   56158,
+   56157,
+   56160,
+   56159,
+   56161,
+   56162
+  ],
+  "elites": [
+   57579,
+   57580,
+   57581,
+   57582,
+   58373,
+   58374,
+   57583,
+   57584,
+   57585,
+   58375,
+   57586,
+   57587,
+   57588,
+   57589,
+   58376
+  ],
+  "dungeon": {
+   "id": "delphi_lair",
+   "name": "Laboratoire de Pross",
+   "boss": 58502,
+   "monsters": [
+    56160,
+    56159,
+    56161,
+    56162
+   ],
+   "pet": 58503,
+   "arena": "crystal",
+   "mechanics": [
+    "pet",
+    "lasers",
+    "adds",
+    "meteors"
+   ],
+   "hazard": "shock",
+   "intro": "Pross, le savant fou, lâche l'Expérience 627 : rayons et bombardements !"
+  }
+ },
+ {
+  "id": "blackflame",
+  "biome": "blackflame",
+  "node": 13,
+  "name": "Blackflame Peak",
+  "levels": [
+   52,
+   54
+  ],
+  "level_bonus": 21,
+  "max_level": 36,
+  "monsters": [
+   56163,
+   56164,
+   56167,
+   56168,
+   56169,
+   56165,
+   56166,
+   56174,
+   56170,
+   56173,
+   56172,
+   56171,
+   56175,
+   56176,
+   56178,
+   56177
+  ],
+  "elites": [
+   57590,
+   57591,
+   57592,
+   57593,
+   58377,
+   57594,
+   57595,
+   57596,
+   58378,
+   58379,
+   57597,
+   57598,
+   57599,
+   58380
+  ],
+  "dungeon": {
+   "id": "blackflame_lair",
+   "name": "Trône du roi sorcier",
+   "boss": 58510,
+   "monsters": [
+    56175,
+    56176,
+    56178,
+    56177
+   ],
+   "pet": 58511,
+   "arena": "lava",
+   "mechanics": [
+    "pet",
+    "meteors",
+    "clones",
+    "vortex"
+   ],
+   "hazard": "lava",
+   "intro": "Wushu, le roi sorcier, et son familier Jiku règnent sur le pic de flamme noire !"
   }
  }
 ]

@@ -168,6 +168,26 @@ fréquents, monstres des camps, élites, boss) ; le terrain reste généré.
 | Wetlands | s007 | niv. 10 | marais sombre, brouillard |
 | Avila Volcano | s009 | niv. 13 | roche noire, arbres morts, ciel rougeâtre |
 | Arid Wilds | s011 | niv. 16 | désert de sable |
+| Delphi Forest | s012 | niv. 19 | forêt volcanique, lys, griffons, foreuses de Pross |
+| Blackflame Peak | s013 | niv. 22 | pic de roche noire, lave, culte de Mara |
+
+### Salles de boss (un vrai boss nommé d'Eden par zone)
+
+| Zone | Boss | Salle | Mécaniques |
+|---|---|---|---|
+| Limestone | Mori, roi des champignons | piliers | renforts à 75/50/25 %, flaques de poison |
+| Rainbowfall | Angela, sorcière du marais noir | marais (mares de poison) | se dédouble (illusions), flaques d'ombre, rayons en croix |
+| Beluga | Ulicul, ogre sauvage | givre | 3 ondes de choc à sauter, renforts |
+| Wetlands | Doubledoor, hôte de la magie | cristaux (piliers, foudre) | bouclier : 3 totems à détruire, rayons, poison |
+| Avila | Miller, bête de flammes géante | lave | pluie de météores (laisse de la lave), ondes de choc |
+| Arid | Abby, reine des insectes | piliers | renforts, tourbillon qui attire, poison |
+| Delphi | Pross, le savant fou (+ Expérience 627) | cristaux | compagnon, rayons, renforts, météores |
+| Blackflame | Wushu, roi sorcier (+ Jiku) | lave | compagnon, météores, illusions, tourbillon |
+
+Données : `tools/build_biomes.py` (DUNGEONS) ; mécaniques : `scripts/ai/boss_brain.gd`
+(bibliothèque : adds, puddles, meteors, stomp, clones, totems, lasers, pet, vortex, reflect),
+dangers au sol : `scripts/combat/hazard.gd` ; agencements : `ProcMap.generate_arena`.
+Les costumes d'Eden tombent sur les boss (1 chance sur 4, 1 sur 2 s'il est enragé).
 
 - Une zone se **débloque en battant le boss de la précédente** (choix dans le lobby).
 - Le héros commence la run au niveau de la zone ; les monstres d'Eden sont ramenés au niveau

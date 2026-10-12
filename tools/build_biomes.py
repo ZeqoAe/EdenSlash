@@ -63,7 +63,40 @@ BIOMES = [
      'env': {'sky_top': [0.35, 0.55, 0.85], 'horizon': [1.0, 0.88, 0.7], 'fog': [0.95, 0.85, 0.68], 'fog_density': 0.0022,
              'ambient': [0.92, 0.85, 0.72], 'sun': [1.0, 0.92, 0.75]},
      'dungeon': 'Fosse du fourmilion'},
+    {'id': 'delphi', 'map': 's012', 'name': 'Delphi Forest', 'levels': [49, 51], 'level_bonus': 18,
+     'textures': {'grass': 'grass_03', 'grass2': 'grass_06', 'dirt': 'dust_05', 'road': 'road_05', 'rock': 'mount_07'},
+     'tint': [0.85, 0.82, 0.74],
+     'env': {'sky_top': [0.42, 0.45, 0.62], 'horizon': [0.95, 0.78, 0.6], 'fog': [0.78, 0.66, 0.55], 'fog_density': 0.003,
+             'ambient': [0.8, 0.74, 0.66], 'sun': [1.0, 0.88, 0.7]},
+     'dungeon': 'Laboratoire de Pross'},
+    {'id': 'blackflame', 'map': 's013', 'name': 'Blackflame Peak', 'levels': [52, 54], 'level_bonus': 21,
+     'textures': {'grass': 'grass_08', 'grass2': 'dust_05', 'dirt': 'dust_05', 'road': 'road_05', 'rock': 'mount_05'},
+     'tint': [0.62, 0.58, 0.6],
+     'env': {'sky_top': [0.16, 0.12, 0.16], 'horizon': [0.55, 0.28, 0.24], 'fog': [0.34, 0.24, 0.24], 'fog_density': 0.0035,
+             'ambient': [0.66, 0.58, 0.58], 'sun': [1.0, 0.75, 0.6]},
+     'dungeon': 'Trône du roi sorcier'},
 ]
+
+# Salles de boss : vrai boss nommé d'Eden (c_monster rang 6), agencement de l'arène et
+# mécaniques (voir BossBrain) ; hazard = style des flaques laissées par le boss.
+DUNGEONS = {
+    'limestone': {'boss': 58470, 'arena': 'pillars', 'mechanics': ['adds', 'puddles'], 'hazard': 'poison',
+                  'intro': "Mori, roi des champignons, répand ses spores : évite les flaques vertes !"},
+    'rainbowfall': {'boss': 58475, 'arena': 'swamp', 'mechanics': ['clones', 'puddles', 'lasers'], 'hazard': 'shadow',
+                    'intro': "Angela, sorcière du marais noir, se dédouble : trouve la vraie !"},
+    'beluga': {'boss': 58480, 'arena': 'frost', 'mechanics': ['stomp', 'adds'], 'hazard': 'frost',
+               'intro': "Ulicul l'ogre sauvage fait trembler le sol : saute par-dessus ses ondes !"},
+    'wetlands': {'boss': 58484, 'arena': 'crystal', 'mechanics': ['totems', 'lasers', 'puddles'], 'hazard': 'poison',
+                 'intro': "Doubledoor, hôte de la magie, se protège derrière des totems : détruis-les !"},
+    'avila': {'boss': 58488, 'arena': 'lava', 'mechanics': ['meteors', 'stomp'], 'hazard': 'lava',
+              'intro': "Miller, bête de flammes géante : la lave monte, reste mobile !"},
+    'arid': {'boss': 58486, 'arena': 'pillars', 'mechanics': ['adds', 'vortex', 'puddles'], 'hazard': 'poison',
+             'intro': "La reine des insectes appelle sa nichée et t'attire dans sa fosse !"},
+    'delphi': {'boss': 58502, 'pet': 58503, 'arena': 'crystal', 'mechanics': ['pet', 'lasers', 'adds', 'meteors'], 'hazard': 'shock',
+               'intro': "Pross, le savant fou, lâche l'Expérience 627 : rayons et bombardements !"},
+    'blackflame': {'boss': 58510, 'pet': 58511, 'arena': 'lava', 'mechanics': ['pet', 'meteors', 'clones', 'vortex'], 'hazard': 'lava',
+                   'intro': "Wushu, le roi sorcier, et son familier Jiku règnent sur le pic de flamme noire !"},
+}
 
 MAX_TREES, MAX_ROCKS, MAX_PLANTS = 8, 7, 10
 
@@ -157,6 +190,31 @@ def main():
     zones = [z for z in json.load(open(os.path.join(GAME, 'data', 'zones.json'), encoding='utf-8')) if z['id'] == 'limestone']
     zones[0]['level_bonus'] = 0
     zones[0]['biome'] = 'limestone'
+    def add_boss(mid, ref_id):
+        """Boss nommé (rang 6) : statistiques calées sur l'élite de la zone (ref_id)."""
+        r = cmon.get(mid)
+        ml = mlist.get(r[1].lower()) if r else None
+        if r is None or ml is None:
+            return False
+        num = build_assets.num
+        base = os.path.splitext(ml['kfm'])[0]
+        if not os.path.exists(os.path.join(GAME, 'assets', 'monsters', base, base + '.glb')):
+            new_kfms.add(base)
+        ref = monsters[str(ref_id)]
+        lvl = num(r[4])
+        k = 1.1 ** (lvl - ref['level'])
+        title, _, name = ' '.join(tmon.get(mid, ['?'])[0].split('\n')).partition('>')
+        monsters[str(mid)] = {
+            'id': mid, 'name': ' '.join((name.strip() or title).split()), 'title': title.strip(' <'),
+            'level': lvl, 'hp': int(ref['hp'] * 1.4 * k), 'xp': int(ref['xp'] * 1.5 * k), 'atk': int(ref['atk'] * 1.15 * k),
+            'def': int(ref['def'] * k), 'mdef': int(ref.get('mdef', 0) * k), 'rank': 6, 'model': base,
+            'texture': os.path.splitext(ml['texture'])[0], 'scale': ml['scale'],
+        }
+        return True
+
+    lime = DUNGEONS['limestone']
+    if add_boss(lime['boss'], zones[0]['elites'][-1] if zones[0].get('elites') else zones[0]['dungeon']['boss']):
+        zones[0]['dungeon'].update({k: v for k, v in lime.items()})
     for b in BIOMES:
         declared, _events, spawns = fsm2godot.parse_scene_ini(read('data/scene/%s.ini' % b['map']).decode('big5', 'replace'))
         fsm = fsm2godot.parse_fsm(read('map/model/%s/%s' % (b['map'], declared)))
@@ -175,12 +233,18 @@ def main():
         if not elites:
             elites = normal[-2:]
         boss = elites[-1]
+        dcfg = DUNGEONS.get(b['id'], {})
+        if dcfg and add_boss(dcfg['boss'], boss):
+            if dcfg.get('pet'):
+                add_boss(dcfg['pet'], boss)
+            boss = dcfg['boss']
         biomes_out[b['id']] = {'textures': b['textures'], 'tint': b['tint'], 'env': b['env'],
                                'trees': trees, 'rocks': rocks, 'plants': plants}
         zones.append({'id': b['id'], 'biome': b['id'], 'node': int(b['map'][1:]), 'name': b['name'], 'levels': b['levels'],
                       'level_bonus': b['level_bonus'], 'max_level': 15 + b['level_bonus'],
                       'monsters': normal, 'elites': elites,
-                      'dungeon': {'id': b['id'] + '_lair', 'name': b['dungeon'], 'boss': boss, 'monsters': normal[-4:]}})
+                      'dungeon': dict({'id': b['id'] + '_lair', 'name': b['dungeon'], 'boss': boss, 'monsters': normal[-4:]},
+                                      **{k: v for k, v in dcfg.items() if k != 'boss'})})
         print('%s (%s) : %d monstres, %d élites, boss %s, %d arbres, %d rochers, %d plantes' % (
             b['name'], b['map'], len(normal), len(elites), monsters[str(boss)]['name'], len(trees), len(rocks), len(plants)))
 

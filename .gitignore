@@ -17,3 +17,6 @@ game/assets/ui/status/*.import
 game/assets/ui/frame/*.import
 
 game/assets/ui/icons/*.import
+
+# Real-ESRGAN (téléchargé, voir tools/upscale_textures.py)
+tools/third_party/realesrgan/

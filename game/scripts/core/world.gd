@@ -356,7 +356,7 @@ func new_arena_map(seed_value: int) -> ProcMap:
 	m.biome = String(GameData.zone(Run.zone_id).get("biome", "limestone"))
 	m.name = "Arena"
 	_swap_map(m)
-	m.generate_arena(seed_value)
+	m.generate_arena(seed_value, String(GameData.zone(Run.zone_id).get("dungeon", {}).get("arena", "ring")))
 	return m
 
 

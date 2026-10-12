@@ -428,7 +428,15 @@ func message_reflect() -> void:
 	DamageNumber.spawn_text(self, "MIROIR !", Color(1.0, 0.85, 0.3))
 
 
+## Bouclier du boss (totems à détruire) : insensible aux dégâts.
+var shielded := false
+
+
 func take_damage(amount: float, source: Combatant = null, crit := false, dot := false) -> void:
+	if shielded:
+		if not dot and randf() < 0.3:
+			DamageNumber.spawn_text(self, "BOUCLIER", Color(0.6, 0.85, 1.0))
+		return
 	# miroir du boss : renvoie 60 % des dégâts au héros
 	if brain and brain.reflecting and source is Player and not dot:
 		source.take_damage(amount * 0.6, self, false, true)

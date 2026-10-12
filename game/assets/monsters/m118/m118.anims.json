@@ -1,0 +1,182 @@
+{
+ "battle01": {
+  "duration": 1.0,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.0,
+    "text": "end"
+   }
+  ]
+ },
+ "attack01": {
+  "duration": 1.5,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.5,
+    "text": "end"
+   }
+  ]
+ },
+ "attack02": {
+  "duration": 1.5,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.5,
+    "text": "end"
+   }
+  ]
+ },
+ "shoot01": {
+  "duration": 1.5,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.5,
+    "text": "end"
+   }
+  ]
+ },
+ "shoot02": {
+  "duration": 2.1667,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 2.1667,
+    "text": "end"
+   }
+  ]
+ },
+ "magic01": {
+  "duration": 1.3333,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.3333,
+    "text": "end"
+   }
+  ]
+ },
+ "hurt01": {
+  "duration": 0.5,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.5,
+    "text": "end"
+   }
+  ]
+ },
+ "hurt02": {
+  "duration": 0.6667,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6667,
+    "text": "end"
+   }
+  ]
+ },
+ "move01": {
+  "duration": 1.0,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.0,
+    "text": "end"
+   }
+  ]
+ },
+ "death01": {
+  "duration": 2.6667,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 2.6667,
+    "text": "end"
+   }
+  ]
+ },
+ "stand01": {
+  "duration": 1.6667,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.6667,
+    "text": "end"
+   }
+  ]
+ },
+ "stand02": {
+  "duration": 2.1667,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 2.1667,
+    "text": "end"
+   }
+  ]
+ }
+}
