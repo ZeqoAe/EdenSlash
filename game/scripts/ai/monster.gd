@@ -287,7 +287,7 @@ func _update_chase(delta: float) -> Vector3:
 	to.y = 0.0
 	face_direction(to, delta, 10.0)
 	if to.length() <= _attack_range():
-		if _time >= _attack_ready_at and not _attacks.is_empty():
+		if _time >= _attack_ready_at and not _attacks.is_empty() and not has_status("disarm"):
 			_start_attack()
 			return Vector3.ZERO
 		# les tireurs gardent leurs distances, les autres collent le héros

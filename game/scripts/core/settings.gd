@@ -17,7 +17,7 @@ const ACTIONS := [
 	["skill_4", "Compétence 4"], ["interact", "Interagir"], ["map", "Carte"],
 	["objectives", "Afficher les objectifs"], ["pause", "Menu / pause"],
 	["camera_rotate", "Tourner la caméra (maintenu)"], ["unstuck", "Se débloquer"], ["help", "Aide"],
-	["feedback", "Signaler un problème"],
+	["feedback", "Signaler un problème"], ["extract", "S'extraire (10 s)"],
 ]
 ## Paires d'actions qui peuvent partager une touche (jamais utilisées en même temps).
 const SHARED_OK := [["move_order", "camera_rotate"]]
@@ -46,6 +46,7 @@ const DEFAULT_BINDS := {
 	"unstuck": [{"k": KEY_F4}],
 	"help": [{"k": KEY_F1}],
 	"feedback": [{"k": KEY_F9}],
+	"extract": [{"k": KEY_X}],
 }
 ## Touches de test, non modifiables.
 const DEBUG_BINDS := {

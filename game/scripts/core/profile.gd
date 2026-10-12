@@ -11,7 +11,7 @@ const SAVE_PATH := "user://profile.json"
 ## sauvegarde : ils ne touchent jamais au profil du joueur.
 const TEST_SAVE_PATH := "user://profile_test.json"
 const INVENTORY_MAX := 40
-const VAULT_MAX := 40
+const VAULT_MAX := 80
 
 signal changed
 
@@ -23,6 +23,11 @@ var equipped: Dictionary = {}  # emplacement -> objet
 var vault: Array = []  # objets gardés entre les runs
 var loadout: Dictionary = {}  # emplacement -> uid de l'objet d'héritage porté au départ
 var in_run := false
+var bag := {}  # consommables de la run (Craft) : clé -> quantité
+var stash := {}  # réserve de fournitures gardées (extraction, victoire), emportée à la run suivante
+var expertise := {}  # classe -> points d'expertise (gagnés à chaque run)
+var talents := {}  # classe -> {id talent (String): niveau}
+var certificates: Array = []  # certificats équipés : "classe/id_passif"
 var unlocked_zones := 1  # zones jouables (dans l'ordre de data/zones.json)
 var selected_zone := "limestone"
 var runs_done := 0
@@ -60,6 +65,10 @@ func load_profile() -> void:
 	selected_class = d.get("selected_class", selected_class)
 	runs_done = int(d.get("runs_done", 0))
 	unlocked_zones = maxi(1, int(d.get("unlocked_zones", 1)))
+	expertise = d.get("expertise", {})
+	stash = d.get("stash", {})
+	talents = d.get("talents", {})
+	certificates = d.get("certificates", [])
 	selected_zone = String(d.get("selected_zone", "limestone"))
 	if d.has("vault"):
 		vault = d.get("vault", []).map(_migrate)
@@ -102,6 +111,7 @@ func save_profile() -> void:
 		_sync_vault()
 	var d := {"selected_class": selected_class, "vault": vault, "loadout": loadout,
 		"unlocked_zones": unlocked_zones, "selected_zone": selected_zone,
+		"expertise": expertise, "talents": talents, "certificates": certificates, "stash": stash,
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(d))
@@ -122,6 +132,7 @@ func _lobby_view() -> void:
 	gold = 0
 	for m in materials:
 		materials[m] = 0
+	bag = {}
 
 
 ## Hors run, ce qui est équipé / rangé redevient l'héritage et le loadout.
@@ -146,6 +157,9 @@ func begin_run() -> void:
 	gold = 0
 	for m in materials:
 		materials[m] = 0
+	# la réserve de fournitures part avec le héros : perdue s'il tombe
+	bag = stash.duplicate()
+	stash = {}
 	save_profile()
 
 
@@ -155,6 +169,8 @@ func end_run(item) -> void:
 	if not in_run:
 		return
 	in_run = false
+	if Run.result == "victoire":
+		keep_supplies()
 	if item is Dictionary and not item.is_empty():
 		var kept: Dictionary = item.duplicate(true)
 		var replaced := false
@@ -171,6 +187,62 @@ func end_run(item) -> void:
 	save_profile()
 
 
+## Extraction réussie : tout l'inventaire de la run rejoint l'héritage (améliorations comprises),
+## l'équipement porté devient l'équipement de départ.
+func end_run_extract() -> int:
+	if not in_run:
+		return 0
+	in_run = false
+	keep_supplies()
+	var kept := 0
+	for it in equipped.values() + inventory:
+		var copy: Dictionary = it.duplicate(true)
+		var replaced := false
+		for i in vault.size():
+			if String(vault[i].uid) == String(copy.uid):
+				vault[i] = copy
+				replaced = true
+				break
+		if not replaced and vault.size() < VAULT_MAX:
+			vault.append(copy)
+		kept += 1
+	loadout = {}
+	for slot in equipped:
+		loadout[slot] = equipped[slot].uid
+	_lobby_view()
+	save_profile()
+	return kept
+
+
+## Les fournitures du sac rejoignent la réserve (extraction réussie, victoire).
+func keep_supplies() -> void:
+	for k in bag:
+		stash[k] = int(stash.get(k, 0)) + int(bag[k])
+	bag = {}
+
+
+func stash_count() -> int:
+	var n := 0
+	for k in stash:
+		n += int(stash[k])
+	return n
+
+
+## Arme de départ du type [param wtype] : la meilleure de l'héritage, sinon une arme commune neuve.
+func select_weapon_type(wtype: String) -> void:
+	var best: Dictionary = {}
+	for it in vault:
+		if it.slot == "weapon" and Items.weapon_type_of(it) == wtype:
+			if best.is_empty() or int(it.rarity) * 20 + int(it.get("upgrade", 0)) > int(best.rarity) * 20 + int(best.get("upgrade", 0)):
+				best = it
+	if best.is_empty():
+		best = Items.generate(1, -1.0, "weapon", selected_class, 0, wtype)
+		vault.append(best)
+	loadout["weapon"] = best.uid
+	_lobby_view()
+	save_profile()
+
+
 ## Nouvelle partie : efface tout (héritage, statistiques) et redonne le katana de départ.
 func reset_all() -> void:
 	in_run = false
@@ -181,8 +253,131 @@ func reset_all() -> void:
 	best_level = 1
 	unlocked_zones = 1
 	selected_zone = "limestone"
+	expertise = {}
+	talents = {}
+	certificates = []
+	stash = {}
 	_lobby_view()
 	_ensure_starter()
+	save_profile()
+
+
+# --- expertise de classe, talents, certificats -------------------------------------------
+const EXPERTISE_MAX := 40
+const CERT_LEVELS := [3, 8]  # niveaux d'expertise débloquant les 2 certificats d'une classe
+
+
+## Points d'expertise nécessaires pour passer du niveau [param lvl] au suivant.
+static func expertise_need(lvl: int) -> int:
+	return 120 + 80 * lvl
+
+
+func expertise_level(cls: String) -> int:
+	var xp := int(expertise.get(cls, 0))
+	var lvl := 1
+	while lvl < EXPERTISE_MAX and xp >= expertise_need(lvl):
+		xp -= expertise_need(lvl)
+		lvl += 1
+	return lvl
+
+
+## Progression vers le niveau suivant : Vector2(points acquis, points nécessaires).
+func expertise_progress(cls: String) -> Vector2:
+	var xp := int(expertise.get(cls, 0))
+	var lvl := 1
+	while lvl < EXPERTISE_MAX and xp >= expertise_need(lvl):
+		xp -= expertise_need(lvl)
+		lvl += 1
+	return Vector2(xp, expertise_need(lvl))
+
+
+## Gain d'expertise en fin de run ; renvoie le nombre de niveaux gagnés.
+func add_expertise(cls: String, amount: int) -> int:
+	var before := expertise_level(cls)
+	expertise[cls] = int(expertise.get(cls, 0)) + amount
+	return expertise_level(cls) - before
+
+
+## Points de talent : 2 au départ, +2 par niveau d'expertise.
+func talent_points(cls: String) -> int:
+	return 2 * expertise_level(cls)
+
+
+func talent_rank(cls: String, id) -> int:
+	return int(talents.get(cls, {}).get(str(int(id)), 0))
+
+
+func talent_spent(cls: String) -> int:
+	var n := 0
+	for k in talents.get(cls, {}):
+		n += int(talents[cls][k])
+	return n
+
+
+func _talent_cell(cls: String, id) -> Dictionary:
+	for row in GameData.talents.get(cls, {}).get("rows", []):
+		for c in row:
+			if c != null and int(c.id) == int(id):
+				return c
+	return {}
+
+
+## Pourquoi un point ne peut pas être ajouté ("" si possible).
+func talent_block(cls: String, id) -> String:
+	var c := _talent_cell(cls, id)
+	if c.is_empty():
+		return "talent inconnu"
+	if talent_rank(cls, id) >= int(c.max):
+		return "niveau maximal"
+	if talent_spent(cls) >= talent_points(cls):
+		return "plus de points (monte l'expertise de la classe)"
+	if talent_spent(cls) < int(c.get("spent", 0)):
+		return "%d points à dépenser dans l'arbre d'abord" % int(c.spent)
+	if int(c.req) > 0 and talent_rank(cls, c.req) < int(c.req_pts):
+		var t: Dictionary = GameData.talents[cls].talents.get(str(int(c.req)), {})
+		return "nécessite %s niveau %d" % [t.get("name", "?"), int(c.req_pts)]
+	return ""
+
+
+func add_talent(cls: String, id) -> bool:
+	if talent_block(cls, id) != "":
+		return false
+	if not talents.has(cls):
+		talents[cls] = {}
+	talents[cls][str(int(id))] = talent_rank(cls, id) + 1
+	save_profile()
+	return true
+
+
+func reset_talents(cls: String) -> void:
+	talents.erase(cls)
+	save_profile()
+
+
+## Certificats débloqués (toutes classes) : [{key, cls, passif}].
+func unlocked_certificates() -> Array:
+	var out: Array = []
+	for cls in GameData.talents:
+		var certs: Array = GameData.talents[cls].get("certificates", [])
+		for i in certs.size():
+			if i < CERT_LEVELS.size() and expertise_level(cls) >= int(CERT_LEVELS[i]):
+				out.append({"key": "%s/%s" % [cls, certs[i]], "cls": cls, "id": certs[i]})
+	return out
+
+
+## Emplacements de certificats : 1, +1 tous les 10 niveaux d'expertise cumulés (4 max).
+func certificate_slots() -> int:
+	var total := 0
+	for cls in GameData.talents:
+		total += expertise_level(cls) - 1
+	return clampi(1 + total / 10, 1, 4)
+
+
+func toggle_certificate(key: String) -> void:
+	if key in certificates:
+		certificates.erase(key)
+	elif certificates.size() < certificate_slots():
+		certificates.append(key)
 	save_profile()
 
 
@@ -200,6 +395,33 @@ func unlock_after(zone_id: String) -> String:
 	selected_zone = String(GameData.zones[next].id)
 	save_profile()
 	return String(GameData.zones[next].name)
+
+
+# --- consommables (gemmes, parchemins, ciseaux, pierres) ------------------------------------
+func add_bag(key: String, n := 1) -> void:
+	bag[key] = int(bag.get(key, 0)) + n
+	changed.emit()
+
+
+func bag_count(key: String) -> int:
+	return int(bag.get(key, 0))
+
+
+func take_bag(key: String, n := 1) -> bool:
+	if bag_count(key) < n:
+		return false
+	bag[key] = bag_count(key) - n
+	if int(bag[key]) <= 0:
+		bag.erase(key)
+	changed.emit()
+	return true
+
+
+## Clés du sac commençant par [param prefix] (« gem », « scroll »…), triées.
+func bag_keys(prefix: String) -> Array:
+	var out := bag.keys().filter(func(k): return String(k).begins_with(prefix))
+	out.sort()
+	return out
 
 
 func add_item(item: Dictionary) -> bool:
@@ -298,12 +520,21 @@ func pay(cost: Dictionary) -> bool:
 
 ## Améliore un objet (porté ou en inventaire). Renvoie la stat renforcée au palier,
 ## "" sinon, ou "!" si impossible.
-func upgrade_item(item: Dictionary) -> String:
-	if int(item.get("upgrade", 0)) >= Items.MAX_UPGRADE or not pay(Items.upgrade_cost(item)):
-		return "!"
-	var s := Items.upgrade(item)
+## Tentative d'amélioration à la Eden : coût payé, pierres de chance et de protection
+## consommées, résultat {ok, text, error?}.
+func upgrade_item(item: Dictionary, luck := 0, protect := false) -> Dictionary:
+	if int(item.get("upgrade", 0)) >= Items.MAX_UPGRADE:
+		return {"ok": false, "error": true, "text": "Amélioration maximale atteinte."}
+	if not pay(Items.upgrade_cost(item)):
+		return {"ok": false, "error": true, "text": "Pas assez d'or ou de matériaux."}
+	luck = mini(luck, bag_count("luck"))
+	if luck > 0:
+		take_bag("luck", luck)
+	if protect and not take_bag("protect"):
+		protect = false
+	var r := Craft.upgrade(item, luck, protect)
 	save_profile()
-	return s
+	return r
 
 
 func buy(item: Dictionary, price: int) -> bool:

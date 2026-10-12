@@ -3,7 +3,7 @@ extends CanvasLayer
 ## Bilan de fin de run (victoire, défaite, abandon), choix de l'objet gardé en
 ## héritage (le reste est perdu), puis retour au lobby.
 
-const TITLES := {"victoire": "VICTOIRE !", "defaite": "DÉFAITE", "abandon": "RUN ABANDONNÉE"}
+const TITLES := {"victoire": "VICTOIRE !", "defaite": "DÉFAITE", "abandon": "RUN ABANDONNÉE", "extraction": "EXTRACTION RÉUSSIE"}
 const MUTED := Color(0.72, 0.72, 0.8)
 
 var _choice = null  # objet gardé
@@ -32,7 +32,7 @@ func show_results() -> void:
 	v.add_theme_constant_override("separation", 10)
 	panel.add_child(v)
 	var t := Hud._label(v, TITLES.get(Run.result, "FIN"), 42,
-		Hud.ACCENT if Run.result == "victoire" else Color(0.95, 0.4, 0.4))
+		Hud.ACCENT if Run.result == "victoire" else (Color(0.5, 0.9, 1.0) if Run.result == "extraction" else Color(0.95, 0.4, 0.4)))
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var cls := Run.class_data()
 	var s := Hud._label(v, "%s · niveau atteint %d · %s   ·   Monstres vaincus : %d   ·   Élites : %d   ·   Or gagné : %d" % [
@@ -41,9 +41,16 @@ func show_results() -> void:
 	if Run.unlocked_name != "":
 		var u := Hud._label(v, "Nouvelle zone débloquée : %s !" % Run.unlocked_name, 22, Color(0.55, 1.0, 0.6))
 		u.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var head := Hud._label(v, "Choisis l'objet à garder en héritage", 24, Hud.ACCENT)
+	var ex := Hud._label(v, "Expertise %s : +%d%s" % [cls.get("name_fr", ""), Run.expertise_gain,
+		("   ·   NIVEAU %d ! (+%d points de talent)" % [Profile.expertise_level(Run.class_id), 2 * Run.expertise_levels]) if Run.expertise_levels > 0 else ""],
+		17, Color(0.6, 0.85, 1.0))
+	ex.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var extract := Run.result == "extraction"
+	var head := Hud._label(v, "Tout ton inventaire est conservé" if extract else "Choisis l'objet à garder en héritage", 24, Hud.ACCENT)
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var sub := Hud._label(v, "Il garde son amélioration et pourra être porté au départ des prochaines runs. Tout le reste (or, matériaux, butin) est perdu.", 14, MUTED)
+	var sub := Hud._label(v, ("Équipement, inventaire et fournitures (gemmes, parchemins, pierres, ciseaux) sont gardés. L'or et les matériaux restent perdus." if extract
+		else ("Il garde son amélioration. Tes fournitures rejoignent ta réserve ; or, matériaux et autres objets sont perdus." if Run.result == "victoire"
+		else "Il garde son amélioration et pourra être porté au départ des prochaines runs. Tout le reste (or, matériaux, fournitures, butin) est perdu.")), 14, MUTED)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 	var body := HBoxContainer.new()
@@ -83,6 +90,8 @@ func show_results() -> void:
 	add_child(root)
 	# présélection : la meilleure pièce
 	_select(items[0] if not items.is_empty() else null)
+	if extract:
+		_confirm.text = "Retour au lobby : %d objet(s) rejoignent ton héritage" % items.size()
 
 
 ## Valeur indicative d'un objet pour la présélection et le tri.
@@ -133,10 +142,14 @@ func _select(item) -> void:
 		return
 	var heir := Profile.vault.any(func(x): return String(x.uid) == String(item.uid))
 	_detail.text = Items.describe(item) + ("\n\n[color=#9fd0ff]Pièce d'héritage : sa version de cette run (amélioration comprise) remplace l'ancienne.[/color]" if heir else "")
-	_confirm.text = "Garder %s et retourner au lobby" % Items.display_name(item)
+	_confirm.text = ("Retour au lobby : tout l'inventaire rejoint ton héritage" if Run.result == "extraction"
+		else "Garder %s et retourner au lobby" % Items.display_name(item))
 
 
 func _finish() -> void:
-	Profile.end_run(_choice)
+	if Run.result == "extraction":
+		Profile.end_run_extract()
+	else:
+		Profile.end_run(_choice)
 	get_tree().paused = false
 	get_tree().change_scene_to_file("res://scenes/lobby.tscn")

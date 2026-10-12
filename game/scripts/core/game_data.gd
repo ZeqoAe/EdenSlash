@@ -17,7 +17,9 @@ const MONSTER_SCALE := 0.7
 
 var monsters: Dictionary = {}  # id (int) -> Dictionary
 var zones: Array = []
-var biomes: Dictionary = {}  # id -> textures, ambiance, décors (tools/build_biomes.py)
+var biomes: Dictionary = {}
+var talents: Dictionary = {}
+var weapon_types: Dictionary = {}  # katana, axe, dagger, bow, scepter, staff (tools/build_classes.py)  # classe -> arbre de talents et certificats (tools/build_talents.py)  # id -> textures, ambiance, décors (tools/build_biomes.py)
 var levels: Array = []
 var classes: Dictionary = {}  # id -> classe (compétences, passifs, apparence...)
 var motion_keys: Dictionary = {}  # kfm -> animation -> {hit, sounds, trail, len}
@@ -29,12 +31,20 @@ func _ready() -> void:
 	for key in raw:
 		monsters[int(key)] = raw[key]
 	zones = _load_json("res://data/zones.json")
+	if FileAccess.file_exists("res://data/weapon_types.json"):
+		weapon_types = _load_json("res://data/weapon_types.json")
+	if FileAccess.file_exists("res://data/talents.json"):
+		talents = _load_json("res://data/talents.json")
 	if FileAccess.file_exists("res://data/biomes.json"):
 		biomes = _load_json("res://data/biomes.json")
 	levels = _load_json("res://data/levels.json")
 	classes = _load_json("res://data/classes.json")
 	motion_keys = _load_json("res://data/motion_keys.json")
 	minimaps = _load_json("res://data/minimaps.json")
+
+
+func weapon_type(id: String) -> Dictionary:
+	return weapon_types.get(id, weapon_types.get("katana", {}))
 
 
 ## Zone [param id] (Limestone par défaut).

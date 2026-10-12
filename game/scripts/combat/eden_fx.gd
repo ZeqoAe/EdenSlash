@@ -5,6 +5,10 @@ extends Node3D
 ## transparence, couleur, défilement / échelle d'UV, planches de texture.
 
 static var _cache := {}  # nom -> [PackedScene, Dictionary]
+## Intensité des effets : les effets d'Eden, pensés pour un MMO, sont renforcés
+## (opacité et luminosité) pour des impacts bien marqués.
+const ALPHA_BOOST := 1.5
+const GLOW_BOOST := 1.3
 static var _tex_cache := {}
 
 var fx_name := ""
@@ -78,7 +82,9 @@ func _ready() -> void:
 		if src:
 			m.albedo_texture = src.albedo_texture
 		var c: Array = info.get("color", [1, 1, 1])
-		m.albedo_color = Color(c[0], c[1], c[2], float(info.get("alpha", 1.0)))
+		var add: bool = info.get("blend", "mix") == "add"
+		var k := GLOW_BOOST if add else 1.0
+		m.albedo_color = Color(c[0] * k, c[1] * k, c[2] * k, minf(1.0, float(info.get("alpha", 1.0)) * ALPHA_BOOST))
 		mi.material_override = m
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_mats[name] = [m, info]
@@ -118,10 +124,11 @@ func _apply(i: int) -> void:
 		var m: StandardMaterial3D = _mats[name][0]
 		var info: Dictionary = _mats[name][1]
 		if info.has("alpha_t"):
-			m.albedo_color.a = float(info.alpha_t[mini(i, info.alpha_t.size() - 1)])
+			m.albedo_color.a = minf(1.0, float(info.alpha_t[mini(i, info.alpha_t.size() - 1)]) * ALPHA_BOOST)
 		if info.has("color_t"):
 			var c: Array = info.color_t[mini(i, info.color_t.size() - 1)]
-			m.albedo_color = Color(c[0], c[1], c[2], m.albedo_color.a)
+			var k := GLOW_BOOST if info.get("blend", "mix") == "add" else 1.0
+			m.albedo_color = Color(c[0] * k, c[1] * k, c[2] * k, m.albedo_color.a)
 		var su := float(_track(info, "uv_su", i, 1.0))
 		var sv := float(_track(info, "uv_sv", i, 1.0))
 		var u := float(_track(info, "uv_u", i, 0.0))

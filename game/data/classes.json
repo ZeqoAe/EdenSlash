@@ -103,21 +103,39 @@
     "anim": "shoot24",
     "mult": 2.2,
     "arc": 360,
-    "radius": 3.4,
-    "leap": 8.0,
-    "leap_forward": 6.0,
+    "radius": 3.6,
+    "leap": 20.0,
+    "leap_forward": 5.5,
     "land_hit": true,
+    "flip": true,
     "finisher": true,
     "applies": {
      "stun": 1.0
     },
     "hit_fx": "s00541",
-    "desc": "Salto avant ; l'impact à la retombée frappe tout autour."
+    "desc": "Bond très haut en salto avant ; la retombée provoque une onde de choc tout autour."
    }
   ],
   "start_skills": 3,
   "lore_fr": "Un samouraï ne se fie qu'à son katana. Après des années d'entraînement, même la lame la plus lourde lui paraît légère comme une plume.",
   "weapon_name": "Katana",
+  "attributes": {
+   "base": {
+    "str": 12,
+    "agi": 10,
+    "int": 4,
+    "wis": 5,
+    "lck": 8
+   },
+   "growth": {
+    "str": 2.6,
+    "agi": 2.0,
+    "int": 0.5,
+    "wis": 0.8,
+    "lck": 1.4
+   }
+  },
+  "weapon_type": "katana",
   "name": "Samurai",
   "name_fr": "Samouraï",
   "lore": "Un samouraï ne se fie qu'à son katana. Après des années d'entraînement, même la lame la plus lourde lui paraît légère comme une plume.",
@@ -557,12 +575,14 @@
    {
     "name": "Tournoi de la hache",
     "anim": "shoot25",
-    "mult": 1.8,
+    "mult": 0.75,
+    "hits": 3,
+    "spin_turns": 3,
     "arc": 360,
     "radius": 4.2,
     "finisher": true,
     "hit_fx": "s00541",
-    "desc": "Tour complet sur toi-même, hache tendue."
+    "desc": "3 tours consécutifs hache tendue, un coup par tour (annulable par esquive ou saut)."
    }
   ],
   "start_skills": 3,
@@ -573,6 +593,23 @@
    "def": 6.0,
    "atk": 1.0
   },
+  "attributes": {
+   "base": {
+    "str": 14,
+    "agi": 7,
+    "int": 3,
+    "wis": 6,
+    "lck": 6
+   },
+   "growth": {
+    "str": 3.0,
+    "agi": 1.4,
+    "int": 0.4,
+    "wis": 1.0,
+    "lck": 1.0
+   }
+  },
+  "weapon_type": "axe",
   "name": "Warrior",
   "name_fr": "Guerrier",
   "lore": "Le guerrier encaisse en première ligne : sa hache lourde renverse et brise les rangs ennemis.",
@@ -767,6 +804,133 @@
     "fx": {
      "cast": "s13121",
      "hit": ""
+    }
+   },
+   {
+    "id": 50038,
+    "kind": "dash",
+    "mult": 1.6,
+    "radius": 2.8,
+    "arc": 120,
+    "dash": 8.0,
+    "cooldown": 10.0,
+    "applies": {
+     "stun": 2.0
+    },
+    "desc": "Ruée : fonce sur la cible (8 m), 160 % et renverse (2 s).",
+    "name": "Ruée",
+    "icon": "res://assets/ui/skills/e0028.png",
+    "anim": "shoot24",
+    "dmg_type": "phys",
+    "eden_name": "Onrush",
+    "fx": {
+     "cast": "",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50039,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 25.0,
+    "buff": {
+     "titan": 6.0
+    },
+    "desc": "Mur du titan : -50 % de dégâts subis mais -60 % de vitesse (6 s).",
+    "name": "Mur du titan",
+    "icon": "res://assets/ui/skills/e0029.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Titan's Wall",
+    "fx": {
+     "cast": "s12921",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50040,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 30.0,
+    "buff": {
+     "survival": 20.0
+    },
+    "desc": "Instinct de survie : +20 % de PV max et +15 % de soins reçus (20 s).",
+    "name": "Instinct de survie",
+    "icon": "res://assets/ui/skills/e0030.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Sense of Survival",
+    "fx": {
+     "cast": "s13021",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50151,
+    "kind": "spin",
+    "mult": 0.4,
+    "radius": 10.0,
+    "arc": 360,
+    "cooldown": 18.0,
+    "applies": {
+     "purgatory": 6.0
+    },
+    "desc": "Provocation de groupe : 40 % jusqu'à 10 m, les ennemis subissent +20 % de dégâts (6 s).",
+    "name": "Provocation de groupe",
+    "icon": "res://assets/ui/skills/e0248.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Group Provoke",
+    "fx": {
+     "cast": "s33021",
+     "hit": "s33041"
+    }
+   },
+   {
+    "id": 50152,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 30.0,
+    "buff": {
+     "frenzy": 12.0
+    },
+    "desc": "Frisson du combat : Frénésie, +30 % de vitesse d'attaque (12 s).",
+    "name": "Frisson du combat",
+    "icon": "res://assets/ui/skills/e0249.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Thrill of Battle",
+    "fx": {
+     "cast": "s33121",
+     "hit": ""
+    }
+   },
+   {
+    "id": 60053,
+    "kind": "spin",
+    "mult": 1.5,
+    "radius": 6.0,
+    "arc": 360,
+    "cooldown": 16.0,
+    "applies": {
+     "bleed": 8.0
+    },
+    "desc": "Lacération : 150 % jusqu'à 6 m et Saignement (8 s).",
+    "name": "Lacération",
+    "icon": "res://assets/ui/skills/e1078.png",
+    "anim": "shoot54",
+    "dmg_type": "phys",
+    "eden_name": "Lacerate",
+    "fx": {
+     "cast": "s101321",
+     "hit": "s100941"
     }
    }
   ],
@@ -1018,6 +1182,23 @@
    "atk_speed": 0.15,
    "move_speed": 0.08
   },
+  "attributes": {
+   "base": {
+    "str": 9,
+    "agi": 14,
+    "int": 4,
+    "wis": 5,
+    "lck": 10
+   },
+   "growth": {
+    "str": 1.6,
+    "agi": 3.0,
+    "int": 0.5,
+    "wis": 0.8,
+    "lck": 1.8
+   }
+  },
+  "weapon_type": "dagger",
   "name": "Thief",
   "name_fr": "Voleur",
   "lore": "Le voleur frappe vite et disparaît : dagues empoisonnées, pas de l'ombre et embuscades.",
@@ -1213,6 +1394,136 @@
     "fx": {
      "cast": "s14921",
      "hit": ""
+    }
+   },
+   {
+    "id": 50018,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 25.0,
+    "buff": {
+     "might": 15.0
+    },
+    "desc": "Encouragement : Puissance, +30 % de force (15 s).",
+    "name": "Encouragement",
+    "icon": "res://assets/ui/skills/e0008.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Encourage",
+    "fx": {
+     "cast": "s10821",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50062,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 20.0,
+    "buff": {
+     "haste": 10.0,
+     "swift": 15.0
+    },
+    "desc": "Galop : +30 % de vitesse (10 s) et +30 % d'agilité (15 s).",
+    "name": "Galop",
+    "icon": "res://assets/ui/skills/e0052.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Gallop",
+    "fx": {
+     "cast": "s15121",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50063,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 25.0,
+    "buff": {
+     "evasion": 6.0
+    },
+    "desc": "Fondu : Évasion, 40 % de chances d'éviter les coups (6 s).",
+    "name": "Fondu",
+    "icon": "res://assets/ui/skills/e0053.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Blend",
+    "fx": {
+     "cast": "s15221",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50157,
+    "kind": "cone",
+    "mult": 1.8,
+    "radius": 3.2,
+    "arc": 100,
+    "cooldown": 9.0,
+    "combo": {
+     "requires": "stun",
+     "double": true
+    },
+    "desc": "Entailles cruelles : 180 %, doublé sur une cible renversée.",
+    "name": "Entailles cruelles",
+    "icon": "res://assets/ui/skills/e0254.png",
+    "anim": "shoot23",
+    "dmg_type": "phys",
+    "eden_name": "Cruel Slashes",
+    "crit_bonus": 0.15,
+    "fx": {
+     "cast": "s33621",
+     "hit": "s33641"
+    }
+   },
+   {
+    "id": 50158,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 20.0,
+    "buff": {
+     "fury": 10.0
+    },
+    "desc": "Sans cœur : Fureur, +25 % de dégâts (10 s).",
+    "name": "Sans cœur",
+    "icon": "res://assets/ui/skills/e0255.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Heartless",
+    "fx": {
+     "cast": "s33721",
+     "hit": ""
+    }
+   },
+   {
+    "id": 60056,
+    "kind": "cone",
+    "mult": 2.0,
+    "radius": 3.0,
+    "arc": 90,
+    "cooldown": 10.0,
+    "applies": {
+     "shock": 6.0,
+     "scar": 3.0
+    },
+    "desc": "Brise-garde : 200 %, la cible subit +15 % de dégâts (6 s) et inflige -30 % (3 s).",
+    "name": "Brise-garde",
+    "icon": "res://assets/ui/skills/e1081.png",
+    "anim": "shoot24",
+    "dmg_type": "phys",
+    "eden_name": "Guard Shatter",
+    "fx": {
+     "cast": "s123721",
+     "hit": "s10641"
     }
    }
   ],
@@ -1461,6 +1772,23 @@
    "hp": 0.85,
    "atk": 0.95
   },
+  "attributes": {
+   "base": {
+    "str": 9,
+    "agi": 13,
+    "int": 5,
+    "wis": 6,
+    "lck": 9
+   },
+   "growth": {
+    "str": 1.4,
+    "agi": 2.8,
+    "int": 0.7,
+    "wis": 0.9,
+    "lck": 1.6
+   }
+  },
+  "weapon_type": "bow",
   "name": "Hunter",
   "name_fr": "Chasseur",
   "lore": "Le chasseur tient l'ennemi à distance : flèches perçantes, volées et pièges aveuglants.",
@@ -1667,6 +1995,142 @@
     "fx": {
      "cast": "s11321",
      "hit": ""
+    }
+   },
+   {
+    "id": 50024,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 25.0,
+    "buff": {
+     "keen": 15.0
+    },
+    "desc": "Volonté sauvage : Œil acéré, +25 % de critique physique et magique (15 s).",
+    "name": "Volonté sauvage",
+    "icon": "res://assets/ui/skills/e0014.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Wild Will",
+    "fx": {
+     "cast": "s11421",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50080,
+    "kind": "bolt",
+    "mult": 2.4,
+    "radius": 0.0,
+    "arc": 0,
+    "range": 15.0,
+    "projectile": "arrow",
+    "cooldown": 9.0,
+    "applies": {
+     "bleed": 6.0
+    },
+    "desc": "Tir douloureux : 240 % et Saignement (6 s).",
+    "name": "Tir douloureux",
+    "icon": "res://assets/ui/skills/e0070.png",
+    "anim": "shoot51",
+    "dmg_type": "phys",
+    "eden_name": "Painful Stab",
+    "fx": {
+     "cast": "",
+     "hit": "s16941"
+    }
+   },
+   {
+    "id": 50084,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 25.0,
+    "buff": {
+     "hunter_stance": 15.0
+    },
+    "desc": "Posture du chasseur : tes attaques de base ont 20 % de chances d'électrocuter la cible (15 s).",
+    "name": "Posture du chasseur",
+    "icon": "res://assets/ui/skills/e0074.png",
+    "anim": "shoot12",
+    "dmg_type": "phys",
+    "eden_name": "Hunter Stance",
+    "fx": {
+     "cast": "s115221",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50085,
+    "kind": "bolt",
+    "mult": 1.6,
+    "radius": 0.0,
+    "arc": 0,
+    "range": 20.0,
+    "pierce": 99,
+    "projectile": "shadow",
+    "cooldown": 12.0,
+    "applies": {
+     "disarm": 3.0
+    },
+    "desc": "Flèche perturbatrice : 160 % sur toute la ligne (20 m), désarme (3 s).",
+    "name": "Flèche perturbatrice",
+    "icon": "res://assets/ui/skills/e1085.png",
+    "anim": "shoot51",
+    "dmg_type": "phys",
+    "eden_name": "Disruptive Arrow",
+    "fx": {
+     "cast": "",
+     "hit": "s40541"
+    }
+   },
+   {
+    "id": 50163,
+    "kind": "bolt",
+    "mult": 2.0,
+    "radius": 0.0,
+    "arc": 0,
+    "range": 15.0,
+    "projectile": "magic",
+    "cooldown": 10.0,
+    "applies": {
+     "chill": 4.0
+    },
+    "desc": "Perce-mana : 200 % et ralentit (4 s).",
+    "name": "Perce-mana",
+    "icon": "res://assets/ui/skills/e1086.png",
+    "anim": "shoot51",
+    "dmg_type": "phys",
+    "eden_name": "Mana Piercer",
+    "crit_bonus": 0.25,
+    "fx": {
+     "cast": "",
+     "hit": "s114741"
+    }
+   },
+   {
+    "id": 50164,
+    "kind": "ground",
+    "mult": 1.0,
+    "radius": 6.0,
+    "arc": 360,
+    "range": 14.0,
+    "drop": "rain",
+    "cooldown": 16.0,
+    "applies": {
+     "poison": 12.0
+    },
+    "desc": "Pluie empoisonnée : 100 % dans une large zone et Poison (12 s).",
+    "name": "Pluie empoisonnée",
+    "icon": "res://assets/ui/skills/e0261.png",
+    "anim": "shoot63",
+    "dmg_type": "phys",
+    "eden_name": "Poison Arrow Rain",
+    "fx": {
+     "cast": "s34321",
+     "hit": "s34341"
     }
    }
   ],
@@ -1915,10 +2379,28 @@
   "base": {
    "hp": 1.1,
    "def": 3.0,
-   "atk": 0.9
+   "atk": 0.7,
+   "matk": 1.0
+  },
+  "attributes": {
+   "base": {
+    "str": 7,
+    "agi": 6,
+    "int": 11,
+    "wis": 14,
+    "lck": 6
+   },
+   "growth": {
+    "str": 1.0,
+    "agi": 1.0,
+    "int": 2.2,
+    "wis": 3.0,
+    "lck": 1.0
+   }
   },
   "attack_range": 9.0,
   "dmg_type": "mag",
+  "weapon_type": "scepter",
   "name": "Cleric",
   "name_fr": "Clerc",
   "lore": "Le clerc soigne ses blessures et foudroie le mal : zones sacrées, soins et barrières.",
@@ -2113,6 +2595,134 @@
     "fx": {
      "cast": "s19321",
      "hit": "s19341"
+    }
+   },
+   {
+    "id": 50030,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 90.0,
+    "buff": {
+     "angel": 60.0
+    },
+    "desc": "Résurrection : un ange gardien te relève une fois à 30 % des PV (60 s).",
+    "name": "Résurrection",
+    "icon": "res://assets/ui/skills/e0020.png",
+    "anim": "shoot12",
+    "dmg_type": "mag",
+    "eden_name": "Revive",
+    "fx": {
+     "cast": "s12021",
+     "hit": "s12041"
+    }
+   },
+   {
+    "id": 50105,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 45.0,
+    "buff": {
+     "grace": 30.0
+    },
+    "desc": "Grâce de sagesse : +30 % d'intelligence et de sagesse (30 s).",
+    "name": "Grâce de sagesse",
+    "icon": "res://assets/ui/skills/e0095.png",
+    "anim": "shoot12",
+    "dmg_type": "mag",
+    "eden_name": "Grace of Wisdom",
+    "fx": {
+     "cast": "s19421",
+     "hit": "s19441"
+    }
+   },
+   {
+    "id": 50107,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 45.0,
+    "buff": {
+     "vitality": 30.0
+    },
+    "desc": "Dure vérité : +15 % de PV max (30 s).",
+    "name": "Dure vérité",
+    "icon": "res://assets/ui/skills/e0097.png",
+    "anim": "shoot12",
+    "dmg_type": "mag",
+    "eden_name": "Hard Truth",
+    "fx": {
+     "cast": "s19621",
+     "hit": "s19641"
+    }
+   },
+   {
+    "id": 50108,
+    "kind": "heal",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "heal": 0.05,
+    "cleanse": true,
+    "cooldown": 15.0,
+    "buff": {
+     "regen": 5.0
+    },
+    "desc": "Vent purificateur : retire tes malus, rend 5 % des PV et Régénération (5 s).",
+    "name": "Vent purificateur",
+    "icon": "res://assets/ui/skills/e0098.png",
+    "anim": "shoot12",
+    "dmg_type": "mag",
+    "eden_name": "Purifying Wind",
+    "fx": {
+     "cast": "s19721",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50169,
+    "kind": "ground",
+    "mult": 1.0,
+    "radius": 5.0,
+    "arc": 360,
+    "range": 12.0,
+    "drop": "hammer",
+    "cooldown": 14.0,
+    "applies": {
+     "burn": 10.0
+    },
+    "desc": "Marteau de discipline : 100 % sacrés dans une zone et brûlure sacrée (10 s).",
+    "name": "Marteau de discipline",
+    "icon": "res://assets/ui/skills/e0266.png",
+    "anim": "shoot01",
+    "dmg_type": "mag",
+    "eden_name": "Hammer of Discipline",
+    "fx": {
+     "cast": "s14121",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50170,
+    "kind": "heal",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "heal": 0.4,
+    "cooldown": 20.0,
+    "desc": "Lumière divine : rend 40 % des PV max.",
+    "name": "Lumière divine",
+    "icon": "res://assets/ui/skills/e0267.png",
+    "anim": "shoot12",
+    "dmg_type": "mag",
+    "eden_name": "Divine Light",
+    "fx": {
+     "cast": "s34921",
+     "hit": "s34941"
     }
    }
   ],
@@ -2361,9 +2971,27 @@
   "attack_range": 10.0,
   "base": {
    "hp": 0.8,
-   "atk": 1.15
+   "atk": 0.5,
+   "matk": 1.15
+  },
+  "attributes": {
+   "base": {
+    "str": 4,
+    "agi": 8,
+    "int": 15,
+    "wis": 9,
+    "lck": 7
+   },
+   "growth": {
+    "str": 0.6,
+    "agi": 1.4,
+    "int": 3.2,
+    "wis": 1.6,
+    "lck": 1.2
+   }
   },
   "dmg_type": "mag",
+  "weapon_type": "staff",
   "name": "Magician",
   "name_fr": "Magicien",
   "lore": "Le magicien plie les éléments : feu, glace et foudre ravagent des zones entières.",
@@ -2570,6 +3198,117 @@
     "fx": {
      "cast": "s22221",
      "hit": ""
+    }
+   },
+   {
+    "id": 50129,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 25.0,
+    "buff": {
+     "keen": 20.0
+    },
+    "desc": "Brume : Œil acéré, +25 % de critique magique (20 s).",
+    "name": "Brume",
+    "icon": "res://assets/ui/skills/e0119.png",
+    "anim": "shoot12",
+    "dmg_type": "mag",
+    "eden_name": "Fog",
+    "fx": {
+     "cast": "s21821",
+     "hit": ""
+    }
+   },
+   {
+    "id": 50130,
+    "kind": "ground",
+    "mult": 0.3,
+    "radius": 6.0,
+    "arc": 360,
+    "range": 12.0,
+    "cooldown": 18.0,
+    "applies": {
+     "purgatory": 10.0
+    },
+    "desc": "Effondrement des résistances : 30 %, les ennemis de la zone subissent +20 % de dégâts (10 s).",
+    "name": "Effondrement des résistances",
+    "icon": "res://assets/ui/skills/e0120.png",
+    "anim": "shoot01",
+    "dmg_type": "mag",
+    "eden_name": "Resistance Collapse",
+    "fx": {
+     "cast": "s21921",
+     "hit": "s21941"
+    }
+   },
+   {
+    "id": 50131,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 25.0,
+    "buff": {
+     "solar": 15.0
+    },
+    "desc": "Gardien élémentaire : -25 % de dégâts subis (15 s).",
+    "name": "Gardien élémentaire",
+    "icon": "res://assets/ui/skills/e0121.png",
+    "anim": "shoot12",
+    "dmg_type": "mag",
+    "eden_name": "Elemental Guardian",
+    "fx": {
+     "cast": "s22021",
+     "hit": "s22041"
+    }
+   },
+   {
+    "id": 50132,
+    "kind": "bolt",
+    "mult": 2.6,
+    "radius": 0.0,
+    "arc": 0,
+    "range": 25.0,
+    "pierce": 99,
+    "projectile": "magic",
+    "cooldown": 8.0,
+    "applies": {
+     "shock": 4.0
+    },
+    "desc": "Surcharge : éclair de 260 % sur toute la ligne (25 m), électrocute (4 s).",
+    "name": "Surcharge",
+    "icon": "res://assets/ui/skills/e0730.png",
+    "anim": "shoot01",
+    "dmg_type": "mag",
+    "eden_name": "Overcharging",
+    "crit_bonus": 0.1,
+    "fx": {
+     "cast": "",
+     "hit": "s108541"
+    }
+   },
+   {
+    "id": 50176,
+    "kind": "ground",
+    "mult": 2.2,
+    "radius": 7.0,
+    "arc": 360,
+    "range": 14.0,
+    "cooldown": 20.0,
+    "applies": {
+     "burn": 5.0
+    },
+    "desc": "Réaction de fusion : 220 % de feu dans une large zone et Brûlure (5 s).",
+    "name": "Réaction de fusion",
+    "icon": "res://assets/ui/skills/e0273.png",
+    "anim": "shoot01",
+    "dmg_type": "mag",
+    "eden_name": "Fusion Reaction",
+    "fx": {
+     "cast": "s35521",
+     "hit": "s35541"
     }
    }
   ],

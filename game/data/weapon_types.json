@@ -1,0 +1,437 @@
+{
+ "katana": {
+  "name": "Katana",
+  "class": "samurai",
+  "battle": "battle13",
+  "dmg_type": "phys",
+  "combo": [
+   {
+    "name": "Taille ascendante",
+    "anim": "attack25",
+    "mult": 1.0,
+    "arc": 150,
+    "hit_fx": "s00141"
+   },
+   {
+    "name": "Taille descendante",
+    "anim": "attack26",
+    "mult": 1.15,
+    "arc": 150,
+    "hit_fx": "s00241"
+   },
+   {
+    "name": "Salto du faucon",
+    "anim": "shoot24",
+    "mult": 2.2,
+    "arc": 360,
+    "radius": 3.6,
+    "leap": 20.0,
+    "leap_forward": 5.5,
+    "land_hit": true,
+    "flip": true,
+    "finisher": true,
+    "applies": {
+     "stun": 1.0
+    },
+    "hit_fx": "s00541",
+    "desc": "Bond très haut en salto avant ; la retombée provoque une onde de choc tout autour."
+   }
+  ],
+  "weapons": [
+   {
+    "code": "W21301",
+    "model": "res://assets/weapons/w213.glb",
+    "texture": "res://assets/weapons/textures/w21301.png",
+    "icon": "res://assets/weapons/icons/w21301.png"
+   },
+   {
+    "code": "W21401",
+    "model": "res://assets/weapons/w214.glb",
+    "texture": "res://assets/weapons/textures/w21401.png",
+    "icon": "res://assets/weapons/icons/w21401.png"
+   },
+   {
+    "code": "W21501",
+    "model": "res://assets/weapons/w215.glb",
+    "texture": "res://assets/weapons/textures/w21501.png",
+    "icon": "res://assets/weapons/icons/w21501.png"
+   },
+   {
+    "code": "W21601",
+    "model": "res://assets/weapons/w216.glb",
+    "texture": "res://assets/weapons/textures/w21601.png",
+    "icon": "res://assets/weapons/icons/w21601.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w21601.png"
+ },
+ "axe": {
+  "name": "Hache",
+  "class": "warrior",
+  "battle": "battle03",
+  "dmg_type": "phys",
+  "combo": [
+   {
+    "name": "Coup de hache",
+    "anim": "attack08",
+    "mult": 1.3,
+    "arc": 140,
+    "radius": 3.2,
+    "max_targets": 3,
+    "hit_fx": "s00241",
+    "desc": "Large coup de hache qui touche les 3 ennemis les plus proches."
+   },
+   {
+    "name": "Crochet",
+    "anim": "attack09",
+    "mult": 1.0,
+    "arc": 120,
+    "radius": 4.5,
+    "pull": 3.0,
+    "applies": {
+     "stun": 1.0
+    },
+    "hit_fx": "s00241",
+    "desc": "La lame accroche les ennemis et les attire vers toi."
+   },
+   {
+    "name": "Tournoi de la hache",
+    "anim": "shoot25",
+    "mult": 0.75,
+    "hits": 3,
+    "spin_turns": 3,
+    "arc": 360,
+    "radius": 4.2,
+    "finisher": true,
+    "hit_fx": "s00541",
+    "desc": "3 tours consécutifs hache tendue, un coup par tour (annulable par esquive ou saut)."
+   }
+  ],
+  "weapons": [
+   {
+    "code": "W20101",
+    "model": "res://assets/weapons/w201.glb",
+    "texture": "res://assets/weapons/textures/w20101.png",
+    "icon": "res://assets/weapons/icons/w20101.png"
+   },
+   {
+    "code": "W20201",
+    "model": "res://assets/weapons/w202.glb",
+    "texture": "res://assets/weapons/textures/w20201.png",
+    "icon": "res://assets/weapons/icons/w20201.png"
+   },
+   {
+    "code": "W20301",
+    "model": "res://assets/weapons/w203.glb",
+    "texture": "res://assets/weapons/textures/w20301.png",
+    "icon": "res://assets/weapons/icons/w20301.png"
+   },
+   {
+    "code": "W20401",
+    "model": "res://assets/weapons/w204.glb",
+    "texture": "res://assets/weapons/textures/w20401.png",
+    "icon": "res://assets/weapons/icons/w20401.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w20401.png"
+ },
+ "dagger": {
+  "name": "Dague",
+  "class": "thief",
+  "battle": "battle02",
+  "dmg_type": "phys",
+  "combo": [
+   {
+    "name": "Tourbillon de lames",
+    "anim": "attack05",
+    "mult": 0.8,
+    "arc": 360,
+    "radius": 2.8,
+    "speed": 1.2,
+    "hit_fx": "s00141",
+    "desc": "Les dagues tournoient tout autour de toi."
+   },
+   {
+    "name": "Ruée tournoyante",
+    "anim": "attack06",
+    "mult": 1.0,
+    "arc": 360,
+    "radius": 3.0,
+    "dash": 4.0,
+    "speed": 1.2,
+    "hit_fx": "s00241",
+    "desc": "Fonce de 4 m puis tourbillonne."
+   },
+   {
+    "name": "Fumigène",
+    "anim": "shoot23",
+    "mult": 1.4,
+    "arc": 360,
+    "radius": 3.5,
+    "move": 5.0,
+    "finisher": true,
+    "applies": {
+     "chill": 3.0
+    },
+    "self_status": {
+     "invisible": 2.0,
+     "evasion": 4.0
+    },
+    "hit_fx": "s00541",
+    "desc": "Bond de 5 m ; une bombe fumigène explose à l'arrivée : tu deviens invisible et insaisissable."
+   }
+  ],
+  "weapons": [
+   {
+    "code": "W10801",
+    "model": "res://assets/weapons/w108.glb",
+    "texture": "res://assets/weapons/textures/w10801.png",
+    "icon": "res://assets/weapons/icons/w10801.png"
+   },
+   {
+    "code": "W10901",
+    "model": "res://assets/weapons/w109.glb",
+    "texture": "res://assets/weapons/textures/w10901.png",
+    "icon": "res://assets/weapons/icons/w10901.png"
+   },
+   {
+    "code": "W11001",
+    "model": "res://assets/weapons/w110.glb",
+    "texture": "res://assets/weapons/textures/w11001.png",
+    "icon": "res://assets/weapons/icons/w11001.png"
+   },
+   {
+    "code": "W11101",
+    "model": "res://assets/weapons/w111.glb",
+    "texture": "res://assets/weapons/textures/w11101.png",
+    "icon": "res://assets/weapons/icons/w11101.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w11101.png"
+ },
+ "bow": {
+  "name": "Arc",
+  "class": "hunter",
+  "battle": "battle05",
+  "dmg_type": "phys",
+  "bone": "Bip01 L Hand",
+  "attack_range": 13.0,
+  "combo": [
+   {
+    "name": "Flèche",
+    "anim": "attack12",
+    "mult": 1.0,
+    "bolt": true,
+    "projectile": "arrow",
+    "hit_fx": "s00141",
+    "desc": "Une flèche rapide."
+   },
+   {
+    "name": "Triple flèche",
+    "anim": "attack12",
+    "mult": 0.7,
+    "bolt": true,
+    "volley": 3,
+    "spread": 24,
+    "projectile": "arrow",
+    "hit_fx": "s00141",
+    "desc": "3 flèches en éventail."
+   },
+   {
+    "name": "Pluie de flèches",
+    "anim": "shoot50",
+    "kind": "ground",
+    "range": 12.0,
+    "mult": 1.5,
+    "radius": 4.0,
+    "arc": 360,
+    "drop": "rain",
+    "finisher": true,
+    "hit_fx": "s00241",
+    "desc": "Une volée retombe sur la zone visée (12 m)."
+   }
+  ],
+  "weapons": [
+   {
+    "code": "W50101",
+    "model": "res://assets/weapons/w501.glb",
+    "texture": "res://assets/weapons/textures/w50101.png",
+    "icon": "res://assets/weapons/icons/w50101.png",
+    "bone": "Bip01 L Hand"
+   },
+   {
+    "code": "W50201",
+    "model": "res://assets/weapons/w502.glb",
+    "texture": "res://assets/weapons/textures/w50201.png",
+    "icon": "res://assets/weapons/icons/w50201.png",
+    "bone": "Bip01 L Hand"
+   },
+   {
+    "code": "W50301",
+    "model": "res://assets/weapons/w503.glb",
+    "texture": "res://assets/weapons/textures/w50301.png",
+    "icon": "res://assets/weapons/icons/w50301.png",
+    "bone": "Bip01 L Hand"
+   },
+   {
+    "code": "W50401",
+    "model": "res://assets/weapons/w504.glb",
+    "texture": "res://assets/weapons/textures/w50401.png",
+    "icon": "res://assets/weapons/icons/w50401.png",
+    "bone": "Bip01 L Hand"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w50401.png"
+ },
+ "scepter": {
+  "name": "Sceptre",
+  "class": "cleric",
+  "battle": "battle04",
+  "dmg_type": "mag",
+  "attack_range": 9.0,
+  "combo": [
+   {
+    "name": "Éclat sacré",
+    "anim": "attack10",
+    "kind": "ground",
+    "range": 9.0,
+    "mult": 0.9,
+    "radius": 2.5,
+    "arc": 360,
+    "hit_fx": "s19141",
+    "desc": "Petite explosion de lumière sur la zone visée."
+   },
+   {
+    "name": "Marteau céleste",
+    "anim": "attack11",
+    "kind": "ground",
+    "range": 9.0,
+    "mult": 1.3,
+    "radius": 3.5,
+    "arc": 360,
+    "drop": "hammer",
+    "applies": {
+     "stun": 1.0
+    },
+    "hit_fx": "s11641",
+    "desc": "Un marteau de lumière tombe du ciel."
+   },
+   {
+    "name": "Prière de groupe",
+    "anim": "shoot12",
+    "kind": "heal",
+    "heal": 0.06,
+    "mult": 0.0,
+    "radius": 0.0,
+    "finisher": true,
+    "self_status": {
+     "regen": 3.0
+    },
+    "desc": "Soigne le clerc (et ses alliés à venir)."
+   }
+  ],
+  "weapons": [
+   {
+    "code": "W30101",
+    "model": "res://assets/weapons/w301.glb",
+    "texture": "res://assets/weapons/textures/w30101.png",
+    "icon": "res://assets/weapons/icons/w30101.png"
+   },
+   {
+    "code": "W30201",
+    "model": "res://assets/weapons/w302.glb",
+    "texture": "res://assets/weapons/textures/w30201.png",
+    "icon": "res://assets/weapons/icons/w30201.png"
+   },
+   {
+    "code": "W30301",
+    "model": "res://assets/weapons/w303.glb",
+    "texture": "res://assets/weapons/textures/w30301.png",
+    "icon": "res://assets/weapons/icons/w30301.png"
+   },
+   {
+    "code": "W30401",
+    "model": "res://assets/weapons/w304.glb",
+    "texture": "res://assets/weapons/textures/w30401.png",
+    "icon": "res://assets/weapons/icons/w30401.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w30401.png"
+ },
+ "staff": {
+  "name": "Bâton",
+  "class": "magician",
+  "battle": "battle07",
+  "dmg_type": "mag",
+  "attack_range": 10.0,
+  "combo": [
+   {
+    "name": "Explosion arcanique",
+    "anim": "attack14",
+    "kind": "ground",
+    "range": 10.0,
+    "mult": 1.0,
+    "radius": 2.5,
+    "arc": 360,
+    "hit_fx": "s12141",
+    "desc": "Explosion magique sur la zone visée."
+   },
+   {
+    "name": "Puits gravitationnel",
+    "anim": "shoot01",
+    "kind": "ground",
+    "range": 10.0,
+    "mult": 0.8,
+    "radius": 4.0,
+    "arc": 360,
+    "pull": 3.0,
+    "applies": {
+     "chill": 2.0
+    },
+    "hit_fx": "s12241",
+    "desc": "Une zone qui aspire les ennemis vers son centre."
+   },
+   {
+    "name": "Pas éthéré",
+    "anim": "jump02",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "move": 6.0,
+    "move_dir": "evade",
+    "finisher": true,
+    "self_status": {
+     "invisible": 2.5
+    },
+    "desc": "Glisse de 6 m (direction de déplacement, sinon loin du danger) et devient invisible pour se replacer."
+   }
+  ],
+  "weapons": [
+   {
+    "code": "W60101",
+    "model": "res://assets/weapons/w601.glb",
+    "texture": "res://assets/weapons/textures/w60101.png",
+    "icon": "res://assets/weapons/icons/w60101.png"
+   },
+   {
+    "code": "W60201",
+    "model": "res://assets/weapons/w602.glb",
+    "texture": "res://assets/weapons/textures/w60201.png",
+    "icon": "res://assets/weapons/icons/w60201.png"
+   },
+   {
+    "code": "W60301",
+    "model": "res://assets/weapons/w603.glb",
+    "texture": "res://assets/weapons/textures/w60301.png",
+    "icon": "res://assets/weapons/icons/w60301.png"
+   },
+   {
+    "code": "W60401",
+    "model": "res://assets/weapons/w604.glb",
+    "texture": "res://assets/weapons/textures/w60401.png",
+    "icon": "res://assets/weapons/icons/w60401.png"
+   }
+  ],
+  "icon": "res://assets/weapons/icons/w60401.png"
+ }
+}

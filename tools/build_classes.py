@@ -343,17 +343,18 @@ COMBOS = {
     'samurai': [
         {'name': 'Taille ascendante', 'anim': 'attack25', 'mult': 1.0, 'arc': 150, 'hit_fx': 's00141'},
         {'name': 'Taille descendante', 'anim': 'attack26', 'mult': 1.15, 'arc': 150, 'hit_fx': 's00241'},
-        {'name': 'Salto du faucon', 'anim': 'shoot24', 'mult': 2.2, 'arc': 360, 'radius': 3.4, 'leap': 8.0,
-         'leap_forward': 6.0, 'land_hit': True, 'finisher': True, 'applies': {'stun': 1.0}, 'hit_fx': 's00541',
-         'desc': "Salto avant ; l'impact à la retombée frappe tout autour."},
+        {'name': 'Salto du faucon', 'anim': 'shoot24', 'mult': 2.2, 'arc': 360, 'radius': 3.6, 'leap': 20.0,
+         'leap_forward': 5.5, 'land_hit': True, 'flip': True, 'finisher': True, 'applies': {'stun': 1.0}, 'hit_fx': 's00541',
+         'desc': "Bond très haut en salto avant ; la retombée provoque une onde de choc tout autour."},
     ],
     'warrior': [
         {'name': 'Coup de hache', 'anim': 'attack08', 'mult': 1.3, 'arc': 140, 'radius': 3.2, 'max_targets': 3,
          'hit_fx': 's00241', 'desc': 'Large coup de hache qui touche les 3 ennemis les plus proches.'},
         {'name': 'Crochet', 'anim': 'attack09', 'mult': 1.0, 'arc': 120, 'radius': 4.5, 'pull': 3.0,
          'applies': {'stun': 1.0}, 'hit_fx': 's00241', 'desc': 'La lame accroche les ennemis et les attire vers toi.'},
-        {'name': 'Tournoi de la hache', 'anim': 'shoot25', 'mult': 1.8, 'arc': 360, 'radius': 4.2, 'finisher': True,
-         'hit_fx': 's00541', 'desc': 'Tour complet sur toi-même, hache tendue.'},
+        {'name': 'Tournoi de la hache', 'anim': 'shoot25', 'mult': 0.75, 'hits': 3, 'spin_turns': 3, 'arc': 360,
+         'radius': 4.2, 'finisher': True, 'hit_fx': 's00541',
+         'desc': '3 tours consécutifs hache tendue, un coup par tour (annulable par esquive ou saut).'},
     ],
     'thief': [
         {'name': 'Tourbillon de lames', 'anim': 'attack05', 'mult': 0.8, 'arc': 360, 'radius': 2.8, 'speed': 1.2,
@@ -395,19 +396,129 @@ COMBOS = {
 }
 for _cid, _combo in COMBOS.items():
     CLASSES[_cid]['combo'] = _combo
+# attributs d'Eden (Force, Agilité, Intelligence, Sagesse, Chance) : base au niveau 1 et croissance
+ATTRIBUTES = {
+    'samurai': ({'str': 12, 'agi': 10, 'int': 4, 'wis': 5, 'lck': 8}, {'str': 2.6, 'agi': 2.0, 'int': 0.5, 'wis': 0.8, 'lck': 1.4}),
+    'warrior': ({'str': 14, 'agi': 7, 'int': 3, 'wis': 6, 'lck': 6}, {'str': 3.0, 'agi': 1.4, 'int': 0.4, 'wis': 1.0, 'lck': 1.0}),
+    'thief': ({'str': 9, 'agi': 14, 'int': 4, 'wis': 5, 'lck': 10}, {'str': 1.6, 'agi': 3.0, 'int': 0.5, 'wis': 0.8, 'lck': 1.8}),
+    'hunter': ({'str': 9, 'agi': 13, 'int': 5, 'wis': 6, 'lck': 9}, {'str': 1.4, 'agi': 2.8, 'int': 0.7, 'wis': 0.9, 'lck': 1.6}),
+    'cleric': ({'str': 7, 'agi': 6, 'int': 11, 'wis': 14, 'lck': 6}, {'str': 1.0, 'agi': 1.0, 'int': 2.2, 'wis': 3.0, 'lck': 1.0}),
+    'magician': ({'str': 4, 'agi': 8, 'int': 15, 'wis': 9, 'lck': 7}, {'str': 0.6, 'agi': 1.4, 'int': 3.2, 'wis': 1.6, 'lck': 1.2}),
+}
+for _cid, (_b, _g) in ATTRIBUTES.items():
+    CLASSES[_cid]['attributes'] = {'base': _b, 'growth': _g}
+CLASSES['cleric']['base'].update({'atk': 0.7, 'matk': 1.0})
+CLASSES['magician']['base'].update({'atk': 0.5, 'matk': 1.15})
 CLASSES['cleric']['attack_range'] = 9.0
 CLASSES['magician']['attack_range'] = 10.0
 # type de dégâts (infobulles) et bonus de critique propres à certaines compétences
 for _cid in ('cleric', 'magician'):
     CLASSES[_cid]['dmg_type'] = 'mag'
+# --- sorts complémentaires : chaque classe reçoit tous ses sorts d'Eden (c_class col. 34-43
+# + les 5 sorts novices de la classe de base), adaptés au hack and slash ----------------------
+EXTRA_SKILLS = {
+    'warrior': [
+        {'id': 50038, 'kind': 'dash', 'mult': 1.6, 'radius': 2.8, 'arc': 120, 'dash': 8.0, 'cooldown': 10.0, 'applies': {'stun': 2.0},
+         'desc': "Ruée : fonce sur la cible (8 m), {dmg} % et renverse (2 s)."},
+        {'id': 50039, 'kind': 'buff', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'cooldown': 25.0, 'buff': {'titan': 6.0},
+         'desc': "Mur du titan : -50 % de dégâts subis mais -60 % de vitesse (6 s)."},
+        {'id': 50040, 'kind': 'buff', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'cooldown': 30.0, 'buff': {'survival': 20.0},
+         'desc': "Instinct de survie : +20 % de PV max et +15 % de soins reçus (20 s)."},
+        {'id': 50151, 'kind': 'spin', 'mult': 0.4, 'radius': 10.0, 'arc': 360, 'cooldown': 18.0, 'applies': {'purgatory': 6.0},
+         'desc': "Provocation de groupe : {dmg} % jusqu'à 10 m, les ennemis subissent +20 % de dégâts (6 s)."},
+        {'id': 50152, 'kind': 'buff', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'cooldown': 30.0, 'buff': {'frenzy': 12.0},
+         'desc': "Frisson du combat : Frénésie, +30 % de vitesse d'attaque (12 s)."},
+        {'id': 60053, 'kind': 'spin', 'mult': 1.5, 'radius': 6.0, 'arc': 360, 'cooldown': 16.0, 'applies': {'bleed': 8.0},
+         'desc': "Lacération : {dmg} % jusqu'à 6 m et Saignement (8 s)."},
+    ],
+    'thief': [
+        {'id': 50018, 'kind': 'buff', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'cooldown': 25.0, 'buff': {'might': 15.0},
+         'desc': "Encouragement : Puissance, +30 % de force (15 s)."},
+        {'id': 50062, 'kind': 'buff', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'cooldown': 20.0, 'buff': {'haste': 10.0, 'swift': 15.0},
+         'desc': "Galop : +30 % de vitesse (10 s) et +30 % d'agilité (15 s)."},
+        {'id': 50063, 'kind': 'buff', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'cooldown': 25.0, 'buff': {'evasion': 6.0},
+         'desc': "Fondu : Évasion, 40 % de chances d'éviter les coups (6 s)."},
+        {'id': 50157, 'kind': 'cone', 'mult': 1.8, 'radius': 3.2, 'arc': 100, 'cooldown': 9.0,
+         'combo': {'requires': 'stun', 'double': True},
+         'desc': "Entailles cruelles : {dmg} %, doublé sur une cible renversée."},
+        {'id': 50158, 'kind': 'buff', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'cooldown': 20.0, 'buff': {'fury': 10.0},
+         'desc': "Sans cœur : Fureur, +25 % de dégâts (10 s)."},
+        {'id': 60056, 'kind': 'cone', 'mult': 2.0, 'radius': 3.0, 'arc': 90, 'cooldown': 10.0, 'applies': {'shock': 6.0, 'scar': 3.0},
+         'desc': "Brise-garde : {dmg} %, la cible subit +15 % de dégâts (6 s) et inflige -30 % (3 s)."},
+    ],
+    'hunter': [
+        {'id': 50024, 'kind': 'buff', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'cooldown': 25.0, 'buff': {'keen': 15.0},
+         'desc': "Volonté sauvage : Œil acéré, +25 % de critique physique et magique (15 s)."},
+        {'id': 50080, 'kind': 'bolt', 'mult': 2.4, 'radius': 0.0, 'arc': 0, 'range': 15.0, 'projectile': 'arrow', 'cooldown': 9.0,
+         'applies': {'bleed': 6.0}, 'desc': "Tir douloureux : {dmg} % et Saignement (6 s)."},
+        {'id': 50084, 'kind': 'buff', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'cooldown': 25.0, 'buff': {'hunter_stance': 15.0},
+         'desc': "Posture du chasseur : tes attaques de base ont 20 % de chances d'électrocuter la cible (15 s)."},
+        {'id': 50085, 'kind': 'bolt', 'mult': 1.6, 'radius': 0.0, 'arc': 0, 'range': 20.0, 'pierce': 99, 'projectile': 'shadow', 'cooldown': 12.0,
+         'applies': {'disarm': 3.0}, 'desc': "Flèche perturbatrice : {dmg} % sur toute la ligne (20 m), désarme (3 s)."},
+        {'id': 50163, 'kind': 'bolt', 'mult': 2.0, 'radius': 0.0, 'arc': 0, 'range': 15.0, 'projectile': 'magic', 'cooldown': 10.0,
+         'applies': {'chill': 4.0}, 'desc': "Perce-mana : {dmg} % et ralentit (4 s)."},
+        {'id': 50164, 'kind': 'ground', 'mult': 1.0, 'radius': 6.0, 'arc': 360, 'range': 14.0, 'drop': 'rain', 'cooldown': 16.0,
+         'applies': {'poison': 12.0}, 'desc': "Pluie empoisonnée : {dmg} % dans une large zone et Poison (12 s)."},
+    ],
+    'cleric': [
+        {'id': 50030, 'kind': 'buff', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'cooldown': 90.0, 'buff': {'angel': 60.0},
+         'desc': "Résurrection : un ange gardien te relève une fois à 30 % des PV (60 s)."},
+        {'id': 50105, 'kind': 'buff', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'cooldown': 45.0, 'buff': {'grace': 30.0},
+         'desc': "Grâce de sagesse : +30 % d'intelligence et de sagesse (30 s)."},
+        {'id': 50107, 'kind': 'buff', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'cooldown': 45.0, 'buff': {'vitality': 30.0},
+         'desc': "Dure vérité : +15 % de PV max (30 s)."},
+        {'id': 50108, 'kind': 'heal', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'heal': 0.05, 'cleanse': True, 'cooldown': 15.0, 'buff': {'regen': 5.0},
+         'desc': "Vent purificateur : retire tes malus, rend 5 % des PV et Régénération (5 s)."},
+        {'id': 50169, 'kind': 'ground', 'mult': 1.0, 'radius': 5.0, 'arc': 360, 'range': 12.0, 'drop': 'hammer', 'cooldown': 14.0,
+         'applies': {'burn': 10.0}, 'desc': "Marteau de discipline : {dmg} % sacrés dans une zone et brûlure sacrée (10 s)."},
+        {'id': 50170, 'kind': 'heal', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'heal': 0.4, 'cooldown': 20.0,
+         'desc': "Lumière divine : rend 40 % des PV max."},
+    ],
+    'magician': [
+        {'id': 50129, 'kind': 'buff', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'cooldown': 25.0, 'buff': {'keen': 20.0},
+         'desc': "Brume : Œil acéré, +25 % de critique magique (20 s)."},
+        {'id': 50130, 'kind': 'ground', 'mult': 0.3, 'radius': 6.0, 'arc': 360, 'range': 12.0, 'cooldown': 18.0, 'applies': {'purgatory': 10.0},
+         'desc': "Effondrement des résistances : {dmg} %, les ennemis de la zone subissent +20 % de dégâts (10 s)."},
+        {'id': 50131, 'kind': 'buff', 'mult': 0.0, 'radius': 0.0, 'arc': 0, 'cooldown': 25.0, 'buff': {'solar': 15.0},
+         'desc': "Gardien élémentaire : -25 % de dégâts subis (15 s)."},
+        {'id': 50132, 'kind': 'bolt', 'mult': 2.6, 'radius': 0.0, 'arc': 0, 'range': 25.0, 'pierce': 99, 'projectile': 'magic', 'cooldown': 8.0,
+         'applies': {'shock': 4.0}, 'desc': "Surcharge : éclair de {dmg} % sur toute la ligne (25 m), électrocute (4 s)."},
+        {'id': 50176, 'kind': 'ground', 'mult': 2.2, 'radius': 7.0, 'arc': 360, 'range': 14.0, 'cooldown': 20.0, 'applies': {'burn': 5.0},
+         'desc': "Réaction de fusion : {dmg} % de feu dans une large zone et Brûlure (5 s)."},
+    ],
+}
+for _cid, _extra in EXTRA_SKILLS.items():
+    CLASSES[_cid]['skills'] = CLASSES[_cid]['skills'] + _extra
+CRIT_BONUS_EXTRA = {50157: 0.15, 50163: 0.25, 50132: 0.1}
+
+# --- types d'arme : le combo d'auto-attaque, la posture et la portée suivent l'arme ------
+# (on peut jouer magicien à la hache, guerrier au bâton... ; les sorts restent ceux de la classe)
+WEAPON_TYPES = {
+    'katana': {'name': 'Katana', 'class': 'samurai', 'codes': ['W21301', 'W21401', 'W21501', 'W21601'], 'battle': 'battle13',
+               'dmg_type': 'phys'},
+    'axe': {'name': 'Hache', 'class': 'warrior', 'codes': ['W20101', 'W20201', 'W20301', 'W20401'], 'battle': 'battle03',
+            'dmg_type': 'phys'},
+    'dagger': {'name': 'Dague', 'class': 'thief', 'codes': ['W10801', 'W10901', 'W11001', 'W11101'], 'battle': 'battle02',
+               'dmg_type': 'phys'},
+    'bow': {'name': 'Arc', 'class': 'hunter', 'codes': ['W50101', 'W50201', 'W50301', 'W50401'], 'battle': 'battle05',
+            'dmg_type': 'phys', 'bone': 'Bip01 L Hand', 'attack_range': 13.0},
+    'scepter': {'name': 'Sceptre', 'class': 'cleric', 'codes': ['W30101', 'W30201', 'W30301', 'W30401'], 'battle': 'battle04',
+                'dmg_type': 'mag', 'attack_range': 9.0},
+    'staff': {'name': 'Bâton', 'class': 'magician', 'codes': ['W60101', 'W60201', 'W60301', 'W60401'], 'battle': 'battle07',
+              'dmg_type': 'mag', 'attack_range': 10.0},
+}
+for _wt, _w in WEAPON_TYPES.items():
+    CLASSES[_w['class']]['weapon_type'] = _wt
+
 SAMURAI_FR = {50181: 'Hirondelle déchue', 50182: 'Vent solaire', 50183: 'Entaille en croix', 50184: 'Purgatoire',
               50185: 'Danse des grues', 50186: 'Langue de Marduk', 50187: "Lame d'Asura", 50188: 'Estoc',
               50189: 'Volonté du sanctuaire'}
 CRIT_BONUS = {50058: 0.30, 50021: 0.20, 50186: 0.15, 50188: 0.10, 50012: 0.10, 50126: 0.10, 50103: 0.10, 50057: 0.15}
 
-ANIM_FILTER = (r'stand0[1-3]|battle0[2-7]|battle13|move0[1-4]|move3[7-9]|move4[0-3]|attack0[5-9]|attack1[0-4]'
-               r'|attack2[5-6]|shoot0[12]|shoot12|shoot2[3-5]|shoot5[014]|shoot63'
-               r'|hurt13|hurt01|death01|jump0[1-3]')
+ANIM_FILTER = (r'stand0[1-3]|battle\d\d|move0[1-4]|move3[7-9]|move4[0-3]|attack\d\d|shoot0[1-3]|shoot1[0-2]'
+               r'|shoot2[3-5]|shoot5\d|shoot6[0-4]|magic0[1-3]|hurt13|hurt01|death01|jump0[1-3]')
+# toutes les postures (battleXX) et attaques (attackXX) d'arme : n'importe quelle classe peut
+# porter n'importe quelle arme ; shootXX = animations de sorts d'Eden (voir eden_kit/m_motion_ids.json)
 
 
 def clean_eden_text(s):
@@ -450,7 +561,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--skip-models', action='store_true')
     a = ap.parse_args()
-    idx = {e['path']: e for e in edenpkg.read_index(nif2gltf.PKG)}
+    if edenpkg.kit_mode(nif2gltf.PKG):
+        print('mode kit : pas de client Eden, modèles et effets déjà exportés réutilisés')
+        a.skip_models = True
+    idx = {e['path']: e for e in edenpkg.load_index(nif2gltf.PKG)}
     read = lambda p: edenpkg.read_file(nif2gltf.PKG, idx[p])  # noqa: E731
     from PIL import Image
 
@@ -461,13 +575,14 @@ def main():
 
     def export_icon(code, folder='skillicon', res_dir='assets/ui/skills'):
         p = 'ui/%s/%s.dds' % (folder, code.lower())
-        if p not in idx:
-            return ''
         out_dir = os.path.join(GAME, res_dir)
-        os.makedirs(out_dir, exist_ok=True)
         dst = os.path.join(out_dir, code.lower() + '.png')
-        if not os.path.exists(dst):
-            Image.open(io.BytesIO(read(p))).convert('RGBA').save(dst)
+        if os.path.exists(dst):
+            return 'res://%s/%s.png' % (res_dir, code.lower())
+        if p not in idx or idx[p].get('pkg') is None:
+            return ''
+        os.makedirs(out_dir, exist_ok=True)
+        Image.open(io.BytesIO(read(p))).convert('RGBA').save(dst)
         return 'res://%s/%s.png' % (res_dir, code.lower())
 
     out_classes = {}
@@ -485,7 +600,7 @@ def main():
         skills = []
         for s in c['skills']:
             r = cspell[s['id']]
-            anim = MOTION_ID.get(int(r[3]), 'shoot23')
+            anim = MOTION_ID.get(int(r[3]) if r[3].isdigit() else 0, 'shoot24')
             used_anims.add(anim)
             sk = dict(s)
             # nom français (début de la description « Nom : ... »), nom d'Eden gardé en référence
@@ -495,8 +610,8 @@ def main():
             sk['desc'] = s['desc'].format(dmg=int(round(s['mult'] * 100)))
             sk['dmg_type'] = s.get('dmg_type', c.get('dmg_type', 'phys'))
             sk['eden_name'] = tspell[s['id']][0]
-            if s['id'] in CRIT_BONUS:
-                sk['crit_bonus'] = CRIT_BONUS[s['id']]
+            if s['id'] in CRIT_BONUS or s['id'] in CRIT_BONUS_EXTRA:
+                sk['crit_bonus'] = CRIT_BONUS.get(s['id'], CRIT_BONUS_EXTRA.get(s['id']))
             # effets d'Eden : incantation (code E -> s), impact (colonne 10)
             cast = ('s' + r[5][1:]).lower() if r[5].upper().startswith('E') else ''
             hit = r[10].lower()
@@ -571,8 +686,33 @@ def main():
     # matériaux d'amélioration et or
     item_icons['materials'] = {k: export_icon(c, 'itemicon', 'assets/ui/items')
                                for k, c in {'fragment': 'i00206', 'essence': 'i00222', 'crystal': 'i00232', 'gold': 'i00228'}.items()}
+    # joaillerie et forge (Craft) : ciseaux de sertissage, pierres de chance et de protection,
+    # gemmes (pierres taillées) et parchemins d'enchantement (rouleaux scellés)
+    craft_codes = {'drill': 'i00690', 'luck': 'i00522', 'protect': 'i00543',
+                   'ruby': 'i00358', 'emerald': 'i00352', 'sapphire': 'i00355', 'pearl': 'i00363', 'topaz': 'i00353',
+                   'garnet': 'i00364', 'onyx': 'i00354', 'amethyst': 'i00351'}
+    for k, code in enumerate(['i00322', 'i00323', 'i00324', 'i00325', 'i00326', 'i00327', 'i00328', 'i00329']):
+        craft_codes['scroll%d' % k] = code
+    item_icons['craft'] = {k: export_icon(c, 'itemicon', 'assets/ui/items') for k, c in craft_codes.items()}
     with open(os.path.join(GAME, 'data', 'item_icons.json'), 'w', encoding='utf-8') as f:
         json.dump(item_icons, f, indent=1)
+    # types d'arme : combo (celui de la classe d'origine de l'arme), posture, portée, modèles
+    weapon_types = {}
+    for wt, w in WEAPON_TYPES.items():
+        entry = {k: v for k, v in w.items() if k != 'codes'}
+        entry['combo'] = COMBOS[w['class']]
+        entry['weapons'] = []
+        for code in w['codes']:
+            we = {'code': code, 'model': 'res://assets/weapons/%s.glb' % code[:4].lower(),
+                  'texture': 'res://assets/weapons/textures/%s.png' % code.lower(),
+                  'icon': export_icon(code, 'itemicon', 'assets/weapons/icons')}
+            if w.get('bone'):
+                we['bone'] = w['bone']
+            entry['weapons'].append(we)
+        entry['icon'] = entry['weapons'][-1]['icon']
+        weapon_types[wt] = entry
+    with open(os.path.join(GAME, 'data', 'weapon_types.json'), 'w', encoding='utf-8') as f:
+        json.dump(weapon_types, f, indent=1, ensure_ascii=False)
     with open(os.path.join(GAME, 'data', 'classes.json'), 'w', encoding='utf-8') as f:
         json.dump(out_classes, f, indent=1, ensure_ascii=False)
     with open(os.path.join(GAME, 'data', 'motion_keys.json'), 'w', encoding='utf-8') as f:

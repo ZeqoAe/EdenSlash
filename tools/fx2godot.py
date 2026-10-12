@@ -77,7 +77,7 @@ def mark_hard_quads(name):
 
 
 def convert(names, idx=None):
-    idx = idx or {e['path']: e for e in edenpkg.read_index(nif2gltf.PKG)}
+    idx = idx or {e['path']: e for e in edenpkg.load_index(nif2gltf.PKG)}
     os.makedirs(OUT, exist_ok=True)
     done = []
     for name in names:

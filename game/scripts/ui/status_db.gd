@@ -15,7 +15,8 @@ const EDEN_ICONS := {
 	"marduk": "res://assets/ui/skills/e0464.png",
 	"shrine": "res://assets/ui/skills/e0467.png",
 }
-const BUFFS := ["solar", "shrine", "marduk", "frenzy", "keen", "haste", "barrier", "fury", "flow", "regen", "invisible", "evasion"]
+const BUFFS := ["solar", "shrine", "marduk", "frenzy", "keen", "haste", "barrier", "fury", "flow", "regen", "invisible", "evasion",
+	"titan", "survival", "might", "swift", "grace", "vitality", "hunter_stance", "angel"]
 const DESC := {
 	"bleed": "Perd 15 % de l'attaque de la source en PV chaque seconde.",
 	"burn": "Perd 25 % de l'attaque de la source en PV chaque seconde.",
@@ -39,6 +40,15 @@ const DESC := {
 	"regen": "Rend 3 % des PV max chaque seconde.",
 	"invisible": "Les monstres perdent ta trace ; attaquer ou lancer un sort la rompt.",
 	"evasion": "40 % de chances d'éviter complètement un coup.",
+	"titan": "Dégâts subis réduits de 50 %, vitesse réduite de 60 %.",
+	"survival": "+20 % de PV max et +15 % de soins reçus.",
+	"might": "+30 % de force.",
+	"swift": "+30 % d'agilité.",
+	"grace": "+30 % d'intelligence et de sagesse.",
+	"vitality": "+15 % de PV max.",
+	"hunter_stance": "Les attaques de base ont 20 % de chances d'électrocuter la cible.",
+	"disarm": "Ne peut plus attaquer.",
+	"angel": "Te relève une fois à 30 % des PV si tu tombes.",
 }
 
 

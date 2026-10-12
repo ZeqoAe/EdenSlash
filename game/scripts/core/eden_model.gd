@@ -97,7 +97,11 @@ static func attach_weapon(model: Node3D, weapon: Dictionary) -> BoneAttachment3D
 
 
 static func weapon_entry(cls: Dictionary, code: String) -> Dictionary:
-	var weapons: Array = cls.get("weapons", [])
+	for wt in GameData.weapon_types.values():
+		for w in wt.get("weapons", []):
+			if w.code == code:
+				return w
+	var weapons: Array = GameData.weapon_type(String(cls.get("weapon_type", "katana"))).get("weapons", cls.get("weapons", []))
 	for w in weapons:
 		if w.code == code:
 			return w

@@ -915,7 +915,7 @@ def main():
     ap.add_argument('--anims', default=None, help='regex des séquences à garder')
     ap.add_argument('--extra-kf', default='', help='.kf supplémentaires, séparés par des virgules')
     a = ap.parse_args()
-    idx = {e['path']: e for e in edenpkg.read_index(PKG)}
+    idx = {e['path']: e for e in edenpkg.load_index(PKG)}
     tex_dir = a.tex_dir or os.path.join(a.out_dir, '..', 'textures')
     conv = Converter(idx, tex_dir, a.tex_uri, a.only.split(',') if a.only else None)
     conv.anim_filter = a.anims

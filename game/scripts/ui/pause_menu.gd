@@ -4,6 +4,7 @@ extends CanvasLayer
 ## compétences, passifs), paramètres, bilan de la run, retour au lobby.
 
 signal abandon_requested
+signal extract_requested
 
 var player: Player
 var _root: Control
@@ -39,6 +40,9 @@ func setup(p: Player) -> void:
 	_button(menu, "Reprendre", close)
 	_button(menu, "Grimoire (sorts, combo)", func(): grimoire.open())
 	_button(menu, "Paramètres", func(): settings.open())
+	_button(menu, "S'extraire (10 s, X)", func():
+		close()
+		extract_requested.emit())
 	_button(menu, "Retour au lobby", func(): _confirm.popup_centered())
 	_button(menu, "Quitter le jeu", func(): get_tree().quit())
 	_run_label = Hud._label(menu, "", 14, Color(0.85, 0.85, 0.9))

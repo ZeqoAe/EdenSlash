@@ -103,6 +103,8 @@ Options de test : `--seed=N` (même map), `--dungeon` (arène du boss), `--rage`
 `--class=warrior|thief|hunter|cleric|magician|samurai`, `--zone=limestone|rainbowfall|beluga|wetlands|avila|arid`.
 Classes : `.venv/Scripts/python -I tools/build_classes.py` ; biomes : `.venv/Scripts/python -I tools/build_biomes.py`
 (aperçu d'une map d'Eden : `tools/scan_biome.py s004`).
+Talents d'Eden : `.venv/Scripts/python -I tools/build_talents.py` (après build_classes) ; bancs : `res://tests/test_skills.tscn -- <classe>` (tous les sorts), `res://tests/test_combo.tscn -- <classe> 0.3,0.7` (combo + captures), `--expertise=N --talents` (écran d'expertise).
+`--weapon=katana|axe|dagger|bow|scepter|staff`, `--extract-at=N` (lance l'extraction à N s).
 Cycle héritage / remboursement : `Godot --headless --path game res://tests/test_progress.tscn`.
 Choix de cartes (sélection puis Valider) : `Godot --headless --path game res://tests/test_cards.tscn`.
 Paramètres et modes de jeu : `Godot --headless --path game res://tests/test_controls.tscn`.

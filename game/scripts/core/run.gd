@@ -21,6 +21,8 @@ var max_level := 1
 var seed := 0  # graine de la map (0 = aléatoire)
 var zone_id := "limestone"
 var unlocked_name := ""  # zone débloquée par la victoire (bilan)
+var expertise_gain := 0
+var expertise_levels := 0
 var rerolls_used := 0  # relances de cartes utilisées (1 par run + cartes « Bonne étoile »)
 
 
@@ -49,6 +51,8 @@ func finish(res: String) -> void:
 	active = false
 	result = res
 	Profile.runs_done += 1
+	expertise_gain = max_level * 15 + kills / 2 + elites * 10 + (200 if res == "victoire" else (60 if res == "extraction" else 0))
+	expertise_levels = Profile.add_expertise(class_id, expertise_gain)
 	if res == "victoire":
 		Profile.runs_won += 1
 		unlocked_name = Profile.unlock_after(zone_id)
@@ -64,11 +68,20 @@ func add_gold(amount: int) -> void:
 
 ## Objet ramassé : directement dans l'inventaire (équipable via le menu pause).
 func pick_up(item: Dictionary) -> bool:
+	if item.has("consumable"):
+		Profile.add_bag(String(item.consumable))
+		return true
 	if not Profile.add_item(item):
 		return false
 	loot.append(item)
 	Profile.save_profile()
 	return true
+
+
+## Type de l'arme en main (son combo d'auto-attaque est utilisé, quelle que soit la classe).
+func weapon_type() -> String:
+	var w: Dictionary = Profile.equipped.get("weapon", {})
+	return Items.weapon_type_of(w) if not w.is_empty() else Items.default_weapon_type(class_id)
 
 
 func duration_text() -> String:
@@ -116,11 +129,12 @@ func skill_rank(id: int) -> int:
 
 ## Bonus de dégâts et de recharge apportés par le rang d'une compétence.
 func skill_damage_mult(id: int) -> float:
-	return 1.0 + 0.2 * (skill_rank(id) - 1)
+	var t := skill_talent(id)
+	return (1.0 + 0.2 * (skill_rank(id) - 1)) * (1.0 + float(t.dmg) + float(t.power))
 
 
 func skill_cooldown_mult(id: int) -> float:
-	return 1.0 - 0.08 * (skill_rank(id) - 1)
+	return (1.0 - 0.08 * (skill_rank(id) - 1)) * (1.0 - minf(float(skill_talent(id).cd), 0.6))
 
 
 ## Statistiques cumulées des passifs de la run.
@@ -130,7 +144,41 @@ func passive_stats() -> Dictionary:
 		var p := passive_def(pid)
 		for s in p.get("stat", {}):
 			total[s] = total.get(s, 0.0) + float(p.stat[s]) * int(passives[pid])
+	# talents de la classe jouée (arbre d'Eden)
+	var tree: Dictionary = GameData.talents.get(class_id, {}).get("talents", {})
+	for id in Profile.talents.get(class_id, {}):
+		var eff: Dictionary = tree.get(id, {}).get("effect", {})
+		if eff.get("type", "") == "stat":
+			total[eff.stat] = total.get(eff.stat, 0.0) + float(eff.per_level) * int(Profile.talents[class_id][id])
+	# certificats équipés (passifs des classes maîtrisées, utilisables par toutes)
+	for key in Profile.certificates:
+		var parts: PackedStringArray = String(key).split("/")
+		for p in GameData.class_data(parts[0]).get("passives", []):
+			if p.id == parts[1]:
+				for s in p.get("stat", {}):
+					total[s] = total.get(s, 0.0) + float(p.stat[s])
 	return total
+
+
+## Bonus des talents sur une compétence : {dmg, cd, duration, power}.
+func skill_talent(skill_id: int) -> Dictionary:
+	var out := {"dmg": 0.0, "cd": 0.0, "duration": 0.0, "power": 0.0}
+	var tree: Dictionary = GameData.talents.get(class_id, {}).get("talents", {})
+	for id in Profile.talents.get(class_id, {}):
+		var eff: Dictionary = tree.get(id, {}).get("effect", {})
+		if int(eff.get("skill", 0)) != skill_id:
+			continue
+		var n := int(Profile.talents[class_id][id])
+		match String(eff.type):
+			"skill_dmg":
+				out.dmg += float(eff.per_level) * n
+			"skill_cd":
+				out.cd += float(eff.per_level) * n
+			"skill_duration":
+				out.duration += float(eff.per_level) * n
+			"skill_power":
+				out.power += float(eff.per_level) * n
+	return out
 
 
 # --- cartes -----------------------------------------------------------------------
@@ -147,6 +195,8 @@ func roll_cards(n := 3, skills_only := false) -> Array:
 			if int(s.rank) < MAX_RANK:
 				pool.append({"type": "upgrade", "id": int(s.id), "weight": 1.5})
 		for p in class_data().get("passives", []) + Boons.LIST:
+			if p.has("eden"):
+				continue  # certificat : se choisit avant la run (expertise)
 			if int(passives.get(p.id, 0)) >= int(p.max):
 				continue
 			if not p.get("requires", []).all(func(r): return passives.has(r)):

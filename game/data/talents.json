@@ -1,0 +1,2294 @@
+{
+ "warrior": {
+  "rows": [
+   [
+    {
+     "id": 52582,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 54699,
+     "max": 1,
+     "req": 52582,
+     "req_pts": 10,
+     "tier": 1,
+     "spent": 0
+    },
+    {
+     "id": 52585,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 2,
+     "spent": 0
+    },
+    {
+     "id": 54705,
+     "max": 10,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 3,
+     "spent": 15
+    },
+    null,
+    {
+     "id": 54697,
+     "max": 5,
+     "req": 54705,
+     "req_pts": 5,
+     "tier": 5,
+     "spent": 25
+    },
+    {
+     "id": 54704,
+     "max": 5,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 6,
+     "spent": 30
+    },
+    {
+     "id": 54701,
+     "max": 5,
+     "req": 54704,
+     "req_pts": 5,
+     "tier": 7,
+     "spent": 35
+    }
+   ],
+   [
+    {
+     "id": 52583,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 52586,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 1,
+     "spent": 0
+    },
+    null,
+    {
+     "id": 54703,
+     "max": 20,
+     "req": 52586,
+     "req_pts": 5,
+     "tier": 3,
+     "spent": 15
+    },
+    {
+     "id": 54694,
+     "max": 5,
+     "req": 54703,
+     "req_pts": 10,
+     "tier": 4,
+     "spent": 20
+    },
+    {
+     "id": 54696,
+     "max": 5,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 5,
+     "spent": 25
+    },
+    null,
+    {
+     "id": 54702,
+     "max": 1,
+     "req": 54696,
+     "req_pts": 5,
+     "tier": 7,
+     "spent": 35
+    }
+   ],
+   [
+    {
+     "id": 52584,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 52581,
+     "max": 5,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 1,
+     "spent": 0
+    },
+    null,
+    {
+     "id": 54695,
+     "max": 5,
+     "req": 52581,
+     "req_pts": 5,
+     "tier": 3,
+     "spent": 15
+    },
+    null,
+    {
+     "id": 54698,
+     "max": 10,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 5,
+     "spent": 25
+    },
+    null,
+    {
+     "id": 54700,
+     "max": 1,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 7,
+     "spent": 35
+    }
+   ]
+  ],
+  "talents": {
+   "52582": {
+    "name": "Precise Defense",
+    "icon": "res://assets/ui/talents/e0141.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "def_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de défense par niveau",
+    "eden": "For each level up, DEF +1%."
+   },
+   "54699": {
+    "name": "Endurance Training",
+    "icon": "res://assets/ui/talents/e0283.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50041,
+     "per_level": 0.2
+    },
+    "desc": "« Rugissement de fer » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Ironhide Roar, DEF bonus is increased by 20%."
+   },
+   "52585": {
+    "name": "Weapon Proficiency",
+    "icon": "res://assets/ui/talents/e0144.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "dmg_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de dégâts (précision) par niveau",
+    "eden": "For each level up, ACC +2%."
+   },
+   "54705": {
+    "name": "Quick Healing",
+    "icon": "res://assets/ui/talents/e0289.png",
+    "max": 10,
+    "effect": {
+     "type": "stat",
+     "stat": "heal_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de soins reçus par niveau",
+    "eden": "For each level up, P-Healing +1%."
+   },
+   "54697": {
+    "name": "Resilient",
+    "icon": "res://assets/ui/talents/e0281.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_cd",
+     "skill": 50039,
+     "per_level": 0.03
+    },
+    "desc": "-3 % de recharge de « Mur du titan » par niveau",
+    "eden": "For each level up, Titan's Wall cooldown time -3%."
+   },
+   "54704": {
+    "name": "Perseverance",
+    "icon": "res://assets/ui/talents/e1078.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 60053,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Lacération » par niveau",
+    "eden": "For each level up, DMG from Lacerate +2%."
+   },
+   "54701": {
+    "name": "Sarcasm Skills",
+    "icon": "res://assets/ui/talents/e0285.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50151,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Provocation de groupe » par niveau",
+    "eden": "For each level up, DMG from Group Provoke +2%."
+   },
+   "52583": {
+    "name": "Self-Defense",
+    "icon": "res://assets/ui/talents/e0142.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "hp_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de PV max par niveau",
+    "eden": "For each level up, Max HP +1%."
+   },
+   "52586": {
+    "name": "CQC Training",
+    "icon": "res://assets/ui/talents/e0145.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "str_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de force par niveau",
+    "eden": "For each level up, STR +1%."
+   },
+   "54703": {
+    "name": "Weapon Master",
+    "icon": "res://assets/ui/talents/e0287.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "atk_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % d'attaque physique et magique par niveau",
+    "eden": "For each level up, when equipped with Melee Weapon, Weapon ATK & M-ATK +1%."
+   },
+   "54694": {
+    "name": "Strength Training",
+    "icon": "res://assets/ui/talents/e0278.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50036,
+     "per_level": 0.03
+    },
+    "desc": "+3 % de dégâts de « Attaque sanglante » par niveau",
+    "eden": "For each level up, DMG from Bloody Attack +3%."
+   },
+   "54696": {
+    "name": "Lower Body Training",
+    "icon": "res://assets/ui/talents/e0280.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50038,
+     "per_level": 0.03
+    },
+    "desc": "+3 % de dégâts de « Ruée » par niveau",
+    "eden": "For each level up, DMG from Onrush +3%."
+   },
+   "54702": {
+    "name": "Madman",
+    "icon": "res://assets/ui/talents/e0286.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50152,
+     "per_level": 0.2
+    },
+    "desc": "« Frisson du combat » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Thrill of Battle, ACC & ATK SPD bonuses +10%."
+   },
+   "52584": {
+    "name": "War Technology",
+    "icon": "res://assets/ui/talents/e0143.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "crit",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de critique par niveau",
+    "eden": "For each level up, CRIT Rate +1%."
+   },
+   "52581": {
+    "name": "Avenger",
+    "icon": "res://assets/ui/talents/e0140.png",
+    "max": 5,
+    "effect": {
+     "type": "stat",
+     "stat": "parry",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de parade par niveau",
+    "eden": "For each level up, Block +1%."
+   },
+   "54695": {
+    "name": "Hatred Release",
+    "icon": "res://assets/ui/talents/e0279.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50037,
+     "per_level": 0.03
+    },
+    "desc": "+3 % de dégâts de « Poing de colère » par niveau",
+    "eden": "For each level up, DMG from Angry Punch +3%."
+   },
+   "54698": {
+    "name": "Survival Training",
+    "icon": "res://assets/ui/talents/e0282.png",
+    "max": 10,
+    "effect": {
+     "type": "skill_duration",
+     "skill": 50040,
+     "per_level": 1.0
+    },
+    "desc": "+1 s de durée des effets de « Instinct de survie » par niveau",
+    "eden": "For each level up, Sense of Survival's duration +1 sec."
+   },
+   "54700": {
+    "name": "Sense of Fear",
+    "icon": "res://assets/ui/talents/e0284.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50042,
+     "per_level": 0.2
+    },
+    "desc": "« Intimidation » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Intimidation, enemy's EVA penalty +20%, duration +2 sec."
+   }
+  },
+  "certificates": [
+   "unshakable",
+   "double_cut"
+  ]
+ },
+ "magician": {
+  "rows": [
+   [
+    {
+     "id": 52657,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 54838,
+     "max": 5,
+     "req": 52657,
+     "req_pts": 10,
+     "tier": 1,
+     "spent": 0
+    },
+    {
+     "id": 52658,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 2,
+     "spent": 0
+    },
+    null,
+    {
+     "id": 54848,
+     "max": 5,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 4,
+     "spent": 20
+    },
+    null,
+    {
+     "id": 54844,
+     "max": 5,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 6,
+     "spent": 30
+    },
+    {
+     "id": 54841,
+     "max": 1,
+     "req": 54844,
+     "req_pts": 5,
+     "tier": 7,
+     "spent": 35
+    }
+   ],
+   [
+    {
+     "id": 52654,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 52656,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 1,
+     "spent": 0
+    },
+    null,
+    {
+     "id": 54840,
+     "max": 5,
+     "req": 52656,
+     "req_pts": 10,
+     "tier": 3,
+     "spent": 15
+    },
+    {
+     "id": 54845,
+     "max": 1,
+     "req": 54840,
+     "req_pts": 5,
+     "tier": 4,
+     "spent": 20
+    },
+    {
+     "id": 54849,
+     "max": 10,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 5,
+     "spent": 25
+    },
+    null,
+    {
+     "id": 54846,
+     "max": 10,
+     "req": 54849,
+     "req_pts": 5,
+     "tier": 7,
+     "spent": 35
+    }
+   ],
+   [
+    {
+     "id": 52653,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 54839,
+     "max": 5,
+     "req": 52653,
+     "req_pts": 10,
+     "tier": 1,
+     "spent": 0
+    },
+    {
+     "id": 52655,
+     "max": 10,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 2,
+     "spent": 0
+    },
+    null,
+    {
+     "id": 54842,
+     "max": 10,
+     "req": 52655,
+     "req_pts": 5,
+     "tier": 4,
+     "spent": 20
+    },
+    {
+     "id": 54843,
+     "max": 1,
+     "req": 54842,
+     "req_pts": 5,
+     "tier": 5,
+     "spent": 25
+    },
+    {
+     "id": 54847,
+     "max": 5,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 6,
+     "spent": 30
+    },
+    null
+   ]
+  ],
+  "talents": {
+   "52657": {
+    "name": "Staff Master",
+    "icon": "res://assets/ui/talents/e0216.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "atk_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % d'attaque physique et magique par niveau",
+    "eden": "For each level up, when equipped with a Staff, weapon's P-ATK & M-ATK +1%."
+   },
+   "54838": {
+    "name": "Thunder Element Mastery",
+    "icon": "res://assets/ui/talents/e0422.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50126,
+     "per_level": 0.03
+    },
+    "desc": "+3 % de dégâts de « Éclair » par niveau",
+    "eden": "For each level up, DMG from Lightning Bolt +3%."
+   },
+   "52658": {
+    "name": "Time and Space Magic",
+    "icon": "res://assets/ui/talents/e0217.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "dmg_pct",
+     "per_level": 0.005
+    },
+    "desc": "+0,5 % de dégâts (précision) par niveau",
+    "eden": "For each level up, EVA +1%."
+   },
+   "54848": {
+    "name": "Recharge",
+    "icon": "res://assets/ui/talents/e0730.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50132,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Surcharge » par niveau",
+    "eden": "For each level up, DMG from Overcharging +2%."
+   },
+   "54844": {
+    "name": "Meditation",
+    "icon": "res://assets/ui/talents/e0428.png",
+    "max": 5,
+    "effect": {
+     "type": "stat",
+     "stat": "cdr",
+     "per_level": -0.02
+    },
+    "desc": "+-2 % de réduction des recharges par niveau",
+    "eden": "For each level up, MP Consumption -2%."
+   },
+   "54841": {
+    "name": "Elemental Field",
+    "icon": "res://assets/ui/talents/e0425.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50129,
+     "per_level": 0.2
+    },
+    "desc": "« Brume » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Fog, increase Move SPD +10%."
+   },
+   "52654": {
+    "name": "Elemental Knowledge",
+    "icon": "res://assets/ui/talents/e0213.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "crit_dmg",
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts critiques par niveau",
+    "eden": "For each level up, M-CRIT DMG +2%."
+   },
+   "52656": {
+    "name": "Tongue Twister",
+    "icon": "res://assets/ui/talents/e0215.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "cast_speed",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de vitesse d'incantation par niveau",
+    "eden": "For each level up, Cast SPD +1%."
+   },
+   "54840": {
+    "name": "Ice Element Mastery",
+    "icon": "res://assets/ui/talents/e0424.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50128,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Tempête de neige » par niveau",
+    "eden": "For each level up, DMG from Snow Storm +2%."
+   },
+   "54845": {
+    "name": "Cold Breath",
+    "icon": "res://assets/ui/talents/e0429.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50133,
+     "per_level": 0.2
+    },
+    "desc": "« Bouclier de glace » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Ice Shield, DEF bonus +20%. The enemy Move SPD debuff will also be increase by 20%."
+   },
+   "54849": {
+    "name": "Unified Will",
+    "icon": "res://assets/ui/talents/e0433.png",
+    "max": 10,
+    "effect": {
+     "type": "stat",
+     "stat": "dmg_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de dégâts (précision) par niveau",
+    "eden": "For each level up, ACC +2%."
+   },
+   "54846": {
+    "name": "Magic Increase",
+    "icon": "res://assets/ui/talents/e0430.png",
+    "max": 10,
+    "effect": {
+     "type": "skill_duration",
+     "skill": 50175,
+     "per_level": 1.0
+    },
+    "desc": "+1 s de durée des effets de « la compétence » par niveau",
+    "eden": "For each level up, Extreme Magic's duration +1 sec."
+   },
+   "52653": {
+    "name": "Black Magic",
+    "icon": "res://assets/ui/talents/e0212.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "crit",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de critique par niveau",
+    "eden": "For each level up, M-CRIT Rate +1%."
+   },
+   "54839": {
+    "name": "Fire Element Mastery",
+    "icon": "res://assets/ui/talents/e0423.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50127,
+     "per_level": 0.03
+    },
+    "desc": "+3 % de dégâts de « Feu de l'enfer » par niveau",
+    "eden": "For each level up, DMG from Hellfire +3%."
+   },
+   "52655": {
+    "name": "Gift of Magic",
+    "icon": "res://assets/ui/talents/e0214.png",
+    "max": 10,
+    "effect": {
+     "type": "stat",
+     "stat": "def_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de défense par niveau",
+    "eden": "For each level up, all Elemental Resistance +1%."
+   },
+   "54842": {
+    "name": "Reversed Elements",
+    "icon": "res://assets/ui/talents/e0426.png",
+    "max": 10,
+    "effect": {
+     "type": "skill_duration",
+     "skill": 50130,
+     "per_level": 1.0
+    },
+    "desc": "+1 s de durée des effets de « Effondrement des résistances » par niveau",
+    "eden": "For each level up, Resistance Collapse's duration +1 sec."
+   },
+   "54843": {
+    "name": "Element Condensation",
+    "icon": "res://assets/ui/talents/e0427.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50131,
+     "per_level": 0.2
+    },
+    "desc": "« Gardien élémentaire » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Elemental Guardian, increase Fire, Ice, and Lightning Resistance +8, instead of +5."
+   },
+   "54847": {
+    "name": "Nuclear Knowledge",
+    "icon": "res://assets/ui/talents/e0431.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50176,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Réaction de fusion » par niveau",
+    "eden": "For each level up, DMG from Fusion Reaction +2%."
+   }
+  },
+  "certificates": [
+   "elemental_essence",
+   "staff_expert"
+  ]
+ },
+ "hunter": {
+  "rows": [
+   [
+    {
+     "id": 52617,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 54769,
+     "max": 5,
+     "req": 52617,
+     "req_pts": 10,
+     "tier": 1,
+     "spent": 0
+    },
+    null,
+    {
+     "id": 54773,
+     "max": 5,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 3,
+     "spent": 15
+    },
+    {
+     "id": 54766,
+     "max": 5,
+     "req": 54773,
+     "req_pts": 5,
+     "tier": 4,
+     "spent": 20
+    },
+    {
+     "id": 54772,
+     "max": 10,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 5,
+     "spent": 25
+    },
+    null,
+    {
+     "id": 54768,
+     "max": 5,
+     "req": 54772,
+     "req_pts": 5,
+     "tier": 7,
+     "spent": 35
+    }
+   ],
+   [
+    {
+     "id": 52619,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 54767,
+     "max": 5,
+     "req": 52619,
+     "req_pts": 10,
+     "tier": 1,
+     "spent": 0
+    },
+    {
+     "id": 52621,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 2,
+     "spent": 0
+    },
+    null,
+    {
+     "id": 54770,
+     "max": 5,
+     "req": 52621,
+     "req_pts": 5,
+     "tier": 4,
+     "spent": 20
+    },
+    {
+     "id": 54777,
+     "max": 5,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 5,
+     "spent": 25
+    },
+    {
+     "id": 54774,
+     "max": 5,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 6,
+     "spent": 30
+    },
+    {
+     "id": 54771,
+     "max": 1,
+     "req": 54774,
+     "req_pts": 5,
+     "tier": 7,
+     "spent": 35
+    }
+   ],
+   [
+    {
+     "id": 52622,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 52618,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 1,
+     "spent": 0
+    },
+    {
+     "id": 52620,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 2,
+     "spent": 0
+    },
+    null,
+    null,
+    {
+     "id": 54776,
+     "max": 10,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 5,
+     "spent": 25
+    },
+    null,
+    {
+     "id": 54775,
+     "max": 1,
+     "req": 54776,
+     "req_pts": 5,
+     "tier": 7,
+     "spent": 35
+    }
+   ]
+  ],
+  "talents": {
+   "52617": {
+    "name": "Beastology",
+    "icon": "res://assets/ui/talents/e0176.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "crit",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de critique par niveau",
+    "eden": "For each level up, CRIT Rate & M-CRIT Rate +1%."
+   },
+   "54769": {
+    "name": "Potent Anesthesia",
+    "icon": "res://assets/ui/talents/e0353.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50081,
+     "per_level": 0.03
+    },
+    "desc": "+3 % de dégâts de « Tir étourdissant » par niveau",
+    "eden": "For each level up, DMG from Dazing Pierce +3%."
+   },
+   "54773": {
+    "name": "Crossbow String",
+    "icon": "res://assets/ui/talents/e0357.png",
+    "max": 5,
+    "effect": {
+     "type": "stat",
+     "stat": "str_pct",
+     "per_level": 0.02
+    },
+    "desc": "+2 % de force par niveau",
+    "eden": "For each level up, STR +2%."
+   },
+   "54766": {
+    "name": "Enhanced Fletching",
+    "icon": "res://assets/ui/talents/e0350.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50078,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Tir en chaîne » par niveau",
+    "eden": "For each level up, DMG from Chain Shot +2%."
+   },
+   "54772": {
+    "name": "Wild Nature",
+    "icon": "res://assets/ui/talents/e0356.png",
+    "max": 10,
+    "effect": {
+     "type": "stat",
+     "stat": "hp_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de PV max par niveau",
+    "eden": "For each level up, Max HP +1%."
+   },
+   "54768": {
+    "name": "Sharpened Arrows",
+    "icon": "res://assets/ui/talents/e0352.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50080,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Tir douloureux » par niveau",
+    "eden": "For each level up, DMG from Painful Stab +2%."
+   },
+   "52619": {
+    "name": "Stargazer",
+    "icon": "res://assets/ui/talents/e0178.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "lck_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de chance par niveau",
+    "eden": "For each level up, LCK +1%."
+   },
+   "54767": {
+    "name": "Enhanced Bowstring",
+    "icon": "res://assets/ui/talents/e0351.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50079,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Blessure perçante » par niveau",
+    "eden": "For each level up, DMG from Piercing Wound +2%."
+   },
+   "52621": {
+    "name": "Stealth Knowledge",
+    "icon": "res://assets/ui/talents/e0180.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "dmg_pct",
+     "per_level": 0.005
+    },
+    "desc": "+0,5 % de dégâts (précision) par niveau",
+    "eden": "For each level up, EVA +1%."
+   },
+   "54770": {
+    "name": "Enhanced Flash",
+    "icon": "res://assets/ui/talents/e0354.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50082,
+     "per_level": 0.03
+    },
+    "desc": "+3 % de dégâts de « Bombe flash » par niveau",
+    "eden": "For each level up, DMG from Flash Bomb +3%."
+   },
+   "54777": {
+    "name": "Clout Shooting",
+    "icon": "res://assets/ui/talents/e1085.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50085,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Flèche perturbatrice » par niveau",
+    "eden": "For each level up, DMG from Disruptive Arrow +2%."
+   },
+   "54774": {
+    "name": "Mana Break",
+    "icon": "res://assets/ui/talents/e1086.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50163,
+     "per_level": 0.03
+    },
+    "desc": "+3 % de dégâts de « Perce-mana » par niveau",
+    "eden": "For each level up, DMG from Mana Piercer +3%."
+   },
+   "54771": {
+    "name": "Enhanced Fuel",
+    "icon": "res://assets/ui/talents/e1084.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50083,
+     "per_level": 0.2
+    },
+    "desc": "« Flèches ardentes » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Burning Arrow, P-ATK and Fire DMG bonuses +20%."
+   },
+   "52622": {
+    "name": "Archery Mastery",
+    "icon": "res://assets/ui/talents/e0181.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "atk_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % d'attaque physique et magique par niveau",
+    "eden": "For each level up, when equipped with a Bow, weapon's P-ATK & M-ATK +1%."
+   },
+   "52618": {
+    "name": "Poison Arrow Knowledge",
+    "icon": "res://assets/ui/talents/e0177.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "crit_dmg",
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts critiques par niveau",
+    "eden": "For each level up, CRIT DMG & M-CRIT DMG +2%."
+   },
+   "52620": {
+    "name": "Hunting Knowledge",
+    "icon": "res://assets/ui/talents/e0179.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "dmg_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de dégâts (précision) par niveau",
+    "eden": "For each level up, ACC +2%."
+   },
+   "54776": {
+    "name": "Hunting Mentality",
+    "icon": "res://assets/ui/talents/e0074.png",
+    "max": 10,
+    "effect": {
+     "type": "skill_duration",
+     "skill": 50084,
+     "per_level": 1.0
+    },
+    "desc": "+1 s de durée des effets de « Posture du chasseur » par niveau",
+    "eden": "For each level up, Hunter Stance duration +1 sec."
+   },
+   "54775": {
+    "name": "Lethal Toxin",
+    "icon": "res://assets/ui/talents/e0359.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50164,
+     "per_level": 0.2
+    },
+    "desc": "« Pluie empoisonnée » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Poison Arrow Rain, skill damage +10% and DoT +20%."
+   }
+  },
+  "certificates": [
+   "hawkeye",
+   "bow_expert"
+  ]
+ },
+ "cleric": {
+  "rows": [
+   [
+    {
+     "id": 52640,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 52639,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 1,
+     "spent": 0
+    },
+    {
+     "id": 54813,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 2,
+     "spent": 0
+    },
+    null,
+    null,
+    {
+     "id": 54812,
+     "max": 5,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 5,
+     "spent": 25
+    },
+    {
+     "id": 54810,
+     "max": 5,
+     "req": 54812,
+     "req_pts": 5,
+     "tier": 6,
+     "spent": 30
+    },
+    {
+     "id": 54805,
+     "max": 1,
+     "req": 54810,
+     "req_pts": 5,
+     "tier": 7,
+     "spent": 35
+    }
+   ],
+   [
+    {
+     "id": 52636,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 52638,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 1,
+     "spent": 0
+    },
+    null,
+    {
+     "id": 54803,
+     "max": 5,
+     "req": 52638,
+     "req_pts": 10,
+     "tier": 3,
+     "spent": 15
+    },
+    {
+     "id": 54809,
+     "max": 5,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 4,
+     "spent": 20
+    },
+    {
+     "id": 54808,
+     "max": 1,
+     "req": 54809,
+     "req_pts": 5,
+     "tier": 5,
+     "spent": 25
+    },
+    {
+     "id": 54811,
+     "max": 5,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 6,
+     "spent": 30
+    },
+    {
+     "id": 54807,
+     "max": 1,
+     "req": 54811,
+     "req_pts": 5,
+     "tier": 7,
+     "spent": 35
+    }
+   ],
+   [
+    {
+     "id": 52635,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 54802,
+     "max": 5,
+     "req": 52635,
+     "req_pts": 10,
+     "tier": 1,
+     "spent": 0
+    },
+    null,
+    null,
+    {
+     "id": 52637,
+     "max": 10,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 4,
+     "spent": 20
+    },
+    {
+     "id": 54806,
+     "max": 1,
+     "req": 52637,
+     "req_pts": 5,
+     "tier": 5,
+     "spent": 25
+    },
+    {
+     "id": 54804,
+     "max": 1,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 6,
+     "spent": 30
+    },
+    null
+   ]
+  ],
+  "talents": {
+   "52640": {
+    "name": "Religious Knowledge",
+    "icon": "res://assets/ui/talents/e0199.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "wis_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de sagesse par niveau",
+    "eden": "For each level up, WIS +1%."
+   },
+   "52639": {
+    "name": "Evangelical Theology",
+    "icon": "res://assets/ui/talents/e0198.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "heal_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de soins reçus par niveau",
+    "eden": "For each level up, G-Healing +1%."
+   },
+   "54813": {
+    "name": "Sacred Duty",
+    "icon": "res://assets/ui/talents/e0397.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "def_pct",
+     "per_level": 0.005
+    },
+    "desc": "+0,5 % de défense par niveau",
+    "eden": "For each level up, M-ATK +0.5%."
+   },
+   "54812": {
+    "name": "Sincerity",
+    "icon": "res://assets/ui/talents/e0396.png",
+    "max": 5,
+    "effect": {
+     "type": "stat",
+     "stat": "def_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de défense par niveau",
+    "eden": "For each level up, all Elemental Resistance +1."
+   },
+   "54810": {
+    "name": "Condemnation",
+    "icon": "res://assets/ui/talents/e0394.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50169,
+     "per_level": 0.03
+    },
+    "desc": "+3 % de dégâts de « Marteau de discipline » par niveau",
+    "eden": "For each level up, DMG from Hammer of Discipline +3%."
+   },
+   "54805": {
+    "name": "Divine Blessing",
+    "icon": "res://assets/ui/talents/e0389.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50105,
+     "per_level": 0.2
+    },
+    "desc": "« Grâce de sagesse » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Grace of Wisdom, WIS & INT bonuses +20%."
+   },
+   "52636": {
+    "name": "Hymnal",
+    "icon": "res://assets/ui/talents/e0195.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "crit_dmg",
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts critiques par niveau",
+    "eden": "For each level up, M-CRIT DMG +2%."
+   },
+   "52638": {
+    "name": "Zealot Doctrine",
+    "icon": "res://assets/ui/talents/e0197.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "cast_speed",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de vitesse d'incantation par niveau",
+    "eden": "For each level up, Cast SPD +1%."
+   },
+   "54803": {
+    "name": "Heresy Punishment",
+    "icon": "res://assets/ui/talents/e0387.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50103,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Châtiment sacré » par niveau",
+    "eden": "For each level up, DMG from Holy Smite +2%."
+   },
+   "54809": {
+    "name": "Enlightenment",
+    "icon": "res://assets/ui/talents/e0393.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50109,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Rayonnement guérisseur » par niveau",
+    "eden": "For each level up, Healing Radiance's healing effect +2%."
+   },
+   "54808": {
+    "name": "Sacred Breath",
+    "icon": "res://assets/ui/talents/e0392.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50108,
+     "per_level": 0.2
+    },
+    "desc": "« Vent purificateur » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "After learning, transforms Purifying Wind into a placeable area skill, but the area of effect is reduced to 20 meters."
+   },
+   "54811": {
+    "name": "Healing Hands",
+    "icon": "res://assets/ui/talents/e0395.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50170,
+     "per_level": 0.03
+    },
+    "desc": "+3 % de dégâts de « Lumière divine » par niveau",
+    "eden": "For each level up, Divine Light's healing effect +3%."
+   },
+   "54807": {
+    "name": "Prophecy Research",
+    "icon": "res://assets/ui/talents/e0391.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50107,
+     "per_level": 0.2
+    },
+    "desc": "« Dure vérité » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Hard Truth, Max HP & MP bonuses +20%."
+   },
+   "52635": {
+    "name": "Exegesis",
+    "icon": "res://assets/ui/talents/e0194.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "crit",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de critique par niveau",
+    "eden": "For each level up, M-CRIT Rate +1%."
+   },
+   "54802": {
+    "name": "Exorcism",
+    "icon": "res://assets/ui/talents/e0386.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50102,
+     "per_level": 0.03
+    },
+    "desc": "+3 % de dégâts de « Sanction de lumière » par niveau",
+    "eden": "For each level up, DMG from Light's Sanction +3%."
+   },
+   "52637": {
+    "name": "Shield Proficiency",
+    "icon": "res://assets/ui/talents/e0196.png",
+    "max": 10,
+    "effect": {
+     "type": "stat",
+     "stat": "parry",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de parade par niveau",
+    "eden": "For each level up, Block +1%."
+   },
+   "54806": {
+    "name": "Spiritual Training",
+    "icon": "res://assets/ui/talents/e0390.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50106,
+     "per_level": 0.2
+    },
+    "desc": "« Cure de vie » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Life Cure, increase Move SPD +15%, and duration +5 sec."
+   },
+   "54804": {
+    "name": "Divine Knowledge",
+    "icon": "res://assets/ui/talents/e0388.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50104,
+     "per_level": 0.2
+    },
+    "desc": "« Bénédiction de lumière » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Light Blessing, LCK, Holy Resistance and Nature Resistance bonuses +20%."
+   }
+  },
+  "certificates": [
+   "iron_will",
+   "shield_expert"
+  ]
+ },
+ "thief": {
+  "rows": [
+   [
+    {
+     "id": 52603,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 52604,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 1,
+     "spent": 0
+    },
+    {
+     "id": 54732,
+     "max": 5,
+     "req": 52604,
+     "req_pts": 10,
+     "tier": 2,
+     "spent": 0
+    },
+    null,
+    {
+     "id": 54740,
+     "max": 10,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 4,
+     "spent": 20
+    },
+    {
+     "id": 54730,
+     "max": 5,
+     "req": 54740,
+     "req_pts": 5,
+     "tier": 5,
+     "spent": 25
+    },
+    null,
+    {
+     "id": 54736,
+     "max": 1,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 7,
+     "spent": 35
+    }
+   ],
+   [
+    {
+     "id": 52601,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 52602,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 1,
+     "spent": 0
+    },
+    {
+     "id": 52599,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 2,
+     "spent": 0
+    },
+    null,
+    {
+     "id": 54731,
+     "max": 5,
+     "req": 52599,
+     "req_pts": 10,
+     "tier": 4,
+     "spent": 20
+    },
+    {
+     "id": 54739,
+     "max": 10,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 5,
+     "spent": 25
+    },
+    null,
+    {
+     "id": 54738,
+     "max": 1,
+     "req": 54739,
+     "req_pts": 5,
+     "tier": 7,
+     "spent": 35
+    }
+   ],
+   [
+    {
+     "id": 52600,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    null,
+    {
+     "id": 54734,
+     "max": 1,
+     "req": 52600,
+     "req_pts": 5,
+     "tier": 2,
+     "spent": 0
+    },
+    {
+     "id": 54741,
+     "max": 5,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 3,
+     "spent": 15
+    },
+    {
+     "id": 54733,
+     "max": 1,
+     "req": 54741,
+     "req_pts": 5,
+     "tier": 4,
+     "spent": 20
+    },
+    null,
+    {
+     "id": 54737,
+     "max": 5,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 6,
+     "spent": 30
+    },
+    {
+     "id": 54735,
+     "max": 1,
+     "req": 54737,
+     "req_pts": 5,
+     "tier": 7,
+     "spent": 35
+    }
+   ]
+  ],
+  "talents": {
+   "52603": {
+    "name": "Art of Deception",
+    "icon": "res://assets/ui/talents/e0162.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "dmg_pct",
+     "per_level": 0.005
+    },
+    "desc": "+0,5 % de dégâts (précision) par niveau",
+    "eden": "For each level up, EVA +1%."
+   },
+   "52604": {
+    "name": "Dagger Fighter",
+    "icon": "res://assets/ui/talents/e0163.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "atk_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % d'attaque physique et magique par niveau",
+    "eden": "For each level up, when equipped with a Dagger, Dagger's P-ATK & M-ATK +1%."
+   },
+   "54732": {
+    "name": "Deadly Intention",
+    "icon": "res://assets/ui/talents/e0316.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50059,
+     "per_level": 0.03
+    },
+    "desc": "+3 % de dégâts de « Confinement mortel » par niveau",
+    "eden": "For each level up, DMG from Deadly Containment +3%."
+   },
+   "54740": {
+    "name": "Hands of Illusions",
+    "icon": "res://assets/ui/talents/e0324.png",
+    "max": 10,
+    "effect": {
+     "type": "stat",
+     "stat": "agi_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % d'agilité par niveau",
+    "eden": "For each level up, AGI +1%."
+   },
+   "54730": {
+    "name": "Fatal Attack",
+    "icon": "res://assets/ui/talents/e0314.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50057,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Attaque éclair » par niveau",
+    "eden": "For each level up, DMG from Swift Attack +2%."
+   },
+   "54736": {
+    "name": "Residual Image",
+    "icon": "res://assets/ui/talents/e0320.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50063,
+     "per_level": 0.2
+    },
+    "desc": "« Fondu » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Blend, EVA and ACC bonus +20%, duration +5 seconds."
+   },
+   "52601": {
+    "name": "Theft Art",
+    "icon": "res://assets/ui/talents/e0160.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "atk_speed",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de vitesse d'attaque par niveau",
+    "eden": "For each level up, ATK SPD +1%."
+   },
+   "52602": {
+    "name": "Art of Throwing",
+    "icon": "res://assets/ui/talents/e0161.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "dmg_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de dégâts (précision) par niveau",
+    "eden": "For each level up, ACC +2%."
+   },
+   "52599": {
+    "name": "Insight",
+    "icon": "res://assets/ui/talents/e0158.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "crit",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de critique par niveau",
+    "eden": "For each level up, CRIT Rate +1%."
+   },
+   "54731": {
+    "name": "Relentless Sneak Attack",
+    "icon": "res://assets/ui/talents/e0315.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50058,
+     "per_level": 0.03
+    },
+    "desc": "+3 % de dégâts de « Embuscade » par niveau",
+    "eden": "For each level up, DMG from Ambush +3%."
+   },
+   "54739": {
+    "name": "Opportunism",
+    "icon": "res://assets/ui/talents/e0323.png",
+    "max": 10,
+    "effect": {
+     "type": "stat",
+     "stat": "lck_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de chance par niveau",
+    "eden": "For each level up, LCK +1%."
+   },
+   "54738": {
+    "name": "Cold Blooded",
+    "icon": "res://assets/ui/talents/e0322.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50158,
+     "per_level": 0.2
+    },
+    "desc": "« Sans cœur » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Heartless, ATK bonus +20%, duration +2 seconds."
+   },
+   "52600": {
+    "name": "Assassination",
+    "icon": "res://assets/ui/talents/e0159.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "crit_dmg",
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts critiques par niveau",
+    "eden": "For each level up, CRIT DMG +2%."
+   },
+   "54734": {
+    "name": "Seize Opportunity",
+    "icon": "res://assets/ui/talents/e0318.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50061,
+     "per_level": 0.2
+    },
+    "desc": "« Pas de l'ombre » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Sneak, CRIT Rate bonus +20% & P-ATK +5%."
+   },
+   "54741": {
+    "name": "Quick Steps",
+    "icon": "res://assets/ui/talents/e0325.png",
+    "max": 5,
+    "effect": {
+     "type": "stat",
+     "stat": "move_speed",
+     "per_level": 0.02
+    },
+    "desc": "+2 % de vitesse par niveau",
+    "eden": "For each level up, Move SPD +2%."
+   },
+   "54733": {
+    "name": "Hidden Breath",
+    "icon": "res://assets/ui/talents/e0317.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50060,
+     "per_level": 0.2
+    },
+    "desc": "« Force cachée » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Hidden Force, doubles the Move SPD bonus. Also the received damage increase is reduced to 3x."
+   },
+   "54737": {
+    "name": "Killing Spree",
+    "icon": "res://assets/ui/talents/e0321.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50157,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Entailles cruelles » par niveau",
+    "eden": "For each level up, DMG from Cruel Slashes +2%."
+   },
+   "54735": {
+    "name": "Shadowless",
+    "icon": "res://assets/ui/talents/e0319.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50062,
+     "per_level": 0.2
+    },
+    "desc": "« Galop » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Gallop, Move SPD & AGI bonuses +20%."
+   }
+  },
+  "certificates": [
+   "quick_means",
+   "dagger_expert"
+  ]
+ },
+ "samurai": {
+  "rows": [
+   [
+    {
+     "id": 52463,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 52468,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 1,
+     "spent": 0
+    },
+    null,
+    {
+     "id": 52472,
+     "max": 5,
+     "req": 52468,
+     "req_pts": 5,
+     "tier": 3,
+     "spent": 15
+    },
+    {
+     "id": 52475,
+     "max": 1,
+     "req": 52472,
+     "req_pts": 5,
+     "tier": 4,
+     "spent": 20
+    },
+    {
+     "id": 52473,
+     "max": 5,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 5,
+     "spent": 25
+    },
+    null,
+    {
+     "id": 52476,
+     "max": 1,
+     "req": 52473,
+     "req_pts": 5,
+     "tier": 7,
+     "spent": 35
+    }
+   ],
+   [
+    {
+     "id": 52469,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 52465,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 1,
+     "spent": 0
+    },
+    {
+     "id": 52480,
+     "max": 10,
+     "req": 52465,
+     "req_pts": 10,
+     "tier": 2,
+     "spent": 0
+    },
+    null,
+    {
+     "id": 52479,
+     "max": 10,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 4,
+     "spent": 20
+    },
+    null,
+    {
+     "id": 52471,
+     "max": 5,
+     "req": 52479,
+     "req_pts": 5,
+     "tier": 6,
+     "spent": 30
+    },
+    {
+     "id": 52478,
+     "max": 1,
+     "req": 52471,
+     "req_pts": 5,
+     "tier": 7,
+     "spent": 35
+    }
+   ],
+   [
+    {
+     "id": 52464,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 0,
+     "spent": 0
+    },
+    {
+     "id": 52466,
+     "max": 20,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 1,
+     "spent": 0
+    },
+    {
+     "id": 52467,
+     "max": 10,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 2,
+     "spent": 0
+    },
+    {
+     "id": 52477,
+     "max": 5,
+     "req": 52467,
+     "req_pts": 5,
+     "tier": 3,
+     "spent": 15
+    },
+    null,
+    {
+     "id": 52474,
+     "max": 1,
+     "req": 52477,
+     "req_pts": 5,
+     "tier": 5,
+     "spent": 25
+    },
+    null,
+    {
+     "id": 52470,
+     "max": 1,
+     "req": 0,
+     "req_pts": 0,
+     "tier": 7,
+     "spent": 35
+    }
+   ]
+  ],
+  "talents": {
+   "52463": {
+    "name": "Katana Specialization",
+    "icon": "res://assets/ui/talents/e0468.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "atk_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % d'attaque physique et magique par niveau",
+    "eden": "For each level up, when equipped with a Katana, weapon's P-ATK & M-ATK +1%."
+   },
+   "52468": {
+    "name": "Iaido",
+    "icon": "res://assets/ui/talents/e0473.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "atk_speed",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de vitesse d'attaque par niveau",
+    "eden": "For each level up, ATK SPD +1%."
+   },
+   "52472": {
+    "name": "Tiger Cross",
+    "icon": "res://assets/ui/talents/e0477.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50183,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Entaille en croix » par niveau",
+    "eden": "For each level up, DMG from Crosswise Cut +2%."
+   },
+   "52475": {
+    "name": "Lightning Strike",
+    "icon": "res://assets/ui/talents/e0480.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50186,
+     "per_level": 0.2
+    },
+    "desc": "« Langue de Marduk » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Marduk's Tongue, P-ATK & ATK SPD bonuses +20%."
+   },
+   "52473": {
+    "name": "Spear Formation",
+    "icon": "res://assets/ui/talents/e0478.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50184,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Purgatoire » par niveau",
+    "eden": "For each level up, DMG from Purgatory +2%."
+   },
+   "52476": {
+    "name": "Asura Way",
+    "icon": "res://assets/ui/talents/e0481.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50187,
+     "per_level": 0.2
+    },
+    "desc": "« Lame d'Asura » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Asura Slash, the original Double Hit damage will be increased to Triple Hit damage."
+   },
+   "52469": {
+    "name": "Swing Training",
+    "icon": "res://assets/ui/talents/e0474.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "agi_pct",
+     "per_level": 0.02
+    },
+    "desc": "+2 % d'agilité par niveau",
+    "eden": "For each level up, AGI +2%."
+   },
+   "52465": {
+    "name": "Samurai Law",
+    "icon": "res://assets/ui/talents/e0470.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "dmg_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de dégâts (précision) par niveau",
+    "eden": "For each level up, ACC +2%."
+   },
+   "52480": {
+    "name": "Melee Combat",
+    "icon": "res://assets/ui/talents/e0485.png",
+    "max": 10,
+    "effect": {
+     "type": "stat",
+     "stat": "parry",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de parade par niveau",
+    "eden": "For each level up, Parry +1%."
+   },
+   "52479": {
+    "name": "Samurai Physique",
+    "icon": "res://assets/ui/talents/e0484.png",
+    "max": 10,
+    "effect": {
+     "type": "stat",
+     "stat": "hp_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de PV max par niveau",
+    "eden": "For each level up, Max HP +1%."
+   },
+   "52471": {
+    "name": "Flame",
+    "icon": "res://assets/ui/talents/e0476.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50182,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Vent solaire » par niveau",
+    "eden": "For each level up, DMG from Solar Wind +2%."
+   },
+   "52478": {
+    "name": "Samurai Spirit",
+    "icon": "res://assets/ui/talents/e0483.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50189,
+     "per_level": 0.2
+    },
+    "desc": "« Volonté du sanctuaire » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Shrine Belief, increases the damage reduction bonus +20%, and duration +2 sec."
+   },
+   "52464": {
+    "name": "Way of Samurai",
+    "icon": "res://assets/ui/talents/e0469.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "lck_pct",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de chance par niveau",
+    "eden": "For each level up, LCK +1%."
+   },
+   "52466": {
+    "name": "Calm State of Mind",
+    "icon": "res://assets/ui/talents/e0471.png",
+    "max": 20,
+    "effect": {
+     "type": "stat",
+     "stat": "crit",
+     "per_level": 0.01
+    },
+    "desc": "+1 % de critique par niveau",
+    "eden": "For each level up, CRIT Rate +1%."
+   },
+   "52467": {
+    "name": "One Katana",
+    "icon": "res://assets/ui/talents/e0472.png",
+    "max": 10,
+    "effect": {
+     "type": "stat",
+     "stat": "crit_dmg",
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts critiques par niveau",
+    "eden": "For each level up, CRIT DMG +2%."
+   },
+   "52477": {
+    "name": "Protrusion: Second",
+    "icon": "res://assets/ui/talents/e0482.png",
+    "max": 5,
+    "effect": {
+     "type": "skill_dmg",
+     "skill": 50188,
+     "per_level": 0.02
+    },
+    "desc": "+2 % de dégâts de « Estoc » par niveau",
+    "eden": "For each level up, DMG from Protrusion +2%."
+   },
+   "52474": {
+    "name": "Thousand Sakura",
+    "icon": "res://assets/ui/talents/e0479.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50185,
+     "per_level": 0.2
+    },
+    "desc": "« Danse des grues » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "When using Dance of Cranes, the \"Thousand Cranes\" effect will now reduce all Physical Resistances -12."
+   },
+   "52470": {
+    "name": "Stumbling Feet",
+    "icon": "res://assets/ui/talents/e0475.png",
+    "max": 1,
+    "effect": {
+     "type": "skill_power",
+     "skill": 50181,
+     "per_level": 0.2
+    },
+    "desc": "« Hirondelle déchue » renforcée : +20 % de dégâts et de durée des effets",
+    "eden": "Fallen Swallow additionally reduces enemy Move SPD -20%."
+   }
+  },
+  "certificates": [
+   "battojutsu",
+   "katana_expert"
+  ]
+ }
+}

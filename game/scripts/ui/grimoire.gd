@@ -15,6 +15,8 @@ var _header_lore: Label
 var _stats: RichTextLabel
 var _passives: VBoxContainer
 var _combo_row: HBoxContainer
+var _weapon_bar: HBoxContainer
+var _weapon := ""
 var _skills_grid: GridContainer
 var _detail: RichTextLabel
 var _rank_bar: HBoxContainer
@@ -104,7 +106,10 @@ func _ready() -> void:
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mid.add_theme_constant_override("separation", 8)
 	body.add_child(mid)
-	_section(mid, "Combo d'auto-attaque  ·  clic gauche répété")
+	_section(mid, "Combo d'auto-attaque  ·  dépend de l'arme en main (clic gauche répété)")
+	_weapon_bar = HBoxContainer.new()
+	_weapon_bar.add_theme_constant_override("separation", 4)
+	mid.add_child(_weapon_bar)
 	_combo_row = HBoxContainer.new()
 	_combo_row.add_theme_constant_override("separation", 8)
 	mid.add_child(_combo_row)
@@ -133,6 +138,7 @@ func _ready() -> void:
 
 func open(class_id := "") -> void:
 	_class_id = class_id if class_id != "" else (Run.class_id if Run.active else Profile.selected_class)
+	_weapon = Run.weapon_type() if Run.active else (Items.weapon_type_of(Profile.equipped.weapon) if Profile.equipped.has("weapon") else "")
 	_root.visible = true
 	_refresh()
 
@@ -196,7 +202,25 @@ func _refresh() -> void:
 	# combo
 	for c in _combo_row.get_children():
 		c.queue_free()
-	var chain: Array = cls.get("combo", [])
+	if _weapon == "":
+		_weapon = Items.default_weapon_type(_class_id)
+	for c in _weapon_bar.get_children():
+		c.queue_free()
+	for wt in GameData.weapon_types:
+		var wb := Button.new()
+		wb.text = String(GameData.weapon_types[wt].name)
+		wb.icon = UiTheme.texture(String(GameData.weapon_types[wt].get("icon", "")))
+		wb.add_theme_constant_override("icon_max_width", 22)
+		wb.toggle_mode = true
+		wb.button_pressed = wt == _weapon
+		wb.focus_mode = Control.FOCUS_NONE
+		var wid: String = wt
+		wb.pressed.connect(func():
+			_weapon = wid
+			_refresh())
+		_weapon_bar.add_child(wb)
+	var wdata := GameData.weapon_type(_weapon)
+	var chain: Array = wdata.get("combo", [])
 	for i in chain.size():
 		var card := PanelContainer.new()
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -204,7 +228,7 @@ func _refresh() -> void:
 		card.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.1, 0.08, 0.17, 0.95), UiTheme.GOLD if fin else UiTheme.GOLD_DIM, 2 if fin else 1, 8))
 		var r := _rich(card, 13)
 		r.fit_content = true
-		r.text = SpellInfo.combo_step_bbcode(chain[i], i, cls, atk)
+		r.text = SpellInfo.combo_step_bbcode(chain[i], i, wdata, _atk(String(wdata.get("dmg_type", "phys"))))
 		_combo_row.add_child(card)
 		if i < chain.size() - 1:
 			var arrow := Hud._label(_combo_row, "➜", 22, UiTheme.GOLD)
@@ -262,16 +286,19 @@ func _refresh_detail() -> void:
 			_refresh_detail())
 		_rank_bar.add_child(b)
 	var icon := String(_skill.get("icon", ""))
-	_detail.text = ("[img=64x64]%s[/img]\n" % icon if icon != "" else "") + SpellInfo.skill_bbcode(_skill, _rank, _atk())
+	_detail.text = ("[img=64x64]%s[/img]\n" % icon if icon != "" else "") + SpellInfo.skill_bbcode(_skill, _rank, _atk(String(_skill.get("dmg_type", "phys"))))
 
 
-## Attaque actuelle du héros (pour chiffrer les dégâts), sinon estimation niveau 1.
-func _atk() -> float:
+## Attaque actuelle du héros (physique ou magique) pour chiffrer les dégâts, sinon estimation niveau 1.
+func _atk(dmg_type := "") -> float:
+	var cls := GameData.class_data(_class_id)
+	if dmg_type == "":
+		dmg_type = String(cls.get("dmg_type", "phys"))
 	var p := get_tree().get_first_node_in_group("player") as Player
 	if p and p.class_id == _class_id:
-		return p.atk
-	var base: Dictionary = GameData.class_data(_class_id).get("base", {})
-	return GameData.player_atk(1) * float(base.get("atk", 1.0))
+		return p.matk if dmg_type == "mag" else p.atk
+	var base: Dictionary = cls.get("base", {})
+	return GameData.player_atk(1) * float(base.get("matk" if dmg_type == "mag" else "atk", 0.5 if dmg_type == "mag" else 1.0))
 
 
 func _owned_rank(id: int) -> int:

@@ -10,6 +10,12 @@ signal objective_changed(text: String)
 signal prompt_changed(text: String)
 signal npc_opened(kind: String, npc: Interactable)
 signal boss_defeated
+signal extracted
+
+const EXTRACT_TIME := 10.0
+var extracting := false
+var extract_left := 0.0
+var _extract_tick := 0.0
 
 const RUN_TIME := 600.0
 const DISCOVER_VILLAGE := 45.0
@@ -95,6 +101,7 @@ func _process(delta: float) -> void:
 	if player == null or map == null:
 		return
 	time += delta
+	_update_extraction(delta)
 	if state == "explore" and time >= RUN_TIME:
 		_start_rage()
 	match state:
@@ -171,6 +178,8 @@ func _interact(it: Interactable) -> void:
 			var luck := 0.25 + (0.25 if state == "rage" else 0.0)
 			for k in 2:
 				_drop_item(it.global_position, _monster_level(1), luck)
+			# coffre : un consommable, meilleur pendant la rage
+			_drop_consumable(it.global_position, _monster_level(1), 2 if state == "rage" else 1)
 			Run.add_gold(15 + player.level * 4)
 			message.emit("Coffre ouvert !", 1.5)
 		"dungeon":
@@ -351,6 +360,10 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		luck += 0.2
 	for i in count:
 		_drop_item(m.global_position, m.level, luck)
+	# consommables : gemmes, parchemins, ciseaux, pierres (adaptés au niveau)
+	var n_cons := 3 if m.is_boss else (1 if m.is_elite and randf() < 0.35 else (1 if randf() < (0.07 if m.enraged else 0.04) else 0))
+	for i in n_cons:
+		_drop_consumable(m.global_position, m.level, 1 if (m.is_boss or m.is_elite) else 0)
 	if m == _boss:
 		_on_boss_killed()
 
@@ -358,6 +371,16 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 func _drop_item(pos: Vector3, level: int, luck: float) -> void:
 	var drop := LootDrop.new()
 	drop.item = Items.generate(loot_level(level), luck, "", Run.class_id)
+	drop.on_picked = func(item): message.emit("Butin : %s" % item.name, 1.5)
+	add_child(drop)
+	var p := pos + Vector3(randf_range(-1.5, 1.5), 0, randf_range(-1.5, 1.5))
+	var g: Vector3 = map.ground_at(p.x, p.z)
+	drop.global_position = (g if g != Vector3.INF else pos) + Vector3.UP * 0.2
+
+
+func _drop_consumable(pos: Vector3, level: int, bonus: int) -> void:
+	var drop := LootDrop.new()
+	drop.item = Craft.loot_item(Craft.random_loot(loot_level(level), bonus))
 	drop.on_picked = func(item): message.emit("Butin : %s" % item.name, 1.5)
 	add_child(drop)
 	var p := pos + Vector3(randf_range(-1.5, 1.5), 0, randf_range(-1.5, 1.5))
@@ -405,6 +428,48 @@ func _update_boss(delta: float) -> void:
 			var a := TAU * i / 4.0 + randf()
 			var p := _boss.global_position + Vector3(cos(a), 0, sin(a)) * 8.0
 			var m := _spawn_monster(_pick_monster(lvl), _around(p, 2.0), lvl)
+
+
+## Extraction : 10 s à survivre (une vague fonce sur le héros), puis on garde tout.
+func start_extraction() -> void:
+	if extracting or state == "cleared" or player == null or player.is_dead:
+		return
+	extracting = true
+	extract_left = EXTRACT_TIME
+	_extract_tick = 0.0
+	print("[run] extraction lancée à %d s" % int(time))
+	message.emit("EXTRACTION dans %d s — survis !" % int(EXTRACT_TIME), 2.0)
+	# les monstres sentent la fuite : encerclement immédiat
+	var lvl := _monster_level(1)
+	if state != "boss" and not _roster.is_empty():
+		for i in 12:
+			var a := TAU * i / 12.0
+			var p := player.global_position + Vector3(cos(a), 0, sin(a)) * 16.0
+			var g: Vector3 = map.ground_at(p.x, p.z)
+			if g != Vector3.INF:
+				_spawn_monster(_pick_monster(lvl), g, lvl)
+
+
+func _update_extraction(delta: float) -> void:
+	if not extracting:
+		return
+	if player.is_dead:
+		extracting = false
+		print("[run] extraction interrompue (mort)")
+		message.emit("Extraction interrompue", 1.5)
+		return
+	extract_left -= delta
+	_extract_tick -= delta
+	if _extract_tick <= 0.0:
+		_extract_tick = 0.5
+		Vfx.ring(player, player.global_position, 2.5 + (EXTRACT_TIME - extract_left) * 0.25, Color(0.45, 0.85, 1.0, 0.9))
+		if absf(extract_left - roundf(extract_left)) < 0.26 and extract_left > 0.3:
+			message.emit("EXTRACTION : %d" % roundi(extract_left), 0.9)
+	if extract_left <= 0.0:
+		print("[run] extraction réussie à %d s" % int(time))
+		extracting = false
+		Vfx.shockwave(player, player.global_position, 5.0, Color(0.5, 0.9, 1.0))
+		extracted.emit()
 
 
 func _on_boss_killed() -> void:

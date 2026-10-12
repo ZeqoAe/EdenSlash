@@ -20,7 +20,16 @@ const JUMP_BUFFER := 0.15  # un saut demandé juste avant d'atterrir part à l'a
 ## « Fluidité » (+10 % de dégâts par palier, 4 max, 3 s sans annulation parfaite = 0).
 const PERFECT_WINDOW := 0.28
 const AIR_SKILL_BONUS := 0.1
-const EVASION_CHANCE := 0.4  # statut « Évasion » (fumigène du voleur)  # compétences lancées en l'air : +10 % de dégâts
+const EVASION_CHANCE := 0.4  # statut « Évasion » (fumigène du voleur)
+
+# --- statistiques d'Eden (voir recalc_stats) --------------------------------------------
+var attrs := {}  # str, agi, int, wis, lck
+var matk := 0.0
+var mcrit := 0.05
+var cast_speed := 1.0
+var evasion_chance := 0.0  # esquive passive (agilité)
+var parry_chance := 0.0  # parade : dégâts divisés par deux (force)
+var heal_power := 1.0  # puissance de soin (sagesse)  # compétences lancées en l'air : +10 % de dégâts
 const STEP_HEIGHT := 0.6
 const HERO_RADIUS := 0.33
 const BASE_SPEED := 6.5
@@ -107,6 +116,7 @@ func _ready() -> void:
 	floor_max_angle = deg_to_rad(55.0)
 	floor_snap_length = 0.7
 	_attach_weapon(Profile.weapon_code())
+	_model_base = model.transform
 	_build_trail()
 	Run.changed.connect(recalc_stats)
 	statuses_changed.connect(recalc_stats)
@@ -119,7 +129,13 @@ func _ready() -> void:
 
 
 func _anim(key: String) -> String:
+	if key == "battle":
+		return String(_weapon_type().get("battle", cls.get("anims", {}).get("battle", "battle13")))
 	return String(cls.get("anims", {}).get(key, key))
+
+
+func _weapon_type() -> Dictionary:
+	return GameData.weapon_type(Run.weapon_type())
 
 
 # --- statistiques -------------------------------------------------------------------
@@ -128,15 +144,38 @@ func recalc_stats() -> void:
 	var ps := Run.passive_stats()
 	var ratio := hp / max_hp if max_hp > 0.0 else 1.0
 	var base: Dictionary = cls.get("base", {})
-	max_hp = maxf(1.0, GameData.player_max_hp(level) * float(base.get("hp", 1.0)) * (1.0 + ps.get("hp_pct", 0.0) + eq.get("hp_pct", 0.0)) + eq.get("hp", 0.0))
-	atk = (GameData.player_atk(level) * float(base.get("atk", 1.0)) + eq.get("atk", 0.0)) * (1.0 + ps.get("atk_pct", 0.0))
+	# attributs d'Eden : base de la classe + croissance par niveau + équipement, × talents
+	attrs = {}
+	var ab: Dictionary = cls.get("attributes", {}).get("base", {})
+	var ag: Dictionary = cls.get("attributes", {}).get("growth", {})
+	var buff_pct := {"str": 0.3 if has_status("might") else 0.0, "agi": 0.3 if has_status("swift") else 0.0,
+		"int": 0.3 if has_status("grace") else 0.0, "wis": 0.3 if has_status("grace") else 0.0, "lck": 0.0}
+	for a in Items.ATTRIBUTES:
+		attrs[a] = (float(ab.get(a, 6.0)) + float(ag.get(a, 1.0)) * (level - 1) + eq.get(a, 0.0)) * (1.0 + ps.get(a + "_pct", 0.0) + float(buff_pct[a]))
+	var s_str: float = attrs.str
+	var s_agi: float = attrs.agi
+	var s_int: float = attrs.int
+	var s_wis: float = attrs.wis
+	var s_lck: float = attrs.lck
+	var hp_buff := (0.2 if has_status("survival") else 0.0) + (0.15 if has_status("vitality") else 0.0)
+	max_hp = maxf(1.0, (GameData.player_max_hp(level) * float(base.get("hp", 1.0)) + s_str * 2.0 + s_wis * 1.5) * (1.0 + ps.get("hp_pct", 0.0) + eq.get("hp_pct", 0.0) + hp_buff) + eq.get("hp", 0.0))
+	atk = (GameData.player_atk(level) * float(base.get("atk", 1.0)) + eq.get("patk", 0.0) + s_str * 0.6) * (1.0 + ps.get("atk_pct", 0.0))
+	matk = (GameData.player_atk(level) * float(base.get("matk", 0.5)) + eq.get("matk", 0.0) + s_int * 0.6) * (1.0 + ps.get("atk_pct", 0.0) + ps.get("matk_pct", 0.0))
 	if has_status("marduk"):
 		atk *= 1.3
-	defense = 4.0 + level * 2.0 + eq.get("def", 0.0) + float(base.get("def", 0.0))
-	crit = 0.05 + float(base.get("crit", 0.0)) + eq.get("crit", 0.0) + ps.get("crit", 0.0) + (0.25 if has_status("keen") else 0.0)
-	crit_dmg = 0.5 + eq.get("crit_dmg", 0.0) + ps.get("crit_dmg", 0.0)
-	atk_speed = 1.0 + float(base.get("atk_speed", 0.0)) + eq.get("atk_speed", 0.0) + ps.get("atk_speed", 0.0) + (0.3 if has_status("marduk") else 0.0) + (0.3 if has_status("frenzy") else 0.0)
+		matk *= 1.3
+	defense = (4.0 + level * 2.0 + eq.get("def", 0.0) + float(base.get("def", 0.0)) + s_str * 0.25) * (1.0 + ps.get("def_pct", 0.0))
+	crit = 0.05 + float(base.get("crit", 0.0)) + eq.get("crit", 0.0) + ps.get("crit", 0.0) + s_lck * 0.0012 + s_agi * 0.0004 + (0.25 if has_status("keen") else 0.0)
+	mcrit = 0.05 + eq.get("mcrit", 0.0) + ps.get("crit", 0.0) + ps.get("mcrit", 0.0) + s_lck * 0.0012 + s_wis * 0.0004 + (0.25 if has_status("keen") else 0.0)
+	crit_dmg = 0.5 + eq.get("crit_dmg", 0.0) + ps.get("crit_dmg", 0.0) + s_lck * 0.0015
+	cast_speed = 1.0 + s_agi * 0.001 + s_wis * 0.0005 + ps.get("cast_speed", 0.0)
+	evasion_chance = clampf(s_agi * 0.0006 + eq.get("eva", 0.0) + ps.get("eva", 0.0), 0.0, 0.2)
+	parry_chance = clampf(s_str * 0.0004 + ps.get("parry", 0.0), 0.0, 0.2)
+	heal_power = 1.0 + s_wis * 0.004 + ps.get("heal_pct", 0.0) + (0.15 if has_status("survival") else 0.0)
+	atk_speed = 1.0 + float(base.get("atk_speed", 0.0)) + s_agi * 0.0015 + eq.get("atk_speed", 0.0) + ps.get("atk_speed", 0.0) + (0.3 if has_status("marduk") else 0.0) + (0.3 if has_status("frenzy") else 0.0)
 	move_mult = 1.0 + float(base.get("move_speed", 0.0)) + eq.get("move_speed", 0.0) + ps.get("move_speed", 0.0) + (0.3 if has_status("shrine") else 0.0) + (0.3 if has_status("haste") else 0.0)
+	if has_status("titan"):
+		move_mult *= 0.4
 	cdr = clampf(eq.get("cdr", 0.0) + ps.get("cdr", 0.0), 0.0, 0.5)
 	lifesteal = eq.get("lifesteal", 0.0) + ps.get("lifesteal", 0.0)
 	area_mult = 1.0 + ps.get("area", 0.0) + eq.get("area", 0.0)
@@ -159,16 +198,31 @@ func recalc_stats() -> void:
 
 ## Tableau des statistiques affiché dans le menu Personnage.
 func stat_sheet() -> Array:
+	var pc := func(v: float) -> String: return "%d %%" % roundi(v * 100)
 	return [
-		["Niveau", str(level)], ["PV", "%d / %d" % [hp, max_hp]], ["Attaque", str(int(atk))],
-		["Défense", str(int(defense))], ["Critique", "%d %%" % roundi(crit * 100)],
-		["Dégâts critiques", "+%d %%" % roundi(crit_dmg * 100)],
-		["Vitesse d'attaque", "%d %%" % roundi(atk_speed * 100)],
+		["Niveau", str(level)], ["PV", "%d / %d" % [hp, max_hp]],
+		["— Attributs —", ""],
+		["Force", str(roundi(attrs.get("str", 0.0)))], ["Agilité", str(roundi(attrs.get("agi", 0.0)))],
+		["Intelligence", str(roundi(attrs.get("int", 0.0)))], ["Sagesse", str(roundi(attrs.get("wis", 0.0)))],
+		["Chance", str(roundi(attrs.get("lck", 0.0)))],
+		["— Offensive physique —", ""],
+		["Attaque physique", str(int(atk))], ["Vitesse d'attaque", pc.call(atk_speed)],
+		["Critique physique", pc.call(crit)], ["Dégâts critiques", "+" + pc.call(crit_dmg)],
+		["— Offensive magique —", ""],
+		["Attaque magique", str(int(matk))], ["Vitesse d'incantation", pc.call(cast_speed)],
+		["Critique magique", pc.call(mcrit)], ["Puissance de soin", pc.call(heal_power)],
+		["— Défense —", ""],
+		["Défense", str(int(defense))], ["Esquive", pc.call(evasion_chance)], ["Parade", pc.call(parry_chance)],
+		["— Autres —", ""],
 		["Vitesse", "%d %%" % roundi(move_mult * 100)], ["Recharge", "-%d %%" % roundi(cdr * 100)],
 		["Vol de vie", "%d %%" % roundi(lifesteal * 100)],
 		["Dégâts", "+%d %%" % roundi((dmg_mult - 1.0) * 100)], ["Zone d'effet", "+%d %%" % roundi((area_mult - 1.0) * 100)],
 		["Portée", "+%d %%" % roundi((reach_mult - 1.0) * 100)],
 	]
+
+
+func dot_power() -> float:
+	return maxf(atk, matk)
 
 
 func dot_mult() -> float:
@@ -285,6 +339,7 @@ func _physics_process(delta: float) -> void:
 		if was_air and _state == "dive":
 			_dive_impact()
 	_handle_obstacles(input_dir, before, delta)
+	_update_pose()
 	_update_trail()
 	if has_status("regen") and hp < max_hp:
 		heal(max_hp * 0.03 * delta)
@@ -472,7 +527,8 @@ func _try_auto_skill() -> bool:
 
 ## Portée de l'attaque de base : corps à corps, ou tir pour l'archer et le mage.
 func attack_reach() -> float:
-	return float(cls.get("attack_range", ATTACK_RANGE)) * (reach_mult if cls.has("attack_range") else 1.0)
+	var wt := _weapon_type()
+	return float(wt.get("attack_range", ATTACK_RANGE)) * (reach_mult if wt.has("attack_range") else 1.0)
 
 
 ## Portée d'une compétence pour le lancement automatique (zone + élan).
@@ -531,7 +587,7 @@ func monster_under_mouse() -> Combatant:
 # --- attaques de base ---------------------------------------------------------------
 ## Coups du combo de la classe (classes.json « combo »), sinon les attaques de base.
 func combo_chain() -> Array:
-	var chain: Array = cls.get("combo", [])
+	var chain: Array = _weapon_type().get("combo", cls.get("combo", []))
 	if not chain.is_empty():
 		return chain
 	var out: Array = []
@@ -559,8 +615,10 @@ func _start_attack(aim: Vector3) -> void:
 		"mult": float(step.get("mult", 1.0)) * (finisher_mult if finisher else 1.0), "radius": radius,
 		"arc": float(step.get("arc", 150.0)), "hit_fx": String(step.get("hit_fx", "s00141")),
 		"applies": step.get("applies", {}), "dash": float(step.get("dash", 0.0)), "finisher": finisher,
+		"dmg_type": String(_weapon_type().get("dmg_type", "phys")),
 	}
-	for k in ["max_targets", "pull", "heal", "crit_bonus", "land_hit", "leap_forward", "self_status", "move", "drop", "spread", "volley"]:
+	for k in ["max_targets", "pull", "heal", "crit_bonus", "land_hit", "leap_forward", "self_status", "move", "drop", "spread", "volley",
+			"hits", "flip", "spin_turns"]:
 		if step.has(k):
 			action[k] = step[k]
 	_break_stealth()
@@ -582,7 +640,7 @@ func _start_attack(aim: Vector3) -> void:
 		action["pierce"] = int(step.get("pierce", 0)) + (1 if finisher else 0)
 		action["volley"] = int(step.get("volley", 1))
 	if finisher and finisher_hits > 1:
-		action["hits"] = finisher_hits
+		action["hits"] = maxi(finisher_hits, int(action.get("hits", 1)))
 		action["arc"] = 360.0
 	_begin_action("attack", String(step.anim), atk_speed * 1.25 * float(step.get("speed", 1.0)), action)
 	if is_on_floor() and float(step.get("leap", 0.0)) > 0.0:
@@ -679,10 +737,16 @@ func _resolve_hit() -> void:
 	_action["hit_done"] = true
 	_last_hit_at = _time
 	var is_skill := _state == "skill"
-	if _action.get("finisher", false):
-		Vfx.ring(self, global_position, float(_action.radius), Color(1.0, 0.85, 0.4, 0.9))
-		EdenFx.play(self, "s00541", global_position, rotation.y, GameData.HERO_SCALE * 1.3)
-		_shake(0.5)
+	if _action.get("finisher", false) and first_hit:
+		if _action.get("land_hit", false):
+			# retombée du salto : onde de choc
+			Vfx.shockwave(self, global_position, float(_action.radius) * 1.4)
+			EdenFx.play(self, "s00541", global_position, rotation.y, GameData.HERO_SCALE * 1.8)
+			_shake(1.2)
+		else:
+			Vfx.ring(self, global_position, float(_action.radius), Color(1.0, 0.85, 0.4, 0.9))
+			EdenFx.play(self, "s00541", global_position, rotation.y, GameData.HERO_SCALE * 1.3)
+			_shake(0.5)
 	var hit: Combatant = null
 	if float(_action.get("move", 0.0)) > 0.0:
 		_quick_move(_action.get("move_dir", forward()), float(_action.move) * reach_mult)
@@ -771,6 +835,26 @@ func _fire_bolts(action: Dictionary, is_skill: bool) -> void:
 	_last_combat = _time
 
 
+var _model_base := Transform3D.IDENTITY
+
+
+## Pose du modèle pendant certains coups : salto avant (rotation autour du buste) et
+## toupie (tours sur soi). Toute autre action remet le modèle droit.
+func _update_pose() -> void:
+	if model == null:
+		return
+	var t := _model_base
+	if _state == "attack" and _action.get("flip", false) and not _action.get("hit_done", false):
+		var k := clampf(_state_time / 0.72, 0.0, 1.0)
+		var angle := TAU * (k * k * (3.0 - 2.0 * k))  # tour complet, lissé
+		var c := Vector3(0.0, 0.9 * GameData.HERO_SCALE, 0.0)
+		t = Transform3D(Basis(Vector3.RIGHT, angle), c - Basis(Vector3.RIGHT, angle) * c) * _model_base
+	elif _state == "attack" and int(_action.get("spin_turns", 0)) > 0:
+		var k := clampf(_state_time / maxf(_state_len * 0.85, 0.1), 0.0, 1.0)
+		t = Transform3D(Basis(Vector3.UP, -TAU * float(_action.spin_turns) * k), Vector3.ZERO) * _model_base
+	model.transform = t
+
+
 ## Déplacement instantané d'un coup (fond en avant, repli du mage, sortie de fumigène).
 func _quick_move(dir: Vector3, dist: float) -> void:
 	_afterimage()
@@ -856,7 +940,13 @@ func bolt_hit(m: Monster, dir: Vector3, action: Dictionary) -> void:
 
 
 func _heal_action(action: Dictionary) -> void:
-	var amount := max_hp * float(action.get("heal", 0.0))
+	if action.get("cleanse", false):
+		# purification : retire les malus du héros
+		for st in statuses.keys():
+			if not StatusDb.is_buff(st):
+				statuses.erase(st)
+		statuses_changed.emit()
+	var amount := max_hp * float(action.get("heal", 0.0)) * heal_power
 	if amount <= 0.0:
 		return
 	heal(amount)
@@ -902,7 +992,7 @@ func proc_hit(m: Combatant, mult: float, can_crit := false) -> void:
 	if m == null or not is_instance_valid(m) or m.is_dead:
 		return
 	var is_crit := can_crit and randf() < crit
-	var dmg := atk * mult * damage_dealt_mult() * dmg_mult * (1.0 + crit_dmg if is_crit else 1.0)
+	var dmg := maxf(atk, matk) * mult * damage_dealt_mult() * dmg_mult * (1.0 + crit_dmg if is_crit else 1.0)
 	var mon := m as Monster
 	if mon and (mon.is_elite or mon.is_boss):
 		dmg *= elite_mult
@@ -924,8 +1014,9 @@ func _hit_monster(m: Monster, dir: Vector3, action: Dictionary, is_skill: bool) 
 	var combo_ok: bool = not combo.is_empty() and m.has_status(String(combo.get("requires", "")))
 	if combo_ok and combo.get("double", false):
 		mult *= 2.0
-	var is_crit := randf() < crit + float(action.get("crit_bonus", 0.0))
-	var dmg := atk * mult * randf_range(0.92, 1.08) * damage_dealt_mult() * (1.0 + crit_dmg if is_crit else 1.0) * flow_mult() * dmg_mult
+	var magic: bool = action.get("dmg_type", "phys") == "mag"
+	var is_crit := randf() < (mcrit if magic else crit) + float(action.get("crit_bonus", 0.0))
+	var dmg := (matk if magic else atk) * mult * randf_range(0.92, 1.08) * damage_dealt_mult() * (1.0 + crit_dmg if is_crit else 1.0) * flow_mult() * dmg_mult
 	if m.is_elite or m.is_boss:
 		dmg *= elite_mult
 	elif execute > 0.0 and m.hp - dmg <= m.max_hp * execute:
@@ -944,6 +1035,8 @@ func _hit_monster(m: Monster, dir: Vector3, action: Dictionary, is_skill: bool) 
 	if lifesteal > 0.0:
 		heal(dmg * lifesteal)
 	Vfx.spark(self, m.global_position + Vector3.UP * 1.0, Color(1.0, 0.85, 0.5), is_crit)
+	if is_skill or is_crit or action.get("finisher", false):
+		Vfx.flash(self, m.global_position + Vector3.UP * 1.0, 1.6 if is_crit else 1.2, Color(1.0, 0.85, 0.55))
 	var pull := float(action.get("pull", 0.0))
 	if pull > 0.0:
 		# attraction vers le héros (grappin) ou le centre de la zone (vortex)
@@ -958,6 +1051,8 @@ func _hit_monster(m: Monster, dir: Vector3, action: Dictionary, is_skill: bool) 
 		for b in combo.get("buff", {}):
 			add_status(b, float(combo.buff[b]), self)
 			recalc_stats()
+	if not is_skill and has_status("hunter_stance") and randf() < 0.2:
+		m.add_status("shock", 5.0, self)
 	Procs.fire(self, "hit", m, m.global_position)
 	if is_crit:
 		Procs.fire(self, "crit", m, m.global_position)
@@ -1012,7 +1107,8 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 		"range": float(s.get("range", 0.0)) * reach_mult, "pierce": int(s.get("pierce", 0)),
 		"projectile": String(s.get("projectile", "magic")), "volley": int(s.get("volley", 1)),
 		"spread": float(s.get("spread", 0.0)), "heal": float(s.get("heal", 0.0)),
-		"crit_bonus": float(s.get("crit_bonus", 0.0)),
+		"crit_bonus": float(s.get("crit_bonus", 0.0)), "cleanse": s.get("cleanse", false),
+		"dmg_type": String(s.get("dmg_type", cls.get("dmg_type", "phys"))),
 	}
 	if s.kind == "ground":
 		# zone au sol à l'endroit visé, dans la limite de la portée
@@ -1027,15 +1123,22 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 		_carry = Vector3.ZERO
 	if _state == "dodge":
 		_end_dodge()
+	var tal := Run.skill_talent(int(s.id))
+	var dur_k := 1.0 + float(tal.power)
 	for b in s.get("buff", {}):
-		add_status(b, float(s.buff[b]), self)
+		add_status(b, float(s.buff[b]) * dur_k + float(tal.duration), self)
+	if float(tal.duration) > 0.0 or float(tal.power) > 0.0:
+		var ap: Dictionary = (s.get("applies", {}) as Dictionary).duplicate()
+		for st in ap:
+			ap[st] = float(ap[st]) * dur_k + float(tal.duration)
+		action["applies"] = ap
 	if s.kind == "buff" or s.kind == "spin":
 		Vfx.ring(self, global_position, maxf(skill_radius(s), 2.5), Color(1.0, 0.8, 0.35, 0.8))
 	recalc_stats()
 	var fx: Dictionary = s.get("fx", {})
 	action["hit_fx"] = String(fx.get("hit", "")) if String(fx.get("hit", "")) != "" else "s00341"
 	EdenFx.play(self, String(fx.get("cast", "")), global_position, rotation.y, GameData.HERO_SCALE, self)
-	_begin_action("skill", String(s.anim), 1.15 * atk_speed, action)
+	_begin_action("skill", String(s.anim), 1.15 * (cast_speed if action.dmg_type == "mag" else atk_speed), action)
 
 
 func _skill_aim() -> Vector3:
@@ -1320,8 +1423,20 @@ func is_invulnerable() -> bool:
 func take_damage(amount: float, source: Combatant = null, is_crit := false, dot := false) -> void:
 	if is_invulnerable():
 		return
-	if not dot and has_status("evasion") and randf() < EVASION_CHANCE:
+	if not dot and ((has_status("evasion") and randf() < EVASION_CHANCE) or randf() < evasion_chance):
 		DamageNumber.spawn_text(self, "ESQUIVE !", Color(0.7, 1.0, 0.7))
+		return
+	if not dot and randf() < parry_chance:
+		DamageNumber.spawn_text(self, "PARADE", Color(0.85, 0.85, 1.0))
+		amount *= 0.5
+	# ange gardien (Résurrection du clerc) : un coup fatal est annulé
+	if has_status("angel") and hp - amount * damage_taken_mult() <= 0.0:
+		statuses.erase("angel")
+		statuses_changed.emit()
+		hp = max_hp * 0.3
+		health_changed.emit(hp, max_hp)
+		DamageNumber.spawn_text(self, "RÉSURRECTION !", Color(1.0, 0.95, 0.6))
+		Vfx.shockwave(self, global_position, 4.0, Color(1.0, 0.95, 0.7))
 		return
 	_last_combat = _time
 	super.take_damage(amount, source, is_crit, dot)

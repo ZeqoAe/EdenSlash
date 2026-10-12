@@ -48,7 +48,7 @@ func _open_for_test() -> void:
 		pause_menu.settings.open(int(_debug_open.trim_prefix("settings")))
 	elif _debug_open == "map":
 		hud._big_map.visible = true
-	elif _debug_open in ["merchant", "smith", "trader"]:
+	elif _debug_open in ["merchant", "smith", "trader", "jeweler"]:
 		# profil de test (user://profile_test.json) : jamais celui du joueur
 		cards._queue.clear()
 		cards._show_next()
@@ -56,7 +56,17 @@ func _open_for_test() -> void:
 			Profile.add_item(Items.generate(player.level + randi_range(0, 3), randf_range(-0.5, 1.0)))
 		Profile.materials.fragment += 40
 		Profile.add_gold(800)
+		# fournitures de test pour la forge et le joaillier
+		for k in ["drill", "drill", "luck", "luck", "luck", "protect", Craft.gem_key("ruby", 1), Craft.gem_key("garnet", 2),
+				Craft.gem_key("amethyst", 0), Craft.scroll_key("violence", 1), Craft.scroll_key("rehab", 1)]:
+			Profile.add_bag(k)
 		village_ui.open(_debug_open, "Test")
+		if _debug_open in ["smith", "jeweler"]:
+			get_tree().create_timer(1.5, true, false, true).timeout.connect(func():
+				var it = village_ui._shown[0]
+				if _debug_open == "jeweler":
+					Craft.drill(it)
+				village_ui._on_entry_pressed(it, 0))
 		if _debug_open == "merchant":
 			get_tree().create_timer(1.5, true, false, true).timeout.connect(func(): village_ui._on_entry_pressed(village_ui._shown[0], 0))
 
@@ -101,6 +111,8 @@ func _ready() -> void:
 	player.leveled_up.connect(_on_level_up)
 	player.died.connect(_on_player_died)
 	director.boss_defeated.connect(func(): end_run("victoire"))
+	director.extracted.connect(func(): end_run("extraction"))
+	pause_menu.extract_requested.connect(func(): director.start_extraction())
 	_parse_args()
 	# captures et arrêt programmés indépendamment de la pause
 	for t in _shots:
@@ -160,6 +172,12 @@ func _parse_args() -> void:
 				for i in 6:
 					Profile.add_item(Items.generate(player.level + 1, randf()))
 				end_run("abandon"))
+		elif arg.begins_with("--extract-at="):
+			var t_ex := float(arg.trim_prefix("--extract-at="))
+			get_tree().create_timer(t_ex).timeout.connect(func():
+				for i in 3:
+					Profile.add_item(Items.generate(player.level + 1, randf()))
+				director.start_extraction())
 		elif arg.begins_with("--seals="):
 			var n_seals := int(arg.trim_prefix("--seals="))
 			get_tree().create_timer(1.0).timeout.connect(func(): director.seals = n_seals)
@@ -209,6 +227,10 @@ func _on_level_up(lvl: int) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if village_ui.is_open():
+		return
+	if event.is_action_pressed("extract") and not _ended and not pause_menu.is_open() and not cards.is_open():
+		director.start_extraction()
+		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("pause") and not _ended and not cards.is_open() and not tools._report_box.visible:
 		if pause_menu.is_open():

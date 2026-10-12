@@ -50,6 +50,15 @@ const STATUS_INFO := {
 	"poison": {"name": "Poison", "color": Color(0.55, 0.9, 0.3)},
 	"regen": {"name": "Régénération", "color": Color(0.5, 1.0, 0.6)},
 	"invisible": {"name": "Invisible", "color": Color(0.75, 0.75, 0.95)},
+	"titan": {"name": "Mur du titan", "color": Color(0.8, 0.7, 0.5)},
+	"survival": {"name": "Instinct de survie", "color": Color(0.6, 1.0, 0.6)},
+	"might": {"name": "Puissance", "color": Color(1.0, 0.6, 0.4)},
+	"swift": {"name": "Célérité", "color": Color(0.6, 1.0, 0.9)},
+	"grace": {"name": "Grâce de sagesse", "color": Color(0.7, 0.8, 1.0)},
+	"vitality": {"name": "Vitalité", "color": Color(0.6, 1.0, 0.7)},
+	"hunter_stance": {"name": "Posture du chasseur", "color": Color(0.9, 0.9, 0.5)},
+	"disarm": {"name": "Désarmé", "color": Color(0.8, 0.8, 0.8)},
+	"angel": {"name": "Ange gardien", "color": Color(1.0, 0.95, 0.7)},
 	"evasion": {"name": "Évasion", "color": Color(0.7, 1.0, 0.7)},
 }
 ## Dégâts par seconde des effets sur la durée, en part de l'attaque de la source.
@@ -66,10 +75,15 @@ func add_status(status: String, duration: float, source: Combatant = null) -> vo
 		return
 	statuses[status] = maxf(float(statuses.get(status, 0.0)), clock + duration)
 	if DOT_FACTOR.has(status) and source:
-		var dps := source.atk * float(DOT_FACTOR[status]) * source.dot_mult()
+		var dps := source.dot_power() * float(DOT_FACTOR[status]) * source.dot_mult()
 		var cur: Dictionary = _dots.get(status, {})
 		_dots[status] = {"dps": maxf(dps, float(cur.get("dps", 0.0))), "source": source, "tick": float(cur.get("tick", 0.0))}
 	statuses_changed.emit()
+
+
+## Attaque utilisée par les effets sur la durée de ce combattant.
+func dot_power() -> float:
+	return atk
 
 
 ## Multiplicateur des dégâts sur la durée infligés (cartes du héros).
@@ -119,6 +133,8 @@ func damage_taken_mult() -> float:
 		m *= 1.15
 	if has_status("barrier"):
 		m *= 0.6
+	if has_status("titan"):
+		m *= 0.5
 	return m
 
 

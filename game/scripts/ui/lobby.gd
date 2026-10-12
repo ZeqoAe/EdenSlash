@@ -16,8 +16,11 @@ var _panel_layer: CanvasLayer
 var _gold: Label
 var _reset_button: Button
 var _zone_box: GridContainer
+var _weapon_box: HBoxContainer
 var _grimoire: Grimoire
 var _open_grimoire := false
+var _talents: TalentsUi
+var _open_talents := false
 var _run_button: Button
 var _reset_armed_at := -10.0
 var _settings: SettingsMenu
@@ -30,10 +33,18 @@ func _ready() -> void:
 			Profile.selected_class = arg.trim_prefix("--class=")
 		elif arg.begins_with("--zone="):
 			Profile.selected_zone = arg.trim_prefix("--zone=")
+		elif arg.begins_with("--weapon="):
+			Profile.select_weapon_type(arg.trim_prefix("--weapon="))
 		elif arg == "--grimoire":
 			_open_grimoire = true
+		elif arg == "--talents":
+			_open_talents = true
+		elif arg.begins_with("--expertise="):
+			# test : expertise donnée à toutes les classes (profil de test uniquement)
+			for cid in GameData.classes:
+				Profile.expertise[cid] = int(arg.trim_prefix("--expertise="))
 	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg == "--grimoire":
+		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in ["--grimoire", "--talents"] or arg.begins_with("--expertise="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -43,9 +54,13 @@ func _ready() -> void:
 	_build_scene()
 	_grimoire = Grimoire.new()
 	add_child(_grimoire)
+	_talents = TalentsUi.new()
+	add_child(_talents)
 	_build_ui()
 	if _open_grimoire:
 		_grimoire.open(Profile.selected_class)
+	if _open_talents:
+		_talents.open(Profile.selected_class)
 	if shot > 0.0:
 		await get_tree().create_timer(shot).timeout
 		DirAccess.make_dir_recursive_absolute("user://shots")
@@ -128,8 +143,8 @@ func _process(delta: float) -> void:
 	if _hero_root:
 		_hero_root.rotation.y += delta * 0.35
 	if _gold:
-		_gold.text = "Héritage : %d objet(s)   ·   Runs : %d (%d victoires)   ·   Meilleur niveau : %d" % [
-			Profile.vault.size(), Profile.runs_done, Profile.runs_won, Profile.best_level]
+		_gold.text = "Héritage : %d objet(s)   ·   Réserve : %d fourniture(s)   ·   Runs : %d (%d victoires)   ·   Meilleur niveau : %d" % [
+			Profile.vault.size(), Profile.stash_count(), Profile.runs_done, Profile.runs_won, Profile.best_level]
 	if _reset_button and _reset_armed_at > 0.0 and _now() - _reset_armed_at > 4.0:
 		_reset_armed_at = -10.0
 		_reset_button.text = "Nouvelle partie (tout effacer)"
@@ -162,6 +177,11 @@ func _build_ui() -> void:
 	var lore := Hud._label(v, cls.get("lore", ""), 15, Color(0.9, 0.9, 0.95))
 	lore.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lore.custom_minimum_size = Vector2(560, 0)
+	Hud._label(v, "Arme  (le combo d'auto-attaque suit l'arme, les sorts suivent la classe)", 18, ACCENT)
+	_weapon_box = HBoxContainer.new()
+	_weapon_box.add_theme_constant_override("separation", 6)
+	v.add_child(_weapon_box)
+	_refresh_weapons()
 	Hud._label(v, "Zone", 22, ACCENT)
 	var zones := GridContainer.new()
 	zones.columns = 3
@@ -172,11 +192,20 @@ func _build_ui() -> void:
 	_refresh_zones()
 	_run_button = _big_button(v, "", _start_run)
 	_refresh_run_button()
-	_big_button(v, "Personnage & équipement", _open_panel)
-	_big_button(v, "Grimoire des classes (sorts, combos, passifs)", func(): _grimoire.open(Profile.selected_class))
-	_big_button(v, "Paramètres (contrôles, touches, affichage…)", func(): _settings.open())
-	_reset_button = _big_button(v, "Nouvelle partie (tout effacer)", _on_reset)
-	_big_button(v, "Quitter", func(): get_tree().quit())
+	# boutons secondaires sur deux colonnes
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 7)
+	v.add_child(grid)
+	for spec in [["Personnage & équipement", _open_panel], ["Grimoire (sorts, combos)", func(): _grimoire.open(Profile.selected_class)],
+			["Expertise & talents", func(): _talents.open(Profile.selected_class)], ["Paramètres", func(): _settings.open()],
+			["Nouvelle partie (tout effacer)", _on_reset], ["Quitter", func(): get_tree().quit()]]:
+		var b := _big_button(grid, spec[0], spec[1])
+		b.custom_minimum_size = Vector2(276, 42)
+		b.add_theme_font_size_override("font_size", 16)
+		if spec[0].begins_with("Nouvelle partie"):
+			_reset_button = b
 	_gold = Hud._label(v, "", 15, ACCENT)
 	var help := Hud._label(root, "Run : chaque run repart de zéro. Monte de niveau, réunis 3 sceaux, affronte le boss. À la fin, garde 1 objet en héritage (avec son amélioration).", 14, Color(1, 1, 1, 0.7))
 	help.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
@@ -233,6 +262,37 @@ func _class_card(id: String, label: String) -> Control:
 		Profile.save_profile()
 		_show_hero())
 	return b
+
+
+## Choix de l'arme de départ : la meilleure de l'héritage de ce type, sinon une arme commune.
+func _refresh_weapons() -> void:
+	for c in _weapon_box.get_children():
+		c.queue_free()
+	var current := Items.weapon_type_of(Profile.equipped.get("weapon", {})) if Profile.equipped.has("weapon") else ""
+	for wt in GameData.weapon_types:
+		var w: Dictionary = GameData.weapon_types[wt]
+		var b := Button.new()
+		b.text = String(w.name)
+		b.icon = UiTheme.texture(String(w.get("icon", "")))
+		b.add_theme_constant_override("icon_max_width", 26)
+		b.custom_minimum_size = Vector2(88, 40)
+		b.add_theme_font_size_override("font_size", 13)
+		b.focus_mode = Control.FOCUS_NONE
+		b.tooltip_text = "%s : combo du %s, %s%s" % [w.name, GameData.class_data(String(w["class"])).get("name_fr", ""),
+			"dégâts magiques" if w.get("dmg_type", "phys") == "mag" else "dégâts physiques",
+			", à distance (%d m)" % int(w.attack_range) if w.has("attack_range") else ", corps à corps"]
+		var sb := Hud.style(Color(0.12, 0.1, 0.2, 0.95))
+		if wt == current:
+			sb.border_color = ACCENT
+			sb.set_border_width_all(3)
+		b.add_theme_stylebox_override("normal", sb)
+		b.add_theme_stylebox_override("hover", Hud.style(Color(0.22, 0.18, 0.34)))
+		var id: String = wt
+		b.pressed.connect(func():
+			Profile.select_weapon_type(id)
+			_refresh_weapons()
+			_show_hero())
+		_weapon_box.add_child(b)
 
 
 ## Zones : débloquées dans l'ordre en battant le boss de la précédente.

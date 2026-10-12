@@ -17,14 +17,24 @@ const SLOT_NAMES := {
 }
 ## Types de base : nom, stats de base (niveau 1, qualité 100 %).
 const BASES := {
-	"weapon": {"name": "Katana", "stats": {"atk": 14.0, "crit": 0.02}},
-	"head": {"name": "Kabuto", "stats": {"hp": 35.0, "def": 2.0}},
-	"chest": {"name": "Dō", "stats": {"hp": 60.0, "def": 4.0}},
-	"legs": {"name": "Hakama", "stats": {"hp": 45.0, "def": 3.0}},
-	"gloves": {"name": "Kote", "stats": {"atk": 5.0, "atk_speed": 0.02}},
-	"boots": {"name": "Suneate", "stats": {"hp": 20.0, "move_speed": 0.04}},
-	"back": {"name": "Haori", "stats": {"hp": 30.0, "crit": 0.02}},
+	"weapon": {"name": "Katana", "stats": {"patk": 14.0, "matk": 6.0, "crit": 0.02}},
+	"head": {"name": "Kabuto", "stats": {"hp": 35.0, "def": 2.0, "wis": 2.0}},
+	"chest": {"name": "Dō", "stats": {"hp": 60.0, "def": 4.0, "str": 2.0}},
+	"legs": {"name": "Hakama", "stats": {"hp": 45.0, "def": 3.0, "agi": 2.0}},
+	"gloves": {"name": "Kote", "stats": {"patk": 4.0, "matk": 4.0, "atk_speed": 0.02}},
+	"boots": {"name": "Suneate", "stats": {"hp": 20.0, "move_speed": 0.04, "agi": 1.0}},
+	"back": {"name": "Haori", "stats": {"hp": 30.0, "crit": 0.02, "lck": 2.0}},
 }
+## Armes selon la classe (comme dans Eden : attaque physique ET magique, attribut principal).
+const WEAPON_BASES := {
+	"katana": {"patk": 14.0, "matk": 6.0, "crit": 0.02, "str": 2.0},
+	"axe": {"patk": 16.0, "matk": 5.0, "str": 3.0},
+	"dagger": {"patk": 12.0, "matk": 5.0, "crit": 0.04, "agi": 3.0},
+	"bow": {"patk": 14.0, "matk": 5.0, "agi": 3.0},
+	"scepter": {"patk": 8.0, "matk": 13.0, "wis": 3.0},
+	"staff": {"patk": 5.0, "matk": 16.0, "int": 3.0},
+}
+const ATTRIBUTES := ["str", "agi", "int", "wis", "lck"]
 const RARITIES := [
 	{"name": "Commun", "color": Color(0.85, 0.85, 0.85), "affixes": 0},
 	{"name": "Magique", "color": Color(0.45, 0.7, 1.0), "affixes": 1},
@@ -32,11 +42,13 @@ const RARITIES := [
 	{"name": "Épique", "color": Color(0.8, 0.45, 1.0), "affixes": 3},
 ]
 const STAT_NAMES := {
-	"atk": "Attaque", "hp": "PV", "def": "Défense", "crit": "Critique",
+	"atk": "Attaque", "patk": "Attaque physique", "matk": "Attaque magique",
+	"str": "Force", "agi": "Agilité", "int": "Intelligence", "wis": "Sagesse", "lck": "Chance",
+	"mcrit": "Critique magique", "hp": "PV", "def": "Défense", "crit": "Critique physique",
 	"crit_dmg": "Dégâts critiques", "atk_speed": "Vitesse d'attaque",
 	"move_speed": "Vitesse", "cdr": "Recharge", "lifesteal": "Vol de vie",
 }
-const PERCENT_STATS := ["crit", "crit_dmg", "atk_speed", "move_speed", "cdr", "lifesteal",
+const PERCENT_STATS := ["crit", "mcrit", "crit_dmg", "atk_speed", "move_speed", "cdr", "lifesteal",
 	"hp_pct", "dmg_pct", "area", "reach", "elite_dmg", "dot_pct"]
 const EXTRA_STAT_NAMES := {
 	"hp_pct": "PV max", "dmg_pct": "Dégâts", "area": "Zone d'effet", "reach": "Portée",
@@ -77,7 +89,9 @@ const SETS := {
 }
 ## Fourchettes des affixes (niveau 1 pour les stats plates).
 const AFFIX_RANGES := {
-	"atk": [3.0, 7.0], "hp": [25.0, 50.0], "def": [2.0, 4.0],
+	"patk": [3.0, 7.0], "matk": [3.0, 7.0], "hp": [25.0, 50.0], "def": [2.0, 4.0],
+	"str": [2.0, 5.0], "agi": [2.0, 5.0], "int": [2.0, 5.0], "wis": [2.0, 5.0], "lck": [2.0, 5.0],
+	"mcrit": [0.02, 0.05],
 	"crit": [0.02, 0.05], "crit_dmg": [0.08, 0.18], "atk_speed": [0.03, 0.07],
 	"move_speed": [0.02, 0.04], "cdr": [0.02, 0.05], "lifesteal": [0.01, 0.02],
 }
@@ -103,13 +117,28 @@ static func material_icon(mat: String) -> String:
 ## Objet aléatoire de niveau [param level] ; [param luck] augmente la rareté.
 ## [param min_rarity] : rareté minimale (boutique).
 ## Nom du type de base ; l'arme dépend de la classe (Katana, Hache, Arc...).
-static func _base_name(slot: String, class_id: String) -> String:
+static func _base_name(slot: String, class_id: String, wtype := "") -> String:
 	if slot == "weapon":
-		return String(GameData.class_data(class_id).get("weapon_name", BASES.weapon.name))
+		return String(GameData.weapon_type(wtype if wtype != "" else default_weapon_type(class_id)).get("name", BASES.weapon.name))
 	return String(BASES[slot].name)
 
 
-static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai", min_rarity := 0) -> Dictionary:
+## Type d'arme de départ d'une classe (celui de son arme d'origine dans Eden).
+static func default_weapon_type(class_id: String) -> String:
+	return String(GameData.class_data(class_id).get("weapon_type", "katana"))
+
+
+## Type d'une arme (les anciennes armes n'avaient que leur classe d'origine).
+static func weapon_type_of(item: Dictionary) -> String:
+	if item.has("wtype"):
+		return String(item.wtype)
+	return default_weapon_type(String(item.get("wclass", "samurai")))
+
+
+static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai", min_rarity := 0, wtype := "") -> Dictionary:
+	if wtype == "":
+		# en run : le butin d'armes suit l'arme en main ; sinon l'arme de la classe
+		wtype = Run.weapon_type() if Run.active and class_id == Run.class_id else default_weapon_type(class_id)
 	if slot == "":
 		slot = SLOTS.pick_random()
 	var roll := randf() + luck
@@ -127,10 +156,11 @@ static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai",
 		"quality": snappedf(randf_range(0.9, 1.2), 0.01),
 		"upgrade": 0,
 		"affixes": {},
-		"name": "%s %s" % [_base_name(slot, class_id), ADJECTIVES.pick_random()],
+		"name": "%s %s" % [_base_name(slot, class_id, wtype), ADJECTIVES.pick_random()],
 	}
 	if slot == "weapon":
-		var weapons: Array = GameData.class_data(class_id).get("weapons", [])
+		item["wtype"] = wtype
+		var weapons: Array = GameData.weapon_type(wtype).get("weapons", [])
 		if not weapons.is_empty():
 			var w: Dictionary = weapons[mini(rarity, weapons.size() - 1)]
 			item["weapon"] = w.code
@@ -198,7 +228,7 @@ static func _level_k(level: int) -> float:
 
 
 static func _add_affix(item: Dictionary, stat: String) -> void:
-	var r: Array = AFFIX_RANGES[stat]
+	var r: Array = AFFIX_RANGES.get(stat, [3.0, 7.0])  # « atk » des anciennes sauvegardes
 	var v := randf_range(r[0], r[1])
 	if not stat in PERCENT_STATS:
 		v *= _level_k(int(item.level))
@@ -206,15 +236,32 @@ static func _add_affix(item: Dictionary, stat: String) -> void:
 
 
 ## Statistiques finales : base × niveau × qualité × amélioration + affixes.
-static func stats(item: Dictionary) -> Dictionary:
+## Stats du type de base de l'objet (l'arme dépend de la classe pour laquelle elle a été créée).
+static func base_stats(item: Dictionary) -> Dictionary:
+	if item.get("slot", "weapon") == "weapon":
+		return WEAPON_BASES.get(weapon_type_of(item), WEAPON_BASES.katana)
+	return BASES.get(item.get("slot", "weapon"), BASES.weapon).stats
+
+
+static func stats(item: Dictionary, with_extras := true) -> Dictionary:
 	var out := {}
-	var base: Dictionary = BASES.get(item.get("slot", "weapon"), BASES.weapon).stats
+	var base := base_stats(item)
 	var k := _level_k(int(item.level)) * float(item.get("quality", 1.0)) * (1.0 + 0.1 * int(item.get("upgrade", 0)))
 	for s in base:
 		out[s] = float(base[s]) * (k if not s in PERCENT_STATS else float(item.get("quality", 1.0)) * (1.0 + 0.1 * int(item.get("upgrade", 0))))
 	var aff: Dictionary = item.get("affixes", {})
 	for s in aff:
-		out[s] = out.get(s, 0.0) + float(aff[s])
+		if s == "atk":
+			# ancien affixe d'attaque : compte pour l'attaque physique et magique
+			out["patk"] = out.get("patk", 0.0) + float(aff[s])
+			out["matk"] = out.get("matk", 0.0) + float(aff[s])
+		else:
+			out[s] = out.get(s, 0.0) + float(aff[s])
+	if with_extras:
+		# gemmes serties, enchantement, bonus aléatoires des améliorations
+		var ex := Craft.extra_stats(item)
+		for s in ex:
+			out[s] = out.get(s, 0.0) + float(ex[s])
 	return out
 
 
@@ -325,7 +372,7 @@ static func color_of(item: Dictionary) -> Color:
 ## Type affiché : nom de l'arme de la classe (Katana, Arc...) ou emplacement.
 static func _weapon_or_slot(item: Dictionary) -> String:
 	if item.slot == "weapon":
-		return "Arme (%s)" % _base_name("weapon", Run.class_id if Run.active else Profile.selected_class)
+		return "Arme (%s)" % String(GameData.weapon_type(weapon_type_of(item)).get("name", "?"))
 	return String(SLOT_NAMES[item.slot])
 
 
@@ -343,9 +390,9 @@ static func describe(item: Dictionary) -> String:
 			"   ·   Amélioration [color=#ffcf6b]+%d[/color] / %d" % [up, MAX_UPGRADE] if up > 0 else ""],
 		"[color=#5a5470]────────────────────────[/color]"]
 	# stats de base du type : valeur finale, (bonus de qualité, amélioration et affixes) entre parenthèses
-	var base: Dictionary = BASES.get(item.slot, {}).get("stats", {})
-	var st := stats(item)
-	var ref := stats({"slot": item.slot, "level": item.level, "quality": 1.0, "upgrade": 0, "affixes": {}})
+	var base := base_stats(item)
+	var st := stats(item, false)
+	var ref := stats({"slot": item.slot, "wtype": weapon_type_of(item) if item.slot == "weapon" else "", "level": item.level, "quality": 1.0, "upgrade": 0, "affixes": {}})
 	for s in base:
 		if not st.has(s):
 			continue
@@ -364,14 +411,29 @@ static func describe(item: Dictionary) -> String:
 	if not aff_lines.is_empty():
 		lines.append("[color=#5a5470]────────────────────────[/color]")
 		lines.append_array(aff_lines)
+	# joaillerie et forge (Craft)
+	var rolls: Array = item.get("up_rolls", [])
+	if not rolls.is_empty():
+		var acc := {}
+		for rl in rolls:
+			acc[rl[0]] = float(acc.get(rl[0], 0.0)) + float(rl[1])
+		var parts: PackedStringArray = []
+		for k in acc:
+			parts.append(stat_text(k, acc[k]))
+		lines.append("[color=#ffcf6b]Amélioration : %s[/color]" % ", ".join(parts))
+	var sockets: Array = item.get("sockets", [])
+	for i in sockets.size():
+		var g = sockets[i]
+		if g is Dictionary:
+			var key := Craft.gem_key(String(g.type), int(g.tier))
+			lines.append("[img=18x18]%s[/img] [color=#ff9ad0]%s : %s[/color]" % [Craft.icon(key), Craft.label(key), Craft._stats_text(Craft.gem_stats(g))])
+		else:
+			lines.append("[color=#8a86a0]◇ Emplacement de gemme vide[/color]")
+	if item.has("enchant"):
+		var e: Dictionary = item.enchant
+		lines.append("[color=#8fd8ff]✦ %s Lv%d : %s[/color]" % [Craft.ENCHANTS.get(String(e.type), {}).get("name", "?"), int(e.lv), Craft._stats_text(Craft.enchant_stats(e))])
 	if up < MAX_UPGRADE:
-		var next_m := -1
-		for m in MILESTONES:
-			if m > up:
-				next_m = m
-				break
-		if next_m > 0:
-			lines.append("[color=#aaaaaa]Palier +%d : une stat renforcée[/color]" % next_m)
+		lines.append("[color=#aaaaaa]Prochaine amélioration : %d %% de réussite[/color]" % roundi(Craft.success_chance(item, 0) * 100))
 	var sid := String(item.get("set", ""))
 	if SETS.has(sid):
 		var worn := int(set_counts(Profile.equipped).get(sid, 0))

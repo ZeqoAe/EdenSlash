@@ -196,7 +196,8 @@ static func class_stats_bbcode(cls: Dictionary) -> String:
 	rows.append("Type de dégâts : %s" % dmg_type_label(String(cls.get("dmg_type", "phys"))))
 	rows.append("Attaque de base : %s" % ("à distance, %s m" % _num(float(cls.attack_range)) if cls.has("attack_range") else "corps à corps"))
 	rows.append("PV : %s" % _mod(float(b.get("hp", 1.0))))
-	rows.append("Attaque : %s" % _mod(float(b.get("atk", 1.0))))
+	rows.append("Attaque physique : %s" % _mod(float(b.get("atk", 1.0))))
+	rows.append("Attaque magique : %s" % _mod(float(b.get("matk", 0.5)) * 2.0))
 	if float(b.get("def", 0.0)) > 0.0:
 		rows.append("Défense : " + _c(C_BUFF, "+%d" % int(b.def)))
 	if float(b.get("crit", 0.0)) > 0.0:
@@ -205,6 +206,14 @@ static func class_stats_bbcode(cls: Dictionary) -> String:
 		rows.append("Vitesse d'attaque : " + _c(C_BUFF, "+%s" % pct(float(b.atk_speed))))
 	if float(b.get("move_speed", 0.0)) > 0.0:
 		rows.append("Vitesse : " + _c(C_BUFF, "+%s" % pct(float(b.move_speed))))
+	var at: Dictionary = cls.get("attributes", {})
+	if not at.is_empty():
+		rows.append("")
+		rows.append("[b]Attributs[/b] " + _c(C_MUTED, "(niveau 1, + par niveau)"))
+		var names := {"str": "Force", "agi": "Agilité", "int": "Intelligence", "wis": "Sagesse", "lck": "Chance"}
+		for a in ["str", "agi", "int", "wis", "lck"]:
+			rows.append("%s : [b]%d[/b] %s" % [names[a], int(at.base.get(a, 0)), _c(C_BUFF, "+%s" % _num(float(at.growth.get(a, 0))))])
+		rows.append(_c(C_MUTED, "Force : attaque physique, PV, parade · Agilité : vitesses, esquive · Intelligence : attaque magique · Sagesse : PV, soins, critique magique · Chance : critiques"))
 	return "\n".join(rows)
 
 

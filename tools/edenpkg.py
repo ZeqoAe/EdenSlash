@@ -20,7 +20,28 @@ def read_index(pkg_dir):
             usize=struct.unpack_from('<I', b, 0x15c)[0]))
     return out
 
+# Mode kit (session sans le client Eden) : la liste des fichiers du client est dans
+# eden_kit/pkg_paths.txt et tout ce qui est utile est déjà exporté dans game/.
+KIT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'eden_kit')
+
+
+def kit_mode(pkg_dir):
+    return not os.path.exists(os.path.join(pkg_dir, 'pkg.idx'))
+
+
+def load_index(pkg_dir):
+    """Index du client, ou index « fantôme » du kit (chemins seuls, contenu indisponible)."""
+    if not kit_mode(pkg_dir):
+        return read_index(pkg_dir)
+    paths = os.path.join(KIT, 'pkg_paths.txt')
+    if not os.path.exists(paths):
+        sys.exit('ni client Eden (%s) ni eden_kit/pkg_paths.txt' % pkg_dir)
+    return [dict(path=p.strip(), pkg=None) for p in open(paths, encoding='utf-8') if p.strip()]
+
+
 def read_file(pkg_dir, e):
+    if e.get('pkg') is None:
+        raise FileNotFoundError("mode kit : %s absent (client Eden non disponible)" % e.get("path"))
     with open(os.path.join(pkg_dir, 'pkg%03d.pkg' % e['pkg']), 'rb') as f:
         f.seek(e['off'])
         c = f.read(e['csize'])

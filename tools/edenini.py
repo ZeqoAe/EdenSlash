@@ -6,6 +6,9 @@ quand on a lu `ncols` champs.
 import os
 
 DB = os.path.join(os.path.dirname(__file__), '..', 'extracted', 'data', 'db')
+if not os.path.isdir(DB):
+    # session sans client Eden : tables copiées dans le kit (tools/export_kit.py)
+    DB = os.path.join(os.path.dirname(__file__), '..', 'eden_kit', 'db')
 
 def read_table(name, encoding='big5'):
     raw = open(os.path.join(DB, name + '.ini'), 'rb').read().decode(encoding, 'replace')

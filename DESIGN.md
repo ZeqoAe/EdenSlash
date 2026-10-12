@@ -44,6 +44,90 @@ Invisibilité : les monstres perdent ta trace ; attaquer ou lancer un sort la ro
 - **Cartes d'objet** : icône d'Eden, nom à la couleur de la rareté, qualité, stats du type de base
   avec le bonus (qualité, amélioration) entre parenthèses, affixes en bleu, bonus de set.
 
+## Statistiques d'Eden
+
+- **Attributs** : Force, Agilité, Intelligence, Sagesse, Chance. Base et croissance par niveau
+  propres à chaque classe, + équipement (affixes d'attributs), × talents (+X % de Force…).
+- Force → attaque physique, PV, défense, parade · Agilité → vitesse d'attaque et
+  d'incantation, esquive (max 20 %) · Intelligence → attaque magique · Sagesse → PV, soins,
+  critique magique · Chance → critique physique et magique, dégâts critiques.
+- **Physique / magique** : les sorts physiques utilisent l'attaque et le critique physiques,
+  les sorts magiques (Clerc, Magicien) l'attaque et le critique magiques ; la vitesse
+  d'incantation accélère les sorts magiques.
+- Armes : attaque physique ET magique selon le type (hache surtout physique, bâton surtout
+  magique) + attribut principal ; anciennes sauvegardes converties automatiquement.
+
+## Sorts complets
+
+Chaque classe a tous ses sorts d'Eden (`c_class` colonnes 34-43 + 5 sorts novices) : 15 pour
+Guerrier, Voleur, Chasseur, Clerc ; 14 Magicien ; 9 Samouraï. Nouveaux états : Mur du titan,
+Instinct de survie, Puissance (+30 % Force), Célérité (+30 % Agilité), Grâce de sagesse,
+Vitalité, Posture du chasseur, Désarmé (ne peut plus attaquer), Ange gardien (relève à 30 %).
+
+## Expertise, talents et certificats
+
+- **Expertise de classe** (40 niveaux), gagnée en fin de run avec la classe : niveau atteint
+  ×15, monstres ÷2, élites ×10, +200 en cas de victoire.
+- **Talents** : l'arbre « Class Talent » d'Eden (`c_talent` + `c_enchant`), 3 lignes × 8
+  paliers, 18 talents par classe, prérequis et paliers de points (15/20/25/30/35) ; 2 points par
+  niveau d'expertise. Effets : stats (défense, PV, force…, critique, vitesses, parade, soins)
+  ou renfort d'une compétence (dégâts, recharge, durée). Propres à la classe jouée.
+- **Certificats** : les 2 passifs de chaque classe (`c_class` col. 30-31), débloqués aux
+  niveaux d'expertise 3 et 8, à équiper avant la run et utilisables par **toutes** les classes
+  (1 emplacement, +1 tous les 10 niveaux d'expertise cumulés, 4 max). Ils ne sortent plus en
+  cartes de niveau.
+- Écran **Expertise** dans le lobby ; « Nouvelle partie » remet tout à zéro.
+
+## Impact visuel
+
+Arcs de lame épais et lumineux (cœur blanc, bloom), ondes de choc au sol avec poussière,
+éclairs d'impact sur les coups de compétence et les critiques, effets d'Eden 1,5× plus opaques.
+Salto du Samouraï : bond de ~4 m avec rotation complète, onde de choc à la retombée.
+Toupie du Guerrier : 3 tours réels du modèle, un coup par tour, annulable par esquive ou saut.
+
+## Joaillerie et forge (comme dans Eden)
+
+- **Emplacements de gemmes** : 2 max par objet, percés aux **ciseaux de sertissage**
+  (1er sûr, 2e à 70 % ; en cas d'échec les ciseaux se brisent, l'objet est intact).
+- **Gemmes** : Rubis (Force), Émeraude (Agilité), Saphir (Intelligence), Perle (Sagesse),
+  Topaze (Chance), Grenat (PV), Onyx (Défense), Améthyste (Critique) ; 5 qualités
+  (brut, taillé, pur, parfait, royal : ×1 / 2 / 3,5 / 5,5 / 8). Sertir dans un emplacement
+  occupé détruit l'ancienne gemme.
+- **Parchemins d'enchantement** (noms d'Eden) : Chant rapide, Violence, Optimisation,
+  Explosion musculaire (armes et gants) ; Légèreté, Compréhension, Rééducation, Récupération
+  (armures). Lv1 à Lv5 selon le niveau du butin, objet de niveau (Lv-1)×10 minimum ;
+  un enchantement par objet (le nouveau remplace l'ancien).
+- **Amélioration à risque** : réussite 100 % jusqu'à +3, puis 90 / 80 / 70 / 60 / 50 / 40 /
+  30 % jusqu'à +10. Chaque réussite : stats de base +10 % et **une stat aléatoire** (doublée
+  aux paliers +4, +6, +8, +10). Échec : matériaux perdus ; vers +6 et au-delà, l'objet perd un
+  niveau (et sa dernière stat aléatoire). **Pierre de chance** : +10 % (3 max par essai).
+  **Pierre de protection** : pas de perte de niveau.
+- Les fournitures tombent des monstres (4 %, 7 % en rage), des élites (35 %), des boss (3),
+  des coffres (1, meilleur en rage) et se vendent à la boutique ; elles sont perdues en fin de
+  run comme l'or et les matériaux. Onglet **Joaillier** chez le marchand.
+
+## Classe + arme (builds exotiques)
+
+- On choisit **une classe** (sorts, passifs, talents, attributs) puis **une arme**, au choix
+  parmi 6 types : katana, hache, dague, arc, sceptre, bâton (lobby, ou l'arme équipée).
+- **Le combo d'auto-attaque, la posture, la portée et le type de dégâts du combo suivent
+  l'arme** (hache = combo du Guerrier, bâton = combo magique du Magicien…) ; les sorts restent
+  ceux de la classe : magicien à la hache, guerrier au bâton, voleur à l'arc…
+- Les stats de base de l'arme dépendent de son type (hache surtout physique, bâton surtout
+  magique) : un build exotique doit composer avec ses attributs.
+- Le butin d'armes suit l'arme en main ; choisir un type dans le lobby équipe la meilleure arme
+  de ce type de l'héritage (ou une arme commune neuve).
+
+## Extraction
+
+- Touche **X** (modifiable) ou menu pause : **10 s à survivre**, une vague encercle aussitôt le
+  héros. Mourir annule l'extraction.
+- Réussite : **tout l'équipement et l'inventaire rejoignent l'héritage** (améliorations,
+  gemmes, enchantements compris), l'équipement porté devient l'équipement de départ ;
+  +60 d'expertise. L'or, les matériaux et les fournitures restent perdus, et aucune zone n'est
+  débloquée (il faut battre le boss pour ça).
+- Victoire contre le boss : 1 objet gardé au choix (inchangé) ; défaite ou abandon : idem.
+
 ## Zones et biomes (progression)
 
 Données : `tools/build_biomes.py` lit une map d'Eden par biome (textures du sol, décors les plus

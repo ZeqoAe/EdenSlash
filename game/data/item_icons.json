@@ -247,5 +247,26 @@
   "essence": "res://assets/ui/items/i00222.png",
   "crystal": "res://assets/ui/items/i00232.png",
   "gold": "res://assets/ui/items/i00228.png"
+ },
+ "craft": {
+  "drill": "res://assets/ui/items/i00690.png",
+  "luck": "res://assets/ui/items/i00522.png",
+  "protect": "res://assets/ui/items/i00543.png",
+  "ruby": "res://assets/ui/items/i00358.png",
+  "emerald": "res://assets/ui/items/i00352.png",
+  "sapphire": "res://assets/ui/items/i00355.png",
+  "pearl": "res://assets/ui/items/i00363.png",
+  "topaz": "res://assets/ui/items/i00353.png",
+  "garnet": "res://assets/ui/items/i00364.png",
+  "onyx": "res://assets/ui/items/i00354.png",
+  "amethyst": "res://assets/ui/items/i00351.png",
+  "scroll0": "res://assets/ui/items/i00322.png",
+  "scroll1": "res://assets/ui/items/i00323.png",
+  "scroll2": "res://assets/ui/items/i00324.png",
+  "scroll3": "res://assets/ui/items/i00325.png",
+  "scroll4": "res://assets/ui/items/i00326.png",
+  "scroll5": "res://assets/ui/items/i00327.png",
+  "scroll6": "res://assets/ui/items/i00328.png",
+  "scroll7": "res://assets/ui/items/i00329.png"
  }
 }
