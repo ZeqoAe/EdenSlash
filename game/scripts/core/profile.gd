@@ -49,7 +49,8 @@ var owned_outfits: Array = []
 ## Trésors de collection obtenus (ids des entrées de l'archive d'Eden hors équipement).
 var collection: Array = []
 var worn := {}  # classe -> {"head": .glb, "back": .glb} : accessoires cosmétiques portés  # cosmétiques d'Eden débloqués (identifiants de data/eden_items.json -> cosmetics)
-## Mode dev (archive) : activé, or et matériaux donnés au départ de chaque run.
+## Mode dev (écran F10) : or et matériaux donnés au départ de chaque run tant que le mode dev
+## est activé dans les Paramètres (« enabled » : ancien interrupteur, repris par les Paramètres).
 var dev := {"enabled": false, "gold": 0, "fragment": 0, "essence": 0, "crystal": 0}
 var unlocked_zones := 1  # zones jouables (dans l'ordre de data/zones.json)
 var selected_zone := "limestone"
@@ -132,6 +133,9 @@ func load_profile() -> void:
 	worn = d.get("worn", {})
 	dev = {"enabled": false, "gold": 0, "fragment": 0, "essence": 0, "crystal": 0}
 	dev.merge(d.get("dev", {}), true)
+	if dev.enabled:  # ancien interrupteur de l'encyclopédie : repris par les Paramètres
+		Settings.set_v("interface", "dev_mode", true)
+		dev.enabled = false
 	selected_zone = String(d.get("selected_zone", "limestone"))
 	if d.has("vault"):
 		vault = d.get("vault", []).map(_migrate)
@@ -326,7 +330,7 @@ func begin_run() -> void:
 	gold = 0
 	for m in materials:
 		materials[m] = 0
-	if dev.get("enabled", false):
+	if Settings.get_v("interface", "dev_mode"):
 		gold = int(dev.get("gold", 0))
 		for m in materials:
 			materials[m] = int(dev.get(m, 0))

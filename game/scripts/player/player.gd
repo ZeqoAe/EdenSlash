@@ -67,6 +67,7 @@ var procs: Array = []  # effets déclenchés actifs
 var proc_ready_at := {}  # id du proc -> instant (clock) de fin de recharge
 
 var skill_ready_at := {}  # id compétence -> instant
+var dev_invincible := false  # mode dev : aucun dégât
 var autoplay := false
 var autoplay_target := Vector3.INF
 
@@ -1443,12 +1444,12 @@ func _afterimage() -> void:
 
 
 func is_invulnerable() -> bool:
-	return _state == "dodge"
+	return _state == "dodge" or dev_invincible
 
 
 func take_damage(amount: float, source: Combatant = null, is_crit := false, dot := false) -> void:
 	if is_invulnerable():
-		if not dot and Run.active:
+		if not dot and Run.active and not dev_invincible:
 			Profile.record_add("dodges", 1)  # mission du Voleur
 		return
 	if not dot and ((has_status("evasion") and randf() < EVASION_CHANCE) or randf() < evasion_chance):

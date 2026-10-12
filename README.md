@@ -91,15 +91,20 @@ triangle de 3 couleurs (*Prisme*) ou losange de 4 de même couleur donnent des b
   capes, trophées, objets spéciaux (montures, familiers, boîte arcanique, autres objets) — avec
   taux, recherche, « obtenus uniquement » et trésors du jeu / de la boutique. Archiver un
   équipement mythique ou légendaire du coffre donne +1 / +2 points d'attribut et des paliers ;
-  les autres entrées (**trésors de collection**) tombent des boss. Onglets **Encyclopédie**
-  (filtres : catégorie, type d'armure, rareté, niveaux, sets, archive, tri ; affichage par pièce
-  ou **par set et niveau** ; mode dev), **Tenues** (tenues, chapeaux et masques, ailes et dos,
-  **auras** : une pierre étoilée et une pierre de lune portées, effet lumineux d'Eden autour du
-  héros et bonus en run) et **Apparences d'armes** (modèles des armes archivées et 652
-  apparences d'armes d'Eden).
-- **Infos** (lobby et pause) : ce que rapporte un point de chaque attribut, formules de chaque
-  statistique, calcul des dégâts et de la défense (héros et monstres), et en run tes valeurs.
-- **Menu pause** : pages Run (compétences, cartes, sac, bilan, actions), Équipement et Infos.
+  les autres entrées (**trésors de collection**) tombent des boss. La Collection n'a plus
+  d'onglets : tenues, chapeaux et masques, ailes et dos, **auras** (une pierre étoilée et une
+  pierre de lune portées, effet lumineux d'Eden autour du héros et bonus en run) et apparences
+  d'armes se choisissent dans **Héros > Apparence**.
+- **Aide** (« ? » de l'écran Héros, page Aide du menu pause) : ce que rapporte un point de chaque
+  attribut, formules de chaque statistique, calcul des dégâts et de la défense, et en run tes valeurs.
+- **Menu pause** : pages Run (compétences, cartes, sac, bilan, actions), Héros et Aide.
+- **Mode dev** (Paramètres > Caméra & interface > *Mode dev*, puis **F10** ou le bouton du menu) :
+  écran à part, invisible si l'option n'est pas cochée. **Objets** : tout le catalogue (équipements,
+  trésors, cosmétiques) avec les filtres (catégorie, type d'armure, rareté, niveaux, sets, archive,
+  tri, par pièce ou **par set et niveau**), ajout ×1 / ×5 au coffre ou au sac avec la rareté et le
+  niveau de puissance choisis ; **Ressources** (or, matériaux, fournitures, en run ou au départ des
+  runs) ; **Progression** (maîtrise, classes, zones, tenues, trésors — avec confirmation) ; **Run**
+  (niveau, invincible, soins, tuer les monstres, faire apparaître élite / boss / coffre, rage, donjon).
 - **Village**, un PNJ par métier : Alec (acheter, vendre), Bryson le forgeron (améliorer, enchanter,
   réforger une stat, polir la qualité), Starnoc le recycleur (désassembler, convertir les matériaux),
   Lertia la joaillière (percer et sertir, fusionner 3 gemmes en une gemme supérieure).
@@ -113,6 +118,7 @@ triangle de 3 couleurs (*Prisme*) ou losange de 4 de même couleur donnent des b
 | F4 | se débloquer |
 | F2 | infos de débogage (position, FPS, état) |
 | F5 / F6 / F7 / F8 | +1 niveau / aller à l'entrée du donjon / arène du boss / déclencher la rage |
+| F10 | écran du mode dev (si activé dans les Paramètres) |
 
 ### Mode test automatique (captures)
 

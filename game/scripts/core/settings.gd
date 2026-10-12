@@ -67,7 +67,8 @@ const DEFAULTS := {
 	"game": {"move_mode": "keyboard", "aim_mode": "smart", "attack_mode": "manual",
 		"auto_skills": [false, false, false, false], "auto_target": "any"},
 	"camera": {"rotate_speed": 1.0, "invert_y": false, "distance": 15.0, "shake": 1.0},
-	"interface": {"damage_numbers": "all", "hit_stop": true, "show_fps": true, "move_marker": true},
+	# dev_mode : écran de test (F10), réservé aux tests
+	"interface": {"damage_numbers": "all", "hit_stop": true, "show_fps": true, "move_marker": true, "dev_mode": false},
 }
 
 ## Modes de jeu prêts à l'emploi (réglages du menu Contrôles).

@@ -38,6 +38,7 @@ var _reward_text: Label
 var _footer: Label
 var _clock: Label
 var _snapshot: Texture2D
+var _dev_button: Button
 
 
 func _ready() -> void:
@@ -49,7 +50,7 @@ func _ready() -> void:
 			Profile.selected_zone = arg.trim_prefix("--zone=")
 		elif arg.begins_with("--weapon="):
 			Profile.select_weapon_type(arg.trim_prefix("--weapon="))
-		elif arg in SCREEN_ARGS or arg.begins_with("--archive=") or arg.begins_with("--appearance="):
+		elif arg in SCREEN_ARGS or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--dev="):
 			_open_screen = arg.trim_prefix("--")
 		elif arg == "--wear-aura":
 			# test : une pierre étoilée et une pierre de lune portées (profil de test uniquement)
@@ -66,7 +67,7 @@ func _ready() -> void:
 		Profile.save_profile()  # classe choisie en argument : son préréglage (et son arme)
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
-				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") \
+				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
 				or arg == "--wear-aura" or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out="):
 			continue
 		if arg.begins_with("--lobby-shot="):
@@ -90,6 +91,10 @@ func _ready() -> void:
 			if _open_screen.contains("="):
 				_hero.appearance._cat = _open_screen.get_slice("=", 1)
 			_open_hero("appearance")
+		"dev":
+			# test : écran du mode dev, page N (paramètres de test uniquement)
+			Settings.set_v("interface", "dev_mode", true)
+			Dev.open(int(_open_screen.get_slice("=", 1)))
 		"archive":
 			_archive.open(0)
 			for arg in OS.get_cmdline_user_args():
@@ -300,6 +305,16 @@ func _build_ui() -> void:
 	clock.texture = MenuWidgets.icon("clock")
 	clock.modulate = MenuWidgets.ICON_TINT
 	_clock = Hud._label(ih, "", 14, UiTheme.TEXT)
+	# mode dev (activé dans les Paramètres) : bouton au-dessus du pied de page
+	_dev_button = MenuWidgets.glass_button("Mode dev  (F10)", 15, Vector2(200, 38))
+	_dev_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_dev_button.offset_left = -228
+	_dev_button.offset_right = -28
+	_dev_button.offset_top = -136
+	_dev_button.offset_bottom = -98
+	_dev_button.pressed.connect(func(): Dev.open())
+	root.add_child(_dev_button)
+	Settings.changed.connect(func(): _dev_button.visible = Dev.enabled())
 
 	# écrans plein écran
 	_hero = HeroScreen.new(6)
@@ -500,6 +515,7 @@ func _refresh_ui() -> void:
 	var lvl := Profile.expertise_level(cid)
 	var next := Progression.rewards_at(cid, lvl + 1).filter(func(r): return r.kind != "talent")
 	_reward_text.text = ("Maîtrise %s niv. %d : %s" % [cd.get("name_fr", cid), lvl + 1, String(next[0].name) if not next.is_empty() else "+2 points de talent"]) if lvl < Profile.EXPERTISE_MAX else "Maîtrise maximale"
+	_dev_button.visible = Dev.enabled()
 	_footer.text = "Sauvegarde %d · héritage %d objet(s) · %d run(s), %d victoire(s)" % [Profile.slot, Profile.vault.size(), Profile.runs_done, Profile.runs_won]
 	_show_menu(_current)
 

@@ -360,6 +360,34 @@ func _test_lobby() -> void:
 	check("Collection : une seule page, sans onglet", lobby._archive._pages.size() == 1 and not lobby._archive._tab_buttons[0].visible)
 	check("Collection : catalogue affiché", lobby._archive.is_open() and lobby._archive.page(0)._grid.get_child_count() > 0)
 	lobby._archive.close_ui()
+	# mode dev : rien sans l'activer dans les Paramètres, puis écran F10
+	Settings.set_v("interface", "dev_mode", false)
+	Dev.toggle()
+	check("mode dev : invisible sans l'activer", not is_instance_valid(Dev.screen) and not lobby._dev_button.visible)
+	Settings.set_v("interface", "dev_mode", true)
+	check("mode dev : bouton du lobby", lobby._dev_button.visible)
+	Dev.toggle()
+	await _frames()
+	var dev: DevScreen = Dev.screen
+	check("mode dev : écran ouvert (Objets, Ressources, Progression ; pas de Run au lobby)", dev.is_open() and dev._pages.size() == 3)
+	var items: DevPages.ItemsPage = dev.page(0)
+	var tpl: Dictionary = GameData.eden_items.filter(func(e): return e.slot == "ring")[0]
+	items._selected = tpl
+	items._give_rar.select(Items.LEGENDARY + 1)
+	items._give_power.value = 30
+	var before := Profile.vault.size()
+	items._give(tpl, 5)
+	var got: Array = Profile.vault.slice(before)
+	check("mode dev : ×5 au coffre, rareté et puissance choisies", got.size() == 5 and got.all(func(it): return int(it.rarity) == Items.LEGENDARY and int(it.plevel) == 30))
+	for it in got:
+		Profile.vault.erase(it)
+	for i in 3:
+		dev.show_page(i)
+		await _frames()
+	check("mode dev : pages Ressources et Progression", dev.page(1).get_child_count() > 0 and dev.page(2)._msg.text.contains("Classes débloquées"))
+	Dev.toggle()
+	check("mode dev : F10 referme", not dev.is_open())
+	Settings.set_v("interface", "dev_mode", false)
 	lobby.free()
 
 
@@ -399,6 +427,29 @@ func _test_run_screens() -> void:
 	info.show_section(InfoPage.SECTIONS.size() - 1)
 	check("pause : page Aide avec les valeurs du héros", info._text.text.contains("PV effectifs"))
 	world.pause_menu.close()
+	await _frames()
+	# mode dev en run : page Run
+	Settings.set_v("interface", "dev_mode", true)
+	Dev.open(3)
+	await _frames()
+	var rp: DevPages.RunActionsPage = Dev.screen.page(3)
+	check("mode dev en run : page Run, jeu en pause", Dev.screen._pages.size() == 4 and rp.visible and get_tree().paused)
+	var lv := player.level
+	rp._box.get_child(1).get_child(1).pressed.emit()
+	check("mode dev : niveau +5", player.level == lv + 5)
+	player.dev_invincible = true
+	var hp := player.hp
+	player.take_damage(99999.0)
+	check("mode dev : invincible", player.hp == hp)
+	player.dev_invincible = false
+	var n0 := get_tree().get_nodes_in_group("monsters").size()
+	world.director.dev_spawn_elite()
+	world.director.dev_spawn_chest()
+	check("mode dev : élite et coffre apparus", get_tree().get_nodes_in_group("monsters").size() == n0 + 1 and world.director.map.interactables[-1].kind == "chest")
+	await _frames()
+	check("mode dev : tuer tous les monstres", world.director.dev_kill_all() >= 1)
+	Dev.screen.close_ui()
+	Settings.set_v("interface", "dev_mode", false)
 	await _frames()
 	check("pause fermée, jeu repris", not world.pause_menu.is_open() and not get_tree().paused)
 	# village

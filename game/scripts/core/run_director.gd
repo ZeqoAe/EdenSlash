@@ -685,3 +685,50 @@ func teleport_to_gateway() -> bool:
 func debug_start_rage() -> void:
 	if state == "explore":
 		time = RUN_TIME
+
+
+# --- mode dev (écran F10) ----------------------------------------------------------------
+func _near_player(d := 7.0) -> Vector3:
+	var p := player.global_position + player.forward() * d
+	return ground_point(p, player.global_position)
+
+
+func dev_spawn_elite() -> void:
+	if _elites.is_empty():
+		return
+	var e := _spawn_monster(_elites.pick_random(), _near_player(), _monster_level(1))
+	if state in ["explore", "rage"] and seals < SEALS_NEEDED:
+		e.carries_seal = true
+
+
+## Boss de la zone sur le terrain (avec ses mécaniques), sans entrer dans le donjon.
+func dev_spawn_boss() -> void:
+	var dungeon: Dictionary = zone.get("dungeon", {})
+	if not dungeon.has("boss"):
+		return
+	var b := _spawn_monster(int(dungeon.boss), _near_player(10.0), mini(maxi(player.level + 1, _monster_level(2)), max_level() + RAGE_LEVEL_BONUS), true)
+	b.display_name = "<Boss> " + b.display_name
+	if b.brain:
+		b.brain.announce.connect(func(t): message.emit(t, 2.5))
+		b.brain.setup(dungeon, self)
+
+
+func dev_spawn_chest() -> void:
+	var npcs: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/npcs.json"))
+	var data: Dictionary = npcs.get("chest", {})
+	var chest := Interactable.new()
+	chest.setup("chest", "Coffre", "res://assets/monsters/%s/%s.glb" % [data.model, data.model],
+		"res://assets/monsters/textures/%s.png" % data.texture, 1.0, 3.0)
+	map.add_child(chest)
+	chest.global_position = _near_player(4.0)
+	map.interactables.append(chest)
+
+
+func dev_kill_all() -> int:
+	var n := 0
+	for m in get_tree().get_nodes_in_group("monsters"):
+		var mo := m as Monster
+		if mo and not mo.is_dead and mo != _boss:
+			mo.take_damage(mo.max_hp * 100.0 + 1e6, player)
+			n += 1
+	return n
