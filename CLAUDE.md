@@ -3,6 +3,10 @@
 Deux sessions travaillent sur ce dépôt : une **locale** (sur le PC, avec le client Eden Eternal,
 extraction des assets) et une **cloud** (sans le client). Le joueur ne connaît pas git.
 
+## Chantier en cours
+Session cloud : lire `A_FAIRE_SESSION_CLOUD.md` (refonte des menus, mode dev, trophées,
+zones / monnaies / coffres) avant de commencer.
+
 ## Branche
 Tout se passe sur la branche `claude/optimistic-gauss-p2g2pq`. Ne pas travailler sur `master`.
 
