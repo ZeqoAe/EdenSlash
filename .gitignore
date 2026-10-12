@@ -1,0 +1,12 @@
+# Données brutes extraites du client (volumineuses, régénérables avec tools/)
+extracted/
+index.csv
+# Godot
+game/.godot/
+*.import.tmp
+# Python
+__pycache__/
+.venv/
+feedback/
+# Captures de travail
+previews/

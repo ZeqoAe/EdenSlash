@@ -1,0 +1,14 @@
+{
+ "s002": {
+  "image": "res://assets/ui/maps/s002m.png",
+  "ppm": 1.0971,
+  "ox": 12,
+  "oy": 8
+ },
+ "s100": {
+  "image": "res://assets/ui/maps/s100m.png",
+  "ppm": 3.2,
+  "ox": 36,
+  "oy": 54
+ }
+}

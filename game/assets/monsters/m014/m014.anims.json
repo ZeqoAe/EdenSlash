@@ -1,0 +1,310 @@
+{
+ "stand01": {
+  "duration": 1.6667,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.6667,
+    "text": "end"
+   }
+  ]
+ },
+ "stand02": {
+  "duration": 2.0,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 2.0,
+    "text": "end"
+   }
+  ]
+ },
+ "battle01": {
+  "duration": 1.6667,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.6667,
+    "text": "end"
+   }
+  ]
+ },
+ "attack01": {
+  "duration": 1.3333,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.2827,
+    "text": "m1"
+   },
+   {
+    "time": 1.2,
+    "text": "end"
+   }
+  ]
+ },
+ "attack02": {
+  "duration": 1.3333,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.3333,
+    "text": "end"
+   },
+   {
+    "time": 0.3013,
+    "text": "m1"
+   },
+   {
+    "time": 0.3147,
+    "text": "hit"
+   }
+  ]
+ },
+ "shoot01": {
+  "duration": 2.0,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.0615,
+    "text": "e1"
+   },
+   {
+    "time": 0.1963,
+    "text": "s1"
+   },
+   {
+    "time": 0.575,
+    "text": "e2"
+   },
+   {
+    "time": 1.4,
+    "text": "end"
+   }
+  ]
+ },
+ "shoot02": {
+  "duration": 1.6667,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.6667,
+    "text": "end"
+   },
+   {
+    "time": 0.49,
+    "text": "m1"
+   }
+  ]
+ },
+ "hurt01": {
+  "duration": 0.3333,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.0487,
+    "text": "m1"
+   },
+   {
+    "time": 0.4333,
+    "text": "end"
+   }
+  ]
+ },
+ "hurt02": {
+  "duration": 0.5333,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.5333,
+    "text": "end"
+   },
+   {
+    "time": 0.0576,
+    "text": "m1"
+   }
+  ]
+ },
+ "attack03": {
+  "duration": 1.3333,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.3333,
+    "text": "end"
+   },
+   {
+    "time": 0.2907,
+    "text": "m1"
+   }
+  ]
+ },
+ "attack04": {
+  "duration": 1.3333,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.3333,
+    "text": "end"
+   },
+   {
+    "time": 0.3013,
+    "text": "m1"
+   }
+  ]
+ },
+ "death01": {
+  "duration": 3.0,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.4667,
+    "text": "end"
+   },
+   {
+    "time": 1.62,
+    "text": "m1"
+   },
+   {
+    "time": 2.25,
+    "text": "m2"
+   }
+  ]
+ },
+ "magic01": {
+  "duration": 1.6667,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.6667,
+    "text": "end"
+   }
+  ]
+ },
+ "magic02": {
+  "duration": 2.0,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 2.0,
+    "text": "end"
+   }
+  ]
+ },
+ "move01": {
+  "duration": 0.6,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.0,
+    "text": "end"
+   },
+   {
+    "time": 0.2304,
+    "text": "m1"
+   },
+   {
+    "time": 0.5496,
+    "text": "m2"
+   }
+  ]
+ },
+ "move02": {
+  "duration": 0.8,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.8,
+    "text": "end"
+   },
+   {
+    "time": 0.4128,
+    "text": "m1"
+   },
+   {
+    "time": 0.7984,
+    "text": "m2"
+   }
+  ]
+ }
+}

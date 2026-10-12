@@ -1,0 +1,26 @@
+{
+ "merchant": {
+  "model": "m012",
+  "texture": "m01201",
+  "scale": 1.1,
+  "name": "Alec, marchand zumi"
+ },
+ "smith": {
+  "model": "m052",
+  "texture": "m05203",
+  "scale": 1.0,
+  "name": "Bryson, forgeron ursun"
+ },
+ "trader": {
+  "model": "m109",
+  "texture": "m10901",
+  "scale": 1.05,
+  "name": "Abel, négociant"
+ },
+ "chest": {
+  "model": "m604",
+  "texture": "m60401",
+  "scale": 1.0,
+  "name": "Coffre secret"
+ }
+}

@@ -1,0 +1,17 @@
+{
+ "death01": {
+  "duration": 2.0,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 2.0,
+    "text": "end"
+   }
+  ]
+ }
+}

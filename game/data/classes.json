@@ -1,0 +1,325 @@
+{
+ "samurai": {
+  "class_id": 16,
+  "body": "m",
+  "appearance": {
+   "outfit": "#L272",
+   "skin": "SL272",
+   "hair": "#L107",
+   "face": "#LFACE",
+   "dye": {
+    "outfit": [
+     [
+      150,
+      25,
+      30
+     ],
+     [
+      225,
+      180,
+      90
+     ],
+     [
+      35,
+      30,
+      40
+     ]
+    ],
+    "hair": [
+     [
+      40,
+      32,
+      40
+     ],
+     [
+      30,
+      25,
+      30
+     ],
+     [
+      20,
+      20,
+      20
+     ]
+    ]
+   }
+  },
+  "weapons": [
+   {
+    "code": "W21301",
+    "model": "res://assets/weapons/w213.glb",
+    "texture": "res://assets/weapons/textures/w21301.png",
+    "icon": "res://assets/weapons/icons/w21301.png"
+   },
+   {
+    "code": "W21401",
+    "model": "res://assets/weapons/w214.glb",
+    "texture": "res://assets/weapons/textures/w21401.png",
+    "icon": "res://assets/weapons/icons/w21401.png"
+   },
+   {
+    "code": "W21501",
+    "model": "res://assets/weapons/w215.glb",
+    "texture": "res://assets/weapons/textures/w21501.png",
+    "icon": "res://assets/weapons/icons/w21501.png"
+   },
+   {
+    "code": "W21601",
+    "model": "res://assets/weapons/w216.glb",
+    "texture": "res://assets/weapons/textures/w21601.png",
+    "icon": "res://assets/weapons/icons/w21601.png"
+   }
+  ],
+  "anims": {
+   "idle": "stand01",
+   "battle": "battle13",
+   "run": "move02",
+   "attacks": [
+    "attack25",
+    "attack26"
+   ],
+   "hurt": "hurt13",
+   "death": "death01",
+   "jump": "jump01",
+   "dodge": "jump02"
+  },
+  "start_skills": 3,
+  "lore_fr": "Un samouraï ne se fie qu'à son katana. Après des années d'entraînement, même la lame la plus lourde lui paraît légère comme une plume.",
+  "name": "Samurai",
+  "name_fr": "Samouraï",
+  "lore": "Un samouraï ne se fie qu'à son katana. Après des années d'entraînement, même la lame la plus lourde lui paraît légère comme une plume.",
+  "icon": "",
+  "model": "res://assets/player/samurai/samurai.glb",
+  "skills": [
+   {
+    "id": 50181,
+    "kind": "dash",
+    "mult": 1.8,
+    "radius": 2.6,
+    "arc": 120,
+    "dash": 6.0,
+    "cooldown": 6.0,
+    "applies": {
+     "bleed": 8.0
+    },
+    "desc": "Fond sur l'ennemi (6 m) : 180 % de dégâts et Saignement (8 s, 15 % de l'attaque par seconde).",
+    "name": "Fallen Swallow",
+    "icon": "res://assets/ui/skills/e0459.png",
+    "anim": "shoot24"
+   },
+   {
+    "id": 50182,
+    "kind": "spin",
+    "mult": 1.1,
+    "hits": 2,
+    "radius": 4.0,
+    "arc": 360,
+    "cooldown": 9.0,
+    "buff": {
+     "solar": 8.0
+    },
+    "desc": "Tourbillon solaire autour de toi : 2 coups de 110 %. Bénédiction solaire : -25 % de dégâts subis (8 s).",
+    "name": "Solar Wind",
+    "icon": "res://assets/ui/skills/e0460.png",
+    "anim": "shoot23"
+   },
+   {
+    "id": 50183,
+    "kind": "cone",
+    "mult": 2.0,
+    "radius": 4.0,
+    "arc": 120,
+    "cooldown": 5.0,
+    "combo": {
+     "requires": "bleed",
+     "applies": {
+      "scar": 8.0
+     }
+    },
+    "desc": "Entaille en croix : 200 %. Sur une cible en Saignement : Cicatrice (ses dégâts -30 %, 8 s).",
+    "name": "Crosswise Cut",
+    "icon": "res://assets/ui/skills/e0461.png",
+    "anim": "shoot23"
+   },
+   {
+    "id": 50184,
+    "kind": "fan",
+    "mult": 1.7,
+    "radius": 10.0,
+    "arc": 90,
+    "cooldown": 8.0,
+    "applies": {
+     "purgatory": 8.0
+    },
+    "desc": "Purgatoire en éventail (10 m) : 170 % et Purgatoire (dégâts subis +20 %, 8 s).",
+    "name": "Purgatory",
+    "icon": "res://assets/ui/skills/e0462.png",
+    "anim": "shoot25"
+   },
+   {
+    "id": 50185,
+    "kind": "flurry",
+    "mult": 0.9,
+    "hits": 3,
+    "radius": 3.5,
+    "arc": 160,
+    "cooldown": 7.0,
+    "combo": {
+     "requires": "bleed",
+     "applies": {
+      "cranes": 8.0
+     }
+    },
+    "desc": "Danse des grues : 3 coups de 90 %. Sur Saignement : Mille grues (dégâts subis +15 %, 8 s).",
+    "name": "Dance of Cranes",
+    "icon": "res://assets/ui/skills/e0463.png",
+    "anim": "shoot25"
+   },
+   {
+    "id": 50186,
+    "kind": "cone",
+    "mult": 2.8,
+    "radius": 3.5,
+    "arc": 70,
+    "cooldown": 10.0,
+    "combo": {
+     "requires": "scar",
+     "buff": {
+      "marduk": 8.0
+     }
+    },
+    "desc": "Frappe éclair : 280 %. Sur Cicatrice : Langue de Marduk (+30 % d'attaque et de vitesse, 8 s).",
+    "name": "Marduk's Tongue",
+    "icon": "res://assets/ui/skills/e0464.png",
+    "anim": "shoot24"
+   },
+   {
+    "id": 50187,
+    "kind": "fan",
+    "mult": 2.2,
+    "radius": 10.0,
+    "arc": 90,
+    "cooldown": 10.0,
+    "combo": {
+     "requires": "purgatory",
+     "double": true
+    },
+    "desc": "Lame d'Asura en éventail (10 m) : 220 %, doublé sur les cibles en Purgatoire.",
+    "name": "Asura Slash",
+    "icon": "res://assets/ui/skills/e0465.png",
+    "anim": "shoot24"
+   },
+   {
+    "id": 50188,
+    "kind": "line",
+    "mult": 2.3,
+    "radius": 8.0,
+    "arc": 25,
+    "cooldown": 8.0,
+    "combo": {
+     "requires": "cranes",
+     "applies": {
+      "stun": 2.0
+     }
+    },
+    "desc": "Estoc en ligne (8 m) : 230 %. Sur Mille grues : renverse la cible (2 s).",
+    "name": "Protrusion",
+    "icon": "res://assets/ui/skills/e0466.png",
+    "anim": "shoot23"
+   },
+   {
+    "id": 50189,
+    "kind": "buff",
+    "mult": 0.0,
+    "radius": 0.0,
+    "arc": 0,
+    "cooldown": 25.0,
+    "buff": {
+     "shrine": 10.0
+    },
+    "desc": "Volonté du sanctuaire : +30 % de vitesse et -30 % de dégâts subis (10 s). Sous Bénédiction solaire : immunité au renversement.",
+    "name": "Shrine Belief",
+    "icon": "res://assets/ui/skills/e0467.png",
+    "anim": "shoot12"
+   }
+  ],
+  "passives": [
+   {
+    "id": "battojutsu",
+    "eden": 50302,
+    "name": "Battojutsu",
+    "stat": {
+     "crit": 0.2
+    },
+    "max": 1,
+    "desc": "+20 % de chances de coup critique.",
+    "icon": "res://assets/ui/skills/j616.png"
+   },
+   {
+    "id": "katana_expert",
+    "eden": 50305,
+    "name": "Katana Expert",
+    "stat": {
+     "atk_pct": 0.15
+    },
+    "max": 1,
+    "desc": "+15 % d'attaque avec un katana.",
+    "icon": "res://assets/ui/skills/j615.png"
+   },
+   {
+    "id": "vigor",
+    "name": "Corps aguerri",
+    "stat": {
+     "hp_pct": 0.15
+    },
+    "max": 3,
+    "desc": "+15 % de PV max."
+   },
+   {
+    "id": "swift_blade",
+    "name": "Lame du vent",
+    "stat": {
+     "atk_speed": 0.12
+    },
+    "max": 3,
+    "desc": "+12 % de vitesse d'attaque."
+   },
+   {
+    "id": "bloodthirst",
+    "name": "Soif de sang",
+    "stat": {
+     "lifesteal": 0.03
+    },
+    "max": 3,
+    "desc": "3 % des dégâts infligés rendent des PV."
+   },
+   {
+    "id": "light_step",
+    "name": "Pas léger",
+    "stat": {
+     "move_speed": 0.08
+    },
+    "max": 2,
+    "desc": "+8 % de vitesse de déplacement."
+   },
+   {
+    "id": "keen_edge",
+    "name": "Fil tranchant",
+    "stat": {
+     "crit_dmg": 0.3
+    },
+    "max": 3,
+    "desc": "+30 % de dégâts critiques."
+   },
+   {
+    "id": "focus",
+    "name": "Concentration",
+    "stat": {
+     "cdr": 0.08
+    },
+    "max": 3,
+    "desc": "-8 % de temps de recharge des compétences."
+   }
+  ]
+ }
+}

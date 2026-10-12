@@ -1,0 +1,80 @@
+# Eden Slash
+
+Hack and slash RPG (fan game, projet local) dans l'univers d'**Eden Eternal**, construit avec
+**Godot 4.7** à partir des données du client Eden Reforged.
+
+## Lancer le jeu
+
+Double-clic sur **`Jouer.bat`** (ou `Editeur.bat` pour ouvrir le projet dans Godot).
+
+### Contrôles
+
+| Action | Touche |
+|---|---|
+| Se déplacer | ZQSD (AZERTY) / WASD (QWERTY) / flèches |
+| Attaquer (sur un monstre : auto-attaque) | Clic gauche (maintenu) |
+| Tourner / incliner la caméra | Clic droit maintenu |
+| Compétences | A E R T ou 1 2 3 4 |
+| Sauter / esquive (invulnérable) | Espace / Maj |
+| Interagir (coffre, PNJ, donjon) | F |
+| Carte / menu (stats, équipement, passifs) | M / Échap |
+| Zoom | Molette |
+
+### Tester et faire des retours
+
+| Touche | Rôle |
+|---|---|
+| F1 | aide en jeu |
+| **F9** | **signaler un problème** : capture + position + état + ta note, enregistrés dans `feedback/` |
+| F4 | se débloquer |
+| F2 | infos de débogage (position, FPS, état) |
+| F5 / F6 / F7 / F8 | +1 niveau / aller à l'entrée du donjon / arène du boss / déclencher la rage |
+
+### Mode test automatique (captures)
+
+```bash
+Godot_v4.7.2-stable_win64_console.exe --path game -- --autoplay --start-level=8 --shots=5,15 --quit-at=16
+```
+
+Les captures arrivent dans `%APPDATA%/Godot/app_userdata/Eden Slash/shots/`.
+
+## Une run (voir DESIGN.md)
+
+- Map **générée à chaque run** dans la DA d'Eden (arbres, rochers, maisons, PNJ, coffres du jeu).
+- **10 minutes** pour explorer, farmer, trouver le **village**, l'**entrée du donjon** et les **coffres**.
+  Brouillard de guerre sur la carte, lieux découverts affichés.
+- Au **village** : Alec (vendre), Bryson (améliorer +1 → +10), Abel (boutique : compétences,
+  passifs, équipement rare) ; désassemblage en fragments / essences / cristaux.
+- Après 10 minutes : **rage** (monstres plus forts, élites en masse, plus d'XP et de butin).
+- Entrée du donjon découverte → **[F]** → arène du boss : zones rouges au sol (cercles, ligne,
+  cône, projectiles, onde), invocations, fureur sous 50 % de PV.
+- Compétences du Samouraï débloquées par **cartes** à chaque niveau (4 emplacements).
+- Équipement à **jets** (qualité 90-120 %, affixes en fourchette, paliers +4/+6/+8/+10).
+
+## Pipeline d'assets (`tools/`)
+
+| Script | Rôle |
+|---|---|
+| `edenpkg.py` | lit les archives `pkg.idx` / `pkg###.pkg` (zlib) du client |
+| `edenini.py` | lit les tables `c_*.ini` (Big5) et `t_*.ini` (textes anglais) |
+| `nif.py` | lecteur NIF Gamebryo générique piloté par `third_party/nif.xml` (niftools) |
+| `nif2gltf.py` | NIF + KF → `.glb` (squelette, skin, B-splines, teinture des personnages) |
+| `fsm2godot.py` | map Eden → Godot : terrain FSM (blocs, couches, ombres, eau, trous), décor + collisions, scènes NIF de donjon, points clés et camps de monstres |
+| `build_assets.py` | génère monstres, textures et `game/data/*.json` pour les zones jouables (rosters lus dans les camps des maps) |
+| `scan_orphans.py` | cherche dans les pkg les fichiers absents de l'index |
+| `blender_preview.py` | rendu de contrôle d'un `.glb` avec Blender en ligne de commande |
+
+```bash
+python -m venv .venv && .venv/Scripts/python -m pip install numpy pillow
+.venv/Scripts/python -I tools/fsm2godot.py s002
+.venv/Scripts/python -I tools/fsm2godot.py s100
+.venv/Scripts/python -I tools/build_assets.py
+# maillage de navigation (chemins praticables) de chaque map
+Godot_v4.7.2-stable_win64_console.exe --headless --path game --script tools/bake_navmesh.gd -- s002
+```
+
+Options de test : `--seed=N` (même map), `--dungeon` (arène du boss), `--rage`,
+`--goto=village|dungeon`, `--boss-after=N` (le bot va au boss après N s), `--open=pause|cards|map|smith|trader`,
+`--teleport=x,z`, `--cam-dist=N`. Test des objets : `Godot --headless --path game res://tests/test_items.tscn`.
+
+Les données brutes extraites (`extracted/`, `index.csv`) ne sont pas versionnées.

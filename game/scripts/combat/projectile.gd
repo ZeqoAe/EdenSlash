@@ -1,0 +1,53 @@
+class_name Projectile
+extends Node3D
+## Projectile ennemi visible (orbe), en ligne droite ; touche le héros au contact.
+
+const SPEED := 15.0
+const LIFE := 2.2
+const HIT_RADIUS := 0.9
+
+var dir := Vector3.FORWARD
+var damage := 50.0
+var source: Combatant
+var _t := 0.0
+
+
+static func fire(from: Node, pos: Vector3, direction: Vector3, dmg: float) -> Projectile:
+	var p := Projectile.new()
+	p.dir = direction.normalized()
+	p.damage = dmg
+	p.source = from as Combatant
+	from.get_tree().current_scene.add_child(p)
+	p.global_position = pos
+	return p
+
+
+func _ready() -> void:
+	var orb := MeshInstance3D.new()
+	var s := SphereMesh.new()
+	s.radius = 0.45
+	s.height = 0.9
+	orb.mesh = s
+	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	m.albedo_color = Color(1.0, 0.45, 0.15)
+	m.emission_enabled = true
+	m.emission = Color(1.0, 0.4, 0.1)
+	m.emission_energy_multiplier = 3.0
+	orb.material_override = m
+	add_child(orb)
+	var l := OmniLight3D.new()
+	l.light_color = Color(1.0, 0.5, 0.2)
+	l.omni_range = 4.0
+	add_child(l)
+
+
+func _physics_process(delta: float) -> void:
+	_t += delta
+	global_position += dir * SPEED * delta
+	var player := get_tree().get_first_node_in_group("player") as Player
+	if player and not player.is_dead and global_position.distance_to(player.global_position + Vector3.UP * 1.0) < HIT_RADIUS + player.radius:
+		player.take_damage(damage, source, false)
+		queue_free()
+	elif _t > LIFE:
+		queue_free()

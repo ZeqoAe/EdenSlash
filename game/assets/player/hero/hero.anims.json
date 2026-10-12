@@ -1,0 +1,602 @@
+{
+ "stand01": {
+  "duration": 3.3333,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 3.3333,
+    "text": "end"
+   }
+  ]
+ },
+ "stand02": {
+  "duration": 3.3333,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 3.3333,
+    "text": "end"
+   }
+  ]
+ },
+ "stand03": {
+  "duration": 3.3333,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 3.3333,
+    "text": "end"
+   }
+  ]
+ },
+ "jump02": {
+  "duration": 1.1333,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.1333,
+    "text": "end"
+   }
+  ]
+ },
+ "death01": {
+  "duration": 2.0,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 2.0,
+    "text": "end"
+   }
+  ]
+ },
+ "magic04": {
+  "duration": 0.6667,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6667,
+    "text": "end"
+   }
+  ]
+ },
+ "shoot06": {
+  "duration": 0.8,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.8,
+    "text": "end"
+   }
+  ]
+ },
+ "battle01": {
+  "duration": 3.2,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 3.2,
+    "text": "end"
+   }
+  ]
+ },
+ "battle02": {
+  "duration": 4.3,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 4.3,
+    "text": "end"
+   }
+  ]
+ },
+ "battle03": {
+  "duration": 4.0,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 4.0,
+    "text": "end"
+   }
+  ]
+ },
+ "hurt01": {
+  "duration": 0.8,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.8,
+    "text": "end"
+   }
+  ]
+ },
+ "hurt02": {
+  "duration": 0.8,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.8,
+    "text": "end"
+   }
+  ]
+ },
+ "magic01": {
+  "duration": 0.6667,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6667,
+    "text": "end"
+   }
+  ]
+ },
+ "magic02": {
+  "duration": 0.6667,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6667,
+    "text": "end"
+   }
+  ]
+ },
+ "magic03": {
+  "duration": 0.6667,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6667,
+    "text": "end"
+   }
+  ]
+ },
+ "magic05": {
+  "duration": 0.6667,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6667,
+    "text": "end"
+   }
+  ]
+ },
+ "magic06": {
+  "duration": 0.6667,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6667,
+    "text": "end"
+   }
+  ]
+ },
+ "shoot01": {
+  "duration": 0.6667,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6667,
+    "text": "end"
+   }
+  ]
+ },
+ "shoot02": {
+  "duration": 0.6667,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6667,
+    "text": "end"
+   }
+  ]
+ },
+ "shoot03": {
+  "duration": 0.7667,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.7667,
+    "text": "end"
+   }
+  ]
+ },
+ "shoot04": {
+  "duration": 0.7667,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.7667,
+    "text": "end"
+   }
+  ]
+ },
+ "shoot05": {
+  "duration": 0.7,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.7,
+    "text": "end"
+   }
+  ]
+ },
+ "move04": {
+  "duration": 1.3333,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.3333,
+    "text": "end"
+   }
+  ]
+ },
+ "jump01": {
+  "duration": 1.1333,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 1.1333,
+    "text": "end"
+   }
+  ]
+ },
+ "attack01": {
+  "duration": 0.6,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6,
+    "text": "end"
+   }
+  ]
+ },
+ "attack02": {
+  "duration": 0.6,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6,
+    "text": "end"
+   }
+  ]
+ },
+ "attack03": {
+  "duration": 0.6,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6,
+    "text": "end"
+   }
+  ]
+ },
+ "attack04": {
+  "duration": 0.6,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6,
+    "text": "end"
+   }
+  ]
+ },
+ "attack05": {
+  "duration": 0.6,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6,
+    "text": "end"
+   }
+  ]
+ },
+ "attack06": {
+  "duration": 0.6,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6,
+    "text": "end"
+   }
+  ]
+ },
+ "attack07": {
+  "duration": 0.6,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.6,
+    "text": "end"
+   }
+  ]
+ },
+ "attack08": {
+  "duration": 0.7333,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.7333,
+    "text": "end"
+   }
+  ]
+ },
+ "attack09": {
+  "duration": 0.7667,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.7667,
+    "text": "end"
+   }
+  ]
+ },
+ "attack10": {
+  "duration": 0.7333,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.7333,
+    "text": "end"
+   }
+  ]
+ },
+ "attack11": {
+  "duration": 0.7333,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.7333,
+    "text": "end"
+   }
+  ]
+ },
+ "attack12": {
+  "duration": 0.7,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.7,
+    "text": "end"
+   }
+  ]
+ },
+ "move01": {
+  "duration": 0.8,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.8,
+    "text": "end"
+   }
+  ]
+ },
+ "move02": {
+  "duration": 0.8,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.8,
+    "text": "end"
+   }
+  ]
+ },
+ "move03": {
+  "duration": 0.8,
+  "loop": true,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.8,
+    "text": "end"
+   }
+  ]
+ },
+ "jump03": {
+  "duration": 0.1333,
+  "loop": false,
+  "frequency": 1.0,
+  "keys": [
+   {
+    "time": 0.0,
+    "text": "start"
+   },
+   {
+    "time": 0.1333,
+    "text": "end"
+   }
+  ]
+ }
+}

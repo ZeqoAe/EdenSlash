@@ -1,0 +1,46 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Eden Slash"
+config/description="Hack and slash fan game dans l'univers d'Eden Eternal"
+run/main_scene="res://scenes/lobby.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+
+[autoload]
+
+GameData="*res://scripts/core/game_data.gd"
+Profile="*res://scripts/core/profile.gd"
+Run="*res://scripts/core/run.gd"
+
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+
+[physics]
+
+3d/physics_engine="Jolt Physics"
+
+[rendering]
+
+anti_aliasing/quality/msaa_3d=2
+
+[shader_globals]
+
+hero_screen={
+"type": "vec2",
+"value": Vector2(0.5, 0.5)
+}
+hero_depth={
+"type": "float",
+"value": 0.0
+}

@@ -1,0 +1,42 @@
+[
+ {
+  "id": "limestone",
+  "node": 2,
+  "name": "Limestone Mtn.",
+  "levels": [
+   1,
+   8
+  ],
+  "map": "s002",
+  "start_event": "BORN",
+  "dungeon": {
+   "id": "andrew_mine",
+   "name": "Andrew V. Mine",
+   "required_level": 8,
+   "level": 9,
+   "map": "s100",
+   "gateway_label": "往安德魯村內礦坑",
+   "monsters": [
+    56211
+   ],
+   "boss": 58392
+  },
+  "monsters": [
+   56001,
+   56002,
+   56212,
+   56003,
+   56004,
+   56005,
+   56006,
+   56007
+  ],
+  "elites": [
+   57501,
+   57502,
+   57503,
+   57504,
+   57505
+  ]
+ }
+]
