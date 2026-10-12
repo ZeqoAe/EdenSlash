@@ -21,6 +21,9 @@ s'il a la bonne version.
   non poussé à la fin d'une session.
 - Les fichiers `.uid` créés par l'éditeur Godot peuvent bloquer un pull : les supprimer
   s'ils existent déjà dans le dépôt distant.
+- `Mettre_a_jour.bat` met de côté (`git stash -u`) les fichiers modifiés localement avant
+  le pull, puis les remet (`git stash pop`). Si un `stash pop` a échoué, le travail local
+  est toujours dans `git stash list` : le récupérer avant de continuer.
 
 ## Tests
 `Godot --headless --path game res://tests/<test>.tscn` pour test_build, test_hud,
