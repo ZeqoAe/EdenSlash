@@ -1,33 +1,28 @@
 extends Node3D
 ## Menu principal (lobby) : le héros posé dans la map de la zone choisie ; menu à icônes
-## à gauche (Jouer, Classe, Équipement, Collection, Infos, Paramètres, Quitter), sous-menu
-## au centre (lancer une run, configuration de la classe, équipement, zone de farm...),
-## badge de la classe en haut à droite, zone et prochaine récompense en bas.
-## Lancer la run : page Équipement (préréglage ou à la main ; l'arme portée décide du
-## combo d'auto-attaque) → Valider → page Expertise & talents (talents, 7 certificats
-## de maîtrise au plus) → Valider → la run démarre.
+## à gauche, une fonction = un seul endroit :
+## - Jouer : lancer la run (un clic), résumé du héros (ouvre l'écran Héros), zone de farm ;
+## - Héros : écran HeroScreen (équipement, talents, apparence, grimoire, classe, aide « ? ») ;
+## - Collection : l'archive des trésors (une seule page) ;
+## - Paramètres, Quitter.
+## Badge de la classe en haut à droite, zone et prochaine récompense en bas.
 ## Les arguments de test (--autoplay, --dungeon, --shots...) lancent la run directement.
 
 const RUN_SCENE := "res://scenes/world.tscn"
 const TITLE_SCENE := "res://scenes/title.tscn"
 ## Menu de gauche : identifiant, texte, icône.
 const MENU := [
-	["play", "Jouer", "play"], ["class", "Classe", "class"], ["equipment", "Équipement", "equipment"],
-	["collection", "Collection", "collection"], ["info", "Infos", "info"], ["settings", "Paramètres", "settings"],
-	["quit", "Quitter", "quit"],
+	["play", "Jouer", "play"], ["hero", "Héros", "class"], ["collection", "Collection", "collection"],
+	["settings", "Paramètres", "settings"], ["quit", "Quitter", "quit"],
 ]
+## Arguments de test qui ouvrent un écran au démarrage (captures, tests).
+const SCREEN_ARGS := ["--grimoire", "--talents", "--info", "--inventory", "--appearance"]
 
 var backdrop: MapBackdrop
-var _equip_screen: InventoryScreen
-var _prep: PageScreen  # préparation de la run : Équipement puis Expertise & talents
-var _prep_button: Button
-var _talents: PageScreen
+var _hero: HeroScreen
 var _archive: PageScreen
-var _info: PageScreen
-var _class_dirty := false
 var _launching := false
-var _grimoire: Grimoire
-var _open_screen := ""  # test : écran ouvert au démarrage (--talents, --prep=1, --archive=1, --info)
+var _open_screen := ""  # test : écran ouvert au démarrage (--inventory, --talents, --appearance, --archive=0...)
 var _settings: SettingsMenu
 var _menu := {}  # identifiant -> MenuWidgets.SideButton
 var _current := "play"  # sous-menu affiché
@@ -54,7 +49,7 @@ func _ready() -> void:
 			Profile.selected_zone = arg.trim_prefix("--zone=")
 		elif arg.begins_with("--weapon="):
 			Profile.select_weapon_type(arg.trim_prefix("--weapon="))
-		elif arg in ["--grimoire", "--talents", "--info", "--inventory"] or arg.begins_with("--prep=") or arg.begins_with("--archive="):
+		elif arg in SCREEN_ARGS or arg.begins_with("--archive=") or arg.begins_with("--appearance="):
 			_open_screen = arg.trim_prefix("--")
 		elif arg == "--wear-aura":
 			# test : une pierre étoilée et une pierre de lune portées (profil de test uniquement)
@@ -70,8 +65,9 @@ func _ready() -> void:
 	if not Profile.in_run:
 		Profile.save_profile()  # classe choisie en argument : son préréglage (et son arme)
 	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in ["--grimoire", "--talents", "--info", "--inventory"] \
-				or arg.begins_with("--prep=") or arg.begins_with("--archive=") or arg.begins_with("--expertise=") 				or arg == "--wear-aura" or arg.begins_with("--archive-cat=") or arg.begins_with("--enc-cat=") or arg.begins_with("--costume-cat="):
+		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
+				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") \
+				or arg == "--wear-aura" or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -79,58 +75,43 @@ func _ready() -> void:
 			_start_run()
 			return
 	_build_scene()
-	_grimoire = Grimoire.new()
-	add_child(_grimoire)
 	_build_ui()
-	if _open_screen == "grimoire":
-		_grimoire.open(Profile.selected_class)
-	elif _open_screen == "talents":
-		_talents.open(0)
-	elif _open_screen == "info":
-		_info.open(0)
-	elif _open_screen.begins_with("prep="):
-		_prepare_run()
-		_prep.show_page(int(_open_screen.trim_prefix("prep=")))
-	elif _open_screen == "inventory":
-		_open_panel()
-	elif _open_screen.begins_with("archive="):
-		_archive.open(int(_open_screen.trim_prefix("archive=")))
-		for arg in OS.get_cmdline_user_args():
-			# tests : catégorie de l'archive / de l'encyclopédie (par set et niveau)
-			if arg.begins_with("--archive-cat="):
-				_archive.page(0)._cat = arg.trim_prefix("--archive-cat=")
-				_archive.page(0).refresh()
-			elif arg.begins_with("--costume-cat="):
-				_archive.page(2)._cat = arg.trim_prefix("--costume-cat=")
-				_archive.page(2).refresh()
-			elif arg.begins_with("--enc-cat="):
-				var enc = _archive.page(1)
-				var key := arg.trim_prefix("--enc-cat=")
-				for i in enc._cats.size():
-					if String(enc._cats[i][1]) == key:
-						enc._cat.select(i)
-						enc._view.select(1 if key.begins_with("a:") else 0)
-				enc._apply_filters()
+	match _open_screen.get_slice("=", 0):
+		"grimoire":
+			_open_hero("grimoire")
+		"talents":
+			_open_hero("talents")
+		"info":
+			_open_hero("help")
+		"inventory":
+			_open_hero("equipment")
+		"appearance":
+			# test : catégorie de l'apparence (--appearance=aura, --appearance=weapon...)
+			if _open_screen.contains("="):
+				_hero.appearance._cat = _open_screen.get_slice("=", 1)
+			_open_hero("appearance")
+		"archive":
+			_archive.open(0)
+			for arg in OS.get_cmdline_user_args():
+				if arg.begins_with("--archive-cat="):  # test : catégorie de l'archive
+					_archive.page(0)._cat = arg.trim_prefix("--archive-cat=")
+					_archive.page(0).refresh()
 	if shot > 0.0:
 		await get_tree().create_timer(shot).timeout
 		DirAccess.make_dir_recursive_absolute("user://shots")
-		get_viewport().get_texture().get_image().save_png("user://shots/lobby.png")
+		var out := "lobby"
+		for arg in OS.get_cmdline_user_args():
+			if arg.begins_with("--shot-out="):
+				out = arg.trim_prefix("--shot-out=")
+		get_viewport().get_texture().get_image().save_png("user://shots/%s.png" % out)
 		get_tree().quit()
 
 
-## Lancer la run : d'abord l'équipement, puis l'expertise.
-func _prepare_run() -> void:
-	_class_dirty = false
-	_prep.set_title("Préparer la run", "%s · %s" % [GameData.class_data(Profile.selected_class).get("name_fr", ""), GameData.zone(Profile.selected_zone).name])
-	_prep.open(0)
-
-
-func _on_prep_validate() -> void:
-	if _prep.current_page() == 0:
-		_prep.show_page(1)
+## Lancer la run : un clic (le héros se prépare dans l'écran Héros).
+func _launch() -> void:
+	if _launching:
 		return
 	_launching = true
-	_prep.close_ui()
 	_start_run()
 
 
@@ -321,44 +302,15 @@ func _build_ui() -> void:
 	_clock = Hud._label(ih, "", 14, UiTheme.TEXT)
 
 	# écrans plein écran
-	# inventaire plein écran (maquette) : raccourcis vers les autres écrans à gauche
-	_equip_screen = InventoryScreen.new(6)
-	add_child(_equip_screen)
-	_equip_screen.closed.connect(func():
+	_hero = HeroScreen.new(6)
+	add_child(_hero)
+	_hero.closed.connect(func():
 		if _launching:
 			return
-		_class_dirty = false
-		_show_hero()
+		_show_hero()  # classe, arme ou apparence ont pu changer
 		_refresh_ui())
-	_equip_screen.shortcuts = [
-		["Talents", "expertise", func(): _from_inventory(func(): _talents.open(0))],
-		["Classe", "class", func(): _equip_screen.page._pick_class()],
-		["Grimoire", "grimoire", func(): _from_inventory(func(): _grimoire.open(Profile.selected_class))],
-		["Statistiques", "stats", func(): _equip_screen.page._show_stat_detail()],
-		["Collection", "collection", func(): _from_inventory(func(): _archive.open(0))],
-	]
-	# préparation de la run : Équipement → Valider → Expertise & talents → Valider → run
-	var prep_inv := InventoryPage.new()
-	prep_inv.class_changed.connect(func(): _class_dirty = true)
-	_prep = _screen("Préparer la run", [["1 · Équipement", prep_inv], ["2 · Expertise & talents", TalentsPage.new()]])
-	_prep_button = Button.new()
-	_prep_button.focus_mode = Control.FOCUS_NONE
-	_prep_button.custom_minimum_size = Vector2(300, 44)
-	_prep_button.add_theme_font_size_override("font_size", 18)
-	_prep_button.add_theme_font_override("font", UiTheme.title_font())
-	_prep_button.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.42, 0.28, 0.08, 1.0), UiTheme.GOLD, 2, 8))
-	_prep_button.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.55, 0.37, 0.1, 1.0), Color(1, 0.9, 0.6), 2, 8))
-	_prep_button.add_theme_color_override("font_color", Color(1, 0.95, 0.85))
-	_prep_button.pressed.connect(_on_prep_validate)
-	_prep.add_header_control(_prep_button)
-	_prep.page_changed.connect(func(i):
-		_prep_button.text = "Valider l'équipement  ▶" if i == 0 else "Valider et lancer la run  ▶")
-	_talents = _screen("Expertise & talents", [["Talents et certificats", TalentsPage.new()]])
-	_talents.set_title("Expertise & talents", "Talents de classe et certificats de maîtrise (7 au plus)")
-	_archive = _screen("Archive", [["Collection", ArchivePages.CollectionPage.new()], ["Encyclopédie", ArchivePages.EncyclopediaPage.new()], ["Tenues", ArchivePages.CostumesPage.new()], ["Apparences d'armes", ArchivePages.SkinsPage.new()]])
-	_archive.set_title("Collection", "Archive : collection à bonus permanents, encyclopédie de tous les objets d'Eden (mode dev), apparences")
-	_info = _screen("Infos", [["Guide des statistiques", InfoPage.new()]])
-	_info.set_title("Infos", "Comment chaque statistique est calculée, ce que vaut un point, formule des dégâts et de la défense")
+	_archive = _screen("Collection", [["Collection", ArchivePages.CollectionPage.new()]])
+	_archive.set_title("Collection", "Archive des trésors : chaque entrée donne un bonus permanent à tous les héros")
 	_settings = SettingsMenu.new()
 	add_child(_settings)
 	_refresh_ui()
@@ -375,15 +327,13 @@ func _tex(parent: Control, px: Vector2) -> TextureRect:
 	return t
 
 
-## Menu de gauche : sous-menu (Jouer, Classe, Quitter) ou écran plein écran.
+## Menu de gauche : sous-menu (Jouer, Quitter) ou écran plein écran.
 func _on_menu(id: String) -> void:
 	match id:
-		"equipment":
-			_open_panel()
+		"hero":
+			_open_hero()
 		"collection":
 			_archive.open(0)
-		"info":
-			_info.open(0)
 		"settings":
 			_settings.open()
 		_:
@@ -399,8 +349,6 @@ func _show_menu(id: String) -> void:
 	match id:
 		"play":
 			_menu_play()
-		"class":
-			_menu_class()
 		"zones":
 			_menu_zones()
 		"quit":
@@ -436,7 +384,7 @@ func _menu_play() -> void:
 	card.add_theme_stylebox_override("normal", n)
 	card.add_theme_stylebox_override("hover", hv)
 	card.add_theme_stylebox_override("pressed", hv)
-	card.pressed.connect(_prepare_run)
+	card.pressed.connect(_launch)
 	_sub.add_child(card)
 	var img := TextureRect.new()
 	img.texture = _snapshot
@@ -479,36 +427,13 @@ func _menu_play() -> void:
 	ch.offset_left = -34
 	ch.offset_bottom = -10
 	ch.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	_row("Configuration de la classe", "Talents et certificats de maîtrise (7 au plus)", "expertise", func(): _talents.open(0))
-	_row("Armes & équipement", "Préréglages, coffre commun ; l'arme portée décide du combo", "equipment", _open_panel)
+	# le héros tel qu'il partira : un clic ouvre l'écran Héros
+	var w: Dictionary = Profile.equipped.get("weapon", {})
+	var free := Profile.talent_points(Profile.selected_class) - Profile.talent_spent(Profile.selected_class)
+	var hr := _row("Héros : %s" % cls.get("name_fr", ""), "%s · puissance %d%s" % [Items.display_name(w) if not w.is_empty() else "sans arme", Profile.equipped.values().reduce(func(acc, it): return acc + EquipmentPage._power_of(it), 0),
+		" · %d point(s) de talent à dépenser" % free if free > 0 else ""], String(cls.get("icon", "")), _open_hero.bind(""))
+	hr.mark(free > 0)
 	_row("Zone de farm", "%s · niveau %d+" % [zone.get("name", ""), 1 + int(zone.get("level_bonus", 0))], "pin", _show_menu.bind("zones"))
-	_row("Grimoire", "Sorts de la classe et combos d'arme", "grimoire", func(): _grimoire.open(Profile.selected_class))
-
-
-func _menu_class() -> void:
-	_sub_title("Classe")
-	var pick := ClassPicker.button(func(): return Profile.selected_class, _select_class, false, Vector2(420, 54))
-	_sub.add_child(pick)
-	# classes débloquées (raccourcis) puis prochaines classes à débloquer
-	var shown := 0
-	for id in GameData.classes:
-		if not Progression.class_unlocked(id) or shown >= 6:
-			continue
-		shown += 1
-		var cd := GameData.class_data(id)
-		var wt := String(GameData.weapon_type(Items.default_weapon_type(id)).get("name", ""))
-		var r := _row(String(cd.get("name_fr", id)), "Maîtrise niv. %d · arme d'origine : %s" % [Profile.expertise_level(id), wt],
-			String(cd.get("icon", "")), _select_class.bind(String(id)), 54.0)
-		r.mark(id == Profile.selected_class)
-	var locked := GameData.classes.keys().filter(func(id): return not Progression.class_unlocked(id))
-	locked.sort_custom(func(a, b): return Progression.mission_progress(a).x / Progression.mission_progress(a).y > Progression.mission_progress(b).x / Progression.mission_progress(b).y)
-	for id in locked.slice(0, 3):
-		var cd := GameData.class_data(id)
-		var r := _row("🔒 %s" % cd.get("name_fr", id), Progression.mission_line(id), String(cd.get("icon", "")), _select_class.bind(String(id)), 50.0)
-		r.modulate = Color(1, 1, 1, 0.6)
-	var lore := Hud._label(_sub, String(GameData.class_data(Profile.selected_class).get("lore", "")), 14, UiTheme.MUTED)
-	lore.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	lore.custom_minimum_size = Vector2(420, 0)
 
 
 func _menu_zones() -> void:
@@ -588,19 +513,11 @@ func _screen(t: String, pages: Array) -> PageScreen:
 	s.closed.connect(func():
 		if _launching:
 			return
-		_class_dirty = false
 		_show_hero()  # classe, arme ou apparence ont pu changer
 		_refresh_ui())
 	return s
 
 
-func _open_panel() -> void:
-	_class_dirty = false
-	_equip_screen.zone_texture = _snapshot
-	_equip_screen.open()
-
-
-## Raccourci de l'inventaire : ferme l'inventaire puis ouvre l'autre écran.
-func _from_inventory(cb: Callable) -> void:
-	_equip_screen.close_ui()
-	cb.call()
+func _open_hero(section := "") -> void:
+	_hero.zone_texture = _snapshot
+	_hero.open(section)

@@ -40,10 +40,12 @@ icône d'Eden déposée sous le même nom (`freeze.png`, `burn.png`…) les remp
 Au lancement, **écran titre** : les maps des zones défilent en fond (survol 3D) ; **Jouer** propose
 *Continuer*, *Charger une partie* ou *Nouvelle partie* sur **3 emplacements de sauvegarde**
 (l'emplacement 1 reprend l'ancienne sauvegarde), puis Paramètres et Quitter.
-**Menu principal** : le héros posé dans la map de la zone choisie ; menu à icônes à gauche (Jouer,
-Classe, Équipement, Collection, Infos, Paramètres, Quitter) ; sous-menu Jouer : *Lancer une run*,
-configuration de la classe (talents, certificats), armes & équipement, zone de farm, grimoire ;
-badge de la classe en haut à droite ; zone et prochaine récompense (expertise) en bas.
+**Menu principal** : le héros posé dans la map de la zone choisie ; menu à icônes à gauche, une
+fonction = un seul endroit : **Jouer** (*Lancer une run* en un clic, résumé du héros, zone de farm),
+**Héros** (un seul écran : Équipement, Talents, Apparence — tenue, tête, dos, auras, arme —,
+Grimoire, Classe, et « ? » pour le guide des statistiques), **Collection** (l'archive seule),
+**Paramètres**, **Quitter** ; badge de la classe en haut à droite ; zone et prochaine récompense
+(expertise) en bas. En run, le menu pause suit la même structure : Run, Héros, Aide.
 Icônes de menu : `tools/make_menu_icons.py` ; trophées : `tools/make_trophy_icons.py`.
 
 **Graphismes** (Paramètres → Affichage → *Qualité graphique* : basse, moyenne, haute, ultra) :

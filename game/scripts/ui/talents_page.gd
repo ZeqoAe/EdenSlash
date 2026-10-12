@@ -11,6 +11,7 @@ extends VBoxContainer
 const CELL := 64
 
 var cls := ""  # classe affichée ("" : classe choisie)
+var class_bar := true  # sélecteur de classe en haut (non dans l'écran Héros : la classe y est déjà)
 var _tabs: HBoxContainer
 var _level_label: Label
 var _bar: ProgressBar
@@ -57,7 +58,9 @@ func _ready() -> void:
 	var th := HBoxContainer.new()
 	tv.add_child(th)
 	ItemWidgets.section(th, "Parcours de maîtrise", 16)
-	Hud._label(th, "   Chaque run fait monter la maîtrise de la classe jouée : points de talent, nouveaux sorts, certificats... (survole un niveau)", 13, UiTheme.MUTED)
+	var tl0 := Hud._label(th, "   Chaque run fait monter la maîtrise de la classe jouée : points de talent, nouveaux sorts, certificats... (survole un niveau)", 13, UiTheme.MUTED)
+	tl0.clip_text = true
+	tl0.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var ts := ScrollContainer.new()
 	ts.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	ts.custom_minimum_size = Vector2(0, 92)
@@ -100,7 +103,7 @@ func _ready() -> void:
 	_board.page = self
 	bh.add_child(_board)
 	_synergy = ItemWidgets.rich(bh, 14)
-	_synergy.custom_minimum_size = Vector2(260, 0)
+	_synergy.custom_minimum_size = Vector2(200, 0)
 	var rules := ItemWidgets.rich(cp, 13)
 	rules.fit_content = true
 	rules.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
@@ -133,7 +136,9 @@ func refresh() -> void:
 	var c := _cls()
 	for b in _tabs.get_children():
 		b.queue_free()
-	_tabs.add_child(ClassPicker.button(func(): return _cls(), func(cid): show_class(cid), true))
+	_tabs.visible = class_bar
+	if class_bar:
+		_tabs.add_child(ClassPicker.button(func(): return _cls(), func(cid): show_class(cid), true))
 	var lvl := Profile.expertise_level(c)
 	var prog := Profile.expertise_progress(c)
 	_level_label.text = "%s — maîtrise niveau %d / %d" % [GameData.class_data(c).get("name_fr", c), lvl, Profile.EXPERTISE_MAX]
@@ -292,7 +297,9 @@ static func cert_tip(key: String, unlocked: bool, cert_level := 0) -> String:
 
 func _refresh_certs() -> void:
 	var slots := Profile.certificate_slots()
-	_slots.text = "%d / %d posés · %d emplacements ouverts sur 7 (+1 tous les 8 niveaux de maîtrise cumulés)" % [Profile.certificates.size(), slots, slots]
+	_slots.text = "%d / %d posés · %d emplacements sur 7" % [Profile.certificates.size(), slots, slots]
+	_slots.tooltip_text = "+1 emplacement tous les 8 niveaux de maîtrise cumulés"
+	_slots.mouse_filter = Control.MOUSE_FILTER_PASS
 	_board.refresh()
 	# bonus de placement
 	var syn := CertBoard.synergies(Profile.cert_board)

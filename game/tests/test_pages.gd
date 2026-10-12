@@ -1,8 +1,8 @@
 extends Node
 ## Écrans plein écran : préréglages d'équipement par classe et coffre commun,
-## menu pause (Run, Équipement, Infos), village (marchand, forgeron, recycleur, joaillier),
+## menu pause (Run, Héros, Aide), village (marchand, forgeron, recycleur, joaillier),
 ## légendaires et accessoires, carte d'objet au survol, archive et apparences,
-## certificats (7 au plus), lancement de run Équipement → Expertise.
+## certificats (7 au plus), menu principal et écran Héros.
 ## godot --headless --path game res://tests/test_pages.tscn  (profil de test uniquement)
 
 var fails := 0
@@ -316,36 +316,50 @@ func _test_lobby() -> void:
 	var lobby: Node = load("res://scenes/lobby.tscn").instantiate()
 	add_child(lobby)
 	await _frames()
-	check("menu principal : Jouer choisi, sous-menu rempli", lobby._menu.play.selected and lobby._sub.get_child_count() >= 4)
-	lobby._show_menu("class")
-	lobby._select_class("warrior")
-	await _frames()
-	check("menu Classe : guerrier choisi", Profile.selected_class == "warrior" and lobby._badge_name.text == "Guerrier" and lobby._menu["class"].selected)
-	lobby._select_class("samurai")
+	check("menu principal : 5 entrées (Jouer, Héros, Collection, Paramètres, Quitter)", lobby._menu.keys() == ["play", "hero", "collection", "settings", "quit"])
+	check("menu principal : Jouer choisi, sous-menu rempli", lobby._menu.play.selected and lobby._sub.get_child_count() >= 3)
 	lobby._show_menu("zones")
 	await _frames()
-	check("menu Zone de farm : 6 zones", lobby._sub.get_children().filter(func(c): return c is MenuWidgets.RowButton).size() == GameData.zones.size())
+	check("menu Zone de farm : %d zones" % GameData.zones.size(), lobby._sub.get_children().filter(func(c): return c is MenuWidgets.RowButton).size() == GameData.zones.size())
 	lobby._show_menu("play")
-	lobby._prepare_run()
+	# écran Héros : une section à la fois, classe, talents, apparence, aide
+	var hero: HeroScreen = lobby._hero
+	lobby._open_hero()
 	await _frames()
-	check("lancer la run : page Équipement d'abord", lobby._prep.is_open() and lobby._prep.current_page() == 0 and lobby._prep_button.text.begins_with("Valider l'équipement"))
-	lobby._on_prep_validate()
+	check("Héros : ouvert sur l'équipement", hero.is_open() and hero.current == "equipment" and hero.page.visible and not hero.talents.visible)
+	hero.show_section("talents")
 	await _frames()
-	check("valider : page Expertise & talents", lobby._prep.current_page() == 1 and lobby._prep_button.text.contains("lancer la run") and lobby._prep.page(1) is TalentsPage)
-	var tp: TalentsPage = lobby._prep.page(1)
-	check("expertise : plateau de 7 cases, parcours de maîtrise", tp._board._slots.size() == 7 and tp._track.get_child_count() >= 8 and tp._certs.get_child_count() >= 2)
-	lobby._prep.close_ui()
+	check("Héros : talents (plateau de 7 cases, parcours de maîtrise)", hero.talents.visible and not hero.page.visible and hero.talents._board._slots.size() == 7 and hero.talents._track.get_child_count() >= 8)
+	check("Héros : pas de second sélecteur de classe dans les talents", not hero.talents._tabs.visible)
+	for cat in ["body", "head", "back", "aura", "weapon"]:
+		hero.appearance._cat = cat
+		hero.show_section("appearance")
+		await _frames()
+		check("Héros : apparence « %s » affichée" % cat, hero.appearance.visible and hero.appearance._grid.get_child_count() > 1)
+	var wt := Items.weapon_type_of(Profile.equipped.get("weapon", {}))
+	var skin: Dictionary = Archive.skins(wt)[1]
+	hero.appearance._skin_cell(wt, 1, skin).pressed.emit()
+	check("Héros : apparence d'arme choisie", Profile.weapon_code() == String(skin.code))
+	Profile.set_skin(wt, "")
+	hero.show_section("help")
+	await _frames()
+	for i in InfoPage.SECTIONS.size():
+		hero.help.show_section(i)
+	check("Héros : aide « ? » (guide des statistiques)", hero.help.visible and hero.help._text.text.length() > 50)
+	Profile.selected_class = "warrior"
+	Profile.save_profile()
+	hero.refresh()
+	check("Héros : classe affichée", hero._class_name.text.begins_with("Guerrier"))
+	hero.close_ui()
+	await _frames()
+	check("Héros fermé : retour au menu, badge à jour", not hero.is_open() and lobby._badge_name.text == "Guerrier")
+	Profile.selected_class = "samurai"
+	Profile.save_profile()
 	lobby._archive.open(0)
 	await _frames()
-	check("archive : catalogue affiché", lobby._archive.is_open() and lobby._archive.page(0)._grid.get_child_count() > 0)
-	lobby._archive.show_page(1)
-	await _frames()
+	check("Collection : une seule page, sans onglet", lobby._archive._pages.size() == 1 and not lobby._archive._tab_buttons[0].visible)
+	check("Collection : catalogue affiché", lobby._archive.is_open() and lobby._archive.page(0)._grid.get_child_count() > 0)
 	lobby._archive.close_ui()
-	lobby._info.open(0)
-	for i in InfoPage.SECTIONS.size():
-		lobby._info.page(0).show_section(i)
-	check("infos : toutes les sections", lobby._info.page(0)._text.text.length() > 50)
-	lobby._info.close_ui()
 	lobby.free()
 
 
@@ -383,7 +397,7 @@ func _test_run_screens() -> void:
 	screen.show_page(2)
 	var info: InfoPage = screen.page(2)
 	info.show_section(InfoPage.SECTIONS.size() - 1)
-	check("pause : page Infos avec les valeurs du héros", info._text.text.contains("PV effectifs"))
+	check("pause : page Aide avec les valeurs du héros", info._text.text.contains("PV effectifs"))
 	world.pause_menu.close()
 	await _frames()
 	check("pause fermée, jeu repris", not world.pause_menu.is_open() and not get_tree().paused)

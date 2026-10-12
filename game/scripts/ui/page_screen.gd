@@ -125,6 +125,8 @@ func add_page(name: String, page: Control) -> int:
 	b.pressed.connect(show_page.bind(i))
 	_tabs.add_child(b)
 	_tab_buttons.append(b)
+	for t in _tab_buttons:  # une seule page : pas d'onglet
+		t.visible = _tab_buttons.size() > 1
 	return i
 
 

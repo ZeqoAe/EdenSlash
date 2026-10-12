@@ -25,6 +25,7 @@ const MAT_NAMES := {"fragment": "Fragments d'amélioration", "essence": "Essence
 const MAT_RARITY := {"fragment": 1, "essence": 2, "crystal": 3}
 
 var player: Player  # null hors run
+var class_card := true  # carte « Classe affichée » (non dans l'écran Héros : la classe y est en haut)
 
 var _doll := {}  # emplacement -> ItemSlot
 var _preview: EquipmentPage.HeroPreview
@@ -160,6 +161,7 @@ func _build_center() -> void:
 	_class_card.add_theme_stylebox_override("pressed", card_box(true))
 	_class_card.add_theme_stylebox_override("disabled", card_box())
 	_class_card.pressed.connect(_pick_class)
+	_class_card.visible = class_card
 	cards.add_child(_class_card)
 	var ch := HBoxContainer.new()
 	ch.set_anchors_preset(Control.PRESET_FULL_RECT)
