@@ -86,6 +86,7 @@ func _ready() -> void:
 	rig.global_position = player.global_position
 
 	director = RunDirector.new()
+	Profile.class_unlocked.connect(_on_class_unlocked)
 	director.world = self
 	add_child(director)
 
@@ -366,6 +367,11 @@ func _on_npc_opened(kind: String, npc: Interactable) -> void:
 var _base_fog := Color(0.85, 0.89, 0.91)
 var _base_fog_density := 0.0018
 var _base_sun := Color(1.0, 0.96, 0.88)
+
+
+## Mission remplie pendant la run : nouvelle classe jouable.
+func _on_class_unlocked(cls: String) -> void:
+	director.message.emit("Nouvelle classe débloquée : %s !" % GameData.class_data(cls).get("name_fr", cls), 5.0)
 
 
 func _on_gfx_settings() -> void:

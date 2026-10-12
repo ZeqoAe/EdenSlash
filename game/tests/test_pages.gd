@@ -27,6 +27,7 @@ func _ready() -> void:
 	_test_presets()
 	_test_items()
 	_test_archive()
+	_test_progression()
 	await _test_title()
 	await _test_lobby()
 	await _test_run_screens()
@@ -148,6 +149,53 @@ func _test_archive() -> void:
 	Profile.save_profile()
 
 
+func _test_progression() -> void:
+	Profile.new_game(3)
+	check("nouvelle partie : seul le Guerrier est jouable", Progression.class_unlocked("warrior") and not Progression.class_unlocked("samurai"))
+	var got: Array = []
+	var cb := func(c): got.append(c)
+	Profile.class_unlocked.connect(cb)
+	Profile.record_add("kills", 249)
+	check("mission du Samouraï en cours (249 / 250)", not Progression.class_unlocked("samurai") and Progression.mission_progress("samurai") == Vector2(249, 250))
+	Profile.record_add("kills", 1)
+	check("mission remplie : Samouraï débloqué", Progression.class_unlocked("samurai") and "samurai" in got)
+	Profile.record_max("best_hit", 900)
+	check("gros coup : Magicien débloqué", Progression.class_unlocked("magician"))
+	Profile.class_unlocked.disconnect(cb)
+	# sorts : 4 de base, les suivants avec la maîtrise
+	check("sorts : 4 de base, le 5e au niveau 2", Progression.skill_level(3) == 1 and Progression.skill_level(4) == 2)
+	Run.start("warrior")
+	var skills: Array = GameData.class_data("warrior").skills
+	var base := skills.slice(0, 4).map(func(x): return int(x.id))
+	var seen := {}
+	for i in 60:
+		for c in Run.roll_cards(3, true):
+			seen[int(c.id)] = true
+	check("maîtrise 1 : seuls les 4 sorts de base sont proposés", seen.keys().all(func(k): return k in base) and seen.size() == 4)
+	Profile.expertise["warrior"] = 2000
+	check("maîtrise montée : nouveaux sorts", Progression.skill_unlocked("warrior", int(skills[5].id)) and Progression.rewards_at("warrior", 2).any(func(r): return r.kind == "skill"))
+	Run.finish("abandon")
+	Profile.end_run(null)
+	# plateau des certificats : losange de 4 oranges
+	for cid in GameData.classes:
+		Profile.expertise[cid] = 999999
+	for k in ["warrior/double_cut", "magician/staff_expert", "hunter/bow_expert", "samurai/katana_expert"]:
+		check("certificat orange : " + k, CertBoard.color_of(k) == "orange")
+	for pos_key in [[0, "warrior/double_cut"], [1, "magician/staff_expert"], [2, "hunter/bow_expert"], [3, "samurai/katana_expert"]]:
+		Profile.place_certificate(pos_key[1], pos_key[0])
+	var syn := CertBoard.synergies(Profile.cert_board)
+	check("losange orange + 5 liens", syn.any(func(x): return x.name == CertBoard.DIAMOND.orange.name) and syn.any(func(x): return String(x.name).ends_with("×5")))
+	check("bonus du plateau dans les passifs", float(CertBoard.stats(Profile.cert_board).get("dmg_pct", 0.0)) > 0.2)
+	Profile.place_certificate("warrior/unshakable", 4)
+	Profile.place_certificate("thief/dagger_expert", 5)
+	check("prisme : triangle de 3 couleurs", CertBoard.synergies(Profile.cert_board).any(func(x): return x.name == CertBoard.PRISM.name))
+	Profile.place_certificate("warrior/double_cut", 6)
+	check("déplacer un certificat sur le plateau", String(Profile.cert_board[6]) == "warrior/double_cut" and String(Profile.cert_board[0]) == "" and Profile.certificates.size() == 6)
+	Profile.load_profile()
+	check("plateau relu du disque", String(Profile.cert_board[6]) == "warrior/double_cut")
+	Profile.new_game(1)
+
+
 func _test_slots() -> void:
 	for i in range(1, Profile.SLOT_COUNT + 1):
 		Profile.delete_slot(i)
@@ -157,7 +205,7 @@ func _test_slots() -> void:
 	Profile.runs_done = 5
 	Profile.save_profile()
 	Profile.new_game(3)
-	check("nouvelle partie : profil vierge", Profile.runs_done == 0 and Profile.selected_class == "samurai")
+	check("nouvelle partie : profil vierge, Guerrier", Profile.runs_done == 0 and Profile.selected_class == "warrior")
 	Profile.load_slot(2)
 	check("charger l'emplacement 2", Profile.slot == 2 and Profile.runs_done == 5 and Profile.selected_class == "warrior" and Profile.equipped.has("weapon"))
 	var sm := Profile.slot_summary(2)
@@ -206,6 +254,8 @@ func _test_lobby() -> void:
 	lobby._on_prep_validate()
 	await _frames()
 	check("valider : page Expertise & talents", lobby._prep.current_page() == 1 and lobby._prep_button.text.contains("lancer la run") and lobby._prep.page(1) is TalentsPage)
+	var tp: TalentsPage = lobby._prep.page(1)
+	check("expertise : plateau de 7 cases, parcours de maîtrise", tp._board._slots.size() == 7 and tp._track.get_child_count() >= 8 and tp._certs.get_child_count() == 12)
 	lobby._prep.close_ui()
 	lobby._archive.open(0)
 	await _frames()

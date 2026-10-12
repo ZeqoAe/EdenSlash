@@ -23,3 +23,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.12 | Écran titre (maps 3D qui défilent, Jouer : continuer / charger / nouvelle partie sur 3 sauvegardes) et nouveau menu principal (menu à icônes, sous-menus, héros dans la map de la zone) | session cloud |
 | 0.1.13 | Mettre_a_jour.bat met de côté les fichiers modifiés par l'éditeur Godot (ils bloquaient la mise à jour) | session cloud |
 | 0.1.14 | Graphismes modernisés : herbe 3D animée, sol en relief sans motif répété, éclairage stylisé des personnages et du décor, occlusion ambiante, effets d'attaque lumineux et fondus, réglage Qualité graphique | session cloud |
+| 0.1.15 | Progression : on démarre Guerrier, classes débloquées par missions, 4 sorts au départ puis débloqués par la maîtrise, parcours de maîtrise ; plateau de certificats 1-2-1-2-1 à synergies de couleurs ; talents au survol | session cloud |

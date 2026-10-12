@@ -54,6 +54,15 @@ fondent au contact du sol (`shaders/eden_fx.gdshader`). Banc de comparaison :
 `res://tests/bench_gfx.tscn -- <zone> [effet]` (captures `user://shots/gfx_<zone>*.png`, à lancer
 avec `--rendering-driver vulkan`).
 
+**Progression** (`scripts/core/progression.gd`) : on commence **Guerrier** ; chaque autre classe se
+débloque par une **mission** sur l'ensemble des runs (Samouraï : 250 monstres, Clerc : soigner
+4000 PV, Magicien : un coup de 800 dégâts, Voleur : 40 esquives, Chasseur : 15 élites). Une classe
+n'a que **4 sorts au départ** ; la **maîtrise** (expertise) de la classe débloque les suivants, des
+points de talent et ses certificats (*parcours de maîtrise* dans la page Expertise).
+**Certificats** : plateau de 7 emplacements en **1-2-1-2-1** (`scripts/core/cert_board.gd`) ;
+couleurs orange (puissance), jaune (vigueur), bleu (précision) : deux de même couleur reliés,
+triangle de 3 couleurs (*Prisme*) ou losange de 4 de même couleur donnent des bonus.
+
 Écrans plein écran (style du grimoire) :
 - **Lancer la run** : page **Équipement** (préréglage ou à la main ; l'arme portée décide du combo
   d'auto-attaque, plus de choix d'arme au lobby) → *Valider* → page **Expertise & talents** (talents

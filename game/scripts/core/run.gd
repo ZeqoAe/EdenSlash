@@ -23,6 +23,7 @@ var zone_id := "limestone"
 var unlocked_name := ""  # zone débloquée par la victoire (bilan)
 var expertise_gain := 0
 var expertise_levels := 0
+var new_classes: Array = []  # classes débloquées pendant la run (bilan)
 var rerolls_used := 0  # relances de cartes utilisées (1 par run + cartes « Bonne étoile »)
 
 
@@ -37,6 +38,7 @@ func start(cid: String) -> void:
 	gold = 0
 	max_level = 1
 	rerolls_used = 0
+	new_classes = []
 	result = ""
 	started_at = Time.get_ticks_msec()
 	zone_id = Profile.selected_zone
@@ -157,6 +159,10 @@ func passive_stats() -> Dictionary:
 			if p.id == parts[1]:
 				for s in p.get("stat", {}):
 					total[s] = total.get(s, 0.0) + float(p.stat[s])
+	# placement des certificats sur le plateau (liens, prisme, losange)
+	var board := CertBoard.stats(Profile.cert_board)
+	for s in board:
+		total[s] = total.get(s, 0.0) + float(board[s])
 	return total
 
 
@@ -188,7 +194,7 @@ func roll_cards(n := 3, skills_only := false) -> Array:
 	var owned := skills.map(func(s): return int(s.id))
 	if skills.size() < MAX_SKILLS:
 		for s in class_data().get("skills", []):
-			if not int(s.id) in owned:
+			if not int(s.id) in owned and Progression.skill_unlocked(class_id, int(s.id)):
 				pool.append({"type": "skill", "id": int(s.id), "weight": 3.0 if skills.size() < 2 else 2.0})
 	if not skills_only:
 		for s in skills:

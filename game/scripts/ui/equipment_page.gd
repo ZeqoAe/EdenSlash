@@ -174,14 +174,16 @@ func _refresh_classes(cid: String, in_run: bool) -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.toggle_mode = true
 		b.button_pressed = id == cid
-		b.disabled = in_run and id != cid
+		var open := Progression.class_unlocked(id)
+		b.disabled = (in_run and id != cid) or not open
 		b.text = String(cls.get("name_fr", id))
 		b.icon = UiTheme.texture(String(cls.get("icon", "")))
 		b.expand_icon = false
 		b.add_theme_constant_override("icon_max_width", 24)
 		b.add_theme_font_size_override("font_size", 13)
 		b.custom_minimum_size = Vector2(98, 40)
-		b.tooltip_text = "Pendant la run, la classe est fixée." if in_run else "Chaque classe a son propre équipement (3 préréglages)."
+		b.tooltip_text = ("Classe verrouillée — mission : " + Progression.mission_line(id)) if not open else \
+			("Pendant la run, la classe est fixée." if in_run else "Chaque classe a son propre équipement (3 préréglages).")
 		var cls_id: String = id
 		b.pressed.connect(func():
 			if in_run or cls_id == Profile.selected_class:

@@ -445,9 +445,13 @@ func _menu_class() -> void:
 	for id in GameData.classes:
 		var cd := GameData.class_data(id)
 		var wt := String(GameData.weapon_type(Items.default_weapon_type(id)).get("name", ""))
-		var r := _row(String(cd.get("name_fr", id)), "Expertise niv. %d · arme d'origine : %s" % [Profile.expertise_level(id), wt],
-			String(cd.get("icon", "")), _select_class.bind(String(id)), 58.0)
+		var open := Progression.class_unlocked(id)
+		var r := _row(String(cd.get("name_fr", id)) if open else "🔒 %s" % cd.get("name_fr", id),
+			("Maîtrise niv. %d · arme d'origine : %s" % [Profile.expertise_level(id), wt]) if open else "Mission : " + Progression.mission_line(id),
+			String(cd.get("icon", "")), _select_class.bind(String(id)), 60.0)
 		r.mark(id == Profile.selected_class)
+		if not open:
+			r.modulate = Color(1, 1, 1, 0.6)
 	var lore := Hud._label(_sub, String(GameData.class_data(Profile.selected_class).get("lore", "")), 14, UiTheme.MUTED)
 	lore.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	lore.custom_minimum_size = Vector2(420, 0)
@@ -478,7 +482,7 @@ func _menu_quit() -> void:
 
 
 func _select_class(id: String) -> void:
-	if id == Profile.selected_class:
+	if id == Profile.selected_class or not Progression.class_unlocked(id):
 		return
 	Profile.selected_class = id
 	Profile.save_profile()
@@ -506,7 +510,7 @@ func _refresh_ui() -> void:
 	_badge_icon.texture = UiTheme.texture(String(cd.get("icon", "")))
 	_badge_name.text = String(cd.get("name_fr", cid))
 	var w: Dictionary = Profile.equipped.get("weapon", {})
-	_badge_sub.text = "Expertise niv. %d · %s" % [Profile.expertise_level(cid), GameData.weapon_type(Items.weapon_type_of(w)).get("name", "") if not w.is_empty() else "sans arme"]
+	_badge_sub.text = "Maîtrise niv. %d · %s" % [Profile.expertise_level(cid), GameData.weapon_type(Items.weapon_type_of(w)).get("name", "") if not w.is_empty() else "sans arme"]
 	var zone := GameData.zone(Profile.selected_zone)
 	_zone_name.text = String(zone.get("name", ""))
 	_zone_sub.text = "Niv. %d+ · zone %d / %d · %d débloquée(s)" % [1 + int(zone.get("level_bonus", 0)), GameData.zone_index(Profile.selected_zone) + 1, GameData.zones.size(), Profile.unlocked_zones]
@@ -515,7 +519,8 @@ func _refresh_ui() -> void:
 	_reward_bar.max_value = maxf(prog.y, 1.0)
 	_reward_bar.value = prog.x
 	var lvl := Profile.expertise_level(cid)
-	_reward_text.text = ("Expertise %s niv. %d : +2 points de talent" % [cd.get("name_fr", cid), lvl + 1]) if lvl < Profile.EXPERTISE_MAX else "Expertise maximale"
+	var next := Progression.rewards_at(cid, lvl + 1).filter(func(r): return r.kind != "talent")
+	_reward_text.text = ("Maîtrise %s niv. %d : %s" % [cd.get("name_fr", cid), lvl + 1, String(next[0].name) if not next.is_empty() else "+2 points de talent"]) if lvl < Profile.EXPERTISE_MAX else "Maîtrise maximale"
 	_footer.text = "Sauvegarde %d · héritage %d objet(s) · %d run(s), %d victoire(s)" % [Profile.slot, Profile.vault.size(), Profile.runs_done, Profile.runs_won]
 	_show_menu(_current)
 

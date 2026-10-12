@@ -251,6 +251,12 @@ func _refresh() -> void:
 		var owned := _owned_rank(int(s.id))
 		if Run.active and owned > 0:
 			b.text += "  (rang %d)" % owned
+		# sorts débloqués par la maîtrise de la classe
+		var need := Progression.skill_level_of(_class_id, int(s.id))
+		if not Progression.skill_unlocked(_class_id, int(s.id)):
+			b.text += "   🔒 maîtrise niv. %d" % need
+			b.modulate = Color(0.7, 0.7, 0.75)
+		b.tooltip_text = "Sort de base" if need <= 1 else "Débloqué au niveau %d de maîtrise de la classe" % need
 		var sd: Dictionary = s
 		b.pressed.connect(func():
 			_skill = sd

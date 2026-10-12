@@ -17,6 +17,8 @@ func check(label: String, ok: bool) -> void:
 func _ready() -> void:
 	check("profil de test", Profile.save_path == Profile.TEST_SAVE_PATH)
 	Profile.reset_all()
+	Profile.selected_class = "samurai"  # combo du katana (on démarre Guerrier sinon)
+	Profile.save_profile()
 	Run.start("samurai")
 	_test_sets()
 	_test_cards()

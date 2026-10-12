@@ -21,7 +21,7 @@ static func glass(radius := 12, border := UiTheme.GOLD_DIM, alpha := 0.84) -> St
 	return sb
 
 
-## Logo « EDEN SLASH » avec son filet orné et le sous-titre.
+## Logo « EDEN SLASH » avec son filet orné.
 static func logo(parent: Control, size := 72, centered := false) -> VBoxContainer:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 0)
@@ -38,21 +38,11 @@ static func logo(parent: Control, size := 72, centered := false) -> VBoxContaine
 	var orn := Ornament.new()
 	orn.custom_minimum_size = Vector2(size * 6.4, 14)
 	v.add_child(orn)
-	var s := Label.new()
-	s.text = "Hack and slash dans l'univers d'Eden Eternal"
-	UiTheme.title(s, maxi(16, size / 4), Color(0.97, 0.94, 0.88))
-	s.add_theme_color_override("font_outline_color", Color(0.05, 0.03, 0.1))
-	s.add_theme_constant_override("outline_size", 6)
-	v.add_child(s)
 	if centered:
-		for c in [t, s]:
-			c.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		orn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	else:
-		s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		orn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-		s.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-		s.custom_minimum_size = Vector2(size * 6.4, 0)
 	return v
 
 

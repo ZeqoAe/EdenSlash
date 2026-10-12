@@ -222,7 +222,10 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 func heal(amount: float) -> void:
 	if is_dead:
 		return
+	var before := hp
 	hp = minf(max_hp, hp + amount)
+	if team == Team.PLAYER and Run.active:
+		Profile.record_add("healed", hp - before)  # mission du Clerc
 	health_changed.emit(hp, max_hp)
 
 

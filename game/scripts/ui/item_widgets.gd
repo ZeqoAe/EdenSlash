@@ -161,6 +161,35 @@ class Wallet extends HBoxContainer:
 			_labels[k].text = str(Profile.gold if k == "gold" else int(Profile.materials.get(k, 0)))
 
 
+## Carte d'infobulle riche (texte BBCode, cadre de couleur).
+static func tip_card(bbcode: String, border := UiTheme.GOLD_DIM, width := 360.0) -> Control:
+	var p := PanelContainer.new()
+	var sb := UiTheme.flat_box(Color(0.05, 0.04, 0.09, 0.97), border, 2, 10)
+	sb.set_content_margin_all(12)
+	p.add_theme_stylebox_override("panel", sb)
+	var r := RichTextLabel.new()
+	r.bbcode_enabled = true
+	r.fit_content = true
+	r.scroll_active = false
+	r.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	r.custom_minimum_size = Vector2(width, 0)
+	r.size = Vector2(width, 0)
+	r.add_theme_font_size_override("normal_font_size", 15)
+	r.add_theme_font_size_override("bold_font_size", 16)
+	r.text = bbcode
+	p.add_child(r)
+	return p
+
+
+## Bouton avec une carte riche au survol ([member tip], BBCode).
+class TipButton extends Button:
+	var tip := ""
+	var tip_border := UiTheme.GOLD_DIM
+
+	func _make_custom_tooltip(_for_text: String) -> Object:
+		return ItemWidgets.tip_card(tip, tip_border) if tip != "" else null
+
+
 ## Bouton d'objet (listes) avec la carte d'objet au survol.
 class CardButton extends Button:
 	var item: Dictionary = {}

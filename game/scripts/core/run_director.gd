@@ -340,6 +340,9 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 	var m := who as Monster
 	player.gain_xp(m.xp_reward)
 	Run.kills += 1
+	Profile.record_add("kills", 1)
+	if m.is_elite or m.is_boss:
+		Profile.record_add("elite_kills", 1)
 	if m.is_elite:
 		Run.elites += 1
 	Run.add_gold(2 + m.level * (3 if m.is_elite else 1))

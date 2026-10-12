@@ -1028,6 +1028,8 @@ func _hit_monster(m: Monster, dir: Vector3, action: Dictionary, is_skill: bool) 
 		dmg = m.hp + 1.0
 		m.take_damage(dmg, self, is_crit, true)
 	if not m.is_dead:
+		# mission du Magicien : plus gros coup (après la défense de la cible)
+		Profile.record_max("best_hit", round(dmg * m.damage_taken_mult() * 100.0 / (100.0 + maxf(m.defense, 0.0))))
 		m.take_damage(dmg, self, is_crit)
 	# effet d'impact d'Eden (limité à quelques cibles par coup pour la lisibilité)
 	var fx_hits := int(action.get("fx_count", 0))
@@ -1425,9 +1427,13 @@ func is_invulnerable() -> bool:
 
 func take_damage(amount: float, source: Combatant = null, is_crit := false, dot := false) -> void:
 	if is_invulnerable():
+		if not dot and Run.active:
+			Profile.record_add("dodges", 1)  # mission du Voleur
 		return
 	if not dot and ((has_status("evasion") and randf() < EVASION_CHANCE) or randf() < evasion_chance):
 		DamageNumber.spawn_text(self, "ESQUIVE !", Color(0.7, 1.0, 0.7))
+		if Run.active:
+			Profile.record_add("dodges", 1)
 		return
 	if not dot and randf() < parry_chance:
 		DamageNumber.spawn_text(self, "PARADE", Color(0.85, 0.85, 1.0))

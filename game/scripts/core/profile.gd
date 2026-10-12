@@ -21,8 +21,9 @@ const VAULT_MAX := 80
 const PRESETS_PER_CLASS := 3
 
 signal changed
+signal class_unlocked(cls: String)  # mission remplie : nouvelle classe jouable
 
-var selected_class := "samurai"
+var selected_class := "warrior"
 var gold := 0
 var materials := {"fragment": 0, "essence": 0, "crystal": 0}
 var inventory: Array = []  # objets (Dictionary)
@@ -38,6 +39,9 @@ var stash := {}  # réserve de fournitures gardées (extraction, victoire), empo
 var expertise := {}  # classe -> points d'expertise (gagnés à chaque run)
 var talents := {}  # classe -> {id talent (String): niveau}
 var certificates: Array = []  # certificats équipés : "classe/id_passif"
+var unlocked_classes: Array = []  # classes débloquées par mission (le Guerrier l'est d'emblée)
+var records := {}  # records cumulés de toutes les runs (missions) : kills, healed, best_hit...
+var cert_board: Array = ["", "", "", "", "", "", ""]  # plateau des certificats (CertBoard)
 var archive := {}  # entrée de l'archive ("katana:4", "set:storm"...) -> copie de l'objet archivé
 var skins := {}  # type d'arme -> code du modèle choisi (apparence débloquée par l'archive)
 var unlocked_zones := 1  # zones jouables (dans l'ordre de data/zones.json)
@@ -85,6 +89,21 @@ func load_profile() -> void:
 	stash = d.get("stash", {})
 	talents = d.get("talents", {})
 	certificates = d.get("certificates", [])
+	records = d.get("records", {})
+	if d.has("unlocked_classes"):
+		unlocked_classes = d.unlocked_classes
+	else:
+		# ancienne sauvegarde : les classes déjà jouées restent débloquées
+		unlocked_classes = []
+		for cid in [String(d.get("selected_class", ""))] + (d.get("expertise", {}) as Dictionary).keys() + (d.get("presets", {}) as Dictionary).keys():
+			if cid != "" and cid != Progression.START_CLASS and not cid in unlocked_classes:
+				unlocked_classes.append(cid)
+	cert_board = d.get("cert_board", [])
+	if cert_board.size() != CertBoard.POS.size():
+		cert_board = ["", "", "", "", "", "", ""]
+		for i in mini(certificates.size(), CertBoard.POS.size()):
+			cert_board[CertBoard.OPEN_ORDER[i]] = String(certificates[i])
+	_sync_certificates()
 	archive = d.get("archive", {})
 	skins = d.get("skins", {})
 	selected_zone = String(d.get("selected_zone", "limestone"))
@@ -133,6 +152,7 @@ func save_profile() -> void:
 	var d := {"selected_class": selected_class, "vault": vault, "loadout": loadout, "presets": presets,
 		"unlocked_zones": unlocked_zones, "selected_zone": selected_zone,
 		"expertise": expertise, "talents": talents, "certificates": certificates, "stash": stash,
+		"unlocked_classes": unlocked_classes, "records": records, "cert_board": cert_board,
 		"archive": archive, "skins": skins, "saved_at": Time.get_datetime_string_from_system(false, true),
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
@@ -415,7 +435,7 @@ func load_slot(i: int) -> void:
 func new_game(i: int) -> void:
 	slot = clampi(i, 1, SLOT_COUNT)
 	save_path = slot_path(slot)
-	selected_class = "samurai"
+	selected_class = Progression.START_CLASS
 	reset_all()
 	_remember_slot()
 
@@ -428,7 +448,7 @@ func delete_slot(i: int) -> void:
 ## Remet le profil en mémoire à zéro, sans rien écrire.
 func _clear() -> void:
 	in_run = false
-	selected_class = "samurai"
+	selected_class = Progression.START_CLASS
 	vault = []
 	loadout = {}
 	presets = {}
@@ -441,6 +461,9 @@ func _clear() -> void:
 	expertise = {}
 	talents = {}
 	certificates = []
+	cert_board = ["", "", "", "", "", "", ""]
+	unlocked_classes = []
+	records = {}
 	archive = {}
 	skins = {}
 	stash = {}
@@ -461,6 +484,9 @@ func reset_all() -> void:
 	expertise = {}
 	talents = {}
 	certificates = []
+	cert_board = ["", "", "", "", "", "", ""]
+	unlocked_classes = []
+	records = {}
 	archive = {}
 	skins = {}
 	stash = {}
@@ -587,12 +613,67 @@ func certificate_slots() -> int:
 	return clampi(2 + total / 8, 2, CERT_MAX)
 
 
+## Équipe le certificat sur le premier emplacement libre du plateau, ou le retire.
 func toggle_certificate(key: String) -> void:
-	if key in certificates:
-		certificates.erase(key)
-	elif certificates.size() < certificate_slots():
-		certificates.append(key)
+	var at := cert_board.find(key)
+	if at >= 0:
+		cert_board[at] = ""
+	else:
+		for pos in CertBoard.OPEN_ORDER:
+			if is_cert_open(pos) and String(cert_board[pos]) == "":
+				cert_board[pos] = key
+				break
+	_sync_certificates()
 	save_profile()
+
+
+func is_cert_open(pos: int) -> bool:
+	return CertBoard.is_open(pos, certificate_slots())
+
+
+## Pose [param key] sur l'emplacement [param pos] (échange si un autre y est, ou si
+## le certificat était déjà posé ailleurs).
+func place_certificate(key: String, pos: int) -> void:
+	if not is_cert_open(pos):
+		return
+	var from := cert_board.find(key)
+	var there := String(cert_board[pos])
+	if from >= 0:
+		cert_board[from] = there
+	cert_board[pos] = key
+	_sync_certificates()
+	save_profile()
+
+
+func remove_certificate_at(pos: int) -> void:
+	cert_board[pos] = ""
+	_sync_certificates()
+	save_profile()
+
+
+## La liste des certificats équipés suit le plateau.
+func _sync_certificates() -> void:
+	certificates = cert_board.filter(func(k): return String(k) != "")
+
+
+# --- records et missions --------------------------------------------------------------------
+func record_add(key: String, amount: float) -> void:
+	records[key] = float(records.get(key, 0.0)) + amount
+	_check_missions()
+
+
+func record_max(key: String, value: float) -> void:
+	if value > float(records.get(key, 0.0)):
+		records[key] = value
+		_check_missions()
+
+
+func _check_missions() -> void:
+	for cls in Progression.check_missions():
+		unlocked_classes.append(cls)
+		if Run.active:
+			Run.new_classes.append(cls)
+		class_unlocked.emit(cls)
 
 
 ## Zone jouable ? (la suivante se débloque en battant le boss de la précédente)

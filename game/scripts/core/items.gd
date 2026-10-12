@@ -61,10 +61,11 @@ const STAT_NAMES := {
 	"move_speed": "Vitesse", "cdr": "Recharge", "lifesteal": "Vol de vie",
 }
 const PERCENT_STATS := ["crit", "mcrit", "crit_dmg", "atk_speed", "move_speed", "cdr", "lifesteal",
-	"hp_pct", "dmg_pct", "area", "reach", "elite_dmg", "dot_pct"]
+	"hp_pct", "dmg_pct", "area", "reach", "elite_dmg", "dot_pct", "def_pct", "atk_pct"]
 const EXTRA_STAT_NAMES := {
 	"hp_pct": "PV max", "dmg_pct": "Dégâts", "area": "Zone d'effet", "reach": "Portée",
 	"elite_dmg": "Dégâts contre élites et boss", "dot_pct": "Dégâts sur la durée",
+	"def_pct": "Défense", "atk_pct": "Attaque",
 }
 ## Couleur des pièces de set (vert, comme dans Eden).
 const SET_COLOR := Color(0.4, 0.95, 0.55)

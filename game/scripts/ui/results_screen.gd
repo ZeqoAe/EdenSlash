@@ -45,6 +45,19 @@ func show_results() -> void:
 		("   ·   NIVEAU %d ! (+%d points de talent)" % [Profile.expertise_level(Run.class_id), 2 * Run.expertise_levels]) if Run.expertise_levels > 0 else ""],
 		17, Color(0.6, 0.85, 1.0))
 	ex.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	# récompenses de maîtrise gagnées (sorts, certificats) et classes débloquées
+	var gained: PackedStringArray = []
+	var lvl := Profile.expertise_level(Run.class_id)
+	for l in range(lvl - Run.expertise_levels + 1, lvl + 1):
+		for r in Progression.rewards_at(Run.class_id, l):
+			if r.kind != "talent":
+				gained.append(String(r.name) if r.kind == "cert" else "Sort : " + String(r.name))
+	for c in Run.new_classes:
+		gained.append("Nouvelle classe : " + String(GameData.class_data(c).get("name_fr", c)))
+	if not gained.is_empty():
+		var g := Hud._label(v, "Débloqué : " + "  ·  ".join(gained), 18, Color(0.55, 1.0, 0.6))
+		g.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		g.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var extract := Run.result == "extraction"
 	var head := Hud._label(v, "Tout ton inventaire est conservé" if extract else "Choisis l'objet à garder en héritage", 24, Hud.ACCENT)
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
