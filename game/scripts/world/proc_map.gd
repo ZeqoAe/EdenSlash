@@ -573,8 +573,9 @@ func _build_village() -> void:
 	# étals et PNJ
 	var stalls := [
 		["merchant", "uc322", 0.0, "Alec, marchand"],
-		["smith", "uc340", TAU / 3.0, "Bryson, forgeron"],
-		["trader", "uc323", 2.0 * TAU / 3.0, "Abel, boutique"],
+		["smith", "uc340", TAU / 4.0, "Bryson, forgeron"],
+		["recycler", "uc323", TAU / 2.0, "Starnoc, recycleur"],
+		["jeweler", "uc322", 3.0 * TAU / 4.0, "Lertia, joaillière"],
 	]
 	var npcs: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/npcs.json"))
 	for s in stalls:

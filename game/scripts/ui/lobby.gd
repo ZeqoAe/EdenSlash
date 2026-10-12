@@ -12,7 +12,8 @@ const ROSTER := [
 
 var _hero_root: Node3D
 var _cam_pivot: Node3D
-var _panel_layer: CanvasLayer
+var _equip_screen: PageScreen
+var _class_dirty := false
 var _gold: Label
 var _reset_button: Button
 var _zone_box: GridContainer
@@ -212,32 +213,26 @@ func _build_ui() -> void:
 	help.position = Vector2(60, -34)
 	layer.add_child(root)
 
-	_panel_layer = CanvasLayer.new()
-	_panel_layer.layer = 5
-	add_child(_panel_layer)
-	var dim := ColorRect.new()
-	dim.color = Color(0.02, 0.01, 0.05, 0.7)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_panel_layer.add_child(dim)
-	var box := VBoxContainer.new()
-	box.set_anchors_preset(Control.PRESET_CENTER)
-	box.position = Vector2(-490, -320)
-	_panel_layer.add_child(box)
-	box.add_child(CharacterPanel.new())
-	var close := Button.new()
-	close.text = "Fermer"
-	close.custom_minimum_size = Vector2(0, 44)
-	close.pressed.connect(func():
-		_panel_layer.visible = false
-		_show_hero())
-	box.add_child(close)
-	_panel_layer.visible = false
+	# personnage & équipement : page plein écran (préréglages par classe, coffre commun)
+	_equip_screen = PageScreen.new("Personnage & équipement", 5)
+	add_child(_equip_screen)
+	var page := EquipmentPage.new()
+	page.class_changed.connect(func(): _class_dirty = true)
+	_equip_screen.add_page("Équipement", page)
+	_equip_screen.closed.connect(func():
+		if _class_dirty:
+			get_tree().reload_current_scene()  # classe changée : tout le lobby suit
+		else:
+			_refresh_weapons()
+			_show_hero())
 	_settings = SettingsMenu.new()
 	add_child(_settings)
 
 
 func _open_panel() -> void:
-	_panel_layer.visible = true
+	_class_dirty = false
+	_equip_screen.set_title("Personnage & équipement", "Coffre commun à toutes les classes · 3 préréglages d'équipement par classe")
+	_equip_screen.open(0)
 
 
 func _class_card(id: String, label: String) -> Control:

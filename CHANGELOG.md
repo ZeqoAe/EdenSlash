@@ -18,3 +18,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.7 | Numéro de version à l'écran, CHANGELOG, `Envoyer.bat` / `Mettre_a_jour.bat` | session cloud |
 | 0.1.8 | Sorts complets (14 à 15 par classe), talents, artisanat, fournitures gardées à l'extraction | session locale |
 | 0.1.9 | Icônes des effets de classe (Mur du titan, Ange gardien…) reprises du sort d'Eden qui les donne | session cloud |
+| 0.1.10 | Écrans plein écran : Personnage (3 préréglages par classe, coffre commun, aperçu 3D), menu pause, village à 4 métiers (réforge, conversion, fusion de gemmes) | session cloud |

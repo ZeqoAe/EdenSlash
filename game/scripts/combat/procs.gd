@@ -134,7 +134,8 @@ static func monsters_near(player: Node, pos: Vector3, r: float) -> Array:
 ## Texte lisible d'un proc (infobulles, cartes, fiche du personnage).
 static func describe(p: Dictionary) -> String:
 	var chance := float(p.get("chance", 1.0))
-	var head := ("%d %% de chances " % roundi(chance * 100) if chance < 1.0 else "") + String(TRIGGER_TEXT.get(p.trigger, p.trigger))
+	var trig := String(p.get("trigger", ""))
+	var head := ("%d %% de chances " % roundi(chance * 100) if chance < 1.0 else "") + String(TRIGGER_TEXT.get(trig, trig))
 	var what := ""
 	var r := float(p.get("radius", 3.0))
 	match String(p.effect):

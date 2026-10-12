@@ -5,6 +5,8 @@ extends Node
 ## son amélioration, et l'équipement de départ choisi parmi l'héritage (loadout).
 ## Hors run, equipped / inventory montrent l'héritage ; pendant une run, ce sont
 ## les objets de la run (copies de l'équipement de départ + butin).
+## L'héritage est un coffre commun à toutes les classes ; chaque classe a son propre
+## équipement, en 3 préréglages nommés (presets) : changer de classe change d'équipement.
 
 const SAVE_PATH := "user://profile.json"
 ## Les lancements de test (arguments après --, scènes res://tests) ont leur propre
@@ -12,6 +14,7 @@ const SAVE_PATH := "user://profile.json"
 const TEST_SAVE_PATH := "user://profile_test.json"
 const INVENTORY_MAX := 40
 const VAULT_MAX := 80
+const PRESETS_PER_CLASS := 3
 
 signal changed
 
@@ -21,7 +24,10 @@ var materials := {"fragment": 0, "essence": 0, "crystal": 0}
 var inventory: Array = []  # objets (Dictionary)
 var equipped: Dictionary = {}  # emplacement -> objet
 var vault: Array = []  # objets gardés entre les runs
-var loadout: Dictionary = {}  # emplacement -> uid de l'objet d'héritage porté au départ
+var loadout: Dictionary = {}  # préréglage actif de la classe choisie : emplacement -> uid (référence dans presets)
+## Préréglages d'équipement : classe -> {"active": int, "sets": [{"name", "slots": {emplacement: uid}}]}
+var presets: Dictionary = {}
+var _view_class := ""  # classe dont le préréglage est projeté dans equipped / inventory (hors run)
 var in_run := false
 var bag := {}  # consommables de la run (Craft) : clé -> quantité
 var stash := {}  # réserve de fournitures gardées (extraction, victoire), emportée à la run suivante
@@ -73,6 +79,7 @@ func load_profile() -> void:
 	if d.has("vault"):
 		vault = d.get("vault", []).map(_migrate)
 		loadout = d.get("loadout", {})
+		presets = d.get("presets", {})
 	else:
 		# ancienne sauvegarde : tout ce qu'on possédait devient l'héritage
 		var eq: Dictionary = d.get("equipped", {})
@@ -109,7 +116,9 @@ func _migrate(item: Dictionary) -> Dictionary:
 func save_profile() -> void:
 	if not in_run:
 		_sync_vault()
-	var d := {"selected_class": selected_class, "vault": vault, "loadout": loadout,
+	if not in_run and selected_class != _view_class:
+		_lobby_view()  # autre classe choisie : on affiche son préréglage
+	var d := {"selected_class": selected_class, "vault": vault, "loadout": loadout, "presets": presets,
 		"unlocked_zones": unlocked_zones, "selected_zone": selected_zone,
 		"expertise": expertise, "talents": talents, "certificates": certificates, "stash": stash,
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level}
@@ -120,8 +129,13 @@ func save_profile() -> void:
 
 
 # --- héritage et runs ------------------------------------------------------------------
-## Hors run : equipped / inventory = l'héritage, réparti selon le loadout.
+## Hors run : equipped / inventory = l'héritage, réparti selon le préréglage actif
+## de la classe choisie (son arme par défaut si le préréglage n'en a pas).
 func _lobby_view() -> void:
+	_view_class = selected_class
+	loadout = _active_slots(selected_class)
+	if not in_run and not loadout.has("weapon"):
+		_default_weapon(selected_class)
 	equipped = {}
 	inventory = []
 	for it in vault:
@@ -135,12 +149,97 @@ func _lobby_view() -> void:
 	bag = {}
 
 
-## Hors run, ce qui est équipé / rangé redevient l'héritage et le loadout.
+## Hors run, ce qui est équipé / rangé redevient l'héritage et le préréglage actif.
 func _sync_vault() -> void:
 	vault = equipped.values() + inventory
-	loadout = {}
+	if _view_class == "":
+		_view_class = selected_class
+	loadout = _active_slots(_view_class)
+	loadout.clear()
 	for slot in equipped:
 		loadout[slot] = equipped[slot].uid
+
+
+# --- préréglages d'équipement par classe ---------------------------------------------------
+func _class_presets(cls: String) -> Dictionary:
+	if not presets.has(cls):
+		var sets: Array = []
+		for i in PRESETS_PER_CLASS:
+			# ancienne sauvegarde : l'équipement unique devient le préréglage 1 de la classe choisie
+			var first: Dictionary = loadout.duplicate() if i == 0 and cls == selected_class and presets.is_empty() else {}
+			sets.append({"name": "Préréglage %d" % (i + 1), "slots": first})
+		presets[cls] = {"active": 0, "sets": sets}
+	var p: Dictionary = presets[cls]
+	while p.sets.size() < PRESETS_PER_CLASS:
+		p.sets.append({"name": "Préréglage %d" % (p.sets.size() + 1), "slots": {}})
+	return p
+
+
+## Emplacements du préréglage actif de [param cls] (dictionnaire partagé, modifiable).
+func _active_slots(cls: String) -> Dictionary:
+	var p := _class_presets(cls)
+	return p.sets[clampi(int(p.active), 0, p.sets.size() - 1)].slots
+
+
+## Arme de départ d'une classe sans arme : la meilleure du coffre de son type, sinon une neuve.
+func _default_weapon(cls: String) -> void:
+	var wtype := Items.default_weapon_type(cls)
+	var best: Dictionary = {}
+	for it in vault:
+		if it.slot == "weapon" and Items.weapon_type_of(it) == wtype:
+			if best.is_empty() or int(it.rarity) * 20 + int(it.get("upgrade", 0)) > int(best.rarity) * 20 + int(best.get("upgrade", 0)):
+				best = it
+	if best.is_empty():
+		best = Items.generate(1, -1.0, "weapon", cls, 0, wtype)
+		vault.append(best)
+	loadout["weapon"] = best.uid
+
+
+func preset_names(cls: String) -> Array:
+	return _class_presets(cls).sets.map(func(s): return String(s.name))
+
+
+func active_preset(cls: String) -> int:
+	return int(_class_presets(cls).active)
+
+
+## Change de préréglage (hors run) ; l'équipement actuel reste enregistré dans l'ancien.
+func set_active_preset(cls: String, index: int) -> void:
+	if in_run:
+		return
+	_sync_vault()
+	_class_presets(cls).active = clampi(index, 0, PRESETS_PER_CLASS - 1)
+	_lobby_view()
+	save_profile()
+
+
+func rename_preset(cls: String, index: int, name: String) -> void:
+	var p := _class_presets(cls)
+	if index >= 0 and index < p.sets.size() and name.strip_edges() != "":
+		p.sets[index].name = name.strip_edges().left(24)
+		save_profile()
+
+
+## Copie le préréglage actif de la classe dans le préréglage [param index].
+func copy_active_preset(cls: String, index: int) -> void:
+	if in_run:
+		return
+	_sync_vault()
+	var p := _class_presets(cls)
+	if index != int(p.active):
+		p.sets[index].slots = _active_slots(cls).duplicate()
+	save_profile()
+
+
+## Classes et préréglages qui utilisent l'objet [param uid] : ["Guerrier · Préréglage 2", ...].
+func item_users(uid: String) -> Array:
+	var out: Array = []
+	for cls in presets:
+		var p: Dictionary = presets[cls]
+		for i in p.sets.size():
+			if String(uid) in p.sets[i].slots.values().map(func(u): return String(u)):
+				out.append("%s · %s" % [GameData.class_data(cls).get("name_fr", cls), p.sets[i].name])
+	return out
 
 
 ## Début de run : on part avec des copies de l'équipement de départ, sans or ni butin.
@@ -206,7 +305,7 @@ func end_run_extract() -> int:
 		if not replaced and vault.size() < VAULT_MAX:
 			vault.append(copy)
 		kept += 1
-	loadout = {}
+	loadout.clear()
 	for slot in equipped:
 		loadout[slot] = equipped[slot].uid
 	_lobby_view()
@@ -230,6 +329,8 @@ func stash_count() -> int:
 
 ## Arme de départ du type [param wtype] : la meilleure de l'héritage, sinon une arme commune neuve.
 func select_weapon_type(wtype: String) -> void:
+	if not in_run:
+		_sync_vault()  # l'équipement de la classe affichée reste dans son préréglage
 	var best: Dictionary = {}
 	for it in vault:
 		if it.slot == "weapon" and Items.weapon_type_of(it) == wtype:
@@ -238,7 +339,7 @@ func select_weapon_type(wtype: String) -> void:
 	if best.is_empty():
 		best = Items.generate(1, -1.0, "weapon", selected_class, 0, wtype)
 		vault.append(best)
-	loadout["weapon"] = best.uid
+	_active_slots(selected_class)["weapon"] = best.uid
 	_lobby_view()
 	save_profile()
 
@@ -248,6 +349,8 @@ func reset_all() -> void:
 	in_run = false
 	vault = []
 	loadout = {}
+	presets = {}
+	_view_class = ""
 	runs_done = 0
 	runs_won = 0
 	best_level = 1

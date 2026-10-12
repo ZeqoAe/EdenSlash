@@ -37,6 +37,16 @@ Polices Cinzel et Nunito (licence OFL, `game/assets/fonts/`). Les icônes d'effe
 dans le dépôt sont dessinées par `tools/make_ui_assets.py` (`game/assets/ui/status/`) : une vraie
 icône d'Eden déposée sous le même nom (`freeze.png`, `burn.png`…) les remplace automatiquement.
 
+Écrans plein écran (style du grimoire) :
+- **Personnage & équipement** (lobby, et menu pause pendant la run) : chaque classe a son propre
+  équipement en **3 préréglages** nommés ; le **coffre est commun** à toutes les classes (★ = objet
+  utilisé par un préréglage) ; glisser-déposer, double-clic ou clic droit pour équiper / retirer ;
+  aperçu 3D du héros, statistiques, bonus de set.
+- **Menu pause** : page Run (compétences, cartes, sac, bilan, actions) et page Personnage.
+- **Village**, un PNJ par métier : Alec (acheter, vendre), Bryson le forgeron (améliorer, enchanter,
+  réforger une stat, polir la qualité), Starnoc le recycleur (désassembler, convertir les matériaux),
+  Lertia la joaillière (percer et sertir, fusionner 3 gemmes en une gemme supérieure).
+
 ### Tester et faire des retours
 
 | Touche | Rôle |
@@ -110,6 +120,7 @@ Choix de cartes (sélection puis Valider) : `Godot --headless --path game res://
 Paramètres et modes de jeu : `Godot --headless --path game res://tests/test_controls.tscn`.
 Combo, procs, sets, cartes de build et plafond de niveau : `Godot --headless --path game res://tests/test_build.tscn`.
 Interface (buffs / debuffs, objectifs, HUD sous les menus) : `Godot --headless --path game res://tests/test_hud.tscn`.
+Préréglages, menu pause et village : `Godot --headless --path game res://tests/test_pages.tscn`.
 Les lancements de test (arguments après `--`, scènes `res://tests`) utilisent `user://profile_test.json`,
 jamais le profil du joueur.
 Saut et esquive mesurés : `Godot --path game res://tests/test_jump.tscn`.

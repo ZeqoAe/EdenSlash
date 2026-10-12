@@ -22,5 +22,17 @@
   "texture": "m60401",
   "scale": 1.0,
   "name": "Coffre secret"
+ },
+ "recycler": {
+  "model": "m053",
+  "texture": "m05305",
+  "scale": 1.0,
+  "name": "Starnoc, recycleur"
+ },
+ "jeweler": {
+  "model": "m071",
+  "texture": "m07103",
+  "scale": 1.05,
+  "name": "Lertia, joaillière"
  }
 }
