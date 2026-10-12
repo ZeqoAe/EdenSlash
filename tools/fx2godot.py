@@ -59,15 +59,32 @@ def _hard_edges(uri, blend):
     return _edge_cache[key]
 
 
-def mark_hard_quads(name):
-    """Marque 'hide' les matériaux d'un effet converti dont le quad aurait des bords durs."""
+def _node_vertex_counts(glb_path):
+    """nom de nœud -> nombre de sommets de son maillage."""
+    _bin, j = _glb_parts(glb_path)
+    out = {}
+    for nd in j.get('nodes', []):
+        if 'mesh' in nd:
+            prim = j['meshes'][nd['mesh']]['primitives'][0]
+            out[nd['name']] = j['accessors'][prim['attributes']['POSITION']]['count']
+    return out
+
+
+def mark_hard_quads(name, quads_only=False):
+    """Marque 'hide' les matériaux d'un effet converti dont le quad aurait des bords durs.
+    [quads_only] : seulement les vrais quads (4 à 8 sommets), pas les maillages (dragon,
+    papillons des auras) dont la texture touche le bord."""
     js = os.path.join(OUT, name + '.fx.json')
     fx = json.load(open(js, encoding='utf-8'))
-    tex = _node_textures(os.path.join(OUT, name + '.glb'))
+    glb = os.path.join(OUT, fx.get('glb', name) + '.glb')
+    tex = _node_textures(glb)
+    verts = _node_vertex_counts(glb) if quads_only else {}
     hidden = []
     for node, info in fx.get('materials', {}).items():
-        uri = tex.get(node)
+        uri = info.get('tex', tex.get(node))
         info.pop('hide', None)
+        if quads_only and verts.get(node, 4) > 8:
+            continue
         if uri and os.path.exists(os.path.join(OUT, uri)) and _hard_edges(uri, info.get('blend', 'mix')):
             info['hide'] = True
             hidden.append(node)
@@ -76,7 +93,7 @@ def mark_hard_quads(name):
     return hidden
 
 
-def convert(names, idx=None):
+def convert(names, idx=None, quads_only=False):
     idx = idx or {e['path']: e for e in edenpkg.load_index(nif2gltf.PKG)}
     os.makedirs(OUT, exist_ok=True)
     done = []
@@ -95,12 +112,57 @@ def convert(names, idx=None):
             continue
         with open(os.path.join(OUT, name.lower() + '.fx.json'), 'w', encoding='utf-8') as f:
             json.dump(fx, f, separators=(',', ':'))
-        hidden = mark_hard_quads(name.lower())
+        hidden = mark_hard_quads(name.lower(), quads_only)
         if hidden:
             print('  quads à bords durs masqués :', ', '.join(hidden))
         done.append(name.lower())
         print('%s : %.2f s, %d nœuds animés, %d matériaux' % (name, fx['duration'], len(fx['nodes']), len(fx['materials'])))
     return done
+
+
+def _glb_parts(path):
+    b = open(path, 'rb').read()
+    n = struct.unpack('<I', b[12:16])[0]
+    return b[20 + n:], json.loads(b[20:20 + n])
+
+
+def share_variants(names):
+    """Variantes de couleur d'un même effet (s83111 … s83115 : même maillage, autres
+    textures) : une seule copie du .glb ; le .fx.json de chaque variante pointe vers
+    ce maillage ("glb") et donne ses textures par matériau ("tex")."""
+    groups = {}
+    for n in sorted(names):
+        groups.setdefault(n[:-1], []).append(n)
+    saved = 0
+    for _key, members in groups.items():
+        live = [m for m in members if os.path.exists(os.path.join(OUT, m + '.glb'))]
+        if len(live) < 2:
+            continue
+        base = live[0]
+        bin0, _j0 = _glb_parts(os.path.join(OUT, base + '.glb'))
+        tex0 = _node_textures(os.path.join(OUT, base + '.glb'))
+        for v in live[1:]:
+            glb = os.path.join(OUT, v + '.glb')
+            binv, _jv = _glb_parts(glb)
+            if binv != bin0:
+                continue  # maillage différent : on garde les deux
+            texv = _node_textures(glb)
+            js = os.path.join(OUT, v + '.fx.json')
+            fx = json.load(open(js, encoding='utf-8'))
+            mats = fx.setdefault('materials', {})
+            if any(node not in mats for node, uri in texv.items() if tex0.get(node) != uri):
+                continue  # texture sur un nœud non animé : pas de remplacement possible
+            for node, uri in texv.items():
+                if tex0.get(node) != uri:
+                    mats[node]['tex'] = uri
+            fx['glb'] = base
+            with open(js, 'w', encoding='utf-8') as f:
+                json.dump(fx, f, separators=(',', ':'))
+            saved += os.path.getsize(glb)
+            os.remove(glb)
+            if os.path.exists(glb + '.import'):
+                os.remove(glb + '.import')
+    print('variantes partagées : %.1f Mo économisés' % (saved / 1e6))
 
 
 if __name__ == '__main__':

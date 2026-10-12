@@ -376,13 +376,17 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 	if m.is_boss:
 		count = 3
 		luck = 0.5
-		# costume d'Eden (skin de tenue) : 1 chance sur 4, 1 sur 2 si le boss est enragé
-		var locked := GameData.cosmetics.filter(func(c): return not Profile.outfit_unlocked(String(c.id)))
-		if not locked.is_empty() and randf() < (0.5 if m.enraged else 0.25):
-			var c: Dictionary = locked.pick_random()
-			Profile.unlock_outfit(String(c.id))
-			Run.new_costumes.append(String(c.name))
-			message.emit("Costume débloqué : %s !" % c.name, 3.5)
+		# trésor de collection de l'archive d'Eden (apparence, aura, monture, familier...) :
+		# 1 chance sur 4, 1 sur 2 si le boss est enragé ; de préférence un trésor portable
+		if randf() < (0.5 if m.enraged else 0.25):
+			var locked := GameData.collection.filter(func(x): return not Profile.collected(x))
+			var wearable := locked.filter(func(x): return x.has("aura") or x.has("skin") or GameData.cosmetic_by_code.has(String(x.get("code", ""))))
+			var pool := wearable if not wearable.is_empty() and randf() < 0.75 else locked
+			if not pool.is_empty():
+				var x: Dictionary = pool.pick_random()
+				Profile.collect(x)
+				Run.new_costumes.append(String(x.name))
+				message.emit("Trésor de collection : %s !" % x.name, 3.5)
 	elif m.is_elite:
 		count = 1
 		luck = 0.3

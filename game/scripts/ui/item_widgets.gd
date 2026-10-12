@@ -213,6 +213,7 @@ class ItemSlot extends Button:
 	var can_drop: Callable  # func(data) -> bool
 	var on_drop: Callable  # func(data)
 	var card_extra: Callable  # func(item) -> String : lignes ajoutées à la carte au survol
+	var card_text := ""  # carte au survol entièrement fournie (trésors de collection)
 
 	func _init(size_px := 64.0) -> void:
 		custom_minimum_size = Vector2(size_px, size_px)
@@ -230,6 +231,8 @@ class ItemSlot extends Button:
 		if item.is_empty():
 			return null
 		var extra := String(card_extra.call(item)) if card_extra.is_valid() else ""
+		if card_text != "":
+			return ItemWidgets.tip_card(card_text + extra, Items.color_of(item))
 		if for_text != Items.display_name(item):
 			extra += "\n\n[color=#c8c8d4]%s[/color]" % for_text  # consigne propre à la case
 		return ItemWidgets.item_card(item, extra)
@@ -278,7 +281,7 @@ class ItemSlot extends Button:
 			draw_circle(p, 3.2, Color(0.75, 0.55, 1.0) if sockets[i] != null else Color(0.35, 0.33, 0.4))
 		if badge != "":
 			HudWidgets.text_center(self, badge, Vector2(size.x * 0.5, size.y - 8.0), font, 11, Color(1, 1, 1, 0.9), 4)
-		else:
+		elif int(item.get("level", 1)) > 0:
 			HudWidgets.text_center(self, str(int(item.get("level", 1))), Vector2(size.x - 11.0, size.y - 9.0), font, 11, Color(1, 1, 1, 0.75), 3)
 
 	func _get_drag_data(_at: Vector2) -> Variant:
@@ -451,7 +454,7 @@ class ItemGrid extends VBoxContainer:
 				return float(Items.SLOTS.size() - Items.SLOTS.find(it.slot)) * 100.0 + float(it.rarity)
 			3:
 				return float(Items.sell_price(it)) + 4.0 * float(int(it.get("upgrade", 0)))
-		return float(it.rarity) * 1000.0 + float(it.level) * 10.0 + float(it.get("upgrade", 0)) + (500.0 if it.has("set") else 0.0)
+		return float(it.rarity) * 1000.0 + float(Items.power_level(it)) * 10.0 + float(it.get("upgrade", 0)) + (500.0 if it.has("set") else 0.0)
 
 	func _on_pressed(it: Dictionary, index: int) -> void:
 		if multi and Input.is_key_pressed(KEY_SHIFT) and _anchor >= 0 and _anchor < _shown.size():

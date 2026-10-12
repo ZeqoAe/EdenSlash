@@ -216,6 +216,14 @@ static func attach_weapon(model: Node3D, weapon: Dictionary) -> BoneAttachment3D
 
 
 static func weapon_entry(cls: Dictionary, code: String) -> Dictionary:
+	if GameData.skin_by_code.has(code):
+		# apparence d'arme de l'archive d'Eden : tenue en main comme l'arme de la classe
+		var sk: Dictionary = GameData.skin_by_code[code]
+		var se := {"code": code, "model": sk.model, "texture": sk.texture}
+		var sb := String(GameData.weapon_type(String(sk.wtype) if String(sk.wtype) != "" else String(cls.get("weapon_type", ""))).get("bone", ""))
+		if sb != "":
+			se["bone"] = sb
+		return se
 	var eden: Dictionary = GameData.eden_by_code.get(code, {})
 	if eden.has("model"):
 		var we := {"code": code, "model": eden.model, "texture": eden.texture}

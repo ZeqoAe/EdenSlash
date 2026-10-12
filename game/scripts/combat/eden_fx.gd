@@ -15,6 +15,8 @@ static var _tex_cache := {}
 
 var fx_name := ""
 var follow: Node3D  # l'effet suit ce nœud (effets d'incantation)
+var loop := false  # aura : rejoue l'effet en boucle au lieu de disparaître
+var alpha_mul := 1.0  # opacité globale (auras plus discrètes que les sorts)
 var _data: Dictionary
 var _t := 0.0
 var _nodes := {}  # nom -> Node3D
@@ -40,16 +42,46 @@ static func play(parent: Node, name: String, pos: Vector3, yaw := 0.0, scale_ :=
 	return fx
 
 
+## Effet en boucle attaché à [param parent] (aura autour du héros : pierres étoilées,
+## pierres de lune), à l'échelle [param scale_].
+static func attach(parent: Node3D, name: String, scale_ := 1.0) -> EdenFx:
+	if name == "" or parent == null or not _load(name):
+		return null
+	var fx := EdenFx.new()
+	fx.fx_name = name
+	fx.loop = true
+	fx.alpha_mul = AURA_ALPHA
+	fx.scale = Vector3.ONE * scale_
+	parent.add_child(fx)
+	return fx
+
+
+## Opacité des auras : effets d'Eden faits pour la ville, atténués pour garder le combat lisible.
+const AURA_ALPHA := 0.6
+
+
+## Auras portées par la classe [param cls_id], attachées à [param parent].
+static func attach_auras(parent: Node3D, cls_id: String, scale_ := 1.0) -> void:
+	for x in Profile.worn_auras(cls_id):
+		var fx := attach(parent, String(x.aura.fx), scale_)
+		if fx:
+			fx.add_to_group("hero_auras")
+
+
 static func _load(name: String) -> bool:
 	if _cache.has(name):
 		return _cache[name] != null
-	var glb := "res://assets/fx/%s.glb" % name
 	var js := "res://assets/fx/%s.fx.json" % name
-	if not ResourceLoader.exists(glb) or not FileAccess.file_exists(js):
+	if not FileAccess.file_exists(js):
+		_cache[name] = null
+		return false
+	var data = JSON.parse_string(FileAccess.get_file_as_string(js))
+	# variante de couleur : maillage d'un autre effet ("glb"), textures propres ("tex")
+	var glb := "res://assets/fx/%s.glb" % (String(data.get("glb", name)) if data is Dictionary else name)
+	if not ResourceLoader.exists(glb):
 		_cache[name] = null
 		return false
 	var scene := load(glb) as PackedScene
-	var data = JSON.parse_string(FileAccess.get_file_as_string(js))
 	if scene == null or typeof(data) != TYPE_DICTIONARY:
 		_cache[name] = null  # effet vide ou illisible : ignoré
 		return false
@@ -80,19 +112,24 @@ func _ready() -> void:
 			_legacy = 1 if RenderingServer.get_current_rendering_method() == "gl_compatibility" else 0
 		if _legacy == 1:
 			_mats[name] = [_legacy_material(src, info), info]
+			(_mats[name][0] as StandardMaterial3D).albedo_color.a *= alpha_mul
 			mi.material_override = _mats[name][0]
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			if info.has("tex"):
+				_set_tex(_mats[name][0], _texture("res://assets/fx/" + String(info.tex)))
 			continue
 		var m := ShaderMaterial.new()
 		m.shader = SHADER
 		var add: bool = info.get("blend", "mix") == "add"
 		m.set_shader_parameter("additive", 1.0 if add else 0.0)
 		m.set_shader_parameter("use_vertex_color", 1.0 if bool(info.get("vcol", true)) else 0.0)
-		if src:
+		if info.has("tex"):
+			m.set_shader_parameter("tex", _texture("res://assets/fx/" + String(info.tex)))
+		elif src:
 			m.set_shader_parameter("tex", src.albedo_texture)
 		var c: Array = info.get("color", [1, 1, 1])
 		var k := GLOW_BOOST if add else 1.0
-		m.set_shader_parameter("color", Color(c[0] * k, c[1] * k, c[2] * k, minf(1.0, float(info.get("alpha", 1.0)) * ALPHA_BOOST)))
+		m.set_shader_parameter("color", Color(c[0] * k, c[1] * k, c[2] * k, minf(1.0, float(info.get("alpha", 1.0)) * ALPHA_BOOST) * alpha_mul))
 		mi.material_override = m
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_mats[name] = [m, info]
@@ -103,8 +140,10 @@ func _process(delta: float) -> void:
 	_t += delta
 	var dur := float(_data.get("duration", 1.0))
 	if _t >= dur:
-		queue_free()
-		return
+		if not loop:
+			queue_free()
+			return
+		_t = fmod(_t, maxf(dur, 0.01))
 	if follow and is_instance_valid(follow):
 		global_transform = follow.global_transform * _offset
 	_apply(int(_t * float(_data.get("fps", 30.0))))
@@ -133,7 +172,7 @@ func _apply(i: int) -> void:
 		var info: Dictionary = _mats[name][1]
 		var col := _get_color(m)
 		if info.has("alpha_t"):
-			col.a = minf(1.0, float(info.alpha_t[mini(i, info.alpha_t.size() - 1)]) * ALPHA_BOOST)
+			col.a = minf(1.0, float(info.alpha_t[mini(i, info.alpha_t.size() - 1)]) * ALPHA_BOOST) * alpha_mul
 		if info.has("color_t"):
 			var c: Array = info.color_t[mini(i, info.color_t.size() - 1)]
 			var k := (GLOW_BOOST if _legacy == 0 else 1.3) if info.get("blend", "mix") == "add" else 1.0

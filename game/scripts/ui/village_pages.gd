@@ -223,8 +223,8 @@ class ReforgePage extends ItemPage:
 		for stat in Forge.reforgeable(it):
 			var s: String = stat
 			var r: Array = Items.AFFIX_RANGES[s]
-			var lo := float(r[0]) * (1.0 if s in Items.PERCENT_STATS else Items._level_k(int(it.level)))
-			var hi := float(r[1]) * (1.0 if s in Items.PERCENT_STATS else Items._level_k(int(it.level)))
+			var lo := float(r[0]) * (1.0 if s in Items.PERCENT_STATS else Items._level_k(Items.power_level(it)))
+			var hi := float(r[1]) * (1.0 if s in Items.PERCENT_STATS else Items._level_k(Items.power_level(it)))
 			button("Réforger %s (%s, fourchette %s à %s)" % [Items.STAT_NAMES.get(s, s), Items.stat_text(s, it.affixes[s]), Items.stat_text(s, lo), Items.stat_text(s, hi)],
 				func(): done(Forge.reforge(it, s)), Profile.can_afford(rc))
 		if Forge.reforgeable(it).is_empty():
@@ -469,7 +469,7 @@ class CraftPage extends HBoxContainer:
 		add_theme_constant_override("separation", 16)
 		var left := ItemWidgets.panel(self, 0, true)
 		ItemWidgets.section(left, "Fabrication d'objets mythiques")
-		Hud._label(left, "Plans d'Eden de cette zone : objets mythiques (orange), pièces de set comprises. Toujours 100 % de qualité.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		Hud._label(left, "Plans d'Eden de cette zone : objets mythiques (orange) jusqu'au niveau d'Eden atteint, pièces de set comprises. Toujours 100 % de qualité.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_filter = OptionButton.new()
 		_keys = [""]
 		_filter.add_item("Tous les plans")
@@ -497,11 +497,15 @@ class CraftPage extends HBoxContainer:
 	static func cost(level: int) -> Dictionary:
 		return {"gold": 300 + 60 * level, "fragment": 30 + 2 * level, "essence": 6 + level / 6, "crystal": 2 + level / 15}
 
+	## Plans : mythiques d'Eden de la zone et de la précédente, jusqu'au niveau d'Eden atteint
+	## dans la run (chronologie) ; au moins les premiers mythiques qui existent (niveau 25).
 	func _plans() -> Array:
-		var band := Items.zone_band()
+		var zi := Items.zone_band()
+		var lo := int(GameData.eden_bands[maxi(zi - 1, 0)][0]) if not GameData.eden_bands.is_empty() else 1
+		var hi := maxi(Items.eden_target(_level()), 25)
 		var key := String(_keys[maxi(_filter.selected, 0)])
 		return GameData.eden_items.filter(func(e):
-			return int(e.rarity) == Items.MYTHIC and int(e.band) in [band, band - 1] \
+			return int(e.rarity) == Items.MYTHIC and int(e.level) >= mini(lo, hi - 10) and int(e.level) <= hi \
 				and (key == "" or String(e.get("wtype", e.slot)) == key))
 
 	func refresh() -> void:

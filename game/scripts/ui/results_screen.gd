@@ -55,7 +55,7 @@ func show_results() -> void:
 	for c in Run.new_classes:
 		gained.append("Nouvelle classe : " + String(GameData.class_data(c).get("name_fr", c)))
 	for c in Run.new_costumes:
-		gained.append("Costume : " + String(c))
+		gained.append("Trésor : " + String(c))
 	if not gained.is_empty():
 		var g := Hud._label(v, "Débloqué : " + "  ·  ".join(gained), 18, Color(0.55, 1.0, 0.6))
 		g.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -111,7 +111,7 @@ func show_results() -> void:
 
 ## Valeur indicative d'un objet pour la présélection et le tri.
 func _score(it: Dictionary) -> float:
-	return float(it.rarity) * 100.0 + float(it.get("upgrade", 0)) * 25.0 + float(it.level) * 3.0 + float(it.get("quality", 1.0)) * 10.0
+	return float(it.rarity) * 100.0 + float(it.get("upgrade", 0)) * 25.0 + float(Items.power_level(it)) * 3.0 + float(it.get("quality", 1.0)) * 10.0
 
 
 func _item_button(item: Dictionary) -> Button:

@@ -46,6 +46,8 @@ var archive := {}  # entrée de l'archive ("katana:4", "set:storm"...) -> copie 
 var skins := {}  # type d'arme -> code du modèle choisi (apparence débloquée par l'archive)
 var outfits := {}  # classe -> tenue portée (skin cosmétique, .glb de assets/player/outfits)
 var owned_outfits: Array = []
+## Trésors de collection obtenus (ids des entrées de l'archive d'Eden hors équipement).
+var collection: Array = []
 var worn := {}  # classe -> {"head": .glb, "back": .glb} : accessoires cosmétiques portés  # cosmétiques d'Eden débloqués (identifiants de data/eden_items.json -> cosmetics)
 ## Mode dev (archive) : activé, or et matériaux donnés au départ de chaque run.
 var dev := {"enabled": false, "gold": 0, "fragment": 0, "essence": 0, "crystal": 0}
@@ -113,6 +115,8 @@ func load_profile() -> void:
 	# ancienne archive (type × rareté) -> une entrée par objet d'Eden mythique ou légendaire
 	for k in archive.keys():
 		if String(k).begins_with("e"):
+			if archive[k] is Dictionary:
+				_migrate(archive[k])
 			continue
 		var old: Dictionary = archive[k]
 		archive.erase(k)
@@ -124,6 +128,7 @@ func load_profile() -> void:
 	skins = d.get("skins", {})
 	outfits = d.get("outfits", {})
 	owned_outfits = d.get("owned_outfits", [])
+	collection = (d.get("collection", []) as Array).map(func(x): return str(int(x)) if typeof(x) == TYPE_FLOAT else String(x))
 	worn = d.get("worn", {})
 	dev = {"enabled": false, "gold": 0, "fragment": 0, "essence": 0, "crystal": 0}
 	dev.merge(d.get("dev", {}), true)
@@ -155,6 +160,13 @@ func _migrate(item: Dictionary) -> Dictionary:
 		# anciennes raretés (commun, magique, rare or, épique, légendaire orange) -> raretés d'Eden
 		item["rarity"] = [0, 2, 3, 3, 4][clampi(int(item.rarity), 0, 4)]
 		item["rv"] = 2
+	if int(item.get("rv", 0)) == 2 and item.has("eden"):
+		# niveau affiché = niveau de l'objet dans Eden ; l'ancien niveau devient sa puissance
+		var e: Dictionary = GameData.eden_by_id.get(int(item.eden), {})
+		item["plevel"] = int(item.get("level", 1))
+		if not e.is_empty():
+			item["level"] = int(e.level)
+		item["rv"] = 3
 	if item.has("quality"):
 		return item
 	item["quality"] = 1.0
@@ -178,7 +190,7 @@ func save_profile() -> void:
 		"unlocked_zones": unlocked_zones, "selected_zone": selected_zone,
 		"expertise": expertise, "talents": talents, "certificates": certificates, "stash": stash,
 		"unlocked_classes": unlocked_classes, "records": records, "cert_board": cert_board,
-		"archive": archive, "skins": skins, "outfits": outfits, "owned_outfits": owned_outfits, "worn": worn, "dev": dev, "saved_at": Time.get_datetime_string_from_system(false, true),
+		"archive": archive, "skins": skins, "outfits": outfits, "owned_outfits": owned_outfits, "collection": collection, "worn": worn, "dev": dev, "saved_at": Time.get_datetime_string_from_system(false, true),
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(d))
@@ -497,6 +509,7 @@ func _clear() -> void:
 	skins = {}
 	outfits = {}
 	owned_outfits = []
+	collection = []
 	worn = {}
 	stash = {}
 	bag = {}
@@ -523,6 +536,7 @@ func reset_all() -> void:
 	skins = {}
 	outfits = {}
 	owned_outfits = []
+	collection = []
 	worn = {}
 	stash = {}
 	_lobby_view()
@@ -992,3 +1006,50 @@ func set_worn(cls: String, cat: String, path: String) -> void:
 		worn[cls].erase(cat)
 	else:
 		worn[cls][cat] = path
+
+
+## Trésor de collection [param x] obtenu ? (une apparence l'est aussi si sa tenue est débloquée)
+func collected(x: Dictionary) -> bool:
+	if str(int(x.id)) in collection:
+		return true
+	var cos: Dictionary = GameData.cosmetic_by_code.get(String(x.get("code", "")), {})
+	return int(x.get("cat", 0)) <= 3 and not cos.is_empty() and outfit_unlocked(String(cos.id))
+
+
+## Obtient le trésor [param x] (et la tenue correspondante pour une apparence).
+func collect(x: Dictionary) -> void:
+	var k := str(int(x.id))
+	if not k in collection:
+		collection.append(k)
+	var cos: Dictionary = GameData.cosmetic_by_code.get(String(x.get("code", "")), {})
+	if int(x.get("cat", 0)) <= 3 and not cos.is_empty():
+		unlock_outfit(String(cos.id))
+
+
+## Auras portées par la classe : une par type (pierre étoilée, pierre de lune, autre).
+func worn_auras(cls: String) -> Array:
+	var out: Array = []
+	var w: Dictionary = worn.get(cls, {})
+	for kind in ["star", "luna", "other"]:
+		var x: Dictionary = GameData.collection_by_id.get(int(w.get("aura_" + kind, 0)), {})
+		if x.has("aura") and collected(x):
+			out.append(x)
+	return out
+
+
+func set_aura(cls: String, kind: String, id: int) -> void:
+	if not worn.has(cls):
+		worn[cls] = {}
+	if id <= 0:
+		worn[cls].erase("aura_" + kind)
+	else:
+		worn[cls]["aura_" + kind] = id
+
+
+## Bonus des auras portées (en run).
+func aura_stats(cls: String) -> Dictionary:
+	var out := {}
+	for x in worn_auras(cls):
+		for s in x.aura.stat:
+			out[s] = float(out.get(s, 0.0)) + float(x.aura.stat[s])
+	return out

@@ -80,12 +80,21 @@ triangle de 3 couleurs (*Prisme*) ou losange de 4 de même couleur donnent des b
   tombent que des **boss** (un garanti par boss) ou se **fabriquent** chez le forgeron (mythiques).
   Les armes mythiques et légendaires portent leur **passif d'Eden**, les pièces de set leurs vrais
   **effets de set** (2, 3, 4… pièces).
-- **Archive des trésors** (lobby, comme dans Eden) : les 2 182 objets mythiques et légendaires
-  d'Eden, rangés par arme, type d'armure et accessoire, avec taux de complétion, recherche et
-  « archivés uniquement » ; archiver un objet du coffre donne +1 (mythique) ou +2 (légendaire)
-  points d'attribut et des paliers de collection ; on peut le retirer plus tard. Les armes
-  archivées débloquent leurs **apparences** (skins). Onglets **Encyclopédie** (tous les objets,
-  mode dev), **Tenues** (tenues, chapeaux et masques, ailes et dos) et **Apparences d'armes**.
+- **Niveaux d'Eden** : un objet affiche son niveau d'Eden (le set 23 est niveau 23) et chaque
+  zone donne les objets de sa tranche d'Eden, dans l'ordre chronologique (Limestone 1-13,
+  Rainbowfall 14-23, Beluga 24-28, Wetlands 29-36, Avila 37-44, Arid 45-48, Delphi 49-51,
+  Blackflame 52-100) ; sa puissance suit le niveau de run où il est tombé.
+- **Archive des trésors** (lobby, comme dans Eden) : les 10 554 entrées de l'archive d'Eden dans
+  ses catégories — apparences (tête, dos, corps, armes), armes et boucliers, armures, bijoux,
+  capes, trophées, objets spéciaux (montures, familiers, boîte arcanique, autres objets) — avec
+  taux, recherche, « obtenus uniquement » et trésors du jeu / de la boutique. Archiver un
+  équipement mythique ou légendaire du coffre donne +1 / +2 points d'attribut et des paliers ;
+  les autres entrées (**trésors de collection**) tombent des boss. Onglets **Encyclopédie**
+  (filtres : catégorie, type d'armure, rareté, niveaux, sets, archive, tri ; affichage par pièce
+  ou **par set et niveau** ; mode dev), **Tenues** (tenues, chapeaux et masques, ailes et dos,
+  **auras** : une pierre étoilée et une pierre de lune portées, effet lumineux d'Eden autour du
+  héros et bonus en run) et **Apparences d'armes** (modèles des armes archivées et 652
+  apparences d'armes d'Eden).
 - **Infos** (lobby et pause) : ce que rapporte un point de chaque attribut, formules de chaque
   statistique, calcul des dégâts et de la défense (héros et monstres), et en run tes valeurs.
 - **Menu pause** : pages Run (compétences, cartes, sac, bilan, actions), Équipement et Infos.
@@ -144,7 +153,7 @@ Les captures arrivent dans `%APPDATA%/Godot/app_userdata/Eden Slash/shots/`.
 | `blender_preview.py` | rendu de contrôle d'un `.glb` avec Blender en ligne de commande |
 | `build_classes.py` | les 60 classes : 6 réglées à la main + `auto_classes.py` / `auto_spells.py` (conversion automatique des sorts d'Eden, noms français dans `eden_fr.py`), corps animé commun, tenues et cheveux, armes, effets |
 | `build_talents.py` | arbres de talents et certificats de toutes les classes |
-| `build_items.py` | catalogue des 3 881 équipements d'Eden (`data/eden_catalog.json` : raretés, stats relatives, 204 sets et leurs effets, 595 passifs d'armes, niveaux d'Eden répartis sur les zones, icônes, 683 modèles d'armes) |
+| `build_items.py` | catalogue d'Eden (`data/eden_catalog.json`) : 5 947 équipements (raretés, stats relatives, 326 sets et leurs effets, passifs d'armes et effets des trophées), toute l'archive d'Eden (`c_collection`, objets de `c_item` et `c_itemmall`), 242 auras (effets convertis par `fx2godot.py`), 652 apparences d'armes, icônes et modèles |
 | `build_cosmetics.py` | cosmétiques d'Eden (table `[TableLoli]` de `4pequip.ini`) → tenues, accessoires de tête, ailes et dos (`assets/player/outfits/`) |
 
 ```bash

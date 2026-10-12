@@ -284,7 +284,7 @@ func _refresh_stats(in_run: bool) -> void:
 
 
 static func _power_of(it: Dictionary) -> int:
-	return int(it.level) * 10 + int(it.rarity) * 25 + int(it.get("upgrade", 0)) * 12 + (30 if it.has("set") else 0)
+	return Items.power_level(it) * 10 + int(it.rarity) * 25 + int(it.get("upgrade", 0)) * 12 + (30 if it.has("set") else 0)
 
 
 func _badge(it: Dictionary) -> String:
@@ -409,7 +409,8 @@ class HeroPreview extends SubViewportContainer:
 		_vp.add_child(disk)
 
 	func show_hero(class_id: String, weapon_code: String) -> void:
-		var key := class_id + "|" + weapon_code + "|" + Profile.outfit_of(class_id) + "|" + "|".join(Profile.worn_parts(class_id))
+		var key := class_id + "|" + weapon_code + "|" + Profile.outfit_of(class_id) + "|" + "|".join(Profile.worn_parts(class_id)) \
+			+ "|" + "|".join(Profile.worn_auras(class_id).map(func(x): return str(int(x.id))))
 		if key == _shown:
 			return
 		_shown = key
@@ -422,6 +423,7 @@ class HeroPreview extends SubViewportContainer:
 		model.scale = Vector3.ONE * GameData.HERO_SCALE
 		_pivot.add_child(model)
 		EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, weapon_code))
+		EdenFx.attach_auras(_pivot, class_id, GameData.HERO_SCALE)
 		var ap := EdenModel.find_anim_player(model)
 		var battle: String = cls.get("anims", {}).get("idle" if idle_pose else "battle", "stand01")
 		if ap and ap.has_animation(battle):

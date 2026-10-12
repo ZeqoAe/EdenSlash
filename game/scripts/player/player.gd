@@ -145,6 +145,9 @@ func recalc_stats() -> void:
 	var arc := Archive.bonus()  # bonus permanents de l'archive
 	for k in arc:
 		eq[k] = float(eq.get(k, 0.0)) + float(arc[k])
+	var aura := Profile.aura_stats(class_id)  # auras portées (pierres étoilées, pierres de lune)
+	for k in aura:
+		eq[k] = float(eq.get(k, 0.0)) + float(aura[k])
 	var ps := Run.passive_stats()
 	# bonus en % de l'équipement (objets et sets d'Eden) : mêmes effets que les passifs
 	for k in ["def_pct", "atk_pct", "matk_pct", "parry", "cast_speed", "heal_pct", "str_pct", "agi_pct", "int_pct", "wis_pct", "lck_pct"]:
@@ -267,6 +270,7 @@ func _dress_model() -> void:
 		EdenModel.dress(model, outfit if i == 0 and outfit != "" and ResourceLoader.exists(outfit) else String(parts[i]))
 	for p in Profile.worn_parts(class_id):
 		EdenModel.dress(model, String(p))
+	EdenFx.attach_auras(self, class_id, GameData.HERO_SCALE)
 
 
 func _attach_weapon(code: String) -> void:

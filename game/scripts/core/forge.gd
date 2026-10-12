@@ -18,7 +18,7 @@ const FUSE_COUNT := 3
 
 # --- forgeron --------------------------------------------------------------------------------
 static func reforge_cost(item: Dictionary) -> Dictionary:
-	return {"gold": 30 + 6 * int(item.level), "essence": 1 + int(item.rarity)}
+	return {"gold": 30 + 6 * Items.power_level(item), "essence": 1 + int(item.rarity)}
 
 
 ## Stats de l'objet qu'on peut réforger (affixes ayant une fourchette).
@@ -40,12 +40,12 @@ static func reforge(item: Dictionary, stat: String) -> String:
 		var b0 := float(item.base[stat])
 		item.base[stat] = nv
 		Profile.save_profile()
-		var k := 1.0 if stat in Items.PERCENT_STATS else Items._level_k(int(item.level))
+		var k := 1.0 if stat in Items.PERCENT_STATS else Items._level_k(Items.power_level(item))
 		return "%s : %s → %s" % [Items.STAT_NAMES.get(stat, Items.EXTRA_STAT_NAMES.get(stat, stat)), Items.stat_text(stat, b0 * k), Items.stat_text(stat, nv * k)]
 	var r: Array = Items.AFFIX_RANGES[stat]
 	var v := randf_range(float(r[0]), float(r[1]))
 	if not stat in Items.PERCENT_STATS:
-		v *= Items._level_k(int(item.level))
+		v *= Items._level_k(Items.power_level(item))
 	var before := float(item.affixes[stat])
 	item.affixes[stat] = v
 	Profile.save_profile()
@@ -53,7 +53,7 @@ static func reforge(item: Dictionary, stat: String) -> String:
 
 
 static func polish_cost(item: Dictionary) -> Dictionary:
-	return {"gold": 50 + 8 * int(item.level), "crystal": 1}
+	return {"gold": 50 + 8 * Items.power_level(item), "crystal": 1}
 
 
 ## Nouveau jet de qualité (90-120 %), gardé seulement s'il est meilleur.

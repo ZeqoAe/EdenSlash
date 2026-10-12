@@ -62,17 +62,19 @@ def main():
     idx = {e['path']: e for e in edenpkg.load_index(nif2gltf.PKG)}
     ti = edenini.read_text('t_item')
     tcol = edenini.read_text('t_collection')
-    names = {}  # code K -> (id objet, nom)
-    for r in edenini.read_table('c_item'):
-        if not r[0].isdigit() or not r[1].startswith(('K', 'A')):
-            continue
-        if r[8] not in ('68', '61', '65', '67') and not r[1].startswith('A'):
-            continue
-        name = ti.get(int(r[0]), [''])[0].strip()
-        if name in ('', '?'):
-            name = tcol.get(int(r[0]), [''])[0].strip()
-        if name and name != '?':
-            names.setdefault(r[1].strip(), (int(r[0]), name))
+    tm = edenini.read_text('t_itemmall')
+    names = {}  # code K -> (id objet, nom) : objets du jeu et de la boutique d'Eden
+    for table, texts in (('c_item', ti), ('c_itemmall', tm)):
+        for r in edenini.read_rows(table):
+            if len(r) < 20 or not r[0].isdigit() or not r[1].startswith(('K', 'A')):
+                continue
+            if r[8] not in ('68', '61', '65', '67') and not r[1].startswith('A'):
+                continue
+            name = texts.get(int(r[0]), [''])[0].strip()
+            if name in ('', '?'):
+                name = tcol.get(int(r[0]), [''])[0].strip()
+            if name and name != '?':
+                names.setdefault(r[1].strip(), (int(r[0]), name))
     meshes = {}  # (catégorie, maillage) -> [(code, teinte)]
     for f in loli_table(idx):
         if len(f) < 6 or f[0][:1] not in ('K', 'A') or f[1] not in CAT_SLOT:
@@ -141,7 +143,7 @@ def main():
             icon = 'res://assets/ui/items/%s.png' % code.lower()
         cosmetics.append({'id': short if cat == 'body' else '%s_%s' % (cat, short), 'cat': cat, 'name': name,
                           'eden_item': iid, 'icon': icon, 'rarity': 4, 'outfit': 'res://assets/player/outfits/' + rel,
-                          'variants': len(variants)})
+                          'variants': len(variants), 'codes': sorted({v[0] for v in variants})})
     path = os.path.join(GAME, 'data', 'eden_catalog.json')
     data = json.load(open(path, encoding='utf-8')) if os.path.exists(path) else {}
     data['cosmetics'] = [c for c in cosmetics if os.path.exists(os.path.join(out_dir, os.path.basename(c['outfit'])))]

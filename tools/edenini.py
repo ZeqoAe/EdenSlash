@@ -49,4 +49,5 @@ def read_rows(name, encoding='big5'):
     import re
     raw = open(os.path.join(DB, name + '.ini'), 'rb').read().decode(encoding, 'replace')
     _head, _, body = raw.partition('\r\n')
-    return [chunk.split('|') for chunk in re.split(r'\|\r\n(?=\d+\|)', body) if chunk]
+    # certaines lignes sont séparées par plusieurs « \r\n » (c_item)
+    return [chunk.split('|') for chunk in re.split(r'\|(?:\r\n)+(?=\d+\|)', body) if chunk]

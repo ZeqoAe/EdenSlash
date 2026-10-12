@@ -32,7 +32,14 @@ var eden_by_id: Dictionary = {}
 var eden_by_code: Dictionary = {}
 var cosmetics: Array = []
 var eden_sets: Dictionary = {}  # "e<id>" -> {name, pieces, bonus}
-var eden_bands: Array = []  # niveaux d'Eden de chaque zone (dans l'ordre de zones.json)
+var eden_bands: Array = []  # [min, max] des niveaux d'Eden de chaque zone (ordre de zones.json)
+## Entrées de l'archive d'Eden hors équipement : apparences (cat. 1-4), montures (29),
+## familiers (30), boîte arcanique (31), autres objets (32, dont les auras).
+var collection: Array = []
+var collection_by_id: Dictionary = {}
+var auras: Array = []  # entrées avec "aura" : {fx, stat, kind (star / luna / other)}
+var cosmetic_by_code: Dictionary = {}  # code K d'Eden -> cosmétique (tenue, tête, dos)
+var skin_by_code: Dictionary = {}  # code K d'Eden -> apparence d'arme {model, texture, wtype}
 
 
 func _ready() -> void:
@@ -54,9 +61,18 @@ func _ready() -> void:
 	if FileAccess.file_exists(cat_path):
 		var ei: Dictionary = _load_json(cat_path)
 		eden_sets = ei.get("sets", {})
-		eden_bands = ei.get("bands", [])
 		eden_items = ei.get("items", [])
 		cosmetics = ei.get("cosmetics", [])
+		collection = ei.get("collection", [])
+		for c: Dictionary in collection:
+			collection_by_id[int(c.id)] = c
+			if c.has("aura"):
+				auras.append(c)
+			if c.has("skin"):
+				skin_by_code[String(c.code)] = c.skin
+		for c: Dictionary in cosmetics:
+			for code in c.get("codes", []):
+				cosmetic_by_code[String(code)] = c
 		for e: Dictionary in eden_items:
 			var key := String(e.get("wtype", e.slot))
 			if not eden_by_slot.has(key):
@@ -64,6 +80,58 @@ func _ready() -> void:
 			eden_by_slot[key].append(e)
 			eden_by_id[int(e.id)] = e
 			eden_by_code[String(e.code)] = e
+
+
+	_build_eden_bands()
+
+
+## Niveaux d'Eden couverts par chaque zone, dans l'ordre chronologique d'Eden : de son
+## niveau de carte (zones.json -> levels) jusqu'à celui de la zone suivante ; la dernière
+## zone va jusqu'au niveau 100.
+func _build_eden_bands() -> void:
+	eden_bands = []
+	for i in zones.size():
+		var lo := 1 if i == 0 else int(zones[i].get("levels", [1, 1])[0])
+		var hi := 100 if i == zones.size() - 1 else int(zones[i + 1].get("levels", [100, 100])[0]) - 1
+		eden_bands.append([lo, maxi(lo, hi)])
+
+
+## Niveaux de run d'une zone : du départ (1 + bonus) au plafond de la rage.
+func zone_run_levels(zi: int) -> Vector2i:
+	var z: Dictionary = zones[clampi(zi, 0, zones.size() - 1)]
+	var s := 1 + int(z.get("level_bonus", 0))
+	return Vector2i(s, int(z.get("max_level", 15)) + 3)
+
+
+## Niveau d'Eden des objets qui tombent au niveau de run [param level] dans la zone
+## [param zi] : la tranche d'Eden de la zone est parcourue au fil de la run.
+func eden_level_at(zi: int, level: int) -> int:
+	if eden_bands.is_empty():
+		return level
+	var b: Array = eden_bands[clampi(zi, 0, eden_bands.size() - 1)]
+	var r := zone_run_levels(zi)
+	var t := clampf(float(level - r.x) / float(maxi(r.y - r.x, 1)), 0.0, 1.0)
+	return roundi(lerpf(float(b[0]), float(b[1]), t))
+
+
+## Niveau de puissance (niveau de run) d'un objet d'Eden de niveau [param eden_level] :
+## position de ce niveau dans la tranche de sa zone (objets donnés hors run).
+func power_level_of(eden_level: int) -> int:
+	for i in eden_bands.size():
+		var b: Array = eden_bands[i]
+		if eden_level <= int(b[1]) or i == eden_bands.size() - 1:
+			var r := zone_run_levels(i)
+			var t := clampf(float(eden_level - int(b[0])) / float(maxi(int(b[1]) - int(b[0]), 1)), 0.0, 1.0)
+			return roundi(lerpf(float(r.x), float(r.y), t))
+	return eden_level
+
+
+## Zone (indice) dont la tranche d'Eden contient [param eden_level].
+func zone_of_eden_level(eden_level: int) -> int:
+	for i in eden_bands.size():
+		if eden_level <= int(eden_bands[i][1]):
+			return i
+	return maxi(eden_bands.size() - 1, 0)
 
 
 func weapon_type(id: String) -> Dictionary:

@@ -9,6 +9,8 @@ extends RefCounted
 ## - désassemblage → matériaux, vente → or ;
 ## - pièces de set (rares et épiques) : bonus à 2 / 4 / 6 pièces portées, dont des
 ##   effets déclenchés façon Eden (foudre, gel, buffs temporaires...).
+## Niveaux : "level" = niveau de l'objet dans Eden (affiché, chronologie des zones) ;
+## "plevel" = niveau de puissance (niveau de run où il est tombé), qui règle ses stats.
 
 const SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "necklace", "ring", "trophy"]
 const SLOT_NAMES := {
@@ -182,7 +184,7 @@ static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai",
 			slot = SLOTS.filter(func(x): return x != "trophy").pick_random()
 	# objet d'Eden de la zone : nom, icône, stats connues, set, passif
 	if not GameData.eden_by_slot.is_empty():
-		var tpl := eden_template(slot, wtype, zone_band(), rarity)
+		var tpl := eden_template(slot, wtype, eden_target(level), rarity)
 		if not tpl.is_empty():
 			return from_template(tpl, level, rarity)
 	var item := {
@@ -232,25 +234,55 @@ static func roll_rarity(luck: float, min_r := 0, max_r := 3) -> int:
 	return clampi(maxi(r, min_r), 0, maxi(max_r, min_r))
 
 
-## Bande de niveaux d'Eden de la zone jouée (data/eden_catalog.json -> bands).
+## Zone jouée (indice dans zones.json).
 static func zone_band() -> int:
-	var zi := GameData.zone_index(Run.zone_id if Run.active else Profile.selected_zone)
-	return clampi(zi, 0, maxi(GameData.eden_bands.size() - 1, 0))
+	return GameData.zone_index(Run.zone_id if Run.active else Profile.selected_zone)
 
 
-## Modèle d'Eden : même emplacement (ou type d'arme), bande de la zone (sinon la plus
-## proche), même rareté (l'épique reprend un modèle bleu, plus fort).
-static func eden_template(slot: String, wtype: String, band: int, rarity: int) -> Dictionary:
-	var list: Array = GameData.eden_by_slot.get(wtype if slot == "weapon" else slot, [])
+## Niveau d'Eden visé par le butin au niveau de run [param level] dans la zone jouée.
+static func eden_target(level: int) -> int:
+	return GameData.eden_level_at(zone_band(), level)
+
+
+## Modèle d'Eden : même emplacement (ou type d'arme), niveau d'Eden le plus haut sans
+## dépasser [param target] (chronologie : pas d'objet d'une zone plus avancée), même rareté
+## si possible. Dans Eden, les objets non mythiques s'arrêtent vers le niveau 40 : au-delà,
+## le butin courant prend un modèle courant du bon niveau (il garde sa rareté tirée).
+## Mythiques et légendaires gardent un modèle d'archive : sans modèle assez bas (premières
+## zones), le plus bas qui existe. Les trophées sans niveau (0) conviennent partout.
+static func eden_template(slot: String, wtype: String, target: int, rarity: int) -> Dictionary:
+	var list: Array = GameData.eden_by_slot.get(wtype if slot == "weapon" else slot, []).filter(
+		func(e): return not (e.get("r", {}) as Dictionary).is_empty() or e.has("passive"))
 	if list.is_empty():
 		return {}
-	var want := 2 if rarity == 3 else rarity
-	for d in [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6, -7, 7]:
-		var cands := list.filter(func(e): return int(e.band) == band + d and int(e.rarity) == want)
-		if not cands.is_empty():
-			return cands.pick_random()
-	var any := list.filter(func(e): return int(e.rarity) <= want)
-	return any.pick_random() if not any.is_empty() else list.pick_random()
+	var archive := rarity >= MYTHIC
+	var same := list.filter(func(e): return int(e.rarity) == rarity)
+	var family := list.filter(func(e): return (int(e.rarity) >= MYTHIC) == archive)
+	var pools: Array = [same]
+	if rarity == 3:
+		pools.append(list.filter(func(e): return int(e.rarity) == 2))  # pas de violet dans Eden
+	pools.append(family)
+	if not archive:
+		pools.append(list)
+	for pool: Array in pools:
+		var near := pool.filter(func(e): return (int(e.level) == 0 and slot == "trophy") or (int(e.level) <= target and int(e.level) >= target - 12))
+		if not near.is_empty():
+			return near.pick_random()
+	for pool: Array in pools:
+		var below := pool.filter(func(e): return int(e.level) <= target)
+		if not below.is_empty():
+			var top := 0
+			for e in below:
+				top = maxi(top, int(e.level))
+			return below.filter(func(e): return int(e.level) >= top - 5).pick_random()
+	for pool: Array in pools:
+		if pool.is_empty():
+			continue
+		var lowest := 1000
+		for e in pool:
+			lowest = mini(lowest, int(e.level))
+		return pool.filter(func(e): return int(e.level) <= lowest + 4).pick_random()
+	return list.pick_random()
 
 
 static func _ref(slot: String, stat: String) -> float:
@@ -261,15 +293,17 @@ static func _ref(slot: String, stat: String) -> float:
 	return float(REF_FLAT.get(stat, 0.0))
 
 
-## Objet du jeu tiré d'un objet d'Eden : stats connues (rapportées au niveau [param level]),
-## × rareté × jet de qualité ; set et passif d'arme pour les mythiques et légendaires.
+## Objet du jeu tiré d'un objet d'Eden : niveau d'Eden de l'objet, stats connues
+## rapportées au niveau de puissance [param level] (niveau de run), × rareté × jet de
+## qualité ; set et passif d'arme pour les mythiques et légendaires.
 static func from_template(e: Dictionary, level: int, rarity := -1) -> Dictionary:
 	var r := int(e.rarity) if rarity < 0 else rarity
 	var slot := String(e.slot)
 	var q: Array = QUALITY[r]
-	var item := {"uid": "%d_%d" % [Time.get_ticks_usec(), randi() % 100000], "slot": slot, "level": level, "rarity": r,
+	var item := {"uid": "%d_%d" % [Time.get_ticks_usec(), randi() % 100000], "slot": slot, "level": int(e.level),
+		"plevel": level, "rarity": r,
 		"quality": snappedf(randf_range(float(q[0]), float(q[1])), 0.01), "upgrade": 0, "affixes": {},
-		"name": String(e.name), "icon": String(e.icon), "eden": int(e.id), "rv": 2}
+		"name": String(e.name), "icon": String(e.icon), "eden": int(e.id), "rv": 3}
 	if slot == "weapon":
 		item["wtype"] = String(e.wtype)
 		if e.has("model"):
@@ -326,13 +360,8 @@ static func eden_base(slot: String, wtype: String, level: int, rarity: int) -> D
 
 ## Objet d'Eden donné (archive, mode dev) : nouvel objet du jeu à son image.
 static func from_eden(e: Dictionary, level := 0) -> Dictionary:
-	var lvl := level
-	if lvl <= 0:
-		# niveau du début de la zone de la bande de l'objet
-		var zones: Array = GameData.zones
-		var zi := clampi(int(e.get("band", 0)), 0, zones.size() - 1)
-		lvl = 1 + int(zones[zi].get("level_bonus", 0)) + 5 if not zones.is_empty() else 10
-	return from_template(e, lvl)
+	# puissance : place du niveau d'Eden de l'objet dans la tranche de sa zone
+	return from_template(e, level if level > 0 else GameData.power_level_of(int(e.level)))
 
 
 ## Transforme l'objet en pièce du set [param set_id].
@@ -387,11 +416,17 @@ static func _level_k(level: int) -> float:
 	return pow(1.08, level - 1)
 
 
+## Niveau de puissance d'un objet (niveau de run où il est tombé) : règle ses stats,
+## ses coûts et sa valeur. Le niveau affiché ("level") est celui d'Eden.
+static func power_level(item: Dictionary) -> int:
+	return int(item.get("plevel", item.get("level", 1)))
+
+
 static func _add_affix(item: Dictionary, stat: String) -> void:
 	var r: Array = AFFIX_RANGES.get(stat, [3.0, 7.0])  # « atk » des anciennes sauvegardes
 	var v := randf_range(r[0], r[1])
 	if not stat in PERCENT_STATS:
-		v *= _level_k(int(item.level))
+		v *= _level_k(power_level(item))
 	item.affixes[stat] = float(item.affixes.get(stat, 0.0)) + v
 
 
@@ -408,7 +443,7 @@ static func base_stats(item: Dictionary) -> Dictionary:
 static func stats(item: Dictionary, with_extras := true) -> Dictionary:
 	var out := {}
 	var base := base_stats(item)
-	var k := _level_k(int(item.level)) * float(item.get("quality", 1.0)) * (1.0 + 0.1 * int(item.get("upgrade", 0)))
+	var k := _level_k(power_level(item)) * float(item.get("quality", 1.0)) * (1.0 + 0.1 * int(item.get("upgrade", 0)))
 	for s in base:
 		out[s] = float(base[s]) * (k if not s in PERCENT_STATS else float(item.get("quality", 1.0)) * (1.0 + 0.1 * int(item.get("upgrade", 0))))
 	var aff: Dictionary = item.get("affixes", {})
@@ -455,7 +490,7 @@ static func upgrade(item: Dictionary) -> String:
 
 static func upgrade_cost(item: Dictionary) -> Dictionary:
 	var up := int(item.get("upgrade", 0))
-	var cost := {"gold": int(20.0 * pow(up + 1, 1.5) * (1.0 + int(item.level) / 5.0)), "fragment": 3 * (up + 1)}
+	var cost := {"gold": int(20.0 * pow(up + 1, 1.5) * (1.0 + power_level(item) / 5.0)), "fragment": 3 * (up + 1)}
 	if up >= 4:
 		cost["essence"] = up - 3
 	if up >= 7:
@@ -470,7 +505,7 @@ const UPGRADE_REFUND := 0.7
 ## Pierres (sans l'or) dépensées pour amener l'objet à son niveau d'amélioration, × 70 %.
 static func upgrade_refund(item: Dictionary) -> Dictionary:
 	var spent := {}
-	var tmp := {"level": int(item.level), "upgrade": 0}
+	var tmp := {"level": power_level(item), "upgrade": 0}
 	for u in int(item.get("upgrade", 0)):
 		tmp.upgrade = u
 		var c := upgrade_cost(tmp)
@@ -495,7 +530,7 @@ static func _merge(a: Dictionary, b: Dictionary) -> Dictionary:
 ## Désassemblage : matériaux selon rareté et niveau + 70 % des pierres d'amélioration.
 static func disassemble_yield(item: Dictionary) -> Dictionary:
 	var r := int(item.rarity)
-	var out := {"fragment": (2 + int(item.level) / 3) * (r + 1)}
+	var out := {"fragment": (2 + power_level(item) / 3) * (r + 1)}
 	if r >= 2:
 		out["essence"] = r - 1
 	if r >= 3:
@@ -504,7 +539,7 @@ static func disassemble_yield(item: Dictionary) -> Dictionary:
 
 
 static func sell_price(item: Dictionary) -> int:
-	return int(5 * (int(item.level) + 1) * (int(item.rarity) + 1))
+	return int(5 * (power_level(item) + 1) * (int(item.rarity) + 1))
 
 
 ## Vente : or + 70 % des pierres d'amélioration.
@@ -537,7 +572,7 @@ static func color_of(item: Dictionary) -> Color:
 static func _weapon_or_slot(item: Dictionary) -> String:
 	if item.slot == "weapon":
 		return "Arme (%s)" % String(GameData.weapon_type(weapon_type_of(item)).get("name", "?"))
-	return String(SLOT_NAMES[item.slot])
+	return String(SLOT_NAMES.get(item.slot, "Bouclier (collection)"))
 
 
 static func describe(item: Dictionary) -> String:
@@ -549,7 +584,7 @@ static func describe(item: Dictionary) -> String:
 	# carte d'objet : icône, nom à la couleur de la rareté, type, qualité
 	var lines := ["%s[font_size=21][b][color=#%s]%s[/color][/b][/font_size]" % [
 			"[img=52x52]%s[/img]  " % icon if icon != "" else "", col, display_name(item)],
-		"[color=#%s]%s[/color] · %s%s · niveau %d" % [col, r.name, _weapon_or_slot(item), " · pièce de set" if item.has("set") else "", int(item.level)],
+		"[color=#%s]%s[/color] · %s%s · %s" % [col, r.name, _weapon_or_slot(item), " · pièce de set" if item.has("set") else "", ("niveau %d" % int(item.level)) if int(item.level) > 0 else "sans niveau"],
 		"Qualité [color=%s]%d %%[/color]%s" % ["#7fe08a" if q >= 1.0 else "#ff9a7a", roundi(q * 100.0),
 			"   ·   Amélioration [color=#ffcf6b]+%d[/color] / %d" % [up, MAX_UPGRADE] if up > 0 else ""],
 		"[color=#5a5470]────────────────────────[/color]"]
@@ -614,7 +649,9 @@ static func describe(item: Dictionary) -> String:
 			var bn := set_bonus(sid, n)
 			var set_col := SET_COLOR.to_html(false) if worn >= n else "888888"
 			lines.append("[color=#%s]%d pièces : %s[/color]" % [set_col, n, " ; ".join(bonus_lines(bn))])
-	var eden: Dictionary = GameData.eden_by_id.get(int(item.get("eden", 0)), {})
-	if not eden.is_empty():
-		lines.append("[color=#8a86a0]Objet d'Eden · niveau %d dans le jeu d'origine[/color]" % int(eden.level))
+	if item.has("plevel"):
+		lines.append("[color=#8a86a0]Objet d'Eden de niveau %d · puissance du niveau de run %d[/color]" % [int(item.level), power_level(item)])
+	var src := String(GameData.eden_by_id.get(int(item.get("eden", 0)), {}).get("src", ""))
+	if src != "":
+		lines.append("[color=#8a86a0]Dans Eden : %s[/color]" % src)
 	return "\n".join(lines)

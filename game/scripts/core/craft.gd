@@ -204,7 +204,7 @@ static func can_enchant(item: Dictionary, key: String) -> String:
 	var armor: bool = item.slot != "weapon" and item.slot != "gloves"
 	if bool(e.get("armor", false)) != armor:
 		return "Ce parchemin s'applique %s." % ("aux armures" if e.get("armor", false) else "aux armes et aux gants")
-	if int(item.level) < scroll_min_level(int(p[2])):
+	if Items.power_level(item) < scroll_min_level(int(p[2])):
 		return "Objet de niveau %d minimum." % scroll_min_level(int(p[2]))
 	return ""
 
@@ -269,7 +269,7 @@ static func _upgrade_roll(item: Dictionary, target: int) -> Array:
 	var r: Array = UPGRADE_ROLL[stat]
 	var v := randf_range(r[0], r[1])
 	if not stat in Items.PERCENT_STATS:
-		v *= pow(1.08, int(item.level) - 1)
+		v *= pow(1.08, Items.power_level(item) - 1)
 	if target in Items.MILESTONES:
 		v *= 2.0
 	return [stat, snappedf(v, 0.001 if stat in Items.PERCENT_STATS else 0.1)]

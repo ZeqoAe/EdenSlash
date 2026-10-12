@@ -56,6 +56,13 @@ func _ready() -> void:
 			Profile.select_weapon_type(arg.trim_prefix("--weapon="))
 		elif arg in ["--grimoire", "--talents", "--info", "--inventory"] or arg.begins_with("--prep=") or arg.begins_with("--archive="):
 			_open_screen = arg.trim_prefix("--")
+		elif arg == "--wear-aura":
+			# test : une pierre étoilée et une pierre de lune portées (profil de test uniquement)
+			for kind in ["star", "luna"]:
+				var xs := GameData.auras.filter(func(x): return String(x.aura.kind) == kind)
+				if not xs.is_empty():
+					Profile.collect(xs[0])
+					Profile.set_aura(Profile.selected_class, kind, int(xs[0].id))
 		elif arg.begins_with("--expertise="):
 			# test : expertise donnée à toutes les classes (profil de test uniquement)
 			for cid in GameData.classes:
@@ -64,7 +71,7 @@ func _ready() -> void:
 		Profile.save_profile()  # classe choisie en argument : son préréglage (et son arme)
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in ["--grimoire", "--talents", "--info", "--inventory"] \
-				or arg.begins_with("--prep=") or arg.begins_with("--archive=") or arg.begins_with("--expertise="):
+				or arg.begins_with("--prep=") or arg.begins_with("--archive=") or arg.begins_with("--expertise=") 				or arg == "--wear-aura" or arg.begins_with("--archive-cat=") or arg.begins_with("--enc-cat=") or arg.begins_with("--costume-cat="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -88,6 +95,22 @@ func _ready() -> void:
 		_open_panel()
 	elif _open_screen.begins_with("archive="):
 		_archive.open(int(_open_screen.trim_prefix("archive=")))
+		for arg in OS.get_cmdline_user_args():
+			# tests : catégorie de l'archive / de l'encyclopédie (par set et niveau)
+			if arg.begins_with("--archive-cat="):
+				_archive.page(0)._cat = arg.trim_prefix("--archive-cat=")
+				_archive.page(0).refresh()
+			elif arg.begins_with("--costume-cat="):
+				_archive.page(2)._cat = arg.trim_prefix("--costume-cat=")
+				_archive.page(2).refresh()
+			elif arg.begins_with("--enc-cat="):
+				var enc = _archive.page(1)
+				var key := arg.trim_prefix("--enc-cat=")
+				for i in enc._cats.size():
+					if String(enc._cats[i][1]) == key:
+						enc._cat.select(i)
+						enc._view.select(1 if key.begins_with("a:") else 0)
+				enc._apply_filters()
 	if shot > 0.0:
 		await get_tree().create_timer(shot).timeout
 		DirAccess.make_dir_recursive_absolute("user://shots")
@@ -143,6 +166,7 @@ func _show_hero() -> void:
 	model.rotation.y = -0.45  # trois-quarts, tourné vers le menu
 	backdrop.hero_root.add_child(model)
 	EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, Profile.weapon_code()))
+	EdenFx.attach_auras(backdrop.hero_root, Profile.selected_class, GameData.HERO_SCALE)
 	var ap := EdenModel.find_anim_player(model)
 	var battle: String = cls.anims.get("battle", "stand01")
 	if ap and ap.has_animation(battle):

@@ -27,6 +27,8 @@ func _ready() -> void:
 	_test_presets()
 	_test_items()
 	_test_archive()
+	_test_eden_levels()
+	_test_treasures()
 	_test_progression()
 	await _test_title()
 	await _test_lobby()
@@ -128,11 +130,62 @@ func _test_items() -> void:
 	slot.free()
 
 
+func _test_eden_levels() -> void:
+	# niveau affiché = niveau d'Eden ; chronologie des zones (pas d'objet d'une zone plus avancée)
+	Profile.selected_zone = "limestone"
+	var lv0: Array = []
+	for i in 60:
+		lv0.append(int(Items.generate(5, 0.5).level))
+	var b0: Array = GameData.eden_bands[0]
+	lv0.sort()
+	check("Limestone : objets d'Eden de niveau %d à %d (médiane %d)" % [int(b0[0]), int(b0[1]), lv0[30]], int(lv0[30]) <= int(b0[1]))
+	Profile.selected_zone = "blackflame"
+	var top := GameData.zone_run_levels(GameData.zone_index("blackflame")).y
+	var lv7: Array = []
+	for i in 60:
+		lv7.append(int(Items.generate(top, 0.5).level))
+	lv7.sort()
+	check("Blackflame en fin de run : objets de haut niveau d'Eden (médiane %d)" % lv7[30], int(lv7[30]) >= 52)
+	var set23: Array = GameData.eden_items.filter(func(e): return int(e.level) == 23 and e.has("set"))
+	if not set23.is_empty():
+		var it := Items.from_eden(set23[0])
+		check("objet d'un set de niveau 23 : niveau 23 dans le jeu (puissance %d)" % Items.power_level(it), int(it.level) == 23 and it.has("plevel"))
+	var old := {"uid": "x", "slot": "head", "level": 7, "rarity": 2, "rv": 2, "eden": int(set23[0].id) if not set23.is_empty() else 0, "quality": 1.0}
+	Profile._migrate(old)
+	check("ancienne sauvegarde : niveau d'Eden affiché, puissance conservée", int(old.get("plevel", 0)) == 7 and int(old.rv) == 3)
+	Profile.selected_zone = "limestone"
+
+
+func _test_treasures() -> void:
+	check("archive : %d entrées (équipement %d) dans les catégories d'Eden" % [Archive.total(), Archive.total_gear()], Archive.total() > 9000 and Archive.total_gear() > 3000)
+	check("catégories d'apparences et d'objets spéciaux", Archive.categories().any(func(c): return c.id == "c:32") and Archive.categories().any(func(c): return c.id == "c:1"))
+	var aura: Dictionary = GameData.auras.filter(func(x): return String(x.aura.kind) == "star")[0]
+	check("aura « %s » : effet %s" % [aura.name, aura.aura.fx], FileAccess.file_exists("res://assets/fx/%s.fx.json" % aura.aura.fx))
+	Profile.collect(aura)
+	Profile.set_aura(Profile.selected_class, "star", int(aura.id))
+	check("aura portée : bonus %s" % Archive.bonus_text(Profile.aura_stats(Profile.selected_class)), not Profile.aura_stats(Profile.selected_class).is_empty())
+	var root := Node3D.new()
+	add_child(root)
+	EdenFx.attach_auras(root, Profile.selected_class, 1.3)
+	check("aura : effet en boucle autour du héros", root.get_child_count() == 1 and (root.get_child(0) as EdenFx).loop)
+	root.queue_free()
+	var skin: Dictionary = GameData.collection.filter(func(x): return x.has("skin") and String(x.skin.wtype) == "")[0]
+	Profile.collect(skin)
+	check("apparence d'arme « %s » disponible pour toutes les armes" % skin.name, Archive.skins("katana").any(func(w): return String(w.code) == String(skin.code)))
+	check("apparence d'arme : modèle en main", String(EdenModel.weapon_entry(GameData.class_data("warrior"), String(skin.code)).get("model", "")) == String(skin.skin.model))
+	var head: Dictionary = GameData.collection.filter(func(x): return int(x.cat) == 1 and GameData.cosmetic_by_code.has(String(x.code)))[0]
+	Profile.collect(head)
+	check("apparence de tête obtenue : chapeau portable", Profile.outfit_unlocked(String(GameData.cosmetic_by_code[String(head.code)].id)))
+	Profile.save_profile()
+	Profile.load_profile()
+	check("trésors relus du disque", Profile.collected(aura) and Profile.worn_auras(Profile.selected_class).size() == 1)
+
+
 func _test_archive() -> void:
 	var common := Items.generate(5, -1.0, "head")
-	var wtpl: Dictionary = GameData.eden_items.filter(func(e): return e.slot == "weapon" and e.get("wtype", "") == "katana" and int(e.rarity) == Items.MYTHIC and e.has("model"))[0]
+	var wtpl: Dictionary = GameData.eden_items.filter(func(e): return e.slot == "weapon" and e.get("wtype", "") == "katana" and int(e.rarity) == Items.MYTHIC and e.has("model") and e.has("arch"))[0]
 	var myth := Items.from_template(wtpl, 5)
-	var ltpl: Dictionary = GameData.eden_items.filter(func(e): return e.slot == "chest" and int(e.rarity) == Items.LEGENDARY)[0]
+	var ltpl: Dictionary = GameData.eden_items.filter(func(e): return e.slot == "chest" and int(e.rarity) == Items.LEGENDARY and e.has("arch"))[0]
 	var legend := Items.from_template(ltpl, 5)
 	for it in [common, myth, legend]:
 		Profile.inventory.append(it)

@@ -9,8 +9,9 @@ const TIER_LABELS := {4: "Mythique", 5: "Légendaire"}
 
 # --- collection --------------------------------------------------------------------------------
 ## Archive des trésors (comme dans Eden) : à gauche les catégories et leur taux, au centre
-## toutes les entrées de la catégorie (mythiques et légendaires d'Eden), à droite la liste
-## de l'archive (score, taux par groupe, bonus) et le dépôt depuis le coffre.
+## toutes les entrées de la catégorie (équipements mythiques et légendaires, apparences,
+## montures, familiers, boîte arcanique, autres objets), à droite la liste de l'archive
+## (score, taux par groupe, bonus) et le dépôt depuis le coffre.
 class CollectionPage extends HBoxContainer:
 	const PER_PAGE := 120
 	var _tree: VBoxContainer
@@ -18,6 +19,7 @@ class CollectionPage extends HBoxContainer:
 	var _head: Label
 	var _rate: Label
 	var _owned_only: CheckBox
+	var _origin: OptionButton
 	var _reverse: CheckBox
 	var _search: LineEdit
 	var _grid: GridContainer
@@ -56,16 +58,27 @@ class CollectionPage extends HBoxContainer:
 		var fl := HBoxContainer.new()
 		fl.add_theme_constant_override("separation", 12)
 		mid.add_child(fl)
+		_origin = OptionButton.new()
+		_origin.fit_to_longest_item = false
+		_origin.custom_minimum_size = Vector2(150, 0)
+		for t in ["Tous les trésors", "Trésors du jeu", "Trésors de la boutique"]:
+			_origin.add_item(t)
+		_origin.focus_mode = Control.FOCUS_NONE
+		_origin.item_selected.connect(func(_i): _refresh_grid(0))
+		fl.add_child(_origin)
+		var fl2 := HBoxContainer.new()
+		fl2.add_theme_constant_override("separation", 12)
+		mid.add_child(fl2)
 		_owned_only = CheckBox.new()
-		_owned_only.text = "Archivés uniquement"
+		_owned_only.text = "Obtenus uniquement"
 		_owned_only.focus_mode = Control.FOCUS_NONE
 		_owned_only.toggled.connect(func(_on): _refresh_grid(0))
-		fl.add_child(_owned_only)
+		fl2.add_child(_owned_only)
 		_reverse = CheckBox.new()
 		_reverse.text = "Ordre inversé"
 		_reverse.focus_mode = Control.FOCUS_NONE
 		_reverse.toggled.connect(func(_on): _refresh_grid(0))
-		fl.add_child(_reverse)
+		fl2.add_child(_reverse)
 		_search = LineEdit.new()
 		_search.placeholder_text = "Recherche…"
 		_search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -158,8 +171,10 @@ class CollectionPage extends HBoxContainer:
 		_head.text = "Archive : " + cat_name
 		_rate.text = "Taux : %.1f %%  (%d / %d)" % [100.0 * r.x / maxf(r.y, 1.0), int(r.x), int(r.y)]
 		var q := _search.text.strip_edges().to_lower()
+		var origin := _origin.selected
 		var list := Archive.entries(_cat).filter(func(e):
-			return (not _owned_only.button_pressed or Profile.archive.has(Archive.key_of(e))) and (q == "" or String(e.name).to_lower().contains(q)))
+			return (not _owned_only.button_pressed or Archive.owned(e)) and (q == "" or String(e.name).to_lower().contains(q)) \
+				and (origin <= 0 or bool(e.get("mall", false)) == (origin == 2)))
 		if _reverse.button_pressed:
 			list.reverse()
 		var pages := maxi(1, ceili(float(list.size()) / PER_PAGE))
@@ -173,6 +188,19 @@ class CollectionPage extends HBoxContainer:
 	func _cell(e: Dictionary) -> Control:
 		var k := Archive.key_of(e)
 		var s := ItemWidgets.ItemSlot.new(58.0)
+		if Archive.is_collection(e):
+			var got := Archive.owned(e)
+			s.set_item(ArchivePages.treasure_item(e))
+			s.dim = not got
+			s.badge = "✔" if got else ""
+			s.card_text = Archive.collection_text(e) + "\n\n%s\n[color=#9a98a8]%s[/color]" % [
+				"[color=#7fe08a]Obtenu[/color]" if got else "[color=#ff9a7a]Pas encore obtenu[/color]", Archive.source_text(e)]
+			s.pressed.connect(func():
+				_selected_entry = e
+				_selected_item = {}
+				_armed = false
+				_refresh_action())
+			return s
 		var owned := Profile.archive.has(k)
 		var item: Dictionary = Profile.archive[k] if owned else ArchivePages.demo_item(e)
 		s.set_item(item)
@@ -191,7 +219,7 @@ class CollectionPage extends HBoxContainer:
 	func _refresh_list() -> void:
 		var lines: PackedStringArray = []
 		lines.append("[b]Score total de l'archive : %d[/b]" % Archive.score())
-		lines.append("Entrées : [b]%d[/b] / %d" % [Archive.count(), Archive.total()])
+		lines.append("Entrées : [b]%d[/b] / %d   (équipement : %d / %d)" % [Archive.count_all(), Archive.total(), Archive.count(), Archive.total_gear()])
 		var groups := {}
 		for c in Archive.categories():
 			var r := Archive.rate(String(c.id))
@@ -207,7 +235,7 @@ class CollectionPage extends HBoxContainer:
 		var n := Archive.count()
 		for m in Archive.MILESTONES:
 			var ok := n >= int(m[0])
-			lines.append("[color=%s]%s %d entrées : %s[/color]" % ["#7fe08a" if ok else "#8a86a0", "✔" if ok else "○", int(m[0]), Archive.bonus_text(m[1])])
+			lines.append("[color=%s]%s %d équipements : %s[/color]" % ["#7fe08a" if ok else "#8a86a0", "✔" if ok else "○", int(m[0]), Archive.bonus_text(m[1])])
 		_list_text.text = "\n".join(lines)
 
 	func _refresh_action() -> void:
@@ -218,6 +246,13 @@ class CollectionPage extends HBoxContainer:
 				("[color=#ff9a7a]%s[/color]" % why) if why != "" else "[color=#7fe08a]Archiver : %s[/color]" % Archive.bonus_text(Archive.entry_bonus(Archive.keys_for(_selected_item)[0]))]
 			_btn.text = "Confirmer : l'objet rejoint l'archive" if _armed else "Archiver"
 			_btn.disabled = why != ""
+			return
+		if not _selected_entry.is_empty() and Archive.is_collection(_selected_entry):
+			var got := Archive.owned(_selected_entry)
+			var where := "onglet Tenues" if _selected_entry.has("aura") or int(_selected_entry.cat) <= 3 else ("onglet Apparences d'armes" if _selected_entry.has("skin") else "")
+			_detail.text = "[b]%s[/b] — %s%s" % [_selected_entry.name, "[color=#7fe08a]obtenu[/color]" if got else Archive.source_text(_selected_entry),
+				(" · se porte dans l'%s." % where) if got and where != "" else ""]
+			_btn.text = "Archiver"
 			return
 		if not _selected_entry.is_empty():
 			var k := Archive.key_of(_selected_entry)
@@ -250,6 +285,12 @@ class CollectionPage extends HBoxContainer:
 			Archive.withdraw(Archive.key_of(_selected_entry))
 			_selected_entry = {}
 			refresh()
+
+
+## Case d'un trésor de collection (icône et rareté d'Eden, sans stats).
+static func treasure_item(x: Dictionary) -> Dictionary:
+	return {"uid": "c%d" % int(x.id), "name": String(x.name), "icon": String(x.icon), "rarity": clampi(int(x.get("rarity", 0)), 0, 5),
+		"slot": "trophy", "level": 0, "quality": 1.0, "upgrade": 0, "affixes": {}}
 
 
 ## Objet de démonstration (toujours le même) pour une entrée d'Eden.
@@ -352,19 +393,30 @@ class SkinsPage extends HBoxContainer:
 
 
 # --- encyclopédie : tous les objets d'Eden + mode dev ----------------------------------------
-## Tous les équipements d'Eden (data/eden_items.json) et les cosmétiques, filtrables ;
-## le mode dev ajoute n'importe quel objet au coffre (ou au sac pendant une run), règle
-## l'or et les matériaux de départ, la réserve de fournitures, la maîtrise et les déblocages.
+## Tous les équipements d'Eden (data/eden_catalog.json), les trésors de collection et les
+## cosmétiques, filtrables (catégorie, type d'armure, rareté, niveaux, sets, archive, tri),
+## par pièce ou regroupés par set et niveau ; le mode dev ajoute n'importe quel objet au
+## coffre (ou au sac pendant une run), règle l'or et les matériaux de départ, la réserve de
+## fournitures, la maîtrise et les déblocages.
 class EncyclopediaPage extends HBoxContainer:
 	const PER_PAGE := 128
+	const GROUPS_PER_PAGE := 24
 	var _cat: OptionButton
+	var _armor: OptionButton
 	var _rar: OptionButton
+	var _view: OptionButton
+	var _sort: OptionButton
+	var _lvl_min: SpinBox
+	var _lvl_max: SpinBox
+	var _sets_only: CheckBox
+	var _arch_only: CheckBox
 	var _search: LineEdit
 	var _count: Label
 	var _page_lbl: Label
-	var _grid: GridContainer
+	var _body: VBoxContainer
 	var _page := 0
 	var _list: Array = []
+	var _groups: Array = []  # [{title, items}]
 	var _cats: Array = []  # [libellé, clé]
 	var _selected: Dictionary = {}  # entrée d'Eden choisie
 	var _preview: Dictionary = {}
@@ -389,45 +441,84 @@ class EncyclopediaPage extends HBoxContainer:
 		_cats = [["Tout l'équipement", ""], ["Armes (toutes)", "weapon"]]
 		for wt in GameData.weapon_types:
 			_cats.append(["  " + String(GameData.weapon_types[wt].name), "w:" + String(wt)])
-		for s in Items.ARMOR + Items.ACCESSORIES:
-			_cats.append([String(Items.SLOT_NAMES[s]), "s:" + String(s)])
-		_cats.append(["Cosmétiques (tenues)", "cosmetic"])
+		_cats.append(["  Boucliers", "s:shield"])
+		for k in Archive.ARMOR_CLASS_FR:
+			_cats.append([String(Archive.ARMOR_CLASS_FR[k]) + " (toutes pièces)", "a:" + String(k)])
+		for sl in Items.ARMOR + Items.ACCESSORIES:
+			_cats.append([String(Items.SLOT_NAMES[sl]), "s:" + String(sl)])
+		for c in Archive.COLLECTION_CATS:
+			_cats.append(["Trésors : %s (%s)" % [String(c[1]).to_lower(), String(c[2]).to_lower()], "c:%d" % int(c[0])])
+		_cats.append(["Cosmétiques portables", "cosmetic"])
 		for c in _cats:
 			_cat.add_item(String(c[0]))
-		_cat.item_selected.connect(func(_i): _apply_filters())
+		_cat.item_selected.connect(func(_i):
+			# armures : regroupées par set et niveau par défaut
+			_view.select(1 if _key().begins_with("a:") else _view.selected)
+			_apply_filters())
 		filters.add_child(_cat)
+		_cat.fit_to_longest_item = false
+		_cat.clip_text = true
+		_cat.custom_minimum_size = Vector2(250, 0)
+		_armor = _option(filters, ["Toute armure", "Plates", "Cuir", "Tissu"])
+		_armor.custom_minimum_size = Vector2(130, 0)
 		_rar = OptionButton.new()
 		_rar.add_item("Toutes raretés")
 		for r in Items.RARITIES:
 			_rar.add_item(String(r.name))
 		_rar.item_selected.connect(func(_i): _apply_filters())
+		_rar.fit_to_longest_item = false
+		_rar.custom_minimum_size = Vector2(130, 0)
 		filters.add_child(_rar)
 		_search = LineEdit.new()
 		_search.placeholder_text = "Rechercher un nom…"
-		_search.custom_minimum_size = Vector2(240, 0)
+		_search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_search.text_changed.connect(func(_t): _apply_filters())
 		filters.add_child(_search)
+		var f2 := HBoxContainer.new()
+		f2.add_theme_constant_override("separation", 8)
+		left.add_child(f2)
+		_view = _option(f2, ["Par pièce", "Par set et niveau"])
+		_view.custom_minimum_size = Vector2(170, 0)
+		_sort = _option(f2, ["Niveau ↑", "Niveau ↓", "Rareté", "Nom"])
+		_sort.custom_minimum_size = Vector2(110, 0)
+		Hud._label(f2, "Niveaux", 14, UiTheme.TEXT).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_lvl_min = _spin(f2, 1)
+		Hud._label(f2, "à", 14, UiTheme.TEXT).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_lvl_max = _spin(f2, 100)
+		_sets_only = CheckBox.new()
+		_sets_only.text = "Sets"
+		_sets_only.focus_mode = Control.FOCUS_NONE
+		_sets_only.toggled.connect(func(_on): _apply_filters())
+		f2.add_child(_sets_only)
+		_arch_only = CheckBox.new()
+		_arch_only.text = "Archive"
+		_arch_only.tooltip_text = "Seulement les objets de l'archive d'Eden"
+		_arch_only.focus_mode = Control.FOCUS_NONE
+		_arch_only.toggled.connect(func(_on): _apply_filters())
+		f2.add_child(_arch_only)
+		var sp := Control.new()
+		sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		f2.add_child(sp)
 		var prev := Button.new()
 		prev.text = "◀"
 		prev.focus_mode = Control.FOCUS_NONE
 		prev.pressed.connect(func(): _goto(_page - 1))
-		filters.add_child(prev)
-		_page_lbl = Hud._label(filters, "", 14, UiTheme.TEXT)
+		f2.add_child(prev)
+		_page_lbl = Hud._label(f2, "", 14, UiTheme.TEXT)
 		_page_lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var nxt := Button.new()
 		nxt.text = "▶"
 		nxt.focus_mode = Control.FOCUS_NONE
 		nxt.pressed.connect(func(): _goto(_page + 1))
-		filters.add_child(nxt)
+		f2.add_child(nxt)
 		var scroll := ScrollContainer.new()
 		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		left.add_child(scroll)
-		_grid = GridContainer.new()
-		_grid.columns = 16
-		_grid.add_theme_constant_override("h_separation", 6)
-		_grid.add_theme_constant_override("v_separation", 6)
-		scroll.add_child(_grid)
+		_body = VBoxContainer.new()
+		_body.add_theme_constant_override("separation", 6)
+		_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll.add_child(_body)
 
 		var right := ItemWidgets.panel(self, 460)
 		ItemWidgets.section(right, "Fiche")
@@ -452,6 +543,27 @@ class EncyclopediaPage extends HBoxContainer:
 		dscroll.add_child(_dev_box)
 		_msg = Hud._label(right, "", 13, UiTheme.BUFF)
 
+	func _option(parent: Control, labels: Array) -> OptionButton:
+		var o := OptionButton.new()
+		o.fit_to_longest_item = false
+		o.clip_text = true
+		for t in labels:
+			o.add_item(String(t))
+		o.focus_mode = Control.FOCUS_NONE
+		o.item_selected.connect(func(_i): _apply_filters())
+		parent.add_child(o)
+		return o
+
+	func _spin(parent: Control, v: int) -> SpinBox:
+		var s := SpinBox.new()
+		s.min_value = 1
+		s.max_value = 100
+		s.value = v
+		s.custom_minimum_size = Vector2(64, 0)
+		s.value_changed.connect(func(_v): _apply_filters())
+		parent.add_child(s)
+		return s
+
 	func refresh() -> void:
 		if not is_inside_tree():
 			return
@@ -459,38 +571,121 @@ class EncyclopediaPage extends HBoxContainer:
 		_apply_filters()
 		_build_dev()
 
+	func _key() -> String:
+		return String(_cats[_cat.selected][1]) if _cat.selected >= 0 else ""
+
 	func _source() -> Array:
-		var key := String(_cats[_cat.selected][1]) if _cat.selected >= 0 else ""
+		var key := _key()
 		if key == "cosmetic":
 			return GameData.cosmetics
+		if key.begins_with("c:"):
+			return Archive.entries(key)
 		if key == "":
 			return GameData.eden_items
 		if key == "weapon":
 			return GameData.eden_items.filter(func(e): return e.slot == "weapon")
+		if key.begins_with("a:"):
+			return GameData.eden_items.filter(func(e): return String(e.get("armor", "")) == key.substr(2))
 		return GameData.eden_by_slot.get(key.substr(2), [])
 
 	func _apply_filters() -> void:
 		var r := _rar.selected - 1
 		var q := _search.text.strip_edges().to_lower()
+		var armor: String = ["", "plates", "cuir", "tissu"][maxi(_armor.selected, 0)]
+		var lo := int(_lvl_min.value)
+		var hi := int(_lvl_max.value)
+		var sets := _sets_only.button_pressed
+		var arch := _arch_only.button_pressed
 		_list = _source().filter(func(e):
-			return (r < 0 or int(e.get("rarity", 0)) == r) and (q == "" or String(e.name).to_lower().contains(q)))
-		_count.text = "%d objets  (%d équipements et %d cosmétiques d'Eden)" % [_list.size(), GameData.eden_items.size(), GameData.cosmetics.size()]
+			var lv := int(e.get("level", 0))
+			return (r < 0 or int(e.get("rarity", 0)) == r) and (q == "" or String(e.name).to_lower().contains(q)) \
+				and (armor == "" or not e.has("slot") or String(e.get("armor", armor)) == armor) \
+				and (not e.has("level") or (lv >= lo and lv <= hi)) \
+				and (not sets or e.has("set")) and (not arch or e.has("arch") or e.has("cat")))
+		match _sort.selected:
+			1:
+				_list.sort_custom(func(a, b): return int(a.get("level", 0)) > int(b.get("level", 0)))
+			2:
+				_list.sort_custom(func(a, b): return [int(b.get("rarity", 0)), int(a.get("level", 0))] < [int(a.get("rarity", 0)), int(b.get("level", 0))])
+			3:
+				_list.sort_custom(func(a, b): return String(a.name) < String(b.name))
+			_:
+				_list.sort_custom(func(a, b): return [int(a.get("level", 0)), int(a.get("rarity", 0))] < [int(b.get("level", 0)), int(b.get("rarity", 0))])
+		_groups = _make_groups(_list) if _view.selected == 1 else []
+		_count.text = "%d entrées  (%d équipements, %d trésors de collection, %d cosmétiques d'Eden)" % [
+			_list.size(), GameData.eden_items.size(), GameData.collection.size(), GameData.cosmetics.size()]
 		_goto(0)
 
+	## Regroupement par set (pièces d'un même set d'Eden), sinon par niveau et nom commun
+	## (« Highland Supreme Helmet / Chestplate… » : même ensemble de ce niveau).
+	func _make_groups(list: Array) -> Array:
+		var by := {}
+		var order: Array = []
+		for e in list:
+			var k := String(e.get("set", ""))
+			if k == "":
+				var words := String(e.name).split(" ")
+				var prefix := " ".join(words.slice(0, words.size() - 1)) if words.size() > 1 and e.has("slot") else String(e.name)
+				k = "L%03d|%s" % [int(e.get("level", 0)), prefix]
+			if not by.has(k):
+				by[k] = []
+				order.append(k)
+			by[k].append(e)
+		var out: Array = []
+		for k in order:
+			var items: Array = by[k]
+			var lv := int(items[0].get("level", 0))
+			var rar := String(Items.RARITIES[clampi(int(items[0].get("rarity", 0)), 0, 5)].name)
+			var title := ""
+			if String(k).begins_with("e"):
+				var sd := Items.set_def(String(k))
+				title = "Niv. %d · Set « %s » · %s · %d / %d pièces" % [lv, String(sd.get("name", "?")), rar, items.size(), (sd.get("pieces", []) as Array).size()]
+			else:
+				var rars: PackedStringArray = []
+				for it in items:
+					var rn := String(Items.RARITIES[clampi(int(it.get("rarity", 0)), 0, 5)].name)
+					if not rn in rars:
+						rars.append(rn)
+				var prefix := String(k).get_slice("|", 1)
+				title = ("Niv. %d · « %s » · %s (%d)" % [lv, prefix, ", ".join(rars), items.size()]) if lv > 0 else "%s (%d)" % [prefix, items.size()]
+			out.append({"title": title, "items": items})
+		return out
+
 	func _goto(p: int) -> void:
-		var pages := maxi(1, ceili(float(_list.size()) / PER_PAGE))
-		_page = clampi(p, 0, pages - 1)
-		_page_lbl.text = "page %d / %d" % [_page + 1, pages]
-		for c in _grid.get_children():
+		for c in _body.get_children():
 			c.queue_free()
+		if _view.selected == 1:
+			var pages := maxi(1, ceili(float(_groups.size()) / GROUPS_PER_PAGE))
+			_page = clampi(p, 0, pages - 1)
+			_page_lbl.text = "page %d / %d" % [_page + 1, pages]
+			for g in _groups.slice(_page * GROUPS_PER_PAGE, (_page + 1) * GROUPS_PER_PAGE):
+				var t := Hud._label(_body, String(g.title), 14, UiTheme.GOLD)
+				t.add_theme_font_override("font", UiTheme.bold_font())
+				var row := HFlowContainer.new()
+				row.add_theme_constant_override("h_separation", 6)
+				row.add_theme_constant_override("v_separation", 6)
+				_body.add_child(row)
+				for e in g.items:
+					row.add_child(_cell(e))
+			return
+		var pages2 := maxi(1, ceili(float(_list.size()) / PER_PAGE))
+		_page = clampi(p, 0, pages2 - 1)
+		_page_lbl.text = "page %d / %d" % [_page + 1, pages2]
+		var grid := GridContainer.new()
+		grid.columns = 16
+		grid.add_theme_constant_override("h_separation", 6)
+		grid.add_theme_constant_override("v_separation", 6)
+		_body.add_child(grid)
 		for e in _list.slice(_page * PER_PAGE, (_page + 1) * PER_PAGE):
-			_grid.add_child(_cell(e))
+			grid.add_child(_cell(e))
 
 	## Objet de démonstration (toujours le même pour une entrée) pour la carte au survol.
 	func _demo(e: Dictionary) -> Dictionary:
 		if e.has("outfit"):
 			return {"uid": "cos_%s" % e.id, "name": e.name, "icon": e.get("icon", ""), "rarity": int(e.get("rarity", 3)),
-				"slot": "chest", "level": 1, "quality": 1.0, "upgrade": 0, "affixes": {}}
+				"slot": "chest", "level": 0, "quality": 1.0, "upgrade": 0, "affixes": {}}
+		if Archive.is_collection(e):
+			return ArchivePages.treasure_item(e)
 		seed(int(e.id))
 		var it := Items.from_eden(e)
 		randomize()
@@ -500,10 +695,15 @@ class EncyclopediaPage extends HBoxContainer:
 		var s := ItemWidgets.ItemSlot.new(58.0)
 		var demo := _demo(e)
 		s.set_item(demo)
-		s.badge = ("Nv %d" % int(e.get("level", 1))) if not e.has("outfit") else "skin"
-		var info := "\n\n[color=#9a98a8]Eden : %s · niveau %d%s[/color]" % [e.name, int(e.get("level", 1)),
-			(" · " + String(e.cn)) if String(e.get("cn", "")) != "" else ""]
-		s.card_extra = func(_it): return info
+		if Archive.is_collection(e):
+			s.card_text = Archive.collection_text(e) + "\n\n[color=#9a98a8]%s[/color]" % ("Obtenu" if Profile.collected(e) else Archive.source_text(e))
+			s.dim = not Profile.collected(e)
+		elif e.has("outfit"):
+			s.badge = "skin"
+		else:
+			s.badge = "Nv %d" % int(e.get("level", 1))
+			var info := "\n\n[color=#9a98a8]%s[/color]" % Archive.source_text(e)
+			s.card_extra = func(_it): return info
 		s.pressed.connect(func():
 			_selected = e
 			_preview = demo
@@ -522,10 +722,13 @@ class EncyclopediaPage extends HBoxContainer:
 			return
 		var e := _selected
 		if e.has("outfit"):
-			_detail.text = "[b]%s[/b]\n[color=#c8c8d4]Cosmétique d'Eden : tenue utilisable comme skin de n'importe quelle classe (onglet Apparences).[/color]%s" % [
+			_detail.text = "[b]%s[/b]\n[color=#c8c8d4]Cosmétique d'Eden : se porte avec n'importe quelle classe (onglet Tenues).[/color]%s" % [
 				e.name, "\n[color=#7fe08a]Débloquée[/color]" if Profile.outfit_unlocked(String(e.id)) else ""]
 			return
-		_detail.text = Items.describe(_preview) + "\n\n[color=#9a98a8]Objet d'Eden n° %d · niveau requis dans Eden : %d[/color]" % [int(e.id), int(e.level)]
+		if Archive.is_collection(e):
+			_detail.text = Archive.collection_text(e) + "\n\n" + ("[color=#7fe08a]Obtenu[/color]" if Profile.collected(e) else "[color=#9a98a8]%s[/color]" % Archive.source_text(e))
+			return
+		_detail.text = Items.describe(_preview) + "\n\n[color=#9a98a8]Objet d'Eden n° %d · %s[/color]" % [int(e.id), Archive.source_text(e)]
 
 	func _give(e: Dictionary, n := 1) -> void:
 		var added := 0
@@ -534,10 +737,14 @@ class EncyclopediaPage extends HBoxContainer:
 				Profile.unlock_outfit(String(e.id))
 				added = 1
 				break
+			if Archive.is_collection(e):
+				Profile.collect(e)
+				added = 1
+				break
 			if Profile.add_item(Items.from_eden(e)):
 				added += 1
 		Profile.save_profile()
-		_msg.text = ("%s × %d ajouté %s." % [e.name, added, "au sac" if Profile.in_run else "au coffre"]) if added > 0 else "Plus de place !"
+		_msg.text = ("%s × %d ajouté %s." % [e.name, added, "à la collection" if Archive.is_collection(e) else ("au sac" if Profile.in_run else "au coffre")]) if added > 0 else "Plus de place !"
 		_show_detail()
 
 	func _build_dev() -> void:
@@ -649,13 +856,22 @@ class EncyclopediaPage extends HBoxContainer:
 			Profile.save_profile()
 			_msg.text = "%d tenues débloquées." % GameData.cosmetics.size())
 		_dev_box.add_child(all_o)
+		var all_t := Button.new()
+		all_t.text = "Obtenir tous les trésors de collection (auras, apparences…)"
+		all_t.focus_mode = Control.FOCUS_NONE
+		all_t.pressed.connect(func():
+			for x in GameData.collection:
+				Profile.collect(x)
+			Profile.save_profile()
+			_msg.text = "%d trésors obtenus." % GameData.collection.size())
+		_dev_box.add_child(all_t)
 
 
 # --- tenues (skins cosmétiques) ------------------------------------------------------------
 ## Costumes d'Eden débloqués (butin des boss, mode dev) : n'importe quelle classe peut
 ## porter n'importe quelle tenue ; « Tenue de la classe » revient à l'apparence d'origine.
 class CostumesPage extends HBoxContainer:
-	const CATS := [["body", "Tenues"], ["head", "Tête et visage"], ["back", "Ailes et dos"]]
+	const CATS := [["body", "Tenues"], ["head", "Tête et visage"], ["back", "Ailes et dos"], ["aura", "Auras"]]
 	var _cat := "body"
 	var _cat_buttons := {}
 	var _grid: GridContainer
@@ -691,7 +907,7 @@ class CostumesPage extends HBoxContainer:
 				refresh())
 			tabs.add_child(b)
 			_cat_buttons[id] = b
-		Hud._label(left, "Les cosmétiques d'Eden se débloquent sur les boss (1 chance sur 4, plus s'ils sont enragés) ou en mode dev. Ils se portent avec n'importe quelle classe.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		Hud._label(left, "Les cosmétiques d'Eden (trésors de collection de l'archive) se débloquent sur les boss (1 chance sur 4, plus s'ils sont enragés) ou en mode dev. Ils se portent avec n'importe quelle classe. Auras : une pierre étoilée et une pierre de lune à la fois, effet lumineux autour du héros et bonus en run.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		var scroll := ScrollContainer.new()
 		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -728,6 +944,16 @@ class CostumesPage extends HBoxContainer:
 		for c in _grid.get_children():
 			c.queue_free()
 		var cid := Profile.selected_class
+		if _cat == "aura":
+			var got := GameData.auras.filter(func(x): return Profile.collected(x))
+			_count.text = "%d / %d auras obtenues" % [got.size(), GameData.auras.size()]
+			for kind in ["star", "luna", "other"]:
+				_grid.add_child(_aura_cell({}, cid, kind))
+			for x in GameData.auras:
+				_grid.add_child(_aura_cell(x, cid, String(x.aura.kind)))
+			_preview.show_hero(cid, Profile.weapon_code())
+			_info.text = _worn_text(cid)
+			return
 		var list := GameData.cosmetics.filter(func(c): return cat_of(c) == _cat)
 		var owned := list.filter(func(c): return Profile.outfit_unlocked(String(c.id)))
 		var all_owned := GameData.cosmetics.filter(func(c): return Profile.outfit_unlocked(String(c.id))).size()
@@ -744,7 +970,48 @@ class CostumesPage extends HBoxContainer:
 				if String(c.outfit) == path and path != "":
 					name = String(c.name)
 			lines.append("%s : [b]%s[/b]" % [k[1], name])
-		_info.text = "[b]%s[/b]\n%s" % [GameData.class_data(cid).get("name_fr", cid), "\n".join(lines)]
+		_info.text = "[b]%s[/b]\n%s\n%s" % [GameData.class_data(cid).get("name_fr", cid), "\n".join(lines), _worn_text(cid, false)]
+
+	## Auras portées et leur bonus.
+	func _worn_text(cid: String, title := true) -> String:
+		var auras := Profile.worn_auras(cid)
+		var names := auras.map(func(x): return String(x.name))
+		var b := Profile.aura_stats(cid)
+		var parts: PackedStringArray = []
+		for s in b:
+			parts.append(Items.stat_text(s, b[s]))
+		return "%sAuras : [b]%s[/b]%s" % ["[b]%s[/b]\n" % GameData.class_data(cid).get("name_fr", cid) if title else "",
+			", ".join(names) if not names.is_empty() else "aucune", ("\n[color=#7fe08a]%s en run[/color]" % ", ".join(parts)) if not parts.is_empty() else ""]
+
+	## Case d'aura ([param x] vide : retirer l'aura de ce type).
+	func _aura_cell(x: Dictionary, cid: String, kind: String) -> Control:
+		var ok := x.is_empty() or Profile.collected(x)
+		var cur := int(Profile.worn.get(cid, {}).get("aura_" + kind, 0))
+		var on := (cur == 0) if x.is_empty() else (cur == int(x.id))
+		var b := ItemWidgets.TipButton.new()
+		b.custom_minimum_size = Vector2(110, 96)
+		b.focus_mode = Control.FOCUS_NONE
+		b.clip_text = true
+		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.add_theme_constant_override("icon_max_width", 48)
+		b.add_theme_font_size_override("font_size", 11)
+		b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.08, 0.06, 0.13, 0.95), UiTheme.GOLD if on else (UiTheme.GOLD_DIM if ok else Color(0.25, 0.23, 0.3)), 3 if on else 2, 8))
+		if x.is_empty():
+			b.text = "Aucune " + String(Archive.AURA_KINDS.get(kind, "aura"))
+		else:
+			b.text = String(x.name) if ok else "🔒 " + String(x.name)
+			b.icon = UiTheme.texture(String(x.icon))
+			b.tip = Archive.collection_text(x) + ("" if ok else "\n[color=#ff9a7a]Verrouillée : trésor de collection des boss[/color]")
+			if not ok:
+				b.modulate = Color(0.6, 0.6, 0.65)
+		b.pressed.connect(func():
+			if not ok:
+				return
+			Profile.set_aura(cid, kind, 0 if x.is_empty() or on else int(x.id))
+			Profile.save_profile()
+			refresh())
+		return b
 
 	func _cell(c: Dictionary, cid: String) -> Control:
 		var ok := c.is_empty() or Profile.outfit_unlocked(String(c.id))
