@@ -6,6 +6,9 @@ extends CanvasLayer
 ## - à droite : le détail de ce qu'on a cliqué (compétence et ses rangs, combo de l'arme
 ##   coup par coup, passif).
 ## S'ouvre depuis la page Classe du héros et le menu pause (classe de la run en cours).
+## En bas : presets de sorts (SpellPresets) : charger un preset enregistré, ou en créer un en
+## faisant glisser les sorts de la liste dans un tableau 4 × 3 (les 4 cases, chacune avec son
+## sort principal et ses 2 enchaînements). Le preset actif range les sorts en run.
 
 const LEFT_W := 330.0
 const RIGHT_W := 430.0
@@ -25,6 +28,16 @@ var _rank_bar: HBoxContainer
 var _selected := {}  # {kind: "skill" | "weapon" | "passive", data}
 var _rank := 1
 var _buttons: Array = []  # [Button, sélection] pour l'état enfoncé
+var _preset_label: Label
+var _preset_msg: Label
+var _editor: VBoxContainer
+var _cells: Array = []  # [case][rang] -> Button
+var _edit_cols: Array = []  # ids en cours d'édition (0 : vide)
+var _name_edit: LineEdit
+var _cert_title: Control
+var _mscroll: ScrollContainer
+var _skill_hint: Control
+const ROW_NAMES := ["Sort principal", "Enchaînement 1", "Enchaînement 2"]
 
 
 func _ready() -> void:
@@ -108,6 +121,7 @@ func _ready() -> void:
 
 	# --- centre : compétences puis passifs ---
 	var mscroll := ScrollContainer.new()
+	_mscroll = mscroll
 	mscroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mscroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	body.add_child(mscroll)
@@ -116,7 +130,8 @@ func _ready() -> void:
 	mid.add_theme_constant_override("separation", 8)
 	mscroll.add_child(mid)
 	_section(mid, "Compétences de la classe")
-	Hud._label(mid, "À débloquer avec les cartes de niveau (4 par run) ; certaines demandent un niveau de maîtrise.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_skill_hint = Hud._label(mid, "À débloquer avec les cartes de niveau (4 par run) ; certaines demandent un niveau de maîtrise.", 13, UiTheme.MUTED)
+	(_skill_hint as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_skills_grid = GridContainer.new()
 	_skills_grid.columns = 2
 	_skills_grid.add_theme_constant_override("h_separation", 8)
@@ -126,11 +141,13 @@ func _ready() -> void:
 	gap.custom_minimum_size = Vector2(0, 6)
 	mid.add_child(gap)
 	_section(mid, "Certificats de la classe (à poser avant la run, ou à trouver en run)")
+	_cert_title = mid.get_child(mid.get_child_count() - 1)
 	_passives_grid = GridContainer.new()
 	_passives_grid.columns = 3
 	_passives_grid.add_theme_constant_override("h_separation", 8)
 	_passives_grid.add_theme_constant_override("v_separation", 6)
 	mid.add_child(_passives_grid)
+	_build_presets(mid)
 
 	# --- droite : détail de la sélection ---
 	var right := PanelContainer.new()
@@ -153,6 +170,13 @@ func open(class_id := "") -> void:
 	_selected = {}
 	_root.visible = true
 	_refresh()
+	if "--preset-editor" in OS.get_cmdline_user_args():
+		# test : l'éditeur de preset ouvert avec quelques sorts posés
+		_open_editor()
+		var sk: Array = GameData.class_data(_class_id).get("skills", [])
+		for i in mini(sk.size(), 7):
+			_edit_cols[i % 4][i / 4] = int(sk[i].id)
+		_refresh_cells()
 
 
 func close_ui() -> void:
@@ -228,6 +252,8 @@ func _refresh() -> void:
 		if locked:
 			label += "   🔒 maîtrise %d" % need
 		var b := _entry(_skills_grid, String(s.get("icon", "")), label, {"kind": "skill", "data": s})
+		var sd: Dictionary = s
+		b.set_drag_forwarding(func(_at): return _drag_spell(b, sd, Vector2i(-1, -1)), Callable(), Callable())
 		if locked:
 			b.modulate = Color(0.7, 0.7, 0.75)
 		b.tooltip_text = String(s.name) + ("  ·  sort de base" if need <= 1 else "  ·  débloqué au niveau %d de maîtrise de la classe" % need)
@@ -240,6 +266,8 @@ func _refresh() -> void:
 			label += "  ×%d" % int(p.max)
 		var b := _entry(_passives_grid, String(p.get("icon", Boons.ICONS.get(p.get("id", ""), ""))), label, {"kind": "passive", "data": p}, 44.0)
 		b.tooltip_text = label
+	_refresh_presets()
+	_set_compact(false)
 	if _selected.is_empty():
 		_selected = {"kind": "skill", "data": skills[0]} if not skills.is_empty() else weapon_sel
 		if _selected.kind == "skill":
@@ -325,6 +353,236 @@ func _atk(dmg_type := "") -> float:
 		return p.matk if dmg_type == "mag" else p.atk
 	var base: Dictionary = cls.get("base", {})
 	return GameData.player_atk(1) * float(base.get("matk" if dmg_type == "mag" else "atk", 0.5 if dmg_type == "mag" else 1.0))
+
+
+# --- presets de sorts ------------------------------------------------------------------------
+func _build_presets(parent: Control) -> void:
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(0, 6)
+	parent.add_child(gap)
+	_section(parent, "Presets de sorts (ordre des cases et des enchaînements)")
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	parent.add_child(row)
+	var load_b := _small_button(row, "Charger un preset ▾", 220)
+	load_b.pressed.connect(func(): _load_menu(load_b))
+	_small_button(row, "Créer un preset", 200).pressed.connect(_open_editor)
+	_preset_label = Hud._label(row, "", 14, UiTheme.MUTED)
+	_preset_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_preset_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_preset_msg = Hud._label(parent, "", 14, UiTheme.BUFF)
+	_editor = VBoxContainer.new()
+	_editor.add_theme_constant_override("separation", 6)
+	_editor.visible = false
+	parent.add_child(_editor)
+	Hud._label(_editor, "Fais glisser les sorts de la liste ci-dessus dans les cases (ou d'une case à l'autre pour les échanger) ; un clic vide une case. Colonne = case de la barre de sorts (touche 1 à 4) : son sort principal, puis les 2 sorts qu'elle enchaîne.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var grid := GridContainer.new()
+	grid.columns = 1 + SpellPresets.COLS
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 6)
+	_editor.add_child(grid)
+	grid.add_child(Control.new())
+	for c in SpellPresets.COLS:
+		var h := Hud._label(grid, "Case %d" % (c + 1), 15, UiTheme.GOLD)
+		h.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_cells = []
+	for c in SpellPresets.COLS:
+		_cells.append([])
+	for r in SpellPresets.ROWS:
+		var rl := Hud._label(grid, String(ROW_NAMES[r]), 13, UiTheme.TEXT)
+		rl.custom_minimum_size = Vector2(110, 0)
+		rl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		for c in SpellPresets.COLS:
+			var cell := Button.new()
+			cell.custom_minimum_size = Vector2(0, 50)
+			cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			cell.focus_mode = Control.FOCUS_NONE
+			cell.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			cell.clip_text = true
+			cell.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			cell.expand_icon = false
+			cell.add_theme_constant_override("icon_max_width", 38)
+			var at := Vector2i(c, r)
+			cell.pressed.connect(func():
+				_edit_cols[at.x][at.y] = 0
+				_refresh_cells())
+			cell.set_drag_forwarding(func(_p): return _drag_spell(cell, _spell_at(at), at) if int(_edit_cols[at.x][at.y]) != 0 else null,
+				func(_p, d): return d is Dictionary and d.has("spell"),
+				func(_p, d): _drop_spell(at, d))
+			grid.add_child(cell)
+			_cells[c].append(cell)
+	var bar := HBoxContainer.new()
+	bar.add_theme_constant_override("separation", 8)
+	_editor.add_child(bar)
+	Hud._label(bar, "Nom", 14, UiTheme.TEXT)
+	_name_edit = LineEdit.new()
+	_name_edit.custom_minimum_size = Vector2(240, 0)
+	_name_edit.placeholder_text = "Nom du preset"
+	bar.add_child(_name_edit)
+	_small_button(bar, "Enregistrer le preset", 200).pressed.connect(_save_editor)
+	_small_button(bar, "Vider", 90).pressed.connect(func():
+		_edit_cols = SpellPresets.empty_cols()
+		_refresh_cells())
+	_small_button(bar, "Annuler", 100).pressed.connect(func():
+		_editor.visible = false
+		_set_compact(false))
+
+
+func _small_button(parent: Control, text: String, width: float) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(width, 40)
+	parent.add_child(b)
+	return b
+
+
+func _refresh_presets() -> void:
+	if _preset_label == null:
+		return
+	var p := SpellPresets.active(_class_id)
+	var n := SpellPresets.list(_class_id).size()
+	_preset_label.text = ("Preset actif : %s" % p.name if not p.is_empty() else "Aucun preset actif : les sorts se rangent dans l'ordre où on les obtient") + "  ·  %d enregistré(s)" % n
+	_editor.visible = false
+
+
+func _spell_at(at: Vector2i) -> Dictionary:
+	var id := int(_edit_cols[at.x][at.y])
+	for s in GameData.class_data(_class_id).get("skills", []):
+		if int(s.id) == id:
+			return s
+	return {}
+
+
+## Données glissées : le sort (et sa case d'origine s'il vient du tableau), avec son icône.
+func _drag_spell(from: Control, sk: Dictionary, at: Vector2i) -> Variant:
+	if sk.is_empty():
+		return null
+	var ic := TextureRect.new()
+	ic.texture = UiTheme.texture(String(sk.get("icon", "")))
+	ic.custom_minimum_size = Vector2(48, 48)
+	ic.size = Vector2(48, 48)
+	ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	from.set_drag_preview(ic)
+	return {"spell": int(sk.id), "from": at}
+
+
+func _drop_spell(at: Vector2i, d: Dictionary) -> void:
+	if _edit_cols.is_empty():
+		return
+	var id := int(d.spell)
+	var from: Vector2i = d.get("from", Vector2i(-1, -1))
+	if from.x >= 0:
+		# d'une case à l'autre : échange
+		_edit_cols[from.x][from.y] = int(_edit_cols[at.x][at.y])
+	else:
+		# depuis la liste : le sort quitte son ancienne case
+		for c in _edit_cols.size():
+			for r in (_edit_cols[c] as Array).size():
+				if int(_edit_cols[c][r]) == id:
+					_edit_cols[c][r] = 0
+	_edit_cols[at.x][at.y] = id
+	_refresh_cells()
+
+
+func _refresh_cells() -> void:
+	for c in SpellPresets.COLS:
+		for r in SpellPresets.ROWS:
+			var cell: Button = _cells[c][r]
+			var sk := _spell_at(Vector2i(c, r))
+			cell.icon = UiTheme.texture(String(sk.get("icon", ""))) if not sk.is_empty() else null
+			cell.text = ("  " + String(sk.name)) if not sk.is_empty() else "  —  glisse un sort ici"
+			cell.modulate = Color.WHITE if not sk.is_empty() else Color(1, 1, 1, 0.55)
+			cell.tooltip_text = (String(sk.name) + "  ·  clic : vider la case") if not sk.is_empty() else "Glisse un sort de la liste ici"
+
+
+func _open_editor() -> void:
+	var p := SpellPresets.active(_class_id)
+	_edit_cols = SpellPresets.empty_cols()
+	if not p.is_empty():
+		for c in mini((p.cols as Array).size(), SpellPresets.COLS):
+			for r in mini((p.cols[c] as Array).size(), SpellPresets.ROWS):
+				_edit_cols[c][r] = int(p.cols[c][r])
+	_name_edit.text = String(p.get("name", "Preset %d" % (SpellPresets.list(_class_id).size() + 1)))
+	_preset_msg.text = ""
+	_editor.visible = true
+	_set_compact(true)
+	_refresh_cells()
+
+
+## Éditeur ouvert : sorts en 3 colonnes plus basses, certificats masqués, pour voir la liste
+## et le tableau ensemble (on glisse sans faire défiler).
+func _set_compact(on: bool) -> void:
+	_skills_grid.columns = 3 if on else 2
+	for b in _skills_grid.get_children():
+		(b as Control).custom_minimum_size.y = 40.0 if on else 52.0
+		(b as Button).add_theme_constant_override("icon_max_width", 30 if on else 40)
+	_cert_title.visible = not on
+	_passives_grid.visible = not on
+	_skill_hint.visible = not on
+	if on and _mscroll:
+		_mscroll.set_deferred("scroll_vertical", 0)
+
+
+func _save_editor() -> void:
+	var n := 0
+	for col in _edit_cols:
+		for id in col:
+			if int(id) != 0:
+				n += 1
+	if n == 0:
+		_preset_msg.text = "Place au moins un sort avant d'enregistrer."
+		return
+	var nm := _name_edit.text.strip_edges()
+	if nm == "":
+		nm = "Preset %d" % (SpellPresets.list(_class_id).size() + 1)
+	SpellPresets.store(_class_id, nm, _edit_cols.duplicate(true))
+	_apply_preset()
+	_refresh_presets()
+	_set_compact(false)
+	_preset_msg.text = "Preset « %s » enregistré et chargé." % nm
+
+
+func _load_menu(anchor: Control) -> void:
+	var pm := PopupMenu.new()
+	var l := SpellPresets.list(_class_id)
+	var act := SpellPresets.active_index(_class_id)
+	for i in l.size():
+		pm.add_radio_check_item(String(l[i].name), i)
+		pm.set_item_checked(i, i == act)
+	pm.add_radio_check_item("Aucun (ordre d'obtention)", 1000)
+	pm.set_item_checked(pm.item_count - 1, act < 0)
+	if act >= 0:
+		pm.add_separator()
+		pm.add_item("Supprimer « %s »" % l[act].name, 2000)
+	pm.id_pressed.connect(func(id):
+		if id == 2000:
+			SpellPresets.remove(_class_id, act)
+			_refresh_presets()
+			_preset_msg.text = "Preset supprimé."
+			return
+		SpellPresets.set_active(_class_id, -1 if id == 1000 else id)
+		_apply_preset()
+		_refresh_presets()
+		_preset_msg.text = ("Preset « %s » chargé." % l[id].name) if id < 1000 else "Plus de preset : ordre d'obtention.")
+	_root.add_child(pm)
+	pm.popup_hide.connect(pm.queue_free)
+	var r := anchor.get_global_rect()
+	pm.position = Vector2i(int(r.position.x), int(r.end.y + 4))
+	pm.popup()
+
+
+## Preset chargé pendant une run de la classe : les sorts se rangent tout de suite
+## (en entraînement, tous les sorts du preset sont posés).
+func _apply_preset() -> void:
+	if not Run.active or Run.class_id != _class_id:
+		return
+	if Training.active:
+		Run.fill_from_preset()
+	else:
+		Run.arrange()
+		Run.changed.emit()
+	_refresh()
 
 
 func _owned_rank(id: int) -> int:

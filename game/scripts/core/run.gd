@@ -244,6 +244,19 @@ func chain_of(slot: int) -> Array:
 	return chains.get(slot, [])
 
 
+## Case où ira l'enchaînement [param id] : celle de sa colonne dans le preset actif, sinon
+## une case au hasard parmi [param room].
+func _chain_slot_for(id: int, room: Array) -> int:
+	var p := SpellPresets.active(class_id)
+	var at := SpellPresets.place_of(p, id) if not p.is_empty() else Vector2i(-1, -1)
+	if at.x >= 0:
+		var main := int(p.cols[at.x][0])
+		for i in skills.size():
+			if int(skills[i].id) == main and i in room:
+				return i
+	return int(room.pick_random())
+
+
 ## Retire le sort [param id] (principal : ses enchaînements partent avec lui et les cases
 ## suivantes se décalent).
 func remove_skill(id: int) -> void:
@@ -355,7 +368,7 @@ func roll_cards(n := 3, skills_only := false) -> Array:
 		if not room.is_empty():
 			for s in class_data().get("skills", []):
 				if not int(s.id) in owned and Progression.skill_unlocked(class_id, int(s.id)):
-					pool.append({"type": "chain", "id": int(s.id), "slot": int(room.pick_random()), "weight": 2.0})
+					pool.append({"type": "chain", "id": int(s.id), "slot": _chain_slot_for(int(s.id), room), "weight": 2.0})
 	if not skills_only:
 		for s in all_skills():
 			if int(s.rank) < int(Cards.rules().max_rank):
@@ -501,6 +514,89 @@ func apply_card(card: Dictionary) -> void:
 			passive_power[card.id] = before + float(card.get("mult", 1.0))
 		"trophy":
 			pick_up(card.item)  # carte de choix de trophée : le trophée va dans le sac
+	if card.type in ["skill", "chain"]:
+		arrange()
+	changed.emit()
+
+
+## Range les sorts pris selon le preset actif de la classe (Grimoire, SpellPresets) : sorts
+## principaux dans l'ordre de leurs cases, enchaînements sous leur case ; les sorts hors
+## preset gardent l'ordre d'obtention et prennent les places libres.
+func arrange() -> void:
+	var p := SpellPresets.active(class_id)
+	if p.is_empty():
+		return
+	var cols: Array = p.get("cols", [])
+	var entries := {}  # id -> entrée {id, rank, ...}
+	for e in all_skills():
+		entries[int(e.id)] = e
+	var old_mains: Array = skills.map(func(e): return int(e.id))
+	var used := {}
+	var new_skills: Array = []
+	var col_of := {}  # case de la run -> colonne du preset
+	for c in cols.size():
+		var id := int(cols[c][0])
+		if entries.has(id) and new_skills.size() < MAX_SKILLS:
+			col_of[new_skills.size()] = c
+			new_skills.append(entries[id])
+			used[id] = true
+	# sorts principaux hors preset (ou dont la colonne n'a pas son sort principal)
+	for id in old_mains:
+		if not used.has(id) and new_skills.size() < MAX_SKILLS and SpellPresets.place_of(p, id).y <= 0:
+			new_skills.append(entries[id])
+			used[id] = true
+	var new_chains := {}
+	for slot in new_skills.size():
+		if col_of.has(slot):
+			var ch: Array = []
+			for r in range(1, (cols[col_of[slot]] as Array).size()):
+				var id := int(cols[col_of[slot]][r])
+				if entries.has(id) and not used.has(id) and ch.size() < MAX_CHAIN:
+					ch.append(entries[id])
+					used[id] = true
+			if not ch.is_empty():
+				new_chains[slot] = ch
+	# le reste : une case principale libre, sinon un enchaînement libre
+	for id in entries:
+		if used.has(id):
+			continue
+		if new_skills.size() < MAX_SKILLS:
+			new_skills.append(entries[id])
+		else:
+			for slot in new_skills.size():
+				var ch: Array = new_chains.get(slot, [])
+				if ch.size() < MAX_CHAIN:
+					ch.append(entries[id])
+					new_chains[slot] = ch
+					break
+		used[id] = true
+	skills = new_skills
+	chains = new_chains
+
+
+## Entraînement : tous les sorts du preset actif, à leur place (rang gardé s'il était pris).
+func fill_from_preset() -> void:
+	var p := SpellPresets.active(class_id)
+	if p.is_empty():
+		return
+	var ranks := {}
+	for e in all_skills():
+		ranks[int(e.id)] = int(e.rank)
+	skills = []
+	chains = {}
+	for col in p.get("cols", []):
+		var id := int(col[0])
+		if id == 0 or skill_def(id).is_empty() or skills.size() >= MAX_SKILLS:
+			continue
+		var slot := skills.size()
+		skills.append({"id": id, "rank": int(ranks.get(id, 1))})
+		var ch: Array = []
+		for r in range(1, (col as Array).size()):
+			var cid := int(col[r])
+			if cid != 0 and not skill_def(cid).is_empty() and ch.size() < MAX_CHAIN:
+				ch.append({"id": cid, "rank": int(ranks.get(cid, 1))})
+		if not ch.is_empty():
+			chains[slot] = ch
 	changed.emit()
 
 

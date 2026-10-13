@@ -24,6 +24,7 @@ func _ready() -> void:
 	_test_cards()
 	_test_ban_keep()
 	_test_gear_rules()
+	_test_spell_presets()
 	await _test_world()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit(1 if fails > 0 else 0)
@@ -220,6 +221,39 @@ func _dummy(dist: float, side := 0.0, hp := 1e7) -> Monster:
 
 
 ## Cartes à rareté, 10 niveaux, totaux cumulés, sorts améliorés, orbes d'expérience.
+## Presets de sorts : les sorts pris se rangent dans les cases et enchaînements du preset.
+func _test_spell_presets() -> void:
+	var saved_skills: Array = Run.skills.duplicate(true)
+	var saved_chains: Dictionary = Run.chains.duplicate(true)
+	var cid := Run.class_id
+	var cl: Array = Run.class_data().get("skills", [])
+	if cl.size() < 6:
+		return
+	var ids: Array = cl.map(func(x): return int(x.id))
+	# preset : case 1 = sort 3 (enchaîne sort 5), case 2 = sort 1, case 3 = sort 2, case 4 = sort 4
+	var cols := SpellPresets.empty_cols()
+	cols[0][0] = ids[2]
+	cols[0][1] = ids[4]
+	cols[1][0] = ids[0]
+	cols[2][0] = ids[1]
+	cols[3][0] = ids[3]
+	var before_active := SpellPresets.active_index(cid)
+	var n_before := SpellPresets.list(cid).size()
+	SpellPresets.store(cid, "__test__", cols)
+	Run.skills = []
+	Run.chains = {}
+	# obtenus dans le désordre : sort 5 d'abord (il prend une case en attendant), puis 1, 2, 3, 4
+	for i in [4, 0, 1, 2, 3]:
+		Run.apply_card({"type": "skill", "id": ids[i]})
+	var mains: Array = Run.skills.map(func(e): return int(e.id))
+	check("preset de sorts : cases dans l'ordre du preset %s" % [mains], mains == [ids[2], ids[0], ids[1], ids[3]])
+	check("preset de sorts : enchaînement sous sa case", Run.chain_of(0).size() == 1 and int(Run.chain_of(0)[0].id) == ids[4])
+	SpellPresets.remove(cid, SpellPresets.list(cid).size() - 1)
+	SpellPresets.set_active(cid, before_active if before_active < n_before else -1)
+	Run.skills = saved_skills
+	Run.chains = saved_chains
+
+
 func _test_card_tiers() -> void:
 	Run.passives.clear()
 	Run.passive_power.clear()
