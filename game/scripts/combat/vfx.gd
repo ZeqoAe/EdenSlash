@@ -2,6 +2,9 @@ class_name Vfx
 extends RefCounted
 ## Effets visuels simples et lisibles : arcs de lame, ondes, étincelles d'impact.
 
+## Aucun effet visuel, son ni chiffre de dégâts (arène ML sans fenêtre : plus rapide).
+static var silent := false
+
 
 static func _material(color: Color) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
@@ -16,6 +19,8 @@ static func _material(color: Color) -> StandardMaterial3D:
 
 ## Arc horizontal (portée [param radius], ouverture [param arc] en degrés) devant [param fwd].
 static func slash(parent: Node, pos: Vector3, fwd: Vector3, radius: float, arc: float, color := Color(1.0, 0.85, 0.6, 0.9)) -> void:
+	if Vfx.silent:
+		return
 	var mesh := ImmediateMesh.new()
 	var segs := 24
 	var half := deg_to_rad(minf(arc, 359.0)) * 0.5
@@ -51,6 +56,8 @@ static func slash(parent: Node, pos: Vector3, fwd: Vector3, radius: float, arc: 
 
 ## Onde circulaire au sol (tourbillons, buffs).
 static func ring(parent: Node, pos: Vector3, radius: float, color := Color(1.0, 0.75, 0.3, 0.8)) -> void:
+	if Vfx.silent:
+		return
 	var mesh := ImmediateMesh.new()
 	var segs := 40
 	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
@@ -82,6 +89,8 @@ static func _spawn(parent: Node, mesh: Mesh, pos: Vector3, color: Color, life: f
 
 ## Onde de choc au sol : double anneau, gerbe de poussière et éclair de lumière.
 static func shockwave(parent: Node, pos: Vector3, radius: float, color := Color(1.0, 0.8, 0.45)) -> void:
+	if Vfx.silent:
+		return
 	if parent == null or not parent.is_inside_tree():
 		return
 	ring(parent, pos, radius, Color(color, 1.0))
@@ -121,6 +130,8 @@ static func shockwave(parent: Node, pos: Vector3, radius: float, color := Color(
 
 ## Éclair de lumière bref à l'impact (billboard qui grossit et s'efface).
 static func flash(parent: Node, pos: Vector3, size: float, color := Color(1.0, 0.9, 0.6)) -> void:
+	if Vfx.silent:
+		return
 	if parent == null or not parent.is_inside_tree():
 		return
 	var mi := MeshInstance3D.new()
@@ -160,6 +171,8 @@ static func _radial() -> Texture2D:
 
 ## Petite gerbe d'étincelles à l'impact.
 static func spark(parent: Node, pos: Vector3, color := Color(1.0, 0.9, 0.6), crit := false) -> void:
+	if Vfx.silent:
+		return
 	if parent == null or not parent.is_inside_tree():
 		return
 	var p := CPUParticles3D.new()
@@ -192,6 +205,8 @@ static func spark(parent: Node, pos: Vector3, color := Color(1.0, 0.9, 0.6), cri
 
 ## Éclair en zigzag de [param from] à [param to] (foudre des procs).
 static func bolt(parent: Node, from: Vector3, to: Vector3, color := Color(0.75, 0.8, 1.0, 1.0)) -> void:
+	if Vfx.silent:
+		return
 	var mesh := ImmediateMesh.new()
 	var segs := 9
 	var dir := to - from

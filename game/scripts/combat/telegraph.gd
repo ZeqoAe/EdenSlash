@@ -131,8 +131,10 @@ func _resolve() -> void:
 	if damage > 0.0 and player and not player.is_dead and contains(player.global_position, player.radius):
 		var dodged_by_jump := jumpable and player.is_airborne() and player.global_position.y > global_position.y + 0.4
 		if dodged_by_jump:
+			player.ml_counts.dodged += 1
 			DamageNumber.spawn_text(player, "SAUT !", Color(0.6, 0.9, 1.0))
 		elif player.is_invulnerable():
+			player.ml_counts.dodged += 1
 			DamageNumber.spawn_text(player, "ESQUIVE !", Color(0.7, 1.0, 0.7))
 		else:
 			player.take_damage(damage, source, false)

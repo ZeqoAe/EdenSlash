@@ -1,0 +1,6 @@
+# Outils de l'IA d'entraînement (installés par IA_Installer.bat dans ia/.venv)
+# PyTorch version processeur : https://download.pytorch.org/whl/cpu
+torch
+stable-baselines3
+gymnasium
+numpy

@@ -86,6 +86,8 @@ var dev_invincible := false  # mode dev : aucun dégât
 var autoplay := false
 var autoplay_idle := false  # test (--idle) : le pilote automatique ne bouge ni ne frappe
 var autoplay_target := Vector3.INF
+var bot: BotInput = null  # IA en apprentissage (arène ML) : remplace le clavier et la souris
+var ml_counts := {"perfect": 0, "chain": 0, "dodged": 0}  # récompenses de l'arène ML
 
 var _state := "idle"  # idle, attack, skill, dodge, jump, dead
 var _state_time := 0.0
@@ -414,6 +416,8 @@ func _speed() -> float:
 
 
 func _read_move_input() -> Vector3:
+	if bot:
+		return bot.move
 	var v := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	if autoplay:
 		v = Vector2.ZERO if autoplay_idle else _autoplay_input()
@@ -484,6 +488,8 @@ func _try_skill_input() -> bool:
 
 
 func _wants(action: String) -> bool:
+	if bot:
+		return bot.wants(action)
 	if autoplay:
 		return false if autoplay_idle else _autoplay_wants(action)
 	if action == "attack":
@@ -498,6 +504,9 @@ func _ui_has_mouse() -> bool:
 ## Clic gauche : verrouille le monstre sous le curseur (auto-attaque),
 ## sinon frappe en direction du curseur. Visée au curseur : frappe toujours vers la souris.
 func _on_attack_pressed() -> void:
+	if bot:
+		_start_attack(bot.aim if bot.aim != Vector3.INF else global_position + forward())
+		return
 	if Input.is_action_just_pressed("attack") and (autoplay or not Settings.cursor_aim()):
 		var m := monster_under_mouse()
 		if m:
@@ -518,7 +527,7 @@ func _on_attack_pressed() -> void:
 ## suivre le curseur), clic sur un monstre = le verrouiller et l'attaquer.
 func _pointer_input() -> void:
 	var act := Settings.move_click_action()
-	if autoplay or act == "" or is_dead:
+	if autoplay or bot or act == "" or is_dead:
 		_click_moving = false
 		return
 	if Input.is_action_just_pressed(act) and not _ui_has_mouse():
@@ -1258,6 +1267,7 @@ func _chain_press(slot: int) -> int:
 		return 1
 	var step := int(_chain[slot].next) + 1
 	var nxt: Dictionary = st.next
+	ml_counts.chain += 1
 	DamageNumber.spawn_text(self, "ENCHAÎNEMENT ×%d" % (step + 1), Color(0.6, 0.9, 1.0))
 	if autoplay:
 		print("[enchainement] case %d, sort %d : %s" % [slot + 1, step + 1, nxt.get("name", "?")])
@@ -1337,6 +1347,8 @@ func _cast_skill(s: Dictionary, slot: int, step: int, forced_aim := Vector3.INF)
 
 
 func _skill_aim() -> Vector3:
+	if bot:
+		return bot.aim
 	var cursor := mouse_ground_point() if not autoplay else Vector3.INF
 	var mode := "smart" if autoplay else Settings.aim_mode()
 	if mode in ["cursor", "action"]:
@@ -1398,7 +1410,7 @@ func _apply_hero_gravity(delta: float) -> void:
 		return
 	var g := GRAVITY_UP if velocity.y > 0.0 else GRAVITY_DOWN
 	g *= 1.0 - 0.25 * int(Run.passives.get("featherfall", 0))
-	if velocity.y > 0.0 and _state == "jump" and not autoplay and not Input.is_action_pressed("jump"):
+	if velocity.y > 0.0 and _state == "jump" and not autoplay and bot == null and not Input.is_action_pressed("jump"):
 		g *= 2.2
 	velocity.y -= g * delta
 
@@ -1509,6 +1521,8 @@ func _shake(amount: float) -> void:
 
 
 func _wants_pressed(action: String) -> bool:
+	if bot:
+		return bot.wants(action)
 	if autoplay:
 		return false
 	return Input.is_action_just_pressed(action)
@@ -1575,6 +1589,7 @@ func flow_mult() -> float:
 
 func _perfect_cancel() -> void:
 	flow_mult()
+	ml_counts.perfect += 1
 	flow_stacks = mini(flow_stacks + 1, 4)
 	_flow_until = _time + 3.0
 	var sid := int(_action.get("skill_id", 0))
@@ -1624,6 +1639,8 @@ func is_invulnerable() -> bool:
 
 func take_damage(amount: float, source: Combatant = null, is_crit := false, dot := false) -> void:
 	if is_invulnerable():
+		if not dot:
+			ml_counts.dodged += 1
 		if not dot and Run.active and not dev_invincible:
 			Profile.record_add("dodges", 1)  # mission du Voleur
 		return

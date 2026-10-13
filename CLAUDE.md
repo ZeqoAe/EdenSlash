@@ -39,6 +39,12 @@ Le dossier n'est pas dans git : la session locale les lit au début du travail.
 test_controls, test_cards, test_progress (et ceux ajoutés depuis). Après l'ajout d'un
 script avec `class_name`, lancer une fois `--import` pour mettre à jour le cache des classes.
 
+## IA d'entraînement (apprentissage par renforcement)
+Arène `game/scenes/ml_arena.tscn` (`game/scripts/ml/`) pilotée par Python (`ia/`, voir
+`ia/LISEZMOI.md`) : `IA_Entrainer.bat`, `IA_Regarder.bat`. Le héros lit `Player.bot`
+(BotInput) à la place du clavier. Ajouter ou retirer une observation dans `ml_arena.gd`
+rend les modèles entraînés inutilisables (`--nouveau`). Modèles et journaux hors git.
+
 ## Graphismes
 Réglages d'image communs dans `game/scripts/world/gfx.gd` (qualité graphique), shaders dans
 `game/shaders/` (terrain, herbe, personnages, décor, effets). Pour comparer un changement de

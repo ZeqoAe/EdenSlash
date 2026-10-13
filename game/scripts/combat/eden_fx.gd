@@ -29,6 +29,8 @@ var _offset := Transform3D.IDENTITY
 
 ## Joue l'effet [param name] à [param pos], orienté selon [param yaw].
 static func play(parent: Node, name: String, pos: Vector3, yaw := 0.0, scale_ := 1.0, p_follow: Node3D = null) -> EdenFx:
+	if Vfx.silent:
+		return null
 	if name == "" or parent == null or not parent.is_inside_tree():
 		return null
 	if not _load(name):
@@ -46,6 +48,8 @@ static func play(parent: Node, name: String, pos: Vector3, yaw := 0.0, scale_ :=
 ## Effet en boucle attaché à [param parent] (aura autour du héros : pierres étoilées,
 ## pierres de lune), à l'échelle [param scale_].
 static func attach(parent: Node3D, name: String, scale_ := 1.0, dark := false) -> EdenFx:
+	if Vfx.silent:
+		return null
 	if name == "" or parent == null or not _load(name):
 		return null
 	var fx := EdenFx.new()

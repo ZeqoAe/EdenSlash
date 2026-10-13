@@ -5,6 +5,8 @@ extends Label3D
 
 ## Texte flottant (ESQUIVE, SAUT, RENVOI...).
 static func spawn_text(target: Node3D, text: String, color: Color) -> void:
+	if Vfx.silent:
+		return
 	if not target.is_inside_tree():
 		return
 	var label := DamageNumber.new()
@@ -26,6 +28,8 @@ static func spawn_text(target: Node3D, text: String, color: Color) -> void:
 
 
 static func spawn(target: Node3D, amount: float, crit: bool, on_player: bool) -> void:
+	if Vfx.silent:
+		return
 	if not target.is_inside_tree():
 		return
 	var mode := String(Settings.get_v("interface", "damage_numbers"))

@@ -54,6 +54,11 @@ var _react_dir := Vector3.ZERO
 var _hop_ready := 0.0
 var _dodge_until := 0.0  # pas de coup pendant le bond d'esquive
 var _cancel_roll := false  # ce coup sera annulé juste après son impact
+## Fuyard (arène ML) : n'attaque jamais, garde ses distances, s'échappe d'un bond quand le
+## héros colle et longe le bord de l'arène (centre [member flee_center], rayon [member flee_radius]).
+var flee := false
+var flee_center := Vector3.ZERO
+var flee_radius := 0.0  # 0 : pas de bord
 
 
 ## Classe [param class_id] au niveau [param lvl] (PV et dégâts d'un héros de ce niveau).
@@ -298,6 +303,8 @@ func _update_chase(delta: float) -> Vector3:
 	if is_passive() or not _can_target():
 		_set_state("idle")
 		return Vector3.ZERO
+	if flee:
+		return _update_flee(delta)
 	var to := _player.global_position - global_position
 	to.y = 0.0
 	var dist := to.length()
@@ -351,6 +358,39 @@ func _update_chase(delta: float) -> Vector3:
 	if _time >= _dash_until and is_on_floor():
 		play(_anim("run", "move02") if v.length() > 0.1 else _battle_anim(), 0.15)
 	return v
+
+
+## Fuite : s'éloigne du héros en tournant autour de lui, se rabat vers le centre près du
+## bord (sinon il se ferait coincer) et bondit hors de portée quand le héros colle.
+func _update_flee(delta: float) -> Vector3:
+	var away := global_position - _player.global_position
+	away.y = 0.0
+	var dist := away.length()
+	away = away.normalized() if dist > 0.01 else -forward()
+	if _time >= _strafe_flip_at:
+		_strafe = -_strafe if randf() < 0.5 else _strafe
+		_strafe_flip_at = _time + randf_range(0.8, 2.0)
+	var tangent := away.cross(Vector3.UP) * _strafe
+	var v := away + tangent * 0.7
+	if flee_radius > 0.0:
+		var off := global_position - flee_center
+		off.y = 0.0
+		var edge := clampf((off.length() - (flee_radius - 5.0)) / 4.0, 0.0, 1.0)
+		if edge > 0.0:
+			# près du bord : longe le mur du côté opposé au héros
+			var along := off.normalized().cross(Vector3.UP)
+			if along.dot(away) < 0.0:
+				along = -along
+			v = v.lerp(along * 1.2 - off.normalized() * 0.6, edge)
+	if dist < 3.6 and _can_dodge() and _time >= _hop_ready and randf() < 0.25 + float(cfg.hop):
+		_hop_ready = _time + 0.7
+		var esc := v.normalized()
+		_dodge(esc.rotated(Vector3.UP, randf_range(-0.4, 0.4)), false)
+		return _dash_vel
+	face_direction(v, delta, 12.0)
+	if _time >= _dash_until and is_on_floor():
+		play(_anim("run", "move02"), 0.15)
+	return v.normalized() * move_speed * (0.75 if dist > 9.0 else 1.0)
 
 
 ## Sort prêt (le plus utile à cette distance), sinon le coup suivant du combo.

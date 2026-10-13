@@ -7,6 +7,8 @@ static var volume_db := 0.0
 
 
 static func play_at(parent: Node, pos: Vector3, wav: String, vol := 0.0, pitch_jitter := 0.06) -> void:
+	if Vfx.silent:
+		return
 	if wav == "" or parent == null or not parent.is_inside_tree():
 		return
 	var stream := _stream(wav)

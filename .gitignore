@@ -20,3 +20,9 @@ game/assets/ui/icons/*.import
 
 # Real-ESRGAN (téléchargé, voir tools/upscale_textures.py)
 tools/third_party/realesrgan/
+
+# IA d'entraînement : modèles, journaux et suivi (sur le PC seulement)
+ia/modeles/
+ia/journaux/
+ia/progression.json
+ia/journal_entrainement.csv
