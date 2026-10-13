@@ -458,60 +458,178 @@ func _changed() -> void:
 	_refresh_stats()
 
 
-## Catalogue d'Eden pour l'emplacement [param slot] : recherche, plus haut niveau d'abord.
+## Catalogue d'Eden pour l'emplacement [param slot] : filtres (type d'armure ou d'arme, rareté,
+## stat recherchée, niveaux, sets), tri, et carte complète de l'objet sélectionné.
 func _open_picker(slot: String) -> void:
 	if _picker:
 		_picker.queue_free()
 	var box := PanelContainer.new()
 	box.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.06, 0.05, 0.12, 0.99), UiTheme.GOLD, 2, 10))
 	box.set_anchors_preset(Control.PRESET_CENTER)
-	box.custom_minimum_size = Vector2(760, 660)
-	box.position = Vector2(-380, -330)
+	box.custom_minimum_size = Vector2(1180, 720)
+	box.position = Vector2(-590, -360)
 	get_child(0).add_child(box)
 	_picker = box
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 8)
+	v.add_theme_constant_override("separation", 6)
 	box.add_child(v)
-	Hud._label(v, "%s : catalogue d'Eden (niveau du profil %d)" % [Items.SLOT_NAMES.get(slot, slot), _lv()], 20, UiTheme.GOLD)
-	var fr := HBoxContainer.new()
-	fr.add_theme_constant_override("separation", 6)
-	v.add_child(fr)
-	var search := LineEdit.new()
-	search.placeholder_text = "Chercher un objet (nom)…"
-	search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	fr.add_child(search)
-	var upto := CheckBox.new()
-	upto.text = "Jusqu'au niveau du profil"
-	upto.focus_mode = Control.FOCUS_NONE
-	upto.button_pressed = true
-	fr.add_child(upto)
-	var lst := ItemList.new()
-	lst.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	lst.fixed_icon_size = Vector2i(32, 32)
-	v.add_child(lst)
+	Hud._label(v, "%s : catalogue d'Eden (profil niveau %d)" % [Items.SLOT_NAMES.get(slot, slot), _lv()], 20, UiTheme.GOLD)
 	var pool: Array = GameData.eden_items.filter(func(x): return String(x.get("slot", "")) == slot)
-	pool.sort_custom(func(a, b): return int(a.level) > int(b.level))
+	# --- filtres
+	var f1 := HBoxContainer.new()
+	f1.add_theme_constant_override("separation", 6)
+	v.add_child(f1)
+	var search := LineEdit.new()
+	search.placeholder_text = "Nom…"
+	search.custom_minimum_size = Vector2(220, 0)
+	f1.add_child(search)
+	# type d'armure (plates, cuir, tissu) ou d'arme
+	var kinds: Array = [""]
+	var kind := OptionButton.new()
+	kind.focus_mode = Control.FOCUS_NONE
+	if slot == "weapon":
+		kind.add_item("Toutes les armes")
+		for wt in GameData.weapon_types:
+			kinds.append(String(wt))
+			kind.add_item(String(GameData.weapon_types[wt].get("name", wt)))
+		var own := kinds.find(Items.default_weapon_type(String(build.get("class", ""))))
+		kind.select(maxi(0, own))
+	else:
+		kind.add_item("Tous les types")
+		var seen := {}
+		for x in pool:
+			var a := String(x.get("armor", ""))
+			if a != "" and not seen.has(a):
+				seen[a] = true
+		for a in ["plates", "cuir", "tissu"]:
+			if seen.has(a):
+				kinds.append(a)
+				kind.add_item(String(Archive.ARMOR_CLASS_FR.get(a, a)))
+		kind.select(0)
+	kind.disabled = kinds.size() <= 1
+	f1.add_child(kind)
+	var rar := OptionButton.new()
+	rar.focus_mode = Control.FOCUS_NONE
+	rar.add_item("Toutes raretés")
+	for rr in Items.RARITIES:
+		rar.add_item(String(rr.name))
+	f1.add_child(rar)
+	# stat recherchée (celles que portent les pièces de cet emplacement)
+	var stat_keys: Array = [""]
+	var counts := {}
+	for x in pool:
+		for k in x.get("r", {}):
+			counts[k] = int(counts.get(k, 0)) + 1
+	var sk: Array = counts.keys()
+	sk.sort_custom(func(a, b): return int(counts[a]) > int(counts[b]))
+	var stat := OptionButton.new()
+	stat.focus_mode = Control.FOCUS_NONE
+	stat.add_item("Toutes les stats")
+	for k in sk:
+		stat_keys.append(String(k))
+		stat.add_item("Avec : %s" % _stat_name(String(k)))
+	f1.add_child(stat)
+	var f2 := HBoxContainer.new()
+	f2.add_theme_constant_override("separation", 6)
+	v.add_child(f2)
+	Hud._label(f2, "Niveau", 14, UiTheme.TEXT)
+	var lmin := SpinBox.new()
+	lmin.min_value = 0
+	lmin.max_value = 200
+	lmin.value = 0
+	lmin.prefix = "de"
+	f2.add_child(lmin)
+	var lmax := SpinBox.new()
+	lmax.min_value = 0
+	lmax.max_value = 200
+	lmax.value = _lv()
+	lmax.prefix = "à"
+	f2.add_child(lmax)
+	var sets := CheckBox.new()
+	sets.text = "Pièces de set seulement"
+	sets.focus_mode = Control.FOCUS_NONE
+	f2.add_child(sets)
+	var sort := OptionButton.new()
+	sort.focus_mode = Control.FOCUS_NONE
+	for t in ["Tri : niveau", "Tri : rareté", "Tri : valeur de la stat choisie", "Tri : nom"]:
+		sort.add_item(t)
+	f2.add_child(sort)
+	var count := Hud._label(f2, "", 13, UiTheme.MUTED)
+	# --- liste et carte
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 10)
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	v.add_child(body)
+	var lst := ItemList.new()
+	lst.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lst.fixed_icon_size = Vector2i(32, 32)
+	body.add_child(lst)
+	var card_box := ScrollContainer.new()
+	card_box.custom_minimum_size = Vector2(400, 0)
+	card_box.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	body.add_child(card_box)
 	var ids: Array = []
 	var fill := func():
 		lst.clear()
 		ids.clear()
 		var q := search.text.to_lower()
+		var want_kind := String(kinds[kind.selected])
+		var want_stat := String(stat_keys[stat.selected])
+		var shown: Array = []
 		for x in pool:
 			if q != "" and not String(x.name).to_lower().contains(q):
 				continue
-			if upto.button_pressed and int(x.level) > _lv():
+			if int(x.level) < int(lmin.value) or int(x.level) > int(lmax.value):
 				continue
+			if rar.selected > 0 and int(x.rarity) != rar.selected - 1:
+				continue
+			if want_kind != "" and String(x.get("wtype" if slot == "weapon" else "armor", "")) != want_kind:
+				continue
+			if want_stat != "" and not x.get("r", {}).has(want_stat):
+				continue
+			if sets.button_pressed and not x.has("set"):
+				continue
+			shown.append(x)
+		match sort.selected:
+			0:
+				shown.sort_custom(func(a, b): return int(a.level) > int(b.level))
+			1:
+				shown.sort_custom(func(a, b): return int(a.rarity) > int(b.rarity) or (int(a.rarity) == int(b.rarity) and int(a.level) > int(b.level)))
+			2:
+				shown.sort_custom(func(a, b): return float(a.get("r", {}).get(want_stat, 0.0)) > float(b.get("r", {}).get(want_stat, 0.0)))
+			3:
+				shown.sort_custom(func(a, b): return String(a.name) < String(b.name))
+		for x in shown.slice(0, 800):
 			var rc: Dictionary = Items.RARITIES[clampi(int(x.rarity), 0, Items.RARITIES.size() - 1)]
-			var i := lst.add_item("%s  · niv. %d · %s%s%s" % [x.name, int(x.level), rc.name,
-				("  · " + String(GameData.weapon_type(String(x.get("wtype", ""))).get("name", ""))) if slot == "weapon" else "",
-				"  · set" if x.has("set") else ""], UiTheme.texture(String(x.get("icon", ""))))
+			var tag := ""
+			if slot == "weapon":
+				tag = "  · " + String(GameData.weapon_type(String(x.get("wtype", ""))).get("name", ""))
+			elif String(x.get("armor", "")) != "":
+				tag = "  · " + String(x.armor)
+			var stats_txt: PackedStringArray = []
+			for k in x.get("r", {}):
+				stats_txt.append(_stat_name(String(k)))
+			var i := lst.add_item("%s  · niv. %d · %s%s%s" % [x.name, int(x.level), rc.name, tag, "  · set" if x.has("set") else ""],
+				UiTheme.texture(String(x.get("icon", ""))))
 			lst.set_item_custom_fg_color(i, rc.color)
+			lst.set_item_tooltip(i, "Stats : " + ", ".join(stats_txt))
 			ids.append(int(x.id))
-			if ids.size() >= 800:
-				break
+		count.text = "%d objet(s)" % shown.size()
+	var show_card := func(i: int):
+		for c in card_box.get_children():
+			c.queue_free()
+		var e: Dictionary = GameData.eden_by_id.get(int(ids[i]), {})
+		var it := RivalBuilds.make_item(slot, {"id": int(ids[i]), "rarity": int(e.get("rarity", 0)), "upgrade": 0}, _lv())
+		var card: Control = _with_power(func(): return ItemWidgets.item_card(it))
+		card_box.add_child(card)
 	fill.call()
+	for w in [kind, rar, stat, sort]:
+		w.item_selected.connect(func(_k): fill.call())
 	search.text_changed.connect(func(_q): fill.call())
-	upto.toggled.connect(func(_on): fill.call())
+	lmin.value_changed.connect(func(_x): fill.call())
+	lmax.value_changed.connect(func(_x): fill.call())
+	sets.toggled.connect(func(_on): fill.call())
+	lst.item_selected.connect(func(i): show_card.call(i))
 	var choose := func(i: int):
 		var e: Dictionary = GameData.eden_by_id.get(int(ids[i]), {})
 		var gear: Dictionary = build.get("gear", {})
@@ -526,6 +644,10 @@ func _open_picker(slot: String) -> void:
 	var bar := HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 8)
 	v.add_child(bar)
+	Hud._label(bar, "Clic : voir la carte · double-clic ou Choisir : équiper", 13, UiTheme.MUTED)
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.add_child(sp)
 	_btn(bar, "Choisir", func():
 		var sel := lst.get_selected_items()
 		if not sel.is_empty():
