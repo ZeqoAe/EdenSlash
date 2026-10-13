@@ -8,6 +8,9 @@ extends Node3D
 ## Lancement (voir ia/eden_env.py) :
 ##   Godot --headless --fixed-fps 60 --path game res://scenes/ml_arena.tscn -- --port=50001
 ##   --watch : fenêtre en temps réel avec caméra et bandeau (regarder l'IA jouer).
+##   --brain=res://data/cerveaux/<nom>.json --scenario=hardcore : le jeu fait jouer un cerveau
+##   exporté tout seul, sans Python (MlBrain) ; --episodes=N : N combats puis bilan et sortie ;
+##   --temperature=0.5 : choix tirés au sort (moins fort, plus humain).
 ## Scénarios (message « reset ») :
 ##   dummy   : mannequin qui ne bouge pas (apprendre combos, sorts et enchaînements) ;
 ##   flee    : adversaire de classe fuyard (jouer agressif, esquives d'annulation pour suivre) ;
@@ -37,6 +40,7 @@ var _t := 0.0
 var _max_time := 60.0
 var _low_hp := 0.0  # PV max du héros pendant l'épisode (0 : normal)
 var _prev_enemy_hp := 0.0
+var _enemy_max_total := 0.0
 var _prev_hero_hp := 0.0
 var _prev_counts := {}
 var _total := {}
@@ -47,6 +51,24 @@ var _label: Label
 var _ep_reward := 0.0
 var _results: Array = []
 var _capture := ""
+var _brain: MlBrain  # cerveau joué par le jeu lui-même (sans Python)
+var _brain_scen := {}
+var _temperature := 0.0
+var _episodes := 0
+var _done_count := 0
+var _wins := 0
+## Scénarios du mode cerveau (mêmes réglages que ia/curriculum.py).
+const PRESETS := {
+	"mannequin": {"scenario": "dummy", "skills": 12, "max_time": 30},
+	"fuyard": {"scenario": "flee", "skills": 12, "difficulty": 2, "max_time": 40},
+	"survie": {"scenario": "monster", "skills": 12, "hero_hp": 1, "max_time": 40, "enemy_hp": 20.0, "cc_immune": true},
+	"facile": {"scenario": "rival", "skills": 12, "difficulty": 0, "max_time": 90},
+	"normal": {"scenario": "rival", "skills": 12, "difficulty": 1, "max_time": 90},
+	"difficile": {"scenario": "rival", "skills": 12, "difficulty": 2, "max_time": 90},
+	"hardcore": {"scenario": "rival", "skills": 12, "difficulty": 3, "max_time": 90},
+	"toutes": {"scenario": "rival", "skills": 12, "difficulty": 3, "max_time": 90, "enemy_class": "random"},
+	"duo": {"scenario": "rival", "skills": 12, "difficulty": 3, "max_time": 120, "enemy_class": "random", "count": 2, "enemy_hp": 0.6},
+}
 
 
 func _ready() -> void:
@@ -59,6 +81,14 @@ func _ready() -> void:
 			_watch = true
 		elif arg.begins_with("--capture="):
 			_capture = arg.trim_prefix("--capture=")  # capture d'écran à 4 s du 1er combat
+		elif arg.begins_with("--brain="):
+			_brain = MlBrain.load_file(arg.trim_prefix("--brain="))
+		elif arg.begins_with("--scenario="):
+			_brain_scen = PRESETS.get(arg.trim_prefix("--scenario="), PRESETS.hardcore).duplicate()
+		elif arg.begins_with("--temperature="):
+			_temperature = float(arg.trim_prefix("--temperature="))
+		elif arg.begins_with("--episodes="):
+			_episodes = int(arg.trim_prefix("--episodes="))
 	_setup_game_state()
 	_build_arena()
 	for m in GameData.monsters.values():
@@ -66,6 +96,14 @@ func _ready() -> void:
 		if int(m.get("rank", 2)) in [2, 3] and ResourceLoader.exists("res://assets/monsters/%s/%s.glb" % [model, model]):
 			_monster_pool.append(int(m.id))
 	_static.assign(get_children())
+	if _brain:
+		if _brain_scen.is_empty():
+			_brain_scen = PRESETS.hardcore.duplicate()
+		_reset(_brain_scen)
+		if _obs().size() != _brain.obs_size:
+			push_error("cerveau d'une ancienne version de l'arène (%d entrées, l'arène en donne %d)" % [_brain.obs_size, _obs().size()])
+			get_tree().quit(1)
+		return
 	if _peer.connect_to_host("127.0.0.1", port) != OK:
 		push_error("arène ML : connexion impossible au port %d" % port)
 		get_tree().quit(1)
@@ -203,7 +241,7 @@ func _process(_delta: float) -> void:
 
 # --- boucle d'échange avec Python ---------------------------------------------------------
 func _physics_process(delta: float) -> void:
-	if _peer.get_status() != StreamPeerTCP.STATUS_CONNECTED:
+	if _brain == null and _peer.get_status() != StreamPeerTCP.STATUS_CONNECTED:
 		return
 	if _wait > 0:
 		_wait -= 1
@@ -213,8 +251,33 @@ func _physics_process(delta: float) -> void:
 			player.hp = minf(player.hp, _low_hp)
 		if _wait > 0:
 			return
+		if _brain:
+			_brain_step()
+			return
 		_send_step()
+	elif _brain:
+		_apply(_brain.act(_obs(), _temperature))
+		_wait = REPEAT
+		return
 	_serve()
+
+
+## Mode cerveau : fin de décision, combat suivant si celui-ci est fini, puis décision suivante.
+func _brain_step() -> void:
+	var res := _step_result()
+	if res.done:
+		_done_count += 1
+		if res.info.result == "win":
+			_wins += 1
+		print("combat %d : %s en %.1f s, dégâts %d %%, subis %d %% (victoires %d / %d)" % [_done_count, res.info.result,
+			res.info.t, roundi(res.info.dealt * 100), roundi(res.info.taken * 100), _wins, _done_count])
+		if _episodes > 0 and _done_count >= _episodes:
+			print("BILAN %s : %d victoires sur %d combats" % [_brain_scen.get("scenario", ""), _wins, _done_count])
+			get_tree().quit()
+			return
+		_reset(_brain_scen)
+	_apply(_brain.act(_obs(), _temperature))
+	_wait = REPEAT
 
 
 ## Lit les ordres de Python jusqu'à une action (le jeu reste figé en attendant).
@@ -285,7 +348,7 @@ func _reset(msg: Dictionary) -> void:
 	enemies.clear()
 	var diff := int(msg.get("difficulty", 1))
 	var enemy_class := String(msg.get("enemy_class", "warrior"))
-	var count := int(msg.get("count", 1)) if scen == "monster" else 1
+	var count := int(msg.get("count", 1)) if scen in ["monster", "rival"] else 1
 	for i in count:
 		var e: Monster
 		if scen == "monster":
@@ -295,7 +358,9 @@ func _reset(msg: Dictionary) -> void:
 			e = m
 		else:
 			var r := ClassRival.new()
-			r.setup(enemy_class, LEVEL, 0 if scen == "dummy" else diff)
+			# "random" : une classe au hasard parmi les 60 (tirée pour chaque adversaire)
+			var cid := String(GameData.classes.keys().pick_random()) if enemy_class == "random" else enemy_class
+			r.setup(cid, LEVEL, 0 if scen == "dummy" else diff)
 			r.passive = scen == "dummy"
 			r.flee = scen == "flee"
 			r.flee_center = Vector3.ZERO
@@ -319,6 +384,9 @@ func _reset(msg: Dictionary) -> void:
 	_last_button = 0
 	_ep_reward = 0.0
 	_prev_enemy_hp = _enemy_hp()
+	_enemy_max_total = 0.0
+	for e in enemies:
+		_enemy_max_total += e.max_hp
 	_prev_hero_hp = player.hp
 	_prev_counts = player.ml_counts.duplicate()
 	_total = {"dealt": 0.0, "taken": 0.0}
@@ -380,6 +448,11 @@ func _apply(a: Array) -> void:
 
 
 func _send_step() -> void:
+	_send(_step_result())
+
+
+## Récompense, fin d'épisode et bilan de la décision qui vient de se jouer.
+func _step_result() -> Dictionary:
 	var r := 0.0
 	var e_hp := _enemy_hp()
 	var dealt := maxf(0.0, _prev_enemy_hp - e_hp)
@@ -418,7 +491,7 @@ func _send_step() -> void:
 			"taken": _total.taken / maxf(player.max_hp, 1.0), "perfect": player.ml_counts.perfect,
 			"chain": player.ml_counts.chain, "dodged": player.ml_counts.dodged, "reward": _ep_reward}
 		_results.append({"win": "V", "loss": "D", "timeout": "-"}[result])
-	_send({"obs": _obs(), "r": r, "done": done, "info": info})
+	return {"obs": _obs(), "r": r, "done": done, "info": info}
 
 
 func _enemy_hp() -> float:
@@ -429,12 +502,9 @@ func _enemy_hp() -> float:
 	return t
 
 
+## PV max cumulés des adversaires au début du combat (un adversaire mort et retiré compte toujours).
 func _enemy_max_hp() -> float:
-	var t := 0.0
-	for e in enemies:
-		if is_instance_valid(e):
-			t += e.max_hp
-	return t
+	return _enemy_max_total
 
 
 func _nearest_enemy() -> Monster:

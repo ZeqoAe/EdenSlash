@@ -23,6 +23,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 
 from curriculum import STAGES, Curriculum
 from eden_env import GodotVecEnv
+from export_brain import export as export_brain
 
 HERE = Path(__file__).resolve().parent
 MODELS = HERE / "modeles"
@@ -60,15 +61,29 @@ class CurriculumCallback(BaseCallback):
         if now - self.t_save > 600:
             save(self.model, self.cur, self.total())
             self.t_save = now
+            if self.cur.stage == len(STAGES) - 1:  # dernière étape : le cerveau « maître » suit les progrès
+                self.export(self.cur.spec)
         return True
 
+    def export(self, spec: dict) -> None:
+        if not spec.get("cerveau"):
+            return
+        try:
+            path = export_brain(MODEL, spec["cerveau"], {"etape": spec["nom"], "decisions": self.total(),
+                                                         "date": time.strftime("%Y-%m-%d %H:%M")})
+            print(f"    Cerveau pour le jeu : {path.name}")
+        except Exception as e:  # l'export ne doit jamais arrêter l'entraînement
+            print(f"    (export du cerveau impossible : {e})")
+
     def _on_rollout_end(self) -> None:
-        old = self.cur.spec["nom"]
+        old_spec = self.cur.spec
+        old = old_spec["nom"]
         if self.cur.maybe_promote(self.total()):
             MODELS.joinpath("etapes").mkdir(parents=True, exist_ok=True)
             self.model.save(MODELS / "etapes" / f"etape_{self.cur.stage}_reussie.zip")
             print(f"\n*** Étape réussie : {old} ({num(self.total())} décisions). Suivante : {self.cur.spec['nom']} ***\n")
             save(self.model, self.cur, self.total())
+            self.export(old_spec)
 
     def report(self, now: float) -> None:
         speed = (self.num_timesteps - self.steps_at_print) / (now - self.t_print)

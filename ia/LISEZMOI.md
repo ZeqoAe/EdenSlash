@@ -33,14 +33,39 @@ Une partie des combats rejoue les étapes passées pour que l'IA ne les oublie p
 3. **Adversaire fuyard** : il court, longe le mur et s'échappe d'un bond ; l'IA doit coller,
    enchaîner et utiliser les esquives d'annulation (bonus pour chaque annulation parfaite).
 4. **Monstres, héros à 1 PV** : un coup et c'est perdu ; survivre 40 s ou tuer les monstres
-   (1 ou 2 monstres d'Eden). Bonus pour chaque coup esquivé.
-5. à 8. **Adversaire de classe** facile, normal, difficile puis **hardcore** (objectif : 70 %
-   de victoires contre le hardcore).
-9. **Perfectionnement** : hardcore sans fin.
+   (1 ou 2 monstres d'Eden, insensibles aux contrôles). Bonus pour chaque coup esquivé.
+5. à 7. **Adversaire de classe** facile, normal, difficile (90 % de victoires).
+8. **Hardcore** : gagner en perdant moins de la moitié de ses PV.
+9. **Expert** : hardcore de toutes les classes et **1 contre 2** (comme la Tour), en perdant
+   moins de 30 % de ses PV.
+10. **Maître** : sans fin, mêmes combats ; on vise la victoire sans presque être touché.
 
 Le modèle de chaque étape réussie est gardé dans `ia/modeles/etapes/` ; pour regarder un
 ancien modèle : `.venv\Scripts\python watch.py hardcore --modele modeles/etapes/etape_3_reussie.zip`
 (depuis le dossier `ia`).
+
+## Cerveaux pour le jeu (la Tour)
+
+Le jeu fait tourner un cerveau tout seul, sans Python (`MlBrain`, `game/scripts/ml/ml_brain.gd` :
+mêmes décisions que dans Python, environ 2,5 ms par décision, soit 5 % d'un cœur). Les cerveaux
+sont exportés automatiquement dans `game/data/cerveaux/` quand une étape est réussie :
+
+| Fichier | Après l'étape |
+|---|---|
+| `guerrier_debutant.json` | 4 (sait esquiver, jamais affronté de héros) |
+| `guerrier_facile.json` … `guerrier_hardcore.json` | 5 à 8 (bat l'adversaire de ce niveau) |
+| `guerrier_expert.json` | 9 (toutes les classes, 1 contre 2) |
+| `guerrier_maitre.json` | 10, mis à jour toutes les 10 minutes |
+
+Export à la main : `.venv\Scripts\python export_brain.py modeles/guerrier.zip guerrier_test`.
+Dans le jeu : `MlBrain.load_file(chemin).act(obs, temperature)` ; `temperature` 0 = le meilleur
+choix, plus haut = des erreurs (plus humain, plus facile). Essai sans fenêtre :
+`Godot --headless --fixed-fps 60 --path game res://scenes/ml_arena.tscn -- --brain=res://data/cerveaux/guerrier_maitre.json --scenario=duo --episodes=20`
+(scénarios : mannequin, fuyard, survie, facile, normal, difficile, hardcore, toutes, duo).
+Le test `res://tests/test_ml_brain.tscn` vérifie qu'un cerveau donne les mêmes actions que Python.
+
+Pour l'instant le cerveau pilote le héros (`Player.bot`) : pour qu'il joue un adversaire dans
+la Tour, il faudra un héros ennemi qui a les mêmes mécaniques que le joueur.
 
 ## Comment ça marche
 
@@ -48,7 +73,7 @@ ancien modèle : `.venv\Scripts\python watch.py hardcore --modele modeles/etapes
   rayon entouré d'un mur, héros niveau 10 sans équipement, adversaire selon le scénario. Le jeu
   se connecte au programme Python et avance au même pas que lui : 1 décision toutes les
   3 images (20 décisions par seconde de jeu). Rien n'est sauvegardé (profil de test vierge).
-- Ce que voit l'IA (133 nombres) : son état (PV, action en cours, instant de l'impact,
+- Ce que voit l'IA (139 nombres, dont les insensibilités aux contrôles de l'adversaire) : son état (PV, action en cours, instant de l'impact,
   fenêtre d'annulation parfaite, combo, recharges, enchaînements et barre de timing, saut,
   statuts), celui de l'adversaire (distance, direction, vitesse, PV, attaque en cours, esquives,
   statuts), les 2 zones rouges les plus proches de l'impact (forme, position, temps restant,

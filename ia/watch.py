@@ -1,7 +1,7 @@
 """Regarder l'IA jouer dans une fenêtre, en temps réel.
 
   python watch.py                  scénario de l'étape en cours
-  python watch.py hardcore         mannequin | mannequin4 | fuyard | survie | facile | normal | difficile | hardcore
+  python watch.py hardcore         mannequin | mannequin4 | fuyard | survie | facile | normal | difficile | hardcore | toutes | duo
   python watch.py hardcore --modele modeles/etapes/etape_5_4.zip
 
 Fermer la fenêtre du jeu pour arrêter.
@@ -18,13 +18,14 @@ from pathlib import Path
 import numpy as np
 from stable_baselines3 import PPO
 
-from curriculum import DUMMY4, DUMMY12, FLEE, FLEE3, STAGES, SURVIVE, SURVIVE2, Curriculum, rival
+from curriculum import ALL, DUMMY4, DUMMY12, DUO, FLEE, FLEE3, STAGES, SURVIVE, SURVIVE2, Curriculum, rival
 from eden_env import GodotVecEnv
 
 HERE = Path(__file__).resolve().parent
 CHOICES = {
     "mannequin4": [DUMMY4], "mannequin": [DUMMY12], "fuyard": [FLEE, FLEE3], "survie": [SURVIVE, SURVIVE2],
     "facile": [rival(0)], "normal": [rival(1)], "difficile": [rival(2)], "hardcore": [rival(3)],
+    "toutes": [ALL], "duo": [DUO],
 }
 
 

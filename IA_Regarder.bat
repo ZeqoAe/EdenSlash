@@ -1,11 +1,11 @@
 @echo off
-rem Regarder l IA jouer. Exemples : IA_Regarder.bat hardcore   (mannequin, fuyard, survie, facile, normal, difficile, hardcore)
+rem Regarder l IA jouer. Exemples : IA_Regarder.bat hardcore   (mannequin, fuyard, survie, facile, normal, difficile, hardcore, toutes, duo)
 chcp 65001 >nul
 set PYTHONIOENCODING=utf-8
 cd /d "%~dp0ia"
 set SCEN=%1
 if "%SCEN%"=="" (
-  echo Scenarios : mannequin4, mannequin, fuyard, survie, facile, normal, difficile, hardcore
+  echo Scenarios : mannequin4, mannequin, fuyard, survie, facile, normal, difficile, hardcore, toutes ^(toutes les classes^), duo ^(1 contre 2^)
   set /p SCEN=Scenario a regarder ^(Entree = etape en cours^) : 
 )
 .venv\Scripts\python -u watch.py %SCEN%
