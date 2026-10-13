@@ -485,7 +485,8 @@ func _test_run_screens() -> void:
 	for i in 8:
 		Profile.add_item(Items.generate(5, 1.0 if i < 3 else -0.5))
 	Profile.gain({"gold": 5000, "crystal": 6})
-	for k in ["drill", "drill", "luck", "protect", Craft.gem_key("ruby", 0), Craft.gem_key("ruby", 0), Craft.gem_key("ruby", 0), Craft.scroll_key("violence", 1)]:
+	for k in ["drill", "drill", Craft.stone_key("lucky"), Craft.stone_key("coral"), Craft.fortify_key("power", 100), Craft.BLESSED,
+			Craft.gem_key("ruby", 0), Craft.gem_key("ruby", 0), Craft.gem_key("ruby", 0), Craft.scroll_key("violence", 1)]:
 		Profile.add_bag(k)
 	# menu pause
 	world.pause_menu.open()
@@ -568,11 +569,11 @@ func _test_run_screens() -> void:
 	v.close_ui()
 	# forge : améliorer à l'or seulement, réforger et polir avec des cristaux
 	var piece: Dictionary = Profile.equipped.weapon
-	check("amélioration : de l'or seulement", Items.upgrade_cost(piece).keys() == ["gold"])
+	check("fortification : or + parchemin", Items.upgrade_cost(piece).keys() == ["gold"] and Craft.fortify_for(piece) != "")
 	var up0 := int(piece.get("upgrade", 0))
 	var g0 := Profile.gold
 	Profile.upgrade_item(piece)
-	check("améliorer (+1 sûr, or payé)", int(piece.upgrade) == up0 + 1 and Profile.gold < g0)
+	check("fortifier (+1 sûr, or payé, parchemin consommé)", int(piece.upgrade) == up0 + 1 and Profile.gold < g0 and Profile.bag_count(Craft.fortify_key("power", 100)) == 0)
 	var crys0 := Profile.amount("crystal")
 	var junk: Dictionary = Profile.inventory.filter(func(x): return x.slot != "trophy")[0]
 	Profile.disassemble_many([junk])

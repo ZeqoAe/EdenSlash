@@ -1,7 +1,7 @@
 # Audit d'Eden Slash (version 0.1.33)
 
 > **Tes réponses (13/10) sur les parties 1 à 5, 7, 8 et 9 sont appliquées** : voir « ✅ Décidé »
-> dans chaque partie. Il reste la partie 6 (forge) et la partie 10 (technique).
+> dans chaque partie. Il reste la partie 10 (technique).
 
 But : repasser sur **tout ce qui existe** avant d'ajouter quoi que ce soit, pour que tu
 choisisses quoi approfondir. Pour chaque partie : **comment ça marche aujourd'hui**, **ce que
@@ -206,8 +206,18 @@ enchanter, fusionner des gemmes. Accessible par la fiche d'un objet (bouton Forg
   un jeu de runs courtes : on n'en utilise qu'une partie.
 - 🟠 L'amélioration à risque peut frustrer sur un objet qu'on va remplacer dans 2 runs.
 
-❓ Simplifier la forge (ex. amélioration sans échec, gemmes en bonus fixes) ou la garder
-complète comme dans Eden ?
+✅ **Décidé et fait (0.1.41)** : forge complète comme dans Eden.
+- **Fortification** : chaque tentative consomme un parchemin de puissance (armes) ou de garde
+  (armures), Lv20 à Lv100, d'un niveau au moins égal à celui de l'objet, plus de l'or. Réussite
+  assurée jusqu'à +2 à +5 selon le parchemin (valeurs d'Eden), puis chances décroissantes.
+- **Pierres de sûreté d'Eden** (une par tentative, toutes protègent l'objet) : sûreté +5 %,
+  chanceuse +10 %, halcyon citrine +50 %, halcyon viridienne / outremer / corail +75 %
+  (de +3 à +6, +7 à +8, +9 à +10), sublime sanguine +100 %. Icônes et couleurs d'Eden.
+- **Formules d'enchantement d'Eden** (Explosion musculaire, Violence, Chant rapide…) Lv1 à Lv9,
+  objets de niveau 25 à 70, valeurs d'Eden (ex. Lv4 : CRIT +11), toute pièce d'équipement.
+- **Parchemin béni** (création du jeu) : une tentative gratuite et protégée.
+- Écran de forge refait : parchemin utilisé, pierres cliquables, barre de réussite, risque.
+- À faire ensuite : objet pour faire redescendre une amélioration d'un niveau.
 
 ---
 

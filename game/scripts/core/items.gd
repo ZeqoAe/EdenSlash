@@ -683,7 +683,7 @@ static func describe(item: Dictionary) -> String:
 		var e: Dictionary = item.enchant
 		lines.append("[color=#8fd8ff]✦ %s Lv%d : %s[/color]" % [Craft.ENCHANTS.get(String(e.type), {}).get("name", "?"), int(e.lv), Craft._stats_text(Craft.enchant_stats(e))])
 	if up < MAX_UPGRADE:
-		lines.append("[color=#aaaaaa]Prochaine amélioration : %d %% de réussite[/color]" % roundi(Craft.success_chance(item, 0) * 100))
+		lines.append("[color=#aaaaaa]Prochaine amélioration : %d %% de réussite[/color]" % roundi(Craft.success_chance(item) * 100))
 	var sid := String(item.get("set", ""))
 	var sdef := set_def(sid)
 	if not sdef.is_empty():

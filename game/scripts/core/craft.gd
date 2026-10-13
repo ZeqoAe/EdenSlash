@@ -2,10 +2,15 @@ class_name Craft
 extends RefCounted
 ## Joaillerie et forge, comme dans Eden Eternal :
 ## - emplacements de gemmes (2 max) percés aux ciseaux de sertissage, gemmes serties ;
-## - parchemins d'enchantement (un enchantement par objet, niveau adapté à l'objet) ;
-## - amélioration à risque : chances de réussite décroissantes, stat aléatoire gagnée à
-##   chaque réussite, échec qui fait redescendre l'objet à partir de +6, pierres de chance
-##   (+10 % de réussite chacune, 3 max) et de protection (empêche la perte de niveau).
+## - formules d'enchantement d'Eden (« Enchant-Muscle Explosion Lv4 » : un enchantement par
+##   objet, niveau d'objet minimum 25 à 70 selon le niveau de la formule) ;
+## - fortification +1 → +10 : chaque tentative consomme un parchemin de puissance (armes) ou de
+##   garde (armures) d'un niveau au moins égal à celui de l'objet, plus de l'or ; réussite
+##   assurée jusqu'à +2 à +5 selon le parchemin, puis chances décroissantes ; un échec vers +6
+##   ou plus fait redescendre l'objet d'un niveau ;
+## - pierres de sûreté d'Eden (une par tentative, consommée quel que soit le résultat) : elles
+##   protègent toutes l'objet et ajoutent +5 % à +100 % de réussite ;
+## - parchemin béni (création du jeu) : une tentative gratuite (ni parchemin ni or) et protégée.
 ## Les consommables sont rangés dans Profile.bag (clé -> quantité), butin de la run.
 
 const MAX_SOCKETS := 2
@@ -24,24 +29,51 @@ const GEMS := {
 const GEM_TIERS := ["brut", "taillé", "pur", "parfait", "royal"]
 const GEM_MULT := [1.0, 2.0, 3.5, 5.5, 8.0]
 
-## Enchantements d'Eden (« Basic Enchant: … Lv1-4 ») : effets par niveau de parchemin.
-const ENCHANTS := {
-	"swift_song": {"name": "Chant rapide", "eden": "Swift Song", "stats": {"atk_speed": 0.02}, "armor": false},
-	"violence": {"name": "Violence", "eden": "Violence", "stats": {"patk": 6.0}, "armor": false},
-	"optimize": {"name": "Optimisation", "eden": "Optimize", "stats": {"matk": 6.0}, "armor": false},
-	"muscle": {"name": "Explosion musculaire", "eden": "Muscle Explosion", "stats": {"str": 4.0}, "armor": false},
-	"slightness": {"name": "Légèreté", "eden": "Slightness", "stats": {"agi": 3.0, "move_speed": 0.01}, "armor": true},
-	"comprehension": {"name": "Compréhension", "eden": "Comprehension", "stats": {"int": 3.0, "wis": 3.0}, "armor": true},
-	"rehab": {"name": "Rééducation", "eden": "Rehab", "stats": {"hp": 50.0}, "armor": true},
-	"recovery": {"name": "Récupération", "eden": "Recovery", "stats": {"hp": 25.0, "lifesteal": 0.005}, "armor": true},
+## Formules d'enchantement d'Eden (« Enchant-… Lv1-9 », icônes d'Eden). [param pts] : valeurs
+## d'Eden par niveau (colonnes de c_item), [param k] : conversion en stat du jeu.
+const ENCHANT_PTS := {
+	"a": [7, 9, 10, 11, 12, 13, 14, 16, 17],
+	"b": [10, 13, 14, 16, 17, 19, 20, 23, 25],
+	"c": [7, 10, 12, 15, 17, 19, 22, 27, 31],
 }
-const MAX_SCROLL_LV := 5
+const ENCHANTS := {
+	"swift_song": {"name": "Chant rapide", "eden": "Swift Song", "stat": "move_speed", "pts": "a", "k": 0.002, "icon": "i00322", "eden_stat": "Move SPD"},
+	"violence": {"name": "Violence", "eden": "Violence", "stat": "atk_speed", "pts": "b", "k": 0.002, "icon": "i00323", "eden_stat": "ATK SPD"},
+	"optimize": {"name": "Optimisation", "eden": "Optimize", "stat": "dmg_pct", "pts": "b", "k": 0.002, "icon": "i00405", "eden_stat": "DMG"},
+	"slightness": {"name": "Légèreté", "eden": "Slightness", "stat": "eva", "pts": "a", "k": 0.0015, "icon": "i00406", "eden_stat": "Dodge"},
+	"muscle": {"name": "Explosion musculaire", "eden": "Muscle Explosion", "stat": "crit", "pts": "a", "k": 0.0015, "icon": "i00419", "eden_stat": "CRIT Rate"},
+	"comprehension": {"name": "Compréhension", "eden": "Comprehension", "stat": "crit_dmg", "pts": "a", "k": 0.004, "icon": "i00418", "eden_stat": "CRIT DMG"},
+	"rehab": {"name": "Rééducation", "eden": "Rehab", "stat": "def_pct", "pts": "c", "k": 0.0015, "icon": "i00409", "eden_stat": "DEF"},
+	"recovery": {"name": "Récupération", "eden": "Recovery", "stat": "cdr", "pts": "c", "k": 0.001, "icon": "i00410", "eden_stat": "Cooldown"},
+}
+## Niveau d'objet minimum de chaque niveau de formule (Eden : Lv1 = 25 … Lv9 = 70).
+const ENCHANT_MIN_LEVEL := [25, 35, 40, 45, 50, 55, 60, 65, 70]
+const MAX_SCROLL_LV := 9
 
-## Chances de réussite pour atteindre +1 … +10.
-const UPGRADE_CHANCE := [1.0, 1.0, 1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3]
-const LUCK_BONUS := 0.1
-const MAX_LUCK := 3
-const DOWNGRADE_FROM := 6  # un échec vers +6 ou plus fait perdre un niveau (sauf protection)
+## Parchemins de fortification d'Eden : puissance (armes), garde (armures, bijoux, trophées).
+const FORTIFY := {
+	"power": {"name": "Parchemin de puissance", "eden": "Power Scroll", "icon": "i00327", "what": "les armes"},
+	"guard": {"name": "Parchemin de garde", "eden": "Guard Scroll", "icon": "i00324", "what": "les armures et accessoires"},
+}
+const FORTIFY_LEVELS := [20, 30, 40, 50, 60, 70, 80, 90, 100]
+
+## Pierres de sûreté d'Eden : [from, to] = niveaux d'amélioration actuels acceptés.
+const STONES := {
+	"safety": {"name": "Pierre de sûreté", "eden": "Safety Stone", "bonus": 0.05, "from": 2, "to": 9, "rarity": 1, "icon": "i00528"},
+	"lucky": {"name": "Pierre de sûreté chanceuse", "eden": "Lucky Safety Stone", "bonus": 0.10, "from": 2, "to": 9, "rarity": 2, "icon": "i00529"},
+	"citrine": {"name": "Pierre halcyon citrine", "eden": "Citrine Halcyon Safety Stone", "bonus": 0.50, "from": 2, "to": 9, "rarity": 3, "icon": "i01202"},
+	"viridian": {"name": "Pierre halcyon viridienne", "eden": "Viridian Halcyon Safety Stone", "bonus": 0.75, "from": 3, "to": 6, "rarity": 3, "icon": "i01009"},
+	"ultramarine": {"name": "Pierre halcyon outremer", "eden": "Ultramarine Halcyon Safety Stone", "bonus": 0.75, "from": 7, "to": 8, "rarity": 3, "icon": "i01010"},
+	"coral": {"name": "Pierre halcyon corail", "eden": "Coral Halcyon Safety Stone", "bonus": 0.75, "from": 9, "to": 9, "rarity": 3, "icon": "i01011"},
+	"sublime": {"name": "Pierre sublime sanguine", "eden": "Sanguine Sublime Safety Stone", "bonus": 1.0, "from": 2, "to": 9, "rarity": 4, "icon": "i11145"},
+}
+## Parchemin béni (création du jeu) : tentative gratuite et protégée.
+const BLESSED := "blessed"
+const BLESSED_ICON := "i00311"
+
+## Chances de réussite de base pour atteindre +1 … +10 (le parchemin assure les premiers).
+const UPGRADE_CHANCE := [1.0, 1.0, 0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3]
+const DOWNGRADE_FROM := 6  # un échec vers +6 ou plus fait perdre un niveau (sauf pierre ou parchemin béni)
 const UPGRADE_POOL_WEAPON := ["patk", "matk", "crit", "atk_speed", "str", "agi", "int"]
 const UPGRADE_POOL_ARMOR := ["hp", "def", "str", "agi", "int", "wis", "lck"]
 const UPGRADE_ROLL := {
@@ -60,20 +92,56 @@ static func scroll_key(type: String, lv: int) -> String:
 	return "scroll:%s:%d" % [type, lv]
 
 
+static func fortify_key(kind: String, lv: int) -> String:
+	return "fortify:%s:%d" % [kind, lv]
+
+
+static func stone_key(id: String) -> String:
+	return "stone:" + id
+
+
+## Anciennes clés (avant 0.1.41) : pierre de chance et pierre de protection.
+static func migrate_key(key: String) -> String:
+	return {"luck": "stone:lucky", "protect": "stone:safety"}.get(key, key)
+
+
+static func migrate_bag(bag: Dictionary) -> Dictionary:
+	var out := {}
+	for k in bag:
+		var nk := migrate_key(String(k))
+		out[nk] = int(out.get(nk, 0)) + int(bag[k])
+	return out
+
+
 static func label(key: String) -> String:
 	var p := key.split(":")
 	match p[0]:
 		"gem":
 			return "%s %s" % [GEMS[p[1]].name, GEM_TIERS[int(p[2])]]
 		"scroll":
-			return "Parchemin : %s Lv%d" % [ENCHANTS[p[1]].name, int(p[2])]
+			return "Enchantement : %s Lv%d" % [ENCHANTS[p[1]].name, int(p[2])]
+		"fortify":
+			return "%s Lv%d" % [FORTIFY[p[1]].name, int(p[2])]
+		"stone":
+			return String(STONES[p[1]].name)
+		"blessed":
+			return "Parchemin béni"
 		"drill":
 			return "Ciseaux de sertissage"
-		"luck":
-			return "Pierre de chance"
-		"protect":
-			return "Pierre de protection"
 	return key
+
+
+## Nom d'origine dans Eden (affiché en sous-titre).
+static func eden_name(key: String) -> String:
+	var p := key.split(":")
+	match p[0]:
+		"scroll":
+			return "Enchant-%s Lv%d" % [ENCHANTS[p[1]].eden, int(p[2])]
+		"fortify":
+			return "%s Lv%d" % [FORTIFY[p[1]].eden, int(p[2])]
+		"stone":
+			return String(STONES[p[1]].eden)
+	return ""
 
 
 static func describe_key(key: String) -> String:
@@ -83,15 +151,29 @@ static func describe_key(key: String) -> String:
 			return "Gemme à sertir : %s." % _stats_text(gem_stats({"type": p[1], "tier": int(p[2])}))
 		"scroll":
 			var e: Dictionary = ENCHANTS[p[1]]
-			return "Enchante %s : %s. Objet de niveau %d minimum." % ["une armure" if e.armor else "une arme ou des gants",
-				_stats_text(enchant_stats({"type": p[1], "lv": int(p[2])})), scroll_min_level(int(p[2]))]
+			var lv := int(p[2])
+			return "Formule d'enchantement (%s).\n%s +%d : %s.\nS'applique à une pièce d'équipement de niveau %d ou plus (remplace l'enchantement en place)." % [
+				eden_name(key), e.eden_stat, enchant_points(p[1], lv), _stats_text(enchant_stats({"type": p[1], "lv": lv})), enchant_min_level(lv)]
+		"fortify":
+			var lv := int(p[2])
+			return "Fortifie %s de niveau %d ou moins (%s).\nRéussite assurée jusqu'à +%d. Ne sert que de +1 à +10.\nLe parchemin disparaît après la tentative." % [
+				FORTIFY[p[1]].what, lv, eden_name(key), fortify_safe(p[1], lv)]
+		"stone":
+			var s: Dictionary = STONES[p[1]]
+			var txt := "Protège l'objet pendant la fortification : il ne redescend pas en cas d'échec."
+			if float(s.bonus) > 0.0:
+				txt += "\nRéussite +%d %%." % roundi(float(s.bonus) * 100.0)
+			txt += "\nUtilisable de +%d à +%d → +%d. Une pierre par tentative, détruite quel que soit le résultat." % [int(s.from), int(s.to), int(s.to) + 1]
+			return txt
+		"blessed":
+			return "Création d'Eden Slash : une tentative de fortification sans parchemin ni or, et protégée (l'objet ne redescend pas). Peut s'accompagner d'une pierre de sûreté."
 		"drill":
 			return "Perce un emplacement de gemme (2 max ; le 2e réussit à 70 %)."
-		"luck":
-			return "+10 % de chances de réussite d'amélioration (3 max par tentative)."
-		"protect":
-			return "Empêche l'objet de perdre un niveau si l'amélioration échoue."
 	return ""
+
+
+static func _icon_path(code: String) -> String:
+	return "res://assets/ui/items/%s.png" % code
 
 
 static func icon(key: String) -> String:
@@ -101,18 +183,31 @@ static func icon(key: String) -> String:
 		"gem":
 			return String(craft.get(p[1], ""))
 		"scroll":
-			return String(craft.get("scroll%d" % (ENCHANTS.keys().find(p[1]) % 8), ""))
+			return _icon_path(String(ENCHANTS[p[1]].icon))
+		"fortify":
+			return _icon_path(String(FORTIFY[p[1]].icon))
+		"stone":
+			return _icon_path(String(STONES[p[1]].icon))
+		"blessed":
+			return _icon_path(BLESSED_ICON)
 	return String(craft.get(p[0], ""))
 
 
 ## Rareté affichée (couleur) d'un consommable.
 static func rarity(key: String) -> int:
 	var p := key.split(":")
-	if p[0] == "gem":
-		return mini(int(p[2]), 3)
-	if p[0] == "scroll":
-		return clampi(int(p[2]) - 1, 0, 3)
-	return 2 if p[0] == "protect" else 1
+	match p[0]:
+		"gem":
+			return mini(int(p[2]), 3)
+		"scroll":
+			return clampi((int(p[2]) - 1) / 2, 0, 3)
+		"fortify":
+			return 1
+		"stone":
+			return int(STONES[p[1]].rarity)
+		"blessed":
+			return 4
+	return 1
 
 
 # --- stats apportées ---------------------------------------------------------------------------
@@ -123,12 +218,21 @@ static func gem_stats(g: Dictionary) -> Dictionary:
 	return {d.stat: float(d.base) * float(GEM_MULT[clampi(int(g.get("tier", 0)), 0, GEM_MULT.size() - 1)])}
 
 
+## Valeur d'Eden de la formule [param type] au niveau [param lv].
+static func enchant_points(type: String, lv: int) -> int:
+	var d: Dictionary = ENCHANTS.get(type, {})
+	if d.is_empty():
+		return 0
+	var pts: Array = ENCHANT_PTS[d.pts]
+	return int(pts[clampi(lv, 1, pts.size()) - 1])
+
+
 static func enchant_stats(e: Dictionary) -> Dictionary:
-	var d: Dictionary = ENCHANTS.get(String(e.get("type", "")), {})
-	var out := {}
-	for s in d.get("stats", {}):
-		out[s] = float(d.stats[s]) * int(e.get("lv", 1))
-	return out
+	var type := String(e.get("type", ""))
+	var d: Dictionary = ENCHANTS.get(type, {})
+	if d.is_empty():
+		return {}
+	return {d.stat: snappedf(enchant_points(type, int(e.get("lv", 1))) * float(d.k), 0.0001)}
 
 
 ## Stats ajoutées à un objet par ses gemmes, son enchantement et ses bonus d'amélioration.
@@ -191,24 +295,37 @@ static func insert_gem(item: Dictionary, key: String, slot: int) -> String:
 
 
 # --- enchantement --------------------------------------------------------------------------------
-## Niveau d'objet minimum pour un parchemin Lv[param lv].
+## Niveau d'objet minimum pour une formule Lv[param lv].
+static func enchant_min_level(lv: int) -> int:
+	return int(ENCHANT_MIN_LEVEL[clampi(lv, 1, ENCHANT_MIN_LEVEL.size()) - 1])
+
+
+## Ancien nom, gardé pour les appels existants.
 static func scroll_min_level(lv: int) -> int:
-	return maxi(1, (lv - 1) * 10)
+	return enchant_min_level(lv)
 
 
-## Niveau de parchemin adapté à un niveau de monstre ou d'objet.
+## Niveau de formule le plus haut utilisable sur un objet (ou un monstre) de niveau [param level]
+## (0 : aucun, sous le niveau 25).
 static func scroll_level_for(level: int) -> int:
-	return clampi(1 + level / 10, 1, MAX_SCROLL_LV)
+	var lv := 0
+	for i in ENCHANT_MIN_LEVEL.size():
+		if level >= int(ENCHANT_MIN_LEVEL[i]):
+			lv = i + 1
+	return lv
+
+
+static func _item_level(item: Dictionary) -> int:
+	return mini(Items.power_cap(item), 999) if int(item.get("level", 0)) <= 0 else int(item.level)
 
 
 static func can_enchant(item: Dictionary, key: String) -> String:
 	var p := key.split(":")
-	var e: Dictionary = ENCHANTS.get(p[1], {})
-	var armor: bool = item.slot != "weapon" and item.slot != "gloves"
-	if bool(e.get("armor", false)) != armor:
-		return "Ce parchemin s'applique %s." % ("aux armures" if e.get("armor", false) else "aux armes et aux gants")
-	if mini(Items.power_cap(item), 999) < scroll_min_level(int(p[2])):  # niveau de l'objet (pas sa puissance du moment)
-		return "Objet de niveau %d minimum." % scroll_min_level(int(p[2]))
+	if not ENCHANTS.has(p[1]):
+		return "Formule inconnue."
+	var need := enchant_min_level(int(p[2]))
+	if maxi(_item_level(item), mini(Items.power_cap(item), 999)) < need:  # niveau de l'objet (pas sa puissance du moment)
+		return "Objet de niveau %d minimum." % need
 	return ""
 
 
@@ -217,7 +334,7 @@ static func apply_scroll(item: Dictionary, key: String) -> String:
 	if why != "":
 		return why
 	if not Profile.take_bag(key):
-		return "Parchemin introuvable."
+		return "Formule introuvable."
 	var p := key.split(":")
 	var replaced := item.has("enchant")
 	item["enchant"] = {"type": p[1], "lv": int(p[2])}
@@ -225,28 +342,82 @@ static func apply_scroll(item: Dictionary, key: String) -> String:
 	return "Enchantement %s Lv%d appliqué%s." % [ENCHANTS[p[1]].name, int(p[2]), " (remplace l'ancien)" if replaced else ""]
 
 
-# --- amélioration à risque -----------------------------------------------------------------------
-## Chance de réussite pour l'amélioration suivante avec [param luck] pierres de chance.
-static func success_chance(item: Dictionary, luck: int) -> float:
+# --- fortification -----------------------------------------------------------------------------
+static func fortify_kind(item: Dictionary) -> String:
+	return "power" if String(item.get("slot", "")) == "weapon" else "guard"
+
+
+## Niveau du parchemin nécessaire (le plus petit au moins égal au niveau de l'objet).
+static func fortify_level_for(item: Dictionary) -> int:
+	var lv := _item_level(item)
+	for f in FORTIFY_LEVELS:
+		if int(f) >= lv:
+			return int(f)
+	return int(FORTIFY_LEVELS[-1])
+
+
+## Réussite assurée jusqu'à +N (Eden : garde +5 / +4 / +3, puissance +4 / +3 / +2).
+static func fortify_safe(kind: String, lv: int) -> int:
+	if kind == "power":
+		return 4 if lv <= 30 else (3 if lv <= 50 else 2)
+	return 5 if lv <= 30 else (4 if lv <= 70 else 3)
+
+
+static func fortify_fits(item: Dictionary, key: String) -> bool:
+	var p := key.split(":")
+	return p.size() == 3 and p[0] == "fortify" and p[1] == fortify_kind(item) and int(p[2]) >= _item_level(item)
+
+
+## Parchemin du sac utilisé pour la prochaine tentative : le plus petit qui convient ("" : aucun).
+static func fortify_for(item: Dictionary) -> String:
+	var best := ""
+	for k in Profile.bag_keys("fortify:" + fortify_kind(item)):
+		if fortify_fits(item, k) and (best == "" or int(k.split(":")[2]) < int(best.split(":")[2])):
+			best = k
+	return best
+
+
+static func stone_usable(item: Dictionary, key: String) -> bool:
+	var p := key.split(":")
+	if p.size() != 2 or p[0] != "stone" or not STONES.has(p[1]):
+		return false
+	var up := int(item.get("upgrade", 0))
+	return up >= int(STONES[p[1]].from) and up <= int(STONES[p[1]].to)
+
+
+## Chance de réussite de la prochaine tentative avec la pierre [param stone] et le parchemin
+## [param scroll] ("" : le parchemin qu'il faudrait ; BLESSED : parchemin béni).
+static func success_chance(item: Dictionary, stone := "", scroll := "") -> float:
 	var up := int(item.get("upgrade", 0))
 	if up >= Items.MAX_UPGRADE:
 		return 0.0
-	return minf(1.0, float(UPGRADE_CHANCE[up]) + LUCK_BONUS * clampi(luck, 0, MAX_LUCK))
+	var c := float(UPGRADE_CHANCE[up])
+	if scroll == "":
+		scroll = fortify_key(fortify_kind(item), fortify_level_for(item))
+	var safe := 3
+	if scroll.begins_with("fortify:"):
+		var p := scroll.split(":")
+		safe = fortify_safe(p[1], int(p[2]))
+	if up + 1 <= safe:
+		c = 1.0
+	if stone != "" and stone_usable(item, stone):
+		c += float(STONES[stone.split(":")[1]].bonus)
+	return minf(1.0, c)
 
 
 ## Ce qu'un échec coûterait (texte).
-static func failure_text(item: Dictionary) -> String:
+static func failure_text(item: Dictionary, protected := false) -> String:
 	var target := int(item.get("upgrade", 0)) + 1
-	if float(UPGRADE_CHANCE[target - 1]) >= 1.0:
-		return "aucun risque"
-	if target >= DOWNGRADE_FROM:
-		return "matériaux perdus et l'objet redescend à +%d (sauf pierre de protection)" % maxi(0, target - 2)
-	return "matériaux perdus"
+	if target >= DOWNGRADE_FROM and not protected:
+		return "l'objet redescend à +%d" % maxi(0, target - 2)
+	return "l'objet reste à +%d" % (target - 1)
 
 
-## Tentative d'amélioration : {ok, text, stat, value}. Les coûts sont payés par l'appelant.
-static func upgrade(item: Dictionary, luck: int, protect: bool) -> Dictionary:
-	var chance := success_chance(item, luck)
+## Tentative de fortification : {ok, text, stat, value}. Parchemin, pierre et or sont consommés
+## par l'appelant (Profile.upgrade_item) ; une pierre ou le parchemin béni protègent l'objet.
+static func upgrade(item: Dictionary, stone := "", scroll := "") -> Dictionary:
+	var chance := success_chance(item, stone, scroll)
+	var protect := stone != "" or scroll == BLESSED
 	var target := int(item.get("upgrade", 0)) + 1
 	if randf() < chance:
 		item.upgrade = target
@@ -270,7 +441,8 @@ static func upgrade(item: Dictionary, luck: int, protect: bool) -> Dictionary:
 				rolls.remove_at(i)
 				break
 		return {"ok": false, "text": "Échec… l'objet redescend à +%d." % int(item.upgrade)}
-	return {"ok": false, "text": "Échec. %s" % ("La pierre de protection a préservé l'objet." if protect and target >= DOWNGRADE_FROM else "L'objet est intact.")}
+	var saved := protect and target >= DOWNGRADE_FROM
+	return {"ok": false, "text": "Échec. %s" % (("%s a protégé l'objet." % ("Le parchemin béni" if stone == "" else label(stone))) if saved else "L'objet est intact.")}
 
 
 ## Stat bonus aléatoire gagnée au palier +[param target] (+4, +6, +8, +10) : [stat, valeur au
@@ -284,19 +456,46 @@ static func _upgrade_roll(item: Dictionary, target: int) -> Array:
 
 
 # --- butin ----------------------------------------------------------------------------------------
+## Niveau de parchemin de fortification adapté à un niveau de butin.
+static func fortify_level_at(level: int) -> int:
+	for f in FORTIFY_LEVELS:
+		if int(f) >= level:
+			return int(f)
+	return int(FORTIFY_LEVELS[-1])
+
+
+## Pierre de sûreté aléatoire ([param bonus] > 0 : les plus rares sortent plus souvent).
+static func random_stone(bonus := 0) -> String:
+	var r := randf() * 100.0 / (1.0 + 0.6 * bonus)
+	if r < 2.0:
+		return stone_key("sublime")
+	if r < 12.0:
+		return stone_key(["viridian", "ultramarine", "coral"].pick_random())
+	if r < 25.0:
+		return stone_key("citrine")
+	if r < 55.0:
+		return stone_key("lucky")
+	return stone_key("safety")
+
+
 ## Consommable aléatoire adapté au niveau ([param bonus] : coffres rares, élites, boss).
 static func random_loot(level: int, bonus := 0) -> String:
 	var r := randf() * 100.0
 	var tier := clampi(level / 8 + bonus + (1 if randf() < 0.25 else 0) - (1 if randf() < 0.3 else 0), 0, GEM_TIERS.size() - 1)
-	if r < 35.0:
+	if r < 26.0:
 		return gem_key(GEMS.keys().pick_random(), tier)
-	if r < 60.0:
-		return scroll_key(ENCHANTS.keys().pick_random(), clampi(scroll_level_for(level) + (1 if bonus > 0 and randf() < 0.3 else 0), 1, MAX_SCROLL_LV))
-	if r < 75.0:
+	if r < 52.0:
+		return fortify_key(["power", "guard"].pick_random(), fortify_level_at(level))
+	if r < 64.0:
+		var slv := scroll_level_for(level)
+		if slv > 0:
+			return scroll_key(ENCHANTS.keys().pick_random(), clampi(slv + (1 if bonus > 0 and randf() < 0.3 else 0) - (1 if randf() < 0.35 else 0), 1, slv))
+		return fortify_key(["power", "guard"].pick_random(), fortify_level_at(level))
+	if r < 72.0:
 		return "drill"
-	if r < 90.0:
-		return "luck"
-	return "protect"
+	if r < 99.0 - 1.5 * bonus:
+		return random_stone(bonus)
+	return BLESSED
 
 
 ## Objet de butin (LootDrop) représentant un consommable.

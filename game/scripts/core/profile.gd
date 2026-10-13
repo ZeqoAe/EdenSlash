@@ -114,7 +114,7 @@ func load_profile() -> void:
 	runs_done = int(d.get("runs_done", 0))
 	unlocked_zones = maxi(1, int(d.get("unlocked_zones", 1)))
 	expertise = d.get("expertise", {})
-	stash = d.get("stash", {})
+	stash = Craft.migrate_bag(d.get("stash", {}))
 	talents = d.get("talents", {})
 	certificates = d.get("certificates", [])
 	records = d.get("records", {})
@@ -927,19 +927,27 @@ func pay(cost: Dictionary) -> bool:
 
 ## Améliore un objet (porté ou en inventaire). Renvoie la stat renforcée au palier,
 ## "" sinon, ou "!" si impossible.
-## Tentative d'amélioration à la Eden : coût payé, pierres de chance et de protection
-## consommées, résultat {ok, text, error?}.
-func upgrade_item(item: Dictionary, luck := 0, protect := false) -> Dictionary:
+## Tentative de fortification à la Eden : un parchemin de puissance / garde du sac et de l'or
+## (ou un parchemin béni, gratuit et protégé), la pierre de sûreté [param stone] éventuelle ;
+## résultat {ok, text, error?}.
+func upgrade_item(item: Dictionary, stone := "", blessed := false) -> Dictionary:
 	if int(item.get("upgrade", 0)) >= Items.MAX_UPGRADE:
 		return {"ok": false, "error": true, "text": "Amélioration maximale atteinte."}
-	if not pay(Items.upgrade_cost(item)):
-		return {"ok": false, "error": true, "text": "Pas assez d'or ou de matériaux."}
-	luck = mini(luck, bag_count("luck"))
-	if luck > 0:
-		take_bag("luck", luck)
-	if protect and not take_bag("protect"):
-		protect = false
-	var r := Craft.upgrade(item, luck, protect)
+	var scroll := Craft.BLESSED
+	if blessed:
+		if bag_count(Craft.BLESSED) <= 0:
+			return {"ok": false, "error": true, "text": "Aucun parchemin béni."}
+	else:
+		scroll = Craft.fortify_for(item)
+		if scroll == "":
+			return {"ok": false, "error": true, "text": "Il faut un %s." % Craft.label(Craft.fortify_key(Craft.fortify_kind(item), Craft.fortify_level_for(item)))}
+		if not can_afford(Items.upgrade_cost(item)):
+			return {"ok": false, "error": true, "text": "Pas assez d'or."}
+		pay(Items.upgrade_cost(item))
+	take_bag(scroll)
+	if stone != "" and not (Craft.stone_usable(item, stone) and take_bag(stone)):
+		stone = ""
+	var r := Craft.upgrade(item, stone, scroll)
 	save_profile()
 	return r
 

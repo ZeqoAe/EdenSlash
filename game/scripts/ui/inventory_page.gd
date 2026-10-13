@@ -774,7 +774,7 @@ func _refresh_detail() -> void:
 		_d_next.text = ""
 		_d_flavor.text = "[color=#9a98a8]%s[/color]" % ("Fournitures : gardées à l'extraction ou à la victoire, perdues si le héros tombe." if String(e.kind) == "stack" else
 			("Gardés entre les runs (on les obtient en démontant des objets)." if key == "crystal" else "Perdu(es) en fin de run : à dépenser !"))
-		_d_set.text = "[b]Utilisation[/b]\n[color=#c8c8d4]%s[/color]" % ("Forge : gemmes, parchemins, pierres de chance et de protection ; fusion de 3 gemmes identiques." if String(e.kind) == "stack" else "Voir l'aide « ? » : Monnaies.")
+		_d_set.text = "[b]Utilisation[/b]\n[color=#c8c8d4]%s[/color]" % ("Forge : gemmes, formules d'enchantement, parchemins de fortification, pierres de sûreté ; fusion de 3 gemmes identiques." if String(e.kind) == "stack" else "Voir l'aide « ? » : Monnaies.")
 		for b in [_b_equip, _b_dismantle]:
 			b.disabled = true
 		# gemmes : la Forge propose la fusion
@@ -789,7 +789,7 @@ func _refresh_detail() -> void:
 	_d_type.text = slot_name + ((" - " + kind.capitalize()) if kind != "" else "") + ("  · porté" if equipped else "")
 	_d_level.text = "Niv. %d%s" % [int(it.level), ("   +%d" % int(it.get("upgrade", 0))) if int(it.get("upgrade", 0)) > 0 else ""]
 	_d_stats.text = _stats_compare(it, equipped)
-	_d_next.text = ("Prochain niveau : %d %% de réussite" % roundi(Craft.success_chance(it, 0) * 100.0)) if int(it.get("upgrade", 0)) < Items.MAX_UPGRADE else "Amélioration maximale"
+	_d_next.text = ("Prochain niveau : %d %% de réussite" % roundi(Craft.success_chance(it) * 100.0)) if int(it.get("upgrade", 0)) < Items.MAX_UPGRADE else "Amélioration maximale"
 	var eden: Dictionary = GameData.eden_by_id.get(int(it.get("eden", 0)), {})
 	var fl: PackedStringArray = []
 	if not eden.is_empty():

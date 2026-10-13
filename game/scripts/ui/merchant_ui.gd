@@ -141,8 +141,10 @@ func roll_offers() -> Array:
 	out.append({"keys": 1, "price": 45 + 8 * lvl, "card": {"type": "key", "title": "Clé ×1", "subtitle": "Ouvre un coffre de la carte sans payer",
 		"desc": "Une clé ouvre n'importe quel coffre de la carte (son prix en or monte à chaque coffre ouvert). Perdue en fin de run.", "icon": Items.material_icon("keys")}})
 	var lv := director.loot_level(lvl) if director else lvl
-	for key in ["drill", ["luck", "protect"].pick_random()]:
-		out.append(_supply_offer(key, 2 if key == "luck" else 1, 40 + 6 * lvl))
+	var flv := Craft.fortify_level_at(lv)
+	out.append(_supply_offer(Craft.fortify_key(["power", "guard"].pick_random(), flv), 2, 30 + 5 * lvl))
+	for key in ["drill", Craft.stone_key(["safety", "lucky"].pick_random())]:
+		out.append(_supply_offer(key, 2 if key.begins_with("stone") else 1, 40 + 6 * lvl))
 	while out.size() < 8:
 		var slot := "trophy" if out.size() == 7 and randf() < 0.5 else ""
 		var item := Items.generate(director.loot_level(lvl + 1) if director else lvl, 0.4, slot, Run.class_id, 2)

@@ -482,7 +482,12 @@ class ResourcesPage extends HBoxContainer:
 		_supplies.add_child(sv)
 		_supplies.move_child(_msg, -1)
 		Hud._label(sv, "Dans le sac de la run" if Profile.in_run else "Dans la réserve (emportée à la prochaine run)", 13, UiTheme.MUTED)
-		var keys: Array = ["drill", "luck", "protect"]
+		var keys: Array = ["drill", Craft.BLESSED]
+		for st in Craft.STONES:
+			keys.append(Craft.stone_key(st))
+		for kind in Craft.FORTIFY:
+			for lv in Craft.FORTIFY_LEVELS:
+				keys.append(Craft.fortify_key(kind, lv))
 		for g in Craft.GEMS:
 			for t in Craft.GEM_TIERS.size():
 				keys.append(Craft.gem_key(g, t))

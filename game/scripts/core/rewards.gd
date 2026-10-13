@@ -5,7 +5,7 @@ extends RefCounted
 ## perdent jamais. **Seule source des objets mythiques et légendaires.**
 ## Chaque coffre : {id, type, plevel}.
 ## - équipement : un objet mythique (légendaire : 20 %, 35 % pour un coffre de boss) ;
-## - forge : pierres de chance et de protection, ciseaux, cristaux ;
+## - forge : parchemins de fortification, pierres de sûreté, ciseaux, parfois un parchemin béni, cristaux ;
 ## - joaillier : gemmes et parchemins d'enchantement ;
 ## - set : choisir 1 pièce mythique parmi 3 pièces d'un même set ;
 ## - trophées : choisir 1 trophée parmi 3.
@@ -106,13 +106,24 @@ static func open(chest: Dictionary) -> Dictionary:
 			var rar := top_rarity(chest)
 			got.items.append(Items.generate(lv, 0.8, "", Profile.selected_class, rar, "", rar))
 		"forge":
-			got.supplies = {"luck": randi_range(1, 2), "protect": 1 if randf() < 0.6 else 0, "drill": 1 if randf() < 0.5 else 0}
+			# parchemins de fortification du niveau du coffre et pierres de sûreté
+			var flv := Craft.fortify_level_at(lv)
+			got.supplies = {Craft.fortify_key("power", flv): randi_range(1, 2), Craft.fortify_key("guard", flv): randi_range(1, 3),
+				Craft.stone_key("safety"): randi_range(1, 2), Craft.stone_key("lucky"): 1}
+			for i in 2:
+				var st := Craft.random_stone(2)
+				got.supplies[st] = int(got.supplies.get(st, 0)) + 1
+			if randf() < 0.5:
+				got.supplies["drill"] = 1
+			if randf() < 0.2:
+				got.supplies[Craft.BLESSED] = 1
 			got.crystal = randi_range(3, 6) + lv / 10
 		"jewel":
 			for i in 2:
 				var g := Craft.gem_key(Craft.GEMS.keys().pick_random(), clampi(lv / 12, 0, Craft.GEM_TIERS.size() - 1))
 				got.supplies[g] = int(got.supplies.get(g, 0)) + 1
-			var sc := Craft.scroll_key(Craft.ENCHANTS.keys().pick_random(), Craft.scroll_level_for(lv))
+			var slv := Craft.scroll_level_for(lv)
+			var sc := Craft.scroll_key(Craft.ENCHANTS.keys().pick_random(), slv) if slv > 0 else Craft.random_stone(1)
 			got.supplies[sc] = 1
 	_give(got)
 	Profile.reward_chests.erase(chest)

@@ -64,8 +64,9 @@ func _open_for_test() -> void:
 		Profile.materials.crystal = int(Profile.materials.get("crystal", 0)) + 40
 		Profile.add_gold(800)
 		# fournitures de test pour la forge
-		for k in ["drill", "drill", "luck", "luck", "luck", "protect", Craft.gem_key("ruby", 1), Craft.gem_key("garnet", 2),
-				Craft.gem_key("amethyst", 0), Craft.scroll_key("violence", 1), Craft.scroll_key("rehab", 1)]:
+		for k in ["drill", "drill", Craft.stone_key("lucky"), Craft.stone_key("coral"), Craft.stone_key("safety"), Craft.BLESSED,
+				Craft.fortify_key("power", 20), Craft.fortify_key("power", 20), Craft.fortify_key("guard", 20), Craft.gem_key("ruby", 1), Craft.gem_key("garnet", 2),
+				Craft.gem_key("amethyst", 0), Craft.scroll_key("violence", 1), Craft.scroll_key("muscle", 4)]:
 			Profile.add_bag(k)
 		if _debug_open == "forge":
 			merchant_ui.open_forge(Profile.inventory[0])

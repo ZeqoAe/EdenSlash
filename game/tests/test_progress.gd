@@ -23,13 +23,25 @@ func _ready() -> void:
 		Profile.add_item(Items.generate(3, 0.5))
 	Profile.gain({"gold": 5000, "crystal": 5})
 	var w: Dictionary = Profile.equipped.weapon
-	# amélioration à risque : avec 3 pierres de chance et une protection à chaque essai
+	# fortification à la Eden : sans parchemin, rien ; parchemin consommé à chaque essai
 	Profile.gain({"gold": 200000, "crystal": 50})
-	Profile.add_bag("luck", 300)
-	Profile.add_bag("protect", 100)
-	var tries := 0
+	var g_before := Profile.gold
+	var r0 := Profile.upgrade_item(w)
+	check("fortifier sans parchemin : refusé, rien payé", r0.get("error", false) and Profile.gold == g_before and int(w.upgrade) == 0)
+	var low := Craft.fortify_key("power", 20)
+	Profile.add_bag(low)
+	var lvl_w := int(w.level)
+	check("parchemin de puissance Lv20 : %s pour une arme niveau %d" % ["accepté" if lvl_w <= 20 else "refusé", lvl_w], Craft.fortify_fits(w, low) == (lvl_w <= 20))
+	check("parchemin de garde refusé sur une arme", not Craft.fortify_fits(w, Craft.fortify_key("guard", 100)))
+	Profile.take_bag(low)
+	var scroll := Craft.fortify_key("power", 100)
+	Profile.add_bag(scroll, 100)
+	Profile.add_bag(Craft.stone_key("lucky"), 300)
+	Profile.upgrade_item(w, Craft.stone_key("lucky"))
+	check("+1 : parchemin consommé, pierre gardée (inutile avant +2)", int(w.upgrade) == 1 and Profile.bag_count(scroll) == 99 and Profile.bag_count(Craft.stone_key("lucky")) == 300)
+	var tries := 1
 	while int(w.upgrade) < 8 and tries < 100:
-		Profile.upgrade_item(w, 3, true)
+		Profile.upgrade_item(w, Craft.stone_key("lucky"))
 		tries += 1
 	check("katana amélioré en +8 (%d essais, protégé) : stats bonus aux paliers +4, +6, +8 seulement" % tries, int(w.upgrade) == 8 and (w.up_rolls as Array).size() == 3)
 	check("stat aléatoire gagnée à chaque réussite", Items.stats(w).has(String(w.up_rolls[0][0])))
@@ -40,19 +52,40 @@ func _ready() -> void:
 		var t := Items.generate(5, 0.0, "chest")
 		t.upgrade = 5
 		t["up_rolls"] = [["hp", 1.0], ["hp", 1.0], ["hp", 1.0], ["hp", 1.0], ["hp", 1.0]]
-		var r := Craft.upgrade(t, 0, false)
+		Craft.upgrade(t)
 		if int(t.upgrade) == 4:
 			downs += 1
 		var t2 := Items.generate(5, 0.0, "chest")
 		t2.upgrade = 5
-		Craft.upgrade(t2, 0, true)
+		Craft.upgrade(t2, Craft.stone_key("safety"))
 		if int(t2.upgrade) == 4:
 			protected_downs += 1
 	check("vers +6 sans protection : ~30 %% de pertes de niveau (%d / 400)" % downs, downs > 80 and downs < 160)
-	check("pierre de protection : aucune perte (%d)" % protected_downs, protected_downs == 0)
+	check("pierre de sûreté : aucune perte (%d)" % protected_downs, protected_downs == 0)
+	# pierres d'Eden : bonus et niveaux d'emploi
+	var t9 := Items.generate(5, 0.0, "chest")
+	t9.upgrade = 9
+	check("pierre halcyon corail : +75 %% de +9 à +10 (%d %%)" % roundi(Craft.success_chance(t9, Craft.stone_key("coral")) * 100),
+		absf(Craft.success_chance(t9, Craft.stone_key("coral")) - minf(1.0, Craft.UPGRADE_CHANCE[9] + 0.75)) < 0.001)
+	check("pierre halcyon viridienne : inutilisable à +9", not Craft.stone_usable(t9, Craft.stone_key("viridian")))
+	check("pierre sublime : 100 %", Craft.success_chance(t9, Craft.stone_key("sublime")) >= 1.0)
+	check("parchemin de garde Lv20 : réussite assurée jusqu'à +5", Craft.fortify_safe("guard", 20) == 5 and Craft.fortify_safe("power", 70) == 2)
+	# parchemin béni : gratuit (ni parchemin ni or) et protégé
+	var tb := Items.generate(5, 0.0, "chest")
+	tb.upgrade = 7
+	Profile.add_bag(Craft.BLESSED, 30)
+	var gb := Profile.gold
+	var b_downs := 0
+	for i in 30:
+		tb.upgrade = 7
+		Profile.upgrade_item(tb, "", true)
+		if int(tb.upgrade) < 7:
+			b_downs += 1
+	check("parchemin béni : 30 essais sans or ni perte de niveau", Profile.gold == gb and b_downs == 0 and Profile.bag_count(Craft.BLESSED) == 0)
+	check("anciennes pierres converties", Craft.migrate_bag({"luck": 2, "protect": 1}) == {"stone:lucky": 2, "stone:safety": 1})
 	# joaillier : emplacements, gemmes, parchemins
 	var armor := Items.generate(12, 0.0, "chest")
-	armor["level"] = 20  # parchemin Lv2 : objet de niveau 10 minimum (niveau de l'objet, pas sa puissance)
+	armor["level"] = 40  # formule Lv2 : objet de niveau 35 minimum (niveau de l'objet, pas sa puissance)
 	Profile.add_bag("drill", 20)
 	while (armor.get("sockets", []) as Array).size() < 2 and Profile.bag_count("drill") > 0:
 		Craft.drill(armor)
@@ -61,12 +94,12 @@ func _ready() -> void:
 	Profile.add_bag(Craft.gem_key("ruby", 2))
 	Craft.insert_gem(armor, Craft.gem_key("ruby", 2), 0)
 	check("rubis pur serti : +14 force", absf(float(Items.stats(armor).get("str", 0.0)) - str_before - 14.0) < 0.01)
-	Profile.add_bag(Craft.scroll_key("violence", 1))
-	check("parchemin d'arme refusé sur une armure", Craft.apply_scroll(armor, Craft.scroll_key("violence", 1)) != "" and not armor.has("enchant"))
-	Profile.add_bag(Craft.scroll_key("rehab", 2))
-	Craft.apply_scroll(armor, Craft.scroll_key("rehab", 2))
-	check("enchantement Rééducation Lv2 : +100 PV", armor.has("enchant") and absf(float(Craft.extra_stats(armor).get("hp", 0.0)) - 100.0) < 0.01)
-	check("parchemin Lv5 refusé sur un objet niveau 12", Craft.can_enchant(armor, Craft.scroll_key("rehab", 5)) != "")
+	Profile.add_bag(Craft.scroll_key("muscle", 9))
+	check("formule Lv9 (objets 70+) refusée sur un objet niveau 40", Craft.apply_scroll(armor, Craft.scroll_key("muscle", 9)) != "" and not armor.has("enchant"))
+	Profile.add_bag(Craft.scroll_key("muscle", 2))
+	Craft.apply_scroll(armor, Craft.scroll_key("muscle", 2))
+	check("Explosion musculaire Lv2 (Eden : CRIT +9) : critique +1,35 %", armor.has("enchant") and absf(float(Craft.extra_stats(armor).get("crit", 0.0)) - 0.0135) < 0.0001)
+	check("formule Lv4 : objets de niveau 45 (comme Eden)", Craft.enchant_min_level(4) == 45 and Craft.enchant_points("muscle", 4) == 11)
 	var spent := {}
 	for u in 8:
 		var c := Items.upgrade_cost({"level": Items.power_level(w), "upgrade": u})
@@ -148,10 +181,10 @@ func _ready() -> void:
 	Profile.end_run(null)
 	check("mort : fournitures emportées perdues", Profile.stash_count() == 0)
 	Run.start("magician")
-	Profile.add_bag("luck", 1)
+	Profile.add_bag(Craft.stone_key("lucky"), 1)
 	Run.finish("victoire")
 	Profile.end_run(null)
-	check("victoire : fournitures en réserve", Profile.stash.get("luck", 0) == 1)
+	check("victoire : fournitures en réserve", Profile.stash.get(Craft.stone_key("lucky"), 0) == 1)
 	Profile.reset_all()
 	check("nouvelle partie : réserve vidée", Profile.stash_count() == 0)
 	print("échecs : ", fails)

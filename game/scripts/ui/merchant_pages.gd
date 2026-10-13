@@ -343,12 +343,12 @@ class CraftPage extends HBoxContainer:
 ## une stat bonus et polir (cristaux), percer et sertir (joaillerie), enchanter. Sans objet
 ## choisi : la fusion des gemmes du sac.
 class ForgePage extends ItemPage:
-	var luck := 0
-	var protect := false
+	var stone := ""  # pierre de sûreté choisie pour la prochaine tentative
+	var blessed := false  # tentative avec un parchemin béni
 
 	func _init() -> void:
 		title = "Forge"
-		hint = "Choisis une pièce (portée ou dans ton sac). Améliorer : or seulement (+1 à +10, risque au-delà de +3). Réforger une stat et polir la qualité : cristaux (démontage, gardés entre les runs)."
+		hint = "Choisis une pièce (portée ou dans ton sac). Fortifier : un parchemin de puissance (arme) ou de garde (armure) du niveau de l'objet, plus de l'or ; une pierre de sûreté protège l'objet et ajoute des chances. Réforger et polir : cristaux."
 		scroll_actions = true
 
 	func show_detail(sel: Array) -> void:
@@ -371,41 +371,141 @@ class ForgePage extends ItemPage:
 		var l := Hud._label(actions, text, 13, UiTheme.MUTED)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
+	## Case de consommable (icône d'Eden, bordure de rareté, quantité, fiche au survol).
+	func _tile(parent: Control, key: String, count: int, on := false, enabled := true, cb := Callable()) -> Button:
+		var b := ItemWidgets.TipButton.new()
+		b.custom_minimum_size = Vector2(58, 58)
+		b.focus_mode = Control.FOCUS_NONE
+		b.icon = UiTheme.texture(Craft.icon(key))
+		b.expand_icon = true
+		var col: Color = Items.RARITIES[clampi(Craft.rarity(key), 0, Items.RARITIES.size() - 1)].color
+		var bg := Color(0.08, 0.06, 0.13, 0.95)
+		b.add_theme_stylebox_override("normal", UiTheme.flat_box(bg, UiTheme.GOLD if on else col.darkened(0.3), 3 if on else 1, 8, false))
+		b.add_theme_stylebox_override("pressed", UiTheme.flat_box(bg, UiTheme.GOLD, 3, 8, false))
+		b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.15, 0.11, 0.24, 1.0), UiTheme.GOLD, 2, 8, false))
+		b.add_theme_stylebox_override("disabled", UiTheme.flat_box(Color(0.05, 0.04, 0.08, 0.9), Color(0.22, 0.21, 0.27), 1, 8, false))
+		if not enabled:
+			b.disabled = true
+			b.modulate = Color(0.55, 0.55, 0.6)
+		var eden := Craft.eden_name(key)
+		b.tip = "[b][color=#%s]%s[/color][/b]%s\n%s\n[color=#c8c8d4]Dans ton sac : %d[/color]" % [col.to_html(false), Craft.label(key),
+			("\n[color=#9a98a8]Eden : %s[/color]" % eden) if eden != "" else "", Craft.describe_key(key), count]
+		b.tip_border = col
+		var n := Label.new()
+		n.text = str(count)
+		n.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		n.add_theme_font_size_override("font_size", 13)
+		n.add_theme_constant_override("outline_size", 4)
+		n.add_theme_color_override("font_outline_color", Color.BLACK)
+		n.add_theme_color_override("font_color", Color.WHITE if count > 0 else Color(1, 0.5, 0.5))
+		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		n.anchor_left = 1.0
+		n.anchor_top = 1.0
+		n.anchor_right = 1.0
+		n.anchor_bottom = 1.0
+		n.offset_left = -34
+		n.offset_top = -19
+		n.offset_right = -4
+		n.offset_bottom = -2
+		b.add_child(n)
+		if cb.is_valid():
+			b.pressed.connect(cb)
+		parent.add_child(b)
+		return b
+
 	func _upgrade(it: Dictionary) -> void:
 		var up := int(it.get("upgrade", 0))
-		_head("Améliorer (or)")
 		if up >= Items.MAX_UPGRADE:
-			_note("Amélioration maximale atteinte (+%d)." % up)
+			_head("Fortification")
+			_note("Fortification maximale atteinte (+%d)." % up)
 			return
+		_head("Fortification   +%d → +%d" % [up, up + 1])
+		if blessed and Profile.bag_count(Craft.BLESSED) <= 0:
+			blessed = false
+		if stone != "" and not (Profile.bag_count(stone) > 0 and Craft.stone_usable(it, stone)):
+			stone = ""
+		var scroll := Craft.BLESSED if blessed else Craft.fortify_for(it)
+		var need := Craft.fortify_key(Craft.fortify_kind(it), Craft.fortify_level_for(it))
 		var cost := Items.upgrade_cost(it)
-		luck = mini(luck, mini(Profile.bag_count("luck"), Craft.MAX_LUCK))
-		var chance := Craft.success_chance(it, luck)
-		var risky: bool = float(Craft.UPGRADE_CHANCE[up]) < 1.0
-		_note("+%d → +%d · %d %% de réussite · coût %d or%s" % [up, up + 1, roundi(chance * 100), int(cost.gold),
-			(" · échec : %s" % Craft.failure_text(it)) if risky else " · sans risque"])
-		if risky:
-			var row := HBoxContainer.new()
-			row.add_theme_constant_override("separation", 6)
-			actions.add_child(row)
-			var minus := ItemWidgets.action_button(row, "−", func():
-				luck = maxi(0, luck - 1)
-				_on_selection(), 44)
-			minus.disabled = luck <= 0
-			Hud._label(row, "Pierres de chance : %d / %d (sac : %d)" % [luck, Craft.MAX_LUCK, Profile.bag_count("luck")], 14, Color.WHITE).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			var plus := ItemWidgets.action_button(row, "+", func():
-				luck = mini(luck + 1, mini(Craft.MAX_LUCK, Profile.bag_count("luck")))
-				_on_selection(), 44)
-			plus.disabled = luck >= mini(Craft.MAX_LUCK, Profile.bag_count("luck"))
-			var can_protect := Profile.bag_count("protect") > 0 and up + 1 >= Craft.DOWNGRADE_FROM
-			protect = protect and can_protect
-			button("%s Pierre de protection (sac : %d)" % ["☑" if protect else "☐", Profile.bag_count("protect")], func():
-				protect = not protect
-				_on_selection(), can_protect)
-		button("Tenter +%d (%d %%) · %d or" % [up + 1, roundi(chance * 100), int(cost.gold)], func():
-			var r := Profile.upgrade_item(it, luck, protect)
-			if Profile.bag_count("protect") <= 0:
-				protect = false
-			done("%s\n%s" % [Items.display_name(it), r.text], 2.4), Profile.can_afford(cost), true)
+		# 1) le parchemin qui sert de ressource (le plus petit qui convient, pris dans le sac)
+		var srow := HBoxContainer.new()
+		srow.add_theme_constant_override("separation", 10)
+		actions.add_child(srow)
+		_tile(srow, scroll if scroll != "" else need, Profile.bag_count(scroll if scroll != "" else need), scroll != "", scroll != "")
+		var stxt := ItemWidgets.rich(srow, 14)
+		stxt.fit_content = true
+		stxt.scroll_active = false
+		stxt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		if blessed:
+			stxt.text = "[b]Parchemin béni[/b] ×%d\nTentative gratuite (ni parchemin ni or) et protégée." % Profile.bag_count(Craft.BLESSED)
+		elif scroll != "":
+			var p := scroll.split(":")
+			stxt.text = "[b]%s[/b] ×%d\n[color=#c8c8d4]Réussite assurée jusqu'à +%d · %s par tentative[/color]" % [Craft.label(scroll), Profile.bag_count(scroll),
+				Craft.fortify_safe(p[1], int(p[2])), ItemWidgets.cost_text(cost)]
+		else:
+			stxt.text = "[color=#ff8a7a]Il te faut un %s (ou de niveau supérieur).[/color]\n[color=#c8c8d4]Butin des monstres, coffres de forge, marchands.[/color]" % Craft.label(need)
+		if Profile.bag_count(Craft.BLESSED) > 0:
+			button("%s Parchemin béni ×%d : tentative gratuite et protégée" % ["☑" if blessed else "☐", Profile.bag_count(Craft.BLESSED)], func():
+				blessed = not blessed
+				_on_selection())
+		# 2) la pierre de sûreté : une par tentative, elle protège l'objet et ajoute des chances
+		_note("Pierre de sûreté (une par tentative, détruite quel que soit le résultat) :")
+		var flow := HFlowContainer.new()
+		flow.add_theme_constant_override("h_separation", 6)
+		flow.add_theme_constant_override("v_separation", 6)
+		actions.add_child(flow)
+		for id in Craft.STONES:
+			var key := Craft.stone_key(id)
+			var n := Profile.bag_count(key)
+			var ok := n > 0 and Craft.stone_usable(it, key)
+			var t := _tile(flow, key, n, key == stone, ok, func():
+				stone = "" if stone == key else key
+				_on_selection())
+			var pct := Label.new()
+			pct.text = "+%d %%" % roundi(float(Craft.STONES[id].bonus) * 100.0)
+			pct.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			pct.add_theme_font_size_override("font_size", 12)
+			pct.add_theme_constant_override("outline_size", 4)
+			pct.add_theme_color_override("font_outline_color", Color.BLACK)
+			pct.add_theme_color_override("font_color", Color(0.6, 1.0, 0.65))
+			pct.position = Vector2(4, 2)
+			t.add_child(pct)
+		# 3) les chances et ce qu'un échec coûterait
+		var chance := Craft.success_chance(it, stone, scroll)
+		var protected := stone != "" or blessed
+		var ccol := Color(0.45, 0.95, 0.5) if chance >= 0.999 else (Color(1.0, 0.85, 0.35) if chance >= 0.6 else Color(1.0, 0.45, 0.4))
+		var bar := ProgressBar.new()
+		bar.min_value = 0.0
+		bar.max_value = 1.0
+		bar.value = chance
+		bar.show_percentage = false
+		bar.custom_minimum_size = Vector2(0, 26)
+		bar.add_theme_stylebox_override("background", UiTheme.flat_box(Color(0.06, 0.05, 0.1, 1.0), UiTheme.GOLD_DIM, 1, 6, false))
+		bar.add_theme_stylebox_override("fill", UiTheme.flat_box(ccol.darkened(0.25), ccol, 1, 6, false))
+		actions.add_child(bar)
+		var bl := Label.new()
+		bl.text = "Réussite : %d %%" % roundi(chance * 100.0)
+		bl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		bl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		bl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		bl.add_theme_font_size_override("font_size", 15)
+		bl.add_theme_constant_override("outline_size", 5)
+		bl.add_theme_color_override("font_outline_color", Color.BLACK)
+		bar.add_child(bl)
+		if chance < 0.999:
+			var risk := "Échec : %s" % Craft.failure_text(it, protected)
+			if protected and up + 1 >= Craft.DOWNGRADE_FROM:
+				risk += " (protégé)"
+			elif not protected and up + 1 >= Craft.DOWNGRADE_FROM:
+				risk += " — une pierre de sûreté l'en empêche"
+			_note(risk)
+		var can: bool = blessed or (scroll != "" and Profile.can_afford(cost))
+		var label := "Fortifier avec le parchemin béni" if blessed else ("Fortifier · %d or" % int(cost.gold))
+		button(label + ("  (%d %%)" % roundi(chance * 100.0)), func():
+			var r := Profile.upgrade_item(it, stone, blessed)
+			if stone != "" and Profile.bag_count(stone) <= 0:
+				stone = ""
+			done("%s\n%s" % [Items.display_name(it), r.text], 2.4), can, true)
 
 	func _crystals(it: Dictionary) -> void:
 		var rc := Forge.reforge_cost(it)
@@ -443,16 +543,30 @@ class ForgePage extends ItemPage:
 
 	func _enchant(it: Dictionary) -> void:
 		var scrolls := Profile.bag_keys("scroll")
-		_head("Enchantement")
+		var cur := ""
+		if it.has("enchant"):
+			var e: Dictionary = it.enchant
+			cur = " · actuel : %s Lv%d" % [String(Craft.ENCHANTS.get(String(e.get("type", "")), {}).get("name", "?")), int(e.get("lv", 1))]
+		_head("Enchantement" + cur)
 		for k in scrolls:
 			var key: String = k
 			var why := Craft.can_enchant(it, key)
-			var b := button("Appliquer %s ×%d" % [Craft.label(key), Profile.bag_count(key)], func(): done(Craft.apply_scroll(it, key)), why == "")
-			b.icon = UiTheme.texture(Craft.icon(key))
-			b.add_theme_constant_override("icon_max_width", 26)
-			b.tooltip_text = why if why != "" else Craft.describe_key(key)
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 10)
+			actions.add_child(row)
+			_tile(row, key, Profile.bag_count(key), false, why == "")
+			var p := key.split(":")
+			var txt := ItemWidgets.rich(row, 14)
+			txt.fit_content = true
+			txt.scroll_active = false
+			txt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			txt.text = "[b]%s[/b]\n[color=#c8c8d4]%s[/color]%s" % [Craft.label(key), Craft._stats_text(Craft.enchant_stats({"type": p[1], "lv": int(p[2])})),
+				("  [color=#ff8a7a]%s[/color]" % why) if why != "" else ""]
+			var b := ItemWidgets.action_button(row, "Appliquer", func(): done(Craft.apply_scroll(it, key)), 120)
+			b.disabled = why != ""
+			b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		if scrolls.is_empty():
-			_note("Aucun parchemin dans ton sac.")
+			_note("Aucune formule d'enchantement dans ton sac (objets de niveau 25 et plus : butin, coffres de joaillerie).")
 
 	func _fusion() -> void:
 		_head("Fusion de gemmes (%d identiques → qualité supérieure)" % Forge.FUSE_COUNT)
