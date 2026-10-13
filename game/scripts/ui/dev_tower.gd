@@ -30,6 +30,13 @@ class TowerPage extends HBoxContainer:
 	func _build_rules() -> void:
 		for c in _rules.get_children().slice(1):
 			c.queue_free()
+		var unlock := CheckBox.new()
+		unlock.text = "Tous les étages de la Tour débloqués (toutes difficultés)"
+		unlock.focus_mode = Control.FOCUS_NONE
+		unlock.button_pressed = bool(Settings.get_v("interface", "tower_unlock_all"))
+		unlock.tooltip_text = "Tant que le mode dev est activé : on peut commencer à n'importe quel étage, sans toucher aux records."
+		unlock.toggled.connect(func(on): Settings.set_v("interface", "tower_unlock_all", on))
+		_rules.add_child(unlock)
 		Hud._label(_rules, "Valeur par défaut au survol. Les changements s'appliquent tout de suite ; « Enregistrer » les garde (data/dev_edits.json).", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		var scroll := ScrollContainer.new()
 		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL

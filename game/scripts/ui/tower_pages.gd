@@ -19,7 +19,7 @@ static func floor_line(f: int, diff: int) -> Array:
 			what = "%d monstres et %d élite(s)" % [int(s.count), int(s.elites)]
 		_:
 			what = "%d monstres" % int(s.count)
-	var state := "battu" if f <= Tower.best(diff) else ("à battre" if f == Tower.best(diff) + 1 else "verrouillé")
+	var state := "battu" if f <= Tower.best(diff) else ("à battre" if f == Tower.best(diff) + 1 else ("ouvert (mode dev)" if Tower.dev_unlock_all() else "verrouillé"))
 	return ["Étage %d · %s" % [f, what], "%s · niveau %d · %s" % [s.zone.name, int(s.level), state]]
 
 

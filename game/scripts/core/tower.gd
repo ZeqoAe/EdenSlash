@@ -312,9 +312,14 @@ static func best(diff := -1) -> int:
 	return int(Profile.records.get(record_key(difficulty if diff < 0 else diff), 0))
 
 
-## Étage jouable : déjà battu, ou le suivant.
+## Mode dev : tous les étages ouverts (case de la page Tour du mode dev, cochée par défaut).
+static func dev_unlock_all() -> bool:
+	return bool(Settings.get_v("interface", "dev_mode")) and bool(Settings.get_v("interface", "tower_unlock_all"))
+
+
+## Étage jouable : déjà battu, ou le suivant (tous en mode dev, si la case est cochée).
 static func unlocked(f: int, diff: int) -> bool:
-	return f <= best(diff) + 1 or bool(Settings.get_v("interface", "dev_mode"))
+	return f <= best(diff) + 1 or dev_unlock_all()
 
 
 ## Fin de l'ascension (gagnée ou perdue) : la sauvegarde est rechargée, puis les objets des

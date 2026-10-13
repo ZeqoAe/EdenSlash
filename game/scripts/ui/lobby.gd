@@ -220,7 +220,8 @@ func _menu_tower_floors() -> void:
 		_tower_page -= 1
 		_show_menu("tower_floors"))
 	nav.add_child(prev)
-	var pl := Hud._label(nav, "Étages %d à %d  ·  battus : %d" % [_tower_page * TowerPages.FLOORS_PER_PAGE + 1, mini((_tower_page + 1) * TowerPages.FLOORS_PER_PAGE, Tower.FLOORS), Tower.best(diff)], 15, UiTheme.TEXT)
+	var pl := Hud._label(nav, "Étages %d à %d  ·  battus : %d%s" % [_tower_page * TowerPages.FLOORS_PER_PAGE + 1, mini((_tower_page + 1) * TowerPages.FLOORS_PER_PAGE, Tower.FLOORS), Tower.best(diff),
+		"\n(mode dev : tous débloqués)" if Tower.dev_unlock_all() else ""], 15, UiTheme.TEXT)
 	pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var nxt := MenuWidgets.glass_button("▶", 18, Vector2(52, 38))
