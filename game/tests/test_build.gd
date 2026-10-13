@@ -258,6 +258,19 @@ func _test_card_tiers() -> void:
 	Run.passive_power.erase(pow_id)
 	if not had:
 		Run.skills = Run.skills.filter(func(x): return int(x.id) != int(sk0.id))
+	# butin plafonné au niveau du héros de la run (première zone)
+	var hl0 := Run.hero_level
+	var zid0 := Run.zone_id
+	Run.zone_id = String(GameData.zones[0].id)
+	Run.hero_level = 5
+	var over: Array = []
+	for i in 120:
+		var it := Items.generate(15, 0.3, "", Run.class_id, 0, "", 3)
+		if int(it.level) > 5 and it.slot != "trophy":
+			over.append("%s %s niv %d" % [it.slot, it.get("wtype", ""), int(it.level)])
+	check("butin au niveau 5 du héros : aucun objet au-dessus du niveau 5 (%s)" % ", ".join(over.slice(0, 4)), over.is_empty())
+	Run.hero_level = hl0
+	Run.zone_id = zid0
 	# certificats : ceux posés sont acquis, les autres tombent en run comme des cartes
 	var own_certs: Array = GameData.talents.get(Run.class_id, {}).get("certificates", [])
 	if not own_certs.is_empty():

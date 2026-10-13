@@ -396,9 +396,16 @@ func _despawn_far() -> int:
 	return n
 
 
+## Dégâts des monstres selon la zone : la première carte sert de tutoriel.
+const ZONE_DAMAGE := [0.55, 0.8]
+
+
 func _spawn_monster(id: int, pos: Vector3, level: int, boss := false) -> Monster:
 	var m := Monster.new()
 	m.configure(GameData.monster(id), boss, level)
+	var zi := GameData.zone_index(String(zone.get("id", "")))
+	if zi >= 0 and zi < ZONE_DAMAGE.size():
+		m.atk *= float(ZONE_DAMAGE[zi])
 	if state == "explore":
 		# montée en puissance sur les 3 premières minutes : la run démarre sans
 		# équipement, le joueur doit pouvoir apprendre avant que ça devienne punitif

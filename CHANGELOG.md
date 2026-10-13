@@ -55,3 +55,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.44 | Accueil : la carte de classe en haut à droite ouvre le choix de classe ; le panneau Jouer ne s'affiche qu'au clic sur Jouer | session locale |
 | 0.1.45 | Accueil : caméra libre autour du héros (glisser pour tourner, molette pour zoomer, clic droit glissé pour la hauteur, double-clic pour la vue de départ) | session locale |
 | 0.1.46 | Certificats : ceux posés sur le plateau sont acquis pour la run, tous les autres (classe jouée et débloqués) peuvent tomber en run comme des cartes ; textes clarifiés | session locale |
+| 0.1.47 | Première zone plus douce (dégâts des monstres ×0,55, zone 2 ×0,8) ; butin en run plafonné au niveau du héros (première zone) | session locale |

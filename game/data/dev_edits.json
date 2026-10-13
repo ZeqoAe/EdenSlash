@@ -1,7 +1,9 @@
 {
+	"card_rules": {},
+	"cards": {},
 	"items": {
 		"20614": {
-			"level": 90,
+			"level": 90.0,
 			"name": "Ragnarok",
 			"nopool": "dev",
 			"passive": {
@@ -23,9 +25,19 @@
 				"parry": 1.0,
 				"patk": 2.39999999999418
 			},
-			"rarity": 5,
+			"rarity": 5.0,
 			"set": null,
 			"trophy": null
+		},
+		"23882": {
+			"r": {
+				"agi": 0.971,
+				"def": 1.052,
+				"dmg_pct": 1.01,
+				"lck": 1.11,
+				"mcrit": 1.136,
+				"str": 1.233
+			}
 		}
 	},
 	"sets": {}

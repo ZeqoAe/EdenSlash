@@ -179,6 +179,7 @@ static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai",
 		# en run : le butin d'armes suit l'arme en main ; sinon l'arme de la classe
 		wtype = Run.weapon_type() if Run.active and class_id == Run.class_id else default_weapon_type(class_id)
 	var rarity := roll_rarity(luck, min_rarity, max_rarity)
+	var free_slot := slot == ""
 	if slot == "":
 		# trophée : seulement sur le butin rare des élites et des boss
 		if rarity >= 2 and luck >= 0.3 and randf() < TROPHY_CHANCE:
@@ -187,7 +188,18 @@ static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai",
 			slot = SLOTS.filter(func(x): return x != "trophy").pick_random()
 	# objet d'Eden de la zone : nom, icône, stats connues, set, passif
 	if not GameData.eden_by_slot.is_empty():
-		var tpl := eden_template(slot, wtype, eden_target(level), rarity)
+		var target := eden_target(level)
+		var tpl := eden_template(slot, wtype, target, rarity)
+		if free_slot and slot != "trophy" and not tpl.is_empty() and int(tpl.level) > target:
+			# pas de modèle assez bas pour cet emplacement (anneaux, trophées…) : un autre
+			# emplacement plutôt qu'un objet au-dessus du niveau du héros
+			var others := SLOTS.filter(func(x): return x != slot and x != "trophy")
+			others.shuffle()
+			for other in others:
+				var t2 := eden_template(other, wtype, target, rarity)
+				if not t2.is_empty() and int(t2.level) <= target:
+					tpl = t2
+					break
 		if not tpl.is_empty():
 			return from_template(tpl, level, rarity)
 	var item := {
@@ -244,7 +256,13 @@ static func zone_band() -> int:
 
 ## Niveau d'Eden visé par le butin au niveau de run [param level] dans la zone jouée.
 static func eden_target(level: int) -> int:
-	return GameData.eden_level_at(zone_band(), level)
+	var t := GameData.eden_level_at(zone_band(), level)
+	if Run.active and Run.hero_level > 0 and not GameData.eden_bands.is_empty():
+		# en run : pas d'objet au-dessus du niveau du héros (sauf le bas de la tranche de la zone :
+		# une zone avancée garde ses propres objets dès le niveau 1)
+		var low := int(GameData.eden_bands[clampi(zone_band(), 0, GameData.eden_bands.size() - 1)][0])
+		t = mini(t, maxi(Run.hero_level, low))
+	return t
 
 
 ## Modèle d'Eden : même emplacement (ou type d'arme), niveau d'Eden le plus haut sans
