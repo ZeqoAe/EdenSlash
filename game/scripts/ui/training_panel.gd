@@ -52,6 +52,8 @@ func setup(p: Player, d: RunDirector) -> void:
 				for m in get_tree().get_nodes_in_group("monsters"):
 					m.queue_free()
 				_rival_class = arg.trim_prefix("--rival=")
+				if _rival_diff and "--rival-hardcore" in OS.get_cmdline_user_args():
+					_rival_diff.select(3)
 				Training.hero_god = true
 				spawn_rival()
 		if "--training-cards" in OS.get_cmdline_user_args():
@@ -374,7 +376,7 @@ func _build_enemies() -> void:
 		_rival_class = cid
 		_rival_btn.text = "Adversaire : %s ▾" % GameData.class_data(cid).get("name_fr", "")))
 	_rival_diff = OptionButton.new()
-	for d in ["Facile", "Normal", "Difficile"]:
+	for d in ClassRival.NAMES:
 		_rival_diff.add_item(d)
 	_rival_diff.select(1)
 	_rival_diff.focus_mode = Control.FOCUS_NONE
@@ -444,7 +446,7 @@ func spawn_rival() -> ClassRival:
 	r.global_position = _spawn_point(0, 1) + Vector3.UP * 0.4
 	r.look_at(player.global_position * Vector3(1, 0, 1) + Vector3.UP * r.global_position.y, Vector3.UP)
 	r.rotate_y(PI)
-	_say("%s adverse (niveau %d) : combo, sorts annoncés en rouge, esquives." % [GameData.class_data(_rival_class).get("name_fr", ""), player.level])
+	_say("%s adverse %s (niveau %d) : combo, sorts annoncés en rouge, esquives." % [GameData.class_data(_rival_class).get("name_fr", ""), String(ClassRival.NAMES[r.difficulty]).to_lower(), player.level])
 	return r
 
 

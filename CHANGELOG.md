@@ -63,3 +63,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.52 | Entraînement : fenêtre « Toutes les cartes » en grand (effets en chiffres, niveau réglable, recherche par effet, filtres) | session locale |
 | 0.1.53 | Entraînement : adversaire de classe (héros IA avec le combo de son arme, ses sorts annoncés en rouge, esquives ; 3 difficultés) | session locale |
 | 0.1.54 | Mode de jeu Action : héros de dos qui regarde le curseur, caméra qui tourne vers le curseur écarté du centre, zoom du plan rapproché à la vue large | session locale |
+| 0.1.55 | Adversaire de classe retravaillé : lit les coups du héros et esquive au dernier moment, annule ses coups (esquive, saut), punit les temps morts, se place hors de portée en tournant autour, vise où le héros va ; nouvelle difficulté Hardcore | session locale |
