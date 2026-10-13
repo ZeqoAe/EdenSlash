@@ -152,6 +152,7 @@ func load_profile() -> void:
 	unlocked_cards = d.get("unlocked_cards", [])
 	collection = (d.get("collection", []) as Array).map(func(x): return str(int(x)) if typeof(x) == TYPE_FLOAT else String(x))
 	worn = d.get("worn", {})
+	_one_aura()
 	materials = {"crystal": int(d.get("crystals", 0))}
 	dev = {"enabled": false, "gold": 0, "keys": 0}
 	dev.merge(d.get("dev", {}), true)
@@ -1104,6 +1105,19 @@ func worn_auras(cls: String) -> Array:
 		if x.has("aura") and collected(x):
 			out.append(x)
 	return out
+
+
+## Anciennes sauvegardes : une seule aura par classe (la première dans l'ordre étoilée, lune, autre).
+func _one_aura() -> void:
+	for cls in worn:
+		var w: Dictionary = worn[cls]
+		var keep := ""
+		for k in ["star", "luna", "other"]:
+			if w.has("aura_" + k):
+				if keep == "":
+					keep = k
+				else:
+					w.erase("aura_" + k)
 
 
 func set_aura(cls: String, kind: String, id: int) -> void:

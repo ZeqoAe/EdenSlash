@@ -13,8 +13,8 @@ class AppearancePage extends HBoxContainer:
 	const CATS := [["body", "Tenue"], ["head", "Tête"], ["back", "Dos"], ["aura", "Auras"], ["weapon", "Arme"]]
 	## Emplacements autour du héros (comme l'équipement) : [id, catégorie, nom, type d'aura].
 	const LEFT_SLOTS := [["body", "body", "Tenue", ""], ["head", "head", "Tête", ""], ["back", "back", "Dos", ""]]
-	const RIGHT_SLOTS := [["star", "aura", "Pierre étoilée", "star"], ["luna", "aura", "Pierre de lune", "luna"],
-		["other", "aura", "Autre aura", "other"], ["weapon", "weapon", "Arme", ""]]
+	## Une seule aura à la fois (pierre étoilée, pierre de lune ou autre : même rôle).
+	const RIGHT_SLOTS := [["aura", "aura", "Aura", ""], ["weapon", "weapon", "Arme", ""]]
 	var _cat := "body"
 	var _slot := "body"
 	var _aura_kind := ""  # auras : type de l'emplacement cliqué ("" : toutes)
@@ -138,11 +138,11 @@ class AppearancePage extends HBoxContainer:
 					if path == "" and id == "body":
 						icon = String(GameData.class_data(cid).get("icon", ""))
 						name = "Tenue de la classe"
-				"star", "luna", "other":
-					var x: Dictionary = GameData.collection_by_id.get(int(w.get("aura_" + id, 0)), {})
-					if not x.is_empty():
-						icon = String(x.icon)
-						name = String(x.name)
+				"aura":
+					var worn_a := Profile.worn_auras(cid)
+					if not worn_a.is_empty():
+						icon = String(worn_a[0].icon)
+						name = String(worn_a[0].name)
 				"weapon":
 					var wi: Dictionary = Profile.equipped.get("weapon", {})
 					icon = String(wi.get("icon", ""))
@@ -188,7 +188,7 @@ class AppearancePage extends HBoxContainer:
 		_info.text = _worn_text(cid)
 		_refresh_dye(cid)
 		_refresh_slots(cid)
-		var names := {"body": "Tenue", "head": "Tête", "back": "Dos", "star": "Pierre étoilée", "luna": "Pierre de lune", "other": "Autre aura", "weapon": "Apparence de l'arme"}
+		var names := {"body": "Tenue", "head": "Tête", "back": "Dos", "aura": "Aura", "weapon": "Apparence de l'arme"}
 		_title.text = String(names.get(_slot, "Apparence"))
 
 	# --- couleurs de la pièce portée ---------------------------------------------------------
@@ -302,12 +302,11 @@ class AppearancePage extends HBoxContainer:
 
 	func _refresh_auras(cid: String) -> void:
 		_grid.columns = 5
-		_hint.text = "Une pierre étoilée et une pierre de lune à la fois : effet lumineux autour du héros et bonus pendant les runs."
+		_hint.text = "Une aura à la fois (pierre étoilée, pierre de lune ou autre) : effet lumineux autour du héros et bonus pendant les runs."
 		var got := GameData.auras.filter(func(x): return Profile.collected(x))
 		_count.text = "%d / %d auras obtenues" % [got.size(), GameData.auras.size()]
-		var kinds: Array = [_aura_kind] if _aura_kind != "" else ["star", "luna", "other"]
-		for kind in kinds:
-			_grid.add_child(_aura_cell({}, cid, kind))
+		var kinds: Array = ["star", "luna", "other"]
+		_grid.add_child(_aura_cell({}, cid, ""))
 		for x in got:
 			if _match(x) and String(x.aura.kind) in kinds:
 				_grid.add_child(_aura_cell(x, cid, String(x.aura.kind)))
@@ -427,7 +426,8 @@ class AppearancePage extends HBoxContainer:
 	## Case d'aura ([param x] vide : retirer l'aura de ce type).
 	func _aura_cell(x: Dictionary, cid: String, kind: String) -> Control:
 		var ok := x.is_empty() or Profile.collected(x)
-		var cur := int(Profile.worn.get(cid, {}).get("aura_" + kind, 0))
+		var worn_a := Profile.worn_auras(cid)
+		var cur := int(worn_a[0].id) if not worn_a.is_empty() else 0
 		var on := (cur == 0) if x.is_empty() else (cur == int(x.id))
 		var b := ItemWidgets.TipButton.new()
 		b.custom_minimum_size = Vector2(110, 96)
@@ -441,7 +441,7 @@ class AppearancePage extends HBoxContainer:
 		b.add_theme_font_size_override("font_size", 11)
 		b.add_theme_stylebox_override("normal", _box(on, ok))
 		if x.is_empty():
-			b.text = "Aucune " + String(Archive.AURA_KINDS.get(kind, "aura"))
+			b.text = "Aucune aura"
 		else:
 			b.text = String(x.name) if ok else "🔒 " + String(x.name)
 			b.icon = UiTheme.texture(String(x.icon))
@@ -451,7 +451,11 @@ class AppearancePage extends HBoxContainer:
 		b.pressed.connect(func():
 			if not ok:
 				return
-			Profile.set_aura(cid, kind, 0 if x.is_empty() or on else int(x.id))
+			if x.is_empty() or on:
+				for k in ["star", "luna", "other"]:
+					Profile.set_aura(cid, k, 0)
+			else:
+				Profile.set_aura(cid, kind, int(x.id))  # retire l'aura portée avant
 			Profile.save_profile()
 			refresh())
 		return b

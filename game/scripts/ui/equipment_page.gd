@@ -426,7 +426,7 @@ class HeroPreview extends SubViewportContainer:
 		model.scale = Vector3.ONE * GameData.HERO_SCALE
 		_pivot.add_child(model)
 		EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, weapon_code))
-		EdenFx.attach_auras(_pivot, class_id, GameData.HERO_SCALE)
+		EdenFx.attach_auras(_pivot, class_id, GameData.HERO_SCALE, true)
 		var ap := EdenModel.find_anim_player(model)
 		var battle: String = cls.get("anims", {}).get("idle" if idle_pose else "battle", "stand01")
 		if ap and ap.has_animation(battle):

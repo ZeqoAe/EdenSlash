@@ -75,6 +75,12 @@ func _ready() -> void:
 				if String(c.name) == arg.trim_prefix("--wear-head="):
 					Profile.unlock_outfit(String(c.id))
 					Profile.set_worn(Profile.selected_class, "head", String(c.outfit))
+		elif arg.begins_with("--wear-aura="):
+			# test : porte l'aura dont l'effet est donné (ex. --wear-aura=s81011)
+			for x in GameData.auras:
+				if String(x.aura.fx) == arg.trim_prefix("--wear-aura="):
+					Profile.collect(x)
+					Profile.set_aura(Profile.selected_class, String(x.aura.kind), int(x.id))
 		elif arg == "--wear-aura":
 			# test : une pierre étoilée et une pierre de lune portées (profil de test uniquement)
 			for kind in ["star", "luna"]:
@@ -91,7 +97,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
 				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
-				or arg == "--wear-aura" or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit="):
+				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -118,8 +124,7 @@ func _ready() -> void:
 			# test : catégorie de l'apparence (--appearance=aura, --appearance=weapon...)
 			if _open_screen.contains("="):
 				_hero.appearance._cat = _open_screen.get_slice("=", 1)
-				_hero.appearance._slot = {"aura": "star"}.get(_hero.appearance._cat, _hero.appearance._cat)
-				_hero.appearance._aura_kind = "star" if _hero.appearance._cat == "aura" else ""
+				_hero.appearance._slot = _hero.appearance._cat
 			_open_hero("appearance")
 		"dev":
 			# test : écran du mode dev, page N (paramètres de test uniquement)

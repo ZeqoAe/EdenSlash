@@ -17,6 +17,7 @@ var fx_name := ""
 var follow: Node3D  # l'effet suit ce nœud (effets d'incantation)
 var loop := false  # aura : rejoue l'effet en boucle au lieu de disparaître
 var alpha_mul := 1.0  # opacité globale (auras plus discrètes que les sorts)
+var on_dark := false  # aura sur fond sombre (aperçus) : lueur additive classique
 var _data: Dictionary
 var _t := 0.0
 var _nodes := {}  # nom -> Node3D
@@ -44,12 +45,13 @@ static func play(parent: Node, name: String, pos: Vector3, yaw := 0.0, scale_ :=
 
 ## Effet en boucle attaché à [param parent] (aura autour du héros : pierres étoilées,
 ## pierres de lune), à l'échelle [param scale_].
-static func attach(parent: Node3D, name: String, scale_ := 1.0) -> EdenFx:
+static func attach(parent: Node3D, name: String, scale_ := 1.0, dark := false) -> EdenFx:
 	if name == "" or parent == null or not _load(name):
 		return null
 	var fx := EdenFx.new()
 	fx.fx_name = name
 	fx.loop = true
+	fx.on_dark = dark
 	fx.alpha_mul = AURA_ALPHA
 	fx.scale = Vector3.ONE * scale_
 	parent.add_child(fx)
@@ -57,13 +59,15 @@ static func attach(parent: Node3D, name: String, scale_ := 1.0) -> EdenFx:
 
 
 ## Opacité des auras : effets d'Eden faits pour la ville, atténués pour garder le combat lisible.
-const AURA_ALPHA := 0.6
+const AURA_ALPHA := 0.75
+const AURA_INTENSITY := 1.15
 
 
 ## Auras portées par la classe [param cls_id], attachées à [param parent].
-static func attach_auras(parent: Node3D, cls_id: String, scale_ := 1.0) -> void:
+## [param dark] : aperçu sur fond sombre (la lueur additive y reste lisible).
+static func attach_auras(parent: Node3D, cls_id: String, scale_ := 1.0, dark := false) -> void:
 	for x in Profile.worn_auras(cls_id):
-		var fx := attach(parent, String(x.aura.fx), scale_)
+		var fx := attach(parent, String(x.aura.fx), scale_, dark)
 		if fx:
 			fx.add_to_group("hero_auras")
 
@@ -124,9 +128,16 @@ func _ready() -> void:
 		m.set_shader_parameter("additive", 1.0 if add else 0.0)
 		m.set_shader_parameter("use_vertex_color", 1.0 if bool(info.get("vcol", true)) else 0.0)
 		if loop:
-			# auras : pas d'assombrissement du fond (il dessinait des rectangles sombres
-			# derrière les grands plans lumineux autour du héros)
+			# auras : sur un décor clair, une lueur purement additive vire au voile blanc ; on
+			# assombrit le fond sous les seules parties vives (courbe forte : pas de rectangles
+			# sombres derrière les grands plans) et on garde les couleurs saturées
 			m.set_shader_parameter("darken", 0.0)
+			if not on_dark:
+				# décor clair (accueil, run) : couleur pleine posée selon la luminosité, sinon la
+				# lueur additive vire au voile blanc
+				m.set_shader_parameter("lum_mix", 1.0)
+				m.set_shader_parameter("intensity", AURA_INTENSITY)
+				m.set_shader_parameter("saturation", 1.4)
 		if info.has("tex"):
 			m.set_shader_parameter("tex", _texture("res://assets/fx/" + String(info.tex)))
 		elif src:

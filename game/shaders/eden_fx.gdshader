@@ -16,6 +16,8 @@ uniform float intensity = 1.7;      // > 1 : lueur
 uniform float saturation = 1.35;
 uniform float darken = 0.15;        // assombrissement du fond sous un effet lumineux
 uniform float soft = 0.5;           // distance de fondu au contact (m)
+uniform float darken_curve = 1.0;   // > 1 : seules les parties vives assombrissent le fond (auras)
+uniform float lum_mix = 0.0;        // 1 : la luminosité sert d'opacité, couleur pleine (auras sur décor clair)
 
 void vertex() {
 	UV = UV * uv_scale + uv_offset;
@@ -40,10 +42,17 @@ void fragment() {
 #endif
 	float lum = max(c.r, max(c.g, c.b));
 	c = mix(vec3(dot(c, vec3(0.299, 0.587, 0.114))), c, saturation);
-	if (additive > 0.5) {
+	if (additive > 0.5 && lum_mix > 0.5) {
+		// aura : couleur pleine posée selon sa luminosité (ne blanchit pas un décor clair),
+		// plus un peu de lueur ajoutée
+		float o = clamp(pow(clamp(lum * a, 0.0, 1.0), 1.6) * 1.5, 0.0, 1.0) * fade;
+		vec3 full = max(c, 0.0) / max(lum, 0.001);
+		ALBEDO = full * o * 0.85 + max(c, 0.0) * a * intensity * 0.35 * fade;
+		ALPHA = o * 0.85;
+	} else if (additive > 0.5) {
 		// lumineux : ajouté au fond (prémultiplié), un peu assombri dessous
 		ALBEDO = max(c, 0.0) * a * intensity * fade;
-		ALPHA = clamp(lum * a * darken, 0.0, 1.0) * fade;
+		ALPHA = clamp(pow(clamp(lum * a, 0.0, 1.0), darken_curve) * darken, 0.0, 1.0) * fade;
 	} else {
 		ALBEDO = max(c, 0.0) * a * fade;
 		ALPHA = clamp(a, 0.0, 1.0) * fade;

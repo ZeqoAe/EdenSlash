@@ -57,3 +57,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.46 | Certificats : ceux posés sur le plateau sont acquis pour la run, tous les autres (classe jouée et débloqués) peuvent tomber en run comme des cartes ; textes clarifiés | session locale |
 | 0.1.47 | Première zone plus douce (dégâts des monstres ×0,55, zone 2 ×0,8) ; butin en run plafonné au niveau du héros (première zone) | session locale |
 | 0.1.48 | Aperçu du héros sur fond opaque (les auras lumineuses se voient en 3D) ; une seule aura portée à la fois | session locale |
+| 0.1.49 | Auras lisibles sur l'accueil et en run (couleurs pleines au lieu d'un voile blanc), une seule case Aura dans Apparence | session locale |
