@@ -184,6 +184,13 @@ func _build_combat_tab() -> void:
 	_button(buttons, "Toutes en manuel", func(): Settings.set_v("game", "auto_skills", [false, false, false, false]), 260)
 	_option(v, "Cible des compétences automatiques", "game", "auto_target", [
 		["any", "N'importe quel monstre à portée"], ["locked", "Seulement la cible verrouillée (clic sur un monstre)"]])
+	_section(v, "Jeu automatique")
+	_check(v, "Combos parfaits automatiques", "game", "auto_combo")
+	_note(v, "Les 4 sorts de ta barre (ton preset) partent seuls dès qu'ils sont prêts et qu'un ennemi est à portée, leurs enchaînements dès l'ouverture de la barre, et juste après chaque impact le héros fait l'annulation parfaite (petit pas autour de la cible : Fluidité, récupération effacée) pour lancer le suivant. Avec l'attaque automatique, il ne reste qu'à se déplacer.")
+	_check(v, "Déplacement automatique", "game", "auto_move")
+	_note(v, "Le héros va seul vers les monstres (à distance de tir pour un archer ou un mage), puis vers l'objectif (donjon, coffre et escalier de la Tour) et ouvre coffres et passages. Te déplacer toi-même reprend la main tant que tu appuies.")
+	_check(v, "Choix des cartes automatique", "game", "auto_cards")
+	_note(v, "À chaque choix de cartes : un nouveau sort tant qu'une case de la barre est libre, sinon la carte de plus haute rareté. Avec les trois options, le jeu se joue tout seul (mode de jeu « Bot » dans Contrôles).")
 
 
 # --- onglet Touches --------------------------------------------------------------------

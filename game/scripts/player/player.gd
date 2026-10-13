@@ -482,6 +482,8 @@ func _read_move_input() -> Vector3:
 	var v := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	if autoplay:
 		v = Vector2.ZERO if autoplay_idle else _autoplay_input()
+	elif v == Vector2.ZERO and _auto_move() and _move_goal == Vector3.INF:
+		v = _autoplay_input()  # déplacement automatique (Paramètres) : le clavier reprend la main
 	if v != Vector2.ZERO:
 		_move_goal = Vector3.INF  # le clavier reprend la main
 	elif _move_goal != Vector3.INF:
@@ -621,6 +623,44 @@ func _set_move_goal(marker: bool) -> void:
 ## Le héros regarde le curseur en permanence (visée au curseur).
 func _aims_at_cursor() -> bool:
 	return not autoplay and bot == null and not foe and Settings.cursor_aim() and not _pad()
+
+
+## Combos parfaits automatiques (Paramètres > Combat), pour le héros du joueur seulement.
+func _auto_combo() -> bool:
+	return not autoplay and bot == null and not foe and Settings.auto_combo()
+
+
+## Déplacement automatique (Paramètres > Combat).
+func _auto_move() -> bool:
+	return not autoplay and bot == null and not foe and Settings.auto_move()
+
+
+var _auto_side := 1.0
+
+
+## Pas de l'annulation parfaite automatique : la direction tenue, sinon de côté autour de la
+## cible la plus proche (en alternant), pour rester à portée.
+func _auto_step_dir(input_dir: Vector3) -> Vector3:
+	if input_dir.length() > 0.1:
+		return input_dir
+	var m := nearest_monster(14.0)
+	if m == null:
+		return -forward()
+	var to := m.global_position - global_position
+	to.y = 0.0
+	_auto_side = -_auto_side
+	var side := to.normalized().cross(Vector3.UP) * _auto_side
+	# trop près pour un tireur : on recule en même temps
+	var back := -to.normalized() * (0.6 if attack_reach() > 6.0 and to.length() < attack_reach() * 0.5 else 0.0)
+	return (side + back).normalized()
+
+
+## Objectif du déplacement automatique (flèche de l'objectif : donjon, coffre, escalier…).
+func _auto_objective() -> Vector3:
+	var w := get_tree().get_first_node_in_group("world")
+	if w and w.get("director") and w.director.has_method("objective_target"):
+		return w.director.objective_target()
+	return Vector3.INF
 
 
 ## On joue à la manette (Gamepad) : visée automatique au lieu du curseur.
@@ -906,6 +946,15 @@ func _update_action(input_dir: Vector3, delta: float) -> void:
 		return
 	# l'esquive annule toute action (une compétence pas encore sortie est perdue) ;
 	# juste après l'impact d'une compétence : annulation parfaite
+	var auto_perfect: bool = _auto_combo() and _state == "skill" and _action.get("hit_done", false) and _time - _last_hit_at >= 0.06 \
+		and _time - _last_hit_at <= PERFECT_WINDOW and _hits.is_empty() and float(_action.get("heal", 0.0)) <= 0.0
+	if auto_perfect:
+		# combos parfaits : petit pas de côté autour de la cible (on reste à portée), Fluidité
+		_trail_on = false
+		_perfect_cancel()
+		_start_dodge(_auto_step_dir(input_dir), true)
+		_dodge_mult = 0.45
+		return
 	if _wants("dodge"):
 		var perfect: bool = _state == "skill" and _action.get("hit_done", false) and _time - _last_hit_at <= PERFECT_WINDOW
 		var air_ok := is_on_floor() or _air_dashes < max_air_dashes()
@@ -1386,6 +1435,8 @@ func _chain_input() -> int:
 		if st.is_empty():
 			continue
 		var auto: bool = autoplay and not autoplay_idle and st.phase == "bar" and float(st.p) >= 0.35
+		if _auto_combo() and st.phase == "bar" and _monster_in_reach(skill_reach(st.next) + 1.0, false) != null:
+			auto = true  # combos parfaits : le sort suivant part dès l'ouverture de la barre
 		if (not autoplay and _wants("skill_%d" % (int(cs) + 1))) or auto:
 			return _chain_press(int(cs))
 	return 0
@@ -1660,6 +1711,9 @@ func _update_dodge() -> void:
 		return
 	# enchaînement pendant l'esquive (sort, esquive, sort suivant)
 	if _chain_input() == 2:
+		return
+	# combos parfaits : le sort suivant part pendant le pas de l'annulation
+	if _auto_combo() and _state_time >= DODGE_TIME * 0.3 and _try_auto_skill():
 		return
 	# compétence dès la seconde moitié de l'esquive (esquive -> sort)
 	if _state_time >= DODGE_TIME * 0.45:
@@ -1947,8 +2001,9 @@ func current_target() -> Combatant:
 func _autoplay_input() -> Vector2:
 	var m := nearest_monster(40.0)
 	var to := Vector3.ZERO
-	if autoplay_target != Vector3.INF and (m == null or global_position.distance_to(m.global_position) > 4.0):
-		to = autoplay_target - global_position
+	var goal := autoplay_target if autoplay else _auto_objective()
+	if goal != Vector3.INF and (m == null or global_position.distance_to(m.global_position) > 4.0):
+		to = goal - global_position
 		if _time > _bot_check_at:
 			if global_position.distance_to(_bot_last_pos) < 1.0:
 				_bot_detour = to.normalized().rotated(Vector3.UP, PI / 2 * (1 if randf() < 0.5 else -1))
@@ -1961,7 +2016,9 @@ func _autoplay_input() -> Vector2:
 		return Vector2.ZERO
 	else:
 		to = m.global_position - global_position
-		if to.length() < 2.2 + m.radius:
+		# au contact (corps à corps), ou à distance de tir (archer, mage) en déplacement automatique
+		var stop := 2.2 + m.radius if autoplay or attack_reach() <= 6.0 else attack_reach() * 0.7
+		if to.length() < stop:
 			return Vector2.ZERO
 		var map := get_tree().get_first_node_in_group("map") as Node3D
 		if map and to.length() > 5.0:

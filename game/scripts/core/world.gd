@@ -232,6 +232,10 @@ func _parse_args() -> void:
 			if not Settings.data.has("game"):
 				Settings.data["game"] = {}
 			Settings.data["game"]["aim_mode"] = arg.trim_prefix("--aim=")
+		elif arg == "--bot-mode":
+			# test : mode « Bot » (combos parfaits, attaque et déplacement automatiques) sans l'enregistrer
+			for k in Settings.PRESETS.bot.game:
+				Settings.data["game"][k] = Settings.PRESETS.bot.game[k]
 		elif arg.begins_with("--cam-dist="):
 			rig.distance = float(arg.trim_prefix("--cam-dist="))
 		elif arg == "--test-feedback":
@@ -330,6 +334,23 @@ func _offer(title: String, options: Array, reroll := Callable()) -> void:
 		# hasard (passifs compris : les mesures d'équilibrage doivent voir des builds)
 		var skills := options.filter(func(o): return String(o.get("type", "")) == "skill")
 		Run.apply_card(skills[0] if not skills.is_empty() and Run.skills.size() < 4 else options.pick_random())
+		return
+	if Settings.auto_cards():
+		# choix automatique (Paramètres) : un nouveau sort tant qu'une case est libre, sinon la
+		# carte de plus haute rareté
+		var pick: Dictionary = options[0]
+		var skills := options.filter(func(o): return String(o.get("type", "")) == "skill")
+		if not skills.is_empty() and Run.skills.size() < Run.MAX_SKILLS:
+			pick = skills[0]
+		else:
+			var best := -1
+			for o in options:
+				var r := Cards.TIER_ORDER.find(String(o.get("tier", "common")))
+				if r > best:
+					best = r
+					pick = o
+		Run.apply_card(pick)
+		hud.show_message("Carte choisie : %s" % String(pick.get("title", "?")), 2.0)
 		return
 	cards.offer(title, options, reroll)
 
@@ -439,6 +460,7 @@ func _print_report() -> void:
 	print("[bilan] butin par rareté %s · niveaux Eden/puissance %s" % [rar, lv.slice(0, 12)])
 	print("[bilan] compétences %s" % [Run.skills.map(func(x): return "%s r%d" % [Run.skill_def(int(x.id)).get("name", x.id), int(x.rank)])])
 	print("[bilan] cartes %s" % [Run.passives])
+	print("[bilan] combos : %d annulations parfaites, %d enchaînements, %d esquives" % [player.ml_counts.perfect, player.ml_counts.chain, player.ml_counts.dodged])
 
 
 func _save_screenshot(file_name: String) -> void:

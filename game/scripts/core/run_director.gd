@@ -247,7 +247,7 @@ func _update_interactions() -> void:
 		prompt_changed.emit(best.prompt() if best else "")
 	if best == null:
 		return
-	if Input.is_action_just_pressed("interact") or (player.autoplay and best.kind in ["chest", "dungeon", "tower_chest", "tower_stairs"]):
+	if Input.is_action_just_pressed("interact") or ((player.autoplay or Settings.auto_move()) and best.kind in ["chest", "dungeon", "tower_chest", "tower_stairs"]):
 		_interact(best)
 
 

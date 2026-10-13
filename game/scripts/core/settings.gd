@@ -86,7 +86,7 @@ const DEFAULTS := {
 	# auto_skills : compétences lancées seules dès qu'elles sont prêtes et qu'un monstre est à portée
 	# auto_target : any (n'importe quel monstre à portée), locked (seulement la cible verrouillée)
 	"game": {"move_mode": "keyboard", "aim_mode": "smart", "attack_mode": "manual",
-		"auto_skills": [false, false, false, false], "auto_target": "any"},
+		"auto_skills": [false, false, false, false], "auto_target": "any", "auto_combo": false, "auto_move": false, "auto_cards": false},
 	"camera": {"rotate_speed": 1.0, "invert_y": false, "distance": 15.0, "shake": 1.0, "action_turn": 1.0},
 	# dev_mode : écran de test (F10), réservé aux tests
 	"interface": {"damage_numbers": "all", "hit_stop": true, "show_fps": true, "move_marker": true, "attack_zone": false, "dev_mode": false,
@@ -107,6 +107,9 @@ const PRESETS := {
 		"game": {"move_mode": "keyboard", "aim_mode": "action", "attack_mode": "manual"}},
 	"relax": {"name": "Détente", "desc": "ZQSD pour se déplacer : attaque de base et compétences se lancent seules sur les monstres à portée.",
 		"game": {"move_mode": "keyboard", "aim_mode": "nearest", "attack_mode": "auto", "auto_skills": [true, true, true, true]}},
+	"bot": {"name": "Bot (tout automatique)", "desc": "Le héros se déplace, frappe et enchaîne ses sorts en combos parfaits tout seul (ton preset de sorts) ; bouger toi-même reprend la main.",
+		"game": {"move_mode": "keyboard", "aim_mode": "nearest", "attack_mode": "auto", "auto_skills": [true, true, true, true],
+			"auto_combo": true, "auto_move": true, "auto_cards": true}},
 }
 
 const RESOLUTIONS := ["1280x720", "1366x768", "1600x900", "1920x1080", "2560x1440", "3840x2160"]
@@ -147,6 +150,9 @@ func apply_preset(id: String) -> void:
 		data.game[k] = g[k].duplicate() if g[k] is Array else g[k]
 	if not g.has("auto_skills"):
 		data.game.auto_skills = [false, false, false, false]
+	for k in ["auto_combo", "auto_move", "auto_cards"]:
+		if not g.has(k):
+			data.game[k] = false
 	save_settings()
 	changed.emit()
 
@@ -160,6 +166,8 @@ func current_preset() -> String:
 			if data.game[k] != g[k]:
 				ok = false
 		if ok and data.game.auto_skills != g.get("auto_skills", [false, false, false, false]):
+			ok = false
+		if ok and (bool(get_v("game", "auto_combo")) != bool(g.get("auto_combo", false)) or bool(get_v("game", "auto_move")) != bool(g.get("auto_move", false))):
 			ok = false
 		if ok:
 			return id
@@ -185,7 +193,23 @@ func auto_attack() -> bool:
 
 func auto_skill(slot: int) -> bool:
 	var a: Array = get_v("game", "auto_skills")
-	return slot < a.size() and bool(a[slot])
+	return (slot < a.size() and bool(a[slot])) or auto_combo()
+
+
+## Combos parfaits automatiques : les 4 sorts du preset, leurs enchaînements et les annulations
+## parfaites au meilleur moment (Paramètres > Combat).
+func auto_combo() -> bool:
+	return bool(get_v("game", "auto_combo"))
+
+
+## Choix des cartes automatique : nouveau sort tant qu'une case est libre, sinon la plus rare.
+func auto_cards() -> bool:
+	return bool(get_v("game", "auto_cards"))
+
+
+## Déplacement automatique : vers les monstres, puis vers l'objectif (Paramètres > Combat).
+func auto_move() -> bool:
+	return bool(get_v("game", "auto_move"))
 
 
 func set_auto_skill(slot: int, on: bool) -> void:
