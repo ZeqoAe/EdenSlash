@@ -521,7 +521,7 @@ func _obs() -> Array:
 	# --- adversaire le plus proche
 	var e := _nearest_enemy()
 	if e == null:
-		o.append_array(_zeros(29))
+		o.append_array(_zeros(29 + Combatant.CC_TYPES.size()))
 	else:
 		var to := e.global_position - p.global_position
 		to.y = 0.0
@@ -547,6 +547,9 @@ func _obs() -> Array:
 		o.append(0.0 if e.is_on_floor() else 1.0)
 		for st in ENEMY_STATUSES:
 			o.append(1.0 if e.has_status(st) else 0.0)
+		# insensibilités aux contrôles (temps restant) : alterner les types de contrôle
+		for cc in Combatant.CC_TYPES:
+			o.append(clampf((float(e.statuses.get("imm_" + cc, 0.0)) - e.clock) / 5.0, 0.0, 1.0))
 		o.append(clampf(e.radius, 0.0, 2.0) / 2.0)
 		o.append(minf(enemies.filter(func(x): return is_instance_valid(x) and not x.is_dead).size(), 4) / 4.0)
 	# --- menaces : les 2 zones rouges les plus proches de l'impact

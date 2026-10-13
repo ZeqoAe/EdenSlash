@@ -27,6 +27,12 @@ const DESC := {
 	"shock": "Subit 15 % de dégâts en plus.",
 	"scar": "Inflige 30 % de dégâts en moins.",
 	"stun": "Ne peut plus agir.",
+	"imm_stun": "Vient d'être renversé : ne peut pas l'être de nouveau tout de suite (les autres contrôles passent).",
+	"imm_freeze": "Vient d'être gelé : ne peut pas l'être de nouveau tout de suite (les autres contrôles passent).",
+	"imm_sleep": "Vient d'être endormi : ne peut pas l'être de nouveau tout de suite (les autres contrôles passent).",
+	"imm_fear": "Vient d'être terrifié : ne peut pas l'être de nouveau tout de suite (les autres contrôles passent).",
+	"imm_root": "Vient d'être immobilisé : ne peut pas l'être de nouveau tout de suite (les autres contrôles passent).",
+	"imm_disarm": "Vient d'être désarmé : ne peut pas l'être de nouveau tout de suite (les autres contrôles passent).",
 	"freeze": "Pris dans la glace : ne peut ni bouger ni attaquer.",
 	"chill": "Vitesse de déplacement réduite de 45 %.",
 	"solar": "Dégâts subis réduits de 25 %.",
@@ -86,6 +92,8 @@ const SPELL_ICONS := {"spell_str": "fury", "spell_agi": "haste", "spell_int": "k
 
 
 static func icon(status: String) -> Texture2D:
+	if status.begins_with("imm_"):  # insensibilité à un contrôle : icône du contrôle
+		status = status.trim_prefix("imm_")
 	if Trophies.STATUSES.has(status):  # buffs des trophées : icône du buff le plus proche
 		status = String(Trophies.STATUSES[status].icon)
 	if SPELL_ICONS.has(status):  # bonus d'attribut des sorts améliorés
@@ -113,7 +121,7 @@ static func _skill_icon_map() -> Dictionary:
 
 
 static func is_buff(status: String) -> bool:
-	return status in BUFFS
+	return status in BUFFS or status.begins_with("imm_")
 
 
 static func display_name(status: String) -> String:

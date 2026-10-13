@@ -1490,10 +1490,12 @@ func _dive_impact() -> void:
 	_resolve_hit()
 
 
-## Étourdissement (zones rouges du boss) : plus aucune action pendant [param t] s.
+## Étourdissement (zones rouges du boss) : plus aucune action pendant [param t] s ; ensuite
+## le héros y est insensible un moment, comme les monstres (Combatant.CC_TYPES).
 func stun(t: float) -> void:
-	if is_dead:
+	if is_dead or _state == "stun" or not _cc_gate("stun", t):
 		return
+	statuses_changed.emit()
 	_state = "stun"
 	_state_time = 0.0
 	_stun_len = t

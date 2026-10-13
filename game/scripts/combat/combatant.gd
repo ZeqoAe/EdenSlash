@@ -67,6 +67,13 @@ const STATUS_INFO := {
 	"fear": {"name": "Terreur", "color": Color(0.7, 0.4, 0.8)},
 	"thorns": {"name": "Épines", "color": Color(0.6, 0.9, 0.4)},
 	"resolve": {"name": "Résolution", "color": Color(1.0, 0.9, 0.6)},
+	# insensibilités aux contrôles (voir CC_TYPES)
+	"imm_stun": {"name": "Insensible au renversement", "color": Color(0.8, 0.85, 1.0)},
+	"imm_freeze": {"name": "Insensible au gel", "color": Color(0.8, 0.85, 1.0)},
+	"imm_sleep": {"name": "Insensible au sommeil", "color": Color(0.8, 0.85, 1.0)},
+	"imm_fear": {"name": "Insensible à la terreur", "color": Color(0.8, 0.85, 1.0)},
+	"imm_root": {"name": "Insensible à l'immobilisation", "color": Color(0.8, 0.85, 1.0)},
+	"imm_disarm": {"name": "Insensible au désarmement", "color": Color(0.8, 0.85, 1.0)},
 	# bonus d'attribut au lancement des sorts (cartes d'amélioration)
 	"spell_str": {"name": "Force du sort", "color": Color(1.0, 0.65, 0.45)},
 	"spell_agi": {"name": "Agilité du sort", "color": Color(0.6, 1.0, 0.8)},
@@ -92,15 +99,43 @@ const STATUS_INFO := {
 }
 ## Dégâts par seconde des effets sur la durée, en part de l'attaque de la source.
 const DOT_FACTOR := {"bleed": 0.15, "burn": 0.25, "poison": 0.2}
+## Contrôles : chaque type a sa propre insensibilité. Un contrôle ne peut pas être remis tant
+## qu'il dure, puis la cible y reste insensible CC_IMMUNITY s (buff « imm_<type> ») : on ne
+## bloque pas un ennemi en boucle avec le même sort, mais enchaîner des contrôles de types
+## différents (renversé, puis terreur, puis gel...) le tient longtemps.
+const CC_TYPES := ["stun", "freeze", "sleep", "fear", "root", "disarm"]
+const CC_IMMUNITY := 3.0
 signal statuses_changed
 
 var statuses := {}  # nom -> instant de fin
 var clock := 0.0
 var _dots := {}  # effet -> {dps, source, tick}
+var _cc_msg_at := -10.0
+
+
+## Le contrôle [param status] serait refusé (déjà en cours ou cible insensible).
+func cc_refused(status: String) -> bool:
+	return status in CC_TYPES and (has_status(status) or has_status("imm_" + status))
+
+
+## Contrôle accepté : la cible y devient insensible jusqu'à sa fin + CC_IMMUNITY s.
+## Refusé : « INSENSIBLE » au-dessus de la cible (pas plus d'une fois par demi-seconde).
+func _cc_gate(status: String, duration: float) -> bool:
+	if not status in CC_TYPES:
+		return true
+	if cc_refused(status):
+		if has_status("imm_" + status) and not has_status(status) and clock - _cc_msg_at > 0.5:
+			_cc_msg_at = clock
+			DamageNumber.spawn_text(self, "INSENSIBLE", Color(0.75, 0.85, 1.0))
+		return false
+	statuses["imm_" + status] = clock + duration + CC_IMMUNITY
+	return true
 
 
 func add_status(status: String, duration: float, source: Combatant = null) -> void:
 	if duration <= 0.0:
+		return
+	if not _cc_gate(status, duration):
 		return
 	if DOT_FACTOR.has(status) and source:
 		duration *= source.dot_duration_mult()

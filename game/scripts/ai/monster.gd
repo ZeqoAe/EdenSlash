@@ -147,16 +147,16 @@ func enrage() -> void:
 	add_child(aura)
 
 
-## Gel et renversement interrompent l'attaque annoncée (la zone rouge disparaît).
+## Gel et renversement interrompent l'attaque annoncée (la zone rouge disparaît), sauf si
+## le monstre y est insensible (même contrôle reçu il y a peu, voir Combatant.CC_TYPES).
 func add_status(status: String, duration: float, source: Combatant = null) -> void:
 	if cc_immune and status in ["stun", "freeze", "sleep", "fear", "root", "chill", "disarm"]:
 		return
-	if is_boss and status == "freeze":
-		duration *= 0.35  # le boss résiste au gel
+	if is_boss and status in ["freeze", "sleep", "fear", "root"]:
+		duration *= 0.35  # le boss résiste au gel, au sommeil, à la terreur et à l'immobilisation
+	var refused := cc_refused(status)
 	super.add_status(status, duration, source)
-	if is_boss and status in ["sleep", "fear", "root"]:
-		duration *= 0.35
-	if status in ["freeze", "stun", "sleep", "fear"] and _state == "attack" and not is_boss:
+	if not refused and status in ["freeze", "stun", "sleep", "fear"] and _state == "attack" and not is_boss:
 		if is_instance_valid(_telegraph):
 			_telegraph.queue_free()
 		_pending_shot = {}
