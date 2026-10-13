@@ -27,6 +27,15 @@ import nif2gltf  # noqa: E402
 GAME = os.path.join(os.path.dirname(__file__), '..', 'game')
 CAT_SLOT = {'0': 'body', '2': 'head', '1': 'back', '4': 'back'}  # 4 : ailes « Blessed » et dos animés
 GENERIC = {'body': "Costume d'Eden %s", 'head': "Accessoire de tête %s", 'back': "Ailes et dos d'Eden %s"}
+# pièces dont Eden n'a ni nom ni icône : « secrètes » (icône rendue d'après le modèle en jeu)
+SECRET = {'body': "Tenue secrète n°%d", 'head': "Coiffe secrète n°%d", 'back': "Ailes secrètes n°%d"}
+
+
+def _clean_name(n):
+    """Nom d'objet de la boutique sans les suffixes de version (Blessed, Ancient…)."""
+    import re
+    n = re.sub(r'\s*\((Blessed|Ancient|Alpha|Cursed)\)', '', n).strip()
+    return n
 
 
 def rgb565(h):
@@ -83,7 +92,8 @@ def main():
         for r in edenini.read_rows(table):
             if len(r) < 20 or not r[0].isdigit() or not (r[2] or r[1]).startswith(('K', 'A', 'V')):
                 continue
-            icons_any.setdefault((r[2] or r[1]).strip(), (int(r[0]), r[1].strip()))
+            # colonne 7 : nom (anglais dans la boutique) quand t_item n'en a pas
+            icons_any.setdefault((r[2] or r[1]).strip(), (int(r[0]), r[1].strip(), _clean_name(r[7].strip()) if r[7].strip().isascii() else ''))
             if r[8] not in ('68', '61', '65', '67') and not (r[2] or r[1]).startswith(('A', 'V')):
                 continue
             name = texts.get(int(r[0]), [''])[0].strip()
@@ -110,6 +120,7 @@ def main():
     os.makedirs(out_dir, exist_ok=True)
     icon_dir = os.path.join(GAME, 'assets', 'ui', 'items')
     cosmetics = []
+    secret_n = {}
     done = 0
     redone = set()
     for (cat, mesh), variants in sorted(meshes.items()):
@@ -121,8 +132,12 @@ def main():
             iid, name, icon_code = names[code]
         else:
             # sans nom anglais : nom générique, mais l'icône de l'objet d'Eden s'il existe
-            any_ = next((icons_any[v[0]] for v in variants if v[0] in icons_any), (0, code))
-            iid, name, icon_code = any_[0], GENERIC[cat] % mesh.lstrip('#'), any_[1]
+            any_ = next((icons_any[v[0]] for v in variants if v[0] in icons_any), None)
+            if any_ and any_[2]:
+                iid, name, icon_code = any_[0], any_[2], any_[1]
+            else:
+                secret_n[cat] = secret_n.get(cat, 0) + 1
+                iid, name, icon_code = (any_[0] if any_ else 0), SECRET[cat] % secret_n[cat], (any_[1] if any_ else code)
         short = mesh.lstrip('#').lower()
         rel = ('cos_%s.glb' % short) if cat == 'body' else ('%s_%s.glb' % (cat, short))
         glb = os.path.join(out_dir, rel)
@@ -179,6 +194,9 @@ def main():
         elif p in idx and idx[p].get('pkg') is not None:
             Image.open(io.BytesIO(edenpkg.read_file(nif2gltf.PKG, idx[p]))).convert('RGBA').save(dst)
             icon = 'res://assets/ui/items/%s.png' % icon_code.lower()
+        cid = short if cat == 'body' else '%s_%s' % (cat, short)
+        if not icon and os.path.exists(os.path.join(icon_dir, 'cos_%s.png' % cid)):
+            icon = 'res://assets/ui/items/cos_%s.png' % cid  # rendue par tests/make_cosmetic_icons.tscn
         cosmetics.append({'id': short if cat == 'body' else '%s_%s' % (cat, short), 'cat': cat, 'name': name,
                           'eden_item': iid, 'icon': icon, 'rarity': 4, 'outfit': 'res://assets/player/outfits/' + rel,
                           'variants': _variants(variants, names), 'codes': sorted({v[0] for v in variants})})
