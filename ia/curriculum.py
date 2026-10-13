@@ -38,10 +38,11 @@ CLASSES = ["samurai", "warrior", "thief", "hunter", "cleric", "magician", "bard"
 DUMMY4 = dict(scenario="dummy", skills=4, max_time=30, bonus={"perfect": 0.05})
 DUMMY12 = dict(scenario="dummy", skills=12, max_time=30, bonus={"perfect": 0.08, "chain": 0.15})
 # fuyard difficile (6,2 m/s, 2 esquives) et hardcore (7 m/s, plus rapide que le héros,
-# 3 esquives) : les contrôles ne suffisent pas, il faut le rattraper
-FLEE = dict(scenario="flee", skills=12, difficulty=2, max_time=40, enemy_hp=1.0,
+# 3 esquives) : les contrôles ne suffisent pas, il faut le rattraper. PV réduits : avec ses
+# 6 à 8 fois les PV du héros, la plupart des classes (lentes, à distance) ne le tuaient pas
+FLEE = dict(scenario="flee", skills=12, difficulty=2, max_time=40, enemy_hp=0.5,
             bonus={"perfect": 0.15, "chain": 0.1}, timeout_reward=-2.0)
-FLEE3 = dict(FLEE, difficulty=3, max_time=45)
+FLEE3 = dict(FLEE, difficulty=3, max_time=45, enemy_hp=0.4)
 # monstres insensibles aux contrôles (sinon on les renverse en boucle et on n'esquive jamais)
 # et assez solides pour qu'il faille survivre, pas juste les tuer vite
 SURVIVE = dict(scenario="monster", skills=12, hero_hp=1, max_time=40, enemy_hp=20.0, cc_immune=True,
@@ -83,7 +84,7 @@ STAGES = [
          juge="dummy", reussite=lambda i: wins(i) and i["chain"] >= 3, seuil=0.85, min_steps=2_000_000),
     dict(nom="3. Adversaire fuyard (agressivité, esquives d'annulation)",
          mix=[(0.5, FLEE), (0.35, FLEE3), (0.15, DUMMY12)],
-         juge="flee", reussite=wins, seuil=0.75, min_steps=3_000_000),
+         juge="flee", reussite=lambda i: i["dealt"] >= 0.7, seuil=0.6, min_steps=3_000_000),
     dict(nom="4. Monstres, héros à 1 PV (esquive)",
          mix=[(0.55, SURVIVE), (0.3, SURVIVE2), (0.1, FLEE), (0.05, DUMMY12)],
          juge="monster", reussite=survives, seuil=0.75, min_steps=4_000_000, cerveau="cerveau_debutant"),
