@@ -11,10 +11,18 @@ class_name HeroPages
 ## d'arme, quelle que soit la classe).
 class AppearancePage extends HBoxContainer:
 	const CATS := [["body", "Tenue"], ["head", "Tête"], ["back", "Dos"], ["aura", "Auras"], ["weapon", "Arme"]]
+	## Emplacements autour du héros (comme l'équipement) : [id, catégorie, nom, type d'aura].
+	const LEFT_SLOTS := [["body", "body", "Tenue", ""], ["head", "head", "Tête", ""], ["back", "back", "Dos", ""]]
+	const RIGHT_SLOTS := [["star", "aura", "Pierre étoilée", "star"], ["luna", "aura", "Pierre de lune", "luna"],
+		["other", "aura", "Autre aura", "other"], ["weapon", "weapon", "Arme", ""]]
 	var _cat := "body"
+	var _slot := "body"
+	var _aura_kind := ""  # auras : type de l'emplacement cliqué ("" : toutes)
 	var _cat_buttons := {}
+	var _slots := {}  # id -> Button
 	var _grid: GridContainer
 	var _hint: Label
+	var _title: Label
 	var _preview: EquipmentPage.HeroPreview
 	var _info: RichTextLabel
 	var _count: Label
@@ -25,31 +33,41 @@ class AppearancePage extends HBoxContainer:
 
 	func _ready() -> void:
 		add_theme_constant_override("separation", 16)
-		var left := ItemWidgets.panel(self, 0, true)
+		# --- le héros au centre, les emplacements autour (comme l'équipement) ---
+		var doll_panel := ItemWidgets.panel(self, 520)
+		var doll := HBoxContainer.new()
+		doll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		doll.add_theme_constant_override("separation", 8)
+		doll_panel.add_child(doll)
+		_slot_column(doll, LEFT_SLOTS)
+		var mid := VBoxContainer.new()
+		mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		doll.add_child(mid)
+		_preview = EquipmentPage.HeroPreview.new()
+		_preview.custom_minimum_size = Vector2(300, 440)
+		_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_preview.idle_pose = true
+		_preview.spin = false
+		mid.add_child(_preview)
+		_preview.frame(5.3, 0.95, 0.35)  # en pied, de trois-quarts face (glisser pour tourner)
+		var tip := Hud._label(mid, "Glisser : tourner · molette : zoom · clic droit glissé : monter / descendre", 12, UiTheme.MUTED)
+		tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_slot_column(doll, RIGHT_SLOTS)
+		_info = ItemWidgets.rich(doll_panel, 14)
+		_info.custom_minimum_size = Vector2(0, 120)
+		_info.size_flags_vertical = Control.SIZE_FILL
+		# --- à droite : le choix pour l'emplacement cliqué, puis ses couleurs ---
+		var right := ItemWidgets.panel(self, 0, true)
 		var head := HBoxContainer.new()
 		head.add_theme_constant_override("separation", 10)
-		left.add_child(head)
-		ItemWidgets.section(head, "Apparence")
+		right.add_child(head)
+		_title = Hud._label(head, "", 20, UiTheme.GOLD)
+		_title.add_theme_font_override("font", UiTheme.title_font())
 		_count = Hud._label(head, "", 14, UiTheme.MUTED)
 		_count.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var tabs := HBoxContainer.new()
-		tabs.add_theme_constant_override("separation", 6)
-		left.add_child(tabs)
-		for c in CATS:
-			var b := Button.new()
-			b.text = String(c[1])
-			b.toggle_mode = true
-			b.focus_mode = Control.FOCUS_NONE
-			b.custom_minimum_size = Vector2(120, 36)
-			var id := String(c[0])
-			b.pressed.connect(func():
-				_cat = id
-				refresh())
-			tabs.add_child(b)
-			_cat_buttons[id] = b
 		var fl := HBoxContainer.new()
 		fl.add_theme_constant_override("separation", 10)
-		left.add_child(fl)
+		right.add_child(fl)
 		_search = LineEdit.new()
 		_search.placeholder_text = "Rechercher…"
 		_search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -60,32 +78,81 @@ class AppearancePage extends HBoxContainer:
 		_owned_only.focus_mode = Control.FOCUS_NONE
 		_owned_only.toggled.connect(func(_on): refresh())
 		fl.add_child(_owned_only)
-		_hint = Hud._label(left, "", 13, UiTheme.MUTED)
+		_hint = Hud._label(right, "", 13, UiTheme.MUTED)
 		_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		var scroll := ScrollContainer.new()
 		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-		left.add_child(scroll)
+		right.add_child(scroll)
 		_grid = GridContainer.new()
-		_grid.columns = 7
+		_grid.columns = 5
 		_grid.add_theme_constant_override("h_separation", 8)
 		_grid.add_theme_constant_override("v_separation", 8)
 		scroll.add_child(_grid)
-		var right := ItemWidgets.panel(self, 420)
-		ItemWidgets.section(right, "Aperçu")
-		_preview = EquipmentPage.HeroPreview.new()
-		_preview.custom_minimum_size = Vector2(380, 440)
-		_preview.size_flags_vertical = Control.SIZE_EXPAND_FILL
-		_preview.idle_pose = true
-		_preview.spin = false
-		right.add_child(_preview)
-		_preview.frame(5.3, 0.95, 0.35)  # en pied, de trois-quarts face (glisser pour tourner)
 		_dye_box = VBoxContainer.new()
 		_dye_box.add_theme_constant_override("separation", 6)
 		right.add_child(_dye_box)
-		_info = ItemWidgets.rich(right, 14)
-		_info.custom_minimum_size = Vector2(0, 110)
-		_info.size_flags_vertical = Control.SIZE_FILL
+
+	## Colonne d'emplacements (icône de ce qui est porté, nom dessous).
+	func _slot_column(parent: Control, slots: Array) -> void:
+		var col := VBoxContainer.new()
+		col.alignment = BoxContainer.ALIGNMENT_CENTER
+		col.add_theme_constant_override("separation", 6)
+		parent.add_child(col)
+		for sl in slots:
+			var cell := VBoxContainer.new()
+			cell.add_theme_constant_override("separation", 0)
+			col.add_child(cell)
+			var b := ItemWidgets.TipButton.new()
+			b.custom_minimum_size = Vector2(84, 84)
+			b.focus_mode = Control.FOCUS_NONE
+			b.expand_icon = true
+			var id := String(sl[0])
+			var cat := String(sl[1])
+			var kind := String(sl[3])
+			b.pressed.connect(func():
+				_slot = id
+				_cat = cat
+				_aura_kind = kind
+				refresh())
+			b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+			cell.add_child(b)
+			var cap := Hud._label(cell, String(sl[2]), 12, UiTheme.MUTED)
+			cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			_slots[id] = b
+
+	## Icône et infobulle de chaque emplacement d'après ce que porte la classe.
+	func _refresh_slots(cid: String) -> void:
+		var w: Dictionary = Profile.worn.get(cid, {})
+		for id in _slots:
+			var b: ItemWidgets.TipButton = _slots[id]
+			var icon := ""
+			var name := ""
+			match id:
+				"body", "head", "back":
+					var path := Profile.outfit_of(cid) if id == "body" else String(w.get(id, ""))
+					for c in GameData.cosmetics:
+						if path != "" and String(c.outfit) == path:
+							icon = String(c.icon)
+							name = String(c.name)
+					if path == "" and id == "body":
+						icon = String(GameData.class_data(cid).get("icon", ""))
+						name = "Tenue de la classe"
+				"star", "luna", "other":
+					var x: Dictionary = GameData.collection_by_id.get(int(w.get("aura_" + id, 0)), {})
+					if not x.is_empty():
+						icon = String(x.icon)
+						name = String(x.name)
+				"weapon":
+					var wi: Dictionary = Profile.equipped.get("weapon", {})
+					icon = String(wi.get("icon", ""))
+					name = Items.display_name(wi) if not wi.is_empty() else ""
+			b.icon = UiTheme.texture(icon) if icon != "" else null
+			b.text = "" if icon != "" else "＋"
+			b.tip = "[b]%s[/b]" % name if name != "" else "[color=#c8c8d4]Vide : clique pour choisir[/color]"
+			var on: bool = id == _slot
+			b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.08, 0.06, 0.13, 0.95), UiTheme.GOLD if on else UiTheme.GOLD_DIM, 3 if on else 1, 10))
+			b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.15, 0.11, 0.24, 1.0), UiTheme.GOLD, 2, 10))
 
 	static func cat_of(c: Dictionary) -> String:
 		return String(c.get("cat", "body"))
@@ -118,6 +185,9 @@ class AppearancePage extends HBoxContainer:
 		_preview.show_hero(cid, _shown_code if _shown_code != "" else Profile.weapon_code())
 		_info.text = _worn_text(cid)
 		_refresh_dye(cid)
+		_refresh_slots(cid)
+		var names := {"body": "Tenue", "head": "Tête", "back": "Dos", "star": "Pierre étoilée", "luna": "Pierre de lune", "other": "Autre aura", "weapon": "Apparence de l'arme"}
+		_title.text = String(names.get(_slot, "Apparence"))
 
 	# --- couleurs de la pièce portée ---------------------------------------------------------
 	const DYE_NAMES := ["Couleur principale", "Couleur secondaire", "Détails"]
@@ -208,7 +278,7 @@ class AppearancePage extends HBoxContainer:
 		_preview.show_hero(cid, _shown_code if _shown_code != "" else Profile.weapon_code())
 
 	func _refresh_costumes(cid: String) -> void:
-		_grid.columns = 7
+		_grid.columns = 5
 		_hint.text = "Costumes d'Eden : trésors de collection des boss (1 chance sur 4, plus s'ils sont enragés). Ils se portent avec n'importe quelle classe."
 		var list := GameData.cosmetics.filter(func(c): return cat_of(c) == _cat)
 		var owned := list.filter(func(c): return Profile.outfit_unlocked(String(c.id)))
@@ -229,18 +299,19 @@ class AppearancePage extends HBoxContainer:
 		return q == "" or String(c.get("name", "")).to_lower().contains(q)
 
 	func _refresh_auras(cid: String) -> void:
-		_grid.columns = 7
+		_grid.columns = 5
 		_hint.text = "Une pierre étoilée et une pierre de lune à la fois : effet lumineux autour du héros et bonus pendant les runs."
 		var got := GameData.auras.filter(func(x): return Profile.collected(x))
 		_count.text = "%d / %d auras obtenues" % [got.size(), GameData.auras.size()]
-		for kind in ["star", "luna", "other"]:
+		var kinds: Array = [_aura_kind] if _aura_kind != "" else ["star", "luna", "other"]
+		for kind in kinds:
 			_grid.add_child(_aura_cell({}, cid, kind))
 		for x in got:
-			if _match(x):
+			if _match(x) and String(x.aura.kind) in kinds:
 				_grid.add_child(_aura_cell(x, cid, String(x.aura.kind)))
 		if not _owned_only.button_pressed:
 			for x in GameData.auras:
-				if not Profile.collected(x) and _match(x):
+				if not Profile.collected(x) and _match(x) and String(x.aura.kind) in kinds:
 					_grid.add_child(_aura_cell(x, cid, String(x.aura.kind)))
 
 	## Apparence de l'arme : l'arme portée (modèles de base, armes archivées), puis les
@@ -483,7 +554,7 @@ class CardsPage extends HBoxContainer:
 		sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		left.add_child(sc)
 		_grid = GridContainer.new()
-		_grid.columns = 6
+		_grid.columns = 5
 		_grid.add_theme_constant_override("h_separation", 8)
 		_grid.add_theme_constant_override("v_separation", 8)
 		sc.add_child(_grid)

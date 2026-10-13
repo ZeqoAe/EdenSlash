@@ -111,6 +111,8 @@ func _ready() -> void:
 			# test : catégorie de l'apparence (--appearance=aura, --appearance=weapon...)
 			if _open_screen.contains("="):
 				_hero.appearance._cat = _open_screen.get_slice("=", 1)
+				_hero.appearance._slot = {"aura": "star"}.get(_hero.appearance._cat, _hero.appearance._cat)
+				_hero.appearance._aura_kind = "star" if _hero.appearance._cat == "aura" else ""
 			_open_hero("appearance")
 		"dev":
 			# test : écran du mode dev, page N (paramètres de test uniquement)
