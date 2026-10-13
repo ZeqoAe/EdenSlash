@@ -79,6 +79,7 @@ var _roster: Array = []  # monstres normaux de la zone, par niveau
 var _elites: Array = []
 var _seed := 0
 var orbs: XpOrbs  # orbes d'expérience au sol
+var tower: TowerDirector  # mode Tour : étages successifs (Tower)
 
 
 func start(p: Player) -> void:
@@ -87,6 +88,16 @@ func start(p: Player) -> void:
 	_roster = zone.monsters.map(func(x): return int(x))
 	_elites = zone.get("elites", []).map(func(x): return int(x))
 	_seed = Run.seed if Run.seed != 0 else randi()
+	if Tower.active:
+		# la Tour : pas de grande carte, une salle par étage
+		state = "tower"
+		_fog = Image.create(FOG_RES, FOG_RES, false, Image.FORMAT_LA8)
+		_fog.fill(Color(0, 0, 0, 0))
+		_fog_tex = ImageTexture.create_from_image(_fog)
+		tower = TowerDirector.new()
+		add_child(tower)
+		tower.setup(self)
+		return
 	map = world.new_run_map(_seed)
 	_place_player(map.start)
 	orbs = XpOrbs.new()
@@ -135,6 +146,11 @@ func in_dungeon() -> bool:
 # --- boucle -----------------------------------------------------------------------------
 func _process(delta: float) -> void:
 	if player == null or map == null:
+		return
+	if state == "tower":
+		tower.update(delta)
+		_update_interactions()
+		_keep_on_map()
 		return
 	if state == "training":
 		# entraînement : pas de minuterie, ni vagues, ni rage
@@ -216,12 +232,14 @@ func _update_interactions() -> void:
 		prompt_changed.emit(best.prompt() if best else "")
 	if best == null:
 		return
-	if Input.is_action_just_pressed("interact") or (player.autoplay and best.kind in ["chest", "dungeon"]):
+	if Input.is_action_just_pressed("interact") or (player.autoplay and best.kind in ["chest", "dungeon", "tower_chest", "tower_stairs"]):
 		_interact(best)
 
 
 func _interact(it: Interactable) -> void:
 	match it.kind:
+		"tower_chest", "tower_stairs":
+			tower.interact(it)
 		"chest":
 			# une clé si on en a, sinon le prix en or (qui monte à chaque coffre ouvert)
 			var price := chest_price()
@@ -457,6 +475,13 @@ func _ring_point(min_d: float, max_d: float) -> Vector3:
 func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 	kills += 1
 	var m := who as Monster
+	if Tower.active:
+		# la Tour : ni expérience (le niveau suit l'étage), ni butin (le coffre de l'étage)
+		Run.kills += 1
+		Profile.record_add("kills", 1)
+		if m.is_elite:
+			Run.elites += 1
+		return
 	if Training.active:
 		# entraînement : l'expérience seulement (pas de butin, de clés ni de records)
 		if orbs:
@@ -613,6 +638,8 @@ func _update_boss(delta: float) -> void:
 
 ## Extraction : 10 s à survivre (une vague fonce sur le héros), puis on garde tout.
 func start_extraction() -> void:
+	if Tower.active:
+		return  # la Tour : on monte ou on tombe
 	if extracting or state == "cleared" or player == null or player.is_dead:
 		return
 	extracting = true
@@ -669,6 +696,8 @@ func revive_point() -> Vector3:
 
 
 func objective_target() -> Vector3:
+	if state == "tower":
+		return tower.target()
 	if state in ["explore", "rage"] and dungeon_found:
 		for p in route:
 			if _flat(p, player.global_position) > 4.0:

@@ -180,6 +180,16 @@ func _start_training() -> void:
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
+func _start_tower() -> void:
+	if _launching:
+		return
+	_launching = true
+	if backdrop:
+		backdrop.release()
+	Tower.start(Profile.selected_class)
+	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+
+
 func _start_run() -> void:
 	if backdrop:
 		backdrop.release()
@@ -579,6 +589,7 @@ func _menu_play() -> void:
 	hr.mark(free > 0)
 	_row("Zone de farm", "%s · niveau %d+" % [zone.get("name", ""), 1 + int(zone.get("level_bonus", 0))], "pin", _show_menu.bind("zones"))
 	_row("Zone d'entraînement", "Tester les sorts, les combos et les cartes de %s (rien n'est gagné ni perdu)" % cls.get("name_fr", ""), "stats", _start_training)
+	_row("La Tour", "Gravir %d étages avec une arme de base : une carte et un coffre par étage, une seule vie · record : étage %d" % [Tower.FLOORS, Tower.best()], "upgrade", _start_tower)
 
 
 func _menu_zones() -> void:

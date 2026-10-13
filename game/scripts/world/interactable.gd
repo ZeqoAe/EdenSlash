@@ -57,6 +57,10 @@ func prompt() -> String:
 			return "[F] Ouvrir — %s" % title
 		"dungeon":
 			return "[F] Entrer dans le donjon"
+		"tower_chest":
+			return "[F] Ouvrir — %s" % title
+		"tower_stairs":
+			return "[F] Monter — %s" % title
 		_:
 			return "[F] Parler à %s" % title
 

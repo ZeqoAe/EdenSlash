@@ -216,6 +216,8 @@ func _update_objectives() -> void:
 	_zone_label.text = _zone_text
 	var t := director.time_left()
 	match director.state:
+		"tower":
+			_clock_label.text = "Étage %d/%d" % [Tower.floor_n, Tower.FLOORS]
 		"boss":
 			_clock_label.text = "BOSS"
 		"cleared":
@@ -227,6 +229,8 @@ func _update_objectives() -> void:
 	_clock_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.35) if rage or t < 60.0 else Color.WHITE)
 	var need: int = director.SEALS_NEEDED
 	_seal_label.text = "Sceaux  " + "◆ ".repeat(mini(director.seals, need)) + "◇ ".repeat(maxi(0, need - director.seals))
+	if Tower.active:
+		_seal_label.text = "Record : étage %d" % Tower.best()
 	var chests_total: int = director.map.chests.size() if director.map and "chests" in director.map else 0
 	var sig := "%s|%s|%d|%d|%d" % [director.state, director.dungeon_found, director.seals, director.chests_opened, director.shrines_captured]
 	if _obj_signature != "" and sig != _obj_signature:

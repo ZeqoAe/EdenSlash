@@ -48,6 +48,10 @@ func setup(p: Player) -> void:
 	if Training.active:
 		_confirm.title = "Quitter l'entraînement ?"
 		_confirm.dialog_text = "Retour au lobby. Rien de l'entraînement n'est gardé."
+	elif Tower.active:
+		_confirm.title = "Quitter la Tour ?"
+		_confirm.dialog_text = "L'ascension s'arrête ici : ton record d'étage et l'expertise
+sont gardés, l'équipement de la Tour est perdu."
 	_confirm.cancel_button_text = "Annuler"
 	_confirm.confirmed.connect(func(): abandon_requested.emit())
 	add_child(_confirm)

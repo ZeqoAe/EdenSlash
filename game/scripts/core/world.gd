@@ -17,6 +17,7 @@ extends Node3D
 ##   --cam-dist=N          distance de la caméra
 ##   --goto=dungeon|shrine|merchant|chest   place le héros près de ce lieu
 ##   --shot-prefix=nom     préfixe des captures (lancements en parallèle)
+##   --tower               lance la Tour (--tower-floor=N : commence à l'étage N)
 
 const REVIVES_PER_RUN := 1
 
@@ -80,6 +81,8 @@ func _ready() -> void:
 	if not Run.active:
 		if "--training" in OS.get_cmdline_user_args():
 			Training.start(Profile.selected_class)  # test : zone d'entraînement
+		elif "--tower" in OS.get_cmdline_user_args():
+			Tower.start(Profile.selected_class)  # test : la Tour
 		else:
 			Run.start(Profile.selected_class)
 	_build_environment()
@@ -114,6 +117,8 @@ func _ready() -> void:
 	pause_menu.abandon_requested.connect(func():
 		if Training.active:
 			Training.leave(get_tree())
+		elif Tower.active:
+			tower_end("abandon")
 		else:
 			end_run("abandon"))
 	if Training.active:
@@ -166,8 +171,14 @@ func _ready() -> void:
 	rig.global_position = player.global_position
 	director.prompt_changed.connect(hud.show_prompt)
 	director.npc_opened.connect(_on_npc_opened)
+	if Tower.active:
+		for arg in OS.get_cmdline_user_args():
+			if arg.begins_with("--tower-floor="):
+				director.tower.begin(int(arg.trim_prefix("--tower-floor=")))
+		# la Tour : une seule carte de départ, de rareté aléatoire
+		_offer("La Tour : ta carte de départ", [Run.roll_cards(6).pick_random()])
 	# première compétence : choix parmi 3 cartes de compétence
-	if Run.skills.is_empty():
+	elif Run.skills.is_empty():
 		var n := int(Run.class_data().get("start_skills", 3))
 		if _goto != "":
 			Run.apply_card(Run.roll_cards(n, true)[0])  # captures (--goto) : pas de choix à l'écran
@@ -297,8 +308,8 @@ func _offer(title: String, options: Array, reroll := Callable()) -> void:
 
 
 func _on_level_up(lvl: int) -> void:
-	if Training.active:
-		return  # entraînement : les cartes se choisissent dans le panneau
+	if Training.active or Tower.active:
+		return  # entraînement : les cartes se choisissent dans le panneau ; Tour : une par étage
 	_offer("Niveau %d ! Choisis une carte" % lvl, Run.roll_cards(3), func(): return Run.roll_cards(3))
 
 
@@ -327,6 +338,12 @@ func _on_player_died(_who: Combatant, _killer: Combatant) -> void:
 		await get_tree().create_timer(1.0).timeout
 		player.respawn(player.global_position)
 		return
+	if Tower.active:
+		# la Tour : une seule vie
+		hud.show_message("Tu es tombé à l'étage %d…" % Tower.floor_n, 2.5)
+		await get_tree().create_timer(2.5).timeout
+		tower_end("defaite")
+		return
 	if revives_left <= 0:
 		hud.show_message("Tu es tombé au combat…", 2.5)
 		await get_tree().create_timer(2.5).timeout
@@ -348,6 +365,19 @@ func end_run(result: String) -> void:
 	var r := ResultsScreen.new()
 	add_child(r)
 	r.show_results()
+
+
+## Fin de l'ascension (défaite, abandon, sommet) : record et expertise, puis le bilan.
+func tower_end(result: String) -> void:
+	if _ended:
+		return
+	_ended = true
+	pause_menu.close()
+	var floor_reached := Tower.reached
+	var got := Tower.finish()
+	var r := TowerResults.new()
+	add_child(r)
+	r.show_results(result, floor_reached, got)
 
 
 ## Bilan chiffré de la run (tests, --quit-at) : progression, butin, cartes, économie.
