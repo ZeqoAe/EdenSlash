@@ -21,6 +21,9 @@ var _mon_search: LineEdit
 var _mon_list: ItemList
 var _mon_ids: Array = []
 var _count: SpinBox
+var _rival_class := "warrior"
+var _rival_btn: Button
+var _rival_diff: OptionButton
 var _msg: Label
 var _tick := 0.0
 
@@ -44,6 +47,13 @@ func setup(p: Player, d: RunDirector) -> void:
 		player.recalc_stats()
 		_spawn_dummy()
 		toggle()
+		for arg in OS.get_cmdline_user_args():
+			if arg.begins_with("--rival="):
+				for m in get_tree().get_nodes_in_group("monsters"):
+					m.queue_free()
+				_rival_class = arg.trim_prefix("--rival=")
+				Training.hero_god = true
+				spawn_rival()
 		if "--training-cards" in OS.get_cmdline_user_args():
 			Run.passives["wide_arc"] = 10
 			Run.passive_power["wide_arc"] = 10.0
@@ -356,6 +366,20 @@ func _build_enemies() -> void:
 		for m in get_tree().get_nodes_in_group("monsters"):
 			m.queue_free()
 		_say("Ennemis retirés."), 120)
+	# adversaire : un héros d'une classe (combo de son arme, sorts, esquives)
+	var rr := _row()
+	_rival_btn = _button(rr, "Adversaire : %s ▾" % GameData.class_data(_rival_class).get("name_fr", ""), func(): pass, 0)
+	_rival_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_rival_btn.pressed.connect(func(): HeroPages.class_menu(_rival_btn, _rival_class, func(cid):
+		_rival_class = cid
+		_rival_btn.text = "Adversaire : %s ▾" % GameData.class_data(cid).get("name_fr", "")))
+	_rival_diff = OptionButton.new()
+	for d in ["Facile", "Normal", "Difficile"]:
+		_rival_diff.add_item(d)
+	_rival_diff.select(1)
+	_rival_diff.focus_mode = Control.FOCUS_NONE
+	rr.add_child(_rival_diff)
+	_button(_box, "Faire apparaître l'adversaire de classe", spawn_rival)
 	_mon_search = LineEdit.new()
 	_mon_search.placeholder_text = "Chercher un monstre (nom)…"
 	_mon_search.text_changed.connect(func(_t): _refresh_monsters())
@@ -410,6 +434,18 @@ func _spawn_selected() -> void:
 	for i in n:
 		director._spawn_monster(id, _spawn_point(i, n), player.level)
 	_say("%d × %s (niveau %d)." % [n, GameData.monster(id).get("name", id), player.level])
+
+
+## Adversaire de classe au niveau du héros, devant lui.
+func spawn_rival() -> ClassRival:
+	var r := ClassRival.new()
+	r.setup(_rival_class, player.level, _rival_diff.selected if _rival_diff else 1)
+	director.add_child(r)
+	r.global_position = _spawn_point(0, 1) + Vector3.UP * 0.4
+	r.look_at(player.global_position * Vector3(1, 0, 1) + Vector3.UP * r.global_position.y, Vector3.UP)
+	r.rotate_y(PI)
+	_say("%s adverse (niveau %d) : combo, sorts annoncés en rouge, esquives." % [GameData.class_data(_rival_class).get("name_fr", ""), player.level])
+	return r
 
 
 ## Mannequin : un monstre de la zone qui ne bouge pas, n'attaque pas et ne meurt jamais.
