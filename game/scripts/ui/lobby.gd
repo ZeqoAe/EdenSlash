@@ -125,6 +125,14 @@ func _ready() -> void:
 			var bodies := GameData.cosmetics.filter(func(x): return String(x.get("cat", "")) == "body")
 			if not bodies.is_empty():
 				demo.look["body"] = String(bodies[3].outfit)
+			if not GameData.auras.is_empty():
+				demo.look["aura"] = int(GameData.auras[0].id)
+				demo.look["aura_tint"] = [70, 170, 255]
+			demo.look["dye"] = {"body": [[220, 40, 60], [30, 30, 40], [240, 200, 80]]}
+			for row in GameData.talents.get("magician", {}).get("rows", []).slice(0, 1):
+				for c in row:
+					if c != null:
+						demo.talents[str(int(c.id))] = int(c.max)
 			var pe := ProfileEditor.open(self, demo, func(_b): pass)
 			for arg in OS.get_cmdline_user_args():
 				if arg.begins_with("--profile-tab="):

@@ -57,7 +57,8 @@ def effect_of(row, text):
         return {'type': 'stat', 'stat': attr + '_pct', 'per_level': n * 0.01}
     if code in STAT_CODES:
         t, stat, k = STAT_CODES[code]
-        return {'type': t, 'stat': stat, 'per_level': round(n * k, 4)}
+        # réduction des recharges : toujours positive (Eden l'écrit « -2 % », le jeu la retranche)
+        return {'type': t, 'stat': stat, 'per_level': round((abs(n) if stat == 'cdr' else n) * k, 4)}
     if code == 2064 and skill:
         return {'type': 'skill_dmg', 'skill': skill, 'per_level': n * 0.01}
     if code == 2141 and skill:

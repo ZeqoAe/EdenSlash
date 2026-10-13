@@ -1207,6 +1207,21 @@ func set_aura(cls: String, kind: String, id: int) -> void:
 		worn[cls]["aura_" + kind] = id
 
 
+## Teinture de l'aura de la classe (Apparence > Aura) : couleur, a = 0 si couleurs d'origine.
+func aura_tint(cls: String) -> Color:
+	var c: Array = worn.get(cls, {}).get("aura_tint", [])
+	return Color8(int(c[0]), int(c[1]), int(c[2]), 255) if c.size() >= 3 else Color(1, 1, 1, 0)
+
+
+func set_aura_tint(cls: String, rgb: Array) -> void:
+	if not worn.has(cls):
+		worn[cls] = {}
+	if rgb.is_empty():
+		worn[cls].erase("aura_tint")
+	else:
+		worn[cls]["aura_tint"] = rgb
+
+
 ## Bonus des auras portées (en run).
 func aura_stats(cls: String) -> Dictionary:
 	var out := {}

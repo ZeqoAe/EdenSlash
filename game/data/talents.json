@@ -2124,9 +2124,9 @@
     "effect": {
      "type": "stat",
      "stat": "cdr",
-     "per_level": -0.02
+     "per_level": 0.02
     },
-    "desc": "+-2 % de réduction des recharges par niveau",
+    "desc": "+2 % de réduction des recharges par niveau",
     "eden": "For each level up, MP Consumption -2%."
    },
    "54841": {
@@ -9019,9 +9019,9 @@
     "effect": {
      "type": "stat",
      "stat": "cdr",
-     "per_level": -0.02
+     "per_level": 0.02
     },
-    "desc": "+-2 % de réduction des recharges par niveau",
+    "desc": "+2 % de réduction des recharges par niveau",
     "eden": "For each level up, MP Consumption -2%."
    },
    "48856": {
@@ -13305,9 +13305,9 @@
     "effect": {
      "type": "stat",
      "stat": "cdr",
-     "per_level": -0.02
+     "per_level": 0.02
     },
-    "desc": "+-2 % de réduction des recharges par niveau",
+    "desc": "+2 % de réduction des recharges par niveau",
     "eden": "For each level up, MP Consumption -2%."
    },
    "48706": {
@@ -18939,9 +18939,9 @@
     "effect": {
      "type": "stat",
      "stat": "cdr",
-     "per_level": -0.01
+     "per_level": 0.01
     },
-    "desc": "+-1 % de réduction des recharges par niveau",
+    "desc": "+1 % de réduction des recharges par niveau",
     "eden": "For each level up, MP consumption -1%."
    },
    "41356": {

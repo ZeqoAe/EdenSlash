@@ -203,6 +203,9 @@ class AppearancePage extends HBoxContainer:
 	func _refresh_dye(cid: String) -> void:
 		for c in _dye_box.get_children():
 			c.queue_free()
+		if _cat == "aura":
+			_refresh_aura_tint(cid)
+			return
 		var path := _worn_path(cid)
 		if path == "" or not EdenModel.can_dye(path):
 			return
@@ -270,6 +273,48 @@ class AppearancePage extends HBoxContainer:
 			h.add_child(r)
 		b.pressed.connect(func(): _set_dye(cid, colors.duplicate(true), true))
 		return b
+
+	## Teinture de l'aura : une couleur qui remplace la teinte de l'effet (nuances gardées).
+	func _refresh_aura_tint(cid: String) -> void:
+		if Profile.worn_auras(cid).is_empty():
+			return
+		ItemWidgets.section(_dye_box, "Couleur de l'aura", 15)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		_dye_box.add_child(row)
+		var cur := Profile.aura_tint(cid)
+		for preset in [[255, 80, 60], [255, 190, 60], [90, 230, 110], [70, 170, 255], [170, 90, 255], [255, 120, 220], [235, 235, 245]]:
+			var col := Color8(preset[0], preset[1], preset[2])
+			var b := Button.new()
+			b.custom_minimum_size = Vector2(30, 30)
+			b.focus_mode = Control.FOCUS_NONE
+			b.add_theme_stylebox_override("normal", UiTheme.flat_box(col, UiTheme.GOLD if cur.a > 0.0 and cur.is_equal_approx(col) else UiTheme.GOLD_DIM, 2, 6))
+			var rgb: Array = preset
+			b.pressed.connect(func():
+				Profile.set_aura_tint(cid, rgb)
+				Profile.save_profile()
+				refresh())
+			row.add_child(b)
+		var pb := ColorPickerButton.new()
+		pb.custom_minimum_size = Vector2(70, 30)
+		pb.focus_mode = Control.FOCUS_NONE
+		pb.edit_alpha = false
+		pb.color = cur if cur.a > 0.0 else Color(1, 1, 1)
+		pb.tooltip_text = "Couleur libre"
+		pb.color_changed.connect(func(c):
+			Profile.set_aura_tint(cid, [c.r8, c.g8, c.b8])
+			_preview.show_hero(cid, _shown_code if _shown_code != "" else Profile.weapon_code()))
+		pb.popup_closed.connect(func(): Profile.save_profile())
+		row.add_child(pb)
+		var reset := Button.new()
+		reset.text = "Origine"
+		reset.focus_mode = Control.FOCUS_NONE
+		reset.tooltip_text = "Couleurs d'origine de l'aura"
+		reset.pressed.connect(func():
+			Profile.set_aura_tint(cid, [])
+			Profile.save_profile()
+			refresh())
+		row.add_child(reset)
 
 	## Nouvelles couleurs (vide : origine) ; [param rebuild] : redessine aussi les nuanciers.
 	func _set_dye(cid: String, colors: Array, rebuild: bool) -> void:

@@ -25,6 +25,9 @@ uniform float spell = 0.0;
 uniform float tex_contrast = 1.0;
 uniform float burn = 0.6;
 uniform float core = 2.0;
+// Teinture (auras) : rgb = couleur voulue, a = force (0 : couleurs d'origine). La couleur
+// remplace la teinte en gardant les nuances (clair / sombre) de l'effet.
+uniform vec4 tint = vec4(1.0, 1.0, 1.0, 0.0);
 
 void vertex() {
 	UV = UV * uv_scale + uv_offset;
@@ -38,6 +41,10 @@ void fragment() {
 	if (use_vertex_color > 0.5) {
 		c *= COLOR.rgb;
 		a *= COLOR.a;
+	}
+	if (tint.a > 0.0) {
+		float tl = max(c.r, max(c.g, c.b));
+		c = mix(c, tint.rgb * tl * 1.15, tint.a);
 	}
 	// particules douces
 #if CURRENT_RENDERER == RENDERER_COMPATIBILITY

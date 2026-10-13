@@ -161,9 +161,13 @@ func _ready() -> void:
 		var extra := String(look.get(k, ""))
 		if extra != "" and ResourceLoader.exists(extra):
 			parts = parts + [extra]
+	var dyes := RivalBuilds.look_dyes(look, cls)
 	for p in parts:
 		EdenModel.dress(model, String(p))
+		if dyes.has(String(p)):
+			EdenModel.apply_dye(model, String(p), dyes[String(p)])
 	EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, weapon_code))
+	EdenFx.attach_aura_ids(self, RivalBuilds.aura_ids(look), GameData.HERO_SCALE, false, RivalBuilds.aura_tint(look))
 	_base_scale = model.scale
 	_player = get_tree().get_first_node_in_group("player") as Player
 	_map = get_tree().get_first_node_in_group("map") as Node3D

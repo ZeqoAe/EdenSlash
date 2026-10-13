@@ -231,13 +231,17 @@ func _test_profile_apply() -> void:
 	Profile.in_run = false
 	var saved := {"vault": Profile.vault.duplicate(), "class": Profile.selected_class, "board": Profile.cert_board.duplicate(),
 		"outfits": Profile.outfits.duplicate(true), "worn": Profile.worn.duplicate(true), "loadout": Profile.loadout.duplicate(), "presets": Profile.presets.duplicate(true),
-		"equipped": Profile.equipped.duplicate(), "inventory": Profile.inventory.duplicate(), "certs": Profile.certificates.duplicate()}
+		"equipped": Profile.equipped.duplicate(), "inventory": Profile.inventory.duplicate(), "certs": Profile.certificates.duplicate(), "talents": Profile.talents.duplicate(true), "collection": Profile.collection.duplicate()}
 	var b := RivalBuilds.blank("magician", 45)
 	RivalBuilds.auto_fill(b)
 	b.gear.weapon["upgrade"] = 10
 	b.gear.weapon["rolls"] = {"4": "matk", "6": "crit", "8": "matk", "10": "int"}
 	b.gear.weapon["gems"] = [Craft.gem_key("sapphire", 4), ""]
 	b.gear.weapon["enchant"] = Craft.scroll_key("optimize", 4)
+	var t0 := str(int(GameData.talents.magician.rows[0][0].id))
+	b["talents"] = {t0: 3}
+	b.look["aura"] = int(GameData.auras[0].id)
+	b.look["aura_tint"] = [70, 170, 255]
 	var w := RivalBuilds.make_item("weapon", b.gear.weapon, 45)
 	var ok_item: bool = int(w.upgrade) == 10 and (w.up_rolls as Array).size() == 4 and (w.sockets as Array)[0] is Dictionary and w.has("enchant")
 	var msg := RivalBuilds.apply_to_hero(b)
@@ -245,11 +249,15 @@ func _test_profile_apply() -> void:
 	check("profil type : arme +10 (4 paliers, gemme, enchantement) appliquée au héros (%s)" % msg,
 		ok_item and Profile.selected_class == "magician" and int(eq.get("upgrade", 0)) == 10 and Profile.equipped.size() >= 8
 		and not SpellPresets.active("magician").is_empty() and Profile.cert_board.has("magician/" + String(GameData.talents.magician.certificates[0])))
+	check("profil type : maîtrise, aura et sa teinture appliquées", int(Profile.talents.get("magician", {}).get(t0, 0)) == 3
+		and Profile.aura_tint("magician").a > 0.0 and not Profile.worn_auras("magician").is_empty())
 	SpellPresets.remove("magician", SpellPresets.active_index("magician"))
 	Profile.vault = saved.vault
 	Profile.selected_class = saved["class"]
 	Profile.cert_board = saved.board
 	Profile.certificates = saved.certs
+	Profile.talents = saved.talents
+	Profile.collection = saved.collection
 	Profile.outfits = saved.outfits
 	Profile.worn = saved.worn
 	Profile.presets = saved.presets

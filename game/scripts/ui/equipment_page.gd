@@ -413,7 +413,7 @@ class HeroPreview extends SubViewportContainer:
 
 	func show_hero(class_id: String, weapon_code: String) -> void:
 		var key := class_id + "|" + weapon_code + "|" + Profile.outfit_of(class_id) + "|" + "|".join(Profile.worn_parts(class_id)) \
-			+ "|" + "|".join(Profile.worn_auras(class_id).map(func(x): return str(int(x.id)))) + "|" + str(Profile.dye_map(class_id))
+			+ "|" + "|".join(Profile.worn_auras(class_id).map(func(x): return str(int(x.id)))) + "|" + str(Profile.dye_map(class_id)) + "|" + str(Profile.aura_tint(class_id))
 		if key == _shown:
 			return
 		_shown = key
@@ -434,8 +434,8 @@ class HeroPreview extends SubViewportContainer:
 			ap.play(battle)
 
 	## Apparence choisie (éditeur d'adversaire) : tenue [param body], pièces [param extra].
-	func show_look(class_id: String, weapon_code: String, body: String, extra: Array) -> void:
-		var key := "look|%s|%s|%s|%s" % [class_id, weapon_code, body, "|".join(extra)]
+	func show_look(class_id: String, weapon_code: String, body: String, extra: Array, dyes: Dictionary = {}, aura_ids: Array = [], aura_tint := Color(1, 1, 1, 0)) -> void:
+		var key := "look|%s|%s|%s|%s|%s|%s|%s" % [class_id, weapon_code, body, "|".join(extra), str(dyes), str(aura_ids), str(aura_tint)]
 		if key == _shown:
 			return
 		_shown = key
@@ -444,10 +444,11 @@ class HeroPreview extends SubViewportContainer:
 		var cls := GameData.class_data(class_id)
 		if cls.is_empty():
 			return
-		var model := EdenModel.instantiate_hero(cls, body, extra.filter(func(p): return String(p) != "" and ResourceLoader.exists(String(p))))
+		var model := EdenModel.instantiate_hero(cls, body, extra.filter(func(p): return String(p) != "" and ResourceLoader.exists(String(p))), dyes)
 		model.scale = Vector3.ONE * GameData.HERO_SCALE
 		_pivot.add_child(model)
 		EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, weapon_code))
+		EdenFx.attach_aura_ids(_pivot, aura_ids, GameData.HERO_SCALE, true, aura_tint)
 		var ap := EdenModel.find_anim_player(model)
 		var battle: String = cls.get("anims", {}).get("battle", "stand01")
 		if ap and ap.has_animation(battle):

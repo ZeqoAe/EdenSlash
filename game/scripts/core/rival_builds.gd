@@ -5,7 +5,9 @@ extends RefCounted
 ##   {name, class, level,
 ##    gear: {emplacement: {id (Eden), rarity, upgrade, rolls: {palier: stat}, gems: [clé, clé],
 ##           enchant: clé}},
-##    look: {body, head, back : chemins .glb}, certs: [clé « classe/passif »],
+##    look: {body, head, back : chemins .glb, dye: {body|head|back: 3 couleurs [r, g, b]},
+##          aura: id de collection, aura_tint: [r, g, b] (vide : couleurs d'origine)},
+##    talents: {id: rang} (points de maîtrise), certs: [clé « classe/passif »],
 ##    spells: [12 ids : case × 3 + rang, 0 = sort de la classe], hp_mult, atk_mult}
 ## Rangés dans les données du jeu (data/build_profiles.json, envoyé sur GitHub avec le reste ;
 ## user:// si le dossier n'est pas modifiable) ; les anciens adversaires (user://rival_builds.json)
@@ -79,7 +81,40 @@ static func remove(name: String) -> void:
 
 static func blank(cid: String, lv := 20) -> Dictionary:
 	return {"name": "%s niv. %d" % [GameData.class_data(cid).get("name_fr", cid), lv], "class": cid, "level": lv, "gear": {}, "look": {},
-		"certs": [], "spells": Duel.grid12([]), "hp_mult": 1.0, "atk_mult": 1.0}
+		"certs": [], "talents": {}, "spells": Duel.grid12([]), "hp_mult": 1.0, "atk_mult": 1.0}
+
+
+# --- apparence et maîtrise --------------------------------------------------------------------
+## Pièces recolorées du profil : chemin .glb -> 3 couleurs (EdenModel.apply_dye).
+static func look_dyes(look: Dictionary, cls: Dictionary) -> Dictionary:
+	var out := {}
+	var dye: Dictionary = look.get("dye", {})
+	for cat in ["body", "head", "back"]:
+		var path := String(look.get(cat, ""))
+		if cat == "body" and path == "":
+			var parts: Array = cls.get("parts", [])
+			path = String(parts[0]) if not parts.is_empty() else ""
+		var c: Array = dye.get(cat, [])
+		if path != "" and c.size() >= 3:
+			out[path] = c
+	return out
+
+
+static func aura_ids(look: Dictionary) -> Array:
+	return [int(look.aura)] if int(look.get("aura", 0)) > 0 else []
+
+
+static func aura_tint(look: Dictionary) -> Color:
+	var c: Array = look.get("aura_tint", [])
+	return Color8(int(c[0]), int(c[1]), int(c[2]), 255) if c.size() >= 3 else Color(1, 1, 1, 0)
+
+
+## Points de maîtrise du profil et niveau de maîtrise qu'il faudrait (2 points par niveau).
+static func talent_points(b: Dictionary) -> int:
+	var n := 0
+	for k in b.get("talents", {}):
+		n += int(b.talents[k])
+	return n
 
 
 # --- objets ------------------------------------------------------------------------------------
@@ -173,6 +208,16 @@ static func stats(b: Dictionary, level: int) -> Dictionary:
 	for sb in Items.active_set_bonuses(gear):
 		for k in sb.stat:
 			total[k] = float(total.get(k, 0.0)) + float(sb.stat[k])
+	# talents de stats (arbre de maîtrise) et bonus de l'aura
+	var tree: Dictionary = GameData.talents.get(String(b.get("class", "")), {}).get("talents", {})
+	for id in b.get("talents", {}):
+		var eff: Dictionary = tree.get(str(id), {}).get("effect", {})
+		if eff.get("type", "") == "stat":
+			total[eff.stat] = float(total.get(eff.stat, 0.0)) + float(eff.per_level) * int(b.talents[id])
+	for id in aura_ids(b.get("look", {})):
+		var ax: Dictionary = GameData.collection_by_id.get(int(id), {})
+		for k in ax.get("aura", {}).get("stat", {}):
+			total[k] = float(total.get(k, 0.0)) + float(ax.aura.stat[k])
 	var cb := CertBoard.stats(cert_board(b))
 	for k in cb:
 		total[k] = float(total.get(k, 0.0)) + float(cb[k])
@@ -238,6 +283,16 @@ static func apply_to_hero(b: Dictionary) -> String:
 		Profile.outfits[cid] = String(look.body)
 	for k in ["head", "back"]:
 		Profile.set_worn(cid, k, String(look.get(k, "")))
+	for k in ["body", "head", "back"]:
+		Profile.set_dye(cid, k, look.get("dye", {}).get(k, []))
+	var ax: Dictionary = GameData.collection_by_id.get(int(look.get("aura", 0)), {})
+	if ax.has("aura"):
+		if not Profile.collected(ax):
+			Profile.collect(ax)  # mode dev : l'aura du profil est obtenue
+		Profile.set_aura(cid, String(ax.aura.kind), int(ax.id))
+	Profile.set_aura_tint(cid, look.get("aura_tint", []))
+	if not b.get("talents", {}).is_empty():
+		Profile.talents[cid] = (b.talents as Dictionary).duplicate()
 	Profile.save_profile()
 	Profile.changed.emit()
-	return "« %s » appliqué : %d objet(s) équipés (et rangés dans le coffre), preset de sorts, certificats, apparence." % [b.name, made.size()]
+	return "« %s » appliqué : %d objet(s) équipés (et rangés dans le coffre), preset de sorts, certificats, maîtrise, apparence." % [b.name, made.size()]

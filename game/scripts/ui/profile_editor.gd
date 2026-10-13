@@ -6,13 +6,17 @@ extends CanvasLayer
 ##   (+0 à +10) et la stat bonus de chaque palier (+4, +6, +8, +10), 2 gemmes, enchantement, et
 ##   sa carte (toutes ses stats) en direct ; carte complète au survol de chaque pièce ;
 ## - Sorts : 12 emplacements (4 cases × principal et 2 enchaînements), fiche du sort au survol ;
-## - Certificats (7 au plus), Apparence (tenue, tête, dos), Adversaire (PV ×, dégâts ×).
+## - Maîtrise : l'arbre de talents de la classe (points de maîtrise), fiche au survol ;
+## - Certificats (7 au plus) ; Apparence : tenue, tête, dos avec leurs teintures (coloris d'Eden
+##   ou 3 couleurs libres), aura et sa teinture ; Adversaire (PV ×, dégâts ×).
 ## À gauche : aperçu 3D et stats calculées comme un héros. Profils enregistrés dans les données
 ## du jeu (RivalBuilds) ; « Appliquer à mon héros » (mode dev) ; « Utiliser pour le duel ».
 
 const SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "necklace", "ring", "trophy"]
 const LOOK := [["body", "Tenue"], ["head", "Tête"], ["back", "Dos"]]
-const TABS := ["Équipement", "Sorts", "Certificats", "Apparence", "Adversaire"]
+const TABS := ["Équipement", "Sorts", "Maîtrise", "Certificats", "Apparence", "Adversaire"]
+const DYE_NAMES := ["Couleur principale", "Couleur secondaire", "Détails"]
+const AURA_PRESETS := [[255, 80, 60], [255, 190, 60], [90, 230, 110], [70, 170, 255], [170, 90, 255], [255, 120, 220], [235, 235, 245]]
 
 var build: Dictionary
 var on_use: Callable
@@ -239,10 +243,12 @@ func _refresh_page() -> void:
 		1:
 			_page_spells()
 		2:
-			_page_certs()
+			_page_talents()
 		3:
-			_page_look()
+			_page_certs()
 		4:
+			_page_look()
+		5:
 			_page_duel()
 
 
@@ -627,11 +633,82 @@ func _page_certs() -> void:
 		grid.add_child(cb)
 
 
+# --- Maîtrise --------------------------------------------------------------------------------------
+func _page_talents() -> void:
+	var cid := String(build.get("class", "warrior"))
+	var tal: Dictionary = build.get("talents", {})
+	build["talents"] = tal
+	var data: Dictionary = GameData.talents.get(cid, {})
+	var tree: Dictionary = data.get("talents", {})
+	var pts := RivalBuilds.talent_points(build)
+	_section(_page, "Maîtrise : %d point(s) attribué(s) · il faudrait la maîtrise niveau %d (2 points par niveau) · fiche au survol" % [pts, ceili(pts / 2.0)])
+	var bar := HBoxContainer.new()
+	bar.add_theme_constant_override("separation", 6)
+	_page.add_child(bar)
+	_btn(bar, "Tout au maximum", func():
+		for row in data.get("rows", []):
+			for c in row:
+				if c != null:
+					tal[str(int(c.id))] = int(c.max)
+		_changed(), 180)
+	_btn(bar, "Tout retirer", func():
+		tal.clear()
+		_changed(), 140)
+	for ri in (data.get("rows", []) as Array).size():
+		var row: Array = data.rows[ri]
+		_section(_page, "Branche %d" % (ri + 1))
+		var flow := HFlowContainer.new()
+		flow.add_theme_constant_override("h_separation", 8)
+		flow.add_theme_constant_override("v_separation", 6)
+		_page.add_child(flow)
+		for c in row:
+			if c == null:
+				continue
+			var id := str(int(c.id))
+			var t: Dictionary = tree.get(id, {})
+			var cell := HBoxContainer.new()
+			cell.add_theme_constant_override("separation", 4)
+			cell.custom_minimum_size = Vector2(300, 0)
+			flow.add_child(cell)
+			var b := ItemWidgets.TipButton.new()
+			b.focus_mode = Control.FOCUS_NONE
+			b.custom_minimum_size = Vector2(200, 44)
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.clip_text = true
+			b.expand_icon = false
+			b.add_theme_constant_override("icon_max_width", 34)
+			b.icon = UiTheme.texture(String(t.get("icon", "")))
+			b.text = " " + String(t.get("name", id))
+			b.tooltip_text = String(t.get("name", ""))
+			var req := ""
+			if int(c.get("req", 0)) > 0:
+				req = "\n[color=#c8c8d4]Demande %s niveau %d[/color]" % [tree.get(str(int(c.req)), {}).get("name", "?"), int(c.req_pts)]
+			if int(c.get("spent", 0)) > 0:
+				req += "\n[color=#c8c8d4]Demande %d points dans l'arbre[/color]" % int(c.spent)
+			b.tip = "[b]%s[/b] (%d niveaux)\n%s%s" % [t.get("name", id), int(c.max), t.get("desc", ""), req]
+			cell.add_child(b)
+			var sp := SpinBox.new()
+			sp.min_value = 0
+			sp.max_value = int(c.max)
+			sp.value = int(tal.get(id, 0))
+			sp.custom_minimum_size = Vector2(80, 0)
+			sp.value_changed.connect(func(x):
+				if int(x) <= 0:
+					tal.erase(id)
+				else:
+					tal[id] = int(x)
+				_refresh_stats())
+			cell.add_child(sp)
+	if (data.get("rows", []) as Array).is_empty():
+		Hud._label(_page, "Pas d'arbre de maîtrise pour cette classe.", 13, UiTheme.MUTED)
+
+
 # --- Apparence ------------------------------------------------------------------------------------
 func _page_look() -> void:
 	if not build.has("look"):
 		build["look"] = {}
-	_section(_page, "Apparence (aperçu à gauche)")
+	var look: Dictionary = build.look
+	_section(_page, "Apparence (aperçu à gauche) : pièces, teintures, aura")
 	for spec in LOOK:
 		var cat: String = spec[0]
 		var row := HBoxContainer.new()
@@ -658,8 +735,125 @@ func _page_look() -> void:
 				build.look.erase(cat)
 			else:
 				build.look[cat] = paths[k]
-			_refresh_stats())
+			_changed())
 		row.add_child(ob)
+		_dye_row(cat, look)
+	_aura_section(look)
+
+
+## Teinture de la pièce [param cat] : coloris d'Eden de la pièce, ou 3 couleurs libres.
+func _dye_row(cat: String, look: Dictionary) -> void:
+	var path := String(look.get(cat, ""))
+	if cat == "body" and path == "":
+		var parts: Array = GameData.class_data(String(build.get("class", ""))).get("parts", [])
+		path = String(parts[0]) if not parts.is_empty() else ""
+	if path == "" or not EdenModel.can_dye(path):
+		return
+	var dye: Dictionary = look.get("dye", {})
+	look["dye"] = dye
+	var cos := {}
+	for c in GameData.cosmetics:
+		if String(c.get("outfit", "")) == path:
+			cos = c
+	var variants: Array = cos.get("variants", []) if cos.get("variants", []) is Array else []
+	var cur: Array = dye.get(cat, [])
+	var shown: Array = cur if cur.size() >= 3 else (variants[0].colors if not variants.is_empty() else [[200, 200, 200], [150, 150, 150], [80, 80, 80]])
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	_page.add_child(row)
+	var l := Hud._label(row, "   couleurs", 13, UiTheme.MUTED)
+	l.custom_minimum_size = Vector2(80, 0)
+	for v in variants.slice(0, 8):
+		var cols: Array = v.colors
+		var sw := Button.new()
+		sw.custom_minimum_size = Vector2(44, 28)
+		sw.focus_mode = Control.FOCUS_NONE
+		sw.tooltip_text = String(v.get("name", "")) if String(v.get("name", "")) != "" else "Coloris d'Eden"
+		sw.add_theme_stylebox_override("normal", UiTheme.flat_box(Color8(int(cols[0][0]), int(cols[0][1]), int(cols[0][2])),
+			UiTheme.GOLD if str(cols) == str(shown) else UiTheme.GOLD_DIM, 2, 6))
+		sw.pressed.connect(func():
+			dye[cat] = cols.duplicate(true)
+			_changed())
+		row.add_child(sw)
+	var pickers: Array = []
+	for i in 3:
+		var pb := ColorPickerButton.new()
+		pb.custom_minimum_size = Vector2(56, 28)
+		pb.focus_mode = Control.FOCUS_NONE
+		pb.edit_alpha = false
+		pb.tooltip_text = DYE_NAMES[i]
+		var c: Array = shown[i]
+		pb.color = Color8(int(c[0]), int(c[1]), int(c[2]))
+		row.add_child(pb)
+		pickers.append(pb)
+	for pb in pickers:
+		pb.color_changed.connect(func(_c):
+			dye[cat] = pickers.map(func(p): return [p.color.r8, p.color.g8, p.color.b8])
+			_refresh_stats())
+	_btn(row, "Origine", func():
+		dye.erase(cat)
+		_changed(), 90)
+
+
+## Aura (toutes celles d'Eden) et sa teinture.
+func _aura_section(look: Dictionary) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	_page.add_child(row)
+	var l := Hud._label(row, "Aura", 15, UiTheme.TEXT)
+	l.custom_minimum_size = Vector2(80, 0)
+	var ob := OptionButton.new()
+	ob.focus_mode = Control.FOCUS_NONE
+	ob.custom_minimum_size = Vector2(420, 0)
+	ob.add_item("Aucune")
+	var ids: Array = [0]
+	var auras: Array = GameData.auras.duplicate()
+	auras.sort_custom(func(a, b): return String(a.name) < String(b.name))
+	for x in auras:
+		ob.add_item("%s (%s)" % [x.name, {"star": "pierre étoilée", "luna": "pierre de lune"}.get(String(x.aura.kind), "autre")])
+		ob.set_item_icon(ob.item_count - 1, UiTheme.texture(String(x.get("icon", ""))))
+		ids.append(int(x.id))
+	ob.add_theme_constant_override("icon_max_width", 24)
+	ob.select(maxi(0, ids.find(int(look.get("aura", 0)))))
+	ob.item_selected.connect(func(k):
+		if k == 0:
+			look.erase("aura")
+		else:
+			look["aura"] = ids[k]
+		_changed())
+	row.add_child(ob)
+	if int(look.get("aura", 0)) <= 0:
+		return
+	var tr := HBoxContainer.new()
+	tr.add_theme_constant_override("separation", 6)
+	_page.add_child(tr)
+	var tl := Hud._label(tr, "   teinture", 13, UiTheme.MUTED)
+	tl.custom_minimum_size = Vector2(80, 0)
+	var cur := RivalBuilds.aura_tint(look)
+	for preset in AURA_PRESETS:
+		var rgb: Array = preset
+		var col := Color8(rgb[0], rgb[1], rgb[2])
+		var sw := Button.new()
+		sw.custom_minimum_size = Vector2(30, 28)
+		sw.focus_mode = Control.FOCUS_NONE
+		sw.add_theme_stylebox_override("normal", UiTheme.flat_box(col, UiTheme.GOLD if cur.a > 0.0 and cur.is_equal_approx(col) else UiTheme.GOLD_DIM, 2, 6))
+		sw.pressed.connect(func():
+			look["aura_tint"] = rgb.duplicate()
+			_changed())
+		tr.add_child(sw)
+	var pb := ColorPickerButton.new()
+	pb.custom_minimum_size = Vector2(70, 28)
+	pb.focus_mode = Control.FOCUS_NONE
+	pb.edit_alpha = false
+	pb.color = cur if cur.a > 0.0 else Color(1, 1, 1)
+	pb.tooltip_text = "Couleur libre de l'aura"
+	pb.color_changed.connect(func(c):
+		look["aura_tint"] = [c.r8, c.g8, c.b8]
+		_refresh_stats())
+	tr.add_child(pb)
+	_btn(tr, "Origine", func():
+		look.erase("aura_tint")
+		_changed(), 90)
 
 
 # --- Adversaire -----------------------------------------------------------------------------------
@@ -694,15 +888,18 @@ func _refresh_stats() -> void:
 	var sets: PackedStringArray = []
 	for sb in Items.active_set_bonuses(RivalBuilds.items(build, lv)):
 		sets.append("%s (%d)" % [Items.set_def(sb.set).get("name", ""), int(sb.pieces)])
-	var lines: PackedStringArray = ["[b]%s · niveau %d[/b]" % [GameData.class_data(cid).get("name_fr", cid), lv],
+	var lines: PackedStringArray = ["[b]%s · niveau %d[/b] · maîtrise %d pts" % [GameData.class_data(cid).get("name_fr", cid), lv, RivalBuilds.talent_points(build)],
 		"PV [b]%s[/b] · attaque [b]%d[/b]" % [Hud._big_number(r.max_hp), roundi(r.atk / (float(r.cfg.atk) / 0.65))],
 		"Défense [b]%d[/b] (%d %% de dégâts subis en moins)" % [roundi(r.defense), roundi(100.0 - 10000.0 / (100.0 + maxf(r.defense, 0.0)))]]
 	for k in ["crit", "crit_dmg", "atk_speed", "cdr", "dmg_pct", "hp_pct", "move_speed"]:
-		if float(st.get(k, 0.0)) != 0.0:
-			lines.append(Items.stat_text(k, st[k]))
+		var v := float(st.get(k, 0.0))
+		if v != 0.0:
+			lines.append(Items.stat_text(k, v) if v > 0.0 else "-" + Items.stat_text(k, -v).trim_prefix("+"))
 	if not sets.is_empty():
 		lines.append("Sets : " + ", ".join(sets))
 	_stats.text = "\n".join(lines)
-	var extra: Array = [String(build.get("look", {}).get("head", "")), String(build.get("look", {}).get("back", ""))]
-	_preview.show_look(cid, r.weapon_code, String(build.get("look", {}).get("body", "")), extra)
+	var look: Dictionary = build.get("look", {})
+	var extra: Array = [String(look.get("head", "")), String(look.get("back", ""))]
+	_preview.show_look(cid, r.weapon_code, String(look.get("body", "")), extra, RivalBuilds.look_dyes(look, GameData.class_data(cid)),
+		RivalBuilds.aura_ids(look), RivalBuilds.aura_tint(look))
 	r.free()

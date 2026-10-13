@@ -18,6 +18,7 @@ var follow: Node3D  # l'effet suit ce nœud (effets d'incantation)
 var loop := false  # aura : rejoue l'effet en boucle au lieu de disparaître
 var alpha_mul := 1.0  # opacité globale (auras plus discrètes que les sorts)
 var on_dark := false  # aura sur fond sombre (aperçus) : lueur additive classique
+var tint := Color(1, 1, 1, 0)  # teinture (auras) : a = force, 0 = couleurs d'origine
 var _data: Dictionary
 var _t := 0.0
 var _nodes := {}  # nom -> Node3D
@@ -47,7 +48,7 @@ static func play(parent: Node, name: String, pos: Vector3, yaw := 0.0, scale_ :=
 
 ## Effet en boucle attaché à [param parent] (aura autour du héros : pierres étoilées,
 ## pierres de lune), à l'échelle [param scale_].
-static func attach(parent: Node3D, name: String, scale_ := 1.0, dark := false) -> EdenFx:
+static func attach(parent: Node3D, name: String, scale_ := 1.0, dark := false, p_tint := Color(1, 1, 1, 0)) -> EdenFx:
 	if Vfx.silent:
 		return null
 	if name == "" or parent == null or not _load(name):
@@ -56,6 +57,7 @@ static func attach(parent: Node3D, name: String, scale_ := 1.0, dark := false) -
 	fx.fx_name = name
 	fx.loop = true
 	fx.on_dark = dark
+	fx.tint = p_tint
 	fx.alpha_mul = AURA_ALPHA
 	fx.scale = Vector3.ONE * scale_
 	parent.add_child(fx)
@@ -79,9 +81,17 @@ const SPELL_CORE := 0.9
 ## [param dark] : aperçu sur fond sombre (la lueur additive y reste lisible).
 static func attach_auras(parent: Node3D, cls_id: String, scale_ := 1.0, dark := false) -> void:
 	for x in Profile.worn_auras(cls_id):
-		var fx := attach(parent, String(x.aura.fx), scale_, dark)
+		var fx := attach(parent, String(x.aura.fx), scale_, dark, Profile.aura_tint(cls_id))
 		if fx:
 			fx.add_to_group("hero_auras")
+
+
+## Auras d'un profil type ou d'un héros ennemi : ids de collection, teinture [param p_tint].
+static func attach_aura_ids(parent: Node3D, ids: Array, scale_ := 1.0, dark := false, p_tint := Color(1, 1, 1, 0)) -> void:
+	for id in ids:
+		var x: Dictionary = GameData.collection_by_id.get(int(id), {})
+		if x.has("aura"):
+			attach(parent, String(x.aura.fx), scale_, dark, p_tint)
 
 
 static func _load(name: String) -> bool:
@@ -136,6 +146,7 @@ func _ready() -> void:
 			continue
 		var m := ShaderMaterial.new()
 		m.shader = SHADER
+		m.set_shader_parameter("tint", tint)
 		var add: bool = info.get("blend", "mix") == "add"
 		m.set_shader_parameter("additive", 1.0 if add else 0.0)
 		m.set_shader_parameter("use_vertex_color", 1.0 if bool(info.get("vcol", true)) else 0.0)
