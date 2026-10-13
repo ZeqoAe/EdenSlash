@@ -9,6 +9,7 @@ enum Team { PLAYER, MONSTER }
 
 const GRAVITY := 24.0
 
+var immortal := false  # ne perd jamais de PV (mannequin d'entraînement)
 var team: Team = Team.MONSTER
 var display_name := ""
 var level := 1
@@ -247,6 +248,11 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 	# la défense réduit en pourcentage (100 déf = -50 %) : les petits coups restent dangereux
 	var dmg := maxf(1.0, round(amount * damage_taken_mult() * (1.0 if dot else 100.0 / (100.0 + maxf(defense, 0.0)))))
 	hp = maxf(0.0, hp - dmg)
+	# entraînement : héros invincible, ennemis invincibles ou mannequin (les dégâts s'affichent)
+	if immortal or (Training.active and (Training.hero_god if team == Team.PLAYER else Training.enemies_immortal)):
+		hp = max_hp
+	if Training.active and source and source.team == Team.PLAYER and team != Team.PLAYER:
+		Training.record(dmg)
 	health_changed.emit(hp, max_hp)
 	if not dot and has_status("sleep"):
 		statuses.erase("sleep")  # un coup réveille

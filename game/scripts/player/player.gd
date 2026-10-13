@@ -1128,6 +1128,8 @@ func skill_in_slot(slot: int) -> Dictionary:
 
 
 func skill_cooldown(s: Dictionary) -> float:
+	if Training.active and Training.no_cd:
+		return 0.1  # entraînement : recharges à zéro
 	return float(s.cooldown) * Run.skill_cooldown_mult(int(s.id)) * (1.0 - cdr)
 
 

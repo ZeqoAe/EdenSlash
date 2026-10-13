@@ -13,6 +13,20 @@ func check(label: String, ok: bool) -> void:
 
 func _ready() -> void:
 	check("profil de test", Profile.save_path == Profile.TEST_SAVE_PATH)
+	# zone d'entraînement : la sauvegarde n'est jamais écrite, le compteur de DPS compte
+	Profile.save_profile()
+	var before_txt := FileAccess.get_file_as_string(Profile.save_path)
+	Training.active = true
+	var g_keep := Profile.selected_zone
+	Profile.selected_zone = "zone_test_entrainement"
+	Profile.save_profile()
+	check("entraînement : sauvegarde non écrite", FileAccess.get_file_as_string(Profile.save_path) == before_txt)
+	Training.reset_meter()
+	Training.record(100.0)
+	Training.record(50.0)
+	check("entraînement : compteur de dégâts (150, DPS > 0)", is_equal_approx(Training.total, 150.0) and Training.dps() > 0.0)
+	Training.active = false
+	Profile.selected_zone = g_keep
 	Profile.reset_all()
 	check("nouvelle partie : 1 katana et le trophée de départ", Profile.vault.size() == 2 and Profile.equipped.has("weapon") and Profile.equipped.has("trophy"))
 	var w_uid: String = Profile.equipped.weapon.uid

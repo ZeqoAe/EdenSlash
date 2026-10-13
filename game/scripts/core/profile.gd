@@ -218,6 +218,8 @@ func _migrate(item: Dictionary) -> Dictionary:
 
 
 func save_profile() -> void:
+	if Training.active:
+		return  # entraînement : rien n'est gardé (la sauvegarde est rechargée à la sortie)
 	if not in_run:
 		_sync_vault()
 	if not in_run and selected_class != _view_class:

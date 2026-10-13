@@ -78,7 +78,10 @@ func _open_for_test() -> void:
 func _ready() -> void:
 	add_to_group("world")  # mode dev (F10) : actions de run
 	if not Run.active:
-		Run.start(Profile.selected_class)
+		if "--training" in OS.get_cmdline_user_args():
+			Training.start(Profile.selected_class)  # test : zone d'entraînement
+		else:
+			Run.start(Profile.selected_class)
 	_build_environment()
 
 	player = Player.new()
@@ -108,7 +111,15 @@ func _ready() -> void:
 	pause_menu = PauseMenu.new()
 	add_child(pause_menu)
 	pause_menu.setup(player)
-	pause_menu.abandon_requested.connect(func(): end_run("abandon"))
+	pause_menu.abandon_requested.connect(func():
+		if Training.active:
+			Training.leave(get_tree())
+		else:
+			end_run("abandon"))
+	if Training.active:
+		var tp := TrainingPanel.new()
+		add_child(tp)
+		tp.setup(player, director)
 	merchant_ui = MerchantUI.new()
 	add_child(merchant_ui)
 	merchant_ui.setup(player, director)
@@ -281,6 +292,8 @@ func _offer(title: String, options: Array, reroll := Callable()) -> void:
 
 
 func _on_level_up(lvl: int) -> void:
+	if Training.active:
+		return  # entraînement : les cartes se choisissent dans le panneau
 	_offer("Niveau %d ! Choisis une carte" % lvl, Run.roll_cards(3), func(): return Run.roll_cards(3))
 
 
@@ -304,6 +317,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _on_player_died(_who: Combatant, _killer: Combatant) -> void:
+	if Training.active:
+		hud.show_message("K.O. (entraînement) : retour immédiat", 1.5)
+		await get_tree().create_timer(1.0).timeout
+		player.respawn(player.global_position)
+		return
 	if revives_left <= 0:
 		hud.show_message("Tu es tombé au combat…", 2.5)
 		await get_tree().create_timer(2.5).timeout

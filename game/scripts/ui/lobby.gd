@@ -170,6 +170,16 @@ func _launch() -> void:
 	_start_run()
 
 
+func _start_training() -> void:
+	if _launching:
+		return
+	_launching = true
+	if backdrop:
+		backdrop.release()
+	Training.start(Profile.selected_class)
+	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+
+
 func _start_run() -> void:
 	if backdrop:
 		backdrop.release()
@@ -568,6 +578,7 @@ func _menu_play() -> void:
 		" · %d point(s) de talent à dépenser" % free if free > 0 else ""], String(cls.get("icon", "")), _open_hero.bind(""))
 	hr.mark(free > 0)
 	_row("Zone de farm", "%s · niveau %d+" % [zone.get("name", ""), 1 + int(zone.get("level_bonus", 0))], "pin", _show_menu.bind("zones"))
+	_row("Zone d'entraînement", "Tester les sorts, les combos et les cartes de %s (rien n'est gagné ni perdu)" % cls.get("name_fr", ""), "stats", _start_training)
 
 
 func _menu_zones() -> void:

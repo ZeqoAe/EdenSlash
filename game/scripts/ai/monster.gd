@@ -11,6 +11,7 @@ var is_boss := false
 var is_elite := false
 var enraged := false
 var carries_seal := false  # gardien d'élite : lâche un sceau du donjon
+var passive := false  # n'attaque pas et ne bouge pas (mannequin d'entraînement)
 var xp_reward := 0
 var move_speed := 3.2
 
@@ -259,8 +260,16 @@ func _can_target() -> bool:
 	return _player_alive() and not _player.has_status("invisible")
 
 
+## Entraînement : mannequin, ou ennemis réglés sur passifs.
+func is_passive() -> bool:
+	return passive or (Training.active and Training.enemies_passive)
+
+
 func _update_idle(_delta: float) -> Vector3:
 	# tous les monstres de la run traquent le héros : pression constante
+	if is_passive():
+		play("stand01" if has_anim("stand01") else "battle01", 0.3)
+		return Vector3.ZERO
 	if _can_target():
 		_set_state("chase")
 	else:
@@ -290,6 +299,9 @@ func _attack_range() -> float:
 
 
 func _update_chase(delta: float) -> Vector3:
+	if is_passive():
+		_set_state("idle")
+		return Vector3.ZERO
 	if not _can_target():
 		_set_state("idle")
 		return Vector3.ZERO

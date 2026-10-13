@@ -45,6 +45,9 @@ func setup(p: Player) -> void:
 	_confirm.title = "Abandonner la run ?"
 	_confirm.dialog_text = "La run sera abandonnée : tu choisiras 1 objet à garder,\nle reste (or, matériaux, butin) est perdu.\nRetourner au lobby ?"
 	_confirm.ok_button_text = "Retour au lobby"
+	if Training.active:
+		_confirm.title = "Quitter l'entraînement ?"
+		_confirm.dialog_text = "Retour au lobby. Rien de l'entraînement n'est gardé."
 	_confirm.cancel_button_text = "Annuler"
 	_confirm.confirmed.connect(func(): abandon_requested.emit())
 	add_child(_confirm)

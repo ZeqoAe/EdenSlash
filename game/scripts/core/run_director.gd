@@ -97,6 +97,10 @@ func start(p: Player) -> void:
 	_fog.fill(Color(0, 0, 0, 1))
 	_fog_tex = ImageTexture.create_from_image(_fog)
 	zone_changed.emit({"name": zone.name, "levels": [1 + int(zone.get("level_bonus", 0)), max_level()]})
+	if Training.active:
+		state = "training"
+		message.emit("Zone d'entraînement\nF3 : panneau (niveau, sorts, cartes, ennemis, DPS)", 4.0)
+		return
 	message.emit("%s\nCoffres, sanctuaires, marchands : renforce ta run, puis trouve le donjon" % zone.name, 3.5)
 	_refresh_chest_labels()
 
@@ -131,6 +135,15 @@ func in_dungeon() -> bool:
 # --- boucle -----------------------------------------------------------------------------
 func _process(delta: float) -> void:
 	if player == null or map == null:
+		return
+	if state == "training":
+		# entraînement : pas de minuterie, ni vagues, ni rage
+		_update_interactions()
+		_keep_on_map()
+		_objective_timer -= delta
+		if _objective_timer <= 0.0:
+			_objective_timer = 0.5
+			objective_changed.emit("Entraînement · F3 : panneau")
 		return
 	time += delta
 	_update_extraction(delta)
@@ -444,6 +457,11 @@ func _ring_point(min_d: float, max_d: float) -> Vector3:
 func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 	kills += 1
 	var m := who as Monster
+	if Training.active:
+		# entraînement : l'expérience seulement (pas de butin, de clés ni de records)
+		if orbs:
+			orbs.spawn(m.global_position, m.xp_reward)
+		return
 	# l'expérience tombe en orbe sous le monstre (à ramasser) ; le boss la donne d'un coup
 	if m.is_boss or orbs == null:
 		player.gain_xp(m.xp_reward)

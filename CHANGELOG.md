@@ -58,3 +58,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.47 | Première zone plus douce (dégâts des monstres ×0,55, zone 2 ×0,8) ; butin en run plafonné au niveau du héros (première zone) | session locale |
 | 0.1.48 | Aperçu du héros sur fond opaque (les auras lumineuses se voient en 3D) ; une seule aura portée à la fois | session locale |
 | 0.1.49 | Auras lisibles sur l'accueil et en run (couleurs pleines au lieu d'un voile blanc), une seule case Aura dans Apparence | session locale |
+| 0.1.50 | Zone d'entraînement (panneau F3 : niveau, sorts, cartes, recharges à zéro, ennemis invincibles ou passifs, monstres au choix, mannequin, DPS ; rien n'est gagné ni perdu) | session locale |
