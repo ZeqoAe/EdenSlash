@@ -20,6 +20,9 @@ uniform float use_decal = 0.0;
 uniform vec3 dye0 = vec3(1.0);
 uniform vec3 dye1 = vec3(1.0);
 uniform vec3 dye2 = vec3(1.0);
+// parties sans masque d'une pièce recolorée (lueurs, plumes d'énergie) : teinte sur la luminosité
+uniform float use_tint = 0.0;
+uniform vec3 tint = vec3(1.0);
 
 void fragment() {
 	vec4 t = texture(albedo_tex, UV) * albedo_color;
@@ -31,6 +34,10 @@ void fragment() {
 			c = mix(c, d.rgb, d.a);
 		}
 		t = vec4(pow(c, vec3(2.2)), m.a) * albedo_color;
+	}
+	if (use_tint > 0.5) {
+		float l = dot(t.rgb, vec3(0.299, 0.587, 0.114));
+		t.rgb = clamp(pow(tint, vec3(2.2)) * l * 2.2, 0.0, 1.0);
 	}
 	if (use_vertex_color > 0.5) {
 		t.rgb *= COLOR.rgb;

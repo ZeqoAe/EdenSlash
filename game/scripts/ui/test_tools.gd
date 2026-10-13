@@ -35,7 +35,8 @@ static func help_text() -> String:
 Molette : zoom
 
 [b]Tests et retours[/b]
-F9 : signaler un problème (capture + position + ta note, envoyés dans le dossier feedback)
+Alt + clic droit sur n'importe quoi : note sur cet élément (objet, apparence, bouton, monstre…)
+F9 : signaler un problème de carte (capture + position + ta note, dossier feedback)
 F4 : se débloquer      F2 : infos de débogage (position, FPS...)
 F5 : +1 niveau      F6 : aller à l'entrée du donjon      F7 : arène du boss      F8 : déclencher la rage
 F1 : afficher / masquer cette aide""" % [

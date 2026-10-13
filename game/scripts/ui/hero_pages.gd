@@ -150,6 +150,8 @@ class AppearancePage extends HBoxContainer:
 			b.icon = UiTheme.texture(icon) if icon != "" else null
 			b.text = "" if icon != "" else "＋"
 			b.tip = "[b]%s[/b]" % name if name != "" else "[color=#c8c8d4]Vide : clique pour choisir[/color]"
+			b.set_meta("report", "Emplacement d'apparence %s : %s%s" % [id, name if name != "" else "vide",
+				(" (%s)" % String(w.get(id, ""))) if id in ["head", "back"] and String(w.get(id, "")) != "" else ""])
 			var on: bool = id == _slot
 			b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.08, 0.06, 0.13, 0.95), UiTheme.GOLD if on else UiTheme.GOLD_DIM, 3 if on else 1, 10))
 			b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.15, 0.11, 0.24, 1.0), UiTheme.GOLD, 2, 10))
@@ -370,6 +372,7 @@ class AppearancePage extends HBoxContainer:
 		var b := ItemWidgets.TipButton.new()
 		b.custom_minimum_size = Vector2(68, 68)
 		b.focus_mode = Control.FOCUS_NONE
+		b.set_meta("report", "Apparence d'arme %s « %s » (code %s)" % [wt, String(x.get("name", "")), code])
 		b.add_theme_stylebox_override("normal", _box(on, ok))
 		b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.15, 0.11, 0.24, 1.0), UiTheme.GOLD, 2, 8))
 		var ic := TextureRect.new()
@@ -429,6 +432,8 @@ class AppearancePage extends HBoxContainer:
 		var b := ItemWidgets.TipButton.new()
 		b.custom_minimum_size = Vector2(110, 96)
 		b.focus_mode = Control.FOCUS_NONE
+		if not x.is_empty():
+			b.set_meta("report", "Aura %s « %s » (collection %s, effet %s)" % [kind, String(x.get("name", "")), str(x.get("id", "")), str(x.get("aura", {}).get("fx", ""))])
 		b.clip_text = true
 		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -457,6 +462,8 @@ class AppearancePage extends HBoxContainer:
 		var b := Button.new()
 		b.custom_minimum_size = Vector2(110, 96)
 		b.focus_mode = Control.FOCUS_NONE
+		if not c.is_empty():
+			b.set_meta("report", "Apparence %s « %s » (id %s, modèle %s)" % [_cat, String(c.get("name", "")), String(c.get("id", "")), String(c.get("outfit", ""))])
 		b.clip_text = true
 		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER

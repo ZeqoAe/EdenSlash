@@ -150,27 +150,63 @@ static func apply_dye(model: Node3D, glb_path: String, colors: Array) -> void:
 	if info.is_empty() or colors.size() < 3:
 		return
 	var dir := glb_path.get_base_dir()
+	var c0: Array = colors[0]
+	var tint := Vector3(float(c0[0]), float(c0[1]), float(c0[2])) / 255.0
 	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
 		if String(mi.get_meta("part", "")) != glb_path:
 			continue
 		for s in mi.mesh.get_surface_count():
 			var src := mi.mesh.surface_get_material(s) as BaseMaterial3D
-			var mat := mi.get_surface_override_material(s) as ShaderMaterial
-			if src == null or mat == null or src.albedo_texture == null:
+			var ov := mi.get_surface_override_material(s)
+			if src == null or ov == null or src.albedo_texture == null:
 				continue
 			var e: Dictionary = info.get(src.albedo_texture.resource_path.get_file(), {})
-			if e.is_empty():
-				continue
-			mat = mat.duplicate()  # matériaux partagés entre héros : copie propre à celui-ci
-			mat.set_shader_parameter("use_dye", 1.0)
-			mat.set_shader_parameter("dye_mask", load(dir.path_join(String(e.mask)).simplify_path()))
-			if String(e.decal) != "":
-				mat.set_shader_parameter("dye_decal", load(dir.path_join(String(e.decal)).simplify_path()))
-				mat.set_shader_parameter("use_decal", 1.0)
-			for i in 3:
-				var c: Array = colors[i]
-				mat.set_shader_parameter("dye%d" % i, Vector3(float(c[0]), float(c[1]), float(c[2])) / 255.0)
-			mi.set_surface_override_material(s, mat)
+			if ov is ShaderMaterial:
+				var mat := (ov as ShaderMaterial).duplicate()  # matériaux partagés entre héros : copie propre à celui-ci
+				if e.is_empty():
+					# partie sans masque (plumes d'énergie, ornements) : teinte de la 1re couleur
+					mat.set_shader_parameter("use_tint", 1.0)
+					mat.set_shader_parameter("tint", tint)
+				else:
+					mat.set_shader_parameter("use_dye", 1.0)
+					mat.set_shader_parameter("dye_mask", load(dir.path_join(String(e.mask)).simplify_path()))
+					if String(e.decal) != "":
+						mat.set_shader_parameter("dye_decal", load(dir.path_join(String(e.decal)).simplify_path()))
+						mat.set_shader_parameter("use_decal", 1.0)
+					for i in 3:
+						var c: Array = colors[i]
+						mat.set_shader_parameter("dye%d" % i, Vector3(float(c[0]), float(c[1]), float(c[2])) / 255.0)
+				mi.set_surface_override_material(s, mat)
+			elif ov is BaseMaterial3D:
+				# lueurs et voiles transparents : texture en niveaux de gris, teintée
+				var gray := _gray_texture(src.albedo_texture)
+				if gray == null:
+					continue
+				var fx := (ov as BaseMaterial3D).duplicate() as BaseMaterial3D
+				fx.albedo_texture = gray
+				fx.albedo_color = Color(minf(tint.x * 1.6, 1.0), minf(tint.y * 1.6, 1.0), minf(tint.z * 1.6, 1.0), (ov as BaseMaterial3D).albedo_color.a)
+				mi.set_surface_override_material(s, fx)
+
+
+static var _gray_cache := {}
+
+
+## Copie en niveaux de gris d'une texture (lueurs recolorées), gardée en cache.
+static func _gray_texture(tex: Texture2D) -> Texture2D:
+	var key := tex.resource_path
+	if _gray_cache.has(key):
+		return _gray_cache[key]
+	var img := tex.get_image()
+	var out: Texture2D = null
+	if img and not img.is_empty():
+		img = img.duplicate()
+		if img.is_compressed():
+			img.decompress()
+		img.adjust_bcs(1.0, 1.0, 0.0)
+		img.generate_mipmaps()
+		out = ImageTexture.create_from_image(img)
+	_gray_cache[key] = out
+	return out
 
 
 ## Le corps commun est exporté avec une tenue complète (pour que tous ses os soient de
@@ -186,6 +222,21 @@ static func strip_body(model: Node3D) -> void:
 ## passent sous le squelette du modèle et suivent ses animations.
 ## Os du haut du dos du héros : point d'accroche des ailes et accessoires de dos.
 const BACK_BONE := "Bip01 Spine1"
+## Corrections de placement des accessoires articulés (data/back_fix.json, calculé par
+## tests/probe_backs.gd) : certaines ailes d'Eden sont décalées ou tournées une fois sur le
+## héros. id -> [bx, by, bz, ox] (base et origine d'une transformation, repère du modèle).
+static var _back_fix = null
+static var use_back_fix := true  # diagnostic : mesurer les pièces sans correction
+
+
+static func back_fix(id: String) -> Transform3D:
+	if _back_fix == null:
+		var d = JSON.parse_string(FileAccess.get_file_as_string("res://data/back_fix.json")) if FileAccess.file_exists("res://data/back_fix.json") else null
+		_back_fix = d if d is Dictionary else {}
+	var f: Array = _back_fix.get(id, [])
+	if not use_back_fix or f.size() < 12:
+		return Transform3D.IDENTITY
+	return Transform3D(Basis(Vector3(f[0], f[1], f[2]), Vector3(f[3], f[4], f[5]), Vector3(f[6], f[7], f[8])), Vector3(f[9], f[10], f[11]))
 
 
 static func dress(model: Node3D, glb_path: String, group := "") -> void:
@@ -214,6 +265,8 @@ static func dress(model: Node3D, glb_path: String, group := "") -> void:
 	# os propres à la pièce (manches, rubans...) : ajoutés au squelette, au repos
 	var src := part.find_child("Skeleton3D", true, false) as Skeleton3D
 	var added := false
+	var loose_frame = null  # repère squelette de la pièce -> os d'accroche (accessoires articulés)
+	var renamed := {}  # nom d'os dans la pièce -> nom sur le héros (accessoires : préfixé)
 	if src:
 		# accessoires articulés (ailes, chapeaux à pompons…) : leurs os pendent d'un bassin
 		# « neutre » (repère de l'accessoire) ; leurs racines sont replacées dans le repère de
@@ -222,14 +275,27 @@ static func dress(model: Node3D, glb_path: String, group := "") -> void:
 		var accessory := (file.begins_with("head_") or file.begins_with("back_")) and skel.find_bone(anchor) >= 0
 		var frame: Node = part.find_child("ANI0", true, false)
 		var to_frame := _relative_xform(frame as Node3D, src) if frame is Node3D else Transform3D.IDENTITY
+		# correction mesurée (repère du modèle) ramenée dans le repère de l'os d'accroche
+		var fix := back_fix(file.get_basename()) if accessory else Transform3D.IDENTITY
+		if fix != Transform3D.IDENTITY:
+			var k := _relative_xform(model, skel)
+			var an := skel.get_bone_global_rest(skel.find_bone(anchor))
+			to_frame = an.affine_inverse() * k.affine_inverse() * fix * k * an * to_frame
+		if accessory:
+			loose_frame = to_frame
 		var fresh := {}
+		# os des accessoires renommés « pièce~os » : les animations du héros ont des pistes pour
+		# des os aux noms génériques (Box01, wing_L01…) qui, sinon, tordraient les ailes ; et deux
+		# accessoires (tête, dos) peuvent avoir des os de même nom
+		var prefix := file.get_basename() + "~" if accessory else ""
 		for b in src.get_bone_count():
 			var bname := src.get_bone_name(b)
-			if skel.find_bone(bname) >= 0:
+			if skel.find_bone(bname) >= 0 or skel.find_bone(prefix + bname) >= 0:
 				continue
 			var idx := skel.get_bone_count()
-			skel.add_bone(bname)
+			skel.add_bone(prefix + bname)
 			fresh[bname] = true
+			renamed[bname] = prefix + bname
 			var parent := src.get_bone_parent(b)
 			var pname := src.get_bone_name(parent) if parent >= 0 else ""
 			if accessory and not fresh.has(pname):
@@ -239,7 +305,7 @@ static func dress(model: Node3D, glb_path: String, group := "") -> void:
 				added = true
 				continue
 			if parent >= 0:
-				skel.set_bone_parent(idx, skel.find_bone(pname))
+				skel.set_bone_parent(idx, skel.find_bone(String(renamed.get(pname, pname))))
 			skel.set_bone_rest(idx, src.get_bone_rest(b))
 			skel.reset_bone_pose(idx)
 			added = true
@@ -249,12 +315,42 @@ static func dress(model: Node3D, glb_path: String, group := "") -> void:
 			if old is MeshInstance3D and old.skin:
 				old.skeleton = NodePath("")
 				old.skeleton = NodePath("..")
+	var src_frame := _relative_xform(part as Node3D, src) if src and part is Node3D else Transform3D.IDENTITY
 	for mi: MeshInstance3D in part.find_children("*", "MeshInstance3D", true, false):
 		var xf := mi.transform
+		var holder := mi.get_parent()
+		# morceau rigide d'un accessoire articulé posé hors des os : repère du squelette de la pièce
+		var loose := src != null and mi.skin == null and not holder is BoneAttachment3D and loose_frame != null
+		if loose:
+			xf = loose_frame * src_frame.affine_inverse() * _relative_xform(part as Node3D, mi)
 		mi.owner = null
-		mi.get_parent().remove_child(mi)
-		skel.add_child(mi)
+		holder.remove_child(mi)
+		if loose:
+			var latt := BoneAttachment3D.new()
+			latt.bone_name = anchor
+			latt.set_meta("part", glb_path)
+			skel.add_child(latt)
+			latt.add_child(mi)
+		elif holder is BoneAttachment3D and mi.skin == null and skel.find_bone(String(renamed.get(String(holder.bone_name), holder.bone_name))) >= 0:
+			# morceau rigide accroché à un os de la pièce (éclairs, plumes…) : il le reste
+			var att := BoneAttachment3D.new()
+			att.bone_name = String(renamed.get(String(holder.bone_name), holder.bone_name))
+			att.set_meta("part", glb_path)
+			skel.add_child(att)
+			att.add_child(mi)
+		else:
+			skel.add_child(mi)
 		mi.transform = xf
+		if mi.skin and not renamed.is_empty() and renamed.values().any(func(v): return String(v).contains("~")):
+			# peau propre à ce héros, sur les os renommés
+			var sk := mi.skin.duplicate() as Skin
+			for j in sk.get_bind_count():
+				var bn := sk.get_bind_name(j)
+				if bn == "" and src and sk.get_bind_bone(j) >= 0:
+					bn = src.get_bone_name(sk.get_bind_bone(j))
+				if renamed.has(bn):
+					sk.set_bind_name(j, String(renamed[bn]))
+			mi.skin = sk
 		mi.skeleton = NodePath("..")
 		mi.set_meta("part", glb_path)
 		if group != "":

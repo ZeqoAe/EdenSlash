@@ -29,6 +29,11 @@ s'il a la bonne version.
   le pull, puis les remet (`git stash pop`). Si un `stash pop` a échoué, le travail local
   est toujours dans `git stash list` : le récupérer avant de continuer.
 
+## Notes du joueur
+Alt + clic droit sur n'importe quoi dans le jeu enregistre une note dans `feedback/<date>_note/`
+(`rapport.json` : note, type, élément visé, version ; `capture.png` avec un repère rouge).
+Le dossier n'est pas dans git : la session locale les lit au début du travail.
+
 ## Tests
 `Godot --headless --path game res://tests/<test>.tscn` pour test_build, test_hud,
 test_controls, test_cards, test_progress (et ceux ajoutés depuis). Après l'ajout d'un

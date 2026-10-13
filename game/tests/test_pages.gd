@@ -355,6 +355,14 @@ func _test_lobby() -> void:
 		hero.show_section("appearance")
 		await _frames()
 		check("Héros : apparence « %s » affichée" % cat, hero.appearance.visible and hero.appearance._grid.get_child_count() > 1)
+		if cat == "back":
+			var lines: PackedStringArray = []
+			Feedback._describe_node(hero.appearance._grid.get_child(1), lines)
+			check("note Alt + clic droit : la case d'ailes se décrit (%s)" % (lines[0] if not lines.is_empty() else "?"), not lines.is_empty() and lines[0].begins_with("Apparence back"))
+			Feedback.open_at(Vector2(400, 300))
+			var fb_open: bool = Feedback.is_open() and get_tree().paused
+			Feedback._close()
+			check("note : fenêtre ouverte puis fermée", fb_open and not Feedback.is_open())
 	var wt := Items.weapon_type_of(Profile.equipped.get("weapon", {}))
 	var skin: Dictionary = Archive.skins(wt)[1]
 	hero.appearance._skin_cell(wt, 1, skin).pressed.emit()

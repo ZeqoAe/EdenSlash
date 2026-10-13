@@ -1,10 +1,14 @@
 class_name Grimoire
 extends CanvasLayer
-## Grimoire des classes, façon page de champion : statistiques de base, passifs,
-## combo d'auto-attaque coup par coup, compétences avec infobulle détaillée et rangs.
-## S'ouvre depuis le lobby et le menu pause (classe de la run en cours).
+## Grimoire des classes, façon page de champion :
+## - à gauche : portrait, statistiques de base, attributs par niveau, arme de la classe ;
+## - au centre : compétences de la classe, puis ses passifs ;
+## - à droite : le détail de ce qu'on a cliqué (compétence et ses rangs, combo de l'arme
+##   coup par coup, passif).
+## S'ouvre depuis la page Classe du héros et le menu pause (classe de la run en cours).
 
-const COL_W := 400.0
+const LEFT_W := 330.0
+const RIGHT_W := 430.0
 
 var _root: Control
 var _class_id := "samurai"
@@ -13,15 +17,14 @@ var _header_icon: TextureRect
 var _header_name: Label
 var _header_lore: Label
 var _stats: RichTextLabel
-var _passives: VBoxContainer
-var _combo_row: HBoxContainer
-var _weapon_bar: HBoxContainer
-var _weapon := ""
+var _weapon_box: VBoxContainer
 var _skills_grid: GridContainer
+var _passives_grid: GridContainer
 var _detail: RichTextLabel
 var _rank_bar: HBoxContainer
-var _skill: Dictionary = {}
+var _selected := {}  # {kind: "skill" | "weapon" | "passive", data}
 var _rank := 1
+var _buttons: Array = []  # [Button, sélection] pour l'état enfoncé
 
 
 func _ready() -> void:
@@ -37,16 +40,17 @@ func _ready() -> void:
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", UiTheme.panel_box(20, 16))
 	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	panel.offset_left = 40
-	panel.offset_top = 30
-	panel.offset_right = -40
-	panel.offset_bottom = -30
+	panel.offset_left = 32
+	panel.offset_top = 26
+	panel.offset_right = -32
+	panel.offset_bottom = -26
+	panel.clip_contents = true
 	_root.add_child(panel)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
 	panel.add_child(v)
 
-	# barre du haut : titre, classes, fermer
+	# barre du haut : titre, classe, fermer
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 10)
 	v.add_child(top)
@@ -69,11 +73,15 @@ func _ready() -> void:
 	body.add_theme_constant_override("separation", 16)
 	v.add_child(body)
 
-	# colonne gauche : portrait, histoire, statistiques, passifs
+	# --- gauche : portrait, statistiques, attributs par niveau, arme de la classe ---
+	var lscroll := ScrollContainer.new()
+	lscroll.custom_minimum_size = Vector2(LEFT_W, 0)
+	lscroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	body.add_child(lscroll)
 	var left := VBoxContainer.new()
-	left.custom_minimum_size = Vector2(340, 0)
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.add_theme_constant_override("separation", 8)
-	body.add_child(left)
+	lscroll.add_child(left)
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 10)
 	left.add_child(head)
@@ -87,42 +95,46 @@ func _ready() -> void:
 	head.add_child(_header_name)
 	_header_lore = Hud._label(left, "", 14, UiTheme.MUTED)
 	_header_lore.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_header_lore.custom_minimum_size = Vector2(340, 0)
+	_header_lore.custom_minimum_size = Vector2(LEFT_W - 20, 0)
 	_section(left, "Statistiques de base")
 	_stats = _rich(left, 15)
 	_stats.fit_content = true
-	_section(left, "Passifs de classe")
-	var ps := ScrollContainer.new()
-	ps.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	ps.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	left.add_child(ps)
-	_passives = VBoxContainer.new()
-	_passives.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_passives.add_theme_constant_override("separation", 8)
-	ps.add_child(_passives)
+	_stats.scroll_active = false
+	_stats.custom_minimum_size = Vector2(LEFT_W - 20, 0)
+	_section(left, "Arme de la classe")
+	Hud._label(left, "Combo d'auto-attaque (clic gauche répété) : clique pour le détail.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_weapon_box = VBoxContainer.new()
+	left.add_child(_weapon_box)
 
-	# centre : combo puis compétences
+	# --- centre : compétences puis passifs ---
+	var mscroll := ScrollContainer.new()
+	mscroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mscroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	body.add_child(mscroll)
 	var mid := VBoxContainer.new()
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mid.add_theme_constant_override("separation", 8)
-	body.add_child(mid)
-	_section(mid, "Combo d'auto-attaque  ·  dépend de l'arme en main (clic gauche répété)")
-	_weapon_bar = HBoxContainer.new()
-	_weapon_bar.add_theme_constant_override("separation", 4)
-	mid.add_child(_weapon_bar)
-	_combo_row = HBoxContainer.new()
-	_combo_row.add_theme_constant_override("separation", 8)
-	mid.add_child(_combo_row)
-	_section(mid, "Compétences  ·  à débloquer avec les cartes de niveau (4 par run)")
+	mscroll.add_child(mid)
+	_section(mid, "Compétences de la classe")
+	Hud._label(mid, "À débloquer avec les cartes de niveau (4 par run) ; certaines demandent un niveau de maîtrise.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_skills_grid = GridContainer.new()
-	_skills_grid.columns = 3
+	_skills_grid.columns = 2
 	_skills_grid.add_theme_constant_override("h_separation", 8)
 	_skills_grid.add_theme_constant_override("v_separation", 8)
 	mid.add_child(_skills_grid)
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(0, 6)
+	mid.add_child(gap)
+	_section(mid, "Passifs de la classe")
+	_passives_grid = GridContainer.new()
+	_passives_grid.columns = 3
+	_passives_grid.add_theme_constant_override("h_separation", 8)
+	_passives_grid.add_theme_constant_override("v_separation", 6)
+	mid.add_child(_passives_grid)
 
-	# droite : détail de la compétence sélectionnée
+	# --- droite : détail de la sélection ---
 	var right := PanelContainer.new()
-	right.custom_minimum_size = Vector2(COL_W, 0)
+	right.custom_minimum_size = Vector2(RIGHT_W, 0)
 	right.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.07, 0.06, 0.13, 0.95), UiTheme.GOLD_DIM, 2, 10))
 	body.add_child(right)
 	var rv := VBoxContainer.new()
@@ -138,7 +150,7 @@ func _ready() -> void:
 
 func open(class_id := "") -> void:
 	_class_id = class_id if class_id != "" else (Run.class_id if Run.active else Profile.selected_class)
-	_weapon = Run.weapon_type() if Run.active else (Items.weapon_type_of(Profile.equipped.weapon) if Profile.equipped.has("weapon") else "")
+	_selected = {}
 	_root.visible = true
 	_refresh()
 
@@ -158,129 +170,139 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 # --- contenu ---------------------------------------------------------------------------------
+## Grand bouton (icône + nom) qui sélectionne [param sel] pour le panneau de droite.
+func _entry(parent: Control, icon: String, text: String, sel: Dictionary, height := 52.0) -> Button:
+	var b := Button.new()
+	b.text = "  " + text
+	b.icon = UiTheme.texture(icon)
+	b.expand_icon = false
+	b.add_theme_constant_override("icon_max_width", int(height) - 12)
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.clip_text = true
+	b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	b.custom_minimum_size = Vector2(0, height)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.toggle_mode = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.pressed.connect(func():
+		_selected = sel
+		if sel.kind == "skill":
+			_rank = maxi(1, _owned_rank(int(sel.data.id)))
+		_refresh_detail())
+	parent.add_child(b)
+	_buttons.append([b, sel])
+	return b
+
+
 func _refresh() -> void:
 	var cls := GameData.class_data(_class_id)
 	for c in _class_bar.get_children():
 		c.queue_free()
 	_class_bar.add_child(ClassPicker.button(func(): return _class_id, func(cid):
 		_class_id = cid
-		_skill = {}
+		_selected = {}
 		_refresh(), true))
 	_header_icon.texture = UiTheme.texture(String(cls.get("icon", "")))
 	_header_name.text = String(cls.get("name_fr", ""))
 	_header_lore.text = String(cls.get("lore", ""))
 	_stats.text = SpellInfo.class_stats_bbcode(cls)
-	var atk := _atk()
-	# passifs : ceux de la classe d'abord (icône d'Eden), puis les communs
-	for c in _passives.get_children():
+	_buttons.clear()
+	# arme de la classe : son combo s'affiche à droite
+	for c in _weapon_box.get_children():
 		c.queue_free()
-	for p in cls.get("passives", []):
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
-		var ic := TextureRect.new()
-		ic.custom_minimum_size = Vector2(36, 36)
-		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		ic.texture = UiTheme.texture(String(p.get("icon", Boons.ICONS.get(p.id, ""))))
-		row.add_child(ic)
-		var r := _rich(row, 13)
-		r.fit_content = true
-		r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		r.text = SpellInfo.passive_bbcode(p)
-		_passives.add_child(row)
-	# combo
-	for c in _combo_row.get_children():
-		c.queue_free()
-	if _weapon == "":
-		_weapon = Items.default_weapon_type(_class_id)
-	for c in _weapon_bar.get_children():
-		c.queue_free()
-	for wt in GameData.weapon_types:
-		var wb := Button.new()
-		wb.text = String(GameData.weapon_types[wt].name)
-		wb.icon = UiTheme.texture(String(GameData.weapon_types[wt].get("icon", "")))
-		wb.add_theme_constant_override("icon_max_width", 22)
-		wb.toggle_mode = true
-		wb.button_pressed = wt == _weapon
-		wb.focus_mode = Control.FOCUS_NONE
-		var wid: String = wt
-		wb.pressed.connect(func():
-			_weapon = wid
-			_refresh())
-		_weapon_bar.add_child(wb)
-	var wdata := GameData.weapon_type(_weapon)
-	var chain: Array = wdata.get("combo", [])
-	for i in chain.size():
-		var card := PanelContainer.new()
-		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var fin: bool = chain[i].get("finisher", false)
-		card.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.1, 0.08, 0.17, 0.95), UiTheme.GOLD if fin else UiTheme.GOLD_DIM, 2 if fin else 1, 8))
-		var r := _rich(card, 13)
-		r.fit_content = true
-		r.text = SpellInfo.combo_step_bbcode(chain[i], i, wdata, _atk(String(wdata.get("dmg_type", "phys"))))
-		_combo_row.add_child(card)
-		if i < chain.size() - 1:
-			var arrow := Hud._label(_combo_row, "➜", 22, UiTheme.GOLD)
-			arrow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	var wt := Items.default_weapon_type(_class_id)
+	var wdata := GameData.weapon_type(wt)
+	var weapon_sel := {"kind": "weapon", "data": wt}
+	_entry(_weapon_box, String(wdata.get("icon", "")), "%s  ·  combo en %d coups" % [String(wdata.get("name", wt)), (wdata.get("combo", []) as Array).size()], weapon_sel, 56.0)
 	# compétences
 	for c in _skills_grid.get_children():
 		c.queue_free()
 	var skills: Array = cls.get("skills", [])
 	for s in skills:
-		var b := Button.new()
-		b.text = "  " + String(s.name)
-		b.icon = UiTheme.texture(String(s.get("icon", "")))
-		b.expand_icon = false
-		b.add_theme_constant_override("icon_max_width", 40)
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.custom_minimum_size = Vector2(0, 52)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.toggle_mode = true
-		b.focus_mode = Control.FOCUS_NONE
+		var label := String(s.name)
 		var owned := _owned_rank(int(s.id))
 		if Run.active and owned > 0:
-			b.text += "  (rang %d)" % owned
-		# sorts débloqués par la maîtrise de la classe
+			label += "  (rang %d)" % owned
 		var need := Progression.skill_level_of(_class_id, int(s.id))
-		if not Progression.skill_unlocked(_class_id, int(s.id)):
-			b.text += "   🔒 maîtrise niv. %d" % need
+		var locked := not Progression.skill_unlocked(_class_id, int(s.id))
+		if locked:
+			label += "   🔒 maîtrise %d" % need
+		var b := _entry(_skills_grid, String(s.get("icon", "")), label, {"kind": "skill", "data": s})
+		if locked:
 			b.modulate = Color(0.7, 0.7, 0.75)
-		b.tooltip_text = "Sort de base" if need <= 1 else "Débloqué au niveau %d de maîtrise de la classe" % need
-		var sd: Dictionary = s
-		b.pressed.connect(func():
-			_skill = sd
-			_rank = maxi(1, _owned_rank(int(sd.id)))
-			_refresh_detail())
-		_skills_grid.add_child(b)
-	if _skill.is_empty() and not skills.is_empty():
-		_skill = skills[0]
-		_rank = maxi(1, _owned_rank(int(_skill.id)))
+		b.tooltip_text = String(s.name) + ("  ·  sort de base" if need <= 1 else "  ·  débloqué au niveau %d de maîtrise de la classe" % need)
+	# passifs : ceux de la classe d'abord (icône d'Eden), puis les communs
+	for c in _passives_grid.get_children():
+		c.queue_free()
+	for p in cls.get("passives", []):
+		var label := String(p.get("name", "?"))
+		if int(p.get("max", 1)) > 1:
+			label += "  ×%d" % int(p.max)
+		var b := _entry(_passives_grid, String(p.get("icon", Boons.ICONS.get(p.get("id", ""), ""))), label, {"kind": "passive", "data": p}, 44.0)
+		b.tooltip_text = label
+	if _selected.is_empty():
+		_selected = {"kind": "skill", "data": skills[0]} if not skills.is_empty() else weapon_sel
+		if _selected.kind == "skill":
+			_rank = maxi(1, _owned_rank(int(_selected.data.id)))
 	_refresh_detail()
+
+
+func _same(a: Dictionary, b: Dictionary) -> bool:
+	if a.is_empty() or b.is_empty() or a.kind != b.kind:
+		return false
+	if a.kind == "weapon":
+		return a.data == b.data
+	return is_same(a.data, b.data) or (a.data is Dictionary and b.data is Dictionary and a.data.get("id") == b.data.get("id") and a.data.get("name") == b.data.get("name"))
 
 
 func _refresh_detail() -> void:
 	for c in _rank_bar.get_children():
 		c.queue_free()
-	if _skill.is_empty():
+	for pair in _buttons:
+		if is_instance_valid(pair[0]):
+			(pair[0] as Button).set_pressed_no_signal(_same(pair[1], _selected))
+	if _selected.is_empty():
 		_detail.text = ""
 		return
-	var cls := GameData.class_data(_class_id)
-	for i in _skills_grid.get_child_count():
-		(_skills_grid.get_child(i) as Button).set_pressed_no_signal(i < cls.skills.size() and int(cls.skills[i].id) == int(_skill.id))
-	Hud._label(_rank_bar, "Rang :", 14, UiTheme.MUTED)
-	for r in range(1, Run.MAX_RANK + 1):
-		var b := Button.new()
-		b.text = str(r)
-		b.toggle_mode = true
-		b.button_pressed = r == _rank
-		b.custom_minimum_size = Vector2(34, 30)
-		b.focus_mode = Control.FOCUS_NONE
-		var rr := r
-		b.pressed.connect(func():
-			_rank = rr
-			_refresh_detail())
-		_rank_bar.add_child(b)
-	var icon := String(_skill.get("icon", ""))
-	_detail.text = ("[img=64x64]%s[/img]\n" % icon if icon != "" else "") + SpellInfo.skill_bbcode(_skill, _rank, _atk(String(_skill.get("dmg_type", "phys"))))
+	match String(_selected.kind):
+		"skill":
+			var sk: Dictionary = _selected.data
+			Hud._label(_rank_bar, "Rang :", 14, UiTheme.MUTED)
+			for r in range(1, Run.MAX_RANK + 1):
+				var b := Button.new()
+				b.text = str(r)
+				b.toggle_mode = true
+				b.button_pressed = r == _rank
+				b.custom_minimum_size = Vector2(34, 30)
+				b.focus_mode = Control.FOCUS_NONE
+				var rr := r
+				b.pressed.connect(func():
+					_rank = rr
+					_refresh_detail())
+				_rank_bar.add_child(b)
+			var icon := String(sk.get("icon", ""))
+			var txt := ("[img=64x64]%s[/img]\n" % icon if icon != "" else "") + SpellInfo.skill_bbcode(sk, _rank, _atk(String(sk.get("dmg_type", "phys"))))
+			var need := Progression.skill_level_of(_class_id, int(sk.id))
+			if not Progression.skill_unlocked(_class_id, int(sk.id)):
+				txt += "\n\n[color=#ffcf6b]🔒 Débloqué au niveau %d de maîtrise de la classe[/color]" % need
+			_detail.text = txt
+		"weapon":
+			var wt := String(_selected.data)
+			var wdata := GameData.weapon_type(wt)
+			var chain: Array = wdata.get("combo", [])
+			var atk := _atk(String(wdata.get("dmg_type", "phys")))
+			var parts: PackedStringArray = []
+			var icon := String(wdata.get("icon", ""))
+			parts.append(("[img=56x56]%s[/img]  " % icon if icon != "" else "") + "[font_size=22][b]%s[/b][/font_size]" % String(wdata.get("name", wt)))
+			parts.append("[color=#c8c8d4]Combo d'auto-attaque en %d coups (clic gauche répété). Une autre arme équipée change le combo.[/color]" % chain.size())
+			for i in chain.size():
+				parts.append(("[color=#ffcf6b]━━━━━━━━━━[/color]\n" if i > 0 else "") + SpellInfo.combo_step_bbcode(chain[i], i, wdata, atk))
+			_detail.text = "\n\n".join(parts)
+		"passive":
+			var p: Dictionary = _selected.data
+			var icon := String(p.get("icon", Boons.ICONS.get(p.get("id", ""), "")))
+			_detail.text = ("[img=64x64]%s[/img]\n" % icon if icon != "" else "") + "[font_size=17]" + SpellInfo.passive_bbcode(p) + "[/font_size]" + \
+				("\n\n[color=#c8c8d4]Passif obtenu avec les cartes de la run ; il se cumule jusqu'à %d fois.[/color]" % int(p.max) if int(p.get("max", 1)) > 1 else "\n\n[color=#c8c8d4]Passif propre à la classe.[/color]")
 
 
 ## Attaque actuelle du héros (physique ou magique) pour chiffrer les dégâts, sinon estimation niveau 1.

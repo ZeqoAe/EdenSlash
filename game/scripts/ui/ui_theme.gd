@@ -146,7 +146,7 @@ static func _add_version_overlay() -> void:
 	layer.layer = 100
 	layer.name = "VersionOverlay"
 	var l := Label.new()
-	l.text = Version.label()
+	l.text = "Alt + clic droit : noter un problème   ·   " + Version.label()
 	l.add_theme_font_size_override("font_size", 12)
 	l.add_theme_color_override("font_color", Color(1, 1, 1, 0.75))
 	l.add_theme_constant_override("outline_size", 3)
@@ -157,7 +157,7 @@ static func _add_version_overlay() -> void:
 	l.anchor_top = 1.0
 	l.anchor_right = 1.0
 	l.anchor_bottom = 1.0
-	l.offset_left = -220.0
+	l.offset_left = -520.0
 	l.offset_top = -22.0
 	l.offset_right = -8.0
 	l.offset_bottom = -4.0
