@@ -88,6 +88,12 @@ var autoplay_idle := false  # test (--idle) : le pilote automatique ne bouge ni 
 var autoplay_target := Vector3.INF
 var bot: BotInput = null  # IA en apprentissage (arène ML) : remplace le clavier et la souris
 var ml_counts := {"perfect": 0, "chain": 0, "dodged": 0}  # récompenses de l'arène ML
+## Héros ennemi (arène ML, Tour) : dans l'équipe des monstres, il vise le joueur et joue sa
+## classe [member class_id] avec son propre jeu de sorts, sans l'équipement, les cartes ni les
+## talents du joueur. Sans [member bot], il ne fait rien (jamais le clavier ni la souris).
+var foe := false
+var kit_skills: Array = []  # [{id, rank}] : sort principal de chaque case (héros ennemi)
+var kit_chains: Dictionary = {}  # case -> [{id, rank}] : enchaînements (héros ennemi)
 
 var _state := "idle"  # idle, attack, skill, dodge, jump, dead
 var _state_time := 0.0
@@ -123,11 +129,12 @@ var _bot_detour_until := 0.0
 
 
 func _ready() -> void:
-	team = Team.PLAYER
-	collision_layer = GameData.PHYS_PLAYER
-	collision_mask = GameData.PHYS_WORLD | GameData.PHYS_MONSTER
-	add_to_group("player")
-	class_id = Run.class_id if Run.active else Profile.selected_class
+	team = Team.MONSTER if foe else Team.PLAYER
+	collision_layer = GameData.PHYS_MONSTER if foe else GameData.PHYS_PLAYER
+	collision_mask = _body_mask()
+	add_to_group("foe_heroes" if foe else "player")
+	if not foe:
+		class_id = Run.class_id if Run.active else Profile.selected_class
 	cls = GameData.class_data(class_id)
 	display_name = cls.get("name_fr", "Héros")
 	kfm = "m"
@@ -136,13 +143,14 @@ func _ready() -> void:
 	_slim_collision()
 	floor_max_angle = deg_to_rad(55.0)
 	floor_snap_length = 0.7
-	_attach_weapon(Profile.weapon_code())
+	_attach_weapon("" if foe else Profile.weapon_code())
 	_model_base = model.transform
 	_build_trail()
-	Run.changed.connect(recalc_stats)
 	statuses_changed.connect(recalc_stats)
 	statuses_changed.connect(_update_stealth_visual)
-	Profile.changed.connect(_on_profile_changed)
+	if not foe:
+		Run.changed.connect(recalc_stats)
+		Profile.changed.connect(_on_profile_changed)
 	recalc_stats()
 	hp = max_hp
 	health_changed.emit(hp, max_hp)
@@ -156,21 +164,56 @@ func _anim(key: String) -> String:
 
 
 func _weapon_type() -> Dictionary:
-	return GameData.weapon_type(Run.weapon_type())
+	return GameData.weapon_type(Items.default_weapon_type(class_id) if foe else Run.weapon_type())
+
+
+## Collisions du corps : le décor et l'autre camp.
+func _body_mask() -> int:
+	return GameData.PHYS_WORLD | (GameData.PHYS_PLAYER if foe else GameData.PHYS_MONSTER)
+
+
+## Cibles de ce héros : monstres et héros ennemis, ou le joueur pour un héros ennemi.
+func foes() -> Array:
+	if foe:
+		return get_tree().get_nodes_in_group("player")
+	return get_tree().get_nodes_in_group("monsters") + get_tree().get_nodes_in_group("foe_heroes")
+
+
+## Cartes de passifs de la run (aucune pour un héros ennemi).
+func _passives() -> Dictionary:
+	return {} if foe else Run.passives
+
+
+## Jeu de sorts : celui de la run, ou le sien pour un héros ennemi.
+func kit() -> Array:
+	return kit_skills if foe else Run.skills
+
+
+func kit_chain(slot: int) -> Array:
+	return kit_chains.get(slot, []) if foe else Run.chain_of(slot)
+
+
+func kit_skill_def(id: int) -> Dictionary:
+	if not foe:
+		return Run.skill_def(id)
+	for s in cls.get("skills", []):
+		if int(s.id) == id:
+			return s
+	return {}
 
 
 # --- statistiques -------------------------------------------------------------------
 func recalc_stats() -> void:
-	if Run.active:
+	if Run.active and not foe:
 		Run.hero_level = level  # puissance des objets portés (suit le niveau, plafonnée)
-	var eq := Profile.equipment_stats()
-	var arc := Archive.bonus()  # bonus permanents de l'archive
+	var eq := {} if foe else Profile.equipment_stats()
+	var arc := {} if foe else Archive.bonus()  # bonus permanents de l'archive
 	for k in arc:
 		eq[k] = float(eq.get(k, 0.0)) + float(arc[k])
-	var aura := Profile.aura_stats(class_id)  # auras portées (pierres étoilées, pierres de lune)
+	var aura := {} if foe else Profile.aura_stats(class_id)  # auras portées (pierres étoilées, pierres de lune)
 	for k in aura:
 		eq[k] = float(eq.get(k, 0.0)) + float(aura[k])
-	var ps := Run.passive_stats()
+	var ps := {} if foe else Run.passive_stats()
 	for st in timed_stats:  # buffs temporaires des trophées
 		if has_status(st):
 			for k in timed_stats[st]:
@@ -228,7 +271,7 @@ func recalc_stats() -> void:
 	pickup_mult = 1.0 + ps.get("pickup", 0.0)
 	xp_mult = 1.0 + ps.get("xp_pct", 0.0)
 	execute = minf(ps.get("execute", 0.0), 0.3)
-	procs = Run.passive_procs() + Profile.equipment_procs()
+	procs = [] if foe else Run.passive_procs() + Profile.equipment_procs()
 	hp = clampf(max_hp * ratio, 1.0, max_hp)
 	health_changed.emit(hp, max_hp)
 	xp_changed.emit(xp, GameData.xp_to_next(level), level)
@@ -299,14 +342,14 @@ func gain_xp(amount: int) -> void:
 func _dress_model() -> void:
 	EdenModel.strip_body(model)
 	var parts: Array = cls.get("parts", [])
-	var outfit := Profile.outfit_of(class_id)
-	var dyes := Profile.dye_map(class_id)
+	var outfit := "" if foe else Profile.outfit_of(class_id)
+	var dyes := {} if foe else Profile.dye_map(class_id)
 	for i in parts.size():
 		var part := outfit if i == 0 and outfit != "" and ResourceLoader.exists(outfit) else String(parts[i])
 		EdenModel.dress(model, part)
 		if dyes.has(part):
 			EdenModel.apply_dye(model, part, dyes[part])
-	for p in Profile.worn_parts(class_id):
+	for p in ([] if foe else Profile.worn_parts(class_id)):
 		EdenModel.dress(model, String(p))
 		if dyes.has(String(p)):
 			EdenModel.apply_dye(model, String(p), dyes[String(p)])
@@ -419,6 +462,8 @@ func _speed() -> float:
 func _read_move_input() -> Vector3:
 	if bot:
 		return bot.move
+	if foe:
+		return Vector3.ZERO
 	var v := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	if autoplay:
 		v = Vector2.ZERO if autoplay_idle else _autoplay_input()
@@ -491,6 +536,8 @@ func _try_skill_input() -> bool:
 func _wants(action: String) -> bool:
 	if bot:
 		return bot.wants(action)
+	if foe:
+		return false
 	if autoplay:
 		return false if autoplay_idle else _autoplay_wants(action)
 	if action == "attack":
@@ -558,7 +605,7 @@ func _set_move_goal(marker: bool) -> void:
 
 ## Le héros regarde le curseur en permanence (visée au curseur).
 func _aims_at_cursor() -> bool:
-	return not autoplay and Settings.cursor_aim() and not _pad()
+	return not autoplay and bot == null and not foe and Settings.cursor_aim() and not _pad()
 
 
 ## On joue à la manette (Gamepad) : visée automatique au lieu du curseur.
@@ -578,7 +625,7 @@ func _pad_aim_point() -> Vector3:
 	dir = dir.normalized()
 	var best: Combatant = null
 	var best_d := INF
-	for node in get_tree().get_nodes_in_group("monsters"):
+	for node in foes():
 		var m := node as Combatant
 		if m == null or m.is_dead:
 			continue
@@ -615,7 +662,7 @@ func _cursor_dir() -> Vector3:
 ## Attaque automatique (Paramètres > Combat) : frappe seule un monstre à portée
 ## quand on ne se déplace pas.
 func _try_auto_attack(moving: bool) -> bool:
-	if autoplay or moving or not Settings.auto_attack():
+	if autoplay or foe or moving or not Settings.auto_attack():
 		return false
 	var m := _monster_in_reach(attack_reach(), false)
 	if m == null:
@@ -627,7 +674,7 @@ func _try_auto_attack(moving: bool) -> bool:
 ## Compétences automatiques : lancées dès qu'elles sont prêtes et qu'un monstre
 ## (ou la cible verrouillée, selon le réglage) est à leur portée.
 func _try_auto_skill() -> bool:
-	if autoplay:
+	if autoplay or foe:
 		return false
 	for i in 4:
 		if not Settings.auto_skill(i) or cooldown_left(i) > 0.0:
@@ -670,7 +717,7 @@ func _monster_in_reach(reach: float, locked_only: bool) -> Combatant:
 		return t if t and _edge_dist(t) <= reach else null
 	var best: Combatant = null
 	var best_d := reach
-	for node in get_tree().get_nodes_in_group("monsters"):
+	for node in foes():
 		var m := node as Combatant
 		if m and not m.is_dead:
 			var d := _edge_dist(m)
@@ -938,8 +985,8 @@ func _resolve_area(action: Dictionary, origin: Vector3, fwd: Vector3, is_skill: 
 			col = Color(0.75, 0.5, 1.0, 0.9)
 		Vfx.slash(self, origin, fwd, radius, arc, col)
 	var targets: Array = []
-	for node in get_tree().get_nodes_in_group("monsters"):
-		var m := node as Monster
+	for node in foes():
+		var m := node as Combatant
 		if m == null or m.is_dead:
 			continue
 		var to := m.global_position - origin
@@ -1074,7 +1121,7 @@ func _update_stealth_visual() -> void:
 
 
 ## Impact d'un projectile du héros.
-func bolt_hit(m: Monster, dir: Vector3, action: Dictionary) -> void:
+func bolt_hit(m: Combatant, dir: Vector3, action: Dictionary) -> void:
 	var is_skill: bool = action.get("is_skill", false)
 	_hit_monster(m, dir, action, is_skill)
 	_last_combat = _time
@@ -1152,7 +1199,9 @@ func reduce_cooldowns(seconds: float) -> void:
 		skill_ready_at[id] = maxf(_time, float(skill_ready_at[id]) - seconds)
 
 
-func _hit_monster(m: Monster, dir: Vector3, action: Dictionary, is_skill: bool) -> void:
+## Coup porté à [param m] : un monstre, ou un héros (héros ennemi, ou le joueur pour lui).
+func _hit_monster(m: Combatant, dir: Vector3, action: Dictionary, is_skill: bool) -> void:
+	var mon := m as Monster
 	var mult: float = action.get("mult", 1.0)
 	var combo: Dictionary = action.get("combo", {})
 	var combo_ok: bool = not combo.is_empty() and m.has_status(String(combo.get("requires", "")))
@@ -1161,7 +1210,7 @@ func _hit_monster(m: Monster, dir: Vector3, action: Dictionary, is_skill: bool) 
 	var magic: bool = action.get("dmg_type", "phys") == "mag"
 	var is_crit := randf() < (mcrit if magic else crit) + float(action.get("crit_bonus", 0.0))
 	var dmg := (matk if magic else atk) * mult * randf_range(0.92, 1.08) * damage_dealt_mult() * (1.0 + crit_dmg if is_crit else 1.0) * flow_mult() * dmg_mult
-	if m.is_elite or m.is_boss:
+	if mon and (mon.is_elite or mon.is_boss):
 		dmg *= elite_mult
 	elif execute > 0.0 and m.hp - dmg <= m.max_hp * execute:
 		# exécution : coup fatal qui ignore la défense
@@ -1170,7 +1219,8 @@ func _hit_monster(m: Monster, dir: Vector3, action: Dictionary, is_skill: bool) 
 		m.take_damage(dmg, self, is_crit, true)
 	if not m.is_dead:
 		# mission du Magicien : plus gros coup (après la défense de la cible)
-		Profile.record_max("best_hit", round(dmg * m.damage_taken_mult() * 100.0 / (100.0 + maxf(m.defense, 0.0))))
+		if not foe:
+			Profile.record_max("best_hit", round(dmg * m.damage_taken_mult() * 100.0 / (100.0 + maxf(m.defense, 0.0))))
 		m.take_damage(dmg, self, is_crit)
 	# effet d'impact d'Eden (limité à quelques cibles par coup pour la lisibilité)
 	var fx_hits := int(action.get("fx_count", 0))
@@ -1217,15 +1267,15 @@ func _hit_pause(duration: float) -> void:
 
 # --- compétences --------------------------------------------------------------------
 func skill_in_slot(slot: int) -> Dictionary:
-	if slot >= Run.skills.size():
+	if slot >= kit().size():
 		return {}
-	return Run.skill_def(int(Run.skills[slot].id))
+	return kit_skill_def(int(kit()[slot].id))
 
 
 func skill_cooldown(s: Dictionary) -> float:
 	if Training.active and Training.no_cd:
 		return 0.1  # entraînement : recharges à zéro
-	return float(s.cooldown) * Run.skill_cooldown_mult(int(s.id)) * (1.0 - cdr)
+	return float(s.cooldown) * (1.0 if foe else Run.skill_cooldown_mult(int(s.id))) * (1.0 - cdr)
 
 
 func cooldown_left(slot: int) -> float:
@@ -1256,7 +1306,7 @@ var _chain := {}
 
 
 func _chain_open(slot: int, next: int) -> void:
-	if next < Run.chain_of(slot).size():
+	if next < kit_chain(slot).size():
 		_chain[slot] = {"next": next, "t0": _time}
 	else:
 		_chain.erase(slot)
@@ -1267,7 +1317,7 @@ func chain_state(slot: int) -> Dictionary:
 	if not _chain.has(slot):
 		return {}
 	var c: Dictionary = _chain[slot]
-	var ch := Run.chain_of(slot)
+	var ch := kit_chain(slot)
 	if int(c.next) >= ch.size():
 		_chain.erase(slot)
 		return {}
@@ -1275,7 +1325,7 @@ func chain_state(slot: int) -> Dictionary:
 	if e >= CHAIN_DELAY + CHAIN_BAR:
 		_chain.erase(slot)  # barre écoulée : chaîne perdue
 		return {}
-	var d := Run.skill_def(int(ch[int(c.next)].id))
+	var d := kit_skill_def(int(ch[int(c.next)].id))
 	if e < CHAIN_DELAY:
 		return {"next": d, "phase": "lock", "left": CHAIN_DELAY - e, "p": 0.0}
 	return {"next": d, "phase": "bar", "left": 0.0, "p": (e - CHAIN_DELAY) / CHAIN_BAR}
@@ -1333,13 +1383,13 @@ func _cast_skill(s: Dictionary, slot: int, step: int, forced_aim := Vector3.INF)
 		aim = global_position + forward()
 	face_direction(aim - global_position, 1.0, 100.0)
 	var action := {
-		"kind": s.kind, "mult": float(s.mult) * Run.skill_damage_mult(int(s.id)),
+		"kind": s.kind, "mult": float(s.mult) * (1.0 if foe else Run.skill_damage_mult(int(s.id))),
 		"radius": skill_radius(s), "arc": float(s.arc), "hits": int(s.get("hits", 1)),
 		"dash": float(s.get("dash", 0.0)) * reach_mult, "applies": s.get("applies", {}), "combo": s.get("combo", {}),
 		"skill_id": int(s.id), "aerial": not is_on_floor(),
 		"range": float(s.get("range", 0.0)) * reach_mult, "pierce": int(s.get("pierce", 0)),
 		"projectile": String(s.get("projectile", "magic")), "volley": int(s.get("volley", 1)),
-		"spread": float(s.get("spread", 0.0)), "heal": float(s.get("heal", 0.0)) * Run.skill_heal_mult(int(s.id)),
+		"spread": float(s.get("spread", 0.0)), "heal": float(s.get("heal", 0.0)) * (1.0 if foe else Run.skill_heal_mult(int(s.id))),
 		"crit_bonus": float(s.get("crit_bonus", 0.0)), "cleanse": s.get("cleanse", false),
 		"dmg_type": String(s.get("dmg_type", cls.get("dmg_type", "phys"))),
 		"slot": slot, "chain_step": step,
@@ -1359,12 +1409,12 @@ func _cast_skill(s: Dictionary, slot: int, step: int, forced_aim := Vector3.INF)
 		_carry = Vector3.ZERO
 	if _state == "dodge":
 		_end_dodge()
-	var tal := Run.skill_talent(int(s.id))
-	var dur_k := (1.0 + float(tal.power)) * Run.skill_duration_mult(int(s.id))
+	var tal := {"dmg": 0.0, "cd": 0.0, "duration": 0.0, "power": 0.0} if foe else Run.skill_talent(int(s.id))
+	var dur_k := (1.0 + float(tal.power)) * (1.0 if foe else Run.skill_duration_mult(int(s.id)))
 	for b in s.get("buff", {}):
 		add_status(b, float(s.buff[b]) * dur_k + float(tal.duration), self)
 	# bonus d'attribut au lancement (cartes d'amélioration rares et mieux)
-	for r in Run.skill_riders(int(s.id)):
+	for r in ([] if foe else Run.skill_riders(int(s.id))):
 		var st := String(Cards.RIDER_STATUS.get(String(r.stat), "spell_str"))
 		timed_stats[st] = {String(r.stat) + "_pct": float(r.value)}
 		add_status(st, float(r.duration), self)
@@ -1413,7 +1463,7 @@ var _stun_fx: Label3D
 
 ## Sauts disponibles : 1 au sol + les sauts aériens des cartes « Saut aérien ».
 func max_jumps() -> int:
-	return 1 + int(Run.passives.get("air_jump", 0))
+	return 1 + int(_passives().get("air_jump", 0))
 
 
 var _air_dashes := 0
@@ -1429,7 +1479,7 @@ func can_jump() -> bool:
 
 ## Esquives aériennes disponibles avant de retoucher le sol.
 func max_air_dashes() -> int:
-	return 1 + int(Run.passives.get("air_dash", 0))
+	return 1 + int(_passives().get("air_dash", 0))
 
 
 ## Gravité du héros : plus forte en chute qu'en montée (saut sec) ; relâcher
@@ -1446,7 +1496,7 @@ func _apply_hero_gravity(delta: float) -> void:
 		velocity.y = move_toward(velocity.y, -1.2, 60.0 * delta)
 		return
 	var g := GRAVITY_UP if velocity.y > 0.0 else GRAVITY_DOWN
-	g *= 1.0 - 0.25 * int(Run.passives.get("featherfall", 0))
+	g *= 1.0 - 0.25 * int(_passives().get("featherfall", 0))
 	if velocity.y > 0.0 and _state == "jump" and not autoplay and bot == null and not Input.is_action_pressed("jump"):
 		g *= 2.2
 	velocity.y -= g * delta
@@ -1466,7 +1516,7 @@ func _start_jump() -> void:
 	_jumps_used = 1 if first else _jumps_used + 1
 	_state = "jump"
 	_state_time = 0.0
-	var height_bonus := 1.0 + 0.2 * int(Run.passives.get("high_jump", 0))
+	var height_bonus := 1.0 + 0.2 * int(_passives().get("high_jump", 0))
 	velocity.y = JUMP_VELOCITY * height_bonus * (1.0 if first else 0.9)
 	play(_anim("jump") if first else _anim("dodge"), 0.05, 1.8, true)
 	if not first:
@@ -1495,7 +1545,7 @@ func _update_jump(input_dir: Vector3, delta: float) -> void:
 			use_skill(i)
 			return
 	# piqué : attaque en l'air si la carte « Frappe plongeante » est prise
-	if _wants_pressed("attack") and Settings.attack_button_attacks() and int(Run.passives.get("dive_strike", 0)) > 0 and _state_time > 0.1:
+	if _wants_pressed("attack") and Settings.attack_button_attacks() and int(_passives().get("dive_strike", 0)) > 0 and _state_time > 0.1:
 		_state = "dive"
 		_state_time = 0.0
 		velocity.y = -26.0
@@ -1517,11 +1567,11 @@ func _update_dive() -> void:
 ## Atterrissage du piqué : onde de choc qui étourdit brièvement.
 func _dive_impact() -> void:
 	_state = "idle"
-	var r := 3.8 + 0.6 * int(Run.passives.get("dive_strike", 0))
+	var r := 3.8 + 0.6 * int(_passives().get("dive_strike", 0))
 	Vfx.ring(self, global_position, r, Color(1.0, 0.85, 0.4, 0.9))
 	EdenFx.play(self, "s00541", global_position, rotation.y, GameData.HERO_SCALE * 1.4)
 	_shake(0.9)
-	_action = {"mult": 1.5 + 0.3 * int(Run.passives.get("dive_strike", 0)), "radius": r, "arc": 360.0,
+	_action = {"mult": 1.5 + 0.3 * int(_passives().get("dive_strike", 0)), "radius": r, "arc": 360.0,
 		"applies": {"stun": 0.6}, "hit_fx": "s00341"}
 	_resolve_hit()
 
@@ -1554,6 +1604,8 @@ func stun(t: float) -> void:
 
 
 func _shake(amount: float) -> void:
+	if foe:
+		return
 	var rig := get_viewport().get_camera_3d().get_parent() as CameraRig if get_viewport().get_camera_3d() else null
 	if rig:
 		rig.shake(amount)
@@ -1562,6 +1614,8 @@ func _shake(amount: float) -> void:
 func _wants_pressed(action: String) -> bool:
 	if bot:
 		return bot.wants(action)
+	if foe:
+		return false
 	if autoplay:
 		return false
 	return Input.is_action_just_pressed(action)
@@ -1610,7 +1664,7 @@ func _update_dodge() -> void:
 
 
 func _end_dodge() -> void:
-	collision_mask = GameData.PHYS_WORLD | GameData.PHYS_MONSTER
+	collision_mask = _body_mask()
 
 
 # --- annulation parfaite et fluidité ---------------------------------------------------
@@ -1681,12 +1735,12 @@ func take_damage(amount: float, source: Combatant = null, is_crit := false, dot 
 	if is_invulnerable():
 		if not dot:
 			ml_counts.dodged += 1
-		if not dot and Run.active and not dev_invincible:
+		if not dot and Run.active and not dev_invincible and not foe:
 			Profile.record_add("dodges", 1)  # mission du Voleur
 		return
 	if not dot and ((has_status("evasion") and randf() < EVASION_CHANCE) or randf() < evasion_chance):
 		DamageNumber.spawn_text(self, "ESQUIVE !", Color(0.7, 1.0, 0.7))
-		if Run.active:
+		if Run.active and not foe:
 			Profile.record_add("dodges", 1)
 		return
 	if not dot and randf() < parry_chance:
@@ -1845,7 +1899,7 @@ func move_goal() -> Vector3:
 func nearest_monster(max_dist: float) -> Combatant:
 	var best: Combatant = null
 	var best_d := max_dist
-	for node in get_tree().get_nodes_in_group("monsters"):
+	for node in foes():
 		var m := node as Combatant
 		if m and not m.is_dead:
 			var d := global_position.distance_to(m.global_position)

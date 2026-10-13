@@ -88,8 +88,8 @@ func _physics_process(delta: float) -> void:
 	var step := _speed * delta
 	global_position += dir * step
 	_travel += step
-	for node in get_tree().get_nodes_in_group("monsters"):
-		var mo := node as Monster
+	for node in shooter.foes():
+		var mo := node as Combatant
 		if mo == null or mo.is_dead or _hit.has(mo):
 			continue
 		var to := mo.global_position - global_position

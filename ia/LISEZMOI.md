@@ -12,6 +12,7 @@ annulation parfaite, et en perd quand elle est touchée, perd ou traîne.
 |---|---|
 | `IA_Installer.bat` | Une seule fois : installe Python, PyTorch et Stable-Baselines3 dans `ia/.venv`. |
 | `IA_Entrainer.bat` | Lance l'entraînement. **Ctrl+C** l'arrête proprement ; le relancer reprend là où il s'était arrêté. |
+| `IA_Duel.bat` | Deux IA s'affrontent dans une fenêtre, sans Python (ex. `IA_Duel.bat guerrier magicien`). |
 | `IA_Regarder.bat` | Ouvre le jeu en fenêtre et montre l'IA en train de jouer (ex. `IA_Regarder.bat hardcore magicien` ; sans classe : au hasard). |
 | `ia\evaluate.py` | Tableau des victoires des 60 classes (`.venv\Scripts\python evaluate.py hardcore --combats 10`, depuis `ia`). |
 
@@ -74,8 +75,17 @@ choix, plus haut = des erreurs (plus humain, plus facile). Essai sans fenêtre :
 (scénarios : mannequin, fuyard, survie, facile, normal, difficile, hardcore, toutes, duo).
 Le test `res://tests/test_ml_brain.tscn` vérifie qu'un cerveau donne les mêmes actions que Python.
 
-Pour l'instant le cerveau pilote le héros (`Player.bot`) : pour qu'il joue un adversaire dans
-la Tour, il faudra un héros ennemi qui a les mêmes mécaniques que le joueur.
+## IA contre IA (duel)
+
+`IA_Duel.bat` (ou `IA_Duel.bat guerrier magicien`) : deux héros pilotés par le meilleur cerveau
+disponible s'affrontent dans une fenêtre, sans Python. Le héros ennemi (`Player.foe`) a
+exactement les mécaniques du joueur (combo, enchaînements, annulations parfaites, esquives) :
+il est dans l'équipe des monstres (groupe `foe_heroes`), vise le joueur, joue sa propre classe et
+son propre jeu de sorts (`kit_skills`, `kit_chains`), sans l'équipement ni les cartes du joueur.
+Chaque cerveau voit le combat de son point de vue ; le coup en cours de l'autre héros lui
+apparaît comme une zone rouge (même forme que la zone bleue des attaques). C'est aussi la base
+des adversaires de la Tour et du futur entraînement en self-play (scénario `duel`, cerveau du
+héros ennemi : `foe_brain`).
 
 ## Comment ça marche
 

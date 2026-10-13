@@ -316,6 +316,11 @@ func _on_damaged(_amount: float, _source: Combatant) -> void:
 	pass
 
 
+## Recul sous les coups (les monstres reculent ; les héros encaissent sans bouger).
+func knockback(_impulse: Vector3) -> void:
+	pass
+
+
 func _on_death(_killer: Combatant) -> void:
 	pass
 

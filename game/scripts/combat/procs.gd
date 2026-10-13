@@ -133,7 +133,7 @@ static func _closest(player: Player, pos: Vector3, r: float, exclude: Array) -> 
 ## Monstres vivants à moins de [param r] m (bord du monstre) de [param pos].
 static func monsters_near(player: Node, pos: Vector3, r: float) -> Array:
 	var out: Array = []
-	for node in player.get_tree().get_nodes_in_group("monsters"):
+	for node in (player.foes() if player is Player else player.get_tree().get_nodes_in_group("monsters")):
 		var m := node as Combatant
 		if m == null or m.is_dead:
 			continue
