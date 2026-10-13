@@ -68,7 +68,79 @@ var slot := 1  # emplacement de sauvegarde chargé
 var _test := false
 
 
+# --- mode dev : ressources illimitées ------------------------------------------------------
+## Case de la page Ressources du mode dev : tant qu'elle est cochée (et le mode dev actif), or,
+## clés, cristaux et toutes les fournitures (sac de la run et réserve) restent au plein. Les
+## cristaux et la réserve d'avant sont mis de côté et rendus quand on décoche.
+const UNLIMITED := 999999
+const UNLIMITED_SUPPLY := 99
+var _refill_t := 0.0
+
+
+func unlimited() -> bool:
+	return bool(dev.get("unlimited", false)) and bool(Settings.get_v("interface", "dev_mode"))
+
+
+func set_unlimited(on: bool) -> void:
+	if on == bool(dev.get("unlimited", false)):
+		return
+	if on:
+		dev["unlimited_backup"] = {"crystal": amount("crystal"), "stash": stash.duplicate()}
+		dev["unlimited"] = true
+		_refill()
+	else:
+		dev["unlimited"] = false
+		var b: Dictionary = dev.get("unlimited_backup", {})
+		if not b.is_empty():
+			materials["crystal"] = int(b.get("crystal", 0))
+			stash = b.get("stash", {}).duplicate()
+		dev.erase("unlimited_backup")
+		if in_run:
+			gold = int(dev.get("gold", 0))
+			keys = int(dev.get("keys", 0))
+			bag = {}
+	save_profile()
+	changed.emit()
+
+
+## Toutes les fournitures qui existent (pierres, parchemins, gemmes, ciseaux).
+static func supply_keys() -> Array:
+	var keys: Array = ["drill", Craft.BLESSED]
+	for st in Craft.STONES:
+		keys.append(Craft.stone_key(st))
+	for kind in Craft.FORTIFY:
+		for lv in Craft.FORTIFY_LEVELS:
+			keys.append(Craft.fortify_key(kind, lv))
+	for g in Craft.GEMS:
+		for t in Craft.GEM_TIERS.size():
+			keys.append(Craft.gem_key(g, t))
+	for en in Craft.ENCHANTS:
+		for lv in range(1, Craft.MAX_SCROLL_LV + 1):
+			keys.append(Craft.scroll_key(en, lv))
+	return keys
+
+
+func _refill() -> void:
+	gold = maxi(gold, UNLIMITED)
+	keys = maxi(keys, UNLIMITED)
+	materials["crystal"] = maxi(int(materials.get("crystal", 0)), UNLIMITED)
+	for k in supply_keys():
+		if int(stash.get(k, 0)) < UNLIMITED_SUPPLY:
+			stash[k] = UNLIMITED_SUPPLY
+		if in_run and int(bag.get(k, 0)) < UNLIMITED_SUPPLY:
+			bag[k] = UNLIMITED_SUPPLY
+
+
+func _process(delta: float) -> void:
+	_refill_t -= delta
+	if _refill_t <= 0.0:
+		_refill_t = 0.3
+		if unlimited():
+			_refill()
+
+
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS  # ressources illimitées : remplies aussi dans les menus (jeu en pause)
 	if not OS.get_cmdline_user_args().is_empty() or " ".join(OS.get_cmdline_args()).contains("res://tests/"):
 		_test = true
 	slot = last_slot()

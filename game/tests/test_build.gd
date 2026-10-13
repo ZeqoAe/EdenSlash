@@ -26,6 +26,7 @@ func _ready() -> void:
 	_test_gear_rules()
 	_test_spell_presets()
 	_test_forge_lobby()
+	_test_dev_unlimited()
 	await _test_world()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit(1 if fails > 0 else 0)
@@ -222,6 +223,24 @@ func _dummy(dist: float, side := 0.0, hp := 1e7) -> Monster:
 
 
 ## Cartes à rareté, 10 niveaux, totaux cumulés, sorts améliorés, orbes d'expérience.
+## Mode dev : ressources illimitées, puis rendues telles qu'avant.
+func _test_dev_unlimited() -> void:
+	var dev_was := bool(Settings.get_v("interface", "dev_mode"))
+	Settings.data["interface"]["dev_mode"] = true
+	var c0 := Profile.amount("crystal")
+	var gem := Craft.gem_key(Craft.GEMS.keys()[0], 0)
+	var g0 := int(Profile.stash.get(gem, 0))
+	Profile.set_unlimited(true)
+	var full := Profile.amount("crystal") >= Profile.UNLIMITED and int(Profile.stash.get(gem, 0)) >= Profile.UNLIMITED_SUPPLY
+	Profile.pay({"crystal": 1000})
+	Profile._refill()
+	var still := Profile.amount("crystal") >= Profile.UNLIMITED
+	Profile.set_unlimited(false)
+	check("mode dev : ressources illimitées (pleines, toujours pleines après un achat), rendues ensuite",
+		full and still and Profile.amount("crystal") == c0 and int(Profile.stash.get(gem, 0)) == g0)
+	Settings.data["interface"]["dev_mode"] = dev_was
+
+
 ## Forge et démontage hors run : fournitures de la réserve, cristaux à la place de l'or.
 func _test_forge_lobby() -> void:
 	var was_in_run := Profile.in_run

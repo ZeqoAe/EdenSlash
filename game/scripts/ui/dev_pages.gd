@@ -449,6 +449,16 @@ class ResourcesPage extends HBoxContainer:
 		for c in _supplies.get_children().slice(1):
 			if c != _msg:
 				c.queue_free()
+		var unl := CheckBox.new()
+		unl.text = "Ressources illimitées (or, clés, cristaux, toutes les fournitures)"
+		unl.focus_mode = Control.FOCUS_NONE
+		unl.button_pressed = Profile.unlimited()
+		unl.tooltip_text = "Tant que c'est coché : tout reste au plein, en run comme hors run. Décoché : tes cristaux et ta réserve d'avant reviennent."
+		unl.toggled.connect(func(on):
+			Profile.set_unlimited(on)
+			_msg.text = "Ressources illimitées" if on else "Ressources normales : cristaux et réserve d'avant rendus"
+			refresh())
+		_box.add_child(unl)
 		Hud._label(_box, ("Valeurs de la run en cours." if Profile.in_run else "Or et clés : donnés au départ de chaque run tant que le mode dev est activé.") + " Cristaux : ceux de la sauvegarde (gardés entre les runs).", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		var names := {"gold": "Or", "keys": "Clés", "crystal": "Cristaux"}
 		for k in ["gold", "keys", "crystal"]:
@@ -482,18 +492,7 @@ class ResourcesPage extends HBoxContainer:
 		_supplies.add_child(sv)
 		_supplies.move_child(_msg, -1)
 		Hud._label(sv, "Dans le sac de la run" if Profile.in_run else "Dans la réserve (emportée à la prochaine run)", 13, UiTheme.MUTED)
-		var keys: Array = ["drill", Craft.BLESSED]
-		for st in Craft.STONES:
-			keys.append(Craft.stone_key(st))
-		for kind in Craft.FORTIFY:
-			for lv in Craft.FORTIFY_LEVELS:
-				keys.append(Craft.fortify_key(kind, lv))
-		for g in Craft.GEMS:
-			for t in Craft.GEM_TIERS.size():
-				keys.append(Craft.gem_key(g, t))
-		for en in Craft.ENCHANTS:
-			for lv in range(1, Craft.MAX_SCROLL_LV + 1):
-				keys.append(Craft.scroll_key(en, lv))
+		var keys: Array = Profile.supply_keys()
 		var scroll := ScrollContainer.new()
 		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
