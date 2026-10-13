@@ -217,6 +217,8 @@ func _update_objectives() -> void:
 	_zone_label.text = _zone_text
 	var t := director.time_left()
 	match director.state:
+		"duel":
+			_clock_label.text = "Manche %d · %d - %d" % [Duel.round_n, Duel.wins, Duel.losses]
 		"tower":
 			_clock_label.text = "Étage %d/%d" % [Tower.floor_n, Tower.FLOORS]
 		"boss":
@@ -230,6 +232,8 @@ func _update_objectives() -> void:
 	_clock_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.35) if rage or t < 60.0 else Color.WHITE)
 	var need: int = director.SEALS_NEEDED
 	_seal_label.text = "Sceaux  " + "◆ ".repeat(mini(director.seals, need)) + "◇ ".repeat(maxi(0, need - director.seals))
+	if Duel.active:
+		_seal_label.text = "Duel %s · 2 manches gagnantes" % ClassRival.NAMES[Duel.difficulty].to_lower()
 	if Tower.active:
 		_seal_label.text = "%s · record : étage %d" % [Tower.DIFF_NAMES[Tower.difficulty], Tower.best()]
 	var chests_total: int = director.map.chests.size() if director.map and "chests" in director.map else 0

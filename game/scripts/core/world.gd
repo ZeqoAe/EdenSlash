@@ -81,6 +81,19 @@ func _ready() -> void:
 	if not Run.active:
 		if "--training" in OS.get_cmdline_user_args():
 			Training.start(Profile.selected_class)  # test : zone d'entraînement
+		elif "--duel" in OS.get_cmdline_user_args():
+			# test : duel contre --duel-class=… en --duel-diff=0..3 (le preset actif ou les 4 premiers sorts)
+			var opp := "warrior"
+			var dd := 2
+			for arg in OS.get_cmdline_user_args():
+				if arg.begins_with("--duel-class="):
+					opp = arg.trim_prefix("--duel-class=")
+				elif arg.begins_with("--duel-diff="):
+					dd = int(arg.trim_prefix("--duel-diff="))
+			Duel.start(Profile.selected_class, opp, dd)
+			if Run.skills.is_empty():
+				for sk in Run.class_data().get("skills", []).slice(0, 4):
+					Run.skills.append({"id": int(sk.id), "rank": 1})
 		elif "--tower" in OS.get_cmdline_user_args():
 			var diff := 1  # test : la Tour (--tower-diff=0..3, --tower-floor=N)
 			var from := 1
@@ -126,6 +139,8 @@ func _ready() -> void:
 			Training.leave(get_tree())
 		elif Tower.active:
 			tower_end("abandon")
+		elif Duel.active:
+			duel_end(false)
 		else:
 			end_run("abandon"))
 	if Training.active:
@@ -178,7 +193,9 @@ func _ready() -> void:
 	rig.global_position = player.global_position
 	director.prompt_changed.connect(hud.show_prompt)
 	director.npc_opened.connect(_on_npc_opened)
-	if Tower.active:
+	if Duel.active:
+		pass  # duel : le build du preset, pas de carte
+	elif Tower.active:
 		# la Tour : une seule carte de départ, de rareté aléatoire
 		_offer("La Tour : ta carte de départ", [Run.roll_cards(6).pick_random()])
 	# première compétence : choix parmi 3 cartes de compétence
@@ -312,7 +329,7 @@ func _offer(title: String, options: Array, reroll := Callable()) -> void:
 
 
 func _on_level_up(lvl: int) -> void:
-	if Training.active or Tower.active:
+	if Training.active or Tower.active or Duel.active:
 		return  # entraînement : les cartes se choisissent dans le panneau ; Tour : une par étage
 	_offer("Niveau %d ! Choisis une carte" % lvl, Run.roll_cards(3), func(): return Run.roll_cards(3))
 
@@ -342,6 +359,9 @@ func _on_player_died(_who: Combatant, _killer: Combatant) -> void:
 		await get_tree().create_timer(1.0).timeout
 		player.respawn(player.global_position)
 		return
+	if Duel.active:
+		director.duel.player_down()  # manche perdue ; la manche suivante le relève
+		return
 	if Tower.active:
 		# la Tour : une seule vie
 		hud.show_message("Tu es tombé à l'étage %d…" % Tower.floor_n, 2.5)
@@ -369,6 +389,21 @@ func end_run(result: String) -> void:
 	var r := ResultsScreen.new()
 	add_child(r)
 	r.show_results()
+
+
+## Fin du duel (2 manches gagnantes, ou abandon) : bilan puis lobby.
+func duel_end(won: bool) -> void:
+	if _ended:
+		return
+	_ended = true
+	pause_menu.close()
+	var score := "%d - %d" % [Duel.wins, Duel.losses]
+	var opp := Duel.rival_class
+	var diff := Duel.difficulty
+	var got := Duel.finish(won)
+	var r := DuelResults.new()
+	add_child(r)
+	r.show_results(won, score, opp, diff, int(got.get("total", 0)))
 
 
 ## Fin de l'ascension (défaite, abandon, sommet) : record et expertise, puis le bilan.

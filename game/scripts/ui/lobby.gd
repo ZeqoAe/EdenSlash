@@ -33,6 +33,8 @@ var _sub_panel: PanelContainer
 var _tower_diff := 1  # la Tour : difficulté et page d'étages affichées, étage choisi
 var _tower_page := 0
 var _tower_sel := 1
+var _duel_opp := "warrior"  # mode Duel : adversaire et difficulté choisis
+var _duel_diff := 2
 var _badge_icon: TextureRect
 var _badge_name: Label
 var _badge_sub: Label
@@ -100,7 +102,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
 				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
-				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor":
+				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu":
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -109,6 +111,8 @@ func _ready() -> void:
 			return
 	_build_scene()
 	_build_ui()
+	if "--duel-menu" in OS.get_cmdline_user_args():
+		_show_menu("duel")  # test : inscription au duel
 	match _open_screen.get_slice("=", 0):
 		"tower-menu":
 			# test : étages de la Tour (--tower-menu=difficulté,étage ; avec un étage : sa fiche ouverte)
@@ -189,6 +193,64 @@ func _start_training() -> void:
 	if backdrop:
 		backdrop.release()
 	Training.start(Profile.selected_class)
+	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+
+
+## Mode Duel : conditions d'inscription (build complet), adversaire, difficulté, inscription.
+func _menu_duel() -> void:
+	var cid := Profile.selected_class
+	_sub_title("Mode duel")
+	Hud._label(_sub, "Ton build doit être prêt avant de t'inscrire : tu te bats avec exactement ce que tu as réglé.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	for r in Duel.requirements(cid):
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		_sub.add_child(h)
+		var mark := Hud._label(h, "✔" if r.ok else "✘", 20, UiTheme.BUFF if r.ok else Color(1.0, 0.45, 0.4))
+		mark.custom_minimum_size = Vector2(22, 0)
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 0)
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(v)
+		Hud._label(v, String(r.label), 15, UiTheme.TEXT)
+		Hud._label(v, String(r.hint), 12, UiTheme.MUTED)
+		if not r.ok:
+			var sec := String(r.section)
+			var fix := MenuWidgets.glass_button("Régler", 14, Vector2(86, 36))
+			fix.pressed.connect(func(): _open_hero(sec))
+			h.add_child(fix)
+	var opp := HBoxContainer.new()
+	opp.add_theme_constant_override("separation", 8)
+	_sub.add_child(opp)
+	var ob := MenuWidgets.glass_button("Adversaire : %s ▾" % GameData.class_data(_duel_opp).get("name_fr", _duel_opp), 15, Vector2(0, 40))
+	ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ob.pressed.connect(func(): HeroPages.class_menu(ob, _duel_opp, func(c):
+		_duel_opp = c
+		_show_menu("duel")))
+	opp.add_child(ob)
+	var dd := OptionButton.new()
+	dd.focus_mode = Control.FOCUS_NONE
+	for n in ClassRival.NAMES:
+		dd.add_item(n)
+	dd.select(_duel_diff)
+	dd.item_selected.connect(func(i):
+		_duel_diff = i
+		_show_menu("duel"))
+	opp.add_child(dd)
+	Hud._label(_sub, "Niveau du duel : %d (celui de ton équipement) · victoires contre cette classe : %d" % [Duel.gear_level(), Duel.wins_against(_duel_opp, _duel_diff)], 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var go := MenuWidgets.gold_button("S'inscrire au duel", 22, Vector2(0, 58))
+	go.disabled = not Duel.is_ready(cid)
+	go.tooltip_text = "" if not go.disabled else "Règle d'abord les points marqués ✘"
+	go.pressed.connect(_start_duel)
+	_sub.add_child(go)
+
+
+func _start_duel() -> void:
+	if _launching or not Duel.is_ready(Profile.selected_class):
+		return
+	_launching = true
+	if backdrop:
+		backdrop.release()
+	Duel.start(Profile.selected_class, _duel_opp, _duel_diff)
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
@@ -537,7 +599,9 @@ func _build_ui() -> void:
 		if _launching:
 			return
 		_show_hero()  # classe, arme ou apparence ont pu changer
-		_refresh_ui())
+		_refresh_ui()
+		if _current == "duel":
+			_show_menu("duel"))  # conditions d'inscription à jour
 	_archive = _screen("Collection", [["Collection", ArchivePages.CollectionPage.new()]])
 	_archive.set_title("Collection", "Archive des trésors : chaque entrée donne un bonus permanent à tous les héros")
 	_chests = _screen("Coffres", [["Coffres", ChestsPage.new()]])
@@ -579,7 +643,7 @@ func _show_menu(id: String) -> void:
 	if _sub_panel:
 		_sub_panel.visible = id != ""
 	for k in _menu:
-		_menu[k].selected = k == ("play" if id in ["zones", "tower", "tower_floors"] else id)
+		_menu[k].selected = k == ("play" if id in ["zones", "tower", "tower_floors", "duel"] else id)
 	for c in _sub.get_children():
 		c.queue_free()
 	match id:
@@ -591,6 +655,8 @@ func _show_menu(id: String) -> void:
 			_menu_tower()
 		"tower_floors":
 			_menu_tower_floors()
+		"duel":
+			_menu_duel()
 		"quit":
 			_menu_quit()
 
@@ -675,6 +741,7 @@ func _menu_play() -> void:
 	hr.mark(free > 0)
 	_row("Zone de farm", "%s · niveau %d+" % [zone.get("name", ""), 1 + int(zone.get("level_bonus", 0))], "pin", _show_menu.bind("zones"))
 	_row("Zone d'entraînement", "Tester les sorts, les combos et les cartes de %s (rien n'est gagné ni perdu)" % cls.get("name_fr", ""), "stats", _start_training)
+	_row("Mode duel", "1 contre 1 contre un héros d'une classe, en 2 manches gagnantes · inscription avec un build complet", "attack", _show_menu.bind("duel"))
 	_row("La Tour", "Gravir %d étages avec une arme de base : une carte et un coffre par étage, les %d classes à battre en duel, une seule vie" % [Tower.FLOORS, Tower.duel_count()], "upgrade", _show_menu.bind("tower"))
 
 

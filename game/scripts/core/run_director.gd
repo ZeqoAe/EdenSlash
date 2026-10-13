@@ -80,6 +80,7 @@ var _elites: Array = []
 var _seed := 0
 var orbs: XpOrbs  # orbes d'expérience au sol
 var tower: TowerDirector  # mode Tour : étages successifs (Tower)
+var duel: DuelDirector  # mode Duel : manches contre un héros (Duel)
 
 
 func start(p: Player) -> void:
@@ -88,6 +89,16 @@ func start(p: Player) -> void:
 	_roster = zone.monsters.map(func(x): return int(x))
 	_elites = zone.get("elites", []).map(func(x): return int(x))
 	_seed = Run.seed if Run.seed != 0 else randi()
+	if Duel.active:
+		# duel : une arène, pas de grande carte
+		state = "duel"
+		_fog = Image.create(FOG_RES, FOG_RES, false, Image.FORMAT_LA8)
+		_fog.fill(Color(0, 0, 0, 0))
+		_fog_tex = ImageTexture.create_from_image(_fog)
+		duel = DuelDirector.new()
+		add_child(duel)
+		duel.setup(self)
+		return
 	if Tower.active:
 		# la Tour : pas de grande carte, une salle par étage
 		state = "tower"
@@ -146,6 +157,10 @@ func in_dungeon() -> bool:
 # --- boucle -----------------------------------------------------------------------------
 func _process(delta: float) -> void:
 	if player == null or map == null:
+		return
+	if state == "duel":
+		duel.update(delta)
+		_keep_on_map()
 		return
 	if state == "tower":
 		tower.update(delta)
@@ -475,6 +490,8 @@ func _ring_point(min_d: float, max_d: float) -> Vector3:
 func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 	kills += 1
 	var m := who as Monster
+	if Duel.active:
+		return  # duel : rien à gagner sur l'adversaire
 	if Tower.active:
 		# la Tour : ni expérience (le niveau suit l'étage), ni butin (le coffre de l'étage)
 		Run.kills += 1
@@ -638,7 +655,7 @@ func _update_boss(delta: float) -> void:
 
 ## Extraction : 10 s à survivre (une vague fonce sur le héros), puis on garde tout.
 func start_extraction() -> void:
-	if Tower.active:
+	if Tower.active or Duel.active:
 		return  # la Tour : on monte ou on tombe
 	if extracting or state == "cleared" or player == null or player.is_dead:
 		return
