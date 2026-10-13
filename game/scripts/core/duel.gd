@@ -21,6 +21,18 @@ static var level := 1
 static var wins := 0
 static var losses := 0
 static var round_n := 1
+## Préparation de l'adversaire (lobby, « Préparer l'adversaire ») : équipement généré à ton
+## niveau ou copie du tien, ses 4 sorts (0 : choisi par l'IA), multiplicateurs de PV et de dégâts.
+const GEAR_MODES := ["Généré à ton niveau", "Copie de ton équipement"]
+static var gear_mode := 1
+static var rival_spells: Array = [0, 0, 0, 0]
+static var hp_mult := 1.0
+static var atk_mult := 1.0
+
+
+## Sorts que l'adversaire peut utiliser (ceux de sa classe, hors renforcements et soins).
+static func spell_choices(cid: String) -> Array:
+	return (GameData.class_data(cid).get("skills", []) as Array).filter(func(s): return String(s.kind) != "buff" and String(s.kind) != "heal")
 
 
 ## Conditions d'inscription pour la classe [param cid] : [{ok, label, hint, section}]
@@ -87,18 +99,36 @@ static func start(cid: String, opponent: String, diff: int) -> void:
 
 
 ## Adversaire de la manche : sa classe, au niveau du duel, avec son équipement.
-static func make_rival() -> ClassRival:
+static func make_rival(lv := -1) -> ClassRival:
+	var at := level if lv < 0 else lv
 	var r := ClassRival.new()
-	r.setup(rival_class, level, difficulty, RIVAL_HP)
-	seed(hash([rival_class, level, difficulty]))
+	r.setup(rival_class, at, difficulty, RIVAL_HP)
 	var gear: Array = []
-	for slot in Tower.DUEL_SLOTS:
-		gear.append(Items.generate(level, 0.3 + 0.2 * difficulty, slot, rival_class, 0, "", 3))
-	randomize()
+	if gear_mode == 1:
+		gear = Profile.equipped.values()  # copie exacte de ton équipement (améliorations comprises)
+	else:
+		seed(hash([rival_class, at, difficulty]))
+		for slot in Tower.DUEL_SLOTS:
+			gear.append(Items.generate(at, 0.3 + 0.2 * difficulty, slot, rival_class, 0, "", 3))
+		randomize()
 	var was := Run.hero_level
-	Run.hero_level = level
+	var was_active := Run.active
+	Run.hero_level = at
+	Run.active = true  # puissance des objets au niveau du duel, même pour l'aperçu du lobby
 	r.apply_gear(gear)
 	Run.hero_level = was
+	Run.active = was_active
+	r.max_hp *= hp_mult
+	r.hp = r.max_hp
+	r.atk *= atk_mult
+	# sorts choisis (sinon les 4 premiers de sa classe)
+	var picked: Array = []
+	for id in rival_spells:
+		for s in spell_choices(rival_class):
+			if int(s.id) == int(id) and not picked.has(s):
+				picked.append(s)
+	if not picked.is_empty():
+		r._skills = picked
 	r.display_name = "<Duel> %s · %s" % [GameData.class_data(rival_class).get("name_fr", rival_class), String(ClassRival.NAMES[difficulty]).to_lower()]
 	return r
 

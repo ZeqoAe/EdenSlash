@@ -102,7 +102,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
 				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
-				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge":
+				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge" or arg == "--duel-prep":
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -113,6 +113,9 @@ func _ready() -> void:
 	_build_ui()
 	if "--duel-menu" in OS.get_cmdline_user_args():
 		_show_menu("duel")  # test : inscription au duel
+		if "--duel-prep" in OS.get_cmdline_user_args():
+			Duel.rival_class = _duel_opp
+			DuelPrep.open(self, func(): _show_menu("duel"))
 	match _open_screen.get_slice("=", 0):
 		"tower-menu":
 			# test : étages de la Tour (--tower-menu=difficulté,étage ; avec un étage : sa fiche ouverte)
@@ -229,6 +232,7 @@ func _menu_duel() -> void:
 	ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ob.pressed.connect(func(): HeroPages.class_menu(ob, _duel_opp, func(c):
 		_duel_opp = c
+		Duel.rival_spells = [0, 0, 0, 0]
 		_show_menu("duel")))
 	opp.add_child(ob)
 	var dd := OptionButton.new()
@@ -241,6 +245,12 @@ func _menu_duel() -> void:
 		_show_menu("duel"))
 	opp.add_child(dd)
 	Hud._label(_sub, "Niveau du duel : %d (celui de ton équipement) · victoires contre cette classe : %d" % [Duel.gear_level(), Duel.wins_against(_duel_opp, _duel_diff)], 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var prep := MenuWidgets.glass_button("Préparer l'adversaire (équipement %s, sorts, PV ×%.1f, dégâts ×%.1f)" % ["copié" if Duel.gear_mode == 1 else "généré", Duel.hp_mult, Duel.atk_mult], 14, Vector2(0, 40))
+	prep.pressed.connect(func():
+		Duel.rival_class = _duel_opp
+		Duel.difficulty = _duel_diff
+		DuelPrep.open(self, func(): _show_menu("duel")))
+	_sub.add_child(prep)
 	var go := MenuWidgets.gold_button("S'inscrire au duel", 22, Vector2(0, 58))
 	go.disabled = not Duel.is_ready(cid)
 	go.tooltip_text = "" if not go.disabled else "Règle d'abord les points marqués ✘"
