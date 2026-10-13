@@ -12,6 +12,7 @@ var is_elite := false
 var enraged := false
 var carries_seal := false  # gardien d'élite : lâche un sceau du donjon
 var passive := false  # n'attaque pas et ne bouge pas (mannequin d'entraînement)
+var cc_immune := false  # insensible aux contrôles (arène ML : on ne peut pas l'empêcher d'attaquer)
 var xp_reward := 0
 var move_speed := 3.2
 
@@ -148,6 +149,8 @@ func enrage() -> void:
 
 ## Gel et renversement interrompent l'attaque annoncée (la zone rouge disparaît).
 func add_status(status: String, duration: float, source: Combatant = null) -> void:
+	if cc_immune and status in ["stun", "freeze", "sleep", "fear", "root", "chill", "disarm"]:
+		return
 	if is_boss and status == "freeze":
 		duration *= 0.35  # le boss résiste au gel
 	super.add_status(status, duration, source)

@@ -304,6 +304,7 @@ func _reset(msg: Dictionary) -> void:
 		e.max_hp *= float(msg.get("enemy_hp", 1.0))
 		e.hp = e.max_hp
 		e.atk *= float(msg.get("enemy_atk", 1.0))
+		e.cc_immune = bool(msg.get("cc_immune", false))
 		add_child(e)
 		var ang := randf() * TAU
 		var d := randf_range(float(msg.get("min_dist", 4.0)), float(msg.get("max_dist", 9.0)))

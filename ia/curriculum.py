@@ -26,8 +26,10 @@ DUMMY12 = dict(scenario="dummy", skills=12, max_time=30, bonus={"perfect": 0.08,
 FLEE = dict(scenario="flee", skills=12, difficulty=2, max_time=40, enemy_hp=1.0,
             bonus={"perfect": 0.15, "chain": 0.1}, timeout_reward=-2.0)
 FLEE3 = dict(FLEE, difficulty=3, max_time=45)
-SURVIVE = dict(scenario="monster", skills=12, hero_hp=1, max_time=40, enemy_hp=8.0,
-               timeout_reward=4.0, loss_penalty=8.0, bonus={"dodged": 0.3, "perfect": 0.05})
+# monstres insensibles aux contrôles (sinon le guerrier les renverse en boucle et n'esquive
+# jamais) et assez solides pour qu'il faille survivre, pas juste les tuer vite
+SURVIVE = dict(scenario="monster", skills=12, hero_hp=1, max_time=40, enemy_hp=20.0, cc_immune=True,
+               timeout_reward=4.0, loss_penalty=8.0, bonus={"dodged": 0.4, "perfect": 0.05})
 SURVIVE2 = dict(SURVIVE, count=2)
 
 
