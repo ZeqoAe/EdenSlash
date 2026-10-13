@@ -102,7 +102,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
 				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
-				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge" or arg == "--duel-prep" or arg == "--rival-editor":
+				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge" or arg == "--duel-prep" or arg == "--rival-editor" or arg.begins_with("--profile-tab="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -114,18 +114,22 @@ func _ready() -> void:
 	if "--duel-menu" in OS.get_cmdline_user_args():
 		_show_menu("duel")  # test : inscription au duel
 		if "--rival-editor" in OS.get_cmdline_user_args():
-			# test : éditeur avec un adversaire de démonstration (une pièce par emplacement)
-			var demo := RivalBuilds.blank("magician")
-			for sl in RivalEditor.SLOTS:
-				for x in GameData.eden_items:
-					if String(x.get("slot", "")) == sl and int(x.level) >= 35:
-						demo.gear[sl] = {"id": int(x.id), "rarity": 4, "upgrade": 5}
-						break
+			# test : éditeur de profils avec un profil de démonstration (rempli, une arme +10)
+			var demo := RivalBuilds.blank("magician", 45)
+			RivalBuilds.auto_fill(demo)
+			if demo.gear.has("weapon"):
+				demo.gear.weapon["upgrade"] = 10
+				demo.gear.weapon["rolls"] = {"4": "matk", "6": "crit", "8": "matk", "10": "int"}
+				demo.gear.weapon["gems"] = [Craft.gem_key("sapphire", 4), Craft.gem_key("amethyst", 3)]
+				demo.gear.weapon["enchant"] = Craft.scroll_key("optimize", 4)
 			var bodies := GameData.cosmetics.filter(func(x): return String(x.get("cat", "")) == "body")
 			if not bodies.is_empty():
 				demo.look["body"] = String(bodies[3].outfit)
-			demo.certs = RivalBuilds.all_certificates().slice(0, 3).map(func(c): return String(c.key))
-			RivalEditor.open(self, demo, 40, func(_b): pass)
+			var pe := ProfileEditor.open(self, demo, func(_b): pass)
+			for arg in OS.get_cmdline_user_args():
+				if arg.begins_with("--profile-tab="):
+					pe._tab = int(arg.trim_prefix("--profile-tab="))
+					pe._refresh_all.call_deferred()
 		if "--duel-prep" in OS.get_cmdline_user_args():
 			Duel.rival_class = _duel_opp
 			DuelPrep.open(self, func(): _show_menu("duel"))
@@ -285,8 +289,8 @@ func _menu_duel() -> void:
 	ed.tooltip_text = "Sa classe, son équipement du catalogue d'Eden, son trophée, son apparence, ses certificats et ses sorts ; plusieurs adversaires enregistrés"
 	ed.pressed.connect(func():
 		Duel.difficulty = _duel_diff
-		var b := Duel.rival_build if built else RivalBuilds.blank(_duel_opp)
-		RivalEditor.open(self, b, Duel.gear_level(), func(nb):
+		var b := Duel.rival_build if built else RivalBuilds.blank(_duel_opp, Duel.gear_level())
+		ProfileEditor.open(self, b, func(nb):
 			Duel.rival_build = nb
 			_duel_opp = String(nb.get("class", _duel_opp))
 			_show_menu("duel")))
@@ -803,6 +807,7 @@ func _menu_play() -> void:
 	hr.mark(free > 0)
 	_row("Zone de farm", "%s · niveau %d+" % [zone.get("name", ""), 1 + int(zone.get("level_bonus", 0))], "pin", _show_menu.bind("zones"))
 	_row("Zone d'entraînement", "Tester les sorts, les combos et les cartes de %s (rien n'est gagné ni perdu)" % cls.get("name_fr", ""), "stats", _start_training)
+	_row("Profils types", "Builds complets par classe et par niveau (équipement +10, gemmes, enchantements, 12 sorts, certificats, apparence) : adversaires de duel ou à appliquer à ton héros", "equipment", func(): ProfileEditor.open(self, RivalBuilds.blank(Profile.selected_class)))
 	_row("Mode duel", "1 contre 1 contre un héros d'une classe, en 2 manches gagnantes · inscription avec un build complet", "attack", _show_menu.bind("duel"))
 	_row("La Tour", "Gravir %d étages avec une arme de base : une carte et un coffre par étage, les %d classes à battre en duel, une seule vie" % [Tower.FLOORS, Tower.duel_count()], "upgrade", _show_menu.bind("tower"))
 

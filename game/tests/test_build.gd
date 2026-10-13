@@ -28,6 +28,7 @@ func _ready() -> void:
 	_test_forge_lobby()
 	_test_dev_unlimited()
 	_test_rival_spells()
+	_test_profile_apply()
 	await _test_world()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit(1 if fails > 0 else 0)
@@ -224,6 +225,43 @@ func _dummy(dist: float, side := 0.0, hp := 1e7) -> Monster:
 
 
 ## Cartes à rareté, 10 niveaux, totaux cumulés, sorts améliorés, orbes d'expérience.
+## Profils types : objet +10 (paliers, gemmes, enchantement) et application au héros.
+func _test_profile_apply() -> void:
+	var was_in_run := Profile.in_run
+	Profile.in_run = false
+	var saved := {"vault": Profile.vault.duplicate(), "class": Profile.selected_class, "board": Profile.cert_board.duplicate(),
+		"outfits": Profile.outfits.duplicate(true), "worn": Profile.worn.duplicate(true), "loadout": Profile.loadout.duplicate(), "presets": Profile.presets.duplicate(true),
+		"equipped": Profile.equipped.duplicate(), "inventory": Profile.inventory.duplicate(), "certs": Profile.certificates.duplicate()}
+	var b := RivalBuilds.blank("magician", 45)
+	RivalBuilds.auto_fill(b)
+	b.gear.weapon["upgrade"] = 10
+	b.gear.weapon["rolls"] = {"4": "matk", "6": "crit", "8": "matk", "10": "int"}
+	b.gear.weapon["gems"] = [Craft.gem_key("sapphire", 4), ""]
+	b.gear.weapon["enchant"] = Craft.scroll_key("optimize", 4)
+	var w := RivalBuilds.make_item("weapon", b.gear.weapon, 45)
+	var ok_item: bool = int(w.upgrade) == 10 and (w.up_rolls as Array).size() == 4 and (w.sockets as Array)[0] is Dictionary and w.has("enchant")
+	var msg := RivalBuilds.apply_to_hero(b)
+	var eq: Dictionary = Profile.equipped.get("weapon", {})
+	check("profil type : arme +10 (4 paliers, gemme, enchantement) appliquée au héros (%s)" % msg,
+		ok_item and Profile.selected_class == "magician" and int(eq.get("upgrade", 0)) == 10 and Profile.equipped.size() >= 8
+		and not SpellPresets.active("magician").is_empty() and Profile.cert_board.has("magician/" + String(GameData.talents.magician.certificates[0])))
+	SpellPresets.remove("magician", SpellPresets.active_index("magician"))
+	Profile.vault = saved.vault
+	Profile.selected_class = saved["class"]
+	Profile.cert_board = saved.board
+	Profile.certificates = saved.certs
+	Profile.outfits = saved.outfits
+	Profile.worn = saved.worn
+	Profile.presets = saved.presets
+	Profile.loadout = saved.loadout
+	Profile.equipped = saved.equipped
+	Profile.inventory = saved.inventory
+	Profile.in_run = was_in_run
+	if not was_in_run:
+		Profile._lobby_view()
+	Profile.save_profile()  # la sauvegarde de test redevient celle d'avant
+
+
 ## Duel : 12 sorts de l'adversaire (4 cases × principal et 2 enchaînements).
 func _test_rival_spells() -> void:
 	var cid := "magician"
