@@ -315,7 +315,7 @@ func _build_camera_tab() -> void:
 	_slider(v, "Tremblements de l'écran", "camera", "shake", 0.0, 1.5, 0.05, func(x): return "%d %%" % roundi(x * 100))
 	_section(v, "Interface et ressenti")
 	_option(v, "Chiffres de dégâts", "interface", "damage_numbers", [
-		["all", "Tous"], ["dealt", "Seulement les dégâts infligés"], ["off", "Masqués"]])
+		["all", "Tous"], ["dealt", "Seulement les dégâts infligés"], ["crit", "Coups critiques et dégâts subis"], ["off", "Masqués"]])
 	_check(v, "Arrêt sur image à l'impact (poids des coups)", "interface", "hit_stop")
 	_check(v, "Afficher les FPS", "interface", "show_fps")
 	_check(v, "Marqueur au sol des clics de déplacement", "interface", "move_marker")

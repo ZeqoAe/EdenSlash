@@ -54,6 +54,8 @@ func show_results() -> void:
 				gained.append(String(r.name) if r.kind == "cert" else "Sort : " + String(r.name))
 	for c in Run.new_classes:
 		gained.append("Nouvelle classe : " + String(GameData.class_data(c).get("name_fr", c)))
+	if Run.combo_best > 0.0:
+		gained.append("Dégâts cumulés : %s%s" % [Hud._big_number(Run.combo_best), " (nouveau record !)" if Run.combo_best >= float(Profile.records.get("best_combo", 0.0)) else ""])
 	for id in Run.new_cards():
 		gained.append("Carte : " + String(Boons.get_def(id).get("name", id)))
 	for c in Run.new_costumes:

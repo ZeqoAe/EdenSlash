@@ -206,8 +206,8 @@ class CollectionPage extends HBoxContainer:
 		s.set_item(item)
 		s.dim = not owned
 		s.badge = "✔" if owned else ""
-		var info := "\n\n%s\n[color=#9a98a8]%s[/color]\n[color=#7fe08a]Bonus d'archive : %s[/color]" % [
-			"[color=#7fe08a]Archivé[/color]" if owned else "[color=#ff9a7a]Pas encore archivé[/color]", Archive.source_text(e), Archive.bonus_text(Archive.entry_bonus(k))]
+		var info := "\n\n%s\n[color=#9a98a8]%s[/color]\n[color=#7fe08a]Archive : %s[/color]" % [
+			"[color=#7fe08a]Archivé[/color]" if owned else "[color=#ff9a7a]Pas encore archivé[/color]", Archive.source_text(e), "compte pour les paliers de collection"]
 		s.card_extra = func(_it): return info
 		s.pressed.connect(func():
 			_selected_entry = e
@@ -231,7 +231,7 @@ class CollectionPage extends HBoxContainer:
 		var b := Archive.bonus()
 		lines.append("")
 		lines.append("[color=#c8c8d4]Bonus permanent, toutes classes :[/color] [b]%s[/b]" % (Archive.bonus_text(b) if not b.is_empty() else "aucun pour l'instant"))
-		lines.append("[color=#c8c8d4]Chaque entrée : +1 point d'attribut (mythique) ou +2 (légendaire).[/color]")
+		lines.append("[color=#c8c8d4]Chaque équipement archivé compte pour les paliers ci-dessous (bonus modestes, pour toutes les classes).[/color]")
 		var n := Archive.count()
 		for m in Archive.MILESTONES:
 			var ok := n >= int(m[0])
@@ -243,7 +243,7 @@ class CollectionPage extends HBoxContainer:
 		if not _selected_item.is_empty():
 			var why := Archive.refusal(_selected_item)
 			_detail.text = "[b][color=#%s]%s[/color][/b]  %s" % [Items.color_of(_selected_item).to_html(false), Items.display_name(_selected_item),
-				("[color=#ff9a7a]%s[/color]" % why) if why != "" else "[color=#7fe08a]Archiver : %s[/color]" % Archive.bonus_text(Archive.entry_bonus(Archive.keys_for(_selected_item)[0]))]
+				("[color=#ff9a7a]%s[/color]" % why) if why != "" else "[color=#7fe08a]Archiver : +1 vers le prochain palier de collection[/color]"]
 			_btn.text = "Confirmer : l'objet rejoint l'archive" if _armed else "Archiver"
 			_btn.disabled = why != ""
 			return

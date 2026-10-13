@@ -53,6 +53,11 @@ var better_item: Dictionary = {}
 var _better_until := 0.0
 var _prompt: Label
 var _fps_label: Label
+var _dmg_box: VBoxContainer  # compteur de dégâts cumulés (Run.combo_damage)
+var _dmg_value: Label
+var _dmg_best: Label
+var _dmg_bar: ColorRect
+var _dmg_shown := 0.0
 var _arrow: Label
 var _big_map: Minimap
 var _msg_tween: Tween
@@ -285,6 +290,34 @@ func _build_minimap(root: Control) -> void:
 			var a := TAU * k / 8.0
 			HudWidgets.diamond(ring, c + Vector2(cos(a), sin(a)) * r, 5.0 if k % 2 == 0 else 3.0, UiTheme.GOLD))
 	holder.add_child(ring)
+	# compteur de dégâts cumulés : à droite, sous la mini-carte
+	_dmg_box = VBoxContainer.new()
+	_dmg_box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_dmg_box.position = Vector2(-260, 300)
+	_dmg_box.custom_minimum_size = Vector2(240, 0)
+	_dmg_box.alignment = BoxContainer.ALIGNMENT_END
+	_dmg_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_dmg_box)
+	var cap := _label(_dmg_box, "DÉGÂTS CUMULÉS", 13, Color(1, 0.85, 0.5, 0.9))
+	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_dmg_value = _label(_dmg_box, "", 40, Color(1, 0.92, 0.6))
+	_dmg_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_dmg_value.add_theme_font_override("font", UiTheme.title_font())
+	_dmg_value.add_theme_constant_override("outline_size", 8)
+	_dmg_value.add_theme_color_override("font_outline_color", Color(0.15, 0.05, 0.02))
+	_dmg_value.pivot_offset = Vector2(240, 30)
+	_dmg_bar = ColorRect.new()
+	_dmg_bar.color = Color(1, 0.75, 0.3, 0.85)
+	_dmg_bar.custom_minimum_size = Vector2(240, 3)
+	_dmg_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_dmg_box.add_child(_dmg_bar)
+	_dmg_best = _label(_dmg_box, "", 12, Color(1, 1, 1, 0.6))
+	_dmg_best.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	for l in [cap, _dmg_best]:
+		l.add_theme_constant_override("outline_size", 5)
+		l.add_theme_color_override("font_outline_color", Color(0.08, 0.04, 0.02, 0.9))
+	_dmg_box.modulate.a = 0.0
+
 	_fps_label = _label(root, "", 12, Color(1, 1, 1, 0.55))
 	_fps_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_fps_label.position = Vector2(-150, 244)
@@ -405,6 +438,7 @@ func _process(delta: float) -> void:
 	if not _root.visible:
 		return
 	_clock += delta
+	_update_damage_counter(delta)
 	# vie basse : bords de l'écran qui pulsent en rouge
 	var hp_ratio := player.hp / maxf(player.max_hp, 1.0)
 	_low_hp.modulate.a = 0.0 if hp_ratio >= 0.3 or player.is_dead else (0.5 + 0.5 * (1.0 - hp_ratio / 0.3)) * (0.65 + 0.35 * sin(_clock * 6.0))
@@ -535,6 +569,35 @@ func _update_arrow() -> void:
 	_arrow.visible = true
 	_arrow.position = center + dir * 90.0 - _arrow.pivot_offset
 	_arrow.rotation = dir.angle() + PI / 2.0
+
+
+## Compteur de dégâts cumulés : grossit à chaque coup, la barre montre les 3 s avant la remise
+## à zéro ; le record de la run et le record absolu en dessous.
+func _update_damage_counter(delta: float) -> void:
+	var now := Run.combo_now()
+	if now <= 0.0:
+		_dmg_box.modulate.a = move_toward(_dmg_box.modulate.a, 0.0, delta * 2.0)
+		_dmg_shown = 0.0
+		return
+	_dmg_box.modulate.a = 1.0
+	if now > _dmg_shown:
+		_dmg_value.scale = Vector2.ONE * minf(1.25, 1.0 + (now - _dmg_shown) / maxf(now, 1.0) * 2.0)
+	_dmg_shown = lerpf(_dmg_shown, now, minf(1.0, delta * 12.0))
+	_dmg_value.scale = _dmg_value.scale.move_toward(Vector2.ONE, delta * 2.0)
+	_dmg_value.text = _big_number(_dmg_shown)
+	_dmg_bar.custom_minimum_size.x = 240.0 * Run.combo_left()
+	var best := maxf(Run.combo_best, float(Profile.records.get("best_combo", 0.0)))
+	_dmg_best.text = "record de la run %s  ·  record %s" % [_big_number(Run.combo_best), _big_number(best)]
+
+
+static func _big_number(v: float) -> String:
+	var s := str(roundi(v))
+	var out := ""
+	for i in s.length():
+		if i > 0 and (s.length() - i) % 3 == 0:
+			out += " "
+		out += s[i]
+	return out
 
 
 ## Objet ramassé meilleur que la pièce portée : 8 s pour l'équiper avec [G].

@@ -214,10 +214,10 @@ func _test_archive() -> void:
 	check("archivé : entrée de l'objet d'Eden", filled == ["e%d" % int(wtpl.id)])
 	check("archivé : quitte le coffre et les préréglages", not Profile.vault.any(func(x): return x.uid == myth.uid) and Profile.item_users(myth.uid).is_empty())
 	check("archivé : une arme reste équipée", Profile.equipped.has("weapon"))
-	check("bonus permanent : +1 Force (mythique)", float(Archive.bonus().get("str", 0.0)) == str0 + 1.0)
+	check("pas de bonus par entrée (seulement les paliers)", float(Archive.bonus().get("str", 0.0)) == str0)
 	check("même entrée : déjà archivé", Archive.refusal(myth.duplicate(true)) != "")
 	Profile.archive_item(legend)
-	check("légendaire (torse) : +2 Force", float(Archive.bonus().get("str", 0.0)) == str0 + 3.0)
+	check("légendaire archivé : toujours pas de stat par entrée", float(Archive.bonus().get("str", 0.0)) == str0)
 	check("collection %d / %d, score %d" % [Archive.count(), Archive.total(), Archive.score()], Archive.count() == 2 and Archive.total() > 1000 and Archive.score() == 3)
 	# apparences : l'arme archivée ajoute son modèle
 	var skins := Archive.skins("katana")

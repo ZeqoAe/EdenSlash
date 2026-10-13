@@ -12,6 +12,12 @@ var active := false
 var class_id := "samurai"
 var skills: Array = []  # [{id, rank}]
 var passives: Dictionary = {}  # id -> nombre de cartes prises (niveau du passif)
+## Compteur de dégâts cumulés : tous les dégâts infligés s'additionnent sans arrêt ; 3 s sans
+## infliger de dégâts et il repart de zéro (record de la run et record absolu).
+const COMBO_RESET_MS := 3000
+var combo_damage := 0.0
+var combo_best := 0.0
+var _combo_last := 0
 var hero_level := 0  # niveau du héros de la run (puissance des objets : Items.power_level)
 var banned: Array = []  # cartes bannies pour la run (ids)
 var kept: Array = []  # cartes gardées pour le prochain choix : [{type, id, tier}]
@@ -44,6 +50,8 @@ func start(cid: String) -> void:
 	passives.clear()
 	passive_power.clear()
 	hero_level = 1
+	combo_damage = 0.0
+	combo_best = 0.0
 	banned.clear()
 	kept.clear()
 	bans_used = 0
@@ -71,6 +79,7 @@ func finish(res: String) -> void:
 		return
 	active = false
 	result = res
+	Profile.record_max("best_combo", combo_best)
 	Profile.runs_done += 1
 	expertise_gain = max_level * 15 + kills / 2 + elites * 10 + (200 if res == "victoire" else (60 if res == "extraction" else 0))
 	expertise_levels = Profile.add_expertise(class_id, expertise_gain)
@@ -405,3 +414,24 @@ func keep_card(card: Dictionary) -> bool:
 ## Cartes débloquées pendant cette run (bilan).
 func new_cards() -> Array:
 	return Cards.unlocked_ids().filter(func(id): return not id in cards_at_start)
+
+
+
+## Dégâts infligés par le héros (Combatant.take_damage).
+func add_combo_damage(dmg: float) -> void:
+	var now := Time.get_ticks_msec()
+	if now - _combo_last > COMBO_RESET_MS:
+		combo_damage = 0.0
+	combo_damage += dmg
+	_combo_last = now
+	combo_best = maxf(combo_best, combo_damage)
+
+
+## Compteur en cours (0 si plus de 3 s sans dégâts).
+func combo_now() -> float:
+	return combo_damage if Time.get_ticks_msec() - _combo_last <= COMBO_RESET_MS else 0.0
+
+
+## Temps restant avant la remise à zéro (0..1).
+func combo_left() -> float:
+	return clampf(1.0 - float(Time.get_ticks_msec() - _combo_last) / COMBO_RESET_MS, 0.0, 1.0)

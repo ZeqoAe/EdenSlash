@@ -24,18 +24,19 @@ const COLLECTION_CATS := [
 	[29, "Montures", "Objets spéciaux"], [30, "Familiers", "Objets spéciaux"],
 	[31, "Boîte arcanique", "Objets spéciaux"], [32, "Autres objets", "Objets spéciaux"],
 ]
-## Points d'attribut par entrée : mythique 1, légendaire 2 (le trophée donne la moitié à chaque attribut).
-const TIER_POINTS := {4: 1.0, 5: 2.0}
-## Paliers de collection : nombre d'entrées remplies -> bonus.
+## L'archive sert surtout à voir les objets et cosmétiques à débloquer : son bonus reste
+## modeste et plafonné. Aucune stat par entrée ; seulement des paliers (nombre d'équipements
+## archivés) : au total +8 % PV, +10 % dégâts, +2 % critique, +4 % vitesse d'attaque, +5 % recharge.
+const TIER_POINTS := {4: 0.0, 5: 0.0}
 const MILESTONES := [
 	[10, {"hp_pct": 0.03}],
 	[25, {"dmg_pct": 0.02}],
 	[50, {"crit": 0.02, "mcrit": 0.02}],
 	[100, {"atk_speed": 0.04}],
-	[200, {"dmg_pct": 0.04}],
+	[200, {"dmg_pct": 0.03}],
 	[400, {"cdr": 0.05}],
-	[800, {"hp_pct": 0.06}],
-	[1500, {"dmg_pct": 0.1}],
+	[800, {"hp_pct": 0.05}],
+	[1500, {"dmg_pct": 0.05}],
 ]
 const ARMOR_CLASS_FR := {"plates": "Armures de plates", "cuir": "Armures de cuir", "tissu": "Armures de tissu"}
 
@@ -185,15 +186,8 @@ static func refusal(item: Dictionary) -> String:
 
 
 ## Bonus d'une entrée (stats).
-static func entry_bonus(k: String) -> Dictionary:
-	var e: Dictionary = GameData.eden_by_id.get(int(k.trim_prefix("e")), {}) if k.begins_with("e") else {}
-	if e.is_empty():
-		return {}
-	var pts := float(TIER_POINTS.get(mini(int(e.rarity), Items.LEGENDARY), 1.0))
-	var base := String(e.get("wtype", e.get("slot", "")))
-	if base == "trophy":
-		return {"lck": pts}  # trophées : de la chance (les trophées n'ont presque plus de stats fixes)
-	return {String(ATTR.get(base, "str")): pts}
+static func entry_bonus(_k: String) -> Dictionary:
+	return {}  # plus de bonus par entrée : seulement les paliers de collection (MILESTONES)
 
 
 ## Bonus permanent de l'archive (entrées + paliers atteints), pour toutes les classes.

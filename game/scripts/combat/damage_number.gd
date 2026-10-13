@@ -29,7 +29,7 @@ static func spawn(target: Node3D, amount: float, crit: bool, on_player: bool) ->
 	if not target.is_inside_tree():
 		return
 	var mode := String(Settings.get_v("interface", "damage_numbers"))
-	if mode == "off" or (mode == "dealt" and on_player):
+	if mode == "off" or (mode == "dealt" and on_player) or (mode == "crit" and not crit and not on_player):
 		return
 	var label := DamageNumber.new()
 	label.text = str(int(amount)) + ("!" if crit else "")
