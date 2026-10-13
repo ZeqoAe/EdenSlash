@@ -28,10 +28,35 @@ func _key(code: Key) -> InputEventKey:
 	return e
 
 
+## Manette : boutons et gâchettes branchés sur les actions, libellés quand on y joue.
+func _test_gamepad() -> void:
+	Settings.apply_bindings()
+	var has_button := func(action: String, b: int) -> bool:
+		return InputMap.action_get_events(action).any(func(e): return e is InputEventJoypadButton and e.button_index == b)
+	var has_axis := func(action: String, a: int, v: float) -> bool:
+		return InputMap.action_get_events(action).any(func(e): return e is InputEventJoypadMotion and e.axis == a and signf(e.axis_value) == signf(v))
+	check("manette : Carré attaque, Rond esquive, Triangle saut, Croix interagir",
+		has_button.call("attack", JOY_BUTTON_X) and has_button.call("dodge", JOY_BUTTON_B) and has_button.call("jump", JOY_BUTTON_Y) and has_button.call("interact", JOY_BUTTON_A))
+	check("manette : sorts sur R1, R2, L1, L2",
+		has_button.call("skill_1", JOY_BUTTON_RIGHT_SHOULDER) and has_axis.call("skill_2", JOY_AXIS_TRIGGER_RIGHT, 1.0)
+		and has_button.call("skill_3", JOY_BUTTON_LEFT_SHOULDER) and has_axis.call("skill_4", JOY_AXIS_TRIGGER_LEFT, 1.0))
+	check("manette : stick gauche pour se déplacer", has_axis.call("move_forward", JOY_AXIS_LEFT_Y, -1.0) and has_axis.call("move_right", JOY_AXIS_LEFT_X, 1.0))
+	# la gâchette R2 enfoncée déclenche bien le sort 2
+	var t := InputEventJoypadMotion.new()
+	t.axis = JOY_AXIS_TRIGGER_RIGHT
+	t.axis_value = 1.0
+	check("manette : R2 enfoncée = sort 2", t.is_action("skill_2") and t.is_action_pressed("skill_2"))
+	Gamepad.active = true
+	var lbl := Settings.action_label("skill_1", 1) + " " + Settings.action_label("interact", 1)
+	Gamepad.active = false
+	check("manette : libellés R1 et Croix (%s), clavier ensuite (%s)" % [lbl, Settings.action_label("skill_1", 1)], lbl == "R1 Croix" and Settings.action_label("skill_1", 1) != "R1")
+
+
 func _ready() -> void:
 	check("paramètres de test", Settings.save_path == Settings.TEST_SAVE_PATH)
 	Settings.reset_all()
 	_test_bindings()
+	_test_gamepad()
 	_test_presets()
 	_test_save_load()
 	await _test_menu()

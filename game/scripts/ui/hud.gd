@@ -74,6 +74,7 @@ func setup(p: Player, d: RunDirector) -> void:
 	player.xp_changed.connect(_on_xp)
 	player.skills_changed.connect(_refresh_skills)
 	Settings.changed.connect(_refresh_skills)
+	Gamepad.device_changed.connect(func(_pad): _refresh_skills())  # libellés des touches (manette ou clavier)
 	director.zone_changed.connect(func(z): _zone_text = "%s · Nv %d-%d" % [z.name, z.levels[0], z.levels[1]])
 	director.message.connect(show_message)
 	director.better_item.connect(show_better)

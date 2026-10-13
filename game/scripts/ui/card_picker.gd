@@ -274,6 +274,32 @@ func _process(_delta: float) -> void:
 		_refresh_confirm()
 
 
+## Manette : croix directionnelle ou stick gauche (gauche / droite) pour choisir une carte,
+## Croix pour valider la carte choisie (sans carte choisie, Croix clique sous le curseur).
+func _input(event: InputEvent) -> void:
+	if not _root.visible or _cards.is_empty():
+		return
+	var step := 0
+	if event is InputEventJoypadButton and event.pressed:
+		if event.button_index == JOY_BUTTON_DPAD_LEFT:
+			step = -1
+		elif event.button_index == JOY_BUTTON_DPAD_RIGHT:
+			step = 1
+		elif event.button_index == JOY_BUTTON_A and _selected >= 0:
+			_confirm_choice()
+			get_viewport().set_input_as_handled()
+			return
+	elif event is InputEventJoypadMotion and event.axis == JOY_AXIS_LEFT_X and absf(event.axis_value) > 0.7 and Time.get_ticks_msec() - _pad_step_at > 250:
+		step = 1 if event.axis_value > 0.0 else -1
+	if step != 0:
+		_pad_step_at = Time.get_ticks_msec()
+		_select(clampi((_selected if _selected >= 0 else (0 if step > 0 else _cards.size())) + (step if _selected >= 0 else 0), 0, _cards.size() - 1))
+		get_viewport().set_input_as_handled()
+
+
+var _pad_step_at := 0
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not _root.visible or not event is InputEventKey or not event.pressed or event.echo:
 		return

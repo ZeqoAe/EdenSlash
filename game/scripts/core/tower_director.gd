@@ -267,7 +267,7 @@ func objective_text() -> String:
 		"cards":
 			return "Étage %d vidé · Choisis une carte" % f
 		"chest":
-			return "Ouvre le coffre au centre [F]"
+			return "Ouvre le coffre au centre [%s]" % Settings.action_label("interact", 1)
 		"stairs":
-			return "Monte à l'étage %d [F]" % (f + 1)
+			return "Monte à l'étage %d [%s]" % [f + 1, Settings.action_label("interact", 1)]
 	return "Sommet atteint"

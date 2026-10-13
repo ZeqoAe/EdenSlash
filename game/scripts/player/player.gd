@@ -494,7 +494,7 @@ func _wants(action: String) -> bool:
 	if autoplay:
 		return false if autoplay_idle else _autoplay_wants(action)
 	if action == "attack":
-		return Input.is_action_pressed(action) and not _ui_has_mouse()
+		return Input.is_action_pressed(action) and (_pad() or not _ui_has_mouse())
 	return Input.is_action_just_pressed(action)
 
 
@@ -528,7 +528,7 @@ func _on_attack_pressed() -> void:
 ## suivre le curseur), clic sur un monstre = le verrouiller et l'attaquer.
 func _pointer_input() -> void:
 	var act := Settings.move_click_action()
-	if autoplay or bot or act == "" or is_dead:
+	if autoplay or bot or act == "" or is_dead or _pad():
 		_click_moving = false
 		return
 	if Input.is_action_just_pressed(act) and not _ui_has_mouse():
@@ -558,7 +558,43 @@ func _set_move_goal(marker: bool) -> void:
 
 ## Le héros regarde le curseur en permanence (visée au curseur).
 func _aims_at_cursor() -> bool:
-	return not autoplay and Settings.cursor_aim()
+	return not autoplay and Settings.cursor_aim() and not _pad()
+
+
+## On joue à la manette (Gamepad) : visée automatique au lieu du curseur.
+func _pad() -> bool:
+	return Gamepad.active and not autoplay and bot == null
+
+
+## Point visé à la manette : le monstre le plus proche devant le héros (dans la direction du
+## stick gauche, sinon de son regard), sinon un monstre tout proche, sinon droit devant.
+func _pad_aim_point() -> Vector3:
+	var v := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var dir := forward()
+	var cam := get_viewport().get_camera_3d()
+	if v.length() > 0.3 and cam:
+		dir = Vector3(v.x, 0, v.y).rotated(Vector3.UP, cam.global_rotation.y)
+	dir.y = 0.0
+	dir = dir.normalized()
+	var best: Combatant = null
+	var best_d := INF
+	for node in get_tree().get_nodes_in_group("monsters"):
+		var m := node as Combatant
+		if m == null or m.is_dead:
+			continue
+		var to := m.global_position - global_position
+		to.y = 0.0
+		var d := to.length()
+		if d > 14.0:
+			continue
+		var ahead := d < 3.0 or rad_to_deg(dir.angle_to(to.normalized())) < 55.0
+		var score := d if ahead else d + 20.0
+		if score < best_d and (ahead or d < 5.0):
+			best = m
+			best_d = score
+	if best:
+		return best.global_position
+	return global_position + dir * 6.0
 
 
 func _cursor_dir() -> Vector3:
@@ -1775,6 +1811,8 @@ func unstuck() -> void:
 
 # --- visée ---------------------------------------------------------------------------
 func mouse_ground_point() -> Vector3:
+	if _pad():
+		return _pad_aim_point()
 	var cam := get_viewport().get_camera_3d()
 	if cam == null:
 		return Vector3.INF

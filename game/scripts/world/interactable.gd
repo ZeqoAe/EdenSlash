@@ -52,6 +52,10 @@ func set_title(t: String) -> void:
 
 
 func prompt() -> String:
+	return _prompt().replace("[F]", "[%s]" % Settings.action_label("interact", 1))
+
+
+func _prompt() -> String:
 	match kind:
 		"chest":
 			return "[F] Ouvrir — %s" % title

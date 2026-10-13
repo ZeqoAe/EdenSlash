@@ -49,6 +49,25 @@ const DEFAULT_BINDS := {
 	"extract": [{"k": KEY_X}],
 	"quick_equip": [{"k": KEY_G}],
 }
+## Manette (disposition fixe, non modifiable ; voir Gamepad) : {"b": bouton} ou
+## {"a": axe, "v": sens}, et le libellé affiché quand on joue à la manette.
+const PAD_BINDS := {
+	"move_forward": [{"a": JOY_AXIS_LEFT_Y, "v": -1.0}], "move_back": [{"a": JOY_AXIS_LEFT_Y, "v": 1.0}],
+	"move_left": [{"a": JOY_AXIS_LEFT_X, "v": -1.0}], "move_right": [{"a": JOY_AXIS_LEFT_X, "v": 1.0}],
+	"attack": [{"b": JOY_BUTTON_X}], "dodge": [{"b": JOY_BUTTON_B}], "jump": [{"b": JOY_BUTTON_Y}],
+	"interact": [{"b": JOY_BUTTON_A}],
+	"skill_1": [{"b": JOY_BUTTON_RIGHT_SHOULDER}], "skill_2": [{"a": JOY_AXIS_TRIGGER_RIGHT, "v": 1.0}],
+	"skill_3": [{"b": JOY_BUTTON_LEFT_SHOULDER}], "skill_4": [{"a": JOY_AXIS_TRIGGER_LEFT, "v": 1.0}],
+	"pause": [{"b": JOY_BUTTON_START}], "map": [{"b": JOY_BUTTON_BACK}],
+	"objectives": [{"b": JOY_BUTTON_DPAD_LEFT}], "quick_equip": [{"b": JOY_BUTTON_DPAD_RIGHT}],
+}
+const PAD_LABELS := {
+	"attack": "Carré", "dodge": "Rond", "jump": "Triangle", "interact": "Croix",
+	"skill_1": "R1", "skill_2": "R2", "skill_3": "L1", "skill_4": "L2",
+	"pause": "Options", "map": "Share", "objectives": "← (croix)", "quick_equip": "→ (croix)",
+	"move_forward": "Stick gauche", "move_back": "Stick gauche", "move_left": "Stick gauche", "move_right": "Stick gauche",
+}
+
 ## Touches de test, non modifiables.
 const DEBUG_BINDS := {
 	"debug_level": KEY_F5, "debug_gateway": KEY_F6, "debug_dungeon": KEY_F7,
@@ -259,6 +278,10 @@ func apply_bindings() -> void:
 			var ev := event_from(e)
 			if ev:
 				InputMap.action_add_event(action, ev)
+		for e in PAD_BINDS.get(action, []):
+			InputMap.action_add_event(action, pad_event(e))
+		if String(action).begins_with("move_"):
+			InputMap.action_set_deadzone(action, 0.2)  # stick : déplacement progressif
 	for action in DEBUG_BINDS:
 		if not InputMap.has_action(action):
 			InputMap.add_action(action)
@@ -275,6 +298,19 @@ static func event_from(e: Dictionary) -> InputEvent:
 		ev.button_index = int(e.m) as MouseButton
 		return ev
 	return null
+
+
+static func pad_event(e: Dictionary) -> InputEvent:
+	if e.has("b"):
+		var b := InputEventJoypadButton.new()
+		b.button_index = int(e.b) as JoyButton
+		b.device = -1  # toutes les manettes
+		return b
+	var m := InputEventJoypadMotion.new()
+	m.axis = int(e.a) as JoyAxis
+	m.axis_value = float(e.v)
+	m.device = -1
+	return m
 
 
 ## Descripteur sauvegardable d'un évènement (touche ou bouton), {} si non utilisable.
@@ -309,6 +345,8 @@ static func event_label(e: Dictionary) -> String:
 
 ## Libellé court des touches d'une action (« A / 1 »), pour le HUD et l'aide.
 func action_label(action: String, max_events := 2) -> String:
+	if Gamepad.active and PAD_LABELS.has(action):
+		return String(PAD_LABELS[action])
 	var parts: PackedStringArray = []
 	for e in binds.get(action, []).slice(0, max_events):
 		parts.append(event_label(e))

@@ -51,9 +51,29 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 
+## Manette : stick droit = rotation et inclinaison, croix directionnelle haut / bas = zoom.
+const PAD_TURN := 150.0  # degrés par seconde, stick au bout
+
+
+func _pad_camera(delta: float) -> void:
+	if not allow_input or get_tree().paused or Input.get_connected_joypads().is_empty():
+		return
+	var r := Gamepad.stick(JOY_AXIS_RIGHT_X, JOY_AXIS_RIGHT_Y)
+	if r != Vector2.ZERO:
+		var speed := PAD_TURN * float(Settings.get_v("camera", "rotate_speed"))
+		var inv := -1.0 if Settings.get_v("camera", "invert_y") else 1.0
+		yaw_deg = wrapf(yaw_deg - r.x * speed * delta, -180.0, 180.0)
+		pitch_deg = clampf(pitch_deg + r.y * speed * 0.5 * inv * delta, 25.0, 75.0)
+	var lo := ACTION_MIN_DIST if Settings.aim_mode() == "action" else 7.0
+	if Input.is_joy_button_pressed(0, JOY_BUTTON_DPAD_UP):
+		distance = maxf(lo, distance - 9.0 * delta)
+	elif Input.is_joy_button_pressed(0, JOY_BUTTON_DPAD_DOWN):
+		distance = minf(28.0, distance + 9.0 * delta)
+
+
 ## Mode action : le curseur écarté du centre fait tourner la caméra (plus vite au bord).
 func _steer(delta: float) -> void:
-	if not allow_input or not DisplayServer.window_is_focused() or get_tree().paused:
+	if not allow_input or not DisplayServer.window_is_focused() or get_tree().paused or Gamepad.active:
 		return
 	if get_viewport().gui_get_hovered_control() != null:
 		return  # au-dessus d'un menu ou de la barre de sorts
@@ -78,6 +98,7 @@ func _process(delta: float) -> void:
 		return
 	global_position = global_position.lerp(target.global_position, clampf(10.0 * delta, 0.0, 1.0))
 	var action := Settings.aim_mode() == "action"
+	_pad_camera(delta)
 	if action:
 		_steer(delta)
 	# mode action : plus on zoome, plus la caméra descend derrière le héros (au-dessus de
