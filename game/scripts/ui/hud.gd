@@ -474,7 +474,7 @@ func _process(delta: float) -> void:
 			_slots[i].chain_icons = ch.slice(at + 1).map(func(e): return UiTheme.texture(String(Run.skill_def(int(e.id)).get("icon", ""))))
 			_slots[i].chain_zone = Player.CHAIN_ZONE
 			if st.phase == "lock":
-				_slots[i].set_cooldown(float(st.left), Player.CHAIN_DELAY)
+				_slots[i].set_cooldown(float(st.left), float(st.get("total", Player.CHAIN_DELAY)))
 				_slots[i].chain_bar = 0.0
 				_slots[i].chain_ready = false
 			else:

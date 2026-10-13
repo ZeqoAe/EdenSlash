@@ -94,6 +94,7 @@ var ml_counts := {"perfect": 0, "chain": 0, "dodged": 0}  # récompenses de l'ar
 var foe := false
 var kit_skills: Array = []  # [{id, rank}] : sort principal de chaque case (héros ennemi)
 var kit_chains: Dictionary = {}  # case -> [{id, rank}] : enchaînements (héros ennemi)
+var pvp_capped: Array = []  # statistiques ramenées à leur plafond JcJ (PvpCaps, duel)
 var foe_gear: Dictionary = {}  # emplacement -> objet : équipement du héros ennemi (duel)
 var foe_look: Dictionary = {}  # {body, head, back} : apparence du héros ennemi (duel)
 
@@ -273,6 +274,7 @@ func recalc_stats() -> void:
 	pickup_mult = 1.0 + ps.get("pickup", 0.0)
 	xp_mult = 1.0 + ps.get("xp_pct", 0.0)
 	execute = minf(ps.get("execute", 0.0), 0.3)
+	pvp_capped = PvpCaps.apply(self) if PvpCaps.active() else []  # duel : plafonds JcJ
 	procs = [] if foe else Run.passive_procs() + Profile.equipment_procs()
 	hp = clampf(max_hp * ratio, 1.0, max_hp)
 	health_changed.emit(hp, max_hp)
@@ -284,7 +286,7 @@ func recalc_stats() -> void:
 ## Tableau des statistiques affiché dans le menu Personnage.
 func stat_sheet() -> Array:
 	var pc := func(v: float) -> String: return "%d %%" % roundi(v * 100)
-	return [
+	var rows := [
 		["Niveau", str(level)], ["PV", "%d / %d" % [hp, max_hp]],
 		["— Attributs —", ""],
 		["Force", str(roundi(attrs.get("str", 0.0)))], ["Agilité", str(roundi(attrs.get("agi", 0.0)))],
@@ -304,6 +306,15 @@ func stat_sheet() -> Array:
 		["Dégâts", "+%d %%" % roundi((dmg_mult - 1.0) * 100)], ["Zone d'effet", "+%d %%" % roundi((area_mult - 1.0) * 100)],
 		["Portée", "+%d %%" % roundi((reach_mult - 1.0) * 100)],
 	]
+	# duel : les statistiques ramenées à leur plafond JcJ sont signalées
+	var cap_rows := {"atk_speed": "Vitesse d'attaque", "cast_speed": "Vitesse d'incantation", "crit": "Critique physique",
+		"mcrit": "Critique magique", "crit_dmg": "Dégâts critiques", "move_mult": "Vitesse", "lifesteal": "Vol de vie",
+		"heal_power": "Puissance de soin", "dmg_mult": "Dégâts", "area_mult": "Zone d'effet", "reach_mult": "Portée"}
+	for k in pvp_capped:
+		for r in rows:
+			if r[0] == cap_rows.get(k, ""):
+				r[1] = String(r[1]) + " (plafond JcJ)"
+	return rows
 
 
 func dot_power() -> float:
@@ -1376,6 +1387,9 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 ## barre de 3 s se remplit au-dessus de la case ; rappuyer dans la zone de la barre
 ## lance le sort suivant. Trop tôt (blocage compris), trop tard ou barre écoulée : la chaîne
 ## est cassée et la case reprend la recharge du premier sort.
+## Chaque sort enchaîné a sa propre recharge : tant qu'elle court, la case reste bloquée (appuyer
+## affiche « En recharge » sans casser la chaîne) ; s'il ne peut pas être prêt avant la fin de
+## la barre, la chaîne n'est pas proposée.
 var _chain := {}
 
 
@@ -1386,7 +1400,8 @@ func _chain_open(slot: int, next: int) -> void:
 		_chain.erase(slot)
 
 
-## État de l'enchaînement de la case : {next, phase ("lock" ou "bar"), left, p} ou {}.
+## État de l'enchaînement de la case : {next, phase ("lock" ou "bar"), left, total, recharge, p}
+## ou {} ; recharge : le blocage vient de la recharge du sort suivant (total : sa recharge).
 func chain_state(slot: int) -> Dictionary:
 	if not _chain.has(slot):
 		return {}
@@ -1400,8 +1415,14 @@ func chain_state(slot: int) -> Dictionary:
 		_chain.erase(slot)  # barre écoulée : chaîne perdue
 		return {}
 	var d := kit_skill_def(int(ch[int(c.next)].id))
-	if e < CHAIN_DELAY:
-		return {"next": d, "phase": "lock", "left": CHAIN_DELAY - e, "p": 0.0}
+	var cd := maxf(0.0, float(skill_ready_at.get(int(d.get("id", 0)), 0.0)) - _time)
+	if cd >= CHAIN_DELAY + CHAIN_BAR - e:
+		_chain.erase(slot)  # le sort suivant ne sera pas rechargé avant la fin de la barre
+		return {}
+	if e < CHAIN_DELAY or cd > 0.0:
+		var by_cd := cd > CHAIN_DELAY - e
+		return {"next": d, "phase": "lock", "left": maxf(CHAIN_DELAY - e, cd), "recharge": by_cd,
+			"total": skill_cooldown(d) if by_cd else CHAIN_DELAY, "p": 0.0}
 	return {"next": d, "phase": "bar", "left": 0.0, "p": (e - CHAIN_DELAY) / CHAIN_BAR}
 
 
@@ -1421,6 +1442,9 @@ func _chain_press(slot: int) -> int:
 	var st := chain_state(slot)
 	if st.is_empty() or _time <= float(_chain[slot].t0):
 		return 0  # l'appui qui vient d'ouvrir la chaîne ne compte pas une 2e fois
+	if st.get("recharge", false):
+		DamageNumber.spawn_text(self, "En recharge", Color(0.7, 0.8, 1.0))
+		return 1  # appui pris, la chaîne attend la fin de la recharge
 	if not chain_ready(slot):
 		var early: bool = st.phase == "lock" or float(st.p) < CHAIN_ZONE.x
 		_chain.erase(slot)
@@ -1433,6 +1457,7 @@ func _chain_press(slot: int) -> int:
 	if autoplay:
 		print("[enchainement] case %d, sort %d : %s" % [slot + 1, step + 1, nxt.get("name", "?")])
 	_shake(0.35)
+	skill_ready_at[int(nxt.id)] = _time + skill_cooldown(nxt)
 	_cast_skill(nxt, slot, step)
 	_chain_open(slot, step)
 	return 2
