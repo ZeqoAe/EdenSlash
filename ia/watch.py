@@ -26,7 +26,7 @@ from eden_env import GodotVecEnv
 HERE = Path(__file__).resolve().parent
 CHOICES = {
     "mannequin4": [DUMMY4], "mannequin": [DUMMY12], "fuyard": [FLEE, FLEE3], "survie": [SURVIVE, SURVIVE2],
-    "facile": [rival(0)], "normal": [rival(1)], "difficile": [rival(2)], "hardcore": [rival(3)],
+    "facile": [rival(0)], "normal": [rival(1)], "difficile": [rival(2)], "hardcore": [ALL],
     "toutes": [ALL], "duo": [DUO],
 }
 

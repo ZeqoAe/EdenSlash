@@ -71,8 +71,9 @@ def clean_win(max_taken: float):
     return lambda i: i["result"] == "win" and i["taken"] < max_taken
 
 
-ALL = rival(3)
-DUO = rival(3, count=2, enemy_hp=0.6, max_time=120)  # 1 contre 2, comme dans la Tour
+# hardcore : 8 fois les PV du héros, 90 s ne suffisaient pas aux classes qui frappent moins fort
+ALL = rival(3, max_time=180)
+DUO = rival(3, count=2, enemy_hp=0.6, max_time=180)  # 1 contre 2, comme dans la Tour
 
 # nom, scénarios (poids, réglages), scénario jugé, réussite, seuil (tous combats confondus),
 # par_classe : seuil que CHAQUE classe doit atteindre (sur ses CLASS_WINDOW derniers combats),
@@ -98,7 +99,7 @@ STAGES = [
          mix=[(0.7, rival(2)), (0.1, rival(1)), (0.1, SURVIVE), (0.1, FLEE)],
          juge="rival", reussite=wins, seuil=0.8, par_classe=0.6, min_steps=2_000_000, cerveau="cerveau_difficile"),
     dict(nom="8. Adversaires HARDCORE (chaque classe doit gagner 70 % de ses combats)",
-         mix=[(0.75, rival(3)), (0.1, rival(2)), (0.1, SURVIVE2), (0.05, FLEE)],
+         mix=[(0.75, ALL), (0.1, rival(2)), (0.1, SURVIVE2), (0.05, FLEE)],
          juge="rival", reussite=wins, seuil=0.8, par_classe=0.7, min_steps=3_000_000, cerveau="cerveau_hardcore"),
     dict(nom="9. Expert : hardcore et 1 contre 2, en perdant moins de 30 % de ses PV",
          mix=[(0.5, ALL), (0.3, DUO), (0.1, SURVIVE2), (0.1, FLEE3)],

@@ -82,12 +82,12 @@ const PRESETS := {
 	"mannequin": {"scenario": "dummy", "skills": 12, "max_time": 30},
 	"fuyard": {"scenario": "flee", "skills": 12, "difficulty": 2, "max_time": 40},
 	"survie": {"scenario": "monster", "skills": 12, "hero_hp": 1, "max_time": 40, "enemy_hp": 20.0, "cc_immune": true},
-	"facile": {"scenario": "rival", "skills": 12, "difficulty": 0, "max_time": 90},
-	"normal": {"scenario": "rival", "skills": 12, "difficulty": 1, "max_time": 90},
-	"difficile": {"scenario": "rival", "skills": 12, "difficulty": 2, "max_time": 90},
-	"hardcore": {"scenario": "rival", "skills": 12, "difficulty": 3, "max_time": 90},
-	"toutes": {"scenario": "rival", "skills": 12, "difficulty": 3, "max_time": 90, "enemy_class": "random"},
-	"duo": {"scenario": "rival", "skills": 12, "difficulty": 3, "max_time": 120, "enemy_class": "random", "count": 2, "enemy_hp": 0.6},
+	"facile": {"scenario": "rival", "skills": 12, "difficulty": 0, "max_time": 90, "enemy_class": "random"},
+	"normal": {"scenario": "rival", "skills": 12, "difficulty": 1, "max_time": 90, "enemy_class": "random"},
+	"difficile": {"scenario": "rival", "skills": 12, "difficulty": 2, "max_time": 90, "enemy_class": "random"},
+	"hardcore": {"scenario": "rival", "skills": 12, "difficulty": 3, "max_time": 180, "enemy_class": "random"},
+	"toutes": {"scenario": "rival", "skills": 12, "difficulty": 3, "max_time": 180, "enemy_class": "random"},
+	"duo": {"scenario": "rival", "skills": 12, "difficulty": 3, "max_time": 180, "enemy_class": "random", "count": 2, "enemy_hp": 0.6},
 }
 
 
