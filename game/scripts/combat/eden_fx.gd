@@ -65,6 +65,10 @@ const AURA_INTENSITY := 1.15
 ## (< 1 : l'effet reste plus longtemps à l'écran).
 const SPELL_LUM_MIX := 0.55
 const SPELL_TIME := 0.85
+## Sorts : relief de la texture (> 1 : plus contrasté), fond assombri sous l'effet, cœur lumineux.
+const SPELL_CONTRAST := 1.7
+const SPELL_BURN := 0.75
+const SPELL_CORE := 0.9
 
 
 ## Auras portées par la classe [param cls_id], attachées à [param parent].
@@ -145,6 +149,11 @@ func _ready() -> void:
 		else:
 			# sorts et impacts : à moitié en couleur pleine, plus d'impact sur un sol clair
 			m.set_shader_parameter("lum_mix", SPELL_LUM_MIX)
+			m.set_shader_parameter("spell", 1.0)
+			m.set_shader_parameter("tex_contrast", SPELL_CONTRAST)
+			m.set_shader_parameter("burn", SPELL_BURN)
+			m.set_shader_parameter("core", SPELL_CORE)
+			m.set_shader_parameter("saturation", 1.6)
 		if info.has("tex"):
 			m.set_shader_parameter("tex", _texture("res://assets/fx/" + String(info.tex)))
 		elif src:

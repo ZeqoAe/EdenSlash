@@ -43,19 +43,21 @@ static func style_environment(env: Environment) -> void:
 	env.ssil_enabled = q >= 3
 	env.ssil_radius = 4.0
 	env.ssil_intensity = 0.8
-	# lueur : seuls les effets et les reflets très lumineux brillent
+	# lueur : seuls les cœurs des effets (couleurs HDR) brillent. Pas de « bloom » sur toute
+	# l'image ni de mélange écran : ils étalaient un voile laiteux sur le décor clair et
+	# faisaient virer les sorts au blanc (on perdait leur texture).
 	env.glow_enabled = q >= 1
-	env.glow_intensity = 0.55
+	env.glow_intensity = 0.4
 	env.glow_strength = 1.0
-	env.glow_bloom = 0.04
-	env.glow_hdr_threshold = 1.05
-	env.glow_hdr_scale = 2.0
-	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SCREEN
+	env.glow_bloom = 0.0
+	env.glow_hdr_threshold = 1.3
+	env.glow_hdr_scale = 1.5
+	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
 	for i in 7:
-		env.set_glow_level(i, 1.0 if i in [1, 2, 3, 4] else 0.0)
+		env.set_glow_level(i, 1.0 if i in [2, 3, 4] else 0.0)
 	# brume : le lointain prend la couleur du ciel (perspective aérienne)
 	env.fog_height_density = 0.0
-	env.fog_aerial_perspective = 0.35
+	env.fog_aerial_perspective = 0.2
 	env.fog_sky_affect = 0.35
 
 

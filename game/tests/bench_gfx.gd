@@ -2,7 +2,7 @@ extends Node3D
 ## Banc graphique : toujours la même vue (map générée graine fixe, héros, monstres,
 ## un effet d'Eden) pour comparer le rendu avant / après une modification.
 ## Captures dans user://shots/gfx_<zone>.png puis quitte.
-## godot --path game --rendering-driver vulkan res://tests/bench_gfx.tscn -- <zone> [fx]
+## godot --path game --rendering-driver vulkan res://tests/bench_gfx.tscn -- <zone> [fx] [instant]
 
 const MONSTERS := ["56001", "56021", "56041"]
 
@@ -11,6 +11,7 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	var zone := String(args[0]) if args.size() > 0 else "limestone"
 	var fx := String(args[1]) if args.size() > 1 else "s36441"
+	var at := float(args[2]) if args.size() > 2 else 0.35  # instant de la capture dans l'effet (s)
 	var bd := MapBackdrop.new()
 	add_child(bd)
 	bd.show_zone(zone)
@@ -48,7 +49,7 @@ func _ready() -> void:
 	bd._fade.color.a = 0.0
 	await get_tree().create_timer(1.0).timeout
 	EdenFx.play(self, fx, p + Vector3(0, 0.1, -1.5), 0.0, GameData.HERO_SCALE)
-	await get_tree().create_timer(0.35).timeout
+	await get_tree().create_timer(at).timeout
 	await RenderingServer.frame_post_draw
 	DirAccess.make_dir_recursive_absolute("user://shots")
 	get_viewport().get_texture().get_image().save_png("user://shots/gfx_%s.png" % zone)
