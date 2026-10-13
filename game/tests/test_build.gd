@@ -290,6 +290,10 @@ func _test_gear_rules() -> void:
 	var got := Rewards.open(ch)
 	check("coffre d'équipement : mythique ou légendaire", int(got.items[0].rarity) >= Items.MYTHIC)
 	check("butin des monstres : jamais mythique ni légendaire", range(300).all(func(_i): return int(Items.generate(10, 0.9).rarity) <= 3))
+	# trophées de build : chaque famille a un texte lisible ; esquive -> onde
+	var bad: Array = Trophies.KINDS.keys().filter(func(k): return Trophies.describe(Trophies.proc_for(k, 3)).strip_edges() == "" or Trophies.describe(Trophies.proc_for(k, 3)).contains("%d"))
+	check("%d familles de trophées, toutes décrites (sans texte : %s)" % [Trophies.KINDS.size(), bad], Trophies.KINDS.size() >= 30 and bad.is_empty())
+	check("trophée Onde d'esquive : se déclenche en esquivant", String(Trophies.proc_for("dodge_wave", 3).trigger) == "dodge")
 
 
 ## Bannir et garder des cartes pendant le choix.

@@ -52,9 +52,33 @@ STAT_KIND = {"agi": "agi", "str": "str", "int": "int_wis", "wis": "int_wis", "lc
              "crit": "crit", "mcrit": "crit", "atk_speed": "speed", "def": "guard", "def_pct": "guard",
              "hp": "regen", "move_speed": "evade", "patk": "str", "matk": "int_wis"}
 FALLBACK = ["agi", "crit", "double", "speed", "str", "int_wis", "guard", "regen", "storm", "might"]
+# Variété (0.1.37) : chaque famille d'Eden a des variantes de build du même archétype ; le
+# trophée prend l'une d'elles (au hasard, mais toujours la même pour un trophée donné).
+VARIANTS = {
+    "agi": ["agi", "wind_dance", "dodge_crit"],
+    "evade": ["evade", "dodge_wave", "shadow_blades", "wind_dance", "perfect_nova"],
+    "crit": ["crit", "crit_chain", "crit_heal", "dodge_crit"],
+    "speed": ["speed", "harvest", "momentum"],
+    "str": ["str", "berserk", "quake"],
+    "might": ["might", "quake", "soul_burst", "berserk"],
+    "int_wis": ["int_wis", "arcane_echo", "mana_surge"],
+    "guard": ["guard", "thorns", "last_stand", "resolve"],
+    "regen": ["regen", "vampire", "crit_heal", "last_stand"],
+    "luck": ["luck", "harvest", "soul_burst"],
+    "storm": ["storm", "crit_chain"],
+    "venom": ["venom", "shadow_blades"],
+}
 
 
 def kind_of(e):
+    base = _base_kind(e)
+    vs = VARIANTS.get(base)
+    if not vs:
+        return base
+    return vs[zlib.crc32(("v" + e["name"]).encode()) % len(vs)]
+
+
+def _base_kind(e):
     k = _kind(e)
     r = e.get("r_old", {})
     text = e.get("eden_text", "").lower()

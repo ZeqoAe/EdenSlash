@@ -186,5 +186,5 @@ static func _buff_text(st: String) -> String:
 	return {
 		"frenzy": "Frénésie (+30 % de vitesse d'attaque)", "keen": "Œil acéré (+25 % de critique)",
 		"haste": "Hâte (+30 % de vitesse)", "barrier": "Barrière (-40 % de dégâts subis)",
-		"fury": "Fureur (+25 % de dégâts)",
+		"fury": "Fureur (+25 % de dégâts)", "thorns": "Épines (renvoie une partie des dégâts subis)",
 	}.get(st, st)

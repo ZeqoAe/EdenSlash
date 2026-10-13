@@ -35,6 +35,24 @@ const KINDS := {
 	"frost": {"name": "Givre", "trigger": "hit", "chance": 0.04, "cd": 2.0, "effect": "freeze", "radius": 3.0, "duration": 1.5},
 	"venom": {"name": "Venin", "trigger": "hit", "chance": 0.05, "cd": 1.0, "effect": "explosion", "mult": 0.7, "radius": 3.0, "applies": {"poison": 4.0}, "color": Color(0.55, 0.9, 0.3, 0.9)},
 	"stun": {"name": "Choc", "trigger": "hit", "chance": 0.03, "cd": 3.0, "effect": "stun", "radius": 1.5, "duration": 1.5},
+	# --- trophées de build (0.1.37) : esquive, critique, élimination, tank, sorts, combo ---
+	"dodge_wave": {"name": "Onde d'esquive", "trigger": "dodge", "chance": 1.0, "cd": 3.0, "effect": "explosion", "mult": 1.2, "radius": 4.0, "color": Color(0.7, 1.0, 0.9, 0.9)},
+	"dodge_crit": {"name": "Riposte", "trigger": "dodge", "chance": 1.0, "cd": 5.0, "effect": "stat_buff", "status": "t_riposte", "stats": {"crit": 0.4, "crit_dmg": 0.4}, "duration": 3.0},
+	"wind_dance": {"name": "Danse du vent", "trigger": "dodge", "chance": 1.0, "cd": 6.0, "effect": "stat_buff", "status": "t_wind", "stats": {"agi_pct": 0.25, "atk_speed": 0.15}, "duration": 5.0},
+	"shadow_blades": {"name": "Lames d'ombre", "trigger": "dodge", "chance": 1.0, "cd": 4.0, "effect": "explosion", "mult": 0.8, "radius": 3.0, "applies": {"bleed": 4.0}, "color": Color(0.6, 0.4, 0.9, 0.9)},
+	"perfect_nova": {"name": "Miroir de givre", "trigger": "perfect", "chance": 1.0, "cd": 2.0, "effect": "nova", "radius": 5.0, "duration": 1.5},
+	"crit_chain": {"name": "Arc électrique", "trigger": "crit", "chance": 0.3, "cd": 1.5, "effect": "lightning", "mult": 0.8, "chain": 4, "radius": 7.0},
+	"crit_heal": {"name": "Sang vif", "trigger": "crit", "chance": 0.3, "cd": 2.0, "effect": "heal", "amount": 0.02},
+	"quake": {"name": "Séisme", "trigger": "finisher", "chance": 1.0, "cd": 3.0, "effect": "explosion", "mult": 1.0, "radius": 4.5, "applies": {"stun": 0.6}, "color": Color(0.95, 0.75, 0.4, 0.9)},
+	"berserk": {"name": "Fureur du désespoir", "trigger": "low_hp", "chance": 1.0, "cd": 30.0, "effect": "stat_buff", "status": "t_berserk", "stats": {"dmg_pct": 0.4, "atk_speed": 0.3}, "duration": 8.0},
+	"arcane_echo": {"name": "Écho arcanique", "trigger": "skill_hit", "chance": 0.2, "cd": 2.0, "effect": "echo", "mult": 0.5},
+	"mana_surge": {"name": "Afflux", "trigger": "skill_hit", "chance": 0.25, "cd": 3.0, "effect": "cdr", "amount": 0.5},
+	"thorns": {"name": "Épines", "trigger": "hurt", "chance": 0.25, "cd": 10.0, "effect": "buff", "status": "thorns", "duration": 6.0},
+	"last_stand": {"name": "Dernier rempart", "trigger": "low_hp", "chance": 1.0, "cd": 45.0, "effect": "heal", "amount": 0.25, "then": [{"effect": "buff", "status": "barrier", "duration": 4.0}]},
+	"vampire": {"name": "Soif de sang", "trigger": "kill", "chance": 0.2, "cd": 6.0, "effect": "stat_buff", "status": "t_vamp", "stats": {"lifesteal": 0.06}, "duration": 6.0},
+	"soul_burst": {"name": "Âmes explosives", "trigger": "kill", "chance": 0.25, "cd": 0.5, "effect": "explosion", "mult": 1.0, "radius": 3.5},
+	"momentum": {"name": "Élan", "trigger": "kill", "chance": 0.3, "cd": 1.0, "effect": "cdr", "amount": 0.3},
+	"harvest": {"name": "Moisson", "trigger": "kill", "chance": 0.2, "cd": 4.0, "effect": "stat_buff", "status": "t_harvest", "stats": {"move_speed": 0.25, "dmg_pct": 0.1}, "duration": 5.0},
 }
 ## Statuts des buffs de trophée : nom, couleur, icône reprise d'un buff proche.
 const STATUSES := {
@@ -49,10 +67,16 @@ const STATUSES := {
 	"t_power": {"name": "Puissance", "color": Color(1.0, 0.35, 0.35), "icon": "fury"},
 	"t_guard": {"name": "Carapace", "color": Color(0.7, 0.85, 1.0), "icon": "barrier"},
 	"t_evade": {"name": "Pas de l'ombre", "color": Color(0.7, 1.0, 0.7), "icon": "evasion"},
+	"t_riposte": {"name": "Riposte", "color": Color(1.0, 0.85, 0.5), "icon": "keen"},
+	"t_wind": {"name": "Danse du vent", "color": Color(0.6, 1.0, 0.85), "icon": "haste"},
+	"t_berserk": {"name": "Fureur du désespoir", "color": Color(1.0, 0.3, 0.25), "icon": "fury"},
+	"t_vamp": {"name": "Soif de sang", "color": Color(0.9, 0.2, 0.3), "icon": "regen"},
+	"t_harvest": {"name": "Moisson", "color": Color(0.9, 0.8, 0.4), "icon": "haste"},
 }
 const STAT_FR := {"str_pct": "Force", "agi_pct": "Agilité", "int_pct": "Intelligence", "wis_pct": "Sagesse", "lck_pct": "Chance",
 	"crit": "chances de critique", "mcrit": "", "crit_dmg": "dégâts critiques", "atk_speed": "vitesse d'attaque",
-	"cast_speed": "vitesse d'incantation", "dmg_pct": "dégâts", "def_pct": "défense", "eva": "esquive", "move_speed": "vitesse de déplacement"}
+	"cast_speed": "vitesse d'incantation", "dmg_pct": "dégâts", "def_pct": "défense", "eva": "esquive", "move_speed": "vitesse de déplacement",
+	"lifesteal": "vol de vie"}
 
 
 ## Le modèle d'Eden peut-il tomber en butin ?

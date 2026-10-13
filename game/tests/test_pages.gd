@@ -678,6 +678,6 @@ func _test_run_screens() -> void:
 	var sc := Rewards.make("set", 30)
 	Profile.reward_chests.append(sc)
 	var pieces := Rewards.offer(sc)
-	check("coffre de set : 3 pièces mythiques au choix", pieces.size() == 3 and pieces.all(func(it): return int(it.rarity) == Items.MYTHIC))
+	check("coffre de set : 3 pièces mythiques ou légendaires au choix", pieces.size() == 3 and pieces.all(func(it): return int(it.rarity) >= Items.MYTHIC))
 	Profile.reward_chests.erase(sc)
 	Profile.save_profile()

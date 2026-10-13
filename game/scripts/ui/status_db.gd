@@ -18,7 +18,7 @@ const EDEN_ICONS := {
 const BUFFS := ["solar", "shrine", "marduk", "frenzy", "keen", "haste", "barrier", "fury", "flow", "regen", "invisible", "evasion",
 	"titan", "survival", "might", "swift", "grace", "vitality", "hunter_stance", "angel", "thorns", "resolve",
 	"t_agi", "t_mind", "t_str", "t_arcane", "t_all", "t_luck", "t_crit", "t_speed", "t_power", "t_guard", "t_evade",
-	"spell_str", "spell_agi", "spell_int", "spell_wis"]
+	"spell_str", "spell_agi", "spell_int", "spell_wis", "t_riposte", "t_wind", "t_berserk", "t_vamp", "t_harvest"]
 const DESC := {
 	"bleed": "Perd 15 % de l'attaque de la source en PV chaque seconde.",
 	"burn": "Perd 25 % de l'attaque de la source en PV chaque seconde.",
@@ -60,6 +60,11 @@ const DESC := {
 	"spell_agi": "Sort amélioré : Agilité accrue.",
 	"spell_int": "Sort amélioré : Intelligence accrue.",
 	"spell_wis": "Sort amélioré : Sagesse accrue.",
+	"t_riposte": "Trophée : critique et dégâts critiques accrus après une esquive.",
+	"t_wind": "Trophée : Agilité et vitesse d'attaque accrues après une esquive.",
+	"t_berserk": "Trophée : dégâts et vitesse d'attaque accrus sous 30 % de PV.",
+	"t_vamp": "Trophée : vol de vie.",
+	"t_harvest": "Trophée : vitesse et dégâts accrus après une élimination.",
 	"t_agi": "Trophée : Agilité accrue.",
 	"t_mind": "Trophée : Agilité et Intelligence accrues.",
 	"t_str": "Trophée : Force accrue.",

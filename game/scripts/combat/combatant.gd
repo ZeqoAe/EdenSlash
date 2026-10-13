@@ -83,6 +83,11 @@ const STATUS_INFO := {
 	"t_power": {"name": "Puissance", "color": Color(1.0, 0.35, 0.35)},
 	"t_guard": {"name": "Carapace", "color": Color(0.7, 0.85, 1.0)},
 	"t_evade": {"name": "Pas de l'ombre", "color": Color(0.7, 1.0, 0.7)},
+	"t_riposte": {"name": "Riposte", "color": Color(1.0, 0.85, 0.5)},
+	"t_wind": {"name": "Danse du vent", "color": Color(0.6, 1.0, 0.85)},
+	"t_berserk": {"name": "Fureur du désespoir", "color": Color(1.0, 0.3, 0.25)},
+	"t_vamp": {"name": "Soif de sang", "color": Color(0.9, 0.2, 0.3)},
+	"t_harvest": {"name": "Moisson", "color": Color(0.9, 0.8, 0.4)},
 }
 ## Dégâts par seconde des effets sur la durée, en part de l'attaque de la source.
 const DOT_FACTOR := {"bleed": 0.15, "burn": 0.25, "poison": 0.2}
