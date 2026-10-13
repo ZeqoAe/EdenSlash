@@ -54,6 +54,17 @@ func _ready() -> void:
 			Profile.select_weapon_type(arg.trim_prefix("--weapon="))
 		elif arg in SCREEN_ARGS or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--dev="):
 			_open_screen = arg.trim_prefix("--")
+		elif arg.begins_with("--wear-back="):
+			# test : porte la pièce de dos d'Eden de ce nom, --dye-back=r,g,b;r,g,b;r,g,b
+			for c in GameData.cosmetics:
+				if String(c.name) == arg.trim_prefix("--wear-back="):
+					Profile.unlock_outfit(String(c.id))
+					Profile.set_worn(Profile.selected_class, "back", String(c.outfit))
+		elif arg.begins_with("--dye-back="):
+			var cols: Array = []
+			for part in arg.trim_prefix("--dye-back=").split(";"):
+				cols.append(Array(part.split(",")).map(func(x): return int(x)))
+			Profile.set_dye(Profile.selected_class, "back", cols)
 		elif arg.begins_with("--wear-head="):
 			# test : porte l'accessoire de tête d'Eden de ce nom (profil de test uniquement)
 			for c in GameData.cosmetics:
@@ -76,7 +87,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
 				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
-				or arg == "--wear-aura" or arg.begins_with("--wear-head=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out="):
+				or arg == "--wear-aura" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -170,7 +181,7 @@ func _show_hero() -> void:
 	var cls := GameData.class_data(Profile.selected_class)
 	if cls.is_empty() or not ResourceLoader.exists(cls.model):
 		return
-	var model := EdenModel.instantiate_hero(cls, Profile.outfit_of(Profile.selected_class), Profile.worn_parts(Profile.selected_class))
+	var model := EdenModel.instantiate_hero(cls, Profile.outfit_of(Profile.selected_class), Profile.worn_parts(Profile.selected_class), Profile.dye_map(Profile.selected_class))
 	model.scale = Vector3.ONE * GameData.HERO_SCALE
 	model.rotation.y = -0.45  # trois-quarts, tourné vers le menu
 	backdrop.hero_root.add_child(model)

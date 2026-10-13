@@ -283,10 +283,16 @@ func _dress_model() -> void:
 	EdenModel.strip_body(model)
 	var parts: Array = cls.get("parts", [])
 	var outfit := Profile.outfit_of(class_id)
+	var dyes := Profile.dye_map(class_id)
 	for i in parts.size():
-		EdenModel.dress(model, outfit if i == 0 and outfit != "" and ResourceLoader.exists(outfit) else String(parts[i]))
+		var part := outfit if i == 0 and outfit != "" and ResourceLoader.exists(outfit) else String(parts[i])
+		EdenModel.dress(model, part)
+		if dyes.has(part):
+			EdenModel.apply_dye(model, part, dyes[part])
 	for p in Profile.worn_parts(class_id):
 		EdenModel.dress(model, String(p))
+		if dyes.has(String(p)):
+			EdenModel.apply_dye(model, String(p), dyes[String(p)])
 	EdenFx.attach_auras(self, class_id, GameData.HERO_SCALE)
 
 

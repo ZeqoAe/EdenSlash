@@ -187,6 +187,8 @@ class Converter:
         self._fx_names = set()
         self.collision = False
         self.dye = None
+        self.keep_masks = False  # garde les masques de teinture (recoloration en jeu)
+        self.dye_masks = {}  # texture teinte -> {mask, decal, key}
         self.by_name = {}
         for p in idx:
             self.by_name.setdefault(os.path.basename(p), []).append(p)
@@ -244,6 +246,24 @@ class Converter:
         tag = '%s_%s' % (key, '_'.join('%02x%02x%02x' % tuple(c) for c in cols))
         name = '%s__%s.png' % (stem, hashlib.md5(tag.encode()).hexdigest()[:6])
         out = os.path.join(self.tex_dir, name)
+        if self.keep_masks:
+            mask = '%s_dyemask.png' % stem
+            mpath = os.path.join(self.tex_dir, mask)
+            if not os.path.exists(mpath):
+                os.makedirs(self.tex_dir, exist_ok=True)
+                img = Image.open(io.BytesIO(self.read(base_path))).convert('RGBA')
+                if max(img.size) > 256:
+                    img.thumbnail((256, 256), Image.LANCZOS)
+                img.save(mpath, optimize=True)
+            dec = None
+            if decal_path:
+                dec = os.path.splitext(os.path.basename(decal_path))[0] + '.png'
+                if not os.path.exists(os.path.join(self.tex_dir, dec)):
+                    img = Image.open(io.BytesIO(self.read(decal_path))).convert('RGBA')
+                    if max(img.size) > 512:
+                        img.thumbnail((512, 512), Image.LANCZOS)
+                    img.save(os.path.join(self.tex_dir, dec), optimize=True)
+            self.dye_masks[name] = {'mask': mask, 'decal': dec, 'key': key}
         if not os.path.exists(out):
             m = self.load_rgba(base_path)
             c = np.array(cols, dtype=np.float32) / 255.0  # (3, 3)

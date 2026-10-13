@@ -19,6 +19,7 @@ class AppearancePage extends HBoxContainer:
 	var _info: RichTextLabel
 	var _count: Label
 	var _shown_code := ""  # modèle d'arme montré dans l'aperçu (essai d'une apparence)
+	var _dye_box: VBoxContainer  # couleurs de la pièce portée (tenue, tête, dos)
 
 	func _ready() -> void:
 		add_theme_constant_override("separation", 16)
@@ -64,6 +65,9 @@ class AppearancePage extends HBoxContainer:
 		_preview.spin = false
 		right.add_child(_preview)
 		_preview.frame(5.3, 0.95, 0.35)  # en pied, de trois-quarts face (glisser pour tourner)
+		_dye_box = VBoxContainer.new()
+		_dye_box.add_theme_constant_override("separation", 6)
+		right.add_child(_dye_box)
 		_info = ItemWidgets.rich(right, 14)
 		_info.custom_minimum_size = Vector2(0, 110)
 		_info.size_flags_vertical = Control.SIZE_FILL
@@ -98,6 +102,95 @@ class AppearancePage extends HBoxContainer:
 				_refresh_costumes(cid)
 		_preview.show_hero(cid, _shown_code if _shown_code != "" else Profile.weapon_code())
 		_info.text = _worn_text(cid)
+		_refresh_dye(cid)
+
+	# --- couleurs de la pièce portée ---------------------------------------------------------
+	const DYE_NAMES := ["Couleur principale", "Couleur secondaire", "Détails"]
+
+	## Pièce portée dans la catégorie affichée ("" : aucune ou tenue de la classe).
+	func _worn_path(cid: String) -> String:
+		if _cat == "body":
+			return Profile.outfit_of(cid)
+		return String(Profile.worn.get(cid, {}).get(_cat, "")) if _cat in ["head", "back"] else ""
+
+	func _refresh_dye(cid: String) -> void:
+		for c in _dye_box.get_children():
+			c.queue_free()
+		var path := _worn_path(cid)
+		if path == "" or not EdenModel.can_dye(path):
+			return
+		var cos := {}
+		for c in GameData.cosmetics:
+			if String(c.outfit) == path:
+				cos = c
+		var variants: Array = cos.get("variants", []) if cos.get("variants", []) is Array else []
+		var cur := Profile.dye_of(cid, _cat)
+		var shown: Array = cur if not cur.is_empty() else (variants[0].colors if not variants.is_empty() else [[200, 200, 200], [150, 150, 150], [80, 80, 80]])
+		ItemWidgets.section(_dye_box, "Couleurs", 15)
+		if not variants.is_empty():
+			var flow := HFlowContainer.new()
+			flow.add_theme_constant_override("h_separation", 6)
+			flow.add_theme_constant_override("v_separation", 6)
+			_dye_box.add_child(flow)
+			for v in variants:
+				flow.add_child(_swatch(cid, v.colors, String(v.get("name", "")), str(v.colors) == str(shown)))
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		_dye_box.add_child(row)
+		var pickers: Array = []
+		for i in 3:
+			var pb := ColorPickerButton.new()
+			pb.custom_minimum_size = Vector2(70, 32)
+			pb.focus_mode = Control.FOCUS_NONE
+			pb.edit_alpha = false
+			pb.tooltip_text = DYE_NAMES[i]
+			var c: Array = shown[i]
+			pb.color = Color8(int(c[0]), int(c[1]), int(c[2]))
+			row.add_child(pb)
+			pickers.append(pb)
+		for pb in pickers:
+			pb.color_changed.connect(func(_c):
+				var cols: Array = pickers.map(func(p): return [p.color.r8, p.color.g8, p.color.b8])
+				_set_dye(cid, cols, false))
+			pb.popup_closed.connect(func(): Profile.save_profile())
+		var reset := Button.new()
+		reset.text = "Origine"
+		reset.tooltip_text = "Couleurs d'origine de la pièce"
+		reset.focus_mode = Control.FOCUS_NONE
+		reset.pressed.connect(func(): _set_dye(cid, [], true))
+		row.add_child(reset)
+
+	func _swatch(cid: String, colors: Array, name: String, on: bool) -> Control:
+		var b := Button.new()
+		b.custom_minimum_size = Vector2(46, 30)
+		b.focus_mode = Control.FOCUS_NONE
+		b.tooltip_text = name if name != "" else "Coloris d'Eden"
+		b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.08, 0.06, 0.13), UiTheme.GOLD if on else UiTheme.GOLD_DIM, 3 if on else 1, 6))
+		var h := HBoxContainer.new()
+		h.set_anchors_preset(Control.PRESET_FULL_RECT)
+		h.offset_left = 5
+		h.offset_right = -5
+		h.offset_top = 5
+		h.offset_bottom = -5
+		h.add_theme_constant_override("separation", 0)
+		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(h)
+		for c in colors:
+			var r := ColorRect.new()
+			r.color = Color8(int(c[0]), int(c[1]), int(c[2]))
+			r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			h.add_child(r)
+		b.pressed.connect(func(): _set_dye(cid, colors.duplicate(true), true))
+		return b
+
+	## Nouvelles couleurs (vide : origine) ; [param rebuild] : redessine aussi les nuanciers.
+	func _set_dye(cid: String, colors: Array, rebuild: bool) -> void:
+		Profile.set_dye(cid, _cat, colors)
+		if rebuild:
+			Profile.save_profile()
+			_refresh_dye(cid)
+		_preview.show_hero(cid, _shown_code if _shown_code != "" else Profile.weapon_code())
 
 	func _refresh_costumes(cid: String) -> void:
 		_grid.columns = 7
@@ -287,6 +380,7 @@ class AppearancePage extends HBoxContainer:
 			if not ok:
 				return
 			var path := String(c.get("outfit", ""))
+			Profile.set_dye(cid, _cat, [])  # autre pièce : ses propres couleurs d'origine
 			if _cat == "body":
 				if path == "":
 					Profile.outfits.erase(cid)

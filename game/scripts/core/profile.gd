@@ -1110,3 +1110,32 @@ func aura_stats(cls: String) -> Dictionary:
 		for s in x.aura.stat:
 			out[s] = float(out.get(s, 0.0)) + float(x.aura.stat[s])
 	return out
+
+
+## Couleurs choisies pour la pièce [param cat] (body, head, back) de la classe : 3 couleurs
+## [r, g, b] (0-255) ; vide = couleurs d'origine de la pièce.
+func dye_of(cls: String, cat: String) -> Array:
+	return worn.get(cls, {}).get("dye", {}).get(cat, [])
+
+
+func set_dye(cls: String, cat: String, colors: Array) -> void:
+	if not worn.has(cls):
+		worn[cls] = {}
+	var d: Dictionary = worn[cls].get("dye", {})
+	if colors.is_empty():
+		d.erase(cat)
+	else:
+		d[cat] = colors
+	worn[cls]["dye"] = d
+
+
+## Pièces recolorées de la classe : chemin .glb -> 3 couleurs (EdenModel.apply_dye).
+func dye_map(cls: String) -> Dictionary:
+	var out := {}
+	var w: Dictionary = worn.get(cls, {})
+	for cat in ["body", "head", "back"]:
+		var path := outfit_of(cls) if cat == "body" else String(w.get(cat, ""))
+		var c := dye_of(cls, cat)
+		if path != "" and not c.is_empty():
+			out[path] = c
+	return out

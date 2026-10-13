@@ -410,7 +410,7 @@ class HeroPreview extends SubViewportContainer:
 
 	func show_hero(class_id: String, weapon_code: String) -> void:
 		var key := class_id + "|" + weapon_code + "|" + Profile.outfit_of(class_id) + "|" + "|".join(Profile.worn_parts(class_id)) \
-			+ "|" + "|".join(Profile.worn_auras(class_id).map(func(x): return str(int(x.id))))
+			+ "|" + "|".join(Profile.worn_auras(class_id).map(func(x): return str(int(x.id)))) + "|" + str(Profile.dye_map(class_id))
 		if key == _shown:
 			return
 		_shown = key
@@ -419,7 +419,7 @@ class HeroPreview extends SubViewportContainer:
 		var cls := GameData.class_data(class_id)
 		if cls.is_empty() or not ResourceLoader.exists(String(cls.get("model", ""))):
 			return
-		var model := EdenModel.instantiate_hero(cls, Profile.outfit_of(class_id), Profile.worn_parts(class_id))
+		var model := EdenModel.instantiate_hero(cls, Profile.outfit_of(class_id), Profile.worn_parts(class_id), Profile.dye_map(class_id))
 		model.scale = Vector3.ONE * GameData.HERO_SCALE
 		_pivot.add_child(model)
 		EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, weapon_code))

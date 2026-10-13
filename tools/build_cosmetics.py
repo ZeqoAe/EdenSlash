@@ -25,7 +25,7 @@ import edenpkg  # noqa: E402
 import nif2gltf  # noqa: E402
 
 GAME = os.path.join(os.path.dirname(__file__), '..', 'game')
-CAT_SLOT = {'0': 'body', '2': 'head', '1': 'back'}
+CAT_SLOT = {'0': 'body', '2': 'head', '1': 'back', '4': 'back'}  # 4 : ailes « Blessed » et dos animés
 GENERIC = {'body': "Costume d'Eden %s", 'head': "Accessoire de tête %s", 'back': "Ailes et dos d'Eden %s"}
 
 
@@ -40,6 +40,17 @@ def dye_of(hexes):
         return None
     hexes = hexes.zfill(12)
     return [rgb565(hexes[i:i + 4]) for i in (0, 4, 8)]
+
+
+def _variants(variants, names):
+    """Coloris d'Eden d'un modèle (sans doublon) : [{name, colors: 3 x [r, g, b]}]."""
+    out, seen = [], set()
+    for code, dye in variants:
+        if not dye or str(dye) in seen:
+            continue
+        seen.add(str(dye))
+        out.append({'name': names[code][1] if code in names else '', 'colors': dye})
+    return out
 
 
 def loli_table(idx):
@@ -67,11 +78,13 @@ def main():
     tm = edenini.read_text('t_itemmall')
     # code K du modèle (colonne 2 de c_item ; la colonne 1 est l'icône) -> (id, nom, icône)
     names = {}  # objets du jeu et de la boutique d'Eden
+    icons_any = {}  # code du modèle -> (id, icône) même sans nom anglais (boutique)
     for table, texts in (('c_item', ti), ('c_itemmall', tm)):
         for r in edenini.read_rows(table):
-            if len(r) < 20 or not r[0].isdigit() or not r[1].startswith(('K', 'A')):
+            if len(r) < 20 or not r[0].isdigit() or not (r[2] or r[1]).startswith(('K', 'A', 'V')):
                 continue
-            if r[8] not in ('68', '61', '65', '67') and not r[1].startswith('A'):
+            icons_any.setdefault((r[2] or r[1]).strip(), (int(r[0]), r[1].strip()))
+            if r[8] not in ('68', '61', '65', '67') and not (r[2] or r[1]).startswith(('A', 'V')):
                 continue
             name = texts.get(int(r[0]), [''])[0].strip()
             if name in ('', '?'):
@@ -81,7 +94,7 @@ def main():
                 names.setdefault(model, (int(r[0]), name, r[1].strip()))
     meshes = {}  # (catégorie, maillage) -> [(code, teinte)]
     for f in loli_table(idx):
-        if len(f) < 6 or f[0][:1] not in ('K', 'A') or f[1] not in CAT_SLOT:
+        if len(f) < 6 or f[0][:1] not in ('K', 'A', 'V') or f[1] not in CAT_SLOT:
             continue
         cat = CAT_SLOT[f[1]]
         mesh = f[2]
@@ -104,7 +117,12 @@ def main():
         code, dye = named[0] if named else variants[0]
         if cat == 'head' and not named:
             continue  # chapeaux sans nom (boutique d'Eden) : trop nombreux, on garde les nommés
-        iid, name, icon_code = names[code] if named else (0, GENERIC[cat] % mesh.lstrip('#'), code)
+        if named:
+            iid, name, icon_code = names[code]
+        else:
+            # sans nom anglais : nom générique, mais l'icône de l'objet d'Eden s'il existe
+            any_ = next((icons_any[v[0]] for v in variants if v[0] in icons_any), (0, code))
+            iid, name, icon_code = any_[0], GENERIC[cat] % mesh.lstrip('#'), any_[1]
         short = mesh.lstrip('#').lower()
         rel = ('cos_%s.glb' % short) if cat == 'body' else ('%s_%s.glb' % (cat, short))
         glb = os.path.join(out_dir, rel)
@@ -115,9 +133,11 @@ def main():
             if a.max and done >= a.max:
                 continue
             before = set(os.listdir(tex_dir))
+            conv = None
             try:
                 if cat == 'body':
                     conv = nif2gltf.Converter(idx, tex_dir, '../textures/', [mesh, 'S' + mesh.lstrip('#')])
+                    conv.keep_masks = True
                     conv.anim_filter = '^$'
                     conv.dye = dict(nif2gltf.DEFAULT_DYE)
                     if dye:
@@ -126,6 +146,7 @@ def main():
                     conv.convert(nif2gltf.resolve('char', nifs[0]), [], glb)
                 else:
                     conv = nif2gltf.Converter(idx, tex_dir, '../textures/')
+                    conv.keep_masks = True
                     conv.anim_filter = '^$'
                     # couleurs de la variante pour toute la pièce (les chapeaux « L1xxx » seraient
                     # sinon teints comme des cheveux, en brun)
@@ -135,6 +156,12 @@ def main():
             except Exception as ex:
                 print('  ! %s : %s' % (mesh, ex))
                 continue
+            # masques de teinture des matériaux recolorables (toute la pièce, sauf la peau du
+            # corps pour les tenues) : relus en jeu par EdenModel.apply_dye
+            masks = {k: {'mask': '../textures/' + v['mask'], 'decal': ('../textures/' + v['decal']) if v['decal'] else ''}
+                     for k, v in conv.dye_masks.items() if cat != 'body' or v['key'] == 'outfit'}
+            with open(glb + '.dye.json', 'w', encoding='utf-8') as f:
+                json.dump(masks, f, separators=(',', ':'))
             for t in set(os.listdir(tex_dir)) - before:
                 p = os.path.join(tex_dir, t)
                 if t.endswith('.png'):
@@ -154,7 +181,7 @@ def main():
             icon = 'res://assets/ui/items/%s.png' % icon_code.lower()
         cosmetics.append({'id': short if cat == 'body' else '%s_%s' % (cat, short), 'cat': cat, 'name': name,
                           'eden_item': iid, 'icon': icon, 'rarity': 4, 'outfit': 'res://assets/player/outfits/' + rel,
-                          'variants': len(variants), 'codes': sorted({v[0] for v in variants})})
+                          'variants': _variants(variants, names), 'codes': sorted({v[0] for v in variants})})
     path = os.path.join(GAME, 'data', 'eden_catalog.json')
     data = json.load(open(path, encoding='utf-8')) if os.path.exists(path) else {}
     data['cosmetics'] = [c for c in cosmetics if os.path.exists(os.path.join(out_dir, os.path.basename(c['outfit'])))]

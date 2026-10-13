@@ -45,12 +45,15 @@ static func _apply_anim_info(player: AnimationPlayer, json_path: String) -> void
 ## Passe les matériaux en éclairage stylisé (shaders/eden_character.gdshader ; toon
 ## standard pour les matériaux à transparence fondue), avec une texture de remplacement
 ## optionnelle (variantes de couleur d'un même monstre).
-static func stylize(root: Node, texture: Texture2D = null) -> void:
+static func stylize(root: Node, texture_override: Texture2D = null) -> void:
 	for mi: MeshInstance3D in root.find_children("*", "MeshInstance3D", true, false):
 		for s in mi.mesh.get_surface_count():
 			var mat := mi.mesh.surface_get_material(s) as BaseMaterial3D
 			if mat == null:
 				continue
+			# texture de variante (armes) : seulement sur les pièces de l'arme elle-même, pas sur
+			# ses plans d'effet (lueurs, rubans) qui ont leur propre texture transparente
+			var texture := texture_override if texture_override and _same_texture_family(mat, texture_override) else null
 			var key := "%d|%s" % [mat.get_instance_id(), texture.resource_path if texture else ""]
 			var toon: Material = _toon_cache.get(key)
 			if toon == null and mat.transparency in [BaseMaterial3D.TRANSPARENCY_DISABLED, BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR]:
@@ -70,6 +73,17 @@ static func stylize(root: Node, texture: Texture2D = null) -> void:
 					toon.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_DEPTH_PRE_PASS
 				_toon_cache[key] = toon
 			mi.set_surface_override_material(s, toon)
+
+
+## La texture d'origine du matériau est-elle de la même famille que [param tex] (w121… / w12101) ?
+static func _same_texture_family(mat: BaseMaterial3D, tex: Texture2D) -> bool:
+	if mat.albedo_texture == null:
+		return true
+	var a := mat.albedo_texture.resource_path.get_file().to_lower()
+	var b := tex.resource_path.get_file().to_lower()
+	if a == "" or b == "":
+		return true
+	return a.substr(0, 4) == b.substr(0, 4)
 
 
 const CHARACTER_SHADER := preload("res://shaders/eden_character.gdshader")
@@ -96,7 +110,7 @@ static func _character_material(src: BaseMaterial3D, texture: Texture2D) -> Shad
 ## Héros d'une classe : corps animé commun (squelette, visage, animations) habillé de
 ## pièces séparées (tenue, cheveux) ; [param outfit] remplace la tenue de la classe (skin).
 ## Les anciennes classes à modèle complet (data/classes.json -> model) restent gérées.
-static func instantiate_hero(cls: Dictionary, outfit := "", extra: Array = []) -> Node3D:
+static func instantiate_hero(cls: Dictionary, outfit := "", extra: Array = [], dyes: Dictionary = {}) -> Node3D:
 	var body := String(cls.get("body_model", ""))
 	if body == "" or not ResourceLoader.exists(body):
 		return instantiate(String(cls.get("model", "")))
@@ -107,7 +121,56 @@ static func instantiate_hero(cls: Dictionary, outfit := "", extra: Array = []) -
 		parts = [outfit] + parts.slice(1)
 	for p in parts + extra:
 		dress(node, String(p))
+		if dyes.has(String(p)):
+			apply_dye(node, String(p), dyes[String(p)])
 	return node
+
+
+static var _dye_info := {}
+
+
+## Masques de teinture d'une pièce (tools/build_cosmetics.py -> <pièce>.glb.dye.json).
+static func dye_info(glb_path: String) -> Dictionary:
+	if not _dye_info.has(glb_path):
+		var js := glb_path + ".dye.json"
+		var d = JSON.parse_string(FileAccess.get_file_as_string(js)) if FileAccess.file_exists(js) else null
+		_dye_info[glb_path] = d if d is Dictionary else {}
+	return _dye_info[glb_path]
+
+
+## La pièce peut-elle changer de couleurs ?
+static func can_dye(glb_path: String) -> bool:
+	return not dye_info(glb_path).is_empty()
+
+
+## Recolore la pièce [param glb_path] portée par [param model] : [param colors] = 3 couleurs
+## [r, g, b] (0-255), comme les coloris d'Eden (data/eden_catalog.json -> cosmetics.variants).
+static func apply_dye(model: Node3D, glb_path: String, colors: Array) -> void:
+	var info := dye_info(glb_path)
+	if info.is_empty() or colors.size() < 3:
+		return
+	var dir := glb_path.get_base_dir()
+	for mi: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
+		if String(mi.get_meta("part", "")) != glb_path:
+			continue
+		for s in mi.mesh.get_surface_count():
+			var src := mi.mesh.surface_get_material(s) as BaseMaterial3D
+			var mat := mi.get_surface_override_material(s) as ShaderMaterial
+			if src == null or mat == null or src.albedo_texture == null:
+				continue
+			var e: Dictionary = info.get(src.albedo_texture.resource_path.get_file(), {})
+			if e.is_empty():
+				continue
+			mat = mat.duplicate()  # matériaux partagés entre héros : copie propre à celui-ci
+			mat.set_shader_parameter("use_dye", 1.0)
+			mat.set_shader_parameter("dye_mask", load(dir.path_join(String(e.mask)).simplify_path()))
+			if String(e.decal) != "":
+				mat.set_shader_parameter("dye_decal", load(dir.path_join(String(e.decal)).simplify_path()))
+				mat.set_shader_parameter("use_decal", 1.0)
+			for i in 3:
+				var c: Array = colors[i]
+				mat.set_shader_parameter("dye%d" % i, Vector3(float(c[0]), float(c[1]), float(c[2])) / 255.0)
+			mi.set_surface_override_material(s, mat)
 
 
 ## Le corps commun est exporté avec une tenue complète (pour que tous ses os soient de
@@ -135,7 +198,7 @@ static func dress(model: Node3D, glb_path: String, group := "") -> void:
 	stylize(part)
 	# accessoires cosmétiques : la tête pour les chapeaux, le haut du dos pour les ailes
 	# (les modèles « L » rangés dans le dos par Eden sont de petits accessoires de tête)
-	var anchor := BACK_BONE if glb_path.get_file().begins_with("back_x") and skel.find_bone(BACK_BONE) >= 0 else "Bip01 Head"
+	var anchor := BACK_BONE if glb_path.get_file().begins_with("back_") and not glb_path.get_file().begins_with("back_l") and skel.find_bone(BACK_BONE) >= 0 else "Bip01 Head"
 	if part.find_child("Skeleton3D", true, false) == null and skel.find_bone(anchor) >= 0:
 		# accessoire rigide (chapeau, lunettes, masque, croix, sac) : accroché à son os comme
 		# dans Eden ; il est déjà exprimé dans le repère de l'os (on annule la conversion Z-up)
@@ -234,8 +297,17 @@ static func attach_weapon(model: Node3D, weapon: Dictionary) -> BoneAttachment3D
 	var root := inst.find_child("EdenRoot", true, false) as Node3D
 	if root:
 		root.transform = Transform3D.IDENTITY
+	# certaines apparences d'Eden (lances Aurora, armes « Ancient ») font 5 à 7 m : ramenées à
+	# la taille des plus grandes armes du jeu (lance : 2,6 m), autour de la poignée
+	var size := bounds(inst).get_longest_axis_size()
+	if size > MAX_WEAPON_SIZE:
+		inst.scale = Vector3.ONE * (MAX_WEAPON_SIZE / size)
 	att.add_child(inst)
 	return att
+
+
+## Plus grande taille d'une arme tenue (repère de l'os, comme les modèles d'Eden).
+const MAX_WEAPON_SIZE := 2.7
 
 
 static func weapon_entry(cls: Dictionary, code: String) -> Dictionary:
