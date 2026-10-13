@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -53,9 +54,25 @@ def main() -> None:
               f"subis {round(info['taken'] * 100)} % · enchaînements {info['chain']} · parfaits {info['perfect']} · "
               f"esquives {info['dodged']}   (victoires {wins}/{len(results)})")
 
+    model_path = Path(args.modele)
+    if not model_path.exists():
+        sys.exit(f"Pas encore de modèle ({model_path.name}) : l'entraînement sauvegarde à chaque étape réussie "
+                 "et toutes les 10 minutes. Réessaie dans quelques minutes.")
+    model = None
+    for attempt in range(5):  # l'entraînement peut être en train d'écrire le fichier
+        try:
+            model = PPO.load(model_path, device="cpu")
+            break
+        except Exception:
+            time.sleep(2)
+    if model is None:
+        sys.exit(f"Impossible de lire {model_path.name} (fichier en cours d'écriture ?). Réessaie.")
     env = GodotVecEnv(1, pick, on_episode, watch=True,
                       extra_args=[f"--capture={Path(args.capture).resolve().as_posix()}"] if args.capture else None)
-    model = PPO.load(args.modele, device="cpu")
+    if env.observation_space.shape != model.observation_space.shape:
+        env.close()
+        sys.exit("Ce modèle a été entraîné avec une ancienne version de l'arène (ce que voit l'IA a changé) : "
+                 "il faut un modèle entraîné depuis (IA_Entrainer.bat).")
     obs = env.reset()
     try:
         while True:

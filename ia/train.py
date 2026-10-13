@@ -119,7 +119,7 @@ def main() -> None:
     if args.nouveau and MODEL.exists():
         old = MODELS / f"ancien_{time.strftime('%Y%m%d_%H%M%S')}"
         old.mkdir(parents=True)
-        for p in [MODEL, STATE]:
+        for p in [MODEL, STATE, MODELS / "etapes"]:
             if p.exists():
                 shutil.move(str(p), old / p.name)
         print(f"Ancien modèle mis de côté dans {old}")
