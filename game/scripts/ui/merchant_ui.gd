@@ -2,7 +2,7 @@ class_name MerchantUI
 extends CanvasLayer
 ## Marchands ambulants (ils remplacent le village) : un écran par marchand, ses offres
 ## tirées pour lui (cartes d'amélioration de la run, clés, équipement, fournitures),
-## rachat des objets contre de l'or, fabrication des mythiques de la zone.
+## rachat des objets contre de l'or (les mythiques et légendaires : coffres de récompense seulement).
 ## La Forge (améliorer, réforger, polir, sertir, enchanter, fusionner) s'ouvre depuis la
 ## fiche d'un objet pendant la run (open_forge), partout sur la carte.
 
@@ -29,7 +29,7 @@ func setup(p: Player, d: RunDirector) -> void:
 	_screen = PageScreen.new(TITLE, 16)
 	_screen.pause_game = true
 	add_child(_screen)
-	for spec in [["Boutique", MerchantPages.ShopPage.new()], ["Vendre", MerchantPages.SellPage.new(false)], ["Fabriquer", MerchantPages.CraftPage.new()]]:
+	for spec in [["Boutique", MerchantPages.ShopPage.new()], ["Vendre", MerchantPages.SellPage.new(false)]]:
 		spec[1].set("ui", self)
 		_screen.add_page(spec[0], spec[1])
 	_screen.closed.connect(_recalc)

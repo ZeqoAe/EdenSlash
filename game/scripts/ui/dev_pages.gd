@@ -475,13 +475,9 @@ class ResourcesPage extends HBoxContainer:
 		for t in Rewards.ORDER:
 			var tt: String = t
 			DevPages.button(cg, "+1 %s" % Rewards.TYPES[t].name, func():
-				var ch := Rewards.make(tt, 20)
-				if Profile.in_run:
-					Run.chests_found.append(ch)
-				else:
-					Profile.reward_chests.append(ch)
-					Profile.save_profile()
-				_msg.text = "%s ajouté %s" % [Rewards.TYPES[tt].name, "(gardé si tu t'en sors)" if Profile.in_run else "au menu Coffres"], 250)
+				Profile.reward_chests.append(Rewards.make(tt, 20))
+				Profile.save_profile()
+				_msg.text = "%s ajouté au menu Coffres" % Rewards.TYPES[tt].name, 250)
 		var sv := HBoxContainer.new()
 		_supplies.add_child(sv)
 		_supplies.move_child(_msg, -1)

@@ -147,6 +147,8 @@ func _weapon_type() -> Dictionary:
 
 # --- statistiques -------------------------------------------------------------------
 func recalc_stats() -> void:
+	if Run.active:
+		Run.hero_level = level  # puissance des objets portés (suit le niveau, plafonnée)
 	var eq := Profile.equipment_stats()
 	var arc := Archive.bonus()  # bonus permanents de l'archive
 	for k in arc:
@@ -270,6 +272,7 @@ func gain_xp(amount: int) -> void:
 		xp -= GameData.xp_to_next(level)
 		level += 1
 		Run.max_level = maxi(Run.max_level, level)
+		Run.hero_level = level
 		recalc_stats()
 		hp = max_hp
 		health_changed.emit(hp, max_hp)

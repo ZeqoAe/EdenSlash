@@ -47,6 +47,10 @@ var _target_ref: WeakRef
 
 var _center_label: Label
 var _prompt_box: PanelContainer
+var _better_box: PanelContainer  # objet ramassé meilleur que la pièce portée : [G] Équiper
+var _better_label: RichTextLabel
+var better_item: Dictionary = {}
+var _better_until := 0.0
 var _prompt: Label
 var _fps_label: Label
 var _arrow: Label
@@ -67,6 +71,7 @@ func setup(p: Player, d: RunDirector) -> void:
 	Settings.changed.connect(_refresh_skills)
 	director.zone_changed.connect(func(z): _zone_text = "%s · Nv %d-%d" % [z.name, z.levels[0], z.levels[1]])
 	director.message.connect(show_message)
+	director.better_item.connect(show_better)
 	_on_hp(player.hp, player.max_hp)
 	_on_xp(player.xp, GameData.xp_to_next(player.level), player.level)
 	_refresh_skills()
@@ -121,6 +126,25 @@ func _build() -> void:
 	root.add_child(_prompt_box)
 	_prompt = _label(_prompt_box, "", 20, Color.WHITE)
 	_prompt_box.visible = false
+
+	_better_box = PanelContainer.new()
+	_better_box.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.05, 0.1, 0.06, 0.92), Color(0.45, 1.0, 0.5), 2, 12))
+	_better_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_better_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_better_box.custom_minimum_size = Vector2(420, 0)
+	_better_box.offset_left = -210
+	_better_box.offset_right = 210
+	_better_box.offset_top = -205
+	_better_box.offset_bottom = -150
+	root.add_child(_better_box)
+	_better_label = RichTextLabel.new()
+	_better_label.bbcode_enabled = true
+	_better_label.fit_content = true
+	_better_label.scroll_active = false
+	_better_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_better_label.add_theme_font_size_override("normal_font_size", 15)
+	_better_box.add_child(_better_label)
+	_better_box.visible = false
 
 	_arrow = _label(root, "▲", 36, ACCENT)
 	_arrow.add_theme_constant_override("outline_size", 8)
@@ -375,6 +399,8 @@ func _refresh_skills() -> void:
 func _process(delta: float) -> void:
 	if player == null:
 		return
+	if _better_box.visible and Time.get_ticks_msec() / 1000.0 > _better_until:
+		_better_box.visible = false
 	_root.visible = not _menu_open()
 	if not _root.visible:
 		return
@@ -509,6 +535,28 @@ func _update_arrow() -> void:
 	_arrow.visible = true
 	_arrow.position = center + dir * 90.0 - _arrow.pivot_offset
 	_arrow.rotation = dir.angle() + PI / 2.0
+
+
+## Objet ramassé meilleur que la pièce portée : 8 s pour l'équiper avec [G].
+func show_better(item: Dictionary) -> void:
+	better_item = item
+	_better_until = Time.get_ticks_msec() / 1000.0 + 8.0
+	var c := Items.compare_to_equipped(item)
+	_better_label.text = "[img=34x34]%s[/img]  [b][color=#%s]%s[/color][/b]  [color=#7fe08a]▲ %+d %%[/color]\n[color=#c8c8d4]Meilleur que ta pièce portée — [b]%s[/b] : équiper[/color]" % [
+		String(item.get("icon", "")), Items.color_of(item).to_html(false), Items.display_name(item), roundi(c * 100.0), Settings.action_label("quick_equip", 1)]
+	_better_box.visible = true
+
+
+## [G] : équipe l'objet signalé (s'il est encore dans le sac).
+func quick_equip() -> bool:
+	if better_item.is_empty() or not _better_box.visible:
+		return false
+	if Profile.inventory.any(func(x): return is_same(x, better_item)):
+		Profile.equip(better_item)
+		show_message("Équipé : %s" % Items.display_name(better_item), 1.5)
+	better_item = {}
+	_better_box.visible = false
+	return true
 
 
 func show_prompt(text: String) -> void:

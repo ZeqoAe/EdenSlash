@@ -139,8 +139,11 @@ static func extra_stats(item: Dictionary) -> Dictionary:
 			_merge(out, gem_stats(g))
 	if item.has("enchant"):
 		_merge(out, enchant_stats(item.enchant))
+	var lk := pow(1.08, Items.power_level(item) - 1)
 	for r in item.get("up_rolls", []):
-		out[r[0]] = float(out.get(r[0], 0.0)) + float(r[1])
+		# [stat, valeur au niveau 1, palier] : les stats fixes suivent la puissance de l'objet
+		var v := float(r[1]) * (lk if r.size() > 2 and not String(r[0]) in Items.PERCENT_STATS else 1.0)
+		out[r[0]] = float(out.get(r[0], 0.0)) + v
 	return out
 
 
@@ -204,7 +207,7 @@ static func can_enchant(item: Dictionary, key: String) -> String:
 	var armor: bool = item.slot != "weapon" and item.slot != "gloves"
 	if bool(e.get("armor", false)) != armor:
 		return "Ce parchemin s'applique %s." % ("aux armures" if e.get("armor", false) else "aux armes et aux gants")
-	if Items.power_level(item) < scroll_min_level(int(p[2])):
+	if mini(Items.power_cap(item), 999) < scroll_min_level(int(p[2])):  # niveau de l'objet (pas sa puissance du moment)
 		return "Objet de niveau %d minimum." % scroll_min_level(int(p[2]))
 	return ""
 
@@ -247,32 +250,37 @@ static func upgrade(item: Dictionary, luck: int, protect: bool) -> Dictionary:
 	var target := int(item.get("upgrade", 0)) + 1
 	if randf() < chance:
 		item.upgrade = target
+		if not target in Items.MILESTONES:
+			# entre les paliers : +10 % des stats de l'objet, pas de stat bonus
+			return {"ok": true, "stat": "", "value": 0.0, "text": "Réussite ! +%d : stats de l'objet +10 %%" % target}
 		var roll := _upgrade_roll(item, target)
 		var rolls: Array = item.get("up_rolls", [])
 		rolls.append(roll)
 		item["up_rolls"] = rolls
-		return {"ok": true, "stat": roll[0], "value": roll[1],
-			"text": "Réussite ! +%d : %s" % [target, Items.stat_text(roll[0], roll[1])]}
+		var shown := float(roll[1]) * (1.0 if String(roll[0]) in Items.PERCENT_STATS else pow(1.08, Items.power_level(item) - 1))
+		return {"ok": true, "stat": roll[0], "value": shown,
+			"text": "Réussite ! +%d : stat bonus %s" % [target, Items.stat_text(roll[0], shown)]}
 	if target >= DOWNGRADE_FROM and not protect and int(item.upgrade) > 0:
-		item.upgrade = int(item.upgrade) - 1
+		var lost := int(item.upgrade)
+		item.upgrade = lost - 1
+		# un palier perdu (+4, +6…) emporte sa stat bonus
 		var rolls: Array = item.get("up_rolls", [])
-		if not rolls.is_empty():
-			rolls.pop_back()
+		for i in range(rolls.size() - 1, -1, -1):
+			if (rolls[i].size() > 2 and int(rolls[i][2]) == lost) or (rolls[i].size() <= 2 and i == rolls.size() - 1):
+				rolls.remove_at(i)
+				break
 		return {"ok": false, "text": "Échec… l'objet redescend à +%d." % int(item.upgrade)}
 	return {"ok": false, "text": "Échec. %s" % ("La pierre de protection a préservé l'objet." if protect and target >= DOWNGRADE_FROM else "L'objet est intact.")}
 
 
-## Stat aléatoire gagnée à l'amélioration +[param target] (doublée aux paliers +4, +6, +8, +10).
+## Stat bonus aléatoire gagnée au palier +[param target] (+4, +6, +8, +10) : [stat, valeur au
+## niveau 1 (suit la puissance de l'objet), palier]. Aléatoire pour qu'un objet parfait soit rare.
 static func _upgrade_roll(item: Dictionary, target: int) -> Array:
 	var pool: Array = UPGRADE_POOL_WEAPON if item.slot in ["weapon", "gloves"] else UPGRADE_POOL_ARMOR
 	var stat: String = pool.pick_random()
 	var r: Array = UPGRADE_ROLL[stat]
-	var v := randf_range(r[0], r[1])
-	if not stat in Items.PERCENT_STATS:
-		v *= pow(1.08, Items.power_level(item) - 1)
-	if target in Items.MILESTONES:
-		v *= 2.0
-	return [stat, snappedf(v, 0.001 if stat in Items.PERCENT_STATS else 0.1)]
+	var v := randf_range(r[0], r[1]) * 2.0
+	return [stat, snappedf(v, 0.001 if stat in Items.PERCENT_STATS else 0.1), target]
 
 
 # --- butin ----------------------------------------------------------------------------------------

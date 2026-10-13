@@ -286,6 +286,10 @@ func _on_level_up(lvl: int) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if merchant_ui.is_open():
 		return
+	if event.is_action_pressed("quick_equip") and not _ended and not pause_menu.is_open() and not cards.is_open():
+		if hud.quick_equip():
+			get_viewport().set_input_as_handled()
+			return
 	if event.is_action_pressed("extract") and not _ended and not pause_menu.is_open() and not cards.is_open():
 		director.start_extraction()
 		get_viewport().set_input_as_handled()

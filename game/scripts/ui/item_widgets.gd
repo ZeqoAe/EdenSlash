@@ -10,9 +10,11 @@ const SORTS := ["Rareté", "Niveau", "Emplacement", "Valeur"]
 # --- textes --------------------------------------------------------------------------------
 ## Comparaison avec la pièce portée au même emplacement ("" si identique ou rien de porté).
 static func compare_text(item: Dictionary, worn) -> String:
-	if worn == null or not (worn is Dictionary) or worn.is_empty() or is_same(worn, item):
+	if worn == null or not (worn is Dictionary) or worn.is_empty() or is_same(worn, item) or String(worn.get("uid", "")) == String(item.get("uid", "-")):
 		return ""
-	return "\n\n[color=#c8c8d4]Par rapport à ta pièce portée (%s) :[/color]\n%s" % [Items.display_name(worn), diff_text(Items.stats(worn), Items.stats(item))]
+	var c := Items.compare_to_equipped(item)
+	var verdict := "[b][color=%s]%s %+d %%[/color][/b]" % ["#7fe08a" if c >= 0 else "#ff7a7a", "▲ Meilleur" if c >= 0.02 else ("▼ Moins bien" if c <= -0.02 else "≈ Équivalent"), roundi(c * 100.0)]
+	return "\n\n[color=#c8c8d4]Par rapport à ta pièce portée (%s) :[/color] %s\n%s" % [Items.display_name(worn), verdict, diff_text(Items.stats(worn), Items.stats(item))]
 
 
 static func diff_text(before: Dictionary, after: Dictionary) -> String:
@@ -217,6 +219,7 @@ class ItemSlot extends Button:
 	var on_drop: Callable  # func(data)
 	var card_extra: Callable  # func(item) -> String : lignes ajoutées à la carte au survol
 	var card_text := ""  # carte au survol entièrement fournie (trésors de collection)
+	var show_compare := false  # ▲ / ▼ : mieux ou moins bien que la pièce portée
 
 	func _init(size_px := 64.0) -> void:
 		custom_minimum_size = Vector2(size_px, size_px)
@@ -282,6 +285,11 @@ class ItemSlot extends Button:
 			var p := Vector2(9.0 + i * 11.0, size.y - 9.0)
 			draw_circle(p, 4.5, Color(0, 0, 0, 0.8))
 			draw_circle(p, 3.2, Color(0.75, 0.55, 1.0) if sockets[i] != null else Color(0.35, 0.33, 0.4))
+		if show_compare and item.has("slot"):
+			var c := Items.compare_to_equipped(item)
+			if absf(c) >= 0.02:
+				HudWidgets.text_center(self, "▲" if c > 0 else "▼", Vector2(size.x - 10.0, 12.0), font, 14,
+					Color(0.45, 1.0, 0.5) if c > 0 else Color(1.0, 0.45, 0.4), 4)
 		if badge != "":
 			HudWidgets.text_center(self, badge, Vector2(size.x * 0.5, size.y - 8.0), font, 11, Color(1, 1, 1, 0.9), 4)
 		elif int(item.get("level", 1)) > 0:
@@ -427,6 +435,7 @@ class ItemGrid extends VBoxContainer:
 			var it: Dictionary = _shown[i]
 			var s := ItemWidgets.ItemSlot.new(cell)
 			s.set_item(it)
+			s.show_compare = true
 			s.source = source
 			s.selected = _selection.any(func(x): return is_same(x, it))
 			s.badge = String(badge_fn.call(it)) if badge_fn.is_valid() else ""

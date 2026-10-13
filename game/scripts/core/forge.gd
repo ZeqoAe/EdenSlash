@@ -15,27 +15,35 @@ static func reforge_cost(item: Dictionary) -> Dictionary:
 	return {"crystal": 1 + int(item.rarity) / 2}
 
 
-## Stats de l'objet qu'on peut réforger (affixes ayant une fourchette).
+## Stats de l'objet qu'on peut réforger : ses stats bonus d'amélioration (+4, +6, +8, +10) ;
+## les stats de l'objet sont fixes (seule la qualité se polit).
 static func reforgeable(item: Dictionary) -> Array:
-	if item.has("base"):
-		# objet d'Eden : ses stats connues (sauf mythiques et légendaires, aux stats fixes)
-		return item.base.keys() if int(item.get("rarity", 0)) < Items.MYTHIC else []
-	return item.get("affixes", {}).keys().filter(func(s): return Items.AFFIX_RANGES.has(s))
+	var out: Array = []
+	for r in item.get("up_rolls", []):
+		if not String(r[0]) in out and Craft.UPGRADE_ROLL.has(String(r[0])):
+			out.append(String(r[0]))
+	if not item.has("base"):
+		for s in item.get("affixes", {}).keys():
+			if Items.AFFIX_RANGES.has(s) and not s in out:
+				out.append(s)
+	return out
 
 
 ## Nouveau jet de l'affixe [param stat] dans sa fourchette. Renvoie le texte du résultat.
 static func reforge(item: Dictionary, stat: String) -> String:
 	if not Profile.pay(reforge_cost(item)):
 		return "Pas assez de cristaux."
-	if item.has("base"):
-		var e: Dictionary = GameData.eden_by_id.get(int(item.get("eden", 0)), {})
-		var ratio := float(e.get("r", {}).get(stat, 1.0))
-		var nv := Items._ref(String(item.slot), stat) * ratio * float(Items.RARITY_MULT[int(item.rarity)]) * randf_range(0.92, 1.08)
-		var b0 := float(item.base[stat])
-		item.base[stat] = nv
-		Profile.save_profile()
-		var k := 1.0 if stat in Items.PERCENT_STATS else Items._level_k(Items.power_level(item))
-		return "%s : %s → %s" % [Items.STAT_NAMES.get(stat, Items.EXTRA_STAT_NAMES.get(stat, stat)), Items.stat_text(stat, b0 * k), Items.stat_text(stat, nv * k)]
+	for roll in item.get("up_rolls", []):
+		if String(roll[0]) == stat and Craft.UPGRADE_ROLL.has(stat):
+			# nouveau jet de la stat bonus d'amélioration dans sa fourchette (palier : ×2)
+			var rr: Array = Craft.UPGRADE_ROLL[stat]
+			var b0 := float(roll[1])
+			roll[1] = snappedf(randf_range(rr[0], rr[1]) * 2.0, 0.001 if stat in Items.PERCENT_STATS else 0.1)
+			if roll.size() < 3:
+				roll.append(Items.MILESTONES[0])
+			Profile.save_profile()
+			var k := 1.0 if stat in Items.PERCENT_STATS else Items._level_k(Items.power_level(item))
+			return "%s : %s → %s" % [Items.STAT_NAMES.get(stat, Items.EXTRA_STAT_NAMES.get(stat, stat)), Items.stat_text(stat, b0 * k), Items.stat_text(stat, float(roll[1]) * k)]
 	var r: Array = Items.AFFIX_RANGES[stat]
 	var v := randf_range(float(r[0]), float(r[1]))
 	if not stat in Items.PERCENT_STATS:

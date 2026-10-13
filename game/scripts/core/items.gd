@@ -9,8 +9,11 @@ extends RefCounted
 ## - désassemblage → matériaux, vente → or ;
 ## - pièces de set (rares et épiques) : bonus à 2 / 4 / 6 pièces portées, dont des
 ##   effets déclenchés façon Eden (foudre, gel, buffs temporaires...).
-## Niveaux : "level" = niveau de l'objet dans Eden (affiché, chronologie des zones) ;
-## "plevel" = niveau de puissance (niveau de run où il est tombé), qui règle ses stats.
+## Niveaux : "level" = niveau de l'objet dans Eden (affiché, chronologie des zones). Sa
+## puissance (qui règle ses stats) suit le niveau du héros pendant la run, plafonnée au
+## niveau de l'objet (power_cap) : un objet 23 n'évolue plus après le niveau 23, un objet 90
+## suit toute la run. Hors run : la puissance maximale. Stats fixes, seul le jet de qualité
+## varie ; les stats bonus n'arrivent qu'aux améliorations +4, +6, +8, +10 (Craft).
 
 const SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "necklace", "ring", "trophy"]
 const SLOT_NAMES := {
@@ -316,7 +319,7 @@ static func from_template(e: Dictionary, level: int, rarity := -1) -> Dictionary
 	for s in e.get("r", {}):
 		var ref := _ref(slot, String(s))
 		if ref > 0.0:
-			base[s] = ref * float(e.r[s]) * float(RARITY_MULT[r]) * (randf_range(0.92, 1.08) if r < MYTHIC else 1.0)
+			base[s] = ref * float(e.r[s]) * float(RARITY_MULT[r])  # stats fixes : seule la qualité varie
 	item["base"] = base
 	# sets : pièces mythiques et légendaires ; les sets créés en mode dev (« u… ») à toute rareté
 	if e.has("set") and (r >= MYTHIC or String(e.set).begins_with("u")):
@@ -426,7 +429,58 @@ static func _level_k(level: int) -> float:
 ## Niveau de puissance d'un objet (niveau de run où il est tombé) : règle ses stats,
 ## ses coûts et sa valeur. Le niveau affiché ("level") est celui d'Eden.
 static func power_level(item: Dictionary) -> int:
-	return int(item.get("plevel", item.get("level", 1)))
+	var cap := power_cap(item)
+	return mini(Run.hero_level, cap) if Run.active and Run.hero_level > 0 else cap
+
+
+## Plafond de puissance : le niveau de l'objet d'Eden, ramené à l'échelle des niveaux de run
+## de sa zone s'il est plus haut (les objets de Limestone, niveaux d'Eden 1-13, vont jusqu'au
+## niveau 18 de la zone) ; les objets sans niveau (trophées) suivent toujours le héros.
+static func power_cap(item: Dictionary) -> int:
+	var lv := int(item.get("level", 1))
+	if not item.has("eden"):
+		return maxi(int(item.get("plevel", lv)), 1)
+	if lv <= 0:
+		return 999
+	return maxi(lv, GameData.power_level_of(lv))
+
+
+## Note d'un objet (comparaison) : chaque stat rapportée à la valeur habituelle de son
+## emplacement au même niveau ; passif +1, pièce de set +0,5.
+static func rating(item: Dictionary) -> float:
+	if item.is_empty():
+		return 0.0
+	var slot := String(item.get("slot", "weapon"))
+	var lk := _level_k(power_level(item))
+	var st := stats(item)
+	var r := 0.0
+	for s in st:
+		var ref := _ref(slot, String(s))
+		if ref <= 0.0:
+			ref = float(AFFIX_RANGES.get(s, [0.0, 0.0])[1])
+		if ref <= 0.0:
+			continue
+		r += float(st[s]) / (ref * (1.0 if s in PERCENT_STATS else lk))
+	if item.has("passive"):
+		r += 1.0
+	if item.has("set"):
+		r += 0.5
+	return r
+
+
+## Écart avec la pièce portée au même emplacement (+0,15 = 15 % mieux) ; 1 si l'emplacement
+## est vide ; 0 pour ce qui ne s'équipe pas.
+static func compare_to_equipped(item: Dictionary) -> float:
+	var slot := String(item.get("slot", ""))
+	if not slot in SLOTS:
+		return 0.0
+	var worn: Dictionary = Profile.equipped.get(slot, {})
+	if worn.is_empty():
+		return 1.0
+	if String(worn.get("uid", "")) == String(item.get("uid", "-")):
+		return 0.0
+	var a := rating(worn)
+	return (rating(item) - a) / maxf(a, 0.01)
 
 
 static func _add_affix(item: Dictionary, stat: String) -> void:
@@ -640,8 +694,10 @@ static func describe(item: Dictionary) -> String:
 			var bn := set_bonus(sid, n)
 			var set_col := SET_COLOR.to_html(false) if worn >= n else "888888"
 			lines.append("[color=#%s]%d pièces : %s[/color]" % [set_col, n, " ; ".join(bonus_lines(bn))])
-	if item.has("plevel"):
-		lines.append("[color=#8a86a0]Objet d'Eden de niveau %d · puissance du niveau de run %d[/color]" % [int(item.level), power_level(item)])
+	if item.has("eden"):
+		var cap := power_cap(item)
+		lines.append("[color=#8a86a0]%s[/color]" % ("Suit ton niveau en run" if cap >= 999 else (
+			"Puissance %d (suit ton niveau en run jusqu'au niveau %d)" % [power_level(item), cap] if Run.active else "Suit ton niveau en run jusqu'au niveau %d" % cap)))
 	var src := String(GameData.eden_by_id.get(int(item.get("eden", 0)), {}).get("src", ""))
 	if src != "":
 		lines.append("[color=#8a86a0]Dans Eden : %s[/color]" % src)

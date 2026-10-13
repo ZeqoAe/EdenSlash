@@ -541,7 +541,7 @@ func _test_run_screens() -> void:
 	var npc: Interactable = map.interactables.filter(func(i): return i.kind == "merchant")[0]
 	v.open(npc)
 	await _frames()
-	check("marchand : boutique ouverte (3 pages : Boutique, Vendre, Fabriquer)", v.is_open() and v._screen._pages.size() == 3)
+	check("marchand : boutique ouverte (2 pages : Boutique, Vendre ; plus de fabrication de mythiques)", v.is_open() and v._screen._pages.size() == 2)
 	check("marchand : cartes, clé, fournitures, équipement", v.offers.any(func(o): return o.has("card") and o.card.type in ["skill", "upgrade", "passive"]) and v.offers.any(func(o): return o.has("keys"))
 		and v.offers.any(func(o): return o.has("bag")) and v.offers.any(func(o): return o.has("item")))
 	var offers_first: Array = v.offers
@@ -578,8 +578,10 @@ func _test_run_screens() -> void:
 	Profile.disassemble_many([junk])
 	check("démonter : des cristaux (%d → %d)" % [crys0, Profile.amount("crystal")], Profile.amount("crystal") > crys0)
 	Profile.materials.crystal = 50
-	Profile.add_item(Items.generate(10, 1.0, "chest", "samurai", 2))  # au moins une pièce rare (stats réforgeables)
-	var rare: Dictionary = Profile.inventory.filter(func(x): return not Forge.reforgeable(x).is_empty())[0]
+	var rare := Items.generate(10, 1.0, "chest", "samurai", 2)
+	rare["upgrade"] = 4
+	rare["up_rolls"] = [["str", 6.0, 4]]  # stat bonus du palier +4 : seule stat réforgeable
+	Profile.add_item(rare)
 	var stat: String = Forge.reforgeable(rare)[0]
 	var txt := Forge.reforge(rare, stat)
 	check("réforger une stat : des cristaux (%s)" % txt, Profile.amount("crystal") < 50 and txt.contains("→") and Forge.reforge_cost(rare).keys() == ["crystal"])
@@ -645,6 +647,7 @@ func _test_run_screens() -> void:
 	world.cards._show_next()
 	# élite : une clé ; coffres de récompense gardés à l'extraction
 	var keys1 := Profile.keys
+	var chests0 := Profile.reward_chests.size()
 	world.director.dev_spawn_elite()
 	await _frames()
 	var elite: Monster = get_tree().get_nodes_in_group("monsters").filter(func(m): return m.is_elite)[-1]
@@ -654,7 +657,7 @@ func _test_run_screens() -> void:
 	world.cards._show_next()
 	Run.pick_up(Rewards.loot_item(Rewards.make("trophy", 10)))
 	Run.pick_up(Rewards.loot_item(Rewards.make("forge", 10)))
-	check("coffres de récompense ramassés", Run.chests_found.size() == 2)
+	check("coffres de récompense ramassés : tout de suite au menu Coffres (jamais perdus)", Profile.reward_chests.size() == chests0 + 2)
 	world.queue_free()
 	await _frames()
 	Run.finish("extraction")

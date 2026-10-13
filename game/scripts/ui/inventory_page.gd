@@ -677,6 +677,7 @@ func _cell(e: Dictionary) -> Control:
 	s.entry = e
 	s.set_item(entry_display(e))
 	s.source = "inventory" if String(e.kind) == "item" else ""
+	s.show_compare = String(e.kind) == "item"
 	s.badge = ("%d" % int(e.count)) if e.has("count") else ""
 	if String(e.kind) == "item" and not Profile.in_run and not Profile.item_users(String(e.item.uid)).is_empty():
 		s.badge = "★"

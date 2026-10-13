@@ -23,6 +23,7 @@ func _ready() -> void:
 	_test_sets()
 	_test_cards()
 	_test_ban_keep()
+	_test_gear_rules()
 	await _test_world()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit(1 if fails > 0 else 0)
@@ -267,6 +268,28 @@ func _test_card_tiers() -> void:
 	Run.passives.clear()
 	Run.passive_power.clear()
 	player.recalc_stats()
+
+
+## Équipement : puissance qui suit le héros (plafonnée), stats fixes, coffres seuls à donner
+## les mythiques et légendaires.
+func _test_gear_rules() -> void:
+	var e23: Dictionary = GameData.eden_items.filter(func(x): return int(x.level) == 23 and x.slot == "chest")[0]
+	var e90: Dictionary = GameData.eden_items.filter(func(x): return int(x.level) >= 85 and x.slot == "chest")[0]
+	var a := Items.from_template(e23, 1)
+	var b := Items.from_template(e90, 1)
+	Run.hero_level = 10
+	check("niveau du héros 10 : objet 23 et objet 90 à la puissance 10", Items.power_level(a) == 10 and Items.power_level(b) == 10)
+	Run.hero_level = 30
+	check("niveau 30 : l'objet 23 plafonne à 23, l'objet 90 suit (30)", Items.power_level(a) == 23 and Items.power_level(b) == 30)
+	Run.hero_level = 1
+	var c1 := Items.from_template(e23, 1, 2)
+	var c2 := Items.from_template(e23, 1, 2)
+	check("stats fixes : deux exemplaires ont les mêmes stats de base (seule la qualité varie)", str(c1.base) == str(c2.base))
+	var ch := Rewards.make("gear", 20)
+	Profile.reward_chests.append(ch)
+	var got := Rewards.open(ch)
+	check("coffre d'équipement : mythique ou légendaire", int(got.items[0].rarity) >= Items.MYTHIC)
+	check("butin des monstres : jamais mythique ni légendaire", range(300).all(func(_i): return int(Items.generate(10, 0.9).rarity) <= 3))
 
 
 ## Bannir et garder des cartes pendant le choix.

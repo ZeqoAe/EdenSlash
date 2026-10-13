@@ -1,7 +1,7 @@
 # Audit d'Eden Slash (version 0.1.33)
 
-> **Tes réponses (13/10) sur les parties 1, 2 et 3 sont appliquées** : voir « ✅ Décidé » dans
-> chaque partie. Il reste les questions des parties 4 à 10.
+> **Tes réponses (13/10) sur les parties 1 à 5 sont appliquées** : voir « ✅ Décidé » dans
+> chaque partie. Il reste les questions des parties 6 à 10.
 
 But : repasser sur **tout ce qui existe** avant d'ajouter quoi que ce soit, pour que tu
 choisisses quoi approfondir. Pour chaque partie : **comment ça marche aujourd'hui**, **ce que
@@ -157,9 +157,22 @@ camps, marchands. 1 relance par run (+1 par Bonne étoile).
 - Petites flèches ▲▼ sur les cases (mieux / moins bien que la pièce portée).
 - Bouton « équiper le meilleur » et « démonter les objets inférieurs ».
 
-❓ L'équipement gardé doit-il rester **plus fort que la run** (sentiment de progression
-permanente) ou être **remis au niveau** du héros (chaque run reste un défi) ?
-❓ Veux-tu des **affixes aléatoires** en plus des stats d'Eden sur commun → épique ?
+✅ **Décidé et fait (0.1.34)** :
+- **Puissance d'un objet = niveau du héros de la run, plafonnée au niveau de l'objet** : un
+  objet 23 n'évolue plus après le niveau 23, un objet 90 suit toute la run (objets de
+  Limestone, niveaux d'Eden 1-13 : jusqu'au niveau max de la zone). Hors run : puissance
+  maximale. La fiche indique « suit ton niveau en run jusqu'au niveau X ».
+- **Améliorations (+N), gemmes et enchantements gardés** d'une run à l'autre.
+- **Stats fixes** : plus de variation aléatoire des stats de base, seul le jet de qualité (%)
+  change. **Pas d'affixes à la création** : une stat bonus aléatoire seulement aux paliers
+  **+4, +6, +8, +10** (les autres niveaux : +10 % des stats). Rater un palier (redescendre)
+  fait perdre sa stat bonus. **Réforger** relance la valeur d'une stat bonus (plus les stats
+  de base).
+- **Comparateur** : ▲ / ▼ sur les objets de l'inventaire et du coffre ; la fiche donne
+  « ▲ Meilleur +12 % » avec le détail ; en run, un objet ramassé meilleur que la pièce portée
+  s'annonce 8 s en bas de l'écran : **G** pour l'équiper (touche modifiable).
+- 🔜 À faire ensuite : une monnaie ou un objet pour **redescendre d'un niveau d'amélioration**
+  et retenter la stat bonus d'un palier.
 
 ---
 
@@ -173,8 +186,14 @@ Tableau complet dans `DESIGN.md` (« Monnaies, coffres et zones »).
 - 🟠 Coffres de récompense : 0,6 % par monstre + boss + élites (15 %). Le menu Coffres est
   séparé du reste : on oublie de les ouvrir.
 
-❓ Ouvrir les coffres de récompense **directement en fin de run** (écran de bilan) plutôt
-que dans un menu à part ?
+✅ **Décidé et fait (0.1.34)** : coffres de récompense sur **100 % des boss du donjon, 20 %
+des élites, 0,5 % des monstres** ; ramassés, ils vont **tout de suite au menu Coffres** et ne
+sont **jamais perdus**, même si la run échoue. **Seule source des mythiques et légendaires**
+(coffre d'équipement : mythique, légendaire 20 % — 35 % sur un coffre de boss ; coffre de set :
+3 pièces mythiques ou légendaires au choix). Les monstres lâchent l'équipement commun à épique
+et les fournitures (ciseaux, gemmes, parchemins, pierres). Le boss ne lâche plus de mythique
+au sol, les marchands ne fabriquent plus de mythiques, les sanctuaires donnent des trophées
+jusqu'à épique.
 
 ---
 
@@ -254,8 +273,8 @@ comparaison ; build actuel visible dans le choix de cartes.
 - 🟢 Rage : ~65 FPS encerclé (0.1.29), plafond de monstres.
 - 🟠 Dépôt GitHub : **1,3 Go** (assets d'Eden). Le rendre privé reste conseillé ; un nettoyage
   de l'historique réduirait la taille (opération délicate, à faire ensemble).
-- 🟠 Une erreur « index hors limites » est apparue une fois sur cinq passages des tests de pages,
-  sans se reproduire : aléatoire, à traquer.
+- 🟢 L'erreur « index hors limites » des tests venait d'un test de réforge (objet sans stat
+  réforgeable) : corrigée avec les nouvelles règles.
 - 🟠 Le pilote automatique des tests ne joue pas comme un humain (cartes, coffres) : les
   mesures d'équilibrage sont approximatives.
 

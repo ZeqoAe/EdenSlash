@@ -12,6 +12,7 @@ var active := false
 var class_id := "samurai"
 var skills: Array = []  # [{id, rank}]
 var passives: Dictionary = {}  # id -> nombre de cartes prises (niveau du passif)
+var hero_level := 0  # niveau du héros de la run (puissance des objets : Items.power_level)
 var banned: Array = []  # cartes bannies pour la run (ids)
 var kept: Array = []  # cartes gardées pour le prochain choix : [{type, id, tier}]
 var bans_used := 0
@@ -33,7 +34,7 @@ var expertise_levels := 0
 var new_classes: Array = []  # classes débloquées pendant la run (bilan)
 var new_costumes: Array = []  # costumes (skins de tenue) débloqués pendant la run
 var rerolls_used := 0  # relances de cartes utilisées (1 par run + cartes « Bonne étoile »)
-var chests_found: Array = []  # coffres de récompense ramassés (gardés si victoire ou extraction)
+var chests_found: Array = []  # (ancien) coffres ramassés : désormais rangés tout de suite dans Profile.reward_chests
 
 
 func start(cid: String) -> void:
@@ -42,6 +43,7 @@ func start(cid: String) -> void:
 	skills.clear()
 	passives.clear()
 	passive_power.clear()
+	hero_level = 1
 	banned.clear()
 	kept.clear()
 	bans_used = 0
@@ -91,7 +93,9 @@ func pick_up(item: Dictionary) -> bool:
 		Profile.add_bag(String(item.consumable))
 		return true
 	if item.has("chest"):
-		chests_found.append(item.chest)
+		# coffre de récompense : rangé tout de suite dans le menu Coffres, jamais perdu
+		Profile.reward_chests.append(item.chest)
+		Profile.save_profile()
 		changed.emit()
 		return true
 	if not Profile.add_item(item):

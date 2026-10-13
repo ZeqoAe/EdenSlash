@@ -1,9 +1,10 @@
 class_name Rewards
 extends RefCounted
-## Coffres de récompense, ouverts hors run (menu Coffres) : ils tombent des monstres
-## (rarement), des élites et des boss, et se gardent après une victoire ou une extraction
-## (perdus si le héros tombe). Chaque coffre : {id, type, plevel}.
-## - équipement : un objet rare à épique (parfois mythique) ;
+## Coffres de récompense, ouverts hors run (menu Coffres) : boss du donjon (100 %), élites
+## (20 %), monstres (0,5 %). Ramassés, ils vont tout de suite dans le menu Coffres et ne se
+## perdent jamais. **Seule source des objets mythiques et légendaires.**
+## Chaque coffre : {id, type, plevel}.
+## - équipement : un objet mythique (légendaire : 20 %, 35 % pour un coffre de boss) ;
 ## - forge : pierres de chance et de protection, ciseaux, cristaux ;
 ## - joaillier : gemmes et parchemins d'enchantement ;
 ## - set : choisir 1 pièce mythique parmi 3 pièces d'un même set ;
@@ -11,17 +12,25 @@ extends RefCounted
 ## Objets : au coffre commun ; fournitures : à la réserve (emportée à la prochaine run).
 
 const TYPES := {
-	"gear": {"name": "Coffre d'équipement", "desc": "Un objet rare à épique (parfois mythique) de ton niveau.", "color": Color(0.4, 0.66, 1.0)},
+	"gear": {"name": "Coffre d'équipement", "desc": "Un objet mythique (parfois légendaire) de ton niveau.", "color": Color(1.0, 0.55, 0.15)},
 	"forge": {"name": "Coffre de forge", "desc": "Pierres de chance et de protection, ciseaux de sertissage, cristaux.", "color": Color(0.85, 0.85, 0.9)},
 	"jewel": {"name": "Coffre du joaillier", "desc": "Gemmes et parchemins d'enchantement.", "color": Color(0.42, 0.9, 0.42)},
-	"set": {"name": "Coffre de set", "desc": "Choisis 1 pièce mythique parmi 3 pièces d'un même set.", "color": Color(1.0, 0.55, 0.15)},
+	"set": {"name": "Coffre de set", "desc": "Choisis 1 pièce mythique (parfois légendaire) parmi 3 pièces d'un même set.", "color": Color(1.0, 0.84, 0.25)},
 	"trophy": {"name": "Coffre de trophées", "desc": "Choisis 1 trophée parmi 3.", "color": Color(1.0, 0.82, 0.3)},
 }
 const ORDER := ["set", "trophy", "gear", "forge", "jewel"]
 
 
-static func make(type: String, plevel: int) -> Dictionary:
-	return {"id": "%d_%d" % [Time.get_ticks_usec(), randi() % 100000], "type": type, "plevel": maxi(plevel, 1)}
+static func make(type: String, plevel: int, boss := false) -> Dictionary:
+	var c := {"id": "%d_%d" % [Time.get_ticks_usec(), randi() % 100000], "type": type, "plevel": maxi(plevel, 1)}
+	if boss:
+		c["boss"] = true
+	return c
+
+
+## Rareté d'un objet de coffre : mythique, ou légendaire (20 %, 35 % pour un coffre de boss).
+static func top_rarity(chest: Dictionary) -> int:
+	return Items.LEGENDARY if randf() < (0.35 if chest.get("boss", false) else 0.2) else Items.MYTHIC
 
 
 ## Coffre tiré au sort pour un monstre ([param boss], [param elite]).
@@ -53,8 +62,9 @@ static func offer(chest: Dictionary) -> Array:
 			out.append(Items.generate(lv, 1.0, "trophy", Profile.selected_class, 2, "", Items.MYTHIC))
 	else:
 		var pieces := set_pieces(lv)
+		var rar := top_rarity(chest)
 		for e in pieces:
-			out.append(Items.from_template(e, lv, Items.MYTHIC))
+			out.append(Items.from_template(e, lv, rar))
 		while out.size() < 3:
 			out.append(Items.generate(lv, 1.0, "", Profile.selected_class, Items.MYTHIC, "", Items.MYTHIC))
 	chest["offer"] = out
@@ -93,7 +103,8 @@ static func open(chest: Dictionary) -> Dictionary:
 	var lv := int(chest.plevel)
 	match String(chest.type):
 		"gear":
-			got.items.append(Items.generate(lv, 0.8, "", Profile.selected_class, 2, "", Items.MYTHIC if randf() < 0.15 else 3))
+			var rar := top_rarity(chest)
+			got.items.append(Items.generate(lv, 0.8, "", Profile.selected_class, rar, "", rar))
 		"forge":
 			got.supplies = {"luck": randi_range(1, 2), "protect": 1 if randf() < 0.6 else 0, "drill": 1 if randf() < 0.5 else 0}
 			got.crystal = randi_range(3, 6) + lv / 10

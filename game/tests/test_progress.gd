@@ -31,7 +31,7 @@ func _ready() -> void:
 	while int(w.upgrade) < 8 and tries < 100:
 		Profile.upgrade_item(w, 3, true)
 		tries += 1
-	check("katana amélioré en +8 (%d essais, protégé)" % tries, int(w.upgrade) == 8 and (w.up_rolls as Array).size() == 8)
+	check("katana amélioré en +8 (%d essais, protégé) : stats bonus aux paliers +4, +6, +8 seulement" % tries, int(w.upgrade) == 8 and (w.up_rolls as Array).size() == 3)
 	check("stat aléatoire gagnée à chaque réussite", Items.stats(w).has(String(w.up_rolls[0][0])))
 	# échecs sans protection : l'objet peut redescendre (statistique sur 400 essais vers +6)
 	var downs := 0
@@ -52,6 +52,7 @@ func _ready() -> void:
 	check("pierre de protection : aucune perte (%d)" % protected_downs, protected_downs == 0)
 	# joaillier : emplacements, gemmes, parchemins
 	var armor := Items.generate(12, 0.0, "chest")
+	armor["level"] = 20  # parchemin Lv2 : objet de niveau 10 minimum (niveau de l'objet, pas sa puissance)
 	Profile.add_bag("drill", 20)
 	while (armor.get("sockets", []) as Array).size() < 2 and Profile.bag_count("drill") > 0:
 		Craft.drill(armor)

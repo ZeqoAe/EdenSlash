@@ -127,7 +127,7 @@ les trophées et les sorts se combinent aux cartes de la run, c'est la boucle re
 | **Fournitures** (gemmes, parchemins, ciseaux, pierres de chance / protection) | butin, coffres de la carte, marchands, coffres de forge et du joaillier | forge : sertir, enchanter, améliorer sans risque | réserve gardée (victoire, extraction), perdues si le héros tombe |
 | **Cartes d'amélioration** | passage de niveau, coffres de la carte, sanctuaires des cartes, gardiens d'élite, marchands | build de la run (sorts, améliorations, passifs) | la run seulement |
 | **Choix de trophée** (3 au choix) | sanctuaires des trophées, coffres de trophées | un trophée (buff sous condition) qui rejoint le sac / le coffre | gardé comme tout objet |
-| **Coffres de récompense** | boss (2), élites (15 %), monstres (0,6 %) | menu **Coffres** hors run : équipement, forge, joaillier, set au choix, trophée au choix | gardés (victoire, extraction), perdus si le héros tombe |
+| **Coffres de récompense** | boss du donjon (100 %), élites (20 %), monstres (0,5 %) | menu **Coffres** hors run : équipement (mythique / légendaire), forge, joaillier, set au choix, trophée au choix ; **seule source des mythiques et légendaires** | **jamais perdus** (rangés dès qu'on les ramasse) |
 | **Points d'expertise** | fin de run | maîtrise de la classe (talents, sorts, certificats) | gardés |
 | **Archive et trésors de collection** | mythiques / légendaires archivés, boss | bonus permanents, apparences | gardés |
 
@@ -393,3 +393,13 @@ Un proc = déclencheur + chance + recharge interne + effet (`scripts/combat/proc
 - **Cartes** : 12 disponibles d'emblée, 18 à débloquer par exploits cumulés (Cards.UNLOCK) ;
   Bannir / Garder 3 fois chacun par run ; page Héros > Cartes.
 - **Coffres de la carte** : prix doublé à chaque ouverture.
+
+## Équipement en run (0.1.34)
+
+- Puissance d'un objet = niveau du héros de la run, plafonnée au niveau de l'objet
+  (Items.power_cap) ; hors run : la puissance maximale. Améliorations, gemmes, enchantements
+  gardés entre les runs.
+- Stats fixes, jet de qualité seulement ; stat bonus aléatoire aux paliers +4 / +6 / +8 / +10
+  (Craft._upgrade_roll), réforgeable aux cristaux.
+- Comparateur (Items.rating, Items.compare_to_equipped) : ▲ / ▼, % sur la fiche, alerte en
+  run et touche G (quick_equip).
