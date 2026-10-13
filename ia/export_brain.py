@@ -1,8 +1,8 @@
 """Exporte un modèle entraîné en cerveau lisible par le jeu (game/data/cerveaux/<nom>.json),
 utilisé sans Python par MlBrain (game/scripts/ml/ml_brain.gd).
 
-  python export_brain.py                              modeles/guerrier.zip -> guerrier_maitre.json
-  python export_brain.py modeles/etapes/etape_6_reussie.zip guerrier_facile
+  python export_brain.py                              modeles/universel.zip -> cerveau_maitre.json
+  python export_brain.py modeles/etapes/etape_6_reussie.zip cerveau_normal
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ def export(model_path: Path | str, name: str, meta: dict | None = None) -> Path:
 
 
 if __name__ == "__main__":
-    src = sys.argv[1] if len(sys.argv) > 1 else str(HERE / "modeles" / "guerrier.zip")
-    name = sys.argv[2] if len(sys.argv) > 2 else "guerrier_maitre"
+    src = sys.argv[1] if len(sys.argv) > 1 else str(HERE / "modeles" / "universel.zip")
+    name = sys.argv[2] if len(sys.argv) > 2 else "cerveau_maitre"
     path = export(src, name, {"source": Path(src).name})
     print(f"Cerveau exporté : {path} ({path.stat().st_size // 1024} Ko)")

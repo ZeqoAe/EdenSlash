@@ -1,6 +1,7 @@
 """Regarder l'IA jouer dans une fenêtre, en temps réel.
 
   python watch.py                  scénario de l'étape en cours
+  python watch.py hardcore --classe magicien   (classe au hasard si absente)
   python watch.py hardcore         mannequin | mannequin4 | fuyard | survie | facile | normal | difficile | hardcore | toutes | duo
   python watch.py hardcore --modele modeles/etapes/etape_5_4.zip
 
@@ -12,13 +13,14 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import unicodedata
 import time
 from pathlib import Path
 
 import numpy as np
 from stable_baselines3 import PPO
 
-from curriculum import ALL, DUMMY4, DUMMY12, DUO, FLEE, FLEE3, STAGES, SURVIVE, SURVIVE2, Curriculum, rival
+from curriculum import CLASSES, ALL, DUMMY4, DUMMY12, DUO, FLEE, FLEE3, STAGES, SURVIVE, SURVIVE2, Curriculum, rival
 from eden_env import GodotVecEnv
 
 HERE = Path(__file__).resolve().parent
@@ -29,29 +31,52 @@ CHOICES = {
 }
 
 
+def _plain(t: str) -> str:
+    return unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode().lower().replace("-", " ").replace("_", " ").strip()
+
+
+_data = json.loads((HERE.parent / "game" / "data" / "classes.json").read_text(encoding="utf-8"))
+NAMES = {cid: c.get("name_fr", cid) for cid, c in _data.get("classes", _data).items()}
+
+
+def find_class(name: str) -> str:
+    """Identifiant de classe d'après son nom français ou son identifiant ("" : au hasard)."""
+    if not name:
+        return ""
+    name = {"mage": "magician", "pretre": "cleric", "prêtre": "cleric"}.get(name.lower(), name)
+    for cid, fr in NAMES.items():
+        if _plain(name) in (_plain(cid), _plain(fr)):
+            return cid
+    sys.exit(f"Classe inconnue : {name}. Exemples : guerrier, mage -> Magicien, clerc, chasseur, samourai…")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("scenario", nargs="?", default="")
-    ap.add_argument("--modele", default=str(HERE / "modeles" / "guerrier.zip"))
+    ap.add_argument("--modele", default=str(HERE / "modeles" / "universel.zip"))
+    ap.add_argument("--classe", default="", help="classe jouée (nom français ou identifiant ; vide : au hasard)")
     ap.add_argument("--capture", default="", help="capture d'écran (png) à 4 s du premier combat")
     args = ap.parse_args()
-    state_path = HERE / "modeles" / "guerrier_etat.json"
+    state_path = Path(args.modele).with_name(Path(args.modele).stem + "_etat.json")
+    hero = find_class(args.classe)
     cur = Curriculum(json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {})
     if args.scenario:
         if args.scenario not in CHOICES:
             sys.exit(f"Scénario inconnu : {args.scenario}. Choix : {', '.join(CHOICES)}")
         pool = CHOICES[args.scenario]
-        pick = lambda _i: dict(pool[np.random.randint(len(pool))])
+        base = lambda: dict(pool[np.random.randint(len(pool))])
         print(f"Scénario : {args.scenario}")
     else:
-        pick = lambda _i: dict(STAGES[cur.stage]["mix"][0][1])
+        base = lambda: dict(STAGES[cur.stage]["mix"][0][1])
         print(f"Scénario de l'étape {cur.stage + 1} : {STAGES[cur.stage]['nom']}")
+    print(f"Classe jouée : {NAMES.get(hero, hero) if hero else 'au hasard à chaque combat'}")
+    pick = lambda _i: {**base(), "hero_class": hero or np.random.choice(CLASSES)}
     results = []
 
     def on_episode(_i, sc, info):
         results.append(info["result"])
         wins = sum(r == "win" for r in results)
-        print(f"Combat {len(results)} : {info['result']:7s} en {info['t']:5.1f} s · dégâts {round(info['dealt'] * 100)} % · "
+        print(f"Combat {len(results)} ({NAMES.get(info.get('hero', ''), '?')}) : {info['result']:7s} en {info['t']:5.1f} s · dégâts {round(info['dealt'] * 100)} % · "
               f"subis {round(info['taken'] * 100)} % · enchaînements {info['chain']} · parfaits {info['perfect']} · "
               f"esquives {info['dodged']}   (victoires {wins}/{len(results)})")
 

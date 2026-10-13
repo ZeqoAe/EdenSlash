@@ -10,7 +10,7 @@ extends Node3D
 ##   --watch : fenêtre en temps réel avec caméra et bandeau (regarder l'IA jouer).
 ##   --brain=res://data/cerveaux/<nom>.json --scenario=hardcore : le jeu fait jouer un cerveau
 ##   exporté tout seul, sans Python (MlBrain) ; --episodes=N : N combats puis bilan et sortie ;
-##   --temperature=0.5 : choix tirés au sort (moins fort, plus humain).
+##   --temperature=0.5 : choix tirés au sort (moins fort, plus humain) ; --hero=mage : classe jouée.
 ## Scénarios (message « reset ») :
 ##   dummy   : mannequin qui ne bouge pas (apprendre combos, sorts et enchaînements) ;
 ##   flee    : adversaire de classe fuyard (jouer agressif, esquives d'annulation pour suivre) ;
@@ -26,6 +26,24 @@ const ENEMY_STATES := ["idle", "chase", "attack", "hurt", "cast"]
 const HERO_STATUSES := ["fury", "barrier", "titan", "survival", "frenzy", "scar", "chill", "root"]
 const ENEMY_STATUSES := ["stun", "bleed", "scar", "purgatory", "chill", "freeze", "shock"]
 const BUTTONS := 8  # rien, attaque, sort 1 à 4, esquive, saut
+## Classes connues du cerveau, dans un ordre FIXE (le cerveau voit la classe jouée et celle de
+## l'adversaire à leur rang dans cette liste) : ajouter une classe à la fin seulement.
+const ML_CLASSES := ["samurai", "warrior", "thief", "hunter", "cleric", "magician", "bard", "knight", "engineer",
+	"martial_artist", "illusionist", "blade_dancer", "shaman", "templar", "ranger", "warlock", "sage", "dragon_knight",
+	"luminary", "inquisitor", "berserker", "shielder", "arch_elementalist", "stormcaster", "trainer", "devil_hunter",
+	"adjudicator", "equilibrian", "assassin", "kage", "battlefield_poet", "life_worshipper", "executioner",
+	"glacier_knight", "mecha_ares", "annihilator", "asura", "rakshasa", "demon_tamer", "chronologist", "blade_acrobat",
+	"elegant_dancer", "druid", "archimage", "dawnbreaker", "paladin", "absolute_arrow", "holy_arrow", "dark_envoy",
+	"conjurer", "blade_master", "master_fencer", "psalmist", "orator", "dragon_soul", "dragon_rider", "black_blade",
+	"light_blade", "reaver", "rifleteer"]
+## Fiche d'un sort vue par le cerveau : type, chiffres, effets (voir _skill_card).
+const SKILL_KINDS := ["buff", "ground", "bolt", "spin", "cone", "heal", "dash", "flurry", "fan", "blink", "line"]
+const DOTS := ["bleed", "burn", "poison"]
+const WEAKEN := ["purgatory", "shock", "scar", "chill", "cranes"]
+const OFF_BUFFS := ["fury", "might", "keen", "frenzy", "marduk", "swift", "grace", "hunter_stance", "haste"]
+const DEF_BUFFS := ["barrier", "titan", "resolve", "evasion", "regen", "invisible", "vitality", "thorns", "angel",
+	"solar", "shrine", "survival"]
+const SKILL_CARD := 25  # nombres par fiche de sort
 
 var player: Player
 var enemies: Array[Monster] = []
@@ -41,6 +59,7 @@ var _max_time := 60.0
 var _low_hp := 0.0  # PV max du héros pendant l'épisode (0 : normal)
 var _prev_enemy_hp := 0.0
 var _enemy_max_total := 0.0
+var _class_obs: Array = []  # classe jouée et fiches de ses 12 sorts (fixes pendant un combat)
 var _prev_hero_hp := 0.0
 var _prev_counts := {}
 var _total := {}
@@ -55,6 +74,7 @@ var _brain: MlBrain  # cerveau joué par le jeu lui-même (sans Python)
 var _brain_scen := {}
 var _temperature := 0.0
 var _episodes := 0
+var _hero_arg := "warrior"
 var _done_count := 0
 var _wins := 0
 ## Scénarios du mode cerveau (mêmes réglages que ia/curriculum.py).
@@ -89,6 +109,8 @@ func _ready() -> void:
 			_temperature = float(arg.trim_prefix("--temperature="))
 		elif arg.begins_with("--episodes="):
 			_episodes = int(arg.trim_prefix("--episodes="))
+		elif arg.begins_with("--hero="):
+			_hero_arg = arg.trim_prefix("--hero=")  # classe jouée par le cerveau (random : au hasard)
 	_setup_game_state()
 	_build_arena()
 	for m in GameData.monsters.values():
@@ -99,6 +121,7 @@ func _ready() -> void:
 	if _brain:
 		if _brain_scen.is_empty():
 			_brain_scen = PRESETS.hardcore.duplicate()
+		_brain_scen["hero_class"] = _hero_arg
 		_reset(_brain_scen)
 		if _obs().size() != _brain.obs_size:
 			push_error("cerveau d'une ancienne version de l'arène (%d entrées, l'arène en donne %d)" % [_brain.obs_size, _obs().size()])
@@ -269,7 +292,7 @@ func _brain_step() -> void:
 		_done_count += 1
 		if res.info.result == "win":
 			_wins += 1
-		print("combat %d : %s en %.1f s, dégâts %d %%, subis %d %% (victoires %d / %d)" % [_done_count, res.info.result,
+		print("combat %d (%s) : %s en %.1f s, dégâts %d %%, subis %d %% (victoires %d / %d)" % [_done_count, res.info.hero, res.info.result,
 			res.info.t, roundi(res.info.dealt * 100), roundi(res.info.taken * 100), _wins, _done_count])
 		if _episodes > 0 and _done_count >= _episodes:
 			print("BILAN %s : %d victoires sur %d combats" % [_brain_scen.get("scenario", ""), _wins, _done_count])
@@ -334,7 +357,13 @@ func _reset(msg: Dictionary) -> void:
 	_ep = msg
 	var scen := String(msg.get("scenario", "dummy"))
 	_max_time = float(msg.get("max_time", 60.0))
-	_setup_skills(int(msg.get("skills", 4)))
+	var hero_class := String(msg.get("hero_class", "warrior"))
+	if hero_class == "random" or not GameData.classes.has(hero_class):
+		hero_class = String(ML_CLASSES.pick_random())
+	_ep["hero_class"] = hero_class
+	Run.class_id = hero_class
+	Profile.selected_class = hero_class
+	_setup_skills(int(msg.get("skills", 4)), String(msg.get("loadout", "default")) == "random")
 	_bot.clear()
 	player = Player.new()
 	player.level = LEVEL
@@ -384,6 +413,7 @@ func _reset(msg: Dictionary) -> void:
 	_last_button = 0
 	_ep_reward = 0.0
 	_prev_enemy_hp = _enemy_hp()
+	_class_obs = _build_class_obs()
 	_enemy_max_total = 0.0
 	for e in enemies:
 		_enemy_max_total += e.max_hp
@@ -393,8 +423,12 @@ func _reset(msg: Dictionary) -> void:
 
 
 ## Sorts du guerrier : 4 cases, puis 2 enchaînements par case (12 sorts).
-func _setup_skills(n: int) -> void:
-	var all: Array = Run.class_data().get("skills", [])
+## [param random_pick] : 12 sorts tirés au hasard parmi ceux de la classe (n'importe quel
+## jeu de sorts, comme une run ou la Tour), sinon les premiers de la liste.
+func _setup_skills(n: int, random_pick := false) -> void:
+	var all: Array = Run.class_data().get("skills", []).duplicate()
+	if random_pick:
+		all.shuffle()
 	Run.skills.clear()
 	Run.chains.clear()
 	for i in mini(4, all.size()):
@@ -408,6 +442,52 @@ func _setup_skills(n: int) -> void:
 					ch.append({"id": int(all[idx].id), "rank": 1})
 			if not ch.is_empty():
 				Run.chains[slot] = ch
+
+
+## Classe jouée (rang dans ML_CLASSES), ses statistiques de base et la fiche de ses 12 sorts
+## (case 1 : sort principal puis ses 2 enchaînements, etc.).
+func _build_class_obs() -> Array:
+	var o: Array = []
+	_one_hot(o, ML_CLASSES.find(Run.class_id), ML_CLASSES.size())
+	var base: Dictionary = Run.class_data().get("base", {})
+	o.append(float(base.get("hp", 1.0)) / 2.0)
+	o.append(float(base.get("atk", 1.0)) / 2.0)
+	o.append(float(base.get("matk", 0.5)) / 2.0)
+	o.append(1.0 if String(GameData.weapon_type(Run.weapon_type()).get("dmg_type", "phys")) == "mag" else 0.0)
+	o.append(1.0 if player.attack_reach() > 6.0 else 0.0)
+	for slot in 4:
+		var ids: Array = [int(Run.skills[slot].id)] if slot < Run.skills.size() else []
+		for e in Run.chain_of(slot):
+			ids.append(int(e.id))
+		for k in 3:
+			o.append_array(_skill_card(Run.skill_def(ids[k]) if k < ids.size() else {}))
+	return o
+
+
+## Fiche d'un sort (SKILL_CARD nombres) : présent, type, dégâts, zone, portée, élan, coups,
+## recharge, contrôle, dégâts sur la durée, affaiblissement, buff offensif / défensif, soin.
+func _skill_card(sk: Dictionary) -> Array:
+	var o: Array = []
+	if sk.is_empty():
+		return _zeros(SKILL_CARD)
+	o.append(1.0)
+	_one_hot(o, SKILL_KINDS.find(String(sk.get("kind", ""))), SKILL_KINDS.size())
+	o.append(clampf(float(sk.get("mult", 0.0)) / 3.0, 0.0, 2.0))
+	o.append(clampf(float(sk.get("radius", 0.0)) / 10.0, 0.0, 2.0))
+	o.append(float(sk.get("arc", 0.0)) / 360.0)
+	o.append(clampf(float(sk.get("range", 0.0)) / 15.0, 0.0, 2.0))
+	o.append(clampf(float(sk.get("dash", 0.0)) / 10.0, 0.0, 2.0))
+	o.append(clampf(float(sk.get("hits", 1)) / 5.0, 0.0, 2.0))
+	o.append(clampf(float(sk.get("cooldown", 0.0)) / 30.0, 0.0, 2.0))
+	var applies: Dictionary = sk.get("applies", {})
+	var buff: Dictionary = sk.get("buff", {})
+	o.append(1.0 if applies.keys().any(func(k): return k in Combatant.CC_TYPES) else 0.0)
+	o.append(1.0 if applies.keys().any(func(k): return k in DOTS) else 0.0)
+	o.append(1.0 if applies.keys().any(func(k): return k in WEAKEN) else 0.0)
+	o.append(1.0 if buff.keys().any(func(k): return k in OFF_BUFFS) else 0.0)
+	o.append(1.0 if buff.keys().any(func(k): return k in DEF_BUFFS) else 0.0)
+	o.append(clampf(float(sk.get("heal", 0.0)), 0.0, 1.0))
+	return o
 
 
 func _random_point(r: float) -> Vector3:
@@ -489,7 +569,8 @@ func _step_result() -> Dictionary:
 	if done:
 		info = {"result": result, "t": _t, "dealt": _total.dealt / maxf(_enemy_max_hp(), 1.0),
 			"taken": _total.taken / maxf(player.max_hp, 1.0), "perfect": player.ml_counts.perfect,
-			"chain": player.ml_counts.chain, "dodged": player.ml_counts.dodged, "reward": _ep_reward}
+			"chain": player.ml_counts.chain, "dodged": player.ml_counts.dodged, "reward": _ep_reward,
+			"hero": String(_ep.get("hero_class", ""))}
 		_results.append({"win": "V", "loss": "D", "timeout": "-"}[result])
 	return {"obs": _obs(), "r": r, "done": done, "info": info}
 
@@ -539,6 +620,7 @@ func _obs() -> Array:
 	var s := _side(f)
 	var scen := String(_ep.get("scenario", "dummy"))
 	_one_hot(o, SCENARIOS.find(scen), SCENARIOS.size())
+	o.append_array(_class_obs)
 	o.append(float(_ep.get("difficulty", 0)) / 3.0)
 	o.append(1.0 if int(_ep.get("skills", 4)) > 4 else 0.0)
 	o.append(1.0 if _low_hp > 0.0 else 0.0)
@@ -662,6 +744,10 @@ func _obs() -> Array:
 		o.append_array([1.0, clampf(rel.dot(s) / RADIUS, -2.0, 2.0), clampf(rel.dot(f) / RADIUS, -2.0, 2.0), proj.dir.dot(s), proj.dir.dot(f)])
 	else:
 		o.append_array(_zeros(5))
+	# classe de l'adversaire de classe le plus proche (aucune pour les monstres) et sa portée
+	var rv := _nearest_enemy() as ClassRival
+	_one_hot(o, ML_CLASSES.find(rv.cid) if rv else -1, ML_CLASSES.size())
+	o.append(clampf(rv._attack_range() / 15.0, 0.0, 1.0) if rv else 0.0)
 	_one_hot(o, _last_button, BUTTONS)
 	return o
 

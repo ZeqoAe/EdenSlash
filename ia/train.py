@@ -1,4 +1,4 @@
-"""Entraîne l'IA du guerrier dans l'arène d'Eden Slash (voir curriculum.py pour les étapes).
+"""Entraîne le cerveau universel (les 60 classes) dans l'arène d'Eden Slash (étapes : curriculum.py).
 
   python train.py              reprend là où l'entraînement s'était arrêté
   python train.py --nouveau    repart de zéro (l'ancien modèle est mis de côté)
@@ -21,14 +21,14 @@ import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 
-from curriculum import STAGES, Curriculum
+from curriculum import CLASSES, STAGES, Curriculum
 from eden_env import GodotVecEnv
 from export_brain import export as export_brain
 
 HERE = Path(__file__).resolve().parent
 MODELS = HERE / "modeles"
-MODEL = MODELS / "guerrier.zip"
-STATE = MODELS / "guerrier_etat.json"
+MODEL = MODELS / "universel.zip"  # cerveau des 60 classes
+STATE = MODELS / "universel_etat.json"
 PROGRESS = HERE / "progression.json"
 JOURNAL = HERE / "journal_entrainement.csv"
 
@@ -98,11 +98,16 @@ class CurriculumCallback(BaseCallback):
             print(f"    {key:9s} victoires {pct(s['victoires']):>5s} · survie {pct(s['survie']):>5s} · {s['duree']:5.1f} s · "
                   f"dégâts {pct(s['degats']):>5s} · subis {pct(s['subis']):>5s} · ench. {s['enchainements']:4.1f} · "
                   f"parfaits {s['parfaits']:4.1f} · esquives {s['esquives']:4.1f}")
+        if spec.get("par_classe") is not None:
+            ok, weakest = self.cur.classes_ok()
+            weak = ", ".join(f"{c} {pct(r) if r >= 0 else '?'}" for c, r in weakest)
+            print(f"    classes au niveau ({pct(spec['par_classe'])} de réussite) : {ok}/{len(CLASSES)} · "
+                  f"les plus faibles : {weak}")
         sys.stdout.flush()
         PROGRESS.write_text(json.dumps({
             "heure": time.strftime("%Y-%m-%d %H:%M:%S"), "etape": self.cur.stage + 1, "nom": spec["nom"],
             "decisions": self.total(), "reussite": round(self.cur.success_rate(), 3), "objectif": spec["seuil"],
-            "etapes_franchies": self.cur.history, "scenarios": summary,
+            "etapes_franchies": self.cur.history, "scenarios": summary, "classes": self.cur.class_table(),
         }, ensure_ascii=False, indent=1), encoding="utf-8")
         new = not JOURNAL.exists()
         with JOURNAL.open("a", newline="", encoding="utf-8") as f:
@@ -152,7 +157,7 @@ def main() -> None:
         model = PPO.load(MODEL, env=env, device="cpu")
     else:
         print(f"Nouveau modèle, étape {cur.stage + 1} : {cur.spec['nom']}")
-        model = PPO("MlpPolicy", env, n_steps=512, batch_size=2048, n_epochs=5, learning_rate=3e-4,
+        model = PPO("MlpPolicy", env, n_steps=1024, batch_size=4096, n_epochs=5, learning_rate=3e-4,
                     gamma=0.995, gae_lambda=0.95, clip_range=0.2, ent_coef=0.01, vf_coef=0.5, max_grad_norm=0.5,
                     policy_kwargs=dict(net_arch=dict(pi=[256, 256], vf=[256, 256])), device="cpu", verbose=0)
     cb = CurriculumCallback(cur, total)

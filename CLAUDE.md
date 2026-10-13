@@ -43,7 +43,9 @@ script avec `class_name`, lancer une fois `--import` pour mettre à jour le cach
 Arène `game/scenes/ml_arena.tscn` (`game/scripts/ml/`) pilotée par Python (`ia/`, voir
 `ia/LISEZMOI.md`) : `IA_Entrainer.bat`, `IA_Regarder.bat`. Le héros lit `Player.bot`
 (BotInput) à la place du clavier. Ajouter ou retirer une observation dans `ml_arena.gd`
-rend les modèles entraînés inutilisables (`--nouveau`). Modèles et journaux hors git.
+rend les modèles entraînés inutilisables (`--nouveau`). Modèles, journaux et cerveaux
+(`game/data/cerveaux/`) hors git. Un seul cerveau joue les 60 classes : l'ordre de
+`ML_CLASSES` (ml_arena.gd) et `CLASSES` (ia/curriculum.py) est fixe, ajouter à la fin.
 
 ## Graphismes
 Réglages d'image communs dans `game/scripts/world/gfx.gd` (qualité graphique), shaders dans
