@@ -1,0 +1,89 @@
+"""Version à partager d'Eden Slash : un dossier prêt à jouer, zippé.
+
+    python tools/make_release.py        (ou Creer_version.bat)
+
+1. exporte le jeu en un paquet (game/export_presets.cfg, « Windows Desktop ») :
+   build/EdenSlash/EdenSlash.pck ;
+2. place à côté le moteur Godot renommé EdenSlash.exe : il charge tout seul le paquet du
+   même nom (pas besoin des modèles d'export de Godot) ;
+3. ajoute LISEZMOI.txt et zippe le tout : build/EdenSlash_v<version>.zip.
+Le joueur dézippe et lance EdenSlash.exe : rien à installer.
+"""
+import os
+import re
+import shutil
+import subprocess
+import sys
+import zipfile
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+GODOT_DIR = os.path.join(os.path.expanduser("~"), "Godot")
+GODOT = os.path.join(GODOT_DIR, "Godot_v4.7.2-stable_win64.exe")
+GODOT_CONSOLE = os.path.join(GODOT_DIR, "Godot_v4.7.2-stable_win64_console.exe")
+OUT = os.path.join(ROOT, "build", "EdenSlash")
+
+README = """EDEN SLASH {version}
+====================
+
+Jouer : double-clic sur EdenSlash.exe (rien à installer).
+
+Configuration : Windows 10 ou 11 64 bits, carte graphique compatible Vulkan
+(la plupart des cartes de moins de 10 ans). Si l'image est trop lourde :
+Paramètres > Affichage > Qualité graphique (basse ou moyenne).
+
+Commandes : clavier et souris (touches modifiables dans Paramètres > Touches),
+ou manette (disposition PlayStation : stick gauche déplacement, stick droit caméra,
+R1 R2 L1 L2 sorts, Carré attaque, Rond esquive, Triangle saut, Croix interagir,
+Options pause ; dans les menus, le stick gauche déplace le curseur et Croix clique).
+F1 en jeu : aide.
+
+Sauvegardes : %APPDATA%\\Godot\\app_userdata\\Eden Slash\\
+(gardées quand on remplace le dossier du jeu par une nouvelle version).
+
+Signaler un problème : Alt + clic droit sur ce qui ne va pas, écris ta note.
+Elle est rangée dans le dossier « feedback » à côté de EdenSlash.exe :
+envoie ce dossier (zippé) à Nico.
+
+Nouvelle version : supprime l'ancien dossier, dézippe le nouveau (les
+sauvegardes ne bougent pas).
+
+Eden Slash est un projet de fan, non commercial, inspiré d'Eden Eternal ;
+ne pas le redistribuer publiquement.
+Moteur : Godot Engine (licence MIT, https://godotengine.org/license).
+"""
+
+
+def version() -> str:
+    txt = open(os.path.join(ROOT, "game", "scripts", "core", "version.gd"), encoding="utf8").read()
+    return re.search(r'NUMBER := "([^"]+)"', txt).group(1)
+
+
+def main() -> int:
+    v = version()
+    print(f"Eden Slash {v} : export du paquet (quelques minutes)...")
+    if os.path.isdir(OUT):
+        shutil.rmtree(OUT)
+    os.makedirs(OUT)
+    pck = os.path.join(OUT, "EdenSlash.pck")
+    r = subprocess.run([GODOT_CONSOLE, "--headless", "--path", os.path.join(ROOT, "game"),
+                        "--export-pack", "Windows Desktop", pck])
+    if r.returncode != 0 or not os.path.isfile(pck):
+        print("Échec de l'export du paquet.")
+        return 1
+    shutil.copy2(GODOT, os.path.join(OUT, "EdenSlash.exe"))
+    with open(os.path.join(OUT, "LISEZMOI.txt"), "w", encoding="utf-8-sig", newline="\r\n") as f:
+        f.write(README.format(version=v))
+    z = os.path.join(ROOT, "build", f"EdenSlash_v{v}.zip")
+    if os.path.exists(z):
+        os.remove(z)
+    print("Compression du zip...")
+    with zipfile.ZipFile(z, "w", zipfile.ZIP_DEFLATED, compresslevel=6, allowZip64=True) as zf:
+        for name in sorted(os.listdir(OUT)):
+            zf.write(os.path.join(OUT, name), arcname=f"EdenSlash/{name}")
+    size = os.path.getsize(z) / (1024 * 1024)
+    print(f"Prêt : {z} ({size:.0f} Mo)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

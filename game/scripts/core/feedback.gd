@@ -213,13 +213,22 @@ func _plain(bb: String) -> String:
 
 
 # --- enregistrement ----------------------------------------------------------------------------
+## Dossier des notes : EdenSlash/feedback/ quand on joue depuis le projet ; à côté du jeu
+## (dossier feedback/ près de EdenSlash.exe) pour la version exportée à partager.
+static func folder() -> String:
+	var res := ProjectSettings.globalize_path("res://")
+	if res != "" and FileAccess.file_exists(res.path_join("project.godot")):
+		return res.path_join("../feedback").simplify_path()
+	return OS.get_executable_path().get_base_dir().path_join("feedback")
+
+
 func _save() -> void:
 	var note := _edit.text.strip_edges()
 	if note == "":
 		_close()
 		return
 	var stamp := Time.get_datetime_string_from_system().replace(":", "-")
-	var dir := ProjectSettings.globalize_path("res://").path_join("../feedback").simplify_path().path_join(stamp + "_note")
+	var dir := folder().path_join(stamp + "_note")
 	DirAccess.make_dir_recursive_absolute(dir)
 	if _shot:
 		_shot.save_png(dir.path_join("capture.png"))

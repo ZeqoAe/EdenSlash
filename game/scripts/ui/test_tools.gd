@@ -168,7 +168,7 @@ func _close_report() -> void:
 
 func _save_report(note: String) -> void:
 	var stamp := Time.get_datetime_string_from_system().replace(":", "-")
-	var dir := ProjectSettings.globalize_path("res://").path_join("../feedback").simplify_path().path_join(stamp)
+	var dir := Feedback.folder().path_join(stamp)
 	DirAccess.make_dir_recursive_absolute(dir)
 	if _pending_shot:
 		_pending_shot.save_png(dir.path_join("capture.png"))

@@ -27,3 +27,6 @@ ia/journaux/
 ia/progression.json
 ia/journal_entrainement.csv
 game/data/cerveaux/
+
+# Versions a partager (Creer_version.bat)
+build/
