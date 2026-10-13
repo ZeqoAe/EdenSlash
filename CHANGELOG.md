@@ -60,3 +60,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.49 | Auras lisibles sur l'accueil et en run (couleurs pleines au lieu d'un voile blanc), une seule case Aura dans Apparence | session locale |
 | 0.1.50 | Zone d'entraînement (panneau F3 : niveau, sorts, cartes, recharges à zéro, ennemis invincibles ou passifs, monstres au choix, mannequin, DPS ; rien n'est gagné ni perdu) | session locale |
 | 0.1.51 | Effets des sorts plus opaques et plus longs, récupération de 0,45 s après un sort (annulée par l'esquive), option : zone de mes attaques au sol en bleu | session locale |
+| 0.1.52 | Entraînement : fenêtre « Toutes les cartes » en grand (effets en chiffres, niveau réglable, recherche par effet, filtres) | session locale |

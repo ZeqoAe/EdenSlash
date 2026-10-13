@@ -44,6 +44,11 @@ func setup(p: Player, d: RunDirector) -> void:
 		player.recalc_stats()
 		_spawn_dummy()
 		toggle()
+		if "--training-cards" in OS.get_cmdline_user_args():
+			Run.passives["wide_arc"] = 10
+			Run.passive_power["wide_arc"] = 10.0
+			player.recalc_stats()
+			open_all_cards()
 
 
 func _build() -> void:
@@ -264,6 +269,7 @@ func _set_skill(sid: int, on: bool) -> void:
 # --- cartes -----------------------------------------------------------------------------------
 func _build_cards() -> void:
 	_section("Cartes")
+	_button(_box, "Voir toutes les cartes (en grand, avec leurs effets)", open_all_cards)
 	_card_search = LineEdit.new()
 	_card_search.placeholder_text = "Chercher une carte…"
 	_card_search.text_changed.connect(func(_t): _refresh_cards())
@@ -278,6 +284,13 @@ func _build_cards() -> void:
 	_cards_box.add_theme_constant_override("separation", 2)
 	_box.add_child(_cards_box)
 	_refresh_cards()
+
+
+## Grande fenêtre de toutes les cartes (effets en chiffres, niveau au choix).
+func open_all_cards() -> void:
+	var w := TrainingCards.new(player)
+	w.closed.connect(_refresh_cards)
+	get_parent().add_child(w)
 
 
 func _all_cards() -> Array:
