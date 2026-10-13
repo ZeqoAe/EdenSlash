@@ -18,6 +18,7 @@ var _spawn_t := 0.0
 var _adds_t := BOSS_ADDS_EVERY
 var _obj_t := 0.0
 var _boss: Monster
+var _rival: ClassRival  # duelliste de l'étage
 var _center := Vector3.ZERO
 var _goal: Interactable  # coffre ou escalier à atteindre (flèche de l'objectif)
 
@@ -61,7 +62,14 @@ func begin(f: int) -> void:
 	_adds_t = BOSS_ADDS_EVERY
 	_boss = null
 	d._boss = null
-	if Tower.is_boss_floor(f):
+	_rival = null
+	if Tower.is_duel_floor(f):
+		left = 0
+		_spawn_rival(f, lvl)
+		d.message.emit("Étage %d / %d
+Duel %d/%d : %s" % [f, Tower.FLOORS, Tower.duel_index(f), Tower.duel_count(),
+			GameData.class_data(_rival.cid).get("name_fr", _rival.cid)], 3.5)
+	elif Tower.is_boss_floor(f):
 		left = 0
 		_spawn_boss(z, lvl)
 		d.message.emit("Étage %d / %d\nBOSS : %s" % [f, Tower.FLOORS, _boss.display_name], 3.5)
@@ -95,6 +103,19 @@ func _spawn_boss(z: Dictionary, lvl: int) -> void:
 		_boss.brain.setup(dungeon, d)
 		_boss.brain.enraged_phase.connect(func(): d.message.emit("%s entre en fureur !" % _boss.display_name, 2.5))
 		_boss.reflect_started.connect(func(): d.message.emit("Miroir ! Ne frappe pas pendant 3 s", 2.0))
+
+
+## Duel : un héros de la classe suivante de la liste, au centre, face au joueur.
+func _spawn_rival(f: int, lvl: int) -> void:
+	var r := ClassRival.new()
+	r.setup(Tower.duel_class(f), lvl, Tower.difficulty, Tower.DUEL_HP, Tower.duel_skills(f))
+	r.display_name = "<Duel> %s" % GameData.class_data(r.cid).get("name_fr", r.cid)
+	d.add_child(r)
+	r.global_position = _center + Vector3.UP * 0.4
+	r.look_at(Vector3(d.player.global_position.x, r.global_position.y, d.player.global_position.z), Vector3.UP)
+	r.rotate_y(PI)
+	r.died.connect(d._on_monster_died)
+	_rival = r
 
 
 ## Point au sol autour du centre de la salle, à distance du héros.
@@ -248,6 +269,8 @@ func objective_text() -> String:
 		"fight":
 			if is_instance_valid(_boss) and not _boss.is_dead:
 				return "Étage %d · Vaincs %s" % [f, _boss.display_name]
+			if is_instance_valid(_rival) and not _rival.is_dead:
+				return "Étage %d · Duel %d/%d : bats %s" % [f, Tower.duel_index(f), Tower.duel_count(), GameData.class_data(_rival.cid).get("name_fr", "")]
 			return "Étage %d · Monstres restants : %d" % [f, left + alive()]
 		"cards":
 			return "Étage %d vidé · Choisis une carte" % f

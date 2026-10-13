@@ -29,9 +29,10 @@ func show_results(result: String, floor_reached: int, got: Dictionary) -> void:
 	panel.add_child(v)
 	var t := Hud._label(v, TITLES.get(result, "FIN DE L'ASCENSION"), 42, Hud.ACCENT if result == "victoire" else Color(0.95, 0.45, 0.4))
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var f := Hud._label(v, "Étage atteint : %d / %d" % [floor_reached, Tower.FLOORS], 30, Color.WHITE)
+	var f := Hud._label(v, "Étage atteint : %d / %d  ·  %s  ·  duels gagnés : %d / %d" % [floor_reached, Tower.FLOORS,
+		Tower.DIFF_NAMES[Tower.difficulty], Tower.duel_index(floor_reached), Tower.duel_count()], 26, Color.WHITE)
 	f.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var rec := Hud._label(v, "NOUVEAU RECORD !" if got.get("new_record", false) else "Record : étage %d" % int(got.get("best", 0)), 22,
+	var rec := Hud._label(v, "NOUVEAU RECORD (%s) !" % Tower.DIFF_NAMES[Tower.difficulty] if got.get("new_record", false) else "Record %s : étage %d" % [Tower.DIFF_NAMES[Tower.difficulty], int(got.get("best", 0))], 22,
 		Color(0.55, 1.0, 0.6) if got.get("new_record", false) else Color(0.75, 0.75, 0.85))
 	rec.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var cls := Run.class_data()

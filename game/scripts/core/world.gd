@@ -17,7 +17,7 @@ extends Node3D
 ##   --cam-dist=N          distance de la caméra
 ##   --goto=dungeon|shrine|merchant|chest   place le héros près de ce lieu
 ##   --shot-prefix=nom     préfixe des captures (lancements en parallèle)
-##   --tower               lance la Tour (--tower-floor=N : commence à l'étage N)
+##   --tower               lance la Tour (--tower-floor=N : à l'étage N, --tower-diff=0..3)
 
 const REVIVES_PER_RUN := 1
 
@@ -82,7 +82,11 @@ func _ready() -> void:
 		if "--training" in OS.get_cmdline_user_args():
 			Training.start(Profile.selected_class)  # test : zone d'entraînement
 		elif "--tower" in OS.get_cmdline_user_args():
-			Tower.start(Profile.selected_class)  # test : la Tour
+			var diff := 1  # test : la Tour (--tower-diff=0..3)
+			for arg in OS.get_cmdline_user_args():
+				if arg.begins_with("--tower-diff="):
+					diff = int(arg.trim_prefix("--tower-diff="))
+			Tower.start(Profile.selected_class, diff)
 		else:
 			Run.start(Profile.selected_class)
 	_build_environment()

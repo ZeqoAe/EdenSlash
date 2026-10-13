@@ -180,13 +180,22 @@ func _start_training() -> void:
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
-func _start_tower() -> void:
+## La Tour : choix de la difficulté (IA des duellistes, force des monstres, record à part).
+func _menu_tower() -> void:
+	_sub_title("La Tour : choisis la difficulté")
+	for i in Tower.DIFF_NAMES.size():
+		var rec := Tower.best(i)
+		_row(String(Tower.DIFF_NAMES[i]), "%s
+Record : %s" % [Tower.DIFF_DESC[i], "étage %d" % rec if rec > 0 else "aucun"], "upgrade", _start_tower.bind(i), 76.0)
+
+
+func _start_tower(diff := 1) -> void:
 	if _launching:
 		return
 	_launching = true
 	if backdrop:
 		backdrop.release()
-	Tower.start(Profile.selected_class)
+	Tower.start(Profile.selected_class, diff)
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
@@ -497,7 +506,7 @@ func _show_menu(id: String) -> void:
 	if _sub_panel:
 		_sub_panel.visible = id != ""
 	for k in _menu:
-		_menu[k].selected = k == ("play" if id == "zones" else id)
+		_menu[k].selected = k == ("play" if id in ["zones", "tower"] else id)
 	for c in _sub.get_children():
 		c.queue_free()
 	match id:
@@ -505,6 +514,8 @@ func _show_menu(id: String) -> void:
 			_menu_play()
 		"zones":
 			_menu_zones()
+		"tower":
+			_menu_tower()
 		"quit":
 			_menu_quit()
 
@@ -589,7 +600,7 @@ func _menu_play() -> void:
 	hr.mark(free > 0)
 	_row("Zone de farm", "%s · niveau %d+" % [zone.get("name", ""), 1 + int(zone.get("level_bonus", 0))], "pin", _show_menu.bind("zones"))
 	_row("Zone d'entraînement", "Tester les sorts, les combos et les cartes de %s (rien n'est gagné ni perdu)" % cls.get("name_fr", ""), "stats", _start_training)
-	_row("La Tour", "Gravir %d étages avec une arme de base : une carte et un coffre par étage, une seule vie · record : étage %d" % [Tower.FLOORS, Tower.best()], "upgrade", _start_tower)
+	_row("La Tour", "Gravir %d étages avec une arme de base : une carte et un coffre par étage, les %d classes à battre en duel, une seule vie" % [Tower.FLOORS, Tower.duel_count()], "upgrade", _show_menu.bind("tower"))
 
 
 func _menu_zones() -> void:

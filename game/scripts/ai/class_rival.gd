@@ -62,7 +62,8 @@ var flee_radius := 0.0  # 0 : pas de bord
 
 
 ## Classe [param class_id] au niveau [param lvl] (PV et dégâts d'un héros de ce niveau).
-func setup(class_id: String, lvl: int, diff := 1) -> void:
+## [param hp_scale] : PV en plus ou en moins (la Tour) ; [param n_skills] : sorts utilisés.
+func setup(class_id: String, lvl: int, diff := 1, hp_scale := 1.0, n_skills := 4) -> void:
 	cid = class_id
 	cls = GameData.class_data(cid)
 	wtype = GameData.weapon_type(String(cls.get("weapon_type", "")))
@@ -73,7 +74,7 @@ func setup(class_id: String, lvl: int, diff := 1) -> void:
 	is_elite = true
 	display_name = "%s · adversaire %s" % [cls.get("name_fr", cid), String(NAMES[difficulty]).to_lower()]
 	var base: Dictionary = cls.get("base", {})
-	max_hp = GameData.player_max_hp(level) * float(base.get("hp", 1.0)) * float(cfg.hp)
+	max_hp = GameData.player_max_hp(level) * float(base.get("hp", 1.0)) * float(cfg.hp) * hp_scale
 	hp = max_hp
 	var magic := String(cls.get("dmg_type", "phys")) in ["mag", "magic"]
 	atk = GameData.player_atk(level) * float(base.get("matk" if magic else "atk", 1.0)) * float(cfg.atk)
@@ -81,7 +82,7 @@ func setup(class_id: String, lvl: int, diff := 1) -> void:
 	xp_reward = 0
 	move_speed = float(cfg.speed)
 	_charges = float(cfg.charges)
-	_skills = (cls.get("skills", []) as Array).filter(func(s): return String(s.kind) != "buff" and String(s.kind) != "heal").slice(0, 4)
+	_skills = (cls.get("skills", []) as Array).filter(func(s): return String(s.kind) != "buff" and String(s.kind) != "heal").slice(0, clampi(n_skills, 0, 4))
 
 
 func _ready() -> void:

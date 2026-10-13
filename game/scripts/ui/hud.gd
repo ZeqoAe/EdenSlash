@@ -230,7 +230,7 @@ func _update_objectives() -> void:
 	var need: int = director.SEALS_NEEDED
 	_seal_label.text = "Sceaux  " + "◆ ".repeat(mini(director.seals, need)) + "◇ ".repeat(maxi(0, need - director.seals))
 	if Tower.active:
-		_seal_label.text = "Record : étage %d" % Tower.best()
+		_seal_label.text = "%s · record : étage %d" % [Tower.DIFF_NAMES[Tower.difficulty], Tower.best()]
 	var chests_total: int = director.map.chests.size() if director.map and "chests" in director.map else 0
 	var sig := "%s|%s|%d|%d|%d" % [director.state, director.dungeon_found, director.seals, director.chests_opened, director.shrines_captured]
 	if _obj_signature != "" and sig != _obj_signature:
