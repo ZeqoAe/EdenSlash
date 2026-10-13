@@ -84,3 +84,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.71 | Version à partager : Creer_version.bat crée build/EdenSlash_v<version>.zip (EdenSlash.exe + paquet du jeu + LISEZMOI, rien à installer) ; notes Alt + clic droit dans un dossier feedback à côté du jeu dans cette version | session locale |
 | 0.1.73 | Numéro de version remis dans l'ordre (la 0.1.71 « version à partager » est arrivée après la 0.1.72 de l'autre session) | session locale |
 | 0.1.74 | IA contre IA : héros ennemi aux mêmes mécaniques que le joueur (Player.foe : équipe des monstres, sa classe et ses sorts, sans l'équipement du joueur), piloté par un cerveau ; scénario duel dans l'arène, IA_Duel.bat pour regarder deux IA s'affronter (classes en français ou au hasard) | session locale |
+| 0.1.75 | IA : point d'étape (60 classes au niveau hardcore, cerveaux exportés) et mode d'emploi pour brancher un adversaire IA dans la Tour (CLAUDE.md) | session locale |

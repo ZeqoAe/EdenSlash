@@ -47,6 +47,18 @@ rend les modèles entraînés inutilisables (`--nouveau`). Modèles, journaux et
 (`game/data/cerveaux/`) hors git. Un seul cerveau joue les 60 classes : l'ordre de
 `ML_CLASSES` (ml_arena.gd) et `CLASSES` (ia/curriculum.py) est fixe, ajouter à la fin.
 
+État (13/10) : étapes 1 à 8 réussies (chaque classe bat le hardcore scripté à 70 % ou plus),
+étape 9 « Expert » en cours ; relancer `IA_Entrainer.bat` pour continuer (il reprend seul).
+Cerveaux prêts dans `game/data/cerveaux/` : debutant, facile, normal, difficile, hardcore,
+actuel (`IA_Duel.bat` prend le meilleur). Brancher un adversaire IA (la Tour) :
+- héros ennemi = `Player.new()` avec `foe = true`, `class_id`, `level`, `kit_skills` /
+  `kit_chains` (comme `MlArena._pick_kit`), `bot = BotInput.new()`, puis `add_child` ;
+- cerveau = `MlBrain.load_file("res://data/cerveaux/cerveau_hardcore.json")` ; toutes les
+  3 images physiques : `obs` comme `MlArena._obs_for(foe, [joueur], fiche, dernière touche, 0)`,
+  `act(obs, temperature)` puis action posée comme `MlArena._apply_for` (à extraire de l'arène
+  dans une classe partagée si la Tour s'en sert). `temperature` > 0 : plus faible, plus humain ;
+  ~5 ms par décision. Le cerveau est entraîné au niveau 10 sans équipement.
+
 ## Graphismes
 Réglages d'image communs dans `game/scripts/world/gfx.gd` (qualité graphique), shaders dans
 `game/shaders/` (terrain, herbe, personnages, décor, effets). Pour comparer un changement de
