@@ -1112,6 +1112,9 @@ func set_aura(cls: String, kind: String, id: int) -> void:
 	if id <= 0:
 		worn[cls].erase("aura_" + kind)
 	else:
+		# une seule aura à la fois (pierre étoilée, pierre de lune ou autre : même rôle)
+		for k in ["star", "luna", "other"]:
+			worn[cls].erase("aura_" + k)
 		worn[cls]["aura_" + kind] = id
 
 

@@ -368,12 +368,15 @@ class HeroPreview extends SubViewportContainer:
 		mouse_filter = Control.MOUSE_FILTER_STOP
 		_vp = SubViewport.new()
 		_vp.own_world_3d = true
-		_vp.transparent_bg = true
+		# fond opaque : les lueurs additives des auras restent visibles (sur fond transparent, elles
+		# ne se voyaient que par-dessus le personnage)
+		_vp.transparent_bg = false
 		_vp.msaa_3d = Viewport.MSAA_2X
 		add_child(_vp)
 		var env := WorldEnvironment.new()
 		env.environment = Environment.new()
-		env.environment.background_mode = Environment.BG_CLEAR_COLOR
+		env.environment.background_mode = Environment.BG_COLOR
+		env.environment.background_color = Color(0.06, 0.05, 0.11)
 		env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 		env.environment.ambient_light_color = Color(0.8, 0.76, 0.86)
 		env.environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
