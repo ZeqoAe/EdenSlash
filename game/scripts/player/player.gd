@@ -145,7 +145,7 @@ func _ready() -> void:
 	_slim_collision()
 	floor_max_angle = deg_to_rad(55.0)
 	floor_snap_length = 0.7
-	_attach_weapon("" if foe else Profile.weapon_code())
+	_attach_weapon(_foe_weapon_code() if foe else Profile.weapon_code())
 	_model_base = model.transform
 	_build_trail()
 	statuses_changed.connect(recalc_stats)
@@ -337,6 +337,13 @@ func gain_xp(amount: int) -> void:
 		health_changed.emit(hp, max_hp)
 		leveled_up.emit(level)
 	xp_changed.emit(xp, GameData.xp_to_next(level), level)
+
+
+## Arme tenue par le héros ennemi : l'apparence choisie dans son profil, sinon son arme.
+func _foe_weapon_code() -> String:
+	if String(foe_look.get("weapon_skin", "")) != "":
+		return String(foe_look.weapon_skin)
+	return String(foe_gear.get("weapon", {}).get("weapon", ""))
 
 
 ## Stats de l'équipement du héros ennemi (comme Profile.equipment_stats, sets compris).

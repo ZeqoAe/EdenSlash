@@ -1,0 +1,307 @@
+[
+	{
+		"atk_mult": 1.0,
+		"certs": [
+			"stormcaster/c50225",
+			"trainer/c50893",
+			"assassin/c56047",
+			"glacier_knight/c50204",
+			"mecha_ares/c50215",
+			"annihilator/c50805",
+			"berserker/c50202"
+		],
+		"class": "warrior",
+		"gear": {
+			"back": {
+				"id": 65315.0,
+				"rarity": 5.0,
+				"upgrade": 0.0
+			},
+			"boots": {
+				"id": 29838.0,
+				"rarity": 5.0,
+				"upgrade": 0.0
+			},
+			"chest": {
+				"id": 29830.0,
+				"rarity": 5.0,
+				"upgrade": 0.0
+			},
+			"gloves": {
+				"id": 29837.0,
+				"rarity": 5.0,
+				"upgrade": 0.0
+			},
+			"head": {
+				"id": 29829.0,
+				"rarity": 5.0,
+				"upgrade": 10.0
+			},
+			"legs": {
+				"id": 29836.0,
+				"rarity": 5.0,
+				"upgrade": 0.0
+			},
+			"necklace": {
+				"id": 65320.0,
+				"rarity": 5.0,
+				"upgrade": 0.0
+			},
+			"ring": {
+				"id": 28408.0,
+				"rarity": 5.0,
+				"upgrade": 0.0
+			},
+			"trophy": {
+				"id": 28479.0,
+				"rarity": 5.0,
+				"upgrade": 0.0
+			},
+			"weapon": {
+				"id": 20614.0,
+				"rarity": 5.0,
+				"upgrade": 10.0
+			}
+		},
+		"hp_mult": 1.0,
+		"look": {
+			"back": "res://assets/player/outfits/back_x605a.glb",
+			"body": "res://assets/player/outfits/cos_l260.glb",
+			"head": "res://assets/player/outfits/head_l1236.glb"
+		},
+		"name": "Adversaire 1",
+		"spells": [
+			50011.0,
+			50015.0,
+			50013.0,
+			50151.0
+		]
+	},
+	{
+		"atk_mult": 1.0,
+		"certs": [
+			"warrior/double_cut",
+			"warrior/unshakable",
+			"illusionist/c50228",
+			"trainer/c50213",
+			"shielder/c50799",
+			"sage/c50434",
+			"blade_dancer/c50211"
+		],
+		"class": "warrior",
+		"gear": {
+			"back": {
+				"enchant": "scroll:optimize:9",
+				"gems": [
+					"gem:ruby:4",
+					"gem:ruby:4"
+				],
+				"id": 28393.0,
+				"rarity": 5.0,
+				"rolls": {
+					"4": "lck",
+					"6": "agi",
+					"8": "str"
+				},
+				"upgrade": 10.0
+			},
+			"boots": {
+				"enchant": "scroll:optimize:9",
+				"gems": [
+					"gem:ruby:4",
+					"gem:ruby:4"
+				],
+				"id": 29758.0,
+				"rarity": 5.0,
+				"rolls": {
+					"10": "lck",
+					"4": "str",
+					"6": "agi"
+				},
+				"upgrade": 10.0
+			},
+			"chest": {
+				"enchant": "scroll:optimize:9",
+				"gems": [
+					"gem:ruby:4",
+					"gem:ruby:4"
+				],
+				"id": 29755.0,
+				"rarity": 5.0,
+				"rolls": {
+					"10": "agi",
+					"4": "lck",
+					"6": "str",
+					"8": "agi"
+				},
+				"upgrade": 10.0
+			},
+			"gloves": {
+				"enchant": "scroll:optimize:9",
+				"gems": [
+					"gem:ruby:4",
+					"gem:ruby:4"
+				],
+				"id": 29757.0,
+				"rarity": 5.0,
+				"rolls": {
+					"4": "patk"
+				},
+				"upgrade": 10.0
+			},
+			"head": {
+				"enchant": "scroll:optimize:9",
+				"gems": [
+					"gem:ruby:4",
+					"gem:ruby:4"
+				],
+				"id": 29754.0,
+				"rarity": 5.0,
+				"rolls": {},
+				"upgrade": 0.0
+			},
+			"legs": {
+				"enchant": "scroll:optimize:9",
+				"gems": [
+					"gem:ruby:4",
+					"gem:ruby:4"
+				],
+				"id": 29756.0,
+				"rarity": 5.0,
+				"rolls": {
+					"10": "str",
+					"4": "agi",
+					"8": "def"
+				},
+				"upgrade": 10.0
+			},
+			"necklace": {
+				"enchant": "scroll:optimize:9",
+				"gems": [
+					"gem:ruby:4",
+					"gem:ruby:4"
+				],
+				"id": 28416.0,
+				"rarity": 4.0,
+				"rolls": {
+					"4": "lck",
+					"8": "str"
+				},
+				"upgrade": 10.0
+			},
+			"ring": {
+				"enchant": "scroll:optimize:9",
+				"gems": [
+					"gem:ruby:4",
+					"gem:ruby:4"
+				],
+				"id": 28399.0,
+				"rarity": 4.0,
+				"rolls": {
+					"4": "str",
+					"6": "str",
+					"8": "lck"
+				},
+				"upgrade": 10.0
+			},
+			"trophy": {
+				"enchant": "scroll:optimize:9",
+				"gems": [
+					"gem:ruby:4",
+					"gem:ruby:4"
+				],
+				"id": 28475.0,
+				"rarity": 5.0,
+				"rolls": {
+					"4": "agi",
+					"6": "lck",
+					"8": "str"
+				},
+				"upgrade": 10.0
+			},
+			"weapon": {
+				"enchant": "scroll:optimize:9",
+				"gems": [
+					"gem:ruby:4",
+					"gem:ruby:4"
+				],
+				"id": 28795.0,
+				"rarity": 5.0,
+				"rolls": {
+					"10": "patk",
+					"4": "patk",
+					"6": "patk",
+					"8": "patk"
+				},
+				"upgrade": 10.0
+			}
+		},
+		"hp_mult": 1.0,
+		"level": 90.0,
+		"look": {
+			"aura": 45432.0,
+			"aura_tint": [
+				70.0,
+				170.0,
+				255.0
+			],
+			"back": "res://assets/player/outfits/back_t863a.glb",
+			"body": "res://assets/player/outfits/cos_l293.glb",
+			"dye": {
+				"back": [
+					[
+						34.0,
+						33.0,
+						219.0
+					],
+					[
+						99.0,
+						154.0,
+						123.0
+					],
+					[
+						90.0,
+						223.0,
+						189.0
+					]
+				]
+			},
+			"head": "res://assets/player/outfits/head_l1183.glb"
+		},
+		"name": "Guerrier niv. 90 VMAX",
+		"spells": [
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0,
+			0
+		],
+		"talents": {
+			"52581": 5.0,
+			"52582": 20.0,
+			"52583": 20.0,
+			"52584": 20.0,
+			"52585": 20.0,
+			"52586": 20.0,
+			"54694": 5.0,
+			"54695": 5.0,
+			"54696": 5.0,
+			"54697": 5.0,
+			"54698": 10.0,
+			"54699": 1.0,
+			"54700": 1.0,
+			"54701": 5.0,
+			"54702": 1.0,
+			"54703": 20.0,
+			"54704": 5.0,
+			"54705": 10.0
+		}
+	}
+]

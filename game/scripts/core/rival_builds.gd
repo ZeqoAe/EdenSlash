@@ -6,7 +6,8 @@ extends RefCounted
 ##    gear: {emplacement: {id (Eden), rarity, upgrade, rolls: {palier: stat}, gems: [clé, clé],
 ##           enchant: clé}},
 ##    look: {body, head, back : chemins .glb, dye: {body|head|back: 3 couleurs [r, g, b]},
-##          aura: id de collection, aura_tint: [r, g, b] (vide : couleurs d'origine)},
+##          aura: id de collection, aura_tint: [r, g, b] (vide : couleurs d'origine),
+##          weapon_skin: code du modèle d'arme porté (vide : celui de l'arme)},
 ##    talents: {id: rang} (points de maîtrise), certs: [clé « classe/passif »],
 ##    spells: [12 ids : case × 3 + rang, 0 = sort de la classe], hp_mult, atk_mult}
 ## Rangés dans les données du jeu (data/build_profiles.json, envoyé sur GitHub avec le reste ;
@@ -178,7 +179,26 @@ static func all_certificates() -> Array:
 			var key := "%s/%s" % [cls, pid]
 			var card := Run.certificate_card(key)
 			if not card.is_empty():
-				out.append({"key": key, "name": String(card.get("name", pid)), "cls": String(GameData.class_data(cls).get("name_fr", cls))})
+				out.append({"key": key, "name": String(card.get("name", pid)), "cls": String(GameData.class_data(cls).get("name_fr", cls)),
+					"cls_id": String(cls), "icon": String(card.get("icon", "")), "stat": card.get("stat", {}), "desc": String(card.get("desc", ""))})
+	return out
+
+
+## Modèles d'arme proposés au profil : [{code, name, icon, from}] — modèles de base du type
+## d'arme [param wtype], armes d'Eden de ce type, apparences d'armes d'Eden (archive).
+static func weapon_skins(wtype: String) -> Array:
+	var out: Array = []
+	var wt := GameData.weapon_type(wtype)
+	var i := 0
+	for w in wt.get("weapons", []):
+		i += 1
+		out.append({"code": String(w.code), "name": "%s de base n°%d" % [wt.get("name", wtype), i], "icon": String(w.get("icon", "")), "from": "base"})
+	for x in GameData.eden_items:
+		if String(x.get("slot", "")) == "weapon" and String(x.get("wtype", "")) == wtype and x.has("model"):
+			out.append({"code": String(x.code), "name": String(x.name), "icon": String(x.get("icon", "")), "from": "eden", "level": int(x.level)})
+	for x in GameData.collection:
+		if x.has("skin") and String(x.skin.get("wtype", "")) in ["", wtype]:
+			out.append({"code": String(x.code), "name": String(x.name), "icon": String(x.get("icon", "")), "from": "skin"})
 	return out
 
 
@@ -291,6 +311,8 @@ static func apply_to_hero(b: Dictionary) -> String:
 			Profile.collect(ax)  # mode dev : l'aura du profil est obtenue
 		Profile.set_aura(cid, String(ax.aura.kind), int(ax.id))
 	Profile.set_aura_tint(cid, look.get("aura_tint", []))
+	if String(look.get("weapon_skin", "")) != "" and made.has("weapon"):
+		Profile.skins[Items.weapon_type_of(made.weapon)] = String(look.weapon_skin)
 	if not b.get("talents", {}).is_empty():
 		Profile.talents[cid] = (b.talents as Dictionary).duplicate()
 	Profile.save_profile()

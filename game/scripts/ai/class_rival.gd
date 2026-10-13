@@ -115,6 +115,8 @@ func apply_build(b: Dictionary, lv: int) -> void:
 	look = b.get("look", {})
 	var w: Dictionary = RivalBuilds.items(b, lv).get("weapon", {})
 	weapon_code = String(w.get("weapon", ""))
+	if String(look.get("weapon_skin", "")) != "":
+		weapon_code = String(look.weapon_skin)  # apparence d'arme choisie dans le profil
 	var picked := Duel.scripted_spells(cid, b.get("spells", []))
 	if not picked.is_empty():
 		_skills = picked

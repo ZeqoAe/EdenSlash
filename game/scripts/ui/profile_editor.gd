@@ -724,35 +724,121 @@ func _spell_menu(anchor: Control, idx: int, all: Array) -> void:
 
 
 # --- Certificats ----------------------------------------------------------------------------------
+var _cert_q := ""
+var _cert_stat := ""
+var _cert_cls := ""
+var _cert_only := false
+
+
 func _page_certs() -> void:
 	var certs: Array = build.get("certs", [])
 	build["certs"] = certs
-	_section(_page, "Certificats (%d / %d) · description au survol" % [certs.size(), RivalBuilds.MAX_CERTS])
+	var all := RivalBuilds.all_certificates()
+	_section(_page, "Certificats (%d / %d) · fiche au survol" % [certs.size(), RivalBuilds.MAX_CERTS])
 	var syn := CertBoard.synergies(RivalBuilds.cert_board(build)).map(func(x): return String(x.name))
 	Hud._label(_page, ("Plateau : " + ", ".join(syn)) if not syn.is_empty() else "Plateau : aucun bonus de placement (relie des certificats de même couleur).", 13, UiTheme.BUFF if not syn.is_empty() else UiTheme.MUTED)
+	# filtres : nom, stat, classe, choisis seulement
+	var f := HBoxContainer.new()
+	f.add_theme_constant_override("separation", 6)
+	_page.add_child(f)
+	var q := LineEdit.new()
+	q.placeholder_text = "Nom…"
+	q.text = _cert_q
+	q.custom_minimum_size = Vector2(200, 0)
+	f.add_child(q)
+	var stats: Array = [""]
+	for c in all:
+		for k in c.stat:
+			if not k in stats:
+				stats.append(String(k))
+	var so := OptionButton.new()
+	so.focus_mode = Control.FOCUS_NONE
+	so.add_item("Toutes les stats")
+	for k in stats.slice(1):
+		so.add_item("Avec : %s" % _stat_name(String(k)))
+	so.select(maxi(0, stats.find(_cert_stat)))
+	f.add_child(so)
+	var classes: Array = [""]
+	var co := OptionButton.new()
+	co.focus_mode = Control.FOCUS_NONE
+	co.add_item("Toutes les classes")
+	for c in all:
+		if not String(c.cls_id) in classes:
+			classes.append(String(c.cls_id))
+			co.add_item(String(c.cls))
+	co.select(maxi(0, classes.find(_cert_cls)))
+	f.add_child(co)
+	var only := CheckBox.new()
+	only.text = "Choisis seulement"
+	only.focus_mode = Control.FOCUS_NONE
+	only.button_pressed = _cert_only
+	f.add_child(only)
+	_btn(f, "Tout retirer", func():
+		certs.clear()
+		_changed(), 120)
 	var grid := GridContainer.new()
 	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 6)
+	grid.add_theme_constant_override("v_separation", 6)
 	_page.add_child(grid)
-	for c in RivalBuilds.all_certificates():
-		var key := String(c.key)
-		var cb := CheckBox.new()
-		cb.text = "%s (%s)" % [c.name, c.cls]
-		cb.focus_mode = Control.FOCUS_NONE
-		cb.clip_text = true
-		cb.custom_minimum_size = Vector2(300, 0)
-		cb.button_pressed = key in certs
-		cb.tooltip_text = String(Run.certificate_card(key).get("desc", ""))
-		cb.toggled.connect(func(on):
-			if on and not key in certs:
-				if certs.size() >= RivalBuilds.MAX_CERTS:
+	var fill := func():
+		for c in grid.get_children():
+			c.queue_free()
+		var n := 0
+		for c in all:
+			var key := String(c.key)
+			var on := key in certs
+			if _cert_q != "" and not (String(c.name) + " " + String(c.desc)).to_lower().contains(_cert_q.to_lower()):
+				continue
+			if _cert_stat != "" and not (c.stat as Dictionary).has(_cert_stat):
+				continue
+			if _cert_cls != "" and String(c.cls_id) != _cert_cls:
+				continue
+			if _cert_only and not on:
+				continue
+			n += 1
+			var b := ItemWidgets.TipButton.new()
+			b.toggle_mode = true
+			b.button_pressed = on
+			b.focus_mode = Control.FOCUS_NONE
+			b.custom_minimum_size = Vector2(330, 52)
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.clip_text = true
+			b.expand_icon = false
+			b.add_theme_constant_override("icon_max_width", 40)
+			b.icon = UiTheme.texture(String(c.icon))
+			var st: PackedStringArray = []
+			for k in c.stat:
+				st.append(Items.stat_text(String(k), c.stat[k]))
+			b.text = " %s%s\n %s" % ["✔ " if on else "", c.name, (", ".join(st) if not st.is_empty() else String(c.cls))]
+			if on:
+				b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.25, 0.18, 0.06, 0.95), UiTheme.GOLD, 2, 8))
+			b.tip = "[b]%s[/b] · %s\n%s" % [c.name, c.cls, c.desc]
+			b.tooltip_text = String(c.name)
+			b.pressed.connect(func():
+				if key in certs:
+					certs.erase(key)
+				elif certs.size() >= RivalBuilds.MAX_CERTS:
 					_msg.text = "%d certificats au plus." % RivalBuilds.MAX_CERTS
-					cb.set_pressed_no_signal(false)
-					return
-				certs.append(key)
-			elif not on:
-				certs.erase(key)
-			_changed())
-		grid.add_child(cb)
+				else:
+					certs.append(key)
+				_changed())
+			grid.add_child(b)
+		if n == 0:
+			Hud._label(grid, "Aucun certificat avec ces filtres.", 13, UiTheme.MUTED)
+	fill.call()
+	q.text_changed.connect(func(t):
+		_cert_q = t
+		fill.call())
+	so.item_selected.connect(func(k):
+		_cert_stat = String(stats[k])
+		fill.call())
+	co.item_selected.connect(func(k):
+		_cert_cls = String(classes[k])
+		fill.call())
+	only.toggled.connect(func(on):
+		_cert_only = on
+		fill.call())
 
 
 # --- Maîtrise --------------------------------------------------------------------------------------
@@ -860,7 +946,109 @@ func _page_look() -> void:
 			_changed())
 		row.add_child(ob)
 		_dye_row(cat, look)
+	_weapon_skin_row(look)
 	_aura_section(look)
+
+## Apparence de l'arme : modèle porté (vide : celui de l'arme du profil).
+func _weapon_skin_row(look: Dictionary) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	_page.add_child(row)
+	var l := Hud._label(row, "Arme", 15, UiTheme.TEXT)
+	l.custom_minimum_size = Vector2(80, 0)
+	var cid := String(build.get("class", "warrior"))
+	var wt := Items.default_weapon_type(cid)
+	var code := String(look.get("weapon_skin", ""))
+	var cur: Dictionary = {}
+	for x in RivalBuilds.weapon_skins(wt):
+		if String(x.code) == code:
+			cur = x
+	var b := MenuWidgets.glass_button(("  " + String(cur.get("name", code))) if code != "" else "  Celle de l'arme du profil", 15, Vector2(420, 40))
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.expand_icon = false
+	b.add_theme_constant_override("icon_max_width", 30)
+	if not cur.is_empty():
+		b.icon = UiTheme.texture(String(cur.get("icon", "")))
+	b.pressed.connect(func(): _open_skin_picker(wt, look))
+	row.add_child(b)
+	if code != "":
+		_btn(row, "Origine", func():
+			look.erase("weapon_skin")
+			_changed(), 90)
+
+
+## Choix du modèle d'arme : modèles de base, armes d'Eden du type, apparences d'armes d'Eden.
+func _open_skin_picker(wt: String, look: Dictionary) -> void:
+	if _picker:
+		_picker.queue_free()
+	var box := PanelContainer.new()
+	box.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.06, 0.05, 0.12, 0.99), UiTheme.GOLD, 2, 10))
+	box.set_anchors_preset(Control.PRESET_CENTER)
+	box.custom_minimum_size = Vector2(760, 660)
+	box.position = Vector2(-380, -330)
+	get_child(0).add_child(box)
+	_picker = box
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	box.add_child(v)
+	Hud._label(v, "Apparence de l'arme (%s) : l'aperçu à gauche suit la sélection" % GameData.weapon_type(wt).get("name", wt), 20, UiTheme.GOLD)
+	var f := HBoxContainer.new()
+	f.add_theme_constant_override("separation", 6)
+	v.add_child(f)
+	var search := LineEdit.new()
+	search.placeholder_text = "Nom…"
+	search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	f.add_child(search)
+	var froms := ["", "base", "eden", "skin"]
+	var src := OptionButton.new()
+	src.focus_mode = Control.FOCUS_NONE
+	for t in ["Tout", "Modèles de base", "Armes d'Eden de ce type", "Apparences d'armes d'Eden (archive)"]:
+		src.add_item(t)
+	f.add_child(src)
+	var lst := ItemList.new()
+	lst.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	lst.fixed_icon_size = Vector2i(32, 32)
+	v.add_child(lst)
+	var all := RivalBuilds.weapon_skins(wt)
+	var codes: Array = []
+	var fill := func():
+		lst.clear()
+		codes.clear()
+		var q := search.text.to_lower()
+		for x in all:
+			if src.selected > 0 and String(x.from) != froms[src.selected]:
+				continue
+			if q != "" and not String(x.name).to_lower().contains(q):
+				continue
+			lst.add_item("%s%s" % [x.name, ("  · niv. %d" % int(x.level)) if x.has("level") else ""], UiTheme.texture(String(x.icon)))
+			codes.append(String(x.code))
+	fill.call()
+	search.text_changed.connect(func(_q): fill.call())
+	src.item_selected.connect(func(_k): fill.call())
+	var before := String(look.get("weapon_skin", ""))
+	lst.item_selected.connect(func(i):
+		look["weapon_skin"] = codes[i]
+		_refresh_stats())
+	var close := func(keep: bool):
+		if not keep:
+			if before == "":
+				look.erase("weapon_skin")
+			else:
+				look["weapon_skin"] = before
+		box.queue_free()
+		_picker = null
+		_changed()
+	lst.item_activated.connect(func(_i): close.call(true))
+	var bar := HBoxContainer.new()
+	bar.add_theme_constant_override("separation", 8)
+	v.add_child(bar)
+	Hud._label(bar, "Clic : essayer · double-clic ou Choisir : garder", 13, UiTheme.MUTED)
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bar.add_child(sp)
+	_btn(bar, "Choisir", func(): close.call(true), 140)
+	_btn(bar, "Annuler", func(): close.call(false), 120)
+	search.grab_focus()
 
 
 ## Teinture de la pièce [param cat] : coloris d'Eden de la pièce, ou 3 couleurs libres.
