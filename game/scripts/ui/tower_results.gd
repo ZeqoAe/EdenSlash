@@ -30,7 +30,7 @@ func show_results(result: String, floor_reached: int, got: Dictionary) -> void:
 	var t := Hud._label(v, TITLES.get(result, "FIN DE L'ASCENSION"), 42, Hud.ACCENT if result == "victoire" else Color(0.95, 0.45, 0.4))
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var f := Hud._label(v, "Étage atteint : %d / %d  ·  %s  ·  duels gagnés : %d / %d" % [floor_reached, Tower.FLOORS,
-		Tower.DIFF_NAMES[Tower.difficulty], Tower.duel_index(floor_reached), Tower.duel_count()], 26, Color.WHITE)
+		Tower.DIFF_NAMES[Tower.difficulty], Tower.duel_index(floor_reached) - Tower.duel_index(Tower.start_floor - 1), Tower.duel_count()], 26, Color.WHITE)
 	f.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var rec := Hud._label(v, "NOUVEAU RECORD (%s) !" % Tower.DIFF_NAMES[Tower.difficulty] if got.get("new_record", false) else "Record %s : étage %d" % [Tower.DIFF_NAMES[Tower.difficulty], int(got.get("best", 0))], 22,
 		Color(0.55, 1.0, 0.6) if got.get("new_record", false) else Color(0.75, 0.75, 0.85))
@@ -50,7 +50,7 @@ func show_results(result: String, floor_reached: int, got: Dictionary) -> void:
 		var b := Hud._label(v, "Build : " + "  ·  ".join(build), 15, Color(0.8, 0.8, 0.9))
 		b.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var note := Hud._label(v, "L'équipement trouvé dans la Tour ne sert que pour l'ascension : ton héros garde le sien.", 14, Color(0.65, 0.65, 0.75))
+	var note := Hud._label(v, "%d objet(s) des coffres de la Tour rejoignent ton coffre commun." % int(got.get("items", 0)), 16, Color(0.55, 1.0, 0.6))
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -64,4 +64,4 @@ func show_results(result: String, floor_reached: int, got: Dictionary) -> void:
 	ok.focus_mode = Control.FOCUS_NONE
 	ok.pressed.connect(func(): Tower.leave(get_tree()))
 	v.add_child(ok)
-	print("[tour] fin : %s, étage %d, record %d" % [result, floor_reached, int(got.get("best", 0))])
+	print("[tour] fin : %s, étage %d, record %d, %d objet(s) gardés, coffre commun : %d objet(s)" % [result, floor_reached, int(got.get("best", 0)), int(got.get("items", 0)), Profile.inventory.size()])

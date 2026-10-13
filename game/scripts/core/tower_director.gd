@@ -7,9 +7,6 @@ extends Node
 
 const SPAWN_EVERY := 0.7  # secondes entre deux groupes
 const BOSS_ADDS_EVERY := 14.0
-const HEAL_BETWEEN := 0.35  # part des PV rendue en montant (tous après un boss)
-## PV des boss : ceux des zones sont faits pour un héros de fin de zone bien équipé.
-const BOSS_HP := 0.3
 
 var d: RunDirector
 var phase := "fight"  # fight, cards, chest, stairs, done
@@ -25,7 +22,7 @@ var _goal: Interactable  # coffre ou escalier à atteindre (flèche de l'objecti
 
 func setup(director: RunDirector) -> void:
 	d = director
-	begin(1)
+	begin(Tower.start_floor)
 
 
 ## Prépare l'étage [param f] : salle, niveau du héros, monstres.
@@ -48,10 +45,10 @@ func begin(f: int) -> void:
 	Run.hero_level = lvl
 	Run.max_level = lvl
 	p.recalc_stats()
-	if f == 1 or Tower.is_boss_floor(f - 1):
+	if f == Tower.start_floor or Tower.is_boss_floor(f - 1):
 		p.heal(p.max_hp)
 	else:
-		p.heal(p.max_hp * HEAL_BETWEEN)
+		p.heal(p.max_hp * Tower.rule("heal_between"))
 	p.set_torch(true)
 	d._place_player(d.map.start)
 	d.zone_changed.emit({"name": "La Tour · %s" % z.name, "levels": [lvl, lvl]})
@@ -66,8 +63,7 @@ func begin(f: int) -> void:
 	if Tower.is_duel_floor(f):
 		left = 0
 		_spawn_rival(f, lvl)
-		d.message.emit("Étage %d / %d
-Duel %d/%d : %s" % [f, Tower.FLOORS, Tower.duel_index(f), Tower.duel_count(),
+		d.message.emit("Étage %d / %d\nDuel %d/%d : %s" % [f, Tower.FLOORS, Tower.duel_index(f), Tower.duel_count(),
 			GameData.class_data(_rival.cid).get("name_fr", _rival.cid)], 3.5)
 	elif Tower.is_boss_floor(f):
 		left = 0
@@ -76,17 +72,16 @@ Duel %d/%d : %s" % [f, Tower.FLOORS, Tower.duel_index(f), Tower.duel_count(),
 	else:
 		left = Tower.monster_count(f)
 		if Tower.is_elite_floor(f):
-			for i in 1 + f / 50:
+			for i in Tower.elite_count(f):
 				_spawn(d._elites.pick_random() if not d._elites.is_empty() else d._pick_monster(lvl), _ring(8.0, 14.0), lvl + 1)
 		d.message.emit("Étage %d / %d%s" % [f, Tower.FLOORS, "\nÉlite en vue !" if Tower.is_elite_floor(f) else ""], 2.5)
 
 
 func _spawn(id: int, pos: Vector3, lvl: int, boss := false) -> Monster:
 	var m := d._spawn_monster(id, pos, lvl, boss)
-	var k := Tower.monster_mult(Tower.floor_n)
-	m.max_hp *= k
+	m.max_hp *= Tower.monster_hp_mult(Tower.floor_n, -1, boss)
 	m.hp = m.max_hp
-	m.atk *= k
+	m.atk *= Tower.monster_atk_mult(Tower.floor_n, -1, boss)
 	m.xp_reward = 0
 	return m
 
@@ -94,8 +89,6 @@ func _spawn(id: int, pos: Vector3, lvl: int, boss := false) -> Monster:
 func _spawn_boss(z: Dictionary, lvl: int) -> void:
 	var dungeon: Dictionary = z.get("dungeon", {})
 	_boss = _spawn(int(dungeon.get("boss", d._pick_monster(lvl))), _center, lvl + 1, true)
-	_boss.max_hp *= BOSS_HP
-	_boss.hp = _boss.max_hp
 	_boss.display_name = "<Boss> " + _boss.display_name
 	d._boss = _boss  # renforts et invocations du boss (RunDirector.summon_for_boss)
 	if _boss.brain:
@@ -107,9 +100,7 @@ func _spawn_boss(z: Dictionary, lvl: int) -> void:
 
 ## Duel : un héros de la classe suivante de la liste, au centre, face au joueur.
 func _spawn_rival(f: int, lvl: int) -> void:
-	var r := ClassRival.new()
-	r.setup(Tower.duel_class(f), lvl, Tower.difficulty, Tower.DUEL_HP, Tower.duel_skills(f))
-	r.display_name = "<Duel> %s" % GameData.class_data(r.cid).get("name_fr", r.cid)
+	var r := Tower.make_rival(Tower.spec(f))
 	d.add_child(r)
 	r.global_position = _center + Vector3.UP * 0.4
 	r.look_at(Vector3(d.player.global_position.x, r.global_position.y, d.player.global_position.z), Vector3.UP)
@@ -202,15 +193,16 @@ func _spawn_chest() -> void:
 func open_chest(it: Interactable) -> void:
 	it.open_chest()
 	var item := Tower.chest_item(Tower.floor_n, Run.class_id)
+	Tower.found.append(item)  # rejoint le coffre commun à la fin de l'ascension
 	var slot := String(item.get("slot", ""))
 	var cur: Dictionary = Profile.equipped.get(slot, {})
 	var better := cur.is_empty() or Items.rating(item) > Items.rating(cur)
 	if better:
 		Profile.equipped[slot] = item
 		Profile.changed.emit()
-		d.message.emit("Coffre : %s\nÉquipé !" % Items.display_name(item), 3.0)
+		d.message.emit("Coffre : %s\nÉquipé ! (gardé à la fin de l'ascension)" % Items.display_name(item), 3.0)
 	else:
-		d.message.emit("Coffre : %s\nMoins bon que %s : tu gardes ta pièce" % [Items.display_name(item), Items.display_name(cur)], 3.0)
+		d.message.emit("Coffre : %s\nMoins bon que %s : rangé, il rejoindra ton coffre" % [Items.display_name(item), Items.display_name(cur)], 3.0)
 	Sfx.play_at(it, it.global_position, "atks001.wav", -6.0, 0.3)
 	_spawn_stairs()
 

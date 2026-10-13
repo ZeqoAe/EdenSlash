@@ -13,7 +13,7 @@ const PATH := "res://data/dev_edits.json"
 const USER_PATH := "user://dev_edits.json"
 const TEST_PATH := "user://dev_edits_test.json"  # tests et lancements avec arguments : jamais le vrai fichier
 
-static var data := {"items": {}, "sets": {}, "cards": {}, "card_rules": {}}
+static var data := {"items": {}, "sets": {}, "cards": {}, "card_rules": {}, "tower": {"rules": {}, "floors": {}}}
 static var _orig := {}  # id -> modèle d'origine (pour annuler les modifications)
 
 
@@ -34,7 +34,7 @@ static func load_and_apply() -> void:
 		var d = JSON.parse_string(FileAccess.get_file_as_string(p))
 		if typeof(d) != TYPE_DICTIONARY:
 			continue
-		for k in ["items", "sets", "cards", "card_rules"]:
+		for k in ["items", "sets", "cards", "card_rules", "tower"]:
 			var src: Dictionary = d.get(k, {})
 			for id in src:
 				data[k][String(id)] = src[id]

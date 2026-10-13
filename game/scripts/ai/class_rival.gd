@@ -85,6 +85,27 @@ func setup(class_id: String, lvl: int, diff := 1, hp_scale := 1.0, n_skills := 4
 	_skills = (cls.get("skills", []) as Array).filter(func(s): return String(s.kind) != "buff" and String(s.kind) != "heal").slice(0, clampi(n_skills, 0, 4))
 
 
+## Équipement porté (la Tour) : ses PV, son attaque et sa défense s'ajoutent, × [param k].
+var gear: Array = []
+var gear_stats: Array = []  # stats de chaque pièce (fiche de la Tour)
+
+
+func apply_gear(items: Array, k := 1.0) -> void:
+	gear = items
+	gear_stats = []
+	var st := {}
+	for it in items:
+		var s := Items.stats(it)
+		gear_stats.append(s)
+		for key in s:
+			st[key] = float(st.get(key, 0.0)) + float(s[key])
+	var magic := String(cls.get("dmg_type", "phys")) in ["mag", "magic"]
+	max_hp = (max_hp + float(st.get("hp", 0.0)) * k) * (1.0 + float(st.get("hp_pct", 0.0)) * k)
+	hp = max_hp
+	atk += float(st.get("matk" if magic else "patk", 0.0)) * k * float(cfg.atk)
+	defense += float(st.get("def", 0.0)) * k
+
+
 func _ready() -> void:
 	team = Team.MONSTER
 	collision_layer = GameData.PHYS_MONSTER

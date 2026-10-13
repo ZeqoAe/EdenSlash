@@ -5,7 +5,7 @@ extends PageScreen
 ## Ressources, Progression et, pendant une run, Run (niveau, invincibilité, apparitions...).
 ## Éditer : stats et bonus des objets possédés et des modèles du catalogue ; Sets : créer et
 ## modifier des sets (DevEditor, enregistrés dans data/dev_edits.json) ; Cartes : cartes de
-## build, raretés tirées et améliorations de sort (DevCards).
+## build, raretés tirées et améliorations de sort (DevCards) ; Tour : règles et étages (DevTower).
 ## Ouvert par-dessus tout le reste ; met le jeu en pause pendant une run.
 
 
@@ -25,6 +25,7 @@ func setup(world: Node) -> void:
 		editor.edit_template(e))
 	add_page("Ressources", DevPages.ResourcesPage.new())
 	add_page("Progression", DevPages.ProgressPage.new())
+	add_page("Tour", DevTower.TowerPage.new())
 	if world:
 		var run := DevPages.RunActionsPage.new()
 		run.world = world

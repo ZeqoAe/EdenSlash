@@ -82,11 +82,14 @@ func _ready() -> void:
 		if "--training" in OS.get_cmdline_user_args():
 			Training.start(Profile.selected_class)  # test : zone d'entraînement
 		elif "--tower" in OS.get_cmdline_user_args():
-			var diff := 1  # test : la Tour (--tower-diff=0..3)
+			var diff := 1  # test : la Tour (--tower-diff=0..3, --tower-floor=N)
+			var from := 1
 			for arg in OS.get_cmdline_user_args():
 				if arg.begins_with("--tower-diff="):
 					diff = int(arg.trim_prefix("--tower-diff="))
-			Tower.start(Profile.selected_class, diff)
+				elif arg.begins_with("--tower-floor="):
+					from = int(arg.trim_prefix("--tower-floor="))
+			Tower.start(Profile.selected_class, diff, from)
 		else:
 			Run.start(Profile.selected_class)
 	_build_environment()
@@ -176,9 +179,6 @@ func _ready() -> void:
 	director.prompt_changed.connect(hud.show_prompt)
 	director.npc_opened.connect(_on_npc_opened)
 	if Tower.active:
-		for arg in OS.get_cmdline_user_args():
-			if arg.begins_with("--tower-floor="):
-				director.tower.begin(int(arg.trim_prefix("--tower-floor=")))
 		# la Tour : une seule carte de départ, de rareté aléatoire
 		_offer("La Tour : ta carte de départ", [Run.roll_cards(6).pick_random()])
 	# première compétence : choix parmi 3 cartes de compétence

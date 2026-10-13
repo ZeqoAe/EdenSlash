@@ -30,6 +30,9 @@ var _menu := {}  # identifiant -> MenuWidgets.SideButton
 var _current := ""  # sous-menu affiché ("" : aucun, le panneau est caché)
 var _sub: VBoxContainer
 var _sub_panel: PanelContainer
+var _tower_diff := 1  # la Tour : difficulté et page d'étages affichées, étage choisi
+var _tower_page := 0
+var _tower_sel := 1
 var _badge_icon: TextureRect
 var _badge_name: Label
 var _badge_sub: Label
@@ -53,7 +56,7 @@ func _ready() -> void:
 			Profile.selected_zone = arg.trim_prefix("--zone=")
 		elif arg.begins_with("--weapon="):
 			Profile.select_weapon_type(arg.trim_prefix("--weapon="))
-		elif arg in SCREEN_ARGS or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--dev="):
+		elif arg in SCREEN_ARGS or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--dev=") or arg.begins_with("--tower-menu="):
 			_open_screen = arg.trim_prefix("--")
 		elif arg.begins_with("--wear-back="):
 			# test : porte la pièce de dos d'Eden de ce nom, --dye-back=r,g,b;r,g,b;r,g,b
@@ -97,7 +100,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
 				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
-				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit="):
+				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -107,6 +110,15 @@ func _ready() -> void:
 	_build_scene()
 	_build_ui()
 	match _open_screen.get_slice("=", 0):
+		"tower-menu":
+			# test : étages de la Tour (--tower-menu=difficulté,étage ; avec un étage : sa fiche ouverte)
+			var parts := _open_screen.get_slice("=", 1).split(",")
+			_tower_diff = int(parts[0])
+			_tower_sel = int(parts[1]) if parts.size() > 1 else 1
+			_tower_page = (_tower_sel - 1) / TowerPages.FLOORS_PER_PAGE
+			_show_menu("tower_floors")
+			if parts.size() > 1:
+				TowerPages.info_popup(_sub, Tower.spec(_tower_sel, _tower_diff))
 		"grimoire":
 			_open_hero("grimoire")
 		"talents":
@@ -185,17 +197,77 @@ func _menu_tower() -> void:
 	_sub_title("La Tour : choisis la difficulté")
 	for i in Tower.DIFF_NAMES.size():
 		var rec := Tower.best(i)
-		_row(String(Tower.DIFF_NAMES[i]), "%s
-Record : %s" % [Tower.DIFF_DESC[i], "étage %d" % rec if rec > 0 else "aucun"], "upgrade", _start_tower.bind(i), 76.0)
+		var di := i
+		_row(String(Tower.DIFF_NAMES[i]), "%s\nÉtages battus : %d / %d" % [Tower.DIFF_DESC[i], rec, Tower.FLOORS], "upgrade", func():
+			_tower_diff = di
+			_tower_sel = mini(Tower.best(di) + 1, Tower.FLOORS)
+			_tower_page = (_tower_sel - 1) / TowerPages.FLOORS_PER_PAGE
+			_show_menu("tower_floors"), 76.0)
 
 
-func _start_tower(diff := 1) -> void:
+## Étages de la difficulté choisie, 10 par page : battus et suivant jouables, les autres
+## verrouillés ; un clic choisit l'étage, « i » ouvre sa fiche (ennemi, sorts, équipement).
+func _menu_tower_floors() -> void:
+	var diff := _tower_diff
+	_sub_title("La Tour · %s" % Tower.DIFF_NAMES[diff])
+	var nav := HBoxContainer.new()
+	nav.add_theme_constant_override("separation", 8)
+	_sub.add_child(nav)
+	var pages := (Tower.FLOORS + TowerPages.FLOORS_PER_PAGE - 1) / TowerPages.FLOORS_PER_PAGE
+	var prev := MenuWidgets.glass_button("◀", 18, Vector2(52, 38))
+	prev.disabled = _tower_page <= 0
+	prev.pressed.connect(func():
+		_tower_page -= 1
+		_show_menu("tower_floors"))
+	nav.add_child(prev)
+	var pl := Hud._label(nav, "Étages %d à %d  ·  battus : %d" % [_tower_page * TowerPages.FLOORS_PER_PAGE + 1, mini((_tower_page + 1) * TowerPages.FLOORS_PER_PAGE, Tower.FLOORS), Tower.best(diff)], 15, UiTheme.TEXT)
+	pl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var nxt := MenuWidgets.glass_button("▶", 18, Vector2(52, 38))
+	nxt.disabled = _tower_page >= pages - 1
+	nxt.pressed.connect(func():
+		_tower_page += 1
+		_show_menu("tower_floors"))
+	nav.add_child(nxt)
+	for i in TowerPages.FLOORS_PER_PAGE:
+		var f := _tower_page * TowerPages.FLOORS_PER_PAGE + i + 1
+		if f > Tower.FLOORS:
+			break
+		var open := Tower.unlocked(f, diff)
+		var line := TowerPages.floor_line(f, diff)
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 6)
+		_sub.add_child(h)
+		var icon := "upgrade" if f > Tower.best(diff) else "new"
+		var r := MenuWidgets.RowButton.new(("🔒 " if not open else "") + String(line[0]), String(line[1]), icon, 56.0)
+		r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		r.disabled = not open
+		r.modulate = Color.WHITE if open else Color(1, 1, 1, 0.45)
+		r.mark(f == _tower_sel)
+		r.pressed.connect(func():
+			_tower_sel = f
+			_show_menu("tower_floors"))
+		h.add_child(r)
+		var info := MenuWidgets.glass_button("i", 18, Vector2(44, 56))
+		info.tooltip_text = "Fiche de l'étage : ennemi, sorts, résistances, équipement"
+		info.pressed.connect(func(): TowerPages.info_popup(_sub, Tower.spec(f, diff)))
+		h.add_child(info)
+	var go := MenuWidgets.gold_button("Commencer à l'étage %d" % _tower_sel, 22, Vector2(0, 58))
+	go.disabled = not Tower.unlocked(_tower_sel, diff)
+	go.pressed.connect(_start_tower.bind(diff, _tower_sel))
+	_sub.add_child(go)
+	var back := MenuWidgets.glass_button("Changer de difficulté", 15, Vector2(0, 36))
+	back.pressed.connect(_show_menu.bind("tower"))
+	_sub.add_child(back)
+
+
+func _start_tower(diff := 1, from := 1) -> void:
 	if _launching:
 		return
 	_launching = true
 	if backdrop:
 		backdrop.release()
-	Tower.start(Profile.selected_class, diff)
+	Tower.start(Profile.selected_class, diff, from)
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
@@ -506,7 +578,7 @@ func _show_menu(id: String) -> void:
 	if _sub_panel:
 		_sub_panel.visible = id != ""
 	for k in _menu:
-		_menu[k].selected = k == ("play" if id in ["zones", "tower"] else id)
+		_menu[k].selected = k == ("play" if id in ["zones", "tower", "tower_floors"] else id)
 	for c in _sub.get_children():
 		c.queue_free()
 	match id:
@@ -516,6 +588,8 @@ func _show_menu(id: String) -> void:
 			_menu_zones()
 		"tower":
 			_menu_tower()
+		"tower_floors":
+			_menu_tower_floors()
 		"quit":
 			_menu_quit()
 
