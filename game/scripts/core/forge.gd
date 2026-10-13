@@ -90,13 +90,29 @@ static func fusable() -> Array:
 	return out
 
 
+## Hors run (forge depuis l'équipement du lobby), l'or n'existe pas : ce qui coûte de l'or en
+## run se paie en cristaux, 1 cristal pour 25 or.
+const GOLD_PER_CRYSTAL := 25
+
+
+## Prix d'une action de forge valant [param gold] or : en or pendant la run, en cristaux hors run.
+static func price(gold: int) -> Dictionary:
+	if Profile.in_run:
+		return {"gold": gold}
+	return {"crystal": maxi(1, ceili(gold / float(GOLD_PER_CRYSTAL)))}
+
+
+## Prix en texte simple (boutons) : « 90 or » ou « 4 crist. ».
+static func price_label(cost: Dictionary) -> String:
+	return ("%d or" % int(cost.gold)) if cost.has("gold") else "%d crist." % int(cost.get("crystal", 0))
+
+
 static func fuse(type: String, tier: int) -> String:
 	var key := Craft.gem_key(type, tier)
 	if Profile.bag_count(key) < FUSE_COUNT:
 		return "Il faut %d gemmes identiques." % FUSE_COUNT
-	if Profile.gold < fuse_cost(tier):
-		return "Pas assez d'or."
-	Profile.gold -= fuse_cost(tier)
+	if not Profile.pay(price(fuse_cost(tier))):
+		return "Pas assez d'or." if Profile.in_run else "Pas assez de cristaux."
 	Profile.take_bag(key, FUSE_COUNT)
 	var out := Craft.gem_key(type, tier + 1)
 	Profile.add_bag(out)

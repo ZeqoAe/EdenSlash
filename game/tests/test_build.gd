@@ -25,6 +25,7 @@ func _ready() -> void:
 	_test_ban_keep()
 	_test_gear_rules()
 	_test_spell_presets()
+	_test_forge_lobby()
 	await _test_world()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit(1 if fails > 0 else 0)
@@ -221,6 +222,35 @@ func _dummy(dist: float, side := 0.0, hp := 1e7) -> Monster:
 
 
 ## Cartes à rareté, 10 niveaux, totaux cumulés, sorts améliorés, orbes d'expérience.
+## Forge et démontage hors run : fournitures de la réserve, cristaux à la place de l'or.
+func _test_forge_lobby() -> void:
+	var was_in_run := Profile.in_run
+	Profile.in_run = false
+	var saved_vault: Array = Profile.vault.duplicate()
+	var saved_stash: Dictionary = Profile.stash.duplicate()
+	var saved_crystal := Profile.amount("crystal")
+	var it := Items.generate(10, 0.0, "chest", Profile.selected_class, 1, "", 1)
+	Profile.inventory.append(it)
+	var scroll := Craft.fortify_key(Craft.fortify_kind(it), Craft.fortify_level_for(it))
+	Profile.stash[scroll] = 3
+	Profile.set_amount("crystal", 500)
+	var cost := Forge.price(int(Items.upgrade_cost(it).gold))
+	Profile.bag = Profile.stash  # comme la forge du lobby
+	var r := Profile.upgrade_item(it)
+	Profile.bag = {}
+	check("forge hors run : payée en cristaux (%s), parchemin pris dans la réserve (%s)" % [cost, r.get("text", "")],
+		cost.has("crystal") and not r.get("error", false) and Profile.amount("crystal") == 500 - int(cost.crystal) and int(Profile.stash.get(scroll, 0)) == 2)
+	var c0 := Profile.amount("crystal")
+	Profile.disassemble(it)
+	check("démontage hors run : l'objet quitte le coffre commun, cristaux gagnés", not Profile.vault.any(func(x): return is_same(x, it)) and Profile.amount("crystal") > c0)
+	Profile.vault = saved_vault
+	Profile.stash = saved_stash
+	Profile.set_amount("crystal", saved_crystal)
+	Profile.in_run = was_in_run
+	if not was_in_run:
+		Profile._lobby_view()
+
+
 ## Presets de sorts : les sorts pris se rangent dans les cases et enchaînements du preset.
 func _test_spell_presets() -> void:
 	var saved_skills: Array = Run.skills.duplicate(true)

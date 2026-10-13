@@ -8,7 +8,8 @@ extends HBoxContainer
 ##   Accessoires, Consommables, Matériaux, Divers), recherche, tri, et la fiche de l'objet
 ##   choisi avec ses raccourcis (Équiper, Forge, Démonter).
 ## Hors run : coffre commun et préréglage de la classe affichée. Pendant la run : sac de la
-## run, or, matériaux et fournitures (la forge et le recyclage n'existent qu'en run).
+## run, or, matériaux et fournitures. Forge et démontage partout : hors run, la forge prend
+## les fournitures de la réserve et se paie en cristaux à la place de l'or (Forge.price).
 
 signal class_changed
 
@@ -805,12 +806,11 @@ func _refresh_detail() -> void:
 	_d_set.text = _set_bbcode(it)
 	_b_equip.disabled = false
 	_b_equip.text = "Retirer" if equipped else "Équiper"
-	var forge_ok := Profile.in_run
-	_b_upgrade.disabled = not forge_ok
-	_b_dismantle.disabled = not forge_ok or equipped
-	var why := "La Forge et le démontage se font pendant la run, depuis ce menu (Échap > Héros)."
-	_b_upgrade.tooltip_text = "" if forge_ok else why
-	_b_dismantle.tooltip_text = ("Retire d'abord l'objet." if equipped else "") if forge_ok else why
+	_b_upgrade.disabled = false
+	_b_dismantle.disabled = equipped
+	_b_upgrade.tooltip_text = "" if Profile.in_run else "Hors run : fournitures de ta réserve, or remplacé par des cristaux (1 pour %d or)." % Forge.GOLD_PER_CRYSTAL
+	var users := Profile.item_users(String(it.get("uid", ""))) if not Profile.in_run else []
+	_b_dismantle.tooltip_text = "Retire d'abord l'objet." if equipped else (("Attention : utilisé par le préréglage de " + ", ".join(users)) if not users.is_empty() else "")
 	_b_dismantle.text = "Confirmer ?" if _armed_dismantle else "Démonter"
 
 
@@ -895,7 +895,7 @@ func _on_equip() -> void:
 
 
 func _on_dismantle() -> void:
-	if _selected.get("kind", "") != "item" or not Profile.in_run:
+	if _selected.get("kind", "") != "item" or _is_equipped(_selected.item):
 		return
 	if not _armed_dismantle:
 		_armed_dismantle = true
@@ -912,12 +912,31 @@ func _on_dismantle() -> void:
 ## sur une gemme : la fusion.
 func _on_upgrade() -> void:
 	var w := get_tree().get_first_node_in_group("world")
-	if not Profile.in_run or w == null:
-		return
-	var mu: MerchantUI = w.merchant_ui
+	var mu: MerchantUI
+	if Profile.in_run and w:
+		mu = w.merchant_ui
+	else:
+		mu = _lobby_forge()
 	mu.open_forge(_selected.item if _selected.get("kind", "") == "item" else {})
 	if not mu._forge.closed.is_connected(refresh):
 		mu._forge.closed.connect(refresh)
+
+
+## Forge hors run (lobby) : celle des marchands, sans héros ni run ; le temps qu'elle est
+## ouverte, le « sac » de la forge est la réserve de fournitures.
+var _forge_ui: MerchantUI
+
+
+func _lobby_forge() -> MerchantUI:
+	if _forge_ui == null:
+		_forge_ui = MerchantUI.new()
+		get_tree().current_scene.add_child(_forge_ui)
+		_forge_ui.setup(null, null)
+		_forge_ui._forge.closed.connect(func():
+			Profile.bag = {}
+			Profile.save_profile())
+	Profile.bag = Profile.stash  # même dictionnaire : la forge puise dans la réserve
+	return _forge_ui
 
 
 func _pick_class() -> void:

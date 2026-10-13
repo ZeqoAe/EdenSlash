@@ -944,9 +944,10 @@ func upgrade_item(item: Dictionary, stone := "", blessed := false) -> Dictionary
 		scroll = Craft.fortify_for(item)
 		if scroll == "":
 			return {"ok": false, "error": true, "text": "Il faut un %s." % Craft.label(Craft.fortify_key(Craft.fortify_kind(item), Craft.fortify_level_for(item)))}
-		if not can_afford(Items.upgrade_cost(item)):
-			return {"ok": false, "error": true, "text": "Pas assez d'or."}
-		pay(Items.upgrade_cost(item))
+		var cost := Forge.price(int(Items.upgrade_cost(item).gold))  # cristaux hors run
+		if not can_afford(cost):
+			return {"ok": false, "error": true, "text": "Pas assez d'or." if in_run else "Pas assez de cristaux."}
+		pay(cost)
 	take_bag(scroll)
 	if stone != "" and not (Craft.stone_usable(item, stone) and take_bag(stone)):
 		stone = ""

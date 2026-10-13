@@ -353,7 +353,8 @@ class ForgePage extends ItemPage:
 
 	func show_detail(sel: Array) -> void:
 		if sel.is_empty():
-			detail.text = "[b]Forge[/b]\n\nChoisis une pièce dans la grille.\n\nTes cristaux : [b]%d[/b] · ton or : [b]%d[/b]" % [Profile.amount("crystal"), Profile.gold]
+			detail.text = "[b]Forge[/b]\n\nChoisis une pièce dans la grille.\n\nTes cristaux : [b]%d[/b]%s" % [Profile.amount("crystal"),
+				(" · ton or : [b]%d[/b]" % Profile.gold) if Profile.in_run else "\n[color=#c8c8d4]Hors run : les fournitures de ta réserve servent, et l'or est remplacé par des cristaux (1 pour %d or).[/color]" % Forge.GOLD_PER_CRYSTAL]
 			_fusion()
 			return
 		var it: Dictionary = sel[0]
@@ -426,7 +427,7 @@ class ForgePage extends ItemPage:
 			stone = ""
 		var scroll := Craft.BLESSED if blessed else Craft.fortify_for(it)
 		var need := Craft.fortify_key(Craft.fortify_kind(it), Craft.fortify_level_for(it))
-		var cost := Items.upgrade_cost(it)
+		var cost := Forge.price(int(Items.upgrade_cost(it).gold))
 		# 1) le parchemin qui sert de ressource (le plus petit qui convient, pris dans le sac)
 		var srow := HBoxContainer.new()
 		srow.add_theme_constant_override("separation", 10)
@@ -500,7 +501,7 @@ class ForgePage extends ItemPage:
 				risk += " — une pierre de sûreté l'en empêche"
 			_note(risk)
 		var can: bool = blessed or (scroll != "" and Profile.can_afford(cost))
-		var label := "Fortifier avec le parchemin béni" if blessed else ("Fortifier · %d or" % int(cost.gold))
+		var label := "Fortifier avec le parchemin béni" if blessed else ("Fortifier · %s" % Forge.price_label(cost))
 		button(label + ("  (%d %%)" % roundi(chance * 100.0)), func():
 			var r := Profile.upgrade_item(it, stone, blessed)
 			if stone != "" and Profile.bag_count(stone) <= 0:
@@ -574,8 +575,9 @@ class ForgePage extends ItemPage:
 		for g in list:
 			var type: String = g.type
 			var tier: int = g.tier
-			var b := button("%s ×%d → %s · %d or" % [Craft.label(g.key), int(g.count), Craft.label(Craft.gem_key(type, tier + 1)), Forge.fuse_cost(tier)], func():
-				done(Forge.fuse(type, tier), 1.8), int(g.count) >= Forge.FUSE_COUNT and Profile.gold >= Forge.fuse_cost(tier))
+			var fp := Forge.price(Forge.fuse_cost(tier))
+			var b := button("%s ×%d → %s · %s" % [Craft.label(g.key), int(g.count), Craft.label(Craft.gem_key(type, tier + 1)), Forge.price_label(fp)], func():
+				done(Forge.fuse(type, tier), 1.8), int(g.count) >= Forge.FUSE_COUNT and Profile.can_afford(fp))
 			b.icon = UiTheme.texture(Craft.icon(g.key))
 			b.add_theme_constant_override("icon_max_width", 26)
 		if list.is_empty():

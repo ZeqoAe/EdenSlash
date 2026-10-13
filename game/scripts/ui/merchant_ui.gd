@@ -67,7 +67,8 @@ func open(npc: Node = null, tab := 0) -> void:
 
 ## Forge sur l'objet [param item] (déjà choisi dans la grille).
 func open_forge(item: Dictionary = {}) -> void:
-	_forge.set_title("Forge", "Or : amélioration · cristaux : réforge et polissage · fournitures : gemmes et enchantements")
+	_forge.set_title("Forge", "Or : amélioration · cristaux : réforge et polissage · fournitures : gemmes et enchantements" if Profile.in_run
+		else "Hors run : fournitures de ta réserve · cristaux pour tout (1 cristal pour %d or)" % Forge.GOLD_PER_CRYSTAL)
 	_forge.show_wallet(true)
 	_forge.open(0)
 	var fp: MerchantPages.ForgePage = _forge.page(0)
@@ -83,9 +84,37 @@ func close_ui() -> void:
 func message(text: String, duration := 2.0) -> void:
 	if director:
 		director.message.emit(text, duration)
+	else:
+		_toast(text, duration)  # hors run (forge depuis l'équipement) : message à l'écran
 	for s in [_screen, _forge]:
 		if s.is_open():
 			s.refresh()
+
+
+var _toast_label: Label
+
+
+func _toast(text: String, duration: float) -> void:
+	if _toast_label == null:
+		var layer := CanvasLayer.new()
+		layer.layer = 40
+		add_child(layer)
+		var holder := Control.new()
+		holder.set_anchors_preset(Control.PRESET_FULL_RECT)
+		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		layer.add_child(holder)
+		_toast_label = Hud._label(holder, "", 22, Color.WHITE)
+		_toast_label.add_theme_constant_override("outline_size", 8)
+		_toast_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+		_toast_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		_toast_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_toast_label.position = Vector2(-500, -150)
+		_toast_label.size = Vector2(1000, 80)
+	_toast_label.text = text
+	_toast_label.modulate.a = 1.0
+	var tw := create_tween()
+	tw.tween_interval(duration)
+	tw.tween_property(_toast_label, "modulate:a", 0.0, 0.4)
 
 
 func _current_item_page() -> MerchantPages.ItemPage:
