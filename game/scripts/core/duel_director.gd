@@ -11,7 +11,9 @@ const SPAWN_DIST := 9.0
 var d: RunDirector
 var phase := "countdown"  # countdown, fight, between, done
 var _t := 0.0
-var _rival: ClassRival
+var _rival: ClassRival  # adversaire scripté
+var _foe: Player  # ou héros ennemi piloté par un cerveau d'IA
+var _pilot: MlDuelPilot
 var _center := Vector3.ZERO
 var _obj_t := 0.0
 
@@ -48,19 +50,63 @@ func _start_round() -> void:
 	p.heal(p.max_hp)
 	p.skill_ready_at.clear()
 	p.statuses.clear()
-	_rival = Duel.make_rival()
-	d.add_child(_rival)
-	_rival.global_position = _ground(_center - Vector3(0, 0, SPAWN_DIST)) + Vector3.UP * 0.4
-	_rival.look_at(Vector3(p.global_position.x, _rival.global_position.y, p.global_position.z), Vector3.UP)
-	_rival.rotate_y(PI)
-	_rival.passive = true  # immobile pendant le compte à rebours
-	_rival.died.connect(_on_rival_died)
+	for n in [_foe, _pilot]:
+		if is_instance_valid(n):
+			n.queue_free()
+	_foe = null
+	_pilot = null
+	_rival = null
+	if Duel.pilot == "" or not _spawn_brain_foe():
+		_rival = Duel.make_rival()
+		d.add_child(_rival)
+		_rival.global_position = _ground(_center - Vector3(0, 0, SPAWN_DIST)) + Vector3.UP * 0.4
+		_rival.look_at(Vector3(p.global_position.x, _rival.global_position.y, p.global_position.z), Vector3.UP)
+		_rival.rotate_y(PI)
+		_rival.passive = true  # immobile pendant le compte à rebours
+		_rival.died.connect(_on_rival_died)
 	phase = "countdown"
 	_t = COUNTDOWN
 	d.message.emit("Manche %d · %d - %d" % [Duel.round_n, Duel.wins, Duel.losses], 1.5)
 	if p.autoplay:
+		var opp: Combatant = _rival if _rival else _foe
 		print("[duel] manche %d contre %s (%s), niveau %d · PV héros %d · PV adversaire %d" % [Duel.round_n, Duel.rival_class,
-			ClassRival.NAMES[Duel.difficulty], Duel.level, int(p.max_hp), int(_rival.max_hp)])
+			("cerveau " + Duel.pilot) if _foe else ClassRival.NAMES[Duel.difficulty], Duel.level, int(p.max_hp), int(opp.max_hp)])
+
+
+## Héros ennemi piloté par un cerveau d'IA : sa classe, ses 12 sorts, et l'équipement et
+## l'apparence de l'adversaire de l'éditeur s'il y en a un. false si le cerveau manque.
+func _spawn_brain_foe() -> bool:
+	var p := d.player
+	var b := Duel.rival_build
+	var h := Player.new()
+	h.foe = true
+	h.class_id = Duel.rival_class
+	h.level = Duel.level
+	var kit := MlDuelPilot.kit_for(Duel.rival_class)
+	h.kit_skills = kit.skills
+	h.kit_chains = kit.chains
+	if not b.is_empty():
+		h.foe_gear = RivalBuilds.items(b, Duel.level)
+		h.foe_look = b.get("look", {})
+	d.add_child(h)
+	var pilot := MlDuelPilot.new()
+	d.add_child(pilot)
+	if not pilot.setup(h, p, Duel.pilot, _center):
+		h.queue_free()
+		pilot.queue_free()
+		d.message.emit("Cerveau d'IA introuvable ou d'une ancienne version : adversaire scripté", 3.0)
+		return false
+	pilot.set_physics_process(false)  # immobile pendant le compte à rebours
+	h.global_position = _ground(_center - Vector3(0, 0, SPAWN_DIST)) + Vector3.UP * 0.4
+	h.face_direction(p.global_position - h.global_position, 1.0, 100.0)
+	h.max_hp *= float(b.get("hp_mult", 1.0)) if not b.is_empty() else 1.0
+	h.hp = h.max_hp
+	h.display_name = "<Duel> %s · IA %s" % [String(b.get("name", GameData.class_data(Duel.rival_class).get("name_fr", ""))) if not b.is_empty()
+		else String(GameData.class_data(Duel.rival_class).get("name_fr", "")), Duel.pilot]
+	h.died.connect(_on_rival_died)
+	_foe = h
+	_pilot = pilot
+	return true
 
 
 func update(delta: float) -> void:
@@ -74,6 +120,8 @@ func update(delta: float) -> void:
 				phase = "fight"
 				if is_instance_valid(_rival):
 					_rival.passive = false
+				if is_instance_valid(_pilot):
+					_pilot.set_physics_process(true)
 				d.message.emit("COMBAT !", 1.0)
 		"between":
 			if _t <= 0.0:
@@ -99,6 +147,9 @@ func player_down() -> void:
 	Duel.losses += 1
 	if is_instance_valid(_rival):
 		_rival.passive = true
+	if is_instance_valid(_pilot):
+		_pilot.set_physics_process(false)
+		_pilot._pilot_bot.clear()
 	_end_round(false)
 
 

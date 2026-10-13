@@ -94,6 +94,8 @@ var ml_counts := {"perfect": 0, "chain": 0, "dodged": 0}  # récompenses de l'ar
 var foe := false
 var kit_skills: Array = []  # [{id, rank}] : sort principal de chaque case (héros ennemi)
 var kit_chains: Dictionary = {}  # case -> [{id, rank}] : enchaînements (héros ennemi)
+var foe_gear: Dictionary = {}  # emplacement -> objet : équipement du héros ennemi (duel)
+var foe_look: Dictionary = {}  # {body, head, back} : apparence du héros ennemi (duel)
 
 var _state := "idle"  # idle, attack, skill, dodge, jump, dead
 var _state_time := 0.0
@@ -206,7 +208,7 @@ func kit_skill_def(id: int) -> Dictionary:
 func recalc_stats() -> void:
 	if Run.active and not foe:
 		Run.hero_level = level  # puissance des objets portés (suit le niveau, plafonnée)
-	var eq := {} if foe else Profile.equipment_stats()
+	var eq := _foe_equipment_stats() if foe else Profile.equipment_stats()
 	var arc := {} if foe else Archive.bonus()  # bonus permanents de l'archive
 	for k in arc:
 		eq[k] = float(eq.get(k, 0.0)) + float(arc[k])
@@ -337,19 +339,32 @@ func gain_xp(amount: int) -> void:
 	xp_changed.emit(xp, GameData.xp_to_next(level), level)
 
 
+## Stats de l'équipement du héros ennemi (comme Profile.equipment_stats, sets compris).
+func _foe_equipment_stats() -> Dictionary:
+	var total := {}
+	for slot in foe_gear:
+		var st := Items.stats(foe_gear[slot])
+		for s in st:
+			total[s] = float(total.get(s, 0.0)) + float(st[s])
+	for b in Items.active_set_bonuses(foe_gear):
+		for s in b.stat:
+			total[s] = float(total.get(s, 0.0)) + float(b.stat[s])
+	return total
+
+
 # --- arme et traînée --------------------------------------------------------------
 ## Tenue et cheveux de la classe (ou skin choisi) sur le corps commun.
 func _dress_model() -> void:
 	EdenModel.strip_body(model)
 	var parts: Array = cls.get("parts", [])
-	var outfit := "" if foe else Profile.outfit_of(class_id)
+	var outfit := String(foe_look.get("body", "")) if foe else Profile.outfit_of(class_id)
 	var dyes := {} if foe else Profile.dye_map(class_id)
 	for i in parts.size():
 		var part := outfit if i == 0 and outfit != "" and ResourceLoader.exists(outfit) else String(parts[i])
 		EdenModel.dress(model, part)
 		if dyes.has(part):
 			EdenModel.apply_dye(model, part, dyes[part])
-	for p in ([] if foe else Profile.worn_parts(class_id)):
+	for p in ([foe_look.get("head", ""), foe_look.get("back", "")].filter(func(x): return String(x) != "" and ResourceLoader.exists(String(x))) if foe else Profile.worn_parts(class_id)):
 		EdenModel.dress(model, String(p))
 		if dyes.has(String(p)):
 			EdenModel.apply_dye(model, String(p), dyes[String(p)])

@@ -90,6 +90,8 @@ func _ready() -> void:
 					opp = arg.trim_prefix("--duel-class=")
 				elif arg.begins_with("--duel-diff="):
 					dd = int(arg.trim_prefix("--duel-diff="))
+				elif arg.begins_with("--duel-pilot="):  # cerveau d'IA (debutant … hardcore, actuel)
+					Duel.pilot = arg.trim_prefix("--duel-pilot=")
 				elif arg.begins_with("--duel-build="):  # adversaire enregistré dans l'éditeur
 					var bi := RivalBuilds.find(arg.trim_prefix("--duel-build="))
 					if bi >= 0:

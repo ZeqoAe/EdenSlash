@@ -81,6 +81,7 @@ var _cam: Camera3D
 var _label: Label
 var _ep_reward := 0.0
 var _results: Array = []
+var center := Vector3.ZERO  # centre de l'arène (0 ici ; le duel du jeu a son arène ailleurs : MlDuelPilot)
 var _capture := ""
 var _brain: MlBrain  # cerveau joué par le jeu lui-même (sans Python)
 var _brain_scen := {}
@@ -774,7 +775,7 @@ func _obs_for(me: Player, opps: Array, class_obs: Array, last_button: int, low_h
 		o.append(p.kit_chain(slot).size() / 2.0)
 	for st in HERO_STATUSES:
 		o.append(1.0 if p.has_status(st) else 0.0)
-	var off := p.global_position
+	var off := p.global_position - center
 	off.y = 0.0
 	o.append(off.dot(s) / RADIUS)
 	o.append(off.dot(f) / RADIUS)
@@ -801,7 +802,7 @@ func _obs_for(me: Player, opps: Array, class_obs: Array, last_button: int, low_h
 		o.append(ef.dot(f))
 		o.append(clampf(e.velocity.dot(s) / 15.0, -1.5, 1.5))
 		o.append(clampf(e.velocity.dot(f) / 15.0, -1.5, 1.5))
-		var eo := e.global_position
+		var eo := e.global_position - center
 		eo.y = 0.0
 		o.append(eo.dot(s) / RADIUS)
 		o.append(eo.dot(f) / RADIUS)

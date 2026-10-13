@@ -277,9 +277,26 @@ func forward() -> Vector3:
 	return global_transform.basis.z.normalized()
 
 
+## Héros contre héros (duel, duels de la Tour, entraînement, arène ML) : l'attaque d'un héros
+## monte de 10 % par niveau mais ses PV bien moins vite ; sans correction, à haut niveau tout
+## le monde tue en un coup (217 000 d'attaque pour 22 000 PV au niveau 90). Les dégâts entre
+## héros sont ramenés à l'échelle des PV : rien ne change au niveau 10.
+static func hero_vs_hero_factor(lv: int) -> float:
+	var l := clampi(lv, 1, 200)
+	var hp_k := GameData.player_max_hp(l) / GameData.player_max_hp(10)
+	var atk_k := GameData.player_atk(l) / GameData.player_atk(10)
+	return clampf(hp_k / atk_k, 0.0, 1.2)
+
+
+static func is_hero(c: Combatant) -> bool:
+	return c is Player or c is ClassRival
+
+
 func take_damage(amount: float, source: Combatant = null, crit := false, dot := false) -> void:
 	if is_dead:
 		return
+	if source and source != self and is_hero(self) and is_hero(source):
+		amount *= hero_vs_hero_factor(maxi(level, source.level))
 	# la défense réduit en pourcentage (100 déf = -50 %) : les petits coups restent dangereux
 	var dmg := maxf(1.0, round(amount * damage_taken_mult() * (1.0 if dot else 100.0 / (100.0 + maxf(defense, 0.0)))))
 	hp = maxf(0.0, hp - dmg)

@@ -27,6 +27,10 @@ const GEAR_MODES := ["Généré à ton niveau", "Copie de ton équipement"]
 static var gear_mode := 1
 static var rival_spells: Array = [0, 0, 0, 0]
 static var hp_mult := 1.0
+## IA de l'adversaire : "" = script de l'entraînement (ClassRival, difficulté ci-dessus), sinon
+## un cerveau entraîné (MlDuelPilot.BRAINS : debutant … hardcore, actuel) qui pilote un héros.
+static var pilot := ""
+
 ## Adversaire créé dans l'éditeur (RivalBuilds) : {} pour la préparation rapide ci-dessus.
 static var rival_build: Dictionary = {}
 static var atk_mult := 1.0

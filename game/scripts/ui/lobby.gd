@@ -261,6 +261,21 @@ func _menu_duel() -> void:
 		_duel_diff = i
 		_show_menu("duel"))
 	opp.add_child(dd)
+	# IA de l'adversaire : script de l'entraînement ou cerveau entraîné (arène ML)
+	var pl := OptionButton.new()
+	pl.focus_mode = Control.FOCUS_NONE
+	pl.add_item("IA scriptée")
+	var brains := MlDuelPilot.available()
+	for b in brains:
+		pl.add_item("Cerveau %s" % b[1])
+		if String(b[0]) == Duel.pilot:
+			pl.select(pl.item_count - 1)
+	pl.tooltip_text = "IA scriptée : celle de l'entraînement, réglée par la difficulté. Cerveau : IA entraînée (apprentissage par renforcement), qui joue un vrai héros avec ses 12 sorts." if not brains.is_empty() else "Aucun cerveau d'IA entraîné sur ce PC (dossier data/cerveaux)."
+	pl.item_selected.connect(func(i):
+		Duel.pilot = "" if i == 0 else String(brains[i - 1][0])
+		_show_menu("duel"))
+	opp.add_child(pl)
+	dd.disabled = Duel.pilot != ""
 	Hud._label(_sub, "Niveau du duel : %d (celui de ton équipement) · victoires contre cette classe : %d" % [Duel.gear_level(), Duel.wins_against(_duel_opp, _duel_diff)], 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
