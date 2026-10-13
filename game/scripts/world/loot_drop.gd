@@ -35,6 +35,7 @@ func _ready() -> void:
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.disable_fog = true  # la brume ne s'ajoute pas aux effets lumineux (carrés pâles)
 	m.albedo_color = Color(color.r, color.g, color.b, 0.35)
 	beam.material_override = m
 	beam.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

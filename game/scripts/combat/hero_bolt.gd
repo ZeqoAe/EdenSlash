@@ -73,6 +73,7 @@ func _ready() -> void:
 	tm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	tm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	tm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	tm.disable_fog = true  # la brume ne s'ajoute pas aux effets lumineux (carrés pâles)
 	tm.albedo_color = Color(st.color, 0.35)
 	trail.material_override = tm
 	trail.position.z = 0.9

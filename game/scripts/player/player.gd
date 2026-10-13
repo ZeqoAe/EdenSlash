@@ -332,6 +332,7 @@ func _build_trail() -> void:
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.disable_fog = true  # la brume ne s'ajoute pas aux effets lumineux (carrés pâles)
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	m.vertex_color_use_as_albedo = true
 	_trail.material_override = m
@@ -1613,6 +1614,7 @@ func _afterimage() -> void:
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	mat.disable_fog = true  # la brume ne s'ajoute pas aux effets lumineux (carrés pâles)
 	mat.albedo_color = Color(0.35, 0.75, 1.0, 0.55)
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	var ghost := Node3D.new()

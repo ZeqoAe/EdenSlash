@@ -113,6 +113,7 @@ func _start_reflect() -> void:
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	m.disable_fog = true  # la brume ne s'ajoute pas aux effets lumineux (carrés pâles)
 	m.albedo_color = Color(1.0, 0.85, 0.3, 0.9)
 	(_reflect_ring as MeshInstance3D).material_override = m
 	boss.add_child(_reflect_ring)

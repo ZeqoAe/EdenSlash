@@ -232,6 +232,7 @@ static func _legacy_material(src: BaseMaterial3D, info: Dictionary) -> StandardM
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD if info.get("blend", "mix") == "add" else BaseMaterial3D.BLEND_MODE_MIX
+	m.disable_fog = true  # la brume ne s'ajoute pas aux effets lumineux (carrés pâles)
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	m.vertex_color_use_as_albedo = bool(info.get("vcol", true))
 	if src:

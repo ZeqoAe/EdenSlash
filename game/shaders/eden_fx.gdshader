@@ -1,5 +1,5 @@
 shader_type spatial;
-render_mode unshaded, blend_premul_alpha, cull_disabled, depth_draw_never, shadows_disabled;
+render_mode unshaded, fog_disabled, blend_premul_alpha, cull_disabled, depth_draw_never, shadows_disabled;
 // Effets d'Eden (EdenFx) : couleurs saturées qui brillent (lueur HDR) au lieu de
 // virer au blanc laiteux, léger assombrissement du fond sous les effets lumineux
 // (lisibles sur un sol clair), fondu au contact du sol et des modèles (particules
