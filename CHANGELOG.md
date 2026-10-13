@@ -53,3 +53,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.42 | Grimoire réorganisé (stats et arme à gauche, sorts puis passifs au centre, détail à droite), notes Alt + clic droit partout, ailes recalées dans le dos (Uriel, Lucifer, ailes étoilées, Dragon Lord…), teinture qui recolore aussi les lueurs | session locale |
 | 0.1.43 | Cartes communes (passifs communs + nouvelles stats) et cartes de classe qui renforcent chaque sort ; mode dev : sets avec niveau/armure, modifier les stats d'une pièce, pièce ou set au sac, maîtrise max de toutes les classes | session locale |
 | 0.1.44 | Accueil : la carte de classe en haut à droite ouvre le choix de classe ; le panneau Jouer ne s'affiche qu'au clic sur Jouer | session locale |
+| 0.1.45 | Accueil : caméra libre autour du héros (glisser pour tourner, molette pour zoomer, clic droit glissé pour la hauteur, double-clic pour la vue de départ) | session locale |

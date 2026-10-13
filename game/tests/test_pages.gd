@@ -342,6 +342,30 @@ func _test_lobby() -> void:
 	check("menu principal : Jouer choisi, sous-menu rempli", lobby._menu.play.selected and lobby._sub_panel.visible and lobby._sub.get_child_count() >= 3)
 	lobby._on_menu("play")
 	check("second clic sur Jouer : panneau refermé", not lobby._sub_panel.visible)
+	# caméra de l'accueil : molette, glisser, double-clic
+	var bd: MapBackdrop = lobby.backdrop
+	var cam0: Vector3 = bd.camera.position
+	var wheel := InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_UP
+	wheel.pressed = true
+	lobby._unhandled_input(wheel)
+	var press := InputEventMouseButton.new()
+	press.button_index = MOUSE_BUTTON_LEFT
+	press.pressed = true
+	lobby._unhandled_input(press)
+	var move := InputEventMouseMotion.new()
+	move.relative = Vector2(120, 30)
+	move.button_mask = MOUSE_BUTTON_MASK_LEFT
+	lobby._unhandled_input(move)
+	press.pressed = false
+	lobby._unhandled_input(press)
+	check("accueil : molette et glisser bougent la caméra autour du héros", bd.orbit_dist < MapBackdrop.STAGE_DIST and bd.orbit_yaw != 0.0 and bd.camera.position.distance_to(cam0) > 0.3)
+	var dbl := InputEventMouseButton.new()
+	dbl.button_index = MOUSE_BUTTON_LEFT
+	dbl.pressed = true
+	dbl.double_click = true
+	lobby._unhandled_input(dbl)
+	check("accueil : double-clic, vue de départ", bd.orbit_yaw == 0.0 and bd.camera.position.distance_to(cam0) < 0.01)
 	lobby._show_menu("zones")
 	await _frames()
 	check("menu Zone de farm : %d zones" % GameData.zones.size(), lobby._sub.get_children().filter(func(c): return c is MenuWidgets.RowButton).size() == GameData.zones.size())

@@ -61,6 +61,9 @@ func _ready() -> void:
 				if String(c.name) == arg.trim_prefix("--wear-back="):
 					Profile.unlock_outfit(String(c.id))
 					Profile.set_worn(Profile.selected_class, "back", String(c.outfit))
+		elif arg.begins_with("--orbit="):
+			# test : caméra de l'accueil (degrés, degrés, distance, hauteur)
+			_test_orbit = Array(arg.trim_prefix("--orbit=").split(",")).map(func(x): return float(x))
 		elif arg.begins_with("--dye-back="):
 			var cols: Array = []
 			for part in arg.trim_prefix("--dye-back=").split(";"):
@@ -88,7 +91,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
 				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
-				or arg == "--wear-aura" or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out="):
+				or arg == "--wear-aura" or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -179,6 +182,12 @@ func _build_scene() -> void:
 	backdrop.stage_hero()
 	_snapshot = backdrop.snapshot()
 	_show_hero()
+	if _test_orbit.size() >= 4:
+		backdrop.orbit_yaw = deg_to_rad(_test_orbit[0])
+		backdrop.orbit_pitch = deg_to_rad(_test_orbit[1])
+		backdrop.orbit_dist = _test_orbit[2]
+		backdrop.orbit_lift = _test_orbit[3]
+		backdrop.place_stage_camera()
 
 
 func _show_hero() -> void:
@@ -203,6 +212,44 @@ func _show_hero() -> void:
 
 
 var _tick := 0.0
+var _orbit_drag := 0  # bouton tenu pour bouger la caméra (0 : aucun)
+var _test_orbit: Array = []
+
+
+## Caméra autour du héros, dans le décor (hors des menus) : glisser pour tourner, molette pour
+## zoomer, clic droit glissé pour monter ou descendre, double-clic pour revenir à la vue de départ.
+func _unhandled_input(event: InputEvent) -> void:
+	if backdrop == null or _screen_open():
+		_orbit_drag = 0
+		return
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.pressed and mb.double_click and mb.button_index == MOUSE_BUTTON_LEFT:
+			backdrop.reset_orbit()
+		elif mb.button_index in [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT]:
+			_orbit_drag = mb.button_index if mb.pressed else 0
+		elif mb.pressed and mb.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
+			backdrop.orbit_dist = clampf(backdrop.orbit_dist * (0.88 if mb.button_index == MOUSE_BUTTON_WHEEL_UP else 1.14), 1.6, 10.0)
+			backdrop.place_stage_camera()
+	elif event is InputEventMouseMotion and _orbit_drag != 0:
+		if not Input.is_mouse_button_pressed(_orbit_drag) and not (event as InputEventMouseMotion).button_mask:
+			_orbit_drag = 0  # bouton relâché au-dessus d'un menu
+			return
+		var mm := event as InputEventMouseMotion
+		if _orbit_drag == MOUSE_BUTTON_LEFT:
+			backdrop.orbit_yaw -= mm.relative.x * 0.008
+			backdrop.orbit_pitch = clampf(backdrop.orbit_pitch + mm.relative.y * 0.005, -0.25, 1.1)
+		else:
+			backdrop.orbit_lift = clampf(backdrop.orbit_lift + mm.relative.y * 0.006, -1.0, 1.2)
+		backdrop.place_stage_camera()
+
+
+## Un écran plein écran (Héros, Collection, Coffres, Paramètres, mode dev) est-il ouvert ?
+func _screen_open() -> bool:
+	for n in [_hero, _archive, _chests, _settings]:
+		if n and n.has_method("is_open") and n.is_open():
+			return true
+	return Dev.is_open() if Dev.has_method("is_open") else false
 
 
 func _process(delta: float) -> void:
@@ -341,6 +388,16 @@ func _build_ui() -> void:
 	info.offset_right = -28
 	info.offset_top = -86
 	info.offset_bottom = -36
+	var orbit_hint := Hud._label(root, "Glisser : tourner autour du héros · molette : zoom · clic droit glissé : hauteur · double-clic : vue de départ", 12, Color(1, 1, 1, 0.7))
+	orbit_hint.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	orbit_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	orbit_hint.offset_left = -760
+	orbit_hint.offset_right = -32
+	orbit_hint.offset_top = -112
+	orbit_hint.offset_bottom = -92
+	orbit_hint.add_theme_constant_override("outline_size", 4)
+	orbit_hint.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	orbit_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(info)
 	var ih := HBoxContainer.new()
 	ih.add_theme_constant_override("separation", 10)

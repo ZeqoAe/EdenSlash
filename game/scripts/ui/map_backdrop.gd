@@ -32,6 +32,15 @@ var _to := Vector3.ZERO
 var _switching := false
 var _snap: SubViewport
 var _released := false
+# caméra du lobby autour du héros (glisser : tourner, molette : zoom, clic droit glissé : hauteur)
+const STAGE_DIST := 5.2
+var _stage := false
+var _stage_away := Vector3.BACK
+var _stage_offset := 1.5
+var orbit_yaw := 0.0  # radians autour du héros (0 : vue de départ)
+var orbit_pitch := 0.0  # radians, vers le haut
+var orbit_dist := STAGE_DIST
+var orbit_lift := 0.0  # hauteur du point visé (m)
 
 
 func _ready() -> void:
@@ -132,14 +141,39 @@ func stage_hero(screen_offset := 1.5) -> void:
 	h.y = map.height_at(h.x, h.z)
 	hero_root.position = h
 	hero_root.rotation.y = atan2(away.x, away.z)
-	var right := away.cross(Vector3.UP).normalized()
-	var cam := h + away * 5.2 + Vector3.UP * 1.7
-	cam.y = maxf(cam.y, map.height_at(cam.x, cam.z) + 1.2)
+	_stage = true
+	_stage_away = away
+	_stage_offset = screen_offset
 	camera.fov = 42.0
-	camera.position = cam
-	camera.look_at(h + Vector3.UP * 1.25 + right * screen_offset)
+	place_stage_camera()
 	sun.directional_shadow_max_distance = 40.0
 	_fade_to(0.0)
+
+
+## Caméra du lobby d'après l'orbite (vue de départ : orbite à zéro). Le héros reste du côté
+## droit de l'écran (le menu est à gauche), de moins en moins quand on zoome.
+func place_stage_camera() -> void:
+	if not _stage or map == null:
+		return
+	var h := hero_root.position
+	var away := _stage_away.rotated(Vector3.UP, orbit_yaw)
+	var right := away.cross(Vector3.UP).normalized()
+	var k := orbit_dist / STAGE_DIST
+	var target := h + Vector3.UP * (1.25 + orbit_lift)
+	var dir := (away * cos(orbit_pitch) + Vector3.UP * sin(orbit_pitch)).normalized()
+	var cam := target + dir * orbit_dist + Vector3.UP * 0.45 * k
+	cam.y = maxf(cam.y, map.height_at(cam.x, cam.z) + 0.4)
+	camera.position = cam
+	camera.look_at(target + right * _stage_offset * pow(k, 1.6))
+
+
+## Remet la vue de départ.
+func reset_orbit() -> void:
+	orbit_yaw = 0.0
+	orbit_pitch = 0.0
+	orbit_dist = STAGE_DIST
+	orbit_lift = 0.0
+	place_stage_camera()
 
 
 ## Lobby : changement de zone avec un fondu (la génération se fait dans le noir).
