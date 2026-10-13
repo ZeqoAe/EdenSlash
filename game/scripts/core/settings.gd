@@ -61,13 +61,14 @@ const DEFAULTS := {
 	"audio": {"master": 0.8, "sfx": 1.0},
 	# move_mode : keyboard (ZQSD), click (clic gauche), rts (clic droit)
 	# aim_mode : smart (cible, sinon curseur, sinon monstre proche), cursor (le héros suit
-	#            le curseur), nearest (toujours le monstre le plus proche)
+	#            le curseur), action (héros de dos, la caméra tourne vers le curseur),
+	#            nearest (toujours le monstre le plus proche)
 	# attack_mode : manual (clic), auto (frappe seul les monstres à portée)
 	# auto_skills : compétences lancées seules dès qu'elles sont prêtes et qu'un monstre est à portée
 	# auto_target : any (n'importe quel monstre à portée), locked (seulement la cible verrouillée)
 	"game": {"move_mode": "keyboard", "aim_mode": "smart", "attack_mode": "manual",
 		"auto_skills": [false, false, false, false], "auto_target": "any"},
-	"camera": {"rotate_speed": 1.0, "invert_y": false, "distance": 15.0, "shake": 1.0},
+	"camera": {"rotate_speed": 1.0, "invert_y": false, "distance": 15.0, "shake": 1.0, "action_turn": 1.0},
 	# dev_mode : écran de test (F10), réservé aux tests
 	"interface": {"damage_numbers": "all", "hit_stop": true, "show_fps": true, "move_marker": true, "attack_zone": false, "dev_mode": false},
 }
@@ -82,6 +83,8 @@ const PRESETS := {
 		"game": {"move_mode": "click", "aim_mode": "cursor", "attack_mode": "auto"}},
 	"rts": {"name": "RTS / MOBA", "desc": "Clic droit pour se déplacer ou attaquer un monstre, compétences au clavier vers la souris, caméra au clic molette.",
 		"game": {"move_mode": "rts", "aim_mode": "cursor", "attack_mode": "auto"}},
+	"action": {"name": "Action (vue de dos)", "desc": "ZQSD pour se déplacer, le héros regarde le curseur et la caméra tourne derrière lui quand le curseur s'écarte du centre. Molette : du plan rapproché à la vue large.",
+		"game": {"move_mode": "keyboard", "aim_mode": "action", "attack_mode": "manual"}},
 	"relax": {"name": "Détente", "desc": "ZQSD pour se déplacer : attaque de base et compétences se lancent seules sur les monstres à portée.",
 		"game": {"move_mode": "keyboard", "aim_mode": "nearest", "attack_mode": "auto", "auto_skills": [true, true, true, true]}},
 }
@@ -149,6 +152,11 @@ func move_mode() -> String:
 
 func aim_mode() -> String:
 	return String(get_v("game", "aim_mode"))
+
+
+## Visée au curseur (le héros regarde toujours la souris) : modes « curseur » et « action ».
+func cursor_aim() -> bool:
+	return aim_mode() in ["cursor", "action"]
 
 
 func auto_attack() -> bool:

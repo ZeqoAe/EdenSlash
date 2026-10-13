@@ -489,7 +489,7 @@ func _ui_has_mouse() -> bool:
 ## Clic gauche : verrouille le monstre sous le curseur (auto-attaque),
 ## sinon frappe en direction du curseur. Visée au curseur : frappe toujours vers la souris.
 func _on_attack_pressed() -> void:
-	if Input.is_action_just_pressed("attack") and (autoplay or Settings.aim_mode() != "cursor"):
+	if Input.is_action_just_pressed("attack") and (autoplay or not Settings.cursor_aim()):
 		var m := monster_under_mouse()
 		if m:
 			_target = m
@@ -539,12 +539,18 @@ func _set_move_goal(marker: bool) -> void:
 
 ## Le héros regarde le curseur en permanence (visée au curseur).
 func _aims_at_cursor() -> bool:
-	return not autoplay and Settings.aim_mode() == "cursor"
+	return not autoplay and Settings.cursor_aim()
 
 
 func _cursor_dir() -> Vector3:
 	var p := mouse_ground_point()
 	if p == Vector3.INF:
+		# mode action, curseur au-dessus de l'horizon : droit devant la caméra
+		var cam := get_viewport().get_camera_3d()
+		if cam and Settings.aim_mode() == "action":
+			var f := -cam.global_transform.basis.z
+			f.y = 0.0
+			return f.normalized()
 		return Vector3.ZERO
 	var d := p - global_position
 	d.y = 0.0
@@ -1234,7 +1240,9 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 func _skill_aim() -> Vector3:
 	var cursor := mouse_ground_point() if not autoplay else Vector3.INF
 	var mode := "smart" if autoplay else Settings.aim_mode()
-	if mode == "cursor":
+	if mode in ["cursor", "action"]:
+		if cursor == Vector3.INF and mode == "action":
+			return global_position + _cursor_dir() * 8.0
 		return cursor
 	if mode == "nearest":
 		var near := nearest_monster(14.0)

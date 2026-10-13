@@ -189,6 +189,11 @@ func _parse_args() -> void:
 				_shots.append(float(s))
 		elif arg.begins_with("--quit-at="):
 			_quit_at = float(arg.trim_prefix("--quit-at="))
+		elif arg.begins_with("--aim="):
+			# test : mode de visée sans toucher aux paramètres enregistrés
+			if not Settings.data.has("game"):
+				Settings.data["game"] = {}
+			Settings.data["game"]["aim_mode"] = arg.trim_prefix("--aim=")
 		elif arg.begins_with("--cam-dist="):
 			rig.distance = float(arg.trim_prefix("--cam-dist="))
 		elif arg == "--test-feedback":

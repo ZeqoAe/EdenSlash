@@ -138,6 +138,7 @@ func _build_game_tab() -> void:
 	_option(v, "Visée des attaques et compétences", "game", "aim_mode", [
 		["smart", "Intelligente : cible verrouillée, sinon curseur, sinon monstre proche"],
 		["cursor", "Suit le curseur : le héros regarde toujours la souris"],
+		["action", "Action : vue de dos, la caméra tourne vers le curseur"],
 		["nearest", "Monstre le plus proche"]])
 	var info := _note(v, "")
 	_refreshers.append(func():
@@ -151,6 +152,8 @@ func _build_game_tab() -> void:
 				lines.append("Touches de déplacement + clic gauche pour attaquer (sur un monstre : auto-attaque).")
 		if Settings.aim_mode() == "cursor":
 			lines.append("Visée au curseur : attaques et compétences partent toujours vers la souris (le clic ne verrouille plus de cible).")
+		elif Settings.aim_mode() == "action":
+			lines.append("Mode action : le héros regarde le curseur ; écarte le curseur à gauche ou à droite et la caméra tourne derrière lui (plus le curseur est loin du centre, plus elle tourne vite). Molette : zoom du plan rapproché à la vue large.")
 		info.text = "\n".join(lines))
 
 
@@ -313,6 +316,7 @@ func _build_camera_tab() -> void:
 	_check(v, "Inverser l'inclinaison (haut / bas)", "camera", "invert_y")
 	_slider(v, "Distance de départ (zoom)", "camera", "distance", 7.0, 28.0, 1.0, func(x): return "%d m" % roundi(x))
 	_slider(v, "Tremblements de l'écran", "camera", "shake", 0.0, 1.5, 0.05, func(x): return "%d %%" % roundi(x * 100))
+	_slider(v, "Mode action : vitesse de rotation au curseur", "camera", "action_turn", 0.3, 2.5, 0.05, func(x): return "%d %%" % roundi(x * 100))
 	_section(v, "Interface et ressenti")
 	_option(v, "Chiffres de dégâts", "interface", "damage_numbers", [
 		["all", "Tous"], ["dealt", "Seulement les dégâts infligés"], ["crit", "Coups critiques et dégâts subis"], ["off", "Masqués"]])
