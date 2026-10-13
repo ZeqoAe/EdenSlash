@@ -556,7 +556,7 @@ class CardsPage extends HBoxContainer:
 		_filter.focus_mode = Control.FOCUS_NONE
 		_filter.item_selected.connect(func(_i): refresh())
 		head.add_child(_filter)
-		Hud._label(left, "Cartes communes : pour toutes les classes. Cartes de la classe : elles renforcent un sort précis et ne sortent que si tu as pris ce sort. Les certificats (passifs d'Eden de la classe) se choisissent avant la run, page Classe. Les cartes se gagnent en montant de niveau, dans les coffres, les sanctuaires et chez les marchands ; les verrouillées se débloquent pour toujours avec leur exploit. Pendant le choix : Bannir retire une carte de la run, Garder la repropose au choix suivant (3 fois chacun par run).", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		Hud._label(left, "Cartes communes : pour toutes les classes. Cartes de la classe : seulement en run de cette classe, elles renforcent un sort et ne sortent qu'une fois ce sort pris. Certificats : les bonus d'Eden de toutes les classes ; ceux posés sur le plateau (page Classe) sont acquis dès le début de la run, les autres peuvent tomber en run comme des cartes. Les cartes se gagnent en montant de niveau, dans les coffres, les sanctuaires et chez les marchands ; les verrouillées se débloquent pour toujours avec leur exploit. Pendant le choix : Bannir retire une carte de la run, Garder la repropose au choix suivant (3 fois chacun par run).", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		var sc := ScrollContainer.new()
 		sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -590,10 +590,10 @@ class CardsPage extends HBoxContainer:
 			for d in commons:
 				_cur.add_child(_cell(d, ""))
 		if f in [0, 2]:
-			_sep("Certificats %s (choisis avant la run, page Classe)" % cname)
+			_sep("Certificats %s (posés : acquis pour la run ; sinon, cartes en run)" % cname)
 			for p in GameData.class_data(_cid()).get("passives", []):
 				_cur.add_child(_cell(p, "cert"))
-			_sep("Cartes %s : renforcent un sort (si tu l'as pris)" % cname)
+			_sep("Cartes %s : renforcent un sort (runs %s, une fois le sort pris)" % [cname, cname])
 			for d in mine:
 				_cur.add_child(_cell(d, "class"))
 		if _detail.text == "":
@@ -632,7 +632,7 @@ class CardsPage extends HBoxContainer:
 			b.modulate = Color(0.65, 0.65, 0.72)
 		b.pressed.connect(func():
 			var lines: PackedStringArray = ["[font_size=19][b][color=#%s]%s[/color][/b][/font_size]" % [rar.color.to_html(false), d.name],
-				"[color=#9a98a8]%s · jusqu'au niveau %d%s[/color]" % [{"cert": "Certificat de classe (page Classe, avant la run)", "class": "Carte de classe %s · sort « %s »" % [String(rar.name).to_lower(), d.get("skill_name", "")]}.get(kind, String(rar.name)), mini(int(d.get("max", 1)), Cards.MAX_LEVEL),
+				"[color=#9a98a8]%s · jusqu'au niveau %d%s[/color]" % [{"cert": "Certificat %s · posé sur le plateau (page Classe) : acquis dès le début de la run ; sinon il peut tomber en run" % String(GameData.class_data(_cid()).get("name_fr", "")), "class": "Carte de classe %s · sort « %s »" % [String(rar.name).to_lower(), d.get("skill_name", "")]}.get(kind, String(rar.name)), mini(int(d.get("max", 1)), Cards.MAX_LEVEL),
 					" · effet immédiat" if d.get("instant", false) else ""], "", String(d.get("desc", ""))]
 			var tl := Cards.stat_lines(d, 0.0, 1.0)
 			if not tl.is_empty():

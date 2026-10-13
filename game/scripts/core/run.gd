@@ -144,7 +144,45 @@ func passive_def(id: String) -> Dictionary:
 	var cc := Cards.class_card(class_id, id)
 	if not cc.is_empty():
 		return cc
+	if id.begins_with("cert:"):
+		return certificate_card(id.trim_prefix("cert:"))
 	return Boons.get_def(id)
+
+
+## Certificat « classe/id » présenté comme une carte (un seul exemplaire, rare).
+func certificate_card(key: String) -> Dictionary:
+	var parts := key.split("/")
+	if parts.size() < 2:
+		return {}
+	for p in GameData.class_data(parts[0]).get("passives", []):
+		if String(p.id) == parts[1]:
+			var d: Dictionary = p.duplicate(true)
+			d["id"] = "cert:" + key
+			d["max"] = 1
+			d["rarity"] = "rare"
+			d["cert"] = key
+			d["cert_class"] = String(GameData.class_data(parts[0]).get("name_fr", parts[0]))
+			if not d.has("desc"):
+				d["desc"] = Cards.total_text(d, 1.0)
+			return d
+	return {}
+
+
+## Certificats qui peuvent tomber en run : ceux de la classe jouée et tous ceux débloqués,
+## sauf ceux posés sur le plateau (déjà acquis pour la run).
+func certificate_pool() -> Array:
+	var keys: Array = Profile.unlocked_certificates().map(func(x): return String(x.key))
+	for c in GameData.talents.get(class_id, {}).get("certificates", []):
+		var k := "%s/%s" % [class_id, c]
+		if not k in keys:
+			keys.append(k)
+	var out: Array = []
+	for k in keys:
+		if not k in Profile.certificates:
+			var d := certificate_card(String(k))
+			if not d.is_empty():
+				out.append(d)
+	return out
 
 
 ## Somme des effets des cartes de classe prises sur le sort [param skill_id] (dmg, cd…).
@@ -283,9 +321,11 @@ func roll_cards(n := 3, skills_only := false) -> Array:
 		var boons := {}
 		for b in Boons.all():
 			boons[String(b.id)] = true
-		for p in class_data().get("passives", []) + Boons.all():
-			if p.has("eden") and not p.get("shared", false):
-				continue  # certificat : se choisit avant la run (expertise) ; les certificats partagés sont des cartes
+		# cartes communes et certificats non posés sur le plateau (ceux posés sont déjà acquis) ;
+		# les certificats pèsent ensemble comme quelques cartes, quel que soit leur nombre
+		var certs := certificate_pool()
+		var cert_k := minf(1.0, 4.0 / maxf(1.0, float(certs.size())))
+		for p in Boons.all() + certs:
 			if int(passives.get(p.id, 0)) >= mini(int(p.get("max", 1)), 99 if p.get("instant", false) else Cards.MAX_LEVEL):
 				continue
 			if String(p.id) in banned or (boons.has(String(p.id)) and not Cards.card_unlocked(String(p.id))):
@@ -293,7 +333,7 @@ func roll_cards(n := 3, skills_only := false) -> Array:
 			if not p.get("requires", []).all(func(r): return passives.has(r)):
 				continue
 			var rar: Dictionary = Boons.RARITY[String(p.get("rarity", "common"))]
-			pool.append({"type": "passive", "id": p.id, "weight": 1.2 * float(rar.weight) * (0.5 if p.get("instant", false) else 1.0)})
+			pool.append({"type": "passive", "id": p.id, "weight": 1.2 * float(rar.weight) * (0.5 if p.get("instant", false) else 1.0) * (cert_k if p.has("cert") else 1.0)})
 		# cartes de classe : seulement pour les sorts pris
 		for d in Cards.class_cards(class_id):
 			if int(d.skill) in owned and int(passives.get(d.id, 0)) < int(d.max) and not String(d.id) in banned:
@@ -360,6 +400,10 @@ func _describe_card(c: Dictionary) -> Dictionary:
 			if before > 0.0:  # 1re carte : la description donne déjà les valeurs de l'effet
 				lines.append_array(Cards.proc_lines(p, before, before + m))
 			var kind := "Évolution" if evo else ("Passif" if p.get("procs", []).is_empty() else "Effet")
+			if p.has("cert"):
+				kind = "Certificat %s ·" % String(p.get("cert_class", ""))
+			elif p.has("skill_mod"):
+				kind = "Carte de sort ·"
 			var mx := mini(int(p.get("max", 1)), Cards.MAX_LEVEL)
 			return {"type": "passive", "id": p.id, "title": p.name, "tier": tier, "mult": m,
 				"subtitle": "%s %s" % [kind, String(Cards.tier(tier).name).to_lower()] + (" · niv. %d → %d" % [stacks, stacks + 1] if mx > 1 else ""),

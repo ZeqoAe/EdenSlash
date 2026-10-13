@@ -125,7 +125,7 @@ func _ready() -> void:
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, 6)
 	mid.add_child(gap)
-	_section(mid, "Passifs de la classe (certificats d'Eden, choisis avant la run)")
+	_section(mid, "Certificats de la classe (à poser avant la run, ou à trouver en run)")
 	_passives_grid = GridContainer.new()
 	_passives_grid.columns = 3
 	_passives_grid.add_theme_constant_override("h_separation", 8)
@@ -312,7 +312,7 @@ func _refresh_detail() -> void:
 			_detail.text = ("[img=64x64]%s[/img]\n" % icon if icon != "" else "") + "[font_size=17]" + SpellInfo.passive_bbcode(p) + "[/font_size]" + \
 				"
 
-[color=#c8c8d4]Certificat de la classe : à placer sur le plateau de la page Classe avant la run (7 au plus) ; une fois la classe maîtrisée, utilisable par les autres classes.[/color]"
+[color=#c8c8d4]Certificat : débloqué par la maîtrise de la classe, utilisable par toutes les classes. Posé sur le plateau de la page Classe (2 à 7 emplacements), il est acquis dès le début de la run ; sinon, il peut tomber en run comme une carte.[/color]"
 
 
 ## Attaque actuelle du héros (physique ou magique) pour chiffrer les dégâts, sinon estimation niveau 1.

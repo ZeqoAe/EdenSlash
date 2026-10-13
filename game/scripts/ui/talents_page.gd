@@ -130,9 +130,11 @@ func _ready() -> void:
 	ch.add_theme_constant_override("separation", 12)
 	cp.add_child(ch)
 	ItemWidgets.section(ch, "Certificats de maîtrise")
+	ch.tooltip_text = "Bonus d'Eden de toutes les classes (débloqués par leur maîtrise). Posés sur le plateau : acquis dès le début de la run. Ceux que tu ne poses pas peuvent tomber en run comme des cartes."
 	_slots = Hud._label(ch, "", 13, UiTheme.MUTED)
 	_slots.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_slots.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	Hud._label(cp, "Posés sur le plateau : acquis dès le début de la run (toutes classes confondues). Les autres peuvent tomber en run comme des cartes.", 12, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var bh := HBoxContainer.new()
 	bh.add_theme_constant_override("separation", 16)
 	cp.add_child(bh)
@@ -357,6 +359,7 @@ static func cert_tip(key: String, unlocked: bool, cert_level := 0) -> String:
 	lines.append("[color=#%s]■ %s[/color] · certificat %s" % [Color(CertBoard.COLORS[c].color).to_html(false), CertBoard.COLORS[c].name,
 		GameData.class_data(parts[0]).get("name_fr", parts[0])])
 	lines.append("[b]%s[/b]" % p.get("desc", ""))
+	lines.append("[color=#c8c8d4]Posé : acquis dès le début de la run. Sinon, il peut tomber en run comme une carte.[/color]")
 	if not unlocked:
 		lines.append("[color=#ff9a7a]🔒 Maîtrise %s niveau %d[/color]" % [GameData.class_data(parts[0]).get("name_fr", parts[0]), cert_level])
 	return "\n".join(lines)

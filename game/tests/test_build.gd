@@ -258,6 +258,25 @@ func _test_card_tiers() -> void:
 	Run.passive_power.erase(pow_id)
 	if not had:
 		Run.skills = Run.skills.filter(func(x): return int(x.id) != int(sk0.id))
+	# certificats : ceux posés sont acquis, les autres tombent en run comme des cartes
+	var own_certs: Array = GameData.talents.get(Run.class_id, {}).get("certificates", [])
+	if not own_certs.is_empty():
+		var key := "%s/%s" % [Run.class_id, own_certs[0]]
+		var saved_certs: Array = Profile.certificates.duplicate()
+		Profile.certificates = []
+		check("certificat non posé : dans le tirage des cartes", Run.certificate_pool().any(func(d): return d.cert == key))
+		Profile.certificates = [key]
+		check("certificat posé : plus dans le tirage", not Run.certificate_pool().any(func(d): return d.cert == key))
+		Profile.certificates = saved_certs
+		var cd := Run.passive_def("cert:" + key)
+		var st0 := Run.passive_stats().duplicate()
+		Run.passives["cert:" + key] = 1
+		Run.passive_power["cert:" + key] = 1.0
+		var sk := String(cd.get("stat", {}).keys()[0]) if not (cd.get("stat", {}) as Dictionary).is_empty() else ""
+		check("certificat « %s » pris en run : son bonus s'applique" % cd.get("name", "?"), sk == "" or float(Run.passive_stats().get(sk, 0.0)) > float(st0.get(sk, 0.0)))
+		Run.passives.erase("cert:" + key)
+		Run.passive_power.erase("cert:" + key)
+	check("cartes de sort : seulement celles de la classe jouée", Cards.class_cards(Run.class_id).all(func(d): return d["class"] == Run.class_id))
 	# sort de soin amélioré : plus de soins, pas seulement moins de recharge
 	var heal_skill := {"id": 9001, "kind": "heal", "heal": 0.3, "cooldown": 10}
 	var up := Cards.skill_upgrade(heal_skill, "epic")
