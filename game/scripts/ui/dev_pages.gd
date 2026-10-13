@@ -568,6 +568,12 @@ class ProgressPage extends HBoxContainer:
 				Profile.save_profile()
 				_done("Maîtrise réglée au niveau %d." % lv)), 120)
 		for a in [
+			["Maîtrise maximale pour toutes les classes", "Débloquer les %d classes et les mettre toutes à la maîtrise %d (tous les sorts, certificats et talents de maîtrise) ?" % [GameData.classes.size(), Profile.EXPERTISE_MAX], func():
+				for c in GameData.classes:
+					if not c in Progression.START_CLASSES and not c in Profile.unlocked_classes:
+						Profile.unlocked_classes.append(c)
+					Profile.set_expertise_level(c, Profile.EXPERTISE_MAX)
+				return "Les %d classes sont débloquées et à la maîtrise %d." % [GameData.classes.size(), Profile.EXPERTISE_MAX]],
 			["Débloquer toutes les classes", "Débloquer les %d classes ?" % GameData.classes.size(), func():
 				for c in GameData.classes:
 					if not c in Progression.START_CLASSES and not c in Profile.unlocked_classes:

@@ -141,7 +141,20 @@ func passive_def(id: String) -> Dictionary:
 	for p in class_data().get("passives", []):
 		if p.id == id:
 			return p
+	var cc := Cards.class_card(class_id, id)
+	if not cc.is_empty():
+		return cc
 	return Boons.get_def(id)
+
+
+## Somme des effets des cartes de classe prises sur le sort [param skill_id] (dmg, cd…).
+func skill_card_mod(skill_id: int, key: String) -> float:
+	var total := 0.0
+	for pid in passives:
+		if String(pid).begins_with("sk%d_" % skill_id):
+			var d := Cards.class_card(class_id, String(pid))
+			total += float(d.get("skill_mod", {}).get(key, 0.0)) * power(String(pid))
+	return total
 
 
 func rerolls_left() -> int:
@@ -192,12 +205,12 @@ func skill_cooldown_mult(id: int) -> float:
 
 ## Soins de la compétence (cartes d'amélioration des sorts de soin).
 func skill_heal_mult(id: int) -> float:
-	return 1.0 + float(skill_entry(id).get("heal", 0.0))
+	return (1.0 + float(skill_entry(id).get("heal", 0.0))) * (1.0 + skill_card_mod(id, "heal"))
 
 
 ## Durée des effets de la compétence (buffs, états infligés).
 func skill_duration_mult(id: int) -> float:
-	return 1.0 + float(skill_entry(id).get("dur", 0.0))
+	return (1.0 + float(skill_entry(id).get("dur", 0.0))) * (1.0 + skill_card_mod(id, "duration"))
 
 
 ## Bonus d'attribut au lancement : [{stat, value, duration}].
@@ -234,7 +247,8 @@ func passive_stats() -> Dictionary:
 
 ## Bonus des talents sur une compétence : {dmg, cd, duration, power}.
 func skill_talent(skill_id: int) -> Dictionary:
-	var out := {"dmg": 0.0, "cd": 0.0, "duration": 0.0, "power": 0.0}
+	# cartes de classe prises sur ce sort (puissance, cadence)
+	var out := {"dmg": skill_card_mod(skill_id, "dmg"), "cd": skill_card_mod(skill_id, "cd"), "duration": 0.0, "power": 0.0}
 	var tree: Dictionary = GameData.talents.get(class_id, {}).get("talents", {})
 	for id in Profile.talents.get(class_id, {}):
 		var eff: Dictionary = tree.get(id, {}).get("effect", {})
@@ -280,6 +294,10 @@ func roll_cards(n := 3, skills_only := false) -> Array:
 				continue
 			var rar: Dictionary = Boons.RARITY[String(p.get("rarity", "common"))]
 			pool.append({"type": "passive", "id": p.id, "weight": 1.2 * float(rar.weight) * (0.5 if p.get("instant", false) else 1.0)})
+		# cartes de classe : seulement pour les sorts pris
+		for d in Cards.class_cards(class_id):
+			if int(d.skill) in owned and int(passives.get(d.id, 0)) < int(d.max) and not String(d.id) in banned:
+				pool.append({"type": "passive", "id": d.id, "weight": 1.0 * float(Boons.RARITY[String(d.rarity)].weight)})
 	pool = pool.filter(func(c): return not (c.type == "skill" and str(c.id) in banned) \
 		and not kept.any(func(k): return String(k.type) == String(c.type) and str(k.id) == str(c.id)))
 	var picks: Array = []

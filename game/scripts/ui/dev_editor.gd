@@ -482,14 +482,30 @@ class SetsPage extends HBoxContainer:
 	var _tiers := {}  # n -> {on: CheckBox, stats: StatEditor, kind: OptionButton}
 	var _preview: RichTextLabel
 	var _msg: Label
+	var _set_search: LineEdit
+	var _armor: OptionButton
+	const ARMORS := [["", "Tous les types"], ["plates", "Plates (lourde : guerrier, chevalier, samouraï…)"],
+		["cuir", "Cuir (légère : voleur, chasseur…)"], ["tissu", "Tissu (magicien, clerc…)"], ["-", "Bijoux, armes, autres"]]
+	const ARMOR_FR := {"plates": "plates (lourde)", "cuir": "cuir (légère)", "tissu": "tissu"}
 
 	func _ready() -> void:
 		add_theme_constant_override("separation", 14)
-		var left := ItemWidgets.panel(self, 340)
+		var left := ItemWidgets.panel(self, 380)
 		ItemWidgets.section(left, "Sets")
 		DevPages.button(left, "+ Nouveau set", _new_set)
+		_set_search = LineEdit.new()
+		_set_search.placeholder_text = "Chercher un set…"
+		_set_search.text_changed.connect(func(_t): refresh())
+		left.add_child(_set_search)
+		_armor = OptionButton.new()
+		for a in ARMORS:
+			_armor.add_item(String(a[1]))
+		_armor.focus_mode = Control.FOCUS_NONE
+		_armor.item_selected.connect(func(_i): refresh())
+		left.add_child(_armor)
 		_list = ItemList.new()
 		_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		_list.fixed_icon_size = Vector2i(34, 34)
 		_list.item_selected.connect(func(i): _open(String(_ids[i])))
 		left.add_child(_list)
 		var mid := ItemWidgets.panel(self, 0, true)
@@ -510,15 +526,40 @@ class SetsPage extends HBoxContainer:
 		if not is_inside_tree():
 			return
 		_list.clear()
-		_ids = GameData.eden_sets.keys()
-		_ids.sort_custom(func(a, b): return [not String(a).begins_with("u"), String(GameData.eden_sets[a].get("name", ""))] < [not String(b).begins_with("u"), String(GameData.eden_sets[b].get("name", ""))])
+		var q := _set_search.text.strip_edges().to_lower()
+		var want := String(ARMORS[_armor.selected][0])
+		_ids = GameData.eden_sets.keys().filter(func(sid):
+			var info := set_info(String(sid))
+			return (q == "" or String(GameData.eden_sets[sid].get("name", "")).to_lower().contains(q)) \
+				and (want == "" or (want == "-" and info.armor == "") or info.armor == want))
+		# tri : sets créés en jeu, puis par niveau, puis par nom
+		_ids.sort_custom(func(a, b): return [not String(a).begins_with("u"), int(set_info(String(a)).level), String(GameData.eden_sets[a].get("name", ""))] < [not String(b).begins_with("u"), int(set_info(String(b)).level), String(GameData.eden_sets[b].get("name", ""))])
 		for sid in _ids:
 			var d: Dictionary = GameData.eden_sets[sid]
-			_list.add_item("%s%s (%d)" % ["★ " if String(sid).begins_with("u") else "", d.get("name", sid), (d.get("pieces", []) as Array).size()])
+			var info := set_info(String(sid))
+			var i := _list.add_item("%s%s · niv. %d%s (%d)" % ["★ " if String(sid).begins_with("u") else "", d.get("name", sid), int(info.level),
+				(" · " + String(ARMOR_FR.get(info.armor, info.armor))) if info.armor != "" else "", (d.get("pieces", []) as Array).size()], UiTheme.texture(String(info.icon)))
+			_list.set_item_custom_fg_color(i, Items.RARITIES[clampi(int(info.rarity), 0, 5)].color)
+			_list.set_item_tooltip(i, "%s\nNiveau d'Eden %d · %s" % [d.get("name", sid), int(info.level), String(ARMOR_FR.get(info.armor, "bijoux / armes"))])
 		if _sid == "":
 			for c in _form.get_children():
 				c.queue_free()
 			Hud._label(_form, "Choisis un set, ou crée-en un nouveau. ★ : sets créés en jeu (leurs pièces comptent à toute rareté).", 15, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+	## Niveau (le plus bas des pièces), type d'armure, rareté et icône d'un set.
+	static func set_info(sid: String) -> Dictionary:
+		var out := {"level": 0, "armor": "", "rarity": 0, "icon": ""}
+		for id in GameData.eden_sets.get(sid, {}).get("pieces", []):
+			var e: Dictionary = GameData.eden_by_id.get(int(id), {})
+			if e.is_empty():
+				continue
+			out.level = int(e.level) if int(out.level) == 0 else mini(int(out.level), int(e.level))
+			if String(e.get("armor", "")) != "" and String(out.armor) == "":
+				out.armor = String(e.armor)
+			out.rarity = maxi(int(out.rarity), int(e.rarity))
+			if String(out.icon) == "" or String(e.slot) == "chest":
+				out.icon = String(e.get("icon", ""))
+		return out
 
 	func _new_set() -> void:
 		var sid := DevEdits.new_set_id()
@@ -582,10 +623,17 @@ class SetsPage extends HBoxContainer:
 			st.changed.connect(_update_preview)
 			ko.item_selected.connect(func(_i): _update_preview())
 			_tiers[n] = {"on": on, "stats": st, "kind": ko}
-		var acts := HBoxContainer.new()
-		acts.add_theme_constant_override("separation", 8)
+		var acts := HFlowContainer.new()
+		acts.add_theme_constant_override("h_separation", 8)
+		acts.add_theme_constant_override("v_separation", 8)
 		_form.add_child(acts)
 		DevPages.button(acts, "Enregistrer le set", _save, 200)
+		DevPages.button(acts, "⬇ Tout le set au sac", func():
+			var n := 0
+			for id in _pieces:
+				if _give(int(id)):
+					n += 1
+			_msg.text = "%d pièce(s) ajoutée(s) au %s." % [n, "sac de la run" if Profile.in_run else "coffre"], 220)
 		DevPages.button(acts, "Supprimer le set", func():
 			DevPages.confirm(self, "Supprimer le set « %s » ? Ses pièces n'en feront plus partie." % _name.text, func():
 				DevEdits.delete_set(_sid)
@@ -626,12 +674,79 @@ class SetsPage extends HBoxContainer:
 			var l := Hud._label(h, "%s · %s" % [e.get("name", id), Items.SLOT_NAMES.get(e.get("slot", ""), "")], 14, Items.RARITIES[clampi(int(e.get("rarity", 0)), 0, 5)].color)
 			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			var pid: int = int(id)
+			var lv := Hud._label(h, "niv. %d%s" % [int(e.get("level", 0)), (" · " + String(ARMOR_FR.get(String(e.get("armor", "")), ""))) if String(e.get("armor", "")) != "" else ""], 13, UiTheme.MUTED)
+			lv.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			DevPages.button(h, "✎ Modifier", func(): _edit_piece(pid), 110).tooltip_text = "Stats de base de cette pièce (modèle du catalogue)"
+			DevPages.button(h, "⬇", func():
+				_give(pid)
+				_msg.text = "%s ajouté au %s." % [GameData.eden_by_id.get(pid, {}).get("name", pid), "sac de la run" if Profile.in_run else "coffre"], 40).tooltip_text = "Ajouter cette pièce au sac (ou au coffre hors run)"
 			DevPages.button(h, "✕", func():
 				_pieces.erase(pid)
 				_refresh_pieces()
-				_update_preview(), 40)
+				_update_preview(), 40).tooltip_text = "Retirer du set"
 		if _pieces.is_empty():
 			Hud._label(_pieces_box, "Aucune pièce : cherche des objets ci-dessous.", 13, UiTheme.MUTED)
+
+	## Ajoute un exemplaire de la pièce [param id] (sa rareté, son niveau d'Eden) au sac ou au coffre.
+	func _give(id: int) -> bool:
+		var e: Dictionary = GameData.eden_by_id.get(id, {})
+		if e.is_empty():
+			return false
+		var it := Items.from_template(e, maxi(1, int(e.level)))
+		var ok := true
+		if Profile.in_run:
+			ok = Profile.add_item(it)
+		else:
+			Profile.vault.append(it)
+		Profile.save_profile()
+		return ok
+
+	## Fenêtre des stats de base d'une pièce, en valeurs réelles à son niveau ; enregistrées dans
+	## le modèle du catalogue (data/dev_edits.json) en rapports par emplacement.
+	func _edit_piece(id: int) -> void:
+		var e: Dictionary = GameData.eden_by_id.get(id, {})
+		if e.is_empty():
+			return
+		var r := int(e.rarity)
+		var tmp := Items.from_template(e, maxi(1, int(e.level)))
+		var k := Items._level_k(Items.power_level(tmp))
+		var real := {}
+		for st in e.get("r", {}):
+			var ref := Items._ref(String(e.slot), String(st)) * float(Items.RARITY_MULT[r])
+			real[st] = float(e.r[st]) * ref * (1.0 if String(st) in Items.PERCENT_STATS else k)
+		var pop := PopupPanel.new()
+		pop.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.05, 0.04, 0.1, 0.98), UiTheme.GOLD, 2, 12))
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 8)
+		v.custom_minimum_size = Vector2(560, 0)
+		pop.add_child(v)
+		var t := Hud._label(v, String(e.name), 18, Items.RARITIES[clampi(r, 0, 5)].color)
+		t.add_theme_font_override("font", UiTheme.bold_font())
+		Hud._label(v, "Stats de base au niveau %d (%s, %s). Valider change ce modèle pour les prochains exemplaires ; « ⬇ » en donne un nouveau." % [
+			int(e.level), Items.RARITIES[clampi(r, 0, 5)].name, Items.SLOT_NAMES.get(e.slot, e.slot)], 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var ed := StatEditor.new(false)
+		ed.set_values(real)
+		v.add_child(ed)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		row.alignment = BoxContainer.ALIGNMENT_END
+		v.add_child(row)
+		DevPages.button(row, "Annuler", func(): pop.hide(), 120)
+		DevPages.button(row, "Valider", func():
+			var ratios := {}
+			var vals := ed.get_values()
+			for st in vals:
+				var ref := Items._ref(String(e.slot), String(st)) * float(Items.RARITY_MULT[r])
+				if ref <= 0.0:
+					continue
+				ratios[st] = snappedf(float(vals[st]) / (ref * (1.0 if String(st) in Items.PERCENT_STATS else k)), 0.001)
+			DevEdits.edit_item(id, {"r": ratios})
+			_msg.text = DevEdits.save() + " %d objet(s) possédé(s) mis à jour." % DevEdits.refresh_owned(id)
+			pop.hide()
+			_refresh_pieces(), 140)
+		add_child(pop)
+		pop.popup_hide.connect(pop.queue_free)
+		pop.popup_centered()
 
 	func _def() -> Dictionary:
 		var bonus := {}

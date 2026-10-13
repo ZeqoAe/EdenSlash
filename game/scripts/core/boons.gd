@@ -52,6 +52,14 @@ const LIST := [
 		"desc": "Effet immédiat : toutes les orbes d'expérience et tous les objets de la carte reviennent vers toi."},
 	{"id": "fortune", "name": "Bonne étoile", "rarity": "common", "max": 10, "stat": {"rerolls": 1, "crit": 0.03},
 		"desc": "+1 relance de cartes et +3 % de critique."},
+	{"id": "precision", "name": "Précision", "rarity": "common", "max": 10, "stat": {"crit": 0.025},
+		"desc": "+2,5 % de chances de coup critique."},
+	{"id": "toughness", "name": "Peau de fer", "rarity": "common", "max": 10, "stat": {"def_pct": 0.06},
+		"desc": "+6 % de défense."},
+	{"id": "brute", "name": "Force brute", "rarity": "common", "max": 10, "stat": {"atk_pct": 0.05},
+		"desc": "+5 % d'attaque (physique et magique)."},
+	{"id": "arcana", "name": "Arcanes", "rarity": "common", "max": 10, "stat": {"matk_pct": 0.05},
+		"desc": "+5 % d'attaque magique."},
 	# --- rares : les effets déclenchés -----------------------------------------------------
 	{"id": "static_blade", "name": "Lame statique", "rarity": "rare", "max": 10,
 		"procs": [{"trigger": "skill_hit", "chance": 0.35, "cd": 4.0, "effect": "lightning", "mult": 1.5, "chain": 3, "radius": 7.0}],
@@ -150,6 +158,15 @@ const ICONS := {
 	"phoenix_blade": "res://assets/ui/status/burn.png", "steel_tempest": "res://assets/ui/skills/e0460.png",
 	"lingering": "res://assets/ui/status/poison.png", "magnet": "res://assets/ui/status/flow.png",
 	"scholar": "res://assets/ui/status/regen.png", "recall": "res://assets/ui/status/haste.png",
+	"precision": "res://assets/ui/status/keen.png", "toughness": "res://assets/ui/status/barrier.png",
+	"brute": "res://assets/ui/skills/j615.png", "arcana": "res://assets/ui/status/shock.png",
+	# passifs communs (data/classes.json)
+	"vigor": "res://assets/ui/status/regen.png", "swift_blade": "res://assets/ui/status/frenzy.png",
+	"bloodthirst": "res://assets/ui/status/fury.png", "light_step": "res://assets/ui/status/haste.png",
+	"keen_edge": "res://assets/ui/status/keen.png", "focus": "res://assets/ui/status/flow.png",
+	"air_jump": "res://assets/ui/status/evasion.png", "high_jump": "res://assets/ui/status/evasion.png",
+	"dive_strike": "res://assets/ui/status/stun.png", "featherfall": "res://assets/ui/status/chill.png",
+	"air_dash": "res://assets/ui/status/haste.png",
 }
 
 static var _all: Array = []
@@ -160,7 +177,7 @@ static var _all: Array = []
 static func all() -> Array:
 	if _all.is_empty():
 		var edits: Dictionary = DevEdits.data.get("cards", {})
-		for b in LIST:
+		for b in LIST + GameData.common_passives.map(func(p): return _common(p)):
 			var d: Dictionary = b.duplicate(true)
 			var e = edits.get(String(b.id))
 			if e is Dictionary:
@@ -187,7 +204,17 @@ static func get_base(id: String) -> Dictionary:
 	for b in LIST:
 		if b.id == id:
 			return b
+	for p in GameData.common_passives:
+		if p.id == id:
+			return _common(p)
 	return {}
+
+
+## Passif commun (data/classes.json) présenté comme une carte commune.
+static func _common(p: Dictionary) -> Dictionary:
+	var d := p.duplicate(true)
+	d["rarity"] = String(p.get("rarity", "common"))
+	return d
 
 
 static func get_def(id: String) -> Dictionary:

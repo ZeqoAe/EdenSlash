@@ -93,7 +93,7 @@ static func _num(v: float) -> String:
 ## Lignes « stat : avant → après » d'un passif dont la puissance passe de [param before] à
 ## [param after] (somme des multiplicateurs de rareté des cartes prises).
 static func stat_lines(def: Dictionary, before: float, after: float) -> PackedStringArray:
-	var out: PackedStringArray = []
+	var out: PackedStringArray = skill_mod_lines(def, before, after)
 	var st: Dictionary = def.get("stat", {})
 	for k in st:
 		var v := float(st[k])
@@ -248,3 +248,65 @@ static func unlock_progress(id: String) -> Vector2:
 
 static func unlocked_ids() -> Array:
 	return Boons.all().filter(func(d): return card_unlocked(String(d.id))).map(func(d): return String(d.id))
+
+
+
+# --- cartes de classe : elles renforcent directement un sort de la classe -------------------
+## Effets possibles d'une carte de sort : [suffixe d'id, nom, rareté, niveaux max, effet
+## (skill_mod : dmg, cd, duration, heal ; par niveau), texte].
+const SKILL_CARDS := {
+	"pow": ["Puissance", "rare", 5, {"dmg": 0.2}, "+20 %% de dégâts de « %s »."],
+	"cd": ["Cadence", "common", 3, {"cd": 0.1}, "-10 %% de temps de recharge de « %s »."],
+	"dur": ["Persistance", "common", 3, {"duration": 0.25}, "+25 %% de durée des effets de « %s » (bonus, états infligés)."],
+	"heal": ["Ferveur", "rare", 5, {"heal": 0.2}, "+20 %% de soins de « %s »."],
+}
+const SKILL_MOD_FR := {"dmg": "Dégâts", "cd": "Recharge", "duration": "Durée des effets", "heal": "Soins"}
+
+static var _class_cards := {}
+
+
+## Cartes de classe de [param cid] : pour chaque sort, puissance (ou ferveur pour les soins),
+## cadence, et persistance s'il pose un bonus ou un état. Elles ne sortent en run que si le
+## sort a été pris.
+static func class_cards(cid: String) -> Array:
+	if _class_cards.has(cid):
+		return _class_cards[cid]
+	var out: Array = []
+	for s in GameData.class_data(cid).get("skills", []):
+		var kinds: Array = []
+		if String(s.kind) == "heal" or float(s.get("heal", 0.0)) > 0.0:
+			kinds.append("heal")
+		elif String(s.kind) != "buff":
+			kinds.append("pow")
+		kinds.append("cd")
+		if String(s.kind) == "buff" or not (s.get("applies", {}) as Dictionary).is_empty():
+			kinds.append("dur")
+		for k in kinds:
+			var t: Array = SKILL_CARDS[k]
+			out.append({"id": "sk%d_%s" % [int(s.id), k], "name": "%s : %s" % [s.name, t[0]], "rarity": t[1], "max": t[2],
+				"skill": int(s.id), "skill_name": String(s.name), "skill_mod": (t[3] as Dictionary).duplicate(),
+				"icon": String(s.get("icon", "")), "desc": String(t[4]) % s.name, "class": cid})
+	_class_cards[cid] = out
+	return out
+
+
+static func class_card(cid: String, id: String) -> Dictionary:
+	if not id.begins_with("sk"):
+		return {}
+	for d in class_cards(cid):
+		if d.id == id:
+			return d
+	return {}
+
+
+## Lignes des effets d'une carte de sort entre deux puissances.
+static func skill_mod_lines(def: Dictionary, before: float, after: float) -> PackedStringArray:
+	var out: PackedStringArray = []
+	var m: Dictionary = def.get("skill_mod", {})
+	for k in m:
+		var sign := "-" if k == "cd" else "+"
+		var a := "%s%d %%" % [sign, roundi(float(m[k]) * before * 100.0)]
+		var b := "%s%d %%" % [sign, roundi(float(m[k]) * after * 100.0)]
+		out.append(("%s de « %s » : [b]%s[/b]" % [SKILL_MOD_FR.get(k, k), def.get("skill_name", ""), b]) if before <= 0.0 else
+			("%s de « %s » : %s → [b]%s[/b]" % [SKILL_MOD_FR.get(k, k), def.get("skill_name", ""), a, b]))
+	return out

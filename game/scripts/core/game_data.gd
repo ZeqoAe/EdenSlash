@@ -55,6 +55,16 @@ func _ready() -> void:
 		biomes = _load_json("res://data/biomes.json")
 	levels = _load_json("res://data/levels.json")
 	classes = _load_json("res://data/classes.json")
+	# passifs communs (Corps aguerri, sauts…) recopiés dans chaque classe : ce sont des cartes
+	# communes à toutes les classes (Boons.all) ; la classe ne garde que ses certificats d'Eden
+	for cid in classes:
+		var keep: Array = []
+		for p in classes[cid].get("passives", []):
+			if p.has("eden"):
+				keep.append(p)
+			elif not common_passives.any(func(q): return q.id == p.id):
+				common_passives.append(p)
+		classes[cid]["passives"] = keep
 	motion_keys = _load_json("res://data/motion_keys.json")
 	minimaps = _load_json("res://data/minimaps.json")
 	var cat_path := "res://data/eden_catalog.json" if FileAccess.file_exists("res://data/eden_catalog.json") else "res://data/eden_items.json"
@@ -152,6 +162,10 @@ func zone_index(id: String) -> int:
 		if zones[i].id == id:
 			return i
 	return 0
+
+
+## Passifs communs à toutes les classes (cartes communes), tirés de data/classes.json.
+var common_passives: Array = []
 
 
 func class_data(id: String) -> Dictionary:

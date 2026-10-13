@@ -125,7 +125,7 @@ func _ready() -> void:
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, 6)
 	mid.add_child(gap)
-	_section(mid, "Passifs de la classe")
+	_section(mid, "Passifs de la classe (certificats d'Eden, choisis avant la run)")
 	_passives_grid = GridContainer.new()
 	_passives_grid.columns = 3
 	_passives_grid.add_theme_constant_override("h_separation", 8)
@@ -282,6 +282,14 @@ func _refresh_detail() -> void:
 				_rank_bar.add_child(b)
 			var icon := String(sk.get("icon", ""))
 			var txt := ("[img=64x64]%s[/img]\n" % icon if icon != "" else "") + SpellInfo.skill_bbcode(sk, _rank, _atk(String(sk.get("dmg_type", "phys"))))
+			var cards := Cards.class_cards(_class_id).filter(func(d): return int(d.skill) == int(sk.id))
+			if not cards.is_empty():
+				txt += "
+
+[b]Cartes de classe pour ce sort[/b] (en run, une fois le sort pris)"
+				for d in cards:
+					txt += "
+• %s : %s (jusqu'à %d fois)" % [String(d.name).get_slice(" : ", 1), " ; ".join(Cards.skill_mod_lines(d, 0.0, 1.0)), int(d.max)]
 			var need := Progression.skill_level_of(_class_id, int(sk.id))
 			if not Progression.skill_unlocked(_class_id, int(sk.id)):
 				txt += "\n\n[color=#ffcf6b]🔒 Débloqué au niveau %d de maîtrise de la classe[/color]" % need
@@ -302,7 +310,9 @@ func _refresh_detail() -> void:
 			var p: Dictionary = _selected.data
 			var icon := String(p.get("icon", Boons.ICONS.get(p.get("id", ""), "")))
 			_detail.text = ("[img=64x64]%s[/img]\n" % icon if icon != "" else "") + "[font_size=17]" + SpellInfo.passive_bbcode(p) + "[/font_size]" + \
-				("\n\n[color=#c8c8d4]Passif obtenu avec les cartes de la run ; il se cumule jusqu'à %d fois.[/color]" % int(p.max) if int(p.get("max", 1)) > 1 else "\n\n[color=#c8c8d4]Passif propre à la classe.[/color]")
+				"
+
+[color=#c8c8d4]Certificat de la classe : à placer sur le plateau de la page Classe avant la run (7 au plus) ; une fois la classe maîtrisée, utilisable par les autres classes.[/color]"
 
 
 ## Attaque actuelle du héros (physique ou magique) pour chiffrer les dégâts, sinon estimation niveau 1.

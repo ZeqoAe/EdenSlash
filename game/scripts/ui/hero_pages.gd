@@ -534,7 +534,8 @@ class AppearancePage extends HBoxContainer:
 ## Toutes les cartes de build : disponibles (en couleur) ou à débloquer (condition et
 ## avancement, cumulés sur toutes les runs) ; passifs de la classe affichée à part.
 class CardsPage extends HBoxContainer:
-	var _grid: GridContainer
+	var _grid: VBoxContainer  # groupes : titre puis grille de cartes
+	var _cur: GridContainer
 	var _count: Label
 	var _detail: RichTextLabel
 	var _filter: OptionButton
@@ -550,20 +551,18 @@ class CardsPage extends HBoxContainer:
 		_count.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		_count.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_filter = OptionButton.new()
-		for t in ["Toutes", "Disponibles", "À débloquer", "Passifs de la classe"]:
+		for t in ["Toutes", "Communes", "De la classe", "À débloquer"]:
 			_filter.add_item(t)
 		_filter.focus_mode = Control.FOCUS_NONE
 		_filter.item_selected.connect(func(_i): refresh())
 		head.add_child(_filter)
-		Hud._label(left, "Les cartes se gagnent en montant de niveau en run, dans les coffres, les sanctuaires et chez les marchands. Les cartes verrouillées se débloquent pour toujours en accomplissant leur exploit (cumulé sur toutes les runs). Pendant le choix : Bannir retire une carte de la run, Garder la repropose au choix suivant (3 fois chacun par run).", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		Hud._label(left, "Cartes communes : pour toutes les classes. Cartes de la classe : elles renforcent un sort précis et ne sortent que si tu as pris ce sort. Les certificats (passifs d'Eden de la classe) se choisissent avant la run, page Classe. Les cartes se gagnent en montant de niveau, dans les coffres, les sanctuaires et chez les marchands ; les verrouillées se débloquent pour toujours avec leur exploit. Pendant le choix : Bannir retire une carte de la run, Garder la repropose au choix suivant (3 fois chacun par run).", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		var sc := ScrollContainer.new()
 		sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		left.add_child(sc)
-		_grid = GridContainer.new()
-		_grid.columns = 5
-		_grid.add_theme_constant_override("h_separation", 8)
-		_grid.add_theme_constant_override("v_separation", 8)
+		_grid = VBoxContainer.new()
+		_grid.add_theme_constant_override("separation", 8)
 		sc.add_child(_grid)
 		var right := ItemWidgets.panel(self, 420)
 		ItemWidgets.section(right, "Fiche")
@@ -579,21 +578,39 @@ class CardsPage extends HBoxContainer:
 			c.queue_free()
 		var all := Boons.all()
 		var open := all.filter(func(d): return Cards.card_unlocked(String(d.id)))
-		_count.text = "%d / %d débloquées" % [open.size(), all.size()]
+		var cname := String(GameData.class_data(_cid()).get("name_fr", ""))
+		var mine: Array = Cards.class_cards(_cid())
+		_count.text = "%d / %d communes débloquées · %d cartes %s" % [open.size(), all.size(), mine.size(), cname]
 		var f := _filter.selected
-		var list: Array = []
-		if f == 3:
-			list = GameData.class_data(_cid()).get("passives", []).filter(func(p): return not p.has("eden") or p.get("shared", false))
-		else:
-			list = all.filter(func(d): return f == 0 or (f == 1) == Cards.card_unlocked(String(d.id)))
-			list.sort_custom(func(a, b): return [not Cards.card_unlocked(String(a.id)), Cards.unlock_progress(String(a.id)).y] < [not Cards.card_unlocked(String(b.id)), Cards.unlock_progress(String(b.id)).y])
-		for d in list:
-			_grid.add_child(_cell(d, f == 3))
+		_cur = null
+		var commons := all.filter(func(d): return f != 3 or not Cards.card_unlocked(String(d.id)))
+		commons.sort_custom(func(a, b): return [not Cards.card_unlocked(String(a.id)), Cards.unlock_progress(String(a.id)).y] < [not Cards.card_unlocked(String(b.id)), Cards.unlock_progress(String(b.id)).y])
+		if f in [0, 1, 3]:
+			_sep("Cartes communes (toutes les classes)" if f != 3 else "À débloquer")
+			for d in commons:
+				_cur.add_child(_cell(d, ""))
+		if f in [0, 2]:
+			_sep("Certificats %s (choisis avant la run, page Classe)" % cname)
+			for p in GameData.class_data(_cid()).get("passives", []):
+				_cur.add_child(_cell(p, "cert"))
+			_sep("Cartes %s : renforcent un sort (si tu l'as pris)" % cname)
+			for d in mine:
+				_cur.add_child(_cell(d, "class"))
 		if _detail.text == "":
 			_detail.text = "[color=#c8c8d4]Clique une carte pour voir sa fiche.[/color]"
 
-	func _cell(d: Dictionary, class_card: bool) -> Control:
+	## Nouveau groupe : titre puis sa grille de cartes.
+	func _sep(text: String) -> void:
+		ItemWidgets.section(_grid, text, 15)
+		_cur = GridContainer.new()
+		_cur.columns = 5
+		_cur.add_theme_constant_override("h_separation", 8)
+		_cur.add_theme_constant_override("v_separation", 8)
+		_grid.add_child(_cur)
+
+	func _cell(d: Dictionary, kind: String) -> Control:
 		var id := String(d.id)
+		var class_card := kind != ""
 		var ok := class_card or Cards.card_unlocked(id)
 		var rar: Dictionary = Boons.RARITY.get(String(d.get("rarity", "common")), Boons.RARITY.common)
 		var b := Button.new()
@@ -615,11 +632,11 @@ class CardsPage extends HBoxContainer:
 			b.modulate = Color(0.65, 0.65, 0.72)
 		b.pressed.connect(func():
 			var lines: PackedStringArray = ["[font_size=19][b][color=#%s]%s[/color][/b][/font_size]" % [rar.color.to_html(false), d.name],
-				"[color=#9a98a8]%s · jusqu'au niveau %d%s[/color]" % ["Passif de classe" if class_card else String(rar.name), mini(int(d.get("max", 1)), Cards.MAX_LEVEL),
+				"[color=#9a98a8]%s · jusqu'au niveau %d%s[/color]" % [{"cert": "Certificat de classe (page Classe, avant la run)", "class": "Carte de classe %s · sort « %s »" % [String(rar.name).to_lower(), d.get("skill_name", "")]}.get(kind, String(rar.name)), mini(int(d.get("max", 1)), Cards.MAX_LEVEL),
 					" · effet immédiat" if d.get("instant", false) else ""], "", String(d.get("desc", ""))]
 			var tl := Cards.stat_lines(d, 0.0, 1.0)
 			if not tl.is_empty():
-				lines.append("\n[color=#9fd0ff]Carte commune : %s[/color]" % " ; ".join(tl))
+				lines.append("\n[color=#9fd0ff]Par carte : %s[/color]" % " ; ".join(tl))
 			for pr in Boons.procs_of(d, 1.0):
 				lines.append("[color=#ffd76a]%s[/color]" % Procs.describe(pr))
 			if not ok:

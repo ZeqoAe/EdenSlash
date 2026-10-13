@@ -233,6 +233,31 @@ func _test_card_tiers() -> void:
 	for i in 9:
 		Run.apply_card(_common_card("sharpened"))
 	check("passif au niveau 10 : plus proposé", Run.roll_cards(3).all(func(x): return str(x.id) != "sharpened") and int(Run.passives.sharpened) == 10)
+	# cartes communes et cartes de classe
+	check("passifs communs dans les cartes (Corps aguerri, Saut aérien)", not Boons.get_def("vigor").is_empty() and not Boons.get_def("air_jump").is_empty())
+	check("la classe ne garde que ses certificats", GameData.class_data(Run.class_id).get("passives", []).all(func(p): return p.has("eden")))
+	var ccs := Cards.class_cards(Run.class_id)
+	var sk0: Dictionary = GameData.class_data(Run.class_id).skills[0]
+	check("cartes de classe : %d pour %d sorts" % [ccs.size(), GameData.class_data(Run.class_id).skills.size()], ccs.size() >= GameData.class_data(Run.class_id).skills.size() * 2)
+	var pow_id := "sk%d_pow" % int(sk0.id)
+	var had := Run.skills.any(func(x): return int(x.id) == int(sk0.id))
+	if not had:
+		Run.skills.append({"id": int(sk0.id), "rank": 1})
+	var seen := false
+	for i in 200:
+		if Run.roll_cards(3).any(func(x): return str(x.id).begins_with("sk%d_" % int(sk0.id))):
+			seen = true
+			break
+	check("carte de sort proposée une fois le sort pris", seen)
+	var dm0 := Run.skill_damage_mult(int(sk0.id))
+	Run.passives[pow_id] = 1
+	Run.passive_power[pow_id] = 1.0
+	check("carte « %s » : +20 %% de dégâts du sort (%.2f → %.2f)" % [Cards.class_card(Run.class_id, pow_id).get("name", "?"), dm0, Run.skill_damage_mult(int(sk0.id))],
+		is_equal_approx(Run.skill_damage_mult(int(sk0.id)), dm0 * 1.2) or (String(sk0.kind) in ["heal", "buff"]))
+	Run.passives.erase(pow_id)
+	Run.passive_power.erase(pow_id)
+	if not had:
+		Run.skills = Run.skills.filter(func(x): return int(x.id) != int(sk0.id))
 	# sort de soin amélioré : plus de soins, pas seulement moins de recharge
 	var heal_skill := {"id": 9001, "kind": "heal", "heal": 0.3, "cooldown": 10}
 	var up := Cards.skill_upgrade(heal_skill, "epic")
