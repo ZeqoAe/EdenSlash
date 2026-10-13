@@ -13,8 +13,11 @@ extends CanvasLayer
 
 signal closed
 
-const SECTIONS := [["equipment", "Équipement", "equipment"], ["talents", "Talents", "expertise"],
-	["appearance", "Apparence", "jewel"], ["cards", "Cartes", "stats"], ["grimoire", "Grimoire", "grimoire"], ["class", "Classe", "class"]]
+## Équipement, Classe (sorts, maîtrise, talents, certificats ; grimoire détaillé en bouton),
+## Apparence, Cartes. La classe se choisit avec la carte en haut à droite (menu par famille) :
+## elle vaut pour toutes les sections (préréglages d'équipement, apparence, talents).
+const SECTIONS := [["equipment", "Équipement", "equipment"], ["class", "Classe", "class"],
+	["appearance", "Apparence", "jewel"], ["cards", "Cartes", "stats"]]
 
 var page: InventoryPage
 var talents: TalentsPage
@@ -95,7 +98,8 @@ func _ready() -> void:
 	appearance = HeroPages.AppearancePage.new()
 	cards = HeroPages.CardsPage.new()
 	help = InfoPage.new()
-	for k in [["equipment", page], ["talents", talents], ["appearance", appearance], ["cards", cards], ["help", help]]:
+	talents.open_grimoire = func(cid): grimoire.open(cid)
+	for k in [["equipment", page], ["class", talents], ["appearance", appearance], ["cards", cards], ["help", help]]:
 		var p: Control = k[1]
 		p.set_anchors_preset(Control.PRESET_FULL_RECT)
 		p.visible = false
@@ -162,7 +166,11 @@ func _build_top(parent: Control) -> void:
 	cc.add_theme_stylebox_override("pressed", InventoryPage.card_box(true))
 	cc.custom_minimum_size = Vector2(250, 66)
 	cc.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	cc.pressed.connect(show_section.bind("class"))
+	cc.pressed.connect(func(): HeroPages.class_menu(cc, _cls(), func(cid):
+		if Progression.class_unlocked(cid) and cid != Profile.selected_class and not Profile.in_run:
+			Profile.selected_class = cid
+			Profile.save_profile()
+			refresh()))
 	top.add_child(cc)
 	var ch := HBoxContainer.new()
 	ch.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -254,16 +262,11 @@ func _nav_button(text: String, icon_name: String) -> Button:
 
 ## Affiche une section ; Grimoire et Classe s'ouvrent par-dessus la section courante.
 func show_section(id: String) -> void:
+	if id == "talents":
+		id = "class"  # anciens raccourcis : les talents sont dans la page Classe
 	match id:
 		"grimoire":
 			grimoire.open(_cls())
-		"class":
-			var p := ClassPicker.open(self, Profile.selected_class, false)
-			p.picked.connect(func(cid):
-				if Progression.class_unlocked(cid) and cid != Profile.selected_class:
-					Profile.selected_class = cid
-					Profile.save_profile()
-					refresh())
 		_:
 			current = id
 			for k in _pages:
@@ -291,15 +294,21 @@ func refresh() -> void:
 	_zone_thumb.texture = zone_texture
 	_zone_thumb.visible = zone_texture != null
 	var free := Profile.talent_points(cid) - Profile.talent_spent(cid)
-	_nav.talents.text = "  Talents" + ("  (%d)" % free if free > 0 else "")
+	_nav["class"].text = "  Classe" + ("  (%d)" % free if free > 0 else "")
 	_subtitle.text = {"equipment": "Équipement, coffre commun et statistiques de la classe.",
-		"talents": "Talents de classe, parcours de maîtrise et certificats (7 au plus).",
+		"class": "Sorts de la classe, parcours de maîtrise, talents et certificats (7 au plus).",
 		"appearance": "Tenue, tête, dos, auras et apparence de l'arme portée.",
 		"cards": "Cartes de build : celles qui sont débloquées, et l'exploit qui débloque les autres.",
 		"help": "Comment chaque statistique est calculée."}.get(current, "")
 	var p: Control = _pages.get(current)
 	if p and p.has_method("refresh"):
 		p.refresh()
+
+
+## Test (--class-menu) : ouvre le menu des classes sous la carte de la classe.
+func _test_class_menu() -> void:
+	var cc: Control = _class_icon.get_parent().get_parent()
+	HeroPages.class_menu(cc, _cls(), func(_c): pass)
 
 
 func is_open() -> bool:

@@ -87,7 +87,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
 				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
-				or arg == "--wear-aura" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out="):
+				or arg == "--wear-aura" or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -100,7 +100,10 @@ func _ready() -> void:
 		"grimoire":
 			_open_hero("grimoire")
 		"talents":
-			_open_hero("talents")
+			_open_hero("class")
+			for arg in OS.get_cmdline_user_args():
+				if arg == "--class-menu":  # test : menu des classes ouvert
+					_hero.get_node(".").call_deferred("_test_class_menu")
 		"info":
 			_open_hero("help")
 		"inventory":

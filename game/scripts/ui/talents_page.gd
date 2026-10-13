@@ -22,6 +22,9 @@ var _board: BoardView
 var _synergy: RichTextLabel
 var _slots: Label
 var _certs: HFlowContainer
+var _spells: HBoxContainer  # sorts de la classe (débloqués ou maîtrise requise)
+var _summary: RichTextLabel
+var open_grimoire: Callable  # grimoire détaillé (stats, combo, passifs, rangs)
 
 
 func _ready() -> void:
@@ -68,6 +71,40 @@ func _ready() -> void:
 	_track = HBoxContainer.new()
 	_track.add_theme_constant_override("separation", 6)
 	ts.add_child(_track)
+
+	# sorts de la classe et résumé (ce que contenait le grimoire)
+	var spp := PanelContainer.new()
+	spp.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.07, 0.06, 0.13, 0.95), UiTheme.GOLD_DIM, 1, 10))
+	add_child(spp)
+	var spv := VBoxContainer.new()
+	spv.add_theme_constant_override("separation", 4)
+	spp.add_child(spv)
+	var sph := HBoxContainer.new()
+	sph.add_theme_constant_override("separation", 12)
+	spv.add_child(sph)
+	ItemWidgets.section(sph, "Sorts de la classe", 16)
+	_summary = RichTextLabel.new()
+	_summary.bbcode_enabled = true
+	_summary.fit_content = true
+	_summary.scroll_active = false
+	_summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_summary.add_theme_font_size_override("normal_font_size", 13)
+	sph.add_child(_summary)
+	var gb := Button.new()
+	gb.text = "Grimoire détaillé"
+	gb.tooltip_text = "Statistiques de base, combo de l'arme, passifs et rangs de chaque sort"
+	gb.focus_mode = Control.FOCUS_NONE
+	gb.pressed.connect(func():
+		if open_grimoire.is_valid():
+			open_grimoire.call(_cls()))
+	sph.add_child(gb)
+	var sps := ScrollContainer.new()
+	sps.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	sps.custom_minimum_size = Vector2(0, 74)
+	spv.add_child(sps)
+	_spells = HBoxContainer.new()
+	_spells.add_theme_constant_override("separation", 6)
+	sps.add_child(_spells)
 
 	var body := HBoxContainer.new()
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -147,6 +184,7 @@ func refresh() -> void:
 	_bar.tooltip_text = "%d / %d points d'expertise" % [prog.x, prog.y]
 	_points.text = "Points de talent : %d / %d" % [Profile.talent_points(c) - Profile.talent_spent(c), Profile.talent_points(c)]
 	_refresh_track(c, lvl)
+	_refresh_spells(c)
 	for x in _grid.get_children():
 		x.queue_free()
 	var tree: Dictionary = GameData.talents.get(c, {})
@@ -154,6 +192,35 @@ func refresh() -> void:
 		for cell in row:
 			_grid.add_child(_cell(cell, tree))
 	_refresh_certs()
+
+
+# --- sorts de la classe ----------------------------------------------------------------------
+func _refresh_spells(c: String) -> void:
+	for x in _spells.get_children():
+		x.queue_free()
+	var cd := GameData.class_data(c)
+	var skills: Array = cd.get("skills", [])
+	var open := skills.filter(func(s): return Progression.skill_unlocked(c, int(s.id))).size()
+	_summary.text = "[color=#c8c8d4]%s · %s · %d / %d sorts débloqués · survol : détail[/color]" % [
+		cd.get("weapon_name", ""), "dégâts magiques" if String(cd.get("dmg_type", "phys")) in ["mag", "magic"] else "dégâts physiques", open, skills.size()]
+	for s in skills:
+		var ok := Progression.skill_unlocked(c, int(s.id))
+		var b := ItemWidgets.TipButton.new()
+		b.custom_minimum_size = Vector2(60, 60)
+		b.focus_mode = Control.FOCUS_NONE
+		b.icon = UiTheme.texture(String(s.get("icon", "")))
+		b.expand_icon = true
+		b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.08, 0.06, 0.13, 0.95), UiTheme.GOLD_DIM if ok else Color(0.25, 0.23, 0.3), 2, 8))
+		if not ok:
+			b.modulate = Color(0.45, 0.45, 0.5)
+			b.text = str(Progression.skill_level_of(c, int(s.id)))
+		var tip := SpellInfo.skill_bbcode(s, 1)
+		if s.get("shared", false):
+			tip = "[color=#9fd0ff]Sort partagé (classe d'origine)[/color]\n" + tip
+		if not ok:
+			tip += "\n\n[color=#ffcf6b]🔒 Débloqué à la maîtrise %d[/color]" % Progression.skill_level_of(c, int(s.id))
+		b.tip = "[img=48x48]%s[/img]  [b]%s[/b]\n%s" % [String(s.get("icon", "")), s.get("name", ""), tip]
+		_spells.add_child(b)
 
 
 # --- parcours de maîtrise --------------------------------------------------------------------

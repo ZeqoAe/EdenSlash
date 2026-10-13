@@ -620,3 +620,54 @@ class CardsPage extends HBoxContainer:
 				lines.append("\n[color=#ffcf6b]🔒 Pour la débloquer : %s — %d / %d[/color]" % [Cards.unlock_text(id), int(p.x), int(p.y)])
 			_detail.text = "\n".join(lines))
 		return b
+
+
+
+# --- choix de la classe : menu compact par famille ---------------------------------------------
+## Menu déroulant sous [param anchor] : les 5 familles en colonnes, de petites étiquettes par
+## classe (débloquées en couleur, les autres grisées avec leur condition au survol).
+static func class_menu(anchor: Control, current: String, on_pick: Callable) -> PopupPanel:
+	var pop := PopupPanel.new()
+	pop.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.05, 0.04, 0.1, 0.98), UiTheme.GOLD, 2, 12))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	pop.add_child(row)
+	for fam in ClassPicker.families():
+		var col := VBoxContainer.new()
+		col.add_theme_constant_override("separation", 3)
+		row.add_child(col)
+		var t := Hud._label(col, String(fam.name), 15, UiTheme.GOLD)
+		t.add_theme_font_override("font", UiTheme.bold_font())
+		for id in fam.classes:
+			var cid := String(id)
+			var cd := GameData.class_data(cid)
+			var ok := Progression.class_unlocked(cid)
+			var b := Button.new()
+			b.text = String(cd.get("name_fr", cid))
+			b.icon = UiTheme.texture(String(cd.get("icon", "")))
+			b.expand_icon = false
+			b.add_theme_constant_override("icon_max_width", 22)
+			b.add_theme_font_size_override("font_size", 12)
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.focus_mode = Control.FOCUS_NONE
+			b.custom_minimum_size = Vector2(176, 28)
+			var orange := String(cd.get("tier", "")) == "orange"
+			b.add_theme_color_override("font_color", (ClassPicker.ORANGE if orange else ClassPicker.GREEN) if ok else Color(0.55, 0.53, 0.6))
+			b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.1, 0.08, 0.18, 0.95) if cid != current else Color(0.3, 0.22, 0.08, 0.95),
+				UiTheme.GOLD if cid == current else Color(0, 0, 0, 0), 1, 6))
+			b.tooltip_text = ("Maîtrise %d" % Profile.expertise_level(cid)) if ok else "🔒 " + Progression.mission_line(cid)
+			if orange:
+				b.text = "   " + b.text
+			b.pressed.connect(func():
+				pop.hide()
+				pop.queue_free()
+				on_pick.call(cid))
+			col.add_child(b)
+	anchor.add_child(pop)
+	pop.popup_hide.connect(pop.queue_free)
+	var r := anchor.get_global_rect()
+	pop.reset_size()
+	var vp := anchor.get_viewport_rect().size
+	pop.position = Vector2i(int(clampf(r.end.x - pop.size.x, 8.0, vp.x - pop.size.x - 8.0)), int(r.end.y + 6.0))
+	pop.popup()
+	return pop

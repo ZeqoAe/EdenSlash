@@ -1,7 +1,7 @@
 # Audit d'Eden Slash (version 0.1.33)
 
-> **Tes réponses (13/10) sur les parties 1 à 5 sont appliquées** : voir « ✅ Décidé » dans
-> chaque partie. Il reste les questions des parties 6 à 10.
+> **Tes réponses (13/10) sur les parties 1 à 5, 7, 8 et 9 sont appliquées** : voir « ✅ Décidé »
+> dans chaque partie. Il reste la partie 6 (forge) et la partie 10 (technique).
 
 But : repasser sur **tout ce qui existe** avant d'ajouter quoi que ce soit, pour que tu
 choisisses quoi approfondir. Pour chaque partie : **comment ça marche aujourd'hui**, **ce que
@@ -220,8 +220,12 @@ complète comme dans Eden ?
 - 🟠 Montures et familiers présents dans l'archive mais **pas jouables**.
 - 🟠 Une trentaine de pièces sans nom ni icône (« Ailes et dos d'Eden X… »).
 
-❓ Bonus d'archive : plafonné, ou seulement les paliers (10, 25, 50…) donnent des bonus ?
-❓ Montures : utiles en run (vitesse hors combat) ou purement cosmétiques au lobby ?
+✅ **Décidé et fait (0.1.36 à 0.1.38)** : l'archive sert d'abord à voir les objets et
+cosmétiques à débloquer ; **plus de bonus par entrée**, seulement des paliers modestes (au total
++8 % PV, +10 % dégâts, +2 % critique, +4 % vitesse d'attaque, +5 % recharge). Montures et
+familiers : collectionnables, pas jouables pour l'instant. Pièces sans nom : vrais noms d'Eden
+retrouvés (52 ailes et dos) ; les 37 introuvables sont des pièces **secrètes** (« Ailes secrètes
+n°X », « Tenue secrète n°X ») avec une icône rendue d'après leur modèle 3D.
 
 ---
 
@@ -233,8 +237,11 @@ frappe, carapace…), force selon la rareté.
 - 🟠 19 familles mais beaucoup se ressemblent (+X % d'un attribut pendant 8 s).
 - 🟠 Le trophée n'a pas d'effet visuel quand il se déclenche (juste un texte).
 
-❓ Veux-tu des trophées plus « build » (ex. « chaque esquive lance une onde ») plutôt que
-des buffs de stats ?
+✅ **Décidé et fait (0.1.37)** : 17 familles de build en plus (esquive : Onde d'esquive, Riposte,
+Danse du vent, Lames d'ombre, Miroir de givre ; critique : Arc électrique, Sang vif ; combo :
+Séisme ; élimination : Âmes explosives, Élan, Moisson, Soif de sang ; tank : Épines, Dernier
+rempart, Fureur du désespoir ; sorts : Écho arcanique, Afflux) ; les 548 trophées d'Eden se
+répartissent sur 35 familles.
 
 ---
 
@@ -264,7 +271,15 @@ des buffs de stats ?
 pour les monstres normaux) ; filtre « Débloqués » + recherche dans Apparence ; flèches de
 comparaison ; build actuel visible dans le choix de cartes.
 
-❓ Quel écran te gêne le plus aujourd'hui ? (je commencerai par celui-là)
+✅ **Décidé et fait (0.1.36, 0.1.39, 0.1.40)** :
+- **Compteur de dégâts cumulés** en run (sous la mini-carte) : tous les dégâts s'additionnent,
+  3 s sans dégâts et il repart de zéro ; record de la run et record absolu, au bilan aussi.
+- **Apparence** : le héros au centre, les emplacements autour (tenue, tête, dos ; pierre
+  étoilée, pierre de lune, autre aura, arme) ; à droite le choix et les couleurs.
+- **Classe** : Grimoire, Talents et Classe fusionnés en une page (sorts de la classe,
+  parcours de maîtrise, talents, certificats ; le grimoire détaillé reste en bouton). Le choix
+  de la classe se fait avec la carte en haut à droite : menu compact par famille, qui vaut pour
+  toutes les sections (équipement et ses préréglages, apparence, talents).
 
 ---
 

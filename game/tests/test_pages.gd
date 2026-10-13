@@ -346,9 +346,9 @@ func _test_lobby() -> void:
 	lobby._open_hero()
 	await _frames()
 	check("Héros : ouvert sur l'équipement", hero.is_open() and hero.current == "equipment" and hero.page.visible and not hero.talents.visible)
-	hero.show_section("talents")
+	hero.show_section("class")
 	await _frames()
-	check("Héros : talents (plateau de 7 cases, parcours de maîtrise)", hero.talents.visible and not hero.page.visible and hero.talents._board._slots.size() == 7 and hero.talents._track.get_child_count() >= 8)
+	check("Héros : page Classe (sorts, plateau de 7 cases, parcours de maîtrise)", hero.talents.visible and hero.talents._spells.get_child_count() >= 4 and not hero.page.visible and hero.talents._board._slots.size() == 7 and hero.talents._track.get_child_count() >= 8)
 	check("Héros : pas de second sélecteur de classe dans les talents", not hero.talents._tabs.visible)
 	for cat in ["body", "head", "back", "aura", "weapon"]:
 		hero.appearance._cat = cat
