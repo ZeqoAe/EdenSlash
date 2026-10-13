@@ -61,6 +61,10 @@ static func attach(parent: Node3D, name: String, scale_ := 1.0, dark := false) -
 ## Opacité des auras : effets d'Eden faits pour la ville, atténués pour garder le combat lisible.
 const AURA_ALPHA := 0.75
 const AURA_INTENSITY := 1.15
+## Sorts : part de couleur pleine (0 : lueur seule, 1 : comme les auras) et vitesse de lecture
+## (< 1 : l'effet reste plus longtemps à l'écran).
+const SPELL_LUM_MIX := 0.55
+const SPELL_TIME := 0.85
 
 
 ## Auras portées par la classe [param cls_id], attachées à [param parent].
@@ -138,6 +142,9 @@ func _ready() -> void:
 				m.set_shader_parameter("lum_mix", 1.0)
 				m.set_shader_parameter("intensity", AURA_INTENSITY)
 				m.set_shader_parameter("saturation", 1.4)
+		else:
+			# sorts et impacts : à moitié en couleur pleine, plus d'impact sur un sol clair
+			m.set_shader_parameter("lum_mix", SPELL_LUM_MIX)
 		if info.has("tex"):
 			m.set_shader_parameter("tex", _texture("res://assets/fx/" + String(info.tex)))
 		elif src:
@@ -152,7 +159,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	_t += delta
+	_t += delta * (1.0 if loop else SPELL_TIME)
 	var dur := float(_data.get("duration", 1.0))
 	if _t >= dur:
 		if not loop:

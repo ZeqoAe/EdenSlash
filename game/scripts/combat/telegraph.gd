@@ -9,6 +9,7 @@ extends Node3D
 signal resolved(hit: bool)
 
 const COLOR := Color(1.0, 0.12, 0.08)
+const PLAYER_COLOR := Color(0.25, 0.6, 1.0)  # zone des attaques du héros (option)
 
 var shape := "circle"
 var radius := 4.0
@@ -22,6 +23,7 @@ var source: Combatant
 var stun_time := 0.0  # étourdit le héros touché
 var jumpable := false  # onde au sol : évitée si le héros est en l'air
 var small := false  # attaque de monstre ordinaire : annonce plus discrète
+var color := COLOR
 
 var _t := 0.0
 var _fill: MeshInstance3D
@@ -69,7 +71,7 @@ func _mat(alpha: float) -> StandardMaterial3D:
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	m.no_depth_test = false
-	m.albedo_color = Color(COLOR, alpha)
+	m.albedo_color = Color(color, alpha)
 	m.render_priority = 1
 	return m
 

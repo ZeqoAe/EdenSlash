@@ -19,6 +19,10 @@ const JUMP_BUFFER := 0.15  # un saut demandé juste avant d'atterrir part à l'a
 ## donne une esquive plus longue et gratuite, rend 25 % de la recharge et monte la
 ## « Fluidité » (+10 % de dégâts par palier, 4 max, 3 s sans annulation parfaite = 0).
 const PERFECT_WINDOW := 0.28
+## Récupération après un sort : pas de nouveau sort avant la fin de l'animation + ce délai
+## (l'impact se voit, moins de matraquage sur place) ; une esquive l'annule (sort, esquive,
+## sort reste fluide).
+const SKILL_RECOVERY := 0.45
 const AIR_SKILL_BONUS := 0.1
 const EVASION_CHANCE := 0.4  # statut « Évasion » (fumigène du voleur)
 
@@ -89,6 +93,7 @@ var _move_goal := Vector3.INF  # point visé par un clic de déplacement (modes 
 var _click_moving := false  # clic de déplacement maintenu : on suit le curseur
 var _dodge_dir := Vector3.ZERO
 var _dodge_ready_at := 0.0
+var _skill_lock_until := 0.0  # pas de nouveau sort avant (récupération ; l'esquive l'annule)
 var _last_combat := -100.0
 var _time := 0.0
 var _weapon: Node3D
@@ -460,6 +465,8 @@ func _update_idle(input_dir: Vector3, delta: float) -> void:
 
 ## Compétence demandée au clavier (prête), sinon compétence automatique.
 func _try_skill_input() -> bool:
+	if _time < _skill_lock_until:
+		return false
 	for i in 4:
 		if _wants("skill_%d" % (i + 1)) and cooldown_left(i) <= 0.0:
 			use_skill(i)
@@ -724,6 +731,30 @@ func _begin_action(state: String, anim_name: String, speed: float, action: Dicti
 	_action["trail"] = [float(trail[0]) / speed, float(trail[-1]) / speed] if trail.size() >= 2 else [_hits[0] - 0.12, _hits[-1] + 0.08]
 	_last_combat = _time
 	play(anim_name, 0.06, speed, true)
+	if Settings.get_v("interface", "attack_zone"):
+		_show_attack_zone()
+
+
+## Zone touchée par l'action en cours, en bleu au sol jusqu'à l'impact (option des
+## Paramètres) : cône, cercle, ligne ou zone visée, comme les annonces rouges des monstres.
+func _show_attack_zone() -> void:
+	var kind := String(_action.get("kind", "cone"))
+	var r := float(_action.get("radius", 0.0))
+	var t0: float = _hits[0] if not _hits.is_empty() else 0.25
+	var props := {"damage": 0.0, "delay": clampf(t0, 0.15, 1.2), "color": Telegraph.PLAYER_COLOR, "small": true}
+	var pos := global_position
+	if kind == "ground" and _action.has("target"):
+		pos = _action.target
+		props.merge({"shape": "circle", "radius": r})
+	elif kind in ["bolt", "line"] or float(_action.get("range", 0.0)) > r + 1.0:
+		props.merge({"shape": "line", "length": maxf(float(_action.get("range", 0.0)), r), "width": maxf(1.2, minf(r, 3.0)) if kind == "line" else 1.2})
+	elif r <= 0.0:
+		return
+	elif float(_action.get("arc", 360.0)) >= 359.0 or kind in ["spin", "buff", "heal"]:
+		props.merge({"shape": "circle", "radius": r})
+	else:
+		props.merge({"shape": "cone", "radius": r, "angle": float(_action.get("arc", 90.0))})
+	Telegraph.spawn(self, pos, rotation.y, props)
 
 
 func _update_action(input_dir: Vector3, delta: float) -> void:
@@ -1197,6 +1228,7 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 	action["hit_fx"] = String(fx.get("hit", "")) if String(fx.get("hit", "")) != "" else "s00341"
 	EdenFx.play(self, String(fx.get("cast", "")), global_position, rotation.y, GameData.HERO_SCALE, self)
 	_begin_action("skill", String(s.anim), 1.15 * (cast_speed if action.dmg_type == "mag" else atk_speed), action)
+	_skill_lock_until = _time + _state_len * 0.92 + SKILL_RECOVERY
 
 
 func _skill_aim() -> Vector3:
@@ -1377,6 +1409,7 @@ func _wants_pressed(action: String) -> bool:
 
 func _start_dodge(input_dir: Vector3, perfect := false) -> void:
 	Procs.fire(self, "dodge")
+	_skill_lock_until = 0.0  # l'esquive efface la récupération du sort
 	_dodge_dir = input_dir.normalized() if input_dir.length() > 0.1 else forward()
 	face_direction(_dodge_dir, 1.0, 100.0)
 	_state = "dodge"

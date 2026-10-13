@@ -319,6 +319,7 @@ func _build_camera_tab() -> void:
 	_check(v, "Arrêt sur image à l'impact (poids des coups)", "interface", "hit_stop")
 	_check(v, "Afficher les FPS", "interface", "show_fps")
 	_check(v, "Marqueur au sol des clics de déplacement", "interface", "move_marker")
+	_check(v, "Zone de mes attaques au sol (en bleu, pour apprendre la portée des sorts)", "interface", "attack_zone")
 	_check(v, "Mode dev (F10 : objets, ressources, progression, actions en run — pour tester)", "interface", "dev_mode")
 
 

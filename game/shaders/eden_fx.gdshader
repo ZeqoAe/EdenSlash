@@ -42,17 +42,16 @@ void fragment() {
 #endif
 	float lum = max(c.r, max(c.g, c.b));
 	c = mix(vec3(dot(c, vec3(0.299, 0.587, 0.114))), c, saturation);
-	if (additive > 0.5 && lum_mix > 0.5) {
-		// aura : couleur pleine posée selon sa luminosité (ne blanchit pas un décor clair),
-		// plus un peu de lueur ajoutée
+	if (additive > 0.5) {
+		// lumineux : ajouté au fond (prémultiplié), un peu assombri dessous…
+		vec3 add_c = max(c, 0.0) * a * intensity * fade;
+		float add_a = clamp(pow(clamp(lum * a, 0.0, 1.0), darken_curve) * darken, 0.0, 1.0) * fade;
+		// … ou couleur pleine posée selon la luminosité (lisible sur un décor clair)
 		float o = clamp(pow(clamp(lum * a, 0.0, 1.0), 1.6) * 1.5, 0.0, 1.0) * fade;
 		vec3 full = max(c, 0.0) / max(lum, 0.001);
-		ALBEDO = full * o * 0.85 + max(c, 0.0) * a * intensity * 0.35 * fade;
-		ALPHA = o * 0.85;
-	} else if (additive > 0.5) {
-		// lumineux : ajouté au fond (prémultiplié), un peu assombri dessous
-		ALBEDO = max(c, 0.0) * a * intensity * fade;
-		ALPHA = clamp(pow(clamp(lum * a, 0.0, 1.0), darken_curve) * darken, 0.0, 1.0) * fade;
+		vec3 mix_c = full * o * 0.85 + max(c, 0.0) * a * intensity * 0.35 * fade;
+		ALBEDO = mix(add_c, mix_c, lum_mix);
+		ALPHA = mix(add_a, o * 0.85, lum_mix);
 	} else {
 		ALBEDO = max(c, 0.0) * a * fade;
 		ALPHA = clamp(a, 0.0, 1.0) * fade;

@@ -30,6 +30,11 @@ func setup(p: Player, d: RunDirector) -> void:
 	director = d
 	layer = 12
 	_build()
+	if "--attack-zone" in OS.get_cmdline_user_args():
+		# test : zone des attaques au sol (sans enregistrer les paramètres du joueur)
+		if not Settings.data.has("interface"):
+			Settings.data["interface"] = {}
+		Settings.data["interface"]["attack_zone"] = true
 	if "--training-open" in OS.get_cmdline_user_args():
 		# test : panneau ouvert, mannequin, 4 sorts
 		await get_tree().create_timer(1.0).timeout
@@ -396,7 +401,7 @@ func _spawn_selected() -> void:
 
 ## Mannequin : un monstre de la zone qui ne bouge pas, n'attaque pas et ne meurt jamais.
 func _spawn_dummy() -> void:
-	var pool: Array = director.zone.get("elites", []) + director.zone.get("monsters", [])
+	var pool: Array = director.zone.get("monsters", []) + director.zone.get("elites", [])
 	if pool.is_empty():
 		return
 	var m := director._spawn_monster(int(pool[0]), _spawn_point(0, 1), player.level)
