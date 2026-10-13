@@ -43,8 +43,7 @@ var shrines_captured := 0
 var _found := {}  # marchands et sanctuaires découverts (instance -> true)
 var _shrine_timer := 0.0
 ## Coffres de la carte : prix en or qui monte à chaque coffre ouvert (ou une clé).
-const CHEST_BASE := 25
-const CHEST_STEP := 20
+const CHEST_BASE := 25  # prix du 1er coffre (+2 par niveau du héros), doublé à chaque coffre ouvert
 const DISCOVER_POI := 45.0
 const SHRINE_PRESSURE := 3.5  # secondes entre deux groupes de monstres pendant une capture
 const MERCHANT_ROAM := 14.0  # rayon de promenade des marchands ambulants
@@ -226,6 +225,7 @@ func _interact(it: Interactable) -> void:
 			Profile.changed.emit()
 			it.open_chest()
 			chests_opened += 1
+			Profile.record_add("chests", 1)
 			_drop_consumable(it.global_position, _monster_level(1), 2 if state == "rage" else 1)
 			message.emit("Coffre ouvert (%s)" % how, 1.5)
 			world._offer("Coffre ouvert ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
@@ -445,6 +445,8 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 	Profile.record_add("kills", 1)
 	if m.is_elite or m.is_boss:
 		Profile.record_add("elite_kills", 1)
+	if m.is_boss:
+		Profile.record_add("boss_kills", 1)
 	if m.is_elite:
 		Run.elites += 1
 		# élite : une clé, et un choix de cartes pour les gardiens des camps
@@ -792,7 +794,7 @@ func debug_start_rage() -> void:
 # --- coffres payants, sanctuaires, marchands ambulants --------------------------------------
 ## Prix du prochain coffre de la carte (monte à chaque coffre ouvert).
 func chest_price() -> int:
-	return CHEST_BASE + CHEST_STEP * chests_opened + 2 * (player.level if player else 1)
+	return (CHEST_BASE + 2 * (player.level if player else 1)) * int(pow(2, mini(chests_opened, 20)))
 
 
 func _refresh_chest_labels() -> void:
@@ -830,6 +832,7 @@ func _update_shrines(delta: float) -> void:
 func _capture(sh: Shrine) -> void:
 	sh.captured = true
 	shrines_captured += 1
+	Profile.record_add("shrines", 1)
 	sh.update_visual()
 	match sh.reward:
 		"trophy":

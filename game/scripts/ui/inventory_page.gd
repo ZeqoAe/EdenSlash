@@ -36,6 +36,8 @@ var _class_card: Button
 var _set_text: Label
 var _stat_vals := {}  # clé -> Label
 var _family := "all"
+var _slot_filter := ""  # case de la poupée cliquée : l'inventaire ne montre que ses pièces
+var _slot_chip: Button
 var _fam_buttons := {}
 var _search: LineEdit
 var _sort: OptionButton
@@ -246,8 +248,12 @@ func _doll_column(parent: Control, slots: Array) -> void:
 		s.can_drop = func(data): return data.source == "inventory" and data.item.slot == slot
 		s.on_drop = func(data): _equip(data.item)
 		s.pressed.connect(func():
+			# case de la poupée : l'inventaire montre les pièces de cet emplacement (les
+			# meilleures d'abord), pour équiper la case vide ou comparer avec la pièce portée
 			var it: Dictionary = Profile.equipped.get(slot, {})
-			_select({"kind": "item", "item": it} if not it.is_empty() else {}))
+			_slot_filter = "" if _slot_filter == slot and not it.is_empty() else slot
+			_select({"kind": "item", "item": it} if not it.is_empty() else {})
+			_refresh_grid())
 		s.activated.connect(func(): _unequip(slot))
 		s.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		cell.add_child(s)
@@ -315,6 +321,7 @@ func _build_right() -> void:
 		var id := String(f[0])
 		b.pressed.connect(func():
 			_family = id
+			_slot_filter = ""
 			_refresh_grid())
 		fams.add_child(b)
 		_fam_buttons[id] = b
@@ -336,6 +343,14 @@ func _build_right() -> void:
 	shb.add_child(_search)
 	_count = Hud._label(filters, "", 13, UiTheme.MUTED)
 	_count.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_slot_chip = Button.new()
+	_slot_chip.focus_mode = Control.FOCUS_NONE
+	_slot_chip.visible = false
+	_slot_chip.tooltip_text = "Revoir tout l'inventaire"
+	_slot_chip.pressed.connect(func():
+		_slot_filter = ""
+		_refresh_grid())
+	filters.add_child(_slot_chip)
 	_sort = OptionButton.new()
 	for s in SORTS:
 		_sort.add_item("Trier : " + s)
@@ -636,8 +651,19 @@ func _refresh_grid() -> void:
 	var q := _search.text.strip_edges().to_lower()
 	var all := _entries()
 	var list := all.filter(func(e): return (_family == "all" or family_of(e) == _family) and (q == "" or entry_name(e).to_lower().contains(q)))
-	list = _sorted(list)
+	if _slot_filter != "":
+		list = all.filter(func(e): return String(e.kind) == "item" and String(e.item.slot) == _slot_filter and (q == "" or entry_name(e).to_lower().contains(q)))
+		list.sort_custom(func(a, b): return EquipmentPage._power_of(a.item) > EquipmentPage._power_of(b.item))
+	else:
+		list = _sorted(list)
 	_count.text = "%d objet(s)" % list.size() if list.size() == all.size() else "%d / %d" % [list.size(), all.size()]
+	_slot_chip.visible = _slot_filter != ""
+	_slot_chip.text = "%s ✕" % Items.SLOT_NAMES.get(_slot_filter, "")
+	if _slot_filter != "" and list.is_empty():
+		_count.text = "Aucune pièce « %s » en stock" % Items.SLOT_NAMES.get(_slot_filter, "")
+	for slot in _doll:
+		(_doll[slot] as ItemWidgets.ItemSlot).selected = slot == _slot_filter
+		_doll[slot].queue_redraw()
 	for e in list:
 		_grid.add_child(_cell(e))
 	# cases vides jusqu'à remplir les lignes (inventaire sans limite : la grille s'allonge)

@@ -243,16 +243,19 @@ func _test_archive() -> void:
 
 func _test_progression() -> void:
 	Profile.new_game(3)
-	check("nouvelle partie : seul le Guerrier est jouable", Progression.class_unlocked("warrior") and not Progression.class_unlocked("samurai"))
+	check("nouvelle partie : les 5 classes de base jouables", Progression.START_CLASSES.all(func(c): return Progression.class_unlocked(c)) and not Progression.class_unlocked("samurai"))
 	var got: Array = []
 	var cb := func(c): got.append(c)
 	Profile.class_unlocked.connect(cb)
-	Profile.record_add("kills", 249)
-	check("mission du Samouraï en cours (249 / 250)", not Progression.class_unlocked("samurai") and Progression.mission_progress("samurai") == Vector2(249, 250))
-	Profile.record_add("kills", 1)
-	check("mission remplie : Samouraï débloqué", Progression.class_unlocked("samurai") and "samurai" in got)
-	Profile.record_max("best_hit", 900)
-	check("gros coup : Magicien débloqué", Progression.class_unlocked("magician"))
+	Profile.set_expertise_level("warrior", 3)
+	check("Guerrier 3 : Chevalier débloqué, pas le Samouraï (Guerrier 3 et Voleur 3)", Progression.class_unlocked("knight") and not Progression.class_unlocked("samurai")
+		and Progression.mission_progress("samurai") == Vector2(4, 6))
+	Profile.set_expertise_level("thief", 3)
+	check("Voleur 3 : Samouraï débloqué", Progression.class_unlocked("samurai") and "samurai" in got)
+	Profile.set_expertise_level("knight", 5)
+	check("Chevalier 5 : Chevalier dragon débloqué (Chevalier 5 ou Guerrier 5)", Progression.class_unlocked("dragon_knight"))
+	check("Templier : une classe de la famille au niveau 7", Progression.mission_text("templar") == "Maîtrise Guerrier 7 ou Chevalier 7 ou Chevalier dragon 7")
+	Profile.expertise = {}
 	Profile.class_unlocked.disconnect(cb)
 	# sorts : 4 de base, les suivants avec la maîtrise
 	check("sorts : 4 de base, le 5e au niveau 2", Progression.skill_level(3) == 1 and Progression.skill_level(4) == 2)

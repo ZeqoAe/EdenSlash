@@ -12,6 +12,11 @@ var active := false
 var class_id := "samurai"
 var skills: Array = []  # [{id, rank}]
 var passives: Dictionary = {}  # id -> nombre de cartes prises (niveau du passif)
+var banned: Array = []  # cartes bannies pour la run (ids)
+var kept: Array = []  # cartes gardées pour le prochain choix : [{type, id, tier}]
+var bans_used := 0
+var locks_used := 0
+var cards_at_start: Array = []  # cartes débloquées au départ (bilan : nouvelles cartes)
 var passive_power: Dictionary = {}  # id -> puissance : somme des multiplicateurs de rareté des cartes prises
 var kills := 0
 var elites := 0
@@ -37,6 +42,11 @@ func start(cid: String) -> void:
 	skills.clear()
 	passives.clear()
 	passive_power.clear()
+	banned.clear()
+	kept.clear()
+	bans_used = 0
+	locks_used = 0
+	cards_at_start = Cards.unlocked_ids()
 	loot.clear()
 	kills = 0
 	elites = 0
@@ -243,19 +253,33 @@ func roll_cards(n := 3, skills_only := false) -> Array:
 		for s in skills:
 			if int(s.rank) < int(Cards.rules().max_rank):
 				pool.append({"type": "upgrade", "id": int(s.id), "weight": 1.5})
+		var boons := {}
+		for b in Boons.all():
+			boons[String(b.id)] = true
 		for p in class_data().get("passives", []) + Boons.all():
 			if p.has("eden") and not p.get("shared", false):
 				continue  # certificat : se choisit avant la run (expertise) ; les certificats partagés sont des cartes
 			if int(passives.get(p.id, 0)) >= mini(int(p.get("max", 1)), 99 if p.get("instant", false) else Cards.MAX_LEVEL):
 				continue
+			if String(p.id) in banned or (boons.has(String(p.id)) and not Cards.card_unlocked(String(p.id))):
+				continue  # bannie pour la run, ou carte pas encore débloquée (méta-progression)
 			if not p.get("requires", []).all(func(r): return passives.has(r)):
 				continue
 			var rar: Dictionary = Boons.RARITY[String(p.get("rarity", "common"))]
 			pool.append({"type": "passive", "id": p.id, "weight": 1.2 * float(rar.weight) * (0.5 if p.get("instant", false) else 1.0)})
+	pool = pool.filter(func(c): return not (c.type == "skill" and str(c.id) in banned) \
+		and not kept.any(func(k): return String(k.type) == String(c.type) and str(k.id) == str(c.id)))
 	var picks: Array = []
+	# cartes gardées au choix précédent : proposées d'abord, avec leur rareté
+	if not skills_only:
+		for k in kept:
+			if picks.size() < n:
+				picks.append(_describe_card(k))
+		kept.clear()
 	# tant que les 4 emplacements ne sont pas remplis, au moins une nouvelle compétence
 	var skill_cards := pool.filter(func(c): return c.type == "skill")
-	if not skill_cards.is_empty() and not skills_only:
+	if not skill_cards.is_empty() and not skills_only and picks.size() < n \
+			and not picks.any(func(c): return String(c.type) == "skill"):
 		var forced: Dictionary = skill_cards.pick_random()
 		picks.append(_describe_card(forced))
 		pool.erase(forced)
@@ -282,8 +306,8 @@ func _describe_card(c: Dictionary) -> Dictionary:
 		"upgrade":
 			var s := skill_def(int(c.id))
 			var rank := skill_rank(int(c.id)) + 1
-			var tier := Cards.roll_tier()
-			var magic := String(class_data().get("dmg_type", "phys")) == "magic"
+			var tier := String(c.get("tier", "")) if String(c.get("tier", "")) != "" else Cards.roll_tier()
+			var magic := String(class_data().get("dmg_type", "phys")) in ["mag", "magic"]
 			var up := Cards.skill_upgrade(s, tier, (["int", "wis"] if magic else ["str", "agi"]).pick_random())
 			return {"type": "upgrade", "id": c.id, "tier": tier, "up": up, "title": "%s — rang %d" % [s.name, rank],
 				"subtitle": "Amélioration %s" % String(Cards.tier(tier).name).to_lower(),
@@ -298,7 +322,7 @@ func _describe_card(c: Dictionary) -> Dictionary:
 					"subtitle": "Effet immédiat", "desc": p.desc, "icon": icon}
 			# rareté tirée (les évolutions sont toujours légendaires, sans multiplicateur)
 			var evo: bool = rarity == "legendary" and not (p.get("requires", []) as Array).is_empty()
-			var tier := "legendary" if evo else Cards.roll_tier()
+			var tier := "legendary" if evo else (String(c.get("tier", "")) if String(c.get("tier", "")) != "" else Cards.roll_tier())
 			var m := 1.0 if evo else Cards.tier_mult(tier)
 			var before := power(p.id)
 			var lines := Cards.stat_lines(p, before, before + m)
@@ -346,3 +370,34 @@ func apply_card(card: Dictionary) -> void:
 		"trophy":
 			pick_up(card.item)  # carte de choix de trophée : le trophée va dans le sac
 	changed.emit()
+
+
+
+## Bannit la carte pour la run ; renvoie une carte de remplacement (ou {}).
+func ban_card(card: Dictionary, shown: Array) -> Dictionary:
+	if bans_used >= Cards.BANS_PER_RUN or String(card.get("type", "")) == "trophy":
+		return {}
+	bans_used += 1
+	banned.append(str(card.id))
+	var others := shown.map(func(c): return "%s|%s" % [c.type, c.id])
+	for i in 20:
+		var cand: Array = roll_cards(1)
+		if not cand.is_empty() and not ("%s|%s" % [cand[0].type, cand[0].id]) in others:
+			return cand[0]
+	return {}
+
+
+## Garde la carte pour le prochain choix (même rareté).
+func keep_card(card: Dictionary) -> bool:
+	if locks_used >= Cards.LOCKS_PER_RUN or String(card.get("type", "")) == "trophy":
+		return false
+	if kept.any(func(k): return String(k.type) == String(card.type) and str(k.id) == str(card.id)):
+		return false
+	locks_used += 1
+	kept.append({"type": card.type, "id": card.id, "tier": String(card.get("tier", ""))})
+	return true
+
+
+## Cartes débloquées pendant cette run (bilan).
+func new_cards() -> Array:
+	return Cards.unlocked_ids().filter(func(id): return not id in cards_at_start)

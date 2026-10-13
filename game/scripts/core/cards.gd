@@ -186,3 +186,65 @@ static func skill_upgrade_lines(cur: Dictionary, up: Dictionary) -> PackedString
 		var rd: Dictionary = up.rider
 		out.append("Au lancement : [b]+%s %% %s[/b] pendant %s s" % [_num(float(rd.value) * 100.0), ATTR_FR.get(String(rd.stat), rd.stat), _num(float(rd.duration))])
 	return out
+
+
+# --- méta-progression : cartes à débloquer ----------------------------------------------------
+## Cartes communes à débloquer (les autres sont disponibles d'emblée ; les passifs de classe
+## aussi) : [record cumulé sur toutes les runs (Profile.records, « best_level » : niveau max
+## atteint en run), objectif, texte]. Modifiable par l'éditeur de cartes (champ « unlock »).
+const UNLOCK := {
+	"lingering": ["kills", 500, "Vaincre %d monstres"],
+	"scholar": ["best_level", 12, "Atteindre le niveau %d en run"],
+	"recall": ["chests", 5, "Ouvrir %d coffres de la carte"],
+	"volatile": ["kills", 1000, "Vaincre %d monstres"],
+	"shockwave": ["elite_kills", 10, "Vaincre %d élites"],
+	"wind_step": ["dodges", 50, "Esquiver %d attaques"],
+	"battle_trance": ["best_hit", 1500, "Infliger un coup de %d dégâts"],
+	"hunter_eye": ["elite_kills", 25, "Vaincre %d élites"],
+	"second_wind": ["healed", 5000, "Soigner %d PV"],
+	"momentum": ["kills", 2500, "Vaincre %d monstres"],
+	"executioner": ["boss_kills", 1, "Vaincre %d boss"],
+	"echo": ["shrines", 5, "Capturer %d sanctuaires"],
+	"frost_nova": ["dodges", 150, "Esquiver %d attaques"],
+	"glass_cannon": ["best_hit", 4000, "Infliger un coup de %d dégâts"],
+	"storm_lord": ["boss_kills", 2, "Vaincre %d boss"],
+	"glacial_shatter": ["boss_kills", 3, "Vaincre %d boss"],
+	"phoenix_blade": ["boss_kills", 4, "Vaincre %d boss"],
+	"steel_tempest": ["boss_kills", 5, "Vaincre %d boss"],
+}
+## Bannir (retirée de la run) et garder (revient au prochain choix) : nombre par run.
+const BANS_PER_RUN := 3
+const LOCKS_PER_RUN := 3
+
+
+static func unlock_rule(id: String) -> Array:
+	var d := Boons.get_def(id)
+	if d.has("unlock"):
+		return d.unlock if d.unlock is Array else []
+	return UNLOCK.get(id, [])
+
+
+static func record_of(key: String) -> float:
+	if key == "best_level":
+		return float(Profile.best_level)
+	return float(Profile.records.get(key, 0.0))
+
+
+## Carte commune disponible ? (sans condition, condition remplie, ou débloquée en mode dev)
+static func card_unlocked(id: String) -> bool:
+	var r := unlock_rule(id)
+	return r.is_empty() or id in Profile.unlocked_cards or record_of(String(r[0])) >= float(r[1])
+
+
+static func unlock_text(id: String) -> String:
+	var r := unlock_rule(id)
+	return String(r[2]) % int(r[1]) if not r.is_empty() else ""
+
+
+static func unlock_progress(id: String) -> Vector2:
+	var r := unlock_rule(id)
+	return Vector2(minf(record_of(String(r[0])), float(r[1])), float(r[1])) if not r.is_empty() else Vector2(1, 1)
+
+
+static func unlocked_ids() -> Array:
+	return Boons.all().filter(func(d): return card_unlocked(String(d.id))).map(func(d): return String(d.id))

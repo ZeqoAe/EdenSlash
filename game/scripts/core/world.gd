@@ -123,7 +123,9 @@ func _ready() -> void:
 	for t in _shots:
 		get_tree().create_timer(t, true).timeout.connect(_save_screenshot.bind("%sshot_%02d.png" % [_shot_prefix, int(t)]))
 	if _quit_at > 0.0:
-		get_tree().create_timer(_quit_at, true).timeout.connect(get_tree().quit)
+		get_tree().create_timer(_quit_at, true).timeout.connect(func():
+			_print_report()
+			get_tree().quit())
 	var zone_bonus := int(GameData.zone(Run.zone_id).get("level_bonus", 0))
 	if zone_bonus > 0 and player.level < 1 + zone_bonus:
 		player.level = 1 + zone_bonus
@@ -236,7 +238,7 @@ func _parse_args() -> void:
 				if not Run.skills.is_empty():
 					picks.append(Run._describe_card({"type": "upgrade", "id": int(Run.skills[0].id)}))
 				picks.append(Run._describe_card({"type": "passive", "id": "static_blade"}))
-				cards.offer("Niveau 5 ! Choisis une carte", picks))
+				cards.offer("Niveau 5 ! Choisis une carte", picks, func(): return Run.roll_cards(3)))
 		elif arg == "--god":
 			# test : héros invincible (mesures de performance sur une longue run)
 			get_tree().create_timer(0.5).timeout.connect(func(): player.dev_invincible = true)
@@ -269,7 +271,10 @@ func _offer(title: String, options: Array, reroll := Callable()) -> void:
 	if options.is_empty():
 		return
 	if player.autoplay:
-		Run.apply_card(options[0])
+		# pilote automatique : une nouvelle compétence tant qu'il en manque, sinon une carte au
+		# hasard (passifs compris : les mesures d'équilibrage doivent voir des builds)
+		var skills := options.filter(func(o): return String(o.get("type", "")) == "skill")
+		Run.apply_card(skills[0] if not skills.is_empty() and Run.skills.size() < 4 else options.pick_random())
 		return
 	cards.offer(title, options, reroll)
 
@@ -315,6 +320,22 @@ func end_run(result: String) -> void:
 	var r := ResultsScreen.new()
 	add_child(r)
 	r.show_results()
+
+
+## Bilan chiffré de la run (tests, --quit-at) : progression, butin, cartes, économie.
+func _print_report() -> void:
+	var rar := {}
+	for it in Profile.inventory + Profile.equipped.values():
+		rar[int(it.get("rarity", 0))] = int(rar.get(int(it.get("rarity", 0)), 0)) + 1
+	var lv := []
+	for it in Profile.inventory:
+		lv.append("%d/%d" % [int(it.get("level", 0)), Items.power_level(it)])
+	print("[bilan] %.0f s · état %s · niveau %d · tués %d · élites %d · or %d · clés %d · sceaux %d · coffres %d · sanctuaires %d · orbes au sol %d" % [
+		director.time, director.state, player.level, Run.kills, Run.elites, Profile.gold, Profile.keys, director.seals,
+		director.chests_opened, director.shrines_captured, director.orbs.count() if director.orbs else 0])
+	print("[bilan] butin par rareté %s · niveaux Eden/puissance %s" % [rar, lv.slice(0, 12)])
+	print("[bilan] compétences %s" % [Run.skills.map(func(x): return "%s r%d" % [Run.skill_def(int(x.id)).get("name", x.id), int(x.rank)])])
+	print("[bilan] cartes %s" % [Run.passives])
 
 
 func _save_screenshot(file_name: String) -> void:

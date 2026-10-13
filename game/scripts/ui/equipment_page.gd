@@ -434,15 +434,51 @@ class HeroPreview extends SubViewportContainer:
 		if is_visible_in_tree() and not _drag and spin:
 			_pivot.rotation.y += delta * 0.35
 
+	## Souris : glisser (clic gauche) pour tourner, molette pour zoomer, glisser au clic droit
+	## pour monter / descendre (ailes, chapeaux, armes vus de près) ; double-clic : cadrage d'origine.
 	func _gui_input(event: InputEvent) -> void:
-		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
-			_drag = event.pressed
-		elif event is InputEventMouseMotion and _drag:
-			_pivot.rotation.y += event.relative.x * 0.01
+		if event is InputEventMouseButton:
+			match event.button_index:
+				MOUSE_BUTTON_LEFT:
+					_drag = event.pressed
+					if event.pressed and event.double_click:
+						_zoom = 1.0
+						_lift = 0.0
+						_apply_frame()
+				MOUSE_BUTTON_RIGHT:
+					_pan = event.pressed
+				MOUSE_BUTTON_WHEEL_UP:
+					if event.pressed:
+						_zoom = clampf(_zoom * 0.9, 0.35, 2.2)
+						_apply_frame()
+						accept_event()
+				MOUSE_BUTTON_WHEEL_DOWN:
+					if event.pressed:
+						_zoom = clampf(_zoom / 0.9, 0.35, 2.2)
+						_apply_frame()
+						accept_event()
+		elif event is InputEventMouseMotion:
+			if _drag:
+				_pivot.rotation.y += event.relative.x * 0.01
+			elif _pan:
+				_lift = clampf(_lift + event.relative.y * 0.006 * _zoom, -0.8, 1.6)
+				_apply_frame()
 
-
+	var _zoom := 1.0
+	var _lift := 0.0
+	var _pan := false
+	var _frame := Vector2(4.6, 1.05)  # distance, hauteur visée (cadrage d'origine)
 
 	## Cadrage : distance de la caméra et hauteur visée (héros en pied).
 	func frame(distance: float, look_y: float, yaw := 0.0) -> void:
-		cam.transform = Transform3D(Basis(), Vector3(0, look_y + 0.25, distance)).looking_at(Vector3(0, look_y, 0))
+		_frame = Vector2(distance, look_y)
+		_zoom = 1.0
+		_lift = 0.0
+		_apply_frame()
 		_pivot.rotation.y = yaw
+
+	func _apply_frame() -> void:
+		var d := _frame.x * _zoom
+		# en zoomant, la visée remonte vers le buste (sinon on ne voit plus que les jambes)
+		var y := _frame.y + _lift + (1.0 - minf(_zoom, 1.0)) * 0.25
+		cam.transform = Transform3D(Basis(), Vector3(0, y + 0.25 * _zoom, d)).looking_at(Vector3(0, y, 0))

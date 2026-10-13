@@ -20,6 +20,8 @@ class AppearancePage extends HBoxContainer:
 	var _count: Label
 	var _shown_code := ""  # modèle d'arme montré dans l'aperçu (essai d'une apparence)
 	var _dye_box: VBoxContainer  # couleurs de la pièce portée (tenue, tête, dos)
+	var _search: LineEdit
+	var _owned_only: CheckBox
 
 	func _ready() -> void:
 		add_theme_constant_override("separation", 16)
@@ -45,6 +47,19 @@ class AppearancePage extends HBoxContainer:
 				refresh())
 			tabs.add_child(b)
 			_cat_buttons[id] = b
+		var fl := HBoxContainer.new()
+		fl.add_theme_constant_override("separation", 10)
+		left.add_child(fl)
+		_search = LineEdit.new()
+		_search.placeholder_text = "Rechercher…"
+		_search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_search.text_changed.connect(func(_t): refresh())
+		fl.add_child(_search)
+		_owned_only = CheckBox.new()
+		_owned_only.text = "Débloqués uniquement"
+		_owned_only.focus_mode = Control.FOCUS_NONE
+		_owned_only.toggled.connect(func(_on): refresh())
+		fl.add_child(_owned_only)
 		_hint = Hud._label(left, "", 13, UiTheme.MUTED)
 		_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		var scroll := ScrollContainer.new()
@@ -201,10 +216,17 @@ class AppearancePage extends HBoxContainer:
 		_grid.add_child(_cell({}, cid))
 		# débloqués d'abord, puis le reste
 		for c in owned:
-			_grid.add_child(_cell(c, cid))
-		for c in list:
-			if not Profile.outfit_unlocked(String(c.id)):
+			if _match(c):
 				_grid.add_child(_cell(c, cid))
+		if not _owned_only.button_pressed:
+			for c in list:
+				if not Profile.outfit_unlocked(String(c.id)) and _match(c):
+					_grid.add_child(_cell(c, cid))
+
+	## Filtre de recherche (nom).
+	func _match(c: Dictionary) -> bool:
+		var q := _search.text.strip_edges().to_lower()
+		return q == "" or String(c.get("name", "")).to_lower().contains(q)
 
 	func _refresh_auras(cid: String) -> void:
 		_grid.columns = 7
@@ -214,10 +236,12 @@ class AppearancePage extends HBoxContainer:
 		for kind in ["star", "luna", "other"]:
 			_grid.add_child(_aura_cell({}, cid, kind))
 		for x in got:
-			_grid.add_child(_aura_cell(x, cid, String(x.aura.kind)))
-		for x in GameData.auras:
-			if not Profile.collected(x):
+			if _match(x):
 				_grid.add_child(_aura_cell(x, cid, String(x.aura.kind)))
+		if not _owned_only.button_pressed:
+			for x in GameData.auras:
+				if not Profile.collected(x) and _match(x):
+					_grid.add_child(_aura_cell(x, cid, String(x.aura.kind)))
 
 	## Apparence de l'arme : l'arme portée (modèles de base, armes archivées), puis les
 	## apparences d'armes d'Eden (trésors de collection, pour n'importe quelle arme), puis
@@ -240,10 +264,12 @@ class AppearancePage extends HBoxContainer:
 		flow.add_theme_constant_override("v_separation", 8)
 		_grid.add_child(flow)
 		for x in got:
-			flow.add_child(_eden_skin_cell(mine, x, true))
-		for x in skins:
-			if not Profile.collected(x):
-				flow.add_child(_eden_skin_cell(mine, x, false))
+			if _match(x):
+				flow.add_child(_eden_skin_cell(mine, x, true))
+		if not _owned_only.button_pressed:
+			for x in skins:
+				if not Profile.collected(x) and _match(x):
+					flow.add_child(_eden_skin_cell(mine, x, false))
 		n += got.size()
 		var o := Hud._label(_grid, "Autres types d'armes", 16, UiTheme.GOLD)
 		o.add_theme_font_override("font", UiTheme.bold_font())
@@ -423,4 +449,103 @@ class AppearancePage extends HBoxContainer:
 			_shown_code = code if code != "" else String(worn.get("weapon", ""))
 			Profile.set_skin(wt, code)
 			refresh())
+		return b
+
+
+# --- cartes : méta-progression ---------------------------------------------------------------
+## Toutes les cartes de build : disponibles (en couleur) ou à débloquer (condition et
+## avancement, cumulés sur toutes les runs) ; passifs de la classe affichée à part.
+class CardsPage extends HBoxContainer:
+	var _grid: GridContainer
+	var _count: Label
+	var _detail: RichTextLabel
+	var _filter: OptionButton
+
+	func _ready() -> void:
+		add_theme_constant_override("separation", 16)
+		var left := ItemWidgets.panel(self, 0, true)
+		var head := HBoxContainer.new()
+		head.add_theme_constant_override("separation", 10)
+		left.add_child(head)
+		ItemWidgets.section(head, "Cartes de build")
+		_count = Hud._label(head, "", 14, UiTheme.MUTED)
+		_count.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_count.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_filter = OptionButton.new()
+		for t in ["Toutes", "Disponibles", "À débloquer", "Passifs de la classe"]:
+			_filter.add_item(t)
+		_filter.focus_mode = Control.FOCUS_NONE
+		_filter.item_selected.connect(func(_i): refresh())
+		head.add_child(_filter)
+		Hud._label(left, "Les cartes se gagnent en montant de niveau en run, dans les coffres, les sanctuaires et chez les marchands. Les cartes verrouillées se débloquent pour toujours en accomplissant leur exploit (cumulé sur toutes les runs). Pendant le choix : Bannir retire une carte de la run, Garder la repropose au choix suivant (3 fois chacun par run).", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var sc := ScrollContainer.new()
+		sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		left.add_child(sc)
+		_grid = GridContainer.new()
+		_grid.columns = 6
+		_grid.add_theme_constant_override("h_separation", 8)
+		_grid.add_theme_constant_override("v_separation", 8)
+		sc.add_child(_grid)
+		var right := ItemWidgets.panel(self, 420)
+		ItemWidgets.section(right, "Fiche")
+		_detail = ItemWidgets.rich(right, 15)
+
+	func _cid() -> String:
+		return Run.class_id if Profile.in_run else Profile.selected_class
+
+	func refresh() -> void:
+		if not is_inside_tree():
+			return
+		for c in _grid.get_children():
+			c.queue_free()
+		var all := Boons.all()
+		var open := all.filter(func(d): return Cards.card_unlocked(String(d.id)))
+		_count.text = "%d / %d débloquées" % [open.size(), all.size()]
+		var f := _filter.selected
+		var list: Array = []
+		if f == 3:
+			list = GameData.class_data(_cid()).get("passives", []).filter(func(p): return not p.has("eden") or p.get("shared", false))
+		else:
+			list = all.filter(func(d): return f == 0 or (f == 1) == Cards.card_unlocked(String(d.id)))
+			list.sort_custom(func(a, b): return [not Cards.card_unlocked(String(a.id)), Cards.unlock_progress(String(a.id)).y] < [not Cards.card_unlocked(String(b.id)), Cards.unlock_progress(String(b.id)).y])
+		for d in list:
+			_grid.add_child(_cell(d, f == 3))
+		if _detail.text == "":
+			_detail.text = "[color=#c8c8d4]Clique une carte pour voir sa fiche.[/color]"
+
+	func _cell(d: Dictionary, class_card: bool) -> Control:
+		var id := String(d.id)
+		var ok := class_card or Cards.card_unlocked(id)
+		var rar: Dictionary = Boons.RARITY.get(String(d.get("rarity", "common")), Boons.RARITY.common)
+		var b := Button.new()
+		b.custom_minimum_size = Vector2(118, 104)
+		b.focus_mode = Control.FOCUS_NONE
+		b.clip_text = true
+		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.expand_icon = false
+		b.add_theme_constant_override("icon_max_width", 48)
+		b.add_theme_font_size_override("font_size", 11)
+		b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.08, 0.06, 0.13, 0.95), rar.color if ok else Color(0.25, 0.23, 0.3), 2, 8))
+		b.icon = UiTheme.texture(String(d.get("icon", Boons.ICONS.get(id, ""))))
+		if ok:
+			b.text = String(d.name)
+		else:
+			var p := Cards.unlock_progress(id)
+			b.text = "🔒 %s\n%d / %d" % [d.name, int(p.x), int(p.y)]
+			b.modulate = Color(0.65, 0.65, 0.72)
+		b.pressed.connect(func():
+			var lines: PackedStringArray = ["[font_size=19][b][color=#%s]%s[/color][/b][/font_size]" % [rar.color.to_html(false), d.name],
+				"[color=#9a98a8]%s · jusqu'au niveau %d%s[/color]" % ["Passif de classe" if class_card else String(rar.name), mini(int(d.get("max", 1)), Cards.MAX_LEVEL),
+					" · effet immédiat" if d.get("instant", false) else ""], "", String(d.get("desc", ""))]
+			var tl := Cards.stat_lines(d, 0.0, 1.0)
+			if not tl.is_empty():
+				lines.append("\n[color=#9fd0ff]Carte commune : %s[/color]" % " ; ".join(tl))
+			for pr in Boons.procs_of(d, 1.0):
+				lines.append("[color=#ffd76a]%s[/color]" % Procs.describe(pr))
+			if not ok:
+				var p := Cards.unlock_progress(id)
+				lines.append("\n[color=#ffcf6b]🔒 Pour la débloquer : %s — %d / %d[/color]" % [Cards.unlock_text(id), int(p.x), int(p.y)])
+			_detail.text = "\n".join(lines))
 		return b

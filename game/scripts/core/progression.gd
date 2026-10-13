@@ -7,14 +7,28 @@ extends RefCounted
 ##   débloque les sorts de la classe (4 au départ) et ses certificats ; le parcours de
 ##   maîtrise (rewards) liste tout ce que rapporte chaque niveau.
 
-const START_CLASS := "warrior"
-## Missions de déblocage des classes : record suivi, objectif, texte.
-const MISSIONS := {
-	"samurai": {"stat": "kills", "goal": 250, "text": "Vaincre %d monstres"},
-	"cleric": {"stat": "healed", "goal": 4000, "text": "Soigner %d PV"},
-	"magician": {"stat": "best_hit", "goal": 800, "text": "Un coup de %d dégâts"},
-	"thief": {"stat": "dodges", "goal": 40, "text": "Esquiver %d attaques"},
-	"hunter": {"stat": "elite_kills", "goal": 15, "text": "Vaincre %d élites"},
+const START_CLASS := "warrior"  # classe choisie dans une nouvelle partie
+## Les 5 classes de base d'Eden (une par famille) sont jouables d'emblée.
+const START_CLASSES := ["warrior", "thief", "hunter", "cleric", "magician"]
+## Déblocage des classes par la maîtrise (règles du joueur, 13/10/2026) :
+## [mode, [[classe, niveau de maîtrise], ...]] ; "all" : toutes les conditions, "any" : une.
+## Les classes éveillées (orange) : maîtrise 8 de leur classe d'origine (data/classes.json).
+const UNLOCKS := {
+	"knight": ["all", [["warrior", 3]]],
+	"samurai": ["all", [["warrior", 3], ["thief", 3]]],
+	"inquisitor": ["all", [["hunter", 3]]],
+	"bard": ["all", [["cleric", 3]]],
+	"luminary": ["all", [["magician", 3], ["thief", 3]]],
+	"dragon_knight": ["any", [["knight", 5], ["warrior", 5]]],
+	"martial_artist": ["any", [["samurai", 5], ["thief", 5]]],
+	"engineer": ["any", [["inquisitor", 5], ["hunter", 5]]],
+	"sage": ["any", [["cleric", 5], ["bard", 5]]],
+	"illusionist": ["any", [["luminary", 5], ["magician", 5]]],
+	"templar": ["any", [["warrior", 7], ["knight", 7], ["dragon_knight", 7]]],
+	"blade_dancer": ["any", [["thief", 7], ["samurai", 7], ["martial_artist", 7]]],
+	"ranger": ["any", [["hunter", 7], ["inquisitor", 7], ["engineer", 7]]],
+	"shaman": ["any", [["cleric", 7], ["bard", 7], ["sage", 7]]],
+	"warlock": ["any", [["magician", 7], ["luminary", 7], ["illusionist", 7]]],
 }
 ## Sorts : les 4 premiers de la classe sont connus d'emblée, les suivants arrivent
 ## à ces niveaux de maîtrise (dans l'ordre de la liste de la classe).
@@ -23,34 +37,54 @@ const SKILL_LEVELS := [2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16]
 
 
 # --- classes ---------------------------------------------------------------------------------
-## Classes importées d'Eden (data/classes.json -> unlock) : débloquées par la maîtrise de
-## leur classe d'origine (classe de base de la famille pour les vertes, classe parente
-## pour les orange). Les 5 classes de départ gardent leurs missions.
 static func class_unlocked(cls: String) -> bool:
-	return cls == START_CLASS or cls in Profile.unlocked_classes
+	return cls in START_CLASSES or cls in Profile.unlocked_classes
 
 
+## Condition de déblocage : [mode, [[classe, niveau], ...]] ; vide pour les classes de base.
+static func requirement(cls: String) -> Array:
+	if cls in START_CLASSES:
+		return []
+	if UNLOCKS.has(cls):
+		return UNLOCKS[cls]
+	var u: Dictionary = GameData.class_data(cls).get("unlock", {})
+	return ["all", [[String(u.cls), int(u.level)]]] if u.has("cls") else []
+
+
+## Ancienne règle (compatibilité) : première condition.
 static func unlock_rule(cls: String) -> Dictionary:
-	return GameData.class_data(cls).get("unlock", {})
+	var r := requirement(cls)
+	return {"cls": r[1][0][0], "level": r[1][0][1]} if not r.is_empty() else {}
 
 
 static func mission_text(cls: String) -> String:
-	var u := unlock_rule(cls)
-	if not u.is_empty() and not MISSIONS.has(cls):
-		return "Maîtrise %s niveau %d" % [GameData.class_data(String(u.cls)).get("name_fr", u.cls), int(u.level)]
-	var m: Dictionary = MISSIONS.get(cls, {})
-	return String(m.get("text", "")) % int(m.get("goal", 0)) if not m.is_empty() else ""
+	var r := requirement(cls)
+	if r.is_empty():
+		return ""
+	var parts: PackedStringArray = []
+	for c in r[1]:
+		parts.append("%s %d" % [GameData.class_data(String(c[0])).get("name_fr", c[0]), int(c[1])])
+	return "Maîtrise " + (" et " if r[0] == "all" else " ou ").join(parts)
 
 
-## Avancement de la mission : Vector2(fait, objectif).
+## Avancement : Vector2(fait, objectif) (somme des conditions, ou la plus avancée pour « ou »).
 static func mission_progress(cls: String) -> Vector2:
-	var u := unlock_rule(cls)
-	if not u.is_empty() and not MISSIONS.has(cls):
-		return Vector2(mini(Profile.expertise_level(String(u.cls)), int(u.level)), int(u.level))
-	var m: Dictionary = MISSIONS.get(cls, {})
-	if m.is_empty():
+	var r := requirement(cls)
+	if r.is_empty():
 		return Vector2(1, 1)
-	return Vector2(minf(float(Profile.records.get(String(m.stat), 0.0)), float(m.goal)), float(m.goal))
+	if r[0] == "all":
+		var done := 0
+		var goal := 0
+		for c in r[1]:
+			done += mini(Profile.expertise_level(String(c[0])), int(c[1]))
+			goal += int(c[1])
+		return Vector2(done, goal)
+	var best := Vector2(0, 1)
+	for c in r[1]:
+		var v := Vector2(mini(Profile.expertise_level(String(c[0])), int(c[1])), int(c[1]))
+		if v.x / v.y > best.x / best.y or best.x == 0:
+			best = v
+	return best
 
 
 static func mission_line(cls: String) -> String:
@@ -58,18 +92,25 @@ static func mission_line(cls: String) -> String:
 	return "%s — %d / %d" % [mission_text(cls), int(p.x), int(p.y)]
 
 
-## Classes dont la mission vient d'être remplie.
+## Classes dont la condition vient d'être remplie.
 static func check_missions() -> Array:
 	var out: Array = []
 	for cls in GameData.classes:
-		if not MISSIONS.has(cls) and unlock_rule(cls).is_empty():
-			continue
-		if class_unlocked(cls):
+		if class_unlocked(cls) or requirement(cls).is_empty():
 			continue
 		var p := mission_progress(cls)
 		if p.x >= p.y:
 			out.append(cls)
 	return out
+
+
+## Niveau de maîtrise le plus haut demandé (tri des classes).
+static func requirement_level(cls: String) -> int:
+	var r := requirement(cls)
+	var m := 0
+	for c in (r[1] if not r.is_empty() else []):
+		m = maxi(m, int(c[1]))
+	return m
 
 
 # --- sorts -----------------------------------------------------------------------------------

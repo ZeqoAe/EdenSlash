@@ -131,7 +131,7 @@ les trophées et les sorts se combinent aux cartes de la run, c'est la boucle re
 | **Points d'expertise** | fin de run | maîtrise de la classe (talents, sorts, certificats) | gardés |
 | **Archive et trésors de collection** | mythiques / légendaires archivés, boss | bonus permanents, apparences | gardés |
 
-**Sur la carte** (512 × 512 m) : 10 **coffres** payants (25 or + 20 par coffre déjà ouvert,
+**Sur la carte** (512 × 512 m) : 10 **coffres** payants (25 or + 2 par niveau, **prix doublé à chaque coffre ouvert**,
 ou une clé) qui donnent un choix de cartes ; 10 **sanctuaires** à capturer (rester 14 s dans
 le cercle pendant que les monstres affluent ; hors du cercle la capture redescend) : cartes,
 trophées ou clés ; 3 **marchands ambulants** qui se promènent (cartes, clé, fournitures,
@@ -386,3 +386,10 @@ Un proc = déclencheur + chance + recharge interne + effet (`scripts/combat/proc
   Aimant), Rappel (tout revient), Érudit (+XP), Venin tenace (effets sur la durée).
 - Tout se règle dans le mode dev, page **Cartes** (Cards, Boons, DevCards ;
   data/dev_edits.json -> cards, card_rules).
+
+## Méta-progression des cartes et classes (0.1.33)
+
+- **Classes** : règles par famille (Progression.UNLOCKS) — voir AUDIT.md partie 1.
+- **Cartes** : 12 disponibles d'emblée, 18 à débloquer par exploits cumulés (Cards.UNLOCK) ;
+  Bannir / Garder 3 fois chacun par run ; page Héros > Cartes.
+- **Coffres de la carte** : prix doublé à chaque ouverture.

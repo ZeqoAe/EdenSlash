@@ -40,7 +40,7 @@ static func families() -> Array:
 
 static func _order(id: String) -> int:
 	var c := GameData.class_data(id)
-	return int(c.get("unlock", {}).get("level", 0)) * 100 + int(c.get("class_id", 0))
+	return Progression.requirement_level(id) * 100 + (50 if String(c.get("tier", "")) == "orange" else 0) + int(c.get("class_id", 0))
 
 
 static func tier_color(id: String) -> Color:

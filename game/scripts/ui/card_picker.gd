@@ -229,7 +229,43 @@ func _make_card(card: Dictionary, i: int) -> Button:
 	d.modulate = Color(0.92, 0.92, 0.95)
 	d.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(d)
+	# bannir (la carte quitte la run, une autre la remplace) / garder (revient au prochain choix)
+	if String(card.get("type", "")) in ["skill", "upgrade", "passive"] and _reroll_fn.is_valid():
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		v.add_child(row)
+		var ban := Button.new()
+		ban.text = "Bannir (%d)" % (Cards.BANS_PER_RUN - Run.bans_used)
+		ban.tooltip_text = "Cette carte ne sera plus proposée pendant la run ; une autre la remplace."
+		ban.focus_mode = Control.FOCUS_NONE
+		ban.add_theme_font_size_override("font_size", 13)
+		ban.disabled = Run.bans_used >= Cards.BANS_PER_RUN or String(card.type) == "upgrade"
+		ban.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ban.pressed.connect(func(): _ban(i))
+		row.add_child(ban)
+		var keep := Button.new()
+		var is_kept: bool = Run.kept.any(func(k): return String(k.type) == String(card.type) and str(k.id) == str(card.id))
+		keep.text = "Gardée ✔" if is_kept else "Garder (%d)" % (Cards.LOCKS_PER_RUN - Run.locks_used)
+		keep.tooltip_text = "La carte revient au prochain choix, avec la même rareté, si tu en prends une autre maintenant."
+		keep.focus_mode = Control.FOCUS_NONE
+		keep.add_theme_font_size_override("font_size", 13)
+		keep.disabled = is_kept or Run.locks_used >= Cards.LOCKS_PER_RUN
+		keep.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		keep.pressed.connect(func():
+			if Run.keep_card(card):
+				_show_cards(_cards))
+		row.add_child(keep)
 	return b
+
+
+func _ban(i: int) -> void:
+	var rep := Run.ban_card(_cards[i], _cards)
+	if rep.is_empty():
+		_cards.remove_at(i)
+	else:
+		_cards[i] = rep
+	_show_cards(_cards)
+	_opened_at -= CONFIRM_DELAY_MS
 
 
 func _process(_delta: float) -> void:
@@ -274,6 +310,8 @@ func _confirm_choice() -> void:
 		return
 	var card: Dictionary = _cards[_selected]
 	_selected = -1
+	# carte gardée puis prise maintenant : elle ne revient pas
+	Run.kept = Run.kept.filter(func(k): return not (String(k.type) == String(card.type) and str(k.id) == str(card.id)))
 	Run.apply_card(card)
 	picked.emit(card)
 	_show_next()

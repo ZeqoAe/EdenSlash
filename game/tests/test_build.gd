@@ -22,6 +22,7 @@ func _ready() -> void:
 	Run.start("samurai")
 	_test_sets()
 	_test_cards()
+	_test_ban_keep()
 	await _test_world()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit(1 if fails > 0 else 0)
@@ -60,6 +61,8 @@ func _test_cards() -> void:
 			ids[str(c.id)] = c
 	check("cartes de build proposées", ids.has("static_blade") and ids.has("wide_arc"))
 	check("évolution absente sans prérequis", not ids.has("storm_lord"))
+	check("carte verrouillée (méta-progression) : 2 boss pour Seigneur de la tempête", not Cards.card_unlocked("storm_lord") and Cards.card_unlocked("wide_arc"))
+	Profile.unlocked_cards.append("storm_lord")
 	Run.apply_card(_common_card("static_blade"))
 	var found := false
 	for i in 300:
@@ -264,6 +267,22 @@ func _test_card_tiers() -> void:
 	Run.passives.clear()
 	Run.passive_power.clear()
 	player.recalc_stats()
+
+
+## Bannir et garder des cartes pendant le choix.
+func _test_ban_keep() -> void:
+	Run.banned.clear()
+	Run.kept.clear()
+	Run.bans_used = 0
+	Run.locks_used = 0
+	var shown: Array = [Run._describe_card({"type": "passive", "id": "sharpened"})]
+	var rep := Run.ban_card(shown[0], shown)
+	check("bannir : carte remplacée, plus jamais proposée", not rep.is_empty() and str(rep.id) != "sharpened"
+		and range(100).all(func(_i): return Run.roll_cards(3).all(func(x): return str(x.id) != "sharpened")))
+	var k := Run._describe_card({"type": "passive", "id": "long_reach"})
+	k["tier"] = "epic"
+	check("garder : la carte revient au choix suivant avec sa rareté", Run.keep_card(k) and Run.roll_cards(3).any(func(x): return str(x.id) == "long_reach" and String(x.tier) == "epic"))
+	Run.banned.clear()
 
 
 ## Carte de passif tirée en rareté commune (puissance +1), pour des tests déterministes.

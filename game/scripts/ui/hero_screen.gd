@@ -14,11 +14,12 @@ extends CanvasLayer
 signal closed
 
 const SECTIONS := [["equipment", "Équipement", "equipment"], ["talents", "Talents", "expertise"],
-	["appearance", "Apparence", "jewel"], ["grimoire", "Grimoire", "grimoire"], ["class", "Classe", "class"]]
+	["appearance", "Apparence", "jewel"], ["cards", "Cartes", "stats"], ["grimoire", "Grimoire", "grimoire"], ["class", "Classe", "class"]]
 
 var page: InventoryPage
 var talents: TalentsPage
 var appearance: HeroPages.AppearancePage
+var cards: HeroPages.CardsPage
 var help: InfoPage
 var grimoire: Grimoire
 var back_text := "Retour au menu"
@@ -92,8 +93,9 @@ func _ready() -> void:
 	talents = TalentsPage.new()
 	talents.class_bar = false
 	appearance = HeroPages.AppearancePage.new()
+	cards = HeroPages.CardsPage.new()
 	help = InfoPage.new()
-	for k in [["equipment", page], ["talents", talents], ["appearance", appearance], ["help", help]]:
+	for k in [["equipment", page], ["talents", talents], ["appearance", appearance], ["cards", cards], ["help", help]]:
 		var p: Control = k[1]
 		p.set_anchors_preset(Control.PRESET_FULL_RECT)
 		p.visible = false
@@ -293,6 +295,7 @@ func refresh() -> void:
 	_subtitle.text = {"equipment": "Équipement, coffre commun et statistiques de la classe.",
 		"talents": "Talents de classe, parcours de maîtrise et certificats (7 au plus).",
 		"appearance": "Tenue, tête, dos, auras et apparence de l'arme portée.",
+		"cards": "Cartes de build : celles qui sont débloquées, et l'exploit qui débloque les autres.",
 		"help": "Comment chaque statistique est calculée."}.get(current, "")
 	var p: Control = _pages.get(current)
 	if p and p.has_method("refresh"):

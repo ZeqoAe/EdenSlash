@@ -47,6 +47,7 @@ var archive := {}  # entrée de l'archive ("katana:4", "set:storm"...) -> copie 
 var skins := {}  # type d'arme -> code du modèle choisi (apparence débloquée par l'archive)
 var outfits := {}  # classe -> tenue portée (skin cosmétique, .glb de assets/player/outfits)
 var owned_outfits: Array = []
+var unlocked_cards: Array = []  # cartes débloquées à la main (mode dev) ; les autres par leurs exploits
 ## Trésors de collection obtenus (ids des entrées de l'archive d'Eden hors équipement).
 var collection: Array = []
 var worn := {}  # classe -> {"head": .glb, "back": .glb} : accessoires cosmétiques portés  # cosmétiques d'Eden débloqués (identifiants de data/eden_items.json -> cosmetics)
@@ -123,7 +124,7 @@ func load_profile() -> void:
 		# ancienne sauvegarde : les classes déjà jouées restent débloquées
 		unlocked_classes = []
 		for cid in [String(d.get("selected_class", ""))] + (d.get("expertise", {}) as Dictionary).keys() + (d.get("presets", {}) as Dictionary).keys():
-			if cid != "" and cid != Progression.START_CLASS and not cid in unlocked_classes:
+			if cid != "" and not cid in Progression.START_CLASSES and not cid in unlocked_classes:
 				unlocked_classes.append(cid)
 	cert_board = d.get("cert_board", [])
 	if cert_board.size() != CertBoard.POS.size():
@@ -148,6 +149,7 @@ func load_profile() -> void:
 	skins = d.get("skins", {})
 	outfits = d.get("outfits", {})
 	owned_outfits = d.get("owned_outfits", [])
+	unlocked_cards = d.get("unlocked_cards", [])
 	collection = (d.get("collection", []) as Array).map(func(x): return str(int(x)) if typeof(x) == TYPE_FLOAT else String(x))
 	worn = d.get("worn", {})
 	materials = {"crystal": int(d.get("crystals", 0))}
@@ -224,7 +226,7 @@ func save_profile() -> void:
 		"crystals": int(materials.get("crystal", 0)), "reward_chests": reward_chests,
 		"expertise": expertise, "talents": talents, "certificates": certificates, "stash": stash,
 		"unlocked_classes": unlocked_classes, "records": records, "cert_board": cert_board,
-		"archive": archive, "skins": skins, "outfits": outfits, "owned_outfits": owned_outfits, "collection": collection, "worn": worn, "dev": dev, "saved_at": Time.get_datetime_string_from_system(false, true),
+		"archive": archive, "skins": skins, "outfits": outfits, "owned_outfits": owned_outfits, "unlocked_cards": unlocked_cards, "collection": collection, "worn": worn, "dev": dev, "saved_at": Time.get_datetime_string_from_system(false, true),
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(d))
@@ -548,6 +550,7 @@ func _clear() -> void:
 	skins = {}
 	outfits = {}
 	owned_outfits = []
+	unlocked_cards = []
 	collection = []
 	worn = {}
 	stash = {}
@@ -578,6 +581,7 @@ func reset_all() -> void:
 	skins = {}
 	outfits = {}
 	owned_outfits = []
+	unlocked_cards = []
 	collection = []
 	worn = {}
 	stash = {}

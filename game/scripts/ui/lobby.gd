@@ -17,7 +17,7 @@ const MENU := [
 	["settings", "Paramètres", "settings"], ["quit", "Quitter", "quit"],
 ]
 ## Arguments de test qui ouvrent un écran au démarrage (captures, tests).
-const SCREEN_ARGS := ["--grimoire", "--talents", "--info", "--inventory", "--appearance", "--chests"]
+const SCREEN_ARGS := ["--grimoire", "--talents", "--info", "--inventory", "--appearance", "--chests", "--cards"]
 
 var backdrop: MapBackdrop
 var _hero: HeroScreen
@@ -105,6 +105,8 @@ func _ready() -> void:
 			_open_hero("help")
 		"inventory":
 			_open_hero("equipment")
+		"cards":
+			_open_hero("cards")
 		"appearance":
 			# test : catégorie de l'apparence (--appearance=aura, --appearance=weapon...)
 			if _open_screen.contains("="):
