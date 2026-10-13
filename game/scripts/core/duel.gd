@@ -25,7 +25,7 @@ static var round_n := 1
 ## niveau ou copie du tien, ses 4 sorts (0 : choisi par l'IA), multiplicateurs de PV et de dégâts.
 const GEAR_MODES := ["Généré à ton niveau", "Copie de ton équipement"]
 static var gear_mode := 1
-static var rival_spells: Array = [0, 0, 0, 0]
+static var rival_spells: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 12 : voir grid12
 static var hp_mult := 1.0
 ## IA de l'adversaire : "" = script de l'entraînement (ClassRival, difficulté ci-dessus), sinon
 ## un cerveau entraîné (MlDuelPilot.BRAINS : debutant … hardcore, actuel) qui pilote un héros.
@@ -34,6 +34,61 @@ static var pilot := ""
 ## Adversaire créé dans l'éditeur (RivalBuilds) : {} pour la préparation rapide ci-dessus.
 static var rival_build: Dictionary = {}
 static var atk_mult := 1.0
+
+
+## Sorts de l'adversaire : 12 emplacements, 3 par case (sort principal puis ses 2
+## enchaînements) : indice case × 3 + rang ; 0 = choix par défaut (ceux de la classe dans
+## l'ordre). Les anciens réglages à 4 sorts deviennent les sorts principaux des 4 cases.
+const SPELL_SLOTS := 12
+
+
+static func grid12(a: Array) -> Array:
+	var out: Array = []
+	out.resize(SPELL_SLOTS)
+	out.fill(0)
+	if a.size() == 4:
+		for c in 4:
+			out[c * 3] = int(a[c])
+	else:
+		for i in mini(a.size(), SPELL_SLOTS):
+			out[i] = int(a[i])
+	return out
+
+
+## Jeu de sorts d'un héros ennemi (cerveau d'IA) d'après la grille : chaque case prend son sort
+## principal et ses enchaînements choisis, sinon ceux de la classe dans l'ordre.
+static func kit_from_grid(cid: String, grid: Array) -> Dictionary:
+	var g := grid12(grid)
+	var base := MlDuelPilot.kit_for(cid)
+	var skills: Array = []
+	var chains := {}
+	for c in 4:
+		var main := int(g[c * 3])
+		if main == 0 and c < base.skills.size():
+			main = int(base.skills[c].id)
+		if main == 0:
+			continue
+		skills.append({"id": main, "rank": 1})
+		var ch: Array = []
+		for r in [1, 2]:
+			if int(g[c * 3 + r]) != 0:
+				ch.append({"id": int(g[c * 3 + r]), "rank": 1})
+		if ch.is_empty():
+			ch = base.chains.get(c, [])
+		if not ch.is_empty():
+			chains[skills.size() - 1] = ch
+	return {"skills": skills, "chains": chains}
+
+
+## Sorts choisis pour l'adversaire scripté (ses attaques ; les renforcements et soins ne
+## servent qu'au héros piloté par un cerveau d'IA).
+static func scripted_spells(cid: String, grid: Array) -> Array:
+	var picked: Array = []
+	for id in grid12(grid):
+		for s in spell_choices(cid):
+			if int(s.id) == int(id) and not picked.has(s):
+				picked.append(s)
+	return picked
 
 
 ## Sorts que l'adversaire peut utiliser (ceux de sa classe, hors renforcements et soins).
@@ -133,11 +188,7 @@ static func make_rival(lv := -1) -> ClassRival:
 	r.hp = r.max_hp
 	r.atk *= atk_mult
 	# sorts choisis (sinon les 4 premiers de sa classe)
-	var picked: Array = []
-	for id in rival_spells:
-		for s in spell_choices(rival_class):
-			if int(s.id) == int(id) and not picked.has(s):
-				picked.append(s)
+	var picked := scripted_spells(rival_class, rival_spells)
 	if not picked.is_empty():
 		r._skills = picked
 	r.display_name = "<Duel> %s · %s" % [GameData.class_data(rival_class).get("name_fr", rival_class), String(ClassRival.NAMES[difficulty]).to_lower()]

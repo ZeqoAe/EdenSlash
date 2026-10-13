@@ -43,37 +43,9 @@ static func open(anchor: Node, on_close: Callable) -> CanvasLayer:
 		refresh.call())
 	gm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	g.add_child(gm)
-	# sorts
-	var choices := Duel.spell_choices(Duel.rival_class)
-	var sg := GridContainer.new()
-	sg.columns = 2
-	sg.add_theme_constant_override("h_separation", 10)
-	sg.add_theme_constant_override("v_separation", 6)
-	v.add_child(sg)
-	for i in 4:
-		var row := HBoxContainer.new()
-		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		sg.add_child(row)
-		var l := Hud._label(row, "Sort %d" % (i + 1), 14, UiTheme.TEXT)
-		l.custom_minimum_size = Vector2(70, 0)
-		var ob := OptionButton.new()
-		ob.focus_mode = Control.FOCUS_NONE
-		ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		ob.custom_minimum_size = Vector2(300, 0)
-		ob.add_item("Choix de l'IA")
-		var sel := 0
-		for j in choices.size():
-			ob.add_item(String(choices[j].name))
-			ob.set_item_icon(j + 1, UiTheme.texture(String(choices[j].get("icon", ""))))
-			if int(choices[j].id) == int(Duel.rival_spells[i]):
-				sel = j + 1
-		ob.add_theme_constant_override("icon_max_width", 22)
-		ob.select(sel)
-		var slot := i
-		ob.item_selected.connect(func(k):
-			Duel.rival_spells[slot] = int(choices[k - 1].id) if k > 0 else 0
-			refresh.call())
-		row.add_child(ob)
+	# sorts : 4 cases × 3 (principal, 2 enchaînements)
+	Duel.rival_spells = Duel.grid12(Duel.rival_spells)
+	spell_grid(v, Duel.rival_class, Duel.rival_spells, func(): refresh.call())
 	# multiplicateurs
 	var m := _row(v, "PV ×")
 	var hp := _spin(m, Duel.hp_mult)
@@ -95,7 +67,7 @@ static func open(anchor: Node, on_close: Callable) -> CanvasLayer:
 	var reset := MenuWidgets.glass_button("Par défaut", 15, Vector2(160, 42))
 	reset.pressed.connect(func():
 		Duel.gear_mode = 1
-		Duel.rival_spells = [0, 0, 0, 0]
+		Duel.rival_spells = Duel.grid12([])
 		Duel.hp_mult = 1.0
 		Duel.atk_mult = 1.0
 		layer.queue_free()
@@ -110,6 +82,50 @@ static func open(anchor: Node, on_close: Callable) -> CanvasLayer:
 	refresh.call()
 	anchor.get_tree().current_scene.add_child(layer)
 	return layer
+
+
+## Grille des 12 sorts (4 cases × principal et 2 enchaînements) : [param grid] (12 ids, 0 :
+## par défaut) est modifiée sur place ; [param on_change] après chaque choix.
+static func spell_grid(parent: Control, cid: String, grid: Array, on_change: Callable) -> void:
+	var all: Array = GameData.class_data(cid).get("skills", [])
+	var g := GridContainer.new()
+	g.columns = 5
+	g.add_theme_constant_override("h_separation", 6)
+	g.add_theme_constant_override("v_separation", 4)
+	parent.add_child(g)
+	g.add_child(Control.new())
+	for c in 4:
+		var h := Hud._label(g, "Case %d" % (c + 1), 14, UiTheme.GOLD)
+		h.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var rows := ["Principal", "Enchaîn. 1", "Enchaîn. 2"]
+	for r in 3:
+		var l := Hud._label(g, String(rows[r]), 13, UiTheme.TEXT)
+		l.custom_minimum_size = Vector2(76, 0)
+		for c in 4:
+			var idx := c * 3 + r
+			var ob := OptionButton.new()
+			ob.focus_mode = Control.FOCUS_NONE
+			ob.custom_minimum_size = Vector2(80, 0)
+			ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			ob.clip_text = true
+			ob.fit_to_longest_item = false
+			ob.add_item("Auto")
+			var sel := 0
+			for j in all.size():
+				var kind := String(all[j].get("kind", ""))
+				ob.add_item(String(all[j].name) + (" (IA cerveau)" if kind in ["buff", "heal"] else ""))
+				ob.set_item_icon(j + 1, UiTheme.texture(String(all[j].get("icon", ""))))
+				if int(all[j].id) == int(grid[idx]):
+					sel = j + 1
+			ob.add_theme_constant_override("icon_max_width", 20)
+			ob.select(sel)
+			ob.tooltip_text = String(all[sel - 1].name) if sel > 0 else "Auto : le sort de la classe à cette place"
+			ob.item_selected.connect(func(k):
+				grid[idx] = int(all[k - 1].id) if k > 0 else 0
+				ob.tooltip_text = String(all[k - 1].name) if k > 0 else "Auto"
+				on_change.call())
+			g.add_child(ob)
+	Hud._label(parent, "Les renforcements et soins (IA cerveau) ne servent qu'à l'adversaire piloté par un cerveau d'IA ; l'IA scriptée lance ses sorts d'attaque.", 12, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 
 static func _row(parent: Control, label: String) -> HBoxContainer:

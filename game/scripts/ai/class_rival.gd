@@ -115,11 +115,7 @@ func apply_build(b: Dictionary, lv: int) -> void:
 	look = b.get("look", {})
 	var w: Dictionary = RivalBuilds.items(b, lv).get("weapon", {})
 	weapon_code = String(w.get("weapon", ""))
-	var picked: Array = []
-	for id in b.get("spells", []):
-		for s in cls.get("skills", []):
-			if int(s.id) == int(id) and String(s.kind) != "buff" and String(s.kind) != "heal" and not picked.has(s):
-				picked.append(s)
+	var picked := Duel.scripted_spells(cid, b.get("spells", []))
 	if not picked.is_empty():
 		_skills = picked
 	display_name = "<Duel> %s" % String(b.get("name", cls.get("name_fr", cid)))

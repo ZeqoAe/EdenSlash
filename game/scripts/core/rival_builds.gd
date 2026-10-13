@@ -63,7 +63,7 @@ static func remove(name: String) -> void:
 
 static func blank(cid: String) -> Dictionary:
 	return {"name": "Adversaire %d" % (list().size() + 1), "class": cid, "gear": {}, "look": {}, "certs": [],
-		"spells": [0, 0, 0, 0], "hp_mult": 1.0, "atk_mult": 1.0}
+		"spells": Duel.grid12([]), "hp_mult": 1.0, "atk_mult": 1.0}
 
 
 ## Objets de l'adversaire au niveau [param level] : emplacement -> objet (comme ceux d'un héros).

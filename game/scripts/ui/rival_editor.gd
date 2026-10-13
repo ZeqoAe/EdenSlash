@@ -107,7 +107,7 @@ func _ready() -> void:
 	_class_btn = MenuWidgets.glass_button("", 16, Vector2(0, 42))
 	_class_btn.pressed.connect(func(): HeroPages.class_menu(_class_btn, String(build["class"]), func(c):
 		build["class"] = c
-		build["spells"] = [0, 0, 0, 0]
+		build["spells"] = Duel.grid12([])
 		_refresh_all()))
 	left.add_child(_class_btn)
 	_preview = EquipmentPage.HeroPreview.new()
@@ -318,27 +318,9 @@ func _refresh_right() -> void:
 	for c in _right.get_children():
 		c.queue_free()
 	var cid := String(build.get("class", "warrior"))
-	_section(_right, "Sorts")
-	var choices := Duel.spell_choices(cid)
-	if not build.has("spells"):
-		build["spells"] = [0, 0, 0, 0]
-	for i in 4:
-		var ob := OptionButton.new()
-		ob.focus_mode = Control.FOCUS_NONE
-		ob.add_item("Sort %d : choix de l'IA" % (i + 1))
-		var sel := 0
-		for j in choices.size():
-			ob.add_item(String(choices[j].name))
-			ob.set_item_icon(j + 1, UiTheme.texture(String(choices[j].get("icon", ""))))
-			if int(choices[j].id) == int(build.spells[i]):
-				sel = j + 1
-		ob.add_theme_constant_override("icon_max_width", 22)
-		ob.select(sel)
-		var slot := i
-		ob.item_selected.connect(func(k):
-			build.spells[slot] = int(choices[k - 1].id) if k > 0 else 0
-			_refresh_stats())
-		_right.add_child(ob)
+	_section(_right, "Sorts (4 cases × principal et 2 enchaînements)")
+	build["spells"] = Duel.grid12(build.get("spells", []))
+	DuelPrep.spell_grid(_right, cid, build.spells, _refresh_stats)
 	_section(_right, "Apparence")
 	if not build.has("look"):
 		build["look"] = {}

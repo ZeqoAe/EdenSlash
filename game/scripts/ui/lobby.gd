@@ -249,7 +249,7 @@ func _menu_duel() -> void:
 	ob.pressed.connect(func(): HeroPages.class_menu(ob, _duel_opp, func(c):
 		_duel_opp = c
 		Duel.rival_build = {}
-		Duel.rival_spells = [0, 0, 0, 0]
+		Duel.rival_spells = Duel.grid12([])
 		_show_menu("duel")))
 	opp.add_child(ob)
 	var dd := OptionButton.new()

@@ -82,7 +82,7 @@ func _spawn_brain_foe() -> bool:
 	h.foe = true
 	h.class_id = Duel.rival_class
 	h.level = Duel.level
-	var kit := MlDuelPilot.kit_for(Duel.rival_class)
+	var kit := Duel.kit_from_grid(Duel.rival_class, b.get("spells", []) if not b.is_empty() else Duel.rival_spells)
 	h.kit_skills = kit.skills
 	h.kit_chains = kit.chains
 	if not b.is_empty():

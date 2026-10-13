@@ -27,6 +27,7 @@ func _ready() -> void:
 	_test_spell_presets()
 	_test_forge_lobby()
 	_test_dev_unlimited()
+	_test_rival_spells()
 	await _test_world()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit(1 if fails > 0 else 0)
@@ -223,6 +224,28 @@ func _dummy(dist: float, side := 0.0, hp := 1e7) -> Monster:
 
 
 ## Cartes à rareté, 10 niveaux, totaux cumulés, sorts améliorés, orbes d'expérience.
+## Duel : 12 sorts de l'adversaire (4 cases × principal et 2 enchaînements).
+func _test_rival_spells() -> void:
+	var cid := "magician"
+	var all: Array = GameData.class_data(cid).get("skills", [])
+	if all.size() < 12:
+		return
+	var grid := Duel.grid12([])
+	grid[0] = int(all[11].id)  # case 1 : le 12e sort en principal
+	grid[1] = int(all[10].id)  # puis le 11e en enchaînement
+	grid[5] = int(all[9].id)  # case 2, 2e enchaînement
+	var kit := Duel.kit_from_grid(cid, grid)
+	var ok_kit: bool = kit.skills.size() == 4 and int(kit.skills[0].id) == int(all[11].id) and int(kit.chains[0][0].id) == int(all[10].id) \
+		and kit.chains[1].size() == 1 and int(kit.chains[1][0].id) == int(all[9].id)
+	var full := Duel.grid12([])
+	for i in 12:
+		full[i] = int(all[i].id)
+	var scripted := Duel.scripted_spells(cid, full)
+	var old := Duel.grid12([int(all[3].id), 0, 0, 0])
+	check("duel : 12 sorts de l'adversaire (cerveau %s, scripté %d sorts, ancien réglage à 4 sorts lu)" % [ok_kit, scripted.size()],
+		ok_kit and scripted.size() > 4 and int(old[0]) == int(all[3].id) and old.size() == 12)
+
+
 ## Mode dev : ressources illimitées, puis rendues telles qu'avant.
 func _test_dev_unlimited() -> void:
 	var dev_was := bool(Settings.get_v("interface", "dev_mode"))
