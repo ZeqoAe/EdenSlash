@@ -27,8 +27,9 @@ var _launching := false
 var _open_screen := ""  # test : écran ouvert au démarrage (--inventory, --talents, --appearance, --archive=0...)
 var _settings: SettingsMenu
 var _menu := {}  # identifiant -> MenuWidgets.SideButton
-var _current := "play"  # sous-menu affiché
+var _current := ""  # sous-menu affiché ("" : aucun, le panneau est caché)
 var _sub: VBoxContainer
+var _sub_panel: PanelContainer
 var _badge_icon: TextureRect
 var _badge_name: Label
 var _badge_sub: Label
@@ -252,7 +253,9 @@ func _build_ui() -> void:
 	sp.add_theme_stylebox_override("panel", MenuWidgets.glass(14))
 	sp.position = Vector2(372, 196)
 	sp.custom_minimum_size = Vector2(450, 0)
+	sp.visible = false
 	root.add_child(sp)
+	_sub_panel = sp
 	_sub = VBoxContainer.new()
 	_sub.add_theme_constant_override("separation", 10)
 	sp.add_child(_sub)
@@ -264,7 +267,13 @@ func _build_ui() -> void:
 	badge.offset_right = -28
 	badge.offset_top = 24
 	badge.offset_bottom = 104
+	badge.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	badge.tooltip_text = "Changer de classe"
 	root.add_child(badge)
+	# clic : menu compact des classes par famille (comme dans l'écran Héros)
+	badge.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			HeroPages.class_menu(badge, Profile.selected_class, _select_class))
 	var bh := HBoxContainer.new()
 	bh.add_theme_constant_override("separation", 14)
 	badge.add_child(bh)
@@ -397,11 +406,14 @@ func _on_menu(id: String) -> void:
 		"settings":
 			_settings.open()
 		_:
-			_show_menu(id)
+			# Jouer, Quitter : le panneau s'ouvre au clic et se referme au second clic
+			_show_menu("" if id == _current else id)
 
 
 func _show_menu(id: String) -> void:
 	_current = id
+	if _sub_panel:
+		_sub_panel.visible = id != ""
 	for k in _menu:
 		_menu[k].selected = k == ("play" if id == "zones" else id)
 	for c in _sub.get_children():
@@ -547,7 +559,7 @@ func _refresh_ui() -> void:
 	var cid := Profile.selected_class
 	var cd := GameData.class_data(cid)
 	_badge_icon.texture = UiTheme.texture(String(cd.get("icon", "")))
-	_badge_name.text = String(cd.get("name_fr", cid))
+	_badge_name.text = String(cd.get("name_fr", cid)) + "  ▾"
 	var w: Dictionary = Profile.equipped.get("weapon", {})
 	_badge_sub.text = "Maîtrise niv. %d · %s" % [Profile.expertise_level(cid), GameData.weapon_type(Items.weapon_type_of(w)).get("name", "") if not w.is_empty() else "sans arme"]
 	var zone := GameData.zone(Profile.selected_zone)
