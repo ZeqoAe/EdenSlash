@@ -399,7 +399,7 @@ func _build_action_bar(root: Control) -> void:
 	_dodge.tooltip_text = "Esquive (invulnérable)"
 	bottom.add_child(_dodge)
 	_combo = HudWidgets.ComboMeter.new()
-	_combo.position = Vector2(300, 78)
+	_combo.position = Vector2(300, 46)  # au-dessus des barres d'enchaînement des cases
 	_combo.size = Vector2(300, 26)
 	bottom.add_child(_combo)
 	_buff_row = HudWidgets.StatusRow.new(true)
@@ -422,10 +422,13 @@ func _refresh_skills() -> void:
 		slot.empty = s.is_empty()
 		slot.icon = null if s.is_empty() else UiTheme.texture(String(s.icon))
 		slot.rank = Run.skill_rank(int(s.id)) if not s.is_empty() else 1
+		slot.chain_icons = Run.chain_of(i).map(func(e): return UiTheme.texture(String(Run.skill_def(int(e.id)).get("icon", ""))))
 		if s.is_empty():
 			slot.tooltip_text = "Emplacement libre : les compétences s'obtiennent avec les cartes de niveau."
 		else:
 			slot.tooltip_text = "%s — rang %d\n%s\nRecharge : %.1f s" % [s.name, slot.rank, s.desc, player.skill_cooldown(s)]
+			for j in Run.chain_of(i).size():
+				slot.tooltip_text += "\n%s Enchaînement %d : %s (0,45 s de blocage, puis rappuie pendant la barre au-dessus de la case)" % ["➜", j + 1, Run.skill_def(int(Run.chain_of(i)[j].id)).get("name", "?")]
 	_dodge.key_text = Settings.action_label("dodge", 1)
 
 
@@ -447,6 +450,28 @@ func _process(delta: float) -> void:
 	for i in 4:
 		var s := player.skill_in_slot(i)
 		_slots[i].set_cooldown(player.cooldown_left(i), player.skill_cooldown(s) if not s.is_empty() else 1.0)
+		# enchaînement : l'icône du sort suivant prend la place, petite recharge, puis la barre
+		var st := player.chain_state(i)
+		var ch: Array = Run.chain_of(i)
+		if st.is_empty():
+			_slots[i].chain_bar = -1.0
+			_slots[i].chain_ready = false
+			if not s.is_empty():
+				_slots[i].icon = UiTheme.texture(String(s.icon))
+			_slots[i].chain_icons = ch.map(func(e): return UiTheme.texture(String(Run.skill_def(int(e.id)).get("icon", ""))))
+		else:
+			_slots[i].icon = UiTheme.texture(String(st.next.get("icon", "")))
+			var at := ch.map(func(e): return int(e.id)).find(int(st.next.id))
+			_slots[i].chain_icons = ch.slice(at + 1).map(func(e): return UiTheme.texture(String(Run.skill_def(int(e.id)).get("icon", ""))))
+			_slots[i].chain_zone = Player.CHAIN_ZONE
+			if st.phase == "lock":
+				_slots[i].set_cooldown(float(st.left), Player.CHAIN_DELAY)
+				_slots[i].chain_bar = 0.0
+				_slots[i].chain_ready = false
+			else:
+				_slots[i].set_cooldown(0.0, 1.0)
+				_slots[i].chain_bar = float(st.p)
+				_slots[i].chain_ready = player.chain_ready(i)
 	var dc := player.dodge_cooldown()
 	_dodge.set_cooldown(dc.x, dc.y)
 	var cs := player.combo_state()

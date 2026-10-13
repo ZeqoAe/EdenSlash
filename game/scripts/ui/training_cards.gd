@@ -13,6 +13,7 @@ var _grid: GridContainer
 var _search: LineEdit
 var _filter: OptionButton
 var _count: Label
+var _shown: Array = []  # cartes affichées (bouton Tout au max)
 
 
 func _init(p: Player) -> void:
@@ -57,6 +58,13 @@ func _ready() -> void:
 	_filter.focus_mode = Control.FOCUS_NONE
 	_filter.item_selected.connect(func(_i): refresh())
 	top.add_child(_filter)
+	_btn(top, "Tout au max", func():
+		# toutes les cartes affichées (filtre et recherche) au niveau maximal
+		for c in _shown:
+			if not c.get("instant", false):
+				Run.passives[c.id] = mini(int(c.get("max", 1)), Cards.MAX_LEVEL)
+				Run.passive_power[c.id] = float(Run.passives[c.id])
+		_changed())
 	_btn(top, "Tout retirer", func():
 		Run.passives.clear()
 		Run.passive_power.clear()
@@ -130,6 +138,7 @@ func refresh() -> void:
 	var f := _filter.selected
 	var shown := 0
 	var taken := 0
+	_shown = []
 	for e in _entries():
 		var d: Dictionary = e[0]
 		var group := String(e[1])
@@ -141,6 +150,7 @@ func refresh() -> void:
 		if q != "" and not (String(d.name) + " " + String(d.get("desc", "")) + " " + _text_of(d)).to_lower().contains(q):
 			continue
 		_grid.add_child(_tile(d, group))
+		_shown.append(d)
 		shown += 1
 	_count.text = "%d cartes · %d prises" % [shown, taken]
 

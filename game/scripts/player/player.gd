@@ -23,6 +23,13 @@ const PERFECT_WINDOW := 0.28
 ## (l'impact se voit, moins de matraquage sur place) ; une esquive l'annule (sort, esquive,
 ## sort reste fluide).
 const SKILL_RECOVERY := 0.45
+## Enchaînement de sorts : blocage après l'appui (le même délai que la récupération d'un
+## sort : appuyer pendant ce temps ne lance rien et casse la chaîne), durée de la barre,
+## zone du bon timing (part de la barre) et bonus de dégâts du sort enchaîné.
+const CHAIN_DELAY := SKILL_RECOVERY
+const CHAIN_BAR := 3.0
+const CHAIN_ZONE := Vector2(0.0, 1.0)
+const CHAIN_BONUS := 0.2
 const AIR_SKILL_BONUS := 0.1
 const EVASION_CHANCE := 0.4  # statut « Évasion » (fumigène du voleur)
 
@@ -465,6 +472,8 @@ func _update_idle(input_dir: Vector3, delta: float) -> void:
 
 ## Compétence demandée au clavier (prête), sinon compétence automatique.
 func _try_skill_input() -> bool:
+	if _chain_input() != 0:
+		return true  # touche d'une case en enchaînement (réussi ou raté)
 	if _time < _skill_lock_until:
 		return false
 	for i in 4:
@@ -784,6 +793,9 @@ func _update_action(input_dir: Vector3, delta: float) -> void:
 	while not _hits.is_empty() and _state_time >= _hits[0]:
 		_hits.pop_front()
 		_resolve_hit()
+	# enchaînement : la touche de la case pendant l'action (barre du bon timing)
+	if _chain_input() == 2:
+		return
 	# l'esquive annule toute action (une compétence pas encore sortie est perdue) ;
 	# juste après l'impact d'une compétence : annulation parfaite
 	if _wants("dodge"):
@@ -1184,6 +1196,90 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 	if s.is_empty() or cooldown_left(slot) > 0.0:
 		return
 	skill_ready_at[int(s.id)] = _time + skill_cooldown(s)
+	_cast_skill(s, slot, 0, forced_aim)
+	_chain_open(slot, 0)
+
+
+## Enchaînements en cours, un par case (indépendants : on peut ouvrir la chaîne de la case 1,
+## puis celle de la case 3, et les réussir dans l'ordre voulu) : case -> {next, t0 (appui)}.
+## Après l'appui : 0,45 s de blocage (l'icône du sort suivant est en recharge), puis une
+## barre de 3 s se remplit au-dessus de la case ; rappuyer dans la zone de la barre
+## lance le sort suivant. Trop tôt (blocage compris), trop tard ou barre écoulée : la chaîne
+## est cassée et la case reprend la recharge du premier sort.
+var _chain := {}
+
+
+func _chain_open(slot: int, next: int) -> void:
+	if next < Run.chain_of(slot).size():
+		_chain[slot] = {"next": next, "t0": _time}
+	else:
+		_chain.erase(slot)
+
+
+## État de l'enchaînement de la case : {next, phase ("lock" ou "bar"), left, p} ou {}.
+func chain_state(slot: int) -> Dictionary:
+	if not _chain.has(slot):
+		return {}
+	var c: Dictionary = _chain[slot]
+	var ch := Run.chain_of(slot)
+	if int(c.next) >= ch.size():
+		_chain.erase(slot)
+		return {}
+	var e := _time - float(c.t0)
+	if e >= CHAIN_DELAY + CHAIN_BAR:
+		_chain.erase(slot)  # barre écoulée : chaîne perdue
+		return {}
+	var d := Run.skill_def(int(ch[int(c.next)].id))
+	if e < CHAIN_DELAY:
+		return {"next": d, "phase": "lock", "left": CHAIN_DELAY - e, "p": 0.0}
+	return {"next": d, "phase": "bar", "left": 0.0, "p": (e - CHAIN_DELAY) / CHAIN_BAR}
+
+
+func chain_next(slot: int) -> Dictionary:
+	return chain_state(slot).get("next", {})
+
+
+## La barre est-elle dans la zone du bon timing ?
+func chain_ready(slot: int) -> bool:
+	var st := chain_state(slot)
+	return not st.is_empty() and st.phase == "bar" and float(st.p) >= CHAIN_ZONE.x and float(st.p) <= CHAIN_ZONE.y
+
+
+## Appui sur la touche d'une case en enchaînement : 0 pas d'enchaînement, 1 raté (chaîne
+## cassée), 2 sort suivant lancé.
+func _chain_press(slot: int) -> int:
+	var st := chain_state(slot)
+	if st.is_empty() or _time <= float(_chain[slot].t0):
+		return 0  # l'appui qui vient d'ouvrir la chaîne ne compte pas une 2e fois
+	if not chain_ready(slot):
+		var early: bool = st.phase == "lock" or float(st.p) < CHAIN_ZONE.x
+		_chain.erase(slot)
+		DamageNumber.spawn_text(self, "Trop tôt" if early else "Trop tard", Color(1.0, 0.6, 0.45))
+		return 1
+	var step := int(_chain[slot].next) + 1
+	var nxt: Dictionary = st.next
+	DamageNumber.spawn_text(self, "ENCHAÎNEMENT ×%d" % (step + 1), Color(0.6, 0.9, 1.0))
+	if autoplay:
+		print("[enchainement] case %d, sort %d : %s" % [slot + 1, step + 1, nxt.get("name", "?")])
+	_shake(0.35)
+	_cast_skill(nxt, slot, step)
+	_chain_open(slot, step)
+	return 2
+
+
+## Touche d'une case en enchaînement (pilote automatique : au milieu de la zone).
+func _chain_input() -> int:
+	for cs in _chain.keys():
+		var st := chain_state(int(cs))
+		if st.is_empty():
+			continue
+		var auto: bool = autoplay and not autoplay_idle and st.phase == "bar" and float(st.p) >= 0.35
+		if (not autoplay and _wants("skill_%d" % (int(cs) + 1))) or auto:
+			return _chain_press(int(cs))
+	return 0
+
+
+func _cast_skill(s: Dictionary, slot: int, step: int, forced_aim := Vector3.INF) -> void:
 	_break_stealth()
 	var aim := forced_aim if forced_aim != Vector3.INF else _skill_aim()
 	if aim == Vector3.INF:
@@ -1199,7 +1295,10 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 		"spread": float(s.get("spread", 0.0)), "heal": float(s.get("heal", 0.0)) * Run.skill_heal_mult(int(s.id)),
 		"crit_bonus": float(s.get("crit_bonus", 0.0)), "cleanse": s.get("cleanse", false),
 		"dmg_type": String(s.get("dmg_type", cls.get("dmg_type", "phys"))),
+		"slot": slot, "chain_step": step,
 	}
+	if step > 0:
+		action.mult *= 1.0 + CHAIN_BONUS
 	if s.kind == "ground":
 		# zone au sol à l'endroit visé, dans la limite de la portée
 		var to_aim := aim - global_position
@@ -1436,6 +1535,9 @@ func _update_dodge() -> void:
 	# saut sans délai pendant l'esquive (garde l'élan)
 	if _wants_pressed("jump") and can_jump():
 		_start_jump()
+		return
+	# enchaînement pendant l'esquive (sort, esquive, sort suivant)
+	if _chain_input() == 2:
 		return
 	# compétence dès la seconde moitié de l'esquive (esquive -> sort)
 	if _state_time >= DODGE_TIME * 0.45:

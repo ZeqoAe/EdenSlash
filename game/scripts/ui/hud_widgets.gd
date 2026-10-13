@@ -135,6 +135,10 @@ class SkillSlot extends Control:
 	var rank := 1
 	var auto := false
 	var round := false  # emplacement rond (esquive)
+	var chain_icons: Array = []  # sorts enchaînés de la case (icônes au-dessus)
+	var chain_ready := false  # timing parfait ouvert : la case brille
+	var chain_bar := -1.0  # barre du bon timing (0-1), -1 : cachée
+	var chain_zone := Vector2(0.55, 0.9)
 	var left := 0.0
 	var fraction := 0.0
 	var _flash := 0.0
@@ -190,6 +194,25 @@ class SkillSlot extends Control:
 			else:
 				draw_rect(rect.grow(2.0 * (1.0 - _flash)), Color(1, 0.95, 0.7, _flash), false, 3.0)
 				draw_rect(inner, Color(1, 0.95, 0.75, _flash * 0.35))
+		if chain_bar >= 0.0:
+			# barre du bon timing : zone dorée, remplissage bleu, curseur blanc
+			var br := Rect2(2.0, -15.0, size.x - 4.0, 10.0)
+			draw_rect(br.grow(1.5), Color(0.03, 0.02, 0.06, 0.95))
+			draw_rect(Rect2(br.position.x + br.size.x * chain_zone.x, br.position.y, br.size.x * (chain_zone.y - chain_zone.x), br.size.y), Color(1.0, 0.8, 0.3, 0.55))
+			draw_rect(Rect2(br.position, Vector2(br.size.x * clampf(chain_bar, 0.0, 1.0), br.size.y)), Color(0.45, 0.8, 1.0, 0.9) if not chain_ready else Color(0.6, 1.0, 0.6, 0.95))
+			var cx := br.position.x + br.size.x * clampf(chain_bar, 0.0, 1.0)
+			draw_line(Vector2(cx, br.position.y - 2.0), Vector2(cx, br.end.y + 2.0), Color.WHITE, 2.0)
+			draw_rect(br.grow(1.5), UiTheme.GOLD_DIM, false, 1.0)
+		var icons_y := -42.0 if chain_bar >= 0.0 else -24.0
+		for i in chain_icons.size():
+			var cr := Rect2(4.0 + i * 24.0, icons_y, 21.0, 21.0)
+			draw_rect(cr.grow(1.0), Color(0.05, 0.04, 0.09, 0.95))
+			if chain_icons[i]:
+				draw_texture_rect(chain_icons[i], cr, false)
+			draw_rect(cr.grow(1.0), Color(0.6, 0.9, 1.0, 0.9) if chain_ready and i == 0 else UiTheme.GOLD_DIM, false, 1.5)
+		if chain_ready:
+			var k := 0.6 + 0.4 * sin(Time.get_ticks_msec() * 0.025)
+			draw_rect(rect.grow(3.0), Color(0.55, 0.9, 1.0, k), false, 4.0)
 		if rank > 1 and not round:
 			for i in mini(rank - 1, 4):
 				HudWidgets.diamond(self, Vector2(size.x - 10.0 - i * 9.0, 10.0), 3.5, Color(0.6, 0.85, 1.0))

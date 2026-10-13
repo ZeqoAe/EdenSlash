@@ -258,6 +258,30 @@ func _test_card_tiers() -> void:
 	Run.passive_power.erase(pow_id)
 	if not had:
 		Run.skills = Run.skills.filter(func(x): return int(x.id) != int(sk0.id))
+	# enchaînements : cases pleines, les autres sorts se proposent en suite de case
+	var sk_saved: Array = Run.skills.duplicate(true)
+	var ch_saved: Dictionary = Run.chains.duplicate(true)
+	var cl: Array = Run.class_data().get("skills", [])
+	Run.skills = []
+	Run.chains = {}
+	for i in mini(4, cl.size()):
+		Run.skills.append({"id": int(cl[i].id), "rank": 1})
+	var saw_chain := false
+	var exp_saved: Dictionary = Profile.expertise.duplicate()
+	Profile.set_expertise_level(Run.class_id, Profile.EXPERTISE_MAX)
+	for i in 60:
+		for cc in Run.roll_cards(3):
+			if String(cc.type) == "chain":
+				saw_chain = true
+				Run.apply_card(cc)
+	check("cases pleines : cartes d'enchaînement, %d sorts en tout (12 au plus)" % Run.all_skills().size(), saw_chain and Run.all_skills().size() > 4 and Run.all_skills().size() <= 12 and Run.chains.values().all(func(x): return x.size() <= 2))
+	var first_chain: int = int(Run.chains.keys()[0]) if not Run.chains.is_empty() else 0
+	var cid0 := int(Run.chains.get(first_chain, [{"id": 0}])[0].id)
+	Run.remove_skill(int(Run.skills[first_chain].id))
+	check("sort principal retiré : ses enchaînements partent avec lui", Run.skill_entry(cid0).is_empty())
+	Run.skills = sk_saved
+	Run.chains = ch_saved
+	Profile.expertise = exp_saved
 	# butin plafonné au niveau du héros de la run (première zone)
 	var hl0 := Run.hero_level
 	var zid0 := Run.zone_id

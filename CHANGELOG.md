@@ -64,3 +64,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.53 | Entraînement : adversaire de classe (héros IA avec le combo de son arme, ses sorts annoncés en rouge, esquives ; 3 difficultés) | session locale |
 | 0.1.54 | Mode de jeu Action : héros de dos qui regarde le curseur, caméra qui tourne vers le curseur écarté du centre, zoom du plan rapproché à la vue large | session locale |
 | 0.1.55 | Adversaire de classe retravaillé : lit les coups du héros et esquive au dernier moment, annule ses coups (esquive, saut), punit les temps morts, se place hors de portée en tournant autour, vise où le héros va ; nouvelle difficulté Hardcore | session locale |
+| 0.1.56 | Enchaînements de sorts (session coupée terminée) : cases pleines, les autres sorts deviennent la suite d'une case (2 par case, 12 sorts) ; après l'appui, 0,45 s de blocage comme la récupération d'un sort (appuyer casse la chaîne), puis rappuyer pendant la barre lance le sort suivant (+20 %) | session locale |

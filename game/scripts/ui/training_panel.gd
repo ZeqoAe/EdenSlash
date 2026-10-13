@@ -46,6 +46,8 @@ func setup(p: Player, d: RunDirector) -> void:
 				Run.skills.append({"id": int(sk.id), "rank": 1})
 		player.recalc_stats()
 		_spawn_dummy()
+		if "--training-chains" in OS.get_cmdline_user_args():
+			_fill_all()
 		toggle()
 		for arg in OS.get_cmdline_user_args():
 			if arg.begins_with("--rival="):
@@ -220,7 +222,7 @@ func set_level(n: int) -> void:
 
 # --- sorts ------------------------------------------------------------------------------------
 func _build_skills() -> void:
-	_section("Sorts (4 au plus, tous débloqués)")
+	_section("Sorts : 4 cases et leurs enchaînements")
 	_skills_box = VBoxContainer.new()
 	_skills_box.add_theme_constant_override("separation", 3)
 	_box.add_child(_skills_box)
@@ -230,6 +232,16 @@ func _build_skills() -> void:
 func _refresh_skills() -> void:
 	for c in _skills_box.get_children():
 		c.queue_free()
+	Hud._label(_skills_box, "Case : sort principal (touche 1 à 4). Enchaînement : après l'appui, 0,45 s de blocage (appuyer casse la chaîne), puis une barre se remplit au-dessus de la case ; rappuie avant la fin pour le sort suivant (2 par case, 12 sorts en tout).", 12, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var r := HBoxContainer.new()
+	r.add_theme_constant_override("separation", 6)
+	_skills_box.add_child(r)
+	_button(r, "Remplir les 12 emplacements", _fill_all, 0).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_button(r, "Tout retirer", func():
+		Run.skills.clear()
+		Run.chains.clear()
+		player.recalc_stats()
+		_refresh_skills(), 110)
 	for s in Run.class_data().get("skills", []):
 		var sid := int(s.id)
 		var h := HBoxContainer.new()
@@ -240,40 +252,91 @@ func _refresh_skills() -> void:
 		ic.custom_minimum_size = Vector2(28, 28)
 		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		h.add_child(ic)
-		var c := CheckBox.new()
-		c.text = String(s.name)
-		c.clip_text = true
-		c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		c.focus_mode = Control.FOCUS_NONE
-		c.button_pressed = Run.skill_rank(sid) > 0
-		c.toggled.connect(func(on): _set_skill(sid, on))
-		h.add_child(c)
+		var l := Hud._label(h, String(s.name), 13, Color.WHITE if Run.skill_rank(sid) > 0 else UiTheme.MUTED)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.clip_text = true
+		var where := OptionButton.new()
+		where.focus_mode = Control.FOCUS_NONE
+		where.add_item("—")
+		for i in Run.MAX_SKILLS:
+			where.add_item("Case %d" % (i + 1))
+		for i in Run.MAX_SKILLS:
+			where.add_item("Case %d ➜ suite" % (i + 1))
+		where.select(_place_index(sid))
+		where.item_selected.connect(func(i): _place(sid, i))
+		h.add_child(where)
 		var rank := SpinBox.new()
 		rank.min_value = 1
 		rank.max_value = Run.MAX_RANK
 		rank.value = maxi(1, Run.skill_rank(sid))
-		rank.prefix = "rang"
-		rank.custom_minimum_size = Vector2(100, 0)
+		rank.prefix = "rg"
+		rank.custom_minimum_size = Vector2(80, 0)
 		rank.editable = Run.skill_rank(sid) > 0
 		rank.value_changed.connect(func(v):
-			for e in Run.skills:
-				if int(e.id) == sid:
-					e.rank = int(v)
-					e.erase("dmg")
-					e.erase("cd")
+			var e := Run.skill_entry(sid)
+			if not e.is_empty():
+				e.rank = int(v)
+				e.erase("dmg")
+				e.erase("cd")
 			player.recalc_stats())
 		h.add_child(rank)
 
 
-func _set_skill(sid: int, on: bool) -> void:
-	if on:
-		if Run.skills.size() >= Run.MAX_SKILLS:
-			_say("4 sorts au plus : décoche-en un d'abord.")
-			_refresh_skills()
-			return
-		Run.skills.append({"id": sid, "rank": 1})
-	else:
-		Run.skills = Run.skills.filter(func(e): return int(e.id) != sid)
+## Indice du menu « où » pour le sort : 0 aucun, 1-4 case, 5-8 enchaînement de la case.
+func _place_index(sid: int) -> int:
+	for i in Run.skills.size():
+		if int(Run.skills[i].id) == sid:
+			return i + 1
+	for k in Run.chains:
+		for e in Run.chains[k]:
+			if int(e.id) == sid:
+				return Run.MAX_SKILLS + 1 + int(k)
+	return 0
+
+
+func _place(sid: int, idx: int) -> void:
+	var rank := maxi(1, Run.skill_rank(sid))
+	Run.remove_skill(sid)
+	if idx >= 1 and idx <= Run.MAX_SKILLS:
+		var slot := idx - 1
+		if slot < Run.skills.size():
+			# la case est prise : le sort en place devient un sort libre
+			var old := int(Run.skills[slot].id)
+			Run.skills[slot] = {"id": sid, "rank": rank}
+			_say("Case %d : %s (remplace %s)." % [slot + 1, Run.skill_def(sid).name, Run.skill_def(old).name])
+		else:
+			Run.skills.append({"id": sid, "rank": rank})
+			if Run.skills.size() - 1 != slot:
+				_say("Case %d : les cases se remplissent dans l'ordre." % Run.skills.size())
+	elif idx > Run.MAX_SKILLS:
+		var slot := idx - Run.MAX_SKILLS - 1
+		if slot >= Run.skills.size():
+			_say("Mets d'abord un sort principal dans la case %d." % (slot + 1))
+		elif Run.chain_of(slot).size() >= Run.MAX_CHAIN:
+			_say("La case %d a déjà 2 enchaînements." % (slot + 1))
+		else:
+			var ch: Array = Run.chain_of(slot).duplicate()
+			ch.append({"id": sid, "rank": rank})
+			Run.chains[slot] = ch
+	player.recalc_stats()
+	_refresh_skills()
+
+
+## 4 sorts principaux puis 2 enchaînements par case, dans l'ordre de la classe.
+func _fill_all() -> void:
+	Run.skills.clear()
+	Run.chains.clear()
+	var list: Array = Run.class_data().get("skills", [])
+	for i in mini(list.size(), Run.MAX_SKILLS):
+		Run.skills.append({"id": int(list[i].id), "rank": 1})
+	var n := Run.MAX_SKILLS
+	for slot in Run.skills.size():
+		var ch: Array = []
+		while ch.size() < Run.MAX_CHAIN and n < list.size():
+			ch.append({"id": int(list[n].id), "rank": 1})
+			n += 1
+		if not ch.is_empty():
+			Run.chains[slot] = ch
 	player.recalc_stats()
 	_refresh_skills()
 

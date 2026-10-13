@@ -10,7 +10,11 @@ const MAX_RANK := 5
 
 var active := false
 var class_id := "samurai"
-var skills: Array = []  # [{id, rank}]
+var skills: Array = []  # [{id, rank}] : sort principal de chaque case (4 au plus)
+## Enchaînements : case -> [{id, rank}] (2 au plus) ; en timing parfait, juste après l'impact
+## du sort de la case, la même touche lance le sort suivant de la chaîne (12 sorts au total).
+var chains: Dictionary = {}
+const MAX_CHAIN := 2
 var passives: Dictionary = {}  # id -> nombre de cartes prises (niveau du passif)
 ## Compteur de dégâts cumulés : tous les dégâts infligés s'additionnent sans arrêt ; 3 s sans
 ## infliger de dégâts et il repart de zéro (record de la run et record absolu).
@@ -47,6 +51,7 @@ func start(cid: String) -> void:
 	active = true
 	class_id = cid
 	skills.clear()
+	chains.clear()
 	passives.clear()
 	passive_power.clear()
 	hero_level = 1
@@ -215,17 +220,47 @@ func passive_procs() -> Array:
 
 ## Compétence prise : {id, rank, dmg, cd, heal, dur, riders}.
 func skill_entry(id: int) -> Dictionary:
-	for s in skills:
+	for s in all_skills():
 		if int(s.id) == id:
 			return s
 	return {}
 
 
 func skill_rank(id: int) -> int:
-	for s in skills:
-		if int(s.id) == id:
-			return int(s.rank)
-	return 0
+	var s := skill_entry(id)
+	return int(s.rank) if not s.is_empty() else 0
+
+
+## Tous les sorts pris : principaux et enchaînements.
+func all_skills() -> Array:
+	var out: Array = skills.duplicate()
+	for k in chains:
+		out.append_array(chains[k])
+	return out
+
+
+## Enchaînement de la case [param slot] : [{id, rank}].
+func chain_of(slot: int) -> Array:
+	return chains.get(slot, [])
+
+
+## Retire le sort [param id] (principal : ses enchaînements partent avec lui et les cases
+## suivantes se décalent).
+func remove_skill(id: int) -> void:
+	for k in chains.keys():
+		chains[k] = (chains[k] as Array).filter(func(e): return int(e.id) != id)
+	for i in skills.size():
+		if int(skills[i].id) == id:
+			skills.remove_at(i)
+			var nc := {}
+			for k in chains:
+				if int(k) < i:
+					nc[int(k)] = chains[k]
+				elif int(k) > i:
+					nc[int(k) - 1] = chains[k]
+			chains = nc
+			break
+	changed.emit()
 
 
 ## Bonus de dégâts et de recharge apportés par les cartes d'amélioration de la compétence
@@ -309,13 +344,20 @@ func skill_talent(skill_id: int) -> Dictionary:
 ## Tire [param n] cartes différentes. [param skills_only] : choix de départ.
 func roll_cards(n := 3, skills_only := false) -> Array:
 	var pool: Array = []
-	var owned := skills.map(func(s): return int(s.id))
+	var owned := all_skills().map(func(s): return int(s.id))
 	if skills.size() < MAX_SKILLS:
 		for s in class_data().get("skills", []):
 			if not int(s.id) in owned and Progression.skill_unlocked(class_id, int(s.id)):
 				pool.append({"type": "skill", "id": int(s.id), "weight": 3.0 if skills.size() < 2 else 2.0})
+	elif not skills_only:
+		# cases pleines : les autres sorts de la classe deviennent des enchaînements
+		var room: Array = range(skills.size()).filter(func(i): return chain_of(i).size() < MAX_CHAIN)
+		if not room.is_empty():
+			for s in class_data().get("skills", []):
+				if not int(s.id) in owned and Progression.skill_unlocked(class_id, int(s.id)):
+					pool.append({"type": "chain", "id": int(s.id), "slot": int(room.pick_random()), "weight": 2.0})
 	if not skills_only:
-		for s in skills:
+		for s in all_skills():
 			if int(s.rank) < int(Cards.rules().max_rank):
 				pool.append({"type": "upgrade", "id": int(s.id), "weight": 1.5})
 		var boons := {}
@@ -338,7 +380,7 @@ func roll_cards(n := 3, skills_only := false) -> Array:
 		for d in Cards.class_cards(class_id):
 			if int(d.skill) in owned and int(passives.get(d.id, 0)) < int(d.max) and not String(d.id) in banned:
 				pool.append({"type": "passive", "id": d.id, "weight": 1.0 * float(Boons.RARITY[String(d.rarity)].weight)})
-	pool = pool.filter(func(c): return not (c.type == "skill" and str(c.id) in banned) \
+	pool = pool.filter(func(c): return not (c.type in ["skill", "chain"] and str(c.id) in banned) \
 		and not kept.any(func(k): return String(k.type) == String(c.type) and str(k.id) == str(c.id)))
 	var picks: Array = []
 	# cartes gardées au choix précédent : proposées d'abord, avec leur rareté
@@ -374,6 +416,15 @@ func _describe_card(c: Dictionary) -> Dictionary:
 			var s := skill_def(int(c.id))
 			return {"type": "skill", "id": c.id, "title": s.name, "subtitle": "Nouvelle compétence",
 				"desc": "%s\nRecharge : %d s" % [s.desc, int(s.cooldown)], "icon": s.icon}
+		"chain":
+			var s := skill_def(int(c.id))
+			var slot := int(c.slot)
+			var first := skill_def(int(skills[slot].id)) if slot < skills.size() else {}
+			var step := chain_of(slot).size() + 2
+			return {"type": "chain", "id": c.id, "slot": slot, "title": "Enchaînement : %s" % s.name,
+				"subtitle": "Case %d · %de sort de la chaîne" % [slot + 1, step],
+				"desc": "%s\n[color=#9fd0ff]Après « %s »%s (touche de la case %d), l'icône de ce sort reste 0,45 s en recharge, puis une barre se remplit au-dessus de la case : rappuie avant qu'elle soit pleine et ce sort part aussitôt, +20 %% de dégâts. Appuyer pendant les 0,45 s ne lance rien et casse la chaîne, comme laisser la barre se vider.[/color]" % [
+					s.desc, first.get("name", "?"), "" if step == 2 else " et le sort suivant", slot + 1], "icon": s.icon}
 		"upgrade":
 			var s := skill_def(int(c.id))
 			var rank := skill_rank(int(c.id)) + 1
@@ -415,8 +466,14 @@ func apply_card(card: Dictionary) -> void:
 		"skill":
 			if skills.size() < MAX_SKILLS:
 				skills.append({"id": int(card.id), "rank": 1})
+		"chain":
+			var slot := int(card.get("slot", 0))
+			var ch: Array = chain_of(slot).duplicate()
+			if slot < skills.size() and ch.size() < MAX_CHAIN and skill_entry(int(card.id)).is_empty():
+				ch.append({"id": int(card.id), "rank": 1})
+				chains[slot] = ch
 		"upgrade":
-			for s in skills:
+			for s in all_skills():
 				if int(s.id) == int(card.id):
 					s.rank = mini(int(s.rank) + 1, int(Cards.rules().max_rank))
 					var up: Dictionary = card.get("up", {"dmg": 0.2, "cd": 0.08})
@@ -469,7 +526,7 @@ func keep_card(card: Dictionary) -> bool:
 	if kept.any(func(k): return String(k.type) == String(card.type) and str(k.id) == str(card.id)):
 		return false
 	locks_used += 1
-	kept.append({"type": card.type, "id": card.id, "tier": String(card.get("tier", ""))})
+	kept.append({"type": card.type, "id": card.id, "tier": String(card.get("tier", "")), "slot": int(card.get("slot", 0))})
 	return true
 
 
