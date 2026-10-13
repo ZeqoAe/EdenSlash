@@ -90,6 +90,10 @@ func _ready() -> void:
 					opp = arg.trim_prefix("--duel-class=")
 				elif arg.begins_with("--duel-diff="):
 					dd = int(arg.trim_prefix("--duel-diff="))
+				elif arg.begins_with("--duel-build="):  # adversaire enregistré dans l'éditeur
+					var bi := RivalBuilds.find(arg.trim_prefix("--duel-build="))
+					if bi >= 0:
+						Duel.rival_build = RivalBuilds.list()[bi]
 			Duel.start(Profile.selected_class, opp, dd)
 			if Run.skills.is_empty():
 				for sk in Run.class_data().get("skills", []).slice(0, 4):

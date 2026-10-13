@@ -27,6 +27,8 @@ const GEAR_MODES := ["Généré à ton niveau", "Copie de ton équipement"]
 static var gear_mode := 1
 static var rival_spells: Array = [0, 0, 0, 0]
 static var hp_mult := 1.0
+## Adversaire créé dans l'éditeur (RivalBuilds) : {} pour la préparation rapide ci-dessus.
+static var rival_build: Dictionary = {}
 static var atk_mult := 1.0
 
 
@@ -87,7 +89,7 @@ static func gear_level() -> int:
 ## [param opponent] en difficulté [param diff].
 static func start(cid: String, opponent: String, diff: int) -> void:
 	active = true
-	rival_class = opponent
+	rival_class = String(rival_build.get("class", opponent)) if not rival_build.is_empty() else opponent
 	difficulty = clampi(diff, 0, ClassRival.NAMES.size() - 1)
 	wins = 0
 	losses = 0
@@ -102,6 +104,11 @@ static func start(cid: String, opponent: String, diff: int) -> void:
 static func make_rival(lv := -1) -> ClassRival:
 	var at := level if lv < 0 else lv
 	var r := ClassRival.new()
+	if not rival_build.is_empty():
+		# adversaire de l'éditeur : son build complet (équipement, apparence, certificats, sorts)
+		r.setup(String(rival_build.get("class", rival_class)), at, difficulty)
+		r.apply_build(rival_build, at)
+		return r
 	r.setup(rival_class, at, difficulty, RIVAL_HP)
 	var gear: Array = []
 	if gear_mode == 1:

@@ -433,6 +433,27 @@ class HeroPreview extends SubViewportContainer:
 			ap.get_animation(battle).loop_mode = Animation.LOOP_LINEAR
 			ap.play(battle)
 
+	## Apparence choisie (éditeur d'adversaire) : tenue [param body], pièces [param extra].
+	func show_look(class_id: String, weapon_code: String, body: String, extra: Array) -> void:
+		var key := "look|%s|%s|%s|%s" % [class_id, weapon_code, body, "|".join(extra)]
+		if key == _shown:
+			return
+		_shown = key
+		for c in _pivot.get_children():
+			c.queue_free()
+		var cls := GameData.class_data(class_id)
+		if cls.is_empty():
+			return
+		var model := EdenModel.instantiate_hero(cls, body, extra.filter(func(p): return String(p) != "" and ResourceLoader.exists(String(p))))
+		model.scale = Vector3.ONE * GameData.HERO_SCALE
+		_pivot.add_child(model)
+		EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, weapon_code))
+		var ap := EdenModel.find_anim_player(model)
+		var battle: String = cls.get("anims", {}).get("battle", "stand01")
+		if ap and ap.has_animation(battle):
+			ap.get_animation(battle).loop_mode = Animation.LOOP_LINEAR
+			ap.play(battle)
+
 	func _process(delta: float) -> void:
 		if is_visible_in_tree() and not _drag and spin:
 			_pivot.rotation.y += delta * 0.35

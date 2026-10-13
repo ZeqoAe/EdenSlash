@@ -102,7 +102,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
 				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
-				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge" or arg == "--duel-prep":
+				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge" or arg == "--duel-prep" or arg == "--rival-editor":
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -113,6 +113,19 @@ func _ready() -> void:
 	_build_ui()
 	if "--duel-menu" in OS.get_cmdline_user_args():
 		_show_menu("duel")  # test : inscription au duel
+		if "--rival-editor" in OS.get_cmdline_user_args():
+			# test : éditeur avec un adversaire de démonstration (une pièce par emplacement)
+			var demo := RivalBuilds.blank("magician")
+			for sl in RivalEditor.SLOTS:
+				for x in GameData.eden_items:
+					if String(x.get("slot", "")) == sl and int(x.level) >= 35:
+						demo.gear[sl] = {"id": int(x.id), "rarity": 4, "upgrade": 5}
+						break
+			var bodies := GameData.cosmetics.filter(func(x): return String(x.get("cat", "")) == "body")
+			if not bodies.is_empty():
+				demo.look["body"] = String(bodies[3].outfit)
+			demo.certs = RivalBuilds.all_certificates().slice(0, 3).map(func(c): return String(c.key))
+			RivalEditor.open(self, demo, 40, func(_b): pass)
 		if "--duel-prep" in OS.get_cmdline_user_args():
 			Duel.rival_class = _duel_opp
 			DuelPrep.open(self, func(): _show_menu("duel"))
@@ -228,10 +241,14 @@ func _menu_duel() -> void:
 	var opp := HBoxContainer.new()
 	opp.add_theme_constant_override("separation", 8)
 	_sub.add_child(opp)
-	var ob := MenuWidgets.glass_button("Adversaire : %s ▾" % GameData.class_data(_duel_opp).get("name_fr", _duel_opp), 15, Vector2(0, 40))
+	var built := not Duel.rival_build.is_empty()
+	var ob := MenuWidgets.glass_button(("Adversaire : %s (éditeur) ▾" % Duel.rival_build.get("name", "?")) if built
+		else "Adversaire : %s ▾" % GameData.class_data(_duel_opp).get("name_fr", _duel_opp), 15, Vector2(0, 40))
 	ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ob.tooltip_text = "Choisir une classe : adversaire simple (l'adversaire de l'éditeur est laissé de côté)"
 	ob.pressed.connect(func(): HeroPages.class_menu(ob, _duel_opp, func(c):
 		_duel_opp = c
+		Duel.rival_build = {}
 		Duel.rival_spells = [0, 0, 0, 0]
 		_show_menu("duel")))
 	opp.add_child(ob)
@@ -245,12 +262,28 @@ func _menu_duel() -> void:
 		_show_menu("duel"))
 	opp.add_child(dd)
 	Hud._label(_sub, "Niveau du duel : %d (celui de ton équipement) · victoires contre cette classe : %d" % [Duel.gear_level(), Duel.wins_against(_duel_opp, _duel_diff)], 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var prep := MenuWidgets.glass_button("Préparer l'adversaire (équipement %s, sorts, PV ×%.1f, dégâts ×%.1f)" % ["copié" if Duel.gear_mode == 1 else "généré", Duel.hp_mult, Duel.atk_mult], 14, Vector2(0, 40))
-	prep.pressed.connect(func():
-		Duel.rival_class = _duel_opp
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	_sub.add_child(row)
+	var ed := MenuWidgets.glass_button("Éditeur d'adversaire", 14, Vector2(0, 40))
+	ed.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ed.tooltip_text = "Sa classe, son équipement du catalogue d'Eden, son trophée, son apparence, ses certificats et ses sorts ; plusieurs adversaires enregistrés"
+	ed.pressed.connect(func():
 		Duel.difficulty = _duel_diff
-		DuelPrep.open(self, func(): _show_menu("duel")))
-	_sub.add_child(prep)
+		var b := Duel.rival_build if built else RivalBuilds.blank(_duel_opp)
+		RivalEditor.open(self, b, Duel.gear_level(), func(nb):
+			Duel.rival_build = nb
+			_duel_opp = String(nb.get("class", _duel_opp))
+			_show_menu("duel")))
+	row.add_child(ed)
+	if not built:
+		var prep := MenuWidgets.glass_button("Préparation rapide (PV ×%.1f, dégâts ×%.1f)" % [Duel.hp_mult, Duel.atk_mult], 14, Vector2(0, 40))
+		prep.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		prep.pressed.connect(func():
+			Duel.rival_class = _duel_opp
+			Duel.difficulty = _duel_diff
+			DuelPrep.open(self, func(): _show_menu("duel")))
+		row.add_child(prep)
 	var go := MenuWidgets.gold_button("S'inscrire au duel", 22, Vector2(0, 58))
 	go.disabled = not Duel.is_ready(cid)
 	go.tooltip_text = "" if not go.disabled else "Règle d'abord les points marqués ✘"

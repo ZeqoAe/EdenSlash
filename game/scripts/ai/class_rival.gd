@@ -85,6 +85,46 @@ func setup(class_id: String, lvl: int, diff := 1, hp_scale := 1.0, n_skills := 4
 	_skills = (cls.get("skills", []) as Array).filter(func(s): return String(s.kind) != "buff" and String(s.kind) != "heal").slice(0, clampi(n_skills, 0, 4))
 
 
+## Apparence (éditeur d'adversaire du duel) : {body, head, back} (.glb), arme portée.
+var look: Dictionary = {}
+var weapon_code := ""
+
+
+## Build complet de l'éditeur d'adversaire (RivalBuilds) au niveau [param lv] : comme un héros,
+## PV, attaque et défense de base + équipement, attributs, sets et certificats ; ses sorts,
+## son apparence ; × ses multiplicateurs de PV et de dégâts.
+func apply_build(b: Dictionary, lv: int) -> void:
+	var base: Dictionary = cls.get("base", {})
+	var magic := String(cls.get("dmg_type", "phys")) in ["mag", "magic"]
+	var st := RivalBuilds.stats(b, lv)
+	var attr := {}
+	var ab: Dictionary = cls.get("attributes", {}).get("base", {})
+	var ag: Dictionary = cls.get("attributes", {}).get("growth", {})
+	for a in Items.ATTRIBUTES:
+		attr[a] = (float(ab.get(a, 6.0)) + float(ag.get(a, 1.0)) * (lv - 1) + float(st.get(a, 0.0))) * (1.0 + float(st.get(a + "_pct", 0.0)))
+	max_hp = (GameData.player_max_hp(lv) * float(base.get("hp", 1.0)) + float(attr.str) * 2.0 + float(attr.wis) * 1.5) \
+		* (1.0 + float(st.get("hp_pct", 0.0))) + float(st.get("hp", 0.0))
+	var raw := GameData.player_atk(lv) * float(base.get("matk" if magic else "atk", 1.0)) + float(st.get("matk" if magic else "patk", 0.0)) \
+		+ float(attr.int if magic else attr.str) * 0.6
+	atk = raw * (1.0 + float(st.get("atk_pct", 0.0)) + (float(st.get("matk_pct", 0.0)) if magic else 0.0)) * (1.0 + float(st.get("dmg_pct", 0.0))) * float(cfg.atk) / 0.65  # Difficile = attaque d'un héros
+	defense = (4.0 + lv * 2.0 + float(st.get("def", 0.0)) + float(base.get("def", 0.0)) + float(attr.str) * 0.25) * (1.0 + float(st.get("def_pct", 0.0)))
+	max_hp *= float(b.get("hp_mult", 1.0))
+	hp = max_hp
+	atk *= float(b.get("atk_mult", 1.0))
+	gear = RivalBuilds.items(b, lv).values()
+	look = b.get("look", {})
+	var w: Dictionary = RivalBuilds.items(b, lv).get("weapon", {})
+	weapon_code = String(w.get("weapon", ""))
+	var picked: Array = []
+	for id in b.get("spells", []):
+		for s in cls.get("skills", []):
+			if int(s.id) == int(id) and String(s.kind) != "buff" and String(s.kind) != "heal" and not picked.has(s):
+				picked.append(s)
+	if not picked.is_empty():
+		_skills = picked
+	display_name = "<Duel> %s" % String(b.get("name", cls.get("name_fr", cid)))
+
+
 ## Équipement porté (la Tour) : ses PV, son attaque et sa défense s'ajoutent, × [param k].
 var gear: Array = []
 var gear_stats: Array = []  # stats de chaque pièce (fiche de la Tour)
@@ -116,9 +156,18 @@ func _ready() -> void:
 	kfm = "m"
 	setup_model(String(cls.get("body_model", cls.get("model", "res://assets/player/body/body_m.glb"))), "", GameData.HERO_SCALE)
 	EdenModel.strip_body(model)
-	for p in cls.get("parts", []):
+	# apparence : celle de la classe, ou la tenue / tête / dos choisis dans l'éditeur d'adversaire
+	var parts: Array = cls.get("parts", [])
+	var body := String(look.get("body", ""))
+	if body != "" and ResourceLoader.exists(body):
+		parts = [body] + parts.slice(1)
+	for k in ["head", "back"]:
+		var extra := String(look.get(k, ""))
+		if extra != "" and ResourceLoader.exists(extra):
+			parts = parts + [extra]
+	for p in parts:
 		EdenModel.dress(model, String(p))
-	EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, ""))
+	EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, weapon_code))
 	_base_scale = model.scale
 	_player = get_tree().get_first_node_in_group("player") as Player
 	_map = get_tree().get_first_node_in_group("map") as Node3D
