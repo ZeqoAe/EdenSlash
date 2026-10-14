@@ -539,6 +539,7 @@ func _physics_process(delta: float) -> void:
 		move_and_slide()
 		return
 	_pointer_input()
+	_queue_collect()
 	var input_dir := _read_move_input()
 	if input_dir.length() > 0.1:
 		_target = null  # se déplacer annule l'auto-attaque
@@ -650,6 +651,8 @@ func _update_idle(input_dir: Vector3, delta: float) -> void:
 func _try_skill_input() -> bool:
 	if _chain_input() != 0:
 		return true  # touche d'une case en enchaînement (réussi ou raté)
+	if _memory_on():
+		return _queue_fire(true) or (_time >= _skill_lock_until and _try_auto_skill())
 	if _time < _skill_lock_until:
 		return false
 	for i in 4:
@@ -1117,6 +1120,8 @@ func _update_action(input_dir: Vector3, delta: float) -> void:
 			_trail_on = false
 			if perfect:
 				_perfect_cancel()
+			elif _state == "skill" and not _action.get("hit_done", false):
+				_refund_cancelled_skill()
 			_start_dodge(input_dir, perfect)
 			return
 	# une compétence annule l'attaque de base : l'appui n'est plus perdu pendant l'auto-attaque
@@ -1139,11 +1144,26 @@ func _update_action(input_dir: Vector3, delta: float) -> void:
 			_state_time = 0.3
 
 
+## Esquive avant l'impact : le sort coupé n'a rien touché, sa recharge est rendue (joueur seulement).
+func _refund_cancelled_skill() -> void:
+	if bot != null or autoplay or foe:
+		return
+	var sid := int(_action.get("skill_id", 0))
+	if sid != 0 and skill_ready_at.has(sid):
+		skill_ready_at[sid] = _time
+		var slot := int(_action.get("slot", -1))
+		if int(_action.get("chain_step", 0)) == 0 and slot >= 0:
+			_chain.erase(slot)  # la chaîne n'a pas commencé : il n'y a rien à enchaîner
+		DamageNumber.spawn_text(self, "Sort rendu", Color(0.7, 0.85, 1.0))
+
+
 ## Applique les dégâts de l'action en cours à tous les monstres de la zone.
 func _resolve_hit() -> void:
 	_action["hit_done"] = true
 	_last_hit_at = _time
 	var is_skill := _state == "skill"
+	if is_skill and bot == null and not autoplay and not foe and not Duel.active and Settings.perfect_hint():
+		Vfx.ring(self, global_position, 1.5, Color(0.4, 0.8, 1.0, 0.8))  # c'est le moment d'esquiver
 	var hit: Combatant = null
 	if float(_action.get("move", 0.0)) > 0.0:
 		_quick_move(_action.get("move_dir", forward()), float(_action.move) * reach_mult)
@@ -1650,6 +1670,8 @@ func _chain_press(slot: int) -> int:
 
 ## Touche d'une case en enchaînement (pilote automatique : au milieu de la zone).
 func _chain_input() -> int:
+	if _memory_on() and _queue_fire(false):
+		return 2
 	for cs in _chain.keys():
 		var st := chain_state(int(cs))
 		if st.is_empty():
@@ -1657,9 +1679,108 @@ func _chain_input() -> int:
 		var auto: bool = autoplay and not autoplay_idle and st.phase == "bar" and float(st.p) >= 0.35
 		if _auto_combo() and st.phase == "bar" and _monster_in_reach(skill_reach(st.next) + 1.0, false) != null:
 			auto = true  # combos parfaits : le sort suivant part dès l'ouverture de la barre
-		if (not autoplay and _wants("skill_%d" % (int(cs) + 1))) or auto:
+		if (not autoplay and not _memory_on() and _wants("skill_%d" % (int(cs) + 1))) or auto:
 			return _chain_press(int(cs))
 	return 0
+
+
+# --- mémoire des touches ------------------------------------------------------------------
+## Jusqu'à QUEUE_MAX appuis de sorts sont gardés (joueur seulement) et joués dans l'ordre : un
+## enchaînement part dès que la barre est ouverte et que le dernier coup du sort en cours est
+## porté, un sort d'une autre case à la fin de la récupération. Marteler une touche ne casse plus
+## la chaîne (plus de « Trop tôt »). Un appui qui n'a pas pu partir s'efface après QUEUE_LIFE s ;
+## l'esquive, le saut et l'étourdissement vident la mémoire.
+const QUEUE_MAX := 3
+const QUEUE_LIFE := 1.2
+const QUEUE_COOLDOWN := 0.3  # un sort en recharge n'est gardé que s'il lui reste ce délai au plus
+const HOLD_DELAY := 0.25  # touche tenue : l'enchaînement suivant est demandé après ce délai
+var _queue: Array = []  # [{slot, t}] dans l'ordre des appuis
+var _hold_since := {}  # case -> instant où sa touche est tenue depuis
+
+
+func _memory_on() -> bool:
+	return not autoplay and bot == null and not foe and Settings.key_memory()
+
+
+## Appuis gardés pour le HUD : [{slot, chain}] (chain : suite de l'enchaînement de la case,
+## sinon un sort qui attend son tour).
+func queue_view() -> Array:
+	var out: Array = []
+	var seen := {}
+	for e in _queue:
+		var slot := int(e.slot)
+		var is_chain: bool = seen.has(slot) or not chain_state(slot).is_empty()
+		seen[slot] = true
+		out.append({"slot": slot, "chain": is_chain})
+	return out
+
+
+## Combien d'appuis la case peut encore absorber : les enchaînements qui restent, plus le sort
+## lui-même quand sa chaîne n'est pas ouverte.
+func _slot_absorb(slot: int) -> int:
+	var ch := kit_chain(slot)
+	if not chain_state(slot).is_empty():
+		return ch.size() - int(_chain[slot].next)
+	return 1 + ch.size()
+
+
+func _queue_press(slot: int) -> void:
+	if skill_in_slot(slot).is_empty() or _queue.size() >= QUEUE_MAX:
+		return
+	var have := 0
+	for e in _queue:
+		if int(e.slot) == slot:
+			have += 1
+	if have >= _slot_absorb(slot):
+		return  # appui dans le vide : ignoré sans pénalité
+	if chain_state(slot).is_empty() and have == 0 and cooldown_left(slot) > QUEUE_COOLDOWN:
+		return  # en recharge
+	_queue.append({"slot": slot, "t": _time})
+
+
+## Lit les touches de sorts (une fois par image) : appuis gardés, touche tenue = enchaînement.
+func _queue_collect() -> void:
+	if not _memory_on():
+		_queue.clear()
+		return
+	_queue = _queue.filter(func(e): return _time - float(e.t) <= QUEUE_LIFE)
+	for i in 4:
+		var act := "skill_%d" % (i + 1)
+		if Input.is_action_just_pressed(act):
+			_hold_since[i] = _time
+			_queue_press(i)
+		elif Input.is_action_pressed(act) and _hold_since.has(i):
+			if Settings.hold_chain() and _time - float(_hold_since[i]) >= HOLD_DELAY and _queue.is_empty() \
+					and not chain_state(i).is_empty():
+				_queue_press(i)
+		else:
+			_hold_since.erase(i)
+
+
+## Les coups du sort en cours sont-ils tous portés ? (on n'enchaîne pas avant : sinon ils sont perdus)
+func _action_done() -> bool:
+	if _state != "skill" and _state != "attack":
+		return true
+	return _hits.is_empty() and (not _action.get("land_hit", false) or _action.get("hit_done", false))
+
+
+## Joue le premier appui gardé s'il peut partir : enchaînement (barre ouverte, coups portés) ou,
+## si [param allow_fresh], sort d'une case (récupération finie, sort rechargé).
+func _queue_fire(allow_fresh: bool) -> bool:
+	if _queue.is_empty():
+		return false
+	var slot := int(_queue[0].slot)
+	var st := chain_state(slot)
+	if not st.is_empty():
+		if st.phase == "bar" and _action_done():
+			_queue.pop_front()
+			return _chain_press(slot) == 2
+		return false
+	if not allow_fresh or _time < _skill_lock_until or cooldown_left(slot) > 0.0:
+		return false
+	_queue.pop_front()
+	use_skill(slot)
+	return true
 
 
 func _cast_skill(s: Dictionary, slot: int, step: int, forced_aim := Vector3.INF) -> void:
@@ -1686,7 +1807,13 @@ func _cast_skill(s: Dictionary, slot: int, step: int, forced_aim := Vector3.INF)
 		# zone au sol à l'endroit visé, dans la limite de la portée
 		var to_aim := aim - global_position
 		to_aim.y = 0.0
-		action["target"] = global_position + to_aim.limit_length(float(action.range))
+		var target := global_position + to_aim.limit_length(float(action.range))
+		if forced_aim == Vector3.INF and bot == null and not autoplay and not foe:
+			# visée au sol aimantée : à moins de GROUND_SNAP d'un monstre, la zone se pose sur lui
+			var near := _monster_near(target, GROUND_SNAP, float(action.range))
+			if near:
+				target = near.global_position
+		action["target"] = target
 		Vfx.ring(self, action.target, float(action.radius), Color(0.6, 0.85, 1.0, 0.6))
 	elif s.kind == "blink":
 		_blink(aim, float(action.range))
@@ -1717,6 +1844,23 @@ func _cast_skill(s: Dictionary, slot: int, step: int, forced_aim := Vector3.INF)
 	EdenFx.play(self, String(fx.get("cast", "")), global_position, rotation.y, GameData.HERO_SCALE, self)
 	_begin_action("skill", String(s.anim), 1.15 * (cast_speed if action.dmg_type == "mag" else atk_speed), action)
 	_skill_lock_until = _time + _state_len * 0.92 + SKILL_RECOVERY
+
+
+const GROUND_SNAP := 3.0
+
+
+## Monstre le plus proche du point [param p] (à [param radius] au plus), à portée [param reach] du héros.
+func _monster_near(p: Vector3, radius: float, reach: float) -> Combatant:
+	var best: Combatant = null
+	var best_d := radius
+	for node in foes():
+		var m := node as Combatant
+		if m and not m.is_dead and global_position.distance_to(m.global_position) <= reach + 1.0:
+			var d := Vector2(p.x - m.global_position.x, p.z - m.global_position.z).length()
+			if d < best_d:
+				best_d = d
+				best = m
+	return best
 
 
 func _skill_aim() -> Vector3:
@@ -1793,6 +1937,7 @@ func is_airborne() -> bool:
 
 
 func _start_jump() -> void:
+	_queue.clear()
 	var first := is_on_floor() or (_jumps_used == 0 and _time - _last_floor_time < COYOTE_TIME)
 	if _state == "dodge":
 		# saut depuis une esquive : on garde l'élan (saut-esquive très long)
@@ -1826,10 +1971,14 @@ func _update_jump(input_dir: Vector3, delta: float) -> void:
 		_start_dodge(input_dir)
 		return
 	# compétences en l'air
-	for i in 4:
-		if _wants("skill_%d" % (i + 1)) and cooldown_left(i) <= 0.0:
-			use_skill(i)
+	if _memory_on():
+		if _queue_fire(true):
 			return
+	else:
+		for i in 4:
+			if _wants("skill_%d" % (i + 1)) and cooldown_left(i) <= 0.0:
+				use_skill(i)
+				return
 	# piqué : attaque en l'air si la carte « Frappe plongeante » est prise
 	if _wants_pressed("attack") and Settings.attack_button_attacks() and int(_passives().get("dive_strike", 0)) > 0 and _state_time > 0.1:
 		_state = "dive"
@@ -1872,6 +2021,7 @@ func stun(t: float) -> void:
 	_state_time = 0.0
 	_stun_len = t
 	_target = null
+	_queue.clear()
 	_trail_on = false
 	play(_anim("hurt"), 0.05, 0.6, true)
 	if _stun_fx == null:
@@ -1908,6 +2058,7 @@ func _wants_pressed(action: String) -> bool:
 
 
 func _start_dodge(input_dir: Vector3, perfect := false) -> void:
+	_queue.clear()  # l'esquive part tout de suite et vide la mémoire des touches
 	Procs.fire(self, "dodge")
 	_skill_lock_until = 0.0  # l'esquive efface la récupération du sort
 	_dodge_dir = input_dir.normalized() if input_dir.length() > 0.1 else forward()
@@ -1937,10 +2088,14 @@ func _update_dodge() -> void:
 		return
 	# compétence dès la seconde moitié de l'esquive (esquive -> sort)
 	if _state_time >= DODGE_TIME * 0.45:
-		for i in 4:
-			if _wants("skill_%d" % (i + 1)) and cooldown_left(i) <= 0.0:
-				use_skill(i)
+		if _memory_on():
+			if _queue_fire(true):
 				return
+		else:
+			for i in 4:
+				if _wants("skill_%d" % (i + 1)) and cooldown_left(i) <= 0.0:
+					use_skill(i)
+					return
 	if _state_time >= DODGE_TIME:
 		_end_dodge()
 		if is_on_floor():

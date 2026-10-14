@@ -19,6 +19,7 @@ var _hp_orb: HudWidgets.Orb
 var _xp_orb: HudWidgets.Orb
 var _slots: Array[HudWidgets.SkillSlot] = []
 var _dodge: HudWidgets.SkillSlot
+var _queue_strip: HudWidgets.QueueStrip
 var _buff_row: HudWidgets.StatusRow
 var _debuff_row: HudWidgets.StatusRow
 var _durations := {}  # "cible:effet" -> [fin, durée totale]
@@ -463,6 +464,9 @@ func _build_action_bar(root: Control) -> void:
 	_dodge.size = Vector2(50, 50)
 	_dodge.tooltip_text = "Esquive (invulnérable)"
 	bottom.add_child(_dodge)
+	_queue_strip = HudWidgets.QueueStrip.new()
+	_queue_strip.position = Vector2(x0 + 4 * 76.0 + 70.0, 126)
+	bottom.add_child(_queue_strip)
 	_buff_row = HudWidgets.StatusRow.new(true)
 	_buff_row.position = Vector2(30, 0)
 	_buff_row.size = Vector2(400, 54)
@@ -489,7 +493,7 @@ func _refresh_skills() -> void:
 		else:
 			slot.tooltip_text = "%s — rang %d\n%s\nRecharge : %.1f s" % [s.name, slot.rank, s.desc, player.skill_cooldown(s)]
 			for j in Run.chain_of(i).size():
-				slot.tooltip_text += "\n%s Enchaînement %d : %s (0,45 s de blocage, puis rappuie pendant la barre au-dessus de la case)" % ["➜", j + 1, Run.skill_def(int(Run.chain_of(i)[j].id)).get("name", "?")]
+				slot.tooltip_text += "\n%s Enchaînement %d : %s (rappuie sur la touche : l'appui est gardé et le coup part dès qu'il peut)" % ["➜", j + 1, Run.skill_def(int(Run.chain_of(i)[j].id)).get("name", "?")]
 	_dodge.key_text = Settings.action_label("dodge", 1)
 
 
@@ -533,6 +537,22 @@ func _process(delta: float) -> void:
 				_slots[i].set_cooldown(0.0, 1.0)
 				_slots[i].chain_bar = float(st.p)
 				_slots[i].chain_ready = player.chain_ready(i)
+	# mémoire des touches : appuis gardés sur les cases (suite d'un enchaînement) ou en pastilles
+	var kept := player.queue_view()
+	var waiting: Array = []
+	for i in 4:
+		var n := 0
+		for e in kept:
+			if int(e.slot) == i and e.chain:
+				n += 1
+		var open: bool = not player.chain_state(i).is_empty()
+		_slots[i].queued_main = open and n >= 1
+		_slots[i].queued_icons = maxi(n - 1, 0) if open else n
+	for e in kept:
+		if not e.chain:
+			waiting.append({"icon": UiTheme.texture(String(player.skill_in_slot(int(e.slot)).get("icon", ""))),
+				"key": Settings.action_label("skill_%d" % (int(e.slot) + 1), 1)})
+	_queue_strip.set_items(waiting)
 	var dc := player.dodge_cooldown()
 	_dodge.set_cooldown(dc.x, dc.y)
 	_update_statuses()

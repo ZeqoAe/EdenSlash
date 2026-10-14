@@ -544,7 +544,7 @@ func _describe_card(c: Dictionary) -> Dictionary:
 			var step := chain_of(slot).size() + 2
 			return {"type": "chain", "id": c.id, "slot": slot, "title": "Enchaînement : %s" % s.name,
 				"subtitle": "Case %d · %de sort de la chaîne" % [slot + 1, step],
-				"desc": "%s\n[color=#9fd0ff]Après « %s »%s (touche de la case %d), l'icône de ce sort reste 0,45 s en recharge, puis une barre se remplit au-dessus de la case : rappuie avant qu'elle soit pleine et ce sort part aussitôt, +20 %% de dégâts. Appuyer pendant les 0,45 s ne lance rien et casse la chaîne, comme laisser la barre se vider.[/color]" % [
+				"desc": "%s\n[color=#9fd0ff]Après « %s »%s (touche de la case %d), l'icône de ce sort reste 0,45 s en recharge, puis une barre se remplit au-dessus de la case : rappuie avant qu'elle soit pleine et ce sort part aussitôt, +20 %% de dégâts. Tu peux rappuyer tout de suite : l'appui est gardé (mémoire des touches) et le coup part dès qu'il le peut. Laisser la barre se vider casse la chaîne.[/color]" % [
 					s.desc, first.get("name", "?"), "" if step == 2 else " et le sort suivant", slot + 1], "icon": s.icon}
 		"upgrade":
 			var s := skill_def(int(c.id))

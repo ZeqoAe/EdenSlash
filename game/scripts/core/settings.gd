@@ -86,11 +86,12 @@ const DEFAULTS := {
 	# auto_skills : compétences lancées seules dès qu'elles sont prêtes et qu'un monstre est à portée
 	# auto_target : any (n'importe quel monstre à portée), locked (seulement la cible verrouillée)
 	"game": {"move_mode": "keyboard", "aim_mode": "smart", "attack_mode": "manual",
-		"auto_skills": [false, false, false, false], "auto_target": "any", "auto_combo": false, "auto_move": false, "auto_cards": false},
+		"auto_skills": [false, false, false, false], "auto_target": "any", "auto_combo": false, "auto_move": false, "auto_cards": false,
+		"key_memory": true, "hold_chain": true},
 	"camera": {"rotate_speed": 1.0, "invert_y": false, "distance": 15.0, "shake": 1.0, "action_turn": 1.0},
 	# dev_mode : écran de test (F10), réservé aux tests
 	"interface": {"damage_numbers": "all", "hit_stop": true, "show_fps": false, "move_marker": true, "attack_zone": false, "dev_mode": false,
-		"tower_unlock_all": true},
+		"tower_unlock_all": true, "perfect_hint": true},
 }
 
 ## Modes de jeu prêts à l'emploi (réglages du menu Contrôles).
@@ -200,6 +201,21 @@ func auto_skill(slot: int) -> bool:
 ## parfaites au meilleur moment (Paramètres > Combat).
 func auto_combo() -> bool:
 	return bool(get_v("game", "auto_combo"))
+
+
+## Mémoire des touches : jusqu'à 3 appuis de sorts gardés et joués dans l'ordre (plus de « Trop tôt »).
+func key_memory() -> bool:
+	return bool(get_v("game", "key_memory"))
+
+
+## Tenir la touche d'une case enchaîne toute la chaîne (avec la mémoire des touches).
+func hold_chain() -> bool:
+	return bool(get_v("game", "hold_chain"))
+
+
+## Anneau bleu bref à chaque impact de sort : c'est le moment de l'annulation parfaite.
+func perfect_hint() -> bool:
+	return bool(get_v("interface", "perfect_hint"))
 
 
 ## Choix des cartes automatique : nouveau sort tant qu'une case est libre, sinon la plus rare.

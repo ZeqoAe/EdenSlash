@@ -232,7 +232,7 @@ func _build_skills() -> void:
 func _refresh_skills() -> void:
 	for c in _skills_box.get_children():
 		c.queue_free()
-	Hud._label(_skills_box, "Case : sort principal (touche 1 à 4). Enchaînement : après l'appui, 0,45 s de blocage (appuyer casse la chaîne), puis une barre se remplit au-dessus de la case ; rappuie avant la fin pour le sort suivant (2 par case, 12 sorts en tout).", 12, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	Hud._label(_skills_box, "Case : sort principal (touche 1 à 4). Enchaînement : une barre se remplit au-dessus de la case ; rappuie avant la fin pour le sort suivant (2 par case, 12 sorts en tout). Les appuis trop tôt sont gardés (mémoire des touches) et partent dès que possible.", 12, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var r := HBoxContainer.new()
 	r.add_theme_constant_override("separation", 6)
 	_skills_box.add_child(r)

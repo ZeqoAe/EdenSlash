@@ -139,6 +139,8 @@ class SkillSlot extends Control:
 	var chain_ready := false  # timing parfait ouvert : la case brille
 	var chain_bar := -1.0  # barre du bon timing (0-1), -1 : cachée
 	var chain_zone := Vector2(0.55, 0.9)
+	var queued_main := false  # un appui gardé attend le coup affiché sur la case
+	var queued_icons := 0  # appuis gardés pour les icônes d'enchaînement qui suivent
 	var left := 0.0
 	var fraction := 0.0
 	var _flash := 0.0
@@ -210,6 +212,14 @@ class SkillSlot extends Control:
 			if chain_icons[i]:
 				draw_texture_rect(chain_icons[i], cr, false)
 			draw_rect(cr.grow(1.0), Color(0.6, 0.9, 1.0, 0.9) if chain_ready and i == 0 else UiTheme.GOLD_DIM, false, 1.5)
+			if i < queued_icons:
+				# appui gardé : l'icône se remplit (cadre bleu plein, chevron)
+				draw_rect(cr, Color(0.35, 0.7, 1.0, 0.5))
+				draw_rect(cr.grow(1.0), Color(0.55, 0.85, 1.0, 1.0), false, 2.0)
+				HudWidgets.text_center(self, "›", cr.get_center(), UiTheme.bold_font(), 16, Color.WHITE, 3)
+		if queued_main:
+			draw_rect(rect.grow(2.0), Color(0.55, 0.85, 1.0, 0.95), false, 3.0)
+			HudWidgets.text_center(self, "›", Vector2(size.x - 9.0, size.y * 0.5), UiTheme.bold_font(), 22, Color(0.7, 0.92, 1.0), 4)
 		if chain_ready:
 			var k := 0.6 + 0.4 * sin(Time.get_ticks_msec() * 0.025)
 			draw_rect(rect.grow(3.0), Color(0.55, 0.9, 1.0, k), false, 4.0)
@@ -226,6 +236,30 @@ class SkillSlot extends Control:
 			var badge := Rect2(c.x - w * 0.5, size.y - 10.0, w, 18.0)
 			draw_style_box(_badge, badge)
 			HudWidgets.text_center(self, key_text, badge.get_center(), font, 12, UiTheme.GOLD, 0)
+
+
+## Sorts d'autres cases gardés par la mémoire des touches : 2 pastilles avec l'icône et la touche,
+## dans l'ordre où ils partiront.
+class QueueStrip extends Control:
+	var items: Array = []  # [{icon: Texture2D, key: String}]
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		size = Vector2(60, 26)
+
+	func set_items(list: Array) -> void:
+		if list.size() != items.size() or str(list) != str(items):
+			items = list
+			queue_redraw()
+
+	func _draw() -> void:
+		for i in mini(items.size(), 2):
+			var r := Rect2(i * 30.0, 0.0, 26.0, 26.0)
+			draw_rect(r.grow(1.0), Color(0.05, 0.04, 0.09, 0.95))
+			if items[i].icon:
+				draw_texture_rect(items[i].icon, r, false)
+			draw_rect(r.grow(1.0), Color(0.55, 0.85, 1.0, 1.0), false, 2.0)
+			HudWidgets.text_center(self, String(items[i].key), Vector2(r.position.x + 20.0, r.end.y - 2.0), UiTheme.bold_font(), 10, UiTheme.GOLD, 3)
 
 
 # --- icône d'effet (buff / debuff) ---------------------------------------------------------

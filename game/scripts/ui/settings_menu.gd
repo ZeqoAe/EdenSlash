@@ -186,6 +186,12 @@ func _build_combat_tab() -> void:
 	_button(buttons, "Toutes en manuel", func(): Settings.set_v("game", "auto_skills", [false, false, false, false]), 260)
 	_option(v, "Cible des compétences automatiques", "game", "auto_target", [
 		["any", "N'importe quel monstre à portée"], ["locked", "Seulement la cible verrouillée (clic sur un monstre)"]])
+	_section(v, "Prise en main")
+	_check(v, "Mémoire des touches", "game", "key_memory")
+	_note(v, "Jusqu'à 3 appuis de sorts sont gardés et joués dans l'ordre : marteler la touche d'une case donne toute la chaîne, taper 1-2-3 pendant un sort les lance l'un après l'autre. Plus de « Trop tôt ». L'esquive et le saut partent tout de suite et vident la mémoire. Seule l'annulation parfaite (esquive juste après un impact) reste à la main.")
+	_check(v, "Tenir la touche d'une case enchaîne toute la chaîne", "game", "hold_chain")
+	_check(v, "Anneau bleu à chaque impact de sort (moment de l'annulation parfaite)", "interface", "perfect_hint")
+	_note(v, "L'anneau annonce le bon moment pour esquiver et faire l'annulation parfaite (recharge réduite, Fluidité). Il n'apparaît jamais en Duel.")
 	_section(v, "Jeu automatique")
 	_check(v, "Combos parfaits automatiques", "game", "auto_combo")
 	_note(v, "Les 4 sorts de ta barre (ton preset) partent seuls dès qu'ils sont prêts et qu'un ennemi est à portée, leurs enchaînements dès l'ouverture de la barre, et juste après chaque impact le héros fait l'annulation parfaite (petit pas autour de la cible : Fluidité, récupération effacée) pour lancer le suivant. Avec l'attaque automatique, il ne reste qu'à se déplacer.")
