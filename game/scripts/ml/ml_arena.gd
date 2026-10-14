@@ -12,6 +12,7 @@ extends Node3D
 ##   exporté tout seul, sans Python (MlBrain) ; --episodes=N : N combats puis bilan et sortie ;
 ##   --temperature=0.5 : choix tirés au sort (moins fort, plus humain) ; --hero=mage : classe jouée.
 ##   --scenario=duel --foe=cleric [--foe-brain=...] : IA contre IA (même cerveau par défaut).
+##   --rules=duel_a : profil de règles de duel (ModeRules) imposé pour les essais d'équilibrage.
 ## Scénarios (message « reset ») :
 ##   dummy   : mannequin qui ne bouge pas (apprendre combos, sorts et enchaînements) ;
 ##   flee    : adversaire de classe fuyard (jouer agressif, esquives d'annulation pour suivre) ;
@@ -92,6 +93,7 @@ var _done_count := 0
 var _wins := 0
 var _level := LEVEL  # --level= : niveau des deux héros (équilibrage JcJ)
 var _hero_build := ""  # --hero-build= : profil type joué par le héros (nom, RivalBuilds)
+var _rules := ""  # --rules= : profil de règles de duel imposé (duel, duel_a, duel_b : ModeRules)
 var _foe_build := ""  # --foe-build= : profil type du héros ennemi (duel)
 var _fight_times: Array = []  # durée des combats finis (victoire ou défaite)
 ## Scénarios du mode cerveau (mêmes réglages que ia/curriculum.py).
@@ -137,6 +139,9 @@ func _ready() -> void:
 			_level = clampi(int(arg.trim_prefix("--level=")), 1, 101)
 		elif arg.begins_with("--hero-build="):
 			_hero_build = arg.trim_prefix("--hero-build=")
+		elif arg.begins_with("--rules="):
+			_rules = arg.trim_prefix("--rules=")
+			ModeRules.forced = _rules
 		elif arg.begins_with("--foe-build="):
 			_foe_build = arg.trim_prefix("--foe-build=")
 		elif arg.begins_with("--foe-temperature="):
@@ -426,7 +431,7 @@ func _reset(msg: Dictionary) -> void:
 	Run.chains = hk.chains
 	# règles du duel du jeu (PvpCaps) pour les essais d'équilibrage ; l'apprentissage reste au
 	# niveau 10 sans équipement, avec l'échelle des héros d'origine
-	Duel.active = scen in ["duel", "rival"] and (_level != LEVEL or _hero_build != "" or _foe_build != "")
+	Duel.active = scen in ["duel", "rival"] and (_level != LEVEL or _hero_build != "" or _foe_build != "" or _rules != "")
 	_bot.clear()
 	player = Player.new()
 	player.level = _level

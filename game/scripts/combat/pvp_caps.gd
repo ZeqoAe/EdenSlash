@@ -51,12 +51,25 @@ static var elapsed := 0.0
 
 ## Combat entre joueurs en cours (mode Duel).
 static func active() -> bool:
-	return Duel.active
+	return Modes.is_pvp()
 
 
-## Multiplicateur d'acharnement (1 avant [constant PRESSURE_START] s).
+## Multiplicateur d'acharnement (1 avant [constant PRESSURE_START] s). Les valeurs viennent du
+## profil du mode en cours (ModeRules) ; les constantes ci-dessus sont les chiffres de départ.
 static func pressure() -> float:
-	return pow(2.0, maxf(0.0, elapsed - PRESSURE_START) / PRESSURE_STEP)
+	return pow(2.0, maxf(0.0, elapsed - pressure_start()) / ModeRules.num("pressure_step", PRESSURE_STEP))
+
+
+static func pressure_start() -> float:
+	return ModeRules.num("pressure_start", PRESSURE_START)
+
+
+static func basic_mult() -> float:
+	return ModeRules.num("basic_mult", BASIC_MULT)
+
+
+static func damage_scale() -> float:
+	return ModeRules.num("dmg_scale", DAMAGE_SCALE)
 
 
 ## Multiplicateur des dégâts d'un héros [param src] sur un héros [param dst] en duel
@@ -65,7 +78,7 @@ static func pressure() -> float:
 static func damage_mult(dst: Combatant, src: Combatant) -> float:
 	var hp := sqrt(maxf(dst.max_hp, 1.0) * maxf(src.max_hp, 1.0))
 	var pw := sqrt(maxf(src.power(), 1.0) * maxf(dst.power(), 1.0))
-	return DAMAGE_SCALE * pressure() * hp / pw
+	return damage_scale() * pressure() * hp / pw
 
 
 ## Part d'un coup subie en duel par un héros de défense [param def] face à un attaquant de
@@ -75,12 +88,12 @@ static func damage_mult(dst: Combatant, src: Combatant) -> float:
 static func taken(def: float, src_def: float) -> float:
 	var d := maxf(def, 1.0)
 	var k := sqrt(d * maxf(src_def, 1.0))
-	return maxf(k / (k + d), 1.0 - MAX_MITIGATION)
+	return maxf(k / (k + d), 1.0 - ModeRules.num("max_mitigation", MAX_MITIGATION))
 
 
 ## Soins reçus en duel.
 static func heal_mult() -> float:
-	return HEAL_MULT / pressure()
+	return ModeRules.num("heal_mult", HEAL_MULT) / pressure()
 
 
 ## Coup de [param src] sur [param dst] entre deux héros en duel.
@@ -91,9 +104,10 @@ static func between_heroes(src: Combatant, dst: Combatant) -> bool:
 ## Ramène les statistiques de [param p] sous les plafonds ; rend les statistiques plafonnées.
 static func apply(p: Player) -> Array:
 	var capped: Array = []
-	for k in CAPS:
+	var caps: Dictionary = ModeRules.rule("caps", CAPS)
+	for k in caps:
 		var v := float(p.get(k))
-		if v > float(CAPS[k]):
-			p.set(k, float(CAPS[k]))
+		if v > float(caps[k]):
+			p.set(k, float(caps[k]))
 			capped.append(k)
 	return capped

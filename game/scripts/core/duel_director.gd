@@ -113,7 +113,7 @@ func update(delta: float) -> void:
 	if phase == "fight":
 		var was := PvpCaps.elapsed
 		PvpCaps.elapsed += delta
-		if was < PvpCaps.PRESSURE_START and PvpCaps.elapsed >= PvpCaps.PRESSURE_START:
+		if was < PvpCaps.pressure_start() and PvpCaps.elapsed >= PvpCaps.pressure_start():
 			d.message.emit("Acharnement : les coups font plus mal, les soins faiblissent", 2.5)
 	match phase:
 		"countdown":

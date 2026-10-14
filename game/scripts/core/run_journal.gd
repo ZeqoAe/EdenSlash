@@ -34,13 +34,8 @@ static func path() -> String:
 
 
 static func mode_name() -> String:
-	if Duel.active:
-		return "duel"
-	if Tower.active:
-		return "tower"
-	if Training.active:
-		return "training"
-	return "survival" if Run.survival else "run"
+	var m := Modes.current()
+	return "run" if m == "menu" else m
 
 
 ## Nouvelle run : compteurs de la carte à zéro.

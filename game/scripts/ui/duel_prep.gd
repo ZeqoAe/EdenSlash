@@ -174,9 +174,9 @@ static func _preview_text() -> String:
 		Hud._big_number(p.max_hp), roundi(my_atk), roundi(p.defense), roundi((p.mcrit if magic else p.crit) * 100.0), roundi(p.crit_dmg * 100.0)]
 	# règles du duel (PvpCaps) : un coup de multiplicateur 1, avant critique et acharnement
 	var pw_me := maxf(p.atk, p.matk)
-	var mine := pw_me * PvpCaps.DAMAGE_SCALE * sqrt(maxf(r.max_hp, 1.0) * maxf(p.max_hp, 1.0)) / sqrt(maxf(pw_me, 1.0) * maxf(r.atk, 1.0)) \
+	var mine := pw_me * PvpCaps.damage_scale() * sqrt(maxf(r.max_hp, 1.0) * maxf(p.max_hp, 1.0)) / sqrt(maxf(pw_me, 1.0) * maxf(r.atk, 1.0)) \
 		* PvpCaps.taken(r.defense, p.defense) / maxf(r.max_hp, 1.0)
-	var theirs := r.atk * PvpCaps.DAMAGE_SCALE * sqrt(maxf(p.max_hp, 1.0) * maxf(r.max_hp, 1.0)) / sqrt(maxf(r.atk, 1.0) * maxf(pw_me, 1.0)) \
+	var theirs := r.atk * PvpCaps.damage_scale() * sqrt(maxf(p.max_hp, 1.0) * maxf(r.max_hp, 1.0)) / sqrt(maxf(r.atk, 1.0) * maxf(pw_me, 1.0)) \
 		* PvpCaps.taken(p.defense, r.defense) / maxf(p.max_hp, 1.0)
 	txt += "[color=#c8c8d4]En duel, les dégâts sont ramenés à l'échelle des deux héros : une auto-attaque retire environ [b]%.1f %%[/b] de ses PV (%.1f %% des tiens pour la sienne), un sort ou un critique bien plus ; l'auto-attaque n'interrompt pas ; après 30 s, l'acharnement double les dégâts toutes les 20 s.[/color]" % [mine * PvpCaps.BASIC_MULT * 100.0, theirs * PvpCaps.BASIC_MULT * 100.0]
 	r.free()

@@ -1461,7 +1461,7 @@ func _hit_monster(m: Combatant, dir: Vector3, action: Dictionary, is_skill: bool
 	# duel : l'auto-attaque entre héros frappe moins fort et n'interrompt pas (PvpCaps.BASIC_MULT)
 	var pvp_basic := not is_skill and PvpCaps.between_heroes(self, m)
 	if pvp_basic:
-		mult *= PvpCaps.BASIC_MULT
+		mult *= PvpCaps.basic_mult()
 	if action.get("basic", false):
 		mult *= basic_mult
 	var combo: Dictionary = action.get("combo", {})
@@ -1473,13 +1473,13 @@ func _hit_monster(m: Combatant, dir: Vector3, action: Dictionary, is_skill: bool
 	var dmg := (matk if magic else atk) * mult * randf_range(0.92, 1.08) * damage_dealt_mult() * (1.0 + crit_dmg if is_crit else 1.0) * flow_mult() * dmg_mult
 	if mon and (mon.is_elite or mon.is_boss):
 		dmg *= elite_mult
-	if not foe and bot == null:
-		RunJournal.player_hit(m, dmg)
 	elif execute > 0.0 and m.hp - dmg <= m.max_hp * execute:
 		# exécution : coup fatal qui ignore la défense
 		DamageNumber.spawn_text(m, "EXÉCUTÉ", Color(1.0, 0.3, 0.3))
 		dmg = m.hp + 1.0
 		m.take_damage(dmg, self, is_crit, true)
+	if not foe and bot == null:
+		RunJournal.player_hit(m, dmg)
 	if not m.is_dead:
 		# mission du Magicien : plus gros coup (après la défense de la cible)
 		if not foe:

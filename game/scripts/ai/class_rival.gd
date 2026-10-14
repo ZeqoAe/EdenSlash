@@ -544,7 +544,7 @@ func _start_attack() -> void:
 				Sfx.play_at(self, global_position, String(snd[1]), -6.0))
 	play(anim_name, 0.06, speed, true)
 	if sk.is_empty() and Duel.active:
-		mult *= PvpCaps.BASIC_MULT  # auto-attaque entre héros en duel
+		mult *= PvpCaps.basic_mult()  # auto-attaque entre héros en duel
 	var is_crit := randf() < crit_chance
 	var dmg := atk * mult * damage_dealt_mult() * randf_range(0.9, 1.1) * (1.0 + crit_bonus if is_crit else 1.0)
 	var kind := String(act.get("kind", "cone"))

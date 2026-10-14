@@ -34,8 +34,13 @@ tous différents, 67 effets dans `Trophies.KINDS`, répartis sur les trophées d
 Reste : retours du joueur sur l'équilibrage (époque 1 gagnée « bien capé » le 14/10, il passe à l'époque 2).
 Lots 1 et 2 de `conception/CONCEPT_FINAL.md` faits (0.1.132 à 0.1.134) : corrections, puis prise en main
 (mémoire des touches, maintien, visée au sol aimantée, anneau d'annulation, Aide au combat en 4 niveaux).
+Lots 3 et 4 faits (0.1.135-0.1.136) : journal de run (`core/run_journal.gd`) et socle des modes
+(`core/modes.gd` : `Modes.current()` déduit des drapeaux ; `core/mode_rules.gd` : profils de règles, à ce jour
+la famille JcJ de `PvpCaps` ; `core/modifiers.gd` : table de modificateurs ; mode dev -> `dev_edits.json`
+« modes » ; arène d'IA `--rules=duel_a`). Les autres familles (monstres, héros, gains) entrent dans les
+profils quand leur consommateur est branché ; les tests `Tower.active` / `Duel.active` dispersés restent.
 Reste du lot 1 : « niveau minimum 10 » du Duel (`Duel.gear_level`), à faire avec le lot 5 (échelle des
-dégâts en même temps) ; insensibilité aux renversements des 11 certificats (B10, non codée). Prochain : lot 3.
+dégâts en même temps) ; insensibilité aux renversements des 11 certificats (B10, non codée). Prochain : lot 5 (Duel à l'arme / équipé).
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,
