@@ -366,9 +366,10 @@ func _test_lobby() -> void:
 	dbl.double_click = true
 	lobby._unhandled_input(dbl)
 	check("accueil : double-clic, vue de départ", bd.orbit_yaw == 0.0 and bd.camera.position.distance_to(cam0) < 0.01)
-	lobby._show_menu("zones")
+	lobby._show_menu("survival")
 	await _frames()
-	check("menu Zone de farm : %d zones" % GameData.zones.size(), lobby._sub.get_children().filter(func(c): return c is MenuWidgets.RowButton).size() == GameData.zones.size())
+	var nz := mini(Profile.unlocked_zones + 1, GameData.zones.size())
+	check("page Survie : %d zone(s) débloquée(s) et la suivante" % Profile.unlocked_zones, lobby._sub.get_children().filter(func(c): return c is MenuWidgets.RowButton).size() == nz)
 	lobby._show_menu("play")
 	# écran Héros : une section à la fois, classe, talents, apparence, aide
 	var hero: HeroScreen = lobby._hero

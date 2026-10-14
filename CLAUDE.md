@@ -13,6 +13,14 @@ façon Megabonk (`DESIGN.md`, « Étapes et sources » et « Monnaies, coffres e
 `tests/test_farm.tscn` ; vues de la carte : `res://tools/map_shots.tscn -- <graine> [zone]`.
 Reste : retours du joueur sur le rythme, l'économie de l'or et la lisibilité de la carte.
 
+Menu Jouer (0.1.122) = activités (`scripts/ui/activities.gd`) : JcE (Survie = l'ancienne run de farm,
+Tour, Donjons à venir, entraînement) et JcJ (Duel, Arènes 2v2 / 3v3 et Champ de bataille 10v10 à venir),
+en étiquettes illustrées par les écrans de chargement d'Eden (`ui/loadingframe/loading_*.dds`, bande
+y 112-452 recadrée en 960×320 dans `assets/ui/activities/`) ; un clic ouvre la page de l'activité
+(réglages puis Lancer). Une activité nouvelle : une entrée dans `Activities.LIST`, son image, sa page
+dans `lobby.gd` (`_show_menu`). La boucle de jeu (équipement choisi pour le JcJ, débloqué en JcE) est
+en cours de refonte avec le joueur dans une autre session.
+
 ## Branche
 Tout se passe sur la branche `claude/optimistic-gauss-p2g2pq`. Ne pas travailler sur `master`.
 

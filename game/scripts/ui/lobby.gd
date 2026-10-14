@@ -255,7 +255,7 @@ func _start_training() -> void:
 ## Mode Duel : conditions d'inscription (build complet), adversaire, difficulté, inscription.
 func _menu_duel() -> void:
 	var cid := Profile.selected_class
-	_sub_title("Mode duel")
+	_activity_head("duel")
 	Hud._label(_sub, "Ton build doit être prêt avant de t'inscrire : tu te bats avec exactement ce que tu as réglé.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	for r in Duel.requirements(cid):
 		var h := HBoxContainer.new()
@@ -354,7 +354,8 @@ func _start_duel() -> void:
 
 ## La Tour : choix de la difficulté (IA des duellistes, force des monstres, record à part).
 func _menu_tower() -> void:
-	_sub_title("La Tour : choisis la difficulté")
+	_activity_head("tower")
+	Hud._label(_sub, "Difficulté", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
 	for i in Tower.DIFF_NAMES.size():
 		var rec := Tower.best(i)
 		var di := i
@@ -362,7 +363,7 @@ func _menu_tower() -> void:
 			_tower_diff = di
 			_tower_sel = mini(Tower.best(di) + 1, Tower.FLOORS)
 			_tower_page = (_tower_sel - 1) / TowerPages.FLOORS_PER_PAGE
-			_show_menu("tower_floors"), 76.0)
+			_show_menu("tower_floors"), 92.0)
 
 
 ## Étages de la difficulté choisie, 10 par page : battus et suivant jouables, les autres
@@ -748,14 +749,22 @@ func _show_menu(id: String) -> void:
 	if _zone_card:
 		_zone_card.visible = id == ""  # sous-menu ouvert : le panneau de zone laisse la place
 	for k in _menu:
-		_menu[k].selected = k == ("play" if id in ["zones", "tower", "tower_floors", "duel"] else id)
+		_menu[k].selected = k == ("" if id == "" else ("quit" if id == "quit" else "play"))
 	for c in _sub.get_children():
 		c.queue_free()
+	if _sub_panel:
+		# activités en grille : panneau large ; pages et autres sous-menus : étroit
+		_sub_panel.custom_minimum_size.x = 728 if id == "play" else 470
+		_sub_panel.size = Vector2.ZERO
 	match id:
 		"play":
 			_menu_play()
-		"zones":
-			_menu_zones()
+		"survival", "zones":
+			_menu_survival()
+		"training":
+			_menu_training()
+		"dungeon", "arena2", "arena3", "battlefield":
+			_menu_soon(id)
 		"tower":
 			_menu_tower()
 		"tower_floors":
@@ -780,91 +789,82 @@ func _row(title: String, sub: String, icon: String, cb: Callable, height := 70.0
 	return r
 
 
+## Menu Jouer : toutes les activités, en étiquettes illustrées (Activities), JcE puis JcJ ;
+## un clic ouvre la page de l'activité (réglages, puis Lancer) dans ce même panneau.
 func _menu_play() -> void:
-	var cls := GameData.class_data(Profile.selected_class)
-	var zone := GameData.zone(Profile.selected_zone)
-	# carte « Lancer une run » sur l'image de la zone
-	var card := Button.new()
-	card.focus_mode = Control.FOCUS_NONE
-	card.custom_minimum_size = Vector2(0, 136)
-	card.clip_contents = true
-	var n := UiTheme.flat_box(Color(0.08, 0.07, 0.16, 1.0), UiTheme.GOLD, 2, 12)
-	var hv := UiTheme.flat_box(Color(0.12, 0.1, 0.22, 1.0), Color(1, 0.92, 0.62), 3, 12)
-	hv.shadow_color = Color(UiTheme.GOLD, 0.5)
-	hv.shadow_size = 12
-	card.add_theme_stylebox_override("normal", n)
-	card.add_theme_stylebox_override("hover", hv)
-	card.add_theme_stylebox_override("pressed", hv)
-	card.pressed.connect(_launch)
-	_sub.add_child(card)
-	var img := TextureRect.new()
-	img.texture = _snapshot
-	img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	img.set_anchors_preset(Control.PRESET_FULL_RECT)
-	img.offset_left = 3
-	img.offset_top = 3
-	img.offset_right = -3
-	img.offset_bottom = -3
-	img.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card.add_child(img)
-	var shade := TextureRect.new()
-	var g := GradientTexture2D.new()
-	g.fill_from = Vector2(0, 0)
-	g.fill_to = Vector2(0, 1)
-	g.gradient = Gradient.new()
-	g.gradient.set_color(0, Color(0, 0, 0, 0.0))
-	g.gradient.set_color(1, Color(0.02, 0.02, 0.08, 0.85))
-	shade.texture = g
-	shade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	shade.stretch_mode = TextureRect.STRETCH_SCALE
-	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
-	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card.add_child(shade)
-	var tv := VBoxContainer.new()
-	tv.set_anchors_preset(Control.PRESET_FULL_RECT)
-	tv.offset_left = 18
-	tv.offset_right = -40
-	tv.offset_bottom = -12
-	tv.alignment = BoxContainer.ALIGNMENT_END
-	tv.add_theme_constant_override("separation", 0)
-	tv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card.add_child(tv)
-	var t := Hud._label(tv, "Lancer une run", 26, Color(1, 0.98, 0.92))
-	t.add_theme_font_override("font", UiTheme.bold_font())
-	Hud._label(tv, "%s · %s · niveau %d+" % [zone.get("name", ""), cls.get("name_fr", ""), 1 + int(zone.get("level_bonus", 0))], 14, Color(0.95, 0.93, 1.0))
-	var ch := Hud._label(card, "›", 40, Color(1, 0.98, 0.92))
-	ch.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
-	ch.offset_left = -34
-	ch.offset_bottom = -10
-	ch.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
-	# le héros tel qu'il partira : un clic ouvre l'écran Héros
-	var w: Dictionary = Profile.equipped.get("weapon", {})
-	var free := Profile.talent_points(Profile.selected_class) - Profile.talent_spent(Profile.selected_class)
-	var hr := _row("Héros : %s" % cls.get("name_fr", ""), "%s · puissance %d%s" % [Items.display_name(w) if not w.is_empty() else "sans arme", Profile.equipped.values().reduce(func(acc, it): return acc + EquipmentPage._power_of(it), 0),
-		" · %d point(s) de talent à dépenser" % free if free > 0 else ""], String(cls.get("icon", "")), _open_hero.bind(""))
-	hr.mark(free > 0)
-	_row("Zone de farm", "%s · niveau %d+" % [zone.get("name", ""), 1 + int(zone.get("level_bonus", 0))], "pin", _show_menu.bind("zones"))
-	_row("Zone d'entraînement", "Sorts, combos et cartes, sans enjeu", "stats", _start_training).tooltip_text = "Tester les sorts, les combos et les cartes de %s : rien n'est gagné ni perdu." % cls.get("name_fr", "")
-	_row("Profils types", "Builds complets par classe et niveau", "equipment", func(): ProfileEditor.open(self, RivalBuilds.blank(Profile.selected_class))).tooltip_text = 		"Équipement +10, gemmes, enchantements, 12 sorts, certificats, apparence : adversaires de duel ou à appliquer à ton héros."
-	_row("Mode duel", "1 contre 1 contre un héros, 2 manches gagnantes", "attack", _show_menu.bind("duel")).tooltip_text = "Inscription avec un build complet."
-	_row("La Tour", "%d étages, une seule vie" % Tower.FLOORS, "upgrade", _show_menu.bind("tower")).tooltip_text = 		"Gravir %d étages avec une arme de base : une carte et un coffre par étage, les %d classes à battre en duel, une seule vie." % [Tower.FLOORS, Tower.duel_count()]
+	for gr in Activities.GROUPS:
+		var head := Hud._label(_sub, String(gr[1]), 15, UiTheme.GOLD)
+		head.add_theme_font_override("font", UiTheme.bold_font())
+		var grid := GridContainer.new()
+		grid.columns = 2
+		grid.add_theme_constant_override("h_separation", 10)
+		grid.add_theme_constant_override("v_separation", 10)
+		_sub.add_child(grid)
+		for a in Activities.LIST.filter(func(x): return x.group == gr[0] or (gr[0] == "pve" and x.group == "")):
+			grid.add_child(_activity_card(a))  # l'entraînement complète la grille JcE
 
 
-func _menu_zones() -> void:
-	_sub_title("Zone de farm")
-	for i in GameData.zones.size():
+func _activity_card(a: Dictionary, size := Vector2(345, 112)) -> Button:
+	var c := Activities.card(a, size)
+	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	c.pressed.connect(_show_menu.bind(String(a.id)))
+	return c
+
+
+## En-tête d'une page d'activité : retour aux activités et bandeau illustré.
+func _activity_head(id: String) -> void:
+	var back := MenuWidgets.glass_button("‹  Activités", 15, Vector2(150, 36))
+	back.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	back.pressed.connect(_show_menu.bind("play"))
+	_sub.add_child(back)
+	var bn := Activities.banner(Activities.get_def(id))
+	bn.custom_minimum_size.y = 118
+	_sub.add_child(bn)
+
+
+## Survie (la run de farm) : la zone, puis Lancer.
+func _menu_survival() -> void:
+	_activity_head("survival")
+	Hud._label(_sub, "Zone", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
+	# zones débloquées, puis la suivante (verrouillée) ; le reste en une ligne
+	for i in mini(Profile.unlocked_zones + 1, GameData.zones.size()):
 		var z: Dictionary = GameData.zones[i]
 		var open := i < Profile.unlocked_zones
 		var r := _row(String(z.name), ("Niveau %d+" % (1 + int(z.get("level_bonus", 0)))) if open else "Verrouillée : bats le boss de %s" % GameData.zones[i - 1].name,
-			"pin", _select_zone.bind(String(z.id)), 54.0)
+			"pin", _select_zone.bind(String(z.id)), 46.0)
 		r.disabled = not open
 		if not open:
 			r.modulate = Color(1, 1, 1, 0.5)
 		r.mark(z.id == Profile.selected_zone)
-	var back := MenuWidgets.glass_button("‹  Retour", 16, Vector2(160, 40))
-	back.pressed.connect(_show_menu.bind("play"))
-	_sub.add_child(back)
+	var more := GameData.zones.size() - mini(Profile.unlocked_zones + 1, GameData.zones.size())
+	if more > 0:
+		Hud._label(_sub, "+ %d zone(s) à découvrir" % more, 13, UiTheme.MUTED)
+	var go := MenuWidgets.gold_button("Lancer la run", 22, Vector2(0, 56))
+	go.pressed.connect(_launch)
+	_sub.add_child(go)
+
+
+## Zone d'entraînement : description, puis Entrer.
+func _menu_training() -> void:
+	_activity_head("training")
+	_activity_desc("training")
+	var go := MenuWidgets.gold_button("Entrer", 22, Vector2(0, 56))
+	go.pressed.connect(_start_training)
+	_sub.add_child(go)
+
+
+## Activité à venir : ce qui est prévu.
+func _menu_soon(id: String) -> void:
+	_activity_head(id)
+	_activity_desc(id)
+	var l := Hud._label(_sub, "Bientôt disponible.", 16, Color(0.8, 0.78, 0.9))
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+
+func _activity_desc(id: String) -> void:
+	var d := Hud._label(_sub, String(Activities.get_def(id).get("desc", "")), 14, UiTheme.TEXT)
+	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	d.custom_minimum_size = Vector2(420, 0)
 
 
 func _menu_quit() -> void:
