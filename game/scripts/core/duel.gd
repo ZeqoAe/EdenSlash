@@ -261,6 +261,7 @@ static func wins_against(opponent: String, diff: int) -> int:
 static func finish(won: bool) -> Dictionary:
 	if not active:
 		return {}
+	RunJournal.end_map("victoire" if won else "defaite", {"rival": rival_class, "difficulty": difficulty, "rounds": [wins, losses]})
 	active = false
 	Run.active = false
 	Profile.in_run = false

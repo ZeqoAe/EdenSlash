@@ -42,6 +42,13 @@ section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : 
 aide au combat en 4 niveaux ; lot 5 Duel à l'arme / équipé…). Le détail de chaque lot est dans
 `conception/<équipe>/raffinement_3.md`.
 
+## Journal de run
+`core/run_journal.gd` écrit une ligne JSON par carte jouée dans `user://journal.jsonl`
+(`%APPDATA%/Godot/app_userdata/Eden Slash/`, hors git) : style (coffres / farm / mixte), or par source
+et par usage, DPS du boss sur 10 s, dégâts subis par minute, temps pour tuer, aide au combat, version.
+Règles de décision (≥ 5 cartes par style et par époque) : `conception/equilibrage/raffinement_3.md`, §2.
+Aucun réglage d'époque ou d'économie avant ces mesures. Test : `res://tests/test_journal.tscn`.
+
 ## Branche
 Tout se passe sur la branche `claude/optimistic-gauss-p2g2pq`. Ne pas travailler sur `master`.
 

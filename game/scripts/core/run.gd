@@ -111,6 +111,7 @@ func start(cid: String) -> void:
 	trophies = []
 	anvil_stage = 0
 	Profile.begin_run()
+	RunJournal.begin_run()
 	changed.emit()
 
 
@@ -133,6 +134,7 @@ func finish(res: String) -> void:
 		return
 	active = false
 	result = res
+	RunJournal.end_map(res)
 	Profile.record_max("best_combo", combo_best)
 	Profile.runs_done += 1
 	expertise_gain = max_level * 15 + kills / 2 + elites * 10 + (200 if res == "victoire" else (60 if res == "extraction" else 0)) + 120 * (stage - 1)
@@ -152,7 +154,8 @@ func finish(res: String) -> void:
 
 
 ## Or gagné : crédité tout de suite (coffres, marchands, forge), compté pour le bilan.
-func add_gold(amount: int) -> void:
+func add_gold(amount: int, source := "autre") -> void:
+	RunJournal.gold_in(amount, source)
 	gold += amount
 	Profile.add_gold(amount)
 

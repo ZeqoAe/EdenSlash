@@ -1440,6 +1440,8 @@ func proc_hit(m: Combatant, mult: float, can_crit := false) -> void:
 	var mon := m as Monster
 	if mon and (mon.is_elite or mon.is_boss):
 		dmg *= elite_mult
+	if not foe and bot == null:
+		RunJournal.player_hit(m, dmg)
 	m.take_damage(dmg, self, is_crit)
 	_last_combat = _time
 	if m.is_dead:
@@ -1471,6 +1473,8 @@ func _hit_monster(m: Combatant, dir: Vector3, action: Dictionary, is_skill: bool
 	var dmg := (matk if magic else atk) * mult * randf_range(0.92, 1.08) * damage_dealt_mult() * (1.0 + crit_dmg if is_crit else 1.0) * flow_mult() * dmg_mult
 	if mon and (mon.is_elite or mon.is_boss):
 		dmg *= elite_mult
+	if not foe and bot == null:
+		RunJournal.player_hit(m, dmg)
 	elif execute > 0.0 and m.hp - dmg <= m.max_hp * execute:
 		# exécution : coup fatal qui ignore la défense
 		DamageNumber.spawn_text(m, "EXÉCUTÉ", Color(1.0, 0.3, 0.3))
@@ -2176,6 +2180,8 @@ func take_damage(amount: float, source: Combatant = null, is_crit := false, dot 
 		Vfx.shockwave(self, global_position, 4.0, Color(1.0, 0.95, 0.7))
 		return
 	_last_combat = _time
+	if not foe:
+		RunJournal.damage_taken(amount * damage_taken_mult(), source, max_hp)
 	super.take_damage(amount, source, is_crit, dot)
 	# Épines (sorts d'Eden « renvoie les dégâts ») : 30 % du coup reçu renvoyé à l'attaquant
 	if not dot and has_status("thorns") and source and is_instance_valid(source) and not source.is_dead:

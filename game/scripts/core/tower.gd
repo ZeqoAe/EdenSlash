@@ -331,6 +331,7 @@ static func unlocked(f: int, diff: int) -> bool:
 static func finish() -> Dictionary:
 	if not active:
 		return {}
+	RunJournal.end_map("fin", {"floor": floor_n})
 	active = false
 	Run.active = false
 	var cid := Run.class_id

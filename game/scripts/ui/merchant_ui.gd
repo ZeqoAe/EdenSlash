@@ -139,6 +139,7 @@ func _select_max_rarity(r: int) -> void:
 func buy(o: Dictionary) -> void:
 	if o.get("sold", false) or Profile.gold < int(o.price):
 		return
+	RunJournal.gold_out(int(o.price), "marchand")
 	if o.has("item"):
 		if not Profile.buy(o.item, int(o.price)):
 			message("Inventaire plein", 1.5)

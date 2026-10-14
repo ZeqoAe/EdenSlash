@@ -113,6 +113,7 @@ var duel: DuelDirector  # mode Duel : manches contre un héros (Duel)
 
 
 func start(p: Player) -> void:
+	RunJournal.context = _journal_context
 	player = p
 	zone = GameData.zone(Run.zone_id)
 	_roster = zone.monsters.map(func(x): return int(x))
@@ -185,6 +186,14 @@ func _place_player(pos: Vector3) -> void:
 	_last_safe = player.global_position
 
 
+## Contexte de la carte pour le journal de run : coffres posés et ouverts, sites, rage.
+func _journal_context() -> Dictionary:
+	if map == null:
+		return {}
+	return {"chests_opened": chests_opened, "chests_total": map.chests.size(), "shrines": shrines_captured,
+		"shrines_total": map.shrines.size(), "state": state}
+
+
 func time_left() -> float:
 	return maxf(0.0, RUN_TIME - time)
 
@@ -197,6 +206,7 @@ func in_dungeon() -> bool:
 func _process(delta: float) -> void:
 	if player == null or map == null:
 		return
+	RunJournal.tick(delta, player.global_position)
 	if state == "duel":
 		duel.update(delta)
 		_keep_on_map()
@@ -315,6 +325,7 @@ func _interact(it: Interactable) -> void:
 				how = "une clé"
 			elif Profile.gold >= price:
 				Profile.gold -= price
+				RunJournal.gold_out(price, "coffres")
 				how = "%d or" % price
 			else:
 				message.emit("%s : %d or (ou une clé)\nTu as %d or" % [it.title.get_slice(" ·", 0), price, Profile.gold], 2.5)
@@ -568,6 +579,7 @@ func _ring_point(min_d: float, max_d: float) -> Vector3:
 
 func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 	kills += 1
+	RunJournal.monster_died(who)
 	var m := who as Monster
 	if Duel.active:
 		return  # duel : rien à gagner sur l'adversaire
@@ -602,7 +614,8 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		message.emit("Clé obtenue (%d)" % Profile.keys, 1.8)
 		if m.carries_seal:
 			world._offer("Gardien vaincu ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
-	Run.add_gold(roundi((1 + m.level * KILL_GOLD * (KILL_GOLD_ELITE if m.is_elite else 1.0)) * (GREED_GOLD if greed else 1.0)))
+	Run.add_gold(roundi((1 + m.level * KILL_GOLD * (KILL_GOLD_ELITE if m.is_elite else 1.0)) * (GREED_GOLD if greed else 1.0)),
+		"boss" if m.is_boss else ("elites" if m.is_elite else "monstres"))
 	# coffres de récompense (ouverts hors run, menu Coffres) : boss du donjon 100 %, élites 20 %,
 	# monstres 0,5 % ; en Survie, forge ou joaillier (l'équipement s'achète au hub)
 	var n_chests := 1 if m.is_boss else (1 if (m.is_elite and randf() < 0.2) or randf() < 0.005 else 0)
@@ -873,6 +886,7 @@ func _next_stage(next: String) -> void:
 		if Run.pick_up((d as LootDrop).item):
 			d.queue_free()
 	_clear_monsters()
+	RunJournal.end_map("etape")
 	Run.stage += 1
 	Run.zone_id = next
 	zone = GameData.zone(next)
@@ -1082,7 +1096,7 @@ func _on_broken(kind: String, pos: Vector3) -> void:
 	var g: Array = BREAK_GOLD.get(kind, [1, 2])
 	var gold := roundi(randi_range(int(g[0]), int(g[1])) * (1.0 + lv * 0.2) * (GREED_GOLD if greed else 1.0))
 	if gold > 0:
-		Run.add_gold(gold)
+		Run.add_gold(gold, "objets")
 		_gold_pop += gold  # affiché en un seul « +N or » (voir _update_breakables)
 	if kind == "gold":
 		return
@@ -1344,7 +1358,7 @@ func _update_challenges() -> void:
 		_drop_reward_chest(ch.pos, _monster_level(2), false)
 		for i in 2:
 			_drop_consumable(ch.pos, _monster_level(1), 2, "challenge")
-		Run.add_gold(roundi((40 + 12 * player.level) * (GREED_GOLD if greed else 1.0)))
+		Run.add_gold(roundi((40 + 12 * player.level) * (GREED_GOLD if greed else 1.0)), "defis")
 		message.emit("Défi réussi ! Coffre de récompense et fournitures", 3.0)
 
 
@@ -1465,7 +1479,7 @@ func _capture(sh: Shrine) -> void:
 				world._offer("Sanctuaire capturé ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
 		"keys":
 			Profile.keys += 2
-			Run.add_gold(40 + 10 * player.level)
+			Run.add_gold(40 + 10 * player.level, "sites")
 			Profile.changed.emit()
 			message.emit("Sanctuaire capturé : 2 clés et de l'or !", 2.5)
 		_:
