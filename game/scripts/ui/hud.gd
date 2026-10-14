@@ -44,6 +44,7 @@ var _target_tag: Label
 var _target_bar: ProgressBar
 var _target_trail: ProgressBar
 var _target_row: HudWidgets.StatusRow
+var _target_hp: Label  # PV actuels / max, sur la barre
 var _target_ref: WeakRef
 
 var _center_label: Label  # titre du bandeau d'annonce
@@ -401,13 +402,19 @@ func _build_target(root: Control) -> void:
 	_target_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_target_tag = _label(head, "", 13, ACCENT)
 	var bars := Control.new()
-	bars.custom_minimum_size = Vector2(0, 12)
+	bars.custom_minimum_size = Vector2(0, 18)
 	v.add_child(bars)
-	_target_trail = _bar(bars, Color(1, 0.9, 0.75, 0.6), 12)
+	_target_trail = _bar(bars, Color(1, 0.9, 0.75, 0.6), 18)
 	_target_trail.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_target_bar = _bar(bars, Color(0.86, 0.18, 0.24), 12)
+	_target_bar = _bar(bars, Color(0.86, 0.18, 0.24), 18)
 	_target_bar.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_target_bar.add_theme_stylebox_override("background", StyleBoxEmpty.new())
+	_target_hp = _label(bars, "", 13, Color.WHITE)
+	_target_hp.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_target_hp.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_target_hp.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_target_hp.add_theme_constant_override("outline_size", 4)
+	_target_hp.add_theme_color_override("font_outline_color", Color(0.05, 0.02, 0.05))
 	_target_row = HudWidgets.StatusRow.new(false, 24.0, false)
 	_target_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	v.add_child(_target_row)
@@ -606,6 +613,7 @@ func _update_target() -> void:
 	_target_bar.max_value = 1.0
 	_target_trail.max_value = 1.0
 	_target_bar.value = ratio
+	_target_hp.text = "%s / %s" % [_big_number(ceilf(t.hp)), _big_number(t.max_hp)]
 	if _target_trail.value > ratio:
 		_target_trail.value = move_toward(_target_trail.value, ratio, get_process_delta_time() * 0.5)
 	else:

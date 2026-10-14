@@ -51,14 +51,14 @@ func _ready() -> void:
 	p.crit_dmg = 141.0
 	p.move_mult = 1.2
 	var capped := PvpCaps.apply(p)
-	check("vitesse d'attaque plafonnée à 300 %", is_equal_approx(p.atk_speed, 3.0))
-	check("critique plafonné à 100 %", is_equal_approx(p.crit, 1.0))
-	check("dégâts critiques plafonnés à ×3,00", is_equal_approx(1.0 + p.crit_dmg, 3.0))
+	check("vitesse d'attaque plafonnée (%d %%)" % roundi(PvpCaps.CAPS.atk_speed * 100), is_equal_approx(p.atk_speed, PvpCaps.CAPS.atk_speed))
+	check("critique plafonné (%d %%)" % roundi(PvpCaps.CAPS.crit * 100), is_equal_approx(p.crit, PvpCaps.CAPS.crit))
+	check("dégâts critiques plafonnés (×%.2f)" % (1.0 + PvpCaps.CAPS.crit_dmg), is_equal_approx(p.crit_dmg, PvpCaps.CAPS.crit_dmg))
 	check("statistique sous le plafond inchangée", is_equal_approx(p.move_mult, 1.2) and not "move_mult" in capped)
 	check("hors duel : pas de plafond", not PvpCaps.active())
 	Duel.active = true
 	p.recalc_stats()
-	check("en duel : plafonds appliqués au calcul des statistiques", p.atk_speed <= 3.0 and p.crit <= 1.0 and p.crit_dmg <= 2.0)
+	check("en duel : plafonds appliqués au calcul des statistiques", p.atk_speed <= PvpCaps.CAPS.atk_speed and p.crit <= PvpCaps.CAPS.crit and p.crit_dmg <= PvpCaps.CAPS.crit_dmg)
 	Duel.active = false
 	await _test_scale()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
@@ -102,6 +102,8 @@ func _test_scale() -> void:
 		t.take_damage(a.atk * 1000.0, a)
 		check("niveau %d : un coup énorme retire 20 %% des PV au plus (%.1f %%)" % [lv, (t.max_hp - t.hp) / t.max_hp * 100.0],
 			t.hp >= t.max_hp * (1.0 - Combatant.PVP_HIT_CAP) - 1.0 and not t.is_dead)
+		if lv == 90:
+			_test_basic(a, t)
 		t.hp = t.max_hp * 0.5
 		var before := t.hp
 		t.heal(t.max_hp * 0.2)
@@ -116,3 +118,34 @@ func _test_scale() -> void:
 		and is_equal_approx(PvpCaps.heal_mult(), PvpCaps.HEAL_MULT / 2.0))
 	PvpCaps.elapsed = 0.0
 	Duel.active = false
+
+
+## Auto-attaque entre héros en duel : sans contrôle, × PvpCaps.BASIC_MULT ; adversaire scripté
+## sur la fiche du build opti de sa classe (mêmes PV et critiques qu'un héros).
+func _test_basic(a: Player, t: Player) -> void:
+	var hit := {"mult": 1.0, "applies": {"stun": 1.0}, "dmg_type": "phys"}
+	a.crit = 0.0
+	t.hp = t.max_hp
+	a._hit_monster(t, Vector3.FORWARD, hit.duplicate(), false)
+	var basic := t.max_hp - t.hp
+	check("duel : l'auto-attaque ne renverse pas", not t.has_status("stun"))
+	t.hp = t.max_hp
+	a._hit_monster(t, Vector3.FORWARD, hit.duplicate(), true)
+	var spell := t.max_hp - t.hp
+	check("duel : un sort renverse toujours", t.has_status("stun"))
+	check("duel : auto-attaque × %.1f (%.0f contre %.0f)" % [PvpCaps.BASIC_MULT, basic, spell],
+		absf(basic / maxf(spell, 1.0) - PvpCaps.BASIC_MULT) < 0.15)
+	t.statuses.clear()
+	t.hp = t.max_hp
+	Duel.rival_class = "warrior"
+	Duel.rival_build = {}
+	Duel.gear_mode = Duel.GEAR_OPTI
+	Duel.difficulty = 2
+	Duel.hp_mult = 1.0
+	Duel.atk_mult = 1.0
+	var r := Duel.make_rival(90)
+	Run.hero_level = 90  # puissance des objets au niveau du duel, comme dans DuelDirector
+	t.recalc_stats()
+	check("adversaire scripté : PV d'un héros opti (%d contre %d)" % [r.max_hp, t.max_hp], absf(r.max_hp / t.max_hp - 1.0) < 0.05)
+	check("adversaire scripté : critiques d'un héros (%d %%)" % roundi(r.crit_chance * 100.0), r.crit_chance > 0.2 and r.crit_chance <= PvpCaps.CAPS.crit)
+	r.free()

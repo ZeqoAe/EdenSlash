@@ -463,6 +463,13 @@ func _reset(msg: Dictionary) -> void:
 			r.setup(cid, _level, 0 if scen == "dummy" else diff)
 			if not rb.is_empty():
 				r.apply_build(rb, _level)  # adversaire scripté sur un profil type (essais d'équilibrage)
+				if Duel.active:
+					# comme en duel : la fiche d'un héros sur ce profil (Duel.make_rival)
+					Duel.rival_build = rb
+					Duel.rival_class = cid
+					var sheet := Duel.rival_sheet(_level)
+					r.use_sheet(sheet)
+					sheet.free()
 			r.passive = scen == "dummy"
 			r.flee = scen == "flee"
 			r.flee_center = Vector3.ZERO

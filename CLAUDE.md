@@ -73,6 +73,10 @@ de `data/build_profiles.json`, garde ceux du joueur ; `-- warrior` : essai sans 
 d'équilibrage : arène d'IA en duel, `res://scenes/ml_arena.tscn -- --scenario=duel --brain=res://data/cerveaux/cerveau_hardcore.json
 --episodes=4 --level=90 --hero-build=warrior:90 --foe-build=magician:90` (avec `--fixed-fps 60`).
 Cible : 30 s à 1 min 30 par manche entre deux héros optimisés, à tout niveau.
+Auto-attaque entre héros : × `PvpCaps.BASIC_MULT`, sans contrôle ni attraction (retour du joueur :
+le crochet du Guerrier en boucle était imbattable). L'adversaire scripté prend la fiche d'un vrai
+héros (`Duel.rival_sheet` : build opti de sa classe par défaut, × `ClassRival.DUEL_DIFF`) et
+critique ; l'adversaire piloté par un cerveau (très fort) est prévu comme défi de fin de jeu.
 
 ## Musique
 `scripts/core/music.gd` (autoload Music) : pistes OGG copiées du dossier `bgm` du client

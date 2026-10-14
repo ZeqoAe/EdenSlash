@@ -135,7 +135,7 @@ les trophées et les sorts se combinent aux cartes de la run, c'est la boucle re
 (jarres, caisses, tonneaux : or, un peu d'XP, parfois des soins, une fourniture ou une clé ; tas d'or
 ramassés en passant ; cristaux à briser en 3 coups : des gemmes), **24 lieux de décor** (ruines, tours de
 guet, arches, ossements, mines, campements, marchés), **8 plateaux** (et cuvettes) avec un trésor en haut,
-un réseau de sentiers ; **30 coffres** payants (or ou clé, +15 % à chaque coffre ouvert) en 3 qualités qui
+un réseau de sentiers ; **30 coffres** payants (or ou clé, +18 % à chaque coffre ouvert) en 3 qualités qui
 proposent **une pièce d'équipement au choix parmi 3** : coffre (spécial → épique), coffre ouvragé (rare →
 mythique, ×2,5), coffre doré (épique → légendaire, ×6, pilier de lumière) ; des **lieux à usage unique**
 (pilier de lumière) : 3 **enclumes** (+1 garanti sur une pièce portée), 2 **autels du scribe** (parchemin

@@ -86,8 +86,7 @@ func _spawn_brain_foe() -> bool:
 	var kit := Duel.kit_from_grid(Duel.rival_class, b.get("spells", []) if not b.is_empty() else Duel.rival_spells)
 	h.kit_skills = kit.skills
 	h.kit_chains = kit.chains
-	if not b.is_empty():
-		h.use_build(b, Duel.level)
+	Duel.equip_foe(h, Duel.level)  # profil de l'éditeur, build opti, copie ou équipement généré
 	d.add_child(h)
 	var pilot := MlDuelPilot.new()
 	d.add_child(pilot)

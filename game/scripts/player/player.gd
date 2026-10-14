@@ -1341,6 +1341,10 @@ func reduce_cooldowns(seconds: float) -> void:
 func _hit_monster(m: Combatant, dir: Vector3, action: Dictionary, is_skill: bool) -> void:
 	var mon := m as Monster
 	var mult: float = action.get("mult", 1.0)
+	# duel : l'auto-attaque entre héros frappe moins fort et n'interrompt pas (PvpCaps.BASIC_MULT)
+	var pvp_basic := not is_skill and PvpCaps.between_heroes(self, m)
+	if pvp_basic:
+		mult *= PvpCaps.BASIC_MULT
 	var combo: Dictionary = action.get("combo", {})
 	var combo_ok: bool = not combo.is_empty() and m.has_status(String(combo.get("requires", "")))
 	if combo_ok and combo.get("double", false):
@@ -1371,13 +1375,15 @@ func _hit_monster(m: Combatant, dir: Vector3, action: Dictionary, is_skill: bool
 	Vfx.spark(self, m.global_position + Vector3.UP * 1.0, Color(1.0, 0.85, 0.5), is_crit)
 	if is_skill or is_crit or action.get("finisher", false):
 		Vfx.flash(self, m.global_position + Vector3.UP * 1.0, 1.6 if is_crit else 1.2, Color(1.0, 0.85, 0.55))
-	var pull := float(action.get("pull", 0.0))
+	var pull := 0.0 if pvp_basic else float(action.get("pull", 0.0))
 	if pull > 0.0:
 		# attraction vers le héros (grappin) ou le centre de la zone (vortex)
 		m.knockback(-dir * sqrt(28.0 * pull))
 	else:
 		m.knockback(dir * (2.5 if is_skill else (3.0 if action.get("finisher", false) else 1.0)))
 	for s in action.get("applies", {}):
+		if pvp_basic and s in Combatant.CC_TYPES:
+			continue
 		m.add_status(s, float(action.applies[s]), self)
 	if combo_ok:
 		for s in combo.get("applies", {}):

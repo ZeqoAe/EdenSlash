@@ -123,6 +123,29 @@ func apply_build(b: Dictionary, lv: int) -> void:
 	display_name = "<Duel> %s" % String(b.get("name", cls.get("name_fr", cid)))
 
 
+## Critiques (duel : ceux du héros dont il prend la fiche, voir [method use_sheet]).
+var crit_chance := 0.0
+var crit_bonus := 0.5
+## Duel : facteur de PV et de dégâts par difficulté, sur la fiche d'un vrai héros (l'IA scriptée
+## ne lance ni renforcements ni soins : en difficile, mêmes stats qu'un héros, en hardcore un peu plus).
+const DUEL_DIFF := [0.6, 0.8, 1.0, 1.2]
+
+
+## Fiche d'un héros complet [param h] (Player, même classe, stats calculées comme celles du
+## joueur : équipement, sets, attributs, maîtrise, certificats, plafonds du duel) : ses PV,
+## sa puissance, sa défense et ses critiques, × le facteur de difficulté du duel.
+func use_sheet(h: Player) -> void:
+	var k := float(DUEL_DIFF[difficulty])
+	max_hp = h.max_hp * k
+	hp = max_hp
+	atk = h.power() * h.dmg_mult * k
+	defense = h.defense
+	var magic := String(cls.get("dmg_type", "phys")) in ["mag", "magic"]
+	crit_chance = h.mcrit if magic else h.crit
+	crit_bonus = h.crit_dmg
+	gear = h.foe_gear.values()
+
+
 ## Équipement porté (la Tour) : ses PV, son attaque et sa défense s'ajoutent, × [param k].
 var gear: Array = []
 var gear_stats: Array = []  # stats de chaque pièce (fiche de la Tour)
@@ -521,12 +544,15 @@ func _start_attack() -> void:
 			if _state == "attack":
 				Sfx.play_at(self, global_position, String(snd[1]), -6.0))
 	play(anim_name, 0.06, speed, true)
-	var dmg := atk * mult * damage_dealt_mult() * randf_range(0.9, 1.1)
+	if sk.is_empty() and Duel.active:
+		mult *= PvpCaps.BASIC_MULT  # auto-attaque entre héros en duel
+	var is_crit := randf() < crit_chance
+	var dmg := atk * mult * damage_dealt_mult() * randf_range(0.9, 1.1) * (1.0 + crit_bonus if is_crit else 1.0)
 	var kind := String(act.get("kind", "cone"))
 	var r := float(act.get("radius", 3.0))
 	var rng := float(act.get("range", 0.0))
 	var at := global_position
-	var props := {"delay": delay, "damage": dmg, "source": self}
+	var props := {"delay": delay, "damage": dmg, "source": self, "crit": is_crit}
 	if kind == "ground":
 		at = global_position + to.limit_length(maxf(rng, 4.0))
 		props.merge({"shape": "circle", "radius": r})

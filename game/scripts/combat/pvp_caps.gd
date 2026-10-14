@@ -7,11 +7,11 @@ extends RefCounted
 ## Valeurs en multiplicateurs (1.0 = 100 %) ; dégâts critiques : bonus (2.0 = coups critiques ×3,00).
 
 const CAPS := {
-	"atk_speed": 3.0,  # vitesse d'attaque 300 %
+	"atk_speed": 2.0,  # vitesse d'attaque 200 % (au-delà, l'auto-attaque en boucle écrase tout)
 	"cast_speed": 3.0,  # vitesse d'incantation 300 %
-	"crit": 1.0,  # critique physique 100 %
-	"mcrit": 1.0,  # critique magique 100 %
-	"crit_dmg": 2.0,  # dégâts critiques ×3,00
+	"crit": 0.5,  # critique physique 50 % (un coup sur deux, pas tous)
+	"mcrit": 0.5,  # critique magique 50 %
+	"crit_dmg": 1.5,  # dégâts critiques ×2,50
 	"move_mult": 2.0,  # vitesse de déplacement 200 %
 	"lifesteal": 0.2,  # vol de vie 20 %
 	"heal_power": 1.5,  # puissance de soin 150 %
@@ -32,11 +32,16 @@ const HEAL_MULT := 0.35
 const PRESSURE_START := 30.0
 const PRESSURE_STEP := 20.0
 ## Échelle des dégâts entre héros en duel : en miroir (même build), un coup de multiplicateur
-## 1 retire 0,9 % des PV de la cible avant défense, quel que soit le niveau. Les stats comptent
+## 1 retire 1,2 % des PV de la cible avant défense, quel que soit le niveau. Les stats comptent
 ## toujours : entre deux héros, l'avantage suit le produit puissance × PV, en racine (voir
 ## [method damage_mult]). Sans ça, l'équipement change tout d'un niveau à l'autre : au niveau 25
 ## il triple l'attaque, au 90 il multiplie les PV par 60 (combats de 4 s ou éternels).
-const DAMAGE_SCALE := 0.009
+const DAMAGE_SCALE := 0.012  # 0.009 avant 0.1.118 (critiques à 100 % et auto-attaque pleine)
+## Auto-attaque (coups du combo de l'arme) entre héros en duel : dégâts × BASIC_MULT et sans
+## contrôle (renversement, gel…) ni attraction : elle n'interrompt plus l'adversaire, les sorts
+## restent l'outil pour le faire. Sinon, avec la vitesse d'attaque au plafond, l'auto-attaque
+## en boucle du Guerrier (crochet qui renverse 1 s) bat tous les builds.
+const BASIC_MULT := 0.7
 ## Réduction des dégâts par la défense en duel : 60 % au plus.
 const MAX_MITIGATION := 0.6
 
@@ -76,6 +81,11 @@ static func taken(def: float, src_def: float) -> float:
 ## Soins reçus en duel.
 static func heal_mult() -> float:
 	return HEAL_MULT / pressure()
+
+
+## Coup de [param src] sur [param dst] entre deux héros en duel.
+static func between_heroes(src: Combatant, dst: Combatant) -> bool:
+	return active() and src != dst and Combatant.is_hero(src) and Combatant.is_hero(dst)
 
 
 ## Ramène les statistiques de [param p] sous les plafonds ; rend les statistiques plafonnées.

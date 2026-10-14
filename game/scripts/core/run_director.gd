@@ -45,8 +45,8 @@ var _found := {}  # marchands et sanctuaires découverts (instance -> true)
 var _shrine_timer := 0.0
 ## Coffres de la carte : prix en or qui monte à chaque coffre ouvert (ou une clé), selon leur
 ## qualité ; ils proposent de l'équipement au choix (façon Megabonk).
-const CHEST_BASE := 20  # prix du 1er coffre (+3 par niveau du héros), +15 % à chaque coffre ouvert
-const CHEST_GROWTH := 1.15
+const CHEST_BASE := 20  # prix du 1er coffre (+3 par niveau du héros), +18 % à chaque coffre ouvert
+const CHEST_GROWTH := 1.18
 ## Qualités de coffre : prix ×, raretés de l'équipement proposé (min, max), chance, nombre de
 ## fournitures données en plus.
 const CHEST_TIERS := [
@@ -55,7 +55,11 @@ const CHEST_TIERS := [
 	{"price": 6.0, "min_r": 3, "max_r": 5, "luck": 0.75, "supplies": 3},  # légendaire 15 %, mythique 22 %
 ]
 ## Objets cassables : or (× niveau), chances de soin, de fourniture, de clé.
-const BREAK_GOLD := {"pot": [2, 4], "crate": [3, 6], "gold": [14, 24], "gem": [0, 0]}
+const BREAK_GOLD := {"pot": [1, 3], "crate": [2, 4], "gold": [10, 16], "gem": [0, 0]}
+## Or par monstre tué : 1 + niveau × KILL_GOLD (× KILL_GOLD_ELITE pour une élite). Retour du
+## joueur (0.1.118) : l'or ne manquait jamais, il ne force plus de choix.
+const KILL_GOLD := 0.5
+const KILL_GOLD_ELITE := 2.5
 const BREAK_HEAL := 0.06
 const BREAK_SUPPLY := {"pot": 0.025, "crate": 0.05}
 const BREAK_KEY := 0.006
@@ -576,7 +580,7 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		message.emit("Clé obtenue (%d)" % Profile.keys, 1.8)
 		if m.carries_seal:
 			world._offer("Gardien vaincu ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
-	Run.add_gold(roundi((2 + m.level * (3 if m.is_elite else 1)) * (GREED_GOLD if greed else 1.0)))
+	Run.add_gold(roundi((1 + m.level * KILL_GOLD * (KILL_GOLD_ELITE if m.is_elite else 1.0)) * (GREED_GOLD if greed else 1.0)))
 	# coffres de récompense (ouverts hors run) : boss, parfois les élites, rarement les autres
 	# coffres de récompense (seule source des mythiques et légendaires) : boss du donjon 100 %,
 	# élites 20 %, monstres 0,5 %
@@ -1021,7 +1025,7 @@ func _on_broken(kind: String, pos: Vector3) -> void:
 		message.emit("Cristal brisé : des gemmes !", 1.5)
 		return
 	var g: Array = BREAK_GOLD.get(kind, [1, 2])
-	var gold := roundi(randi_range(int(g[0]), int(g[1])) * (1.0 + lv * 0.25) * (GREED_GOLD if greed else 1.0))
+	var gold := roundi(randi_range(int(g[0]), int(g[1])) * (1.0 + lv * 0.2) * (GREED_GOLD if greed else 1.0))
 	if gold > 0:
 		Run.add_gold(gold)
 		_gold_pop += gold  # affiché en un seul « +N or » (voir _update_breakables)

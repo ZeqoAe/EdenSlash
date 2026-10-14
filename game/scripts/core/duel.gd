@@ -12,7 +12,6 @@ extends RefCounted
 const ROUNDS_TO_WIN := 2
 const ARMOR := ["head", "chest", "legs", "gloves", "boots"]
 const ZONE := "arid"  # arène à piliers, éclairée
-const RIVAL_HP := 0.6  # PV de l'adversaire (× ceux de l'entraînement : il a lui aussi de l'équipement)
 
 static var active := false
 static var rival_class := "warrior"
@@ -23,8 +22,10 @@ static var losses := 0
 static var round_n := 1
 ## Préparation de l'adversaire (lobby, « Préparer l'adversaire ») : équipement généré à ton
 ## niveau ou copie du tien, ses 4 sorts (0 : choisi par l'IA), multiplicateurs de PV et de dégâts.
-const GEAR_MODES := ["Généré à ton niveau", "Copie de ton équipement"]
-static var gear_mode := 1
+const GEAR_MODES := ["Généré à ton niveau", "Copie de ton équipement", "Build opti de sa classe"]
+const GEAR_COPY := 1
+const GEAR_OPTI := 2
+static var gear_mode := GEAR_COPY  # à armes égales par défaut
 static var rival_spells: Array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]  # 12 : voir grid12
 static var hp_mult := 1.0
 ## IA de l'adversaire : "" = script de l'entraînement (ClassRival, difficulté ci-dessus), sinon
@@ -159,31 +160,84 @@ static func start(cid: String, opponent: String, diff: int) -> void:
 	Run.fill_from_preset()
 
 
-## Adversaire de la manche : sa classe, au niveau du duel, avec son équipement.
+static var _opti: Array = []
+
+
+## Profil « opti » généré (tools/gen_profiles) de la classe [param cid], au niveau le plus
+## proche de [param lv] ({} s'il n'y en a pas).
+static func opti_build(cid: String, lv: int) -> Dictionary:
+	if _opti.is_empty():
+		# les profils du jeu, même quand RivalBuilds lit le fichier de test
+		var all = JSON.parse_string(FileAccess.get_file_as_string(RivalBuilds.PATH))
+		_opti = (all as Array).filter(func(b): return b is Dictionary and String(b.get("auto", "")) != "") if all is Array else [{}]
+	var best: Dictionary = {}
+	for b in _opti:
+		if String(b.get("auto", "")) == "" or String(b.get("class", "")) != cid:
+			continue
+		if best.is_empty() or absi(int(b.get("level", 0)) - lv) < absi(int(best.get("level", 0)) - lv):
+			best = b
+	return best
+
+
+## Équipe le héros ennemi [param h] (Player, foe) comme l'adversaire préparé : profil de
+## l'éditeur, build opti de sa classe, copie de ton équipement ou équipement généré.
+static func equip_foe(h: Player, lv: int) -> void:
+	var b := rival_build
+	if b.is_empty() and gear_mode == GEAR_OPTI:
+		b = opti_build(rival_class, lv)
+	if not b.is_empty():
+		h.use_build(b, lv)
+		return
+	h.built = true
+	h.foe_gear = {}
+	if gear_mode == GEAR_COPY:
+		h.foe_gear = Profile.equipped.duplicate(true)  # copie exacte de ton équipement (améliorations comprises)
+		h.foe_extra = Run.passive_stats()  # et de tes bonus (maîtrise, certificats et leur placement)
+	else:
+		seed(hash([rival_class, lv, difficulty]))
+		for slot in Tower.DUEL_SLOTS:
+			h.foe_gear[slot] = Items.generate(lv, 0.3 + 0.2 * difficulty, slot, rival_class, 0, "", 3)
+		randomize()
+
+
+## Fiche du héros que l'adversaire scripté imite (stats calculées comme celles d'un héros,
+## plafonds du duel compris). À libérer après usage.
+static func rival_sheet(lv: int) -> Player:
+	var h := Player.new()
+	h.foe = true
+	h.class_id = rival_class
+	h.cls = GameData.class_data(rival_class)
+	h.level = lv
+	equip_foe(h, lv)
+	var was := Run.hero_level
+	var was_active := Run.active
+	Run.hero_level = lv
+	Run.active = true  # puissance des objets au niveau du duel, même pour l'aperçu du lobby
+	h.recalc_stats()
+	PvpCaps.apply(h)
+	Run.hero_level = was
+	Run.active = was_active
+	return h
+
+
+## Adversaire de la manche : sa classe, au niveau du duel, avec la fiche d'un héros équipé
+## (voir [method equip_foe]).
 static func make_rival(lv := -1) -> ClassRival:
 	var at := level if lv < 0 else lv
 	var r := ClassRival.new()
+	var cid := String(rival_build.get("class", rival_class)) if not rival_build.is_empty() else rival_class
+	r.setup(cid, at, difficulty)
 	if not rival_build.is_empty():
-		# adversaire de l'éditeur : son build complet (équipement, apparence, certificats, sorts)
-		r.setup(String(rival_build.get("class", rival_class)), at, difficulty)
+		# adversaire de l'éditeur : son apparence et ses sorts (ses stats : la fiche ci-dessous)
 		r.apply_build(rival_build, at)
+	var h := rival_sheet(at)
+	r.use_sheet(h)
+	h.free()
+	if not rival_build.is_empty():
+		r.max_hp *= float(rival_build.get("hp_mult", 1.0))
+		r.atk *= float(rival_build.get("atk_mult", 1.0))
+		r.hp = r.max_hp
 		return r
-	r.setup(rival_class, at, difficulty, RIVAL_HP)
-	var gear: Array = []
-	if gear_mode == 1:
-		gear = Profile.equipped.values()  # copie exacte de ton équipement (améliorations comprises)
-	else:
-		seed(hash([rival_class, at, difficulty]))
-		for slot in Tower.DUEL_SLOTS:
-			gear.append(Items.generate(at, 0.3 + 0.2 * difficulty, slot, rival_class, 0, "", 3))
-		randomize()
-	var was := Run.hero_level
-	var was_active := Run.active
-	Run.hero_level = at
-	Run.active = true  # puissance des objets au niveau du duel, même pour l'aperçu du lobby
-	r.apply_gear(gear)
-	Run.hero_level = was
-	Run.active = was_active
 	r.max_hp *= hp_mult
 	r.hp = r.max_hp
 	r.atk *= atk_mult

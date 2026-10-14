@@ -66,7 +66,7 @@ static func open(anchor: Node, on_close: Callable) -> CanvasLayer:
 	v.add_child(bar)
 	var reset := MenuWidgets.glass_button("Par défaut", 15, Vector2(160, 42))
 	reset.pressed.connect(func():
-		Duel.gear_mode = 1
+		Duel.gear_mode = Duel.GEAR_COPY
 		Duel.rival_spells = Duel.grid12([])
 		Duel.hp_mult = 1.0
 		Duel.atk_mult = 1.0
@@ -160,13 +160,15 @@ static func _preview_text() -> String:
 	p.cls = GameData.class_data(Profile.selected_class)
 	p.level = lv
 	p.recalc_stats()
+	PvpCaps.apply(p)  # stats du duel (plafonds JcJ)
 	var magic := String(p.cls.get("dmg_type", "phys")) in ["mag", "magic"]
 	var my_atk := p.matk if magic else p.atk
 	var spells: PackedStringArray = []
 	for s in r._skills:
 		spells.append(String(s.name))
 	var txt := "[b]Niveau du duel : %d[/b]\n" % lv
-	txt += "[color=#ff9a8a][b]Adversaire[/b][/color] : PV [b]%s[/b] · attaque [b]%d[/b] · défense %d\n" % [Hud._big_number(r.max_hp), roundi(r.atk), roundi(r.defense)]
+	txt += "[color=#ff9a8a][b]Adversaire[/b][/color] : PV [b]%s[/b] · attaque [b]%d[/b] · défense %d · critiques %d %% (+%d %% de dégâts)\n" % [
+		Hud._big_number(r.max_hp), roundi(r.atk), roundi(r.defense), roundi(r.crit_chance * 100.0), roundi(r.crit_bonus * 100.0)]
 	txt += "   Sorts : %s\n" % (", ".join(spells) if not spells.is_empty() else "combo de l'arme seulement")
 	txt += "[color=#9fd0ff][b]Toi[/b][/color] : PV [b]%s[/b] · attaque [b]%d[/b] · défense %d · critiques %d %% (+%d %% de dégâts)\n" % [
 		Hud._big_number(p.max_hp), roundi(my_atk), roundi(p.defense), roundi((p.mcrit if magic else p.crit) * 100.0), roundi(p.crit_dmg * 100.0)]
@@ -176,7 +178,7 @@ static func _preview_text() -> String:
 		* PvpCaps.taken(r.defense, p.defense) / maxf(r.max_hp, 1.0)
 	var theirs := r.atk * PvpCaps.DAMAGE_SCALE * sqrt(maxf(p.max_hp, 1.0) * maxf(r.max_hp, 1.0)) / sqrt(maxf(r.atk, 1.0) * maxf(pw_me, 1.0)) \
 		* PvpCaps.taken(p.defense, r.defense) / maxf(p.max_hp, 1.0)
-	txt += "[color=#c8c8d4]En duel, les dégâts sont ramenés à l'échelle des deux héros : un coup simple retire environ [b]%.1f %%[/b] de ses PV (%.1f %% des tiens pour le sien), un sort ou un critique bien plus ; après 30 s, l'acharnement double les dégâts toutes les 20 s.[/color]" % [mine * 100.0, theirs * 100.0]
+	txt += "[color=#c8c8d4]En duel, les dégâts sont ramenés à l'échelle des deux héros : une auto-attaque retire environ [b]%.1f %%[/b] de ses PV (%.1f %% des tiens pour la sienne), un sort ou un critique bien plus ; l'auto-attaque n'interrompt pas ; après 30 s, l'acharnement double les dégâts toutes les 20 s.[/color]" % [mine * PvpCaps.BASIC_MULT * 100.0, theirs * PvpCaps.BASIC_MULT * 100.0]
 	r.free()
 	p.free()
 	Run.class_id = was

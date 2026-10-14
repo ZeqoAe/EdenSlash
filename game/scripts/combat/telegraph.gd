@@ -21,6 +21,7 @@ var delay := 1.2
 var damage := 100.0
 var source: Combatant
 var stun_time := 0.0  # étourdit le héros touché
+var crit := false  # coup critique (adversaire de duel)
 var jumpable := false  # onde au sol : évitée si le héros est en l'air
 var small := false  # attaque de monstre ordinaire : annonce plus discrète
 var color := COLOR
@@ -186,7 +187,7 @@ func _resolve() -> void:
 			player.ml_counts.dodged += 1
 			DamageNumber.spawn_text(player, "ESQUIVE !", Color(0.7, 1.0, 0.7))
 		else:
-			player.take_damage(damage, source, false)
+			player.take_damage(damage, source, crit)
 			if stun_time > 0.0:
 				player.stun(stun_time)
 			hit = true
