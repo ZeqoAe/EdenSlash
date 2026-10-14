@@ -645,6 +645,10 @@ func _build_ui() -> void:
 	orbit_hint.add_theme_constant_override("outline_size", 4)
 	orbit_hint.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	orbit_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# l'aide de la caméra s'efface après quelques secondes (la scène reste dégagée)
+	var fade := orbit_hint.create_tween()
+	fade.tween_interval(8.0)
+	fade.tween_property(orbit_hint, "modulate:a", 0.0, 1.5)
 	root.add_child(info)
 	var ih := HBoxContainer.new()
 	ih.add_theme_constant_override("separation", 10)

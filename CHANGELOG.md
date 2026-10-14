@@ -114,3 +114,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.102 | Test des pages remis à jour (mode dev : page Tour) : tous les tests passent | session locale |
 | 0.1.103 | Bilan de run en tuiles (classe, niveau, durée, monstres, élites, or, étape) ; le bandeau d'annonce ne chevauche plus le titre d'un choix de cartes | session locale |
 | 0.1.104 | Combat : les monstres qui masquent le héros (boss géants, élites) deviennent translucides ; pendant un boss, la barre du haut reste sur le boss (nom sans « <Boss> »), sans les insensibilités dans ses effets | session locale |
+| 0.1.105 | Duel : l'adversaire est marqué « Adversaire » (et non « Élite ») dans la barre du haut ; lobby : l'aide de la caméra s'efface au bout de 8 s | session locale |

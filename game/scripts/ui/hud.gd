@@ -595,7 +595,9 @@ func _update_target() -> void:
 	_target_name.text = t.display_name.trim_prefix("<Boss> ").trim_prefix("<Duel> ")
 	var m := t as Monster
 	var tag := "Nv %d" % t.level
-	if m and m.is_boss:
+	if Combatant.is_hero(t):
+		tag = "Adversaire · " + tag  # duel, Tour : un héros, pas une élite
+	elif m and m.is_boss:
 		tag = "BOSS · " + tag
 	elif m and m.is_elite:
 		tag = "Élite · " + tag
