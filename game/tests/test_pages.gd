@@ -428,7 +428,7 @@ func _test_lobby() -> void:
 	Profile.save_profile()
 	lobby._archive.open(4)
 	await _frames()
-	check("Carnet : vue d'ensemble, succès, cartes, trophées, collection ; Atelier : l'Armurerie et la Fabrication", lobby._archive._pages.size() == 5 and lobby._workshop._pages.size() == 2)
+	check("Carnet : vue d'ensemble, succès, cartes, trophées, collection ; Atelier : l'Armurerie, la Fabrication et la Forge", lobby._archive._pages.size() == 5 and lobby._workshop._pages.size() == 3)
 	check("Collection : catalogue affiché", lobby._archive.is_open() and lobby._archive.page(4)._grid.get_child_count() > 0)
 	lobby._archive.close_ui()
 	# mode dev : rien sans l'activer dans les Paramètres, puis écran F10

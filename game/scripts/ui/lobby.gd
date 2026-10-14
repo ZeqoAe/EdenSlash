@@ -107,7 +107,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
 				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
-				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge" or arg == "--duel-prep" or arg == "--rival-editor" or arg.begins_with("--profile-tab=") or arg.begins_with("--profile-picker=") or arg == "--profile-load" or arg.begins_with("--settings-tab=") or arg.begins_with("--menu=") or arg.begins_with("--chest-open=") or arg.begins_with("--chests-tab="):
+				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge" or arg == "--duel-prep" or arg == "--rival-editor" or arg.begins_with("--profile-tab=") or arg.begins_with("--profile-picker=") or arg == "--profile-load" or arg.begins_with("--settings-tab=") or arg.begins_with("--menu=") or arg.begins_with("--chest-open=") or arg.begins_with("--chests-tab=") or arg.begins_with("--workshop-tab="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -233,7 +233,11 @@ func _ready() -> void:
 						for it in SlotChests.offer(box, ep, 3 if ep == 3 else 1, 2):
 							Profile.seen_gear.append(int(it.eden))
 				Profile.insignia = 300
-			_workshop.open(0)
+			var wtab := 0
+			for arg in OS.get_cmdline_user_args():
+				if arg.begins_with("--workshop-tab="):
+					wtab = int(arg.get_slice("=", 1))  # test : onglet de l'Atelier (2 : Forge)
+			_workshop.open(wtab)
 		"archive":
 			_archive.open(4)
 			for arg in OS.get_cmdline_user_args():
@@ -973,8 +977,8 @@ func _build_ui() -> void:
 	_archive = _screen("Carnet", [["Vue d'ensemble", CarnetPages.OverviewPage.new()], ["Succès et titres", CarnetPages.AchievementsPage.new()],
 		["Cartes", CarnetPages.CardsPage.new()], ["Trophées", CarnetPages.TrophiesPage.new()], ["Collection", ArchivePages.CollectionPage.new()]])
 	_archive.set_title("Carnet", "Archive des trésors : chaque entrée donne un bonus permanent à tous les héros")
-	_workshop = _screen("Atelier", [["Armurerie", GearShopPage.new()], ["Fabrication", FabricationPage.new()]])
-	_workshop.set_title("Atelier", "Armurerie : les pièces de la Survie s'achètent avec tes insignes · Fabrication : les plans des donjons")
+	_workshop = _screen("Atelier", [["Armurerie", GearShopPage.new()], ["Fabrication", FabricationPage.new()], ["Forge", ForgeBench.new()]])
+	_workshop.set_title("Atelier", "Armurerie · Fabrication des plans · Forge (améliorer, enchanter, sertir, polir, réajuster, démonter)")
 	_chests = _screen("Coffres", [["Coffres", ChestsPage.new()], ["Roulette", WheelPage.new()]])
 	_chests.set_title("Coffres", "Coffres de récompense rapportés des runs : apparences, forge, joaillier · Roulette : 3 lancers par jour")
 	_settings = SettingsMenu.new()

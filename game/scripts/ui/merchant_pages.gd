@@ -11,6 +11,8 @@ class ItemPage extends HBoxContainer:
 	var multi := false
 	var scroll_actions := false  # actions nombreuses : colonne de droite défilante
 	var include_equipped := true
+	var grid_cols := 10  # colonnes de la grille d'objets
+	var right_width := 640.0  # largeur de la colonne de droite (fiche et actions)
 	var title := ""
 	var hint := ""
 	var grid: ItemWidgets.ItemGrid
@@ -24,11 +26,11 @@ class ItemPage extends HBoxContainer:
 		ItemWidgets.section(left, title)
 		var h := Hud._label(left, hint, 13, UiTheme.MUTED)
 		h.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		grid = ItemWidgets.ItemGrid.new(multi, 10, 62.0)
+		grid = ItemWidgets.ItemGrid.new(multi, grid_cols, 62.0)
 		grid.badge_fn = func(it): return "porté" if _worn(it) else ""
 		grid.selection_changed.connect(_on_selection)
 		left.add_child(grid)
-		var right := ItemWidgets.panel(self, 640)  # la fiche et ses actions (forge) : la place utile
+		var right := ItemWidgets.panel(self, right_width)  # la fiche et ses actions (forge) : la place utile
 		detail = ItemWidgets.rich(right, 15)
 		actions = VBoxContainer.new()
 		actions.add_theme_constant_override("separation", 8)

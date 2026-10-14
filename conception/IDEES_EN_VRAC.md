@@ -12,7 +12,7 @@ puis classée par **priorité** (apport au jeu) et **facilité** (travail et ris
 | 2 | Roulette quotidienne de skins (3 tirages par jour, case « perdu ») | Moyenne | Facile | Boucle de rétention simple, réutilise coffres d'apparence et titres | **Fait (0.1.153)** |
 | 3 | Puissance d'équipement (PE) et déblocages | Haute | Moyenne | Donne un repère unique du niveau de l'équipement ; sert de verrou aux activités avancées | **Fait (0.1.154)** |
 | 4 | Potions | Moyenne | Moyenne | Brique indispensable au Battle royale et au Trio ; utile en Survie et en donjon | **Fait (0.1.155)** : 4 potions, touches C / V (au lieu de 2 emplacements équipés) |
-| 5 | Forge unifiée (améliorer, démonter, enchanter, gemmes, polir, réforger) avec animations | Haute | Moyenne | La logique existe déjà (`Craft`, `Forge`) : il manque la page unique et le ressenti | À faire |
+| 5 | Forge unifiée (améliorer, démonter, enchanter, gemmes, polir, réforger) avec animations | Haute | Moyenne | La logique existe déjà (`Craft`, `Forge`) : il manque la page unique et le ressenti | **Fait (0.1.156)** : Atelier > Forge (`ui/forge_bench.gd`) |
 | 6 | File d'attente du Duel (recherche, match trouvé, draft 60 s, récap 10 s) | Haute | Moyenne | Beaucoup d'écrans mais peu de règles nouvelles ; prépare le chargement et un vrai en ligne | À faire |
 | 7 | Lisibilité des sorts : texture = zone = effet | Très haute | Difficile (itératif, à l'œil) | Le plus gros gain pour le JcJ, mais demande des captures et des allers-retours | Audit outillé + premier lot ; la suite demande ton œil |
 | 8 | Trio PvE puis PvP (5 vagues, boss sac à PV, zone qui bascule en JcJ) | Haute | Difficile | Réutilise donjons, alliés IA et ciblage par camp ; nouveaux : vagues, boss long, bascule | Conçu, à coder (après 1 à 7) |

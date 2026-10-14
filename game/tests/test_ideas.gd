@@ -19,6 +19,7 @@ func _ready() -> void:
 	_test_wheel()
 	_test_gear_power()
 	_test_potions()
+	await _test_forge()
 	print("ÉCHECS : %d" % fails)
 	get_tree().quit(1 if fails > 0 else 0)
 
@@ -180,3 +181,82 @@ func _test_potions() -> void:
 	check("potions : touches C, V et croix haut / bas déclarées", Settings.DEFAULT_BINDS.has("potion_1") and Settings.PAD_BINDS.has("potion_2") and Settings.PAD_ACTIONS.has("potion_1"))
 	check("potions : actions créées dans l'InputMap", InputMap.has_action("potion_1") and InputMap.has_action("potion_2"))
 	Profile.bag = {}
+
+
+func _find_buttons(n: Node, out: Array) -> void:
+	if n is Button:
+		out.append(n)
+	for c in n.get_children():
+		_find_buttons(c, out)
+
+
+func _button_with(root: Node, prefix: String) -> Button:
+	var all: Array = []
+	_find_buttons(root, all)
+	for b in all:
+		if (b as Button).text.begins_with(prefix) and not (b as Button).disabled:
+			return b
+	return null
+
+
+func _test_forge() -> void:
+	Profile.reset_all()
+	Settings.reset_all()
+	Profile.in_run = false
+	ForgeBench.fast = true
+	var fb := ForgeBench.new()
+	add_child(fb)
+	await get_tree().process_frame
+	check("forge : la page se construit avec sa barre", fb._bar != null and fb.grid != null)
+	var it := Items.generate(30, 1.0, "chest", "warrior", 0, "", 0)
+	Profile.inventory = [it]
+	var need := Craft.fortify_key(Craft.fortify_kind(it), Craft.fortify_level_for(it))
+	Profile.stash = {need: 5, "stone:safety": 2}
+	Profile.materials["crystal"] = 500
+	fb.refresh()
+	fb.grid.select_item(it)
+	await get_tree().process_frame
+	check("forge : six établis proposés", ForgeBench.BENCHES.size() == 6 and _button_with(fb, "Améliorer") != null and _button_with(fb, "Démonter") != null)
+	var up0 := int(it.get("upgrade", 0))
+	var b := _button_with(fb, "Fortifier")
+	check("forge : un bouton Fortifier est proposé avec le parchemin du sac", b != null)
+	if b:
+		b.pressed.emit()
+		check("forge : la barre se remplit avant le résultat (action pas encore faite)", fb._busy and int(it.get("upgrade", 0)) == up0)
+		await get_tree().create_timer(0.3).timeout
+		check("forge : après la barre, l'action est faite et un verdict s'affiche", not fb._busy and fb._got_verdict and fb._bar._title.text in ["RÉUSSI", "RATÉ"])
+		check("forge : le parchemin est consommé", Profile.bag_count(need) == 4)
+		check("forge : une réussite monte à +1", (fb._bar._title.text == "RÉUSSI") == (int(it.get("upgrade", 0)) == up0 + 1) or fb._bar._title.text == "RATÉ")
+	check("forge : mots d'échec reconnus", ForgeBench._is_fail("Échec. L'objet est intact.") and ForgeBench._is_fail("Pas assez de cristaux.") and not ForgeBench._is_fail("Réussite ! +1 : stats de l'objet +10 %"))
+	# polir
+	fb.bench = "polish"
+	fb._on_selection()
+	await get_tree().process_frame
+	var bp := _button_with(fb, "Polir ·")
+	check("forge : établi Polir", bp != null)
+	if bp:
+		var c0 := Profile.amount("crystal")
+		bp.pressed.emit()
+		await get_tree().create_timer(0.3).timeout
+		check("forge : polir coûte des cristaux", Profile.amount("crystal") < c0 and fb._got_verdict)
+	# démonter (deux clics)
+	fb.bench = "dismantle"
+	fb._on_selection()
+	await get_tree().process_frame
+	var bd := _button_with(fb, "Démonter ·")
+	check("forge : établi Démonter", bd != null)
+	if bd:
+		bd.pressed.emit()
+		await get_tree().process_frame
+		check("forge : démonter demande confirmation", Profile.inventory.has(it))
+		var bc := _button_with(fb, "Confirmer : démonter")
+		if bc:
+			var c1 := Profile.amount("crystal")
+			bc.pressed.emit()
+			await get_tree().create_timer(0.3).timeout
+			check("forge : démontage confirmé : l'objet part, des cristaux arrivent", not Profile.inventory.has(it) and Profile.amount("crystal") > c1)
+	fb.queue_free()
+	await get_tree().process_frame
+	check("forge : fermée, la réserve n'est plus liée au sac de la run", Profile.bag.is_empty() or not is_same(Profile.bag, Profile.stash))
+	ForgeBench.fast = false
+	Profile.reset_all()
