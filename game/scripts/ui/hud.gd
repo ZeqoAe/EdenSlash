@@ -2,7 +2,7 @@ class_name Hud
 extends CanvasLayer
 ## HUD de la run, style or sur indigo (UiTheme) :
 ## - bas : orbe de vie, 4 compétences (recharge circulaire), esquive, orbe d'expérience
-##   (niveau au centre), indicateur de combo ; buffs à gauche et debuffs à droite au-dessus ;
+##   (niveau au centre) ; buffs à gauche et debuffs à droite au-dessus ;
 ## - haut gauche : objectifs repliés (zone, chrono, sceaux), dépliés avec [Tab] et quelques
 ##   secondes à chaque découverte ;
 ## - haut centre : cible (PV, niveau, effets) ; haut droite : mini-carte ronde.
@@ -19,7 +19,6 @@ var _hp_orb: HudWidgets.Orb
 var _xp_orb: HudWidgets.Orb
 var _slots: Array[HudWidgets.SkillSlot] = []
 var _dodge: HudWidgets.SkillSlot
-var _combo: HudWidgets.ComboMeter
 var _buff_row: HudWidgets.StatusRow
 var _debuff_row: HudWidgets.StatusRow
 var _durations := {}  # "cible:effet" -> [fin, durée totale]
@@ -464,10 +463,6 @@ func _build_action_bar(root: Control) -> void:
 	_dodge.size = Vector2(50, 50)
 	_dodge.tooltip_text = "Esquive (invulnérable)"
 	bottom.add_child(_dodge)
-	_combo = HudWidgets.ComboMeter.new()
-	_combo.position = Vector2(300, 46)  # au-dessus des barres d'enchaînement des cases
-	_combo.size = Vector2(300, 26)
-	bottom.add_child(_combo)
 	_buff_row = HudWidgets.StatusRow.new(true)
 	_buff_row.position = Vector2(30, 0)
 	_buff_row.size = Vector2(400, 54)
@@ -540,8 +535,6 @@ func _process(delta: float) -> void:
 				_slots[i].chain_ready = player.chain_ready(i)
 	var dc := player.dodge_cooldown()
 	_dodge.set_cooldown(dc.x, dc.y)
-	var cs := player.combo_state()
-	_combo.set_state(cs.x, cs.y)
 	_update_statuses()
 	_update_target()
 	_update_objectives()

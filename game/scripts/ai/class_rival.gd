@@ -1,7 +1,7 @@
 class_name ClassRival
 extends Monster
 ## Adversaire de la zone d'entraînement : un héros d'une classe (corps, tenue, arme) qui
-## enchaîne le combo de son arme et lance les sorts de la classe. Ses coups sont annoncés au
+## répète l'auto-attaque de son arme et lance les sorts de la classe. Ses coups sont annoncés au
 ## sol en rouge (comme les monstres) avec la forme du coup ou du sort (cône, cercle, ligne,
 ## zone visée) et les effets d'Eden.
 ## Il lit les coups du héros (zone et instant d'impact) et esquive au bon moment, se tient
@@ -36,6 +36,7 @@ const JUMP_SPEED := 9.5
 var cid := "warrior"
 var cls: Dictionary = {}
 var wtype: Dictionary = {}
+var auto_step: Dictionary = {}  # auto-attaque de son arme (WeaponAttacks.rival_step)
 var difficulty := 1
 var cfg: Dictionary = DIFF[1]
 var _combo_i := 0
@@ -67,6 +68,7 @@ func setup(class_id: String, lvl: int, diff := 1, hp_scale := 1.0, n_skills := 4
 	cid = class_id
 	cls = GameData.class_data(cid)
 	wtype = GameData.weapon_type(String(cls.get("weapon_type", "")))
+	auto_step = WeaponAttacks.rival_step(String(cls.get("weapon_type", "katana")))
 	difficulty = clampi(diff, 0, DIFF.size() - 1)
 	cfg = DIFF[difficulty]
 	level = maxi(1, lvl)
@@ -489,13 +491,13 @@ func _update_flee(delta: float) -> Vector3:
 	return v.normalized() * move_speed * (0.75 if dist > 9.0 else 1.0)
 
 
-## Sort prêt (le plus utile à cette distance), sinon le coup suivant du combo.
+## Sort prêt (le plus utile à cette distance), sinon l'auto-attaque de son arme.
 ## Les coups visent là où le héros sera à l'impact.
 func _start_attack() -> void:
 	var to := _player.global_position - global_position
 	to.y = 0.0
 	var sk: Dictionary = {}
-	var finisher := _combo_i == 0
+	var finisher := _combo_i % 3 == 2  # tous les 3 coups : moment privilégié pour un sort (hardcore)
 	for s in _skills:
 		var ready := _time >= float(_skill_ready.get(int(s.id), 1.0 + randf() * 2.0 / (1.0 + difficulty)))
 		# hardcore : les sorts tombent en fin de combo ou quand le héros est ouvert
@@ -512,11 +514,8 @@ func _start_attack() -> void:
 		anim_name = String(sk.get("anim", "attack01"))
 		mult = float(sk.get("mult", 1.5))
 	else:
-		var chain: Array = wtype.get("combo", [])
-		if chain.is_empty():
-			return
-		act = chain[_combo_i % chain.size()]
-		_combo_i = (_combo_i + 1) % chain.size()
+		act = auto_step
+		_combo_i += 1
 		anim_name = String(act.get("anim", "attack01"))
 		mult = float(act.get("mult", 1.0))
 	_set_state("attack")
@@ -609,9 +608,9 @@ func _cancel_after_hit() -> void:
 	_end_of_hit()
 
 
-## Pause avant le coup suivant : courte dans le combo, plus longue après le dernier.
+## Pause avant le coup suivant : courte, plus longue tous les 3 coups (le temps de souffler).
 func _end_of_hit() -> void:
-	var pause := float(cfg.pause) if _combo_i != 0 else float(cfg.pause_end)
+	var pause := float(cfg.pause) if _combo_i % 3 != 0 else float(cfg.pause_end)
 	_attack_ready_at = _time + pause * randf_range(0.85, 1.15)
 
 

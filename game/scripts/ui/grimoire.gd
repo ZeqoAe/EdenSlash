@@ -231,13 +231,13 @@ func _refresh() -> void:
 	_header_lore.text = String(cls.get("lore", ""))
 	_stats.text = SpellInfo.class_stats_bbcode(cls)
 	_buttons.clear()
-	# arme de la classe : son combo s'affiche à droite
+	# arme de la classe : son auto-attaque s'affiche à droite
 	for c in _weapon_box.get_children():
 		c.queue_free()
 	var wt := Items.default_weapon_type(_class_id)
 	var wdata := GameData.weapon_type(wt)
 	var weapon_sel := {"kind": "weapon", "data": wt}
-	_entry(_weapon_box, String(wdata.get("icon", "")), "%s  ·  combo en %d coups" % [String(wdata.get("name", wt)), (wdata.get("combo", []) as Array).size()], weapon_sel, 56.0)
+	_entry(_weapon_box, String(wdata.get("icon", "")), "%s  ·  %s" % [String(wdata.get("name", wt)), " / ".join(WeaponAttacks.variants(wt).map(func(v): return String(v.name)))], weapon_sel, 56.0)
 	# compétences
 	for c in _skills_grid.get_children():
 		c.queue_free()
@@ -325,14 +325,16 @@ func _refresh_detail() -> void:
 		"weapon":
 			var wt := String(_selected.data)
 			var wdata := GameData.weapon_type(wt)
-			var chain: Array = wdata.get("combo", [])
-			var atk := _atk(String(wdata.get("dmg_type", "phys")))
+			var vs := WeaponAttacks.variants(wt)
 			var parts: PackedStringArray = []
 			var icon := String(wdata.get("icon", ""))
 			parts.append(("[img=56x56]%s[/img]  " % icon if icon != "" else "") + "[font_size=22][b]%s[/b][/font_size]" % String(wdata.get("name", wt)))
-			parts.append("[color=#c8c8d4]Combo d'auto-attaque en %d coups (clic gauche répété). Une autre arme équipée change le combo.[/color]" % chain.size())
-			for i in chain.size():
-				parts.append(("[color=#ffcf6b]━━━━━━━━━━[/color]\n" if i > 0 else "") + SpellInfo.combo_step_bbcode(chain[i], i, wdata, atk))
+			parts.append("[color=#c8c8d4]Auto-attaque de l'arme (clic gauche, ou automatique) : toujours la même, elle grandit avec les cartes. Une autre arme équipée change l'auto-attaque.%s[/color]" %
+				(" Deux variantes : le modèle de l'arme décide laquelle." if vs.size() > 1 else ""))
+			for i in vs.size():
+				var sp := WeaponAttacks.spec_for({"auto_variant": i, "slot": "weapon"}, wt)
+				parts.append(("[color=#ffcf6b]━━━━━━━━━━[/color]\n" if i > 0 else "") + WeaponAttacks.bbcode(sp, _atk(String(sp.dmg_type))))
+			parts.append("[color=#9a98a8]Arme secondaire (inventaire, ou un 2e coffre d'arme en Survie) : son auto-attaque part seule, à %d %% des dégâts.[/color]" % roundi(WeaponAttacks.OFFHAND_DMG * 100.0))
 			_detail.text = "\n\n".join(parts)
 		"passive":
 			var p: Dictionary = _selected.data

@@ -329,6 +329,8 @@ func _lobby_view() -> void:
 	for it in vault:
 		if String(loadout.get(it.slot, "")) == String(it.uid) and not equipped.has(it.slot):
 			equipped[it.slot] = it
+		elif it.slot == "weapon" and String(loadout.get("offhand", "")) == String(it.uid) and not equipped.has("offhand"):
+			equipped["offhand"] = it  # arme secondaire
 		else:
 			inventory.append(it)
 	gold = 0
@@ -929,11 +931,52 @@ func add_gold(amount: int) -> void:
 
 func equip(item: Dictionary) -> void:
 	var slot: String = item.slot
+	if is_same(equipped.get("offhand"), item):
+		swap_weapons()  # l'arme secondaire devient l'arme principale
+		return
 	inventory.erase(item)
 	if equipped.has(slot):
 		inventory.append(equipped[slot])
 	equipped[slot] = item
 	save_profile()
+
+
+## Arme secondaire (WeaponAttacks.OFFHAND_DMG) : une arme de l'inventaire, ou l'arme principale
+## (les deux s'échangent alors).
+func equip_offhand(item: Dictionary) -> void:
+	if item.get("slot", "") != "weapon":
+		return
+	var main: Dictionary = equipped.get("weapon", {})
+	var old: Dictionary = equipped.get("offhand", {})
+	if is_same(main, item):
+		if old.is_empty():
+			return
+		equipped["weapon"] = old
+	else:
+		inventory.erase(item)
+		if not old.is_empty():
+			inventory.append(old)
+	equipped["offhand"] = item
+	save_profile()
+
+
+## Échange l'arme principale et l'arme secondaire.
+func swap_weapons() -> void:
+	var main: Dictionary = equipped.get("weapon", {})
+	var off: Dictionary = equipped.get("offhand", {})
+	if main.is_empty() or off.is_empty():
+		return
+	equipped["weapon"] = off
+	equipped["offhand"] = main
+	save_profile()
+
+
+## Emplacement où [param item] est porté ("" : pas porté).
+func slot_of(item: Dictionary) -> String:
+	for slot in equipped:
+		if is_same(equipped[slot], item):
+			return slot
+	return ""
 
 
 func unequip(slot: String) -> void:
@@ -1069,9 +1112,10 @@ func equipment_stats() -> Dictionary:
 			it = it.duplicate()  # Survie : l'enclume améliore l'emplacement, pas la pièce
 			it["upgrade"] = int(Run.slot_bonus[slot])
 		var st := Items.stats(it)
+		var k := WeaponAttacks.OFFHAND_STATS if slot == "offhand" else 1.0  # arme secondaire : une partie de ses stats
 		for s in st:
-			total[s] = total.get(s, 0.0) + float(st[s])
-	for b in Items.active_set_bonuses(equipped):
+			total[s] = total.get(s, 0.0) + float(st[s]) * k
+	for b in Items.active_set_bonuses(set_gear()):
 		for s in b.stat:
 			total[s] = total.get(s, 0.0) + float(b.stat[s])
 	return total
@@ -1079,7 +1123,14 @@ func equipment_stats() -> Dictionary:
 
 ## Effets déclenchés des bonus de set actifs.
 func equipment_procs() -> Array:
-	return Items.gear_procs(equipped)
+	return Items.gear_procs(set_gear())
+
+
+## Équipement qui compte pour les sets et les passifs d'objet (sans l'arme secondaire).
+func set_gear() -> Dictionary:
+	var g := equipped.duplicate()
+	g.erase("offhand")
+	return g
 
 
 ## Modèle de l'arme portée : son apparence choisie dans l'archive, sinon le sien.

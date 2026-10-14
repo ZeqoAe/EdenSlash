@@ -22,8 +22,8 @@ const LIST := [
 		"desc": "Trois héros contre trois : rôles (tank, soins, dégâts) et contrôle de la zone."},
 	{"id": "battlefield", "group": "pvp", "name": "Champ de bataille", "sub": "10 contre 10", "soon": true,
 		"desc": "Un immense champ de bataille en 10 contre 10 : objectifs à tenir, renforts et grandes mêlées."},
-	{"id": "training", "group": "", "name": "Zone d'entraînement", "sub": "Sorts, combos et cartes, sans enjeu",
-		"desc": "Teste tes sorts, tes combos et tes cartes sur des mannequins et des adversaires réglables : rien n'est gagné ni perdu."},
+	{"id": "training", "group": "", "name": "Zone d'entraînement", "sub": "Sorts, armes et cartes, sans enjeu",
+		"desc": "Teste tes sorts, tes armes et tes cartes sur des mannequins et des adversaires réglables : rien n'est gagné ni perdu."},
 ]
 
 

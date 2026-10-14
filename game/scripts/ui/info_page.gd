@@ -143,7 +143,7 @@ func _damage() -> String:
 	t += "[b]Dégâts = Attaque × Puissance de l'action × aléa (92 à 108 %) × Critique × Statuts × Flow × (1 + Dégâts %) × Élites[/b]\n"
 	t += _table(["Facteur", "Détail"], [
 		["Attaque", "physique ou magique selon l'arme (auto-attaque) ou le sort"],
-		["Puissance de l'action", "coup d'auto-attaque (le 3e coup du combo frappe plus fort), sort (% indiqué dans le grimoire), ×2 sur un combo réussi (ex. cible gelée)"],
+		["Puissance de l'action", "auto-attaque de l'arme (% de son arme, cartes « Main lourde »), arme secondaire 60 %, sort (% indiqué dans le grimoire), ×2 sur un combo réussi (ex. cible gelée)"],
 		["Critique", "× (1 + dégâts critiques) si le coup est critique (chance = critique physique ou magique)"],
 		["Statuts du héros", "Fureur ×1,25 · Cicatrice ×0,7 · Marduk : attaque ×1,3"],
 		["Flow", "+10 % par annulation parfaite enchaînée (jusqu'à +40 %, 3 s)"],

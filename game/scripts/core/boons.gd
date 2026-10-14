@@ -13,9 +13,11 @@ extends RefCounted
 ## Les cartes sont modifiables dans l'éditeur de cartes du mode dev (Boons.all()).
 ##
 ## Statistiques propres aux cartes : area (rayon des zones), reach (portée de l'attaque
-## de base et des compétences en ligne / éventail / élan), dmg_pct, elite_dmg,
-## finisher_dmg (3e coup du combo), finisher_area, combo_window (s), dot_pct,
-## execute (seuil d'exécution des monstres normaux), rerolls (relances de cartes).
+## de base et des compétences en ligne / éventail / élan), dmg_pct, elite_dmg, dot_pct,
+## proj (projectiles de l'auto-attaque, ou frappes en plus pour la mêlée), pierce
+## (perforation), bounce (rebonds), execute (seuil d'exécution des monstres normaux),
+## rerolls (relances de cartes). L'auto-attaque de chaque arme réagit à certaines d'entre
+## elles (WeaponAttacks : « Grandit avec »).
 
 const RARITY := {
 	"common": {"name": "Commune", "color": Color(0.85, 0.85, 0.88), "weight": 1.0},
@@ -34,12 +36,24 @@ const LIST := [
 		"desc": "+8 % de dégâts."},
 	{"id": "giant_slayer", "name": "Tueur de géants", "rarity": "common", "max": 10, "stat": {"elite_dmg": 0.2},
 		"desc": "+20 % de dégâts contre les élites et les boss."},
-	{"id": "combo_flow", "name": "Enchaînement fluide", "rarity": "common", "max": 10,
-		"stat": {"combo_window": 0.35, "atk_speed": 0.06},
-		"desc": "Combo plus facile à tenir (+0,35 s entre deux coups) et +6 % de vitesse d'attaque."},
-	{"id": "heavy_finisher", "name": "Coup de grâce", "rarity": "common", "max": 10,
-		"stat": {"finisher_dmg": 0.4, "finisher_area": 0.15},
-		"desc": "Le 3e coup du combo : +40 % de dégâts et +15 % de zone."},
+	{"id": "combo_flow", "name": "Cadence", "rarity": "common", "max": 10,
+		"stat": {"atk_speed": 0.08},
+		"desc": "+8 % de vitesse d'attaque : l'auto-attaque part plus souvent."},
+	{"id": "incantation", "name": "Incantation vive", "rarity": "common", "max": 10,
+		"stat": {"cast_speed": 0.1},
+		"desc": "+10 % de vitesse d'incantation : armes à incantation (sceptre, bâton, grimoire) plus rapides, zones qui tombent plus tôt."},
+	{"id": "heavy_finisher", "name": "Main lourde", "rarity": "common", "max": 10,
+		"stat": {"basic_dmg": 0.12},
+		"desc": "+12 % de dégâts de l'auto-attaque (arme principale et secondaire)."},
+	{"id": "multishot", "name": "Projectile supplémentaire", "rarity": "epic", "max": 5,
+		"stat": {"proj": 1.0},
+		"desc": "+1 projectile à l'auto-attaque (une flèche, une zone ou une boule de feu de plus) ; les armes de mêlée frappent une fois de plus."},
+	{"id": "piercing", "name": "Perforation", "rarity": "rare", "max": 5,
+		"stat": {"pierce": 1.0},
+		"desc": "Les projectiles traversent un ennemi de plus."},
+	{"id": "ricochet", "name": "Ricochet", "rarity": "rare", "max": 5,
+		"stat": {"bounce": 1.0},
+		"desc": "Les projectiles rebondissent sur un ennemi proche de plus (8 m)."},
 	{"id": "deep_wounds", "name": "Plaies profondes", "rarity": "common", "max": 10, "stat": {"dot_pct": 0.3},
 		"desc": "+30 % de dégâts des saignements et des brûlures."},
 	{"id": "lingering", "name": "Venin tenace", "rarity": "common", "max": 10, "stat": {"dot_dur": 0.15, "dot_pct": 0.1},
@@ -78,10 +92,10 @@ const LIST := [
 		"per_stack": {"chance": 0.15, "mult": 0.3},
 		"desc": "30 % de chances qu'un monstre tué explose (3,5 m, 120 %). Les explosions peuvent s'enchaîner."},
 	{"id": "shockwave", "name": "Onde de choc", "rarity": "rare", "max": 10,
-		"procs": [{"trigger": "finisher", "chance": 1.0, "cd": 0.0, "effect": "explosion", "mult": 1.0, "radius": 5.0,
-			"applies": {"stun": 0.5}, "color": Color(1.0, 0.9, 0.5, 0.9)}],
-		"per_stack": {"mult": 0.5, "radius": 1.0},
-		"desc": "Le 3e coup du combo libère une onde de choc (5 m, 100 %, renverse 0,5 s)."},
+		"procs": [{"trigger": "basic_hit", "chance": 0.15, "cd": 1.5, "effect": "explosion", "mult": 1.0, "radius": 4.0,
+			"color": Color(1.0, 0.9, 0.5, 0.9)}],
+		"per_stack": {"mult": 0.4, "radius": 0.6, "chance": 0.05},
+		"desc": "15 % de chances qu'une auto-attaque libère une onde de choc sur sa cible (4 m, 100 %, recharge 1,5 s)."},
 	{"id": "wind_step", "name": "Pas du vent", "rarity": "rare", "max": 10,
 		"procs": [{"trigger": "dodge", "chance": 1.0, "cd": 5.0, "effect": "buff", "status": "haste", "duration": 3.0,
 			"then": [{"effect": "buff", "status": "fury", "duration": 3.0}]}],
@@ -135,9 +149,9 @@ const LIST := [
 			"radius": 4.0, "applies": {"burn": 4.0}}],
 		"desc": "Évolution de Braise + Cadavres explosifs : un monstre en feu explose à sa mort et enflamme ses voisins."},
 	{"id": "steel_tempest", "name": "Tempête d'acier", "rarity": "legendary", "max": 1,
-		"requires": ["heavy_finisher"],
-		"stat": {"finisher_area": 0.6, "finisher_hits": 1},
-		"desc": "Évolution de Coup de grâce : le 3e coup du combo devient un tourbillon qui frappe deux fois (+60 % de zone)."},
+		"requires": ["heavy_finisher", "multishot"],
+		"stat": {"proj": 2.0, "area": 0.25, "basic_dmg": 0.2},
+		"desc": "Évolution de Main lourde + Projectile supplémentaire : +2 projectiles (ou frappes), +25 % de zone et +20 % de dégâts de l'auto-attaque."},
 ]
 
 
@@ -145,7 +159,9 @@ const LIST := [
 const ICONS := {
 	"wide_arc": "res://assets/ui/skills/e0460.png", "long_reach": "res://assets/ui/skills/e0466.png",
 	"sharpened": "res://assets/ui/skills/j615.png", "giant_slayer": "res://assets/ui/skills/e0465.png",
-	"combo_flow": "res://assets/ui/status/flow.png", "heavy_finisher": "res://assets/ui/skills/e0464.png",
+	"combo_flow": "res://assets/ui/status/frenzy.png", "heavy_finisher": "res://assets/ui/skills/e0464.png",
+	"incantation": "res://assets/ui/status/flow.png", "multishot": "res://assets/ui/skills/e0466.png",
+	"piercing": "res://assets/ui/skills/e0461.png", "ricochet": "res://assets/ui/status/shock.png",
 	"deep_wounds": "res://assets/ui/skills/e0459.png", "fortune": "res://assets/ui/skills/j616.png",
 	"static_blade": "res://assets/ui/status/shock.png", "frost_edge": "res://assets/ui/status/freeze.png",
 	"ember": "res://assets/ui/status/burn.png", "volatile": "res://assets/ui/status/fury.png",

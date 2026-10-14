@@ -4,7 +4,7 @@ extends RefCounted
 ## Un proc = un déclencheur, une chance, une recharge interne (s) et un effet :
 ##   {"id", "trigger", "chance", "cd", "effect", ...paramètres de l'effet}
 ## Déclencheurs : hit (chaque monstre touché), skill_hit (impact d'une compétence),
-## crit, kill, finisher (3e coup du combo), dodge, perfect (annulation parfaite),
+## crit, kill, basic_hit (impact d'une auto-attaque d'arme), dodge, perfect (annulation parfaite),
 ## hurt (dégâts subis), low_hp (sous 30 % de PV).
 ## Effets : lightning (foudre en chaîne), freeze, chill, burn, shock, stun (sur les monstres
 ## autour de la cible), explosion, nova (gel autour du héros), buff (état temporaire
@@ -13,7 +13,7 @@ extends RefCounted
 
 const TRIGGER_TEXT := {
 	"hit": "à l'impact", "skill_hit": "à l'impact d'une compétence", "crit": "sur un coup critique",
-	"kill": "en tuant un monstre", "finisher": "au coup final du combo", "dodge": "en esquivant",
+	"kill": "en tuant un monstre", "basic_hit": "à l'impact d'une auto-attaque", "dodge": "en esquivant",
 	"perfect": "sur une annulation parfaite", "hurt": "quand tu es touché", "low_hp": "sous 30 % de PV",
 }
 ## Profondeur max des réactions en chaîne (une explosion qui tue déclenche une explosion…).

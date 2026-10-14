@@ -24,7 +24,7 @@ var _slots: Label
 var _certs: HFlowContainer
 var _spells: HBoxContainer  # sorts de la classe (débloqués ou maîtrise requise)
 var _summary: RichTextLabel
-var open_grimoire: Callable  # grimoire détaillé (stats, combo, passifs, rangs)
+var open_grimoire: Callable  # grimoire détaillé (stats, auto-attaque, passifs, rangs)
 
 
 func _ready() -> void:
@@ -92,7 +92,7 @@ func _ready() -> void:
 	sph.add_child(_summary)
 	var gb := Button.new()
 	gb.text = "Grimoire détaillé"
-	gb.tooltip_text = "Statistiques de base, combo de l'arme, passifs et rangs de chaque sort"
+	gb.tooltip_text = "Statistiques de base, auto-attaque de l'arme, passifs et rangs de chaque sort"
 	gb.focus_mode = Control.FOCUS_NONE
 	gb.pressed.connect(func():
 		if open_grimoire.is_valid():

@@ -24,7 +24,7 @@ const KINDS := {
 	"luck": {"name": "Bonne étoile", "trigger": "kill", "chance": 0.2, "effect": "stat_buff", "status": "t_luck", "stats": {"lck_pct": 0.4}, "duration": 10.0},
 	"crit": {"name": "Instinct du prédateur", "trigger": "hit", "chance": 0.05, "effect": "stat_buff", "status": "t_crit", "stats": {"crit": 0.15, "mcrit": 0.15, "crit_dmg": 0.3}, "duration": 8.0},
 	"speed": {"name": "Frénésie", "trigger": "crit", "chance": 0.25, "cd": 4.0, "effect": "stat_buff", "status": "t_speed", "stats": {"atk_speed": 0.25, "cast_speed": 0.15}, "duration": 6.0},
-	"might": {"name": "Puissance", "trigger": "finisher", "chance": 0.25, "cd": 4.0, "effect": "stat_buff", "status": "t_power", "stats": {"dmg_pct": 0.2}, "duration": 6.0},
+	"might": {"name": "Puissance", "trigger": "basic_hit", "chance": 0.1, "cd": 4.0, "effect": "stat_buff", "status": "t_power", "stats": {"dmg_pct": 0.2}, "duration": 6.0},
 	"guard": {"name": "Carapace", "trigger": "hurt", "chance": 0.2, "cd": 12.0, "effect": "stat_buff", "status": "t_guard", "stats": {"def_pct": 0.6}, "duration": 6.0},
 	"evade": {"name": "Pas de l'ombre", "trigger": "dodge", "chance": 1.0, "cd": 6.0, "effect": "stat_buff", "status": "t_evade", "stats": {"eva": 0.15, "move_speed": 0.2}, "duration": 4.0},
 	"regen": {"name": "Sève vivante", "trigger": "kill", "chance": 0.15, "cd": 2.0, "effect": "heal", "amount": 0.05},
@@ -35,7 +35,7 @@ const KINDS := {
 	"frost": {"name": "Givre", "trigger": "hit", "chance": 0.04, "cd": 2.0, "effect": "freeze", "radius": 3.0, "duration": 1.5},
 	"venom": {"name": "Venin", "trigger": "hit", "chance": 0.05, "cd": 1.0, "effect": "explosion", "mult": 0.7, "radius": 3.0, "applies": {"poison": 4.0}, "color": Color(0.55, 0.9, 0.3, 0.9)},
 	"stun": {"name": "Choc", "trigger": "hit", "chance": 0.03, "cd": 3.0, "effect": "stun", "radius": 1.5, "duration": 1.5},
-	# --- trophées de build (0.1.37) : esquive, critique, élimination, tank, sorts, combo ---
+	# --- trophées de build (0.1.37) : esquive, critique, élimination, tank, sorts, auto-attaque ---
 	"dodge_wave": {"name": "Onde d'esquive", "trigger": "dodge", "chance": 1.0, "cd": 3.0, "effect": "explosion", "mult": 1.2, "radius": 4.0, "color": Color(0.7, 1.0, 0.9, 0.9)},
 	"dodge_crit": {"name": "Riposte", "trigger": "dodge", "chance": 1.0, "cd": 5.0, "effect": "stat_buff", "status": "t_riposte", "stats": {"crit": 0.4, "crit_dmg": 0.4}, "duration": 3.0},
 	"wind_dance": {"name": "Danse du vent", "trigger": "dodge", "chance": 1.0, "cd": 6.0, "effect": "stat_buff", "status": "t_wind", "stats": {"agi_pct": 0.25, "atk_speed": 0.15}, "duration": 5.0},
@@ -43,7 +43,7 @@ const KINDS := {
 	"perfect_nova": {"name": "Miroir de givre", "trigger": "perfect", "chance": 1.0, "cd": 2.0, "effect": "nova", "radius": 5.0, "duration": 1.5},
 	"crit_chain": {"name": "Arc électrique", "trigger": "crit", "chance": 0.3, "cd": 1.5, "effect": "lightning", "mult": 0.8, "chain": 4, "radius": 7.0},
 	"crit_heal": {"name": "Sang vif", "trigger": "crit", "chance": 0.3, "cd": 2.0, "effect": "heal", "amount": 0.02},
-	"quake": {"name": "Séisme", "trigger": "finisher", "chance": 1.0, "cd": 3.0, "effect": "explosion", "mult": 1.0, "radius": 4.5, "applies": {"stun": 0.6}, "color": Color(0.95, 0.75, 0.4, 0.9)},
+	"quake": {"name": "Séisme", "trigger": "basic_hit", "chance": 0.2, "cd": 3.0, "effect": "explosion", "mult": 1.0, "radius": 4.5, "color": Color(0.95, 0.75, 0.4, 0.9)},
 	"berserk": {"name": "Fureur du désespoir", "trigger": "low_hp", "chance": 1.0, "cd": 30.0, "effect": "stat_buff", "status": "t_berserk", "stats": {"dmg_pct": 0.4, "atk_speed": 0.3}, "duration": 8.0},
 	"arcane_echo": {"name": "Écho arcanique", "trigger": "skill_hit", "chance": 0.2, "cd": 2.0, "effect": "echo", "mult": 0.5},
 	"mana_surge": {"name": "Afflux", "trigger": "skill_hit", "chance": 0.25, "cd": 3.0, "effect": "cdr", "amount": 0.5},

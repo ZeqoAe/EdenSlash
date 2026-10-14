@@ -567,9 +567,13 @@ func apply_card(card: Dictionary) -> void:
 			passive_power[card.id] = before + float(card.get("mult", 1.0))
 		"trophy", "gear":
 			if survival:
-				# coffre d'emplacement : la pièce est portée tout de suite (l'ancienne reste dans le sac)
+				# coffre d'emplacement : la pièce est portée tout de suite (l'ancienne reste dans le sac) ;
+				# une nouvelle arme devient l'arme principale et l'ancienne passe en arme secondaire
+				var old_main: Dictionary = Profile.equipped.get("weapon", {}) if card.item.slot == "weapon" else {}
 				Profile.inventory.append(card.item)
 				Profile.equip(card.item)
+				if not old_main.is_empty():
+					Profile.equip_offhand(old_main)
 				if card.item.has("eden") and not int(card.item.eden) in seen_items:
 					seen_items.append(int(card.item.eden))
 				Profile.changed.emit()

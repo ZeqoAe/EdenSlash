@@ -1,7 +1,8 @@
 class_name HeroBolt
 extends Node3D
 ## Projectile du héros (flèche, projectile magique, trait sacré) : file en ligne
-## droite, touche les monstres sur son passage, traverse [member pierce] cibles.
+## droite, touche les monstres sur son passage, traverse [member pierce] cibles, puis
+## rebondit [member bounce] fois vers l'ennemi le plus proche (auto-attaques, cartes).
 ## Les dégâts sont appliqués par le héros (Player.bolt_hit) avec l'action d'origine.
 
 const STYLES := {
@@ -21,6 +22,8 @@ var action: Dictionary
 var dir := Vector3.FORWARD
 var max_range := 13.0
 var pierce := 0
+var bounce := 0
+const BOUNCE_RANGE := 8.0
 var style := "arrow"
 var _speed := 30.0
 var _travel := 0.0
@@ -34,6 +37,7 @@ static func fire(p: Player, pos: Vector3, direction: Vector3, act: Dictionary) -
 	b.dir = Vector3(direction.x, 0.0, direction.z).normalized()
 	b.max_range = float(act.get("range", 13.0))
 	b.pierce = int(act.get("pierce", 0))
+	b.bounce = int(act.get("bounce", 0))
 	b.style = String(act.get("projectile", "arrow"))
 	p.get_tree().current_scene.add_child(b)
 	b.global_position = pos
@@ -99,9 +103,37 @@ func _physics_process(delta: float) -> void:
 		if to.length() <= mo.radius + 0.55:
 			_hit.append(mo)
 			shooter.bolt_hit(mo, dir, action)
-			if pierce <= 0:
+			if pierce > 0:
+				pierce -= 1
+			elif bounce > 0 and _bounce_from(mo):
+				bounce -= 1
+				return
+			else:
 				queue_free()
 				return
-			pierce -= 1
 	if _travel >= max_range:
 		queue_free()
+
+
+## Rebond : repart de [param from] vers l'ennemi le plus proche pas encore touché.
+func _bounce_from(from: Combatant) -> bool:
+	if not is_instance_valid(shooter):
+		return false
+	var best: Combatant = null
+	var best_d := BOUNCE_RANGE
+	for node in shooter.foes():
+		var mo := node as Combatant
+		if mo == null or mo.is_dead or _hit.has(mo) or mo == from:
+			continue
+		var d := mo.global_position.distance_to(from.global_position)
+		if d < best_d:
+			best_d = d
+			best = mo
+	if best == null:
+		return false
+	var to := best.global_position - global_position
+	to.y = 0.0
+	dir = to.normalized()
+	look_at(global_position + dir, Vector3.UP)
+	_travel = maxf(0.0, max_range - BOUNCE_RANGE - 1.0)
+	return true

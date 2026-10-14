@@ -1,7 +1,7 @@
 class_name HudWidgets
 extends RefCounted
 ## Éléments dessinés du HUD : orbes (vie, expérience), emplacements de compétence avec
-## recharge circulaire, indicateur de combo, icônes d'effets (buffs / debuffs).
+## recharge circulaire, icônes d'effets (buffs / debuffs).
 
 
 static func text_center(ci: CanvasItem, text: String, center: Vector2, font: Font, size: int, color: Color, outline := 4) -> void:
@@ -226,54 +226,6 @@ class SkillSlot extends Control:
 			var badge := Rect2(c.x - w * 0.5, size.y - 10.0, w, 18.0)
 			draw_style_box(_badge, badge)
 			HudWidgets.text_center(self, key_text, badge.get_center(), font, 12, UiTheme.GOLD, 0)
-
-
-# --- indicateur de combo ----------------------------------------------------------------------
-class ComboMeter extends Control:
-	var step := 0
-	var total := 3
-	var _alpha := 0.0
-	var _burst := 0.0
-	var _last := 0
-
-	func _init() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	func set_state(s: int, n: int) -> void:
-		if s >= n and n > 0 and _last < n:
-			_burst = 1.0  # coup final
-		_last = s
-		step = s
-		total = n
-
-	func _process(delta: float) -> void:
-		_alpha = move_toward(_alpha, 1.0 if step > 0 else 0.0, delta * (6.0 if step > 0 else 2.0))
-		_burst = maxf(0.0, _burst - delta * 2.0)
-		if _alpha > 0.0 or _burst > 0.0:
-			queue_redraw()
-
-	func _draw() -> void:
-		if _alpha <= 0.0 and _burst <= 0.0:
-			return
-		var c := size * 0.5
-		var gap := 28.0
-		var x0 := c.x - gap * (total - 1) * 0.5 + 34.0
-		HudWidgets.text_center(self, "COMBO", Vector2(x0 - 52.0, c.y), UiTheme.title_font(), 15, Color(UiTheme.GOLD, _alpha), 4)
-		for i in total:
-			var p := Vector2(x0 + gap * i, c.y)
-			var finisher := i == total - 1
-			var r := 11.0 if finisher else 8.5
-			var lit := i < step
-			HudWidgets.diamond(self, p, r + 2.5, Color(0.05, 0.02, 0.08, 0.85 * _alpha))
-			var col := (Color(1.0, 0.45, 0.2) if finisher else UiTheme.GOLD) if lit else Color(0.4, 0.33, 0.25, 0.8)
-			HudWidgets.diamond(self, p, r, Color(col, col.a * _alpha))
-			if lit:
-				HudWidgets.diamond(self, p + Vector2(0, -r * 0.35), r * 0.35, Color(1, 1, 1, 0.5 * _alpha))
-		if _burst > 0.0:
-			var p := Vector2(x0 + gap * (total - 1), c.y)
-			var rr := 12.0 + (1.0 - _burst) * 26.0
-			var pts := PackedVector2Array([p + Vector2(0, -rr), p + Vector2(rr, 0), p + Vector2(0, rr), p + Vector2(-rr, 0), p + Vector2(0, -rr)])
-			draw_polyline(pts, Color(1.0, 0.6, 0.25, _burst), 3.0, true)
 
 
 # --- icône d'effet (buff / debuff) ---------------------------------------------------------

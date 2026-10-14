@@ -27,9 +27,9 @@ const ATTR_FR := {"str": "Force", "agi": "Agilité", "int": "Intelligence", "wis
 
 ## Statistiques propres aux cartes : [nom, unité] ("%" : en pourcentage, "s" : secondes, "" : nombre).
 const STAT_FR := {
-	"area": ["Rayon des zones", "%"], "reach": ["Portée", "%"], "finisher_dmg": ["Dégâts du 3e coup", "%"],
-	"finisher_area": ["Zone du 3e coup", "%"], "finisher_hits": ["Frappes du 3e coup", ""],
-	"combo_window": ["Délai du combo", "s"], "execute": ["Seuil d'exécution", "%"], "rerolls": ["Relances", ""],
+	"area": ["Rayon des zones", "%"], "reach": ["Portée", "%"], "basic_dmg": ["Dégâts de l'auto-attaque", "%"],
+	"proj": ["Projectiles / frappes", "n"], "pierce": ["Perforation", "n"], "bounce": ["Rebonds", "n"],
+	"cast_speed": ["Vitesse d'incantation", "%"], "execute": ["Seuil d'exécution", "%"], "rerolls": ["Relances", ""],
 	"dot_dur": ["Durée des effets sur la durée", "%"], "pickup": ["Zone de collecte", "%"], "xp_pct": ["Expérience", "%"],
 }
 ## Paramètres des effets déclenchés montrés sur la carte : [nom, unité].
@@ -83,6 +83,8 @@ static func stat_value(k: String, v: float) -> String:
 			return "%s%s %%" % ["+" if v >= 0.0 else "", _num(v * 100.0)]
 		"s":
 			return "+%s s" % _num(v)
+		"n":
+			return "+%d" % floori(v + 0.001)  # nombre entier (projectiles…) : les raretés s'additionnent
 	return "%s%s" % ["+" if v >= 0.0 else "", _num(v)]
 
 

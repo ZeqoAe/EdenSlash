@@ -1172,7 +1172,7 @@ func anvil_cards() -> Array:
 	var pieces: Array = []
 	for slot in Profile.equipped:
 		var it: Dictionary = Profile.equipped[slot]
-		if int(it.get("upgrade", 0)) < Items.MAX_UPGRADE:
+		if slot != "offhand" and int(it.get("upgrade", 0)) < Items.MAX_UPGRADE:
 			pieces.append(it)
 	pieces.sort_custom(func(a, b): return (a.slot == "weapon" and b.slot != "weapon") or (a.slot == b.slot) or \
 		((a.slot == "weapon") == (b.slot == "weapon") and int(a.get("upgrade", 0)) < int(b.get("upgrade", 0))))

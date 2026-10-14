@@ -48,9 +48,6 @@ const DODGE_DISTANCE := 6.0
 const DODGE_TIME := 0.32
 const DODGE_COOLDOWN := 0.45
 const ATTACK_RANGE := 2.6
-## Combo d'auto-attaque : le coup suivant doit partir moins de COMBO_WINDOW s
-## après la fin du précédent ; le 3e coup (coup final) est un saut frappé en zone.
-const COMBO_WINDOW := 0.6
 
 var class_id := "samurai"
 var cls: Dictionary
@@ -68,10 +65,11 @@ var area_mult := 1.0  # rayon des zones
 var reach_mult := 1.0  # portée (attaque de base, compétences en ligne / éventail / élan)
 var dmg_mult := 1.0
 var elite_mult := 1.0
-var finisher_mult := 1.0
-var finisher_area := 1.0
-var finisher_hits := 1
-var combo_window := COMBO_WINDOW
+# auto-attaque de l'arme (WeaponAttacks) : projectiles (ou frappes) en plus, perforation, rebonds
+var extra_proj := 0
+var basic_mult := 1.0  # dégâts de l'auto-attaque (cartes Main lourde, Tempête d'acier)
+var pierce_bonus := 0
+var bounce_bonus := 0
 var dot_bonus := 1.0
 var dot_duration := 1.0  # durée des effets sur la durée infligés (cartes)
 var pickup_mult := 1.0  # zone de collecte des orbes d'expérience et des objets (carte Aimant)
@@ -105,8 +103,10 @@ var _state_time := 0.0
 var _state_len := 0.0
 var _hits: Array = []  # instants d'impact restants de l'action en cours
 var _action: Dictionary = {}  # compétence / attaque en cours
-var _combo_step := 0  # coups du combo déjà portés
-var _combo_expire := 0.0
+var _auto: Dictionary = {}  # auto-attaque de l'arme principale (WeaponAttacks.spec_for)
+var _off: Dictionary = {}  # auto-attaque de l'arme secondaire ({} : aucune)
+var _off_ready_at := 0.0  # prochaine frappe de l'arme secondaire
+var _swing := 0  # attaques de base portées (alterne les animations de l'arme)
 var _last_skill := {}  # dernière compétence portée (pour l'Écho)
 var _target: Combatant  # cible verrouillée par clic (auto-attaque)
 var _move_goal := Vector3.INF  # point visé par un clic de déplacement (modes souris)
@@ -170,7 +170,32 @@ func _anim(key: String) -> String:
 
 
 func _weapon_type() -> Dictionary:
-	return GameData.weapon_type(Items.default_weapon_type(class_id) if foe else Run.weapon_type())
+	return GameData.weapon_type(_weapon_type_id())
+
+
+func _weapon_type_id() -> String:
+	return Items.default_weapon_type(class_id) if foe else Run.weapon_type()
+
+
+## Arme principale portée (celle du héros ennemi : son équipement).
+func weapon_item() -> Dictionary:
+	return foe_gear.get("weapon", {}) if foe or built else Profile.equipped.get("weapon", {})
+
+
+## Arme secondaire portée ({} : aucune). Elle frappe seule, sans animation (WeaponAttacks.OFFHAND_DMG).
+func offhand_item() -> Dictionary:
+	return foe_gear.get("offhand", {}) if foe or built else Profile.equipped.get("offhand", {})
+
+
+## Auto-attaque de l'arme principale et de l'arme secondaire ({} : aucune).
+func auto_spec() -> Dictionary:
+	if _auto.is_empty():
+		_auto = WeaponAttacks.spec_for(weapon_item(), _weapon_type_id())
+	return _auto
+
+
+func offhand_spec() -> Dictionary:
+	return _off
 
 
 ## Collisions du corps : le décor et l'autre camp.
@@ -269,10 +294,13 @@ func recalc_stats() -> void:
 	reach_mult = 1.0 + ps.get("reach", 0.0) + eq.get("reach", 0.0)
 	dmg_mult = maxf(0.1, 1.0 + ps.get("dmg_pct", 0.0) + eq.get("dmg_pct", 0.0))
 	elite_mult = 1.0 + ps.get("elite_dmg", 0.0) + eq.get("elite_dmg", 0.0)
-	finisher_mult = 1.0 + ps.get("finisher_dmg", 0.0)
-	finisher_area = 1.0 + ps.get("finisher_area", 0.0)
-	finisher_hits = 1 + int(ps.get("finisher_hits", 0))
-	combo_window = COMBO_WINDOW + ps.get("combo_window", 0.0)
+	basic_mult = 1.0 + ps.get("basic_dmg", 0.0) + eq.get("basic_dmg", 0.0)
+	extra_proj = int(floorf(ps.get("proj", 0.0) + eq.get("proj", 0.0) + 0.001))
+	pierce_bonus = int(floorf(ps.get("pierce", 0.0) + eq.get("pierce", 0.0) + 0.001))
+	bounce_bonus = int(floorf(ps.get("bounce", 0.0) + eq.get("bounce", 0.0) + 0.001))
+	_auto = WeaponAttacks.spec_for(weapon_item(), String(_weapon_type_id()))
+	var oh := offhand_item()
+	_off = WeaponAttacks.spec_for(oh) if not oh.is_empty() else {}
 	dot_bonus = 1.0 + ps.get("dot_pct", 0.0) + eq.get("dot_pct", 0.0)
 	dot_duration = 1.0 + ps.get("dot_dur", 0.0)
 	pickup_mult = 1.0 + ps.get("pickup", 0.0)
@@ -309,6 +337,7 @@ func stat_sheet() -> Array:
 		["Vol de vie", "%d %%" % roundi(lifesteal * 100)],
 		["Dégâts", "+%d %%" % roundi((dmg_mult - 1.0) * 100)], ["Zone d'effet", "+%d %%" % roundi((area_mult - 1.0) * 100)],
 		["Portée", "+%d %%" % roundi((reach_mult - 1.0) * 100)],
+		["Projectiles / frappes", "+%d" % extra_proj], ["Perforation", "+%d" % pierce_bonus], ["Rebonds", "+%d" % bounce_bonus],
 	]
 	# duel : les statistiques ramenées à leur plafond JcJ sont signalées
 	var cap_rows := {"atk_speed": "Vitesse d'attaque", "cast_speed": "Vitesse d'incantation", "crit": "Critique physique",
@@ -520,6 +549,7 @@ func _physics_process(delta: float) -> void:
 			if _state_time >= _stun_len:
 				_state = "idle"
 				_stun_fx.visible = false
+	_update_offhand()
 	var was_air := not is_on_floor()
 	var before := global_position
 	move_and_slide()
@@ -820,10 +850,9 @@ func _try_auto_skill() -> bool:
 	return false
 
 
-## Portée de l'attaque de base : corps à corps, ou tir pour l'archer et le mage.
+## Portée de l'attaque de base (WeaponAttacks.reach) : corps à corps, tir ou incantation.
 func attack_reach() -> float:
-	var wt := _weapon_type()
-	return float(wt.get("attack_range", ATTACK_RANGE)) * (reach_mult if wt.has("attack_range") else 1.0)
+	return WeaponAttacks.reach(auto_spec(), reach_mult, area_mult)
 
 
 ## Portée d'une compétence pour le lancement automatique (zone + élan).
@@ -880,67 +909,87 @@ func monster_under_mouse() -> Combatant:
 
 
 # --- attaques de base ---------------------------------------------------------------
-## Coups du combo de la classe (classes.json « combo »), sinon les attaques de base.
-func combo_chain() -> Array:
-	var chain: Array = _weapon_type().get("combo", cls.get("combo", []))
-	if not chain.is_empty():
-		return chain
-	var out: Array = []
-	for a in cls.get("anims", {}).get("attacks", ["attack01"]):
-		out.append({"anim": a})
-	return out
-
-
-## Coup du combo en cours et taille du combo (HUD) ; Vector2i(0, n) hors combo.
-func combo_state() -> Vector2i:
-	var n := combo_chain().size()
-	return Vector2i(_combo_step if _time <= _combo_expire or _state == "attack" else 0, n)
-
-
+## Attaque de base : l'auto-attaque de l'arme principale (WeaponAttacks), toujours la même ;
+## les animations de l'arme alternent. Plus de combo, ni d'étourdissement ou d'attraction :
+## elle grandit avec les cartes (projectiles, zone, portée, vitesse, perforation, rebonds).
 func _start_attack(aim: Vector3) -> void:
-	var chain := combo_chain()
-	if _time > _combo_expire or _combo_step >= chain.size():
-		_combo_step = 0
-	var step: Dictionary = chain[_combo_step]
-	_combo_step += 1
-	var finisher: bool = step.get("finisher", false)
+	var s := auto_spec()
 	face_direction(aim - global_position, 1.0, 100.0)
-	var radius := float(step.get("radius", ATTACK_RANGE)) * (area_mult * finisher_area if finisher else reach_mult)
-	var action := {
-		"mult": float(step.get("mult", 1.0)) * (finisher_mult if finisher else 1.0), "radius": radius,
-		"arc": float(step.get("arc", 150.0)), "hit_fx": String(step.get("hit_fx", "s00141")),
-		"applies": step.get("applies", {}), "dash": float(step.get("dash", 0.0)), "finisher": finisher,
-		"dmg_type": String(_weapon_type().get("dmg_type", "phys")),
-	}
-	for k in ["max_targets", "pull", "heal", "crit_bonus", "land_hit", "leap_forward", "self_status", "move", "drop", "spread", "volley",
-			"hits", "flip", "spin_turns"]:
-		if step.has(k):
-			action[k] = step[k]
+	var action := WeaponAttacks.action_for(s, self)
 	_break_stealth()
-	match String(step.get("kind", "")):
-		"ground":
-			# zone au sol à l'endroit visé (pluie de flèches, marteau, zones du mage)
-			var to_aim := aim - global_position
-			to_aim.y = 0.0
-			action["kind"] = "ground"
-			action["target"] = global_position + to_aim.limit_length(float(step.get("range", attack_reach())) * reach_mult)
-		"heal":
-			action["kind"] = "heal"
-	if step.has("move"):
-		action["move_dir"] = _evade_dir() if step.get("move_dir", "forward") == "evade" else forward()
-	if step.get("bolt", false):
-		action["kind"] = "bolt"
-		action["range"] = attack_reach()
-		action["projectile"] = String(step.get("projectile", "arrow"))
-		action["pierce"] = int(step.get("pierce", 0)) + (1 if finisher else 0)
-		action["volley"] = int(step.get("volley", 1))
-	if finisher and finisher_hits > 1:
-		action["hits"] = maxi(finisher_hits, int(action.get("hits", 1)))
-		action["arc"] = 360.0
-	_begin_action("attack", String(step.anim), atk_speed * 1.25 * float(step.get("speed", 1.0)), action)
-	if is_on_floor() and float(step.get("leap", 0.0)) > 0.0:
-		velocity.y = float(step.get("leap", 0.0))  # saut automatique (salto du samouraï)
-	_combo_expire = _time + _state_len + combo_window
+	if String(action.get("kind", "")) == "cast":
+		var to_aim := aim - global_position
+		to_aim.y = 0.0
+		action["target"] = global_position + to_aim.limit_length(float(action.range))
+	var anims: Array = s.get("anims", ["attack01"])
+	var anim_name := String(anims[_swing % anims.size()])
+	_swing += 1
+	var rate := cast_speed if WeaponAttacks.rate_stat(s) == "cast_speed" else atk_speed
+	_begin_action("attack", anim_name, rate * 1.25 * float(s.get("speed", 1.0)), action)
+	if String(action.get("kind", "")) == "cast":
+		_announce_cast(action, _hits[0] if not _hits.is_empty() else 0.3)
+
+
+## Arme secondaire : frappe seule l'ennemi le plus proche à sa portée, à sa propre cadence et
+## sans animation (WeaponAttacks.OFFHAND_DMG des dégâts) ; pas pendant un étourdissement ni
+## une invisibilité (elle la romprait).
+func _update_offhand() -> void:
+	if _off.is_empty() or _state == "stun" or _time < _off_ready_at or has_status("invisible"):
+		return
+	var m := _monster_in_reach(WeaponAttacks.reach(_off, reach_mult, area_mult), false)
+	if m == null:
+		return
+	var rate := (cast_speed if WeaponAttacks.rate_stat(_off) == "cast_speed" else atk_speed) * float(_off.get("speed", 1.0)) * WeaponAttacks.BASE_RATE
+	_off_ready_at = _time + 1.0 / maxf(rate, 0.1)
+	var a := WeaponAttacks.action_for(_off, self)
+	a["mult"] = float(a.mult) * WeaponAttacks.OFFHAND_DMG
+	a["offhand"] = true
+	var to := m.global_position - global_position
+	to.y = 0.0
+	var fwd := to.normalized() if to.length() > 0.1 else forward()
+	_last_combat = _time
+	match String(a.get("kind", "")):
+		"bolt":
+			_fire_bolts(a, false, fwd)
+		"cast":
+			a["target"] = m.global_position
+			_announce_cast(a, 0.0)
+			get_tree().create_timer(float(a.delay), false).timeout.connect(_cast_land.bind(a))
+		_:
+			_off_strike(a, m)
+			for i in range(1, int(a.get("hits", 1))):
+				get_tree().create_timer(0.14 * i, false).timeout.connect(_off_strike.bind(a, m))
+
+
+## Un coup de mêlée de l'arme secondaire vers [param m] (sa position du moment).
+func _off_strike(a: Dictionary, m: Combatant) -> void:
+	if is_dead:
+		return
+	var fwd := forward()
+	if is_instance_valid(m) and not m.is_dead:
+		var to := m.global_position - global_position
+		to.y = 0.0
+		if to.length() > 0.1:
+			fwd = to.normalized()
+	var origin := global_position + (fwd * float(a.get("offset", 1.8)) if String(a.get("kind", "")) == "slam" else Vector3.ZERO)
+	var h := _resolve_area(a, origin, fwd, false)
+	if h:
+		Procs.fire(self, "basic_hit", h, h.global_position)
+
+
+## Incantation : points d'impact (la cible, puis les zones en plus autour d'elle) annoncés en
+## bleu jusqu'à l'explosion (fin de l'animation + délai d'incantation).
+func _announce_cast(action: Dictionary, t_hit: float) -> void:
+	var at: Vector3 = action.get("target", global_position)
+	var r := float(action.radius)
+	var pts: Array = [at]
+	for i in int(action.get("zones", 1)) - 1:
+		var ang := TAU * float(i) / maxf(int(action.zones) - 1, 1) + randf() * 0.6
+		pts.append(at + Vector3(cos(ang), 0.0, sin(ang)) * r * randf_range(1.1, 1.6))
+	action["points"] = pts
+	for pt in pts:
+		Telegraph.spawn(self, pt, 0.0, {"damage": 0.0, "delay": clampf(t_hit + float(action.delay), 0.15, 2.0),
+			"color": Telegraph.PLAYER_COLOR, "small": true, "shape": "circle", "radius": r})
 
 
 func _begin_action(state: String, anim_name: String, speed: float, action: Dictionary) -> void:
@@ -982,8 +1031,13 @@ func _show_attack_zone() -> void:
 	var t0: float = _hits[0] if not _hits.is_empty() else 0.25
 	var props := {"damage": 0.0, "delay": clampf(t0, 0.15, 1.2), "color": Telegraph.PLAYER_COLOR, "small": true}
 	var pos := global_position
+	if kind == "cast":
+		return  # incantation : ses zones sont toujours annoncées (_start_attack)
 	if kind == "ground" and _action.has("target"):
 		pos = _action.target
+		props.merge({"shape": "circle", "radius": r})
+	elif kind == "slam":
+		pos = global_position + forward() * float(_action.get("offset", 1.8))
 		props.merge({"shape": "circle", "radius": r})
 	elif kind in ["bolt", "line"] or float(_action.get("range", 0.0)) > r + 1.0:
 		props.merge({"shape": "line", "length": maxf(float(_action.get("range", 0.0)), r), "width": maxf(1.2, minf(r, 3.0)) if kind == "line" else 1.2})
@@ -1064,20 +1118,9 @@ func _update_action(input_dir: Vector3, delta: float) -> void:
 
 ## Applique les dégâts de l'action en cours à tous les monstres de la zone.
 func _resolve_hit() -> void:
-	var first_hit: bool = not _action.get("hit_done", false)
 	_action["hit_done"] = true
 	_last_hit_at = _time
 	var is_skill := _state == "skill"
-	if _action.get("finisher", false) and first_hit:
-		if _action.get("land_hit", false):
-			# retombée du salto : onde de choc
-			Vfx.shockwave(self, global_position, float(_action.radius) * 1.4)
-			EdenFx.play(self, "s00541", global_position, rotation.y, GameData.HERO_SCALE * 1.8)
-			_shake(1.2)
-		else:
-			Vfx.ring(self, global_position, float(_action.radius), Color(1.0, 0.85, 0.4, 0.9))
-			EdenFx.play(self, "s00541", global_position, rotation.y, GameData.HERO_SCALE * 1.3)
-			_shake(0.5)
 	var hit: Combatant = null
 	if float(_action.get("move", 0.0)) > 0.0:
 		_quick_move(_action.get("move_dir", forward()), float(_action.move) * reach_mult)
@@ -1090,6 +1133,14 @@ func _resolve_hit() -> void:
 		"bolt":
 			_fire_bolts(_action, is_skill)
 			return
+		"cast":
+			# incantation de l'arme : les zones tombent après le délai (vitesse d'incantation)
+			get_tree().create_timer(float(_action.get("delay", 0.4)), false).timeout.connect(_cast_land.bind(_action))
+			return
+		"slam":
+			var at := global_position + forward() * float(_action.get("offset", 1.8))
+			Vfx.shockwave(self, at, float(_action.radius), Color(1.0, 0.8, 0.5))
+			hit = _resolve_area(_action, at, forward(), false)
 		"heal":
 			_heal_action(_action)
 			hit = _resolve_area(_action, global_position, forward(), is_skill) if float(_action.get("radius", 0.0)) > 0.0 else null
@@ -1108,8 +1159,23 @@ func _resolve_hit() -> void:
 		_last_skill = {"action": _action.duplicate(true), "pos": global_position, "fwd": forward()}
 		if hit:
 			Procs.fire(self, "skill_hit", hit, hit.global_position)
-	if _action.get("finisher", false) and first_hit:
-		Procs.fire(self, "finisher", hit, global_position)
+	if hit and _action.get("basic", false):
+		Procs.fire(self, "basic_hit", hit, hit.global_position)
+
+
+## Impact des zones d'une incantation d'arme (WeaponAttacks, forme « cast »).
+func _cast_land(action: Dictionary) -> void:
+	if is_dead:
+		return
+	var first: Combatant = null
+	for pt: Vector3 in action.get("points", [action.get("target", global_position)]):
+		Vfx.ring(self, pt, float(action.radius), Color(0.6, 0.75, 1.0, 0.9))
+		EdenFx.play(self, String(action.get("hit_fx", "")), pt, rotation.y, GameData.HERO_SCALE * 1.2)
+		var h := _resolve_area(action, pt, forward(), false)
+		if first == null:
+			first = h
+	if first:
+		Procs.fire(self, "basic_hit", first, first.global_position)
 
 
 ## Applique [param action] à tous les monstres de sa zone (rayon, arc) depuis
@@ -1123,6 +1189,8 @@ func _resolve_area(action: Dictionary, origin: Vector3, fwd: Vector3, is_skill: 
 		var col := Color(1.0, 0.8, 0.5, 0.85) if not is_skill else Color(1.0, 0.45, 0.25, 0.9)
 		if action.get("echo", false):
 			col = Color(0.75, 0.5, 1.0, 0.9)
+		elif action.get("offhand", false):
+			col = Color(0.5, 0.9, 1.0, 0.85)  # arme secondaire
 		Vfx.slash(self, origin, fwd, radius, arc, col)
 	if not foe and action.get("kind", "") != "buff":
 		get_tree().call_group("breakables", "hit_area", origin, fwd, radius, arc)  # jarres, caisses, cristaux
@@ -1156,10 +1224,10 @@ func _resolve_area(action: Dictionary, origin: Vector3, fwd: Vector3, is_skill: 
 
 # --- tirs, soins, téléportation (archer, mage, clerc, voleur) ----------------------
 ## Tire la volée de l'action en cours (attaque de base ou compétence).
-func _fire_bolts(action: Dictionary, is_skill: bool) -> void:
+func _fire_bolts(action: Dictionary, is_skill: bool, aim_dir := Vector3.ZERO) -> void:
 	var n := maxi(1, int(action.get("volley", 1)))
 	var spread := deg_to_rad(float(action.get("spread", 0.0)) if n > 1 else 0.0)
-	var fwd := forward()
+	var fwd := forward() if aim_dir == Vector3.ZERO else Vector3(aim_dir.x, 0.0, aim_dir.z).normalized()
 	var a := action.duplicate()
 	a["is_skill"] = is_skill
 	for i in n:
@@ -1265,8 +1333,18 @@ func _update_stealth_visual() -> void:
 ## Impact d'un projectile du héros.
 func bolt_hit(m: Combatant, dir: Vector3, action: Dictionary) -> void:
 	var is_skill: bool = action.get("is_skill", false)
-	_hit_monster(m, dir, action, is_skill)
+	if float(action.get("explode", 0.0)) > 0.0:
+		# obus, boule de feu : explosion autour de la cible touchée (rayon × zone)
+		var a := action.duplicate()
+		a["radius"] = float(action.explode)
+		a["arc"] = 360.0
+		Vfx.shockwave(self, m.global_position, float(action.explode), Color(1.0, 0.55, 0.25))
+		_resolve_area(a, m.global_position, dir, is_skill)
+	else:
+		_hit_monster(m, dir, action, is_skill)
 	_last_combat = _time
+	if action.get("basic", false):
+		Procs.fire(self, "basic_hit", m, m.global_position)
 	if is_skill and not action.get("proc_done", false):
 		action["proc_done"] = true
 		Procs.fire(self, "skill_hit", m, m.global_position)
@@ -1349,6 +1427,8 @@ func _hit_monster(m: Combatant, dir: Vector3, action: Dictionary, is_skill: bool
 	var pvp_basic := not is_skill and PvpCaps.between_heroes(self, m)
 	if pvp_basic:
 		mult *= PvpCaps.BASIC_MULT
+	if action.get("basic", false):
+		mult *= basic_mult
 	var combo: Dictionary = action.get("combo", {})
 	var combo_ok: bool = not combo.is_empty() and m.has_status(String(combo.get("requires", "")))
 	if combo_ok and combo.get("double", false):
@@ -1376,15 +1456,17 @@ func _hit_monster(m: Combatant, dir: Vector3, action: Dictionary, is_skill: bool
 		EdenFx.play(self, hit_fx, m.global_position + Vector3.UP * 0.2, rotation.y, GameData.HERO_SCALE)
 	if lifesteal > 0.0:
 		heal(dmg * lifesteal)
+	if float(action.get("heal_on_hit", 0.0)) > 0.0:
+		heal(max_hp * float(action.heal_on_hit) * heal_power)  # Éclat sacré du sceptre
 	Vfx.spark(self, m.global_position + Vector3.UP * 1.0, Color(1.0, 0.85, 0.5), is_crit)
-	if is_skill or is_crit or action.get("finisher", false):
+	if is_skill or is_crit:
 		Vfx.flash(self, m.global_position + Vector3.UP * 1.0, 1.6 if is_crit else 1.2, Color(1.0, 0.85, 0.55))
 	var pull := 0.0 if pvp_basic else float(action.get("pull", 0.0))
 	if pull > 0.0:
 		# attraction vers le héros (grappin) ou le centre de la zone (vortex)
 		m.knockback(-dir * sqrt(28.0 * pull))
 	else:
-		m.knockback(dir * (2.5 if is_skill else (3.0 if action.get("finisher", false) else 1.0)))
+		m.knockback(dir * (2.5 if is_skill else 0.6))
 	for s in action.get("applies", {}):
 		if pvp_basic and s in Combatant.CC_TYPES:
 			continue

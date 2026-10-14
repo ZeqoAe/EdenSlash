@@ -1,8 +1,7 @@
 class_name SpellInfo
 extends RefCounted
 ## Infobulles détaillées « à la Eden » générées depuis les vraies valeurs du jeu :
-## compétences (dégâts, type, critique, effets et durées, rangs 1 à 5), coups du combo
-## d'auto-attaque, passifs et statistiques de base des classes.
+## compétences (dégâts, type, critique, effets et durées, rangs 1 à 5), passifs et statistiques de base des classes.
 
 const C_DMG := "#ffcf6b"
 const C_PHYS := "#ff9a6b"
@@ -145,37 +144,6 @@ static func _effect_lines(s: Dictionary, mult_k: float, atk: float) -> PackedStr
 			bits.append("%s sur toi (%s)" % [_c(C_BUFF, StatusDb.display_name(st)), _secs(float(combo.buff[st]))])
 		out.append("• [b]Combo[/b] — sur une cible en %s : %s" % [_c(C_DEBUFF, req), ", ".join(bits)])
 	return out
-
-
-# --- combo d'auto-attaque ------------------------------------------------------------------
-static func combo_step_bbcode(step: Dictionary, index: int, cls: Dictionary, atk := -1.0) -> String:
-	var s := step.duplicate()
-	s["dmg_type"] = cls.get("dmg_type", "phys")
-	if step.get("bolt", false):
-		s["kind"] = "bolt"
-		s["range"] = cls.get("attack_range", 13.0)
-	elif not step.has("kind") and not step.has("radius"):
-		s["radius"] = 2.6
-	var lines: PackedStringArray = []
-	lines.append("[font_size=18][b]%d · %s[/b][/font_size]%s" % [index + 1, step.get("name", "Coup %d" % (index + 1)),
-		_c(C_CRIT, "   COUP FINAL") if step.get("finisher", false) else ""])
-	var head: PackedStringArray = []
-	var kind := String(s.get("kind", ""))
-	if kind == "bolt":
-		head.append("Tir · %s m" % _num(float(s.range)))
-	elif kind == "ground":
-		head.append("Zone ciblée · %s m, rayon %s m" % [_num(float(step.get("range", 0.0))), _num(float(step.radius))])
-	elif kind == "heal":
-		head.append("Soin")
-	elif float(s.get("radius", 0.0)) > 0.0:
-		head.append(("Autour de soi" if float(s.get("arc", 150)) >= 360 else "Devant · %d°" % int(s.get("arc", 150))) + ", %s m" % _num(float(s.radius)))
-	lines.append(_c(C_MUTED, " · ".join(head)))
-	if step.has("desc"):
-		lines.append("[i]%s[/i]" % step.desc)
-	lines.append_array(_effect_lines(s, 1.0, atk))
-	if step.get("finisher", false):
-		lines.append(_c(C_MUTED, "Le coup final profite des cartes « coup final » (dégâts, zone, coups supplémentaires)."))
-	return "\n".join(lines)
 
 
 # --- passifs et classe ----------------------------------------------------------------------

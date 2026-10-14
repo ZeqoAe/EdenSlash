@@ -68,13 +68,12 @@ static func _duel_lines(s: Dictionary) -> PackedStringArray:
 	out.append("")
 	out.append("[color=#%s][b]Sorts (%d)[/b][/color]" % [UiTheme.GOLD.to_html(false), r._skills.size()])
 	if r._skills.is_empty():
-		out.append("Aucun : seulement le combo de son arme")
+		out.append("Aucun : seulement l'auto-attaque de son arme")
 	for sk in r._skills:
 		out.append("• [b]%s[/b] — %d %% de son attaque, recharge %.1f s\n   [color=#b8b8c8]%s[/color]" % [sk.get("name", "?"), roundi(float(sk.get("mult", 1.5)) * 100.0),
 			float(sk.get("cooldown", 5.0)) * float(cfg.skill_cd), sk.get("desc", "")])
-	var combo: Array = r.wtype.get("combo", [])
-	if not combo.is_empty():
-		out.append("• Combo de l'arme (%s) : %s" % [r.wtype.get("name", ""), " → ".join(combo.map(func(c): return String(c.get("name", "?"))))])
+	if not r.auto_step.is_empty():
+		out.append("• Auto-attaque de l'arme (%s) : %s" % [r.wtype.get("name", ""), String(r.auto_step.get("name", "?"))])
 	out.append("")
 	out.append("[color=#%s][b]Équipement[/b][/color]" % UiTheme.GOLD.to_html(false))
 	for i in r.gear.size():

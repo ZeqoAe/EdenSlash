@@ -431,7 +431,7 @@ func _build_enemies() -> void:
 		for m in get_tree().get_nodes_in_group("monsters"):
 			m.queue_free()
 		_say("Ennemis retirés."), 120)
-	# adversaire : un héros d'une classe (combo de son arme, sorts, esquives)
+	# adversaire : un héros d'une classe (auto-attaque de son arme, sorts, esquives)
 	var rr := _row()
 	_rival_btn = _button(rr, "Adversaire : %s ▾" % GameData.class_data(_rival_class).get("name_fr", ""), func(): pass, 0)
 	_rival_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -509,7 +509,7 @@ func spawn_rival() -> ClassRival:
 	r.global_position = _spawn_point(0, 1) + Vector3.UP * 0.4
 	r.look_at(player.global_position * Vector3(1, 0, 1) + Vector3.UP * r.global_position.y, Vector3.UP)
 	r.rotate_y(PI)
-	_say("%s adverse %s (niveau %d) : combo, sorts annoncés en rouge, esquives." % [GameData.class_data(_rival_class).get("name_fr", ""), String(ClassRival.NAMES[r.difficulty]).to_lower(), player.level])
+	_say("%s adverse %s (niveau %d) : auto-attaque, sorts annoncés en rouge, esquives." % [GameData.class_data(_rival_class).get("name_fr", ""), String(ClassRival.NAMES[r.difficulty]).to_lower(), player.level])
 	return r
 
 

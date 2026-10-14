@@ -401,20 +401,37 @@ aériens / mages), **Pas aérien** (+1 esquive en l'air, ×2).
 - **Désassemblage** → des **cristaux** selon la rareté (gardés entre les runs). **Vente** → or
   **+ la moitié de l'or** investi dans les améliorations.
 
-## Combo d'auto-attaque
+## Auto-attaque des armes (refonte 0.1.127, demande du joueur du 14/10/2026)
 
-- 3 coups enchaînés (le suivant doit partir moins de 0,6 s après la fin du précédent) :
-  coup de sabre dans un sens, dans l'autre (+15 %), puis **coup final** : saut automatique,
-  frappe en zone à 360° (220 %), renverse 0,4 s. Indicateur « Combo ◆◆◇ » sur la barre.
-- Défini par classe dans `classes.json` (`combo` : animation, multiplicateur, arc, rayon,
-  saut, élan, effets) : chaque future classe aura son propre enchaînement.
-- Cartes liées : Enchaînement fluide (fenêtre plus longue), Coup de grâce (+40 % au coup
-  final), Onde de choc, évolution Tempête d'acier (le coup final frappe deux fois en tourbillon).
+- **Plus de combo** (ni coup final, saut, étourdissement ou attraction) : chaque type d'arme a
+  **une seule auto-attaque**, répétée, volontairement **faible en début de run**. Sa force vient
+  des **cartes** : chaque arme a une forme qui réagit à certaines statistiques (« Grandit avec »
+  dans le grimoire). Catalogue : `scripts/combat/weapon_attacks.gd` (`WeaponAttacks.SPECS`).
+- Formes : **taille** en arc (katana, hache, épée, espadon, faux, cestes, dagues), **estoc** en
+  ligne (rapière, lance : longueur × portée), **impact** au sol (marteau), **onde** autour du
+  héros (guitare), **projectiles** (arc, dagues de lancer, baguette, canon, grimoire, boule de
+  feu) et **incantation** (sceptre, bâton : zone au point visé après un délai réglé par la
+  **vitesse d'incantation**).
+- Cartes : **Projectile supplémentaire** (+1 flèche à l'arc, +1 zone à l'incantation, +1 frappe
+  pour la mêlée), **Perforation**, **Ricochet** (rebond vers un ennemi à 8 m), **Cadence**
+  (vitesse d'attaque), **Incantation vive** (vitesse d'incantation), **Main lourde** (dégâts de
+  l'auto-attaque), Lame large (zone), Allonge (portée), **Onde de choc** (chance à l'impact),
+  évolution **Tempête d'acier** (Main lourde + Projectile supplémentaire). Les effets « coup final »
+  des sets et trophées passent sur « impact d'une auto-attaque » (avec une chance).
+- Certaines armes ont **deux variantes** (dagues : lacération ou lancer ; arc : flèche ou flèche
+  perçante ; bâton : météore ou boule de feu) : le modèle d'Eden de l'arme décide laquelle.
+- **Arme secondaire** (case de l'inventaire, bouton « Secondaire », glisser entre les deux cases
+  pour échanger) : son auto-attaque part **seule**, sans animation, vers l'ennemi le plus proche
+  à sa portée, à **60 % des dégâts** et avec **50 % de ses stats d'objet** ; elle ne compte pas
+  pour les sets. En Survie, une nouvelle arme devient l'arme principale et l'ancienne passe en
+  secondaire.
+- Duel : l'auto-attaque entre héros garde × `PvpCaps.BASIC_MULT`. L'adversaire scripté répète
+  l'auto-attaque de son arme (pause plus longue tous les 3 coups).
 
 ## Effets déclenchés (procs)
 
 Un proc = déclencheur + chance + recharge interne + effet (`scripts/combat/procs.gd`).
-- Déclencheurs : impact, impact d'une compétence, critique, monstre tué, coup final du combo,
+- Déclencheurs : impact, impact d'une compétence, critique, monstre tué, impact d'une auto-attaque,
   esquive, annulation parfaite, dégâts subis, passage sous 30 % de PV.
 - Effets : foudre en chaîne, gel (immobilise, annule l'attaque annoncée ; le boss résiste),
   ralenti, brûlure, électrocution (+15 % de dégâts subis), explosion, nova de givre, buffs

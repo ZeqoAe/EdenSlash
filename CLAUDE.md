@@ -24,6 +24,9 @@ Survie refondue (0.1.123 à 0.1.125, décisions dans `DESIGN.md`, « Boucle de j
 époques (`core/epochs.gd`), coffres d'emplacement (`core/slot_chests.gd`), enclume par emplacement
 (`Run.slot_bonus`), départ sans équipement (`Run.start_survival`), Collection > Armurerie
 (`ui/gear_shop_page.gd`, `Profile.seen_gear`, `Profile.insignia`).
+Armes refondues (0.1.127, `DESIGN.md`, « Auto-attaque des armes ») : plus de combo, une auto-attaque
+par type d'arme (`combat/weapon_attacks.gd`) qui grandit avec les cartes, arme secondaire
+(`Profile.equipped.offhand`, `Player._update_offhand`). Reste : retours du joueur sur l'équilibrage.
 
 ## Branche
 Tout se passe sur la branche `claude/optimistic-gauss-p2g2pq`. Ne pas travailler sur `master`.

@@ -14,8 +14,8 @@ extends HBoxContainer
 signal class_changed
 
 const LEFT_SLOTS := ["weapon", "necklace", "head", "chest", "legs"]
-const RIGHT_SLOTS := ["back", "gloves", "boots", "ring", "trophy"]
-const SLOT_CAPTIONS := {"weapon": "Arme principale", "necklace": "Collier"}
+const RIGHT_SLOTS := ["offhand", "back", "gloves", "boots", "ring", "trophy"]
+const SLOT_CAPTIONS := {"weapon": "Arme principale", "offhand": "Arme secondaire", "necklace": "Collier"}
 const FAMILIES := [["all", "Tous", "all"], ["weapon", "Armes", "weapon"], ["armor", "Armures", "armor"],
 	["acc", "Accessoires", "ring"], ["cons", "Fournitures", "potion"], ["mat", "Matériaux", "gem"], ["misc", "Divers", "misc"]]
 const SORTS := ["Rareté", "Niveau", "Nom", "Type", "Amélioration"]
@@ -58,6 +58,7 @@ var _d_next: Label
 var _d_flavor: RichTextLabel
 var _d_set: RichTextLabel
 var _b_equip: Button
+var _b_offhand: Button  # armes : porter en arme secondaire / échanger
 var _b_upgrade: Button
 var _b_dismantle: Button
 var _armed_dismantle := false
@@ -246,8 +247,8 @@ func _doll_column(parent: Control, slots: Array) -> void:
 		s.source = "equipped"
 		s.placeholder = ""
 		s.ghost = _ghost_icon(slot)
-		s.can_drop = func(data): return data.source == "inventory" and data.item.slot == slot
-		s.on_drop = func(data): _equip(data.item)
+		s.can_drop = func(data): return (data.source == "inventory" and data.item.slot == _item_slot(slot)) 			or (data.source == "equipped" and String(data.slot) in ["weapon", "offhand"] and slot in ["weapon", "offhand"] and String(data.slot) != slot)
+		s.on_drop = func(data): _drop_on(slot, data)
 		s.pressed.connect(func():
 			# case de la poupée : l'inventaire montre les pièces de cet emplacement (les
 			# meilleures d'abord), pour équiper la case vide ou comparer avec la pièce portée
@@ -263,9 +264,26 @@ func _doll_column(parent: Control, slots: Array) -> void:
 		_doll[slot] = s
 
 
+## Type d'objet d'une case de la poupée (l'arme secondaire est une arme).
+static func _item_slot(slot: String) -> String:
+	return "weapon" if slot == "offhand" else slot
+
+
+## Dépôt sur la case [param slot] : équipe, ou échange l'arme principale et la secondaire.
+func _drop_on(slot: String, data) -> void:
+	if data.source == "equipped":
+		Profile.swap_weapons()
+		_after_change({"kind": "item", "item": Profile.equipped.get(slot, {})})
+	elif slot == "offhand":
+		Profile.equip_offhand(data.item)
+		_after_change({"kind": "item", "item": data.item})
+	else:
+		_equip(data.item)
+
+
 ## Icône fantôme d'une case vide (pièce d'Eden représentative).
 func _ghost_icon(slot: String) -> String:
-	if slot == "weapon":
+	if slot in ["weapon", "offhand"]:
 		var cls := GameData.class_data(_cls())
 		var ws: Array = GameData.weapon_type(String(cls.get("weapon_type", "katana"))).get("weapons", [])
 		return String(ws[0].icon) if not ws.is_empty() else ""
@@ -437,6 +455,9 @@ func _build_detail(parent: Control) -> void:
 	spacer.size_flags_stretch_ratio = 0.6
 	acts.add_child(spacer)
 	_b_equip = _action(acts, "Équiper", "", _on_equip, true)
+	_b_offhand = _action(acts, "Secondaire", "", _on_offhand)
+	_b_offhand.tooltip_text = "Arme secondaire : son auto-attaque part seule, à %d %% des dégâts et %d %% de ses stats." % [
+		roundi(WeaponAttacks.OFFHAND_DMG * 100.0), roundi(WeaponAttacks.OFFHAND_STATS * 100.0)]
 	_b_upgrade = _action(acts, "Forge", "upgrade", _on_upgrade)
 	_b_dismantle = _action(acts, "Démonter", "dismantle", _on_dismantle)
 
@@ -614,7 +635,7 @@ func refresh() -> void:
 	for it in Profile.equipped.values():
 		power += EquipmentPage._power_of(it)
 	_power.text = str(power)
-	var sets := Items.active_set_bonuses(Profile.equipped)
+	var sets := Items.active_set_bonuses(Profile.set_gear())
 	_set_text.text = ("%s · %d pièces" % [Items.set_def(sets[-1].set).get("name", ""), int(sets[-1].pieces)]) if not sets.is_empty() else "Aucun bonus actif"
 	var p := _stats_player()
 	var mag := String(cd.get("dmg_type", "phys")) == "mag"
@@ -654,7 +675,7 @@ func _refresh_grid() -> void:
 	var all := _entries()
 	var list := all.filter(func(e): return (_family == "all" or family_of(e) == _family) and (q == "" or entry_name(e).to_lower().contains(q)))
 	if _slot_filter != "":
-		list = all.filter(func(e): return String(e.kind) == "item" and String(e.item.slot) == _slot_filter and (q == "" or entry_name(e).to_lower().contains(q)))
+		list = all.filter(func(e): return String(e.kind) == "item" and String(e.item.slot) == _item_slot(_slot_filter) and (q == "" or entry_name(e).to_lower().contains(q)))
 		list.sort_custom(func(a, b): return EquipmentPage._power_of(a.item) > EquipmentPage._power_of(b.item))
 	else:
 		list = _sorted(list)
@@ -747,6 +768,7 @@ func _refresh_detail() -> void:
 		for b in [_b_equip, _b_upgrade, _b_dismantle]:
 			b.disabled = true
 		_b_equip.text = "Équiper"
+		_b_offhand.visible = false
 		_b_dismantle.text = "Démonter"
 		return
 	var disp := entry_display(e)
@@ -779,13 +801,15 @@ func _refresh_detail() -> void:
 		_d_set.text = "[b]Utilisation[/b]\n[color=#c8c8d4]%s[/color]" % ("Forge : gemmes, formules d'enchantement, parchemins de fortification, pierres de sûreté ; fusion de 3 gemmes identiques." if String(e.kind) == "stack" else "Voir l'aide « ? » : Monnaies.")
 		for b in [_b_equip, _b_dismantle]:
 			b.disabled = true
+		_b_offhand.visible = false
 		# gemmes : la Forge propose la fusion
 		_b_upgrade.disabled = not (Profile.in_run and String(e.kind) == "stack" and key.begins_with("gem"))
 		_b_upgrade.tooltip_text = "Fusion de 3 gemmes identiques (Forge)"
 		return
 	var it: Dictionary = e.item
 	var equipped := _is_equipped(it)
-	var slot_name := String(SLOT_CAPTIONS.get(it.slot, Items.SLOT_NAMES[it.slot]))
+	var worn_slot := Profile.slot_of(it)
+	var slot_name := String(SLOT_CAPTIONS.get(worn_slot if worn_slot != "" else it.slot, Items.SLOT_NAMES[it.slot]))
 	var kind := String(GameData.weapon_type(Items.weapon_type_of(it)).get("name", "")) if it.slot == "weapon" else \
 		String(GameData.eden_by_id.get(int(it.get("eden", 0)), {}).get("armor", ""))
 	_d_type.text = slot_name + ((" - " + kind.capitalize()) if kind != "" else "") + ("  · porté" if equipped else "")
@@ -807,6 +831,8 @@ func _refresh_detail() -> void:
 	_d_set.text = _set_bbcode(it)
 	_b_equip.disabled = false
 	_b_equip.text = "Retirer" if equipped else "Équiper"
+	_b_offhand.visible = it.slot == "weapon" and worn_slot != "offhand" and not (worn_slot == "weapon" and not Profile.equipped.has("offhand"))
+	_b_offhand.text = "Échanger" if worn_slot == "weapon" else "Secondaire"
 	_b_upgrade.disabled = false
 	_b_dismantle.disabled = equipped
 	_b_upgrade.tooltip_text = "" if Profile.in_run else "Hors run : fournitures de ta réserve, or remplacé par des cristaux (1 pour %d or)." % Forge.GOLD_PER_CRYSTAL
@@ -818,7 +844,7 @@ func _refresh_detail() -> void:
 ## Statistiques de l'objet comparées à la pièce portée (écart en vert / rouge).
 func _stats_compare(it: Dictionary, equipped: bool) -> String:
 	var st := Items.stats(it)
-	var worn: Dictionary = Profile.equipped.get(it.slot, {}) if not equipped else {}
+	var worn: Dictionary = Profile.equipped.get(it.slot, {}) if not equipped else {}  # (comparée à l'arme principale)
 	var wst := Items.stats(worn) if not worn.is_empty() else {}
 	var keys := st.keys()
 	for k in wst:
@@ -847,7 +873,7 @@ func _set_bbcode(it: Dictionary) -> String:
 	var s := Items.set_def(sid)
 	if s.is_empty():
 		return "[b]Bonus de set[/b]\n[color=#9a98a8]Cet objet n'appartient à aucun set.[/color]"
-	var worn := int(Items.set_counts(Profile.equipped).get(sid, 0))
+	var worn := int(Items.set_counts(Profile.set_gear()).get(sid, 0))
 	var lines: PackedStringArray = ["[b][color=#%s]%s[/color][/b]  (%d pièce(s) portée(s))" % [Items.SET_COLOR.to_html(false), s.name, worn]]
 	for n in Items.set_tiers(sid):
 		var ok: bool = worn >= n
@@ -890,9 +916,16 @@ func _on_equip() -> void:
 	if _selected.get("kind", "") != "item":
 		return
 	if _is_equipped(_selected.item):
-		_unequip(String(_selected.item.slot))
+		_unequip(Profile.slot_of(_selected.item))
 	else:
 		_equip(_selected.item)
+
+
+func _on_offhand() -> void:
+	if _selected.get("kind", "") != "item" or _selected.item.get("slot", "") != "weapon":
+		return
+	Profile.equip_offhand(_selected.item)
+	_after_change({"kind": "item", "item": _selected.item})
 
 
 func _on_dismantle() -> void:

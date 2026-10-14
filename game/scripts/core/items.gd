@@ -19,7 +19,7 @@ const SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "n
 const SLOT_NAMES := {
 	"weapon": "Arme", "head": "Tête", "chest": "Torse", "legs": "Jambes",
 	"gloves": "Gants", "boots": "Bottes", "back": "Cape",
-	"necklace": "Collier", "ring": "Bague", "trophy": "Trophée",
+	"necklace": "Collier", "ring": "Bague", "trophy": "Trophée", "offhand": "Arme secondaire",
 }
 ## Pièces d'armure et accessoires (bijoux et trophée, comme dans Eden).
 const ARMOR := ["head", "chest", "legs", "gloves", "boots", "back"]
@@ -102,7 +102,7 @@ const SETS := {
 	"storm": {"name": "Tempête", "suffix": "de la Tempête", "bonus": {
 		2: {"stat": {"atk_speed": 0.08}},
 		4: {"procs": [{"trigger": "hit", "chance": 0.12, "cd": 2.5, "effect": "lightning", "mult": 0.9, "chain": 2, "radius": 6.0}]},
-		6: {"stat": {"dmg_pct": 0.12}, "procs": [{"trigger": "finisher", "chance": 1.0, "cd": 3.0, "effect": "lightning", "mult": 2.0, "chain": 5, "radius": 8.0}]}}},
+		6: {"stat": {"dmg_pct": 0.12}, "procs": [{"trigger": "basic_hit", "chance": 0.25, "cd": 3.0, "effect": "lightning", "mult": 2.0, "chain": 5, "radius": 8.0}]}}},
 	"frost": {"name": "Givre éternel", "suffix": "du Givre éternel", "bonus": {
 		2: {"stat": {"cdr": 0.06}},
 		4: {"procs": [{"trigger": "skill_hit", "chance": 0.35, "cd": 5.0, "effect": "freeze", "duration": 1.5, "radius": 3.5}]},

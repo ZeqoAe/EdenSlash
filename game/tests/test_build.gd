@@ -104,21 +104,41 @@ func _test_world() -> void:
 	check("monstres plafonnés (hors rage)", world.director._monster_level(2) == 15)
 	player.level = 1
 
-	# combo : 3 coups enchaînés, le 3e en saut et en zone
+	# auto-attaque de l'arme (0.1.127) : toujours la même, plus de combo ni de coup final
 	var m := _dummy(1.8)
+	var hp_m := m.hp
 	player._start_attack(m.global_position)
-	check("combo : 1er coup", player.combo_state() == Vector2i(1, 3) and not player._action.get("finisher", false))
+	check("auto-attaque : coup de l'arme", player._action.get("basic", false) and not player._action.has("finisher") and int(player._action.get("hits", 1)) == 1)
 	await _wait_idle()
+	check("auto-attaque : touche", m.hp < hp_m)
 	player._start_attack(m.global_position)
-	check("combo : 2e coup", player.combo_state().x == 2)
+	check("auto-attaque : la même au coup suivant", player._action.get("basic", false) and int(player._action.get("hits", 1)) == 1)
 	await _wait_idle()
-	player._start_attack(m.global_position)
-	check("combo : coup final en saut et en zone", player._action.get("finisher", false) and player.velocity.y > 0.0 and float(player._action.arc) == 360.0)
-	await _wait_idle()
-	await get_tree().create_timer(player.combo_window + 0.2).timeout
-	player._start_attack(m.global_position)
-	check("combo : repart du début après une pause", player.combo_state().x == 1)
-	await _wait_idle()
+	Run.apply_card(_common_card("multishot"))
+	check("Projectile supplémentaire : +1 frappe en mêlée", player.extra_proj == 1 and int(WeaponAttacks.action_for(player.auto_spec(), player).hits) == 2)
+	var bow := WeaponAttacks.action_for(WeaponAttacks.spec_for({}, "bow"), player)
+	check("Projectile supplémentaire : 2 flèches à l'arc", String(bow.kind) == "bolt" and int(bow.volley) == 2)
+	var staff := WeaponAttacks.action_for(WeaponAttacks.spec_for({"auto_variant": 0, "slot": "weapon"}, "staff"), player)
+	check("bâton : incantation à 2 zones, délai réglé par la vitesse d'incantation", String(staff.kind) == "cast" and int(staff.zones) == 2 		and is_equal_approx(float(staff.delay), 0.65 / player.cast_speed))
+	for wt in GameData.weapon_types:
+		for v in WeaponAttacks.variants(String(wt)):
+			if not (v.has("shape") and v.has("anims") and v.has("mult") and v.has("scales")):
+				check("auto-attaque complète : %s" % wt, false)
+	check("auto-attaque pour chaque type d'arme", GameData.weapon_types.keys().all(func(k): return WeaponAttacks.SPECS.has(k)))
+	# arme secondaire : frappe seule, à sa cadence
+	var off := Items.generate(1, 0.0, "weapon", Run.class_id, 0, "bow")
+	Profile.inventory.append(off)
+	Profile.equip_offhand(off)
+	player.recalc_stats()
+	check("arme secondaire portée", not player.offhand_spec().is_empty() and String(player.offhand_spec().wtype) == "bow")
+	var hp_o := m.hp
+	player._off_ready_at = 0.0
+	for i in 40:
+		await get_tree().physics_frame
+	check("arme secondaire : tire seule", m.hp < hp_o)
+	Profile.unequip("offhand")
+	player.recalc_stats()
+	check("arme secondaire retirée", player.offhand_spec().is_empty())
 
 	# zone et portée
 	var sk: Dictionary = Run.class_data().skills[1]  # tourbillon (cercle)

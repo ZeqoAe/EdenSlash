@@ -169,7 +169,7 @@ static func _preview_text() -> String:
 	var txt := "[b]Niveau du duel : %d[/b]\n" % lv
 	txt += "[color=#ff9a8a][b]Adversaire[/b][/color] : PV [b]%s[/b] · attaque [b]%d[/b] · défense %d · critiques %d %% (+%d %% de dégâts)\n" % [
 		Hud._big_number(r.max_hp), roundi(r.atk), roundi(r.defense), roundi(r.crit_chance * 100.0), roundi(r.crit_bonus * 100.0)]
-	txt += "   Sorts : %s\n" % (", ".join(spells) if not spells.is_empty() else "combo de l'arme seulement")
+	txt += "   Sorts : %s\n" % (", ".join(spells) if not spells.is_empty() else "auto-attaque de l'arme seulement")
 	txt += "[color=#9fd0ff][b]Toi[/b][/color] : PV [b]%s[/b] · attaque [b]%d[/b] · défense %d · critiques %d %% (+%d %% de dégâts)\n" % [
 		Hud._big_number(p.max_hp), roundi(my_atk), roundi(p.defense), roundi((p.mcrit if magic else p.crit) * 100.0), roundi(p.crit_dmg * 100.0)]
 	# règles du duel (PvpCaps) : un coup de multiplicateur 1, avant critique et acharnement

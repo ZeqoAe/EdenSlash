@@ -831,9 +831,9 @@ func _obs_for(me: Player, opps: Array, class_obs: Array, last_button: int, low_h
 	o.append(1.0 if acting and p._action.get("hit_done", false) else 0.0)
 	o.append(1.0 if p._state == "skill" and p._action.get("hit_done", false) and p._time - p._last_hit_at <= Player.PERFECT_WINDOW else 0.0)
 	o.append(clampf(p._state_len / 2.0, 0.0, 1.0) if acting else 0.0)
-	var cs := p.combo_state()
-	o.append(float(cs.x) / maxf(cs.y, 1.0))
-	o.append(clampf(p._combo_expire - p._time, 0.0, 1.0))
+	# anciennes observations du combo (0.1.127 : plus de combo) : arme secondaire, même nombre
+	o.append(1.0 if not p.offhand_spec().is_empty() else 0.0)
+	o.append(clampf(p._off_ready_at - p._time, 0.0, 1.0))
 	o.append(p.dodge_cooldown().x / Player.DODGE_COOLDOWN)
 	o.append(clampf((p._skill_lock_until - p._time) / 1.5, 0.0, 1.0))
 	o.append(1.0 if p.is_on_floor() else 0.0)

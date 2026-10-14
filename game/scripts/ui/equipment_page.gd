@@ -278,7 +278,7 @@ func _refresh_stats(in_run: bool) -> void:
 		power += _power_of(it)
 	_power.text = "Puissance d'équipement : %d" % power
 	var sl: PackedStringArray = []
-	for b in Items.active_set_bonuses(Profile.equipped):
+	for b in Items.active_set_bonuses(Profile.set_gear()):
 		sl.append("[color=#%s]%s · %d pièces[/color] : %s" % [Items.SET_COLOR.to_html(false), Items.set_def(b.set).get("name", ""), int(b.pieces), " ; ".join(Items.bonus_lines(b))])
 	_sets.text = "\n".join(sl) if not sl.is_empty() else "[color=#c8c8d4]Aucun bonus actif : porte 2, 4 ou 6 pièces d'un même set (cadre vert).[/color]"
 

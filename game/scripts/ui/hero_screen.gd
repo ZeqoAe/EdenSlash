@@ -6,7 +6,7 @@ extends CanvasLayer
 ## - Équipement : InventoryPage (héros équipé, coffre commun, statistiques et « Détail ») ;
 ## - Talents : TalentsPage (talents de classe, parcours de maîtrise, certificats) ;
 ## - Apparence : HeroPages.AppearancePage (tenue, tête, dos, auras, apparence d'arme) ;
-## - Grimoire : sorts de la classe et combos d'arme (livre ouvert par-dessus) ;
+## - Grimoire : sorts de la classe et auto-attaques des armes (livre ouvert par-dessus) ;
 ## - Classe : sélecteur des classes (aussi en cliquant la carte de la classe) ;
 ## - « ? » : guide des statistiques (InfoPage).
 ## Échap : ferme la fenêtre ouverte par-dessus, sinon revient au menu.
