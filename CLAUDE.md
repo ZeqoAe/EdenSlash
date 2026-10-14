@@ -6,6 +6,12 @@ extraction des assets) et une **cloud** (sans le client). Le joueur ne connaît 
 ## Chantier en cours
 Refonte des menus, mode dev, trophées, zones / monnaies / coffres : faite (0.1.22 à 0.1.26,
 état en tête de `A_FAIRE_SESSION_CLOUD.md`) ; reste la validation des menus par le joueur.
+Nuit du 14/10 (0.1.89 à 0.1.98) : duel équilibré à tout niveau (voir « Duel (JcJ) ») et mode farm
+façon Megabonk (`DESIGN.md`, « Étapes et sources » et « Monnaies, coffres et zones ») : carte remplie
+(objets à casser `world/breakables.gd`, sites, plateaux, camps, lieux à usage unique), coffres en
+3 qualités qui proposent de l'équipement, run en 3 étapes (portail après le boss). Test :
+`tests/test_farm.tscn` ; vues de la carte : `res://tools/map_shots.tscn -- <graine> [zone]`.
+Reste : retours du joueur sur le rythme, l'économie de l'or et la lisibilité de la carte.
 
 ## Branche
 Tout se passe sur la branche `claude/optimistic-gauss-p2g2pq`. Ne pas travailler sur `master`.

@@ -1228,7 +1228,10 @@ func _refresh_stats() -> void:
 		sets.append("%s (%d)" % [Items.set_def(sb.set).get("name", ""), int(sb.pieces)])
 	var lines: PackedStringArray = ["[b]%s · niveau %d[/b] · maîtrise %d pts" % [GameData.class_data(cid).get("name_fr", cid), lv, RivalBuilds.talent_points(build)],
 		"PV [b]%s[/b] · attaque [b]%d[/b]" % [Hud._big_number(r.max_hp), roundi(r.atk / (float(r.cfg.atk) / 0.65))],
-		"Défense [b]%d[/b] (%d %% de dégâts subis en moins)" % [roundi(r.defense), roundi(100.0 - 10000.0 / (100.0 + maxf(r.defense, 0.0)))]]
+		# en duel, la défense se compare à celle de l'adversaire (PvpCaps.taken) : ici à une défense
+		# moyenne pour ce niveau
+		"Défense [b]%d[/b] (en duel : %d %% des dégâts subis face à une défense moyenne)" % [roundi(r.defense),
+			roundi(100.0 * PvpCaps.taken(r.defense, 100.0 * pow(1.095, maxi(lv - 10, 0))))]]
 	for k in ["crit", "crit_dmg", "atk_speed", "cdr", "dmg_pct", "hp_pct", "move_speed"]:
 		var v := float(st.get(k, 0.0))
 		if v != 0.0:
