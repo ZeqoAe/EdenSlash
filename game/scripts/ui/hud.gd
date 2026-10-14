@@ -27,6 +27,7 @@ var _last_level := 0
 
 var _obj_panel: PanelContainer
 var _zone_label: Label
+var _gold_label: Label  # or et clés de la run (coffres, marchands, forge)
 var _clock_label: Label
 var _seal_label: Label
 var _obj_details: VBoxContainer
@@ -193,6 +194,8 @@ func _build_objectives(root: Control) -> void:
 	v.add_child(sub)
 	_seal_label = _label(sub, "", 14, Color(0.85, 0.75, 1.0))
 	_seal_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_gold_label = _label(sub, "", 14, Color(1.0, 0.85, 0.35))
+	_gold_label.add_theme_font_override("font", UiTheme.bold_font())
 	_obj_hint = _label(sub, "", 12, Color(1, 1, 1, 0.5))
 	_obj_details = VBoxContainer.new()
 	_obj_details.add_theme_constant_override("separation", 3)
@@ -232,6 +235,8 @@ func _update_objectives() -> void:
 	_clock_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.35) if rage or t < 60.0 else Color.WHITE)
 	var need: int = director.SEALS_NEEDED
 	_seal_label.text = "Sceaux  " + "◆ ".repeat(mini(director.seals, need)) + "◇ ".repeat(maxi(0, need - director.seals))
+	_gold_label.text = "%d or · %d clé%s  " % [Profile.gold, Profile.keys, "s" if Profile.keys > 1 else ""]
+	_gold_label.visible = not Duel.active and not Tower.active
 	if Duel.active:
 		_seal_label.text = "Duel %s · 2 manches gagnantes" % ClassRival.NAMES[Duel.difficulty].to_lower()
 	if Tower.active:
@@ -256,8 +261,17 @@ func _update_objectives() -> void:
 		_:
 			lines.append("✔ Entrée du donjon trouvée" if director.dungeon_found else "◇ Trouve l'entrée du donjon")
 			lines.append("✔ Sceaux réunis : le donjon est ouvert" if director.seals >= need else "◇ Sceaux du donjon : %d / %d (gardiens d'élite)" % [director.seals, need])
-			lines.append("◇ Coffres : %d / %d · prochain : %d or ou 1 clé (clés : %d)" % [director.chests_opened, chests_total, director.chest_price(), Profile.keys])
-			lines.append("◇ Sanctuaires capturés : %d / %d (cartes, trophées, clés)" % [director.shrines_captured, director.map.shrines.size() if director.map else 0])
+			lines.append("◇ Coffres : %d / %d · simple %d · ouvragé %d · doré %d or (ou 1 clé)" % [director.chests_opened, chests_total,
+				director.chest_price(0), director.chest_price(1), director.chest_price(2)])
+			var used := 0
+			var total := 0
+			if director.map:
+				for it in director.map.interactables:
+					if is_instance_valid(it) and Interactable.STATION_VERBS.has(it.kind):
+						total += 1
+						used += 1 if it.used else 0
+			lines.append("◇ Sanctuaires %d / %d · lieux utilisés %d / %d (enclumes, scribes, défis…)" % [director.shrines_captured,
+				director.map.shrines.size() if director.map else 0, used, total])
 			lines.append("La rage arrive dans %02d:%02d : monstres plus forts, plus de butin" % [int(t) / 60, int(t) % 60] if not rage else "Rage : monstres plus forts, plus d'XP et de butin")
 	for i in _obj_lines.size():
 		var shown := i < lines.size()

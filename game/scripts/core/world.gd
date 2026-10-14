@@ -298,6 +298,12 @@ func _parse_args() -> void:
 					picks.append(Run._describe_card({"type": "upgrade", "id": int(Run.skills[0].id)}))
 				picks.append(Run._describe_card({"type": "passive", "id": "static_blade"}))
 				cards.offer("Niveau 5 ! Choisis une carte", picks, func(): return Run.roll_cards(3)))
+		elif arg == "--gear-shot":
+			# test : choix d'équipement d'un coffre doré (avec --shots)
+			get_tree().create_timer(1.5).timeout.connect(func():
+				cards._queue.clear()
+				cards._show_next()
+				cards.offer("Coffre doré : choisis une pièce d'équipement", director.gear_cards(3, 2)))
 		elif arg == "--god":
 			# test : héros invincible (mesures de performance sur une longue run)
 			get_tree().create_timer(0.5).timeout.connect(func(): player.dev_invincible = true)

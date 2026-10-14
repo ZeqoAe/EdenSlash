@@ -806,6 +806,8 @@ func _build_dungeon_entrance() -> void:
 	portal.setup("dungeon", "Entrée du donjon", "", "", 1.0, 6.0)
 	holder.add_child(portal)
 	portal.global_position = dungeon
+	if is_in_group("map"):  # pas dans le décor des menus
+		portal.add_beam(Color(0.85, 0.35, 1.0), 34.0)  # repère du donjon, visible de loin
 	interactables.append(portal)
 
 
