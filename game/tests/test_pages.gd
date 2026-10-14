@@ -652,13 +652,14 @@ func _test_run_screens() -> void:
 	var chest: Interactable = map.interactables.filter(func(i): return i.kind == "chest" and not i.used)[0]
 	Profile.keys = 0
 	Profile.gold = 0
-	var p0 := d.chest_price()
+	var tier := int(chest.get_meta("tier", 0))
+	var p0 := d.chest_price(tier)
 	d._interact(chest)
 	check("coffre : refusé sans or ni clé (%d or)" % p0, not chest.used)
 	Profile.gold = 1000
 	world.cards._queue.clear()
 	d._interact(chest)
-	check("coffre : payé en or, choix de cartes, prix suivant plus cher", chest.used and Profile.gold == 1000 - p0 and d.chest_price() > p0 and (world.cards.is_open() or not world.cards._queue.is_empty()))
+	check("coffre : payé en or, choix d'équipement, prix suivant plus cher", chest.used and Profile.gold == 1000 - p0 and d.chest_price(tier) > p0 and (world.cards.is_open() or not world.cards._queue.is_empty()))
 	world.cards._queue.clear()
 	world.cards._show_next()
 	var chest2: Interactable = map.interactables.filter(func(i): return i.kind == "chest" and not i.used)[0]
