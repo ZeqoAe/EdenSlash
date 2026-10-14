@@ -66,6 +66,8 @@ const STATIONS := {
 ## Lieux de décor (repères, avec des objets à casser autour).
 const SITE_KINDS := ["ruins", "ruins", "ruins", "tower", "tower", "arch", "bones", "bones", "mine", "mine", "camp", "camp", "camp", "market", "market"]
 const SITE_COUNT := 24
+## Biomes verts (ruines moussues) ; ailleurs, piliers de briques.
+const GREEN_BIOMES := ["limestone", "rainbowfall", "wetlands", "delphi"]
 
 var _splat: Image
 var _roads: Array = []  # polylignes (Array[Vector2])
@@ -944,7 +946,10 @@ func _build_sites() -> void:
 						_add_box_collider(q, Vector3(3.6, 2.2, 0.6), -a + PI * 0.5 + yaw)
 					var cq: Vector3 = at.call(cos(a + PI * 0.25) * 12.0, sin(a + PI * 0.25) * 12.0)
 					_add_instance(batch, {"model": "ub201_1", "scale": [0.9, 1.1], "col": 0.7}, cq, true)
-				_add_instance(batch, {"model": ["ub138", "ub138_1", "ub138_2"][rng.randi() % 3], "scale": [0.7, 0.7], "col": 2.0}, at.call(0.0, 0.0), true, yaw)
+				if biome in GREEN_BIOMES:
+					_add_instance(batch, {"model": ["ub138", "ub138_1", "ub138_2"][rng.randi() % 3], "scale": [0.7, 0.7], "col": 2.0}, at.call(0.0, 0.0), true, yaw)
+				else:
+					_add_instance(batch, {"model": "ub108", "scale": [1.3, 1.3], "col": 1.4}, at.call(0.0, 0.0), true, yaw)  # pas de mousse hors des biomes verts
 			"tower":
 				_add_instance(batch, {"model": "ub018", "scale": [1.0, 1.0], "col": 2.0}, at.call(0.0, 0.0), true, yaw)
 				_add_instance(batch, {"model": "uc006", "scale": [1.0, 1.0], "col": 0.8}, at.call(3.5, 1.5), true, yaw)

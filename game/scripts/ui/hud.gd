@@ -222,6 +222,8 @@ func _update_objectives() -> void:
 	match director.state:
 		"duel":
 			_clock_label.text = "Manche %d · %d - %d" % [Duel.round_n, Duel.wins, Duel.losses]
+			if PvpCaps.pressure() > 1.05:
+				_clock_label.text += " · acharnement ×%.1f" % PvpCaps.pressure()
 		"tower":
 			_clock_label.text = "Étage %d/%d" % [Tower.floor_n, Tower.FLOORS]
 		"boss":
