@@ -292,30 +292,15 @@ func _process(_delta: float) -> void:
 		_refresh_confirm()
 
 
-## Manette : croix directionnelle ou stick gauche (gauche / droite) pour choisir une carte,
-## Croix pour valider la carte choisie (sans carte choisie, Croix clique sous le curseur).
+## Manette : le cadre de navigation (UiNav) se déplace entre les cartes et les boutons ; A sur une carte
+## la choisit, A de nouveau sur la carte choisie la valide (sinon : le bouton Valider).
 func _input(event: InputEvent) -> void:
-	if not _root.visible or _cards.is_empty():
+	if not _root.visible or _cards.is_empty() or _selected < 0:
 		return
-	var step := 0
-	if event is InputEventJoypadButton and event.pressed:
-		if event.button_index == JOY_BUTTON_DPAD_LEFT:
-			step = -1
-		elif event.button_index == JOY_BUTTON_DPAD_RIGHT:
-			step = 1
-		elif event.button_index == JOY_BUTTON_A and _selected >= 0:
+	if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_A and Gamepad.active:
+		if UiNav.cursor != null and _selected < _buttons.size() and UiNav.cursor == _buttons[_selected]:
 			_confirm_choice()
 			get_viewport().set_input_as_handled()
-			return
-	elif event is InputEventJoypadMotion and event.axis == JOY_AXIS_LEFT_X and absf(event.axis_value) > 0.7 and Time.get_ticks_msec() - _pad_step_at > 250:
-		step = 1 if event.axis_value > 0.0 else -1
-	if step != 0:
-		_pad_step_at = Time.get_ticks_msec()
-		_select(clampi((_selected if _selected >= 0 else (0 if step > 0 else _cards.size())) + (step if _selected >= 0 else 0), 0, _cards.size() - 1))
-		get_viewport().set_input_as_handled()
-
-
-var _pad_step_at := 0
 
 
 func _unhandled_input(event: InputEvent) -> void:

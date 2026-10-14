@@ -92,6 +92,14 @@ et par usage, DPS du boss sur 10 s, dégâts subis par minute, temps pour tuer, 
 Règles de décision (≥ 5 cartes par style et par époque) : `conception/equilibrage/raffinement_3.md`, §2.
 Aucun réglage d'époque ou d'économie avant ces mesures. Test : `res://tests/test_journal.tscn`.
 
+## Manette et menus
+`core/ui_nav.gd` (autoload UiNav) fait naviguer TOUS les menus à la manette : cadre doré qui saute au contrôle le plus proche dans la direction
+(parmi ceux du calque le plus haut), A = vrai clic de souris au centre, B = Échap, X = clic droit, LB/RB = onglets (`tab_screens`, `step_page`,
+TabContainer), Y = curseur libre. Aucun écran à adapter : un nouveau menu fait de Button/BaseButton est navigable tout seul (un panneau
+cliquable doit avoir un signal `gui_input` relié). Test d'atteignabilité : `tests/test_nav_screens.tscn` (ajouter les nouveaux écrans).
+Manette réassignable : `Settings.pad_binds` (`pad_bind`, `pad_label`, `pad_layout` xbox/ps), Paramètres > Touches > Manette. Export pour
+Steam Link / Apple TV : `Creer_version.bat` (zip + `Jouer_plein_ecran.bat`, argument `--fullscreen`).
+
 ## Branche
 Tout se passe sur la branche `claude/optimistic-gauss-p2g2pq`. Ne pas travailler sur `master`.
 

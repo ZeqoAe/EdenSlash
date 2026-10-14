@@ -49,7 +49,7 @@ func _test_gamepad() -> void:
 	Gamepad.active = true
 	var lbl := Settings.action_label("skill_1", 1) + " " + Settings.action_label("interact", 1)
 	Gamepad.active = false
-	check("manette : libellés R1 et Croix (%s), clavier ensuite (%s)" % [lbl, Settings.action_label("skill_1", 1)], lbl == "R1 Croix" and Settings.action_label("skill_1", 1) != "R1")
+	check("manette : libellés Xbox RB et A (%s), clavier ensuite (%s)" % [lbl, Settings.action_label("skill_1", 1)], lbl == "RB A" and Settings.action_label("skill_1", 1) != "RB")
 
 
 func _ready() -> void:

@@ -276,6 +276,20 @@ func _build_tutorial(root: Control) -> void:
 		br.add_child(btn)
 
 
+## Manette : L3 ferme la fiche de découverte, R3 ouvre le Guide à son chapitre (rien d'autre à la souris).
+func _pad_card_input(event: InputEvent) -> bool:
+	if not (event is InputEventJoypadButton and event.pressed) or _card_panel == null or not _card_panel.visible:
+		return false
+	if event.button_index == JOY_BUTTON_LEFT_STICK:
+		_card_panel.visible = false
+		return true
+	if event.button_index == JOY_BUTTON_RIGHT_STICK:
+		_card_panel.visible = false
+		Guide.open_on(get_parent(), _card_id)
+		return true
+	return false
+
+
 func _update_tutorial() -> void:
 	var guided := Tutorial.guided()
 	_steps_panel.visible = guided
@@ -293,6 +307,9 @@ func _update_tutorial() -> void:
 			_card_title.text = String(c.title)
 			_card_body.text = "
 ".join((c.lines as Array).map(func(l): return "• " + String(l)))
+			if Gamepad.active:
+				_card_body.text += "
+[%s : compris · %s : Guide]" % [Settings.pad_name(JOY_BUTTON_LEFT_STICK), Settings.pad_name(JOY_BUTTON_RIGHT_STICK)]
 			_card_until = Time.get_ticks_msec() / 1000.0 + 20.0
 			_card_panel.visible = true
 
@@ -754,6 +771,9 @@ func _menu_open() -> bool:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if get_tree().paused:
+		return
+	if _pad_card_input(event):
+		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("map"):
 		_big_map.visible = not _big_map.visible

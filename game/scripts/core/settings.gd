@@ -61,6 +61,21 @@ const PAD_BINDS := {
 	"pause": [{"b": JOY_BUTTON_START}], "map": [{"b": JOY_BUTTON_BACK}],
 	"objectives": [{"b": JOY_BUTTON_DPAD_LEFT}], "quick_equip": [{"b": JOY_BUTTON_DPAD_RIGHT}],
 }
+## Actions dont la manette est réassignable (le déplacement reste au stick gauche).
+const PAD_ACTIONS := ["attack", "dodge", "jump", "interact", "skill_1", "skill_2", "skill_3", "skill_4",
+	"pause", "map", "objectives", "quick_equip", "extract", "help", "unstuck", "feedback"]
+## Noms des boutons selon la disposition (Godot : A = bouton du bas, B = droite, X = gauche, Y = haut).
+const PAD_NAMES := {
+	"xbox": {JOY_BUTTON_A: "A", JOY_BUTTON_B: "B", JOY_BUTTON_X: "X", JOY_BUTTON_Y: "Y", JOY_BUTTON_LEFT_SHOULDER: "LB",
+		JOY_BUTTON_RIGHT_SHOULDER: "RB", JOY_BUTTON_START: "Menu", JOY_BUTTON_BACK: "Vue", JOY_BUTTON_GUIDE: "Xbox",
+		JOY_BUTTON_LEFT_STICK: "L3", JOY_BUTTON_RIGHT_STICK: "R3", JOY_BUTTON_DPAD_UP: "↑ (croix)", JOY_BUTTON_DPAD_DOWN: "↓ (croix)",
+		JOY_BUTTON_DPAD_LEFT: "← (croix)", JOY_BUTTON_DPAD_RIGHT: "→ (croix)"},
+	"ps": {JOY_BUTTON_A: "Croix", JOY_BUTTON_B: "Rond", JOY_BUTTON_X: "Carré", JOY_BUTTON_Y: "Triangle", JOY_BUTTON_LEFT_SHOULDER: "L1",
+		JOY_BUTTON_RIGHT_SHOULDER: "R1", JOY_BUTTON_START: "Options", JOY_BUTTON_BACK: "Share", JOY_BUTTON_GUIDE: "PS",
+		JOY_BUTTON_LEFT_STICK: "L3", JOY_BUTTON_RIGHT_STICK: "R3", JOY_BUTTON_DPAD_UP: "↑ (croix)", JOY_BUTTON_DPAD_DOWN: "↓ (croix)",
+		JOY_BUTTON_DPAD_LEFT: "← (croix)", JOY_BUTTON_DPAD_RIGHT: "→ (croix)"},
+}
+const PAD_TRIGGERS := {"xbox": {JOY_AXIS_TRIGGER_LEFT: "LT", JOY_AXIS_TRIGGER_RIGHT: "RT"}, "ps": {JOY_AXIS_TRIGGER_LEFT: "L2", JOY_AXIS_TRIGGER_RIGHT: "R2"}}
 const PAD_LABELS := {
 	"attack": "Carré", "dodge": "Rond", "jump": "Triangle", "interact": "Croix",
 	"skill_1": "R1", "skill_2": "R2", "skill_3": "L1", "skill_4": "L2",
@@ -91,7 +106,7 @@ const DEFAULTS := {
 	"camera": {"rotate_speed": 1.0, "invert_y": false, "distance": 15.0, "shake": 1.0, "action_turn": 1.0},
 	# dev_mode : écran de test (F10), réservé aux tests
 	"interface": {"damage_numbers": "all", "hit_stop": true, "show_fps": false, "move_marker": true, "attack_zone": false, "dev_mode": false,
-		"tower_unlock_all": true, "perfect_hint": true},
+		"tower_unlock_all": true, "perfect_hint": true, "pad_labels": "auto"},
 }
 
 ## Modes de jeu prêts à l'emploi (réglages du menu Contrôles).
@@ -117,6 +132,7 @@ const RESOLUTIONS := ["1280x720", "1366x768", "1600x900", "1920x1080", "2560x144
 
 var data: Dictionary = {}
 var binds: Dictionary = {}  # action -> [{"k": ...} | {"m": ...}]
+var pad_binds: Dictionary = {}  # action -> [{"b": bouton} | {"a": axe, "v": ±1}] (manette)
 var save_path := SAVE_PATH
 
 
@@ -128,6 +144,8 @@ func _ready() -> void:
 	load_settings()
 	apply_bindings()
 	apply_all()
+	if "--fullscreen" in OS.get_cmdline_args():
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)  # pour jouer en streaming (Steam Link)
 
 
 # --- valeurs -------------------------------------------------------------------------
@@ -326,6 +344,7 @@ func reset_section(section: String) -> void:
 func reset_all(save := true) -> void:
 	data = DEFAULTS.duplicate(true)
 	binds = DEFAULT_BINDS.duplicate(true)
+	pad_binds = PAD_BINDS.duplicate(true)
 	if save:
 		apply_bindings()
 		apply_all()
@@ -349,6 +368,11 @@ func load_settings() -> void:
 			var v: Variant = cf.get_value("keys", action, null)
 			if v is Array:
 				binds[action] = v.filter(func(e): return e is Dictionary and (e.has("k") or e.has("m")))
+	if cf.has_section("pad"):
+		for action in PAD_ACTIONS:
+			var v: Variant = cf.get_value("pad", action, null)
+			if v is Array:
+				pad_binds[action] = v.filter(func(e): return e is Dictionary and (e.has("b") or (e.has("a") and e.has("v"))))
 
 
 func save_settings() -> void:
@@ -358,6 +382,8 @@ func save_settings() -> void:
 			cf.set_value(section, key, data[section][key])
 	for action in binds:
 		cf.set_value("keys", action, binds[action])
+	for action in PAD_ACTIONS:
+		cf.set_value("pad", action, pad_binds.get(action, []))
 	cf.save(save_path)
 
 
@@ -372,7 +398,7 @@ func apply_bindings() -> void:
 			var ev := event_from(e)
 			if ev:
 				InputMap.action_add_event(action, ev)
-		for e in PAD_BINDS.get(action, []):
+		for e in pad_binds.get(action, PAD_BINDS.get(action, [])):
 			InputMap.action_add_event(action, pad_event(e))
 		if String(action).begins_with("move_"):
 			InputMap.action_set_deadzone(action, 0.2)  # stick : déplacement progressif
@@ -439,6 +465,10 @@ static func event_label(e: Dictionary) -> String:
 
 ## Libellé court des touches d'une action (« A / 1 »), pour le HUD et l'aide.
 func action_label(action: String, max_events := 2) -> String:
+	if Gamepad.active and String(action).begins_with("move_"):
+		return "Stick gauche"
+	if Gamepad.active and pad_binds.has(action) and not (pad_binds[action] as Array).is_empty():
+		return pad_action_label(action)
 	if Gamepad.active and PAD_LABELS.has(action):
 		return String(PAD_LABELS[action])
 	var parts: PackedStringArray = []
@@ -474,6 +504,73 @@ func unbind(action: String, idx: int) -> void:
 	var list: Array = binds.get(action, [])
 	if idx < list.size():
 		list.remove_at(idx)
+	apply_bindings()
+	save_settings()
+	changed.emit()
+
+
+# --- manette réassignable ------------------------------------------------------------------
+## Disposition affichée : "xbox" ou "ps" (Paramètres > Interface, sinon d'après le nom de la manette).
+func pad_layout() -> String:
+	var forced := String(get_v("interface", "pad_labels"))
+	if forced in ["xbox", "ps"]:
+		return forced
+	var n := Input.get_joy_name(0).to_lower() if not Input.get_connected_joypads().is_empty() else ""
+	for key in ["playstation", "dualshock", "dualsense", "ps3", "ps4", "ps5", "sony"]:
+		if n.contains(key):
+			return "ps"
+	return "xbox"  # Xbox, Steam Link (manette virtuelle) et inconnues
+
+
+## Nom d'un bouton de la manette ([param button] : JoyButton) dans la disposition affichée.
+func pad_name(button: int) -> String:
+	return String(PAD_NAMES[pad_layout()].get(button, "Bouton %d" % button))
+
+
+func pad_label(e: Dictionary) -> String:
+	if e.has("b"):
+		return pad_name(int(e.b))
+	if e.has("a"):
+		var t: Dictionary = PAD_TRIGGERS[pad_layout()]
+		return String(t.get(int(e.a), "Axe %d" % int(e.a)))
+	return "—"
+
+
+func pad_action_label(action: String) -> String:
+	var list: Array = pad_binds.get(action, [])
+	return pad_label(list[0]) if not list.is_empty() else "—"
+
+
+## Descripteur d'un évènement de manette (bouton ou gâchette), {} sinon (les sticks ne s'assignent pas).
+static func describe_pad(ev: InputEvent) -> Dictionary:
+	if ev is InputEventJoypadButton and ev.pressed:
+		return {"b": int(ev.button_index)}
+	if ev is InputEventJoypadMotion and ev.axis in [JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT] and absf(ev.axis_value) > 0.7:
+		return {"a": int(ev.axis), "v": 1.0}
+	return {}
+
+
+## Assigne [param e] à [param action] (un seul bouton par action) ; l'enlève des autres. Renvoie les
+## noms des actions qui l'ont perdu.
+func pad_bind(action: String, e: Dictionary) -> PackedStringArray:
+	var lost: PackedStringArray = []
+	for other in PAD_ACTIONS:
+		if other == action:
+			continue
+		var list: Array = pad_binds.get(other, [])
+		var kept := list.filter(func(x): return not (x == e or (x.has("a") and e.has("a") and int(x.a) == int(e.a)) or (x.has("b") and e.has("b") and int(x.b) == int(e.b))))
+		if kept.size() != list.size():
+			pad_binds[other] = kept
+			lost.append(action_name(other))
+	pad_binds[action] = [e]
+	apply_bindings()
+	save_settings()
+	changed.emit()
+	return lost
+
+
+func reset_pad_bindings() -> void:
+	pad_binds = PAD_BINDS.duplicate(true)
 	apply_bindings()
 	save_settings()
 	changed.emit()

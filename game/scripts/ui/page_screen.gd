@@ -29,6 +29,7 @@ func _init(screen_title := "", layer_index := 20) -> void:
 
 
 func _ready() -> void:
+	add_to_group("tab_screens")  # L1 / R1 changent d'onglet (UiNav)
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_root)
@@ -128,6 +129,12 @@ func add_page(name: String, page: Control) -> int:
 	for t in _tab_buttons:  # une seule page : pas d'onglet
 		t.visible = _tab_buttons.size() > 1
 	return i
+
+
+## Page suivante (+1) ou précédente (-1) : L1 / R1 (LB / RB) à la manette.
+func step_page(delta: int) -> void:
+	if _pages.size() > 1:
+		show_page(wrapi(_current + delta, 0, _pages.size()))
 
 
 func page(i: int) -> Control:

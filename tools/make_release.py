@@ -32,10 +32,26 @@ Configuration : Windows 10 ou 11 64 bits, carte graphique compatible Vulkan
 Paramètres > Affichage > Qualité graphique (basse ou moyenne).
 
 Commandes : clavier et souris (touches modifiables dans Paramètres > Touches),
-ou manette (disposition PlayStation : stick gauche déplacement, stick droit caméra,
-R1 R2 L1 L2 sorts, Carré attaque, Rond esquive, Triangle saut, Croix interagir,
-Options pause ; dans les menus, le stick gauche déplace le curseur et Croix clique).
-F1 en jeu : aide.
+ou manette entièrement (menus compris, sans souris). Les noms des boutons suivent
+la manette (Xbox : A B X Y, LB RB LT RT ; PlayStation : Croix Rond Carré Triangle L1 R1 L2 R2).
+  En jeu : stick gauche déplacement, stick droit caméra, RB / RT / LB / LT les 4 sorts,
+  X attaque, B esquive, Y saut, A interagir, Menu pause, Vue carte, croix : zoom,
+  objectifs (gauche) et équiper l'objet trouvé (droite). Tout est réassignable :
+  Paramètres > Touches > Manette.
+  Dans les menus : croix directionnelle ou stick gauche pour se déplacer (cadre doré),
+  A valider, B retour, X clic droit, LB / RB changent d'onglet, stick droit défile,
+  Y passe en curseur libre (le stick gauche déplace la souris), et inversement.
+F1 en jeu : le Guide (commandes, règles, Premiers pas).
+
+JOUER SUR APPLE TV AVEC STEAM LINK
+  1. Sur le PC : Steam > Jeux > Ajouter un jeu non-Steam, choisir EdenSlash.exe.
+  2. Sur l'Apple TV : installer l'app « Steam Link », l'associer au PC et brancher la manette.
+  3. Lancer le jeu depuis Steam Link. Mets la manette en configuration « Manette » (Xbox)
+     dans Steam si elle propose clavier / souris par défaut. Pour un jeu plein écran,
+     lance plutôt Jouer_plein_ecran.bat (ajoute-le à Steam à la place de EdenSlash.exe).
+  Les boutons affichés sont ceux d'une manette Xbox ; si ce n'est pas le cas :
+  Paramètres > Touches > Manette > « Noms ».
+
 
 Sauvegardes : %APPDATA%\\Godot\\app_userdata\\Eden Slash\\
 (gardées quand on remplace le dossier du jeu par une nouvelle version).
@@ -71,6 +87,8 @@ def main() -> int:
         print("Échec de l'export du paquet.")
         return 1
     shutil.copy2(GODOT, os.path.join(OUT, "EdenSlash.exe"))
+    with open(os.path.join(OUT, "Jouer_plein_ecran.bat"), "w", encoding="ascii", newline="\r\n") as f:
+        f.write("@echo off\nrem Lance Eden Slash en plein ecran (streaming Steam Link)\ncd /d \"%~dp0\"\nstart \"\" /wait EdenSlash.exe --fullscreen\n")
     with open(os.path.join(OUT, "LISEZMOI.txt"), "w", encoding="utf-8-sig", newline="\r\n") as f:
         f.write(README.format(version=v))
     z = os.path.join(ROOT, "build", f"EdenSlash_v{v}.zip")

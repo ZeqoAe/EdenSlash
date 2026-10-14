@@ -6,6 +6,7 @@ extends CanvasLayer
 signal closed
 
 var _list: ItemList
+var _skip: Button
 var _body: RichTextLabel
 var _ids: Array = []
 var _paused_before := false
@@ -71,11 +72,22 @@ func build() -> void:
 	_list.custom_minimum_size = Vector2(290, 0)
 	_list.item_selected.connect(func(i): _show(String(_ids[i])))
 	row.add_child(_list)
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(col)
 	_body = RichTextLabel.new()
 	_body.bbcode_enabled = true
-	_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_body.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_body.add_theme_font_size_override("normal_font_size", 17)
-	row.add_child(_body)
+	col.add_child(_body)
+	_skip = Button.new()
+	_skip.text = "Passer les Premiers pas"
+	_skip.focus_mode = Control.FOCUS_NONE
+	_skip.visible = false
+	_skip.pressed.connect(func():
+		Tutorial.skip_steps()
+		_show("steps"))
+	col.add_child(_skip)
 	_fill()
 	_was_open = true
 
@@ -102,6 +114,7 @@ func select(chapter: String) -> void:
 
 func _show(id: String) -> void:
 	var txt := ""
+	_skip.visible = id == "steps" and not Tutorial.done_all()
 	match id:
 		"commands":
 			txt = TestTools.help_text()

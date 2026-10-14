@@ -223,6 +223,9 @@ const KEY_GROUPS := [
 	["Interface", ["interact", "map", "objectives", "pause", "camera_rotate", "unstuck", "help", "feedback", "extract", "quick_equip"]],
 ]
 var _tester: Label
+var _pad_listen := ""  # action de manette en cours d'assignation
+var _pad_buttons := {}
+var _pad_listen_id := 0
 
 
 func _build_keys_tab() -> void:
@@ -278,6 +281,78 @@ func _build_keys_tab() -> void:
 	_button(h, "Touches par défaut", func():
 		Settings.reset_bindings()
 		_say("Touches par défaut rétablies"), 280)
+	_build_pad_section(grid)
+
+
+## Manette : un bouton par action ; clic (ou A) puis appuie sur le bouton voulu de la manette.
+func _build_pad_section(grid: GridContainer) -> void:
+	var gh := Hud._label(grid, "Manette", 18, ACCENT)
+	gh.add_theme_font_override("font", UiTheme.bold_font())
+	Hud._label(grid, "Déplacement : stick gauche (fixe) · stick droit : caméra", 13, UiTheme.MUTED)
+	var layout_btn := _option_button(grid)
+	for a in Settings.PAD_ACTIONS:
+		var action: String = a
+		Hud._label(grid, Settings.action_name(action), 16, Color(0.92, 0.92, 0.96)).custom_minimum_size = Vector2(LABEL_W + 40, 0)
+		var b := Button.new()
+		b.custom_minimum_size = Vector2(250, 36)
+		b.focus_mode = Control.FOCUS_NONE
+		b.add_theme_font_size_override("font_size", 15)
+		b.add_theme_stylebox_override("normal", Hud.style(Color(0.12, 0.1, 0.2, 0.95)))
+		b.add_theme_stylebox_override("hover", Hud.style(Color(0.22, 0.18, 0.34)))
+		b.pressed.connect(_start_pad_listening.bind(action, b))
+		grid.add_child(b)
+		Hud._label(grid, "", 8, ACCENT)
+		_pad_buttons[action] = b
+		_refreshers.append(func():
+			if _pad_listen != action:
+				b.text = Settings.pad_action_label(action))
+	var rb := Button.new()
+	rb.text = "Manette par défaut"
+	rb.custom_minimum_size = Vector2(250, 40)
+	rb.focus_mode = Control.FOCUS_NONE
+	rb.pressed.connect(func():
+		Settings.reset_pad_bindings()
+		_say("Manette par défaut rétablie"))
+	grid.add_child(rb)
+	Hud._label(grid, "", 8, ACCENT)
+	Hud._label(grid, "", 8, ACCENT)
+
+
+## Bouton d'option : disposition des noms de boutons (auto, Xbox, PlayStation).
+func _option_button(grid: GridContainer) -> Button:
+	var lb := Button.new()
+	lb.custom_minimum_size = Vector2(250, 36)
+	lb.focus_mode = Control.FOCUS_NONE
+	var names := {"auto": "Noms : automatique", "xbox": "Noms : Xbox (A B X Y)", "ps": "Noms : PlayStation"}
+	_refreshers.append(func(): lb.text = String(names.get(String(Settings.get_v("interface", "pad_labels")), "auto")))
+	lb.pressed.connect(func():
+		var order := ["auto", "xbox", "ps"]
+		var cur := String(Settings.get_v("interface", "pad_labels"))
+		Settings.set_v("interface", "pad_labels", order[(order.find(cur) + 1) % order.size()]))
+	grid.add_child(lb)
+	return lb
+
+
+func _start_pad_listening(action: String, b: Button) -> void:
+	_stop_listening()
+	_pad_listen = action
+	_pad_listen_id += 1
+	var my_id := _pad_listen_id
+	b.text = "Appuie sur un bouton…"
+	b.add_theme_color_override("font_color", ACCENT)
+	# sans appui, l'écoute s'arrête toute seule (pas besoin de clavier pour annuler)
+	get_tree().create_timer(6.0).timeout.connect(func():
+		if _pad_listen == action and _pad_listen_id == my_id:
+			_stop_pad_listening())
+
+
+func _stop_pad_listening() -> void:
+	if _pad_listen != "":
+		var b: Button = _pad_buttons.get(_pad_listen)
+		if b:
+			b.remove_theme_color_override("font_color")
+		_pad_listen = ""
+		_refresh()
 
 
 func _start_listening(action: String, idx: int, b: Button) -> void:
@@ -299,6 +374,18 @@ func _stop_listening() -> void:
 
 func _input(event: InputEvent) -> void:
 	if not _root.visible:
+		return
+	if _pad_listen != "":
+		var d := Settings.describe_pad(event)
+		if not d.is_empty():
+			get_viewport().set_input_as_handled()
+			var lost := Settings.pad_bind(_pad_listen, d)
+			var act := _pad_listen
+			_stop_pad_listening()
+			_say("%s : %s%s" % [Settings.action_name(act), Settings.pad_label(d), (" (retiré de : %s)" % ", ".join(lost)) if not lost.is_empty() else ""])
+		elif event is InputEventKey and event.pressed:
+			get_viewport().set_input_as_handled()
+			_stop_pad_listening()
 		return
 	if _listen_action != "":
 		var key := event as InputEventKey
