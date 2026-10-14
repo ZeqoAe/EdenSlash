@@ -636,6 +636,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("map"):
 		_big_map.visible = not _big_map.visible
+		if _big_map.visible:
+			hide_banner()
 	elif event.is_action_pressed("objectives"):
 		_obj_pinned = not _obj_pinned
 		_obj_show_until = 0.0

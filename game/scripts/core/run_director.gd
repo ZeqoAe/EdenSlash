@@ -259,6 +259,9 @@ func _update_discovery() -> void:
 	for it in map.interactables:
 		if is_instance_valid(it) and Interactable.STATION_VERBS.has(it.kind) and not _found.has(it) and _flat(p, it.global_position) < DISCOVER_POI:
 			_found[it] = true
+	for k in map.camps.size():
+		if map.camps[k].elite and not _found.has("fort%d" % k) and _flat(p, map.camps[k].pos) < DISCOVER_POI:
+			_found["fort%d" % k] = map.camps[k].pos  # fort d'élite : repère sur la carte
 	if not dungeon_found and _flat(p, map.dungeon) < DISCOVER_DUNGEON:
 		dungeon_found = true
 		message.emit("Entrée du donjon découverte !\n[F] pour affronter le boss quand tu es prêt", 3.5)
@@ -1175,6 +1178,10 @@ func markers() -> Array:
 	if state in ["boss", "cleared"]:
 		return out
 	for k in _found:
+		if k is String:
+			if String(k).begins_with("fort"):
+				out.append([_found[k], "fort"])
+			continue
 		if is_instance_valid(k) and k is Interactable and not k.used:
 			out.append([k.global_position, "merchant" if k.kind == "merchant" else k.kind])
 		elif is_instance_valid(k) and k is Shrine and not k.captured:

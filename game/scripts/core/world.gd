@@ -307,6 +307,24 @@ func _parse_args() -> void:
 				for i in 6:
 					Profile.add_item(Items.generate(player.level + randi_range(0, 2), randf_range(0.0, 1.0)))
 				pause_menu.open(page))
+		elif arg == "--bigmap":
+			# test : grande carte ouverte, carte entièrement découverte (avec --shots)
+			get_tree().create_timer(2.0).timeout.connect(func():
+				cards._queue.clear()
+				cards._show_next()
+				if director._fog:
+					director._fog.fill(Color(0, 0, 0, 0))
+					director._fog_tex.update(director._fog)
+				for it in director.map.interactables:
+					director._found[it] = true
+				for sh in director.map.shrines:
+					director._found[sh] = true
+				for k in director.map.camps.size():
+					if director.map.camps[k].elite:
+						director._found["fort%d" % k] = director.map.camps[k].pos
+				director.dungeon_found = true
+				hud.hide_banner()
+				hud._big_map.visible = true)
 		elif arg == "--gear-shot":
 			# test : choix d'équipement d'un coffre doré (avec --shots)
 			get_tree().create_timer(1.5).timeout.connect(func():

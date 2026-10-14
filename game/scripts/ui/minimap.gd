@@ -4,19 +4,24 @@ extends Control
 ## lieux découverts, monstres, chemin vers le donjon. Grande carte avec [M].
 
 const ICONS := {
-	"merchant": Color(0.4, 0.85, 1.0),
+	"merchant": Color(1.0, 1.0, 1.0),
 	"dungeon": Color(0.85, 0.35, 1.0),
 	"chest": Color(1.0, 0.85, 0.3),
 	"shrine": Color(0.55, 1.0, 0.6),
 	"anvil": Color(1.0, 0.6, 0.3),
 	"scribe": Color(0.6, 0.75, 1.0),
 	"well": Color(0.5, 1.0, 0.7),
-	"magnet": Color(0.45, 0.8, 1.0),
+	"magnet": Color(0.3, 1.0, 0.95),
 	"greed": Color(1.0, 0.82, 0.3),
 	"challenge": Color(1.0, 0.35, 0.3),
 	"chest1": Color(1.0, 0.45, 0.35),
 	"chest2": Color(1.0, 0.95, 0.4),
+	"fort": Color(1.0, 0.35, 0.25),
 }
+## Légende de la grande carte : [type, nom].
+const LEGEND := [["dungeon", "Donjon"], ["merchant", "Marchand"], ["shrine", "Sanctuaire"], ["fort", "Fort d'élite (sceau)"],
+	["chest", "Coffre"], ["chest1", "Coffre ouvragé"], ["chest2", "Coffre doré"], ["anvil", "Enclume"], ["scribe", "Autel du scribe"],
+	["well", "Fontaine de vie"], ["magnet", "Pierre d'aimant"], ["greed", "Autel de cupidité"], ["challenge", "Stèle du défi"]]
 
 var player: Player
 var director: RunDirector
@@ -81,6 +86,9 @@ func _draw() -> void:
 		elif m[1] == "shrine":
 			draw_arc(sp, 6.0, 0.0, TAU, 20, Color(0, 0, 0, 0.6), 3.5)
 			draw_arc(sp, 6.0, 0.0, TAU, 20, col, 2.0)
+		elif m[1] == "fort":
+			_diamond(sp, 7.5, Color(0, 0, 0, 0.6))
+			_diamond(sp, 6.0, col)
 		else:
 			draw_circle(sp, 7.0, Color(0, 0, 0, 0.6))
 			draw_circle(sp, 5.5, col)
@@ -104,10 +112,39 @@ func _draw() -> void:
 	draw_colored_polygon(PackedVector2Array([hp + dir * 8.0, hp - dir * 5.0 + side * 5.0, hp - dir * 2.0, hp - dir * 5.0 - side * 5.0]), Color.WHITE)
 	if not round:
 		draw_rect(Rect2(Vector2.ONE, size - Vector2.ONE * 2.0), Color(0.98, 0.78, 0.35, 0.8), false, 2.0)
+	if big:
+		_draw_legend()
 	if not big:
 		var north := c + xf.basis_xform(Vector2(0, -1)).normalized() * (minf(size.x, size.y) * 0.5 - 12.0)
 		draw_circle(north, 9.0, Color(0.1, 0.08, 0.14, 0.9))
 		draw_string(get_theme_default_font(), north + Vector2(-5, 5), "N", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 0.9, 0.6))
+
+
+func _diamond(c: Vector2, r: float, col: Color) -> void:
+	draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)]), col)
+
+
+## Légende (grande carte) : la forme et la couleur de chaque lieu.
+func _draw_legend() -> void:
+	var font := get_theme_default_font()
+	var row := 19.0
+	var box := Rect2(Vector2(10, size.y - 16 - row * LEGEND.size()), Vector2(178, row * LEGEND.size() + 8))
+	draw_rect(box, Color(0.04, 0.03, 0.08, 0.82))
+	draw_rect(box, Color(0.98, 0.78, 0.35, 0.5), false, 1.0)
+	for i in LEGEND.size():
+		var k: String = LEGEND[i][0]
+		var p := box.position + Vector2(16, 14 + row * i)
+		var col: Color = ICONS.get(k, Color.WHITE)
+		if k.begins_with("chest"):
+			var r := 3.0 if k == "chest" else 4.5
+			draw_rect(Rect2(p - Vector2(r, r), Vector2(r, r) * 2.0), col)
+		elif k == "shrine":
+			draw_arc(p, 5.0, 0.0, TAU, 16, col, 2.0)
+		elif k == "fort":
+			_diamond(p, 5.5, col)
+		else:
+			draw_circle(p, 5.0, col)
+		draw_string(font, p + Vector2(14, 5), String(LEGEND[i][1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.93, 0.9, 0.98))
 
 
 func _inside(p: Vector2) -> bool:
