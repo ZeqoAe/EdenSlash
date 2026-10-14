@@ -969,8 +969,8 @@ func _build_ui() -> void:
 	_archive = _screen("Carnet", [["Vue d'ensemble", CarnetPages.OverviewPage.new()], ["Succès et titres", CarnetPages.AchievementsPage.new()],
 		["Cartes", CarnetPages.CardsPage.new()], ["Trophées", CarnetPages.TrophiesPage.new()], ["Collection", ArchivePages.CollectionPage.new()]])
 	_archive.set_title("Carnet", "Archive des trésors : chaque entrée donne un bonus permanent à tous les héros")
-	_workshop = _screen("Atelier", [["Armurerie", GearShopPage.new()]])
-	_workshop.set_title("Atelier", "Armurerie : les pièces découvertes en Survie s'achètent avec tes insignes")
+	_workshop = _screen("Atelier", [["Armurerie", GearShopPage.new()], ["Fabrication", FabricationPage.new()]])
+	_workshop.set_title("Atelier", "Armurerie : les pièces de la Survie s'achètent avec tes insignes · Fabrication : les plans des donjons")
 	_chests = _screen("Coffres", [["Coffres", ChestsPage.new()]])
 	_chests.set_title("Coffres", "Coffres de récompense rapportés des runs : apparences, forge, joaillier")
 	_settings = SettingsMenu.new()
@@ -1090,7 +1090,9 @@ func _show_menu(id: String) -> void:
 			_menu_dungeon()
 		"arenas":
 			_menu_arenas()
-		"trials", "rush":
+		"rush":
+			_menu_rush()
+		"trials":
 			_menu_soon(id)
 		"mastery":
 			_menu_mastery()
@@ -1307,6 +1309,17 @@ func _menu_dungeon() -> void:
 			_dg_diff = di
 			_show_menu("dungeon"))
 		dr.add_child(b)
+	_dungeon_allies_picker()
+	var open_now := Dungeons.is_open(_dg_zone)
+	var go := MenuWidgets.gold_button("Entrer dans %s" % Dungeons.name_of(_dg_zone), 22, Vector2(0, 58))
+	go.disabled = not open_now
+	go.tooltip_text = "" if open_now else Dungeons.condition(_dg_zone)
+	go.pressed.connect(_start_dungeon)
+	_sub.add_child(go)
+
+
+## Choix des alliés IA d'un donjon ou de la Ruée.
+func _dungeon_allies_picker() -> void:
 	Hud._label(_sub, "Alliés IA (PV des monstres +50 % par allié, butin inchangé)", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
 	var ar := HBoxContainer.new()
 	ar.add_theme_constant_override("separation", 6)
@@ -1325,12 +1338,44 @@ func _menu_dungeon() -> void:
 		var kk := k
 		ob.item_selected.connect(func(i): _dg_allies[kk] = ids[i])
 		ar.add_child(ob)
-	var open_now := Dungeons.is_open(_dg_zone)
-	var go := MenuWidgets.gold_button("Entrer dans %s" % Dungeons.name_of(_dg_zone), 22, Vector2(0, 58))
-	go.disabled = not open_now
-	go.tooltip_text = "" if open_now else Dungeons.condition(_dg_zone)
-	go.pressed.connect(_start_dungeon)
+
+
+## Ruée des boss : les 8 boss de donjon à la suite, une difficulté, des alliés IA.
+func _menu_rush() -> void:
+	_activity_head("rush")
+	_activity_desc("rush")
+	Hud._label(_sub, "Difficulté", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
+	var dr := HBoxContainer.new()
+	dr.add_theme_constant_override("separation", 6)
+	_sub.add_child(dr)
+	for i in Dungeons.DIFF_NAMES.size():
+		var best := int(Profile.records.get("rush_best_%d" % i, 0))
+		var b := MenuWidgets.glass_button(("✔ " if i == _dg_diff else "") + "%s (%d / %d)" % [Dungeons.DIFF_NAMES[i], best, Dungeons.rush_floors()], 14, Vector2(0, 40))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.tooltip_text = "Boss de niveau %d à %d · titre « %s » si les %d tombent" % [Dungeons.rush_level(1, i), Dungeons.rush_level(Dungeons.rush_floors(), i), Dungeons.RUSH_TITLES[i], Dungeons.rush_floors()]
+		var di := i
+		b.pressed.connect(func():
+			_dg_diff = di
+			_show_menu("rush"))
+		dr.add_child(b)
+	_dungeon_allies_picker()
+	var go := MenuWidgets.gold_button("Lancer la Ruée", 22, Vector2(0, 58))
+	go.disabled = not Unlocks.is_open("dungeons")
+	go.tooltip_text = "" if Unlocks.is_open("dungeons") else Unlocks.condition("dungeons")
+	go.pressed.connect(_start_rush)
 	_sub.add_child(go)
+
+
+func _start_rush() -> void:
+	if _launching or not Unlocks.is_open("dungeons"):
+		return
+	_launching = true
+	if backdrop:
+		backdrop.release()
+	var allies: Array = _dg_allies.filter(func(c): return String(c) != "")
+	Dungeons.last_allies = allies
+	Tower.start_dungeon(Profile.selected_class, Dungeons.RUSH, _dg_diff, allies)
+	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
 func _start_dungeon() -> void:

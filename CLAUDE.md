@@ -57,7 +57,7 @@ dans le HUD, Guide `ui/guide.gd` (F1), touches rangées en 4 groupes avec test d
 les images des fiches restent à écrire. Lot 10 fait (0.1.142) : page Jouer en 3 rangées (Aventure, Défis, Affrontements) avec Arènes fusionnées, Défi de maîtrise
 (`core/challenge.gd` : 2 modificateurs du jour câblés en Survie, 3 classes, maîtrise ×2, +600 la 1re fois, insignes ×1,5), contrats de
 classe (`core/contracts.gd`, remplis à chaque Survie), reprise de la Tour (palier de 10 étages, kit complet + cartes). Épreuves de maîtrise
-et Ruée des boss restent « Bientôt » (pas de moteur de leçons). Lot 11 fait (0.1.143) : Carnet = Vue d'ensemble (`core/completion.gd`, 10 catégories), Succès et titres (`core/achievements.gd`, 40 succès
+restent « Bientôt » (pas de moteur de leçons ; la Ruée des boss est faite depuis 0.1.152). Lot 11 fait (0.1.143) : Carnet = Vue d'ensemble (`core/completion.gd`, 10 catégories), Succès et titres (`core/achievements.gd`, 40 succès
 accordés pour le passé, titres à porter), Grimoire des cartes, Codex des trophées, Collection (`ui/carnet_pages.gd`). Pas encore : signatures de
 famille, apparences/auras en onglets, statistiques. Lot 12 fait (0.1.144) : ciblage par camp (groupe « heroes » = joueur + alliés IA ; `Combatant.hostile_targets` pour les coups au sol, projectiles et
 zones ; les monstres visent le héros hostile le plus proche, réévalué toutes les 0,5 s) et allié scripté (`ClassRival.ally`, soigne sous 50 % de PV,
@@ -80,8 +80,15 @@ Les 16 lots de `conception/CONCEPT_FINAL.md` sont codés. Restes traités (0.1.1
 (`DamageNumber.spawn(..., capped)`), profils « opti » régénérés (`gen_profiles`, les 60 classes), 6 cerveaux du Panthéon figés dans git
 (`data/cerveaux/pantheon_<id>.json`, exception du `.gitignore` ; `MlDuelPilot.brain_path` les prend quand `Duel.mode == "pantheon"`),
 cerveau adverse en équipe (Arènes et Gantelet : sélecteur « Premier adversaire » du lobby, `Duel.pilot`, victoire de manche seulement
-quand le cerveau ET les scriptés sont à terre). Restes : Épreuves de maîtrise (moteur de leçons), signatures de famille, images des
-activités et des fiches (session locale).
+quand le cerveau ET les scriptés sont à terre).
+Panoplies de donjon (0.1.152, B9) : chaque donjon a un archétype (`Dungeons.ARCHETYPES` : Tempête, Givre, Lame sanglante, Faucon, Phénix, Vent,
++ `salvo` Salve et `rampart` Rempart dans `Items.SETS`) ; son coffre de set porte `archetype`, les 3 pièces proposées aussi (`item.archetype`) et
+comptent pour 2 / 4 / 6 en plus du set d'Eden (`Items.set_counts`). Fabrication (Atelier, `ui/fabrication_page.gd`) : un plan de donjon
+(`Profile.plans`) permet de fabriquer une pièce de la panoplie contre des cristaux (60 × difficulté), mythique (légendaire si le donjon est fini
+en Mythique). Ruée des boss (0.1.152) : « zone » `Dungeons.RUSH` du moteur de donjon (`Tower.rush`) : 8 salles = les boss des 8 zones, une carte
+entre deux, soin partiel ; cristaux à chaque boss, coffre d'équipement + d'apparence (1re fois) et titre à la fin (`Dungeons.rush_reward`) ; débloquée
+avec les Donjons. Tests : `test_lot17` (restes), `test_lot18` (panoplies, fabrication, Ruée).
+Restes : Épreuves de maîtrise (moteur de leçons), signatures de famille, images des activités et des fiches (session locale).
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

@@ -81,7 +81,7 @@ func begin(f: int) -> void:
 	Run.hero_level = lvl
 	Run.max_level = lvl
 	p.recalc_stats()
-	if f == Tower.start_floor or Tower.is_boss_floor(f - 1):
+	if f == Tower.start_floor or (Tower.is_boss_floor(f - 1) and not Tower.rush):
 		p.heal(p.max_hp)
 	else:
 		p.heal(p.max_hp * Tower.rule("heal_between"))

@@ -61,6 +61,7 @@ const DIFF_RULE := ["monster_easy", "monster_normal", "monster_hard", "monster_h
 static var active := false
 ## Donjon (lot 13) : zone du donjon en cours ("" : pas de donjon), difficulté et alliés IA choisis.
 static var dungeon := ""
+static var rush := false  # la Ruée des boss : « donjon » dont les salles sont les boss des 8 zones
 static var dungeon_diff := 0
 static var allies: Array = []
 static var difficulty := 1
@@ -77,6 +78,7 @@ static var _gear_cache := {}  # "étage_difficulté" -> équipement du duelliste
 static func start_dungeon(cid: String, zid: String, diff: int, ally_ids: Array) -> void:
 	start(cid, 1, 1)
 	dungeon = zid
+	rush = zid == Dungeons.RUSH
 	dungeon_diff = clampi(diff, 0, Dungeons.DIFF_NAMES.size() - 1)
 	allies = ally_ids.slice(0, Dungeons.MAX_ALLIES)
 	difficulty = 1
@@ -88,6 +90,7 @@ static func start_dungeon(cid: String, zid: String, diff: int, ally_ids: Array) 
 
 static func start(cid: String, diff := 1, from := 1) -> void:
 	dungeon = ""
+	rush = false
 	allies = []
 	active = true
 	difficulty = clampi(diff, 0, DIFF_NAMES.size() - 1)
@@ -141,10 +144,14 @@ static func is_dungeon() -> bool:
 
 ## Dernière salle ou dernier étage.
 static func top() -> int:
+	if rush:
+		return Dungeons.rush_floors()
 	return Dungeons.ROOMS.size() if is_dungeon() else FLOORS
 
 
 static func zone_for(f: int) -> Dictionary:
+	if rush:
+		return Dungeons.rush_zone(f)
 	if is_dungeon():
 		return Dungeons.zone(dungeon)
 	return GameData.zones[clampi((f - 1) / FLOORS_PER_ZONE, 0, GameData.zones.size() - 1)]
@@ -162,6 +169,8 @@ static func default_type(f: int) -> String:
 
 
 static func floor_type(f: int) -> String:
+	if rush:
+		return "boss"
 	if is_dungeon():
 		return String(Dungeons.ROOMS[clampi(f - 1, 0, Dungeons.ROOMS.size() - 1)])
 	var t := String(floor_edit(f).get("type", ""))
@@ -169,6 +178,8 @@ static func floor_type(f: int) -> String:
 
 
 static func level_for(f: int) -> int:
+	if rush:
+		return Dungeons.rush_level(f, dungeon_diff)
 	if is_dungeon():
 		return Dungeons.level(dungeon, dungeon_diff) + (1 if f >= Dungeons.ROOMS.size() else 0)
 	if floor_edit(f).has("level"):
@@ -452,7 +463,10 @@ static func _finish_dungeon() -> Dictionary:
 	Profile.keys = 0
 	Profile.bag = {}
 	var rew := {}
-	if victory:
+	var was_rush := rush
+	if was_rush:
+		rew = Dungeons.rush_reward(reached, diff)  # des cristaux même si la Ruée s'arrête avant la fin
+	elif victory:
 		rew = Dungeons.reward(zid, diff)
 	var xp := (reached * 40 + (150 if victory else 0)) * (1 + diff)
 	var lv := Profile.add_expertise(cid, xp)
@@ -460,8 +474,9 @@ static func _finish_dungeon() -> Dictionary:
 	Profile._lobby_view()
 	Profile.save_profile()
 	dungeon = ""
+	rush = false
 	allies = []
-	return {"dungeon": true, "victory": victory, "rooms": reached, "xp": xp, "levels": lv, "reward": rew, "zone": zid, "diff": diff}
+	return {"dungeon": true, "rush": was_rush, "victory": victory, "rooms": reached, "xp": xp, "levels": lv, "reward": rew, "zone": zid, "diff": diff}
 
 
 static func leave(tree: SceneTree) -> void:

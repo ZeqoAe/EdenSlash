@@ -126,6 +126,9 @@ static func offer(chest: Dictionary) -> Array:
 		while out.size() < 3:
 			out.append(Items.generate(lv, 1.0, "", Profile.selected_class, Items.MYTHIC, "", Items.MYTHIC))
 	Items.reward_zone = ""
+	if String(chest.get("archetype", "")) != "":
+		for it in out:
+			it["archetype"] = String(chest.archetype)
 	chest["offer"] = out
 	return out
 

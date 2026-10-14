@@ -29,11 +29,11 @@ func show_results(got: Dictionary) -> void:
 	var t := Hud._label(v, TITLES[victory], 42, Hud.ACCENT if victory else Color(0.95, 0.45, 0.4))
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var zid := String(got.get("zone", ""))
-	var info := Hud._label(v, "%s · %s · salles franchies : %d / %d" % [Dungeons.name_of(zid), Dungeons.DIFF_NAMES[int(got.get("diff", 0))], int(got.get("rooms", 0)), Dungeons.ROOMS.size()], 22, Color.WHITE)
+	var info := Hud._label(v, "%s · %s · salles franchies : %d / %d" % [Dungeons.name_of(zid), Dungeons.DIFF_NAMES[int(got.get("diff", 0))], int(got.get("rooms", 0)), Dungeons.rush_floors() if bool(got.get("rush", false)) else Dungeons.ROOMS.size()], 22, Color.WHITE)
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var ex := Hud._label(v, "Maîtrise %s : +%d" % [Run.class_data().get("name_fr", ""), int(got.get("xp", 0))], 17, Color(0.6, 0.85, 1.0))
 	ex.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	if victory:
+	if victory or bool(got.get("rush", false)):
 		var r: Dictionary = got.get("reward", {})
 		var lines: PackedStringArray = []
 		for c in r.get("chests", []):
@@ -41,6 +41,8 @@ func show_results(got: Dictionary) -> void:
 		lines.append("%d cristaux" % int(r.get("crystals", 0)))
 		if String(r.get("plan", "")) != "":
 			lines.append("un plan de fabrication !")
+		if String(r.get("title", "")) != "":
+			lines.append("le titre « %s »" % String(r.title))
 		var l := Hud._label(v, "Butin : " + ", ".join(lines) + "  (menu Coffres)", 20, Color(0.55, 1.0, 0.6))
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -51,7 +53,7 @@ func show_results(got: Dictionary) -> void:
 	row.add_theme_constant_override("separation", 12)
 	v.add_child(row)
 	var again := Button.new()
-	again.text = "Rejouer (même donjon)"
+	again.text = "Rejouer (la Ruée)" if bool(got.get("rush", false)) else "Rejouer (même donjon)"
 	again.custom_minimum_size = Vector2(0, 54)
 	again.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	again.focus_mode = Control.FOCUS_NONE

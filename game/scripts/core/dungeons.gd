@@ -18,6 +18,56 @@ const ALLY_HP_STEP := 0.5  # PV des monstres en plus par allié
 const MAX_ALLIES := 2
 
 
+## Panoplie (archétype d'`Items.SETS`) de chaque donjon : ses pièces comptent pour 2 / 4 / 6 en plus du set d'Eden.
+const ARCHETYPES := {
+	"limestone": "storm", "rainbowfall": "frost", "beluga": "blood", "wetlands": "falcon",
+	"avila": "phoenix", "arid": "wind", "delphi": "salvo", "blackflame": "rampart",
+}
+
+
+static func archetype(zid: String) -> String:
+	return String(ARCHETYPES.get(zid, "storm"))
+
+
+## Ruée des boss : « zone » spéciale du moteur de donjon, un étage par zone (son boss, niveau du donjon).
+const RUSH := "rush"
+const RUSH_TITLES := ["Briseur de boss", "Fléau des boss", "Seigneur des boss"]  # Normal, Héroïque, Mythique
+
+
+static func rush_floors() -> int:
+	return GameData.zones.size()
+
+
+static func rush_zone(f: int) -> Dictionary:
+	return GameData.zones[clampi(f - 1, 0, GameData.zones.size() - 1)]
+
+
+static func rush_level(f: int, diff: int) -> int:
+	return level(String(rush_zone(f).id), diff)
+
+
+## Butin de la Ruée : cristaux pour chaque boss battu ; si les 8 sont tombés, un coffre d'équipement
+## (le 1er de chaque difficulté : un coffre d'apparence) et le titre de la difficulté.
+static func rush_reward(reached: int, diff: int) -> Dictionary:
+	var out := {"chests": [], "crystals": 15 * reached * (diff + 1), "plan": "", "rush": true, "title": ""}
+	Profile.materials["crystal"] = int(Profile.materials.get("crystal", 0)) + int(out.crystals)
+	var key := "rush_best_%d" % diff
+	Profile.records[key] = maxi(int(Profile.records.get(key, 0)), reached)
+	if reached >= rush_floors():
+		var lv := rush_level(rush_floors(), diff)
+		var c := Rewards.make("gear", lv, true)
+		Profile.reward_chests.append(c)
+		out.chests.append(c)
+		if int(Profile.records.get("rush_clear_%d" % diff, 0)) == 0:
+			var look := Rewards.make(Rewards.look_type(diff + 1), lv, true)
+			Profile.reward_chests.append(look)
+			out.chests.append(look)
+		Profile.records["rush_clear_%d" % diff] = int(Profile.records.get("rush_clear_%d" % diff, 0)) + 1
+		out.title = RUSH_TITLES[clampi(diff, 0, RUSH_TITLES.size() - 1)]
+		Profile.add_title(out.title)
+	return out
+
+
 ## Alliés du dernier donjon lancé (pour « Rejouer »).
 static var last_allies: Array = []
 
@@ -31,6 +81,8 @@ static func zone(zid: String) -> Dictionary:
 
 
 static func name_of(zid: String) -> String:
+	if zid == RUSH:
+		return "Ruée des boss"
 	var z := zone(zid)
 	return String(z.get("dungeon", {}).get("name", z.get("name", zid)))
 
@@ -97,6 +149,7 @@ static func reward(zid: String, diff: int) -> Dictionary:
 	var boss := diff >= 1
 	var c := Rewards.make("set", lv, boss)
 	c["zone"] = zid
+	c["archetype"] = archetype(zid)  # ses 3 pièces portent la panoplie du donjon
 	Profile.reward_chests.append(c)
 	out.chests.append(c)
 	if diff >= 2:

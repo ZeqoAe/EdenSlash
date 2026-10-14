@@ -127,6 +127,15 @@ const SETS := {
 		4: {"procs": [{"trigger": "perfect", "chance": 1.0, "cd": 0.0, "effect": "cdr", "amount": 0.6}]},
 		6: {"procs": [{"trigger": "dodge", "chance": 1.0, "cd": 8.0, "effect": "buff", "status": "haste", "duration": 3.0,
 			"then": [{"effect": "buff", "status": "fury", "duration": 3.0}]}]}}},
+	# archétypes de donjon sans équivalent dans les anciens sets (lot « Donjons », panoplies B9)
+	"salvo": {"name": "Salve", "suffix": "de la Salve", "bonus": {
+		2: {"stat": {"reach": 0.12}},
+		4: {"procs": [{"trigger": "skill_hit", "chance": 0.2, "cd": 4.0, "effect": "echo", "mult": 0.6}]},
+		6: {"stat": {"dmg_pct": 0.08}, "procs": [{"trigger": "basic_hit", "chance": 0.2, "cd": 2.5, "effect": "explosion", "mult": 0.9, "radius": 3.5}]}}},
+	"rampart": {"name": "Rempart", "suffix": "du Rempart", "bonus": {
+		2: {"stat": {"def_pct": 0.1}},
+		4: {"procs": [{"trigger": "hurt", "chance": 1.0, "cd": 10.0, "effect": "buff", "status": "barrier", "duration": 3.0}]},
+		6: {"stat": {"hp_pct": 0.08}, "procs": [{"trigger": "hurt", "chance": 0.25, "cd": 8.0, "effect": "buff", "status": "thorns", "duration": 4.0}]}}},
 	"wind": {"name": "Vent céleste", "suffix": "du Vent céleste", "bonus": {
 		2: {"stat": {"move_speed": 0.06}},
 		4: {"procs": [{"trigger": "dodge", "chance": 1.0, "cd": 5.0, "effect": "buff", "status": "haste", "duration": 3.0,
@@ -426,6 +435,9 @@ static func set_counts(equipped: Dictionary) -> Dictionary:
 		var sid := String(equipped[slot].get("set", ""))
 		if sid != "":
 			out[sid] = int(out.get(sid, 0)) + 1
+		var arch := String(equipped[slot].get("archetype", ""))  # panoplie de donjon : compte en plus du set d'Eden
+		if arch != "" and arch != sid and SETS.has(arch):
+			out[arch] = int(out.get(arch, 0)) + 1
 	return out
 
 
@@ -683,7 +695,7 @@ static func describe(item: Dictionary) -> String:
 	# carte d'objet : icône, nom à la couleur de la rareté, type, qualité
 	var lines := ["%s[font_size=21][b][color=#%s]%s[/color][/b][/font_size]" % [
 			"[img=52x52]%s[/img]  " % icon if icon != "" else "", col, display_name(item)],
-		"[color=#%s]%s[/color] · %s%s · %s" % [col, ("Éveillé" if item.get("awakened", false) else r.name), _weapon_or_slot(item), " · pièce de set" if item.has("set") else "", ("niveau %d" % int(item.level)) if int(item.level) > 0 else "sans niveau"],
+		"[color=#%s]%s[/color] · %s%s · %s" % [col, ("Éveillé" if item.get("awakened", false) else r.name), _weapon_or_slot(item), (" · pièce de set" if item.has("set") else "") + (" · panoplie %s" % String(SETS[item.archetype].name) if SETS.has(String(item.get("archetype", ""))) else ""), ("niveau %d" % int(item.level)) if int(item.level) > 0 else "sans niveau"],
 		"Qualité [color=%s]%d %%[/color]%s" % ["#7fe08a" if q >= 1.0 else "#ff9a7a", roundi(q * 100.0),
 			"   ·   Amélioration [color=#ffcf6b]+%d[/color] / %d" % [up, MAX_UPGRADE] if up > 0 else ""],
 		"[color=#5a5470]────────────────────────[/color]"]
@@ -748,6 +760,14 @@ static func describe(item: Dictionary) -> String:
 			var bn := set_bonus(sid, n)
 			var set_col := SET_COLOR.to_html(false) if worn >= n else "888888"
 			lines.append("[color=#%s]%d pièces : %s[/color]" % [set_col, n, " ; ".join(bonus_lines(bn))])
+	var arch := String(item.get("archetype", ""))
+	if SETS.has(arch):
+		var aworn := int(set_counts(Profile.equipped).get(arch, 0))
+		lines.append("")
+		lines.append("[color=#%s]Panoplie de donjon · %s (%d pièce%s portée%s)[/color]" % [SET_COLOR.to_html(false), SETS[arch].name, aworn, "s" if aworn > 1 else "", "s" if aworn > 1 else ""])
+		for n in set_tiers(arch):
+			var acol := SET_COLOR.to_html(false) if aworn >= n else "888888"
+			lines.append("[color=#%s]%d pièces : %s[/color]" % [acol, n, " ; ".join(bonus_lines(set_bonus(arch, n)))])
 	if item.has("eden"):
 		var cap := power_cap(item)
 		lines.append("[color=#8a86a0]%s[/color]" % ("Suit ton niveau en run" if cap >= 999 else (
