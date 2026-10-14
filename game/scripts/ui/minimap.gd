@@ -8,6 +8,14 @@ const ICONS := {
 	"dungeon": Color(0.85, 0.35, 1.0),
 	"chest": Color(1.0, 0.85, 0.3),
 	"shrine": Color(0.55, 1.0, 0.6),
+	"anvil": Color(1.0, 0.6, 0.3),
+	"scribe": Color(0.6, 0.75, 1.0),
+	"well": Color(0.5, 1.0, 0.7),
+	"magnet": Color(0.45, 0.8, 1.0),
+	"greed": Color(1.0, 0.82, 0.3),
+	"challenge": Color(1.0, 0.35, 0.3),
+	"chest1": Color(1.0, 0.45, 0.35),
+	"chest2": Color(1.0, 0.95, 0.4),
 }
 
 var player: Player
@@ -64,11 +72,12 @@ func _draw() -> void:
 		var sp: Vector2 = w2s.call(m[0])
 		var col: Color = ICONS.get(m[1], Color.WHITE)
 		if not _inside(sp):
-			if m[1] == "chest":
+			if String(m[1]).begins_with("chest"):
 				continue
 			sp = _clamp_edge(sp, c)  # marchands, sanctuaires, donjon : au bord dans la bonne direction
-		if m[1] == "chest":
-			draw_rect(Rect2(sp - Vector2(3, 3), Vector2(6, 6)), col)
+		if String(m[1]).begins_with("chest"):
+			var r := 3.0 + (1.5 if m[1] != "chest" else 0.0)
+			draw_rect(Rect2(sp - Vector2(r, r), Vector2(r, r) * 2.0), col)
 		elif m[1] == "shrine":
 			draw_arc(sp, 6.0, 0.0, TAU, 20, Color(0, 0, 0, 0.6), 3.5)
 			draw_arc(sp, 6.0, 0.0, TAU, 20, col, 2.0)

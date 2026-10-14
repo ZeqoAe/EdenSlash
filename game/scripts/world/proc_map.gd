@@ -42,6 +42,30 @@ var merchant_spots: Array[Vector3] = []  # marchands ambulants (le premier : la 
 var shrine_spots: Array = []  # [{pos, reward}] zones à capturer
 var shrines: Array = []  # Shrine (run seulement)
 var interactables: Array[Interactable] = []
+var chest_tiers: Array = []  # palier de chaque coffre de [member chests] (0 coffre, 1 ouvragé, 2 doré)
+var stations: Array = []  # [{pos, kind}] enclumes, scribes, fontaines, aimants, cupidité, défi
+var sites: Array = []  # [{pos, kind, yaw}] lieux de décor : ruines, tour de guet, mine, campement…
+var breakables: Breakables  # jarres, caisses, tas d'or, cristaux (run seulement)
+var _decor_pts: Array[Vector2] = []  # arbres et rochers posés (les cassables les évitent)
+var plateaus: Array = []  # [{c: Vector2, r, h}] plateaux et collines (relief à gravir, points de vue)
+const PLATEAU_COUNT := 8
+const PLATEAU_RAMP := 18.0  # largeur des pentes (m) : ~34° au plus, toujours praticables
+
+## Coffres de la carte : nombre, et combien de coffres ouvragés et dorés parmi eux.
+const CHEST_COUNT := 30
+const CHEST_TIER_COUNTS := [0, 9, 3]
+## Lieux utilisables une fois (le directeur de run gère leur effet).
+const STATIONS := {
+	"anvil": {"count": 3, "title": "Enclume", "model": "uc340", "scale": 1.0, "col": 1.4},
+	"scribe": {"count": 2, "title": "Autel du scribe", "model": "uc503", "scale": 0.55, "col": 1.8},
+	"well": {"count": 3, "title": "Fontaine de vie", "model": "uc406", "scale": 1.0, "col": 1.2},
+	"magnet": {"count": 2, "title": "Pierre d'aimant", "model": "ud115", "scale": 0.9, "col": 1.2},
+	"greed": {"count": 1, "title": "Autel de cupidité", "model": "uc033", "scale": 2.2, "col": 0.0},
+	"challenge": {"count": 2, "title": "Stèle du défi", "model": "ub201_1", "scale": 1.0, "col": 0.9},
+}
+## Lieux de décor (repères, avec des objets à casser autour).
+const SITE_KINDS := ["ruins", "ruins", "ruins", "tower", "tower", "arch", "bones", "bones", "mine", "mine", "camp", "camp", "camp", "market", "market"]
+const SITE_COUNT := 24
 
 var _splat: Image
 var _roads: Array = []  # polylignes (Array[Vector2])
@@ -64,7 +88,10 @@ func generate_run(seed_value: int) -> void:
 	_build_chests()
 	_build_merchants()
 	_build_shrines()
+	_build_stations()
+	_build_sites()
 	_scatter_props()
+	_scatter_breakables()
 	GrassField.create(self)
 	_build_minimap()
 	_setup_navigation()
@@ -192,11 +219,30 @@ func _place_pois() -> void:
 	dungeon = Vector3(d2.x, 0, d2.y)
 	village = Vector3(v2.x, 0, v2.y)
 	_occupied = [[s2, 16.0], [d2, 18.0], [v2, 42.0]]
-	for k in 10:
-		var p := _free_point(48.0, 55.0)
+	plateaus.clear()
+	for k in PLATEAU_COUNT:
+		var p := _free_point(70.0, 80.0)
+		if p != Vector2.INF:
+			plateaus.append({"c": p, "r": rng.randf_range(14.0, 26.0), "h": rng.randf_range(4.5, 8.0) * (1.0 if k % 3 != 2 else -0.6)})
+	for k in CHEST_COUNT:
+		var p := _free_point(30.0, 40.0)
 		if p != Vector2.INF:
 			chests.append(Vector3(p.x, 0, p.y))
 			_occupied.append([p, 6.0])
+	# coffres ouvragés et dorés : plutôt loin du départ
+	var far := {}
+	for k in chests.size():
+		far[k] = Vector2(chests[k].x, chests[k].z).distance_to(s2) + rng.randf() * 120.0
+	var order: Array = range(chests.size())
+	order.sort_custom(func(a, b): return float(far[a]) > float(far[b]))
+	chest_tiers.resize(chests.size())
+	chest_tiers.fill(0)
+	var at := 0
+	for tier in [2, 1]:
+		for k in int(CHEST_TIER_COUNTS[tier]):
+			if at < order.size():
+				chest_tiers[order[at]] = tier
+				at += 1
 	# marchands ambulants : la clairière de l'ancien village, puis deux autres
 	merchant_spots.append(Vector3(v2.x, 0, v2.y))
 	for k in 2:
@@ -204,6 +250,13 @@ func _place_pois() -> void:
 		if p != Vector2.INF:
 			merchant_spots.append(Vector3(p.x, 0, p.y))
 			_occupied.append([p, 8.0])
+	# lieux utilisables une fois
+	for kind in STATIONS:
+		for k in int(STATIONS[kind].count):
+			var p := _free_point(36.0, 50.0)
+			if p != Vector2.INF:
+				stations.append({"pos": Vector3(p.x, 0, p.y), "kind": kind})
+				_occupied.append([p, 8.0])
 	# zones à capturer : surtout des cartes, quelques trophées et clés
 	var kinds := ["card", "card", "trophy", "card", "keys", "card", "trophy", "card", "card", "trophy"]
 	for k in kinds.size():
@@ -219,6 +272,13 @@ func _place_pois() -> void:
 		var tier := clampi(int(p.distance_to(s2) / 90.0), 0, 3)
 		camps.append({"pos": Vector3(p.x, 0, p.y), "tier": tier, "elite": k < 4})
 		_occupied.append([p, 9.0])
+	# lieux de décor
+	for k in SITE_COUNT:
+		var p := _free_point(26.0, 36.0)
+		if p == Vector2.INF:
+			continue
+		sites.append({"pos": Vector3(p.x, 0, p.y), "kind": SITE_KINDS[k % SITE_KINDS.size()], "yaw": rng.randf() * TAU})
+		_occupied.append([p, 14.0])
 
 
 ## Point libre à distance des lieux existants, loin des bords.
@@ -246,6 +306,12 @@ func _build_heights(with_border: bool) -> void:
 				var d := minf(minf(x, z), minf(size - x, size - z))
 				if d < 50.0:
 					h += pow((50.0 - d) / 50.0, 2.0) * 30.0
+			# plateaux (et une cuvette sur trois) au bord irrégulier
+			for pl in plateaus:
+				var dd := Vector2(x, z).distance_to(pl.c)
+				var r: float = float(pl.r) * (1.0 + 0.18 * _noise2.get_noise_2d(x * 0.7, z * 0.7))
+				if dd < r + PLATEAU_RAMP:
+					h += float(pl.h) * (1.0 - smoothstep(r, r + PLATEAU_RAMP, dd))
 			heights[j * n + i] = h
 
 
@@ -253,16 +319,30 @@ func _build_roads() -> void:
 	var s2 := Vector2(start.x, start.z)
 	var v2 := Vector2(village.x, village.z)
 	var d2 := Vector2(dungeon.x, dungeon.z)
-	var links := [[s2, v2], [v2, d2]]
-	# quelques chemins secondaires vers des coffres
-	var others := chests.duplicate()
-	others.shuffle()
-	for k in mini(3, others.size()):
-		links.append([v2, Vector2(others[k].x, others[k].z)])
-	for l in links:
+	for l in [[s2, v2], [v2, d2]]:
 		var road := _wiggle(l[0], l[1])
 		_roads.append(road)
 		_flatten_along(road, 4.5)
+	# sentiers vers des coffres, lieux de décor et lieux utilisables, chacun rattaché au chemin
+	# le plus proche (un réseau qui se lit, pas un écheveau)
+	var spots: Array = chests.slice(0, 4).map(func(x): return Vector2(x.x, x.z)) + sites.map(func(x): return Vector2(x.pos.x, x.pos.z)) \
+		+ stations.map(func(x): return Vector2(x.pos.x, x.pos.z))
+	spots.shuffle()
+	for k in mini(12, spots.size()):
+		var to: Vector2 = spots[k]
+		var from := s2
+		var best := INF
+		for road in _roads:
+			for q: Vector2 in road:
+				var d := q.distance_to(to)
+				if d < best:
+					best = d
+					from = q
+		if best < 30.0:
+			continue
+		var road := _wiggle(from, to)
+		_roads.append(road)
+		_flatten_along(road, 3.5)
 
 
 ## Chemin naturel : points intermédiaires décalés par du bruit.
@@ -299,6 +379,10 @@ func _flatten_pois() -> void:
 		_flatten_disk(Vector2(sh.pos.x, sh.pos.z), 8.0, _raw_height(sh.pos.x, sh.pos.z), 0.9)
 	for camp in camps:
 		_flatten_disk(Vector2(camp.pos.x, camp.pos.z), 9.0, _raw_height(camp.pos.x, camp.pos.z), 0.7)
+	for st in stations:
+		_flatten_disk(Vector2(st.pos.x, st.pos.z), 5.0, _raw_height(st.pos.x, st.pos.z), 0.9)
+	for site in sites:
+		_flatten_disk(Vector2(site.pos.x, site.pos.z), 11.0, _raw_height(site.pos.x, site.pos.z), 0.6)
 	start.y = height_at(start.x, start.z)
 	village.y = height_at(village.x, village.z)
 	dungeon.y = height_at(dungeon.x, dungeon.z)
@@ -310,6 +394,10 @@ func _flatten_pois() -> void:
 		sh.pos.y = height_at(sh.pos.x, sh.pos.z)
 	for camp in camps:
 		camp.pos.y = height_at(camp.pos.x, camp.pos.z)
+	for st in stations:
+		st.pos.y = height_at(st.pos.x, st.pos.z)
+	for site in sites:
+		site.pos.y = height_at(site.pos.x, site.pos.z)
 
 
 ## Aplanit vers [param target] dans un disque, avec un bord adouci.
@@ -583,6 +671,7 @@ func _scatter_props() -> void:
 		_add_instance(batch, PropCatalog.pick(_trees, rng), pos)
 		if placed.size() > 520:
 			break
+	_decor_pts = placed
 	# rochers
 	for k in 90:
 		var p := Vector2(rng.randf_range(20, size - 20), rng.randf_range(20, size - 20))
@@ -762,17 +851,205 @@ func _build_shrines() -> void:
 		shrines.append(node)
 
 
+## Coffres de la carte : coffre (animé), coffre ouvragé (rouge), coffre doré (lumière dorée).
+const CHEST_LOOKS := [
+	{"title": "Coffre", "model": "", "scale": 1.0},
+	{"title": "Coffre ouvragé", "model": "uc019", "scale": 1.5, "light": Color(1.0, 0.45, 0.35)},
+	{"title": "Coffre doré", "model": "uc009", "scale": 1.6, "light": Color(1.0, 0.82, 0.3)},
+]
+
+
 func _build_chests() -> void:
 	var npcs: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/npcs.json"))
 	var data: Dictionary = npcs.get("chest", {})
-	for c in chests:
+	for k in chests.size():
+		var c: Vector3 = chests[k]
+		var tier := int(chest_tiers[k]) if k < chest_tiers.size() else 0
+		var look: Dictionary = CHEST_LOOKS[tier]
 		var chest := Interactable.new()
-		chest.setup("chest", "Coffre", "res://assets/monsters/%s/%s.glb" % [data.model, data.model],
-			"res://assets/monsters/textures/%s.png" % data.texture, 1.0, 3.0)
+		if String(look.model) == "":
+			chest.setup("chest", String(look.title), "res://assets/monsters/%s/%s.glb" % [data.model, data.model],
+				"res://assets/monsters/textures/%s.png" % data.texture, 1.0, 3.0)
+		else:
+			chest.setup("chest", String(look.title), "res://assets/maps/objects/%s.glb" % look.model, "", float(look.scale), 3.0)
+			var l := OmniLight3D.new()
+			l.light_color = look.light
+			l.light_energy = 1.4
+			l.omni_range = 6.0
+			l.position.y = 1.6
+			chest.add_child(l)
+			chest.add_beam(look.light, 10.0 if tier == 1 else 18.0)
+		chest.set_meta("tier", tier)
 		add_child(chest)
 		chest.global_position = c
 		chest.rotation.y = rng.randf() * TAU
 		interactables.append(chest)
+
+
+## Lieux utilisables une fois : le décor (lot) et l'élément interactif.
+func _build_stations() -> void:
+	var batch := {}
+	for st in stations:
+		var def: Dictionary = STATIONS[st.kind]
+		_add_instance(batch, {"model": def.model, "scale": [def.scale, def.scale], "col": def.col}, st.pos, float(def.col) > 0.0)
+		var it := Interactable.new()
+		it.setup(String(st.kind), String(def.title), "", "", 1.0, 3.6)
+		add_child(it)
+		it.global_position = st.pos
+		it.add_beam(Interactable.STATION_COLORS.get(st.kind, Color(1, 0.9, 0.6)))
+		interactables.append(it)
+		var l := OmniLight3D.new()
+		l.light_color = Interactable.STATION_COLORS.get(st.kind, Color(1, 0.9, 0.6))
+		l.light_energy = 1.6
+		l.omni_range = 9.0
+		l.position = st.pos + Vector3.UP * 2.5
+		add_child(l)
+		if st.kind == "challenge":
+			for i in 3:
+				var a := TAU * i / 3.0
+				_add_instance(batch, {"model": "ud101", "scale": [0.5, 0.6]}, st.pos + Vector3(cos(a), 0, sin(a)) * 2.6, false)
+		elif st.kind == "greed":
+			for i in 3:
+				var a := TAU * i / 3.0 + 0.4
+				_add_instance(batch, {"model": "uc030", "scale": [1.1, 1.3]}, st.pos + Vector3(cos(a), 0, sin(a)) * 1.8, false)
+	_flush_batches(batch, self)
+
+
+## Lieux de décor : ruines, tours de guet, arches rocheuses, ossements, mines, campements,
+## marchés abandonnés. Chacun a ses objets à casser (posés par _scatter_breakables).
+func _build_sites() -> void:
+	var holder := Node3D.new()
+	holder.name = "Sites"
+	add_child(holder)
+	var batch := {}
+	for site in sites:
+		var c: Vector3 = site.pos
+		var yaw: float = site.yaw
+		var at := func(dx: float, dz: float) -> Vector3:
+			var v := Vector3(dx, 0, dz).rotated(Vector3.UP, yaw)
+			var q := c + v
+			q.y = height_at(q.x, q.z)
+			return q
+		match String(site.kind):
+			"ruins":
+				# enceinte effondrée : un mur par côté (avec une brèche), piliers aux coins
+				for side in 4:
+					var a := TAU * side / 4.0
+					var q: Vector3 = at.call(cos(a) * 8.5, sin(a) * 8.5)
+					var m: String = ["ub201", "ub201_3", "ub201", "ub201_2"][side]
+					if rng.randf() < 0.85:
+						_add_instance(batch, {"model": m, "scale": [1.05, 1.15]}, q - Vector3.UP * 0.2, false, -a + PI * 0.5 + yaw)
+						_add_box_collider(q, Vector3(3.6, 2.2, 0.6), -a + PI * 0.5 + yaw)
+					var cq: Vector3 = at.call(cos(a + PI * 0.25) * 12.0, sin(a + PI * 0.25) * 12.0)
+					_add_instance(batch, {"model": "ub201_1", "scale": [0.9, 1.1], "col": 0.7}, cq, true)
+				_add_instance(batch, {"model": ["ub138", "ub138_1", "ub138_2"][rng.randi() % 3], "scale": [0.7, 0.7], "col": 2.0}, at.call(0.0, 0.0), true, yaw)
+			"tower":
+				_add_instance(batch, {"model": "ub018", "scale": [1.0, 1.0], "col": 2.0}, at.call(0.0, 0.0), true, yaw)
+				_add_instance(batch, {"model": "uc006", "scale": [1.0, 1.0], "col": 0.8}, at.call(3.5, 1.5), true, yaw)
+				_add_instance(batch, {"model": "uc308", "scale": [1.0, 1.0]}, at.call(-3.0, 2.5), false)
+			"arch":
+				_add_instance(batch, {"model": "ud012_1", "scale": [0.6, 0.6]}, at.call(0.0, 0.0) - Vector3.UP * 0.3, false, yaw)
+				_add_collider(at.call(-3.6, 0.0), 1.4, 6.0)
+				_add_collider(at.call(3.6, 0.0), 1.4, 6.0)
+				_add_instance(batch, {"model": "ud011_1", "scale": [0.5, 0.6], "col": 1.6}, at.call(6.5, 5.0), true)
+			"bones":
+				_add_instance(batch, {"model": "ud109_1", "scale": [0.8, 0.8]}, at.call(0.0, 0.0), false, yaw)
+				_add_instance(batch, {"model": "ud109", "scale": [0.9, 0.9]}, at.call(5.0, -3.0), false)
+				_add_instance(batch, {"model": "ud101", "scale": [0.8, 0.8]}, at.call(-4.0, 3.0), false)
+				_add_instance(batch, {"model": "ud102", "scale": [0.7, 0.7]}, at.call(3.0, 5.0), false)
+			"mine":
+				for i in 4:
+					_add_instance(batch, {"model": "uc301", "scale": [1.0, 1.0]}, at.call(0.0, -6.0 + i * 2.9), false, yaw)
+				_add_instance(batch, {"model": "uc304", "scale": [1.0, 1.0], "col": 1.0}, at.call(0.0, 5.5), true, yaw)
+				_add_instance(batch, {"model": "uc303", "scale": [1.0, 1.0], "col": 1.0}, at.call(3.2, 1.0), true, yaw + 0.6)
+				_add_instance(batch, {"model": "uc501", "scale": [0.45, 0.45]}, at.call(-5.5, 0.0), false, yaw)
+				_add_box_collider(at.call(-5.5, 0.0), Vector3(1.6, 3.0, 1.2), yaw)
+				_add_instance(batch, {"model": "uc002_1", "scale": [1.0, 1.0]}, at.call(2.5, -4.0), false)
+			"camp":
+				_add_instance(batch, {"model": "uc309", "scale": [1.2, 1.2]}, at.call(0.0, 0.0), false)
+				_add_instance(batch, {"model": "uc310", "scale": [1.0, 1.0], "col": 0.8}, at.call(0.0, -4.0), true, yaw)
+				_add_instance(batch, {"model": "uc021", "scale": [1.0, 1.0]}, at.call(3.5, 0.5), false, yaw + 1.2)
+				_add_instance(batch, {"model": "uc314", "scale": [0.9, 0.9]}, at.call(-3.5, 1.5), false, yaw - 1.4)
+				_add_instance(batch, {"model": "uc017", "scale": [1.0, 1.0]}, at.call(2.0, 4.0), false)
+				var l := OmniLight3D.new()
+				l.light_color = Color(1.0, 0.6, 0.25)
+				l.light_energy = 1.8
+				l.omni_range = 9.0
+				l.position = c + Vector3.UP * 1.2
+				holder.add_child(l)
+			"market":
+				_add_instance(batch, {"model": "uc322", "scale": [0.9, 0.9]}, at.call(0.0, -3.0), false, yaw)
+				_add_box_collider(at.call(0.0, -3.0), Vector3(2.0, 1.5, 1.0), yaw)
+				_add_instance(batch, {"model": "uc323_1", "scale": [0.8, 0.8]}, at.call(5.0, 2.0), false, yaw - 0.8)
+				_add_instance(batch, {"model": "uc026", "scale": [1.0, 1.0], "col": 1.2}, at.call(-4.5, 2.5), true, yaw + 0.5)
+				_add_instance(batch, {"model": "uc018", "scale": [0.9, 0.9]}, at.call(1.0, 3.0), false)
+	_flush_batches(batch, holder)
+
+
+## Objets à casser : autour des lieux de décor, au bord des chemins, près des coffres, et
+## quelques-uns perdus ; cristaux dans les mines et en plein champ.
+func _scatter_breakables() -> void:
+	breakables = Breakables.new()
+	breakables.map_size = size
+	add_child(breakables)
+	for site in sites:
+		var c := Vector2(site.pos.x, site.pos.z)
+		_crowd(c, rng.randi_range(9, 15), 3.0, 11.0, 0.8)
+		if site.kind == "mine":
+			for i in 3:
+				var a := rng.randf() * TAU
+				_put_breakable("gem", c + Vector2(cos(a), sin(a)) * rng.randf_range(4.0, 8.0))
+	for k in chests.size():
+		_crowd(Vector2(chests[k].x, chests[k].z), 3 + 2 * int(chest_tiers[k]), 2.5, 5.0, 0.2 + 0.3 * int(chest_tiers[k]))
+	for camp in camps:
+		_crowd(Vector2(camp.pos.x, camp.pos.z), 5, 4.0, 9.0, 0.35)
+	for st in stations:
+		_crowd(Vector2(st.pos.x, st.pos.z), 4, 3.5, 7.0, 0.3)
+	# bord des chemins : un petit groupe tous les ~22 m, d'un côté ou de l'autre
+	for road in _roads:
+		for k in road.size() - 1:
+			var a: Vector2 = road[k]
+			var b: Vector2 = road[k + 1]
+			var seg := a.distance_to(b)
+			var t := rng.randf_range(4.0, 14.0)
+			while t < seg:
+				if rng.randf() < 0.8:
+					var side := (b - a).normalized().orthogonal() * (1.0 if rng.randf() < 0.5 else -1.0)
+					_crowd(a.lerp(b, t / seg) + side * rng.randf_range(4.5, 7.0), rng.randi_range(1, 4), 0.0, 2.0, 0.15)
+				t += rng.randf_range(11.0, 20.0)
+	# isolés en plein champ, et cristaux
+	for k in 170:
+		var p := Vector2(rng.randf_range(20, size - 20), rng.randf_range(20, size - 20))
+		if _is_free(p, 1.0):
+			_crowd(p, rng.randi_range(1, 3), 0.0, 1.8, 0.2)
+	# plateaux : un trésor en haut (jarres, or, un cristal)
+	for pl in plateaus:
+		if float(pl.h) > 0.0:
+			_crowd(pl.c, rng.randi_range(6, 10), 2.0, float(pl.r) * 0.7, 1.0)
+			_put_breakable("gem", pl.c + Vector2(rng.randf_range(-4, 4), rng.randf_range(-4, 4)))
+	for k in 9:
+		var p := _free_point(20.0, 40.0)
+		if p != Vector2.INF:
+			_put_breakable("gem", p)
+	breakables.build()
+	print("[map] cassables : %d jarres, %d caisses, %d tas d'or, %d cristaux ; coffres %d, lieux %d, décors %d" % [breakables.count("pot"),
+		breakables.count("crate"), breakables.count("gold"), breakables.count("gem"), chests.size(), stations.size(), sites.size()])
+
+
+func _put_breakable(kind: String, p: Vector2) -> void:
+	if p.x < 6.0 or p.y < 6.0 or p.x > size - 6.0 or p.y > size - 6.0 or _near(_decor_pts, p, 2.2):
+		return
+	breakables.add(kind, Vector3(p.x, height_at(p.x, p.y), p.y), rng)
+
+
+## Petit groupe de jarres et de caisses autour de [param c] (parfois un tas d'or).
+func _crowd(c: Vector2, n: int, r0: float, r1: float, gold_chance: float) -> void:
+	for i in n:
+		var a := rng.randf() * TAU
+		_put_breakable("pot" if rng.randf() < 0.55 else "crate", c + Vector2(cos(a), sin(a)) * rng.randf_range(r0, r1))
+	if rng.randf() < gold_chance:
+		var a := rng.randf() * TAU
+		_put_breakable("gold", c + Vector2(cos(a), sin(a)) * rng.randf_range(r0, r1))
 
 
 # --- requêtes ----------------------------------------------------------------------------

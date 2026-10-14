@@ -164,6 +164,8 @@ func _do_reroll() -> void:
 func _make_card(card: Dictionary, i: int) -> Button:
 	# couleur : rareté tirée de la carte (Cards), sinon type de carte
 	var col: Color = Cards.tier(String(card.tier)).color if card.has("tier") and card.tier != "common" 		else (Boons.RARITY[card.rarity].color if card.has("rarity") and card.rarity != "common" else TYPE_COLORS.get(card.type, ACCENT))
+	if card.has("color"):
+		col = card.color  # objet (coffres de la carte, enclume) : couleur de sa rareté
 	var b := Button.new()
 	b.custom_minimum_size = Vector2(320, 380)
 	b.focus_mode = Control.FOCUS_NONE

@@ -512,11 +512,24 @@ func apply_card(card: Dictionary) -> void:
 			var before := power(String(card.id))
 			passives[card.id] = int(passives.get(card.id, 0)) + 1
 			passive_power[card.id] = before + float(card.get("mult", 1.0))
-		"trophy":
-			pick_up(card.item)  # carte de choix de trophée : le trophée va dans le sac
+		"trophy", "gear":
+			pick_up(card.item)  # choix de trophée ou d'équipement (coffres de la carte) : dans le sac
+		"anvil":
+			# enclume de la carte : +1 garanti sur la pièce portée choisie
+			var it: Dictionary = Profile.equipped.get(String(card.slot), {})
+			if not it.is_empty():
+				var res := Craft.upgrade_free(it)
+				anvil_result = String(res.get("text", ""))
+				Profile.changed.emit()
+		"scroll":
+			Profile.add_bag(String(card.key))  # autel du scribe : le parchemin choisi
 	if card.type in ["skill", "chain"]:
 		arrange()
 	changed.emit()
+
+
+## Résultat de la dernière enclume (affiché par le directeur de run).
+var anvil_result := ""
 
 
 ## Range les sorts pris selon le preset actif de la classe (Grimoire, SpellPresets) : sorts
@@ -603,7 +616,7 @@ func fill_from_preset() -> void:
 
 ## Bannit la carte pour la run ; renvoie une carte de remplacement (ou {}).
 func ban_card(card: Dictionary, shown: Array) -> Dictionary:
-	if bans_used >= Cards.BANS_PER_RUN or String(card.get("type", "")) == "trophy":
+	if bans_used >= Cards.BANS_PER_RUN or String(card.get("type", "")) in ["trophy", "gear", "anvil", "scroll"]:
 		return {}
 	bans_used += 1
 	banned.append(str(card.id))
@@ -617,7 +630,7 @@ func ban_card(card: Dictionary, shown: Array) -> Dictionary:
 
 ## Garde la carte pour le prochain choix (même rareté).
 func keep_card(card: Dictionary) -> bool:
-	if locks_used >= Cards.LOCKS_PER_RUN or String(card.get("type", "")) == "trophy":
+	if locks_used >= Cards.LOCKS_PER_RUN or String(card.get("type", "")) in ["trophy", "gear", "anvil", "scroll"]:
 		return false
 	if kept.any(func(k): return String(k.type) == String(card.type) and str(k.id) == str(card.id)):
 		return false

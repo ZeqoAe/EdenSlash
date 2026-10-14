@@ -43,8 +43,28 @@ var chests_opened := 0
 var shrines_captured := 0
 var _found := {}  # marchands et sanctuaires découverts (instance -> true)
 var _shrine_timer := 0.0
-## Coffres de la carte : prix en or qui monte à chaque coffre ouvert (ou une clé).
-const CHEST_BASE := 25  # prix du 1er coffre (+2 par niveau du héros), doublé à chaque coffre ouvert
+## Coffres de la carte : prix en or qui monte à chaque coffre ouvert (ou une clé), selon leur
+## qualité ; ils proposent de l'équipement au choix (façon Megabonk).
+const CHEST_BASE := 20  # prix du 1er coffre (+3 par niveau du héros), +15 % à chaque coffre ouvert
+const CHEST_GROWTH := 1.15
+## Qualités de coffre : prix ×, raretés de l'équipement proposé (min, max), chance, nombre de
+## fournitures données en plus.
+const CHEST_TIERS := [
+	{"price": 1.0, "min_r": 1, "max_r": 3, "luck": 0.3, "supplies": 1},
+	{"price": 2.5, "min_r": 2, "max_r": 4, "luck": 0.7, "supplies": 2},
+	{"price": 6.0, "min_r": 3, "max_r": 5, "luck": 1.2, "supplies": 3},
+]
+## Objets cassables : or (× niveau), chances de soin, de fourniture, de clé.
+const BREAK_GOLD := {"pot": [2, 4], "crate": [3, 6], "gold": [14, 24], "gem": [0, 0]}
+const BREAK_HEAL := 0.06
+const BREAK_SUPPLY := {"pot": 0.025, "crate": 0.05}
+const BREAK_KEY := 0.006
+## Autel de cupidité : or et butin ×1,5, monstres +25 % (PV et dégâts) jusqu'à la fin de la carte.
+const GREED_GOLD := 1.5
+const GREED_MONSTERS := 1.25
+var greed := false
+var _touch_timer := 0.0
+var _challenges: Array = []  # défis en cours : {station, monsters}
 const DISCOVER_POI := 45.0
 const SHRINE_PRESSURE := 3.5  # secondes entre deux groupes de monstres pendant une capture
 const MERCHANT_ROAM := 14.0  # rayon de promenade des marchands ambulants
@@ -111,6 +131,8 @@ func start(p: Player) -> void:
 		return
 	map = world.new_run_map(_seed)
 	_place_player(map.start)
+	if map.breakables:
+		map.breakables.broken.connect(_on_broken)
 	orbs = XpOrbs.new()
 	add_child(orbs)
 	if not Run.instant_card.is_connected(_on_instant_card):
@@ -123,7 +145,7 @@ func start(p: Player) -> void:
 		state = "training"
 		message.emit("Zone d'entraînement\nF3 : panneau (niveau, sorts, cartes, ennemis, DPS)", 4.0)
 		return
-	message.emit("%s\nCoffres, sanctuaires, marchands : renforce ta run, puis trouve le donjon" % zone.name, 3.5)
+	message.emit("%s\nCasse tout, ouvre les coffres, forge ton équipement, puis trouve le donjon" % zone.name, 3.5)
 	_refresh_chest_labels()
 
 
@@ -186,6 +208,8 @@ func _process(delta: float) -> void:
 			_update_spawns(delta)
 			_update_shrines(delta)
 			_update_merchants(delta)
+			_update_breakables(delta)
+			_update_challenges()
 		"boss":
 			_update_boss(delta)
 	_update_interactions()
@@ -227,6 +251,9 @@ func _update_discovery() -> void:
 	for sh in map.shrines:
 		if not _found.has(sh) and _flat(p, sh.global_position) < DISCOVER_POI:
 			_found[sh] = true
+	for it in map.interactables:
+		if is_instance_valid(it) and Interactable.STATION_VERBS.has(it.kind) and not _found.has(it) and _flat(p, it.global_position) < DISCOVER_POI:
+			_found[it] = true
 	if not dungeon_found and _flat(p, map.dungeon) < DISCOVER_DUNGEON:
 		dungeon_found = true
 		message.emit("Entrée du donjon découverte !\n[F] pour affronter le boss quand tu es prêt", 3.5)
@@ -257,7 +284,8 @@ func _interact(it: Interactable) -> void:
 			tower.interact(it)
 		"chest":
 			# une clé si on en a, sinon le prix en or (qui monte à chaque coffre ouvert)
-			var price := chest_price()
+			var tier := int(it.get_meta("tier", 0))
+			var price := chest_price(tier)
 			var how := ""
 			if Profile.keys > 0:
 				Profile.keys -= 1
@@ -266,17 +294,21 @@ func _interact(it: Interactable) -> void:
 				Profile.gold -= price
 				how = "%d or" % price
 			else:
-				message.emit("Ce coffre coûte %d or (ou une clé)\nTu as %d or" % [price, Profile.gold], 2.5)
+				message.emit("%s : %d or (ou une clé)\nTu as %d or" % [it.title.get_slice(" ·", 0), price, Profile.gold], 2.5)
 				_near = null
 				return
 			Profile.changed.emit()
 			it.open_chest()
 			chests_opened += 1
 			Profile.record_add("chests", 1)
-			_drop_consumable(it.global_position, _monster_level(1), 2 if state == "rage" else 1)
-			message.emit("Coffre ouvert (%s)" % how, 1.5)
-			world._offer("Coffre ouvert ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
+			var def: Dictionary = CHEST_TIERS[tier]
+			for i in int(def.supplies) + (1 if state == "rage" else 0):
+				_drop_consumable(it.global_position, _monster_level(1), tier)
+			message.emit("%s ouvert (%s)" % [it.title.get_slice(" ·", 0), how], 1.5)
+			world._offer("%s : choisis une pièce d'équipement" % it.title.get_slice(" ·", 0), gear_cards(3, tier), func(): return gear_cards(3, tier))
 			_refresh_chest_labels()
+		_ when Interactable.STATION_VERBS.has(it.kind):
+			_use_station(it)
 		"dungeon":
 			# le bot de test (--boss-after) ignore les sceaux
 			if seals < SEALS_NEEDED and not (player.autoplay and time > _autoplay_dungeon_time()):
@@ -459,6 +491,10 @@ func _spawn_monster(id: int, pos: Vector3, level: int, boss := false) -> Monster
 		m.max_hp *= k
 		m.hp = m.max_hp
 		m.atk *= k
+	if greed and not boss:
+		m.max_hp *= GREED_MONSTERS
+		m.hp = m.max_hp
+		m.atk *= GREED_MONSTERS
 	add_child(m)
 	m.global_position = pos + Vector3.UP * 0.4
 	m.rotation.y = randf() * TAU
@@ -523,7 +559,7 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		message.emit("Clé obtenue (%d)" % Profile.keys, 1.8)
 		if m.carries_seal:
 			world._offer("Gardien vaincu ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
-	Run.add_gold(2 + m.level * (3 if m.is_elite else 1))
+	Run.add_gold(roundi((2 + m.level * (3 if m.is_elite else 1)) * (GREED_GOLD if greed else 1.0)))
 	# coffres de récompense (ouverts hors run) : boss, parfois les élites, rarement les autres
 	# coffres de récompense (seule source des mythiques et légendaires) : boss du donjon 100 %,
 	# élites 20 %, monstres 0,5 %
@@ -552,7 +588,7 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 	elif m.is_elite:
 		count = 1
 		luck = 0.3
-	elif randf() < (0.08 if m.enraged else 0.05):
+	elif randf() < (0.08 if m.enraged else 0.05) * (GREED_GOLD if greed else 1.0):
 		count = 1
 	if m.enraged:
 		luck += 0.2
@@ -807,21 +843,203 @@ func fog_texture() -> Texture2D:
 	return null if state in ["boss", "cleared"] else _fog_tex
 
 
+# --- objets cassables, coffres d'équipement, lieux utilisables ------------------------------
+func _update_breakables(delta: float) -> void:
+	if Run.anvil_result != "":
+		message.emit("Enclume : %s" % Run.anvil_result, 2.5)
+		Run.anvil_result = ""
+	_touch_timer -= delta
+	if _touch_timer > 0.0 or map.breakables == null or player.is_dead:
+		return
+	_touch_timer = 0.08
+	map.breakables.touch(player.global_position)
+
+
+## Objet cassé : or, un peu d'expérience, parfois des soins, une fourniture ou une clé ;
+## cristal : des gemmes.
+func _on_broken(kind: String, pos: Vector3) -> void:
+	var lv := player.level
+	Profile.record_add("breakables", 1)
+	if kind == "gem":
+		for i in randi_range(1, 2):
+			var tier := clampi(lv / 8 + randi_range(0, 1), 0, Craft.GEM_TIERS.size() - 1)
+			_drop_loot(pos, Craft.loot_item(Craft.gem_key(Craft.GEMS.keys().pick_random(), tier)))
+		message.emit("Cristal brisé : des gemmes !", 1.5)
+		return
+	var g: Array = BREAK_GOLD.get(kind, [1, 2])
+	var gold := roundi(randi_range(int(g[0]), int(g[1])) * (1.0 + lv * 0.25) * (GREED_GOLD if greed else 1.0))
+	if gold > 0:
+		Run.add_gold(gold)
+		DamageNumber.spawn_text(player, "+%d or" % gold, Color(1.0, 0.85, 0.3))
+	if kind == "gold":
+		return
+	if orbs:
+		orbs.spawn(pos, 1.0 + lv * 0.5)
+	if randf() < BREAK_HEAL and player.hp < player.max_hp:
+		player.heal(player.max_hp * 0.1)
+		DamageNumber.spawn_text(player, "+PV", Color(0.5, 1.0, 0.55))
+	if randf() < float(BREAK_SUPPLY.get(kind, 0.0)) * (GREED_GOLD if greed else 1.0):
+		_drop_consumable(pos, _monster_level(0), 0)
+	if randf() < BREAK_KEY:
+		Profile.keys += 1
+		Profile.changed.emit()
+		message.emit("Une clé dans les débris ! (%d)" % Profile.keys, 1.8)
+
+
+func _drop_loot(pos: Vector3, item: Dictionary) -> void:
+	var drop := LootDrop.new()
+	drop.item = item
+	drop.on_picked = func(it): message.emit("Butin : %s" % it.name, 1.5)
+	add_child(drop)
+	var p := pos + Vector3(randf_range(-1.2, 1.2), 0, randf_range(-1.2, 1.2))
+	var gr: Vector3 = map.ground_at(p.x, p.z)
+	drop.global_position = (gr if gr != Vector3.INF else pos) + Vector3.UP * 0.2
+
+
+## Choix d'équipement d'un coffre de la carte de qualité [param tier].
+func gear_cards(n: int, tier: int) -> Array:
+	var def: Dictionary = CHEST_TIERS[clampi(tier, 0, CHEST_TIERS.size() - 1)]
+	var out: Array = []
+	for i in n:
+		var it := Items.generate(loot_level(player.level + 1), float(def.luck), "", Run.class_id, int(def.min_r), "", int(def.max_r))
+		out.append(item_card(it, "gear"))
+	return out
+
+
+## Carte de choix pour l'objet [param it] : stats, set, passif, comparaison avec la pièce portée.
+static func item_card(it: Dictionary, type: String) -> Dictionary:
+	var lines: PackedStringArray = []
+	var st := Items.stats(it)
+	for k in st:
+		if lines.size() >= 6:
+			break
+		if absf(float(st[k])) > 0.0001:
+			lines.append(Items.stat_text(String(k), st[k]))
+	if it.has("set"):
+		lines.append("[color=#66f28c]Set : %s[/color]" % String(Items.set_def(String(it.set)).get("name", it.set)))
+	var pv: Dictionary = it.get("passive", {})
+	if String(pv.get("desc", "")) != "":
+		lines.append("[color=#ffd36b]%s[/color]" % pv.desc)
+	var cmp := Items.compare_to_equipped(it)
+	var cmp_txt := "[color=#7dff8a]Emplacement libre[/color]" if cmp >= 1.0 else ("[color=#7dff8a]▲ +%d %%[/color] sur ta pièce" % roundi(cmp * 100.0)
+		if cmp > 0.005 else ("[color=#ff8a7d]▼ %d %%[/color] sur ta pièce" % roundi(cmp * 100.0) if cmp < -0.005 else "Comme ta pièce"))
+	var r := clampi(int(it.get("rarity", 0)), 0, Items.RARITIES.size() - 1)
+	return {"type": type, "id": String(it.get("uid", "")), "item": it, "title": Items.display_name(it),
+		"subtitle": "%s · %s · niv. %d" % [Items.SLOT_NAMES.get(it.slot, it.slot), Items.RARITIES[r].name, int(it.get("level", 0))],
+		"desc": cmp_txt + "\n" + "\n".join(lines), "icon": String(it.get("icon", "")), "color": Items.color_of(it)}
+
+
+## Enclume : l'arme et les 3 pièces portées les moins améliorées (pas au maximum).
+func anvil_cards() -> Array:
+	var pieces: Array = []
+	for slot in Profile.equipped:
+		var it: Dictionary = Profile.equipped[slot]
+		if int(it.get("upgrade", 0)) < Items.MAX_UPGRADE:
+			pieces.append(it)
+	pieces.sort_custom(func(a, b): return (a.slot == "weapon" and b.slot != "weapon") or (a.slot == b.slot) or \
+		((a.slot == "weapon") == (b.slot == "weapon") and int(a.get("upgrade", 0)) < int(b.get("upgrade", 0))))
+	var out: Array = []
+	for it: Dictionary in pieces.slice(0, 4):
+		var up := int(it.get("upgrade", 0))
+		var c := item_card(it, "anvil")
+		c["slot"] = String(it.slot)
+		c["subtitle"] = "%s · +%d → +%d" % [Items.SLOT_NAMES.get(it.slot, it.slot), up, up + 1]
+		c["desc"] = ("[color=#7dff8a]Palier +%d : stat bonus en plus[/color]\n" % (up + 1) if (up + 1) in Items.MILESTONES else "Stats de l'objet +10 %\n") + \
+			"\n".join(String(c.desc).split("\n").slice(1))
+		out.append(c)
+	return out
+
+
+## Autel du scribe : parchemins d'enchantement du niveau de la carte, au choix.
+func scroll_cards(n: int) -> Array:
+	var slv := maxi(1, Craft.scroll_level_for(loot_level(player.level + 2)))
+	var types: Array = Craft.ENCHANTS.keys()
+	types.shuffle()
+	var out: Array = []
+	for t in types.slice(0, n):
+		var key := Craft.scroll_key(String(t), slv)
+		out.append({"type": "scroll", "id": key, "key": key, "title": Craft.label(key), "subtitle": "Parchemin d'enchantement",
+			"desc": Craft.describe_key(key), "icon": Craft.icon(key), "color": Color(0.6, 0.75, 1.0)})
+	return out
+
+
+func _use_station(it: Interactable) -> void:
+	match it.kind:
+		"anvil":
+			var cards := anvil_cards()
+			if cards.is_empty():
+				message.emit("Rien à forger : équipe une pièce (au plus +%d)" % Items.MAX_UPGRADE, 2.5)
+				return
+			it.use_up()
+			world._offer("Enclume : +1 garanti sur une pièce portée", cards)
+		"scribe":
+			it.use_up()
+			world._offer("Autel du scribe : choisis un parchemin d'enchantement", scroll_cards(3))
+		"well":
+			it.use_up()
+			player.heal(player.max_hp)
+			Vfx.ring(player, player.global_position, 3.0, Color(0.5, 1.0, 0.7, 0.9))
+			message.emit("Fontaine de vie : PV au maximum", 2.0)
+		"magnet":
+			it.use_up()
+			_on_instant_card("recall")
+		"greed":
+			it.use_up()
+			greed = true
+			world.set_rage_mood(state == "rage")
+			message.emit("Pacte de cupidité : +50 % d'or et de butin\\nles monstres sont plus forts (+25 %)", 3.5)
+		"challenge":
+			it.use_up()
+			_start_challenge(it.global_position)
+
+
+## Défi : une escouade d'élites (et leurs gardes) surgit ; les vaincre donne un coffre de
+## récompense (mythiques et légendaires, menu Coffres) et des fournitures.
+func _start_challenge(c: Vector3) -> void:
+	var lvl := _monster_level(2)
+	var elites: Array = []
+	for i in 3:
+		var a := TAU * i / 3.0
+		var p := _around(c + Vector3(cos(a), 0, sin(a)) * 7.0, 2.0)
+		var m: Monster = _spawn_monster(_elites.pick_random() if not _elites.is_empty() else _pick_monster(lvl), p, lvl)
+		if _elites.is_empty():
+			m.max_hp *= 4.0
+			m.hp = m.max_hp
+		elites.append(m)
+	for i in mini(6, _room()):
+		_spawn_monster(_pick_monster(lvl), _around(c, 9.0), lvl)
+	_challenges.append({"pos": c, "elites": elites})
+	message.emit("DÉFI : abats les 3 élites !", 2.5)
+
+
+func _update_challenges() -> void:
+	for ch in _challenges.duplicate():
+		if not (ch.elites as Array).all(func(m): return not is_instance_valid(m) or m.is_dead):
+			continue
+		_challenges.erase(ch)
+		_drop_reward_chest(ch.pos, _monster_level(2), false)
+		for i in 2:
+			_drop_consumable(ch.pos, _monster_level(1), 2)
+		Run.add_gold(roundi((40 + 12 * player.level) * (GREED_GOLD if greed else 1.0)))
+		message.emit("Défi réussi ! Coffre de récompense et fournitures", 3.0)
+
+
 ## Lieux connus à afficher sur la mini-carte : [position, type].
 func markers() -> Array:
 	var out: Array = []
 	if state in ["boss", "cleared"]:
 		return out
 	for k in _found:
-		if is_instance_valid(k) and k is Interactable:
-			out.append([k.global_position, "merchant"])
+		if is_instance_valid(k) and k is Interactable and not k.used:
+			out.append([k.global_position, "merchant" if k.kind == "merchant" else k.kind])
 		elif is_instance_valid(k) and k is Shrine and not k.captured:
 			out.append([k.global_position, "shrine"])
 	if dungeon_found:
 		out.append([map.dungeon, "dungeon"])
 	for it in map.interactables:
 		if is_instance_valid(it) and it.kind == "chest" and not it.used and _flat(player.global_position, it.global_position) < DISCOVER_CHEST * 3.0:
-			out.append([it.global_position, "chest"])
+			var tier := int(it.get_meta("tier", 0))
+			out.append([it.global_position, "chest" if tier == 0 else "chest%d" % tier])
 	return out
 
 
@@ -865,16 +1083,17 @@ func debug_start_rage() -> void:
 
 
 # --- coffres payants, sanctuaires, marchands ambulants --------------------------------------
-## Prix du prochain coffre de la carte (monte à chaque coffre ouvert).
-func chest_price() -> int:
-	return (CHEST_BASE + 2 * (player.level if player else 1)) * int(pow(2, mini(chests_opened, 20)))
+## Prix du prochain coffre de la carte de qualité [param tier] (monte à chaque coffre ouvert).
+func chest_price(tier := 0) -> int:
+	var base := float(CHEST_BASE + 3 * (player.level if player else 1)) * float(CHEST_TIERS[clampi(tier, 0, 2)].price)
+	return roundi(base * pow(CHEST_GROWTH, mini(chests_opened, 60)))
 
 
 func _refresh_chest_labels() -> void:
-	var t := "Coffre · %d or ou 1 clé" % chest_price()
 	for it in map.interactables:
 		if is_instance_valid(it) and it.kind == "chest" and not it.used:
-			it.set_title(t)
+			var tier := int(it.get_meta("tier", 0))
+			it.set_title("%s · %d or ou 1 clé" % [ProcMap.CHEST_LOOKS[tier].title, chest_price(tier)])
 
 
 ## Zones à capturer : rester dans le cercle sous la pression des monstres.

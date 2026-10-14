@@ -420,17 +420,7 @@ static func upgrade(item: Dictionary, stone := "", scroll := "") -> Dictionary:
 	var protect := stone != "" or scroll == BLESSED
 	var target := int(item.get("upgrade", 0)) + 1
 	if randf() < chance:
-		item.upgrade = target
-		if not target in Items.MILESTONES:
-			# entre les paliers : +10 % des stats de l'objet, pas de stat bonus
-			return {"ok": true, "stat": "", "value": 0.0, "text": "Réussite ! +%d : stats de l'objet +10 %%" % target}
-		var roll := _upgrade_roll(item, target)
-		var rolls: Array = item.get("up_rolls", [])
-		rolls.append(roll)
-		item["up_rolls"] = rolls
-		var shown := float(roll[1]) * (1.0 if String(roll[0]) in Items.PERCENT_STATS else pow(1.08, Items.power_level(item) - 1))
-		return {"ok": true, "stat": roll[0], "value": shown,
-			"text": "Réussite ! +%d : stat bonus %s" % [target, Items.stat_text(roll[0], shown)]}
+		return _upgrade_success(item, target)
 	if target >= DOWNGRADE_FROM and not protect and int(item.upgrade) > 0:
 		var lost := int(item.upgrade)
 		item.upgrade = lost - 1
@@ -443,6 +433,28 @@ static func upgrade(item: Dictionary, stone := "", scroll := "") -> Dictionary:
 		return {"ok": false, "text": "Échec… l'objet redescend à +%d." % int(item.upgrade)}
 	var saved := protect and target >= DOWNGRADE_FROM
 	return {"ok": false, "text": "Échec. %s" % (("%s a protégé l'objet." % ("Le parchemin béni" if stone == "" else label(stone))) if saved else "L'objet est intact.")}
+
+
+## Amélioration réussie d'office (enclume de la carte) : +1 sans parchemin ni or, sans risque.
+static func upgrade_free(item: Dictionary) -> Dictionary:
+	var target := int(item.get("upgrade", 0)) + 1
+	if target > Items.MAX_UPGRADE:
+		return {"ok": false, "text": "Déjà +%d" % Items.MAX_UPGRADE}
+	return _upgrade_success(item, target)
+
+
+static func _upgrade_success(item: Dictionary, target: int) -> Dictionary:
+	item.upgrade = target
+	if not target in Items.MILESTONES:
+		# entre les paliers : +10 % des stats de l'objet, pas de stat bonus
+		return {"ok": true, "stat": "", "value": 0.0, "text": "Réussite ! +%d : stats de l'objet +10 %%" % target}
+	var roll := _upgrade_roll(item, target)
+	var rolls: Array = item.get("up_rolls", [])
+	rolls.append(roll)
+	item["up_rolls"] = rolls
+	var shown := float(roll[1]) * (1.0 if String(roll[0]) in Items.PERCENT_STATS else pow(1.08, Items.power_level(item) - 1))
+	return {"ok": true, "stat": roll[0], "value": shown,
+		"text": "Réussite ! +%d : stat bonus %s" % [target, Items.stat_text(roll[0], shown)]}
 
 
 ## Stat bonus aléatoire gagnée au palier +[param target] (+4, +6, +8, +10) : [stat, valeur au

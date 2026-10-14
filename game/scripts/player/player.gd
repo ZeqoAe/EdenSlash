@@ -1086,6 +1086,8 @@ func _resolve_area(action: Dictionary, origin: Vector3, fwd: Vector3, is_skill: 
 		if action.get("echo", false):
 			col = Color(0.75, 0.5, 1.0, 0.9)
 		Vfx.slash(self, origin, fwd, radius, arc, col)
+	if not foe and action.get("kind", "") != "buff":
+		get_tree().call_group("breakables", "hit_area", origin, fwd, radius, arc)  # jarres, caisses, cristaux
 	var targets: Array = []
 	for node in foes():
 		var m := node as Combatant

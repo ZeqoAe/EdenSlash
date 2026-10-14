@@ -131,8 +131,17 @@ les trophées et les sorts se combinent aux cartes de la run, c'est la boucle re
 | **Points d'expertise** | fin de run | maîtrise de la classe (talents, sorts, certificats) | gardés |
 | **Archive et trésors de collection** | mythiques / légendaires archivés, boss | bonus permanents, apparences | gardés |
 
-**Sur la carte** (512 × 512 m) : 10 **coffres** payants (25 or + 2 par niveau, **prix doublé à chaque coffre ouvert**,
-ou une clé) qui donnent un choix de cartes ; 10 **sanctuaires** à capturer (rester 14 s dans
+**Sur la carte** (512 × 512 m, refonte 0.1.90 façon Megabonk) : plus de **1 000 objets à casser**
+(jarres, caisses, tonneaux : or, un peu d'XP, parfois des soins, une fourniture ou une clé ; tas d'or
+ramassés en passant ; cristaux à briser en 3 coups : des gemmes), **24 lieux de décor** (ruines, tours de
+guet, arches, ossements, mines, campements, marchés), **8 plateaux** (et cuvettes) avec un trésor en haut,
+un réseau de sentiers ; **30 coffres** payants (or ou clé, +15 % à chaque coffre ouvert) en 3 qualités qui
+proposent **une pièce d'équipement au choix parmi 3** : coffre (spécial → épique), coffre ouvragé (rare →
+mythique, ×2,5), coffre doré (épique → légendaire, ×6, pilier de lumière) ; des **lieux à usage unique**
+(pilier de lumière) : 3 **enclumes** (+1 garanti sur une pièce portée), 2 **autels du scribe** (parchemin
+d'enchantement au choix), 3 **fontaines de vie**, 2 **pierres d'aimant** (toute l'XP et le butin), 1 **autel de
+cupidité** (+50 % d'or et de butin, monstres +25 %), 2 **stèles du défi** (3 élites : coffre de récompense
+mythique / légendaire et fournitures). Ancien fonctionnement : 10 coffres à prix doublé, choix de cartes ; 10 **sanctuaires** à capturer (rester 14 s dans
 le cercle pendant que les monstres affluent ; hors du cercle la capture redescend) : cartes,
 trophées ou clés ; 3 **marchands ambulants** qui se promènent (cartes, clé, fournitures,
 équipement, rachat du butin, fabrication) ; les **élites** donnent une clé, les gardiens des
