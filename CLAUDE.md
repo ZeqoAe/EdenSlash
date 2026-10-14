@@ -20,6 +20,10 @@ y 112-452 recadrée en 960×320 dans `assets/ui/activities/`) ; un clic ouvre la
 (réglages puis Lancer). Une activité nouvelle : une entrée dans `Activities.LIST`, son image, sa page
 dans `lobby.gd` (`_show_menu`). La boucle de jeu (équipement choisi pour le JcJ, débloqué en JcE) est
 en cours de refonte avec le joueur dans une autre session.
+Survie refondue (0.1.123 à 0.1.125, décisions dans `DESIGN.md`, « Boucle de jeu et Survie ») :
+époques (`core/epochs.gd`), coffres d'emplacement (`core/slot_chests.gd`), enclume par emplacement
+(`Run.slot_bonus`), départ sans équipement (`Run.start_survival`), Collection > Armurerie
+(`ui/gear_shop_page.gd`, `Profile.seen_gear`, `Profile.insignia`).
 
 ## Branche
 Tout se passe sur la branche `claude/optimistic-gauss-p2g2pq`. Ne pas travailler sur `master`.
