@@ -326,7 +326,7 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 	if not dot and has_status("sleep"):
 		statuses.erase("sleep")  # un coup réveille
 		statuses_changed.emit()
-	DamageNumber.spawn(self, dmg, crit, team == Team.PLAYER)
+	DamageNumber.spawn(self, dmg, crit, team == Team.PLAYER, dot)
 	if source and source.team == Team.PLAYER and team != Team.PLAYER and Run.active:
 		Run.add_combo_damage(dmg)
 	_on_damaged(dmg, source)

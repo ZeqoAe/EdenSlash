@@ -186,6 +186,9 @@ func _refresh_status_label() -> void:
 	for st in statuses:
 		if STATUS_INFO.has(st) and not String(st).begins_with("imm_") and has_status(st):
 			shown.append(st)
+	# monstres ordinaires : la teinte suffit (en horde, un nom au-dessus de chacun noie l'écran)
+	if not (is_elite or is_boss):
+		shown = []
 	var parts: PackedStringArray = []
 	for st in shown.slice(0, 2):
 		parts.append(STATUS_INFO[st].name)

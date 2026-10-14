@@ -6,6 +6,10 @@ extends Label3D
 
 const STACK_WINDOW := 0.6  # s : un texte plus récent que ça pousse le suivant vers le haut
 const STACK_STEP := 0.42  # m entre deux textes empilés
+const SAME_TEXT_GAP := 0.5  # s : le même texte sur la même cible ne se répète pas avant
+const MAX_ALIVE := 45  # au-delà, seuls les critiques et les dégâts subis par le héros s'affichent
+
+static var alive := 0
 
 
 ## Hauteur d'empilement pour un nouveau texte sur [param target] (et le note).
@@ -31,6 +35,12 @@ static func spawn_text(target: Node3D, text: String, color: Color) -> void:
 		return
 	if not target.is_inside_tree():
 		return
+	var now := Time.get_ticks_msec() / 1000.0
+	var last: Dictionary = target.get_meta("dn_last", {})
+	if now - float(last.get(text, -10.0)) < SAME_TEXT_GAP:
+		return  # « ESQUIVE ! » en rafale : un seul
+	last[text] = now
+	target.set_meta("dn_last", last)
 	var label := DamageNumber.new()
 	label.text = text
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -49,7 +59,7 @@ static func spawn_text(target: Node3D, text: String, color: Color) -> void:
 	tw.chain().tween_callback(label.queue_free)
 
 
-static func spawn(target: Node3D, amount: float, crit: bool, on_player: bool) -> void:
+static func spawn(target: Node3D, amount: float, crit: bool, on_player: bool, dot := false) -> void:
 	if Vfx.silent:
 		return
 	if not target.is_inside_tree():
@@ -57,14 +67,16 @@ static func spawn(target: Node3D, amount: float, crit: bool, on_player: bool) ->
 	var mode := String(Settings.get_v("interface", "damage_numbers"))
 	if mode == "off" or (mode == "dealt" and on_player) or (mode == "crit" and not crit and not on_player):
 		return
+	if alive >= MAX_ALIVE and not crit and not on_player:
+		return  # mêlée dense : l'écran reste lisible
 	var label := DamageNumber.new()
 	label.text = str(int(amount)) + ("!" if crit else "")
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
 	label.fixed_size = true
 	label.pixel_size = 0.0011
-	label.font_size = 54 if crit else 36
-	label.outline_size = 14
+	label.font_size = 54 if crit else (24 if dot else 36)
+	label.outline_size = 14 if not dot else 9
 	label.outline_modulate = Color(0.1, 0.05, 0.1)
 	if on_player:
 		label.modulate = Color(1.0, 0.35, 0.35)
@@ -72,7 +84,11 @@ static func spawn(target: Node3D, amount: float, crit: bool, on_player: bool) ->
 		label.modulate = Color(1.0, 0.82, 0.2)
 	else:
 		label.modulate = Color(1.0, 1.0, 1.0)
+	if dot:
+		label.modulate.a = 0.7  # effets sur la durée : discrets
 	target.get_tree().current_scene.add_child(label)
+	alive += 1
+	label.tree_exiting.connect(func(): alive -= 1)
 	var side := randf_range(-1.0, 1.0)
 	var jitter := Vector3(side * 0.45, 0.0, randf_range(-0.2, 0.2))
 	label.global_position = target.global_position + Vector3.UP * 2.0 + jitter
