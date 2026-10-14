@@ -1,0 +1,268 @@
+classe;sort;id;type;rayon_zone;arc;fx_cast;ratio_cast_avant;ratio_cast_apres;fx_hit;ratio_hit_avant;ratio_hit_apres;verdict_avant;verdict_apres
+samurai;Coup sec;50016;cone;3.0;120;s10621;1.56;0.95;s10641;2.24;2.24;déborde;déborde
+samurai;Coups résonnants;50017;flurry;3.0;150;s10721;4.46;2.23;s10741;1.07;1.07;déborde;déborde
+samurai;Frappe furieuse;50020;flurry;3.0;150;s11021;1.69;0.95;s11041;1.22;1.22;déborde;ok
+samurai;Hirondelle déchue;50181;dash;2.6;120;s36021;2.20;1.10;s36041;1.89;1.89;déborde;déborde
+samurai;Vent solaire;50182;spin;4.0;360;s36421;3.35;1.67;s36441;0.37;0.37;déborde;déborde
+samurai;Entaille en croix;50183;cone;4.0;120;s36121;3.35;1.67;s36141;0.92;0.92;déborde;déborde
+samurai;Purgatoire;50184;fan;10.0;90;s123421;1.25;0.95;;0.00;0.00;ok;ok
+samurai;Danse des grues;50185;flurry;3.5;160;s36621;1.91;0.96;s36241;2.36;2.36;déborde;déborde
+samurai;Langue de Marduk;50186;cone;3.5;70;s36521;1.34;0.95;s36541;1.11;1.11;ok;ok
+samurai;Lame d'Asura;50187;fan;10.0;90;s123321;1.25;0.95;;0.00;0.00;ok;ok
+samurai;Estoc;50188;line;8.0;25;s36821;1.51;0.95;s36841;0.64;0.64;ok;ok
+warrior;Impact profond;50011;cone;3.6;120;s10121;1.25;0.95;s10141;0.28;0.28;ok;ok
+warrior;Coup destructeur;50012;cone;3.4;80;s10221;2.28;1.14;s10241;1.08;1.08;déborde;ok
+warrior;Cyclone de combat;50015;spin;4.2;360;s10521;1.80;0.95;s10541;0.87;0.87;ok;ok
+warrior;Attaque sanglante;50036;cone;3.6;140;s12621;1.86;0.95;s12641;1.28;1.28;déborde;ok
+warrior;Poing de colère;50037;dash;2.8;120;s12721;2.25;1.13;s12741;2.31;2.31;déborde;déborde
+warrior;Provocation;50013;spin;6.5;360;s10321;0.77;0.95;s10341;0.37;0.37;ok;ok
+warrior;Intimidation;50042;spin;7.0;360;s13221;0.71;0.95;;0.00;0.00;ok;ok
+warrior;Ruée;50038;dash;2.8;120;;0.00;0.00;;0.00;0.00;sans effet;sans effet
+warrior;Provocation de groupe;50151;spin;10.0;360;s33021;0.57;0.77;s33041;0.24;0.24;ok;ok
+warrior;Lacération;60053;spin;6.0;360;s101321;0.73;0.95;s100941;0.21;0.21;ok;ok
+thief;Attaque éclair;50057;dash;2.4;120;s14621;3.30;1.65;s14641;1.82;1.82;déborde;déborde
+thief;Embuscade;50058;cone;3.0;70;s14721;2.23;1.12;s14741;1.38;1.38;déborde;ok
+thief;Confinement mortel;50059;cone;3.2;120;s14821;1.30;0.95;s14841;1.15;1.15;ok;ok
+thief;Pas de l'ombre;50061;blink;3.0;360;s15021;1.43;0.95;;0.00;0.00;ok;ok
+thief;Entailles cruelles;50157;cone;3.2;100;s33621;4.23;2.11;s33641;1.36;1.36;déborde;déborde
+thief;Brise-garde;60056;cone;3.0;90;s123721;1.91;0.95;s10641;2.24;2.24;déborde;déborde
+hunter;Bombe flash;50082;ground;4.0;360;;0.00;0.00;s17141;1.19;0.95;ok;ok
+hunter;Pluie empoisonnée;50164;ground;6.0;360;s34321;2.23;1.12;s34341;0.36;0.55;trop petit;ok
+cleric;Séisme;50026;ground;4.0;360;s11621;0.81;0.95;s11641;0.74;0.95;ok;ok
+cleric;Tornade;50027;spin;4.5;360;s11721;0.69;0.94;s11741;0.87;0.87;ok;ok
+cleric;Châtiment sacré;50103;ground;5.0;360;s99999;0.00;0.00;s19241;0.73;0.95;ok;ok
+cleric;Rayonnement guérisseur;50109;heal;5.0;360;s19821;1.08;1.08;;0.00;0.00;ok;ok
+cleric;Marteau de discipline;50169;ground;5.0;360;s14121;0.95;0.95;;0.00;0.00;ok;ok
+magician;Bombe de feu;50031;ground;3.5;360;s12121;1.76;0.95;s12141;0.98;0.95;déborde;ok
+magician;Frisson de l'hiver;50033;cone;7.0;70;s12321;0.52;0.70;s12341;0.62;0.62;ok;ok
+magician;Toile d'éclairs;50032;ground;5.0;360;s12221;0.49;0.67;s12241;0.73;0.95;trop petit;ok
+magician;Feu de l'enfer;50127;ground;5.0;360;s21621;0.49;0.67;s21641;0.64;0.95;trop petit;ok
+magician;Tempête de neige;50128;ground;6.0;360;s99999;0.00;0.00;s21741;0.53;0.80;ok;ok
+magician;Saut dimensionnel;50035;blink;3.0;360;s12521;1.19;0.95;s12541;1.38;1.38;ok;ok
+magician;Effondrement des résistances;50130;ground;6.0;360;s21921;0.71;0.95;s21941;0.75;0.95;ok;ok
+magician;Réaction de fusion;50176;ground;7.0;360;s35521;1.71;0.95;s35541;0.46;0.69;trop petit;ok
+bard;Métal brûlant;50111;ground;6.0;360;s20021;0.78;0.95;s20041;0.21;0.31;trop petit;trop petit
+bard;Musique de vie;50112;heal;4.0;360;s20121;1.07;1.07;s20141;0.92;0.92;ok;ok
+bard;Symphonie démoniaque;50113;heal;8.0;360;s20221;0.20;0.20;s20241;0.37;0.37;ok;ok
+bard;Mélodie exaltée;50114;heal;8.0;360;s20321;0.29;0.29;s20341;0.24;0.24;ok;ok
+bard;Hymne guerrier;50115;heal;8.0;360;s20421;0.29;0.29;s20441;0.24;0.24;ok;ok
+bard;Chant d'illusion;50116;heal;8.0;360;s20521;0.31;0.31;s20541;0.27;0.27;ok;ok
+bard;Concerto sacré;50172;heal;8.0;360;s35121;0.95;0.95;s35141;0.52;0.52;ok;ok
+knight;Attaque continue;50043;flurry;3.4;150;s13321;3.94;1.97;s13341;0.71;0.71;déborde;déborde
+knight;Tempête du jugement;50044;spin;4.5;360;s13521;1.56;0.95;s13541;0.81;0.81;ok;ok
+knight;Sceau des lames;50045;spin;6.0;360;s13621;1.32;0.95;s13641;0.44;0.44;ok;ok
+engineer;Débogage;50087;heal;4.0;360;s17621;0.45;0.45;s17641;0.97;0.97;ok;ok
+engineer;Réglages mécaniques;50089;heal;4.0;360;s17821;0.54;0.54;;0.00;0.00;ok;ok
+engineer;Bombe d'huile;50090;ground;4.5;360;s99999;0.00;0.00;s17941;0.49;0.73;trop petit;ok
+engineer;Poudre noire;50091;ground;4.5;360;s99999;0.00;0.00;s18021;2.88;1.44;ok;ok
+engineer;Bombe gluante;50092;ground;4.5;360;s99999;0.00;0.00;s18141;0.49;0.73;trop petit;ok
+engineer;Armure d'acier;50093;spin;4.5;360;s18221;0.91;0.95;;0.00;0.00;ok;ok
+engineer;Destruction par missiles;50165;ground;4.5;360;s99999;0.00;0.00;s34441;0.33;0.49;trop petit;trop petit
+martial_artist;Coup dévastateur;50064;cone;3.4;90;s15321;1.32;0.95;s15341;1.51;1.51;ok;ok
+martial_artist;Répression;50065;cone;3.4;90;s15421;1.43;0.95;s15441;1.08;1.08;ok;ok
+martial_artist;Assaut chargé;50066;dash;2.8;120;;0.00;0.00;;0.00;0.00;sans effet;sans effet
+martial_artist;Rugissement de vajra;50067;cone;3.4;90;s109521;1.43;0.95;s13541;1.08;1.08;ok;ok
+martial_artist;Cicatrice spirituelle;50070;cone;3.4;90;s15921;1.85;0.95;s15941;2.43;2.43;déborde;déborde
+illusionist;Œil hypnotique;50135;ground;6.0;360;s22421;1.18;0.95;s22441;0.21;0.31;trop petit;trop petit
+illusionist;Frénésie du bouffon;50139;spin;4.5;360;s22821;0.65;0.88;;0.00;0.00;ok;ok
+illusionist;Retour du temps;50140;ground;4.0;360;s22921;0.55;0.75;s15021;1.29;0.95;ok;ok
+illusionist;Aérolithe;50178;ground;4.5;360;s35721;0.97;0.95;s35741;0.81;0.95;ok;ok
+blade_dancer;Superstar;50071;flurry;3.4;150;s16021;1.61;0.95;s16041;1.08;1.08;déborde;ok
+blade_dancer;Lame dansante;50072;spin;4.5;360;s16121;1.85;0.95;s16141;0.81;0.81;ok;ok
+blade_dancer;Charme éclatant;50073;spin;6.0;360;s16221;0.44;0.60;;0.00;0.00;trop petit;ok
+blade_dancer;Danse de l'oiseau de feu;50161;spin;4.5;360;s34021;1.89;0.95;s34041;0.71;0.71;ok;ok
+blade_dancer;Danse hypnotique;60058;spin;4.5;360;s102921;0.81;0.95;s102921;0.97;0.97;ok;ok
+shaman;Rage des tempêtes;50119;ground;4.5;360;s20821;0.95;0.95;;0.00;0.00;ok;ok
+shaman;Gouttes du ciel;50123;heal;7.5;360;s21221;0.41;0.41;;0.00;0.00;ok;ok
+shaman;Cyclone verdoyant;50124;ground;6.0;360;s20721;0.68;0.92;s38331;1.20;0.95;ok;ok
+shaman;Bénédiction de la nature;50125;heal;6.0;360;s20921;0.34;0.34;s20941;0.90;0.90;ok;ok
+shaman;Arbre de vie;50174;heal;4.0;360;s35321;0.63;0.63;;0.00;0.00;ok;ok
+shaman;Rappel;50173;heal;4.0;360;s35221;0.81;0.81;s35241;0.66;0.66;ok;ok
+templar;Impact du jugement;50051;spin;4.5;360;s14221;1.69;0.95;s14241;0.76;0.76;ok;ok
+templar;Coup de bouclier;50052;cone;3.4;90;s127021;1.85;0.95;s14341;1.08;1.08;déborde;ok
+templar;Avènement céleste;50053;heal;4.5;360;s14421;0.65;0.65;;0.00;0.00;ok;ok
+templar;Lumière de soin;50055;heal;4.0;360;s24421;0.72;0.72;s24441;0.86;0.86;ok;ok
+templar;Lumière protectrice;50056;heal;4.5;360;s24521;0.64;0.64;s24541;0.71;0.71;ok;ok
+templar;Marteau du tonnerre;50156;spin;4.5;360;s33521;0.59;0.80;s33541;0.76;0.76;ok;ok
+ranger;Pluie d'étoiles filantes;50095;ground;6.0;360;s18421;0.75;0.95;s18441;0.61;0.92;ok;ok
+warlock;Parasite des ténèbres;50143;ground;4.0;360;s23221;2.58;1.29;s23241;0.59;0.88;déborde;ok
+warlock;Menaces de mort;50145;ground;4.5;360;s23421;2.66;1.33;s23441;0.66;0.95;ok;ok
+warlock;Porteur de peste;50179;ground;4.0;360;s23221;2.58;1.29;;0.00;0.00;déborde;ok
+sage;Marteau guérisseur;50424;cone;3.6;140;s43821;1.25;0.95;s43841;0.71;0.71;ok;ok
+sage;Marteau d'inspiration;50425;cone;3.6;140;s43921;1.30;0.95;s43941;0.71;0.71;ok;ok
+sage;Aura : protection du marteau;50426;heal;4.0;360;s44021;1.67;1.67;;0.00;0.00;ok;ok
+sage;Aura : singularité;50430;spin;4.5;360;s44421;1.88;0.95;;0.00;0.00;ok;ok
+sage;Courage inébranlable;50431;heal;4.5;360;s44521;1.94;1.94;s44541;0.54;0.54;ok;ok
+sage;Fracas terrestre;50432;spin;4.5;360;s44621;2.73;1.37;s44641;0.90;0.90;ok;ok
+sage;Arrivée bénie;60057;heal;4.0;360;s43821;1.12;1.12;s11841;1.79;1.79;ok;ok
+dragon_knight;Écaille inversée;50444;spin;4.5;360;s52721;1.49;0.95;s52941;0.43;0.43;ok;ok
+dragon_knight;Coup de queue du drake;50445;cone;3.4;90;s52421;2.45;1.22;s52641;1.15;1.15;déborde;ok
+dragon_knight;Dévoreur infernal;50446;fan;7.0;90;s52721;0.96;0.95;s52941;0.28;0.28;ok;ok
+dragon_knight;Embuscade du croc;50448;spin;4.5;360;s53521;2.93;1.47;s53741;0.54;0.54;ok;ok
+dragon_knight;Taille de l'aile;50449;fan;7.0;90;s53821;0.78;0.95;s54041;0.35;0.35;ok;ok
+dragon_knight;Forme du drake furtif;50452;heal;4.0;360;s54521;1.63;1.63;;0.00;0.00;ok;ok
+dragon_knight;Flamme noire cachée;50453;ground;4.5;360;s114021;3.08;1.54;s54041;0.54;0.81;ok;ok
+luminary;Destruction de l'aurore;50463;ground;4.0;360;s56921;5.18;2.59;;0.00;0.00;déborde;déborde
+luminary;Lumière éclatante;50464;spin;6.0;360;s57221;0.44;0.60;s57341;1.40;1.40;trop petit;ok
+luminary;Taille noire;50467;flurry;3.4;150;s57921;1.55;0.95;s00541;0.44;0.44;ok;ok
+luminary;Formation du silence;50468;ground;4.5;360;s58021;1.89;0.95;;0.00;0.00;ok;ok
+luminary;Croix d'ombre;50469;ground;4.0;360;s58221;2.06;1.03;;0.00;0.00;déborde;ok
+luminary;Porte des ténèbres;50470;ground;4.5;360;s58421;0.55;0.74;;0.00;0.00;ok;ok
+inquisitor;Chaîne d'âme;50943;fan;7.0;90;s117121;1.67;0.95;s00141;0.52;0.52;ok;ok
+inquisitor;Garrot;50944;spin;4.5;360;s117221;1.88;0.95;s101341;0.49;0.49;ok;ok
+inquisitor;Impact infernal;50945;ground;4.5;360;s117321;1.63;0.95;s110541;0.71;0.95;ok;ok
+inquisitor;Spirale perçante;50946;ground;6.0;360;s117421;0.88;0.95;s00141;0.61;0.92;ok;ok
+inquisitor;Flammes jumelles;50947;ground;4.0;360;s117521;1.63;0.95;s00141;0.92;0.95;déborde;ok
+inquisitor;Dévastation;50948;ground;4.0;360;s117621;1.48;0.95;s110541;0.80;0.95;ok;ok
+berserker;Frappe frénétique;50687;cone;3.4;90;s100121;1.76;0.95;s101341;0.64;0.64;déborde;ok
+berserker;Coup en pleine face;50688;cone;3.4;90;s100321;2.45;1.22;s19241;1.08;1.08;déborde;ok
+berserker;Bousculade;50689;dash;2.8;120;s100521;3.20;1.60;s18041;1.14;1.14;déborde;déborde
+berserker;Survie désespérée;50691;spin;4.0;360;s100921;1.48;0.95;s100941;0.31;0.31;ok;ok
+berserker;Colère;50693;ground;4.0;360;s101321;1.09;0.95;s101341;0.55;0.82;ok;ok
+berserker;Cœur ébranlé;50694;spin;6.0;360;s101521;1.26;0.95;;0.00;0.00;ok;ok
+shielder;Frappe tenace;50695;cone;3.6;140;s100221;2.06;1.03;s52641;1.08;1.08;déborde;ok
+shielder;Coup provocant;50696;cone;3.4;90;s100421;4.42;2.21;s10241;1.08;1.08;déborde;déborde
+shielder;Interception;50697;dash;2.8;120;s100621;1.23;0.95;;0.00;0.00;ok;ok
+shielder;Corps du titan;50698;spin;4.5;360;s100821;1.27;0.95;;0.00;0.00;ok;ok
+shielder;Volonté sans fin;50702;spin;4.5;360;s25721;2.50;1.25;s10141;0.23;0.23;ok;ok
+arch_elementalist;Tornade de flammes;50766;spin;4.5;360;s107521;1.17;0.95;s21641;0.71;0.71;ok;ok
+arch_elementalist;Vent polaire du nord;50767;ground;7.5;360;s107721;0.94;0.95;s21741;0.43;0.64;trop petit;ok
+arch_elementalist;Chaos élémentaire;50769;ground;4.0;360;s22021;0.81;0.95;s108121;2.26;1.13;déborde;ok
+arch_elementalist;Dragon à neuf têtes;50774;fan;7.5;90;s109121;2.02;1.01;s52641;0.52;0.52;ok;ok
+stormcaster;Tourbillon des ailes;50777;ground;4.5;360;;0.00;0.00;s21541;0.81;0.95;ok;ok
+stormcaster;Attraction vers le bas;50779;spin;7.5;360;;0.00;0.00;s12241;0.49;0.49;ok;ok
+trainer;Bandage de bête;50856;heal;4.0;360;;0.00;0.00;s113641;0.86;0.86;ok;ok
+trainer;Marque de chasse;50857;ground;4.0;360;;0.00;0.00;s113741;1.03;0.95;ok;ok
+devil_hunter;Marque de tir;50867;ground;4.0;360;;0.00;0.00;s114541;1.23;0.95;ok;ok
+devil_hunter;Salve ininterrompue;50868;ground;4.0;360;;0.00;0.00;s114641;1.03;0.95;ok;ok
+devil_hunter;Posture de sniper;50874;spin;4.5;360;s115221;0.91;0.95;;0.00;0.00;ok;ok
+adjudicator;Frappe d'examen;50876;heal;4.0;360;;0.00;0.00;s11841;1.79;1.79;ok;ok
+adjudicator;Pluie de météores sacrés;50877;ground;6.0;360;s115521;0.87;0.95;;0.00;0.00;ok;ok
+adjudicator;Feu divin;50878;heal;4.0;360;s115621;0.63;0.63;s115641;0.66;0.66;ok;ok
+adjudicator;Lumière de vérité;50882;heal;7.5;360;s116021;0.72;0.72;;0.00;0.00;ok;ok
+equilibrian;Venue de la lumière;50885;ground;4.5;360;s116321;0.49;0.66;;0.00;0.00;trop petit;ok
+equilibrian;Faux silencieuse;50886;ground;6.0;360;s116421;1.50;0.95;;0.00;0.00;ok;ok
+equilibrian;Écriture du désespoir;50888;ground;4.5;360;s116621;0.64;0.86;;0.00;0.00;ok;ok
+assassin;Coup d'ombre;56001;dash;2.8;120;s123721;2.04;1.02;s101341;0.78;0.78;déborde;ok
+assassin;Égorgement;56002;cone;3.4;90;s123821;0.78;0.95;s110541;0.94;0.94;ok;ok
+assassin;Entailles mortelles;56003;flurry;3.4;150;s123921;1.97;0.98;s101341;0.64;0.64;déborde;ok
+assassin;Assassinat silencieux;56004;spin;4.5;360;s124021;0.81;0.95;;0.00;0.00;ok;ok
+assassin;Marche nocturne;56007;spin;4.5;360;s124321;0.64;0.86;;0.00;0.00;ok;ok
+kage;Ombre : lien mortel;56016;cone;3.4;90;s125021;3.73;1.86;s125051;0.30;0.30;déborde;déborde
+kage;Corps : cyclone;56017;spin;4.5;360;s125121;1.72;0.95;s01041;0.49;0.49;ok;ok
+kage;Insecte : nid;56020;spin;4.5;360;s125421;0.79;0.95;s125441;0.38;0.38;ok;ok
+battlefield_poet;Métal sombre;50704;ground;6.0;360;s105921;0.46;0.61;s105941;0.25;0.37;trop petit;trop petit
+battlefield_poet;Tonnerre entrelacé;50710;ground;6.0;360;s107121;3.22;1.61;s107151;0.33;0.49;trop petit;trop petit
+life_worshipper;Notes explosives;50711;heal;8.0;360;s105821;0.25;0.25;s105841;0.24;0.24;ok;ok
+life_worshipper;Chant de lumière;50712;heal;8.0;360;s106021;0.27;0.27;s106041;0.16;0.16;ok;ok
+life_worshipper;Suite de vie;50713;heal;4.0;360;s106221;0.76;0.76;s106241;0.43;0.43;ok;ok
+life_worshipper;Mouvement d'assaut;50714;heal;8.0;360;s106421;0.80;0.80;s106441;0.16;0.16;ok;ok
+life_worshipper;Mélodie légère;50715;heal;8.0;360;s106621;0.43;0.43;s106641;0.27;0.27;ok;ok
+life_worshipper;Voix du tonnerre;50718;ground;4.5;360;s107221;1.52;0.95;s00641;0.28;0.42;trop petit;trop petit
+executioner;Estoc sanguinaire;50809;flurry;3.4;150;s111021;1.43;0.95;s14641;1.28;1.28;ok;ok
+executioner;Riposte de sang;50810;spin;4.5;360;s111221;2.72;1.36;s111241;0.59;0.59;ok;ok
+executioner;Lame de sang;50811;ground;4.5;360;s112021;1.47;0.95;s55741;0.38;0.57;trop petit;ok
+executioner;Estoc à la main;50817;dash;2.8;120;s112621;1.16;0.95;s13541;1.31;1.31;ok;ok
+glacier_knight;Estoc de glace;50818;cone;3.4;90;s111121;1.61;0.95;s14641;1.28;1.28;déborde;ok
+glacier_knight;Estoc tournoyant;50819;spin;4.5;360;s111321;2.76;1.38;s13541;0.81;0.81;ok;ok
+glacier_knight;Limite de l'épée de glace;50820;spin;4.5;360;s111521;1.31;0.95;;0.00;0.00;ok;ok
+glacier_knight;Estoc à la cheville;50826;cone;3.4;90;s112721;0.92;0.95;s13541;1.08;1.08;ok;ok
+mecha_ares;Poing d'acier;50737;ground;4.5;360;s103321;0.77;0.95;s103341;2.74;1.37;ok;ok
+mecha_ares;Rayon gamma;50739;ground;4.0;360;s103721;4.79;2.40;s00541;0.37;0.56;déborde;déborde
+mecha_ares;Missiles automatiques;50740;spin;4.5;360;s103921;0.64;0.86;;0.00;0.00;ok;ok
+mecha_ares;Mine lancée;50741;ground;6.0;360;s99999;0.00;0.00;s18541;0.57;0.86;ok;ok
+mecha_ares;Anéantissement total;50744;spin;6.0;360;s105521;1.72;0.95;s18041;0.53;0.53;ok;ok
+annihilator;Tir concentré;50746;ground;4.0;360;s103421;3.75;1.88;s54041;0.60;0.91;déborde;déborde
+annihilator;Balles multicolores;50750;spin;4.5;360;s17421;0.49;0.66;;0.00;0.00;trop petit;ok
+annihilator;Canon satellite;50753;ground;7.5;360;s105621;0.27;0.36;s17541;0.58;0.87;trop petit;trop petit
+asura;Poing plongeant;50827;cone;3.4;90;s109521;1.43;0.95;s13541;1.08;1.08;ok;ok
+asura;Puissance du poing;50829;cone;3.4;90;s15421;1.43;0.95;s17141;1.40;1.40;ok;ok
+asura;Poing du tyran;50831;dash;2.8;120;;0.00;0.00;s13541;1.31;1.31;ok;ok
+asura;Brise-roi;50837;cone;3.4;90;s110021;1.01;0.95;s14641;1.28;1.28;ok;ok
+rakshasa;Ruée d'impact;50838;dash;2.8;120;;0.00;0.00;s13541;1.31;1.31;ok;ok
+rakshasa;Vague du dragon de feu;50839;fan;7.0;90;;0.00;0.00;s53441;0.35;0.35;ok;ok
+rakshasa;Poing de l'ombre du dragon;50840;dash;2.8;120;s103421;5.36;2.68;s110541;1.14;1.14;déborde;déborde
+rakshasa;Canon de l'âme du dragon;50844;dash;2.8;120;;0.00;0.00;s21641;1.14;1.14;ok;ok
+rakshasa;Concentration;50845;spin;4.0;360;;0.00;0.00;s15441;0.92;0.92;ok;ok
+demon_tamer;Appel des chimères;56053;spin;4.5;360;;0.00;0.00;;0.00;0.00;sans effet;sans effet
+demon_tamer;Asservissement;56058;ground;4.0;360;s120521;0.50;0.68;;0.00;0.00;ok;ok
+demon_tamer;Chute des chimères;56062;ground;4.0;360;s35721;1.09;0.95;s35741;0.92;0.95;ok;ok
+demon_tamer;Tempête des chimères;56063;spin;4.0;360;;0.00;0.00;s36041;1.23;1.23;ok;ok
+chronologist;Ralentissement temporel;56070;ground;4.5;360;s12321;0.81;0.95;s22341;1.02;0.95;ok;ok
+chronologist;Hypnose temporelle;56071;ground;4.0;360;s22421;1.77;0.95;s22441;0.31;0.47;déborde;trop petit
+chronologist;Illusion du temps;56072;ground;4.0;360;s22821;0.73;0.95;s22841;0.74;0.95;ok;ok
+blade_acrobat;Posture de star;50719;cone;3.4;90;s101721;0.86;0.95;s16041;1.08;1.08;ok;ok
+blade_acrobat;Danse d'épées;50720;spin;4.0;360;s16121;2.08;1.04;s16141;0.92;0.92;déborde;ok
+blade_acrobat;Rythme charmeur;50721;spin;6.0;360;s102121;0.73;0.95;s102141;0.49;0.49;ok;ok
+blade_acrobat;Envoûtement;50723;spin;6.0;360;s102521;0.79;0.95;;0.00;0.00;ok;ok
+blade_acrobat;Danse de la nuit noire;50726;ground;6.0;360;s103121;0.91;0.95;;0.00;0.00;ok;ok
+elegant_dancer;Pas étincelants;50731;spin;6.0;360;s102221;1.18;0.95;;0.00;0.00;ok;ok
+elegant_dancer;Danse de la colombe;50733;ground;4.0;360;s102621;0.00;0.00;;0.00;0.00;ok;ok
+druid;Art vaudou;56079;ground;4.0;360;;0.00;0.00;s00941;0.86;0.95;ok;ok
+druid;Frappe des ancêtres;56081;ground;4.5;360;s20721;0.91;0.95;s21411;0.73;0.95;ok;ok
+druid;Source de vie;56083;heal;4.0;360;s52021;0.59;0.59;;0.00;0.00;ok;ok
+druid;Protection de la nature;56086;spin;4.5;360;;0.00;0.00;s36141;0.81;0.81;ok;ok
+druid;Pouvoir de métamorphose;56087;ground;4.0;360;s101621;0.86;0.95;s10221;2.32;1.16;déborde;ok
+archimage;Contre-attaque de l'élu;56096;ground;6.0;360;s00541;0.21;0.28;s107441;0.44;0.66;trop petit;trop petit
+dawnbreaker;Vol de force;56025;spin;4.5;360;s125821;0.91;0.95;s00741;0.71;0.71;ok;ok
+dawnbreaker;Taille de sang;56026;ground;4.0;360;s57031;1.63;0.95;s00441;0.86;0.95;déborde;ok
+dawnbreaker;Taille démoniaque;56027;spin;4.8;360;s127121;1.19;0.95;s115441;0.44;0.44;ok;ok
+dawnbreaker;Taille puissante;56028;dash;2.8;120;s126221;0.95;0.95;s123141;0.86;0.86;ok;ok
+dawnbreaker;Renaissance du sang;56030;ground;4.5;360;s126521;0.92;0.95;s57341;1.87;0.95;ok;ok
+paladin;Protection de lumière;56035;heal;4.0;360;s126821;0.72;0.72;s126841;0.86;0.86;ok;ok
+paladin;Marteau du châtiment;56037;cone;3.4;90;s127021;1.85;0.95;s11641;0.87;0.87;déborde;ok
+paladin;Marteau de justice;56038;spin;4.5;360;s127121;1.27;0.95;s115441;0.47;0.47;ok;ok
+paladin;Marteau de tonnerre;56039;ground;4.5;360;s127221;0.59;0.80;s122141;0.76;0.95;ok;ok
+paladin;Coup de bouclier furieux;56040;cone;3.4;90;s127321;1.43;0.95;s114941;1.08;1.08;ok;ok
+absolute_arrow;Absolu : âme brisée;56111;fan;7.0;90;s37721;3.31;1.65;s36841;0.74;0.74;ok;ok
+absolute_arrow;Absolu : rafale;56115;cone;6.0;140;s15221;1.32;0.95;s17941;0.36;0.36;ok;ok
+holy_arrow;Flèche pure;56119;ground;4.5;360;s125921;0.92;0.95;s14141;1.09;0.95;ok;ok
+holy_arrow;Frappe d'Amaterasu;56120;ground;4.5;360;s126821;0.64;0.86;s38531;0.81;0.95;ok;ok
+holy_arrow;Désarmement céleste;56121;fan;7.0;90;s126321;0.55;0.74;s123241;0.38;0.38;ok;ok
+holy_arrow;Assaut de lumière céleste;56122;ground;4.5;360;s100121;1.33;0.95;s00541;0.33;0.49;trop petit;trop petit
+dark_envoy;Marque de mort;50897;ground;4.0;360;;0.00;0.00;s119741;0.43;0.64;trop petit;ok
+dark_envoy;Venue de la mort;50905;ground;4.5;360;s120521;0.45;0.60;;0.00;0.00;trop petit;ok
+conjurer;Explosion de foudre;50915;ground;4.0;360;s121521;1.07;0.95;;0.00;0.00;ok;ok
+conjurer;Dragon de foudre;50917;ground;4.5;360;s121721;1.13;0.95;;0.00;0.00;ok;ok
+conjurer;Tonnerre hanté;50918;ground;4.5;360;s121821;0.72;0.95;s00541;0.33;0.49;trop petit;trop petit
+blade_master;Pas de jade;50921;dash;2.8;120;s122121;3.48;1.74;s122141;1.23;1.23;déborde;déborde
+blade_master;Esprit vide;50922;flurry;3.4;150;s122221;0.78;0.95;s36441;0.44;0.44;ok;ok
+blade_master;Retour de l'hirondelle;50923;flurry;3.4;150;s122321;1.13;0.95;s36141;1.08;1.08;ok;ok
+blade_master;Miroir limpide;50924;flurry;3.4;150;s122421;1.97;0.98;s36241;2.43;2.43;déborde;déborde
+blade_master;Sabre du rêve;50925;cone;3.4;90;s122521;0.75;0.95;s36441;0.44;0.44;ok;ok
+master_fencer;Souffle suspendu;50932;spin;4.5;360;s42821;0.72;0.95;;0.00;0.00;ok;ok
+master_fencer;Nouvelle lune;50933;cone;3.6;140;s123021;0.69;0.93;s123041;0.67;0.67;ok;ok
+master_fencer;Croissant de lune;50934;cone;3.6;140;s36421;3.72;1.86;s123141;0.67;0.67;déborde;déborde
+master_fencer;Pleine lune;50935;cone;3.6;140;s36821;3.36;1.68;s123241;0.74;0.74;déborde;déborde
+master_fencer;Éclipse;50936;fan;7.0;90;s123321;1.78;0.95;s36441;0.21;0.21;ok;ok
+master_fencer;Lune et ombre;50937;fan;7.0;90;s123421;1.78;0.95;s36441;0.21;0.21;ok;ok
+master_fencer;Éclair de l'aube;50939;spin;6.0;360;s123621;0.78;0.95;s10541;0.61;0.61;ok;ok
+psalmist;Marteau de l'archange;56131;cone;3.4;90;s43921;1.38;0.95;;0.00;0.00;ok;ok
+psalmist;Marteau aux six ailes;56132;cone;3.4;90;s10621;1.38;0.95;;0.00;0.00;ok;ok
+orator;Marteau céleste;56139;cone;4.5;140;s100321;1.85;0.95;;0.00;0.00;ok;ok
+orator;Marteau démoniaque;56140;dash;2.8;120;s100221;2.65;1.32;;0.00;0.00;déborde;ok
+orator;Marteau du premier roi;56141;cone;4.5;140;s10121;1.00;0.95;;0.00;0.00;ok;ok
+dragon_soul;Fureur du dragon divin;56153;cone;6.0;140;s56221;1.22;0.95;s55841;0.49;0.49;ok;ok
+dragon_soul;Terreur du dragon de feu;56154;cone;6.0;140;s54321;1.22;0.95;s43841;0.43;0.43;ok;ok
+dragon_soul;Souffle destructeur;56155;cone;4.5;140;s52821;1.99;1.00;s52641;0.87;0.87;ok;ok
+dragon_soul;Retour du dragon caché;56156;dash;2.8;120;s119221;1.88;0.95;s15341;1.84;1.84;déborde;déborde
+dragon_rider;Lance dans l'âme;56163;ground;6.0;360;s35521;1.99;1.00;s34841;0.40;0.60;trop petit;ok
+dragon_rider;Taille du roi dragon;56164;ground;4.5;360;s52421;1.85;0.95;s40341;0.87;0.95;ok;ok
+dragon_rider;Hurlement terrifiant;56165;ground;4.5;360;;0.00;0.00;s34041;0.71;0.95;ok;ok
+black_blade;Taille de l'enfer;56179;ground;4.5;360;s121121;1.42;0.95;;0.00;0.00;ok;ok
+black_blade;Taille du démon;56180;ground;4.5;360;s41821;0.40;0.55;s38841;0.23;0.34;trop petit;trop petit
+black_blade;Taille sombre;56181;ground;4.5;360;s118821;2.57;1.29;s114841;0.38;0.57;trop petit;ok
+black_blade;Brise-démon;56182;ground;4.5;360;s118321;1.04;0.95;s114641;0.92;0.95;ok;ok
+light_blade;Sanctuaire;56187;ground;4.5;360;s54821;0.55;0.74;s48522;0.92;0.95;ok;ok
+light_blade;Jour saint;56189;ground;4.5;360;s42421;0.72;0.95;s39451;0.87;0.95;ok;ok
+light_blade;Taille du démon sacré;56191;ground;4.5;360;s40021;1.29;0.95;s39841;0.76;0.95;ok;ok
+light_blade;Frappe céleste;56193;ground;4.5;360;s117621;1.31;0.95;s114041;0.54;0.81;ok;ok
+reaver;Destination finale;50951;dash;2.8;120;s118521;1.67;0.95;s123041;0.86;0.86;déborde;ok
+reaver;Chaîne de fureur;50953;spin;6.0;360;s119621;1.56;0.95;s118021;1.05;1.05;ok;ok
+reaver;Faux de la mort;50955;dash;2.8;120;s118921;2.04;1.02;s123041;0.86;0.86;déborde;ok
+reaver;Moisson des âmes;50957;cone;3.6;140;s118221;3.02;1.51;s23141;1.50;1.50;déborde;ok
+rifleteer;Taille sans peur;50960;spin;4.5;360;s118821;2.57;1.29;s101341;0.49;0.49;ok;ok
+rifleteer;Entrave d'ombre;50963;ground;4.0;360;s119121;1.48;0.95;s00141;0.92;0.95;ok;ok
+rifleteer;Champ du jugement;50965;ground;4.5;360;s119321;1.01;0.95;;0.00;0.00;ok;ok
+rifleteer;Balle-faux;50966;ground;6.0;360;s119321;0.76;0.95;;0.00;0.00;ok;ok
+rifleteer;Sanction d'anéantissement;50969;ground;4.5;360;s119321;1.01;0.95;;0.00;0.00;ok;ok

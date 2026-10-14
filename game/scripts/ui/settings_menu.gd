@@ -478,6 +478,7 @@ func _build_camera_tab() -> void:
 	var who := [["all", "Tout afficher"], ["dim_others", "Atténuer ceux des autres héros"], ["hide_others", "Masquer ceux des autres héros"],
 		["hide_mine", "Masquer les miens"], ["hide_all", "Tout masquer (les miens et ceux des autres)"]]
 	_option(v, "Effets de sorts et d'impacts des héros", "interface", "fx_spells", who)
+	_slider(v, "Intensité des effets de sorts (opacité et éclat : plus d'impact)", "interface", "fx_intensity", 0.5, 1.6, 0.05, func(x): return "%d %%" % roundi(x * 100))
 	_option(v, "Auras de skin (pierres étoilées, auras de collection…)", "interface", "fx_auras", who)
 	_option(v, "Étincelles, poussière et éclairs d'impact", "interface", "fx_particles", [
 		["all", "Tous"], ["reduced", "Réduits (moitié)"], ["off", "Aucun"]])

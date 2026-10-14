@@ -111,7 +111,7 @@ const DEFAULTS := {
 	# dev_mode : écran de test (F10), réservé aux tests
 	"interface": {"damage_numbers": "all", "hit_stop": true, "show_fps": false, "move_marker": true, "attack_zone": false, "dev_mode": false,
 		"tower_unlock_all": true, "perfect_hint": true, "pad_labels": "auto",
-		"fx_spells": "all", "fx_auras": "all", "fx_particles": "all"},
+		"fx_spells": "all", "fx_auras": "all", "fx_particles": "all", "fx_intensity": 1.0},
 }
 
 ## Modes de jeu prêts à l'emploi (réglages du menu Contrôles).

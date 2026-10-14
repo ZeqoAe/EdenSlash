@@ -52,7 +52,7 @@ static func play(parent: Node, name: String, pos: Vector3, yaw := 0.0, scale_ :=
 	var fx := EdenFx.new()
 	fx.fx_name = name
 	fx.follow = p_follow
-	fx.alpha_mul = k
+	fx.alpha_mul = k * float(Settings.get_v("interface", "fx_intensity"))  # impact visuel réglable
 	parent.get_tree().current_scene.add_child(fx)
 	fx.global_transform = Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * scale_), pos)
 	if p_follow:
@@ -109,6 +109,47 @@ static func attach_aura_ids(parent: Node3D, ids: Array, scale_ := 1.0, dark := f
 		var x: Dictionary = GameData.collection_by_id.get(int(id), {})
 		if x.has("aura"):
 			attach(parent, String(x.aura.fx), scale_, dark, p_tint)
+
+
+static var _radii := {}
+static var _radii_loaded := false
+
+
+## Rayon du cœur visible de l'effet [param name] à l'échelle 1 (m), mesuré par tools/fx_measure.tscn (data/fx_radius.json) :
+## il sert à mettre l'effet à la taille de la zone d'un sort (voir [method fit_scale]) ; 0 si inconnu.
+static func native_radius(name: String) -> float:
+	if not _radii_loaded:
+		_radii_loaded = true
+		var path := "res://data/fx_radius.json"
+		if FileAccess.file_exists(path):
+			var d = JSON.parse_string(FileAccess.get_file_as_string(path))
+			if d is Dictionary:
+				_radii = d
+	return float(_radii.get(name, 0.0))
+
+
+## Échelle à donner à l'effet [param name] pour qu'il couvre un rayon de [param zone_radius] (m), (le cœur de l'effet remplit la zone) :
+## bornée entre [param lo] et [param hi] fois [param base] (l'échelle d'origine du jeu) pour qu'un effet mal mesuré
+## ne devienne jamais minuscule ni énorme.
+static func fit_scale(name: String, zone_radius: float, base: float, lo := 0.6, hi := 1.6) -> float:
+	var r := native_radius(name)
+	if r <= 0.01 or zone_radius <= 0.01:
+		return base
+	return clampf(zone_radius * 0.95 / r, base * lo, base * hi)
+
+
+## Échelle de l'effet d'incantation [param fx_name] du sort [param skill] posé sur le héros : mis à la taille de
+## la zone de dégâts [param radius] (ce qu'on voit = ce qu'on touche), ni plus petit que la moitié ni plus grand
+## que 1,35 fois l'échelle d'origine. Renforts et soins (pas de zone) gardent l'échelle d'origine.
+static func cast_scale(fx_name: String, skill: Dictionary, radius: float) -> float:
+	if String(skill.get("kind", "")) in ["buff", "heal"]:
+		return GameData.HERO_SCALE
+	return fit_scale(fx_name, radius, GameData.HERO_SCALE, 0.5, 1.35)
+
+
+## Échelle de l'effet d'impact [param fx_name] d'une zone au sol de rayon [param radius].
+static func hit_scale(fx_name: String, radius: float) -> float:
+	return fit_scale(fx_name, radius, GameData.HERO_SCALE * 1.2, 0.5, 1.5)
 
 
 static func _load(name: String) -> bool:

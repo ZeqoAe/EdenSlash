@@ -1184,7 +1184,7 @@ func _resolve_hit() -> void:
 			a["arc"] = 360.0
 			var at: Vector3 = _action.get("target", global_position)
 			Vfx.ring(self, at, float(_action.radius), Color(1.0, 0.6, 0.3, 0.9))
-			EdenFx.play(self, String(_action.get("hit_fx", "")), at, rotation.y, GameData.HERO_SCALE * 1.2)
+			EdenFx.play(self, String(_action.get("hit_fx", "")), at, rotation.y, EdenFx.hit_scale(String(_action.get("hit_fx", "")), float(_action.radius)))
 			hit = _resolve_area(a, at, forward(), is_skill)
 		_:
 			hit = _resolve_area(_action, global_position, forward(), is_skill)
@@ -1217,7 +1217,7 @@ func _cast_land(action: Dictionary) -> void:
 	var first: Combatant = null
 	for pt: Vector3 in action.get("points", [action.get("target", global_position)]):
 		Vfx.ring(self, pt, float(action.radius), Color(0.6, 0.75, 1.0, 0.9))
-		EdenFx.play(self, String(action.get("hit_fx", "")), pt, rotation.y, GameData.HERO_SCALE * 1.2)
+		EdenFx.play(self, String(action.get("hit_fx", "")), pt, rotation.y, EdenFx.hit_scale(String(action.get("hit_fx", "")), float(action.radius)))
 		var h := _resolve_area(action, pt, forward(), false)
 		if first == null:
 			first = h
@@ -1856,7 +1856,7 @@ func _cast_skill(s: Dictionary, slot: int, step: int, forced_aim := Vector3.INF)
 	recalc_stats()
 	var fx: Dictionary = s.get("fx", {})
 	action["hit_fx"] = String(fx.get("hit", "")) if String(fx.get("hit", "")) != "" else "s00341"
-	EdenFx.play(self, String(fx.get("cast", "")), global_position, rotation.y, GameData.HERO_SCALE, self)
+	EdenFx.play(self, String(fx.get("cast", "")), global_position, rotation.y, EdenFx.cast_scale(String(fx.get("cast", "")), s, skill_radius(s)), self)
 	_begin_action("skill", String(s.anim), 1.15 * (cast_speed if action.dmg_type == "mag" else atk_speed), action)
 	_skill_lock_until = _time + _state_len * 0.92 + SKILL_RECOVERY
 

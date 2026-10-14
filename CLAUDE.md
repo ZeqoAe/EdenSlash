@@ -89,6 +89,12 @@ en Mythique). Ruée des boss (0.1.152) : « zone » `Dungeons.RUSH` du moteur de
 entre deux, soin partiel ; cristaux à chaque boss, coffre d'équipement + d'apparence (1re fois) et titre à la fin (`Dungeons.rush_reward`) ; débloquée
 avec les Donjons. Tests : `test_lot17` (restes), `test_lot18` (panoplies, fabrication, Ruée).
 Restes : Épreuves de maîtrise (moteur de leçons), signatures de famille, images des activités et des fiches (session locale).
+Idées en vrac du joueur (15/10, 0.1.153 à 0.1.158, classement et état dans `conception/IDEES_EN_VRAC.md`) : options de lisibilité des effets
+(`Settings.fx_factor`, jamais les zones d'attaque), Roulette quotidienne (`core/wheel.gd`, Coffres > Roulette), puissance d'équipement
+(`core/gear_power.gd` : verrous Héroïque / Mythique des donjons et butin légendaire), potions (`core/potions.gd`, touches C / V), Forge unifiée
+(`ui/forge_bench.gd`, Atelier > Forge), file d'attente du Duel (`ui/duel_queue.gd`), effets de sorts mis à la taille de leur zone
+(`EdenFx.cast_scale`, `data/fx_radius.json` par `tools/fx_measure.tscn`). Reste : Trio PvE puis PvP, Battle royale, MOBA 4v4 (conçus dans le
+même fichier, pas codés), les 39 sorts de `conception/fx_audit.csv`, « Triple lame ».
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

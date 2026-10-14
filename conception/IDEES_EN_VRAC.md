@@ -14,7 +14,7 @@ puis classée par **priorité** (apport au jeu) et **facilité** (travail et ris
 | 4 | Potions | Moyenne | Moyenne | Brique indispensable au Battle royale et au Trio ; utile en Survie et en donjon | **Fait (0.1.155)** : 4 potions, touches C / V (au lieu de 2 emplacements équipés) |
 | 5 | Forge unifiée (améliorer, démonter, enchanter, gemmes, polir, réforger) avec animations | Haute | Moyenne | La logique existe déjà (`Craft`, `Forge`) : il manque la page unique et le ressenti | **Fait (0.1.156)** : Atelier > Forge (`ui/forge_bench.gd`) |
 | 6 | File d'attente du Duel (recherche, match trouvé, draft 60 s, récap 10 s) | Haute | Moyenne | Beaucoup d'écrans mais peu de règles nouvelles ; prépare le chargement et un vrai en ligne | **Fait (0.1.157)** : `ui/duel_queue.gd` (Duel libre, Ligue, Panthéon ; pas les Arènes ni le Gantelet) |
-| 7 | Lisibilité des sorts : texture = zone = effet | Très haute | Difficile (itératif, à l'œil) | Le plus gros gain pour le JcJ, mais demande des captures et des allers-retours | Audit outillé + premier lot ; la suite demande ton œil |
+| 7 | Lisibilité des sorts : texture = zone = effet | Très haute | Difficile (itératif, à l'œil) | Le plus gros gain pour le JcJ, mais demande des captures et des allers-retours | **Premier lot fait (0.1.158)** : audit outillé, effets ajustés à leur zone, intensité réglable ; reste à faire avec ton œil : les 39 sorts de `conception/fx_audit.csv`, et « Triple lame » |
 | 8 | Trio PvE puis PvP (5 vagues, boss sac à PV, zone qui bascule en JcJ) | Haute | Difficile | Réutilise donjons, alliés IA et ciblage par camp ; nouveaux : vagues, boss long, bascule | Conçu, à coder (après 1 à 7) |
 | 9 | Battle royale (spawn aléatoire, coffres de loot, potions) | Haute | Difficile | Besoin de la PE, des potions et d'adversaires IA nombreux ; carte à zone réduite | Conçu, à coder |
 | 10 | MOBA 4v4 | Moyenne | Très difficile | Voies, tours, sbires, objectifs : un jeu à part entière | Conçu, très long terme |
@@ -177,3 +177,27 @@ difficile ; une fois vaincu, la zone devient un JcJ à trois, le survivant gagne
 sbires par vagues, 2 tours par voie, un nexus ; niveau de partie (PX communs), or des sbires pour acheter 6 objets dans
 une boutique de base ; l'IA de camp joue des rôles (assassin, soutien…). C'est un projet d'au moins dix lots : on ne le
 code qu'une fois 8 et 9 en place (ils fournissent les camps multiples, les vagues et le ciblage).
+
+
+---
+
+## État du chantier « lisibilité des sorts » (0.1.158)
+**Fait**
+- `tools/fx_measure.tscn` : mesure le rayon du cœur de chacun des 598 effets d'Eden des sorts (rendu de dessus et de côté,
+  pixels allumés, 80 % de la masse) dans `data/fx_radius.json` (à relancer si de nouveaux effets sont convertis ; demande un
+  rendu, pas de `--headless`).
+- `EdenFx.cast_scale` et `hit_scale` : l'effet d'incantation et l'effet d'impact d'une zone sont mis à la taille de la zone
+  de dégâts (entre 0,5 et 1,35 fois l'échelle d'origine pour l'incantation, 0,5 à 1,5 pour l'impact), pour le héros et pour
+  l'adversaire scripté. Les renforts et les soins gardent leur échelle.
+- `tools/fx_audit.tscn` : sorts « qui débordent » ou « trop petits » avant et après (82 avant, 39 après) ; la liste est dans
+  `conception/fx_audit.csv`.
+- `tools/fx_sheet.tscn -- --class=<classe>` : planche « avant / après » de chaque sort avec sa zone en rouge, pour juger à l'œil.
+- Réglage **Intensité des effets de sorts** (50 à 160 %, 100 % par défaut) dans Paramètres, pour le ressenti d'impact.
+
+**À faire (demande ton œil, session locale)**
+- Les 39 sorts restants du CSV : ceux où même l'échelle bornée ne suffit pas (effet de cérémonie sur une petite zone,
+  ou l'inverse). Deux choix par sort : changer l'effet (autre modèle d'Eden de la même couleur) ou changer la zone.
+- **« Triple lame »** (idée du joueur) : un sort du samouraï, trois explosions alignées devant lui (0,7 m, 2,2 m, 3,8 m),
+  0,12 s entre chacune, chacune une vraie zone de dégâts qui projette en l'air. Il manque côté moteur : un état « en l'air »
+  pour les monstres (aujourd'hui seuls renversement et étourdissement existent) et un type de sort « salve » qui pose
+  plusieurs zones en ligne (le type `cast` des armes le fait déjà : `_cast_land` pose une liste de points).

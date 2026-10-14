@@ -585,7 +585,8 @@ func _start_attack() -> void:
 	var yaw := atan2(to.x, to.z)
 	face_direction(to, 1.0, 100.0)
 	if not sk.is_empty():
-		EdenFx.play(self, String(sk.get("fx", {}).get("cast", "")), global_position, yaw, GameData.HERO_SCALE, self)
+		var cast_fx := String(sk.get("fx", {}).get("cast", ""))
+		EdenFx.play(self, cast_fx, global_position, yaw, EdenFx.cast_scale(cast_fx, sk, float(sk.get("radius", 0.0))), self)
 	for snd in keys.get("sounds", []):
 		get_tree().create_timer(float(snd[0]) / speed, false).timeout.connect(func():
 			if _state == "attack":
@@ -612,7 +613,7 @@ func _start_attack() -> void:
 	if kind == "dash":
 		_pending_dash = to.normalized() * minf(to.length(), maxf(rng, 6.0))
 	var fx: Variant = act.get("fx")
-	_cur = {"hit_fx": String(act.get("hit_fx", fx.get("hit", "s00141") if fx is Dictionary else "s00141")), "at": at, "yaw": yaw}
+	_cur = {"hit_fx": String(act.get("hit_fx", fx.get("hit", "s00141") if fx is Dictionary else "s00141")), "at": at, "yaw": yaw, "radius": float(act.get("radius", 0.0))}
 	_telegraph = Telegraph.spawn(self, at, yaw, props)
 
 
@@ -624,7 +625,7 @@ func _update_attack(delta: float) -> void:
 	if _hit_done and not was and not _cur.is_empty():
 		var hf := String(_cur.hit_fx)
 		if hf != "":
-			EdenFx.play(self, hf, _cur.at + Vector3.UP * 0.2, float(_cur.yaw), GameData.HERO_SCALE * 1.2)
+			EdenFx.play(self, hf, _cur.at + Vector3.UP * 0.2, float(_cur.yaw), EdenFx.hit_scale(hf, float(_cur.get("radius", 0.0))))
 		_cur = {}
 	# annulation : juste après l'impact, la fin du coup est coupée par une esquive, un saut
 	# ou directement le coup suivant

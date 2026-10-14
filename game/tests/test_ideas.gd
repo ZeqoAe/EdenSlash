@@ -21,6 +21,7 @@ func _ready() -> void:
 	_test_potions()
 	await _test_forge()
 	await _test_queue()
+	_test_fx_fit()
 	print("ÉCHECS : %d" % fails)
 	get_tree().quit(1 if fails > 0 else 0)
 
@@ -347,3 +348,21 @@ func _test_queue() -> void:
 	check("file : un draft incomplet à 0 s annule le match", inc.size() == 1 and String(inc[0]).contains("Draft incomplet"))
 	DuelQueue.speed = 1.0
 	Duel.bare = false
+
+
+func _test_fx_fit() -> void:
+	check("effets : rayons mesurés présents (data/fx_radius.json)", EdenFx.native_radius("s10641") > 0.5 and EdenFx.native_radius("s00541") > 0.0)
+	check("effets : un effet inconnu garde l'échelle d'origine", is_equal_approx(EdenFx.fit_scale("inconnu", 3.0, 1.3), 1.3))
+	var base := GameData.HERO_SCALE
+	var big := EdenFx.fit_scale("s10641", 0.5, base)
+	var huge := EdenFx.fit_scale("s10641", 50.0, base)
+	check("effets : l'échelle ajustée reste bornée (0,6 à 1,6 fois l'origine)", big >= base * 0.6 - 0.001 and huge <= base * 1.6 + 0.001)
+	check("effets : un gros effet sur une petite zone rétrécit", EdenFx.cast_scale("s10641", {"kind": "cone"}, 1.5) < base)
+	check("effets : renforts et soins gardent l'échelle d'origine", is_equal_approx(EdenFx.cast_scale("s10641", {"kind": "buff"}, 1.5), base) and is_equal_approx(EdenFx.cast_scale("s10641", {"kind": "heal"}, 1.5), base))
+	var zone_small := EdenFx.hit_scale("s00141", 1.0)
+	var zone_big := EdenFx.hit_scale("s00141", 8.0)
+	check("effets : l'impact grandit avec la zone", zone_big > zone_small)
+	# réglage d'intensité lu
+	Settings.set_v("interface", "fx_intensity", 1.4)
+	check("effets : intensité réglable", is_equal_approx(float(Settings.get_v("interface", "fx_intensity")), 1.4))
+	Settings.reset_all()
