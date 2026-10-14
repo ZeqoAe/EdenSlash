@@ -364,9 +364,12 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 	# en duel, la référence est la défense des deux héros (PvpCaps.taken)
 	var taken := PvpCaps.taken(defense, source.defense) if pvp else 100.0 / (100.0 + maxf(defense, 0.0))
 	var dmg := maxf(1.0, round(amount * damage_taken_mult() * (1.0 if dot else taken)))
+	var capped := false
 	if pvp:
+		var before := dmg
 		dmg = minf(dmg, ceilf(max_hp * ModeRules.num("hit_cap", PVP_HIT_CAP)))
 		dmg = _burst_limit(dmg)
+		capped = dmg < before - 0.5  # le coup a atteint le plafond : affiché en gris
 		PvpCaps.note_hit(source, self, dmg)
 	hp = maxf(0.0, hp - dmg)
 	# entraînement : héros invincible, ennemis invincibles ou mannequin (les dégâts s'affichent)
@@ -378,7 +381,7 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 	if not dot and has_status("sleep"):
 		statuses.erase("sleep")  # un coup réveille
 		statuses_changed.emit()
-	DamageNumber.spawn(self, dmg, crit, team == Team.PLAYER, dot)
+	DamageNumber.spawn(self, dmg, crit, team == Team.PLAYER, dot, capped)
 	if source and source.team == Team.PLAYER and team != Team.PLAYER and Run.active:
 		Run.add_combo_damage(dmg)
 	_on_damaged(dmg, source)

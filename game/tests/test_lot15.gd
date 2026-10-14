@@ -40,30 +40,25 @@ func _ready() -> void:
 		await get_tree().physics_frame
 	check("le combat est lancé", dd.phase == "fight")
 	# un seul adversaire tombe : la manche continue
-	dd._foes[0].hp = 1.0
-	dd._foes[0].take_damage(1e12, world.player, false)
-	await get_tree().physics_frame
+	_kill(dd._foes[0], world.player)
+	for _i in 4:
+		await get_tree().physics_frame  # laisse la manche se conclure (stable)
 	check("un adversaire tombé ne termine pas la manche", dd.phase == "fight" and Duel.wins == 0)
-	dd._foes[1].hp = 1.0
-	dd._foes[1].take_damage(1e12, world.player, false)
-	await get_tree().physics_frame
+	_kill(dd._foes[1], world.player)
+	await _until(func(): return Duel.wins >= 1)
 	check("tous les adversaires à terre : manche gagnée", Duel.wins == 1 and dd.phase == "between")
 	# le joueur tombe mais l'allié se bat : la manche continue
-	for i in 220:
-		await get_tree().physics_frame
+	await _until(func(): return Duel.round_n == 2 and dd.phase == "fight", 1500)
 	check("manche suivante lancée", Duel.round_n == 2)
-	for i in 200:
+	for i in 100:
 		await get_tree().physics_frame
-	world.player.hp = 1.0
-	world.player.take_damage(1e12, dd._foes[0], false)
+	_kill(world.player, dd._foes[0])
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	check("joueur à terre, allié debout : la manche n'est pas perdue", dd.phase == "fight" and Duel.losses == 0 and dd._player_out)
-	dd._allies[0].hp = 1.0
-	dd._allies[0].take_damage(1e12, dd._foes[0], false)
-	for i in 5:
-		await get_tree().physics_frame
-	check("allié à terre aussi : manche perdue", Duel.losses == 1)
+	_kill(dd._allies[0], dd._foes[0])
+	await _until(func(): return Duel.losses >= 1, 120)
+	check("allié à terre aussi : manche perdue", Duel.losses >= 1)
 	world.queue_free()
 	Duel.active = false
 	Duel.mode = "free"
@@ -72,3 +67,20 @@ func _ready() -> void:
 	Duel.bare = false
 	print("TOUT EST OK (0 échec(s))" if fails == 0 else "ÉCHECS : %d" % fails)
 	get_tree().quit(fails)
+
+
+## Tue [param t] malgré l'esquive (20 % en duel) : on réessaie.
+func _kill(t, src) -> void:
+	for _i in 12:
+		if t.is_dead:
+			return
+		t.hp = 1.0
+		t.take_damage(1e12, src, false)
+
+
+## Attend (au plus [param max_frames] images) que [param cond] soit vraie.
+func _until(cond: Callable, max_frames := 300) -> void:
+	for _i in max_frames:
+		if cond.call():
+			return
+		await get_tree().physics_frame

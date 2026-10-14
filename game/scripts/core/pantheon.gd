@@ -61,7 +61,7 @@ static func available(i: int) -> bool:
 
 
 static func brain_file_present(id: String) -> bool:
-	return FileAccess.file_exists(MlDuelPilot.brain_path(id))
+	return FileAccess.file_exists(MlDuelPilot.frozen_path(id)) or FileAccess.file_exists("res://data/cerveaux/cerveau_%s.json" % id)
 
 
 static func awake_count() -> int:

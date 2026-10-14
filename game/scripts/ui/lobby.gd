@@ -269,6 +269,7 @@ func _start_training() -> void:
 var _duel_tab := "free"
 var _team_size := 2  # Arènes : 2 (2v2) ou 3 (3v3)
 var _team_allies: Array = ["", ""]
+var _team_brain := ""  # Arènes / Gantelet : cerveau d'IA qui pilote le premier adversaire ("" = scriptés seulement)
 var _gauntlet_foes := 2
 
 
@@ -283,7 +284,7 @@ func _start_team(mode: String, allies: Array, foes: Array) -> void:
 	if _launching or foes.is_empty():
 		return
 	Duel.mode = mode
-	Duel.pilot = ""
+	Duel.pilot = _team_brain if MlDuelPilot.available().any(func(b): return b[0] == _team_brain) else ""
 	Duel.rival_build = {}
 	Duel.team_allies = allies
 	Duel.extra_foes = foes.slice(1)
@@ -292,6 +293,24 @@ func _start_team(mode: String, allies: Array, foes: Array) -> void:
 		backdrop.release()
 	Duel.start(Profile.selected_class, String(foes[0]), 2)
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+
+
+## Choix du cerveau d'IA qui pilote le premier adversaire d'une équipe (les autres restent scriptés).
+func _team_brain_picker() -> void:
+	var brains := MlDuelPilot.available()
+	if brains.is_empty():
+		return
+	Hud._label(_sub, "Premier adversaire", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
+	var pl := OptionButton.new()
+	pl.focus_mode = Control.FOCUS_NONE
+	pl.add_item("IA scriptée")
+	for b in brains:
+		pl.add_item("Cerveau %s" % b[1])
+		if String(b[0]) == _team_brain:
+			pl.select(pl.item_count - 1)
+	pl.tooltip_text = "Un cerveau d'IA entraînée joue le premier adversaire (très fort aux paliers élevés) ; les autres restent scriptés."
+	pl.item_selected.connect(func(i): _team_brain = "" if i == 0 else String(brains[i - 1][0]))
+	_sub.add_child(pl)
 
 
 ## Gantelet : toi (équipé) contre deux, puis trois héros scriptés.
@@ -308,6 +327,7 @@ func _menu_gauntlet() -> void:
 			_gauntlet_foes = k
 			_show_menu("duel"))
 		row.add_child(b)
+	_team_brain_picker()
 	for r in Duel.requirements(Profile.selected_class):
 		Hud._label(_sub, "%s %s — %s" % ["✔" if r.ok else "✘", r.label, r.hint], 13, UiTheme.BUFF if r.ok else Color(1.0, 0.5, 0.45))
 	var ready := Duel.is_ready(Profile.selected_class)
@@ -349,6 +369,7 @@ func _menu_arenas() -> void:
 		var kk := k
 		ob.item_selected.connect(func(i): _team_allies[kk] = ids[i])
 		_sub.add_child(ob)
+	_team_brain_picker()
 	Hud._label(_sub, "Duel à l'arme, niveau 10 : tu joues avec ton preset de sorts ; si tu tombes, tes alliés continuent. 2 manches gagnantes.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var ready := Duel.is_ready_bare(Profile.selected_class)
 	var go := MenuWidgets.gold_button("Lancer l'arène", 22, Vector2(0, 58))

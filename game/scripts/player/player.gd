@@ -2030,8 +2030,27 @@ func _dive_impact() -> void:
 
 ## Étourdissement (zones rouges du boss) : plus aucune action pendant [param t] s ; ensuite
 ## le héros y est insensible un moment, comme les monstres (Combatant.CC_TYPES).
+## Un certificat porté (plateau ou carte de la run) rend insensible aux renversements des monstres.
+func knock_immune() -> bool:
+	if foe or built or _bare():
+		return false
+	var keys: Array = Profile.certificates.duplicate()
+	for pid in Run.passives:
+		if String(pid).begins_with("cert:"):
+			keys.append(String(pid).trim_prefix("cert:"))
+	for k in keys:
+		if String(TalentsPage.cert_passive(String(k)).get("desc", "")).contains("insensible aux renversements"):
+			return true
+	return false
+
+
 func stun(t: float) -> void:
-	if is_dead or _state == "stun" or not _cc_gate("stun", t):
+	if is_dead or _state == "stun":
+		return
+	if knock_immune():
+		DamageNumber.spawn_text(self, "INÉBRANLABLE", Color(0.8, 0.9, 1.0))
+		return
+	if not _cc_gate("stun", t):
 		return
 	statuses_changed.emit()
 	_state = "stun"

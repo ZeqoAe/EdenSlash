@@ -75,10 +75,13 @@ héroïques 1 à 10 après l'époque IV (monstres +12 % PV et +8 % dégâts par 
 coffre d'apparence aux rangs 3, 6 et 9, titre au rang 10), et `tools/journal_report.py` : applique les règles de décision du journal de run
 (≥ 5 cartes par style et par époque) ; AUCUN réglage d'époque ou d'économie n'a été fait : il faut d'abord jouer des cartes en Survie.
 
-Les 16 lots de `conception/CONCEPT_FINAL.md` sont codés. Restes connus, par ordre d'utilité : niveau minimum du Duel libre, insensibilité aux
-renversements des certificats, profils « opti » à régénérer (20 classes reclassées), cerveaux du Panthéon à figer dans git, Épreuves de maîtrise et
-Ruée des boss (moteur de leçons), fabrication des plans, panoplies-archétypes des donjons, un cerveau adverse en équipe, signatures de famille,
-images des activités et des fiches (session locale).
+Les 16 lots de `conception/CONCEPT_FINAL.md` sont codés. Restes traités (0.1.151) : Duel équipé dès le niveau 1 (`Duel.gear_level`), certificats
+« insensible aux renversements » (`Player.knock_immune`, ignore `stun`), coups réduits par le plafond du duel affichés en gris « (max) »
+(`DamageNumber.spawn(..., capped)`), profils « opti » régénérés (`gen_profiles`, les 60 classes), 6 cerveaux du Panthéon figés dans git
+(`data/cerveaux/pantheon_<id>.json`, exception du `.gitignore` ; `MlDuelPilot.brain_path` les prend quand `Duel.mode == "pantheon"`),
+cerveau adverse en équipe (Arènes et Gantelet : sélecteur « Premier adversaire » du lobby, `Duel.pilot`, victoire de manche seulement
+quand le cerveau ET les scriptés sont à terre). Restes : Épreuves de maîtrise (moteur de leçons), signatures de famille, images des
+activités et des fiches (session locale).
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

@@ -166,9 +166,9 @@ static func is_ready(cid: String) -> bool:
 	return requirements(cid).all(func(r): return r.ok)
 
 
-## Niveau du duel : celui de l'équipement porté (sa pièce la plus haute), 10 au moins.
+## Niveau du duel équipé : celui de l'équipement porté (sa pièce la plus haute), 1 au moins.
 static func gear_level() -> int:
-	var lv := 10
+	var lv := 1
 	for slot in Profile.equipped:
 		lv = maxi(lv, mini(Items.power_cap(Profile.equipped[slot]), 101))
 	return lv

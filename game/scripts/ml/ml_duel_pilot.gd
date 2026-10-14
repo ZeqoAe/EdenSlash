@@ -4,7 +4,8 @@ extends MlArena
 ## reprend ce que voit et fait l'IA de l'arène (_obs_for, _apply_for), sans connexion à Python
 ## ni arène à construire. Le duel l'ajoute comme enfant ; tick() à chaque image
 ## physique (le nœud le fait lui-même) : une décision toutes les REPEAT images, comme à l'entraînement.
-## Fichiers : res://data/cerveaux/cerveau_<palier>.json (débutant … hardcore, actuel).
+## Fichiers : res://data/cerveaux/cerveau_<palier>.json (débutant … hardcore, actuel), hors git ; le Panthéon
+## utilise des copies figées pantheon_<palier>.json, dans git.
 
 const BRAINS := [["debutant", "Débutant"], ["facile", "Facile"], ["normal", "Normal"], ["difficile", "Difficile"],
 	["hardcore", "Hardcore"], ["actuel", "Le plus récent"]]
@@ -20,7 +21,14 @@ var _pilot_wait := 0
 
 
 static func brain_path(key: String) -> String:
+	# Panthéon : cerveaux figés (pantheon_<id>.json, dans git) pour que les défis ne changent pas avec l'entraînement
+	if Duel.mode == "pantheon" and FileAccess.file_exists(frozen_path(key)):
+		return frozen_path(key)
 	return "res://data/cerveaux/cerveau_%s.json" % key
+
+
+static func frozen_path(key: String) -> String:
+	return "res://data/cerveaux/pantheon_%s.json" % key
 
 
 ## Cerveaux présents (les fichiers sont produits par l'entraînement, hors git).

@@ -26,7 +26,8 @@ ia/modeles/
 ia/journaux/
 ia/progression.json
 ia/journal_entrainement.csv
-game/data/cerveaux/
+game/data/cerveaux/*
+!game/data/cerveaux/pantheon_*.json
 
 # Versions a partager (Creer_version.bat)
 build/

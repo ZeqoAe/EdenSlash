@@ -59,7 +59,7 @@ static func spawn_text(target: Node3D, text: String, color: Color) -> void:
 	tw.chain().tween_callback(label.queue_free)
 
 
-static func spawn(target: Node3D, amount: float, crit: bool, on_player: bool, dot := false) -> void:
+static func spawn(target: Node3D, amount: float, crit: bool, on_player: bool, dot := false, capped := false) -> void:
 	if Vfx.silent:
 		return
 	if not target.is_inside_tree():
@@ -84,6 +84,9 @@ static func spawn(target: Node3D, amount: float, crit: bool, on_player: bool, do
 		label.modulate = Color(1.0, 0.82, 0.2)
 	else:
 		label.modulate = Color(1.0, 1.0, 1.0)
+	if capped:
+		label.modulate = Color(0.68, 0.68, 0.74)  # « il a encaissé le max » : plafond par coup ou rafale du duel
+		label.text += " (max)"
 	if dot:
 		label.modulate.a = 0.7  # effets sur la durée : discrets
 	target.get_tree().current_scene.add_child(label)

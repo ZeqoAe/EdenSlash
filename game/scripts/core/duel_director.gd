@@ -178,6 +178,9 @@ func update(delta: float) -> void:
 		for f in _foes:
 			if is_instance_valid(f):
 				f.passive = true
+		if is_instance_valid(_pilot):
+			_pilot.set_physics_process(false)
+			_pilot._pilot_bot.clear()
 		_end_round(false)
 	_obj_t -= delta
 	if _obj_t <= 0.0:
@@ -188,8 +191,8 @@ func update(delta: float) -> void:
 func _on_rival_died(_who: Combatant, _killer: Combatant) -> void:
 	if phase != "fight":
 		return
-	if not _all_down(_foes) and not (is_instance_valid(_foe) and not _foe.is_dead and _foes.is_empty()):
-		return  # il reste des adversaires debout
+	if not _all_down(_foes) or (is_instance_valid(_foe) and not _foe.is_dead):
+		return  # il reste des adversaires debout (scriptés ou piloté par un cerveau)
 	Duel.wins += 1
 	_end_round(true)
 
