@@ -32,6 +32,11 @@ Trophées (0.1.130) : plus de l'équipement, collection de la run (`Run.trophies
 tous différents, 67 effets dans `Trophies.KINDS`, répartis sur les trophées d'Eden par
 `tools/rework_trophies.py` : relancer l'outil après l'ajout d'une famille).
 Reste : retours du joueur sur l'équilibrage (époque 1 gagnée « bien capé » le 14/10, il passe à l'époque 2).
+Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
+`REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
+section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,
+aide au combat en 4 niveaux ; lot 5 Duel à l'arme / équipé…). Le détail de chaque lot est dans
+`conception/<équipe>/raffinement_3.md`.
 
 ## Branche
 Tout se passe sur la branche `claude/optimistic-gauss-p2g2pq`. Ne pas travailler sur `master`.
