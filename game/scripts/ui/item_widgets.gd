@@ -288,7 +288,12 @@ class ItemSlot extends Button:
 			draw_rect(r.grow(-6.0), Color(1.0, 0.9, 0.5, 0.08 + 0.06 * sin(t * 2.0)))
 		var font := UiTheme.bold_font()
 		var up := int(item.get("upgrade", 0))
-		if up > 0:
+		if slot_id != "" and Run.active and Run.survival and Run.slot_bonus.has(slot_id):
+			# Survie : bonus d'enclume de l'emplacement (s'applique à la pièce portée ici)
+			var sb := int(Run.slot_bonus[slot_id])
+			HudWidgets.text_center(self, "%+d" % sb, Vector2(size.x - 13.0, 11.0), font, 13,
+				Color(1.0, 0.45, 0.4) if sb < 0 else (Color(1.0, 0.85, 0.3) if sb >= 9 else Color(0.6, 1.0, 0.65)), 4)
+		elif up > 0:
 			HudWidgets.text_center(self, "+%d" % up, Vector2(size.x - 13.0, 11.0), font, 13, Color(1, 0.88, 0.45), 4)
 		if item.has("set"):
 			HudWidgets.diamond(self, Vector2(9, 9), 5.0, Items.SET_COLOR)
