@@ -11,11 +11,14 @@ var _choices: HBoxContainer
 var _current: Dictionary = {}  # coffre à choix en cours
 
 
+var _card_box: CenterContainer
+
+
 func _ready() -> void:
 	add_theme_constant_override("separation", 16)
 	var left := ItemWidgets.panel(self, 560)
 	ItemWidgets.section(left, "Tes coffres")
-	Hud._label(left, "Ils tombent des boss, parfois des élites, rarement des autres monstres, et se gardent si tu t'en sors (victoire ou extraction). Les objets vont au coffre commun, les fournitures à la réserve de la prochaine run.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	Hud._label(left, "Boss d'étape et stèles du défi : toujours ; élites : 1 fois sur 5 ; monstres : rarement. Gardés si tu t'en sors (victoire ou extraction). Les objets vont au coffre commun, les fournitures à la réserve de la prochaine run.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var sc := ScrollContainer.new()
 	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -35,6 +38,14 @@ func _ready() -> void:
 	_choices.add_theme_constant_override("separation", 14)
 	_choices.alignment = BoxContainer.ALIGNMENT_CENTER
 	right.add_child(_choices)
+	# fiche complète de l'objet sélectionné parmi les propositions
+	var sc2 := ScrollContainer.new()
+	sc2.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	sc2.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	right.add_child(sc2)
+	_card_box = CenterContainer.new()
+	_card_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sc2.add_child(_card_box)
 
 
 func refresh() -> void:
@@ -67,6 +78,7 @@ func _row(type: String, chests: Array) -> Control:
 	p.add_child(h)
 	var ic := TextureRect.new()
 	ic.texture = MenuWidgets.icon("chest")
+	ic.modulate = (t.color as Color).lightened(0.15)  # un coffre de la couleur de son type
 	ic.custom_minimum_size = Vector2(54, 54)
 	ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -105,11 +117,20 @@ func _show_text(title: String, text: String) -> void:
 	_detail.text = text
 	for c in _choices.get_children():
 		c.queue_free()
+	_show_card({})
+
+
+## Fiche complète de [param it] sous les propositions (vide : rien).
+func _show_card(it: Dictionary) -> void:
+	for c in _card_box.get_children():
+		c.queue_free()
+	if not it.is_empty():
+		_card_box.add_child(ItemWidgets.item_card(it))
 
 
 func _show_choices(chest: Dictionary) -> void:
 	var t: Dictionary = Rewards.TYPES[chest.type]
-	_show_text(String(t.name), "Choisis 1 objet (survol : fiche complète). Les autres disparaissent.")
+	_show_text(String(t.name), "Choisis 1 objet (clic sur une icône : sa fiche complète en dessous). Les autres disparaissent.")
 	var items := Rewards.offer(chest)
 	for i in items.size():
 		var it: Dictionary = items[i]
@@ -120,6 +141,7 @@ func _show_choices(chest: Dictionary) -> void:
 		var s := ItemWidgets.ItemSlot.new(110.0)
 		s.set_item(it)
 		s.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		s.pressed.connect(func(): _show_card(it))
 		v.add_child(s)
 		var name := Hud._label(v, Items.display_name(it), 15, Items.color_of(it))
 		name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -137,3 +159,5 @@ func _show_choices(chest: Dictionary) -> void:
 			_show_text("Ajouté au coffre commun", Rewards.got_text({"items": [got]}))
 			refresh())
 		v.add_child(b)
+	if not items.is_empty():
+		_show_card(items[0])
