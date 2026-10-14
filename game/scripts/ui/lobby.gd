@@ -264,15 +264,114 @@ func _start_training() -> void:
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
-## Duel : trois onglets — libre (les deux modes), Ligue (à l'arme, rangs) et Panthéon (les cerveaux).
+## Duel : quatre onglets — libre, Ligue, Panthéon et Gantelet (1 contre 2 ou 3, équipé).
 var _duel_tab := "free"
+var _team_size := 2  # Arènes : 2 (2v2) ou 3 (3v3)
+var _team_allies: Array = ["", ""]
+var _gauntlet_foes := 2
+
+
+## Classes au hasard (distinctes), différentes de celle du joueur.
+func _random_classes(n: int, avoid: Array = []) -> Array:
+	var pool: Array = GameData.classes.keys().filter(func(c): return not c in avoid and c != Profile.selected_class)
+	pool.shuffle()
+	return pool.slice(0, n)
+
+
+func _start_team(mode: String, allies: Array, foes: Array) -> void:
+	if _launching or foes.is_empty():
+		return
+	Duel.mode = mode
+	Duel.pilot = ""
+	Duel.rival_build = {}
+	Duel.team_allies = allies
+	Duel.extra_foes = foes.slice(1)
+	_launching = true
+	if backdrop:
+		backdrop.release()
+	Duel.start(Profile.selected_class, String(foes[0]), 2)
+	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+
+
+## Gantelet : toi (équipé) contre deux, puis trois héros scriptés.
+func _menu_gauntlet() -> void:
+	Hud._label(_sub, "Tout ton build compte (équipement, maîtrise, certificats), sous les plafonds du Duel. Tiens à 1 contre 2, puis à 1 contre 3.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	_sub.add_child(row)
+	for n in [2, 3]:
+		var b := MenuWidgets.glass_button(("✔ " if _gauntlet_foes == n else "") + "1 contre %d" % n, 16, Vector2(0, 42))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var k: int = n
+		b.pressed.connect(func():
+			_gauntlet_foes = k
+			_show_menu("duel"))
+		row.add_child(b)
+	for r in Duel.requirements(Profile.selected_class):
+		Hud._label(_sub, "%s %s — %s" % ["✔" if r.ok else "✘", r.label, r.hint], 13, UiTheme.BUFF if r.ok else Color(1.0, 0.5, 0.45))
+	var ready := Duel.is_ready(Profile.selected_class)
+	var go := MenuWidgets.gold_button("Entrer dans le Gantelet", 22, Vector2(0, 58))
+	go.disabled = not ready
+	go.tooltip_text = "" if ready else "Règle d'abord les points marqués ✘ (Héros)"
+	go.pressed.connect(func():
+		Duel.bare = false
+		_start_team("gauntlet", [], _random_classes(_gauntlet_foes)))
+	_sub.add_child(go)
+
+
+## Arènes : toi et tes alliés IA contre une équipe IA (2v2 ou 3v3), à l'arme.
+func _menu_arenas() -> void:
+	_activity_head("arenas")
+	_activity_desc("arenas")
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	_sub.add_child(row)
+	for n in [2, 3]:
+		var b := MenuWidgets.glass_button(("✔ " if _team_size == n else "") + "%d contre %d" % [n, n], 16, Vector2(0, 42))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var k: int = n
+		b.pressed.connect(func():
+			_team_size = k
+			_show_menu("arenas"))
+		row.add_child(b)
+	Hud._label(_sub, "Tes alliés IA (classes au choix, « Au hasard » sinon)", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
+	for k in _team_size - 1:
+		var ob := OptionButton.new()
+		ob.focus_mode = Control.FOCUS_NONE
+		ob.add_item("Au hasard")
+		var ids: Array = [""]
+		for cid in GameData.classes:
+			if Progression.class_unlocked(cid):
+				ob.add_item(String(GameData.class_data(cid).get("name_fr", cid)))
+				ids.append(cid)
+		ob.select(maxi(ids.find(_team_allies[k]), 0))
+		var kk := k
+		ob.item_selected.connect(func(i): _team_allies[kk] = ids[i])
+		_sub.add_child(ob)
+	Hud._label(_sub, "Duel à l'arme, niveau 10 : tu joues avec ton preset de sorts ; si tu tombes, tes alliés continuent. 2 manches gagnantes.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var ready := Duel.is_ready_bare(Profile.selected_class)
+	var go := MenuWidgets.gold_button("Lancer l'arène", 22, Vector2(0, 58))
+	go.disabled = not ready
+	go.tooltip_text = "" if ready else "Ton preset de sorts doit avoir 4 cases remplies."
+	go.pressed.connect(func():
+		var allies: Array = []
+		for k in _team_size - 1:
+			allies.append(String(_team_allies[k]) if String(_team_allies[k]) != "" else "")
+		var taken: Array = allies.filter(func(c): return c != "")
+		for i in allies.size():
+			if allies[i] == "":
+				allies[i] = _random_classes(1, taken)[0]
+				taken.append(allies[i])
+		Duel.bare = true
+		_start_team("arena%d" % _team_size, allies, _random_classes(_team_size, taken)))
+	_sub.add_child(go)
 
 
 func _duel_tabs() -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	_sub.add_child(row)
-	for t in [["free", "Libre", ""], ["league", "Ligue", "league"], ["pantheon", "Panthéon", "pantheon"]]:
+	for t in [["free", "Libre", ""], ["league", "Ligue", "league"], ["pantheon", "Panthéon", "pantheon"], ["gauntlet", "Gantelet", "gauntlet"]]:
 		var open: bool = String(t[2]) == "" or Unlocks.is_open(String(t[2]))
 		var b := MenuWidgets.glass_button(("🔒 " if not open else ("▶ " if _duel_tab == t[0] else "")) + String(t[1]), 15, Vector2(0, 38))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -350,6 +449,9 @@ func _menu_duel() -> void:
 		return
 	if _duel_tab == "pantheon" and Unlocks.is_open("pantheon"):
 		_menu_pantheon()
+		return
+	if _duel_tab == "gauntlet" and Unlocks.is_open("gauntlet"):
+		_menu_gauntlet()
 		return
 	_duel_tab = "free"
 	Duel.mode = "free"
@@ -964,7 +1066,9 @@ func _show_menu(id: String) -> void:
 			_menu_training()
 		"dungeon":
 			_menu_dungeon()
-		"arenas", "trials", "rush":
+		"arenas":
+			_menu_arenas()
+		"trials", "rush":
 			_menu_soon(id)
 		"mastery":
 			_menu_mastery()

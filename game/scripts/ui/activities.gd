@@ -24,7 +24,7 @@ const LIST := [
 		"desc": "Enchaîne les boss des époques gagnées, sans souffler."},
 	{"id": "duel", "row": "versus", "unlock": "duel_free", "group": "pvp", "name": "Duel", "sub": "1 contre 1, à l'arme ou équipé", "gain": "Rangs, titres, maîtrise",
 		"desc": "Affronte un héros d'une classe, piloté par l'IA scriptée ou par un cerveau entraîné : à armes égales (niveau libre) ou avec ton build complet."},
-	{"id": "arenas", "row": "versus", "unlock": "arenas", "img": "arena2", "group": "pvp", "name": "Arènes", "sub": "2 contre 2, 3 contre 3, alliés IA", "soon": true, "gain": "Titres",
+	{"id": "arenas", "row": "versus", "unlock": "arenas", "img": "arena2", "group": "pvp", "name": "Arènes", "sub": "2 contre 2, 3 contre 3, alliés IA", "gain": "Titres",
 		"desc": "Toi et tes alliés IA contre une équipe IA : composition d'équipe, soutien et coups combinés, hors ligne."},
 	{"id": "training", "row": "", "group": "", "name": "Zone d'entraînement", "sub": "Sorts, armes et cartes, sans enjeu", "gain": "Rien (banc d'essai)",
 		"desc": "Teste tes sorts, tes armes et tes cartes sur des mannequins et des adversaires réglables : rien n'est gagné ni perdu."},

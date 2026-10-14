@@ -37,10 +37,29 @@ const PVP_A := {
 
 ## Profils par nom. La Tour et l'entraînement n'ont pas de règles de duel propres (celles de
 ## « duel_b » s'appliquent quand Duel.active).
+## Arènes à alliés IA : mêmes règles que l'à l'arme, échelle réduite (plus de héros qui frappent) et
+## soins moitié moins forts. Le Gantelet (1 contre 2 ou 3) se joue équipé.
+const PVP_A2 := {
+	"dmg_scale": 0.022, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": PvpCaps.HEAL_MULT * 0.5,
+	"max_mitigation": PvpCaps.MAX_MITIGATION, "pressure_start": PvpCaps.PRESSURE_START,
+	"pressure_step": PvpCaps.PRESSURE_STEP, "pct_weight": 1.0,
+	"hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
+	"caps": PvpCaps.CAPS,
+}
+const PVP_A3 := {
+	"dmg_scale": 0.018, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": PvpCaps.HEAL_MULT * 0.5,
+	"max_mitigation": PvpCaps.MAX_MITIGATION, "pressure_start": PvpCaps.PRESSURE_START,
+	"pressure_step": PvpCaps.PRESSURE_STEP, "pct_weight": 1.0,
+	"hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
+	"caps": PvpCaps.CAPS,
+}
 const PROFILES := {
 	"duel": PVP,
 	"duel_a": PVP_A,
 	"duel_b": PVP,
+	"arena2": PVP_A2,
+	"arena3": PVP_A3,
+	"gauntlet": PVP,
 }
 
 ## Profil imposé (arène d'IA : --rules=duel_a), prioritaire sur le mode en cours.
@@ -54,6 +73,8 @@ static func profile_name() -> String:
 		return forced
 	var m := Modes.current()
 	if m == "duel":
+		if Duel.mode in ["arena2", "arena3", "gauntlet"]:
+			return Duel.mode
 		return "duel_a" if Duel.bare else "duel_b"
 	return m if PROFILES.has(m) else ""
 

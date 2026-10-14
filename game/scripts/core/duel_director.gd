@@ -14,6 +14,9 @@ var _t := 0.0
 var _rival: ClassRival  # adversaire scripté
 var _foe: Player  # ou héros ennemi piloté par un cerveau d'IA
 var _pilot: MlDuelPilot
+var _foes: Array = []  # tous les adversaires scriptés de la manche (le premier est _rival)
+var _allies: Array = []  # alliés IA du joueur (Arènes)
+var _player_out := false  # le joueur est tombé mais ses alliés se battent encore
 var _center := Vector3.ZERO
 var _obj_t := 0.0
 
@@ -64,6 +67,7 @@ func _start_round() -> void:
 		_rival.rotate_y(PI)
 		_rival.passive = true  # immobile pendant le compte à rebours
 		_rival.died.connect(_on_rival_died)
+	_spawn_team(p)
 	phase = "countdown"
 	_t = COUNTDOWN
 	PvpCaps.elapsed = 0.0
@@ -72,6 +76,37 @@ func _start_round() -> void:
 		var opp: Combatant = _rival if _rival else _foe
 		print("[duel] manche %d contre %s (%s), niveau %d · PV héros %d · PV adversaire %d" % [Duel.round_n, Duel.rival_class,
 			("cerveau " + Duel.pilot) if _foe else ClassRival.NAMES[Duel.difficulty], Duel.level, int(p.max_hp), int(opp.max_hp)])
+
+
+## Équipes : adversaires en plus (Gantelet, Arènes) et alliés IA du joueur, de part et d'autre.
+func _spawn_team(p: Player) -> void:
+	for n in _foes + _allies:
+		if is_instance_valid(n) and n != _rival:
+			n.queue_free()
+	_foes = [_rival] if is_instance_valid(_rival) else []
+	_allies = []
+	_player_out = false
+	var i := 1
+	for cid in Duel.extra_foes:
+		var f := Duel.make_extra(String(cid))
+		d.add_child(f)
+		f.global_position = _ground(_center - Vector3(0, 0, SPAWN_DIST) + Vector3(3.5 * (1 if i % 2 == 1 else -1) * ((i + 1) / 2), 0, 0)) + Vector3.UP * 0.4
+		f.passive = true
+		f.died.connect(_on_rival_died)
+		_foes.append(f)
+		i += 1
+	i = 1
+	for cid in Duel.team_allies:
+		var a := Duel.make_ally(String(cid))
+		d.add_child(a)
+		a.global_position = _ground(_center + Vector3(0, 0, SPAWN_DIST) + Vector3(3.5 * (1 if i % 2 == 1 else -1) * ((i + 1) / 2), 0, 0)) + Vector3.UP * 0.4
+		a.passive = true
+		_allies.append(a)
+		i += 1
+
+
+func _all_down(list: Array) -> bool:
+	return list.all(func(x): return not is_instance_valid(x) or x.is_dead)
 
 
 ## Héros ennemi piloté par un cerveau d'IA : sa classe, ses 12 sorts, et l'équipement et
@@ -122,6 +157,12 @@ func update(delta: float) -> void:
 				d.message.emit(str(n), 0.8)
 			if _t <= 0.0:
 				phase = "fight"
+				for f in _foes:
+					if is_instance_valid(f):
+						f.passive = false
+				for a in _allies:
+					if is_instance_valid(a):
+						a.passive = false
 				if is_instance_valid(_rival):
 					_rival.passive = false
 				if is_instance_valid(_pilot):
@@ -131,6 +172,13 @@ func update(delta: float) -> void:
 			if _t <= 0.0:
 				Duel.round_n += 1
 				_start_round()
+	if phase == "fight" and _player_out and _all_down(_allies):
+		_player_out = false
+		Duel.losses += 1
+		for f in _foes:
+			if is_instance_valid(f):
+				f.passive = true
+		_end_round(false)
 	_obj_t -= delta
 	if _obj_t <= 0.0:
 		_obj_t = 0.25
@@ -140,6 +188,8 @@ func update(delta: float) -> void:
 func _on_rival_died(_who: Combatant, _killer: Combatant) -> void:
 	if phase != "fight":
 		return
+	if not _all_down(_foes) and not (is_instance_valid(_foe) and not _foe.is_dead and _foes.is_empty()):
+		return  # il reste des adversaires debout
 	Duel.wins += 1
 	_end_round(true)
 
@@ -148,7 +198,14 @@ func _on_rival_died(_who: Combatant, _killer: Combatant) -> void:
 func player_down() -> void:
 	if phase != "fight":
 		return
+	if not _allies.is_empty() and not _all_down(_allies):
+		_player_out = true  # les alliés continuent ; la manche est perdue quand ils tombent aussi
+		d.message.emit("Tu es tombé : tes alliés se battent encore !", 2.5)
+		return
 	Duel.losses += 1
+	for f in _foes:
+		if is_instance_valid(f):
+			f.passive = true
 	if is_instance_valid(_rival):
 		_rival.passive = true
 	if is_instance_valid(_pilot):

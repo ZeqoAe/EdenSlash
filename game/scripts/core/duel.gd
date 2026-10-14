@@ -21,6 +21,9 @@ static var bare := false
 ## Mode du duel : "free" (libre), "league" (Ligue) ou "pantheon" ; les deux derniers sont classés.
 static var mode := "free"
 static var last_report: Dictionary = {}
+## Équipes (Arènes, Gantelet) : classes des alliés IA du joueur et des adversaires en plus du premier.
+static var team_allies: Array = []
+static var extra_foes: Array = []
 static var bare_level := 10
 static var bare_variant := 0
 static var _stashed_build: Dictionary = {}
@@ -174,7 +177,27 @@ static func gear_level() -> int:
 ## Inscription : la run du duel avec la classe [param cid] (build du preset) contre
 ## [param opponent] en difficulté [param diff].
 static func ranked() -> bool:
-	return active and mode in ["league", "pantheon"]
+	return active and mode in ["league", "pantheon", "arena2", "arena3", "gauntlet"]
+
+
+## Adversaire scripté supplémentaire de la classe [param cid] (équipes) : même fiche que le premier.
+static func make_extra(cid: String) -> ClassRival:
+	var keep := rival_class
+	rival_class = cid
+	var r := make_rival()
+	rival_class = keep
+	return r
+
+
+## Allié IA du joueur (Arènes) : un héros scripté du camp du joueur, au niveau du duel.
+static func make_ally(cid: String) -> ClassRival:
+	var a := ClassRival.new()
+	a.ally = true
+	a.setup(cid, level, 2)
+	var b := opti_build(cid, level)
+	if not b.is_empty() and not bare:
+		a.apply_build(b, level)
+	return a
 
 
 ## Résultat classé du duel qui vient de finir (Ligue : rang et maîtrise ; Panthéon : récompenses).
@@ -188,15 +211,35 @@ static func settle(won: bool, cid: String) -> Dictionary:
 			var r := Pantheon.report_win(pilot, cid) if won else {}
 			r["mode"] = "pantheon"
 			return r
+		"arena2", "arena3", "gauntlet":
+			var key := "%s_wins" % mode if mode != "gauntlet" else "gauntlet_%d_wins" % (extra_foes.size() + 1)
+			var r := {"mode": mode, "text": []}
+			if won:
+				Profile.record_add(key, 1)
+				var gain := 60 * (extra_foes.size() + 1) if mode == "gauntlet" else 50 * (team_allies.size() + 1)
+				Profile.insignia += gain
+				r.text.append("+%d insignes" % gain)
+				if int(Profile.records.get(key, 0)) == 1:
+					var title: String = {"arena2": "Arène à deux", "arena3": "Arène à trois", "gauntlet": "Gantelet"}[mode]
+					if mode == "gauntlet" and extra_foes.size() >= 2:
+						title = "Gantelet complet"
+					Profile.add_title(title)
+					r.text.append("Titre : « %s »" % title)
+			return r
 	return {}
 
 
 static func start(cid: String, opponent: String, diff: int) -> void:
 	active = true
 	last_report = {}
-	if mode != "free":
-		bare = true  # Ligue et Panthéon : à l'arme
+	if mode in ["league", "pantheon", "arena2", "arena3"]:
+		bare = true  # Ligue, Panthéon et Arènes : à l'arme
 		bare_level = Pantheon.LEVEL
+	elif mode == "gauntlet":
+		bare = false  # le Gantelet se joue équipé : tout ton build compte
+	if not mode in ["arena2", "arena3", "gauntlet"]:
+		team_allies = []
+		extra_foes = []
 	rival_class = String(rival_build.get("class", opponent)) if not rival_build.is_empty() else opponent
 	difficulty = clampi(diff, 0, ClassRival.NAMES.size() - 1)
 	wins = 0

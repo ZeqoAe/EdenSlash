@@ -68,7 +68,9 @@ sont collectés), mécaniques propres à chaque boss de donjon (ceux de la Survi
 à l'arme niveau 10, aide limitée à Assisté, maîtrise par duel. Panthéon (`core/pantheon.gd`) : 6 cerveaux dans l'ordre, panoplie des Esprits
 (`Items.SETS.pantheon`, effets à 2/4/6 pièces, jamais en duel à l'arme), coffres d'apparence et d'auras (`aura_rare`, `aura_legend`), titres, éveil par
 les 5 familles. Pas encore : cerveaux figés dans git (ils restent hors git : `data/cerveaux/cerveau_<id>.json`), aura exclusive du Champion, Gantelet
-(lot 15). Prochain : lot 15 (Arènes, Gantelet).
+(lot 15). Lot 15 fait (0.1.147) : Arènes 2v2 / 3v3 à alliés IA (activité Arènes, à l'arme niveau 10, `DuelDirector` en équipes : `_foes`, `_allies`, le joueur tombé
+laisse ses alliés finir la manche ; profils `arena2` 0,022 et `arena3` 0,018, soins ×0,5) et Gantelet (onglet du Duel, 1 contre 2 ou 3, équipé, rang Or de la Ligue).
+Un seul cerveau adverse n'est pas encore branché dans les équipes (adversaires scriptés seulement). Prochain : lot 16 (étoiles d'époque, rangs héroïques, rapport du journal).
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,
