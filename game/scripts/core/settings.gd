@@ -106,9 +106,9 @@ const PRESETS := {
 		"game": {"move_mode": "rts", "aim_mode": "cursor", "attack_mode": "auto"}},
 	"action": {"name": "Action (vue de dos)", "desc": "ZQSD pour se déplacer, le héros regarde le curseur et la caméra tourne derrière lui quand le curseur s'écarte du centre. Molette : du plan rapproché à la vue large.",
 		"game": {"move_mode": "keyboard", "aim_mode": "action", "attack_mode": "manual"}},
-	"relax": {"name": "Détente", "desc": "ZQSD pour se déplacer : attaque de base et compétences se lancent seules sur les monstres à portée.",
-		"game": {"move_mode": "keyboard", "aim_mode": "nearest", "attack_mode": "auto", "auto_skills": [true, true, true, true]}},
-	"bot": {"name": "Bot (tout automatique)", "desc": "Le héros se déplace, frappe et enchaîne ses sorts en combos parfaits tout seul (ton preset de sorts) ; bouger toi-même reprend la main.",
+	"relax": {"name": "Détente", "desc": "ZQSD pour se déplacer : attaque de base, compétences et enchaînements se lancent seuls sur les monstres à portée (sans annulation parfaite).",
+		"game": {"move_mode": "keyboard", "aim_mode": "nearest", "attack_mode": "auto", "auto_skills": [true, true, true, true], "auto_combo": true}},
+	"bot": {"name": "Bot (tout automatique)", "desc": "Le héros se déplace, frappe et enchaîne ses sorts tout seul (ton preset de sorts), sans annulation parfaite ; bouger toi-même reprend la main.",
 		"game": {"move_mode": "keyboard", "aim_mode": "nearest", "attack_mode": "auto", "auto_skills": [true, true, true, true],
 			"auto_combo": true, "auto_move": true, "auto_cards": true}},
 }
@@ -197,10 +197,64 @@ func auto_skill(slot: int) -> bool:
 	return (slot < a.size() and bool(a[slot])) or auto_combo()
 
 
-## Combos parfaits automatiques : les 4 sorts du preset, leurs enchaînements et les annulations
-## parfaites au meilleur moment (Paramètres > Combat).
+## Sorts et enchaînements automatiques : les 4 sorts du preset et leurs enchaînements, dès l'ouverture
+## de la barre (Paramètres > Combat). Plus d'annulations parfaites : c'est le geste du joueur.
 func auto_combo() -> bool:
 	return bool(get_v("game", "auto_combo"))
+
+
+## Aide au combat : quatre niveaux qui rangent les réglages existants (le niveau est lu dans les
+## réglages, "custom" si on les a mélangés à la main). Manuel : tout à la main ; Assisté : mémoire des
+## touches, maintien et anneau d'annulation (par défaut) ; Détente : sorts et enchaînements
+## automatiques, attaque de base automatique, sans annulation parfaite ; Bot : en plus, déplacement
+## et choix des cartes. L'annulation parfaite reste un geste du joueur.
+const ASSIST := {
+	"manual": {"name": "Manuel", "tag": "", "color": Color(0.8, 0.8, 0.85),
+		"desc": "Tout à la main : pas de mémoire des touches, sorts, enchaînements et annulations parfaites au bon timing."},
+	"assisted": {"name": "Assisté", "tag": "ASSISTÉ", "color": Color(0.45, 0.9, 0.55),
+		"desc": "Mémoire des touches (3 appuis gardés), tenir la touche enchaîne, anneau d'annonce de l'annulation parfaite. Les sorts, le déplacement et l'esquive restent à toi."},
+	"relax": {"name": "Détente", "tag": "SORTS AUTO", "color": Color(0.45, 0.7, 1.0),
+		"desc": "Attaque de base, sorts et enchaînements partent seuls sur les monstres à portée. Tu te déplaces et tu esquives ; l'annulation parfaite, plus puissante, reste à la main."},
+	"bot": {"name": "Bot", "tag": "BOT", "color": Color(0.75, 0.55, 1.0),
+		"desc": "Comme Détente, et le héros se déplace et choisit ses cartes tout seul. Bouger toi-même reprend la main."},
+}
+
+
+func assist_level() -> String:
+	var any_skill := false
+	for i in 4:
+		any_skill = any_skill or bool((get_v("game", "auto_skills") as Array)[i])
+	var mem := key_memory()
+	var all_aids := mem and hold_chain() and perfect_hint()
+	var no_aids := not mem and not hold_chain() and not perfect_hint()
+	if auto_move() and auto_combo() and auto_attack():
+		return "bot"
+	if auto_combo() and not auto_move() and auto_attack():
+		return "relax"
+	if not auto_move() and not auto_combo() and not any_skill and not auto_cards() and not auto_attack():
+		if all_aids:
+			return "assisted"
+		if no_aids:
+			return "manual"
+	return "custom"
+
+
+func set_assist(level: String) -> void:
+	if not ASSIST.has(level):
+		return
+	var g: Dictionary = data.game
+	g["auto_skills"] = [false, false, false, false]
+	g["auto_combo"] = level in ["relax", "bot"]
+	g["auto_move"] = level == "bot"
+	g["auto_cards"] = level == "bot"
+	g["attack_mode"] = "auto" if level in ["relax", "bot"] else "manual"
+	g["key_memory"] = level != "manual"
+	g["hold_chain"] = level != "manual"
+	data.interface["perfect_hint"] = level != "manual"
+	if level in ["relax", "bot"]:
+		g["aim_mode"] = "nearest"
+	save_settings()
+	changed.emit()
 
 
 ## Mémoire des touches : jusqu'à 3 appuis de sorts gardés et joués dans l'ordre (plus de « Trop tôt »).

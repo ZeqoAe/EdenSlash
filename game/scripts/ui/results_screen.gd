@@ -61,6 +61,9 @@ func show_results() -> void:
 		("   ·   NIVEAU %d ! (+%d points de talent)" % [Profile.expertise_level(Run.class_id), 2 * Run.expertise_levels]) if Run.expertise_levels > 0 else ""],
 		17, Color(0.6, 0.85, 1.0))
 	ex.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var assist := Settings.assist_level()
+	var al := Hud._label(v, "Aide au combat : %s" % String(Settings.ASSIST[assist].name if Settings.ASSIST.has(assist) else "Personnalisée"), 14, UiTheme.MUTED)
+	al.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	# récompenses de maîtrise gagnées (sorts, certificats) et classes débloquées
 	var gained: PackedStringArray = []
 	var lvl := Profile.expertise_level(Run.class_id)

@@ -32,6 +32,10 @@ Trophées (0.1.130) : plus de l'équipement, collection de la run (`Run.trophies
 tous différents, 67 effets dans `Trophies.KINDS`, répartis sur les trophées d'Eden par
 `tools/rework_trophies.py` : relancer l'outil après l'ajout d'une famille).
 Reste : retours du joueur sur l'équilibrage (époque 1 gagnée « bien capé » le 14/10, il passe à l'époque 2).
+Lots 1 et 2 de `conception/CONCEPT_FINAL.md` faits (0.1.132 à 0.1.134) : corrections, puis prise en main
+(mémoire des touches, maintien, visée au sol aimantée, anneau d'annulation, Aide au combat en 4 niveaux).
+Reste du lot 1 : « niveau minimum 10 » du Duel (`Duel.gear_level`), à faire avec le lot 5 (échelle des
+dégâts en même temps) ; insensibilité aux renversements des 11 certificats (B10, non codée). Prochain : lot 3.
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

@@ -737,35 +737,20 @@ func _aims_at_cursor() -> bool:
 	return not autoplay and bot == null and not foe and Settings.cursor_aim() and not _pad()
 
 
-## Combos parfaits automatiques (Paramètres > Combat), pour le héros du joueur seulement ;
-## jamais en Duel (seul le jeu du joueur y compte).
+## Sorts et enchaînements automatiques (Paramètres > Combat), pour le héros du joueur seulement ;
+## jamais en Duel ni dans un duel de la Tour (seul le jeu du joueur y compte).
 func _auto_combo() -> bool:
-	return not autoplay and bot == null and not foe and not Duel.active and Settings.auto_combo()
+	return not autoplay and bot == null and not foe and not Duel.active and not _tower_duel() and Settings.auto_combo()
+
+
+## Étage de duel de la Tour : l'aide au combat y est limitée à « Assisté ».
+func _tower_duel() -> bool:
+	return Tower.active and Tower.is_duel_floor(Tower.floor_n)
 
 
 ## Déplacement automatique (Paramètres > Combat).
 func _auto_move() -> bool:
-	return not autoplay and bot == null and not foe and Settings.auto_move()
-
-
-var _auto_side := 1.0
-
-
-## Pas de l'annulation parfaite automatique : la direction tenue, sinon de côté autour de la
-## cible la plus proche (en alternant), pour rester à portée.
-func _auto_step_dir(input_dir: Vector3) -> Vector3:
-	if input_dir.length() > 0.1:
-		return input_dir
-	var m := nearest_monster(14.0)
-	if m == null:
-		return -forward()
-	var to := m.global_position - global_position
-	to.y = 0.0
-	_auto_side = -_auto_side
-	var side := to.normalized().cross(Vector3.UP) * _auto_side
-	# trop près pour un tireur : on recule en même temps
-	var back := -to.normalized() * (0.6 if attack_reach() > 6.0 and to.length() < attack_reach() * 0.5 else 0.0)
-	return (side + back).normalized()
+	return not autoplay and bot == null and not foe and not _tower_duel() and Settings.auto_move()
 
 
 ## Objectif du déplacement automatique (flèche de l'objectif : donjon, coffre, escalier…).
@@ -849,7 +834,7 @@ func _try_auto_attack(moving: bool) -> bool:
 ## Compétences automatiques : lancées dès qu'elles sont prêtes et qu'un monstre
 ## (ou la cible verrouillée, selon le réglage) est à leur portée.
 func _try_auto_skill() -> bool:
-	if autoplay or foe:
+	if autoplay or foe or _tower_duel():
 		return false
 	for i in 4:
 		if not Settings.auto_skill(i) or cooldown_left(i) > 0.0:
@@ -1102,15 +1087,6 @@ func _update_action(input_dir: Vector3, delta: float) -> void:
 		return
 	# l'esquive annule toute action (une compétence pas encore sortie est perdue) ;
 	# juste après l'impact d'une compétence : annulation parfaite
-	var auto_perfect: bool = _auto_combo() and _state == "skill" and _action.get("hit_done", false) and _time - _last_hit_at >= 0.06 \
-		and _time - _last_hit_at <= PERFECT_WINDOW and _hits.is_empty() and float(_action.get("heal", 0.0)) <= 0.0
-	if auto_perfect:
-		# combos parfaits : petit pas de côté autour de la cible (on reste à portée), Fluidité
-		_trail_on = false
-		_perfect_cancel()
-		_start_dodge(_auto_step_dir(input_dir), true)
-		_dodge_mult = 0.45
-		return
 	if _wants("dodge"):
 		var perfect: bool = _state == "skill" and _action.get("hit_done", false) and _time - _last_hit_at <= PERFECT_WINDOW
 		var air_ok := is_on_floor() or _air_dashes < max_air_dashes()
@@ -1677,8 +1653,8 @@ func _chain_input() -> int:
 		if st.is_empty():
 			continue
 		var auto: bool = autoplay and not autoplay_idle and st.phase == "bar" and float(st.p) >= 0.35
-		if _auto_combo() and st.phase == "bar" and _monster_in_reach(skill_reach(st.next) + 1.0, false) != null:
-			auto = true  # combos parfaits : le sort suivant part dès l'ouverture de la barre
+		if _auto_combo() and st.phase == "bar" and _action_done() and _monster_in_reach(skill_reach(st.next) + 1.0, false) != null:
+			auto = true  # sorts automatiques : le sort suivant part dès l'ouverture de la barre
 		if (not autoplay and not _memory_on() and _wants("skill_%d" % (int(cs) + 1))) or auto:
 			return _chain_press(int(cs))
 	return 0

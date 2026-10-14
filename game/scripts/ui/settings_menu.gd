@@ -160,6 +160,19 @@ func _build_game_tab() -> void:
 # --- onglet Combat ---------------------------------------------------------------------
 func _build_combat_tab() -> void:
 	var v := _tab("Combat")
+	_section(v, "Aide au combat")
+	var lv_row := HBoxContainer.new()
+	lv_row.add_theme_constant_override("separation", 10)
+	v.add_child(lv_row)
+	var lv_note := _note(v, "")
+	for id in Settings.ASSIST:
+		var b := _button(lv_row, String(Settings.ASSIST[id].name), func(): Settings.set_assist(id), 200)
+		b.toggle_mode = true
+		b.add_theme_stylebox_override("pressed", Hud.style(Color(0.2, 0.34, 0.5, 1.0)))
+		_refreshers.append(func(): b.set_pressed_no_signal(Settings.assist_level() == id))
+	_refreshers.append(func():
+		var cur := Settings.assist_level()
+		lv_note.text = String(Settings.ASSIST[cur].desc) if Settings.ASSIST.has(cur) else "Personnalisée : tes réglages détaillés ci-dessous ne correspondent à aucun niveau.")
 	_section(v, "Attaque de base")
 	_option(v, "Mode d'attaque", "game", "attack_mode", [
 		["manual", "Manuel : clic pour attaquer"], ["auto", "Automatique : frappe seul les monstres au contact"]])
@@ -193,8 +206,8 @@ func _build_combat_tab() -> void:
 	_check(v, "Anneau bleu à chaque impact de sort (moment de l'annulation parfaite)", "interface", "perfect_hint")
 	_note(v, "L'anneau annonce le bon moment pour esquiver et faire l'annulation parfaite (recharge réduite, Fluidité). Il n'apparaît jamais en Duel.")
 	_section(v, "Jeu automatique")
-	_check(v, "Combos parfaits automatiques", "game", "auto_combo")
-	_note(v, "Les 4 sorts de ta barre (ton preset) partent seuls dès qu'ils sont prêts et qu'un ennemi est à portée, leurs enchaînements dès l'ouverture de la barre, et juste après chaque impact le héros fait l'annulation parfaite (petit pas autour de la cible : Fluidité, récupération effacée) pour lancer le suivant. Avec l'attaque automatique, il ne reste qu'à se déplacer.")
+	_check(v, "Sorts et enchaînements automatiques", "game", "auto_combo")
+	_note(v, "Les 4 sorts de ta barre (ton preset) partent seuls dès qu'ils sont prêts et qu'un ennemi est à portée, et leurs enchaînements dès l'ouverture de la barre. L'annulation parfaite (esquive juste après un impact : Fluidité, recharge réduite) reste un geste à faire toi-même. Pas dans les duels de la Tour ni en Duel.")
 	_check(v, "Déplacement automatique", "game", "auto_move")
 	_note(v, "Le héros va seul vers les monstres (à distance de tir pour un archer ou un mage), puis vers l'objectif (donjon, coffre et escalier de la Tour) et ouvre coffres et passages. Te déplacer toi-même reprend la main tant que tu appuies.")
 	_check(v, "Choix des cartes automatique", "game", "auto_cards")

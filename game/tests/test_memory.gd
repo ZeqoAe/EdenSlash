@@ -76,6 +76,21 @@ func _ready() -> void:
 	Input.action_release("skill_1")
 	check("touche tenue : la chaîne entière part (%d)" % player.ml_counts.chain, int(player.ml_counts.chain) == 2)
 
+	# aide Détente : sorts et enchaînements partent seuls, jamais d'annulation parfaite
+	Settings.set_assist("relax")
+	await _reset()
+	player.ml_counts.perfect = 0
+	var id: int = world.director._pick_monster(player.level)
+	var m: Monster = world.director._spawn_monster(id, player.global_position + player.forward() * 2.0, 1)
+	m.max_hp = 1e9
+	m.hp = 1e9
+	m.set_physics_process(false)
+	m.set_process(false)
+	await _wait(6.0)
+	check("Détente : les sorts partent seuls (%d enchaînements)" % player.ml_counts.chain, int(player.ml_counts.chain) >= 1)
+	check("Détente : aucune annulation parfaite automatique", int(player.ml_counts.perfect) == 0)
+	Settings.set_assist("assisted")
+
 	print("TOUT EST OK (0 échec(s))" if fails == 0 else "ÉCHECS : %d" % fails)
 	get_tree().quit(fails)
 

@@ -357,7 +357,18 @@ achetable au hub (collection, JcJ), avec une monnaie gagnée en run selon la dis
   « PARFAIT ! », esquive plus longue et gratuite (même en l'air), images rémanentes,
   -25 % sur la recharge restante, et **Fluidité** +10 % de dégâts par palier (4 max, 3 s).
   Enchaînement type : saut → sort → esquive parfaite → sort…
-  Esquiver avant l'impact annule la compétence (perdue).
+  Esquiver avant l'impact annule la compétence, dont la recharge est rendue (« Sort rendu »).
+  Un anneau bleu bref annonce le moment à chaque impact de sort (jamais en Duel).
+- **Mémoire des touches** (0.1.133, joueur seulement, `Player._queue_*`) : jusqu'à 3 appuis de sorts
+  gardés et joués dans l'ordre ; plus de « Trop tôt » ; l'enchaînement part dès que la barre est
+  ouverte et que le dernier coup du sort en cours est porté ; un appui qui n'a pas pu partir s'efface
+  après 1,2 s ; un sort en recharge n'est gardé que s'il lui reste 0,3 s au plus ; esquive, saut et
+  étourdissement vident la file. Tenir la touche d'une case enchaîne toute la chaîne. Une zone au sol
+  visée à moins de 3 m d'un monstre se pose sur lui.
+- **Aide au combat** (0.1.134, `Settings.ASSIST`) : Manuel, Assisté (défaut : mémoire, maintien,
+  anneau), Détente (attaque, sorts et enchaînements automatiques), Bot (+ déplacement et cartes).
+  L'automatique ne fait plus d'annulation parfaite : c'est le geste du joueur. Étiquette au HUD,
+  ligne au bilan ; coupée dans les duels de la Tour et en Duel.
 
 ## Saut, une mécanique de build
 

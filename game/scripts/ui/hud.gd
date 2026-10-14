@@ -20,6 +20,7 @@ var _xp_orb: HudWidgets.Orb
 var _slots: Array[HudWidgets.SkillSlot] = []
 var _dodge: HudWidgets.SkillSlot
 var _queue_strip: HudWidgets.QueueStrip
+var _assist_label: Label
 var _buff_row: HudWidgets.StatusRow
 var _debuff_row: HudWidgets.StatusRow
 var _durations := {}  # "cible:effet" -> [fin, durée totale]
@@ -464,6 +465,11 @@ func _build_action_bar(root: Control) -> void:
 	_dodge.size = Vector2(50, 50)
 	_dodge.tooltip_text = "Esquive (invulnérable)"
 	bottom.add_child(_dodge)
+	_assist_label = Hud._label(bottom, "", 11, Color.WHITE)
+	_assist_label.position = Vector2(172, 118)
+	_assist_label.size = Vector2(88, 18)
+	_assist_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_assist_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_queue_strip = HudWidgets.QueueStrip.new()
 	_queue_strip.position = Vector2(x0 + 4 * 76.0 + 70.0, 126)
 	bottom.add_child(_queue_strip)
@@ -553,6 +559,10 @@ func _process(delta: float) -> void:
 			waiting.append({"icon": UiTheme.texture(String(player.skill_in_slot(int(e.slot)).get("icon", ""))),
 				"key": Settings.action_label("skill_%d" % (int(e.slot) + 1), 1)})
 	_queue_strip.set_items(waiting)
+	var lv := Settings.assist_level()
+	var info: Dictionary = Settings.ASSIST.get(lv, {})
+	_assist_label.text = String(info.get("tag", ""))
+	_assist_label.add_theme_color_override("font_color", info.get("color", Color.WHITE))
 	var dc := player.dodge_cooldown()
 	_dodge.set_cooldown(dc.x, dc.y)
 	_update_statuses()

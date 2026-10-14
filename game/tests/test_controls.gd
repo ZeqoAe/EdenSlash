@@ -94,6 +94,21 @@ func _test_presets() -> void:
 	check("réglage modifié : mode personnalisé", Settings.current_preset() == "")
 	Settings.apply_preset("classic")
 	check("retour au Classique", Settings.current_preset() == "classic" and not Settings.auto_skill(0))
+	# aide au combat : 4 niveaux
+	check("aide par défaut : Assisté", Settings.assist_level() == "assisted" and Settings.key_memory())
+	Settings.set_assist("manual")
+	check("aide Manuel : ni mémoire des touches ni anneau", Settings.assist_level() == "manual" and not Settings.key_memory() and not Settings.perfect_hint())
+	Settings.set_assist("relax")
+	check("aide Détente : sorts, enchaînements et attaque automatiques, déplacement à la main",
+		Settings.assist_level() == "relax" and Settings.auto_combo() and Settings.auto_attack() and not Settings.auto_move())
+	Settings.set_assist("bot")
+	check("aide Bot : déplacement et cartes automatiques", Settings.assist_level() == "bot" and Settings.auto_move() and Settings.auto_cards())
+	Settings.set_auto_skill(1, true)
+	Settings.set_assist("assisted")
+	check("retour à Assisté : tout à la main", Settings.assist_level() == "assisted" and not Settings.auto_skill(1) and not Settings.auto_combo())
+	Settings.apply_preset("relax")
+	check("préréglage Détente = aide Détente", Settings.assist_level() == "relax")
+	Settings.apply_preset("classic")
 
 
 func _test_save_load() -> void:
