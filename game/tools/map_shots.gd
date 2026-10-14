@@ -35,6 +35,10 @@ func _ready() -> void:
 		views.append([m.chests[k], 24.0, 0.8])
 	for k in mini(3, m.stations.size()):
 		views.append([m.stations[k * 3 % m.stations.size()].pos, 22.0, 0.8])
+	for camp in m.camps:
+		if camp.elite:
+			views.append([camp.pos, 30.0, 0.8])
+			break
 	views.append([m.start, 40.0, 0.8])
 	DirAccess.make_dir_recursive_absolute("user://shots")
 	for i in views.size():

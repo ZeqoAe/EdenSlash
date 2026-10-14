@@ -35,8 +35,12 @@ func show_results() -> void:
 		Hud.ACCENT if Run.result == "victoire" else (Color(0.5, 0.9, 1.0) if Run.result == "extraction" else Color(0.95, 0.4, 0.4)))
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var cls := Run.class_data()
-	var s := Hud._label(v, "%s · niveau atteint %d · %s   ·   Monstres vaincus : %d   ·   Élites : %d   ·   Or gagné : %d" % [
-		cls.get("name_fr", ""), Run.max_level, Run.duration_text(), Run.kills, Run.elites, Run.gold], 16, Color(0.9, 0.9, 0.95))
+	var stage_txt := ""
+	if not Tower.active and not Duel.active and not Training.active:
+		stage_txt = "   ·   Étape %d/%d : %s" % [Run.stage, RunDirector.STAGES, GameData.zone(Run.zone_id).get("name", Run.zone_id)]
+	var s := Hud._label(v, "%s · niveau atteint %d · %s   ·   Monstres vaincus : %d   ·   Élites : %d   ·   Or gagné : %d%s" % [
+		cls.get("name_fr", ""), Run.max_level, Run.duration_text(), Run.kills, Run.elites, Run.gold, stage_txt], 16, Color(0.9, 0.9, 0.95))
+	s.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if Run.unlocked_name != "":
 		var u := Hud._label(v, "Nouvelle zone débloquée : %s !" % Run.unlocked_name, 22, Color(0.55, 1.0, 0.6))

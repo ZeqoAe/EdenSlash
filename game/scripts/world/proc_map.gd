@@ -92,6 +92,7 @@ func generate_run(seed_value: int) -> void:
 	_build_shrines()
 	_build_stations()
 	_build_sites()
+	_build_camps()
 	_scatter_props()
 	_scatter_breakables()
 	GrassField.create(self)
@@ -990,6 +991,41 @@ func _build_sites() -> void:
 				_add_instance(batch, {"model": "uc323_1", "scale": [0.8, 0.8]}, at.call(5.0, 2.0), false, yaw - 0.8)
 				_add_instance(batch, {"model": "uc026", "scale": [1.0, 1.0], "col": 1.2}, at.call(-4.5, 2.5), true, yaw + 0.5)
 				_add_instance(batch, {"model": "uc018", "scale": [0.9, 0.9]}, at.call(1.0, 3.0), false)
+	_flush_batches(batch, holder)
+
+
+## Camps de monstres : camp d'élite (palissade à pieux, torches, lueur rouge : un gardien y
+## porte un sceau du donjon) ou simple bivouac (feu, rondins, ossements).
+func _build_camps() -> void:
+	var holder := Node3D.new()
+	holder.name = "Camps"
+	add_child(holder)
+	var batch := {}
+	for camp in camps:
+		var c: Vector3 = camp.pos
+		if camp.elite:
+			# palissade fermée, une entrée (2 pieux manquants)
+			for i in range(2, 22):
+				var a := TAU * i / 22.0
+				var q := c + Vector3(cos(a), 0, sin(a)) * 9.0
+				q.y = height_at(q.x, q.z) - 0.2
+				_add_instance(batch, {"model": "ub006_1", "scale": [1.45, 1.6]}, q, false, -a + PI * 0.5)
+				_add_box_collider(q, Vector3(1.3, 1.6, 0.25), -a + PI * 0.5)
+			for side: float in [-1.0, 1.0]:
+				var t := c + Vector3(cos(TAU / 22.0 + side * 0.32), 0, sin(TAU / 22.0 + side * 0.32)) * 9.6
+				t.y = height_at(t.x, t.z)
+				_torch(t)
+			var l := OmniLight3D.new()
+			l.light_color = Color(1.0, 0.35, 0.25)
+			l.light_energy = 1.4
+			l.omni_range = 12.0
+			l.position = c + Vector3.UP * 3.0
+			holder.add_child(l)
+			_add_instance(batch, {"model": "ud109", "scale": [0.8, 0.9]}, c + Vector3(2.5, 0, -1.5), false)
+		else:
+			_add_instance(batch, {"model": "uc309_1", "scale": [1.0, 1.1]}, c, false)
+			_add_instance(batch, {"model": "uc021", "scale": [0.9, 1.0]}, c + Vector3(2.4, 0, 1.0), false, rng.randf() * TAU)
+			_add_instance(batch, {"model": "ud101", "scale": [0.6, 0.7]}, c + Vector3(-2.5, 0, -1.8), false)
 	_flush_batches(batch, holder)
 
 
