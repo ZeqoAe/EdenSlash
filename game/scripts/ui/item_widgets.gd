@@ -232,6 +232,10 @@ class ItemSlot extends Button:
 		item = it
 		if not it.is_empty():
 			tooltip_text = Items.display_name(it)  # déclenche la carte d'objet au survol
+		set_process(it.get("awakened", false))  # pièce éveillée : aura animée
+		queue_redraw()
+
+	func _process(_delta: float) -> void:
 		queue_redraw()
 
 	func _make_custom_tooltip(for_text: String) -> Object:
@@ -275,6 +279,13 @@ class ItemSlot extends Button:
 		var tex := UiTheme.texture(String(item.get("icon", "")))
 		if tex:
 			draw_texture_rect(tex, r.grow(-6.0), false, Color(1, 1, 1, 0.45 if dim else 1.0))
+		if item.get("awakened", false):
+			# éveillé : aura dorée qui pulse autour de la pièce
+			var t := Time.get_ticks_msec() / 1000.0
+			for k in 3:
+				var a := (0.35 - 0.1 * k) * (0.6 + 0.4 * sin(t * 3.0 + k))
+				draw_rect(r.grow(-2.0 - 2.0 * k), Color(1.0, 0.85, 0.35, a), false, 2.0)
+			draw_rect(r.grow(-6.0), Color(1.0, 0.9, 0.5, 0.08 + 0.06 * sin(t * 2.0)))
 		var font := UiTheme.bold_font()
 		var up := int(item.get("upgrade", 0))
 		if up > 0:

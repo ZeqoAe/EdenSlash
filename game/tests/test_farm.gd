@@ -142,6 +142,7 @@ func _ready() -> void:
 		and d.time < 2.0 and d.map.breakables != null and d.map.breakables.count() > 600 and player.level == lv)
 	_test_reward_zone()
 	await _test_fortune()
+	await _test_armory()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit()
 
@@ -224,3 +225,20 @@ func _test_fortune() -> void:
 	check("case piégée : série perdue, rien d'encaissé", p2._over and p2._won == 0 and Profile.reward_chests.size() == chests0)
 	p2._close()
 	await get_tree().process_frame
+
+
+## Armurerie (hub) : une pièce vue en Survie s'achète avec des insignes, une seule fois.
+func _test_armory() -> void:
+	var it: Dictionary = SlotChests.offer("head", 1, 1, 1)[0]
+	Profile.seen_gear = [int(it.eden)]
+	Profile.insignia = 500
+	var page := GearShopPage.new()
+	add_child(page)
+	await get_tree().process_frame
+	page.refresh()
+	var p := GearShopPage.price(GameData.eden_by_id[int(it.eden)])
+	page._on_buy()
+	check("armurerie : pièce achetée (%d insignes), dans le coffre" % p, Profile.insignia == 500 - p and GearShopPage.owned(int(it.eden)))
+	page._on_buy()
+	check("armurerie : une seule fois", Profile.insignia == 500 - p)
+	page.queue_free()

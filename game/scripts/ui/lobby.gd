@@ -17,7 +17,7 @@ const MENU := [
 	["settings", "Paramètres", "settings"], ["quit", "Quitter", "quit"],
 ]
 ## Arguments de test qui ouvrent un écran au démarrage (captures, tests).
-const SCREEN_ARGS := ["--grimoire", "--talents", "--info", "--inventory", "--appearance", "--chests", "--cards", "--settings"]
+const SCREEN_ARGS := ["--grimoire", "--talents", "--info", "--inventory", "--appearance", "--chests", "--cards", "--settings", "--armory"]
 
 var backdrop: MapBackdrop
 var _hero: HeroScreen
@@ -218,6 +218,15 @@ func _ready() -> void:
 				pick = Profile.reward_chests.filter(func(c): return c.type == kind)
 			if not pick.is_empty():
 				_chests.page(0).open_chest(pick[0])
+		"armory":
+			# test (profil de test) : pièces découvertes en Survie (époque I et une éveillée), insignes
+			if Profile.seen_gear.is_empty():
+				for ep in [1, 3]:
+					for box in ["weapon", "head", "chest"]:
+						for it in SlotChests.offer(box, ep, 3 if ep == 3 else 1, 2):
+							Profile.seen_gear.append(int(it.eden))
+				Profile.insignia = 300
+			_archive.open(1)
 		"archive":
 			_archive.open(0)
 			for arg in OS.get_cmdline_user_args():
@@ -707,7 +716,7 @@ func _build_ui() -> void:
 		_refresh_ui()
 		if _current == "duel":
 			_show_menu("duel"))  # conditions d'inscription à jour
-	_archive = _screen("Collection", [["Collection", ArchivePages.CollectionPage.new()]])
+	_archive = _screen("Collection", [["Collection", ArchivePages.CollectionPage.new()], ["Armurerie", GearShopPage.new()]])
 	_archive.set_title("Collection", "Archive des trésors : chaque entrée donne un bonus permanent à tous les héros")
 	_chests = _screen("Coffres", [["Coffres", ChestsPage.new()]])
 	_chests.set_title("Coffres", "Coffres de récompense rapportés des runs : équipement, forge, joaillier, set au choix, trophée au choix")

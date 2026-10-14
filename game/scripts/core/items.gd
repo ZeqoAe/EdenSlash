@@ -670,7 +670,7 @@ static func describe(item: Dictionary) -> String:
 	# carte d'objet : icône, nom à la couleur de la rareté, type, qualité
 	var lines := ["%s[font_size=21][b][color=#%s]%s[/color][/b][/font_size]" % [
 			"[img=52x52]%s[/img]  " % icon if icon != "" else "", col, display_name(item)],
-		"[color=#%s]%s[/color] · %s%s · %s" % [col, r.name, _weapon_or_slot(item), " · pièce de set" if item.has("set") else "", ("niveau %d" % int(item.level)) if int(item.level) > 0 else "sans niveau"],
+		"[color=#%s]%s[/color] · %s%s · %s" % [col, ("Éveillé" if item.get("awakened", false) else r.name), _weapon_or_slot(item), " · pièce de set" if item.has("set") else "", ("niveau %d" % int(item.level)) if int(item.level) > 0 else "sans niveau"],
 		"Qualité [color=%s]%d %%[/color]%s" % ["#7fe08a" if q >= 1.0 else "#ff9a7a", roundi(q * 100.0),
 			"   ·   Amélioration [color=#ffcf6b]+%d[/color] / %d" % [up, MAX_UPGRADE] if up > 0 else ""],
 		"[color=#5a5470]────────────────────────[/color]"]
