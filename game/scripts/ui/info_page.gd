@@ -83,7 +83,7 @@ static func _table(head: Array, rows: Array) -> String:
 
 func _money() -> String:
 	var t := _h("Une run : étapes, carte, monnaies")
-	t += _note("Une run = 3 étapes : la zone choisie puis les deux suivantes. Sur chaque carte : casse tout, ouvre les coffres, forge ton équipement, réunis 3 sceaux puis affronte le boss du donjon (le pilier violet). Boss vaincu : un portail mène à l'étape suivante, tu gardes ton niveau, tes cartes, ton équipement, ton or et tes clés. Après 10 minutes sur une carte : la rage.")
+	t += _note("Une run = 3 étapes : la zone choisie, puis des zones à ta hauteur. Sur chaque carte : casse tout, ouvre les coffres, forge ton équipement, réunis 3 sceaux puis affronte le boss du donjon (le pilier violet). Boss vaincu : un portail mène à l'étape suivante, tu gardes ton niveau, tes cartes, ton équipement, ton or et tes clés. Après 10 minutes sur une carte : la rage.")
 	t += _table(["Monnaie", "Où l'obtenir", "À quoi elle sert", "En fin de run"], [
 		["[b]Or[/b]", "Jarres, caisses, tas d'or, monstres, défis, vente aux marchands", "Coffres de la carte (le prix monte de 15 % à chaque coffre), marchands, amélioration +1 → +10", "[color=#ff9a7a]perdu[/color]"],
 		["[b]Clés[/b]", "Élites (1 chacune), débris, sanctuaires des clés, marchands", "Ouvrir n'importe quel coffre de la carte sans payer", "[color=#ff9a7a]perdues[/color]"],

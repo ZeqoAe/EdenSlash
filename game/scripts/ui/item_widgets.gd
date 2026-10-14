@@ -156,14 +156,15 @@ class Wallet extends HBoxContainer:
 			ic.tooltip_text = {"gold": "Or (perdu en fin de run)", "keys": "Clés (perdues en fin de run)", "crystal": "Cristaux (gardés)"}[k]
 			ic.mouse_filter = Control.MOUSE_FILTER_PASS
 			add_child(ic)
-			var l := Hud._label(self, "0", 16, Color.WHITE)
-			l.custom_minimum_size = Vector2(46, 0)
+			var l := Hud._label(self, "0", 16, Color(1.0, 0.85, 0.35) if k == "gold" else Color.WHITE)
+			l.custom_minimum_size = Vector2(78, 0)
 			l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			_labels[k] = l
 
 	func refresh() -> void:
 		for k in _labels:
-			_labels[k].text = str(Profile.amount(k))
+			var n := Profile.amount(k)
+			_labels[k].text = "%d %s" % [n, {"gold": "or", "keys": "clé" if n < 2 else "clés", "crystal": "cristal" if n < 2 else "cristaux"}[k]]
 
 
 ## Carte d'infobulle riche (texte BBCode, cadre de couleur).

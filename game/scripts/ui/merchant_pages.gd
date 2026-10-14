@@ -28,20 +28,25 @@ class ItemPage extends HBoxContainer:
 		grid.badge_fn = func(it): return "porté" if _worn(it) else ""
 		grid.selection_changed.connect(_on_selection)
 		left.add_child(grid)
-		var right := ItemWidgets.panel(self, 520)
+		var right := ItemWidgets.panel(self, 640)  # la fiche et ses actions (forge) : la place utile
 		detail = ItemWidgets.rich(right, 15)
 		actions = VBoxContainer.new()
 		actions.add_theme_constant_override("separation", 8)
 		if scroll_actions:
-			detail.fit_content = false
-			detail.scroll_active = true
-			detail.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			# fiche et actions dans un seul défilement (pas de trou entre les deux)
 			var sc := ScrollContainer.new()
 			sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 			sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 			right.add_child(sc)
+			var col := VBoxContainer.new()
+			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			col.add_theme_constant_override("separation", 10)
+			sc.add_child(col)
+			detail.reparent(col)
+			detail.fit_content = true
+			detail.scroll_active = false
 			actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			sc.add_child(actions)
+			col.add_child(actions)
 		else:
 			right.add_child(actions)
 
@@ -164,7 +169,7 @@ class ShopPage extends HBoxContainer:
 		_grid.add_theme_constant_override("h_separation", 10)
 		_grid.add_theme_constant_override("v_separation", 10)
 		left.add_child(_grid)
-		var right := ItemWidgets.panel(self, 520)
+		var right := ItemWidgets.panel(self, 560)
 		_detail = ItemWidgets.rich(right, 15)
 		_actions = VBoxContainer.new()
 		right.add_child(_actions)
@@ -172,6 +177,12 @@ class ShopPage extends HBoxContainer:
 	func refresh() -> void:
 		for c in _grid.get_children():
 			c.queue_free()
+		if _selected == null:
+			# la première offre encore en vente : sa fiche s'affiche tout de suite
+			for o in ui.offers:
+				if not o.get("sold", false):
+					_selected = o
+					break
 		for o in ui.offers:
 			_grid.add_child(_offer_card(o))
 		_show()
@@ -179,7 +190,8 @@ class ShopPage extends HBoxContainer:
 	func _offer_card(o: Dictionary) -> Control:
 		var b := Button.new()
 		b.focus_mode = Control.FOCUS_NONE
-		b.custom_minimum_size = Vector2(240, 92)
+		b.custom_minimum_size = Vector2(280, 104)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.toggle_mode = true
 		b.button_pressed = _selected != null and is_same(_selected, o)
 		b.disabled = o.get("sold", false)

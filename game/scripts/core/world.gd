@@ -298,6 +298,15 @@ func _parse_args() -> void:
 					picks.append(Run._describe_card({"type": "upgrade", "id": int(Run.skills[0].id)}))
 				picks.append(Run._describe_card({"type": "passive", "id": "static_blade"}))
 				cards.offer("Niveau 5 ! Choisis une carte", picks, func(): return Run.roll_cards(3)))
+		elif arg.begins_with("--pause="):
+			# test : menu pause ouvert sur la page N (0 Run, 1 Héros, 2 Aide), avec --shots
+			var page := int(arg.trim_prefix("--pause="))
+			get_tree().create_timer(2.5).timeout.connect(func():
+				cards._queue.clear()
+				cards._show_next()
+				for i in 6:
+					Profile.add_item(Items.generate(player.level + randi_range(0, 2), randf_range(0.0, 1.0)))
+				pause_menu.open(page))
 		elif arg == "--gear-shot":
 			# test : choix d'équipement d'un coffre doré (avec --shots)
 			get_tree().create_timer(1.5).timeout.connect(func():

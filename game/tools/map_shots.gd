@@ -29,6 +29,12 @@ func _ready() -> void:
 	add_child(cam)
 	cam.make_current()
 	var views: Array = [[Vector3(m.size * 0.5, 0, m.size * 0.5), 420.0, 0.0]]
+	if "--close" in args:
+		# gros plan sur des objets à casser (vérification du rendu)
+		views.clear()
+		var alive: Array = m.breakables.alive_list()
+		for k in 4:
+			views.append([alive[k * 37 % alive.size()][0], 6.0, 0.9])
 	for k in mini(4, m.sites.size()):
 		views.append([m.sites[k].pos, 34.0, 0.8])
 	for k in mini(2, m.chests.size()):

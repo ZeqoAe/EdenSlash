@@ -261,9 +261,9 @@ func _update_objectives() -> void:
 		"cleared":
 			lines = ["✔ Boss vaincu : ramasse le butin"]
 		_:
-			lines.append("✔ Entrée du donjon trouvée" if director.dungeon_found else "◇ Trouve l'entrée du donjon")
-			lines.append("✔ Sceaux réunis : le donjon est ouvert" if director.seals >= need else "◇ Sceaux du donjon : %d / %d (gardiens d'élite)" % [director.seals, need])
-			lines.append("◇ Coffres : %d / %d · simple %d · ouvragé %d · doré %d or (ou 1 clé)" % [director.chests_opened, chests_total,
+			lines.append("✔ Entrée du donjon trouvée" if director.dungeon_found else "◇ Trouve le donjon (pilier violet)")
+			lines.append("✔ Sceaux réunis : donjon ouvert" if director.seals >= need else "◇ Sceaux %d / %d : forts d'élite" % [director.seals, need])
+			lines.append("◇ Coffres %d / %d · %d / %d / %d or" % [director.chests_opened, chests_total,
 				director.chest_price(0), director.chest_price(1), director.chest_price(2)])
 			var used := 0
 			var total := 0
@@ -272,9 +272,9 @@ func _update_objectives() -> void:
 					if is_instance_valid(it) and Interactable.STATION_VERBS.has(it.kind):
 						total += 1
 						used += 1 if it.used else 0
-			lines.append("◇ Sanctuaires %d / %d · lieux utilisés %d / %d (enclumes, scribes, défis…)" % [director.shrines_captured,
+			lines.append("◇ Sanctuaires %d / %d · lieux %d / %d" % [director.shrines_captured,
 				director.map.shrines.size() if director.map else 0, used, total])
-			lines.append("La rage arrive dans %02d:%02d : monstres plus forts, plus de butin" % [int(t) / 60, int(t) % 60] if not rage else "Rage : monstres plus forts, plus d'XP et de butin")
+			lines.append("Rage dans %02d:%02d (monstres et butin plus forts)" % [int(t) / 60, int(t) % 60] if not rage else "RAGE : monstres et butin plus forts")
 	for i in _obj_lines.size():
 		var shown := i < lines.size()
 		_obj_lines[i].visible = shown

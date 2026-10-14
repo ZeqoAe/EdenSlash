@@ -70,8 +70,10 @@ func refresh() -> void:
 	for s in Run.skills:
 		var d := Run.skill_def(int(s.id))
 		_row(_skills, String(d.get("icon", "")), "%s — rang %d" % [d.get("name", "?"), int(s.rank)], String(d.get("desc", "")), UiTheme.GOLD)
-	for i in Run.MAX_SKILLS - Run.skills.size():
-		_row(_skills, "", "Emplacement libre", "Les nouvelles compétences s'obtiennent avec les cartes de niveau et à la boutique.", UiTheme.MUTED)
+	var free := Run.MAX_SKILLS - Run.skills.size()
+	if free > 0:
+		_row(_skills, "", "%d emplacement%s libre%s" % [free, "s" if free > 1 else "", "s" if free > 1 else ""],
+			"Les compétences s'obtiennent avec les cartes de niveau et chez les marchands.", UiTheme.MUTED)
 	for ch in _cards.get_children():
 		ch.queue_free()
 	if Run.passives.is_empty():

@@ -10,7 +10,7 @@ static func text_center(ci: CanvasItem, text: String, center: Vector2, font: Fon
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
 	var pos := Vector2(center.x - w * 0.5, center.y + (font.get_ascent(size) - font.get_descent(size)) * 0.5)
 	if outline > 0:
-		ci.draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, outline, Color(0.03, 0.01, 0.05, 0.85))
+		ci.draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, outline, Color(0.03, 0.01, 0.05, 0.85 * color.a))  # le contour s'estompe avec le texte
 	ci.draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
 
 
