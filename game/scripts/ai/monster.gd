@@ -181,12 +181,16 @@ func _update_tint() -> void:
 
 func _refresh_status_label() -> void:
 	_update_tint()
+	# états actifs seulement, sans les insensibilités (mécanique invisible), 2 au plus
+	var shown: Array = []
+	for st in statuses:
+		if STATUS_INFO.has(st) and not String(st).begins_with("imm_") and has_status(st):
+			shown.append(st)
 	var parts: PackedStringArray = []
-	for s in statuses:
-		if STATUS_INFO.has(s):
-			parts.append(STATUS_INFO[s].name)
-	_status_label.text = " · ".join(parts)
-	_status_label.modulate = STATUS_INFO[statuses.keys()[0]].color if not statuses.is_empty() and STATUS_INFO.has(statuses.keys()[0]) else Color.WHITE
+	for st in shown.slice(0, 2):
+		parts.append(STATUS_INFO[st].name)
+	_status_label.text = " · ".join(parts) + (" +%d" % (shown.size() - 2) if shown.size() > 2 else "")
+	_status_label.modulate = STATUS_INFO[shown[0]].color if not shown.is_empty() else Color.WHITE
 
 
 func _physics_process(delta: float) -> void:

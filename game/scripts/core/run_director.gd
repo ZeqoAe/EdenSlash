@@ -67,6 +67,8 @@ var greed := false
 ## suivante ; niveau, cartes, équipement, or et clés sont gardés. Victoire après la dernière.
 const STAGES := 3
 var _touch_timer := 0.0
+var _gold_pop := 0  # or des objets cassés pas encore affiché
+var _gold_pop_timer := 0.0
 var _challenges: Array = []  # défis en cours : {station, monsters}
 const DISCOVER_POI := 45.0
 const SHRINE_PRESSURE := 3.5  # secondes entre deux groupes de monstres pendant une capture
@@ -986,6 +988,11 @@ func _update_breakables(delta: float) -> void:
 	if Run.anvil_result != "":
 		message.emit("Enclume : %s" % Run.anvil_result, 2.5)
 		Run.anvil_result = ""
+	_gold_pop_timer -= delta
+	if _gold_pop > 0 and _gold_pop_timer <= 0.0:
+		DamageNumber.spawn_text(player, "+%d or" % _gold_pop, Color(1.0, 0.85, 0.3))
+		_gold_pop = 0
+		_gold_pop_timer = 0.5
 	_touch_timer -= delta
 	if _touch_timer > 0.0 or map.breakables == null or player.is_dead:
 		return
@@ -1008,7 +1015,7 @@ func _on_broken(kind: String, pos: Vector3) -> void:
 	var gold := roundi(randi_range(int(g[0]), int(g[1])) * (1.0 + lv * 0.25) * (GREED_GOLD if greed else 1.0))
 	if gold > 0:
 		Run.add_gold(gold)
-		DamageNumber.spawn_text(player, "+%d or" % gold, Color(1.0, 0.85, 0.3))
+		_gold_pop += gold  # affiché en un seul « +N or » (voir _update_breakables)
 	if kind == "gold":
 		return
 	if orbs:

@@ -46,7 +46,12 @@ var _target_trail: ProgressBar
 var _target_row: HudWidgets.StatusRow
 var _target_ref: WeakRef
 
-var _center_label: Label
+var _center_label: Label  # titre du bandeau d'annonce
+var _center_sub: Label  # détail du bandeau (2e ligne et suivantes)
+var _banner: PanelContainer
+var _feed: VBoxContainer  # fil de butin (à gauche) : petites lignes qui s'effacent
+## Messages qui vont dans le fil de butin plutôt que dans le bandeau (début du texte).
+const FEED_PREFIXES := ["Butin", "Clé", "Une clé", "Coffre", "Coffre ouvragé", "Coffre doré", "Équipé", "Rangé", "Cristal"]
 var _prompt_box: PanelContainer
 var _better_box: PanelContainer  # objet ramassé meilleur que la pièce portée : [G] Équiper
 var _better_label: RichTextLabel
@@ -115,14 +120,43 @@ func _build() -> void:
 	_build_action_bar(root)
 
 	# --- messages (centre) ---
-	_center_label = _label(root, "", 40, ACCENT)
-	_center_label.set_anchors_preset(Control.PRESET_CENTER)
-	_center_label.position = Vector2(-560, -240)
-	_center_label.size = Vector2(1120, 150)
+	# bandeau d'annonce : haut de l'écran, titre + détail sur une bande sombre
+	_banner = PanelContainer.new()
+	var band := StyleBoxFlat.new()
+	band.bg_color = Color(0.03, 0.02, 0.06, 0.62)
+	band.border_color = Color(UiTheme.GOLD, 0.55)
+	band.border_width_top = 1
+	band.border_width_bottom = 1
+	band.content_margin_top = 8
+	band.content_margin_bottom = 10
+	band.content_margin_left = 40
+	band.content_margin_right = 40
+	_banner.add_theme_stylebox_override("panel", band)
+	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_banner.position = Vector2(-430, 150)
+	_banner.size = Vector2(860, 0)
+	_banner.custom_minimum_size = Vector2(860, 0)
+	root.add_child(_banner)
+	var bv := VBoxContainer.new()
+	bv.add_theme_constant_override("separation", 2)
+	bv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_banner.add_child(bv)
+	_center_label = _label(bv, "", 30, ACCENT)
 	_center_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_center_label.pivot_offset = _center_label.size * 0.5
-	UiTheme.title(_center_label, 40)
-	_center_label.modulate.a = 0.0
+	UiTheme.title(_center_label, 30)
+	_center_sub = _label(bv, "", 17, Color(0.93, 0.9, 0.98))
+	_center_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_center_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_banner.pivot_offset = Vector2(430, 40)
+	_banner.modulate.a = 0.0
+	# fil de butin (gauche, sous le panneau d'objectifs)
+	_feed = VBoxContainer.new()
+	_feed.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_feed.add_theme_constant_override("separation", 4)
+	_feed.position = Vector2(18, 330)
+	_feed.size = Vector2(380, 0)
+	root.add_child(_feed)
 
 	# --- invite d'interaction ([F] Ouvrir...) ---
 	_prompt_box = PanelContainer.new()
@@ -682,17 +716,44 @@ func show_prompt(text: String) -> void:
 
 
 func show_message(text: String, duration: float) -> void:
-	_center_label.text = text
+	for pre in FEED_PREFIXES:
+		if text.begins_with(pre) and not text.contains("\n"):
+			feed(text)
+			return
+	var lines := text.split("\n", false, 1)
+	_center_label.text = lines[0] if not lines.is_empty() else ""
+	_center_sub.text = lines[1] if lines.size() > 1 else ""
+	_center_sub.visible = lines.size() > 1
 	if _msg_tween:
 		_msg_tween.kill()
-	_center_label.modulate.a = 0.0
-	_center_label.scale = Vector2.ONE * 1.15
+	_banner.modulate.a = 0.0
+	_banner.scale = Vector2(1.06, 1.06)
 	_msg_tween = create_tween()
 	_msg_tween.set_parallel()
-	_msg_tween.tween_property(_center_label, "modulate:a", 1.0, 0.2)
-	_msg_tween.tween_property(_center_label, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_msg_tween.tween_property(_banner, "modulate:a", 1.0, 0.18)
+	_msg_tween.tween_property(_banner, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_msg_tween.chain().tween_interval(duration)
-	_msg_tween.chain().tween_property(_center_label, "modulate:a", 0.0, 0.5)
+	_msg_tween.chain().tween_property(_banner, "modulate:a", 0.0, 0.5)
+
+
+## Ligne du fil de butin (5 au plus, la plus récente en bas), effacée après quelques secondes.
+func feed(text: String, color := Color(1.0, 0.88, 0.55)) -> void:
+	var box := PanelContainer.new()
+	box.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.04, 0.03, 0.08, 0.72), Color(color, 0.45), 1, 6))
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var l := _label(box, text, 15, color)
+	l.clip_text = true
+	_feed.add_child(box)
+	while _feed.get_child_count() > 5:
+		var old := _feed.get_child(0)
+		_feed.remove_child(old)
+		old.queue_free()
+	box.modulate.a = 0.0
+	var tw := box.create_tween()
+	tw.tween_property(box, "modulate:a", 1.0, 0.15)
+	tw.tween_interval(3.5)
+	tw.tween_property(box, "modulate:a", 0.0, 0.6)
+	tw.tween_callback(box.queue_free)
 
 
 func _on_hp(hp: float, max_hp: float) -> void:

@@ -60,7 +60,7 @@ const STATIONS := {
 	"scribe": {"count": 2, "title": "Autel du scribe", "model": "uc503", "scale": 0.55, "col": 1.8},
 	"well": {"count": 3, "title": "Fontaine de vie", "model": "uc406", "scale": 1.0, "col": 1.2},
 	"magnet": {"count": 2, "title": "Pierre d'aimant", "model": "ud115", "scale": 0.9, "col": 1.2},
-	"greed": {"count": 1, "title": "Autel de cupidité", "model": "uc033", "scale": 2.2, "col": 0.0},
+	"greed": {"count": 1, "title": "Autel de cupidité", "model": "uc033", "scale": 1.5, "col": 0.0},
 	"challenge": {"count": 2, "title": "Stèle du défi", "model": "ub201_1", "scale": 1.0, "col": 0.9},
 }
 ## Lieux de décor (repères, avec des objets à casser autour).
@@ -905,7 +905,7 @@ func _build_stations() -> void:
 		interactables.append(it)
 		var l := OmniLight3D.new()
 		l.light_color = Interactable.STATION_COLORS.get(st.kind, Color(1, 0.9, 0.6))
-		l.light_energy = 1.6
+		l.light_energy = 0.5 if st.kind == "greed" else 1.0  # l'or reflète beaucoup : pas d'éblouissement
 		l.omni_range = 9.0
 		l.position = st.pos + Vector3.UP * 2.5
 		add_child(l)

@@ -151,6 +151,7 @@ func _ready() -> void:
 	_attach_weapon(_foe_weapon_code() if foe else Profile.weapon_code())
 	_model_base = model.transform
 	_build_trail()
+	_build_ground_ring()
 	statuses_changed.connect(recalc_stats)
 	statuses_changed.connect(_update_stealth_visual)
 	if not foe:
@@ -362,6 +363,32 @@ func _foe_weapon_code() -> String:
 
 func power() -> float:
 	return maxf(atk, matk)
+
+
+static var _ring_tex: ImageTexture
+
+
+## Anneau projeté au sol sous le héros (doré, rouge pour un héros ennemi) : on retrouve son
+## héros dans la mêlée, l'anneau épouse le relief.
+func _build_ground_ring() -> void:
+	if _ring_tex == null:
+		var n := 128
+		var img := Image.create(n, n, false, Image.FORMAT_RGBA8)
+		for y in n:
+			for x in n:
+				var d := Vector2(x + 0.5 - n * 0.5, y + 0.5 - n * 0.5).length() / (n * 0.5)
+				var a := clampf(1.0 - absf(d - 0.86) / 0.08, 0.0, 1.0) + clampf(0.25 - d * 0.25, 0.0, 1.0) * 0.6
+				img.set_pixel(x, y, Color(1, 1, 1, clampf(a, 0.0, 1.0)))
+		_ring_tex = ImageTexture.create_from_image(img)
+	var dec := Decal.new()
+	dec.texture_albedo = _ring_tex
+	dec.modulate = Color(1.0, 0.35, 0.3, 0.75) if foe else Color(1.0, 0.82, 0.35, 0.6)
+	dec.size = Vector3(1.9, 4.0, 1.9)
+	dec.position = Vector3(0, 0.5, 0)
+	dec.cull_mask = 1  # le sol et le décor, pas les personnages
+	dec.distance_fade_enabled = true
+	dec.distance_fade_begin = 60.0
+	add_child(dec)
 
 
 ## Joue le profil type [param b] au niveau [param lv] : son équipement (passifs et sets
