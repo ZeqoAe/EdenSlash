@@ -244,7 +244,9 @@ Les costumes d'Eden tombent sur les boss (1 chance sur 4, 1 sur 2 s'il est enrag
 
 ## Étapes et sources (refonte 0.1.91, façon Megabonk)
 
-- **Une run = 3 étapes** : la zone choisie, puis les deux suivantes. Le boss d'une étape vaincu, un
+- **Une run = 3 étapes** : la zone choisie, puis une zone à la hauteur du héros (au moins la suivante :
+  niveau 17 en fin d'étape 1 → Avila 13-30 ; sinon monstres et butin, plafonnés au niveau de la zone,
+  resteraient sous le sien ; les zones franchies se débloquent). Le boss d'une étape vaincu, un
   **portail** apparaît dans sa salle : il mène à la carte de la zone suivante (minuterie, sceaux et coffres
   remis à zéro ; niveau, cartes, équipement, or et clés gardés ; la zone suivante est aussi débloquée).
   Victoire après le boss de la 3e étape (ou de la dernière zone). +120 d'expertise par étape franchie.

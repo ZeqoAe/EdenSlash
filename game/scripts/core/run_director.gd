@@ -745,8 +745,12 @@ func _on_boss_killed() -> void:
 	state = "cleared"
 	var next := next_zone_id()
 	if next != "":
-		var opened := Profile.unlock_after(String(zone.get("id", "")))  # aussi pour les prochaines runs
-		if opened != "":
+		# les zones jusqu'à celle de l'étape suivante s'ouvrent aussi pour les prochaines runs
+		var target := GameData.zone_index(next)
+		while Profile.unlocked_zones <= target:
+			var opened := Profile.unlock_after(String(GameData.zones[Profile.unlocked_zones - 1].id))
+			if opened == "":
+				break
 			Run.unlocked_name = opened
 		message.emit("Boss vaincu ! Ramasse le butin,\npuis prends le portail vers %s (étape %d/%d)" % [GameData.zone(next).get("name", next), Run.stage + 1, STAGES], 4.5)
 		_spawn_stage_portal(next)
@@ -756,12 +760,20 @@ func _on_boss_killed() -> void:
 	boss_defeated.emit()
 
 
-## Zone de l'étape suivante ("" : dernière étape, ou plus de zone après celle-ci).
+## Zone de l'étape suivante ("" : dernière étape, ou plus de zone après celle-ci) : au moins la
+## zone suivante, et plus loin si le héros a déjà dépassé son début (sinon monstres et butin,
+## plafonnés au niveau de la zone, seraient sous le sien).
 func next_zone_id() -> String:
 	if Run.stage >= STAGES:
 		return ""
-	var i := GameData.zone_index(String(zone.get("id", ""))) + 1
-	return String(GameData.zones[i].id) if i > 0 and i < GameData.zones.size() else ""
+	var cur := GameData.zone_index(String(zone.get("id", "")))
+	if cur < 0 or cur + 1 >= GameData.zones.size():
+		return ""
+	var best := cur + 1
+	for i in range(cur + 1, GameData.zones.size()):
+		if GameData.zone_run_levels(i).x <= (player.level if player else 1) - 3:
+			best = i
+	return String(GameData.zones[best].id)
 
 
 func _emit_zone() -> void:
