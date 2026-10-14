@@ -78,6 +78,7 @@ func _open_for_test() -> void:
 
 func _ready() -> void:
 	add_to_group("world")  # mode dev (F10) : actions de run
+	ScreenFade.reveal(get_tree())  # arrivée en fondu (la carte se génère pendant le noir)
 	if not Run.active:
 		if "--training" in OS.get_cmdline_user_args():
 			Training.start(Profile.selected_class)  # test : zone d'entraînement

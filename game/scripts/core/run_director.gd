@@ -324,14 +324,15 @@ func _interact(it: Interactable) -> void:
 		_ when Interactable.STATION_VERBS.has(it.kind):
 			_use_station(it)
 		"stage_portal":
-			_next_stage(String(it.get_meta("zone", "")))
+			it.used = true  # un seul passage (le fondu dure un instant)
+			ScreenFade.run(get_tree(), _next_stage.bind(String(it.get_meta("zone", ""))))
 		"dungeon":
 			# le bot de test (--boss-after) ignore les sceaux
 			if seals < SEALS_NEEDED and not (player.autoplay and time > _autoplay_dungeon_time()):
 				message.emit("L'entrée est scellée : %d/%d sceaux\nLes gardiens d'élite les portent" % [seals, SEALS_NEEDED], 3.0)
 				_near = null
 				return
-			_enter_arena()
+			ScreenFade.run(get_tree(), _enter_arena)
 		_:
 			npc_opened.emit(it.kind, it)
 	_near = null
