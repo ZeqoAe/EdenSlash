@@ -264,7 +264,7 @@ static func finish(won: bool) -> Dictionary:
 	active = false
 	Run.active = false
 	Profile.in_run = false
-	Profile.load_profile()
+	Profile.reload_keep_records()
 	Profile.gold = 0
 	Profile.keys = 0
 	Profile.bag = {}

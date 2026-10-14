@@ -734,9 +734,10 @@ func _aims_at_cursor() -> bool:
 	return not autoplay and bot == null and not foe and Settings.cursor_aim() and not _pad()
 
 
-## Combos parfaits automatiques (Paramètres > Combat), pour le héros du joueur seulement.
+## Combos parfaits automatiques (Paramètres > Combat), pour le héros du joueur seulement ;
+## jamais en Duel (seul le jeu du joueur y compte).
 func _auto_combo() -> bool:
-	return not autoplay and bot == null and not foe and Settings.auto_combo()
+	return not autoplay and bot == null and not foe and not Duel.active and Settings.auto_combo()
 
 
 ## Déplacement automatique (Paramètres > Combat).
@@ -1522,9 +1523,12 @@ func _hit_monster(m: Combatant, dir: Vector3, action: Dictionary, is_skill: bool
 		Procs.fire(self, "kill", m, m.global_position)
 
 
-## Micro-arrêt sur impact : donne du poids aux coups.
+## Micro-arrêt sur impact : donne du poids aux coups. Il ralentit tout le jeu : jamais quand
+## un autre héros se bat (Duel, duellistes de la Tour), ni pour un héros piloté par une IA.
 func _hit_pause(duration: float) -> void:
-	if not Settings.get_v("interface", "hit_stop"):
+	if not Settings.get_v("interface", "hit_stop") or Duel.active or foe or bot != null:
+		return
+	if Tower.active and Tower.is_duel_floor(Tower.floor_n):
 		return
 	Engine.time_scale = 0.15
 	await get_tree().create_timer(duration, true, false, true).timeout

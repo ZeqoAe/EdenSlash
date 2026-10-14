@@ -43,7 +43,7 @@ func setup(p: Player) -> void:
 	_run.settings_requested.connect(func(): settings.open())
 	_confirm = ConfirmationDialog.new()
 	_confirm.title = "Abandonner la run ?"
-	_confirm.dialog_text = "La run sera abandonnée : tu choisiras 1 objet à garder,\nle reste (or, matériaux, butin) est perdu.\nRetourner au lobby ?"
+	_confirm.dialog_text = "La run sera abandonnée : l'or, les clés et les fournitures de la run sont perdus\n(les coffres de récompense ramassés et les insignes sont gardés).\nRetourner au lobby ?"
 	_confirm.ok_button_text = "Retour au lobby"
 	if Training.active:
 		_confirm.title = "Quitter l'entraînement ?"

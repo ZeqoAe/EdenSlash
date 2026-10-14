@@ -603,9 +603,8 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		if m.carries_seal:
 			world._offer("Gardien vaincu ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
 	Run.add_gold(roundi((1 + m.level * KILL_GOLD * (KILL_GOLD_ELITE if m.is_elite else 1.0)) * (GREED_GOLD if greed else 1.0)))
-	# coffres de récompense (ouverts hors run) : boss, parfois les élites, rarement les autres
-	# coffres de récompense (seule source des mythiques et légendaires) : boss du donjon 100 %,
-	# élites 20 %, monstres 0,5 %
+	# coffres de récompense (ouverts hors run, menu Coffres) : boss du donjon 100 %, élites 20 %,
+	# monstres 0,5 % ; en Survie, forge ou joaillier (l'équipement s'achète au hub)
 	var n_chests := 1 if m.is_boss else (1 if (m.is_elite and randf() < 0.2) or randf() < 0.005 else 0)
 	for i in n_chests:
 		_drop_reward_chest(m.global_position, m.level, m.is_boss)
@@ -810,6 +809,7 @@ func _on_boss_killed() -> void:
 		return
 	if Run.survival:
 		var opened := Epochs.clear(Run.epoch)
+		Run.unlocked_epoch = opened
 		message.emit("%s terminée !%s" % [Epochs.get_def(Run.epoch).name, ("\n%s débloquée" % opened) if opened != "" else ""], 4.5)
 	else:
 		message.emit("Boss vaincu !\nRamasse le butin", 3.0)

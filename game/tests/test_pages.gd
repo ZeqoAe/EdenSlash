@@ -281,6 +281,23 @@ func _test_progression() -> void:
 	var syn := CertBoard.synergies(Profile.cert_board)
 	check("losange orange + 5 liens", syn.any(func(x): return x.name == CertBoard.DIAMOND.orange.name) and syn.any(func(x): return String(x.name).ends_with("×5")))
 	check("bonus du plateau dans les passifs", float(CertBoard.stats(Profile.cert_board).get("dmg_pct", 0.0)) > 0.2)
+	# le même passif d'une autre classe de la lignée ne se pose pas une 2e fois
+	var owner_of := {}
+	var pair: Array = []
+	for cls in GameData.talents:
+		for pid in GameData.talents[cls].get("certificates", []):
+			if owner_of.has(pid) and pair.is_empty():
+				pair = ["%s/%s" % [owner_of[pid], pid], "%s/%s" % [cls, pid]]
+			owner_of[pid] = cls
+	check("des passifs partagés entre classes existent", not pair.is_empty())
+	if not pair.is_empty():
+		var saved_board: Array = Profile.cert_board.duplicate()
+		Profile.cert_board = ["", "", "", "", "", "", ""]
+		Profile.place_certificate(pair[0], 3)
+		Profile.place_certificate(pair[1], 1)
+		check("passif déjà posé : refusé", String(Profile.cert_board[1]) == "" and Profile.cert_passive_posed(pair[1]))
+		Profile.cert_board = saved_board
+	check("couleur d'après la stat : PV = jaune, critique = bleu", CertBoard.color_of("warrior/unshakable") == "yellow" and CertBoard.color_of("thief/dagger_expert") == "blue")
 	Profile.place_certificate("warrior/unshakable", 4)
 	Profile.place_certificate("thief/dagger_expert", 5)
 	check("prisme : triangle de 3 couleurs", CertBoard.synergies(Profile.cert_board).any(func(x): return x.name == CertBoard.PRISM.name))

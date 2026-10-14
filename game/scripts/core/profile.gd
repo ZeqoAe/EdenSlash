@@ -828,13 +828,24 @@ func toggle_certificate(key: String) -> void:
 	var at := cert_board.find(key)
 	if at >= 0:
 		cert_board[at] = ""
-	else:
+	elif not cert_passive_posed(key):
 		for pos in CertBoard.OPEN_ORDER:
 			if is_cert_open(pos) and String(cert_board[pos]) == "":
 				cert_board[pos] = key
 				break
 	_sync_certificates()
 	save_profile()
+
+
+## Le passif de [param key] est-il déjà posé par un autre certificat du plateau (le même passif
+## d'une autre classe de la lignée) ? [param except_pos] : emplacement qu'on va remplacer.
+func cert_passive_posed(key: String, except_pos := -1) -> bool:
+	var pid := CertBoard.passive_id(key)
+	for i in cert_board.size():
+		var k := String(cert_board[i])
+		if k != "" and i != except_pos and k != key and CertBoard.passive_id(k) == pid:
+			return true
+	return false
 
 
 func is_cert_open(pos: int) -> bool:
@@ -847,6 +858,8 @@ func place_certificate(key: String, pos: int) -> void:
 	if not is_cert_open(pos):
 		return
 	var from := cert_board.find(key)
+	if from < 0 and cert_passive_posed(key, pos):
+		return
 	var there := String(cert_board[pos])
 	if from >= 0:
 		cert_board[from] = there
@@ -876,6 +889,21 @@ func record_max(key: String, value: float) -> void:
 	if value > float(records.get(key, 0.0)):
 		records[key] = value
 		_check_missions()
+
+
+## Recharge la sauvegarde (fin de Tour ou de Duel : rien n'y est écrit pendant la partie) en
+## gardant les records gagnés pendant la partie (éliminations, esquives…), qui comptent pour
+## les cartes à débloquer et les classes à missions.
+func reload_keep_records() -> void:
+	var kept := records.duplicate()
+	load_profile()
+	for k in kept:
+		var v = kept[k]
+		if (v is float or v is int) and float(v) > float(records.get(k, 0.0)):
+			records[k] = v
+		elif not records.has(k):
+			records[k] = v
+	_check_missions()
 
 
 func _check_missions() -> void:

@@ -11,7 +11,7 @@ const LIST := [
 	{"id": "survival", "group": "pve", "name": "Survie", "sub": "Carte ouverte, horde, coffres et boss",
 		"desc": "Une grande carte à explorer en 3 étapes pendant que la horde grossit : objets à casser, coffres, lieux à usage unique, forts d'élite, puis le boss et le portail vers l'étape suivante."},
 	{"id": "tower", "group": "pve", "name": "La Tour", "sub": "200 étages, une seule vie",
-		"desc": "Gravis les étages avec une arme de base : une carte et un coffre par étage, des héros de toutes les classes à battre en duel, une seule vie."},
+		"desc": "Gravis les étages avec ton équipement (préréglage actif) : une carte et un coffre par étage, des héros de toutes les classes à battre en duel, une seule vie."},
 	{"id": "dungeon", "group": "pve", "name": "Donjons", "sub": "Salles, vagues et boss", "soon": true,
 		"desc": "Des donjons d'Eden en plusieurs salles : vagues de monstres, mécaniques de boss et butin propre à chaque donjon."},
 	{"id": "duel", "group": "pvp", "name": "Duel", "sub": "1 contre 1, 2 manches gagnantes",

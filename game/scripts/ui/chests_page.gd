@@ -22,7 +22,7 @@ func _ready() -> void:
 	add_theme_constant_override("separation", 16)
 	var left := ItemWidgets.panel(self, 560)
 	ItemWidgets.section(left, "Tes coffres")
-	Hud._label(left, "Boss d'étape et stèles du défi : toujours ; élites : 1 fois sur 5 ; monstres : rarement. Gardés si tu t'en sors (victoire ou extraction). Les objets vont au coffre commun, les fournitures à la réserve de la prochaine run.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	Hud._label(left, "Survie : chaque boss (un coffre d'apparence, plus un coffre de forge ou de joaillier), stèles du défi, élites 1 fois sur 5, monstres rarement, autel de la fortune. Tour : paliers 50, 100, 150 et 200 (apparence). Un coffre ramassé est toujours gardé. Les objets vont au coffre commun, les fournitures à ta réserve.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var sc := ScrollContainer.new()
 	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

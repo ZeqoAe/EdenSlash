@@ -2,7 +2,8 @@ class_name TestTools
 extends CanvasLayer
 ## Outils pour tester le jeu et faire des retours :
 ##   F1 aide · F2 infos de débogage · F4 se débloquer · F9 signaler un problème
-##   F5 +1 niveau · F6 aller à l'entrée du donjon · F7 entrer dans le donjon
+##   mode dev seulement : F5 +1 niveau · F6 aller à l'entrée du donjon · F7 entrer dans le donjon
+##   · F8 déclencher la rage
 ## Les rapports F9 (capture + état + note) vont dans EdenSlash/feedback/.
 
 var player: Player
@@ -26,6 +27,7 @@ static func help_text() -> String:
 	var skills: PackedStringArray = []
 	for i in 4:
 		skills.append(Settings.action_label("skill_%d" % (i + 1), 1))
+	var dev := "\nMode dev : F5 +1 niveau      F6 aller à l'entrée du donjon      F7 arène du boss      F8 déclencher la rage" if dev_keys() else ""
 	var mask := Settings.camera_rotate_mask()
 	var cam := "Clic molette" if mask == MOUSE_BUTTON_MASK_MIDDLE else Settings.action_label("camera_rotate", 1)
 	return """[b]Contrôles[/b]  (Échap > Paramètres pour les changer)
@@ -37,13 +39,17 @@ Molette : zoom
 [b]Tests et retours[/b]
 Alt + clic droit sur n'importe quoi : note sur cet élément (objet, apparence, bouton, monstre…)
 F9 : signaler un problème de carte (capture + position + ta note, dossier feedback)
-F4 : se débloquer      F2 : infos de débogage (position, FPS...)
-F5 : +1 niveau      F6 : aller à l'entrée du donjon      F7 : arène du boss      F8 : déclencher la rage
+F4 : se débloquer      F2 : infos de débogage (position, FPS...)%s
 F1 : afficher / masquer cette aide""" % [
 		Settings.action_label("move_forward", 1), Settings.action_label("move_left", 1),
 		Settings.action_label("move_back", 1), Settings.action_label("move_right", 1),
 		k.call("jump"), k.call("dodge"), move, cam, " ".join(skills), k.call("interact"),
-		k.call("map"), Settings.action_label("objectives", 1), Settings.action_label("pause", 1)]
+		k.call("map"), Settings.action_label("objectives", 1), Settings.action_label("pause", 1), dev]
+
+
+## Touches de test F5 à F8 (niveau, téléportation, rage) : en mode dev seulement.
+static func dev_keys() -> bool:
+	return bool(Settings.get_v("interface", "dev_mode"))
 
 
 func setup(p: Player, d: RunDirector) -> void:
@@ -130,6 +136,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("unstuck"):
 		player.unstuck()
 		_show_toast("Débloqué")
+	elif not dev_keys():
+		return
 	elif event.is_action_pressed("debug_level"):
 		player.gain_xp(GameData.xp_to_next(player.level) - player.xp)
 	elif event.is_action_pressed("debug_gateway"):

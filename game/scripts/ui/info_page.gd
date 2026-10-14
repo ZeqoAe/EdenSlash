@@ -82,18 +82,23 @@ static func _table(head: Array, rows: Array) -> String:
 
 
 func _money() -> String:
-	var t := _h("Une run : étapes, carte, monnaies")
-	t += _note("Une run = 3 étapes : la zone choisie, puis des zones à ta hauteur. Sur chaque carte : casse tout, ouvre les coffres, forge ton équipement, réunis 3 sceaux puis affronte le boss du donjon (le pilier violet). Boss vaincu : un portail mène à l'étape suivante, tu gardes ton niveau, tes cartes, ton équipement, ton or et tes clés. Après 10 minutes sur une carte : la rage.")
+	var t := _h("La Survie : époques, carte, monnaies")
+	t += _note("Une run de Survie = une époque de 3 maps. Tu pars au niveau 1, sans équipement : il se trouve dans les coffres de la carte. Sur chaque map : casse tout, ouvre les coffres, réunis 3 sceaux (les gardiens d'élite les portent), puis affronte le boss du donjon. Boss vaincu : un portail mène à la map suivante, tu gardes ton niveau, tes cartes, ton équipement, ton or et tes clés. Battre le boss de la 3e map débloque l'époque suivante. Après 10 minutes sur une map : la rage.")
 	t += _table(["Monnaie", "Où l'obtenir", "À quoi elle sert", "En fin de run"], [
-		["[b]Or[/b]", "Jarres, caisses, tas d'or, monstres, défis, vente aux marchands", "Coffres de la carte (le prix monte de 15 % à chaque coffre), marchands, amélioration +1 → +10", "[color=#ff9a7a]perdu[/color]"],
+		["[b]Or[/b]", "Jarres, caisses, tas d'or, monstres, défis, vente aux marchands", "Coffres de la carte (le prix monte à chaque coffre), marchands", "[color=#ff9a7a]perdu[/color]"],
 		["[b]Clés[/b]", "Élites (1 chacune), débris, sanctuaires des clés, marchands", "Ouvrir n'importe quel coffre de la carte sans payer", "[color=#ff9a7a]perdues[/color]"],
-		["[b]Cristaux[/b]", "Démonter un objet", "Réforger une stat bonus, polir la qualité, fabrication", "[color=#7fe08a]gardés[/color]"],
-		["[b]Fournitures[/b]", "Caisses (parchemins de fortification), cristaux et jarres (gemmes), coffres ouvragés et dorés et défis (pierres, parchemins bénis), autels du scribe (enchantements)", "Forge : améliorer, sertir des gemmes, enchanter, améliorer sans risque", "gardées si tu t'en sors"],
-		["[b]Cartes[/b]", "Niveaux, sanctuaires, gardiens d'élite, marchands", "Ton build de la run", "la run seulement"],
-		["[b]Coffres de récompense[/b]", "Boss d'étape (toujours), stèles du défi (toujours), élites (20 %)", "Menu Coffres : mythiques et légendaires, sets, forge, joaillier, trophées", "gardés si tu t'en sors"],
+		["[b]Insignes[/b]", "Fin de run : selon les maps parcourues, les monstres et les élites, bonus en cas de victoire", "Armurerie (Collection) : acheter les pièces découvertes dans les coffres", "[color=#7fe08a]gardés[/color]"],
+		["[b]Fournitures[/b]", "Caisses, cristaux, jarres, défis, autels du scribe (parchemins, gemmes, pierres, enchantements)", "Forge du hub : améliorer, sertir, enchanter", "gardées en cas de victoire ou d'extraction"],
+		["[b]Cartes, trophées[/b]", "Niveaux, coffres de sort, de passif, de certificat et de trophée, sanctuaires, marchands", "Ton build de la run (12 trophées au plus)", "la run seulement"],
+		["[b]Coffres de récompense[/b]", "Boss (coffre d'apparence), stèles du défi, autel de la fortune", "Menu Coffres", "[color=#7fe08a]toujours gardés[/color]"],
 	])
 	t += _sub("Sur la carte")
-	t += _note("• Plus de 1 000 jarres, caisses et tonneaux : frappe-les ou fonce dedans (or, XP, parfois soins, fournitures, clés) ; tas d'or ramassés en passant ; cristaux : 3 coups, des gemmes.\n• 30 coffres : or ou une clé, une pièce d'équipement au choix parmi 3 — coffre (jusqu'à épique), coffre ouvragé (jusqu'à mythique), coffre doré (jusqu'à légendaire, pilier doré).\n• Lieux à usage unique (piliers de lumière) : enclume (+1 garanti sur une pièce portée), autel du scribe (parchemin d'enchantement au choix), fontaine de vie, pierre d'aimant (toute l'XP et le butin), autel de cupidité (+50 % d'or et de butin, monstres +25 %), stèle du défi (3 élites : coffre de récompense).\n• 10 sanctuaires : reste dans le cercle (14 s) pendant que les monstres affluent ; cartes, trophées ou clés.\n• 3 marchands ambulants : cartes, clé, fournitures, équipement ; ils rachètent ton butin.\n• Ruines, tours de guet, mines, campements et plateaux : remplis d'objets à casser.\n• Forge (Échap > Héros, fiche d'un objet) : améliorer (or et parchemin), réforger et polir (cristaux), percer, sertir, enchanter.")
+	t += _note("• 30 coffres d'emplacement : chacun vise un emplacement (arme, casque, torse, jambières, gants, bottes, bijoux, trophée) ou un type de carte (sort, passif, certificat). Un coffre d'équipement propose 3 pièces d'Eden de l'époque, avec une relance ; elles restent à +0.
+• Enclume : tire une amélioration (de −2 à +10) pour un emplacement ; elle s'applique à la pièce portée dans cet emplacement jusqu'à la fin de la run.
+• L'équipement de la run n'est pas gardé : chaque pièce choisie dans un coffre devient achetable à l'Armurerie avec tes insignes.
+• Lieux à usage unique (piliers de lumière) : enclume, autel du scribe, fontaine de vie, pierre d'aimant, autel de cupidité, stèle du défi, autel de la fortune (pyramide : encaisser ou tenter l'étage suivant).
+• Sanctuaires : reste dans le cercle pendant que les monstres affluent. Marchands ambulants : cartes, clés, fournitures.
+• La forge n'est pas disponible pendant la Survie : elle sert au hub, pour la Tour et le Duel.")
 	return t
 
 
@@ -207,7 +212,7 @@ func _gear() -> String:
 		["Rareté", "nombre d'affixes : Commun 0 · Magique 1 · Rare (or) 2 · Épique (violet) 3 · Légendaire (orange) 4"],
 		["Sets (cadre vert)", "bonus à 2, 4 et 6 pièces portées, dont des effets déclenchés"],
 		["Gemmes, enchantement", "stats ajoutées par le joaillier et les parchemins"],
-		["Archive", "chaque entrée remplie : +1 / +2 / +4 points d'attribut (rare / épique / légendaire), +1 % de dégâts par set ; paliers de collection"],
+		["Archive", "paliers de collection (entrées remplies) : 10 → +3 % PV · 25 → +2 % dégâts · 50 → +2 % critique · 100 → +4 % vitesse d'attaque · 200 → +3 % dégâts · 400 → +5 % recharge · 800 → +5 % PV · 1 500 → +5 % dégâts"],
 	])
 	t += _sub("Fourchettes des affixes (niveau 1)")
 	var rows: Array = []

@@ -26,11 +26,11 @@ const COLORS := {
 	"yellow": {"name": "Vigueur", "color": Color(1.0, 0.86, 0.3)},
 	"blue": {"name": "Précision", "color": Color(0.4, 0.72, 1.0)},
 }
-## Couleur de chaque certificat (passif d'Eden).
-const CERT_COLOR := {
-	"double_cut": "orange", "staff_expert": "orange", "bow_expert": "orange", "katana_expert": "orange",
-	"unshakable": "yellow", "iron_will": "yellow", "shield_expert": "yellow", "quick_means": "yellow",
-	"battojutsu": "blue", "dagger_expert": "blue", "elemental_essence": "blue", "hawkeye": "blue",
+## Couleur d'un certificat selon la statistique de son passif : attaque et dégâts = orange,
+## PV, défense et soins = jaune, tout le reste (critique, vitesses, esquive, zone, portée…) = bleu.
+const STAT_COLOR := {
+	"atk_pct": "orange", "dmg_pct": "orange", "crit_dmg": "orange",
+	"hp_pct": "yellow", "def_pct": "yellow", "heal_pct": "yellow", "lifesteal": "yellow",
 }
 const PAIR := {
 	"orange": {"dmg_pct": 0.03},
@@ -47,7 +47,20 @@ const PRISM := {"name": "Prisme", "stat": {"dmg_pct": 0.03, "hp_pct": 0.03, "cdr
 
 static func color_of(key: String) -> String:
 	var p := key.split("/")
-	return String(CERT_COLOR.get(p[p.size() - 1], "blue"))
+	if p.size() < 2:
+		return "blue"
+	for pp in GameData.class_data(p[0]).get("passives", []):
+		if String(pp.id) == p[1]:
+			for s in pp.get("stat", {}):
+				return String(STAT_COLOR.get(s, "blue"))
+	return "blue"
+
+
+## Les certificats d'une même lignée (parent et enfants) portent le même passif : un passif ne
+## se pose qu'une fois sur le plateau. Identifiant du passif de [param key] ("classe/passif").
+static func passive_id(key: String) -> String:
+	var p := key.split("/")
+	return p[p.size() - 1]
 
 
 static func color_value(key: String) -> Color:

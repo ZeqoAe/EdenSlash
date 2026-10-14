@@ -38,7 +38,8 @@ var result := ""  # victoire, defaite, abandon
 var max_level := 1
 var seed := 0  # graine de la map (0 = aléatoire)
 var zone_id := "limestone"
-var unlocked_name := ""  # zone débloquée par la victoire (bilan)
+var unlocked_name := ""  # zone débloquée par la victoire (ancienne run)
+var unlocked_epoch := ""  # Survie : époque débloquée par la victoire (bilan)
 var expertise_gain := 0
 var expertise_levels := 0
 var new_classes: Array = []  # classes débloquées pendant la run (bilan)
@@ -101,6 +102,7 @@ func start(cid: String) -> void:
 	start_zone = zone_id
 	stage = 1
 	unlocked_name = ""
+	unlocked_epoch = ""
 	survival = false
 	epoch = 1
 	seen_items = []
@@ -247,7 +249,7 @@ func certificate_pool() -> Array:
 			keys.append(k)
 	var out: Array = []
 	for k in keys:
-		if not k in Profile.certificates:
+		if not k in Profile.certificates and not Profile.cert_passive_posed(String(k)):
 			var d := certificate_card(String(k))
 			if not d.is_empty():
 				out.append(d)

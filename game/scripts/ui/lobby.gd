@@ -658,7 +658,7 @@ func _build_ui() -> void:
 	_reward_bar.add_theme_stylebox_override("fill", UiTheme.flat_box(UiTheme.GOLD, UiTheme.GOLD, 0, 7, false))
 	rr.add_child(_reward_bar)
 	_reward_text = Hud._label(rv, "", 12, UiTheme.MUTED)
-	# sauvegarde, héritage et heure (en bas à droite)
+	# sauvegarde, coffre commun et heure (en bas à droite)
 	var info := PanelContainer.new()
 	info.add_theme_stylebox_override("panel", MenuWidgets.glass(12, MenuWidgets.LINE))
 	info.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
@@ -719,7 +719,7 @@ func _build_ui() -> void:
 	_archive = _screen("Collection", [["Collection", ArchivePages.CollectionPage.new()], ["Armurerie", GearShopPage.new()]])
 	_archive.set_title("Collection", "Archive des trésors : chaque entrée donne un bonus permanent à tous les héros")
 	_chests = _screen("Coffres", [["Coffres", ChestsPage.new()]])
-	_chests.set_title("Coffres", "Coffres de récompense rapportés des runs : équipement, forge, joaillier, set au choix, trophée au choix")
+	_chests.set_title("Coffres", "Coffres de récompense rapportés des runs : apparences, forge, joaillier")
 	_settings = SettingsMenu.new()
 	add_child(_settings)
 	_refresh_ui()
@@ -934,7 +934,7 @@ func _refresh_ui() -> void:
 	_reward_text.text = ("Maîtrise %s niv. %d : %s" % [cd.get("name_fr", cid), lvl + 1, String(next[0].name) if not next.is_empty() else "+2 points de talent"]) if lvl < Profile.EXPERTISE_MAX else "Maîtrise maximale"
 	_dev_button.visible = Dev.enabled()
 	_menu.chests._label.text = "Coffres" + ("  (%d)" % Profile.reward_chests.size() if not Profile.reward_chests.is_empty() else "")
-	_footer.text = "Sauvegarde %d · héritage %d objet(s) · %d run(s), %d victoire(s)" % [Profile.slot, Profile.vault.size(), Profile.runs_done, Profile.runs_won]
+	_footer.text = "Sauvegarde %d · coffre commun %d objet(s) · %d run(s), %d victoire(s)" % [Profile.slot, Profile.vault.size(), Profile.runs_done, Profile.runs_won]
 	_show_menu(_current)
 
 
