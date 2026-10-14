@@ -13,8 +13,8 @@ const RUN_SCENE := "res://scenes/world.tscn"
 const TITLE_SCENE := "res://scenes/title.tscn"
 ## Menu de gauche : identifiant, texte, icône.
 const MENU := [
-	["play", "Jouer", "play"], ["hero", "Héros", "class"], ["chests", "Coffres", "chest"], ["collection", "Collection", "collection"],
-	["settings", "Paramètres", "settings"], ["quit", "Quitter", "quit"],
+	["play", "Jouer", "play"], ["hero", "Héros", "class"], ["chests", "Coffres", "chest"], ["workshop", "Atelier", "equipment"],
+	["collection", "Carnet", "collection"], ["settings", "Paramètres", "settings"], ["quit", "Quitter", "quit"],
 ]
 ## Arguments de test qui ouvrent un écran au démarrage (captures, tests).
 const SCREEN_ARGS := ["--grimoire", "--talents", "--info", "--inventory", "--appearance", "--chests", "--cards", "--settings", "--armory"]
@@ -22,6 +22,7 @@ const SCREEN_ARGS := ["--grimoire", "--talents", "--info", "--inventory", "--app
 var backdrop: MapBackdrop
 var _hero: HeroScreen
 var _archive: PageScreen
+var _workshop: PageScreen
 var _chests: PageScreen
 var _launching := false
 var _open_screen := ""  # test : écran ouvert au démarrage (--inventory, --talents, --appearance, --archive=0...)
@@ -226,7 +227,7 @@ func _ready() -> void:
 						for it in SlotChests.offer(box, ep, 3 if ep == 3 else 1, 2):
 							Profile.seen_gear.append(int(it.eden))
 				Profile.insignia = 300
-			_archive.open(1)
+			_workshop.open(0)
 		"archive":
 			_archive.open(0)
 			for arg in OS.get_cmdline_user_args():
@@ -557,7 +558,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Un écran plein écran (Héros, Collection, Coffres, Paramètres, mode dev) est-il ouvert ?
 func _screen_open() -> bool:
-	for n in [_hero, _archive, _chests, _settings]:
+	for n in [_hero, _archive, _workshop, _chests, _settings]:
 		if n and n.has_method("is_open") and n.is_open():
 			return true
 	return Dev.is_open() if Dev.has_method("is_open") else false
@@ -749,8 +750,10 @@ func _build_ui() -> void:
 		_refresh_ui()
 		if _current == "duel":
 			_show_menu("duel"))  # conditions d'inscription à jour
-	_archive = _screen("Collection", [["Collection", ArchivePages.CollectionPage.new()], ["Armurerie", GearShopPage.new()]])
-	_archive.set_title("Collection", "Archive des trésors : chaque entrée donne un bonus permanent à tous les héros")
+	_archive = _screen("Carnet", [["Collection", ArchivePages.CollectionPage.new()]])
+	_archive.set_title("Carnet", "Archive des trésors : chaque entrée donne un bonus permanent à tous les héros")
+	_workshop = _screen("Atelier", [["Armurerie", GearShopPage.new()]])
+	_workshop.set_title("Atelier", "Armurerie : les pièces découvertes en Survie s'achètent avec tes insignes")
 	_chests = _screen("Coffres", [["Coffres", ChestsPage.new()]])
 	_chests.set_title("Coffres", "Coffres de récompense rapportés des runs : apparences, forge, joaillier")
 	_settings = SettingsMenu.new()
@@ -774,15 +777,37 @@ func _on_menu(id: String) -> void:
 	match id:
 		"hero":
 			_open_hero()
-		"collection":
-			_archive.open(0)
-		"chests":
-			_chests.open(0)
+		"collection", "chests", "workshop":
+			if not Unlocks.is_open(_menu_unlock(id)):
+				return
+			match id:
+				"collection":
+					_archive.open(0)
+				"workshop":
+					_workshop.open(0)
+				_:
+					_chests.open(0)
 		"settings":
 			_settings.open()
 		_:
 			# Jouer, Quitter : le panneau s'ouvre au clic et se referme au second clic
 			_show_menu("" if id == _current else id)
+
+
+## Entrée du fil d'éveil (Unlocks) d'un bouton du menu de gauche.
+func _menu_unlock(id: String) -> String:
+	return {"collection": "collection", "chests": "chests", "workshop": "armory"}.get(id, "survival")
+
+
+## Grise les boutons du menu dont l'entrée n'est pas encore ouverte, avec la condition en infobulle.
+func _refresh_locks() -> void:
+	for id in ["collection", "chests", "workshop"]:
+		if not _menu.has(id):
+			continue
+		var key := _menu_unlock(id)
+		var open := Unlocks.is_open(key)
+		_menu[id].modulate = Color.WHITE if open else Color(1, 1, 1, 0.42)
+		_menu[id].tooltip_text = "" if open else Unlocks.lock_text(key)
 
 
 func _show_menu(id: String) -> void:
@@ -850,7 +875,11 @@ func _menu_play() -> void:
 func _activity_card(a: Dictionary, size := Vector2(345, 112)) -> Button:
 	var c := Activities.card(a, size)
 	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	c.pressed.connect(_show_menu.bind(String(a.id)))
+	if Activities.locked(a):
+		c.tooltip_text = Unlocks.lock_text(String(a.unlock))  # grisée : la condition dit comment l'ouvrir
+		c.pressed.connect(func(): c.tooltip_text = Unlocks.lock_text(String(a.unlock)))
+	else:
+		c.pressed.connect(_show_menu.bind(String(a.id)))
 	return c
 
 
@@ -949,6 +978,8 @@ func _select_zone(id: String) -> void:
 func _refresh_ui() -> void:
 	if _sub == null:
 		return
+	Unlocks.refresh()
+	_refresh_locks()
 	var cid := Profile.selected_class
 	var cd := GameData.class_data(cid)
 	_badge_icon.texture = UiTheme.texture(String(cd.get("icon", "")))
@@ -967,7 +998,9 @@ func _refresh_ui() -> void:
 	_reward_text.text = ("Maîtrise %s niv. %d : %s" % [cd.get("name_fr", cid), lvl + 1, String(next[0].name) if not next.is_empty() else "+2 points de talent"]) if lvl < Profile.EXPERTISE_MAX else "Maîtrise maximale"
 	_dev_button.visible = Dev.enabled()
 	_menu.chests._label.text = "Coffres" + ("  (%d)" % Profile.reward_chests.size() if not Profile.reward_chests.is_empty() else "")
-	_footer.text = "Sauvegarde %d · coffre commun %d objet(s) · %d run(s), %d victoire(s)" % [Profile.slot, Profile.vault.size(), Profile.runs_done, Profile.runs_won]
+	_footer.text = "%d insignes · %d cristaux · %d coffre(s) à ouvrir
+Sauvegarde %d · coffre commun %d objet(s) · %d run(s), %d victoire(s)" % [
+		Profile.insignia, int(Profile.materials.get("crystal", 0)), Profile.reward_chests.size(), Profile.slot, Profile.vault.size(), Profile.runs_done, Profile.runs_won]
 	_show_menu(_current)
 
 

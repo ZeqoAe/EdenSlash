@@ -10,21 +10,26 @@ const GROUPS := [["pve", "Aventure (JcE)"], ["pvp", "Affrontements (JcJ)"]]
 const LIST := [
 	{"id": "survival", "group": "pve", "name": "Survie", "sub": "Carte ouverte, horde, coffres et boss",
 		"desc": "Une grande carte à explorer en 3 étapes pendant que la horde grossit : objets à casser, coffres, lieux à usage unique, forts d'élite, puis le boss et le portail vers l'étape suivante."},
-	{"id": "tower", "group": "pve", "name": "La Tour", "sub": "200 étages, une seule vie",
+	{"id": "tower", "unlock": "tower", "group": "pve", "name": "La Tour", "sub": "200 étages, une seule vie",
 		"desc": "Gravis les étages avec ton équipement (préréglage actif) : une carte et un coffre par étage, des héros de toutes les classes à battre en duel, une seule vie."},
-	{"id": "dungeon", "group": "pve", "name": "Donjons", "sub": "Salles, vagues et boss", "soon": true,
+	{"id": "dungeon", "unlock": "dungeons", "group": "pve", "name": "Donjons", "sub": "Salles, vagues et boss", "soon": true,
 		"desc": "Des donjons d'Eden en plusieurs salles : vagues de monstres, mécaniques de boss et butin propre à chaque donjon."},
-	{"id": "duel", "group": "pvp", "name": "Duel", "sub": "1 contre 1, 2 manches gagnantes",
+	{"id": "duel", "unlock": "duel_free", "group": "pvp", "name": "Duel", "sub": "1 contre 1, 2 manches gagnantes",
 		"desc": "Affronte un héros d'une classe, piloté par l'IA scriptée ou par un cerveau entraîné, avec ton build complet."},
-	{"id": "arena2", "group": "pvp", "name": "Arène 2 contre 2", "sub": "Équipes de deux héros", "soon": true,
+	{"id": "arena2", "unlock": "arenas", "group": "pvp", "name": "Arène 2 contre 2", "sub": "Équipes de deux héros", "soon": true,
 		"desc": "Deux héros contre deux : composition d'équipe, soutien et coups combinés."},
-	{"id": "arena3", "group": "pvp", "name": "Arène 3 contre 3", "sub": "Équipes de trois héros", "soon": true,
+	{"id": "arena3", "unlock": "arenas", "group": "pvp", "name": "Arène 3 contre 3", "sub": "Équipes de trois héros", "soon": true,
 		"desc": "Trois héros contre trois : rôles (tank, soins, dégâts) et contrôle de la zone."},
 	{"id": "battlefield", "group": "pvp", "name": "Champ de bataille", "sub": "10 contre 10", "soon": true,
 		"desc": "Un immense champ de bataille en 10 contre 10 : objectifs à tenir, renforts et grandes mêlées."},
 	{"id": "training", "group": "", "name": "Zone d'entraînement", "sub": "Sorts, armes et cartes, sans enjeu",
 		"desc": "Teste tes sorts, tes armes et tes cartes sur des mannequins et des adversaires réglables : rien n'est gagné ni perdu."},
 ]
+
+
+## Activité pas encore ouverte (fil d'éveil) : grisée, avec sa condition.
+static func locked(a: Dictionary) -> bool:
+	return a.has("unlock") and not Unlocks.is_open(String(a.unlock))
 
 
 static func get_def(id: String) -> Dictionary:
@@ -42,7 +47,7 @@ static func card(a: Dictionary, size := Vector2(0, 118)) -> Button:
 	b.custom_minimum_size = size
 	b.clip_contents = true
 	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	var soon: bool = a.get("soon", false)
+	var soon: bool = a.get("soon", false) or locked(a)
 	var n := UiTheme.flat_box(Color(0.08, 0.07, 0.16, 1.0), UiTheme.GOLD_DIM if not soon else Color(0.35, 0.32, 0.42), 2, 12)
 	var hv := UiTheme.flat_box(Color(0.12, 0.1, 0.22, 1.0), Color(1, 0.92, 0.62), 3, 12)
 	hv.shadow_color = Color(UiTheme.GOLD, 0.45)

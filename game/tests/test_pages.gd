@@ -350,7 +350,7 @@ func _test_lobby() -> void:
 	var lobby: Node = load("res://scenes/lobby.tscn").instantiate()
 	add_child(lobby)
 	await _frames()
-	check("menu principal : Jouer, Héros, Coffres, Collection, Paramètres, Quitter", lobby._menu.keys() == ["play", "hero", "chests", "collection", "settings", "quit"])
+	check("menu principal : Jouer, Héros, Coffres, Atelier, Carnet, Paramètres, Quitter", lobby._menu.keys() == ["play", "hero", "chests", "workshop", "collection", "settings", "quit"])
 	check("accueil : panneau Jouer caché au départ", not lobby._sub_panel.visible)
 	lobby._on_menu("play")
 	await _frames()
@@ -428,7 +428,7 @@ func _test_lobby() -> void:
 	Profile.save_profile()
 	lobby._archive.open(0)
 	await _frames()
-	check("Collection : Collection et Armurerie", lobby._archive._pages.size() == 2 and lobby._archive._tab_buttons[0].visible)
+	check("Carnet : la Collection ; Atelier : l'Armurerie", lobby._archive._pages.size() == 1 and lobby._workshop._pages.size() == 1)
 	check("Collection : catalogue affiché", lobby._archive.is_open() and lobby._archive.page(0)._grid.get_child_count() > 0)
 	lobby._archive.close_ui()
 	# mode dev : rien sans l'activer dans les Paramètres, puis écran F10

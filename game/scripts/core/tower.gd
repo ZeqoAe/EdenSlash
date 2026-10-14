@@ -310,6 +310,14 @@ static func record_key(diff: int) -> String:
 	return RECORD if diff == 1 else "%s_%d" % [RECORD, diff]
 
 
+## Duellistes battus au mieux, toutes difficultés confondues (fil d'éveil).
+static func duelists_beaten() -> int:
+	var top := 0
+	for d in DIFF_NAMES.size():
+		top = maxi(top, best(d))
+	return duel_index(top)
+
+
 ## Dernier étage battu dans la difficulté [param diff].
 static func best(diff := -1) -> int:
 	return int(Profile.records.get(record_key(difficulty if diff < 0 else diff), 0))
