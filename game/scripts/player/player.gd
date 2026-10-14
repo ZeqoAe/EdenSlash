@@ -759,7 +759,7 @@ func _auto_combo() -> bool:
 
 ## Étage de duel de la Tour : l'aide au combat y est limitée à « Assisté ».
 func _tower_duel() -> bool:
-	return Tower.active and Tower.is_duel_floor(Tower.floor_n)
+	return (Tower.active and Tower.is_duel_floor(Tower.floor_n)) or Duel.ranked()
 
 
 ## Déplacement automatique (Paramètres > Combat).

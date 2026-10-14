@@ -114,7 +114,7 @@ static func refresh() -> Array:
 
 
 static func titles() -> Array:
-	var out: Array = []
+	var out: Array = Profile.extra_titles.duplicate()
 	for a in LIST:
 		if owned(a.id) and String(a.title) != "":
 			out.append(String(a.title))

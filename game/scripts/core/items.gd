@@ -121,6 +121,12 @@ const SETS := {
 		4: {"procs": [{"trigger": "low_hp", "chance": 1.0, "cd": 60.0, "effect": "heal", "amount": 0.3,
 			"then": [{"effect": "explosion", "mult": 1.5, "radius": 5.0, "applies": {"burn": 5.0}}]}]},
 		6: {"stat": {"dot_pct": 0.4}, "procs": [{"trigger": "crit", "chance": 0.3, "cd": 1.0, "effect": "burn", "duration": 4.0, "radius": 2.5}]}}},
+	# panoplie du Panthéon : des effets de geste, pas de statistiques (jamais en duel à l'arme)
+	"pantheon": {"name": "Esprits", "suffix": "des Esprits", "bonus": {
+		2: {"procs": [{"trigger": "perfect", "chance": 1.0, "cd": 0.0, "effect": "stat_buff", "status": "t_esprit", "stats": {"dmg_pct": 0.1}, "duration": 5.0}]},
+		4: {"procs": [{"trigger": "perfect", "chance": 1.0, "cd": 0.0, "effect": "cdr", "amount": 0.6}]},
+		6: {"procs": [{"trigger": "dodge", "chance": 1.0, "cd": 8.0, "effect": "buff", "status": "haste", "duration": 3.0,
+			"then": [{"effect": "buff", "status": "fury", "duration": 3.0}]}]}}},
 	"wind": {"name": "Vent céleste", "suffix": "du Vent céleste", "bonus": {
 		2: {"stat": {"move_speed": 0.06}},
 		4: {"procs": [{"trigger": "dodge", "chance": 1.0, "cd": 5.0, "effect": "buff", "status": "haste", "duration": 3.0,

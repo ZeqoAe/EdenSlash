@@ -264,10 +264,96 @@ func _start_training() -> void:
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
+## Duel : trois onglets — libre (les deux modes), Ligue (à l'arme, rangs) et Panthéon (les cerveaux).
+var _duel_tab := "free"
+
+
+func _duel_tabs() -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	_sub.add_child(row)
+	for t in [["free", "Libre", ""], ["league", "Ligue", "league"], ["pantheon", "Panthéon", "pantheon"]]:
+		var open: bool = String(t[2]) == "" or Unlocks.is_open(String(t[2]))
+		var b := MenuWidgets.glass_button(("🔒 " if not open else ("▶ " if _duel_tab == t[0] else "")) + String(t[1]), 15, Vector2(0, 38))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.modulate = Color.WHITE if open else Color(1, 1, 1, 0.45)
+		b.tooltip_text = "" if open else Unlocks.lock_text(String(t[2]))
+		var id := String(t[0])
+		b.pressed.connect(func():
+			if open:
+				_duel_tab = id
+				_show_menu("duel"))
+		row.add_child(b)
+
+
+## Ligue : cinq rangs contre l'IA scriptée, à l'arme niveau 10, aide Assistée au plus.
+func _menu_league() -> void:
+	var nxt := League.target_rank()
+	Hud._label(_sub, "Rang : %s" % League.rank_name(), 24, UiTheme.GOLD).add_theme_font_override("font", UiTheme.title_font())
+	if League.rank_index() >= League.RANKS.size() - 1:
+		Hud._label(_sub, "Rang maximal atteint : la Ligue ne rapporte plus que de la maîtrise.", 14, UiTheme.MUTED)
+	else:
+		Hud._label(_sub, "Prochain rang : %s — %d victoire(s) d'affilée contre l'IA %s (%d / %d)" % [League.rank_name(nxt), League.WINS_PER_RANK,
+			String(ClassRival.NAMES[League.DIFFICULTY[nxt]]).to_lower(), League.streak(), League.WINS_PER_RANK], 15, UiTheme.TEXT).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	Hud._label(_sub, "Duel à l'arme, niveau 10 : seul ton preset de sorts compte. L'aide est limitée à « Assistée ». Chaque victoire rapporte de la maîtrise à ta classe.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var ready := Duel.is_ready_bare(Profile.selected_class)
+	var go := MenuWidgets.gold_button("Combat de Ligue", 22, Vector2(0, 58))
+	go.disabled = not ready
+	go.tooltip_text = "" if ready else "Ton preset de sorts doit avoir 4 cases remplies."
+	go.pressed.connect(func(): _start_ranked("league", ""))
+	_sub.add_child(go)
+
+
+## Panthéon : les six cerveaux dans l'ordre, avec leurs récompenses.
+func _menu_pantheon() -> void:
+	Hud._label(_sub, "Les cerveaux d'IA — à l'arme, niveau 10, meilleur de 3.", 14, UiTheme.MUTED)
+	for i in Pantheon.BRAINS.size():
+		var b: Dictionary = Pantheon.BRAINS[i]
+		var id := String(b.id)
+		var done := Pantheon.beaten(id)
+		var open := Pantheon.available(i) and Pantheon.brain_file_present(id)
+		var st: Dictionary = Profile.pantheon.get(id, {})
+		var rewards := "pièce « %s », coffre d'apparence%s, titre « %s »" % [Items.SLOT_NAMES.get(String(b.slot), String(b.slot)).to_lower(), (", coffre d'auras" if String(b.aura) != "" else ""), b.title]
+		var sub := "%s\n%s%s" % [rewards, ("✔ battu" + (" · éveillé" if st.get("awake", false) else " (%d/5 familles)" % (st.get("families", []) as Array).size())) if done else ("à défier" if open else ("🔒 bats le précédent" if i > 0 and not Pantheon.beaten(String(Pantheon.BRAINS[i - 1].id)) else "cerveau absent sur ce PC")), ""]
+		var r := _row("Cerveau %s" % b.name, sub, "upgrade" if not done else "new", func(): _start_ranked("pantheon", id), 76.0)
+		r.disabled = not open
+		r.modulate = Color.WHITE if open or done else Color(1, 1, 1, 0.5)
+	Hud._label(_sub, "Panoplie des Esprits : %d / 6 pièces · éveillées : %d" % [Pantheon.progress(), Pantheon.awake_count()], 14, UiTheme.GOLD)
+
+
+func _start_ranked(mode: String, brain: String) -> void:
+	if _launching:
+		return
+	var pool: Array = GameData.classes.keys()
+	pool.sort()
+	var opp := String(pool[randi() % pool.size()])
+	Duel.mode = mode
+	Duel.bare = true
+	Duel.bare_level = Pantheon.LEVEL
+	Duel.rival_build = {}
+	Duel.pilot = brain
+	var diff := 3 if mode == "pantheon" else int(League.DIFFICULTY[League.target_rank()])
+	_launching = true
+	if backdrop:
+		backdrop.release()
+	Duel.start(Profile.selected_class, opp, diff)
+	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+
+
 ## Mode Duel : conditions d'inscription (build complet), adversaire, difficulté, inscription.
 func _menu_duel() -> void:
 	var cid := Profile.selected_class
 	_activity_head("duel")
+	_duel_tabs()
+	if _duel_tab == "league" and Unlocks.is_open("league"):
+		_menu_league()
+		return
+	if _duel_tab == "pantheon" and Unlocks.is_open("pantheon"):
+		_menu_pantheon()
+		return
+	_duel_tab = "free"
+	Duel.mode = "free"
+	Duel.pilot = Duel.pilot if Duel.mode == "free" else ""
 	# deux modes : à l'arme (rien que le preset de sorts, niveau au choix) ou équipé (tout compte)
 	var modes := HBoxContainer.new()
 	modes.add_theme_constant_override("separation", 8)

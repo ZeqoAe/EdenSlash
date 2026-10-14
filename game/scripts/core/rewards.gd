@@ -23,11 +23,16 @@ const TYPES := {
 	"look_rare": {"name": "Coffre d'apparence rare", "desc": "Une apparence que tu n'as pas encore, rare ou épique.", "color": Color(0.4, 0.65, 1.0)},
 	"look_epic": {"name": "Coffre d'apparence mythique", "desc": "Une apparence mythique que tu n'as pas encore.", "color": Color(1.0, 0.55, 0.15)},
 	"look_legend": {"name": "Coffre d'apparence légendaire", "desc": "Une apparence légendaire que tu n'as pas encore.", "color": Color(1.0, 0.86, 0.3)},
+	# coffres d'auras (Panthéon) : une aura de la collection que tu n'as pas
+	"aura_rare": {"name": "Coffre d'auras rare", "desc": "Une aura rare que tu n'as pas encore.", "color": Color(0.45, 0.8, 1.0)},
+	"aura_legend": {"name": "Coffre d'auras légendaire", "desc": "Une aura légendaire que tu n'as pas encore.", "color": Color(1.0, 0.7, 0.95)},
 }
-const ORDER := ["look_legend", "look_epic", "look_rare", "look_common", "set", "trophy", "gear", "forge", "jewel"]
+const ORDER := ["aura_legend", "aura_rare", "look_legend", "look_epic", "look_rare", "look_common", "set", "trophy", "gear", "forge", "jewel"]
 ## Raretés (de la collection d'Eden) de chaque coffre d'apparence, du commun au légendaire.
 const LOOKS := {"look_common": [0, 1], "look_rare": [2, 3], "look_epic": [4], "look_legend": [5]}
 const LOOK_TYPES := ["look_common", "look_rare", "look_epic", "look_legend"]
+## Raretés d'Eden des auras de chaque coffre d'auras.
+const AURAS := {"aura_rare": [2], "aura_legend": [5]}
 
 
 ## Coffre d'apparence de qualité [param tier] (0 commun … 3 légendaire).
@@ -47,6 +52,13 @@ static func roll_look(type: String) -> Dictionary:
 		if not pool.is_empty():
 			return pool.pick_random()
 	return free.pick_random()
+
+
+## Aura de la collection pas encore obtenue, de la rareté du coffre d'auras [param type].
+static func roll_aura(type: String) -> Dictionary:
+	var want: Array = AURAS.get(type, [2])
+	var free := GameData.collection.filter(func(x): return x.has("aura") and not Profile.collected(x) and want.has(int(x.get("rarity", 0))))
+	return free.pick_random() if not free.is_empty() else {}
 
 
 static func make(type: String, plevel: int, boss := false) -> Dictionary:
@@ -157,6 +169,9 @@ static func preview(chest: Dictionary) -> String:
 			return "2 gemmes de rang %d et 1 parchemin d'enchantement." % (clampi(lv / 12, 0, Craft.GEM_TIERS.size() - 1) + 1)
 		"set", "trophy":
 			return "3 pièces mythiques d'un même set au choix (déjà possédées : jamais proposées) ; légendaire : %d %%." % (35 if chest.get("boss", false) else 20)
+	if AURAS.has(t):
+		var left := GameData.collection.filter(func(x): return x.has("aura") and not Profile.collected(x) and (AURAS[t] as Array).has(int(x.get("rarity", 0)))).size()
+		return "Une aura que tu n'as pas (%d encore à trouver à cette rareté) ; toutes obtenues : 60 insignes." % left
 	if LOOKS.has(t):
 		var free := GameData.collection.filter(func(x): return not Profile.collected(x) 			and (x.has("aura") or x.has("skin") or (int(x.get("cat", 9)) <= 3 and GameData.cosmetic_by_code.has(String(x.get("code", ""))))) 			and not String(x.get("name", "")).contains("(Alpha)") and (LOOKS[t] as Array).has(int(x.get("rarity", 0))))
 		return "Une apparence que tu n'as pas (%d encore à trouver à cette rareté) ; tout obtenu : 30 cristaux." % free.size()
@@ -217,6 +232,13 @@ static func open(chest: Dictionary) -> Dictionary:
 	var got := {"items": [], "supplies": {}, "crystal": 0}
 	var lv := int(chest.plevel)
 	Items.reward_zone = zone_of(chest)
+	if AURAS.has(String(chest.type)):
+		var a := roll_aura(String(chest.type))
+		if not a.is_empty():
+			Profile.collect(a)
+			got["looks"] = [a]
+		else:
+			Profile.insignia += 60  # toutes les auras de cette rareté sont obtenues : des insignes
 	if LOOKS.has(String(chest.type)):
 		# apparence au hasard, jamais un doublon (toute la collection obtenue : des cristaux)
 		var x := roll_look(String(chest.type))

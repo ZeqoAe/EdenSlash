@@ -18,6 +18,9 @@ static var rival_class := "warrior"
 ## Duel à l'arme (mode A) : aucune pièce, aucun talent ni certificat, niveau choisi (1 à 100), arme de la
 ## classe (variante au choix). Sinon duel équipé (mode B) : tout ce que tu as réglé compte.
 static var bare := false
+## Mode du duel : "free" (libre), "league" (Ligue) ou "pantheon" ; les deux derniers sont classés.
+static var mode := "free"
+static var last_report: Dictionary = {}
 static var bare_level := 10
 static var bare_variant := 0
 static var _stashed_build: Dictionary = {}
@@ -147,6 +150,15 @@ static func requirements(cid: String) -> Array:
 	return out
 
 
+## Prêt pour un duel à l'arme : seul le preset de sorts compte.
+static func is_ready_bare(cid: String) -> bool:
+	var was := bare
+	bare = true
+	var ok := is_ready(cid)
+	bare = was
+	return ok
+
+
 static func is_ready(cid: String) -> bool:
 	return requirements(cid).all(func(r): return r.ok)
 
@@ -161,8 +173,30 @@ static func gear_level() -> int:
 
 ## Inscription : la run du duel avec la classe [param cid] (build du preset) contre
 ## [param opponent] en difficulté [param diff].
+static func ranked() -> bool:
+	return active and mode in ["league", "pantheon"]
+
+
+## Résultat classé du duel qui vient de finir (Ligue : rang et maîtrise ; Panthéon : récompenses).
+static func settle(won: bool, cid: String) -> Dictionary:
+	match mode:
+		"league":
+			var r := League.report(won, cid, wins)
+			r["mode"] = "league"
+			return r
+		"pantheon":
+			var r := Pantheon.report_win(pilot, cid) if won else {}
+			r["mode"] = "pantheon"
+			return r
+	return {}
+
+
 static func start(cid: String, opponent: String, diff: int) -> void:
 	active = true
+	last_report = {}
+	if mode != "free":
+		bare = true  # Ligue et Panthéon : à l'arme
+		bare_level = Pantheon.LEVEL
 	rival_class = String(rival_build.get("class", opponent)) if not rival_build.is_empty() else opponent
 	difficulty = clampi(diff, 0, ClassRival.NAMES.size() - 1)
 	wins = 0
@@ -301,6 +335,7 @@ static func finish(won: bool) -> Dictionary:
 	Profile.gold = 0
 	Profile.keys = 0
 	Profile.bag = {}
+	last_report = settle(won, Run.class_id) if mode != "free" else {}
 	if won:
 		if bare and level <= 1:
 			Profile.record_add("duel_lv1", 1)

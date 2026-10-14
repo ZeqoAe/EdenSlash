@@ -64,7 +64,11 @@ zones ; les monstres visent le héros hostile le plus proche, réévalué toutes
 pose ses renforts). Les cerveaux ne sont pas alliés (ils ne voient pas leurs équipiers). Lot 13 fait (0.1.145) : Donjons (`core/dungeons.gd`) : un par zone, 4 salles (monstres, élites, monstres, boss) sur le moteur de salles de la Tour
 (`Tower.dungeon`, mode « dungeon »), équipement synchronisé, kit du préréglage, une carte par salle, 0 à 2 alliés IA, Normal / Héroïque (+15) /
 Mythique (90), butin (coffre de set, cristaux, plan 10 %). Pas encore : panoplies-archétypes des donjons, système de fabrication des plans (ils
-sont collectés), mécaniques propres à chaque boss de donjon (ceux de la Survie sont réutilisés), salle de repos. Prochain : lot 14 (Panthéon).
+sont collectés), mécaniques propres à chaque boss de donjon (ceux de la Survie sont réutilisés), salle de repos. Lot 14 fait (0.1.146) : Duel en trois onglets (Libre, Ligue, Panthéon). Ligue (`core/league.gd`) : rangs Bronze à Platine, 3 victoires d'affilée par rang,
+à l'arme niveau 10, aide limitée à Assisté, maîtrise par duel. Panthéon (`core/pantheon.gd`) : 6 cerveaux dans l'ordre, panoplie des Esprits
+(`Items.SETS.pantheon`, effets à 2/4/6 pièces, jamais en duel à l'arme), coffres d'apparence et d'auras (`aura_rare`, `aura_legend`), titres, éveil par
+les 5 familles. Pas encore : cerveaux figés dans git (ils restent hors git : `data/cerveaux/cerveau_<id>.json`), aura exclusive du Champion, Gantelet
+(lot 15). Prochain : lot 15 (Arènes, Gantelet).
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

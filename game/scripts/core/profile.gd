@@ -48,6 +48,8 @@ var tutorial: Dictionary = {}
 var contracts: Dictionary = {}
 ## Carnet : succès obtenus (id -> date), titre porté, effets de trophée découverts, variantes d'arme menées à l'effet légendaire.
 var achievements: Dictionary = {}
+var pantheon: Dictionary = {}  # Pantheon : cerveau -> {classes, families, awake}
+var extra_titles: Array = []  # titres gagnés hors succès (Panthéon, Ligue)
 var plans: Array = []  # plans de fabrication trouvés dans les donjons
 var title := ""
 var seen_trophies: Array = []
@@ -266,6 +268,8 @@ func load_profile() -> void:
 	contracts = d.get("contracts", {})
 	achievements = d.get("achievements", {})
 	plans = d.get("plans", [])
+	pantheon = d.get("pantheon", {})
+	extra_titles = d.get("extra_titles", [])
 	title = String(d.get("title", ""))
 	seen_trophies = d.get("seen_trophies", [])
 	weapon_legend = d.get("weapon_legend", [])
@@ -324,7 +328,7 @@ func save_profile() -> void:
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level,
 		"seen_gear": seen_gear, "insignia": insignia, "unlocked_features": unlocked_features,
 		"new_features": new_features, "tutorial": tutorial, "contracts": contracts,
-		"achievements": achievements, "plans": plans, "title": title, "seen_trophies": seen_trophies, "weapon_legend": weapon_legend}
+		"achievements": achievements, "plans": plans, "pantheon": pantheon, "extra_titles": extra_titles, "title": title, "seen_trophies": seen_trophies, "weapon_legend": weapon_legend}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(d))
 	f.close()
@@ -680,6 +684,8 @@ func _clear() -> void:
 	contracts = {}
 	achievements = {}
 	plans = []
+	pantheon = {}
+	extra_titles = []
 	title = ""
 	seen_trophies = []
 	weapon_legend = []
@@ -722,6 +728,8 @@ func reset_all() -> void:
 	contracts = {}
 	achievements = {}
 	plans = []
+	pantheon = {}
+	extra_titles = []
 	title = ""
 	seen_trophies = []
 	weapon_legend = []
@@ -937,6 +945,16 @@ func record_max(key: String, value: float) -> void:
 ## Recharge la sauvegarde (fin de Tour ou de Duel : rien n'y est écrit pendant la partie) en
 ## gardant les records gagnés pendant la partie (éliminations, esquives…), qui comptent pour
 ## les cartes à débloquer et les classes à missions.
+## Effet de trophée découvert (codex du Carnet).
+func chest_add(type: String, plevel: int) -> void:
+	reward_chests.append(Rewards.make(type, plevel, true))
+
+
+func add_title(t: String) -> void:
+	if t != "" and not t in extra_titles:
+		extra_titles.append(t)
+
+
 ## Effet de trophée découvert (codex du Carnet).
 func note_trophy(kind: String) -> void:
 	if kind != "" and not kind in seen_trophies:
