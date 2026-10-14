@@ -1306,18 +1306,23 @@ func _menu_dungeon() -> void:
 	dr.add_theme_constant_override("separation", 6)
 	_sub.add_child(dr)
 	for i in Dungeons.DIFF_NAMES.size():
-		var b := MenuWidgets.glass_button(("✔ " if i == _dg_diff else "") + "%s (niv. %d)" % [Dungeons.DIFF_NAMES[i], Dungeons.level(_dg_zone, i)], 14, Vector2(0, 40))
+		var ok_pe := Dungeons.power_ok(_dg_zone, i)
+		var b := MenuWidgets.glass_button(("🔒 " if not ok_pe else ("✔ " if i == _dg_diff else "")) + "%s (niv. %d)" % [Dungeons.DIFF_NAMES[i], Dungeons.level(_dg_zone, i)], 14, Vector2(0, 40))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.modulate = Color.WHITE if ok_pe else Color(1, 1, 1, 0.5)
+		b.tooltip_text = Dungeons.power_text(_dg_zone, i)
 		var di := i
 		b.pressed.connect(func():
 			_dg_diff = di
 			_show_menu("dungeon"))
 		dr.add_child(b)
+	var pe_note := Hud._label(_sub, (Dungeons.power_text(_dg_zone, _dg_diff) if Dungeons.power_required(_dg_zone, _dg_diff) > 0 else GearPower.summary(Dungeons.level(_dg_zone, _dg_diff))), 13, UiTheme.MUTED)
+	pe_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_dungeon_allies_picker()
-	var open_now := Dungeons.is_open(_dg_zone)
+	var open_now := Dungeons.is_open(_dg_zone) and Dungeons.power_ok(_dg_zone, _dg_diff)
 	var go := MenuWidgets.gold_button("Entrer dans %s" % Dungeons.name_of(_dg_zone), 22, Vector2(0, 58))
 	go.disabled = not open_now
-	go.tooltip_text = "" if open_now else Dungeons.condition(_dg_zone)
+	go.tooltip_text = ("" if Dungeons.power_ok(_dg_zone, _dg_diff) else Dungeons.power_text(_dg_zone, _dg_diff)) if Dungeons.is_open(_dg_zone) else Dungeons.condition(_dg_zone)
 	go.pressed.connect(_start_dungeon)
 	_sub.add_child(go)
 
@@ -1357,6 +1362,10 @@ func _menu_rush() -> void:
 		var b := MenuWidgets.glass_button(("✔ " if i == _dg_diff else "") + "%s (%d / %d)" % [Dungeons.DIFF_NAMES[i], best, Dungeons.rush_floors()], 14, Vector2(0, 40))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.tooltip_text = "Boss de niveau %d à %d · titre « %s » si les %d tombent" % [Dungeons.rush_level(1, i), Dungeons.rush_level(Dungeons.rush_floors(), i), Dungeons.RUSH_TITLES[i], Dungeons.rush_floors()]
+		if not Dungeons.power_ok(Dungeons.RUSH, i):
+			b.text = "🔒 " + b.text
+			b.modulate = Color(1, 1, 1, 0.5)
+			b.tooltip_text += "\n" + Dungeons.power_text(Dungeons.RUSH, i)
 		var di := i
 		b.pressed.connect(func():
 			_dg_diff = di
@@ -1364,14 +1373,14 @@ func _menu_rush() -> void:
 		dr.add_child(b)
 	_dungeon_allies_picker()
 	var go := MenuWidgets.gold_button("Lancer la Ruée", 22, Vector2(0, 58))
-	go.disabled = not Unlocks.is_open("dungeons")
-	go.tooltip_text = "" if Unlocks.is_open("dungeons") else Unlocks.condition("dungeons")
+	go.disabled = not Unlocks.is_open("dungeons") or not Dungeons.power_ok(Dungeons.RUSH, _dg_diff)
+	go.tooltip_text = Unlocks.condition("dungeons") if not Unlocks.is_open("dungeons") else Dungeons.power_text(Dungeons.RUSH, _dg_diff)
 	go.pressed.connect(_start_rush)
 	_sub.add_child(go)
 
 
 func _start_rush() -> void:
-	if _launching or not Unlocks.is_open("dungeons"):
+	if _launching or not Unlocks.is_open("dungeons") or not Dungeons.power_ok(Dungeons.RUSH, _dg_diff):
 		return
 	_launching = true
 	if backdrop:
@@ -1383,7 +1392,7 @@ func _start_rush() -> void:
 
 
 func _start_dungeon() -> void:
-	if _launching or not Dungeons.is_open(_dg_zone):
+	if _launching or not Dungeons.is_open(_dg_zone) or not Dungeons.power_ok(_dg_zone, _dg_diff):
 		return
 	_launching = true
 	if backdrop:

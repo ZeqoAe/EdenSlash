@@ -643,10 +643,9 @@ func refresh() -> void:
 	_class_name.add_theme_color_override("font_color", ClassPicker.tier_color(cid))
 	_class_card.disabled = Profile.in_run
 	_class_card.tooltip_text = "Pendant la run, la classe est fixée." if Profile.in_run else "Choisir la classe dont tu prépares le set (chaque classe a son préréglage)."
-	var power := 0
-	for it in Profile.equipped.values():
-		power += EquipmentPage._power_of(it)
-	_power.text = str(power)
+	_power.text = GearPower.fmt(GearPower.hero_power())
+	_power.tooltip_text = GearPower.summary(maxi(Profile.best_level, 1)) + "
+Elle ouvre les difficultés Héroïque et Mythique des donjons et les butins légendaires."
 	var sets := Items.active_set_bonuses(Profile.set_gear())
 	_set_text.text = ("%s · %d pièces" % [Items.set_def(sets[-1].set).get("name", ""), int(sets[-1].pieces)]) if not sets.is_empty() else "Aucun bonus actif"
 	var p := _stats_player()

@@ -14,7 +14,9 @@ static func compare_text(item: Dictionary, worn) -> String:
 		return ""
 	var c := Items.compare_to_equipped(item)
 	var verdict := "[b][color=%s]%s %+d %%[/color][/b]" % ["#7fe08a" if c >= 0 else "#ff7a7a", "▲ Meilleur" if c >= 0.02 else ("▼ Moins bien" if c <= -0.02 else "≈ Équivalent"), roundi(c * 100.0)]
-	return "\n\n[color=#c8c8d4]Par rapport à ta pièce portée (%s) :[/color] %s\n%s" % [Items.display_name(worn), verdict, diff_text(Items.stats(worn), Items.stats(item))]
+	var dpe := GearPower.delta_if_equipped(item)
+	var pe_txt := "   [color=%s]PE %s%s[/color]" % ["#7fe08a" if dpe >= 0 else "#ff7a7a", "+" if dpe >= 0 else "", GearPower.fmt(dpe)]
+	return "\n\n[color=#c8c8d4]Par rapport à ta pièce portée (%s) :[/color] %s%s\n%s" % [Items.display_name(worn), verdict, pe_txt, diff_text(Items.stats(worn), Items.stats(item))]
 
 
 static func diff_text(before: Dictionary, after: Dictionary) -> String:

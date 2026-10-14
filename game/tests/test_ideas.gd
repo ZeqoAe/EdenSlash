@@ -17,6 +17,7 @@ func _ready() -> void:
 	Profile.reset_all()
 	_test_fx_options()
 	_test_wheel()
+	_test_gear_power()
 	print("ÉCHECS : %d" % fails)
 	get_tree().quit(1 if fails > 0 else 0)
 
@@ -82,3 +83,52 @@ func _test_wheel() -> void:
 	pg.refresh()
 	check("roulette : la page se construit", pg.get_child_count() > 0)
 	pg.queue_free()
+
+
+func _test_gear_power() -> void:
+	Profile.reset_all()
+	Settings.reset_all()
+	Profile.equipped = {}
+	check("PE : sans équipement, 0", GearPower.hero_power() == 0)
+	check("PE attendue croissante avec le niveau", GearPower.expected(10) < GearPower.expected(50) and GearPower.expected(50) < GearPower.expected(90))
+	var low := Items.generate(30, 1.0, "head", "warrior", 0, "", 0)
+	var high := Items.generate(30, 1.0, "head", "warrior", Items.MYTHIC, "", Items.MYTHIC)
+	check("PE d'une pièce : mythique > commune", GearPower.item_power(high) > GearPower.item_power(low) and GearPower.item_power(low) > 0)
+	var up := high.duplicate(true)
+	up["upgrade"] = 10
+	check("PE d'une pièce : +10 > +0", GearPower.item_power(up) > GearPower.item_power(high))
+	Profile.equipped = {"head": high}
+	var one := GearPower.hero_power()
+	check("PE du héros : une pièce portée = sa PE", one == GearPower.item_power(high))
+	check("PE : variation si on remplace par une pièce meilleure", GearPower.delta_if_equipped(up) > 0 and GearPower.delta_if_equipped(low) < 0)
+	Profile.equipped = {}
+	for slot in Items.SLOTS:
+		var it := Items.generate(40, 1.0, slot, "warrior", Items.MYTHIC, "", Items.MYTHIC)
+		Profile.equipped[slot] = it
+	var full := GearPower.hero_power()
+	check("PE : 9 mythiques ≈ 80 % de l'attendue (note 8,7 sur 10)", GearPower.ratio(40, full) > 0.6 and GearPower.ratio(40, full) < 1.0)
+	check("PE : texte lisible avec séparateur de milliers", GearPower.fmt(12345) == "12 345" and GearPower.fmt(7) == "7" and GearPower.fmt(-1500) == "-1 500")
+	# verrous
+	var zid := String(Dungeons.zone_ids()[0])
+	check("donjon Normal : aucune PE requise", Dungeons.power_required(zid, 0) == 0 and Dungeons.power_ok(zid, 0))
+	check("donjon Héroïque : PE requise > 0", Dungeons.power_required(zid, 1) > 0)
+	check("donjon Mythique exige plus que l'Héroïque (niveau 90 vs ~30)", Dungeons.power_required(zid, 2) > Dungeons.power_required(zid, 1))
+	Profile.equipped = {}
+	check("sans équipement : Héroïque fermé", not Dungeons.power_ok(zid, 1))
+	check("Ruée Héroïque fermée sans équipement, Normale ouverte", not Dungeons.power_ok(Dungeons.RUSH, 1) and Dungeons.power_ok(Dungeons.RUSH, 0))
+	Settings.set_v("interface", "dev_mode", true)
+	check("mode dev : tout ouvert", Dungeons.power_ok(zid, 2) and Dungeons.power_ok(Dungeons.RUSH, 2))
+	Settings.set_v("interface", "dev_mode", false)
+	# butin légendaire
+	var chest := Rewards.make("gear", 60, true)
+	var got_legend := false
+	for i in 80:
+		got_legend = got_legend or Rewards.top_rarity(chest) == Items.LEGENDARY
+	check("sans PE : un coffre ne donne jamais de légendaire", not got_legend and not Rewards.legendary_open(chest))
+	check("aperçu du coffre : dit la PE qu'il faut", Rewards.preview(chest).contains("PE"))
+	Settings.set_v("interface", "dev_mode", true)
+	for i in 80:
+		got_legend = got_legend or Rewards.top_rarity(chest) == Items.LEGENDARY
+	check("avec la PE (ici le mode dev) : des légendaires tombent", got_legend)
+	Settings.reset_all()
+	Profile.equipped = {}

@@ -108,6 +108,24 @@ static func is_open(zid: String) -> bool:
 	return false
 
 
+## PE (puissance d'équipement) qu'il faut pour le donjon [param zid] à la difficulté [param diff] ; la Ruée
+## se juge au niveau de son étage du milieu.
+static func power_required(zid: String, diff: int) -> int:
+	var lv := level(zid, diff) if zid != RUSH else rush_level((rush_floors() + 1) / 2, diff)
+	return GearPower.required(lv, float(GearPower.DIFF_RATIO[clampi(diff, 0, 2)]))
+
+
+static func power_ok(zid: String, diff: int) -> bool:
+	return GearPower.meets(power_required(zid, diff))
+
+
+static func power_text(zid: String, diff: int) -> String:
+	var need := power_required(zid, diff)
+	if need <= 0:
+		return ""
+	return "PE requise : %s (la tienne : %s)" % [GearPower.fmt(need), GearPower.fmt(GearPower.hero_power())]
+
+
 static func condition(zid: String) -> String:
 	if not Unlocks.is_open("dungeons"):
 		return Unlocks.condition("dungeons")

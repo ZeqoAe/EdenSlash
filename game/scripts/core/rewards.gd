@@ -82,9 +82,20 @@ static func zone_of(chest: Dictionary) -> String:
 	return String(GameData.zones[-1].id) if not GameData.zones.is_empty() else ""
 
 
-## Rareté d'un objet de coffre : mythique, ou légendaire (20 %, 35 % pour un coffre de boss).
+## Rareté d'un objet de coffre : mythique, ou légendaire (20 %, 35 % pour un coffre de boss) si ta PE
+## atteint la moitié de celle d'un équipement correct du niveau du coffre (sinon : mythique).
 static func top_rarity(chest: Dictionary) -> int:
-	return Items.LEGENDARY if randf() < (0.35 if chest.get("boss", false) else 0.2) else Items.MYTHIC
+	return Items.LEGENDARY if legendary_open(chest) and randf() < (0.35 if chest.get("boss", false) else 0.2) else Items.MYTHIC
+
+
+static func legendary_open(chest: Dictionary) -> bool:
+	return GearPower.meets(GearPower.required(int(chest.get("plevel", 1)), GearPower.LEGEND_RATIO))
+
+
+static func _legend_text(chest: Dictionary) -> String:
+	if legendary_open(chest):
+		return "%d %% de chances" % (35 if chest.get("boss", false) else 20)
+	return "il faut une PE de %s, la tienne : %s" % [GearPower.fmt(GearPower.required(int(chest.get("plevel", 1)), GearPower.LEGEND_RATIO)), GearPower.fmt(GearPower.hero_power())]
 
 
 ## Coffre tiré au sort pour un monstre ([param boss], [param elite]).
@@ -164,14 +175,14 @@ static func preview(chest: Dictionary) -> String:
 	var t := String(chest.type)
 	match t:
 		"gear":
-			return "Un objet mythique de niveau %d (légendaire : %d %% de chances)." % [lv, 35 if chest.get("boss", false) else 20]
+			return "Un objet mythique de niveau %d (légendaire : %s)." % [lv, _legend_text(chest)]
 		"forge":
 			return "1-2 parchemins de puissance et 1-3 de garde (niveau %d), 1-2 pierres de sûreté, 1 pierre de chance, 2 pierres, parfois des ciseaux (50 %%) et un parchemin béni (20 %%), %d-%d cristaux." % [
 				Craft.fortify_level_at(lv), 3 + lv / 10, 6 + lv / 10]
 		"jewel":
 			return "2 gemmes de rang %d et 1 parchemin d'enchantement." % (clampi(lv / 12, 0, Craft.GEM_TIERS.size() - 1) + 1)
 		"set", "trophy":
-			return "3 pièces mythiques d'un même set au choix (déjà possédées : jamais proposées) ; légendaire : %d %%." % (35 if chest.get("boss", false) else 20)
+			return "3 pièces mythiques d'un même set au choix (déjà possédées : jamais proposées) ; légendaire : %s." % _legend_text(chest)
 	if AURAS.has(t):
 		var left := GameData.collection.filter(func(x): return x.has("aura") and not Profile.collected(x) and (AURAS[t] as Array).has(int(x.get("rarity", 0)))).size()
 		return "Une aura que tu n'as pas (%d encore à trouver à cette rareté) ; toutes obtenues : 60 insignes." % left

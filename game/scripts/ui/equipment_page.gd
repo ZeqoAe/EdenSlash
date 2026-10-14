@@ -273,10 +273,13 @@ func _refresh_stats(in_run: bool) -> void:
 			for k in arc:
 				lines.append("[color=#7fe08a]%s[/color]" % Items.stat_text(k, arc[k]))
 	_stats.text = "\n".join(lines)
-	var power := 0
-	for it in Profile.equipped.values():
-		power += _power_of(it)
-	_power.text = "Puissance d'équipement : %d" % power
+	var power := GearPower.hero_power()
+	var lv := maxi(Profile.best_level, 1)
+	var tier := GearPower.tier(GearPower.ratio(lv, power))
+	_power.text = "Puissance d'équipement : %s · %s" % [GearPower.fmt(power), tier[1]]
+	_power.add_theme_color_override("font_color", tier[2])
+	_power.tooltip_text = "PE attendue pour ton meilleur niveau (%d) : %s. Chaque pièce vaut sa note × son niveau ; les paliers de set ajoutent 6 %%. Elle ouvre les difficultés Héroïque et Mythique des donjons (%d %% et %d %% de la PE attendue du donjon) et les butins légendaires (%d %%)." % [
+		lv, GearPower.fmt(GearPower.expected(lv)), roundi(float(GearPower.DIFF_RATIO[1]) * 100.0), roundi(float(GearPower.DIFF_RATIO[2]) * 100.0), roundi(GearPower.LEGEND_RATIO * 100.0)]
 	var sl: PackedStringArray = []
 	for b in Items.active_set_bonuses(Profile.set_gear()):
 		sl.append("[color=#%s]%s · %d pièces[/color] : %s" % [Items.SET_COLOR.to_html(false), Items.set_def(b.set).get("name", ""), int(b.pieces), " ; ".join(Items.bonus_lines(b))])
@@ -284,7 +287,7 @@ func _refresh_stats(in_run: bool) -> void:
 
 
 static func _power_of(it: Dictionary) -> int:
-	return Items.power_level(it) * 10 + int(it.rarity) * 25 + int(it.get("upgrade", 0)) * 12 + (30 if it.has("set") else 0)
+	return GearPower.item_power(it)
 
 
 func _badge(it: Dictionary) -> String:

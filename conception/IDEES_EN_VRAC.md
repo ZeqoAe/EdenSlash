@@ -9,11 +9,11 @@ puis classée par **priorité** (apport au jeu) et **facilité** (travail et ris
 | Rang | Idée | Priorité | Facilité | Pourquoi ce rang | État |
 |---|---|---|---|---|---|
 | 1 | Options de lisibilité : masquer effets de sorts / auras de skin, pour soi ou pour tous | Haute | Très facile | Aide le JcJ, les PC modestes ; ne touche à aucune règle de jeu | **Fait (0.1.153)** |
-| 2 | Roulette quotidienne de skins (3 tirages par jour, case « perdu ») | Moyenne | Facile | Boucle de rétention simple, réutilise coffres d'apparence et titres | **Fait (0.1.154)** |
-| 3 | Puissance d'équipement (PE) et déblocages | Haute | Moyenne | Donne un repère unique du niveau de l'équipement ; sert de verrou aux activités avancées | **Fait (0.1.155)** |
-| 4 | Potions | Moyenne | Moyenne | Brique indispensable au Battle royale et au Trio ; utile en Survie et en donjon | **Fait (0.1.156)** |
-| 5 | Forge unifiée (améliorer, démonter, enchanter, gemmes, polir, réforger) avec animations | Haute | Moyenne | La logique existe déjà (`Craft`, `Forge`) : il manque la page unique et le ressenti | **Fait (0.1.157)** |
-| 6 | File d'attente du Duel (recherche, match trouvé, draft 60 s, récap 10 s) | Haute | Moyenne | Beaucoup d'écrans mais peu de règles nouvelles ; prépare le chargement et un vrai en ligne | **Fait (0.1.158)** |
+| 2 | Roulette quotidienne de skins (3 tirages par jour, case « perdu ») | Moyenne | Facile | Boucle de rétention simple, réutilise coffres d'apparence et titres | **Fait (0.1.153)** |
+| 3 | Puissance d'équipement (PE) et déblocages | Haute | Moyenne | Donne un repère unique du niveau de l'équipement ; sert de verrou aux activités avancées | **Fait (0.1.154)** |
+| 4 | Potions | Moyenne | Moyenne | Brique indispensable au Battle royale et au Trio ; utile en Survie et en donjon | À faire |
+| 5 | Forge unifiée (améliorer, démonter, enchanter, gemmes, polir, réforger) avec animations | Haute | Moyenne | La logique existe déjà (`Craft`, `Forge`) : il manque la page unique et le ressenti | À faire |
+| 6 | File d'attente du Duel (recherche, match trouvé, draft 60 s, récap 10 s) | Haute | Moyenne | Beaucoup d'écrans mais peu de règles nouvelles ; prépare le chargement et un vrai en ligne | À faire |
 | 7 | Lisibilité des sorts : texture = zone = effet | Très haute | Difficile (itératif, à l'œil) | Le plus gros gain pour le JcJ, mais demande des captures et des allers-retours | Audit outillé + premier lot ; la suite demande ton œil |
 | 8 | Trio PvE puis PvP (5 vagues, boss sac à PV, zone qui bascule en JcJ) | Haute | Difficile | Réutilise donjons, alliés IA et ciblage par camp ; nouveaux : vagues, boss long, bascule | Conçu, à coder (après 1 à 7) |
 | 9 | Battle royale (spawn aléatoire, coffres de loot, potions) | Haute | Difficile | Besoin de la PE, des potions et d'adversaires IA nombreux ; carte à zone réduite | Conçu, à coder |
