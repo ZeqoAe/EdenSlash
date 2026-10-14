@@ -128,6 +128,8 @@ static func label(key: String) -> String:
 			return "Parchemin béni"
 		"drill":
 			return "Ciseaux de sertissage"
+		"potion":
+			return Potions.label(String(p[1]))
 	return key
 
 
@@ -169,6 +171,10 @@ static func describe_key(key: String) -> String:
 			return "Création d'Eden Slash : une tentative de fortification sans parchemin ni or, et protégée (l'objet ne redescend pas). Peut s'accompagner d'une pierre de sûreté."
 		"drill":
 			return "Perce un emplacement de gemme (2 max ; le 2e réussit à 70 %)."
+		"potion":
+			var d: Dictionary = Potions.KINDS[p[1]]
+			return "%s
+Se boit en run : touche %s. Recharge de %d s. Gardée en cas de victoire ou d'extraction." % [d.desc, Settings.action_label("potion_1" if p[1] == "heal" else "potion_2", 1), int(Potions.COOLDOWN)]
 	return ""
 
 
@@ -190,6 +196,8 @@ static func icon(key: String) -> String:
 			return _icon_path(String(STONES[p[1]].icon))
 		"blessed":
 			return _icon_path(BLESSED_ICON)
+		"potion":
+			return Potions.icon_path(String(p[1]))
 	return String(craft.get(p[0], ""))
 
 
@@ -207,6 +215,8 @@ static func rarity(key: String) -> int:
 			return int(STONES[p[1]].rarity)
 		"blessed":
 			return 4
+		"potion":
+			return 1
 	return 1
 
 

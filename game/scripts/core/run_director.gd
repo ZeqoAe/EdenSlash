@@ -350,6 +350,8 @@ func _interact(it: Interactable) -> void:
 			var def: Dictionary = CHEST_TIERS[tier]
 			for i in int(def.supplies) + (1 if state == "rage" else 0):
 				_drop_consumable(it.global_position, _monster_level(1), tier, "chest%d" % tier)
+			if tier >= 1 or randf() < 0.4:
+				_drop_potion(it.global_position, "heal" if tier == 0 else Potions.roll_kind())
 			world._offer("%s : choisis une pièce d'équipement" % it.title.get_slice(" ·", 0), gear_cards(3, tier), func(): return gear_cards(3, tier))
 			_refresh_chest_labels()
 		_ when Interactable.STATION_VERBS.has(it.kind):
@@ -668,6 +670,11 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 	var n_cons := 3 if m.is_boss else (1 if m.is_elite and randf() < 0.35 else (1 if randf() < (0.07 if m.enraged else 0.04) else 0))
 	for i in n_cons:
 		_drop_consumable(m.global_position, m.level, 1 if (m.is_boss or m.is_elite) else 0)
+	if m.is_boss:
+		_drop_potion(m.global_position, "heal")
+		_drop_potion(m.global_position, "heal")
+	elif randf() < (POTION_ELITE if m.is_elite else POTION_MONSTER):
+		_drop_potion(m.global_position, Potions.roll_kind())
 	if m == _boss:
 		_on_boss_killed()
 
@@ -698,6 +705,22 @@ func _drop_reward_chest(pos: Vector3, level: int, boss: bool) -> void:
 		t = "forge" if randf() < 0.6 else "jewel"  # Survie : de quoi optimiser au hub (l'équipement s'y achète)
 	drop.item = Rewards.loot_item(Rewards.make(t, loot_level(level), boss))
 	drop.on_picked = func(item): message.emit("%s ! Rangé dans le menu Coffres (jamais perdu)" % item.name, 2.5)
+	add_child(drop)
+	var p := pos + Vector3(randf_range(-1.5, 1.5), 0, randf_range(-1.5, 1.5))
+	var g: Vector3 = map.ground_at(p.x, p.z)
+	drop.global_position = (g if g != Vector3.INF else pos) + Vector3.UP * 0.2
+
+
+## Chances qu'un monstre ou une élite lâche une potion (voir Potions).
+const POTION_MONSTER := 0.03
+const POTION_ELITE := 0.3
+const BREAK_POTION := 0.03
+
+
+func _drop_potion(pos: Vector3, kind: String) -> void:
+	var drop := LootDrop.new()
+	drop.item = Craft.loot_item(Potions.key(kind))
+	drop.on_picked = func(item): message.emit("%s ! (%s pour boire)" % [item.name, Settings.action_label("potion_1" if kind == "heal" else "potion_2", 1)], 2.0)
 	add_child(drop)
 	var p := pos + Vector3(randf_range(-1.5, 1.5), 0, randf_range(-1.5, 1.5))
 	var g: Vector3 = map.ground_at(p.x, p.z)
@@ -1116,6 +1139,8 @@ func _on_broken(kind: String, pos: Vector3) -> void:
 		return
 	if orbs:
 		orbs.spawn(pos, 1.0 + lv * 0.5)
+	if randf() < BREAK_POTION * (GREED_GOLD if greed else 1.0):
+		_drop_potion(pos, Potions.roll_kind())
 	if randf() < BREAK_HEAL and player.hp < player.max_hp:
 		player.heal(player.max_hp * 0.1)
 		DamageNumber.spawn_text(player, "+PV", Color(0.5, 1.0, 0.55))

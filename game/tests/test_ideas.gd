@@ -18,6 +18,7 @@ func _ready() -> void:
 	_test_fx_options()
 	_test_wheel()
 	_test_gear_power()
+	_test_potions()
 	print("ÉCHECS : %d" % fails)
 	get_tree().quit(1 if fails > 0 else 0)
 
@@ -132,3 +133,50 @@ func _test_gear_power() -> void:
 	check("avec la PE (ici le mode dev) : des légendaires tombent", got_legend)
 	Settings.reset_all()
 	Profile.equipped = {}
+
+
+func _test_potions() -> void:
+	Profile.reset_all()
+	Settings.reset_all()
+	check("potions : 4 sortes, icônes présentes", Potions.KINDS.size() == 4 and Potions.KINDS.keys().all(func(k): return ResourceLoader.exists(Potions.icon_path(k))))
+	check("potions : clé de la réserve reconnue", Potions.is_potion("potion:heal") and not Potions.is_potion("gem:ruby:1") and Potions.kind_of("potion:keen") == "keen")
+	check("potions : libellé, icône, rareté et description par Craft", Craft.label("potion:haste") == "Potion d'élan" and Craft.icon("potion:heal") != "" and Craft.rarity("potion:heal") >= 0 and Craft.describe_key("potion:heal").contains("35"))
+	var it := Craft.loot_item("potion:frenzy")
+	check("potions : un butin potion se ramasse comme une fourniture", it.has("consumable") and it.name == "Potion de rage")
+	Profile.bag = {}
+	Potions.start_run()
+	check("potions : départ de run = 2 soins", Potions.count("heal") == 2 and Potions.count("haste") == 0)
+	Profile.bag[Potions.key("heal")] = 5
+	Potions.start_run()
+	check("potions : le départ ne retire pas un stock plus grand", Potions.count("heal") == 5)
+	check("potions : sans potion d'effet, rien à boire", Potions.boost_to_use() == "")
+	Potions.grant("keen", 1)
+	Potions.grant("haste", 3)
+	check("potions : la potion d'effet bue est la plus nombreuse", Potions.boost_to_use() == "haste" and Potions.kind_for_slot(1) == "heal" and Potions.kind_for_slot(2) == "haste")
+	check("potions : hors run, interdites", not Potions.allowed())
+	Potions.tick(100.0)
+	check("potions : recharges à zéro après un long temps", Potions.cooldown_left("heal") == 0.0 and Potions.cooldown_left("boost") == 0.0)
+	var pl := Player.new()
+	pl.max_hp = 1000.0
+	pl.hp = 400.0
+	check("potions : hors run, use() ne fait rien", Potions.use(pl, 1) == "" and Profile.bag_count("potion:heal") == 5)
+	Run.active = true
+	Duel.active = true
+	check("potions : jamais en duel", not Potions.allowed())
+	Duel.active = false
+	check("potions : en run, permises", Potions.allowed())
+	var msg := Potions.use(pl, 1)
+	check("potions : le soin rend 35 % des PV et consomme une potion", is_equal_approx(pl.hp, 750.0) and Potions.count("heal") == 4 and msg.contains("bue"))
+	check("potions : recharge de 20 s après avoir bu", is_equal_approx(Potions.cooldown_left("heal"), 20.0) and Potions.use(pl, 1).contains("encore"))
+	check("potions : la recharge ne consomme pas de potion", Potions.count("heal") == 4)
+	Potions.tick(21.0)
+	pl.hp = pl.max_hp
+	check("potions : PV pleins, pas de gaspillage", Potions.use(pl, 1).contains("pleins") and Potions.count("heal") == 4)
+	var m2 := Potions.use(pl, 2)
+	check("potions : la potion d'effet donne son statut", m2.contains("Potion d'élan") and pl.has_status("haste") and Potions.count("haste") == 2)
+	check("potions : recharge d'effet séparée de celle du soin", Potions.cooldown_left("boost") > 0.0 and Potions.cooldown_left("heal") == 0.0)
+	Run.active = false
+	pl.free()
+	check("potions : touches C, V et croix haut / bas déclarées", Settings.DEFAULT_BINDS.has("potion_1") and Settings.PAD_BINDS.has("potion_2") and Settings.PAD_ACTIONS.has("potion_1"))
+	check("potions : actions créées dans l'InputMap", InputMap.has_action("potion_1") and InputMap.has_action("potion_2"))
+	Profile.bag = {}

@@ -19,6 +19,7 @@ var _hp_orb: HudWidgets.Orb
 var _xp_orb: HudWidgets.Orb
 var _slots: Array[HudWidgets.SkillSlot] = []
 var _dodge: HudWidgets.SkillSlot
+var _potion_slots: Array = []  # cases de potions (soin, effet)
 var _queue_strip: HudWidgets.QueueStrip
 var _assist_label: Label
 var _steps_panel: PanelContainer
@@ -571,6 +572,12 @@ func _build_action_bar(root: Control) -> void:
 	_dodge.size = Vector2(50, 50)
 	_dodge.tooltip_text = "Esquive (invulnérable)"
 	bottom.add_child(_dodge)
+	for i in 2:
+		var ps := HudWidgets.PotionSlot.new()
+		ps.position = Vector2(176 + i * 46.0, 140)
+		ps.size = Vector2(40, 40)
+		bottom.add_child(ps)
+		_potion_slots.append(ps)
 	_assist_label = Hud._label(bottom, "", 11, Color.WHITE)
 	_assist_label.position = Vector2(172, 118)
 	_assist_label.size = Vector2(88, 18)
@@ -588,6 +595,28 @@ func _build_action_bar(root: Control) -> void:
 	_debuff_row.position = Vector2(470, 0)
 	_debuff_row.size = Vector2(400, 54)
 	bottom.add_child(_debuff_row)
+
+
+## Cases de potions (soin, effet) : icône, nombre, recharge, touche.
+func _refresh_potions() -> void:
+	for i in 2:
+		var ps: HudWidgets.PotionSlot = _potion_slots[i]
+		ps.visible = Potions.allowed()
+		var kind := Potions.kind_for_slot(i + 1)
+		ps.key_text = Settings.action_label("potion_%d" % (i + 1), 1)
+		ps.empty = kind == ""
+		if kind == "":
+			ps.icon = null
+			ps.count = 0
+			ps.tooltip_text = "Potion d'effet (%s) : aucune. Élan, rage et acuité se trouvent dans les coffres, les débris et sur les élites." % ps.key_text
+			ps.set_cooldown(Potions.cooldown_left("boost"), Potions.COOLDOWN)
+			continue
+		var def: Dictionary = Potions.KINDS[kind]
+		ps.icon = UiTheme.texture(Potions.icon_path(kind))
+		ps.count = Potions.count(kind)
+		ps.tint = def.color
+		ps.tooltip_text = "%s (%s) — %s\nRecharge : %d s, commune aux potions %s." % [def.name, ps.key_text, def.desc, int(Potions.COOLDOWN), "de soin" if kind == "heal" else "d'effet"]
+		ps.set_cooldown(Potions.cooldown_left(String(def.group)), Potions.COOLDOWN)
 
 
 func _refresh_skills() -> void:
@@ -618,6 +647,7 @@ func _process(delta: float) -> void:
 	if not _root.visible:
 		return
 	_clock += delta
+	_refresh_potions()
 	_update_damage_counter(delta)
 	# vie basse : bords de l'écran qui pulsent en rouge
 	var hp_ratio := player.hp / maxf(player.max_hp, 1.0)

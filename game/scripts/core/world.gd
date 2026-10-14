@@ -415,9 +415,20 @@ func _on_level_up(lvl: int) -> void:
 	_offer("Niveau %d ! Choisis une carte" % lvl, Run.roll_cards(3), func(): return Run.roll_cards(3))
 
 
+func _process(delta: float) -> void:
+	Potions.tick(delta)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if merchant_ui.is_open():
 		return
+	for slot in [1, 2]:
+		if event.is_action_pressed("potion_%d" % slot) and not _ended and not pause_menu.is_open() and not cards.is_open():
+			var msg := Potions.use(player, slot)
+			if msg != "":
+				hud.show_message(msg, 1.6)
+			get_viewport().set_input_as_handled()
+			return
 	if event.is_action_pressed("quick_equip") and not _ended and not pause_menu.is_open() and not cards.is_open():
 		if hud.quick_equip():
 			get_viewport().set_input_as_handled()

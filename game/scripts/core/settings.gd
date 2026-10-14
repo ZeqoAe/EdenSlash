@@ -18,6 +18,7 @@ const ACTIONS := [
 	["objectives", "Afficher les objectifs"], ["pause", "Menu / pause"],
 	["camera_rotate", "Tourner la caméra (maintenu)"], ["unstuck", "Se débloquer"], ["help", "Aide"],
 	["feedback", "Signaler un problème"], ["extract", "S'extraire (10 s)"], ["quick_equip", "Équiper l'objet trouvé"],
+	["potion_1", "Potion de soin"], ["potion_2", "Potion d'effet"],
 ]
 ## Paires d'actions qui peuvent partager une touche (jamais utilisées en même temps).
 const SHARED_OK := [["move_order", "camera_rotate"]]
@@ -48,6 +49,8 @@ const DEFAULT_BINDS := {
 	"feedback": [{"k": KEY_F9}],
 	"extract": [{"k": KEY_X}],
 	"quick_equip": [{"k": KEY_G}],
+	"potion_1": [{"k": KEY_C}],
+	"potion_2": [{"k": KEY_V}],
 }
 ## Manette (disposition fixe, non modifiable ; voir Gamepad) : {"b": bouton} ou
 ## {"a": axe, "v": sens}, et le libellé affiché quand on joue à la manette.
@@ -60,10 +63,11 @@ const PAD_BINDS := {
 	"skill_3": [{"b": JOY_BUTTON_LEFT_SHOULDER}], "skill_4": [{"a": JOY_AXIS_TRIGGER_LEFT, "v": 1.0}],
 	"pause": [{"b": JOY_BUTTON_START}], "map": [{"b": JOY_BUTTON_BACK}],
 	"objectives": [{"b": JOY_BUTTON_DPAD_LEFT}], "quick_equip": [{"b": JOY_BUTTON_DPAD_RIGHT}],
+	"potion_1": [{"b": JOY_BUTTON_DPAD_UP}], "potion_2": [{"b": JOY_BUTTON_DPAD_DOWN}],
 }
 ## Actions dont la manette est réassignable (le déplacement reste au stick gauche).
 const PAD_ACTIONS := ["attack", "dodge", "jump", "interact", "skill_1", "skill_2", "skill_3", "skill_4",
-	"pause", "map", "objectives", "quick_equip", "extract", "help", "unstuck", "feedback"]
+	"pause", "map", "objectives", "quick_equip", "potion_1", "potion_2", "extract", "help", "unstuck", "feedback"]
 ## Noms des boutons selon la disposition (Godot : A = bouton du bas, B = droite, X = gauche, Y = haut).
 const PAD_NAMES := {
 	"xbox": {JOY_BUTTON_A: "A", JOY_BUTTON_B: "B", JOY_BUTTON_X: "X", JOY_BUTTON_Y: "Y", JOY_BUTTON_LEFT_SHOULDER: "LB",
@@ -79,7 +83,7 @@ const PAD_TRIGGERS := {"xbox": {JOY_AXIS_TRIGGER_LEFT: "LT", JOY_AXIS_TRIGGER_RI
 const PAD_LABELS := {
 	"attack": "Carré", "dodge": "Rond", "jump": "Triangle", "interact": "Croix",
 	"skill_1": "R1", "skill_2": "R2", "skill_3": "L1", "skill_4": "L2",
-	"pause": "Options", "map": "Share", "objectives": "← (croix)", "quick_equip": "→ (croix)",
+	"pause": "Options", "map": "Share", "objectives": "← (croix)", "quick_equip": "→ (croix)", "potion_1": "↑ (croix)", "potion_2": "↓ (croix)",
 	"move_forward": "Stick gauche", "move_back": "Stick gauche", "move_left": "Stick gauche", "move_right": "Stick gauche",
 }
 
@@ -390,11 +394,15 @@ func load_settings() -> void:
 				data[section][key] = v
 	if cf.has_section("keys"):
 		for action in DEFAULT_BINDS:
+			if not cf.has_section_key("keys", action):
+				continue  # touche ajoutée depuis la sauvegarde : le réglage par défaut reste
 			var v: Variant = cf.get_value("keys", action, null)
 			if v is Array:
 				binds[action] = v.filter(func(e): return e is Dictionary and (e.has("k") or e.has("m")))
 	if cf.has_section("pad"):
 		for action in PAD_ACTIONS:
+			if not cf.has_section_key("pad", action):
+				continue
 			var v: Variant = cf.get_value("pad", action, null)
 			if v is Array:
 				pad_binds[action] = v.filter(func(e): return e is Dictionary and (e.has("b") or (e.has("a") and e.has("v"))))

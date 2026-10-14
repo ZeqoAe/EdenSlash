@@ -136,6 +136,7 @@ func start(cid: String) -> void:
 	trophies = []
 	anvil_stage = 0
 	Profile.begin_run()
+	Potions.start_run()
 	RunJournal.begin_run()
 	changed.emit()
 

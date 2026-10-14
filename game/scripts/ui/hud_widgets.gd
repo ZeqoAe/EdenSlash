@@ -240,6 +240,22 @@ class SkillSlot extends Control:
 
 ## Sorts d'autres cases gardés par la mémoire des touches : 2 pastilles avec l'icône et la touche,
 ## dans l'ordre où ils partiront.
+## Case de potion : une case de compétence avec le nombre de fioles restantes dans le coin.
+class PotionSlot extends SkillSlot:
+	var count := 0
+	var tint := Color.WHITE
+
+	func _draw() -> void:
+		super._draw()
+		if empty:
+			return
+		var t := str(count)
+		var f := UiTheme.bold_font()
+		var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
+		draw_rect(Rect2(size.x - w - 8.0, size.y - 19.0, w + 6.0, 17.0), Color(0.04, 0.03, 0.08, 0.92))
+		draw_string(f, Vector2(size.x - w - 5.0, size.y - 5.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, tint if count > 0 else Color(1, 0.4, 0.4))
+
+
 class QueueStrip extends Control:
 	var items: Array = []  # [{icon: Texture2D, key: String}]
 

@@ -218,7 +218,7 @@ func _build_combat_tab() -> void:
 ## Touches rangées en quatre groupes.
 const KEY_GROUPS := [
 	["Déplacement", ["move_forward", "move_back", "move_left", "move_right", "jump", "dodge"]],
-	["Combat", ["attack", "move_order"]],
+	["Combat", ["attack", "move_order", "potion_1", "potion_2"]],
 	["Sorts", ["skill_1", "skill_2", "skill_3", "skill_4"]],
 	["Interface", ["interact", "map", "objectives", "pause", "camera_rotate", "unstuck", "help", "feedback", "extract", "quick_equip"]],
 ]
