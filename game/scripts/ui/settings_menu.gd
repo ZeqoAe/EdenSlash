@@ -215,8 +215,19 @@ func _build_combat_tab() -> void:
 
 
 # --- onglet Touches --------------------------------------------------------------------
+## Touches rangées en quatre groupes.
+const KEY_GROUPS := [
+	["Déplacement", ["move_forward", "move_back", "move_left", "move_right", "jump", "dodge"]],
+	["Combat", ["attack", "move_order"]],
+	["Sorts", ["skill_1", "skill_2", "skill_3", "skill_4"]],
+	["Interface", ["interact", "map", "objectives", "pause", "camera_rotate", "unstuck", "help", "feedback", "extract", "quick_equip"]],
+]
+var _tester: Label
+
+
 func _build_keys_tab() -> void:
 	var v := _tab("Touches", false)
+	_tester = Hud._label(v, "Test : appuie sur une touche pour voir l'action qu'elle déclenche.", 15, ACCENT)
 	_note(v, "Clique sur une case puis appuie sur une touche ou un bouton de souris.  Échap : annuler  ·  Suppr / Retour : effacer.  Une touche déjà prise est retirée de l'autre action.")
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -227,7 +238,23 @@ func _build_keys_tab() -> void:
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 6)
 	scroll.add_child(grid)
-	for a in Settings.ACTIONS:
+	var order: Array = []
+	for g in KEY_GROUPS:
+		order.append(["#", g[0]])
+		for aid in g[1]:
+			for a in Settings.ACTIONS:
+				if a[0] == aid:
+					order.append(a)
+	for a in Settings.ACTIONS:  # une action oubliée des groupes reste visible
+		if not order.any(func(o): return o[0] == a[0]):
+			order.append(a)
+	for a in order:
+		if String(a[0]) == "#":
+			var gh := Hud._label(grid, String(a[1]), 18, ACCENT)
+			gh.add_theme_font_override("font", UiTheme.bold_font())
+			Hud._label(grid, "", 8, ACCENT)
+			Hud._label(grid, "", 8, ACCENT)
+			continue
 		var action: String = a[0]
 		var name_lbl := Hud._label(grid, a[1], 16, Color(0.92, 0.92, 0.96))
 		name_lbl.custom_minimum_size = Vector2(LABEL_W + 40, 0)
@@ -289,6 +316,12 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			_assign(event)
 		return
+	if _tester != null and _tester.is_visible_in_tree() and (event is InputEventKey or event is InputEventMouseButton) and event.pressed 			and not (event is InputEventKey and (event as InputEventKey).physical_keycode == KEY_ESCAPE):
+		var hits: PackedStringArray = []
+		for a in Settings.ACTIONS:
+			if event.is_action_pressed(a[0]):
+				hits.append(String(a[1]))
+		_tester.text = "Test : cette touche déclenche « %s »." % " / ".join(hits) if not hits.is_empty() else "Test : cette touche n'est liée à aucune action."
 	if event is InputEventKey and event.pressed and not event.echo and (event.is_action("pause") or event.physical_keycode == KEY_ESCAPE):
 		get_viewport().set_input_as_handled()
 		close()

@@ -10,6 +10,7 @@ var _confirm: Button
 
 
 func show_results() -> void:
+	Tutorial.event("results")
 	layer = 30
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	get_tree().paused = true

@@ -261,6 +261,7 @@ func _objective_text() -> String:
 
 
 func _start_rage() -> void:
+	Tutorial.event("rage")
 	state = "rage"
 	message.emit("LES MONSTRES ENTRENT EN RAGE !\nDanger accru, butin et XP accrus", 4.0)
 	world.set_rage_mood(true)
@@ -335,6 +336,7 @@ func _interact(it: Interactable) -> void:
 			it.open_chest()
 			Sfx.event_at(self, it.global_position, "chest", -2.0)
 			chests_opened += 1
+			Tutorial.event("chest")
 			Profile.record_add("chests", 1)
 			message.emit("%s ouvert (%s)" % [it.title.get_slice(" ·", 0), how], 1.5)
 			if box != "":
@@ -361,6 +363,8 @@ func _interact(it: Interactable) -> void:
 				return
 			ScreenFade.run(get_tree(), _enter_arena)
 		_:
+			if it.kind == "merchant":
+				Tutorial.event("merchant")
 			npc_opened.emit(it.kind, it)
 	_near = null
 	prompt_changed.emit("")
@@ -601,6 +605,7 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 	else:
 		orbs.spawn(m.global_position, m.xp_reward)
 	Run.kills += 1
+	Tutorial.event("kill")
 	Profile.record_add("kills", 1)
 	if m.is_elite or m.is_boss:
 		Profile.record_add("elite_kills", 1)
@@ -623,6 +628,7 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		_drop_reward_chest(m.global_position, m.level, m.is_boss)
 	if seals < SEALS_NEEDED and (m.carries_seal or (m.is_elite and randf() < 0.3)):
 		seals += 1
+		Tutorial.event("seal")
 		message.emit("Sceau du donjon obtenu (%d/%d)" % [seals, SEALS_NEEDED], 2.5)
 	var luck := 0.0
 	var count := 0
@@ -804,6 +810,7 @@ func _update_extraction(delta: float) -> void:
 
 
 func _on_boss_killed() -> void:
+	Tutorial.event("boss")
 	print("[run] boss vaincu à %.0f s, niveau %d, étape %d/%d" % [time, player.level, Run.stage, STAGES])
 	state = "cleared"
 	if Run.survival:
@@ -869,6 +876,7 @@ func _emit_zone() -> void:
 
 ## Portail vers l'étape suivante, dans la salle du boss.
 func _spawn_stage_portal(next: String) -> void:
+	Tutorial.event("portal")
 	var portal := Interactable.new()
 	portal.setup("stage_portal", "Portail : %s" % GameData.zone(next).get("name", next), "res://assets/maps/objects/ub105.glb", "", 0.4, 5.0)
 	portal.set_meta("zone", next)
@@ -1471,6 +1479,7 @@ func _update_shrines(delta: float) -> void:
 func _capture(sh: Shrine) -> void:
 	sh.captured = true
 	shrines_captured += 1
+	Tutorial.event("shrine")
 	Profile.record_add("shrines", 1)
 	sh.update_visual()
 	match sh.reward:

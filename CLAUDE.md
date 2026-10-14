@@ -51,7 +51,10 @@ autel en insignes et coffres d'apparence (plus d'équipement), bilans avec « Re
 Lot 8 fait (0.1.140) : fil d'éveil `core/unlocks.gd` (conditions, entrées gardées pour toujours dans
 `Profile.unlocked_features`, migration d'une ancienne sauvegarde, mode dev = tout ouvert), boutons et cartes d'activités grisés avec
 leur condition, menu Atelier (Armurerie) / Carnet (Collection), ressources dans le pied du lobby, squelette de la Ligue
-(`core/league.gd`, rangs 0-4). Le Guide F1 vient avec le lot 9. Prochain : lot 9 (tutoriel).
+(`core/league.gd`, rangs 0-4). Le Guide F1 vient avec le lot 9. Lot 9 fait (0.1.141) : `core/tutorial.gd` (10 Premiers pas validés par événements de jeu, 16 fiches à la 1re rencontre, nouveautés par
+version, état dans `Profile.tutorial`), accueil `ui/welcome.gd` (3 départs, 5 classes, contrôles et aide), panneaux Premiers pas / fiche
+dans le HUD, Guide `ui/guide.gd` (F1), touches rangées en 4 groupes avec test de touche. Les fiches de lieux (scribe, fontaine…) et
+les images des fiches restent à écrire. Prochain : lot 10 (page Jouer, Tour, Défis).
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

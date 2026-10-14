@@ -127,8 +127,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_close_report()
 		return
 	if event.is_action_pressed("help"):
-		_help_label.text = help_text()
-		_help.visible = not _help.visible
+		if not Guide.close_in(self):
+			Guide.open_on(self, "commands")
 	elif event.is_action_pressed("debug_overlay"):
 		_overlay.visible = not _overlay.visible
 	elif event.is_action_pressed("feedback"):

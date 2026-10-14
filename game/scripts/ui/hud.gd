@@ -21,6 +21,14 @@ var _slots: Array[HudWidgets.SkillSlot] = []
 var _dodge: HudWidgets.SkillSlot
 var _queue_strip: HudWidgets.QueueStrip
 var _assist_label: Label
+var _steps_panel: PanelContainer
+var _steps_head: Label
+var _steps_text: Label
+var _card_panel: PanelContainer
+var _card_title: Label
+var _card_body: Label
+var _card_id := ""
+var _card_until := 0.0
 var _buff_row: HudWidgets.StatusRow
 var _debuff_row: HudWidgets.StatusRow
 var _durations := {}  # "cible:effet" -> [fin, durée totale]
@@ -117,6 +125,7 @@ func _build() -> void:
 	# NB : root n'est ajouté qu'à la fin, pour que les positions ancrées
 	# (centre, bas, droite) soient relatives à l'ancre.
 	_build_objectives(root)
+	_build_tutorial(root)
 	_build_minimap(root)
 	_build_target(root)
 	_build_action_bar(root)
@@ -208,6 +217,86 @@ func _build() -> void:
 
 
 # --- objectifs (haut gauche) -------------------------------------------------------------
+## Premiers pas (étape en cours, touches réelles) et fiche de découverte : jamais bloquants.
+func _build_tutorial(root: Control) -> void:
+	_steps_panel = PanelContainer.new()
+	_steps_panel.add_theme_stylebox_override("panel", UiTheme.panel_box(18, 10))
+	_steps_panel.position = Vector2(14, 214)
+	_steps_panel.custom_minimum_size = Vector2(330, 0)
+	_steps_panel.visible = false
+	root.add_child(_steps_panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 4)
+	_steps_panel.add_child(v)
+	var h := HBoxContainer.new()
+	v.add_child(h)
+	_steps_head = _label(h, "", 14, ACCENT)
+	_steps_head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var skip := Button.new()
+	skip.text = "Passer"
+	skip.focus_mode = Control.FOCUS_NONE
+	skip.pressed.connect(func():
+		Tutorial.skip_steps()
+		_steps_panel.visible = false)
+	h.add_child(skip)
+	_steps_text = _label(v, "", 15, Color.WHITE)
+	_steps_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_steps_text.custom_minimum_size = Vector2(300, 0)
+	_card_panel = PanelContainer.new()
+	_card_panel.add_theme_stylebox_override("panel", UiTheme.panel_box(18, 12))
+	_card_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	_card_panel.offset_left = -400
+	_card_panel.offset_right = -14
+	_card_panel.offset_top = -120
+	_card_panel.visible = false
+	root.add_child(_card_panel)
+	var cv := VBoxContainer.new()
+	cv.add_theme_constant_override("separation", 6)
+	_card_panel.add_child(cv)
+	_card_title = _label(cv, "", 20, UiTheme.GOLD)
+	UiTheme.title(_card_title, 20)
+	_card_body = _label(cv, "", 15, Color.WHITE)
+	_card_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_card_body.custom_minimum_size = Vector2(350, 0)
+	var br := HBoxContainer.new()
+	br.add_theme_constant_override("separation", 6)
+	cv.add_child(br)
+	for b in [["Compris", func(): _card_panel.visible = false],
+			["Plus de détails", func():
+				_card_panel.visible = false
+				Guide.open_on(get_parent(), _card_id)],
+			["Plus de conseils", func():
+				Profile.tutorial["cards_off"] = true
+				Profile.save_profile()
+				_card_panel.visible = false]]:
+		var btn := Button.new()
+		btn.text = String(b[0])
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.pressed.connect(b[1])
+		br.add_child(btn)
+
+
+func _update_tutorial() -> void:
+	var guided := Tutorial.guided()
+	_steps_panel.visible = guided
+	if guided:
+		var s := Tutorial.current_step()
+		_steps_head.text = Tutorial.progress_text()
+		_steps_text.text = Tutorial.step_text(s)
+	if _card_panel.visible and Time.get_ticks_msec() / 1000.0 > _card_until:
+		_card_panel.visible = false
+	if not _card_panel.visible and director != null and not director.state in ["boss", "duel", "tower"] and not Duel.active and not Tower.active:
+		var id := Tutorial.take_card()
+		if id != "":
+			var c: Dictionary = Tutorial.CARDS[id]
+			_card_id = id
+			_card_title.text = String(c.title)
+			_card_body.text = "
+".join((c.lines as Array).map(func(l): return "• " + String(l)))
+			_card_until = Time.get_ticks_msec() / 1000.0 + 20.0
+			_card_panel.visible = true
+
+
 func _build_objectives(root: Control) -> void:
 	_obj_panel = PanelContainer.new()
 	_obj_panel.add_theme_stylebox_override("panel", UiTheme.panel_box(18, 12))
@@ -565,6 +654,7 @@ func _process(delta: float) -> void:
 	_assist_label.add_theme_color_override("font_color", info.get("color", Color.WHITE))
 	var dc := player.dodge_cooldown()
 	_dodge.set_cooldown(dc.x, dc.y)
+	_update_tutorial()
 	_update_statuses()
 	_update_target()
 	_update_objectives()

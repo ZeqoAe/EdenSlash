@@ -171,6 +171,7 @@ func pick_up(item: Dictionary) -> bool:
 		Profile.add_bag(String(item.consumable))
 		return true
 	if item.has("chest"):
+		Tutorial.event("reward_chest")
 		# coffre de récompense : rangé tout de suite dans le menu Coffres, jamais perdu
 		Profile.reward_chests.append(item.chest)
 		Profile.save_profile()
@@ -613,6 +614,7 @@ func _describe_card(c: Dictionary) -> Dictionary:
 
 
 func apply_card(card: Dictionary) -> void:
+	Tutorial.on_card(card)
 	match card.type:
 		"skill":
 			if skills.size() < MAX_SKILLS:

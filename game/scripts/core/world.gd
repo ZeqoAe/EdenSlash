@@ -379,6 +379,8 @@ func _parse_args() -> void:
 func _offer(title: String, options: Array, reroll := Callable(), own_rerolls := -1) -> void:
 	if options.is_empty():
 		return
+	if options.any(func(o): return String(o.get("type", "")) in ["skill", "chain", "upgrade", "passive"]):
+		Tutorial.event("cards_open")
 	if player.autoplay:
 		# pilote automatique : une nouvelle compétence tant qu'il en manque, sinon une carte au
 		# hasard (passifs compris : les mesures d'équilibrage doivent voir des builds)

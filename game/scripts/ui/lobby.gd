@@ -115,6 +115,7 @@ func _ready() -> void:
 			return
 	_build_scene()
 	_build_ui()
+	_welcome_flow.call_deferred()
 	if "--duel-menu" in OS.get_cmdline_user_args():
 		_show_menu("duel")  # test : inscription au duel
 		if "--rival-editor" in OS.get_cmdline_user_args():
@@ -792,6 +793,44 @@ func _on_menu(id: String) -> void:
 		_:
 			# Jouer, Quitter : le panneau s'ouvre au clic et se referme au second clic
 			_show_menu("" if id == _current else id)
+
+
+## Accueil d'une nouvelle partie ; sinon les nouveautés (une fenêtre par version) et la fiche en attente.
+func _welcome_flow() -> void:
+	if not OS.get_cmdline_user_args().is_empty() or Settings.save_path == Settings.TEST_SAVE_PATH:
+		return
+	Tutorial.init_for_save()
+	if Tutorial.mode() == "":
+		var w := Welcome.new()
+		add_child(w)
+		w.finished.connect(func(warmup: bool):
+			_refresh_ui()
+			if warmup:
+				_start_training())
+		return
+	var news := Tutorial.news_to_show()
+	var pending := Tutorial.take_card()
+	if pending != "":
+		news.append(pending)
+	Profile.save_profile()
+	if news.is_empty():
+		return
+	var dlg := AcceptDialog.new()
+	dlg.title = "Nouveau dans cette version (%s)" % Version.NUMBER
+	var txt := ""
+	for id in news:
+		var c: Dictionary = Tutorial.CARDS[id]
+		txt += "• %s — %s
+" % [c.title, " ".join(c.lines)]
+	dlg.dialog_text = txt
+	dlg.ok_button_text = "Compris"
+	dlg.add_button("Tout voir dans le Guide", true, "guide")
+	dlg.custom_action.connect(func(_a):
+		dlg.hide()
+		Guide.open_on(self, "news"))
+	dlg.min_size = Vector2(760, 0)
+	add_child(dlg)
+	dlg.popup_centered()
 
 
 ## Entrée du fil d'éveil (Unlocks) d'un bouton du menu de gauche.

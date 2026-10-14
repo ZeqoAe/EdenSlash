@@ -1589,6 +1589,10 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 	if s.is_empty() or cooldown_left(slot) > 0.0:
 		return
 	skill_ready_at[int(s.id)] = _time + skill_cooldown(s)
+	if not foe and bot == null:
+		Tutorial.event("skill")
+		if not kit_chain(slot).is_empty():
+			Tutorial.event("chain_open")
 	_cast_skill(s, slot, 0, forced_aim)
 	_chain_open(slot, 0)
 
@@ -1665,6 +1669,8 @@ func _chain_press(slot: int) -> int:
 	var step := int(_chain[slot].next) + 1
 	var nxt: Dictionary = st.next
 	ml_counts.chain += 1
+	if not foe and bot == null:
+		Tutorial.event("chain")
 	DamageNumber.spawn_text(self, "ENCHAÎNEMENT ×%d" % (step + 1), Color(0.6, 0.9, 1.0))
 	if autoplay:
 		print("[enchainement] case %d, sort %d : %s" % [slot + 1, step + 1, nxt.get("name", "?")])
@@ -1945,6 +1951,8 @@ func is_airborne() -> bool:
 
 func _start_jump() -> void:
 	_queue.clear()
+	if not foe and bot == null:
+		Tutorial.event("jump")
 	var first := is_on_floor() or (_jumps_used == 0 and _time - _last_floor_time < COYOTE_TIME)
 	if _state == "dodge":
 		# saut depuis une esquive : on garde l'élan (saut-esquive très long)
@@ -2066,6 +2074,8 @@ func _wants_pressed(action: String) -> bool:
 
 func _start_dodge(input_dir: Vector3, perfect := false) -> void:
 	_queue.clear()  # l'esquive part tout de suite et vide la mémoire des touches
+	if not foe and bot == null:
+		Tutorial.event("dodge")
 	Procs.fire(self, "dodge")
 	_skill_lock_until = 0.0  # l'esquive efface la récupération du sort
 	_dodge_dir = input_dir.normalized() if input_dir.length() > 0.1 else forward()
@@ -2134,6 +2144,8 @@ func flow_mult() -> float:
 func _perfect_cancel() -> void:
 	flow_mult()
 	ml_counts.perfect += 1
+	if not foe and bot == null:
+		Tutorial.event("perfect")
 	flow_stacks = mini(flow_stacks + 1, 4)
 	_flow_until = _time + 3.0
 	var sid := int(_action.get("skill_id", 0))

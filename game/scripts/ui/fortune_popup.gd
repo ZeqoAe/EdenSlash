@@ -22,6 +22,7 @@ var _bar: HBoxContainer
 
 
 static func open(parent: Node, hero_level: int, chest_level: int, done: Callable) -> FortunePopup:
+	Tutorial.event("fortune")
 	var f := FortunePopup.new()
 	f.level = hero_level
 	f.plevel = chest_level
