@@ -444,6 +444,10 @@ aériens / mages), **Pas aérien** (+1 esquive en l'air, ×2).
   variante (« tous les N coups » renforcé, état infligé à chaque coup, explosion ou foudre à
   l'impact), puis deux bonus mineurs et un majeur. Les améliorations restent sur l'emplacement
   quand l'arme change (`Run.weapon_ups`).
+- **Trophées** (0.1.129) : effet unique, ils ne s'améliorent pas (forge, enclume, gemmes,
+  enchantements : `Items.is_unique`). En Survie, un trophée déjà obtenu dans la run ne retombe
+  plus, ni un 2e trophée du même effet que celui porté ; la carte dit lequel il remplace, et le
+  menu pause (page Run) montre le trophée actif et ceux du sac (inactifs).
 - Duel : l'auto-attaque entre héros garde × `PvpCaps.BASIC_MULT`. L'adversaire scripté répète
   l'auto-attaque de son arme (pause plus longue tous les 3 coups).
 

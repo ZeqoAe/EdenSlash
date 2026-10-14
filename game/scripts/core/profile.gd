@@ -1097,6 +1097,8 @@ func pay(cost: Dictionary) -> bool:
 ## (ou un parchemin béni, gratuit et protégé), la pierre de sûreté [param stone] éventuelle ;
 ## résultat {ok, text, error?}.
 func upgrade_item(item: Dictionary, stone := "", blessed := false) -> Dictionary:
+	if Items.is_unique(item):
+		return {"ok": false, "error": true, "text": Items.UNIQUE_TEXT}
 	if int(item.get("upgrade", 0)) >= Items.MAX_UPGRADE:
 		return {"ok": false, "error": true, "text": "Amélioration maximale atteinte."}
 	var scroll := Craft.BLESSED

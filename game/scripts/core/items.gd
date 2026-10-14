@@ -163,6 +163,14 @@ static func _base_name(slot: String, class_id: String, wtype := "") -> String:
 
 
 ## Type d'arme de départ d'une classe (celui de son arme d'origine dans Eden).
+## Objet à effet unique (trophée) : ne s'améliore pas (forge, enclume, gemmes, enchantements).
+static func is_unique(item: Dictionary) -> bool:
+	return String(item.get("slot", "")) == "trophy"
+
+
+const UNIQUE_TEXT := "Trophée : un effet unique, il ne s'améliore pas."
+
+
 static func default_weapon_type(class_id: String) -> String:
 	return String(GameData.class_data(class_id).get("weapon_type", "katana"))
 

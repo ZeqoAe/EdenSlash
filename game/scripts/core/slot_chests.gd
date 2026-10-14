@@ -77,6 +77,11 @@ static func pool(box: String, epoch: int, stage: int) -> Array:
 ## au niveau maximal de la map.
 static func offer(box: String, epoch: int, stage: int, n := 3) -> Array:
 	var p := pool(box, epoch, stage)
+	if box == "trophy" and Run.active:
+		var worn_kind := String(Profile.equipped.get("trophy", {}).get("passive", {}).get("trophy", ""))
+		var owned := Profile.equipped.values() + Profile.inventory
+		p = p.filter(func(e): return not int(e.id) in Run.seen_items and String(e.get("trophy", "")) != worn_kind \
+			and not owned.any(func(it): return int(it.get("eden", -1)) == int(e.id)))
 	p.shuffle()
 	var m := Epochs.map_def(epoch, stage)
 	var out: Array = []

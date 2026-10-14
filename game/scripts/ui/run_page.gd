@@ -1,7 +1,8 @@
 class_name RunPage
 extends HBoxContainer
-## Page « Run » du menu pause : compétences de la run, cartes de build et passifs,
-## fournitures du sac, bilan, et les actions (reprendre, s'extraire, lobby, quitter).
+## Page « Run » du menu pause : les 12 sorts de la run (4 cases et leurs 2 enchaînements), les
+## armes et leurs améliorations, le trophée porté (actif) et ceux du sac, les cartes de build et
+## passifs, fournitures du sac, bilan, et les actions (reprendre, s'extraire, lobby, quitter).
 
 signal resume_requested
 signal extract_requested
@@ -11,6 +12,7 @@ signal settings_requested
 
 var player: Player
 var _skills: VBoxContainer
+var _skills_title: Label
 var _cards: VBoxContainer
 var _bag: RichTextLabel
 var _summary: RichTextLabel
@@ -20,7 +22,7 @@ func _ready() -> void:
 	add_theme_constant_override("separation", 16)
 	# compétences
 	var a := ItemWidgets.panel(self, 0, true)
-	ItemWidgets.section(a, "Compétences de la run")
+	_skills_title = ItemWidgets.section(a, "Compétences de la run")
 	var sa := ScrollContainer.new()
 	sa.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	sa.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -31,7 +33,7 @@ func _ready() -> void:
 	sa.add_child(_skills)
 	# cartes et passifs
 	var b := ItemWidgets.panel(self, 0, true)
-	ItemWidgets.section(b, "Cartes et passifs")
+	ItemWidgets.section(b, "Trophée et cartes")
 	var sb := ScrollContainer.new()
 	sb.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	sb.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -67,15 +69,54 @@ func refresh() -> void:
 		return
 	for ch in _skills.get_children():
 		ch.queue_free()
-	for s in Run.skills:
-		var d := Run.skill_def(int(s.id))
-		_row(_skills, String(d.get("icon", "")), "%s — rang %d" % [d.get("name", "?"), int(s.rank)], String(d.get("desc", "")), UiTheme.GOLD)
-	var free := Run.MAX_SKILLS - Run.skills.size()
-	if free > 0:
-		_row(_skills, "", "%d emplacement%s libre%s" % [free, "s" if free > 1 else "", "s" if free > 1 else ""],
-			"Les compétences s'obtiennent avec les cartes de niveau et chez les marchands.", UiTheme.MUTED)
+	# 4 cases, chacune avec ses 2 enchaînements : 12 sorts en tout
+	var total := Run.all_skills().size()
+	if _skills_title:
+		_skills_title.text = "Compétences de la run (%d / %d)" % [total, Run.MAX_SKILLS * (1 + Run.MAX_CHAIN)]
+	for i in Run.MAX_SKILLS:
+		var ch: Array = []
+		if i >= Run.skills.size():
+			_row(_skills, "", "Case %d : libre" % (i + 1), "Les compétences s'obtiennent avec les cartes de niveau.", UiTheme.MUTED)
+		else:
+			var s: Dictionary = Run.skills[i]
+			var d := Run.skill_def(int(s.id))
+			_row(_skills, String(d.get("icon", "")), "Case %d · %s — rang %d" % [i + 1, d.get("name", "?"), int(s.rank)], String(d.get("desc", "")), UiTheme.GOLD)
+			ch = Run.chain_of(i)
+		for j in Run.MAX_CHAIN:
+			if j < ch.size():
+				var cd := Run.skill_def(int(ch[j].id))
+				_row(_skills, String(cd.get("icon", "")), "↳ Enchaînement %d : %s — rang %d" % [j + 2, cd.get("name", "?"), int(ch[j].rank)],
+					String(cd.get("desc", "")), Color(0.55, 0.9, 1.0), 34, 38)
+			else:
+				_row(_skills, "", "↳ Enchaînement %d : libre" % (j + 2), "Quand les 4 cases sont pleines, les cartes de sort deviennent des enchaînements.",
+					UiTheme.MUTED, 34, 38)
+	# armes : auto-attaque et améliorations de la run
+	ItemWidgets.section(_skills, "Armes", 15)
+	for slot in ["weapon", "offhand"]:
+		var ws := Run.weapon_spec(slot)
+		var it: Dictionary = Profile.equipped.get(slot, {})
+		if ws.is_empty():
+			_row(_skills, "", "Arme secondaire : aucune", "Les boss en lâchent toujours une, les élites parfois.", UiTheme.MUTED)
+			continue
+		var mt := WeaponAttacks.mods_text(ws, Run.weapon_ups.get(slot, {}))
+		_row(_skills, String(it.get("icon", GameData.weapon_type(String(ws.wtype)).get("icon", ""))),
+			"%s : %s" % ["Arme principale" if slot == "weapon" else "Arme secondaire", WeaponAttacks.variant_label(it) if not it.is_empty() else ws.name],
+			String(ws.desc) + ("\n" + mt if mt != "" else "\nPas encore améliorée (cartes d'amélioration d'arme)."), UiTheme.GOLD)
 	for ch in _cards.get_children():
 		ch.queue_free()
+	# trophée : celui porté agit, ceux du sac non
+	ItemWidgets.section(_cards, "Trophée", 15)
+	var worn: Dictionary = Profile.equipped.get("trophy", {})
+	if worn.is_empty():
+		_row(_cards, "", "Aucun trophée porté", "Les coffres de trophée en proposent : un effet unique, chaque trophée ne tombe qu'une fois par run.", UiTheme.MUTED)
+	else:
+		_row(_cards, String(worn.get("icon", "")), "✔ Actif : %s" % Items.display_name(worn),
+			String(worn.get("passive", {}).get("desc", "")), Color(0.5, 1.0, 0.55))
+	for it in Profile.inventory:
+		if String(it.get("slot", "")) == "trophy":
+			_row(_cards, String(it.get("icon", "")), "Dans le sac (inactif) : %s" % Items.display_name(it),
+				String(it.get("passive", {}).get("desc", "")), UiTheme.MUTED, 0, 40)
+	ItemWidgets.section(_cards, "Cartes de build et passifs", 15)
 	if Run.passives.is_empty():
 		Hud._label(_cards, "Aucune carte pour l'instant : monte de niveau pour en choisir.", 14, UiTheme.MUTED)
 	for pid in Run.passives:
@@ -101,12 +142,16 @@ Total : " + Cards.total_text(p, Run.power(pid)) if not (p.get("stat", {}) as Dic
 		_bag.text = "\n".join(parts)
 
 
-func _row(parent: Control, icon: String, title: String, desc: String, color: Color) -> void:
+func _row(parent: Control, icon: String, title: String, desc: String, color: Color, indent := 0, icon_px := 52) -> void:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 12)
 	parent.add_child(h)
+	if indent > 0:
+		var pad := Control.new()
+		pad.custom_minimum_size = Vector2(indent - 12, 0)
+		h.add_child(pad)
 	var ic := TextureRect.new()
-	ic.custom_minimum_size = Vector2(52, 52)
+	ic.custom_minimum_size = Vector2(icon_px, icon_px)
 	ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	ic.texture = UiTheme.texture(icon)

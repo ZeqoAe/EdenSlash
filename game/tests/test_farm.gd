@@ -64,8 +64,8 @@ func _ready() -> void:
 	_close_cards()
 	check("Survie : départ sans équipement (époque %d)" % Run.epoch, Run.survival and not Profile.equipped.has("helmet") and not Profile.equipped.has("head"))
 	var starts: Array = d.start_weapon_cards()
-	check("arme de départ : l'arme de la classe, ses 2 variantes, palier %d" % int(Epochs.map_def(Run.epoch, 1).weapon), starts.size() == 2 \
-		and starts.all(func(c): return c.item.slot == "weapon" and Items.weapon_type_of(c.item) == Run.weapon_type() and int(c.item.level) <= int(Epochs.map_def(Run.epoch, 1).weapon)) \
+	check("arme de départ : l'arme de la classe (%s), ses 2 variantes, palier de la map" % Run.weapon_type(), starts.size() == 2 \
+		and starts.all(func(c): return c.item.slot == "weapon" and Items.weapon_type_of(c.item) == Run.weapon_type() and int(c.item.level) in SlotChests.pool("weapon", Run.epoch, 1).map(func(e): return int(e.level))) \
 		and int(starts[0].item.auto_variant) == 0 and int(starts[1].item.auto_variant) == 1)
 	Run.apply_card(starts[0])
 	check("arme choisie : portée tout de suite", Profile.equipped.has("weapon") and String(Profile.equipped.weapon.uid) == String(starts[0].item.uid))

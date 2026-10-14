@@ -371,6 +371,9 @@ class ForgePage extends ItemPage:
 			return
 		var it: Dictionary = sel[0]
 		detail.text = Items.describe(it)
+		if Items.is_unique(it):
+			detail.text += "\n\n[color=#ffb347]%s[/color]" % Items.UNIQUE_TEXT
+			return
 		_upgrade(it)
 		_crystals(it)
 		_gems(it)

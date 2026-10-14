@@ -184,6 +184,25 @@ func _test_world() -> void:
 	Profile.unequip("offhand")
 	player.recalc_stats()
 	check("arme secondaire retirée", player.offhand_spec().is_empty())
+	# trophées : effet unique, pas d'amélioration, une seule fois par run
+	var trophies := SlotChests.offer("trophy", 1, 3, 50)
+	check("coffre de trophée : des trophées (%d)" % trophies.size(), not trophies.is_empty() and trophies.all(func(it): return it.slot == "trophy"))
+	if not trophies.is_empty():
+		var tr: Dictionary = trophies[0]
+		check("trophée : pas d'amélioration (forge, enclume, gemmes, enchantement)", not bool(Craft.upgrade(tr).ok) and not bool(Craft.upgrade_free(tr).ok) \
+			and Craft.drill(tr) == Items.UNIQUE_TEXT and Craft.can_enchant(tr, "scroll:atk:1") == Items.UNIQUE_TEXT and int(tr.upgrade) == 0)
+		Run.seen_items.append(int(tr.eden))
+		var again := SlotChests.offer("trophy", 1, 3, 50)
+		check("trophée déjà obtenu : ne retombe plus", not again.any(func(it): return int(it.eden) == int(tr.eden)))
+		Run.seen_items.erase(int(tr.eden))
+	# menu pause, page Run : les 12 sorts (4 cases × sort + 2 enchaînements), armes et trophée
+	var rp := RunPage.new()
+	rp.player = player
+	world.add_child(rp)
+	rp.refresh()
+	check("pause : compétences sur 12 lignes (%d)" % rp._skills.get_children().filter(func(c): return c is HBoxContainer).size(),
+		rp._skills.get_children().filter(func(c): return c is HBoxContainer).size() >= 12 + 2 and rp._skills_title.text.ends_with("/ 12)"))
+	rp.queue_free()
 
 	# zone et portée
 	var sk: Dictionary = Run.class_data().skills[1]  # tourbillon (cercle)

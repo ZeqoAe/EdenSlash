@@ -1215,6 +1215,15 @@ static func item_card(it: Dictionary, type: String) -> Dictionary:
 	if String(pv.get("desc", "")) != "":
 		lines.append("[color=#ffd36b]%s[/color]" % pv.desc)
 	var cmp := Items.compare_to_equipped(it)
+	if it.slot == "trophy":
+		# trophée : effet unique ; on dit lequel il remplace (l'ancien n'agit plus, il reste dans le sac)
+		var worn: Dictionary = Profile.equipped.get("trophy", {})
+		var head := "[color=#7dff8a]Emplacement libre : effet actif dès qu'il est pris[/color]" if worn.is_empty() else \
+			"[color=#ffb347]Remplace %s[/color] (son effet s'arrête : %s)" % [Items.display_name(worn), String(worn.get("passive", {}).get("desc", "?"))]
+		var r0 := clampi(int(it.get("rarity", 0)), 0, Items.RARITIES.size() - 1)
+		return {"type": type, "id": String(it.get("uid", "")), "item": it, "title": Items.display_name(it),
+			"subtitle": "Trophée · %s · effet unique" % Items.RARITIES[r0].name,
+			"desc": head + "\n[color=#ffd36b]%s[/color]" % String(it.get("passive", {}).get("desc", "")), "icon": String(it.get("icon", "")), "color": Items.color_of(it)}
 	var cmp_txt := "[color=#7dff8a]Emplacement libre[/color]" if cmp >= 1.0 else ("[color=#7dff8a]▲ +%d %%[/color] sur ta pièce" % roundi(cmp * 100.0)
 		if cmp > 0.005 else ("[color=#ff8a7d]▼ %d %%[/color] sur ta pièce" % roundi(cmp * 100.0) if cmp < -0.005 else "Comme ta pièce"))
 	var r := clampi(int(it.get("rarity", 0)), 0, Items.RARITIES.size() - 1)
@@ -1229,7 +1238,7 @@ func anvil_cards() -> Array:
 	var pieces: Array = []
 	for slot in Profile.equipped:
 		var it: Dictionary = Profile.equipped[slot]
-		if slot != "offhand" and int(it.get("upgrade", 0)) < Items.MAX_UPGRADE:
+		if slot != "offhand" and not Items.is_unique(it) and int(it.get("upgrade", 0)) < Items.MAX_UPGRADE:
 			pieces.append(it)
 	pieces.sort_custom(func(a, b): return (a.slot == "weapon" and b.slot != "weapon") or (a.slot == b.slot) or \
 		((a.slot == "weapon") == (b.slot == "weapon") and int(a.get("upgrade", 0)) < int(b.get("upgrade", 0))))

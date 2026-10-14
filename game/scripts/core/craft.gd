@@ -266,6 +266,8 @@ static func _stats_text(st: Dictionary) -> String:
 # --- sertissage ---------------------------------------------------------------------------------
 ## Perce un emplacement avec des ciseaux de sertissage. Renvoie un message.
 static func drill(item: Dictionary) -> String:
+	if Items.is_unique(item):
+		return Items.UNIQUE_TEXT
 	var sockets: Array = item.get("sockets", [])
 	if sockets.size() >= MAX_SOCKETS:
 		return "Déjà %d emplacements." % MAX_SOCKETS
@@ -282,6 +284,8 @@ static func drill(item: Dictionary) -> String:
 
 ## Sertit la gemme [param key] dans l'emplacement [param slot] (l'ancienne gemme est détruite).
 static func insert_gem(item: Dictionary, key: String, slot: int) -> String:
+	if Items.is_unique(item):
+		return Items.UNIQUE_TEXT
 	var sockets: Array = item.get("sockets", [])
 	if slot < 0 or slot >= sockets.size():
 		return "Pas d'emplacement : perce-le d'abord."
@@ -320,6 +324,8 @@ static func _item_level(item: Dictionary) -> int:
 
 
 static func can_enchant(item: Dictionary, key: String) -> String:
+	if Items.is_unique(item):
+		return Items.UNIQUE_TEXT
 	var p := key.split(":")
 	if not ENCHANTS.has(p[1]):
 		return "Formule inconnue."
@@ -416,6 +422,8 @@ static func failure_text(item: Dictionary, protected := false) -> String:
 ## Tentative de fortification : {ok, text, stat, value}. Parchemin, pierre et or sont consommés
 ## par l'appelant (Profile.upgrade_item) ; une pierre ou le parchemin béni protègent l'objet.
 static func upgrade(item: Dictionary, stone := "", scroll := "") -> Dictionary:
+	if Items.is_unique(item):
+		return {"ok": false, "error": true, "text": Items.UNIQUE_TEXT}
 	var chance := success_chance(item, stone, scroll)
 	var protect := stone != "" or scroll == BLESSED
 	var target := int(item.get("upgrade", 0)) + 1
@@ -437,6 +445,8 @@ static func upgrade(item: Dictionary, stone := "", scroll := "") -> Dictionary:
 
 ## Amélioration réussie d'office (enclume de la carte) : +1 sans parchemin ni or, sans risque.
 static func upgrade_free(item: Dictionary) -> Dictionary:
+	if Items.is_unique(item):
+		return {"ok": false, "text": Items.UNIQUE_TEXT}
 	var target := int(item.get("upgrade", 0)) + 1
 	if target > Items.MAX_UPGRADE:
 		return {"ok": false, "text": "Déjà +%d" % Items.MAX_UPGRADE}
