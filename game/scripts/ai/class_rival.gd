@@ -85,6 +85,14 @@ func setup(class_id: String, lvl: int, diff := 1, hp_scale := 1.0, n_skills := 4
 	move_speed = float(cfg.speed)
 	_charges = float(cfg.charges)
 	_skills = (cls.get("skills", []) as Array).filter(func(s): return String(s.kind) != "buff" and String(s.kind) != "heal").slice(0, clampi(n_skills, 0, 4))
+	_support = (cls.get("skills", []) as Array).filter(func(s): return String(s.kind) == "buff" or String(s.kind) == "heal")
+
+
+## Allié IA du joueur (lot 12) : même héros scripté, mais du camp du joueur. Il vise les monstres,
+## soigne l'allié le plus bas et pose ses renforts ; ses coups ne touchent que les monstres.
+var ally := false
+var _support: Array = []  # sorts de soin et de renfort (allié seulement)
+var _support_ready_at := 2.0
 
 
 ## Apparence (éditeur d'adversaire du duel) : {body, head, back} (.glb), arme portée.
@@ -170,10 +178,14 @@ func apply_gear(items: Array, k := 1.0) -> void:
 
 
 func _ready() -> void:
-	team = Team.MONSTER
-	collision_layer = GameData.PHYS_MONSTER
-	collision_mask = GameData.PHYS_WORLD | GameData.PHYS_PLAYER
-	add_to_group("monsters")
+	team = Team.PLAYER if ally else Team.MONSTER
+	collision_layer = GameData.PHYS_PLAYER if ally else GameData.PHYS_MONSTER
+	collision_mask = (GameData.PHYS_WORLD | GameData.PHYS_MONSTER) if ally else (GameData.PHYS_WORLD | GameData.PHYS_PLAYER)
+	if ally:
+		add_to_group("heroes")
+		add_to_group("allies")
+	else:
+		add_to_group("monsters")
 	floor_max_angle = deg_to_rad(55.0)
 	floor_snap_length = 0.7
 	kfm = "m"
@@ -196,7 +208,7 @@ func _ready() -> void:
 	EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, weapon_code))
 	EdenFx.attach_aura_ids(self, RivalBuilds.aura_ids(look), GameData.HERO_SCALE, false, RivalBuilds.aura_tint(look))
 	_base_scale = model.scale
-	_player = get_tree().get_first_node_in_group("player") as Player
+	_player = get_tree().get_first_node_in_group("player") as Combatant
 	_map = get_tree().get_first_node_in_group("map") as Node3D
 	_status_label = Label3D.new()
 	_status_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -236,7 +248,34 @@ func is_invulnerable() -> bool:
 
 # --- cerveau ------------------------------------------------------------------------------
 
+## Soutien de l'allié : soigne le héros le plus bas sous 50 % de PV, pose un renfort au début et à la recharge.
+func _support_tick() -> void:
+	if not ally or _support.is_empty() or _time < _support_ready_at:
+		return
+	var heroes := get_tree().get_nodes_in_group("heroes")
+	for s in _support:
+		if String(s.kind) == "heal":
+			var low: Combatant = null
+			for n in heroes:
+				var c := n as Combatant
+				if c != null and not c.is_dead and c.hp < c.max_hp * 0.5 and (low == null or c.hp / c.max_hp < low.hp / low.max_hp):
+					low = c
+			if low != null:
+				low.heal(low.max_hp * clampf(float(s.get("heal", 0.25)), 0.1, 0.5))
+				Vfx.ring(low, low.global_position, 2.0, Color(0.5, 1.0, 0.55, 0.9))
+				_support_ready_at = _time + maxf(float(s.get("cooldown", 12.0)), 6.0)
+				return
+		else:
+			var buffs: Dictionary = s.get("buff", {})
+			for st in buffs:
+				for n in heroes:
+					(n as Combatant).add_status(String(st), minf(float(buffs[st]), 12.0), self)
+			_support_ready_at = _time + maxf(float(s.get("cooldown", 20.0)), 15.0)
+			return
+
+
 func _physics_process(delta: float) -> void:
+	_support_tick()
 	if not is_dead and not is_disabled() and not is_passive() and _can_target() and _state != "spawn":
 		_charges = minf(float(cfg.charges), _charges + delta / float(cfg.recharge))
 		if is_on_floor():
@@ -256,7 +295,14 @@ func apply_gravity(delta: float) -> void:
 
 ## Juge le coup en cours du héros : si l'adversaire est dans sa zone, il esquive juste avant
 ## l'impact (après son délai de réaction), et peut annuler son propre coup pour ça.
+## La cible comme héros du joueur (lecture de ses coups) ; null si c'est un monstre ou un allié IA.
+func _pl() -> Player:
+	return _player as Player
+
+
 func _read_player() -> void:
+	if _pl() == null:
+		return
 	if _react_at >= 0.0:
 		if _time >= _react_at:
 			_react_at = -1.0
@@ -266,7 +312,7 @@ func _read_player() -> void:
 	var th := _threat()
 	if th.is_empty():
 		return
-	var act: Dictionary = _player._action
+	var act: Dictionary = _pl()._action
 	if is_same(act, _seen_action):
 		return
 	_seen_action = act
@@ -285,8 +331,8 @@ func _read_player() -> void:
 
 ## Coup du héros qui va toucher l'adversaire : {t (s avant l'impact), dir (sortie)} ou {}.
 func _threat() -> Dictionary:
-	var p := _player
-	if not (p._state in ["attack", "skill"]) or p._hits.is_empty():
+	var p := _pl()
+	if p == null or not (p._state in ["attack", "skill"]) or p._hits.is_empty():
 		return {}
 	var a: Dictionary = p._action
 	var kind := String(a.get("kind", "cone"))
@@ -337,7 +383,9 @@ func _can_dodge() -> bool:
 
 ## Le héros est ouvert : récupération d'un sort, fin d'action, esquive en recharge.
 func _player_open() -> bool:
-	var p := _player
+	var p := _pl()
+	if p == null:
+		return true  # un monstre ou un allié n'esquive pas : toujours « ouvert »
 	if p.is_invulnerable():
 		return false
 	if p._state in ["attack", "skill"] and p._hits.is_empty():
@@ -447,7 +495,7 @@ func _update_chase(delta: float) -> Vector3:
 		v = (tangent + (-dir if dist < want else dir) * clampf(absf(dist - want) / 2.0, 0.0, 1.0)).normalized() * move_speed
 	else:
 		# hors de portée du héros en attendant son coup, en tournant autour de lui
-		var want := maxf(_player.attack_reach() + radius + 1.0, reach + 0.6)
+		var want := maxf((_pl().attack_reach() if _pl() else 3.0) + radius + 1.0, reach + 0.6)
 		var radial := clampf((dist - want) / 1.5, -1.0, 1.0)
 		v = (tangent * (0.5 + 0.5 * float(difficulty >= 2)) + dir * radial).normalized() * move_speed * (0.55 + 0.15 * difficulty)
 		if difficulty >= 2 and _time >= _hop_ready and randf() < float(cfg.hop) * 0.04:

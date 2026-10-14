@@ -304,6 +304,49 @@ func power() -> float:
 	return atk
 
 
+## Héros vivants (groupe « heroes » : le joueur et ses alliés IA) que les coups de [param source] peuvent
+## toucher : ceux de l'autre camp (tous si la source est inconnue).
+static func hostile_heroes(tree: SceneTree, source: Combatant = null) -> Array:
+	var out: Array = []
+	for n in tree.get_nodes_in_group("heroes"):
+		var c := n as Combatant
+		if c != null and not c.is_dead and (source == null or not is_instance_valid(source) or c.team != source.team):
+			out.append(c)
+	return out
+
+
+## Ce que les coups de [param source] peuvent toucher : les héros (joueur et alliés) pour un monstre,
+## les monstres et les héros ennemis pour un allié du joueur.
+static func hostile_targets(tree: SceneTree, source: Combatant = null) -> Array:
+	if source != null and is_instance_valid(source) and source.team == Team.PLAYER:
+		var out: Array = []
+		for n in tree.get_nodes_in_group("monsters"):
+			var c := n as Combatant
+			if c != null and not c.is_dead and c != source:
+				out.append(c)
+		return out
+	return hostile_heroes(tree, source)
+
+
+## Cible hostile la plus proche de ce combattant parmi [param pool] (inertie : on garde l'ancienne cible
+## tant qu'elle n'est pas plus de 30 % plus loin que la meilleure).
+func pick_target(pool: Array, current: Combatant = null) -> Combatant:
+	var best: Combatant = null
+	var best_d := INF
+	for n in pool:
+		var c := n as Combatant
+		if c == null or c.is_dead or c == self:
+			continue
+		var d := global_position.distance_to(c.global_position)
+		if d < best_d:
+			best_d = d
+			best = c
+	if current != null and is_instance_valid(current) and not current.is_dead and current in pool \
+			and global_position.distance_to(current.global_position) <= best_d * 1.3:
+		return current
+	return best
+
+
 static func is_hero(c: Combatant) -> bool:
 	return c is Player or c is ClassRival
 

@@ -45,9 +45,13 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_t += delta
 	global_position += dir * SPEED * delta
-	var player := get_tree().get_first_node_in_group("player") as Player
-	if player and not player.is_dead and global_position.distance_to(player.global_position + Vector3.UP * 1.0) < HIT_RADIUS + player.radius:
-		player.take_damage(damage, source, false)
+	var struck := false
+	for target in Combatant.hostile_targets(get_tree(), source):
+		if global_position.distance_to(target.global_position + Vector3.UP * 1.0) < HIT_RADIUS + target.radius:
+			target.take_damage(damage, source, false)
+			struck = true
+			break
+	if struck:
 		queue_free()
 	elif _t > LIFE:
 		queue_free()

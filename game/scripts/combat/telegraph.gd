@@ -177,8 +177,17 @@ func _process(delta: float) -> void:
 func _resolve() -> void:
 	set_process(false)
 	var hit := false
-	var player := get_tree().get_first_node_in_group("player") as Player
-	if damage > 0.0 and player and not player.is_dead and contains(player.global_position, player.radius):
+	for target in Combatant.hostile_targets(get_tree(), source):
+		if damage <= 0.0 or not contains(target.global_position, target.radius):
+			continue
+		var player := target as Player
+		if player == null:
+			# allié IA (ClassRival) : même règle, sans les compteurs du joueur
+			if target.has_method("is_invulnerable") and target.is_invulnerable():
+				continue
+			target.take_damage(damage, source, crit)
+			hit = true
+			continue
 		var dodged_by_jump := jumpable and player.is_airborne() and player.global_position.y > global_position.y + 0.4
 		if dodged_by_jump:
 			player.ml_counts.dodged += 1

@@ -25,7 +25,8 @@ var _wander_target := Vector3.ZERO
 var _knock := Vector3.ZERO
 var _time := 0.0
 var _attacks: Array[String] = []
-var _player: Player
+var _player: Combatant  # cible : le héros hostile le plus proche (le joueur ou un allié IA)
+var _retarget_t := 0.0
 var _base_scale := Vector3.ONE
 var _hit_time := 0.45
 var _map: Node3D  # ProcMap ou MapLoader (path_between)
@@ -71,7 +72,7 @@ func _ready() -> void:
 	for a in ["attack01", "attack02", "attack03"]:
 		if has_anim(a):
 			_attacks.append(a)
-	_player = get_tree().get_first_node_in_group("player") as Player
+	_player = get_tree().get_first_node_in_group("player") as Combatant
 	_map = get_tree().get_first_node_in_group("map") as Node3D
 	_status_label = Label3D.new()
 	_status_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
@@ -201,6 +202,14 @@ func _physics_process(delta: float) -> void:
 	_state_time += delta
 	tick_statuses(delta)
 	apply_gravity(delta)
+	_retarget_t -= delta
+	if _retarget_t <= 0.0:
+		_retarget_t = 0.5
+		var pool := _hostile_pool()
+		if pool.size() > 1 or team == Team.PLAYER:  # un seul héros : la cible ne change pas
+			var t := pick_target(pool, _player)
+			if t != null:
+				_player = t
 	if is_disabled() and not is_dead:
 		velocity.x = 0.0
 		velocity.z = 0.0
@@ -259,6 +268,11 @@ func _physics_process(delta: float) -> void:
 func _set_state(s: String) -> void:
 	_state = s
 	_state_time = 0.0
+
+
+## Cibles possibles : les héros (le joueur et ses alliés) ; un allié du joueur vise les monstres.
+func _hostile_pool() -> Array:
+	return get_tree().get_nodes_in_group("monsters" if team == Team.PLAYER else "heroes")
 
 
 func _player_alive() -> bool:

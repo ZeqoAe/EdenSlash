@@ -59,7 +59,9 @@ les images des fiches restent à écrire. Lot 10 fait (0.1.142) : page Jouer en 
 classe (`core/contracts.gd`, remplis à chaque Survie), reprise de la Tour (palier de 10 étages, kit complet + cartes). Épreuves de maîtrise
 et Ruée des boss restent « Bientôt » (pas de moteur de leçons). Lot 11 fait (0.1.143) : Carnet = Vue d'ensemble (`core/completion.gd`, 10 catégories), Succès et titres (`core/achievements.gd`, 40 succès
 accordés pour le passé, titres à porter), Grimoire des cartes, Codex des trophées, Collection (`ui/carnet_pages.gd`). Pas encore : signatures de
-famille, apparences/auras en onglets, statistiques. Prochain : lot 12 (alliés IA : ciblage par camp).
+famille, apparences/auras en onglets, statistiques. Lot 12 fait (0.1.144) : ciblage par camp (groupe « heroes » = joueur + alliés IA ; `Combatant.hostile_targets` pour les coups au sol, projectiles et
+zones ; les monstres visent le héros hostile le plus proche, réévalué toutes les 0,5 s) et allié scripté (`ClassRival.ally`, soigne sous 50 % de PV,
+pose ses renforts). Les cerveaux ne sont pas alliés (ils ne voient pas leurs équipiers). Prochain : lot 13 (Donjons).
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

@@ -141,6 +141,8 @@ func _ready() -> void:
 	collision_mask = _body_mask()
 	add_to_group("foe_heroes" if foe else "player")
 	if not foe:
+		add_to_group("heroes")  # le joueur et ses alliés IA : cibles des monstres
+	if not foe:
 		class_id = Run.class_id if Run.active else Profile.selected_class
 	cls = GameData.class_data(class_id)
 	display_name = cls.get("name_fr", "Héros")

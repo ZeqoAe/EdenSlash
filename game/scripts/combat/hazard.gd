@@ -94,12 +94,12 @@ func _physics_process(delta: float) -> void:
 	if _tick > 0.0:
 		return
 	_tick = 0.5
-	var p := get_tree().get_first_node_in_group("player") as Player
-	if p == null or p.is_dead or not p.is_on_floor():
-		return
-	var d := Vector2(p.global_position.x - global_position.x, p.global_position.z - global_position.z).length()
-	if d <= radius:
-		var src: Combatant = source if is_instance_valid(source) else null
-		p.take_damage(dps * 0.5, src, false, true)
-		var st := String(STYLES.get(style, STYLES.lava).status)
-		p.add_status(st, 2.0, src)
+	for p in Combatant.hostile_targets(get_tree(), source if is_instance_valid(source) else null):
+		if not p.is_on_floor():
+			continue  # (monstres et héros : les zones au sol ne touchent que ce qui marche)
+		var d := Vector2(p.global_position.x - global_position.x, p.global_position.z - global_position.z).length()
+		if d <= radius:
+			var src: Combatant = source if is_instance_valid(source) else null
+			p.take_damage(dps * 0.5, src, false, true)
+			var st := String(STYLES.get(style, STYLES.lava).status)
+			p.add_status(st, 2.0, src)
