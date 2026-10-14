@@ -28,10 +28,11 @@ func _ready() -> void:
 	var br: Breakables = map.breakables
 	check("carte remplie : %d objets à casser (jarres %d, caisses %d, or %d, cristaux %d)" % [br.count(), br.count("pot"), br.count("crate"),
 		br.count("gold"), br.count("gem")], br.count() > 600 and br.count("gem") >= 10 and br.count("gold") >= 30)
-	var tiers := [0, 0, 0]
-	for t in map.chest_tiers:
-		tiers[int(t)] += 1
-	check("30 coffres dont %d ouvragés et %d dorés" % [tiers[1], tiers[2]], map.chests.size() >= 25 and tiers[1] >= 8 and tiers[2] >= 3)
+	var boxes := {}
+	for it in map.interactables:
+		if it.kind == "chest":
+			boxes[String(it.get_meta("box", ""))] = int(boxes.get(String(it.get_meta("box", "")), 0)) + 1
+	check("30 coffres d'emplacement : %s" % [boxes], map.chests.size() >= 25 and boxes.size() == SlotChests.BOXES.size() and not boxes.has(""))
 	var kinds := {}
 	for st in map.stations:
 		kinds[st.kind] = int(kinds.get(st.kind, 0)) + 1
@@ -59,37 +60,42 @@ func _ready() -> void:
 	await get_tree().process_frame
 	check("cristal : intact après 2 coups, brisé au 3e, gemmes au sol", still and get_tree().get_nodes_in_group("loot").size() > loot0)
 
-	# coffre ouvragé : équipement au choix, au moins rare
+	# Survie : départ sans équipement, arme de départ au choix
+	_close_cards()
+	check("Survie : départ sans équipement (époque %d)" % Run.epoch, Run.survival and not Profile.equipped.has("helmet") and not Profile.equipped.has("head"))
+	var starts: Array = d.start_weapon_cards()
+	check("arme de départ : 3 armes du palier %d" % int(Epochs.map_def(Run.epoch, 1).weapon), starts.size() == 3 and starts.all(func(c): return c.item.slot == "weapon" and int(c.item.level) == int(Epochs.map_def(Run.epoch, 1).weapon)))
+	Run.apply_card(starts[0])
+	check("arme choisie : portée tout de suite", Profile.equipped.has("weapon") and String(Profile.equipped.weapon.uid) == String(starts[0].item.uid))
+	# coffre de casque : 3 casques du palier de la map, au choix, une relance
 	var chest: Interactable = null
 	for it in map.interactables:
-		if it.kind == "chest" and int(it.get_meta("tier", 0)) == 1:
+		if it.kind == "chest" and String(it.get_meta("box", "")) == "head":
 			chest = it
 	Profile.keys = 0
 	Profile.gold = 0
-	var price := d.chest_price(1)
+	var price := d.chest_price(0, "head")
 	d._interact(chest)
-	check("coffre ouvragé trop cher sans or (prix %d, coffre simple %d)" % [price, d.chest_price(0)], not chest.used and price > d.chest_price(0))
+	check("coffre trop cher sans or (prix %d)" % price, not chest.used)
 	Profile.gold = price
 	d._interact(chest)
 	var cards: Array = world.cards._cards
-	check("coffre ouvragé ouvert : 3 pièces d'équipement au choix, rare ou mieux", chest.used and cards.size() == 3
-		and cards.all(func(c): return c.type == "gear" and int(c.item.rarity) >= 2))
-	var inv0 := Profile.inventory.size()
+	var tier := int(Epochs.map_def(Run.epoch, Run.stage).armor)
+	check("coffre de casque : 3 casques mythiques du palier %d" % tier, chest.used and cards.size() == 3
+		and cards.all(func(c): return c.type == "gear" and c.item.slot == "head" and int(c.item.level) == tier and int(c.item.rarity) == Items.MYTHIC))
+	check("une relance propre au coffre", world.cards._own_rerolls == 1)
 	Run.apply_card(cards[0])
-	check("la pièce choisie rejoint le sac", Profile.inventory.size() == inv0 + 1)
+	check("casque choisi : porté et noté pour le hub", Profile.equipped.has("head") and int(cards[0].item.eden) in Run.seen_items)
 	_close_cards()
-
-	# enclume : +1 garanti sur une pièce portée
-	var w := Items.generate(5, 0.0, "weapon", Run.class_id, 1, "", 2)
-	Profile.equipped["weapon"] = w
-	var up0 := int(w.upgrade)
+	# enclume : un emplacement, tirage de -2 à +10, une fois par carte
 	_use("anvil")
 	cards = world.cards._cards
-	check("enclume : choix de pièces portées", not cards.is_empty() and cards.all(func(c): return c.type == "anvil"))
-	var pick: Dictionary = cards.filter(func(c): return c.slot == "weapon")[0]
-	Run.apply_card(pick)
-	check("enclume : arme +%d → +%d" % [up0, int(Profile.equipped.weapon.upgrade)], int(Profile.equipped.weapon.upgrade) == up0 + 1)
+	check("enclume : choix d'emplacements", not cards.is_empty() and cards.all(func(c): return c.type == "anvil_slot"))
+	Run.apply_card(cards.filter(func(c): return c.slot == "head")[0])
+	var hb := int(Run.slot_bonus.get("head", 99))
+	check("enclume : casque %+d (entre -2 et +10)" % hb, hb >= -2 and hb <= 10)
 	_close_cards()
+	check("enclume : une seule par carte", d.map.interactables.filter(func(i): return is_instance_valid(i) and i.kind == "anvil" and not i.used).is_empty())
 	# autel du scribe
 	_use("scribe")
 	cards = world.cards._cards

@@ -26,6 +26,7 @@ var _chests: PageScreen
 var _launching := false
 var _open_screen := ""  # test : écran ouvert au démarrage (--inventory, --talents, --appearance, --archive=0...)
 var _settings: SettingsMenu
+var _epoch := 99  # époque choisie pour la Survie (la plus avancée ouverte par défaut)
 var _zone_card: Control  # zone choisie et prochaine récompense (en bas à gauche)
 var _menu := {}  # identifiant -> MenuWidgets.SideButton
 var _current := ""  # sous-menu affiché ("" : aucun, le panneau est caché)
@@ -436,7 +437,7 @@ func _start_tower(diff := 1, from := 1) -> void:
 func _start_run() -> void:
 	if backdrop:
 		backdrop.release()
-	Run.start(Profile.selected_class)
+	Run.start_survival(Profile.selected_class, clampi(_epoch, 1, Epochs.unlocked()))
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
@@ -822,23 +823,30 @@ func _activity_head(id: String) -> void:
 	_sub.add_child(bn)
 
 
-## Survie (la run de farm) : la zone, puis Lancer.
+## Survie : l'époque (3 maps, paliers et raretés des coffres), puis Lancer.
 func _menu_survival() -> void:
 	_activity_head("survival")
-	Hud._label(_sub, "Zone", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
-	# zones débloquées, puis la suivante (verrouillée) ; le reste en une ligne
-	for i in mini(Profile.unlocked_zones + 1, GameData.zones.size()):
-		var z: Dictionary = GameData.zones[i]
-		var open := i < Profile.unlocked_zones
-		var r := _row(String(z.name), ("Niveau %d+" % (1 + int(z.get("level_bonus", 0)))) if open else "Verrouillée : bats le boss de %s" % GameData.zones[i - 1].name,
-			"pin", _select_zone.bind(String(z.id)), 46.0)
+	Hud._label(_sub, "Époque", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
+	_epoch = clampi(_epoch, 1, Epochs.unlocked())
+	for i in range(1, Epochs.count() + 1):
+		var e := Epochs.get_def(i)
+		var open := i <= Epochs.unlocked()
+		var zones: Array = (e.zones as Array).map(func(z): return String(GameData.zone(String(z)).get("name", z)))
+		var tiers: Array = range(1, 4).map(func(st): return str(int(Epochs.map_def(i, st).armor)))
+		var sub := ("%s
+Paliers %s · %s" % [" → ".join(zones), ", ".join(tiers), Epochs.rarity_name(Epochs.map_def(i, 3))]) if open 			else "Verrouillée : termine l'%s" % Epochs.get_def(i - 1).name
+		var ei := i
+		var r := _row(String(e.name), sub, "pin", func():
+			_epoch = ei
+			_select_zone(Epochs.zone(ei, 1))
+			_show_menu("survival"), 62.0)
 		r.disabled = not open
 		if not open:
 			r.modulate = Color(1, 1, 1, 0.5)
-		r.mark(z.id == Profile.selected_zone)
-	var more := GameData.zones.size() - mini(Profile.unlocked_zones + 1, GameData.zones.size())
-	if more > 0:
-		Hud._label(_sub, "+ %d zone(s) à découvrir" % more, 13, UiTheme.MUTED)
+		r.mark(i == _epoch)
+	var hint := Hud._label(_sub, "Tu pars sans équipement : arme au choix au départ, puis coffres d'emplacement sur chaque carte.", 13, UiTheme.MUTED)
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hint.custom_minimum_size = Vector2(420, 0)
 	var go := MenuWidgets.gold_button("Lancer la run", 22, Vector2(0, 56))
 	go.pressed.connect(_launch)
 	_sub.add_child(go)

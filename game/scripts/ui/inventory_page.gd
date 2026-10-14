@@ -913,6 +913,10 @@ func _on_dismantle() -> void:
 ## sur une gemme : la fusion.
 func _on_upgrade() -> void:
 	var w := get_tree().get_first_node_in_group("world")
+	if Profile.in_run and Run.survival:
+		if w:
+			w.hud.show_message("Survie : les pièces restent à +0 ; l'enclume améliore un emplacement, une fois par carte", 3.0)
+		return
 	var mu: MerchantUI
 	if Profile.in_run and w:
 		mu = w.merchant_ui

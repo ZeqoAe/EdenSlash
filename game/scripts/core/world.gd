@@ -118,7 +118,15 @@ func _ready() -> void:
 					from = int(arg.trim_prefix("--tower-floor="))
 			Tower.start(Profile.selected_class, diff, from)
 		else:
-			Run.start(Profile.selected_class)
+			# test : une run de Survie (--epoch=N ; époque I par défaut, ou celle de la zone choisie)
+			var ep := 1
+			for i in range(Epochs.count(), 0, -1):
+				if Epochs.zone(i, 1) == Profile.selected_zone:
+					ep = i
+			for arg in OS.get_cmdline_user_args():
+				if arg.begins_with("--epoch="):
+					ep = int(arg.trim_prefix("--epoch="))
+			Run.start_survival(Profile.selected_class, ep)
 	_build_environment()
 
 	player = Player.new()
@@ -368,7 +376,7 @@ func _parse_args() -> void:
 
 
 ## Propose des cartes ; en mode bot, la première est choisie automatiquement.
-func _offer(title: String, options: Array, reroll := Callable()) -> void:
+func _offer(title: String, options: Array, reroll := Callable(), own_rerolls := -1) -> void:
 	if options.is_empty():
 		return
 	if player.autoplay:
@@ -377,7 +385,7 @@ func _offer(title: String, options: Array, reroll := Callable()) -> void:
 		var skills := options.filter(func(o): return String(o.get("type", "")) == "skill")
 		Run.apply_card(skills[0] if not skills.is_empty() and Run.skills.size() < 4 else options.pick_random())
 		return
-	if Settings.auto_cards():
+	if Settings.auto_cards() and not options.any(func(o): return String(o.get("type", "")) in ["gear", "trophy", "anvil_slot"]):
 		# choix automatique (Paramètres) : un nouveau sort tant qu'une case est libre, sinon la
 		# carte de plus haute rareté
 		var pick: Dictionary = options[0]
@@ -394,7 +402,7 @@ func _offer(title: String, options: Array, reroll := Callable()) -> void:
 		Run.apply_card(pick)
 		hud.show_message("Carte choisie : %s" % String(pick.get("title", "?")), 2.0)
 		return
-	cards.offer(title, options, reroll)
+	cards.offer(title, options, reroll, own_rerolls)
 
 
 func _on_level_up(lvl: int) -> void:

@@ -43,6 +43,7 @@ var shrine_spots: Array = []  # [{pos, reward}] zones à capturer
 var shrines: Array = []  # Shrine (run seulement)
 var interactables: Array[Interactable] = []
 var chest_tiers: Array = []  # palier de chaque coffre de [member chests] (0 coffre, 1 ouvragé, 2 doré)
+var chest_boxes: Array = []  # Survie : type de chaque coffre (SlotChests.BOXES), vide sinon
 var stations: Array = []  # [{pos, kind}] enclumes, scribes, fontaines, aimants, cupidité, défi
 var sites: Array = []  # [{pos, kind, yaw}] lieux de décor : ruines, tour de guet, mine, campement…
 var breakables: Breakables  # jarres, caisses, tas d'or, cristaux (run seulement)
@@ -247,6 +248,13 @@ func _place_pois() -> void:
 			if at < order.size():
 				chest_tiers[order[at]] = tier
 				at += 1
+	# Survie : chaque coffre vise un emplacement ou un type de cartes (SlotChests), son
+	# apparence suit sa catégorie (équipement, cartes, bijoux et trophées)
+	chest_boxes = []
+	if Run.active and Run.survival:
+		chest_boxes = SlotChests.layout(chests.size(), rng)
+		for k in chests.size():
+			chest_tiers[k] = int(SlotChests.BOXES[chest_boxes[k]].look)
 	# marchands ambulants : la clairière de l'ancien village, puis deux autres
 	merchant_spots.append(Vector3(v2.x, 0, v2.y))
 	for k in 2:
@@ -900,6 +908,8 @@ func _build_chests() -> void:
 			chest.add_child(l)
 			chest.add_beam(look.light, 10.0 if tier == 1 else 18.0)
 		chest.set_meta("tier", tier)
+		if k < chest_boxes.size():
+			chest.set_meta("box", String(chest_boxes[k]))
 		add_child(chest)
 		chest.global_position = c
 		chest.rotation.y = rng.randf() * TAU

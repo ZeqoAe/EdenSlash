@@ -85,6 +85,24 @@ func show_results() -> void:
 		g.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		g.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var extract := Run.result == "extraction"
+	if Run.survival:
+		# Survie : l'équipement de la run reste dans la run ; ses pièces s'achètent au hub
+		var sh := Hud._label(v, "%d insignes gagnés · %d pièce(s) découverte(s) dans les coffres" % [Run.insignia_gain, Run.seen_items.size()], 24, Hud.ACCENT)
+		sh.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var ss := Hud._label(v, "L'équipement de la run n'est pas gardé : chaque pièce choisie dans un coffre devient achetable au hub avec tes insignes. " 			+ ("Tes fournitures rejoignent ta réserve." if Run.result in ["victoire", "extraction"] else "Fournitures, or et clés sont perdus."), 14, MUTED)
+		ss.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		ss.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_confirm = Button.new()
+		_confirm.custom_minimum_size = Vector2(0, 54)
+		_confirm.add_theme_font_size_override("font_size", 20)
+		_confirm.add_theme_stylebox_override("normal", Hud.style(Color(0.2, 0.15, 0.3)))
+		_confirm.add_theme_stylebox_override("hover", Hud.style(Color(0.3, 0.22, 0.42)))
+		_confirm.focus_mode = Control.FOCUS_NONE
+		_confirm.text = "Retour au lobby"
+		_confirm.pressed.connect(_finish)
+		v.add_child(_confirm)
+		add_child(root)
+		return
 	var head := Hud._label(v, "Tout ton inventaire est conservé" if extract else "Choisis l'objet à garder en héritage", 24, Hud.ACCENT)
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var sub := Hud._label(v, ("Équipement, inventaire et fournitures (gemmes, parchemins, pierres, ciseaux) sont gardés. L'or et les matériaux restent perdus." if extract
@@ -188,7 +206,9 @@ func _select(item) -> void:
 
 
 func _finish() -> void:
-	if Run.result == "extraction":
+	if Run.survival:
+		Profile.end_run_survival()
+	elif Run.result == "extraction":
 		Profile.end_run_extract()
 	else:
 		Profile.end_run(_choice)

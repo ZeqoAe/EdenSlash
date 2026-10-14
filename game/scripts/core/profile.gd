@@ -35,6 +35,10 @@ var loadout: Dictionary = {}  # préréglage actif de la classe choisie : emplac
 var presets: Dictionary = {}
 var _view_class := ""  # classe dont le préréglage est projeté dans equipped / inventory (hors run)
 var in_run := false
+## Survie : pièces d'Eden (id) choisies au moins une fois dans un coffre d'emplacement,
+## achetables au hub ; insignes : monnaie gagnée en Survie pour les acheter.
+var seen_gear: Array = []
+var insignia := 0
 var bag := {}  # consommables de la run (Craft) : clé -> quantité
 var stash := {}  # réserve de fournitures gardées (extraction, victoire), emportée à la run suivante
 var expertise := {}  # classe -> points d'expertise (gagnés à chaque run)
@@ -251,6 +255,8 @@ func load_profile() -> void:
 	_lobby_view()
 	runs_won = int(d.get("runs_won", 0))
 	best_level = int(d.get("best_level", 1))
+	seen_gear = d.get("seen_gear", []).map(func(x): return int(x))
+	insignia = int(d.get("insignia", 0))
 
 
 ## Anciennes sauvegardes (stats figées) -> format à jets.
@@ -302,7 +308,8 @@ func save_profile() -> void:
 		"expertise": expertise, "talents": talents, "certificates": certificates, "stash": stash,
 		"unlocked_classes": unlocked_classes, "records": records, "cert_board": cert_board,
 		"archive": archive, "skins": skins, "outfits": outfits, "owned_outfits": owned_outfits, "unlocked_cards": unlocked_cards, "collection": collection, "worn": worn, "dev": dev, "saved_at": Time.get_datetime_string_from_system(false, true),
-		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level}
+		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level,
+		"seen_gear": seen_gear, "insignia": insignia}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(d))
 	f.close()
@@ -470,6 +477,18 @@ func end_run(item) -> void:
 	save_profile()
 
 
+## Fin d'une run de Survie : l'équipement de la run n'est pas gardé (il s'achète au hub) ;
+## fournitures gardées en cas de victoire ou d'extraction.
+func end_run_survival() -> void:
+	if not in_run:
+		return
+	in_run = false
+	if Run.result in ["victoire", "extraction"]:
+		keep_supplies()
+	_lobby_view()
+	save_profile()
+
+
 ## Extraction réussie : tout l'inventaire de la run rejoint l'héritage (améliorations comprises),
 ## l'équipement porté devient l'équipement de départ.
 func end_run_extract() -> int:
@@ -613,6 +632,8 @@ func _clear() -> void:
 	runs_done = 0
 	runs_won = 0
 	best_level = 1
+	seen_gear = []
+	insignia = 0
 	unlocked_zones = 1
 	selected_zone = "limestone"
 	expertise = {}
@@ -644,6 +665,8 @@ func reset_all() -> void:
 	runs_done = 0
 	runs_won = 0
 	best_level = 1
+	seen_gear = []
+	insignia = 0
 	unlocked_zones = 1
 	selected_zone = "limestone"
 	expertise = {}
@@ -1041,7 +1064,11 @@ func buy(item: Dictionary, price: int) -> bool:
 func equipment_stats() -> Dictionary:
 	var total := {}
 	for slot in equipped:
-		var st := Items.stats(equipped[slot])
+		var it: Dictionary = equipped[slot]
+		if Run.active and Run.survival and Run.slot_bonus.has(slot):
+			it = it.duplicate()  # Survie : l'enclume améliore l'emplacement, pas la pièce
+			it["upgrade"] = int(Run.slot_bonus[slot])
+		var st := Items.stats(it)
 		for s in st:
 			total[s] = total.get(s, 0.0) + float(st[s])
 	for b in Items.active_set_bonuses(equipped):

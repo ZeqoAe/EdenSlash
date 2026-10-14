@@ -245,6 +245,50 @@ Les costumes d'Eden tombent sur les boss (1 chance sur 4, 1 sur 2 s'il est enrag
 - Lobby : **Nouvelle partie** efface l'héritage et les statistiques (2 clics pour confirmer).
 - Les 3 premières minutes, les monstres montent de 60 % à 100 % de leurs PV et dégâts.
 
+## Boucle de jeu et Survie (refonte 0.1.123, décisions du joueur du 14/10/2026)
+
+**Ce qui se débloque avec le temps (méta)** : les classes suivantes, les sorts des classes, les
+certificats et passifs, les points de maîtrise (maîtrise de classe, déjà en place) ; les
+cosmétiques ; l'équipement **pour la collection et le JcJ non normalisé** (achat au hub).
+
+**En Survie, on part toujours sans son équipement** : il se débloque pendant la run, map après
+map. L'équipement de la collection ne sert qu'au hub (collection, JcJ non normalisé), où se fait
+toute l'optimisation (+10, gemmes, enchantements, réforge).
+
+**Époques** : une run = 3 maps d'une même époque ; la puissance est normalisée (on repart du
+niveau 1, la puissance d'une pièce suit le niveau du héros, plafonné à chaque map) ; l'époque
+change les pièces d'Eden proposées (modèles, panoplies, raretés) et la difficulté des monstres.
+Battre le boss final d'une époque débloque la suivante.
+
+| Époque | Maps (zones) | Armures | Armes | Raretés |
+|---|---|---|---|---|
+| I | Limestone, Rainbowfall, Beluga | 23, 33, 43 | 20, 30, 40 | mythique |
+| II | Wetlands, Avila, Arid | 48, 53, 60 | 45, 50, 60 | mythique, mythique, légendaire |
+| III | Delphi, Blackflame, Wetlands | 65, 70, 70 | 65, 70, 75 | légendaire, légendaire, éveillé |
+| IV | Avila, Arid, Blackflame | 80, 85, 80 | 80, 85, 90 | légendaire, légendaire, éveillé |
+
+Mythique = orange, légendaire = jaune, éveillé = jaune avec une aura sur l'icône (pièces
+« Awaken » d'Eden, niveaux 70 et 80).
+
+**Coffres d'emplacement** (les 30 coffres payants de la map) : arme, tête, torse, jambes, gants,
+bottes, bijoux (bague, collier, boucles), trophée, carte de sort, carte de passif, carte de
+certificat. Un coffre d'équipement propose **3 pièces au hasard** parmi toutes les pièces de son
+emplacement au palier et à la rareté de la map (au palier 23 : 6 panoplies), avec **une relance
+par coffre**. Les armes sont de tous les types : changer d'arme change le combo d'auto-attaque.
+Départ : **une arme au choix parmi 3** (palier de la map 1). Les monstres ne lâchent plus
+d'équipement (or, expérience, fournitures, clés).
+
+**En run, les pièces restent à +0** (stats de base et bonus de panoplie). **Enclume, une fois
+par map** : on choisit un emplacement, il reçoit un tirage pondéré de -2 à +10 (le plus souvent
++3 à +6, rarement +9/+10 ou négatif), gardé pour toute la run quelle que soit la pièce portée
+dans cet emplacement : des runs moyennes, des runs dorées, des runs maudites.
+
+**Cartes** : la montée de niveau propose toujours des cartes ; les coffres de cartes (sort,
+passif, certificat) permettent de viser un type.
+
+**Hub, collection** : une pièce choisie au moins une fois dans un coffre de Survie devient
+achetable au hub (collection, JcJ), avec une monnaie gagnée en run selon la distance parcourue.
+
 ## Étapes et sources (refonte 0.1.91, façon Megabonk)
 
 - **Une run = 3 étapes** : la zone choisie, puis une zone à la hauteur du héros (au moins la suivante :

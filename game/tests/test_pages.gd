@@ -368,8 +368,7 @@ func _test_lobby() -> void:
 	check("accueil : double-clic, vue de départ", bd.orbit_yaw == 0.0 and bd.camera.position.distance_to(cam0) < 0.01)
 	lobby._show_menu("survival")
 	await _frames()
-	var nz := mini(Profile.unlocked_zones + 1, GameData.zones.size())
-	check("page Survie : %d zone(s) débloquée(s) et la suivante" % Profile.unlocked_zones, lobby._sub.get_children().filter(func(c): return c is MenuWidgets.RowButton).size() == nz)
+	check("page Survie : %d époques" % Epochs.count(), lobby._sub.get_children().filter(func(c): return c is MenuWidgets.RowButton).size() == Epochs.count())
 	lobby._show_menu("play")
 	# écran Héros : une section à la fois, classe, talents, apparence, aide
 	var hero: HeroScreen = lobby._hero
@@ -519,6 +518,10 @@ func _test_run_screens() -> void:
 	world.director.set_process(false)
 	world.cards._queue.clear()
 	world.cards._show_next()
+	# écrans de run et forge (hors Survie : en Survie, les pièces restent à +0)
+	Run.survival = false
+	if not Profile.equipped.has("weapon"):
+		Profile.equipped["weapon"] = Items.generate(5, 0.0, "weapon", Run.class_id)
 	var player: Player = world.player
 	for i in 8:
 		Profile.add_item(Items.generate(5, 1.0 if i < 3 else -0.5))
@@ -654,13 +657,14 @@ func _test_run_screens() -> void:
 	Profile.keys = 0
 	Profile.gold = 0
 	var tier := int(chest.get_meta("tier", 0))
-	var p0 := d.chest_price(tier)
+	var box := String(chest.get_meta("box", ""))
+	var p0 := d.chest_price(tier, box)
 	d._interact(chest)
 	check("coffre : refusé sans or ni clé (%d or)" % p0, not chest.used)
 	Profile.gold = 1000
 	world.cards._queue.clear()
 	d._interact(chest)
-	check("coffre : payé en or, choix d'équipement, prix suivant plus cher", chest.used and Profile.gold == 1000 - p0 and d.chest_price(tier) > p0 and (world.cards.is_open() or not world.cards._queue.is_empty()))
+	check("coffre : payé en or, choix d'équipement, prix suivant plus cher", chest.used and Profile.gold == 1000 - p0 and d.chest_price(tier, box) > p0 and (world.cards.is_open() or not world.cards._queue.is_empty()))
 	world.cards._queue.clear()
 	world.cards._show_next()
 	var chest2: Interactable = map.interactables.filter(func(i): return i.kind == "chest" and not i.used)[0]

@@ -47,6 +47,20 @@ var rerolls_used := 0  # relances de cartes utilisées (1 par run + cartes « Bo
 var chests_found: Array = []  # (ancien) coffres ramassés : désormais rangés tout de suite dans Profile.reward_chests
 var stage := 1  # étape de la run (façon Megabonk : boss vaincu → portail vers la zone suivante)
 var start_zone := ""  # zone choisie au lobby (première étape)
+## Survie (DESIGN.md, « Boucle de jeu et Survie ») : époque de 3 maps, départ sans équipement,
+## coffres d'emplacement ; false pour la Tour, le Duel, l'entraînement.
+var survival := false
+var epoch := 1
+## Pièces choisies dans les coffres de la run (Eden id) : achetables au hub ensuite.
+var seen_items: Array = []
+## Enclume de la Survie : emplacement -> amélioration tirée (-2 à +10), appliquée à la pièce
+## portée dans cet emplacement, quelle qu'elle soit, jusqu'à la fin de la run.
+var slot_bonus: Dictionary = {}
+var anvil_stage := 0  # map où l'enclume a servi (une fois par map)
+var insignia_gain := 0  # insignes gagnés à la fin de la run (bilan)
+## Tirage de l'enclume : valeur -> poids (le plus souvent +3 à +6, rarement +9/+10 ou négatif).
+const ANVIL_ROLLS := {-2: 2, -1: 3, 0: 4, 1: 6, 2: 8, 3: 12, 4: 14, 5: 14, 6: 12, 7: 9, 8: 6, 9: 3, 10: 2}
+const ANVIL_SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "necklace", "ring"]
 
 
 func start(cid: String) -> void:
@@ -79,7 +93,26 @@ func start(cid: String) -> void:
 	start_zone = zone_id
 	stage = 1
 	unlocked_name = ""
+	survival = false
+	epoch = 1
+	seen_items = []
+	slot_bonus = {}
+	anvil_stage = 0
 	Profile.begin_run()
+	changed.emit()
+
+
+## Run de Survie de l'époque [param ep] : la zone de sa 1re map, sans l'équipement du profil
+## (il se débloque dans les coffres d'emplacement ; l'arme de départ est choisie à l'arrivée).
+func start_survival(cid: String, ep: int) -> void:
+	Profile.selected_zone = Epochs.zone(ep, 1)
+	start(cid)
+	survival = true
+	epoch = clampi(ep, 1, Epochs.count())
+	zone_id = Epochs.zone(epoch, 1)
+	start_zone = zone_id
+	Profile.equipped = {}
+	Profile.inventory = []
 	changed.emit()
 
 
@@ -92,6 +125,13 @@ func finish(res: String) -> void:
 	Profile.runs_done += 1
 	expertise_gain = max_level * 15 + kills / 2 + elites * 10 + (200 if res == "victoire" else (60 if res == "extraction" else 0)) + 120 * (stage - 1)
 	expertise_levels = Profile.add_expertise(class_id, expertise_gain)
+	if survival:
+		# pièces choisies dans les coffres : achetables au hub ; insignes selon la distance parcourue
+		for id in seen_items:
+			if not int(id) in Profile.seen_gear:
+				Profile.seen_gear.append(int(id))
+		insignia_gain = 25 * stage + kills / 25 + elites * 2 + (60 * epoch if res == "victoire" else 0)
+		Profile.insignia += insignia_gain
 	if res == "victoire":
 		Profile.runs_won += 1
 		unlocked_name = Profile.unlock_after(zone_id)
@@ -359,7 +399,9 @@ func skill_talent(skill_id: int) -> Dictionary:
 
 # --- cartes -----------------------------------------------------------------------
 ## Tire [param n] cartes différentes. [param skills_only] : choix de départ.
-func roll_cards(n := 3, skills_only := false) -> Array:
+## [param kind] : "" toutes ; "spell" sorts (nouveau, enchaînement, rang) ; "passive" passifs
+## hors certificats ; "cert" certificats (coffres de cartes de la Survie).
+func roll_cards(n := 3, skills_only := false, kind := "") -> Array:
 	var pool: Array = []
 	var owned := all_skills().map(func(s): return int(s.id))
 	if skills.size() < MAX_SKILLS:
@@ -392,16 +434,23 @@ func roll_cards(n := 3, skills_only := false) -> Array:
 			if not p.get("requires", []).all(func(r): return passives.has(r)):
 				continue
 			var rar: Dictionary = Boons.RARITY[String(p.get("rarity", "common"))]
-			pool.append({"type": "passive", "id": p.id, "weight": 1.2 * float(rar.weight) * (0.5 if p.get("instant", false) else 1.0) * (cert_k if p.has("cert") else 1.0)})
+			pool.append({"type": "passive", "id": p.id, "cert": p.has("cert"), "weight": 1.2 * float(rar.weight) * (0.5 if p.get("instant", false) else 1.0) * (cert_k if p.has("cert") else 1.0)})
 		# cartes de classe : seulement pour les sorts pris
 		for d in Cards.class_cards(class_id):
 			if int(d.skill) in owned and int(passives.get(d.id, 0)) < int(d.max) and not String(d.id) in banned:
 				pool.append({"type": "passive", "id": d.id, "weight": 1.0 * float(Boons.RARITY[String(d.rarity)].weight)})
 	pool = pool.filter(func(c): return not (c.type in ["skill", "chain"] and str(c.id) in banned) \
 		and not kept.any(func(k): return String(k.type) == String(c.type) and str(k.id) == str(c.id)))
+	match kind:
+		"spell":
+			pool = pool.filter(func(c): return c.type in ["skill", "chain", "upgrade"])
+		"passive":
+			pool = pool.filter(func(c): return c.type == "passive" and not c.get("cert", false))
+		"cert":
+			pool = pool.filter(func(c): return c.get("cert", false))
 	var picks: Array = []
 	# cartes gardées au choix précédent : proposées d'abord, avec leur rareté
-	if not skills_only:
+	if not skills_only and kind == "":
 		for k in kept:
 			if picks.size() < n:
 				picks.append(_describe_card(k))
@@ -517,7 +566,17 @@ func apply_card(card: Dictionary) -> void:
 			passives[card.id] = int(passives.get(card.id, 0)) + 1
 			passive_power[card.id] = before + float(card.get("mult", 1.0))
 		"trophy", "gear":
-			pick_up(card.item)  # choix de trophée ou d'équipement (coffres de la carte) : dans le sac
+			if survival:
+				# coffre d'emplacement : la pièce est portée tout de suite (l'ancienne reste dans le sac)
+				Profile.inventory.append(card.item)
+				Profile.equip(card.item)
+				if card.item.has("eden") and not int(card.item.eden) in seen_items:
+					seen_items.append(int(card.item.eden))
+				Profile.changed.emit()
+			else:
+				pick_up(card.item)  # choix de trophée ou d'équipement (coffres de la carte) : dans le sac
+		"anvil_slot":
+			anvil_result = anvil_roll(String(card.slot))
 		"anvil":
 			# enclume de la carte : +1 garanti sur la pièce portée choisie
 			var it: Dictionary = Profile.equipped.get(String(card.slot), {})
@@ -534,6 +593,30 @@ func apply_card(card: Dictionary) -> void:
 
 ## Résultat de la dernière enclume (affiché par le directeur de run).
 var anvil_result := ""
+
+
+## Enclume de la Survie : tire l'amélioration de l'emplacement [param slot] (remplace la
+## précédente) ; renvoie le texte du résultat.
+func anvil_roll(slot: String) -> String:
+	var total := 0
+	for v in ANVIL_ROLLS:
+		total += int(ANVIL_ROLLS[v])
+	var r := randi() % total
+	var got := 0
+	for v in ANVIL_ROLLS:
+		r -= int(ANVIL_ROLLS[v])
+		if r < 0:
+			got = int(v)
+			break
+	slot_bonus[slot] = got
+	anvil_stage = stage
+	Profile.changed.emit()
+	var name := String(Items.SLOT_NAMES.get(slot, slot))
+	if got >= 9:
+		return "Coup de maître ! %s %+d" % [name, got]
+	if got < 0:
+		return "Le métal se fend… %s %+d" % [name, got]
+	return "%s %+d" % [name, got]
 
 
 ## Range les sorts pris selon le preset actif de la classe (Grimoire, SpellPresets) : sorts

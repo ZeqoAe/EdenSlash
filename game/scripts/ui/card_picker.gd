@@ -102,10 +102,12 @@ func _ready() -> void:
 
 ## Ajoute un choix à la file (plusieurs niveaux d'un coup = plusieurs choix).
 ## [param reroll] : tire de nouvelles cartes (bouton « Relancer », limité par run).
-func offer(title: String, cards: Array, reroll := Callable()) -> void:
+## [param own_rerolls] : relances propres à ce choix (coffre d'emplacement : 1) ; -1 : celles
+## de la run (Run.rerolls_left).
+func offer(title: String, cards: Array, reroll := Callable(), own_rerolls := -1) -> void:
 	if cards.is_empty():
 		return
-	_queue.append([title, cards, reroll])
+	_queue.append([title, cards, reroll, own_rerolls])
 	if not _root.visible:
 		_show_next()
 
@@ -122,6 +124,7 @@ func _show_next() -> void:
 	var item: Array = _queue.pop_front()
 	_title.text = item[0]
 	_reroll_fn = item[2] if item.size() > 2 else Callable()
+	_own_rerolls = int(item[3]) if item.size() > 3 else -1
 	_show_cards(item[1])
 	var host := get_parent()
 	if host and "hud" in host and host.hud:
@@ -145,21 +148,31 @@ func _show_cards(cards: Array) -> void:
 	_refresh_reroll()
 
 
+var _own_rerolls := -1
+
+
+func _rerolls_left() -> int:
+	return _own_rerolls if _own_rerolls >= 0 else Run.rerolls_left()
+
+
 func _refresh_reroll() -> void:
 	_reroll.visible = _reroll_fn.is_valid()
-	var left := Run.rerolls_left()
+	var left := _rerolls_left()
 	_reroll.text = "Relancer (%d)" % left
 	_reroll.disabled = left <= 0
 
 
 ## Nouvelles cartes à la place des cartes proposées (une relance consommée).
 func _do_reroll() -> void:
-	if not _reroll_fn.is_valid() or Run.rerolls_left() <= 0:
+	if not _reroll_fn.is_valid() or _rerolls_left() <= 0:
 		return
 	var cards: Array = _reroll_fn.call()
 	if cards.is_empty():
 		return
-	Run.rerolls_used += 1
+	if _own_rerolls >= 0:
+		_own_rerolls -= 1
+	else:
+		Run.rerolls_used += 1
 	_show_cards(cards)
 	_opened_at -= CONFIRM_DELAY_MS  # pas de délai anti-rafale après une relance volontaire
 

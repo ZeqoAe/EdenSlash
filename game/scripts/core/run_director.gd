@@ -157,8 +157,12 @@ func start(p: Player) -> void:
 		state = "training"
 		message.emit("Zone d'entraînement\nF3 : panneau (niveau, sorts, cartes, ennemis, DPS)", 4.0)
 		return
-	message.emit("%s\nCasse tout, ouvre les coffres, forge ton équipement, puis trouve le donjon" % zone.name, 3.5)
 	_refresh_chest_labels()
+	if Run.survival:
+		message.emit("%s · %s\nTu pars sans équipement : ouvre les coffres de la carte, puis trouve le donjon" % [zone.name, Epochs.get_def(Run.epoch).name], 4.0)
+		world._offer("Choisis ton arme de départ", start_weapon_cards())  # avant la première compétence
+	else:
+		message.emit("%s\nCasse tout, ouvre les coffres, forge ton équipement, puis trouve le donjon" % zone.name, 3.5)
 
 
 ## Carte à effet immédiat. Rappel : orbes et objets de toute la carte reviennent au héros.
@@ -302,7 +306,8 @@ func _interact(it: Interactable) -> void:
 		"chest":
 			# une clé si on en a, sinon le prix en or (qui monte à chaque coffre ouvert)
 			var tier := int(it.get_meta("tier", 0))
-			var price := chest_price(tier)
+			var box := String(it.get_meta("box", ""))
+			var price := chest_price(tier, box)
 			var how := ""
 			if Profile.keys > 0:
 				Profile.keys -= 1
@@ -319,10 +324,16 @@ func _interact(it: Interactable) -> void:
 			Sfx.event_at(self, it.global_position, "chest", -2.0)
 			chests_opened += 1
 			Profile.record_add("chests", 1)
+			message.emit("%s ouvert (%s)" % [it.title.get_slice(" ·", 0), how], 1.5)
+			if box != "":
+				_open_slot_chest(box)
+				_refresh_chest_labels()
+				_near = null
+				prompt_changed.emit("")
+				return
 			var def: Dictionary = CHEST_TIERS[tier]
 			for i in int(def.supplies) + (1 if state == "rage" else 0):
 				_drop_consumable(it.global_position, _monster_level(1), tier, "chest%d" % tier)
-			message.emit("%s ouvert (%s)" % [it.title.get_slice(" ·", 0), how], 1.5)
 			world._offer("%s : choisis une pièce d'équipement" % it.title.get_slice(" ·", 0), gear_cards(3, tier), func(): return gear_cards(3, tier))
 			_refresh_chest_labels()
 		_ when Interactable.STATION_VERBS.has(it.kind):
@@ -349,6 +360,9 @@ func _monster_level(tier: int) -> int:
 	# les zones suivantes : monstres de plus haut niveau (+1 par palier de zone en plus)
 	var bonus := float(zone.get("level_bonus", 0))
 	var tier_extra := float(GameData.zone_index(String(zone.get("id", "")))) * 0.5
+	if Run.survival:
+		bonus = float(Epochs.level_bonus(Run.stage))  # puissance normalisée : la map, pas la zone
+		tier_extra = 0.0
 	var base := 1.0 + bonus + time / 60.0 * 0.9 + (float(RAGE_LEVEL_BONUS) if state == "rage" else 0.0)
 	var cap := max_level() + (RAGE_LEVEL_BONUS if state in ["rage", "boss"] else 0)
 	return clampi(roundi(maxf(base, player.level - 1.0 + tier_extra) + tier), 1, cap)
@@ -356,6 +370,8 @@ func _monster_level(tier: int) -> int:
 
 ## Niveau maximal du butin et des monstres (hors rage) de la zone en cours.
 func max_level() -> int:
+	if Run.survival:
+		return Epochs.cap(Run.stage)
 	return int(zone.get("max_level", ZONE_MAX_LEVEL.get(String(zone.get("id", "")), 30)))
 
 
@@ -502,9 +518,14 @@ const ZONE_DAMAGE := [0.55, 0.8]
 func _spawn_monster(id: int, pos: Vector3, level: int, boss := false) -> Monster:
 	var m := Monster.new()
 	m.configure(GameData.monster(id), boss, level)
-	var zi := GameData.zone_index(String(zone.get("id", "")))
+	var zi := GameData.zone_index(String(zone.get("id", ""))) if not Run.survival else Run.stage - 1
 	if zi >= 0 and zi < ZONE_DAMAGE.size():
 		m.atk *= float(ZONE_DAMAGE[zi])
+	if Run.survival:
+		var em := Epochs.monster_mult(Run.epoch)  # époques suivantes : monstres plus coriaces
+		m.max_hp *= em
+		m.hp = m.max_hp
+		m.atk *= em
 	if state == "explore":
 		# montée en puissance sur les 3 premières minutes : la run démarre sans
 		# équipement, le joueur doit pouvoir apprendre avant que ça devienne punitif
@@ -613,6 +634,8 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		count = 1
 	if m.enraged:
 		luck += 0.2
+	if Run.survival:
+		count = 0  # Survie : l'équipement vient des coffres d'emplacement seulement
 	for i in count:  # commun à épique (mythiques et légendaires : coffres de récompense)
 		_drop_item(m.global_position, m.level, luck)
 	# consommables : gemmes, parchemins, ciseaux, pierres (adaptés au niveau)
@@ -639,7 +662,10 @@ func _drop_item(pos: Vector3, level: int, luck: float, min_r := 0, max_r := 3) -
 
 func _drop_reward_chest(pos: Vector3, level: int, boss: bool) -> void:
 	var drop := LootDrop.new()
-	drop.item = Rewards.loot_item(Rewards.make(Rewards.roll_type(boss), loot_level(level), boss))
+	var t := Rewards.roll_type(boss)
+	if Run.survival and not t in ["forge", "jewel"]:
+		t = "forge" if randf() < 0.6 else "jewel"  # Survie : de quoi optimiser au hub (l'équipement s'y achète)
+	drop.item = Rewards.loot_item(Rewards.make(t, loot_level(level), boss))
 	drop.on_picked = func(item): message.emit("%s ! Rangé dans le menu Coffres (jamais perdu)" % item.name, 2.5)
 	add_child(drop)
 	var p := pos + Vector3(randf_range(-1.5, 1.5), 0, randf_range(-1.5, 1.5))
@@ -769,7 +795,11 @@ func _on_boss_killed() -> void:
 		message.emit("Boss vaincu ! Ramasse le butin,\npuis prends le portail vers %s (étape %d/%d)" % [GameData.zone(next).get("name", next), Run.stage + 1, STAGES], 4.5)
 		_spawn_stage_portal(next)
 		return
-	message.emit("Boss vaincu !\nRamasse le butin", 3.0)
+	if Run.survival:
+		var opened := Epochs.clear(Run.epoch)
+		message.emit("%s terminée !%s" % [Epochs.get_def(Run.epoch).name, ("\n%s débloquée" % opened) if opened != "" else ""], 4.5)
+	else:
+		message.emit("Boss vaincu !\nRamasse le butin", 3.0)
 	await get_tree().create_timer(6.0).timeout
 	boss_defeated.emit()
 
@@ -780,6 +810,8 @@ func _on_boss_killed() -> void:
 func next_zone_id() -> String:
 	if Run.stage >= STAGES:
 		return ""
+	if Run.survival:
+		return Epochs.zone(Run.epoch, Run.stage + 1)
 	var cur := GameData.zone_index(String(zone.get("id", "")))
 	if cur < 0 or cur + 1 >= GameData.zones.size():
 		return ""
@@ -1064,6 +1096,40 @@ func gear_cards(n: int, tier: int) -> Array:
 	return out
 
 
+## Survie : arme de départ, 3 armes du palier de la 1re map (tous types : l'auto-attaque suit l'arme).
+func start_weapon_cards() -> Array:
+	return SlotChests.offer("weapon", Run.epoch, Run.stage).map(func(it): return item_card(it, "gear"))
+
+
+## Survie : coffre d'emplacement ouvert, 3 pièces (ou cartes) au choix, une relance par coffre.
+func _open_slot_chest(box: String) -> void:
+	var title := SlotChests.title(box)
+	if SlotChests.is_cards(box):
+		var kind := String(SlotChests.BOXES[box].cards)
+		var cards := Run.roll_cards(3, false, kind)
+		if cards.is_empty():
+			cards = Run.roll_cards(3)  # plus rien de ce type : des cartes au choix
+		world._offer("%s : choisis une carte" % title, cards, func(): return Run.roll_cards(3, false, kind), 1)
+		return
+	var gear := SlotChests.offer(box, Run.epoch, Run.stage).map(func(it): return item_card(it, "gear"))
+	world._offer("%s (%s) : choisis une pièce" % [title, Epochs.map_text(Run.epoch, Run.stage)], gear,
+		func(): return SlotChests.offer(box, Run.epoch, Run.stage).map(func(it): return item_card(it, "gear")), 1)
+
+
+## Survie : enclume, un emplacement au choix (sa pièce actuelle, son bonus actuel).
+func anvil_slot_cards() -> Array:
+	var out: Array = []
+	for slot in Run.ANVIL_SLOTS:
+		var it: Dictionary = Profile.equipped.get(slot, {})
+		var cur := int(Run.slot_bonus.get(slot, 0))
+		out.append({"type": "anvil_slot", "id": slot, "slot": slot, "title": String(Items.SLOT_NAMES.get(slot, slot)),
+			"subtitle": ("Actuellement %+d (remplacé)" % cur) if Run.slot_bonus.has(slot) else "Emplacement à +0",
+			"desc": (Items.display_name(it) if not it.is_empty() else "Vide : le bonus s'appliquera à la pièce que tu y mettras") \
+				+ "\nTirage de -2 à +10 (le plus souvent +3 à +6)", "icon": String(it.get("icon", "")) if not it.is_empty() else "",
+			"color": Items.color_of(it) if not it.is_empty() else Color(0.75, 0.7, 0.6)})
+	return out
+
+
 ## Carte de choix pour l'objet [param it] : stats, set, passif, comparaison avec la pièce portée.
 static func item_card(it: Dictionary, type: String) -> Dictionary:
 	var lines: PackedStringArray = []
@@ -1083,7 +1149,8 @@ static func item_card(it: Dictionary, type: String) -> Dictionary:
 		if cmp > 0.005 else ("[color=#ff8a7d]▼ %d %%[/color] sur ta pièce" % roundi(cmp * 100.0) if cmp < -0.005 else "Comme ta pièce"))
 	var r := clampi(int(it.get("rarity", 0)), 0, Items.RARITIES.size() - 1)
 	return {"type": type, "id": String(it.get("uid", "")), "item": it, "title": Items.display_name(it),
-		"subtitle": "%s · %s · niv. %d" % [Items.SLOT_NAMES.get(it.slot, it.slot), Items.RARITIES[r].name, int(it.get("level", 0))],
+		"subtitle": "%s · %s · niv. %d" % [String(GameData.weapon_type(Items.weapon_type_of(it)).get("name", "Arme")) if it.slot == "weapon" else Items.SLOT_NAMES.get(it.slot, it.slot),
+			Items.RARITIES[r].name, int(it.get("level", 0))],
 		"desc": cmp_txt + "\n" + "\n".join(lines), "icon": String(it.get("icon", "")), "color": Items.color_of(it)}
 
 
@@ -1124,6 +1191,14 @@ func scroll_cards(n: int) -> Array:
 func _use_station(it: Interactable) -> void:
 	Sfx.event_at(self, it.global_position, "station", -4.0)
 	match it.kind:
+		"anvil" when Run.survival:
+			if Run.anvil_stage == Run.stage:
+				message.emit("L'enclume a déjà servi sur cette carte (une fois par carte)", 2.5)
+				return
+			for a in map.interactables:
+				if is_instance_valid(a) and a.kind == "anvil":
+					a.use_up()  # une seule enclume par carte
+			world._offer("Enclume : choisis un emplacement (amélioration tirée de -2 à +10, pour toute la run)", anvil_slot_cards())
 		"anvil":
 			var cards := anvil_cards()
 			if cards.is_empty():
@@ -1254,8 +1329,9 @@ func debug_start_rage() -> void:
 
 # --- coffres payants, sanctuaires, marchands ambulants --------------------------------------
 ## Prix du prochain coffre de la carte de qualité [param tier] (monte à chaque coffre ouvert).
-func chest_price(tier := 0) -> int:
-	var base := float(CHEST_BASE + 3 * (player.level if player else 1)) * float(CHEST_TIERS[clampi(tier, 0, 2)].price)
+func chest_price(tier := 0, box := "") -> int:
+	var mult := float(CHEST_TIERS[clampi(tier, 0, 2)].price) if box == "" else float(SlotChests.BOXES.get(box, {}).get("price", 1.0))
+	var base := float(CHEST_BASE + 3 * (player.level if player else 1)) * mult
 	return roundi(base * pow(CHEST_GROWTH, mini(chests_opened, 60)))
 
 
@@ -1263,7 +1339,9 @@ func _refresh_chest_labels() -> void:
 	for it in map.interactables:
 		if is_instance_valid(it) and it.kind == "chest" and not it.used:
 			var tier := int(it.get_meta("tier", 0))
-			it.set_title("%s · %d or ou 1 clé" % [ProcMap.CHEST_LOOKS[tier].title, chest_price(tier)])
+			var box := String(it.get_meta("box", ""))
+			var name := SlotChests.title(box) if box != "" else String(ProcMap.CHEST_LOOKS[tier].title)
+			it.set_title("%s · %d or ou 1 clé" % [name, chest_price(tier, box)])
 
 
 ## Zones à capturer : rester dans le cercle sous la pression des monstres.
