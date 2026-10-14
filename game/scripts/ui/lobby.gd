@@ -876,7 +876,9 @@ func _show_menu(id: String) -> void:
 			_menu_survival()
 		"training":
 			_menu_training()
-		"dungeon", "arenas", "trials", "rush":
+		"dungeon":
+			_menu_dungeon()
+		"arenas", "trials", "rush":
 			_menu_soon(id)
 		"mastery":
 			_menu_mastery()
@@ -1018,6 +1020,90 @@ func _start_challenge(cid: String) -> void:
 		backdrop.release()
 	Profile.selected_class = cid
 	Challenge.start(cid)
+	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+
+
+## Donjons : un par zone (ouvert quand son boss est battu en Survie), trois difficultés, jusqu'à deux alliés IA.
+var _dg_zone := ""
+var _dg_diff := 0
+var _dg_allies: Array = ["", ""]
+
+
+func _menu_dungeon() -> void:
+	_activity_head("dungeon")
+	_activity_desc("dungeon")
+	var zids := Dungeons.zone_ids()
+	if _dg_zone == "" or not _dg_zone in zids:
+		_dg_zone = String(zids[0])
+	Hud._label(_sub, "Donjon", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 6)
+	_sub.add_child(grid)
+	for zid in zids:
+		var open := Dungeons.is_open(String(zid))
+		var done := false
+		for d in Dungeons.DIFF_NAMES.size():
+			done = done or Dungeons.cleared(String(zid), d) > 0
+		var b := MenuWidgets.glass_button(("🔒 " if not open else ("✔ " if done else "")) + Dungeons.name_of(String(zid)), 14, Vector2(0, 40))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.modulate = Color.WHITE if open else Color(1, 1, 1, 0.45)
+		b.tooltip_text = "Niveau %d (Normal)" % Dungeons.level(String(zid), 0) if open else Dungeons.condition(String(zid))
+		if String(zid) == _dg_zone:
+			b.text = "▶ " + b.text
+		var z := String(zid)
+		b.pressed.connect(func():
+			_dg_zone = z
+			_show_menu("dungeon"))
+		grid.add_child(b)
+	Hud._label(_sub, "Difficulté", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
+	var dr := HBoxContainer.new()
+	dr.add_theme_constant_override("separation", 6)
+	_sub.add_child(dr)
+	for i in Dungeons.DIFF_NAMES.size():
+		var b := MenuWidgets.glass_button(("✔ " if i == _dg_diff else "") + "%s (niv. %d)" % [Dungeons.DIFF_NAMES[i], Dungeons.level(_dg_zone, i)], 14, Vector2(0, 40))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var di := i
+		b.pressed.connect(func():
+			_dg_diff = di
+			_show_menu("dungeon"))
+		dr.add_child(b)
+	Hud._label(_sub, "Alliés IA (PV des monstres +50 % par allié, butin inchangé)", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
+	var ar := HBoxContainer.new()
+	ar.add_theme_constant_override("separation", 6)
+	_sub.add_child(ar)
+	for k in Dungeons.MAX_ALLIES:
+		var ob := OptionButton.new()
+		ob.focus_mode = Control.FOCUS_NONE
+		ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ob.add_item("Aucun allié")
+		var ids: Array = ["" ]
+		for cid in GameData.classes:
+			if Progression.class_unlocked(cid):
+				ob.add_item(String(GameData.class_data(cid).get("name_fr", cid)))
+				ids.append(cid)
+		ob.select(maxi(ids.find(_dg_allies[k]), 0))
+		var kk := k
+		ob.item_selected.connect(func(i): _dg_allies[kk] = ids[i])
+		ar.add_child(ob)
+	var open_now := Dungeons.is_open(_dg_zone)
+	var go := MenuWidgets.gold_button("Entrer dans %s" % Dungeons.name_of(_dg_zone), 22, Vector2(0, 58))
+	go.disabled = not open_now
+	go.tooltip_text = "" if open_now else Dungeons.condition(_dg_zone)
+	go.pressed.connect(_start_dungeon)
+	_sub.add_child(go)
+
+
+func _start_dungeon() -> void:
+	if _launching or not Dungeons.is_open(_dg_zone):
+		return
+	_launching = true
+	if backdrop:
+		backdrop.release()
+	var allies: Array = _dg_allies.filter(func(c): return String(c) != "")
+	Dungeons.last_allies = allies
+	Tower.start_dungeon(Profile.selected_class, _dg_zone, _dg_diff, allies)
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 

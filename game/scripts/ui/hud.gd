@@ -350,7 +350,7 @@ func _update_objectives() -> void:
 			if PvpCaps.pressure() > 1.05:
 				_clock_label.text += " · acharnement ×%.1f" % PvpCaps.pressure()
 		"tower":
-			_clock_label.text = "Étage %d/%d" % [Tower.floor_n, Tower.FLOORS]
+			_clock_label.text = "%s %d/%d" % ["Salle" if Tower.is_dungeon() else "Étage", Tower.floor_n, Tower.top()]
 		"boss":
 			_clock_label.text = "BOSS"
 		"cleared":
@@ -367,7 +367,7 @@ func _update_objectives() -> void:
 	if Duel.active:
 		_seal_label.text = "Duel %s · 2 manches gagnantes" % ClassRival.NAMES[Duel.difficulty].to_lower()
 	if Tower.active:
-		_seal_label.text = "%s · record : étage %d" % [Tower.DIFF_NAMES[Tower.difficulty], Tower.best()]
+		_seal_label.text = ("%s · %s" % [Dungeons.name_of(Tower.dungeon), Dungeons.DIFF_NAMES[Tower.dungeon_diff]]) if Tower.is_dungeon() else "%s · record : étage %d" % [Tower.DIFF_NAMES[Tower.difficulty], Tower.best()]
 	var chests_total: int = director.map.chests.size() if director.map and "chests" in director.map else 0
 	var sig := "%s|%s|%d|%d|%d" % [director.state, director.dungeon_found, director.seals, director.chests_opened, director.shrines_captured]
 	if _obj_signature != "" and sig != _obj_signature:

@@ -48,6 +48,7 @@ var tutorial: Dictionary = {}
 var contracts: Dictionary = {}
 ## Carnet : succès obtenus (id -> date), titre porté, effets de trophée découverts, variantes d'arme menées à l'effet légendaire.
 var achievements: Dictionary = {}
+var plans: Array = []  # plans de fabrication trouvés dans les donjons
 var title := ""
 var seen_trophies: Array = []
 var weapon_legend: Array = []
@@ -264,6 +265,7 @@ func load_profile() -> void:
 	tutorial = d.get("tutorial", {})
 	contracts = d.get("contracts", {})
 	achievements = d.get("achievements", {})
+	plans = d.get("plans", [])
 	title = String(d.get("title", ""))
 	seen_trophies = d.get("seen_trophies", [])
 	weapon_legend = d.get("weapon_legend", [])
@@ -322,7 +324,7 @@ func save_profile() -> void:
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level,
 		"seen_gear": seen_gear, "insignia": insignia, "unlocked_features": unlocked_features,
 		"new_features": new_features, "tutorial": tutorial, "contracts": contracts,
-		"achievements": achievements, "title": title, "seen_trophies": seen_trophies, "weapon_legend": weapon_legend}
+		"achievements": achievements, "plans": plans, "title": title, "seen_trophies": seen_trophies, "weapon_legend": weapon_legend}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(d))
 	f.close()
@@ -677,6 +679,7 @@ func _clear() -> void:
 	tutorial = {}
 	contracts = {}
 	achievements = {}
+	plans = []
 	title = ""
 	seen_trophies = []
 	weapon_legend = []
@@ -718,6 +721,7 @@ func reset_all() -> void:
 	tutorial = {}
 	contracts = {}
 	achievements = {}
+	plans = []
 	title = ""
 	seen_trophies = []
 	weapon_legend = []

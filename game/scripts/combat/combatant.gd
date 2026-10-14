@@ -306,7 +306,7 @@ func power() -> float:
 
 ## Héros vivants (groupe « heroes » : le joueur et ses alliés IA) que les coups de [param source] peuvent
 ## toucher : ceux de l'autre camp (tous si la source est inconnue).
-static func hostile_heroes(tree: SceneTree, source: Combatant = null) -> Array:
+static func hostile_heroes(tree: SceneTree, source = null) -> Array:
 	var out: Array = []
 	for n in tree.get_nodes_in_group("heroes"):
 		var c := n as Combatant
@@ -317,7 +317,7 @@ static func hostile_heroes(tree: SceneTree, source: Combatant = null) -> Array:
 
 ## Ce que les coups de [param source] peuvent toucher : les héros (joueur et alliés) pour un monstre,
 ## les monstres et les héros ennemis pour un allié du joueur.
-static func hostile_targets(tree: SceneTree, source: Combatant = null) -> Array:
+static func hostile_targets(tree: SceneTree, source = null) -> Array:
 	if source != null and is_instance_valid(source) and source.team == Team.PLAYER:
 		var out: Array = []
 		for n in tree.get_nodes_in_group("monsters"):
@@ -330,7 +330,7 @@ static func hostile_targets(tree: SceneTree, source: Combatant = null) -> Array:
 
 ## Cible hostile la plus proche de ce combattant parmi [param pool] (inertie : on garde l'ancienne cible
 ## tant qu'elle n'est pas plus de 30 % plus loin que la meilleure).
-func pick_target(pool: Array, current: Combatant = null) -> Combatant:
+func pick_target(pool: Array, current = null) -> Combatant:
 	var best: Combatant = null
 	var best_d := INF
 	for n in pool:

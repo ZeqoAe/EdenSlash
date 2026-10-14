@@ -61,7 +61,10 @@ et Ruée des boss restent « Bientôt » (pas de moteur de leçons). Lot 11 fait
 accordés pour le passé, titres à porter), Grimoire des cartes, Codex des trophées, Collection (`ui/carnet_pages.gd`). Pas encore : signatures de
 famille, apparences/auras en onglets, statistiques. Lot 12 fait (0.1.144) : ciblage par camp (groupe « heroes » = joueur + alliés IA ; `Combatant.hostile_targets` pour les coups au sol, projectiles et
 zones ; les monstres visent le héros hostile le plus proche, réévalué toutes les 0,5 s) et allié scripté (`ClassRival.ally`, soigne sous 50 % de PV,
-pose ses renforts). Les cerveaux ne sont pas alliés (ils ne voient pas leurs équipiers). Prochain : lot 13 (Donjons).
+pose ses renforts). Les cerveaux ne sont pas alliés (ils ne voient pas leurs équipiers). Lot 13 fait (0.1.145) : Donjons (`core/dungeons.gd`) : un par zone, 4 salles (monstres, élites, monstres, boss) sur le moteur de salles de la Tour
+(`Tower.dungeon`, mode « dungeon »), équipement synchronisé, kit du préréglage, une carte par salle, 0 à 2 alliés IA, Normal / Héroïque (+15) /
+Mythique (90), butin (coffre de set, cristaux, plan 10 %). Pas encore : panoplies-archétypes des donjons, système de fabrication des plans (ils
+sont collectés), mécaniques propres à chaque boss de donjon (ceux de la Survie sont réutilisés), salle de repos. Prochain : lot 14 (Panthéon).
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

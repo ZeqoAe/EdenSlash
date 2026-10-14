@@ -493,6 +493,12 @@ func tower_end(result: String) -> void:
 		return
 	_ended = true
 	pause_menu.close()
+	if Tower.is_dungeon():
+		var dg := Tower.finish()
+		var dr := DungeonResults.new()
+		add_child(dr)
+		dr.show_results(dg)
+		return
 	var floor_reached := Tower.reached
 	var got := Tower.finish()
 	var r := TowerResults.new()

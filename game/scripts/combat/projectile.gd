@@ -46,9 +46,10 @@ func _physics_process(delta: float) -> void:
 	_t += delta
 	global_position += dir * SPEED * delta
 	var struck := false
-	for target in Combatant.hostile_targets(get_tree(), source):
+	var src: Combatant = source if is_instance_valid(source) else null
+	for target in Combatant.hostile_targets(get_tree(), src):
 		if global_position.distance_to(target.global_position + Vector3.UP * 1.0) < HIT_RADIUS + target.radius:
-			target.take_damage(damage, source, false)
+			target.take_damage(damage, src, false)
 			struck = true
 			break
 	if struck:

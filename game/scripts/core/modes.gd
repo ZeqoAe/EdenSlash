@@ -16,7 +16,7 @@ static func current() -> String:
 	if Duel.active:
 		return "duel"
 	if Tower.active:
-		return "tower"
+		return "dungeon" if Tower.is_dungeon() else "tower"
 	if Training.active:
 		return "training"
 	if Run.active:

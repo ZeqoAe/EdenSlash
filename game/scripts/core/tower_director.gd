@@ -23,6 +23,42 @@ var _goal: Interactable  # coffre ou escalier à atteindre (flèche de l'objecti
 func setup(director: RunDirector) -> void:
 	d = director
 	begin(Tower.start_floor)
+	_spawn_allies()
+
+
+func _room_word() -> String:
+	return "Salle" if Tower.is_dungeon() else "Étage"
+
+
+## Alliés IA du donjon : des héros scriptés du camp du joueur (comme les duellistes, mais alliés).
+var _allies: Array = []
+
+
+func _spawn_allies() -> void:
+	if not Tower.is_dungeon():
+		return
+	for cid in Tower.allies:
+		var a := ClassRival.new()
+		a.ally = true
+		a.setup(String(cid), Tower.level_for(1), 2)
+		var b := Duel.opti_build(String(cid), Tower.level_for(1))
+		if not b.is_empty():
+			a.apply_build(b, Tower.level_for(1))
+		d.add_child(a)
+		a.died.connect(func(_w, _k): d.message.emit("Un allié est tombé : %s" % a.display_name, 2.5))
+		_allies.append(a)
+	_place_allies()
+
+
+func _place_allies() -> void:
+	var i := 0
+	for a in _allies:
+		if is_instance_valid(a):
+			if a.is_dead:
+				continue
+			a.global_position = d.player.global_position + Vector3(2.5 * (1 if i % 2 == 0 else -1), 0.4, 1.5)
+			a.hp = minf(a.max_hp, a.hp + a.max_hp * 0.35)
+			i += 1
 
 
 ## Prépare l'étage [param f] : salle, niveau du héros, monstres.
@@ -51,6 +87,7 @@ func begin(f: int) -> void:
 		p.heal(p.max_hp * Tower.rule("heal_between"))
 	p.set_torch(true)
 	d._place_player(d.map.start)
+	_place_allies()
 	d.zone_changed.emit({"name": "La Tour · %s" % z.name, "levels": [lvl, lvl]})
 	if p.autoplay:
 		print("[tour] étage %d · niveau %d · PV %d · équipement %d pièce(s)" % [f, lvl, int(p.hp), Profile.equipped.size()])
@@ -63,18 +100,18 @@ func begin(f: int) -> void:
 	if Tower.is_duel_floor(f):
 		left = 0
 		_spawn_rival(f, lvl)
-		d.message.emit("Étage %d / %d\nDuel %d/%d : %s" % [f, Tower.FLOORS, Tower.duel_index(f), Tower.duel_count(),
+		d.message.emit("Étage %d / %d\nDuel %d/%d : %s" % [f, Tower.top(), Tower.duel_index(f), Tower.duel_count(),
 			GameData.class_data(_rival.cid).get("name_fr", _rival.cid)], 3.5)
 	elif Tower.is_boss_floor(f):
 		left = 0
 		_spawn_boss(z, lvl)
-		d.message.emit("Étage %d / %d\nBOSS : %s" % [f, Tower.FLOORS, _boss.display_name], 3.5)
+		d.message.emit("%s %d / %d\nBOSS : %s" % [_room_word(), f, Tower.top(), _boss.display_name], 3.5)
 	else:
 		left = Tower.monster_count(f)
 		if Tower.is_elite_floor(f):
 			for i in Tower.elite_count(f):
 				_spawn(d._elites.pick_random() if not d._elites.is_empty() else d._pick_monster(lvl), _ring(8.0, 14.0), lvl + 1)
-		d.message.emit("Étage %d / %d%s" % [f, Tower.FLOORS, "\nÉlite en vue !" if Tower.is_elite_floor(f) else ""], 2.5)
+		d.message.emit("%s %d / %d%s" % [_room_word(), f, Tower.top(), "\nÉlite en vue !" if Tower.is_elite_floor(f) else ""], 2.5)
 
 
 func _spawn(id: int, pos: Vector3, lvl: int, boss := false) -> Monster:
@@ -131,7 +168,10 @@ func update(delta: float) -> void:
 		"cards":
 			# carte choisie (la fenêtre est fermée) : le coffre apparaît au centre
 			if not d.world.cards.is_open():
-				_spawn_chest()
+				if Tower.is_dungeon():
+					_spawn_stairs()  # donjon : une carte par salle, pas de coffre
+				else:
+					_spawn_chest()
 	if d.player.autoplay:
 		d.player.autoplay_target = target()
 	_obj_t -= delta
@@ -164,9 +204,9 @@ func _cleared() -> void:
 	var f := Tower.floor_n
 	Tower.reached = f
 	d.player.heal(d.player.max_hp * 0.1)
-	if f >= Tower.FLOORS:
+	if f >= Tower.top():
 		phase = "done"
-		d.message.emit("SOMMET DE LA TOUR ATTEINT !", 5.0)
+		d.message.emit("DONJON TERMINÉ !" if Tower.is_dungeon() else "SOMMET DE LA TOUR ATTEINT !", 5.0)
 		d.world.tower_end("victoire")
 		return
 	phase = "cards"
@@ -263,11 +303,11 @@ func objective_text() -> String:
 				return "Étage %d · Vaincs %s" % [f, _boss.display_name]
 			if is_instance_valid(_rival) and not _rival.is_dead:
 				return "Étage %d · Duel %d/%d : bats %s" % [f, Tower.duel_index(f), Tower.duel_count(), GameData.class_data(_rival.cid).get("name_fr", "")]
-			return "Étage %d · Monstres restants : %d" % [f, left + alive()]
+			return "%s %d · Monstres restants : %d" % [_room_word(), f, left + alive()]
 		"cards":
-			return "Étage %d vidé · Choisis une carte" % f
+			return "%s %d vidée · Choisis une carte" % [_room_word(), f]
 		"chest":
 			return "Ouvre le coffre au centre [%s]" % Settings.action_label("interact", 1)
 		"stairs":
-			return "Monte à l'étage %d [%s]" % [f + 1, Settings.action_label("interact", 1)]
+			return "%s [%s]" % ["Passe à la salle suivante" if Tower.is_dungeon() else "Monte à l'étage %d" % (f + 1), Settings.action_label("interact", 1)]
 	return "Sommet atteint"

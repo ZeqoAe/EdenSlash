@@ -177,7 +177,8 @@ func _process(delta: float) -> void:
 func _resolve() -> void:
 	set_process(false)
 	var hit := false
-	for target in Combatant.hostile_targets(get_tree(), source):
+	var src: Combatant = source if is_instance_valid(source) else null  # la source a pu mourir entre-temps
+	for target in Combatant.hostile_targets(get_tree(), src):
 		if damage <= 0.0 or not contains(target.global_position, target.radius):
 			continue
 		var player := target as Player
@@ -185,7 +186,7 @@ func _resolve() -> void:
 			# allié IA (ClassRival) : même règle, sans les compteurs du joueur
 			if target.has_method("is_invulnerable") and target.is_invulnerable():
 				continue
-			target.take_damage(damage, source, crit)
+			target.take_damage(damage, src, crit)
 			hit = true
 			continue
 		var dodged_by_jump := jumpable and player.is_airborne() and player.global_position.y > global_position.y + 0.4
@@ -196,7 +197,7 @@ func _resolve() -> void:
 			player.ml_counts.dodged += 1
 			DamageNumber.spawn_text(player, "ESQUIVE !", Color(0.7, 1.0, 0.7))
 		else:
-			player.take_damage(damage, source, crit)
+			player.take_damage(damage, src, crit)
 			if stun_time > 0.0:
 				player.stun(stun_time)
 			hit = true

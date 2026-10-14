@@ -59,6 +59,10 @@ const RULES := {
 const DIFF_RULE := ["monster_easy", "monster_normal", "monster_hard", "monster_hardcore"]
 
 static var active := false
+## Donjon (lot 13) : zone du donjon en cours ("" : pas de donjon), difficulté et alliés IA choisis.
+static var dungeon := ""
+static var dungeon_diff := 0
+static var allies: Array = []
 static var difficulty := 1
 static var start_floor := 1
 static var floor_n := 1  # étage en cours
@@ -69,7 +73,22 @@ static var _gear_cache := {}  # "étage_difficulté" -> équipement du duelliste
 
 
 ## Lance l'ascension avec la classe [param cid], en [param diff], à l'étage [param from].
+## Lance le donjon de la zone [param zid] en difficulté [param diff] avec les alliés IA [param ally_ids].
+static func start_dungeon(cid: String, zid: String, diff: int, ally_ids: Array) -> void:
+	start(cid, 1, 1)
+	dungeon = zid
+	dungeon_diff = clampi(diff, 0, Dungeons.DIFF_NAMES.size() - 1)
+	allies = ally_ids.slice(0, Dungeons.MAX_ALLIES)
+	difficulty = 1
+	Run.fill_from_preset()
+	if Run.skills.is_empty():
+		for s in (Run.class_data().get("skills", []) as Array).slice(0, 4):
+			Run.skills.append({"id": int(s.id), "rank": 1})
+
+
 static func start(cid: String, diff := 1, from := 1) -> void:
+	dungeon = ""
+	allies = []
 	active = true
 	difficulty = clampi(diff, 0, DIFF_NAMES.size() - 1)
 	start_floor = clampi(from, 1, FLOORS)
@@ -116,7 +135,18 @@ static func edited() -> void:
 	_gear_cache.clear()
 
 
+static func is_dungeon() -> bool:
+	return dungeon != ""
+
+
+## Dernière salle ou dernier étage.
+static func top() -> int:
+	return Dungeons.ROOMS.size() if is_dungeon() else FLOORS
+
+
 static func zone_for(f: int) -> Dictionary:
+	if is_dungeon():
+		return Dungeons.zone(dungeon)
 	return GameData.zones[clampi((f - 1) / FLOORS_PER_ZONE, 0, GameData.zones.size() - 1)]
 
 
@@ -132,11 +162,15 @@ static func default_type(f: int) -> String:
 
 
 static func floor_type(f: int) -> String:
+	if is_dungeon():
+		return String(Dungeons.ROOMS[clampi(f - 1, 0, Dungeons.ROOMS.size() - 1)])
 	var t := String(floor_edit(f).get("type", ""))
 	return t if t in TYPES else default_type(f)
 
 
 static func level_for(f: int) -> int:
+	if is_dungeon():
+		return Dungeons.level(dungeon, dungeon_diff) + (1 if f >= Dungeons.ROOMS.size() else 0)
 	if floor_edit(f).has("level"):
 		return maxi(1, int(floor_edit(f).level))
 	return 1 + int((f - 1) * rule("level_per_floor"))
@@ -201,16 +235,22 @@ static func duel_skills(f: int) -> int:
 
 
 static func monster_count(f: int) -> int:
+	if is_dungeon():
+		return 14 + 4 * dungeon_diff + (4 if f == 3 else 0)
 	if floor_edit(f).has("count"):
 		return maxi(0, int(floor_edit(f).count))
 	return mini(int(rule("monsters_base") + f * rule("monsters_per_floor")), int(rule("monsters_max")))
 
 
 static func max_alive(f: int) -> int:
+	if is_dungeon():
+		return 12 + 2 * dungeon_diff
 	return mini(int(rule("alive_base") + f * rule("alive_per_floor")), int(rule("alive_max")))
 
 
 static func elite_count(f: int) -> int:
+	if is_dungeon():
+		return 3 + dungeon_diff
 	return 1 + int(f / 50 * rule("elite_count_per_50"))
 
 
@@ -222,10 +262,14 @@ static func monster_mult(f: int, diff := -1) -> float:
 
 ## PV et dégâts des monstres de l'étage (× réglages de l'étage dans le mode dev) ; boss à part.
 static func monster_hp_mult(f: int, diff := -1, boss := false) -> float:
+	if is_dungeon():
+		return Dungeons.hp_mult(boss, floor_type(f) == "elite", allies.size())
 	return monster_mult(f, diff) * float(floor_edit(f).get("hp", 1.0)) * (rule("boss_hp") if boss else 1.0)
 
 
 static func monster_atk_mult(f: int, diff := -1, boss := false) -> float:
+	if is_dungeon():
+		return 1.0 + 0.3 * dungeon_diff
 	return monster_mult(f, diff) * float(floor_edit(f).get("atk", 1.0)) * (rule("boss_atk") if boss else 1.0)
 
 
@@ -361,6 +405,8 @@ static func unlocked(f: int, diff: int) -> bool:
 static func finish() -> Dictionary:
 	if not active:
 		return {}
+	if is_dungeon():
+		return _finish_dungeon()
 	RunJournal.end_map("fin", {"floor": floor_n})
 	active = false
 	Run.active = false
@@ -389,6 +435,33 @@ static func finish() -> Dictionary:
 	Profile._lobby_view()
 	Profile.save_profile()
 	return {"best": best(), "new_record": reached > old, "xp": xp, "levels": lv, "items": found.size(), "looks": looks}
+
+
+## Fin d'un donjon : butin si le boss est tombé, sauvegarde rechargée (comme la Tour).
+static func _finish_dungeon() -> Dictionary:
+	var victory := reached >= top()
+	RunJournal.end_map("victoire" if victory else "defaite", {"dungeon": dungeon, "dungeon_diff": dungeon_diff, "rooms": reached, "allies": allies.size()})
+	active = false
+	Run.active = false
+	var cid := Run.class_id
+	var zid := dungeon
+	var diff := dungeon_diff
+	Profile.in_run = false
+	Profile.reload_keep_records()
+	Profile.gold = 0
+	Profile.keys = 0
+	Profile.bag = {}
+	var rew := {}
+	if victory:
+		rew = Dungeons.reward(zid, diff)
+	var xp := (reached * 40 + (150 if victory else 0)) * (1 + diff)
+	var lv := Profile.add_expertise(cid, xp)
+	Achievements.refresh()
+	Profile._lobby_view()
+	Profile.save_profile()
+	dungeon = ""
+	allies = []
+	return {"dungeon": true, "victory": victory, "rooms": reached, "xp": xp, "levels": lv, "reward": rew, "zone": zid, "diff": diff}
 
 
 static func leave(tree: SceneTree) -> void:

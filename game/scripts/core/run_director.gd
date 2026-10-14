@@ -812,6 +812,8 @@ func _update_extraction(delta: float) -> void:
 
 func _on_boss_killed() -> void:
 	Tutorial.event("boss")
+	if Run.survival:
+		Profile.records["boss_" + String(zone.get("id", ""))] = 1  # ouvre le donjon de cette zone
 	print("[run] boss vaincu à %.0f s, niveau %d, étape %d/%d" % [time, player.level, Run.stage, STAGES])
 	state = "cleared"
 	if Run.survival:

@@ -276,7 +276,7 @@ func _hostile_pool() -> Array:
 
 
 func _player_alive() -> bool:
-	return _player != null and not _player.is_dead
+	return is_instance_valid(_player) and not _player.is_dead
 
 
 ## Le héros peut être pris pour cible (vivant et pas invisible).
