@@ -390,6 +390,8 @@ func _offer(title: String, options: Array, reroll := Callable()) -> void:
 
 
 func _on_level_up(lvl: int) -> void:
+	Sfx.ui("level_up", -6.0)
+	Vfx.shockwave(player, player.global_position, 5.0, Color(1.0, 0.85, 0.4))
 	if Training.active or Tower.active or Duel.active:
 		return  # entraînement : les cartes se choisissent dans le panneau ; Tour : une par étage
 	_offer("Niveau %d ! Choisis une carte" % lvl, Run.roll_cards(3), func(): return Run.roll_cards(3))

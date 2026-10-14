@@ -150,6 +150,8 @@ func _break(i: int) -> void:
 	if not it.alive:
 		return
 	it.alive = false
+	if it.kind != "gold":
+		Sfx.event_at(self, it.pos, "rock" if it.kind == "gem" else "wood", -10.0)
 	for mm: MultiMesh in _mms.get(it.key, []):
 		var xf := mm.get_instance_transform(it.idx)
 		mm.set_instance_transform(it.idx, Transform3D(Basis().scaled(Vector3.ONE * 0.0001), xf.origin))

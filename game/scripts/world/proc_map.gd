@@ -824,6 +824,11 @@ func _torch(p: Vector3) -> void:
 	l.omni_range = 10.0
 	l.position = p + Vector3.UP * 2.2
 	add_child(l)
+	if is_in_group("map"):
+		var snd := Node3D.new()
+		add_child(snd)
+		snd.position = p
+		Sfx.loop_at(snd, Vector3.UP * 2.0, "torch.wav", -14.0, 10.0)
 
 
 ## Marchands ambulants : un PNJ par emplacement (le directeur les fait se promener).
@@ -902,6 +907,8 @@ func _build_stations() -> void:
 		add_child(it)
 		it.global_position = st.pos
 		it.add_beam(Interactable.STATION_COLORS.get(st.kind, Color(1, 0.9, 0.6)))
+		if st.kind == "well":
+			Sfx.loop_at(it, Vector3.UP, "fountain.wav", -10.0, 14.0)
 		interactables.append(it)
 		var l := OmniLight3D.new()
 		l.light_color = Interactable.STATION_COLORS.get(st.kind, Color(1, 0.9, 0.6))
@@ -985,6 +992,10 @@ func _build_sites() -> void:
 				l.omni_range = 9.0
 				l.position = c + Vector3.UP * 1.2
 				holder.add_child(l)
+				var fire := Node3D.new()
+				holder.add_child(fire)
+				fire.position = c
+				Sfx.loop_at(fire, Vector3.UP, "campfire.wav", -8.0, 18.0)
 			"market":
 				_add_instance(batch, {"model": "uc322", "scale": [0.9, 0.9]}, at.call(0.0, -3.0), false, yaw)
 				_add_box_collider(at.call(0.0, -3.0), Vector3(2.0, 1.5, 1.0), yaw)

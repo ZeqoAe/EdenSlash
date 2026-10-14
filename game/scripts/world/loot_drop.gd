@@ -47,7 +47,7 @@ func _process(delta: float) -> void:
 	_icon.position.y = 1.0 + sin(_t * 3.0) * 0.15
 	if _player and not _player.is_dead and _player.global_position.distance_to(global_position) < PICKUP_RADIUS * _player.pickup_mult:
 		if Run.pick_up(item):
-			Sfx.play_at(self, global_position, "atks001.wav", -12.0, 0.3)
+			Sfx.ui("pickup", -8.0)
 			if on_picked.is_valid():
 				on_picked.call(item)
 			queue_free()

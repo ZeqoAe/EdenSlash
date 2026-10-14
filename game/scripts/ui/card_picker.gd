@@ -319,6 +319,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _select(i: int) -> void:
+	if i != _selected:
+		Sfx.ui("click", -6.0)
 	_selected = i
 	for j in _buttons.size():
 		var b: Button = _buttons[j]
@@ -344,5 +346,6 @@ func _confirm_choice() -> void:
 	# carte gardée puis prise maintenant : elle ne revient pas
 	Run.kept = Run.kept.filter(func(k): return not (String(k.type) == String(card.type) and str(k.id) == str(card.id)))
 	Run.apply_card(card)
+	Sfx.ui("confirm", -3.0)
 	picked.emit(card)
 	_show_next()

@@ -312,6 +312,7 @@ func _interact(it: Interactable) -> void:
 				return
 			Profile.changed.emit()
 			it.open_chest()
+			Sfx.event_at(self, it.global_position, "chest", -2.0)
 			chests_opened += 1
 			Profile.record_add("chests", 1)
 			var def: Dictionary = CHEST_TIERS[tier]
@@ -997,6 +998,7 @@ func _update_breakables(delta: float) -> void:
 	_gold_pop_timer -= delta
 	if _gold_pop > 0 and _gold_pop_timer <= 0.0:
 		DamageNumber.spawn_text(player, "+%d or" % _gold_pop, Color(1.0, 0.85, 0.3))
+		Sfx.ui("gold", -10.0)
 		_gold_pop = 0
 		_gold_pop_timer = 0.5
 	_touch_timer -= delta
@@ -1115,6 +1117,7 @@ func scroll_cards(n: int) -> Array:
 
 
 func _use_station(it: Interactable) -> void:
+	Sfx.event_at(self, it.global_position, "station", -4.0)
 	match it.kind:
 		"anvil":
 			var cards := anvil_cards()

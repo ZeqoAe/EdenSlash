@@ -189,6 +189,7 @@ class RowButton extends Button:
 ## Gros bouton doré (Jouer, Lancer).
 static func gold_button(text: String, font_size := 30, min_size := Vector2(420, 80)) -> Button:
 	var b := Button.new()
+	b.pressed.connect(func(): Sfx.ui("confirm", -6.0))
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = min_size
@@ -213,6 +214,7 @@ static func gold_button(text: String, font_size := 30, min_size := Vector2(420, 
 ## Bouton secondaire translucide.
 static func glass_button(text: String, font_size := 20, min_size := Vector2(320, 52)) -> Button:
 	var b := Button.new()
+	b.pressed.connect(func(): Sfx.ui("click", -8.0))
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = min_size
