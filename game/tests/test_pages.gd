@@ -73,8 +73,8 @@ func _test_presets() -> void:
 	# choisir une arme juste après avoir changé de classe (lobby) : va dans la nouvelle classe
 	Profile.selected_class = "magician"
 	Profile.select_weapon_type("bow")
-	check("magicien à l'arc, le samouraï garde son katana", Items.weapon_type_of(Profile.equipped.weapon) == "bow"
-		and String(Profile.presets.samurai.sets[0].slots.weapon) != String(Profile.equipped.weapon.uid))
+	check("magicien à l'arc (arme secondaire), le samouraï garde son katana", Items.weapon_type_of(Profile.equipped.get("offhand", {})) == "bow"
+		and String(Profile.presets.samurai.sets[0].slots.weapon) != String(Profile.equipped.offhand.uid))
 	Profile.selected_class = "samurai"
 	Profile.save_profile()
 	# sauvegarde et rechargement

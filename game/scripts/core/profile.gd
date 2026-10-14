@@ -322,7 +322,7 @@ func save_profile() -> void:
 func _lobby_view() -> void:
 	_view_class = selected_class
 	loadout = _active_slots(selected_class)
-	if not in_run and not loadout.has("weapon"):
+	if not in_run and (not loadout.has("weapon") or not _main_weapon_ok(String(loadout.weapon), selected_class)):
 		_default_weapon(selected_class)
 	equipped = {}
 	inventory = []
@@ -370,6 +370,26 @@ func _class_presets(cls: String) -> Dictionary:
 func _active_slots(cls: String) -> Dictionary:
 	var p := _class_presets(cls)
 	return p.sets[clampi(int(p.active), 0, p.sets.size() - 1)].slots
+
+
+## L'objet [param uid] du coffre commun est une arme du type de la classe [param cls].
+func _main_weapon_ok(uid: String, cls: String) -> bool:
+	for it in vault:
+		if String(it.uid) == uid:
+			return it.slot == "weapon" and Items.weapon_type_of(it) == Items.default_weapon_type(cls)
+	return false
+
+
+## Type de l'arme principale : celui de la classe jouée (ou affichée hors run). L'arme
+## secondaire peut être de n'importe quel type.
+func main_weapon_type() -> String:
+	var cls := Run.class_id if in_run else (_view_class if _view_class != "" else selected_class)
+	return Items.default_weapon_type(cls)
+
+
+## [param item] peut être l'arme principale (arme du type de la classe).
+func can_be_main(item: Dictionary) -> bool:
+	return item.get("slot", "") == "weapon" and Items.weapon_type_of(item) == main_weapon_type()
 
 
 ## Arme de départ d'une classe sans arme : la meilleure du coffre de son type, sinon une neuve.
@@ -547,7 +567,9 @@ func select_weapon_type(wtype: String) -> void:
 	if best.is_empty():
 		best = Items.generate(1, -1.0, "weapon", selected_class, 0, wtype)
 		vault.append(best)
-	_active_slots(selected_class)["weapon"] = best.uid
+	# l'arme de la classe est l'arme principale ; un autre type devient l'arme secondaire
+	var main := wtype == Items.default_weapon_type(selected_class)
+	_active_slots(selected_class)["weapon" if main else "offhand"] = best.uid
 	_lobby_view()
 	save_profile()
 
@@ -932,7 +954,10 @@ func add_gold(amount: int) -> void:
 func equip(item: Dictionary) -> void:
 	var slot: String = item.slot
 	if is_same(equipped.get("offhand"), item):
-		swap_weapons()  # l'arme secondaire devient l'arme principale
+		swap_weapons()  # l'arme secondaire devient l'arme principale (si elle est du type de la classe)
+		return
+	if slot == "weapon" and not can_be_main(item):
+		equip_offhand(item)  # arme d'un autre type : seulement en arme secondaire
 		return
 	inventory.erase(item)
 	if equipped.has(slot):
@@ -949,7 +974,7 @@ func equip_offhand(item: Dictionary) -> void:
 	var main: Dictionary = equipped.get("weapon", {})
 	var old: Dictionary = equipped.get("offhand", {})
 	if is_same(main, item):
-		if old.is_empty():
+		if old.is_empty() or not can_be_main(old):
 			return
 		equipped["weapon"] = old
 	else:
@@ -964,7 +989,7 @@ func equip_offhand(item: Dictionary) -> void:
 func swap_weapons() -> void:
 	var main: Dictionary = equipped.get("weapon", {})
 	var off: Dictionary = equipped.get("offhand", {})
-	if main.is_empty() or off.is_empty():
+	if main.is_empty() or off.is_empty() or not can_be_main(off):
 		return
 	equipped["weapon"] = off
 	equipped["offhand"] = main

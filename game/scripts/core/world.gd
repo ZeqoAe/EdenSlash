@@ -385,7 +385,7 @@ func _offer(title: String, options: Array, reroll := Callable(), own_rerolls := 
 		var skills := options.filter(func(o): return String(o.get("type", "")) == "skill")
 		Run.apply_card(skills[0] if not skills.is_empty() and Run.skills.size() < 4 else options.pick_random())
 		return
-	if Settings.auto_cards() and not options.any(func(o): return String(o.get("type", "")) in ["gear", "trophy", "anvil_slot"]):
+	if Settings.auto_cards() and not options.any(func(o): return String(o.get("type", "")) in ["gear", "trophy", "anvil_slot", "offhand"]):
 		# choix automatique (Paramètres) : un nouveau sort tant qu'une case est libre, sinon la
 		# carte de plus haute rareté
 		var pick: Dictionary = options[0]

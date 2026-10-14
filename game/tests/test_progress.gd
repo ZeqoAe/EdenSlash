@@ -168,14 +168,15 @@ func _ready() -> void:
 	Profile.end_run(null)
 	Profile.reset_all()
 	check("nouvelle partie : expertise remise à zéro", Profile.expertise.is_empty() and Profile.certificates.is_empty())
-	# armes indépendantes de la classe
+	# arme principale = arme de la classe ; un autre type = arme secondaire (0.1.128)
 	Profile.selected_class = "magician"
 	Profile.select_weapon_type("axe")
-	check("magicien à la hache : arme de départ créée", Items.weapon_type_of(Profile.equipped.weapon) == "axe")
+	check("magicien à la hache : hache en arme secondaire, bâton en principale", Items.weapon_type_of(Profile.equipped.get("offhand", {})) == "axe"
+		and Items.weapon_type_of(Profile.equipped.weapon) == "staff")
 	Run.start("magician")
-	check("en run : le combo suit l'arme", Run.weapon_type() == "axe" and GameData.weapon_type(Run.weapon_type()).combo[0].name == "Coup de hache")
+	check("en run : l'arme principale reste celle de la classe", Run.weapon_type() == "staff")
 	var loot_w := Items.generate(4, 0.0, "weapon", "magician")
-	check("le butin d'armes suit l'arme en main (objet d'Eden : %s)" % loot_w.name, Items.weapon_type_of(loot_w) == "axe" and GameData.eden_by_id.get(int(loot_w.get("eden", 0)), {}).get("wtype", "") == "axe")
+	check("le butin d'armes suit l'arme de la classe (objet d'Eden : %s)" % loot_w.name, Items.weapon_type_of(loot_w) == "staff" and GameData.eden_by_id.get(int(loot_w.get("eden", 0)), {}).get("wtype", "") == "staff")
 	check("ancienne arme sans type : type de sa classe", Items.weapon_type_of({"slot": "weapon", "wclass": "hunter"}) == "bow")
 	# extraction : tout l'inventaire est gardé
 	for i in 4:
@@ -183,8 +184,9 @@ func _ready() -> void:
 	var n_before := Profile.vault.size()
 	Run.finish("extraction")
 	var kept := Profile.end_run_extract()
-	check("extraction : %d objets gardés" % kept, kept == 6 and Profile.vault.size() == n_before + 4 and not Profile.in_run)
-	check("extraction : l'arme portée reste l'arme de départ", Items.weapon_type_of(Profile.equipped.weapon) == "axe")
+	check("extraction : %d objets gardés" % kept, kept == 7 and Profile.vault.size() == n_before + 4 and not Profile.in_run)
+	check("extraction : les armes portées restent en place", Items.weapon_type_of(Profile.equipped.weapon) == "staff"
+		and Items.weapon_type_of(Profile.equipped.get("offhand", {})) == "axe")
 	# fournitures : gardées par l'extraction, emportées à la run suivante, perdues à la mort
 	Run.start("magician")
 	Profile.add_bag("drill", 2)

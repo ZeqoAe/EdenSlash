@@ -106,6 +106,8 @@ var _action: Dictionary = {}  # compétence / attaque en cours
 var _auto: Dictionary = {}  # auto-attaque de l'arme principale (WeaponAttacks.spec_for)
 var _off: Dictionary = {}  # auto-attaque de l'arme secondaire ({} : aucune)
 var _off_ready_at := 0.0  # prochaine frappe de l'arme secondaire
+var _auto_count := {}  # coups portés par emplacement d'arme (effets légendaires « tous les N coups »)
+var _sig_ready := {}  # recharge interne des effets légendaires à l'impact, par emplacement
 var _swing := 0  # attaques de base portées (alterne les animations de l'arme)
 var _last_skill := {}  # dernière compétence portée (pour l'Écho)
 var _target: Combatant  # cible verrouillée par clic (auto-attaque)
@@ -173,8 +175,16 @@ func _weapon_type() -> Dictionary:
 	return GameData.weapon_type(_weapon_type_id())
 
 
+## Type de l'arme principale : toujours celui de la classe (0.1.128).
 func _weapon_type_id() -> String:
-	return Items.default_weapon_type(class_id) if foe else Run.weapon_type()
+	return Items.default_weapon_type(class_id)
+
+
+## Améliorations d'arme de la run pour l'emplacement [param slot] ("weapon", "offhand").
+func weapon_mods(slot: String) -> Dictionary:
+	if foe or built or not Run.active:
+		return {}
+	return Run.weapon_ups.get(slot, {})
 
 
 ## Arme principale portée (celle du héros ennemi : son équipement).
@@ -852,7 +862,8 @@ func _try_auto_skill() -> bool:
 
 ## Portée de l'attaque de base (WeaponAttacks.reach) : corps à corps, tir ou incantation.
 func attack_reach() -> float:
-	return WeaponAttacks.reach(auto_spec(), reach_mult, area_mult)
+	var m := weapon_mods("weapon")
+	return WeaponAttacks.reach(auto_spec(), reach_mult * (1.0 + float(m.get("reach", 0.0))), area_mult * (1.0 + float(m.get("area", 0.0))))
 
 
 ## Portée d'une compétence pour le lancement automatique (zone + élan).
@@ -915,7 +926,12 @@ func monster_under_mouse() -> Combatant:
 func _start_attack(aim: Vector3) -> void:
 	var s := auto_spec()
 	face_direction(aim - global_position, 1.0, 100.0)
-	var action := WeaponAttacks.action_for(s, self)
+	var mods := weapon_mods("weapon")
+	var action := WeaponAttacks.action_for(s, self, mods)
+	action["wslot"] = "weapon"
+	_auto_count["weapon"] = int(_auto_count.get("weapon", 0)) + 1
+	if WeaponAttacks.empower(action, s, mods, int(_auto_count.weapon)):
+		Vfx.flash(self, global_position + Vector3.UP * 1.2, 1.4, Color(1.0, 0.7, 0.3))
 	_break_stealth()
 	if String(action.get("kind", "")) == "cast":
 		var to_aim := aim - global_position
@@ -925,6 +941,7 @@ func _start_attack(aim: Vector3) -> void:
 	var anim_name := String(anims[_swing % anims.size()])
 	_swing += 1
 	var rate := cast_speed if WeaponAttacks.rate_stat(s) == "cast_speed" else atk_speed
+	rate *= 1.0 + float(mods.get("speed", 0.0))
 	_begin_action("attack", anim_name, rate * 1.25 * float(s.get("speed", 1.0)), action)
 	if String(action.get("kind", "")) == "cast":
 		_announce_cast(action, _hits[0] if not _hits.is_empty() else 0.3)
@@ -939,11 +956,16 @@ func _update_offhand() -> void:
 	var m := _monster_in_reach(WeaponAttacks.reach(_off, reach_mult, area_mult), false)
 	if m == null:
 		return
-	var rate := (cast_speed if WeaponAttacks.rate_stat(_off) == "cast_speed" else atk_speed) * float(_off.get("speed", 1.0)) * WeaponAttacks.BASE_RATE
+	var mods := weapon_mods("offhand")
+	var rate := (cast_speed if WeaponAttacks.rate_stat(_off) == "cast_speed" else atk_speed) * float(_off.get("speed", 1.0)) \
+		* WeaponAttacks.BASE_RATE * (1.0 + float(mods.get("speed", 0.0)))
 	_off_ready_at = _time + 1.0 / maxf(rate, 0.1)
-	var a := WeaponAttacks.action_for(_off, self)
+	var a := WeaponAttacks.action_for(_off, self, mods)
 	a["mult"] = float(a.mult) * WeaponAttacks.OFFHAND_DMG
 	a["offhand"] = true
+	a["wslot"] = "offhand"
+	_auto_count["offhand"] = int(_auto_count.get("offhand", 0)) + 1
+	WeaponAttacks.empower(a, _off, mods, int(_auto_count.offhand))
 	var to := m.global_position - global_position
 	to.y = 0.0
 	var fwd := to.normalized() if to.length() > 0.1 else forward()
@@ -974,7 +996,7 @@ func _off_strike(a: Dictionary, m: Combatant) -> void:
 	var origin := global_position + (fwd * float(a.get("offset", 1.8)) if String(a.get("kind", "")) == "slam" else Vector3.ZERO)
 	var h := _resolve_area(a, origin, fwd, false)
 	if h:
-		Procs.fire(self, "basic_hit", h, h.global_position)
+		_on_basic_hit(a, h)
 
 
 ## Incantation : points d'impact (la cible, puis les zones en plus autour d'elle) annoncés en
@@ -1160,7 +1182,21 @@ func _resolve_hit() -> void:
 		if hit:
 			Procs.fire(self, "skill_hit", hit, hit.global_position)
 	if hit and _action.get("basic", false):
-		Procs.fire(self, "basic_hit", hit, hit.global_position)
+		_on_basic_hit(_action, hit)
+
+
+## Impact d'une auto-attaque d'arme : effets déclenchés « basic_hit » et effet légendaire de
+## l'arme à l'impact (explosion, foudre ; chance et recharge interne par emplacement).
+func _on_basic_hit(action: Dictionary, target: Combatant) -> void:
+	Procs.fire(self, "basic_hit", target, target.global_position)
+	var sig: Dictionary = action.get("sig_proc", {})
+	if sig.is_empty() or not is_instance_valid(target):
+		return
+	var slot := String(action.get("wslot", "weapon"))
+	if _time < float(_sig_ready.get(slot, 0.0)) or randf() >= float(sig.get("chance", 0.2)):
+		return
+	_sig_ready[slot] = _time + float(sig.get("cd", 0.5))
+	Procs.run(self, WeaponAttacks.sig_proc(sig), target, target.global_position)
 
 
 ## Impact des zones d'une incantation d'arme (WeaponAttacks, forme « cast »).
@@ -1175,7 +1211,7 @@ func _cast_land(action: Dictionary) -> void:
 		if first == null:
 			first = h
 	if first:
-		Procs.fire(self, "basic_hit", first, first.global_position)
+		_on_basic_hit(action, first)
 
 
 ## Applique [param action] à tous les monstres de sa zone (rayon, arc) depuis
@@ -1344,7 +1380,7 @@ func bolt_hit(m: Combatant, dir: Vector3, action: Dictionary) -> void:
 		_hit_monster(m, dir, action, is_skill)
 	_last_combat = _time
 	if action.get("basic", false):
-		Procs.fire(self, "basic_hit", m, m.global_position)
+		_on_basic_hit(action, m)
 	if is_skill and not action.get("proc_done", false):
 		action["proc_done"] = true
 		Procs.fire(self, "skill_hit", m, m.global_position)

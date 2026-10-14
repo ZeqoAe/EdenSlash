@@ -160,7 +160,8 @@ func start(p: Player) -> void:
 	_refresh_chest_labels()
 	if Run.survival:
 		message.emit("%s · %s\nTu pars sans équipement : ouvre les coffres de la carte, puis trouve le donjon" % [zone.name, Epochs.get_def(Run.epoch).name], 4.0)
-		world._offer("Choisis ton arme de départ", start_weapon_cards())  # avant la première compétence
+		world._offer("Ton arme de %s : choisis sa variante" % String(GameData.weapon_type(Run.weapon_type()).get("name", "classe")).to_lower(),
+			start_weapon_cards())  # avant la première compétence
 	else:
 		message.emit("%s\nCasse tout, ouvre les coffres, forge ton équipement, puis trouve le donjon" % zone.name, 3.5)
 
@@ -637,6 +638,10 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		luck += 0.2
 	if Run.survival:
 		count = 0  # Survie : l'équipement vient des coffres d'emplacement seulement
+		# arme secondaire : le boss en lâche toujours une, une élite parfois (plus souvent sans)
+		var no_off: bool = Profile.equipped.get("offhand", {}).is_empty()
+		if m.is_boss or (m.is_elite and randf() < (OFFHAND_DROP_FIRST if no_off else OFFHAND_DROP)):
+			_drop_offhand(m.global_position)
 	for i in count:  # commun à épique (mythiques et légendaires : coffres de récompense)
 		_drop_item(m.global_position, m.level, luck)
 	# consommables : gemmes, parchemins, ciseaux, pierres (adaptés au niveau)
@@ -645,6 +650,11 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		_drop_consumable(m.global_position, m.level, 1 if (m.is_boss or m.is_elite) else 0)
 	if m == _boss:
 		_on_boss_killed()
+
+
+## Survie : chances qu'une élite lâche une arme secondaire (sans arme secondaire / avec).
+const OFFHAND_DROP_FIRST := 0.4
+const OFFHAND_DROP := 0.12
 
 
 func _drop_item(pos: Vector3, level: int, luck: float, min_r := 0, max_r := 3) -> void:
@@ -1109,9 +1119,56 @@ func gear_cards(n: int, tier: int) -> Array:
 	return out
 
 
-## Survie : arme de départ, 3 armes du palier de la 1re map (tous types : l'auto-attaque suit l'arme).
+## Survie : arme de départ, du type de la classe (l'arme principale est fixée par la classe),
+## au palier de la 1re map : ses deux variantes au choix.
 func start_weapon_cards() -> Array:
-	return SlotChests.offer("weapon", Run.epoch, Run.stage).map(func(it): return item_card(it, "gear"))
+	var items := SlotChests.offer("weapon", Run.epoch, Run.stage, 2)
+	if items.is_empty():
+		items = [Items.generate(loot_level(1), 0.0, "weapon", Run.class_id, 0, Run.weapon_type(), 0)]
+	while items.size() < 2:
+		var copy: Dictionary = items[0].duplicate(true)
+		copy["uid"] = "%s_v" % String(copy.uid)
+		items.append(copy)
+	var out: Array = []
+	for i in 2:
+		items[i]["auto_variant"] = i
+		out.append(weapon_card(items[i], "gear"))
+	return out
+
+
+## Carte d'une arme : sa variante d'auto-attaque d'abord, puis ses statistiques.
+static func weapon_card(it: Dictionary, type: String) -> Dictionary:
+	var c := item_card(it, type)
+	var s := WeaponAttacks.spec_for(it)
+	c["subtitle"] = "%s · %s" % [WeaponAttacks.variant_label(it), Items.RARITIES[clampi(int(it.get("rarity", 0)), 0, Items.RARITIES.size() - 1)].name]
+	var head := "[color=#ffcf6b][b]%s[/b][/color] : %s" % [s.name, s.desc]
+	if s.has("sig"):
+		head += "\n[color=#ffb347]★ %s[/color]" % WeaponAttacks.sig_text(s)
+	var lines := String(c.desc).split("\n")
+	if type == "offhand":
+		var cur: Dictionary = Profile.equipped.get("offhand", {})
+		lines[0] = "[color=#7dff8a]Emplacement libre[/color]" if cur.is_empty() else "Remplace : %s" % WeaponAttacks.variant_label(cur)
+		head += "\n[color=#9a98a8]Arme secondaire : frappe seule, %d %% des dégâts et %d %% de ses stats.[/color]" % [
+			roundi(WeaponAttacks.OFFHAND_DMG * 100.0), roundi(WeaponAttacks.OFFHAND_STATS * 100.0)]
+	c["desc"] = head + "\n" + "\n".join(lines.slice(0, 4))
+	return c
+
+
+## Survie : arme secondaire lâchée par une élite ou un boss ; ramassée, elle propose 3 armes
+## d'autres types que la classe (une relance).
+func _drop_offhand(pos: Vector3) -> void:
+	var drop := LootDrop.new()
+	var m := Epochs.map_def(Run.epoch, Run.stage)
+	var wt := GameData.weapon_type(["bow", "staff", "axe", "spear", "cannon"].pick_random())
+	var ws: Array = wt.get("weapons", [])
+	drop.item = {"offhand_drop": true, "name": "Arme secondaire", "rarity": int(m.rarity),
+		"icon": String(ws[0].icon) if not ws.is_empty() else ""}
+	drop.on_picked = func(_item):
+		var roll := func(): return SlotChests.offhand_offer(Run.epoch, Run.stage).map(func(it): return weapon_card(it, "offhand"))
+		world._offer("Arme secondaire trouvée : choisis-en une", roll.call(), roll, 1)
+	add_child(drop)
+	var g: Vector3 = map.ground_at(pos.x, pos.z)
+	drop.global_position = (g if g != Vector3.INF else pos) + Vector3.UP * 0.2
 
 
 ## Survie : coffre d'emplacement ouvert, 3 pièces (ou cartes) au choix, une relance par coffre.
@@ -1124,9 +1181,9 @@ func _open_slot_chest(box: String) -> void:
 			cards = Run.roll_cards(3)  # plus rien de ce type : des cartes au choix
 		world._offer("%s : choisis une carte" % title, cards, func(): return Run.roll_cards(3, false, kind), 1)
 		return
-	var gear := SlotChests.offer(box, Run.epoch, Run.stage).map(func(it): return item_card(it, "gear"))
+	var gear := SlotChests.offer(box, Run.epoch, Run.stage).map(func(it): return weapon_card(it, "gear") if it.slot == "weapon" else item_card(it, "gear"))
 	world._offer("%s (%s) : choisis une pièce" % [title, Epochs.map_text(Run.epoch, Run.stage)], gear,
-		func(): return SlotChests.offer(box, Run.epoch, Run.stage).map(func(it): return item_card(it, "gear")), 1)
+		func(): return SlotChests.offer(box, Run.epoch, Run.stage).map(func(it): return weapon_card(it, "gear") if it.slot == "weapon" else item_card(it, "gear")), 1)
 
 
 ## Survie : enclume, un emplacement au choix (sa pièce actuelle, son bonus actuel).

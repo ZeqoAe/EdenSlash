@@ -115,18 +115,63 @@ func _test_world() -> void:
 	check("auto-attaque : la même au coup suivant", player._action.get("basic", false) and int(player._action.get("hits", 1)) == 1)
 	await _wait_idle()
 	Run.apply_card(_common_card("multishot"))
-	check("Projectile supplémentaire : +1 frappe en mêlée", player.extra_proj == 1 and int(WeaponAttacks.action_for(player.auto_spec(), player).hits) == 2)
+	check("Projectile supplémentaire : +1 frappe en mêlée", player.extra_proj == 1 and int(WeaponAttacks.action_for(WeaponAttacks.spec_for({"auto_variant": 0, "slot": "weapon"}, "katana"), player).hits) == 2)
 	var bow := WeaponAttacks.action_for(WeaponAttacks.spec_for({}, "bow"), player)
 	check("Projectile supplémentaire : 2 flèches à l'arc", String(bow.kind) == "bolt" and int(bow.volley) == 2)
 	var staff := WeaponAttacks.action_for(WeaponAttacks.spec_for({"auto_variant": 0, "slot": "weapon"}, "staff"), player)
-	check("bâton : incantation à 2 zones, délai réglé par la vitesse d'incantation", String(staff.kind) == "cast" and int(staff.zones) == 2 		and is_equal_approx(float(staff.delay), 0.65 / player.cast_speed))
+	check("bâton : incantation à 2 zones, délai réglé par la vitesse d'incantation", String(staff.kind) == "cast" and int(staff.zones) == 2 \
+		and is_equal_approx(float(staff.delay), 0.65 / player.cast_speed))
 	for wt in GameData.weapon_types:
 		for v in WeaponAttacks.variants(String(wt)):
 			if not (v.has("shape") and v.has("anims") and v.has("mult") and v.has("scales")):
 				check("auto-attaque complète : %s" % wt, false)
 	check("auto-attaque pour chaque type d'arme", GameData.weapon_types.keys().all(func(k): return WeaponAttacks.SPECS.has(k)))
+	check("deux variantes par arme, chacune avec son effet légendaire", WeaponAttacks.SPECS.keys().all(func(k):
+		return WeaponAttacks.variants(k).size() == 2 and WeaponAttacks.variants(k).all(func(v): return v.has("sig") and v.has("desc"))))
+	# arme principale : toujours celle de la classe
+	check("arme principale : type de la classe", String(player.auto_spec().wtype) == Items.default_weapon_type(Run.class_id))
+	var foreign := Items.generate(1, 0.0, "weapon", Run.class_id, 0, "cannon" if Run.weapon_type() != "cannon" else "bow")
+	Profile.inventory.append(foreign)
+	Profile.equip(foreign)
+	check("arme d'un autre type : équipée en secondaire", is_same(Profile.equipped.get("offhand"), foreign) and Profile.can_be_main(Profile.equipped.weapon))
+	Profile.unequip("offhand")
+	# améliorations d'arme : plus la carte est rare, plus elle a d'effets
+	var spec := player.auto_spec()
+	var up_c := WeaponAttacks.roll_upgrade(spec, "common", {})
+	var up_r := WeaponAttacks.roll_upgrade(spec, "rare", {})
+	var up_e := WeaponAttacks.roll_upgrade(spec, "epic", {})
+	var up_l := WeaponAttacks.roll_upgrade(spec, "legendary", {})
+	check("amélioration commune : dégâts seulement", up_c.keys() == ["dmg"])
+	check("amélioration rare : dégâts + un bonus", up_r.size() == 2 and up_r.has("dmg"))
+	check("amélioration épique : dégâts + deux bonus", up_e.size() >= 2 and up_e.has("dmg") and float(up_e.dmg) > float(up_r.dmg))
+	check("amélioration légendaire : effet légendaire", up_l.get("sig", false))
+	check("légendaire, effet déjà acquis : trois bonus", not WeaponAttacks.roll_upgrade(spec, "legendary", {"sig": true}).has("sig"))
+	var bow_spec := WeaponAttacks.spec_for({"auto_variant": 0, "slot": "weapon"}, "bow")
+	var crit_seen := 0
+	for i in 60:
+		if WeaponAttacks.roll_upgrade(bow_spec, "rare", {}).has("crit"):
+			crit_seen += 1
+	check("arc : le critique sort souvent sur une rare (%d / 60)" % crit_seen, crit_seen >= 20)
+	var wcard := Run._describe_card({"type": "weapon_up", "id": "weapon", "tier": "legendary"})
+	Run.apply_card(wcard)
+	check("carte d'arme : niveau 1 et effet légendaire", int(Run.weapon_ups.weapon.rank) == 1 and Run.weapon_ups.weapon.get("sig", false))
+	var a_up := WeaponAttacks.action_for(spec, player, player.weapon_mods("weapon"))
+	var a_base := WeaponAttacks.action_for(spec, player)
+	check("carte d'arme : auto-attaque plus forte", float(a_up.mult) > float(a_base.mult))
+	check("cartes d'arme proposées", Run.roll_cards(3, false, "weapon").any(func(c): return String(c.type) == "weapon_up"))
+	var bow_mods := {"sig": true}
+	var volley := WeaponAttacks.action_for(bow_spec, player, bow_mods)
+	check("arc, Volée : 4e flèche renforcée", not WeaponAttacks.empower(volley.duplicate(), bow_spec, bow_mods, 3) \
+		and WeaponAttacks.empower(volley, bow_spec, bow_mods, 4) and int(volley.volley) == int(WeaponAttacks.action_for(bow_spec, player).volley) + 2)
+	Run.weapon_ups = {}
+	# arme secondaire trouvée en jeu : jamais du type de la classe
+	var offers := SlotChests.offhand_offer(1, 1)
+	check("arme secondaire : 3 armes d'autres types (%d)" % offers.size(), offers.size() == 3 \
+		and offers.all(func(it): return Items.weapon_type_of(it) != Run.weapon_type() and it.has("auto_variant")))
+	check("coffre d'arme : armes du type de la classe", SlotChests.offer("weapon", 1, 1).all(func(it): return Items.weapon_type_of(it) == Run.weapon_type()))
 	# arme secondaire : frappe seule, à sa cadence
 	var off := Items.generate(1, 0.0, "weapon", Run.class_id, 0, "bow")
+	off["auto_variant"] = 0
 	Profile.inventory.append(off)
 	Profile.equip_offhand(off)
 	player.recalc_stats()

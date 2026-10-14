@@ -56,6 +56,10 @@ var seen_items: Array = []
 ## Enclume de la Survie : emplacement -> amélioration tirée (-2 à +10), appliquée à la pièce
 ## portée dans cet emplacement, quelle qu'elle soit, jusqu'à la fin de la run.
 var slot_bonus: Dictionary = {}
+## Améliorations d'arme de la run (cartes « weapon_up », WeaponAttacks.roll_upgrade) par
+## emplacement ("weapon", "offhand") : {rank, dmg, crit, speed, area, …, sig}. Elles restent sur
+## l'emplacement quand l'arme change.
+var weapon_ups: Dictionary = {}
 var anvil_stage := 0  # map où l'enclume a servi (une fois par map)
 var insignia_gain := 0  # insignes gagnés à la fin de la run (bilan)
 ## Tirage de l'enclume : valeur -> poids (le plus souvent +3 à +6, rarement +9/+10 ou négatif).
@@ -97,6 +101,7 @@ func start(cid: String) -> void:
 	epoch = 1
 	seen_items = []
 	slot_bonus = {}
+	weapon_ups = {}
 	anvil_stage = 0
 	Profile.begin_run()
 	changed.emit()
@@ -147,6 +152,8 @@ func add_gold(amount: int) -> void:
 
 ## Objet ramassé : directement dans l'inventaire (équipable via le menu pause).
 func pick_up(item: Dictionary) -> bool:
+	if item.has("offhand_drop"):
+		return true  # arme secondaire : le choix s'ouvre au ramassage (RunDirector._drop_offhand)
 	if item.has("consumable"):
 		Profile.add_bag(String(item.consumable))
 		return true
@@ -163,10 +170,18 @@ func pick_up(item: Dictionary) -> bool:
 	return true
 
 
-## Type de l'arme en main (son combo d'auto-attaque est utilisé, quelle que soit la classe).
+## Type de l'arme principale : toujours celui de la classe (0.1.128) ; l'arme secondaire,
+## trouvée en jeu, peut être de n'importe quel type.
 func weapon_type() -> String:
-	var w: Dictionary = Profile.equipped.get("weapon", {})
-	return Items.weapon_type_of(w) if not w.is_empty() else Items.default_weapon_type(class_id)
+	return Items.default_weapon_type(class_id)
+
+
+## Auto-attaque de l'emplacement d'arme [param slot] ({} : pas d'arme secondaire).
+func weapon_spec(slot: String) -> Dictionary:
+	var it: Dictionary = Profile.equipped.get(slot, {})
+	if slot == "weapon":
+		return WeaponAttacks.spec_for(it, weapon_type())
+	return WeaponAttacks.spec_for(it) if not it.is_empty() else {}
 
 
 func duration_text() -> String:
@@ -419,6 +434,10 @@ func roll_cards(n := 3, skills_only := false, kind := "") -> Array:
 		for s in all_skills():
 			if int(s.rank) < int(Cards.rules().max_rank):
 				pool.append({"type": "upgrade", "id": int(s.id), "weight": 1.5})
+		# améliorations d'arme : l'arme principale souvent, la secondaire si elle est portée
+		for slot in ["weapon", "offhand"]:
+			if not weapon_spec(slot).is_empty() and int(weapon_ups.get(slot, {}).get("rank", 0)) < WeaponAttacks.MAX_RANK:
+				pool.append({"type": "weapon_up", "id": slot, "weight": 2.2 if slot == "weapon" else 1.3})
 		var boons := {}
 		for b in Boons.all():
 			boons[String(b.id)] = true
@@ -444,6 +463,8 @@ func roll_cards(n := 3, skills_only := false, kind := "") -> Array:
 	match kind:
 		"spell":
 			pool = pool.filter(func(c): return c.type in ["skill", "chain", "upgrade"])
+		"weapon":
+			pool = pool.filter(func(c): return c.type == "weapon_up")
 		"passive":
 			pool = pool.filter(func(c): return c.type == "passive" and not c.get("cert", false))
 		"cert":
@@ -500,6 +521,18 @@ func _describe_card(c: Dictionary) -> Dictionary:
 			return {"type": "upgrade", "id": c.id, "tier": tier, "up": up, "title": "%s — rang %d" % [s.name, rank],
 				"subtitle": "Amélioration %s" % String(Cards.tier(tier).name).to_lower(),
 				"desc": "\n".join(Cards.skill_upgrade_lines(skill_entry(int(c.id)), up)), "icon": s.icon}
+		"weapon_up":
+			var slot := String(c.id)
+			var spec := weapon_spec(slot)
+			var cur: Dictionary = weapon_ups.get(slot, {})
+			var tier := String(c.get("tier", "")) if String(c.get("tier", "")) != "" else Cards.roll_tier()
+			var up := WeaponAttacks.roll_upgrade(spec, tier, cur)
+			var it: Dictionary = Profile.equipped.get(slot, {})
+			var icon := String(it.get("icon", GameData.weapon_type(String(spec.wtype)).get("icon", "")))
+			return {"type": "weapon_up", "id": slot, "tier": tier, "up": up,
+				"title": "%s — niveau %d" % [spec.name, int(cur.get("rank", 0)) + 1],
+				"subtitle": "Amélioration d'arme %s · %s" % [String(Cards.tier(tier).name).to_lower(), "arme principale" if slot == "weapon" else "arme secondaire"],
+				"desc": "\n".join(WeaponAttacks.upgrade_lines(spec, cur, up)), "icon": icon}
 		_:
 			var p := passive_def(String(c.id))
 			var stacks := int(passives.get(p.id, 0))
@@ -567,18 +600,25 @@ func apply_card(card: Dictionary) -> void:
 			passive_power[card.id] = before + float(card.get("mult", 1.0))
 		"trophy", "gear":
 			if survival:
-				# coffre d'emplacement : la pièce est portée tout de suite (l'ancienne reste dans le sac) ;
-				# une nouvelle arme devient l'arme principale et l'ancienne passe en arme secondaire
-				var old_main: Dictionary = Profile.equipped.get("weapon", {}) if card.item.slot == "weapon" else {}
+				# coffre d'emplacement : la pièce est portée tout de suite (l'ancienne reste dans le sac)
 				Profile.inventory.append(card.item)
 				Profile.equip(card.item)
-				if not old_main.is_empty():
-					Profile.equip_offhand(old_main)
 				if card.item.has("eden") and not int(card.item.eden) in seen_items:
 					seen_items.append(int(card.item.eden))
 				Profile.changed.emit()
 			else:
 				pick_up(card.item)  # choix de trophée ou d'équipement (coffres de la carte) : dans le sac
+		"weapon_up":
+			var cur: Dictionary = weapon_ups.get(String(card.id), {})
+			WeaponAttacks.merge_upgrade(cur, card.get("up", {"dmg": 0.15}))
+			weapon_ups[String(card.id)] = cur
+		"offhand":
+			# arme secondaire trouvée en jeu : portée tout de suite (l'ancienne reste dans le sac)
+			Profile.inventory.append(card.item)
+			Profile.equip_offhand(card.item)
+			if card.item.has("eden") and not int(card.item.eden) in seen_items:
+				seen_items.append(int(card.item.eden))
+			Profile.changed.emit()
 		"anvil_slot":
 			anvil_result = anvil_roll(String(card.slot))
 		"anvil":

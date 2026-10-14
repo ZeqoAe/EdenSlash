@@ -9,7 +9,7 @@ extends CanvasLayer
 signal picked(card: Dictionary)
 
 const ACCENT := Color(0.98, 0.78, 0.35)
-const TYPE_COLORS := {"skill": Color(1.0, 0.55, 0.3), "chain": Color(0.55, 0.9, 1.0), "upgrade": Color(0.45, 0.75, 1.0), "passive": Color(0.6, 0.95, 0.55)}
+const TYPE_COLORS := {"skill": Color(1.0, 0.55, 0.3), "chain": Color(0.55, 0.9, 1.0), "upgrade": Color(0.45, 0.75, 1.0), "weapon_up": Color(1.0, 0.8, 0.4), "passive": Color(0.6, 0.95, 0.55)}
 const CONFIRM_DELAY_MS := 400  # Valider inactif juste après l'ouverture (clics en rafale)
 
 var _queue: Array = []  # [titre, cartes, relance (Callable)]
@@ -248,7 +248,7 @@ func _make_card(card: Dictionary, i: int) -> Button:
 	d.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(d)
 	# bannir (la carte quitte la run, une autre la remplace) / garder (revient au prochain choix)
-	if String(card.get("type", "")) in ["skill", "chain", "upgrade", "passive"] and _reroll_fn.is_valid():
+	if String(card.get("type", "")) in ["skill", "chain", "upgrade", "weapon_up", "passive"] and _reroll_fn.is_valid():
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 6)
 		v.add_child(row)
@@ -257,7 +257,7 @@ func _make_card(card: Dictionary, i: int) -> Button:
 		ban.tooltip_text = "Cette carte ne sera plus proposée pendant la run ; une autre la remplace."
 		ban.focus_mode = Control.FOCUS_NONE
 		ban.add_theme_font_size_override("font_size", 13)
-		ban.disabled = Run.bans_used >= Cards.BANS_PER_RUN or String(card.type) == "upgrade"
+		ban.disabled = Run.bans_used >= Cards.BANS_PER_RUN or String(card.type) in ["upgrade", "weapon_up"]
 		ban.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		ban.pressed.connect(func(): _ban(i))
 		row.add_child(ban)

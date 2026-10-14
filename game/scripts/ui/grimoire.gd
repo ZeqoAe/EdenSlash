@@ -334,7 +334,14 @@ func _refresh_detail() -> void:
 			for i in vs.size():
 				var sp := WeaponAttacks.spec_for({"auto_variant": i, "slot": "weapon"}, wt)
 				parts.append(("[color=#ffcf6b]━━━━━━━━━━[/color]\n" if i > 0 else "") + WeaponAttacks.bbcode(sp, _atk(String(sp.dmg_type))))
-			parts.append("[color=#9a98a8]Arme secondaire (inventaire, ou un 2e coffre d'arme en Survie) : son auto-attaque part seule, à %d %% des dégâts.[/color]" % roundi(WeaponAttacks.OFFHAND_DMG * 100.0))
+			parts.append("[color=#c8c8d4]Améliorations d'arme (cartes de niveau, %d niveaux par arme) : commune = dégâts ; rare = dégâts + un bonus (critique, cadence, zone, portée…) ; épique = + un bonus majeur (projectile, perforation, rebond, grande zone) ; légendaire = + l'effet légendaire de la variante (★).[/color]" % WeaponAttacks.MAX_RANK)
+			parts.append("[color=#9a98a8]Arme secondaire (trouvée en jeu sur les élites et les boss de la Survie, de n'importe quel type) : son auto-attaque part seule, à %d %% des dégâts.[/color]" % roundi(WeaponAttacks.OFFHAND_DMG * 100.0))
+			if Run.active:
+				for slot in ["weapon", "offhand"]:
+					var ws := Run.weapon_spec(slot)
+					var mt := WeaponAttacks.mods_text(ws, Run.weapon_ups.get(slot, {})) if not ws.is_empty() else ""
+					if mt != "":
+						parts.append("[b]%s (%s)[/b]\n%s" % ["Arme principale" if slot == "weapon" else "Arme secondaire", ws.name, mt])
 			_detail.text = "\n\n".join(parts)
 		"passive":
 			var p: Dictionary = _selected.data

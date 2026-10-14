@@ -418,13 +418,32 @@ aériens / mages), **Pas aérien** (+1 esquive en l'air, ×2).
   l'auto-attaque), Lame large (zone), Allonge (portée), **Onde de choc** (chance à l'impact),
   évolution **Tempête d'acier** (Main lourde + Projectile supplémentaire). Les effets « coup final »
   des sets et trophées passent sur « impact d'une auto-attaque » (avec une chance).
-- Certaines armes ont **deux variantes** (dagues : lacération ou lancer ; arc : flèche ou flèche
-  perçante ; bâton : météore ou boule de feu) : le modèle d'Eden de l'arme décide laquelle.
-- **Arme secondaire** (case de l'inventaire, bouton « Secondaire », glisser entre les deux cases
-  pour échanger) : son auto-attaque part **seule**, sans animation, vers l'ennemi le plus proche
-  à sa portée, à **60 % des dégâts** et avec **50 % de ses stats d'objet** ; elle ne compte pas
-  pour les sets. En Survie, une nouvelle arme devient l'arme principale et l'ancienne passe en
-  secondaire.
+- **Deux variantes par arme** (0.1.128), aux synergies différentes : katana Iaï (critique) /
+  Lame du vent (projectile perçant) ; hache Taille large / Hache de jet (rebonds, saignement) ;
+  dagues Lacération / Dagues de lancer ; arc Flèche / Pluie de flèches (zones) ; sceptre Éclat
+  sacré / Orbe de lumière (rebonds, soin) ; bâton Météore / Boule de feu ; épée Taille /
+  Tourbillon ; rapière Estoc / Rafale d'estocs (3 frappes) ; espadon Taille lourde / Onde
+  tranchante (traverse tout) ; marteau Impact / Onde sismique ; baguette Trait d'ombre /
+  Malédiction (poison) ; cestes Directs / Poing de chi ; canon Obus / Mitraille (4 plombs) ;
+  lance Estoc / Lance de jet ; guitare Onde sonore / Notes vagabondes ; grimoire Pages / Glyphe
+  (ralentit) ; faux Faux / Salve. L'arme (son modèle d'Eden) décide de la variante ; au départ de
+  la Survie, le joueur choisit entre les deux variantes de l'arme de sa classe.
+- **Arme principale = arme de la classe**, toujours (la case n'accepte que ce type). Une arme
+  d'un autre type ne peut être que l'**arme secondaire** : son auto-attaque part **seule**, sans
+  animation, vers l'ennemi le plus proche, à **60 % des dégâts** et avec **50 % de ses stats
+  d'objet** ; elle ne compte pas pour les sets. En Survie, elle se **trouve en jeu** : le boss en
+  lâche toujours une, une élite parfois (40 % sans arme secondaire, 12 % avec) ; ramassée, elle
+  propose 3 armes d'autres types (variante au hasard, une relance). Les coffres d'arme ne donnent
+  que l'arme de la classe.
+- **Améliorations d'arme** (cartes de niveau « weapon_up », 8 niveaux par emplacement, l'arme
+  principale souvent, la secondaire si elle est portée) : **commune** = dégâts (+15 %) ; **rare** =
+  dégâts + un bonus mineur (critique +5 %, cadence +8 %, zone +10 %, portée +12 %, durée des
+  effets +1 s, soin, délai d'incantation -12 % ; chaque arme a ses bonus de prédilection, le
+  critique pour l'arc) ; **épique** = + un bonus majeur (+1 projectile ou frappe, +1 perforation,
+  +1 rebond, +25 % de zone, explosion plus large) ; **légendaire** = + l'**effet légendaire** de la
+  variante (« tous les N coups » renforcé, état infligé à chaque coup, explosion ou foudre à
+  l'impact), puis deux bonus mineurs et un majeur. Les améliorations restent sur l'emplacement
+  quand l'arme change (`Run.weapon_ups`).
 - Duel : l'auto-attaque entre héros garde × `PvpCaps.BASIC_MULT`. L'adversaire scripté répète
   l'auto-attaque de son arme (pause plus longue tous les 3 coups).
 

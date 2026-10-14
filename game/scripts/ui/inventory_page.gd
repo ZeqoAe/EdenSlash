@@ -247,7 +247,7 @@ func _doll_column(parent: Control, slots: Array) -> void:
 		s.source = "equipped"
 		s.placeholder = ""
 		s.ghost = _ghost_icon(slot)
-		s.can_drop = func(data): return (data.source == "inventory" and data.item.slot == _item_slot(slot)) 			or (data.source == "equipped" and String(data.slot) in ["weapon", "offhand"] and slot in ["weapon", "offhand"] and String(data.slot) != slot)
+		s.can_drop = func(data): return _can_drop_on(slot, data)
 		s.on_drop = func(data): _drop_on(slot, data)
 		s.pressed.connect(func():
 			# case de la poupée : l'inventaire montre les pièces de cet emplacement (les
@@ -267,6 +267,15 @@ func _doll_column(parent: Control, slots: Array) -> void:
 ## Type d'objet d'une case de la poupée (l'arme secondaire est une arme).
 static func _item_slot(slot: String) -> String:
 	return "weapon" if slot == "offhand" else slot
+
+
+## L'arme principale est du type de la classe ; la secondaire, de n'importe quel type.
+func _can_drop_on(slot: String, data) -> bool:
+	if data.source == "inventory":
+		return data.item.slot == _item_slot(slot) and (slot != "weapon" or Profile.can_be_main(data.item))
+	# échange entre les deux cases d'arme (si l'arme secondaire peut être la principale)
+	return data.source == "equipped" and String(data.slot) in ["weapon", "offhand"] and slot in ["weapon", "offhand"] \
+		and String(data.slot) != slot and Profile.can_be_main(Profile.equipped.get("offhand", {}))
 
 
 ## Dépôt sur la case [param slot] : équipe, ou échange l'arme principale et la secondaire.
@@ -624,6 +633,9 @@ func refresh() -> void:
 		s.selected = _selected.get("kind", "") == "item" and is_same(Profile.equipped.get(slot), _selected.get("item"))
 		if s.item.is_empty():
 			s.tooltip_text = "%s : vide (glisse un objet ici)" % SLOT_CAPTIONS.get(slot, Items.SLOT_NAMES[slot])
+		if slot in ["weapon", "offhand"]:
+			s.tooltip_text = ("Arme principale : une arme de type « %s » (celui de la classe)" % GameData.weapon_type(Profile.main_weapon_type()).get("name", "")) \
+				if slot == "weapon" else "Arme secondaire : n'importe quelle arme ; elle frappe seule (%d %% des dégâts)" % roundi(WeaponAttacks.OFFHAND_DMG * 100.0)
 		s.queue_redraw()
 	_preview.show_hero(cid, Profile.weapon_code())
 	_class_icon.texture = UiTheme.texture(String(cd.get("icon", "")))
@@ -815,6 +827,9 @@ func _refresh_detail() -> void:
 	_d_type.text = slot_name + ((" - " + kind.capitalize()) if kind != "" else "") + ("  · porté" if equipped else "")
 	_d_level.text = "Niv. %d%s" % [int(it.level), ("   +%d" % int(it.get("upgrade", 0))) if int(it.get("upgrade", 0)) > 0 else ""]
 	_d_stats.text = _stats_compare(it, equipped)
+	if it.slot == "weapon":
+		var ws := WeaponAttacks.spec_for(it)
+		_d_stats.text = "[color=#ffcf6b][b]%s[/b][/color] [color=#9a98a8](auto-attaque)[/color] : %s\n" % [ws.name, ws.desc] + _d_stats.text
 	_d_next.text = ("Prochain niveau : %d %% de réussite" % roundi(Craft.success_chance(it) * 100.0)) if int(it.get("upgrade", 0)) < Items.MAX_UPGRADE else "Amélioration maximale"
 	var eden: Dictionary = GameData.eden_by_id.get(int(it.get("eden", 0)), {})
 	var fl: PackedStringArray = []
@@ -831,8 +846,12 @@ func _refresh_detail() -> void:
 	_d_set.text = _set_bbcode(it)
 	_b_equip.disabled = false
 	_b_equip.text = "Retirer" if equipped else "Équiper"
-	_b_offhand.visible = it.slot == "weapon" and worn_slot != "offhand" and not (worn_slot == "weapon" and not Profile.equipped.has("offhand"))
+	var off: Dictionary = Profile.equipped.get("offhand", {})
+	_b_offhand.visible = it.slot == "weapon" and worn_slot != "offhand" and (worn_slot != "weapon" or Profile.can_be_main(off))
 	_b_offhand.text = "Échanger" if worn_slot == "weapon" else "Secondaire"
+	if it.slot == "weapon" and not equipped and not Profile.can_be_main(it):
+		_b_equip.text = "Équiper (secondaire)"  # une arme d'un autre type que la classe
+		_b_offhand.visible = false
 	_b_upgrade.disabled = false
 	_b_dismantle.disabled = equipped
 	_b_upgrade.tooltip_text = "" if Profile.in_run else "Hors run : fournitures de ta réserve, or remplacé par des cristaux (1 pour %d or)." % Forge.GOLD_PER_CRYSTAL

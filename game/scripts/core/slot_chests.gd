@@ -51,8 +51,9 @@ static func pool(box: String, epoch: int, stage: int) -> Array:
 		var lv := int(m.weapon) if slot == "weapon" else int(m.armor)
 		var rarity := int(m.rarity)
 		var awakened: bool = m.get("awakened", false) and slot in ["head", "chest", "legs", "gloves", "boots"]
+		var main := Profile.main_weapon_type()  # coffre d'arme : l'arme principale, du type de la classe
 		var cands: Array = GameData.eden_items.filter(func(e): return String(e.get("slot", "")) == slot \
-			and Trophies.in_pool(e) and (int(e.rarity) == rarity or (slot == "trophy" and int(e.rarity) >= Items.MYTHIC)) \
+			and (slot != "weapon" or String(e.get("wtype", "")) == main) and Trophies.in_pool(e) and (int(e.rarity) == rarity or (slot == "trophy" and int(e.rarity) >= Items.MYTHIC)) \
 			and String(e.name).begins_with("Awaken ") == awakened)
 		if cands.is_empty():
 			continue
@@ -84,6 +85,38 @@ static func offer(box: String, epoch: int, stage: int, n := 3) -> Array:
 		it["upgrade"] = 0
 		if m.get("awakened", false) and String(e.name).begins_with("Awaken "):
 			it["awakened"] = true
+		out.append(it)
+	return out
+
+
+## Arme secondaire trouvée en jeu (élites, boss de la Survie) : [param n] armes de types
+## différents (aucune du type de la classe), à la rareté et au palier de la map, chacune avec
+## une de ses deux variantes au hasard.
+static func offhand_offer(epoch: int, stage: int, n := 3) -> Array:
+	var m := Epochs.map_def(epoch, stage)
+	var main := Profile.main_weapon_type()
+	var lv := int(m.weapon)
+	var by_type := {}
+	for e in GameData.eden_items:
+		if String(e.get("slot", "")) != "weapon" or String(e.get("wtype", "")) in ["", main] or not Trophies.in_pool(e) \
+				or int(e.rarity) != int(m.rarity) or String(e.name).begins_with("Awaken "):
+			continue
+		var wt := String(e.wtype)
+		if not by_type.has(wt):
+			by_type[wt] = []
+		by_type[wt].append(e)
+	var types := by_type.keys()
+	types.shuffle()
+	var out: Array = []
+	for wt in types.slice(0, n):
+		# palier de la map, sinon le plus proche
+		var best: Dictionary = {}
+		for e in by_type[wt]:
+			if best.is_empty() or absi(int(e.level) - lv) < absi(int(best.level) - lv):
+				best = e
+		var it := Items.from_template(best, Epochs.cap(stage), int(m.rarity))
+		it["upgrade"] = 0
+		it["auto_variant"] = randi() % 2
 		out.append(it)
 	return out
 
