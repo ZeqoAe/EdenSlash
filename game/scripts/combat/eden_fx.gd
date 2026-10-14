@@ -26,6 +26,18 @@ var _mats := {}  # nom -> [ShaderMaterial ou StandardMaterial3D, info]
 ## Moteur de compatibilité (OpenGL) : matériaux standard (le shader n'y est pas fiable).
 static var _legacy := -1
 var _offset := Transform3D.IDENTITY
+var _scope := -1  # propriétaire d'une aura : 1 moi, 0 un autre héros, -1 aperçu (voir Settings.fx_factor)
+var _recheck := 0.0
+
+
+## 1 si l'effet de [param node] est celui de mon héros, 0 si c'est celui d'un autre héros (adversaire,
+## allié IA), -1 hors combat (aperçus du lobby et de l'équipement : jamais masqués).
+static func _owner_scope(node: Node) -> int:
+	if node is Player:
+		return 0 if (node as Player).foe else 1
+	if node is ClassRival:
+		return 0
+	return -1
 
 
 ## Joue l'effet [param name] à [param pos], orienté selon [param yaw].
@@ -34,11 +46,13 @@ static func play(parent: Node, name: String, pos: Vector3, yaw := 0.0, scale_ :=
 		return null
 	if name == "" or parent == null or not parent.is_inside_tree():
 		return null
-	if not _load(name):
+	var k := Settings.fx_factor("fx_spells", _owner_scope(parent))
+	if k <= 0.0 or not _load(name):
 		return null
 	var fx := EdenFx.new()
 	fx.fx_name = name
 	fx.follow = p_follow
+	fx.alpha_mul = k
 	parent.get_tree().current_scene.add_child(fx)
 	fx.global_transform = Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * scale_), pos)
 	if p_follow:
@@ -58,7 +72,10 @@ static func attach(parent: Node3D, name: String, scale_ := 1.0, dark := false, p
 	fx.loop = true
 	fx.on_dark = dark
 	fx.tint = p_tint
-	fx.alpha_mul = AURA_ALPHA
+	fx._scope = _owner_scope(parent)
+	var k := Settings.fx_factor("fx_auras", fx._scope)
+	fx.alpha_mul = AURA_ALPHA * maxf(k, 0.35)  # masquée : reste créée (réaffichée si on change le réglage)
+	fx.visible = k > 0.0
 	fx.scale = Vector3.ONE * scale_
 	parent.add_child(fx)
 	return fx
@@ -183,6 +200,11 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if loop and _scope >= 0:
+		_recheck -= delta
+		if _recheck <= 0.0:
+			_recheck = 0.5
+			visible = Settings.fx_factor("fx_auras", _scope) > 0.0  # réglage changé pendant la partie
 	_t += delta * (1.0 if loop else SPELL_TIME)
 	var dur := float(_data.get("duration", 1.0))
 	if _t >= dur:

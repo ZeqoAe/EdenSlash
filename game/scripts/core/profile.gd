@@ -39,6 +39,7 @@ var in_run := false
 ## achetables au hub ; insignes : monnaie gagnée en Survie pour les acheter.
 var seen_gear: Array = []
 var insignia := 0
+var wheel := {}  # roulette quotidienne (Wheel) : jour, lancers faits, série sans gain
 ## Fil d'éveil (Unlocks) : entrées ouvertes (gardées pour toujours) et ouvertures pas encore annoncées.
 var unlocked_features: Array = []
 var new_features: Array = []
@@ -262,6 +263,7 @@ func load_profile() -> void:
 	best_level = int(d.get("best_level", 1))
 	seen_gear = d.get("seen_gear", []).map(func(x): return int(x))
 	insignia = int(d.get("insignia", 0))
+	wheel = d.get("wheel", {})
 	unlocked_features = d.get("unlocked_features", [])
 	new_features = d.get("new_features", [])
 	tutorial = d.get("tutorial", {})
@@ -326,7 +328,7 @@ func save_profile() -> void:
 		"unlocked_classes": unlocked_classes, "records": records, "cert_board": cert_board,
 		"archive": archive, "skins": skins, "outfits": outfits, "owned_outfits": owned_outfits, "unlocked_cards": unlocked_cards, "collection": collection, "worn": worn, "dev": dev, "saved_at": Time.get_datetime_string_from_system(false, true),
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level,
-		"seen_gear": seen_gear, "insignia": insignia, "unlocked_features": unlocked_features,
+		"seen_gear": seen_gear, "insignia": insignia, "wheel": wheel, "unlocked_features": unlocked_features,
 		"new_features": new_features, "tutorial": tutorial, "contracts": contracts,
 		"achievements": achievements, "plans": plans, "pantheon": pantheon, "extra_titles": extra_titles, "title": title, "seen_trophies": seen_trophies, "weapon_legend": weapon_legend}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
@@ -678,6 +680,7 @@ func _clear() -> void:
 	best_level = 1
 	seen_gear = []
 	insignia = 0
+	wheel = {}
 	unlocked_features = []
 	new_features = []
 	tutorial = {}
@@ -722,6 +725,7 @@ func reset_all() -> void:
 	best_level = 1
 	seen_gear = []
 	insignia = 0
+	wheel = {}
 	unlocked_features = []
 	new_features = []
 	tutorial = {}

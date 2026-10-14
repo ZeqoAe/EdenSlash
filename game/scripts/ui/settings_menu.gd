@@ -473,6 +473,14 @@ func _build_camera_tab() -> void:
 	_check(v, "Afficher les FPS", "interface", "show_fps")
 	_check(v, "Marqueur au sol des clics de déplacement", "interface", "move_marker")
 	_check(v, "Zone de mes attaques au sol (en bleu, pour apprendre la portée des sorts)", "interface", "attack_zone")
+	_section(v, "Effets visuels (lisibilité et performances)")
+	_note(v, "Les zones d'attaque (avertissements rouges, cercles au sol) restent toujours visibles : seuls les décors lumineux des sorts et des skins sont concernés.")
+	var who := [["all", "Tout afficher"], ["dim_others", "Atténuer ceux des autres héros"], ["hide_others", "Masquer ceux des autres héros"],
+		["hide_mine", "Masquer les miens"], ["hide_all", "Tout masquer (les miens et ceux des autres)"]]
+	_option(v, "Effets de sorts et d'impacts des héros", "interface", "fx_spells", who)
+	_option(v, "Auras de skin (pierres étoilées, auras de collection…)", "interface", "fx_auras", who)
+	_option(v, "Étincelles, poussière et éclairs d'impact", "interface", "fx_particles", [
+		["all", "Tous"], ["reduced", "Réduits (moitié)"], ["off", "Aucun"]])
 	_check(v, "Mode dev (F10 : objets, ressources, progression, actions en run — pour tester)", "interface", "dev_mode")
 
 

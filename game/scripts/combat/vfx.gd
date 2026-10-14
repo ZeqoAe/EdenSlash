@@ -98,6 +98,8 @@ static func shockwave(parent: Node, pos: Vector3, radius: float, color := Color(
 	ring(parent, pos, radius * 0.6, Color(1.0, 0.95, 0.8, 0.7))
 	parent.get_tree().create_timer(0.08).timeout.connect(func(): ring(parent, pos, radius * 1.35, Color(color, 0.7)))
 	flash(parent, pos + Vector3.UP * 0.6, radius * 0.6, color)
+	if Settings.fx_particles() != "all":
+		return  # pas de gerbe de poussière : les anneaux au sol suffisent à lire la zone
 	var p := CPUParticles3D.new()
 	p.one_shot = true
 	p.emitting = false
@@ -131,7 +133,7 @@ static func shockwave(parent: Node, pos: Vector3, radius: float, color := Color(
 
 ## Éclair de lumière bref à l'impact (billboard qui grossit et s'efface).
 static func flash(parent: Node, pos: Vector3, size: float, color := Color(1.0, 0.9, 0.6)) -> void:
-	if Vfx.silent:
+	if Vfx.silent or Settings.fx_particles() == "off":
 		return
 	if parent == null or not parent.is_inside_tree():
 		return
@@ -172,14 +174,14 @@ static func _radial() -> Texture2D:
 
 ## Petite gerbe d'étincelles à l'impact.
 static func spark(parent: Node, pos: Vector3, color := Color(1.0, 0.9, 0.6), crit := false) -> void:
-	if Vfx.silent:
+	if Vfx.silent or Settings.fx_particles() == "off":
 		return
 	if parent == null or not parent.is_inside_tree():
 		return
 	var p := CPUParticles3D.new()
 	p.one_shot = true
 	p.emitting = false
-	p.amount = 22 if crit else 12
+	p.amount = (22 if crit else 12) / (2 if Settings.fx_particles() == "reduced" else 1)
 	p.lifetime = 0.3
 	p.explosiveness = 1.0
 	p.direction = Vector3.UP

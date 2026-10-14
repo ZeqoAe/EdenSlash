@@ -107,7 +107,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
 				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
-				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge" or arg == "--duel-prep" or arg == "--rival-editor" or arg.begins_with("--profile-tab=") or arg.begins_with("--profile-picker=") or arg == "--profile-load" or arg.begins_with("--settings-tab=") or arg.begins_with("--menu=") or arg.begins_with("--chest-open="):
+				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge" or arg == "--duel-prep" or arg == "--rival-editor" or arg.begins_with("--profile-tab=") or arg.begins_with("--profile-picker=") or arg == "--profile-load" or arg.begins_with("--settings-tab=") or arg.begins_with("--menu=") or arg.begins_with("--chest-open=") or arg.begins_with("--chests-tab="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -210,7 +210,11 @@ func _ready() -> void:
 			if Profile.reward_chests.is_empty():
 				for t in Rewards.ORDER:
 					Profile.reward_chests.append(Rewards.make(t, 25))
-			_chests.open(0)
+			var ctab := 0
+			for arg in OS.get_cmdline_user_args():
+				if arg.begins_with("--chests-tab="):
+					ctab = int(arg.get_slice("=", 1))  # test : onglet de l'écran Coffres (1 : Roulette)
+			_chests.open(ctab)
 			var kind := "set"  # --chest-open=gear : coffre ouvert (set, trophy, gear, forge, jewel ; none : aucun)
 			for arg in OS.get_cmdline_user_args():
 				if arg.begins_with("--chest-open="):
@@ -971,8 +975,8 @@ func _build_ui() -> void:
 	_archive.set_title("Carnet", "Archive des trésors : chaque entrée donne un bonus permanent à tous les héros")
 	_workshop = _screen("Atelier", [["Armurerie", GearShopPage.new()], ["Fabrication", FabricationPage.new()]])
 	_workshop.set_title("Atelier", "Armurerie : les pièces de la Survie s'achètent avec tes insignes · Fabrication : les plans des donjons")
-	_chests = _screen("Coffres", [["Coffres", ChestsPage.new()]])
-	_chests.set_title("Coffres", "Coffres de récompense rapportés des runs : apparences, forge, joaillier")
+	_chests = _screen("Coffres", [["Coffres", ChestsPage.new()], ["Roulette", WheelPage.new()]])
+	_chests.set_title("Coffres", "Coffres de récompense rapportés des runs : apparences, forge, joaillier · Roulette : 3 lancers par jour")
 	_settings = SettingsMenu.new()
 	add_child(_settings)
 	_refresh_ui()
@@ -1454,7 +1458,7 @@ func _refresh_ui() -> void:
 	var next := Progression.rewards_at(cid, lvl + 1).filter(func(r): return r.kind != "talent")
 	_reward_text.text = ("Maîtrise %s niv. %d : %s" % [cd.get("name_fr", cid), lvl + 1, String(next[0].name) if not next.is_empty() else "+2 points de talent"]) if lvl < Profile.EXPERTISE_MAX else "Maîtrise maximale"
 	_dev_button.visible = Dev.enabled()
-	_menu.chests._label.text = "Coffres" + ("  (%d)" % Profile.reward_chests.size() if not Profile.reward_chests.is_empty() else "")
+	_menu.chests._label.text = "Coffres" + ("  (%d)" % Profile.reward_chests.size() if not Profile.reward_chests.is_empty() else "") + ("  ★" if Wheel.free_left() > 0 else "")
 	_footer.text = "%d insignes · %d cristaux · %d coffre(s) à ouvrir
 Sauvegarde %d · coffre commun %d objet(s) · %d run(s), %d victoire(s)" % [
 		Profile.insignia, int(Profile.materials.get("crystal", 0)), Profile.reward_chests.size(), Profile.slot, Profile.vault.size(), Profile.runs_done, Profile.runs_won]

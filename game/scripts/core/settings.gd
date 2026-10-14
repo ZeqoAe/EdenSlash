@@ -106,7 +106,8 @@ const DEFAULTS := {
 	"camera": {"rotate_speed": 1.0, "invert_y": false, "distance": 15.0, "shake": 1.0, "action_turn": 1.0},
 	# dev_mode : écran de test (F10), réservé aux tests
 	"interface": {"damage_numbers": "all", "hit_stop": true, "show_fps": false, "move_marker": true, "attack_zone": false, "dev_mode": false,
-		"tower_unlock_all": true, "perfect_hint": true, "pad_labels": "auto"},
+		"tower_unlock_all": true, "perfect_hint": true, "pad_labels": "auto",
+		"fx_spells": "all", "fx_auras": "all", "fx_particles": "all"},
 }
 
 ## Modes de jeu prêts à l'emploi (réglages du menu Contrôles).
@@ -160,6 +161,30 @@ func set_v(section: String, key: String, value: Variant) -> void:
 	_apply_section(section)
 	save_settings()
 	changed.emit()
+
+
+## Lisibilité / performances : part d'opacité (0 à 1) des effets de sorts ([param kind] « fx_spells »)
+## ou des auras de skin (« fx_auras ») selon leur propriétaire : [param mine] = 1 pour mes effets,
+## 0 pour ceux des autres héros, -1 pour un aperçu (jamais masqué). Valeurs : all, dim_others,
+## hide_others, hide_mine, hide_all.
+func fx_factor(kind: String, mine: int) -> float:
+	if mine < 0:
+		return 1.0
+	match String(get_v("interface", kind)):
+		"dim_others":
+			return 1.0 if mine == 1 else 0.35
+		"hide_others":
+			return 1.0 if mine == 1 else 0.0
+		"hide_mine":
+			return 0.0 if mine == 1 else 1.0
+		"hide_all":
+			return 0.0
+	return 1.0
+
+
+## Étincelles, poussière et éclairs d'impact : « all », « reduced » (moitié) ou « off ».
+func fx_particles() -> String:
+	return String(get_v("interface", "fx_particles"))
 
 
 func apply_preset(id: String) -> void:
