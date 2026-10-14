@@ -26,6 +26,7 @@ var _chests: PageScreen
 var _launching := false
 var _open_screen := ""  # test : écran ouvert au démarrage (--inventory, --talents, --appearance, --archive=0...)
 var _settings: SettingsMenu
+var _zone_card: Control  # zone choisie et prochaine récompense (en bas à gauche)
 var _menu := {}  # identifiant -> MenuWidgets.SideButton
 var _current := ""  # sous-menu affiché ("" : aucun, le panneau est caché)
 var _sub: VBoxContainer
@@ -103,7 +104,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
 				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
-				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge" or arg == "--duel-prep" or arg == "--rival-editor" or arg.begins_with("--profile-tab=") or arg.begins_with("--profile-picker=") or arg == "--profile-load" or arg.begins_with("--settings-tab="):
+				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge" or arg == "--duel-prep" or arg == "--rival-editor" or arg.begins_with("--profile-tab=") or arg.begins_with("--profile-picker=") or arg == "--profile-load" or arg.begins_with("--settings-tab=") or arg.begins_with("--menu="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -146,6 +147,9 @@ func _ready() -> void:
 		if "--duel-prep" in OS.get_cmdline_user_args():
 			Duel.rival_class = _duel_opp
 			DuelPrep.open(self, func(): _show_menu("duel"))
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--menu="):  # test : sous-menu ouvert (play, zones, tower, duel)
+			_show_menu(arg.trim_prefix("--menu="))
 	match _open_screen.get_slice("=", 0):
 		"tower-menu":
 			# test : étages de la Tour (--tower-menu=difficulté,étage ; avec un étage : sa fiche ouverte)
@@ -595,6 +599,7 @@ func _build_ui() -> void:
 	zc.offset_top = -136
 	zc.offset_bottom = -28
 	root.add_child(zc)
+	_zone_card = zc
 	var zh := HBoxContainer.new()
 	zh.add_theme_constant_override("separation", 16)
 	zc.add_child(zh)
@@ -731,6 +736,8 @@ func _show_menu(id: String) -> void:
 	_current = id
 	if _sub_panel:
 		_sub_panel.visible = id != ""
+	if _zone_card:
+		_zone_card.visible = id == ""  # sous-menu ouvert : le panneau de zone laisse la place
 	for k in _menu:
 		_menu[k].selected = k == ("play" if id in ["zones", "tower", "tower_floors", "duel"] else id)
 	for c in _sub.get_children():
@@ -829,10 +836,10 @@ func _menu_play() -> void:
 		" · %d point(s) de talent à dépenser" % free if free > 0 else ""], String(cls.get("icon", "")), _open_hero.bind(""))
 	hr.mark(free > 0)
 	_row("Zone de farm", "%s · niveau %d+" % [zone.get("name", ""), 1 + int(zone.get("level_bonus", 0))], "pin", _show_menu.bind("zones"))
-	_row("Zone d'entraînement", "Tester les sorts, les combos et les cartes de %s (rien n'est gagné ni perdu)" % cls.get("name_fr", ""), "stats", _start_training)
-	_row("Profils types", "Builds complets par classe et par niveau (équipement +10, gemmes, enchantements, 12 sorts, certificats, apparence) : adversaires de duel ou à appliquer à ton héros", "equipment", func(): ProfileEditor.open(self, RivalBuilds.blank(Profile.selected_class)))
-	_row("Mode duel", "1 contre 1 contre un héros d'une classe, en 2 manches gagnantes · inscription avec un build complet", "attack", _show_menu.bind("duel"))
-	_row("La Tour", "Gravir %d étages avec une arme de base : une carte et un coffre par étage, les %d classes à battre en duel, une seule vie" % [Tower.FLOORS, Tower.duel_count()], "upgrade", _show_menu.bind("tower"))
+	_row("Zone d'entraînement", "Sorts, combos et cartes, sans enjeu", "stats", _start_training).tooltip_text = "Tester les sorts, les combos et les cartes de %s : rien n'est gagné ni perdu." % cls.get("name_fr", "")
+	_row("Profils types", "Builds complets par classe et niveau", "equipment", func(): ProfileEditor.open(self, RivalBuilds.blank(Profile.selected_class))).tooltip_text = 		"Équipement +10, gemmes, enchantements, 12 sorts, certificats, apparence : adversaires de duel ou à appliquer à ton héros."
+	_row("Mode duel", "1 contre 1 contre un héros, 2 manches gagnantes", "attack", _show_menu.bind("duel")).tooltip_text = "Inscription avec un build complet."
+	_row("La Tour", "%d étages, une seule vie" % Tower.FLOORS, "upgrade", _show_menu.bind("tower")).tooltip_text = 		"Gravir %d étages avec une arme de base : une carte et un coffre par étage, les %d classes à battre en duel, une seule vie." % [Tower.FLOORS, Tower.duel_count()]
 
 
 func _menu_zones() -> void:
