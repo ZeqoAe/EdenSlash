@@ -509,11 +509,12 @@ class AppearancePage extends HBoxContainer:
 		var ok := c.is_empty() or Profile.outfit_unlocked(String(c.id))
 		var on := _current(cid) == String(c.get("outfit", ""))
 		var b := Button.new()
-		b.custom_minimum_size = Vector2(110, 96)
+		b.custom_minimum_size = Vector2(110, 108)
 		b.focus_mode = Control.FOCUS_NONE
 		if not c.is_empty():
 			b.set_meta("report", "Apparence %s « %s » (id %s, modèle %s)" % [_cat, String(c.get("name", "")), String(c.get("id", "")), String(c.get("outfit", ""))])
-		b.clip_text = true
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # nom sur deux lignes plutôt que coupé
+		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.expand_icon = false
@@ -605,7 +606,10 @@ class CardsPage extends HBoxContainer:
 		_filter.focus_mode = Control.FOCUS_NONE
 		_filter.item_selected.connect(func(_i): refresh())
 		head.add_child(_filter)
-		Hud._label(left, "Cartes communes : pour toutes les classes. Cartes de la classe : seulement en run de cette classe, elles renforcent un sort et ne sortent qu'une fois ce sort pris. Certificats : les bonus d'Eden de toutes les classes ; ceux posés sur le plateau (page Classe) sont acquis dès le début de la run, les autres peuvent tomber en run comme des cartes. Les cartes se gagnent en montant de niveau, dans les sanctuaires, sur les gardiens d'élite et chez les marchands (les coffres de la carte donnent de l'équipement) ; les verrouillées se débloquent pour toujours avec leur exploit. Pendant le choix : Bannir retire une carte de la run, Garder la repropose au choix suivant (3 fois chacun par run).", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var intro := Hud._label(left, "Gagnées en montant de niveau, dans les sanctuaires, sur les gardiens d'élite et chez les marchands · survol : détail", 13, UiTheme.MUTED)
+		intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		intro.mouse_filter = Control.MOUSE_FILTER_PASS
+		intro.tooltip_text = "Cartes communes : pour toutes les classes. Cartes de la classe : seulement en run de cette classe, elles renforcent un sort et ne sortent qu'une fois ce sort pris. Certificats : les bonus d'Eden de toutes les classes ; ceux posés sur le plateau (page Classe) sont acquis dès le début de la run, les autres peuvent tomber en run comme des cartes. Les verrouillées se débloquent pour toujours avec leur exploit. Pendant le choix : Bannir retire une carte de la run, Garder la repropose au choix suivant (3 fois chacun par run)."
 		var sc := ScrollContainer.new()
 		sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -646,13 +650,17 @@ class CardsPage extends HBoxContainer:
 			for d in mine:
 				_cur.add_child(_cell(d, "class"))
 		if _detail.text == "":
-			_detail.text = "[color=#c8c8d4]Clique une carte pour voir sa fiche.[/color]"
+			# fiche de la première carte d'emblée (pas de panneau vide)
+			for g in _grid.get_children():
+				if g is GridContainer and g.get_child_count() > 0:
+					(g.get_child(0) as Button).pressed.emit()
+					break
 
 	## Nouveau groupe : titre puis sa grille de cartes.
 	func _sep(text: String) -> void:
 		ItemWidgets.section(_grid, text, 15)
 		_cur = GridContainer.new()
-		_cur.columns = 5
+		_cur.columns = 6
 		_cur.add_theme_constant_override("h_separation", 8)
 		_cur.add_theme_constant_override("v_separation", 8)
 		_grid.add_child(_cur)
@@ -665,7 +673,7 @@ class CardsPage extends HBoxContainer:
 		var b := Button.new()
 		b.custom_minimum_size = Vector2(118, 104)
 		b.focus_mode = Control.FOCUS_NONE
-		b.clip_text = true
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		b.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
 		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		b.expand_icon = false

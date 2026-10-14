@@ -72,8 +72,10 @@ func _ready() -> void:
 		var ei: Dictionary = _load_json(cat_path)
 		eden_sets = ei.get("sets", {})
 		eden_items = ei.get("items", [])
-		cosmetics = ei.get("cosmetics", [])
-		collection = ei.get("collection", [])
+		# entrées de test du client d'Eden (« Available ID (JP) », « Testing ID »…) : écartées
+		var junk := RegEx.create_from_string("(?i)^(test|testing|available id)\\b")
+		cosmetics = (ei.get("cosmetics", []) as Array).filter(func(c): return junk.search(String(c.get("name", ""))) == null)
+		collection = (ei.get("collection", []) as Array).filter(func(c): return junk.search(String(c.get("name", ""))) == null)
 		for c: Dictionary in collection:
 			collection_by_id[int(c.id)] = c
 			if c.has("aura"):
