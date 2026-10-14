@@ -59,6 +59,15 @@ actuel (`IA_Duel.bat` prend le meilleur). Brancher un adversaire IA (la Tour) :
   dans une classe partagée si la Tour s'en sert). `temperature` > 0 : plus faible, plus humain ;
   ~5 ms par décision. Le cerveau est entraîné au niveau 10 sans équipement.
 
+## Duel (JcJ) et profils « opti »
+Règles du duel dans `combat/pvp_caps.gd` (échelle des dégâts, défense relative, soins, acharnement,
+plafonds) appliquées par `Combatant.take_damage` quand `Duel.active`. Profils générés :
+`Godot --headless --path game res://tools/gen_profiles.tscn` (réécrit les profils « auto »: "opti"
+de `data/build_profiles.json`, garde ceux du joueur ; `-- warrior` : essai sans écrire). Essai
+d'équilibrage : arène d'IA en duel, `res://scenes/ml_arena.tscn -- --scenario=duel --brain=res://data/cerveaux/cerveau_hardcore.json
+--episodes=4 --level=90 --hero-build=warrior:90 --foe-build=magician:90` (avec `--fixed-fps 60`).
+Cible : 30 s à 1 min 30 par manche entre deux héros optimisés, à tout niveau.
+
 ## Graphismes
 Réglages d'image communs dans `game/scripts/world/gfx.gd` (qualité graphique), shaders dans
 `game/shaders/` (terrain, herbe, personnages, décor, effets). Pour comparer un changement de

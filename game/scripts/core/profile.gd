@@ -1052,18 +1052,7 @@ func equipment_stats() -> Dictionary:
 
 ## Effets déclenchés des bonus de set actifs.
 func equipment_procs() -> Array:
-	var out: Array = []
-	for b in Items.active_set_bonuses(equipped):
-		out.append_array(b.procs)
-	# passifs des armes mythiques et légendaires d'Eden
-	for slot in equipped:
-		var i := 0
-		for p: Dictionary in equipped[slot].get("passive", {}).get("procs", []):
-			var q := p.duplicate(true)
-			q["id"] = "passive_%s_%d" % [slot, i]
-			out.append(q)
-			i += 1
-	return out
+	return Items.gear_procs(equipped)
 
 
 ## Modèle de l'arme portée : son apparence choisie dans l'archive, sinon le sien.

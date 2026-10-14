@@ -430,6 +430,22 @@ static func active_set_bonuses(equipped: Dictionary) -> Array:
 	return out
 
 
+## Effets déclenchés d'un équipement (emplacement -> objet) : bonus de set actifs, passifs des
+## armes mythiques et légendaires d'Eden et des trophées.
+static func gear_procs(equipped: Dictionary) -> Array:
+	var out: Array = []
+	for b in active_set_bonuses(equipped):
+		out.append_array(b.procs)
+	for slot in equipped:
+		var i := 0
+		for p: Dictionary in equipped[slot].get("passive", {}).get("procs", []):
+			var q := p.duplicate(true)
+			q["id"] = "passive_%s_%d" % [slot, i]
+			out.append(q)
+			i += 1
+	return out
+
+
 ## Lignes de description d'un bonus de set.
 static func bonus_lines(b: Dictionary) -> PackedStringArray:
 	var out: PackedStringArray = []

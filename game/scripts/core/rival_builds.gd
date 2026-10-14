@@ -228,7 +228,16 @@ static func stats(b: Dictionary, level: int) -> Dictionary:
 	for sb in Items.active_set_bonuses(gear):
 		for k in sb.stat:
 			total[k] = float(total.get(k, 0.0)) + float(sb.stat[k])
-	# talents de stats (arbre de maîtrise) et bonus de l'aura
+	var ex := extra_stats(b)
+	for k in ex:
+		total[k] = float(total.get(k, 0.0)) + float(ex[k])
+	return total
+
+
+## Stats du profil hors équipement : talents de stats (arbre de maîtrise), aura, certificats et
+## leur placement sur le plateau.
+static func extra_stats(b: Dictionary) -> Dictionary:
+	var total := {}
 	var tree: Dictionary = GameData.talents.get(String(b.get("class", "")), {}).get("talents", {})
 	for id in b.get("talents", {}):
 		var eff: Dictionary = tree.get(str(id), {}).get("effect", {})

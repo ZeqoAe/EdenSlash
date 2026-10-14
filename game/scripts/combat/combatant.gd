@@ -288,6 +288,15 @@ static func hero_vs_hero_factor(lv: int) -> float:
 	return clampf(hp_k / atk_k, 0.0, 1.2)
 
 
+## Part des PV max qu'un seul coup peut retirer en duel (pas de mort en un coup).
+const PVP_HIT_CAP := 0.2
+
+
+## Puissance d'attaque (échelle des dégâts entre héros en duel).
+func power() -> float:
+	return atk
+
+
 static func is_hero(c: Combatant) -> bool:
 	return c is Player or c is ClassRival
 
@@ -295,10 +304,18 @@ static func is_hero(c: Combatant) -> bool:
 func take_damage(amount: float, source: Combatant = null, crit := false, dot := false) -> void:
 	if is_dead:
 		return
-	if source and source != self and is_hero(self) and is_hero(source):
+	var hvh := source != null and source != self and is_hero(self) and is_hero(source)
+	var pvp := hvh and PvpCaps.active()
+	if pvp:
+		amount *= PvpCaps.damage_mult(self, source)  # duel : échelle propre (PvpCaps)
+	elif hvh:
 		amount *= hero_vs_hero_factor(maxi(level, source.level))
-	# la défense réduit en pourcentage (100 déf = -50 %) : les petits coups restent dangereux
-	var dmg := maxf(1.0, round(amount * damage_taken_mult() * (1.0 if dot else 100.0 / (100.0 + maxf(defense, 0.0)))))
+	# la défense réduit en pourcentage (100 déf = -50 %) : les petits coups restent dangereux ;
+	# en duel, la référence est la défense des deux héros (PvpCaps.taken)
+	var taken := PvpCaps.taken(defense, source.defense) if pvp else 100.0 / (100.0 + maxf(defense, 0.0))
+	var dmg := maxf(1.0, round(amount * damage_taken_mult() * (1.0 if dot else taken)))
+	if pvp:
+		dmg = minf(dmg, ceilf(max_hp * PVP_HIT_CAP))
 	hp = maxf(0.0, hp - dmg)
 	# entraînement : héros invincible, ennemis invincibles ou mannequin (les dégâts s'affichent)
 	if immortal or (Training.active and (Training.hero_god if team == Team.PLAYER else Training.enemies_immortal)):
@@ -322,6 +339,8 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 func heal(amount: float) -> void:
 	if is_dead:
 		return
+	if PvpCaps.active():
+		amount *= PvpCaps.heal_mult()
 	var before := hp
 	hp = minf(max_hp, hp + amount)
 	if team == Team.PLAYER and Run.active:

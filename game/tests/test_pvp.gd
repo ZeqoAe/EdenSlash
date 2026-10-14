@@ -1,5 +1,6 @@
 extends Node
-## Recharges des sorts enchaînés et plafonds des statistiques en duel (PvpCaps) :
+## Recharges des sorts enchaînés, plafonds des statistiques et échelle des dégâts en duel
+## (PvpCaps) :
 ## godot --headless --path game res://tests/test_pvp.tscn
 
 var fails := 0
@@ -59,5 +60,59 @@ func _ready() -> void:
 	p.recalc_stats()
 	check("en duel : plafonds appliqués au calcul des statistiques", p.atk_speed <= 3.0 and p.crit <= 1.0 and p.crit_dmg <= 2.0)
 	Duel.active = false
+	await _test_scale()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit()
+
+
+## Duel entre deux guerriers « opti » (profils générés) : un coup retire la même part des PV au
+## niveau 25 et au 90, jamais plus de 20 % ; soins réduits ; acharnement.
+func _test_scale() -> void:
+	var all = JSON.parse_string(FileAccess.get_file_as_string(RivalBuilds.PATH))
+	var frac := {}
+	Duel.active = true
+	PvpCaps.elapsed = 0.0
+	for lv in [25, 90]:
+		var b: Dictionary = {}
+		for x in all:
+			if String(x.get("auto", "")) != "" and String(x["class"]) == "warrior" and int(x.level) == lv:
+				b = x
+		if b.is_empty():
+			check("profil opti du guerrier niveau %d" % lv, false)
+			continue
+		var hs: Array = []
+		for i in 2:
+			var h := Player.new()
+			h.foe = true
+			h.class_id = "warrior"
+			h.level = lv
+			h.use_build(b, lv)
+			add_child(h)
+			hs.append(h)
+		await get_tree().physics_frame
+		for h in hs:
+			h.set_physics_process(false)
+			h.evasion_chance = 0.0
+			h.parry_chance = 0.0
+		var a: Player = hs[0]
+		var t: Player = hs[1]
+		t.take_damage(a.atk, a)
+		frac[lv] = (t.max_hp - t.hp) / t.max_hp
+		t.hp = t.max_hp
+		t.take_damage(a.atk * 1000.0, a)
+		check("niveau %d : un coup énorme retire 20 %% des PV au plus (%.1f %%)" % [lv, (t.max_hp - t.hp) / t.max_hp * 100.0],
+			t.hp >= t.max_hp * (1.0 - Combatant.PVP_HIT_CAP) - 1.0 and not t.is_dead)
+		t.hp = t.max_hp * 0.5
+		var before := t.hp
+		t.heal(t.max_hp * 0.2)
+		check("niveau %d : soins réduits en duel" % lv, absf((t.hp - before) - t.max_hp * 0.2 * PvpCaps.HEAL_MULT) < 1.0)
+		for h in hs:
+			h.queue_free()
+	if frac.size() == 2:
+		check("même part des PV par coup au niveau 25 et 90 (%.2f %% / %.2f %%)" % [frac[25] * 100.0, frac[90] * 100.0],
+			frac[90] > 0.002 and absf(frac[25] - frac[90]) < 0.35 * frac[90])
+	PvpCaps.elapsed = PvpCaps.PRESSURE_START + PvpCaps.PRESSURE_STEP
+	check("acharnement : dégâts ×2 et soins ÷2 un palier plus tard", is_equal_approx(PvpCaps.pressure(), 2.0)
+		and is_equal_approx(PvpCaps.heal_mult(), PvpCaps.HEAL_MULT / 2.0))
+	PvpCaps.elapsed = 0.0
+	Duel.active = false

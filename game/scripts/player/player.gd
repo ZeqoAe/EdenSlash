@@ -97,6 +97,8 @@ var kit_chains: Dictionary = {}  # case -> [{id, rank}] : enchaînements (héros
 var pvp_capped: Array = []  # statistiques ramenées à leur plafond JcJ (PvpCaps, duel)
 var foe_gear: Dictionary = {}  # emplacement -> objet : équipement du héros ennemi (duel)
 var foe_look: Dictionary = {}  # {body, head, back} : apparence du héros ennemi (duel)
+var foe_extra: Dictionary = {}  # stats du profil hors équipement : maîtrise, certificats, aura
+var built := false  # joué sur un profil type (use_build) : ni l'équipement ni les cartes du joueur
 
 var _state := "idle"  # idle, attack, skill, dodge, jump, dead
 var _state_time := 0.0
@@ -209,14 +211,15 @@ func kit_skill_def(id: int) -> Dictionary:
 func recalc_stats() -> void:
 	if Run.active and not foe:
 		Run.hero_level = level  # puissance des objets portés (suit le niveau, plafonnée)
-	var eq := _foe_equipment_stats() if foe else Profile.equipment_stats()
-	var arc := {} if foe else Archive.bonus()  # bonus permanents de l'archive
+	var own := foe or built  # héros ennemi ou profil type : ses propres stats
+	var eq := _foe_equipment_stats() if own else Profile.equipment_stats()
+	var arc := {} if own else Archive.bonus()  # bonus permanents de l'archive
 	for k in arc:
 		eq[k] = float(eq.get(k, 0.0)) + float(arc[k])
-	var aura := {} if foe else Profile.aura_stats(class_id)  # auras portées (pierres étoilées, pierres de lune)
+	var aura := {} if own else Profile.aura_stats(class_id)  # auras portées (pierres étoilées, pierres de lune)
 	for k in aura:
 		eq[k] = float(eq.get(k, 0.0)) + float(aura[k])
-	var ps := {} if foe else Run.passive_stats()
+	var ps := foe_extra.duplicate() if own else Run.passive_stats()
 	for st in timed_stats:  # buffs temporaires des trophées
 		if has_status(st):
 			for k in timed_stats[st]:
@@ -275,7 +278,7 @@ func recalc_stats() -> void:
 	xp_mult = 1.0 + ps.get("xp_pct", 0.0)
 	execute = minf(ps.get("execute", 0.0), 0.3)
 	pvp_capped = PvpCaps.apply(self) if PvpCaps.active() else []  # duel : plafonds JcJ
-	procs = [] if foe else Run.passive_procs() + Profile.equipment_procs()
+	procs = Items.gear_procs(foe_gear) if own else Run.passive_procs() + Profile.equipment_procs()
 	hp = clampf(max_hp * ratio, 1.0, max_hp)
 	health_changed.emit(hp, max_hp)
 	xp_changed.emit(xp, GameData.xp_to_next(level), level)
@@ -355,6 +358,20 @@ func _foe_weapon_code() -> String:
 	if String(foe_look.get("weapon_skin", "")) != "":
 		return String(foe_look.weapon_skin)
 	return String(foe_gear.get("weapon", {}).get("weapon", ""))
+
+
+func power() -> float:
+	return maxf(atk, matk)
+
+
+## Joue le profil type [param b] au niveau [param lv] : son équipement (passifs et sets
+## compris), sa maîtrise, ses certificats, son aura et son apparence (héros ennemi du duel, ou
+## héros de l'arène d'IA). À poser avant add_child.
+func use_build(b: Dictionary, lv: int) -> void:
+	foe_gear = RivalBuilds.items(b, lv)
+	foe_extra = RivalBuilds.extra_stats(b)
+	foe_look = b.get("look", {})
+	built = true
 
 
 ## Stats de l'équipement du héros ennemi (comme Profile.equipment_stats, sets compris).

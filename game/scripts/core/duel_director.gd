@@ -66,6 +66,7 @@ func _start_round() -> void:
 		_rival.died.connect(_on_rival_died)
 	phase = "countdown"
 	_t = COUNTDOWN
+	PvpCaps.elapsed = 0.0
 	d.message.emit("Manche %d · %d - %d" % [Duel.round_n, Duel.wins, Duel.losses], 1.5)
 	if p.autoplay:
 		var opp: Combatant = _rival if _rival else _foe
@@ -86,8 +87,7 @@ func _spawn_brain_foe() -> bool:
 	h.kit_skills = kit.skills
 	h.kit_chains = kit.chains
 	if not b.is_empty():
-		h.foe_gear = RivalBuilds.items(b, Duel.level)
-		h.foe_look = b.get("look", {})
+		h.use_build(b, Duel.level)
 	d.add_child(h)
 	var pilot := MlDuelPilot.new()
 	d.add_child(pilot)
@@ -111,6 +111,11 @@ func _spawn_brain_foe() -> bool:
 
 func update(delta: float) -> void:
 	_t -= delta
+	if phase == "fight":
+		var was := PvpCaps.elapsed
+		PvpCaps.elapsed += delta
+		if was < PvpCaps.PRESSURE_START and PvpCaps.elapsed >= PvpCaps.PRESSURE_START:
+			d.message.emit("Acharnement : les coups font plus mal, les soins faiblissent", 2.5)
 	match phase:
 		"countdown":
 			var n := ceili(_t)

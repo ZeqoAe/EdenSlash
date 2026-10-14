@@ -90,6 +90,10 @@ var _episodes := 0
 var _hero_arg := "warrior"
 var _done_count := 0
 var _wins := 0
+var _level := LEVEL  # --level= : niveau des deux héros (équilibrage JcJ)
+var _hero_build := ""  # --hero-build= : profil type joué par le héros (nom, RivalBuilds)
+var _foe_build := ""  # --foe-build= : profil type du héros ennemi (duel)
+var _fight_times: Array = []  # durée des combats finis (victoire ou défaite)
 ## Scénarios du mode cerveau (mêmes réglages que ia/curriculum.py).
 const PRESETS := {
 	"mannequin": {"scenario": "dummy", "skills": 12, "max_time": 30},
@@ -129,6 +133,12 @@ func _ready() -> void:
 			_foe_arg = _class_from_name(arg.trim_prefix("--foe="))  # classe du héros ennemi (duel)
 		elif arg.begins_with("--foe-brain="):
 			_foe_brain_arg = arg.trim_prefix("--foe-brain=")
+		elif arg.begins_with("--level="):
+			_level = clampi(int(arg.trim_prefix("--level=")), 1, 101)
+		elif arg.begins_with("--hero-build="):
+			_hero_build = arg.trim_prefix("--hero-build=")
+		elif arg.begins_with("--foe-build="):
+			_foe_build = arg.trim_prefix("--foe-build=")
 		elif arg.begins_with("--foe-temperature="):
 			_foe_temperature = float(arg.trim_prefix("--foe-temperature="))
 	_setup_game_state()
@@ -292,6 +302,7 @@ func _physics_process(delta: float) -> void:
 	if _wait > 0:
 		_wait -= 1
 		_t += delta
+		PvpCaps.elapsed = _t
 		_bot.pulse.clear()  # une touche n'est appuyée qu'à la première image de la décision
 		_foe_bot.pulse.clear()
 		if _low_hp > 0.0 and player and not player.is_dead:
@@ -317,10 +328,16 @@ func _brain_step() -> void:
 		_done_count += 1
 		if res.info.result == "win":
 			_wins += 1
+		if res.info.result != "timeout":
+			_fight_times.append(float(res.info.t))
 		print("combat %d (%s) : %s en %.1f s, dégâts %d %%, subis %d %% (victoires %d / %d)" % [_done_count, res.info.hero, res.info.result,
 			res.info.t, roundi(res.info.dealt * 100), roundi(res.info.taken * 100), _wins, _done_count])
 		if _episodes > 0 and _done_count >= _episodes:
-			print("BILAN %s : %d victoires sur %d combats" % [_brain_scen.get("scenario", ""), _wins, _done_count])
+			var avg := 0.0
+			for t in _fight_times:
+				avg += float(t) / maxf(_fight_times.size(), 1)
+			print("BILAN %s : %d victoires sur %d combats, %d sans vainqueur, durée moyenne %.1f s" % [_brain_scen.get("scenario", ""), _wins, _done_count,
+				_done_count - _fight_times.size(), avg])
 			get_tree().quit()
 			return
 		_reset(_brain_scen)
@@ -395,15 +412,26 @@ func _reset(msg: Dictionary) -> void:
 	var hero_class := String(msg.get("hero_class", "warrior"))
 	if hero_class == "random" or not GameData.classes.has(hero_class):
 		hero_class = String(ML_CLASSES.pick_random())
+	var hb := _build(_hero_build)
+	if not hb.is_empty():
+		hero_class = String(hb["class"])
 	_ep["hero_class"] = hero_class
 	Run.class_id = hero_class
+	Run.hero_level = _level
 	Profile.selected_class = hero_class
 	var hk := _pick_kit(hero_class, int(msg.get("skills", 4)), String(msg.get("loadout", "default")) == "random")
+	if not hb.is_empty():
+		hk = Duel.kit_from_grid(hero_class, hb.get("spells", []))
 	Run.skills = hk.skills
 	Run.chains = hk.chains
+	# règles du duel du jeu (PvpCaps) pour les essais d'équilibrage ; l'apprentissage reste au
+	# niveau 10 sans équipement, avec l'échelle des héros d'origine
+	Duel.active = scen == "duel" and (_level != LEVEL or _hero_build != "" or _foe_build != "")
 	_bot.clear()
 	player = Player.new()
-	player.level = LEVEL
+	player.level = _level
+	if not hb.is_empty():
+		player.use_build(hb, _level)
 	player.bot = _bot
 	add_child(player)
 	var hero_at := _random_point(5.0)
@@ -460,6 +488,10 @@ func _reset(msg: Dictionary) -> void:
 	_prev_hero_hp = player.hp
 	_prev_counts = player.ml_counts.duplicate()
 	_total = {"dealt": 0.0, "taken": 0.0}
+	if _brain and _done_count == 0 and foe_hero:
+		await get_tree().physics_frame
+		print("  ", _sheet(player), "
+  ", _sheet(foe_hero))
 
 
 ## Jeu de sorts de la classe [param cid] : 4 cases, puis 2 enchaînements par case (12 sorts).
@@ -537,11 +569,18 @@ func _spawn_foe(msg: Dictionary, hero_at: Vector3) -> void:
 	var fcls := String(msg.get("foe_class", "random"))
 	if fcls == "random" or not GameData.classes.has(fcls):
 		fcls = String(ML_CLASSES.pick_random())
+	var fb := _build(_foe_build)
+	if not fb.is_empty():
+		fcls = String(fb["class"])
 	var fk := _pick_kit(fcls, int(msg.get("skills", 12)), String(msg.get("foe_loadout", msg.get("loadout", "default"))) == "random")
+	if not fb.is_empty():
+		fk = Duel.kit_from_grid(fcls, fb.get("spells", []))
 	foe_hero = Player.new()
 	foe_hero.foe = true
 	foe_hero.class_id = fcls
-	foe_hero.level = LEVEL
+	foe_hero.level = _level
+	if not fb.is_empty():
+		foe_hero.use_build(fb, _level)
 	foe_hero.kit_skills = fk.skills
 	foe_hero.kit_chains = fk.chains
 	_foe_bot.clear()
@@ -561,6 +600,32 @@ func _spawn_foe(msg: Dictionary, hero_at: Vector3) -> void:
 		if not _brains.has(path):
 			_brains[path] = MlBrain.load_file(path)
 		_foe_brain = _brains[path]
+
+
+## Profil type nommé [param name] (RivalBuilds), ou « classe:niveau » (profil « opti » généré,
+## tools/gen_profiles.gd) ; vide si aucun.
+func _build(name: String) -> Dictionary:
+	if name == "":
+		return {}
+	# les profils du jeu, même si la ligne de commande met RivalBuilds en mode test
+	var all = JSON.parse_string(FileAccess.get_file_as_string(RivalBuilds.PATH))
+	if not all is Array:
+		return {}
+	if name.contains(":"):
+		for b in all:
+			if String(b.get("auto", "")) != "" and String(b.get("class", "")) == _class_from_name(name.get_slice(":", 0)) 					and int(b.get("level", 0)) == int(name.get_slice(":", 1)):
+				return b
+	for b in all:
+		if String(b.get("name", "")) == name:
+			return b
+	push_error("profil type introuvable : " + name)
+	return {}
+
+
+## Fiche courte d'un héros (essais d'équilibrage JcJ).
+static func _sheet(h: Player) -> String:
+	return "%s niv. %d : PV %d, att. %d, att. mag. %d, déf. %d, crit %d %%, esq. %d %%" % [h.display_name if h.display_name != "" else h.class_id,
+		h.level, h.max_hp, h.atk, h.matk, h.defense, roundi(h.crit * 100), roundi(h.evasion_chance * 100)]
 
 
 ## Identifiant de classe d'après un identifiant ou un nom français (« magicien », « Samouraï »,

@@ -23,7 +23,7 @@ var on_use: Callable
 var _tab := 0
 var _slot := "weapon"
 
-var _saved: OptionButton
+var _saved: Button
 var _name: LineEdit
 var _class_btn: Button
 var _level: SpinBox
@@ -74,10 +74,8 @@ func _ready() -> void:
 	v.add_child(top)
 	var t := Hud._label(top, "Profils types", 24, UiTheme.GOLD)
 	t.add_theme_font_override("font", UiTheme.title_font())
-	_saved = OptionButton.new()
-	_saved.focus_mode = Control.FOCUS_NONE
-	_saved.custom_minimum_size = Vector2(260, 38)
-	_saved.item_selected.connect(_on_load)
+	_saved = MenuWidgets.glass_button("", 15, Vector2(260, 38))
+	_saved.pressed.connect(_load_menu)
 	top.add_child(_saved)
 	_name = LineEdit.new()
 	_name.custom_minimum_size = Vector2(240, 38)
@@ -195,22 +193,52 @@ func _section(parent: Control, text: String) -> void:
 
 
 func _refresh_saved() -> void:
-	_saved.clear()
-	_saved.add_item("Charger un profil ▾ (%d)" % RivalBuilds.list().size())
-	var l := RivalBuilds.list().duplicate()
-	for b in l:
-		_saved.add_item("%s · %s niv. %d" % [b.get("name", "?"), GameData.class_data(String(b.get("class", ""))).get("name_fr", ""), int(b.get("level", 20))])
-	_saved.select(0)
+	_saved.text = "Charger un profil ▾ (%d)" % RivalBuilds.list().size()
+
+
+## Profils enregistrés, rangés par classe (sous-menus), du plus bas niveau au plus haut ; la
+## classe du profil ouvert en premier.
+func _load_menu() -> void:
+	var by_class := {}
+	var list := RivalBuilds.list()
+	for i in list.size():
+		var cid := String(list[i].get("class", ""))
+		if not by_class.has(cid):
+			by_class[cid] = []
+		by_class[cid].append(i)
+	var order: Array = []
+	var cur := String(build.get("class", ""))
+	if by_class.has(cur):
+		order.append(cur)
+	for cid in GameData.classes:
+		if by_class.has(cid) and not cid in order:
+			order.append(cid)
+	for cid in by_class:
+		if not cid in order:
+			order.append(cid)
+	var pm := PopupMenu.new()
+	for cid in order:
+		var sub := PopupMenu.new()
+		var idx: Array = by_class[cid]
+		idx.sort_custom(func(a, b): return int(list[a].get("level", 0)) < int(list[b].get("level", 0)) 			or (int(list[a].get("level", 0)) == int(list[b].get("level", 0)) and String(list[a].get("name", "")) < String(list[b].get("name", ""))))
+		for i in idx:
+			sub.add_item("%s · niv. %d" % [list[i].get("name", "?"), int(list[i].get("level", 20))], i)
+		sub.id_pressed.connect(_on_load)
+		pm.add_submenu_node_item("%s (%d)" % [GameData.class_data(cid).get("name_fr", cid), idx.size()], sub)
+	add_child(pm)
+	pm.popup_hide.connect(pm.queue_free)
+	var r := _saved.get_global_rect()
+	pm.position = Vector2i(int(r.position.x), int(r.end.y))
+	pm.popup()
 
 
 func _on_load(i: int) -> void:
-	if i >= 1 and i - 1 < RivalBuilds.list().size():
-		build = (RivalBuilds.list()[i - 1] as Dictionary).duplicate(true)
+	if i >= 0 and i < RivalBuilds.list().size():
+		build = (RivalBuilds.list()[i] as Dictionary).duplicate(true)
 		if not build.has("level"):
 			build["level"] = 20
 		build["spells"] = Duel.grid12(build.get("spells", []))
 		_msg.text = "« %s » chargé" % build.name
-	_saved.select(0)
 	_refresh_all()
 
 
