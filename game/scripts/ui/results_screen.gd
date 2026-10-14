@@ -35,13 +35,29 @@ func show_results() -> void:
 		Hud.ACCENT if Run.result == "victoire" else (Color(0.5, 0.9, 1.0) if Run.result == "extraction" else Color(0.95, 0.4, 0.4)))
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var cls := Run.class_data()
-	var stage_txt := ""
+	# résultats en tuiles : grand chiffre et légende
+	var tiles := HBoxContainer.new()
+	tiles.alignment = BoxContainer.ALIGNMENT_CENTER
+	tiles.add_theme_constant_override("separation", 10)
+	v.add_child(tiles)
+	var data := [[String(cls.get("name_fr", "")), "classe"], [str(Run.max_level), "niveau atteint"], [Run.duration_text(), "durée"],
+		[str(Run.kills), "monstres"], [str(Run.elites), "élites"], [str(Run.gold), "or gagné"]]
 	if not Tower.active and not Duel.active and not Training.active:
-		stage_txt = "   ·   Étape %d/%d : %s" % [Run.stage, RunDirector.STAGES, GameData.zone(Run.zone_id).get("name", Run.zone_id)]
-	var s := Hud._label(v, "%s · niveau atteint %d · %s   ·   Monstres vaincus : %d   ·   Élites : %d   ·   Or gagné : %d%s" % [
-		cls.get("name_fr", ""), Run.max_level, Run.duration_text(), Run.kills, Run.elites, Run.gold, stage_txt], 16, Color(0.9, 0.9, 0.95))
-	s.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		data.append(["%d / %d" % [Run.stage, RunDirector.STAGES], String(GameData.zone(Run.zone_id).get("name", Run.zone_id))])
+	for d in data:
+		var p := PanelContainer.new()
+		p.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.08, 0.06, 0.14, 0.95), UiTheme.GOLD_DIM, 1, 8))
+		p.custom_minimum_size = Vector2(118, 0)
+		tiles.add_child(p)
+		var tv := VBoxContainer.new()
+		tv.add_theme_constant_override("separation", 0)
+		p.add_child(tv)
+		var big := Hud._label(tv, String(d[0]), 21, UiTheme.GOLD)
+		big.add_theme_font_override("font", UiTheme.bold_font())
+		big.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var cap := Hud._label(tv, String(d[1]), 12, UiTheme.MUTED)
+		cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cap.clip_text = true
 	if Run.unlocked_name != "":
 		var u := Hud._label(v, "Nouvelle zone débloquée : %s !" % Run.unlocked_name, 22, Color(0.55, 1.0, 0.6))
 		u.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

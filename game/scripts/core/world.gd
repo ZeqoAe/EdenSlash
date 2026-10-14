@@ -336,6 +336,7 @@ func _parse_args() -> void:
 				Profile.changed.emit()
 		elif arg.begins_with("--start-level="):
 			player.level = int(arg.trim_prefix("--start-level="))
+			Run.max_level = maxi(Run.max_level, player.level)
 			player.recalc_stats()
 			player.hp = player.max_hp
 

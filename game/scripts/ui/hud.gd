@@ -736,6 +736,13 @@ func show_message(text: String, duration: float) -> void:
 	_msg_tween.chain().tween_property(_banner, "modulate:a", 0.0, 0.5)
 
 
+## Cache tout de suite le bandeau d'annonce (un choix de cartes ou un menu s'ouvre par-dessus).
+func hide_banner() -> void:
+	if _msg_tween:
+		_msg_tween.kill()
+	_banner.modulate.a = 0.0
+
+
 ## Ligne du fil de butin (5 au plus, la plus récente en bas), effacée après quelques secondes.
 func feed(text: String, color := Color(1.0, 0.88, 0.55)) -> void:
 	var box := PanelContainer.new()

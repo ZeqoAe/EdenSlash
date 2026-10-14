@@ -123,6 +123,9 @@ func _show_next() -> void:
 	_title.text = item[0]
 	_reroll_fn = item[2] if item.size() > 2 else Callable()
 	_show_cards(item[1])
+	var host := get_parent()
+	if host and "hud" in host and host.hud:
+		host.hud.hide_banner()  # pas d'annonce sous le titre du choix
 	_root.visible = true
 	get_tree().paused = true
 
