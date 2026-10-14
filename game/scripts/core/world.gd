@@ -449,7 +449,7 @@ func _on_player_died(_who: Combatant, _killer: Combatant) -> void:
 		await get_tree().create_timer(2.5).timeout
 		tower_end("defaite")
 		return
-	if revives_left <= 0:
+	if revives_left <= 0 or Challenge.has("one_life"):
 		hud.show_message("Tu es tombé au combat…", 2.5)
 		await get_tree().create_timer(2.5).timeout
 		end_run("defaite")

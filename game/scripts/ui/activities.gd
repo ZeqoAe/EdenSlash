@@ -7,22 +7,26 @@ extends RefCounted
 
 const IMG := "res://assets/ui/activities/%s.jpg"
 const GROUPS := [["pve", "Aventure (JcE)"], ["pvp", "Affrontements (JcJ)"]]
+## Rangées de la page Jouer (3 colonnes) : Aventure, Défis, Affrontements.
+const ROWS := [["adventure", "Aventure"], ["challenge", "Défis"], ["versus", "Affrontements"]]
 const LIST := [
-	{"id": "survival", "group": "pve", "name": "Survie", "sub": "Carte ouverte, horde, coffres et boss",
+	{"id": "survival", "row": "adventure", "group": "pve", "name": "Survie", "sub": "Carte ouverte, horde, coffres et boss", "gain": "Maîtrise, insignes, pièces",
 		"desc": "Une grande carte à explorer en 3 étapes pendant que la horde grossit : objets à casser, coffres, lieux à usage unique, forts d'élite, puis le boss et le portail vers l'étape suivante."},
-	{"id": "tower", "unlock": "tower", "group": "pve", "name": "La Tour", "sub": "200 étages, une seule vie",
-		"desc": "Gravis les étages avec ton équipement (préréglage actif) : une carte et un coffre par étage, des héros de toutes les classes à battre en duel, une seule vie."},
-	{"id": "dungeon", "unlock": "dungeons", "group": "pve", "name": "Donjons", "sub": "Salles, vagues et boss", "soon": true,
+	{"id": "dungeon", "row": "adventure", "unlock": "dungeons", "group": "pve", "name": "Donjons", "sub": "Salles, vagues et boss", "soon": true, "gain": "Pièces ciblées, plans",
 		"desc": "Des donjons d'Eden en plusieurs salles : vagues de monstres, mécaniques de boss et butin propre à chaque donjon."},
-	{"id": "duel", "unlock": "duel_free", "group": "pvp", "name": "Duel", "sub": "1 contre 1, 2 manches gagnantes",
-		"desc": "Affronte un héros d'une classe, piloté par l'IA scriptée ou par un cerveau entraîné, avec ton build complet."},
-	{"id": "arena2", "unlock": "arenas", "group": "pvp", "name": "Arène 2 contre 2", "sub": "Équipes de deux héros", "soon": true,
-		"desc": "Deux héros contre deux : composition d'équipe, soutien et coups combinés."},
-	{"id": "arena3", "unlock": "arenas", "group": "pvp", "name": "Arène 3 contre 3", "sub": "Équipes de trois héros", "soon": true,
-		"desc": "Trois héros contre trois : rôles (tank, soins, dégâts) et contrôle de la zone."},
-	{"id": "battlefield", "group": "pvp", "name": "Champ de bataille", "sub": "10 contre 10", "soon": true,
-		"desc": "Un immense champ de bataille en 10 contre 10 : objectifs à tenir, renforts et grandes mêlées."},
-	{"id": "training", "group": "", "name": "Zone d'entraînement", "sub": "Sorts, armes et cartes, sans enjeu",
+	{"id": "tower", "row": "adventure", "unlock": "tower", "group": "pve", "name": "La Tour", "sub": "200 étages, une seule vie", "gain": "Joaillerie, cristaux, apparences",
+		"desc": "Gravis les étages avec ton équipement (préréglage actif) : une carte et un coffre par étage, des héros de toutes les classes à battre en duel, une seule vie."},
+	{"id": "mastery", "row": "challenge", "unlock": "daily", "img": "survival", "group": "pve", "name": "Défi de maîtrise", "sub": "Une Survie par jour, deux contraintes", "gain": "Maîtrise ×2, insignes ×1,5",
+		"desc": "Une Survie de l'époque I avec deux modificateurs imposés et trois classes proposées. La maîtrise gagnée est doublée, +600 à la première réussite du jour. Ici aussi : les contrats de ta classe."},
+	{"id": "trials", "row": "challenge", "img": "training", "group": "pve", "name": "Épreuves de maîtrise", "sub": "Leçons chronométrées par famille", "soon": true, "gain": "Médailles, maîtrise",
+		"desc": "Une leçon par famille de classes, au chrono, avec tes sorts et leurs états propres : bronze, argent, or."},
+	{"id": "rush", "row": "challenge", "unlock": "heroic", "img": "dungeon", "group": "pve", "name": "Ruée des boss", "sub": "Les boss d'époque à la suite", "soon": true, "gain": "Titres",
+		"desc": "Enchaîne les boss des époques gagnées, sans souffler."},
+	{"id": "duel", "row": "versus", "unlock": "duel_free", "group": "pvp", "name": "Duel", "sub": "1 contre 1, à l'arme ou équipé", "gain": "Rangs, titres, maîtrise",
+		"desc": "Affronte un héros d'une classe, piloté par l'IA scriptée ou par un cerveau entraîné : à armes égales (niveau libre) ou avec ton build complet."},
+	{"id": "arenas", "row": "versus", "unlock": "arenas", "img": "arena2", "group": "pvp", "name": "Arènes", "sub": "2 contre 2, 3 contre 3, alliés IA", "soon": true, "gain": "Titres",
+		"desc": "Toi et tes alliés IA contre une équipe IA : composition d'équipe, soutien et coups combinés, hors ligne."},
+	{"id": "training", "row": "", "group": "", "name": "Zone d'entraînement", "sub": "Sorts, armes et cartes, sans enjeu", "gain": "Rien (banc d'essai)",
 		"desc": "Teste tes sorts, tes armes et tes cartes sur des mannequins et des adversaires réglables : rien n'est gagné ni perdu."},
 ]
 
@@ -118,7 +122,7 @@ static func banner(a: Dictionary) -> Control:
 
 
 static func _art(parent: Control, a: Dictionary, shade: float, inset := 3.0) -> void:
-	var path := IMG % String(a.id)
+	var path := IMG % String(a.get("img", a.id))
 	if ResourceLoader.exists(path):
 		var img := TextureRect.new()
 		img.texture = load(path)

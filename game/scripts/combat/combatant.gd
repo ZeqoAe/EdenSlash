@@ -368,6 +368,8 @@ func _burst_limit(dmg: float) -> float:
 func heal(amount: float) -> void:
 	if is_dead:
 		return
+	if team == Team.PLAYER and not ModeRules.modifiers.is_empty():
+		amount = float(Modifiers.apply("heal_mult", amount, ModeRules.modifiers))  # « soins reçus ÷ 2 »
 	if PvpCaps.active():
 		amount *= PvpCaps.heal_mult()
 	var before := hp

@@ -34,6 +34,10 @@ var elites := 0
 var loot: Array = []
 var gold := 0
 var started_at := 0
+var perfects := 0  # annulations parfaites de la run (contrats de classe)
+var chests_total := 0  # coffres de la carte ouverts pendant la run
+var contracts_done: Array = []  # contrats terminés à la fin de la run (bilan)
+var challenge_first := false  # 1re réussite du Défi de maîtrise du jour (bilan)
 var fortune_insignia := 0  # insignes gagnés à l'autel de la fortune (déjà crédités)
 var result := ""  # victoire, defaite, abandon
 var max_level := 1
@@ -105,6 +109,11 @@ func start(cid: String) -> void:
 	unlocked_name = ""
 	unlocked_epoch = ""
 	fortune_insignia = 0
+	perfects = 0
+	chests_total = 0
+	contracts_done = []
+	challenge_first = false
+	Challenge.reset()
 	survival = false
 	epoch = 1
 	seen_items = []
@@ -140,6 +149,14 @@ func finish(res: String) -> void:
 	Profile.record_max("best_combo", combo_best)
 	Profile.runs_done += 1
 	expertise_gain = max_level * 15 + kills / 2 + elites * 10 + (200 if res == "victoire" else (60 if res == "extraction" else 0)) + 120 * (stage - 1)
+	var settled := Challenge.settle(expertise_gain, res)
+	expertise_gain = int(settled.gain)
+	challenge_first = bool(settled.first)
+	if survival and res != "abandon":
+		contracts_done = Contracts.report(class_id, {"kills": kills, "elites": elites, "chests": chests_total, "perfects": perfects,
+			"max_level": max_level, "wins": 1 if res == "victoire" else 0})
+		for c in contracts_done:
+			expertise_gain += int(c.reward)
 	expertise_levels = Profile.add_expertise(class_id, expertise_gain)
 	if survival:
 		# pièces choisies dans les coffres : achetables au hub ; insignes selon la distance parcourue
@@ -147,6 +164,8 @@ func finish(res: String) -> void:
 			if not int(id) in Profile.seen_gear:
 				Profile.seen_gear.append(int(id))
 		insignia_gain = 25 * stage + kills / 25 + elites * 2 + (60 * epoch if res == "victoire" else 0)
+		if Challenge.active:
+			insignia_gain = roundi(insignia_gain * 1.5)  # Défi de maîtrise : insignes ×1,5
 		Profile.insignia += insignia_gain
 		insignia_gain += fortune_insignia  # (déjà crédités à l'autel)
 	if res == "victoire":
@@ -158,6 +177,7 @@ func finish(res: String) -> void:
 
 ## Or gagné : crédité tout de suite (coffres, marchands, forge), compté pour le bilan.
 func add_gold(amount: int, source := "autre") -> void:
+	amount = roundi(float(Modifiers.apply("chest_gold", float(amount), ModeRules.modifiers)))  # modificateur « or +30 % »
 	RunJournal.gold_in(amount, source)
 	gold += amount
 	Profile.add_gold(amount)

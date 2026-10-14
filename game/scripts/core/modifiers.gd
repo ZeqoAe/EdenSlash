@@ -9,7 +9,7 @@ extends RefCounted
 const LIST := {
 	"heal_half": {"text": "Soins reçus divisés par deux", "cost": 1, "effect": {"heal_mult": ["mul", 0.5]}},
 	"elites_double": {"text": "Élites deux fois plus nombreuses", "cost": 2, "effect": {"elite_count": ["mul", 2.0]}},
-	"chests_plus": {"text": "Coffres +30 % (et monstres plus durs)", "cost": 1, "effect": {"chest_gold": ["mul", 1.3], "mob_hp": ["mul", 1.15]}},
+	"chests_plus": {"text": "Or +30 % (et monstres +15 % de PV)", "cost": 1, "effect": {"chest_gold": ["mul", 1.3], "mob_hp": ["mul", 1.15]}},
 	"anvil_cap": {"text": "Enclume plafonnée à +6", "cost": 1, "effect": {"anvil_max": ["set", 6]}},
 	"one_life": {"text": "Une seule vie", "cost": 3, "effect": {"resurrections": ["set", 0]}},
 	"double_bolts": {"text": "Projectiles des monstres doublés", "cost": 2, "effect": {"mob_projectiles": ["mul", 2.0]}},

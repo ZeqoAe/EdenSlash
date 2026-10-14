@@ -2146,6 +2146,7 @@ func _perfect_cancel() -> void:
 	ml_counts.perfect += 1
 	if not foe and bot == null:
 		Tutorial.event("perfect")
+		Run.perfects += 1
 	flow_stacks = mini(flow_stacks + 1, 4)
 	_flow_until = _time + 3.0
 	var sid := int(_action.get("skill_id", 0))

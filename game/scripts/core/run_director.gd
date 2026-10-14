@@ -337,6 +337,7 @@ func _interact(it: Interactable) -> void:
 			Sfx.event_at(self, it.global_position, "chest", -2.0)
 			chests_opened += 1
 			Tutorial.event("chest")
+			Run.chests_total += 1
 			Profile.record_add("chests", 1)
 			message.emit("%s ouvert (%s)" % [it.title.get_slice(" ·", 0), how], 1.5)
 			if box != "":
@@ -487,7 +488,7 @@ func _update_spawns(delta: float) -> void:
 	if rage and not _elites.is_empty():
 		_elite_timer -= delta
 		if _elite_timer <= 0.0:
-			_elite_timer = 22.0
+			_elite_timer = 22.0 * (0.5 if Challenge.has("elites_double") else 1.0)
 			var c := _ring_point(24.0, 34.0)
 			if c != Vector3.INF:
 				for i in clampi(_room(), 1, 3):
@@ -539,7 +540,7 @@ func _spawn_monster(id: int, pos: Vector3, level: int, boss := false) -> Monster
 		m.atk *= float(ZONE_DAMAGE[zi])
 	if Run.survival:
 		var em := Epochs.monster_mult(Run.epoch)  # époques suivantes : monstres plus coriaces
-		m.max_hp *= em
+		m.max_hp *= em * float(Modifiers.apply("mob_hp", 1.0, ModeRules.modifiers))
 		m.hp = m.max_hp
 		m.atk *= em
 	if state == "explore":

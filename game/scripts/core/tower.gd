@@ -85,6 +85,8 @@ static func start(cid: String, diff := 1, from := 1) -> void:
 	Profile.bag = {}
 	Profile.gold = 0
 	Profile.keys = 0
+	if start_floor > 1:
+		_resume_kit()
 	Profile.changed.emit()
 
 
@@ -308,6 +310,26 @@ static func chest_item(f: int, class_id: String) -> Dictionary:
 # --- progression ------------------------------------------------------------------------------
 static func record_key(diff: int) -> String:
 	return RECORD if diff == 1 else "%s_%d" % [RECORD, diff]
+
+
+## Palier de reprise de la difficulté [param diff] : le début du bloc de 10 étages en cours
+## (étage 1 tant que moins de 10 étages sont battus).
+static func checkpoint(diff := -1) -> int:
+	var b := best(diff)
+	return clampi((b / 10) * 10 + 1, 1, FLOORS)
+
+
+## Reprise sans piège : partir d'un étage élevé donne le kit complet (12 sorts du préréglage) et
+## des cartes en rapport avec l'étage (une tous les 6 étages), pour ne pas arriver nu.
+static func _resume_kit() -> void:
+	Run.fill_from_preset()
+	if Run.skills.is_empty():
+		for s in (Run.class_data().get("skills", []) as Array).slice(0, 4):
+			Run.skills.append({"id": int(s.id), "rank": 1})  # pas de préréglage : les sorts de base de la classe
+	for i in start_floor / 6:
+		var pick: Array = Run.roll_cards(1, false, "passive")
+		if not pick.is_empty():
+			Run.apply_card(pick[0])
 
 
 ## Duellistes battus au mieux, toutes difficultés confondues (fil d'éveil).

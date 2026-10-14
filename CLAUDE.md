@@ -54,7 +54,10 @@ leur condition, menu Atelier (Armurerie) / Carnet (Collection), ressources dans 
 (`core/league.gd`, rangs 0-4). Le Guide F1 vient avec le lot 9. Lot 9 fait (0.1.141) : `core/tutorial.gd` (10 Premiers pas validés par événements de jeu, 16 fiches à la 1re rencontre, nouveautés par
 version, état dans `Profile.tutorial`), accueil `ui/welcome.gd` (3 départs, 5 classes, contrôles et aide), panneaux Premiers pas / fiche
 dans le HUD, Guide `ui/guide.gd` (F1), touches rangées en 4 groupes avec test de touche. Les fiches de lieux (scribe, fontaine…) et
-les images des fiches restent à écrire. Prochain : lot 10 (page Jouer, Tour, Défis).
+les images des fiches restent à écrire. Lot 10 fait (0.1.142) : page Jouer en 3 rangées (Aventure, Défis, Affrontements) avec Arènes fusionnées, Défi de maîtrise
+(`core/challenge.gd` : 2 modificateurs du jour câblés en Survie, 3 classes, maîtrise ×2, +600 la 1re fois, insignes ×1,5), contrats de
+classe (`core/contracts.gd`, remplis à chaque Survie), reprise de la Tour (palier de 10 étages, kit complet + cartes). Épreuves de maîtrise
+et Ruée des boss restent « Bientôt » (pas de moteur de leçons). Prochain : lot 11 (Carnet).
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

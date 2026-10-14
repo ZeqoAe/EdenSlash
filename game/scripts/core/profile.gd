@@ -44,6 +44,8 @@ var unlocked_features: Array = []
 var new_features: Array = []
 ## Tutoriel (Tutorial) : {mode, steps, seen, version} ; vide = pas encore choisi.
 var tutorial: Dictionary = {}
+## Contrats de classe (Contracts) : classe -> {active, progress, done}.
+var contracts: Dictionary = {}
 var bag := {}  # consommables de la run (Craft) : clé -> quantité
 var stash := {}  # réserve de fournitures gardées (extraction, victoire), emportée à la run suivante
 var expertise := {}  # classe -> points d'expertise (gagnés à chaque run)
@@ -255,6 +257,7 @@ func load_profile() -> void:
 	unlocked_features = d.get("unlocked_features", [])
 	new_features = d.get("new_features", [])
 	tutorial = d.get("tutorial", {})
+	contracts = d.get("contracts", {})
 	Unlocks.migrate(d.has("unlocked_features"))
 
 
@@ -309,7 +312,7 @@ func save_profile() -> void:
 		"archive": archive, "skins": skins, "outfits": outfits, "owned_outfits": owned_outfits, "unlocked_cards": unlocked_cards, "collection": collection, "worn": worn, "dev": dev, "saved_at": Time.get_datetime_string_from_system(false, true),
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level,
 		"seen_gear": seen_gear, "insignia": insignia, "unlocked_features": unlocked_features,
-		"new_features": new_features, "tutorial": tutorial}
+		"new_features": new_features, "tutorial": tutorial, "contracts": contracts}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(d))
 	f.close()
@@ -662,6 +665,7 @@ func _clear() -> void:
 	unlocked_features = []
 	new_features = []
 	tutorial = {}
+	contracts = {}
 	unlocked_zones = 1
 	selected_zone = "limestone"
 	expertise = {}
@@ -698,6 +702,7 @@ func reset_all() -> void:
 	unlocked_features = []
 	new_features = []
 	tutorial = {}
+	contracts = {}
 	unlocked_zones = 1
 	selected_zone = "limestone"
 	expertise = {}

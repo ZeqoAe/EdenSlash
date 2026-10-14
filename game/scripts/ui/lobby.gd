@@ -400,6 +400,11 @@ func _start_duel() -> void:
 ## La Tour : choix de la difficulté (IA des duellistes, force des monstres, record à part).
 func _menu_tower() -> void:
 	_activity_head("tower")
+	if Tower.checkpoint(1) > 1 or Tower.checkpoint(_tower_diff) > 1:
+		var d := _tower_diff
+		var from := Tower.checkpoint(d)
+		if from > 1:
+			_row("Reprendre l'ascension", "Étage %d (%s) avec ton kit complet et des cartes selon l'étage" % [from, Tower.DIFF_NAMES[d]], "continue", func(): _start_tower(d, from), 70.0)
 	Hud._label(_sub, "Difficulté", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
 	for i in Tower.DIFF_NAMES.size():
 		var rec := Tower.best(i)
@@ -861,7 +866,7 @@ func _show_menu(id: String) -> void:
 		c.queue_free()
 	if _sub_panel:
 		# activités en grille : panneau large ; pages et autres sous-menus : étroit
-		_sub_panel.custom_minimum_size.x = 728 if id == "play" else 470
+		_sub_panel.custom_minimum_size.x = 760 if id == "play" else 470
 		_sub_panel.size = Vector2.ZERO
 	match id:
 		"play":
@@ -870,8 +875,10 @@ func _show_menu(id: String) -> void:
 			_menu_survival()
 		"training":
 			_menu_training()
-		"dungeon", "arena2", "arena3", "battlefield":
+		"dungeon", "arenas", "trials", "rush":
 			_menu_soon(id)
+		"mastery":
+			_menu_mastery()
 		"tower":
 			_menu_tower()
 		"tower_floors":
@@ -899,16 +906,18 @@ func _row(title: String, sub: String, icon: String, cb: Callable, height := 70.0
 ## Menu Jouer : toutes les activités, en étiquettes illustrées (Activities), JcE puis JcJ ;
 ## un clic ouvre la page de l'activité (réglages, puis Lancer) dans ce même panneau.
 func _menu_play() -> void:
-	for gr in Activities.GROUPS:
-		var head := Hud._label(_sub, String(gr[1]), 15, UiTheme.GOLD)
+	for row in Activities.ROWS:
+		var head := Hud._label(_sub, String(row[1]), 15, UiTheme.GOLD)
 		head.add_theme_font_override("font", UiTheme.bold_font())
 		var grid := GridContainer.new()
-		grid.columns = 2
+		grid.columns = 3
 		grid.add_theme_constant_override("h_separation", 10)
 		grid.add_theme_constant_override("v_separation", 10)
 		_sub.add_child(grid)
-		for a in Activities.LIST.filter(func(x): return x.group == gr[0] or (gr[0] == "pve" and x.group == "")):
-			grid.add_child(_activity_card(a))  # l'entraînement complète la grille JcE
+		for a in Activities.LIST.filter(func(x): return x.row == row[0]):
+			grid.add_child(_activity_card(a, Vector2(230, 112)))
+	var tr := _activity_card(Activities.get_def("training"), Vector2(0, 52))
+	_sub.add_child(tr)
 
 
 func _activity_card(a: Dictionary, size := Vector2(345, 112)) -> Button:
@@ -972,6 +981,45 @@ func _menu_training() -> void:
 
 
 ## Activité à venir : ce qui est prévu.
+## Défi de maîtrise : la Survie du jour (deux modificateurs, trois classes) et les contrats de la classe.
+func _menu_mastery() -> void:
+	_activity_head("mastery")
+	_activity_desc("mastery")
+	Hud._label(_sub, "Aujourd'hui (%s)" % Challenge.today(), 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
+	for m in Challenge.modifiers_today():
+		Hud._label(_sub, "• " + String(Modifiers.LIST[m].text), 15, UiTheme.TEXT)
+	Hud._label(_sub, "Réussite du jour : %s" % ("faite (maîtrise ×2 seulement)" if Challenge.done_today() else "+%d points à la première victoire" % Challenge.BONUS_FIRST), 14, UiTheme.MUTED)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	_sub.add_child(row)
+	for cid in Challenge.classes_today():
+		var cd := GameData.class_data(cid)
+		var b := MenuWidgets.glass_button("%s\nmaîtrise %d" % [cd.get("name_fr", cid), Profile.expertise_level(cid)], 15, Vector2(0, 62))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.tooltip_text = "Lancer le défi avec cette classe"
+		var c := String(cid)
+		b.pressed.connect(func(): _start_challenge(c))
+		row.add_child(b)
+	var cls := Profile.selected_class
+	Hud._label(_sub, "Contrats de %s" % GameData.class_data(cls).get("name_fr", cls), 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
+	var st := Contracts.state(cls)
+	for id in st.active:
+		var t := Contracts.template(String(id))
+		Hud._label(_sub, "%s  —  %d / %d  (+%d)" % [String(t.text) % int(t.target), Contracts.progress(cls, String(id)), int(t.target), int(t.reward)], 14, UiTheme.TEXT)
+	Hud._label(_sub, "Les contrats se remplissent à chaque Survie avec cette classe.", 12, UiTheme.MUTED)
+
+
+func _start_challenge(cid: String) -> void:
+	if _launching:
+		return
+	_launching = true
+	if backdrop:
+		backdrop.release()
+	Profile.selected_class = cid
+	Challenge.start(cid)
+	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+
+
 func _menu_soon(id: String) -> void:
 	_activity_head(id)
 	_activity_desc(id)
