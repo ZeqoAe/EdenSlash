@@ -242,6 +242,27 @@ Les costumes d'Eden tombent sur les boss (1 chance sur 4, 1 sur 2 s'il est enrag
 - Lobby : **Nouvelle partie** efface l'héritage et les statistiques (2 clics pour confirmer).
 - Les 3 premières minutes, les monstres montent de 60 % à 100 % de leurs PV et dégâts.
 
+## Étapes et sources (refonte 0.1.91, façon Megabonk)
+
+- **Une run = 3 étapes** : la zone choisie, puis les deux suivantes. Le boss d'une étape vaincu, un
+  **portail** apparaît dans sa salle : il mène à la carte de la zone suivante (minuterie, sceaux et coffres
+  remis à zéro ; niveau, cartes, équipement, or et clés gardés ; la zone suivante est aussi débloquée).
+  Victoire après le boss de la 3e étape (ou de la dernière zone). +120 d'expertise par étape franchie.
+- **Où trouver quoi** :
+
+| Ce qu'on cherche | Où |
+|---|---|
+| Or | jarres, caisses, tas d'or (ramassés en passant), monstres, défis |
+| Parchemins de fortification (chaque +1) | caisses et tonneaux surtout, coffres simples, élites |
+| Gemmes | cristaux (3 coups), jarres, coffres du joaillier |
+| Parchemins d'enchantement | autels du scribe (au choix), coffres ouvragés et dorés, marchands |
+| Pierres de sûreté, parchemin béni | coffres ouvragés et dorés, stèles du défi, élites |
+| +1 sans risque | enclumes (3 par carte) |
+| Équipement commun → épique | monstres (5 %), coffres simples (choix de 3), marchands |
+| Équipement rare → mythique | coffres ouvragés (mythique 7 % par proposition) |
+| Équipement épique → légendaire | coffres dorés (légendaire 15 %, mythique 22 % par proposition) |
+| Mythique / légendaire garantis, sets | coffres de récompense : boss d'étape (100 %), stèles du défi (100 %), élites (20 %) |
+
 ## Déroulement d'une run (10 minutes + rage)
 
 | Phase | Ce qui se passe |

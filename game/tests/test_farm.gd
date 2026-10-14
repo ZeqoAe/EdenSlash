@@ -114,6 +114,25 @@ func _ready() -> void:
 	await get_tree().process_frame
 	var chest_drop := get_tree().get_nodes_in_group("loot").any(func(l): return (l as LootDrop).item.has("chest"))
 	check("défi réussi : coffre de récompense au sol", d._challenges.is_empty() and chest_drop)
+	# étapes : boss vaincu → portail vers la zone suivante (même run)
+	var zone0 := Run.zone_id
+	d.debug_enter_dungeon()
+	await get_tree().create_timer(1.0).timeout
+	var boss: Monster = d._boss
+	check("donjon : boss présent", is_instance_valid(boss))
+	boss.take_damage(boss.max_hp * 1000.0 + 1e9, player)
+	await get_tree().create_timer(0.5).timeout
+	var portal: Interactable = null
+	for it in d.map.interactables:
+		if is_instance_valid(it) and it.kind == "stage_portal":
+			portal = it
+	check("boss vaincu : portail vers l'étape 2", portal != null and d.state == "cleared")
+	var lv := player.level
+	if portal:
+		d._interact(portal)
+		await get_tree().create_timer(1.0).timeout
+	check("étape 2 : %s → %s, carte neuve, niveau gardé" % [zone0, Run.zone_id], Run.stage == 2 and Run.zone_id != zone0 and d.state == "explore"
+		and d.time < 2.0 and d.map.breakables != null and d.map.breakables.count() > 600 and player.level == lv)
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit()
 

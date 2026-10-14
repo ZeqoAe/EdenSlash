@@ -50,9 +50,9 @@ const CHEST_GROWTH := 1.15
 ## Qualités de coffre : prix ×, raretés de l'équipement proposé (min, max), chance, nombre de
 ## fournitures données en plus.
 const CHEST_TIERS := [
-	{"price": 1.0, "min_r": 1, "max_r": 3, "luck": 0.3, "supplies": 1},
-	{"price": 2.5, "min_r": 2, "max_r": 4, "luck": 0.7, "supplies": 2},
-	{"price": 6.0, "min_r": 3, "max_r": 5, "luck": 1.2, "supplies": 3},
+	{"price": 1.0, "min_r": 1, "max_r": 3, "luck": 0.3, "supplies": 1},  # épique 18 % par proposition
+	{"price": 2.5, "min_r": 2, "max_r": 4, "luck": 0.45, "supplies": 2},  # mythique 7 %, épique 26 %
+	{"price": 6.0, "min_r": 3, "max_r": 5, "luck": 0.75, "supplies": 3},  # légendaire 15 %, mythique 22 %
 ]
 ## Objets cassables : or (× niveau), chances de soin, de fourniture, de clé.
 const BREAK_GOLD := {"pot": [2, 4], "crate": [3, 6], "gold": [14, 24], "gem": [0, 0]}
@@ -63,6 +63,9 @@ const BREAK_KEY := 0.006
 const GREED_GOLD := 1.5
 const GREED_MONSTERS := 1.25
 var greed := false
+## Étapes d'une run (façon Megabonk) : le boss d'une étape vaincu, un portail mène à la zone
+## suivante ; niveau, cartes, équipement, or et clés sont gardés. Victoire après la dernière.
+const STAGES := 3
 var _touch_timer := 0.0
 var _challenges: Array = []  # défis en cours : {station, monsters}
 const DISCOVER_POI := 45.0
@@ -140,7 +143,7 @@ func start(p: Player) -> void:
 	_fog = Image.create(FOG_RES, FOG_RES, false, Image.FORMAT_LA8)
 	_fog.fill(Color(0, 0, 0, 1))
 	_fog_tex = ImageTexture.create_from_image(_fog)
-	zone_changed.emit({"name": zone.name, "levels": [1 + int(zone.get("level_bonus", 0)), max_level()]})
+	_emit_zone()
 	if Training.active:
 		state = "training"
 		message.emit("Zone d'entraînement\nF3 : panneau (niveau, sorts, cartes, ennemis, DPS)", 4.0)
@@ -226,7 +229,7 @@ func _objective_text() -> String:
 	if state == "boss":
 		return "Vaincs %s !" % (_boss.display_name if is_instance_valid(_boss) else "le boss")
 	if state == "cleared":
-		return "Boss vaincu !"
+		return "Boss vaincu ! Portail vers l'étape %d/%d" % [Run.stage + 1, STAGES] if next_zone_id() != "" else "Boss vaincu !"
 	var t := time_left()
 	var clock := "RAGE !" if state == "rage" else "%02d:%02d avant la rage" % [int(t) / 60, int(t) % 60]
 	return "%s\nDonjon %s   ·   Sceaux %d/%d   ·   Coffres %d/%d   ·   Sanctuaires %d/%d" % [clock,
@@ -274,7 +277,7 @@ func _update_interactions() -> void:
 		prompt_changed.emit(best.prompt() if best else "")
 	if best == null:
 		return
-	if Input.is_action_just_pressed("interact") or ((player.autoplay or Settings.auto_move()) and best.kind in ["chest", "dungeon", "tower_chest", "tower_stairs"]):
+	if Input.is_action_just_pressed("interact") or ((player.autoplay or Settings.auto_move()) and best.kind in ["chest", "dungeon", "tower_chest", "tower_stairs", "stage_portal"]):
 		_interact(best)
 
 
@@ -303,12 +306,14 @@ func _interact(it: Interactable) -> void:
 			Profile.record_add("chests", 1)
 			var def: Dictionary = CHEST_TIERS[tier]
 			for i in int(def.supplies) + (1 if state == "rage" else 0):
-				_drop_consumable(it.global_position, _monster_level(1), tier)
+				_drop_consumable(it.global_position, _monster_level(1), tier, "chest%d" % tier)
 			message.emit("%s ouvert (%s)" % [it.title.get_slice(" ·", 0), how], 1.5)
 			world._offer("%s : choisis une pièce d'équipement" % it.title.get_slice(" ·", 0), gear_cards(3, tier), func(): return gear_cards(3, tier))
 			_refresh_chest_labels()
 		_ when Interactable.STATION_VERBS.has(it.kind):
 			_use_station(it)
+		"stage_portal":
+			_next_stage(String(it.get_meta("zone", "")))
 		"dungeon":
 			# le bot de test (--boss-after) ignore les sceaux
 			if seals < SEALS_NEEDED and not (player.autoplay and time > _autoplay_dungeon_time()):
@@ -626,9 +631,9 @@ func _drop_reward_chest(pos: Vector3, level: int, boss: bool) -> void:
 	drop.global_position = (g if g != Vector3.INF else pos) + Vector3.UP * 0.2
 
 
-func _drop_consumable(pos: Vector3, level: int, bonus: int) -> void:
+func _drop_consumable(pos: Vector3, level: int, bonus: int, source := "") -> void:
 	var drop := LootDrop.new()
-	drop.item = Craft.loot_item(Craft.random_loot(loot_level(level), bonus))
+	drop.item = Craft.loot_item(Craft.loot_for(source, loot_level(level), bonus))
 	drop.on_picked = func(item): message.emit("Butin : %s" % item.name, 1.5)
 	add_child(drop)
 	var p := pos + Vector3(randf_range(-1.5, 1.5), 0, randf_range(-1.5, 1.5))
@@ -734,11 +739,93 @@ func _update_extraction(delta: float) -> void:
 
 
 func _on_boss_killed() -> void:
-	print("[run] boss vaincu à %.0f s, niveau %d" % [time, player.level])
+	print("[run] boss vaincu à %.0f s, niveau %d, étape %d/%d" % [time, player.level, Run.stage, STAGES])
 	state = "cleared"
+	var next := next_zone_id()
+	if next != "":
+		var opened := Profile.unlock_after(String(zone.get("id", "")))  # aussi pour les prochaines runs
+		if opened != "":
+			Run.unlocked_name = opened
+		message.emit("Boss vaincu ! Ramasse le butin,\npuis prends le portail vers %s (étape %d/%d)" % [GameData.zone(next).get("name", next), Run.stage + 1, STAGES], 4.5)
+		_spawn_stage_portal(next)
+		return
 	message.emit("Boss vaincu !\nRamasse le butin", 3.0)
 	await get_tree().create_timer(6.0).timeout
 	boss_defeated.emit()
+
+
+## Zone de l'étape suivante ("" : dernière étape, ou plus de zone après celle-ci).
+func next_zone_id() -> String:
+	if Run.stage >= STAGES:
+		return ""
+	var i := GameData.zone_index(String(zone.get("id", ""))) + 1
+	return String(GameData.zones[i].id) if i > 0 and i < GameData.zones.size() else ""
+
+
+func _emit_zone() -> void:
+	var title := String(zone.get("name", ""))
+	if not Training.active and not Tower.active and not Duel.active:
+		title = "%s · étape %d/%d" % [title, Run.stage, STAGES]
+	zone_changed.emit({"name": title, "levels": [1 + int(zone.get("level_bonus", 0)), max_level()]})
+
+
+## Portail vers l'étape suivante, dans la salle du boss.
+func _spawn_stage_portal(next: String) -> void:
+	var portal := Interactable.new()
+	portal.setup("stage_portal", "Portail : %s" % GameData.zone(next).get("name", next), "res://assets/maps/objects/ub105.glb", "", 0.4, 5.0)
+	portal.set_meta("zone", next)
+	map.add_child(portal)
+	var c := Vector3(map.size * 0.5, 0, map.size * 0.5) + Vector3(0, 0, -6.0)
+	portal.global_position = ground_point(c, map.start)
+	portal.add_beam(Color(0.55, 0.85, 1.0), 20.0)
+	map.interactables.append(portal)
+
+
+## Étape suivante : nouvelle carte de la zone suivante, minuterie et sceaux remis à zéro ; le
+## héros garde tout (niveau, cartes, équipement, or, clés). Le butin resté au sol est ramassé.
+func _next_stage(next: String) -> void:
+	if orbs:
+		orbs.collect_all_now()
+	for d in get_tree().get_nodes_in_group("loot"):
+		if Run.pick_up((d as LootDrop).item):
+			d.queue_free()
+	_clear_monsters()
+	Run.stage += 1
+	Run.zone_id = next
+	zone = GameData.zone(next)
+	_roster = zone.monsters.map(func(x): return int(x))
+	_elites = zone.get("elites", []).map(func(x): return int(x))
+	state = "explore"
+	time = 0.0
+	seals = 0
+	dungeon_found = false
+	chests_opened = 0
+	shrines_captured = 0
+	greed = false
+	extracting = false
+	_found.clear()
+	_challenges.clear()
+	_camp_ready_at.clear()
+	_wave_timer = 60.0
+	_elite_timer = 25.0
+	_boss = null
+	_near = null
+	route = PackedVector3Array()
+	world.set_dungeon_mood(false)
+	world._apply_biome_env()
+	player.set_torch(false)
+	_seed = randi()
+	map = world.new_run_map(_seed)
+	_place_player(map.start)
+	if map.breakables:
+		map.breakables.broken.connect(_on_broken)
+	_fog.fill(Color(0, 0, 0, 1))
+	_fog_tex.update(_fog)
+	player.heal(player.max_hp)
+	_emit_zone()
+	_refresh_chest_labels()
+	print("[run] étape %d : %s" % [Run.stage, zone.name])
+	message.emit("Étape %d/%d : %s\nLes monstres sont plus forts, le butin aussi" % [Run.stage, STAGES, zone.name], 4.0)
 
 
 # --- divers ----------------------------------------------------------------------------
@@ -879,7 +966,7 @@ func _on_broken(kind: String, pos: Vector3) -> void:
 		player.heal(player.max_hp * 0.1)
 		DamageNumber.spawn_text(player, "+PV", Color(0.5, 1.0, 0.55))
 	if randf() < float(BREAK_SUPPLY.get(kind, 0.0)) * (GREED_GOLD if greed else 1.0):
-		_drop_consumable(pos, _monster_level(0), 0)
+		_drop_consumable(pos, _monster_level(0), 0, kind)
 	if randf() < BREAK_KEY:
 		Profile.keys += 1
 		Profile.changed.emit()
@@ -1019,7 +1106,7 @@ func _update_challenges() -> void:
 		_challenges.erase(ch)
 		_drop_reward_chest(ch.pos, _monster_level(2), false)
 		for i in 2:
-			_drop_consumable(ch.pos, _monster_level(1), 2)
+			_drop_consumable(ch.pos, _monster_level(1), 2, "challenge")
 		Run.add_gold(roundi((40 + 12 * player.level) * (GREED_GOLD if greed else 1.0)))
 		message.emit("Défi réussi ! Coffre de récompense et fournitures", 3.0)
 

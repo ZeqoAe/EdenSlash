@@ -510,6 +510,52 @@ static func random_loot(level: int, bonus := 0) -> String:
 	return BLESSED
 
 
+## Spécialité des sources de fournitures (mode farm) : poids de chaque famille.
+## gem : gemmes · fortify : parchemins de fortification (pour chaque +1) · scroll : parchemins
+## d'enchantement · drill : ciseaux · stone : pierres de sûreté · blessed : parchemin béni.
+const LOOT_SOURCES := {
+	"crate": {"fortify": 55, "drill": 20, "stone": 20, "gem": 5},  # caisses et tonneaux : la forge
+	"pot": {"gem": 40, "fortify": 30, "stone": 15, "drill": 15},  # jarres : un peu de tout
+	"chest0": {"fortify": 45, "stone": 25, "gem": 15, "scroll": 10, "drill": 5},
+	"chest1": {"fortify": 30, "stone": 30, "scroll": 20, "gem": 15, "blessed": 5},
+	"chest2": {"stone": 30, "scroll": 25, "fortify": 20, "blessed": 15, "gem": 10},
+	"challenge": {"stone": 40, "blessed": 25, "scroll": 20, "fortify": 15},
+}
+
+
+## Fournitures de la source [param source] (LOOT_SOURCES ; sinon le tirage général).
+static func loot_for(source: String, level: int, bonus := 0) -> String:
+	var w: Dictionary = LOOT_SOURCES.get(source, {})
+	if w.is_empty():
+		return random_loot(level, bonus)
+	var total := 0
+	for k in w:
+		total += int(w[k])
+	var r := randi() % maxi(total, 1)
+	var fam := ""
+	for k in w:
+		r -= int(w[k])
+		if r < 0:
+			fam = String(k)
+			break
+	var tier := clampi(level / 8 + bonus + (1 if randf() < 0.25 else 0) - (1 if randf() < 0.3 else 0), 0, GEM_TIERS.size() - 1)
+	match fam:
+		"gem":
+			return gem_key(GEMS.keys().pick_random(), tier)
+		"scroll":
+			var slv := scroll_level_for(level)
+			if slv > 0:
+				return scroll_key(ENCHANTS.keys().pick_random(), clampi(slv - (1 if randf() < 0.35 - 0.15 * bonus else 0), 1, slv))
+			return fortify_key(["power", "guard"].pick_random(), fortify_level_at(level))
+		"drill":
+			return "drill"
+		"stone":
+			return random_stone(bonus)
+		"blessed":
+			return BLESSED
+	return fortify_key(["power", "guard"].pick_random(), fortify_level_at(level))
+
+
 ## Objet de butin (LootDrop) représentant un consommable.
 static func loot_item(key: String) -> Dictionary:
 	return {"consumable": key, "name": label(key), "icon": icon(key), "rarity": rarity(key)}

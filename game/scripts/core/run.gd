@@ -45,6 +45,8 @@ var new_classes: Array = []  # classes débloquées pendant la run (bilan)
 var new_costumes: Array = []  # costumes (skins de tenue) débloqués pendant la run
 var rerolls_used := 0  # relances de cartes utilisées (1 par run + cartes « Bonne étoile »)
 var chests_found: Array = []  # (ancien) coffres ramassés : désormais rangés tout de suite dans Profile.reward_chests
+var stage := 1  # étape de la run (façon Megabonk : boss vaincu → portail vers la zone suivante)
+var start_zone := ""  # zone choisie au lobby (première étape)
 
 
 func start(cid: String) -> void:
@@ -74,6 +76,8 @@ func start(cid: String) -> void:
 	result = ""
 	started_at = Time.get_ticks_msec()
 	zone_id = Profile.selected_zone
+	start_zone = zone_id
+	stage = 1
 	unlocked_name = ""
 	Profile.begin_run()
 	changed.emit()
@@ -86,7 +90,7 @@ func finish(res: String) -> void:
 	result = res
 	Profile.record_max("best_combo", combo_best)
 	Profile.runs_done += 1
-	expertise_gain = max_level * 15 + kills / 2 + elites * 10 + (200 if res == "victoire" else (60 if res == "extraction" else 0))
+	expertise_gain = max_level * 15 + kills / 2 + elites * 10 + (200 if res == "victoire" else (60 if res == "extraction" else 0)) + 120 * (stage - 1)
 	expertise_levels = Profile.add_expertise(class_id, expertise_gain)
 	if res == "victoire":
 		Profile.runs_won += 1
