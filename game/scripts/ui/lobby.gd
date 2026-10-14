@@ -456,17 +456,40 @@ func _start_ranked(mode: String, brain: String) -> void:
 	var pool: Array = GameData.classes.keys()
 	pool.sort()
 	var opp := String(pool[randi() % pool.size()])
+	var prev := {"mode": Duel.mode, "bare": Duel.bare, "level": Duel.bare_level, "build": Duel.rival_build, "pilot": Duel.pilot}
 	Duel.mode = mode
 	Duel.bare = true
 	Duel.bare_level = Pantheon.LEVEL
 	Duel.rival_build = {}
 	Duel.pilot = brain
 	var diff := 3 if mode == "pantheon" else int(League.DIFFICULTY[League.target_rank()])
-	_launching = true
-	if backdrop:
-		backdrop.release()
-	Duel.start(Profile.selected_class, opp, diff)
-	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	var launch := func():
+		_launching = true
+		if backdrop:
+			backdrop.release()
+		Duel.start(Profile.selected_class, opp, diff)
+		get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	var restore := func():
+		Duel.mode = prev.mode
+		Duel.bare = prev.bare
+		Duel.bare_level = prev.level
+		Duel.rival_build = prev.build
+		Duel.pilot = prev.pilot
+	_queue_duel("Panthéon" if mode == "pantheon" else "Ligue", "%s · à l'arme" % ("Défi d'un cerveau d'IA" if mode == "pantheon" else "Duel classé"), opp, Pantheon.LEVEL, diff, launch, restore)
+
+
+## File d'attente du Duel (DuelQueue : recherche, match trouvé, draft de 60 s, récapitulatif de 10 s) puis
+## [param launch]. Annulée ou refusée : [param restore] remet les réglages du Duel d'avant.
+func _queue_duel(title: String, sub: String, opp: String, level: int, diff: int, launch: Callable, restore := Callable()) -> void:
+	if _launching:
+		return
+	var q := DuelQueue.open(self, title, sub, opp, level, diff, launch, func(section: String, on_closed: Callable):
+		_open_hero(section)
+		_hero.closed.connect(on_closed, CONNECT_ONE_SHOT))
+	q.cancelled.connect(func(_reason):
+		if restore.is_valid():
+			restore.call()
+		_show_menu(_current))
 
 
 ## Mode Duel : conditions d'inscription (build complet), adversaire, difficulté, inscription.
@@ -608,11 +631,16 @@ func _menu_duel() -> void:
 func _start_duel() -> void:
 	if _launching or not Duel.is_ready(Profile.selected_class):
 		return
-	_launching = true
-	if backdrop:
-		backdrop.release()
-	Duel.start(Profile.selected_class, _duel_opp, _duel_diff)
-	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	var opp := String(Duel.rival_build.get("class", _duel_opp)) if not Duel.rival_build.is_empty() else _duel_opp
+	var diff := _duel_diff
+	var lv := Duel.bare_level if Duel.bare else Duel.gear_level()
+	var launch := func():
+		_launching = true
+		if backdrop:
+			backdrop.release()
+		Duel.start(Profile.selected_class, _duel_opp, diff)
+		get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	_queue_duel("Duel libre", "Duel libre · %s" % ("à l'arme" if Duel.bare else "équipé"), opp, lv, diff, launch)
 
 
 ## La Tour : choix de la difficulté (IA des duellistes, force des monstres, record à part).
