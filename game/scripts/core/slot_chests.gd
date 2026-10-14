@@ -22,9 +22,10 @@ const BOXES := {
 	"cert": {"name": "Coffre de certificat", "cards": "cert", "look": 1, "price": 1.4},
 }
 ## Les 30 coffres d'une map (mélangés sur la carte).
-const LAYOUT := ["weapon", "weapon", "weapon", "head", "head", "head", "chest", "chest", "chest", "legs", "legs", "legs",
-	"gloves", "gloves", "gloves", "boots", "boots", "boots", "jewel", "jewel", "jewel", "trophy", "trophy",
-	"spell", "spell", "spell", "passive", "passive", "cert", "cert"]
+## 4 coffres de trophée par map : jusqu'à 12 trophées par run (Run.MAX_TROPHIES).
+const LAYOUT := ["weapon", "weapon", "head", "head", "head", "chest", "chest", "chest", "legs", "legs", "legs",
+	"gloves", "gloves", "gloves", "boots", "boots", "boots", "jewel", "jewel", "jewel", "trophy", "trophy", "trophy", "trophy",
+	"spell", "spell", "spell", "passive", "passive", "cert"]
 
 
 ## Types des [param n] coffres d'une map, mélangés avec [param rng].
@@ -76,12 +77,9 @@ static func pool(box: String, epoch: int, stage: int) -> Array:
 ## [param n] pièces au hasard d'un coffre [param box] (sans doublon), +0, puissance plafonnée
 ## au niveau maximal de la map.
 static func offer(box: String, epoch: int, stage: int, n := 3) -> Array:
+	if box == "trophy":
+		return trophy_offer(epoch, stage, n)
 	var p := pool(box, epoch, stage)
-	if box == "trophy" and Run.active:
-		var worn_kind := String(Profile.equipped.get("trophy", {}).get("passive", {}).get("trophy", ""))
-		var owned := Profile.equipped.values() + Profile.inventory
-		p = p.filter(func(e): return not int(e.id) in Run.seen_items and String(e.get("trophy", "")) != worn_kind \
-			and not owned.any(func(it): return int(it.get("eden", -1)) == int(e.id)))
 	p.shuffle()
 	var m := Epochs.map_def(epoch, stage)
 	var out: Array = []
@@ -91,6 +89,34 @@ static func offer(box: String, epoch: int, stage: int, n := 3) -> Array:
 		if m.get("awakened", false) and String(e.name).begins_with("Awaken "):
 			it["awakened"] = true
 		out.append(it)
+	return out
+
+
+## Trophées proposés : [param n] effets différents que la collection de la run n'a pas encore ;
+## pour chaque effet, le trophée d'Eden dont le niveau est le plus proche de celui de la map
+## (variantes de niveau : plus forts aux époques avancées).
+static func trophy_offer(epoch: int, stage: int, n := 3) -> Array:
+	var lv := int(Epochs.map_def(epoch, stage).armor)
+	var owned: Array = Run.trophy_kinds() if Run.active else []
+	var by_kind := {}
+	for e in GameData.eden_items:
+		if String(e.get("slot", "")) != "trophy" or not Trophies.in_pool(e) or String(e.get("trophy", "")) in owned \
+				or (Run.active and int(e.id) in Run.seen_items):
+			continue
+		var k := String(e.trophy)
+		if not by_kind.has(k):
+			by_kind[k] = []
+		by_kind[k].append(e)
+	var kinds := by_kind.keys()
+	kinds.shuffle()
+	var out: Array = []
+	for k in kinds.slice(0, n):
+		var best: Dictionary = {}
+		for e in by_kind[k]:
+			var d := absi(int(e.level) - lv)
+			if best.is_empty() or d < absi(int(best.level) - lv) or (d == absi(int(best.level) - lv) and randf() < 0.5):
+				best = e
+		out.append(Items.from_template(best, Epochs.cap(stage), int(best.rarity)))
 	return out
 
 

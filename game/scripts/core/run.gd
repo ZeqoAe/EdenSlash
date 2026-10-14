@@ -60,6 +60,10 @@ var slot_bonus: Dictionary = {}
 ## emplacement ("weapon", "offhand") : {rank, dmg, crit, speed, area, …, sig}. Elles restent sur
 ## l'emplacement quand l'arme change.
 var weapon_ups: Dictionary = {}
+## Trophées de la run (0.1.130) : objets d'Eden (Items.from_template, passif « trophy »), tous
+## d'effets différents, jusqu'à MAX_TROPHIES ; leurs effets agissent tous (trophy_procs).
+const MAX_TROPHIES := 12
+var trophies: Array = []
 var anvil_stage := 0  # map où l'enclume a servi (une fois par map)
 var insignia_gain := 0  # insignes gagnés à la fin de la run (bilan)
 ## Tirage de l'enclume : valeur -> poids (le plus souvent +3 à +6, rarement +9/+10 ou négatif).
@@ -102,6 +106,7 @@ func start(cid: String) -> void:
 	seen_items = []
 	slot_bonus = {}
 	weapon_ups = {}
+	trophies = []
 	anvil_stage = 0
 	Profile.begin_run()
 	changed.emit()
@@ -270,6 +275,33 @@ func power(pid: String) -> float:
 
 
 ## Effets déclenchés apportés par les cartes de la run.
+## Familles d'effet des trophées de la run.
+func trophy_kinds() -> Array:
+	return trophies.map(func(t): return String(t.get("passive", {}).get("trophy", "")))
+
+
+## Ajoute le trophée [param it] à la collection (refusé si elle est pleine ou si son effet y est
+## déjà).
+func add_trophy(it: Dictionary) -> bool:
+	var kind := String(it.get("passive", {}).get("trophy", ""))
+	if trophies.size() >= MAX_TROPHIES or kind == "" or kind in trophy_kinds():
+		return false
+	trophies.append(it)
+	if it.has("eden") and not int(it.eden) in seen_items:
+		seen_items.append(int(it.eden))
+	changed.emit()
+	return true
+
+
+## Effets des trophées de la run (un par trophée).
+func trophy_procs() -> Array:
+	var out: Array = []
+	for t in trophies:
+		for p: Dictionary in t.get("passive", {}).get("procs", []):
+			out.append(p.duplicate(true))
+	return out
+
+
 func passive_procs() -> Array:
 	var out: Array = []
 	for pid in passives:
@@ -598,7 +630,9 @@ func apply_card(card: Dictionary) -> void:
 			var before := power(String(card.id))
 			passives[card.id] = int(passives.get(card.id, 0)) + 1
 			passive_power[card.id] = before + float(card.get("mult", 1.0))
-		"trophy", "gear":
+		"trophy":
+			add_trophy(card.item)  # collection de la run : l'effet agit tout de suite
+		"gear":
 			if survival:
 				# coffre d'emplacement : la pièce est portée tout de suite (l'ancienne reste dans le sac)
 				Profile.inventory.append(card.item)

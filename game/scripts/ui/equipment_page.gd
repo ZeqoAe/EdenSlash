@@ -11,7 +11,7 @@ signal class_changed
 
 const DOLL_LEFT := ["head", "chest", "legs", "boots"]
 const DOLL_RIGHT := ["weapon", "gloves", "back"]
-const DOLL_BOTTOM := ["necklace", "ring", "trophy"]
+const DOLL_BOTTOM := ["necklace", "ring"]
 
 var player: Player  # null hors run
 

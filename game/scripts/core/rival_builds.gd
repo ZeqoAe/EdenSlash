@@ -266,7 +266,7 @@ static func auto_fill(b: Dictionary) -> void:
 	var lv := int(b.get("level", 20))
 	var wtype := Items.default_weapon_type(cid)
 	var gear := {}
-	for slot in ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "necklace", "ring", "trophy"]:
+	for slot in ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "necklace", "ring"]:
 		var best: Dictionary = {}
 		for x in GameData.eden_items:
 			if String(x.get("slot", "")) != slot or int(x.level) > lv:

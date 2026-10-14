@@ -175,8 +175,7 @@ func roll_offers() -> Array:
 	for key in ["drill", Craft.stone_key(["safety", "lucky"].pick_random())]:
 		out.append(_supply_offer(key, 2 if key.begins_with("stone") else 1, 40 + 6 * lvl))
 	while out.size() < 8 and not Run.survival:  # Survie : l'équipement vient des coffres d'emplacement
-		var slot := "trophy" if out.size() == 7 and randf() < 0.5 else ""
-		var item := Items.generate(director.loot_level(lvl + 1) if director else lvl, 0.4, slot, Run.class_id, 2)
+		var item := Items.generate(director.loot_level(lvl + 1) if director else lvl, 0.4, "", Run.class_id, 2)
 		out.append({"item": item, "price": Items.buy_price(item)})
 	out.append(_supply_offer(Craft.random_loot(lv, 1), 1, 60 + 8 * lvl))
 	return out

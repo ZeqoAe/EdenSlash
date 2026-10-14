@@ -1181,6 +1181,12 @@ func _open_slot_chest(box: String) -> void:
 			cards = Run.roll_cards(3)  # plus rien de ce type : des cartes au choix
 		world._offer("%s : choisis une carte" % title, cards, func(): return Run.roll_cards(3, false, kind), 1)
 		return
+	if box == "trophy":
+		if Run.trophies.size() >= Run.MAX_TROPHIES:
+			world._offer("Collection de trophées complète (%d) : choisis une carte" % Run.MAX_TROPHIES, Run.roll_cards(3), func(): return Run.roll_cards(3), 1)
+		else:
+			world._offer("%s (%d / %d trophées) : choisis-en un" % [title, Run.trophies.size(), Run.MAX_TROPHIES], trophy_cards(3), func(): return trophy_cards(3), 1)
+		return
 	var gear := SlotChests.offer(box, Run.epoch, Run.stage).map(func(it): return weapon_card(it, "gear") if it.slot == "weapon" else item_card(it, "gear"))
 	world._offer("%s (%s) : choisis une pièce" % [title, Epochs.map_text(Run.epoch, Run.stage)], gear,
 		func(): return SlotChests.offer(box, Run.epoch, Run.stage).map(func(it): return weapon_card(it, "gear") if it.slot == "weapon" else item_card(it, "gear")), 1)
@@ -1216,13 +1222,11 @@ static func item_card(it: Dictionary, type: String) -> Dictionary:
 		lines.append("[color=#ffd36b]%s[/color]" % pv.desc)
 	var cmp := Items.compare_to_equipped(it)
 	if it.slot == "trophy":
-		# trophée : effet unique ; on dit lequel il remplace (l'ancien n'agit plus, il reste dans le sac)
-		var worn: Dictionary = Profile.equipped.get("trophy", {})
-		var head := "[color=#7dff8a]Emplacement libre : effet actif dès qu'il est pris[/color]" if worn.is_empty() else \
-			"[color=#ffb347]Remplace %s[/color] (son effet s'arrête : %s)" % [Items.display_name(worn), String(worn.get("passive", {}).get("desc", "?"))]
-		var r0 := clampi(int(it.get("rarity", 0)), 0, Items.RARITIES.size() - 1)
-		return {"type": type, "id": String(it.get("uid", "")), "item": it, "title": Items.display_name(it),
-			"subtitle": "Trophée · %s · effet unique" % Items.RARITIES[r0].name,
+		# trophée : collection de la run (12 au plus, effets différents), effet actif tout de suite
+		var head := "[color=#7dff8a]S'ajoute à ta collection (%d → %d / %d) : effet actif tout de suite[/color]" % [
+			Run.trophies.size(), Run.trophies.size() + 1, Run.MAX_TROPHIES]
+		return {"type": "trophy", "id": String(it.get("uid", "")), "item": it, "title": Items.display_name(it),
+			"subtitle": "Trophée · %s · niv. %d" % [String(it.get("passive", {}).get("name", "")), int(it.get("level", 0))],
 			"desc": head + "\n[color=#ffd36b]%s[/color]" % String(it.get("passive", {}).get("desc", "")), "icon": String(it.get("icon", "")), "color": Items.color_of(it)}
 	var cmp_txt := "[color=#7dff8a]Emplacement libre[/color]" if cmp >= 1.0 else ("[color=#7dff8a]▲ +%d %%[/color] sur ta pièce" % roundi(cmp * 100.0)
 		if cmp > 0.005 else ("[color=#ff8a7d]▼ %d %%[/color] sur ta pièce" % roundi(cmp * 100.0) if cmp < -0.005 else "Comme ta pièce"))
@@ -1455,7 +1459,10 @@ func _capture(sh: Shrine) -> void:
 	sh.update_visual()
 	match sh.reward:
 		"trophy":
-			world._offer("Sanctuaire capturé ! Choisis un trophée", trophy_cards(3))
+			if Run.trophies.size() < Run.MAX_TROPHIES:
+				world._offer("Sanctuaire capturé ! Choisis un trophée (%d / %d)" % [Run.trophies.size(), Run.MAX_TROPHIES], trophy_cards(3))
+			else:
+				world._offer("Sanctuaire capturé ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
 		"keys":
 			Profile.keys += 2
 			Run.add_gold(40 + 10 * player.level)
@@ -1465,15 +1472,10 @@ func _capture(sh: Shrine) -> void:
 			world._offer("Sanctuaire capturé ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
 
 
-## Cartes de choix de trophée : 3 trophées du niveau de la run (le choisi va dans le sac).
+## Cartes de choix de trophée : [param n] effets que la collection n'a pas encore, au niveau
+## de la map (le choisi rejoint Run.trophies).
 func trophy_cards(n: int) -> Array:
-	var out: Array = []
-	for i in n:
-		var it := Items.generate(loot_level(player.level), 0.7, "trophy", Run.class_id, 2, "", 3)
-		out.append({"type": "trophy", "id": String(it.uid), "item": it, "title": Items.display_name(it),
-			"subtitle": "Trophée %s" % String(Items.RARITIES[int(it.rarity)].name).to_lower(),
-			"desc": String(it.get("passive", {}).get("desc", "")), "icon": String(it.icon)})
-	return out
+	return SlotChests.trophy_offer(Run.epoch, Run.stage, n).map(func(it): return item_card(it, "trophy"))
 
 
 ## Marchands ambulants : ils se promènent autour de leur place, et s'arrêtent face au héros.

@@ -79,8 +79,8 @@ static func top_rarity(chest: Dictionary) -> int:
 static func roll_type(boss := false) -> String:
 	var r := randf()
 	if boss:
-		return "set" if r < 0.45 else ("trophy" if r < 0.8 else "gear")
-	return "gear" if r < 0.4 else ("forge" if r < 0.65 else ("jewel" if r < 0.85 else "trophy"))
+		return "set" if r < 0.6 else "gear"  # (plus de coffres de trophées : collection de la run)
+	return "gear" if r < 0.45 else ("forge" if r < 0.72 else "jewel")
 
 
 ## Objet de butin (LootDrop) représentant un coffre.
@@ -104,9 +104,8 @@ static func offer(chest: Dictionary) -> Array:
 	var out: Array = []
 	var lv := int(chest.plevel)
 	Items.reward_zone = zone_of(chest)
-	if chest.type == "trophy":
-		for i in 3:
-			out.append(Items.generate(lv, 1.0, "trophy", Profile.selected_class, 2, "", Items.MYTHIC))
+	if false:
+		pass  # (ancien coffre de trophées : il donne des pièces de set, comme un coffre de set)
 	else:
 		var pieces := set_pieces(lv)
 		var rar := top_rarity(chest)

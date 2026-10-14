@@ -104,18 +104,13 @@ func refresh() -> void:
 			String(ws.desc) + ("\n" + mt if mt != "" else "\nPas encore améliorée (cartes d'amélioration d'arme)."), UiTheme.GOLD)
 	for ch in _cards.get_children():
 		ch.queue_free()
-	# trophée : celui porté agit, ceux du sac non
-	ItemWidgets.section(_cards, "Trophée", 15)
-	var worn: Dictionary = Profile.equipped.get("trophy", {})
-	if worn.is_empty():
-		_row(_cards, "", "Aucun trophée porté", "Les coffres de trophée en proposent : un effet unique, chaque trophée ne tombe qu'une fois par run.", UiTheme.MUTED)
-	else:
-		_row(_cards, String(worn.get("icon", "")), "✔ Actif : %s" % Items.display_name(worn),
-			String(worn.get("passive", {}).get("desc", "")), Color(0.5, 1.0, 0.55))
-	for it in Profile.inventory:
-		if String(it.get("slot", "")) == "trophy":
-			_row(_cards, String(it.get("icon", "")), "Dans le sac (inactif) : %s" % Items.display_name(it),
-				String(it.get("passive", {}).get("desc", "")), UiTheme.MUTED, 0, 40)
+	# trophées : collection de la run, tous actifs
+	ItemWidgets.section(_cards, "Trophées (%d / %d)" % [Run.trophies.size(), Run.MAX_TROPHIES], 15)
+	if Run.trophies.is_empty():
+		_row(_cards, "", "Aucun trophée pour l'instant", "Coffres de trophée (4 par map) et sanctuaires : jusqu'à %d trophées par run, tous d'effets différents, tous actifs." % Run.MAX_TROPHIES, UiTheme.MUTED)
+	for t in Run.trophies:
+		_row(_cards, String(t.get("icon", "")), "✔ %s · %s" % [String(t.get("passive", {}).get("name", "")), Items.display_name(t)],
+			String(t.get("passive", {}).get("desc", "")), Color(0.5, 1.0, 0.55), 0, 40)
 	ItemWidgets.section(_cards, "Cartes de build et passifs", 15)
 	if Run.passives.is_empty():
 		Hud._label(_cards, "Aucune carte pour l'instant : monte de niveau pour en choisir.", 14, UiTheme.MUTED)

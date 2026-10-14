@@ -15,7 +15,9 @@ extends RefCounted
 ## suit toute la run. Hors run : la puissance maximale. Stats fixes, seul le jet de qualité
 ## varie ; les stats bonus n'arrivent qu'aux améliorations +4, +6, +8, +10 (Craft).
 
-const SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "necklace", "ring", "trophy"]
+## Emplacements d'équipement (le trophée n'en est plus un depuis 0.1.130 : collection de la run,
+## Run.trophies).
+const SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "necklace", "ring"]
 const SLOT_NAMES := {
 	"weapon": "Arme", "head": "Tête", "chest": "Torse", "legs": "Jambes",
 	"gloves": "Gants", "boots": "Bottes", "back": "Cape",
@@ -25,7 +27,6 @@ const SLOT_NAMES := {
 const ARMOR := ["head", "chest", "legs", "gloves", "boots", "back"]
 const ACCESSORIES := ["necklace", "ring", "trophy"]
 ## Le trophée ne tombe que des élites et des boss (butin rare ou mieux).
-const TROPHY_CHANCE := 0.2
 ## Types de base : nom, stats de base (niveau 1, qualité 100 %).
 const BASES := {
 	"weapon": {"name": "Katana", "stats": {"patk": 14.0, "matk": 6.0, "crit": 0.02}},
@@ -189,11 +190,7 @@ static func generate(level: int, luck := 0.0, slot := "", class_id := "samurai",
 	var rarity := roll_rarity(luck, min_rarity, max_rarity)
 	var free_slot := slot == ""
 	if slot == "":
-		# trophée : seulement sur le butin rare des élites et des boss
-		if rarity >= 2 and luck >= 0.3 and randf() < TROPHY_CHANCE:
-			slot = "trophy"
-		else:
-			slot = SLOTS.filter(func(x): return x != "trophy").pick_random()
+		slot = SLOTS.pick_random()  # jamais de trophée (collection de la run, Run.trophies)
 	# objet d'Eden de la zone : nom, icône, stats connues, set, passif
 	if not GameData.eden_by_slot.is_empty():
 		var target := eden_target(level)
@@ -452,6 +449,8 @@ static func gear_procs(equipped: Dictionary) -> Array:
 	for b in active_set_bonuses(equipped):
 		out.append_array(b.procs)
 	for slot in equipped:
+		if slot == "trophy" or String(equipped[slot].get("slot", "")) == "trophy":
+			continue  # anciens trophées portés : plus de l'équipement
 		var i := 0
 		for p: Dictionary in equipped[slot].get("passive", {}).get("procs", []):
 			var q := p.duplicate(true)

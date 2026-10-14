@@ -12,7 +12,7 @@ extends CanvasLayer
 ## À gauche : aperçu 3D et stats calculées comme un héros. Profils enregistrés dans les données
 ## du jeu (RivalBuilds) ; « Appliquer à mon héros » (mode dev) ; « Utiliser pour le duel ».
 
-const SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "necklace", "ring", "trophy"]
+const SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "necklace", "ring"]
 const LOOK := [["body", "Tenue"], ["head", "Tête"], ["back", "Dos"]]
 const TABS := ["Équipement", "Sorts", "Maîtrise", "Certificats", "Apparence", "Adversaire"]
 const DYE_NAMES := ["Couleur principale", "Couleur secondaire", "Détails"]

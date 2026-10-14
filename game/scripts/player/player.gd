@@ -317,7 +317,7 @@ func recalc_stats() -> void:
 	xp_mult = 1.0 + ps.get("xp_pct", 0.0)
 	execute = minf(ps.get("execute", 0.0), 0.3)
 	pvp_capped = PvpCaps.apply(self) if PvpCaps.active() else []  # duel : plafonds JcJ
-	procs = Items.gear_procs(foe_gear) if own else Run.passive_procs() + Profile.equipment_procs()
+	procs = Items.gear_procs(foe_gear) if own else Run.passive_procs() + Run.trophy_procs() + Profile.equipment_procs()
 	hp = clampf(max_hp * ratio, 1.0, max_hp)
 	health_changed.emit(hp, max_hp)
 	xp_changed.emit(xp, GameData.xp_to_next(level), level)

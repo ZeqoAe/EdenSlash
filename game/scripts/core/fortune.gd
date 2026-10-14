@@ -17,8 +17,8 @@ const PRIZES := [
 	{"chests": ["forge", "jewel"]},
 	{"chests": ["gear"]},
 	{"chests": ["gear", "set"]},
-	{"chests": ["set", "trophy"]},
-	{"chests": ["set", "trophy"], "boss": true, "look": true},
+	{"chests": ["set", "gear"]},
+	{"chests": ["set", "gear"], "boss": true, "look": true},
 ]
 
 

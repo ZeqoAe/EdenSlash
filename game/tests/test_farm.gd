@@ -180,7 +180,7 @@ func _test_reward_zone() -> void:
 	var was_zone := Profile.selected_zone
 	Run.active = false
 	Profile.selected_zone = String(GameData.zones[-1].id)
-	var c := Rewards.make("trophy", 6)
+	var c := Rewards.make("set", 6)
 	c["zone"] = String(GameData.zones[0].id)
 	var top := 0
 	for it in Rewards.offer(c):
@@ -193,7 +193,7 @@ func _test_reward_zone() -> void:
 	Items.reward_zone = ""
 	Profile.selected_zone = was_zone  # Rewards.open sauvegarde le profil
 	Run.active = was_run
-	check("coffre de la 1re zone ouvert au lobby : trophées de son époque (niveau max %d)" % top, top <= 20)
+	check("coffre de la 1re zone ouvert au lobby : pièces de son époque (niveau max %d, pas celles de la dernière zone)" % top, top <= 30)
 	check("coffre d'équipement : objet de l'époque de sa zone (%d, %d sans elle)" % [int(own.level), int(gear.level)], int(own.level) <= int(gear.level))
 
 

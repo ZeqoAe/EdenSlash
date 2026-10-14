@@ -14,7 +14,7 @@ extends HBoxContainer
 signal class_changed
 
 const LEFT_SLOTS := ["weapon", "necklace", "head", "chest", "legs"]
-const RIGHT_SLOTS := ["offhand", "back", "gloves", "boots", "ring", "trophy"]
+const RIGHT_SLOTS := ["offhand", "back", "gloves", "boots", "ring"]
 const SLOT_CAPTIONS := {"weapon": "Arme principale", "offhand": "Arme secondaire", "necklace": "Collier"}
 const FAMILIES := [["all", "Tous", "all"], ["weapon", "Armes", "weapon"], ["armor", "Armures", "armor"],
 	["acc", "Accessoires", "ring"], ["cons", "Fournitures", "potion"], ["mat", "Matériaux", "gem"], ["misc", "Divers", "misc"]]
@@ -846,6 +846,9 @@ func _refresh_detail() -> void:
 	_d_set.text = _set_bbcode(it)
 	_b_equip.disabled = false
 	_b_equip.text = "Retirer" if equipped else "Équiper"
+	if it.slot == "trophy":
+		_b_equip.disabled = true  # ancien trophée : les trophées se trouvent pendant la run (collection)
+		_b_equip.tooltip_text = "Les trophées ne s'équipent plus : jusqu'à %d par run, trouvés dans les coffres de trophée." % Run.MAX_TROPHIES
 	var off: Dictionary = Profile.equipped.get("offhand", {})
 	_b_offhand.visible = it.slot == "weapon" and worn_slot != "offhand" and (worn_slot != "weapon" or Profile.can_be_main(off))
 	_b_offhand.text = "Échanger" if worn_slot == "weapon" else "Secondaire"

@@ -91,8 +91,7 @@ func _test_items() -> void:
 		trophies += 1 if it.slot == "trophy" else 0
 	check("butin courant : jusqu'à épique, jamais mythique ni légendaire", rar.has(3) and not rar.has(4) and not rar.has(5))
 	check("6 raretés d'Eden (mythique orange, légendaire or)", Items.RARITIES.size() == 6 and Items.RARITIES[4].name == "Mythique" and Items.RARITIES[5].name == "Légendaire")
-	check("trophées sur le butin rare des élites et boss", trophies > 0)
-	check("pas de trophée sur le butin courant", range(200).all(func(_i): return Items.generate(5, 0.0).slot != "trophy"))
+	check("plus de trophée dans le butin (collection de la run)", trophies == 0)
 	# trophées : buff sous condition, pas de stats fixes, objets parasites hors du butin
 	var tros: Array = []
 	for i in 300:
@@ -101,8 +100,7 @@ func _test_items() -> void:
 	check("trophées : jamais de familier, d'objet de test ni de bonus de sort", tros.all(func(t): return not GameData.eden_by_id.get(int(t.eden), {}).has("nopool")))
 	check("trophées retirés du butin toujours dans l'archive", Archive.entries("s:trophy").any(func(e): return e.has("nopool")))
 	check("carte du trophée : le buff en clair", Items.describe(tros[0]).contains(String(tros[0].passive.desc)))
-	var st_uid := Profile.starter_trophy
-	check("trophée de départ équipé", st_uid != "" and String(Profile.equipped.get("trophy", {}).get("uid", "")) == st_uid)
+	check("plus de trophée de départ ni de trophée porté", not Profile.equipped.has("trophy"))
 	var old_t := {"uid": "old_t", "slot": "trophy", "eden": 34164, "rarity": 5, "rv": 3, "level": 59, "plevel": 20, "quality": 1.0, "upgrade": 0, "affixes": {},
 		"base": {"str": 30.0}, "passive": {"name": "Banks", "desc": "x", "procs": []}}
 	Profile._migrate(old_t)
@@ -678,7 +676,7 @@ func _test_run_screens() -> void:
 	var sh: Shrine = map.shrines.filter(func(x): return not x.captured)[0]
 	sh.reward = "trophy"  # la carte en a presque toujours, mais le placement est aléatoire
 	player.global_position = sh.global_position + Vector3.UP * 0.5
-	var bag0 := Profile.inventory.size()
+	var tro0 := Run.trophies.size()
 	for i in 20:
 		d._update_shrines(1.0)
 	check("sanctuaire capturé en restant dans le cercle", sh.captured and d.shrines_captured >= 1)
@@ -686,7 +684,7 @@ func _test_run_screens() -> void:
 	world.cards._select(0)
 	world.cards._opened_at = 0
 	world.cards._confirm_choice()
-	check("trophée choisi : dans le sac", Profile.inventory.size() == bag0 + 1 and Profile.inventory[-1].slot == "trophy")
+	check("trophée choisi : dans la collection de la run", Run.trophies.size() == tro0 + 1 and Run.trophies[-1].slot == "trophy")
 	world.cards._queue.clear()
 	world.cards._show_next()
 	# élite : une clé ; coffres de récompense gardés à l'extraction
@@ -699,7 +697,7 @@ func _test_run_screens() -> void:
 	check("élite vaincue : une clé", Profile.keys == keys1 + 1)
 	world.cards._queue.clear()
 	world.cards._show_next()
-	Run.pick_up(Rewards.loot_item(Rewards.make("trophy", 10)))
+	Run.pick_up(Rewards.loot_item(Rewards.make("set", 10)))
 	Run.pick_up(Rewards.loot_item(Rewards.make("forge", 10)))
 	check("coffres de récompense ramassés : tout de suite au menu Coffres (jamais perdus)", Profile.reward_chests.size() == chests0 + 2)
 	world.queue_free()
@@ -713,12 +711,13 @@ func _test_run_screens() -> void:
 	var st0 := Profile.stash_count()
 	var got := Rewards.open(forge_chest)
 	check("coffre de forge ouvert : fournitures et cristaux", Profile.stash_count() > st0 and int(got.crystal) > 0 and not Profile.reward_chests.has(forge_chest))
-	var tc: Dictionary = Profile.reward_chests.filter(func(c): return c.type == "trophy")[0]
+	var tc: Dictionary = Profile.reward_chests.filter(func(c): return c.type == "set")[0]
 	var offer3 := Rewards.offer(tc)
-	check("coffre de trophées : 3 propositions gardées", offer3.size() == 3 and is_same(Rewards.offer(tc), offer3))
+	check("coffre de set : 3 propositions gardées", offer3.size() == 3 and is_same(Rewards.offer(tc), offer3))
 	var vault0 := Profile.vault.size()
 	var chosen := Rewards.choose(tc, 1)
-	check("trophée choisi : au coffre commun", Profile.vault.size() == vault0 + 1 and chosen.slot == "trophy" and not Profile.reward_chests.has(tc))
+	check("pièce choisie : au coffre commun", Profile.vault.size() == vault0 + 1 and chosen.slot != "trophy" and not Profile.reward_chests.has(tc))
+	check("plus de coffres de trophées", range(300).all(func(_i): return Rewards.roll_type(randf() < 0.5) != "trophy"))
 	var sc := Rewards.make("set", 30)
 	Profile.reward_chests.append(sc)
 	var pieces := Rewards.offer(sc)

@@ -28,7 +28,10 @@ Armes refondues (0.1.127-0.1.128, `DESIGN.md`, « Auto-attaque des armes ») : p
 variantes d'auto-attaque par type d'arme (`combat/weapon_attacks.gd`), arme principale = arme de la
 classe, arme secondaire trouvée en jeu (`Profile.equipped.offhand`, `SlotChests.offhand_offer`,
 `Player._update_offhand`), cartes d'amélioration d'arme (`Run.weapon_ups`, `WeaponAttacks.roll_upgrade`).
-Reste : retours du joueur sur l'équilibrage.
+Trophées (0.1.130) : plus de l'équipement, collection de la run (`Run.trophies`, 12 au plus, effets
+tous différents, 67 effets dans `Trophies.KINDS`, répartis sur les trophées d'Eden par
+`tools/rework_trophies.py` : relancer l'outil après l'ajout d'une famille).
+Reste : retours du joueur sur l'équilibrage (époque 1 gagnée « bien capé » le 14/10, il passe à l'époque 2).
 
 ## Branche
 Tout se passe sur la branche `claude/optimistic-gauss-p2g2pq`. Ne pas travailler sur `master`.

@@ -184,9 +184,30 @@ func _test_world() -> void:
 	Profile.unequip("offhand")
 	player.recalc_stats()
 	check("arme secondaire retirée", player.offhand_spec().is_empty())
-	# trophées : effet unique, pas d'amélioration, une seule fois par run
-	var trophies := SlotChests.offer("trophy", 1, 3, 50)
-	check("coffre de trophée : des trophées (%d)" % trophies.size(), not trophies.is_empty() and trophies.all(func(it): return it.slot == "trophy"))
+	# trophées : collection de la run (12 au plus, effets tous différents), pas d'amélioration
+	var trophies := SlotChests.offer("trophy", 1, 3, 80)
+	var tkinds := {}
+	for it in trophies:
+		tkinds[String(it.passive.trophy)] = true
+	check("coffre de trophée : %d effets différents proposables (60 au moins)" % trophies.size(), trophies.size() >= 60 and tkinds.size() == trophies.size()
+		and trophies.all(func(it): return it.slot == "trophy"))
+	var hi := SlotChests.trophy_offer(4, 3, 80)
+	check("variantes de niveau : trophées plus hauts et plus forts aux dernières époques", hi.size() >= 60 \
+		and hi.reduce(func(a, it): return a + int(it.level), 0) > trophies.reduce(func(a, it): return a + int(it.level), 0))
+	Run.trophies = []
+	for it in trophies.slice(0, 13):
+		Run.add_trophy(it)
+	check("collection : 12 trophées au plus", Run.trophies.size() == Run.MAX_TROPHIES)
+	var dup: Dictionary = trophies[0].duplicate(true)
+	Run.trophies.pop_back()
+	check("collection : jamais deux fois le même effet", not Run.add_trophy(dup))
+	player.recalc_stats()
+	check("collection : tous les effets agissent (%d)" % Run.trophy_procs().size(), Run.trophy_procs().size() == 11
+		and player.procs.filter(func(p): return String(p.get("id", "")).begins_with("trophy_")).size() == 11)
+	check("coffre de trophée : jamais un effet déjà pris", SlotChests.trophy_offer(1, 3, 80).all(func(it): return not String(it.passive.trophy) in Run.trophy_kinds()))
+	Run.trophies = []
+	player.recalc_stats()
+	check("trophées : plus de case d'équipement", not "trophy" in Items.SLOTS and not Profile.equipped.has("trophy"))
 	if not trophies.is_empty():
 		var tr: Dictionary = trophies[0]
 		check("trophée : pas d'amélioration (forge, enclume, gemmes, enchantement)", not bool(Craft.upgrade(tr).ok) and not bool(Craft.upgrade_free(tr).ok) \
@@ -609,7 +630,9 @@ func _test_gear_rules() -> void:
 	check("butin des monstres : jamais mythique ni légendaire", range(300).all(func(_i): return int(Items.generate(10, 0.9).rarity) <= 3))
 	# trophées de build : chaque famille a un texte lisible ; esquive -> onde
 	var bad: Array = Trophies.KINDS.keys().filter(func(k): return Trophies.describe(Trophies.proc_for(k, 3)).strip_edges() == "" or Trophies.describe(Trophies.proc_for(k, 3)).contains("%d"))
-	check("%d familles de trophées, toutes décrites (sans texte : %s)" % [Trophies.KINDS.size(), bad], Trophies.KINDS.size() >= 30 and bad.is_empty())
+	check("%d familles de trophées, toutes décrites (sans texte : %s)" % [Trophies.KINDS.size(), bad], Trophies.KINDS.size() >= 60 and bad.is_empty())
+	var no_model: Array = Trophies.KINDS.keys().filter(func(k): return not GameData.eden_items.any(func(e): return String(e.get("trophy", "")) == k and Trophies.in_pool(e)))
+	check("chaque famille de trophée a des modèles d'Eden (sans : %s)" % [no_model], no_model.is_empty())
 	check("trophée Onde d'esquive : se déclenche en esquivant", String(Trophies.proc_for("dodge_wave", 3).trigger) == "dodge")
 
 

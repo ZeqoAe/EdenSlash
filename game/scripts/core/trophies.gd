@@ -1,15 +1,19 @@
 class_name Trophies
 extends RefCounted
-## Trophées : presque pas de stats fixes, un buff sous condition. Chaque trophée d'Eden a une
-## famille (« trophy » dans data/eden_catalog.json, écrite par tools/rework_trophies.py
-## d'après son texte d'Eden) ; la rareté de l'objet règle la force du buff (chance, valeurs).
-## Un trophée de départ est donné à tout le monde (Profile) ; les autres se lootent sur les
-## élites et les boss. Les objets marqués « nopool » (familiers, tests, bonus de sorts d'autres
-## classes) restent dans l'archive mais ne tombent jamais.
+## Trophées : un effet sous condition, sans stats fixes. Depuis 0.1.130 ils ne sont plus de
+## l'équipement : c'est une collection de la run (Run.trophies, jusqu'à Run.MAX_TROPHIES, tous
+## d'effets différents), trouvée dans les coffres de trophée et les sanctuaires. Chaque trophée
+## d'Eden a une famille (« trophy » dans data/eden_catalog.json, écrite par
+## tools/rework_trophies.py d'après son texte d'Eden) ; sa rareté et son niveau règlent la force
+## de l'effet (chance, valeurs). Les objets marqués « nopool » (familiers, tests, bonus de sorts
+## d'autres classes) restent dans l'archive mais ne tombent jamais.
 
-## Trophée de départ (Eden : Departure Crystal, « Éveil »).
+## Ancien trophée de départ (Eden : Departure Crystal) : plus donné depuis 0.1.130.
 const STARTER_ID := 35199
 const STARTER_RARITY := 1
+## Force selon le niveau du trophée d'Eden : × (LEVEL_MIN … LEVEL_MIN + LEVEL_SPAN au niveau 90).
+const LEVEL_MIN := 0.75
+const LEVEL_SPAN := 0.5
 ## Force du buff selon la rareté (commun … légendaire) : chance × et valeurs ×.
 const CHANCE_MULT := [0.7, 0.8, 0.9, 1.0, 1.1, 1.25]
 const VALUE_MULT := [0.5, 0.6, 0.75, 0.9, 1.0, 1.2]
@@ -53,6 +57,45 @@ const KINDS := {
 	"soul_burst": {"name": "Âmes explosives", "trigger": "kill", "chance": 0.25, "cd": 0.5, "effect": "explosion", "mult": 1.0, "radius": 3.5},
 	"momentum": {"name": "Élan", "trigger": "kill", "chance": 0.3, "cd": 1.0, "effect": "cdr", "amount": 0.3},
 	"harvest": {"name": "Moisson", "trigger": "kill", "chance": 0.2, "cd": 4.0, "effect": "stat_buff", "status": "t_harvest", "stats": {"move_speed": 0.25, "dmg_pct": 0.1}, "duration": 5.0},
+	# --- trophées de collection (0.1.130) : 12 par run, tous d'effets différents ---
+	# éléments à l'impact
+	"chill_touch": {"name": "Toucher glacial", "trigger": "hit", "chance": 0.08, "cd": 1.0, "effect": "chill", "radius": 3.0, "duration": 3.0},
+	"shock_strike": {"name": "Électrocution", "trigger": "hit", "chance": 0.06, "cd": 1.5, "effect": "shock", "radius": 3.0, "duration": 4.0},
+	"hit_def": {"name": "Bastion", "trigger": "hit", "chance": 0.06, "cd": 6.0, "effect": "stat_buff", "status": "t_bastion", "stats": {"def_pct": 0.35}, "duration": 6.0},
+	# sorts
+	"ember_skill": {"name": "Sorts ardents", "trigger": "skill_hit", "chance": 0.35, "cd": 1.5, "effect": "burn", "radius": 3.5, "duration": 4.0},
+	"frost_skill": {"name": "Sorts gelés", "trigger": "skill_hit", "chance": 0.25, "cd": 4.0, "effect": "freeze", "radius": 3.0, "duration": 1.2},
+	"storm_skill": {"name": "Sorts orageux", "trigger": "skill_hit", "chance": 0.3, "cd": 2.0, "effect": "lightning", "mult": 0.8, "chain": 4, "radius": 7.0},
+	"skill_power": {"name": "Maîtrise", "trigger": "skill_hit", "chance": 0.2, "cd": 6.0, "effect": "stat_buff", "status": "t_mastery", "stats": {"dmg_pct": 0.15, "cast_speed": 0.1}, "duration": 6.0},
+	"skill_heal": {"name": "Sorts vitaux", "trigger": "skill_hit", "chance": 0.2, "cd": 3.0, "effect": "heal", "amount": 0.025},
+	# auto-attaque de l'arme
+	"basic_storm": {"name": "Lame foudroyante", "trigger": "basic_hit", "chance": 0.12, "cd": 1.0, "effect": "lightning", "mult": 0.7, "chain": 3, "radius": 6.0},
+	"basic_burn": {"name": "Lame ardente", "trigger": "basic_hit", "chance": 0.15, "cd": 1.0, "effect": "burn", "radius": 2.5, "duration": 4.0},
+	"basic_bleed": {"name": "Lame dentelée", "trigger": "basic_hit", "chance": 0.2, "cd": 0.8, "effect": "explosion", "mult": 0.3, "radius": 2.0, "applies": {"bleed": 4.0}, "color": Color(0.9, 0.25, 0.25, 0.9)},
+	"basic_haste": {"name": "Rythme", "trigger": "basic_hit", "chance": 0.08, "cd": 8.0, "effect": "stat_buff", "status": "t_rhythm", "stats": {"atk_speed": 0.3}, "duration": 6.0},
+	# critiques
+	"crit_burst": {"name": "Éclat critique", "trigger": "crit", "chance": 0.25, "cd": 1.0, "effect": "explosion", "mult": 0.8, "radius": 3.0, "color": Color(1.0, 0.9, 0.5, 0.9)},
+	"crit_frost": {"name": "Morsure du froid", "trigger": "crit", "chance": 0.2, "cd": 1.5, "effect": "chill", "radius": 3.5, "duration": 3.0},
+	"crit_cdr": {"name": "Concentration", "trigger": "crit", "chance": 0.15, "cd": 3.0, "effect": "cdr", "amount": 0.3},
+	"luck_crit": {"name": "Fortune", "trigger": "crit", "chance": 0.15, "cd": 6.0, "effect": "stat_buff", "status": "t_fortune", "stats": {"lck_pct": 0.3, "crit_dmg": 0.15}, "duration": 8.0},
+	# éliminations
+	"kill_frost": {"name": "Tombe glacée", "trigger": "kill", "chance": 0.25, "cd": 3.0, "effect": "nova", "radius": 4.0, "duration": 1.2},
+	"kill_storm": {"name": "Décharge", "trigger": "kill", "chance": 0.25, "cd": 1.0, "effect": "lightning", "mult": 0.8, "chain": 3, "radius": 7.0},
+	"kill_shield": {"name": "Trophée de chasse", "trigger": "kill", "chance": 0.1, "cd": 10.0, "effect": "buff", "status": "barrier", "duration": 3.0},
+	"kill_crit": {"name": "Prédateur", "trigger": "kill", "chance": 0.2, "cd": 6.0, "effect": "stat_buff", "status": "t_predator", "stats": {"crit": 0.2, "mcrit": 0.2, "crit_dmg": 0.2}, "duration": 6.0},
+	# esquive et annulation parfaite
+	"dodge_heal": {"name": "Souffle", "trigger": "dodge", "chance": 1.0, "cd": 5.0, "effect": "heal", "amount": 0.04},
+	"dodge_cdr": {"name": "Pas vif", "trigger": "dodge", "chance": 1.0, "cd": 5.0, "effect": "cdr", "amount": 0.25},
+	"dodge_frost": {"name": "Sillage glacé", "trigger": "dodge", "chance": 1.0, "cd": 6.0, "effect": "nova", "radius": 3.5, "duration": 1.0},
+	"perfect_storm": {"name": "Contre foudroyant", "trigger": "perfect", "chance": 1.0, "cd": 2.0, "effect": "lightning", "mult": 1.2, "chain": 5, "radius": 7.0},
+	"perfect_power": {"name": "Contre parfait", "trigger": "perfect", "chance": 1.0, "cd": 4.0, "effect": "stat_buff", "status": "t_parry", "stats": {"dmg_pct": 0.3}, "duration": 4.0},
+	# dégâts subis et PV bas
+	"hurt_frost": {"name": "Cœur de glace", "trigger": "hurt", "chance": 0.2, "cd": 10.0, "effect": "nova", "radius": 4.0, "duration": 1.5},
+	"hurt_storm": {"name": "Représailles", "trigger": "hurt", "chance": 0.3, "cd": 4.0, "effect": "lightning", "mult": 1.0, "chain": 3, "radius": 7.0},
+	"hurt_heal": {"name": "Seconde peau", "trigger": "hurt", "chance": 0.15, "cd": 8.0, "effect": "heal", "amount": 0.04},
+	"hurt_haste": {"name": "Repli", "trigger": "hurt", "chance": 0.2, "cd": 10.0, "effect": "buff", "status": "haste", "duration": 3.0},
+	"low_frost": {"name": "Dernier hiver", "trigger": "low_hp", "chance": 1.0, "cd": 40.0, "effect": "nova", "radius": 6.0, "duration": 2.5},
+	"low_speed": {"name": "Instinct de survie", "trigger": "low_hp", "chance": 1.0, "cd": 40.0, "effect": "stat_buff", "status": "t_survive", "stats": {"move_speed": 0.4, "eva": 0.25}, "duration": 6.0},
 }
 ## Statuts des buffs de trophée : nom, couleur, icône reprise d'un buff proche.
 const STATUSES := {
@@ -72,6 +115,13 @@ const STATUSES := {
 	"t_berserk": {"name": "Fureur du désespoir", "color": Color(1.0, 0.3, 0.25), "icon": "fury"},
 	"t_vamp": {"name": "Soif de sang", "color": Color(0.9, 0.2, 0.3), "icon": "regen"},
 	"t_harvest": {"name": "Moisson", "color": Color(0.9, 0.8, 0.4), "icon": "haste"},
+	"t_bastion": {"name": "Bastion", "color": Color(0.7, 0.85, 1.0), "icon": "barrier"},
+	"t_mastery": {"name": "Maîtrise", "color": Color(0.75, 0.7, 1.0), "icon": "grace"},
+	"t_rhythm": {"name": "Rythme", "color": Color(1.0, 0.7, 0.35), "icon": "frenzy"},
+	"t_fortune": {"name": "Fortune", "color": Color(1.0, 0.9, 0.4), "icon": "keen"},
+	"t_predator": {"name": "Prédateur", "color": Color(1.0, 0.5, 0.4), "icon": "keen"},
+	"t_parry": {"name": "Contre parfait", "color": Color(1.0, 0.85, 0.5), "icon": "fury"},
+	"t_survive": {"name": "Instinct de survie", "color": Color(0.6, 1.0, 0.7), "icon": "haste"},
 }
 const STAT_FR := {"str_pct": "Force", "agi_pct": "Agilité", "int_pct": "Intelligence", "wis_pct": "Sagesse", "lck_pct": "Chance",
 	"crit": "chances de critique", "mcrit": "", "crit_dmg": "dégâts critiques", "atk_speed": "vitesse d'attaque",
@@ -87,18 +137,19 @@ static func in_pool(e: Dictionary) -> bool:
 ## Passif d'un trophée de rareté [param rarity] fait d'après le modèle d'Eden [param e].
 static func passive_for(e: Dictionary, rarity: int) -> Dictionary:
 	var kind := String(e.get("trophy", "agi"))
-	var p := proc_for(kind, rarity)
+	var p := proc_for(kind, rarity, int(e.get("level", 0)))
 	return {"name": String(KINDS.get(kind, KINDS.agi).name), "desc": describe(p), "stat": {}, "procs": [p], "trophy": kind}
 
 
-static func proc_for(kind: String, rarity: int) -> Dictionary:
+static func proc_for(kind: String, rarity: int, level := 0) -> Dictionary:
 	var r := clampi(rarity, 0, 5)
 	var p: Dictionary = KINDS.get(kind, KINDS.agi).duplicate(true)
 	p.erase("name")
 	p["id"] = "trophy_" + kind
+	var lk := level_mult(level)
 	if float(p.chance) < 1.0:
-		p.chance = snappedf(minf(float(p.chance) * float(CHANCE_MULT[r]), 0.95), 0.005)
-	var vm := float(VALUE_MULT[r])
+		p.chance = snappedf(minf(float(p.chance) * float(CHANCE_MULT[r]) * sqrt(lk), 0.95), 0.005)
+	var vm := float(VALUE_MULT[r]) * lk
 	if p.has("stats"):
 		var st := {}
 		for s in p.stats:
@@ -108,6 +159,13 @@ static func proc_for(kind: String, rarity: int) -> Dictionary:
 		if p.has(k):
 			p[k] = snappedf(float(p[k]) * vm, 0.01)
 	return p
+
+
+## Force selon le niveau du trophée (variantes de niveau d'un même effet ; 0 : sans niveau).
+static func level_mult(level: int) -> float:
+	if level <= 0:
+		return 1.0
+	return LEVEL_MIN + LEVEL_SPAN * clampf(float(level) / 90.0, 0.0, 1.0)
 
 
 ## Texte lisible du buff (fiche de l'objet).

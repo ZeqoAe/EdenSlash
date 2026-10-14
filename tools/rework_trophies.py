@@ -19,6 +19,36 @@ import zlib
 from pathlib import Path
 
 CATALOG = Path(__file__).resolve().parent.parent / "game" / "data" / "eden_catalog.json"
+TROPHIES_GD = Path(__file__).resolve().parent.parent / "game" / "scripts" / "core" / "trophies.gd"
+# chaque famille a au moins MIN_PER_KIND modèles d'Eden (variantes de niveau du même effet)
+MIN_PER_KIND = 5
+
+
+def all_kinds():
+    """Familles définies dans trophies.gd (KINDS), dans l'ordre."""
+    text = TROPHIES_GD.read_text(encoding="utf-8")
+    block = text.split("const KINDS := {", 1)[1].split("\n}", 1)[0]
+    return re.findall(r'^\t"(\w+)": \{"name"', block, re.M)
+
+
+def balance(pool):
+    """Familles trop rares : prennent des modèles aux familles les plus fournies, en visant
+    des niveaux d'Eden variés (un modèle bas, un moyen, un haut…)."""
+    by_kind = collections.defaultdict(list)
+    for e in pool:
+        by_kind[e["trophy"]].append(e)
+    for kind in all_kinds():
+        while len(by_kind[kind]) < MIN_PER_KIND:
+            donor = max(by_kind, key=lambda k: (len(by_kind[k]), k))
+            if len(by_kind[donor]) <= MIN_PER_KIND + 1:
+                break
+            have = sorted(int(x.get("level", 0)) for x in by_kind[kind])
+            # le modèle du donneur dont le niveau est le plus éloigné de ceux déjà pris
+            cands = sorted(by_kind[donor], key=lambda x: x["id"])
+            pick = max(cands, key=lambda x: (min([abs(int(x.get("level", 0)) - h) for h in have] or [999]), -x["id"]))
+            by_kind[donor].remove(pick)
+            pick["trophy"] = kind
+            by_kind[kind].append(pick)
 
 # (motif dans le texte de l'effet, famille) : le premier qui correspond gagne
 RULES = [
@@ -54,19 +84,28 @@ STAT_KIND = {"agi": "agi", "str": "str", "int": "int_wis", "wis": "int_wis", "lc
 FALLBACK = ["agi", "crit", "double", "speed", "str", "int_wis", "guard", "regen", "storm", "might"]
 # Variété (0.1.37) : chaque famille d'Eden a des variantes de build du même archétype ; le
 # trophée prend l'une d'elles (au hasard, mais toujours la même pour un trophée donné).
+# 0.1.130 : 66 familles (12 trophées d'effets différents par run) ; les familles très fournies
+# d'Eden (résistance, défense, critique…) se partagent entre plus de variantes.
 VARIANTS = {
-    "agi": ["agi", "wind_dance", "dodge_crit"],
-    "evade": ["evade", "dodge_wave", "shadow_blades", "wind_dance", "perfect_nova"],
-    "crit": ["crit", "crit_chain", "crit_heal", "dodge_crit"],
-    "speed": ["speed", "harvest", "momentum"],
-    "str": ["str", "berserk", "quake"],
-    "might": ["might", "quake", "soul_burst", "berserk"],
-    "int_wis": ["int_wis", "arcane_echo", "mana_surge"],
-    "guard": ["guard", "thorns", "last_stand", "resolve"],
-    "regen": ["regen", "vampire", "crit_heal", "last_stand"],
-    "luck": ["luck", "harvest", "soul_burst"],
-    "storm": ["storm", "crit_chain"],
-    "venom": ["venom", "shadow_blades"],
+    "agi": ["agi", "wind_dance", "dodge_crit", "dodge_cdr", "dodge_heal"],
+    "agi_int": ["agi_int", "dodge_cdr", "skill_power"],
+    "all": ["all", "luck_crit", "kill_crit"],
+    "evade": ["evade", "dodge_wave", "shadow_blades", "wind_dance", "perfect_nova", "dodge_frost", "perfect_storm", "perfect_power", "low_speed"],
+    "crit": ["crit", "crit_chain", "crit_heal", "dodge_crit", "crit_burst", "crit_frost", "crit_cdr", "luck_crit"],
+    "speed": ["speed", "harvest", "momentum", "basic_haste", "kill_crit"],
+    "str": ["str", "berserk", "quake", "basic_bleed", "basic_burn"],
+    "might": ["might", "quake", "soul_burst", "berserk", "basic_storm", "kill_storm"],
+    "int_wis": ["int_wis", "arcane_echo", "mana_surge", "storm_skill", "ember_skill", "frost_skill", "skill_power", "skill_heal"],
+    "guard": ["guard", "thorns", "last_stand", "resolve", "hit_def", "hurt_frost", "hurt_storm", "hurt_heal"],
+    "regen": ["regen", "vampire", "crit_heal", "last_stand", "hurt_heal", "skill_heal", "dodge_heal"],
+    "luck": ["luck", "harvest", "soul_burst", "luck_crit", "kill_shield"],
+    "storm": ["storm", "crit_chain", "basic_storm", "kill_storm", "shock_strike", "storm_skill"],
+    "venom": ["venom", "shadow_blades", "basic_bleed"],
+    "fire": ["fire", "ember_skill", "basic_burn"],
+    "frost": ["frost", "chill_touch", "crit_frost", "kill_frost", "low_frost"],
+    "stun": ["stun", "shock_strike", "chill_touch", "frost_skill", "kill_frost", "low_frost", "hurt_frost"],
+    "resolve": ["resolve", "hurt_haste", "kill_shield", "low_speed", "hit_def", "dodge_frost", "perfect_power"],
+    "double": ["double", "basic_haste", "basic_storm"],
 }
 
 
@@ -149,7 +188,13 @@ def main():
             out.append((e["id"], e["name"], reason))
         else:
             e.pop("nopool", None)
+    balance([e for e in data["items"] if e.get("slot") == "trophy" and not e.get("nopool")])
+    for e in data["items"]:
+        if e.get("slot") == "trophy" and not e.get("nopool"):
             kinds[e["trophy"]] += 1
+    missing = [k for k in all_kinds() if kinds[k] == 0]
+    if missing:
+        print("familles sans modèle :", missing)
     CATALOG.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print("familles :", dict(kinds.most_common()))
     print("retirés du butin (%d) :" % len(out))

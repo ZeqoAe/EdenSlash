@@ -164,17 +164,7 @@ func _ensure_starter() -> void:
 		vault.append(w)
 		loadout["weapon"] = w.uid
 		changed = true
-	if starter_trophy == "" and GameData.eden_by_id.has(Trophies.STARTER_ID):
-		var t := Items.from_template(GameData.eden_by_id[Trophies.STARTER_ID], 1, Trophies.STARTER_RARITY)
-		vault.append(t)
-		starter_trophy = String(t.uid)
-		for cls in presets:
-			for st in presets[cls].sets:
-				if not st.slots.has("trophy"):
-					st.slots["trophy"] = starter_trophy
-		if not loadout.has("trophy"):
-			loadout["trophy"] = starter_trophy
-		changed = true
+	# (0.1.130 : plus de trophée de départ, les trophées sont une collection de la run)
 	if changed:
 		_lobby_view()
 		save_profile()
@@ -327,6 +317,9 @@ func _lobby_view() -> void:
 	equipped = {}
 	inventory = []
 	for it in vault:
+		if it.slot == "trophy":
+			inventory.append(it)  # ancien trophée : plus de l'équipement (reste au coffre)
+			continue
 		if String(loadout.get(it.slot, "")) == String(it.uid) and not equipped.has(it.slot):
 			equipped[it.slot] = it
 		elif it.slot == "weapon" and String(loadout.get("offhand", "")) == String(it.uid) and not equipped.has("offhand"):
@@ -356,8 +349,6 @@ func _class_presets(cls: String) -> Dictionary:
 		for i in PRESETS_PER_CLASS:
 			# ancienne sauvegarde : l'équipement unique devient le préréglage 1 de la classe choisie
 			var first: Dictionary = loadout.duplicate() if i == 0 and cls == selected_class and presets.is_empty() else {}
-			if i == 0 and not first.has("trophy") and vault.any(func(it): return String(it.uid) == starter_trophy):
-				first["trophy"] = starter_trophy  # nouvelle classe : le trophée de départ
 			sets.append({"name": "Préréglage %d" % (i + 1), "slots": first})
 		presets[cls] = {"active": 0, "sets": sets}
 	var p: Dictionary = presets[cls]
@@ -953,6 +944,8 @@ func add_gold(amount: int) -> void:
 
 func equip(item: Dictionary) -> void:
 	var slot: String = item.slot
+	if slot == "trophy":
+		return  # les trophées ne s'équipent plus (collection de la run)
 	if is_same(equipped.get("offhand"), item):
 		swap_weapons()  # l'arme secondaire devient l'arme principale (si elle est du type de la classe)
 		return
@@ -1135,6 +1128,8 @@ func equipment_stats() -> Dictionary:
 	var total := {}
 	for slot in equipped:
 		var it: Dictionary = equipped[slot]
+		if slot == "trophy":
+			continue
 		if Run.active and Run.survival and Run.slot_bonus.has(slot):
 			it = it.duplicate()  # Survie : l'enclume améliore l'emplacement, pas la pièce
 			it["upgrade"] = int(Run.slot_bonus[slot])
