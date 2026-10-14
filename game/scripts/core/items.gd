@@ -250,7 +250,14 @@ static func roll_rarity(luck: float, min_r := 0, max_r := 3) -> int:
 
 
 ## Zone jouée (indice dans zones.json).
+## Coffre de récompense ouvert hors run (Rewards) : zone d'où vient le coffre (sinon la zone
+## choisie au lobby donnerait des objets d'une autre époque, niveau 90 pour un débutant).
+static var reward_zone := ""
+
+
 static func zone_band() -> int:
+	if reward_zone != "":
+		return GameData.zone_index(reward_zone)
 	return GameData.zone_index(Run.zone_id if Run.active else Profile.selected_zone)
 
 

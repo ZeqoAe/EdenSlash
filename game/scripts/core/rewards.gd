@@ -22,10 +22,24 @@ const ORDER := ["set", "trophy", "gear", "forge", "jewel"]
 
 
 static func make(type: String, plevel: int, boss := false) -> Dictionary:
-	var c := {"id": "%d_%d" % [Time.get_ticks_usec(), randi() % 100000], "type": type, "plevel": maxi(plevel, 1)}
+	var c := {"id": "%d_%d" % [Time.get_ticks_usec(), randi() % 100000], "type": type, "plevel": maxi(plevel, 1),
+		"zone": Run.zone_id if Run.active else ""}
 	if boss:
 		c["boss"] = true
 	return c
+
+
+## Zone d'où vient [param chest] (objets de son époque d'Eden) ; anciens coffres : la
+## première zone dont les niveaux de run couvrent son niveau.
+static func zone_of(chest: Dictionary) -> String:
+	var z := String(chest.get("zone", ""))
+	if z != "" and GameData.zones.any(func(x): return String(x.id) == z):
+		return z
+	var lv := int(chest.get("plevel", 1))
+	for i in GameData.zones.size():
+		if lv <= GameData.zone_run_levels(i).y:
+			return String(GameData.zones[i].id)
+	return String(GameData.zones[-1].id) if not GameData.zones.is_empty() else ""
 
 
 ## Rareté d'un objet de coffre : mythique, ou légendaire (20 %, 35 % pour un coffre de boss).
@@ -53,10 +67,15 @@ static func is_choice(chest: Dictionary) -> bool:
 
 ## Propositions d'un coffre à choix (tirées une fois, gardées dans le coffre).
 static func offer(chest: Dictionary) -> Array:
+	if not chest.has("zone"):
+		# coffre d'avant 0.1.119 : propositions tirées dans la zone du lobby, retirées une fois
+		chest.erase("offer")
+		chest["zone"] = zone_of(chest)
 	if chest.has("offer"):
 		return chest.offer
 	var out: Array = []
 	var lv := int(chest.plevel)
+	Items.reward_zone = zone_of(chest)
 	if chest.type == "trophy":
 		for i in 3:
 			out.append(Items.generate(lv, 1.0, "trophy", Profile.selected_class, 2, "", Items.MYTHIC))
@@ -67,6 +86,7 @@ static func offer(chest: Dictionary) -> Array:
 			out.append(Items.from_template(e, lv, rar))
 		while out.size() < 3:
 			out.append(Items.generate(lv, 1.0, "", Profile.selected_class, Items.MYTHIC, "", Items.MYTHIC))
+	Items.reward_zone = ""
 	chest["offer"] = out
 	return out
 
@@ -101,6 +121,7 @@ static func set_pieces(plevel: int) -> Array:
 static func open(chest: Dictionary) -> Dictionary:
 	var got := {"items": [], "supplies": {}, "crystal": 0}
 	var lv := int(chest.plevel)
+	Items.reward_zone = zone_of(chest)
 	match String(chest.type):
 		"gear":
 			var rar := top_rarity(chest)
@@ -125,6 +146,7 @@ static func open(chest: Dictionary) -> Dictionary:
 			var slv := Craft.scroll_level_for(lv)
 			var sc := Craft.scroll_key(Craft.ENCHANTS.keys().pick_random(), slv) if slv > 0 else Craft.random_stone(1)
 			got.supplies[sc] = 1
+	Items.reward_zone = ""
 	_give(got)
 	Profile.reward_chests.erase(chest)
 	Profile.save_profile()

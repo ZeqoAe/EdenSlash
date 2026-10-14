@@ -104,7 +104,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
 				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
-				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge" or arg == "--duel-prep" or arg == "--rival-editor" or arg.begins_with("--profile-tab=") or arg.begins_with("--profile-picker=") or arg == "--profile-load" or arg.begins_with("--settings-tab=") or arg.begins_with("--menu="):
+				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge" or arg == "--duel-prep" or arg == "--rival-editor" or arg.begins_with("--profile-tab=") or arg.begins_with("--profile-picker=") or arg == "--profile-load" or arg.begins_with("--settings-tab=") or arg.begins_with("--menu=") or arg.begins_with("--chest-open="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -207,7 +207,16 @@ func _ready() -> void:
 				for t in Rewards.ORDER:
 					Profile.reward_chests.append(Rewards.make(t, 25))
 			_chests.open(0)
-			_chests.page(0).open_chest(Profile.reward_chests.filter(func(c): return c.type == "set")[0])
+			var kind := "set"  # --chest-open=gear : coffre ouvert (set, trophy, gear, forge, jewel ; none : aucun)
+			for arg in OS.get_cmdline_user_args():
+				if arg.begins_with("--chest-open="):
+					kind = arg.trim_prefix("--chest-open=")
+			var pick := Profile.reward_chests.filter(func(c): return c.type == kind)
+			if pick.is_empty() and Rewards.TYPES.has(kind):
+				Profile.reward_chests.append(Rewards.make(kind, 25))
+				pick = Profile.reward_chests.filter(func(c): return c.type == kind)
+			if not pick.is_empty():
+				_chests.page(0).open_chest(pick[0])
 		"archive":
 			_archive.open(0)
 			for arg in OS.get_cmdline_user_args():

@@ -14,6 +14,7 @@ func check(label: String, ok: bool) -> void:
 
 
 func _ready() -> void:
+	Profile.selected_zone = String(GameData.zones[0].id)  # 1re zone, quelle que soit celle du profil de test
 	world = load("res://scenes/world.tscn").instantiate()
 	get_tree().root.add_child.call_deferred(world)
 	await get_tree().create_timer(6.0).timeout
@@ -133,6 +134,7 @@ func _ready() -> void:
 		await get_tree().create_timer(1.0).timeout
 	check("étape 2 : %s → %s, carte neuve, niveau gardé" % [zone0, Run.zone_id], Run.stage == 2 and Run.zone_id != zone0 and d.state == "explore"
 		and d.time < 2.0 and d.map.breakables != null and d.map.breakables.count() > 600 and player.level == lv)
+	_test_reward_zone()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit()
 
@@ -156,3 +158,27 @@ func _use(kind: String) -> void:
 func _close_cards() -> void:
 	world.cards._queue.clear()
 	world.cards._show_next()
+
+
+## Coffre de récompense de la 1re zone ouvert au lobby sur la dernière zone : objets de
+## l'époque de sa zone (retour du joueur : trophées niveau 90 proposés à un débutant).
+func _test_reward_zone() -> void:
+	var was_run := Run.active
+	var was_zone := Profile.selected_zone
+	Run.active = false
+	Profile.selected_zone = String(GameData.zones[-1].id)
+	var c := Rewards.make("trophy", 6)
+	c["zone"] = String(GameData.zones[0].id)
+	var top := 0
+	for it in Rewards.offer(c):
+		top = maxi(top, int(it.level))
+	var g := Rewards.make("gear", 6)
+	g["zone"] = String(GameData.zones[0].id)
+	var gear: Dictionary = Items.generate(6, 0.8, "", "warrior", Items.MYTHIC, "", Items.MYTHIC)  # sans la zone du coffre
+	Items.reward_zone = Rewards.zone_of(g)
+	var own: Dictionary = Items.generate(6, 0.8, "", "warrior", Items.MYTHIC, "", Items.MYTHIC)
+	Items.reward_zone = ""
+	Profile.selected_zone = was_zone  # Rewards.open sauvegarde le profil
+	Run.active = was_run
+	check("coffre de la 1re zone ouvert au lobby : trophées de son époque (niveau max %d)" % top, top <= 20)
+	check("coffre d'équipement : objet de l'époque de sa zone (%d, %d sans elle)" % [int(own.level), int(gear.level)], int(own.level) <= int(gear.level))
