@@ -49,10 +49,26 @@ func _ready() -> void:
 	_mat.albedo_color = Color(st.color, 0.0)
 	_mat.emission_enabled = true
 	_mat.emission = st.color
-	_mat.emission_energy_multiplier = 1.6
+	_mat.emission_energy_multiplier = 0.35  # lueur douce : le héros et les zones annoncées restent lisibles
 	_disc.material_override = _mat
 	_disc.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(_disc)
+	# liseré du bord : la limite de la flaque se lit sans la remplir d'une couleur vive
+	var edge := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = maxf(radius - 0.18, 0.05)
+	torus.outer_radius = radius
+	torus.rings = 40
+	edge.mesh = torus
+	edge.scale = Vector3(1, 0.05, 1)
+	edge.position.y = 0.04
+	var em := StandardMaterial3D.new()
+	em.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	em.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	em.albedo_color = Color(st.color.lightened(0.2), 0.8)
+	edge.material_override = em
+	edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(edge)
 	var light := OmniLight3D.new()
 	light.light_color = st.color
 	light.light_energy = 0.8
@@ -60,7 +76,7 @@ func _ready() -> void:
 	light.shadow_enabled = false
 	light.position.y = 0.6
 	add_child(light)
-	create_tween().tween_property(_mat, "albedo_color:a", 0.55, grow)
+	create_tween().tween_property(_mat, "albedo_color:a", 0.28, grow)
 
 
 func _physics_process(delta: float) -> void:

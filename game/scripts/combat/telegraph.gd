@@ -42,7 +42,14 @@ static func spawn(parent: Node, pos: Vector3, yaw: float, props: Dictionary) -> 
 func _ready() -> void:
 	var outline := MeshInstance3D.new()
 	outline.mesh = _shape_mesh(1.0)
-	outline.material_override = _mat(0.18 if small else 0.28)
+	outline.material_override = _mat(0.08 if small else 0.12)  # fond léger : le héros reste visible
+	# liseré net sur tout le contour (lisible même quand plusieurs zones se chevauchent)
+	var border := MeshInstance3D.new()
+	border.mesh = _border_mesh(0.14 if small else 0.18)
+	border.material_override = _mat(0.85)
+	border.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	border.position.y = 0.01
+	add_child(border)
 	if jumpable:
 		# bord jaune : on peut l'éviter en sautant
 		var edge := MeshInstance3D.new()
@@ -59,7 +66,7 @@ func _ready() -> void:
 	add_child(outline)
 	_fill = MeshInstance3D.new()
 	_fill.mesh = outline.mesh
-	_fill.material_override = _mat(0.45)
+	_fill.material_override = _mat(0.32)
 	_fill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_fill.scale = Vector3(0.01, 1, 0.01) if shape != "line" else Vector3(1, 1, 0.01)
 	add_child(_fill)
@@ -109,6 +116,48 @@ func _shape_mesh(k: float) -> Mesh:
 				im.surface_add_vertex(d0 * r0)
 				im.surface_add_vertex(d1 * radius * k)
 				im.surface_add_vertex(d1 * r0)
+	im.surface_end()
+	return im
+
+
+## Bande de largeur [param w] le long du contour de la forme.
+func _border_mesh(w: float) -> Mesh:
+	var im := ImmediateMesh.new()
+	im.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
+	var band := func(a: Vector3, b: Vector3, n: Vector3) -> void:
+		# segment a→b, épaisseur vers l'intérieur (n)
+		for v in [a, b, b + n * w, a, b + n * w, a + n * w]:
+			im.surface_add_vertex(v)
+	match shape:
+		"line":
+			var h := width * 0.5
+			var p := [Vector3(-h, 0, 0), Vector3(h, 0, 0), Vector3(h, 0, length), Vector3(-h, 0, length)]
+			band.call(p[0], p[1], Vector3(0, 0, 1))
+			band.call(p[1], p[2], Vector3(-1, 0, 0))
+			band.call(p[2], p[3], Vector3(0, 0, -1))
+			band.call(p[3], p[0], Vector3(1, 0, 0))
+		"cone":
+			var half := deg_to_rad(angle) * 0.5
+			var segs := 24
+			for i in segs:
+				var a0 := -half + 2.0 * half * i / segs
+				var a1 := -half + 2.0 * half * (i + 1) / segs
+				var d0 := Vector3(sin(a0), 0, cos(a0))
+				var d1 := Vector3(sin(a1), 0, cos(a1))
+				band.call(d0 * radius, d1 * radius, -(d0 + d1).normalized())
+			for side: float in [-1.0, 1.0]:
+				var d := Vector3(sin(half * side), 0, cos(half * side))
+				band.call(Vector3.ZERO, d * radius, Vector3(cos(half * side), 0, -sin(half * side)) * -side)
+		_:
+			var segs := 48
+			for ring in ([radius, inner] if shape == "ring" and inner > 0.0 else [radius]):
+				var inward := 1.0 if is_equal_approx(float(ring), radius) else -1.0
+				for i in segs:
+					var a0 := TAU * i / segs
+					var a1 := TAU * (i + 1) / segs
+					var d0 := Vector3(sin(a0), 0, cos(a0))
+					var d1 := Vector3(sin(a1), 0, cos(a1))
+					band.call(d0 * float(ring), d1 * float(ring), -(d0 + d1).normalized() * inward)
 	im.surface_end()
 	return im
 

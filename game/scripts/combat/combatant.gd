@@ -119,12 +119,12 @@ func cc_refused(status: String) -> bool:
 
 
 ## Contrôle accepté : la cible y devient insensible jusqu'à sa fin + CC_IMMUNITY s.
-## Refusé : « INSENSIBLE » au-dessus de la cible (pas plus d'une fois par demi-seconde).
+## Refusé : « INSENSIBLE » au-dessus de la cible (pas plus d'une fois toutes les 2 s).
 func _cc_gate(status: String, duration: float) -> bool:
 	if not status in CC_TYPES:
 		return true
 	if cc_refused(status):
-		if has_status("imm_" + status) and not has_status(status) and clock - _cc_msg_at > 0.5:
+		if has_status("imm_" + status) and not has_status(status) and clock - _cc_msg_at > 2.0:
 			_cc_msg_at = clock
 			DamageNumber.spawn_text(self, "INSENSIBLE", Color(0.75, 0.85, 1.0))
 		return false
