@@ -82,18 +82,18 @@ static func _table(head: Array, rows: Array) -> String:
 
 
 func _money() -> String:
-	var t := _h("Monnaies : où les obtenir, à quoi elles servent")
-	t += _note("Les monstres donnent l'équipement (objets au sol, or, coffres de récompense). Les coffres de la carte, sanctuaires, élites et marchands donnent les cartes d'amélioration de la run.")
+	var t := _h("Une run : étapes, carte, monnaies")
+	t += _note("Une run = 3 étapes : la zone choisie puis les deux suivantes. Sur chaque carte : casse tout, ouvre les coffres, forge ton équipement, réunis 3 sceaux puis affronte le boss du donjon (le pilier violet). Boss vaincu : un portail mène à l'étape suivante, tu gardes ton niveau, tes cartes, ton équipement, ton or et tes clés. Après 10 minutes sur une carte : la rage.")
 	t += _table(["Monnaie", "Où l'obtenir", "À quoi elle sert", "En fin de run"], [
-		["[b]Or[/b]", "Monstres, vente d'objets aux marchands, sanctuaires des clés", "Coffres de la carte (le prix monte à chaque coffre), marchands, amélioration +1 → +10, fusion de gemmes", "[color=#ff9a7a]perdu[/color]"],
-		["[b]Clés[/b]", "Élites (1 chacune), sanctuaires des clés, marchands", "Ouvrir un coffre de la carte sans payer", "[color=#ff9a7a]perdues[/color]"],
+		["[b]Or[/b]", "Jarres, caisses, tas d'or, monstres, défis, vente aux marchands", "Coffres de la carte (le prix monte de 15 % à chaque coffre), marchands, amélioration +1 → +10", "[color=#ff9a7a]perdu[/color]"],
+		["[b]Clés[/b]", "Élites (1 chacune), débris, sanctuaires des clés, marchands", "Ouvrir n'importe quel coffre de la carte sans payer", "[color=#ff9a7a]perdues[/color]"],
 		["[b]Cristaux[/b]", "Démonter un objet", "Réforger une stat bonus, polir la qualité, fabrication", "[color=#7fe08a]gardés[/color]"],
-		["[b]Fournitures[/b]", "Butin, coffres, marchands, coffres de forge et du joaillier", "Forge : sertir des gemmes, enchanter, améliorer sans risque", "gardées si tu t'en sors"],
-		["[b]Cartes[/b]", "Niveaux, coffres de la carte, sanctuaires, gardiens d'élite, marchands", "Ton build de la run", "la run seulement"],
-		["[b]Coffres de récompense[/b]", "Boss, parfois les élites, rarement les monstres", "Menu Coffres : équipement, forge, joaillier, set au choix, trophée au choix", "gardés si tu t'en sors"],
+		["[b]Fournitures[/b]", "Caisses (parchemins de fortification), cristaux et jarres (gemmes), coffres ouvragés et dorés et défis (pierres, parchemins bénis), autels du scribe (enchantements)", "Forge : améliorer, sertir des gemmes, enchanter, améliorer sans risque", "gardées si tu t'en sors"],
+		["[b]Cartes[/b]", "Niveaux, sanctuaires, gardiens d'élite, marchands", "Ton build de la run", "la run seulement"],
+		["[b]Coffres de récompense[/b]", "Boss d'étape (toujours), stèles du défi (toujours), élites (20 %)", "Menu Coffres : mythiques et légendaires, sets, forge, joaillier, trophées", "gardés si tu t'en sors"],
 	])
 	t += _sub("Sur la carte")
-	t += _note("• 10 coffres : or ou une clé, un choix de cartes.\n• 10 sanctuaires : reste dans le cercle (14 s) pendant que les monstres affluent ; cartes, trophées ou clés.\n• 3 marchands ambulants : cartes, clé, fournitures, équipement ; ils rachètent ton butin.\n• Élites : une clé ; les gardiens des camps portent un sceau du donjon et donnent un choix de cartes.\n• Forge (Échap > Héros, fiche d'un objet) : améliorer (or), réforger et polir (cristaux), percer, sertir, enchanter.")
+	t += _note("• Plus de 1 000 jarres, caisses et tonneaux : frappe-les ou fonce dedans (or, XP, parfois soins, fournitures, clés) ; tas d'or ramassés en passant ; cristaux : 3 coups, des gemmes.\n• 30 coffres : or ou une clé, une pièce d'équipement au choix parmi 3 — coffre (jusqu'à épique), coffre ouvragé (jusqu'à mythique), coffre doré (jusqu'à légendaire, pilier doré).\n• Lieux à usage unique (piliers de lumière) : enclume (+1 garanti sur une pièce portée), autel du scribe (parchemin d'enchantement au choix), fontaine de vie, pierre d'aimant (toute l'XP et le butin), autel de cupidité (+50 % d'or et de butin, monstres +25 %), stèle du défi (3 élites : coffre de récompense).\n• 10 sanctuaires : reste dans le cercle (14 s) pendant que les monstres affluent ; cartes, trophées ou clés.\n• 3 marchands ambulants : cartes, clé, fournitures, équipement ; ils rachètent ton butin.\n• Ruines, tours de guet, mines, campements et plateaux : remplis d'objets à casser.\n• Forge (Échap > Héros, fiche d'un objet) : améliorer (or et parchemin), réforger et polir (cristaux), percer, sertir, enchanter.")
 	return t
 
 

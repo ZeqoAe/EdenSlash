@@ -426,7 +426,7 @@ func _reset(msg: Dictionary) -> void:
 	Run.chains = hk.chains
 	# règles du duel du jeu (PvpCaps) pour les essais d'équilibrage ; l'apprentissage reste au
 	# niveau 10 sans équipement, avec l'échelle des héros d'origine
-	Duel.active = scen == "duel" and (_level != LEVEL or _hero_build != "" or _foe_build != "")
+	Duel.active = scen in ["duel", "rival"] and (_level != LEVEL or _hero_build != "" or _foe_build != "")
 	_bot.clear()
 	player = Player.new()
 	player.level = _level
@@ -451,13 +451,18 @@ func _reset(msg: Dictionary) -> void:
 		if scen == "monster":
 			var m := Monster.new()
 			var pool: Array = msg.get("monsters", _monster_pool)
-			m.configure(GameData.monster(int(pool.pick_random())), false, LEVEL)
+			m.configure(GameData.monster(int(pool.pick_random())), false, _level)
 			e = m
 		else:
 			var r := ClassRival.new()
 			# "random" : une classe au hasard parmi les 60 (tirée pour chaque adversaire)
 			var cid := String(GameData.classes.keys().pick_random()) if enemy_class == "random" else enemy_class
-			r.setup(cid, LEVEL, 0 if scen == "dummy" else diff)
+			var rb := _build(_foe_build)
+			if not rb.is_empty():
+				cid = String(rb["class"])
+			r.setup(cid, _level, 0 if scen == "dummy" else diff)
+			if not rb.is_empty():
+				r.apply_build(rb, _level)  # adversaire scripté sur un profil type (essais d'équilibrage)
 			r.passive = scen == "dummy"
 			r.flee = scen == "flee"
 			r.flee_center = Vector3.ZERO
@@ -488,10 +493,14 @@ func _reset(msg: Dictionary) -> void:
 	_prev_hero_hp = player.hp
 	_prev_counts = player.ml_counts.duplicate()
 	_total = {"dealt": 0.0, "taken": 0.0}
-	if _brain and _done_count == 0 and foe_hero:
+	if _brain and _done_count == 0 and (foe_hero or not enemies.is_empty()):
 		await get_tree().physics_frame
-		print("  ", _sheet(player), "
-  ", _sheet(foe_hero))
+		print("  ", _sheet(player))
+		if foe_hero:
+			print("  ", _sheet(foe_hero))
+		elif enemies[0] is ClassRival:
+			var r: ClassRival = enemies[0]
+			print("  %s (scripté) niv. %d : PV %d, att. %d, déf. %d" % [r.display_name, r.level, r.max_hp, r.atk, r.defense])
 
 
 ## Jeu de sorts de la classe [param cid] : 4 cases, puis 2 enchaînements par case (12 sorts).
