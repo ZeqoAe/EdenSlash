@@ -36,7 +36,7 @@ const PRESSURE_STEP := 20.0
 ## toujours : entre deux héros, l'avantage suit le produit puissance × PV, en racine (voir
 ## [method damage_mult]). Sans ça, l'équipement change tout d'un niveau à l'autre : au niveau 25
 ## il triple l'attaque, au 90 il multiplie les PV par 60 (combats de 4 s ou éternels).
-const DAMAGE_SCALE := 0.012  # 0.009 avant 0.1.118 (critiques à 100 % et auto-attaque pleine)
+const DAMAGE_SCALE := 0.021  # duel équipé (0.1.137 : plafonds plus bas, bonus en % ramenés de moitié ; 0.012 avant) ; à l'arme : 0,030 (ModeRules)
 ## Auto-attaque (coups du combo de l'arme) entre héros en duel : dégâts × BASIC_MULT et sans
 ## contrôle (renversement, gel…) ni attraction : elle n'interrompt plus l'adversaire, les sorts
 ## restent l'outil pour le faire. Sinon, avec la vitesse d'attaque au plafond, l'auto-attaque
@@ -47,6 +47,25 @@ const MAX_MITIGATION := 0.6
 
 ## Temps de combat de la manche en cours (avancé par le duel ou l'arène d'IA).
 static var elapsed := 0.0
+## Bilan du duel : durée de chaque manche et plus gros coup porté / reçu par le joueur (part des PV max).
+static var round_times: Array = []
+static var best_dealt := 0.0
+static var best_taken := 0.0
+
+
+static func reset_stats() -> void:
+	round_times = []
+	best_dealt = 0.0
+	best_taken = 0.0
+
+
+## Coup [param dmg] de [param src] sur [param dst] (déjà plafonné) : pour le bilan.
+static func note_hit(src: Combatant, dst: Combatant, dmg: float) -> void:
+	var frac := dmg / maxf(dst.max_hp, 1.0)
+	if src is Player and not (src as Player).foe:
+		best_dealt = maxf(best_dealt, frac)
+	elif dst is Player and not (dst as Player).foe:
+		best_taken = maxf(best_taken, frac)
 
 
 ## Combat entre joueurs en cours (mode Duel).
@@ -99,6 +118,16 @@ static func heal_mult() -> float:
 ## Coup de [param src] sur [param dst] entre deux héros en duel.
 static func between_heroes(src: Combatant, dst: Combatant) -> bool:
 	return active() and src != dst and Combatant.is_hero(src) and Combatant.is_hero(dst)
+
+
+## Bonus en % ramenés au poids du mode (duel équipé : la moitié), avant les plafonds : un bonus
+## effectif = 1 + poids × (bonus − 1) pour les dégâts, les dégâts sur la durée et la puissance de soin.
+static func soften(p: Player) -> void:
+	var w := ModeRules.num("pct_weight", 1.0)
+	if is_equal_approx(w, 1.0):
+		return
+	for k in ["dmg_mult", "dot_bonus", "heal_power"]:
+		p.set(k, 1.0 + w * (float(p.get(k)) - 1.0))
 
 
 ## Ramène les statistiques de [param p] sous les plafonds ; rend les statistiques plafonnées.

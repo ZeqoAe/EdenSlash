@@ -296,7 +296,7 @@ static func hero_vs_hero_factor(lv: int) -> float:
 
 
 ## Part des PV max qu'un seul coup peut retirer en duel (pas de mort en un coup).
-const PVP_HIT_CAP := 0.2
+const PVP_HIT_CAP := 0.15  # valeur de départ ; le profil du mode (hit_cap) la remplace
 
 
 ## Puissance d'attaque (échelle des dégâts entre héros en duel).
@@ -322,7 +322,9 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 	var taken := PvpCaps.taken(defense, source.defense) if pvp else 100.0 / (100.0 + maxf(defense, 0.0))
 	var dmg := maxf(1.0, round(amount * damage_taken_mult() * (1.0 if dot else taken)))
 	if pvp:
-		dmg = minf(dmg, ceilf(max_hp * PVP_HIT_CAP))
+		dmg = minf(dmg, ceilf(max_hp * ModeRules.num("hit_cap", PVP_HIT_CAP)))
+		dmg = _burst_limit(dmg)
+		PvpCaps.note_hit(source, self, dmg)
 	hp = maxf(0.0, hp - dmg)
 	# entraînement : héros invincible, ennemis invincibles ou mannequin (les dégâts s'affichent)
 	if immortal or (Training.active and (Training.hero_god if team == Team.PLAYER else Training.enemies_immortal)):
@@ -341,6 +343,26 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 		is_dead = true
 		_on_death(source)
 		died.emit(self, source)
+
+
+## Pas de mort en un coup : les dégâts reçus sur la fenêtre (2 s) ne dépassent pas burst_cap des PV
+## max ; au-delà, le reste du coup ne compte que pour burst_excess (on sent le coup, on ne vide pas
+## la barre). Le temps est celui de la manche (PvpCaps.elapsed).
+var _burst: Array = []  # [[instant, dégâts]]
+
+
+func _burst_limit(dmg: float) -> float:
+	var now := PvpCaps.elapsed
+	var win := ModeRules.num("burst_window", 2.0)
+	_burst = _burst.filter(func(e): return float(e[0]) <= now and now - float(e[0]) <= win)
+	var sum := 0.0
+	for e in _burst:
+		sum += float(e[1])
+	var room := maxf(0.0, max_hp * ModeRules.num("burst_cap", 0.35) - sum)
+	if dmg > room:
+		dmg = maxf(1.0, round(room + (dmg - room) * ModeRules.num("burst_excess", 0.25)))
+	_burst.append([now, dmg])
+	return dmg
 
 
 func heal(amount: float) -> void:

@@ -53,12 +53,13 @@ func _ready() -> void:
 	var capped := PvpCaps.apply(p)
 	check("vitesse d'attaque plafonnée (%d %%)" % roundi(PvpCaps.CAPS.atk_speed * 100), is_equal_approx(p.atk_speed, PvpCaps.CAPS.atk_speed))
 	check("critique plafonné (%d %%)" % roundi(PvpCaps.CAPS.crit * 100), is_equal_approx(p.crit, PvpCaps.CAPS.crit))
-	check("dégâts critiques plafonnés (×%.2f)" % (1.0 + PvpCaps.CAPS.crit_dmg), is_equal_approx(p.crit_dmg, PvpCaps.CAPS.crit_dmg))
+	var cd_cap := float(ModeRules.rule("caps").crit_dmg)
+	check("dégâts critiques plafonnés (×%.2f)" % (1.0 + cd_cap), is_equal_approx(p.crit_dmg, cd_cap))
 	check("statistique sous le plafond inchangée", is_equal_approx(p.move_mult, 1.2) and not "move_mult" in capped)
 	check("hors duel : pas de plafond", not PvpCaps.active())
 	Duel.active = true
 	p.recalc_stats()
-	check("en duel : plafonds appliqués au calcul des statistiques", p.atk_speed <= PvpCaps.CAPS.atk_speed and p.crit <= PvpCaps.CAPS.crit and p.crit_dmg <= PvpCaps.CAPS.crit_dmg)
+	check("en duel : plafonds appliqués au calcul des statistiques", p.atk_speed <= PvpCaps.CAPS.atk_speed and p.crit <= PvpCaps.CAPS.crit and p.crit_dmg <= cd_cap)
 	Duel.active = false
 	await _test_scale()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])

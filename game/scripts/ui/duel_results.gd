@@ -30,6 +30,13 @@ func show_results(won: bool, score: String, opponent: String, diff: int, total: 
 	s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var w := Hud._label(v, "Victoires contre cette classe dans cette difficulté : %d" % total, 17, Color(0.6, 0.85, 1.0))
 	w.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var times: PackedStringArray = []
+	for tm in PvpCaps.round_times:
+		times.append("%d s" % roundi(float(tm)))
+	var m := Hud._label(v, "%s niveau %d · manches : %s" % ["À l'arme" if Duel.bare else "Équipé", Duel.level, ", ".join(times) if not times.is_empty() else "—"], 16, UiTheme.MUTED)
+	m.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var hit := Hud._label(v, "Plus gros coup porté : %d %% des PV de l'adversaire · reçu : %d %% de tes PV" % [roundi(PvpCaps.best_dealt * 100.0), roundi(PvpCaps.best_taken * 100.0)], 16, UiTheme.MUTED)
+	hit.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(spacer)

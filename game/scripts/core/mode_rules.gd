@@ -9,18 +9,37 @@ extends RefCounted
 ## pressure_start, pressure_step, caps. D'autres familles (monstres, héros, gains) rejoindront les
 ## profils quand leur consommateur sera branché (Survie, Donjon, Panthéon…).
 
+## Duel équipé (mode B) : tout compte ; plafonds de dégâts +100 % et critiques ×2, bonus en % ramenés
+## de moitié (pct_weight 0,5 sur dmg_mult, dot_bonus, heal_power). « duel » est son ancien nom.
+## Pas de mort en un coup : au plus hit_cap des PV max par coup, et burst_cap sur burst_window s ; au-delà
+## le reste du coup compte burst_excess.
 const PVP := {
 	"dmg_scale": PvpCaps.DAMAGE_SCALE, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": PvpCaps.HEAL_MULT,
 	"max_mitigation": PvpCaps.MAX_MITIGATION, "pressure_start": PvpCaps.PRESSURE_START,
-	"pressure_step": PvpCaps.PRESSURE_STEP, "caps": PvpCaps.CAPS,
+	"pressure_step": PvpCaps.PRESSURE_STEP, "pct_weight": 0.5,
+	"hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
+	"caps": {
+		"atk_speed": 2.0, "cast_speed": 3.0, "crit": 0.5, "mcrit": 0.5, "crit_dmg": 1.0, "move_mult": 2.0,
+		"lifesteal": 0.2, "heal_power": 1.5, "cdr": 0.3, "dmg_mult": 2.0, "dot_bonus": 3.0, "area_mult": 2.0, "reach_mult": 2.0,
+	},
 }
 
-## Profils par nom. « duel_a » (à l'arme) et « duel_b » (équipé) copient « duel » pour l'instant : le
-## lot 5 les sépare. La Tour et l'entraînement n'ont pas de règles de duel propres (celles de « duel »
-## s'appliquent quand Duel.active).
+## Duel à l'arme (mode A) : aucune pièce ni bonus de méta, niveau choisi ; l'échelle des dégâts
+## compense l'équipement absent (manches de 45 à 90 s à tout niveau). Plafonds de stats : ceux de
+## base (rien à plafonner sans équipement).
+const PVP_A := {
+	"dmg_scale": 0.030, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": PvpCaps.HEAL_MULT,
+	"max_mitigation": PvpCaps.MAX_MITIGATION, "pressure_start": PvpCaps.PRESSURE_START,
+	"pressure_step": PvpCaps.PRESSURE_STEP, "pct_weight": 1.0,
+	"hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
+	"caps": PvpCaps.CAPS,
+}
+
+## Profils par nom. La Tour et l'entraînement n'ont pas de règles de duel propres (celles de
+## « duel_b » s'appliquent quand Duel.active).
 const PROFILES := {
 	"duel": PVP,
-	"duel_a": PVP,
+	"duel_a": PVP_A,
 	"duel_b": PVP,
 }
 
@@ -34,6 +53,8 @@ static func profile_name() -> String:
 	if forced != "":
 		return forced
 	var m := Modes.current()
+	if m == "duel":
+		return "duel_a" if Duel.bare else "duel_b"
 	return m if PROFILES.has(m) else ""
 
 

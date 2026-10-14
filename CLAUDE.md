@@ -40,7 +40,8 @@ la famille JcJ de `PvpCaps` ; `core/modifiers.gd` : table de modificateurs ; mod
 « modes » ; arène d'IA `--rules=duel_a`). Les autres familles (monstres, héros, gains) entrent dans les
 profils quand leur consommateur est branché ; les tests `Tower.active` / `Duel.active` dispersés restent.
 Reste du lot 1 : « niveau minimum 10 » du Duel (`Duel.gear_level`), à faire avec le lot 5 (échelle des
-dégâts en même temps) ; insensibilité aux renversements des 11 certificats (B10, non codée). Prochain : lot 5 (Duel à l'arme / équipé).
+dégâts en même temps) ; insensibilité aux renversements des 11 certificats (B10, non codée). Lot 5 fait (0.1.137) sauf : coups réduits par la rafale non affichés en gris, Ligue/Panthéon/Gantelet (lots 14-15).
+Prochain : lot 6 (builds sains).
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,
@@ -107,6 +108,11 @@ actuel (`IA_Duel.bat` prend le meilleur). Brancher un adversaire IA (la Tour) :
   ~5 ms par décision. Le cerveau est entraîné au niveau 10 sans équipement.
 
 ## Duel (JcJ) et profils « opti »
+Deux modes depuis 0.1.137 (`Duel.bare`, lobby > Duel) : **à l'arme** (profil `duel_a` : aucune pièce ni méta, arme de
+la classe, niveau 1-100 au choix, échelle 0,030, manches de 66-81 s mesurées aux niveaux 1, 10, 50 et 90) et
+**équipé** (`duel_b` : échelle 0,021, dégâts +100 % et critiques ×2 au plus, bonus en % ramenés de moitié ; mesuré
+53-90 s selon la paire). Dans les deux : un coup retire 15 % des PV max au plus, 35 % sur 2 s (le reste compte
+×0,25). Règles lues par `ModeRules` ; essai : `--rules=duel_a|duel_b` dans l'arène d'IA.
 Règles du duel dans `combat/pvp_caps.gd` (échelle des dégâts, défense relative, soins, acharnement,
 plafonds) appliquées par `Combatant.take_damage` quand `Duel.active`. Profils générés :
 `Godot --headless --path game res://tools/gen_profiles.tscn` (réécrit les profils « auto »: "opti"

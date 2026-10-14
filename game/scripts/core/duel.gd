@@ -15,6 +15,12 @@ const ZONE := "arid"  # arène à piliers, éclairée
 
 static var active := false
 static var rival_class := "warrior"
+## Duel à l'arme (mode A) : aucune pièce, aucun talent ni certificat, niveau choisi (1 à 100), arme de la
+## classe (variante au choix). Sinon duel équipé (mode B) : tout ce que tu as réglé compte.
+static var bare := false
+static var bare_level := 10
+static var bare_variant := 0
+static var _stashed_build: Dictionary = {}
 static var difficulty := 2
 static var level := 1
 static var wins := 0
@@ -102,6 +108,14 @@ static func spell_choices(cid: String) -> Array:
 static func requirements(cid: String) -> Array:
 	var out: Array = []
 	var p := SpellPresets.active(cid)
+	if bare:
+		# à l'arme : seul le preset de sorts compte (rien d'autre n'entre dans le combat)
+		var n := 0
+		for col in p.get("cols", []):
+			if int(col[0]) != 0:
+				n += 1
+		return [{"ok": n >= 4, "label": "Preset de sorts actif, 4 cases remplies",
+			"hint": ("Preset « %s » : %d case(s) sur 4" % [p.name, n]) if not p.is_empty() else "Aucun preset actif (Grimoire > Créer un preset)", "section": "grimoire"}]
 	var mains := 0
 	for col in p.get("cols", []):
 		if int(col[0]) != 0:
@@ -154,10 +168,21 @@ static func start(cid: String, opponent: String, diff: int) -> void:
 	wins = 0
 	losses = 0
 	round_n = 1
-	level = gear_level()
+	level = clampi(bare_level, 1, 100) if bare else gear_level()
+	PvpCaps.reset_stats()
+	_stashed_build = {}
+	if bare:
+		_stashed_build = rival_build  # l'adversaire de l'éditeur revient après le duel
+		rival_build = {}
 	Run.start(cid)
 	Run.zone_id = ZONE
 	Run.fill_from_preset()
+	if bare:
+		# rien de la méta dans le combat (la sauvegarde n'est pas écrite en duel, elle est rechargée à la sortie)
+		Profile.equipped = {}
+		Profile.talents[cid] = {}
+		Profile.certificates = []
+		Profile.cert_board = ["", "", "", "", "", "", ""]
 
 
 static var _opti: Array = []
@@ -182,6 +207,11 @@ static func opti_build(cid: String, lv: int) -> Dictionary:
 ## Équipe le héros ennemi [param h] (Player, foe) comme l'adversaire préparé : profil de
 ## l'éditeur, build opti de sa classe, copie de ton équipement ou équipement généré.
 static func equip_foe(h: Player, lv: int) -> void:
+	if bare:
+		h.built = true  # à l'arme : l'adversaire non plus n'a ni pièces ni bonus
+		h.foe_gear = {}
+		h.foe_extra = {}
+		return
 	var b := rival_build
 	if b.is_empty() and gear_mode == GEAR_OPTI:
 		b = opti_build(rival_class, lv)
@@ -266,6 +296,8 @@ static func finish(won: bool) -> Dictionary:
 	Run.active = false
 	Profile.in_run = false
 	Profile.reload_keep_records()
+	if bare:
+		rival_build = _stashed_build
 	Profile.gold = 0
 	Profile.keys = 0
 	Profile.bag = {}

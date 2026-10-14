@@ -189,11 +189,20 @@ func weapon_mods(slot: String) -> Dictionary:
 
 ## Arme principale portée (celle du héros ennemi : son équipement).
 func weapon_item() -> Dictionary:
+	if _bare():
+		return {"auto_variant": Duel.bare_variant}  # l'arme de la classe, sans aucune stat
 	return foe_gear.get("weapon", {}) if foe or built else Profile.equipped.get("weapon", {})
+
+
+## Héros du joueur en duel à l'arme (Duel.bare).
+func _bare() -> bool:
+	return Duel.active and Duel.bare and not foe and not built
 
 
 ## Arme secondaire portée ({} : aucune). Elle frappe seule, sans animation (WeaponAttacks.OFFHAND_DMG).
 func offhand_item() -> Dictionary:
+	if _bare():
+		return {}
 	return foe_gear.get("offhand", {}) if foe or built else Profile.equipped.get("offhand", {})
 
 
@@ -248,14 +257,15 @@ func recalc_stats() -> void:
 	if Run.active and not foe:
 		Run.hero_level = level  # puissance des objets portés (suit le niveau, plafonnée)
 	var own := foe or built  # héros ennemi ou profil type : ses propres stats
-	var eq := _foe_equipment_stats() if own else Profile.equipment_stats()
-	var arc := {} if own else Archive.bonus()  # bonus permanents de l'archive
+	var bare := _bare()  # duel à l'arme : ni pièces ni bonus de méta, seulement l'arme de la classe
+	var eq := _foe_equipment_stats() if own else ({} if bare else Profile.equipment_stats())
+	var arc := {} if own or bare else Archive.bonus()  # bonus permanents de l'archive
 	for k in arc:
 		eq[k] = float(eq.get(k, 0.0)) + float(arc[k])
-	var aura := {} if own else Profile.aura_stats(class_id)  # auras portées (pierres étoilées, pierres de lune)
+	var aura := {} if own or bare else Profile.aura_stats(class_id)  # auras portées (pierres étoilées, pierres de lune)
 	for k in aura:
 		eq[k] = float(eq.get(k, 0.0)) + float(aura[k])
-	var ps := foe_extra.duplicate() if own else Run.passive_stats()
+	var ps := foe_extra.duplicate() if own else ({} if bare else Run.passive_stats())
 	for st in timed_stats:  # buffs temporaires des trophées
 		if has_status(st):
 			for k in timed_stats[st]:
@@ -316,8 +326,10 @@ func recalc_stats() -> void:
 	pickup_mult = 1.0 + ps.get("pickup", 0.0)
 	xp_mult = 1.0 + ps.get("xp_pct", 0.0)
 	execute = minf(ps.get("execute", 0.0), 0.3)
+	if PvpCaps.active():
+		PvpCaps.soften(self)  # duel équipé : bonus en % ramenés avant les plafonds
 	pvp_capped = PvpCaps.apply(self) if PvpCaps.active() else []  # duel : plafonds JcJ
-	procs = Items.gear_procs(foe_gear) if own else Run.passive_procs() + Run.trophy_procs() + Profile.equipment_procs()
+	procs = Items.gear_procs(foe_gear) if own else ([] if bare else Run.passive_procs() + Run.trophy_procs() + Profile.equipment_procs())
 	hp = clampf(max_hp * ratio, 1.0, max_hp)
 	health_changed.emit(hp, max_hp)
 	xp_changed.emit(xp, GameData.xp_to_next(level), level)

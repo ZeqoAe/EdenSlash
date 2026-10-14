@@ -266,7 +266,40 @@ func _start_training() -> void:
 func _menu_duel() -> void:
 	var cid := Profile.selected_class
 	_activity_head("duel")
-	Hud._label(_sub, "Ton build doit être prêt avant de t'inscrire : tu te bats avec exactement ce que tu as réglé.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# deux modes : à l'arme (rien que le preset de sorts, niveau au choix) ou équipé (tout compte)
+	var modes := HBoxContainer.new()
+	modes.add_theme_constant_override("separation", 8)
+	_sub.add_child(modes)
+	for m in [[true, "À l'arme"], [false, "Équipé"]]:
+		var mb := MenuWidgets.glass_button(String(m[1]) + ("  ✔" if Duel.bare == bool(m[0]) else ""), 16, Vector2(0, 42))
+		mb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		mb.tooltip_text = "Aucune pièce ni bonus de méta : l'arme de ta classe et ton preset de sorts, niveau au choix. Les deux héros sont à armes égales." if bool(m[0]) 			else "Tout ce que tu as réglé compte : équipement, maîtrise, certificats. Le niveau est celui de ton équipement."
+		mb.pressed.connect(func():
+			Duel.bare = bool(m[0])
+			_show_menu("duel"))
+		modes.add_child(mb)
+	if Duel.bare:
+		var lr := HBoxContainer.new()
+		lr.add_theme_constant_override("separation", 8)
+		_sub.add_child(lr)
+		Hud._label(lr, "Niveau du duel", 15, UiTheme.TEXT)
+		var sp := SpinBox.new()
+		sp.min_value = 1
+		sp.max_value = 100
+		sp.value = Duel.bare_level
+		sp.value_changed.connect(func(x): Duel.bare_level = int(x))
+		lr.add_child(sp)
+		var variants := WeaponAttacks.variants(Items.default_weapon_type(cid))
+		if variants.size() > 1:
+			Hud._label(lr, "Arme", 15, UiTheme.TEXT)
+			var vo := OptionButton.new()
+			vo.focus_mode = Control.FOCUS_NONE
+			for vv in variants:
+				vo.add_item(String(vv.get("name", "?")))
+			vo.select(clampi(Duel.bare_variant, 0, variants.size() - 1))
+			vo.item_selected.connect(func(i): Duel.bare_variant = i)
+			lr.add_child(vo)
+	Hud._label(_sub, "À l'arme : seul ton preset de sorts compte, à armes égales avec l'adversaire." if Duel.bare 		else "Ton build doit être prêt avant de t'inscrire : tu te bats avec exactement ce que tu as réglé.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	for r in Duel.requirements(cid):
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 8)
@@ -322,7 +355,7 @@ func _menu_duel() -> void:
 		_show_menu("duel"))
 	opp.add_child(pl)
 	dd.disabled = Duel.pilot != ""
-	Hud._label(_sub, "Niveau du duel : %d (celui de ton équipement) · victoires contre cette classe : %d" % [Duel.gear_level(), Duel.wins_against(_duel_opp, _duel_diff)], 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	Hud._label(_sub, "Niveau du duel : %d (%s) · victoires contre cette classe : %d" % [Duel.bare_level if Duel.bare else Duel.gear_level(), "choisi" if Duel.bare else "celui de ton équipement", Duel.wins_against(_duel_opp, _duel_diff)], 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	_sub.add_child(row)

@@ -158,6 +158,7 @@ func player_down() -> void:
 
 
 func _end_round(won: bool) -> void:
+	PvpCaps.round_times.append(snappedf(PvpCaps.elapsed, 0.1))
 	if Duel.wins >= Duel.ROUNDS_TO_WIN or Duel.losses >= Duel.ROUNDS_TO_WIN:
 		phase = "done"
 		var victory := Duel.wins >= Duel.ROUNDS_TO_WIN
