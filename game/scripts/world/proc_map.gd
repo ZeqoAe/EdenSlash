@@ -62,6 +62,7 @@ const STATIONS := {
 	"magnet": {"count": 2, "title": "Pierre d'aimant", "model": "ud115", "scale": 0.9, "col": 1.2},
 	"greed": {"count": 1, "title": "Autel de cupidité", "model": "uc033", "scale": 1.5, "col": 0.0},
 	"challenge": {"count": 2, "title": "Stèle du défi", "model": "ub201_1", "scale": 1.0, "col": 0.9},
+	"fortune": {"count": 1, "title": "Autel de la fortune", "model": "ub106", "scale": 0.9, "col": 1.4},
 }
 ## Lieux de décor (repères, avec des objets à casser autour).
 const SITE_KINDS := ["ruins", "ruins", "ruins", "tower", "tower", "arch", "bones", "bones", "mine", "mine", "camp", "camp", "camp", "market", "market"]

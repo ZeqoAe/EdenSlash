@@ -56,6 +56,13 @@ func _open_for_test() -> void:
 		pause_menu.settings.open(int(_debug_open.trim_prefix("settings")))
 	elif _debug_open == "map":
 		hud._big_map.visible = true
+	elif _debug_open == "fortune":
+		# autel de la fortune : étage 1 gagné, l'étage 2 proposé
+		cards._queue.clear()
+		cards._show_next()
+		var f := FortunePopup.open(self, player.level, player.level, Callable())
+		await get_tree().process_frame
+		f._pick(1, (f._trap + 2) % 8)
 	elif _debug_open in ["merchant", "forge"]:
 		# profil de test (user://profile_test.json) : jamais celui du joueur
 		cards._queue.clear()

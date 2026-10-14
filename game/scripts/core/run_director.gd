@@ -1150,6 +1150,13 @@ func _use_station(it: Interactable) -> void:
 		"challenge":
 			it.use_up()
 			_start_challenge(it.global_position)
+		"fortune":
+			it.use_up()
+			var plv := loot_level(_monster_level(2))
+			if player.autoplay:
+				message.emit("Autel de la fortune : %s" % Fortune.give(1, player.level, plv), 2.5)  # pilote auto : encaisse l'étage 1
+			else:
+				FortunePopup.open(self, player.level, plv, Callable())
 
 
 ## Défi : une escouade d'élites (et leurs gardes) surgit ; les vaincre donne un coffre de

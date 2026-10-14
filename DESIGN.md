@@ -141,7 +141,10 @@ mythique, ×2,5), coffre doré (épique → légendaire, ×6, pilier de lumière
 (pilier de lumière) : 3 **enclumes** (+1 garanti sur une pièce portée), 2 **autels du scribe** (parchemin
 d'enchantement au choix), 3 **fontaines de vie**, 2 **pierres d'aimant** (toute l'XP et le butin), 1 **autel de
 cupidité** (+50 % d'or et de butin, monstres +25 %), 2 **stèles du défi** (3 élites : coffre de récompense
-mythique / légendaire et fournitures). Ancien fonctionnement : 10 coffres à prix doublé, choix de cartes ; 10 **sanctuaires** à capturer (rester 14 s dans
+mythique / légendaire et fournitures), 1 **autel de la fortune** (idée du joueur : pyramide de 8 étages,
+étages 1 à 7 de 8 à 2 cases dont une piégée ; encaisser ou monter, la case piégée fait tout perdre ; gains :
+or, clés, puis coffres de forge, joaillier, équipement, set, trophées ; sommet (1 chance sur 8) : une
+apparence dorée de la collection, `core/fortune.gd`). Ancien fonctionnement : 10 coffres à prix doublé, choix de cartes ; 10 **sanctuaires** à capturer (rester 14 s dans
 le cercle pendant que les monstres affluent ; hors du cercle la capture redescend) : cartes,
 trophées ou clés ; 3 **marchands ambulants** qui se promènent (cartes, clé, fournitures,
 équipement, rachat du butin, fabrication) ; les **élites** donnent une clé, les gardiens des

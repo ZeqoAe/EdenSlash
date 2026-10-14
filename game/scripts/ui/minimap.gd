@@ -13,6 +13,7 @@ const ICONS := {
 	"well": Color(0.5, 1.0, 0.7),
 	"magnet": Color(0.3, 1.0, 0.95),
 	"greed": Color(1.0, 0.82, 0.3),
+	"fortune": Color(1.0, 0.6, 0.95),
 	"challenge": Color(1.0, 0.35, 0.3),
 	"chest1": Color(1.0, 0.45, 0.35),
 	"chest2": Color(1.0, 0.95, 0.4),
@@ -21,7 +22,7 @@ const ICONS := {
 ## Légende de la grande carte : [type, nom].
 const LEGEND := [["dungeon", "Donjon"], ["merchant", "Marchand"], ["shrine", "Sanctuaire"], ["fort", "Fort d'élite (sceau)"],
 	["chest", "Coffre"], ["chest1", "Coffre ouvragé"], ["chest2", "Coffre doré"], ["anvil", "Enclume"], ["scribe", "Autel du scribe"],
-	["well", "Fontaine de vie"], ["magnet", "Pierre d'aimant"], ["greed", "Autel de cupidité"], ["challenge", "Stèle du défi"]]
+	["well", "Fontaine de vie"], ["magnet", "Pierre d'aimant"], ["greed", "Autel de cupidité"], ["challenge", "Stèle du défi"], ["fortune", "Autel de la fortune"]]
 
 var player: Player
 var director: RunDirector

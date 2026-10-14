@@ -35,7 +35,7 @@ func _ready() -> void:
 	var kinds := {}
 	for st in map.stations:
 		kinds[st.kind] = int(kinds.get(st.kind, 0)) + 1
-	check("lieux : %s" % [kinds], kinds.size() == 6)
+	check("lieux : %s" % [kinds], kinds.size() == 7)
 	check("%d lieux de décor, %d plateaux" % [map.sites.size(), map.plateaus.size()], map.sites.size() >= 18 and map.plateaus.size() >= 5)
 
 	# jarre : un coup suffit, de l'or
@@ -135,6 +135,7 @@ func _ready() -> void:
 	check("étape 2 : %s → %s, carte neuve, niveau gardé" % [zone0, Run.zone_id], Run.stage == 2 and Run.zone_id != zone0 and d.state == "explore"
 		and d.time < 2.0 and d.map.breakables != null and d.map.breakables.count() > 600 and player.level == lv)
 	_test_reward_zone()
+	await _test_fortune()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit()
 
@@ -182,3 +183,38 @@ func _test_reward_zone() -> void:
 	Run.active = was_run
 	check("coffre de la 1re zone ouvert au lobby : trophées de son époque (niveau max %d)" % top, top <= 20)
 	check("coffre d'équipement : objet de l'époque de sa zone (%d, %d sans elle)" % [int(own.level), int(gear.level)], int(own.level) <= int(gear.level))
+
+
+## Autel de la fortune : étage 1 gagné, montée, étage 2 gagné, encaissé (or et clés) ; une
+## case piégée fait tout perdre.
+func _test_fortune() -> void:
+	_use("fortune")
+	await get_tree().process_frame
+	var pop: FortunePopup = null
+	for c in get_tree().root.get_children():
+		if c is FortunePopup:
+			pop = c
+	check("autel de la fortune : la pyramide s'ouvre (jeu en pause)", pop != null and get_tree().paused)
+	if pop == null:
+		return
+	check("étage 1 : 8 cases", (pop._rows[1] as Array).size() == 8 and (pop._rows[7] as Array).size() == 2)
+	pop._pick(1, (pop._trap + 1) % 8)
+	check("case gagnante : gain en attente", pop._won == 1 and not pop._over)
+	pop._start_floor(2)
+	pop._pick(2, (pop._trap + 1) % 7)
+	var gold0 := Profile.gold
+	var keys0 := Profile.keys
+	pop._leave()
+	check("encaissé à l'étage 2 : or et 2 clés (+%d or)" % (Profile.gold - gold0), Profile.gold > gold0 and Profile.keys == keys0 + 2 and pop._over)
+	pop._close()
+	await get_tree().process_frame
+	check("fermé : le jeu reprend", not get_tree().paused)
+	var p2 := FortunePopup.open(self, 10, 10, Callable())
+	await get_tree().process_frame
+	var chests0 := Profile.reward_chests.size()
+	p2._pick(1, (p2._trap + 1) % 8)
+	p2._start_floor(2)
+	p2._pick(2, p2._trap)
+	check("case piégée : série perdue, rien d'encaissé", p2._over and p2._won == 0 and Profile.reward_chests.size() == chests0)
+	p2._close()
+	await get_tree().process_frame
