@@ -66,5 +66,17 @@ func show_results(result: String, floor_reached: int, got: Dictionary) -> void:
 	ok.add_theme_stylebox_override("hover", Hud.style(Color(0.3, 0.22, 0.42)))
 	ok.focus_mode = Control.FOCUS_NONE
 	ok.pressed.connect(func(): Tower.leave(get_tree()))
+	var again := Button.new()
+	again.text = "Rejouer (étage %d, %s)" % [Tower.start_floor, Tower.DIFF_NAMES[Tower.difficulty]]
+	again.custom_minimum_size = Vector2(0, 54)
+	again.add_theme_font_size_override("font_size", 20)
+	again.add_theme_stylebox_override("normal", Hud.style(Color(0.15, 0.3, 0.2)))
+	again.add_theme_stylebox_override("hover", Hud.style(Color(0.22, 0.42, 0.3)))
+	again.focus_mode = Control.FOCUS_NONE
+	again.pressed.connect(func():
+		get_tree().paused = false
+		Tower.start(Profile.selected_class, Tower.difficulty, Tower.start_floor)
+		get_tree().change_scene_to_file("res://scenes/world.tscn"))
+	v.add_child(again)
 	v.add_child(ok)
 	print("[tour] fin : %s, étage %d, record %d, %d objet(s) gardés, coffre commun : %d objet(s)" % [result, floor_reached, int(got.get("best", 0)), int(got.get("items", 0)), Profile.inventory.size()])

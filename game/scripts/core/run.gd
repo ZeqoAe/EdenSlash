@@ -34,6 +34,7 @@ var elites := 0
 var loot: Array = []
 var gold := 0
 var started_at := 0
+var fortune_insignia := 0  # insignes gagnés à l'autel de la fortune (déjà crédités)
 var result := ""  # victoire, defaite, abandon
 var max_level := 1
 var seed := 0  # graine de la map (0 = aléatoire)
@@ -103,6 +104,7 @@ func start(cid: String) -> void:
 	stage = 1
 	unlocked_name = ""
 	unlocked_epoch = ""
+	fortune_insignia = 0
 	survival = false
 	epoch = 1
 	seen_items = []
@@ -146,6 +148,7 @@ func finish(res: String) -> void:
 				Profile.seen_gear.append(int(id))
 		insignia_gain = 25 * stage + kills / 25 + elites * 2 + (60 * epoch if res == "victoire" else 0)
 		Profile.insignia += insignia_gain
+		insignia_gain += fortune_insignia  # (déjà crédités à l'autel)
 	if res == "victoire":
 		Profile.runs_won += 1
 		unlocked_name = Profile.unlock_after(zone_id)

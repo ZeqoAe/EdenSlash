@@ -10,16 +10,23 @@ extends RefCounted
 const FLOORS := 7  # étages à choix ; le 8e est le sommet
 ## Gain de chaque étage (index 0 : étage 1 ; 7 : sommet) ; chaque gain remplace le précédent.
 ## gold : × FORTUNE_GOLD ; chests : coffres de récompense (menu Coffres) ; look : apparence.
+## insignia : insignes (× 1 + 0,25 par époque au-delà de la 1re) ; chests : coffres d'apparence
+## (commun, rare…) ; l'équipement ne sort plus de l'autel (le hasard ne donne jamais de puissance).
 const PRIZES := [
 	{"gold": 1.0},
 	{"gold": 1.5, "keys": 2},
-	{"chests": ["forge"]},
-	{"chests": ["forge", "jewel"]},
-	{"chests": ["gear"]},
-	{"chests": ["gear", "set"]},
-	{"chests": ["set", "gear"]},
-	{"chests": ["set", "gear"], "boss": true, "look": true},
+	{"insignia": 15},
+	{"insignia": 25},
+	{"insignia": 40},
+	{"insignia": 60, "chests": ["look_common"]},
+	{"insignia": 90, "chests": ["look_rare"]},
+	{"insignia": 120, "look": true},
 ]
+
+
+## Insignes d'un gain à l'époque [param epoch].
+static func insignia_for(n: int, epoch: int) -> int:
+	return roundi(n * (1.0 + 0.25 * (maxi(epoch, 1) - 1)))
 
 
 ## Nombre de cases de l'étage [param f] (1 à 7).
@@ -39,6 +46,8 @@ static func prize_text(f: int, level: int) -> String:
 		parts.append("%d or" % gold_for(float(p.gold), level))
 	if p.has("keys"):
 		parts.append("%d clés" % int(p["keys"]))
+	if p.has("insignia"):
+		parts.append("%d insignes" % insignia_for(int(p.insignia), Run.epoch))
 	for t in p.get("chests", []):
 		parts.append(String(Rewards.TYPES[t].name).to_lower())
 	if p.get("look", false):
@@ -57,6 +66,11 @@ static func give(f: int, level: int, plevel: int) -> String:
 	if p.has("keys"):
 		Profile.keys += int(p["keys"])
 		parts.append("%d clés" % int(p["keys"]))
+	if p.has("insignia"):
+		var n := insignia_for(int(p.insignia), Run.epoch)
+		Profile.insignia += n
+		Run.fortune_insignia += n
+		parts.append("%d insignes" % n)
 	for t in p.get("chests", []):
 		Profile.reward_chests.append(Rewards.make(String(t), plevel, p.get("boss", false)))
 		parts.append(String(Rewards.TYPES[t].name).to_lower())

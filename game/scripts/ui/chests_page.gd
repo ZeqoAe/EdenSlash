@@ -14,6 +14,7 @@ var _open_btn: Button
 var _loot: HFlowContainer  # contenu d'un coffre ouvert
 var _choices: HBoxContainer
 var _card_box: CenterContainer
+var _all_btn: Button
 var _current: Dictionary = {}  # coffre à choix en cours
 var _shown: Dictionary = {}  # coffre affiché (fermé) à droite
 
@@ -22,6 +23,10 @@ func _ready() -> void:
 	add_theme_constant_override("separation", 16)
 	var left := ItemWidgets.panel(self, 560)
 	ItemWidgets.section(left, "Tes coffres")
+	_all_btn = MenuWidgets.glass_button("Ouvrir tous les coffres sans choix", 16, Vector2(0, 42))
+	_all_btn.tooltip_text = "Ouvre d'un coup les coffres de forge, de joaillier, d'équipement et d'apparence (les coffres à choix restent à part), puis affiche un récapitulatif."
+	_all_btn.pressed.connect(func(): open_many(Profile.reward_chests.filter(func(c): return not Rewards.is_choice(c))))
+	left.add_child(_all_btn)
 	Hud._label(left, "Survie : chaque boss (un coffre d'apparence, plus un coffre de forge ou de joaillier), stèles du défi, élites 1 fois sur 5, monstres rarement, autel de la fortune. Tour : paliers 50, 100, 150 et 200 (apparence). Un coffre ramassé est toujours gardé. Les objets vont au coffre commun, les fournitures à ta réserve.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var sc := ScrollContainer.new()
 	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -78,6 +83,7 @@ func refresh() -> void:
 	if _current.is_empty() and (_shown.is_empty() or not Profile.reward_chests.has(_shown)) and _loot.get_child_count() == 0:
 		_preview(Profile.reward_chests.filter(func(c): return Rewards.ORDER.has(c.type))
 			.reduce(func(a, c): return c if a.is_empty() or Rewards.ORDER.find(c.type) < Rewards.ORDER.find(a.type) else a, {}))
+	_all_btn.visible = Profile.reward_chests.any(func(c): return not Rewards.is_choice(c))
 	for c in _list.get_children():
 		c.queue_free()
 	var by := {}
@@ -128,7 +134,18 @@ func _row(type: String, chests: Array) -> Control:
 	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var b := MenuWidgets.glass_button("Ouvrir", 16, Vector2(110, 44))
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	b.pressed.connect(open_chest.bind(chests[0]))
+	b.tooltip_text = "Ctrl + clic : ouvre tous les coffres de ce type d'un coup" if not Rewards.is_choice(chests[0]) else "Choisis une pièce parmi trois"
+	b.pressed.connect(func():
+		if Input.is_key_pressed(KEY_CTRL) and not Rewards.is_choice(chests[0]):
+			open_many(chests)
+		else:
+			open_chest(chests[0]))
+	if chests.size() > 1 and not Rewards.is_choice(chests[0]):
+		var all := MenuWidgets.glass_button("Tout", 16, Vector2(70, 44))
+		all.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		all.tooltip_text = "Ouvre les %d coffres de ce type" % chests.size()
+		all.pressed.connect(func(): open_many(chests))
+		h.add_child(all)
 	h.add_child(b)
 	return p
 
@@ -148,7 +165,8 @@ func _preview(chest: Dictionary) -> void:
 	var t: Dictionary = Rewards.TYPES[chest.type]
 	_title.text = String(t.name)
 	_title.add_theme_color_override("font_color", (t.color as Color).lightened(0.2))
-	_detail.text = "[color=#c8c8d4]%s[/color]" % String(t.desc)
+	_detail.text = "[color=#c8c8d4]Niveau %d · %s[/color]
+[color=#a8a2b8]%s[/color]" % [int(chest.plevel), String(t.desc), Rewards.preview(chest)]
 	_stage.show_chest(t.color)
 	_open_btn.visible = true
 
@@ -172,6 +190,26 @@ func open_chest(chest: Dictionary) -> void:
 		_on_burst()
 		return
 	_stage.open()
+
+
+## Ouvre plusieurs coffres sans choix d'un coup : une seule présentation, puis le récapitulatif.
+func open_many(chests: Array) -> void:
+	var todo := chests.filter(func(c): return not Rewards.is_choice(c) and Profile.reward_chests.has(c))
+	if todo.is_empty():
+		return
+	_current = {}
+	_shown = {}
+	var got := Rewards.open_all(todo)
+	_clear()
+	_open_btn.visible = false
+	_title.text = "%d coffre(s) ouvert(s)" % int(got.opened)
+	_title.add_theme_color_override("font_color", UiTheme.GOLD)
+	_detail.text = "[color=#e6d7ff]%s[/color]
+[color=#a8a2b8]Objets : au coffre commun · fournitures : à la réserve de ta prochaine run[/color]" % Rewards.summary(got)
+	_stage.show_chest(Color(1.0, 0.86, 0.3))
+	Sfx.ui("confirm")
+	_show_loot(got)
+	refresh()
 
 
 ## Couvercle ouvert : le contenu apparaît.

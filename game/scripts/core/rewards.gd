@@ -136,11 +136,79 @@ static func set_pieces(plevel: int) -> Array:
 	var out: Array = []
 	for pid in ps:
 		var e: Dictionary = GameData.eden_by_id.get(int(pid), {})
-		if not e.is_empty():
-			out.append(e)
+		if not e.is_empty() and not GearShopPage.owned(int(pid)) and not Archive.owned(e):
+			out.append(e)  # une pièce déjà possédée (coffre commun, archive) n'est plus proposée
 		if out.size() >= 3:
 			break
 	return out
+
+
+## Contenu possible d'un coffre, en texte (mêmes règles que [method open] : l'aperçu ne ment pas).
+static func preview(chest: Dictionary) -> String:
+	var lv := int(chest.plevel)
+	var t := String(chest.type)
+	match t:
+		"gear":
+			return "Un objet mythique de niveau %d (légendaire : %d %% de chances)." % [lv, 35 if chest.get("boss", false) else 20]
+		"forge":
+			return "1-2 parchemins de puissance et 1-3 de garde (niveau %d), 1-2 pierres de sûreté, 1 pierre de chance, 2 pierres, parfois des ciseaux (50 %%) et un parchemin béni (20 %%), %d-%d cristaux." % [
+				Craft.fortify_level_at(lv), 3 + lv / 10, 6 + lv / 10]
+		"jewel":
+			return "2 gemmes de rang %d et 1 parchemin d'enchantement." % (clampi(lv / 12, 0, Craft.GEM_TIERS.size() - 1) + 1)
+		"set", "trophy":
+			return "3 pièces mythiques d'un même set au choix (déjà possédées : jamais proposées) ; légendaire : %d %%." % (35 if chest.get("boss", false) else 20)
+	if LOOKS.has(t):
+		var free := GameData.collection.filter(func(x): return not Profile.collected(x) 			and (x.has("aura") or x.has("skin") or (int(x.get("cat", 9)) <= 3 and GameData.cosmetic_by_code.has(String(x.get("code", ""))))) 			and not String(x.get("name", "")).contains("(Alpha)") and (LOOKS[t] as Array).has(int(x.get("rarity", 0))))
+		return "Une apparence que tu n'as pas (%d encore à trouver à cette rareté) ; tout obtenu : 30 cristaux." % free.size()
+	return String(TYPES[t].desc)
+
+
+## Additionne le contenu de plusieurs coffres ouverts.
+static func merge_got(a: Dictionary, b: Dictionary) -> Dictionary:
+	a["items"] = (a.get("items", []) as Array) + (b.get("items", []) as Array)
+	a["looks"] = (a.get("looks", []) as Array) + (b.get("looks", []) as Array)
+	var sup: Dictionary = a.get("supplies", {})
+	for k in b.get("supplies", {}):
+		sup[k] = int(sup.get(k, 0)) + int(b.supplies[k])
+	a["supplies"] = sup
+	a["crystal"] = int(a.get("crystal", 0)) + int(b.get("crystal", 0))
+	return a
+
+
+## Ouvre tous les coffres sans choix de [param chests] ; renvoie le récapitulatif additionné et le nombre ouvert.
+static func open_all(chests: Array) -> Dictionary:
+	var total := {"items": [], "looks": [], "supplies": {}, "crystal": 0, "opened": 0}
+	for c in chests.duplicate():
+		if is_choice(c) or not Profile.reward_chests.has(c):
+			continue
+		merge_got(total, open(c))
+		total["opened"] = int(total.opened) + 1
+	return total
+
+
+## Phrase de récapitulatif (« 14 parchemins, 9 pierres, 47 cristaux, 2 apparences »).
+static func summary(got: Dictionary) -> String:
+	var scrolls := 0
+	var stones := 0
+	var gems := 0
+	var other := 0
+	for k in got.get("supplies", {}):
+		var n := int(got.supplies[k])
+		var lab := Craft.label(k).to_lower()
+		if lab.contains("parchemin"):
+			scrolls += n
+		elif lab.contains("pierre"):
+			stones += n
+		elif lab.contains("gemme"):
+			gems += n
+		else:
+			other += n
+	var parts: PackedStringArray = []
+	for e in [[scrolls, "parchemin(s)"], [stones, "pierre(s)"], [gems, "gemme(s)"], [other, "autre(s) fourniture(s)"],
+			[int(got.get("crystal", 0)), "cristaux"], [(got.get("items", []) as Array).size(), "objet(s)"], [(got.get("looks", []) as Array).size(), "apparence(s)"]]:
+		if int(e[0]) > 0:
+			parts.append("%d %s" % [int(e[0]), e[1]])
+	return ", ".join(parts) if not parts.is_empty() else "rien"
 
 
 ## Ouvre un coffre sans choix : le contenu est donné, le coffre retiré. Renvoie le contenu

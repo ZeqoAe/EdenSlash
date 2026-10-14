@@ -48,4 +48,16 @@ func show_results(won: bool, score: String, opponent: String, diff: int, total: 
 	ok.add_theme_stylebox_override("hover", Hud.style(Color(0.3, 0.22, 0.42)))
 	ok.focus_mode = Control.FOCUS_NONE
 	ok.pressed.connect(func(): Duel.leave(get_tree()))
+	var again := Button.new()
+	again.text = "Rejouer (même adversaire)"
+	again.custom_minimum_size = Vector2(0, 54)
+	again.add_theme_font_size_override("font_size", 20)
+	again.add_theme_stylebox_override("normal", Hud.style(Color(0.15, 0.3, 0.2)))
+	again.add_theme_stylebox_override("hover", Hud.style(Color(0.22, 0.42, 0.3)))
+	again.focus_mode = Control.FOCUS_NONE
+	again.pressed.connect(func():
+		get_tree().paused = false
+		Duel.start(Profile.selected_class, Duel.rival_class, Duel.difficulty)
+		get_tree().change_scene_to_file("res://scenes/world.tscn"))
+	v.add_child(again)
 	v.add_child(ok)

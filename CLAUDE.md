@@ -46,7 +46,9 @@ Lame large +98 % au plus, projectiles en plus normalisés et plafonnés à +4, E
 majorité de sorts magiques = classes magiques (`GameData._balance_damage_types`, 20 classes), arme qui grandit (poids ×2,3,
 amélioration garantie au boss, effet légendaire au niveau 4), facettes d'amélioration de sort (plus de cartes de classe).
 Les profils « opti » (`gen_profiles`) n'ont PAS été régénérés (le générateur n'est pas déterministe et ça décalerait le
-réglage du duel équipé) : à relancer plus tard pour les 20 classes reclassées. Prochain : lot 7 (bilan, coffres, autel).
+réglage du duel équipé) : à relancer plus tard pour les 20 classes reclassées. Lot 7 fait (0.1.139) : coffres lisibles (aperçu du contenu, « Ouvrir tout », récapitulatif, plus de pièce possédée proposée),
+autel en insignes et coffres d'apparence (plus d'équipement), bilans avec « Rejouer » (Survie, Duel, Tour) et bloc Gardé / perdu.
+Prochain : lot 8 (déblocages et Atelier).
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

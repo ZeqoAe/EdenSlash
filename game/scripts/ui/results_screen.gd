@@ -84,9 +84,25 @@ func show_results() -> void:
 		g.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		g.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	# Survie : l'équipement de la run reste dans la run ; ses pièces s'achètent au hub
-	var sh := Hud._label(v, "%d insignes gagnés · %d pièce(s) découverte(s) dans les coffres" % [Run.insignia_gain, Run.seen_items.size()], 24, Hud.ACCENT)
-	sh.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var kept := Run.result in ["victoire", "extraction"]
+	# gardé (vert) et perdu (rouge) : ce que cette run rapporte vraiment
+	var keep_row := HBoxContainer.new()
+	keep_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	keep_row.add_theme_constant_override("separation", 26)
+	v.add_child(keep_row)
+	var green := Color(0.55, 1.0, 0.6)
+	var red := Color(1.0, 0.5, 0.45)
+	var supplies := 0
+	for k in Profile.bag:
+		supplies += int(Profile.bag[k])
+	for e in [
+			["%d insignes" % Run.insignia_gain, green], ["%d pièce(s) découverte(s)" % Run.seen_items.size(), green],
+			["%d coffre(s) à ouvrir" % Run.chests_found.size(), green],
+			["%d fourniture(s) %s" % [supplies, "gardées" if kept else "perdues"], green if kept else red],
+			["or et clés perdus", red]]:
+		Hud._label(keep_row, String(e[0]), 17, e[1])
+	var sh := Hud._label(v, "Gardé : %d insignes · %d pièce(s) découverte(s) dans les coffres" % [Run.insignia_gain, Run.seen_items.size()], 22, Hud.ACCENT)
+	sh.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var ss := Hud._label(v, "L'équipement de la run n'est pas gardé : chaque pièce choisie dans un coffre devient achetable à l'Armurerie avec tes insignes. "
 		+ ("Les fournitures de la run (ciseaux, parchemins, pierres) rejoignent ta réserve." if kept else "Les fournitures de la run, l'or et les clés sont perdus.")
 		+ " Les coffres de récompense ramassés sont toujours gardés.", 14, MUTED)
@@ -100,8 +116,32 @@ func show_results() -> void:
 	_confirm.focus_mode = Control.FOCUS_NONE
 	_confirm.text = "Retour au lobby"
 	_confirm.pressed.connect(_finish)
-	v.add_child(_confirm)
+	var again := Button.new()
+	again.custom_minimum_size = Vector2(0, 54)
+	again.add_theme_font_size_override("font_size", 20)
+	again.add_theme_stylebox_override("normal", Hud.style(Color(0.15, 0.3, 0.2)))
+	again.add_theme_stylebox_override("hover", Hud.style(Color(0.22, 0.42, 0.3)))
+	again.focus_mode = Control.FOCUS_NONE
+	again.text = "Rejouer (%s)" % Epochs.get_def(Run.epoch).name
+	again.disabled = not Run.survival or Run.epoch > Epochs.unlocked()
+	again.pressed.connect(_replay)
+	var btns := HBoxContainer.new()
+	btns.add_theme_constant_override("separation", 12)
+	_confirm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	again.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btns.add_child(again)
+	btns.add_child(_confirm)
+	v.add_child(btns)
 	add_child(root)
+
+
+## Rejouer : même classe, même époque, sans repasser par le lobby.
+func _replay() -> void:
+	var epoch := Run.epoch
+	Profile.end_run_survival()
+	get_tree().paused = false
+	Run.start_survival(Profile.selected_class, epoch)
+	get_tree().change_scene_to_file("res://scenes/world.tscn")
 
 
 func _finish() -> void:
