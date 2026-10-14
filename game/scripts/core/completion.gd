@@ -43,7 +43,7 @@ static func categories() -> Array:
 		["Trophées", Profile.seen_trophies.size(), Trophies.KINDS.size(), "effets de trophée découverts"],
 		["Armes", Profile.weapon_legend.size(), weapons_total(), "variantes menées à l'effet légendaire"],
 		["Équipement", Profile.seen_gear.size(), maxi(Profile.seen_gear.size(), 154), "pièces découvertes en Survie"],
-		["Époques et Tour", ep + mini(tower / 50, 4), Epochs.count() + 4, "époques gagnées et paliers de la Tour"],
+		["Époques et Tour", Epochs.total_stars() + mini(tower / 50, 4), Epochs.count() * 3 + 4, "étoiles d'époque et paliers de la Tour"],
 		["Activités", league, League.RANKS.size() - 1, "rangs de la Ligue"],
 		["Succès", int(Achievements.count().x), int(Achievements.count().y), "succès obtenus"],
 	]

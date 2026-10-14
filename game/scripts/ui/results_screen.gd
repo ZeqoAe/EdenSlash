@@ -62,6 +62,12 @@ func show_results() -> void:
 		("   ·   NIVEAU %d ! (+%d points de talent)" % [Profile.expertise_level(Run.class_id), 2 * Run.expertise_levels]) if Run.expertise_levels > 0 else ""],
 		17, Color(0.6, 0.85, 1.0))
 	ex.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if Run.stars_gained > 0:
+		var st := Hud._label(v, "Étoile(s) gagnée(s) : %d  (%s : %s)" % [Run.stars_gained, Epochs.get_def(Run.epoch).name, Epochs.star_text(Run.epoch)], 16, Color(1.0, 0.85, 0.35))
+		st.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	for hr in Run.heroic_rewards:
+		var hl := Hud._label(v, "Rang héroïque %d : %s" % [Run.heroic_rank, hr], 16, Color(1.0, 0.7, 0.4))
+		hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	if Run.challenge_first:
 		var ch := Hud._label(v, "Défi de maîtrise réussi : +%d points de maîtrise (première réussite du jour)" % Challenge.BONUS_FIRST, 16, Color(1.0, 0.85, 0.35))
 		ch.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

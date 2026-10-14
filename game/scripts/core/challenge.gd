@@ -54,8 +54,11 @@ static func done_today() -> bool:
 	return String(Profile.records.get("challenge_day", "")) == today()
 
 
+static var heroic_mods: Array = []  # contraintes d'un rang héroïque (hors Défi de maîtrise)
+
+
 static func has(mod: String) -> bool:
-	return active and mod in mods
+	return (active and mod in mods) or mod in heroic_mods
 
 
 ## Lance le défi du jour avec la classe [param cid].
@@ -69,6 +72,7 @@ static func start(cid: String) -> void:
 static func reset() -> void:
 	active = false
 	mods = []
+	heroic_mods = []
 	ModeRules.modifiers = []
 
 

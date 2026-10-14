@@ -262,6 +262,7 @@ func _objective_text() -> String:
 
 func _start_rage() -> void:
 	Tutorial.event("rage")
+	Run.rage_stages.append(Run.stage)
 	state = "rage"
 	message.emit("LES MONSTRES ENTRENT EN RAGE !\nDanger accru, butin et XP accrus", 4.0)
 	world.set_rage_mood(true)
@@ -540,9 +541,9 @@ func _spawn_monster(id: int, pos: Vector3, level: int, boss := false) -> Monster
 		m.atk *= float(ZONE_DAMAGE[zi])
 	if Run.survival:
 		var em := Epochs.monster_mult(Run.epoch)  # époques suivantes : monstres plus coriaces
-		m.max_hp *= em * float(Modifiers.apply("mob_hp", 1.0, ModeRules.modifiers))
+		m.max_hp *= em * float(Modifiers.apply("mob_hp", 1.0, ModeRules.modifiers)) * (1.0 + Epochs.HEROIC_HP * Run.heroic_rank)
 		m.hp = m.max_hp
-		m.atk *= em
+		m.atk *= em * (1.0 + Epochs.HEROIC_ATK * Run.heroic_rank)
 	if state == "explore":
 		# montée en puissance sur les 3 premières minutes : la run démarre sans
 		# équipement, le joueur doit pouvoir apprendre avant que ça devienne punitif

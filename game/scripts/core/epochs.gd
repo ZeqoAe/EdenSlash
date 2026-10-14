@@ -56,6 +56,81 @@ static func monster_mult(epoch: int) -> float:
 	return float(MONSTER_MULT[clampi(epoch, 1, MONSTER_MULT.size()) - 1])
 
 
+## Étoiles d'époque (3 par époque) : ★1 gagner l'époque, ★2 la gagner sans résurrection, ★3 réussir le défi
+## de l'époque. Elles sont gardées dans `Profile.records["epoch_stars_<n>"]` (masque de bits).
+const CHALLENGES := [
+	"Vaincre le boss de la 3e carte avant la rage",
+	"Finir avec 12 trophées",
+	"Finir sans arme secondaire",
+	"Utiliser l'enclume sur les 3 cartes",
+]
+
+
+static func star_mask(epoch: int) -> int:
+	return int(Profile.records.get("epoch_stars_%d" % epoch, 0))
+
+
+static func stars(epoch: int) -> int:
+	var m := star_mask(epoch)
+	return (m & 1) + ((m >> 1) & 1) + ((m >> 2) & 1)
+
+
+static func total_stars() -> int:
+	var n := 0
+	for ep in range(1, count() + 1):
+		n += stars(ep)
+	return n
+
+
+static func star_text(epoch: int) -> String:
+	var m := star_mask(epoch)
+	var s := ""
+	for b in 3:
+		s += "★" if (m >> b) & 1 else "☆"
+	return s
+
+
+## Les trois conditions de la run qui vient de finir (victoire à la 3e carte) : bits des étoiles gagnées.
+static func earned_mask(epoch: int) -> int:
+	var m := 1
+	if Run.resurrections == 0:
+		m |= 2
+	var ok := false
+	match epoch:
+		1:
+			ok = not Run.stage in Run.rage_stages
+		2:
+			ok = Run.trophies.size() >= Run.MAX_TROPHIES
+		3:
+			ok = not Run.offhand_used
+		4:
+			ok = Run.anvil_stages.size() >= 3
+	if ok:
+		m |= 4
+	return m
+
+
+## Rang héroïque le plus haut terminé sur l'époque [param epoch].
+static func heroic_best(epoch: int) -> int:
+	return int(Profile.records.get("heroic_best_%d" % epoch, 0))
+
+
+## Rangs héroïques ouverts par l'époque IV ; au plus 10 ; chaque rang demande le précédent terminé.
+static func heroic_open() -> bool:
+	return Unlocks.is_open("heroic")
+
+
+const HEROIC_MAX := 10
+const HEROIC_HP := 0.12
+const HEROIC_ATK := 0.08
+const HEROIC_INSIGNIA := 0.15
+
+
+## Contraintes cumulées d'un rang héroïque : une de plus tous les 3 rangs.
+static func heroic_mods(rank: int) -> Array:
+	return Challenge.SURVIVAL_MODS.slice(0, mini(rank / 3, Challenge.SURVIVAL_MODS.size()))
+
+
 ## Époques ouvertes : la I, puis une de plus par époque terminée.
 static func unlocked() -> int:
 	return clampi(1 + int(Profile.records.get("epochs_cleared", 0)), 1, LIST.size())

@@ -34,6 +34,13 @@ var elites := 0
 var loot: Array = []
 var gold := 0
 var started_at := 0
+var resurrections := 0  # résurrections utilisées (étoile « sans résurrection »)
+var rage_stages: Array = []  # cartes où la rage a démarré
+var offhand_used := false
+var anvil_stages: Array = []  # cartes où l'enclume a servi
+var heroic_rank := 0  # rang héroïque de la run (0 : normale)
+var stars_gained := 0  # étoiles nouvellement gagnées à la fin de la run (bilan)
+var heroic_rewards: Array = []  # récompenses du rang héroïque (bilan)
 var perfects := 0  # annulations parfaites de la run (contrats de classe)
 var chests_total := 0  # coffres de la carte ouverts pendant la run
 var contracts_done: Array = []  # contrats terminés à la fin de la run (bilan)
@@ -110,6 +117,13 @@ func start(cid: String) -> void:
 	unlocked_epoch = ""
 	fortune_insignia = 0
 	perfects = 0
+	resurrections = 0
+	rage_stages = []
+	offhand_used = false
+	anvil_stages = []
+	heroic_rank = 0
+	stars_gained = 0
+	heroic_rewards = []
 	chests_total = 0
 	contracts_done = []
 	challenge_first = false
@@ -128,9 +142,11 @@ func start(cid: String) -> void:
 
 ## Run de Survie de l'époque [param ep] : la zone de sa 1re map, sans l'équipement du profil
 ## (il se débloque dans les coffres d'emplacement ; l'arme de départ est choisie à l'arrivée).
-func start_survival(cid: String, ep: int) -> void:
+func start_survival(cid: String, ep: int, rank := 0) -> void:
 	Profile.selected_zone = Epochs.zone(ep, 1)
 	start(cid)
+	heroic_rank = clampi(rank, 0, Epochs.HEROIC_MAX) if Epochs.heroic_open() else 0
+	Challenge.heroic_mods = Epochs.heroic_mods(heroic_rank)
 	survival = true
 	epoch = clampi(ep, 1, Epochs.count())
 	zone_id = Epochs.zone(epoch, 1)
@@ -166,14 +182,42 @@ func finish(res: String) -> void:
 		insignia_gain = 25 * stage + kills / 25 + elites * 2 + (60 * epoch if res == "victoire" else 0)
 		if Challenge.active:
 			insignia_gain = roundi(insignia_gain * 1.5)  # Défi de maîtrise : insignes ×1,5
+		if heroic_rank > 0:
+			insignia_gain = roundi(insignia_gain * (1.0 + Epochs.HEROIC_INSIGNIA * heroic_rank))
 		Profile.insignia += insignia_gain
 		insignia_gain += fortune_insignia  # (déjà crédités à l'autel)
 	if res == "victoire":
 		Profile.runs_won += 1
 		unlocked_name = Profile.unlock_after(zone_id)
+		if survival and stage >= RunDirector.STAGES:
+			_award_stars()
+			_award_heroic()
 	Profile.best_level = maxi(Profile.best_level, max_level)
 	Achievements.refresh()
 	Profile.save_profile()
+
+
+## Étoiles d'époque gagnées par la run (victoire à la 3e carte).
+func _award_stars() -> void:
+	var key := "epoch_stars_%d" % epoch
+	var before := Epochs.stars(epoch)
+	Profile.records[key] = Epochs.star_mask(epoch) | Epochs.earned_mask(epoch)
+	stars_gained = Epochs.stars(epoch) - before
+
+
+## Rang héroïque terminé : le suivant s'ouvre, récompenses (coffre d'apparence aux rangs 3, 6 et 9, titre au rang 10).
+func _award_heroic() -> void:
+	if heroic_rank <= 0:
+		return
+	if heroic_rank > Epochs.heroic_best(epoch):
+		Profile.records["heroic_best_%d" % epoch] = heroic_rank
+		if heroic_rank % 3 == 0 and heroic_rank < Epochs.HEROIC_MAX:
+			Profile.chest_add(Rewards.look_type(mini(epoch, 3)), max_level)
+			heroic_rewards.append("coffre d'apparence (rang %d)" % heroic_rank)
+		if heroic_rank >= Epochs.HEROIC_MAX:
+			var t := "Héros de %s" % Epochs.get_def(epoch).name
+			Profile.add_title(t)
+			heroic_rewards.append("titre « %s »" % t)
 
 
 ## Or gagné : crédité tout de suite (coffres, marchands, forge), compté pour le bilan.
@@ -694,6 +738,7 @@ func apply_card(card: Dictionary) -> void:
 				var ws := weapon_spec(String(card.id))
 				Profile.note_weapon_legend("%s:%d" % [ws.get("wtype", "?"), int(ws.get("variant", 0))])
 		"offhand":
+			offhand_used = true
 			# arme secondaire trouvée en jeu : portée tout de suite (l'ancienne reste dans le sac)
 			Profile.inventory.append(card.item)
 			Profile.equip_offhand(card.item)
@@ -701,8 +746,12 @@ func apply_card(card: Dictionary) -> void:
 				seen_items.append(int(card.item.eden))
 			Profile.changed.emit()
 		"anvil_slot":
+			if not stage in anvil_stages:
+				anvil_stages.append(stage)
 			anvil_result = anvil_roll(String(card.slot))
 		"anvil":
+			if not stage in anvil_stages:
+				anvil_stages.append(stage)
 			# enclume de la carte : +1 garanti sur la pièce portée choisie
 			var it: Dictionary = Profile.equipped.get(String(card.slot), {})
 			if not it.is_empty():

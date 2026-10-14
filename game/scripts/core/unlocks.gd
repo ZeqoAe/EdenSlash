@@ -59,7 +59,7 @@ static func test(id: String) -> bool:
 		"pantheon":
 			return League.rank_index() >= 4
 		"heroic":
-			return Epochs.unlocked() >= 5
+			return int(Profile.records.get("epochs_cleared", 0)) >= 4
 	return false
 
 

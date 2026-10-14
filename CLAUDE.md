@@ -70,7 +70,15 @@ sont collectés), mécaniques propres à chaque boss de donjon (ceux de la Survi
 les 5 familles. Pas encore : cerveaux figés dans git (ils restent hors git : `data/cerveaux/cerveau_<id>.json`), aura exclusive du Champion, Gantelet
 (lot 15). Lot 15 fait (0.1.147) : Arènes 2v2 / 3v3 à alliés IA (activité Arènes, à l'arme niveau 10, `DuelDirector` en équipes : `_foes`, `_allies`, le joueur tombé
 laisse ses alliés finir la manche ; profils `arena2` 0,022 et `arena3` 0,018, soins ×0,5) et Gantelet (onglet du Duel, 1 contre 2 ou 3, équipé, rang Or de la Ligue).
-Un seul cerveau adverse n'est pas encore branché dans les équipes (adversaires scriptés seulement). Prochain : lot 16 (étoiles d'époque, rangs héroïques, rapport du journal).
+Un seul cerveau adverse n'est pas encore branché dans les équipes (adversaires scriptés seulement). Lot 16 fait (0.1.148) : étoiles d'époque (3 par époque : victoire, sans résurrection, défi de l'époque ; `Epochs.stars`, `Run._award_stars`), rangs
+héroïques 1 à 10 après l'époque IV (monstres +12 % PV et +8 % dégâts par rang, une contrainte de plus tous les 3 rangs, insignes +15 % par rang,
+coffre d'apparence aux rangs 3, 6 et 9, titre au rang 10), et `tools/journal_report.py` : applique les règles de décision du journal de run
+(≥ 5 cartes par style et par époque) ; AUCUN réglage d'époque ou d'économie n'a été fait : il faut d'abord jouer des cartes en Survie.
+
+Les 16 lots de `conception/CONCEPT_FINAL.md` sont codés. Restes connus, par ordre d'utilité : niveau minimum du Duel libre, insensibilité aux
+renversements des certificats, profils « opti » à régénérer (20 classes reclassées), cerveaux du Panthéon à figer dans git, Épreuves de maîtrise et
+Ruée des boss (moteur de leçons), fabrication des plans, panoplies-archétypes des donjons, un cerveau adverse en équipe, signatures de famille,
+images des activités et des fiches (session locale).
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

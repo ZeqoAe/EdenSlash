@@ -27,6 +27,7 @@ var _chests: PageScreen
 var _launching := false
 var _open_screen := ""  # test : écran ouvert au démarrage (--inventory, --talents, --appearance, --archive=0...)
 var _settings: SettingsMenu
+var _heroic := 0  # rang héroïque choisi pour la Survie
 var _epoch := 99  # époque choisie pour la Survie (la plus avancée ouverte par défaut)
 var _zone_card: Control  # zone choisie et prochaine récompense (en bas à gauche)
 var _menu := {}  # identifiant -> MenuWidgets.SideButton
@@ -674,7 +675,7 @@ func _start_tower(diff := 1, from := 1) -> void:
 func _start_run() -> void:
 	if backdrop:
 		backdrop.release()
-	Run.start_survival(Profile.selected_class, clampi(_epoch, 1, Epochs.unlocked()))
+	Run.start_survival(Profile.selected_class, clampi(_epoch, 1, Epochs.unlocked()), _heroic)
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
@@ -1148,6 +1149,8 @@ func _menu_survival() -> void:
 		var sub := ("%s
 Paliers %s · %s" % [" → ".join(zones), ", ".join(tiers), Epochs.rarity_name(Epochs.map_def(i, 3))]) if open 			else "Verrouillée : termine l'%s" % Epochs.get_def(i - 1).name
 		var ei := i
+		if open:
+			sub += "\nÉtoiles : %s  ·  défi : %s%s" % [Epochs.star_text(i), Epochs.CHALLENGES[i - 1], ("  ·  rang héroïque %d" % Epochs.heroic_best(i)) if Epochs.heroic_best(i) > 0 else ""]
 		var r := _row(String(e.name), sub, "pin", func():
 			_epoch = ei
 			_select_zone(Epochs.zone(ei, 1))
@@ -1156,6 +1159,30 @@ Paliers %s · %s" % [" → ".join(zones), ", ".join(tiers), Epochs.rarity_name(E
 		if not open:
 			r.modulate = Color(1, 1, 1, 0.5)
 		r.mark(i == _epoch)
+	if Epochs.heroic_open() and Epochs.heroic_best(_epoch) >= 0:
+		var top := mini(Epochs.heroic_best(_epoch) + 1, Epochs.HEROIC_MAX)
+		_heroic = clampi(_heroic, 0, top)
+		var hr := HBoxContainer.new()
+		hr.add_theme_constant_override("separation", 8)
+		_sub.add_child(hr)
+		var minus := MenuWidgets.glass_button("−", 18, Vector2(48, 40))
+		minus.disabled = _heroic <= 0
+		minus.pressed.connect(func():
+			_heroic -= 1
+			_show_menu("survival"))
+		hr.add_child(minus)
+		var hl := Hud._label(hr, ("Rang héroïque %d : monstres +%d %% PV, +%d %% dégâts, insignes +%d %%" % [_heroic, roundi(Epochs.HEROIC_HP * 100 * _heroic), roundi(Epochs.HEROIC_ATK * 100 * _heroic), roundi(Epochs.HEROIC_INSIGNIA * 100 * _heroic)]) if _heroic > 0 else "Run normale (rangs héroïques ouverts)", 14, UiTheme.TEXT)
+		hl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var plus := MenuWidgets.glass_button("+", 18, Vector2(48, 40))
+		plus.disabled = _heroic >= top
+		plus.pressed.connect(func():
+			_heroic += 1
+			_show_menu("survival"))
+		hr.add_child(plus)
+		if _heroic >= 3:
+			var cons: Array = Epochs.heroic_mods(_heroic).map(func(m): return String(Modifiers.LIST[m].text))
+			Hud._label(_sub, "Contraintes : " + " · ".join(cons), 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var hint := Hud._label(_sub, "Tu pars sans équipement : arme au choix au départ, puis coffres d'emplacement sur chaque carte.", 13, UiTheme.MUTED)
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.custom_minimum_size = Vector2(420, 0)

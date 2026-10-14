@@ -455,6 +455,7 @@ func _on_player_died(_who: Combatant, _killer: Combatant) -> void:
 		end_run("defaite")
 		return
 	revives_left -= 1
+	Run.resurrections += 1
 	hud.show_message("K.O. — résurrection (%d restante%s)" % [revives_left, "s" if revives_left > 1 else ""], 2.5)
 	await get_tree().create_timer(3.0).timeout
 	player.respawn(director.revive_point())
