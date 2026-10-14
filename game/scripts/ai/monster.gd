@@ -328,8 +328,49 @@ func _update_chase(delta: float) -> Vector3:
 			return Vector3.ZERO
 	play("move02" if has_anim("move02") else "move01", 0.2)
 	var step := _path_step(_player.global_position)
+	step = _unstick(step)
 	face_direction(step, delta, 10.0)
-	return step * move_speed
+	return step * move_speed * catch_up(to.length())
+
+
+## Rattrapage en run : un monstre distancé accélère (jusqu'à CATCH_UP × sa vitesse à 30 m
+## et plus), sinon le héros (6,5 m/s) sème toute la horde en courant ; de près, vitesse
+## normale (on peut toujours esquiver et se replacer).
+const CATCH_UP := 1.7
+
+
+func catch_up(dist: float) -> float:
+	if not Run.active or is_boss:
+		return 1.0
+	return lerpf(1.0, CATCH_UP, clampf((dist - 8.0) / 22.0, 0.0, 1.0))
+
+
+## Décoincement : un monstre qui n'avance presque plus (arbre, rocher, bord de falaise)
+## contourne par le côté pendant un moment.
+var _stuck_check := 0.0
+var _stuck_from := Vector3.ZERO
+var _detour_until := 0.0
+var _detour := Vector3.ZERO
+var _unstick_at := -1.0  # dernier appel : une pause (coup, recul) remet la mesure à zéro
+
+
+func _unstick(step: Vector3) -> Vector3:
+	if _time - _unstick_at > 0.2:
+		_stuck_check = _time + 0.5
+		_stuck_from = global_position
+	_unstick_at = _time
+	if _time < _detour_until:
+		return (_detour + step * 0.35).normalized()
+	if _time >= _stuck_check:
+		var moved := Vector2(global_position.x - _stuck_from.x, global_position.z - _stuck_from.z).length()
+		if moved < move_speed * 0.5 * 0.25 and _knock.length() < 0.5 and not has_status("chill"):
+			var side := step.cross(Vector3.UP).normalized() * (1.0 if randf() < 0.5 else -1.0)
+			_detour = side
+			_detour_until = _time + randf_range(0.6, 1.0)
+			_path_timer = 0.0  # nouveau chemin après le détour
+		_stuck_check = _time + 0.5
+		_stuck_from = global_position
+	return step
 
 
 ## Direction de marche vers [param goal] en suivant le maillage de navigation
@@ -337,7 +378,7 @@ func _update_chase(delta: float) -> Vector3:
 func _path_step(goal: Vector3) -> Vector3:
 	var to := goal - global_position
 	to.y = 0.0
-	if to.length() < 5.0 or _map == null:
+	if to.length() < 3.0 or _map == null:
 		return to.normalized()
 	_path_timer -= get_physics_process_delta_time()
 	if _path_timer <= 0.0:
