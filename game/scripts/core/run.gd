@@ -172,6 +172,7 @@ func finish(res: String) -> void:
 		Profile.runs_won += 1
 		unlocked_name = Profile.unlock_after(zone_id)
 	Profile.best_level = maxi(Profile.best_level, max_level)
+	Achievements.refresh()
 	Profile.save_profile()
 
 
@@ -316,6 +317,7 @@ func add_trophy(it: Dictionary) -> bool:
 	if trophies.size() >= MAX_TROPHIES or kind == "" or kind in trophy_kinds():
 		return false
 	trophies.append(it)
+	Profile.note_trophy(kind)
 	if it.has("eden") and not int(it.eden) in seen_items:
 		seen_items.append(int(it.eden))
 	changed.emit()
@@ -688,6 +690,9 @@ func apply_card(card: Dictionary) -> void:
 			var cur: Dictionary = weapon_ups.get(String(card.id), {})
 			WeaponAttacks.merge_upgrade(cur, card.get("up", {"dmg": 0.15}))
 			weapon_ups[String(card.id)] = cur
+			if cur.get("sig", false):
+				var ws := weapon_spec(String(card.id))
+				Profile.note_weapon_legend("%s:%d" % [ws.get("wtype", "?"), int(ws.get("variant", 0))])
 		"offhand":
 			# arme secondaire trouvée en jeu : portée tout de suite (l'ancienne reste dans le sac)
 			Profile.inventory.append(card.item)

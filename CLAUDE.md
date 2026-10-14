@@ -57,7 +57,9 @@ dans le HUD, Guide `ui/guide.gd` (F1), touches rangées en 4 groupes avec test d
 les images des fiches restent à écrire. Lot 10 fait (0.1.142) : page Jouer en 3 rangées (Aventure, Défis, Affrontements) avec Arènes fusionnées, Défi de maîtrise
 (`core/challenge.gd` : 2 modificateurs du jour câblés en Survie, 3 classes, maîtrise ×2, +600 la 1re fois, insignes ×1,5), contrats de
 classe (`core/contracts.gd`, remplis à chaque Survie), reprise de la Tour (palier de 10 étages, kit complet + cartes). Épreuves de maîtrise
-et Ruée des boss restent « Bientôt » (pas de moteur de leçons). Prochain : lot 11 (Carnet).
+et Ruée des boss restent « Bientôt » (pas de moteur de leçons). Lot 11 fait (0.1.143) : Carnet = Vue d'ensemble (`core/completion.gd`, 10 catégories), Succès et titres (`core/achievements.gd`, 40 succès
+accordés pour le passé, titres à porter), Grimoire des cartes, Codex des trophées, Collection (`ui/carnet_pages.gd`). Pas encore : signatures de
+famille, apparences/auras en onglets, statistiques. Prochain : lot 12 (alliés IA : ciblage par camp).
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

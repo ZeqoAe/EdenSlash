@@ -426,10 +426,10 @@ func _test_lobby() -> void:
 	check("Héros fermé : retour au menu, badge à jour", not hero.is_open() and lobby._badge_name.text.begins_with("Guerrier"))
 	Profile.selected_class = "samurai"
 	Profile.save_profile()
-	lobby._archive.open(0)
+	lobby._archive.open(4)
 	await _frames()
-	check("Carnet : la Collection ; Atelier : l'Armurerie", lobby._archive._pages.size() == 1 and lobby._workshop._pages.size() == 1)
-	check("Collection : catalogue affiché", lobby._archive.is_open() and lobby._archive.page(0)._grid.get_child_count() > 0)
+	check("Carnet : vue d'ensemble, succès, cartes, trophées, collection ; Atelier : l'Armurerie", lobby._archive._pages.size() == 5 and lobby._workshop._pages.size() == 1)
+	check("Collection : catalogue affiché", lobby._archive.is_open() and lobby._archive.page(4)._grid.get_child_count() > 0)
 	lobby._archive.close_ui()
 	# mode dev : rien sans l'activer dans les Paramètres, puis écran F10
 	Settings.set_v("interface", "dev_mode", false)

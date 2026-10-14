@@ -46,6 +46,11 @@ var new_features: Array = []
 var tutorial: Dictionary = {}
 ## Contrats de classe (Contracts) : classe -> {active, progress, done}.
 var contracts: Dictionary = {}
+## Carnet : succès obtenus (id -> date), titre porté, effets de trophée découverts, variantes d'arme menées à l'effet légendaire.
+var achievements: Dictionary = {}
+var title := ""
+var seen_trophies: Array = []
+var weapon_legend: Array = []
 var bag := {}  # consommables de la run (Craft) : clé -> quantité
 var stash := {}  # réserve de fournitures gardées (extraction, victoire), emportée à la run suivante
 var expertise := {}  # classe -> points d'expertise (gagnés à chaque run)
@@ -258,6 +263,10 @@ func load_profile() -> void:
 	new_features = d.get("new_features", [])
 	tutorial = d.get("tutorial", {})
 	contracts = d.get("contracts", {})
+	achievements = d.get("achievements", {})
+	title = String(d.get("title", ""))
+	seen_trophies = d.get("seen_trophies", [])
+	weapon_legend = d.get("weapon_legend", [])
 	Unlocks.migrate(d.has("unlocked_features"))
 
 
@@ -312,7 +321,8 @@ func save_profile() -> void:
 		"archive": archive, "skins": skins, "outfits": outfits, "owned_outfits": owned_outfits, "unlocked_cards": unlocked_cards, "collection": collection, "worn": worn, "dev": dev, "saved_at": Time.get_datetime_string_from_system(false, true),
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level,
 		"seen_gear": seen_gear, "insignia": insignia, "unlocked_features": unlocked_features,
-		"new_features": new_features, "tutorial": tutorial, "contracts": contracts}
+		"new_features": new_features, "tutorial": tutorial, "contracts": contracts,
+		"achievements": achievements, "title": title, "seen_trophies": seen_trophies, "weapon_legend": weapon_legend}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
 	f.store_string(JSON.stringify(d))
 	f.close()
@@ -666,6 +676,10 @@ func _clear() -> void:
 	new_features = []
 	tutorial = {}
 	contracts = {}
+	achievements = {}
+	title = ""
+	seen_trophies = []
+	weapon_legend = []
 	unlocked_zones = 1
 	selected_zone = "limestone"
 	expertise = {}
@@ -703,6 +717,10 @@ func reset_all() -> void:
 	new_features = []
 	tutorial = {}
 	contracts = {}
+	achievements = {}
+	title = ""
+	seen_trophies = []
+	weapon_legend = []
 	unlocked_zones = 1
 	selected_zone = "limestone"
 	expertise = {}
@@ -915,6 +933,18 @@ func record_max(key: String, value: float) -> void:
 ## Recharge la sauvegarde (fin de Tour ou de Duel : rien n'y est écrit pendant la partie) en
 ## gardant les records gagnés pendant la partie (éliminations, esquives…), qui comptent pour
 ## les cartes à débloquer et les classes à missions.
+## Effet de trophée découvert (codex du Carnet).
+func note_trophy(kind: String) -> void:
+	if kind != "" and not kind in seen_trophies:
+		seen_trophies.append(kind)
+
+
+## Variante d'arme menée à son effet légendaire (Carnet, catégorie Armes).
+func note_weapon_legend(key: String) -> void:
+	if not key in weapon_legend:
+		weapon_legend.append(key)
+
+
 func reload_keep_records() -> void:
 	var kept := records.duplicate()
 	load_profile()

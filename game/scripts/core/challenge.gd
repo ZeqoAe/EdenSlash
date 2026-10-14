@@ -82,4 +82,5 @@ static func settle(gain: int, result: String) -> Dictionary:
 		out.gain = int(out.gain) + BONUS_FIRST
 		out.first = true
 		Profile.records["challenge_day"] = today()
+		Profile.record_add("challenge_wins", 1)
 	return out

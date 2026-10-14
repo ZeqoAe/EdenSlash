@@ -302,6 +302,8 @@ static func finish(won: bool) -> Dictionary:
 	Profile.keys = 0
 	Profile.bag = {}
 	if won:
+		if bare and level <= 1:
+			Profile.record_add("duel_lv1", 1)
 		Profile.record_add("duel_wins", 1)
 		Profile.record_add(win_key(rival_class, difficulty), 1)
 	Profile._lobby_view()

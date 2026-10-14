@@ -230,11 +230,11 @@ func _ready() -> void:
 				Profile.insignia = 300
 			_workshop.open(0)
 		"archive":
-			_archive.open(0)
+			_archive.open(4)
 			for arg in OS.get_cmdline_user_args():
 				if arg.begins_with("--archive-cat="):  # test : catégorie de l'archive
-					_archive.page(0)._cat = arg.trim_prefix("--archive-cat=")
-					_archive.page(0).refresh()
+					_archive.page(4)._cat = arg.trim_prefix("--archive-cat=")
+					_archive.page(4).refresh()
 	if shot > 0.0:
 		await get_tree().create_timer(shot).timeout
 		DirAccess.make_dir_recursive_absolute("user://shots")
@@ -756,7 +756,8 @@ func _build_ui() -> void:
 		_refresh_ui()
 		if _current == "duel":
 			_show_menu("duel"))  # conditions d'inscription à jour
-	_archive = _screen("Carnet", [["Collection", ArchivePages.CollectionPage.new()]])
+	_archive = _screen("Carnet", [["Vue d'ensemble", CarnetPages.OverviewPage.new()], ["Succès et titres", CarnetPages.AchievementsPage.new()],
+		["Cartes", CarnetPages.CardsPage.new()], ["Trophées", CarnetPages.TrophiesPage.new()], ["Collection", ArchivePages.CollectionPage.new()]])
 	_archive.set_title("Carnet", "Archive des trésors : chaque entrée donne un bonus permanent à tous les héros")
 	_workshop = _screen("Atelier", [["Armurerie", GearShopPage.new()]])
 	_workshop.set_title("Atelier", "Armurerie : les pièces découvertes en Survie s'achètent avec tes insignes")
