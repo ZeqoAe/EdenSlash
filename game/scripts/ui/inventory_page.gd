@@ -5,7 +5,7 @@ extends HBoxContainer
 ##   d'équipement, la classe dont on prépare le set, le set actif, les 5 statistiques
 ##   principales et un bouton « Détail » (toutes les statistiques) ;
 ## - à droite, l'inventaire sans limite de place : familles (Tous, Armes, Armures,
-##   Accessoires, Consommables, Matériaux, Divers), recherche, tri, et la fiche de l'objet
+##   Accessoires, Fournitures, Matériaux, Divers), recherche, tri, et la fiche de l'objet
 ##   choisi avec ses raccourcis (Équiper, Forge, Démonter).
 ## Hors run : coffre commun et préréglage de la classe affichée. Pendant la run : sac de la
 ## run, or, matériaux et fournitures. Forge et démontage partout : hors run, la forge prend
@@ -17,7 +17,7 @@ const LEFT_SLOTS := ["weapon", "necklace", "head", "chest", "legs"]
 const RIGHT_SLOTS := ["back", "gloves", "boots", "ring", "trophy"]
 const SLOT_CAPTIONS := {"weapon": "Arme principale", "necklace": "Collier"}
 const FAMILIES := [["all", "Tous", "all"], ["weapon", "Armes", "weapon"], ["armor", "Armures", "armor"],
-	["acc", "Accessoires", "ring"], ["cons", "Consommables", "potion"], ["mat", "Matériaux", "gem"], ["misc", "Divers", "misc"]]
+	["acc", "Accessoires", "ring"], ["cons", "Fournitures", "potion"], ["mat", "Matériaux", "gem"], ["misc", "Divers", "misc"]]
 const SORTS := ["Rareté", "Niveau", "Nom", "Type", "Amélioration"]
 const COLUMNS := 9
 const CELL := 66.0
@@ -414,6 +414,7 @@ func _build_detail(parent: Control) -> void:
 	_d_level.add_theme_font_override("font", UiTheme.bold_font())
 	_d_stats = ItemWidgets.rich(left, 14)
 	_d_stats.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_d_stats.custom_minimum_size = Vector2(0, 96)  # jamais écrasée (sinon une barre de défilement inutile)
 	_d_next = Hud._label(left, "", 13, UiTheme.MUTED)
 	_d_flavor = ItemWidgets.rich(left, 12)
 	_d_flavor.fit_content = true

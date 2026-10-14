@@ -211,11 +211,19 @@ static func build_theme() -> Theme:
 	t.set_font_size("font_size", "TooltipLabel", 15)
 	t.set_stylebox("normal", "LineEdit", flat_box(Color(0.05, 0.04, 0.1, 0.95), GOLD_DIM, 1, 6, false))
 	t.set_stylebox("focus", "LineEdit", flat_box(Color(0.05, 0.04, 0.1, 0.95), GOLD, 2, 6, false))
+	# barres de défilement fines (6 px) et discrètes : la poignée s'allume au survol
+	var thin := func(c: Color) -> StyleBoxFlat:
+		var b := flat_box(c, Color(0, 0, 0, 0), 0, 3, false)
+		b.content_margin_left = 3
+		b.content_margin_right = 3
+		b.content_margin_top = 3
+		b.content_margin_bottom = 3
+		return b
 	for sb_type in ["VScrollBar", "HScrollBar"]:
-		t.set_stylebox("scroll", sb_type, flat_box(Color(0, 0, 0, 0.35), Color(0, 0, 0, 0), 0, 4, false))
-		t.set_stylebox("grabber", sb_type, flat_box(GOLD_DIM, Color(0, 0, 0, 0), 0, 4, false))
-		t.set_stylebox("grabber_highlight", sb_type, flat_box(GOLD, Color(0, 0, 0, 0), 0, 4, false))
-		t.set_stylebox("grabber_pressed", sb_type, flat_box(GOLD, Color(0, 0, 0, 0), 0, 4, false))
+		t.set_stylebox("scroll", sb_type, thin.call(Color(0, 0, 0, 0.25)))
+		t.set_stylebox("grabber", sb_type, thin.call(Color(GOLD_DIM, 0.55)))
+		t.set_stylebox("grabber_highlight", sb_type, thin.call(GOLD))
+		t.set_stylebox("grabber_pressed", sb_type, thin.call(GOLD))
 	var track := flat_box(Color(0, 0, 0, 0.5), GOLD_DIM, 1, 4, false)
 	track.content_margin_top = 3
 	track.content_margin_bottom = 3
