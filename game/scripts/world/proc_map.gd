@@ -284,8 +284,17 @@ func _place_pois() -> void:
 		_occupied.append([p, 14.0])
 
 
-## Point libre à distance des lieux existants, loin des bords.
+## Point libre à distance des lieux existants, loin des bords ; la carte étant pleine, l'écart
+## demandé se relâche (×0,75 puis ×0,5) plutôt que de renoncer au lieu.
 func _free_point(min_dist: float, margin: float) -> Vector2:
+	for k in [1.0, 0.75, 0.5]:
+		var p := _free_point_once(min_dist * k, margin)
+		if p != Vector2.INF:
+			return p
+	return Vector2.INF
+
+
+func _free_point_once(min_dist: float, margin: float) -> Vector2:
 	for attempt in 80:
 		var p := Vector2(rng.randf_range(margin, size - margin), rng.randf_range(margin, size - margin))
 		var ok := true
