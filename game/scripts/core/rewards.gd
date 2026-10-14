@@ -17,8 +17,36 @@ const TYPES := {
 	"jewel": {"name": "Coffre du joaillier", "desc": "Gemmes et parchemins d'enchantement.", "color": Color(0.42, 0.9, 0.42)},
 	"set": {"name": "Coffre de set", "desc": "Choisis 1 pièce mythique (parfois légendaire) parmi 3 pièces d'un même set.", "color": Color(1.0, 0.84, 0.25)},
 	"trophy": {"name": "Coffre de trophées", "desc": "Choisis 1 trophée parmi 3.", "color": Color(1.0, 0.82, 0.3)},
+	# coffres d'apparence (boss de Survie, paliers de la Tour) : une apparence au hasard, jamais
+	# un doublon ; leur qualité fixe la rareté de l'apparence
+	"look_common": {"name": "Coffre d'apparence commun", "desc": "Une apparence que tu n'as pas encore, commune ou spéciale.", "color": Color(0.75, 0.8, 0.9)},
+	"look_rare": {"name": "Coffre d'apparence rare", "desc": "Une apparence que tu n'as pas encore, rare ou épique.", "color": Color(0.4, 0.65, 1.0)},
+	"look_epic": {"name": "Coffre d'apparence mythique", "desc": "Une apparence mythique que tu n'as pas encore.", "color": Color(1.0, 0.55, 0.15)},
+	"look_legend": {"name": "Coffre d'apparence légendaire", "desc": "Une apparence légendaire que tu n'as pas encore.", "color": Color(1.0, 0.86, 0.3)},
 }
-const ORDER := ["set", "trophy", "gear", "forge", "jewel"]
+const ORDER := ["look_legend", "look_epic", "look_rare", "look_common", "set", "trophy", "gear", "forge", "jewel"]
+## Raretés (de la collection d'Eden) de chaque coffre d'apparence, du commun au légendaire.
+const LOOKS := {"look_common": [0, 1], "look_rare": [2, 3], "look_epic": [4], "look_legend": [5]}
+const LOOK_TYPES := ["look_common", "look_rare", "look_epic", "look_legend"]
+
+
+## Coffre d'apparence de qualité [param tier] (0 commun … 3 légendaire).
+static func look_type(tier: int) -> String:
+	return LOOK_TYPES[clampi(tier, 0, LOOK_TYPES.size() - 1)]
+
+
+## Apparence portable (tenue, accessoire, skin d'arme, aura) pas encore obtenue, de la rareté
+## du coffre [param type] ; sinon d'une autre rareté (la plus proche) ; {} si tout est obtenu.
+static func roll_look(type: String) -> Dictionary:
+	var free := GameData.collection.filter(func(x): return not Profile.collected(x) 		and (x.has("aura") or x.has("skin") or (int(x.get("cat", 9)) <= 3 and GameData.cosmetic_by_code.has(String(x.get("code", ""))))) 		and not String(x.get("name", "")).contains("(Alpha)"))
+	if free.is_empty():
+		return {}
+	var want: Array = LOOKS.get(type, [0, 1])
+	for gap in 6:
+		var pool := free.filter(func(x): return want.any(func(r): return absi(int(x.get("rarity", 0)) - int(r)) <= gap))
+		if not pool.is_empty():
+			return pool.pick_random()
+	return free.pick_random()
 
 
 static func make(type: String, plevel: int, boss := false) -> Dictionary:
@@ -122,6 +150,14 @@ static func open(chest: Dictionary) -> Dictionary:
 	var got := {"items": [], "supplies": {}, "crystal": 0}
 	var lv := int(chest.plevel)
 	Items.reward_zone = zone_of(chest)
+	if LOOKS.has(String(chest.type)):
+		# apparence au hasard, jamais un doublon (toute la collection obtenue : des cristaux)
+		var x := roll_look(String(chest.type))
+		if not x.is_empty():
+			Profile.collect(x)
+			got["looks"] = [x]
+		else:
+			got.crystal = 30
 	match String(chest.type):
 		"gear":
 			var rar := top_rarity(chest)
@@ -177,6 +213,8 @@ static func got_text(got: Dictionary) -> String:
 	var lines: PackedStringArray = []
 	for it in got.get("items", []):
 		lines.append("[color=#%s]%s[/color]" % [Items.color_of(it).to_html(false), Items.display_name(it)])
+	for x in got.get("looks", []):
+		lines.append("Apparence : %s" % String(x.name))
 	for k in got.get("supplies", {}):
 		if int(got.supplies[k]) > 0:
 			lines.append("[img=20x20]%s[/img] %s ×%d" % [Craft.icon(k), Craft.label(k), int(got.supplies[k])])

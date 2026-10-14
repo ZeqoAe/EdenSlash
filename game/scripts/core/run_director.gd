@@ -618,7 +618,8 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		luck = 0.5
 		# trésor de collection de l'archive d'Eden (apparence, aura, monture, familier...) :
 		# 1 chance sur 4, 1 sur 2 si le boss est enragé ; de préférence un trésor portable
-		if randf() < (0.5 if m.enraged else 0.25):
+		# (Survie : un coffre d'apparence à la place, voir give_look_chest)
+		if not Run.survival and randf() < (0.5 if m.enraged else 0.25):
 			var locked := GameData.collection.filter(func(x): return not Profile.collected(x))
 			var wearable := locked.filter(func(x): return x.has("aura") or x.has("skin") or GameData.cosmetic_by_code.has(String(x.get("code", ""))))
 			var pool := wearable if not wearable.is_empty() and randf() < 0.75 else locked
@@ -783,6 +784,8 @@ func _update_extraction(delta: float) -> void:
 func _on_boss_killed() -> void:
 	print("[run] boss vaincu à %.0f s, niveau %d, étape %d/%d" % [time, player.level, Run.stage, STAGES])
 	state = "cleared"
+	if Run.survival:
+		give_look_chest()
 	var next := next_zone_id()
 	if next != "":
 		# les zones jusqu'à celle de l'étape suivante s'ouvrent aussi pour les prochaines runs
@@ -802,6 +805,16 @@ func _on_boss_killed() -> void:
 		message.emit("Boss vaincu !\nRamasse le butin", 3.0)
 	await get_tree().create_timer(6.0).timeout
 	boss_defeated.emit()
+
+
+## Survie, boss vaincu : un coffre d'apparence (menu Coffres, jamais perdu), d'autant plus rare
+## que l'époque est avancée (+1 au boss de la 3e map, 1 chance sur 5 d'une qualité de plus).
+func give_look_chest() -> void:
+	var tier := Run.epoch - 1 + (1 if Run.stage >= STAGES else 0) + (1 if randf() < 0.2 else 0)
+	var c := Rewards.make(Rewards.look_type(tier), max_level(), true)
+	Profile.reward_chests.append(c)
+	Profile.save_profile()
+	message.emit("%s ! (menu Coffres)" % Rewards.TYPES[c.type].name, 3.0)
 
 
 ## Zone de l'étape suivante ("" : dernière étape, ou plus de zone après celle-ci) : au moins la

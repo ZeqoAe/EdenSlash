@@ -19,6 +19,9 @@ extends RefCounted
 const FLOORS := 200
 const FLOORS_PER_ZONE := 25
 const RECORD := "tower_best"
+## Étages qui donnent un coffre d'apparence, et sa qualité (Rewards.LOOK_TYPES).
+const LOOK_FLOORS := [50, 100, 150, 200]
+const LOOK_TIERS := [1, 2, 3, 3]
 const DIFF_NAMES := ["Facile", "Normal", "Difficile", "Hardcore"]
 const DIFF_DESC := [
 	"Duellistes lents à réagir, monstres affaiblis.",
@@ -340,12 +343,21 @@ static func finish() -> Dictionary:
 		Profile.vault.append(it)  # le coffre commun (l'inventaire du lobby en est tiré)
 	var old := best()
 	Profile.record_max(record_key(difficulty), reached)
+	# paliers 50, 100, 150, 200 : un coffre d'apparence (une fois par difficulté et par palier)
+	var looks := 0
+	for i in LOOK_FLOORS.size():
+		var f: int = LOOK_FLOORS[i]
+		var key := "tower_look_%d_%d" % [difficulty, f]
+		if reached >= f and not Profile.records.has(key):
+			Profile.records[key] = 1
+			Profile.reward_chests.append(Rewards.make(Rewards.look_type(LOOK_TIERS[i]), 30, true))
+			looks += 1
 	var climbed := maxi(0, reached - start_floor + 1)
 	var xp := roundi((climbed * 12 + Run.kills / 3) * [0.75, 1.0, 1.3, 1.6][difficulty])
 	var lv := Profile.add_expertise(cid, xp)
 	Profile._lobby_view()
 	Profile.save_profile()
-	return {"best": best(), "new_record": reached > old, "xp": xp, "levels": lv, "items": found.size()}
+	return {"best": best(), "new_record": reached > old, "xp": xp, "levels": lv, "items": found.size(), "looks": looks}
 
 
 static func leave(tree: SceneTree) -> void:

@@ -52,6 +52,9 @@ func show_results(result: String, floor_reached: int, got: Dictionary) -> void:
 		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var note := Hud._label(v, "%d objet(s) des coffres de la Tour rejoignent ton coffre commun." % int(got.get("items", 0)), 16, Color(0.55, 1.0, 0.6))
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if int(got.get("looks", 0)) > 0:
+		var lk := Hud._label(v, "Palier franchi : %d coffre(s) d'apparence dans le menu Coffres !" % int(got.looks), 18, Color(1.0, 0.85, 0.35))
+		lk.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var spacer := Control.new()
 	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(spacer)

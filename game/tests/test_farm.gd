@@ -127,8 +127,10 @@ func _ready() -> void:
 	await get_tree().create_timer(1.0).timeout
 	var boss: Monster = d._boss
 	check("donjon : boss présent", is_instance_valid(boss))
+	var looks0 := Profile.reward_chests.filter(func(c): return Rewards.LOOKS.has(String(c.type))).size()
 	boss.take_damage(boss.max_hp * 1000.0 + 1e9, player)
 	await get_tree().create_timer(0.5).timeout
+	check("boss de Survie : un coffre d'apparence", Profile.reward_chests.filter(func(c): return Rewards.LOOKS.has(String(c.type))).size() == looks0 + 1)
 	var portal: Interactable = null
 	for it in d.map.interactables:
 		if is_instance_valid(it) and it.kind == "stage_portal":
@@ -143,6 +145,7 @@ func _ready() -> void:
 	_test_reward_zone()
 	await _test_fortune()
 	await _test_armory()
+	_test_look_chests()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit()
 
@@ -229,7 +232,11 @@ func _test_fortune() -> void:
 
 ## Armurerie (hub) : une pièce vue en Survie s'achète avec des insignes, une seule fois.
 func _test_armory() -> void:
-	var it: Dictionary = SlotChests.offer("head", 1, 1, 1)[0]
+	# une pièce pas encore achetée (le profil de test garde les achats des lancements précédents)
+	var free := SlotChests.pool("head", 1, 2).filter(func(e): return not GearShopPage.owned(int(e.id)))
+	if free.is_empty():
+		free = SlotChests.pool("chest", 1, 3).filter(func(e): return not GearShopPage.owned(int(e.id)))
+	var it := GearShopPage.make(free[0])
 	Profile.seen_gear = [int(it.eden)]
 	Profile.insignia = 500
 	var page := GearShopPage.new()
@@ -242,3 +249,21 @@ func _test_armory() -> void:
 	page._on_buy()
 	check("armurerie : une seule fois", Profile.insignia == 500 - p)
 	page.queue_free()
+
+
+## Coffres d'apparence : une apparence nouvelle au hasard (jamais un doublon), de la rareté du coffre.
+func _test_look_chests() -> void:
+	var owned0 := Profile.collection.size()
+	var names: Array = []
+	var rarities: Array = []
+	for t in Rewards.LOOK_TYPES:
+		var c := Rewards.make(t, 10, true)
+		Profile.reward_chests.append(c)
+		var got := Rewards.open(c)
+		for x in got.get("looks", []):
+			names.append(String(x.name))
+			rarities.append(int(x.get("rarity", 0)))
+	check("coffres d'apparence : 4 apparences nouvelles %s" % [rarities], names.size() == 4 and Profile.collection.size() == owned0 + 4
+		and rarities[2] == 4 and rarities[3] == 5)
+	var x0: Dictionary = Rewards.roll_look("look_legend")
+	check("jamais une apparence déjà obtenue", not x0.is_empty() and not Profile.collected(x0))

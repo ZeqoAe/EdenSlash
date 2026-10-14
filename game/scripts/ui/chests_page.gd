@@ -186,7 +186,8 @@ func _on_burst() -> void:
 		var got: Dictionary = chest.get("_got", {})
 		chest.erase("_got")
 		_title.text = "%s ouvert !" % t.name
-		_detail.text = "[color=#a8a2b8]Objets : au coffre commun · fournitures : à la réserve de ta prochaine run[/color]"
+		_detail.text = "[color=#a8a2b8]%s[/color]" % ("Ajoutée à ta collection : à porter dans Héros > Apparence" if not got.get("looks", []).is_empty()
+			else "Objets : au coffre commun · fournitures : à la réserve de ta prochaine run")
 		_show_loot(got)
 		_shown = {}
 	refresh()
@@ -205,6 +206,28 @@ func _clear() -> void:
 func _show_loot(got: Dictionary) -> void:
 	_clear()
 	var tiles: Array = []
+	for x in got.get("looks", []):
+		# apparence débloquée : grande case à la couleur de sa rareté
+		var col: Color = Items.RARITIES[clampi(int(x.get("rarity", 0)), 0, Items.RARITIES.size() - 1)].color
+		var v := _tile()
+		v.custom_minimum_size = Vector2(220, 0)
+		var frame := PanelContainer.new()
+		frame.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.06, 0.05, 0.1, 0.95), col, 3, 10))
+		frame.custom_minimum_size = Vector2(120, 120)
+		frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		v.add_child(frame)
+		var ic := TextureRect.new()
+		ic.texture = UiTheme.texture(String(x.get("icon", "")))
+		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		frame.add_child(ic)
+		var nl := Hud._label(v, String(x.name), 16, col)
+		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		nl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var kind := "Aura" if x.has("aura") else ("Apparence d'arme" if x.has("skin") else "Apparence")
+		var sl := Hud._label(v, "%s · %s · nouvelle !" % [kind, Items.RARITIES[clampi(int(x.get("rarity", 0)), 0, 5)].name], 13, UiTheme.MUTED)
+		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		tiles.append(v)
 	for it in got.get("items", []):
 		var v := _tile()
 		var s := ItemWidgets.ItemSlot.new(84.0)
