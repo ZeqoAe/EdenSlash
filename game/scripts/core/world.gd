@@ -464,6 +464,8 @@ func _print_report() -> void:
 		director.time, director.state, player.level, Run.kills, Run.elites, Profile.gold, Profile.keys, director.seals,
 		director.chests_opened, director.shrines_captured, director.orbs.count() if director.orbs else 0])
 	print("[bilan] butin par rareté %s · niveaux Eden/puissance %s" % [rar, lv.slice(0, 12)])
+	if director.map and "breakables" in director.map and director.map.breakables:
+		print("[bilan] objets à casser restants : %d · étape %d · cupidité %s" % [director.map.breakables.count(), Run.stage, director.greed])
 	print("[bilan] compétences %s" % [Run.skills.map(func(x): return "%s r%d" % [Run.skill_def(int(x.id)).get("name", x.id), int(x.rank)])])
 	print("[bilan] cartes %s" % [Run.passives])
 	print("[bilan] combos : %d annulations parfaites, %d enchaînements, %d esquives" % [player.ml_counts.perfect, player.ml_counts.chain, player.ml_counts.dodged])

@@ -694,6 +694,13 @@ func _auto_step_dir(input_dir: Vector3) -> Vector3:
 
 
 ## Objectif du déplacement automatique (flèche de l'objectif : donjon, coffre, escalier…).
+func _farm_goal() -> Vector3:
+	var w := get_tree().get_first_node_in_group("world")
+	if w and w.get("director") and w.director.has_method("farm_target"):
+		return w.director.farm_target()
+	return Vector3.INF
+
+
 func _auto_objective() -> Vector3:
 	var w := get_tree().get_first_node_in_group("world")
 	if w and w.get("director") and w.director.has_method("objective_target"):
@@ -2056,6 +2063,8 @@ func _autoplay_input() -> Vector2:
 	var m := nearest_monster(40.0)
 	var to := Vector3.ZERO
 	var goal := autoplay_target if autoplay else _auto_objective()
+	if goal == Vector3.INF:
+		goal = _farm_goal()  # rien d'autre à faire : coffres, lieux, objets à casser
 	if goal != Vector3.INF and (m == null or global_position.distance_to(m.global_position) > 4.0):
 		to = goal - global_position
 		if _time > _bot_check_at:

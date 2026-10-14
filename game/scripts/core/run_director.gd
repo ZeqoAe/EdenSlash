@@ -277,7 +277,9 @@ func _update_interactions() -> void:
 		prompt_changed.emit(best.prompt() if best else "")
 	if best == null:
 		return
-	if Input.is_action_just_pressed("interact") or ((player.autoplay or Settings.auto_move()) and best.kind in ["chest", "dungeon", "tower_chest", "tower_stairs", "stage_portal"]):
+	var auto := player.autoplay or Settings.auto_move()
+	if Input.is_action_just_pressed("interact") or (auto and (best.kind in ["chest", "dungeon", "tower_chest", "tower_stairs", "stage_portal"]
+			or (best.kind in AUTO_STATIONS and (best.kind != "well" or player.hp < player.max_hp * 0.7)))):
 		_interact(best)
 
 
@@ -835,6 +837,43 @@ func revive_point() -> Vector3:
 	return map.start + Vector3.UP * 0.6
 
 
+## Lieux que le déplacement automatique utilise tout seul (la cupidité et le défi restent un
+## choix du joueur).
+const AUTO_STATIONS := ["anvil", "scribe", "magnet", "well"]
+var _farm_at := 0.0
+var _farm_cache := Vector3.INF
+
+
+## Cible de farm du déplacement automatique et du bot de test : coffre qu'on peut ouvrir, lieu
+## utile pas encore utilisé, sinon l'objet à casser le plus proche. Vector3.INF : rien.
+func farm_target() -> Vector3:
+	if not state in ["explore", "rage"] or map == null or player == null:
+		return Vector3.INF
+	if time < _farm_at:
+		return _farm_cache
+	_farm_at = time + 0.5
+	var p := player.global_position
+	var best := Vector3.INF
+	var bd := 75.0
+	for it in map.interactables:
+		if not is_instance_valid(it) or it.used:
+			continue
+		var ok := false
+		if it.kind == "chest":
+			ok = Profile.keys > 0 or Profile.gold >= chest_price(int(it.get_meta("tier", 0)))
+		elif it.kind in AUTO_STATIONS:
+			ok = it.kind != "well" or player.hp < player.max_hp * 0.7
+		if ok:
+			var d := _flat(p, it.global_position)
+			if d < bd:
+				bd = d
+				best = it.global_position
+	if best == Vector3.INF and map.breakables:
+		best = map.breakables.nearest(p, 45.0)
+	_farm_cache = best
+	return best
+
+
 func objective_target() -> Vector3:
 	if state == "tower":
 		return tower.target()
@@ -1238,9 +1277,10 @@ func trophy_cards(n: int) -> Array:
 
 ## Marchands ambulants : ils se promènent autour de leur place, et s'arrêtent face au héros.
 func _update_merchants(delta: float) -> void:
-	for it: Interactable in map.interactables:
-		if not is_instance_valid(it) or it.kind != "merchant":
-			continue
+	for node in map.interactables:
+		if not is_instance_valid(node) or node.kind != "merchant":
+			continue  # (les coffres ouverts disparaissent : pas de type imposé dans la boucle)
+		var it: Interactable = node
 		var to_player: Vector3 = player.global_position - it.global_position
 		to_player.y = 0.0
 		if to_player.length() < 7.0:

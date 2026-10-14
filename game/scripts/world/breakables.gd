@@ -86,6 +86,18 @@ func alive_list() -> Array:
 	return out
 
 
+## Objet vivant le plus proche de [param pos] à moins de [param r] m (Vector3.INF : aucun).
+func nearest(pos: Vector3, r: float) -> Vector3:
+	var best := Vector3.INF
+	var bd := r
+	for i in _near(pos, r):
+		var d := Vector2(_items[i].pos.x - pos.x, _items[i].pos.z - pos.z).length()
+		if d < bd:
+			bd = d
+			best = _items[i].pos
+	return best
+
+
 func _cell(p: Vector3) -> Vector2i:
 	return Vector2i(int(floor(p.x / CELL)), int(floor(p.z / CELL)))
 
