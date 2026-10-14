@@ -168,11 +168,34 @@ static func skill_upgrade(s: Dictionary, tier_id: String, attr_hint := "") -> Di
 		out["dur"] = float(r.duration) * m
 	else:
 		out["dmg"] = float(r.dmg) * m
-	# bonus d'attribut au lancement : seulement à partir de rare, plus probable si rare+
-	if tier_id != "common" and randf() < float(r.rider_chance):
+	# facettes (les anciennes cartes de classe fondues dans l'amélioration) : rare 1, épique 2,
+	# légendaire 3 parmi Puissance (ou Ferveur), Cadence, Persistance
+	var cands: Array = ["heal" if (kind == "heal" or float(s.get("heal", 0.0)) > 0.0) else ("dur" if kind == "buff" else "pow"), "cd"]
+	if kind == "buff" or not (s.get("applies", {}) as Dictionary).is_empty():
+		cands.append("dur")
+	cands.shuffle()
+	var facets: Array = []
+	for f in cands.slice(0, FACETS.get(tier_id, 0)):
+		facets.append(f)
+		var fv: Dictionary = FACET_VALUES[f]
+		out[fv.key] = float(out.get(fv.key, 0.0)) + float(fv.value) * m
+	if not facets.is_empty():
+		out["facets"] = facets
+	# bonus d'attribut au lancement : seulement à partir de rare, garanti en légendaire
+	if tier_id != "common" and (tier_id == "legendary" or randf() < float(r.rider_chance)):
 		var attr: String = attr_hint if attr_hint != "" else ["str", "agi", "int", "wis"].pick_random()
 		out["rider"] = {"stat": attr, "value": float(r.rider_pct) * m, "duration": float(r.rider_duration)}
 	return out
+
+
+## Facettes d'une amélioration de sort par rareté, et leur effet (clé de l'entrée du sort, valeur).
+const FACETS := {"common": 0, "rare": 1, "epic": 2, "legendary": 3}
+const FACET_VALUES := {
+	"pow": {"key": "dmg", "value": 0.08, "name": "Puissance"},
+	"heal": {"key": "heal", "value": 0.08, "name": "Ferveur"},
+	"cd": {"key": "cd", "value": 0.04, "name": "Cadence"},
+	"dur": {"key": "dur", "value": 0.12, "name": "Persistance"},
+}
 
 
 ## Texte d'une amélioration de sort : totaux avant → après.
@@ -184,6 +207,8 @@ static func skill_upgrade_lines(cur: Dictionary, up: Dictionary) -> PackedString
 			out.append("%s : +%s %% → [b]+%s %%[/b]" % [k[1], _num(a * 100.0), _num((a + float(up[k[0]])) * 100.0)])
 	var c := float(cur.get("cd", 0.0))
 	out.append("Recharge : -%s %% → [b]-%s %%[/b]" % [_num(minf(c, 0.6) * 100.0), _num(minf(c + float(up.cd), 0.6) * 100.0)])
+	if up.has("facets"):
+		out.append("Facettes : [b]%s[/b]" % ", ".join((up.facets as Array).map(func(f): return String(FACET_VALUES[f].name))))
 	if up.has("rider"):
 		var rd: Dictionary = up.rider
 		out.append("Au lancement : [b]+%s %% %s[/b] pendant %s s" % [_num(float(rd.value) * 100.0), ATTR_FR.get(String(rd.stat), rd.stat), _num(float(rd.duration))])

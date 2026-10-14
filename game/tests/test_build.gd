@@ -229,7 +229,7 @@ func _test_world() -> void:
 	var sk: Dictionary = Run.class_data().skills[1]  # tourbillon (cercle)
 	var r0 := player.skill_radius(sk)
 	Run.apply_card(_common_card("wide_arc"))
-	check("Lame large : rayon des zones +15 %", is_equal_approx(player.skill_radius(sk), r0 * 1.15))
+	check("Lame large : rayon des zones +14 %", is_equal_approx(player.skill_radius(sk), r0 * 1.14))
 
 	# procs : foudre en chaîne
 	var pack: Array = [_dummy(3.0, 0.0), _dummy(4.5, 0.6), _dummy(6.0, -0.6)]
@@ -505,7 +505,7 @@ func _test_card_tiers() -> void:
 		if Run.roll_cards(3).any(func(x): return str(x.id).begins_with("sk%d_" % int(sk0.id))):
 			seen = true
 			break
-	check("carte de sort proposée une fois le sort pris", seen)
+	check("cartes de classe : plus proposées (fondues dans l'amélioration de sort)", not seen)
 	var dm0 := Run.skill_damage_mult(int(sk0.id))
 	Run.passives[pow_id] = 1
 	Run.passive_power[pow_id] = 1.0
@@ -574,11 +574,15 @@ func _test_card_tiers() -> void:
 	# sort de soin amélioré : plus de soins, pas seulement moins de recharge
 	var heal_skill := {"id": 9001, "kind": "heal", "heal": 0.3, "cooldown": 10}
 	var up := Cards.skill_upgrade(heal_skill, "epic")
-	check("amélioration d'un sort de soin : +33 % de soins et -11 % de recharge (épique)", is_equal_approx(float(up.heal), 0.33) and is_equal_approx(float(up.cd), 0.11) and not up.has("dmg"))
+	check("amélioration d'un sort de soin (épique) : 2 facettes, soins et recharge en plus", float(up.heal) > 0.33 and float(up.cd) > 0.11 and (up.facets as Array).size() == 2 and not up.has("dmg"))
+	var rare_up := Cards.skill_upgrade({"id": 9002, "kind": "cone", "cooldown": 5}, "rare")
+	check("amélioration rare : une facette", (rare_up.facets as Array).size() == 1)
+	check("amélioration commune : aucune facette", not Cards.skill_upgrade({"id": 9002, "kind": "cone", "cooldown": 5}, "common").has("facets"))
+	check("amélioration légendaire : bonus d'attribut garanti", Cards.skill_upgrade({"id": 9002, "kind": "cone", "cooldown": 5, "applies": {"burn": 3.0}}, "legendary").has("rider"))
 	Run.skills.append({"id": 9001, "rank": 1})
 	up["rider"] = {"stat": "int", "value": 0.2, "duration": 6.0}
 	Run.apply_card({"type": "upgrade", "id": 9001, "up": up})
-	check("sort amélioré : soins x1,33, bonus d'Intelligence au lancement", is_equal_approx(Run.skill_heal_mult(9001), 1.33) and Run.skill_riders(9001).size() == 1 and int(Run.skill_entry(9001).rank) == 2)
+	check("sort amélioré : soins x1,33, bonus d'Intelligence au lancement", is_equal_approx(Run.skill_heal_mult(9001), 1.0 + float(up.heal)) and Run.skill_riders(9001).size() == 1 and int(Run.skill_entry(9001).rank) == 2)
 	Run.skills.pop_back()
 	# effets sur la durée plus longs (Venin tenace)
 	Run.apply_card(_common_card("lingering"))

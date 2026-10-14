@@ -1461,6 +1461,21 @@ func proc_hit(m: Combatant, mult: float, can_crit := false) -> void:
 
 
 ## Recharges des compétences réduites de [param seconds] s.
+## Recharges rendues par les effets (Élan meurtrier…) : au plus CDR_PER_SEC s rendues par seconde
+## (réserve de CDR_PER_SEC s qui se remplit à ce rythme). Renvoie la part accordée de [param amount].
+const CDR_PER_SEC := 1.5
+var _cdr_given := 0.0
+var _cdr_at := 0.0
+
+
+func cdr_allow(amount: float) -> float:
+	_cdr_given = maxf(0.0, _cdr_given - (clock - _cdr_at) * CDR_PER_SEC)
+	_cdr_at = clock
+	var ok := minf(amount, maxf(0.0, CDR_PER_SEC - _cdr_given))
+	_cdr_given += ok
+	return ok
+
+
 func reduce_cooldowns(seconds: float) -> void:
 	for id in skill_ready_at:
 		skill_ready_at[id] = maxf(_time, float(skill_ready_at[id]) - seconds)

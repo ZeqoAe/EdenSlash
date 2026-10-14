@@ -808,6 +808,8 @@ func _on_boss_killed() -> void:
 	state = "cleared"
 	if Run.survival:
 		give_look_chest()
+		# une amélioration d'arme garantie à chaque boss de carte
+		world._offer("Boss vaincu ! Améliore ton arme", Run.roll_cards(3, false, "weapon"))
 	var next := next_zone_id()
 	if next != "":
 		# les zones jusqu'à celle de l'étape suivante s'ouvrent aussi pour les prochaines runs

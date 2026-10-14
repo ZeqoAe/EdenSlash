@@ -28,8 +28,8 @@ const RARITY := {
 
 const LIST := [
 	# --- communes : la base d'un build ---------------------------------------------------
-	{"id": "wide_arc", "name": "Lame large", "rarity": "common", "max": 10, "stat": {"area": 0.15},
-		"desc": "Rayon des attaques de zone : attaques, compétences, explosions, foudre et gel."},
+	{"id": "wide_arc", "name": "Lame large", "rarity": "common", "max": 7, "stat": {"area": 0.14},
+		"desc": "+14 % de rayon des attaques de zone (attaques, compétences, explosions, foudre et gel), +98 % au plus."},
 	{"id": "long_reach", "name": "Allonge", "rarity": "common", "max": 10, "stat": {"reach": 0.15},
 		"desc": "+15 % de portée : attaque de base, compétences en ligne, en éventail et élans."},
 	{"id": "sharpened", "name": "Fil aiguisé", "rarity": "common", "max": 10, "stat": {"dmg_pct": 0.08},
@@ -115,9 +115,9 @@ const LIST := [
 		"per_stack": {"amount": 0.03, "cd": -4.0},
 		"desc": "Sous 30 % de PV : rend 30 % des PV, Barrière 4 s et gèle autour de toi (une fois par minute)."},
 	{"id": "momentum", "name": "Élan meurtrier", "rarity": "rare", "max": 10,
-		"procs": [{"trigger": "kill", "chance": 1.0, "cd": 0.0, "effect": "cdr", "amount": 0.3}],
+		"procs": [{"trigger": "kill", "chance": 1.0, "cd": 0.15, "effect": "cdr", "amount": 0.3}],
 		"per_stack": {"amount": 0.2},
-		"desc": "Chaque monstre tué réduit les recharges de 0,3 s."},
+		"desc": "Chaque monstre tué réduit les recharges de 0,3 s (pas plus de 1,5 s par seconde)."},
 	# --- épiques -------------------------------------------------------------------------
 	{"id": "executioner", "name": "Exécuteur", "rarity": "epic", "max": 10, "stat": {"execute": 0.12},
 		"desc": "Les monstres normaux sous 12 % de PV sont exécutés d'un coup."},

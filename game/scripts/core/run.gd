@@ -453,6 +453,18 @@ func skill_talent(skill_id: int) -> Dictionary:
 ## Tire [param n] cartes différentes. [param skills_only] : choix de départ.
 ## [param kind] : "" toutes ; "spell" sorts (nouveau, enchaînement, rang) ; "passive" passifs
 ## hors certificats ; "cert" certificats (coffres de cartes de la Survie).
+## Plafonds des statistiques de cartes : une carte dont la stat est au plafond n'est plus proposée.
+const STAT_CAPS := {"execute": 0.3, "cdr": 0.5, "eva": 0.2}
+
+
+func _at_cap(p: Dictionary) -> bool:
+	var st: Dictionary = p.get("stat", {})
+	for k in STAT_CAPS:
+		if st.has(k) and float(passive_stats().get(k, 0.0)) >= float(STAT_CAPS[k]) - 0.0001:
+			return true
+	return false
+
+
 func roll_cards(n := 3, skills_only := false, kind := "") -> Array:
 	var pool: Array = []
 	var owned := all_skills().map(func(s): return int(s.id))
@@ -474,7 +486,7 @@ func roll_cards(n := 3, skills_only := false, kind := "") -> Array:
 		# améliorations d'arme : l'arme principale souvent, la secondaire si elle est portée
 		for slot in ["weapon", "offhand"]:
 			if not weapon_spec(slot).is_empty() and int(weapon_ups.get(slot, {}).get("rank", 0)) < WeaponAttacks.MAX_RANK:
-				pool.append({"type": "weapon_up", "id": slot, "weight": 2.2 if slot == "weapon" else 1.3})
+				pool.append({"type": "weapon_up", "id": slot, "weight": 5.0 if slot == "weapon" else 1.8})
 		var boons := {}
 		for b in Boons.all():
 			boons[String(b.id)] = true
@@ -489,12 +501,12 @@ func roll_cards(n := 3, skills_only := false, kind := "") -> Array:
 				continue  # bannie pour la run, ou carte pas encore débloquée (méta-progression)
 			if not p.get("requires", []).all(func(r): return passives.has(r)):
 				continue
+			if _at_cap(p):
+				continue  # statistique au plafond : la carte n'apporterait rien
 			var rar: Dictionary = Boons.RARITY[String(p.get("rarity", "common"))]
 			pool.append({"type": "passive", "id": p.id, "cert": p.has("cert"), "weight": 1.2 * float(rar.weight) * (0.5 if p.get("instant", false) else 1.0) * (cert_k if p.has("cert") else 1.0)})
-		# cartes de classe : seulement pour les sorts pris
-		for d in Cards.class_cards(class_id):
-			if int(d.skill) in owned and int(passives.get(d.id, 0)) < int(d.max) and not String(d.id) in banned:
-				pool.append({"type": "passive", "id": d.id, "weight": 1.0 * float(Boons.RARITY[String(d.rarity)].weight)})
+		# les cartes de classe (puissance, cadence, persistance) ne sont plus proposées : elles sont
+		# devenues les facettes de l'amélioration de sort (Cards.skill_upgrade)
 	pool = pool.filter(func(c): return not (c.type in ["skill", "chain"] and str(c.id) in banned) \
 		and not kept.any(func(k): return String(k.type) == String(c.type) and str(k.id) == str(c.id)))
 	match kind:

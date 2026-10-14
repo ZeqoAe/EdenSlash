@@ -41,7 +41,12 @@ la famille JcJ de `PvpCaps` ; `core/modifiers.gd` : table de modificateurs ; mod
 profils quand leur consommateur est branché ; les tests `Tower.active` / `Duel.active` dispersés restent.
 Reste du lot 1 : « niveau minimum 10 » du Duel (`Duel.gear_level`), à faire avec le lot 5 (échelle des
 dégâts en même temps) ; insensibilité aux renversements des 11 certificats (B10, non codée). Lot 5 fait (0.1.137) sauf : coups réduits par la rafale non affichés en gris, Ligue/Panthéon/Gantelet (lots 14-15).
-Prochain : lot 6 (builds sains).
+Lot 6 fait (0.1.138) : garde-fous (Élan meurtrier 0,15 s et 1,5 s rendues par seconde, trophées « à l'impact » 5 s,
+Lame large +98 % au plus, projectiles en plus normalisés et plafonnés à +4, Exécuteur retiré au plafond), classes à
+majorité de sorts magiques = classes magiques (`GameData._balance_damage_types`, 20 classes), arme qui grandit (poids ×2,3,
+amélioration garantie au boss, effet légendaire au niveau 4), facettes d'amélioration de sort (plus de cartes de classe).
+Les profils « opti » (`gen_profiles`) n'ont PAS été régénérés (le générateur n'est pas déterministe et ça décalerait le
+réglage du duel équipé) : à relancer plus tard pour les 20 classes reclassées. Prochain : lot 7 (bilan, coffres, autel).
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

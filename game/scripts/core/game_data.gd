@@ -65,6 +65,7 @@ func _ready() -> void:
 			elif not common_passives.any(func(q): return q.id == p.id):
 				common_passives.append(p)
 		classes[cid]["passives"] = keep
+	_balance_damage_types()
 	motion_keys = _load_json("res://data/motion_keys.json")
 	minimaps = _load_json("res://data/minimaps.json")
 	var cat_path := "res://data/eden_catalog.json" if FileAccess.file_exists("res://data/eden_catalog.json") else "res://data/eden_items.json"
@@ -177,6 +178,29 @@ func class_data(id: String) -> Dictionary:
 ## Clés d'animation d'Eden (motion.ini) : instants d'impact, sons, traînée.
 func anim_keys(kfm: String, anim: String) -> Dictionary:
 	return motion_keys.get(kfm, {}).get(anim, {})
+
+
+## Cohérence physique / magique : une classe dont la majorité des sorts d'attaque sont magiques est une
+## classe magique (type de dégâts « mag », attaque magique de base comme les classes magiques d'origine),
+## sinon ses sorts magiques s'appuieraient sur une attaque magique de base trop faible.
+func _balance_damage_types() -> void:
+	for cid in classes:
+		var c: Dictionary = classes[cid]
+		var mag := 0
+		var phys := 0
+		for s in c.get("skills", []):
+			if s.get("shared", false) or String(s.get("kind", "")) in ["buff", "heal"]:
+				continue
+			if String(s.get("dmg_type", "phys")) == "mag":
+				mag += 1
+			else:
+				phys += 1
+		if mag > phys and String(c.get("dmg_type", "phys")) != "mag":
+			c["dmg_type"] = "mag"
+			var b: Dictionary = c.get("base", {})
+			b["atk"] = 0.6
+			b["matk"] = 1.1
+			c["base"] = b
 
 
 func _load_json(path: String) -> Variant:

@@ -90,7 +90,7 @@ static func run(player: Player, p: Dictionary, target: Combatant, pos: Vector3) 
 			player.heal(player.max_hp * float(p.get("amount", 0.2)))
 			DamageNumber.spawn_text(player, "+%d %% PV" % roundi(float(p.get("amount", 0.2)) * 100), Color(0.5, 1.0, 0.55))
 		"cdr":
-			player.reduce_cooldowns(float(p.get("amount", 0.5)))
+			player.reduce_cooldowns(player.cdr_allow(float(p.get("amount", 0.5))))
 		"echo":
 			player.echo_last_skill(float(p.get("mult", 0.6)))
 	for extra in p.get("then", []):

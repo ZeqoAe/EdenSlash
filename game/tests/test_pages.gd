@@ -463,7 +463,7 @@ func _test_lobby() -> void:
 	cp._save()
 	check("éditeur de cartes : Lame large modifiée (+20 % de rayon par carte commune)", is_equal_approx(float(Boons.get_def("wide_arc").stat.area), 0.2) and DevEdits.data.cards.has("wide_arc"))
 	cp._reset()
-	check("éditeur de cartes : carte rétablie", is_equal_approx(float(Boons.get_def("wide_arc").stat.area), 0.15) and not DevEdits.data.cards.has("wide_arc"))
+	check("éditeur de cartes : carte rétablie", is_equal_approx(float(Boons.get_def("wide_arc").stat.area), 0.14) and not DevEdits.data.cards.has("wide_arc"))
 	cp._open("")
 	check("éditeur de cartes : règles des raretés", cp._rule_spins.has("tier_legendary") and cp._rule_spins.has("heal"))
 	await _test_dev_editor(dev)

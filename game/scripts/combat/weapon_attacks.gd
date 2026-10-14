@@ -211,6 +211,7 @@ const SPECS := {
 
 # --- améliorations d'arme -------------------------------------------------------------------
 const MAX_RANK := 8
+const SIG_RANK := 4  # niveau de l'arme où l'effet légendaire de sa variante est acquis
 ## Dégâts de l'auto-attaque par carte, selon la rareté.
 const UP_DMG := {"common": 0.15, "rare": 0.18, "epic": 0.22, "legendary": 0.3}
 ## Bonus mineurs (rare et mieux) et majeurs (épique et mieux) : valeur par carte.
@@ -280,9 +281,12 @@ static func reach(s: Dictionary, reach_mult: float, area_mult: float) -> float:
 ## Action de combat de l'auto-attaque [param s] pour le héros [param p] (attaque de base de
 ## Player : mêmes champs que les compétences) ; [param mods] : améliorations de l'emplacement
 ## (Run.weapon_ups).
+const MAX_EXTRA_PROJ := 4  # plafond des projectiles / frappes en plus (cartes + Tempête d'acier)
+
+
 static func action_for(s: Dictionary, p: Player, mods := {}) -> Dictionary:
 	var shape := String(s.get("shape", "slash"))
-	var extra := p.extra_proj + int(mods.get("proj", 0))
+	var extra := mini(p.extra_proj + int(mods.get("proj", 0)), MAX_EXTRA_PROJ)
 	var area := p.area_mult * (1.0 + float(mods.get("area", 0.0)))
 	var reach_m := p.reach_mult * (1.0 + float(mods.get("reach", 0.0)))
 	var applies: Dictionary = (s.get("applies", {}) as Dictionary).duplicate()
@@ -338,7 +342,19 @@ static func action_for(s: Dictionary, p: Player, mods := {}) -> Dictionary:
 			a["radius"] = float(s.get("radius", 2.8)) * area
 			a["arc"] = float(s.get("arc", 150.0))
 			a["hits"] = int(s.get("hits", 1)) + extra
+	if extra > 0:
+		# frappes et projectiles en plus normalisés : chaque variante vaut +40 à +60 % par unité en plus
+		var base_n := int(s.get("count", 1)) if shape == "bolt" else (1 if shape == "cast" else int(s.get("hits", 1)))
+		a["mult"] = float(a.mult) * (float(base_n) + proj_gain(s, base_n) * extra) / float(base_n + extra)
 	return a
+
+
+## Gain d'une frappe ou d'un projectile en plus, en part d'une frappe de la variante : 0,5 pour une seule
+## frappe (+50 %), 0,6 pour deux, 1 pour une rafale de 3 ou plus (chaque projectile compte plein).
+static func proj_gain(s: Dictionary, base_n: int) -> float:
+	if s.has("proj_gain"):
+		return float(s.proj_gain)
+	return 0.5 if base_n <= 1 else (0.6 if base_n == 2 else 1.0)
 
 
 ## Effet légendaire « tous les N coups » : renforce l'action [param a] si c'est le N-ième coup
@@ -497,6 +513,8 @@ static func roll_upgrade(s: Dictionary, tier: String, cur: Dictionary) -> Dictio
 ## Ajoute [param up] aux améliorations [param cur] (niveau + 1).
 static func merge_upgrade(cur: Dictionary, up: Dictionary) -> void:
 	cur["rank"] = int(cur.get("rank", 0)) + 1
+	if int(cur.rank) >= SIG_RANK:
+		cur["sig"] = true  # l'effet légendaire de la variante s'acquiert au niveau 4
 	for k in up:
 		if k == "sig":
 			cur["sig"] = true
