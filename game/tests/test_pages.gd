@@ -425,7 +425,7 @@ func _test_lobby() -> void:
 	Dev.toggle()
 	await _frames()
 	var dev: DevScreen = Dev.screen
-	check("mode dev : écran ouvert (Objets, Éditer, Sets, Cartes, Ressources, Progression ; pas de Run au lobby)", dev.is_open() and dev._pages.size() == 6)
+	check("mode dev : écran ouvert (Objets, Éditer, Sets, Cartes, Ressources, Progression, Tour ; pas de Run au lobby)", dev.is_open() and dev._pages.size() == 7)
 	var items: DevPages.ItemsPage = dev.page(0)
 	var tpl: Dictionary = GameData.eden_items.filter(func(e): return e.slot == "ring")[0]
 	items._selected = tpl
@@ -549,10 +549,10 @@ func _test_run_screens() -> void:
 	await _frames()
 	# mode dev en run : page Run
 	Settings.set_v("interface", "dev_mode", true)
-	Dev.open(6)
+	Dev.open(7)
 	await _frames()
-	var rp: DevPages.RunActionsPage = Dev.screen.page(6)
-	check("mode dev en run : page Run, jeu en pause", Dev.screen._pages.size() == 7 and rp.visible and get_tree().paused)
+	var rp: DevPages.RunActionsPage = Dev.screen.page(7)
+	check("mode dev en run : page Run, jeu en pause", Dev.screen._pages.size() == 8 and rp.visible and get_tree().paused)
 	var lv := player.level
 	rp._box.get_child(1).get_child(1).pressed.emit()
 	check("mode dev : niveau +5", player.level == lv + 5)
