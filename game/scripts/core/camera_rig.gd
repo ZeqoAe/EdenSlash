@@ -119,3 +119,39 @@ func _process(delta: float) -> void:
 	if _shake > 0.0:
 		camera.position += Vector3(randf_range(-1, 1), randf_range(-1, 1), 0) * _shake * 0.15
 		_shake = maxf(0.0, _shake - delta * 4.0)
+	_occlusion_timer -= delta
+	if _occlusion_timer <= 0.0:
+		_occlusion_timer = 0.1
+		_fade_occluders(hero)
+
+
+var _occlusion_timer := 0.0
+var _faded := {}  # monstre -> transparence actuelle
+
+
+## Monstres entre la caméra et le héros, assez gros pour le cacher (boss, élites…) : rendus
+## translucides le temps de passer (sinon un boss géant remplit l'écran).
+func _fade_occluders(hero: Vector3) -> void:
+	var c := camera.global_position
+	var seg := hero - c
+	var len2 := seg.length_squared()
+	if len2 < 0.01:
+		return
+	for node in get_tree().get_nodes_in_group("monsters"):
+		var m := node as Combatant
+		if m == null or not is_instance_valid(m) or m.model == null:
+			continue
+		var r := maxf(m.radius * 2.2, 1.2) * (2.0 if (m as Monster) and m.is_boss else 1.0)
+		var center := m.global_position + Vector3.UP * r * 0.6
+		var t := clampf((center - c).dot(seg) / len2, 0.0, 1.0)
+		var hide := t > 0.02 and t < 0.94 and center.distance_to(c + seg * t) < r
+		var want := 0.7 if hide else 0.0
+		var cur := float(_faded.get(m, 0.0))
+		if is_equal_approx(cur, want):
+			continue
+		_faded[m] = want
+		for mi in m.model.find_children("*", "GeometryInstance3D", true, false):
+			(mi as GeometryInstance3D).transparency = want
+	for m in _faded.keys():
+		if not is_instance_valid(m):
+			_faded.erase(m)

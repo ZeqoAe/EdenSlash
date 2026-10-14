@@ -577,6 +577,10 @@ func _total(who: String, st: String, end: float, left: float) -> float:
 # --- cible -------------------------------------------------------------------------------
 func _update_target() -> void:
 	var t := player.current_target()
+	# combat de boss : la barre reste sur le boss (pas sur ses renforts)
+	var boss = director.get("_boss") if director else null
+	if boss and is_instance_valid(boss) and not boss.is_dead:
+		t = boss
 	if t == null:
 		t = player.nearest_monster(9.0)
 	if t == null:
@@ -588,7 +592,7 @@ func _update_target() -> void:
 		_target_ref = weakref(t)
 		_target_trail.value = ratio
 	_target_box.visible = true
-	_target_name.text = t.display_name
+	_target_name.text = t.display_name.trim_prefix("<Boss> ").trim_prefix("<Duel> ")
 	var m := t as Monster
 	var tag := "Nv %d" % t.level
 	if m and m.is_boss:
@@ -608,7 +612,7 @@ func _update_target() -> void:
 	var id := str(t.get_instance_id())
 	for st in t.statuses:
 		var left := float(t.statuses[st]) - t.clock
-		if left > 0.0 and Combatant.STATUS_INFO.has(st):
+		if left > 0.0 and Combatant.STATUS_INFO.has(st) and not String(st).begins_with("imm_"):  # pas les insensibilités
 			effects.append({"id": st, "left": left, "total": _total(id, st, float(t.statuses[st]), left)})
 	_target_row.sync(effects)
 
