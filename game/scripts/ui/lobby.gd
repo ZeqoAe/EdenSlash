@@ -50,6 +50,7 @@ var _dev_button: Button
 
 
 func _ready() -> void:
+	Music.play(Music.MENU)
 	var shot := -1.0
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class="):

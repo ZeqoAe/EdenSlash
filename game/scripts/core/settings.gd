@@ -77,7 +77,7 @@ const DEBUG_BINDS := {
 const DEFAULTS := {
 	"display": {"window_mode": "windowed", "resolution": "1600x900", "vsync": true, "max_fps": 0,
 		"msaa": 2, "ui_scale": 1.0, "quality": "high"},
-	"audio": {"master": 0.8, "sfx": 1.0},
+	"audio": {"master": 0.8, "sfx": 1.0, "music": 0.6},
 	# move_mode : keyboard (ZQSD), click (clic gauche), rts (clic droit)
 	# aim_mode : smart (cible, sinon curseur, sinon monstre proche), cursor (le héros suit
 	#            le curseur), action (héros de dos, la caméra tourne vers le curseur),
@@ -448,6 +448,9 @@ func _apply_section(section: String) -> void:
 			var bus := AudioServer.get_bus_index("Master")
 			AudioServer.set_bus_volume_db(bus, linear_to_db(maxf(float(get_v("audio", "master")), 0.0001)))
 			Sfx.volume_db = linear_to_db(maxf(float(get_v("audio", "sfx")), 0.0001))
+			var music := get_node_or_null("/root/Music")  # chargée après les paramètres au démarrage
+			if music:
+				music.set_volume(float(get_v("audio", "music")))
 
 
 func _apply_display() -> void:

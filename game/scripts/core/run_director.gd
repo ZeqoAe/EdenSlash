@@ -116,6 +116,7 @@ func start(p: Player) -> void:
 	_seed = Run.seed if Run.seed != 0 else randi()
 	if Duel.active:
 		# duel : une arène, pas de grande carte
+		Music.play(Music.DUEL)
 		state = "duel"
 		_fog = Image.create(FOG_RES, FOG_RES, false, Image.FORMAT_LA8)
 		_fog.fill(Color(0, 0, 0, 0))
@@ -126,6 +127,7 @@ func start(p: Player) -> void:
 		return
 	if Tower.active:
 		# la Tour : pas de grande carte, une salle par étage
+		Music.play(Music.TOWER)
 		state = "tower"
 		_fog = Image.create(FOG_RES, FOG_RES, false, Image.FORMAT_LA8)
 		_fog.fill(Color(0, 0, 0, 0))
@@ -138,6 +140,7 @@ func start(p: Player) -> void:
 	_place_player(map.start)
 	if map.breakables:
 		map.breakables.broken.connect(_on_broken)
+	Music.play_zone(String(zone.get("id", "")))
 	orbs = XpOrbs.new()
 	add_child(orbs)
 	if not Run.instant_card.is_connected(_on_instant_card):

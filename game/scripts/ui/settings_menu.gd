@@ -315,6 +315,7 @@ func _build_audio_tab() -> void:
 	var v := _tab("Son")
 	_slider(v, "Volume général", "audio", "master", 0.0, 1.0, 0.05, func(x): return "%d %%" % roundi(x * 100))
 	_slider(v, "Effets sonores", "audio", "sfx", 0.0, 1.0, 0.05, func(x): return "%d %%" % roundi(x * 100))
+	_slider(v, "Musique", "audio", "music", 0.0, 1.0, 0.05, func(x): return "%d %%" % roundi(x * 100))
 
 
 # --- onglet Caméra et interface ----------------------------------------------------------

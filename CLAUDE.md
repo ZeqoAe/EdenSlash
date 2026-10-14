@@ -74,6 +74,11 @@ d'équilibrage : arène d'IA en duel, `res://scenes/ml_arena.tscn -- --scenario=
 --episodes=4 --level=90 --hero-build=warrior:90 --foe-build=magician:90` (avec `--fixed-fps 60`).
 Cible : 30 s à 1 min 30 par manche entre deux héros optimisés, à tout niveau.
 
+## Musique
+`scripts/core/music.gd` (autoload Music) : pistes OGG copiées du dossier `bgm` du client
+(`%LOCALAPPDATA%/EdenReforged/bgm`) dans `game/assets/music/` ; piste d'une zone = colonne bgm
+de `c_node` pour sa scène d'Eden (S002 → bgm007…). Ajouter une zone : sa piste dans `Music.ZONES`.
+
 ## Graphismes
 Réglages d'image communs dans `game/scripts/world/gfx.gd` (qualité graphique), shaders dans
 `game/shaders/` (terrain, herbe, personnages, décor, effets). Pour comparer un changement de

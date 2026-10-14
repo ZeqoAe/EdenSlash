@@ -640,6 +640,11 @@ func _apply_biome_env() -> void:
 
 ## Après 10 minutes : ciel et brouillard rougeâtres.
 func set_rage_mood(on: bool) -> void:
+	if not Duel.active and not Tower.active:
+		if on:
+			Music.play(Music.RAGE)
+		else:
+			Music.play_zone(Run.zone_id)
 	env.fog_light_color = Color(0.75, 0.35, 0.3) if on else _base_fog
 	env.fog_density = 0.004 if on else _base_fog_density
 	sun.light_color = Color(1.0, 0.6, 0.45) if on else _base_sun
@@ -647,6 +652,11 @@ func set_rage_mood(on: bool) -> void:
 
 ## Ambiance plus sombre dans les donjons.
 func set_dungeon_mood(on: bool) -> void:
+	if not Duel.active and not Tower.active:
+		if on:
+			Music.play(Music.BOSS)
+		else:
+			Music.play_zone(Run.zone_id)
 	env.fog_light_color = Color(0.35, 0.28, 0.42) if on else _base_fog
 	env.fog_density = 0.01 if on else _base_fog_density
 	env.ambient_light_energy = 0.45 if on else 0.75
