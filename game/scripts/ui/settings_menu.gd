@@ -176,7 +176,9 @@ func _build_combat_tab() -> void:
 		_refreshers.append(func():
 			var on := Settings.auto_skill(i)
 			c.set_pressed_no_signal(on)
-			c.text = "%d (%s) : %s" % [i + 1, Settings.action_label("skill_%d" % (i + 1), 1), "AUTO" if on else "manuel"])
+			var key := Settings.action_label("skill_%d" % (i + 1), 1)
+			var label := "Case %d" % (i + 1) if key == str(i + 1) else "Case %d (%s)" % [i + 1, key]  # touche par défaut : pas de doublon
+			c.text = "%s : %s" % [label, "AUTO" if on else "manuel"])
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 10)
 	v.add_child(buttons)

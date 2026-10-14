@@ -17,7 +17,7 @@ const MENU := [
 	["settings", "Paramètres", "settings"], ["quit", "Quitter", "quit"],
 ]
 ## Arguments de test qui ouvrent un écran au démarrage (captures, tests).
-const SCREEN_ARGS := ["--grimoire", "--talents", "--info", "--inventory", "--appearance", "--chests", "--cards"]
+const SCREEN_ARGS := ["--grimoire", "--talents", "--info", "--inventory", "--appearance", "--chests", "--cards", "--settings"]
 
 var backdrop: MapBackdrop
 var _hero: HeroScreen
@@ -102,7 +102,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--class=") or arg.begins_with("--zone=") or arg.begins_with("--weapon=") or arg in SCREEN_ARGS \
 				or arg.begins_with("--archive=") or arg.begins_with("--appearance=") or arg.begins_with("--expertise=") or arg.begins_with("--dev=") \
-				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge" or arg == "--duel-prep" or arg == "--rival-editor" or arg.begins_with("--profile-tab=") or arg.begins_with("--profile-picker=") or arg == "--profile-load":
+				or arg.begins_with("--wear-aura") or arg == "--class-menu" or arg.begins_with("--wear-head=") or arg.begins_with("--wear-back=") or arg.begins_with("--dye-back=") or arg.begins_with("--archive-cat=") or arg.begins_with("--shot-out=") or arg.begins_with("--orbit=") or arg.begins_with("--tower-menu=") or arg == "--preset-editor" or arg == "--duel-menu" or arg == "--lobby-forge" or arg == "--duel-prep" or arg == "--rival-editor" or arg.begins_with("--profile-tab=") or arg.begins_with("--profile-picker=") or arg == "--profile-load" or arg.begins_with("--settings-tab="):
 			continue
 		if arg.begins_with("--lobby-shot="):
 			shot = float(arg.trim_prefix("--lobby-shot="))
@@ -155,6 +155,12 @@ func _ready() -> void:
 			_show_menu("tower_floors")
 			if parts.size() > 1:
 				TowerPages.info_popup(_sub, Tower.spec(_tower_sel, _tower_diff))
+		"settings":
+			var tab := 0
+			for arg in OS.get_cmdline_user_args():
+				if arg.begins_with("--settings-tab="):  # test : onglet des paramètres
+					tab = int(arg.trim_prefix("--settings-tab="))
+			_settings.open(tab)
 		"grimoire":
 			_open_hero("grimoire")
 		"talents":

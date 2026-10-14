@@ -116,3 +116,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.104 | Combat : les monstres qui masquent le héros (boss géants, élites) deviennent translucides ; pendant un boss, la barre du haut reste sur le boss (nom sans « <Boss> »), sans les insensibilités dans ses effets | session locale |
 | 0.1.105 | Duel : l'adversaire est marqué « Adversaire » (et non « Élite ») dans la barre du haut ; lobby : l'aide de la caméra s'efface au bout de 8 s | session locale |
 | 0.1.106 | Grande carte (M) : légende de tous les lieux, forts d'élite découverts marqués (losange rouge : ils portent les sceaux), couleurs mieux distinctes (marchand blanc, aimant cyan), bandeau masqué à l'ouverture ; capture --bigmap | session locale |
+| 0.1.107 | Paramètres : cases de sort automatiques nommées « Case 1 : manuel » (plus de « 1 (1) ») ; captures --settings / --settings-tab=N | session locale |
