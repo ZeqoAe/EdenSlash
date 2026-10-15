@@ -20,7 +20,7 @@ const LIST := [
 		"desc": "Quatre salles, un boss."},
 	{"id": "tower", "row": "adventure", "unlock": "tower", "group": "pve", "name": "La Tour", "sub": "200 étages, une seule vie", "gain": "Cristaux, gemmes, apparences", "gives": ["crystal", "gem", "look"],
 		"desc": "Une carte et un coffre par étage, des duels de toutes les classes."},
-	{"id": "mastery", "row": "challenge", "unlock": "daily", "img": "survival", "group": "pve", "name": "Défi de maîtrise", "sub": "Une Survie par jour", "gain": "Maîtrise ×2, insignes ×1,5", "gives": ["mastery", "insignia"],
+	{"id": "quests", "row": "challenge", "unlock": "daily", "img": "training", "group": "pve", "tag": "Chaque jour", "name": "Quêtes", "sub": "Du jour, de la semaine et de classe", "gain": "Insignes, cristaux, maîtrise, apparences", "gives": ["insignia", "crystal", "mastery", "look"],
 		"desc": ""},
 	{"id": "trials", "row": "challenge", "img": "training", "group": "pve", "name": "Épreuves de maîtrise", "sub": "Leçons chronométrées", "soon": true, "gain": "Médailles, maîtrise", "gives": ["mastery"],
 		"desc": "Une leçon par famille de classes, au chrono : bronze, argent, or."},
@@ -47,6 +47,14 @@ static func locked(a: Dictionary) -> bool:
 ## Activité absente du menu Jouer : le Survivant tant qu'il est en chantier (hors mode dev).
 static func hidden(a: Dictionary) -> bool:
 	return String(a.get("id", "")) == "survivor" and not Survivor.visible()
+
+
+## Sous-titre d'une étiquette : fixe, sauf les Quêtes (combien sont faites aujourd'hui).
+static func sub_text(a: Dictionary) -> String:
+	if String(a.get("id", "")) == "quests":
+		var s := Quests.card_sub()
+		return s if s != "" else String(a.sub)
+	return String(a.sub)
 
 
 static func get_def(id: String) -> Dictionary:
@@ -100,7 +108,7 @@ static func card(a: Dictionary, size := Vector2(0, 118)) -> Button:
 	var is_locked := locked(a)  # grisée : le sous-titre dit comment l'ouvrir
 	if lock != null:
 		lock.title = t  # le cadenas se place au-dessus du nom
-	var st := Hud._label(tv, _short_condition(String(a.unlock)) if is_locked else String(a.sub), 13, Color(0.92, 0.9, 0.98, 0.95))
+	var st := Hud._label(tv, _short_condition(String(a.unlock)) if is_locked else sub_text(a), 13, Color(0.92, 0.9, 0.98, 0.95))
 	if is_locked:
 		st.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # la condition tient sur deux lignes plutôt que d'être coupée
 	else:

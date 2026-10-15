@@ -176,6 +176,8 @@ func _ready() -> void:
 	await probe("lobby : Ruée des boss", 0.8)
 	lobby._show_menu("royale")
 	await probe("lobby : Battle royale", 0.8)
+	lobby._show_menu("quests")
+	await probe("lobby : Quêtes (relance, Défi du jour)", 0.8)
 	lobby._show_menu("siege")
 	await probe("lobby : Le Siège", 0.8)
 	lobby._show_menu("dungeon")

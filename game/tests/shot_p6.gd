@@ -112,7 +112,7 @@ func _ready() -> void:
 	add_child(lobby)
 	await get_tree().create_timer(2.0).timeout
 	await _shot("00_lobby")
-	for id in ["play", "survival", "dungeon", "tower", "rush", "siege", "mastery", "duel", "arenas", "royale"]:
+	for id in ["play", "survival", "dungeon", "tower", "rush", "siege", "quests", "duel", "arenas", "royale"]:
 		lobby._show_menu(id)
 		await _shot("01_" + id)
 	lobby._show_menu("")

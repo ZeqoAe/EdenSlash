@@ -15,7 +15,7 @@ const LIST := {
 	"chests": {"name": "Coffres", "cond": "Ramasse un premier coffre de récompense ou termine une Survie.", "legacy": true},
 	"armory": {"name": "Atelier : Armurerie", "cond": "Découvre une première pièce dans un coffre de la Survie.", "legacy": true},
 	"certificates": {"name": "Plateau des certificats", "cond": "Atteins la maîtrise 3 d'une classe.", "legacy": true},
-	"daily": {"name": "Défi de maîtrise", "cond": "Termine 3 Survies.", "legacy": true},
+	"daily": {"name": "Quêtes", "cond": "Termine 3 Survies.", "legacy": true},
 	"forge": {"name": "Atelier : Forge et Réserve", "cond": "Gagne l'époque I (boss de la 3e carte).", "legacy": true},
 	"tower": {"name": "La Tour", "cond": "Gagne l'époque I (boss de la 3e carte).", "legacy": true},
 	"duel_free": {"name": "Duel libre", "cond": "Bats un premier duelliste de la Tour.", "legacy": true},

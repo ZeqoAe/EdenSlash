@@ -318,6 +318,7 @@ static func summary(got: Dictionary) -> String:
 ## Ouvre un coffre sans choix : le contenu est donné, le coffre retiré. Renvoie le contenu
 ## {items, supplies, crystal}.
 static func open(chest: Dictionary) -> Dictionary:
+	Quests.event("chest_open")  # quêtes (passe M5)
 	var got := {"items": [], "supplies": {}, "crystal": 0}
 	var lv := int(chest.plevel)
 	Items.reward_zone = zone_of(chest)
@@ -386,6 +387,7 @@ static func open(chest: Dictionary) -> Dictionary:
 ## Coffre à choix : l'objet [param index] des propositions rejoint le coffre commun.
 static func choose(chest: Dictionary, index: int) -> Dictionary:
 	var items := offer(chest)
+	Quests.event("chest_open")  # quêtes (passe M5)
 	var it: Dictionary = items[clampi(index, 0, items.size() - 1)]
 	_give({"items": [it], "supplies": {}, "crystal": 0})
 	Profile.reward_chests.erase(chest)

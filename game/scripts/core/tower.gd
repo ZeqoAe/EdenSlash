@@ -468,6 +468,7 @@ static func finish() -> Dictionary:
 			Profile.reward_chests.append(Rewards.make(Rewards.look_type(LOOK_TIERS[i]), 30, true))
 			looks += 1
 	var climbed := maxi(0, reached - start_floor + 1)
+	Quests.end_run("tower", false, {"reached": reached, "climbed": climbed})  # quêtes (passe M5)
 	# cristaux et coffres de gemmes / de forge de l'ascension (ActivityLoot : le rôle de la Tour)
 	var crystals := ActivityLoot.tower_crystals(climbed, difficulty)
 	Profile.materials["crystal"] = int(Profile.materials.get("crystal", 0)) + crystals
@@ -506,6 +507,8 @@ static func _finish_dungeon() -> Dictionary:
 		rew = Dungeons.reward(zid, diff)
 	var xp := (reached * 40 + (150 if victory else 0)) * (1 + diff)
 	var lv := Profile.add_expertise(cid, xp)
+	Quests.end_run("siege" if was_siege else ("rush" if was_rush else "dungeon"), victory, {"rooms": reached, "reached": reached, "diff": diff,
+		"allies": allies.size(), "boss_down": was_siege and reached > Siege.WAVES, "siege_won": was_siege and sg_outcome == "won"})  # quêtes (passe M5)
 	Achievements.refresh()
 	Profile._lobby_view()
 	Profile.save_profile()

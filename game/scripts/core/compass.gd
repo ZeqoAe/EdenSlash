@@ -58,6 +58,9 @@ static func advice(in_bilan := false) -> Dictionary:
 	if n_chests > 0 and Unlocks.is_open("chests"):
 		return _make("chests", "%s à ouvrir" % GearPower.plural(n_chests, "coffre"), {"chests": true},
 			"Les coffres de récompense attendent dans Coffres : pièces, fournitures, apparences.", "look")
+	var qh := Quests.hint() if not in_bilan else {}
+	if not qh.is_empty() and bool(qh.nearly):
+		return _make("quest_near", String(qh.text), qh.go, String(qh.tip), "stars")  # une quête presque finie (passe M5)
 	var e := ClassGear.entry(cid)
 	if int(e.filled) == 0:
 		return _make("start_gear", "%s : choisis la classe dans Héros pour recevoir son équipement" % cname, {"hero": "class"},
@@ -94,6 +97,8 @@ static func advice(in_bilan := false) -> Dictionary:
 	var step := next_ladder()
 	if not step.is_empty():
 		return step
+	if not qh.is_empty():
+		return _make("quest", String(qh.text), qh.go, String(qh.tip), "stars")  # les quêtes du jour (passe M5)
 	var other := lagging_class(cid)
 	if other != "":
 		return _make("other_class", "%s est équipé : prépare %s" % [cname, ClassGear.class_label(other)], {"registry": true},
@@ -238,6 +243,9 @@ static func lagging_class(except: String) -> String:
 ## Toujours une phrase (la boussole, à défaut) ; "" si rien d'utile.
 static func after(mode: String, got: Dictionary = {}) -> String:
 	var parts: PackedStringArray = []
+	var quest_line := Quests.report_line()  # « Quête accomplie : … » ou la quête la plus avancée (passe M5)
+	if quest_line != "":
+		parts.append(quest_line)
 	match mode:
 		"survival":
 			if String(got.get("unlocked", "")) != "":

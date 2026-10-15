@@ -1421,8 +1421,8 @@ func _show_menu(id: String) -> void:
 			_menu_siege()
 		"trials":
 			_menu_soon(id)
-		"mastery":
-			_menu_mastery()
+		"quests":
+			_menu_quests()
 		"tower":
 			_menu_tower()
 		"tower_floors":
@@ -1592,41 +1592,10 @@ func _menu_training() -> void:
 	_pin(go)
 
 
-## Défi de maîtrise : la Survie du jour (deux modificateurs, trois classes) et les contrats de la classe.
-func _menu_mastery() -> void:
-	_activity_head("mastery")
-	_section("Aujourd'hui, %s" % _date_fr(Challenge.today()))
-	for m in Challenge.modifiers_today():
-		Hud._label(_sub, "• " + String(Modifiers.LIST[m].text), 15, UiTheme.TEXT)
-	if Challenge.done_today():
-		Hud._label(_sub, "✔ Réussi aujourd'hui", 14, UiTheme.BUFF)
-	_section("Lancer avec")
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 8)
-	_sub.add_child(row)
-	for cid in Challenge.classes_today():
-		var cd := GameData.class_data(cid)
-		var b := MenuWidgets.glass_button("%s\nmaîtrise %d" % [cd.get("name_fr", cid), Profile.expertise_level(cid)], 15, Vector2(0, 62))
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.tooltip_text = "Lancer le défi avec cette classe" + ("" if Challenge.done_today() else " : +%d points de maîtrise à la première victoire du jour" % Challenge.BONUS_FIRST)
-		var c := String(cid)
-		b.pressed.connect(func(): _start_challenge(c))
-		row.add_child(b)
-	var cls := Profile.selected_class
-	_section("Contrats de %s" % GameData.class_data(cls).get("name_fr", cls))
-	var st := Contracts.state(cls)
-	for id in st.active:
-		var t := Contracts.template(String(id))
-		Hud._label(_sub, "%s  —  %d / %d  (+%d)" % [String(t.text) % int(t.target), Contracts.progress(cls, String(id)), int(t.target), int(t.reward)], 14, UiTheme.TEXT)
-
-
-## « 2026-10-15 » -> « 15 octobre ».
-func _date_fr(iso: String) -> String:
-	var p := iso.split("-")
-	var months := ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
-	if p.size() != 3 or int(p[1]) < 1 or int(p[1]) > 12:
-		return iso
-	return "%d %s" % [int(p[2]), months[int(p[1]) - 1]]
+## Quêtes : celles du jour (dont le Défi du jour), de la semaine et de la classe (QuestsPage).
+func _menu_quests() -> void:
+	_activity_head("quests")
+	QuestsPage.fill(_sub, _start_challenge, _show_menu.bind("quests"))
 
 
 func _start_challenge(cid: String) -> void:

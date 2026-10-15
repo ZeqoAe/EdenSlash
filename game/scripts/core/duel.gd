@@ -420,6 +420,7 @@ static func finish(won: bool) -> Dictionary:
 	Profile.keys = 0
 	Profile.bag = {}
 	last_report = settle(won, Run.class_id)
+	Quests.end_run("arenas" if mode in ["arena2", "arena3"] else ("gauntlet" if mode == "gauntlet" else "duel"), won, {"mode": mode, "rival": rival_class})  # quêtes (passe M5)
 	if _stashed_mults.size() == 2:
 		hp_mult = float(_stashed_mults[0])
 		atk_mult = float(_stashed_mults[1])

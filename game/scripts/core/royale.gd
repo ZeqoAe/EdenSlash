@@ -270,6 +270,7 @@ static func finish(place: int) -> Dictionary:
 	Profile.bag = {}
 	rank = place
 	last_report = settle(place, n_kills, cid)
+	Quests.end_run("royale", place == 1, {"place": place, "pkills": n_kills})  # quêtes (passe M5)
 	Profile._lobby_view()
 	Profile.save_profile()
 	return last_report

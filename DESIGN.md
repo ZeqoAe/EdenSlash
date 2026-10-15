@@ -853,6 +853,38 @@ est dans les rapports `conception/nuit_15_10/R_E*.md` ; la passe P6 le rend lisi
 - **Option** (P10) : Paramètres > Caméra et interface > « Afficher la boussole d'objectif » (`Settings.show_compass()`, activée
   par défaut) ; désactivée, la pastille disparaît du lobby (la ligne « Ta quête » des bilans reste).
 
+## Quêtes (passe M5, retour du joueur : « le Défi de maîtrise ressemble à des quêtes journalières »)
+
+Le Défi de maîtrise n'est plus une page à part : c'est la quête « Défi du jour » d'un système de quêtes (`core/quests.gd`, pool
+`core/quest_pool.gd`, page `ui/quests_page.gd`). Ouvert par le même verrou qu'avant (3 Survies, entrée `daily` du fil d'éveil).
+
+- **Où** : Jouer > rangée Défis > « Quêtes » (une page d'activité comme les autres, manette comprise) ; l'étiquette dit « 1 sur 3
+  aujourd'hui ». Rien dans le Carnet : les quêtes se lancent, elles ne se consultent pas.
+- **Du jour (3)** : le Défi du jour (la Survie de l'époque I, deux contraintes, maîtrise ×2, +600 la 1re victoire, insignes ×1,5 : règles de
+  `core/challenge.gd`, inchangées, avec ses trois classes proposées) puis deux quêtes d'autres activités tirées du pool (≈ 40 quêtes :
+  Survie, Survivant [mode dev], Donjons, Tour, Ruée, Siège, Duel, Arènes, Gantelet, Battle royale, coffres du menu, variété). Tirage
+  déterministe par date (`Quests.draw`), figé dans `Profile.records.quests` ; les quêtes dont l'activité est fermée ne sont pas tirées.
+  Budget : ≈ 22 min pour le Défi du jour (la Survie qu'on jouerait de toute façon) + 2 quêtes de 11 min au plus ≈ 40 min au total ; une
+  même Survie fait avancer plusieurs quêtes de Survie.
+- **De la semaine (2)** : deux grandes quêtes d'activités différentes (cibles × 5 à 8 de celles du jour).
+- **Défis de classe** : les contrats de `core/contracts.gd`, inchangés, listés sous les quêtes pour la classe choisie.
+- **Une quête n'est jamais obligatoire**, rien ne se perd en les ratant. **Relance** : une quête du jour non faite se change une fois par
+  jour (le Défi du jour aussi).
+- **Récompenses sobres** (jamais d'équipement) : du jour, une seule au tirage : insignes 40 / 70 / 100 (au plus 300 par jour), cristaux
+  20 / 35 / 50, maîtrise 150 / 250 / 350 pour la classe la plus en retard (`Quests.laggard`), ou un coffre de parchemins ; le Défi du jour
+  garde ses gains propres. De la semaine : 350 insignes + un coffre d'apparence rare, ou 150 cristaux + un coffre de parchemins. Les
+  quêtes du Survivant (aucun lien avec le compte) ne donnent que des coffres d'apparence.
+- **Série** : une quête du jour accomplie par jour prolonge la série (`Quests.series_n`). Un jour manqué est pardonné ; au-delà, la
+  série retombe à son dernier palier gagné (jamais à zéro). Paliers cosmétiques à 3, 7, 14, 30, 60 et 100 jours (coffres d'apparence et
+  d'aura, titres « Régulier » et « Inlassable »), chacun donné une seule fois.
+- **Suivi** : un bus unique `Quests.event` / `Quests.end_run(activité, gagné, extra)`, appelé en fin de Survie, Survivant, Donjon, Ruée,
+  Siège, Tour, Duel / Arènes / Gantelet et Battle royale (après le rechargement de la sauvegarde), plus `zone_hit` (télégraphes) et
+  `chest_open` (menu Coffres). Les compteurs de la partie sont lus dans `Run` à la fin ; rien n'est écrit en cours de partie.
+  Une partie de moins de 30 s ne compte pas. HUD : `ui/quest_badge.gd` (la quête la plus avancée de l'activité jouée, une petite carte
+  `InfoCard` « Quête accomplie » à l'accomplissement) ; bilans : ligne « Ta quête » (`Compass.after`) ; boussole : quête presque faite
+  ou, à défaut, la plus avancée. Succès « Aventurier appliqué » et « Constance ».
+- Test : `tests/test_quests.tscn`.
+
 ## Tout le jeu en français (passe P10, 0.1.190)
 
 Aucun texte lisible ne doit rester en anglais. Les noms d'Eden passent par une seule table (`data/names_fr.json`, `NamesFr.apply`,

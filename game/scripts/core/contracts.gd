@@ -1,6 +1,6 @@
 class_name Contracts
 extends RefCounted
-## Contrats de classe (lot 10) : trois contrats par classe, visibles sur la page du Défi de maîtrise ;
+## Contrats de classe (lot 10) : trois contrats par classe, présentés comme des défis de classe sur la page Quêtes (Quests.class_challenges) ;
 ## ils se remplissent à chaque fin de run avec cette classe et rapportent 400 à 800 points de
 ## maîtrise. Un contrat terminé est remplacé par un autre. État : `Profile.contracts[classe]` =
 ## {active: [ids], progress: {id: n}, done: n}.

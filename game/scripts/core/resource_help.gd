@@ -7,7 +7,7 @@ extends RefCounted
 ## id -> {name, icon (nom d'icône du menu, ou "item:<chemin>" / "craft:<clé>"), get (où l'obtenir), spend (où la dépenser)}
 const KINDS := {
 	"insignia": {"name": "Insignes", "icon": "upgrade",
-		"get": "Survie, Défi de maîtrise, première victoire du jour en JcJ.",
+		"get": "Survie, Quêtes, première victoire du jour en JcJ.",
 		"spend": "Armurerie (pièces), boutique des Coffres (apparences), leçons de maîtrise."},
 	"crystal": {"name": "Cristaux", "icon": "item:crystal",
 		"get": "Donjons, Ruée, Siège, Tour, démontage de pièces.",

@@ -198,6 +198,7 @@ func _resolve() -> void:
 			DamageNumber.spawn_text(player, "ESQUIVE !", Color(0.7, 1.0, 0.7))
 		else:
 			player.take_damage(damage, src, crit)
+			Quests.event("zone_hit")  # quête « sans dégât de zone » (passe M5)
 			if stun_time > 0.0:
 				player.stun(stun_time)
 			hit = true

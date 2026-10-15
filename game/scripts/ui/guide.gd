@@ -25,7 +25,7 @@ const ROLES := {
 	"survival": "Le cœur du jeu : tu y découvres de nouvelles pièces et ta classe y gagne de la maîtrise.",
 	"dungeon": "Quatre salles et un boss, seul ou avec des alliés IA. Chaque donjon a sa panoplie et ses plans.",
 	"tower": "Monte étage après étage, avec une seule vie, contre des duellistes de toutes les classes. Elle donne des cristaux et des gemmes.",
-	"mastery": "Une Survie par jour avec deux contraintes. Idéal pour rattraper la maîtrise d'une classe.",
+	"quests": "Trois quêtes par jour, deux par semaine, des défis de classe. Le Défi du jour est une Survie avec deux contraintes.",
 	"rush": "Les huit boss à la suite. Elle donne des fournitures de haut niveau et des titres.",
 	"siege": "Cinq vagues avec deux alliés IA, un boss, puis chacun pour soi. Elle donne les formules d'enchantement les plus hautes.",
 	"duel": "Un contre un contre l'IA, à l'arme ou équipé. Monte la Ligue, puis affronte le Panthéon et son équipement.",

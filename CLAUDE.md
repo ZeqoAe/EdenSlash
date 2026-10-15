@@ -147,6 +147,10 @@ dégâts rangés en colonnes avec budget par 0,3 s (`DamageNumber`) ; bandeau d'
 deux morceaux (`Hud.zone_parts` : le « 1 » de la police des titres se lit comme un I) ; cartes de niveau à couleur de rareté (commune = gris).
 Captures : `tests/shot_p3.tscn -- stage=N boss_at=S guide_at=S` (+ arguments du monde), variable `P3_RES=1280x720`, APPDATA détourné.
 La quête commune se voit (0.1.186, passe P6, `DESIGN.md` « La quête commune se voit ») : boussole du lobby `core/compass.gd` (un conseil cliquable calculé depuis le compte, `Compass.advice()` ; ligne « Ta quête » des bilans `Compass.after`), pastilles de gains des activités (`Activities.LIST` clé `gives`, `ui/gain_chips.gd`), « où l'obtenir, où le dépenser » de chaque ressource (`core/resource_help.gd`). Test : `test_compass`. Une activité ou une ressource nouvelle : une entrée dans `ResourceHelp.KINDS` / `gives`, et un cas dans `Compass` si elle change la quête.
+Quêtes (passe M5, `DESIGN.md` « Quêtes ») : le Défi de maîtrise est devenu la quête « Défi du jour » de `core/quests.gd` (pool
+`core/quest_pool.gd`, page Jouer > Quêtes `ui/quests_page.gd`, carte du HUD `ui/quest_badge.gd`) : 3 quêtes par jour, 2 par semaine, relance,
+série à paliers cosmétiques, contrats de classe listés dessous. Bus unique : `Quests.end_run(activité, gagné, extra)` en fin de chaque mode,
+`Quests.event("zone_hit" | "chest_open")` ; état dans `Profile.records.quests`. Une activité nouvelle : une entrée dans `QuestPool.ACTS` et des quêtes.
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

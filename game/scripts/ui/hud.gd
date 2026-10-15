@@ -167,6 +167,7 @@ func _build() -> void:
 	_build_objectives(root)
 	_build_tutorial(root)
 	MenaceBadge.attach(_left, director)  # « Menace ×1,2 · Pacte » sous les objectifs (passe P12)
+	QuestBadge.attach(_left, self)  # la quête en cours, discrète (passe M5)
 	_build_minimap(root)
 	_build_target(root)
 	_build_action_bar(root)

@@ -1,6 +1,6 @@
 class_name Challenge
 extends RefCounted
-## Défi de maîtrise (lot 10) : une Survie de l'époque I par jour, avec deux modificateurs imposés et
+## Défi du jour (lot 10, devenu l'une des trois quêtes du jour en passe M5, voir Quests) : une Survie de l'époque I par jour, avec deux modificateurs imposés et
 ## trois classes proposées dont au moins une peu maîtrisée. La maîtrise gagnée est doublée, et la
 ## première réussite du jour rapporte 600 points de plus ; les insignes sont ×1,5. Tout vient de la
 ## date : le même défi toute la journée.
@@ -13,7 +13,7 @@ static var mods: Array = []
 
 
 static func today() -> String:
-	return Time.get_date_string_from_system()
+	return Quests.today()
 
 
 static func _rng() -> RandomNumberGenerator:

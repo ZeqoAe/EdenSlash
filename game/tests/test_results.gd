@@ -104,7 +104,7 @@ func _insignia_cases() -> void:
 		sum += int(l[1])
 	check("insignes : victoire, cartes 2 et 3, défi et autel, somme exacte (%d / %d) : %s" % [sum, Run.insignia_gain, tip.replace("\n", " | ")],
 		sum == Run.insignia_gain and tip.contains("Victoire : +120") and tip.contains("Cartes 2 et 3 atteintes : +50")
-		and tip.contains("Défi de maîtrise : +") and tip.contains("Autel de la fortune : +40") and not tip.contains("Run courte"))
+		and tip.contains("Défi du jour : +") and tip.contains("Autel de la fortune : +40") and not tip.contains("Run courte"))
 	# moins de 10 monstres : la participation dit quoi faire
 	Run.start_survival("warrior", 1)
 	Run.kills = 3

@@ -72,7 +72,7 @@ static func gained_rows() -> Array:
 	for hr in Run.heroic_rewards:
 		out.append(row("Rang héroïque %d : %s" % [Run.heroic_rank, hr], "", "", "new"))
 	if Run.challenge_first:
-		out.append(row("Défi de maîtrise réussi", "+%d" % Challenge.BONUS_FIRST, "Première réussite du jour", "expertise"))
+		out.append(row("Défi du jour réussi", "+%d" % Challenge.BONUS_FIRST, "Première réussite du jour", "expertise"))
 	for c in Run.contracts_done:
 		out.append(row("Contrat : %s" % c.text, "+%d" % int(c.reward), "", "expertise"))
 	var lvl := Profile.expertise_level(Run.class_id)
@@ -147,7 +147,7 @@ static func insignia_lines() -> Array:
 		base += int(l[1])
 	var bonus := Run.insignia_gain - Run.fortune_insignia - Menace.insignia_extra - base
 	if bonus > 0:
-		var who := "Défi de maîtrise" if Run.heroic_rank <= 0 else ("Rang héroïque %d" % Run.heroic_rank if not Challenge.active else "Défi et rang héroïque")
+		var who := "Défi du jour" if Run.heroic_rank <= 0 else ("Rang héroïque %d" % Run.heroic_rank if not Challenge.active else "Défi et rang héroïque")
 		out.append([who, bonus])
 	if Menace.insignia_extra > 0:  # géants vaincus et pactes de la run (passe P12)
 		var label := "Pacte de cupidité"
