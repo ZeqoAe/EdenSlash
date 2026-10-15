@@ -71,6 +71,8 @@ var epoch := 1
 ## Pièces choisies dans les coffres de la run (Eden id) : achetables au hub ensuite.
 var seen_items: Array = []
 ## Enclume de la Survie : emplacement -> bonus tiré (+0 à +7), AJOUTÉ au +N de la pièce portée dans
+## Armes des autres types découvertes avec une arme choisie (SlotChests.weapon_family) : Armurerie aussi.
+var seen_family: Array = []
 ## cet emplacement (celui du hub), quelle qu'elle soit, jusqu'à la fin de la run ; le total est
 ## plafonné à UPGRADE_CAP (voir slot_upgrade).
 var slot_bonus: Dictionary = {}
@@ -93,7 +95,7 @@ static var test_fight_range := 4.0
 const ANVIL_ROLLS := {0: 4, 1: 8, 2: 12, 3: 15, 4: 14, 5: 10, 6: 6, 7: 3}
 ## +N maximal d'une pièce en Survie (+10 du hub + enclume) : ×2,2 sur ses stats de base au plus.
 const UPGRADE_CAP := 12
-const ANVIL_SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "necklace", "ring"]
+const ANVIL_SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "necklace", "ring"]
 
 
 func start(cid: String) -> void:
@@ -145,6 +147,7 @@ func start(cid: String) -> void:
 	seen_items = []
 	slot_bonus = {}
 	weapon_ups = {}
+	seen_family = []
 	trophies = []
 	anvil_stage = 0
 	Profile.begin_run()
@@ -200,7 +203,7 @@ func finish(res: String) -> void:
 	shared_gain = Profile.last_shared.duplicate()
 	if survival:
 		# pièces choisies dans les coffres : achetables au hub ; insignes selon la distance parcourue
-		for id in seen_items:
+		for id in seen_items + seen_family:
 			if not int(id) in Profile.seen_gear:
 				Profile.seen_gear.append(int(id))
 		# 25 de participation (dès 10 monstres vaincus), 25 par carte atteinte : même une défaite en carte 1
@@ -401,6 +404,17 @@ func trophy_procs() -> Array:
 		for p: Dictionary in t.get("passive", {}).get("procs", []):
 			out.append(p.duplicate(true))
 	return out
+## Survie : une arme choisie (coffre d'arme, arme secondaire) fait découvrir les armes de tous les types
+## au palier et à la rareté de la map (Armurerie, fin de run) : avoir l'arme de chaque type ne demande pas
+## de jouer une classe de chaque type (lot E4).
+func discover_weapons() -> void:
+	if not survival:
+		return
+	for id in SlotChests.weapon_family(epoch, stage):
+		if not int(id) in seen_family:
+			seen_family.append(int(id))
+
+
 
 
 func passive_procs() -> Array:
@@ -804,6 +818,8 @@ func apply_card(card: Dictionary) -> void:
 			var cur: Dictionary = weapon_ups.get(String(card.id), {})
 			WeaponAttacks.merge_upgrade(cur, card.get("up", {"dmg": 0.15}))
 			weapon_ups[String(card.id)] = cur
+				if String(card.item.get("slot", "")) == "weapon":
+					discover_weapons()
 			if cur.get("sig", false):
 				var ws := weapon_spec(String(card.id))
 				Profile.note_weapon_legend("%s:%d" % [ws.get("wtype", "?"), int(ws.get("variant", 0))])
@@ -821,6 +837,7 @@ func apply_card(card: Dictionary) -> void:
 			anvil_result = anvil_roll(String(card.slot))
 		"anvil":
 			if not stage in anvil_stages:
+			discover_weapons()
 				anvil_stages.append(stage)
 			# enclume de la carte : +1 garanti sur la pièce portée choisie
 			var it: Dictionary = Profile.equipped.get(String(card.slot), {})

@@ -526,10 +526,11 @@ static func random_stone(bonus := 0) -> String:
 	return stone_key("safety")
 
 
-## Consommable aléatoire adapté au niveau ([param bonus] : coffres rares, élites, boss).
-static func random_loot(level: int, bonus := 0) -> String:
+## Consommable aléatoire adapté au niveau ([param bonus] : coffres rares, élites, boss) ; les gemmes
+## suivent [param gem_level] s'il est donné (Survie : RunDirector.gem_level), sinon [param level].
+static func random_loot(level: int, bonus := 0, gem_level := -1) -> String:
 	var r := randf() * 100.0
-	var tier := clampi(level / 8 + bonus + (1 if randf() < 0.25 else 0) - (1 if randf() < 0.3 else 0), 0, GEM_TIERS.size() - 1)
+	var tier := clampi((gem_level if gem_level >= 0 else level) / 8 + bonus + (1 if randf() < 0.25 else 0) - (1 if randf() < 0.3 else 0), 0, GEM_TIERS.size() - 1)
 	if r < 26.0:
 		return gem_key(GEMS.keys().pick_random(), tier)
 	if r < 52.0:
@@ -559,11 +560,12 @@ const LOOT_SOURCES := {
 }
 
 
-## Fournitures de la source [param source] (LOOT_SOURCES ; sinon le tirage général).
-static func loot_for(source: String, level: int, bonus := 0) -> String:
+## Fournitures de la source [param source] (LOOT_SOURCES ; sinon le tirage général) ; gemmes au
+## niveau [param gem_level] s'il est donné.
+static func loot_for(source: String, level: int, bonus := 0, gem_level := -1) -> String:
 	var w: Dictionary = LOOT_SOURCES.get(source, {})
 	if w.is_empty():
-		return random_loot(level, bonus)
+		return random_loot(level, bonus, gem_level)
 	var total := 0
 	for k in w:
 		total += int(w[k])
@@ -574,7 +576,7 @@ static func loot_for(source: String, level: int, bonus := 0) -> String:
 		if r < 0:
 			fam = String(k)
 			break
-	var tier := clampi(level / 8 + bonus + (1 if randf() < 0.25 else 0) - (1 if randf() < 0.3 else 0), 0, GEM_TIERS.size() - 1)
+	var tier := clampi((gem_level if gem_level >= 0 else level) / 8 + bonus + (1 if randf() < 0.25 else 0) - (1 if randf() < 0.3 else 0), 0, GEM_TIERS.size() - 1)
 	match fam:
 		"gem":
 			return gem_key(GEMS.keys().pick_random(), tier)

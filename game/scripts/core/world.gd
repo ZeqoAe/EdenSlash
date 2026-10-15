@@ -523,6 +523,8 @@ func end_run(result: String) -> void:
 		# mesures : une ligne de bilan puis on quitte
 		print("[fin] résultat=%s niveau=%d temps=%.0f étape=%d tués=%d élites=%d insignes=%d pv=%d atk=%d matk=%d" % [result, player.level,
 			director.time, Run.stage, Run.kills, Run.elites, Run.insignia_gain, player.max_hp, player.atk, player.matk])
+		print("[fournitures] sac=%s coffres=%s armes découvertes=%d" % [Profile.bag, Profile.reward_chests.map(func(c): return "%s:%d" % [c.type, int(c.plevel)]),
+			Run.seen_family.size()])
 		get_tree().quit()
 		return
 	var r := ResultsScreen.new()

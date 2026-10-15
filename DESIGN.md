@@ -405,8 +405,9 @@ Mythique = orange, légendaire = jaune, éveillé = jaune avec une aura sur l'ic
 « Awaken » d'Eden, niveaux 70 et 80).
 
 **Coffres d'emplacement** (les 30 coffres payants de la map) : arme, tête, torse, jambes, gants,
-bottes, bijoux (bague, collier, boucles), trophée, carte de sort, carte de passif, carte de
-certificat. Un coffre d'équipement propose **3 pièces au hasard** parmi toutes les pièces de son
+bottes, cape (2 coffres depuis 0.1.179, pris aux gants et aux bottes : les 9 emplacements de la PE se trouvent tous
+en Survie ; une cape pèse ≈ 1/9 de la PE), bijoux (bague, collier, boucles), trophée, carte de sort, carte de passif, carte de
+certificat. L'enclume vise aussi la cape. Un coffre d'équipement propose **3 pièces au hasard** parmi toutes les pièces de son
 emplacement au palier et à la rareté de la map (au palier 23 : 6 panoplies), avec **une relance
 par coffre**. Les armes sont de tous les types : changer d'arme change le combo d'auto-attaque.
 Départ : l'arme du hub (plus de choix d'arme au départ depuis 0.1.164). Les monstres ne lâchent plus
@@ -425,6 +426,26 @@ passif, certificat) permettent de viser un type.
 
 **Hub, collection** : une pièce choisie au moins une fois dans un coffre de Survie devient
 achetable au hub (collection, JcJ), avec une monnaie gagnée en run selon la distance parcourue.
+
+**Les 17 types d'arme (0.1.179, lot E4)** : l'arme principale est du type de la classe, l'arme secondaire est libre.
+Décision : **une arme choisie en Survie** (coffre d'arme ou arme secondaire) fait **découvrir les armes de tous les
+types** au palier et à la rareté de la carte (`SlotChests.weapon_family`, `Run.seen_family` → `Profile.seen_gear` en fin
+de run). L'Armurerie vend donc l'épée, l'arc, le bâton… de chaque palier vu, quelle que soit la classe jouée : une classe
+d'épée peut s'équiper d'une épée trouvée en jouant un Guerrier, et toute classe d'une arme secondaire de n'importe quel type.
+Pourquoi : la Survie reste le seul lieu de découverte (rôle unique), aucun nouveau coffre ni nouvelle monnaie, et la quête
+« l'arme de chaque type » ne demande pas de jouer une classe de chaque type. Une pièce n'est découverte qu'à 20 niveaux au
+plus du palier de la carte (`SlotChests.POOL_WINDOW`) : un type sans pièce proche n'en donne pas (époque I : 15 types sur 17).
+Le même écart vaut pour les coffres : plus de légendaire de niveau 1 proposée au palier 60. L'arme secondaire trouvée en jeu
+est tirée comme un coffre d'arme de son type.
+
+**Fournitures de la Survie (0.1.179, lot E4)** : les parchemins de fortification, les formules d'enchantement (autel du
+scribe, marchands, objets à casser) et les coffres de forge sont au niveau **des pièces de la carte d'époque** (le plus haut
+de l'armure et de l'arme : parchemins Lv 30 / 40 / 50 en époque I, 50 / 60 / 60 en II, 70 / 70 / 80 en III, 80 / 90 / 90 en IV ;
+formules jusqu'au niveau 9 dès l'époque III), et non plus plafonnés au niveau 35 : une pièce de l'Armurerie se monte avec ce
+que donne la Survie de son époque. Les **gemmes** (et les coffres du joaillier) gardent le niveau du moment, **plus un rang
+par époque** (`RunDirector.GEM_EPOCH_LEVELS`) : les royales restent rares avant l'époque IV et les Donjons Mythiques. La
+difficulté n'en dépend pas : la forge est fermée pendant la Survie, les fournitures ne servent qu'au hub (gardées sur
+victoire ou extraction ; les coffres de forge et du joaillier sont toujours gardés).
 
 ## Étapes et sources (refonte 0.1.91, façon Megabonk)
 

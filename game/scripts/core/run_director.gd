@@ -413,6 +413,27 @@ func loot_level(level: int) -> int:
 	return clampi(level, 1, max_level())
 
 
+## Niveau des fournitures (parchemins de fortification, formules d'enchantement, coffres de forge) : en
+## Survie, celui des pièces de la carte d'époque (le plus haut de l'armure et de l'arme), pour monter au hub
+## les pièces de cette époque (sinon le butin plafonné à 15 / 25 / 35 ne servait qu'aux pièces de niveau 40
+## au plus). Les fournitures ne servent qu'au hub : la forge est fermée pendant la Survie (lot E4).
+func supply_level(level: int) -> int:
+	if Run.survival:
+		var m := Epochs.map_def(Run.epoch, Run.stage)
+		return maxi(int(m.armor), int(m.weapon))
+	return loot_level(level)
+
+
+## Survie : niveaux de butin ajoutés par époque au rang des gemmes (un rang de plus par époque : Craft tire
+## les gemmes au niveau / 8 ; les gemmes royales restent la marque des époques avancées et des Donjons Mythiques).
+const GEM_EPOCH_LEVELS := 8
+
+
+## Niveau qui fixe le rang des gemmes et des coffres du joaillier : le niveau du moment, plus un rang par époque.
+func gem_level(level: int) -> int:
+	return loot_level(level) + (GEM_EPOCH_LEVELS * (Run.epoch - 1) if Run.survival else 0)
+
+
 ## Invocation pendant le combat de boss (renforts, illusions, totems, compagnon).
 ## [param id] = 0 : un monstre de la salle.
 func summon_for_boss(id: int, pos: Vector3, elite := false) -> Monster:
@@ -716,7 +737,7 @@ func _drop_reward_chest(pos: Vector3, level: int, boss: bool) -> void:
 	var t := Rewards.roll_type(boss)
 	if Run.survival and not t in ["forge", "jewel"]:
 		t = "forge" if randf() < 0.6 else "jewel"  # Survie : de quoi optimiser au hub (l'équipement s'y achète)
-	drop.item = Rewards.loot_item(Rewards.make(t, loot_level(level), boss))
+	drop.item = Rewards.loot_item(Rewards.make(t, supply_level(level) if t == "forge" else gem_level(level), boss))
 	drop.on_picked = func(item): message.emit("%s ! Rangé dans le menu Coffres (jamais perdu)" % item.name, 2.5)
 	add_child(drop)
 	var p := pos + Vector3(randf_range(-1.5, 1.5), 0, randf_range(-1.5, 1.5))
@@ -742,7 +763,7 @@ func _drop_potion(pos: Vector3, kind: String) -> void:
 
 func _drop_consumable(pos: Vector3, level: int, bonus: int, source := "") -> void:
 	var drop := LootDrop.new()
-	drop.item = Craft.loot_item(Craft.loot_for(source, loot_level(level), bonus))
+	drop.item = Craft.loot_item(Craft.loot_for(source, supply_level(level), bonus, gem_level(level)))
 	drop.on_picked = func(item): message.emit("Butin : %s" % item.name, 1.5)
 	add_child(drop)
 	var p := pos + Vector3(randf_range(-1.5, 1.5), 0, randf_range(-1.5, 1.5))
@@ -1141,7 +1162,7 @@ func _on_broken(kind: String, pos: Vector3) -> void:
 	Profile.record_add("breakables", 1)
 	if kind == "gem":
 		for i in randi_range(1, 2):
-			var tier := clampi(lv / 8 + randi_range(0, 1), 0, Craft.GEM_TIERS.size() - 1)
+			var tier := clampi(gem_level(lv) / 8 + randi_range(0, 1), 0, Craft.GEM_TIERS.size() - 1)
 			_drop_loot(pos, Craft.loot_item(Craft.gem_key(Craft.GEMS.keys().pick_random(), tier)))
 		message.emit("Cristal brisé : des gemmes !", 1.5)
 		return
@@ -1260,10 +1281,20 @@ func _open_slot_chest(box: String) -> void:
 		func(): return SlotChests.offer(box, Run.epoch, Run.stage).map(func(it): return weapon_card(it, "gear") if it.slot == "weapon" else item_card(it, "gear")), 1)
 
 
-## Survie : enclume, un emplacement au choix (sa pièce actuelle, son bonus actuel).
+## Enclume : emplacements montrés à la fois (le choix en montre 3, comme un coffre ; la relance passe aux suivants).
+const ANVIL_PAGE := 3
+
+
+## Survie : enclume, un emplacement au choix (sa pièce actuelle, son bonus actuel), les 9 emplacements
+## rangés du plus utile au moins utile : pièce portée d'abord, puis le +N total le plus bas, l'arme en tête.
 func anvil_slot_cards() -> Array:
+	var slots: Array = Run.ANVIL_SLOTS.duplicate()
+	var key := func(s: String) -> int:
+		var it: Dictionary = Profile.equipped.get(s, {})
+		return (0 if not it.is_empty() else 1000) + 10 * Run.slot_upgrade(int(it.get("upgrade", 0)), s) + (0 if s == "weapon" else 1)
+	slots.sort_custom(func(a, b): return key.call(a) < key.call(b) or (key.call(a) == key.call(b) and Run.ANVIL_SLOTS.find(a) < Run.ANVIL_SLOTS.find(b)))
 	var out: Array = []
-	for slot in Run.ANVIL_SLOTS:
+	for slot in slots:
 		var it: Dictionary = Profile.equipped.get(slot, {})
 		var cur := int(Run.slot_bonus.get(slot, 0))
 		var up := int(it.get("upgrade", 0))
@@ -1328,9 +1359,9 @@ func anvil_cards() -> Array:
 	return out
 
 
-## Autel du scribe : parchemins d'enchantement du niveau de la carte, au choix.
+## Autel du scribe : parchemins d'enchantement du niveau de la carte (Survie : de ses pièces), au choix.
 func scroll_cards(n: int) -> Array:
-	var slv := maxi(1, Craft.scroll_level_for(loot_level(player.level + 2)))
+	var slv := maxi(1, Craft.scroll_level_for(supply_level(player.level + 2)))
 	var types: Array = Craft.ENCHANTS.keys()
 	types.shuffle()
 	var out: Array = []
@@ -1351,7 +1382,14 @@ func _use_station(it: Interactable) -> void:
 			for a in map.interactables:
 				if is_instance_valid(a) and a.kind == "anvil":
 					a.use_up()  # une seule enclume par carte
-			world._offer("Enclume : choisis un emplacement (bonus de +0 à +7 ajouté à sa pièce pour toute la run, total +%d au plus)" % Run.UPGRADE_CAP, anvil_slot_cards())
+			# 3 emplacements à la fois (les plus utiles d'abord) ; la relance montre les suivants, en boucle
+			var all := anvil_slot_cards()
+			var pages := ceili(all.size() / float(ANVIL_PAGE))
+			var page := [0]
+			var next := func() -> Array:
+				page[0] = (page[0] + 1) % pages
+				return all.slice(page[0] * ANVIL_PAGE, (page[0] + 1) * ANVIL_PAGE)
+			world._offer("Enclume : choisis un emplacement", all.slice(0, ANVIL_PAGE), next, 2 * (pages - 1))
 		"anvil":
 			var cards := anvil_cards()
 			if cards.is_empty():

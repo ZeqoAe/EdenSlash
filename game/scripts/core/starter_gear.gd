@@ -53,15 +53,19 @@ static func _pick(slot: String, wtype: String) -> Dictionary:
 ## Équipement de mesure (arguments --hub= des mesures d'équilibrage, tests) : « E.C.N[.G] » = pièces
 ## des coffres de l'époque E, carte C, améliorées à +N, avec 2 gemmes de palier G par pièce (G < 0 ou
 ## absent : aucune) et un enchantement sur l'arme. Sans cohérence de panoplie (pièces au hasard).
+## Cape comprise (0.1.179) ; « E.C.N.G.0 » : sans cape (mesure de ce qu'elle apporte).
 static func scenario(spec: String, cid: String) -> Dictionary:
 	var p := spec.split(".")
 	var epoch := int(p[0]) if p.size() > 0 else 1
 	var stage := int(p[1]) if p.size() > 1 else 3
 	var up := int(p[2]) if p.size() > 2 else 10
 	var gem := int(p[3]) if p.size() > 3 else -1
+	var cape := int(p[4]) != 0 if p.size() > 4 else true
 	var out := {}
 	var jewels := ["ring", "necklace"]
-	for box in ["weapon", "head", "chest", "legs", "gloves", "boots", "jewel", "jewel"]:
+	for box in ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "jewel", "jewel"]:
+		if box == "back" and not cape:
+			continue
 		var offer := SlotChests.offer("jewel" if box == "jewel" else box, epoch, stage, 6)
 		if box == "jewel":
 			offer = offer.filter(func(it): return String(it.slot) == String(jewels[0]))
