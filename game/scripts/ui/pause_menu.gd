@@ -48,6 +48,9 @@ func setup(p: Player) -> void:
 	if Training.active:
 		_confirm.title = "Quitter l'entraînement ?"
 		_confirm.dialog_text = "Retour au lobby. Rien de l'entraînement n'est gardé."
+	elif Royale.active:
+		_confirm.title = "Abandonner le Battle royale ?"
+		_confirm.dialog_text = "Tu quittes la partie : tu termines dernier (8e). Seules les récompenses de cette place sont gardées. Retour au lobby."
 	elif Duel.active:
 		_confirm.title = "Abandonner le duel ?"
 		_confirm.dialog_text = "Le duel compte comme perdu. Retour au lobby."

@@ -21,6 +21,7 @@ const LIST := {
 	"duel_free": {"name": "Duel libre", "cond": "Bats un premier duelliste de la Tour.", "legacy": true},
 	"league": {"name": "Ligue", "cond": "Bats 3 duellistes de la Tour (ou gagne 3 duels).", "legacy": true},
 	"dungeons": {"name": "Donjons", "cond": "Gagne l'époque II.", "legacy": false},
+	"royale": {"name": "Battle royale", "cond": "Atteins le rang Argent de la Ligue (ou gagne 6 duels).", "legacy": false},
 	"siege": {"name": "Le Siège", "cond": "Ouvre les Donjons (gagne l'époque II) ; puis une puissance d'équipement suffisante.", "legacy": false},
 	"gauntlet": {"name": "Gantelet", "cond": "Atteins le rang Or de la Ligue.", "legacy": false},
 	"arenas": {"name": "Arènes avec alliés IA", "cond": "Atteins le rang Or de la Ligue.", "legacy": false},
@@ -55,6 +56,8 @@ static func test(id: String) -> bool:
 			return int(Profile.records.get("duel_wins", 0)) >= 3 or Tower.duelists_beaten() >= 3
 		"dungeons":
 			return Epochs.unlocked() >= 3
+		"royale":
+			return League.rank_index() >= 2 or int(Profile.records.get("duel_wins", 0)) >= 6
 		"siege":
 			return test("dungeons")  # la puissance d'équipement est vérifiée au lancement (Siege.power_ok)
 		"gauntlet", "arenas":

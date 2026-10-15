@@ -13,6 +13,8 @@ static var forced := ""
 static func current() -> String:
 	if forced != "":
 		return forced
+	if Royale.active:
+		return "royale"
 	if Duel.active:
 		return "duel"
 	if Tower.active:
@@ -24,9 +26,9 @@ static func current() -> String:
 	return "menu"
 
 
-## Combat entre héros (règles JcJ de PvpCaps).
+## Combat entre héros (règles JcJ de PvpCaps) : le Duel et le Battle royale.
 static func is_pvp() -> bool:
-	return current() == "duel" or Siege.ffa  # le chacun pour soi du Siège joue aussi aux règles du JcJ
+	return current() in ["duel", "royale"] or Siege.ffa  # + le chacun pour soi du Siège
 
 
 ## Mode où les records, les cartes à débloquer et les succès comptent (règle commune : partout sauf

@@ -55,6 +55,10 @@ const PLATEAU_RAMP := 18.0  # largeur des pentes (m) : ~34° au plus, toujours p
 ## Coffres de la carte : nombre, et combien de coffres ouvragés et dorés parmi eux.
 const CHEST_COUNT := 30
 const CHEST_TIER_COUNTS := [0, 9, 3]
+## Battle royale : plus de coffres (les trois qualités), ni camps, marchands, sanctuaires ni donjon.
+const ROYALE_CHEST_COUNT := 64
+const ROYALE_TIER_COUNTS := [0, 18, 8]
+var royale := false
 ## Lieux utilisables une fois (le directeur de run gère leur effet).
 const STATIONS := {
 	"anvil": {"count": 3, "title": "Enclume", "model": "uc340", "scale": 1.0, "col": 1.4},
@@ -80,6 +84,28 @@ var _noise2 := FastNoiseLite.new()
 
 
 # --- génération ----------------------------------------------------------------------
+## Carte du Battle royale : la carte de Survie, remplie de coffres et vidée de ses monstres, camps,
+## marchands, sanctuaires et du donjon (voir RoyaleDirector).
+func generate_royale(seed_value: int) -> void:
+	royale = true
+	_setup(biome, 512.0, seed_value)
+	_place_pois()
+	_build_heights(true)
+	_build_roads()
+	_flatten_pois()
+	_paint_splat()
+	_build_terrain()
+	_build_chests()
+	_build_stations()
+	_build_sites()
+	_scatter_props()
+	_scatter_breakables()
+	GrassField.create(self)
+	_build_minimap()
+	_setup_navigation()
+	info.events = [{"type": "REVIVE", "pos": [start.x, start.y, start.z]}]
+
+
 func generate_run(seed_value: int) -> void:
 	_setup(biome, 512.0, seed_value)
 	_place_pois()
@@ -229,8 +255,8 @@ func _place_pois() -> void:
 		var p := _free_point(70.0, 80.0)
 		if p != Vector2.INF:
 			plateaus.append({"c": p, "r": rng.randf_range(14.0, 26.0), "h": rng.randf_range(4.5, 8.0) * (1.0 if k % 3 != 2 else -0.6)})
-	for k in CHEST_COUNT:
-		var p := _free_point(30.0, 40.0)
+	for k in (ROYALE_CHEST_COUNT if royale else CHEST_COUNT):
+		var p := _free_point(22.0 if royale else 30.0, 40.0)
 		if p != Vector2.INF:
 			chests.append(Vector3(p.x, 0, p.y))
 			_occupied.append([p, 6.0])
@@ -244,39 +270,40 @@ func _place_pois() -> void:
 	chest_tiers.fill(0)
 	var at := 0
 	for tier in [2, 1]:
-		for k in int(CHEST_TIER_COUNTS[tier]):
+		for k in int((ROYALE_TIER_COUNTS if royale else CHEST_TIER_COUNTS)[tier]):
 			if at < order.size():
 				chest_tiers[order[at]] = tier
 				at += 1
 	# Survie : chaque coffre vise un emplacement ou un type de cartes (SlotChests), son
 	# apparence suit sa catégorie (équipement, cartes, bijoux et trophées)
 	chest_boxes = []
-	if Run.active and Run.survival:
+	if Run.active and Run.survival and not royale:
 		chest_boxes = SlotChests.layout(chests.size(), rng)
 		for k in chests.size():
 			chest_tiers[k] = int(SlotChests.BOXES[chest_boxes[k]].look)
 	# marchands ambulants : la clairière de l'ancien village, puis deux autres
-	merchant_spots.append(Vector3(v2.x, 0, v2.y))
-	for k in 2:
+	if not royale:
+		merchant_spots.append(Vector3(v2.x, 0, v2.y))
+	for k in (0 if royale else 2):
 		var p := _free_point(60.0, 60.0)
 		if p != Vector2.INF:
 			merchant_spots.append(Vector3(p.x, 0, p.y))
 			_occupied.append([p, 8.0])
 	# lieux utilisables une fois
 	for kind in STATIONS:
-		for k in int(STATIONS[kind].count):
+		for k in (int(STATIONS[kind].count) if not royale else (4 if kind == "well" else 0)):
 			var p := _free_point(36.0, 50.0)
 			if p != Vector2.INF:
 				stations.append({"pos": Vector3(p.x, 0, p.y), "kind": kind})
 				_occupied.append([p, 8.0])
 	# zones à capturer : surtout des cartes, quelques trophées et clés
 	var kinds := ["card", "card", "trophy", "card", "keys", "card", "trophy", "card", "card", "trophy"]
-	for k in kinds.size():
+	for k in (0 if royale else kinds.size()):
 		var p := _free_point(40.0, 55.0)
 		if p != Vector2.INF:
 			shrine_spots.append({"pos": Vector3(p.x, 0, p.y), "reward": kinds[k]})
 			_occupied.append([p, 18.0])
-	for k in 16:
+	for k in (0 if royale else 16):
 		var p := _free_point(36.0, 60.0)
 		if p == Vector2.INF:
 			continue

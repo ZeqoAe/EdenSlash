@@ -26,6 +26,8 @@ const LIST := [
 		"desc": "Affronte un héros d'une classe, piloté par l'IA scriptée ou par un cerveau entraîné : à armes égales (niveau libre) ou avec ton build complet."},
 	{"id": "arenas", "row": "versus", "unlock": "arenas", "img": "arena2", "group": "pvp", "name": "Arènes", "sub": "2 contre 2, 3 contre 3, alliés IA", "gain": "Titres",
 		"desc": "Toi et tes alliés IA contre une équipe IA : composition d'équipe, soutien et coups combinés, hors ligne."},
+	{"id": "royale", "row": "versus", "unlock": "royale", "img": "battlefield", "group": "pvp", "name": "Battle royale", "sub": "8 héros, un anneau, un seul survivant", "gain": "Insignes, coffre d'apparence, titre",
+		"desc": "Toi et sept héros IA tombez nus, niveau 1, à des points tirés au sort d'une grande carte pleine de coffres. Pille l'équipement, les cartes et les potions, monte de niveau en ouvrant des coffres et en éliminant les autres, et reste dans l'anneau qui se referme en 4 phases (3 min 30). Le dernier debout gagne."},
 	{"id": "siege", "row": "versus", "unlock": "siege", "img": "arena3", "group": "pvp", "tag": "JcE + JcJ", "name": "Le Siège", "sub": "Trois héros, cinq vagues, un boss, puis chacun pour soi", "gain": "Coffre d'apparence légendaire",
 		"desc": "Toi et deux alliés IA tenez une arène contre cinq vagues de monstres nombreux et coriaces, puis contre le boss du donjon (fureur au bout de 6 minutes). Quand il tombe, la zone se ferme et son cœur tombe au centre : les trois héros deviennent ennemis. Le dernier debout gagne un coffre d'apparence légendaire ; ou emporte le cœur hors de l'anneau pour quitter le duel avec moins."},
 	{"id": "training", "row": "", "group": "", "name": "Zone d'entraînement", "sub": "Sorts, armes et cartes, sans enjeu", "gain": "Rien (banc d'essai)",
