@@ -55,6 +55,12 @@ static func begin_map() -> void:
 	_last_source = ""
 
 
+## Minutes jouées sur la carte en cours (temps de jeu, pauses exclues) : Run.finish s'en sert pour les insignes
+## d'une run arrêtée sur la 1re carte (Economy.ENTRY_MINUTES).
+static func map_minutes() -> float:
+	return _time / 60.0
+
+
 static func add(key: String, amount := 1.0) -> void:
 	counters[key] = float(counters.get(key, 0.0)) + amount
 

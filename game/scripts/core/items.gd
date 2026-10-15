@@ -681,9 +681,13 @@ static func _merge(a: Dictionary, b: Dictionary) -> Dictionary:
 ## d'amélioration. Avant 0.1.165 c'était 1 à 8, mais un cristal vaut maintenant 5 fois plus d'or
 ## (`Forge.GOLD_PER_CRYSTAL`) : le démontage reste un complément, pas la source (les clears de Donjon, de Ruée,
 ## de Siège et de Tour en donnent 30 à 320, voir ActivityLoot).
+## Passe E6 : une pièce rachetable à l'Armurerie (découverte : Profile.seen_gear) ne rend que la part de ses
+## améliorations. Sinon acheter une pièce d'un palier déjà entamé (15 % du prix, 8 insignes au plus bas) puis la
+## démonter (3 cristaux), en boucle, changeait les insignes en cristaux sans limite (≈ 3 insignes le cristal).
 static func disassemble_yield(item: Dictionary) -> Dictionary:
 	var r := int(item.rarity)
-	return {"crystal": 1 + r / 2 + int(item.get("upgrade", 0)) / 3}
+	var base := 0 if item.has("eden") and int(item.eden) in Profile.seen_gear else 1 + r / 2
+	return {"crystal": base + int(item.get("upgrade", 0)) / 3}
 
 
 static func sell_price(item: Dictionary) -> int:

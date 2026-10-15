@@ -169,6 +169,9 @@ kind_blurb` (type + spécialité), pastille `_badge`. Roulette : `Wheel.board()`
 et par usage, DPS du boss sur 10 s, dégâts subis par minute, temps pour tuer, aide au combat, version.
 Règles de décision (≥ 5 cartes par style et par époque) : `conception/equilibrage/raffinement_3.md`, §2.
 Aucun réglage d'époque ou d'économie avant ces mesures. Test : `res://tests/test_journal.tscn`.
+Passe E6 (`conception/nuit_15_10/R_E6.md`, DESIGN.md « Équilibrage global ») : simulation d'un compte neuf avec les vraies formules
+`res://tools/progression_sim.tscn` (`--probe`, `--mult=1,1.7,3.4,7`, `--skill=`, `--trace`) ; bornes dans `tests/test_e6`. Le journal réel
+n'a encore que 2 cartes de Survie : relancer `tools/journal_report.py` quand il en aura ≥ 5 par style et par époque.
 
 ## HUD, pause et bilans (0.1.180, lot U9)
 Un seul composant de bilan, `ui/results_panel.gd` (`ResultsPanel.show_spec` : titre, tuiles, blocs Gagné / Gardé / Perdu, boutons) ; `ResultsScreen`

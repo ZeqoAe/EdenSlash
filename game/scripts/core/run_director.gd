@@ -664,6 +664,8 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 	# coffres de récompense (ouverts hors run, menu Coffres) : boss du donjon 100 %, élites 20 %,
 	# monstres 0,5 % ; en Survie, forge ou joaillier (l'équipement s'achète au hub)
 	var n_chests := 1 if m.is_boss else (1 if (m.is_elite and randf() < 0.2) or randf() < 0.005 else 0)
+	if n_chests > 0 and _farm_capped(m, "chests"):
+		n_chests = 0
 	for i in n_chests:
 		_drop_reward_chest(m.global_position, m.level, m.is_boss)
 	if seals < SEALS_NEEDED and (m.carries_seal or (m.is_elite and randf() < 0.3)):
@@ -704,6 +706,8 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		_drop_item(m.global_position, m.level, luck)
 	# consommables : gemmes, parchemins, ciseaux, pierres (adaptés au niveau)
 	var n_cons := 3 if m.is_boss else (1 if m.is_elite and randf() < 0.35 else (1 if randf() < (0.07 if m.enraged else 0.04) else 0))
+	if n_cons > 0 and _farm_capped(m, "supplies"):
+		n_cons = 0
 	for i in n_cons:
 		_drop_consumable(m.global_position, m.level, 1 if (m.is_boss or m.is_elite) else 0)
 	if m.is_boss:
@@ -713,6 +717,24 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		_drop_potion(m.global_position, Potions.roll_kind())
 	if m == _boss:
 		_on_boss_killed()
+
+
+## Passe E6 : en Survie, les monstres ordinaires d'une carte lâchent au plus FARM_CAP coffres de récompense et
+## fournitures (une carte jouée normalement : 3 à 5 coffres, 30 à 45 fournitures). Au-delà (rester en rage sur une
+## carte pour ses lâchers), seuls les élites, les boss, les défis et les objets cassés donnent encore. Sans ce
+## plafond, une carte d'époque IV tenue 15 min en rage donnait plus de parchemins et de formules qu'une heure de
+## Ruée ou de Siège, et les coffres sont gardés même sur défaite.
+const FARM_CAP := {"chests": 6, "supplies": 60}
+var _farm := {}
+
+
+## Vrai si le lâcher [param kind] (« chests », « supplies ») du monstre [param m] dépasse le plafond de la carte.
+func _farm_capped(m: Monster, kind: String) -> bool:
+	if not Run.survival or m.is_boss or m.is_elite:
+		return false
+	var n := int(_farm.get(kind, 0))
+	_farm[kind] = n + 1
+	return n >= int(FARM_CAP[kind])
 
 
 ## Survie : chances qu'une élite lâche une arme secondaire (sans arme secondaire / avec).
@@ -972,6 +994,7 @@ func _next_stage(next: String) -> void:
 	shrines_captured = 0
 	greed = false
 	extracting = false
+	_farm.clear()
 	_found.clear()
 	_challenges.clear()
 	_camp_ready_at.clear()

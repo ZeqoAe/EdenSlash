@@ -22,7 +22,10 @@ const RUSH_PER_BOSS := [8, 18, 34]
 const SIEGE_PER_WAVE := [4, 10, 18]
 const SIEGE_BOSS := [10, 40, 110]
 ## Cristaux de la Tour : par étage monté, selon la difficulté (Facile, Normal, Difficile, Hardcore).
-const TOWER_PER_FLOOR := [1.0, 1.5, 2.0, 2.5]
+## Passe E6 (avant 1 / 1,5 / 2 / 2,5) : la Tour s'ouvre à l'époque I gagnée, les Donjons à l'époque II ; entre les deux
+## elle est la seule source de cristaux (≈ 45 / h en Normal à 2 min l'étage : un +5 sur une pièce de l'époque I en
+## demandait ≈ 2 h). Maintenant ≈ 120 / h en Normal, toujours sous un Donjon Normal (180) et loin du Mythique (≈ 1 000).
+const TOWER_PER_FLOOR := [3.0, 4.0, 5.0, 6.0]
 ## Un coffre de gemmes tous les [TOWER_GEM_EVERY] étages montés, un coffre de forge tous les [TOWER_FORGE_EVERY].
 const TOWER_GEM_EVERY := 10
 const TOWER_FORGE_EVERY := 50

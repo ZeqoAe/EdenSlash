@@ -8,6 +8,9 @@ signal instant_card(id: String)  # carte à effet immédiat (Rappel)
 const MAX_SKILLS := 4
 const MAX_RANK := 5
 const INSIGNIA_BASE := 25  # insignes de participation d'une run de Survie (dès 10 monstres vaincus)
+## Passe E6 : monstres comptés pour la maîtrise et les insignes, au plus KILL_CAP_PER_MAP par carte atteinte (une carte
+## jouée normalement en compte 700 à 1 000 ; rester en rage sur la 1re carte n'est pas une ferme sans fin).
+const KILL_CAP_PER_MAP := 1500
 
 var active := false
 var class_id := "samurai"
@@ -71,9 +74,9 @@ var survival := false
 var epoch := 1
 ## Pièces choisies dans les coffres de la run (Eden id) : achetables au hub ensuite.
 var seen_items: Array = []
-## Enclume de la Survie : emplacement -> bonus tiré (+0 à +7), AJOUTÉ au +N de la pièce portée dans
 ## Armes des autres types découvertes avec une arme choisie (SlotChests.weapon_family) : Armurerie aussi.
 var seen_family: Array = []
+## Enclume de la Survie : emplacement -> bonus tiré (+0 à +7), AJOUTÉ au +N de la pièce portée dans
 ## cet emplacement (celui du hub), quelle qu'elle soit, jusqu'à la fin de la run ; le total est
 ## plafonné à UPGRADE_CAP (voir slot_upgrade).
 var slot_bonus: Dictionary = {}
@@ -87,6 +90,9 @@ const MAX_TROPHIES := 12
 var trophies: Array = []
 var anvil_stage := 0  # map où l'enclume a servi (une fois par map)
 var insignia_gain := 0  # insignes gagnés à la fin de la run (bilan)
+## Détail des insignes de la Survie (Economy.survival_insignia_parts : participation, maps, fights, victory), avant Défi,
+## rang héroïque et autel de la fortune ; le bilan peut l'afficher tel quel (participation au prorata, monstres plafonnés).
+var insignia_parts: Dictionary = {}
 ## Mesures d'équilibrage seulement (--human=<part de coups évités>) : facteur sur les dégâts subis par le héros.
 static var test_taken := 1.0
 ## Mesures : distance (m) en deçà de laquelle le bot de test combat au lieu de marcher vers son objectif.
@@ -147,9 +153,9 @@ func start(cid: String) -> void:
 	survival = false
 	epoch = 1
 	seen_items = []
+	seen_family = []
 	slot_bonus = {}
 	weapon_ups = {}
-	seen_family = []
 	trophies = []
 	anvil_stage = 0
 	Profile.begin_run()
@@ -180,10 +186,12 @@ func finish(res: String) -> void:
 		return
 	active = false
 	result = res
+	var map_min := RunJournal.map_minutes()  # temps de la carte en cours (avant que le journal la close)
 	RunJournal.end_map(res)
 	Profile.record_max("best_combo", combo_best)
 	Profile.runs_done += 1
-	expertise_gain = max_level * 15 + kills / 2 + elites * 10 + (200 if res == "victoire" else (60 if res == "extraction" else 0)) + 120 * (stage - 1)
+	var counted := mini(kills, KILL_CAP_PER_MAP * maxi(stage, 1))
+	expertise_gain = max_level * 15 + counted / 2 + elites * 10 + (200 if res == "victoire" else (60 if res == "extraction" else 0)) + 120 * (stage - 1)
 	var settled := Challenge.settle(expertise_gain, res)
 	expertise_gain = int(settled.gain)
 	challenge_first = bool(settled.first)
@@ -210,7 +218,8 @@ func finish(res: String) -> void:
 				Profile.seen_gear.append(int(id))
 		# 25 de participation (dès 10 monstres vaincus), 25 par carte atteinte : même une défaite en carte 1
 		# paie de quoi acheter une pièce de l'Armurerie en 1 ou 2 runs (prix 50 à 73 pour l'époque I)
-		insignia_gain = Economy.survival_insignia(stage, kills, elites, epoch, res == "victoire")  # barème unique (lot E5)
+		insignia_parts = Economy.survival_insignia_parts(stage, counted, elites, epoch, res == "victoire", map_min)  # barème unique (lots E5, E6)
+		insignia_gain = Economy.survival_insignia(stage, counted, elites, epoch, res == "victoire", map_min)
 		if Challenge.active:
 			insignia_gain = roundi(insignia_gain * 1.5)  # Défi de maîtrise : insignes ×1,5
 		if heroic_rank > 0:
@@ -404,13 +413,6 @@ func add_trophy(it: Dictionary) -> bool:
 	return true
 
 
-## Effets des trophées de la run (un par trophée).
-func trophy_procs() -> Array:
-	var out: Array = []
-	for t in trophies:
-		for p: Dictionary in t.get("passive", {}).get("procs", []):
-			out.append(p.duplicate(true))
-	return out
 ## Survie : une arme choisie (coffre d'arme, arme secondaire) fait découvrir les armes de tous les types
 ## au palier et à la rareté de la map (Armurerie, fin de run) : avoir l'arme de chaque type ne demande pas
 ## de jouer une classe de chaque type (lot E4).
@@ -422,6 +424,13 @@ func discover_weapons() -> void:
 			seen_family.append(int(id))
 
 
+## Effets des trophées de la run (un par trophée).
+func trophy_procs() -> Array:
+	var out: Array = []
+	for t in trophies:
+		for p: Dictionary in t.get("passive", {}).get("procs", []):
+			out.append(p.duplicate(true))
+	return out
 
 
 func passive_procs() -> Array:
@@ -818,6 +827,8 @@ func apply_card(card: Dictionary) -> void:
 				Profile.equip(card.item)
 				if card.item.has("eden") and not int(card.item.eden) in seen_items:
 					seen_items.append(int(card.item.eden))
+				if String(card.item.get("slot", "")) == "weapon":
+					discover_weapons()
 				Profile.changed.emit()
 			else:
 				pick_up(card.item)  # choix de trophée ou d'équipement (coffres de la carte) : dans le sac
@@ -825,8 +836,6 @@ func apply_card(card: Dictionary) -> void:
 			var cur: Dictionary = weapon_ups.get(String(card.id), {})
 			WeaponAttacks.merge_upgrade(cur, card.get("up", {"dmg": 0.15}))
 			weapon_ups[String(card.id)] = cur
-				if String(card.item.get("slot", "")) == "weapon":
-					discover_weapons()
 			if cur.get("sig", false):
 				var ws := weapon_spec(String(card.id))
 				Profile.note_weapon_legend("%s:%d" % [ws.get("wtype", "?"), int(ws.get("variant", 0))])
@@ -837,6 +846,7 @@ func apply_card(card: Dictionary) -> void:
 			Profile.equip_offhand(card.item)
 			if card.item.has("eden") and not int(card.item.eden) in seen_items:
 				seen_items.append(int(card.item.eden))
+			discover_weapons()
 			Profile.changed.emit()
 		"anvil_slot":
 			if not stage in anvil_stages:
@@ -844,7 +854,6 @@ func apply_card(card: Dictionary) -> void:
 			anvil_result = anvil_roll(String(card.slot))
 		"anvil":
 			if not stage in anvil_stages:
-			discover_weapons()
 				anvil_stages.append(stage)
 			# enclume de la carte : +1 garanti sur la pièce portée choisie
 			var it: Dictionary = Profile.equipped.get(String(card.slot), {})

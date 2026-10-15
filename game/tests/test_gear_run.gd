@@ -125,7 +125,9 @@ func _ready() -> void:
 	var g15 := float(Craft.extra_stats(item).hp)
 	Run.hero_level = 35
 	var g35 := float(Craft.extra_stats(item).hp)
-	check("gemme parfaite au niveau 1 / 15 / 35 : %.0f < %.0f < %.0f PV" % [g1, g15, g35], g1 < g15 and g15 < g35 and is_equal_approx(g15, 220.0) and g1 > 60.0 and g35 <= 441.0)
+	# passe E6 : × Craft.GEM_RUN_SHARE × 1,08^(niveau − 1), comme les stats des pièces (220 PV pleins hors run)
+	check("gemme parfaite au niveau 1 / 15 / 35 : %.0f < %.0f < %.0f PV" % [g1, g15, g35], g1 < g15 and g15 < g35
+		and is_equal_approx(g15, 220.0 * Craft.GEM_RUN_SHARE * pow(1.08, 14)) and g35 < 441.0)
 	var crit_item := {"slot": "ring", "sockets": [{"type": "amethyst", "tier": 2}]}
 	Run.hero_level = 1
 	check("gemme de critique (en %) : non normalisée", is_equal_approx(float(Craft.extra_stats(crit_item).crit), 0.035))
@@ -139,12 +141,13 @@ func _ready() -> void:
 	Run.kills = 40
 	Run.elites = 1
 	Run.stage = 1
+	RunJournal._time = 300.0  # 5 min sur la 1re carte (passe E6 : participation au prorata des 10 premières minutes)
 	Run.finish("defaite")
 	var defeat_gain := Run.insignia_gain
 	var cheapest := 9999
 	for e in SlotChests.pool("head", 1, 1) + SlotChests.pool("chest", 1, 1):
 		cheapest = mini(cheapest, GearShopPage.price(e))
-	check("une défaite (1re map, 40 tués) rapporte %d insignes : de quoi acheter une pièce de la 1re map (%d)" % [defeat_gain, cheapest], defeat_gain >= cheapest)
+	check("une défaite (1re map, 5 min, 40 tués) rapporte %d insignes : une pièce de la 1re map (%d) en 2 runs" % [defeat_gain, cheapest], defeat_gain * 2 >= cheapest)
 	Profile.end_run_survival()
 
 	Profile.reset_all()

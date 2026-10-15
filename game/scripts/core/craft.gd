@@ -228,14 +228,17 @@ static func gem_stats(g: Dictionary) -> Dictionary:
 	return {d.stat: float(d.base) * float(GEM_MULT[clampi(int(g.get("tier", 0)), 0, GEM_MULT.size() - 1)])}
 
 
-## Survie (0.1.164) : les valeurs PLATES des gemmes (force, PV, défense…) suivent le niveau du héros
-## comme les stats des pièces, pleines à GEM_REF_LEVEL (plafond de la 1re map), entre ×0,35 et ×2 :
-## sans cela une gemme royale vaudrait +320 PV dès le niveau 1. Hors Survie : valeur pleine.
-const GEM_REF_LEVEL := 15
+## Survie : les valeurs PLATES des gemmes (force, PV, défense…) suivent le niveau du héros exactement comme
+## les stats des pièces (×1,08 par niveau) : GEM_RUN_SHARE × 1,08^(niveau − 1), soit ×0,09 au niveau 1, ×0,27 au
+## niveau 15, ×0,57 au 25, ×1,24 au 35. Une gemme royale de PV vaut alors environ la moitié des PV d'un torse
+## +0 du même niveau, à tout niveau. (0.1.164 : ×1 au niveau 15, jusqu'à ×2 : mesure E6, deux gemmes royales par
+## pièce triplaient la puissance d'un héros en carte 1, plus que l'écart de toutes les époques.) Hors Survie : valeur
+## pleine (duels inchangés).
+const GEM_RUN_SHARE := 0.09
 static func gem_run_factor() -> float:
 	if not (Run.active and Run.survival and Run.hero_level > 0):
 		return 1.0
-	return clampf(pow(1.08, Run.hero_level - GEM_REF_LEVEL), 0.35, 2.0)
+	return GEM_RUN_SHARE * pow(1.08, Run.hero_level - 1)
 
 
 ## Valeur d'Eden de la formule [param type] au niveau [param lv].
@@ -343,6 +346,20 @@ static func scroll_level_for(level: int) -> int:
 		if level >= int(ENCHANT_MIN_LEVEL[i]):
 			lv = i + 1
 	return lv
+
+
+## Passe E6 : niveau de formule le plus haut qui tombe en Survie, par époque (I à IV). Les formules Lv8-9 restent
+## le butin propre du Siège (et des coffres du joaillier de niveau 70 ou plus : Donjons Héroïques hauts et
+## Mythiques, Ruée) : sans plafond, une carte d'époque IV en donnait une dizaine, plus qu'un Siège Mythique.
+const SURVIVAL_SCROLL_MAX := [2, 4, 6, 7]
+
+
+## Niveau de formule des fournitures tirées au niveau [param level] : plafonné en Survie (SURVIVAL_SCROLL_MAX).
+static func loot_scroll_level(level: int) -> int:
+	var slv := scroll_level_for(level)
+	if Run.active and Run.survival:
+		slv = mini(slv, int(SURVIVAL_SCROLL_MAX[clampi(Run.epoch, 1, SURVIVAL_SCROLL_MAX.size()) - 1]))
+	return slv
 
 
 static func _item_level(item: Dictionary) -> int:
@@ -536,7 +553,7 @@ static func random_loot(level: int, bonus := 0, gem_level := -1) -> String:
 	if r < 52.0:
 		return fortify_key(["power", "guard"].pick_random(), fortify_level_at(level))
 	if r < 64.0:
-		var slv := scroll_level_for(level)
+		var slv := loot_scroll_level(level)
 		if slv > 0:
 			return scroll_key(ENCHANTS.keys().pick_random(), clampi(slv + (1 if bonus > 0 and randf() < 0.3 else 0) - (1 if randf() < 0.35 else 0), 1, slv))
 		return fortify_key(["power", "guard"].pick_random(), fortify_level_at(level))
@@ -581,7 +598,7 @@ static func loot_for(source: String, level: int, bonus := 0, gem_level := -1) ->
 		"gem":
 			return gem_key(GEMS.keys().pick_random(), tier)
 		"scroll":
-			var slv := scroll_level_for(level)
+			var slv := loot_scroll_level(level)
 			if slv > 0:
 				return scroll_key(ENCHANTS.keys().pick_random(), clampi(slv - (1 if randf() < 0.35 - 0.15 * bonus else 0), 1, slv))
 			return fortify_key(["power", "guard"].pick_random(), fortify_level_at(level))

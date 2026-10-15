@@ -22,7 +22,12 @@ const CAPS := [15, 25, 35]
 ## Niveau de départ des monstres de chaque map.
 const LEVEL_BONUS := [0, 12, 22]
 ## PV et dégâts des monstres par époque (la difficulté vient des monstres, pas du niveau).
-const MONSTER_MULT := [1.0, 1.35, 1.75, 2.2]
+## Passe E6 (avant 1,35 / 1,75 / 2,2) : l'équipement du hub multiplie la puissance du héros en Survie par
+## ≈ 6 à 7 entre les pièces +0 de l'époque I et un équipement complet d'époque IV (+10, gemmes, enchantements) ; avec
+## l'ancien écart, l'époque IV tombait ≈ 10 h après le premier lancement (simulation tools/progression_sim). Chaque
+## époque demande maintenant l'équipement de la précédente bien monté : II ≈ pièces de l'époque I à +5 et
+## quelques gemmes, III ≈ pièces de l'époque II à +10, IV ≈ un équipement complet (R_E6.md).
+const MONSTER_MULT := [1.0, 1.7, 3.4, 7.0]
 
 
 ## Premiers niveaux de la Survie plus vite (0.1.164) : l'expérience gagnée est multipliée par ce facteur,

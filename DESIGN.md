@@ -224,7 +224,7 @@ chacune avec son rôle :
 | Donjon | 30 / 90 / 170 | forge ×1 ; + joaillier en Héroïque ; forge ×2 + joaillier en Mythique (niveau du donjon : 14-60, 29-75, 90) |
 | Ruée des boss | 8 / 18 / 34 par boss (64 / 144 / 272 pour huit) | à 4 boss : forge ×1 ; à 8 : parchemins (×1 en Normal, ×2 sinon), pierres rares, gemmes (niveau du dernier boss : 60 / 75 / 90) |
 | Siège | 4 / 10 / 18 par vague + 10 / 40 / 110 boss tombé (30 / 90 / 200) | boss tombé : formules d'enchantement ×1 / 2 / 3, + forge en Héroïque et Mythique |
-| Tour | 1 / 1,5 / 2 / 2,5 par étage monté (Facile à Hardcore) | gemmes tous les 10 étages, forge tous les 50 (niveau de l'étage) |
+| Tour | 3 / 4 / 5 / 6 par étage monté (Facile à Hardcore ; passe E6, avant 1 à 2,5) | gemmes tous les 10 étages, forge tous les 50 (niveau de l'étage) |
 
 - Un coffre porte une spécialité (`focus`) : « parchemins » (2-3 puissance, 2-4 garde), « pierres » (4 pierres rares
   en plus), « gemmes » (3 gemmes d'un rang de plus), « formules » (3 formules au niveau le plus haut, 1 gemme).
@@ -382,7 +382,8 @@ pleine run, le hub retrouve exactement son équipement d'avant (`Profile.begin_r
 achetables à l'Armurerie. **Compte neuf** : `StarterGear` donne à chaque classe, une fois, 8 pièces d'Eden
 communes, spéciales ou rares (la plus rare possible) du palier 10-30, le plus proche de 20 (arme du type de la classe, tête, torse,
 jambes, gants, bottes, bague, collier), à +0 : le hub n'est jamais vide. **Boucle d'amorçage** : 25 insignes de participation par
-run (dès 10 monstres tués) + 25 par carte atteinte, de quoi acheter une pièce de l'époque I (50 à 73) en 1 ou 2 runs, même perdues ;
+run (dès 10 monstres tués) + 25 par carte atteinte, de quoi acheter une pièce de l'époque I (50 à 73) en 1 ou 2 runs, même perdues
+(passe E6 : sur la 1re carte, ces 50 sont au prorata des 10 minutes avant la rage, voir « Équilibrage global ») ;
 les premiers niveaux de chaque run montent plus vite (XP ×2 au niveau 1, ×1 au niveau 10) et le début de chaque carte est plus doux
 (monstres à 45 % puis 100 % sur 5 min). Mesures et plafonds : `conception/nuit_15_10/N1_survie_equipement.md`.
 
@@ -391,8 +392,8 @@ niveau 1, la puissance d'une pièce suit le niveau du héros, plafonné à chaqu
 change les pièces d'Eden proposées (modèles, panoplies, raretés) et la difficulté des monstres.
 Battre le boss final d'une époque débloque la suivante. **Ce qui compte dans une pièce** (la normalisation par le
 niveau ne change pas) : sa rareté (×0,85 commune à ×1,32 légendaire sur les stats de base), son jet de qualité, son
-+N du hub (+10 % des stats de base par niveau, ×2 à +10), ses gemmes (valeurs plates suivant le niveau du héros,
-pleines au niveau 15), son enchantement, son passif d'arme et les bonus de panoplie (2 / 4 / 6 pièces).
++N du hub (+10 % des stats de base par niveau, ×2 à +10), ses gemmes (valeurs plates suivant le niveau du héros comme
+les pièces : × 0,09 × 1,08^(niveau − 1), passe E6), son enchantement, son passif d'arme et les bonus de panoplie (2 / 4 / 6 pièces).
 
 | Époque | Maps (zones) | Armures | Armes | Raretés |
 |---|---|---|---|---|
@@ -441,11 +442,42 @@ est tirée comme un coffre d'arme de son type.
 **Fournitures de la Survie (0.1.179, lot E4)** : les parchemins de fortification, les formules d'enchantement (autel du
 scribe, marchands, objets à casser) et les coffres de forge sont au niveau **des pièces de la carte d'époque** (le plus haut
 de l'armure et de l'arme : parchemins Lv 30 / 40 / 50 en époque I, 50 / 60 / 60 en II, 70 / 70 / 80 en III, 80 / 90 / 90 en IV ;
-formules jusqu'au niveau 9 dès l'époque III), et non plus plafonnés au niveau 35 : une pièce de l'Armurerie se monte avec ce
+formules plafonnées par époque depuis la passe E6 : Lv 2 / 4 / 6 / 7, les Lv 8-9 sont au Siège), et non plus plafonnés au niveau 35 : une pièce de l'Armurerie se monte avec ce
 que donne la Survie de son époque. Les **gemmes** (et les coffres du joaillier) gardent le niveau du moment, **plus un rang
-par époque** (`RunDirector.GEM_EPOCH_LEVELS`) : les royales restent rares avant l'époque IV et les Donjons Mythiques. La
+par époque** (`RunDirector.GEM_EPOCH_LEVELS`) : rang = niveau / 8, donc des royales dès la fin de la 3e carte de l'époque I et
+partout à l'époque IV (mesure E6 ; leur poids en Survie est réglé par `Craft.GEM_RUN_SHARE`, pas par leur rareté). La
 difficulté n'en dépend pas : la forge est fermée pendant la Survie, les fournitures ne servent qu'au hub (gardées sur
 victoire ou extraction ; les coffres de forge et du joaillier sont toujours gardés).
+
+**Équilibrage global (passe E6, 0.1.182)** — mesures et modèle dans `conception/nuit_15_10/R_E6.md`, simulation
+`res://tools/progression_sim.tscn` (compte neuf de bout en bout avec les vraies formules ; `--probe` : puissance des
+équipements types ; `--mult=…` : essai d'autres écarts d'époque), bornes vérifiées par `tests/test_e6`.
+- **Écart d'époque** (`Epochs.MONSTER_MULT`, PV et dégâts des monstres) : **×1 / ×1,7 / ×3,4 / ×7** (avant ×1 / 1,35 / 1,75 / 2,2).
+  En Survie la puissance d'une pièce suit le niveau du héros, mais son +N (×2 à +10), sa rareté, ses gemmes et son
+  enchantement multiplient la puissance du héros par ≈ 6 à 7 entre des pièces +0 de l'époque I et un équipement complet
+  d'époque IV. Avec l'ancien écart, un compte simulé gagnait l'époque IV ≈ 10 h après son premier lancement. Maintenant :
+  II demande les pièces de l'époque I montées (+5, quelques gemmes), III les pièces de l'époque II à +10, IV un
+  équipement complet (+10 partout, gemmes, enchantements). Les rangs héroïques s'ajoutent par-dessus (défi de prestige).
+- **Gemmes en Survie** : × `Craft.GEM_RUN_SHARE` (0,09) × 1,08^(niveau − 1), comme les pièces : une gemme royale de PV vaut
+  ≈ 40 % d'un torse +0 du même niveau (avant : ×1 au niveau 15, deux royales par pièce triplaient la puissance en carte 1).
+  Hors Survie (Tour, Donjons, duels) : pleine valeur, inchangé.
+- **Insignes d'une run arrêtée sur la 1re carte** : participation et 25 de la 1re carte au prorata des 10 minutes avant la
+  rage (`Economy.ENTRY_MINUTES`, temps de jeu lu dans le journal de run). Abandonner au bout d'une minute ne paie plus
+  ≈ 2 000 insignes à l'heure (240 maintenant) ; une défaite de débutant de 5 min paie toujours une pièce en 2 runs.
+- **Monstres comptés** pour la maîtrise et les insignes : au plus 1 500 par carte atteinte (`Run.KILL_CAP_PER_MAP` ; une
+  carte normale en compte 700 à 1 000). Rester en rage sur la 1re carte n'est plus une ferme.
+- **Lâchers des monstres ordinaires** en Survie : au plus 6 coffres de récompense et 60 fournitures par carte
+  (`RunDirector.FARM_CAP`) ; élites, boss, défis, objets cassés et coffres de la carte ne sont pas plafonnés.
+- **Démontage** : une pièce rachetable à l'Armurerie (découverte) ne rend que la part de ses améliorations (+N / 3) ;
+  avant, acheter une pièce d'un palier entamé (15 % du prix, 8 insignes au plus bas) puis la démonter (3 cristaux) changeait
+  les insignes en cristaux sans limite. Les insignes servent à acquérir, les cristaux à optimiser : aucun pont entre les deux.
+- **Formules d'enchantement** en Survie : niveau 2 / 4 / 6 / 7 au plus selon l'époque (`Craft.SURVIVAL_SCROLL_MAX`) ; les
+  niveaux 8-9 viennent du Siège (rôle « formules hautes ») et des coffres du joaillier de niveau 70 ou plus.
+- Inchangés après vérification : enclume (+12 au plus : une pièce +10 n'y gagne que +2 sur 3 emplacements), capes (≈ 1/9
+  de la puissance), cartes d'amélioration (plafonnées), barème d'E5 (la Survie reste la 1re source d'insignes à l'heure,
+  le JcJ plafonné au jour), cristaux d'E1 (Donjon Mythique ≈ 1 000 / h, Ruée ≈ 900, Siège ≈ 860).
+- **Tour** : 3 / 4 / 5 / 6 cristaux par étage (avant 1 à 2,5, `ActivityLoot.TOWER_PER_FLOOR`) : entre l'époque I gagnée et les
+  Donjons (époque II), c'est la seule source de cristaux (≈ 120 / h en Normal, sous un Donjon Normal à 180).
 
 ## Étapes et sources (refonte 0.1.91, façon Megabonk)
 

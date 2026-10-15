@@ -175,7 +175,8 @@ func _test_activities() -> void:
 	Tower.start("warrior", 1, 1)
 	Tower.reached = 20
 	var res := Tower.finish()
-	check("Tour (Normal) : 20 étages = 30 cristaux et 2 coffres de gemmes", int(res.crystals) == 30 and res.chests.size() == 2 and Profile.amount("crystal") == 30)
+	var tc := ActivityLoot.tower_crystals(20, 1)  # 4 par étage en Normal depuis la passe E6
+	check("Tour (Normal) : 20 étages = %d cristaux et 2 coffres de gemmes" % tc, tc == 80 and int(res.crystals) == tc and res.chests.size() == 2 and Profile.amount("crystal") == tc)
 	check("les coffres de gemmes de la Tour sont dans le menu Coffres", Profile.reward_chests.filter(func(c): return c.type == "jewel").size() == 2)
 	Profile.reward_chests = []
 

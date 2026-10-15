@@ -45,6 +45,7 @@ func _ready() -> void:
 	Run.stage = 1
 	Run.active = true
 	Profile.insignia = 0
+	RunJournal._time = 600.0  # 10 min sur la carte : participation entière (passe E6, Economy.ENTRY_MINUTES)
 	Run.finish("extraction")
 	var plain := 25 * 1
 	check("insignes × (1 + 0,15 × rang)", Run.insignia_gain == roundi(plain * (1.0 + 0.15 * 4)) or Run.insignia_gain > plain)
