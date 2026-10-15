@@ -549,6 +549,42 @@ But : faire sentir qu'une run se prépare avant le boss, en offrant des risques 
 - **Mesures** : `--giants=N` fait invoquer N géants par carte au pilote automatique (2:00 puis 4:30). Test : `tests/test_p12.tscn` ;
   captures : `tests/shot_p12.tscn`.
 
+## Boss : PV fixes et rage du boss (passe P11, retour du joueur du 15/10)
+
+Retour du joueur (compte neuf, 0.1.189) : « nos dégâts scalent à l'infini (c'est le but), mais le boss de la 3e carte a des PV
+ridicules ». Mesure (journal réel et sonde) : boss des cartes 1 / 2 / 3 de l'époque I tués en 53 / 17 / 9 s ; leurs PV venaient
+du niveau d'Eden de chaque boss (≈ 40 000 à 120 000 partout) pendant que les dégâts du héros sont ×13 entre la carte 1 et la 3.
+Décision du joueur : **PV FIXES par carte et par époque, démesurés, jamais calculés d'après le niveau ou la PE du héros** (sinon
+il suffirait de foncer au boss) ; il faut avoir fait **une bonne run** (niveau, cartes, trophées, enclume, trouvailles) pour le battre.
+
+- **Survie** : PV = `Epochs.BOSS_HP_MAP[carte]` × `Epochs.BOSS_HP_EPOCH[époque]` × rangs héroïques × Menace (P12, ×1 à ×2).
+
+  | | Carte 1 | Carte 2 | Carte 3 |
+  |---|---|---|---|
+  | Époque I | 80 000 | 370 000 | 1 750 000 |
+  | Époque II (×2) | 160 000 | 740 000 | 3 500 000 |
+  | Époque III (×4) | 320 000 | 1 480 000 | 7 000 000 |
+  | Époque IV (×5,5) | 440 000 | 2 035 000 | 9 625 000 |
+
+- **Rage du boss** (Survie) : après **2:30 / 3:00 / 4:00** dans l'arène (`Epochs.BOSS_RAGE_AT`, ≈ 2 fois le temps d'une bonne
+  run), ses dégâts suivent les paliers de la rage de la carte (`RunDirector.RAGE_TIERS`, une minute par palier : ×1,1, ×2, ×11, ×101) ;
+  ses PV ne bougent pas. HUD : « BOSS · 2:30 » dans le cadre de la zone (rouge à 30 s), puis « RAGE ×2 · 0:42 » ; la ligne
+  d'objectif et le panneau d'objectifs disent la même chose ; bandeau à chaque palier. La barre du boss porte deux encoches dorées
+  à mi-vie (2e phase : il entre en fureur).
+- **Ce qu'il faut pour le battre** (sonde `tools/boss_ttk.py`, aide « Bot », héros invincible, médiane de 5 classes) : run
+  *rushée* (boss atteint tôt : carte 1 niveau 8, 7 cartes) 4 à 8 min, donc jamais avant sa rage ; run *moyenne* 1 min 20 à 5 min
+  (passe aux cartes 1-2, souvent pas à la 3e) ; *bonne* run 1 min à 2 min 40 ; run *dorée* (bonne run + équipement du hub optimisé)
+  30 s à 1 min 50, jamais en quelques secondes. L'équipement du hub raccourcit toujours le combat. Avec des coups encaissés
+  (`--human 0.5`), les runs rushées perdent toutes (20 / 20).
+- **Donjons, Ruée, Siège** : PV fixes par niveau et difficulté, plus d'après les données d'Eden de chaque boss (elles donnaient
+  un boss Mythique de Limestone à 990 millions de PV, jamais tué, et un Héroïque de Blackflame tué en 15 s) :
+  PV = 106 000 × 1,09^(niveau − 15) × [1 ; 3,4 ; 2,5] (Normal, Héroïque, Mythique) (`Dungeons.boss_hp`, ×1,09 par niveau comme les
+  dégâts d'un héros synchronisé), × (1 + 0,5 par allié) ; Ruée × 0,6 par boss (8 boss d'affilée) ; Siège × 3,2 (trois héros,
+  fureur à 6 min inchangée). Mesuré avec l'équipement attendu : 1 min 30 à 2 min 50 dans la plupart des cas.
+- **Inchangés** : monstres normaux, élites, géants, rage de la carte (la survie est bonne d'après le joueur) ; duels et Tour.
+- **Progression** (`tools/progression_sim`, terme `C_BOSS` : un boss de carte 2-3 tombe ≈ 3 fois sur 4 pour un compte neuf, 9 sur 10
+  avec des pièces mythiques) : époques gagnées à 2,4 / 8,5 / 17,6 / 30,5 h (avant 1,9 / 6,9 / 14,5 / 24,0), 1re victoire en 7 runs.
+
 ## Déroulement d'une run (10 minutes + rage)
 
 | Phase | Ce qui se passe |
@@ -556,7 +592,7 @@ But : faire sentir qu'une run se prépare avant le boss, en offrant des risques 
 | 0:00 → 10:00 | Exploration d'une map générée : farmer, ouvrir les **coffres** (or ou clé), capturer les **sanctuaires**, trouver les **marchands ambulants** et l'**entrée du donjon**. Monstres de la zone, élites ponctuelles (clés). |
 | 10:00 → … | **Rage** : monstres plus forts, monstres de niveau supérieur, élites en masse. Plus d'XP et de butin. **Escalade** (passe P9, idée du joueur) : chaque minute de rage, PV et dégâts des monstres de la carte ×1,1 (10:00), ×2 (11:00), ×11 (12:00), puis ×101 (13:00 et après) ; le boss n'est pas concerné (l'arène arrête le chronomètre). Le HUD affiche « RAGE ×2 · 0:42 » (multiplicateur, temps avant le palier suivant). La rage est un chronomètre : vers 12 min il faut être au boss ou s'extraire. |
 | N'importe quand | Si l'entrée du donjon est découverte **et 3 sceaux réunis** : entrer → **arène du boss**. |
-| Boss | Combat direct dans une arène dédiée. Attaques annoncées par des **zones rouges au sol** (cercle, ligne, cône au corps à corps, projectiles à distance) + monstres invoqués autour. Être touché = **étourdi** 1 à 1,5 s. **Miroir** toutes les 12–17 s pendant 3 s : frapper le boss renvoie 60 % des dégâts. L'onde circulaire (bord jaune) se **saute**. |
+| Boss | Combat direct dans une arène dédiée. Attaques annoncées par des **zones rouges au sol** (cercle, ligne, cône au corps à corps, projectiles à distance) + monstres invoqués autour. Être touché = **étourdi** 1 à 1,5 s. **Miroir** toutes les 12–17 s pendant 3 s : frapper le boss renvoie 60 % des dégâts. L'onde circulaire (bord jaune) se **saute**. PV fixes par carte et par époque, **rage du boss** après 2:30 / 3:00 / 4:00 (passe P11, voir « Boss : PV fixes et rage du boss »). |
 | Fin | Victoire (boss vaincu) ou défaite → bilan → lobby. Le bilan (même composant dans tous les modes) sépare **Gagné** (maîtrise, étoiles, déblocages), **Gardé** (insignes dont 25 de participation, pièces découvertes, coffres, fournitures d'une run réussie) et **Perdu** (or, clés, fournitures d'une run perdue). |
 
 ## Pression constante (easy to play, hard to master)

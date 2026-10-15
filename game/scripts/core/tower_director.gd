@@ -132,6 +132,11 @@ func _spawn_boss(z: Dictionary, lvl: int) -> void:
 	var dungeon: Dictionary = z.get("dungeon", {})
 	_boss = _spawn(int(dungeon.get("boss", d._pick_monster(lvl))), _center, lvl + 1, true)
 	_boss.display_name = "<Boss> " + _boss.display_name
+	if Tower.is_dungeon():
+		# donjon, Ruée, Siège : PV fixes par niveau et difficulté (passe P11), alliés ou trio en plus
+		var hp := Dungeons.boss_hp(lvl + 1, Tower.dungeon_diff, Tower.rush)
+		_boss.max_hp = hp * (Siege.BOSS_SCALE if Tower.siege else 1.0 + Dungeons.ALLY_HP_STEP * Tower.allies.size())
+		_boss.hp = _boss.max_hp
 	d._boss = _boss  # renforts et invocations du boss (RunDirector.summon_for_boss)
 	if _boss.brain:
 		_boss.brain.announce.connect(func(t): d.message.emit(t, 2.5))

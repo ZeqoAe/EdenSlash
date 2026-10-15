@@ -97,6 +97,9 @@ var insignia_parts: Dictionary = {}
 static var test_taken := 1.0
 ## Mesures : distance (m) en deçà de laquelle le bot de test combat au lieu de marcher vers son objectif.
 static var test_fight_range := 4.0
+## Mesures (--rush=<m>, passe P11) : en route vers le boss, le bot suit le chemin du donjon et ne combat qu'en deçà
+## de cette distance, comme un joueur qui file au boss (la horde le suit depuis P9) ; < 0 : comme le reste du temps.
+static var test_rush_range := -1.0
 ## Tirage de l'enclume : valeur -> poids (le plus souvent +2 à +4, moyenne ≈ +3,2, rarement +6/+7).
 ## Elle rattrape surtout les pièces peu améliorées : sur une pièce +10 du hub, le plafond coupe vite.
 const ANVIL_ROLLS := {0: 4, 1: 8, 2: 12, 3: 15, 4: 14, 5: 10, 6: 6, 7: 3}

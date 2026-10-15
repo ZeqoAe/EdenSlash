@@ -274,7 +274,8 @@ func _process(delta: float) -> void:
 
 func _objective_text() -> String:
 	if state == "boss":
-		return "Vaincs %s !" % (_boss.display_name if is_instance_valid(_boss) else "le boss")
+		var who := "Vaincs %s !" % (_boss.display_name.trim_prefix("<Boss> ") if is_instance_valid(_boss) else "le boss")
+		return who + ("\n" + boss_rage_text() if Run.survival else "")
 	if state == "cleared":
 		return "Boss vaincu ! Portail vers l'étape %d/%d" % [Run.stage + 1, STAGES] if next_zone_id() != "" else "Boss vaincu !"
 	var t := time_left()
@@ -894,6 +895,13 @@ func _enter_arena() -> void:
 	c.y = map.height_at(c.x, c.z)
 	_boss = _spawn_monster(boss_id, c, mini(maxi(player.level + 1, _monster_level(2)), max_level() + RAGE_LEVEL_BONUS), true)
 	_boss.display_name = "<Boss> " + _boss.display_name
+	_boss_time = 0.0
+	_boss_rage = 0
+	if Run.survival:
+		# PV fixes par carte et par époque (passe P11) ; la Menace s'y applique ensuite (Menace.apply, en différé)
+		_boss.max_hp = Epochs.boss_hp(Run.epoch, Run.stage) * float(Modifiers.apply("mob_hp", 1.0, ModeRules.modifiers)) \
+			* (1.0 + Epochs.HEROIC_HP * Run.heroic_rank)
+		_boss.hp = _boss.max_hp
 	var dungeon: Dictionary = zone.get("dungeon", {})
 	if _boss.brain:
 		_boss.brain.announce.connect(func(t): message.emit(t, 2.5))
@@ -912,6 +920,9 @@ func _enter_arena() -> void:
 func _update_boss(delta: float) -> void:
 	if not is_instance_valid(_boss) or _boss.is_dead:
 		return
+	_boss_time += delta
+	if Run.survival and boss_rage_tier() != _boss_rage:
+		_raise_boss_rage(boss_rage_tier())
 	_adds_timer -= delta
 	if _adds_timer <= 0.0:
 		_adds_timer = BOSS_ADDS_EVERY
@@ -920,6 +931,55 @@ func _update_boss(delta: float) -> void:
 			var a := TAU * i / 4.0 + randf()
 			var p := _boss.global_position + Vector3(cos(a), 0, sin(a)) * 8.0
 			var m := _spawn_monster(_pick_monster(lvl), _around(p, 2.0), lvl)
+
+
+## Rage du boss de la Survie (passe P11) : temps passé dans l'arène et palier atteint (0 avant Epochs.BOSS_RAGE_AT).
+var _boss_time := 0.0
+var _boss_rage := 0
+
+
+## Palier de la rage du boss (0 avant son début, puis 1 à RAGE_TIERS.size(), un de plus par minute) ; Survie seulement.
+func boss_rage_tier() -> int:
+	if state != "boss" or not Run.survival:
+		return 0
+	var at := Epochs.boss_rage_at(Run.stage)
+	if _boss_time < at:
+		return 0
+	return clampi(int((_boss_time - at) / RAGE_STEP) + 1, 1, RAGE_TIERS.size())
+
+
+## Secondes avant le palier suivant de la rage du boss (avant son début : avant le palier 1 ; -1 au dernier).
+func boss_rage_next_in() -> float:
+	var tier := boss_rage_tier()
+	if tier >= RAGE_TIERS.size():
+		return -1.0
+	return maxf(0.0, Epochs.boss_rage_at(Run.stage) + RAGE_STEP * tier - _boss_time)
+
+
+## Dégâts du boss au palier [param tier] de sa rage (ses PV ne changent pas : on ne peut plus le finir à temps).
+func _raise_boss_rage(tier: int) -> void:
+	var k := rage_mult(tier) / rage_mult(_boss_rage)
+	_boss_rage = tier
+	_boss.atk *= k
+	match tier:
+		1:
+			message.emit("LE BOSS ENTRE EN RAGE !\nAchève-le vite : ses coups montent chaque minute", 3.5)
+		2:
+			message.emit("LA RAGE DU BOSS MONTE !\nSes coups sont deux fois plus forts", 3.0)
+		3:
+			message.emit("LE BOSS SE DÉCHAÎNE !\nSes coups sont onze fois plus forts", 3.0)
+
+
+## Ligne d'horloge du combat de boss : « Rage du boss dans 1:42 », puis « RAGE ×2 · 0:42 ».
+func boss_rage_text() -> String:
+	var tier := boss_rage_tier()
+	var left := boss_rage_next_in()
+	if tier == 0:
+		return "Rage du boss dans %d:%02d" % [int(left) / 60, int(left) % 60]
+	var txt := "RAGE ×%s" % fmt_mult(rage_mult(tier))
+	if left >= 0.0:
+		txt += " · %d:%02d" % [int(left) / 60, int(left) % 60]
+	return txt
 
 
 ## Extraction : 10 s à survivre (une vague fonce sur le héros), puis on garde tout.

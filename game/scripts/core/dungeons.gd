@@ -19,6 +19,15 @@ const BOSS_HP := 25.0  # × les PV de base d'un monstre de son niveau
 const ALLY_HP_STEP := 0.5  # PV des monstres en plus par allié
 const MAX_ALLIES := 2
 const PLAN_CHANCE := 0.1  # plan de fabrication après un donjon déjà terminé dans cette difficulté
+## PV des boss de donjon, de la Ruée et du Siège (passe P11) : FIXES par niveau et difficulté, plus d'après les données
+## d'Eden de chaque boss (elles donnaient un boss Mythique de Limestone à 990 millions de PV, jamais tué, et un boss
+## Héroïque de Blackflame tué en 15 s). PV = BOSS_REF_HP × BOSS_GROWTH^(niveau − 15) × BOSS_DIFF[difficulté], comme
+## les dégâts d'un héros synchronisé (×1,09 par niveau, mesurés au pilote, tools/boss_ttk.py --dungeons) : ≈ 1 min 40,
+## 2 min, 2 min 30 avec l'équipement attendu de la difficulté ; la Ruée enchaîne 8 boss plus courts (RUSH_BOSS).
+const BOSS_REF_HP := 106000.0
+const BOSS_GROWTH := 1.09
+const BOSS_DIFF := [1.0, 3.4, 2.5]
+const RUSH_BOSS := 0.6
 
 
 ## Panoplie (archétype d'`Items.SETS`) de chaque donjon : ses pièces comptent pour 2 / 4 / 6 en plus du set d'Eden.
@@ -144,6 +153,11 @@ static func rooms(zid: String, diff: int) -> Array:
 	for i in ROOMS.size():
 		out.append({"type": ROOMS[i], "level": lv + (1 if ROOMS[i] == "boss" else 0)})
 	return out
+
+
+## PV fixes d'un boss de donjon de niveau [param lvl] en difficulté [param diff] (sans alliés ; Ruée : × RUSH_BOSS).
+static func boss_hp(lvl: int, diff: int, rush := false) -> float:
+	return BOSS_REF_HP * pow(BOSS_GROWTH, float(lvl - 15)) * float(BOSS_DIFF[clampi(diff, 0, BOSS_DIFF.size() - 1)]) * (RUSH_BOSS if rush else 1.0)
 
 
 static func hp_mult(boss: bool, elite: bool, allies: int) -> float:

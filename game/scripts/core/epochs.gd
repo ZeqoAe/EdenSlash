@@ -31,6 +31,29 @@ const LEVEL_BONUS := [0, 12, 22]
 ## compte neuf) seuls 53 % des runs tenaient 7 min sur la 1re carte et la simulation donnait 13 runs avant la 1re
 ## victoire (cible 5-8). Les époques II à IV ne bougent pas (R_P5.md).
 const MONSTER_MULT := [0.85, 1.7, 3.4, 7.0]
+## PV des boss de la Survie (passe P11, retour du joueur : « nos dégâts scalent à l'infini, le boss de la 3e carte a des
+## PV ridicules ») : FIXES par carte et par époque, jamais calculés d'après le niveau ou la PE du héros (sinon il
+## suffirait de foncer au boss). PV = BOSS_HP_MAP[carte] × BOSS_HP_EPOCH[époque] (× rangs héroïques, × Menace).
+## Réglés au pilote (tools/boss_ttk.py, R_P11.md) pour qu'une BONNE run de la carte (niveau plafond, cartes, trophées,
+## enclume, trouvailles) le tue en ≈ 1 / 1,5 / 2 min ; une run « rushée » (boss atteint tôt) met 4 à 8 min et se
+## heurte à la rage du boss. Avant : ≈ 40 000 à 120 000 PV partout (le niveau d'Eden du boss), tué en 5-15 s aux cartes 2-3.
+const BOSS_HP_MAP := [80000.0, 370000.0, 1750000.0]
+## Facteur d'époque des PV du boss : les dégâts d'une bonne run grandissent avec l'équipement du hub de l'époque
+## (mesurés au pilote, combats longs : ×1 / ×1,7-2,4 / ×3,9-4,9 / ×3,9-6,9 selon la carte).
+const BOSS_HP_EPOCH := [1.0, 2.0, 4.0, 5.5]
+## Rage du boss (passe P11) : après BOSS_RAGE_AT[carte] secondes dans l'arène, les dégâts du boss suivent les paliers de
+## la rage de la carte (RunDirector.RAGE_TIERS, une minute par palier : ×1,1, ×2, ×11, ×101). Environ deux fois le
+## temps d'une bonne run : une run ordinaire passe encore, une run rushée ne finit pas le combat.
+const BOSS_RAGE_AT := [150.0, 180.0, 240.0]
+
+
+## PV fixes du boss de la carte [param stage] de l'époque [param epoch] (sans rang héroïque ni Menace).
+static func boss_hp(epoch: int, stage: int) -> float:
+	return float(BOSS_HP_MAP[clampi(stage, 1, BOSS_HP_MAP.size()) - 1]) * float(BOSS_HP_EPOCH[clampi(epoch, 1, BOSS_HP_EPOCH.size()) - 1])
+
+
+static func boss_rage_at(stage: int) -> float:
+	return float(BOSS_RAGE_AT[clampi(stage, 1, BOSS_RAGE_AT.size()) - 1])
 
 
 ## Premiers niveaux de la Survie plus vite (0.1.164) : l'expérience gagnée est multipliée par ce facteur,

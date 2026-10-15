@@ -2431,10 +2431,22 @@ func _autoplay_input() -> Vector2:
 	var m := nearest_monster(40.0)
 	var to := Vector3.ZERO
 	var goal := autoplay_target if autoplay else _auto_objective()
+	var rushing := autoplay and autoplay_target != Vector3.INF and Run.test_rush_range >= 0.0
+	var fight_range := Run.test_rush_range if rushing else Run.test_fight_range
 	if goal == Vector3.INF:
 		goal = _farm_goal()  # rien d'autre à faire : coffres, lieux, objets à casser
-	if goal != Vector3.INF and (m == null or global_position.distance_to(m.global_position) > Run.test_fight_range):
+	if goal != Vector3.INF and (m == null or global_position.distance_to(m.global_position) > fight_range):
 		to = goal - global_position
+		if rushing and to.length() > 5.0:
+			# mesures (--rush) : suit le chemin du donjon (la trace affichée au joueur) au lieu de la ligne droite
+			var nav := get_tree().get_first_node_in_group("map") as Node3D
+			if nav:
+				for pt: Vector3 in nav.call("path_between", global_position, goal):
+					var d := pt - global_position
+					d.y = 0.0
+					if d.length() > 1.2:
+						to = d
+						break
 		if _time > _bot_check_at:
 			if global_position.distance_to(_bot_last_pos) < 1.0:
 				_bot_detour = to.normalized().rotated(Vector3.UP, PI / 2 * (1 if randf() < 0.5 else -1))

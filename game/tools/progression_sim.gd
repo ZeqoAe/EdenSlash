@@ -25,6 +25,10 @@ const BETA := 2.6
 ## Apprentissage : les premières runs sont plus dures (−LEARN au 1er essai, divisé par e toutes les LEARN_RUNS runs).
 const LEARN := 1.2
 const LEARN_RUNS := 3.0
+## Passe P11 : boss à PV fixes et rage du boss. Une carte survécue n'est finie que si le boss tombe avant que sa rage
+## ne tue le héros : chance sigmoïde(C_BOSS[carte] + BETA × ln R + talent), tirée des combats de la sonde
+## tools/boss_ttk.py (--human 0.5 : runs moyennes et bonnes, la moitié de chaque pour un joueur moyen appris).
+const C_BOSS := [3.0, 2.0, 2.0]
 const HERO_LEVELS := [15, 25, 35]
 const BASE_DRAWS := 6
 ## Durées (minutes) : carte finie, chargement, sessions d'activités.
@@ -56,6 +60,7 @@ var quiet := false
 var _cache := {}
 var trace := false
 var mult: Array = []  # --mult=1,1.8,3,4.5 : essai d'autres Epochs.MONSTER_MULT sans toucher le jeu
+var no_boss := "--no-boss" in OS.get_cmdline_user_args()  # passe P11 : sans l'enjeu du boss (comparaison avant / après)
 
 
 func _ready() -> void:
@@ -194,7 +199,14 @@ static func sigmoid(x: float) -> float:
 
 
 func clear_chance(r: float, k: int, talent: float) -> float:
-	return sigmoid(float(C_MAP[k]) + BETA * log(maxf(r, 0.05)) + talent)
+	return sigmoid(float(C_MAP[k]) + BETA * log(maxf(r, 0.05)) + talent) * boss_chance(r, k, talent)
+
+
+## Le boss de la carte [param k] tombe avant sa rage (passe P11) ; --no-boss : comme avant (boss sans enjeu).
+func boss_chance(r: float, k: int, talent: float) -> float:
+	if no_boss:
+		return 1.0
+	return sigmoid(float(C_BOSS[k]) + BETA * log(maxf(r, 0.05)))  # (le talent compte déjà dans la survie à la carte)
 
 
 # --- un compte ---------------------------------------------------------------------------------------

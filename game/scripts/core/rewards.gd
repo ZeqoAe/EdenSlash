@@ -28,6 +28,9 @@ const TYPES := {
 	"aura_rare": {"name": "Coffre d'aura rare", "desc": "Une aura rare.", "color": Color(0.45, 0.8, 1.0), "icon": "new"},
 	"aura_legend": {"name": "Coffre d'aura légendaire", "desc": "Une aura légendaire.", "color": Color(1.0, 0.7, 0.95), "icon": "new"},
 }
+## Plancher des pièces mythiques d'Eden (niveau 20-23) : un coffre d'équipement ne donne pas de pièce au-delà de
+## max(son niveau, ce plancher) + 5.
+const LOW_GEAR_FLOOR := 23
 const ORDER := ["aura_legend", "aura_rare", "look_legend", "look_epic", "look_rare", "look_common", "set", "gear", "forge", "jewel"]
 ## Spécialités des coffres de forge et de joaillier (voir ActivityLoot) : le contenu insiste sur une matière.
 const FOCUS_ORDER := ["", "scroll", "stone", "gem", "enchant"]
@@ -336,7 +339,14 @@ static func open(chest: Dictionary) -> Dictionary:
 	match String(chest.type):
 		"gear":
 			var rar := top_rarity(chest)
-			got.items.append(Items.generate(lv, 0.8, "", Profile.selected_class, rar, "", rar))
+			# emplacement tiré au hasard ; les capes mythiques d'Eden commencent au niveau 33 : un coffre de bas niveau
+			# en retire une autre pièce plutôt qu'une cape bien au-dessus de lui (passe P11, test_p9 aléatoire)
+			var it := Items.generate(lv, 0.8, "", Profile.selected_class, rar, "", rar)
+			for i in 6:
+				if int(it.get("level", 0)) <= maxi(lv, LOW_GEAR_FLOOR) + 5:
+					break
+				it = Items.generate(lv, 0.8, "", Profile.selected_class, rar, "", rar)
+			got.items.append(it)
 		"forge":
 			# parchemins de fortification du niveau du coffre et pierres de sûreté
 			var flv := Craft.fortify_level_at(lv)

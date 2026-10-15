@@ -46,6 +46,8 @@ func _ready() -> void:
 	var total := 0
 	var dist_sum := 0.0
 	var eff := 0.0
+	var detour := 0
+	var dmax := 0.0
 	for r in ROUTES:
 		var res: Dictionary = await _route(d, map, player, r)
 		stuck += int(res.stuck)
@@ -54,16 +56,24 @@ func _ready() -> void:
 		total += int(res.total)
 		dist_sum += float(res.dist)
 		eff += float(res.eff)
+		detour += int(res.detour)
+		dmax = maxf(dmax, float(res.dmax))
 	var stuck_pct := 100.0 * stuck / maxf(samples, 1)
 	var near_pct := 100.0 * near / maxf(total, 1)
 	var speed_ratio := eff / maxf(samples, 1)
 	var mean_d := dist_sum / maxf(total, 1)
-	print("[poursuite] échantillons %d · vitesse réelle / voulue %.2f · immobiles %.1f %% · à moins de 30 m à la fin %.0f %% · distance moyenne %.1f m" % [
-		samples, speed_ratio, stuck_pct, near_pct, mean_d])
+	var detour_pct := 100.0 * detour / maxf(samples, 1)
+	print("[poursuite] échantillons %d · vitesse réelle / voulue %.2f · immobiles %.1f %% · à moins de 30 m à la fin %.0f %% · distance moyenne %.1f m · contournement %.0f %% · le plus distancé %.0f m" % [
+		samples, speed_ratio, stuck_pct, near_pct, mean_d, detour_pct, dmax])
 	# avant la passe P9 : vitesse réelle 0,38 de la voulue (demi-tours vers le départ du chemin), distance moyenne 91 m
 	check("les monstres en chasse avancent à leur vitesse (%.2f de la vitesse voulue, ≥ 0,85)" % speed_ratio, speed_ratio >= 0.85)
 	check("presque jamais immobiles contre le décor (%.1f %% du temps, ≤ 6 %%)" % stuck_pct, stuck_pct <= 6.0)
 	check("la horde reste dans les talons du héros qui court (%.1f m en moyenne, ≤ 30 ; %.0f %% à moins de 30 m)" % [mean_d, near_pct], mean_d <= 30.0 and near_pct >= 70.0)
+	# passe P11 (sentiment) : en terrain dégagé la horde va droit au héros (2 % des pas mesurés s'écartent de plus
+	# de 30° : rochers, arbres, falaises contournés par le maillage), et un héros qui court distance les plus lents
+	# (vitesse 3,4 à 4,6 m/s, rattrapage ×1,7 au plus à 30 m : le plus lent plafonne à 5,8 m/s contre 6,5)
+	check("les monstres contournent le décor au lieu de foncer en ligne droite (%.1f %% des pas à plus de 30°, ≥ 1 %%)" % detour_pct, detour_pct >= 1.0)
+	check("pas de poursuite parfaite : les plus lents décrochent (%.0f m au plus loin, > 25)" % dmax, dmax > 25.0)
 	print("TOUS LES TESTS PASSENT" if fails == 0 else "%d ÉCHEC(S)" % fails)
 	get_tree().quit(1 if fails > 0 else 0)
 
@@ -101,6 +111,7 @@ func _route(d: RunDirector, map: ProcMap, player: Player, r: int) -> Dictionary:
 	var sample_t := 0.0
 	var eff_sum := 0.0
 	var states := {}
+	var detour := 0
 	while t < RUN_S:
 		var dt := get_physics_process_delta_time()
 		await get_tree().physics_frame
@@ -118,6 +129,11 @@ func _route(d: RunDirector, map: ProcMap, player: Player, r: int) -> Dictionary:
 				if last.has(m) and dist > 6.0 and m._state == "chase":
 					samples += 1
 					var moved := _flat(m.global_position, last[m])
+					# contournement (passe P11) : la marche s'écarte de plus de 30° de la ligne droite vers le héros
+					var step := Vector2(m.global_position.x - last[m].x, m.global_position.z - last[m].z)
+					var line := Vector2(player.global_position.x - last[m].x, player.global_position.z - last[m].z)
+					if moved > 0.5 and absf(step.angle_to(line)) > deg_to_rad(30.0):
+						detour += 1
 					eff_sum += moved / maxf(m.move_speed * m.catch_up(dist) * sample_t, 0.01)
 					if moved < m.move_speed * sample_t * 0.25:
 						stuck += 1
@@ -125,15 +141,17 @@ func _route(d: RunDirector, map: ProcMap, player: Player, r: int) -> Dictionary:
 			sample_t = 0.0
 	var near := 0
 	var dsum := 0.0
+	var dmax := 0.0
 	for m in mons:
 		if is_instance_valid(m):
 			states[m._state] = int(states.get(m._state, 0)) + 1
 			var dist := _flat(m.global_position, player.global_position)
 			dsum += dist
+			dmax = maxf(dmax, dist)
 			near += 1 if dist <= 30.0 else 0
 	if "--report" in OS.get_cmdline_user_args():
 		print("  course %d : chemin %.0f m, %d monstres, immobiles %d / %d, vitesse réelle / voulue %.2f, au contact %d, états %s" % [r + 1, _length(path), mons.size(), stuck, samples, eff_sum / maxf(samples, 1), near, states])
-	return {"stuck": stuck, "samples": samples, "near": near, "total": mons.size(), "dist": dsum, "eff": eff_sum}
+	return {"stuck": stuck, "samples": samples, "near": near, "total": mons.size(), "dist": dsum, "eff": eff_sum, "detour": detour, "dmax": dmax}
 
 
 func _length(p: PackedVector3Array) -> float:

@@ -27,7 +27,7 @@ def run_one(job):
     env["EDEN_PROFILE"] = "user://sim_%d_%s_%d.json" % (os.getpid(), cls, idx)
     cmd = [GODOT, "--headless", "--fixed-fps", "60", "--path", GAME, "res://scenes/world.tscn", "--", "--autoplay",
            "--auto-quit", "--class=" + cls, "--hub=" + a.hub, "--epoch=%d" % a.epoch, "--seed=%d" % seed,
-           "--boss-after=%d" % a.boss_after, "--quit-at=%d" % a.quit_at, "--human=%s" % a.human, "--fight=%s" % a.fight] + (a.extra.split() if a.extra else [])
+           "--boss-after=%d" % a.boss_after, "--quit-at=%d" % a.quit_at, "--human=%s" % a.human, "--fight=%s" % a.fight] + (["--rush=%s" % a.rush] if a.rush else []) + (a.extra.split() if a.extra else [])
     try:
         out = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=a.timeout, encoding="utf-8", errors="replace").stdout
     except subprocess.TimeoutExpired:
@@ -97,6 +97,7 @@ def main():
     ap.add_argument("--timeout", type=int, default=900)
     ap.add_argument("--jobs", type=int, default=5)
     ap.add_argument("--fight", default="8", help="le bot combat les monstres à moins de N mètres avant de marcher vers un objectif")
+    ap.add_argument("--rush", default="", help="en route vers le boss : suit le chemin du donjon, ne combat qu'à moins de N mètres (P11 : joueur qui file au boss)")
     ap.add_argument("--seed-base", dest="seed_base", type=int, default=1000)
     ap.add_argument("--extra", default="", help="arguments en plus pour le jeu (ex. « --no-cape » : coffres de cape remplacés)")
     ap.add_argument("--human", default="0", help="part des coups évités par un joueur humain (0 : le bot brut, 0.3 débutant, 0.5 bon joueur)")
@@ -107,7 +108,7 @@ def main():
             jobs.append((cls, a.seed_base + s * 7919, a, len(jobs)))
     with ThreadPoolExecutor(max_workers=a.jobs) as ex:
         res = list(ex.map(run_one, jobs))
-    print("hub=%s époque=%d boss-après=%ds coups évités=%s" % (a.hub, a.epoch, a.boss_after, a.human))
+    print("hub=%s époque=%d boss-après=%ds coups évités=%s rush=%s" % (a.hub, a.epoch, a.boss_after, a.human, a.rush or "-"))
     for r in res:
         print(" ", r)
     n = len(res)

@@ -48,6 +48,7 @@ var _zone_text := ""
 var _zone_extra := ""  # « Étape 1/3 », « Nv 29 » : en police ordinaire (le « 1 » de la police des titres se lit comme un I)
 var _target_big := false  # la cible est un boss : cadre large
 var _target_bars: Control
+var _target_phase: Control  # repère de phase sur la barre d'un boss (deux encoches)
 var _target_w := 380.0
 
 var _target_box: PanelContainer
@@ -407,7 +408,13 @@ func _update_objectives() -> void:
 		"tower":
 			_clock_label.text = director.tower.clock_text() if Tower.siege else "%s %d/%d" % ["Salle" if Tower.is_dungeon() else "Étage", Tower.floor_n, Tower.top()]
 		"boss":
+			# Survie (passe P11) : temps avant la rage du boss, puis son palier
 			_clock_label.text = "BOSS"
+			if Run.survival:
+				var tier: int = director.boss_rage_tier()
+				var left: float = director.boss_rage_next_in()
+				rage = tier > 0 or left < 30.0
+				_clock_label.text = director.boss_rage_text() if tier > 0 else "BOSS · %d:%02d" % [int(left) / 60, int(left) % 60]
 		"cleared":
 			_clock_label.text = "Victoire"
 		"rage":
@@ -451,6 +458,8 @@ func _update_objectives() -> void:
 			lines = director.royale.objective_lines() if director.royale else []
 		"boss":
 			lines = ["⚔ Vaincs le boss du donjon", "Évite les zones rouges ([%s] : esquive)" % Settings.action_label("dodge", 1)]
+			if Run.survival:
+				lines.append(director.boss_rage_text())  # passe P11 : le combat a une limite de temps
 		"cleared":
 			lines = ["✔ Boss vaincu : ramasse le butin"]
 		_:
@@ -578,6 +587,26 @@ func _build_target(root: Control) -> void:
 	_target_bar = _bar(bars, Color(0.86, 0.18, 0.24), 18)
 	_target_bar.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_target_bar.add_theme_stylebox_override("background", StyleBoxEmpty.new())
+	# boss : repère de la 2e phase (à mi-vie, il entre en fureur), deux encoches dorées en haut et en bas de la grande
+	# barre (le texte des PV reste lisible entre elles)
+	_target_phase = Control.new()
+	_target_phase.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_target_phase.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_target_phase.visible = false
+	bars.add_child(_target_phase)
+	for bottom in [false, true]:
+		var notch := ColorRect.new()
+		notch.color = Color(1.0, 0.85, 0.4)
+		notch.anchor_left = BossBrain.PHASE2_AT
+		notch.anchor_right = BossBrain.PHASE2_AT
+		notch.anchor_top = 1.0 if bottom else 0.0
+		notch.anchor_bottom = notch.anchor_top
+		notch.offset_left = -1.5
+		notch.offset_right = 1.5
+		notch.offset_top = -6.0 if bottom else 0.0
+		notch.offset_bottom = 0.0 if bottom else 6.0
+		notch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_target_phase.add_child(notch)
 	_target_hp = _label(bars, "", UiTheme.MIN_TEXT, Color.WHITE)
 	_target_hp.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_target_hp.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -832,6 +861,7 @@ func _update_target() -> void:
 	_target_name.text = t.display_name.trim_prefix("<Boss> ").trim_prefix("<Duel> ")
 	var m := t as Monster
 	_set_target_big(m != null and m.is_boss)
+	_target_phase.visible = m != null and m.brain != null and ratio > BossBrain.PHASE2_AT
 	var tag := "Nv %d" % t.level
 	if Combatant.is_hero(t):
 		tag = "Adversaire · " + tag  # duel, Tour : un héros, pas une élite

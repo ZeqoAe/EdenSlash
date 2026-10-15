@@ -93,6 +93,9 @@ func _apply_scenario_args() -> void:
 			Profile.save_profile()  # change la vue du hub vers cette classe (équipement de départ compris)
 		elif arg.begins_with("--hub="):
 			hub = arg.trim_prefix("--hub=")
+	if hub != "":
+		# mesures : réglages par défaut en mémoire (settings_test.cfg, partagé avec les tests, faussait le bot)
+		Settings.reset_all(false)
 	if hub != "" and hub != "new":
 		Profile.install_gear(StarterGear.scenario(hub, Profile.selected_class))
 
@@ -371,6 +374,8 @@ func _parse_args() -> void:
 				cards.offer("Coffre doré : choisis une pièce d'équipement", director.gear_cards(3, 2)))
 		elif arg.begins_with("--fight="):
 			Run.test_fight_range = float(arg.trim_prefix("--fight="))
+		elif arg.begins_with("--rush="):
+			Run.test_rush_range = float(arg.trim_prefix("--rush="))
 		elif arg.begins_with("--human="):
 			Run.test_taken = 1.0 - clampf(float(arg.trim_prefix("--human=")), 0.0, 0.95)
 		elif arg == "--god":

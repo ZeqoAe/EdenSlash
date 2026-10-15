@@ -6,6 +6,8 @@ extends Node
 ## Sous 50 % de PV : fureur (annonces plus courtes, onde régulière).
 
 signal enraged_phase
+## Seuil de la 2e phase (part des PV) : repère sur la barre du boss (HUD).
+const PHASE2_AT := 0.5
 ## Annonce d'une mécanique propre au boss (texte affiché par le directeur de run).
 signal announce(text: String)
 
@@ -47,7 +49,7 @@ func _physics_process(delta: float) -> void:
 	var player := boss._player
 	if player == null or player.is_dead:
 		return
-	if not _phase2 and boss.hp < boss.max_hp * 0.5:
+	if not _phase2 and boss.hp < boss.max_hp * PHASE2_AT:
 		_phase2 = true
 		enraged_phase.emit()
 		_cast_nova()

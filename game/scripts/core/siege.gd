@@ -18,6 +18,9 @@ const COUNT_MULT := 2.0  # monstres en nombre ×2 (par rapport à une salle de d
 const MONSTER_HP := Dungeons.MONSTER_HP * 2.0  # PV ×2
 const ELITE_HP := Dungeons.ELITE_HP * 2.0
 const BOSS_HP := 24.0  # × les PV de base du boss (15 dans un donjon à deux alliés) : un sac à PV
+## Passe P11 : PV du boss = PV fixes d'un boss de donjon du même niveau (Dungeons.boss_hp) × ce rapport (le même qu'avant :
+## 24 contre 7,5 pour un boss de donjon sans allié) ; trois héros le frappent, sa fureur à 6 min borne le combat.
+const BOSS_SCALE := BOSS_HP / (Dungeons.BOSS_HP * 0.3)
 const ENRAGE_AT := 360.0  # fureur du boss après 6 minutes de combat
 const ENRAGE_STEP := 15.0  # puis ses dégâts montent encore toutes les 15 s
 const REST_TIME := 7.0  # pause entre deux vagues (soin partiel, potions)
