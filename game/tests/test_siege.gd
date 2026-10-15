@@ -134,13 +134,16 @@ func _launch(diff: int) -> Node:
 	Tower.start_siege("warrior", _zone(), diff, ["cleric", "knight"])
 	var world: Node = load("res://scenes/world.tscn").instantiate()
 	get_tree().root.add_child.call_deferred(world)
-	await get_tree().create_timer(6.0).timeout
+	await get_tree().create_timer(2.0).timeout
+	await _wait(func(): return world.director != null and world.director.tower != null and world.cards != null, 40.0)
+	await get_tree().create_timer(1.0).timeout
 	var d: RunDirector = world.director
 	var player: Player = world.player
 	player.immortal = true  # les vagues ne doivent pas nous tuer pendant le test
 	world.cards._queue.clear()
 	world.cards._show_next()  # ferme le choix de départ (dépause)
-	await get_tree().create_timer(3.0).timeout
+	var td: SiegeDirector = d.tower
+	await _wait(func(): return td.alive() > 0)
 	return world
 
 
@@ -159,6 +162,14 @@ func _drive(world: Node, until: Callable, frames := 7000) -> void:
 			if not m.is_dead:
 				m.hp = 1.0
 				m.take_damage(1e12, world.player, false)
+		await get_tree().physics_frame
+
+
+## Attend (au plus [param secs] s de jeu) que [param cond] soit vraie : le test ne dépend pas de la vitesse de la machine.
+func _wait(cond: Callable, secs := 10.0) -> void:
+	var t := 0.0
+	while t < secs and not cond.call():
+		t += get_physics_process_delta_time()
 		await get_tree().physics_frame
 
 
@@ -184,18 +195,18 @@ func _test_full_game_won() -> void:
 	check("pas encore hostiles pendant la trêve", not Siege.ffa and player.ffa_id == -1)
 	var r0 := td._ring_r
 	td._ffa_t = Siege.TRUCE + 0.1
-	await get_tree().create_timer(0.3).timeout
+	await _wait(func(): return td.phase == "ffa")
 	check("trêve finie : chacun pour soi, trois ffa_id distincts", Siege.ffa and td.phase == "ffa" and player.ffa_id == 0 and td._allies[0].ffa_id == 1 and td._allies[1].ffa_id == 2)
 	check("le joueur peut frapper les alliés devenus rivaux", td._allies[0] in player.foes() and td._allies[1] in player.foes())
 	check("les alliés visent le joueur et l'autre allié", player in td._allies[0]._hostile_pool() and td._allies[1] in td._allies[0]._hostile_pool())
 	td._ffa_t = Siege.RING_TIME
-	await get_tree().create_timer(0.3).timeout
+	await _wait(func(): return is_equal_approx(td._ring_r, Siege.RING_TO))
 	check("l'anneau a rétréci (%.1f → %.1f m)" % [r0, td._ring_r], is_equal_approx(td._ring_r, Siege.RING_TO))
 	# hors de l'anneau : le joueur brûle
 	player.immortal = false
 	player.hp = player.max_hp
 	player.global_position = td._center + Vector3(Siege.RING_TO + 6.0, 1.0, 0)
-	await get_tree().create_timer(1.2).timeout
+	await _wait(func(): return player.hp < player.max_hp, 4.0)
 	check("hors de l'anneau : le joueur perd des PV", player.hp < player.max_hp)
 	player.global_position = td._center + Vector3(2.0, 1.0, 0)
 	player.immortal = true
@@ -203,9 +214,9 @@ func _test_full_game_won() -> void:
 	for a in td._allies:
 		a.hp = 1.0
 		a.take_damage(1000.0, player)
-	await get_tree().create_timer(0.4).timeout
+	await _wait(func(): return td.phase == "done")
 	check("les deux rivaux tombés : dernier debout", td.phase == "done" and Siege.outcome == "won" and not Siege.ffa)
-	await get_tree().create_timer(3.2).timeout
+	await _wait(func(): return not Tower.siege, 8.0)
 	var legend := Profile.reward_chests.filter(func(c): return c.type == "look_legend")
 	check("bilan : un coffre d'apparence légendaire dans les coffres, titre gagné", legend.size() == 1 and Siege.TITLE in Profile.extra_titles)
 	check("moteur remis à zéro, bilan affiché", not Tower.siege and not Tower.is_dungeon() and world.get_children().any(func(c): return c is DungeonResults))
@@ -223,13 +234,13 @@ func _test_full_game_escaped() -> void:
 	td.interact(td._core)
 	check("le joueur prend le cœur : il est le porteur, sa lueur est posée", Siege.carrier == player and td._core.used and is_instance_valid(td._orb))
 	td._ffa_t = Siege.TRUCE + 0.1
-	await get_tree().create_timer(0.3).timeout
+	await _wait(func(): return td.phase == "ffa")
 	check("les IA visent le porteur", td._allies[0]._hostile_pool() == [player] and td._allies[1]._hostile_pool() == [player])
 	td._ffa_t = Siege.RING_TIME
 	player.global_position = td._center + Vector3(Siege.RING_TO + 1.0, 1.0, 0)
-	await get_tree().create_timer(0.4).timeout
+	await _wait(func(): return td.phase == "done")
 	check("le porteur franchit l'anneau : il quitte le duel", Siege.outcome == "escaped" or Tower.siege == false)
-	await get_tree().create_timer(3.2).timeout
+	await _wait(func(): return not Tower.siege, 8.0)
 	var epic := Profile.reward_chests.filter(func(c): return c.type == "look_epic")
 	var legend := Profile.reward_chests.filter(func(c): return c.type == "look_legend")
 	check("récompense moindre : apparence épique, pas de légendaire", epic.size() == 1 and legend.is_empty())
@@ -245,13 +256,13 @@ func _test_eliminated() -> void:
 	var player: Player = world.player
 	await _to_ring(world)
 	td._ffa_t = Siege.TRUCE + 0.1
-	await get_tree().create_timer(0.3).timeout
+	await _wait(func(): return td.phase == "ffa")
 	player.immortal = false
 	player.hp = 1.0
 	player.take_damage(1e9, td._allies[0])
-	await get_tree().create_timer(0.5).timeout
+	await _wait(func(): return td.phase == "done")
 	check("joueur éliminé en chacun pour soi : classé 3e, partie finie", Siege.outcome == "eliminated" and Siege.rank == 3 and td.phase == "done")
-	await get_tree().create_timer(3.2).timeout
+	await _wait(func(): return not Tower.siege, 8.0)
 	var legend := Profile.reward_chests.filter(func(c): return c.type == "look_legend")
 	var gear := Profile.reward_chests.filter(func(c): return c.type == "gear")
 	check("éliminé : le boss compte (coffre d'équipement), pas de légendaire", gear.size() == 1 and legend.is_empty())
