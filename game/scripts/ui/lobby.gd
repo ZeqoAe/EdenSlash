@@ -50,6 +50,7 @@ var _tower_page := 0
 var _tower_sel := 1
 var _duel_opp := "warrior"  # mode Duel : adversaire et difficulté choisis
 var _duel_diff := 2
+var _badge: PanelContainer  # badge de la classe (en haut à droite) : un clic ouvre le choix de classe
 var _badge_icon: TextureRect
 var _badge_name: Label
 var _badge_sub: Label
@@ -183,6 +184,10 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--menu="):  # test : sous-menu ouvert (play, zones, tower, duel)
 			_show_menu(arg.trim_prefix("--menu="))
+	if Survivor.lobby_request == "class":  # bilan du Survivant, « Changer de classe » : la page du mode et le choix de classe
+		Survivor.lobby_request = ""
+		_show_menu("survivor")
+		_open_class_menu.call_deferred()
 	match _open_screen.get_slice("=", 0):
 		"tower-menu":
 			# test : étages de la Tour (--tower-menu=difficulté,étage ; avec un étage : sa fiche ouverte)
@@ -975,6 +980,7 @@ func _build_ui() -> void:
 	_foot.minimum_size_changed.connect(_queue_fit)
 	# badge de la classe (en haut à droite)
 	var badge := PanelContainer.new()
+	_badge = badge
 	badge.add_theme_stylebox_override("panel", MenuWidgets.glass(12))
 	badge.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	badge.offset_left = -380
@@ -1563,6 +1569,7 @@ func _menu_survivor() -> void:
 	cr.pressed.connect(func(): HeroPages.class_menu(cr, Profile.selected_class, func(id: String):
 		_select_class(id)
 		_show_menu("survivor")))
+	_survivor_rewards(1)
 	_section("Zone")
 	var zones := Survivor.zones()
 	if not _sv_zone in zones:
@@ -1605,6 +1612,27 @@ func _survivor_overview() -> void:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		l.custom_minimum_size = Vector2(90, 0)
+
+
+## Ce que le Survivant donne : trois coffres d'apparence selon l'avancée (✔ une fois gagnés), le titre au boss.
+func _survivor_rewards(tier: int) -> void:
+	_section("Coffres d'apparence", "Chaque palier d'avancée donne son coffre une fois ; ensuite, un coffre commun et un coffre rare au plus par jour.")
+	for g in SurvivorRewards.board(tier):
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		_sub.add_child(h)
+		var mark := Hud._label(h, "✔" if bool(g.done) else "◇", 15, UiTheme.GOLD if bool(g.done) else UiTheme.MUTED)
+		mark.custom_minimum_size = Vector2(18, 0)
+		var t := Hud._label(h, String(g.text) + ("  ·  titre « %s »" % String(g.title) if String(g.title) != "" else ""), 15, UiTheme.TEXT)
+		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var c: Dictionary = Rewards.TYPES[String(g.type)]
+		var n := Hud._label(h, String(c.name).trim_prefix("Coffre d'apparence "), 15, c.color)
+		n.tooltip_text = String(c.name)
+		n.mouse_filter = Control.MOUSE_FILTER_STOP
+		var gap := Control.new()  # la rareté ne touche pas la barre de défilement
+		gap.custom_minimum_size = Vector2(10, 0)
+		h.add_child(gap)
 
 
 func _start_survivor() -> void:
@@ -1896,6 +1924,11 @@ func _menu_quit() -> void:
 		backdrop.release()
 		get_tree().change_scene_to_file.call_deferred(TITLE_SCENE))
 	_row("Quitter le jeu", "Ta progression est sauvegardée", "quit", func(): get_tree().quit())
+
+
+func _open_class_menu() -> void:
+	if _badge != null and is_inside_tree():
+		HeroPages.class_menu(_badge, Profile.selected_class, _select_class)
 
 
 func _select_class(id: String) -> void:

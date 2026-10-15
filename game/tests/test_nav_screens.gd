@@ -329,6 +329,19 @@ func _ready() -> void:
 	await probe("bilan de Survie", 0.9)
 	r.queue_free()
 	get_tree().paused = false
+	# lot S6 : le bilan du Survivant (Rejouer, Changer de classe, Retour au lobby)
+	Run.survivor = true
+	SurvivorRewards.last = {"res": "victoire", "tier": 1, "time": 1260.0, "guardians": 3, "boss": true, "kills": 800, "title": "Survivant", "new_title": true,
+		"chests": [{"id": "win", "type": "look_epic", "text": "Vaincre le boss", "kind": "first"}], "build": SurvivorRewards.build()}
+	var rsv := ResultsScreen.new()
+	world.add_child(rsv)
+	rsv.show_results()
+	await get_tree().create_timer(ResultsPanel.LOCK_SECS + 0.3, true).timeout
+	await probe("bilan : Survivant", 0.9)
+	rsv.queue_free()
+	Run.survivor = false
+	SurvivorRewards.reset()
+	get_tree().paused = false
 	for mode in ["duel", "tour", "donjon", "royale"]:
 		var b: ResultsPanel
 		match mode:

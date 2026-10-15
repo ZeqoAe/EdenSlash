@@ -50,7 +50,7 @@ func _hub() -> String:
 		eq[s] = String(Profile.equipped[s].get("uid", ""))
 	var keys := {}
 	for k in Survivor.HUB_KEYS:
-		keys[k] = Profile.get(k)
+		keys[k] = SurvivorRewards.hub_view(k, Profile.get(k))
 	return JSON.stringify([Profile.vault.map(func(it): return String(it.get("uid", ""))), Profile.loadout, Profile.presets, eq, keys], "", true)
 
 

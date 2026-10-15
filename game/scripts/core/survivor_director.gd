@@ -140,6 +140,7 @@ func start_message() -> String:
 ## Chaque image, en exploration comme dans l'arène : chronologie, défis, journal minute par minute.
 func update(_delta: float) -> void:
 	_sample_minute()
+	SurvivorRewards.track(self)  # suivi pour les récompenses de fin (S6)
 	if d.state != "explore":
 		return
 	_update_challenges()

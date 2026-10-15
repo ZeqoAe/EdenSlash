@@ -136,6 +136,9 @@ S4 déroulé : `SurvivorDirector` (`timeline()` gardiens 5/10/15 min, portail 15
 prise par le `spawner` de P15 s'il existe ; gardiens et boss à PV fixes ; 30 coffres `BOXES` -> `SurvivorCards.chest_cards`) ; `test_sv4`.
 S5 interface : `ui/survivor_cards_view.gd` (rendu des cartes, délégué par `CardPicker` ; hauteur `card_cap()`), `ui/survivor_build_page.gd`
 (pause > Build), `ui/survivor_hud.gd` (frise 20 min, rage du boss) ; fiches `sv_*` dans le choix ; `test_sv5` (200 états, débordement), `shot_sv5`.
+S6 fin de run : `SurvivorRewards` (`track` par le directeur, `plan` / `settle` : coffres d'apparence seulement, une fois par palier d'avancée et de difficulté puis
+au plus un commun et un rare par jour, plafonds dans `Profile.records["sv_rewards"]`, titres de victoire ; `build()` pour le bilan), bilan `ResultsScreen.survivor_spec`
+(colonne « Ton build » de `ResultsPanel`, Rejouer / Changer de classe via `Survivor.lobby_request`), `Quests.end_run("survivor", …, quest_extra())` ; `test_sv6`, `shot_sv6`.
 Matières des activités (0.1.165, lot E1 de la nuit du 15/10, `DESIGN.md` « Matières et cristaux des activités ») : `core/activity_loot.gd`
 (cristaux et coffres de forge / du joaillier au niveau des Donjons, de la Ruée, du Siège et de la Tour, avec `focus` des coffres dans
 `Rewards`), `Forge.GOLD_PER_CRYSTAL` = 125, compteur d'Armurerie calculé (`Completion.armory_total`), plus de coffre de trophées. Test : `test_loot`.

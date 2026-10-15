@@ -12,6 +12,7 @@ extends CanvasLayer
 ##     "tiles": [["12", "niveau atteint"], ["3 / 8", "place", "infobulle", true]],   # [valeur, légende, infobulle, mis en avant]
 ##     "gained": [ResultsPanel.row("Maîtrise Guerrier", "+15", "", "expertise")],   # progression
 ##     "kept": [...], "lost": [...],                      # butin gardé ; ce qui reste dans la partie
+##     "build": [...],                                    # (Survivant) le build final : mêmes lignes, bloc bleu
 ##     "footnote": "",
 ##     "buttons": [{"text": "Rejouer", "primary": true, "call": func(): ...}, {"text": "Retour au lobby", "call": ...}],
 ## })
@@ -29,7 +30,8 @@ const KEPT := Color(0.5, 0.95, 0.58)
 const LOST := Color(1.0, 0.5, 0.45)
 const WIDTH := 1040.0
 const LOCK_SECS := 0.45  # les boutons n'agissent pas tout de suite : un appui de fin de combat ne doit rien valider
-const COLUMNS := [["gained", "Gagné", GAINED], ["kept", "Gardé", KEPT], ["lost", "Perdu", LOST]]
+const BUILD := INFO
+const COLUMNS := [["gained", "Gagné", GAINED], ["kept", "Gardé", KEPT], ["lost", "Perdu", LOST], ["build", "Ton build", BUILD]]
 const ICON_MATERIALS := ["gold", "keys", "crystal"]
 const COUNT_MIN := 10  # en dessous, un nombre apparaît tel quel (compter de 0 à 3 ne dit rien)
 const COUNT_SECS := 0.8

@@ -43,6 +43,7 @@ static var bans_used := 0
 static var picks := {}  # famille de carte -> nombre de cartes prises (journal, S3)
 static var since := {}  # cible -> choix depuis sa dernière apparition (pitié, S3)
 static var _hub := {}  # instantané de la progression du compte (HUB_KEYS)
+static var lobby_request := ""  # bilan -> lobby : "class" ouvre la page du mode et le choix de classe (lu une fois par le lobby)
 
 
 ## Remise à zéro (en tête de Run.start : tout autre mode lancé ensuite repart sans Survivant).
@@ -52,6 +53,7 @@ static func reset() -> void:
 	picks = {}
 	since = {}
 	_hub = {}
+	SurvivorRewards.reset()
 
 
 ## Zones jouables : celles des époques de la Survie (8 décors) ; aucune ne demande de progression.

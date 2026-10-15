@@ -40,24 +40,83 @@ func spec() -> Dictionary:
 	}
 
 
-## Bilan d'un Survivant (lot S1 : le minimum ; S6 y met les coffres d'apparence, le Codex et le bloc « Ton build »).
-## Aucune ligne de progression : le mode n'en donne pas.
+## Bilan d'un Survivant (lot S6) : l'avancée (niveau, durée, gardiens, boss), le titre gagné, les coffres d'apparence (les
+## seules récompenses du mode : jamais d'insignes, de maîtrise ni de découverte) et le build final. Rien n'est perdu.
 func survivor_spec() -> Dictionary:
+	var last := SurvivorRewards.last
 	var zone := String(GameData.zone(Survivor.zone_id).get("name", Survivor.zone_id))
+	var tier := int(last.get("tier", Survivor.palier))
+	var sub := "%s · Survivant · %s" % [Run.class_data().get("name_fr", ""), zone]
+	if tier > 1:
+		sub += " · palier %s" % ["", "II", "III", "IV", "V"][clampi(tier, 1, 5) - 1]
+	var won := Run.result == "victoire"
+	var boss := "vaincu" if won else ("atteint" if bool(last.get("boss", false)) else "—")
+	var kept := survivor_chest_rows(last)
+	var note := ""
+	if kept.is_empty():
+		note = "Tiens 10 minutes pour gagner un coffre d'apparence." if SurvivorRewards.reached(Run.result).is_empty() else "Récompenses du jour déjà prises."
 	return {
 		"title": TITLES.get(Run.result, "FIN"),
-		"tone": "win" if Run.result == "victoire" else "lose",
-		"subtitle": "%s · Survivant · %s" % [Run.class_data().get("name_fr", ""), zone],
-		"tiles": [[str(Run.max_level), "niveau atteint"], [Run.duration_text(), "durée"], [str(Run.kills), "monstres"],
-			[str(Run.elites), "élites"]],
-		"gained": [],
-		"kept": chest_rows(Run.new_reward_chests()),
-		"lost": lost_rows(false),
+		"tone": "win" if won else "lose",
+		"subtitle": sub,
+		"notes": ["Titre gagné : « %s »" % String(last.title)] if bool(last.get("new_title", false)) else [],
+		"tiles": [[str(Run.max_level), "niveau atteint"], [SurvivorDirector.clock(float(last.get("time", 0.0))), "durée"],
+			[str(Run.kills), "monstres"], [str(Run.elites), "élites"], ["%d / %d" % [int(last.get("guardians", 0)), SurvivorRewards.GUARDIANS], "gardiens"],
+			[boss, "boss", "Le boss t'attend à %s." % SurvivorDirector.clock(Survivor.RUN_TIME)]],
+		"kept": kept,
+		"build": survivor_build_rows(last.get("build", {})),
+		"quest": Quests.report_line(),
+		"footnote": note,
 		"buttons": [
 			{"text": "Rejouer", "primary": true, "call": _replay},
+			{"text": "Changer de classe", "call": _change_class},
 			{"text": "Retour au lobby", "call": _finish},
 		],
 	}
+
+
+## Coffres d'apparence de la run : un par palier d'avancée atteint (avec la raison au survol), puis ceux des quêtes.
+static func survivor_chest_rows(last: Dictionary) -> Array:
+	var out: Array = []
+	var mine: Array = last.get("chests", [])
+	for g in mine:
+		var why := "%s · %s" % [g.text, "première fois" if String(g.kind) == "first" else "une fois par jour"]
+		out.append(row(Rewards.kind_name(String(g.type)), "×1", why, "chest"))
+	out.append_array(chest_rows(Run.new_reward_chests().slice(mine.size())))
+	return out
+
+
+## Le build final : arme, pièces, panoplie, passifs et sorts (détail au survol).
+static func survivor_build_rows(b: Dictionary) -> Array:
+	var out: Array = []
+	if b.is_empty():
+		return out
+	var w: Dictionary = b.weapon
+	if w.is_empty():
+		out.append(row("Sans arme", "", "", "weapon"))
+	else:
+		out.append(row(String(w.name), "+%d" % int(w.upgrade) if int(w.upgrade) > 0 else "", "", "weapon"))
+	var tip: PackedStringArray = []
+	for p in b.pieces:
+		tip.append("%s : %s%s" % [Items.SLOT_NAMES.get(p.slot, p.slot), "+%d " % int(p.upgrade) if int(p.upgrade) > 0 else "", p.name])
+	out.append(row("Pièces", "%d / %d" % [(b.pieces as Array).size(), int(b.slots) - 1], "\n".join(tip), "armor"))
+	if int(b.set_n) >= 2:
+		out.append(row("Panoplie " + String(b.set), "%d / 5" % int(b.set_n), "Bonus à 2, 3 et 5 pièces", "equipment"))
+	if int(b.plus10) > 0:
+		out.append(row("Pièces à +10", str(b.plus10), "", "upgrade"))
+	if int(b.perfect) > 0:
+		out.append(row("Jets parfaits", str(b.perfect), "Pièces à 120 % de qualité", "new"))
+	var spells: Array = b.spells
+	var names: PackedStringArray = []
+	for s in spells:
+		names.append("%s (niv. %d)" % [s.name, int(s.rank)])
+	var shown := spells.size() if spells.size() <= 4 else 3  # quatre sorts au plus en ligne, sinon trois et « N autres »
+	for k in shown:
+		out.append(row(String(spells[k].name), "niv. %d" % int(spells[k].rank), "\n".join(names), "grimoire"))
+	if spells.size() > shown:
+		var more := spells.size() - shown
+		out.append(row("%d autre%s sort%s" % [more, "s" if more > 1 else "", "s" if more > 1 else ""], "", "\n".join(names), "grimoire"))
+	return out
 
 
 ## Progression de la run : maîtrise, étoiles, contrats, sorts et cartes débloqués.
@@ -178,10 +237,16 @@ func _replay() -> void:
 	Profile.end_run_survival()
 	get_tree().paused = false
 	if survivor:
-		Survivor.start(Profile.selected_class, Survivor.zone_id, Survivor.palier)  # même zone, même palier
+		Survivor.start(Run.class_id, Survivor.zone_id, Survivor.palier)  # même classe, même zone, même palier
 	else:
 		Run.start_survival(Profile.selected_class, epoch)
 	get_tree().change_scene_to_file("res://scenes/world.tscn")
+
+
+## Survivant : retour au lobby sur la page du mode, avec le choix de classe ouvert.
+func _change_class() -> void:
+	Survivor.lobby_request = "class"
+	_finish()
 
 
 func _finish() -> void:

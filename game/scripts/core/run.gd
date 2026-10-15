@@ -201,7 +201,7 @@ func finish(res: String) -> void:
 		# Survivant : aucun lien avec la progression du compte (ni maîtrise, ni insignes, ni records) ; le hub est
 		# remis tel qu'au départ, puis ses seules récompenses (SurvivorRewards, lot S6)
 		Survivor.finish(res, mini(kills, KILL_CAP_PER_MAP))
-		Quests.end_run("survivor", res == "victoire")  # après la remise du hub (quêtes, passe M5)
+		Quests.end_run("survivor", res == "victoire", SurvivorRewards.quest_extra())  # après la remise du hub (quêtes, passe M5)
 		Profile.save_profile()
 		return
 	Profile.record_max("best_combo", combo_best)

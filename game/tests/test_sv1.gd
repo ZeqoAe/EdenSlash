@@ -74,7 +74,17 @@ func _hub() -> String:
 	vault.sort()
 	var parts := ["vault=" + str(vault), "loadout=" + _norm(Profile.loadout), "presets=" + _norm(Profile.presets)]
 	for k in Survivor.HUB_KEYS:
-		parts.append("%s=%s" % [k, _norm(Profile.get(k))])
+		var v: Variant = Profile.get(k)
+		match k:  # (lot S6 : les seules choses que le Survivant donne : coffres d'apparence, titres, plafonds)
+			"reward_chests":
+				v = (v as Array).filter(func(c): return not String(c.type).begins_with("look_"))
+			"records":
+				v = (v as Dictionary).duplicate(true)
+				v.erase(SurvivorRewards.KEY)
+				v.erase("quests")
+			"extra_titles":
+				v = (v as Array).filter(func(t): return not String(t) in SurvivorRewards.TITLES)
+		parts.append("%s=%s" % [k, _norm(v)])
 	return "\n".join(parts)
 
 
@@ -252,7 +262,7 @@ func _flow() -> void:
 	check("défaite : bilan", await _until(func(): return _results() != null, 20.0, "bilan"))
 	var panel := _results()
 	await _wait(ResultsPanel.LOCK_SECS + 1.5)
-	check("bilan du Survivant : Rejouer puis Retour au lobby", panel.buttons.size() == 2 and panel.buttons[0].text == "Rejouer")
+	check("bilan du Survivant : Rejouer, Changer de classe, Retour au lobby", panel.buttons.size() == 3 and panel.buttons[0].text == "Rejouer")
 	var wid := world.get_instance_id()
 	panel.buttons[0].pressed.emit()
 	check("Rejouer : nouvelle partie", await _until(func(): return _is_world() and _scene().get_instance_id() != wid, 90.0, "monde relancé"))

@@ -622,6 +622,18 @@ d'apparence (lot S6). Socle (S1, 0.1.194) :
   carte, pièce à vie, paliers). Pause : page **Build** d'abord (emplacements verrouillés, sorts x / 10, passifs cumulés, sets
   2 / 3 / 5, statistiques), pas de page d'inventaire. HUD : frise des 20 minutes (gardiens, portail, boss) puis jauge de la
   rage du boss, « Équipement x / 9 · Sorts x / 6 », niveau de chaque sort en chiffre sur sa case.
+- **Fin de run et récompenses** (S6, `core/survivor_rewards.gd`) : **seulement des coffres d'apparence** (jamais d'insignes, de maîtrise,
+  de cristaux, de découvertes ni de puissance). Trois paliers d'avancée : tenir 10 minutes (temps de carte, pauses exclues) → coffre
+  commun ; trois gardiens vaincus → rare ; boss vaincu → mythique (**légendaire dès le palier II**) et un titre de victoire par
+  palier (Survivant, endurci, implacable, légendaire, Maître des survivants). Chaque palier d'avancée paie **une fois par palier de
+  difficulté** ; ensuite, au plus **un coffre commun (10 minutes) et un rare (boss vaincu) par jour** : le total est borné (15 coffres
+  « première fois » en tout), aucun farm cosmétique. Même une défaite ou un abandon paient ce qui a été atteint ; pas de titre hors
+  victoire. Plafonds dans `Profile.records["sv_rewards"]` (rien à migrer). Bilan (`ResultsScreen.survivor_spec`) : six tuiles (niveau,
+  durée, monstres, élites, gardiens x / 3, boss), titre gagné, bloc Gardé (les coffres, raison au survol), bloc **Ton build** (arme,
+  pièces x / 8, panoplie, pièces à +10, jets parfaits, sorts), ligne « Ta quête », boutons Rejouer (même classe, zone, palier), Changer
+  de classe (page du mode et choix de classe ouverts) et Retour au lobby ; rien de « Perdu » ni de maîtrise. Les quêtes reçoivent le
+  temps de carte. Page du lobby : trois lignes de récompenses (✔ une fois gagnées). L'apparence du hub (tenue, accessoires, aura,
+  skin d'arme du type) s'affiche pendant la run. Le hub reste intact (hors coffres d'apparence, titres et plafonds).
 
 ## Étapes et sources (refonte 0.1.91, façon Megabonk)
 
