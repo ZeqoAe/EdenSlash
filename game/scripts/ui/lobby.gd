@@ -397,6 +397,50 @@ func _menu_arenas() -> void:
 	_sub.add_child(go)
 
 
+## Battle royale : le niveau des sept héros IA, puis Lancer. Tout le monde part nu, niveau 1.
+var _royale_diff := -1
+
+
+func _menu_royale() -> void:
+	_activity_head("royale")
+	_activity_desc("royale")
+	Hud._label(_sub, "Adversaires", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	_sub.add_child(row)
+	for opt in [[-1, "Mélange"], [0, "Facile"], [1, "Normal"], [2, "Difficile"], [3, "Hardcore"]]:
+		var b := MenuWidgets.glass_button(("✔ " if _royale_diff == int(opt[0]) else "") + String(opt[1]), 14, Vector2(0, 40))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var k: int = opt[0]
+		b.pressed.connect(func():
+			_royale_diff = k
+			_show_menu("royale"))
+		row.add_child(b)
+	var rules := Hud._label(_sub, "• Chacun pour soi : 7 héros IA de classes au hasard, nus et niveau 1 comme toi.\n• 64 coffres sur la carte, en 3 qualités : équipement à ton niveau, potions (%s soin, %s effet), cartes.\n• Le niveau monte par coffres et éliminations ; le butin suit ton niveau.\n• L'anneau se referme en 4 phases (3 min 30) ; hors de lui, les dégâts montent.\n• Récompenses : insignes selon la place, coffre d'apparence au top 3, titre à la première victoire."
+		% [Settings.action_label("potion_1", 1), Settings.action_label("potion_2", 1)], 13, UiTheme.MUTED)
+	rules.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	rules.custom_minimum_size = Vector2(420, 0)
+	var rec := Hud._label(_sub, "Victoires : %d · meilleure place : %s · éliminations : %d" % [int(Profile.records.get("royale_wins", 0)),
+		str(int(Profile.records.get("royale_best", 0))) if int(Profile.records.get("royale_best", 0)) > 0 else "—", int(Profile.records.get("royale_kills", 0))], 14, Color(0.6, 0.85, 1.0))
+	rec.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var go := MenuWidgets.gold_button("Lancer le Battle royale", 22, Vector2(0, 58))
+	go.disabled = not Unlocks.is_open("royale")
+	go.tooltip_text = "" if Unlocks.is_open("royale") else Unlocks.lock_text("royale")
+	go.pressed.connect(_start_royale)
+	_sub.add_child(go)
+
+
+func _start_royale() -> void:
+	if _launching or not Unlocks.is_open("royale"):
+		return
+	_launching = true
+	if backdrop:
+		backdrop.release()
+	Royale.difficulty = _royale_diff
+	Royale.start(Profile.selected_class)
+	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+
+
 func _duel_tabs() -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
@@ -1126,6 +1170,8 @@ func _show_menu(id: String) -> void:
 			_menu_dungeon()
 		"arenas":
 			_menu_arenas()
+		"royale":
+			_menu_royale()
 		"rush":
 			_menu_rush()
 		"trials":

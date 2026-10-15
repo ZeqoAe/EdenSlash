@@ -110,6 +110,7 @@ var _seed := 0
 var orbs: XpOrbs  # orbes d'expérience au sol
 var tower: TowerDirector  # mode Tour : étages successifs (Tower)
 var duel: DuelDirector  # mode Duel : manches contre un héros (Duel)
+var royale: RoyaleDirector  # mode Battle royale : huit héros, un anneau (Royale)
 
 
 func start(p: Player) -> void:
@@ -119,6 +120,12 @@ func start(p: Player) -> void:
 	_roster = zone.monsters.map(func(x): return int(x))
 	_elites = zone.get("elites", []).map(func(x): return int(x))
 	_seed = Run.seed if Run.seed != 0 else randi()
+	if Royale.active:
+		# Battle royale : la grande carte, huit héros, un anneau (le directeur monte la carte)
+		royale = RoyaleDirector.new()
+		add_child(royale)
+		royale.setup(self)
+		return
 	if Duel.active:
 		# duel : une arène, pas de grande carte
 		Music.play(Music.DUEL)
@@ -207,6 +214,12 @@ func _process(delta: float) -> void:
 	if player == null or map == null:
 		return
 	RunJournal.tick(delta, player.global_position)
+	if state == "royale":
+		royale.update(delta)
+		_update_interactions()
+		_update_breakables(delta)
+		_keep_on_map()
+		return
 	if state == "duel":
 		duel.update(delta)
 		_keep_on_map()
@@ -316,6 +329,8 @@ func _interact(it: Interactable) -> void:
 	match it.kind:
 		"tower_chest", "tower_stairs":
 			tower.interact(it)
+		"chest" when state == "royale":
+			royale.open_chest(it)  # Battle royale : coffres gratuits, qualité = ce qu'ils donnent
 		"chest":
 			# une clé si on en a, sinon le prix en or (qui monte à chaque coffre ouvert)
 			var tier := int(it.get_meta("tier", 0))
@@ -792,7 +807,7 @@ func _update_boss(delta: float) -> void:
 
 ## Extraction : 10 s à survivre (une vague fonce sur le héros), puis on garde tout.
 func start_extraction() -> void:
-	if Tower.active or Duel.active:
+	if Tower.active or Duel.active or Royale.active:
 		return  # la Tour : on monte ou on tombe
 	if extracting or state == "cleared" or player == null or player.is_dead:
 		return
@@ -979,6 +994,8 @@ var _farm_cache := Vector3.INF
 ## Cible de farm du déplacement automatique et du bot de test : coffre qu'on peut ouvrir, lieu
 ## utile pas encore utilisé, sinon l'objet à casser le plus proche. Vector3.INF : rien.
 func farm_target() -> Vector3:
+	if state == "royale" and royale != null:
+		return royale.farm_target()
 	if not state in ["explore", "rage"] or map == null or player == null:
 		return Vector3.INF
 	if time < _farm_at:
@@ -1404,6 +1421,8 @@ func _update_challenges() -> void:
 ## Lieux connus à afficher sur la mini-carte : [position, type].
 func markers() -> Array:
 	var out: Array = []
+	if state == "royale":
+		return royale.markers()
 	if state in ["boss", "cleared"]:
 		return out
 	for k in _found:

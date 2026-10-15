@@ -93,9 +93,16 @@ func _draw() -> void:
 		else:
 			draw_circle(sp, 7.0, Color(0, 0, 0, 0.6))
 			draw_circle(sp, 5.5, col)
-	# monstres
+	# Battle royale : l'anneau actuel (violet) et le prochain (blanc)
+	if Royale.active and director.royale != null and not director.royale.ring.is_empty():
+		_draw_ring(w2s, director.royale.ring.center, float(director.royale.ring.radius), Color(0.7, 0.45, 1.0, 0.95))
+		if float(director.royale.ring.next_radius) < float(director.royale.ring.radius) - 1.0:
+			_draw_ring(w2s, director.royale.ring.next_center, float(director.royale.ring.next_radius), Color(1, 1, 1, 0.8))
+	# monstres (Battle royale : les autres héros ne se voient que de près)
 	for node in get_tree().get_nodes_in_group("monsters"):
 		var mo := node as Monster
+		if Royale.active and mo.global_position.distance_to(player.global_position) > 45.0:
+			continue
 		var sp: Vector2 = w2s.call(mo.global_position)
 		if not _inside(sp):
 			continue
@@ -119,6 +126,18 @@ func _draw() -> void:
 		var north := c + xf.basis_xform(Vector2(0, -1)).normalized() * (minf(size.x, size.y) * 0.5 - 12.0)
 		draw_circle(north, 9.0, Color(0.1, 0.08, 0.14, 0.9))
 		draw_string(get_theme_default_font(), north + Vector2(-5, 5), "N", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 0.9, 0.6))
+
+
+## Cercle de rayon [param r] m autour de [param c] (x, z) sur la carte ; seuls les points visibles sont tracés.
+func _draw_ring(w2s: Callable, c: Vector2, r: float, col: Color) -> void:
+	var prev := Vector2.INF
+	var steps := 96
+	for k in steps + 1:
+		var a := TAU * k / steps
+		var sp: Vector2 = w2s.call(Vector3(c.x + cos(a) * r, 0.0, c.y + sin(a) * r))
+		if prev != Vector2.INF and (_inside(sp) or _inside(prev)):
+			draw_line(prev, sp, col, 2.5, true)
+		prev = sp
 
 
 func _diamond(c: Vector2, r: float, col: Color) -> void:

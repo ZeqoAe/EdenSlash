@@ -300,7 +300,7 @@ func _update_tutorial() -> void:
 		_steps_text.text = Tutorial.step_text(s)
 	if _card_panel.visible and Time.get_ticks_msec() / 1000.0 > _card_until:
 		_card_panel.visible = false
-	if not _card_panel.visible and director != null and not director.state in ["boss", "duel", "tower"] and not Duel.active and not Tower.active:
+	if not _card_panel.visible and director != null and not director.state in ["boss", "duel", "tower", "royale"] and not Duel.active and not Tower.active:
 		var id := Tutorial.take_card()
 		if id != "":
 			var c: Dictionary = Tutorial.CARDS[id]
@@ -363,6 +363,8 @@ func _update_objectives() -> void:
 	_zone_label.text = _zone_text
 	var t := director.time_left()
 	match director.state:
+		"royale":
+			_clock_label.text = director.royale.clock_text() if director.royale else ""
 		"duel":
 			_clock_label.text = "Manche %d · %d - %d" % [Duel.round_n, Duel.wins, Duel.losses]
 			if PvpCaps.pressure() > 1.05:
@@ -381,7 +383,9 @@ func _update_objectives() -> void:
 	var need: int = director.SEALS_NEEDED
 	_seal_label.text = "Sceaux  " + "◆ ".repeat(mini(director.seals, need)) + "◇ ".repeat(maxi(0, need - director.seals))
 	_gold_label.text = "%d or · %d clé%s  " % [Profile.gold, Profile.keys, "s" if Profile.keys > 1 else ""]
-	_gold_label.visible = not Duel.active and not Tower.active
+	_gold_label.visible = not Duel.active and not Tower.active and not Royale.active
+	if Royale.active and director.royale:
+		_seal_label.text = "Battle royale · %d / %d en vie · %d élimination%s" % [director.royale.alive_count(), Royale.PLAYERS, Royale.kills, "s" if Royale.kills > 1 else ""]
 	if Duel.active:
 		_seal_label.text = "Duel %s · 2 manches gagnantes" % ClassRival.NAMES[Duel.difficulty].to_lower()
 	if Tower.active:
@@ -398,6 +402,8 @@ func _update_objectives() -> void:
 		return
 	var lines: Array[String] = []
 	match director.state:
+		"royale":
+			lines = director.royale.objective_lines() if director.royale else []
 		"boss":
 			lines = ["⚔ Vaincs le boss du donjon", "Évite les zones rouges ([%s] : esquive)" % Settings.action_label("dodge", 1),
 				"Miroir : ne frappe pas le boss pendant 3 s", "L'onde au bord jaune se saute"]

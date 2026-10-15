@@ -60,6 +60,8 @@ var _cancel_roll := false  # ce coup sera annulé juste après son impact
 var flee := false
 var flee_center := Vector3.ZERO
 var flee_radius := 0.0  # 0 : pas de bord
+## Battle royale : point à rejoindre tant qu'aucun adversaire n'est proche (coffre, anneau) ; INF : il combat.
+var goal := Vector3.INF
 
 
 ## Classe [param class_id] au niveau [param lvl] (PV et dégâts d'un héros de ce niveau).
@@ -451,6 +453,8 @@ func _update_chase(delta: float) -> Vector3:
 		return Vector3.ZERO
 	if flee:
 		return _update_flee(delta)
+	if goal != Vector3.INF:
+		return _update_goal(delta)
 	var to := _player.global_position - global_position
 	to.y = 0.0
 	var dist := to.length()
@@ -504,6 +508,20 @@ func _update_chase(delta: float) -> Vector3:
 	if _time >= _dash_until and is_on_floor():
 		play(_anim("run", "move02") if v.length() > 0.1 else _battle_anim(), 0.15)
 	return v
+
+
+## Va vers [member goal] (Battle royale) sans s'occuper des adversaires.
+func _update_goal(delta: float) -> Vector3:
+	var to := goal - global_position
+	to.y = 0.0
+	if to.length() < 1.2:
+		if _time >= _dash_until and is_on_floor():
+			play(_anim("idle", "stand01"), 0.2)
+		return Vector3.ZERO
+	face_direction(to, delta, 12.0)
+	if _time >= _dash_until and is_on_floor():
+		play(_anim("run", "move02"), 0.15)
+	return _path_step(goal) * move_speed
 
 
 ## Fuite : s'éloigne du héros en tournant autour de lui, se rabat vers le centre près du
@@ -592,7 +610,7 @@ func _start_attack() -> void:
 			if _state == "attack":
 				Sfx.play_at(self, global_position, String(snd[1]), -6.0))
 	play(anim_name, 0.06, speed, true)
-	if sk.is_empty() and Duel.active:
+	if sk.is_empty() and (Duel.active or Royale.active):
 		mult *= PvpCaps.basic_mult()  # auto-attaque entre héros en duel
 	var is_crit := randf() < crit_chance
 	var dmg := atk * mult * damage_dealt_mult() * randf_range(0.9, 1.1) * (1.0 + crit_bonus if is_crit else 1.0)

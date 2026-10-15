@@ -206,7 +206,7 @@ func _physics_process(delta: float) -> void:
 	if _retarget_t <= 0.0:
 		_retarget_t = 0.5
 		var pool := _hostile_pool()
-		if pool.size() > 1 or team == Team.PLAYER:  # un seul héros : la cible ne change pas
+		if pool.size() > 1 or team == Team.PLAYER or ffa_id >= 0:  # un seul héros : la cible ne change pas
 			var t := pick_target(pool, _player)
 			if t != null:
 				_player = t

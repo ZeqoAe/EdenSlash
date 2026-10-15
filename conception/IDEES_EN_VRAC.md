@@ -16,7 +16,7 @@ puis classée par **priorité** (apport au jeu) et **facilité** (travail et ris
 | 6 | File d'attente du Duel (recherche, match trouvé, draft 60 s, récap 10 s) | Haute | Moyenne | Beaucoup d'écrans mais peu de règles nouvelles ; prépare le chargement et un vrai en ligne | **Fait (0.1.157)** : `ui/duel_queue.gd` (Duel libre, Ligue, Panthéon ; pas les Arènes ni le Gantelet) |
 | 7 | Lisibilité des sorts : texture = zone = effet | Très haute | Difficile (itératif, à l'œil) | Le plus gros gain pour le JcJ, mais demande des captures et des allers-retours | **Premier lot fait (0.1.158)** : audit outillé, effets ajustés à leur zone, intensité réglable ; reste à faire avec ton œil : les 39 sorts de `conception/fx_audit.csv`, et « Triple lame » |
 | 8 | Trio PvE puis PvP (5 vagues, boss sac à PV, zone qui bascule en JcJ) | Haute | Difficile | Réutilise donjons, alliés IA et ciblage par camp ; nouveaux : vagues, boss long, bascule | Conçu, à coder (après 1 à 7) |
-| 9 | Battle royale (spawn aléatoire, coffres de loot, potions) | Haute | Difficile | Besoin de la PE, des potions et d'adversaires IA nombreux ; carte à zone réduite | Conçu, à coder |
+| 9 | Battle royale (spawn aléatoire, coffres de loot, potions) | Haute | Difficile | Besoin de la PE, des potions et d'adversaires IA nombreux ; carte à zone réduite | **Fait (0.1.161)** : `core/royale.gd`, `core/royale_director.gd`, `Combatant.ffa_id` ; reste : cerveaux du Panthéon en adversaires, image dédiée (celle du Champ de bataille sert en attendant) |
 | 10 | MOBA 4v4 | Moyenne | Très difficile | Voies, tours, sbires, objectifs : un jeu à part entière | Conçu, très long terme |
 
 L'ordre suit le rapport valeur / effort, avec une contrainte de dépendance : les potions (4) et la PE (3)
@@ -169,6 +169,31 @@ difficile ; une fois vaincu, la zone devient un JcJ à trois, le survivant gagne
 - **Anneau** qui se referme en 4 phases (3 min 30 au total), dégâts hors anneau croissants ; dernier debout gagne.
 - Récompenses : insignes selon le rang, coffre d'apparence au top 3, titre à la 1re victoire.
 - Dépend de : potions (4), PE (pour le plafond d'équipement des coffres), ciblage multi-camps (Trio).
+
+**Réalisation (0.1.161)**
+- **Chacun pour soi** : `Combatant.ffa_id` (-1 = les camps décident), `set_ffa(id)` / `clear_ffa()`, groupe « ffa » ;
+  `hostile_targets`, `hostile_heroes`, `Player.foes()` et `Monster._hostile_pool()` renvoient, pour un combattant en ffa,
+  tous les autres membres vivants du groupe. Coups au sol, projectiles, zones, procs et cibles des monstres suivent. Le Siège
+  s'en sert pour sa bascule (`Siege`).
+- **Mode** : `Royale.active` ; `Modes.current()` = « royale », règles JcJ (`PvpCaps`) avec le profil `ModeRules.ROYALE`
+  (échelle 0,05 : deux héros de même niveau se tuent en 30 à 50 s ; pas d'acharnement, l'anneau fait pression ; soins ×0,8).
+  Rien n'est gardé de la partie sauf les récompenses (sauvegarde rechargée comme au Duel).
+- **Carte** : `ProcMap.generate_royale` = la carte de Survie (512 m) sans camps, marchands, sanctuaires ni donjon, avec 64 coffres
+  (38 simples, 18 ouvragés, 8 dorés) et 4 fontaines. Spawns tirés au sort, au moins ~90 m les uns des autres.
+- **Anneau** (`Royale.PHASES`, `ring_at`) : 35 s d'attente + 15 s de resserrement (rayon 260 → 170), puis 30 + 15 (→ 110), 30 + 15
+  (→ 60), 25 + 20 (→ 14), dernier cercle 25 s (mort subite) = 3 min 30. Dégâts hors anneau par seconde, en part des PV max :
+  2 %, 4 %, 7 %, 12 %, 20 %. Le prochain anneau (centre tiré dans le précédent) est marqué en blanc sur la carte et la mini-carte.
+- **Coffres** (`Royale.CHEST_TIERS`) : trois pièces au choix du niveau du héros + 1, potions au sol (`RunDirector._drop_potion`),
+  parfois une carte (35 % ouvragé, 80 % doré), expérience (0,55 / 0,85 / 1,3 niveau). Une élimination = un niveau et 25 % de PV.
+- **Héros scriptés** (`ClassRival`, difficulté mélangée de Facile à Hardcore, réglable au lobby) : stats d'un vrai héros du même
+  niveau et du même équipement (`Royale.sheet`, `refresh_ai`) ; ils pillent les coffres (`ClassRival.goal`), fuient l'anneau,
+  se battent dès qu'un adversaire est à moins de 22 m, boivent leurs potions sous 40 % de PV. Niveau et pièces montent aux coffres
+  et aux éliminations comme ceux du joueur.
+- **Récompenses** (`Royale.settle`) : insignes 220 / 140 / 90 / 55 / 35 / 22 / 14 / 8 selon la place + 15 par élimination,
+  coffre d'apparence au top 3 (légendaire / épique / rare), titre « Dernier debout » à la première victoire.
+- **Verrou** : Ligue rang Argent (ou 6 victoires de duel), `Unlocks` « royale ».
+- Pas encore : cerveaux du Panthéon comme adversaires (`MlDuelPilot` demande un héros `foe` visé sur un seul adversaire),
+  équipes (duo / trio), spectateur après la mort, largage animé.
 
 ## 10. MOBA 4v4 (rang 10)
 **Idée du joueur** : un mode MOBA 4v4.

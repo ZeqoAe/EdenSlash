@@ -108,6 +108,11 @@ func _ready() -> void:
 			if Run.skills.is_empty():
 				for sk in Run.class_data().get("skills", []).slice(0, 4):
 					Run.skills.append({"id": int(sk.id), "rank": 1})
+		elif "--royale" in OS.get_cmdline_user_args():
+			for arg in OS.get_cmdline_user_args():  # test : Battle royale (--royale-diff=0..3)
+				if arg.begins_with("--royale-diff="):
+					Royale.difficulty = int(arg.trim_prefix("--royale-diff="))
+			Royale.start(Profile.selected_class)
 		elif "--tower" in OS.get_cmdline_user_args():
 			var diff := 1  # test : la Tour (--tower-diff=0..3, --tower-floor=N)
 			var from := 1
@@ -163,6 +168,8 @@ func _ready() -> void:
 			tower_end("abandon")
 		elif Duel.active:
 			duel_end(false)
+		elif Royale.active:
+			royale_end(Royale.PLAYERS)
 		else:
 			end_run("abandon"))
 	if Training.active:
@@ -188,7 +195,7 @@ func _ready() -> void:
 			_print_report()
 			get_tree().quit())
 	var zone_bonus := int(GameData.zone(Run.zone_id).get("level_bonus", 0))
-	if zone_bonus > 0 and player.level < 1 + zone_bonus:
+	if zone_bonus > 0 and player.level < 1 + zone_bonus and not Royale.active:
 		player.level = 1 + zone_bonus
 		player.recalc_stats()
 		player.hp = player.max_hp
@@ -451,6 +458,9 @@ func _on_player_died(_who: Combatant, _killer: Combatant) -> void:
 		await get_tree().create_timer(1.0).timeout
 		player.respawn(player.global_position)
 		return
+	if Royale.active:
+		director.royale.player_down()  # Battle royale : une seule vie ; le directeur annonce la place
+		return
 	if Duel.active:
 		director.duel.player_down()  # manche perdue ; la manche suivante le relève
 		return
@@ -627,6 +637,32 @@ func new_run_map(seed_value: int) -> ProcMap:
 ## Génère l'arène du boss.
 func new_arena_map(seed_value: int) -> ProcMap:
 	var m := ProcMap.new()
+## Génère la carte du Battle royale (la carte de Survie, remplie de coffres).
+func new_royale_map(seed_value: int) -> ProcMap:
+	var m := ProcMap.new()
+	m.biome = String(GameData.zone(Run.zone_id).get("biome", "limestone"))
+	m.name = "RoyaleMap"
+	_swap_map(m)
+	m.generate_royale(seed_value)
+	return m
+
+
+## Fin d'une partie de Battle royale : récompenses de la place [param place] (1 = vainqueur), puis le bilan.
+func royale_end(place: int) -> void:
+	if _ended:
+		return
+	_ended = true
+	pause_menu.close()
+	var kills := Royale.kills
+	var level := player.level
+	var chests: int = director.royale.chests_opened if director.royale else 0
+	var secs: float = director.royale.elapsed if director.royale else 0.0
+	var got := Royale.finish(place)
+	var r := RoyaleResults.new()
+	add_child(r)
+	r.show_results(place, kills, level, chests, secs, got)
+
+
 	m.biome = String(GameData.zone(Run.zone_id).get("biome", "limestone"))
 	m.name = "Arena"
 	_swap_map(m)

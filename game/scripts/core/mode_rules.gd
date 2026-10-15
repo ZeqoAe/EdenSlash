@@ -53,7 +53,17 @@ const PVP_A3 := {
 	"hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
 	"caps": PvpCaps.CAPS,
 }
+## Battle royale : héros nus qui montent de niveau en pillant ; huit héros qui se frappent (échelle réduite), pas
+## d'acharnement (l'anneau fait pression), soins presque entiers (les potions comptent).
+const ROYALE := {
+	"dmg_scale": 0.05, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": 0.8,
+	"max_mitigation": PvpCaps.MAX_MITIGATION, "pressure_start": 100000.0,
+	"pressure_step": PvpCaps.PRESSURE_STEP, "pct_weight": 0.75,
+	"hit_cap": 0.18, "burst_cap": 0.4, "burst_window": 2.0, "burst_excess": 0.3,
+	"caps": PvpCaps.CAPS,
+}
 const PROFILES := {
+	"royale": ROYALE,
 	"duel": PVP,
 	"duel_a": PVP_A,
 	"duel_b": PVP,

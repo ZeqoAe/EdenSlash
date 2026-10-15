@@ -399,6 +399,8 @@ func gain_xp(amount: int) -> void:
 	xp += amount
 	# Survie : niveau plafonné sur chaque map (Epochs.CAPS), l'expérience en trop attend la suivante
 	var cap := Epochs.cap(Run.stage) if Run.active and Run.survival and not foe else 9999
+	if Royale.active and not foe:
+		cap = Royale.LEVEL_CAP
 	if level >= cap:
 		xp = mini(xp, GameData.xp_to_next(level) - 1)
 	while xp >= GameData.xp_to_next(level) and level < cap:
