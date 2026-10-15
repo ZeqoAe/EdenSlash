@@ -531,6 +531,23 @@ d'apparence (lot S6). Socle (S1, 0.1.194) :
   critique, écho de compétence, barrière et soin) + stat du type d'armure. Propositions : type d'armure de la classe ×2,
   jamais deux pièces du même set dans une offre, set déjà porté à 3 pièces ×0,3 : un 5/5 ≈ 1 run sur 25 pour un joueur qui le
   cherche (`tools/sv_set_sim.tscn`), presque jamais sans le chercher.
+- **Déroulé** (S4, `core/survivor_director.gd`) : chronologie fixe (`SurvivorDirector.timeline`) : gardien à 5:00, 10:00 et
+  15:00 (annoncé 10 s avant, un géant de P12 à 18 m du héros, PV fixes 40 000 / 150 000 / 450 000 × palier × Menace, coups
+  plafonnés à 30 % des PV du héros ; vaincu : coffre du gardien et or, la Menace ne monte pas) ; portail du boss ouvert à
+  15:00 (sans sceau, entrée en avance comptée pour l'« Audace » de S6) ; « le boss arrive dans 1:00 » et horde finale à 19:00 ;
+  entrée forcée dans l'arène à 20:00 (attend un héros debout). Boss : PV fixes 1 500 000 × palier × Menace (jamais d'après le
+  héros), rage du boss après 4:00 (paliers de P11). Boss vaincu = victoire ; seconde chute = défaite ; abandon au menu pause ;
+  pas d'extraction.
+- **Monstres** : `SurvivorDirector.spawn_plan(t)` donne la composition par minute : vivants 18 → 110, meutes toutes les
+  6 → 1,8 s de 4 → 12, vagues alternées toutes les 45 → 25 s, élites dès 8:00 (40 s, puis 20 s par deux après 15:00), niveau
+  1 + 1,8 par minute (90 au plus ; sans le plancher « héros − 1 » qui emballait la run), PV × 0,5 × 1,12^min, dégâts × 0,5 × 1,07^min, × palier. Le
+  composant de spawn de P15 (`RunDirector.spawner`) prend les meutes et les vagues quand il est là (`--spawn=legacy` : celui du
+  Survivant). Plus de plafond de niveau du héros par carte (90).
+- **Ce qui reste / disparaît** : or (monstres, objets cassés, défis, gardiens ; coffres et marchands), clés, XP, potions (3 % /
+  30 %), fontaine, aimant, sanctuaires, camps d'élite (clé + carte), pacte et autels du géant (P12 inchangé) **restent** ; 30
+  coffres du Survivant (2 par emplacement d'armure et de bijou, 2 d'arme, 6 de sort ouvragés, 6 dorés) dont le contenu vient
+  de `SurvivorCards.chest_cards` ; l'enclume donne +2 sur une pièce portée ; la stèle du défi donne un coffre doré ; plus de
+  butin d'équipement, de coffre de récompense, de fourniture, de gemme, d'arme secondaire ni de sceau.
 
 ## Étapes et sources (refonte 0.1.91, façon Megabonk)
 

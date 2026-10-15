@@ -125,6 +125,8 @@ Survivant (en chantier, lots S1-S8 de `conception/survivor/` : `SPEC.md` corrig�
 branchés par des crochets `Survivor.active` / `sv` (`run_director.gd`) ; activité visible en mode dev (`Survivor.READY`) ; `world.tscn -- --survivor` ; test `test_sv1`.
 S2 pièces et arme : `SurvivorPool` (13 sets de niveau 90, bonus 2/3/5 via `Items.set_def` en Survivant), `SurvivorGear` (stats d'origine, qualité 100-120 %,
 passif fixe `fixed_passive` + paliers tirés à la proposition `upgrade_offer` / `apply_upgrade`, `equip` verrouillé à vie, `weapon_offers`) ; `test_sv2`, `tools/sv_set_sim.tscn`.
+S4 déroulé : `SurvivorDirector` (`timeline()` gardiens 5/10/15 min, portail 15:00, arène forcée 20:00 ; `spawn_plan(t)` courbe des monstres,
+prise par le `spawner` de P15 s'il existe ; gardiens et boss à PV fixes ; 30 coffres `BOXES` -> `SurvivorCards.chest_cards`) ; `test_sv4`.
 Matières des activités (0.1.165, lot E1 de la nuit du 15/10, `DESIGN.md` « Matières et cristaux des activités ») : `core/activity_loot.gd`
 (cristaux et coffres de forge / du joaillier au niveau des Donjons, de la Ruée, du Siège et de la Tour, avec `focus` des coffres dans
 `Rewards`), `Forge.GOLD_PER_CRYSTAL` = 125, compteur d'Armurerie calculé (`Completion.armory_total`), plus de coffre de trophées. Test : `test_loot`.

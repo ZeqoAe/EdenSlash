@@ -1,94 +1,539 @@
 class_name SurvivorDirector
 extends RefCounted
-## Déroulement d'un Survivant (lot S4, SPEC §1, §6, §8.2-8.3) : 20 minutes sur une seule carte, courbes de monstres,
-## gardiens à 5 / 10 / 15 min, portail du boss à 15:00, boss forcé à 20:00, coffres du Survivant, lieux propres.
-## Créé par RunDirector.start quand Survivor.active (variable `sv` du directeur).
+## Déroulement d'un Survivant (lot S4, SPEC §1, §6, §8.2-8.3, corrigé par DECISIONS_JOUEUR) : 20 minutes sur une seule
+## carte, sans rage de carte ; la pression vient de la courbe des monstres par minute. Créé par RunDirector.start quand
+## Survivor.active (variable `sv` du directeur).
 ##
-## Lot S1 : squelette. Chaque méthode qui REMPLACE un comportement de la Survie renvoie vrai si elle l'a pris en charge
-## (faux : le directeur fait comme en Survie) ; les autres ne font rien. Seules différences déjà actives : pas de rage de
-## carte (crochet du directeur), une seule carte (le boss vaincu termine la run) et le message d'ouverture.
+## Chronologie (timeline()) : gardiens à 5:00, 10:00 et 15:00 (annoncés 10 s avant), portail du boss ouvert à 15:00
+## (entrée en avance permise), « le boss arrive dans 1:00 » et horde finale à 19:00, entrée forcée dans l'arène à 20:00.
+## Arène : boss de la zone à PV FIXES (boss_hp × palier × Menace, jamais d'après le héros), rage du boss après
+## boss_rage_at (4:00), renforts du directeur. Boss vaincu = victoire ; seconde chute = défaite (world.gd).
+##
+## Monstres : spawn_plan(t) donne la composition voulue à l'instant t (vivants au plus, rythme des meutes, vagues,
+## élites, niveau, PV et dégâts) ; update_spawns l'applique avec les outils du directeur (anneau, meutes). Interface
+## étroite pour le composant de spawn de P15 : il n'aura qu'à lire spawn_plan(t).
+##
+## Convention des crochets (S1) : une méthode qui remplace un comportement de la Survie renvoie vrai si elle l'a pris
+## en charge (faux : le directeur fait comme en Survie).
+
+## Coffres du Survivant (SPEC §6.2) : nom, apparence (ProcMap.CHEST_LOOKS : 0 simple, 1 ouvragé, 2 doré), prix
+## (× RunDirector.chest_price) et emplacement visé. Le contenu vient de SurvivorCards.chest_cards(id) (lot S3).
+const BOXES := {
+	"sv_weapon": {"name": "Coffre d'arme", "look": 0, "price": 1.0, "slot": "weapon"},
+	"sv_head": {"name": "Coffre de tête", "look": 0, "price": 1.0, "slot": "head"},
+	"sv_chest": {"name": "Coffre de torse", "look": 0, "price": 1.0, "slot": "chest"},
+	"sv_legs": {"name": "Coffre de jambes", "look": 0, "price": 1.0, "slot": "legs"},
+	"sv_gloves": {"name": "Coffre de gants", "look": 0, "price": 1.0, "slot": "gloves"},
+	"sv_boots": {"name": "Coffre de bottes", "look": 0, "price": 1.0, "slot": "boots"},
+	"sv_back": {"name": "Coffre de cape", "look": 0, "price": 1.0, "slot": "back"},
+	"sv_necklace": {"name": "Coffre de collier", "look": 0, "price": 1.0, "slot": "necklace"},
+	"sv_ring": {"name": "Coffre de bague", "look": 0, "price": 1.0, "slot": "ring"},
+	"sv_spell": {"name": "Coffre de sort", "look": 1, "price": 1.2},
+	"sv_gold": {"name": "Coffre doré", "look": 2, "price": 1.5},
+}
+## Les 30 coffres de la carte : 2 par emplacement d'armure et de bijou (16), 2 d'arme, 6 de sort, 6 dorés.
+const LAYOUT := ["sv_head", "sv_head", "sv_chest", "sv_chest", "sv_legs", "sv_legs", "sv_gloves", "sv_gloves",
+	"sv_boots", "sv_boots", "sv_back", "sv_back", "sv_necklace", "sv_necklace", "sv_ring", "sv_ring",
+	"sv_weapon", "sv_weapon", "sv_spell", "sv_spell", "sv_spell", "sv_spell", "sv_spell", "sv_spell",
+	"sv_gold", "sv_gold", "sv_gold", "sv_gold", "sv_gold", "sv_gold"]
+## Coffres hors carte, même mécanisme : celui du gardien vaincu, l'enclume (+2 sur une pièce portée).
+const GUARDIAN_BOX := "sv_guardian"
+const ANVIL_BOX := "sv_anvil"
+
+## Niveau maximal du héros, des monstres et du butin (la puissance des pièces suit le héros, plafonnée à 90).
+const MAX_LEVEL := 90
+const GUARDIAN_WARN := 10.0  # annonce d'un gardien, secondes avant
+const GUARDIAN_DIST := 18.0  # un gardien surgit à cette distance du héros
+const GUARDIAN_GOLD := [60, 15]  # or d'un gardien vaincu : base + par niveau (comme un géant)
+const PORTAL_MSG_DELAY := 5.0  # l'annonce du portail suit celle du 3e gardien (même minute)
+const FINAL_HORDE_AT := 1140.0  # 19:00 : « le boss arrive dans 1:00 », densité maximale
+const FINAL_HORDE := 30  # monstres de la horde finale, en anneau autour du héros
+const CHALLENGE_GOLD := [40, 12]  # stèle du défi réussie : or (base + par niveau), et un coffre doré gratuit
+const MSG_THROTTLE := 3.0  # secondes entre deux messages répétés (portail fermé, enclume vide)
 
 var d: RunDirector
+var _next := 0  # prochain événement de la chronologie
+var _events: Array = []
+var _forced := false  # entrée dans l'arène lancée (en avance ou forcée)
+var arena_at := -1.0  # instant de l'entrée dans l'arène (temps de carte) ; -1 avant
+var arena_forced := false  # entrée forcée à 20:00 (sinon : en avance, bonus « Audace » du lot S6)
+var boss_hp := 0.0  # PV du boss posés à l'entrée (avant la Menace, appliquée en différé)
+var guardians: Array = []  # {n, t, level, hp, ttk} : un par gardien apparu
+var _minutes: Array = []  # journal : une ligne par minute de carte
+var _minute := 0
+var _pack_t := 3.0
+var _wave_t := 45.0
+var _elite_t := 0.0
+var _despawn_t := 2.0
+var _wave_hard := false
+var _challenges: Array = []  # stèles du défi en cours : {pos, elites}
+var _msg_at := {}  # message -> instant du dernier affichage (anti-répétition)
+var _base_context: Callable  # contexte de la carte du directeur (journal de run)
 
 
 func _init(director: RunDirector) -> void:
 	d = director
+	_events = timeline()
+	# journal de run : le contexte de la carte (posé par RunDirector.start juste avant) reçoit en plus nos champs (méthode
+	# liée plutôt qu'une fonction anonyme : une variable statique qui garde une fonction anonyme fait planter la sortie)
+	_base_context = RunJournal.context
+	RunJournal.context = _journal_context
 
 
-## Message d'ouverture de la carte ("" : celui de la Survie).
+## Règle du profil « survivor » (ModeRules, modifiable en mode dev) ; [param fallback] si la clé n'y est pas.
+static func r(key: String, fallback: Variant) -> Variant:
+	return ModeRules.rule(key, fallback, "survivor")
+
+
+## Multiplicateur du palier en cours (monstres, gardiens et boss : PV et dégâts, SPEC §8.5).
+static func palier_mult() -> float:
+	var m: Array = r("palier_mult", [1.0])
+	return float(m[clampi(Survivor.palier - 1, 0, m.size() - 1)])
+
+
+## Chronologie de la run : événements datés (secondes de carte), dans l'ordre. id : guardian_warn, guardian,
+## portal, final_horde, boss ; n : rang du gardien.
+static func timeline() -> Array:
+	var out: Array = []
+	for i in Survivor.GUARDIAN_TIMES.size():
+		out.append({"t": float(Survivor.GUARDIAN_TIMES[i]) - GUARDIAN_WARN, "id": "guardian_warn", "n": i})
+		out.append({"t": float(Survivor.GUARDIAN_TIMES[i]), "id": "guardian", "n": i})
+	out.append({"t": Survivor.BOSS_OPEN_AT + PORTAL_MSG_DELAY, "id": "portal"})
+	out.append({"t": FINAL_HORDE_AT, "id": "final_horde"})
+	out.append({"t": Survivor.RUN_TIME, "id": "boss"})
+	out.sort_custom(func(a, b): return float(a.t) < float(b.t))
+	return out
+
+
+## Composition voulue à [param t] secondes de carte (SPEC §8.2) : vivants au plus, rythme et taille des meutes, vagues,
+## élites (0 : aucune), niveau de base, PV et dégâts (× palier), horde finale. Interpolée sur les 20 minutes ; au-delà
+## (renforts de l'arène) elle reste celle de 20:00.
+static func spawn_plan(t: float) -> Dictionary:
+	var mins := clampf(t / 60.0, 0.0, Survivor.RUN_TIME / 60.0)
+	var k := mins / (Survivor.RUN_TIME / 60.0)
+	var final := t >= FINAL_HORDE_AT
+	var pk := palier_mult()
+	var pack_every: Array = r("pack_every", [6.0, 1.8])
+	var pack_size: Array = r("pack_size", [4, 12])
+	var wave_every: Array = r("wave_every", [45.0, 25.0])
+	var elite_every: Array = r("elite_every", [40.0, 20.0])
+	var elites_from := float(r("elites_from", 480.0))
+	return {
+		"minute": mins,
+		"alive_max": roundi(lerpf(float(r("alive_start", 18)), float(r("alive_end", 110)), 1.0 if final else k)),
+		"pack_every": float(pack_every[1]) if final else lerpf(float(pack_every[0]), float(pack_every[1]), k),
+		"pack_size": roundi(lerpf(float(pack_size[0]), float(pack_size[1]), 1.0 if final else k)),
+		"wave_every": lerpf(float(wave_every[0]), float(wave_every[1]), k),
+		"elite_every": 0.0 if t < elites_from else float(elite_every[1] if t >= Survivor.BOSS_OPEN_AT else elite_every[0]),
+		"level": clampi(roundi(1.0 + float(r("level_per_min", 1.8)) * mins), 1, MAX_LEVEL),
+		"hp_mult": float(r("hp0", 0.5)) * pow(float(r("hp_growth", 1.12)), mins) * pk,
+		"atk_mult": float(r("atk0", 0.5)) * pow(float(r("atk_growth", 1.07)), mins) * pk,
+		"final": final,
+	}
+
+
+## Message d'ouverture de la carte.
 func start_message() -> String:
-	return "%s · Survivant\nMonte de niveau : arme, pièces et sorts se gagnent aux cartes" % String(d.zone.get("name", ""))
+	return "%s · Survivant\nTiens 20 minutes : le boss arrive à 20:00" % String(d.zone.get("name", ""))
 
 
-## Chaque image, en exploration comme dans l'arène (gardiens, portail, horde finale : S4).
+## Chaque image, en exploration comme dans l'arène : chronologie, défis, journal minute par minute.
 func update(_delta: float) -> void:
-	pass
+	_sample_minute()
+	if d.state != "explore":
+		return
+	_update_challenges()
+	while _next < _events.size() and d.time >= float(_events[_next].t):
+		var ev: Dictionary = _events[_next]
+		if ev.id == "boss" and not _can_force():
+			return  # héros à terre : l'entrée forcée attend qu'il se relève
+		_next += 1
+		_fire(ev)
 
 
-## Apparition des monstres de la carte ; faux : celle de la Survie.
-func update_spawns(_delta: float) -> bool:
-	return false
+func _fire(ev: Dictionary) -> void:
+	match String(ev.id):
+		"guardian_warn":
+			d.message.emit("Un gardien approche !\nIl surgit dans %d secondes" % int(GUARDIAN_WARN), 3.0)
+		"guardian":
+			spawn_guardian(int(ev.n))
+		"portal":
+			d.dungeon_found = true  # la trace mène au portail
+			d.message.emit("Le portail du boss est ouvert !\nEntre quand tu veux : le boss arrive à 20:00", 4.0)
+		"final_horde":
+			d.message.emit("Le boss arrive dans 1:00 !\nLa horde se déchaîne", 4.0)
+			_ring(FINAL_HORDE, monster_level(0), 16.0)
+		"boss":
+			enter_arena(true)
 
 
-## Ligne d'objectif en exploration ("" : celle de la Survie).
-func objective_text() -> String:
-	return ""
+## L'entrée forcée attend un héros debout (la résurrection prend 3 s).
+func _can_force() -> bool:
+	return d.player != null and not d.player.is_dead
 
 
-## Niveau des monstres (0 : celui de la Survie).
-func monster_level(_tier: int) -> int:
-	return 0
+## Entrée dans l'arène du boss (en avance au portail, ou forcée à 20:00) : une seule fois.
+func enter_arena(forced: bool) -> void:
+	if _forced or d.state != "explore":
+		return
+	_forced = true
+	arena_forced = forced
+	if forced:
+		d.message.emit("Le boss t'attend !", 2.0)
+	print("[sv] entrée dans l'arène à %s (%s), niveau %d" % [clock(d.time), "forcée" if forced else "en avance", d.player.level])
+	ScreenFade.run(d.get_tree(), d._enter_arena)
 
 
-## Niveau maximal des monstres et du butin (0 : celui de la Survie).
+## Vrai quand le portail du boss est ouvert (15:00).
+func portal_open() -> bool:
+	return d.time >= Survivor.BOSS_OPEN_AT
+
+
+## Secondes d'avance à l'entrée de l'arène (0 : forcée ou pas encore entré) ; bonus « Audace » (lot S6).
+func early_seconds() -> float:
+	if arena_at < 0.0 or arena_forced:
+		return 0.0
+	return maxf(0.0, Survivor.RUN_TIME - arena_at)
+
+
+# --- monstres ------------------------------------------------------------------------------------------------------
+## Apparition des monstres de la carte d'après spawn_plan (remplace celle de la Survie) : gardiens d'élite des camps,
+## meutes continues, vagues alternées (encerclement + élite / horde), élites ponctuelles.
+func update_spawns(delta: float) -> bool:
+	var plan := spawn_plan(d.time)
+	var cap := int(plan.alive_max)
+	var alive := _alive()
+	_despawn_t -= delta
+	if _despawn_t <= 0.0:
+		_despawn_t = 2.0
+		if alive > int(cap * 0.8):
+			alive -= d._despawn_far()
+	_update_camps()
+	var sp = _squads()  # composant de spawn de P15 (escouades mélangées par rôle, anneau espacé) s'il est là
+	if sp != null:
+		sp._tick_common(delta)
+	_pack_t -= delta
+	if _pack_t <= 0.0:
+		_pack_t = float(plan.pack_every)
+		if alive < cap:
+			if sp != null:
+				sp.spawn_squad(sp._pick_squad(), float(mini(int(plan.pack_size), cap - alive)), monster_level(0))
+			else:
+				_pack(mini(int(plan.pack_size), cap - alive), monster_level(0), 20.0, 28.0)
+	_wave_t -= delta
+	if _wave_t <= 0.0:
+		_wave_t = float(plan.wave_every)
+		_wave_hard = not _wave_hard
+		var lvl := monster_level(1)
+		var mins := float(plan.minute)
+		if sp != null:
+			sp._event(sp._pick_event(_wave_hard), mins, false)  # encerclement annoncé, escorte, ruée, tenaille
+			if _wave_hard and float(plan.elite_every) > 0.0:
+				_elite(1)
+		elif _wave_hard:
+			d.message.emit("Vague : encerclement !", 2.0)
+			_ring(mini(10 + int(mins * 2.0), maxi(0, cap - _alive())), lvl, 18.0)
+			if float(plan.elite_every) > 0.0:
+				_elite(1)
+		else:
+			d.message.emit("Vague : horde !", 1.6)
+			for i in 3:
+				_pack(mini(6 + int(mins), maxi(0, cap - _alive())), maxi(1, lvl - 2), 22.0, 30.0)
+	if float(plan.elite_every) > 0.0:
+		_elite_t -= delta
+		if _elite_t <= 0.0:
+			_elite_t = float(plan.elite_every)
+			_elite(1 if d.time < Survivor.BOSS_OPEN_AT else 2)
+	return true
+
+
+## Composant de spawn de la passe P15 (RunDirector.spawner, SpawnDirector) quand il est en place et pas en mode
+## « --spawn=legacy » ; null : le spawn propre au Survivant (meutes, anneaux). Appels dynamiques : le Survivant ne
+## dépend pas de sa présence.
+func _squads() -> Variant:
+	var sp = d.get("spawner")
+	if sp == null or "--spawn=legacy" in OS.get_cmdline_user_args():
+		return null
+	for f in ["_tick_common", "spawn_squad", "_pick_squad", "_event", "_pick_event"]:
+		if not sp.has_method(f):
+			return null
+	return sp
+
+
+func _alive() -> int:
+	return d.get_tree().get_nodes_in_group("monsters").size()
+
+
+## Gardiens d'élite des camps (comme en Survie : une fois chacun, puis toutes les 2 min) : une clé et un choix de
+## cartes ; ils ne portent plus de sceau utile (le portail du boss n'en demande pas).
+func _update_camps() -> void:
+	if d._elites.is_empty():
+		return
+	for k in d.map.camps.size():
+		var camp: Dictionary = d.map.camps[k]
+		if not camp.elite or d._flat(d.player.global_position, camp.pos) > RunDirector.CAMP_ACTIVATE or d.time < float(d._camp_ready_at.get(k, 0.0)):
+			continue
+		d._camp_ready_at[k] = d.time + 120.0
+		var lvl := monster_level(int(camp.tier) + 1)
+		var e := d._spawn_monster(d._elites.pick_random(), camp.pos, lvl)
+		e.carries_seal = true  # (RunDirector : un choix de cartes à sa mort)
+		for i in 4:
+			d._spawn_monster(d._pick_monster(lvl), d._around(camp.pos, 6.0), lvl)
+		d.message.emit("Un gardien d'élite défend son camp !", 2.0)
+
+
+func _pack(count: int, level: int, min_d: float, max_d: float) -> void:
+	if count <= 0:
+		return
+	var center := d._ring_point(min_d, max_d)
+	if center == Vector3.INF:
+		return
+	var id := d._pick_monster(level)
+	for i in count:
+		d._spawn_monster(id if randf() < 0.7 else d._pick_monster(level), d._around(center, 4.0), level)
+
+
+## Anneau complet de [param n] monstres autour du héros (encerclement, horde finale).
+func _ring(n: int, level: int, dist: float) -> void:
+	for i in n:
+		var a := TAU * i / float(n)
+		var p := d.player.global_position + Vector3(cos(a), 0, sin(a)) * dist
+		var g: Vector3 = d.map.ground_at(p.x, p.z)
+		if g != Vector3.INF:
+			d._spawn_monster(d._pick_monster(level), g, level)
+
+
+func _elite(n: int) -> void:
+	var c := d._ring_point(24.0, 34.0)
+	if c == Vector3.INF:
+		return
+	for i in n:
+		var id: int = d._elites.pick_random() if not d._elites.is_empty() else d._pick_monster(monster_level(1))
+		var m := d._spawn_monster(id, d._around(c, 5.0), monster_level(1))
+		if d._elites.is_empty():
+			m.is_elite = true
+			m.max_hp *= 4.0
+			m.hp = m.max_hp
+
+
+## Niveau des monstres (SPEC §8.2) : 1 + 1,8 par minute (+ palier du camp [param tier]), 90 au plus. DÉCISION S4 : pas de
+## plancher « niveau du héros − 1 » (SPEC) : sans le plafond de niveau par carte de la Survie, il emballait la run (héros et
+## monstres qui se tirent l'un l'autre : niveau 66 à 20:00 mesuré au pilote, cible 38).
+func monster_level(tier: int) -> int:
+	return clampi(int(spawn_plan(d.time).level) + tier, 1, MAX_LEVEL)
+
+
+## Niveau maximal des monstres et du butin.
 func max_level() -> int:
-	return 0
+	return MAX_LEVEL
 
 
-## PV et dégâts d'un monstre qui apparaît ; faux : multiplicateurs de la Survie (zone, époque, montée du début).
-func scale_monster(_m: Monster, _boss: bool) -> bool:
+## PV et dégâts d'un monstre qui apparaît : la courbe par minute × palier (à la place de la zone, de l'époque et de la
+## montée du début de la Survie). Gardien : PV fixes ; boss : dégâts seulement (PV fixes posés par setup_boss).
+func scale_monster(m: Monster, boss: bool) -> bool:
+	var plan := spawn_plan(d.time)
+	m.atk *= float(plan.atk_mult)
+	if m.has_meta("sv_guardian"):
+		m.max_hp = guardian_hp(int(m.get_meta("sv_guardian")))
+	elif not boss:
+		m.max_hp *= float(plan.hp_mult)
+	m.hp = m.max_hp
+	return true
+
+
+## PV fixes du gardien [param n] (0, 1, 2) × palier, avant la Menace (SPEC §8.2) : jamais d'après le héros.
+static func guardian_hp(n: int) -> float:
+	var hp: Array = r("guardian_hp", [40000.0, 150000.0, 450000.0])
+	return float(hp[clampi(n, 0, hp.size() - 1)]) * palier_mult()
+
+
+## PV fixes du boss final × palier, avant la Menace (SPEC §8.3).
+static func final_boss_hp() -> float:
+	return float(r("boss_hp", 1500000.0)) * palier_mult()
+
+
+## Monstre vaincu (après l'or et la clé d'élite) : ni équipement, ni coffre de récompense, ni fourniture, ni arme
+## secondaire, ni sceau ; seulement des potions (3 % monstre, 30 % élite).
+func on_monster_died(m: Monster) -> bool:
+	if not m.is_boss and randf() < (RunDirector.POTION_ELITE if m.is_elite else RunDirector.POTION_MONSTER):
+		d._drop_potion(m.global_position, Potions.roll_kind())
+	return true
+
+
+# --- gardiens --------------------------------------------------------------------------------------------------------
+## Fait surgir le gardien [param n] (0, 1, 2) à GUARDIAN_DIST du héros : un géant (GiantMonster, passe P12) aux PV fixes,
+## coups plafonnés à 30 % des PV du héros. Vaincu : coffre du gardien et or ; il ne monte PAS la Menace.
+func spawn_guardian(n: int) -> GiantMonster:
+	var lvl := monster_level(2)
+	var at := d._ring_point(GUARDIAN_DIST - 1.0, GUARDIAN_DIST + 1.0)
+	if at == Vector3.INF:
+		at = d._around(d.player.global_position, 6.0)
+	var g := GiantMonster.new()
+	g.ref_elite = GameData.monster(int(d._elites.pick_random())) if not d._elites.is_empty() else {}
+	g.set_meta("sv_guardian", n)
+	d._spawn_monster(d._pick_monster(lvl), at, lvl, false, g)
+	g.spawned_at = d.time
+	g.display_name = "Gardien · " + g.display_name.trim_prefix("Géant · ")
+	g.died.connect(func(_who: Combatant, _killer: Combatant): _on_guardian_died(n, g))
+	guardians.append({"n": n, "t": snappedf(d.time, 0.1), "level": lvl, "hp": roundi(g.max_hp), "ttk": -1.0})
+	RunJournal.add("sv_guardians")
+	Sfx.event_at(d, at, "rock", 2.0)
+	Vfx.shockwave(d.player, at, 8.0, Color(1.0, 0.4, 0.2))
+	d.message.emit("UN GARDIEN SURGIT !\nVaincs-le : un coffre de gardien t'attend", 3.5)
+	print("[sv] gardien %d à %s · niveau %d · PV %d · Menace %s" % [n + 1, clock(d.time), lvl, roundi(g.max_hp), Menace.mult_text()])
+	return g
+
+
+func _on_guardian_died(n: int, g: GiantMonster) -> void:
+	if not is_instance_valid(d) or not Run.active:
+		return
+	var ttk := d.time - g.spawned_at
+	for e in guardians:
+		if int(e.n) == n and float(e.ttk) < 0.0:
+			e.ttk = snappedf(ttk, 0.1)
+			break
+	RunJournal.add("sv_guardian_kills")
+	Run.add_gold(GUARDIAN_GOLD[0] + GUARDIAN_GOLD[1] * g.level, "gardiens")
+	print("[sv] gardien %d vaincu en %.0f s" % [n + 1, ttk])
+	d.message.emit("GARDIEN VAINCU !\nOuvre son coffre", 3.0)
+	offer_box(GUARDIAN_BOX, "Coffre du gardien : choisis une carte")
+
+
+## Gardiens vaincus.
+func guardians_killed() -> int:
+	return guardians.filter(func(e): return float(e.ttk) >= 0.0).size()
+
+
+# --- coffres, lieux, sanctuaires ------------------------------------------------------------------------------------
+## Cartes du coffre [param box] : SurvivorCards.chest_cards (lot S3) ; tant que S3 n'est pas branché, des cartes de
+## la Survie (sorts pour le coffre de sort).
+static func box_cards(box: String) -> Array:
+	if SurvivorCards.handles():
+		var c := SurvivorCards.chest_cards(box)
+		if not c.is_empty() or box == ANVIL_BOX:
+			return c
+	if box == ANVIL_BOX:
+		return []
+	var cards := Run.roll_cards(3, false, "spell") if box == "sv_spell" else []
+	return cards if not cards.is_empty() else Run.roll_cards(3)
+
+
+## Propose les cartes du coffre [param box] (une relance par coffre, comme en Survie).
+func offer_box(box: String, title: String) -> void:
+	var roll := func() -> Array: return box_cards(box)
+	d.world._offer(title, roll.call(), roll, 1)
+
+
+## Coffre de la carte ouvert (déjà payé par le directeur).
+func open_chest(box: String) -> bool:
+	if not BOXES.has(box):
+		return false
+	offer_box(box, "%s : choisis une carte" % String(BOXES[box].name))
+	return true
+
+
+## Nom d'un coffre du Survivant ("" : pas un coffre du Survivant).
+static func box_title(box: String) -> String:
+	return String(BOXES.get(box, {}).get("name", ""))
+
+
+## Prix relatif d'un coffre du Survivant (× RunDirector.chest_price).
+static func box_price(box: String) -> float:
+	return float(BOXES.get(box, {}).get("price", 1.0))
+
+
+## Lieux : l'enclume donne +2 gratuit sur une pièce portée (chacune une fois) ; la stèle du défi donne un coffre doré.
+## Fontaine, aimant, pacte et autel du géant : comme en Survie (P12 inchangé).
+func use_station(it: Interactable) -> bool:
+	match it.kind:
+		"anvil":
+			var cards := box_cards(ANVIL_BOX)
+			if cards.is_empty():
+				if d.player.autoplay:
+					it.use_up()  # (pilote : il n'y revient pas en boucle)
+				else:
+					_say("Enclume : aucune pièce à renforcer\nReviens quand tu portes une pièce", 2.5)
+				return true
+			it.use_up()
+			d.world._offer("Enclume : +2 sur une pièce", cards)
+			return true
+		"challenge":
+			it.use_up()
+			_start_challenge(it.global_position)
+			return true
 	return false
 
 
-## Monstre vaincu (après l'or) ; vrai : le butin de la Survie (coffres de récompense, fournitures, armes
-## secondaires, sceaux) n'est pas donné.
-func on_monster_died(_m: Monster) -> bool:
-	return false
+## Défi de la stèle : 3 élites et leur garde ; vaincues, un coffre doré gratuit et de l'or (pas de coffre de
+## récompense ni de fourniture).
+func _start_challenge(c: Vector3) -> void:
+	var lvl := monster_level(2)
+	var elites: Array = []
+	for i in 3:
+		var a := TAU * i / 3.0
+		var p := d._around(c + Vector3(cos(a), 0, sin(a)) * 7.0, 2.0)
+		var m: Monster = d._spawn_monster(d._elites.pick_random() if not d._elites.is_empty() else d._pick_monster(lvl), p, lvl)
+		if d._elites.is_empty():
+			m.max_hp *= 4.0
+			m.hp = m.max_hp
+		elites.append(m)
+	for i in 6:
+		d._spawn_monster(d._pick_monster(lvl), d._around(c, 9.0), lvl)
+	_challenges.append({"pos": c, "elites": elites})
+	d.message.emit("DÉFI : abats les 3 élites !", 2.5)
 
 
-## Entrée du donjon ; vrai : prise en charge (portail du boss sans sceau, S4).
-func try_enter_boss() -> bool:
-	return false
+func _update_challenges() -> void:
+	for ch in _challenges.duplicate():
+		if not (ch.elites as Array).all(func(m): return not is_instance_valid(m) or m.is_dead):
+			continue
+		_challenges.erase(ch)
+		Run.add_gold(roundi((CHALLENGE_GOLD[0] + CHALLENGE_GOLD[1] * d.player.level) * (RunDirector.GREED_GOLD if d.greed else 1.0)), "defis")
+		d.message.emit("Défi réussi ! Un coffre doré", 3.0)
+		offer_box("sv_gold", "Défi réussi ! Coffre doré : choisis une carte")
 
 
-## Coffre de la carte ouvert (type [param box]) ; vrai : prise en charge (coffres du Survivant, S4).
-func open_chest(_box: String) -> bool:
-	return false
-
-
-## Lieu utilisé (enclume, stèle…) ; vrai : prise en charge.
-func use_station(_it: Interactable) -> bool:
-	return false
-
-
-## Sanctuaire capturé ; vrai : prise en charge.
+## Sanctuaire capturé : comme en Survie (carte du Survivant, ou 2 clés et de l'or ; « trophée » devenu « carte »).
 func capture(_sh: Shrine) -> bool:
 	return false
 
 
-## Boss créé à l'entrée de l'arène (PV fixes, palier, Menace : S4).
-func setup_boss(_boss: Monster) -> void:
-	pass
+## Entrée du donjon : portail du boss, ouvert à 15:00, sans sceau ; avant, il reste fermé.
+func try_enter_boss() -> bool:
+	if not portal_open():
+		var left := Survivor.BOSS_OPEN_AT - d.time
+		_say("Le portail du boss est fermé\nIl s'ouvre dans %d:%02d" % [int(left) / 60, int(left) % 60], 2.5)
+		return true
+	enter_arena(false)
+	return true
 
 
-## Début de la rage du boss en secondes (< 0 : celui de la Survie).
+func _say(text: String, duration: float) -> void:
+	if d.time - float(_msg_at.get(text.get_slice("\n", 0), -INF)) < MSG_THROTTLE:
+		return
+	_msg_at[text.get_slice("\n", 0)] = d.time
+	d.message.emit(text, duration)
+
+
+# --- boss ------------------------------------------------------------------------------------------------------------
+## Boss créé à l'entrée de l'arène : PV fixes × palier (la Menace s'y applique ensuite, Menace.apply en différé).
+func setup_boss(boss: Monster) -> void:
+	arena_at = d.time if arena_at < 0.0 else arena_at
+	boss_hp = final_boss_hp()
+	boss.max_hp = boss_hp
+	boss.hp = boss.max_hp
+	print("[sv] boss %s · PV %d (× Menace %s) · niveau %d" % [boss.display_name.trim_prefix("<Boss> "), roundi(boss_hp), Menace.mult_text(), boss.level])
+
+
+## Début de la rage du boss, en secondes dans l'arène (4:00).
 func boss_rage_at() -> float:
-	return -1.0
+	return float(r("boss_rage_at", 240.0))
 
 
 ## Boss vaincu : une seule carte, la run est gagnée (bilan après 6 s, en pause pendant un choix de carte).
 func on_boss_killed() -> bool:
 	d.state = "cleared"
+	print("[sv] boss vaincu à %s (%.0f s dans l'arène), niveau %d" % [clock(d.time), d.time - arena_at, d.player.level])
 	d.message.emit("Boss vaincu !\nTu as survécu", 4.0)
 	_finish_later()
 	return true
@@ -100,7 +545,96 @@ func _finish_later() -> void:
 		d.boss_defeated.emit()
 
 
-## Disposition des coffres de la carte (ProcMap) : types [param boxes] et apparences [param tiers] modifiés sur place
-## (coffres du Survivant, SPEC §6.2, lot S4) ; S1 garde ceux de la Survie.
-static func layout_map(_boxes: Array, _tiers: Array, _rng: RandomNumberGenerator) -> void:
-	pass
+# --- texte et journal --------------------------------------------------------------------------------------------------
+## Temps « 12:34 ».
+static func clock(t: float) -> String:
+	return "%d:%02d" % [int(t) / 60, int(t) % 60]
+
+
+## Prochain gardien encore à venir (-1 : aucun).
+func next_guardian() -> int:
+	for i in Survivor.GUARDIAN_TIMES.size():
+		if d.time < float(Survivor.GUARDIAN_TIMES[i]):
+			return i
+	return -1
+
+
+## Ligne d'objectif en exploration : « Gardien à 10:00 », puis « Portail du boss ouvert », puis « Boss dans 0:42 ».
+func objective_text() -> String:
+	var n := next_guardian()
+	if n >= 0:
+		return "Gardien à %s" % clock(Survivor.GUARDIAN_TIMES[n])
+	if d.time < FINAL_HORDE_AT:
+		return "Portail du boss ouvert · boss à 20:00"
+	return "Le boss arrive dans %s" % clock(maxf(0.0, Survivor.RUN_TIME - d.time))
+
+
+## Ligne courte sous l'horloge du HUD (à la place des sceaux) : les gardiens vaincus.
+func status_text() -> String:
+	var n := Survivor.GUARDIAN_TIMES.size()
+	var k := guardians_killed()
+	return "Gardiens  " + "◆ ".repeat(k) + "◇ ".repeat(maxi(0, n - k))
+
+
+## Lignes du panneau d'objectifs du HUD (exploration).
+func objective_lines() -> Array[String]:
+	var lines: Array[String] = []
+	var n := next_guardian()
+	lines.append(("◇ Gardien à %s" % clock(Survivor.GUARDIAN_TIMES[n])) if n >= 0 else "✔ Les trois gardiens sont passés")
+	lines.append("✔ Portail du boss ouvert : entre quand tu veux" if portal_open() else "◇ Portail du boss à %s" % clock(Survivor.BOSS_OPEN_AT))
+	lines.append("◇ Coffres %d / %d" % [d.chests_opened, d.map.chests.size() if d.map else 0])
+	lines.append("◇ Sanctuaires %d / %d" % [d.shrines_captured, d.map.shrines.size() if d.map else 0])
+	lines.append("Boss à 20:00" if d.time < FINAL_HORDE_AT else "Le boss arrive dans %s" % clock(maxf(0.0, Survivor.RUN_TIME - d.time)))
+	return lines
+
+
+## Une ligne de journal par minute de carte (et d'arène) ; ligne « [sv] » dans la console.
+func _sample_minute() -> void:
+	var m := int(d.time / 60.0)
+	if m <= _minute or d.player == null:
+		return
+	_minute = m
+	var plan := spawn_plan(d.time)
+	var row := {"m": m, "state": d.state, "level": d.player.level, "hp": snappedf(d.player.hp / maxf(d.player.max_hp, 1.0), 0.01),
+		"alive": _alive(), "kills": Run.kills, "mlvl": monster_level(0), "hp_mult": snappedf(float(plan.hp_mult), 0.01),
+		"atk_mult": snappedf(float(plan.atk_mult), 0.01), "menace": Menace.level, "gold": Profile.gold,
+		"skills": Run.skills.size(), "pieces": SurvivorGear.worn().size()}
+	_minutes.append(row)
+	print("[sv] %02d:00 · %s · niveau %d · PV %d %% · monstres %d (niv. %d, PV ×%.2f, dégâts ×%.2f) · tués %d · Menace %d · or %d · sorts %d · pièces %d" % [
+		m, d.state, row.level, roundi(float(row.hp) * 100.0), row.alive, row.mlvl, row.hp_mult, row.atk_mult, row.kills, row.menace,
+		row.gold, row.skills, row.pieces])
+
+
+func _journal_context() -> Dictionary:
+	var base: Dictionary = _base_context.call() if _base_context.is_valid() else {}
+	return base.merged(journal())
+
+
+## Champs du journal de run (ajoutés au contexte de la carte) : minute par minute, gardiens, arène, boss.
+func journal() -> Dictionary:
+	return {"sv_minutes": _minutes.duplicate(true), "sv_guardians": guardians.duplicate(true), "sv_arena_at": snappedf(arena_at, 0.1),
+		"sv_arena_forced": arena_forced, "sv_early_s": snappedf(early_seconds(), 0.1), "sv_boss_hp": roundi(boss_hp)}
+
+
+## Disposition des coffres de la carte (ProcMap) : types [param boxes] et apparences [param tiers] remplacés sur place
+## par ceux du Survivant (LAYOUT, mélangés avec [param rng]).
+static func layout_map(boxes: Array, tiers: Array, rng: RandomNumberGenerator) -> void:
+	var out := layout(boxes.size(), rng)
+	for k in boxes.size():
+		boxes[k] = out[k]
+		if k < tiers.size():
+			tiers[k] = int(BOXES[out[k]].look)
+
+
+## Types des [param n] coffres d'une carte du Survivant, mélangés avec [param rng].
+static func layout(n: int, rng: RandomNumberGenerator) -> Array:
+	var out: Array = []
+	while out.size() < n:
+		out.append_array(LAYOUT)
+	out = out.slice(0, n)
+	for i in range(out.size() - 1, 0, -1):
+		var j := rng.randi_range(0, i)
+		var t = out[i]
+		out[i] = out[j]
+		out[j] = t
+	return out

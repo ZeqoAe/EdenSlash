@@ -164,10 +164,10 @@ static func xp_mult(level: int) -> float:
 	return lerpf(rule("xp_start"), rule("xp_end"), clampf((level - 1) / (until - 1.0), 0.0, 1.0))
 
 
-## Niveau maximal du héros : S1 garde celui de la Survie ([param default]) tant que les monstres n'ont pas leur
-## courbe propre (S4 lève le plafond avec SurvivorDirector.max_level).
+## Niveau maximal du héros : aucun plafond par carte (SPEC §8.1), seulement celui des monstres et des pièces (90,
+## SurvivorDirector.MAX_LEVEL) ; [param default] (plafond de la Survie) hors Survivant.
 static func level_cap(default: int) -> int:
-	return default
+	return SurvivorDirector.MAX_LEVEL if active else default
 
 
 ## Nombre de lieux [param kind] posés sur la carte : ni autel du scribe (fournitures du hub) ni autel de la fortune

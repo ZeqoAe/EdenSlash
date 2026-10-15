@@ -435,6 +435,8 @@ func _update_objectives() -> void:
 		_seal_label.text = extra.trim_suffix(" · ") + (" · %s · 2 manches gagnantes" % ClassRival.NAMES[Duel.difficulty].to_lower() if Duel.round_n <= 1 and Duel.wins + Duel.losses == 0 else "")
 	if Tower.active:
 		_seal_label.text = extra + (("%s · %s" % [Dungeons.name_of(Tower.dungeon), Dungeons.DIFF_NAMES[Tower.dungeon_diff]]) if Tower.is_dungeon() else "%s · record : étage %d" % [Tower.DIFF_NAMES[Tower.difficulty], Tower.best()])
+	if director.sv:
+		_seal_label.text = extra + director.sv.status_text()  # Survivant : les gardiens, pas de sceau
 	if Training.active:
 		_seal_label.text = ""  # ni minuterie, ni sceaux, ni or : on s'entraîne
 		_clock_label.text = ""
@@ -463,6 +465,8 @@ func _update_objectives() -> void:
 				lines.append(director.boss_rage_text())  # passe P11 : le combat a une limite de temps
 		"cleared":
 			lines = ["✔ Boss vaincu : ramasse le butin"]
+		_ when director.sv != null:
+			lines = director.sv.objective_lines()  # Survivant : gardiens, portail, boss à 20:00
 		_:
 			lines.append("✔ Entrée du donjon trouvée" if director.dungeon_found else "◇ Trouve le donjon (pilier violet)")
 			lines.append("✔ Sceaux réunis : donjon ouvert" if director.seals >= need else "◇ Sceaux %d / %d : forts d'élite" % [director.seals, need])

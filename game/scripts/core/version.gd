@@ -4,7 +4,7 @@ extends RefCounted
 ## les rapports F9. À augmenter de 1 (dernier chiffre) à CHAQUE envoi sur GitHub,
 ## avec une ligne dans CHANGELOG.md (voir CLAUDE.md).
 
-const NUMBER := "0.1.196"
+const NUMBER := "0.1.197"
 
 
 static func label() -> String:

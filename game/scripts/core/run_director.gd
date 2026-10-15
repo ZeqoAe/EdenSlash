@@ -387,7 +387,8 @@ func _update_discovery() -> void:
 			_found["fort%d" % k] = map.camps[k].pos  # fort d'élite : repère sur la carte
 	if not dungeon_found and _flat(p, map.dungeon) < DISCOVER_DUNGEON:
 		dungeon_found = true
-		message.emit("Entrée du donjon découverte !\n[F] pour affronter le boss quand tu es prêt", 3.5)
+		message.emit("Entrée du donjon découverte !\n[F] pour affronter le boss quand tu es prêt" if sv == null
+			else "Portail du boss découvert !\nIl s'ouvre à 15:00", 3.5)
 
 
 func _update_interactions() -> void:
@@ -1017,8 +1018,8 @@ func boss_rage_text() -> String:
 
 ## Extraction : 10 s à survivre (une vague fonce sur le héros), puis on garde tout.
 func start_extraction() -> void:
-	if Tower.active or Duel.active or Royale.active:
-		return  # la Tour : on monte ou on tombe
+	if Tower.active or Duel.active or Royale.active or sv:
+		return  # la Tour : on monte ou on tombe (Survivant : pas d'extraction, le boss arrive à 20:00)
 	if extracting or state == "cleared" or player == null or player.is_dead:
 		return
 	extracting = true
@@ -1354,7 +1355,7 @@ func _update_breakables(delta: float) -> void:
 func _on_broken(kind: String, pos: Vector3) -> void:
 	var lv := player.level
 	Profile.record_add("breakables", 1)
-	if kind == "gem":
+	if kind == "gem" and sv == null:  # (Survivant : le cristal ne donne ni gemme ni fourniture)
 		for i in randi_range(1, 2):
 			var tier := clampi(gem_level(lv) / 8 + randi_range(0, 1), 0, Craft.GEM_TIERS.size() - 1)
 			_drop_loot(pos, Craft.loot_item(Craft.gem_key(Craft.GEMS.keys().pick_random(), tier)))
@@ -1374,7 +1375,7 @@ func _on_broken(kind: String, pos: Vector3) -> void:
 	if randf() < BREAK_HEAL and player.hp < player.max_hp:
 		player.heal(player.max_hp * 0.1)
 		DamageNumber.spawn_text(player, "+PV", Color(0.5, 1.0, 0.55))
-	if randf() < float(BREAK_SUPPLY.get(kind, 0.0)) * (GREED_GOLD if greed else 1.0):
+	if sv == null and randf() < float(BREAK_SUPPLY.get(kind, 0.0)) * (GREED_GOLD if greed else 1.0):
 		_drop_consumable(pos, _monster_level(0), 0, kind)
 	if randf() < BREAK_KEY:
 		Profile.keys += 1
@@ -1725,7 +1726,8 @@ func debug_start_rage() -> void:
 # --- coffres payants, sanctuaires, marchands ambulants --------------------------------------
 ## Prix du prochain coffre de la carte de qualité [param tier] (monte à chaque coffre ouvert).
 func chest_price(tier := 0, box := "") -> int:
-	var mult := float(CHEST_TIERS[clampi(tier, 0, 2)].price) if box == "" else float(SlotChests.BOXES.get(box, {}).get("price", 1.0))
+	var mult := float(CHEST_TIERS[clampi(tier, 0, 2)].price) if box == "" else (SurvivorDirector.box_price(box) if SurvivorDirector.BOXES.has(box)
+		else float(SlotChests.BOXES.get(box, {}).get("price", 1.0)))
 	var base := float(CHEST_BASE + 3 * (player.level if player else 1)) * mult
 	return roundi(base * pow(CHEST_GROWTH, mini(chests_opened, 60)))
 
@@ -1736,6 +1738,8 @@ func _refresh_chest_labels() -> void:
 			var tier := int(it.get_meta("tier", 0))
 			var box := String(it.get_meta("box", ""))
 			var name := SlotChests.title(box) if box != "" else String(ProcMap.CHEST_LOOKS[tier].title)
+			if SurvivorDirector.BOXES.has(box):
+				name = SurvivorDirector.box_title(box)  # coffres du Survivant
 			it.set_title("%s · %d or ou 1 clé" % [name, chest_price(tier, box)])
 
 
