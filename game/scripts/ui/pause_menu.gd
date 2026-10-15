@@ -16,6 +16,7 @@ var _run: RunPage
 var _equip: InventoryPage
 var _help_button: Button
 var _confirm: Confirm
+var build: SurvivorBuildPage  # Survivant : page « Build » (null ailleurs)
 
 
 func setup(p: Player) -> void:
@@ -25,12 +26,19 @@ func setup(p: Player) -> void:
 	_screen = PageScreen.new("Pause", 15)
 	_screen.pause_game = true
 	add_child(_screen)
+	if Survivor.active:
+		# Survivant (lot S5) : la page Build d'abord (tout le build, rien ne se retire) ; pas d'inventaire ni de coffre
+		build = SurvivorBuildPage.new()
+		build.player = player
+		build.resume_requested.connect(close)
+		_screen.add_page("Build", build)
 	_run = RunPage.new()
 	_run.player = player
 	_screen.add_page("Run", _run)
-	_equip = InventoryPage.new()
-	_equip.player = player
-	_screen.add_page("Héros", _equip)
+	if not Survivor.active:
+		_equip = InventoryPage.new()
+		_equip.player = player
+		_screen.add_page("Héros", _equip)
 	_help_button = Button.new()
 	_help_button.text = "?  Aide"
 	_help_button.tooltip_text = "Le Guide : touches, cartes, modes et formules (%s)" % Settings.action_label("help", 1)

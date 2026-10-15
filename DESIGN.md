@@ -614,6 +614,14 @@ d'apparence (lot S6). Socle (S1, 0.1.194) :
   coffres du Survivant (2 par emplacement d'armure et de bijou, 2 d'arme, 6 de sort ouvragés, 6 dorés) dont le contenu vient
   de `SurvivorCards.chest_cards` ; l'enclume donne +2 sur une pièce portée ; la stèle du défi donne un coffre doré ; plus de
   butin d'équipement, de coffre de récompense, de fourniture, de gemme, d'arme secondaire ni de sceau.
+- **Interface** (S5, `ui/survivor_cards_view.gd`, `ui/survivor_build_page.gd`, `ui/survivor_hud.gd`) : cartes rendues par famille
+  (pièce : statistique principale en gros, 4 lignes, barre du jet 100 → 120 et ★ au jet parfait, set x / 5 et son prochain
+  bonus, passif fixe, « Gardée à vie » ; amélioration : « +4 → +6 », jauge des paliers, passif tiré encadré d'or, avant → après
+  ▲ ; sort : niveau n → n + 1 sur 10, « Ce niveau » puis « Total ») ; Bannir / Garder épinglés en bas de chaque carte, Relancer
+  et Passer sous la rangée (manette : LB relance, RB passe). Trois fiches à la 1re rencontre, dans le choix lui-même (première
+  carte, pièce à vie, paliers). Pause : page **Build** d'abord (emplacements verrouillés, sorts x / 10, passifs cumulés, sets
+  2 / 3 / 5, statistiques), pas de page d'inventaire. HUD : frise des 20 minutes (gardiens, portail, boss) puis jauge de la
+  rage du boss, « Équipement x / 9 · Sorts x / 6 », niveau de chaque sort en chiffre sur sa case.
 
 ## Étapes et sources (refonte 0.1.91, façon Megabonk)
 

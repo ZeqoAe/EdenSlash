@@ -287,6 +287,27 @@ func _ready() -> void:
 	await probe("pause : confirmation de « Quitter le jeu »", 0.9)
 	world.pause_menu._confirm.hide_now()
 	world.pause_menu.close()
+	# lot S5 : Survivant, page Build de la pause (cases des pièces, Reprendre) et choix de cartes (cartes, Bannir, Garder, Relancer)
+	Survivor.active = true
+	var sv_layer := CanvasLayer.new()
+	sv_layer.layer = 30
+	world.add_child(sv_layer)
+	var sv_page := SurvivorBuildPage.new()
+	sv_page.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sv_layer.add_child(sv_page)
+	sv_page.refresh()
+	await probe("Survivant : page Build", 0.9)
+	sv_layer.queue_free()
+	var sv_pick := CardPicker.new()
+	world.add_child(sv_pick)
+	sv_pick.offer("Choisis ton arme ou ta première compétence", SurvivorCards.first_offer(), func(): return SurvivorCards.first_offer())
+	await get_tree().create_timer(0.5, true).timeout
+	await probe("Survivant : choix de cartes", 0.9)
+	sv_pick._queue.clear()
+	sv_pick._show_next()
+	sv_pick.queue_free()
+	Survivor.active = false
+	get_tree().paused = false
 	# P8 : la fiche de découverte en jeu est une petite carte sous le HUD ; L3 la ferme, R3 ouvre le Guide
 	var hud: Hud = world.hud
 	hud._show_card("results")

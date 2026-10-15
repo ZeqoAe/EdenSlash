@@ -24,5 +24,6 @@
 | S4 Survivant : déroulé de la run (`conception/survivor/R_S4.md`) | sous-agent | fait | 0.1.197 |
 | S2 Survivant : pièces et arme (`conception/survivor/R_S2.md`) | sous-agent | fait | 0.1.195 |
 | S3 Survivant : cartes (`conception/survivor/R_S3.md`) | sous-agent | fait | 0.1.198 |
+| S5 Survivant : interface en run (`conception/survivor/R_S5.md`) | sous-agent | fait | 0.1.203 |
 
 Note : le lancement de sessions séparées est refusé quand le tour vient d'un événement automatique ; l'orchestrateur utilise alors des sous-agents.

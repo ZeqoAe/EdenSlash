@@ -84,6 +84,7 @@ var _msg_tween: Tween
 var _clock := 0.0
 var _low_hp: TextureRect
 var _root: Control
+var _sv_hud: SurvivorHud  # Survivant : frise des 20 minutes (null ailleurs)
 
 
 func setup(p: Player, d: RunDirector) -> void:
@@ -165,6 +166,8 @@ func _build() -> void:
 	_left.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_left)
 	_build_objectives(root)
+	if Survivor.active:
+		_sv_hud = SurvivorHud.attach(_obj_panel, director)  # Survivant : frise des 20 minutes, rage du boss (lot S5)
 	_build_tutorial(root)
 	MenaceBadge.attach(_left, director)  # « Menace ×1,2 · Pacte » sous les objectifs (passe P12)
 	QuestBadge.attach(_left, self)  # la quête en cours, discrète (passe M5)
@@ -436,7 +439,7 @@ func _update_objectives() -> void:
 	if Tower.active:
 		_seal_label.text = extra + (("%s · %s" % [Dungeons.name_of(Tower.dungeon), Dungeons.DIFF_NAMES[Tower.dungeon_diff]]) if Tower.is_dungeon() else "%s · record : étage %d" % [Tower.DIFF_NAMES[Tower.difficulty], Tower.best()])
 	if director.sv:
-		_seal_label.text = extra + director.sv.status_text()  # Survivant : les gardiens, pas de sceau
+		_seal_label.text = extra.trim_suffix(" · ")  # Survivant : les gardiens sont sur la frise (SurvivorHud), pas de sceau
 	if Training.active:
 		_seal_label.text = ""  # ni minuterie, ni sceaux, ni or : on s'entraîne
 		_clock_label.text = ""
@@ -725,11 +728,12 @@ func _refresh_skills() -> void:
 		slot.empty = s.is_empty()
 		slot.icon = null if s.is_empty() else UiTheme.texture(String(s.icon))
 		slot.rank = Run.skill_rank(int(s.id)) if not s.is_empty() else 1
+		slot.level_badge = slot.rank if Survivor.active and not s.is_empty() else 0  # Survivant : niveau 1 à 10 en chiffre
 		slot.chain_icons = Run.chain_of(i).map(func(e): return UiTheme.texture(String(Run.skill_def(int(e.id)).get("icon", ""))))
 		if s.is_empty():
 			slot.tooltip_text = "Emplacement libre"
 		else:
-			slot.tooltip_text = "%s — rang %d\n%s\nRecharge : %.1f s" % [s.name, slot.rank, s.desc, player.skill_cooldown(s)]
+			slot.tooltip_text = "%s — %s %d\n%s\nRecharge : %.1f s" % [s.name, "niveau" if Survivor.active else "rang", slot.rank, s.desc, player.skill_cooldown(s)]
 			for j in Run.chain_of(i).size():
 				slot.tooltip_text += "\n%s Enchaînement %d : %s (rappuie sur la touche : l'appui est gardé et le coup part dès qu'il peut)" % ["➜", j + 1, Run.skill_def(int(Run.chain_of(i)[j].id)).get("name", "?")]
 	_dodge.key_text = Settings.action_label("dodge", 1)

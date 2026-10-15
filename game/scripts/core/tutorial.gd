@@ -80,6 +80,17 @@ const CARDS := {
 	"quests": {"title": "Quêtes", "on": "", "version": "0.1.196", "chapter": "modes",
 		"short": "Trois quêtes par jour et deux par semaine, dans Jouer. Elles donnent insignes, cristaux et apparences.", "icon": "new",
 		"lines": ["Trois quêtes par jour et deux par semaine, dans Jouer > Quêtes. Le Défi du jour est l'une d'elles.", "Une quête du jour accomplie par jour prolonge ta série, qui offre des apparences.", "Aucune n'est obligatoire : tu peux changer une quête du jour, une fois par jour."]},
+	# Survivant (lot S5) : montrées dans le choix de cartes lui-même (CardPicker._show_tip), à la 1re rencontre ; jamais
+	# annoncées comme nouveautés (« news » : le mode s'annonce une fois prêt, lot S6).
+	"sv_first": {"title": "Survivant : 1re carte", "on": "", "version": "0.1.194", "chapter": "cards", "news": false,
+		"short": "Choisis une arme ou un sort pour commencer. Pièces, armes et sorts se gagnent ensuite aux cartes.", "icon": "grimoire",
+		"lines": ["En Survivant, tu pars sans arme ni pièce : la première carte donne une arme ou un sort.", "Tout le reste se gagne aux cartes, niveau après niveau."]},
+	"sv_locked": {"title": "Survivant : pièce à vie", "on": "", "version": "0.1.194", "chapter": "gear", "news": false,
+		"short": "Une pièce prise reste dans son emplacement jusqu'à la fin de la run. Passer garde la place pour mieux.", "icon": "armor",
+		"lines": ["En Survivant, une pièce prise reste dans son emplacement jusqu'à la fin de la run.", "Les pièces trouvées plus tard sont plus rares : passer garde la place libre."]},
+	"sv_tier": {"title": "Survivant : paliers", "on": "", "version": "0.1.194", "chapter": "gear", "news": false,
+		"short": "À +6, +8 et +10, la pièce gagne un passif. Il est écrit sur la carte : tu le vois avant de choisir.", "icon": "upgrade",
+		"lines": ["En Survivant, une pièce gagne un passif à +6, +8 et +10 : quatre à +10.", "Le passif est tiré quand la carte est proposée et écrit dessus.", "Relancer ou bannir en tire un autre."]},
 	"hub_gear": {"title": "Équipement du hub", "on": "", "version": "0.1.173", "chapter": "gear",
 		"short": "Tu pars avec l'équipement porté au hub. Après la run, il est exactement comme avant.", "icon": "armor",
 		"lines": ["Tu pars avec l'équipement que tu portes au hub : pièces, +N, gemmes, enchantements.", "Les trouvailles de coffre le remplacent le temps de la run.", "Après la run, ton équipement est exactement comme avant."]},
@@ -252,6 +263,8 @@ static func skip_steps() -> void:
 static func news_since(since: String) -> Array:
 	var out: Array = []
 	for id in CARDS:
+		if not bool(CARDS[id].get("news", true)):
+			continue  # fiche qui ne s'annonce pas (Survivant : vue dans le choix de cartes)
 		if since == "" or _vkey(String(CARDS[id].version)) > _vkey(since):
 			out.append(id)
 	return out

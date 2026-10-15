@@ -20,6 +20,16 @@ const VEIL_ALPHA := 0.45  # opacité des cartes pendant ce délai
 const MAX_STATS := 4  # lignes de statistiques d'une pièce (hors comparaison, set et passif)
 ## Groupe des écrans qui tiennent la pause tant qu'ils sont ouverts (is_open()) : choix de carte, fondu.
 const PAUSE_GROUP := "pause_modal"
+const FOOT_H := 56.0  # Survivant : place des boutons Bannir / Garder épinglés en bas de la carte
+
+
+## Hauteur maximale d'une carte : 470 px hors Survivant ; en Survivant, ce que l'écran laisse (titre, fiche, boutons),
+## entre 430 et 600 px.
+func card_cap() -> float:
+	if not SurvivorCards.on():
+		return 470.0
+	var free := get_viewport().get_visible_rect().size.y - 180.0 - (_tip.get_combined_minimum_size().y + 18.0 if _tip.visible else 0.0)
+	return clampf(free, 430.0, 600.0)
 
 var _queue: Array = []  # [titre, cartes, relance (Callable)]
 var _reroll_fn: Callable
@@ -33,6 +43,10 @@ var _opened_at := 0
 var _shared: RichTextLabel  # lignes communes à toutes les cartes d'équipement, dites une fois
 var _pad_focus := false  # nouveau choix : le cadre de la manette ira sur la 1re carte une fois la rangée posée
 var _skip: Button  # Survivant : « Passer (+N or) »
+var _tip: PanelContainer  # Survivant : fiche de découverte sous le titre (première carte, pièce à vie, paliers)
+var tip_id := ""  # fiche affichée avec le choix en cours ("" : aucune)
+## Fiches de découverte du Survivant, dans l'ordre de priorité, et le test qui dit si le choix les concerne.
+const SV_TIPS := ["sv_first", "sv_locked", "sv_tier"]
 
 
 func _ready() -> void:
@@ -58,6 +72,12 @@ func _ready() -> void:
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UiTheme.title(_title, 40, ACCENT)
 	v.add_child(_title)
+	_tip = PanelContainer.new()  # Survivant : fiche de découverte à la 1re rencontre (Tutorial, style des cartes P8)
+	_tip.add_theme_stylebox_override("panel", MenuWidgets.glass(12))
+	_tip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_tip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tip.visible = false
+	v.add_child(_tip)
 	_row = HBoxContainer.new()
 	_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_row.add_theme_constant_override("separation", 28)
@@ -138,6 +158,7 @@ func _show_next() -> void:
 	_reroll_fn = item[2] if item.size() > 2 else Callable()
 	_own_rerolls = int(item[3]) if item.size() > 3 else -1
 	_pad_focus = true
+	_show_tip(item[1])
 	_show_cards(item[1])
 	var host := get_parent()
 	if host and "hud" in host and host.hud:
@@ -169,12 +190,13 @@ func _fit_heights() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var tallest := 380.0
+	var sv := SurvivorCards.on()
 	for b in _buttons:
 		if is_instance_valid(b):
-			tallest = maxf(tallest, (b.get_meta("content") as Control).get_combined_minimum_size().y + 36.0)
+			tallest = maxf(tallest, (b.get_meta("content") as Control).get_combined_minimum_size().y + 36.0 + (FOOT_H - 18.0 if sv else 0.0))
 	for b in _buttons:
 		if is_instance_valid(b):
-			b.custom_minimum_size.y = minf(tallest, 470.0)
+			b.custom_minimum_size.y = minf(tallest, card_cap())
 	if _pad_focus and _root.visible and not _buttons.is_empty() and is_instance_valid(_buttons[0]):
 		_pad_focus = false
 		UiNav.focus(_buttons[0])  # manette : la 1re carte est désignée tout de suite (sans effet à la souris)
@@ -187,7 +209,7 @@ func _fit_heights() -> void:
 func _descriptions(cards: Array) -> Dictionary:
 	var each: Array = []
 	var lines: Array = []
-	var gear := cards.size() >= 2
+	var gear := cards.size() >= 2 and not SurvivorCards.on()  # (Survivant : SurvivorCardView rend chaque carte en entier)
 	for c in cards:
 		each.append(String(c.desc))
 		gear = gear and c.has("item")
@@ -225,11 +247,73 @@ func _rerolls_left() -> int:
 func _refresh_reroll() -> void:
 	_reroll.visible = _reroll_fn.is_valid()
 	var left := _rerolls_left()
-	_reroll.text = "Relancer (%d)" % left
+	# manette : la gâchette qui fait l'action est écrite sur le bouton (LB relance, RB passe)
+	var pad := Gamepad.active
+	_reroll.text = ("%s  " % Settings.pad_name(JOY_BUTTON_LEFT_SHOULDER) if pad else "") + "Relancer (%d)" % left
 	_reroll.disabled = left <= 0
 	_skip.visible = SurvivorCards.can_skip(_cards)
-	_skip.text = "Passer (+%d or)" % SurvivorCards.skip_gold()
+	_skip.text = ("%s  " % Settings.pad_name(JOY_BUTTON_RIGHT_SHOULDER) if pad else "") + "Passer (+%d or)" % SurvivorCards.skip_gold()
 	_skip.tooltip_text = "Ne prends aucune carte : de l'or à la place."
+	for btn in [_reroll, _skip]:
+		btn.custom_minimum_size.x = 250.0 if pad else 200.0
+
+
+## Survivant : la fiche de découverte qui concerne ce choix, à la 1re rencontre (une seule par choix, vue une fois) :
+## le premier choix, une pièce (gardée à vie), une amélioration qui donne un passif de palier.
+func _show_tip(cards: Array) -> void:
+	tip_id = ""
+	for ch in _tip.get_children():
+		ch.queue_free()
+	if SurvivorCards.on():
+		for id in SV_TIPS:
+			if Tutorial.card_pending(id) and _tip_fits(id, cards):
+				tip_id = id
+				break
+	_tip.visible = tip_id != ""
+	if tip_id == "":
+		return
+	Tutorial.mark_seen(tip_id)
+	var spec := Tutorial.card_spec(tip_id)
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 12)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tip.add_child(h)
+	h.add_child(InfoCard._icon_frame(String(spec.icon)))
+	var t := VBoxContainer.new()
+	t.add_theme_constant_override("separation", 0)
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(t)
+	var head := Hud._label(t, String(spec.title), 16, ACCENT)
+	head.add_theme_font_override("font", UiTheme.bold_font())
+	var body := Hud._label(t, String(spec.body), 15, Color(0.93, 0.92, 0.97))
+	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.custom_minimum_size = Vector2(640, 0)
+
+
+static func _tip_fits(id: String, cards: Array) -> bool:
+	match id:
+		"sv_first":
+			return cards.any(func(c): return bool(c.get("sv_first", false)))
+		"sv_locked":
+			return cards.any(func(c): return String(c.get("type", "")) in ["sv_piece", "sv_weapon"])
+		"sv_tier":
+			return cards.any(func(c): return not (c.get("offer", {}).get("passives", []) as Array).is_empty())
+	return false
+
+
+## Manette : LB relance, RB passe (les gâchettes ne servent pas d'onglets ici : le choix n'en a pas).
+func _input(event: InputEvent) -> void:
+	if not _root.visible or not (event is InputEventJoypadButton and event.pressed):
+		return
+	match event.button_index:
+		JOY_BUTTON_LEFT_SHOULDER:
+			if _reroll.visible and not _reroll.disabled:
+				_do_reroll()
+			get_viewport().set_input_as_handled()
+		JOY_BUTTON_RIGHT_SHOULDER:
+			if _skip.visible:
+				_do_skip()
+			get_viewport().set_input_as_handled()
 
 
 ## Survivant : aucune carte prise, de l'or à la place (sans effet pendant le délai anti-rafale).
@@ -334,7 +418,8 @@ func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(badge)
 	var key := Label.new()
-	key.text = String(card.subtitle)
+	var sv_view := SurvivorCardView.handles(card)  # Survivant : contenu propre (pièce, amélioration, sort)
+	key.text = SurvivorCardView.header(card) if sv_view else String(card.subtitle)
 	key.add_theme_color_override("font_color", col.lightened(0.15))
 	key.add_theme_font_size_override("font_size", 17)
 	key.add_theme_font_override("font", UiTheme.bold_font())
@@ -345,6 +430,23 @@ func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 	key.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	key.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(key)
+	if sv_view:
+		# Survivant : contenu serré ; Bannir / Garder épinglés en bas de la carte (jamais poussés hors du cadre)
+		v.add_theme_constant_override("separation", 6)
+		v.offset_bottom = -FOOT_H
+		SurvivorCardView.build(v, card, col)
+		var foot := HBoxContainer.new()
+		foot.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+		foot.offset_left = 18
+		foot.offset_right = -18
+		foot.offset_top = -FOOT_H + 4.0
+		foot.offset_bottom = -14
+		foot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(foot)
+		_add_ban_keep(foot, card, i)
+		if foot.get_child_count() > 0:
+			(foot.get_child(0) as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		return b
 	var icon := TextureRect.new()
 	icon.custom_minimum_size = Vector2(96, 96)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -372,7 +474,12 @@ func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 	d.modulate = Color(0.95, 0.95, 0.98)
 	d.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(d)
-	# bannir (la carte quitte la run, une autre la remplace) / garder (revient au prochain choix)
+	_add_ban_keep(v, card, i)
+	return b
+
+
+## Bannir (la carte quitte la run, une autre la remplace) / garder (revient au prochain choix), en bas de la carte.
+func _add_ban_keep(v: Container, card: Dictionary, i: int) -> void:
 	var sv := SurvivorCards.on()  # Survivant : ses cartes (pièces, améliorations à passif, armes) se bannissent et se gardent aussi
 	if String(card.get("type", "")) in (SurvivorCards.FAMILY.keys().filter(func(t): return not t in SurvivorCards.FALLBACK) if sv
 			else ["skill", "chain", "upgrade", "weapon_up", "passive"]) and _reroll_fn.is_valid():
@@ -400,7 +507,6 @@ func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 			if SurvivorCards.keep(card) if sv else Run.keep_card(card):
 				_show_cards(_cards))
 		row.add_child(keep)
-	return b
 
 
 func _ban(i: int) -> void:

@@ -1557,6 +1557,12 @@ var _sv_zone := ""
 func _menu_survivor() -> void:
 	_activity_head("survivor")
 	_activity_desc("survivor")
+	_survivor_overview()  # (lot S5) le mode en trois idées, puis la classe
+	_section("Classe")
+	var cr := _row(String(GameData.class_data(Profile.selected_class).get("name_fr", Profile.selected_class)), "Changer de classe", "class", func(): pass, 56.0)
+	cr.pressed.connect(func(): HeroPages.class_menu(cr, Profile.selected_class, func(id: String):
+		_select_class(id)
+		_show_menu("survivor")))
 	_section("Zone")
 	var zones := Survivor.zones()
 	if not _sv_zone in zones:
@@ -1572,6 +1578,33 @@ func _menu_survivor() -> void:
 	var go := MenuWidgets.gold_button("Lancer le Survivant", 22, Vector2(0, 56))
 	go.pressed.connect(_start_survivor)
 	_pin(go)
+
+
+## Survivant (lot S5) : le mode en trois idées, une icône et quelques mots chacune.
+func _survivor_overview() -> void:
+	var g := GridContainer.new()
+	g.columns = 3
+	g.add_theme_constant_override("h_separation", 8)
+	_sub.add_child(g)
+	for e in [["armor", "Pièces à vie"], ["upgrade", "Passifs +6 +8 +10"], ["clock", "Boss à 20:00"]]:
+		var p := PanelContainer.new()
+		p.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.08, 0.06, 0.15, 0.85), UiTheme.GOLD_DIM, 1, 8, false))
+		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		g.add_child(p)
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		p.add_child(h)
+		var ic := TextureRect.new()
+		ic.texture = MenuWidgets.icon(String(e[0]))
+		ic.custom_minimum_size = Vector2(26, 26)
+		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ic.modulate = Color(1.0, 0.9, 0.62)
+		h.add_child(ic)
+		var l := Hud._label(h, String(e[1]), 14, UiTheme.TEXT)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.custom_minimum_size = Vector2(90, 0)
 
 
 func _start_survivor() -> void:

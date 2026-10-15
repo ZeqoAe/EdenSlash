@@ -89,7 +89,7 @@ static func stat_value(k: String, v: float) -> String:
 
 
 static func _num(v: float) -> String:
-	return str(roundi(v)) if absf(v - roundf(v)) < 0.05 else String.num(v, 1)
+	return str(roundi(v)) if absf(v - roundf(v)) < 0.05 else String.num(v, 1).replace(".", ",")  # virgule décimale française
 
 
 ## Lignes « stat : avant → après » d'un passif dont la puissance passe de [param before] à

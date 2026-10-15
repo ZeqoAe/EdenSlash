@@ -133,6 +133,7 @@ class SkillSlot extends Control:
 	var empty := true
 	var key_text := ""
 	var rank := 1
+	var level_badge := 0  # Survivant : niveau du sort affiché en chiffre (0 : losanges de rang habituels)
 	var auto := false
 	var round := false  # emplacement rond (esquive)
 	var chain_icons: Array = []  # sorts enchaînés de la case (icônes au-dessus)
@@ -223,7 +224,15 @@ class SkillSlot extends Control:
 		if chain_ready:
 			var k := 0.6 + 0.4 * sin(Time.get_ticks_msec() * 0.025)
 			draw_rect(rect.grow(3.0), Color(0.55, 0.9, 1.0, k), false, 4.0)
-		if rank > 1 and not round:
+		if level_badge > 0 and not round:
+			# Survivant : le niveau du sort (1 à 10) en chiffre, en haut à droite (doré au niveau 10)
+			var lt := str(level_badge)
+			var lf := UiTheme.bold_font()
+			var lw := maxf(18.0, lf.get_string_size(lt, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_TEXT).x + 8.0)
+			var lr := Rect2(size.x - lw - 2.0, 2.0, lw, 19.0)
+			draw_style_box(UiTheme.flat_box(Color(0.06, 0.04, 0.1, 0.95), UiTheme.GOLD if level_badge >= 10 else Color(0.6, 0.85, 1.0), 1, 5, false), lr)
+			HudWidgets.text_center(self, lt, lr.get_center(), lf, UiTheme.MIN_TEXT, UiTheme.GOLD if level_badge >= 10 else Color(0.85, 0.95, 1.0), 0)
+		elif rank > 1 and not round:
 			for i in mini(rank - 1, 4):
 				HudWidgets.diamond(self, Vector2(size.x - 10.0 - i * 9.0, 10.0), 3.5, Color(0.6, 0.85, 1.0))
 		if auto:
