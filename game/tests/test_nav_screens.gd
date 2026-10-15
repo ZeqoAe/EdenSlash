@@ -57,6 +57,16 @@ func _ready() -> void:
 	lobby._show_menu("")
 	lobby._chests.open(0)
 	await probe("Coffres")
+	lobby._chests.open(1)
+	await probe("Roulette (cases, liste des gains, boutons)")
+	lobby._chests.open(0)
+	var chests_page: ChestsPage = lobby._chests._pages[0]
+	for t in ["gear", "look_rare"]:
+		Profile.reward_chests.append(Rewards.make(t, 40))
+	Profile.reward_chests.append(Rewards.make("forge", 60, false, "scroll"))
+	chests_page.refresh()
+	await probe("Coffres : liste variée, pastilles et Ouvrir tout")
+	Profile.reward_chests.clear()
 	lobby._chests.close_ui()
 	lobby._archive.open(0)
 	await probe("Carnet : vue d'ensemble")

@@ -82,7 +82,7 @@ func _test_chests() -> void:
 	var t2 := ActivityLoot.tower_chests(51, 80, lvf)
 	check("Tour, reprise à l'étage 51 jusqu'à 80 : 3 coffres de gemmes", t2.size() == 3 and _levels_of(t2) == [31, 36, 41])
 	check("Tour : rien sans étage monté", ActivityLoot.tower_chests(10, 9, lvf).is_empty())
-	check("texte groupé des coffres", ActivityLoot.chests_text(d2).contains("Coffre de forge ×2") and ActivityLoot.chests_text(d2).contains("Coffre du joaillier"))
+	check("texte groupé des coffres", ActivityLoot.chests_text(d2).contains("Coffre de forge ×2") and ActivityLoot.chests_text(d2).contains("Coffre de joaillier"))
 	Profile.reward_chests = []
 
 

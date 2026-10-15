@@ -2,15 +2,17 @@ class_name CardPicker
 extends CanvasLayer
 ## Choix de cartes (nouvelle compétence, amélioration, passif) au passage de
 ## niveau et au départ de la run. Met le jeu en pause pendant le choix.
-## Cliquer une carte la sélectionne seulement : le choix se confirme avec le
-## bouton « Valider » (ou Entrée), pour ne pas choisir par erreur en spammant
-## l'auto-attaque au moment du passage de niveau.
+## Un seul geste : cliquer une carte (ou 1, 2, 3, ou A à la manette) la choisit. Pendant les
+## 0,3 premières secondes les cartes sont voilées et ignorent tout : on ne choisit pas par
+## erreur en spammant l'auto-attaque au moment du passage de niveau.
 
 signal picked(card: Dictionary)
 
 const ACCENT := Color(0.98, 0.78, 0.35)
 const TYPE_COLORS := {"skill": Color(1.0, 0.55, 0.3), "chain": Color(0.55, 0.9, 1.0), "upgrade": Color(0.45, 0.75, 1.0), "weapon_up": Color(1.0, 0.8, 0.4), "passive": Color(0.6, 0.95, 0.55)}
-const CONFIRM_DELAY_MS := 400  # Valider inactif juste après l'ouverture (clics en rafale)
+const CONFIRM_DELAY_MS := 300  # cartes inertes juste après l'ouverture (clics en rafale)
+const VEIL_ALPHA := 0.45  # opacité des cartes pendant ce délai
+const MAX_STATS := 4  # lignes de statistiques d'une pièce (hors comparaison, set et passif)
 
 var _queue: Array = []  # [titre, cartes, relance (Callable)]
 var _reroll_fn: Callable
@@ -20,9 +22,8 @@ var _root: Control
 var _title: Label
 var _row: HBoxContainer
 var _buttons: Array = []
-var _selected := -1
-var _confirm: Button
 var _opened_at := 0
+var _shared: RichTextLabel  # lignes communes à toutes les cartes d'équipement, dites une fois
 
 
 func _ready() -> void:
@@ -49,26 +50,9 @@ func _ready() -> void:
 	_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_row.add_theme_constant_override("separation", 28)
 	v.add_child(_row)
-	_confirm = Button.new()
-	_confirm.custom_minimum_size = Vector2(260, 56)
-	_confirm.focus_mode = Control.FOCUS_NONE
-	_confirm.add_theme_font_size_override("font_size", 24)
-	_confirm.add_theme_color_override("font_color", Color(0.1, 0.05, 0.15))
-	_confirm.add_theme_color_override("font_hover_color", Color(0.1, 0.05, 0.15))
-	_confirm.add_theme_color_override("font_pressed_color", Color(0.1, 0.05, 0.15))
-	_confirm.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.45))
-	var cs := StyleBoxFlat.new()
-	cs.bg_color = ACCENT
-	cs.set_corner_radius_all(10)
-	var ch := cs.duplicate() as StyleBoxFlat
-	ch.bg_color = ACCENT.lightened(0.25)
-	var cd := cs.duplicate() as StyleBoxFlat
+	var cd := StyleBoxFlat.new()
 	cd.bg_color = Color(0.2, 0.18, 0.28, 0.9)
-	_confirm.add_theme_stylebox_override("normal", cs)
-	_confirm.add_theme_stylebox_override("hover", ch)
-	_confirm.add_theme_stylebox_override("pressed", ch)
-	_confirm.add_theme_stylebox_override("disabled", cd)
-	_confirm.pressed.connect(_confirm_choice)
+	cd.set_corner_radius_all(10)
 	_reroll = Button.new()
 	_reroll.custom_minimum_size = Vector2(200, 56)
 	_reroll.focus_mode = Control.FOCUS_NONE
@@ -85,17 +69,19 @@ func _ready() -> void:
 	_reroll.add_theme_stylebox_override("pressed", rh)
 	_reroll.add_theme_stylebox_override("disabled", cd)
 	_reroll.pressed.connect(_do_reroll)
+	_shared = RichTextLabel.new()
+	_shared.bbcode_enabled = true
+	_shared.fit_content = true
+	_shared.scroll_active = false
+	_shared.add_theme_font_size_override("normal_font_size", 17)
+	_shared.add_theme_font_override("normal_font", UiTheme.bold_font())
+	_shared.add_theme_color_override("default_color", Color(0.85, 0.85, 0.92))
+	_shared.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(_shared)
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	buttons.add_theme_constant_override("separation", 20)
-	buttons.add_child(_confirm)
 	buttons.add_child(_reroll)
 	v.add_child(buttons)
-	var hint := Label.new()
-	hint.text = "Clique sur une carte (ou 1, 2, 3) puis sur Valider (ou Entrée)"
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.modulate = Color(1, 1, 1, 0.7)
-	v.add_child(hint)
 	_root.visible = false
 	add_child(_root)
 
@@ -138,14 +124,65 @@ func _show_cards(cards: Array) -> void:
 	for c in _row.get_children():
 		c.queue_free()
 	_buttons.clear()
+	var descs := _descriptions(_cards)
+	_shared.text = "[center]%s[/center]" % descs.shared if descs.shared != "" else ""
+	_shared.visible = descs.shared != ""
 	for i in _cards.size():
-		var b := _make_card(_cards[i], i)
+		var b := _make_card(_cards[i], i, String(descs.each[i]))
 		_buttons.append(b)
 		_row.add_child(b)
-	_selected = -1
 	_opened_at = Time.get_ticks_msec()
-	_refresh_confirm()
+	_row.modulate.a = VEIL_ALPHA
 	_refresh_reroll()
+	_fit_heights()
+
+
+## Cartes de même hauteur, assez hautes pour tout leur texte (jamais de ligne coupée).
+func _fit_heights() -> void:
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var tallest := 380.0
+	for b in _buttons:
+		if is_instance_valid(b):
+			tallest = maxf(tallest, (b.get_child(0) as Control).get_combined_minimum_size().y + 36.0)
+	for b in _buttons:
+		if is_instance_valid(b):
+			b.custom_minimum_size.y = minf(tallest, 470.0)
+
+
+## Textes des cartes : pour l'équipement, les lignes identiques sur toutes les cartes (« Emplacement
+## libre », les mêmes +3 Force des deux variantes d'une arme) sont dites une seule fois sous la rangée,
+## et une pièce n'affiche que ses [constant MAX_STATS] premières statistiques.
+## Renvoie {each: texte de chaque carte, shared: ligne commune (BBCode) ou ""}.
+func _descriptions(cards: Array) -> Dictionary:
+	var each: Array = []
+	var lines: Array = []
+	var gear := cards.size() >= 2
+	for c in cards:
+		each.append(String(c.desc))
+		gear = gear and c.has("item")
+		lines.append(String(c.desc).split("\n"))
+	if not gear:
+		return {"each": each, "shared": ""}
+	var common: Array = []
+	for l in lines[0]:
+		if String(l) != "" and lines.all(func(ls): return (ls as PackedStringArray).has(l)):
+			common.append(String(l))
+	for i in cards.size():
+		var kept: PackedStringArray = []
+		var stats := 0
+		var is_weapon := String(cards[i].item.get("slot", "")) == "weapon"
+		for j in (lines[i] as PackedStringArray).size():
+			var l: String = lines[i][j]
+			if common.has(l):
+				continue
+			if j > 0 and not is_weapon and not l.begins_with("[color=#66f28c]") and not l.begins_with("[color=#ffd36b]"):
+				stats += 1
+				if stats > MAX_STATS:
+					continue
+			kept.append(l)
+		each[i] = "\n".join(kept)
+	return {"each": each, "shared": "  ·  ".join(PackedStringArray(common))}
 
 
 var _own_rerolls := -1
@@ -175,9 +212,10 @@ func _do_reroll() -> void:
 		Run.rerolls_used += 1
 	_show_cards(cards)
 	_opened_at -= CONFIRM_DELAY_MS  # pas de délai anti-rafale après une relance volontaire
+	_row.modulate.a = 1.0
 
 
-func _make_card(card: Dictionary, i: int) -> Button:
+func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 	# couleur : rareté tirée de la carte (Cards), sinon type de carte
 	var col: Color = Cards.tier(String(card.tier)).color if card.has("tier") and card.tier != "common" 		else (Boons.RARITY[card.rarity].color if card.has("rarity") and card.rarity != "common" else TYPE_COLORS.get(card.type, ACCENT))
 	if card.has("color"):
@@ -197,16 +235,10 @@ func _make_card(card: Dictionary, i: int) -> Button:
 	b.add_theme_stylebox_override("normal", sb)
 	b.add_theme_stylebox_override("hover", hover)
 	b.add_theme_stylebox_override("pressed", hover)
-	var chosen := hover.duplicate() as StyleBoxFlat
-	chosen.bg_color = Color(0.22, 0.17, 0.32, 1.0)
-	chosen.border_color = col.lightened(0.35)
-	chosen.set_border_width_all(7)
-	chosen.shadow_color = Color(col, 0.6)
-	chosen.shadow_size = 18
-	b.set_meta("style_normal", sb)
-	b.set_meta("style_hover", hover)
-	b.set_meta("style_selected", chosen)
-	b.pressed.connect(_select.bind(i))
+	hover.border_color = col.lightened(0.3)
+	hover.shadow_color = Color(col, 0.55)
+	hover.shadow_size = 16
+	b.pressed.connect(_choose.bind(i))
 	var v := VBoxContainer.new()
 	v.set_anchors_preset(Control.PRESET_FULL_RECT)
 	v.offset_left = 18
@@ -238,8 +270,9 @@ func _make_card(card: Dictionary, i: int) -> Button:
 	# description et totaux avant → après (texte enrichi)
 	var d := RichTextLabel.new()
 	d.bbcode_enabled = true
-	d.text = card.desc
+	d.text = desc
 	d.scroll_active = false
+	d.fit_content = true
 	d.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	d.add_theme_font_size_override("normal_font_size", 14)
 	d.add_theme_font_size_override("bold_font_size", 15)
@@ -283,64 +316,33 @@ func _ban(i: int) -> void:
 	else:
 		_cards[i] = rep
 	_show_cards(_cards)
-	_opened_at -= CONFIRM_DELAY_MS
+	_opened_at -= CONFIRM_DELAY_MS  # pas de délai anti-rafale après un bannissement volontaire
+	_row.modulate.a = 1.0
 
 
+## Les cartes sortent du voile à la fin du délai anti-rafale (temps réel : le jeu est en pause).
 func _process(_delta: float) -> void:
-	# fin du délai anti-rafale : réactive Valider
-	if _root.visible and _confirm.disabled and _selected >= 0:
-		_refresh_confirm()
+	if _root.visible and _row.modulate.a < 1.0:
+		var t := clampf(float(Time.get_ticks_msec() - _opened_at) / CONFIRM_DELAY_MS, 0.0, 1.0)
+		_row.modulate.a = lerpf(VEIL_ALPHA, 1.0, t)
 
 
-## Manette : le cadre de navigation (UiNav) se déplace entre les cartes et les boutons ; A sur une carte
-## la choisit, A de nouveau sur la carte choisie la valide (sinon : le bouton Valider).
-func _input(event: InputEvent) -> void:
-	if not _root.visible or _cards.is_empty() or _selected < 0:
-		return
-	if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_A and Gamepad.active:
-		if UiNav.cursor != null and _selected < _buttons.size() and UiNav.cursor == _buttons[_selected]:
-			_confirm_choice()
-			get_viewport().set_input_as_handled()
-
-
+## 1, 2, 3 choisissent la carte (ce sont aussi les touches de compétences : le délai anti-rafale protège).
+## À la manette, A sur la carte désignée par le cadre de navigation est un vrai clic (UiNav).
 func _unhandled_input(event: InputEvent) -> void:
 	if not _root.visible or not event is InputEventKey or not event.pressed or event.echo:
 		return
-	# 1, 2, 3 sélectionnent seulement (ce sont aussi les touches de compétences)
 	var n: int = event.physical_keycode - KEY_1
 	if n >= 0 and n < _cards.size():
-		_select(n)
-		get_viewport().set_input_as_handled()
-	elif event.physical_keycode in [KEY_ENTER, KEY_KP_ENTER]:
-		_confirm_choice()
+		_choose(n)
 		get_viewport().set_input_as_handled()
 
 
-func _select(i: int) -> void:
-	if i != _selected:
-		Sfx.ui("click", -6.0)
-	_selected = i
-	for j in _buttons.size():
-		var b: Button = _buttons[j]
-		var on := j == i
-		b.add_theme_stylebox_override("normal", b.get_meta("style_selected" if on else "style_normal"))
-		b.add_theme_stylebox_override("hover", b.get_meta("style_selected" if on else "style_hover"))
-		b.add_theme_stylebox_override("pressed", b.get_meta("style_selected" if on else "style_hover"))
-		b.scale = Vector2.ONE * (1.04 if on else 1.0)
-	_refresh_confirm()
-
-
-func _refresh_confirm() -> void:
-	var ok := _selected >= 0 and Time.get_ticks_msec() - _opened_at >= CONFIRM_DELAY_MS
-	_confirm.disabled = not ok
-	_confirm.text = "Valider" if _selected >= 0 else "Choisis une carte"
-
-
-func _confirm_choice() -> void:
-	if _selected < 0 or _selected >= _cards.size() or Time.get_ticks_msec() - _opened_at < CONFIRM_DELAY_MS:
+## Choisit la carte [param i] et passe au choix suivant ; sans effet pendant le délai anti-rafale.
+func _choose(i: int) -> void:
+	if i < 0 or i >= _cards.size() or Time.get_ticks_msec() - _opened_at < CONFIRM_DELAY_MS:
 		return
-	var card: Dictionary = _cards[_selected]
-	_selected = -1
+	var card: Dictionary = _cards[i]
 	# carte gardée puis prise maintenant : elle ne revient pas
 	Run.kept = Run.kept.filter(func(k): return not (String(k.type) == String(card.type) and str(k.id) == str(card.id)))
 	Run.apply_card(card)

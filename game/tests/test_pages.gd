@@ -715,9 +715,8 @@ func _test_run_screens() -> void:
 		d._update_shrines(1.0)
 	check("sanctuaire capturé en restant dans le cercle", sh.captured and d.shrines_captured >= 1)
 	check("sanctuaire des trophées : choix de 3 trophées", world.cards.is_open() and world.cards._cards.size() == 3 and world.cards._cards.all(func(c): return c.type == "trophy"))
-	world.cards._select(0)
 	world.cards._opened_at = 0
-	world.cards._confirm_choice()
+	world.cards._choose(0)
 	check("trophée choisi : dans la collection de la run", Run.trophies.size() == tro0 + 1 and Run.trophies[-1].slot == "trophy")
 	world.cards._queue.clear()
 	world.cards._show_next()

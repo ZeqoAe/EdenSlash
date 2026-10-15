@@ -569,6 +569,19 @@ Un proc = déclencheur + chance + recharge interne + effet (`scripts/combat/proc
 - Pistes suivantes : bannir une carte, cartes « malédiction » à fort bonus, reliques d'élite,
   projectiles (lames fantômes), invocations, synergies entre classes.
 
+## Choix et coffres de récompense (lot U3 de la nuit du 15/10)
+
+- **Choix de carte en un geste** : un clic sur une carte (ou 1, 2, 3, ou A à la manette) la choisit, plus de bouton
+  « Valider ». Pendant les 0,3 premières secondes les cartes sont voilées et ignorent tout (anti-rafale). Une pièce
+  d'équipement montre 4 statistiques au plus ; les lignes communes à toutes les cartes (« Emplacement libre », les mêmes
+  statistiques des deux variantes d'une arme) sont dites une fois sous la rangée.
+- **Coffres** (menu Coffres) : une ligne par genre, c'est-à-dire par type et par spécialité (« Coffre de forge »,
+  « Coffre de forge · parchemins », « Coffre de joaillier · formules »…), une pastille d'icône par type en plus de la
+  couleur, « Ouvrir tout (N) », une phrase sans chiffre par genre (le détail du contenu est dans l'infobulle).
+- **Roulette** : chaque case promet l'apparence qu'elle donnera (`Wheel.board`, tirée à chaque lancer, gardée dans la
+  sauvegarde, jamais deux fois la même, remplacée si le joueur l'a obtenue entre-temps), visible dans la roue et dans la
+  liste « Gains ». Le lancer donne l'apparence de la case désignée, pitié comprise ; le gain s'affiche en grand 3 s.
+
 ## Plafond de niveau par zone
 
 - Limestone (map 1) : butin au niveau 15 maximum, monstres plafonnés au niveau 15 (18 en rage

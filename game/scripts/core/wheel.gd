@@ -88,6 +88,54 @@ static func slice_at(r: float) -> int:
 	return SLICES.size() - 1
 
 
+## Apparence promise par chaque case de la roue (idée du joueur : voir le gain à l'avance), tirée une fois
+## par lancer et gardée dans la sauvegarde : [code]{"key": "jour#lancers", "ids": [id ou 0 par case]}[/code].
+## La case « Perdu » n'a rien (0) ; un id à 0 sur une autre case = collection du rang déjà complète (insignes).
+## Le lancer donne l'apparence promise par la case désignée : ce qu'on voit sur la roue est ce qu'on gagne.
+static func board() -> Array:
+	var w := state()
+	var key := "%s#%d" % [today(), int(w.total)]
+	var b: Dictionary = w.get("board", {})
+	var fresh := String(b.get("key", "")) != key
+	if fresh:
+		b = {"key": key, "ids": []}
+		w["board"] = b
+	var ids: Array = b.ids
+	var out: Array = []
+	var used := {}
+	for i in SLICES.size():
+		var look: Dictionary = {}
+		var id := int(ids[i]) if i < ids.size() else -1
+		if id > 0 and GameData.collection_by_id.has(id) and not Profile.collected(GameData.collection_by_id[id]) and not used.has(id):
+			look = GameData.collection_by_id[id]  # promesse gardée
+		elif String(SLICES[i][0]) != "lost" and (id != 0 or i >= ids.size()):
+			look = _roll_look(String(SLICES[i][0]), used)
+		used[int(look.get("id", 0))] = true
+		out.append(look)
+	var new_ids: Array = out.map(func(l): return int(l.get("id", 0)))
+	if fresh or new_ids != (b.ids as Array).map(func(i): return int(i)):
+		b["ids"] = new_ids
+		Profile.save_profile()  # la promesse survit à un redémarrage
+	return out
+
+
+## Apparence du gain [param kind] pas encore obtenue ni déjà promise à une autre case ({} si tout est obtenu).
+static func _roll_look(kind: String, used: Dictionary) -> Dictionary:
+	var look: Dictionary = {}
+	for _try in 12:
+		look = _draw_look(kind)
+		if look.is_empty() or not used.has(int(look.id)):
+			break
+	return look if not look.is_empty() and not used.has(int(look.id)) else {}
+
+
+static func _draw_look(kind: String) -> Dictionary:
+	if kind == "jackpot":
+		var look := Fortune.summit_look()
+		return look if not look.is_empty() else Rewards.roll_look("look_legend")
+	return Rewards.roll_look("look_" + kind)
+
+
 ## Une case de ce type (la plus large d'abord si plusieurs).
 static func slice_of(kind: String) -> int:
 	var best := -1
@@ -121,28 +169,23 @@ static func spin(roll := -1.0) -> Dictionary:
 		pity = "Pitié : après %d « Perdu » d'affilée, tu gagnes au moins du commun." % PITY_LOST
 	if pity != "":
 		idx = slice_of(kind)
+	var promised: Dictionary = board()[idx]  # avant de compter le lancer : la planche est celle qu'on a vue
 	w["total"] = int(w.total) + 1
 	w["misses"] = int(w.misses) + 1 if kind == "lost" else 0
 	w["since_rare"] = 0 if int(KINDS[kind].rank) >= 2 else int(w.since_rare) + 1
 	Profile.records["wheel_spins"] = int(Profile.records.get("wheel_spins", 0)) + 1
 	var out := {"ok": true, "slice": idx, "kind": kind, "paid": paid, "pity": pity, "look": {}, "insignia": 0, "text": ""}
-	_grant(kind, out)
+	_grant(kind, out, promised)
 	Profile.changed.emit()
 	Profile.save_profile()
 	return out
 
 
-static func _grant(kind: String, out: Dictionary) -> void:
+static func _grant(kind: String, out: Dictionary, promised: Dictionary) -> void:
 	if kind == "lost":
 		out.text = "Perdu… retente ta chance !"
 		return
-	var look: Dictionary = {}
-	if kind == "jackpot":
-		look = Fortune.summit_look()
-		if look.is_empty():
-			look = Rewards.roll_look("look_legend")
-	else:
-		look = Rewards.roll_look("look_" + kind)
+	var look := promised  # l'apparence montrée sur la case ; vide : toute la collection du rang est obtenue
 	if look.is_empty():
 		var n := int(CONSOLATION[kind])
 		Profile.insignia += n

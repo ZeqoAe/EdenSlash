@@ -1093,7 +1093,7 @@ func _build_ui() -> void:
 	_workshop = _screen("Atelier", [["Armurerie", GearShopPage.new()], ["Fabrication", FabricationPage.new()], ["Forge", ForgeBench.new()]])
 	_workshop.set_title("Atelier", "Armurerie · Fabrication des plans · Forge (améliorer, enchanter, sertir, polir, réajuster, démonter)")
 	_chests = _screen("Coffres", [["Coffres", ChestsPage.new()], ["Roulette", WheelPage.new()]])
-	_chests.set_title("Coffres", "Coffres de récompense rapportés des runs : apparences, forge, joaillier · Roulette : 3 lancers par jour")
+	_chests.set_title("Coffres")  # le sous-titre vient de chaque onglet (ChestsPage / WheelPage .subtitle())
 	_settings = SettingsMenu.new()
 	add_child(_settings)
 	_refresh_ui()

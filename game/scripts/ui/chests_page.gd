@@ -14,20 +14,23 @@ var _open_btn: Button
 var _loot: HFlowContainer  # contenu d'un coffre ouvert
 var _choices: HBoxContainer
 var _card_box: CenterContainer
+var _card_scroll: ScrollContainer  # fiche de l'objet choisi : visible seulement quand il y en a une
 var _all_btn: Button
 var _current: Dictionary = {}  # coffre à choix en cours
 var _shown: Dictionary = {}  # coffre affiché (fermé) à droite
+
+const STAGE_H := 270.0  # hauteur du coffre 3D, fermé
+const STAGE_COMPACT := 110.0  # une fois ouvert : de la place pour le contenu et la fiche
 
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 16)
 	var left := ItemWidgets.panel(self, 560)
 	ItemWidgets.section(left, "Tes coffres")
-	_all_btn = MenuWidgets.glass_button("Ouvrir tous les coffres sans choix", 16, Vector2(0, 42))
-	_all_btn.tooltip_text = "Ouvre d'un coup les coffres de forge, de joaillier, d'équipement et d'apparence (les coffres à choix restent à part), puis affiche un récapitulatif."
+	_all_btn = MenuWidgets.glass_button("Ouvrir tout", 16, Vector2(0, 42))
+	_all_btn.tooltip_text = "Ouvre d'un coup tous les coffres sans choix, puis affiche un récapitulatif. Les coffres de set restent à ouvrir un par un."
 	_all_btn.pressed.connect(func(): open_many(Profile.reward_chests.filter(func(c): return not Rewards.is_choice(c))))
 	left.add_child(_all_btn)
-	Hud._label(left, "Survie : chaque boss (un coffre d'apparence, plus un coffre de forge ou de joaillier), stèles du défi, élites 1 fois sur 5, monstres rarement, autel de la fortune. Tour : paliers 50, 100, 150 et 200 (apparence). Un coffre ramassé est toujours gardé. Les objets vont au coffre commun, les fournitures à ta réserve.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var sc := ScrollContainer.new()
 	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -49,6 +52,7 @@ func _ready() -> void:
 	_detail.fit_content = true
 	_detail.size_flags_vertical = Control.SIZE_FILL
 	_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_detail.mouse_filter = Control.MOUSE_FILTER_PASS
 	var bc := CenterContainer.new()
 	right.add_child(bc)
 	_open_btn = MenuWidgets.gold_button("Ouvrir", 20, Vector2(240, 48))
@@ -56,23 +60,29 @@ func _ready() -> void:
 		if not _shown.is_empty():
 			open_chest(_shown))
 	bc.add_child(_open_btn)
+	var loot_scroll := ScrollContainer.new()
+	loot_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	loot_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	right.add_child(loot_scroll)
 	_loot = HFlowContainer.new()
+	_loot.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_loot.alignment = FlowContainer.ALIGNMENT_CENTER
 	_loot.add_theme_constant_override("h_separation", 14)
 	_loot.add_theme_constant_override("v_separation", 10)
-	right.add_child(_loot)
+	loot_scroll.add_child(_loot)
 	_choices = HBoxContainer.new()
 	_choices.add_theme_constant_override("separation", 14)
 	_choices.alignment = BoxContainer.ALIGNMENT_CENTER
 	right.add_child(_choices)
 	# fiche complète de l'objet sélectionné
-	var sc2 := ScrollContainer.new()
-	sc2.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	sc2.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	right.add_child(sc2)
+	_card_scroll = ScrollContainer.new()
+	_card_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_card_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_card_scroll.visible = false
+	right.add_child(_card_scroll)
 	_card_box = CenterContainer.new()
 	_card_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	sc2.add_child(_card_box)
+	_card_scroll.add_child(_card_box)
 
 
 func refresh() -> void:
@@ -82,30 +92,60 @@ func refresh() -> void:
 		_current = {}
 	if _current.is_empty() and (_shown.is_empty() or not Profile.reward_chests.has(_shown)) and _loot.get_child_count() == 0:
 		_preview(Profile.reward_chests.filter(func(c): return Rewards.ORDER.has(c.type))
-			.reduce(func(a, c): return c if a.is_empty() or Rewards.ORDER.find(c.type) < Rewards.ORDER.find(a.type) else a, {}))
-	_all_btn.visible = Profile.reward_chests.any(func(c): return not Rewards.is_choice(c))
+			.reduce(func(a, c): return c if a.is_empty() or Rewards.kind_rank(Rewards.kind_of(c)) < Rewards.kind_rank(Rewards.kind_of(a)) else a, {}))
+	var openable := Profile.reward_chests.filter(func(c): return not Rewards.is_choice(c)).size()
+	_all_btn.visible = openable > 0
+	_all_btn.text = "Ouvrir tout (%d)" % openable
 	for c in _list.get_children():
 		c.queue_free()
-	var by := {}
+	var by := {}  # un groupe par type et par spécialité : « forge » et « forge · parchemins » restent distincts
 	for ch in Profile.reward_chests:
-		if not by.has(ch.type):
-			by[ch.type] = []
-		by[ch.type].append(ch)
-	for t in Rewards.ORDER:
-		if by.has(t):
-			_list.add_child(_row(t, by[t]))
+		if not Rewards.ORDER.has(ch.type):
+			continue
+		var k := Rewards.kind_of(ch)
+		if not by.has(k):
+			by[k] = []
+		by[k].append(ch)
+	var kinds := by.keys()
+	kinds.sort_custom(func(a, b): return Rewards.kind_rank(a) < Rewards.kind_rank(b))
+	for k in kinds:
+		_list.add_child(_row(k, by[k]))
 	if Profile.reward_chests.is_empty():
-		Hud._label(_list, "Aucun coffre pour l'instant : bats des boss et des élites, puis ramène-les (victoire ou extraction).", 15, UiTheme.TEXT).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var empty := Hud._label(_list, "Aucun coffre pour l'instant.\nLes boss, les donjons et la Tour en donnent.", 16, UiTheme.MUTED)
+		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 
-func _row(type: String, chests: Array) -> Control:
-	var t: Dictionary = Rewards.TYPES[type]
+## Pastille d'un type de coffre : un disque de sa couleur avec son icône (le type se reconnaît sans la couleur).
+func _badge(t: Dictionary) -> Control:
+	var col: Color = t.color
+	var disc := PanelContainer.new()
+	disc.custom_minimum_size = Vector2(54, 54)
+	disc.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	disc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	disc.add_theme_stylebox_override("panel", UiTheme.flat_box(col.darkened(0.62), col.lightened(0.1), 3, 27))
+	var ic := TextureRect.new()
+	ic.texture = MenuWidgets.icon(String(t.icon))
+	ic.modulate = col.lightened(0.55)
+	ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	ic.custom_minimum_size = Vector2(30, 30)
+	ic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	disc.add_child(ic)
+	return disc
+
+
+func _row(kind: String, chests: Array) -> Control:
+	var t: Dictionary = Rewards.TYPES[String(chests[0].type)]
 	var p := PanelContainer.new()
 	var box := InventoryPage.card_box()
-	if not _shown.is_empty() and _shown.type == type:
+	if not _shown.is_empty() and Rewards.kind_of(_shown) == kind:
 		box = box.duplicate()
-		box.border_color = (t.color as Color)
-		box.set_border_width_all(2)
+		box.bg_color = (t.color as Color).darkened(0.7)
+		box.border_color = (t.color as Color).lightened(0.2)
+		box.set_border_width_all(3)
 	p.add_theme_stylebox_override("panel", box)
 	p.mouse_filter = Control.MOUSE_FILTER_STOP
 	p.gui_input.connect(func(e):
@@ -115,26 +155,21 @@ func _row(type: String, chests: Array) -> Control:
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 12)
 	p.add_child(h)
-	var ic := TextureRect.new()
-	ic.texture = MenuWidgets.icon("chest")
-	ic.modulate = (t.color as Color).lightened(0.15)  # un coffre de la couleur de son type
-	ic.custom_minimum_size = Vector2(54, 54)
-	ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	h.add_child(ic)
+	h.add_child(_badge(t))
 	var v := VBoxContainer.new()
 	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	v.add_theme_constant_override("separation", 0)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(v)
-	var n := Hud._label(v, "%s  ×%d" % [t.name, chests.size()], 18, (t.color as Color).lightened(0.25))
+	var n := Hud._label(v, "%s  ×%d" % [Rewards.kind_name(kind), chests.size()], 18, (t.color as Color).lightened(0.25))
 	n.add_theme_font_override("font", UiTheme.bold_font())
-	var d := Hud._label(v, String(t.desc), 13, UiTheme.MUTED)
+	n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var d := Hud._label(v, Rewards.kind_blurb(kind), 13, UiTheme.MUTED)
 	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var b := MenuWidgets.glass_button("Ouvrir", 16, Vector2(110, 44))
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	b.tooltip_text = "Ctrl + clic : ouvre tous les coffres de ce type d'un coup" if not Rewards.is_choice(chests[0]) else "Choisis une pièce parmi trois"
+	b.tooltip_text = "Ctrl + clic : ouvre tous les coffres de ce genre" if not Rewards.is_choice(chests[0]) else "Choisis une pièce parmi trois"
 	b.pressed.connect(func():
 		if Input.is_key_pressed(KEY_CTRL) and not Rewards.is_choice(chests[0]):
 			open_many(chests)
@@ -143,7 +178,7 @@ func _row(type: String, chests: Array) -> Control:
 	if chests.size() > 1 and not Rewards.is_choice(chests[0]):
 		var all := MenuWidgets.glass_button("Tout", 16, Vector2(70, 44))
 		all.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		all.tooltip_text = "Ouvre les %d coffres de ce type" % chests.size()
+		all.tooltip_text = "Ouvre les %d coffres" % chests.size()
 		all.pressed.connect(func(): open_many(chests))
 		h.add_child(all)
 	h.add_child(b)
@@ -155,18 +190,21 @@ func _preview(chest: Dictionary) -> void:
 	_shown = chest
 	_current = {}
 	_clear()
+	_stage.custom_minimum_size.y = STAGE_H
+	_detail.tooltip_text = ""
 	if chest.is_empty():
 		_title.text = "Coffres"
 		_title.add_theme_color_override("font_color", UiTheme.GOLD)
-		_detail.text = "[color=#a8a2b8]Aucun coffre à ouvrir.[/color]"
+		_detail.text = ""  # l'état vide est dit une fois, dans la liste
 		_stage.show_chest(Color(0.5, 0.45, 0.6))
 		_open_btn.visible = false
 		return
 	var t: Dictionary = Rewards.TYPES[chest.type]
-	_title.text = String(t.name)
+	var kind := Rewards.kind_of(chest)
+	_title.text = Rewards.kind_name(kind)
 	_title.add_theme_color_override("font_color", (t.color as Color).lightened(0.2))
-	_detail.text = "[color=#c8c8d4]Niveau %d · %s[/color]
-[color=#a8a2b8]%s[/color]" % [int(chest.plevel), String(t.desc), Rewards.preview(chest)]
+	_detail.text = "[color=#c8c8d4]Niveau %d · %s[/color]" % [int(chest.plevel), Rewards.kind_blurb(kind)]
+	_detail.tooltip_text = Rewards.preview(chest)  # le détail du contenu, au survol
 	_stage.show_chest(t.color)
 	_open_btn.visible = true
 
@@ -202,13 +240,14 @@ func open_many(chests: Array) -> void:
 	var got := Rewards.open_all(todo)
 	_clear()
 	_open_btn.visible = false
-	_title.text = "%d coffre(s) ouvert(s)" % int(got.opened)
+	_title.text = "%d coffres ouverts" % int(got.opened) if int(got.opened) > 1 else "Coffre ouvert"
 	_title.add_theme_color_override("font_color", UiTheme.GOLD)
-	_detail.text = "[color=#e6d7ff]%s[/color]
-[color=#a8a2b8]Objets : au coffre commun · fournitures : à la réserve de ta prochaine run[/color]" % Rewards.summary(got)
+	_detail.text = "[color=#e6d7ff]%s[/color]" % Rewards.summary(got)
+	_detail.tooltip_text = "Les objets vont au coffre commun, les fournitures à ta réserve."
+	_stage.custom_minimum_size.y = STAGE_COMPACT
 	_stage.show_chest(Color(1.0, 0.86, 0.3))
 	Sfx.ui("confirm")
-	_show_loot(got)
+	_show_loot(got, int(got.opened) == 1)  # plusieurs coffres : pas de fiche d'office, un clic sur un objet l'affiche
 	refresh()
 
 
@@ -217,15 +256,15 @@ func _on_burst() -> void:
 	var chest := _shown
 	if chest.is_empty():
 		return
-	var t: Dictionary = Rewards.TYPES[chest.type]
 	if Rewards.is_choice(chest):
 		_show_choices(chest)
 	else:
 		var got: Dictionary = chest.get("_got", {})
 		chest.erase("_got")
-		_title.text = "%s ouvert !" % t.name
-		_detail.text = "[color=#a8a2b8]%s[/color]" % ("Ajoutée à ta collection : à porter dans Héros > Apparence" if not got.get("looks", []).is_empty()
-			else "Objets : au coffre commun · fournitures : à la réserve de ta prochaine run")
+		_title.text = "Coffre ouvert"
+		_detail.text = "[color=#a8a2b8]%s[/color]" % ("À porter dans Héros > Apparence" if not got.get("looks", []).is_empty() else "")
+		_detail.tooltip_text = "Les objets vont au coffre commun, les fournitures à ta réserve."
+		_stage.custom_minimum_size.y = STAGE_COMPACT
 		_show_loot(got)
 		_shown = {}
 	refresh()
@@ -241,7 +280,7 @@ func _clear() -> void:
 
 ## Contenu d'un coffre ouvert : une case par objet ou fourniture, qui apparaissent l'une
 ## après l'autre ; la fiche du premier objet en dessous.
-func _show_loot(got: Dictionary) -> void:
+func _show_loot(got: Dictionary, first_card := true) -> void:
 	_clear()
 	var tiles: Array = []
 	for x in got.get("looks", []):
@@ -297,7 +336,7 @@ func _show_loot(got: Dictionary) -> void:
 		tw.tween_property(tile, "modulate:a", 1.0, 0.2)
 		tw.tween_property(tile, "scale", Vector2.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	var items: Array = got.get("items", [])
-	if not items.is_empty():
+	if first_card and not items.is_empty():
 		_show_card(items[0])
 
 
@@ -330,6 +369,7 @@ func _supply_tile(tex: Texture2D, text: String) -> Control:
 func _show_card(it: Dictionary) -> void:
 	for c in _card_box.get_children():
 		c.queue_free()
+	_card_scroll.visible = not it.is_empty()
 	if not it.is_empty():
 		_card_box.add_child(ItemWidgets.item_card(it))
 
@@ -338,7 +378,9 @@ func _show_choices(chest: Dictionary) -> void:
 	var t: Dictionary = Rewards.TYPES[chest.type]
 	_clear()
 	_title.text = String(t.name)
-	_detail.text = "[color=#c8c8d4]Choisis 1 objet (clic sur une icône : sa fiche complète en dessous). Les autres disparaissent.[/color]"
+	_detail.text = "[color=#c8c8d4]Choisis 1 objet[/color]"
+	_detail.tooltip_text = "Clique une icône pour voir sa fiche. Les deux autres pièces disparaissent."
+	_stage.custom_minimum_size.y = STAGE_COMPACT
 	var items := Rewards.offer(chest)
 	for i in items.size():
 		var it: Dictionary = items[i]

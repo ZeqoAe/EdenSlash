@@ -140,6 +140,11 @@ Détails = l'ancienne `InfoPage`) bâtis depuis les touches réelles, `Tutorial.
 Premiers pas seulement en Survie (`Modes.current()`). Fiche nouvelle : une entrée de `Tutorial.CARDS` avec son chapitre ; `on: ""` + version = annoncée
 aux anciennes sauvegardes. Test : `test_lot9` (tailles de fenêtre comprises), captures `tests/shot_u2.tscn` (`SHOT_TAG=1280x720`).
 
+## Choix de carte, coffres, roulette (lot U3, `conception/nuit_15_10/R_U3.md`)
+`CardPicker` : un clic / 1-2-3 choisit (`_choose`, délai anti-rafale 0,3 s, cartes voilées), plus de Valider. Coffres : `Rewards.kind_of / kind_name /
+kind_blurb` (type + spécialité), pastille `_badge`. Roulette : `Wheel.board()` = l'apparence promise par chaque case (gardée dans `Profile.wheel.board`),
+`WheelPage` fige la planche jusqu'à la fin de l'annonce du gain (3 s). Captures : `shot_chests.tscn`, `shot_cards.tscn` ; test : `test_u3`.
+
 ## Journal de run
 `core/run_journal.gd` écrit une ligne JSON par carte jouée dans `user://journal.jsonl`
 (`%APPDATA%/Godot/app_userdata/Eden Slash/`, hors git) : style (coffres / farm / mixte), or par source

@@ -79,8 +79,7 @@ func _ready() -> void:
 		if Tower.reached >= 1:
 			break
 		if world.cards.is_open() and Tower.reached == 0:  # carte de niveau éventuelle : on prend la première
-			world.cards._select(0)
-			world.cards._confirm_choice()
+			world.cards._choose(0)
 		for m in get_tree().get_nodes_in_group("monsters"):  # les renforts du boss aussi
 			if not m.is_dead:
 				m.hp = 1.0
