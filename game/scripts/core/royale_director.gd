@@ -295,28 +295,42 @@ func _order(r: ClassRival) -> void:
 		tag.text = "%s\n%d %%" % [r.display_name, roundi(r.hp / r.max_hp * 100.0)]
 	var pos := r.global_position
 	var flat := Vector2(pos.x, pos.z)
-	var target_next := String(ring.state) == "shrink" or (String(ring.state) == "hold" and float(ring.left) < 12.0)
-	var tc: Vector2 = ring.next_center if target_next else ring.center
-	var tr: float = ring.next_radius if target_next else ring.radius
-	var margin := 0.9 if (target_next or int(ring.phase) > 0) else 0.98  # 1er anneau : toute la carte, on pille partout
-	if flat.distance_to(tc) > tr * margin or _outside(pos, 0.95 if margin < 0.95 else 1.0):
+	var cc: Vector2 = ring.center
+	var cr: float = ring.radius
+	var nc: Vector2 = ring.next_center
+	var nr: float = ring.next_radius
+	var shrinking := nr < cr - 1.0
+	var state := String(ring.state)
+	# partir à temps : assez tôt pour atteindre le prochain anneau en courant, pas avant
+	var must_go := _outside(pos, 0.95)
+	if shrinking and flat.distance_to(nc) > nr * 0.9:
+		var walk := maxf(0.0, flat.distance_to(nc) - nr * 0.85) / (maxf(r.move_speed, 4.0) * 1.15)
+		must_go = must_go or state == "shrink" or float(ring.left) < walk + 6.0
+	if must_go:
 		_release(r)
-		var dirv := (flat - tc)
-		var spot := tc + (dirv.normalized() * minf(dirv.length(), tr * 0.45) if dirv.length() > 0.1 else Vector2.ZERO)
+		var c := nc if shrinking else cc
+		var rad := nr if shrinking else cr
+		var dirv := flat - c
+		var spot := c + (dirv.normalized() * minf(dirv.length(), rad * 0.7) if dirv.length() > 0.1 else Vector2.ZERO)
 		var g: Vector3 = d.map.ground_at(spot.x, spot.y)
 		r.goal = g if g != Vector3.INF else Vector3(spot.x, pos.y, spot.y)
 		st["mode"] = "R"
 		return
 	# un adversaire proche : on se bat
 	var near := INF
+	var near_pos := Vector3.INF
 	for f in Combatant.ffa_foes(get_tree(), r):
-		near = minf(near, pos.distance_to((f as Node3D).global_position))
+		var fd := pos.distance_to((f as Node3D).global_position)
+		if fd < near:
+			near = fd
+			near_pos = (f as Node3D).global_position
 	if near < FIGHT_RANGE:
 		r.goal = Vector3.INF
 		st["mode"] = "F"
 		return
-	# sinon un coffre dans la zone
-	var chest := _pick_chest(r, flat, tc, tr * margin)
+	# sinon un coffre dans la zone sûre (le prochain anneau quand il approche)
+	var soon := shrinking and (state == "shrink" or float(ring.left) < 30.0)
+	var chest := _pick_chest(r, flat, nc if soon else cc, (nr * 0.95) if soon else (cr * 0.97))
 	if chest != null:
 		var cp := chest.global_position
 		if Vector2(cp.x - pos.x, cp.z - pos.z).length() < CHEST_RANGE:
@@ -326,8 +340,11 @@ func _order(r: ClassRival) -> void:
 		else:
 			r.goal = cp
 			st["mode"] = "L"
+	elif near_pos != Vector3.INF:
+		r.goal = near_pos  # plus de coffre : il file vers l'adversaire le plus proche (course, sauts, esquives)
+		st["mode"] = "H"
 	else:
-		r.goal = Vector3.INF  # plus de coffre : il chasse l'adversaire le plus proche
+		r.goal = Vector3.INF
 		st["mode"] = "H"
 
 

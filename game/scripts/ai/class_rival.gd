@@ -62,6 +62,8 @@ var flee_center := Vector3.ZERO
 var flee_radius := 0.0  # 0 : pas de bord
 ## Battle royale : point à rejoindre tant qu'aucun adversaire n'est proche (coffre, anneau) ; INF : il combat.
 var goal := Vector3.INF
+var _travel_next_at := 0.0  # prochain saut ou esquive du trajet
+var _travel_dash_at := 0.0  # esquive en l'air prévue après le saut
 
 
 ## Classe [param class_id] au niveau [param lvl] (PV et dégâts d'un héros de ce niveau).
@@ -514,14 +516,33 @@ func _update_chase(delta: float) -> Vector3:
 func _update_goal(delta: float) -> Vector3:
 	var to := goal - global_position
 	to.y = 0.0
-	if to.length() < 1.2:
+	var dist := to.length()
+	if dist < 1.2:
 		if _time >= _dash_until and is_on_floor():
 			play(_anim("idle", "stand01"), 0.2)
 		return Vector3.ZERO
 	face_direction(to, delta, 12.0)
+	var step := _path_step(goal)
+	# trajet long : la course s'enchaîne avec des sauts et des esquives (un saut, puis une esquive en l'air, ou une esquive au sol)
+	if dist > 9.0 and not has_status("root"):
+		if _travel_dash_at > 0.0 and _time >= _travel_dash_at:
+			_travel_dash_at = 0.0
+			if _can_dodge():
+				_dodge(step, false)
+				return _dash_vel
+		elif _time >= _travel_next_at and _time >= _dash_until and _jump_req <= 0.0:
+			_travel_next_at = _time + randf_range(0.7, 1.5)
+			var roll := randf()
+			if roll < 0.5 and is_on_floor():
+				_jump(step)
+				_travel_dash_at = _time + 0.26 if _charges >= 1.0 and randf() < 0.75 else 0.0
+				return _dash_vel
+			elif _can_dodge() and _charges >= 1.0:
+				_dodge(step, false)
+				return _dash_vel
 	if _time >= _dash_until and is_on_floor():
 		play(_anim("run", "move02"), 0.15)
-	return _path_step(goal) * move_speed
+	return step * move_speed
 
 
 ## Fuite : s'éloigne du héros en tournant autour de lui, se rabat vers le centre près du

@@ -19,6 +19,8 @@ func _ready() -> void:
 	_test_ring()
 	_test_rules()
 	await _test_ai_duels()
+	await _test_travel()
+	await _test_spell_swap()
 	await _test_game_win()
 	await _test_game_loss()
 	print("TOUT EST OK (0 échec(s))" if fails == 0 else "ÉCHECS : %d" % fails)
@@ -230,6 +232,14 @@ func _test_game_win() -> void:
 	var pick: Dictionary = Royale.chest_items(2, p.level, Run.class_id)[0]
 	Run.apply_card(RunDirector.item_card(pick, "gear"))
 	check("pièce de coffre portée (%s, niveau d'objet %d)" % [pick.slot, int(pick.level)], Profile.equipped.has(String(pick.slot)) and int(pick.level) >= 1)
+	# changer de pièce : la page Héros du menu pause remet l'ancienne pièce (elle est restée dans le sac)
+	var piece_a := Items.generate(p.level + 1, 0.5, "chest", Run.class_id, 0, "", 3)
+	var piece_b := Items.generate(p.level + 1, 0.5, "chest", Run.class_id, 0, "", 3)
+	Run.apply_card(RunDirector.item_card(piece_a, "gear"))
+	Run.apply_card(RunDirector.item_card(piece_b, "gear"))
+	check("2e pièce du même emplacement : portée, la 1re reste dans le sac", is_same(Profile.equipped.chest, piece_b) and Profile.inventory.any(func(x): return is_same(x, piece_a)))
+	world.pause_menu._equip._equip(piece_a)
+	check("page Héros du menu pause : on remet l'ancienne pièce (échange)", is_same(Profile.equipped.chest, piece_a) and Profile.inventory.any(func(x): return is_same(x, piece_b)))
 	# anneau : un héros hors de l'anneau perd des PV
 	rd.phase = "fight"
 	var victim: ClassRival = rd.ais[0]
@@ -280,3 +290,76 @@ func _test_game_loss() -> void:
 	check("bilan de défaite : partie terminée, place 8", world._ended and Royale.rank == 8 and not Royale.active)
 	world.queue_free()
 	await get_tree().create_timer(0.5).timeout
+
+
+## Trajet hors combat : un héros scripté qui rejoint un point lointain court, saute et esquive en chemin.
+func _test_travel() -> void:
+	Royale.active = true
+	var root := Node3D.new()
+	add_child(root)
+	var floor_body := StaticBody3D.new()
+	floor_body.collision_layer = GameData.PHYS_WORLD
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(400, 2, 400)
+	shape.shape = box
+	shape.position.y = -1.0
+	floor_body.add_child(shape)
+	root.add_child(floor_body)
+	var r := Royale.make_ai("warrior", 2, 1)
+	root.add_child(r)
+	r.global_position = Vector3(-100, 0.5, 0)
+	r.set_ffa(1)
+	var other := Royale.make_ai("magician", 2, 2)  # une cible lointaine pour que le héros ait un adversaire
+	root.add_child(other)
+	other.global_position = Vector3(150, 0.5, 150)
+	other.passive = true
+	other.set_ffa(2)
+	r.goal = Vector3(100, 0.0, 0)
+	await get_tree().physics_frame
+	var airborne := 0
+	var dashes := 0
+	var last_dash := -1.0
+	var t := 0.0
+	while t < 6.0:
+		await get_tree().physics_frame
+		t += get_physics_process_delta_time()
+		if not r.is_on_floor():
+			airborne += 1
+		if r._dash_until != last_dash and r._dash_until > 0.0:
+			last_dash = r._dash_until
+			dashes += 1
+	var moved := r.global_position.x + 100.0
+	check("trajet : le héros avance (%.0f m en 6 s)" % moved, moved > 35.0)
+	check("trajet : sauts (%d images en l'air) et esquives/bonds (%d)" % [airborne, dashes], airborne > 10 and dashes >= 3)
+	root.queue_free()
+	Royale.active = false
+	await get_tree().process_frame
+
+
+## Menu pause : les sorts de la run s'échangent par glisser-déposer (Run.swap_spells).
+func _test_spell_swap() -> void:
+	Profile.reset_all()
+	Run.start("magician")
+	var ids: Array = (GameData.class_data("magician").get("skills", []) as Array).map(func(s): return int(s.id))
+	Run.skills = [{"id": ids[0], "rank": 1}, {"id": ids[1], "rank": 2}, {"id": ids[2], "rank": 1}]
+	Run.chains = {0: [{"id": ids[3], "rank": 1}], 1: [{"id": ids[4], "rank": 1}, {"id": ids[5], "rank": 1}]}
+	check("deux sorts principaux s'échangent", Run.swap_spells(Vector2i(0, 0), Vector2i(2, 0)) and int(Run.skills[0].id) == ids[2] and int(Run.skills[2].id) == ids[0])
+	check("principal ↔ enchaînement", Run.swap_spells(Vector2i(1, 0), Vector2i(0, 1)) and int(Run.skills[1].id) == ids[3] and int(Run.chains[0][0].id) == ids[1] and int(Run.chains[0][0].rank) == 2)
+	check("enchaînement vers une position d'enchaînement libre", Run.swap_spells(Vector2i(1, 1), Vector2i(2, 2)) and Run.chain_of(1).size() == 1 and Run.chain_of(2).size() == 1 and int(Run.chain_of(2)[0].id) == ids[4])
+	check("un principal ne va pas sur une position libre", not Run.swap_spells(Vector2i(0, 0), Vector2i(0, 2)) and not Run.swap_spells(Vector2i(0, 0), Vector2i(3, 0)))
+	check("position libre en source, ou même position : rien", not Run.swap_spells(Vector2i(3, 0), Vector2i(0, 0)) and not Run.swap_spells(Vector2i(0, 0), Vector2i(0, 0)))
+	check("12 positions, aucun sort perdu ni dupliqué", Run.all_skills().size() == 6 and Run.all_skills().map(func(s): return int(s.id)).size() == 6)
+	var page := RunPage.new()
+	page.player = null
+	add_child(page)
+	await get_tree().process_frame
+	page.refresh()
+	var rows := page._skills.find_children("*", "HBoxContainer", true, false).filter(func(n): return n is RunPage.SpellRow)
+	check("la page Run affiche ses lignes de sorts glissables (%d)" % rows.size(), rows.size() == 11)
+	var src: RunPage.SpellRow = rows[0]
+	var dst: RunPage.SpellRow = rows[3]  # case 2, sort principal
+	check("on peut déposer sur une ligne occupée, pas sur sa propre ligne", dst._can_drop_data(Vector2.ZERO, {"spell_pos": src.pos}) and not src._can_drop_data(Vector2.ZERO, {"spell_pos": src.pos}))
+	page.queue_free()
+	Run.active = false
+	Profile.in_run = false
