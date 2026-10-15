@@ -641,7 +641,9 @@ il suffirait de foncer au boss) ; il faut avoir fait **une bonne run** (niveau, 
   étourdissement vident la file. Tenir la touche d'une case enchaîne toute la chaîne. Une zone au sol
   visée à moins de 3 m d'un monstre se pose sur lui.
 - **Aide au combat** (0.1.134, `Settings.ASSIST`) : Manuel, Assisté (défaut : mémoire, maintien,
-  anneau), Détente (attaque, sorts et enchaînements automatiques), Bot (+ déplacement et cartes).
+  anneau), Détente (attaque, sorts et enchaînements automatiques), Bot (+ déplacement et cartes ; depuis
+  0.1.193 aussi l'équipement, l'arme secondaire, l'enclume et les trophées : `CardPicker.auto_pick`, meilleure rareté puis
+  note pondérée par le profil de la classe). Un choix de carte ouvert tient la pause, même au bout d'un fondu (arène du boss).
   L'automatique ne fait plus d'annulation parfaite : c'est le geste du joueur. Étiquette au HUD,
   ligne au bilan ; coupée dans les duels de la Tour et en Duel.
 

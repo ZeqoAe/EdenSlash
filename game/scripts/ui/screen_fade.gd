@@ -2,20 +2,27 @@ class_name ScreenFade
 extends CanvasLayer
 ## Fondu au noir autour d'un changement de carte (donjon, étape suivante) : l'écran s'assombrit,
 ## le jeu est mis en pause pendant que [param work] génère la nouvelle carte (l'à-coup ne se voit
-## pas), puis l'image revient.
+## pas), puis l'image revient. À la fin, la pause d'avant revient, sauf si un choix de carte s'est ouvert
+## pendant le noir (orbes ramassées en entrant dans l'arène : passage de niveau) : il garde la pause.
 
 const OUT := 0.3
 const IN := 0.45
 
 var _rect: ColorRect
+var _playing := false  # fondu en cours (groupe CardPicker.PAUSE_GROUP : il tient la pause)
 
 
 static func run(tree: SceneTree, work: Callable) -> void:
 	var f := ScreenFade.new()
 	f.layer = 90
 	f.process_mode = Node.PROCESS_MODE_ALWAYS
+	f.add_to_group(CardPicker.PAUSE_GROUP)
 	tree.root.add_child(f)
 	await f._play(tree, work)
+
+
+func is_open() -> bool:
+	return _playing
 
 
 ## Apparition depuis le noir (début d'une run, après un chargement).
@@ -47,6 +54,7 @@ func _play(tree: SceneTree, work: Callable) -> void:
 	_rect.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_rect)
 	var was_paused := tree.paused
+	_playing = true
 	tree.paused = true
 	var tw := create_tween()
 	tw.tween_property(_rect, "color:a", 1.0, OUT)
@@ -54,7 +62,8 @@ func _play(tree: SceneTree, work: Callable) -> void:
 	work.call()
 	await tree.process_frame
 	await tree.process_frame
-	tree.paused = was_paused
+	_playing = false
+	tree.paused = was_paused or CardPicker.pause_held(tree, self)
 	var tw2 := create_tween()
 	tw2.tween_property(_rect, "color:a", 0.0, IN)
 	await tw2.finished

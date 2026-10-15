@@ -5,6 +5,9 @@ extends CanvasLayer
 ## Un seul geste : cliquer une carte (ou 1, 2, 3, ou A à la manette) la choisit. Pendant les
 ## 0,3 premières secondes les cartes sont voilées et ignorent tout : on ne choisit pas par
 ## erreur en spammant l'auto-attaque au moment du passage de niveau.
+## Manette : le cadre doré se pose sur la 1re carte dès l'ouverture (A la choisit, la croix change de carte).
+## Le jeu reste en pause tant qu'un choix est ouvert, même si un fondu (entrée dans l'arène du boss) se
+## termine pendant le choix : les écrans qui tiennent la pause sont dans le groupe [constant PAUSE_GROUP].
 
 signal picked(card: Dictionary)
 
@@ -15,6 +18,8 @@ const TYPE_COLORS := {"skill": Color(0.35, 0.95, 0.72), "chain": Color(0.55, 0.9
 const CONFIRM_DELAY_MS := 300  # cartes inertes juste après l'ouverture (clics en rafale)
 const VEIL_ALPHA := 0.45  # opacité des cartes pendant ce délai
 const MAX_STATS := 4  # lignes de statistiques d'une pièce (hors comparaison, set et passif)
+## Groupe des écrans qui tiennent la pause tant qu'ils sont ouverts (is_open()) : choix de carte, fondu.
+const PAUSE_GROUP := "pause_modal"
 
 var _queue: Array = []  # [titre, cartes, relance (Callable)]
 var _reroll_fn: Callable
@@ -26,11 +31,13 @@ var _row: HBoxContainer
 var _buttons: Array = []
 var _opened_at := 0
 var _shared: RichTextLabel  # lignes communes à toutes les cartes d'équipement, dites une fois
+var _pad_focus := false  # nouveau choix : le cadre de la manette ira sur la 1re carte une fois la rangée posée
 
 
 func _ready() -> void:
 	layer = 20
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	add_to_group(PAUSE_GROUP)
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var dim := ColorRect.new()
@@ -106,15 +113,24 @@ func is_open() -> bool:
 	return _root.visible
 
 
+## Un autre écran du groupe [constant PAUSE_GROUP] (que [param except]) est ouvert : la pause doit rester.
+static func pause_held(tree: SceneTree, except: Node = null) -> bool:
+	for n in tree.get_nodes_in_group(PAUSE_GROUP):
+		if n != except and n.has_method("is_open") and n.is_open():
+			return true
+	return false
+
+
 func _show_next() -> void:
 	if _queue.is_empty():
 		_root.visible = false
-		get_tree().paused = false
+		get_tree().paused = pause_held(get_tree(), self)
 		return
 	var item: Array = _queue.pop_front()
 	_title.text = item[0]
 	_reroll_fn = item[2] if item.size() > 2 else Callable()
 	_own_rerolls = int(item[3]) if item.size() > 3 else -1
+	_pad_focus = true
 	_show_cards(item[1])
 	var host := get_parent()
 	if host and "hud" in host and host.hud:
@@ -152,6 +168,9 @@ func _fit_heights() -> void:
 	for b in _buttons:
 		if is_instance_valid(b):
 			b.custom_minimum_size.y = minf(tallest, 470.0)
+	if _pad_focus and _root.visible and not _buttons.is_empty() and is_instance_valid(_buttons[0]):
+		_pad_focus = false
+		UiNav.focus(_buttons[0])  # manette : la 1re carte est désignée tout de suite (sans effet à la souris)
 
 
 ## Textes des cartes : pour l'équipement, les lignes identiques sur toutes les cartes (« Emplacement
@@ -403,3 +422,40 @@ func _choose(i: int) -> void:
 	Sfx.ui("confirm", -3.0)
 	picked.emit(card)
 	_show_next()
+
+
+## Choix automatique (aide au combat « Bot », pilote automatique --autoplay) : jamais d'écran laissé ouvert.
+## Un nouveau sort tant qu'une case est libre ; équipement (coffre, arme secondaire, trophée) : la meilleure
+## rareté, puis le plus grand gain de note pondérée par le profil de la classe (Items.rating, ClassGear) sur la
+## pièce portée ; enclume, parchemins : la 1re carte (rangées de la plus utile à la moins utile) ; autres
+## cartes : la plus haute rareté ([param random_cards] : au hasard, pour que les mesures voient des builds variés).
+static func auto_pick(options: Array, random_cards := false) -> Dictionary:
+	if options.is_empty():
+		return {}
+	var skills := options.filter(func(o): return String(o.get("type", "")) == "skill")
+	if not skills.is_empty() and Run.skills.size() < Run.MAX_SKILLS:
+		return skills[0]
+	if options.all(func(o): return o.has("item")):
+		var prof := ClassGear.profile(Run.class_id)
+		var best: Dictionary = options[0]
+		var best_key := -INF
+		for o in options:
+			var it: Dictionary = o.item
+			var worn: Dictionary = Profile.equipped.get("offhand" if String(o.get("type", "")) == "offhand" else String(it.get("slot", "")), {})
+			var key := int(it.get("rarity", 0)) * 1000.0 + Items.rating(it, prof) - (Items.rating(worn, prof) if String(o.get("type", "")) != "trophy" else 0.0)
+			if key > best_key:
+				best_key = key
+				best = o
+		return best
+	if options.any(func(o): return String(o.get("type", "")) in ["anvil_slot", "anvil", "scroll"]):
+		return options[0]
+	if random_cards:
+		return options.pick_random()
+	var pick: Dictionary = options[0]
+	var best_r := -1
+	for o in options:
+		var r := Cards.TIER_ORDER.find(String(o.get("tier", "common")))
+		if r > best_r:
+			best_r = r
+			pick = o
+	return pick

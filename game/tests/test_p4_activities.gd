@@ -299,7 +299,12 @@ func _activity(act_in: String) -> Dictionary:
 func _end_game(act: String, world: Node, player: Player) -> ResultsPanel:
 	var duelish: bool = act in ["duel", "league", "pantheon", "gauntlet", "arena2", "arena3"]
 	if act == "survival_win":
-		pass  # la victoire arrive d'elle-même (6 s après le boss)
+		# la victoire arrive d'elle-même 6 s après le boss, une fois choisie l'amélioration d'arme (le choix tient la pause, P13)
+		for i in 8:
+			await _wait(0.5)
+			if world.cards.is_open():
+				world.cards._opened_at -= CardPicker.CONFIRM_DELAY_MS
+				world.cards._choose(0)
 	elif act in ["survival", "challenge"]:
 		world.revives_left = 0
 		player.dev_invincible = false

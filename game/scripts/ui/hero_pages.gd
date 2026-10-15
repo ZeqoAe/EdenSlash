@@ -227,7 +227,16 @@ class AppearancePage extends HBoxContainer:
 			_refresh_aura_tint(cid)
 			return
 		var path := _worn_path(cid)
-		if path == "" or not EdenModel.can_dye(path):
+		if path == "":
+			return
+		if not EdenModel.can_dye(path):
+			# texture cuite : pas de nuancier qui ne ferait rien, une ligne qui le dit
+			ItemWidgets.section(_dye_box, "Couleurs", 15)
+			var fixed := Label.new()
+			fixed.text = "Non teintable : cette pièce garde ses couleurs."
+			fixed.add_theme_font_size_override("font_size", UiTheme.MIN_TEXT)
+			fixed.add_theme_color_override("font_color", Color(0.72, 0.7, 0.8))
+			_dye_box.add_child(fixed)
 			return
 		var cos := {}
 		for c in GameData.cosmetics:

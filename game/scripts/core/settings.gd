@@ -263,7 +263,7 @@ const ASSIST := {
 	"relax": {"name": "Détente", "tag": "SORTS AUTO", "color": Color(0.45, 0.7, 1.0),
 		"desc": "Attaque de base, sorts et enchaînements partent seuls sur les monstres à portée. Tu te déplaces et tu esquives ; l'annulation parfaite, plus puissante, reste à la main."},
 	"bot": {"name": "Bot", "tag": "BOT", "color": Color(0.75, 0.55, 1.0),
-		"desc": "Comme Détente, et le héros se déplace et choisit ses cartes tout seul. Bouger toi-même reprend la main."},
+		"desc": "Comme Détente, et le héros se déplace et choisit seul ses cartes et son équipement. Bouger toi-même reprend la main."},
 }
 
 

@@ -262,6 +262,10 @@ static func dress(model: Node3D, glb_path: String, group := "") -> void:
 		var root := part.find_child("EdenRoot", true, false) as Node3D
 		if root:
 			root.transform = Transform3D.IDENTITY
+		# chaque maillage porte le nom de sa pièce, comme ceux des pièces articulées : la teinture
+		# (apply_dye) les retrouve (sans cela, un accessoire rigide gardait ses couleurs d'origine)
+		for mi in part.find_children("*", "MeshInstance3D", true, false):
+			mi.set_meta("part", glb_path)
 		att.add_child(part)
 		return
 	# os propres à la pièce (manches, rubans...) : ajoutés au squelette, au repos

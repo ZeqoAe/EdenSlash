@@ -199,6 +199,9 @@ remplie, FPS et touches de test cachés (« F1 : aide » 10 s au début). Pause 
 (parmi ceux du calque le plus haut), A = vrai clic de souris au centre, B = Échap, X = clic droit, LB/RB = onglets (`tab_screens`, `step_page`,
 TabContainer), Y = curseur libre. Aucun écran à adapter : un nouveau menu fait de Button/BaseButton est navigable tout seul (un panneau
 cliquable doit avoir un signal `gui_input` relié). Test d'atteignabilité : `tests/test_nav_screens.tscn` (ajouter les nouveaux écrans).
+Choix en run (0.1.193, P13) : tout passe par `world._offer` -> `CardPicker` ; le choix tient la pause (groupe `CardPicker.PAUSE_GROUP`,
+`ScreenFade` aussi : un fondu ne relance pas le jeu sous un choix), cadre de la manette sur la 1re carte ; aide « Bot » et `--autoplay` :
+`CardPicker.auto_pick` (équipement compris). Teinture : `EdenModel.dress` marque chaque maillage (`meta part`), accessoires rigides compris.
 Écrans à pages : doivent tenir dans 1280×720 (colonnes et panneaux réduits sous 1500 px de large, cf. `PageScreen._fit_header`,
 `InventoryPage._narrow`) ; vérifier avec `tests/shot_p1.tscn` (`P1_STATE=neuf|avance P1_RES=1280x720`, lignes `[débord]` = contrôle hors écran).
 Manette réassignable : `Settings.pad_binds` (`pad_bind`, `pad_label`, `pad_layout` xbox/ps), Paramètres > Touches > Manette. Export pour

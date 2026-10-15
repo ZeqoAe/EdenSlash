@@ -1054,7 +1054,7 @@ func _on_boss_killed() -> void:
 		message.emit("%s terminée !%s" % [Epochs.get_def(Run.epoch).name, ("\n%s débloquée" % opened) if opened != "" else ""], 4.5)
 	else:
 		message.emit("Boss vaincu !\nRamasse le butin", 3.0)
-	await get_tree().create_timer(6.0).timeout
+	await get_tree().create_timer(6.0, false).timeout  # en pause pendant un choix de carte (sinon le bilan le recouvrait)
 	boss_defeated.emit()
 
 

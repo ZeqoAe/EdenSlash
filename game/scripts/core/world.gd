@@ -406,34 +406,23 @@ func _parse_args() -> void:
 			player.hp = player.max_hp
 
 
-## Propose des cartes ; en mode bot, la première est choisie automatiquement.
+## Propose des cartes ; en mode bot (et au pilote automatique), le choix se fait seul, équipement compris
+## (CardPicker.auto_pick : aucun écran de choix ne reste ouvert).
 func _offer(title: String, options: Array, reroll := Callable(), own_rerolls := -1) -> void:
 	if options.is_empty():
 		return
 	if options.any(func(o): return String(o.get("type", "")) in ["skill", "chain", "upgrade", "passive"]):
 		Tutorial.event("cards_open")
 	if player.autoplay:
-		# pilote automatique : une nouvelle compétence tant qu'il en manque, sinon une carte au
-		# hasard (passifs compris : les mesures d'équilibrage doivent voir des builds)
-		var skills := options.filter(func(o): return String(o.get("type", "")) == "skill")
-		Run.apply_card(skills[0] if not skills.is_empty() and Run.skills.size() < 4 else options.pick_random())
+		# pilote automatique : cartes au hasard (passifs compris : les mesures d'équilibrage doivent voir des builds)
+		Run.apply_card(CardPicker.auto_pick(options, true))
 		return
-	if Settings.auto_cards() and not options.any(func(o): return String(o.get("type", "")) in ["gear", "trophy", "anvil_slot", "offhand"]):
-		# choix automatique (Paramètres) : un nouveau sort tant qu'une case est libre, sinon la
-		# carte de plus haute rareté
-		var pick: Dictionary = options[0]
-		var skills := options.filter(func(o): return String(o.get("type", "")) == "skill")
-		if not skills.is_empty() and Run.skills.size() < Run.MAX_SKILLS:
-			pick = skills[0]
-		else:
-			var best := -1
-			for o in options:
-				var r := Cards.TIER_ORDER.find(String(o.get("tier", "common")))
-				if r > best:
-					best = r
-					pick = o
+	if Settings.auto_cards():
+		var pick := CardPicker.auto_pick(options)
 		Run.apply_card(pick)
-		hud.show_message("Carte choisie : %s" % String(pick.get("title", "?")), 2.0)
+		var what: String = {"anvil_slot": "Enclume", "anvil": "Enclume", "scroll": "Parchemin choisi"}.get(String(pick.get("type", "")),
+			"Pièce choisie" if pick.has("item") else "Carte choisie")
+		hud.show_message("%s : %s" % [what, String(pick.get("title", "?"))], 2.0)
 		return
 	cards.offer(title, options, reroll, own_rerolls)
 
