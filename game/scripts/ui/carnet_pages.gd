@@ -16,6 +16,7 @@ static func tabs() -> Array:
 		["Cartes", CardsPage.new()],
 		["Trophées", TrophiesPage.new()],
 		["Collection", ArchivePages.CollectionPage.new()],
+		["Registre", RegistryPage.new()],
 	]
 
 
@@ -164,7 +165,8 @@ class ScrollPage extends VBoxContainer:
 ## Vue d'ensemble : le bandeau de complétion, puis les dix catégories (cliquables quand elles ont une page).
 class OverviewPage extends ScrollPage:
 	## Catégorie -> page du Carnet ou section du Héros où la retrouver.
-	const LINKS := {"Succès": "tab:Achievements", "Cartes": "tab:Cards", "Trophées": "tab:Trophies", "Classes": "hero:class", "Maîtrise": "hero:class"}
+	const LINKS := {"Succès": "tab:Achievements", "Cartes": "tab:Cards", "Trophées": "tab:Trophies", "Classes": "hero:class", "Maîtrise": "hero:class",
+		"Équipement": "tab:Registry"}
 
 	func subtitle() -> String:
 		return "Ta progression d'un coup d'œil"
@@ -251,6 +253,8 @@ class OverviewPage extends ScrollPage:
 				CarnetPages.goto_tab(self, CarnetPages.CardsPage)
 			"Trophies":
 				CarnetPages.goto_tab(self, CarnetPages.TrophiesPage)
+			"Registry":
+				CarnetPages.goto_tab(self, RegistryPage)
 
 
 ## Succès : obtenus d'abord, puis ceux en cours par avancement ; titres à porter.

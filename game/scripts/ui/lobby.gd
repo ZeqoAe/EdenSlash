@@ -58,6 +58,8 @@ var _reward_bar: ProgressBar
 var _reward_text: Label
 var _reward_nums: Label
 var _footer: Label
+var _gear_band: Label  # « 3 / 60 classes équipées » (Registre de l'équipement)
+var _gear_sep: VSeparator
 var _clock: Label
 var _snapshot: Texture2D
 var _dev_button: Button
@@ -1063,6 +1065,18 @@ func _build_ui() -> void:
 	user.texture = MenuWidgets.icon("user")
 	user.modulate = MenuWidgets.ICON_TINT
 	_footer = Hud._label(ih, "", 14, UiTheme.TEXT)
+	# Registre de l'équipement (lot E3) : classes équipées ; un clic ouvre le Registre du Carnet
+	_gear_sep = VSeparator.new()
+	ih.add_child(_gear_sep)
+	_gear_band = Hud._label(ih, "", 14, UiTheme.TEXT)
+	_gear_band.mouse_filter = Control.MOUSE_FILTER_STOP
+	_gear_band.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_gear_band.tooltip_text = "Registre de l'équipement"
+	_gear_band.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT and Unlocks.is_open("collection"):
+			for i in _archive.page_count():
+				if _archive.page(i) is RegistryPage:
+					_archive.open(i))
 	ih.add_child(VSeparator.new())
 	var clock := _tex(ih, Vector2(22, 22))
 	clock.texture = MenuWidgets.icon("clock")
@@ -1705,6 +1719,12 @@ func _refresh_ui() -> void:
 	var n_chests := Profile.reward_chests.size()
 	_menu.chests.set_badge(("%d" % n_chests if n_chests > 0 else "") + (" ★" if Wheel.free_left() > 0 else ""))
 	_footer.text = "%d insignes · %d cristaux" % [Profile.insignia, int(Profile.materials.get("crystal", 0))]
+	var reg := Unlocks.is_open("collection")
+	_gear_band.visible = reg
+	_gear_sep.visible = reg
+	if reg:
+		var ec := ClassGear.equipped_count()
+		_gear_band.text = "%d / %d classes équipées" % [ec.x, ec.y]
 	_show_menu(_current)
 
 

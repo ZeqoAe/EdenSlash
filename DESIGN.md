@@ -120,6 +120,30 @@ Vitalité, Posture du chasseur, Désarmé (ne peut plus attaquer), Ange gardien 
   description d'un sort n'est plus répétée sous « Effets » ; LB / RB changent de section ; « ? » ouvre le Guide
   (Détails) : plus de page d'aide à part dans l'écran Héros.
 
+### Équipement des 60 classes (lot E3 de la nuit du 15/10, `core/class_gear.gd`)
+
+- **7 profils de stats** (`data/class_profiles.json`, généré par `tools/gen_class_profiles.py`, à relancer si une classe
+  change) : type de dégâts réel (après `GameData._balance_damage_types`), défense de base 6 = classe de garde, sinon
+  l'attribut de croissance le plus fort parmi ceux qui font ses dégâts. Puissance (force, 4 classes), Vivacité (agilité,
+  9), Précision (chance, 9), Rempart (garde physique, 10), Croisé (garde magique, 4), Arcane (intelligence, 15), Esprit
+  (sagesse, 9). Poids par stat de 0,3 à 1,5 ; type d'armure préféré (tissu / cuir / plates) = +0,5 de note.
+- `Items.rating(pièce, profil)` : la note pondérée ne sert qu'aux choix automatiques ; **la PE affichée et les seuils
+  d'activité restent la note commune** (sans profil, rien ne change).
+- **Équiper le meilleur** (Héros > Équipement > Gérer, hors run) : pour chaque emplacement du préréglage actif, la pièce
+  du coffre commun de plus grande valeur pour le profil (arme principale du type de la classe, arme secondaire libre),
+  puis les panoplies essayées par paliers (2 / 4 / 6) et des échanges pièce par pièce. **Garder mes choix** : les pièces
+  posées à la main (ni de départ, ni posées par le dernier « Équiper le meilleur ») restent.
+- **Appliquer à la famille** : le préréglage actif copié dans le préréglage actif des classes du même profil ; chacune
+  prend sa meilleure arme de son type, une classe sans arme de son type au coffre est sautée.
+- La dernière de ces actions s'**annule** (« Annuler : … » dans Gérer) : rien n'écrase un préréglage sans retour.
+- **Registre de l'équipement** (Carnet, dernier onglet) : par classe, PE du préréglage actif face à la PE attendue au
+  meilleur niveau atteint, arme du bon type, pièces (celles de départ = « base », elles ne comptent pas), panoplie de
+  donjon x / 6, Esprits x / 6, pièces à +10, gemmes, enchantements ; état (À commencer, À compléter, À renforcer,
+  Équipée = 9 vraies pièces et PE ≥ 70 % de l'attendue, Optimale = panoplie 6, tout à +10, serti, enchanté) et une ligne
+  « Il manque : … → activité » (arme / pièces / niveau → Survie puis Armurerie, panoplie → Donjons ou Panthéon, +10 →
+  Forge, gemmes → la Tour, enchantements → le Siège). Moins équipées d'abord ; un clic ouvre l'équipement de la classe.
+  Lobby : « N / 60 classes équipées » dans le pied de page (un clic ouvre le Registre).
+
 ## Impact visuel
 
 Arcs de lame épais et lumineux (cœur blanc, bloom), ondes de choc au sol avec poussière,

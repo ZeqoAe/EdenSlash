@@ -173,6 +173,11 @@ cliquable doit avoir un signal `gui_input` relié). Test d'atteignabilité : `te
 Manette réassignable : `Settings.pad_binds` (`pad_bind`, `pad_label`, `pad_layout` xbox/ps), Paramètres > Touches > Manette. Export pour
 Steam Link / Apple TV : `Creer_version.bat` (zip + `Jouer_plein_ecran.bat`, argument `--fullscreen`).
 
+## Équipement des 60 classes (0.1.178, lot E3)
+`core/class_gear.gd` : 7 profils de stats (`data/class_profiles.json`, régénérer avec `python tools/gen_class_profiles.py`), « Équiper le meilleur »,
+« garder mes choix », « Appliquer à la famille », annulation (menu Gérer de Héros > Équipement), fiche du Registre (`ui/registry_page.gd`, dernier onglet
+du Carnet ; bandeau « N / 60 classes équipées » du lobby). La PE affichée reste sans profil (`Items.rating(item)`). Test : `test_e3`.
+
 ## Branche
 Tout se passe sur la branche `claude/optimistic-gauss-p2g2pq`. Ne pas travailler sur `master`.
 

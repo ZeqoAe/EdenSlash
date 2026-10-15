@@ -531,12 +531,15 @@ static func power_cap(item: Dictionary) -> int:
 
 ## Note d'un objet (comparaison) : chaque stat rapportée à la valeur habituelle de son
 ## emplacement au même niveau ; passif +1, pièce de set +0,5.
-static func rating(item: Dictionary) -> float:
+## [param profile] (profil de stats d'une classe, ClassGear.profile) : chaque stat × son poids, et
+## +ARMOR_PREF_BONUS pour une pièce du type d'armure préféré. Sans profil : la note commune (PE, comparaisons).
+static func rating(item: Dictionary, profile: Dictionary = {}) -> float:
 	if item.is_empty():
 		return 0.0
 	var slot := String(item.get("slot", "weapon"))
 	var lk := _level_k(power_level(item))
 	var st := stats(item)
+	var w: Dictionary = profile.get("weights", {})
 	var r := 0.0
 	for s in st:
 		var ref := _ref(slot, String(s))
@@ -544,12 +547,25 @@ static func rating(item: Dictionary) -> float:
 			ref = float(AFFIX_RANGES.get(s, [0.0, 0.0])[1])
 		if ref <= 0.0:
 			continue
-		r += float(st[s]) / (ref * (1.0 if s in PERCENT_STATS else lk))
+		r += float(w.get(s, 1.0)) * float(st[s]) / (ref * (1.0 if s in PERCENT_STATS else lk))
 	if item.has("passive"):
 		r += 1.0
 	if item.has("set"):
 		r += 0.5
+	if not profile.is_empty() and armor_type(item) != "" and armor_type(item) == String(profile.get("armor", "")):
+		r += ARMOR_PREF_BONUS
 	return r
+
+
+## Bonus de note d'une pièce du type d'armure préféré du profil (autant qu'une pièce de set).
+const ARMOR_PREF_BONUS := 0.5
+
+
+## Type d'armure d'une pièce d'Eden (« tissu », « cuir », « plates ») ; "" pour le reste.
+static func armor_type(item: Dictionary) -> String:
+	if not item.has("eden"):
+		return ""
+	return String(GameData.eden_by_id.get(int(item.eden), {}).get("armor", ""))
 
 
 ## Écart avec la pièce portée au même emplacement (+0,15 = 15 % mieux) ; 1 si l'emplacement

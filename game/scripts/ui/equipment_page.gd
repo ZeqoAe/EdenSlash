@@ -48,7 +48,7 @@ class PresetBar extends HBoxContainer:
 		_more.add_theme_stylebox_override("normal", _box(false))
 		_more.add_theme_stylebox_override("hover", _box(true))
 		_more.add_theme_stylebox_override("pressed", _box(true))
-		_more.tooltip_text = "Copier l'équipement porté vers un autre préréglage, renommer"
+		_more.tooltip_text = "Équiper le meilleur, copier vers un autre préréglage ou vers la famille, renommer"
 		_more.pressed.connect(_open_menu)
 		add_child(_more)
 
@@ -112,7 +112,7 @@ class PresetBar extends HBoxContainer:
 			v.add_child(_entry("Copier vers « %s » · %s" % [names[j], pieces_text(piece_count(_cid, j))], func():
 				Profile.copy_active_preset(_cid, jj)
 				changed.emit("Équipement copié vers « %s »." % names[jj])))
-		for a in extra_actions:
+		for a in extra_actions + ClassGear.menu_actions(_cid):  # meilleur équipement, famille, annulation (lot E3)
 			var act: Dictionary = a
 			var b := _entry(String(act.label), func():
 				changed.emit(String(act.call.call(_cid))))

@@ -21,30 +21,51 @@ const TIERS := [[0.35, "Faible", Color(0.7, 0.7, 0.78)], [0.7, "Correcte", Color
 	[1.0, "Solide", Color(0.4, 0.7, 1.0)], [999.0, "Redoutable", Color(1.0, 0.7, 0.2)]]
 
 
-static func item_power(item: Dictionary) -> int:
+## PE d'une pièce ; avec [param profile] (profil de stats d'une classe) : sa valeur pour cette classe
+## (choix de « Équiper le meilleur », jamais affichée comme PE).
+static func item_power(item: Dictionary, profile: Dictionary = {}) -> int:
 	if item.is_empty():
 		return 0
-	return roundi(Items.rating(item) * (BASE + PER_LEVEL * Items.power_level(item)))
+	return roundi(Items.rating(item, profile) * (BASE + PER_LEVEL * Items.power_level(item)))
 
 
 ## PE de l'équipement [param gear] (par défaut celui du héros : Profile.equipped).
 static func hero_power(gear: Dictionary = {}) -> int:
-	var g: Dictionary = gear if not gear.is_empty() else Profile.equipped
+	return gear_power(gear if not gear.is_empty() else Profile.equipped)
+
+
+## PE d'un équipement quelconque (emplacement -> objet ; vide = 0), éventuellement pondérée par un profil.
+static func gear_power(g: Dictionary, profile: Dictionary = {}) -> int:
 	var total := 0.0
 	for slot in g:
 		if slot == "trophy":
 			continue
-		var p := float(item_power(g[slot]))
-		total += p * (OFFHAND_SHARE if slot == "offhand" else 1.0)
+		total += float(item_power(g[slot], profile)) * slot_share(slot)
+	return roundi(total * set_factor(g))
+
+
+## Part d'un emplacement dans la PE (l'arme secondaire compte pour 30 %).
+static func slot_share(slot: String) -> float:
+	return OFFHAND_SHARE if slot == "offhand" else 1.0
+
+
+## Multiplicateur des paliers de panoplie actifs (l'arme secondaire n'y compte pas).
+static func set_factor(g: Dictionary) -> float:
 	var sg := g.duplicate()
 	sg.erase("offhand")
-	var steps := Items.active_set_bonuses(sg).size()
-	return roundi(total * (1.0 + SET_STEP * steps))
+	sg.erase("trophy")
+	return 1.0 + SET_STEP * Items.active_set_bonuses(sg).size()
 
 
 ## PE d'un équipement correct de niveau de puissance [param level].
 static func expected(level: int) -> int:
 	return roundi(Items.SLOTS.size() * TARGET_RATING * (BASE + PER_LEVEL * maxi(level, 1)))
+
+
+## Niveau de référence de la PE attendue hors activité (écran Équipement, Registre) : le meilleur niveau
+## atteint en run.
+static func target_level() -> int:
+	return maxi(Profile.best_level, 1)
 
 
 ## PE qu'il faut pour le niveau [param level] à la part [param share] (0 à 1) de la PE attendue.

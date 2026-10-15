@@ -83,6 +83,16 @@ func _ready() -> void:
 	CarnetPages.open_hero(lobby._archive.page(2), "cards")
 	check("Carnet > Cartes : le lien ouvre Héros > Cartes", lobby._hero.is_open() and not lobby._archive.is_open())
 	lobby._hero.close_ui()
+	# Registre de l'équipement (lot E3) : filtres et lignes de classe ; une ligne ouvre Héros > Équipement
+	var reg_i := 0
+	for i in lobby._archive.page_count():
+		if lobby._archive.page(i) is RegistryPage:
+			reg_i = i
+	lobby._archive.open(reg_i)
+	await probe("Carnet : Registre de l'équipement", 0.8)
+	lobby._archive.page(reg_i)._open_class(Profile.selected_class)
+	check("Registre : une classe ouvre Héros > Équipement", lobby._hero.is_open() and not lobby._archive.is_open())
+	lobby._hero.close_ui()
 	lobby._archive.open(0)
 	lobby._archive.close_ui()
 	lobby._workshop.open(0)
