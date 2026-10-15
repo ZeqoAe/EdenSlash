@@ -565,13 +565,11 @@ func clock_text() -> String:
 
 ## Lignes du panneau d'objectifs (HUD).
 func objective_lines() -> Array[String]:
-	var dps := roundi(float(ring.get("dps", 0.0)) * 100.0)
+	# trois lignes : les survivants sont déjà sous le titre, les potions dans la barre d'action
 	var out: Array[String] = []
-	out.append("⚔ Sois le dernier debout : %d / %d en vie" % [alive_count(), Royale.PLAYERS])
-	out.append("◇ Reste dans l'anneau violet (hors de lui : %d %% des PV par seconde)" % dps)
+	out.append("⚔ Reste dans l'anneau violet")
 	out.append("◇ Coffres ouverts : %d · niveau %d / %d" % [chests_opened, d.player.level, Royale.LEVEL_CAP])
-	out.append("◇ Potions : [%s] soin (%d) · [%s] effet (%d)" % [Settings.action_label("potion_1", 1), Potions.count("heal"), Settings.action_label("potion_2", 1), Potions.count(Potions.boost_to_use()) if Potions.boost_to_use() != "" else 0])
-	out.append("◇ Une élimination = un niveau et 25 % de PV")
+	out.append("◇ Chaque élimination : un niveau et des PV")
 	return out
 
 

@@ -9,7 +9,9 @@ extends CanvasLayer
 signal picked(card: Dictionary)
 
 const ACCENT := Color(0.98, 0.78, 0.35)
-const TYPE_COLORS := {"skill": Color(1.0, 0.55, 0.3), "chain": Color(0.55, 0.9, 1.0), "upgrade": Color(0.45, 0.75, 1.0), "weapon_up": Color(1.0, 0.8, 0.4), "passive": Color(0.6, 0.95, 0.55)}
+## Couleur des cartes sans rareté (nouveau sort, enchaînement) : un vert menthe que ni le bleu rare, ni le violet épique,
+## ni l'orange légendaire ne confondent. Les autres cartes portent la couleur de leur rareté.
+const TYPE_COLORS := {"skill": Color(0.35, 0.95, 0.72), "chain": Color(0.55, 0.98, 0.85), "upgrade": Color(0.85, 0.85, 0.88), "weapon_up": Color(0.85, 0.85, 0.88), "passive": Color(0.85, 0.85, 0.88)}
 const CONFIRM_DELAY_MS := 300  # cartes inertes juste après l'ouverture (clics en rafale)
 const VEIL_ALPHA := 0.45  # opacité des cartes pendant ce délai
 const MAX_STATS := 4  # lignes de statistiques d'une pièce (hors comparaison, set et passif)
@@ -35,13 +37,15 @@ func _ready() -> void:
 	dim.color = Color(0.02, 0.01, 0.05, 0.72)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(dim)
+	var center := CenterContainer.new()  # le bloc est centré quelle que soit la hauteur de l'écran (720 p compris)
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(center)
 	var v := VBoxContainer.new()
-	v.set_anchors_preset(Control.PRESET_CENTER)
 	v.alignment = BoxContainer.ALIGNMENT_CENTER
-	v.add_theme_constant_override("separation", 22)
-	v.position = Vector2(-560, -270)
+	v.add_theme_constant_override("separation", 18)
 	v.custom_minimum_size = Vector2(1120, 0)
-	_root.add_child(v)
+	center.add_child(v)
 	_title = Label.new()
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UiTheme.title(_title, 40, ACCENT)
@@ -144,7 +148,7 @@ func _fit_heights() -> void:
 	var tallest := 380.0
 	for b in _buttons:
 		if is_instance_valid(b):
-			tallest = maxf(tallest, (b.get_child(0) as Control).get_combined_minimum_size().y + 36.0)
+			tallest = maxf(tallest, (b.get_meta("content") as Control).get_combined_minimum_size().y + 36.0)
 	for b in _buttons:
 		if is_instance_valid(b):
 			b.custom_minimum_size.y = minf(tallest, 470.0)
@@ -217,7 +221,11 @@ func _do_reroll() -> void:
 
 func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 	# couleur : rareté tirée de la carte (Cards), sinon type de carte
-	var col: Color = Cards.tier(String(card.tier)).color if card.has("tier") and card.tier != "common" 		else (Boons.RARITY[card.rarity].color if card.has("rarity") and card.rarity != "common" else TYPE_COLORS.get(card.type, ACCENT))
+	var col: Color = TYPE_COLORS.get(card.type, ACCENT)
+	if card.has("tier") and Cards.TIERS.has(String(card.tier)):
+		col = Cards.tier(String(card.tier)).color  # la couleur est celle de la rareté, commune comprise (gris clair)
+	elif card.has("rarity") and Boons.RARITY.has(String(card.rarity)):
+		col = Boons.RARITY[card.rarity].color
 	if card.has("color"):
 		col = card.color  # objet (coffres de la carte, enclume) : couleur de sa rareté
 	var b := Button.new()
@@ -229,6 +237,9 @@ func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 	sb.border_color = col
 	sb.set_border_width_all(3)
 	sb.set_corner_radius_all(14)
+	if String(card.get("tier", "common")) in ["rare", "epic", "legendary"]:
+		sb.shadow_color = Color(col, 0.38)  # les cartes rares et mieux brillent
+		sb.shadow_size = 12
 	var hover := sb.duplicate() as StyleBoxFlat
 	hover.bg_color = Color(0.16, 0.13, 0.25, 1.0)
 	hover.set_border_width_all(5)
@@ -247,12 +258,55 @@ func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 	v.offset_bottom = -18
 	v.add_theme_constant_override("separation", 10)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.set_meta("content", v)
 	b.add_child(v)
+	# fond teinté de la rareté, du haut vers le bas : la couleur se voit de loin, sans lire le texte
+	var tint := GradientTexture2D.new()
+	tint.fill = GradientTexture2D.FILL_LINEAR
+	tint.fill_from = Vector2(0.5, 0.0)
+	tint.fill_to = Vector2(0.5, 1.0)
+	tint.gradient = Gradient.new()
+	tint.gradient.colors = PackedColorArray([Color(col, 0.34), Color(col, 0.0)])
+	var wash := TextureRect.new()
+	wash.texture = tint
+	wash.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	wash.stretch_mode = TextureRect.STRETCH_SCALE
+	wash.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	wash.offset_left = 6
+	wash.offset_right = -6
+	wash.offset_top = 6
+	wash.offset_bottom = 170
+	wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.add_child(wash)
+	b.move_child(wash, 0)
+	# ligne du haut : la touche qui choisit la carte (pastille), puis rareté, type et niveau
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 10)
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(top)
+	var badge := Label.new()
+	badge.text = str(i + 1)
+	badge.custom_minimum_size = Vector2(30, 30)
+	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	badge.add_theme_font_size_override("font_size", 18)
+	badge.add_theme_font_override("font", UiTheme.bold_font())
+	badge.add_theme_color_override("font_color", Color(0.06, 0.04, 0.1))
+	badge.add_theme_stylebox_override("normal", UiTheme.flat_box(col, col.lightened(0.3), 1, 15, false))
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top.add_child(badge)
 	var key := Label.new()
-	key.text = "%d · %s" % [i + 1, card.subtitle]
-	key.add_theme_color_override("font_color", col)
-	key.add_theme_font_size_override("font_size", 16)
-	v.add_child(key)
+	key.text = String(card.subtitle)
+	key.add_theme_color_override("font_color", col.lightened(0.15))
+	key.add_theme_font_size_override("font_size", 17)
+	key.add_theme_font_override("font", UiTheme.bold_font())
+	key.add_theme_constant_override("outline_size", 4)
+	key.add_theme_color_override("font_outline_color", Color(0.04, 0.02, 0.08, 0.9))
+	key.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	key.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	key.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	key.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top.add_child(key)
 	var icon := TextureRect.new()
 	icon.custom_minimum_size = Vector2(96, 96)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -274,10 +328,10 @@ func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 	d.scroll_active = false
 	d.fit_content = true
 	d.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	d.add_theme_font_size_override("normal_font_size", 14)
-	d.add_theme_font_size_override("bold_font_size", 15)
+	d.add_theme_font_size_override("normal_font_size", 15)
+	d.add_theme_font_size_override("bold_font_size", 16)
 	d.add_theme_font_override("bold_font", UiTheme.bold_font())
-	d.modulate = Color(0.92, 0.92, 0.95)
+	d.modulate = Color(0.95, 0.95, 0.98)
 	d.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(d)
 	# bannir (la carte quitte la run, une autre la remplace) / garder (revient au prochain choix)
@@ -289,7 +343,7 @@ func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 		ban.text = "Bannir (%d)" % (Cards.BANS_PER_RUN - Run.bans_used)
 		ban.tooltip_text = "Cette carte ne sera plus proposée pendant la run ; une autre la remplace."
 		ban.focus_mode = Control.FOCUS_NONE
-		ban.add_theme_font_size_override("font_size", 13)
+		ban.add_theme_font_size_override("font_size", UiTheme.MIN_TEXT)
 		ban.disabled = Run.bans_used >= Cards.BANS_PER_RUN or String(card.type) in ["upgrade", "weapon_up"]
 		ban.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		ban.pressed.connect(func(): _ban(i))
@@ -299,7 +353,7 @@ func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 		keep.text = "Gardée ✔" if is_kept else "Garder (%d)" % (Cards.LOCKS_PER_RUN - Run.locks_used)
 		keep.tooltip_text = "La carte revient au prochain choix, avec la même rareté, si tu en prends une autre maintenant."
 		keep.focus_mode = Control.FOCUS_NONE
-		keep.add_theme_font_size_override("font_size", 13)
+		keep.add_theme_font_size_override("font_size", UiTheme.MIN_TEXT)
 		keep.disabled = is_kept or Run.locks_used >= Cards.LOCKS_PER_RUN
 		keep.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		keep.pressed.connect(func():

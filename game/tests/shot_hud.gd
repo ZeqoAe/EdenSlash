@@ -6,6 +6,8 @@ extends Node
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	Settings.reset_all()
+	if OS.get_environment("P3_RES") != "":
+		Settings.set_v("display", "resolution", OS.get_environment("P3_RES"))  # captures à 1280x720 (le réglage prime sur --resolution)
 	Profile.selected_class = "warrior"
 	if "siege" in args:
 		Tower.start_siege("warrior", "limestone", 0, [])

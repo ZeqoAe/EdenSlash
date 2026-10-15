@@ -1,8 +1,8 @@
 class_name PauseMenu
 extends CanvasLayer
 ## Menu pause (Échap), plein écran, même structure que le lobby : page « Run »
-## (compétences, cartes, sac, bilan, actions), page « Héros » (équipement, statistiques,
-## sac de la run) et page « Aide » (formules des statistiques et des dégâts, valeurs du héros).
+## (compétences, cartes, sac, bilan, actions) et page « Héros » (équipement, statistiques,
+## sac de la run). Le bouton « ? Aide » de l'en-tête ouvre le Guide (formules, valeurs du héros).
 ## Grimoire et paramètres s'ouvrent par-dessus.
 
 signal abandon_requested
@@ -14,7 +14,7 @@ var grimoire: Grimoire
 var _screen: PageScreen
 var _run: RunPage
 var _equip: InventoryPage
-var _info: InfoPage
+var _help_button: Button
 var _confirm: Confirm
 
 
@@ -31,9 +31,13 @@ func setup(p: Player) -> void:
 	_equip = InventoryPage.new()
 	_equip.player = player
 	_screen.add_page("Héros", _equip)
-	_info = InfoPage.new()
-	_info.player = player
-	_screen.add_page("Aide", _info)
+	_help_button = Button.new()
+	_help_button.text = "?  Aide"
+	_help_button.tooltip_text = "Le Guide : touches, cartes, modes et formules (%s)" % Settings.action_label("help", 1)
+	_help_button.focus_mode = Control.FOCUS_NONE
+	_help_button.custom_minimum_size = Vector2(0, 40)
+	_help_button.pressed.connect(open_guide)
+	_screen.add_header_control(_help_button)
 	_run.resume_requested.connect(close)
 	_run.extract_requested.connect(func():
 		close()
@@ -55,6 +59,14 @@ func setup(p: Player) -> void:
 
 func is_open() -> bool:
 	return _screen != null and _screen.is_open()
+
+
+## « ? Aide » : le Guide, sur ses formules, par-dessus la pause (Échap ou F1 le ferme, la pause reste).
+func open_guide() -> Guide:
+	# même parent que la touche F1 (TestTools) : F1 le referme au lieu d'en ouvrir un second
+	var world := get_parent()
+	var host: Node = world.get("tools") if world != null and "tools" in world and world.get("tools") != null else get_tree().current_scene
+	return Guide.open_on(host, "details")
 
 
 func open(page := -1) -> void:

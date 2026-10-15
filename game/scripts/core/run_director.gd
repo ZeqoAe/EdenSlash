@@ -163,6 +163,8 @@ func start(p: Player) -> void:
 	_emit_zone()
 	if Training.active:
 		state = "training"
+		_fog.fill(Color(0, 0, 0, 0))  # la mini-carte montre toute la zone (rien à explorer)
+		_fog_tex.update(_fog)
 		message.emit("Zone d'entraînement\nF3 : panneau (niveau, sorts, cartes, ennemis, DPS)", 4.0)
 		return
 	_refresh_chest_labels()
@@ -807,8 +809,7 @@ func _enter_arena() -> void:
 	if _boss.brain:
 		_boss.brain.enraged_phase.connect(func(): message.emit("%s entre en fureur !" % _boss.display_name, 2.5))
 		_boss.reflect_started.connect(func(): message.emit("Miroir ! Ne frappe pas pendant 3 s", 2.0))
-	message.emit("BOSS : %s
-Évite les zones rouges (Maj : esquive)" % _boss.display_name, 3.5)
+	message.emit("BOSS : %s" % _boss.display_name.trim_prefix("<Boss> "), 3.5)  # le conseil d'esquive est dans le panneau d'objectifs
 
 
 func _update_boss(delta: float) -> void:
@@ -1359,9 +1360,10 @@ func anvil_cards() -> Array:
 	return out
 
 
-## Autel du scribe : parchemins d'enchantement du niveau de la carte (Survie : de ses pièces), au choix.
+## Autel du scribe : parchemins d'enchantement du niveau de la carte (Survie : de ses pièces, plafonnés par époque :
+## Craft.SURVIVAL_SCROLL_MAX), au choix.
 func scroll_cards(n: int) -> Array:
-	var slv := maxi(1, Craft.scroll_level_for(supply_level(player.level + 2)))
+	var slv := maxi(1, Craft.loot_scroll_level(supply_level(player.level + 2)))
 	var types: Array = Craft.ENCHANTS.keys()
 	types.shuffle()
 	var out: Array = []

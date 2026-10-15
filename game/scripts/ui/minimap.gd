@@ -29,6 +29,7 @@ var director: RunDirector
 var big := false
 var round := false  # mini-carte ronde (découpée par son parent, voir Hud)
 var zoom := 2.0  # pixels écran par mètre (mini-carte)
+const ARENA_METERS := 200.0  # une carte plus petite est une arène (duel, Tour, donjon, boss) : elle tient entière dans la mini-carte
 
 
 func setup(p: Player, d: RunDirector) -> void:
@@ -56,6 +57,9 @@ func _draw() -> void:
 	var center_img := Vector2(player.global_position.x, player.global_position.z) * ppm
 	if big:
 		scale_ = minf(size.x, size.y) / tex.get_width()
+		center_img = Vector2(tex.get_width(), tex.get_height()) * 0.5
+	elif tex.get_width() / ppm < ARENA_METERS:
+		scale_ = (minf(size.x, size.y) - 8.0) / tex.get_width()  # arène : vue d'ensemble fixe, le héros s'y déplace
 		center_img = Vector2(tex.get_width(), tex.get_height()) * 0.5
 	# repère : image -> écran (rotation selon la caméra sur la mini-carte)
 	var xf := Transform2D(yaw, c) * Transform2D(0.0, Vector2.ONE * scale_, 0.0, Vector2.ZERO) * Transform2D(0.0, -center_img)

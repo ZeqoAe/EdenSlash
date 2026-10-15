@@ -49,6 +49,10 @@ var _obj_pinned := false
 var _obj_show_until := 0.0
 var _obj_signature := ""
 var _zone_text := ""
+var _zone_extra := ""  # « Étape 1/3 », « Nv 29 » : en police ordinaire (le « 1 » de la police des titres se lit comme un I)
+var _target_big := false  # la cible est un boss : cadre large
+var _target_bars: Control
+var _target_w := 380.0
 
 var _target_box: PanelContainer
 var _target_name: Label
@@ -64,7 +68,7 @@ var _center_sub: Label  # détail du bandeau (2e ligne et suivantes)
 var _banner: PanelContainer
 var _feed: VBoxContainer  # fil de butin (à gauche) : petites lignes qui s'effacent
 ## Messages qui vont dans le fil de butin plutôt que dans le bandeau (début du texte).
-const FEED_PREFIXES := ["Butin", "Clé", "Une clé", "Coffre", "Coffre ouvragé", "Coffre doré", "Équipé", "Rangé", "Cristal"]
+const FEED_PREFIXES := ["Butin", "Clé", "Une clé", "Coffre", "Coffre ouvragé", "Coffre doré", "Équipé", "Rangé", "Cristal", "Potion"]
 var _prompt_box: PanelContainer
 var _better_box: PanelContainer  # objet ramassé meilleur que la pièce portée : [G] Équiper
 var _better_label: RichTextLabel
@@ -94,7 +98,10 @@ func setup(p: Player, d: RunDirector) -> void:
 	player.skills_changed.connect(_refresh_skills)
 	Settings.changed.connect(_refresh_skills)
 	Gamepad.device_changed.connect(func(_pad): _refresh_skills())  # libellés des touches (manette ou clavier)
-	director.zone_changed.connect(func(z): _zone_text = zone_title(z))
+	director.zone_changed.connect(func(z):
+		var parts := zone_parts(z)
+		_zone_text = parts[0]
+		_zone_extra = parts[1])
 	director.message.connect(show_message)
 	director.better_item.connect(show_better)
 	_on_hp(player.hp, player.max_hp)
@@ -106,16 +113,28 @@ func setup(p: Player, d: RunDirector) -> void:
 ## (duel, Tour, donjons : « Nv 14 », jamais « Nv 14-14 ») ; en Survie il suit la carte. Battle royale : l'horloge
 ## de l'anneau prend toute la ligne, pas de titre.
 static func zone_title(z: Dictionary) -> String:
+	var parts := zone_parts(z)
+	return parts[0] if parts[1] == "" else "%s · %s" % parts
+
+
+## Le titre en deux morceaux [nom, précision] : le nom s'écrit en police des titres, la précision (étape, niveau)
+## en police ordinaire sur la ligne du dessous.
+static func zone_parts(z: Dictionary) -> Array:
 	if Royale.active:
-		return ""
+		return ["", ""]
+	if Training.active:
+		return ["Entraînement", ""]
 	var lo := int(z.levels[0])
 	var hi := int(z.levels[1])
 	if Tower.active:
 		var base := "La Ruée" if Tower.rush else ("Le Siège" if Tower.siege else ("Donjon" if Tower.is_dungeon() else "La Tour"))
-		return "%s · Nv %d" % [base, lo]
+		return [base, "Nv %d" % lo]
 	if not Duel.active:
-		return String(z.name)
-	return "%s · Nv %d" % [z.name, lo] if lo == hi else "%s · Nv %d-%d" % [z.name, lo, hi]
+		var m := RegEx.create_from_string("^(.*) · [ée]tape (\\d+/\\d+)$").search(String(z.name))
+		if m:
+			return [m.get_string(1), "Étape " + m.get_string(2)]
+		return [String(z.name), ""]
+	return [String(z.name), "Nv %d" % lo if lo == hi else "Nv %d-%d" % [lo, hi]]
 
 
 func _build() -> void:
@@ -157,33 +176,47 @@ func _build() -> void:
 	# --- messages (centre) ---
 	# bandeau d'annonce : haut de l'écran, titre + détail sur une bande sombre
 	_banner = PanelContainer.new()
-	var band := StyleBoxFlat.new()
-	band.bg_color = Color(0.03, 0.02, 0.06, 0.62)
-	band.border_color = Color(UiTheme.GOLD, 0.55)
-	band.border_width_top = 1
-	band.border_width_bottom = 1
-	band.content_margin_top = 8
-	band.content_margin_bottom = 10
-	band.content_margin_left = 40
-	band.content_margin_right = 40
+	var band := StyleBoxEmpty.new()  # le fond est un dégradé qui s'efface sur les côtés (il ne coupe pas l'écran en deux)
 	_banner.add_theme_stylebox_override("panel", band)
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_banner.position = Vector2(-430, 150)
-	_banner.size = Vector2(860, 0)
-	_banner.custom_minimum_size = Vector2(860, 0)
+	_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_banner.offset_left = -300
+	_banner.offset_right = 300
+	_banner.offset_top = 122
+	_banner.custom_minimum_size = Vector2(600, 0)
 	root.add_child(_banner)
+	var fade := GradientTexture2D.new()
+	fade.fill = GradientTexture2D.FILL_LINEAR
+	fade.fill_from = Vector2(0.0, 0.0)
+	fade.fill_to = Vector2(1.0, 0.0)
+	fade.gradient = Gradient.new()
+	fade.gradient.colors = PackedColorArray([Color(0.03, 0.02, 0.06, 0.0), Color(0.03, 0.02, 0.06, 0.78), Color(0.03, 0.02, 0.06, 0.78), Color(0.03, 0.02, 0.06, 0.0)])
+	fade.gradient.offsets = PackedFloat32Array([0.0, 0.22, 0.78, 1.0])
+	var bg := TextureRect.new()
+	bg.texture = fade
+	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bg.stretch_mode = TextureRect.STRETCH_SCALE
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_banner.add_child(bg)
+	var bm := MarginContainer.new()
+	bm.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side in ["left", "right"]:
+		bm.add_theme_constant_override("margin_" + side, 70)
+	bm.add_theme_constant_override("margin_top", 8)
+	bm.add_theme_constant_override("margin_bottom", 12)
+	_banner.add_child(bm)
 	var bv := VBoxContainer.new()
 	bv.add_theme_constant_override("separation", 2)
 	bv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_banner.add_child(bv)
+	bm.add_child(bv)
 	_center_label = _label(bv, "", 30, ACCENT)
 	_center_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UiTheme.title(_center_label, 30)
 	_center_sub = _label(bv, "", 17, Color(0.93, 0.9, 0.98))
 	_center_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_center_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_banner.pivot_offset = Vector2(430, 40)
+	_center_sub.custom_minimum_size = Vector2(460, 0)
 	_banner.modulate.a = 0.0
 	# fil de butin (gauche, sous les objectifs et les premiers pas)
 	_feed = VBoxContainer.new()
@@ -359,9 +392,11 @@ func _build_objectives(root: Control) -> void:
 	_zone_label = _label(head, "", 16, ACCENT)
 	UiTheme.title(_zone_label, 16)
 	_zone_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_zone_label.clip_text = true  # un nom de zone trop long ne fait pas grandir le panneau
+	_zone_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # un nom long passe à la ligne, il n'est jamais coupé
+	_zone_label.custom_minimum_size = Vector2(100, 0)
 	_clock_label = _label(head, "", 17, Color.WHITE)
 	_clock_label.add_theme_font_override("font", UiTheme.bold_font())
+	_clock_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	var sub := HBoxContainer.new()
 	sub.add_theme_constant_override("separation", 10)
 	v.add_child(sub)
@@ -414,19 +449,23 @@ func _update_objectives() -> void:
 			_clock_label.text = "⏳ %02d:%02d" % [int(t) / 60, int(t) % 60]
 	_clock_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.35) if rage or t < 60.0 else Color.WHITE)
 	var need: int = director.SEALS_NEEDED
-	_seal_label.text = "Sceaux  " + "◆ ".repeat(mini(director.seals, need)) + "◇ ".repeat(maxi(0, need - director.seals))
+	var extra := _zone_extra + " · " if _zone_extra != "" else ""  # étape ou niveau, en police ordinaire
+	_seal_label.text = extra + "Sceaux  " + "◆ ".repeat(mini(director.seals, need)) + "◇ ".repeat(maxi(0, need - director.seals))
 	_gold_label.text = "%d or · %d clé%s" % [Profile.gold, Profile.keys, "s" if Profile.keys > 1 else ""]
-	_gold_label.visible = not Duel.active and not Tower.active and not Royale.active
+	_gold_label.visible = not Duel.active and not Tower.active and not Royale.active and not Training.active
 	if Royale.active and director.royale:
 		_seal_label.text = "%d / %d en vie · %d élimination%s" % [director.royale.alive_count(), Royale.PLAYERS, Royale.kills, "s" if Royale.kills > 1 else ""]
 	if Duel.active:
 		# la règle du duel ne se lit qu'avant le premier coup : ensuite le score parle
-		_seal_label.text = "Duel %s · 2 manches gagnantes" % ClassRival.NAMES[Duel.difficulty].to_lower() if Duel.round_n <= 1 and Duel.wins + Duel.losses == 0 else ""
+		_seal_label.text = extra.trim_suffix(" · ") + (" · %s · 2 manches gagnantes" % ClassRival.NAMES[Duel.difficulty].to_lower() if Duel.round_n <= 1 and Duel.wins + Duel.losses == 0 else "")
 	if Tower.active:
-		_seal_label.text = ("%s · %s" % [Dungeons.name_of(Tower.dungeon), Dungeons.DIFF_NAMES[Tower.dungeon_diff]]) if Tower.is_dungeon() else "%s · record : étage %d" % [Tower.DIFF_NAMES[Tower.difficulty], Tower.best()]
+		_seal_label.text = extra + (("%s · %s" % [Dungeons.name_of(Tower.dungeon), Dungeons.DIFF_NAMES[Tower.dungeon_diff]]) if Tower.is_dungeon() else "%s · record : étage %d" % [Tower.DIFF_NAMES[Tower.difficulty], Tower.best()])
+	if Training.active:
+		_seal_label.text = ""  # ni minuterie, ni sceaux, ni or : on s'entraîne
+		_clock_label.text = ""
 	_seal_label.get_parent().visible = _seal_label.text != "" or _gold_label.visible
-	# objectifs : le duel et la Tour n'en ont pas (rien à déplier)
-	var has_objectives: bool = not director.state in ["duel", "tower"]
+	# objectifs : le duel, la Tour et l'entraînement n'en ont pas (rien à déplier)
+	var has_objectives: bool = not director.state in ["duel", "tower"] and not Training.active
 	_obj_chevron.visible = has_objectives
 	var chests_total: int = director.map.chests.size() if director.map and "chests" in director.map else 0
 	var sig := "%s|%s|%d|%d|%d" % [director.state, director.dungeon_found, director.seals, director.chests_opened, director.shrines_captured]
@@ -554,6 +593,7 @@ func _build_target(root: Control) -> void:
 	_target_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_target_tag = _label(head, "", UiTheme.MIN_TEXT, ACCENT)
 	var bars := Control.new()
+	_target_bars = bars
 	bars.custom_minimum_size = Vector2(0, 18)
 	v.add_child(bars)
 	_target_trail = _bar(bars, Color(1, 0.9, 0.75, 0.6), 18)
@@ -751,6 +791,13 @@ func _process(delta: float) -> void:
 	_update_target()
 	_update_objectives()
 	_update_arrow()
+	# choix de carte ouvert : la pile de gauche et la cible se retirent (elles se mêlent au titre et aux cartes) ;
+	# la barre d'action, la vie et la mini-carte restent
+	var w := get_parent()
+	var picking: bool = w != null and w.get("cards") != null and w.cards.is_open()
+	_left.visible = not picking
+	if picking:
+		_target_box.visible = false
 
 
 # --- buffs / debuffs -----------------------------------------------------------------------
@@ -806,6 +853,7 @@ func _update_target() -> void:
 	_target_box.visible = true
 	_target_name.text = t.display_name.trim_prefix("<Boss> ").trim_prefix("<Duel> ")
 	var m := t as Monster
+	_set_target_big(m != null and m.is_boss)
 	var tag := "Nv %d" % t.level
 	if Combatant.is_hero(t):
 		tag = "Adversaire · " + tag  # duel, Tour : un héros, pas une élite
@@ -830,6 +878,23 @@ func _update_target() -> void:
 		if left > 0.0 and Combatant.STATUS_INFO.has(st) and not String(st).begins_with("imm_"):  # pas les insensibilités
 			effects.append({"id": st, "left": left, "total": _total(id, st, float(t.statuses[st]), left)})
 	_target_row.sync(effects)
+
+
+## Un boss a un cadre plus large, une barre plus haute et un nom plus grand que les autres cibles.
+func _set_target_big(big: bool) -> void:
+	# large de 560 px, mais jamais sur la pile de gauche ni sur la mini-carte (écran de 1280 : 500 px)
+	var w := clampf(get_viewport().get_visible_rect().size.x - 2.0 * (PANEL_W + 30.0), 380.0, 560.0) if big else 380.0
+	if big == _target_big and is_equal_approx(w, _target_w):
+		return
+	_target_big = big
+	_target_w = w
+	_target_box.custom_minimum_size.x = w
+	_target_box.offset_left = -w * 0.5  # (ancré au centre : des décalages, pas une position)
+	_target_box.offset_right = w * 0.5
+	_target_bars.custom_minimum_size.y = 26.0 if big else 18.0
+	_target_name.add_theme_font_size_override("font_size", 21 if big else 16)
+	_target_hp.add_theme_font_size_override("font_size", 16 if big else UiTheme.MIN_TEXT)
+	_target_box.reset_size()
 
 
 ## Menu pause, marchand ou bilan ouvert : le HUD laisse la place (le choix de cartes le garde).
@@ -942,6 +1007,7 @@ func show_prompt(text: String) -> void:
 
 
 func show_message(text: String, duration: float) -> void:
+	text = text.replace("<Boss> ", "").replace("<Duel> ", "")  # (les noms de combattants portent une étiquette interne)
 	for pre in FEED_PREFIXES:
 		if text.begins_with(pre) and not text.contains("\n"):
 			feed(text)
@@ -953,6 +1019,9 @@ func show_message(text: String, duration: float) -> void:
 	if _msg_tween:
 		_msg_tween.kill()
 	_banner.modulate.a = 0.0
+	_banner.reset_size()
+	_banner.pivot_offset = _banner.get_combined_minimum_size() * 0.5
+	_settle_banner()
 	_banner.scale = Vector2(1.06, 1.06)
 	_msg_tween = create_tween()
 	_msg_tween.set_parallel()
@@ -960,6 +1029,15 @@ func show_message(text: String, duration: float) -> void:
 	_msg_tween.tween_property(_banner, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_msg_tween.chain().tween_interval(duration)
 	_msg_tween.chain().tween_property(_banner, "modulate:a", 0.0, 0.5)
+
+
+## Un conteneur grandit tout seul mais ne rétrécit pas : le texte à renvoyer à la ligne se mesure à la largeur du
+## bandeau, qu'on ne connaît qu'une image plus tard ; on le recale alors (sinon un grand vide sous le titre).
+func _settle_banner() -> void:
+	await get_tree().process_frame
+	if is_instance_valid(_banner):
+		_banner.reset_size()
+		_banner.pivot_offset = _banner.size * 0.5
 
 
 ## Cache tout de suite le bandeau d'annonce (un choix de cartes ou un menu s'ouvre par-dessus).

@@ -34,9 +34,42 @@ func _ready() -> void:
 	Profile.reset_all()
 	await _survival()
 	await _modes()
+	await _animation()
 	await _pause_and_hud()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit(1 if fails > 0 else 0)
+
+
+# --- animation des gains : nombres qui montent, meilleur gain, passage immédiat ----------------------------
+func _animation() -> void:
+	await _clear()
+	var parse := ResultsPanel._parse_count("+1 250")
+	check("compteur : « +1 250 » -> préfixe +, 1250, groupé", parse.prefix == "+" and parse.n == 1250 and parse.grouped and parse.suffix == "")
+	check("compteur : une durée, une décimale ou un texte ne montent pas", ResultsPanel._parse_count("05:23").is_empty() and ResultsPanel._parse_count("1,5").is_empty() and ResultsPanel._parse_count("Nv 12").is_empty())
+	check("compteur : « 34 % » garde son suffixe", ResultsPanel._parse_count("34 %").suffix == " %" and ResultsPanel._count_text(ResultsPanel._parse_count("34 %"), 0.5) == "17 %")
+	check("meilleur gain : un seul gain chiffré, pas de mise en avant", ResultsPanel.best_row({"gained": [ResultsPanel.row("Maîtrise", "+50")]}).is_empty())
+	var spec := {"title": "VICTOIRE", "tone": "win", "tiles": [["12 480", "dégâts"], ["8", "niveau"]],
+		"gained": [ResultsPanel.row("Maîtrise Guerrier", "+15")],
+		"kept": [ResultsPanel.row("Insignes", "+240"), ResultsPanel.row("Coffres", "×3")],
+		"buttons": [{"text": "Rejouer", "primary": true, "call": func(): pass}]}
+	check("meilleur gain : les insignes (+240) devant la maîtrise (+15)", ResultsPanel.best_row(spec).get("text", "") == "Insignes")
+	var rp := ResultsPanel.new()
+	add_child(rp)
+	rp.show_spec(spec)
+	await get_tree().process_frame
+	var starts := rp._counters.map(func(c): return String(c.label.text))
+	check("animation : les nombres partent de 0 (12 480, +15, +240 : pas le « 8 » ni « ×3 », trop petits)", rp._counters.size() == 3 and starts.has("0") and starts.has("+0") and rp._best_box != null)
+	check("animation : en cours", rp._animating)
+	var ev := InputEventKey.new()
+	ev.pressed = true
+	ev.keycode = KEY_SPACE
+	rp._input(ev)
+	check("animation : une touche montre tout de suite le résultat final", not rp._animating and rp._counters.all(func(c): return c.label.text == String(c.final)))
+	check("animation : les blocs sont tous visibles après le passage", rp._fades.all(func(f): return not is_instance_valid(f) or f.modulate.a >= 0.99))
+	await get_tree().create_timer(0.3, true).timeout
+	check("animation : le texte final des tuiles est exact", String(rp._counters[0].final) == "12 480")
+	rp.queue_free()
+	await _clear()
 
 
 # --- Survie : un bilan sans doublon, avec insignes de participation et coffres de la run ---------------
@@ -192,6 +225,17 @@ func _pause_and_hud() -> void:
 	Royale.active = true
 	check("HUD : pas de Premiers pas au Battle royale (même avec le drapeau de la Survie)", not hud._survival_mode() and Hud.zone_title({"name": "x", "levels": [1, 40]}) == "")
 	Royale.active = ra
+	check("HUD : l'étape se sépare du nom (« Forêt · étape 2/3 »)", Hud.zone_parts({"name": "Forêt des Chutes · étape 2/3", "levels": [1, 20]}) == ["Forêt des Chutes", "Étape 2/3"])
+	check("HUD : un nom sans étape reste entier", Hud.zone_parts({"name": "Monts Calcaires", "levels": [1, 20]}) == ["Monts Calcaires", ""])
+	var tr := Training.active
+	Training.active = true
+	check("HUD : l'entraînement s'appelle « Entraînement » (ni minuterie ni sceaux)", Hud.zone_parts({"name": "Monts Calcaires", "levels": [1, 20]})[0] == "Entraînement")
+	Training.active = tr
+	hud._set_target_big(true)
+	var want := clampf(hud.get_viewport().get_visible_rect().size.x - 2.0 * (Hud.PANEL_W + 30.0), 380.0, 560.0)
+	check("HUD : cadre de boss à la bonne largeur (%d px), centré, sans toucher la pile de gauche" % int(want), is_equal_approx(hud._target_box.custom_minimum_size.x, want) and is_equal_approx(hud._target_box.offset_left, -want * 0.5) and is_equal_approx(hud._target_box.offset_right, want * 0.5))
+	hud._set_target_big(false)
+	check("HUD : cadre normal rétabli", hud._target_box.custom_minimum_size.x < 400.0)
 	# pause : cases occupées, confirmations
 	world.pause_menu.open()
 	await get_tree().process_frame
@@ -220,6 +264,7 @@ func _pause_and_hud() -> void:
 	check("pause : « Abandonner » demande aussi confirmation", world.pause_menu._confirm.visible and world.pause_menu._confirm._title.text == "Abandonner la run ?")
 	world.pause_menu.close()
 	check("pause : fermer la pause ferme la confirmation", not world.pause_menu._confirm.visible)
+	check("pause : « ? Aide » dans l'en-tête, deux pages seulement", world.pause_menu._help_button != null and world.pause_menu._screen.page_count() == 2)
 	var lt: Dictionary = PauseMenu.leave_texts()
 	check("pause : textes d'abandon de la Survie", lt.button == "Abandonner la run" and lt.ok == "Abandonner")
 	world.queue_free()

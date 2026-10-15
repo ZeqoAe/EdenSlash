@@ -130,6 +130,11 @@ Atelier poli (nuit du 15/10, lot U5, `conception/nuit_15_10/R_U5.md`) : bourse c
 filtrable (statut / emplacement / époque / classe, silhouettes « à découvrir », `Completion.armory_ids` donne l'époque), Fabrication en cartes par
 donjon, Forge = un panneau avant → après (`ForgeBench`, `MerchantPages.ForgePage.ba_table`), fusion de gemmes au taux 25 (`Forge.fuse_price`).
 Test : `tests/test_workshop.tscn` ; captures : `tests/shot_atelier.tscn`, `tests/shot_merchant.tscn`.
+Passe P3 « HUD en jeu » (0.1.181, `conception/nuit_15_10/R_P3.md`) : la pause n'a plus d'onglet Aide mais un bouton « ? Aide » qui ouvre le Guide
+(`PauseMenu.open_guide`) ; bilan animé (`ResultsPanel` : nombres qui montent, meilleur gain doré, `finish_now` sur une touche) ; chiffres de
+dégâts rangés en colonnes avec budget par 0,3 s (`DamageNumber`) ; bandeau d'annonce en dégradé, cadre de boss large, titre du HUD en
+deux morceaux (`Hud.zone_parts` : le « 1 » de la police des titres se lit comme un I) ; cartes de niveau à couleur de rareté (commune = gris).
+Captures : `tests/shot_p3.tscn -- stage=N boss_at=S guide_at=S` (+ arguments du monde), variable `P3_RES=1280x720`, APPDATA détourné.
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,
