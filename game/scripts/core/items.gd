@@ -126,7 +126,12 @@ const SETS := {
 		2: {"procs": [{"trigger": "perfect", "chance": 1.0, "cd": 0.0, "effect": "stat_buff", "status": "t_esprit", "stats": {"dmg_pct": 0.1}, "duration": 5.0}]},
 		4: {"procs": [{"trigger": "perfect", "chance": 1.0, "cd": 0.0, "effect": "cdr", "amount": 0.6}]},
 		6: {"procs": [{"trigger": "dodge", "chance": 1.0, "cd": 8.0, "effect": "buff", "status": "haste", "duration": 3.0,
-			"then": [{"effect": "buff", "status": "fury", "duration": 3.0}]}]}}},
+			"then": [{"effect": "buff", "status": "fury", "duration": 3.0}]}]}},
+		# éveil (lot E2) : avec 6 pièces éveillées portées, le palier 6 devient celui-ci (recharge moitié, effets plus
+		# longs, dégâts et critique en plus)
+		"awake": {
+		6: {"stat": {"dmg_pct": 0.1, "crit": 0.05}, "procs": [{"trigger": "dodge", "chance": 1.0, "cd": 4.0, "effect": "buff", "status": "haste", "duration": 4.0,
+			"then": [{"effect": "buff", "status": "fury", "duration": 4.0}]}]}}},
 	# archétypes de donjon sans équivalent dans les anciens sets (lot « Donjons », panoplies B9)
 	"salvo": {"name": "Salve", "suffix": "de la Salve", "bonus": {
 		2: {"stat": {"reach": 0.12}},
@@ -441,6 +446,16 @@ static func set_counts(equipped: Dictionary) -> Dictionary:
 	return out
 
 
+## Pièces éveillées du set [param sid] parmi [param equipped] (panoplie des Esprits : Pantheon.piece_awake).
+static func awakened_count(equipped: Dictionary, sid: String) -> int:
+	var n := 0
+	for slot in equipped:
+		var it: Dictionary = equipped[slot]
+		if String(it.get("set", "")) == sid and (Pantheon.piece_awake(it) if sid == "pantheon" else bool(it.get("awakened", false))):
+			n += 1
+	return n
+
+
 ## Bonus de set actifs : [{set, pieces, stat, procs}].
 static func active_set_bonuses(equipped: Dictionary) -> Array:
 	var out: Array = []
@@ -449,6 +464,9 @@ static func active_set_bonuses(equipped: Dictionary) -> Array:
 		for n in set_tiers(sid):
 			if int(counts[sid]) >= n:
 				var b: Dictionary = set_bonus(sid, n)
+				var aw: Dictionary = set_def(sid).get("awake", {}).get(n, {})
+				if not aw.is_empty() and awakened_count(equipped, sid) >= n:
+					b = aw  # palier éveillé (panoplie des Esprits)
 				var procs: Array = []
 				var i := 0
 				for p: Dictionary in b.get("procs", []):
@@ -763,6 +781,9 @@ static func describe(item: Dictionary) -> String:
 			var bn := set_bonus(sid, n)
 			var set_col := SET_COLOR.to_html(false) if worn >= n else "888888"
 			lines.append("[color=#%s]%d pièces : %s[/color]" % [set_col, n, " ; ".join(bonus_lines(bn))])
+		for n in sdef.get("awake", {}):
+			var on := worn >= int(n) and awakened_count(Profile.equipped, sid) >= int(n)
+			lines.append("[color=#%s]%d pièces éveillées : %s[/color]" % [SET_COLOR.to_html(false) if on else "888888", int(n), " ; ".join(bonus_lines(sdef.awake[n]))])
 	var arch := String(item.get("archetype", ""))
 	if SETS.has(arch):
 		var aworn := int(set_counts(Profile.equipped).get(arch, 0))

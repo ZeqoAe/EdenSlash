@@ -5,9 +5,10 @@ extends RefCounted
 ## preset de sorts actif (4 cases), points de maîtrise et certificats posés, arme et armure,
 ## tenue portée. Le héros se bat exactement avec ce build (sorts du preset, talents,
 ## certificats, équipement, apparence), au niveau de son équipement ; l'adversaire porte un
-## équipement du même niveau. Rien n'est gagné ni perdu, sauf les victoires comptées
-## (records « duel_wins », « duel_win_<classe>_<difficulté> ») : la sauvegarde n'est pas
-## écrite pendant le duel, elle est rechargée à la sortie.
+## équipement du même niveau. Rien n'est perdu ; une victoire rapporte de la maîtrise (League.pvp_mastery,
+## réduite en duel libre), les modes classés aussi leurs récompenses (voir [method settle]), et les
+## victoires sont comptées (records « duel_wins », « duel_win_<classe>_<difficulté> ») : la sauvegarde
+## n'est pas écrite pendant le duel, elle est rechargée à la sortie.
 
 const ROUNDS_TO_WIN := 2
 const ARMOR := ["head", "chest", "legs", "gloves", "boots"]
@@ -27,6 +28,8 @@ static var extra_foes: Array = []
 static var bare_level := 10
 static var bare_variant := 0
 static var _stashed_build: Dictionary = {}
+static var _stashed_mults: Array = []
+static var _weakened := false  # adversaire du duel en cours affaibli (voir foe_weakened)
 static var difficulty := 2
 static var level := 1
 static var wins := 0
@@ -200,7 +203,24 @@ static func make_ally(cid: String) -> ClassRival:
 	return a
 
 
-## Résultat classé du duel qui vient de finir (Ligue : rang et maîtrise ; Panthéon : récompenses).
+## Le duel libre a été rendu plus facile (préparation de l'adversaire : PV ou dégâts réduits, adversaire de
+## l'éditeur) : il ne rapporte pas de maîtrise.
+static func foe_weakened() -> bool:
+	return not rival_build.is_empty() or hp_mult < 1.0 or atk_mult < 1.0
+
+
+## Maîtrise d'une victoire hors Ligue (formule commune League.pvp_mastery), créditée à la classe [param cid].
+static func _grant_mastery(cid: String, r: Dictionary) -> void:
+	var m := League.pvp_mastery(mode, wins, difficulty, extra_foes.size())
+	if m <= 0:
+		return
+	Profile.add_expertise(cid, m)
+	r["mastery"] = m
+	(r.text as Array).append("Maîtrise : +%d" % m)
+
+
+## Résultat du duel qui vient de finir (Ligue : rang et maîtrise ; Panthéon : récompenses et maîtrise ; Arènes et
+## Gantelet : maîtrise, insignes plafonnés au jour, titre ; duel libre : maîtrise réduite).
 static func settle(won: bool, cid: String) -> Dictionary:
 	match mode:
 		"league":
@@ -209,22 +229,37 @@ static func settle(won: bool, cid: String) -> Dictionary:
 			return r
 		"pantheon":
 			var r := Pantheon.report_win(pilot, cid) if won else {}
+			if not r.has("text"):
+				r["text"] = []
 			r["mode"] = "pantheon"
+			if won:
+				# palier = rang du cerveau (1 à 6), comme un rang de Ligue
+				var m := League.mastery_for(wins, Pantheon.index_of(pilot) + 1, float(League.MODE_FACTOR.pantheon))
+				Profile.add_expertise(cid, m)
+				r["mastery"] = m
+				(r.text as Array).append("Maîtrise : +%d" % m)
 			return r
 		"arena2", "arena3", "gauntlet":
 			var key := "%s_wins" % mode if mode != "gauntlet" else "gauntlet_%d_wins" % (extra_foes.size() + 1)
 			var r := {"mode": mode, "text": []}
 			if won:
 				Profile.record_add(key, 1)
-				var gain := 60 * (extra_foes.size() + 1) if mode == "gauntlet" else 50 * (team_allies.size() + 1)
+				_grant_mastery(cid, r)
+				var gain := League.win_insignia(key.trim_suffix("_wins"))
 				Profile.insignia += gain
-				r.text.append("+%d insignes" % gain)
+				r["insignia"] = gain
+				r.text.append("+%d insignes%s" % [gain, " (1re victoire du jour)" if gain > League.REPEAT_INSIGNIA else ""])
 				if int(Profile.records.get(key, 0)) == 1:
 					var title: String = {"arena2": "Arène à deux", "arena3": "Arène à trois", "gauntlet": "Gantelet"}[mode]
 					if mode == "gauntlet" and extra_foes.size() >= 2:
 						title = "Gantelet complet"
 					Profile.add_title(title)
 					r.text.append("Titre : « %s »" % title)
+			return r
+		"free":
+			var r := {"mode": mode, "text": []}
+			if won and not _weakened:
+				_grant_mastery(cid, r)
 			return r
 	return {}
 
@@ -240,6 +275,11 @@ static func start(cid: String, opponent: String, diff: int) -> void:
 	if not mode in ["arena2", "arena3", "gauntlet"]:
 		team_allies = []
 		extra_foes = []
+	# la préparation de l'adversaire (PV, dégâts) ne vaut que pour le duel libre : remise après le duel
+	_stashed_mults = [hp_mult, atk_mult]
+	if mode != "free":
+		hp_mult = 1.0
+		atk_mult = 1.0
 	rival_class = String(rival_build.get("class", opponent)) if not rival_build.is_empty() else opponent
 	difficulty = clampi(diff, 0, ClassRival.NAMES.size() - 1)
 	wins = 0
@@ -251,6 +291,7 @@ static func start(cid: String, opponent: String, diff: int) -> void:
 	if bare:
 		_stashed_build = rival_build  # l'adversaire de l'éditeur revient après le duel
 		rival_build = {}
+	_weakened = foe_weakened()  # (à l'arme, l'adversaire de l'éditeur est déjà mis de côté)
 	Run.start(cid)
 	Run.zone_id = ZONE
 	Run.fill_from_preset()
@@ -378,7 +419,11 @@ static func finish(won: bool) -> Dictionary:
 	Profile.gold = 0
 	Profile.keys = 0
 	Profile.bag = {}
-	last_report = settle(won, Run.class_id) if mode != "free" else {}
+	last_report = settle(won, Run.class_id)
+	if _stashed_mults.size() == 2:
+		hp_mult = float(_stashed_mults[0])
+		atk_mult = float(_stashed_mults[1])
+		_stashed_mults = []
 	if won:
 		if bare and level <= 1:
 			Profile.record_add("duel_lv1", 1)

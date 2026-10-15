@@ -213,15 +213,27 @@ static func rank_for(alive: int) -> int:
 	return clampi(alive, 1, PLAYERS)
 
 
-## Récompenses d'une partie finie en [param place] avec [param n_kills] éliminations. Les insignes sont crédités,
-## le coffre d'apparence et le titre aussi ; renvoie {insignia, chest, title, text: [lignes], first_win}.
+## Maîtrise d'une partie (formule commune du JcJ, League.mastery_for) : « manches » = 2 pour la victoire, 1 pour
+## le podium ; palier = éliminations (4 au plus) ; × la part du mode et la difficulté (mélange = Difficile).
+static func mastery_for(place: int, n_kills: int) -> int:
+	var rounds := 2 if place == 1 else (1 if place <= 3 else 0)
+	var d := clampi(difficulty if difficulty >= 0 else 2, 0, League.DIFF_FACTOR.size() - 1)
+	return League.mastery_for(rounds, mini(n_kills, 4), float(League.MODE_FACTOR.royale) * float(League.DIFF_FACTOR[d]))
+
+
+## Récompenses d'une partie finie en [param place] avec [param n_kills] éliminations. Les insignes (plafonnés au
+## jour : League.royale_insignia), la maîtrise de la classe [param cid], le coffre d'apparence et le titre sont
+## crédités ; renvoie {insignia, mastery, chest, title, text: [lignes], first_win}.
 static func settle(place: int, n_kills: int, cid: String) -> Dictionary:
-	var out := {"insignia": 0, "chest": "", "title": "", "text": [], "first_win": false, "place": place, "kills": n_kills}
-	var base: Array = [0, 220, 140, 90, 55, 35, 22, 14, 8]
-	var ins := int(base[clampi(place, 1, 8)]) + 15 * n_kills
+	var out := {"insignia": 0, "mastery": 0, "chest": "", "title": "", "text": [], "first_win": false, "place": place, "kills": n_kills}
+	var ins := League.royale_insignia(place, n_kills)
 	out.insignia = ins
 	Profile.insignia += ins
 	out.text.append("+%d insignes (place %d, %d élimination%s)" % [ins, place, n_kills, "s" if n_kills > 1 else ""])
+	out.mastery = mastery_for(place, n_kills)
+	if int(out.mastery) > 0:
+		Profile.add_expertise(cid, int(out.mastery))
+		out.text.append("Maîtrise : +%d" % int(out.mastery))
 	Profile.record_add("royale_games", 1)
 	Profile.record_add("royale_kills", n_kills)
 	if place == 1:

@@ -6,7 +6,8 @@ extends RefCounted
 ## Il réutilise l'infrastructure de la Tour (salles, directeur, bilan) : `Tower.dungeon` est la zone du
 ## donjon en cours ("" : pas de donjon). Butin : un coffre de set (pièce mythique au choix, légendaire
 ## plus probable en Héroïque et Mythique), des cristaux, des coffres de matières au niveau du donjon
-## (ActivityLoot : de quoi monter les pièces de ce niveau) et un plan de fabrication une fois sur dix.
+## (ActivityLoot : de quoi monter les pièces de ce niveau) et le plan de fabrication de la zone (sûr au 1er donjon
+## terminé de chaque difficulté, sinon une fois sur dix).
 
 const ROOMS := ["monsters", "elite", "monsters", "boss"]
 const DIFF_NAMES := ["Normal", "Héroïque", "Mythique"]
@@ -17,6 +18,7 @@ const ELITE_HP := 2.5
 const BOSS_HP := 25.0  # × les PV de base d'un monstre de son niveau
 const ALLY_HP_STEP := 0.5  # PV des monstres en plus par allié
 const MAX_ALLIES := 2
+const PLAN_CHANCE := 0.1  # plan de fabrication après un donjon déjà terminé dans cette difficulté
 
 
 ## Panoplie (archétype d'`Items.SETS`) de chaque donjon : ses pièces comptent pour 2 / 4 / 6 en plus du set d'Eden.
@@ -179,7 +181,9 @@ static func reward(zid: String, diff: int) -> Dictionary:
 		out.chests.append(c2)
 	out.chests.append_array(ActivityLoot.dungeon_chests(lv, diff))
 	Profile.materials["crystal"] = int(Profile.materials.get("crystal", 0)) + int(out.crystals)
-	if randf() < 0.1 or (cleared(zid, diff) == 0 and diff >= 1 and not "plan_" + zid in Profile.plans):
+	# plan : sûr au 1er donjon terminé de chaque difficulté (un seul plan par zone : la fabrication suit ensuite
+	# la meilleure difficulté terminée), sinon une fois sur dix
+	if randf() < PLAN_CHANCE or cleared(zid, diff) == 0:
 		var plan := "plan_" + zid
 		if not plan in Profile.plans:
 			Profile.plans.append(plan)

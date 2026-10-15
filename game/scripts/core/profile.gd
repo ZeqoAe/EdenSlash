@@ -277,6 +277,7 @@ func load_profile() -> void:
 	achievements = d.get("achievements", {})
 	plans = d.get("plans", [])
 	pantheon = d.get("pantheon", {})
+	Pantheon.sync_seen()  # pièces des Esprits gagnées : à l'Armurerie (anciennes sauvegardes comprises)
 	extra_titles = d.get("extra_titles", [])
 	title = String(d.get("title", ""))
 	seen_trophies = d.get("seen_trophies", [])

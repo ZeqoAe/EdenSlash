@@ -107,16 +107,20 @@ func _test_rules() -> void:
 	check("pas d'acharnement (l'anneau fait pression)", is_equal_approx(PvpCaps.pressure(), 1.0))
 	Royale.active = false
 	check("hors partie : mode normal", Modes.current() != "royale")
+	League.day_override = "2026-01-01"
 	var before := Profile.insignia
 	var win := Royale.settle(1, 3, "warrior")
 	check("1re victoire : titre « Dernier debout », coffre d'apparence légendaire", win.first_win and "Dernier debout" in Profile.extra_titles and win.chest == "look_legend")
-	check("insignes : 220 + 15 par élimination", Profile.insignia - before == 220 + 45 and int(win.insignia) == 265)
+	check("insignes : meilleure place du jour + 3 par élimination", Profile.insignia - before == 110 + 9 and int(win.insignia) == 119)
+	check("maîtrise de la classe jouée", int(win.mastery) > 0 and int(Profile.expertise.get("warrior", 0)) >= int(win.mastery))
 	var again := Royale.settle(1, 0, "warrior")
-	check("2e victoire : pas de second titre", not again.first_win and again.title == "")
+	check("2e victoire : pas de second titre, ni insignes de place le même jour", not again.first_win and again.title == "" and int(again.insignia) == 0)
 	var third := Royale.settle(3, 1, "warrior")
 	check("3e place : coffre d'apparence rare", third.chest == "look_rare")
+	League.day_override = "2026-01-02"
 	var fifth := Royale.settle(5, 0, "warrior")
-	check("5e place : insignes seulement", fifth.chest == "" and int(fifth.insignia) == 35)
+	check("5e place (jour suivant) : insignes seulement", fifth.chest == "" and int(fifth.insignia) == 18)
+	League.day_override = ""
 	check("records : parties, victoires, meilleure place", int(Profile.records.royale_games) == 4 and int(Profile.records.royale_wins) == 2 and int(Profile.records.royale_best) == 1)
 	check("le butin suit le niveau, plafonné", Royale.loot_level(1) == 2 and Royale.loot_level(500) == Royale.LEVEL_CAP)
 	check("3 pièces par coffre", Royale.chest_items(2, 10, "warrior").size() == 3)

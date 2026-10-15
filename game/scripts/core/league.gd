@@ -11,6 +11,71 @@ const WINS_PER_RANK := 3
 const DIFFICULTY := [0, 0, 1, 2, 3]  # difficulté ClassRival de l'IA du rang (index = rang visé)
 const MASTERY_PER_ROUND := 150  # maîtrise de la classe jouée par manche gagnée
 const MASTERY_BASE := 40  # + 20 par rang, par duel gagné
+const MASTERY_PER_TIER := 20
+
+## Maîtrise du JcJ contre l'IA hors Ligue (lot E2) : même formule que la Ligue, × la part du mode, × la
+## difficulté choisie (palier = difficulté + 1, comme le rang de Ligue qui l'affronte).
+const DIFF_FACTOR := [0.5, 0.7, 0.85, 1.0]  # Facile, Normal, Difficile, Hardcore
+const MODE_FACTOR := {"free": 0.5, "arena2": 0.5, "arena3": 0.5, "gauntlet": 0.5, "royale": 0.5, "pantheon": 1.0}
+const GAUNTLET_PER_FOE := 0.25  # Gantelet : +25 % par adversaire en plus du premier
+
+## Insignes du JcJ contre l'IA plafonnés (I6) : la 1re victoire du jour de chaque mode paie [constant DAILY_INSIGNIA],
+## les suivantes [constant REPEAT_INSIGNIA]. Battle royale : seule la meilleure place du jour paie (la différence
+## avec la précédente), plus [constant ROYALE_KILL] par élimination.
+const DAILY_INSIGNIA := {"arena2": 50, "arena3": 75, "gauntlet_2": 60, "gauntlet_3": 90}
+const REPEAT_INSIGNIA := 10
+const ROYALE_PLACE := [0, 110, 70, 45, 28, 18, 11, 7, 4]  # indice = place
+const ROYALE_KILL := 3
+static var day_override := ""  # tests : jour forcé
+
+
+## Maîtrise d'un duel gagné en [param rounds_won] manches au palier [param tier] (rang de Ligue visé,
+## ou difficulté + 1), × [param factor]. Formule commune à tout le JcJ contre l'IA.
+static func mastery_for(rounds_won: int, tier: int, factor := 1.0) -> int:
+	return roundi((MASTERY_BASE + MASTERY_PER_TIER * maxi(tier, 0) + MASTERY_PER_ROUND * maxi(rounds_won, 0)) * factor)
+
+
+## Maîtrise d'une victoire dans le mode [param mode] (hors Ligue) contre l'IA de difficulté [param diff] ;
+## [param extra_foes] : adversaires en plus du premier (Gantelet).
+static func pvp_mastery(mode: String, rounds_won: int, diff: int, extra_foes := 0) -> int:
+	var d := clampi(diff, 0, DIFF_FACTOR.size() - 1)
+	var f := float(MODE_FACTOR.get(mode, 0.5)) * float(DIFF_FACTOR[d])
+	if mode == "gauntlet":
+		f *= 1.0 + GAUNTLET_PER_FOE * maxi(extra_foes, 0)
+	return mastery_for(rounds_won, d + 1, f)
+
+
+static func today() -> String:
+	return day_override if day_override != "" else Time.get_date_string_from_system()
+
+
+## Compteurs du jour (remis à zéro chaque jour) : {day, <clé> : victoires ou meilleure place}.
+static func daily() -> Dictionary:
+	var d = Profile.records.get("pvp_daily", {})
+	if not d is Dictionary or String(d.get("day", "")) != today():
+		d = {"day": today()}
+		Profile.records["pvp_daily"] = d
+	return d
+
+
+## Insignes d'une victoire dans le mode [param key] (« arena2 », « gauntlet_3 »…) : pleins à la 1re du jour.
+static func win_insignia(key: String) -> int:
+	var d := daily()
+	var n := int(d.get(key, 0))
+	d[key] = n + 1
+	return int(DAILY_INSIGNIA.get(key, REPEAT_INSIGNIA)) if n == 0 else REPEAT_INSIGNIA
+
+
+## Insignes d'une partie de Battle royale : la meilleure place du jour paie la différence avec la précédente.
+static func royale_insignia(place: int, n_kills: int) -> int:
+	var d := daily()
+	var p := clampi(place, 1, ROYALE_PLACE.size() - 1)
+	var best := int(d.get("royale_best", ROYALE_PLACE.size()))
+	var paid := int(ROYALE_PLACE[best]) if best < ROYALE_PLACE.size() else 0
+	var gain := maxi(int(ROYALE_PLACE[p]) - paid, 0)
+	if p < best:
+		d["royale_best"] = p
+	return gain + ROYALE_KILL * maxi(n_kills, 0)
 
 
 static func rank_index() -> int:
@@ -36,7 +101,7 @@ static func report(won: bool, class_id: String, rounds_won: int) -> Dictionary:
 	var out := {"promoted": false, "rank": rank_index(), "mastery": 0}
 	if won:
 		Profile.records["league_streak"] = streak() + 1
-		out.mastery = MASTERY_BASE + 20 * target_rank() + MASTERY_PER_ROUND * rounds_won
+		out.mastery = mastery_for(rounds_won, target_rank())
 		Profile.add_expertise(class_id, int(out.mastery))
 		var next := target_rank()
 		if streak() >= WINS_PER_RANK and next > rank_index():

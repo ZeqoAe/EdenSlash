@@ -62,11 +62,12 @@ static func armory_total() -> int:
 	return armory_ids().size()
 
 
-## Pièces découvertes qui sont de l'équipement (les trophées de la Survie entrent aussi dans `seen_gear`).
+## Pièces découvertes qui sont de l'équipement (les trophées de la Survie et les pièces des Esprits du Panthéon
+## entrent aussi dans `seen_gear`, hors du compte).
 static func armory_done() -> int:
 	var n := 0
 	for id in Profile.seen_gear:
-		if String(GameData.eden_by_id.get(int(id), {}).get("slot", "")) != "trophy":
+		if not Pantheon.is_shop_id(int(id)) and String(GameData.eden_by_id.get(int(id), {}).get("slot", "")) != "trophy":
 			n += 1
 	return n
 

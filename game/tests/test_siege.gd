@@ -63,7 +63,9 @@ func _test_unlock_and_activity() -> void:
 	var zid := _zone()
 	Profile.records["boss_" + zid] = 1
 	Profile.unlocked_features = ["dungeons", "siege"]
-	check("la PE se vérifie au lancement (Siege.power_ok suit GearPower)", Siege.power_required(zid, 0) > 0 and Siege.power_required(zid, 2) > Siege.power_required(zid, 0))
+	check("la PE se vérifie au lancement (Siege.power_ok suit GearPower) ; Normal ouvert à tous", Siege.power_required(zid, 0) == 0 and Siege.power_required(zid, 2) > Siege.power_required(zid, 1))
+	Profile.equipped = {}
+	check("Siège Normal jouable sans équipement (PE 0)", Siege.playable(zid, 0))
 	check("la PE du Siège dépasse celle d'un donjon de même difficulté", Siege.power_required(zid, 1) > Dungeons.power_required(zid, 1))
 	Profile.equipped = {}
 	check("sans équipement : le Siège n'est pas jouable (PE)", not Siege.power_ok(zid, 1) or Siege.power_required(zid, 1) == 0)
@@ -154,8 +156,7 @@ func _drive(world: Node, until: Callable, frames := 7000) -> void:
 		if until.call():
 			return
 		if world.cards.is_open():
-			world.cards._select(0)
-			world.cards._confirm_choice()
+			world.cards._choose(0)
 		if td.phase == "rest":
 			td._rest_t = 0.0
 		for m in get_tree().get_nodes_in_group("monsters"):

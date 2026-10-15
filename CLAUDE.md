@@ -114,6 +114,9 @@ Activité Battle royale dans JcJ (verrou `royale` : Ligue Argent). Test : `tests
 Matières des activités (0.1.165, lot E1 de la nuit du 15/10, `DESIGN.md` « Matières et cristaux des activités ») : `core/activity_loot.gd`
 (cristaux et coffres de forge / du joaillier au niveau des Donjons, de la Ruée, du Siège et de la Tour, avec `focus` des coffres dans
 `Rewards`), `Forge.GOLD_PER_CRYSTAL` = 125, compteur d'Armurerie calculé (`Completion.armory_total`), plus de coffre de trophées. Test : `test_loot`.
+Lot E2 (nuit du 15/10, `DESIGN.md` « Maîtrise et insignes du JcJ… ») : maîtrise du JcJ par `League.mastery_for` / `pvp_mastery`,
+insignes JcJ plafonnés au jour (`League.win_insignia`, `royale_insignia`), plan sûr au 1er donjon de chaque difficulté, fabrication sur 9
+emplacements, Siège Normal sans PE ; panoplie des Esprits : modèles fixes niveau 70 dans `GameData.eden_by_id` (`Pantheon.shop_id`, `sync_seen`), éveil = `Items.SETS.pantheon.awake`.
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

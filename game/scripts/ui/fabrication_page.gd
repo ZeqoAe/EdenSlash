@@ -5,7 +5,7 @@ extends VBoxContainer
 ## l'emplacement voulu. Le plan n'est pas consommé. Niveau et rareté suivent la meilleure difficulté terminée :
 ## mythique, légendaire une fois le donjon fini en Mythique.
 
-const SLOTS := ["head", "chest", "legs", "gloves", "boots", "back"]
+const SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "necklace", "ring"]  # arme : du type de la classe choisie
 const COST := 60  # cristaux par niveau de difficulté terminé (Normal 60, Héroïque 120, Mythique 180)
 
 var _list: VBoxContainer
@@ -49,7 +49,10 @@ static func craft(zid: String, slot: String) -> Dictionary:
 		return {"error": "Inventaire plein."}
 	var d := maxi(best_diff(zid), 0)
 	var rar := Items.LEGENDARY if d >= 2 else Items.MYTHIC
-	var it := Items.generate(Dungeons.level(zid, d), 1.0, slot, Profile.selected_class, rar, "", rar)
+	# modèle d'Eden du niveau du donjon (et non de la zone choisie au lobby) ; arme du type de la classe choisie
+	var lv := Dungeons.level(zid, d)
+	var tpl := Items.eden_template(slot, Items.default_weapon_type(Profile.selected_class), lv, rar)
+	var it := Items.from_template(tpl, lv, rar) if not tpl.is_empty() else Items.generate(lv, 1.0, slot, Profile.selected_class, rar, "", rar)
 	it["archetype"] = Dungeons.archetype(zid)
 	Profile.materials["crystal"] = Profile.amount("crystal") - c
 	Profile.add_item(it)

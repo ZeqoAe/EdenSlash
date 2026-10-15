@@ -27,8 +27,9 @@ const RING_TIME := 20.0
 const TRUCE := 4.0  # trêve avant le chacun pour soi
 const RING_DPS := 0.05  # part des PV max perdue par seconde hors de l'anneau (monte avec le temps)
 const ALLIES := 2
-## Rapport PE / PE attendue pour entrer (Normal, Héroïque, Mythique) : plus exigeant qu'un donjon de même niveau.
-const POWER_RATIO := [0.35, 0.65, 0.9]
+## Rapport PE / PE attendue pour entrer (Normal, Héroïque, Mythique) : Normal ouvert à tous comme un donjon
+## Normal (lot E2, I12), puis plus exigeant qu'un donjon de même niveau.
+const POWER_RATIO := [0.0, 0.65, 0.9]
 const TITLE := "Maître du Siège"
 
 ## Issue du chacun pour soi du siège en cours : "", "won" (dernier debout), "escaped" (cœur emporté), "eliminated".

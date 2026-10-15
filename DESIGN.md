@@ -195,6 +195,29 @@ chacune avec son rôle :
 - Le démontage rend 1 à 3 cristaux (avant : 1 à 8) et un coffre de forge 2 à 3 au niveau 30 (avant : 3 à 9) : un
   cristal vaut 5 fois plus d'or, ils restent un complément. Le coffre de trophées n'existe plus.
 
+### Maîtrise et insignes du JcJ, plans, panoplie des Esprits (lot E2 de la nuit du 15/10)
+
+- **Maîtrise partout** : formule commune `League.mastery_for(manches, palier, part)` = (40 + 20 × palier + 150 × manche
+  gagnée) × part. Ligue : inchangée (palier = rang visé, part 1). Panthéon : palier = rang du cerveau (1-6), part 1, à chaque
+  victoire. Duel libre, Arènes, Gantelet : palier = difficulté + 1, part 0,5 × difficulté (Facile 0,5 … Hardcore 1) ;
+  Gantelet +25 % par adversaire en plus ; duel libre contre un adversaire affaibli (préparation PV / dégâts < 1, adversaire
+  de l'éditeur) : rien. Battle royale : « manches » 2 pour la victoire, 1 pour le podium, palier = éliminations (4 au plus).
+  Les modes classés ignorent la préparation de l'adversaire du duel libre.
+- **Insignes du JcJ contre l'IA plafonnés au jour** (`League.win_insignia`, `royale_insignia`) : 1re victoire du jour de
+  chaque mode 50 (Arènes 2v2) / 75 (3v3) / 60 (Gantelet 1v2) / 90 (1v3), puis 10 ; Battle royale : la meilleure place
+  du jour paie la différence avec la précédente (110 / 70 / 45 / 28 / 18 / 11 / 7 / 4), + 3 par élimination. Une heure
+  de JcJ rapporte ≈ 180-190 insignes (première heure du jour ≈ 300-450 si on gagne tout), contre ≈ 360 (époque I) à
+  670 (époque IV) pour une heure de Survie gagnée.
+- **Plans** : le plan d'une zone tombe à coup sûr au 1er donjon terminé de chaque difficulté (Normal compris), sinon une
+  fois sur dix. **Fabrication** : les 9 emplacements (arme du type de la classe choisie, collier, anneau compris), modèle
+  d'Eden du niveau du donjon (et non plus de la zone choisie au lobby).
+- **Siège Normal** : aucune PE requise (Héroïque 65 %, Mythique 90 %).
+- **Panoplie des Esprits universelle** : chaque pièce est un modèle fixe, légendaire de niveau d'Eden 70, quelle que soit la
+  zone. Gagnée, elle s'ajoute à `seen_gear` (id `Pantheon.shop_id`) : l'Armurerie la revend (220 insignes) pour toutes
+  les classes ; battre le Champion y ouvre l'arme des Esprits des 17 types. **Éveil** : avec 6 pièces éveillées portées
+  (cerveau battu par les 5 familles), le palier 6 devient : +10 % dégâts, +5 % critique, esquive → hâte puis furie 4 s,
+  recharge 4 s (au lieu de 3 s / 8 s).
+
 ## Classe + arme (builds exotiques)
 
 - On choisit **une classe** (sorts, passifs, talents, attributs) puis **une arme**, au choix

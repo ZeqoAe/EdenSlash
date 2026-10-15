@@ -6,9 +6,21 @@ extends RefCounted
 ## déjà battu donne un coffre d'apparence de moins haute qualité ; la même classe, rien de plus (pas de
 ## farm). Une pièce « s'éveille » quand son cerveau est battu avec une classe de chacune des 5 familles.
 ## État : `Profile.pantheon[cerveau] = {classes: [...], families: [...], awake: bool}`.
+##
+## Panoplie universelle (lot E2, I8) : chaque pièce est un modèle fixe (légendaire de niveau [constant PIECE_LEVEL],
+## jamais selon la zone du lobby). Gagnée, elle entre aussi dans `Profile.seen_gear` sous un id à elle
+## ([method shop_id]) : l'Armurerie la revend à toutes les classes ; le Champion y ouvre l'arme des Esprits de
+## chacun des 17 types. Ces modèles sont ajoutés à `GameData.eden_by_id` ([method register_templates]). Éveil :
+## 6 pièces éveillées portées = bonus 6 pièces renforcé (`Items.SETS.pantheon.awake`).
+## Battre un cerveau donne aussi de la maîtrise (Duel.settle, formule commune League.mastery_for).
 
 const LEVEL := 10
 const FAMILIES := 5
+const PIECE_LEVEL := 70  # niveau d'Eden des pièces de la panoplie (fixe)
+const SHOP_BASE := 900000  # ids des pièces dans seen_gear : SHOP_BASE + 100 × cerveau + type d'arme
+## Types d'arme, dans un ordre fixe (les ids en dépendent : ajouter à la fin).
+const WTYPES := ["axe", "bow", "cannon", "cestus", "dagger", "greatsword", "grimoire", "guitar", "gunscythe",
+	"hammer", "katana", "rapier", "rod", "scepter", "spear", "staff", "sword"]
 
 ## id du cerveau (fichier data/cerveaux/cerveau_<id>.json), nom, emplacement de la pièce, récompenses.
 const BRAINS := [
@@ -72,13 +84,107 @@ static func awake_count() -> int:
 	return n
 
 
-## Pièce de la panoplie pour le cerveau [param b] (légendaire, du niveau le plus haut du héros).
+## Id (dans seen_gear et `GameData.eden_by_id`) de la pièce du cerveau [param i] ; [param wtype] pour l'arme.
+static func shop_id(i: int, wtype := "") -> int:
+	return SHOP_BASE + 100 * i + maxi(WTYPES.find(wtype), 0)
+
+
+static func is_shop_id(id: int) -> bool:
+	return id >= SHOP_BASE and id < SHOP_BASE + 100 * BRAINS.size()
+
+
+## Ids de la pièce du cerveau [param i] : une, ou une par type d'arme (Champion).
+static func shop_ids(i: int) -> Array:
+	if String(brain(i).slot) != "weapon":
+		return [shop_id(i)]
+	return WTYPES.map(func(w): return shop_id(i, w))
+
+
+## Modèle d'Eden choisi pour une pièce : légendaire de [param slot] (ou du type d'arme [param wtype]), le plus haut
+## sans dépasser PIECE_LEVEL (le plus bas au-dessus sinon), hors pièces « Awaken » ; toujours le même.
+static func _base_template(slot: String, wtype: String) -> Dictionary:
+	var best: Dictionary = {}
+	var above: Dictionary = {}
+	for e: Dictionary in GameData.eden_by_slot.get(wtype if slot == "weapon" else slot, []):
+		if int(e.get("rarity", 0)) != Items.LEGENDARY or (e.get("r", {}) as Dictionary).is_empty() or GameData.is_awakened(e):
+			continue
+		var lv := int(e.level)
+		if lv <= PIECE_LEVEL:
+			if best.is_empty() or lv > int(best.level) or (lv == int(best.level) and int(e.id) < int(best.id)):
+				best = e
+		elif above.is_empty() or lv < int(above.level) or (lv == int(above.level) and int(e.id) < int(above.id)):
+			above = e
+	return best if not best.is_empty() else above
+
+
+## Ajoute à `GameData.eden_by_id` les modèles des pièces de la panoplie (une fois) : l'Armurerie, l'archive et les
+## fiches les lisent comme les autres pièces (pas dans `eden_by_slot` : jamais dans un butin).
+static func register_templates() -> void:
+	if GameData.eden_by_id.has(shop_id(0)) or GameData.eden_by_slot.is_empty():
+		return
+	for i in BRAINS.size():
+		var slot := String(BRAINS[i].slot)
+		for id in shop_ids(i):
+			var wt: String = WTYPES[int(id) % 100] if slot == "weapon" else ""
+			var e := _base_template(slot, wt)
+			if e.is_empty():
+				continue
+			var t := e.duplicate(true)
+			t["id"] = int(id)
+			t["set"] = "pantheon"
+			t["pantheon"] = String(BRAINS[i].id)
+			t["name"] = "%s %s" % [String(e.name), String(Items.SETS.pantheon.suffix)]
+			t.erase("arch")  # pas d'entrée d'archive (archiver retirerait la pièce)
+			GameData.eden_by_id[int(id)] = t
+
+
+## Modèle d'une pièce de la panoplie ({} si absent).
+static func template(id: int) -> Dictionary:
+	register_templates()
+	return GameData.eden_by_id.get(id, {}) if is_shop_id(id) else {}
+
+
+## Pièces gagnées → Armurerie (seen_gear) ; aussi pour une sauvegarde d'avant le lot E2 (appelé au chargement).
+static func sync_seen() -> void:
+	register_templates()
+	for i in BRAINS.size():
+		if beaten(String(BRAINS[i].id)):
+			_reveal(i)
+
+
+static func _reveal(i: int) -> void:
+	for id in shop_ids(i):
+		if not int(id) in Profile.seen_gear and not template(int(id)).is_empty():
+			Profile.seen_gear.append(int(id))
+
+
+## Cerveau d'une pièce de la panoplie ("" : pas une pièce des Esprits).
+static func brain_of(item: Dictionary) -> String:
+	if item.has("pantheon"):
+		return String(item.pantheon)
+	var id := int(item.get("eden", -1))
+	return String(BRAINS[(id - SHOP_BASE) / 100].id) if is_shop_id(id) else ""
+
+
+## La pièce est éveillée (drapeau posé à l'éveil, ou son cerveau battu par les 5 familles).
+static func piece_awake(item: Dictionary) -> bool:
+	if bool(item.get("awakened", false)):
+		return true
+	var id := brain_of(item)
+	return id != "" and bool(Profile.pantheon.get(id, {}).get("awake", false))
+
+
+## Pièce de la panoplie pour le cerveau [param b] : modèle fixe (arme : du type de la classe [param class_id]).
 static func make_piece(b: Dictionary, class_id: String, awake := false) -> Dictionary:
-	var lv := maxi(Profile.best_level, 10)
-	var it := Items.generate(lv, 1.0, String(b.slot), class_id, Items.LEGENDARY, "", Items.LEGENDARY)
-	Items.make_set_piece(it, "pantheon")
+	var i := index_of(String(b.id))
+	var e := template(shop_id(i, Items.default_weapon_type(class_id) if String(b.slot) == "weapon" else ""))
+	var it: Dictionary
+	if e.is_empty():  # catalogue d'Eden absent (tests minimaux) : pièce générée
+		it = Items.generate(PIECE_LEVEL, 1.0, String(b.slot), class_id, Items.LEGENDARY, "", Items.LEGENDARY)
+		Items.make_set_piece(it, "pantheon")
+	else:
+		it = Items.from_template(e, PIECE_LEVEL, Items.LEGENDARY)
 	it["pantheon"] = String(b.id)
-	it["name"] = "%s (%s)" % [String(it.name), String(b.name)]
 	if awake:
 		it["awakened"] = true
 	return it
@@ -103,6 +209,8 @@ static func report_win(id: String, class_id: String) -> Dictionary:
 		Profile.vault.append(piece)
 		out.piece = piece
 		out.text.append("Pièce de la panoplie des Esprits : %s" % String(piece.name))
+		_reveal(i)  # à l'Armurerie pour toutes les classes
+		out.text.append("Armes des Esprits de tous les types : à l'Armurerie" if String(b.slot) == "weapon" else "Rachetable à l'Armurerie")
 		Profile.chest_add(String(b.look), LEVEL)
 		out.chests.append(String(b.look))
 		if String(b.aura) != "":
@@ -129,7 +237,7 @@ static func report_win(id: String, class_id: String) -> Dictionary:
 		out.awake = true
 		out.text.append("La pièce s'éveille : le cerveau est battu par les 5 familles !")
 		for it in Profile.vault + Profile.inventory:
-			if String(it.get("pantheon", "")) == id:
+			if brain_of(it) == id:
 				it["awakened"] = true
 		Profile.chest_add("aura_legend", LEVEL)
 		out.chests.append("aura_legend")
