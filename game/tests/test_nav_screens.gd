@@ -70,6 +70,8 @@ func _ready() -> void:
 	lobby._workshop.close_ui()
 	lobby._show_menu("rush")
 	await probe("lobby : Ruée des boss", 0.8)
+	lobby._show_menu("siege")
+	await probe("lobby : Le Siège", 0.8)
 	lobby._show_menu("")
 	lobby._open_hero("class")
 	await probe("Héros : classe", 0.8)

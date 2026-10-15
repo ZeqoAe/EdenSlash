@@ -38,16 +38,21 @@ func _spawn_allies() -> void:
 	if not Tower.is_dungeon():
 		return
 	for cid in Tower.allies:
-		var a := ClassRival.new()
-		a.ally = true
-		a.setup(String(cid), Tower.level_for(1), 2)
-		var b := Duel.opti_build(String(cid), Tower.level_for(1))
-		if not b.is_empty():
-			a.apply_build(b, Tower.level_for(1))
-		d.add_child(a)
-		a.died.connect(func(_w, _k): d.message.emit("Un allié est tombé : %s" % a.display_name, 2.5))
-		_allies.append(a)
+		_allies.append(_make_ally(String(cid)))
 	_place_allies()
+
+
+## Un allié IA de la classe [param cid] (build « opti » au niveau de la salle), ajouté à la scène.
+func _make_ally(cid: String) -> ClassRival:
+	var a := ClassRival.new()
+	a.ally = true
+	a.setup(cid, Tower.level_for(1), 2)
+	var b := Duel.opti_build(cid, Tower.level_for(1))
+	if not b.is_empty():
+		a.apply_build(b, Tower.level_for(1))
+	d.add_child(a)
+	a.died.connect(func(_w, _k): d.message.emit("Un allié est tombé : %s" % a.display_name, 2.5))
+	return a
 
 
 func _place_allies() -> void:

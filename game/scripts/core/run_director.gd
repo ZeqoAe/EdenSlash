@@ -137,7 +137,7 @@ func start(p: Player) -> void:
 		_fog = Image.create(FOG_RES, FOG_RES, false, Image.FORMAT_LA8)
 		_fog.fill(Color(0, 0, 0, 0))
 		_fog_tex = ImageTexture.create_from_image(_fog)
-		tower = TowerDirector.new()
+		tower = SiegeDirector.new() if Tower.siege else TowerDirector.new()
 		add_child(tower)
 		tower.setup(self)
 		return
@@ -314,7 +314,7 @@ func _update_interactions() -> void:
 
 func _interact(it: Interactable) -> void:
 	match it.kind:
-		"tower_chest", "tower_stairs":
+		"tower_chest", "tower_stairs", "siege_core":
 			tower.interact(it)
 		"chest":
 			# une clé si on en a, sinon le prix en or (qui monte à chaque coffre ouvert)

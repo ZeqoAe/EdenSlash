@@ -26,7 +26,7 @@ static func current() -> String:
 
 ## Combat entre héros (règles JcJ de PvpCaps).
 static func is_pvp() -> bool:
-	return current() == "duel"
+	return current() == "duel" or Siege.ffa  # le chacun pour soi du Siège joue aussi aux règles du JcJ
 
 
 ## Mode où les records, les cartes à débloquer et les succès comptent (règle commune : partout sauf

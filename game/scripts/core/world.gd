@@ -454,6 +454,9 @@ func _on_player_died(_who: Combatant, _killer: Combatant) -> void:
 	if Duel.active:
 		director.duel.player_down()  # manche perdue ; la manche suivante le relève
 		return
+	if Tower.active and Tower.siege:
+		director.tower.player_down()  # Le Siège : une seule vie ; le directeur annonce la fin et le rang
+		return
 	if Tower.active:
 		# la Tour : une seule vie
 		hud.show_message("Tu es tombé à l'étage %d…" % Tower.floor_n, 2.5)

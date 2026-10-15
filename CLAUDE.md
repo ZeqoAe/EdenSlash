@@ -93,7 +93,9 @@ Idées en vrac du joueur (15/10, 0.1.153 à 0.1.158, classement et état dans `c
 (`Settings.fx_factor`, jamais les zones d'attaque), Roulette quotidienne (`core/wheel.gd`, Coffres > Roulette), puissance d'équipement
 (`core/gear_power.gd` : verrous Héroïque / Mythique des donjons et butin légendaire), potions (`core/potions.gd`, touches C / V), Forge unifiée
 (`ui/forge_bench.gd`, Atelier > Forge), file d'attente du Duel (`ui/duel_queue.gd`), effets de sorts mis à la taille de leur zone
-(`EdenFx.cast_scale`, `data/fx_radius.json` par `tools/fx_measure.tscn`). Reste : Trio PvE puis PvP, Battle royale, MOBA 4v4 (conçus dans le
+(`EdenFx.cast_scale`, `data/fx_radius.json` par `tools/fx_measure.tscn`). Le Siège (0.1.161, `core/siege.gd`, `core/siege_director.gd` qui prolonge `TowerDirector`, `Tower.siege`, test `test_siege`) : joueur + 2 alliés IA,
+5 vagues, boss (fureur 6 min), anneau de 20 s, cœur au centre, chacun pour soi à trois (`Combatant.set_ffa`, `Siege.ffa` = règles JcJ, profil
+`siege` de `ModeRules`) ; dernier debout = coffre `look_legend`, cœur emporté = `look_epic`. Reste : Battle royale, MOBA 4v4 (conçus dans le
 même fichier, pas codés), les 39 sorts de `conception/fx_audit.csv`, « Triple lame ».
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la

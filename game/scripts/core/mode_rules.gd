@@ -53,7 +53,17 @@ const PVP_A3 := {
 	"hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
 	"caps": PvpCaps.CAPS,
 }
+## Le Siège, chacun pour soi à trois (après le boss) : mêmes règles que l'arène à trois, héros équipés (plafonds de
+## l'équipé, bonus en % ramenés de moitié), soins moitié moins forts.
+const PVP_SIEGE := {
+	"dmg_scale": 0.018, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": PvpCaps.HEAL_MULT * 0.5,
+	"max_mitigation": PvpCaps.MAX_MITIGATION, "pressure_start": PvpCaps.PRESSURE_START,
+	"pressure_step": PvpCaps.PRESSURE_STEP, "pct_weight": 0.5,
+	"hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
+	"caps": PVP["caps"],
+}
 const PROFILES := {
+	"siege": PVP_SIEGE,
 	"duel": PVP,
 	"duel_a": PVP_A,
 	"duel_b": PVP,
@@ -71,6 +81,8 @@ static var modifiers: Array = []
 static func profile_name() -> String:
 	if forced != "":
 		return forced
+	if Siege.ffa:
+		return "siege"
 	var m := Modes.current()
 	if m == "duel":
 		if Duel.mode in ["arena2", "arena3", "gauntlet"]:

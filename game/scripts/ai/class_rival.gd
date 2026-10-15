@@ -252,7 +252,7 @@ func is_invulnerable() -> bool:
 func _support_tick() -> void:
 	if not ally or _support.is_empty() or _time < _support_ready_at:
 		return
-	var heroes := get_tree().get_nodes_in_group("heroes")
+	var heroes: Array = [self] if ffa_id >= 0 else get_tree().get_nodes_in_group("heroes")  # chacun pour soi : soutien pour soi seul
 	for s in _support:
 		if String(s.kind) == "heal":
 			var low: Combatant = null
@@ -592,7 +592,7 @@ func _start_attack() -> void:
 			if _state == "attack":
 				Sfx.play_at(self, global_position, String(snd[1]), -6.0))
 	play(anim_name, 0.06, speed, true)
-	if sk.is_empty() and Duel.active:
+	if sk.is_empty() and (Duel.active or Siege.ffa):
 		mult *= PvpCaps.basic_mult()  # auto-attaque entre héros en duel
 	var is_crit := randf() < crit_chance
 	var dmg := atk * mult * damage_dealt_mult() * randf_range(0.9, 1.1) * (1.0 + crit_bonus if is_crit else 1.0)

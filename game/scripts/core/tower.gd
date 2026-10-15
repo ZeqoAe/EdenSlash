@@ -62,6 +62,7 @@ static var active := false
 ## Donjon (lot 13) : zone du donjon en cours ("" : pas de donjon), difficulté et alliés IA choisis.
 static var dungeon := ""
 static var rush := false  # la Ruée des boss : « donjon » dont les salles sont les boss des 8 zones
+static var siege := false  # Le Siège : « donjon » à 5 vagues puis le boss, puis le chacun pour soi (Siege)
 static var dungeon_diff := 0
 static var allies: Array = []
 static var difficulty := 1
@@ -79,6 +80,7 @@ static func start_dungeon(cid: String, zid: String, diff: int, ally_ids: Array) 
 	start(cid, 1, 1)
 	dungeon = zid
 	rush = zid == Dungeons.RUSH
+	siege = false
 	dungeon_diff = clampi(diff, 0, Dungeons.DIFF_NAMES.size() - 1)
 	allies = ally_ids.slice(0, Dungeons.MAX_ALLIES)
 	difficulty = 1
@@ -88,9 +90,20 @@ static func start_dungeon(cid: String, zid: String, diff: int, ally_ids: Array) 
 			Run.skills.append({"id": int(s.id), "rank": 1})
 
 
+## Lance Le Siège de la zone [param zid] : deux alliés IA (complétés au hasard), cinq vagues, le boss, le chacun pour soi.
+static func start_siege(cid: String, zid: String, diff: int, ally_ids: Array) -> void:
+	start_dungeon(cid, zid, diff, [])
+	siege = true
+	rush = false
+	allies = Siege.fill_allies(ally_ids)
+	Siege.reset()
+
+
 static func start(cid: String, diff := 1, from := 1) -> void:
 	dungeon = ""
 	rush = false
+	siege = false
+	Siege.reset()
 	allies = []
 	active = true
 	difficulty = clampi(diff, 0, DIFF_NAMES.size() - 1)
@@ -144,6 +157,8 @@ static func is_dungeon() -> bool:
 
 ## Dernière salle ou dernier étage.
 static func top() -> int:
+	if siege:
+		return Siege.WAVES + 1  # cinq vagues, puis le boss
 	if rush:
 		return Dungeons.rush_floors()
 	return Dungeons.ROOMS.size() if is_dungeon() else FLOORS
@@ -169,6 +184,8 @@ static func default_type(f: int) -> String:
 
 
 static func floor_type(f: int) -> String:
+	if siege:
+		return Siege.floor_type(f)
 	if rush:
 		return "boss"
 	if is_dungeon():
@@ -180,6 +197,8 @@ static func floor_type(f: int) -> String:
 static func level_for(f: int) -> int:
 	if rush:
 		return Dungeons.rush_level(f, dungeon_diff)
+	if siege:
+		return Siege.level(dungeon, dungeon_diff) + (1 if f > Siege.WAVES else 0)
 	if is_dungeon():
 		return Dungeons.level(dungeon, dungeon_diff) + (1 if f >= Dungeons.ROOMS.size() else 0)
 	if floor_edit(f).has("level"):
@@ -246,6 +265,8 @@ static func duel_skills(f: int) -> int:
 
 
 static func monster_count(f: int) -> int:
+	if siege:
+		return Siege.wave_count(f, dungeon_diff)
 	if is_dungeon():
 		return 14 + 4 * dungeon_diff + (4 if f == 3 else 0)
 	if floor_edit(f).has("count"):
@@ -254,12 +275,16 @@ static func monster_count(f: int) -> int:
 
 
 static func max_alive(f: int) -> int:
+	if siege:
+		return Siege.max_alive(dungeon_diff)
 	if is_dungeon():
 		return 12 + 2 * dungeon_diff
 	return mini(int(rule("alive_base") + f * rule("alive_per_floor")), int(rule("alive_max")))
 
 
 static func elite_count(f: int) -> int:
+	if siege:
+		return Siege.elite_count(f, dungeon_diff)
 	if is_dungeon():
 		return 3 + dungeon_diff
 	return 1 + int(f / 50 * rule("elite_count_per_50"))
@@ -273,6 +298,8 @@ static func monster_mult(f: int, diff := -1) -> float:
 
 ## PV et dégâts des monstres de l'étage (× réglages de l'étage dans le mode dev) ; boss à part.
 static func monster_hp_mult(f: int, diff := -1, boss := false) -> float:
+	if siege:
+		return Siege.hp_mult(boss, floor_type(f) == "elite")
 	if is_dungeon():
 		return Dungeons.hp_mult(boss, floor_type(f) == "elite", allies.size())
 	return monster_mult(f, diff) * float(floor_edit(f).get("hp", 1.0)) * (rule("boss_hp") if boss else 1.0)
@@ -451,6 +478,8 @@ static func finish() -> Dictionary:
 ## Fin d'un donjon : butin si le boss est tombé, sauvegarde rechargée (comme la Tour).
 static func _finish_dungeon() -> Dictionary:
 	var victory := reached >= top()
+	var was_siege := siege
+	var sg_outcome := Siege.outcome
 	RunJournal.end_map("victoire" if victory else "defaite", {"dungeon": dungeon, "dungeon_diff": dungeon_diff, "rooms": reached, "allies": allies.size()})
 	active = false
 	Run.active = false
@@ -464,7 +493,9 @@ static func _finish_dungeon() -> Dictionary:
 	Profile.bag = {}
 	var rew := {}
 	var was_rush := rush
-	if was_rush:
+	if was_siege:
+		rew = Siege.settle(zid, diff, reached, sg_outcome)  # des cristaux dès les premières vagues
+	elif was_rush:
 		rew = Dungeons.rush_reward(reached, diff)  # des cristaux même si la Ruée s'arrête avant la fin
 	elif victory:
 		rew = Dungeons.reward(zid, diff)
@@ -475,8 +506,12 @@ static func _finish_dungeon() -> Dictionary:
 	Profile.save_profile()
 	dungeon = ""
 	rush = false
+	siege = false
 	allies = []
-	return {"dungeon": true, "rush": was_rush, "victory": victory, "rooms": reached, "xp": xp, "levels": lv, "reward": rew, "zone": zid, "diff": diff}
+	var rank := Siege.rank
+	Siege.reset()
+	return {"dungeon": true, "rush": was_rush, "siege": was_siege, "outcome": sg_outcome, "rank": rank, "victory": victory, "rooms": reached,
+		"xp": xp, "levels": lv, "reward": rew, "zone": zid, "diff": diff}
 
 
 static func leave(tree: SceneTree) -> void:

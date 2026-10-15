@@ -74,6 +74,8 @@ func _prompt() -> String:
 			return "[F] Ouvrir — %s" % title
 		"tower_stairs":
 			return "[F] Monter — %s" % title
+		"siege_core":
+			return "[F] Prendre le cœur et quitter le duel (récompense moindre)"
 		"stage_portal":
 			return "[F] Étape suivante — %s" % title
 		_ when STATION_VERBS.has(kind):

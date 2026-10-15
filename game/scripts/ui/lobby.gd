@@ -1128,6 +1128,8 @@ func _show_menu(id: String) -> void:
 			_menu_arenas()
 		"rush":
 			_menu_rush()
+		"siege":
+			_menu_siege()
 		"trials":
 			_menu_soon(id)
 		"mastery":
@@ -1308,10 +1310,23 @@ var _dg_allies: Array = ["", ""]
 func _menu_dungeon() -> void:
 	_activity_head("dungeon")
 	_activity_desc("dungeon")
+	_dungeon_pickers("dungeon", false)
+	_dungeon_allies_picker()
+	var open_now := Dungeons.is_open(_dg_zone) and Dungeons.power_ok(_dg_zone, _dg_diff)
+	var go := MenuWidgets.gold_button("Entrer dans %s" % Dungeons.name_of(_dg_zone), 22, Vector2(0, 58))
+	go.disabled = not open_now
+	go.tooltip_text = ("" if Dungeons.power_ok(_dg_zone, _dg_diff) else Dungeons.power_text(_dg_zone, _dg_diff)) if Dungeons.is_open(_dg_zone) else Dungeons.condition(_dg_zone)
+	go.pressed.connect(_start_dungeon)
+	_sub.add_child(go)
+
+
+## Choix de la zone (un donjon par zone, ouvert quand son boss est battu en Survie) et de la difficulté, pour les
+## Donjons et pour Le Siège ([param siege] : la PE exigée est celle du Siège). [param menu] : page à rouvrir au clic.
+func _dungeon_pickers(menu: String, siege: bool) -> void:
 	var zids := Dungeons.zone_ids()
 	if _dg_zone == "" or not _dg_zone in zids:
 		_dg_zone = String(zids[0])
-	Hud._label(_sub, "Donjon", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
+	Hud._label(_sub, "Donjon" if not siege else "Arène et boss", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 8)
@@ -1321,7 +1336,7 @@ func _menu_dungeon() -> void:
 		var open := Dungeons.is_open(String(zid))
 		var done := false
 		for d in Dungeons.DIFF_NAMES.size():
-			done = done or Dungeons.cleared(String(zid), d) > 0
+			done = done or (Siege.clears(String(zid), d) if siege else Dungeons.cleared(String(zid), d)) > 0
 		var b := MenuWidgets.glass_button(("🔒 " if not open else ("✔ " if done else "")) + Dungeons.name_of(String(zid)), 14, Vector2(0, 40))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.modulate = Color.WHITE if open else Color(1, 1, 1, 0.45)
@@ -1331,32 +1346,78 @@ func _menu_dungeon() -> void:
 		var z := String(zid)
 		b.pressed.connect(func():
 			_dg_zone = z
-			_show_menu("dungeon"))
+			_show_menu(menu))
 		grid.add_child(b)
 	Hud._label(_sub, "Difficulté", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
 	var dr := HBoxContainer.new()
 	dr.add_theme_constant_override("separation", 6)
 	_sub.add_child(dr)
 	for i in Dungeons.DIFF_NAMES.size():
-		var ok_pe := Dungeons.power_ok(_dg_zone, i)
+		var ok_pe := Siege.power_ok(_dg_zone, i) if siege else Dungeons.power_ok(_dg_zone, i)
 		var b := MenuWidgets.glass_button(("🔒 " if not ok_pe else ("✔ " if i == _dg_diff else "")) + "%s (niv. %d)" % [Dungeons.DIFF_NAMES[i], Dungeons.level(_dg_zone, i)], 14, Vector2(0, 40))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.modulate = Color.WHITE if ok_pe else Color(1, 1, 1, 0.5)
-		b.tooltip_text = Dungeons.power_text(_dg_zone, i)
+		b.tooltip_text = Siege.power_text(_dg_zone, i) if siege else Dungeons.power_text(_dg_zone, i)
 		var di := i
 		b.pressed.connect(func():
 			_dg_diff = di
-			_show_menu("dungeon"))
+			_show_menu(menu))
 		dr.add_child(b)
-	var pe_note := Hud._label(_sub, (Dungeons.power_text(_dg_zone, _dg_diff) if Dungeons.power_required(_dg_zone, _dg_diff) > 0 else GearPower.summary(Dungeons.level(_dg_zone, _dg_diff))), 13, UiTheme.MUTED)
+	var need := Siege.power_required(_dg_zone, _dg_diff) if siege else Dungeons.power_required(_dg_zone, _dg_diff)
+	var text := (Siege.power_text(_dg_zone, _dg_diff) if siege else Dungeons.power_text(_dg_zone, _dg_diff)) if need > 0 else GearPower.summary(Dungeons.level(_dg_zone, _dg_diff))
+	var pe_note := Hud._label(_sub, text, 13, UiTheme.MUTED)
 	pe_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_dungeon_allies_picker()
-	var open_now := Dungeons.is_open(_dg_zone) and Dungeons.power_ok(_dg_zone, _dg_diff)
-	var go := MenuWidgets.gold_button("Entrer dans %s" % Dungeons.name_of(_dg_zone), 22, Vector2(0, 58))
+
+
+## Le Siège : trois héros (toi et deux alliés IA), cinq vagues, le boss de la zone, puis le chacun pour soi.
+func _menu_siege() -> void:
+	_activity_head("siege")
+	_activity_desc("siege")
+	_dungeon_pickers("siege", true)
+	Hud._label(_sub, "Tes deux alliés IA (« Au hasard » sinon) : ils deviennent tes rivaux quand le boss tombe", 15, UiTheme.GOLD).add_theme_font_override("font", UiTheme.bold_font())
+	var ar := HBoxContainer.new()
+	ar.add_theme_constant_override("separation", 6)
+	_sub.add_child(ar)
+	for k in Siege.ALLIES:
+		var ob := OptionButton.new()
+		ob.focus_mode = Control.FOCUS_NONE
+		ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ob.add_item("Au hasard")
+		var ids: Array = [""]
+		for cid in GameData.classes:
+			if Progression.class_unlocked(cid):
+				ob.add_item(String(GameData.class_data(cid).get("name_fr", cid)))
+				ids.append(cid)
+		ob.select(maxi(ids.find(_dg_allies[k]), 0))
+		var kk := k
+		ob.item_selected.connect(func(i): _dg_allies[kk] = ids[i])
+		ar.add_child(ob)
+	var best := int(Profile.records.get("siege_best_%d" % _dg_diff, 0))
+	var rec := Hud._label(_sub, "Victoires du chacun pour soi : %d · meilleur siège (%s) : %s" % [Siege.wins(), Dungeons.DIFF_NAMES[_dg_diff], ("boss vaincu" if best > Siege.WAVES else "vague %d / %d" % [best, Siege.WAVES])], 13, UiTheme.MUTED)
+	rec.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var open_now := Siege.playable(_dg_zone, _dg_diff)
+	var go := MenuWidgets.gold_button("Lancer le Siège de %s" % Dungeons.name_of(_dg_zone), 22, Vector2(0, 58))
 	go.disabled = not open_now
-	go.tooltip_text = ("" if Dungeons.power_ok(_dg_zone, _dg_diff) else Dungeons.power_text(_dg_zone, _dg_diff)) if Dungeons.is_open(_dg_zone) else Dungeons.condition(_dg_zone)
-	go.pressed.connect(_start_dungeon)
+	if not Unlocks.is_open("siege"):
+		go.tooltip_text = Unlocks.condition("siege")
+	elif not Dungeons.is_open(_dg_zone):
+		go.tooltip_text = Dungeons.condition(_dg_zone)
+	else:
+		go.tooltip_text = Siege.power_text(_dg_zone, _dg_diff) if not Siege.power_ok(_dg_zone, _dg_diff) else ""
+	go.pressed.connect(_start_siege)
 	_sub.add_child(go)
+
+
+func _start_siege() -> void:
+	if _launching or not Siege.playable(_dg_zone, _dg_diff):
+		return
+	_launching = true
+	if backdrop:
+		backdrop.release()
+	var allies: Array = _dg_allies.filter(func(c): return String(c) != "")
+	Dungeons.last_allies = allies
+	Tower.start_siege(Profile.selected_class, _dg_zone, _dg_diff, allies)
+	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
 ## Choix des alliés IA d'un donjon ou de la Ruée.

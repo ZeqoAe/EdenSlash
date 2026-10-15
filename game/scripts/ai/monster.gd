@@ -273,7 +273,11 @@ func _set_state(s: String) -> void:
 ## Cibles possibles : les héros (le joueur et ses alliés) ; un allié du joueur vise les monstres.
 func _hostile_pool() -> Array:
 	if ffa_id >= 0:
-		return Combatant.ffa_foes(get_tree(), self)
+		var foes := Combatant.ffa_foes(get_tree(), self)
+		# Le Siège : celui qui emporte le cœur est la cible de tous
+		if Siege.carrier != null and is_instance_valid(Siege.carrier) and Siege.carrier in foes:
+			return [Siege.carrier]
+		return foes
 	return get_tree().get_nodes_in_group("monsters" if team == Team.PLAYER else "heroes")
 
 

@@ -159,6 +159,21 @@ difficile ; une fois vaincu, la zone devient un JcJ à trois, le survivant gagne
   cœur hors de l'anneau pour *quitter le duel* avec une récompense moindre (choix de risque).
 - Effets de ciblage : groupes `heroes` et `hostile_targets` (lot 12) ; Trio ajoute un 3e camp.
 
+**Fait (0.1.161) — Le Siège** : `core/siege.gd` (règles, verrous, butin), `core/siege_director.gd` (déroulé, prolonge `TowerDirector`),
+`Tower.siege` (moteur des Donjons), activité « Le Siège » (rangée Affrontements, image `arena3`), page `lobby.gd` (`_menu_siege`), verrou
+`Unlocks` « siege » (Donjons ouverts) + PE du Siège (`Siege.POWER_RATIO`, plus exigeante qu'un donjon), test `tests/test_siege.tscn`.
+- Pas de 3e camp : chaque héros reçoit un `ffa_id` (`Combatant.set_ffa`, socle du Battle royale) à la bascule ; le camp (`Team`) ne change pas.
+  `Siege.ffa` lève les règles du JcJ (`Modes.is_pvp`, profil `siege` de `ModeRules` : échelle 0,018, soins ×0,5, plafonds de l'équipé) et coupe les potions.
+- Vagues : 5 (élites aux 3e et 5e), nombre ×2 (`Siege.wave_count`), PV ×2 (`MONSTER_HP` 3,6), une carte puis 7 s de répit
+  (soin `heal_between`, +1 potion de soin, +1 potion d'effet aux vagues paires). Boss : PV ×24, fureur à 6 min (×1,82 puis ×1,15 / 15 s).
+- Bascule : les alliés tombés sont remplacés, les trois héros reviennent à pleine vie sur un cercle, trêve de 4 s, anneau 25 → 9 m en 20 s
+  (hors anneau : 5 %/s des PV max pour le joueur, les IA sont repoussées), cœur au centre (`[F]`) : le porteur est la cible exclusive des IA
+  (`Siege.carrier`) et s'enfuit en franchissant l'anneau.
+- Butin (`Siege.settle`) : cristaux dès les vagues, boss tombé = coffre d'équipement, dernier debout = + coffre `look_legend` et titre
+  « Maître du Siège », cœur emporté = + `look_epic`, éliminé = rien de plus.
+- À régler en jouant : durée du chacun pour soi (IA contre IA : ~100 s sans le joueur, l'acharnement de PvpCaps tranche), PV du boss, dégâts
+  de l'anneau. Pas encore : 3 joueurs humains (rien ne l'empêche dans le code), IA qui disputent le cœur, mécaniques propres au boss en 2e phase.
+
 ## 9. Battle royale (rang 9)
 **Idée du joueur** : spawn aléatoire sur la carte, plein de coffres de loot différent, intro des potions.
 

@@ -44,7 +44,7 @@ static func icon_path(kind: String) -> String:
 
 ## Les potions servent-elles dans ce mode ? (en run, pas en duel).
 static func allowed() -> bool:
-	return Run.active and not Duel.active
+	return Run.active and not Duel.active and not Siege.ffa  # ni en duel, ni dans le chacun pour soi du Siège
 
 
 ## Départ de run : au moins [constant START_HEAL] potions de soin, recharges remises à zéro.

@@ -26,14 +26,25 @@ func show_results(got: Dictionary) -> void:
 	v.add_theme_constant_override("separation", 12)
 	panel.add_child(v)
 	var victory := bool(got.get("victory", false))
-	var t := Hud._label(v, TITLES[victory], 42, Hud.ACCENT if victory else Color(0.95, 0.45, 0.4))
+	var siege := bool(got.get("siege", false))
+	var title_text: String = TITLES[victory]
+	if siege:
+		title_text = siege_title(got)
+	var t := Hud._label(v, title_text, 42, Hud.ACCENT if victory else Color(0.95, 0.45, 0.4))
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var zid := String(got.get("zone", ""))
-	var info := Hud._label(v, "%s · %s · salles franchies : %d / %d" % [Dungeons.name_of(zid), Dungeons.DIFF_NAMES[int(got.get("diff", 0))], int(got.get("rooms", 0)), Dungeons.rush_floors() if bool(got.get("rush", false)) else Dungeons.ROOMS.size()], 22, Color.WHITE)
+	var info_text := "%s · %s · salles franchies : %d / %d" % [Dungeons.name_of(zid), Dungeons.DIFF_NAMES[int(got.get("diff", 0))], int(got.get("rooms", 0)), Dungeons.rush_floors() if bool(got.get("rush", false)) else Dungeons.ROOMS.size()]
+	if siege:
+		info_text = "Le Siège · %s · %s · vagues vaincues : %d / %d%s" % [Dungeons.name_of(zid), Dungeons.DIFF_NAMES[int(got.get("diff", 0))], mini(int(got.get("rooms", 0)), Siege.WAVES), Siege.WAVES, " · boss vaincu" if victory else ""]
+	var info := Hud._label(v, info_text, 22, Color.WHITE)
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var ex := Hud._label(v, "Maîtrise %s : +%d" % [Run.class_data().get("name_fr", ""), int(got.get("xp", 0))], 17, Color(0.6, 0.85, 1.0))
 	ex.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	if victory or bool(got.get("rush", false)):
+	if siege and String(got.get("outcome", "")) != "":
+		var oc := Hud._label(v, siege_outcome_text(got), 20, Color(1.0, 0.8, 0.45))
+		oc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		oc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if victory or bool(got.get("rush", false)) or siege:
 		var r: Dictionary = got.get("reward", {})
 		var lines: PackedStringArray = []
 		for c in r.get("chests", []):
@@ -53,13 +64,16 @@ func show_results(got: Dictionary) -> void:
 	row.add_theme_constant_override("separation", 12)
 	v.add_child(row)
 	var again := Button.new()
-	again.text = "Rejouer (la Ruée)" if bool(got.get("rush", false)) else "Rejouer (même donjon)"
+	again.text = "Rejouer (la Ruée)" if bool(got.get("rush", false)) else ("Rejouer (même siège)" if siege else "Rejouer (même donjon)")
 	again.custom_minimum_size = Vector2(0, 54)
 	again.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	again.focus_mode = Control.FOCUS_NONE
 	again.pressed.connect(func():
 		get_tree().paused = false
-		Tower.start_dungeon(Profile.selected_class, zid, int(got.get("diff", 0)), Dungeons.last_allies)
+		if siege:
+			Tower.start_siege(Profile.selected_class, zid, int(got.get("diff", 0)), Dungeons.last_allies)
+		else:
+			Tower.start_dungeon(Profile.selected_class, zid, int(got.get("diff", 0)), Dungeons.last_allies)
 		get_tree().change_scene_to_file("res://scenes/world.tscn"))
 	row.add_child(again)
 	var ok := Button.new()
@@ -71,3 +85,26 @@ func show_results(got: Dictionary) -> void:
 		get_tree().paused = false
 		get_tree().change_scene_to_file("res://scenes/lobby.tscn"))
 	row.add_child(ok)
+
+
+## Titre du bilan d'un siège selon l'issue du chacun pour soi.
+static func siege_title(got: Dictionary) -> String:
+	match String(got.get("outcome", "")):
+		"won":
+			return "DERNIER DEBOUT !"
+		"escaped":
+			return "TU QUITTES LE DUEL"
+		"eliminated":
+			return "ÉLIMINÉ (%de)" % maxi(2, int(got.get("rank", 3)))
+	return "SIÈGE TERMINÉ" if bool(got.get("victory", false)) else "SIÈGE PERDU"
+
+
+static func siege_outcome_text(got: Dictionary) -> String:
+	match String(got.get("outcome", "")):
+		"won":
+			return "Tu as battu tes deux compagnons : coffre d'apparence légendaire."
+		"escaped":
+			return "Tu as emporté le cœur hors de l'anneau : récompense moindre, mais saine et sauve."
+		"eliminated":
+			return "Le boss est tombé, mais tu n'as pas survécu au chacun pour soi."
+	return ""
