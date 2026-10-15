@@ -563,8 +563,8 @@ static func compare_to_equipped(item: Dictionary) -> float:
 		return 1.0
 	if String(worn.get("uid", "")) == String(item.get("uid", "-")):
 		return 0.0
-	var a := rating(worn)
-	return (rating(item) - a) / maxf(a, 0.01)
+	var a := rating(anvil_applied(worn, slot))  # en Survie, l'enclume de l'emplacement compte pour les deux pièces
+	return (rating(anvil_applied(item, slot)) - a) / maxf(a, 0.01)
 
 
 static func _add_affix(item: Dictionary, stat: String) -> void:
@@ -707,20 +707,66 @@ static func _weapon_or_slot(item: Dictionary) -> String:
 	return String(SLOT_NAMES.get(item.slot, "Bouclier (collection)"))
 
 
-static func describe(item: Dictionary) -> String:
-	var r: Dictionary = RARITIES[int(item.rarity)]
-	var col := color_of(item).to_html(false)
-	var icon := String(item.get("icon", ""))
-	var q := float(item.get("quality", 1.0))
-	var up := int(item.get("upgrade", 0))
-	# carte d'objet : icône, nom à la couleur de la rareté, type, qualité
-	var lines := ["%s[font_size=21][b][color=#%s]%s[/color][/b][/font_size]" % [
-			"[img=52x52]%s[/img]  " % icon if icon != "" else "", col, display_name(item)],
-		"[color=#%s]%s[/color] · %s%s · %s" % [col, ("Éveillé" if item.get("awakened", false) else r.name), _weapon_or_slot(item), (" · pièce de set" if item.has("set") else "") + (" · panoplie %s" % String(SETS[item.archetype].name) if SETS.has(String(item.get("archetype", ""))) else ""), ("niveau %d" % int(item.level)) if int(item.level) > 0 else "sans niveau"],
-		"Qualité [color=%s]%d %%[/color]%s" % ["#7fe08a" if q >= 1.0 else "#ff9a7a", roundi(q * 100.0),
-			"   ·   Amélioration [color=#ffcf6b]+%d[/color] / %d" % [up, MAX_UPGRADE] if up > 0 else ""],
-		"[color=#5a5470]────────────────────────[/color]"]
-	# stats connues : valeur finale, (écart dû à la qualité et à l'amélioration) entre parenthèses
+## Filet horizontal des cartes.
+const SEPARATOR := "[hr color=#4a4562]"
+
+
+## Entier avec espace insécable entre les milliers (2 272).
+static func fmt_num(n: int) -> String:
+	var s := str(absi(n))
+	var out := ""
+	while s.length() > 3:
+		out = " " + s.substr(s.length() - 3) + out
+		s = s.substr(0, s.length() - 3)
+	return ("-" if n < 0 else "") + s + out
+
+
+## Statistique en pourcentage rattachée à une statistique plate du même nom (« Défense » 231 et « Défense » 4 % :
+## une seule ligne sur la carte).
+const PCT_OF := {"def_pct": "def", "matk_pct": "matk", "atk_pct": "patk", "str_pct": "str", "agi_pct": "agi",
+	"int_pct": "int", "wis_pct": "wis", "lck_pct": "lck"}
+## Statistique mise en gros sur la carte, par emplacement : la première présente (« atk » = la plus forte des deux attaques).
+const MAIN_STAT := {"weapon": ["atk"], "gloves": ["atk"], "ring": ["atk", "crit"], "necklace": ["hp", "atk"],
+	"head": ["def", "hp"], "chest": ["def", "hp"], "legs": ["def", "hp"], "back": ["def", "hp"], "boots": ["def", "hp"],
+	"offhand": ["atk", "def"]}
+## Lignes secondaires affichées sur la carte courte (les autres derrière « Maj : détails »).
+const CARD_ROWS := 5
+
+
+## Poids d'une statistique pour son emplacement (valeur rapportée à la valeur habituelle) : classe les lignes.
+static func stat_weight(slot: String, stat: String, value: float, lk: float) -> float:
+	var ref := _ref(slot, stat)
+	if ref <= 0.0:
+		ref = float(AFFIX_RANGES.get(stat, [0.0, 0.0])[1])
+	if ref <= 0.0:
+		return 0.5
+	return absf(value) / (ref * (1.0 if stat in PERCENT_STATS else lk))
+
+
+## Clé de la statistique principale (celle qu'on met en gros), "" si l'objet n'en a pas.
+static func main_stat_key(item: Dictionary, st: Dictionary) -> String:
+	var slot := String(item.get("slot", ""))
+	for c in MAIN_STAT.get(slot, []):
+		if c == "atk":
+			var a := "patk" if float(st.get("patk", 0.0)) >= float(st.get("matk", 0.0)) else "matk"
+			if float(st.get(a, 0.0)) > 0.0:
+				return a
+		elif float(st.get(c, 0.0)) > 0.0:
+			return String(c)
+	var best := ""
+	var bw := 0.0
+	var lk := _level_k(power_level(item))
+	for s in st:
+		var w := stat_weight(slot, String(s), float(st[s]), lk)
+		if w > bw and not PCT_OF.has(String(s)):
+			bw = w
+			best = String(s)
+	return best
+
+
+## Lignes de statistiques : [{k, name, val, bonus, aff, w, pct}] (valeur finale, écart dû à la qualité et à
+## l'amélioration, affixe hors type de base, poids, statistique en % fusionnée).
+static func stat_rows(item: Dictionary) -> Array:
 	var base := base_stats(item)
 	var st := stats(item, false)
 	var ref_item := item.duplicate()
@@ -728,75 +774,173 @@ static func describe(item: Dictionary) -> String:
 	ref_item["upgrade"] = 0
 	ref_item.erase("passive")
 	var ref := stats(ref_item, false)
-	for s in base:
-		if not st.has(s):
-			continue
-		var bonus := float(st[s]) - float(ref.get(s, 0.0))
-		var pct: bool = s in PERCENT_STATS
-		var bonus_txt := ""
-		var shown := roundi(bonus * (100.0 if pct else 1.0))
-		if shown != 0:
-			bonus_txt = "  [color=%s](%s%d%s)[/color]" % ["#7fe08a" if bonus > 0 else "#ff7a7a", "+" if bonus > 0 else "", shown, " %" if pct else ""]
-		lines.append("%s  [b]%s[/b]%s" % [STAT_NAMES.get(s, EXTRA_STAT_NAMES.get(s, s)), ("%d %%" % roundi(float(st[s]) * 100.0)) if pct else str(roundi(float(st[s]))), bonus_txt])
+	var slot := String(item.get("slot", ""))
+	var lk := _level_k(power_level(item))
+	var rows: Array = []
+	for pass_aff in [false, true]:
+		for s in st:
+			if base.has(s) == pass_aff:
+				continue
+			var pct: bool = s in PERCENT_STATS
+			var bonus := float(st[s]) - float(ref.get(s, 0.0)) if not pass_aff else 0.0
+			var shown := roundi(bonus * (100.0 if pct else 1.0))
+			rows.append({"k": String(s), "name": String(STAT_NAMES.get(s, EXTRA_STAT_NAMES.get(s, s))),
+				"val": ("%d %%" % roundi(float(st[s]) * 100.0)) if pct else fmt_num(roundi(float(st[s]))),
+				"bonus": ("(%s%d%s)" % ["+" if bonus > 0 else "", shown, " %" if pct else ""]) if shown != 0 else "",
+				"bonus_ok": bonus > 0, "aff": pass_aff, "w": stat_weight(slot, String(s), float(st[s]), lk), "pct": ""})
+	# statistique en % et statistique plate du même nom : une seule ligne
+	for pk in PCT_OF:
+		var pi := rows.find_custom(func(r): return r.k == pk)
+		var fi := rows.find_custom(func(r): return r.k == PCT_OF[pk])
+		if pi >= 0 and fi >= 0:
+			rows[fi]["pct"] = "+%s" % String(rows[pi].val)
+			rows[fi]["w"] = float(rows[fi].w) + float(rows[pi].w)
+			rows.remove_at(pi)
+	return rows
+
+
+static func _row_text(r: Dictionary, size := 0) -> String:
+	var bonus := ("  [color=%s]%s[/color]" % ["#7fe08a" if r.bonus_ok else "#ff7a7a", r.bonus]) if r.bonus != "" else ""
+	var pct := ("  [color=#9fd0ff]%s[/color]" % r.pct) if r.pct != "" else ""
+	var name_col := "#9fd0ff" if r.aff else "#e6e4ee"
+	if size > 0:
+		return "[font_size=%d][b]%s[/b][/font_size]  [color=%s]%s[/color]%s%s" % [size, r.val, name_col, r.name, bonus, pct]
+	return "[color=%s]%s[/color]  [b]%s[/b]%s%s" % [name_col, r.name, r.val, bonus, pct]
+
+
+## Bloc d'une panoplie : titre avec le nombre de pièces portées, puis les paliers (tous, ou seulement le prochain).
+static func _set_block(sid: String, title: String, detailed: bool) -> Array:
+	var tiers := set_tiers(sid)
+	if tiers.is_empty():
+		return []
+	var worn := int(set_counts(Profile.equipped).get(sid, 0))
+	var sc := SET_COLOR.to_html(false)
+	var out := ["", "[color=#%s]◆ %s  [b]%d / %d[/b][/color]" % [sc, title, worn, int(tiers.max())]]
+	var shown_next := false
+	for n in tiers:
+		var active: bool = worn >= int(n)
+		if not detailed:
+			if active or shown_next:
+				continue
+			shown_next = true
+		out.append("[color=#%s]%d pièces : %s[/color]" % [sc if active else "8a86a0", n, " ; ".join(bonus_lines(set_bonus(sid, n)))])
+	if detailed:
+		var aw: Dictionary = set_def(sid).get("awake", {})
+		for n in aw:
+			var on := worn >= int(n) and awakened_count(Profile.equipped, sid) >= int(n)
+			out.append("[color=#%s]%d pièces éveillées : %s[/color]" % [sc if on else "8a86a0", int(n), " ; ".join(bonus_lines(aw[n]))])
+	return out
+
+
+## Pièce portée dans [param slot] telle qu'elle compte pour le héros : en Survie, avec le bonus d'enclume de
+## l'emplacement ajouté à son +N (copie ; la pièce d'origine ne change pas).
+static func anvil_applied(item: Dictionary, slot: String) -> Dictionary:
+	if item.is_empty() or not (Run.active and Run.survival and Run.slot_bonus.has(slot)):
+		return item
+	var it := item.duplicate()
+	it["upgrade"] = Run.slot_upgrade(int(item.get("upgrade", 0)), slot)
+	it["anvil"] = int(Run.slot_bonus.get(slot, 0))
+	return it
+
+
+## Nom en tête de carte : pour une pièce de panoplie, sans le nom de la panoplie entre parenthèses (il est
+## écrit plus bas, avec le nombre de pièces portées).
+static func card_name(item: Dictionary) -> String:
+	var n := display_name(item)
+	if item.has("set") and n.ends_with(")") and n.contains(" ("):
+		return n.substr(0, n.rfind(" (")).strip_edges()
+	return n
+
+
+## Carte d'un objet en BBCode. [param detailed] faux : la carte courte (statistique principale, 5 lignes,
+## passif, gemmes, panoplie) ; vrai : tout (bonus d'amélioration, paliers de panoplie, puissance de la pièce).
+static func describe(item: Dictionary, detailed := true) -> String:
+	var r: Dictionary = RARITIES[clampi(int(item.get("rarity", 0)), 0, RARITIES.size() - 1)]
+	var col := color_of(item).to_html(false)
+	var icon := String(item.get("icon", ""))
+	var slot := String(item.get("slot", ""))
+	var q := float(item.get("quality", 1.0))
+	var up := int(item.get("upgrade", 0))
+	var lvl := int(item.get("level", 0))
+	var lines := ["%s[font_size=21][b][color=#%s]%s[/color][/b][/font_size]" % [
+			"[img=52x52]%s[/img]  " % icon if icon != "" else "", col, card_name(item)],
+		"[color=#%s]%s[/color] · %s%s" % [col, ("Éveillé" if item.get("awakened", false) else r.name), _weapon_or_slot(item),
+			(" · niveau %d" % lvl) if lvl > 0 else ""]]
+	var bits: PackedStringArray = []
+	if slot != "trophy":
+		bits.append("[color=#ffd76a][b]PE %s[/b][/color]" % GearPower.fmt(GearPower.item_power(item)))
+	bits.append("Qualité [color=%s]%d %%[/color]" % ["#7fe08a" if q >= 1.0 else "#ff9a7a", roundi(q * 100.0)])
+	lines.append(" · ".join(bits))
+	lines.append(SEPARATOR)
+	# statistique principale en gros, puis les lignes secondaires
+	var rows := stat_rows(item)
+	var main := main_stat_key(item, stats(item, false))
+	var mi := rows.find_custom(func(x): return x.k == main)
+	if mi >= 0:
+		lines.append(_row_text(rows[mi], 30))
+		rows.remove_at(mi)
+	var hidden := 0
+	if not detailed and rows.size() > CARD_ROWS:
+		var order := range(rows.size())
+		order.sort_custom(func(a, b): return float(rows[a].w) > float(rows[b].w))
+		var keep := order.slice(0, CARD_ROWS)
+		var kept: Array = []
+		for i in rows.size():
+			if i in keep:
+				kept.append(rows[i])
+		hidden = rows.size() - kept.size()
+		rows = kept
+	for row in rows:
+		lines.append(_row_text(row))
+	if hidden > 0:
+		lines.append("[color=#8a86a0]+ %d autre%s statistique%s[/color]" % [hidden, "s" if hidden > 1 else "", "s" if hidden > 1 else ""])
 	if item.has("passive"):
+		lines.append("")
 		lines.append("[color=#ffd76a]✶ Passif — %s : %s[/color]" % [item.passive.get("name", ""), item.passive.get("desc", "")])
-	# affixes (stats hors type de base)
-	var aff_lines: PackedStringArray = []
-	for s in st:
-		if not base.has(s):
-			aff_lines.append("[color=#9fd0ff]%s[/color]" % stat_text(s, st[s]))
-	if not aff_lines.is_empty():
-		lines.append("[color=#5a5470]────────────────────────[/color]")
-		lines.append_array(aff_lines)
 	# joaillerie et forge (Craft)
+	var extra_lines: Array = []
 	var rolls: Array = item.get("up_rolls", [])
-	if not rolls.is_empty():
+	if detailed and not rolls.is_empty():
 		var acc := {}
 		for rl in rolls:
 			acc[rl[0]] = float(acc.get(rl[0], 0.0)) + float(rl[1])
 		var parts: PackedStringArray = []
 		for k in acc:
 			parts.append(stat_text(k, acc[k]))
-		lines.append("[color=#ffcf6b]Amélioration : %s[/color]" % ", ".join(parts))
+		extra_lines.append("[color=#ffcf6b]Bonus d'amélioration : %s[/color]" % ", ".join(parts))
 	var sockets: Array = item.get("sockets", [])
 	for i in sockets.size():
 		var g = sockets[i]
 		if g is Dictionary:
 			var key := Craft.gem_key(String(g.type), int(g.tier))
-			lines.append("[img=18x18]%s[/img] [color=#ff9ad0]%s : %s[/color]" % [Craft.icon(key), Craft.label(key), Craft._stats_text(Craft.gem_stats(g))])
+			extra_lines.append("[img=18x18]%s[/img] [color=#ff9ad0]%s : %s[/color]" % [Craft.icon(key), Craft.label(key), Craft._stats_text(Craft.gem_stats(g))])
 		else:
-			lines.append("[color=#8a86a0]◇ Emplacement de gemme vide[/color]")
+			extra_lines.append("[color=#8a86a0]◇ Emplacement de gemme vide[/color]")
 	if item.has("enchant"):
 		var e: Dictionary = item.enchant
-		lines.append("[color=#8fd8ff]✦ %s Lv%d : %s[/color]" % [Craft.ENCHANTS.get(String(e.type), {}).get("name", "?"), int(e.lv), Craft._stats_text(Craft.enchant_stats(e))])
-	if up < MAX_UPGRADE:
-		lines.append("[color=#aaaaaa]Prochaine amélioration : %d %% de réussite[/color]" % roundi(Craft.success_chance(item) * 100))
+		extra_lines.append("[color=#8fd8ff]✦ %s Lv%d : %s[/color]" % [Craft.ENCHANTS.get(String(e.type), {}).get("name", "?"), int(e.lv), Craft._stats_text(Craft.enchant_stats(e))])
+	if not extra_lines.is_empty():
+		lines.append("")
+		lines.append_array(extra_lines)
+	# panoplies : celle de la pièce, puis l'archétype de donjon
 	var sid := String(item.get("set", ""))
 	var sdef := set_def(sid)
 	if not sdef.is_empty():
-		var worn := int(set_counts(Profile.equipped).get(sid, 0))
-		lines.append("")
-		lines.append("[color=#%s]%s (%d pièce%s portée%s)[/color]" % [SET_COLOR.to_html(false), sdef.name, worn, "s" if worn > 1 else "", "s" if worn > 1 else ""])
-		for n in set_tiers(sid):
-			var bn := set_bonus(sid, n)
-			var set_col := SET_COLOR.to_html(false) if worn >= n else "888888"
-			lines.append("[color=#%s]%d pièces : %s[/color]" % [set_col, n, " ; ".join(bonus_lines(bn))])
-		for n in sdef.get("awake", {}):
-			var on := worn >= int(n) and awakened_count(Profile.equipped, sid) >= int(n)
-			lines.append("[color=#%s]%d pièces éveillées : %s[/color]" % [SET_COLOR.to_html(false) if on else "888888", int(n), " ; ".join(bonus_lines(sdef.awake[n]))])
+		lines.append_array(_set_block(sid, "Panoplie %s" % sdef.name, detailed))
 	var arch := String(item.get("archetype", ""))
 	if SETS.has(arch):
-		var aworn := int(set_counts(Profile.equipped).get(arch, 0))
-		lines.append("")
-		lines.append("[color=#%s]Panoplie de donjon · %s (%d pièce%s portée%s)[/color]" % [SET_COLOR.to_html(false), SETS[arch].name, aworn, "s" if aworn > 1 else "", "s" if aworn > 1 else ""])
-		for n in set_tiers(arch):
-			var acol := SET_COLOR.to_html(false) if aworn >= n else "888888"
-			lines.append("[color=#%s]%d pièces : %s[/color]" % [acol, n, " ; ".join(bonus_lines(set_bonus(arch, n)))])
-	if item.has("eden"):
-		var cap := power_cap(item)
-		lines.append("[color=#8a86a0]%s[/color]" % ("Suit ton niveau en run" if cap >= 999 else (
-			"Puissance %d (suit ton niveau en run jusqu'au niveau %d)" % [power_level(item), cap] if Run.active else "Suit ton niveau en run jusqu'au niveau %d" % cap)))
-	var src := String(GameData.eden_by_id.get(int(item.get("eden", 0)), {}).get("src", ""))
-	if src != "":
-		lines.append("[color=#8a86a0]Dans Eden : %s[/color]" % src)
+		lines.append_array(_set_block(arch, "Panoplie de donjon · %s" % SETS[arch].name, detailed))
+	if detailed:
+		var foot: Array = []
+		if int(item.get("anvil", 0)) > 0:
+			foot.append("Enclume de la run : +%d" % int(item.anvil))
+		if up < MAX_UPGRADE and not Run.active and not is_unique(item):
+			foot.append("Prochaine amélioration : %d %% de réussite" % roundi(Craft.success_chance(item) * 100))
+		if item.has("eden"):
+			var cap := power_cap(item)
+			foot.append("Niveau de puissance %d%s" % [power_level(item), "" if cap >= 999 or not Run.active else " (suit ton niveau, plafond %d)" % cap])
+		if not foot.is_empty():
+			lines.append("")
+			for f in foot:
+				lines.append("[color=#8a86a0]%s[/color]" % f)
 	return "\n".join(lines)

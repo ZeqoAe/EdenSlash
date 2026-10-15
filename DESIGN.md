@@ -546,6 +546,15 @@ Un proc = déclencheur + chance + recharge interne + effet (`scripts/combat/proc
   (Frénésie sur critique), Œil du faucon (critique, portée), Phénix (survie, brûlure),
   Vent céleste (esquive → Hâte + Fureur).
 - Infobulle : bonus du set, ceux actifs en vert ; fiche du personnage : bonus de set actifs.
+- **Carte d'objet** (0.1.172, `Items.describe`, `ItemWidgets.item_card`) : icône et nom à la couleur de la rareté, ligne
+  « rareté · emplacement · niveau », puissance de la pièce (PE) et qualité, **statistique principale en gros** (attaque pour les
+  armes, gants et bagues, défense puis PV pour les armures, capes et bottes, PV pour les colliers), cinq lignes secondaires au plus
+  (les plus lourdes), passif, gemmes, enchantement, panoplie « x / N » (et panoplie de donjon) avec le prochain palier, puis la
+  comparaison avec la pièce portée (verdict, écart de PE, une ligne ▲ vert / ▼ rouge par différence). **Maj** déplie : tous les
+  paliers, bonus d'amélioration, chance de la prochaine amélioration (hors run), niveau de puissance. Les pages qui affichent
+  une fiche à demeure (Atelier, marchand, Équipement) montrent toujours la carte complète. Une statistique plate et son
+  pourcentage du même nom (Défense 231 et Défense 4 %) tiennent sur une seule ligne. En Survie, la pièce portée s'affiche et se
+  compare avec le bonus d'enclume de son emplacement. Rien ne parle du jeu d'origine.
 
 ## Cartes de build (roguelite)
 

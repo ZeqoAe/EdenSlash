@@ -1,7 +1,7 @@
 class_name Archive
 extends RefCounted
-## Archive façon Eden (« Treasure Archive ») : toutes les entrées de l'archive d'Eden
-## (c_collection), dans ses catégories : apparences (tête, dos, corps, armes), armes par
+## Archive des trésors : toutes les entrées de l'archive (données du catalogue),
+## dans ses catégories : apparences (tête, dos, corps, armes), armes par
 ## type et boucliers, armures de plates / cuir / tissu et capes, bijoux et trophées, objets
 ## spéciaux (montures, familiers, boîte arcanique, autres objets dont les auras).
 ## Équipement (mythiques et légendaires) : on y dépose l'objet (il quitte le coffre ; on peut
@@ -238,9 +238,9 @@ static func collection_text(x: Dictionary) -> String:
 		for s in x.aura.stat:
 			parts.append(Items.stat_text(s, x.aura.stat[s]))
 		lines.append("[color=#ffd76a]✶ Aura (%s) : %s pendant les runs[/color]" % [AURA_KINDS.get(String(x.aura.kind), "aura"), ", ".join(parts)])
-		lines.append("[color=#c8c8d4]Effet lumineux autour du héros ; une pierre étoilée et une pierre de lune se portent ensemble (Héros > Apparence).[/color]")
+		lines.append("[color=#c8c8d4]Une pierre étoilée et une pierre de lune se portent ensemble (Héros > Apparence).[/color]")
 	elif x.has("skin"):
-		lines.append("[color=#c8c8d4]Apparence d'arme : se choisit dans « Apparences d'armes » pour %s.[/color]" % (
+		lines.append("[color=#c8c8d4]Apparence d'arme : à choisir dans Héros > Apparence (%s).[/color]" % (
 			"n'importe quelle arme" if String(x.skin.wtype) == "" else String(GameData.weapon_type(String(x.skin.wtype)).get("name", "son type d'arme"))))
 	elif GameData.cosmetic_by_code.has(String(x.get("code", ""))):
 		lines.append("[color=#c8c8d4]Se porte avec n'importe quelle classe (Héros > Apparence).[/color]")

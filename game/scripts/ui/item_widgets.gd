@@ -5,35 +5,56 @@ extends RefCounted
 ## comparaison et de coût.
 
 const SORTS := ["Rareté", "Niveau", "Emplacement", "Valeur"]
+## Différences de la comparaison affichées sur la carte courte (les autres derrière Maj).
+const DIFF_ROWS := 5
 
 
 # --- textes --------------------------------------------------------------------------------
-## Comparaison avec la pièce portée au même emplacement ("" si identique ou rien de porté).
-static func compare_text(item: Dictionary, worn) -> String:
+## Comparaison avec la pièce portée au même emplacement ("" si identique ou rien de porté) : verdict et écart de PE,
+## puis une ligne par différence (▲ vert : gagné, ▼ rouge : perdu). [param detailed] faux : les 5 plus fortes seulement.
+static func compare_text(item: Dictionary, worn, detailed := true) -> String:
 	if worn == null or not (worn is Dictionary) or worn.is_empty() or is_same(worn, item) or String(worn.get("uid", "")) == String(item.get("uid", "-")):
 		return ""
-	var c := Items.compare_to_equipped(item)
-	var verdict := "[b][color=%s]%s %+d %%[/color][/b]" % ["#7fe08a" if c >= 0 else "#ff7a7a", "▲ Meilleur" if c >= 0.02 else ("▼ Moins bien" if c <= -0.02 else "≈ Équivalent"), roundi(c * 100.0)]
-	var dpe := GearPower.delta_if_equipped(item)
-	var pe_txt := "   [color=%s]PE %s%s[/color]" % ["#7fe08a" if dpe >= 0 else "#ff7a7a", "+" if dpe >= 0 else "", GearPower.fmt(dpe)]
-	return "\n\n[color=#c8c8d4]Par rapport à ta pièce portée (%s) :[/color] %s%s\n%s" % [Items.display_name(worn), verdict, pe_txt, diff_text(Items.stats(worn), Items.stats(item))]
+	var slot := String(item.get("slot", ""))
+	var head := "[color=#8a86a0]Porté : %s[/color]" % Items.display_name(Items.anvil_applied(worn, slot))
+	if slot in Items.SLOTS:
+		var c := Items.compare_to_equipped(item)
+		var dpe := GearPower.delta_if_equipped(item)
+		head += "\n[b][color=%s]%s %s%d %%[/color][/b]   [color=%s]PE %s%s[/color]" % [
+			"#c8c8d4" if absf(c) < 0.02 else ("#7fe08a" if c > 0.0 else "#ff7a7a"), "▲ Meilleur" if c >= 0.02 else ("▼ Moins bien" if c <= -0.02 else "≈ Équivalent"),
+			"+" if c >= 0.0 else "", roundi(c * 100.0), "#7fe08a" if dpe >= 0 else "#ff7a7a", "+" if dpe >= 0 else "", GearPower.fmt(dpe)]
+	return "\n\n%s\n%s\n%s" % [Items.SEPARATOR, head, diff_text(
+		Items.stats(Items.anvil_applied(worn, slot)), Items.stats(Items.anvil_applied(item, slot)), slot, detailed,
+		Items._level_k(Items.power_level(item)))]
 
 
-static func diff_text(before: Dictionary, after: Dictionary) -> String:
+## Différences de statistiques, une ligne chacune, les plus lourdes d'abord (5 au plus si [param detailed] est faux).
+static func diff_text(before: Dictionary, after: Dictionary, slot := "", detailed := true, lk := 1.0) -> String:
 	var keys := before.keys()
 	for k in after:
 		if not k in keys:
 			keys.append(k)
-	var parts: PackedStringArray = []
+	var parts: Array = []
 	for k in keys:
 		var d := float(after.get(k, 0.0)) - float(before.get(k, 0.0))
 		var pct: bool = k in Items.PERCENT_STATS
 		var shown := roundi(d * 100.0) if pct else roundi(d)
 		if shown == 0:
 			continue
-		parts.append("[color=%s]%s%d%s %s[/color]" % ["#7fe08a" if d > 0 else "#ff7a7a", "+" if d > 0 else "",
-			shown, " %" if pct else "", Items.STAT_NAMES.get(k, Items.EXTRA_STAT_NAMES.get(k, k))])
-	return "   ".join(parts) if not parts.is_empty() else "[color=#c8c8d4]identique[/color]"
+		parts.append({"w": Items.stat_weight(slot if slot != "" else "weapon", String(k), d, lk),
+			"t": "[color=%s]%s %s%d%s %s[/color]" % ["#7fe08a" if d > 0 else "#ff7a7a", "▲" if d > 0 else "▼", "+" if d > 0 else "",
+				shown, " %" if pct else "", Items.STAT_NAMES.get(k, Items.EXTRA_STAT_NAMES.get(k, k))]})
+	if parts.is_empty():
+		return "[color=#c8c8d4]identique[/color]"
+	parts.sort_custom(func(a, b): return float(a.w) > float(b.w))
+	var lines: PackedStringArray = []
+	for i in parts.size():
+		if detailed or i < DIFF_ROWS:
+			lines.append(String(parts[i].t))
+	var more := parts.size() - lines.size()
+	if more > 0:
+		lines.append("[color=#8a86a0]+ %d autre%s différence%s[/color]" % [more, "s" if more > 1 else "", "s" if more > 1 else ""])
+	return "\n".join(lines)
 
 
 static func icon_bb(k: String) -> String:
@@ -120,26 +141,63 @@ static func action_button(parent: Control, text: String, cb: Callable, min_w := 
 	return b
 
 
-## Carte d'objet affichée au survol : description complète (stats, affixes, amélioration,
-## gemmes, enchantement, set et ses effets), comparaison avec la pièce portée, [param extra].
-static func item_card(item: Dictionary, extra := "") -> Control:
-	var p := PanelContainer.new()
-	var sb := UiTheme.flat_box(Color(0.05, 0.04, 0.09, 0.97), Items.color_of(item), 2, 10)
-	sb.set_content_margin_all(14)
-	p.add_theme_stylebox_override("panel", sb)
-	var r := RichTextLabel.new()
-	r.bbcode_enabled = true
-	r.fit_content = true
-	r.scroll_active = false
-	r.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	r.custom_minimum_size = Vector2(400, 0)
-	r.size = Vector2(400, 0)
-	r.add_theme_font_size_override("normal_font_size", 15)
-	r.add_theme_font_size_override("bold_font_size", 16)
-	var worn = Profile.equipped.get(String(item.get("slot", "")), null)
-	r.text = Items.describe(item) + compare_text(item, worn) + extra
-	p.add_child(r)
-	return p
+## Carte d'objet (infobulle) : la carte courte (statistique principale en gros, cinq lignes, passif, gemmes,
+## panoplie) et la comparaison avec la pièce portée ; Maj la déplie en carte complète, [param extra] en bas.
+## [param mode] : -1 = suit la touche Maj, 0 = toujours courte, 1 = toujours complète.
+static func item_card(item: Dictionary, extra := "", mode := -1) -> Control:
+	return ItemCard.new(item, extra, mode)
+
+
+## Texte complet de la carte d'[param item] (BBCode) : carte, comparaison avec la pièce portée au même emplacement
+## (l'objet porté s'affiche avec le bonus d'enclume de la Survie), [param extra].
+static func card_text(item: Dictionary, extra := "", detailed := false) -> String:
+	var slot := String(item.get("slot", ""))
+	var worn = Profile.equipped.get(slot, null)
+	var is_worn: bool = worn is Dictionary and not worn.is_empty() and String(worn.get("uid", "")) == String(item.get("uid", "-"))
+	var shown := Items.anvil_applied(item, slot) if is_worn else item
+	var hint := "" if detailed else "\n\n[color=#6c6882]Maj : détails[/color]"
+	return Items.describe(shown, detailed) + compare_text(item, worn, detailed) + extra + hint
+
+
+class ItemCard extends PanelContainer:
+	var item: Dictionary
+	var extra := ""
+	var auto := true
+	var detailed := false
+	var _label: RichTextLabel
+
+	func _init(it: Dictionary, ex := "", mode := -1) -> void:
+		item = it
+		extra = ex
+		auto = mode < 0
+		var sb := UiTheme.flat_box(Color(0.05, 0.04, 0.09, 0.97), Items.color_of(it), 2, 10)
+		sb.set_content_margin_all(14)
+		add_theme_stylebox_override("panel", sb)
+		_label = RichTextLabel.new()
+		_label.bbcode_enabled = true
+		_label.fit_content = true
+		_label.scroll_active = false
+		_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_label.custom_minimum_size = Vector2(400, 0)
+		_label.size = Vector2(400, 0)
+		_label.add_theme_font_size_override("normal_font_size", 15)
+		_label.add_theme_font_size_override("bold_font_size", 16)
+		add_child(_label)
+		detailed = mode == 1 or (auto and Input.is_key_pressed(KEY_SHIFT))
+		_refresh()
+
+	func _ready() -> void:
+		set_process(auto)  # le moteur active _process à l'entrée dans l'arbre : seulement si Maj commande la carte
+
+	func _refresh() -> void:
+		_label.text = ItemWidgets.card_text(item, extra, detailed)
+		reset_size()
+
+	func _process(_delta: float) -> void:
+		var d := Input.is_key_pressed(KEY_SHIFT)
+		if d != detailed:
+			detailed = d
+			_refresh()
 
 
 # --- bourse --------------------------------------------------------------------------------
