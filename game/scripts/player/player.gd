@@ -226,6 +226,8 @@ func _body_mask() -> int:
 
 ## Cibles de ce héros : monstres et héros ennemis, ou le joueur pour un héros ennemi.
 func foes() -> Array:
+	if ffa_id >= 0:
+		return Combatant.ffa_foes(get_tree(), self)
 	if foe:
 		return get_tree().get_nodes_in_group("player")
 	return get_tree().get_nodes_in_group("monsters") + get_tree().get_nodes_in_group("foe_heroes")

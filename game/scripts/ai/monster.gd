@@ -272,6 +272,8 @@ func _set_state(s: String) -> void:
 
 ## Cibles possibles : les héros (le joueur et ses alliés) ; un allié du joueur vise les monstres.
 func _hostile_pool() -> Array:
+	if ffa_id >= 0:
+		return Combatant.ffa_foes(get_tree(), self)
 	return get_tree().get_nodes_in_group("monsters" if team == Team.PLAYER else "heroes")
 
 

@@ -304,9 +304,36 @@ func power() -> float:
 	return atk
 
 
+## Chacun pour soi (Battle royale, bascule du Siège) : un combattant avec un [member ffa_id] >= 0 est l'ennemi
+## de tous les autres membres du groupe « ffa », quel que soit son camp. -1 : les camps (Team) décident.
+var ffa_id := -1
+
+
+func set_ffa(id: int) -> void:
+	ffa_id = id
+	add_to_group("ffa")
+
+
+func clear_ffa() -> void:
+	ffa_id = -1
+	remove_from_group("ffa")
+
+
+## Les autres combattants vivants du groupe « ffa » (cibles d'un combattant en chacun pour soi).
+static func ffa_foes(tree: SceneTree, source) -> Array:
+	var out: Array = []
+	for n in tree.get_nodes_in_group("ffa"):
+		var c := n as Combatant
+		if c != null and not c.is_dead and c != source and c.ffa_id >= 0 and c.ffa_id != source.ffa_id:
+			out.append(c)
+	return out
+
+
 ## Héros vivants (groupe « heroes » : le joueur et ses alliés IA) que les coups de [param source] peuvent
 ## toucher : ceux de l'autre camp (tous si la source est inconnue).
 static func hostile_heroes(tree: SceneTree, source = null) -> Array:
+	if source != null and is_instance_valid(source) and source.ffa_id >= 0:
+		return ffa_foes(tree, source)
 	var out: Array = []
 	for n in tree.get_nodes_in_group("heroes"):
 		var c := n as Combatant
@@ -318,6 +345,8 @@ static func hostile_heroes(tree: SceneTree, source = null) -> Array:
 ## Ce que les coups de [param source] peuvent toucher : les héros (joueur et alliés) pour un monstre,
 ## les monstres et les héros ennemis pour un allié du joueur.
 static func hostile_targets(tree: SceneTree, source = null) -> Array:
+	if source != null and is_instance_valid(source) and source.ffa_id >= 0:
+		return ffa_foes(tree, source)
 	if source != null and is_instance_valid(source) and source.team == Team.PLAYER:
 		var out: Array = []
 		for n in tree.get_nodes_in_group("monsters"):
