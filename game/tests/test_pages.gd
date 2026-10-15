@@ -407,10 +407,64 @@ func _test_lobby() -> void:
 	lobby._open_hero()
 	await _frames()
 	check("Héros : ouvert sur l'équipement", hero.is_open() and hero.current == "equipment" and hero.page.visible and not hero.talents.visible)
+	check("Héros : fiche d'objet masquée sans sélection, 3 préréglages + « Gérer »", not hero.page._d_card.visible and hero.page.preset_bar.visible and hero.page.preset_bar.get_child_count() == 4)
+	var worn_head: Dictionary = Profile.equipped.get("head", {})
+	var spare := Items.generate(30, 0.9, "head", Profile.selected_class)
+	Profile.inventory.append(spare)
+	hero.page.refresh()
+	hero.page._select({"kind": "item", "item": spare})
+	check("Héros : une pièce choisie montre la pièce portée à côté", hero.page._d_card.visible and hero.page._d_cmp.visible
+		and hero.page._d_cmp_name.text == (Items.display_name(worn_head) if not worn_head.is_empty() else "Emplacement libre"))
+	hero.page._select({})
+	check("Héros : fiche masquée de nouveau sans sélection", not hero.page._d_card.visible)
+	Profile.inventory.erase(spare)
+	var pb: EquipmentPage.PresetBar = hero.page.preset_bar
+	var act := {"called": ""}
+	var cb := func(cid):
+		act.called = cid
+		return "fait"
+	pb.extra_actions.append({"label": "Action de test", "call": cb})
+	pb._open_menu()
+	await _frames()
+	var entry: Button = null
+	for b in pb._pop.find_children("*", "Button", true, false):
+		if (b as Button).text == "Action de test":
+			entry = b
+	check("préréglages : le menu « Gérer » reçoit les actions ajoutées (copie, renommage, équiper le meilleur)", entry != null
+		and pb._pop.find_children("*", "Button", true, false).filter(func(b): return (b as Button).text.begins_with("Copier vers")).size() == 2)
+	entry.pressed.emit()
+	check("préréglages : l'action ajoutée reçoit la classe affichée", act.called == Profile.selected_class)
+	pb.extra_actions.clear()
+	var before_preset := Profile.active_preset(Profile.selected_class)
+	pb.get_child((before_preset + 1) % 3).pressed.emit()
+	check("préréglages : un clic change de préréglage", Profile.active_preset(Profile.selected_class) == (before_preset + 1) % 3)
+	pb.get_child(before_preset).pressed.emit()
+	check("préréglages : retour au préréglage d'origine", Profile.active_preset(Profile.selected_class) == before_preset)
 	hero.show_section("class")
 	await _frames()
 	check("Héros : page Classe (sorts, plateau de 7 cases, parcours de maîtrise)", hero.talents.visible and hero.talents._spells.get_child_count() >= 4 and not hero.page.visible and hero.talents._board._slots.size() == 7 and hero.talents._track.get_child_count() >= 8)
 	check("Héros : pas de second sélecteur de classe dans les talents", not hero.talents._tabs.visible)
+	check("Héros : Classe s'ouvre sur les sorts, un seul sous-onglet à la fois", hero.talents.sub == "spells" and hero.talents._sub_pages.spells.visible
+		and not hero.talents._sub_pages.talents.visible and not hero.talents._sub_pages.certs.visible)
+	hero.talents.show_sub("talents")
+	check("Héros : sous-onglet Talents", hero.talents._sub_pages.talents.visible and not hero.talents._sub_pages.spells.visible and hero.talents._grid.get_child_count() > 0)
+	hero.talents.show_sub("certs")
+	check("Héros : sous-onglet Certificats", hero.talents._sub_pages.certs.visible and hero.talents._certs.get_child_count() > 0)
+	hero.talents.show_sub("spells")
+	hero.talents._spells.get_child(2).pressed.emit()
+	check("Héros : un sort cliqué ouvre le Grimoire sur ce sort", hero.grimoire.is_open() and String(hero.grimoire._selected.get("kind", "")) == "skill"
+		and int(hero.grimoire._selected.data.id) == int(GameData.class_data(Profile.selected_class).skills[2].id))
+	check("sorts : plus de mention du jeu d'origine ni de description répétée", not SpellInfo.skill_bbcode(GameData.class_data(Profile.selected_class).skills[2]).contains("Eden"))
+	hero.grimoire.close_ui()
+	hero.show_section("equipment")
+	hero.step_page(1)
+	check("Héros : LB / RB change de section", hero.is_in_group("tab_screens") and hero.current == "class")
+	hero.step_page(-1)
+	hero.show_section("appearance")
+	await _frames()
+	var unlocked_bodies := GameData.cosmetics.filter(func(c): return HeroPages.AppearancePage.cat_of(c) == "body" and Profile.outfit_unlocked(String(c.id))).size()
+	check("Héros : apparence, « Débloqués uniquement » par défaut (que les pièces débloquées)", hero.appearance._owned_only.button_pressed and hero.appearance._grid.get_child_count() == 1 + unlocked_bodies)
+	hero.appearance._owned_only.button_pressed = false
 	for cat in ["body", "head", "back", "aura", "weapon"]:
 		hero.appearance._cat = cat
 		hero.show_section("appearance")
@@ -431,9 +485,10 @@ func _test_lobby() -> void:
 	Profile.set_skin(wt, "")
 	hero.show_section("help")
 	await _frames()
-	for i in InfoPage.SECTIONS.size():
-		hero.help.show_section(i)
-	check("Héros : aide « ? » (guide des statistiques)", hero.help.visible and hero.help._text.text.length() > 50)
+	var guide_shown := hero._guide_open()
+	Guide.close_in(get_tree().current_scene)
+	await _frames()
+	check("Héros : « ? » ouvre le Guide sur ses formules (la seule aide du jeu), plus de page d'aide à part", guide_shown and not hero._guide_open() and not hero._pages.has("help"))
 	Profile.selected_class = "warrior"
 	Profile.save_profile()
 	hero.refresh()
@@ -575,6 +630,7 @@ func _test_run_screens() -> void:
 	var it: Dictionary = Profile.inventory.filter(func(x): return x.slot != "weapon")[0]
 	eq._equip(it)
 	check("équiper depuis la page", is_same(Profile.equipped.get(it.slot), it))
+	check("pause > Héros : ni préréglages (la classe est fixée) ni Forge en Survie", not eq.preset_bar.visible and (not Run.survival or not eq._b_upgrade.visible))
 	eq._unequip(it.slot)
 	check("retirer depuis la page", not Profile.equipped.has(it.slot) or not is_same(Profile.equipped.get(it.slot), it))
 	screen.show_page(2)

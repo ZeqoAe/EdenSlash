@@ -1,9 +1,9 @@
 class_name InventoryPage
 extends HBoxContainer
 ## Inventaire (maquette de l'utilisateur) :
-## - au centre, le héros entouré de son équipement (5 cases de chaque côté), la puissance
-##   d'équipement, la classe dont on prépare le set, le set actif, les 5 statistiques
-##   principales et un bouton « Détail » (toutes les statistiques) ;
+## - au centre, les 3 préréglages d'équipement de la classe (hors run), le héros entouré de son
+##   équipement (5 cases de chaque côté), la puissance d'équipement, la panoplie active, les 5
+##   statistiques principales et un bouton « Détail » (toutes les statistiques) ;
 ## - à droite, l'inventaire sans limite de place : familles (Tous, Armes, Armures,
 ##   Accessoires, Fournitures, Matériaux, Divers), recherche, tri, et la fiche de l'objet
 ##   choisi avec ses raccourcis (Équiper, Forge, Démonter).
@@ -11,7 +11,7 @@ extends HBoxContainer
 ## run, or, matériaux et fournitures. Forge et démontage partout : hors run, la forge prend
 ## les fournitures de la réserve et se paie en cristaux à la place de l'or (Forge.price).
 
-signal class_changed
+signal preset_changed  # préréglage changé ou copié : l'écran Héros se met à jour
 
 const LEFT_SLOTS := ["weapon", "necklace", "head", "chest", "legs"]
 const RIGHT_SLOTS := ["offhand", "back", "gloves", "boots", "ring"]
@@ -26,14 +26,13 @@ const MAT_NAMES := {"crystal": "Cristaux", "keys": "Clés"}
 const MAT_RARITY := {"crystal": 3, "keys": 2}
 
 var player: Player  # null hors run
-var class_card := true  # carte « Classe affichée » (non dans l'écran Héros : la classe y est en haut)
 
+## Préréglages d'équipement de la classe (hors run). La session « équiper le meilleur » y ajoute ses
+## entrées : preset_bar.extra_actions.append({"label": ..., "call": Callable(cid) -> message}).
+var preset_bar: EquipmentPage.PresetBar
 var _doll := {}  # emplacement -> ItemSlot
 var _preview: EquipmentPage.HeroPreview
 var _power: Label
-var _class_icon: TextureRect
-var _class_name: Label
-var _class_card: Button
 var _set_text: Label
 var _stat_vals := {}  # clé -> Label
 var _family := "all"
@@ -44,9 +43,16 @@ var _search: LineEdit
 var _sort: OptionButton
 var _grid: GridContainer
 var _count: Label
+var _empty: Label  # grille sans objet : une phrase
 var _selected: Dictionary = {}  # entrée : {kind: item|stack|mat|gold, item, key, count}
 var _calc: Player  # héros fictif pour calculer les statistiques hors run
-# fiche de l'objet
+# fiche de l'objet (cachée tant qu'aucun objet n'est choisi)
+var _d_card: PanelContainer
+var _d_cmp: PanelContainer  # comparaison avec la pièce portée
+var _d_cmp_slot: ItemWidgets.ItemSlot
+var _d_cmp_name: Label
+var _d_cmp_level: Label
+var _d_cmp_verdict: RichTextLabel
 var _d_slot: ItemWidgets.ItemSlot
 var _d_name: Label
 var _d_badge: PanelContainer
@@ -54,7 +60,6 @@ var _d_badge_label: Label
 var _d_type: Label
 var _d_level: Label
 var _d_stats: RichTextLabel
-var _d_next: Label
 var _d_flavor: RichTextLabel
 var _d_set: RichTextLabel
 var _b_equip: Button
@@ -89,7 +94,7 @@ static func frame_box(radius := 12, alpha := 0.9) -> StyleBoxFlat:
 	return sb
 
 
-## Petite carte (classe, set, statistiques).
+## Petite carte (panoplie, statistiques, comparaison).
 static func card_box(active := false) -> StyleBoxFlat:
 	var sb := UiTheme.flat_box(Color(0.08, 0.08, 0.18, 0.92) if not active else Color(0.3, 0.22, 0.08, 0.95),
 		Color(0.62, 0.48, 0.25, 0.85) if not active else UiTheme.GOLD, 1 if not active else 2, 8, false)
@@ -111,7 +116,7 @@ func _exit_tree() -> void:
 		_calc.free()
 
 
-# --- centre : héros, équipement, classe, set, statistiques -----------------------------------
+# --- centre : préréglages, héros, équipement, panoplie, statistiques -----------------------------------
 func _build_center() -> void:
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", frame_box())
@@ -120,6 +125,9 @@ func _build_center() -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 10)
 	panel.add_child(v)
+	preset_bar = EquipmentPage.PresetBar.new()
+	preset_bar.changed.connect(_on_preset_changed)
+	v.add_child(preset_bar)
 	var doll := HBoxContainer.new()
 	doll.add_theme_constant_override("separation", 8)
 	doll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -152,61 +160,21 @@ func _build_center() -> void:
 	_power = Label.new()
 	UiTheme.title(_power, 30, UiTheme.GOLD)
 	pv.add_child(_power)
-	# classe affichée et set
-	var cards := HBoxContainer.new()
-	cards.add_theme_constant_override("separation", 10)
-	v.add_child(cards)
-	_class_card = Button.new()
-	_class_card.focus_mode = Control.FOCUS_NONE
-	_class_card.custom_minimum_size = Vector2(0, 66)
-	_class_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_class_card.add_theme_stylebox_override("normal", card_box())
-	_class_card.add_theme_stylebox_override("hover", card_box(true))
-	_class_card.add_theme_stylebox_override("pressed", card_box(true))
-	_class_card.add_theme_stylebox_override("disabled", card_box())
-	_class_card.pressed.connect(_pick_class)
-	_class_card.visible = class_card
-	cards.add_child(_class_card)
-	var ch := HBoxContainer.new()
-	ch.set_anchors_preset(Control.PRESET_FULL_RECT)
-	ch.offset_left = 12
-	ch.offset_right = -10
-	ch.add_theme_constant_override("separation", 10)
-	ch.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_class_card.add_child(ch)
-	_class_icon = TextureRect.new()
-	_class_icon.custom_minimum_size = Vector2(44, 44)
-	_class_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_class_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	_class_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_class_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ch.add_child(_class_icon)
-	var cv := VBoxContainer.new()
-	cv.alignment = BoxContainer.ALIGNMENT_CENTER
-	cv.add_theme_constant_override("separation", -2)
-	cv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ch.add_child(cv)
-	Hud._label(cv, "Classe affichée  ▾", 13, UiTheme.MUTED).mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_class_name = Hud._label(cv, "", 22, UiTheme.TEXT)
-	_class_name.add_theme_font_override("font", UiTheme.title_font())
-	_class_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# panoplie active
 	var set_card := PanelContainer.new()
 	set_card.add_theme_stylebox_override("panel", card_box())
-	set_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	cards.add_child(set_card)
+	v.add_child(set_card)
 	var sh := HBoxContainer.new()
 	sh.add_theme_constant_override("separation", 8)
 	set_card.add_child(sh)
 	sh.add_child(gold_icon("all", 22))
-	var sv := VBoxContainer.new()
-	sv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	sv.add_theme_constant_override("separation", -2)
-	sh.add_child(sv)
-	Hud._label(sv, "Set d'équipement", 15, UiTheme.TEXT)
-	_set_text = Hud._label(sv, "", 12, UiTheme.MUTED)
+	_set_text = Hud._label(sh, "", 14, UiTheme.TEXT)
+	_set_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_set_text.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_set_text.clip_text = true
-	var see := _small_button("Voir les sets", _show_sets)
+	var see := _small_button("Panoplies", _show_sets)
 	see.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	see.tooltip_text = "Bonus à 2, 4 et 6 pièces portées"
 	sh.add_child(see)
 	# 5 statistiques principales
 	var stats := PanelContainer.new()
@@ -290,7 +258,7 @@ func _drop_on(slot: String, data) -> void:
 		_equip(data.item)
 
 
-## Icône fantôme d'une case vide (pièce d'Eden représentative).
+## Icône fantôme d'une case vide (une pièce représentative de l'emplacement).
 func _ghost_icon(slot: String) -> String:
 	if slot in ["weapon", "offhand"]:
 		var cls := GameData.class_data(_cls())
@@ -385,6 +353,10 @@ func _build_right() -> void:
 	_sort.custom_minimum_size = Vector2(170, 0)
 	_sort.item_selected.connect(func(_i): _refresh_grid())
 	filters.add_child(_sort)
+	_msg = Hud._label(v, "", 14, UiTheme.BUFF)
+	_msg.visible = false
+	_empty = Hud._label(v, "", 14, UiTheme.MUTED)
+	_empty.visible = false
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -398,15 +370,16 @@ func _build_right() -> void:
 
 
 func _build_detail(parent: Control) -> void:
-	var card := PanelContainer.new()
+	_d_card = PanelContainer.new()
 	var sb := frame_box(10, 0.95)
 	sb.border_color = UiTheme.GOLD
-	card.add_theme_stylebox_override("panel", sb)
-	card.custom_minimum_size = Vector2(0, 290)
-	parent.add_child(card)
+	_d_card.add_theme_stylebox_override("panel", sb)
+	_d_card.custom_minimum_size = Vector2(0, 286)
+	_d_card.visible = false  # rien de choisi : la grille prend toute la place
+	parent.add_child(_d_card)
 	var cv := VBoxContainer.new()
 	cv.add_theme_constant_override("separation", 8)
-	card.add_child(cv)
+	_d_card.add_child(cv)
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 14)
 	h.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -425,37 +398,65 @@ func _build_detail(parent: Control) -> void:
 	tv.add_theme_constant_override("separation", 0)
 	tv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(tv)
-	var nh := HBoxContainer.new()
-	nh.add_theme_constant_override("separation", 10)
-	tv.add_child(nh)
-	_d_name = Hud._label(nh, "", 21, UiTheme.TEXT)
+	_d_name = Hud._label(tv, "", 20, UiTheme.TEXT)
 	_d_name.add_theme_font_override("font", UiTheme.title_font())
 	_d_name.clip_text = true
 	_d_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var nh := HBoxContainer.new()
+	nh.add_theme_constant_override("separation", 10)
+	tv.add_child(nh)
+	_d_type = Hud._label(nh, "", 13, UiTheme.MUTED)
+	_d_type.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_d_badge = PanelContainer.new()
 	_d_badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	nh.add_child(_d_badge)
 	_d_badge_label = Hud._label(_d_badge, "", 12, Color.WHITE)
-	_d_type = Hud._label(tv, "", 13, UiTheme.MUTED)
 	_d_level = Hud._label(tv, "", 17, UiTheme.TEXT)
 	_d_level.add_theme_font_override("font", UiTheme.bold_font())
 	_d_stats = ItemWidgets.rich(left, 14)
-	_d_stats.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_d_stats.custom_minimum_size = Vector2(0, 96)  # jamais écrasée (sinon une barre de défilement inutile)
-	_d_next = Hud._label(left, "", 13, UiTheme.MUTED)
+	_d_stats.fit_content = true  # sa hauteur suit les statistiques : jamais de barre de défilement
+	_d_stats.scroll_active = false
+	_d_stats.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	_d_stats.add_theme_constant_override("table_h_separation", 18)
+	_d_stats.add_theme_constant_override("table_v_separation", 3)
 	_d_flavor = ItemWidgets.rich(left, 12)
 	_d_flavor.fit_content = true
 	var right := VBoxContainer.new()
-	right.custom_minimum_size = Vector2(250, 0)
+	right.custom_minimum_size = Vector2(280, 0)
 	right.add_theme_constant_override("separation", 8)
 	h.add_child(right)
+	# la pièce portée à côté de celle qu'on regarde
+	_d_cmp = PanelContainer.new()
+	_d_cmp.add_theme_stylebox_override("panel", card_box())
+	right.add_child(_d_cmp)
+	var cmv := VBoxContainer.new()
+	cmv.add_theme_constant_override("separation", 4)
+	_d_cmp.add_child(cmv)
+	Hud._label(cmv, "Pièce portée", 12, UiTheme.MUTED)
+	var cmh := HBoxContainer.new()
+	cmh.add_theme_constant_override("separation", 10)
+	cmv.add_child(cmh)
+	_d_cmp_slot = ItemWidgets.ItemSlot.new(48.0)
+	_d_cmp_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_d_cmp_slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	cmh.add_child(_d_cmp_slot)
+	var cmt := VBoxContainer.new()
+	cmt.add_theme_constant_override("separation", -2)
+	cmt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cmt.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	cmh.add_child(cmt)
+	_d_cmp_name = Hud._label(cmt, "", 14, UiTheme.TEXT)
+	_d_cmp_name.clip_text = true
+	_d_cmp_level = Hud._label(cmt, "", 12, UiTheme.MUTED)
+	_d_cmp_verdict = ItemWidgets.rich(cmv, 13)
+	_d_cmp_verdict.fit_content = true
+	_d_cmp_verdict.scroll_active = false
+	_d_cmp_verdict.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	var setp := PanelContainer.new()
 	setp.add_theme_stylebox_override("panel", card_box())
 	setp.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	right.add_child(setp)
 	_d_set = ItemWidgets.rich(setp, 13)
-	_msg = Hud._label(right, "", 13, UiTheme.BUFF)
-	_msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var acts := HBoxContainer.new()
 	acts.add_theme_constant_override("separation", 10)
 	cv.add_child(acts)
@@ -638,16 +639,13 @@ func refresh() -> void:
 				if slot == "weapon" else "Arme secondaire : n'importe quelle arme ; elle frappe seule (%d %% des dégâts)" % roundi(WeaponAttacks.OFFHAND_DMG * 100.0)
 		s.queue_redraw()
 	_preview.show_hero(cid, Profile.weapon_code())
-	_class_icon.texture = UiTheme.texture(String(cd.get("icon", "")))
-	_class_name.text = String(cd.get("name_fr", cid))
-	_class_name.add_theme_color_override("font_color", ClassPicker.tier_color(cid))
-	_class_card.disabled = Profile.in_run
-	_class_card.tooltip_text = "Pendant la run, la classe est fixée." if Profile.in_run else "Choisir la classe dont tu prépares le set (chaque classe a son préréglage)."
+	preset_bar.refresh(cid)
 	_power.text = GearPower.fmt(GearPower.hero_power())
 	_power.tooltip_text = GearPower.summary(maxi(Profile.best_level, 1)) + "
 Elle ouvre les difficultés Héroïque et Mythique des donjons et les butins légendaires."
 	var sets := Items.active_set_bonuses(Profile.set_gear())
-	_set_text.text = ("%s · %d pièces" % [Items.set_def(sets[-1].set).get("name", ""), int(sets[-1].pieces)]) if not sets.is_empty() else "Aucun bonus actif"
+	_set_text.text = ("%s · %d pièces" % [Items.set_def(sets[-1].set).get("name", ""), int(sets[-1].pieces)]) if not sets.is_empty() else "Aucune panoplie active"
+	_set_text.add_theme_color_override("font_color", UiTheme.TEXT if not sets.is_empty() else UiTheme.MUTED)
 	var p := _stats_player()
 	var mag := String(cd.get("dmg_type", "phys")) == "mag"
 	_stat_vals.hp.text = str(roundi(p.max_hp))
@@ -698,6 +696,8 @@ func _refresh_grid() -> void:
 	for slot in _doll:
 		(_doll[slot] as ItemWidgets.ItemSlot).selected = slot == _slot_filter
 		_doll[slot].queue_redraw()
+	_empty.visible = all.is_empty()
+	_empty.text = "Ton sac est vide." if Profile.in_run else "Ton coffre est vide : le butin de la Survie arrive ici."
 	for e in list:
 		_grid.add_child(_cell(e))
 	# cases vides jusqu'à remplir les lignes (inventaire sans limite : la grille s'allonge)
@@ -744,7 +744,7 @@ static func _same(a: Dictionary, b: Dictionary) -> bool:
 func _select(e: Dictionary) -> void:
 	_selected = e
 	_armed_dismantle = false
-	_msg.text = ""
+	_say("")
 	for c in _grid.get_children():
 		if c is StackSlot:
 			c.selected = _same(c.entry, e)
@@ -760,28 +760,22 @@ func _is_equipped(it: Dictionary) -> bool:
 
 
 # --- fiche de l'objet ------------------------------------------------------------------------
+## Message court au-dessus de la grille (objet démonté, équipement copié...) ; "" l'efface.
+func _say(text: String) -> void:
+	_msg.text = text
+	_msg.visible = text != ""
+
+
 func _refresh_detail() -> void:
 	var e := _selected
 	if e.get("kind", "") == "item" and not (_is_equipped(e.item) or Profile.inventory.any(func(x): return is_same(x, e.item))):
 		e = {}  # objet vendu, démonté ou archivé
 		_selected = {}
+	_d_card.visible = not e.is_empty()
 	if e.is_empty():
-		_d_slot.set_item({})
-		_d_name.text = "Choisis un objet"
-		_d_name.add_theme_color_override("font_color", UiTheme.TEXT)
-		_d_badge.visible = false
-		_d_type.text = "Clique une case de l'inventaire ou de l'équipement."
-		_d_level.text = ""
-		_d_stats.text = "[color=#c8c8d4]Double-clic (ou glisser-déposer) : équiper / retirer.\n★ : objet utilisé dans le préréglage d'une classe.[/color]"
-		_d_next.text = ""
-		_d_flavor.text = ""
-		_d_set.text = "[b]Bonus de set[/b]\n[color=#9a98a8]Les pièces de set ont un cadre vert ; 2, 4 et 6 pièces portées donnent des bonus.[/color]"
-		for b in [_b_equip, _b_upgrade, _b_dismantle]:
-			b.disabled = true
-		_b_equip.text = "Équiper"
-		_b_offhand.visible = false
-		_b_dismantle.text = "Démonter"
 		return
+	_b_upgrade.visible = not (Profile.in_run and Run.survival)  # la forge est au hub
+	_d_set.tooltip_text = ""
 	var disp := entry_display(e)
 	_d_slot.set_item(disp)
 	_d_slot.queue_redraw()
@@ -799,6 +793,7 @@ func _refresh_detail() -> void:
 	_d_badge.add_theme_stylebox_override("panel", bs)
 	_d_badge_label.add_theme_color_override("font_color", col.lightened(0.3))
 	if String(e.kind) != "item":
+		_d_cmp.visible = false
 		_d_type.text = {"stack": "Fourniture", "mat": "Matériau", "gold": "Monnaie"}.get(String(e.kind), "")
 		_d_level.text = "Quantité : %d" % int(e.count)
 		var key := String(e.key)
@@ -806,7 +801,6 @@ func _refresh_detail() -> void:
 			"crystal": "Réforger une stat bonus d'un objet et polir sa qualité (Forge).",
 			"keys": "Ouvre un coffre de la carte sans payer.",
 			"gold": "Coffres de la carte, marchands ambulants, amélioration +1 à +10 (Forge)."}.get(key, ""))
-		_d_next.text = ""
 		_d_flavor.text = "[color=#9a98a8]%s[/color]" % ("Fournitures : gardées à l'extraction ou à la victoire, perdues si le héros tombe." if String(e.kind) == "stack" else
 			("Gardés entre les runs (on les obtient en démontant des objets)." if key == "crystal" else "Perdu(es) en fin de run : à dépenser !"))
 		_d_set.text = "[b]Utilisation[/b]\n[color=#c8c8d4]%s[/color]" % ("Forge : gemmes, formules d'enchantement, parchemins de fortification, pierres de sûreté ; fusion de 3 gemmes identiques." if String(e.kind) == "stack" else "Voir l'aide « ? » : Monnaies.")
@@ -821,19 +815,14 @@ func _refresh_detail() -> void:
 	var equipped := _is_equipped(it)
 	var worn_slot := Profile.slot_of(it)
 	var slot_name := String(SLOT_CAPTIONS.get(worn_slot if worn_slot != "" else it.slot, Items.SLOT_NAMES[it.slot]))
-	var kind := String(GameData.weapon_type(Items.weapon_type_of(it)).get("name", "")) if it.slot == "weapon" else \
-		String(GameData.eden_by_id.get(int(it.get("eden", 0)), {}).get("armor", ""))
-	_d_type.text = slot_name + ((" - " + kind.capitalize()) if kind != "" else "") + ("  · porté" if equipped else "")
+	var kind := String(GameData.weapon_type(Items.weapon_type_of(it)).get("name", "")) if it.slot == "weapon" else ""
+	_d_type.text = slot_name + ((" · " + kind) if kind != "" else "") + ("  · porté" if equipped else "")
 	_d_level.text = "Niv. %d%s" % [int(it.level), ("   +%d" % int(it.get("upgrade", 0))) if int(it.get("upgrade", 0)) > 0 else ""]
 	_d_stats.text = _stats_compare(it, equipped)
 	if it.slot == "weapon":
 		var ws := WeaponAttacks.spec_for(it)
 		_d_stats.text = "[color=#ffcf6b][b]%s[/b][/color] [color=#9a98a8](auto-attaque)[/color] : %s\n" % [ws.name, ws.desc] + _d_stats.text
-	_d_next.text = ("Prochain niveau : %d %% de réussite" % roundi(Craft.success_chance(it) * 100.0)) if int(it.get("upgrade", 0)) < Items.MAX_UPGRADE else "Amélioration maximale"
-	var eden: Dictionary = GameData.eden_by_id.get(int(it.get("eden", 0)), {})
 	var fl: PackedStringArray = []
-	if not eden.is_empty():
-		fl.append("« %s » : objet d'Eden (niveau %d dans le jeu d'origine)." % [eden.name, int(eden.level)])
 	var sockets: Array = it.get("sockets", [])
 	if not sockets.is_empty() or it.has("enchant"):
 		fl.append("Emplacements : %d / 2%s" % [sockets.size(), ("  · enchanté") if it.has("enchant") else ""])
@@ -843,6 +832,7 @@ func _refresh_detail() -> void:
 			fl.append("★ Utilisé par : " + ", ".join(users))
 	_d_flavor.text = "[i][color=#b8b4c8]%s[/color][/i]" % "\n".join(fl)
 	_d_set.text = _set_bbcode(it)
+	_refresh_compare(it, equipped)
 	_b_equip.disabled = false
 	_b_equip.text = "Retirer" if equipped else "Équiper"
 	if it.slot == "trophy":
@@ -855,24 +845,59 @@ func _refresh_detail() -> void:
 		_b_equip.text = "Équiper (secondaire)"  # une arme d'un autre type que la classe
 		_b_offhand.visible = false
 	_b_upgrade.disabled = false
-	_b_dismantle.disabled = equipped
-	_b_upgrade.tooltip_text = "" if Profile.in_run else "Hors run : fournitures de ta réserve, or remplacé par des cristaux (1 pour %d or)." % Forge.GOLD_PER_CRYSTAL
+	var up := "Amélioration maximale" if int(it.get("upgrade", 0)) >= Items.MAX_UPGRADE else "Prochain niveau : %d %% de réussite" % roundi(Craft.success_chance(it) * 100.0)
+	_b_upgrade.tooltip_text = up if Profile.in_run else up + "\nHors run : fournitures de ta réserve, or remplacé par des cristaux (1 pour %d or)." % Forge.GOLD_PER_CRYSTAL
 	var users := Profile.item_users(String(it.get("uid", ""))) if not Profile.in_run else []
 	_b_dismantle.tooltip_text = "Retire d'abord l'objet." if equipped else (("Attention : utilisé par le préréglage de " + ", ".join(users)) if not users.is_empty() else "")
 	_b_dismantle.text = "Confirmer ?" if _armed_dismantle else "Démonter"
 
 
+## Pièce portée à l'emplacement où irait [param it] (l'arme d'un autre type que la classe va en secondaire).
+func _compare_target(it: Dictionary) -> Dictionary:
+	if it.slot == "weapon" and not Profile.can_be_main(it):
+		return Profile.equipped.get("offhand", {})
+	return Profile.equipped.get(it.slot, {})
+
+
+## Carte « Pièce portée » : la pièce en place et ce que change l'échange (mieux ou moins bien, puissance).
+func _refresh_compare(it: Dictionary, equipped: bool) -> void:
+	_d_cmp.visible = not equipped
+	if equipped:
+		return
+	var worn := _compare_target(it)
+	_d_cmp_slot.set_item(worn)
+	_d_cmp_slot.queue_redraw()
+	var txt := ""
+	if worn.is_empty():
+		_d_cmp_name.text = "Emplacement libre"
+		_d_cmp_name.add_theme_color_override("font_color", UiTheme.MUTED)
+		_d_cmp_level.text = ""
+		txt = "[b][color=#7fe08a]▲ Nouvelle[/color][/b]"
+	else:
+		_d_cmp_name.text = Items.display_name(worn)
+		_d_cmp_name.add_theme_color_override("font_color", Items.color_of(worn))
+		_d_cmp_level.text = "Niv. %d%s" % [int(worn.level), ("   +%d" % int(worn.get("upgrade", 0))) if int(worn.get("upgrade", 0)) > 0 else ""]
+		var wr := Items.rating(worn)
+		var c := (Items.rating(it) - wr) / maxf(wr, 0.01)
+		txt = "[b][color=%s]%s %+d %%[/color][/b]" % ["#7fe08a" if c >= 0.0 else "#ff7a7a",
+			"▲" if c >= 0.02 else ("▼" if c <= -0.02 else "≈"), roundi(c * 100.0)]
+	if String(it.slot) in Items.SLOTS and not (it.slot == "weapon" and not Profile.can_be_main(it)):
+		var dpe := GearPower.delta_if_equipped(it)
+		txt += "   [color=%s]Puissance %s%s[/color]" % ["#7fe08a" if dpe >= 0 else "#ff7a7a", "+" if dpe >= 0 else "", GearPower.fmt(dpe)]
+	_d_cmp_verdict.text = txt
+
+
 ## Statistiques de l'objet comparées à la pièce portée (écart en vert / rouge).
 func _stats_compare(it: Dictionary, equipped: bool) -> String:
 	var st := Items.stats(it)
-	var worn: Dictionary = Profile.equipped.get(it.slot, {}) if not equipped else {}  # (comparée à l'arme principale)
+	var worn: Dictionary = _compare_target(it) if not equipped else {}
 	var wst := Items.stats(worn) if not worn.is_empty() else {}
 	var keys := st.keys()
 	for k in wst:
 		if not k in keys:
 			keys.append(k)
-	var lines: PackedStringArray = []
-	for k in keys.slice(0, 7):
+	var cells: PackedStringArray = []
+	for k in keys.slice(0, 8):
 		var v := float(st.get(k, 0.0))
 		var pct: bool = k in Items.PERCENT_STATS
 		var name := String(Items.STAT_NAMES.get(k, Items.EXTRA_STAT_NAMES.get(k, k)))
@@ -883,28 +908,29 @@ func _stats_compare(it: Dictionary, equipped: bool) -> String:
 			if absf(dv) > 0.0001:
 				var dtxt := ("%+d %%" % roundi(dv * 100.0)) if pct else ("%+d" % roundi(dv))
 				diff = "  [color=%s](%s)[/color]" % ["#7fe08a" if dv > 0 else "#ff7a7a", dtxt]
-		lines.append("[color=#c8c8d4]%s[/color]  [b]%s[/b]%s" % [name, val, diff])
-	if not worn.is_empty():
-		lines.append("[color=#8a86a0]Écarts par rapport à %s[/color]" % Items.display_name(worn))
-	return "\n".join(lines)
+		cells.append("[cell][color=#c8c8d4]%s[/color]  [b]%s[/b]%s[/cell]" % [name, val, diff])
+	if cells.size() % 2 == 1:
+		cells.append("[cell] [/cell]")
+	return "[table=2]" + "".join(cells) + "[/table]"
 
 
 func _set_bbcode(it: Dictionary) -> String:
 	var sid := String(it.get("set", ""))
 	var s := Items.set_def(sid)
+	_d_set.tooltip_text = ""
 	if s.is_empty():
-		return "[b]Bonus de set[/b]\n[color=#9a98a8]Cet objet n'appartient à aucun set.[/color]"
+		return "[b]Panoplie[/b]\n[color=#9a98a8]Cet objet n'appartient à aucune panoplie.[/color]"
 	var worn := int(Items.set_counts(Profile.set_gear()).get(sid, 0))
-	var lines: PackedStringArray = ["[b][color=#%s]%s[/color][/b]  (%d pièce(s) portée(s))" % [Items.SET_COLOR.to_html(false), s.name, worn]]
+	var lines: PackedStringArray = ["[b][color=#%s]%s[/color][/b]  [color=#9a98a8]%d portée%s[/color]" % [Items.SET_COLOR.to_html(false), s.name, worn, "s" if worn > 1 else ""]]
 	for n in Items.set_tiers(sid):
 		var ok: bool = worn >= n
-		lines.append("[color=%s](%d pièces) %s[/color]" % ["#7fe08a" if ok else "#c8c8d4", n, " ; ".join(Items.bonus_lines(Items.set_bonus(sid, n)))])
+		lines.append("[color=%s](%d) %s[/color]" % ["#7fe08a" if ok else "#c8c8d4", n, " ; ".join(Items.bonus_lines(Items.set_bonus(sid, n)))])
 	var pieces: Array = s.get("pieces", [])
 	if not pieces.is_empty():
 		var names: PackedStringArray = []
 		for pid in pieces:
 			names.append(String(GameData.eden_by_id.get(int(pid), {}).get("name", "?")))
-		lines.append("[color=#8a86a0]Pièces : %s[/color]" % ", ".join(names))
+		_d_set.tooltip_text = "Pièces : " + ", ".join(names)
 	return "\n".join(lines)
 
 
@@ -960,7 +986,7 @@ func _on_dismantle() -> void:
 	var got := Profile.disassemble(it)
 	_selected = {}
 	refresh()
-	_msg.text = "%s démonté : %s" % [Items.display_name(it), ItemWidgets.materials_text(got, true)]
+	_say("%s démonté : %s" % [Items.display_name(it), ItemWidgets.materials_text(got, true)])
 
 
 ## Forge (pendant la run) : améliorer, réforger, polir, sertir, enchanter l'objet choisi ;
@@ -998,18 +1024,12 @@ func _lobby_forge() -> MerchantUI:
 	return _forge_ui
 
 
-func _pick_class() -> void:
-	if Profile.in_run:
-		return
-	var p := ClassPicker.open(self, Profile.selected_class, false)
-	p.picked.connect(func(cid):
-		if cid == Profile.selected_class:
-			return
-		Profile.selected_class = cid
-		Profile.save_profile()
-		_selected = {}
-		class_changed.emit()
-		refresh())
+## Préréglage changé, copié ou renommé : l'équipement porté et la fiche suivent.
+func _on_preset_changed(message: String) -> void:
+	_selected = {}
+	preset_changed.emit()
+	refresh()
+	_say(message)
 
 
 func _show_stat_detail() -> void:
@@ -1020,7 +1040,7 @@ func _show_stat_detail() -> void:
 			lines.append("\n[color=#f5c75a][b]%s[/b][/color]" % String(row[0]).replace("—", "").strip_edges())
 		else:
 			lines.append("%s : [b]%s[/b]" % [row[0], row[1]])
-	var extra := "" if player else "\n\n[color=#9a98a8]Hors run : héros niveau %d (début de la zone choisie), équipement porté, talents, certificats et bonus de l'archive compris.[/color]" % _level()
+	var extra := "" if player else "\n\n[color=#9a98a8]Hors run : héros niveau %d avec l'équipement porté, les talents, les certificats et la collection.[/color]" % _level()
 	InfoDialog.open(self, "Statistiques — %s" % GameData.class_data(_cls()).get("name_fr", ""), "\n".join(lines).strip_edges() + extra)
 
 
@@ -1042,8 +1062,8 @@ func _show_sets() -> void:
 			lines.append("   [color=%s](%d) %s[/color]" % ["#7fe08a" if worn >= n else "#c8c8d4", n, " ; ".join(Items.bonus_lines(Items.set_bonus(sid, n)))])
 		lines.append("")
 	if lines.is_empty():
-		lines.append("[color=#9a98a8]Aucune pièce de set pour l'instant.[/color]")
-	InfoDialog.open(self, "Sets d'équipement", "[color=#c8c8d4]Les sets d'Eden sont des pièces mythiques (orange) : boss et fabrication. Bonus à 2 et 5 pièces portées.[/color]\n\n" + "\n".join(lines))
+		lines.append("[color=#9a98a8]Aucune pièce de panoplie pour l'instant.[/color]")
+	InfoDialog.open(self, "Panoplies", "\n".join(lines))
 
 
 # --- widgets ---------------------------------------------------------------------------------

@@ -140,6 +140,12 @@ Détails = l'ancienne `InfoPage`) bâtis depuis les touches réelles, `Tutorial.
 Premiers pas seulement en Survie (`Modes.current()`). Fiche nouvelle : une entrée de `Tutorial.CARDS` avec son chapitre ; `on: ""` + version = annoncée
 aux anciennes sauvegardes. Test : `test_lot9` (tailles de fenêtre comprises), captures `tests/shot_u2.tscn` (`SHOT_TAG=1280x720`).
 
+## Écran Héros (lot U4, `conception/nuit_15_10/R_U4.md`)
+Équipement : `InventoryPage` + `EquipmentPage.PresetBar` (3 préréglages, « Gérer » copie / renomme ; `preset_bar.extra_actions` = point d'entrée de
+« Équiper le meilleur » et « Appliquer à la famille »), fiche d'objet cachée sans sélection avec la pièce portée à côté. Classe : `TalentsPage` en
+sous-onglets (`show_sub` : spells, talents, certs), un sort cliqué ouvre `Grimoire.open(classe, id)`. Apparence : « Débloqués uniquement » par défaut.
+« ? » ouvre le Guide (Détails). Captures : `res://tests/shot_hero.tscn` (APPDATA détourné). Tests : `test_pages` (section Héros), `test_nav_screens`.
+
 ## Choix de carte, coffres, roulette (lot U3, `conception/nuit_15_10/R_U3.md`)
 `CardPicker` : un clic / 1-2-3 choisit (`_choose`, délai anti-rafale 0,3 s, cartes voilées), plus de Valider. Coffres : `Rewards.kind_of / kind_name /
 kind_blurb` (type + spécialité), pastille `_badge`. Roulette : `Wheel.board()` = l'apparence promise par chaque case (gardée dans `Profile.wheel.board`),

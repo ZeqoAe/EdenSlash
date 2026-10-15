@@ -2,10 +2,10 @@ class_name Grimoire
 extends CanvasLayer
 ## Grimoire des classes, façon page de champion :
 ## - à gauche : portrait, statistiques de base, attributs par niveau, arme de la classe ;
-## - au centre : compétences de la classe, puis ses passifs ;
-## - à droite : le détail de ce qu'on a cliqué (compétence et ses rangs, combo de l'arme
-##   coup par coup, passif).
-## S'ouvre depuis la page Classe du héros et le menu pause (classe de la run en cours).
+## - au centre : sorts de la classe, puis ses certificats ;
+## - à droite : le détail de ce qu'on a cliqué (sort et ses rangs, auto-attaque de l'arme,
+##   certificat).
+## S'ouvre depuis la page Classe du héros (sur le sort cliqué) et le menu pause (classe de la run).
 ## En bas : presets de sorts (SpellPresets) : charger un preset enregistré, ou en créer un en
 ## faisant glisser les sorts de la liste dans un tableau 4 × 3 (les 4 cases, chacune avec son
 ## sort principal et ses 2 enchaînements). Le preset actif range les sorts en run.
@@ -36,7 +36,6 @@ var _edit_cols: Array = []  # ids en cours d'édition (0 : vide)
 var _name_edit: LineEdit
 var _cert_title: Control
 var _mscroll: ScrollContainer
-var _skill_hint: Control
 const ROW_NAMES := ["Sort principal", "Enchaînement 1", "Enchaînement 2"]
 
 
@@ -115,7 +114,6 @@ func _ready() -> void:
 	_stats.scroll_active = false
 	_stats.custom_minimum_size = Vector2(LEFT_W - 20, 0)
 	_section(left, "Arme de la classe")
-	Hud._label(left, "Combo d'auto-attaque (clic gauche répété) : clique pour le détail.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_weapon_box = VBoxContainer.new()
 	left.add_child(_weapon_box)
 
@@ -129,9 +127,7 @@ func _ready() -> void:
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mid.add_theme_constant_override("separation", 8)
 	mscroll.add_child(mid)
-	_section(mid, "Compétences de la classe")
-	_skill_hint = Hud._label(mid, "À débloquer avec les cartes de niveau (4 par run) ; certaines demandent un niveau de maîtrise.", 13, UiTheme.MUTED)
-	(_skill_hint as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_section(mid, "Sorts")
 	_skills_grid = GridContainer.new()
 	_skills_grid.columns = 2
 	_skills_grid.add_theme_constant_override("h_separation", 8)
@@ -140,7 +136,7 @@ func _ready() -> void:
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, 6)
 	mid.add_child(gap)
-	_section(mid, "Certificats de la classe (à poser avant la run, ou à trouver en run)")
+	_section(mid, "Certificats de la classe")
 	_cert_title = mid.get_child(mid.get_child_count() - 1)
 	_passives_grid = GridContainer.new()
 	_passives_grid.columns = 3
@@ -165,9 +161,14 @@ func _ready() -> void:
 	_root.visible = false
 
 
-func open(class_id := "") -> void:
+## Ouvre le grimoire de [param class_id] ; [param skill_id] > 0 : sur ce sort.
+func open(class_id := "", skill_id := 0) -> void:
 	_class_id = class_id if class_id != "" else (Run.class_id if Run.active else Profile.selected_class)
 	_selected = {}
+	for s in GameData.class_data(_class_id).get("skills", []):
+		if skill_id > 0 and int(s.id) == skill_id:
+			_selected = {"kind": "skill", "data": s}
+			_rank = maxi(1, _owned_rank(skill_id))
 	_root.visible = true
 	_refresh()
 	if "--preset-editor" in OS.get_cmdline_user_args():
@@ -257,7 +258,7 @@ func _refresh() -> void:
 		if locked:
 			b.modulate = Color(0.7, 0.7, 0.75)
 		b.tooltip_text = String(s.name) + ("  ·  sort de base" if need <= 1 else "  ·  débloqué au niveau %d de maîtrise de la classe" % need)
-	# passifs : ceux de la classe d'abord (icône d'Eden), puis les communs
+	# certificats de la classe
 	for c in _passives_grid.get_children():
 		c.queue_free()
 	for p in cls.get("passives", []):
@@ -329,7 +330,7 @@ func _refresh_detail() -> void:
 			var parts: PackedStringArray = []
 			var icon := String(wdata.get("icon", ""))
 			parts.append(("[img=56x56]%s[/img]  " % icon if icon != "" else "") + "[font_size=22][b]%s[/b][/font_size]" % String(wdata.get("name", wt)))
-			parts.append("[color=#c8c8d4]Auto-attaque de l'arme (clic gauche, ou automatique) : toujours la même, elle grandit avec les cartes. Une autre arme équipée change l'auto-attaque.%s[/color]" %
+			parts.append("[color=#c8c8d4]Auto-attaque (clic gauche, ou automatique) : elle grandit avec les cartes.%s[/color]" %
 				(" Deux variantes : le modèle de l'arme décide laquelle." if vs.size() > 1 else ""))
 			for i in vs.size():
 				var sp := WeaponAttacks.spec_for({"auto_variant": i, "slot": "weapon"}, wt)
@@ -347,9 +348,7 @@ func _refresh_detail() -> void:
 			var p: Dictionary = _selected.data
 			var icon := String(p.get("icon", Boons.ICONS.get(p.get("id", ""), "")))
 			_detail.text = ("[img=64x64]%s[/img]\n" % icon if icon != "" else "") + "[font_size=17]" + SpellInfo.passive_bbcode(p) + "[/font_size]" + \
-				"
-
-[color=#c8c8d4]Certificat : débloqué par la maîtrise de la classe, utilisable par toutes les classes. Posé sur le plateau de la page Classe (2 à 7 emplacements), il est acquis dès le début de la run ; sinon, il peut tomber en run comme une carte.[/color]"
+				"\n\n[color=#c8c8d4]Certificat : à poser sur le plateau (Classe > Certificats) pour l'avoir dès le début de la run.[/color]"
 
 
 ## Attaque actuelle du héros (physique ou magique) pour chiffrer les dégâts, sinon estimation niveau 1.
@@ -369,7 +368,7 @@ func _build_presets(parent: Control) -> void:
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, 6)
 	parent.add_child(gap)
-	_section(parent, "Presets de sorts (ordre des cases et des enchaînements)")
+	_section(parent, "Presets de sorts")
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	parent.add_child(row)
@@ -384,8 +383,8 @@ func _build_presets(parent: Control) -> void:
 	_editor.add_theme_constant_override("separation", 6)
 	_editor.visible = false
 	parent.add_child(_editor)
-	Hud._label(_editor, "Fais glisser les sorts de la liste ci-dessus dans les cases (ou d'une case à l'autre pour les échanger) ; un clic vide une case. Colonne = case de la barre de sorts (touche 1 à 4) : son sort principal, puis les 2 sorts qu'elle enchaîne.", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var grid := GridContainer.new()
+	grid.tooltip_text = "Glisse les sorts de la liste dans les cases (ou d'une case à l'autre pour les échanger), clic pour vider une case. Chaque colonne est une case de la barre de sorts (touche 1 à 4) : son sort principal, puis les 2 sorts qu'elle enchaîne."
 	grid.columns = 1 + SpellPresets.COLS
 	grid.add_theme_constant_override("h_separation", 6)
 	grid.add_theme_constant_override("v_separation", 6)
@@ -394,6 +393,7 @@ func _build_presets(parent: Control) -> void:
 	for c in SpellPresets.COLS:
 		var h := Hud._label(grid, "Case %d" % (c + 1), 15, UiTheme.GOLD)
 		h.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		h.mouse_filter = Control.MOUSE_FILTER_PASS
 	_cells = []
 	for c in SpellPresets.COLS:
 		_cells.append([])
@@ -528,7 +528,6 @@ func _set_compact(on: bool) -> void:
 		(b as Button).add_theme_constant_override("icon_max_width", 30 if on else 40)
 	_cert_title.visible = not on
 	_passives_grid.visible = not on
-	_skill_hint.visible = not on
 	if on and _mscroll:
 		_mscroll.set_deferred("scroll_vertical", 0)
 

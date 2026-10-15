@@ -1,30 +1,35 @@
 class_name TalentsPage
 extends VBoxContainer
-## Page Expertise & talents (onglet « Class » d'Eden) :
-## - parcours de maîtrise : ce que rapporte chaque niveau d'expertise de la classe
-##   (points de talent, sorts, certificats...) ;
-## - à gauche, l'arbre de talents (détail au survol, clic : +1 point) ;
-## - à droite, le plateau des certificats de maîtrise (CertBoard, 7 emplacements en
-##   1-2-1-2-1) : glisser ou cliquer un certificat pour le poser ; les couleurs
-##   reliées, les triangles de 3 couleurs et les losanges donnent des bonus.
+## Page Classe : la maîtrise de la classe affichée, en trois sous-onglets.
+## - en haut, toujours visibles : le niveau de maîtrise et le parcours (ce que rapporte chaque niveau) ;
+## - Sorts : les sorts de la classe (un clic ouvre le Grimoire sur ce sort) ;
+## - Talents : l'arbre de talents (détail au survol, clic : +1 point) ;
+## - Certificats : le plateau de 7 emplacements (CertBoard) : glisser ou cliquer un certificat pour
+##   le poser ; les couleurs reliées, les triangles de 3 couleurs et les losanges donnent des bonus.
 
-const CELL := 64
+const CELL := 88
+const SUBS := [["spells", "Sorts"], ["talents", "Talents"], ["certs", "Certificats"]]
 
 var cls := ""  # classe affichée ("" : classe choisie)
 var class_bar := true  # sélecteur de classe en haut (non dans l'écran Héros : la classe y est déjà)
+var sub := "spells"  # sous-onglet affiché
+var open_grimoire: Callable  # func(classe, id du sort ou 0) : grimoire détaillé
 var _tabs: HBoxContainer
 var _level_label: Label
 var _bar: ProgressBar
-var _points: Label
+var _bar_text: Label
 var _track: HBoxContainer
+var _sub_buttons := {}  # id -> Button
+var _sub_pages := {}  # id -> Control
+var _points: Label
+var _reset: Button
 var _grid: GridContainer
 var _board: BoardView
 var _synergy: RichTextLabel
 var _slots: Label
 var _certs: HFlowContainer
-var _spells: HBoxContainer  # sorts de la classe (débloqués ou maîtrise requise)
-var _summary: RichTextLabel
-var open_grimoire: Callable  # grimoire détaillé (stats, auto-attaque, passifs, rangs)
+var _spells: GridContainer  # sorts de la classe (débloqués ou maîtrise requise)
+var _summary: Label
 
 
 func _ready() -> void:
@@ -36,21 +41,20 @@ func _ready() -> void:
 	head.add_theme_constant_override("separation", 14)
 	add_child(head)
 	_level_label = Label.new()
-	UiTheme.title(_level_label, 20)
+	UiTheme.title(_level_label, 22)
 	head.add_child(_level_label)
 	_bar = ProgressBar.new()
-	_bar.custom_minimum_size = Vector2(300, 20)
+	_bar.custom_minimum_size = Vector2(340, 22)
 	_bar.show_percentage = false
 	_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_bar.add_theme_stylebox_override("background", UiTheme.flat_box(Color(0.05, 0.04, 0.1, 0.95), UiTheme.GOLD_DIM, 1, 6, false))
+	_bar.add_theme_stylebox_override("fill", UiTheme.flat_box(Color(0.62, 0.45, 0.14, 1.0), Color(0, 0, 0, 0), 0, 6, false))
 	head.add_child(_bar)
-	_points = Hud._label(head, "", 16, UiTheme.GOLD)
-	var reset := Button.new()
-	reset.text = "Réinitialiser les talents"
-	reset.focus_mode = Control.FOCUS_NONE
-	reset.pressed.connect(func():
-		Profile.reset_talents(_cls())
-		refresh())
-	head.add_child(reset)
+	_bar_text = Hud._label(_bar, "", 13, UiTheme.TEXT)
+	_bar_text.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_bar_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_bar_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_bar_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# parcours de maîtrise
 	var tp := PanelContainer.new()
 	tp.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.07, 0.06, 0.13, 0.95), UiTheme.GOLD_DIM, 1, 10))
@@ -58,12 +62,7 @@ func _ready() -> void:
 	var tv := VBoxContainer.new()
 	tv.add_theme_constant_override("separation", 4)
 	tp.add_child(tv)
-	var th := HBoxContainer.new()
-	tv.add_child(th)
-	ItemWidgets.section(th, "Parcours de maîtrise", 16)
-	var tl0 := Hud._label(th, "   Chaque run fait monter la maîtrise de la classe jouée : points de talent, nouveaux sorts, certificats... (survole un niveau)", 13, UiTheme.MUTED)
-	tl0.clip_text = true
-	tl0.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ItemWidgets.section(tv, "Parcours de maîtrise", 16)
 	var ts := ScrollContainer.new()
 	ts.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	ts.custom_minimum_size = Vector2(0, 92)
@@ -71,87 +70,145 @@ func _ready() -> void:
 	_track = HBoxContainer.new()
 	_track.add_theme_constant_override("separation", 6)
 	ts.add_child(_track)
+	# sous-onglets
+	var tb := HBoxContainer.new()
+	tb.add_theme_constant_override("separation", 8)
+	add_child(tb)
+	for t in SUBS:
+		var b := Button.new()
+		b.text = String(t[1])
+		b.toggle_mode = true
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(170, 42)
+		b.add_theme_font_size_override("font_size", 16)
+		b.add_theme_font_override("font", UiTheme.bold_font())
+		b.pressed.connect(show_sub.bind(String(t[0])))
+		tb.add_child(b)
+		_sub_buttons[t[0]] = b
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tb.add_child(sp)
+	_points = Hud._label(tb, "", 16, UiTheme.GOLD)
+	_points.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_points.mouse_filter = Control.MOUSE_FILTER_PASS
+	_points.tooltip_text = "Paliers : 15, 20, 25, 30 puis 35 points dépensés ouvrent les colonnes de droite."
+	_reset = Button.new()
+	_reset.text = "Réinitialiser"
+	_reset.focus_mode = Control.FOCUS_NONE
+	_reset.pressed.connect(func():
+		Profile.reset_talents(_cls())
+		refresh())
+	tb.add_child(_reset)
+	_build_spells_page()
+	_build_talents_page()
+	_build_certs_page()
 
-	# sorts de la classe et résumé (ce que contenait le grimoire)
-	var spp := PanelContainer.new()
-	spp.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.07, 0.06, 0.13, 0.95), UiTheme.GOLD_DIM, 1, 10))
-	add_child(spp)
-	var spv := VBoxContainer.new()
-	spv.add_theme_constant_override("separation", 4)
-	spp.add_child(spv)
+
+## Cadre sombre d'un sous-onglet (rempli par une VBox).
+func _sub_panel(id: String) -> VBoxContainer:
+	var pc := PanelContainer.new()
+	pc.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.07, 0.06, 0.13, 0.95), UiTheme.GOLD_DIM, 2, 10))
+	pc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	add_child(pc)
+	_sub_pages[id] = pc
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 8)
+	pc.add_child(v)
+	return v
+
+
+func _build_spells_page() -> void:
+	var v := _sub_panel("spells")
 	var sph := HBoxContainer.new()
 	sph.add_theme_constant_override("separation", 12)
-	spv.add_child(sph)
-	ItemWidgets.section(sph, "Sorts de la classe", 16)
-	_summary = RichTextLabel.new()
-	_summary.bbcode_enabled = true
-	_summary.fit_content = true
-	_summary.scroll_active = false
+	v.add_child(sph)
+	_summary = Hud._label(sph, "", 14, UiTheme.MUTED)
 	_summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_summary.add_theme_font_size_override("normal_font_size", 13)
-	sph.add_child(_summary)
+	_summary.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var gb := Button.new()
 	gb.text = "Grimoire détaillé"
-	gb.tooltip_text = "Statistiques de base, auto-attaque de l'arme, passifs et rangs de chaque sort"
+	gb.tooltip_text = "Statistiques de base, auto-attaque de l'arme, certificats, rangs de chaque sort, préréglages de sorts"
 	gb.focus_mode = Control.FOCUS_NONE
 	gb.pressed.connect(func():
 		if open_grimoire.is_valid():
-			open_grimoire.call(_cls()))
+			open_grimoire.call(_cls(), 0))
 	sph.add_child(gb)
-	var sps := ScrollContainer.new()
-	sps.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	sps.custom_minimum_size = Vector2(0, 74)
-	spv.add_child(sps)
-	_spells = HBoxContainer.new()
-	_spells.add_theme_constant_override("separation", 6)
-	sps.add_child(_spells)
+	var sc := ScrollContainer.new()
+	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	v.add_child(sc)
+	_spells = GridContainer.new()
+	_spells.columns = 3
+	_spells.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_spells.add_theme_constant_override("h_separation", 8)
+	_spells.add_theme_constant_override("v_separation", 8)
+	sc.add_child(_spells)
 
-	var body := HBoxContainer.new()
-	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 14)
-	add_child(body)
-	# talents
-	var tree_panel := PanelContainer.new()
-	tree_panel.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.07, 0.06, 0.13, 0.95), UiTheme.GOLD_DIM, 2, 10))
-	body.add_child(tree_panel)
-	var tl := VBoxContainer.new()
-	tl.add_theme_constant_override("separation", 6)
-	tree_panel.add_child(tl)
-	ItemWidgets.section(tl, "Talents de classe")
+
+func _build_talents_page() -> void:
+	var v := _sub_panel("talents")
+	var cc := CenterContainer.new()
+	cc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	v.add_child(cc)
 	_grid = GridContainer.new()
 	_grid.columns = 8
-	_grid.add_theme_constant_override("h_separation", 10)
-	_grid.add_theme_constant_override("v_separation", 10)
-	tl.add_child(_grid)
-	Hud._label(tl, "Clic : +1 point · survol : détail. Paliers : 15, 20, 25, 30 puis 35 points dépensés pour les colonnes de droite.", 12, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	# certificats
-	var cp := ItemWidgets.panel(body, 0, true)
+	_grid.add_theme_constant_override("h_separation", 16)
+	_grid.add_theme_constant_override("v_separation", 14)
+	cc.add_child(_grid)
+
+
+func _build_certs_page() -> void:
+	var pc := PanelContainer.new()
+	pc.add_theme_stylebox_override("panel", StyleBoxEmpty.new())  # les deux cadres ci-dessous suffisent
+	pc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	add_child(pc)
+	_sub_pages["certs"] = pc
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 14)
+	pc.add_child(body)
+	# gauche : le plateau, ses bonus, la légende des couleurs
+	var lp := PanelContainer.new()
+	lp.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.07, 0.06, 0.13, 0.95), UiTheme.GOLD_DIM, 2, 10))
+	lp.custom_minimum_size = Vector2(500, 0)
+	body.add_child(lp)
+	var lv := VBoxContainer.new()
+	lv.add_theme_constant_override("separation", 8)
+	lp.add_child(lv)
 	var ch := HBoxContainer.new()
 	ch.add_theme_constant_override("separation", 12)
-	cp.add_child(ch)
-	ItemWidgets.section(ch, "Certificats de maîtrise")
-	ch.tooltip_text = "Bonus d'Eden de toutes les classes (débloqués par leur maîtrise). Posés sur le plateau : acquis dès le début de la run. Ceux que tu ne poses pas peuvent tomber en run comme des cartes."
-	_slots = Hud._label(ch, "", 13, UiTheme.MUTED)
+	lv.add_child(ch)
+	ItemWidgets.section(ch, "Plateau")
+	_slots = Hud._label(ch, "", 14, UiTheme.MUTED)
 	_slots.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_slots.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	Hud._label(cp, "Posés sur le plateau : acquis dès le début de la run (toutes classes confondues). Les autres peuvent tomber en run comme des cartes.", 12, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var bh := HBoxContainer.new()
-	bh.add_theme_constant_override("separation", 16)
-	cp.add_child(bh)
 	_board = BoardView.new()
 	_board.page = self
-	bh.add_child(_board)
-	_synergy = ItemWidgets.rich(bh, 14)
-	_synergy.custom_minimum_size = Vector2(200, 0)
-	var rules := ItemWidgets.rich(cp, 13)
+	_board.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	lv.add_child(_board)
+	_synergy = ItemWidgets.rich(lv, 14)
+	_synergy.fit_content = true
+	_synergy.scroll_active = false
+	_synergy.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	var rules := ItemWidgets.rich(lv, 13)
 	rules.fit_content = true
+	rules.scroll_active = false
 	rules.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	rules.text = CertBoard.rules_bbcode()
-	Hud._label(cp, "Certificats disponibles (clic ou glisser sur le plateau ; clic sur une case du plateau pour retirer)", 13, UiTheme.MUTED)
+	# droite : les certificats disponibles
+	var rp := PanelContainer.new()
+	rp.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.07, 0.06, 0.13, 0.95), UiTheme.GOLD_DIM, 2, 10))
+	rp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_child(rp)
+	var rv := VBoxContainer.new()
+	rv.add_theme_constant_override("separation", 8)
+	rp.add_child(rv)
+	var rt := ItemWidgets.section(rv, "Disponibles")
+	rt.mouse_filter = Control.MOUSE_FILTER_PASS
+	rt.tooltip_text = "Clic ou glisser sur le plateau pour poser, clic sur une case du plateau pour retirer. Posés : acquis dès le début de la run (toutes classes confondues). Les autres peuvent tomber en run comme des cartes."
 	var cs := ScrollContainer.new()
 	cs.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	cs.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	cp.add_child(cs)
+	rv.add_child(cs)
 	_certs = HFlowContainer.new()
 	_certs.add_theme_constant_override("h_separation", 8)
 	_certs.add_theme_constant_override("v_separation", 8)
@@ -169,59 +226,104 @@ func show_class(c := "") -> void:
 	refresh()
 
 
+## Change de sous-onglet (Sorts, Talents, Certificats).
+func show_sub(id: String) -> void:
+	sub = id if _sub_pages.has(id) else "spells"
+	for k in _sub_pages:
+		_sub_pages[k].visible = k == sub
+	for k in _sub_buttons:
+		var on: bool = k == sub
+		var b: Button = _sub_buttons[k]
+		b.set_pressed_no_signal(on)
+		var box := EquipmentPage.PresetBar._box(on)
+		for st in ["normal", "pressed", "hover_pressed"]:
+			b.add_theme_stylebox_override(st, box)
+		b.add_theme_stylebox_override("hover", EquipmentPage.PresetBar._box(true))
+		b.add_theme_color_override("font_color", Color(0.12, 0.08, 0.02) if on else Color(0.92, 0.88, 0.8))
+		b.add_theme_color_override("font_pressed_color", Color(0.12, 0.08, 0.02))
+		b.add_theme_color_override("font_hover_pressed_color", Color(0.12, 0.08, 0.02))
+	_points.visible = sub == "talents"
+	_reset.visible = sub == "talents"
+
+
 func refresh() -> void:
 	if not is_inside_tree():
 		return
 	var c := _cls()
 	for b in _tabs.get_children():
+		_tabs.remove_child(b)
 		b.queue_free()
 	_tabs.visible = class_bar
 	if class_bar:
 		_tabs.add_child(ClassPicker.button(func(): return _cls(), func(cid): show_class(cid), true))
 	var lvl := Profile.expertise_level(c)
 	var prog := Profile.expertise_progress(c)
-	_level_label.text = "%s — maîtrise niveau %d / %d" % [GameData.class_data(c).get("name_fr", c), lvl, Profile.EXPERTISE_MAX]
+	_level_label.text = "Maîtrise niveau %d / %d" % [lvl, Profile.EXPERTISE_MAX]
 	_bar.max_value = prog.y
 	_bar.value = prog.x
-	_bar.tooltip_text = "%d / %d points d'expertise" % [prog.x, prog.y]
-	_points.text = "Points de talent : %d / %d" % [Profile.talent_points(c) - Profile.talent_spent(c), Profile.talent_points(c)]
+	_bar_text.text = "%d / %d" % [prog.x, prog.y] if lvl < Profile.EXPERTISE_MAX else "Niveau maximal"
+	_bar.tooltip_text = "Points d'expertise de la classe : chaque run en rapporte."
+	var free := Profile.talent_points(c) - Profile.talent_spent(c)
+	_points.text = "Points de talent : %d / %d" % [free, Profile.talent_points(c)]
+	_sub_buttons["talents"].text = "Talents" + ("  (%d)" % free if free > 0 else "")
 	_refresh_track(c, lvl)
 	_refresh_spells(c)
 	for x in _grid.get_children():
+		_grid.remove_child(x)
 		x.queue_free()
 	var tree: Dictionary = GameData.talents.get(c, {})
 	for row in tree.get("rows", []):
 		for cell in row:
 			_grid.add_child(_cell(cell, tree))
 	_refresh_certs()
+	show_sub(sub)
 
 
 # --- sorts de la classe ----------------------------------------------------------------------
 func _refresh_spells(c: String) -> void:
 	for x in _spells.get_children():
+		_spells.remove_child(x)
 		x.queue_free()
 	var cd := GameData.class_data(c)
 	var skills: Array = cd.get("skills", [])
 	var open := skills.filter(func(s): return Progression.skill_unlocked(c, int(s.id))).size()
-	_summary.text = "[color=#c8c8d4]%s · %s · %d / %d sorts débloqués · survol : détail[/color]" % [
+	_summary.text = "%s · %s · %d / %d sorts" % [
 		cd.get("weapon_name", ""), "dégâts magiques" if String(cd.get("dmg_type", "phys")) in ["mag", "magic"] else "dégâts physiques", open, skills.size()]
 	for s in skills:
 		var ok := Progression.skill_unlocked(c, int(s.id))
 		var b := ItemWidgets.TipButton.new()
-		b.custom_minimum_size = Vector2(60, 60)
+		b.custom_minimum_size = Vector2(0, 58)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.focus_mode = Control.FOCUS_NONE
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.clip_text = true
+		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		b.icon = UiTheme.texture(String(s.get("icon", "")))
-		b.expand_icon = true
-		b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.08, 0.06, 0.13, 0.95), UiTheme.GOLD_DIM if ok else Color(0.25, 0.23, 0.3), 2, 8))
+		b.expand_icon = false
+		b.add_theme_constant_override("icon_max_width", 42)
+		b.add_theme_constant_override("h_separation", 10)
+		b.add_theme_font_size_override("font_size", 16)
+		b.text = String(s.get("name", ""))
+		var sb := UiTheme.flat_box(Color(0.1, 0.08, 0.18, 0.95), UiTheme.GOLD_DIM if ok else Color(0.25, 0.23, 0.3), 1, 8, false)
+		sb.content_margin_left = 12
+		b.add_theme_stylebox_override("normal", sb)
+		b.add_theme_stylebox_override("pressed", sb)
+		b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.22, 0.16, 0.08, 1.0), UiTheme.GOLD, 2, 8, false))
 		if not ok:
-			b.modulate = Color(0.45, 0.45, 0.5)
-			b.text = str(Progression.skill_level_of(c, int(s.id)))
+			b.modulate = Color(0.55, 0.55, 0.6)
+			b.text += "   🔒 maîtrise %d" % Progression.skill_level_of(c, int(s.id))
 		var tip := SpellInfo.skill_bbcode(s, 1)
 		if s.get("shared", false):
 			tip = "[color=#9fd0ff]Sort partagé (classe d'origine)[/color]\n" + tip
 		if not ok:
 			tip += "\n\n[color=#ffcf6b]🔒 Débloqué à la maîtrise %d[/color]" % Progression.skill_level_of(c, int(s.id))
+		tip += "\n[color=#ffcf6b]Clic : ouvrir dans le Grimoire[/color]"
+		b.tooltip_text = " "
 		b.tip = "[img=48x48]%s[/img]  [b]%s[/b]\n%s" % [String(s.get("icon", "")), s.get("name", ""), tip]
+		var sid := int(s.id)
+		b.pressed.connect(func():
+			if open_grimoire.is_valid():
+				open_grimoire.call(_cls(), sid))
 		_spells.add_child(b)
 
 
@@ -333,13 +435,12 @@ func _talent_tip(_c: String, _id: int, t: Dictionary, rank: int, block: String) 
 		lines.append("[color=#7fe08a]Actuellement : %s%d %%[/color]" % ["-" if eff.type == "skill_cd" else "+", roundi(float(eff.per_level) * rank * 100)])
 	elif rank > 0 and eff.get("type", "") == "skill_duration":
 		lines.append("[color=#7fe08a]Actuellement : +%d s[/color]" % roundi(float(eff.per_level) * rank))
-	lines.append("[color=#8a86a0]Eden Eternal : %s[/color]" % t.get("eden", ""))
 	lines.append("[color=#ff9a7a]%s[/color]" % block if block != "" else "[color=#ffcf6b]Clic : +1 point[/color]")
 	return "\n".join(lines)
 
 
 # --- certificats -----------------------------------------------------------------------------
-## Passif d'Eden d'un certificat "classe/id".
+## Passif de classe d'un certificat "classe/id".
 static func cert_passive(key: String) -> Dictionary:
 	var p := key.split("/")
 	if p.size() < 2:
@@ -359,7 +460,7 @@ static func cert_tip(key: String, unlocked: bool, cert_level := 0) -> String:
 	lines.append("[color=#%s]■ %s[/color] · certificat %s" % [Color(CertBoard.COLORS[c].color).to_html(false), CertBoard.COLORS[c].name,
 		GameData.class_data(parts[0]).get("name_fr", parts[0])])
 	lines.append("[b]%s[/b]" % p.get("desc", ""))
-	lines.append("[color=#c8c8d4]Posé : acquis dès le début de la run. Sinon, il peut tomber en run comme une carte.[/color]")
+	lines.append("[color=#c8c8d4]Posé : acquis dès le début de la run.[/color]")
 	if not unlocked:
 		lines.append("[color=#ff9a7a]🔒 Maîtrise %s niveau %d[/color]" % [GameData.class_data(parts[0]).get("name_fr", parts[0]), cert_level])
 	return "\n".join(lines)
@@ -367,8 +468,8 @@ static func cert_tip(key: String, unlocked: bool, cert_level := 0) -> String:
 
 func _refresh_certs() -> void:
 	var slots := Profile.certificate_slots()
-	_slots.text = "%d / %d posés · %d emplacements sur 7" % [Profile.certificates.size(), slots, slots]
-	_slots.tooltip_text = "+1 emplacement tous les 8 niveaux de maîtrise cumulés"
+	_slots.text = "%d / %d posés" % [Profile.certificates.size(), slots]
+	_slots.tooltip_text = "%d emplacements ouverts sur 7 : +1 tous les 8 niveaux de maîtrise cumulés." % slots
 	_slots.mouse_filter = Control.MOUSE_FILTER_PASS
 	_board.refresh()
 	# bonus de placement

@@ -4,11 +4,11 @@ class_name HeroPages
 
 # --- apparence : tenue, tête, dos, auras, arme -------------------------------------------------
 ## Tout ce que le héros porte « pour le style », au même endroit que la classe : costumes
-## d'Eden débloqués (butin des boss, mode dev ; n'importe quelle classe peut porter n'importe
-## quelle tenue, « Tenue de la classe » revient à l'apparence d'origine), auras (une pierre
-## étoilée et une pierre de lune à la fois) et apparence de l'arme (modèles de base, armes
-## mythiques ou légendaires archivées, apparences de l'archive ; vaut pour tout le type
-## d'arme, quelle que soit la classe).
+## débloqués (butin des boss, mode dev ; n'importe quelle classe peut porter n'importe quelle
+## tenue, « Tenue de la classe » revient à l'apparence d'origine), auras (une seule à la fois) et
+## apparence de l'arme (modèles de base, armes mythiques ou légendaires archivées, apparences de
+## la collection ; vaut pour tout le type d'arme, quelle que soit la classe). Par défaut, seules
+## les pièces débloquées sont montrées (le filtre « Débloqués uniquement » les révèle toutes).
 class AppearancePage extends HBoxContainer:
 	const CATS := [["body", "Tenue"], ["head", "Tête"], ["back", "Dos"], ["aura", "Auras"], ["weapon", "Arme"]]
 	## Emplacements autour du héros (comme l'équipement) : [id, catégorie, nom, type d'aura].
@@ -29,7 +29,7 @@ class AppearancePage extends HBoxContainer:
 	var _shown_code := ""  # modèle d'arme montré dans l'aperçu (essai d'une apparence)
 	var _dye_box: VBoxContainer  # couleurs de la pièce portée (tenue, tête, dos)
 	var _search: LineEdit
-	var _owned_only: CheckBox
+	var _owned_only: Button  # filtre « Débloqués uniquement » (activé par défaut)
 
 	func _ready() -> void:
 		add_theme_constant_override("separation", 16)
@@ -50,12 +50,13 @@ class AppearancePage extends HBoxContainer:
 		_preview.spin = false
 		mid.add_child(_preview)
 		_preview.frame(5.3, 0.95, 0.35)  # en pied, de trois-quarts face (glisser pour tourner)
-		var tip := Hud._label(mid, "Glisser : tourner · molette : zoom · clic droit glissé : monter / descendre", 12, UiTheme.MUTED)
+		var tip := Hud._label(mid, "Glisser : tourner · Molette : zoom", 12, UiTheme.MUTED)
 		tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_slot_column(doll, RIGHT_SLOTS)
-		_info = ItemWidgets.rich(doll_panel, 14)
-		_info.custom_minimum_size = Vector2(0, 120)
-		_info.size_flags_vertical = Control.SIZE_FILL
+		_info = ItemWidgets.rich(doll_panel, 14)  # bonus de l'aura portée (vide sans aura)
+		_info.fit_content = true
+		_info.scroll_active = false
+		_info.size_flags_vertical = Control.SIZE_SHRINK_END
 		# --- à droite : le choix pour l'emplacement cliqué, puis ses couleurs ---
 		var right := ItemWidgets.panel(self, 0, true)
 		var head := HBoxContainer.new()
@@ -73,10 +74,17 @@ class AppearancePage extends HBoxContainer:
 		_search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_search.text_changed.connect(func(_t): refresh())
 		fl.add_child(_search)
-		_owned_only = CheckBox.new()
+		_owned_only = Button.new()
 		_owned_only.text = "Débloqués uniquement"
+		_owned_only.toggle_mode = true
+		_owned_only.button_pressed = true
 		_owned_only.focus_mode = Control.FOCUS_NONE
-		_owned_only.toggled.connect(func(_on): refresh())
+		_owned_only.custom_minimum_size = Vector2(0, 38)
+		_owned_only.add_theme_font_size_override("font_size", 14)
+		_owned_only.toggled.connect(func(_on):
+			_style_filter()
+			refresh())
+		_style_filter()
 		fl.add_child(_owned_only)
 		_hint = Hud._label(right, "", 13, UiTheme.MUTED)
 		_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -92,6 +100,18 @@ class AppearancePage extends HBoxContainer:
 		_dye_box = VBoxContainer.new()
 		_dye_box.add_theme_constant_override("separation", 6)
 		right.add_child(_dye_box)
+
+	## Interrupteur « Débloqués uniquement » : doré quand le filtre est actif.
+	func _style_filter() -> void:
+		var on := _owned_only.button_pressed
+		var sb := UiTheme.flat_box(Color(0.5, 0.36, 0.1, 1.0) if on else Color(0.08, 0.07, 0.16, 0.92), UiTheme.GOLD if on else UiTheme.GOLD_DIM, 1, 7, false)
+		sb.content_margin_left = 14
+		sb.content_margin_right = 14
+		for st in ["normal", "pressed", "hover", "hover_pressed"]:
+			_owned_only.add_theme_stylebox_override(st, sb)
+		_owned_only.add_theme_color_override("font_color", Color(0.12, 0.08, 0.02) if on else Color(0.92, 0.88, 0.8))
+		_owned_only.add_theme_color_override("font_pressed_color", Color(0.12, 0.08, 0.02))
+		_owned_only.add_theme_color_override("font_hover_pressed_color", Color(0.12, 0.08, 0.02))
 
 	## Colonne d'emplacements (icône de ce qui est porté, nom dessous).
 	func _slot_column(parent: Control, slots: Array) -> void:
@@ -254,7 +274,7 @@ class AppearancePage extends HBoxContainer:
 		var b := Button.new()
 		b.custom_minimum_size = Vector2(46, 30)
 		b.focus_mode = Control.FOCUS_NONE
-		b.tooltip_text = name if name != "" else "Coloris d'Eden"
+		b.tooltip_text = name if name != "" else "Coloris"
 		b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.08, 0.06, 0.13), UiTheme.GOLD if on else UiTheme.GOLD_DIM, 3 if on else 1, 6))
 		var h := HBoxContainer.new()
 		h.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -326,10 +346,11 @@ class AppearancePage extends HBoxContainer:
 
 	func _refresh_costumes(cid: String) -> void:
 		_grid.columns = 5
-		_hint.text = "Costumes d'Eden : trésors de collection des boss (1 chance sur 4, plus s'ils sont enragés). Ils se portent avec n'importe quelle classe."
 		var list := GameData.cosmetics.filter(func(c): return cat_of(c) == _cat)
 		var owned := list.filter(func(c): return Profile.outfit_unlocked(String(c.id)))
 		_count.text = "%d / %d débloqués" % [owned.size(), list.size()]
+		_hint.text = "%d à découvrir : butin des boss" % (list.size() - owned.size()) if owned.size() < list.size() else ""
+		_hint.visible = _hint.text != ""
 		_grid.add_child(_cell({}, cid))
 		# débloqués d'abord, puis le reste
 		for c in owned:
@@ -347,9 +368,10 @@ class AppearancePage extends HBoxContainer:
 
 	func _refresh_auras(cid: String) -> void:
 		_grid.columns = 5
-		_hint.text = "Une aura à la fois (pierre étoilée, pierre de lune ou autre) : effet lumineux autour du héros et bonus pendant les runs."
 		var got := GameData.auras.filter(func(x): return Profile.collected(x))
-		_count.text = "%d / %d auras obtenues" % [got.size(), GameData.auras.size()]
+		_count.text = "%d / %d débloquées" % [got.size(), GameData.auras.size()]
+		_hint.text = "%d à découvrir : butin des boss" % (GameData.auras.size() - got.size()) if got.size() < GameData.auras.size() else ""
+		_hint.visible = _hint.text != ""
 		var kinds: Array = ["star", "luna", "other"]
 		_grid.add_child(_aura_cell({}, cid, ""))
 		for x in got:
@@ -361,20 +383,21 @@ class AppearancePage extends HBoxContainer:
 					_grid.add_child(_aura_cell(x, cid, String(x.aura.kind)))
 
 	## Apparence de l'arme : l'arme portée (modèles de base, armes archivées), puis les
-	## apparences d'armes d'Eden (trésors de collection, pour n'importe quelle arme), puis
-	## les modèles de base des autres types d'armes.
+	## apparences d'armes de la collection (pour n'importe quelle arme), puis les modèles de base
+	## des autres types d'armes.
 	func _refresh_weapon(cid: String) -> void:
 		_grid.columns = 1
-		_hint.text = "Arme portée : « Auto » garde son propre modèle ; les modèles de base et les armes mythiques ou légendaires archivées de ce type sont libres. Les apparences d'armes d'Eden (trésors de collection des boss) se portent avec n'importe quelle arme. Le choix vaut pour toutes les armes de ce type, quelle que soit la classe."
+		_hint.text = "Le choix vaut pour toutes les armes de ce type, quelle que soit la classe."
+		_hint.visible = true
 		var w: Dictionary = Profile.equipped.get("weapon", {})
 		var mine := Items.weapon_type_of(w) if not w.is_empty() else String(GameData.class_data(cid).get("weapon_type", ""))
 		var n := 0
 		if GameData.weapon_types.has(mine):
 			n += _weapon_row(mine, true)
-		# apparences d'armes d'Eden : obtenues d'abord, puis les autres (verrouillées)
+		# apparences d'armes de la collection : obtenues d'abord, puis les autres (verrouillées)
 		var skins := GameData.collection.filter(func(x): return x.has("skin"))
 		var got := skins.filter(func(x): return Profile.collected(x))
-		var t := Hud._label(_grid, "Apparences d'armes d'Eden : %d / %d obtenues (pour %s)" % [got.size(), skins.size(), String(GameData.weapon_type(mine).get("name", "l'arme portée")).to_lower()], 16, UiTheme.GOLD)
+		var t := Hud._label(_grid, "Apparences · %d / %d" % [got.size(), skins.size()], 16, UiTheme.GOLD)
 		t.add_theme_font_override("font", UiTheme.bold_font())
 		var flow := HFlowContainer.new()
 		flow.add_theme_constant_override("h_separation", 8)
@@ -409,7 +432,7 @@ class AppearancePage extends HBoxContainer:
 			row.add_child(_skin_cell(wt, i, ws[i]))
 		return ws.size()
 
-	## Case d'une apparence d'arme d'Eden (appliquée au type de l'arme portée).
+	## Case d'une apparence d'arme de la collection (appliquée au type de l'arme portée).
 	func _eden_skin_cell(wt: String, x: Dictionary, ok: bool) -> Control:
 		var code := String(x.code)
 		var on := String(Profile.skins.get(wt, "")) == code
@@ -431,9 +454,7 @@ class AppearancePage extends HBoxContainer:
 		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		ic.modulate = Color.WHITE if ok else Color(0.35, 0.35, 0.4, 0.8)
 		b.add_child(ic)
-		b.tip = Archive.collection_text(x) + ("" if ok else "
-[color=#ff9a7a]Verrouillée : trésor de collection des boss[/color]") 			+ ("
-[color=#9a98a8]Clique pour l'aperçu.[/color]" if not ok else "")
+		b.tip = Archive.collection_text(x) + ("" if ok else "\n[color=#ff9a7a]Verrouillée : butin des boss[/color]\n[color=#9a98a8]Clic : aperçu[/color]")
 		b.pressed.connect(func():
 			_shown_code = code  # aperçu même verrouillée
 			if ok:
@@ -441,29 +462,13 @@ class AppearancePage extends HBoxContainer:
 			refresh())
 		return b
 
-	## Ce que porte la classe et le bonus des auras.
+	## Bonus de l'aura portée (le reste de ce que porte la classe se lit sur les emplacements).
 	func _worn_text(cid: String) -> String:
-		var lines: PackedStringArray = []
-		for k in [["body", "Tenue"], ["head", "Tête"], ["back", "Dos"]]:
-			var path := Profile.outfit_of(cid) if k[0] == "body" else String(Profile.worn.get(cid, {}).get(k[0], ""))
-			var name := "tenue de la classe" if k[0] == "body" else "aucun"
-			for c in GameData.cosmetics:
-				if String(c.outfit) == path and path != "":
-					name = String(c.name)
-			lines.append("%s : [b]%s[/b]" % [k[1], name])
-		var w: Dictionary = Profile.equipped.get("weapon", {})
-		var skin := String(Profile.skins.get(Items.weapon_type_of(w), "")) if not w.is_empty() else ""
-		lines.append("Arme : [b]%s[/b]%s" % [Items.display_name(w) if not w.is_empty() else "aucune", " (apparence choisie)" if skin != "" else ""])
-		var auras := Profile.worn_auras(cid)
-		var names := auras.map(func(x): return String(x.name))
-		lines.append("Auras : [b]%s[/b]" % (", ".join(names) if not names.is_empty() else "aucune"))
-		var b := Profile.aura_stats(cid)
 		var parts: PackedStringArray = []
-		for s in b:
-			parts.append(Items.stat_text(s, b[s]))
-		if not parts.is_empty():
-			lines.append("[color=#7fe08a]%s en run[/color]" % ", ".join(parts))
-		return "[b]%s[/b]\n%s" % [GameData.class_data(cid).get("name_fr", cid), "\n".join(lines)]
+		var b := Profile.aura_stats(cid)
+		for st in b:
+			parts.append(Items.stat_text(st, b[st]))
+		return "[color=#7fe08a]%s en run[/color]" % ", ".join(parts) if not parts.is_empty() else ""
 
 	static func _box(on: bool, ok: bool) -> StyleBoxFlat:
 		return UiTheme.flat_box(Color(0.08, 0.06, 0.13, 0.95), UiTheme.GOLD if on else (UiTheme.GOLD_DIM if ok else Color(0.25, 0.23, 0.3)), 3 if on else 2, 8)
@@ -490,7 +495,7 @@ class AppearancePage extends HBoxContainer:
 		else:
 			b.text = String(x.name) if ok else "🔒 " + String(x.name)
 			b.icon = UiTheme.texture(String(x.icon))
-			b.tip = Archive.collection_text(x) + ("" if ok else "\n[color=#ff9a7a]Verrouillée : trésor de collection des boss[/color]")
+			b.tip = Archive.collection_text(x) + ("" if ok else "\n[color=#ff9a7a]Verrouillée : butin des boss[/color]")
 			if not ok:
 				b.modulate = Color(0.6, 0.6, 0.65)
 		b.pressed.connect(func():
@@ -600,16 +605,14 @@ class CardsPage extends HBoxContainer:
 		_count = Hud._label(head, "", 14, UiTheme.MUTED)
 		_count.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		_count.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_count.mouse_filter = Control.MOUSE_FILTER_PASS
+		_count.tooltip_text = "Cartes communes : pour toutes les classes. Cartes de classe : seulement en run de cette classe, elles renforcent un sort. Certificats : posés sur le plateau (Classe > Certificats), ils sont acquis dès le début de la run. Les verrouillées se débloquent pour toujours avec leur exploit. Pendant le choix : Bannir retire une carte de la run, Garder la repropose au choix suivant (3 fois chacun par run)."
 		_filter = OptionButton.new()
 		for t in ["Toutes", "Communes", "De la classe", "À débloquer"]:
 			_filter.add_item(t)
 		_filter.focus_mode = Control.FOCUS_NONE
 		_filter.item_selected.connect(func(_i): refresh())
 		head.add_child(_filter)
-		var intro := Hud._label(left, "Gagnées en montant de niveau, dans les sanctuaires, sur les gardiens d'élite et chez les marchands · survol : détail", 13, UiTheme.MUTED)
-		intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		intro.mouse_filter = Control.MOUSE_FILTER_PASS
-		intro.tooltip_text = "Cartes communes : pour toutes les classes. Cartes de la classe : seulement en run de cette classe, elles renforcent un sort et ne sortent qu'une fois ce sort pris. Certificats : les bonus d'Eden de toutes les classes ; ceux posés sur le plateau (page Classe) sont acquis dès le début de la run, les autres peuvent tomber en run comme des cartes. Les verrouillées se débloquent pour toujours avec leur exploit. Pendant le choix : Bannir retire une carte de la run, Garder la repropose au choix suivant (3 fois chacun par run)."
 		var sc := ScrollContainer.new()
 		sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -633,20 +636,20 @@ class CardsPage extends HBoxContainer:
 		var open := all.filter(func(d): return Cards.card_unlocked(String(d.id)))
 		var cname := String(GameData.class_data(_cid()).get("name_fr", ""))
 		var mine: Array = Cards.class_cards(_cid())
-		_count.text = "%d / %d communes débloquées · %d cartes %s" % [open.size(), all.size(), mine.size(), cname]
+		_count.text = "%d / %d communes · %d de classe" % [open.size(), all.size(), mine.size()]
 		var f := _filter.selected
 		_cur = null
 		var commons := all.filter(func(d): return f != 3 or not Cards.card_unlocked(String(d.id)))
 		commons.sort_custom(func(a, b): return [not Cards.card_unlocked(String(a.id)), Cards.unlock_progress(String(a.id)).y] < [not Cards.card_unlocked(String(b.id)), Cards.unlock_progress(String(b.id)).y])
 		if f in [0, 1, 3]:
-			_sep("Cartes communes (toutes les classes)" if f != 3 else "À débloquer")
+			_sep("Cartes communes" if f != 3 else "À débloquer")
 			for d in commons:
 				_cur.add_child(_cell(d, ""))
 		if f in [0, 2]:
-			_sep("Certificats %s (posés : acquis pour la run ; sinon, cartes en run)" % cname)
+			_sep("Certificats %s" % cname)
 			for p in GameData.class_data(_cid()).get("passives", []):
 				_cur.add_child(_cell(p, "cert"))
-			_sep("Cartes %s : renforcent un sort (runs %s, une fois le sort pris)" % [cname, cname])
+			_sep("Cartes %s" % cname)
 			for d in mine:
 				_cur.add_child(_cell(d, "class"))
 		if _detail.text == "":
@@ -688,8 +691,9 @@ class CardsPage extends HBoxContainer:
 			b.text = "🔒 %s\n%d / %d" % [d.name, int(p.x), int(p.y)]
 			b.modulate = Color(0.65, 0.65, 0.72)
 		b.pressed.connect(func():
-			var lines: PackedStringArray = ["[font_size=19][b][color=#%s]%s[/color][/b][/font_size]" % [rar.color.to_html(false), d.name],
-				"[color=#9a98a8]%s · jusqu'au niveau %d%s[/color]" % [{"cert": "Certificat %s · posé sur le plateau (page Classe) : acquis dès le début de la run ; sinon il peut tomber en run" % String(GameData.class_data(_cid()).get("name_fr", "")), "class": "Carte de classe %s · sort « %s »" % [String(rar.name).to_lower(), d.get("skill_name", "")]}.get(kind, String(rar.name)), mini(int(d.get("max", 1)), Cards.MAX_LEVEL),
+			var ic := String(d.get("icon", Boons.ICONS.get(id, "")))
+			var lines: PackedStringArray = [("[img=48x48]%s[/img]  " % ic if ic != "" else "") + "[font_size=19][b][color=#%s]%s[/color][/b][/font_size]" % [rar.color.to_html(false), d.name],
+				"[color=#9a98a8]%s · jusqu'au niveau %d%s[/color]" % [{"cert": "Certificat %s" % String(GameData.class_data(_cid()).get("name_fr", "")), "class": "Carte de classe %s · sort « %s »" % [String(rar.name).to_lower(), d.get("skill_name", "")]}.get(kind, String(rar.name)), mini(int(d.get("max", 1)), Cards.MAX_LEVEL),
 					" · effet immédiat" if d.get("instant", false) else ""], "", String(d.get("desc", ""))]
 			var tl := Cards.stat_lines(d, 0.0, 1.0)
 			if not tl.is_empty():

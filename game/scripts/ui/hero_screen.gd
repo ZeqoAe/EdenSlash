@@ -1,21 +1,20 @@
 class_name HeroScreen
 extends CanvasLayer
-## Écran Héros plein écran (maquette de l'utilisateur) : tout ce qui concerne le héros au
-## même endroit. Barre du haut (retour, titre, aide « ? », carte de la classe), sections à
-## gauche, puis la section choisie :
-## - Équipement : InventoryPage (héros équipé, coffre commun, statistiques et « Détail ») ;
-## - Talents : TalentsPage (talents de classe, parcours de maîtrise, certificats) ;
+## Écran Héros plein écran : tout ce qui concerne le héros au même endroit. Barre du haut
+## (retour, titre, aide « ? », carte de la classe : un clic change de classe), sections à gauche
+## (LB / RB à la manette), puis la section choisie :
+## - Équipement : InventoryPage (préréglages, héros équipé, coffre commun, statistiques) ;
+## - Classe : TalentsPage en trois sous-onglets (Sorts, Talents, Certificats) ; le Grimoire
+##   détaillé s'ouvre par-dessus ;
 ## - Apparence : HeroPages.AppearancePage (tenue, tête, dos, auras, apparence d'arme) ;
-## - Grimoire : sorts de la classe et auto-attaques des armes (livre ouvert par-dessus) ;
-## - Classe : sélecteur des classes (aussi en cliquant la carte de la classe) ;
-## - « ? » : guide des statistiques (InfoPage).
+## - Cartes : HeroPages.CardsPage ;
+## - « ? » : ouvre le Guide sur ses formules (le Guide est la seule aide du jeu).
 ## Échap : ferme la fenêtre ouverte par-dessus, sinon revient au menu.
 
 signal closed
 
-## Équipement, Classe (sorts, maîtrise, talents, certificats ; grimoire détaillé en bouton),
-## Apparence, Cartes. La classe se choisit avec la carte en haut à droite (menu par famille) :
-## elle vaut pour toutes les sections (préréglages d'équipement, apparence, talents).
+## La classe se choisit avec la carte en haut à droite (menu par famille) : elle vaut pour toutes
+## les sections (préréglages d'équipement, apparence, talents).
 const SECTIONS := [["equipment", "Équipement", "equipment"], ["class", "Classe", "class"],
 	["appearance", "Apparence", "jewel"], ["cards", "Cartes", "stats"]]
 
@@ -23,21 +22,16 @@ var page: InventoryPage
 var talents: TalentsPage
 var appearance: HeroPages.AppearancePage
 var cards: HeroPages.CardsPage
-var help: InfoPage
 var grimoire: Grimoire
 var back_text := "Retour au menu"
-var zone_texture: Texture2D
+var zone_texture: Texture2D  # (plus affichée ; le lobby la renseigne encore)
 var pause_game := false
 var current := "equipment"
 var _root: Control
 var _title: Label
-var _subtitle: Label
 var _class_icon: TextureRect
 var _class_name: Label
 var _class_level: Label
-var _zone_name: Label
-var _zone_level: Label
-var _zone_thumb: TextureRect
 var _side: VBoxContainer
 var _nav := {}  # section -> Button
 var _pages := {}  # section -> Control
@@ -47,6 +41,7 @@ var _help_button: Button
 func _init(layer_index := 6) -> void:
 	layer = layer_index
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	add_to_group("tab_screens")  # LB / RB : section suivante ou précédente
 
 
 func _ready() -> void:
@@ -92,14 +87,12 @@ func _ready() -> void:
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	body.add_child(content)
 	page = InventoryPage.new()
-	page.class_card = false
 	talents = TalentsPage.new()
 	talents.class_bar = false
 	appearance = HeroPages.AppearancePage.new()
 	cards = HeroPages.CardsPage.new()
-	help = InfoPage.new()
-	talents.open_grimoire = func(cid): grimoire.open(cid)
-	for k in [["equipment", page], ["class", talents], ["appearance", appearance], ["cards", cards], ["help", help]]:
+	talents.open_grimoire = func(cid, skill_id := 0): grimoire.open(cid, skill_id)
+	for k in [["equipment", page], ["class", talents], ["appearance", appearance], ["cards", cards]]:
 		var p: Control = k[1]
 		p.set_anchors_preset(Control.PRESET_FULL_RECT)
 		p.visible = false
@@ -108,7 +101,7 @@ func _ready() -> void:
 	_build_side()
 	grimoire = Grimoire.new()
 	add_child(grimoire)
-	page.class_changed.connect(refresh)
+	page.preset_changed.connect(refresh)
 	_root.visible = false
 
 
@@ -132,23 +125,18 @@ func _build_top(parent: Control) -> void:
 	back.pressed.connect(close_ui)
 	top.add_child(back)
 	top.add_child(InventoryPage.gold_icon("class", 54))
-	var tv := VBoxContainer.new()
-	tv.alignment = BoxContainer.ALIGNMENT_CENTER
-	tv.add_theme_constant_override("separation", -4)
-	top.add_child(tv)
 	_title = Label.new()
 	_title.text = "Héros"
+	_title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	UiTheme.title(_title, 42, UiTheme.GOLD)
-	tv.add_child(_title)
-	_subtitle = Hud._label(tv, "", 15, UiTheme.TEXT)
+	top.add_child(_title)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(sp)
 	_help_button = Button.new()
 	_help_button.text = "?"
-	_help_button.tooltip_text = "Aide : comment chaque statistique est calculée"
+	_help_button.tooltip_text = "Aide"
 	_help_button.focus_mode = Control.FOCUS_NONE
-	_help_button.toggle_mode = true
 	_help_button.custom_minimum_size = Vector2(52, 52)
 	_help_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_help_button.add_theme_font_override("font", UiTheme.title_font())
@@ -156,7 +144,7 @@ func _build_top(parent: Control) -> void:
 	_help_button.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.06, 0.05, 0.12, 0.9), UiTheme.GOLD_DIM, 2, 26, false))
 	_help_button.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.25, 0.18, 0.07, 0.95), UiTheme.GOLD, 2, 26, false))
 	_help_button.add_theme_stylebox_override("pressed", UiTheme.flat_box(Color(0.32, 0.22, 0.07, 0.95), UiTheme.GOLD, 2, 26, false))
-	_help_button.pressed.connect(func(): show_section("equipment" if current == "help" else "help"))
+	_help_button.pressed.connect(_open_guide)
 	top.add_child(_help_button)
 	var cc := Button.new()  # carte de la classe : ouvre le sélecteur
 	cc.focus_mode = Control.FOCUS_NONE
@@ -204,29 +192,6 @@ func _build_side() -> void:
 		b.pressed.connect(show_section.bind(String(s[0])))
 		_side.add_child(b)
 		_nav[s[0]] = b
-	var sp := Control.new()
-	sp.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_side.add_child(sp)
-	var zc := PanelContainer.new()
-	zc.add_theme_stylebox_override("panel", InventoryPage.card_box())
-	_side.add_child(zc)
-	var zh := HBoxContainer.new()
-	zh.add_theme_constant_override("separation", 8)
-	zc.add_child(zh)
-	_zone_thumb = TextureRect.new()
-	_zone_thumb.custom_minimum_size = Vector2(96, 64)
-	_zone_thumb.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_zone_thumb.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	zh.add_child(_zone_thumb)
-	var zv := VBoxContainer.new()
-	zv.alignment = BoxContainer.ALIGNMENT_CENTER
-	zv.add_theme_constant_override("separation", 0)
-	zh.add_child(zv)
-	zv.add_child(InventoryPage.gold_icon("pin", 18))
-	_zone_name = Hud._label(zv, "", 12, UiTheme.TEXT)
-	_zone_name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_zone_name.custom_minimum_size = Vector2(90, 0)
-	_zone_level = Hud._label(zv, "", 11, UiTheme.MUTED)
 
 
 func _nav_button(text: String, icon_name: String) -> Button:
@@ -260,13 +225,15 @@ func _nav_button(text: String, icon_name: String) -> Button:
 	return b
 
 
-## Affiche une section ; Grimoire et Classe s'ouvrent par-dessus la section courante.
+## Affiche une section ; le Grimoire s'ouvre par-dessus la section courante.
 func show_section(id: String) -> void:
 	if id == "talents":
 		id = "class"  # anciens raccourcis : les talents sont dans la page Classe
 	match id:
 		"grimoire":
 			grimoire.open(_cls())
+		"help":
+			_open_guide()
 		_:
 			current = id
 			for k in _pages:
@@ -274,7 +241,26 @@ func show_section(id: String) -> void:
 			refresh()
 	for k in _nav:
 		_nav[k].set_pressed_no_signal(k == current)
-	_help_button.set_pressed_no_signal(current == "help")
+
+
+## « ? » : le Guide, sur ses formules (il se ferme avec F1 ou Échap).
+func _open_guide() -> void:
+	Guide.open_on(get_tree().current_scene, "details")
+
+
+## Le Guide est-il ouvert par-dessus l'écran ?
+func _guide_open() -> bool:
+	for n in get_tree().current_scene.get_children():
+		if n is Guide and not n.is_queued_for_deletion():
+			return true
+	return false
+
+
+## LB / RB : section suivante ou précédente (Équipement, Classe, Apparence, Cartes).
+func step_page(delta: int) -> void:
+	var ids: Array = SECTIONS.map(func(x): return String(x[0]))
+	var i := ids.find(current)
+	show_section(ids[wrapi((i if i >= 0 else 0) + delta, 0, ids.size())])
 
 
 func _cls() -> String:
@@ -287,19 +273,9 @@ func refresh() -> void:
 	_class_icon.texture = UiTheme.texture(String(cd.get("icon", "")))
 	_class_name.text = "%s   ▾" % cd.get("name_fr", cid)
 	_class_name.add_theme_color_override("font_color", ClassPicker.tier_color(cid))
-	var zone := GameData.zone(Run.zone_id if Profile.in_run else Profile.selected_zone)
 	_class_level.text = ("Niv. %d" % page.player.level) if page.player else "Maîtrise niv. %d" % Profile.expertise_level(cid)
-	_zone_name.text = String(zone.get("name", ""))
-	_zone_level.text = "Niv. %d+" % (1 + int(zone.get("level_bonus", 0)))
-	_zone_thumb.texture = zone_texture
-	_zone_thumb.visible = zone_texture != null
 	var free := Profile.talent_points(cid) - Profile.talent_spent(cid)
 	_nav["class"].text = "  Classe" + ("  (%d)" % free if free > 0 else "")
-	_subtitle.text = {"equipment": "Équipement, coffre commun et statistiques de la classe.",
-		"class": "Sorts de la classe, parcours de maîtrise, talents et certificats (7 au plus).",
-		"appearance": "Tenue, tête, dos, auras et apparence de l'arme portée.",
-		"cards": "Cartes de build : celles qui sont débloquées, et l'exploit qui débloque les autres.",
-		"help": "Comment chaque statistique est calculée."}.get(current, "")
 	var p: Control = _pages.get(current)
 	if p and p.has_method("refresh"):
 		p.refresh()
@@ -332,11 +308,8 @@ func close_ui() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not is_open() or grimoire.is_open():
+	if not is_open() or grimoire.is_open() or _guide_open():
 		return
 	if event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
-		if current == "help":
-			show_section("equipment")
-		else:
-			close_ui()
+		close_ui()

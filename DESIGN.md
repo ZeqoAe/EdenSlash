@@ -105,6 +105,20 @@ Vitalité, Posture du chasseur, Désarmé (ne peut plus attaquer), Ange gardien 
   cartes de niveau.
 - Écran **Expertise** dans le lobby ; « Nouvelle partie » remet tout à zéro.
 
+### Écran Héros (lot U4 de la nuit du 15/10, 0.1.175)
+
+- **Équipement** : 3 préréglages par classe en haut de la page (un clic change, « Gérer » copie l'équipement
+  porté vers un autre préréglage ou renomme ; `EquipmentPage.PresetBar.extra_actions` reçoit les actions
+  ajoutées plus tard, ex. « Équiper le meilleur »). La fiche d'objet est cachée sans sélection ; une pièce
+  choisie montre la pièce portée à côté (▲ / ▼ en %, puissance d'équipement). Pas de préréglages ni de Forge
+  dans le menu pause de la Survie.
+- **Classe** : maîtrise et parcours toujours visibles, puis trois sous-onglets Sorts (un clic ouvre le Grimoire
+  sur le sort), Talents (points et « Réinitialiser » seulement ici), Certificats (plateau, bonus, liste).
+- **Apparence** : « Débloqués uniquement » activé par défaut (compteur « 1 / 122 », « 121 à découvrir »).
+- Plus aucune mention du jeu d'origine (« Eden Eternal : … » sur sorts et talents, niveaux d'Eden) ; la
+  description d'un sort n'est plus répétée sous « Effets » ; LB / RB changent de section ; « ? » ouvre le Guide
+  (Détails) : plus de page d'aide à part dans l'écran Héros.
+
 ## Impact visuel
 
 Arcs de lame épais et lumineux (cœur blanc, bloom), ondes de choc au sol avec poussière,

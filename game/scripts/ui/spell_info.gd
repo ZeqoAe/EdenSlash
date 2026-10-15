@@ -1,6 +1,6 @@
 class_name SpellInfo
 extends RefCounted
-## Infobulles détaillées « à la Eden » générées depuis les vraies valeurs du jeu :
+## Infobulles détaillées générées depuis les vraies valeurs du jeu :
 ## compétences (dégâts, type, critique, effets et durées, rangs 1 à 5), passifs et statistiques de base des classes.
 
 const C_DMG := "#ffcf6b"
@@ -69,8 +69,6 @@ static func skill_bbcode(s: Dictionary, rank := 1, atk := -1.0) -> String:
 		head.append(("Zone %s m" % _num(float(s.radius))) + ("" if float(s.get("arc", 360)) >= 360 or kind in ["ground", "blink", "spin"] else " · %d°" % int(s.arc)))
 	lines.append(_c(C_MUTED, " · ".join(head)))
 	lines.append("")
-	lines.append("[i]%s[/i]" % String(s.get("desc", "")))
-	lines.append("")
 	lines.append("[b]Effets[/b]")
 	lines.append_array(_effect_lines(s, skill_rank_mult(rank), atk))
 	lines.append("")
@@ -84,9 +82,6 @@ static func skill_bbcode(s: Dictionary, rank := 1, atk := -1.0) -> String:
 		var txt := "R%d : %s" % [r, " · ".join(parts)]
 		table.append(("[b]%s[/b]" % _c(C_DMG, txt)) if r == rank else _c(C_MUTED, txt))
 	lines.append("   ".join(table))
-	if s.has("eden_name"):
-		lines.append("")
-		lines.append(_c(C_MUTED, "Eden Eternal : « %s »" % s.eden_name))
 	return "\n".join(lines)
 
 
@@ -181,7 +176,6 @@ static func class_stats_bbcode(cls: Dictionary) -> String:
 		var names := {"str": "Force", "agi": "Agilité", "int": "Intelligence", "wis": "Sagesse", "lck": "Chance"}
 		for a in ["str", "agi", "int", "wis", "lck"]:
 			rows.append("%s : [b]%d[/b] %s" % [names[a], int(at.base.get(a, 0)), _c(C_BUFF, "+%s" % _num(float(at.growth.get(a, 0))))])
-		rows.append(_c(C_MUTED, "Force : attaque physique, PV, parade · Agilité : vitesses, esquive · Intelligence : attaque magique · Sagesse : PV, soins, critique magique · Chance : critiques"))
 	return "\n".join(rows)
 
 

@@ -1,6 +1,6 @@
 class_name ClassPicker
 extends CanvasLayer
-## Sélecteur de classe plein écran : les 5 familles d'Eden en colonnes (Guerrier, Voleur,
+## Sélecteur de classe plein écran : les 5 familles en colonnes (Guerrier, Voleur,
 ## Chasseur, Clerc, Magicien). Dans chaque colonne, les classes vertes (classes de base)
 ## puis, en retrait sous chacune, ses ascensions orange.
 ## ClassPicker.button(...) donne le bouton « classe ▾ » qui ouvre le sélecteur.
@@ -108,9 +108,11 @@ func _ready() -> void:
 	var head := HBoxContainer.new()
 	v.add_child(head)
 	UiTheme.title(Hud._label(head, "Choisir une classe", 28, UiTheme.GOLD), 28)
-	var legend := Hud._label(head, "   ● classes vertes (base)", 15, GREEN)
+	var legend := Hud._label(head, "   ● base", 15, GREEN)
 	legend.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var legend2 := Hud._label(head, "   ● classes orange (ascensions : gardent les sorts de leur classe d'origine)", 15, ORANGE)
+	var legend2 := Hud._label(head, "   ● ascension", 15, ORANGE)
+	legend2.tooltip_text = "Les ascensions gardent les sorts de leur classe d'origine."
+	legend2.mouse_filter = Control.MOUSE_FILTER_PASS
 	legend2.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -204,13 +206,13 @@ func _show_detail(id: String, refused := false) -> void:
 	var orange := String(cd.get("tier", "green")) == "orange"
 	var open := Progression.class_unlocked(id)
 	var lines: PackedStringArray = []
-	lines.append("[b][color=#%s]%s[/color][/b]  [color=#9a98a8](%s)[/color]" % [tier_color(id).to_html(false), cd.get("name_fr", id), cd.get("name", "")])
-	lines.append(("Classe orange (ascension de %s)" % GameData.class_data(String(cd.get("parent", ""))).get("name_fr", "")) if orange
-		else "Classe verte · famille %s" % FAMILY_NAMES.get(int(cd.get("family", 1)), ""))
-	lines.append("Arme d'origine : %s · %s" % [cd.get("weapon_name", ""), "dégâts magiques" if cd.get("dmg_type", "phys") == "mag" else "dégâts physiques"])
+	lines.append("[b][color=#%s]%s[/color][/b]" % [tier_color(id).to_html(false), cd.get("name_fr", id)])
+	lines.append(("Ascension de %s" % GameData.class_data(String(cd.get("parent", ""))).get("name_fr", "")) if orange
+		else "Classe de base · famille %s" % FAMILY_NAMES.get(int(cd.get("family", 1)), ""))
+	lines.append("Arme : %s · %s" % [cd.get("weapon_name", ""), "dégâts magiques" if cd.get("dmg_type", "phys") == "mag" else "dégâts physiques"])
 	var skills: Array = cd.get("skills", [])
 	var shared := skills.filter(func(s): return s.get("shared", false)).size()
-	lines.append("%d sorts : %d propres + %d partagés (jouables d'emblée)" % [skills.size(), skills.size() - shared, shared])
+	lines.append("%d sorts dont %d partagés" % [skills.size(), shared])
 	lines.append("")
 	lines.append(String(cd.get("lore", "")))
 	lines.append("")
