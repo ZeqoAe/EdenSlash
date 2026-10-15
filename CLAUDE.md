@@ -197,6 +197,9 @@ sous-onglets (`show_sub` : spells, talents, certs), un sort cliqué ouvre `Grimo
 `CardPicker` : un clic / 1-2-3 choisit (`_choose`, délai anti-rafale 0,3 s, cartes voilées), plus de Valider. Coffres : `Rewards.kind_of / kind_name /
 kind_blurb` (type + spécialité), pastille `_badge`. Roulette : `Wheel.board()` = l'apparence promise par chaque case (gardée dans `Profile.wheel.board`),
 `WheelPage` fige la planche jusqu'à la fin de l'annonce du gain (3 s). Captures : `shot_chests.tscn`, `shot_cards.tscn` ; test : `test_u3`.
+Spawn de la carte (passe P15, `DESIGN.md`, « Apparition des monstres et puissance ») : `core/spawn_director.gd` (rôles, escouades
+mélangées, événements, arrivées de tous les côtés, réutilisé par le Survivant) et `core/monster_scaling.gd` (niveau qui suit le héros,
+PV / dégâts selon l'indice d'équipement, bornés) ; `--spawn=legacy` pour comparer ; test `test_p15`, captures `shot_p15`.
 
 ## Journal de run
 `core/run_journal.gd` écrit une ligne JSON par carte jouée dans `user://journal.jsonl`

@@ -668,6 +668,48 @@ d'apparence (lot S6). Socle (S1, 0.1.194) :
 | Équipement épique → légendaire | coffres dorés (légendaire 15 %, mythique 22 % par proposition) |
 | Mythique / légendaire garantis, sets | coffres de récompense : boss d'étape (100 %), stèles du défi (100 %), élites (20 %) |
 
+## Apparition des monstres et puissance (passe P15, retour du joueur du 15/10)
+
+Retour : « des entités DIFFÉRENTES plutôt qu'un pack de 10 champignons qui viennent du même côté ; de tous les côtés, espacés ;
+un niveau corrélé au nôtre, et des PV et des dégâts quand on commence à être stuffé ». Code : `core/spawn_director.gd`
+(composant réutilisable : zone, temps de la carte, niveau du héros ; interface du Survivant, qui garde son rythme
+`spawn_plan(t)` : `tick(delta)`, `pack(budget, niveau)`, `wave(dur, minutes)`, `pace`), `core/monster_scaling.gd`,
+`ui/arrival_marker.gd` ; crochets d'une ligne dans `RunDirector` (`spawner`), `Monster.kind_override`. Boss : rien ne change.
+
+- **Rôles** (`SpawnDirector.ROLES`, d'après le modèle d'Eden ou l'identifiant) : essaim léger (PV ×0,5, dégâts ×0,45, rapide,
+  petit), mêlée rapide (vitesse ×1,08), chargeur (attaque en charge, dégâts ×0,9), tireur (attaque à distance, garde ses
+  distances, dégâts ×0,65), tank lent (PV ×2,4, dégâts ×1,3, vitesse ×0,72, plus grand), soigneur (lueur verte, rend 6 % des PV
+  aux monstres blessés à 9 m toutes les 6 s). PV par point de budget ≈ 1 pour chaque rôle ; l'expérience suit le coût.
+  Vivants au plus : 6 tireurs, 6 chargeurs, 6 tanks, 3 soigneurs. Chaque zone a 4 rôles au moins, Limestone les 6.
+- **Escouades** (flux continu, même rythme que l'ancien pack, budget ×0,7 (`PACE`) de 4 + minutes, 8-12 en rage ; un groupe
+  mélangé venu de tous les côtés est plus dangereux qu'un pack d'une espèce, mesuré : ×1 donnait 1,5 à 1,8 fois plus de dégâts
+  subis) : meute, essaim,
+  chargeurs, tireurs (1 min), mixte (30 s), rempart (2 min), soutien (3 min 30) ; au-delà de 7 points, deux escouades de deux côtés.
+  Jamais plus de 3 fois la même espèce dans un groupe (sauf l'essaim). Tout le bestiaire de la zone dès le début.
+- **Événements** (45 s, 30 s en rage ; un dur puis un léger) : *encerclement* (6 à 8 groupes mélangés à 20 m, annoncés 1,1 s
+  avant par des cercles orange qui se remplissent, une élite), *élite escortée* (tank, soigneur, mêlée, tireur), *ruée d'essaim*
+  (3 groupes à 90° au moins), *tenaille* (deux escouades opposées). En rage, élites enragées toutes les 22 s.
+- **Direction** : anneau de 24 à 31 m (hors de la vue), angle d'or (137,5°) d'un groupe au suivant, 8 secteurs qui « chauffent »
+  (demi-vie 12 s), 60° au moins entre deux groupes d'un événement ; le dos du héros (sens de marche) une fois sur deux, et alors
+  signalé ; devant lui 4 fois sur 10 (sinon les groupes barrent sa route : boss atteint 13-33 % au pilote au lieu de 60 %). Point refusé hors de la carte (marge 6 m) ou en pente ; glissé sur le maillage de navigation le plus proche (4 m au
+  plus : jamais dans un arbre ou un rocher) ; refusé derrière un mur (chemin > 1,7 × la ligne droite + 8 m). Jamais de famine :
+  maillage pas encore calculé (asynchrone) → le sol suffit ; 8 points refusés → sans le test du chemin ; puis l'ancien tirage.
+- **Signal d'arrivée** : flèche au bord de l'écran (rouge : élite ; jaune : groupe dans le dos), chevron au-dessus du point
+  quand il est dans la vue, 2,6 s, sous les cadres du haut et au-dessus de la barre de sorts.
+- **Niveau** : niveau du monstre = max(courbe du temps, niveau du héros + décalage) + palier, plafonné (Epochs.CAPS, +3 en rage) ;
+  décalage −1 au début de la carte → −0,5 à l'heure de la rage (avant : −1 tout le temps).
+- **Puissance** (`MonsterScaling`, Survie) : indice d'équipement = PE de l'équipement porté (trouvailles de la carte et enclume
+  comprises) / PE attendue au niveau du héros (départ 0,68, pièces de la carte à +0 0,94, époque I à +3 1,2, époque I optimisée
+  1,9, époque II optimisée 2,4). Bande neutre par époque (`EPOCH_BAND` : I 0,6-0,95, II 1-1,35, III 1,9-2,45, IV 2,2-2,7) ;
+  au-dessus, PV × (1 + 0,6 ln(indice / haut)) et dégâts × (1 + 0,35 ln(…)), en dessous de même ; bornes PV ×0,9-1,6, dégâts
+  ×0,9-1,4 ; lissé (45 s), seulement pour les monstres qui apparaissent. Cartes, trophées et améliorations d'arme n'y comptent pas.
+- **Empilement** (PV d'un monstre normal) : niveau × époque (`MONSTER_MULT`) × rangs héroïques × montée du début × rôle ×
+  [puissance × Menace × pacte ≤ ×2,6] × rage ; dégâts : niveau × zone × époque × rangs × montée × rôle × [puissance × pacte ≤ ×1,6]
+  × rage. La puissance cède sa place sous ces plafonds, jamais en dessous de ×1 ; la rage (chronomètre) reste hors plafond.
+- **Mesures** : ligne `[spawn]` toutes les 30 s au pilote automatique (`--auto-quit`, `--trace`), résumée par `tools/sim_survie.py` ;
+  `--spawn=legacy` rejoue l'ancien spawn ; journal de run : `spawn_species`, `spawn_spread`, `power_hp`, `gear_index`…
+  Indices d'équipement : `res://tools/power_probe.tscn`. Tests : `tests/test_p15.tscn` ; captures : `tests/shot_p15.tscn`.
+
 ## Pacte, géants et Menace (passe P12, 0.1.191, idée du joueur inspirée de Megabonk)
 
 But : faire sentir qu'une run se prépare avant le boss, en offrant des risques choisis qui paient. Code : `core/menace.gd`,
@@ -745,9 +787,10 @@ il suffirait de foncer au boss) ; il faut avoir fait **une bonne run** (niveau, 
 - **Tous les monstres de la map traquent le héros** : jamais besoin d'aller les chercher.
   Ils suivent le maillage de navigation point par point (passe P9 : ils faisaient demi-tour vers le départ de leur
   chemin et n'avançaient qu'au tiers de leur vitesse ; maintenant 95 %, la horde reste à ~18 m d'un héros qui court, `tests/test_pursuit`).
-- Flux continu de meutes (4 → 9 monstres, toutes les 6 → 3,5 s ; en rage 8–12 toutes les 2 s).
-- **Vagues alternées** toutes les 45 s (30 s en rage) : *encerclement* (anneau de monstres
-  + une élite, difficile) puis *horde* (beaucoup de monstres plus faibles, facile).
+- Flux continu d'escouades mélangées (budget 4 → 9, toutes les 6 → 3,5 s ; en rage 8–12 toutes les 2 s), de tous les
+  côtés (passe P15, voir « Apparition des monstres et puissance »).
+- **Vagues alternées** toutes les 45 s (30 s en rage) : un événement dur (*encerclement* annoncé ou *élite escortée*) puis un
+  léger (*ruée d'essaim* ou *tenaille*).
 - Chaque attaque de monstre est **annoncée au sol** selon son modèle : cône au corps à corps,
   ligne de charge (le monstre fonce), cercle d'écrasement, trait de tir. Sortir de la zone,
   esquiver (Maj) ou **sauter** au bon moment évite le coup.

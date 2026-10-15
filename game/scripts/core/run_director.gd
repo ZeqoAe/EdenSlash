@@ -117,6 +117,7 @@ var orbs: XpOrbs  # orbes d'expérience au sol
 var tower: TowerDirector  # mode Tour : étages successifs (Tower)
 var duel: DuelDirector  # mode Duel : manches contre un héros (Duel)
 var royale: RoyaleDirector  # mode Battle royale : huit héros, un anneau (Royale)
+var spawner: SpawnDirector  # apparition des monstres de la carte (passe P15) ; null hors carte
 var sv: SurvivorDirector  # mode Survivant : 20 minutes, une carte, tout aux cartes (Survivor) ; null sinon
 
 
@@ -160,6 +161,7 @@ func start(p: Player) -> void:
 		sv = SurvivorDirector.new(self)
 	map = world.new_run_map(_seed)
 	_place_player(map.start)
+	spawner = SpawnDirector.new(self)
 	if map.breakables:
 		map.breakables.broken.connect(_on_broken)
 	Music.play_zone(String(zone.get("id", "")))
@@ -211,7 +213,7 @@ func _journal_context() -> Dictionary:
 	if map == null:
 		return {}
 	return {"chests_opened": chests_opened, "chests_total": map.chests.size(), "shrines": shrines_captured,
-		"shrines_total": map.shrines.size(), "state": state}.merged(Menace.journal(greed))
+		"shrines_total": map.shrines.size(), "state": state}.merged(Menace.journal(greed)).merged(spawner.journal() if spawner else {})
 
 
 func time_left() -> float:
@@ -492,7 +494,8 @@ func _monster_level(tier: int) -> int:
 		tier_extra = 0.0
 	var base := 1.0 + bonus + time / 60.0 * 0.9 + (float(RAGE_LEVEL_BONUS) if state == "rage" else 0.0)
 	var cap := max_level() + (RAGE_LEVEL_BONUS if state in ["rage", "boss"] else 0)
-	return clampi(roundi(maxf(base, player.level - 1.0 + tier_extra) + tier), 1, cap)
+	var offset := spawner.level_offset() if spawner else -1.0  # niveau du héros + décalage (MonsterScaling)
+	return clampi(roundi(maxf(base, player.level + offset + tier_extra) + tier), 1, cap)
 
 
 ## Niveau maximal du butin et des monstres (hors rage) de la zone en cours.
@@ -553,6 +556,8 @@ func ground_point(p: Vector3, fallback: Vector3) -> Vector3:
 
 
 func _pick_monster(level: int) -> int:
+	if spawner and not SpawnDirector.legacy:
+		return spawner.pick_any(level)  # rôles mélangés (passe P15)
 	# le roster (trié par niveau d'origine) se dévoile avec la progression dans la zone
 	var start := 1 + int(zone.get("level_bonus", 0))
 	var n := clampi(2 + int((level - start) * _roster.size() / 10.0), 2, _roster.size())
@@ -588,6 +593,8 @@ func _update_spawns(delta: float) -> void:
 		for i in mini(4, _room()):
 			_spawn_monster(_pick_monster(lvl), _around(camp.pos, 6.0), lvl)
 		message.emit("Un gardien d'élite garde un sceau !", 2.0)
+	if spawner and spawner.update(delta, alive, cap):
+		return  # escouades mélangées, événements, élites de la rage (passe P15)
 	# flux continu
 	_roam_timer -= delta
 	if _roam_timer <= 0.0 and alive < cap:
@@ -688,6 +695,8 @@ func _spawn_monster(id: int, pos: Vector3, level: int, boss := false, into: Mons
 		m.max_hp *= GREED_MONSTERS
 		m.hp = m.max_hp
 		m.atk *= GREED_MONSTERS
+	if spawner and not boss and into == null:
+		spawner.prepare(m, pos)  # rôle, puissance du héros, mesures (passe P15)
 	add_child(m)
 	m.global_position = pos + Vector3.UP * 0.4
 	m.rotation.y = randf() * TAU
@@ -1180,6 +1189,7 @@ func _next_stage(next: String) -> void:
 	_seed = randi()
 	map = world.new_run_map(_seed)
 	_place_player(map.start)
+	spawner = SpawnDirector.new(self)
 	if map.breakables:
 		map.breakables.broken.connect(_on_broken)
 	_fog.fill(Color(0, 0, 0, 1))

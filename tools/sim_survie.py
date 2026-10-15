@@ -47,6 +47,14 @@ def run_one(job):
         r["boss_t"] = int(m.group(1))
         r["boss_lvl"] = int(m.group(2))
     r["won_boss"] = "boss vaincu" in out
+    # passe P15 : dernière ligne de mesure du spawn (avant le boss), voir SpawnDirector.stats_line
+    sp = re.findall(r"\[spawn\] t=(\d+) \w+ espèces=(\d+) top=([\d.]+) espèces_fenêtre=([\d.]+) identiques=([\d.]+) par_point=([\d.]+) dispersion=([\d.]+) secteurs=([\d.]+) std=(\d+) pv×([\d.]+) dég×([\d.]+) indice=([\d.]+) monstres=(\d+) .*? dégâts_subis_min=([\d.]+) pv_max=(\d+) ttk=([-\d.]+) niv=(\d+)", out)
+    if sp:
+        g = sp[-1]
+        r["spawn"] = {"t": int(g[0]), "species": int(g[1]), "top": float(g[2]), "win_species": float(g[3]), "same": float(g[4]),
+                      "per_point": float(g[5]), "spread": float(g[6]), "sectors": float(g[7]), "std": int(g[8]), "pv": float(g[9]),
+                      "deg": float(g[10]), "index": float(g[11]), "monsters": int(g[12]), "taken_min": float(g[13]),
+                      "hp_max": int(g[14]), "ttk": float(g[15]), "lvl": int(g[16])}
     m = re.search(r"\[fournitures\] sac=(\{.*?\}) coffres=(\[.*?\]) armes découvertes=(\d+)", out)
     if m:
         bag = {}
@@ -117,7 +125,25 @@ def main():
     print("=> %d runs : boss atteint %d (%.0f %%), boss battu %d (%.0f %%)" % (n, reached, 100.0 * reached / n, won, 100.0 * won / n))
     alive = sum(1 for r in res if r.get("t", 0) >= 420 or r.get("boss"))
     print("=> survit au moins 7 min (ou atteint le boss) : %d (%.0f %%)" % (alive, 100.0 * alive / n))
+    spawn_summary(res)
     supplies_summary(res)
+
+
+def spawn_summary(res):
+    """Passe P15 : moyennes de la dernière ligne « [spawn] » de chaque run (composition, directions, pression)."""
+    sp = [r["spawn"] for r in res if "spawn" in r]
+    if not sp:
+        return
+    avg = lambda k: sum(s[k] for s in sp) / len(sp)
+    pct = lambda s: s["taken_min"] / max(s["hp_max"], 1) * 100.0
+    print("=> spawn (%d runs, dernière mesure à %.0f s en moyenne) : espèces %.1f, espèces par fenêtre de 20 s %.1f, espèce la plus vue %.0f %%,"
+          " part de l'espèce dominante d'un groupe %.0f %%, monstres par point %.1f, dispersion %.2f (0 = de tous les côtés), secteurs %.1f / 8,"
+          " écart-type des angles %.0f°" % (len(sp), avg("t"), avg("species"), avg("win_species"), avg("top") * 100, avg("same") * 100,
+                                           avg("per_point"), avg("spread"), avg("sectors"), avg("std")))
+    ttk = [s["ttk"] for s in sp if s["ttk"] >= 0]
+    print("   pression : dégâts subis %.0f / min (%.0f %% des PV max par minute), TTK des monstres %.2f s, niveau %.1f, PV ×%.2f, dégâts ×%.2f,"
+          " indice d'équipement %.2f" % (avg("taken_min"), sum(pct(s) for s in sp) / len(sp), sum(ttk) / max(len(ttk), 1), avg("lvl"),
+                                         avg("pv"), avg("deg"), avg("index")))
 
 
 if __name__ == "__main__":

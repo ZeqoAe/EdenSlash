@@ -314,9 +314,15 @@ func _update_idle(_delta: float) -> Vector3:
 const ATTACK_KINDS := {"m018": "charge", "m075": "charge", "m020": "slam", "m024": "ranged", "m029": "ranged"}
 
 
+## Attaque imposée par le rôle du monstre (SpawnDirector.ROLES : tireur, chargeur…) ; "" : celle du modèle.
+var kind_override := ""
+
+
 func attack_kind() -> String:
 	if is_boss:
 		return "melee"
+	if kind_override != "":
+		return kind_override
 	return ATTACK_KINDS.get(String(data.get("model", "")), "melee")
 
 
