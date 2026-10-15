@@ -286,6 +286,7 @@ func _migrate(item: Dictionary) -> Dictionary:
 		# anciennes raretés (commun, magique, rare or, épique, légendaire orange) -> raretés d'Eden
 		item["rarity"] = [0, 2, 3, 3, 4][clampi(int(item.rarity), 0, 4)]
 		item["rv"] = 2
+	NamesFr.fix_item(item)  # ancienne sauvegarde : nom d'objet anglais -> français
 	if int(item.get("rv", 0)) == 2 and item.has("eden"):
 		# niveau affiché = niveau de l'objet dans Eden ; l'ancien niveau devient sa puissance
 		var e: Dictionary = GameData.eden_by_id.get(int(item.eden), {})

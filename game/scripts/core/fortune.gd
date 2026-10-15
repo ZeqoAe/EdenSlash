@@ -92,6 +92,6 @@ static func summit_look() -> Dictionary:
 	var pool := GameData.collection.filter(func(x): return int(x.get("cat", 0)) <= 3 \
 		and GameData.cosmetic_by_code.has(String(x.get("code", ""))) and not Profile.collected(x) \
 		and not String(x.get("name", "")).contains("(Alpha)"))
-	var gold := pool.filter(func(x): return String(x.name).to_lower().contains("gold"))
+	var gold := pool.filter(func(x): return String(x.get("name_en", x.name)).to_lower().contains("gold"))
 	var pick: Array = gold if not gold.is_empty() else pool
 	return pick.pick_random() if not pick.is_empty() else {}

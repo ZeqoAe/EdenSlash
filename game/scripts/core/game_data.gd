@@ -93,10 +93,16 @@ func _ready() -> void:
 			eden_by_slot[key].append(e)
 			eden_by_id[int(e.id)] = e
 			eden_by_code[String(e.code)] = e
+		NamesFr.apply(self)  # noms français (data/names_fr.json) : avant les modifications du mode dev
 		DevEdits.load_and_apply()  # modifications du mode dev (data/dev_edits.json)
 
 
 	_build_eden_bands()
+
+
+## Pièce « Awaken » d'Eden (éveillée) : le nom d'origine fait foi, le nom affiché est français.
+func is_awakened(e: Dictionary) -> bool:
+	return String(e.get("name_en", e.get("name", ""))).begins_with("Awaken ")
 
 
 ## Niveaux d'Eden couverts par chaque zone, dans l'ordre chronologique d'Eden : de son

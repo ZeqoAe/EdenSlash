@@ -14,7 +14,7 @@ var _head: Label
 
 ## Prix en insignes : selon la rareté et le niveau d'Eden de la pièce.
 static func price(e: Dictionary) -> int:
-	if String(e.get("name", "")).begins_with("Awaken "):
+	if GameData.is_awakened(e):
 		return 250
 	var lv := int(e.get("level", 1))
 	return 80 + 2 * lv if int(e.get("rarity", 0)) >= Items.LEGENDARY else 30 + lv
@@ -33,7 +33,7 @@ static func make(e: Dictionary) -> Dictionary:
 	var it := Items.from_template(e, int(e.level), int(e.rarity))
 	it["upgrade"] = 0
 	it["quality"] = 1.0
-	if String(e.name).begins_with("Awaken "):
+	if GameData.is_awakened(e):
 		it["awakened"] = true
 	return it
 

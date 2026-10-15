@@ -55,7 +55,7 @@ static func pool(box: String, epoch: int, stage: int) -> Array:
 		var main := Profile.main_weapon_type()  # coffre d'arme : l'arme principale, du type de la classe
 		var cands: Array = GameData.eden_items.filter(func(e): return String(e.get("slot", "")) == slot \
 			and (slot != "weapon" or String(e.get("wtype", "")) == main) and Trophies.in_pool(e) and (int(e.rarity) == rarity or (slot == "trophy" and int(e.rarity) >= Items.MYTHIC)) \
-			and String(e.name).begins_with("Awaken ") == awakened)
+			and GameData.is_awakened(e) == awakened)
 		if cands.is_empty():
 			continue
 		# palier exact, sinon le plus haut en dessous, sinon le plus bas au-dessus
@@ -86,7 +86,7 @@ static func offer(box: String, epoch: int, stage: int, n := 3) -> Array:
 	for e in p.slice(0, n):
 		var it := Items.from_template(e, Epochs.cap(stage), int(m.rarity) if String(e.slot) != "trophy" else int(e.rarity))
 		it["upgrade"] = 0
-		if m.get("awakened", false) and String(e.name).begins_with("Awaken "):
+		if m.get("awakened", false) and GameData.is_awakened(e):
 			it["awakened"] = true
 		out.append(it)
 	return out
@@ -130,7 +130,7 @@ static func offhand_offer(epoch: int, stage: int, n := 3) -> Array:
 	var by_type := {}
 	for e in GameData.eden_items:
 		if String(e.get("slot", "")) != "weapon" or String(e.get("wtype", "")) in ["", main] or not Trophies.in_pool(e) \
-				or int(e.rarity) != int(m.rarity) or String(e.name).begins_with("Awaken "):
+				or int(e.rarity) != int(m.rarity) or GameData.is_awakened(e):
 			continue
 		var wt := String(e.wtype)
 		if not by_type.has(wt):

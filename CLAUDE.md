@@ -213,3 +213,9 @@ de `c_node` pour sa scène d'Eden (S002 → bgm007…). Ajouter une zone : sa pi
 Réglages d'image communs dans `game/scripts/world/gfx.gd` (qualité graphique), shaders dans
 `game/shaders/` (terrain, herbe, personnages, décor, effets). Pour comparer un changement de
 rendu : `res://tests/bench_gfx.tscn -- <zone> [effet]` (même vue à chaque fois).
+## Noms français (lot U10)
+`data/names_fr.json` (anglais exact -> français : objets, panoplies, monstres, zones, apparences) est appliqué UNE fois par
+`NamesFr.apply` (appelé par `GameData._ready`) : `name` devient français, l'original reste dans `name_en`. Pièce éveillée : `GameData.is_awakened(e)`
+(jamais `e.name.begins_with("Awaken ")`). La table est générée par `tools/names_fr_build.py` (lexique `names_fr_lexicon.py`, `names_fr_extra*.py` ; noms
+faits à la main : `names_fr_exact.py`) ; à la main, la section « overrides » du JSON l'emporte et survit à la régénération. Test : `test_names_fr`.
+
