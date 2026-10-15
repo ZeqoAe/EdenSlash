@@ -637,9 +637,6 @@ func new_run_map(seed_value: int) -> ProcMap:
 	return m
 
 
-## Génère l'arène du boss.
-func new_arena_map(seed_value: int) -> ProcMap:
-	var m := ProcMap.new()
 ## Génère la carte du Battle royale (la carte de Survie, remplie de coffres).
 func new_royale_map(seed_value: int) -> ProcMap:
 	var m := ProcMap.new()
@@ -666,6 +663,9 @@ func royale_end(place: int) -> void:
 	r.show_results(place, kills, level, chests, secs, got)
 
 
+## Génère l'arène du boss.
+func new_arena_map(seed_value: int) -> ProcMap:
+	var m := ProcMap.new()
 	m.biome = String(GameData.zone(Run.zone_id).get("biome", "limestone"))
 	m.name = "Arena"
 	_swap_map(m)

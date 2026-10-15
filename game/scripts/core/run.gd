@@ -411,6 +411,50 @@ func chain_of(slot: int) -> Array:
 	return chains.get(slot, [])
 
 
+## Sort à la position [param pos] de la grille de la run : x = case (0 à 3), y = 0 sort principal, 1 et 2 enchaînements.
+## {} si la position est libre.
+func spell_at(pos: Vector2i) -> Dictionary:
+	if pos.y == 0:
+		return skills[pos.x] if pos.x >= 0 and pos.x < skills.size() else {}
+	var ch := chain_of(pos.x)
+	return ch[pos.y - 1] if pos.y - 1 < ch.size() else {}
+
+
+## Échange les sorts des positions [param a] et [param b] (glisser-déposer du menu pause). Un enchaînement peut aussi
+## aller sur une position d'enchaînement libre ; un sort principal ne peut pas quitter sa case (elle resterait vide).
+## Renvoie true si quelque chose a changé.
+func swap_spells(a: Vector2i, b: Vector2i) -> bool:
+	if a == b:
+		return false
+	var ea := spell_at(a)
+	var eb := spell_at(b)
+	if ea.is_empty():
+		return false
+	if eb.is_empty():
+		if a.y == 0 or b.y == 0 or b.x >= skills.size():
+			return false
+		var src: Array = chain_of(a.x).duplicate()
+		src.remove_at(a.y - 1)
+		chains[a.x] = src
+		var dst: Array = chain_of(b.x).duplicate()
+		dst.append(ea)
+		chains[b.x] = dst
+	else:
+		_set_spell(a, eb)
+		_set_spell(b, ea)
+	changed.emit()
+	return true
+
+
+func _set_spell(pos: Vector2i, entry: Dictionary) -> void:
+	if pos.y == 0:
+		skills[pos.x] = entry
+		return
+	var ch: Array = chain_of(pos.x).duplicate()
+	ch[pos.y - 1] = entry
+	chains[pos.x] = ch
+
+
 ## Case où ira l'enchaînement [param id] : celle de sa colonne dans le preset actif, sinon
 ## une case au hasard parmi [param room].
 func _chain_slot_for(id: int, room: Array) -> int:

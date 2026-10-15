@@ -73,6 +73,7 @@ func refresh() -> void:
 	var total := Run.all_skills().size()
 	if _skills_title:
 		_skills_title.text = "Compétences de la run (%d / %d)" % [total, Run.MAX_SKILLS * (1 + Run.MAX_CHAIN)]
+	Hud._label(_skills, "Glisse un sort sur un autre pour échanger leurs places (touches et enchaînements).", 13, UiTheme.MUTED)
 	for i in Run.MAX_SKILLS:
 		var ch: Array = []
 		if i >= Run.skills.size():
@@ -80,16 +81,16 @@ func refresh() -> void:
 		else:
 			var s: Dictionary = Run.skills[i]
 			var d := Run.skill_def(int(s.id))
-			_row(_skills, String(d.get("icon", "")), "Case %d · %s — rang %d" % [i + 1, d.get("name", "?"), int(s.rank)], String(d.get("desc", "")), UiTheme.GOLD)
+			_row(_skills, String(d.get("icon", "")), "Case %d · %s — rang %d" % [i + 1, d.get("name", "?"), int(s.rank)], String(d.get("desc", "")), UiTheme.GOLD, 0, 52, Vector2i(i, 0))
 			ch = Run.chain_of(i)
 		for j in Run.MAX_CHAIN:
 			if j < ch.size():
 				var cd := Run.skill_def(int(ch[j].id))
 				_row(_skills, String(cd.get("icon", "")), "↳ Enchaînement %d : %s — rang %d" % [j + 2, cd.get("name", "?"), int(ch[j].rank)],
-					String(cd.get("desc", "")), Color(0.55, 0.9, 1.0), 34, 38)
+					String(cd.get("desc", "")), Color(0.55, 0.9, 1.0), 34, 38, Vector2i(i, j + 1))
 			else:
 				_row(_skills, "", "↳ Enchaînement %d : libre" % (j + 2), "Quand les 4 cases sont pleines, les cartes de sort deviennent des enchaînements.",
-					UiTheme.MUTED, 34, 38)
+					UiTheme.MUTED, 34, 38, Vector2i(i, j + 1))
 	# armes : auto-attaque et améliorations de la run
 	ItemWidgets.section(_skills, "Armes", 15)
 	for slot in ["weapon", "offhand"]:
@@ -137,8 +138,55 @@ Total : " + Cards.total_text(p, Run.power(pid)) if not (p.get("stat", {}) as Dic
 		_bag.text = "\n".join(parts)
 
 
-func _row(parent: Control, icon: String, title: String, desc: String, color: Color, indent := 0, icon_px := 52) -> void:
-	var h := HBoxContainer.new()
+## Ligne de la grille des sorts : on la glisse sur une autre pour échanger leurs places (Run.swap_spells).
+class SpellRow extends HBoxContainer:
+	var pos := Vector2i(-1, -1)
+	var label := ""
+	var on_swap: Callable
+
+	func _get_drag_data(_at: Vector2) -> Variant:
+		if Run.spell_at(pos).is_empty():
+			return null
+		var p := Label.new()
+		p.text = "  %s  " % label
+		p.add_theme_font_size_override("font_size", 16)
+		p.add_theme_color_override("font_color", Color(1, 0.92, 0.6))
+		p.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.1, 0.08, 0.2, 0.95), UiTheme.GOLD, 2, 8))
+		set_drag_preview(p)
+		return {"spell_pos": pos}
+
+	func _can_drop_data(_at: Vector2, data: Variant) -> bool:
+		if not (data is Dictionary and data.has("spell_pos")):
+			return false
+		var from: Vector2i = data.spell_pos
+		if from == pos:
+			return false
+		# les emplacements libres n'accueillent que des enchaînements
+		return not Run.spell_at(pos).is_empty() or (pos.y > 0 and from.y > 0 and pos.x < Run.skills.size())
+
+	func _drop_data(_at: Vector2, data: Variant) -> void:
+		if on_swap.is_valid():
+			on_swap.call(data.spell_pos, pos)
+
+
+func _swap(a: Vector2i, b: Vector2i) -> void:
+	if Run.swap_spells(a, b):
+		Sfx.ui("pickup", -8.0)
+		refresh()
+
+
+func _row(parent: Control, icon: String, title: String, desc: String, color: Color, indent := 0, icon_px := 52, spell := Vector2i(-1, -1)) -> void:
+	var h: HBoxContainer
+	if spell.x >= 0:
+		var sr := SpellRow.new()
+		sr.pos = spell
+		sr.label = title.get_slice(" —", 0)
+		sr.on_swap = _swap
+		sr.mouse_filter = Control.MOUSE_FILTER_STOP
+		sr.mouse_default_cursor_shape = Control.CURSOR_DRAG if not Run.spell_at(spell).is_empty() else Control.CURSOR_ARROW
+		h = sr
+	else:
+		h = HBoxContainer.new()
 	h.add_theme_constant_override("separation", 12)
 	parent.add_child(h)
 	if indent > 0:
