@@ -2,6 +2,7 @@ extends Node3D
 ## Écran titre : les maps des zones défilent en fond (survol 3D) ; gros bouton Jouer
 ## (continuer, charger une partie, nouvelle partie sur l'un des 3 emplacements),
 ## Paramètres, Quitter. Les lancements avec arguments (tests, captures) vont droit au lobby.
+## Aucun texte superflu : le décor défile, les trois boutons suffisent.
 
 const LOBBY := "res://scenes/lobby.tscn"
 
@@ -9,9 +10,6 @@ var backdrop: MapBackdrop
 var _settings: SettingsMenu
 var _main: VBoxContainer
 var _center: Control
-var _zone_name: Label
-var _zone_sub: Label
-var _zone_box: Control
 var _saves: Control  # fenêtre Jouer
 var _saves_title: Label
 var _saves_body: VBoxContainer
@@ -24,7 +22,6 @@ func _ready() -> void:
 		return
 	backdrop = MapBackdrop.new()
 	add_child(backdrop)
-	backdrop.zone_shown.connect(_on_zone)
 	backdrop.fly_over(GameData.zones.map(func(z): return String(z.id)))
 	_build_ui()
 	_settings = SettingsMenu.new()
@@ -86,42 +83,7 @@ func _build_ui() -> void:
 	bottom_gap.custom_minimum_size = Vector2(0, 60)
 	bottom_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	center.add_child(bottom_gap)
-	# zone survolée, en bas à gauche
-	_zone_box = HBoxContainer.new()
-	_zone_box.add_theme_constant_override("separation", 12)
-	_zone_box.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	_zone_box.position = Vector2(40, -96)
-	_zone_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(_zone_box)
-	var pin := TextureRect.new()
-	pin.texture = MenuWidgets.icon("pin")
-	pin.modulate = UiTheme.GOLD
-	pin.custom_minimum_size = Vector2(38, 38)
-	pin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	pin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	pin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_zone_box.add_child(pin)
-	var zv := VBoxContainer.new()
-	zv.add_theme_constant_override("separation", -2)
-	_zone_box.add_child(zv)
-	_zone_name = Label.new()
-	UiTheme.title(_zone_name, 26, Color(1, 0.97, 0.9))
-	_zone_name.add_theme_color_override("font_outline_color", Color(0.05, 0.03, 0.1))
-	_zone_name.add_theme_constant_override("outline_size", 6)
-	zv.add_child(_zone_name)
-	_zone_sub = Hud._label(zv, "", 15, Color(0.9, 0.88, 0.96))
-	_zone_sub.add_theme_color_override("font_outline_color", Color(0.05, 0.03, 0.1))
-	_zone_sub.add_theme_constant_override("outline_size", 4)
-	_zone_box.modulate.a = 0.0
 	_build_saves(root)
-
-
-func _on_zone(z: Dictionary) -> void:
-	_zone_name.text = String(z.get("name", ""))
-	var i := GameData.zones.find(z)
-	_zone_sub.text = "Zone %d · niveau %d+" % [i + 1, 1 + int(z.get("level_bonus", 0))]
-	var tw := create_tween()
-	tw.tween_property(_zone_box, "modulate:a", 1.0, 1.2).from(0.0)
 
 
 # --- fenêtre Jouer : continuer, charger, nouvelle partie -----------------------------------
@@ -190,11 +152,11 @@ func _show_root() -> void:
 		var row := MenuWidgets.RowButton.new("Continuer", "Sauvegarde %d · %s" % [last, _summary_text(Profile.slot_summary(last))], "continue", 84)
 		row.pressed.connect(_load.bind(last))
 		_saves_body.add_child(row)
-	var load_row := MenuWidgets.RowButton.new("Charger une partie", "Choisis l'une de tes sauvegardes" if any else "Aucune sauvegarde pour l'instant", "save", 76)
+	var load_row := MenuWidgets.RowButton.new("Charger une partie", "" if any else "Aucune sauvegarde", "save", 76)
 	load_row.disabled = not any
 	load_row.pressed.connect(_show_slots.bind(false))
 	_saves_body.add_child(load_row)
-	var new_row := MenuWidgets.RowButton.new("Nouvelle partie", "Commence une aventure sur un emplacement libre (ou remplace une sauvegarde)", "new", 76)
+	var new_row := MenuWidgets.RowButton.new("Nouvelle partie", "", "new", 76)
 	new_row.pressed.connect(_show_slots.bind(true))
 	_saves_body.add_child(new_row)
 	_back_button(_close_saves)
@@ -203,9 +165,16 @@ func _show_root() -> void:
 func _summary_text(s: Dictionary) -> String:
 	if s.is_empty():
 		return "vide"
-	return "%s · %d run%s (%d victoire%s) · meilleur niveau %d · archive %d / %d" % [
+	return "%s · %d run%s · %d victoire%s · niveau max %d" % [
 		GameData.class_data(String(s["class"])).get("name_fr", s["class"]), int(s.runs), "s" if int(s.runs) > 1 else "",
-		int(s.wins), "s" if int(s.wins) > 1 else "", int(s.best), int(s.archive), Archive.total()]
+		int(s.wins), "s" if int(s.wins) > 1 else "", int(s.best)]
+
+
+## « 2026-10-15T21:30:12 » -> « 15/10/2026 à 21 h 30 ».
+static func date_fr(iso: String) -> String:
+	if iso.length() < 16 or iso[10] != "T":
+		return ""
+	return "%s/%s/%s à %s h %s" % [iso.substr(8, 2), iso.substr(5, 2), iso.substr(0, 4), iso.substr(11, 2), iso.substr(14, 2)]
 
 
 func _show_slots(new_game: bool) -> void:
@@ -244,8 +213,9 @@ func _slot_card(i: int, new_game: bool) -> Control:
 		Hud._label(v, "Emplacement libre", 14, UiTheme.MUTED)
 	else:
 		Hud._label(v, _summary_text(s), 14, UiTheme.TEXT).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		Hud._label(v, "Zones débloquées %d / %d · héritage %d objet(s)%s" % [int(s.zones), GameData.zones.size(), int(s.items),
-			(" · dernière partie : %s" % String(s.saved_at).replace("T", " ").left(16)) if String(s.saved_at) != "" else ""], 13, UiTheme.MUTED)
+		var when := date_fr(String(s.saved_at))
+		if when != "":
+			Hud._label(v, "Dernière partie : %s" % when, 14, UiTheme.MUTED)
 	var b: Button
 	if new_game:
 		b = MenuWidgets.gold_button("Commencer" if s.is_empty() else "Remplacer", 18, Vector2(170, 52))

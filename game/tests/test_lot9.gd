@@ -65,13 +65,77 @@ func _ready() -> void:
 	Tutorial.skip_steps()
 	check("Passer : étapes toutes cochées, rien de bloqué", Tutorial.done_all())
 	Run.active = false
+	# Premiers pas : jamais en dehors de la Survie
+	Run.start_survival("warrior", 1)
+	Profile.tutorial["steps"] = []
+	check("Premiers pas actifs en Survie", Tutorial.guided())
+	Duel.active = true
+	check("Premiers pas masqués en Duel", not Tutorial.guided() and Tutorial.event("weapon").is_empty())
+	Duel.active = false
+	Training.active = true
+	check("Premiers pas masqués à l'entraînement", not Tutorial.guided())
+	Training.active = false
+	Run.active = false
+	check("Premiers pas masqués hors run", not Tutorial.guided())
+	# textes : fiches courtes, sans pourcentage ni mention du jeu d'origine, rangées dans un chapitre du Guide
+	var chapter_ids: Array = Guide.CHAPTERS.map(func(c): return c[0])
+	check("Guide : 6 onglets au plus", Guide.CHAPTERS.size() <= 6)
+	var bad_cards: Array = []
+	for id in Tutorial.CARDS:
+		var c: Dictionary = Tutorial.CARDS[id]
+		var all: String = " ".join(c.lines) + String(c.title)
+		if c.lines.size() > 3 or "%" in all or "Eden" in all or not String(c.chapter) in chapter_ids:
+			bad_cards.append(id)
+	check("fiches : 3 lignes au plus, sans %% ni Eden, chapitre connu %s" % str(bad_cards), bad_cards.is_empty())
+	var bad_steps: Array = []
+	for s in Tutorial.STEPS:
+		if "%" in String(s.text) or "Eden" in String(s.text):
+			bad_steps.append(s.id)
+	check("Premiers pas : sans pourcentage ni Eden %s" % str(bad_steps), bad_steps.is_empty())
 	# Guide
 	var g := Guide.open_on(self, "commands")
 	await get_tree().process_frame
-	check("Guide ouvert, chapitres : commandes, étapes, fiches, nouveautés", g._ids.size() >= Tutorial.CARDS.size() + 3 and g._body.text.length() > 20)
-	g.select("cards")
-	check("chapitre d'une fiche affiché", g._body.text.contains("cartes") or g._body.text.contains("Cartes"))
+	check("Guide ouvert sur Commandes (ancien identifiant)", g.current_page() == 0 and g.page_count() == Guide.CHAPTERS.size())
+	var txt := ""
+	for b in Guide.blocks_for("controls"):
+		txt += String(b.text)
+	check("Commandes : touches du joueur, pas de touches de test", txt.contains("Sauter") and not txt.contains("F9") and not txt.contains("Tests et retours"))
+	g.select("chain")
+	check("fiche d'un chapitre : onglet Sorts et cartes, bloc visé", g.current_page() == 1 and g.page(1)._blocks.has("chain"))
+	for i in Guide.CHAPTERS.size() - 1:
+		g.show_page(i)
+		await get_tree().process_frame
+		check("chapitre « %s » : des blocs" % Guide.CHAPTERS[i][1], g.page(i)._blocks.size() >= 3)
+	g.select("news")
+	if Tutorial._vkey(Version.NUMBER) >= Tutorial._vkey(String(Tutorial.CARDS.hub_gear.version)):
+		check("« news » mène à la dernière nouveauté (équipement du hub)", g.current_page() == Guide.chapter_index("gear"))
+	g.show_page(Guide.chapter_index("details"))
+	await get_tree().process_frame
+	check("Détails : l'ancienne page d'aide", g.page(Guide.chapter_index("details")) is InfoPage)
 	g.close()
+	await get_tree().process_frame
+	check("Guide fermé : la partie n'est plus en pause", not get_tree().paused)
+	# Accueil : le panneau tient dans la fenêtre à plusieurs tailles
+	var win := get_tree().root
+	var old_size := win.size
+	for sz in [Vector2i(1600, 900), Vector2i(1280, 720), Vector2i(1024, 576), Vector2i(800, 600)]:
+		win.size = sz
+		var w2 := Welcome.new()
+		add_child(w2)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		for step in 3:
+			match step:
+				1: w2._step_class()
+				2: w2._step_controls()
+			await get_tree().process_frame
+			await get_tree().process_frame
+			var r := w2._panel.get_global_rect()
+			var vp := get_viewport().get_visible_rect().size
+			check("accueil %dx%d écran %d : panneau dans la fenêtre" % [sz.x, sz.y, step + 1], r.position.x >= -1.0 and r.position.y >= -1.0 and r.end.x <= vp.x + 1.0 and r.end.y <= vp.y + 1.0)
+		w2.queue_free()
+		await get_tree().process_frame
+	win.size = old_size
 	get_tree().paused = false
 	print("TOUT EST OK (0 échec(s))" if fails == 0 else "ÉCHECS : %d" % fails)
 	get_tree().quit(fails)

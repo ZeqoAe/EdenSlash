@@ -82,12 +82,12 @@ static func _table(head: Array, rows: Array) -> String:
 
 
 func _money() -> String:
-	var t := _h("La Survie : époques, carte, monnaies")
-	t += _note("Une run de Survie = une époque de 3 maps. Tu pars au niveau 1 avec ton équipement du hub (pièces, +N, gemmes, enchantements, panoplies) ; les coffres de la carte en proposent d'autres, qui remplacent un emplacement le temps de la run. Sur chaque map : casse tout, ouvre les coffres, réunis 3 sceaux (les gardiens d'élite les portent), puis affronte le boss du donjon. Boss vaincu : un portail mène à la map suivante, tu gardes ton niveau, tes cartes, ton équipement, ton or et tes clés. Battre le boss de la 3e map débloque l'époque suivante. Après 10 minutes sur une map : la rage.")
+	var t := _h("Monnaies et coffres")
+	t += _note("Une époque = 3 cartes. Tu pars avec ton équipement du hub ; les coffres de la carte en proposent d'autres, le temps de la run. Le boss vaincu ouvre un portail vers la carte suivante : tu gardes ton niveau, tes cartes, ton or et tes clés.")
 	t += _table(["Monnaie", "Où l'obtenir", "À quoi elle sert", "En fin de run"], [
 		["[b]Or[/b]", "Jarres, caisses, tas d'or, monstres, défis, vente aux marchands", "Coffres de la carte (le prix monte à chaque coffre), marchands", "[color=#ff9a7a]perdu[/color]"],
 		["[b]Clés[/b]", "Élites (1 chacune), débris, sanctuaires des clés, marchands", "Ouvrir n'importe quel coffre de la carte sans payer", "[color=#ff9a7a]perdues[/color]"],
-		["[b]Insignes[/b]", "Fin de run, même perdue : 25 de participation, puis selon les maps parcourues, les monstres et les élites, bonus en cas de victoire", "Armurerie (Collection) : acheter les pièces découvertes dans les coffres ; elles partent avec toi en Survie", "[color=#7fe08a]gardés[/color]"],
+		["[b]Insignes[/b]", "Fin de run, même perdue : 25 de participation, puis selon les cartes parcourues, les monstres et les élites, bonus en cas de victoire", "Armurerie (Atelier) : acheter les pièces découvertes dans les coffres ; elles partent avec toi en Survie", "[color=#7fe08a]gardés[/color]"],
 		["[b]Fournitures[/b]", "Caisses, cristaux, jarres, défis, autels du scribe (parchemins, gemmes, pierres, enchantements)", "Forge du hub : améliorer, sertir, enchanter", "gardées en cas de victoire ou d'extraction"],
 		["[b]Cartes, trophées[/b]", "Niveaux, coffres de sort, de passif, de certificat et de trophée, sanctuaires, marchands", "Ton build de la run (12 trophées au plus)", "la run seulement"],
 		["[b]Coffres de récompense[/b]", "Boss (coffre d'apparence), stèles du défi, autel de la fortune", "Menu Coffres", "[color=#7fe08a]toujours gardés[/color]"],
@@ -97,8 +97,7 @@ func _money() -> String:
 • Enclume : tire un bonus de +0 à +7 pour un emplacement ; il s'ajoute au +N de la pièce portée dans cet emplacement (total +12 au plus) jusqu'à la fin de la run.
 • Ton équipement du hub n'est jamais modifié par une run : les pièces trouvées en coffre servent pendant la run, et chaque pièce choisie devient achetable à l'Armurerie avec tes insignes.
 • Lieux à usage unique (piliers de lumière) : enclume, autel du scribe, fontaine de vie, pierre d'aimant, autel de cupidité, stèle du défi, autel de la fortune (pyramide : encaisser ou tenter l'étage suivant).
-• Sanctuaires : reste dans le cercle pendant que les monstres affluent. Marchands ambulants : cartes, clés, fournitures.
-• La forge n'est pas disponible pendant la Survie : elle sert au hub, pour la Tour et le Duel.")
+• Sanctuaires : reste dans le cercle pendant que les monstres affluent. Marchands ambulants : cartes, clés, fournitures.")
 	return t
 
 
@@ -120,7 +119,7 @@ func _attributes() -> String:
 
 func _hero() -> String:
 	var t := _h("Statistiques du héros")
-	t += _note("« Niveau » : niveau du héros pendant la run. « Classe » : coefficients propres à chaque classe (data/classes.json).")
+	t += _note("« Niveau » : niveau du héros pendant la run. « Classe » : coefficients propres à chaque classe.")
 	t += _table(["Statistique", "Formule"], [
 		["PV max", "(PV du niveau × coef. classe + 2 × For + 1,5 × Sag) × (1 + PV % cartes, équipement et buffs) + PV de l'équipement"],
 		["Attaque physique", "(45 × 1,1^(niveau − 1) × coef. classe + att. physique de l'équipement + 0,6 × For) × (1 + attaque % des cartes)"],

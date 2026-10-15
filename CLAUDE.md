@@ -33,6 +33,9 @@ Enclume additive : bonus +0 à +7 AJOUTÉ au +N du hub, total plafonné à +12 (
 suivant le niveau du héros en Survie (`Craft.gem_run_factor`). Insignes : 25 de participation (`Run.INSIGNIA_BASE`). Premiers niveaux
 plus rapides (`Epochs.xp_boost`), début de carte plus doux (`EARLY_EASE` / `EARLY_RAMP`). Mesures : `tools/sim_survie.py`
 (pilote automatique en parallèle, EDEN_PROFILE jetable, `--hub new|E.C.N.G`, `--human`), test `test_gear_run`.
+Lot E4 (nuit du 15/10, rapport `conception/nuit_15_10/R_E4.md`) : coffre de cape (`SlotChests.BOXES.back`, enclume comprise) ; une arme
+choisie en Survie découvre les armes des 17 types au palier de la carte (`SlotChests.weapon_family`, `Run.seen_family`) ; fournitures au
+niveau des pièces de la carte (`RunDirector.supply_level`), gemmes +1 rang par époque (`gem_level`). Test `test_e4`.
 Armes refondues (0.1.127-0.1.128, `DESIGN.md`, « Auto-attaque des armes ») : plus de combo, deux
 variantes d'auto-attaque par type d'arme (`combat/weapon_attacks.gd`), arme principale = arme de la
 classe, arme secondaire trouvée en jeu (`Profile.equipped.offhand`, `SlotChests.offhand_offer`,
@@ -129,6 +132,13 @@ aide au combat en 4 niveaux ; lot 5 Duel à l'arme / équipé…). Le détail de
 Carnet (nuit du 15/10, lot U7, rapport `conception/nuit_15_10/R_U7.md`) : onglets construits par `CarnetPages.tabs()` (en ajouter un à la fin : la
 Collection garde l'indice 4) ; chaque page donne son sous-titre par `subtitle()` (lu par `PageScreen`, rétrocompatible) ; Carnet > Cartes = compteurs +
 lien vers Héros > Cartes (pas de doublon) ; vue d'ensemble = bandeau + 10 cartes cliquables, plus de « Déblocages » ; plus aucune mention d'Eden côté joueur.
+
+## Entrée du jeu et Guide (lot U2)
+Écran titre sans texte de zone ; accueil `ui/welcome.gd` en 3 écrans (départ, classe avec ses 3 sorts, contrôles + aide) qui tient dans la
+fenêtre à toute taille ; Guide F1 `ui/guide.gd` (un `PageScreen`) = seule aide du jeu, 6 onglets (Commandes, Cartes, Survie, Équipement, Modes,
+Détails = l'ancienne `InfoPage`) bâtis depuis les touches réelles, `Tutorial.CARDS` (champ `chapter`) et `Activities.LIST` (rôles dans `Guide.ROLES`).
+Premiers pas seulement en Survie (`Modes.current()`). Fiche nouvelle : une entrée de `Tutorial.CARDS` avec son chapitre ; `on: ""` + version = annoncée
+aux anciennes sauvegardes. Test : `test_lot9` (tailles de fenêtre comprises), captures `tests/shot_u2.tscn` (`SHOT_TAG=1280x720`).
 
 ## Journal de run
 `core/run_journal.gd` écrit une ligne JSON par carte jouée dans `user://journal.jsonl`
