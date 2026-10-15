@@ -43,6 +43,7 @@ var _fades: Array = []  # blocs qui apparaissent (finish_now les montre d'un cou
 var _tweens: Array = []
 var _best: Dictionary = {}  # la ligne mise en avant (la même instance que dans la description)
 var _best_box: PanelContainer
+var _quest_box: PanelContainer  # la ligne « Pour ta quête » (spec.quest)
 var _animating := false
 var _col_index := 0  # colonne en cours de construction (décale la montée des nombres)
 
@@ -159,6 +160,8 @@ func show_spec(spec: Dictionary) -> void:
 			_appear(tl, 0.04 * i)
 			_register_count((tl.get_child(0) as Control).get_child(0) as Label, String(d[0]), 0.15 + 0.07 * i)
 	_build_columns(spec)
+	if String(spec.get("quest", "")) != "":
+		_add_quest(String(spec.quest))
 	if String(spec.get("footnote", "")) != "":
 		var f := Hud._label(_body, String(spec.footnote), UiTheme.MIN_TEXT, UiTheme.MUTED)
 		f.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -286,11 +289,43 @@ func _build_buttons(list: Array) -> void:
 
 
 ## Les blocs défilent si l'écran est trop petit (liste de gains très longue) ; sinon ils prennent leur hauteur.
+## Ligne « Pour ta quête » : ce que ce gain change pour l'équipement des classes, et la suite (Compass.after).
+func _add_quest(text: String) -> void:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.1, 0.08, 0.04, 0.9), Color(UiTheme.GOLD, 0.7), 1, 10, false))
+	p.custom_minimum_size = Vector2(WIDTH - 90.0, 0)
+	p.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 10)
+	p.add_child(h)
+	var ic := TextureRect.new()
+	ic.texture = MenuWidgets.icon("pin")
+	ic.modulate = UiTheme.GOLD
+	ic.custom_minimum_size = Vector2(22, 22)
+	ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(ic)
+	var tag := Hud._label(h, "Ta quête", 15, UiTheme.GOLD)
+	tag.add_theme_font_override("font", UiTheme.bold_font())
+	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var l := Hud._label(h, text, 16, UiTheme.TEXT)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body.add_child(p)
+	_quest_box = p
+	_appear(p, 0.8)
+
+
 func _fit() -> void:
 	if _scroll == null:
 		return
 	var inner := _scroll.get_child(0) as Control
-	var room := 400.0
+	# la liste prend la place qui reste : une fenêtre de 720 px la raccourcit (elle défile), la ligne de quête lui prend 50 px
+	var room := clampf(get_viewport().get_visible_rect().size.y - 450.0 - (50.0 if _quest_box != null else 0.0), 170.0, 400.0)
 	_scroll.custom_minimum_size.y = minf(inner.get_combined_minimum_size().y, room)
 
 

@@ -20,7 +20,7 @@ func show_results(result: String, floor_reached: int, got: Dictionary) -> void:
 	if int(got.get("items", 0)) > 0:
 		kept.append(row("Objets des coffres", str(int(got.items)), "Ils rejoignent ton coffre commun", "equipment"))
 	if int(got.get("crystals", 0)) > 0:
-		kept.append(row("Cristaux", str(int(got.crystals)), "", "crystal"))
+		kept.append(row("Cristaux", str(int(got.crystals)), ResourceHelp.tip("crystal"), "crystal"))
 	kept.append_array(chest_rows(got.get("chests", [])))
 	if int(got.get("looks", 0)) > 0:
 		kept.append(row("Coffre d'apparence", "×%d" % int(got.looks) if int(got.looks) > 1 else "", "Palier franchi", "chest"))
@@ -44,6 +44,7 @@ func show_results(result: String, floor_reached: int, got: Dictionary) -> void:
 		"gained": gained,
 		"kept": kept,
 		"lost": [row("Build de l'ascension", "", "Sorts, cartes et équipement de la Tour", "equipment")],
+		"quest": Compass.after("tower", {"crystals": int(got.get("crystals", 0)), "looks": int(got.get("looks", 0))}),
 		"footnote": ("Build : " + "  ·  ".join(build)) if not build.is_empty() else "",
 		"buttons": [
 			{"text": "Rejouer (étage %d, %s)" % [Tower.start_floor, diff], "primary": true, "call": func():

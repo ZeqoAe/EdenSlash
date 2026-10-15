@@ -12,7 +12,7 @@ func _init() -> void:
 	add_theme_constant_override("separation", 14)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_insignia = Hud._label(self, "", 17, UiTheme.GOLD)
-	_insignia.tooltip_text = "Insignes : gagnés en Survie, ils achètent des pièces à l'Armurerie"
+	_insignia.tooltip_text = ResourceHelp.tip("insignia")
 	_insignia.mouse_filter = Control.MOUSE_FILTER_PASS
 	var ic := TextureRect.new()
 	ic.texture = UiTheme.texture(Items.material_icon("crystal"))
@@ -23,7 +23,7 @@ func _init() -> void:
 	ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(ic)
 	_crystals = Hud._label(self, "", 17, Color(0.75, 0.88, 1.0))
-	_crystals.tooltip_text = "Cristaux : gardés d'une partie à l'autre, ils paient la forge et la fabrication"
+	_crystals.tooltip_text = ResourceHelp.tip("crystal")
 	_crystals.mouse_filter = Control.MOUSE_FILTER_PASS
 	refresh()
 

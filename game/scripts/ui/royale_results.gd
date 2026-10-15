@@ -25,6 +25,7 @@ func show_results(place: int, kills: int, level: int, chests: int, secs: float, 
 		"tiles": tiles,
 		"kept": kept,
 		"lost": [row("Équipement et potions", "", "Ils restent dans la partie", "equipment")],
+		"quest": Compass.after("royale", {"looks": 1 if (got.get("text", []) as Array).any(func(t): return String(t).begins_with("Coffre d'apparence")) else 0}),
 		"buttons": [
 			{"text": "Rejouer", "primary": true, "call": func():
 				get_tree().paused = false

@@ -30,6 +30,7 @@ func spec() -> Dictionary:
 		"gained": gained_rows(),
 		"kept": kept_rows(kept),
 		"lost": lost_rows(kept),
+		"quest": Compass.after("survival", {"unlocked": Run.unlocked_epoch, "seen": Run.seen_items.size()}),
 		"buttons": [
 			{"text": "Rejouer (%s)" % epoch_name, "primary": true, "disabled": not Run.survival or Run.epoch > Epochs.unlocked(), "call": _replay},
 			{"text": "Retour au lobby", "call": _finish},
@@ -72,12 +73,12 @@ static func gained_rows() -> Array:
 ## Butin gardé : insignes (avec le détail au survol), pièces découvertes, coffres, fournitures de la réserve.
 static func kept_rows(supplies_kept: bool) -> Array:
 	var out: Array = []
-	out.append(row("Insignes", "+%d" % Run.insignia_gain, insignia_tip(), "upgrade"))
+	out.append(row("Insignes", "+%d" % Run.insignia_gain, insignia_tip() + "\n\n" + ResourceHelp.hint("insignia"), "upgrade"))
 	if not Run.seen_items.is_empty():
 		out.append(row("Pièces découvertes", str(Run.seen_items.size()), "À acheter à l'Armurerie avec des insignes", "equipment"))
 	out.append_array(chest_rows(Run.new_reward_chests()))
 	if supplies_kept and supplies() > 0:
-		out.append(row("Fournitures", str(supplies()), "Elles rejoignent ta réserve", "gem"))
+		out.append(row("Fournitures", str(supplies()), "Elles rejoignent ta réserve : parchemins, pierres, gemmes et formules se dépensent à la Forge.", "gem"))
 	return out
 
 

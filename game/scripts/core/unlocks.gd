@@ -22,7 +22,7 @@ const LIST := {
 	"league": {"name": "Ligue", "cond": "Bats 3 duellistes de la Tour (ou gagne 3 duels).", "legacy": true},
 	"dungeons": {"name": "Donjons", "cond": "Gagne l'époque II.", "legacy": false},
 	"royale": {"name": "Battle royale", "cond": "Atteins le rang Argent de la Ligue (ou gagne 6 duels).", "legacy": false},
-	"siege": {"name": "Le Siège", "cond": "Gagne l'époque II, puis atteins une puissance d'équipement suffisante.", "legacy": false},
+	"siege": {"name": "Le Siège", "cond": "Gagne l'époque II (les difficultés plus dures demandent de la puissance d'équipement).", "legacy": false},
 	"gauntlet": {"name": "Gantelet", "cond": "Atteins le rang Or de la Ligue.", "legacy": false},
 	"arenas": {"name": "Arènes avec alliés IA", "cond": "Atteins le rang Or de la Ligue.", "legacy": false},
 	"pantheon": {"name": "Panthéon des cerveaux", "cond": "Atteins le rang Platine de la Ligue.", "legacy": false},

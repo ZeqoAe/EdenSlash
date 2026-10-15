@@ -98,7 +98,7 @@ func _on_selection() -> void:
 func show_detail(sel: Array) -> void:
 	_sync_tabs()
 	if sel.is_empty():
-		detail.text = "[center]\n[img=72x72]%s[/img]\n\n[font_size=20][b]Choisis une pièce[/b][/font_size]\n[color=#c8c8d4]dans la grille, à gauche.[/color][/center]" % Items.material_icon("crystal")
+		detail.text = "[center]\n[img=72x72]%s[/img]\n\n[font_size=20][b]Choisis une pièce[/b][/font_size]\n[color=#c8c8d4]dans la grille, à gauche.[/color]%s[/center]" % [Items.material_icon("crystal"), _crystal_hint()]
 		if bench == "gems":
 			_fusion()
 		return
@@ -120,6 +120,13 @@ func show_detail(sel: Array) -> void:
 			_reforge(it)
 		"dismantle":
 			_dismantle(it)
+
+
+## Sans cristaux, la Forge dit où en trouver (passe P6) : rien ne se dépense sans savoir d'où ça vient.
+func _crystal_hint() -> String:
+	if Profile.in_run or Profile.amount("crystal") > 0:
+		return ""
+	return "\n\n[color=#ffb347]Tu n'as pas de cristaux.[/color]\n[color=#c8c8d4]%s[/color]" % ResourceHelp.KINDS.crystal.get
 
 
 ## Nom, type et qualité de la pièce : les trois premières lignes de sa fiche.

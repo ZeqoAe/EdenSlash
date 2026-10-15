@@ -78,7 +78,7 @@ func _ready() -> void:
 	head.add_theme_font_override("font", UiTheme.title_font())
 	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_count = Hud._label(hh, "", 18, UiTheme.TEXT)
-	_count.tooltip_text = "Plans de donjon trouvés"
+	_count.tooltip_text = ResourceHelp.tip("plan")
 	_count.mouse_filter = Control.MOUSE_FILTER_PASS
 	var sc := ScrollContainer.new()
 	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL

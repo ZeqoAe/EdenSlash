@@ -133,7 +133,14 @@ static func label(key: String) -> String:
 	return key
 
 
+## Description d'une fourniture, suivie de « où en trouver » et « à quoi ça sert » (ResourceHelp, passe P6).
 static func describe_key(key: String) -> String:
+	var base := _describe_base(key)
+	var h := ResourceHelp.hint(ResourceHelp.kind_of_key(key))
+	return base if h == "" or base == "" else base + "\n" + h
+
+
+static func _describe_base(key: String) -> String:
 	var p := key.split(":")
 	match p[0]:
 		"gem":

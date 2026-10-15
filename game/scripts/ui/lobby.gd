@@ -62,6 +62,8 @@ var _reward_nums: Label
 var _footer: Label
 var _info_bar: Control  # pied de page (insignes, cristaux, heure) : le panneau central lui laisse la place
 var _gear_band: Label  # « 3 / 60 classes équipées » (Registre de l'équipement)
+var _compass: Button  # la boussole : un conseil, une ligne cliquable en haut de l'écran (Compass)
+var _compass_go := {}
 var _gear_sep: VSeparator
 var _clock: Label
 var _snapshot: Texture2D
@@ -1082,6 +1084,8 @@ func _build_ui() -> void:
 	user.texture = MenuWidgets.icon("user")
 	user.modulate = MenuWidgets.ICON_TINT
 	_footer = Hud._label(ih, "", 14, UiTheme.TEXT)
+	_footer.mouse_filter = Control.MOUSE_FILTER_STOP
+	_footer.tooltip_text = ResourceHelp.tip("insignia") + "\n\n" + ResourceHelp.tip("crystal")  # où les gagner, où les dépenser
 	# Registre de l'équipement (lot E3) : classes équipées ; un clic ouvre le Registre du Carnet
 	_gear_sep = VSeparator.new()
 	ih.add_child(_gear_sep)
@@ -1091,9 +1095,7 @@ func _build_ui() -> void:
 	_gear_band.tooltip_text = "Registre de l'équipement"
 	_gear_band.gui_input.connect(func(ev: InputEvent):
 		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT and Unlocks.is_open("collection"):
-			for i in _archive.page_count():
-				if _archive.page(i) is RegistryPage:
-					_archive.open(i))
+			_open_registry())
 	ih.add_child(VSeparator.new())
 	var clock := _tex(ih, Vector2(22, 22))
 	clock.texture = MenuWidgets.icon("clock")
@@ -1110,6 +1112,7 @@ func _build_ui() -> void:
 	root.add_child(_dev_button)
 	Settings.changed.connect(func(): _dev_button.visible = Dev.enabled())
 
+	_build_compass(root)
 	# écrans plein écran
 	_hero = HeroScreen.new(6)
 	add_child(_hero)
@@ -1129,6 +1132,83 @@ func _build_ui() -> void:
 	_settings = SettingsMenu.new()
 	add_child(_settings)
 	_refresh_ui()
+
+
+## La boussole : une pastille cliquable à gauche du badge de classe (jamais sur les pages) ; le texte se recalcule dans _refresh_ui.
+func _build_compass(root: Control) -> void:
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	b.expand_icon = true
+	b.add_theme_font_size_override("font_size", 15)
+	b.add_theme_constant_override("icon_max_width", 22)
+	b.add_theme_constant_override("h_separation", 10)
+	b.add_theme_color_override("font_color", UiTheme.TEXT)
+	b.add_theme_color_override("font_hover_color", Color(1, 0.96, 0.8))
+	b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(MenuWidgets.GLASS, 0.78), Color(UiTheme.GOLD_DIM, 0.8), 1, 20, false))
+	b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.13, 0.12, 0.26, 0.95), UiTheme.GOLD, 2, 20, false))
+	b.add_theme_stylebox_override("pressed", UiTheme.flat_box(Color(0.13, 0.12, 0.26, 0.95), UiTheme.GOLD, 2, 20, false))
+	b.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	b.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	b.offset_right = -396  # à gauche du badge de classe
+	b.offset_top = 44
+	b.offset_bottom = 84
+	b.visible = false
+	b.pressed.connect(func(): _compass_open(_compass_go))
+	root.add_child(b)
+	_compass = b
+
+
+## Met à jour la boussole : le conseil du moment (Compass.advice), ou rien hors du lobby.
+func _refresh_compass() -> void:
+	if _compass == null:
+		return
+	var adv := Compass.advice()
+	_compass.visible = not adv.is_empty()
+	if adv.is_empty():
+		return
+	_compass_go = adv.go
+	_compass.text = String(adv.text)
+	_compass.tooltip_text = "%s\n%s" % [adv.text, adv.tip] if String(adv.tip) != "" else String(adv.text)
+	_compass.icon = ResourceHelp.icon(String(adv.icon)) if ResourceHelp.has(String(adv.icon)) else MenuWidgets.icon("pin")
+	var font := _compass.get_theme_font("font")
+	var want := font.get_string_size(_compass.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 70.0
+	var room := get_viewport().get_visible_rect().size.x - 396.0 - 490.0  # entre le logo et le badge
+	var w := clampf(want, 140.0, maxf(room, 140.0))
+	_compass.custom_minimum_size.x = w
+	_compass.offset_right = -396.0
+	_compass.offset_left = -396.0 - w
+	_compass.size = Vector2(w, 40)
+
+
+## Le clic de la boussole : ouvre la page décrite par [param go] (voir Compass).
+func _compass_open(go: Dictionary) -> void:
+	if go.is_empty() or _launching:
+		return
+	if go.has("workshop"):
+		_workshop.open(int(go.workshop))
+	elif go.has("chests"):
+		_chests.open(0)
+	elif go.has("registry"):
+		_open_registry()
+	elif go.has("hero"):
+		_open_hero(String(go.hero))
+	elif go.has("menu"):
+		if go.has("zone"):
+			_dg_zone = String(go.zone)
+		if go.has("tab"):
+			_duel_tab = String(go.tab)
+		_show_menu(String(go.menu))
+
+
+## Carnet > Registre de l'équipement.
+func _open_registry() -> void:
+	for i in _archive.page_count():
+		if _archive.page(i) is RegistryPage:
+			_archive.open(i)
+			return
 
 
 func _tex(parent: Control, px: Vector2) -> TextureRect:
@@ -1185,6 +1265,7 @@ func _welcome_flow() -> void:
 	var pending := Tutorial.take_card()
 	if pending != "" and not pending in news:
 		news.append(pending)
+	news = Tutorial.news_sorted(news)
 	Profile.save_profile()
 	if news.is_empty():
 		return
@@ -1284,7 +1365,6 @@ func _fit_scroll() -> void:
 		var info_left := get_viewport().get_visible_rect().size.x - 28.0 - maxf(372.0, _info_bar.get_combined_minimum_size().x)
 		if info_left < _sub_panel.position.x + _sub_panel.custom_minimum_size.x:
 			bottom = 100.0  # le panneau passerait sous le pied de page
-	news = Tutorial.news_sorted(news)
 	var avail := get_viewport().get_visible_rect().size.y - _sub_panel.position.y - bottom - 28.0 - (foot_h + 10.0 if foot_h > 0.0 else 0.0)
 	var want := clampf(_sub.get_combined_minimum_size().y, 0.0, maxf(avail, 120.0))
 	if absf(_scroll.custom_minimum_size.y - want) > 0.5:
@@ -1403,6 +1483,9 @@ func _activity_head(id: String) -> void:
 	var bn := Activities.banner(Activities.get_def(id))
 	bn.custom_minimum_size.y = 118
 	_sub.add_child(bn)
+	var gl := GainChips.line(Activities.get_def(id), Activities.locked(Activities.get_def(id)))  # ce que cette activité donne
+	if gl != null:
+		_sub.add_child(gl)
 
 
 ## Survie : l'époque (3 cartes), le rang héroïque, puis Lancer.
@@ -1576,6 +1659,7 @@ func _dungeon_pickers(menu: String, siege: bool) -> void:
 			_show_menu(menu))
 		dr.add_child(b)
 	_pe_gauge(Siege.power_required(_dg_zone, _dg_diff) if siege else Dungeons.power_required(_dg_zone, _dg_diff))
+	_pe_next(_dg_zone, siege)
 
 
 ## Bouton de lancement fermé par la PE : le détail est dans la jauge de la page (_pe_gauge).
@@ -1584,7 +1668,7 @@ const PE_LOW := "Puissance d'équipement insuffisante"
 
 ## Jauge de la PE exigée par la difficulté choisie (passe P5) : la tienne / la requise, verte quand elle suffit.
 ## Rien en Normal (aucune PE requise).
-func _pe_gauge(need: int) -> void:
+func _pe_gauge(need: int, label := "") -> void:
 	if need <= 0:
 		return
 	var have := GearPower.hero_power()
@@ -1594,7 +1678,10 @@ func _pe_gauge(need: int) -> void:
 	box.mouse_filter = Control.MOUSE_FILTER_STOP
 	box.tooltip_text = "Puissance d'équipement (PE). Pour la monter : des pièces de plus haut niveau à l'Armurerie, puis +N, gemmes et enchantements à la Forge."
 	_sub.add_child(box)
-	Hud._label(box, "PE requise : %s · la tienne : %s" % [GearPower.fmt(need), GearPower.fmt(have)], 14, UiTheme.BUFF if ok else UiTheme.MUTED)
+	var line := "PE requise : %s · la tienne : %s" % [GearPower.fmt(need), GearPower.fmt(have)]
+	if label != "":
+		line = "%s : PE requise %s · la tienne %s" % [label, GearPower.fmt(need), GearPower.fmt(have)]
+	Hud._label(box, line, 14, UiTheme.BUFF if ok else UiTheme.MUTED)
 	var bar := ProgressBar.new()
 	bar.max_value = float(need)
 	bar.value = float(mini(have, need))
@@ -1610,6 +1697,18 @@ func _pe_gauge(need: int) -> void:
 	bar.add_theme_stylebox_override("fill", fill)
 	bar.add_theme_stylebox_override("background", bg)
 	box.add_child(bar)
+
+
+## La difficulté choisie est ouverte : la jauge de la première plus dure qui ne l'est pas encore (passe P6), pour que la prochaine
+## marche à gravir se voie sans cliquer dessus. [param siege] : la PE exigée est celle du Siège.
+func _pe_next(zid: String, siege: bool) -> void:
+	var ok_now := Siege.power_ok(zid, _dg_diff) if siege else Dungeons.power_ok(zid, _dg_diff)
+	if not ok_now:
+		return  # la jauge de la difficulté choisie dit déjà ce qui manque
+	for i in range(_dg_diff + 1, Dungeons.DIFF_NAMES.size()):
+		if not (Siege.power_ok(zid, i) if siege else Dungeons.power_ok(zid, i)):
+			_pe_gauge(Siege.power_required(zid, i) if siege else Dungeons.power_required(zid, i), String(Dungeons.DIFF_NAMES[i]))
+			return
 
 
 ## Le Siège : trois héros (toi et deux alliés IA), cinq vagues, le boss de la zone, puis le chacun pour soi.
@@ -1706,6 +1805,8 @@ func _menu_rush() -> void:
 			_dg_diff = di
 			_show_menu("rush"))
 		dr.add_child(b)
+	_pe_gauge(Dungeons.power_required(Dungeons.RUSH, _dg_diff))
+	_pe_next(Dungeons.RUSH, false)
 	_dungeon_allies_picker()
 	var go := MenuWidgets.gold_button("Lancer la Ruée", 22, Vector2(0, 58))
 	go.disabled = not Unlocks.is_open("dungeons") or not Dungeons.power_ok(Dungeons.RUSH, _dg_diff)
@@ -1716,7 +1817,6 @@ func _menu_rush() -> void:
 func _start_rush() -> void:
 	if _launching or not Unlocks.is_open("dungeons") or not Dungeons.power_ok(Dungeons.RUSH, _dg_diff):
 		return
-	_pe_gauge(Dungeons.power_required(Dungeons.RUSH, _dg_diff))
 	_launching = true
 	if backdrop:
 		backdrop.release()
@@ -1786,6 +1886,7 @@ func _refresh_ui() -> void:
 		return
 	Unlocks.refresh()
 	_refresh_locks()
+	_refresh_compass()
 	var cid := Profile.selected_class
 	var cd := GameData.class_data(cid)
 	_badge_icon.texture = UiTheme.texture(String(cd.get("icon", "")))

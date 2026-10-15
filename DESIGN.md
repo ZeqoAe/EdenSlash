@@ -730,6 +730,28 @@ Un proc = déclencheur + chance + recharge interne + effet (`scripts/combat/proc
   sauvegarde, jamais deux fois la même, remplacée si le joueur l'a obtenue entre-temps), visible dans la roue et dans la
   liste « Gains ». Le lancer donne l'apparence de la case désignée, pitié comprise ; le gain s'affiche en grand 3 s.
 
+## La quête commune se voit (passe P6, 0.1.186)
+
+Toutes les activités servent une quête : l'équipement optimal de toutes les classes, les titres, les apparences. Le moteur
+est dans les rapports `conception/nuit_15_10/R_E*.md` ; la passe P6 le rend lisible (rapport `R_P6.md`).
+
+- **Gains en pastilles** : chaque activité de la page Jouer porte, en icônes, ce qu'elle seule donne (`Activities.LIST`,
+  clé `gives`, `ui/gain_chips.gd`) : Survie = pièces, maîtrise, insignes, étoiles ; Donjons = panoplies, plans, cristaux,
+  parchemins ; Tour = cristaux, gemmes, apparences ; Ruée = parchemins, pierres, cristaux, titres ; Siège = formules,
+  cristaux, apparences ; Duel = rangs, titres, maîtrise, Esprits ; etc. La page de l'activité les répète avec leur nom.
+- **Chaque ressource dit où l'obtenir et où la dépenser** (`core/resource_help.gd`, une table) : infobulle des icônes,
+  du pied du lobby, de la bourse de l'Atelier, des fournitures (`Craft.describe_key`), des lignes de bilan, de la Forge sans cristaux.
+- **Boussole** (`core/compass.gd`, ligne cliquable en haut du lobby) : un seul conseil, recalculé à chaque affichage pour la
+  classe choisie. Ordre : première Survie ; pièce du coffre commun que « Équiper le meilleur » poserait ; pièce achetable avec
+  les insignes ; coffres à ouvrir ; ce qui manque à la classe (emplacement vide, niveau, panoplie de donjon ou Esprits, +10,
+  gemmes, enchantements) avec l'activité qui le donne ; échelon suivant du fil d'éveil ; classe suivante du Registre.
+  Jamais en partie. Une activité fermée est remplacée par son échelon (« Gagne l'époque II : les Donjons s'ouvrent »).
+- **Bilans** : une ligne « Ta quête » (`spec.quest`, `Compass.after(mode, gains)`) dit ce que le gain change (« plan obtenu »,
+  « panoplie Tempête 2 / 6 : un coffre de set donne +1 pièce », « 170 cristaux pour la Forge », « Esprits 1 / 6 »…), puis la suite.
+- **Pages Donjon, Siège, Ruée** : sous la difficulté choisie, la jauge de la première difficulté plus dure encore fermée par la PE.
+- Parcours de la première heure : Survie, bilan, boussole « une pièce est achetable », Armurerie, « À équiper : Héros >
+  Équipement » (le dernier pas après un achat), boussole suivante. Test : `tests/test_compass.tscn`.
+
 ## Plafond de niveau par zone
 
 - Limestone (map 1) : butin au niveau 15 maximum, monstres plafonnés au niveau 15 (18 en rage

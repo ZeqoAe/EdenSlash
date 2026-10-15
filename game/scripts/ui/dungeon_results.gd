@@ -34,11 +34,20 @@ func show_results(got: Dictionary) -> void:
 		var r: Dictionary = got.get("reward", {})
 		kept.append_array(chest_rows(r.get("chests", [])))
 		if int(r.get("crystals", 0)) > 0:
-			kept.append(row("Cristaux", str(int(r.crystals)), "", "crystal"))
+			kept.append(row("Cristaux", str(int(r.crystals)), ResourceHelp.tip("crystal"), "crystal"))
 		if String(r.get("plan", "")) != "":
 			kept.append(row("Plan de fabrication", "", "À fabriquer à l'Atelier", "equipment"))
 		if String(r.get("title", "")) != "":
 			gained.append(row("Titre « %s »" % String(r.title), "", "", "user"))
+	var quest := {}
+	if victory or rush or siege:
+		var rw: Dictionary = got.get("reward", {})
+		quest = {"crystals": int(rw.get("crystals", 0)), "plan": String(rw.get("plan", "")), "title": String(rw.get("title", "")),
+			"formulas": siege and (rw.get("chests", []) as Array).any(func(c): return String(c.get("focus", "")) == "enchant"),
+			"looks": 1 if siege and String(got.get("outcome", "")) in ["won", "escaped"] else 0}
+		for c in rw.get("chests", []):
+			if String(c.get("archetype", "")) != "":
+				quest["archetype"] = String(c.archetype)
 	var tiles: Array = [progress, [Dungeons.DIFF_NAMES[diff], "difficulté"], [str(Run.max_level), "niveau"], [Run.duration_text(), "durée"],
 		[str(Run.kills), "monstres"], [str(Run.elites), "élites"]]
 	show_spec({
@@ -49,6 +58,7 @@ func show_results(got: Dictionary) -> void:
 		"tiles": tiles,
 		"gained": gained,
 		"kept": kept,
+		"quest": Compass.after("siege" if siege else ("rush" if rush else "dungeon"), quest),
 		"buttons": [
 			{"text": "Rejouer (la Ruée)" if rush else ("Rejouer (même siège)" if siege else "Rejouer (même donjon)"), "primary": true, "call": func():
 				get_tree().paused = false

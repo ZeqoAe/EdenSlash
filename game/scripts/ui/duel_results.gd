@@ -47,6 +47,8 @@ func show_results(won: bool, score: String, opponent: String, diff: int, total: 
 		],
 		"gained": rep.gained,
 		"kept": rep.kept,
+		"quest": Compass.after("duel", {"promoted": bool(Duel.last_report.get("promoted", false)), "rank_name": League.rank_name(),
+			"mode": String(Duel.last_report.get("mode", "")), "spirit": Duel.last_report.get("text", []).any(func(t): return String(t).begins_with("Pièce de la panoplie des Esprits"))}),
 		"buttons": [
 			{"text": "Rejouer (même adversaire)", "primary": true, "call": func():
 				get_tree().paused = false

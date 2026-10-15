@@ -10,25 +10,25 @@ const GROUPS := [["pve", "Aventure (JcE)"], ["pvp", "Affrontements (JcJ)"]]
 ## Rangées de la page Jouer (3 colonnes) : Aventure, Défis, Affrontements.
 const ROWS := [["adventure", "Aventure"], ["challenge", "Défis"], ["versus", "Affrontements"]]
 const LIST := [
-	{"id": "survival", "row": "adventure", "group": "pve", "name": "Survie", "sub": "Horde, coffres et boss", "gain": "Maîtrise, insignes, pièces",
+	{"id": "survival", "row": "adventure", "group": "pve", "name": "Survie", "sub": "Horde, coffres et boss", "gain": "Maîtrise, insignes, pièces", "gives": ["piece", "mastery", "insignia", "stars"],
 		"desc": "Explore la carte, tiens face à la horde, bats le boss."},
-	{"id": "dungeon", "row": "adventure", "unlock": "dungeons", "group": "pve", "name": "Donjons", "sub": "Salles, boss et alliés IA", "gain": "Panoplies, plans, cristaux",
+	{"id": "dungeon", "row": "adventure", "unlock": "dungeons", "group": "pve", "name": "Donjons", "sub": "Salles, boss et alliés IA", "gain": "Panoplies, plans, cristaux", "gives": ["panoply", "plan", "crystal", "fortify"],
 		"desc": "Quatre salles, un boss."},
-	{"id": "tower", "row": "adventure", "unlock": "tower", "group": "pve", "name": "La Tour", "sub": "200 étages, une seule vie", "gain": "Cristaux, gemmes, apparences",
+	{"id": "tower", "row": "adventure", "unlock": "tower", "group": "pve", "name": "La Tour", "sub": "200 étages, une seule vie", "gain": "Cristaux, gemmes, apparences", "gives": ["crystal", "gem", "look"],
 		"desc": "Une carte et un coffre par étage, des duels de toutes les classes."},
-	{"id": "mastery", "row": "challenge", "unlock": "daily", "img": "survival", "group": "pve", "name": "Défi de maîtrise", "sub": "Une Survie par jour", "gain": "Maîtrise ×2, insignes ×1,5",
+	{"id": "mastery", "row": "challenge", "unlock": "daily", "img": "survival", "group": "pve", "name": "Défi de maîtrise", "sub": "Une Survie par jour", "gain": "Maîtrise ×2, insignes ×1,5", "gives": ["mastery", "insignia"],
 		"desc": ""},
-	{"id": "trials", "row": "challenge", "img": "training", "group": "pve", "name": "Épreuves de maîtrise", "sub": "Leçons chronométrées", "soon": true, "gain": "Médailles, maîtrise",
+	{"id": "trials", "row": "challenge", "img": "training", "group": "pve", "name": "Épreuves de maîtrise", "sub": "Leçons chronométrées", "soon": true, "gain": "Médailles, maîtrise", "gives": ["mastery"],
 		"desc": "Une leçon par famille de classes, au chrono : bronze, argent, or."},
-	{"id": "rush", "row": "challenge", "unlock": "dungeons", "img": "dungeon", "group": "pve", "name": "Ruée des boss", "sub": "Les 8 boss à la suite", "gain": "Titres, cristaux, coffres",
+	{"id": "rush", "row": "challenge", "unlock": "dungeons", "img": "dungeon", "group": "pve", "name": "Ruée des boss", "sub": "Les 8 boss à la suite", "gain": "Titres, cristaux, coffres", "gives": ["fortify", "stone", "crystal", "title"],
 		"desc": "Les huit boss à la suite, une carte entre deux."},
-	{"id": "siege", "row": "challenge", "unlock": "siege", "img": "arena3", "group": "pvp", "tag": "JcE + JcJ", "name": "Le Siège", "sub": "Vagues, boss, chacun pour soi", "gain": "Apparence légendaire, cristaux",
+	{"id": "siege", "row": "challenge", "unlock": "siege", "img": "arena3", "group": "pvp", "tag": "JcE + JcJ", "name": "Le Siège", "sub": "Vagues, boss, chacun pour soi", "gain": "Apparence légendaire, cristaux", "gives": ["formula", "crystal", "look"],
 		"desc": "5 vagues, un boss, puis chacun pour soi. Le dernier debout gagne."},
-	{"id": "duel", "row": "versus", "unlock": "duel_free", "group": "pvp", "name": "Duel", "sub": "1 contre 1, à l'arme ou équipé", "gain": "Rangs, titres, maîtrise",
+	{"id": "duel", "row": "versus", "unlock": "duel_free", "group": "pvp", "name": "Duel", "sub": "1 contre 1, à l'arme ou équipé", "gain": "Rangs, titres, maîtrise", "gives": ["rank", "title", "mastery", "spirit"],
 		"desc": "Un héros adverse, piloté par l'IA, à armes égales ou avec ton build."},
-	{"id": "arenas", "row": "versus", "unlock": "arenas", "img": "arena2", "group": "pvp", "name": "Arènes", "sub": "2 contre 2 ou 3 contre 3", "gain": "Titres, maîtrise",
+	{"id": "arenas", "row": "versus", "unlock": "arenas", "img": "arena2", "group": "pvp", "name": "Arènes", "sub": "2 contre 2 ou 3 contre 3", "gain": "Titres, maîtrise", "gives": ["title", "mastery", "insignia"],
 		"desc": "Toi et tes alliés IA contre une équipe IA."},
-	{"id": "royale", "row": "versus", "unlock": "royale", "img": "battlefield", "group": "pvp", "name": "Battle royale", "sub": "8 héros, un seul survivant", "gain": "Coffre d'apparence, titre, maîtrise",
+	{"id": "royale", "row": "versus", "unlock": "royale", "img": "battlefield", "group": "pvp", "name": "Battle royale", "sub": "8 héros, un seul survivant", "gain": "Coffre d'apparence, titre, maîtrise", "gives": ["look", "title", "mastery"],
 		"desc": ""},
 	{"id": "training", "row": "", "group": "", "name": "Zone d'entraînement", "sub": "Sorts, armes et cartes, sans enjeu", "gain": "Rien (banc d'essai)",
 		"desc": ""},
@@ -93,6 +93,13 @@ static func card(a: Dictionary, size := Vector2(0, 118)) -> Button:
 	if tag != null:
 		tag.position = Vector2(10, 10)
 		b.add_child(tag)
+	var gc := GainChips.icons(a, 18, soon)  # ce que l'activité donne : icônes seules, le détail au survol
+	if gc != null:
+		gc.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		gc.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		gc.offset_right = -8
+		gc.offset_top = 8
+		b.add_child(gc)
 	var ch := Hud._label(b, "›", 34, Color(1, 0.98, 0.92, 0.9 if not soon else 0.4))
 	ch.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
 	ch.offset_left = -26
