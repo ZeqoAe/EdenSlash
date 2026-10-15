@@ -19,7 +19,7 @@ const CHAPTERS := [
 ## Anciens identifiants de chapitre (appels existants) -> nouvel identifiant ou « chapitre:bloc ».
 const ALIASES := {"commands": "controls", "steps": "controls:steps", "tips": "controls:tips", "news": "news"}
 ## Ordre des fiches du chapitre « Survie » (le déroulé d'abord).
-const RUN_ORDER := ["portal", "rage", "anvil", "merchant", "shrine", "fortune", "reward_chest", "results"]
+const RUN_ORDER := ["portal", "rage", "anvil", "merchant", "shrine", "fortune", "giant", "reward_chest", "results"]
 ## Rôle de chaque activité : ce qu'elle est seule à apporter.
 const ROLES := {
 	"survival": "Le cœur du jeu : tu y découvres de nouvelles pièces et ta classe y gagne de la maîtrise.",

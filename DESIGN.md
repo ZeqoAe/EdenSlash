@@ -179,7 +179,8 @@ proposent **une pièce d'équipement au choix parmi 3** : coffre (spécial → �
 mythique, ×2,5), coffre doré (épique → légendaire, ×6, pilier de lumière) ; des **lieux à usage unique**
 (pilier de lumière) : 3 **enclumes** (+1 garanti sur une pièce portée), 2 **autels du scribe** (parchemin
 d'enchantement au choix), 3 **fontaines de vie**, 2 **pierres d'aimant** (toute l'XP et le butin), 1 **autel de
-cupidité** (+50 % d'or et de butin, monstres +25 %), 2 **stèles du défi** (3 élites : coffre de récompense
+cupidité** (pacte : +50 % d'or, de butin et d'insignes, monstres +25 % jusqu'à la fin de la carte), 2 **autels du géant**
+(un géant à vaincre : une carte, mais la Menace monte, voir « Pacte, géants et Menace »), 2 **stèles du défi** (3 élites : coffre de récompense
 mythique / légendaire et fournitures), 1 **autel de la fortune** (idée du joueur : pyramide de 8 étages,
 étages 1 à 7 de 8 à 2 cases dont une piégée ; encaisser ou monter, la case piégée fait tout perdre ; gains :
 or, clés, puis coffres de forge, joaillier, équipement, set, trophées ; sommet (1 chance sur 8) : une
@@ -521,6 +522,32 @@ l'époque II avec un équipement d'époque I à +10.
 | Équipement rare → mythique | coffres ouvragés (mythique 7 % par proposition) |
 | Équipement épique → légendaire | coffres dorés (légendaire 15 %, mythique 22 % par proposition) |
 | Mythique / légendaire garantis, sets | coffres de récompense : boss d'étape (100 %), stèles du défi (100 %), élites (20 %) |
+
+## Pacte, géants et Menace (passe P12, 0.1.191, idée du joueur inspirée de Megabonk)
+
+But : faire sentir qu'une run se prépare avant le boss, en offrant des risques choisis qui paient. Code : `core/menace.gd`,
+`world/giant_altar.gd`, `ai/giant_monster.gd`, `ui/menace_badge.gd` ; crochets d'une ligne dans `RunDirector` et `Run.finish`.
+
+- **Pacte** (autel de cupidité, 1 par carte, existait déjà) : jusqu'à la fin de la carte, monstres +25 % (PV et dégâts, ceux déjà
+  là compris), or et butin ×1,5 ; nouveau : les **insignes** de fin de run +50 % au prorata des cartes jouées sous pacte.
+- **Autel du géant** (2 par carte, gratuits, une fois chacun, pas en rage) : un **géant** surgit, le monstre ordinaire le plus fort
+  du moment agrandi ≈ ×2,8 (×3,5 avec le drapeau d'élite) : PV de 8 élites de la zone au même niveau, coup de 1,6 élite, plafonné
+  à 30 % des PV max du héros (jamais tué d'un coup), lent (×0,72). Une attaque sur deux est une grande zone au sol : écrasement
+  (cercle de 5,5 m sous le héros, 1,25 s), onde (anneau 2,6-12 m, à sauter, 1,4 s), balayage (éventail de 160°, 9 m, 1,1 s).
+  Vaincu : une **carte au choix parmi 3** (une relance), 60 + 15 × niveau d'or, ses récompenses d'élite (clé…), expérience
+  bornée à 3 élites ; **Menace +1**.
+- **Menace** : chaque cran, PV des monstres vivants de la carte, de tous les monstres suivants **et des boss suivants** +20 %
+  (cumul additif : ×1,2, ×1,4… ; plafond **5 = ×2**, un géant de plus ne la monte plus) ; dégâts inchangés. Le boss garde ses PV
+  fixes (P11) multipliés par la Menace (appliquée à la fin de l'image, après son réglage). Remise à zéro au début de chaque run.
+  Récompense : insignes de fin de run **+10 % par cran** (au plus +50 %), plus le pacte (au plus ×2 en tout).
+- **Bornes** : 2 géants par carte au plus (6 par run) : 2 cartes de plus par carte, contre ≈ 10 aux sanctuaires ; pas de géant en
+  rage (les paliers de rage en feraient un mur, et une ferme à rage est fermée par P9). La rage ne change pas ; en JcJ, à la Tour et
+  au Battle royale, ni géant ni pacte (Menace 0).
+- **HUD** : pastille sous les objectifs, « ☠ Menace ×1,2 » et « ⚖ Pacte » ; le détail chiffré est dans l'infobulle. Bilan : ligne
+  « Menace ×1,4 et pacte » dans le détail des insignes. Journal de run : `menace`, `giants_summoned`, `giants_killed`, `pact`,
+  `pact_maps` et compteurs `giant_kills`, `giant_ttk_sum`, or « geants ». Fiche de découverte « Géants et Menace ».
+- **Mesures** : `--giants=N` fait invoquer N géants par carte au pilote automatique (2:00 puis 4:30). Test : `tests/test_p12.tscn` ;
+  captures : `tests/shot_p12.tscn`.
 
 ## Déroulement d'une run (10 minutes + rage)
 

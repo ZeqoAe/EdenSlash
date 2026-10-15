@@ -109,6 +109,9 @@ Idées en vrac du joueur (15/10, 0.1.153 à 0.1.158, classement et état dans `c
 5 vagues, boss (fureur 6 min), anneau de 20 s, cœur au centre, chacun pour soi à trois (`Combatant.set_ffa`, `Siege.ffa` = règles JcJ, profil
 `siege` de `ModeRules`) ; dernier debout = coffre `look_legend`, cœur emporté = `look_epic`. Reste : Battle royale, MOBA 4v4 (conçus dans le
 même fichier, pas codés), les 39 sorts de `conception/fx_audit.csv`, « Triple lame ».
+Pacte, géants et Menace (0.1.191, P12, `DESIGN.md`) : `core/menace.gd` (Menace : PV des monstres et boss +20 % par géant vaincu, plafond 5,
+remise à zéro dans `RunDirector.start`), `world/giant_altar.gd` (2 autels par carte, `--giants=N` pour le pilote auto), `ai/giant_monster.gd`,
+`ui/menace_badge.gd` ; crochets d'une ligne dans `RunDirector` (`_spawn_monster(..., into)`, `Menace.apply`) et `Run.finish`. Test : `test_p12`.
 Battle royale (0.1.161, idée 9, détail dans `conception/IDEES_EN_VRAC.md`) : `core/royale.gd` (état, calendrier de l'anneau, héros scriptés,
 récompenses) et `core/royale_director.gd` (carte `ProcMap.generate_royale`, 7 `ClassRival` qui pillent / fuient l'anneau / se battent via `ClassRival.goal`,
 coffres du joueur, anneau visible). Le « chacun pour soi » est général : `Combatant.ffa_id` / `set_ffa()` / `clear_ffa()` + groupe « ffa » (le Siège s'en sert aussi).

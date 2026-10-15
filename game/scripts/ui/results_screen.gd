@@ -123,10 +123,15 @@ static func insignia_lines() -> Array:
 	var base := 0
 	for l in out:
 		base += int(l[1])
-	var bonus := Run.insignia_gain - Run.fortune_insignia - base
+	var bonus := Run.insignia_gain - Run.fortune_insignia - Menace.insignia_extra - base
 	if bonus > 0:
 		var who := "Défi de maîtrise" if Run.heroic_rank <= 0 else ("Rang héroïque %d" % Run.heroic_rank if not Challenge.active else "Défi et rang héroïque")
 		out.append([who, bonus])
+	if Menace.insignia_extra > 0:  # géants vaincus et pactes de la run (passe P12)
+		var label := "Pacte de cupidité"
+		if Menace.level > 0:
+			label = "Menace %s" % Menace.mult_text() + (" et pacte" if Menace.pact_maps > 0 else "")
+		out.append([label, Menace.insignia_extra])
 	if Run.fortune_insignia > 0:
 		out.append(["Autel de la fortune", Run.fortune_insignia])
 	return out

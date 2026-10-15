@@ -68,6 +68,7 @@ const STATIONS := {
 	"greed": {"count": 1, "title": "Autel de cupidité", "model": "uc033", "scale": 1.5, "col": 0.0},
 	"challenge": {"count": 2, "title": "Stèle du défi", "model": "ub201_1", "scale": 1.0, "col": 0.9},
 	"fortune": {"count": 1, "title": "Autel de la fortune", "model": "ub106", "scale": 0.9, "col": 1.4},
+	"giant": {"count": 2, "title": "Autel du géant", "model": "ud112", "scale": 0.3, "col": 0.0},  # passe P12 (GiantAltar)
 }
 ## Lieux de décor (repères, avec des objets à casser autour).
 const SITE_KINDS := ["ruins", "ruins", "ruins", "tower", "tower", "arch", "bones", "bones", "mine", "mine", "camp", "camp", "camp", "market", "market"]
@@ -967,6 +968,10 @@ func _build_stations() -> void:
 			for i in 3:
 				var a := TAU * i / 3.0
 				_add_instance(batch, {"model": "ud101", "scale": [0.5, 0.6]}, st.pos + Vector3(cos(a), 0, sin(a)) * 2.6, false)
+		elif st.kind == "giant":
+			for i in 4:  # crânes autour de la grande cage thoracique
+				var a := TAU * i / 4.0 + 0.8
+				_add_instance(batch, {"model": "ud101", "scale": [0.7, 0.9]}, st.pos + Vector3(cos(a), 0, sin(a)) * 3.4, false)
 		elif st.kind == "greed":
 			for i in 3:
 				var a := TAU * i / 3.0 + 0.4

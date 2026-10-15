@@ -36,7 +36,7 @@ func _ready() -> void:
 	var kinds := {}
 	for st in map.stations:
 		kinds[st.kind] = int(kinds.get(st.kind, 0)) + 1
-	check("lieux : %s" % [kinds], kinds.size() == 7)
+	check("lieux : %s" % [kinds], kinds.size() == ProcMap.STATIONS.size())
 	check("%d lieux de décor, %d plateaux" % [map.sites.size(), map.plateaus.size()], map.sites.size() >= 18 and map.plateaus.size() >= 5)
 
 	# jarre : un coup suffit, de l'or

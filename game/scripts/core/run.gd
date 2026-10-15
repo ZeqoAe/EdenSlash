@@ -228,6 +228,7 @@ func finish(res: String) -> void:
 		Profile.insignia += insignia_gain
 		insignia_gain += fortune_insignia  # (déjà crédités à l'autel)
 	if res == "victoire":
+		insignia_gain = Menace.add_insignia(insignia_gain, stage)  # Menace atteinte, cartes sous pacte (passe P12)
 		Profile.runs_won += 1
 		unlocked_name = Profile.unlock_after(zone_id)
 		if survival and stage >= RunDirector.STAGES:

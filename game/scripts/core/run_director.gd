@@ -120,6 +120,7 @@ var royale: RoyaleDirector  # mode Battle royale : huit héros, un anneau (Royal
 
 
 func start(p: Player) -> void:
+	Menace.reset()  # Menace et pacte : propres à chaque run (passe P12)
 	RunJournal.context = _journal_context
 	player = p
 	zone = GameData.zone(Run.zone_id)
@@ -174,6 +175,7 @@ func start(p: Player) -> void:
 		message.emit("Zone d'entraînement\nF3 : panneau (niveau, sorts, cartes, ennemis, DPS)", 4.0)
 		return
 	_refresh_chest_labels()
+	GiantAltar.attach(self)  # mesures : --giants=N
 	if Run.survival:
 		message.emit("%s · %s\nTu pars avec ton équipement du hub : les coffres de la carte le remplacent le temps de la run, puis trouve le donjon" % [zone.name, Epochs.get_def(Run.epoch).name], 4.5)
 	else:
@@ -204,7 +206,7 @@ func _journal_context() -> Dictionary:
 	if map == null:
 		return {}
 	return {"chests_opened": chests_opened, "chests_total": map.chests.size(), "shrines": shrines_captured,
-		"shrines_total": map.shrines.size(), "state": state}
+		"shrines_total": map.shrines.size(), "state": state}.merged(Menace.journal(greed))
 
 
 func time_left() -> float:
@@ -642,8 +644,8 @@ func _despawn_far() -> int:
 const ZONE_DAMAGE := [0.55, 0.8]
 
 
-func _spawn_monster(id: int, pos: Vector3, level: int, boss := false) -> Monster:
-	var m := Monster.new()
+func _spawn_monster(id: int, pos: Vector3, level: int, boss := false, into: Monster = null) -> Monster:
+	var m := into if into != null else Monster.new()  # [param into] : un monstre déjà créé (géant de l'autel)
 	m.configure(GameData.monster(id), boss, level)
 	var zi := GameData.zone_index(String(zone.get("id", ""))) if not Run.survival else Run.stage - 1
 	if zi >= 0 and zi < ZONE_DAMAGE.size():
@@ -671,6 +673,7 @@ func _spawn_monster(id: int, pos: Vector3, level: int, boss := false) -> Monster
 		m.enrage()
 		_apply_rage_mult(m)
 	m.died.connect(_on_monster_died)
+	Menace.apply(m)  # PV × Menace (boss compris, après ses PV fixes)
 	return m
 
 
@@ -1508,8 +1511,11 @@ func _use_station(it: Interactable) -> void:
 		"greed":
 			it.use_up()
 			greed = true
+			Menace.pact_taken(get_tree(), GREED_MONSTERS)  # les monstres déjà là aussi ; insignes de la carte ×1,5
 			world.set_rage_mood(state == "rage")
-			message.emit("Pacte de cupidité : +50 % d'or et de butin\\nles monstres sont plus forts (+25 %)", 3.5)
+			message.emit("PACTE DE CUPIDITÉ\nOr, butin et insignes accrus : les monstres se renforcent", 3.5)
+		"giant":
+			GiantAltar.invoke(self, it)
 		"challenge":
 			it.use_up()
 			_start_challenge(it.global_position)

@@ -165,6 +165,7 @@ func _build() -> void:
 	root.add_child(_left)
 	_build_objectives(root)
 	_build_tutorial(root)
+	MenaceBadge.attach(_left, director)  # « Menace ×1,2 · Pacte » sous les objectifs (passe P12)
 	_build_minimap(root)
 	_build_target(root)
 	_build_action_bar(root)
