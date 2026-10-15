@@ -77,7 +77,10 @@ func _ready() -> void:
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(dim)
 	_panel = PanelContainer.new()
-	_panel.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.05, 0.04, 0.1, 0.98), UiTheme.GOLD, 2, 14))
+	var box := UiTheme.flat_box(Color(0.05, 0.04, 0.1, 0.98), UiTheme.GOLD, 2, 14)
+	box.set_content_margin_all(24)  # (passe M7) le contenu touchait le cadre
+	box.content_margin_top = 16
+	_panel.add_theme_stylebox_override("panel", box)
 	_panel.set_anchors_preset(Control.PRESET_CENTER)
 	_panel.custom_minimum_size = Vector2(1060, 640)
 	_panel.position = Vector2(-530, -320)
@@ -156,9 +159,15 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if phase == Phase.SEARCH and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("pause")):
+	if not (event.is_action_pressed("ui_cancel") or event.is_action_pressed("pause")):
+		return
+	# Échap / B : annule la recherche, refuse le match trouvé (passe M7 : sans effet à cette étape avant)
+	if phase == Phase.SEARCH:
 		get_viewport().set_input_as_handled()
 		_finish("Recherche annulée.")
+	elif phase == Phase.FOUND and not me_accepted:
+		get_viewport().set_input_as_handled()
+		_finish("Match refusé.")
 
 
 func _finish(reason: String) -> void:
@@ -335,7 +344,7 @@ func _build_draft() -> void:
 	right.custom_minimum_size = Vector2(300, 0)
 	cols.add_child(right)
 	Hud._label(right, "Adversaire", 18, Color(1.0, 0.6, 0.55))
-	_hero_card(right, opp_class, "%s · niveau %d" % [opp_name, level], Color(1.0, 0.6, 0.55))
+	_hero_card(right, opp_class, _opp_line(), Color(1.0, 0.6, 0.55))
 	_status_opp = Hud._label(right, "", 16, UiTheme.MUTED)
 	_update_opp_status()
 	var sp := Control.new()
@@ -345,6 +354,15 @@ func _build_draft() -> void:
 	_validate.pressed.connect(lock_in)
 	right.add_child(_validate)
 	_refresh_draft()
+
+
+## Ligne sous l'adversaire : son niveau et son IA (le nom de la classe est déjà au-dessus).
+func _opp_line() -> String:
+	var ai := "IA %s" % String(ClassRival.NAMES[clampi(diff, 0, 3)]).to_lower()
+	for b in MlDuelPilot.BRAINS:
+		if Duel.pilot != "" and String(b[0]) == Duel.pilot:
+			ai = "cerveau %s" % String(b[1]).to_lower()
+	return "Niveau %d · %s" % [level, ai]
 
 
 func _enter_draft_again() -> void:
@@ -375,7 +393,7 @@ func _refresh_draft() -> void:
 		_req_box.add_child(h)
 		var mark := Hud._label(h, "✔" if r.ok else "✘", 18, UiTheme.BUFF if r.ok else Color(1.0, 0.45, 0.4))
 		mark.custom_minimum_size = Vector2(22, 0)
-		var l := Hud._label(h, "%s : %s" % [r.label, r.hint], 13, UiTheme.TEXT)
+		var l := Hud._label(h, "%s : %s" % [r.label, r.hint], 14, UiTheme.TEXT)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if not r.ok and open_hero.is_valid() and String(r.section) != "grimoire":
 			var sec := String(r.section)
@@ -394,7 +412,7 @@ func _refresh_draft() -> void:
 		for c in 4:
 			nc.append([int(grid[c * 3]), int(grid[c * 3 + 1]), int(grid[c * 3 + 2])])
 		SpellPresets.store(cid, "Draft de duel", nc)
-		_refresh_req_only())
+		_refresh_req_only(), false)
 	if _validate:
 		_validate.disabled = me_locked or not Duel.is_ready(cid)
 		_validate.text = "Choix validé : en attente…" if me_locked else "Valider mon choix"
@@ -410,7 +428,7 @@ func _refresh_req_only() -> void:
 		_req_box.add_child(h)
 		var mark := Hud._label(h, "✔" if r.ok else "✘", 18, UiTheme.BUFF if r.ok else Color(1.0, 0.45, 0.4))
 		mark.custom_minimum_size = Vector2(22, 0)
-		Hud._label(h, "%s : %s" % [r.label, r.hint], 13, UiTheme.TEXT)
+		Hud._label(h, "%s : %s" % [r.label, r.hint], 14, UiTheme.TEXT)
 	if _validate:
 		_validate.disabled = me_locked or not Duel.is_ready(cid)
 
@@ -444,7 +462,7 @@ func _build_recap() -> void:
 	var mine := _kit_of_player()
 	var theirs := _kit_of_rival()
 	_recap_column(cols, "Toi", Profile.selected_class, mine, Color(0.6, 0.8, 1.0))
-	_recap_column(cols, "Adversaire", opp_class, theirs, Color(1.0, 0.6, 0.55))
+	_recap_column(cols, _opp_line(), opp_class, theirs, Color(1.0, 0.6, 0.55))
 	_timer_label = Hud._label(_body, "", 20, Color.WHITE)
 	_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_bar = ProgressBar.new()
@@ -455,7 +473,7 @@ func _build_recap() -> void:
 	_bar.add_theme_stylebox_override("fill", UiTheme.flat_box(Color(0.4, 0.8, 0.5), Color(0.6, 1.0, 0.7), 1, 6, false))
 	_bar.add_theme_stylebox_override("background", UiTheme.flat_box(Color(0.06, 0.05, 0.1), UiTheme.GOLD_DIM, 1, 6, false))
 	_body.add_child(_bar)
-	var pl := Hud._label(_body, "Chargement de l'arène et des effets des deux héros…", 13, UiTheme.MUTED)
+	var pl := Hud._label(_body, "Chargement de l'arène et des effets des deux héros…", 14, UiTheme.MUTED)
 	pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var c := CenterContainer.new()
 	_body.add_child(c)
@@ -517,11 +535,11 @@ func _recap_column(parent: Control, who: String, cid: String, kit: Array, col: C
 		t.mouse_filter = Control.MOUSE_FILTER_PASS
 		flow.add_child(t)
 	if kit.is_empty():
-		Hud._label(v, "Cerveau d'IA entraîné : il joue les 12 sorts de son préréglage" if who == "Adversaire" and Duel.pilot != "" else "Auto-attaque de l'arme seulement", 13, UiTheme.MUTED)
+		Hud._label(v, "Il joue les 12 sorts de sa classe" if who != "Toi" and Duel.pilot != "" else "Auto-attaque de l'arme seulement", 14, UiTheme.MUTED)
 	if who == "Toi" and not Duel.bare:
-		Hud._label(v, "Maîtrise et certificats posés · PE %s" % GearPower.fmt(GearPower.hero_power()), 13, UiTheme.TEXT)
+		Hud._label(v, "Maîtrise et certificats posés · PE %s" % GearPower.fmt(GearPower.hero_power()), 14, UiTheme.TEXT)
 	elif who == "Toi":
-		Hud._label(v, "À l'arme : ni pièces ni maîtrise, seulement tes sorts", 13, UiTheme.MUTED)
+		Hud._label(v, "À l'arme : ni pièces ni maîtrise, seulement tes sorts", 14, UiTheme.MUTED)
 
 
 ## Préchargement : la scène de jeu en tâche de fond, puis les effets d'Eden des sorts des deux kits, un par image.

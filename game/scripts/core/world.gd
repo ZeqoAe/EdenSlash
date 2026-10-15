@@ -122,6 +122,20 @@ func _ready() -> void:
 					var bi := RivalBuilds.find(arg.trim_prefix("--duel-build="))
 					if bi >= 0:
 						Duel.rival_build = RivalBuilds.list()[bi]
+				elif arg.begins_with("--duel-mode="):
+					# mesures (passe M7) : arena2, arena3, gauntlet2, gauntlet3 ; équipes de classes au hasard
+					var dm := arg.trim_prefix("--duel-mode=")
+					var n := int(dm.right(1))
+					Duel.mode = dm.left(-1) if dm.begins_with("gauntlet") else dm
+					Duel.team_allies = Duel.team_classes(n - 1, [], [Duel.family_of(Profile.selected_class)]) if dm.begins_with("arena") else []
+					var foes := Duel.team_classes(n, Duel.team_allies)
+					opp = String(foes[0])
+					Duel.extra_foes = foes.slice(1)
+				elif arg.begins_with("--duel-level="):
+					Duel.arena_level = int(arg.trim_prefix("--duel-level="))
+					Duel.bare_level = Duel.arena_level
+				elif arg == "--duel-hazards":
+					Duel.hazards = true
 			Duel.start(Profile.selected_class, opp, dd)
 			if Run.skills.is_empty():
 				for sk in Run.class_data().get("skills", []).slice(0, 4):
@@ -194,6 +208,7 @@ func _ready() -> void:
 		elif Tower.active:
 			tower_end("abandon")
 		elif Duel.active:
+			Duel.forfeit = true  # le bilan dit « Abandon » (passe M7)
 			duel_end(false)
 		elif Royale.active:
 			royale_end(director.royale.leave_place() if director.royale else Royale.PLAYERS)  # (spectateur : sa place)
@@ -547,6 +562,10 @@ func duel_end(won: bool) -> void:
 	var opp := Duel.rival_class
 	var diff := Duel.difficulty
 	var got := Duel.finish(won)
+	if "--auto-quit" in OS.get_cmdline_user_args():
+		print("[duel] bilan %s %s, manches %s" % ["victoire" if won else "défaite", score, PvpCaps.round_times])  # mesures (passe M7)
+		get_tree().quit()
+		return
 	var r := DuelResults.new()
 	add_child(r)
 	r.show_results(won, score, opp, diff, int(got.get("total", 0)))

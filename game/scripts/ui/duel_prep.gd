@@ -86,7 +86,9 @@ static func open(anchor: Node, on_close: Callable) -> CanvasLayer:
 
 ## Grille des 12 sorts (4 cases × principal et 2 enchaînements) : [param grid] (12 ids, 0 :
 ## par défaut) est modifiée sur place ; [param on_change] après chaque choix.
-static func spell_grid(parent: Control, cid: String, grid: Array, on_change: Callable) -> void:
+## [param for_rival] : grille de l'adversaire (« Auto » = le sort de sa classe, soins et renforts marqués « IA cerveau ») ;
+## sinon celle du joueur (draft du Duel : « Aucun », tous les sorts servent).
+static func spell_grid(parent: Control, cid: String, grid: Array, on_change: Callable, for_rival := true) -> void:
 	var all: Array = GameData.class_data(cid).get("skills", [])
 	var g := GridContainer.new()
 	g.columns = 5
@@ -99,7 +101,7 @@ static func spell_grid(parent: Control, cid: String, grid: Array, on_change: Cal
 		h.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var rows := ["Principal", "Enchaîn. 1", "Enchaîn. 2"]
 	for r in 3:
-		var l := Hud._label(g, String(rows[r]), 13, UiTheme.TEXT)
+		var l := Hud._label(g, String(rows[r]), 14, UiTheme.TEXT)
 		l.custom_minimum_size = Vector2(76, 0)
 		for c in 4:
 			var idx := c * 3 + r
@@ -108,24 +110,26 @@ static func spell_grid(parent: Control, cid: String, grid: Array, on_change: Cal
 			ob.custom_minimum_size = Vector2(80, 0)
 			ob.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			ob.clip_text = true
+			ob.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS  # « Impact pro… » plutôt que « Impact prof »
 			ob.fit_to_longest_item = false
-			ob.add_item("Auto")
+			ob.add_item("Auto" if for_rival else "Aucun")
 			var sel := 0
 			for j in all.size():
 				var kind := String(all[j].get("kind", ""))
-				ob.add_item(String(all[j].name) + (" (IA cerveau)" if kind in ["buff", "heal"] else ""))
+				ob.add_item(String(all[j].name) + (" (IA cerveau)" if for_rival and kind in ["buff", "heal"] else ""))
 				ob.set_item_icon(j + 1, UiTheme.texture(String(all[j].get("icon", ""))))
 				if int(all[j].id) == int(grid[idx]):
 					sel = j + 1
 			ob.add_theme_constant_override("icon_max_width", 20)
 			ob.select(sel)
-			ob.tooltip_text = String(all[sel - 1].name) if sel > 0 else "Auto : le sort de la classe à cette place"
+			ob.tooltip_text = String(all[sel - 1].name) if sel > 0 else ("Auto : le sort de la classe à cette place" if for_rival else "Aucun sort")
 			ob.item_selected.connect(func(k):
 				grid[idx] = int(all[k - 1].id) if k > 0 else 0
-				ob.tooltip_text = String(all[k - 1].name) if k > 0 else "Auto"
+				ob.tooltip_text = String(all[k - 1].name) if k > 0 else ("Auto" if for_rival else "Aucun sort")
 				on_change.call())
 			g.add_child(ob)
-	Hud._label(parent, "Les renforcements et soins (IA cerveau) ne servent qu'à l'adversaire piloté par un cerveau d'IA ; l'IA scriptée lance ses sorts d'attaque.", 12, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if for_rival:
+		Hud._label(parent, "Les renforcements et soins (IA cerveau) ne servent qu'à l'adversaire piloté par un cerveau d'IA ; l'IA scriptée lance ses sorts d'attaque.", 14, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 
 static func _row(parent: Control, label: String) -> HBoxContainer:

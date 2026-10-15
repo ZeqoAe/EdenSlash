@@ -79,7 +79,7 @@ func open_guide() -> Guide:
 
 func open(page := -1) -> void:
 	_screen.set_title("Pause", "%s · niveau %d · %s" % [Run.class_data().get("name_fr", ""), player.level, Run.duration_text()])
-	_screen.show_wallet(not Royale.active)  # Battle royale : ni or, ni clés, ni cristaux (passe M1)
+	_screen.show_wallet(not Royale.active and not Duel.active)  # Battle royale, duel : ni or, ni clés, ni cristaux (passes M1, M7)
 	_screen.open(page)
 
 

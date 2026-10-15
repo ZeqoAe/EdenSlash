@@ -6,6 +6,7 @@ extends Node
 
 const COUNTDOWN := 3.0
 const BETWEEN := 2.5  # pause après une manche
+const BETWEEN_TEAM := 4.0
 const SPAWN_DIST := 9.0
 
 var d: RunDirector
@@ -19,6 +20,10 @@ var _allies: Array = []  # alliés IA du joueur (Arènes)
 var _player_out := false  # le joueur est tombé mais ses alliés se battent encore
 var _center := Vector3.ZERO
 var _obj_t := 0.0
+var _bars: TeamBars  # équipes : PV de chaque héros sous le titre (passe M7)
+## Manche en cours : dégâts infligés et reçus, K.O. de chaque héros (id d'instance -> {dealt, taken, ko}, PvpCaps.board) ;
+## tableau de manche montré entre deux manches en équipe (passe M7).
+var board: Dictionary = {}
 
 
 func setup(director: RunDirector) -> void:
@@ -34,8 +39,16 @@ func setup(director: RunDirector) -> void:
 	Run.hero_level = Duel.level
 	Run.max_level = Duel.level
 	p.recalc_stats()
-	d.zone_changed.emit({"name": "Duel · %s" % GameData.class_data(Duel.rival_class).get("name_fr", ""), "levels": [Duel.level, Duel.level]})
+	# titre du HUD : le mode en équipe, en Ligue et au Panthéon ; la classe de l'adversaire en duel libre
+	var title := Duel.mode_title() if Duel.mode != "free" else "Duel · %s" % GameData.class_data(Duel.rival_class).get("name_fr", "")
+	d.zone_changed.emit({"name": title, "levels": [Duel.level, Duel.level]})
 	_start_round()
+	if Duel.team_mode():
+		_bars = TeamBars.new()
+		var stack: Node = d.world.hud.get("_left") if d.world.get("hud") != null else null
+		if stack != null:
+			stack.add_child(_bars)  # pile de gauche du HUD, sous le titre
+			_bars.setup(self)
 
 
 func _ground(p: Vector3) -> Vector3:
@@ -68,8 +81,21 @@ func _start_round() -> void:
 		_rival.passive = true  # immobile pendant le compte à rebours
 		_rival.died.connect(_on_rival_died)
 	_spawn_team(p)
+	if is_instance_valid(_pilot):
+		_pilot.others = _allies  # le cerveau vise aussi tes alliés (avant : le joueur seul, figé quand il tombait)
+	# tableau de la manche, caméra rendue au joueur (elle suivait un allié s'il était tombé)
+	PvpCaps.board = {}
+	board = PvpCaps.board
+	for c in [p] + _allies + _foes + ([_foe] if is_instance_valid(_foe) else []):
+		if is_instance_valid(c) and not c.died.is_connected(_note_ko):
+			c.died.connect(_note_ko)
+	if d.world.rig != null:
+		d.world.rig.target = p
+	if _bars != null:
+		_bars.rebuild()
 	phase = "countdown"
 	_t = COUNTDOWN
+	_hazard_at = HAZARD_FIRST
 	PvpCaps.elapsed = 0.0
 	d.message.emit("Manche %d · %d - %d" % [Duel.round_n, Duel.wins, Duel.losses], 1.5)
 	if p.autoplay:
@@ -150,6 +176,9 @@ func update(delta: float) -> void:
 		PvpCaps.elapsed += delta
 		if was < PvpCaps.pressure_start() and PvpCaps.elapsed >= PvpCaps.pressure_start():
 			d.message.emit("Acharnement : les coups font plus mal, les soins faiblissent", 2.5)
+		var late := ModeRules.num("sudden_after", 100000.0)
+		if was <= late and PvpCaps.elapsed > late:
+			d.message.emit("Mort subite : les coups font de plus en plus mal", 2.5)  # (passe M7)
 	match phase:
 		"countdown":
 			var n := ceili(_t)
@@ -172,6 +201,10 @@ func update(delta: float) -> void:
 			if _t <= 0.0:
 				Duel.round_n += 1
 				_start_round()
+	if phase == "fight" and _player_out:
+		_follow_ally()
+	if phase == "fight" and Duel.hazards and Duel.team_mode():
+		_hazard_tick(delta)
 	if phase == "fight" and _player_out and _all_down(_allies):
 		_player_out = false
 		Duel.losses += 1
@@ -185,7 +218,71 @@ func update(delta: float) -> void:
 	_obj_t -= delta
 	if _obj_t <= 0.0:
 		_obj_t = 0.25
-		d.objective_changed.emit("Duel · manche %d · toi %d - %d %s" % [Duel.round_n, Duel.wins, Duel.losses, GameData.class_data(Duel.rival_class).get("name_fr", "")])
+		var vs := Duel.mode_title() if Duel.team_mode() else String(GameData.class_data(Duel.rival_class).get("name_fr", ""))
+		d.objective_changed.emit("%s · manche %d · %d - %d" % [vs, Duel.round_n, Duel.wins, Duel.losses])
+
+
+## Arène piégée (passe M7) : passé HAZARD_FIRST s de manche, toutes les HAZARD_EVERY s, une zone de feu par paire de
+## héros debout (2 à 3) tombe près d'un héros tiré au sort ; HAZARD_DELAY s d'annonce, puis HAZARD_HIT des PV max à
+## chaque héros dedans (tous camps, sans défense : le même danger pour tous), sauf s'il esquive.
+const HAZARD_FIRST := 10.0
+const HAZARD_EVERY := 8.0
+const HAZARD_DELAY := 1.4
+const HAZARD_RADIUS := 3.2
+const HAZARD_HIT := 0.12
+const HAZARD_COLOR := Color(0.78, 0.3, 1.0)  # violet : ni le rouge des coups, ni la couleur du sable
+var _hazard_at := HAZARD_FIRST
+
+
+func _fighters() -> Array:
+	var out: Array = []
+	for c in [d.player] + _allies + _foes + ([_foe] if is_instance_valid(_foe) else []):
+		if is_instance_valid(c) and not c.is_dead and not c in out:
+			out.append(c)
+	return out
+
+
+func _hazard_tick(_delta: float) -> void:
+	if PvpCaps.elapsed < _hazard_at:
+		return
+	_hazard_at = PvpCaps.elapsed + HAZARD_EVERY
+	var alive := _fighters()
+	if alive.is_empty():
+		return
+	for i in clampi(alive.size() / 2, 1, 3):
+		var who: Combatant = alive[randi() % alive.size()]
+		var at: Vector3 = _ground(who.global_position + Vector3(randf_range(-2.5, 2.5), 0, randf_range(-2.5, 2.5)))
+		var tg := Telegraph.spawn(d, at, 0.0, {"shape": "circle", "radius": HAZARD_RADIUS, "delay": HAZARD_DELAY, "damage": 0.0, "color": HAZARD_COLOR})
+		tg.resolved.connect(func(_hit): _hazard_hit(tg))
+
+
+func _hazard_hit(tg: Telegraph) -> void:
+	if not is_instance_valid(tg) or phase != "fight":
+		return
+	for c in _fighters():
+		if not tg.contains(c.global_position, c.radius):
+			continue
+		if c.has_method("is_invulnerable") and c.is_invulnerable():
+			DamageNumber.spawn_text(c, "ESQUIVE", Color(0.7, 1.0, 0.7))
+			continue
+		c.take_damage(c.max_hp * HAZARD_HIT, null, false, true)
+
+
+## K.O. du tableau de la manche.
+func _note_ko(_who: Combatant, killer: Combatant) -> void:
+	if phase == "fight" and killer != null and is_instance_valid(killer):
+		PvpCaps.board_add(killer, "ko", 1)
+
+
+## Le joueur est tombé, ses alliés se battent : la caméra suit le premier allié debout (spectateur jusqu'à la manche suivante).
+func _follow_ally() -> void:
+	if d.world.rig == null:
+		return
+	for a in _allies:
+		if is_instance_valid(a) and not a.is_dead:
+			if d.world.rig.target != a:
+				d.world.rig.target = a
+			return
 
 
 func _on_rival_died(_who: Combatant, _killer: Combatant) -> void:
@@ -204,6 +301,7 @@ func player_down() -> void:
 	if not _allies.is_empty() and not _all_down(_allies):
 		_player_out = true  # les alliés continuent ; la manche est perdue quand ils tombent aussi
 		d.message.emit("Tu es tombé : tes alliés se battent encore !", 2.5)
+		_follow_ally()
 		return
 	Duel.losses += 1
 	for f in _foes:
@@ -219,6 +317,8 @@ func player_down() -> void:
 
 func _end_round(won: bool) -> void:
 	PvpCaps.round_times.append(snappedf(PvpCaps.elapsed, 0.1))
+	if d.player.autoplay:
+		print("[duel] manche %d %s en %.1f s (%s, %s)" % [Duel.round_n, "gagnée" if won else "perdue", PvpCaps.elapsed, Duel.mode, ClassRival.NAMES[Duel.difficulty]])
 	if Duel.wins >= Duel.ROUNDS_TO_WIN or Duel.losses >= Duel.ROUNDS_TO_WIN:
 		phase = "done"
 		var victory := Duel.wins >= Duel.ROUNDS_TO_WIN
@@ -228,5 +328,5 @@ func _end_round(won: bool) -> void:
 		d.get_tree().create_timer(2.5).timeout.connect(func(): d.world.duel_end(victory))
 		return
 	phase = "between"
-	_t = BETWEEN
+	_t = BETWEEN_TEAM if Duel.team_mode() else BETWEEN  # en équipe : le temps de lire le tableau de la manche
 	d.message.emit("Manche gagnée ! %d - %d" % [Duel.wins, Duel.losses] if won else "Manche perdue… %d - %d" % [Duel.wins, Duel.losses], 2.0)

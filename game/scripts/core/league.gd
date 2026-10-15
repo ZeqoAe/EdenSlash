@@ -58,12 +58,35 @@ static func daily() -> Dictionary:
 	return d
 
 
-## Insignes d'une victoire dans le mode [param key] (« arena2 », « gauntlet_3 »…) : pleins à la 1re du jour.
-static func win_insignia(key: String) -> int:
+## Insignes d'une victoire dans le mode [param key] (« arena2 », « gauntlet_3 »…) : pleins à la 1re du jour,
+## × la difficulté [param diff] des adversaires rapportée à Difficile (passe M7 : la difficulté se choisit ; une
+## 1re victoire en Facile paie environ 60 %, en Hardcore 118 %).
+static func win_insignia(key: String, diff := 2) -> int:
 	var d := daily()
 	var n := int(d.get(key, 0))
 	d[key] = n + 1
-	return int(DAILY_INSIGNIA.get(key, REPEAT_INSIGNIA)) if n == 0 else REPEAT_INSIGNIA
+	return daily_insignia(key, diff) if n == 0 else REPEAT_INSIGNIA
+
+
+## Insignes de la 1re victoire du jour dans le mode [param key] à la difficulté [param diff] (sans la compter).
+static func daily_insignia(key: String, diff := 2) -> int:
+	var k := float(DIFF_FACTOR[clampi(diff, 0, DIFF_FACTOR.size() - 1)]) / float(DIFF_FACTOR[2])
+	return roundi(float(DAILY_INSIGNIA.get(key, REPEAT_INSIGNIA)) * k)
+
+
+## Insignes de la promotion au rang [param rank].
+static func promo_insignia(rank: int) -> int:
+	return 40 * rank
+
+
+## La 1re victoire du jour du mode [param key] est-elle encore à prendre ?
+static func daily_open(key: String) -> bool:
+	return int(daily().get(key, 0)) == 0
+
+
+## Coffre d'apparence de la promotion au rang [param rank] (passe M7 : rang gardé à vie, donc une seule fois) :
+## Bronze et Argent rare, Or mythique, Platine légendaire.
+const PROMO_LOOK := ["", "look_rare", "look_rare", "look_epic", "look_legend"]
 
 
 ## Insignes d'une partie de Battle royale : la meilleure place du jour paie la différence avec la précédente.
@@ -98,7 +121,7 @@ static func streak() -> int:
 
 ## Un duel de Ligue est terminé : [param won] ; renvoie {promoted, rank, mastery}.
 static func report(won: bool, class_id: String, rounds_won: int) -> Dictionary:
-	var out := {"promoted": false, "rank": rank_index(), "mastery": 0}
+	var out := {"promoted": false, "rank": rank_index(), "mastery": 0, "text": [], "chests": []}
 	if won:
 		Profile.records["league_streak"] = streak() + 1
 		out.mastery = mastery_for(rounds_won, target_rank())
@@ -107,7 +130,12 @@ static func report(won: bool, class_id: String, rounds_won: int) -> Dictionary:
 		if streak() >= WINS_PER_RANK and next > rank_index():
 			Profile.records["league_rank"] = next
 			Profile.records["league_streak"] = 0
-			Profile.insignia += 40 * next
+			Profile.insignia += promo_insignia(next)
+			(out.text as Array).append("+%d insignes (promotion)" % promo_insignia(next))
+			var look := String(PROMO_LOOK[next])
+			if look != "":
+				Profile.chest_add(look, Pantheon.LEVEL)
+				(out.chests as Array).append(look)
 			out.promoted = true
 			out.rank = next
 	else:

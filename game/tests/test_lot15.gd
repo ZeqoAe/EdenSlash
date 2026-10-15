@@ -17,9 +17,9 @@ func _ready() -> void:
 	# règles des profils d'équipe
 	Duel.active = true
 	Duel.mode = "arena2"
-	check("arène 2v2 : échelle 0,022, soins ×0,5", ModeRules.profile_name() == "arena2" and is_equal_approx(PvpCaps.damage_scale(), 0.022) and is_equal_approx(PvpCaps.heal_mult(), PvpCaps.HEAL_MULT * 0.5))
+	check("arène 2v2 : échelle 0,026 (passe M7), soins ×0,5", ModeRules.profile_name() == "arena2" and is_equal_approx(PvpCaps.damage_scale(), 0.026) and is_equal_approx(PvpCaps.heal_mult(), PvpCaps.HEAL_MULT * 0.5))
 	Duel.mode = "arena3"
-	check("arène 3v3 : échelle 0,018", is_equal_approx(PvpCaps.damage_scale(), 0.018))
+	check("arène 3v3 : échelle 0,024 (passe M7)", is_equal_approx(PvpCaps.damage_scale(), 0.024))
 	Duel.mode = "gauntlet"
 	check("Gantelet : règles du duel équipé", ModeRules.profile_name() == "gauntlet" and is_equal_approx(PvpCaps.damage_scale(), PvpCaps.DAMAGE_SCALE))
 	Duel.active = false
@@ -75,6 +75,8 @@ func _kill(t, src) -> void:
 		if t.is_dead:
 			return
 		t.hp = 1.0
+		if t is ClassRival:
+			t._invuln_until = 0.0  # (passe M7 : les héros IA esquivent aussi les zones de leurs adversaires)
 		t.take_damage(1e12, src, false)
 
 

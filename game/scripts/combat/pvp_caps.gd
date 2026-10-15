@@ -59,8 +59,22 @@ static func reset_stats() -> void:
 	best_taken = 0.0
 
 
+## Tableau de la manche en équipe (passe M7, DuelDirector) : id d'instance -> {dealt, taken, ko} ; vidé à chaque manche.
+static var board: Dictionary = {}
+
+
+static func board_add(c: Combatant, key: String, v: float) -> void:
+	if c == null or not is_instance_valid(c):
+		return
+	var e: Dictionary = board.get(c.get_instance_id(), {"dealt": 0.0, "taken": 0.0, "ko": 0})
+	e[key] = float(e.get(key, 0.0)) + v
+	board[c.get_instance_id()] = e
+
+
 ## Coup [param dmg] de [param src] sur [param dst] (déjà plafonné) : pour le bilan.
 static func note_hit(src: Combatant, dst: Combatant, dmg: float) -> void:
+	board_add(src, "dealt", dmg)
+	board_add(dst, "taken", dmg)
 	var frac := dmg / maxf(dst.max_hp, 1.0)
 	if src is Player and not (src as Player).foe:
 		best_dealt = maxf(best_dealt, frac)
@@ -73,10 +87,21 @@ static func active() -> bool:
 	return Modes.is_pvp()
 
 
+## Mort subite (passe M7) : passé [constant SUDDEN_AFTER] s, l'acharnement double en plus toutes les [constant SUDDEN_STEP] s.
+## Mesuré (arène d'IA, cerveau contre cerveau) : les duels avec un soigneur ou un tank soigneur (Clerc, Paladin, Barde)
+## duraient 95 à 120 s à tout niveau quand les autres tenaient en 50-90 s ; les manches de moins de 90 s ne changent pas.
+const SUDDEN_AFTER := 90.0
+const SUDDEN_STEP := 5.0
+
+
 ## Multiplicateur d'acharnement (1 avant [constant PRESSURE_START] s). Les valeurs viennent du
 ## profil du mode en cours (ModeRules) ; les constantes ci-dessus sont les chiffres de départ.
 static func pressure() -> float:
-	return pow(2.0, maxf(0.0, elapsed - pressure_start()) / ModeRules.num("pressure_step", PRESSURE_STEP))
+	var p := pow(2.0, maxf(0.0, elapsed - pressure_start()) / ModeRules.num("pressure_step", PRESSURE_STEP))
+	var late := ModeRules.num("sudden_after", 100000.0)
+	if elapsed > late:
+		p *= pow(2.0, (elapsed - late) / ModeRules.num("sudden_step", SUDDEN_STEP))
+	return p
 
 
 static func pressure_start() -> float:

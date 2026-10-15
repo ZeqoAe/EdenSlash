@@ -259,3 +259,19 @@ code qu'une fois 8 et 9 en place (ils fournissent les camps multiples, les vague
   0,12 s entre chacune, chacune une vraie zone de dégâts qui projette en l'air. Il manque côté moteur : un état « en l'air »
   pour les monstres (aujourd'hui seuls renversement et étourdissement existent) et un type de sort « salve » qui pose
   plusieurs zones en ligne (le type `cast` des armes le fait déjà : `_cast_land` pose une liste de points).
+
+---
+
+## Passe M7 (nuit du 15/10) : Arènes, Duel, Gantelet — six idées de game designer
+
+| # | Idée | Apport | Coût | État |
+|---|---|---|---|---|
+| 1 | **Arène piégée** : option des Arènes et du Gantelet ; passé 10 s, des zones de feu violettes tombent près des héros toutes les 8 s, pour les deux camps (12 % des PV, esquive possible) ; les héros IA les lisent et les esquivent | Les manches ne se ressemblent plus, on bouge, la lecture du terrain compte | Faible (Telegraph existant) | **Fait (0.1.205)** : `DuelDirector._hazard_tick`, `Duel.hazards` |
+| 2 | **Rang et série visibles, promotions qui comptent** : pastilles de série vers le rang suivant, IA du rang, récompense de la promotion affichée ; promotion = insignes + coffre d'apparence (rare, rare, mythique, légendaire) ; 1re victoire du jour (insignes) affichée sur Arènes et Gantelet | Le joueur sait où il en est et ce qu'il gagne ; la Ligue rejoint la quête des apparences | Faible | **Fait** : `League.PROMO_LOOK`, `daily_insignia`, pages du lobby |
+| 3 | **PV des équipes et tableau de manche** : sous le titre du HUD, une barre par héros (bleu / rouge) ; entre deux manches, dégâts infligés et K.O. de chacun ; si tu tombes, la caméra suit un allié | Lisibilité d'une mêlée à six, retour sur son jeu, plus d'écran figé sur un corps | Faible | **Fait** : `ui/team_bars.gd`, `PvpCaps.board` |
+| 4 | **Modificateur de manche choisi par le perdant** : entre deux manches, le camp qui vient de perdre choisit 1 de 2 modificateurs (soins ÷ 2, vitesse + 20 %, critiques ×2, arène piégée) pour la manche suivante | Retours en arrière, choix tactique ; la table `Modifiers` existe | Moyen (UI de choix, IA qui choisit) | Proposé |
+| 5 | **Saisons de Ligue** : tous les 30 jours, rang de saison remis à Bronze (le rang à vie reste pour les déblocages) ; fin de saison = apparence exclusive et titre « Saison N · Or » | Rejouabilité de la Ligue une fois Platine atteint | Moyen (dates, migration, récompenses uniques) | Proposé |
+| 6 | **Entraînement contre un cerveau avec retour** : après chaque manche contre un cerveau, 3 lignes concrètes (« 3 esquives sur 11 coups annoncés », « tes sorts ont touché 4 fois sur 9 », « tu as pris 40 % de tes dégâts dans le dos ») | Apprendre le JcJ sans tutoriel ; les compteurs `ml_counts` existent | Moyen | Proposé |
+
+Aussi envisagés, écartés pour cette passe : « Roi de la colline » (nouveau mode, cercle à tenir : à faire avec le Champ de
+bataille), revoir la dernière manche (enregistrer les positions de 6 héros à 20 Hz : lourd pour un gain modeste).

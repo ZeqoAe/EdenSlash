@@ -41,6 +41,7 @@ static func spawn(parent: Node, pos: Vector3, yaw: float, props: Dictionary) -> 
 
 
 func _ready() -> void:
+	add_to_group("telegraphs")  # les héros scriptés en équipe les lisent pour esquiver (ClassRival._read_zones, passe M7)
 	var outline := MeshInstance3D.new()
 	outline.mesh = _shape_mesh(1.0)
 	outline.material_override = _mat(0.08 if small else 0.12)  # fond léger : le héros reste visible

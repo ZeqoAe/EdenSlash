@@ -232,7 +232,7 @@ func foes() -> Array:
 	if ffa_id >= 0:
 		return Combatant.ffa_foes(get_tree(), self)
 	if foe:
-		return get_tree().get_nodes_in_group("player")
+		return Combatant.hostile_heroes(get_tree(), self)  # le joueur et ses alliés IA (Arènes : passe M7)
 	return get_tree().get_nodes_in_group("monsters") + get_tree().get_nodes_in_group("foe_heroes")
 
 

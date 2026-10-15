@@ -36,7 +36,7 @@ func _ready() -> void:
 	sa.add_child(_skills)
 	# cartes et passifs
 	var b := ItemWidgets.panel(self, 0, true)
-	b.get_parent().visible = not Survivor.active  # Survivant : passifs et sets sont sur la page Build (lot S5)
+	b.get_parent().visible = not Survivor.active and not Duel.active  # Survivant : passifs et sets sont sur la page Build (lot S5) ; duel : ni trophée ni carte (passe M7)
 	ItemWidgets.section(b, "Trophée et cartes")
 	var sb := ScrollContainer.new()
 	sb.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -149,6 +149,12 @@ Total : " + Cards.total_text(p, Run.power(pid)) if not (p.get("stat", {}) as Dic
 	var secs := (Time.get_ticks_msec() - Run.started_at) / 1000
 	var tiles := [[str(player.level if player else Run.max_level), "niveau"], ["%d:%02d" % [secs / 60, secs % 60], "durée"],
 			[str(Run.kills), "monstres"], [str(Run.elites), "élites"], [str(Run.gold), "or gagné"], [str(Run.loot.size()), "objets"]]
+	if Duel.active:
+		# duel, Arènes, Gantelet (passe M7) : ni monstres, ni or, ni objets ; le score et les coups
+		var t := int(PvpCaps.elapsed)
+		tiles = [[str(Duel.level), "niveau"], ["%d - %d" % [Duel.wins, Duel.losses], "manches"], ["%d:%02d" % [t / 60, t % 60], "manche %d" % Duel.round_n],
+			["%d %%" % roundi(PvpCaps.best_dealt * 100.0), "coup porté"], ["%d %%" % roundi(PvpCaps.best_taken * 100.0), "coup reçu"],
+			["À l'arme" if Duel.bare else "Équipé", Duel.mode_title().to_lower() if Duel.mode != "free" else "duel libre"]]
 	var rd = _royale()
 	if rd != null:
 		# Battle royale (passe M1) : ni monstres, ni or, ni objets ; les chiffres de la partie
@@ -158,8 +164,8 @@ Total : " + Cards.total_text(p, Run.power(pid)) if not (p.get("stat", {}) as Dic
 			[str(rd.chests_opened), "coffres"], [str(Potions.count("heal")), "soins"]]
 	for e in tiles:
 		ResultsPanel.tile(_stats, String(e[0]), String(e[1]), "", false, 100.0)
-	_bag_title.visible = not Profile.bag.is_empty()
-	_bag.visible = not Profile.bag.is_empty()
+	_bag_title.visible = not Profile.bag.is_empty() and not Duel.active  # (duel : rien ne se ramasse ni ne se boit)
+	_bag.visible = _bag_title.visible
 	var parts: PackedStringArray = []
 	for k in Profile.bag.keys():
 		parts.append("[img=20x20]%s[/img] %s ×%d" % [Craft.icon(k), Craft.label(k), Profile.bag_count(k)])

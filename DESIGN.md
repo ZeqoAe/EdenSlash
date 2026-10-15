@@ -248,6 +248,16 @@ chacune avec son rôle :
   du jour paie la différence avec la précédente (110 / 70 / 45 / 28 / 18 / 11 / 7 / 4), + 3 par élimination. Une heure
   de JcJ rapporte ≈ 180-190 insignes (première heure du jour ≈ 300-450 si on gagne tout), contre ≈ 360 (époque I) à
   670 (époque IV) pour une heure de Survie gagnée.
+- **Arènes, Gantelet, Ligue (passe M7)** : la difficulté des héros IA se choisit (Facile à Hardcore, Difficile par défaut) ;
+  la 1re victoire du jour paie ses insignes × la difficulté rapportée à Difficile (Facile ≈ 60 %, Hardcore ≈ 118 %). Les alliés
+  ont la fiche d'un héros de leur classe × la difficulté, comme les adversaires (avant : PV d'entraînement × 3 à × 8) et la
+  même difficulté qu'eux ; les équipes sont de familles différentes ; les adversaires soignent et renforcent leur camp
+  comme les alliés (Arènes et Gantelet). Arènes : niveau au choix (10 par défaut), échelle 0,026 (2v2) / 0,024 (3v3),
+  acharnement dès 25 s / 20 s. **Arène piégée** (option) : passé 10 s, toutes les 8 s, une zone de feu par paire de héros
+  debout (rayon 3,2 m, 1,4 s d'annonce) retire 12 % des PV max à tout héros dedans, tous camps, esquive possible.
+  **Promotion de Ligue** : + 40 × rang insignes et un coffre d'apparence (Bronze et Argent rare, Or mythique, Platine légendaire),
+  une seule fois puisque le rang est gardé à vie. **Mort subite** (duel à l'arme et équipé, Arènes, Gantelet) : passé 90 s de
+  manche, l'acharnement double en plus toutes les 5 s (les duels avec un soigneur duraient 95 à 120 s).
 - **Plans** : le plan d'une zone tombe à coup sûr au 1er donjon terminé de chaque difficulté (Normal compris), sinon une
   fois sur dix. **Fabrication** : les 9 emplacements (arme du type de la classe choisie, collier, anneau compris), modèle
   d'Eden du niveau du donjon (et non plus de la zone choisie au lobby).

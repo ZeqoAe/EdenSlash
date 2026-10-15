@@ -313,18 +313,89 @@ var _team_size := 2  # Arènes : 2 (2v2) ou 3 (3v3)
 var _team_allies: Array = ["", ""]
 var _team_brain := ""  # Arènes / Gantelet : cerveau d'IA qui pilote le premier adversaire ("" = scriptés seulement)
 var _gauntlet_foes := 2
+var _team_diff := 2  # Arènes / Gantelet : difficulté des héros IA (passe M7 : réglable, Difficile par défaut)
 
 
-## Classes au hasard (distinctes), différentes de celle du joueur.
-func _random_classes(n: int, avoid: Array = []) -> Array:
-	var pool: Array = GameData.classes.keys().filter(func(c): return not c in avoid and c != Profile.selected_class)
-	pool.shuffle()
-	return pool.slice(0, n)
+## Classes au hasard, de familles différentes (Duel.team_classes), hors de celle du joueur.
+func _random_classes(n: int, avoid: Array = [], avoid_families: Array = []) -> Array:
+	return Duel.team_classes(n, avoid, avoid_families)
+
+
+## Arènes / Gantelet (passe M7) : difficulté des héros IA, en une rangée de boutons ; [param menu] est la page à redessiner.
+func _team_diff_row(menu: String) -> void:
+	_section("Adversaires", "Leur jeu (lecture de tes coups, esquives, choix de cible) ; tes alliés jouent au même niveau.")
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	_sub.add_child(row)
+	for i in ClassRival.NAMES.size():
+		var b := MenuWidgets.glass_button(("✔ " if _team_diff == i else "") + String(ClassRival.NAMES[i]), 14, Vector2(0, 40))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var k := i
+		b.pressed.connect(func():
+			_team_diff = k
+			_show_menu(menu))
+		row.add_child(b)
+
+
+## Arènes / Gantelet (passe M7) : arène classique ou piégée (zones de feu pour tout le monde, Duel.hazards).
+func _hazard_row(menu: String) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	_sub.add_child(row)
+	for opt in [[false, "Arène classique", "Le sol est sûr : seuls les héros frappent."], [true, "Arène piégée", "Des zones de feu tombent près des héros toutes les quelques secondes, pour les deux camps : une esquive les évite."]]:
+		var b := MenuWidgets.glass_button(("✔ " if Duel.hazards == bool(opt[0]) else "") + String(opt[1]), 14, Vector2(0, 40))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.tooltip_text = String(opt[2])
+		var on := bool(opt[0])
+		b.pressed.connect(func():
+			Duel.hazards = on
+			_show_menu(menu))
+		row.add_child(b)
+
+
+## Victoires du mode et 1re victoire du jour (insignes) : une ligne, le détail en infobulle.
+func _team_record(key: String) -> void:
+	var wins := int(Profile.records.get(key + "_wins", 0))
+	var daily := League.daily_open(key)
+	var l := Hud._label(_sub, "Victoires : %d · %s" % [wins, ("1re victoire du jour : +%d insignes" % League.daily_insignia(key, _team_diff)) if daily
+		else "1re victoire du jour déjà prise"], 14, Color(0.6, 0.85, 1.0))
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.tooltip_text = "Chaque victoire rapporte de la maîtrise à ta classe ; la 1re du jour rapporte aussi des insignes (plus en difficulté haute), les suivantes %d." % League.REPEAT_INSIGNIA
+	l.mouse_filter = Control.MOUSE_FILTER_PASS
+
+
+## Conditions d'inscription [param reqs] (Duel.requirements) : seulement les points à régler, chacun avec « Régler » ;
+## tout réglé : une ligne « Héros prêt » (passe M7 : plus de liste de ✔ « 0 / 0 emplacements »).
+func _req_list(reqs: Array) -> void:
+	var todo := reqs.filter(func(r): return not r.ok)
+	if todo.is_empty():
+		var p := SpellPresets.active(Profile.selected_class)
+		var ok := Hud._label(_sub, "✔ Héros prêt · préréglage « %s »" % String(p.get("name", "")), 14, UiTheme.BUFF)
+		ok.tooltip_text = "\n".join(reqs.map(func(r): return "✔ %s : %s" % [r.label, r.hint]))
+		ok.mouse_filter = Control.MOUSE_FILTER_PASS
+		return
+	for r in todo:
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		_sub.add_child(h)
+		var mark := Hud._label(h, "✘", 20, Color(1.0, 0.45, 0.4))
+		mark.custom_minimum_size = Vector2(22, 0)
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 0)
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(v)
+		Hud._label(v, String(r.label), 15, UiTheme.TEXT)
+		Hud._label(v, String(r.hint), 14, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var sec := String(r.section)
+		var fix := MenuWidgets.glass_button("Régler", 14, Vector2(86, 36))
+		fix.pressed.connect(func(): _open_hero(sec))
+		h.add_child(fix)
 
 
 func _start_team(mode: String, allies: Array, foes: Array) -> void:
 	if _launching or foes.is_empty():
 		return
+	Duel.save_free()  # (passe M7) les réglages du duel libre reviennent au retour au lobby
 	Duel.mode = mode
 	Duel.pilot = _team_brain if MlDuelPilot.available().any(func(b): return b[0] == _team_brain) else ""
 	Duel.rival_build = {}
@@ -333,7 +404,7 @@ func _start_team(mode: String, allies: Array, foes: Array) -> void:
 	_launching = true
 	if backdrop:
 		backdrop.release()
-	Duel.start(Profile.selected_class, String(foes[0]), 2)
+	Duel.start(Profile.selected_class, String(foes[0]), _team_diff)
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
@@ -368,17 +439,21 @@ func _menu_gauntlet() -> void:
 			_gauntlet_foes = k
 			_show_menu("duel"))
 		row.add_child(b)
+	# le Gantelet se joue équipé : conditions du duel équipé (passe M7 : la page lisait celles de l'à l'arme), en tête
+	var was := Duel.bare
+	Duel.bare = false
+	var reqs := Duel.requirements(Profile.selected_class)
+	Duel.bare = was
+	_req_list(reqs)
+	_team_diff_row("duel")
+	_hazard_row("duel")
 	_team_brain_picker()
-	for r in Duel.requirements(Profile.selected_class):
-		Hud._label(_sub, "%s %s — %s" % ["✔" if r.ok else "✘", r.label, r.hint], 13, UiTheme.BUFF if r.ok else Color(1.0, 0.5, 0.45))
-	var ready := Duel.is_ready(Profile.selected_class)
+	_team_record("gauntlet_%d" % _gauntlet_foes)
+	var ready := reqs.all(func(r): return r.ok)
 	var go := MenuWidgets.gold_button("Entrer dans le Gantelet", 22, Vector2(0, 58))
 	go.disabled = not ready
-	go.tooltip_text = "" if ready else "Règle d'abord les points marqués ✘ (Héros)"
-	go.pressed.connect(func():
-		Duel.bare = false
-		_start_team("gauntlet", [], _random_classes(_gauntlet_foes)))
-	_pin(go)
+	go.pressed.connect(func(): _start_team("gauntlet", [], _random_classes(_gauntlet_foes)))
+	_pin_go(go, "" if ready else "Règle d'abord les points marqués ✘")
 
 
 ## Arènes : toi et tes alliés IA contre une équipe IA (2v2 ou 3v3), à l'arme.
@@ -409,7 +484,22 @@ func _menu_arenas() -> void:
 		var kk := k
 		ob.item_selected.connect(func(i): _team_allies[kk] = ids[i])
 		_sub.add_child(ob)
+	_team_diff_row("arenas")
+	_hazard_row("arenas")
+	# niveau de l'arène (à l'arme, comme le duel libre)
+	var lr := HBoxContainer.new()
+	lr.add_theme_constant_override("separation", 8)
+	_sub.add_child(lr)
+	Hud._label(lr, "Niveau des héros", 15, UiTheme.TEXT)
+	var sp := SpinBox.new()
+	sp.min_value = 1
+	sp.max_value = 100
+	sp.value = Duel.arena_level
+	sp.tooltip_text = "Tous les héros de l'arène, toi compris, se battent à ce niveau, à l'arme."
+	sp.value_changed.connect(func(x): Duel.arena_level = int(x))
+	lr.add_child(sp)
 	_team_brain_picker()
+	_team_record("arena%d" % _team_size)
 	var ready := Duel.is_ready_bare(Profile.selected_class)
 	var go := MenuWidgets.gold_button("Lancer l'arène", 22, Vector2(0, 58))
 	go.disabled = not ready
@@ -418,11 +508,13 @@ func _menu_arenas() -> void:
 		for k in _team_size - 1:
 			allies.append(String(_team_allies[k]) if String(_team_allies[k]) != "" else "")
 		var taken: Array = allies.filter(func(c): return c != "")
+		# alliés au hasard : d'une famille absente de ton équipe (pas deux soigneurs ni trois mêlées)
+		var fams: Array = [Duel.family_of(Profile.selected_class)] + taken.map(func(c): return Duel.family_of(String(c)))
 		for i in allies.size():
 			if allies[i] == "":
-				allies[i] = _random_classes(1, taken)[0]
+				allies[i] = _random_classes(1, taken, fams)[0]
 				taken.append(allies[i])
-		Duel.bare = true
+				fams.append(Duel.family_of(String(allies[i])))
 		_start_team("arena%d" % _team_size, allies, _random_classes(_team_size, taken)))
 	_pin_go(go, "" if ready else "Ton préréglage de sorts doit avoir 4 cases remplies.")
 
@@ -493,8 +585,18 @@ func _menu_league() -> void:
 	if League.rank_index() >= League.RANKS.size() - 1:
 		Hud._label(_sub, "Rang maximal atteint : la Ligue ne rapporte plus que de la maîtrise.", 14, UiTheme.MUTED)
 	else:
-		Hud._label(_sub, "Prochain rang : %s — %s d'affilée contre l'IA %s (%d / %d)" % [League.rank_name(nxt), GearPower.plural(League.WINS_PER_RANK, "victoire"),
-			String(ClassRival.NAMES[League.DIFFICULTY[nxt]]).to_lower(), League.streak(), League.WINS_PER_RANK], 15, UiTheme.TEXT).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		# série vers le rang suivant (passe M7) : une pastille par victoire d'affilée, la récompense de la promotion
+		var sr := HBoxContainer.new()
+		sr.add_theme_constant_override("separation", 10)
+		_sub.add_child(sr)
+		Hud._label(sr, "Vers %s · IA %s" % [League.rank_name(nxt), String(ClassRival.NAMES[League.DIFFICULTY[nxt]]).to_lower()], 17, UiTheme.TEXT)
+		var pips := Hud._label(sr, " ".join(range(League.WINS_PER_RANK).map(func(i): return "●" if i < League.streak() else "○")), 22, UiTheme.GOLD)
+		pips.tooltip_text = "%s d'affilée contre l'IA %s ; une défaite remet la série à zéro." % [GearPower.plural(League.WINS_PER_RANK, "victoire"),
+			String(ClassRival.NAMES[League.DIFFICULTY[nxt]]).to_lower()]
+		pips.mouse_filter = Control.MOUSE_FILTER_PASS
+		var look := String(League.PROMO_LOOK[nxt])
+		Hud._label(_sub, "Promotion : +%d insignes%s" % [League.promo_insignia(nxt), (", " + String(Rewards.TYPES[look].name).to_lower()) if look != "" else ""],
+			14, Color(0.6, 0.85, 1.0)).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var ready := Duel.is_ready_bare(Profile.selected_class)
 	var go := MenuWidgets.gold_button("Combat de Ligue", 22, Vector2(0, 58))
 	go.disabled = not ready
@@ -534,7 +636,7 @@ func _start_ranked(mode: String, brain: String) -> void:
 	var pool: Array = GameData.classes.keys()
 	pool.sort()
 	var opp := String(pool[randi() % pool.size()])
-	var prev := {"mode": Duel.mode, "bare": Duel.bare, "level": Duel.bare_level, "build": Duel.rival_build, "pilot": Duel.pilot}
+	Duel.save_free()  # (passe M7) rendus à l'annulation de la file ou au retour au lobby, plus seulement à l'annulation
 	Duel.mode = mode
 	Duel.bare = true
 	Duel.bare_level = Pantheon.LEVEL
@@ -547,12 +649,7 @@ func _start_ranked(mode: String, brain: String) -> void:
 			backdrop.release()
 		Duel.start(Profile.selected_class, opp, diff)
 		get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
-	var restore := func():
-		Duel.mode = prev.mode
-		Duel.bare = prev.bare
-		Duel.bare_level = prev.level
-		Duel.rival_build = prev.build
-		Duel.pilot = prev.pilot
+	var restore := func(): Duel.restore_free()
 	_queue_duel("Panthéon" if mode == "pantheon" else "Ligue", "%s · à l'arme" % ("Défi d'un cerveau d'IA" if mode == "pantheon" else "Duel classé"), opp, Pantheon.LEVEL, diff, launch, restore)
 
 
@@ -585,8 +682,8 @@ func _menu_duel() -> void:
 		_menu_gauntlet()
 		return
 	_duel_tab = "free"
+	Duel.restore_free()  # (passe M7) une partie classée ou en équipe interrompue ne laisse pas ses réglages ici
 	Duel.mode = "free"
-	Duel.pilot = Duel.pilot if Duel.mode == "free" else ""
 	# deux modes : à l'arme (rien que le préréglage de sorts, niveau au choix) ou équipé (tout compte)
 	var modes := HBoxContainer.new()
 	modes.add_theme_constant_override("separation", 8)
@@ -620,23 +717,7 @@ func _menu_duel() -> void:
 			vo.select(clampi(Duel.bare_variant, 0, variants.size() - 1))
 			vo.item_selected.connect(func(i): Duel.bare_variant = i)
 			lr.add_child(vo)
-	for r in Duel.requirements(cid):
-		var h := HBoxContainer.new()
-		h.add_theme_constant_override("separation", 8)
-		_sub.add_child(h)
-		var mark := Hud._label(h, "✔" if r.ok else "✘", 20, UiTheme.BUFF if r.ok else Color(1.0, 0.45, 0.4))
-		mark.custom_minimum_size = Vector2(22, 0)
-		var v := VBoxContainer.new()
-		v.add_theme_constant_override("separation", 0)
-		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		h.add_child(v)
-		Hud._label(v, String(r.label), 15, UiTheme.TEXT)
-		Hud._label(v, String(r.hint), 12, UiTheme.MUTED)
-		if not r.ok:
-			var sec := String(r.section)
-			var fix := MenuWidgets.glass_button("Régler", 14, Vector2(86, 36))
-			fix.pressed.connect(func(): _open_hero(sec))
-			h.add_child(fix)
+	_req_list(Duel.requirements(cid))
 	var opp := HBoxContainer.new()
 	opp.add_theme_constant_override("separation", 8)
 	_sub.add_child(opp)
@@ -676,7 +757,7 @@ func _menu_duel() -> void:
 	opp.add_child(pl)
 	dd.disabled = Duel.pilot != ""
 	Hud._label(_sub, ("Victoires contre cette classe : %d" % Duel.wins_against(_duel_opp, _duel_diff)) if Duel.bare
-		else ("Niveau du duel : %d · victoires contre cette classe : %d" % [Duel.gear_level(), Duel.wins_against(_duel_opp, _duel_diff)]), 13, UiTheme.MUTED)
+		else ("Niveau du duel : %d · victoires contre cette classe : %d" % [Duel.gear_level(), Duel.wins_against(_duel_opp, _duel_diff)]), 14, UiTheme.MUTED)  # (passe M7 : 14 px au moins)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	_sub.add_child(row)

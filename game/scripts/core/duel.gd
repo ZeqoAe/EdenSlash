@@ -25,6 +25,16 @@ static var last_report: Dictionary = {}
 ## Équipes (Arènes, Gantelet) : classes des alliés IA du joueur et des adversaires en plus du premier.
 static var team_allies: Array = []
 static var extra_foes: Array = []
+## Arènes (passe M7) : niveau choisi au lobby (à l'arme, 1 à 100 ; 10 par défaut comme la Ligue).
+static var arena_level := 10
+## Abandon (menu pause) : le bilan dit « Abandon » plutôt que « Défaite ».
+static var forfeit := false
+## Arène piégée (Arènes et Gantelet, passe M7) : des zones de feu tombent régulièrement près des héros, tous camps
+## confondus (DuelDirector._hazard_tick) ; l'esquive les évite.
+static var hazards := false
+## Réglages du duel libre mis de côté le temps d'une partie classée ou en équipe (passe M7) : la Ligue, le
+## Panthéon et les Arènes les écrasaient (cerveau, adversaire de l'éditeur, à l'arme, niveau) ; rendus au retour au lobby.
+static var _free_prefs: Dictionary = {}
 static var bare_level := 10
 static var bare_variant := 0
 static var _stashed_build: Dictionary = {}
@@ -192,15 +202,100 @@ static func make_extra(cid: String) -> ClassRival:
 	return r
 
 
-## Allié IA du joueur (Arènes) : un héros scripté du camp du joueur, au niveau du duel.
+## Allié IA du joueur (Arènes) : un héros scripté du camp du joueur, au niveau du duel, de la difficulté
+## choisie pour les adversaires (les deux équipes jouent aussi bien : passe M7 ; avant, toujours Difficile).
 static func make_ally(cid: String) -> ClassRival:
 	var a := ClassRival.new()
 	a.ally = true
-	a.setup(cid, level, 2)
-	var b := opti_build(cid, level)
-	if not b.is_empty() and not bare:
-		a.apply_build(b, level)
+	a.setup(cid, level, difficulty)
+	# même fiche que les adversaires (celle d'un héros de sa classe × la difficulté) : avant la passe M7, l'allié gardait
+	# les PV d'entraînement de ClassRival (× 3 à × 8), deux fois et demie plus solide et plus fort qu'un adversaire
+	var keep := rival_class
+	rival_class = cid
+	var h := rival_sheet(level)
+	rival_class = keep
+	a.use_sheet(h)
+	h.free()
+	a.display_name = "%s · allié" % GameData.class_data(cid).get("name_fr", cid)
 	return a
+
+
+## Classes des équipes (Arènes, Gantelet) : [param n] classes de familles différentes tant que possible (pas deux
+## soigneurs ni deux mêlées de la même famille), hors [param avoid] et hors de la classe du joueur ; familles de [param avoid_families] évitées si possible.
+static func team_classes(n: int, avoid: Array = [], avoid_families: Array = []) -> Array:
+	var pool: Array = GameData.classes.keys().filter(func(c): return not c in avoid and c != Profile.selected_class)
+	pool.shuffle()
+	var out: Array = []
+	var fams: Array = avoid_families.duplicate()
+	for pass_n in 2:  # d'abord des familles nouvelles, puis n'importe quelle classe restante
+		for c in pool:
+			if out.size() >= n:
+				break
+			var fam := int(GameData.class_data(c).get("family", 0))
+			if c in out or (pass_n == 0 and fam in fams):
+				continue
+			out.append(c)
+			fams.append(fam)
+	return out
+
+
+## Famille d'une classe (1 à 5).
+static func family_of(cid: String) -> int:
+	return int(GameData.class_data(cid).get("family", 0))
+
+
+## Nom du mode en cours (titre du HUD, bilan) : « Arène 3 contre 3 », « Gantelet 1 contre 3 », « Ligue »…
+static func mode_title() -> String:
+	match mode:
+		"arena2", "arena3":
+			return "Arène %d contre %d" % [team_allies.size() + 1, extra_foes.size() + 1]
+		"gauntlet":
+			return "Gantelet 1 contre %d" % (extra_foes.size() + 1)
+		"league":
+			return "Ligue · %s" % League.rank_name(League.target_rank())
+		"pantheon":
+			return "Panthéon"
+	return "Duel"
+
+
+## Partie à plusieurs héros par camp (Arènes, Gantelet).
+static func team_mode() -> bool:
+	return active and (not team_allies.is_empty() or not extra_foes.is_empty())
+
+
+## Met de côté les réglages du duel libre avant une partie classée ou en équipe (une seule fois).
+static func save_free() -> void:
+	if _free_prefs.is_empty():
+		_free_prefs = {"bare": bare, "level": bare_level, "build": rival_build, "pilot": pilot}
+
+
+## Rend les réglages du duel libre (retour au lobby, file annulée).
+static func restore_free() -> void:
+	if _free_prefs.is_empty():
+		return
+	bare = bool(_free_prefs.bare)
+	bare_level = int(_free_prefs.level)
+	rival_build = _free_prefs.build
+	pilot = String(_free_prefs.pilot)
+	mode = "free"
+	team_allies = []
+	extra_foes = []
+	_free_prefs = {}
+
+
+## « Rejouer » du bilan : même mode ; Ligue et Panthéon contre une nouvelle classe, Arènes et Gantelet contre une
+## nouvelle équipe (les alliés restent) ; le duel libre contre le même adversaire.
+static func replay() -> void:
+	var opp := rival_class
+	match mode:
+		"league", "pantheon":
+			var pool: Array = GameData.classes.keys()
+			opp = String(pool[randi() % pool.size()])
+		"arena2", "arena3", "gauntlet":
+			var foes := team_classes(extra_foes.size() + 1, team_allies)
+			opp = String(foes[0])
+			extra_foes = foes.slice(1)
+	start(Profile.selected_class, opp, difficulty)
 
 
 ## Le duel libre a été rendu plus facile (préparation de l'adversaire : PV ou dégâts réduits, adversaire de
@@ -245,7 +340,7 @@ static func settle(won: bool, cid: String) -> Dictionary:
 			if won:
 				Profile.record_add(key, 1)
 				_grant_mastery(cid, r)
-				var gain := League.win_insignia(key.trim_suffix("_wins"))
+				var gain := League.win_insignia(key.trim_suffix("_wins"), difficulty)
 				Profile.insignia += gain
 				r["insignia"] = gain
 				r.text.append("+%d insignes%s" % [gain, " (1re victoire du jour)" if gain > League.REPEAT_INSIGNIA else ""])
@@ -266,10 +361,11 @@ static func settle(won: bool, cid: String) -> Dictionary:
 
 static func start(cid: String, opponent: String, diff: int) -> void:
 	active = true
+	forfeit = false
 	last_report = {}
 	if mode in ["league", "pantheon", "arena2", "arena3"]:
 		bare = true  # Ligue, Panthéon et Arènes : à l'arme
-		bare_level = Pantheon.LEVEL
+		bare_level = Pantheon.LEVEL if not mode.begins_with("arena") else clampi(arena_level, 1, 100)
 	elif mode == "gauntlet":
 		bare = false  # le Gantelet se joue équipé : tout ton build compte
 	if not mode in ["arena2", "arena3", "gauntlet"]:
@@ -438,5 +534,6 @@ static func finish(won: bool) -> Dictionary:
 static func leave(tree: SceneTree) -> void:
 	if active:
 		finish(false)
+	restore_free()
 	tree.paused = false
 	tree.change_scene_to_file.call_deferred("res://scenes/lobby.tscn")

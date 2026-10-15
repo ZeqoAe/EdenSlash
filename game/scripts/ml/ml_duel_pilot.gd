@@ -12,6 +12,8 @@ const BRAINS := [["debutant", "Débutant"], ["facile", "Facile"], ["normal", "No
 
 var foe: Player
 var target: Player
+## Équipes (Arènes, Gantelet ; passe M7) : les alliés IA du joueur, aussi visés (le plus proche des vivants).
+var others: Array = []
 var brain: MlBrain
 var temperature := 0.0
 var _pilot_bot := BotInput.new()
@@ -80,8 +82,12 @@ func tick(delta: float) -> void:
 		_pilot_wait -= 1
 		_pilot_bot.pulse.clear()  # une touche n'est appuyée qu'à la première image de la décision
 		return
-	var obs := _obs_for(foe, [target], _pilot_obs, _pilot_last, 0.0)
-	_pilot_last = _apply_for(_pilot_bot, foe, [target], brain.act(obs, temperature))
+	var opps: Array = ([target] + others).filter(func(c): return is_instance_valid(c) and not c.is_dead)
+	if opps.is_empty():
+		_pilot_bot.clear()
+		return
+	var obs := _obs_for(foe, opps, _pilot_obs, _pilot_last, 0.0)
+	_pilot_last = _apply_for(_pilot_bot, foe, opps, brain.act(obs, temperature))
 	_pilot_wait = REPEAT - 1
 
 

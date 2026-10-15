@@ -17,7 +17,7 @@ const PVP := {
 	"dmg_scale": PvpCaps.DAMAGE_SCALE, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": PvpCaps.HEAL_MULT,
 	"max_mitigation": PvpCaps.MAX_MITIGATION, "pressure_start": PvpCaps.PRESSURE_START,
 	"pressure_step": PvpCaps.PRESSURE_STEP, "pct_weight": 0.5,
-	"hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
+	"sudden_after": PvpCaps.SUDDEN_AFTER, "hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
 	"caps": {
 		"atk_speed": 2.0, "cast_speed": 3.0, "crit": 0.5, "mcrit": 0.5, "crit_dmg": 1.0, "move_mult": 2.0,
 		"lifesteal": 0.2, "heal_power": 1.5, "cdr": 0.3, "dmg_mult": 2.0, "dot_bonus": 3.0, "area_mult": 2.0, "reach_mult": 2.0,
@@ -31,7 +31,7 @@ const PVP_A := {
 	"dmg_scale": 0.030, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": PvpCaps.HEAL_MULT,
 	"max_mitigation": PvpCaps.MAX_MITIGATION, "pressure_start": PvpCaps.PRESSURE_START,
 	"pressure_step": PvpCaps.PRESSURE_STEP, "pct_weight": 1.0,
-	"hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
+	"sudden_after": PvpCaps.SUDDEN_AFTER, "hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
 	"caps": PvpCaps.CAPS,
 }
 
@@ -39,18 +39,21 @@ const PVP_A := {
 ## « duel_b » s'appliquent quand Duel.active).
 ## Arènes à alliés IA : mêmes règles que l'à l'arme, échelle réduite (plus de héros qui frappent) et
 ## soins moitié moins forts. Le Gantelet (1 contre 2 ou 3) se joue équipé.
+## Passe M7 (alliés à la fiche d'un héros, ciblage du plus faible) : manches mesurées 85 s en 2v2 et 104 s en 3v3 (cible
+## 30-90 s) : échelle 0,022 -> 0,026 et 0,018 -> 0,024, acharnement dès 25 s et 20 s (une mêlée à six se met en place plus tard,
+## et les soins des deux camps l'étirent).
 const PVP_A2 := {
-	"dmg_scale": 0.022, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": PvpCaps.HEAL_MULT * 0.5,
-	"max_mitigation": PvpCaps.MAX_MITIGATION, "pressure_start": PvpCaps.PRESSURE_START,
+	"dmg_scale": 0.026, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": PvpCaps.HEAL_MULT * 0.5,
+	"max_mitigation": PvpCaps.MAX_MITIGATION, "pressure_start": 25.0,
 	"pressure_step": PvpCaps.PRESSURE_STEP, "pct_weight": 1.0,
-	"hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
+	"sudden_after": PvpCaps.SUDDEN_AFTER, "hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
 	"caps": PvpCaps.CAPS,
 }
 const PVP_A3 := {
-	"dmg_scale": 0.018, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": PvpCaps.HEAL_MULT * 0.5,
-	"max_mitigation": PvpCaps.MAX_MITIGATION, "pressure_start": PvpCaps.PRESSURE_START,
+	"dmg_scale": 0.024, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": PvpCaps.HEAL_MULT * 0.5,
+	"max_mitigation": PvpCaps.MAX_MITIGATION, "pressure_start": 20.0,
 	"pressure_step": PvpCaps.PRESSURE_STEP, "pct_weight": 1.0,
-	"hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
+	"sudden_after": PvpCaps.SUDDEN_AFTER, "hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
 	"caps": PvpCaps.CAPS,
 }
 ## Le Siège, chacun pour soi à trois (après le boss) : mêmes règles que l'arène à trois, héros équipés (plafonds de

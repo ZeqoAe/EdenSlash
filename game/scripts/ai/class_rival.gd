@@ -258,11 +258,51 @@ func is_invulnerable() -> bool:
 
 # --- cerveau ------------------------------------------------------------------------------
 
+## Équipes (passe M7) : Arènes et Gantelet, plusieurs héros par camp.
+func _team_mode() -> bool:
+	return Duel.team_mode()
+
+
+## Équipiers de ce héros (lui compris) : le joueur et ses alliés, ou les adversaires de son camp.
+func _teammates() -> Array:
+	if ffa_id >= 0:
+		return [self]  # chacun pour soi : soutien pour soi seul
+	if ally:
+		return get_tree().get_nodes_in_group("heroes")
+	return get_tree().get_nodes_in_group("monsters").filter(func(n): return n is ClassRival and not (n as ClassRival).ally) \
+		+ get_tree().get_nodes_in_group("foe_heroes")
+
+
+## Cible en équipe (passe M7) : le plus faible à portée raisonnable plutôt que le plus proche (Normal et plus : un
+## héros à moitié de PV « vaut » FOCUS m de moins) ; en duel et en Facile, le plus proche comme avant.
+const FOCUS := [0.0, 5.0, 8.0, 11.0]
+
+
+func pick_target(pool: Array, current = null) -> Combatant:
+	if not _team_mode() or difficulty <= 0:
+		return super.pick_target(pool, current)
+	var best: Combatant = null
+	var best_s := INF
+	for n in pool:
+		var c := n as Combatant
+		if c == null or c.is_dead or c == self or c.has_status("invisible"):
+			continue
+		var s := global_position.distance_to(c.global_position) + float(FOCUS[difficulty]) * 2.0 * (c.hp / maxf(c.max_hp, 1.0))
+		if c == current:
+			s -= 2.5  # inertie : on ne change pas de cible pour un mètre
+		if s < best_s:
+			best_s = s
+			best = c
+	return best
+
+
 ## Soutien de l'allié : soigne le héros le plus bas sous 50 % de PV, pose un renfort au début et à la recharge.
+## Arènes et Gantelet (passe M7) : les adversaires aussi soutiennent leur camp (mêmes règles des deux côtés ; au
+## Gantelet, un joueur moyen gagnait 3 fois sur 4 à 1 contre 3 sans ça).
 func _support_tick() -> void:
-	if not ally or _support.is_empty() or _time < _support_ready_at:
+	if not (ally or _team_mode()) or _support.is_empty() or _time < _support_ready_at or is_passive():
 		return
-	var heroes: Array = [self] if ffa_id >= 0 else get_tree().get_nodes_in_group("heroes")  # chacun pour soi : soutien pour soi seul
+	var heroes: Array = _teammates()
 	for s in _support:
 		if String(s.kind) == "heal":
 			var low: Combatant = null
@@ -311,18 +351,25 @@ func _pl() -> Player:
 
 
 func _read_player() -> void:
-	if _pl() == null:
-		return
 	if _react_at >= 0.0:
 		if _time >= _react_at:
 			_react_at = -1.0
 			if _can_dodge():
 				_dodge(_react_dir)
 		return
-	var th := _threat()
+	if _team_mode():
+		_read_zones()  # en équipe : les zones rouges de tous les héros adverses, pas seulement de sa cible
+		if _react_at >= 0.0:
+			return
+	var reader := _pl()
+	if reader == null and _team_mode() and not ally:
+		reader = _player_hero()  # en équipe, sa cible peut être un allié : il garde un œil sur les coups du joueur
+	if reader == null:
+		return
+	var th := _threat(reader)
 	if th.is_empty():
 		return
-	var act: Dictionary = _pl()._action
+	var act: Dictionary = reader._action
 	if is_same(act, _seen_action):
 		return
 	_seen_action = act
@@ -339,9 +386,16 @@ func _read_player() -> void:
 	_react_at = _time + wait
 
 
-## Coup du héros qui va toucher l'adversaire : {t (s avant l'impact), dir (sortie)} ou {}.
-func _threat() -> Dictionary:
-	var p := _pl()
+## Le héros du joueur (vivant), ou null.
+func _player_hero() -> Player:
+	var p := get_tree().get_first_node_in_group("player") as Player
+	return p if p != null and not p.is_dead else null
+
+
+## Coup du héros [param p] (sa cible par défaut) qui va toucher l'adversaire : {t (s avant l'impact), dir (sortie)} ou {}.
+func _threat(p: Player = null) -> Dictionary:
+	if p == null:
+		p = _pl()
 	if p == null or not (p._state in ["attack", "skill"]) or p._hits.is_empty():
 		return {}
 	var a: Dictionary = p._action
@@ -383,6 +437,78 @@ func _threat() -> Dictionary:
 	# cône ou cercle : de côté et en arrière, hors de portée
 	var out := (to.normalized() * 0.6 + away_side).normalized() if arc < 359.0 else to.normalized()
 	return {"t": t, "dir": out}
+
+
+## Équipes (passe M7) : zones rouges (Telegraph) posées par un héros de l'autre camp ou par l'arène, où il se tient :
+## il en sort d'une esquive juste avant l'impact (chance de lecture et délai de réaction de sa difficulté). Une
+## décision par zone. Les coups des héros pilotés par le joueur ou un cerveau restent lus par [method _threat].
+var _zone_check_at := 0.0
+var _seen_zones := {}
+
+
+func _read_zones() -> void:
+	if _time < _zone_check_at or is_invulnerable() or not _can_dodge():
+		return
+	_zone_check_at = _time + 0.08
+	if _seen_zones.size() > 64:
+		_seen_zones.clear()
+	for n in get_tree().get_nodes_in_group("telegraphs"):
+		var tg := n as Telegraph
+		if tg == null or tg.is_queued_for_deletion():
+			continue
+		var src = tg.source
+		if is_instance_valid(src) and (src == self or src.team == team) and src.ffa_id < 0:
+			continue  # ses coups et ceux de son camp
+		var iid := tg.get_instance_id()
+		if _seen_zones.has(iid) or not tg.contains(global_position, radius):
+			continue
+		_seen_zones[iid] = true
+		var left := tg.delay - tg._t
+		if randf() > float(cfg.read) or left < float(cfg.react):
+			continue
+		var out := global_position - tg.global_position
+		out.y = 0.0
+		if tg.shape in ["line", "cone"]:
+			# de côté par rapport à l'axe du coup
+			var fwd := Vector3(sin(tg.rotation.y), 0.0, cos(tg.rotation.y))
+			var side := fwd.cross(Vector3.UP)
+			out = side * (signf(out.dot(side)) if absf(out.dot(side)) > 0.2 else (1.0 if randf() < 0.5 else -1.0))
+		_react_dir = out.normalized() if out.length() > 0.1 else -forward()
+		_react_at = _time + clampf(left - DASH_IFRAMES * 0.6, float(cfg.react), maxf(left - 0.04, 0.0))
+		return
+
+
+## Retraite (passe M7, équipes, Normal et plus) : sous 30 % de PV, il recule 2,5 s vers un équipier (le soigneur
+## le soigne sous 50 %) en gardant sa cible à distance ; une fois toutes les 12 s.
+const RETREAT_HP := 0.3
+var _retreat_until := 0.0
+var _retreat_ready := 0.0
+
+
+func _update_retreat(delta: float) -> Vector3:
+	var away := global_position - _player.global_position
+	away.y = 0.0
+	var dist := away.length()
+	away = away.normalized() if dist > 0.01 else -forward()
+	var mate: Combatant = null
+	for n in _teammates():
+		var c := n as Combatant
+		if c != null and c != self and not c.is_dead and (mate == null or c.global_position.distance_to(global_position) < mate.global_position.distance_to(global_position)):
+			mate = c
+	var v := away
+	if mate != null:
+		var to_mate := mate.global_position - global_position
+		to_mate.y = 0.0
+		if to_mate.length() > 2.5:
+			v = (away * 0.6 + to_mate.normalized()).normalized()
+	if dist < 4.0 and _can_dodge() and _charges >= 1.5 and _time >= _hop_ready:
+		_hop_ready = _time + 0.8
+		_dodge(v.rotated(Vector3.UP, randf_range(-0.3, 0.3)), false)
+		return _dash_vel
+	face_direction(v, delta, 12.0)
+	if _time >= _dash_until and is_on_floor():
+		play(_anim("run", "move02"), 0.15)
+	return v * move_speed
 
 
 func _can_dodge() -> bool:
@@ -463,6 +589,11 @@ func _update_chase(delta: float) -> Vector3:
 		return _update_flee(delta)
 	if goal != Vector3.INF:
 		return _update_goal(delta)
+	if _team_mode() and difficulty >= 1 and hp < max_hp * RETREAT_HP and _time >= _retreat_ready:
+		_retreat_until = _time + 2.5
+		_retreat_ready = _time + 12.0
+	if _time < _retreat_until:
+		return _update_retreat(delta)
 	var to := _player.global_position - global_position
 	to.y = 0.0
 	var dist := to.length()

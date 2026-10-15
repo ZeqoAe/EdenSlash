@@ -351,7 +351,8 @@ static func hostile_targets(tree: SceneTree, source = null) -> Array:
 		return ffa_foes(tree, source)
 	if source != null and is_instance_valid(source) and source.team == Team.PLAYER:
 		var out: Array = []
-		for n in tree.get_nodes_in_group("monsters"):
+		# (passe M7 : et les héros ennemis pilotés par un cerveau, que les alliés IA ne pouvaient pas toucher)
+		for n in tree.get_nodes_in_group("monsters") + tree.get_nodes_in_group("foe_heroes"):
 			var c := n as Combatant
 			if c != null and not c.is_dead and c != source:
 				out.append(c)

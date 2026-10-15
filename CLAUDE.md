@@ -320,6 +320,11 @@ Auto-attaque entre héros : × `PvpCaps.BASIC_MULT`, sans contrôle ni attractio
 le crochet du Guerrier en boucle était imbattable). L'adversaire scripté prend la fiche d'un vrai
 héros (`Duel.rival_sheet` : build opti de sa classe par défaut, × `ClassRival.DUEL_DIFF`) et
 critique ; l'adversaire piloté par un cerveau (très fort) est prévu comme défi de fin de jeu.
+Passe M7 (`conception/nuit_15_10/R_M7.md`) : Arènes / Gantelet à difficulté réglable, alliés à la fiche d'un héros (`Duel.make_ally`),
+équipes de familles différentes (`Duel.team_classes`), arène piégée (`Duel.hazards`), PV des équipes et tableau de manche
+(`ui/team_bars.gd`, `PvpCaps.board`), cerveau qui vise aussi les alliés (`MlDuelPilot.others`), réglages du duel libre rendus
+(`Duel.save_free` / `restore_free`), mort subite après 90 s (`PvpCaps.SUDDEN_AFTER`, profils de duel). Mesure en partie réelle :
+`world.tscn -- --duel --duel-mode=arena3|gauntlet3 [--hub=2.3] --autoplay --auto-quit` (lignes `[duel] manche…`).
 
 ## Musique
 `scripts/core/music.gd` (autoload Music) : pistes OGG copiées du dossier `bgm` du client

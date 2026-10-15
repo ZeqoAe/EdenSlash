@@ -279,7 +279,9 @@ func _hostile_pool() -> Array:
 		if Siege.carrier != null and is_instance_valid(Siege.carrier) and Siege.carrier in foes:
 			return [Siege.carrier]
 		return foes
-	return get_tree().get_nodes_in_group("monsters" if team == Team.PLAYER else "heroes")
+	if team == Team.PLAYER:
+		return get_tree().get_nodes_in_group("monsters") + get_tree().get_nodes_in_group("foe_heroes")  # (passe M7 : héros ennemi d'un cerveau)
+	return get_tree().get_nodes_in_group("heroes")
 
 
 func _player_alive() -> bool:
