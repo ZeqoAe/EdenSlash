@@ -55,10 +55,11 @@ func _ready() -> void:
 		for _i in 10:
 			await get_tree().physics_frame
 		check("l'adversaire scripté tombé, le cerveau debout : la manche continue", dd.phase == "fight" and Duel.wins == 0)
-		_kill(dd._foe, world.player)
-		for _i in 60:
+		for _i in 240:  # (sous charge, le coup peut tomber pendant un temps d'invulnérabilité : on le répète)
 			if Duel.wins >= 1:
 				break
+			if is_instance_valid(dd._foe) and not dd._foe.is_dead:
+				_kill(dd._foe, world.player)
 			await get_tree().physics_frame
 		check("cerveau tombé aussi : manche gagnée", Duel.wins == 1)
 		world.queue_free()

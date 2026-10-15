@@ -23,16 +23,21 @@ static func reveal(tree: SceneTree, duration := 0.7) -> void:
 	var f := ScreenFade.new()
 	f.layer = 90
 	f.process_mode = Node.PROCESS_MODE_ALWAYS
-	tree.root.add_child(f)
-	f._rect = ColorRect.new()
-	f._rect.color = Color(0.01, 0.0, 0.02, 1.0)
-	f._rect.set_anchors_preset(Control.PRESET_FULL_RECT)
-	f._rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	f.add_child(f._rect)
-	var tw := f.create_tween()
+	# (différé : la racine est « occupée à installer ses enfants » quand le monde est lancé directement en ligne de commande)
+	tree.root.add_child.call_deferred(f)
+	f.tree_entered.connect(f._start_reveal.bind(duration), CONNECT_ONE_SHOT)
+
+
+func _start_reveal(duration: float) -> void:
+	_rect = ColorRect.new()
+	_rect.color = Color(0.01, 0.0, 0.02, 1.0)
+	_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_rect)
+	var tw := create_tween()
 	tw.tween_interval(0.1)
-	tw.tween_property(f._rect, "color:a", 0.0, duration)
-	tw.tween_callback(f.queue_free)
+	tw.tween_property(_rect, "color:a", 0.0, duration)
+	tw.tween_callback(queue_free)
 
 
 func _play(tree: SceneTree, work: Callable) -> void:

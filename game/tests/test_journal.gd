@@ -35,6 +35,7 @@ func _ready() -> void:
 	check("DPS du boss sur 10 s et temps pour le tuer", float(l.dps_boss_10s) == 50.0 and l.has("ttk_boss"))
 	check("pression : dégâts subis par minute et plus gros coup", float(l.dmg_taken_min) > 0.0 and float(l.max_hit_frac) == 0.1)
 	check("contexte : mode, classe, aide, version", l.mode == "survival" or l.mode == "run" and l["class"] == "warrior" and l.has("assist") and l.v == Version.NUMBER)
+	RunJournal.context = Callable()  # (sinon le rappel vers ce nœud libéré fait planter la sortie)
 	m.free()
 	print("TOUT EST OK (0 échec(s))" if fails == 0 else "ÉCHECS : %d" % fails)
 	get_tree().quit(fails)

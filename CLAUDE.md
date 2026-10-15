@@ -232,6 +232,10 @@ Le dossier n'est pas dans git : la session locale les lit au début du travail.
 `Godot --headless --path game res://tests/<test>.tscn` pour test_build, test_hud,
 test_controls, test_cards, test_progress (et ceux ajoutés depuis). Après l'ajout d'un
 script avec `class_name`, lancer une fois `--import` pour mettre à jour le cache des classes.
+Intégration (passe P4, `conception/nuit_15_10/R_P4.md`) : `test_p4_flow` (hub de bout en bout, sans changer de scène),
+`test_p4_activities` (chaque activité lancée depuis le lobby, jouée, bilan, retour ; ~7 min ; `-- duel,tower` pour un
+sous-ensemble) et `test_p4_migration` (vieilles sauvegardes ; `P4_REAL_SAVES=<dossier>` charge aussi de vrais profils).
+Plusieurs sessions dans le même dossier : lancer la suite sur une copie de `game/` avec `config/custom_user_dir_name` à part.
 
 ## IA d'entraînement (apprentissage par renforcement)
 Arène `game/scenes/ml_arena.tscn` (`game/scripts/ml/`) pilotée par Python (`ia/`, voir
