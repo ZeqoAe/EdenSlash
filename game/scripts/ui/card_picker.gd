@@ -32,6 +32,7 @@ var _buttons: Array = []
 var _opened_at := 0
 var _shared: RichTextLabel  # lignes communes à toutes les cartes d'équipement, dites une fois
 var _pad_focus := false  # nouveau choix : le cadre de la manette ira sur la 1re carte une fois la rangée posée
+var _skip: Button  # Survivant : « Passer (+N or) »
 
 
 func _ready() -> void:
@@ -91,7 +92,13 @@ func _ready() -> void:
 	v.add_child(_shared)
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.add_theme_constant_override("separation", 20)
 	buttons.add_child(_reroll)
+	# Survivant : « Passer » (aucune carte, de l'or à la place), jamais au premier choix de la run
+	_skip = _reroll.duplicate(0) as Button  # même style, sans le signal de la relance
+	_skip.pressed.connect(_do_skip)
+	_skip.visible = false
+	buttons.add_child(_skip)
 	v.add_child(buttons)
 	_root.visible = false
 	add_child(_root)
@@ -199,7 +206,7 @@ func _descriptions(cards: Array) -> Dictionary:
 			var l: String = lines[i][j]
 			if common.has(l):
 				continue
-			if j > 0 and not is_weapon and not l.begins_with("[color=#66f28c]") and not l.begins_with("[color=#ffd36b]"):
+			if j > 0 and not is_weapon and not l.begins_with("[color=#66f28c]") and not l.begins_with("[color=#ffd36b]") and not l.begins_with("[color=#9a98a8]"):
 				stats += 1
 				if stats > MAX_STATS:
 					continue
@@ -220,6 +227,18 @@ func _refresh_reroll() -> void:
 	var left := _rerolls_left()
 	_reroll.text = "Relancer (%d)" % left
 	_reroll.disabled = left <= 0
+	_skip.visible = SurvivorCards.can_skip(_cards)
+	_skip.text = "Passer (+%d or)" % SurvivorCards.skip_gold()
+	_skip.tooltip_text = "Ne prends aucune carte : de l'or à la place."
+
+
+## Survivant : aucune carte prise, de l'or à la place (sans effet pendant le délai anti-rafale).
+func _do_skip() -> void:
+	if not _root.visible or not SurvivorCards.can_skip(_cards) or Time.get_ticks_msec() - _opened_at < CONFIRM_DELAY_MS:
+		return
+	SurvivorCards.skip()
+	Sfx.ui("confirm", -3.0)
+	_show_next()
 
 
 ## Nouvelles cartes à la place des cartes proposées (une relance consommée).
@@ -354,16 +373,18 @@ func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 	d.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(d)
 	# bannir (la carte quitte la run, une autre la remplace) / garder (revient au prochain choix)
-	if String(card.get("type", "")) in ["skill", "chain", "upgrade", "weapon_up", "passive"] and _reroll_fn.is_valid():
+	var sv := SurvivorCards.on()  # Survivant : ses cartes (pièces, améliorations à passif, armes) se bannissent et se gardent aussi
+	if String(card.get("type", "")) in (SurvivorCards.FAMILY.keys().filter(func(t): return not t in SurvivorCards.FALLBACK) if sv
+			else ["skill", "chain", "upgrade", "weapon_up", "passive"]) and _reroll_fn.is_valid():
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 6)
 		v.add_child(row)
 		var ban := Button.new()
-		ban.text = "Bannir (%d)" % (Cards.BANS_PER_RUN - Run.bans_used)
-		ban.tooltip_text = "Cette carte ne sera plus proposée pendant la run ; une autre la remplace."
+		ban.text = "%s (%d)" % [SurvivorCards.ban_label(card), SurvivorCards.bans_left()] if sv else "Bannir (%d)" % (Cards.BANS_PER_RUN - Run.bans_used)
+		ban.tooltip_text = SurvivorCards.ban_tip(card) if sv else "Cette carte ne sera plus proposée pendant la run ; une autre la remplace."
 		ban.focus_mode = Control.FOCUS_NONE
 		ban.add_theme_font_size_override("font_size", UiTheme.MIN_TEXT)
-		ban.disabled = Run.bans_used >= Cards.BANS_PER_RUN or String(card.type) in ["upgrade", "weapon_up"]
+		ban.disabled = not SurvivorCards.can_ban(card) if sv else (Run.bans_used >= Cards.BANS_PER_RUN or String(card.type) in ["upgrade", "weapon_up"])
 		ban.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		ban.pressed.connect(func(): _ban(i))
 		row.add_child(ban)
@@ -376,7 +397,7 @@ func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 		keep.disabled = is_kept or Run.locks_used >= Cards.LOCKS_PER_RUN
 		keep.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		keep.pressed.connect(func():
-			if Run.keep_card(card):
+			if SurvivorCards.keep(card) if sv else Run.keep_card(card):
 				_show_cards(_cards))
 		row.add_child(keep)
 	return b

@@ -2052,7 +2052,7 @@ func _dive_impact() -> void:
 func knock_immune() -> bool:
 	if foe or built or _bare():
 		return false
-	var keys: Array = Profile.certificates.duplicate()
+	var keys: Array = [] if Survivor.active else Profile.certificates.duplicate()  # (Survivant : pas de certificats du compte)
 	for pid in Run.passives:
 		if String(pid).begins_with("cert:"):
 			keys.append(String(pid).trim_prefix("cert:"))

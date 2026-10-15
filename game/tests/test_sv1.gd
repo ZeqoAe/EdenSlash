@@ -167,7 +167,8 @@ func _unit() -> void:
 	Run.hero_level = 1
 	check("lieux : ni scribe ni fortune, les autres inchangés", Survivor.station_count("scribe", 2) == 0 and Survivor.station_count("fortune", 1) == 0 and Survivor.station_count("anvil", 3) == 3)
 	check("sanctuaire « trophée » -> carte", Survivor.shrine_reward("trophy") == "card" and Survivor.shrine_reward("keys") == "keys")
-	check("cartes : celles de la Survie tant que S3 n'est pas branché", not SurvivorCards.handles() and not Run.roll_cards(3).is_empty())
+	check("cartes du Survivant (S3) : rien pris, le choix de départ (armes et compétences)", SurvivorCards.handles()
+		and Run.roll_cards(3).all(func(c): return String(c.type) in ["sv_weapon", "skill"] and c.get("sv_first", false)))
 	check("carte « sv_… » appartient au Survivant", Survivor.owns({"type": "sv_piece"}) and not Survivor.owns({"type": "skill"}))
 
 	# --- fermeture en pleine run : la sauvegarde ne contient rien de la run -------------------------------------
@@ -238,12 +239,12 @@ func _flow() -> void:
 	check("Modes.current() == survivor en jeu, zone %s" % Run.zone_id, Modes.current() == "survivor" and Run.zone_id == "rainbowfall" and world.director.sv != null)
 	check("héros niveau 1, sans pièce du hub", world.player.level == 1 and Profile.equipped.is_empty())
 	check("pas d'autel du scribe ni de la fortune sur la carte", world.director.map.interactables.all(func(it): return not is_instance_valid(it) or not it.kind in ["scribe", "fortune"]))
-	check("choix de départ ouvert (première compétence, jeu en pause)", await _until(func(): return world.cards.is_open(), 10.0, "choix de départ"))
+	check("choix de départ ouvert (arme ou compétence, jeu en pause)", await _until(func(): return world.cards.is_open(), 10.0, "choix de départ"))
 	world.cards._opened_at -= CardPicker.CONFIRM_DELAY_MS
 	world.cards._choose(0)
 	world.player.autoplay = true
 	await _wait(6.0)
-	check("le héros joue (vivant, une compétence prise)", not world.player.is_dead and not Run.skills.is_empty())
+	check("le héros joue (vivant, une arme ou une compétence prise)", not world.player.is_dead and (not Run.skills.is_empty() or Profile.equipped.has("weapon")))
 	# défaite
 	world.revives_left = 0
 	world.player.hp = 1.0

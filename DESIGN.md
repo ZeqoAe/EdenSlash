@@ -529,8 +529,22 @@ d'apparence (lot S6). Socle (S1, 0.1.194) :
   (attribut dominant : Assaut +6 % d'attaque, Vivacité +8 % de vitesse d'attaque, Sortilège +8 % d'attaque magique, Grâce +8 %
   de PV) ; 3 = les deux stats propres au set ; 5 = bonus fort + effet de la famille (explosion d'auto-attaque, foudre sur
   critique, écho de compétence, barrière et soin) + stat du type d'armure. Propositions : type d'armure de la classe ×2,
-  jamais deux pièces du même set dans une offre, set déjà porté à 3 pièces ×0,3 : un 5/5 ≈ 1 run sur 25 pour un joueur qui le
-  cherche (`tools/sv_set_sim.tscn`), presque jamais sans le chercher.
+  jamais deux pièces du même set dans une offre, set déjà porté à 3 pièces ×0,14 (S3, mesuré avec le vrai tirage des cartes) :
+  un 5/5 ≈ 1 run sur 25 pour un joueur qui le cherche (`tools/sv_cards_sim.tscn`), jamais sans le chercher.
+- **Cartes** (S3, `core/survivor_cards.gd`) : à chaque montée de niveau, 3 cartes sur des cibles différentes : une carte
+  d'**équipement** (une arme tant qu'aucune n'est portée, sinon nouvelle pièce d'un emplacement libre ou amélioration +2 d'une
+  pièce ou de l'arme, +4 en légendaire, jusqu'à +10 ; à +6 / +8 / +10 le passif gagné est écrit sur la carte), une carte de
+  **sort** (nouveau sort du kit entier de la classe, 6 au plus, ou amélioration de niveau 1 à 10 : effet de `Cards.skill_upgrade`
+  cumulé, niveau 5 au moins épique, niveau 10 légendaire ; un nouveau sort tant que le héros en a moins de 2), une carte libre au
+  poids (profil `survivor` : `w_*`, pitié ×2 après 6 choix, évolution légendaire quand ses passifs sont portés) ; au plus 2
+  nouvelles pièces ; cartes de repli (or, soin, relance) seulement s'il manque des cartes. Plus de carte commune.
+  **Premier choix** : seulement des armes (types différents) et des compétences, obligatoire. **Relancer** 2 fois par run (+
+  passifs « relances ») : une amélioration relancée tire un autre passif ; **bannir** 3 fois (un sort, un type d'arme, un set,
+  le passif d'une amélioration, une évolution ; pas l'amélioration de sort) ; **garder** (la carte revient telle quelle) ;
+  **Passer** : 15 + 3 × niveau d'or, jamais au premier choix. Coffres (`chest_cards`) : emplacement libre = 3 pièces de cet
+  emplacement, pris = son amélioration d'abord ; arme = 3 améliorations de raretés différentes ; sort ; doré (rareté +) ;
+  gardien (pièces d'emplacements libres) ; enclume (+2 sur les pièces les plus proches d'un passif). **Rien du compte** : ni
+  talents, ni certificats, ni plateau, ni sorts fermés par la maîtrise (le kit entier est ouvert), ni cartes débloquées.
 - **Déroulé** (S4, `core/survivor_director.gd`) : chronologie fixe (`SurvivorDirector.timeline`) : gardien à 5:00, 10:00 et
   15:00 (annoncé 10 s avant, un géant de P12 à 18 m du héros, PV fixes 40 000 / 150 000 / 450 000 × palier × Menace, coups
   plafonnés à 30 % des PV du héros ; vaincu : coffre du gardien et or, la Menace ne monte pas) ; portail du boss ouvert à

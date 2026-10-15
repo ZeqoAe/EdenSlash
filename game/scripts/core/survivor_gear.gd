@@ -266,8 +266,8 @@ static func roll_tier_passive(piece: Dictionary, tier: int, rng: RandomNumberGen
 ## Offre d'amélioration de la pièce de [param slot] (carte « Amélioration de pièce » ou « d'arme », S3) : +[param step],
 ## et pour chaque palier +6 / +8 / +10 franchi, le passif tiré MAINTENANT (affiché sur la carte ; une relance ou un
 ## bannissement tirent une autre offre). Arme : l'amélioration d'auto-attaque tirée aussi. {} si la pièce est au maximum.
-## {type, slot, uid, from, to, tier, passives: [{at, id, power}], auto?}
-static func upgrade_offer(slot: String, card_tier := "common", rng: RandomNumberGenerator = null, step := Survivor.UP_STEP) -> Dictionary:
+## {type, slot, uid, from, to, tier, passives: [{at, id, power}], auto?}. [param exclude] : passifs jamais tirés (bannis, S3).
+static func upgrade_offer(slot: String, card_tier := "common", rng: RandomNumberGenerator = null, step := Survivor.UP_STEP, exclude: Array = []) -> Dictionary:
 	var item: Dictionary = Profile.equipped.get(slot, {})
 	var from := int(item.get("upgrade", 0))
 	if item.is_empty() or from >= Items.MAX_UPGRADE:
@@ -275,7 +275,7 @@ static func upgrade_offer(slot: String, card_tier := "common", rng: RandomNumber
 	var to := mini(from + maxi(step, 1), Items.MAX_UPGRADE)
 	var offer := {"type": "sv_weapon_up" if slot == "weapon" else "sv_piece_up", "slot": slot, "uid": String(item.get("uid", "")),
 		"from": from, "to": to, "tier": card_tier, "passives": []}
-	var taken: Array = []
+	var taken: Array = exclude.duplicate()
 	for at in Survivor.WAKE_AT:
 		if from < int(at) and int(at) <= to:
 			var id := roll_tier_passive(item, int(at), rng, taken)

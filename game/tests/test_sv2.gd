@@ -28,10 +28,11 @@ func _ready() -> void:
 	_lock()
 	_sets()
 	_weapons()
-	_frequency()
 	Run.finish("abandon")
 	Profile.end_run_survival()
 	check("hub intact après la run (coffre, préréglages, loadout, équipement porté)", _hub() == hub)
+	_frequency()  # (après la run : la simulation joue ses propres runs)
+	check("hub intact après les runs simulées", _hub() == hub)
 	check("noms des sets sans nom propre : la fin commune des pièces (%s, %s)" % [SurvivorPool.panoply_name("e447"), SurvivorPool.panoply_name("e448")],
 		SurvivorPool.sets().all(func(x): return not SurvivorPool.panoply_name(String(x)).right(1).is_valid_int()))
 	check("hors Survivant : les sets d'Eden gardent leurs paliers d'origine", not Items.set_def("e340").get("sv", false)
@@ -320,8 +321,10 @@ func _weapons() -> void:
 # --- fréquence du 5/5 -------------------------------------------------------------------------------------------------
 func _frequency() -> void:
 	var sim = load("res://tools/sv_set_sim.gd")
-	var r: Dictionary = sim.simulate(1500, 5, "plates", "chercheur")
-	check("5/5 rare pour un joueur qui cherche un set : %.1f %% (1 run sur %.0f, cible 20 à 30)" % [100.0 * r.full, 1.0 / maxf(r.full, 0.0001)],
-		r.full >= 1.0 / 60.0 and r.full <= 1.0 / 12.0)
+	# (lot S3 : mesuré avec le vrai tirage des cartes, tools/sv_cards_sim ; le modèle de sv_set_sim l'estimait avant S3)
+	var real: Dictionary = (load("res://tools/sv_cards_sim.gd") as GDScript).simulate(300, 5, "chercheur")
+	var full := float(real.target5) / float(real.runs)
+	check("5/5 rare pour un joueur qui cherche un set : %.1f %% (1 run sur %.0f, cible 20 à 30)" % [100.0 * full, 1.0 / maxf(full, 0.0001)],
+		full >= 1.0 / 60.0 and full <= 1.0 / 12.0)
 	var p: Dictionary = sim.simulate(1500, 5, "plates", "preneur")
 	check("5/5 sans le chercher : presque jamais (%.2f %%)" % (100.0 * p.full), p.full < 0.01)

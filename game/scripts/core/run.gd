@@ -600,6 +600,8 @@ func passive_stats() -> Dictionary:
 		var p := passive_def(pid)
 		for s in p.get("stat", {}):
 			total[s] = total.get(s, 0.0) + float(p.stat[s]) * power(pid)
+	if Survivor.active:
+		return total  # Survivant : ni talents, ni certificats, ni plateau (aucun lien avec la progression du compte)
 	# talents de la classe jouée (arbre d'Eden)
 	var tree: Dictionary = GameData.talents.get(class_id, {}).get("talents", {})
 	for id in Profile.talents.get(class_id, {}):
@@ -624,6 +626,8 @@ func passive_stats() -> Dictionary:
 func skill_talent(skill_id: int) -> Dictionary:
 	# cartes de classe prises sur ce sort (puissance, cadence)
 	var out := {"dmg": skill_card_mod(skill_id, "dmg"), "cd": skill_card_mod(skill_id, "cd"), "duration": 0.0, "power": 0.0}
+	if Survivor.active:
+		return out  # Survivant : pas de talents de classe
 	var tree: Dictionary = GameData.talents.get(class_id, {}).get("talents", {})
 	for id in Profile.talents.get(class_id, {}):
 		var eff: Dictionary = tree.get(id, {}).get("effect", {})
