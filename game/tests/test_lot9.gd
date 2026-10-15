@@ -118,8 +118,10 @@ func _ready() -> void:
 		await get_tree().process_frame
 		check("chapitre « %s » : des blocs" % Guide.CHAPTERS[i][1], g.page(i)._blocks.size() >= 3)
 	g.select("news")
-	if Tutorial._vkey(Version.NUMBER) >= Tutorial._vkey(String(Tutorial.CARDS.hub_gear.version)):
-		check("« news » mène à la dernière nouveauté (équipement du hub)", g.current_page() == Guide.chapter_index("gear"))
+	# la nouveauté la plus récente change à chaque fiche ajoutée (0.1.191 : Géants et Menace) : on la relit au lieu de la figer
+	var released: Array = Tutorial.CARDS.keys().filter(func(id): return Tutorial._vkey(String(Tutorial.CARDS[id].version)) <= Tutorial._vkey(Version.NUMBER))
+	var latest: String = String(Tutorial.news_sorted(released)[0])
+	check("« news » mène à la dernière nouveauté (%s, chapitre %s)" % [latest, Tutorial.chapter_of(latest)], g.current_page() == Guide.chapter_index(Tutorial.chapter_of(latest)))
 	g.show_page(Guide.chapter_index("details"))
 	await get_tree().process_frame
 	check("Détails : l'ancienne page d'aide", g.page(Guide.chapter_index("details")) is InfoPage)

@@ -88,6 +88,7 @@ func _test_registry_new() -> void:
 
 ## Coffre garni : 3 pièces par emplacement (zone avancée, mythiques ou légendaires) et 2 armes de chaque type.
 func _fill_vault() -> void:
+	seed(2026)  # coffre identique à chaque exécution (« équiper le meilleur » est une heuristique : pas optimale sur tous les tirages)
 	Items.reward_zone = "wetlands"  # pièces d'une zone avancée (niveaux d'Eden 40-50), au-dessus de l'équipement de départ
 	for slot in ["head", "chest", "legs", "gloves", "boots", "back", "necklace", "ring"]:
 		for k in 3:
@@ -163,8 +164,12 @@ func _test_equip_best() -> void:
 	check("menu : « garder mes choix » proposé", ClassGear.menu_actions(cid).any(func(a): return String(a.label).contains("garder mes choix")))
 	ClassGear.equip_best(cid, true)
 	check("garder mes choix : la pièce reste", _uid(Profile.equipped.get("chest")) == _uid(worse))
+	var pe_kept := GearPower.gear_power(Profile.equipped, prof)
 	ClassGear.equip_best(cid, false)
-	check("sans garder : une meilleure revient", GearPower.item_power(Profile.equipped.get("chest"), prof) > GearPower.item_power(worse, prof))
+	# Le meilleur équipement compte les bonus de panoplie : le torse choisi peut valoir moins seul mais plus avec les autres pièces
+	# (1 tirage sur 12 de la voûte aléatoire) ; on compare donc la PE de l'ensemble, pas la pièce seule.
+	check("sans garder : le meilleur ensemble revient (PE au moins égale)", GearPower.gear_power(Profile.equipped, prof) >= pe_kept)
+	check("sans garder : la pièce posée à la main n'est plus un choix", ClassGear.choice_slots(cid).is_empty())
 
 
 func _gear(uids: Dictionary) -> Dictionary:

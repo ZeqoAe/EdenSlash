@@ -306,10 +306,10 @@ func _test_queue() -> void:
 		if q.phase != DuelQueue.Phase.DRAFT:
 			break
 	check("file : l'adversaire valide, le récapitulatif s'affiche", q.phase == DuelQueue.Phase.RECAP or q.phase == DuelQueue.Phase.DONE)
-	for i in 600:
+	# le chargement de la partie (scène + effets) prend du temps réel, pas un nombre d'images : on attend le lancement jusqu'à 2 min
+	var t_end := Time.get_ticks_msec() + 120000
+	while not _launched and Time.get_ticks_msec() < t_end:
 		await get_tree().process_frame
-		if _launched:
-			break
 	await get_tree().process_frame
 	check("file : après le récapitulatif et le chargement, la partie se lance", _launched)
 	# annulation pendant la recherche

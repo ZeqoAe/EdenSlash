@@ -97,6 +97,8 @@ func _ready() -> void:
 	# --- doublon « Défense » : plat + pourcentage fusionnés ---------------------------------------------
 	var dd := Items.generate(30, 0.0, "chest", "warrior", 3, "", 5)
 	dd["base"] = {"def": 40.0, "def_pct": 0.04, "hp": 100.0, "str": 5.0}
+	dd["quality"] = 1.0  # la qualité tirée change le pourcentage affiché (+3 % ou +4 % selon le tirage)
+	dd["upgrade"] = 0
 	var rows := Items.stat_rows(dd)
 	check("Défense plate et en % : une seule ligne", rows.filter(func(r): return r.name == "Défense").size() == 1)
 	check("la ligne fusionnée porte le pourcentage", String(rows.filter(func(r): return r.name == "Défense")[0].pct) == "+4 %")
