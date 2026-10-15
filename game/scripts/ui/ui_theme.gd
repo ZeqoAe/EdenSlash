@@ -148,9 +148,9 @@ static func _add_version_overlay() -> void:
 	layer.layer = 100
 	layer.name = "VersionOverlay"
 	var l := Label.new()
-	l.text = "Alt + clic droit : noter un problème   ·   " + Version.label()
+	l.text = Version.label()  # (Alt + clic droit pour noter un problème : dans l'aide F1, plus en permanence à l'écran)
 	l.add_theme_font_size_override("font_size", MIN_TEXT)
-	l.add_theme_color_override("font_color", Color(1, 1, 1, 0.75))
+	l.add_theme_color_override("font_color", Color(1, 1, 1, 0.5))
 	l.add_theme_constant_override("outline_size", 3)
 	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE

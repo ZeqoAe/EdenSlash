@@ -241,7 +241,7 @@ func _ready() -> void:
 		pass  # duel : le build du preset, pas de carte
 	elif Tower.active:
 		# la Tour : une seule carte de départ, de rareté aléatoire
-		_offer("La Tour : ta carte de départ", [Run.roll_cards(6).pick_random()])
+		_offer("Ta carte de départ", [Run.roll_cards(6).pick_random()])  # Tour, donjons, Siège, Ruée
 	# première compétence : choix parmi 3 cartes de compétence
 	elif Run.skills.is_empty():
 		var n := int(Run.class_data().get("start_skills", 3))

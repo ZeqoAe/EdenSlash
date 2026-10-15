@@ -73,7 +73,8 @@ func _draw() -> void:
 		var sp: Vector2 = w2s.call(p)
 		if _inside(sp):
 			draw_circle(sp, 1.8, Color(1.0, 0.85, 0.35, 0.9))
-	# lieux connus
+	# lieux connus (grande carte : icônes agrandies, elles sont petites sur 680 px)
+	var k := 1.5 if big else 1.0
 	for m in director.markers():
 		var sp: Vector2 = w2s.call(m[0])
 		var col: Color = ICONS.get(m[1], Color.WHITE)
@@ -82,17 +83,17 @@ func _draw() -> void:
 				continue
 			sp = _clamp_edge(sp, c)  # marchands, sanctuaires, donjon : au bord dans la bonne direction
 		if String(m[1]).begins_with("chest"):
-			var r := 3.0 + (1.5 if m[1] != "chest" else 0.0)
+			var r := (3.0 + (1.5 if m[1] != "chest" else 0.0)) * k
 			draw_rect(Rect2(sp - Vector2(r, r), Vector2(r, r) * 2.0), col)
 		elif m[1] == "shrine":
-			draw_arc(sp, 6.0, 0.0, TAU, 20, Color(0, 0, 0, 0.6), 3.5)
-			draw_arc(sp, 6.0, 0.0, TAU, 20, col, 2.0)
+			draw_arc(sp, 6.0 * k, 0.0, TAU, 20, Color(0, 0, 0, 0.6), 3.5)
+			draw_arc(sp, 6.0 * k, 0.0, TAU, 20, col, 2.0)
 		elif m[1] == "fort":
-			_diamond(sp, 7.5, Color(0, 0, 0, 0.6))
-			_diamond(sp, 6.0, col)
+			_diamond(sp, 7.5 * k, Color(0, 0, 0, 0.6))
+			_diamond(sp, 6.0 * k, col)
 		else:
-			draw_circle(sp, 7.0, Color(0, 0, 0, 0.6))
-			draw_circle(sp, 5.5, col)
+			draw_circle(sp, 7.0 * k, Color(0, 0, 0, 0.6))
+			draw_circle(sp, 5.5 * k, col)
 	# Battle royale : l'anneau actuel (violet) et le prochain (blanc)
 	if Royale.active and director.royale != null and not director.royale.ring.is_empty():
 		_draw_ring(w2s, director.royale.ring.center, float(director.royale.ring.radius), Color(0.7, 0.45, 1.0, 0.95))
@@ -144,27 +145,34 @@ func _diamond(c: Vector2, r: float, col: Color) -> void:
 	draw_colored_polygon(PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)]), col)
 
 
-## Légende (grande carte) : la forme et la couleur de chaque lieu.
+## Légende (grande carte) : la forme et la couleur des seuls lieux découverts, en colonne translucide
+## (elle ne cache plus la carte avant d'avoir quoi que ce soit à dire).
 func _draw_legend() -> void:
+	var seen := {}
+	for m in director.markers():
+		seen[String(m[1])] = true
+	var kinds: Array = LEGEND.filter(func(e): return seen.has(String(e[0])))
+	if kinds.is_empty():
+		return
 	var font := get_theme_default_font()
-	var row := 19.0
-	var box := Rect2(Vector2(10, size.y - 16 - row * LEGEND.size()), Vector2(178, row * LEGEND.size() + 8))
-	draw_rect(box, Color(0.04, 0.03, 0.08, 0.82))
+	var row := 24.0
+	var box := Rect2(Vector2(10, size.y - 16 - row * kinds.size()), Vector2(206, row * kinds.size() + 8))
+	draw_rect(box, Color(0.04, 0.03, 0.08, 0.7))
 	draw_rect(box, Color(0.98, 0.78, 0.35, 0.5), false, 1.0)
-	for i in LEGEND.size():
-		var k: String = LEGEND[i][0]
-		var p := box.position + Vector2(16, 14 + row * i)
+	for i in kinds.size():
+		var k: String = kinds[i][0]
+		var p := box.position + Vector2(18, 16 + row * i)
 		var col: Color = ICONS.get(k, Color.WHITE)
 		if k.begins_with("chest"):
-			var r := 3.0 if k == "chest" else 4.5
+			var r := 4.0 if k == "chest" else 5.5
 			draw_rect(Rect2(p - Vector2(r, r), Vector2(r, r) * 2.0), col)
 		elif k == "shrine":
-			draw_arc(p, 5.0, 0.0, TAU, 16, col, 2.0)
+			draw_arc(p, 6.0, 0.0, TAU, 16, col, 2.5)
 		elif k == "fort":
-			_diamond(p, 5.5, col)
+			_diamond(p, 7.0, col)
 		else:
-			draw_circle(p, 5.0, col)
-		draw_string(font, p + Vector2(14, 5), String(LEGEND[i][1]), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.93, 0.9, 0.98))
+			draw_circle(p, 6.0, col)
+		draw_string(font, p + Vector2(16, 5), String(kinds[i][1]), HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_TEXT, Color(0.93, 0.9, 0.98))
 
 
 func _inside(p: Vector2) -> bool:

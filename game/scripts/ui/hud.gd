@@ -9,6 +9,7 @@ extends CanvasLayer
 
 const ACCENT := UiTheme.GOLD
 const PANEL := Color(0.07, 0.06, 0.12, 0.82)
+const PANEL_W := 360.0  # largeur des panneaux de la pile en haut à gauche
 const OBJECTIVE_AUTO_SHOW := 5.0  # s de dépliage automatique après une découverte
 
 var player: Player
@@ -35,14 +36,15 @@ var _debuff_row: HudWidgets.StatusRow
 var _durations := {}  # "cible:effet" -> [fin, durée totale]
 var _last_level := 0
 
+var _left: VBoxContainer  # pile en haut à gauche : objectifs, premiers pas, fil de butin (se recale seule)
 var _obj_panel: PanelContainer
+var _obj_chevron: Label  # ▾ / ▴ : les objectifs se déplient avec la touche des objectifs
 var _zone_label: Label
 var _gold_label: Label  # or et clés de la run (coffres, marchands, forge)
 var _clock_label: Label
 var _seal_label: Label
 var _obj_details: VBoxContainer
 var _obj_lines: Array[Label] = []
-var _obj_hint: Label
 var _obj_pinned := false
 var _obj_show_until := 0.0
 var _obj_signature := ""
@@ -92,12 +94,28 @@ func setup(p: Player, d: RunDirector) -> void:
 	player.skills_changed.connect(_refresh_skills)
 	Settings.changed.connect(_refresh_skills)
 	Gamepad.device_changed.connect(func(_pad): _refresh_skills())  # libellés des touches (manette ou clavier)
-	director.zone_changed.connect(func(z): _zone_text = "%s · Nv %d-%d" % [z.name, z.levels[0], z.levels[1]])
+	director.zone_changed.connect(func(z): _zone_text = zone_title(z))
 	director.message.connect(show_message)
 	director.better_item.connect(show_better)
 	_on_hp(player.hp, player.max_hp)
 	_on_xp(player.xp, GameData.xp_to_next(player.level), player.level)
 	_refresh_skills()
+
+
+## Titre du panneau d'objectifs : « Zone · étape 1/3 ». Le niveau des monstres n'est donné que là où il compte
+## (duel, Tour, donjons : « Nv 14 », jamais « Nv 14-14 ») ; en Survie il suit la carte. Battle royale : l'horloge
+## de l'anneau prend toute la ligne, pas de titre.
+static func zone_title(z: Dictionary) -> String:
+	if Royale.active:
+		return ""
+	var lo := int(z.levels[0])
+	var hi := int(z.levels[1])
+	if Tower.active:
+		var base := "La Ruée" if Tower.rush else ("Le Siège" if Tower.siege else ("Donjon" if Tower.is_dungeon() else "La Tour"))
+		return "%s · Nv %d" % [base, lo]
+	if not Duel.active:
+		return String(z.name)
+	return "%s · Nv %d" % [z.name, lo] if lo == hi else "%s · Nv %d-%d" % [z.name, lo, hi]
 
 
 func _build() -> void:
@@ -125,6 +143,11 @@ func _build() -> void:
 	root.add_child(_low_hp)
 	# NB : root n'est ajouté qu'à la fin, pour que les positions ancrées
 	# (centre, bas, droite) soient relatives à l'ancre.
+	_left = VBoxContainer.new()
+	_left.add_theme_constant_override("separation", 8)
+	_left.position = Vector2(14, 12)
+	_left.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_left)
 	_build_objectives(root)
 	_build_tutorial(root)
 	_build_minimap(root)
@@ -162,13 +185,12 @@ func _build() -> void:
 	_center_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_banner.pivot_offset = Vector2(430, 40)
 	_banner.modulate.a = 0.0
-	# fil de butin (gauche, sous le panneau d'objectifs)
+	# fil de butin (gauche, sous les objectifs et les premiers pas)
 	_feed = VBoxContainer.new()
 	_feed.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_feed.add_theme_constant_override("separation", 4)
-	_feed.position = Vector2(18, 330)
-	_feed.size = Vector2(380, 0)
-	root.add_child(_feed)
+	_feed.custom_minimum_size = Vector2(PANEL_W, 0)
+	_left.add_child(_feed)
 
 	# --- invite d'interaction ([F] Ouvrir...) ---
 	_prompt_box = PanelContainer.new()
@@ -222,16 +244,16 @@ func _build() -> void:
 func _build_tutorial(root: Control) -> void:
 	_steps_panel = PanelContainer.new()
 	_steps_panel.add_theme_stylebox_override("panel", UiTheme.panel_box(18, 10))
-	_steps_panel.position = Vector2(14, 214)
-	_steps_panel.custom_minimum_size = Vector2(330, 0)
+	_steps_panel.custom_minimum_size = Vector2(PANEL_W, 0)
+	_steps_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	_steps_panel.visible = false
-	root.add_child(_steps_panel)
+	_left.add_child(_steps_panel)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 4)
 	_steps_panel.add_child(v)
 	var h := HBoxContainer.new()
 	v.add_child(h)
-	_steps_head = _label(h, "", 14, ACCENT)
+	_steps_head = _label(h, "", UiTheme.MIN_TEXT, ACCENT)
 	_steps_head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var skip := Button.new()
 	skip.text = "Passer"
@@ -240,15 +262,15 @@ func _build_tutorial(root: Control) -> void:
 		Tutorial.skip_steps()
 		_steps_panel.visible = false)
 	h.add_child(skip)
-	_steps_text = _label(v, "", 15, Color.WHITE)
+	_steps_text = _label(v, "", 16, Color.WHITE)
 	_steps_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_steps_text.custom_minimum_size = Vector2(300, 0)
+	_steps_text.custom_minimum_size = Vector2(PANEL_W - 36.0, 0)
 	_card_panel = PanelContainer.new()
 	_card_panel.add_theme_stylebox_override("panel", UiTheme.panel_box(18, 12))
 	_card_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
 	_card_panel.offset_left = -400
 	_card_panel.offset_right = -14
-	_card_panel.offset_top = -120
+	_card_panel.offset_top = -70  # sous le compteur de dégâts cumulés (il finit vers y = 370)
 	_card_panel.visible = false
 	root.add_child(_card_panel)
 	var cv := VBoxContainer.new()
@@ -291,8 +313,14 @@ func _pad_card_input(event: InputEvent) -> bool:
 	return false
 
 
+## Survie seulement : les Premiers pas et les fiches de découverte parlent de la Survie (pas du Duel, de la
+## Tour, du Battle royale ni de l'entraînement, qui peuvent pourtant garder le drapeau de la Survie).
+func _survival_mode() -> bool:
+	return Run.survival and not Duel.active and not Tower.active and not Royale.active and not Training.active
+
+
 func _update_tutorial() -> void:
-	var guided := Tutorial.guided()
+	var guided := Tutorial.guided() and _survival_mode()
 	_steps_panel.visible = guided
 	if guided:
 		var s := Tutorial.current_step()
@@ -300,7 +328,7 @@ func _update_tutorial() -> void:
 		_steps_text.text = Tutorial.step_text(s)
 	if _card_panel.visible and Time.get_ticks_msec() / 1000.0 > _card_until:
 		_card_panel.visible = false
-	if not _card_panel.visible and director != null and not director.state in ["boss", "duel", "tower", "royale"] and not Duel.active and not Tower.active:
+	if not _card_panel.visible and director != null and not director.state in ["boss", "duel", "tower", "royale"] and _survival_mode():
 		var id := Tutorial.take_card()
 		if id != "":
 			var c: Dictionary = Tutorial.CARDS[id]
@@ -319,27 +347,31 @@ func _build_objectives(root: Control) -> void:
 	_obj_panel = PanelContainer.new()
 	_obj_panel.add_theme_stylebox_override("panel", UiTheme.panel_box(18, 12))
 	_obj_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_obj_panel.position = Vector2(14, 12)
-	_obj_panel.custom_minimum_size = Vector2(330, 0)
-	root.add_child(_obj_panel)
+	_obj_panel.custom_minimum_size = Vector2(PANEL_W, 0)
+	_obj_panel.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	_left.add_child(_obj_panel)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 4)
 	_obj_panel.add_child(v)
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 10)
 	v.add_child(head)
-	_zone_label = _label(head, "", 15, ACCENT)
-	UiTheme.title(_zone_label, 15)
+	_zone_label = _label(head, "", 16, ACCENT)
+	UiTheme.title(_zone_label, 16)
 	_zone_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_clock_label = _label(head, "", 16, Color.WHITE)
+	_zone_label.clip_text = true  # un nom de zone trop long ne fait pas grandir le panneau
+	_clock_label = _label(head, "", 17, Color.WHITE)
 	_clock_label.add_theme_font_override("font", UiTheme.bold_font())
 	var sub := HBoxContainer.new()
+	sub.add_theme_constant_override("separation", 10)
 	v.add_child(sub)
-	_seal_label = _label(sub, "", 14, Color(0.85, 0.75, 1.0))
+	_seal_label = _label(sub, "", UiTheme.MIN_TEXT, Color(0.85, 0.75, 1.0))
 	_seal_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_gold_label = _label(sub, "", 14, Color(1.0, 0.85, 0.35))
+	_seal_label.clip_text = true
+	_gold_label = _label(sub, "", UiTheme.MIN_TEXT, Color(1.0, 0.85, 0.35))
 	_gold_label.add_theme_font_override("font", UiTheme.bold_font())
-	_obj_hint = _label(sub, "", 12, Color(1, 1, 1, 0.5))
+	_obj_chevron = _label(sub, "▾", 16, Color(1, 1, 1, 0.55))
+	_obj_chevron.mouse_filter = Control.MOUSE_FILTER_PASS  # infobulle : la touche des objectifs
 	_obj_details = VBoxContainer.new()
 	_obj_details.add_theme_constant_override("separation", 3)
 	v.add_child(_obj_details)
@@ -351,9 +383,9 @@ func _build_objectives(root: Control) -> void:
 	sep.add_theme_stylebox_override("separator", line)
 	_obj_details.add_child(sep)
 	for i in 5:
-		var l := _label(_obj_details, "", 14, Color.WHITE)
+		var l := _label(_obj_details, "", UiTheme.MIN_TEXT + 1, Color.WHITE)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.custom_minimum_size = Vector2(300, 0)
+		l.custom_minimum_size = Vector2(PANEL_W - 36.0, 0)
 		_obj_lines.append(l)
 	_obj_details.visible = false
 
@@ -361,6 +393,7 @@ func _build_objectives(root: Control) -> void:
 func _update_objectives() -> void:
 	var rage := director.state == "rage"
 	_zone_label.text = _zone_text
+	_zone_label.visible = _zone_text != ""
 	var t := director.time_left()
 	match director.state:
 		"royale":
@@ -382,22 +415,28 @@ func _update_objectives() -> void:
 	_clock_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.35) if rage or t < 60.0 else Color.WHITE)
 	var need: int = director.SEALS_NEEDED
 	_seal_label.text = "Sceaux  " + "◆ ".repeat(mini(director.seals, need)) + "◇ ".repeat(maxi(0, need - director.seals))
-	_gold_label.text = "%d or · %d clé%s  " % [Profile.gold, Profile.keys, "s" if Profile.keys > 1 else ""]
+	_gold_label.text = "%d or · %d clé%s" % [Profile.gold, Profile.keys, "s" if Profile.keys > 1 else ""]
 	_gold_label.visible = not Duel.active and not Tower.active and not Royale.active
 	if Royale.active and director.royale:
-		_seal_label.text = "Battle royale · %d / %d en vie · %d élimination%s" % [director.royale.alive_count(), Royale.PLAYERS, Royale.kills, "s" if Royale.kills > 1 else ""]
+		_seal_label.text = "%d / %d en vie · %d élimination%s" % [director.royale.alive_count(), Royale.PLAYERS, Royale.kills, "s" if Royale.kills > 1 else ""]
 	if Duel.active:
-		_seal_label.text = "Duel %s · 2 manches gagnantes" % ClassRival.NAMES[Duel.difficulty].to_lower()
+		# la règle du duel ne se lit qu'avant le premier coup : ensuite le score parle
+		_seal_label.text = "Duel %s · 2 manches gagnantes" % ClassRival.NAMES[Duel.difficulty].to_lower() if Duel.round_n <= 1 and Duel.wins + Duel.losses == 0 else ""
 	if Tower.active:
-		_seal_label.text = ("%s%s · %s" % ["Siège · " if Tower.siege else "", Dungeons.name_of(Tower.dungeon), Dungeons.DIFF_NAMES[Tower.dungeon_diff]]) if Tower.is_dungeon() else "%s · record : étage %d" % [Tower.DIFF_NAMES[Tower.difficulty], Tower.best()]
+		_seal_label.text = ("%s · %s" % [Dungeons.name_of(Tower.dungeon), Dungeons.DIFF_NAMES[Tower.dungeon_diff]]) if Tower.is_dungeon() else "%s · record : étage %d" % [Tower.DIFF_NAMES[Tower.difficulty], Tower.best()]
+	_seal_label.get_parent().visible = _seal_label.text != "" or _gold_label.visible
+	# objectifs : le duel et la Tour n'en ont pas (rien à déplier)
+	var has_objectives: bool = not director.state in ["duel", "tower"]
+	_obj_chevron.visible = has_objectives
 	var chests_total: int = director.map.chests.size() if director.map and "chests" in director.map else 0
 	var sig := "%s|%s|%d|%d|%d" % [director.state, director.dungeon_found, director.seals, director.chests_opened, director.shrines_captured]
 	if _obj_signature != "" and sig != _obj_signature:
 		_obj_show_until = _clock + OBJECTIVE_AUTO_SHOW  # nouvelle découverte : on déplie un instant
 	_obj_signature = sig
-	var open := _obj_pinned or _clock < _obj_show_until
+	var open := has_objectives and (_obj_pinned or _clock < _obj_show_until)
 	_obj_details.visible = open
-	_obj_hint.text = "[%s] %s" % [Settings.action_label("objectives", 1), "replier" if _obj_pinned else "objectifs"]
+	_obj_chevron.text = "▴" if open else "▾"
+	_obj_chevron.tooltip_text = "Objectifs : touche [%s]" % Settings.action_label("objectives", 1)
 	if not open:
 		return
 	var lines: Array[String] = []
@@ -405,8 +444,7 @@ func _update_objectives() -> void:
 		"royale":
 			lines = director.royale.objective_lines() if director.royale else []
 		"boss":
-			lines = ["⚔ Vaincs le boss du donjon", "Évite les zones rouges ([%s] : esquive)" % Settings.action_label("dodge", 1),
-				"Miroir : ne frappe pas le boss pendant 3 s", "L'onde au bord jaune se saute"]
+			lines = ["⚔ Vaincs le boss du donjon", "Évite les zones rouges ([%s] : esquive)" % Settings.action_label("dodge", 1)]
 		"cleared":
 			lines = ["✔ Boss vaincu : ramasse le butin"]
 		_:
@@ -423,7 +461,7 @@ func _update_objectives() -> void:
 						used += 1 if it.used else 0
 			lines.append("◇ Sanctuaires %d / %d · lieux %d / %d" % [director.shrines_captured,
 				director.map.shrines.size() if director.map else 0, used, total])
-			lines.append("Rage dans %02d:%02d (monstres et butin plus forts)" % [int(t) / 60, int(t) % 60] if not rage else "RAGE : monstres et butin plus forts")
+			lines.append("Rage dans %02d:%02d" % [int(t) / 60, int(t) % 60] if not rage else "RAGE : monstres et butin plus forts")
 	for i in _obj_lines.size():
 		var shown := i < lines.size()
 		_obj_lines[i].visible = shown
@@ -467,12 +505,12 @@ func _build_minimap(root: Control) -> void:
 	# compteur de dégâts cumulés : à droite, sous la mini-carte
 	_dmg_box = VBoxContainer.new()
 	_dmg_box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_dmg_box.position = Vector2(-260, 300)
+	_dmg_box.position = Vector2(-260, 268)
 	_dmg_box.custom_minimum_size = Vector2(240, 0)
 	_dmg_box.alignment = BoxContainer.ALIGNMENT_END
 	_dmg_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_dmg_box)
-	var cap := _label(_dmg_box, "DÉGÂTS CUMULÉS", 13, Color(1, 0.85, 0.5, 0.9))
+	var cap := _label(_dmg_box, "DÉGÂTS CUMULÉS", UiTheme.MIN_TEXT, Color(1, 0.85, 0.5, 0.9))
 	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_dmg_value = _label(_dmg_box, "", 40, Color(1, 0.92, 0.6))
 	_dmg_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
@@ -485,14 +523,14 @@ func _build_minimap(root: Control) -> void:
 	_dmg_bar.custom_minimum_size = Vector2(240, 3)
 	_dmg_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_dmg_box.add_child(_dmg_bar)
-	_dmg_best = _label(_dmg_box, "", 12, Color(1, 1, 1, 0.6))
+	_dmg_best = _label(_dmg_box, "", UiTheme.MIN_TEXT, Color(1, 1, 1, 0.7))
 	_dmg_best.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	for l in [cap, _dmg_best]:
 		l.add_theme_constant_override("outline_size", 5)
 		l.add_theme_color_override("font_outline_color", Color(0.08, 0.04, 0.02, 0.9))
 	_dmg_box.modulate.a = 0.0
 
-	_fps_label = _label(root, "", 12, Color(1, 1, 1, 0.55))
+	_fps_label = _label(root, "", UiTheme.MIN_TEXT, Color(1, 1, 1, 0.6))
 	_fps_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_fps_label.position = Vector2(-150, 244)
 
@@ -514,7 +552,7 @@ func _build_target(root: Control) -> void:
 	_target_name = _label(head, "", 16, Color.WHITE)
 	_target_name.add_theme_font_override("font", UiTheme.bold_font())
 	_target_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_target_tag = _label(head, "", 13, ACCENT)
+	_target_tag = _label(head, "", UiTheme.MIN_TEXT, ACCENT)
 	var bars := Control.new()
 	bars.custom_minimum_size = Vector2(0, 18)
 	v.add_child(bars)
@@ -523,7 +561,7 @@ func _build_target(root: Control) -> void:
 	_target_bar = _bar(bars, Color(0.86, 0.18, 0.24), 18)
 	_target_bar.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_target_bar.add_theme_stylebox_override("background", StyleBoxEmpty.new())
-	_target_hp = _label(bars, "", 13, Color.WHITE)
+	_target_hp = _label(bars, "", UiTheme.MIN_TEXT, Color.WHITE)
 	_target_hp.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_target_hp.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_target_hp.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -580,13 +618,14 @@ func _build_action_bar(root: Control) -> void:
 	bottom.add_child(_dodge)
 	for i in 2:
 		var ps := HudWidgets.PotionSlot.new()
-		ps.position = Vector2(176 + i * 46.0, 140)
-		ps.size = Vector2(40, 40)
+		ps.position = Vector2(174 + i * 50.0, 138)
+		ps.size = Vector2(46, 46)
 		bottom.add_child(ps)
 		_potion_slots.append(ps)
-	_assist_label = Hud._label(bottom, "", 11, Color.WHITE)
-	_assist_label.position = Vector2(172, 118)
-	_assist_label.size = Vector2(88, 18)
+	_assist_label = Hud._label(bottom, "", UiTheme.MIN_TEXT, Color.WHITE)
+	_assist_label.add_theme_font_override("font", UiTheme.bold_font())
+	_assist_label.position = Vector2(158, 114)
+	_assist_label.size = Vector2(104, 22)
 	_assist_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_assist_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_queue_strip = HudWidgets.QueueStrip.new()
@@ -630,13 +669,13 @@ func _refresh_skills() -> void:
 		var s := player.skill_in_slot(i)
 		var slot := _slots[i]
 		slot.key_text = Settings.action_label("skill_%d" % (i + 1), 1)
-		slot.auto = Settings.auto_skill(i)
+		slot.auto = Settings.auto_skill(i) and not s.is_empty()  # « AUTO » sur une case vide ne dit rien
 		slot.empty = s.is_empty()
 		slot.icon = null if s.is_empty() else UiTheme.texture(String(s.icon))
 		slot.rank = Run.skill_rank(int(s.id)) if not s.is_empty() else 1
 		slot.chain_icons = Run.chain_of(i).map(func(e): return UiTheme.texture(String(Run.skill_def(int(e.id)).get("icon", ""))))
 		if s.is_empty():
-			slot.tooltip_text = "Emplacement libre : les compétences s'obtiennent avec les cartes de niveau."
+			slot.tooltip_text = "Emplacement libre"
 		else:
 			slot.tooltip_text = "%s — rang %d\n%s\nRecharge : %.1f s" % [s.name, slot.rank, s.desc, player.skill_cooldown(s)]
 			for j in Run.chain_of(i).size():
@@ -797,6 +836,8 @@ func _update_target() -> void:
 func _menu_open() -> bool:
 	if not get_tree().paused:
 		return false
+	if not get_tree().get_nodes_in_group("results_panel").is_empty():
+		return true  # bilan de fin de partie : rien du HUD ne doit se lire à travers
 	var w := get_parent()
 	for key in ["pause_menu", "merchant_ui"]:
 		var menu = w.get(key) if w else null
@@ -844,7 +885,7 @@ func _update_arrow() -> void:
 ## à zéro ; le record de la run et le record absolu en dessous.
 func _update_damage_counter(delta: float) -> void:
 	var now := Run.combo_now()
-	if now <= 0.0:
+	if Duel.active or now <= 0.0:  # en duel il n'a pas de sens (les coups sont plafonnés)
 		_dmg_box.modulate.a = move_toward(_dmg_box.modulate.a, 0.0, delta * 2.0)
 		_dmg_shown = 0.0
 		return
@@ -856,7 +897,7 @@ func _update_damage_counter(delta: float) -> void:
 	_dmg_value.text = _big_number(_dmg_shown)
 	_dmg_bar.custom_minimum_size.x = 240.0 * Run.combo_left()
 	var best := maxf(Run.combo_best, float(Profile.records.get("best_combo", 0.0)))
-	_dmg_best.text = "record de la run %s  ·  record %s" % [_big_number(Run.combo_best), _big_number(best)]
+	_dmg_best.text = "record %s" % _big_number(best) if best <= Run.combo_best else "record %s  ·  run %s" % [_big_number(best), _big_number(Run.combo_best)]
 
 
 static func _big_number(v: float) -> String:

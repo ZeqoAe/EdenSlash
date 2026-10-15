@@ -360,7 +360,8 @@ func _test_spell_swap() -> void:
 	await get_tree().process_frame
 	page.refresh()
 	var rows := page._skills.find_children("*", "HBoxContainer", true, false).filter(func(n): return n is RunPage.SpellRow)
-	check("la page Run affiche ses lignes de sorts glissables (%d)" % rows.size(), rows.size() == 11)
+	# (0.1.180) 3 cases : leurs sorts, leurs enchaînements et les positions d'enchaînement libres (cachées hors glisser) ; pas de ligne pour la 4e case libre
+	check("la page Run affiche ses lignes de sorts glissables (%d)" % rows.size(), rows.size() == 9)
 	var src: RunPage.SpellRow = rows[0]
 	var dst: RunPage.SpellRow = rows[3]  # case 2, sort principal
 	check("on peut déposer sur une ligne occupée, pas sur sa propre ligne", dst._can_drop_data(Vector2.ZERO, {"spell_pos": src.pos}) and not src._can_drop_data(Vector2.ZERO, {"spell_pos": src.pos}))

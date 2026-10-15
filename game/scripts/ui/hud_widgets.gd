@@ -96,9 +96,9 @@ class Orb extends Control:
 			draw_arc(c, r + 8.0 + (1.0 - flash) * 14.0, 0.0, TAU, 96, Color(UiTheme.GOLD, flash), 5.0, true)
 			draw_circle(c, r, Color(1, 0.9, 0.6, flash * 0.35))
 		var bold := UiTheme.bold_font()
-		HudWidgets.text_center(self, caption, c + Vector2(0, -r * 0.45), bold, 13, Color(1, 1, 1, 0.8), 3)
+		HudWidgets.text_center(self, caption, c + Vector2(0, -r * 0.45), bold, UiTheme.MIN_TEXT, Color(1, 1, 1, 0.8), 3)
 		HudWidgets.text_center(self, big_text, c + Vector2(0, 2), big_font if big_font else bold, big_size, Color.WHITE, 6)
-		HudWidgets.text_center(self, small_text, c + Vector2(0, r * 0.48), bold, 13, Color(1, 1, 1, 0.85), 3)
+		HudWidgets.text_center(self, small_text, c + Vector2(0, r * 0.48), bold, UiTheme.MIN_TEXT, Color(1, 1, 1, 0.85), 3)
 
 	func _liquid(c: Vector2, r: float, v: float, top: Color, bottom: Color, wave: bool) -> void:
 		if v <= 0.002:
@@ -227,15 +227,15 @@ class SkillSlot extends Control:
 			for i in mini(rank - 1, 4):
 				HudWidgets.diamond(self, Vector2(size.x - 10.0 - i * 9.0, 10.0), 3.5, Color(0.6, 0.85, 1.0))
 		if auto:
-			var tag := Rect2(4, 4, 34, 15)
+			var tag := Rect2(4, 4, 40, 17)
 			draw_style_box(UiTheme.flat_box(Color(0.1, 0.35, 0.15, 0.95), UiTheme.BUFF, 1, 4, false), tag)
-			HudWidgets.text_center(self, "AUTO", tag.get_center(), UiTheme.bold_font(), 10, Color(0.85, 1.0, 0.85), 0)
+			HudWidgets.text_center(self, "AUTO", tag.get_center(), UiTheme.bold_font(), 12, Color(0.85, 1.0, 0.85), 0)
 		if key_text != "":
 			var font := UiTheme.bold_font()
-			var w := maxf(22.0, font.get_string_size(key_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x + 10.0)
-			var badge := Rect2(c.x - w * 0.5, size.y - 10.0, w, 18.0)
+			var w := maxf(24.0, font.get_string_size(key_text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_TEXT).x + 10.0)
+			var badge := Rect2(c.x - w * 0.5, size.y - 11.0, w, 22.0)
 			draw_style_box(_badge, badge)
-			HudWidgets.text_center(self, key_text, badge.get_center(), font, 12, UiTheme.GOLD, 0)
+			HudWidgets.text_center(self, key_text, badge.get_center(), font, UiTheme.MIN_TEXT, UiTheme.GOLD, 0)
 
 
 ## Sorts d'autres cases gardés par la mémoire des touches : 2 pastilles avec l'icône et la touche,
@@ -252,8 +252,9 @@ class PotionSlot extends SkillSlot:
 		var t := str(count)
 		var f := UiTheme.bold_font()
 		var w := f.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14).x
-		draw_rect(Rect2(size.x - w - 8.0, size.y - 19.0, w + 6.0, 17.0), Color(0.04, 0.03, 0.08, 0.92))
-		draw_string(f, Vector2(size.x - w - 5.0, size.y - 5.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, tint if count > 0 else Color(1, 0.4, 0.4))
+		# le nombre en haut à droite : la touche occupe le bas de la case
+		draw_rect(Rect2(size.x - w - 8.0, 2.0, w + 6.0, 17.0), Color(0.04, 0.03, 0.08, 0.92))
+		draw_string(f, Vector2(size.x - w - 5.0, 16.0), t, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, tint if count > 0 else Color(1, 0.4, 0.4))
 
 
 class QueueStrip extends Control:
@@ -275,7 +276,7 @@ class QueueStrip extends Control:
 			if items[i].icon:
 				draw_texture_rect(items[i].icon, r, false)
 			draw_rect(r.grow(1.0), Color(0.55, 0.85, 1.0, 1.0), false, 2.0)
-			HudWidgets.text_center(self, String(items[i].key), Vector2(r.position.x + 20.0, r.end.y - 2.0), UiTheme.bold_font(), 10, UiTheme.GOLD, 3)
+			HudWidgets.text_center(self, String(items[i].key), Vector2(r.position.x + 20.0, r.end.y - 2.0), UiTheme.bold_font(), 12, UiTheme.GOLD, 3)
 
 
 # --- icône d'effet (buff / debuff) ---------------------------------------------------------

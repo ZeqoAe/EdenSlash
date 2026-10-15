@@ -69,10 +69,11 @@ func _ready() -> void:
 	ev.pressed = true
 	hud._unhandled_input(ev)
 	await _frames()
-	check("touche Objectifs : dépliés", hud._obj_details.visible)
+	check("touche Objectifs : dépliés (chevron ▴)", hud._obj_details.visible and hud._obj_chevron.text == "▴")
 	hud._unhandled_input(ev)
 	await _frames()
-	check("touche Objectifs : repliés", not hud._obj_details.visible)
+	check("touche Objectifs : repliés (chevron ▾)", not hud._obj_details.visible and hud._obj_chevron.text == "▾")
+	check("pile de gauche : objectifs, premiers pas et fil de butin dans une seule colonne", hud._obj_panel.get_parent() == hud._left and hud._steps_panel.get_parent() == hud._left and hud._feed.get_parent() == hud._left)
 	world.director.seals += 1
 	await _frames()
 	check("découverte : dépliés quelques secondes", hud._obj_details.visible)

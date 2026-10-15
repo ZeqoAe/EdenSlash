@@ -218,12 +218,42 @@ func _ready() -> void:
 	await probe("pause : Run", 0.8)
 	world.pause_menu._screen.show_page(1)
 	await probe("pause : Héros", 0.7)
+	world.pause_menu._screen.show_page(0)
+	world.pause_menu._run.quit_requested.emit()
+	await probe("pause : confirmation de « Quitter le jeu »", 0.9)
+	world.pause_menu._confirm.hide_now()
 	world.pause_menu.close()
 	var r := ResultsScreen.new()
 	world.add_child(r)
 	Run.result = "victoire"
 	r.show_results()
+	await get_tree().create_timer(ResultsPanel.LOCK_SECS + 0.3, true).timeout  # les boutons du bilan se dégèlent
 	await probe("bilan de Survie", 0.9)
+	r.queue_free()
+	get_tree().paused = false
+	for mode in ["duel", "tour", "donjon", "royale"]:
+		var b: ResultsPanel
+		match mode:
+			"duel":
+				b = DuelResults.new()
+				world.add_child(b)
+				b.show_results(true, "2 - 1", "thief", 2, 5)
+			"tour":
+				b = TowerResults.new()
+				world.add_child(b)
+				b.show_results("defaite", 14, {"best": 14, "new_record": true, "xp": 130, "levels": 1, "items": 2, "crystals": 15, "chests": [Rewards.make("forge", 30, true, "scroll")], "looks": 0})
+			"donjon":
+				b = DungeonResults.new()
+				world.add_child(b)
+				b.show_results({"victory": true, "zone": "limestone", "diff": 1, "rooms": 4, "xp": 90, "reward": {"chests": [Rewards.make("set", 30, true)], "crystals": 90}})
+			_:
+				b = RoyaleResults.new()
+				world.add_child(b)
+				b.show_results(3, 2, 7, 6, 171.0, {"text": ["+90 insignes (place 3)"]})
+		await get_tree().create_timer(ResultsPanel.LOCK_SECS + 0.3, true).timeout
+		await probe("bilan : %s" % mode, 0.9)
+		b.queue_free()
+		get_tree().paused = false
 	var fp := FortunePopup.open(world, 10, 10, Callable())
 	await probe("autel de la fortune", 0.7)
 	fp.queue_free()

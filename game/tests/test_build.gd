@@ -221,8 +221,11 @@ func _test_world() -> void:
 	rp.player = player
 	world.add_child(rp)
 	rp.refresh()
-	check("pause : compétences sur 12 lignes (%d)" % rp._skills.get_children().filter(func(c): return c is HBoxContainer).size(),
-		rp._skills.get_children().filter(func(c): return c is HBoxContainer).size() >= 12 + 2 and rp._skills_title.text.ends_with("/ 12)"))
+	# (0.1.180) seules les cases occupées s'affichent, avec les enchaînements pris, plus une case libre (jamais 12 lignes dont 8 vides)
+	var rows := rp._skills.get_children().filter(func(c): return c is HBoxContainer and c.visible)
+	var free_rows := rows.filter(func(c): return c.find_children("*", "Label", true, false).any(func(l): return (l as Label).text.contains("libre") and (l as Label).visible))
+	check("pause : compétences occupées + 1 case libre (%d lignes, %d sorts)" % [rows.size(), Run.all_skills().size()],
+		rows.size() >= Run.all_skills().size() + 1 and free_rows.size() <= 1 and rp._skills_title.text.ends_with("/ 12)"))
 	rp.queue_free()
 
 	# zone et portée

@@ -478,7 +478,7 @@ victoire ou extraction ; les coffres de forge et du joaillier sont toujours gard
 | 10:00 → … | **Rage** : monstres plus forts, monstres de niveau supérieur, élites en masse. Plus d'XP et de butin. |
 | N'importe quand | Si l'entrée du donjon est découverte **et 3 sceaux réunis** : entrer → **arène du boss**. |
 | Boss | Combat direct dans une arène dédiée. Attaques annoncées par des **zones rouges au sol** (cercle, ligne, cône au corps à corps, projectiles à distance) + monstres invoqués autour. Être touché = **étourdi** 1 à 1,5 s. **Miroir** toutes les 12–17 s pendant 3 s : frapper le boss renvoie 60 % des dégâts. L'onde circulaire (bord jaune) se **saute**. |
-| Fin | Victoire (boss vaincu) ou défaite → bilan → lobby. |
+| Fin | Victoire (boss vaincu) ou défaite → bilan → lobby. Le bilan (même composant dans tous les modes) sépare **Gagné** (maîtrise, étoiles, déblocages), **Gardé** (insignes dont 25 de participation, pièces découvertes, coffres, fournitures d'une run réussie) et **Perdu** (or, clés, fournitures d'une run perdue). |
 
 ## Pression constante (easy to play, hard to master)
 

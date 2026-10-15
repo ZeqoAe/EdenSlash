@@ -165,6 +165,12 @@ et par usage, DPS du boss sur 10 s, dégâts subis par minute, temps pour tuer, 
 Règles de décision (≥ 5 cartes par style et par époque) : `conception/equilibrage/raffinement_3.md`, §2.
 Aucun réglage d'époque ou d'économie avant ces mesures. Test : `res://tests/test_journal.tscn`.
 
+## HUD, pause et bilans (0.1.180, lot U9)
+Un seul composant de bilan, `ui/results_panel.gd` (`ResultsPanel.show_spec` : titre, tuiles, blocs Gagné / Gardé / Perdu, boutons) ; `ResultsScreen`
+(Survie), `DuelResults`, `TowerResults`, `DungeonResults` (donjon, siège, ruée) et `RoyaleResults` l'étendent et ne font que bâtir la description.
+HUD : pile en haut à gauche (`Hud._left` : objectifs, Premiers pas, butin), Premiers pas et fiches seulement en Survie (`_survival_mode`), « AUTO » sur case
+remplie, FPS et touches de test cachés (« F1 : aide » 10 s au début). Pause : cases occupées seulement, confirmations stylées (`PauseMenu.Confirm`, `leave_texts`).
+
 ## Manette et menus
 `core/ui_nav.gd` (autoload UiNav) fait naviguer TOUS les menus à la manette : cadre doré qui saute au contrôle le plus proche dans la direction
 (parmi ceux du calque le plus haut), A = vrai clic de souris au centre, B = Échap, X = clic droit, LB/RB = onglets (`tab_screens`, `step_page`,

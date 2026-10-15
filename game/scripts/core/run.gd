@@ -62,6 +62,7 @@ var new_classes: Array = []  # classes débloquées pendant la run (bilan)
 var new_costumes: Array = []  # costumes (skins de tenue) débloqués pendant la run
 var rerolls_used := 0  # relances de cartes utilisées (1 par run + cartes « Bonne étoile »)
 var chests_found: Array = []  # (ancien) coffres ramassés : désormais rangés tout de suite dans Profile.reward_chests
+var reward_mark := 0  # nombre de coffres de récompense à l'ouverture de la run (bilan : new_reward_chests)
 var stage := 1  # étape de la run (façon Megabonk : boss vaincu → portail vers la zone suivante)
 var start_zone := ""  # zone choisie au lobby (première étape)
 ## Survie (DESIGN.md, « Boucle de jeu et Survie ») : époque de 3 maps, départ avec l'équipement du hub,
@@ -122,6 +123,7 @@ func start(cid: String) -> void:
 	new_classes = []
 	new_costumes = []
 	chests_found = []
+	reward_mark = Profile.reward_chests.size()
 	result = ""
 	started_at = Time.get_ticks_msec()
 	zone_id = Profile.selected_zone
@@ -290,6 +292,11 @@ func weapon_spec(slot: String) -> Dictionary:
 	if slot == "weapon":
 		return WeaponAttacks.spec_for(it, weapon_type())
 	return WeaponAttacks.spec_for(it) if not it.is_empty() else {}
+
+
+## Coffres de récompense gagnés pendant la run (rangés tout de suite dans le menu Coffres).
+func new_reward_chests() -> Array:
+	return Profile.reward_chests.slice(mini(reward_mark, Profile.reward_chests.size()))
 
 
 func duration_text() -> String:

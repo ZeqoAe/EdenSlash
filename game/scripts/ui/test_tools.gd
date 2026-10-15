@@ -15,6 +15,8 @@ var _overlay: Label
 var _report_box: PanelContainer
 var _report_edit: LineEdit
 var _toast: Label
+var _hint: Label  # « F1 : aide » : quelques secondes au début de la run, puis il s'efface
+var _hint_t := 0.0
 var _pending_shot: Image
 
 ## Aide : reflète les touches et le mode de jeu choisis dans les Paramètres.
@@ -27,7 +29,7 @@ static func help_text() -> String:
 	var skills: PackedStringArray = []
 	for i in 4:
 		skills.append(Settings.action_label("skill_%d" % (i + 1), 1))
-	var dev := "\nMode dev : F5 +1 niveau      F6 aller à l'entrée du donjon      F7 arène du boss      F8 déclencher la rage" if dev_keys() else ""
+	var dev := "\nMode dev : F5 +1 niveau      F6 aller à l'entrée du donjon      F7 arène du boss      F8 déclencher la rage      F2 infos de débogage" if dev_keys() else ""
 	var mask := Settings.camera_rotate_mask()
 	var cam := "Clic molette" if mask == MOUSE_BUTTON_MASK_MIDDLE else Settings.action_label("camera_rotate", 1)
 	return """[b]Contrôles[/b]  (Échap > Paramètres pour les changer)
@@ -36,11 +38,9 @@ static func help_text() -> String:
 %s : compétences      %s : interagir (coffre, PNJ, donjon)      %s : carte      %s : objectifs      %s : menu
 Molette : zoom
 
-[b]Tests et retours[/b]
-Alt + clic droit sur n'importe quoi : note sur cet élément (objet, apparence, bouton, monstre…)
-F9 : signaler un problème de carte (capture + position + ta note, dossier feedback)
-F4 : se débloquer      F2 : infos de débogage (position, FPS...)%s
-F1 : afficher / masquer cette aide""" % [
+[b]Aide et retours[/b]
+F4 : se débloquer (si le héros est coincé)      F1 : afficher / masquer cette aide
+Alt + clic droit sur n'importe quoi : noter un problème      F9 : signaler un problème de carte%s""" % [
 		Settings.action_label("move_forward", 1), Settings.action_label("move_left", 1),
 		Settings.action_label("move_back", 1), Settings.action_label("move_right", 1),
 		k.call("jump"), k.call("dodge"), move, cam, " ".join(skills), k.call("interact"),
@@ -112,13 +112,15 @@ func _build() -> void:
 	_toast.add_theme_color_override("font_outline_color", Color.BLACK)
 	add_child(_toast)
 
-	var hint := Label.new()
-	hint.text = "F1 : aide   ·   F9 : signaler un problème"
-	hint.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	hint.position = Vector2(14, -28)
-	hint.add_theme_font_size_override("font_size", 13)
-	hint.modulate = Color(1, 1, 1, 0.65)
-	add_child(hint)
+	_hint = Label.new()
+	_hint.text = "%s : aide" % Settings.action_label("help", 1)
+	_hint.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_hint.position = Vector2(16, -32)
+	_hint.add_theme_font_size_override("font_size", UiTheme.MIN_TEXT)
+	_hint.add_theme_constant_override("outline_size", 4)
+	_hint.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
+	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_hint)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -151,7 +153,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		director.debug_start_rage()
 
 
-func _process(_delta: float) -> void:
+const HINT_SECS := 10.0
+
+
+func _process(delta: float) -> void:
+	if _hint != null and _hint.visible:
+		_hint_t += delta
+		_hint.modulate.a = clampf((HINT_SECS - _hint_t) / 2.0, 0.0, 1.0) * 0.8  # 2 dernières secondes : il s'efface
+		_hint.visible = _hint_t < HINT_SECS
 	if _overlay.visible and player:
 		var p := player.global_position
 		_overlay.text = "Map %s  |  pos %.1f, %.1f, %.1f (Eden x=%.1f y=%.1f)\nÉtat %s  |  niveau %d  |  au sol %s  |  monstres %d  |  %d FPS" % [
