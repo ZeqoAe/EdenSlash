@@ -153,7 +153,7 @@ func start(p: Player) -> void:
 		_fog = Image.create(FOG_RES, FOG_RES, false, Image.FORMAT_LA8)
 		_fog.fill(Color(0, 0, 0, 0))
 		_fog_tex = ImageTexture.create_from_image(_fog)
-		tower = SiegeDirector.new() if Tower.siege else TowerDirector.new()
+		tower = SiegeDirector.new() if Tower.siege else (RushDirector.new() if Tower.rush else TowerDirector.new())
 		add_child(tower)
 		tower.setup(self)
 		return

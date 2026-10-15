@@ -28,6 +28,17 @@ func show_results(got: Dictionary) -> void:
 	var notes: Array = []
 	if siege and String(got.get("outcome", "")) != "":
 		notes.append(siege_outcome_text(got))
+	var rw0: Dictionary = got.get("reward", {})
+	if rush and not (rw0.get("bosses", []) as Array).is_empty():
+		# passe M6 : les boss vaincus du tirage, ses modificateurs
+		var names: Array = (rw0.bosses as Array).map(func(id): return BossLibrary.short_name(String(id)))
+		var mods: Array = (rw0.get("mods", []) as Array).map(func(k): return String(Rush.MODS.get(k, {}).get("name", k)))
+		notes.append("Vaincus : %s%s" % [", ".join(names), (" · " + ", ".join(mods)) if not mods.is_empty() else ""])
+	if siege and not (rw0.get("stars", []) as Array).is_empty():
+		var st: Array = rw0.stars
+		var fresh := (rw0.get("new_stars", []) as Array).size()
+		notes.append("Objectifs %s%s" % ["".join(Siege.STARS.map(func(s): return "★" if String(s.id) in st else "☆")),
+			(" · %d nouvea%s" % [fresh, "ux" if fresh > 1 else "u"]) if fresh > 0 else ""])
 	var cls := Run.class_data()
 	var gained: Array = [row("Maîtrise %s" % cls.get("name_fr", ""), "+%d" % int(got.get("xp", 0)), "", "expertise")]
 	var kept: Array = []
@@ -51,6 +62,8 @@ func show_results(got: Dictionary) -> void:
 				quest["archetype"] = String(c.archetype)
 	var tiles: Array = [progress, [Dungeons.DIFF_NAMES[diff], "difficulté"], [str(Run.max_level), "niveau"], [Run.duration_text(), "durée"],
 		[str(Run.kills), "monstres"], [str(Run.elites), "élites"]]
+	if rush and int(rw0.get("seed", 0)) > 0:
+		tiles = tiles.slice(0, 4) + [["n° %d" % int(rw0.seed), "tirage"], [str((rw0.get("mods", []) as Array).size()), "modificateurs"]]
 	show_spec({
 		"title": title,
 		"tone": "win" if victory else "lose",

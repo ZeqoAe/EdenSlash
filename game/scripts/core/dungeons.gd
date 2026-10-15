@@ -44,7 +44,7 @@ static func archetype(zid: String) -> String:
 	return String(ARCHETYPES.get(zid, "storm"))
 
 
-## Ruée des boss : « zone » spéciale du moteur de donjon, un étage par zone (son boss, niveau du donjon).
+## Ruée des boss : « zone » spéciale du moteur de donjon, un étage par zone (un boss de la zone tiré par Rush, niveau du donjon).
 const RUSH := "rush"
 const RUSH_TITLES := ["Briseur de boss", "Fléau des boss", "Seigneur des boss"]  # Normal, Héroïque, Mythique
 
@@ -64,8 +64,10 @@ static func rush_level(f: int, diff: int) -> int:
 ## Butin de la Ruée : cristaux pour chaque boss battu ; des coffres de matières de haut niveau (un de forge à
 ## la moitié, quatre dont pierres rares et gemmes si les 8 sont tombés) ; si les 8 sont tombés, un coffre
 ## d'équipement (le 1er de chaque difficulté : un coffre d'apparence) et le titre de la difficulté.
+## Passe M6 : cristaux × Rush.bonus() (modificateurs choisis) ; le bilan reçoit le tirage (graine, boss vaincus, modificateurs).
 static func rush_reward(reached: int, diff: int) -> Dictionary:
-	var out := {"chests": [], "crystals": ActivityLoot.rush_crystals(reached, diff), "plan": "", "rush": true, "title": ""}
+	var out := {"chests": [], "crystals": roundi(ActivityLoot.rush_crystals(reached, diff) * Rush.bonus()), "plan": "", "rush": true, "title": "",
+		"seed": Rush.seed, "mods": Rush.mods.duplicate(), "bosses": Rush.lineup.slice(0, reached)}
 	Profile.materials["crystal"] = int(Profile.materials.get("crystal", 0)) + int(out.crystals)
 	var key := "rush_best_%d" % diff
 	Profile.records[key] = maxi(int(Profile.records.get(key, 0)), reached)
@@ -82,6 +84,8 @@ static func rush_reward(reached: int, diff: int) -> Dictionary:
 		Profile.records["rush_clear_%d" % diff] = int(Profile.records.get("rush_clear_%d" % diff, 0)) + 1
 		out.title = RUSH_TITLES[clampi(diff, 0, RUSH_TITLES.size() - 1)]
 		Profile.add_title(out.title)
+		if Rush.seed > 0:
+			Rush.cleared()  # tirage vaincu : la prochaine Ruée en propose un autre
 	return out
 
 

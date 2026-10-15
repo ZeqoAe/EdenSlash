@@ -36,8 +36,29 @@ const ALLIES := 2
 const POWER_RATIO := [0.0, 4.0, 3.4]
 const TITLE := "Maître du Siège"
 
+## PE conseillée (rapport à la PE attendue du niveau du siège) : Normal, Héroïque, Mythique ; au moins la PE requise.
+## Mesurée au pilote (conception/nuit_15_10/R_M6.md) : « Équilibré » avec l'équipement de l'époque II gagnée en Normal, au
+## verrou en Héroïque, à l'équipement complet optimisé en Mythique (≈ 65 000 : le verrou seul y est « Difficile »).
+const ADVISED := [1.3, 4.1, 3.6]
+## Passe M6 : boss et lieutenants de la bibliothèque (BossLibrary). Le boss du jour de chaque zone (un des 6, il change
+## chaque jour) ; les vagues d'élites (3 et 5) amènent chacune un lieutenant (un autre boss de la zone, une mécanique).
+const LIEUTENANT_WAVES := [3, 5]
+const LIEUTENANT_HP := 1.6  # PV d'un lieutenant × ceux d'un lieutenant de donjon (trois héros le frappent ; 2 : vague 3 trois fois plus longue)
+## Objectifs secondaires (passe M6) : une étoile chacun, retenue par zone et difficulté ; chacun rapporte
+## STAR_BONUS des cristaux du siège en plus.
+const STARS := [
+	{"id": "boss", "name": "Le boss tombe", "tip": "Vaincs le boss du siège."},
+	{"id": "allies", "name": "Personne ne tombe", "tip": "Aucun allié ne tombe avant la chute du boss."},
+	{"id": "fast", "name": "Avant sa fureur", "tip": "Vaincs le boss avant qu'il entre en fureur."},
+]
+const STAR_BONUS := 0.25
+
 ## Issue du chacun pour soi du siège en cours : "", "won" (dernier debout), "escaped" (cœur emporté), "eliminated".
 static var outcome := ""
+## Objectifs secondaires réussis pendant le siège en cours (ids de STARS).
+static var stars_done: Array = []
+## Un allié est tombé pendant les vagues ou le boss (objectif « Personne ne tombe » manqué).
+static var ally_fell := false
 ## Rang final du joueur (1 = vainqueur, 3 = tombé le premier).
 static var rank := 0
 ## Héros qui porte le cœur (jamais plus d'un) : les IA le prennent pour cible.
@@ -51,6 +72,67 @@ static func reset() -> void:
 	rank = 0
 	carrier = null
 	ffa = false
+	stars_done = []
+	ally_fell = false
+
+
+# --- boss et lieutenants (bibliothèque) ------------------------------------------------------------
+## Boss du jour du siège de la zone [param zid] : un des boss de la zone (BossLibrary.for_zone), tiré par jour.
+static func boss_for(zid: String, day := "") -> String:
+	var pool := BossLibrary.for_zone(zid)
+	if pool.is_empty():
+		return ""
+	var dd := Quests.today() if day == "" else day
+	return String(pool[absi(hash(["siege", zid, dd])) % pool.size()])
+
+
+## Lieutenants du siège de [param zid] (vagues LIEUTENANT_WAVES) : les deux boss suivants de la zone, jamais le boss du jour.
+static func lieutenants_for(zid: String, day := "") -> Array:
+	var pool := BossLibrary.for_zone(zid)
+	var boss := boss_for(zid, day)
+	var out: Array = []
+	var i := pool.find(boss)
+	for k in range(1, pool.size()):
+		if out.size() >= LIEUTENANT_WAVES.size():
+			break
+		out.append(String(pool[(i + k) % pool.size()]))
+	return out
+
+
+## Lieutenant de la vague [param f] ("" : aucun).
+static func lieutenant_at(zid: String, f: int) -> String:
+	var k := LIEUTENANT_WAVES.find(f)
+	var l := lieutenants_for(zid)
+	return String(l[k]) if k >= 0 and k < l.size() else ""
+
+
+# --- PE conseillée, objectifs secondaires -------------------------------------------------------------
+static func advised(zid: String, diff: int) -> int:
+	var lv := level(zid, diff)
+	return maxi(GearPower.required(lv, float(ADVISED[clampi(diff, 0, 2)])), power_required(zid, diff))
+
+
+## Étoiles déjà gagnées pour la zone [param zid] et la difficulté [param diff] (ids de STARS).
+static func stars(zid: String, diff: int) -> Array:
+	var bits := int(Profile.records.get("siege_stars_%s_%d" % [zid, diff], 0))
+	var out: Array = []
+	for i in STARS.size():
+		if (bits >> i) & 1 == 1:
+			out.append(String(STARS[i].id))
+	return out
+
+
+## Objectifs du siège qui vient de finir : [param boss_down], [param fast] (boss tué avant sa fureur).
+static func score_stars(boss_down: bool, fast: bool) -> Array:
+	var out: Array = []
+	if boss_down:
+		out.append("boss")
+		if not ally_fell:
+			out.append("allies")
+		if fast:
+			out.append("fast")
+	stars_done = out
+	return out
 
 
 static func floor_type(f: int) -> String:
@@ -129,8 +211,18 @@ static func wins() -> int:
 static func settle(zid: String, diff: int, reached: int, result: String) -> Dictionary:
 	var lv := level(zid, diff) + 1
 	var boss_down := reached > WAVES
-	var out := {"chests": [], "crystals": ActivityLoot.siege_crystals(reached, diff, boss_down),
-		"title": "", "outcome": result, "boss": boss_down}
+	# objectifs secondaires (passe M6) : chacun ajoute STAR_BONUS des cristaux ; étoiles retenues par zone et difficulté
+	var extra := stars_done.filter(func(s): return s != "boss").size()
+	var out := {"chests": [], "crystals": roundi(ActivityLoot.siege_crystals(reached, diff, boss_down) * (1.0 + STAR_BONUS * extra)),
+		"title": "", "outcome": result, "boss": boss_down, "stars": stars_done.duplicate(), "new_stars": []}
+	var skey := "siege_stars_%s_%d" % [zid, diff]
+	var bits := int(Profile.records.get(skey, 0))
+	for i in STARS.size():
+		if String(STARS[i].id) in stars_done and (bits >> i) & 1 == 0:
+			bits |= 1 << i
+			out.new_stars.append(String(STARS[i].id))
+	if bits != 0:
+		Profile.records[skey] = bits
 	Profile.materials["crystal"] = int(Profile.materials.get("crystal", 0)) + int(out.crystals)
 	var key := "siege_best_%d" % diff
 	Profile.records[key] = maxi(int(Profile.records.get(key, 0)), mini(reached, WAVES + 1))

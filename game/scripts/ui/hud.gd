@@ -438,6 +438,8 @@ func _update_objectives() -> void:
 		_seal_label.text = extra.trim_suffix(" · ") + (" · %s · 2 manches gagnantes" % ClassRival.NAMES[Duel.difficulty].to_lower() if Duel.round_n <= 1 and Duel.wins + Duel.losses == 0 else "")
 	if Tower.active:
 		_seal_label.text = extra + (("%s · %s" % [Dungeons.name_of(Tower.dungeon), Dungeons.DIFF_NAMES[Tower.dungeon_diff]]) if Tower.is_dungeon() else "%s · record : étage %d" % [Tower.DIFF_NAMES[Tower.difficulty], Tower.best()])
+		if director.tower and director.tower.has_method("sub_text"):
+			_seal_label.text = extra + director.tower.sub_text()  # Ruée : le boss suivant ; Siège : alliés debout (passe M6)
 	if director.sv:
 		_seal_label.text = extra.trim_suffix(" · ")  # Survivant : les gardiens sont sur la frise (SurvivorHud), pas de sceau
 	if Training.active:

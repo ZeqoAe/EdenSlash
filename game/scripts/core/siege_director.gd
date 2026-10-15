@@ -5,6 +5,11 @@ extends TowerDirector
 ## cœur du boss tombe au centre, trêve de quelques secondes, puis chacun pour soi à trois (un `ffa_id` par héros,
 ## règles du JcJ). Fin : dernier debout (coffre d'apparence légendaire), cœur emporté hors de l'anneau (coffre
 ## d'apparence épique) ou éliminé. Prolonge TowerDirector pour en garder l'apparition des monstres, du boss et des alliés.
+##
+## Passe M6 : le boss est le boss du jour de la zone (bibliothèque, Siege.boss_for), les vagues d'élites amènent un lieutenant
+## (Siege.lieutenant_at) ; les vagues arrivent en escouades mélangées par rôle (composant de la passe P15 : SpawnDirector.compose,
+## species_for, apply_role) tout autour de l'arène, à l'angle d'or d'un groupe au suivant, avec un événement par vague
+## (WAVE_EVENTS : tenaille, encerclement annoncé, élite escortée, ruée d'essaim) ; objectifs secondaires suivis (Siege.STARS).
 
 var _wave_t := 0.0  # secondes de combat de la vague ou du boss en cours
 var _enraged := false
@@ -18,6 +23,17 @@ var _orb: Node3D  # lueur au-dessus de celui qui porte le cœur
 var _out_t := 0.0  # tic des dégâts hors de l'anneau
 var _msg_t := 0.0
 var _hazards_done := false
+var _sd: SpawnDirector  # compositions par rôle (passe P15)
+var _angle := randf() * TAU  # direction de la dernière escouade (angle d'or)
+var _event_left := -1  # monstres restant à faire venir quand l'événement de la vague part (-1 : déjà parti)
+
+## Événement de chaque vague (1 à 5), lancé quand il reste ~55 % des monstres à faire venir : les vagues d'élites (3, 5) ont un
+## événement léger (leur lieutenant fait le pic), les vagues de monstres un dur (mesuré : élite escortée + lieutenant en vague 3 =
+## vague trois fois plus longue que les autres).
+const WAVE_EVENTS := ["pincer", "encircle", "swarm", "escort", "pincer"]
+const SQUAD_EVERY := 1.6  # s entre deux escouades
+const EDGE := [14.0, 21.0]  # m du centre : les escouades arrivent du bord de l'arène
+const WARN_TIME := 1.1  # s entre les cercles orange et l'arrivée (encerclement)
 
 
 func setup(director: RunDirector) -> void:
@@ -44,6 +60,8 @@ func setup(director: RunDirector) -> void:
 	d._place_player(d.map.start)
 	Potions.start_run()  # 2 potions de soin au départ (Tower.start vide la réserve)
 	_spawn_allies()
+	_sd = SpawnDirector.new(d)
+	_sd._verbose = false
 	d.zone_changed.emit({"name": "Le Siège · %s" % Dungeons.name_of(Tower.dungeon), "levels": [lvl, lvl]})
 	begin(1)
 
@@ -64,20 +82,64 @@ func begin(f: int) -> void:
 	var lvl := Tower.level_for(f)
 	if Tower.is_boss_floor(f):
 		left = 0
-		_spawn_boss(Tower.zone_for(f), lvl)
+		_spawn_siege_boss(lvl)
 		_enrage_next = Siege.ENRAGE_AT
 		_enraged = false
 		_spawn_hazards()
-		var intro := String(Tower.zone_for(f).get("dungeon", {}).get("intro", ""))
-		d.message.emit("BOSS : %s\nFureur dans %d min · évite les zones rouges" % [_boss.display_name, int(Siege.ENRAGE_AT / 60.0)], 4.0)
+		var bid := String(_boss.get_meta("boss_id", ""))
+		var intro := BossLibrary.intro(bid) if bid != "" else String(Tower.zone_for(f).get("dungeon", {}).get("intro", ""))
+		d.message.emit("BOSS : %s\nFureur dans %d min · évite les zones rouges" % [_boss.display_name.trim_prefix("<Boss> "), int(Siege.ENRAGE_AT / 60.0)], 4.0)
 		if intro != "":
 			d.get_tree().create_timer(4.2).timeout.connect(func(): d.message.emit(intro, 3.5))
 		return
 	left = Tower.monster_count(f)
+	_event_left = roundi(left * 0.55)
+	var lt := ""
 	if Tower.is_elite_floor(f):
 		for i in Tower.elite_count(f):
-			_spawn(d._elites.pick_random() if not d._elites.is_empty() else d._pick_monster(lvl), _ring(8.0, 14.0), lvl + 1)
-	d.message.emit("Vague %d / %d%s" % [f, Siege.WAVES, "\nDes élites !" if Tower.is_elite_floor(f) else ""], 2.5)
+			var at := _edge_point()
+			_spawn(d._elites.pick_random() if not d._elites.is_empty() else d._pick_monster(lvl), at, lvl + 1)
+			ArrivalMarker.mark(d, at, Color(1.0, 0.3, 0.2))
+		lt = _spawn_wave_lieutenant(f, lvl)
+	d.message.emit("Vague %d / %d%s" % [f, Siege.WAVES, ("\nUn lieutenant mène la vague : %s" % lt) if lt != "" else ("\nDes élites !" if Tower.is_elite_floor(f) else "")], 2.5)
+
+
+## Boss du siège : le boss du jour de la zone (bibliothèque), PV d'un boss de donjon du même niveau × Siege.BOSS_SCALE.
+func _spawn_siege_boss(lvl: int) -> void:
+	var bid := Siege.boss_for(Tower.dungeon)
+	if bid != "":
+		var hp := BossLibrary.hp(bid, lvl + 1, Tower.dungeon_diff) * Siege.BOSS_SCALE
+		_boss = BossLibrary.spawn(bid, Tower.dungeon_diff, {"director": d, "pos": _center, "level": lvl + 1, "hp": hp,
+			"atk_mult": Tower.monster_atk_mult(Tower.floor_n, -1, true)})
+	if _boss == null:
+		_spawn_boss(Tower.zone_for(Tower.floor_n), lvl)  # (bibliothèque vide : le boss de la zone, comme avant)
+		return
+	_boss.xp_reward = 0
+
+
+## Lieutenant de la vague [param f] (vagues d'élites) : un autre boss de la zone, une mécanique, compté dans la vague.
+func _spawn_wave_lieutenant(f: int, lvl: int) -> String:
+	var lid := Siege.lieutenant_at(Tower.dungeon, f)
+	if lid == "":
+		return ""
+	var hp := BossLibrary.hp(lid, lvl + 1, Tower.dungeon_diff) * Siege.LIEUTENANT_HP
+	var at := _edge_point()
+	var m := BossLibrary.spawn(lid, Tower.dungeon_diff, {"director": d, "pos": at, "level": lvl + 1, "hp": hp, "lieutenant": true,
+		"atk_mult": Tower.monster_atk_mult(f, -1, true)})
+	if m == null:
+		return ""
+	m.xp_reward = 0
+	ArrivalMarker.mark(d, at, Color(1.0, 0.3, 0.2))
+	return BossLibrary.short_name(lid)
+
+
+## Allié IA (TowerDirector) : sa chute pendant les vagues ou le boss manque l'objectif « Personne ne tombe ».
+func _make_ally(cid: String) -> ClassRival:
+	var a := super._make_ally(cid)
+	a.died.connect(func(_w, _k):
+		if phase in ["fight", "cards", "rest"]:
+			Siege.ally_fell = true)
+	return a
 
 
 ## Dangers permanents de l'arène du boss (lave, poison, givre…), comme dans la salle du boss de la Survie.
@@ -116,10 +178,15 @@ func _update_fight(delta: float) -> void:
 	var lvl := Tower.level_for(f)
 	_wave_t += delta
 	_spawn_t -= delta
-	if left > 0 and _spawn_t <= 0.0 and alive() < Tower.max_alive(f):
-		_spawn_t = SPAWN_EVERY
-		for i in mini(3, left):
-			_spawn(d._pick_monster(lvl), _ring(9.0, 22.0), lvl)
+	if _sd:
+		_sd.tick(delta)  # soigneurs (rôle « soigneur » de la passe P15)
+	if left > 0 and _event_left >= 0 and left <= _event_left and not Tower.is_boss_floor(f):
+		_event_left = -1
+		_wave_event(String(WAVE_EVENTS[clampi(f - 1, 0, WAVE_EVENTS.size() - 1)]), f, lvl)
+	elif left > 0 and _spawn_t <= 0.0 and alive() < Tower.max_alive(f):
+		_spawn_t = SQUAD_EVERY
+		if _spawn_squad(_squad_for(f), mini(left, 3 + f / 2), lvl, _edge_point()) == 0:
+			_spawn(d._pick_monster(lvl), _edge_point(), lvl)  # (zone sans rôle utilisable : un monstre quelconque)
 			left -= 1
 	if is_instance_valid(_boss):
 		if _boss.is_dead:
@@ -178,9 +245,114 @@ func _start_rest() -> void:
 	d.message.emit("Répit : PV rendus, 1 potion de soin%s\nVague %d dans %d s" % [extra, f + 1, int(Siege.REST_TIME)], 3.0)
 
 
+# --- vagues : escouades par rôle, événements (passe M6, composant de la passe P15) -----------------
+## Escouade de la vague [param f] : celles de SpawnDirector.SQUADS débloquées à cette vague (tireurs dès la 2e, rempart
+## à la 3e, soutien à la 5e), au hasard selon leur poids.
+func _squad_for(f: int) -> Dictionary:
+	var pool: Array = SpawnDirector.SQUADS.filter(func(s): return float(s.from) <= float(f - 1) and _sd._squad_possible(s))
+	if pool.is_empty():
+		return {"id": "meute", "roles": {"melee": 1, "swarm": 1}}
+	var total := 0.0
+	for s in pool:
+		total += float(s.w)
+	var r := randf() * total
+	for s in pool:
+		r -= float(s.w)
+		if r <= 0.0:
+			return s
+	return pool[-1]
+
+
+## Pose une escouade [param squad] de [param n] monstres au plus autour de [param c] (rôles mélangés, jamais plus de trois
+## fois la même espèce) ; tireurs et soigneurs en retrait. Renvoie le nombre posé.
+func _spawn_squad(squad: Dictionary, n: int, lvl: int, c: Vector3) -> int:
+	if _sd == null or n <= 0:
+		return 0
+	var roles := _sd.compose(squad, float(n)).slice(0, n)
+	var ids := _sd.species_for(roles)
+	var out := c - _center
+	out.y = 0.0
+	out = out.normalized() if out.length() > 0.1 else Vector3.FORWARD
+	var placed := 0
+	for id in ids:
+		if left <= 0:
+			break
+		var role := SpawnDirector.role_of(int(id))
+		var at := c + out * (3.0 if role in ["ranged", "support"] else 0.0)
+		var m := _spawn(int(id), _near(at, 2.5), lvl)
+		SpawnDirector.apply_role(m, role)
+		left -= 1
+		placed += 1
+	if placed > 0 and _behind(c):
+		ArrivalMarker.mark(d, c, Color(1.0, 0.85, 0.35))  # arrivée dans le dos : signalée
+	return placed
+
+
+## Point du bord de l'arène pour la prochaine escouade : l'angle d'or depuis la précédente (des arrivées tout autour),
+## à distance du héros.
+func _edge_point() -> Vector3:
+	for k in 8:
+		_angle = fposmod(_angle + SpawnDirector.GOLDEN + randf_range(-0.3, 0.3), TAU)
+		var p := _center + Vector3(cos(_angle), 0, sin(_angle)) * randf_range(EDGE[0], EDGE[1])
+		var g: Vector3 = d.map.ground_at(p.x, p.z)
+		if g != Vector3.INF and g.distance_to(d.player.global_position) > 9.0:
+			return g
+	return _ring(9.0, 20.0)
+
+
+## Le point [param c] est dans le dos du héros (±60°).
+func _behind(c: Vector3) -> bool:
+	var fw := d.player.forward()
+	var to := c - d.player.global_position
+	return Vector2(fw.x, fw.z).normalized().dot(Vector2(to.x, to.z).normalized()) < -0.5
+
+
+## Événement de la vague (annoncé) : prise en tenaille (deux escouades opposées), encerclement (cercles orange autour du
+## héros puis six petits groupes), élite escortée, ruée d'essaim (trois escouades rapides).
+func _wave_event(kind: String, f: int, lvl: int) -> void:
+	match kind:
+		"encircle":
+			d.message.emit("Encerclement !", 2.0)
+			var rot := randf() * TAU
+			var n := 6
+			var per := maxi(1, mini(left, 18) / n)
+			for i in n:
+				var a := rot + TAU * i / n
+				var p := d.player.global_position + Vector3(cos(a), 0, sin(a)) * 10.0
+				var g: Vector3 = d.map.ground_at(p.x, p.z)
+				if g == Vector3.INF or g.distance_to(_center) > EDGE[1] + 2.0:
+					g = _edge_point()
+				Telegraph.spawn(d, g, 0.0, {"shape": "circle", "radius": 2.4, "delay": WARN_TIME, "damage": 0.0, "small": true,
+					"color": SpawnDirector.WARN_COLOR})
+				d.get_tree().create_timer(WARN_TIME, false).timeout.connect(func():
+					if phase == "fight" and Tower.floor_n == f and not d.player.is_dead:
+						_spawn_squad({"id": "cercle", "roles": {"melee": 1, "swarm": 1, "charger": 1}}, per, lvl, g))
+		"escort":
+			d.message.emit("Une élite et son escorte !", 2.0)
+			var c := _edge_point()
+			if not d._elites.is_empty():
+				_spawn(d._elites.pick_random(), c, lvl + 1)
+			ArrivalMarker.mark(d, c, Color(1.0, 0.3, 0.2))
+			_spawn_squad({"id": "escorte", "roles": {"tank": 1, "melee": 2, "ranged": 1, "support": 1}}, mini(left, 5), lvl, c)
+		"swarm":
+			d.message.emit("Ruée d'essaim !", 1.6)
+			for k in 3:
+				_spawn_squad({"id": "ruee", "roles": {"swarm": 4, "melee": 1}}, mini(left, 5), lvl, _edge_point())
+		_:  # tenaille
+			d.message.emit("Pris en tenaille !", 1.6)
+			var to := d.player.global_position - _center
+			var a := atan2(to.z, to.x) + PI * 0.5
+			for k in 2:
+				var ang := a + PI * k
+				var p := _center + Vector3(cos(ang), 0, sin(ang)) * EDGE[1]
+				var g: Vector3 = d.map.ground_at(p.x, p.z)
+				_spawn_squad(_squad_for(f), mini(left, 5), lvl, g if g != Vector3.INF else _edge_point())
+
+
 # --- le boss tombe : l'anneau, le cœur, le chacun pour soi ------------------------------------
 func _boss_down() -> void:
 	Tower.reached = Tower.top()  # la partie PvE est gagnée, quoi qu'il arrive ensuite
+	Siege.score_stars(true, not _enraged)  # objectifs secondaires (passe M6)
 	d._clear_monsters()
 	phase = "ring"
 	_ffa_t = 0.0
@@ -411,6 +583,14 @@ func clock_text() -> String:
 	if Tower.is_boss_floor(Tower.floor_n):
 		return "BOSS" if _enraged else "Boss %d:%02d" % [int(maxf(0.0, Siege.ENRAGE_AT - _wave_t)) / 60, int(maxf(0.0, Siege.ENRAGE_AT - _wave_t)) % 60]
 	return "Vague %d/%d" % [Tower.floor_n, Siege.WAVES]
+
+
+## Sous-ligne du HUD : l'arène, la difficulté et, avant la chute du boss, les alliés debout (objectif « Personne ne tombe »).
+func sub_text() -> String:
+	var base := "%s · %s" % [Dungeons.name_of(Tower.dungeon), Dungeons.DIFF_NAMES[Tower.dungeon_diff]]
+	if phase in ["ring", "ffa", "done"]:
+		return base
+	return "%s · alliés %d/%d" % [base, _alive_allies().size(), _allies.size()]
 
 
 func objective_text() -> String:

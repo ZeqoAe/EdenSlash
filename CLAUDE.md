@@ -112,6 +112,9 @@ Idées en vrac du joueur (15/10, 0.1.153 à 0.1.158, classement et état dans `c
 5 vagues, boss (fureur 6 min), anneau de 20 s, cœur au centre, chacun pour soi à trois (`Combatant.set_ffa`, `Siege.ffa` = règles JcJ, profil
 `siege` de `ModeRules`) ; dernier debout = coffre `look_legend`, cœur emporté = `look_epic`. Reste : Battle royale, MOBA 4v4 (conçus dans le
 même fichier, pas codés), les 39 sorts de `conception/fx_audit.csv`, « Triple lame ».
+Ruée et Siège sur la bibliothèque (passe M6, `conception/nuit_15_10/R_M6.md`) : `core/rush.gd` (8 boss tirés à graine, modificateurs) et
+`core/rush_director.gd` ; Siège : boss du jour et lieutenants (`Siege.boss_for`), vagues en escouades par rôle (P15), objectifs ★ ; pages :
+PE requise / conseillée et estimation (`ui/difficulty_panel.gd`, `Rush.ADVISED`, `Siege.ADVISED`). Mesures : `tools/m6_run.tscn`.
 Pacte, géants et Menace (0.1.191, P12, `DESIGN.md`) : `core/menace.gd` (Menace : PV des monstres et boss +20 % par géant vaincu, plafond 5,
 remise à zéro dans `RunDirector.start`), `world/giant_altar.gd` (2 autels par carte, `--giants=N` pour le pilote auto), `ai/giant_monster.gd`,
 `ui/menace_badge.gd` ; crochets d'une ligne dans `RunDirector` (`_spawn_monster(..., into)`, `Menace.apply`) et `Run.finish`. Test : `test_p12`.

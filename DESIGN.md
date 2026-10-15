@@ -400,8 +400,43 @@ pool de boss aux mécaniques différentes, réutilisables partout (Tour, Ruée, 
 - **Page Donjons** (`ui/dungeon_page.gd`) : en haut le donjon choisi (boss, mécaniques avec leur conseil en infobulle, pièces,
   victoires) et sa difficulté (jauge de PE) ; dessous « Je cherche » : filtres **pièce**, **panoplie**, **mécanique**, puis la liste
   (ouverts d'abord, fermés grisés avec leur condition) ; alliés IA ; « Entrer : <donjon> » épinglé. « Rejouer » relance le même boss.
-- **Pas encore** : la Ruée, le Siège, la Survie et le Survivant gardent leurs boss ; ils passeront par
-  `BossLibrary.spawn(id, palier, {director, pos, level, …})` (API dans `conception/nuit_15_10/R_M2.md`). La Tour y passe (M3).
+- **Pas encore** : la Survie et le Survivant gardent leurs boss ; ils passeront par
+  `BossLibrary.spawn(id, palier, {director, pos, level, …})` (API dans `conception/nuit_15_10/R_M2.md`). La Tour (M3), la Ruée et
+  le Siège (M6) y passent.
+
+## Ruée des boss et Siège sur la bibliothèque (passe M6, nuit du 15/10)
+
+Retour du joueur : le Siège Normal fait, un Mythique tenté « vraiment dur, logique : je n'avais pas la puissance ». La difficulté
+doit se lire avant de lancer ; la Ruée et le Siège puisent dans la bibliothèque de boss.
+
+- **Ruée** (`core/rush.gd`, `core/rush_director.gd`) : **8 boss tirés** dans la bibliothèque, un par zone dans l'ordre des zones
+  (niveau croissant en Normal et Héroïque ; en Mythique, tous niveau 90, PV × 0,8 → × 1,2 du 1er au 8e). Le tirage varie les
+  mécaniques (deux boss qui se suivent ne partagent pas de famille quand la zone le permet ; les boss du tirage précédent sont évités)
+  et se fait à partir d'une **graine affichée** (« tirage n° 4821 ») : il reste le même tant que la Ruée n'est pas vaincue (on
+  réessaie les mêmes boss), « Nouveau tirage » en donne un autre, une Ruée vaincue aussi. PV fixes du palier (P11, × 0,6), sans
+  renforts génériques ; carte et 50 % des PV entre deux boss. HUD : « Boss 3/8 », sous-ligne « Ensuite : Buster ».
+- **Modificateurs de la Ruée** (au choix, gardés) : *Sans répit* (aucun soin entre deux boss, cristaux +30 %), *Boss enragés*
+  (dégâts × 1,25, mécaniques × 0,85 d'intervalle, +40 %), *À l'aveugle* (boss à venir cachés sur la page et au HUD, +15 %).
+  Récompenses inchangées sinon (lot E1 : cristaux, parchemins, pierres et gemmes du niveau du dernier boss, coffre d'équipement,
+  apparence la 1re fois, titre), cristaux × (1 + bonus). Bilan : les boss vaincus et les modificateurs.
+- **Siège** : le **boss du jour** de la zone (un des 6 boss de la bibliothèque, change chaque jour, PV × 3,2 d'un boss de donjon)
+  et un **lieutenant** par vague d'élites (vagues 3 et 5 : un autre boss de la zone, une mécanique, 0,4 × les PV d'un boss de
+  donjon). Vagues en **escouades par rôle** (composant de P15 : compositions débloquées vague après vague, jamais plus de 3 fois la
+  même espèce, tireurs et soigneurs en retrait) qui arrivent du bord de l'arène à l'angle d'or, arrivée dans le dos signalée ; un
+  **événement annoncé** par vague (tenaille, encerclement aux cercles orange, ruée d'essaim, élite escortée, tenaille : les vagues
+  d'élites ont un événement léger, leur lieutenant fait le pic).
+  Alliés IA en comportement d'équipe (M7 : ils lisent les zones rouges, se replient sous 30 % de PV) — aussi en Donjon et Ruée.
+- **Objectifs du Siège** (une étoile chacun, retenues par zone et difficulté) : *Le boss tombe*, *Personne ne tombe* (aucun allié
+  à terre avant la chute du boss ; sous-ligne du HUD « alliés 2/2 »), *Avant sa fureur* ; les deux derniers ajoutent chacun
+  +25 % de cristaux au siège.
+- **Lisibilité de la difficulté** (`ui/difficulty_panel.gd`, pages Ruée et Siège) : « PE requise · la tienne » (ou « PE
+  conseillée » en Normal) sur une jauge, une **estimation** — *Facile* (≥ 1,35 × la PE conseillée), *Équilibré* (≥ 0,95),
+  *Difficile* (≥ 0,7), *Hors de portée* —, les **récompenses** de la difficulté et, si elle est trop haute, un avertissement d'une
+  phrase. La difficulté reste permise (mode dev compris). PE conseillée = `ADVISED` × PE attendue du niveau (au moins la requise),
+  mesurée au pilote (`tools/m6_run.tscn`, `R_M6.md`) : Ruée [1,3 ; 3,7 ; 3,4], Siège [1,3 ; 4,1 ; 3,6] — « Équilibré » avec
+  l'équipement de l'époque II gagnée en Normal, au verrou de PE en Héroïque, avec l'équipement complet optimisé en Mythique (le
+  verrou seul y est « Difficile »). Verrous et PV inchangés (le Normal passe à l'ouverture, l'Héroïque au verrou). Ruée au pilote :
+  10 à 15 min en « Équilibré », 5 min en « Facile », 30 à 40 min en « Hors de portée ».
 
 ## La Tour : types d'étage (passe M3, nuit du 15/10)
 

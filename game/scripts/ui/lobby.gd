@@ -1806,7 +1806,10 @@ func _dungeon_pickers(menu: String, siege: bool) -> void:
 			_dg_diff = di
 			_show_menu(menu))
 		dr.add_child(b)
-	_pe_gauge(Siege.power_required(_dg_zone, _dg_diff) if siege else Dungeons.power_required(_dg_zone, _dg_diff))
+	if siege:  # passe M6 : PE requise ou conseillée, estimation, récompenses, avertissement
+		DifficultyPanel.add(_sub, Siege.power_required(_dg_zone, _dg_diff), Siege.advised(_dg_zone, _dg_diff), DifficultyPanel.siege_rewards(_dg_zone, _dg_diff))
+	else:
+		_pe_gauge(Dungeons.power_required(_dg_zone, _dg_diff))
 	_pe_next(_dg_zone, siege)
 
 
@@ -1863,6 +1866,7 @@ func _pe_next(zid: String, siege: bool) -> void:
 func _menu_siege() -> void:
 	_activity_head("siege")
 	_dungeon_pickers("siege", true)
+	_siege_boss_and_stars()
 	_section("Alliés IA", "Ils deviennent tes rivaux quand le boss tombe. « Au hasard » sinon.")
 	var ar := HBoxContainer.new()
 	ar.add_theme_constant_override("separation", 6)
@@ -1896,6 +1900,37 @@ func _menu_siege() -> void:
 		why = PE_LOW
 	go.pressed.connect(_start_siege)
 	_pin_go(go, why)
+
+
+## Siège (passe M6) : le boss du jour et ses lieutenants (bibliothèque), puis les trois objectifs (étoiles gagnées).
+func _siege_boss_and_stars() -> void:
+	var bid := Siege.boss_for(_dg_zone)
+	if bid != "":
+		_section("Boss du jour", "Il change chaque jour. Ses lieutenants mènent les vagues d'élites.")
+		var b := Hud._label(_sub, "%s · %s" % [BossLibrary.full_name(bid), ", ".join(BossLibrary.mechanic_names(bid))], 15, UiTheme.TEXT)
+		b.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var lts: Array = Siege.lieutenants_for(_dg_zone)
+		if not lts.is_empty():
+			var parts: Array = []
+			for i in lts.size():
+				parts.append("%s (vague %d)" % [BossLibrary.short_name(String(lts[i])), int(Siege.LIEUTENANT_WAVES[i])])
+			Hud._label(_sub, "Lieutenants : " + ", ".join(parts), 14, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var got := Siege.stars(_dg_zone, _dg_diff)
+	_section("Objectifs  %s" % "".join(Siege.STARS.map(func(st): return "★" if String(st.id) in got else "☆")),
+		"Chaque objectif réussi ajoute un quart de cristaux en plus.")
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	_sub.add_child(row)
+	for st in Siege.STARS:
+		var done := String(st.id) in got
+		var p := PanelContainer.new()
+		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		p.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.08, 0.06, 0.15, 0.85), UiTheme.GOLD if done else UiTheme.GOLD_DIM, 1, 8, false))
+		p.mouse_filter = Control.MOUSE_FILTER_STOP
+		p.tooltip_text = String(st.tip)
+		row.add_child(p)
+		var l := Hud._label(p, ("★ " if done else "☆ ") + String(st.name), 14, UiTheme.GOLD if done else UiTheme.TEXT)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 
 func _start_siege() -> void:
@@ -1932,7 +1967,7 @@ func _dungeon_allies_picker() -> void:
 		ar.add_child(ob)
 
 
-## Ruée des boss : les 8 boss de donjon à la suite, une difficulté, des alliés IA.
+## Ruée des boss : 8 boss de la bibliothèque à la suite (un tirage, passe M6), une difficulté, des modificateurs, des alliés IA.
 func _menu_rush() -> void:
 	_activity_head("rush")
 	_section("Difficulté")
@@ -1953,13 +1988,68 @@ func _menu_rush() -> void:
 			_dg_diff = di
 			_show_menu("rush"))
 		dr.add_child(b)
-	_pe_gauge(Dungeons.power_required(Dungeons.RUSH, _dg_diff))
+	DifficultyPanel.add(_sub, Dungeons.power_required(Dungeons.RUSH, _dg_diff), Rush.advised(_dg_diff), DifficultyPanel.rush_rewards(_dg_diff, Rush.chosen()))
 	_pe_next(Dungeons.RUSH, false)
+	_rush_lineup()
+	_rush_mods()
 	_dungeon_allies_picker()
 	var go := MenuWidgets.gold_button("Lancer la Ruée", 22, Vector2(0, 58))
 	go.disabled = not Unlocks.is_open("dungeons") or not Dungeons.power_ok(Dungeons.RUSH, _dg_diff)
 	go.pressed.connect(_start_rush)
 	_pin_go(go, Unlocks.condition("dungeons") if not Unlocks.is_open("dungeons") else (PE_LOW if go.disabled else ""))
+
+
+## Les huit boss du tirage proposé (« ??? » à l'aveugle), sa graine et « Nouveau tirage ».
+func _rush_lineup() -> void:
+	var seed_n := Rush.current_seed()
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	_sub.add_child(head)
+	var t := _section("Les %d boss · tirage n° %d" % [Dungeons.rush_floors(), seed_n],
+		"Un boss par zone, de plus en plus forts. Le tirage reste le même tant que la Ruée n'est pas vaincue.")
+	t.reparent(head)
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var rr := MenuWidgets.glass_button("Nouveau tirage", 13, Vector2(0, 30))
+	rr.tooltip_text = "D'autres boss, d'autres mécaniques."
+	rr.pressed.connect(func():
+		Rush.reroll()
+		Profile.save_profile()
+		_show_menu("rush"))
+	head.add_child(rr)
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 14)
+	grid.add_theme_constant_override("v_separation", 3)
+	_sub.add_child(grid)
+	var blind := "blind" in Rush.chosen()
+	var ids := Rush.lineup_for(seed_n)
+	for i in ids.size():
+		var id := String(ids[i])
+		var hidden := blind and i > 0
+		var l := Hud._label(grid, "%d  %s" % [i + 1, "???" if hidden else BossLibrary.short_name(id)], 14, UiTheme.MUTED if hidden else UiTheme.TEXT)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.mouse_filter = Control.MOUSE_FILTER_STOP
+		l.tooltip_text = "Caché jusqu'à son arrivée" if hidden else "%s\n%s" % [BossLibrary.full_name(id), ", ".join(BossLibrary.mechanic_names(id))]
+
+
+## Modificateurs de la Ruée (passe M6) : plus durs, plus de cristaux (le total est dans les récompenses).
+func _rush_mods() -> void:
+	_section("Modificateurs", "Plus durs, plus de cristaux.")
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	_sub.add_child(row)
+	var on := Rush.chosen()
+	for k in Rush.MOD_ORDER:
+		var m: Dictionary = Rush.MODS[k]
+		var b := MenuWidgets.glass_button(("✔ " if k in on else "") + String(m.name), 14, Vector2(0, 38))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.tooltip_text = "%s\nCristaux : +%d %%" % [String(m.desc), roundi(100.0 * float(m.bonus))]
+		var kk := String(k)
+		b.pressed.connect(func():
+			Rush.toggle(kk)
+			Profile.save_profile()
+			_show_menu("rush"))
+		row.add_child(b)
 
 
 func _start_rush() -> void:

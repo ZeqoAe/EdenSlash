@@ -258,9 +258,10 @@ func is_invulnerable() -> bool:
 
 # --- cerveau ------------------------------------------------------------------------------
 
-## Équipes (passe M7) : Arènes et Gantelet, plusieurs héros par camp.
+## Équipes (passe M7) : Arènes et Gantelet, plusieurs héros par camp ; passe M6 : aussi les alliés des Donjons, de la Ruée
+## et du Siège (ils lisent les zones rouges du boss, se replient sous 30 % de PV, visent le plus faible).
 func _team_mode() -> bool:
-	return Duel.team_mode()
+	return Duel.team_mode() or (Tower.active and Tower.is_dungeon())
 
 
 ## Équipiers de ce héros (lui compris) : le joueur et ses alliés, ou les adversaires de son camp.

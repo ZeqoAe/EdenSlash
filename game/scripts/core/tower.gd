@@ -107,7 +107,7 @@ const DIFF_RULE := ["monster_easy", "monster_normal", "monster_hard", "monster_h
 static var active := false
 ## Donjon (lot 13) : zone du donjon en cours ("" : pas de donjon), difficulté et alliés IA choisis.
 static var dungeon := ""
-static var rush := false  # la Ruée des boss : « donjon » dont les salles sont les boss des 8 zones
+static var rush := false  # la Ruée des boss : « donjon » de 8 salles de boss (Rush : tirage de la bibliothèque, passe M6)
 static var siege := false  # Le Siège : « donjon » à 5 vagues puis le boss, puis le chacun pour soi (Siege)
 static var dungeon_diff := 0
 ## Donjon à la carte (passe M2) : boss de la bibliothèque (BossLibrary) du donjon en cours ("" : Ruée, Siège, Tour).
@@ -138,6 +138,8 @@ static func start_dungeon(cid: String, zid: String, diff: int, ally_ids: Array, 
 	dungeon_diff = clampi(diff, 0, Dungeons.DIFF_NAMES.size() - 1)
 	allies = ally_ids.slice(0, Dungeons.MAX_ALLIES)
 	difficulty = 1
+	if rush:
+		Rush.start()  # passe M6 : les huit boss du tirage proposé, les modificateurs cochés
 	Run.fill_from_preset()
 	if Run.skills.is_empty():
 		for s in (Run.class_data().get("skills", []) as Array).slice(0, 4):
@@ -854,6 +856,7 @@ static func _finish_dungeon() -> Dictionary:
 	rush = false
 	siege = false
 	allies = []
+	Rush.reset()
 	var rank := Siege.rank
 	Siege.reset()
 	return {"dungeon": true, "rush": was_rush, "siege": was_siege, "outcome": sg_outcome, "rank": rank, "victory": victory, "rooms": reached,
