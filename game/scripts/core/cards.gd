@@ -239,6 +239,32 @@ const UNLOCK := {
 	"phoenix_blade": ["boss_kills", 4, "Vaincre %d boss"],
 	"steel_tempest": ["boss_kills", 5, "Vaincre %d boss"],
 }
+## Effets des cartes communes réutilisables ailleurs que dans les cartes (passifs des pièces du Survivant, SurvivorGear) :
+## tous les passifs qui ont une statistique ou un effet déclenché, sauf les effets immédiats (Rappel), les malus (Canon de
+## verre), les évolutions (prérequis) et les sauts (sans statistique). Ordre FIXE : les tables déterministes s'y réfèrent
+## (ajouter à la fin).
+const PASSIVE_EFFECTS := ["wide_arc", "long_reach", "sharpened", "giant_slayer", "combo_flow", "incantation", "heavy_finisher",
+	"multishot", "piercing", "ricochet", "deep_wounds", "lingering", "magnet", "scholar", "fortune", "precision", "toughness",
+	"brute", "arcana", "static_blade", "frost_edge", "ember", "volatile", "shockwave", "wind_step", "battle_trance",
+	"hunter_eye", "second_wind", "momentum", "executioner", "echo", "frost_nova", "vigor", "swift_blade", "bloodthirst",
+	"light_step", "keen_edge", "focus"]
+
+
+## Effets réutilisables existants (une carte supprimée dans l'éditeur du mode dev en sort).
+static func passive_effects() -> Array:
+	return PASSIVE_EFFECTS.filter(func(id): return not Boons.get_def(String(id)).is_empty())
+
+
+## Ligne d'un effet à la puissance [param pw] (1 = une carte commune) : « Lame large : Rayon des zones +14 % » ; pour un
+## effet déclenché, sa description.
+static func effect_line(id: String, pw := 1.0) -> String:
+	var d := Boons.get_def(id)
+	if d.is_empty():
+		return id
+	var t := total_text(d, pw) if not (d.get("stat", {}) as Dictionary).is_empty() else String(d.get("desc", ""))
+	return "%s : %s" % [String(d.get("name", id)), t]
+
+
 ## Bannir (retirée de la run) et garder (revient au prochain choix) : nombre par run.
 const BANS_PER_RUN := 3
 const LOCKS_PER_RUN := 3

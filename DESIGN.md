@@ -518,6 +518,19 @@ d'apparence (lot S6). Socle (S1, 0.1.194) :
   expérience ×2 au niveau 1 → ×1,15 au niveau 10, puissance des pièces « Survivant » = niveau du héros (90 au plus).
 - Règles chiffrées : profil `survivor` de `ModeRules` (modifiable en mode dev). Visible au menu Jouer en mode dev seulement
   tant que `Survivor.READY` est faux (passé à vrai à la fin de S6).
+- **Pièces et arme** (S2, `core/survivor_pool.gd`, `core/survivor_gear.gd`) : pool = les 13 sets d'Eden de niveau 90 (tête,
+  torse, jambes, gants, bottes ; 5 en plates, 5 en cuir, 3 en tissu), plus les pièces de niveau 90 hors set pour la cape, le
+  collier et la bague ; armes des 17 types (modèles de niveau 90). Stats d'origine de la pièce, puissance = niveau du héros (90
+  au plus) ; seule part aléatoire : la qualité, 100 à 120 % (jet parfait = 120 %). Chaque pièce a un **passif fixe** (effet
+  d'une carte commune, `Cards.PASSIVE_EFFECTS`, table déterministe, jamais deux fois le même dans un set) et gagne à +6, +8 et
+  +10 un passif tiré **quand la carte d'amélioration est proposée** (affiché, différent des siens) : 4 passifs distincts à +10,
+  cumulés dans la run (`Run.passive_power`), plafonnés par effet. Emplacements et arme **verrouillés à vie** (aucun retrait ni
+  remplacement, même au menu pause). **Panoplies** à 2 / 3 / 5 pièces, en Survivant seulement : 2 = stat de la famille du set
+  (attribut dominant : Assaut +6 % d'attaque, Vivacité +8 % de vitesse d'attaque, Sortilège +8 % d'attaque magique, Grâce +8 %
+  de PV) ; 3 = les deux stats propres au set ; 5 = bonus fort + effet de la famille (explosion d'auto-attaque, foudre sur
+  critique, écho de compétence, barrière et soin) + stat du type d'armure. Propositions : type d'armure de la classe ×2,
+  jamais deux pièces du même set dans une offre, set déjà porté à 3 pièces ×0,3 : un 5/5 ≈ 1 run sur 25 pour un joueur qui le
+  cherche (`tools/sv_set_sim.tscn`), presque jamais sans le chercher.
 
 ## Étapes et sources (refonte 0.1.91, façon Megabonk)
 

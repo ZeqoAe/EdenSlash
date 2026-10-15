@@ -387,6 +387,10 @@ static func from_template(e: Dictionary, level: int, rarity := -1) -> Dictionary
 
 ## Définition d'un set : sets d'Eden (data/eden_catalog.json) ou anciens sets du jeu.
 static func set_def(sid: String) -> Dictionary:
+	if Survivor.active and sid.begins_with("e"):
+		var sv := SurvivorPool.set_def(sid)  # Survivant : bonus à 2 / 3 / 5 pièces (règle par famille de set)
+		if not sv.is_empty():
+			return sv
 	return SETS.get(sid, GameData.eden_sets.get(sid, {}))
 
 
@@ -924,6 +928,12 @@ static func describe(item: Dictionary, detailed := true) -> String:
 			lines.append("[color=#ffd76a]✶ Passif : %s[/color]" % item.passive.get("desc", ""))
 		else:
 			lines.append("[color=#ffd76a]✶ Passif — %s : %s[/color]" % [item.passive.get("name", ""), item.passive.get("desc", "")])
+	if item.has("sv_passives"):  # Survivant : passif fixe, puis ceux des paliers +6 / +8 / +10
+		lines.append("")
+		for l in SurvivorGear.passive_lines(item):
+			lines.append("[color=#ffd76a]✶ %s[/color]" % l)
+		if SurvivorGear.item_locked(item):
+			lines.append("[color=#8a86a0]%s[/color]" % SurvivorGear.LOCK_TEXT)
 	# joaillerie et forge (Craft)
 	var extra_lines: Array = []
 	var rolls: Array = item.get("up_rolls", [])

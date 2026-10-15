@@ -1142,8 +1142,8 @@ func add_gold(amount: int) -> void:
 
 func equip(item: Dictionary) -> void:
 	var slot: String = item.slot
-	if slot == "trophy":
-		return  # les trophées ne s'équipent plus (collection de la run)
+	if slot == "trophy" or SurvivorGear.locked(slot):
+		return  # les trophées ne s'équipent plus (collection de la run) ; Survivant : emplacement verrouillé à vie
 	if is_same(equipped.get("offhand"), item):
 		swap_weapons()  # l'arme secondaire devient l'arme principale (si elle est du type de la classe)
 		return
@@ -1160,7 +1160,7 @@ func equip(item: Dictionary) -> void:
 ## Arme secondaire (WeaponAttacks.OFFHAND_DMG) : une arme de l'inventaire, ou l'arme principale
 ## (les deux s'échangent alors).
 func equip_offhand(item: Dictionary) -> void:
-	if item.get("slot", "") != "weapon":
+	if item.get("slot", "") != "weapon" or SurvivorGear.locked("weapon"):
 		return
 	var main: Dictionary = equipped.get("weapon", {})
 	var old: Dictionary = equipped.get("offhand", {})
@@ -1180,7 +1180,7 @@ func equip_offhand(item: Dictionary) -> void:
 func swap_weapons() -> void:
 	var main: Dictionary = equipped.get("weapon", {})
 	var off: Dictionary = equipped.get("offhand", {})
-	if main.is_empty() or off.is_empty() or not can_be_main(off):
+	if main.is_empty() or off.is_empty() or not can_be_main(off) or SurvivorGear.locked("weapon"):
 		return
 	equipped["weapon"] = off
 	equipped["offhand"] = main
@@ -1196,7 +1196,7 @@ func slot_of(item: Dictionary) -> String:
 
 
 func unequip(slot: String) -> void:
-	if equipped.has(slot) and inventory.size() < INVENTORY_MAX:
+	if equipped.has(slot) and inventory.size() < INVENTORY_MAX and not SurvivorGear.locked(slot):
 		inventory.append(equipped[slot])
 		equipped.erase(slot)
 		save_profile()

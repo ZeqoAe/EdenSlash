@@ -253,6 +253,8 @@ static func _item_slot(slot: String) -> String:
 
 ## L'arme principale est du type de la classe ; la secondaire, de n'importe quel type.
 func _can_drop_on(slot: String, data) -> bool:
+	if SurvivorGear.locked(_item_slot(slot)):
+		return false  # Survivant : emplacement verrouillé à vie
 	if data.source == "inventory":
 		return data.item.slot == _item_slot(slot) and (slot != "weapon" or Profile.can_be_main(data.item))
 	# échange entre les deux cases d'arme (si l'arme secondaire peut être la principale)
@@ -860,6 +862,10 @@ func _refresh_detail() -> void:
 	_b_offhand.text = "Échanger" if worn_slot == "weapon" else "Secondaire"
 	if it.slot == "weapon" and not equipped and not Profile.can_be_main(it):
 		_b_equip.text = "Équiper (secondaire)"  # une arme d'un autre type que la classe
+		_b_offhand.visible = false
+	if SurvivorGear.locked(String(it.slot)):
+		_b_equip.disabled = true  # Survivant : la pièce posée reste toute la run, l'emplacement aussi
+		_b_equip.text = SurvivorGear.LOCK_TEXT
 		_b_offhand.visible = false
 	_b_upgrade.disabled = false
 	var up := "Amélioration maximale" if int(it.get("upgrade", 0)) >= Items.MAX_UPGRADE else "Prochain niveau : %d %% de réussite" % roundi(Craft.success_chance(it) * 100.0)

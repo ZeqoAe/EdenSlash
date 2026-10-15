@@ -80,6 +80,10 @@ const SURVIVOR := {
 	"pity_after": 6, "luck_per_min": 0.02, "base_rerolls": 2, "bans": 3, "skip_gold_base": 15, "skip_gold_per_level": 3,
 	# pièces (DECISIONS §1) : qualité 100 à 120 %, jet parfait = 120 %
 	"quality_min": 1.0, "perfect_quality": 1.2,
+	# mélange des propositions de pièces (lot S2, SurvivorPool.weight) : type d'armure de la classe ×armor_pref, set dont le
+	# héros porte déjà set_damp_from pièces ×set_damp (4e et 5e pièces rares : 5/5 ≈ 1 run sur 25, tools/sv_set_sim) ;
+	# puissance d'un passif de pièce (1 = une carte commune)
+	"armor_pref": 2.0, "set_damp": 0.3, "set_damp_from": 3, "passive_power": 1.0,
 	# héros (§8.1) : expérience ×2 au niveau 1, ×1,15 à partir du niveau 10 ; une résurrection
 	"xp_start": 2.0, "xp_end": 1.15, "xp_until": 10, "resurrections": 1,
 	# monstres (§8.2) : PV hp0 × hp_growth^minutes, dégâts atk0 × atk_growth^minutes, vivants au plus
