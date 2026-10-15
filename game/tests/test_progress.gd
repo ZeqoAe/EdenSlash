@@ -193,9 +193,10 @@ func _ready() -> void:
 	Profile.add_bag(Craft.gem_key("ruby", 1))
 	Run.finish("extraction")
 	Profile.end_run_extract()
-	check("extraction : fournitures en réserve", Profile.stash_count() == 3 and Profile.bag.is_empty())
+	var potions := func(): return int(Profile.stash.get("potion:heal", 0))  # les 2 potions de soin de départ reviennent aussi en réserve
+	check("extraction : fournitures en réserve", Profile.stash_count() - potions.call() == 3 and Profile.bag.is_empty())
 	Run.start("magician")
-	check("nouvelle run : la réserve part dans le sac", Profile.bag_count("drill") == 2 and Profile.stash_count() == 0)
+	check("nouvelle run : la réserve part dans le sac", Profile.bag_count("drill") == 2 and Profile.stash_count() == 0 and Profile.bag_count("potion:heal") >= Potions.START_HEAL)
 	Run.finish("defaite")
 	Profile.end_run(null)
 	check("mort : fournitures emportées perdues", Profile.stash_count() == 0)
