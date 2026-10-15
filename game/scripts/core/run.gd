@@ -7,6 +7,7 @@ signal instant_card(id: String)  # carte à effet immédiat (Rappel)
 
 const MAX_SKILLS := 4
 const MAX_RANK := 5
+const INSIGNIA_BASE := 25  # insignes de participation d'une run de Survie (dès 10 monstres vaincus)
 
 var active := false
 var class_id := "samurai"
@@ -60,14 +61,15 @@ var rerolls_used := 0  # relances de cartes utilisées (1 par run + cartes « Bo
 var chests_found: Array = []  # (ancien) coffres ramassés : désormais rangés tout de suite dans Profile.reward_chests
 var stage := 1  # étape de la run (façon Megabonk : boss vaincu → portail vers la zone suivante)
 var start_zone := ""  # zone choisie au lobby (première étape)
-## Survie (DESIGN.md, « Boucle de jeu et Survie ») : époque de 3 maps, départ sans équipement,
+## Survie (DESIGN.md, « Boucle de jeu et Survie ») : époque de 3 maps, départ avec l'équipement du hub,
 ## coffres d'emplacement ; false pour la Tour, le Duel, l'entraînement.
 var survival := false
 var epoch := 1
 ## Pièces choisies dans les coffres de la run (Eden id) : achetables au hub ensuite.
 var seen_items: Array = []
-## Enclume de la Survie : emplacement -> amélioration tirée (-2 à +10), appliquée à la pièce
-## portée dans cet emplacement, quelle qu'elle soit, jusqu'à la fin de la run.
+## Enclume de la Survie : emplacement -> bonus tiré (+0 à +7), AJOUTÉ au +N de la pièce portée dans
+## cet emplacement (celui du hub), quelle qu'elle soit, jusqu'à la fin de la run ; le total est
+## plafonné à UPGRADE_CAP (voir slot_upgrade).
 var slot_bonus: Dictionary = {}
 ## Améliorations d'arme de la run (cartes « weapon_up », WeaponAttacks.roll_upgrade) par
 ## emplacement ("weapon", "offhand") : {rank, dmg, crit, speed, area, …, sig}. Elles restent sur
@@ -79,8 +81,15 @@ const MAX_TROPHIES := 12
 var trophies: Array = []
 var anvil_stage := 0  # map où l'enclume a servi (une fois par map)
 var insignia_gain := 0  # insignes gagnés à la fin de la run (bilan)
-## Tirage de l'enclume : valeur -> poids (le plus souvent +3 à +6, rarement +9/+10 ou négatif).
-const ANVIL_ROLLS := {-2: 2, -1: 3, 0: 4, 1: 6, 2: 8, 3: 12, 4: 14, 5: 14, 6: 12, 7: 9, 8: 6, 9: 3, 10: 2}
+## Mesures d'équilibrage seulement (--human=<part de coups évités>) : facteur sur les dégâts subis par le héros.
+static var test_taken := 1.0
+## Mesures : distance (m) en deçà de laquelle le bot de test combat au lieu de marcher vers son objectif.
+static var test_fight_range := 4.0
+## Tirage de l'enclume : valeur -> poids (le plus souvent +2 à +4, moyenne ≈ +3,2, rarement +6/+7).
+## Elle rattrape surtout les pièces peu améliorées : sur une pièce +10 du hub, le plafond coupe vite.
+const ANVIL_ROLLS := {0: 4, 1: 8, 2: 12, 3: 15, 4: 14, 5: 10, 6: 6, 7: 3}
+## +N maximal d'une pièce en Survie (+10 du hub + enclume) : ×2,2 sur ses stats de base au plus.
+const UPGRADE_CAP := 12
 const ANVIL_SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "necklace", "ring"]
 
 
@@ -141,8 +150,10 @@ func start(cid: String) -> void:
 	changed.emit()
 
 
-## Run de Survie de l'époque [param ep] : la zone de sa 1re map, sans l'équipement du profil
-## (il se débloque dans les coffres d'emplacement ; l'arme de départ est choisie à l'arrivée).
+## Run de Survie de l'époque [param ep] : la zone de sa 1re map, avec l'équipement du hub (0.1.164 :
+## pièces, +N, gemmes, enchantements, panoplies, arme secondaire ; copies, voir Profile.begin_run).
+## Les trouvailles des coffres d'emplacement remplacent un emplacement le temps de la run seulement :
+## l'équipement du hub est restauré à la fin (Profile.end_run_survival).
 func start_survival(cid: String, ep: int, rank := 0) -> void:
 	Profile.selected_zone = Epochs.zone(ep, 1)
 	start(cid)
@@ -152,8 +163,7 @@ func start_survival(cid: String, ep: int, rank := 0) -> void:
 	epoch = clampi(ep, 1, Epochs.count())
 	zone_id = Epochs.zone(epoch, 1)
 	start_zone = zone_id
-	Profile.equipped = {}
-	Profile.inventory = []
+	offhand_used = Profile.equipped.has("offhand")  # défi « sans arme secondaire » : celle du hub compte
 	changed.emit()
 
 
@@ -180,7 +190,9 @@ func finish(res: String) -> void:
 		for id in seen_items:
 			if not int(id) in Profile.seen_gear:
 				Profile.seen_gear.append(int(id))
-		insignia_gain = 25 * stage + kills / 25 + elites * 2 + (60 * epoch if res == "victoire" else 0)
+		# 25 de participation (dès 10 monstres vaincus), 25 par carte atteinte : même une défaite en carte 1
+		# paie de quoi acheter une pièce de l'Armurerie en 1 ou 2 runs (prix 50 à 73 pour l'époque I)
+		insignia_gain = (INSIGNIA_BASE if kills >= 10 else 0) + 25 * stage + kills / 20 + elites * 2 + (60 * epoch if res == "victoire" else 0)
 		if Challenge.active:
 			insignia_gain = roundi(insignia_gain * 1.5)  # Défi de maîtrise : insignes ×1,5
 		if heroic_rank > 0:
@@ -814,6 +826,12 @@ func apply_card(card: Dictionary) -> void:
 var anvil_result := ""
 
 
+## +N effectif d'une pièce portée dans [param slot] : son +N (hub) plus le bonus d'enclume de
+## l'emplacement, plafonné à UPGRADE_CAP.
+func slot_upgrade(piece_up: int, slot: String) -> int:
+	return clampi(piece_up + int(slot_bonus.get(slot, 0)), 0, maxi(UPGRADE_CAP, piece_up))
+
+
 ## Enclume de la Survie : tire l'amélioration de l'emplacement [param slot] (remplace la
 ## précédente) ; renvoie le texte du résultat.
 func anvil_roll(slot: String) -> String:
@@ -831,11 +849,10 @@ func anvil_roll(slot: String) -> String:
 	anvil_stage = stage
 	Profile.changed.emit()
 	var name := String(Items.SLOT_NAMES.get(slot, slot))
-	if got >= 9:
-		return "Coup de maître ! %s %+d" % [name, got]
-	if got < 0:
-		return "Le métal se fend… %s %+d" % [name, got]
-	return "%s %+d" % [name, got]
+	var up := slot_upgrade(int(Profile.equipped.get(slot, {}).get("upgrade", 0)), slot)
+	if got >= 6:
+		return "Coup de maître ! %s +%d (total +%d)" % [name, got, up]
+	return "%s +%d (total +%d)" % [name, got, up]
 
 
 ## Range les sorts pris selon le preset actif de la classe (Grimoire, SpellPresets) : sorts

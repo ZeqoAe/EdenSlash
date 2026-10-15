@@ -82,8 +82,8 @@ var route := PackedVector3Array()
 var _camp_ready_at := {}  # index de camp -> instant
 var _roam_timer := 2.0
 var _wave_timer := 60.0
-const EARLY_RAMP := 180.0  # durée de la montée en puissance du début de run (s)
-const EARLY_EASE := 0.6  # PV et dégâts des monstres au tout début (×)
+const EARLY_RAMP := 300.0  # durée de la montée en puissance du début de run (s)
+const EARLY_EASE := 0.45  # PV et dégâts des monstres au tout début (×)
 var _wave_hard := false
 var seals := 0
 var _despawn_timer := 2.0
@@ -167,9 +167,7 @@ func start(p: Player) -> void:
 		return
 	_refresh_chest_labels()
 	if Run.survival:
-		message.emit("%s · %s\nTu pars sans équipement : ouvre les coffres de la carte, puis trouve le donjon" % [zone.name, Epochs.get_def(Run.epoch).name], 4.0)
-		world._offer("Ton arme de %s : choisis sa variante" % String(GameData.weapon_type(Run.weapon_type()).get("name", "classe")).to_lower(),
-			start_weapon_cards())  # avant la première compétence
+		message.emit("%s · %s\nTu pars avec ton équipement du hub : les coffres de la carte le remplacent le temps de la run, puis trouve le donjon" % [zone.name, Epochs.get_def(Run.epoch).name], 4.5)
 	else:
 		message.emit("%s\nCasse tout, ouvre les coffres, forge ton équipement, puis trouve le donjon" % zone.name, 3.5)
 
@@ -562,8 +560,8 @@ func _spawn_monster(id: int, pos: Vector3, level: int, boss := false) -> Monster
 		m.hp = m.max_hp
 		m.atk *= em * (1.0 + Epochs.HEROIC_ATK * Run.heroic_rank)
 	if state == "explore":
-		# montée en puissance sur les 3 premières minutes : la run démarre sans
-		# équipement, le joueur doit pouvoir apprendre avant que ça devienne punitif
+		# montée en puissance sur les premières minutes de chaque carte : le joueur doit
+		# pouvoir se mettre en place avant que ça devienne punitif
 		var k := lerpf(EARLY_EASE, 1.0, clampf(time / EARLY_RAMP, 0.0, 1.0))
 		m.max_hp *= k
 		m.hp = m.max_hp
@@ -1268,10 +1266,12 @@ func anvil_slot_cards() -> Array:
 	for slot in Run.ANVIL_SLOTS:
 		var it: Dictionary = Profile.equipped.get(slot, {})
 		var cur := int(Run.slot_bonus.get(slot, 0))
+		var up := int(it.get("upgrade", 0))
 		out.append({"type": "anvil_slot", "id": slot, "slot": slot, "title": String(Items.SLOT_NAMES.get(slot, slot)),
-			"subtitle": ("Actuellement %+d (remplacé)" % cur) if Run.slot_bonus.has(slot) else "Emplacement à +0",
+			"subtitle": ("Bonus actuel +%d (remplacé) · total +%d" % [cur, Run.slot_upgrade(up, slot)]) if Run.slot_bonus.has(slot) else "Pièce à +%d, sans bonus de run" % up,
 			"desc": (Items.display_name(it) if not it.is_empty() else "Vide : le bonus s'appliquera à la pièce que tu y mettras") \
-				+ "\nTirage de -2 à +10 (le plus souvent +3 à +6)", "icon": String(it.get("icon", "")) if not it.is_empty() else "",
+				+ "\nTirage de +0 à +7 (le plus souvent +2 à +4), ajouté au +N de la pièce (total +%d au plus)" % Run.UPGRADE_CAP,
+			"icon": String(it.get("icon", "")) if not it.is_empty() else "",
 			"color": Items.color_of(it) if not it.is_empty() else Color(0.75, 0.7, 0.6)})
 	return out
 
@@ -1351,7 +1351,7 @@ func _use_station(it: Interactable) -> void:
 			for a in map.interactables:
 				if is_instance_valid(a) and a.kind == "anvil":
 					a.use_up()  # une seule enclume par carte
-			world._offer("Enclume : choisis un emplacement (amélioration tirée de -2 à +10, pour toute la run)", anvil_slot_cards())
+			world._offer("Enclume : choisis un emplacement (bonus de +0 à +7 ajouté à sa pièce pour toute la run, total +%d au plus)" % Run.UPGRADE_CAP, anvil_slot_cards())
 		"anvil":
 			var cards := anvil_cards()
 			if cards.is_empty():

@@ -273,14 +273,28 @@ Les costumes d'Eden tombent sur les boss (1 chance sur 4, 1 sur 2 s'il est enrag
 certificats et passifs, les points de maîtrise (maîtrise de classe, déjà en place) ; les
 cosmétiques ; l'équipement **pour la collection et le JcJ non normalisé** (achat au hub).
 
-**En Survie, on part toujours sans son équipement** : il se débloque pendant la run, map après
-map. L'équipement de la collection ne sert qu'au hub (collection, JcJ non normalisé), où se fait
-toute l'optimisation (+10, gemmes, enchantements, réforge).
+**En Survie, on part avec l'équipement du hub (0.1.164, décision du joueur du 15/10 : elle remplace celle de
+0.1.123 « on part sans équipement »)** : le préréglage actif de la classe (pièces, +N, gemmes, enchantements,
+panoplies, arme secondaire) est porté dès la première seconde ; toute l'optimisation (Armurerie, Atelier :
+forge, gemmes, enchantements) sert donc la Survie et la progression entre les runs est réelle. La run travaille
+sur des **copies** : les trouvailles des coffres d'emplacement remplacent un emplacement le temps de la run
+seulement, et à la fin (victoire, défaite, abandon, extraction) ou à la reprise après une fermeture du jeu en
+pleine run, le hub retrouve exactement son équipement d'avant (`Profile.begin_run` prend un instantané,
+`Profile.end_run_survival` le restaure si quelque chose a bougé). Les pièces choisies en coffre restent
+achetables à l'Armurerie. **Compte neuf** : `StarterGear` donne à chaque classe, une fois, 8 pièces d'Eden
+communes, spéciales ou rares (la plus rare possible) du palier 10-30, le plus proche de 20 (arme du type de la classe, tête, torse,
+jambes, gants, bottes, bague, collier), à +0 : le hub n'est jamais vide. **Boucle d'amorçage** : 25 insignes de participation par
+run (dès 10 monstres tués) + 25 par carte atteinte, de quoi acheter une pièce de l'époque I (50 à 73) en 1 ou 2 runs, même perdues ;
+les premiers niveaux de chaque run montent plus vite (XP ×2 au niveau 1, ×1 au niveau 10) et le début de chaque carte est plus doux
+(monstres à 45 % puis 100 % sur 5 min). Mesures et plafonds : `conception/nuit_15_10/N1_survie_equipement.md`.
 
 **Époques** : une run = 3 maps d'une même époque ; la puissance est normalisée (on repart du
 niveau 1, la puissance d'une pièce suit le niveau du héros, plafonné à chaque map) ; l'époque
 change les pièces d'Eden proposées (modèles, panoplies, raretés) et la difficulté des monstres.
-Battre le boss final d'une époque débloque la suivante.
+Battre le boss final d'une époque débloque la suivante. **Ce qui compte dans une pièce** (la normalisation par le
+niveau ne change pas) : sa rareté (×0,85 commune à ×1,32 légendaire sur les stats de base), son jet de qualité, son
++N du hub (+10 % des stats de base par niveau, ×2 à +10), ses gemmes (valeurs plates suivant le niveau du héros,
+pleines au niveau 15), son enchantement, son passif d'arme et les bonus de panoplie (2 / 4 / 6 pièces).
 
 | Époque | Maps (zones) | Armures | Armes | Raretés |
 |---|---|---|---|---|
@@ -297,13 +311,16 @@ bottes, bijoux (bague, collier, boucles), trophée, carte de sort, carte de pass
 certificat. Un coffre d'équipement propose **3 pièces au hasard** parmi toutes les pièces de son
 emplacement au palier et à la rareté de la map (au palier 23 : 6 panoplies), avec **une relance
 par coffre**. Les armes sont de tous les types : changer d'arme change le combo d'auto-attaque.
-Départ : **une arme au choix parmi 3** (palier de la map 1). Les monstres ne lâchent plus
+Départ : l'arme du hub (plus de choix d'arme au départ depuis 0.1.164). Les monstres ne lâchent plus
 d'équipement (or, expérience, fournitures, clés).
 
-**En run, les pièces restent à +0** (stats de base et bonus de panoplie). **Enclume, une fois
-par map** : on choisit un emplacement, il reçoit un tirage pondéré de -2 à +10 (le plus souvent
-+3 à +6, rarement +9/+10 ou négatif), gardé pour toute la run quelle que soit la pièce portée
-dans cet emplacement : des runs moyennes, des runs dorées, des runs maudites.
+**Enclume, une fois par map** (remaniée en 0.1.164) : on choisit un emplacement, il reçoit un tirage pondéré de
++0 à +7 (le plus souvent +2 à +4, moyenne ≈ +3,2), **ajouté au +N de la pièce portée** dans cet emplacement (celui du
+hub), quelle qu'elle soit, pour toute la run ; **le total est plafonné à +12** (`Run.UPGRADE_CAP`, ×2,2 sur les
+stats de base). Elle rattrape donc surtout les pièces peu améliorées (une pièce +10 gagne au plus +2), sans faire
+exploser les stats ; plus de tirages négatifs (le hub compte maintenant). Un nouveau tirage sur le même emplacement
+remplace l'ancien. Les cartes d'amélioration d'arme restent plafonnées (niveau 8 par arme, `WeaponAttacks.MAX_RANK`) ;
+les cartes de sort ont leur propre plafond de rang ; elles s'ajoutent aux stats de l'équipement sans le remplacer.
 
 **Cartes** : la montée de niveau propose toujours des cartes ; les coffres de cartes (sort,
 passif, certificat) permettent de viser un type.

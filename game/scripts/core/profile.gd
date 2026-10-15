@@ -38,6 +38,8 @@ var in_run := false
 ## Survie : pièces d'Eden (id) choisies au moins une fois dans un coffre d'emplacement,
 ## achetables au hub ; insignes : monnaie gagnée en Survie pour les acheter.
 var seen_gear: Array = []
+## Classes dont l'équipement de départ (StarterGear) a déjà été remis ; la Survie part avec l'équipement du hub.
+var starter_done: Array = []
 var insignia := 0
 var wheel := {}  # roulette quotidienne (Wheel) : jour, lancers faits, série sans gain
 ## Fil d'éveil (Unlocks) : entrées ouvertes (gardées pour toujours) et ouvertures pas encore annoncées.
@@ -165,6 +167,9 @@ func _ready() -> void:
 		_test = true
 	slot = last_slot()
 	save_path = slot_path(slot)
+	var env_path := OS.get_environment("EDEN_PROFILE")  # mesures en parallèle : un profil par processus
+	if env_path != "":
+		save_path = env_path
 	load_profile()
 	_ensure_starter()
 
@@ -242,6 +247,7 @@ func load_profile() -> void:
 		Settings.set_v("interface", "dev_mode", true)
 		dev.enabled = false
 	selected_zone = String(d.get("selected_zone", "limestone"))
+	starter_done = d.get("starter_done", [])
 	starter_trophy = String(d.get("starter_trophy", ""))
 	reward_chests = Rewards.migrate(d.get("reward_chests", []))
 	if d.has("vault"):
@@ -280,13 +286,13 @@ func load_profile() -> void:
 
 ## Anciennes sauvegardes (stats figées) -> format à jets.
 func _migrate(item: Dictionary) -> Dictionary:
+	NamesFr.fix_item(item)  # ancienne sauvegarde : nom d'objet anglais -> français
 	if not item.has("uid"):
 		item["uid"] = "%d_%d" % [Time.get_ticks_usec(), randi() % 100000]
 	if not item.has("rv") and item.has("rarity"):
 		# anciennes raretés (commun, magique, rare or, épique, légendaire orange) -> raretés d'Eden
 		item["rarity"] = [0, 2, 3, 3, 4][clampi(int(item.rarity), 0, 4)]
 		item["rv"] = 2
-	NamesFr.fix_item(item)  # ancienne sauvegarde : nom d'objet anglais -> français
 	if int(item.get("rv", 0)) == 2 and item.has("eden"):
 		# niveau affiché = niveau de l'objet dans Eden ; l'ancien niveau devient sa puissance
 		var e: Dictionary = GameData.eden_by_id.get(int(item.eden), {})
@@ -329,7 +335,7 @@ func save_profile() -> void:
 		"unlocked_classes": unlocked_classes, "records": records, "cert_board": cert_board,
 		"archive": archive, "skins": skins, "outfits": outfits, "owned_outfits": owned_outfits, "unlocked_cards": unlocked_cards, "collection": collection, "worn": worn, "dev": dev, "saved_at": Time.get_datetime_string_from_system(false, true),
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level,
-		"seen_gear": seen_gear, "insignia": insignia, "wheel": wheel, "unlocked_features": unlocked_features,
+		"seen_gear": seen_gear, "starter_done": starter_done, "insignia": insignia, "wheel": wheel, "unlocked_features": unlocked_features,
 		"new_features": new_features, "tutorial": tutorial, "contracts": contracts,
 		"achievements": achievements, "plans": plans, "pantheon": pantheon, "extra_titles": extra_titles, "title": title, "seen_trophies": seen_trophies, "weapon_legend": weapon_legend}
 	var f := FileAccess.open(save_path, FileAccess.WRITE)
@@ -343,6 +349,7 @@ func save_profile() -> void:
 ## de la classe choisie (son arme par défaut si le préréglage n'en a pas).
 func _lobby_view() -> void:
 	_view_class = selected_class
+	_grant_starter(selected_class)
 	loadout = _active_slots(selected_class)
 	if not in_run and (not loadout.has("weapon") or not _main_weapon_ok(String(loadout.weapon), selected_class)):
 		_default_weapon(selected_class)
@@ -361,6 +368,42 @@ func _lobby_view() -> void:
 	gold = 0
 	keys = 0
 	bag = {}
+
+
+## Équipement de départ de la classe [param cls] (StarterGear), une seule fois : seulement si son
+## préréglage actif n'a aucune pièce d'armure ; l'arme du préréglage reste si elle est déjà correcte.
+func _grant_starter(cls: String) -> void:
+	if in_run or cls in starter_done:
+		return
+	starter_done.append(cls)
+	var slots := _active_slots(cls)
+	if not StarterGear.needs(slots):
+		return
+	var gear := StarterGear.items(cls)
+	var keep_weapon := false
+	if slots.has("weapon"):
+		for it in vault:
+			if String(it.uid) == String(slots.weapon):
+				keep_weapon = int(it.rarity) >= 2 or Items.power_cap(it) >= 12
+	for slot in gear:
+		if slot == "weapon" and keep_weapon:
+			continue
+		vault.append(gear[slot])
+		slots[slot] = gear[slot].uid
+
+
+## Remplace l'équipement du préréglage actif de la classe choisie par [param gear] (emplacement ->
+## objet) : tests et mesures d'équilibrage. Hors run.
+func install_gear(gear: Dictionary) -> void:
+	if in_run:
+		return
+	_sync_vault()
+	var slots := _active_slots(selected_class)
+	for slot in gear:
+		vault.append(gear[slot])
+		slots[slot] = gear[slot].uid
+	_lobby_view()
+	save_profile()
 
 
 ## Hors run, ce qui est équipé / rangé redevient l'héritage et le préréglage actif.
@@ -481,7 +524,12 @@ func begin_run() -> void:
 	if in_run:
 		return
 	_sync_vault()
+	if selected_class != _view_class:
+		_lobby_view()  # classe choisie juste avant le départ (défi du jour) : c'est son équipement qui part
 	in_run = true
+	# instantané de l'équipement du hub : la run travaille sur des copies, et les sauvegardes faites en
+	# pleine run écrivent ce coffre-là (jamais les trouvailles) ; restauré par end_run_survival
+	_hub_snapshot = {"vault": vault.duplicate(true), "loadout": loadout.duplicate(true), "presets": presets.duplicate(true)}
 	var start := {}
 	for slot in equipped:
 		start[slot] = equipped[slot].duplicate(true)
@@ -504,6 +552,7 @@ func end_run(item) -> void:
 	if not in_run:
 		return
 	in_run = false
+	_hub_snapshot = {}
 	if Run.result == "victoire":
 		keep_supplies()
 	if item is Dictionary and not item.is_empty():
@@ -530,8 +579,29 @@ func end_run_survival() -> void:
 	in_run = false
 	if Run.result in ["victoire", "extraction"]:
 		keep_supplies()
+	restore_hub_gear()
 	_lobby_view()
 	save_profile()
+
+
+## Instantané de l'équipement du hub pris au départ de la run (vide hors run).
+var _hub_snapshot: Dictionary = {}
+
+
+## Remet le coffre, les préréglages et le loadout tels qu'au départ de la run si quelque chose les a
+## modifiés (les trouvailles de la run ne changent jamais l'équipement du hub). Renvoie true si
+## une restauration a été nécessaire.
+func restore_hub_gear() -> bool:
+	if _hub_snapshot.is_empty():
+		return false
+	var changed: bool = vault.hash() != _hub_snapshot.vault.hash() or loadout.hash() != _hub_snapshot.loadout.hash() \
+		or presets.hash() != _hub_snapshot.presets.hash()
+	if changed:
+		vault = _hub_snapshot.vault
+		loadout = _hub_snapshot.loadout
+		presets = _hub_snapshot.presets
+	_hub_snapshot = {}
+	return changed
 
 
 ## Extraction réussie : tout l'inventaire de la run rejoint l'héritage (améliorations comprises),
@@ -540,6 +610,7 @@ func end_run_extract() -> int:
 	if not in_run:
 		return 0
 	in_run = false
+	_hub_snapshot = {}
 	keep_supplies()
 	var kept := 0
 	for it in equipped.values() + inventory:
@@ -680,6 +751,7 @@ func _clear() -> void:
 	runs_won = 0
 	best_level = 1
 	seen_gear = []
+	starter_done = []
 	insignia = 0
 	wheel = {}
 	unlocked_features = []
@@ -725,6 +797,7 @@ func reset_all() -> void:
 	runs_won = 0
 	best_level = 1
 	seen_gear = []
+	starter_done = []
 	insignia = 0
 	wheel = {}
 	unlocked_features = []
@@ -1237,8 +1310,8 @@ func equipment_stats() -> Dictionary:
 		if slot == "trophy":
 			continue
 		if Run.active and Run.survival and Run.slot_bonus.has(slot):
-			it = it.duplicate()  # Survie : l'enclume améliore l'emplacement, pas la pièce
-			it["upgrade"] = int(Run.slot_bonus[slot])
+			it = it.duplicate()  # Survie : l'enclume s'ajoute au +N de la pièce (plafond Run.UPGRADE_CAP)
+			it["upgrade"] = Run.slot_upgrade(int(it.get("upgrade", 0)), slot)
 		var st := Items.stats(it)
 		var k := WeaponAttacks.OFFHAND_STATS if slot == "offhand" else 1.0  # arme secondaire : une partie de ses stats
 		for s in st:

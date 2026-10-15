@@ -23,8 +23,16 @@ en cours de refonte avec le joueur dans une autre session.
 Lobby poli (0.1.169, lot U1 de la nuit du 15/10) : les pages d'activité défilent (`_scroll`) sous une largeur fixe (`PANEL_W`), le bouton d'action est épinglé dans `_foot` (`_pin`, `_pin_go` : la raison d'un bouton grisé s'écrit au-dessus) ; `MenuWidgets.RowButton` prend la hauteur de son texte ; pied de page sur une ligne ; les activités « Bientôt » sont cachées ; fiche d'étage de la Tour sans chiffres (`TowerPages.Sheet`). `test_pages` vérifie largeur, hauteur et bouton visible de chaque page.
 Survie refondue (0.1.123 à 0.1.125, décisions dans `DESIGN.md`, « Boucle de jeu et Survie ») :
 époques (`core/epochs.gd`), coffres d'emplacement (`core/slot_chests.gd`), enclume par emplacement
-(`Run.slot_bonus`), départ sans équipement (`Run.start_survival`), Collection > Armurerie
-(`ui/gear_shop_page.gd`, `Profile.seen_gear`, `Profile.insignia`).
+(`Run.slot_bonus`), Collection > Armurerie (`ui/gear_shop_page.gd`, `Profile.seen_gear`, `Profile.insignia`).
+**0.1.164 : la Survie part avec l'ÉQUIPEMENT DU HUB** (elle ne part plus « sans équipement » : décision du joueur du 15/10,
+détail dans `DESIGN.md` et `conception/nuit_15_10/N1_survie_equipement.md`). `Profile.begin_run` copie l'équipement du préréglage
+actif et prend un instantané (`_hub_snapshot`) que `Profile.end_run_survival` restaure (`restore_hub_gear`) ; la sauvegarde en pleine
+run écrit toujours le hub (reprise propre après fermeture). Les coffres d'emplacement remplacent un emplacement le temps de la run.
+Compte neuf : `core/starter_gear.gd` (8 pièces d'Eden communes à rares par classe, remises une fois : `Profile.starter_done`).
+Enclume additive : bonus +0 à +7 AJOUTÉ au +N du hub, total plafonné à +12 (`Run.UPGRADE_CAP`, `Run.slot_upgrade`). Gemmes : valeurs plates
+suivant le niveau du héros en Survie (`Craft.gem_run_factor`). Insignes : 25 de participation (`Run.INSIGNIA_BASE`). Premiers niveaux
+plus rapides (`Epochs.xp_boost`), début de carte plus doux (`EARLY_EASE` / `EARLY_RAMP`). Mesures : `tools/sim_survie.py`
+(pilote automatique en parallèle, EDEN_PROFILE jetable, `--hub new|E.C.N.G`, `--human`), test `test_gear_run`.
 Armes refondues (0.1.127-0.1.128, `DESIGN.md`, « Auto-attaque des armes ») : plus de combo, deux
 variantes d'auto-attaque par type d'arme (`combat/weapon_attacks.gd`), arme principale = arme de la
 classe, arme secondaire trouvée en jeu (`Profile.equipped.offhand`, `SlotChests.offhand_offer`,

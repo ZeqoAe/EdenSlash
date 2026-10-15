@@ -83,10 +83,25 @@ func _open_for_test() -> void:
 			get_tree().create_timer(1.5, true, false, true).timeout.connect(func(): merchant_ui._on_entry_pressed(merchant_ui._shown[0], 0) if not merchant_ui._shown.is_empty() else null)
 
 
+## Mesures d'équilibrage : --class=<id> (classe du profil), --hub=new | <époque>.<carte>.<+N>[.<palier de gemme>]
+## (équipement du hub, voir StarterGear.scenario), avant le départ de la run (profil séparé : EDEN_PROFILE).
+func _apply_scenario_args() -> void:
+	var hub := ""
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--class="):
+			Profile.selected_class = arg.trim_prefix("--class=")
+			Profile.save_profile()  # change la vue du hub vers cette classe (équipement de départ compris)
+		elif arg.begins_with("--hub="):
+			hub = arg.trim_prefix("--hub=")
+	if hub != "" and hub != "new":
+		Profile.install_gear(StarterGear.scenario(hub, Profile.selected_class))
+
+
 func _ready() -> void:
 	add_to_group("world")  # mode dev (F10) : actions de run
 	ScreenFade.reveal(get_tree())  # arrivée en fondu (la carte se génère pendant le noir)
 	if not Run.active:
+		_apply_scenario_args()
 		if "--training" in OS.get_cmdline_user_args():
 			Training.start(Profile.selected_class)  # test : zone d'entraînement
 		elif "--duel" in OS.get_cmdline_user_args():
@@ -354,6 +369,10 @@ func _parse_args() -> void:
 				cards._queue.clear()
 				cards._show_next()
 				cards.offer("Coffre doré : choisis une pièce d'équipement", director.gear_cards(3, 2)))
+		elif arg.begins_with("--fight="):
+			Run.test_fight_range = float(arg.trim_prefix("--fight="))
+		elif arg.begins_with("--human="):
+			Run.test_taken = 1.0 - clampf(float(arg.trim_prefix("--human=")), 0.0, 0.95)
 		elif arg == "--god":
 			# test : héros invincible (mesures de performance sur une longue run)
 			get_tree().create_timer(0.5).timeout.connect(func(): player.dev_invincible = true)
@@ -422,8 +441,16 @@ func _on_level_up(lvl: int) -> void:
 	_offer("Niveau %d ! Choisis une carte" % lvl, Run.roll_cards(3), func(): return Run.roll_cards(3))
 
 
+var _trace_t := 0.0
+var _trace := "--trace" in OS.get_cmdline_user_args()
+
+
 func _process(delta: float) -> void:
 	Potions.tick(delta)
+	if _trace and not _ended and director != null and director.time >= _trace_t:
+		_trace_t = director.time + 15.0  # mesures (--trace) : l'état de la run toutes les 15 s
+		print("[trace] t=%3.0f niv=%d pv=%d/%d tués=%d or=%d monstres=%d état=%s" % [director.time, player.level, player.hp, player.max_hp,
+			Run.kills, Profile.gold, get_tree().get_nodes_in_group("monsters").size(), director.state])
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -492,6 +519,12 @@ func end_run(result: String) -> void:
 	_ended = true
 	pause_menu.close()
 	Run.finish(result)
+	if "--auto-quit" in OS.get_cmdline_user_args():
+		# mesures : une ligne de bilan puis on quitte
+		print("[fin] résultat=%s niveau=%d temps=%.0f étape=%d tués=%d élites=%d insignes=%d pv=%d atk=%d matk=%d" % [result, player.level,
+			director.time, Run.stage, Run.kills, Run.elites, Run.insignia_gain, player.max_hp, player.atk, player.matk])
+		get_tree().quit()
+		return
 	var r := ResultsScreen.new()
 	add_child(r)
 	r.show_results()

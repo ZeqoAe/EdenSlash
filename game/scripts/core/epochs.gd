@@ -25,6 +25,12 @@ const LEVEL_BONUS := [0, 12, 22]
 const MONSTER_MULT := [1.0, 1.35, 1.75, 2.2]
 
 
+## Premiers niveaux de la Survie plus vite (0.1.164) : l'expérience gagnée est multipliée par ce facteur,
+## 2,0 au niveau 1 jusqu'à 1,0 au niveau 10 (un niveau = des PV rendus et une carte, donc des sorts).
+static func xp_boost(level: int) -> float:
+	return 1.0 + 1.0 * clampf(float(10 - level) / 9.0, 0.0, 1.0)
+
+
 static func count() -> int:
 	return LIST.size()
 

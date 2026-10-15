@@ -396,6 +396,8 @@ func _on_profile_changed() -> void:
 func gain_xp(amount: int) -> void:
 	if is_dead:
 		return
+	if Run.active and Run.survival and not foe and not Royale.active:
+		amount = roundi(float(amount) * Epochs.xp_boost(level))
 	xp += amount
 	# Survie : niveau plafonné sur chaque map (Epochs.CAPS), l'expérience en trop attend la suivante
 	var cap := Epochs.cap(Run.stage) if Run.active and Run.survival and not foe else 9999
@@ -2426,7 +2428,7 @@ func _autoplay_input() -> Vector2:
 	var goal := autoplay_target if autoplay else _auto_objective()
 	if goal == Vector3.INF:
 		goal = _farm_goal()  # rien d'autre à faire : coffres, lieux, objets à casser
-	if goal != Vector3.INF and (m == null or global_position.distance_to(m.global_position) > 4.0):
+	if goal != Vector3.INF and (m == null or global_position.distance_to(m.global_position) > Run.test_fight_range):
 		to = goal - global_position
 		if _time > _bot_check_at:
 			if global_position.distance_to(_bot_last_pos) < 1.0:

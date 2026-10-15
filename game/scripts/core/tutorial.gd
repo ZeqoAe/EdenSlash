@@ -9,7 +9,7 @@ extends RefCounted
 ## Premiers pas : (id, texte, événement qui le valide, nombre d'occurrences). {touche:action} est
 ## remplacé par la touche réelle du joueur.
 const STEPS := [
-	{"id": "weapon", "text": "Choisis ton arme : chacune a 2 façons d'attaquer.", "event": "weapon", "n": 1},
+	{"id": "weapon", "text": "Ton équipement du hub est déjà porté : ton arme a 2 façons d'attaquer. Frappe un monstre.", "event": "weapon", "n": 1},
 	{"id": "fight", "text": "Déplace-toi avec {move_forward}{move_left}{move_back}{move_right} et frappe en restant près des monstres : 10 à vaincre.", "event": "kill", "n": 10},
 	{"id": "jump", "text": "Saute avec {jump}.", "event": "jump", "n": 1},
 	{"id": "dodge", "text": "Esquive avec {dodge} : tu es invulnérable pendant la roulade.", "event": "dodge", "n": 1},
@@ -37,7 +37,7 @@ const CARDS := {
 	"offhand": {"title": "Arme secondaire", "on": "offhand", "version": "0.1.141",
 		"lines": ["Elle frappe seule, sans animation, à 60 % des dégâts.", "Elle a ses propres niveaux d'amélioration."]},
 	"anvil": {"title": "L'enclume", "on": "anvil", "version": "0.1.141",
-		"lines": ["+1 sur un emplacement d'équipement, une fois par carte.", "Le meilleur palier d'enclume compte pour la puissance de la run."]},
+		"lines": ["Un bonus de +0 à +7 sur un emplacement d'équipement, une fois par carte.", "Il s'ajoute au +N de ta pièce (total +12 au plus) pour toute la run."]},
 	"fortune": {"title": "Autel de la fortune", "on": "fortune", "version": "0.1.141",
 		"lines": ["Huit étages : encaisse ou monte tenter l'étage suivant.", "Une case est piégée : elle fait tout perdre.", "Les gains sont des insignes et des coffres d'apparence."]},
 	"merchant": {"title": "Marchands", "on": "merchant", "version": "0.1.141",
@@ -51,7 +51,7 @@ const CARDS := {
 	"portal": {"title": "Les étapes", "on": "portal", "version": "0.1.141",
 		"lines": ["Chaque époque a 3 cartes : le boss ouvre le portail vers la suivante.", "Tu gardes niveau, cartes et équipement d'une carte à l'autre."]},
 	"results": {"title": "Ce que tu gardes", "on": "results", "version": "0.1.141",
-		"lines": ["La maîtrise de ta classe et les insignes sont toujours gardés.", "Les pièces découvertes s'achètent à l'Atelier (Armurerie).", "L'équipement de la run, l'or et les clés sont perdus."]},
+		"lines": ["La maîtrise de ta classe et les insignes sont toujours gardés.", "Les pièces découvertes s'achètent à l'Atelier (Armurerie).", "Ton équipement du hub reste intact ; les trouvailles de la run, l'or et les clés sont perdus."]},
 	"assist": {"title": "Aide au combat", "on": "", "version": "0.1.134",
 		"lines": ["Manuel, Assisté, Détente ou Bot : Paramètres > Combat.", "Assisté garde les appuis de sorts et annonce l'annulation parfaite."]},
 	"dungeons": {"title": "Nouveau : Donjons", "on": "", "version": "0.1.150",
@@ -126,6 +126,8 @@ static var _counts := {}
 static func event(name: String) -> Dictionary:
 	if mode() == "":
 		return {}
+	if name == "kill":
+		event("weapon")  # l'arme du hub est déjà portée : la 1re victime valide l'étape
 	var finished := {}
 	if mode() == "guided" and Run.active and Run.survival:
 		for s in STEPS:

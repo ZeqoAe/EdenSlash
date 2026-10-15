@@ -60,9 +60,9 @@ func _ready() -> void:
 	await get_tree().process_frame
 	check("cristal : intact après 2 coups, brisé au 3e, gemmes au sol", still and get_tree().get_nodes_in_group("loot").size() > loot0)
 
-	# Survie : départ sans équipement, arme de départ au choix
+	# Survie : départ avec l'équipement du hub (0.1.164) ; l'arme de départ au choix reste pour la Battle royale
 	_close_cards()
-	check("Survie : départ sans équipement (époque %d)" % Run.epoch, Run.survival and not Profile.equipped.has("helmet") and not Profile.equipped.has("head"))
+	check("Survie : départ avec l'équipement du hub (époque %d, %d pièces)" % [Run.epoch, Profile.equipped.size()], Run.survival and Profile.equipped.has("weapon") and Profile.in_run)
 	var starts: Array = d.start_weapon_cards()
 	check("arme de départ : l'arme de la classe (%s), ses 2 variantes, palier de la map" % Run.weapon_type(), starts.size() == 2 \
 		and starts.all(func(c): return c.item.slot == "weapon" and Items.weapon_type_of(c.item) == Run.weapon_type() and int(c.item.level) in SlotChests.pool("weapon", Run.epoch, 1).map(func(e): return int(e.level))) \
@@ -95,7 +95,7 @@ func _ready() -> void:
 	check("enclume : choix d'emplacements", not cards.is_empty() and cards.all(func(c): return c.type == "anvil_slot"))
 	Run.apply_card(cards.filter(func(c): return c.slot == "head")[0])
 	var hb := int(Run.slot_bonus.get("head", 99))
-	check("enclume : casque %+d (entre -2 et +10)" % hb, hb >= -2 and hb <= 10)
+	check("enclume : casque +%d (entre +0 et +7), s'ajoute au +N de la pièce (plafond +%d)" % [hb, Run.UPGRADE_CAP], hb >= 0 and hb <= 7 		and Run.slot_upgrade(int(Profile.equipped.head.get("upgrade", 0)), "head") == mini(hb + int(Profile.equipped.head.get("upgrade", 0)), maxi(Run.UPGRADE_CAP, int(Profile.equipped.head.get("upgrade", 0)))))
 	_close_cards()
 	check("enclume : une seule par carte", d.map.interactables.filter(func(i): return is_instance_valid(i) and i.kind == "anvil" and not i.used).is_empty())
 	# autel du scribe

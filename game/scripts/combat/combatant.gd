@@ -199,6 +199,8 @@ func tick_statuses(delta: float) -> void:
 ## Multiplicateur des dégâts subis (débuffs ennemis, buffs du héros).
 func damage_taken_mult() -> float:
 	var m := 1.0
+	if Run.test_taken != 1.0 and self is Player and not (self as Player).foe:
+		m *= Run.test_taken  # mesures (--human=) : un humain évite une part des coups que le bot encaisse
 	if has_status("purgatory"):
 		m *= 1.2
 	if has_status("cranes"):

@@ -228,6 +228,16 @@ static func gem_stats(g: Dictionary) -> Dictionary:
 	return {d.stat: float(d.base) * float(GEM_MULT[clampi(int(g.get("tier", 0)), 0, GEM_MULT.size() - 1)])}
 
 
+## Survie (0.1.164) : les valeurs PLATES des gemmes (force, PV, défense…) suivent le niveau du héros
+## comme les stats des pièces, pleines à GEM_REF_LEVEL (plafond de la 1re map), entre ×0,35 et ×2 :
+## sans cela une gemme royale vaudrait +320 PV dès le niveau 1. Hors Survie : valeur pleine.
+const GEM_REF_LEVEL := 15
+static func gem_run_factor() -> float:
+	if not (Run.active and Run.survival and Run.hero_level > 0):
+		return 1.0
+	return clampf(pow(1.08, Run.hero_level - GEM_REF_LEVEL), 0.35, 2.0)
+
+
 ## Valeur d'Eden de la formule [param type] au niveau [param lv].
 static func enchant_points(type: String, lv: int) -> int:
 	var d: Dictionary = ENCHANTS.get(type, {})
@@ -248,9 +258,15 @@ static func enchant_stats(e: Dictionary) -> Dictionary:
 ## Stats ajoutées à un objet par ses gemmes, son enchantement et ses bonus d'amélioration.
 static func extra_stats(item: Dictionary) -> Dictionary:
 	var out := {}
+	var gk := gem_run_factor()
 	for g in item.get("sockets", []):
 		if g is Dictionary:
-			_merge(out, gem_stats(g))
+			var gs := gem_stats(g)
+			if gk != 1.0:
+				for s in gs:
+					if not String(s) in Items.PERCENT_STATS:
+						gs[s] = float(gs[s]) * gk
+			_merge(out, gs)
 	if item.has("enchant"):
 		_merge(out, enchant_stats(item.enchant))
 	var lk := pow(1.08, Items.power_level(item) - 1)

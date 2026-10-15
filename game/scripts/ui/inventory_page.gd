@@ -969,7 +969,7 @@ func _on_upgrade() -> void:
 	var w := get_tree().get_first_node_in_group("world")
 	if Profile.in_run and Run.survival:
 		if w:
-			w.hud.show_message("Survie : les pièces restent à +0 ; l'enclume améliore un emplacement, une fois par carte", 3.0)
+			w.hud.show_message("Survie : l'amélioration des pièces se fait au hub (Atelier) ; en run, l'enclume ajoute un bonus à un emplacement, une fois par carte", 3.0)
 		return
 	var mu: MerchantUI
 	if Profile.in_run and w:

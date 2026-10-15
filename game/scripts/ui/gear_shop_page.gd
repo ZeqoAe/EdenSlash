@@ -47,7 +47,7 @@ func _ready() -> void:
 	_head.add_theme_font_override("font", UiTheme.title_font())
 	_head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_wallet = Hud._label(hh, "", 17, Color(0.75, 0.85, 1.0))
-	Hud._label(left, "Les pièces que tu as choisies dans les coffres de la Survie, à acheter avec tes insignes : elles rejoignent ton coffre commun (collection, JcJ, forge).", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	Hud._label(left, "Les pièces que tu as choisies dans les coffres de la Survie, à acheter avec tes insignes : elles rejoignent ton coffre commun : équipe-les, elles partent avec toi en Survie (et servent en JcJ, à la forge).", 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_grid = ItemWidgets.ItemGrid.new(false, 9, 72.0)
 	_grid.set_empty_text("Aucune pièce découverte : en Survie, choisis des pièces dans les coffres d'emplacement.")
 	_grid.badge_fn = func(it): return "✓" if owned(int(it.get("eden", -1))) else "%d" % price(GameData.eden_by_id.get(int(it.eden), {}))
