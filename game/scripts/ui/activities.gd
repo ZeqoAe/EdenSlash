@@ -10,28 +10,28 @@ const GROUPS := [["pve", "Aventure (JcE)"], ["pvp", "Affrontements (JcJ)"]]
 ## Rangées de la page Jouer (3 colonnes) : Aventure, Défis, Affrontements.
 const ROWS := [["adventure", "Aventure"], ["challenge", "Défis"], ["versus", "Affrontements"]]
 const LIST := [
-	{"id": "survival", "row": "adventure", "group": "pve", "name": "Survie", "sub": "Carte ouverte, horde, coffres et boss", "gain": "Maîtrise, insignes, pièces",
-		"desc": "Une grande carte à explorer en 3 étapes pendant que la horde grossit : objets à casser, coffres, lieux à usage unique, forts d'élite, puis le boss et le portail vers l'étape suivante."},
-	{"id": "dungeon", "row": "adventure", "unlock": "dungeons", "group": "pve", "name": "Donjons", "sub": "Quatre salles, un boss, des alliés IA", "gain": "Pièces ciblées, plans",
-		"desc": "Des donjons d'Eden en plusieurs salles : vagues de monstres, mécaniques de boss et butin propre à chaque donjon."},
-	{"id": "tower", "row": "adventure", "unlock": "tower", "group": "pve", "name": "La Tour", "sub": "200 étages, une seule vie", "gain": "Joaillerie, cristaux, apparences",
-		"desc": "Gravis les étages avec ton équipement (préréglage actif) : une carte et un coffre par étage, des héros de toutes les classes à battre en duel, une seule vie."},
-	{"id": "mastery", "row": "challenge", "unlock": "daily", "img": "survival", "group": "pve", "name": "Défi de maîtrise", "sub": "Une Survie par jour, deux contraintes", "gain": "Maîtrise ×2, insignes ×1,5",
-		"desc": "Une Survie de l'époque I avec deux modificateurs imposés et trois classes proposées. La maîtrise gagnée est doublée, +600 à la première réussite du jour. Ici aussi : les contrats de ta classe."},
-	{"id": "trials", "row": "challenge", "img": "training", "group": "pve", "name": "Épreuves de maîtrise", "sub": "Leçons chronométrées par famille", "soon": true, "gain": "Médailles, maîtrise",
-		"desc": "Une leçon par famille de classes, au chrono, avec tes sorts et leurs états propres : bronze, argent, or."},
-	{"id": "rush", "row": "challenge", "unlock": "dungeons", "img": "dungeon", "group": "pve", "name": "Ruée des boss", "sub": "Les 8 boss de donjon à la suite", "gain": "Titres, cristaux, coffres",
-		"desc": "Enchaîne les boss des huit zones, du premier au dernier : une carte entre deux, peu de soins. Trois difficultés, un titre chacune."},
+	{"id": "survival", "row": "adventure", "group": "pve", "name": "Survie", "sub": "Horde, coffres et boss", "gain": "Maîtrise, insignes, pièces",
+		"desc": "Explore la carte, tiens face à la horde, bats le boss."},
+	{"id": "dungeon", "row": "adventure", "unlock": "dungeons", "group": "pve", "name": "Donjons", "sub": "Salles, boss et alliés IA", "gain": "Panoplies, plans, cristaux",
+		"desc": "Quatre salles, un boss."},
+	{"id": "tower", "row": "adventure", "unlock": "tower", "group": "pve", "name": "La Tour", "sub": "200 étages, une seule vie", "gain": "Cristaux, gemmes, apparences",
+		"desc": "Une carte et un coffre par étage, des duels de toutes les classes."},
+	{"id": "mastery", "row": "challenge", "unlock": "daily", "img": "survival", "group": "pve", "name": "Défi de maîtrise", "sub": "Une Survie par jour", "gain": "Maîtrise ×2, insignes ×1,5",
+		"desc": ""},
+	{"id": "trials", "row": "challenge", "img": "training", "group": "pve", "name": "Épreuves de maîtrise", "sub": "Leçons chronométrées", "soon": true, "gain": "Médailles, maîtrise",
+		"desc": "Une leçon par famille de classes, au chrono : bronze, argent, or."},
+	{"id": "rush", "row": "challenge", "unlock": "dungeons", "img": "dungeon", "group": "pve", "name": "Ruée des boss", "sub": "Les 8 boss à la suite", "gain": "Titres, cristaux, coffres",
+		"desc": "Les huit boss à la suite, une carte entre deux."},
+	{"id": "siege", "row": "challenge", "unlock": "siege", "img": "arena3", "group": "pvp", "tag": "JcE + JcJ", "name": "Le Siège", "sub": "Vagues, boss, chacun pour soi", "gain": "Apparence légendaire, cristaux",
+		"desc": "5 vagues, un boss, puis chacun pour soi. Le dernier debout gagne."},
 	{"id": "duel", "row": "versus", "unlock": "duel_free", "group": "pvp", "name": "Duel", "sub": "1 contre 1, à l'arme ou équipé", "gain": "Rangs, titres, maîtrise",
-		"desc": "Affronte un héros d'une classe, piloté par l'IA scriptée ou par un cerveau entraîné : à armes égales (niveau libre) ou avec ton build complet."},
-	{"id": "arenas", "row": "versus", "unlock": "arenas", "img": "arena2", "group": "pvp", "name": "Arènes", "sub": "2 contre 2, 3 contre 3, alliés IA", "gain": "Titres",
-		"desc": "Toi et tes alliés IA contre une équipe IA : composition d'équipe, soutien et coups combinés, hors ligne."},
-	{"id": "royale", "row": "versus", "unlock": "royale", "img": "battlefield", "group": "pvp", "name": "Battle royale", "sub": "8 héros, un anneau, un seul survivant", "gain": "Insignes, coffre d'apparence, titre",
-		"desc": "Toi et sept héros IA tombez nus, niveau 1, à des points tirés au sort d'une grande carte pleine de coffres. Pille l'équipement, les cartes et les potions, monte de niveau en ouvrant des coffres et en éliminant les autres, et reste dans l'anneau qui se referme en 4 phases (3 min 30). Le dernier debout gagne."},
-	{"id": "siege", "row": "versus", "unlock": "siege", "img": "arena3", "group": "pvp", "tag": "JcE + JcJ", "name": "Le Siège", "sub": "Trois héros, cinq vagues, un boss, puis chacun pour soi", "gain": "Coffre d'apparence légendaire",
-		"desc": "Toi et deux alliés IA tenez une arène contre cinq vagues de monstres nombreux et coriaces, puis contre le boss du donjon (fureur au bout de 6 minutes). Quand il tombe, la zone se ferme et son cœur tombe au centre : les trois héros deviennent ennemis. Le dernier debout gagne un coffre d'apparence légendaire ; ou emporte le cœur hors de l'anneau pour quitter le duel avec moins."},
+		"desc": "Un héros adverse, piloté par l'IA, à armes égales ou avec ton build."},
+	{"id": "arenas", "row": "versus", "unlock": "arenas", "img": "arena2", "group": "pvp", "name": "Arènes", "sub": "2 contre 2 ou 3 contre 3", "gain": "Titres",
+		"desc": "Toi et tes alliés IA contre une équipe IA."},
+	{"id": "royale", "row": "versus", "unlock": "royale", "img": "battlefield", "group": "pvp", "name": "Battle royale", "sub": "8 héros, un seul survivant", "gain": "Insignes, coffre d'apparence, titre",
+		"desc": ""},
 	{"id": "training", "row": "", "group": "", "name": "Zone d'entraînement", "sub": "Sorts, armes et cartes, sans enjeu", "gain": "Rien (banc d'essai)",
-		"desc": "Teste tes sorts, tes armes et tes cartes sur des mannequins et des adversaires réglables : rien n'est gagné ni perdu."},
+		"desc": ""},
 ]
 
 
@@ -82,7 +82,9 @@ static func card(a: Dictionary, size := Vector2(0, 118)) -> Button:
 	var t := Hud._label(tv, String(a.name), 22, Color(1, 0.98, 0.92) if not soon else Color(0.85, 0.83, 0.9))
 	t.add_theme_font_override("font", UiTheme.bold_font())
 	t.add_theme_constant_override("outline_size", 6)
-	Hud._label(tv, String(a.sub), 13, Color(0.92, 0.9, 0.98, 0.95))
+	t.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	var st := Hud._label(tv, String(a.sub), 13, Color(0.92, 0.9, 0.98, 0.95))
+	st.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var tag := _tag(a)
 	if tag != null:
 		tag.position = Vector2(10, 10)

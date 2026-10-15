@@ -53,7 +53,7 @@ func _test_presets() -> void:
 	# autre classe : autre équipement, même coffre
 	Profile.selected_class = "warrior"
 	Profile.save_profile()
-	check("guerrier : sans le casque du samouraï", _uid("head") == "")
+	check("guerrier : pas le casque du samouraï (son propre casque de départ)", _uid("head") != helm.uid and _uid("head") != "")
 	check("guerrier : sa propre arme (hache)", Items.weapon_type_of(Profile.equipped.get("weapon", {})) == "axe")
 	check("coffre commun : le casque est disponible", Profile.inventory.any(func(it): return it.uid == helm.uid))
 	Profile.equip(Profile.inventory.filter(func(it): return it.uid == helm.uid)[0])
@@ -384,7 +384,24 @@ func _test_lobby() -> void:
 	lobby._show_menu("survival")
 	await _frames()
 	check("page Survie : %d époques" % Epochs.count(), lobby._sub.get_children().filter(func(c): return c is MenuWidgets.RowButton).size() == Epochs.count())
+	# pages du lobby : largeur fixe, jamais plus haute que l'écran, bouton d'action épinglé et visible, lignes sans chevauchement
+	get_tree().root.size = Vector2i(1600, 900)
+	await _frames()
+	var screen_h: float = lobby.get_viewport().get_visible_rect().size.y
+	for pid in ["survival", "dungeon", "siege", "duel", "royale", "arenas", "rush", "tower", "tower_floors", "mastery", "training"]:
+		lobby._show_menu(pid)
+		await _frames()
+		await _frames()
+		var rect: Rect2 = lobby._sub_panel.get_global_rect()
+		check("page %s : panneau de largeur fixe, dans l'écran" % pid, absf(rect.size.x - float(lobby.PANEL_W)) < 12.0 and rect.end.y <= screen_h)
+		if pid != "mastery" and pid != "tower":
+			var btn: Control = lobby._foot.get_child(lobby._foot.get_child_count() - 1) if lobby._foot.get_child_count() > 0 else null
+			check("page %s : bouton d'action épinglé, visible" % pid, btn != null and btn.get_global_rect().end.y <= screen_h and btn.get_global_rect().size.y > 30.0)
+		for c in lobby._sub.get_children():
+			if c is MenuWidgets.RowButton:
+				check("page %s : ligne assez haute pour son texte" % pid, c.size.y >= c._content.get_combined_minimum_size().y)
 	lobby._show_menu("play")
+	check("page Jouer : les « Bientôt » sont cachés", not lobby._sub.get_children().any(func(c): return c is GridContainer and c.get_child_count() > 3))
 	# écran Héros : une section à la fois, classe, talents, apparence, aide
 	var hero: HeroScreen = lobby._hero
 	lobby._open_hero()

@@ -20,6 +20,7 @@ y 112-452 recadrée en 960×320 dans `assets/ui/activities/`) ; un clic ouvre la
 (réglages puis Lancer). Une activité nouvelle : une entrée dans `Activities.LIST`, son image, sa page
 dans `lobby.gd` (`_show_menu`). La boucle de jeu (équipement choisi pour le JcJ, débloqué en JcE) est
 en cours de refonte avec le joueur dans une autre session.
+Lobby poli (0.1.169, lot U1 de la nuit du 15/10) : les pages d'activité défilent (`_scroll`) sous une largeur fixe (`PANEL_W`), le bouton d'action est épinglé dans `_foot` (`_pin`, `_pin_go` : la raison d'un bouton grisé s'écrit au-dessus) ; `MenuWidgets.RowButton` prend la hauteur de son texte ; pied de page sur une ligne ; les activités « Bientôt » sont cachées ; fiche d'étage de la Tour sans chiffres (`TowerPages.Sheet`). `test_pages` vérifie largeur, hauteur et bouton visible de chaque page.
 Survie refondue (0.1.123 à 0.1.125, décisions dans `DESIGN.md`, « Boucle de jeu et Survie ») :
 époques (`core/epochs.gd`), coffres d'emplacement (`core/slot_chests.gd`), enclume par emplacement
 (`Run.slot_bonus`), départ sans équipement (`Run.start_survival`), Collection > Armurerie

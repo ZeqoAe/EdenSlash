@@ -70,6 +70,8 @@ class SideButton extends Button:
 	var _icon: TextureRect
 	var _label: Label
 	var _chevron: Label
+	var _badge: PanelContainer
+	var _badge_label: Label
 
 	func _init(text_value: String, icon_name: String, height := 62.0) -> void:
 		focus_mode = Control.FOCUS_NONE
@@ -97,6 +99,15 @@ class SideButton extends Button:
 		_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		_label.size_flags_vertical = Control.SIZE_FILL
 		h.add_child(_label)
+		# pastille de notification (coffres à ouvrir…)
+		_badge = PanelContainer.new()
+		_badge.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.72, 0.16, 0.16), Color(1, 0.86, 0.72), 1, 11, false))
+		_badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_badge.visible = false
+		_badge_label = Hud._label(_badge, "", 14, Color(1, 0.97, 0.92))
+		_badge_label.add_theme_font_override("font", UiTheme.bold_font())
+		h.add_child(_badge)
 		_chevron = Label.new()
 		_chevron.text = "›"
 		_chevron.add_theme_font_override("font", UiTheme.bold_font())
@@ -107,6 +118,11 @@ class SideButton extends Button:
 		mouse_entered.connect(_restyle)
 		mouse_exited.connect(_restyle)
 		_restyle()
+
+	## Pastille à droite du texte ("" : aucune).
+	func set_badge(text_value: String) -> void:
+		_badge_label.text = text_value
+		_badge.visible = text_value != ""
 
 	func _restyle() -> void:
 		if _label == null:
@@ -125,16 +141,21 @@ class SideButton extends Button:
 		_chevron.add_theme_color_override("font_color", UiTheme.GOLD)
 
 
-## Ligne de sous-menu : icône, titre, sous-titre, chevron.
+## Ligne de sous-menu : icône, titre, sous-titre, chevron. [param height] est la hauteur minimale :
+## la ligne grandit toute seule quand le texte prend plus de place (deux ou trois lignes).
 class RowButton extends Button:
+	const PAD := 18.0  # marge verticale autour du texte
 	var _title: Label
 	var _sub: Label
 	var _icon: TextureRect
 	var _box: StyleBoxFlat
 	var _hover_box: StyleBoxFlat
+	var _base_h := 72.0
+	var _content: HBoxContainer
 
 	func _init(title_text: String, sub_text: String, icon_name := "", height := 72.0) -> void:
 		focus_mode = Control.FOCUS_NONE
+		_base_h = height
 		custom_minimum_size = Vector2(0, height)
 		_box = UiTheme.flat_box(Color(0.07, 0.08, 0.17, 0.9), MenuWidgets.LINE, 1, 10, false)
 		_hover_box = UiTheme.flat_box(Color(0.13, 0.12, 0.26, 0.96), UiTheme.GOLD_DIM, 2, 10, false)
@@ -149,6 +170,8 @@ class RowButton extends Button:
 		h.add_theme_constant_override("separation", 16)
 		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(h)
+		_content = h
+		h.minimum_size_changed.connect(_fit)
 		if icon_name != "":
 			_icon = TextureRect.new()
 			_icon.texture = MenuWidgets.icon(icon_name) if not icon_name.begins_with("res://") else UiTheme.texture(icon_name)
@@ -170,6 +193,7 @@ class RowButton extends Button:
 		_sub = Hud._label(v, sub_text, 13, UiTheme.MUTED)
 		_sub.visible = sub_text != ""
 		_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_sub.custom_minimum_size.x = 120.0  # une largeur minimale pour que le retour à la ligne se calcule
 		var ch := Hud._label(h, "›", 30, UiTheme.TEXT)
 		ch.add_theme_font_override("font", UiTheme.bold_font())
 		ch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -178,6 +202,14 @@ class RowButton extends Button:
 		_title.text = title_text
 		_sub.text = sub_text
 		_sub.visible = sub_text != ""
+		_fit()
+
+	## Hauteur = celle du texte (le texte à la ligne ne connaît sa hauteur qu'une fois la largeur posée).
+	func _fit() -> void:
+		var need := _content.get_combined_minimum_size().y + PAD
+		var want := maxf(_base_h, need)
+		if absf(custom_minimum_size.y - want) > 0.5:
+			custom_minimum_size.y = want
 
 	## Ligne choisie (classe, zone) : cadre doré.
 	func mark(on: bool) -> void:
