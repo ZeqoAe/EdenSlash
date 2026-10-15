@@ -250,7 +250,7 @@ chacune avec son rôle :
 - **Plans** : le plan d'une zone tombe à coup sûr au 1er donjon terminé de chaque difficulté (Normal compris), sinon une
   fois sur dix. **Fabrication** : les 9 emplacements (arme du type de la classe choisie, collier, anneau compris), modèle
   d'Eden du niveau du donjon (et non plus de la zone choisie au lobby).
-- **Siège Normal** : aucune PE requise (Héroïque 65 %, Mythique 90 %).
+- **Siège Normal** : aucune PE requise (Héroïque et Mythique : voir « Verrous de PE (passe P5) »).
 - **Panoplie des Esprits universelle** : chaque pièce est un modèle fixe, légendaire de niveau d'Eden 70, quelle que soit la
   zone. Gagnée, elle s'ajoute à `seen_gear` (id `Pantheon.shop_id`) : l'Armurerie la revend (220 insignes) pour toutes
   les classes ; battre le Champion y ouvre l'arme des Esprits des 17 types. **Éveil** : avec 6 pièces éveillées portées
@@ -454,7 +454,9 @@ victoire ou extraction ; les coffres de forge et du joaillier sont toujours gard
 **Équilibrage global (passe E6, 0.1.182)** — mesures et modèle dans `conception/nuit_15_10/R_E6.md`, simulation
 `res://tools/progression_sim.tscn` (compte neuf de bout en bout avec les vraies formules ; `--probe` : puissance des
 équipements types ; `--mult=…` : essai d'autres écarts d'époque), bornes vérifiées par `tests/test_e6`.
-- **Écart d'époque** (`Epochs.MONSTER_MULT`, PV et dégâts des monstres) : **×1 / ×1,7 / ×3,4 / ×7** (avant ×1 / 1,35 / 1,75 / 2,2).
+- **Écart d'époque** (`Epochs.MONSTER_MULT`, PV et dégâts des monstres) : **×0,85 / ×1,7 / ×3,4 / ×7** (avant ×1 / 1,35 / 1,75 / 2,2 ;
+  époque I adoucie de ×1 à ×0,85 par la passe P5 : un joueur moyen au compte neuf atteint le boss de la carte 1 une run sur deux,
+  1re victoire en 5-6 runs).
   En Survie la puissance d'une pièce suit le niveau du héros, mais son +N (×2 à +10), sa rareté, ses gemmes et son
   enchantement multiplient la puissance du héros par ≈ 6 à 7 entre des pièces +0 de l'époque I et un équipement complet
   d'époque IV. Avec l'ancien écart, un compte simulé gagnait l'époque IV ≈ 10 h après son premier lancement. Maintenant :
@@ -478,6 +480,22 @@ victoire ou extraction ; les coffres de forge et du joaillier sont toujours gard
 - Inchangés après vérification : enclume (+12 au plus : une pièce +10 n'y gagne que +2 sur 3 emplacements), capes (≈ 1/9
   de la puissance), cartes d'amélioration (plafonnées), barème d'E5 (la Survie reste la 1re source d'insignes à l'heure,
   le JcJ plafonné au jour), cristaux d'E1 (Donjon Mythique ≈ 1 000 / h, Ruée ≈ 900, Siège ≈ 860).
+
+**Verrous de PE (passe P5, 0.1.184)** — mesures dans `conception/nuit_15_10/R_P5.md`. PE requise = rapport × PE attendue
+du niveau de l'activité (`GearPower.required`). La PE réelle d'un compte dépasse vite l'« attendue » (pièces +10, gemmes,
+enchantements, panoplies ; simulation, joueur moyen : ≈ 6 000 à l'époque I gagnée, 13 000 à la II, 25-30 000 à la III,
+53-55 000 à la IV, 61-64 000 équipement complet) : les anciens rapports (0,55 / 0,8) ouvraient tout le Mythique dès
+l'époque II avec un équipement d'époque I à +10.
+- **Donjons** (`GearPower.DIFF_RATIO`) : Normal 0, **Héroïque ×3,6** (1re zone ≈ 25 300, s'ouvre vers l'époque III, puis
+  zone après zone jusqu'à ≈ 55 000), **Mythique ×3,1** (niveau 90 : 55 800, après l'époque IV, équipement amélioré). La Ruée
+  se juge au niveau de son 4e boss (Héroïque ≈ 41 500).
+- **Siège** (`Siege.POWER_RATIO`) : Normal 0, Héroïque ×4, Mythique ×3,4 (61 200 : ≈ équipement complet).
+- **Butin légendaire des coffres** (`GearPower.LEGEND_RATIO`) : ×1,8 (coffre de niveau 40 : ≈ 16 200, vers l'époque II ;
+  niveau 90 : 32 400, vers l'époque III gagnée).
+- Pages Donjon, Siège et Ruée : jauge « PE requise · la tienne » sous la difficulté (verte quand elle suffit), le bouton
+  fermé dit seulement « Puissance d'équipement insuffisante ».
+- Bilan de la Survie : l'infobulle des insignes lit `Run.insignia_parts` (participation au prorata d'une run courte, cartes
+  suivantes, monstres et élites plafonnés, victoire, bonus du défi / du rang héroïque, autel) ; les lignes font le total.
 - **Tour** : 3 / 4 / 5 / 6 cristaux par étage (avant 1 à 2,5, `ActivityLoot.TOWER_PER_FLOOR`) : entre l'époque I gagnée et les
   Donjons (époque II), c'est la seule source de cristaux (≈ 120 / h en Normal, sous un Donjon Normal à 180).
 

@@ -100,29 +100,47 @@ static func supplies() -> int:
 	return n
 
 
-## D'où viennent les insignes de la run (participation, cartes atteintes, monstres, victoire, bonus).
+## D'où viennent les insignes de la run : le détail calculé par Run.finish (Run.insignia_parts, barème
+## Economy.survival_insignia_parts), puis le bonus du défi / du rang héroïque et l'autel. Les lignes font le total.
 static func insignia_tip() -> String:
-	var lines: PackedStringArray = []
-	var sum := 0
-	var part := Run.INSIGNIA_BASE if Run.kills >= 10 else 0
-	if part > 0:
-		lines.append("Participation : +%d" % part)
-	else:
-		lines.append("Participation : vaincs 10 monstres (+%d)" % Run.INSIGNIA_BASE)
-	var cards := 25 * Run.stage
-	var fights := Run.kills / 20 + Run.elites * 2
-	var win := 60 * Run.epoch if Run.result == "victoire" else 0
-	lines.append("Cartes atteintes : +%d" % cards)
-	if fights > 0:
-		lines.append("Monstres et élites : +%d" % fights)
-	if win > 0:
-		lines.append("Victoire : +%d" % win)
+	return "\n".join(PackedStringArray(insignia_lines().map(func(l): return "%s : +%d" % [l[0], l[1]]) + insignia_notes()))
+
+
+## Lignes [libellé, insignes] de l'infobulle ; leur somme = Run.insignia_gain.
+static func insignia_lines() -> Array:
+	var p := Run.insignia_parts
+	if p.is_empty():  # (bilan sans Run.finish de Survie : barème sans prorata)
+		p = Economy.survival_insignia_parts(Run.stage, Run.kills, Run.elites, Run.epoch, Run.result == "victoire")
+	var out: Array = [["Participation", int(p.get("participation", 0))]]
+	var maps := int(p.get("maps", 0))
+	if maps > 0:
+		out.append(["Carte 2 atteinte" if Run.stage <= 2 else ("Cartes 2 et 3 atteintes" if Run.stage == 3 else "Cartes 2 à %d atteintes" % Run.stage), maps])
+	if int(p.get("fights", 0)) > 0:
+		out.append(["Monstres et élites", int(p.fights)])
+	if int(p.get("victory", 0)) > 0:
+		out.append(["Victoire", int(p.victory)])
+	var base := 0
+	for l in out:
+		base += int(l[1])
+	var bonus := Run.insignia_gain - Run.fortune_insignia - base
+	if bonus > 0:
+		var who := "Défi de maîtrise" if Run.heroic_rank <= 0 else ("Rang héroïque %d" % Run.heroic_rank if not Challenge.active else "Défi et rang héroïque")
+		out.append([who, bonus])
 	if Run.fortune_insignia > 0:
-		lines.append("Autel de la fortune : +%d" % Run.fortune_insignia)
-	sum = part + cards + fights + win + Run.fortune_insignia
-	if Run.insignia_gain > sum:
-		lines.append("Bonus (défi, rang héroïque) : +%d" % (Run.insignia_gain - sum))
-	return "\n".join(lines)
+		out.append(["Autel de la fortune", Run.fortune_insignia])
+	return out
+
+
+## Notes de l'infobulle : ce qui a réduit la participation ou les monstres comptés.
+static func insignia_notes() -> Array:
+	var notes: Array = []
+	if Run.kills < 10:
+		notes.append("Vaincs 10 monstres : +%d de participation." % Run.INSIGNIA_BASE)
+	if Run.stage <= 1 and not Run.insignia_parts.is_empty() and int(Run.insignia_parts.get("participation", 0)) < Run.INSIGNIA_BASE * (2 if Run.kills >= 10 else 1):
+		notes.append("Run courte : participation selon le temps passé sur la 1re carte.")
+	if Run.kills > Run.KILL_CAP_PER_MAP * maxi(Run.stage, 1):
+		notes.append("Monstres comptés : %d par carte au plus." % Run.KILL_CAP_PER_MAP)
+	return notes
 
 
 ## Rejouer : même classe, même époque, sans repasser par le lobby.

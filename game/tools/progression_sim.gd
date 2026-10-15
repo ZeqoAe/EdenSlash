@@ -87,6 +87,10 @@ func _ready() -> void:
 		probe()
 		get_tree().quit()
 		return
+	if "--gates" in OS.get_cmdline_user_args():
+		gates_table()
+		get_tree().quit()
+		return
 	var res := simulate(accounts, skill, hours, seed_value)
 	print_report(res, skill)
 	activity_table()
@@ -202,7 +206,35 @@ func new_account(skill: String) -> Dictionary:
 
 func _note(acc: Dictionary, key: String) -> void:
 	if not acc.events.has(key):
-		acc.events[key] = {"h": acc.min / 60.0, "runs": int(acc.runs)}
+		acc.events[key] = {"h": acc.min / 60.0, "runs": int(acc.runs), "pe": pe(acc), "lvl": avg_level(acc)}
+
+
+## Passe P5 : verrous de PE du jeu (sans la marge de niveau du modèle) franchis par le compte : donjons et Siège
+## (au moins une zone / toutes les zones) par difficulté, Ruée, butin légendaire d'un coffre de niveau 60 et 90.
+func _note_gates(acc: Dictionary) -> void:
+	if int(acc.cleared) < 2:
+		return
+	var power := pe(acc)
+	for d in [1, 2]:
+		var any_d := false
+		var all_d := true
+		var any_s := false
+		for z in Dungeons.zone_ids():
+			var ok := power >= Dungeons.power_required(String(z), d)
+			any_d = any_d or ok
+			all_d = all_d and ok
+			any_s = any_s or power >= Siege.power_required(String(z), d)
+		if any_d:
+			_note(acc, "open_dungeon_%d" % d)
+		if all_d:
+			_note(acc, "open_dungeon_%d_all" % d)
+		if any_s:
+			_note(acc, "open_siege_%d" % d)
+		if power >= Dungeons.power_required(Dungeons.RUSH, d):
+			_note(acc, "open_rush_%d" % d)
+	for lv in [60, 90]:
+		if power >= GearPower.required(lv, GearPower.LEGEND_RATIO):
+			_note(acc, "legend_%d" % lv)
 
 
 func _add_bag(acc: Dictionary, key: String, n := 1) -> void:
@@ -560,6 +592,7 @@ func simulate(accounts: int, skill: String, max_hours: float, seed_value: int) -
 			next_activity = int(acc.cleared) >= 1 and rng.randf() > SURVIVAL_SHARE
 			shop(acc)
 			workshop(acc)
+			_note_gates(acc)
 			if int(acc.cleared) >= Epochs.count():
 				_note(acc, "epoch_all")
 			var kt := kit_tier(acc)
@@ -586,22 +619,29 @@ static func _median(xs: Array) -> float:
 static func milestone(res: Dictionary, key: String) -> Dictionary:
 	var hs: Array = []
 	var rs: Array = []
+	var ps: Array = []
+	var ls: Array = []
 	var n := 0
 	for acc in res.accounts:
 		if acc.events.has(key):
 			n += 1
 			hs.append(float(acc.events[key].h))
 			rs.append(int(acc.events[key].runs))
+			ps.append(int(acc.events[key].get("pe", 0)))
+			ls.append(float(acc.events[key].get("lvl", 0.0)))
 	if n * 2 < (res.accounts as Array).size():
-		return {"h": -1.0, "runs": -1, "share": float(n) / maxf(1.0, (res.accounts as Array).size())}
-	return {"h": snappedf(_median(hs), 0.1), "runs": int(_median(rs)), "share": float(n) / float((res.accounts as Array).size())}
+		return {"h": -1.0, "runs": -1, "pe": -1, "lvl": -1.0, "share": float(n) / maxf(1.0, (res.accounts as Array).size())}
+	return {"h": snappedf(_median(hs), 0.1), "runs": int(_median(rs)), "pe": int(_median(ps)), "lvl": _median(ls),
+		"share": float(n) / float((res.accounts as Array).size())}
 
 
 func print_report(res: Dictionary, skill: String) -> void:
 	print("== progression d'un compte neuf (%s, %d comptes, classe %s) ==" % [skill, (res.accounts as Array).size(), cid])
-	for key in ["epoch_1", "epoch_2", "epoch_3", "epoch_4", "dungeon_1", "dungeon_2", "kit_1", "kit_2", "kit_3", "kit_4"]:
+	for key in ["epoch_1", "epoch_2", "epoch_3", "epoch_4", "dungeon_1", "dungeon_2", "kit_1", "kit_2", "kit_3", "kit_4",
+			"open_dungeon_1", "open_dungeon_1_all", "open_dungeon_2", "open_dungeon_2_all", "open_siege_1", "open_siege_2",
+			"open_rush_1", "open_rush_2", "legend_60", "legend_90"]:
 		var m := milestone(res, key)
-		print("  %-12s : %s" % [key, ("médiane %.1f h, %d runs (%.0f %% des comptes)" % [m.h, m.runs, 100.0 * float(m.share)]) if float(m.h) >= 0.0 else "non atteint par la moitié des comptes (%.0f %%)" % (100.0 * float(m.share))])
+		print("  %-18s : %s" % [key, ("médiane %.1f h, %d runs, PE %d, niveau des pièces %.0f (%.0f %% des comptes)" % [m.h, m.runs, m.pe, m.lvl, 100.0 * float(m.share)]) if float(m.h) >= 0.0 else "non atteint par la moitié des comptes (%.0f %%)" % (100.0 * float(m.share))])
 	if not quiet:
 		var acc: Dictionary = res.accounts[0]
 		print("  courbe du compte 1 (toutes les 5 runs) :")
@@ -663,3 +703,21 @@ func probe() -> void:
 			var r := ratios(g, ep, false)
 			line += "  E%d %.2f | %.2f" % [ep, float(r[0]), float(r[2])]
 		print(line)
+
+
+## Passe P5 : PE requise par chaque verrou (donjons, Siège, Ruée, butin légendaire) et PE d'équipements types.
+func gates_table() -> void:
+	print("== PE requise (donjon | siège) ==")
+	for z in Dungeons.zone_ids():
+		var line := "  %-14s" % z
+		for d in 3:
+			line += "  %s nv %d : %6d | %6d" % [Dungeons.DIFF_NAMES[d], Dungeons.level(String(z), d), Dungeons.power_required(String(z), d), Siege.power_required(String(z), d)]
+		print(line)
+	print("  Ruée : %d / %d / %d" % [Dungeons.power_required(Dungeons.RUSH, 0), Dungeons.power_required(Dungeons.RUSH, 1), Dungeons.power_required(Dungeons.RUSH, 2)])
+	for lv in [20, 40, 60, 75, 90]:
+		print("  légendaire au niveau %d : PE %d" % [lv, GearPower.required(lv, GearPower.LEGEND_RATIO)])
+	print("== PE d'équipements types (époque.carte.+N.rang des gemmes) ==")
+	seed(7)
+	for spec in ["1.1.0", "1.3.0", "1.3.10.3", "2.3.0", "2.3.10.3", "3.3.0", "3.3.10.4", "4.1.10.4", "4.3.0", "4.3.5.4", "4.3.10.4"]:
+		print("  %-10s PE %d" % [spec, GearPower.gear_power(StarterGear.scenario(spec, cid))])
+	print("  compte neuf : PE %d" % GearPower.gear_power(StarterGear.items(cid)))

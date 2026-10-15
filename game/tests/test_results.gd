@@ -33,6 +33,7 @@ func _ready() -> void:
 	Profile.selected_class = "warrior"
 	Profile.reset_all()
 	await _survival()
+	await _insignia_cases()
 	await _modes()
 	await _animation()
 	await _pause_and_hud()
@@ -72,6 +73,49 @@ func _animation() -> void:
 	await _clear()
 
 
+# --- Survie : détail des insignes (Run.insignia_parts, passe P5) : run courte au prorata, victoire, défi ---------
+func _insignia_cases() -> void:
+	await _clear()
+	# run courte : 1 minute sur la 1re carte, 12 monstres -> participation au prorata, note « Run courte »
+	Run.start_survival("warrior", 1)
+	Run.kills = 12
+	Run.active = false
+	Run.result = "abandon"
+	Run.insignia_parts = Economy.survival_insignia_parts(1, 12, 0, 1, false, 1.0)
+	Run.insignia_gain = Economy.survival_insignia(1, 12, 0, 1, false, 1.0)
+	var tip := ResultsScreen.insignia_tip()
+	check("insignes : run courte au prorata (+%d), expliquée : %s" % [Run.insignia_gain, tip.replace("\n", " | ")],
+		Run.insignia_gain == 5 and tip.contains("Participation : +5") and tip.contains("Run courte"))
+	# victoire d'époque II avec défi et autel : victoire, cartes 2 et 3, bonus du défi, autel ; somme = total
+	Run.start_survival("warrior", 2)
+	Run.stage = 3
+	Run.kills = 700
+	Run.elites = 12
+	Run.epoch = 2
+	Challenge.active = true
+	Run.insignia_parts = Economy.survival_insignia_parts(3, 700, 12, 2, true, 30.0)
+	var base := Economy.survival_insignia(3, 700, 12, 2, true, 30.0)
+	Run.fortune_insignia = 40
+	Run.insignia_gain = roundi(base * 1.5) + 40
+	Run.result = "victoire"
+	tip = ResultsScreen.insignia_tip()
+	var sum := 0
+	for l in ResultsScreen.insignia_lines():
+		sum += int(l[1])
+	check("insignes : victoire, cartes 2 et 3, défi et autel, somme exacte (%d / %d) : %s" % [sum, Run.insignia_gain, tip.replace("\n", " | ")],
+		sum == Run.insignia_gain and tip.contains("Victoire : +120") and tip.contains("Cartes 2 et 3 atteintes : +50")
+		and tip.contains("Défi de maîtrise : +") and tip.contains("Autel de la fortune : +40") and not tip.contains("Run courte"))
+	# moins de 10 monstres : la participation dit quoi faire
+	Run.start_survival("warrior", 1)
+	Run.kills = 3
+	Run.insignia_parts = Economy.survival_insignia_parts(1, 3, 0, 1, false, 12.0)
+	Run.insignia_gain = Economy.survival_insignia(1, 3, 0, 1, false, 12.0)
+	tip = ResultsScreen.insignia_tip()
+	check("insignes : moins de 10 monstres, la note dit quoi faire : %s" % tip.replace("\n", " | "), tip.contains("Vaincs 10 monstres") and tip.contains("Participation : +25"))
+	Challenge.reset()
+	Run.active = false
+
+
 # --- Survie : un bilan sans doublon, avec insignes de participation et coffres de la run ---------------
 func _survival() -> void:
 	Run.start_survival("warrior", 1)
@@ -96,7 +140,11 @@ func _survival() -> void:
 	check("Survie : défaite (ton rouge), titre et sous-titre", spec.title == "DÉFAITE" and spec.tone == "lose" and String(spec.subtitle).contains("Époque I"))
 	check("Survie : insignes gardés = ceux de la run", spec.kept[0].value == "+%d" % Run.insignia_gain and Run.insignia_gain >= 25)
 	var tip := String(spec.kept[0].tip)
-	check("Survie : participation (10 monstres) dans l'infobulle des insignes : %s" % [tip.replace("\n", " | ")], tip.contains("Participation : +25") and tip.contains("Cartes atteintes : +50"))
+	check("Survie : participation (10 monstres) dans l'infobulle des insignes : %s" % [tip.replace("\n", " | ")], tip.contains("Participation : +50") and tip.contains("Carte 2 atteinte : +25"))
+	var tip_sum := 0
+	for l in ResultsScreen.insignia_lines():
+		tip_sum += int(l[1])
+	check("Survie : les lignes de l'infobulle font le total (Run.insignia_parts) : %d / %d" % [tip_sum, Run.insignia_gain], tip_sum == Run.insignia_gain and not Run.insignia_parts.is_empty())
 	check("Survie : coffres de la run listés (forge · parchemins ×2, apparence)", txt.has("Coffre de forge · parchemins") and txt.has("Coffre d'apparence rare") and spec.kept.any(func(r): return r.text == "Coffre de forge · parchemins" and r.value == "×2"))
 	check("Survie : l'or reste dans la run (bloc Perdu)", spec.lost.any(func(r): return r.text == "Or" and r.value == "90"))
 	check("Survie : fournitures perdues en défaite, gardées en victoire", ResultsScreen.lost_rows(true).all(func(r): return r.text != "Fournitures") and ResultsScreen.kept_rows(false).all(func(r): return r.text != "Fournitures"))

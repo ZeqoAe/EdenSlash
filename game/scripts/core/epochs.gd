@@ -27,7 +27,10 @@ const LEVEL_BONUS := [0, 12, 22]
 ## l'ancien écart, l'époque IV tombait ≈ 10 h après le premier lancement (simulation tools/progression_sim). Chaque
 ## époque demande maintenant l'équipement de la précédente bien monté : II ≈ pièces de l'époque I à +5 et
 ## quelques gemmes, III ≈ pièces de l'époque II à +10, IV ≈ un équipement complet (R_E6.md).
-const MONSTER_MULT := [1.0, 1.7, 3.4, 7.0]
+## Passe P5 : époque I adoucie (1 → 0,85, PV et dégâts) : au pilote automatique (joueur moyen, 40 % de coups évités,
+## compte neuf) seuls 53 % des runs tenaient 7 min sur la 1re carte et la simulation donnait 13 runs avant la 1re
+## victoire (cible 5-8). Les époques II à IV ne bougent pas (R_P5.md).
+const MONSTER_MULT := [0.85, 1.7, 3.4, 7.0]
 
 
 ## Premiers niveaux de la Survie plus vite (0.1.164) : l'expérience gagnée est multipliée par ce facteur,

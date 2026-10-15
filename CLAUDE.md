@@ -172,6 +172,9 @@ Aucun réglage d'époque ou d'économie avant ces mesures. Test : `res://tests/t
 Passe E6 (`conception/nuit_15_10/R_E6.md`, DESIGN.md « Équilibrage global ») : simulation d'un compte neuf avec les vraies formules
 `res://tools/progression_sim.tscn` (`--probe`, `--mult=1,1.7,3.4,7`, `--skill=`, `--trace`) ; bornes dans `tests/test_e6`. Le journal réel
 n'a encore que 2 cartes de Survie : relancer `tools/journal_report.py` quand il en aura ≥ 5 par style et par époque.
+Passe P5 (`R_P5.md`) : verrous de PE recalés sur la PE simulée (`GearPower.DIFF_RATIO` 0 / 3,6 / 3,1, `Siege.POWER_RATIO` 0 / 4 / 3,4,
+`LEGEND_RATIO` 1,8 ; `progression_sim -- --gates` : PE requise par zone ; jalons `open_*` / `legend_*`), époque I adoucie (monstres ×0,85),
+infobulle des insignes du bilan = `Run.insignia_parts`. Jauge de PE des pages Donjon / Siège / Ruée : `Lobby._pe_gauge`.
 
 ## HUD, pause et bilans (0.1.180, lot U9)
 Un seul composant de bilan, `ui/results_panel.gd` (`ResultsPanel.show_spec` : titre, tuiles, blocs Gagné / Gardé / Perdu, boutons) ; `ResultsScreen`

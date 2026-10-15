@@ -29,6 +29,7 @@ func _ready() -> void:
 	_test_gems()
 	_test_epochs()
 	_test_dismantle()
+	_test_gates()
 	await _test_progression()
 	Run.active = false
 	Run.survival = false
@@ -148,7 +149,7 @@ func _test_gems() -> void:
 
 func _test_epochs() -> void:
 	var m: Array = Epochs.MONSTER_MULT
-	check("monstres : ×1 à l'époque I, de plus en plus forts", is_equal_approx(float(m[0]), 1.0) and float(m[1]) > 1.0 and float(m[2]) > float(m[1]) and float(m[3]) > float(m[2]))
+	check("monstres : ×0,85 à l'époque I (adoucie, passe P5), de plus en plus forts", float(m[0]) <= 1.0 and float(m[0]) >= 0.8 and float(m[1]) > 1.0 and float(m[2]) > float(m[1]) and float(m[3]) > float(m[2]))
 	check("époque IV : ≥ ×5 (un équipement complet est attendu)", float(m[3]) >= 5.0)
 
 
@@ -184,4 +185,33 @@ func _test_progression() -> void:
 	check("époque II : pas avant 4 h — %s h" % e2.h, float(e2.h) < 0.0 or float(e2.h) >= 4.0)
 	check("époque IV : hors de portée avant 15 h — %s h" % e4.h, float(e4.h) < 0.0 or float(e4.h) >= 15.0)
 	check("équipement complet d'une classe (+10, gemmes, enchantements) : 12 h ou plus — %s h" % kit.h, float(kit.h) < 0.0 or float(kit.h) >= 12.0)
+	# passe P5 : verrous de PE recalés sur la PE réelle du compte simulé
+	var e3: Dictionary = sim.milestone(res, "epoch_3")
+	var h1: Dictionary = sim.milestone(res, "open_dungeon_1")
+	var m2: Dictionary = sim.milestone(res, "open_dungeon_2")
+	print("      verrous : Héroïque %s h (époque III %s h), Mythique %s h (époque IV %s h), Siège Mythique %s h, légendaire niv. 90 %s h" % [h1.h, e3.h, m2.h, e4.h,
+		sim.milestone(res, "open_siege_2").h, sim.milestone(res, "legend_90").h])
+	check("P5 : 1er donjon Héroïque après l'époque II et vers l'époque III (≥ 75 %% de son temps) — %s h / %s h" % [h1.h, e3.h],
+		float(h1.h) > float(e2.h) and float(h1.h) >= 0.75 * float(e3.h))
+	check("P5 : Mythique pas avant l'époque IV (≥ 90 %% de son temps) — %s h / %s h" % [m2.h, e4.h], float(m2.h) < 0.0 or float(m2.h) >= 0.9 * float(e4.h))
 	sim.queue_free()
+
+
+## Passe P5 : seuils de PE (donjons, Siège, Ruée, légendaire) : ordre des difficultés et équipements types.
+func _test_gates() -> void:
+	seed(7)
+	var kit_e1 := GearPower.gear_power(StarterGear.scenario("1.3.10.3", "warrior"))
+	var kit_e3 := GearPower.gear_power(StarterGear.scenario("3.3.10.4", "warrior"))
+	var low := String(Dungeons.zone_ids()[0])
+	check("P5 : équipement d'époque I à +10 (PE %d) : ni Héroïque (%d) ni Mythique (%d)" % [kit_e1, Dungeons.power_required(low, 1), Dungeons.power_required(low, 2)],
+		kit_e1 < Dungeons.power_required(low, 1) and kit_e1 < Dungeons.power_required(low, 2))
+	check("P5 : équipement d'époque III à +10 (PE %d) : Héroïque de la 1re zone, pas le Mythique" % kit_e3,
+		kit_e3 >= Dungeons.power_required(low, 1) and kit_e3 < Dungeons.power_required(low, 2))
+	var ordered := true
+	for z in Dungeons.zone_ids():
+		ordered = ordered and Dungeons.power_required(String(z), 2) >= Dungeons.power_required(String(z), 1) \
+			and Siege.power_required(String(z), 1) > Dungeons.power_required(String(z), 1) and Siege.power_required(String(z), 2) > Dungeons.power_required(String(z), 2)
+	check("P5 : dans chaque zone Mythique ≥ Héroïque, Siège > donjon", ordered)
+	var kit_e4 := GearPower.gear_power(StarterGear.scenario("4.3.10.4", "warrior"))
+	check("P5 : légendaire d'un coffre de niveau 90 fermé à l'équipement d'époque I +10, ouvert à celui d'époque IV +10 (PE %d)" % kit_e4,
+		kit_e1 < GearPower.required(90, GearPower.LEGEND_RATIO) and kit_e4 >= GearPower.required(90, GearPower.LEGEND_RATIO))

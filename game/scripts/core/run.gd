@@ -138,6 +138,7 @@ func start(cid: String) -> void:
 	unlocked_name = ""
 	unlocked_epoch = ""
 	fortune_insignia = 0
+	insignia_parts = {}
 	perfects = 0
 	resurrections = 0
 	rage_stages = []

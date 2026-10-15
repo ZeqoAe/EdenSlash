@@ -14,9 +14,15 @@ const TARGET_RATING := 10.0  # note moyenne d'un emplacement « attendu »
 const OFFHAND_SHARE := 0.3
 const SET_STEP := 0.06
 ## Rapport PE / PE attendue : seuil de chaque difficulté de donjon (Normal, Héroïque, Mythique).
-const DIFF_RATIO := [0.0, 0.55, 0.8]
-## Rapport minimal pour qu'un coffre puisse donner une pièce légendaire (sinon : mythique).
-const LEGEND_RATIO := 0.5
+## Passe P5 (simulation tools/progression_sim, joueur moyen) : la PE réelle dépasse vite l'« attendue » (pièces +10,
+## gemmes, enchantements, panoplies : ≈ 6 000 à l'époque I gagnée, 12 600 à la II, 31 000 à la III, 53 000 à la IV,
+## 61 000 équipement complet). Héroïque s'ouvre vers l'époque III (zone la plus basse) puis zone après zone jusqu'à
+## l'époque IV ; Mythique (niveau 90 : 55 800) après l'époque IV, équipement amélioré. Avant : 0,55 / 0,8 ouvraient
+## tout le Mythique dès l'époque II gagnée (un équipement d'époque I à +10 y suffisait).
+const DIFF_RATIO := [0.0, 3.6, 3.1]
+## Rapport minimal pour qu'un coffre puisse donner une pièce légendaire (sinon : mythique). Passe P5 : 1,8 (coffre de
+## niveau 40 : vers l'époque II gagnée ; niveau 90 : vers l'époque III gagnée). Avant : 0,5, ouvert dès l'époque I.
+const LEGEND_RATIO := 1.8
 const TIERS := [[0.35, "Faible", Color(0.7, 0.7, 0.78)], [0.7, "Correcte", Color(0.5, 0.85, 0.5)],
 	[1.0, "Solide", Color(0.4, 0.7, 1.0)], [999.0, "Redoutable", Color(1.0, 0.7, 0.2)]]
 

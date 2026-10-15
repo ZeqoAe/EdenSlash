@@ -1493,7 +1493,7 @@ func _menu_dungeon() -> void:
 	var go := MenuWidgets.gold_button("Entrer : %s" % Dungeons.name_of(_dg_zone), 22, Vector2(0, 58))
 	go.disabled = not open_now
 	go.pressed.connect(_start_dungeon)
-	_pin_go(go, ("" if Dungeons.power_ok(_dg_zone, _dg_diff) else Dungeons.power_text(_dg_zone, _dg_diff)) if Dungeons.is_open(_dg_zone) else Dungeons.condition(_dg_zone))
+	_pin_go(go, ("" if Dungeons.power_ok(_dg_zone, _dg_diff) else PE_LOW) if Dungeons.is_open(_dg_zone) else Dungeons.condition(_dg_zone))
 
 
 ## Choix de la zone (un donjon par zone, ouvert quand son boss est battu en Survie) et de la difficulté, pour les
@@ -1539,10 +1539,41 @@ func _dungeon_pickers(menu: String, siege: bool) -> void:
 			_dg_diff = di
 			_show_menu(menu))
 		dr.add_child(b)
-	var need := Siege.power_required(_dg_zone, _dg_diff) if siege else Dungeons.power_required(_dg_zone, _dg_diff)
-	var text := (Siege.power_text(_dg_zone, _dg_diff) if siege else Dungeons.power_text(_dg_zone, _dg_diff)) if need > 0 else GearPower.summary(Dungeons.level(_dg_zone, _dg_diff))
-	var pe_note := Hud._label(_sub, text, 13, UiTheme.MUTED)
-	pe_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_pe_gauge(Siege.power_required(_dg_zone, _dg_diff) if siege else Dungeons.power_required(_dg_zone, _dg_diff))
+
+
+## Bouton de lancement fermé par la PE : le détail est dans la jauge de la page (_pe_gauge).
+const PE_LOW := "Puissance d'équipement insuffisante"
+
+
+## Jauge de la PE exigée par la difficulté choisie (passe P5) : la tienne / la requise, verte quand elle suffit.
+## Rien en Normal (aucune PE requise).
+func _pe_gauge(need: int) -> void:
+	if need <= 0:
+		return
+	var have := GearPower.hero_power()
+	var ok := GearPower.meets(need)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 4)
+	box.mouse_filter = Control.MOUSE_FILTER_STOP
+	box.tooltip_text = "Puissance d'équipement (PE). Pour la monter : des pièces de plus haut niveau à l'Armurerie, puis +N, gemmes et enchantements à la Forge."
+	_sub.add_child(box)
+	Hud._label(box, "PE requise : %s · la tienne : %s" % [GearPower.fmt(need), GearPower.fmt(have)], 14, UiTheme.BUFF if ok else UiTheme.MUTED)
+	var bar := ProgressBar.new()
+	bar.max_value = float(need)
+	bar.value = float(mini(have, need))
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(0, 8)
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = UiTheme.BUFF if ok else UiTheme.GOLD
+	fill.set_corner_radius_all(4)
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(1, 1, 1, 0.1)
+	bg.set_corner_radius_all(4)
+	bar.add_theme_stylebox_override("fill", fill)
+	bar.add_theme_stylebox_override("background", bg)
+	box.add_child(bar)
 
 
 ## Le Siège : trois héros (toi et deux alliés IA), cinq vagues, le boss de la zone, puis le chacun pour soi.
@@ -1579,7 +1610,7 @@ func _menu_siege() -> void:
 	elif not Dungeons.is_open(_dg_zone):
 		why = Dungeons.condition(_dg_zone)
 	elif not Siege.power_ok(_dg_zone, _dg_diff):
-		why = Siege.power_text(_dg_zone, _dg_diff)
+		why = PE_LOW
 	go.pressed.connect(_start_siege)
 	_pin_go(go, why)
 
@@ -1643,12 +1674,13 @@ func _menu_rush() -> void:
 	var go := MenuWidgets.gold_button("Lancer la Ruée", 22, Vector2(0, 58))
 	go.disabled = not Unlocks.is_open("dungeons") or not Dungeons.power_ok(Dungeons.RUSH, _dg_diff)
 	go.pressed.connect(_start_rush)
-	_pin_go(go, Unlocks.condition("dungeons") if not Unlocks.is_open("dungeons") else (Dungeons.power_text(Dungeons.RUSH, _dg_diff) if go.disabled else ""))
+	_pin_go(go, Unlocks.condition("dungeons") if not Unlocks.is_open("dungeons") else (PE_LOW if go.disabled else ""))
 
 
 func _start_rush() -> void:
 	if _launching or not Unlocks.is_open("dungeons") or not Dungeons.power_ok(Dungeons.RUSH, _dg_diff):
 		return
+	_pe_gauge(Dungeons.power_required(Dungeons.RUSH, _dg_diff))
 	_launching = true
 	if backdrop:
 		backdrop.release()
