@@ -120,6 +120,9 @@ Matières des activités (0.1.165, lot E1 de la nuit du 15/10, `DESIGN.md` « Ma
 Lot E2 (nuit du 15/10, `DESIGN.md` « Maîtrise et insignes du JcJ… ») : maîtrise du JcJ par `League.mastery_for` / `pvp_mastery`,
 insignes JcJ plafonnés au jour (`League.win_insignia`, `royale_insignia`), plan sûr au 1er donjon de chaque difficulté, fabrication sur 9
 emplacements, Siège Normal sans PE ; panoplie des Esprits : modèles fixes niveau 70 dans `GameData.eden_by_id` (`Pantheon.shop_id`, `sync_seen`), éveil = `Items.SETS.pantheon.awake`.
+Lot E5 (nuit du 15/10, `core/economy.gd`, `R_E5.md`) : barème des insignes (`Economy.survival_insignia`, cibles `INSIGNIA_PER_HOUR`), Armurerie à paliers
+(`GearShopPage.price` = `Economy.armory_price`), puits `buy_chest` / `buy_lesson` (pas encore de bouton), maîtrise : rattrapage, 1re victoire par époque
+(`Run.first_win_bonus`), part de l'arbre dans `Profile.add_expertise` (`last_shared`). Test `test_e5`, chiffres : `res://tools/insignia_probe.tscn`.
 Infobulles d'objets (0.1.172, lot U6 de la nuit du 15/10) : `Items.describe(item, detailed)` (carte courte : stat principale en gros, 5 lignes, passif,
 gemmes, panoplie x / N ; complète : tout) et `ItemWidgets.item_card` (suit Maj, comparaison ▲ / ▼ avec la pièce portée, enclume de Survie comprise) ;
 test `test_tooltips`, captures `tests/shot_tips.tscn`.

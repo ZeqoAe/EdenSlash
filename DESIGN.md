@@ -94,7 +94,8 @@ Vitalité, Posture du chasseur, Désarmé (ne peut plus attaquer), Ange gardien 
 ## Expertise, talents et certificats
 
 - **Expertise de classe** (40 niveaux), gagnée en fin de run avec la classe : niveau atteint
-  ×15, monstres ÷2, élites ×10, +200 en cas de victoire.
+  ×15, monstres ÷2, élites ×10, +200 en cas de victoire (rattrapage, 1re victoire et part de l'arbre :
+  voir « Insignes et maîtrise des 60 classes »).
 - **Talents** : l'arbre « Class Talent » d'Eden (`c_talent` + `c_enchant`), 3 lignes × 8
   paliers, 18 talents par classe, prérequis et paliers de points (15/20/25/30/35) ; 2 points par
   niveau d'expertise. Effets : stats (défense, PV, force…, critique, vitesses, parade, soins)
@@ -231,6 +232,26 @@ chacune avec son rôle :
   les classes ; battre le Champion y ouvre l'arme des Esprits des 17 types. **Éveil** : avec 6 pièces éveillées portées
   (cerveau battu par les 5 familles), le palier 6 devient : +10 % dégâts, +5 % critique, esquive → hâte puis furie 4 s,
   recharge 4 s (au lieu de 3 s / 8 s).
+
+### Insignes et maîtrise des 60 classes (lot E5 de la nuit du 15/10, `core/economy.gd`)
+
+- **Barème unique** (`Economy.INSIGNIA_PER_HOUR`, contrôlé par `test_e5`) : la Survie est la référence (≈ 360 insignes / h
+  gagnée en époque I, 670 en époque IV, formule `Economy.survival_insignia`) ; le JcJ contre l'IA reste en dessous (≈ 400
+  la 1re heure du jour, puis ≈ 60) ; Donjons, Ruée, Siège et Tour ne donnent pas d'insignes (cristaux et matières).
+- **Armurerie à paliers** (`Economy.armory_price`) : la 1re pièce d'un palier (même emplacement, type d'arme, niveau, rareté,
+  éveil) coûte le prix plein, les autres pièces de ce palier (autres panoplies ou attributs, utiles à d'autres classes)
+  15 %. Pièces des Esprits : jamais de remise. Kit d'une classe : 1,8 h (époque I) à 3,3-3,9 h ; collection d'une époque :
+  16 h (I), 28 h (II), ≈ 58 h (III-IV ; ≈ 33 h au rang héroïque 5) au lieu de 44 / 84 / 230 h
+  (`GearShopPage.price` = `Economy.armory_price`).
+- **Puits sobres** : coffres d'apparence et d'auras achetés avec des insignes (`Economy.SHOP_CHESTS` : rare 150 ×3,
+  mythique 300 ×2, légendaire 600 ×1, aura rare 400 ×1, aura légendaire 900 ×1 par semaine ; fermés quand la collection
+  de la rareté est complète) ; **leçon de maîtrise** : 200 insignes → 300 points pour une classe en retard, 3 par jour.
+  **À brancher** : boutons d'achat (menu Coffres : `Economy.buy_chest` ; Héros > Maîtrise : `Economy.buy_lesson`).
+- **Maîtrise des 60 classes** : rattrapage ×1,5 en Survie pour une classe à 3 niveaux ou plus sous la meilleure du compte
+  (jusqu'au niveau 20) ; 1re victoire de la classe à chaque époque : +600 / 900 / 1 200 / 1 500 ; **part de l'arbre** : 10 %
+  de toute maîtrise gagnée va aux voisines de l'arbre (classe d'origine et classes qui en descendent) débloquées et plus
+  basses (`Profile.add_expertise`, `last_shared`) ; le Défi de maîtrise propose de préférence des classes en retard. Une classe
+  jouée après la première monte au niveau 20 en ≈ 3,6 Survies gagnées au lieu de 6,6 (contrats compris).
 
 ### Atelier (lot U5 de la nuit du 15/10 : Armurerie, Fabrication, Forge)
 

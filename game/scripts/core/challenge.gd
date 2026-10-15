@@ -32,7 +32,8 @@ static func modifiers_today() -> Array:
 	return out
 
 
-## Trois classes proposées : une parmi les moins maîtrisées, deux au hasard (classes ouvertes seulement).
+## Trois classes proposées : une parmi les moins maîtrisées, deux au hasard, de préférence en retard sur la meilleure
+## classe (Economy.lagging) ; classes ouvertes seulement.
 static func classes_today() -> Array:
 	var open: Array = []
 	for cid in GameData.classes:
@@ -44,7 +45,11 @@ static func classes_today() -> Array:
 	if open.is_empty():
 		return out
 	out.append(open[r.randi() % mini(5, open.size())])
+	# lot E5 : les deux autres parmi les classes en retard (rattrapage) quand il y en a assez
 	var rest := open.filter(func(c): return not c in out)
+	var late := rest.filter(func(c): return Economy.lagging(String(c)))
+	if late.size() >= 2:
+		rest = late
 	while out.size() < 3 and not rest.is_empty():
 		out.append(rest.pop_at(r.randi() % rest.size()))
 	return out

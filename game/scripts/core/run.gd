@@ -55,6 +55,9 @@ var unlocked_name := ""  # zone débloquée par la victoire (ancienne run)
 var unlocked_epoch := ""  # Survie : époque débloquée par la victoire (bilan)
 var expertise_gain := 0
 var expertise_levels := 0
+var expertise_catchup := 0  # part de expertise_gain due au rattrapage (Economy.catchup, bilan)
+var first_win_bonus := 0  # part de expertise_gain : 1re victoire de la classe à cette époque (bilan)
+var shared_gain := {}  # part de l'arbre de classe donnée aux voisines : classe -> points (bilan)
 var new_classes: Array = []  # classes débloquées pendant la run (bilan)
 var new_costumes: Array = []  # costumes (skins de tenue) débloqués pendant la run
 var rerolls_used := 0  # relances de cartes utilisées (1 par run + cartes « Bonne étoile »)
@@ -184,7 +187,17 @@ func finish(res: String) -> void:
 			"max_level": max_level, "wins": 1 if res == "victoire" else 0})
 		for c in contracts_done:
 			expertise_gain += int(c.reward)
+	expertise_catchup = 0
+	first_win_bonus = 0
+	if survival:
+		# lot E5 : rattrapage des classes en retard, puis 1re victoire de la classe à cette époque
+		expertise_catchup = Economy.catchup(class_id, expertise_gain) - expertise_gain
+		expertise_gain += expertise_catchup
+		if res == "victoire" and stage >= RunDirector.STAGES:
+			first_win_bonus = Economy.first_win(class_id, epoch)
+			expertise_gain += first_win_bonus
 	expertise_levels = Profile.add_expertise(class_id, expertise_gain)
+	shared_gain = Profile.last_shared.duplicate()
 	if survival:
 		# pièces choisies dans les coffres : achetables au hub ; insignes selon la distance parcourue
 		for id in seen_items:
@@ -192,7 +205,7 @@ func finish(res: String) -> void:
 				Profile.seen_gear.append(int(id))
 		# 25 de participation (dès 10 monstres vaincus), 25 par carte atteinte : même une défaite en carte 1
 		# paie de quoi acheter une pièce de l'Armurerie en 1 ou 2 runs (prix 50 à 73 pour l'époque I)
-		insignia_gain = (INSIGNIA_BASE if kills >= 10 else 0) + 25 * stage + kills / 20 + elites * 2 + (60 * epoch if res == "victoire" else 0)
+		insignia_gain = Economy.survival_insignia(stage, kills, elites, epoch, res == "victoire")  # barème unique (lot E5)
 		if Challenge.active:
 			insignia_gain = roundi(insignia_gain * 1.5)  # Défi de maîtrise : insignes ×1,5
 		if heroic_rank > 0:

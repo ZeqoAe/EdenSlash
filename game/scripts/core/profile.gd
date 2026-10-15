@@ -60,6 +60,7 @@ var weapon_legend: Array = []
 var bag := {}  # consommables de la run (Craft) : clé -> quantité
 var stash := {}  # réserve de fournitures gardées (extraction, victoire), emportée à la run suivante
 var expertise := {}  # classe -> points d'expertise (gagnés à chaque run)
+var last_shared := {}  # part de l'arbre du dernier gain d'expertise : classe -> points (bilan, non sauvegardé)
 var talents := {}  # classe -> {id talent (String): niveau}
 var certificates: Array = []  # certificats équipés : "classe/id_passif"
 var unlocked_classes: Array = []  # classes débloquées par mission (le Guerrier l'est d'emblée)
@@ -866,11 +867,15 @@ func expertise_progress(cls: String) -> Vector2:
 	return Vector2(xp, expertise_need(lvl))
 
 
-## Gain d'expertise en fin de run ; renvoie le nombre de niveaux gagnés.
-func add_expertise(cls: String, amount: int) -> int:
+## Gain d'expertise en fin de run ; renvoie le nombre de niveaux gagnés. [param share] : une part va aux
+## voisines de l'arbre de classe plus basses (Economy.share_tree, lot E5) ; détail dans [member last_shared].
+func add_expertise(cls: String, amount: int, share := true) -> int:
 	var before := expertise_level(cls)
+	last_shared = Economy.share_tree(cls, amount) if share else {}
+	for n in last_shared:
+		expertise[n] = int(expertise.get(n, 0)) + int(last_shared[n])
 	expertise[cls] = int(expertise.get(cls, 0)) + amount
-	if expertise_level(cls) > before:
+	if expertise_level(cls) > before or not last_shared.is_empty():
 		_check_missions()  # la maîtrise débloque les classes vertes et orange qui en dépendent
 	return expertise_level(cls) - before
 

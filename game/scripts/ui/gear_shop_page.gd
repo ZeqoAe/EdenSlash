@@ -41,12 +41,9 @@ func subtitle() -> String:
 	return "Pièces découvertes en Survie"
 
 
-## Prix en insignes : selon la rareté et le niveau de la pièce.
+## Prix en insignes : selon la rareté et le niveau de la pièce, remisé quand son palier est entamé (Economy, lot E5).
 static func price(e: Dictionary) -> int:
-	if GameData.is_awakened(e):
-		return 250
-	var lv := int(e.get("level", 1))
-	return 80 + 2 * lv if int(e.get("rarity", 0)) >= Items.LEGENDARY else 30 + lv
+	return Economy.armory_price(e)
 
 
 ## Ids des pièces déjà possédées (dans le coffre commun ou portées).
