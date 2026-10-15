@@ -127,7 +127,7 @@ func _test_save_load() -> void:
 func _test_menu() -> void:
 	var menu := SettingsMenu.new()
 	add_child(menu)
-	for t in menu._pages.size():
+	for t in menu.page_count():  # (les pages se construisent en arrière-plan : page_count() termine la construction)
 		menu.open(t)
 		await get_tree().process_frame
 	check("menu : 6 onglets", menu._pages.size() == 6 and menu.is_open())

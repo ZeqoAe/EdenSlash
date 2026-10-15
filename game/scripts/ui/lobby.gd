@@ -132,6 +132,16 @@ func _ready() -> void:
 	_build_scene()
 	_build_ui()
 	_welcome_flow.call_deferred()
+	if OS.get_cmdline_user_args().is_empty():
+		# P2 : la scène de run se charge en tâche de fond une fois le lobby affiché (Lancer n'attend plus)
+		var prefetch := Timer.new()  # enfant du lobby : disparaît avec lui si le joueur part avant
+		prefetch.one_shot = true
+		prefetch.wait_time = 2.0
+		add_child(prefetch)
+		prefetch.timeout.connect(func():
+			if not _launching:
+				ResourceLoader.load_threaded_request(RUN_SCENE))
+		prefetch.start()
 	if "--duel-menu" in OS.get_cmdline_user_args():
 		_show_menu("duel")  # test : inscription au duel
 		if "--rival-editor" in OS.get_cmdline_user_args():
@@ -1156,6 +1166,14 @@ func _on_menu(id: String) -> void:
 func _welcome_flow() -> void:
 	if not OS.get_cmdline_user_args().is_empty() or Settings.save_path == Settings.TEST_SAVE_PATH:
 		return
+	var notice := SafeFile.take_notice()
+	if notice != "":
+		var nd := AcceptDialog.new()  # une sauvegarde abîmée a été remplacée par sa dernière copie saine
+		nd.title = "Sauvegarde"
+		nd.dialog_text = notice
+		nd.ok_button_text = "Compris"
+		add_child(nd)
+		nd.popup_centered()
 	Tutorial.init_for_save()
 	if Tutorial.mode() == "":
 		var w := Welcome.new()

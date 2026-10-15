@@ -50,18 +50,53 @@ func _init() -> void:
 
 func _ready() -> void:
 	super._ready()
-	_build_footer()
-	_build_game_page()
-	_build_combat_page()
-	_build_keys_page()
-	_build_display_page()
-	_build_audio_page()
-	_build_camera_page()
 	page_changed.connect(_on_page_changed)
 	Settings.changed.connect(_refresh)
+	# P2 : 825 nœuds et ~100 ms : les pages se construisent une par image pendant que l'écran s'affiche (ou d'un coup,
+	# à l'ouverture, si le joueur n'attend pas) au lieu de figer le chargement du titre, du lobby et de la run.
+	_build_steps = [_build_footer, _build_game_page, _build_combat_page, _build_keys_page, _build_display_page,
+		_build_audio_page, _build_camera_page]
+
+
+var _build_steps: Array[Callable] = []
+var _build_next := 0
+
+
+func _build_one() -> void:
+	if _build_next < _build_steps.size():
+		var step := _build_steps[_build_next]
+		_build_next += 1
+		step.call()
+
+
+## Termine la construction des pages (appelé avant tout accès aux pages).
+func ensure_built() -> void:
+	while _build_next < _build_steps.size():
+		_build_one()
+
+
+func page_count() -> int:
+	ensure_built()
+	return super.page_count()
+
+
+func page(i: int) -> Control:
+	ensure_built()
+	return super.page(i)
+
+
+func show_page(i: int) -> void:
+	ensure_built()
+	super.show_page(i)
+
+
+func step_page(delta: int) -> void:
+	ensure_built()
+	super.step_page(delta)
 
 
 func open(tab := -1) -> void:
+	ensure_built()
 	_say("")
 	super.open(tab)
 	_refresh()
@@ -83,6 +118,8 @@ func close_ui() -> void:
 
 
 func _process(delta: float) -> void:
+	if _build_next < _build_steps.size():
+		_build_one()  # une page par image (voir _ready)
 	if _reset_armed_at > 0.0 and Time.get_ticks_msec() / 1000.0 - _reset_armed_at > 4.0:
 		_reset_armed_at = -10.0
 		_reset_all.text = "Tout réinitialiser"

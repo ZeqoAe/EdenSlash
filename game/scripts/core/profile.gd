@@ -162,7 +162,12 @@ func _process(delta: float) -> void:
 			_refill()
 
 
+## Durées du démarrage en microsecondes (tools/perf_ui.gd).
+var boot_us: Dictionary = {}
+
+
 func _ready() -> void:
+	var t0 := Time.get_ticks_usec()
 	process_mode = Node.PROCESS_MODE_ALWAYS  # ressources illimitées : remplies aussi dans les menus (jeu en pause)
 	if not OS.get_cmdline_user_args().is_empty() or " ".join(OS.get_cmdline_args()).contains("res://tests/"):
 		_test = true
@@ -172,7 +177,9 @@ func _ready() -> void:
 	if env_path != "":
 		save_path = env_path
 	load_profile()
+	boot_us["load_profile"] = Time.get_ticks_usec() - t0
 	_ensure_starter()
+	boot_us["Profile._ready total"] = Time.get_ticks_usec() - t0
 
 
 ## Équipement de départ : un katana commun si l'héritage n'a pas d'arme, et le trophée de
@@ -193,9 +200,10 @@ func _ensure_starter() -> void:
 
 
 func load_profile() -> void:
-	if not FileAccess.file_exists(save_path):
+	var txt := SafeFile.read(save_path)  # fichier principal, sinon .tmp / .bak si une coupure l'a abîmé
+	if txt == "":
 		return
-	var d = JSON.parse_string(FileAccess.get_file_as_string(save_path))
+	var d = JSON.parse_string(txt)
 	if typeof(d) != TYPE_DICTIONARY:
 		return
 	selected_class = d.get("selected_class", selected_class)
@@ -340,9 +348,7 @@ func save_profile() -> void:
 		"seen_gear": seen_gear, "starter_done": starter_done, "insignia": insignia, "wheel": wheel, "unlocked_features": unlocked_features,
 		"new_features": new_features, "tutorial": tutorial, "contracts": contracts,
 		"achievements": achievements, "plans": plans, "pantheon": pantheon, "extra_titles": extra_titles, "title": title, "seen_trophies": seen_trophies, "weapon_legend": weapon_legend}
-	var f := FileAccess.open(save_path, FileAccess.WRITE)
-	f.store_string(JSON.stringify(d))
-	f.close()
+	SafeFile.write(save_path, JSON.stringify(d))  # .tmp relu puis renommé, ancien fichier gardé en .bak
 	changed.emit()
 
 
@@ -681,26 +687,24 @@ func slot_path(i: int) -> String:
 
 func last_slot() -> int:
 	var p := LAST_SLOT_PATH if not _test else "user://last_slot_test.txt"
-	if FileAccess.file_exists(p):
-		return clampi(int(FileAccess.get_file_as_string(p).strip_edges()), 1, SLOT_COUNT)
-	return 1
+	var txt := SafeFile.read(p, func(t): return t.strip_edges().is_valid_int())
+	return clampi(int(txt.strip_edges()), 1, SLOT_COUNT) if txt != "" else 1
 
 
 func _remember_slot() -> void:
-	var f := FileAccess.open(LAST_SLOT_PATH if not _test else "user://last_slot_test.txt", FileAccess.WRITE)
-	if f:
-		f.store_string(str(slot))
+	SafeFile.write(LAST_SLOT_PATH if not _test else "user://last_slot_test.txt", str(slot), func(t): return t.strip_edges().is_valid_int())
 
 
 func slot_exists(i: int) -> bool:
-	return FileAccess.file_exists(slot_path(i))
+	var p := slot_path(i)
+	return FileAccess.file_exists(p) or FileAccess.file_exists(p + ".bak") or FileAccess.file_exists(p + ".tmp")
 
 
 ## Résumé d'un emplacement pour l'écran titre ({} s'il est vide).
 func slot_summary(i: int) -> Dictionary:
 	if not slot_exists(i):
 		return {}
-	var d = JSON.parse_string(FileAccess.get_file_as_string(slot_path(i)))
+	var d = JSON.parse_string(SafeFile.read(slot_path(i)))
 	if typeof(d) != TYPE_DICTIONARY:
 		return {}
 	var lv := 0
@@ -729,13 +733,21 @@ func new_game(i: int) -> void:
 	slot = clampi(i, 1, SLOT_COUNT)
 	save_path = slot_path(slot)
 	selected_class = Progression.START_CLASS
+	_remove_copies(save_path)  # les copies de l'ancienne partie ne doivent pas ressusciter
 	reset_all()
 	_remember_slot()
 
 
 func delete_slot(i: int) -> void:
-	if slot_exists(i):
+	if FileAccess.file_exists(slot_path(i)):
 		DirAccess.remove_absolute(slot_path(i))
+	_remove_copies(slot_path(i))
+
+
+func _remove_copies(path: String) -> void:
+	for ext in [".bak", ".tmp"]:
+		if FileAccess.file_exists(path + ext):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path + ext))
 
 
 ## Remet le profil en mémoire à zéro, sans rien écrire.
@@ -1403,13 +1415,48 @@ func set_expertise_level(cls: String, lvl: int) -> void:
 	_check_missions()
 
 
+## Index de recherche des tableaux d'identifiants collection et owned_outfits : `x in tableau` coûtait un parcours
+## complet, donc des millions de comparaisons pour filtrer le catalogue (Roulette, Collection, coffres d'apparence).
+## Reconstruits quand le tableau change de taille ou d'identité (ajout, chargement, réinitialisation) ; P2.
+var _coll_src: Array = []
+var _coll_n := -1
+var _coll_found := {}
+var _outfit_src: Array = []
+var _outfit_n := -1
+var _outfit_found := {}
+
+
+func _in_collection(id: String) -> bool:
+	if collection.is_empty():
+		return false  # compte neuf : rien à chercher
+	if _coll_n != collection.size() or not is_same(_coll_src, collection):
+		_coll_found = {}
+		for v in collection:
+			_coll_found[String(v)] = true
+		_coll_src = collection
+		_coll_n = collection.size()
+	return _coll_found.has(id)
+
+
+func _in_outfits(id: String) -> bool:
+	if _outfit_n != owned_outfits.size() or not is_same(_outfit_src, owned_outfits):
+		_outfit_found = {}
+		for v in owned_outfits:
+			_outfit_found[String(v)] = true
+		_outfit_src = owned_outfits
+		_outfit_n = owned_outfits.size()
+	return _outfit_found.has(id)
+
+
 func outfit_unlocked(id: String) -> bool:
-	return id in owned_outfits
+	return _in_outfits(id)
 
 
 func unlock_outfit(id: String) -> void:
-	if not id in owned_outfits:
+	if not _in_outfits(id):
 		owned_outfits.append(id)
+		_outfit_found[id] = true
+		_outfit_n = owned_outfits.size()
 
 
 ## Accessoires cosmétiques portés par la classe (chapeau, dos/ailes) : chemins .glb.
@@ -1429,7 +1476,7 @@ func set_worn(cls: String, cat: String, path: String) -> void:
 
 ## Trésor de collection [param x] obtenu ? (une apparence l'est aussi si sa tenue est débloquée)
 func collected(x: Dictionary) -> bool:
-	if str(int(x.id)) in collection:
+	if _in_collection(str(int(x.id))):
 		return true
 	var cos: Dictionary = GameData.cosmetic_by_code.get(String(x.get("code", "")), {})
 	return int(x.get("cat", 0)) <= 3 and not cos.is_empty() and outfit_unlocked(String(cos.id))
@@ -1438,8 +1485,13 @@ func collected(x: Dictionary) -> bool:
 ## Obtient le trésor [param x] (et la tenue correspondante pour une apparence).
 func collect(x: Dictionary) -> void:
 	var k := str(int(x.id))
-	if not k in collection:
+	if not _in_collection(k):
+		if collection.is_empty():
+			_coll_found = {}  # l'index repart de zéro avec le premier trésor
+			_coll_src = collection
 		collection.append(k)
+		_coll_found[k] = true
+		_coll_n = collection.size()
 	var cos: Dictionary = GameData.cosmetic_by_code.get(String(x.get("code", "")), {})
 	if int(x.get("cat", 0)) <= 3 and not cos.is_empty():
 		unlock_outfit(String(cos.id))

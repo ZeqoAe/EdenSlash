@@ -26,6 +26,8 @@ func _ready() -> void:
 	_build_ui()
 	_settings = SettingsMenu.new()
 	add_child(_settings)
+	# P2 : le lobby (scène et scripts) se charge en tâche de fond pendant que le joueur lit le titre
+	ResourceLoader.load_threaded_request(LOBBY)
 
 
 func _build_ui() -> void:

@@ -85,7 +85,7 @@ func _grid_rows() -> int:
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 14)
-	Completion.armory_ids.call_deferred()  # le catalogue se calcule une fois (près d'une seconde) : au chargement plutôt qu'au premier clic
+	Completion.warm_armory.call_deferred()  # le catalogue vient du cache disque, sinon se calcule par tranches pendant l'affichage (P2)
 	var left := ItemWidgets.panel(self, 0, true)
 	var hh := HBoxContainer.new()
 	left.add_child(hh)
@@ -224,7 +224,10 @@ func _build_all() -> void:
 		if e.is_empty() or String(e.get("slot", "")) == "trophy":
 			continue
 		var st := "owned" if have.has(int(id)) else ("buy" if seen.has(int(id)) else "locked")
-		_all.append({"id": int(id), "e": e, "state": st, "epoch": int(cat.get(id, 0)), "slot": String(e.slot), "level": int(e.get("level", 1))})
+		var row := {"id": int(id), "e": e, "state": st, "epoch": int(cat.get(id, 0)), "slot": String(e.slot), "level": int(e.get("level", 1))}
+		row["k0"] = _sort_key(row, false, RANK)  # clés de tri calculées une fois (P2) : le tri ne rappelle plus _sort_key à chaque comparaison
+		row["k1"] = _sort_key(row, true, RANK)
+		_all.append(row)
 
 
 ## Filtre, trie et affiche la page courante.
@@ -244,8 +247,8 @@ func _apply() -> void:
 		if wtype != "" and r.slot == "weapon" and String(r.e.get("wtype", "")) != wtype:
 			return false
 		return true)
-	var rank := {"buy": 0, "owned": 1, "locked": 2}
-	_rows.sort_custom(func(a, b): return _sort_key(a, status == "all", rank) < _sort_key(b, status == "all", rank))
+	var kk := "k1" if status == "all" else "k0"
+	_rows.sort_custom(func(a, b): return a[kk] < b[kk])
 	var per := _grid_cols() * _grid_rows()
 	var pages := maxi(1, ceili(_rows.size() / float(per)))
 	_page = clampi(_page, 0, pages - 1)
@@ -262,6 +265,9 @@ func _apply() -> void:
 	_page_label.text = "%d / %d" % [_page + 1, pages]
 	_fill_grid(per)
 	_show_detail()
+
+
+const RANK := {"buy": 0, "owned": 1, "locked": 2}
 
 
 func _sort_key(r: Dictionary, by_state: bool, rank: Dictionary) -> float:
@@ -311,7 +317,7 @@ func _empty_text() -> String:
 	match String(STATUSES[maxi(_f_status.selected, 0)][0]):
 		"buy":
 			return "Aucune pièce découverte pour l'instant.\nEn Survie, chaque coffre d'emplacement en révèle trois." if Completion.armory_done() == 0 \
-				else "Rien à acheter pour l'instant."
+				else "Rien à acheter pour l'instant.\nLa Survie révèle d'autres pièces, époque après époque."
 		"owned":
 			return "Tu ne possèdes encore aucune pièce de l'Armurerie."
 		"locked":
@@ -332,6 +338,7 @@ func _show_detail() -> void:
 		_detail_box.remove_child(c)
 		c.queue_free()
 	_short.text = ""
+	_short.add_theme_color_override("font_color", UiTheme.DEBUFF)
 	var row := _row_of(_sel)
 	_buy.visible = not row.is_empty() and row.state != "locked"
 	if row.is_empty():
@@ -349,6 +356,9 @@ func _show_detail() -> void:
 	if row.state == "owned":
 		_buy.text = "Dans ton coffre"
 		_buy.disabled = true
+		if not Profile.equipped.values().any(func(w): return int(w.get("eden", -1)) == int(row.id)):
+			_short.text = "À équiper : Héros > Équipement"  # l'achat ne la pose pas : le dernier pas du parcours
+			_short.add_theme_color_override("font_color", UiTheme.BUFF)
 	else:
 		_buy.text = "Acheter · %s insignes" % GearPower.fmt(p)
 		_buy.disabled = Profile.insignia < p

@@ -42,7 +42,19 @@ var cosmetic_by_code: Dictionary = {}  # code K d'Eden -> cosmétique (tenue, t�
 var skin_by_code: Dictionary = {}  # code K d'Eden -> apparence d'arme {model, texture, wtype}
 
 
+## Durées du démarrage en microsecondes par étape (tools/perf_ui.gd les affiche).
+var boot_us: Dictionary = {}
+
+
+func _lap(label: String, since: int) -> int:
+	var now := Time.get_ticks_usec()
+	boot_us[label] = now - since
+	return now
+
+
 func _ready() -> void:
+	var t0 := Time.get_ticks_usec()
+	boot_us["depuis le lancement du moteur (début de GameData)"] = t0
 	var raw: Dictionary = _load_json("res://data/monsters.json")
 	for key in raw:
 		monsters[int(key)] = raw[key]
@@ -65,12 +77,15 @@ func _ready() -> void:
 			elif not common_passives.any(func(q): return q.id == p.id):
 				common_passives.append(p)
 		classes[cid]["passives"] = keep
+	var t := _lap("monstres, zones, classes, talents (JSON)", t0)
 	_balance_damage_types()
 	motion_keys = _load_json("res://data/motion_keys.json")
 	minimaps = _load_json("res://data/minimaps.json")
 	var cat_path := "res://data/eden_catalog.json" if FileAccess.file_exists("res://data/eden_catalog.json") else "res://data/eden_items.json"
 	if FileAccess.file_exists(cat_path):
+		t = _lap("motion_keys + minimaps (JSON)", t)
 		var ei: Dictionary = _load_json(cat_path)
+		t = _lap("catalogue d'objets (JSON)", t)
 		eden_sets = ei.get("sets", {})
 		eden_items = ei.get("items", [])
 		# entrées de test du client d'Eden (« Available ID (JP) », « Testing ID »…) : écartées
@@ -93,11 +108,15 @@ func _ready() -> void:
 			eden_by_slot[key].append(e)
 			eden_by_id[int(e.id)] = e
 			eden_by_code[String(e.code)] = e
+		t = _lap("index du catalogue", t)
 		NamesFr.apply(self)  # noms français (data/names_fr.json) : avant les modifications du mode dev
+		t = _lap("NamesFr.apply (noms français)", t)
 		DevEdits.load_and_apply()  # modifications du mode dev (data/dev_edits.json)
+		t = _lap("DevEdits.load_and_apply", t)
 
 
 	_build_eden_bands()
+	boot_us["GameData._ready total"] = Time.get_ticks_usec() - t0
 
 
 ## Pièce « Awaken » d'Eden (éveillée) : le nom d'origine fait foi, le nom affiché est français.

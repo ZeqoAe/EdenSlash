@@ -29,9 +29,10 @@ static func paths() -> Array:
 
 static func load_and_apply() -> void:
 	for p in paths():
-		if not FileAccess.file_exists(p):
+		var txt := SafeFile.read(p)
+		if txt == "":
 			continue
-		var d = JSON.parse_string(FileAccess.get_file_as_string(p))
+		var d = JSON.parse_string(txt)
 		if typeof(d) != TYPE_DICTIONARY:
 			continue
 		for k in ["items", "sets", "cards", "card_rules", "tower", "modes"]:
@@ -47,15 +48,12 @@ static func load_and_apply() -> void:
 static func save() -> String:
 	var txt := JSON.stringify(data, "\t", true)
 	if is_test():
-		var tf := FileAccess.open(TEST_PATH, FileAccess.WRITE)
-		tf.store_string(txt)
+		SafeFile.write(TEST_PATH, txt)
 		return "Enregistré (fichier de test)."
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
 	if f == null:
-		f = FileAccess.open(USER_PATH, FileAccess.WRITE)
-		if f == null:
+		if not SafeFile.write(USER_PATH, txt):
 			return "Impossible d'enregistrer les modifications."
-		f.store_string(txt)
 		return "Enregistré dans %s." % ProjectSettings.globalize_path(USER_PATH)
 	f.store_string(txt)
 	return "Enregistré (data/dev_edits.json : Envoyer.bat l'envoie sur GitHub)."

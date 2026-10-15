@@ -384,7 +384,8 @@ func reset_all(save := true) -> void:
 # --- sauvegarde ----------------------------------------------------------------------
 func load_settings() -> void:
 	var cf := ConfigFile.new()
-	if cf.load(save_path) != OK:
+	var txt := SafeFile.read(save_path, func(t): return ConfigFile.new().parse(t) == OK)
+	if txt == "" or cf.parse(txt) != OK:
 		return
 	for section in DEFAULTS:
 		for key in DEFAULTS[section]:
@@ -417,7 +418,7 @@ func save_settings() -> void:
 		cf.set_value("keys", action, binds[action])
 	for action in PAD_ACTIONS:
 		cf.set_value("pad", action, pad_binds.get(action, []))
-	cf.save(save_path)
+	SafeFile.write(save_path, cf.encode_to_text(), func(t): return ConfigFile.new().parse(t) == OK)
 
 
 # --- touches -------------------------------------------------------------------------

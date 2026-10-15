@@ -119,6 +119,7 @@ var _skill_lock_until := 0.0  # pas de nouveau sort avant (récupération ; l'es
 var _last_combat := -100.0
 var _time := 0.0
 var _weapon: Node3D
+var _weapon_code := "?"  # modèle d'arme actuellement attaché (Profile.changed ne le recharge que s'il change)
 var _blade_tip: Node3D
 var _blade_base: Node3D
 var _trail: MeshInstance3D
@@ -389,7 +390,10 @@ func dot_duration_mult() -> float:
 
 
 func _on_profile_changed() -> void:
-	_attach_weapon(Profile.weapon_code())
+	# chaque gain d'or ou de fourniture émet Profile.changed : le modèle d'arme ne se recharge que si l'arme change (P2)
+	var code := Profile.weapon_code()
+	if code != _weapon_code:
+		_attach_weapon(code)
 	recalc_stats()
 
 
@@ -500,6 +504,7 @@ func _dress_model() -> void:
 
 
 func _attach_weapon(code: String) -> void:
+	_weapon_code = code
 	if _weapon:
 		_weapon.queue_free()
 		_weapon = null

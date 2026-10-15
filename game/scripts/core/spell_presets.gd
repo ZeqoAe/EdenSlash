@@ -26,16 +26,15 @@ static func _load() -> void:
 	if _loaded:
 		return
 	_loaded = true
-	if FileAccess.file_exists(_path()):
-		var d = JSON.parse_string(FileAccess.get_file_as_string(_path()))
+	var txt := SafeFile.read(_path())
+	if txt != "":
+		var d = JSON.parse_string(txt)
 		if typeof(d) == TYPE_DICTIONARY:
 			_data = d
 
 
 static func save() -> void:
-	var f := FileAccess.open(_path(), FileAccess.WRITE)
-	if f:
-		f.store_string(JSON.stringify(_data, "\t"))
+	SafeFile.write(_path(), JSON.stringify(_data, "\t"))
 
 
 static func _cls(cid: String) -> Dictionary:

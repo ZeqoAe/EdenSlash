@@ -135,6 +135,7 @@ Passe P3 « HUD en jeu » (0.1.181, `conception/nuit_15_10/R_P3.md`) : la pause 
 dégâts rangés en colonnes avec budget par 0,3 s (`DamageNumber`) ; bandeau d'annonce en dégradé, cadre de boss large, titre du HUD en
 deux morceaux (`Hud.zone_parts` : le « 1 » de la police des titres se lit comme un I) ; cartes de niveau à couleur de rareté (commune = gris).
 Captures : `tests/shot_p3.tscn -- stage=N boss_at=S guide_at=S` (+ arguments du monde), variable `P3_RES=1280x720`, APPDATA détourné.
+La quête commune se voit (0.1.186, passe P6, `DESIGN.md` « La quête commune se voit ») : boussole du lobby `core/compass.gd` (un conseil cliquable calculé depuis le compte, `Compass.advice()` ; ligne « Ta quête » des bilans `Compass.after`), pastilles de gains des activités (`Activities.LIST` clé `gives`, `ui/gain_chips.gd`), « où l'obtenir, où le dépenser » de chaque ressource (`core/resource_help.gd`). Test : `test_compass`. Une activité ou une ressource nouvelle : une entrée dans `ResourceHelp.KINDS` / `gives`, et un cas dans `Compass` si elle change la quête.
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,
@@ -284,6 +285,16 @@ de `c_node` pour sa scène d'Eden (S002 → bgm007…). Ajouter une zone : sa pi
 Réglages d'image communs dans `game/scripts/world/gfx.gd` (qualité graphique), shaders dans
 `game/shaders/` (terrain, herbe, personnages, décor, effets). Pour comparer un changement de
 rendu : `res://tests/bench_gfx.tscn -- <zone> [effet]` (même vue à chaque fois).
+
+## Performances (passe P2, `conception/nuit_15_10/R_P2.md`)
+Mesures headless : `PERF_ARGS="--only=boot,lobby,pages,leaks,detail,run --fat" EDEN_PROFILE=<fichier> Godot --headless --path game res://tools/perf_ui.tscn`
+(options par variable d'environnement : le lobby prend tout argument `--` pour un lancement de run). Test : `test_p2`. À savoir : une case d'objet
+(`ItemSlot`) n'a de `_process` que si la pièce est éveillée ; `Completion.armory_ids()` est gardé dans `user://armory_cache.json` (clé = version + empreinte des
+sources du tirage) ; `Profile.collected` / `outfit_unlocked` passent par un index ; `EdenModel._toon_cache` est clé par chemin de sous-ressource (pas par
+`get_instance_id`) ; le titre précharge le lobby et le lobby la scène de run en tâche de fond ; `SettingsMenu` construit ses pages une par image. **Sauvegardes sûres** : tout fichier de user://
+(profil, réglages, dernier emplacement, rivaux, préréglages de sorts, dev_edits) passe par `SafeFile.write/read` (`.tmp` relu et validé, ancien fichier gardé en `.bak`, repli
+automatique et message sobre au lobby si le fichier principal est abîmé) ; un nouveau fichier de sauvegarde doit faire de même.
+
 ## Noms français (lot U10)
 `data/names_fr.json` (anglais exact -> français : objets, panoplies, monstres, zones, apparences) est appliqué UNE fois par
 `NamesFr.apply` (appelé par `GameData._ready`) : `name` devient français, l'original reste dans `name_en`. Pièce éveillée : `GameData.is_awakened(e)`

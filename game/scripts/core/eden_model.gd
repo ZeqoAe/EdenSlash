@@ -54,7 +54,9 @@ static func stylize(root: Node, texture_override: Texture2D = null) -> void:
 			# texture de variante (armes) : seulement sur les pièces de l'arme elle-même, pas sur
 			# ses plans d'effet (lueurs, rubans) qui ont leur propre texture transparente
 			var texture := texture_override if texture_override and _same_texture_family(mat, texture_override) else null
-			var key := "%d|%s" % [mat.get_instance_id(), texture.resource_path if texture else ""]
+			# clé stable d'un rechargement du .glb à l'autre (chemin du sous-ressource), sinon chaque modèle bâti ajoutait ses
+			# ShaderMaterial au cache sans jamais en retrouver un (fuite : 2 par héros du lobby, P2)
+			var key := "%s|%s" % [mat.resource_path if mat.resource_path != "" else str(mat.get_instance_id()), texture.resource_path if texture else ""]
 			var toon: Material = _toon_cache.get(key)
 			if toon == null and mat.transparency in [BaseMaterial3D.TRANSPARENCY_DISABLED, BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR]:
 				toon = _character_material(mat, texture)

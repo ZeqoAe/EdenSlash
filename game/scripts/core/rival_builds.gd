@@ -29,9 +29,10 @@ static func list() -> Array:
 		_loaded = true
 		var paths := [TEST_PATH, "user://rival_builds_test.json"] if DevEdits.is_test() else [PATH, USER_PATH, LEGACY_PATH]
 		for p in paths:
-			if not FileAccess.file_exists(p):
+			var txt := SafeFile.read(p)  # les fichiers user:// ont une copie .bak ; res://data/ est lu tel quel
+			if txt == "":
 				continue
-			var d = JSON.parse_string(FileAccess.get_file_as_string(p))
+			var d = JSON.parse_string(txt)
 			if d is Array:
 				for b in d:
 					if b is Dictionary and find(String(b.get("name", ""))) < 0:
@@ -42,14 +43,13 @@ static func list() -> Array:
 static func save() -> String:
 	var txt := JSON.stringify(_list, "\t")
 	if DevEdits.is_test():
-		var tf := FileAccess.open(TEST_PATH, FileAccess.WRITE)
-		tf.store_string(txt)
+		SafeFile.write(TEST_PATH, txt)
 		return "Enregistré (fichier de test)."
 	var f := FileAccess.open(PATH, FileAccess.WRITE)
 	if f == null:
-		f = FileAccess.open(USER_PATH, FileAccess.WRITE)
-		if f == null:
+		if not SafeFile.write(USER_PATH, txt):
 			return "Impossible d'enregistrer."
+		return "Enregistré."
 	f.store_string(txt)
 	return "Enregistré."
 

@@ -30,6 +30,7 @@ class CollectionPage extends HBoxContainer:
 	var _selected_item: Dictionary = {}
 	var _selected_entry: Dictionary = {}
 	var _armed := false
+	var _rate_memo := {}  # catégorie -> avancement, calculé une fois par refresh() (3 écrans de la page le lisent)
 
 	func _ready() -> void:
 		add_theme_constant_override("separation", 14)
@@ -125,12 +126,18 @@ class CollectionPage extends HBoxContainer:
 			return
 		if _cat == "":
 			_cat = String(Archive.categories()[0].id)
+		_rate_memo.clear()
 		_build_tree()
 		_refresh_grid(_page)
 		_refresh_list()
 		_vault_grid.set_empty_text("Aucun objet mythique ou légendaire à archiver.")  # avant set_items : lu à la reconstruction
 		_vault_grid.set_items(Profile.all_items().filter(func(it): return int(it.rarity) >= Items.ARCHIVE_MIN_RARITY))
 		_refresh_action()
+
+	func _cat_rate(cat_id: String) -> Vector2:
+		if not _rate_memo.has(cat_id):
+			_rate_memo[cat_id] = Archive.rate(cat_id)
+		return _rate_memo[cat_id]
 
 	func _build_tree() -> void:
 		for c in _tree.get_children():
@@ -141,7 +148,7 @@ class CollectionPage extends HBoxContainer:
 				group = String(c.group)
 				var g := Hud._label(_tree, "▼ " + group, 15, UiTheme.GOLD)
 				g.add_theme_font_override("font", UiTheme.bold_font())
-			var r := Archive.rate(String(c.id))
+			var r := _cat_rate(String(c.id))
 			var b := Button.new()
 			b.text = "   %s  %d/%d" % [c.name, int(r.x), int(r.y)]
 			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -162,7 +169,7 @@ class CollectionPage extends HBoxContainer:
 		for c in Archive.categories():
 			if String(c.id) == _cat:
 				cat_name = String(c.name)
-		var r := Archive.rate(_cat)
+		var r := _cat_rate(_cat)
 		_head.text = cat_name
 		_rate.text = "%d / %d" % [int(r.x), int(r.y)]
 		var q := _search.text.strip_edges().to_lower()
@@ -228,7 +235,7 @@ class CollectionPage extends HBoxContainer:
 		lines.append("[font_size=22][b]%s[/b][/font_size] / %s trésors" % [CarnetPages.num(Archive.count_all()), CarnetPages.num(Archive.total())])
 		var groups := {}
 		for c in Archive.categories():
-			var r := Archive.rate(String(c.id))
+			var r := _cat_rate(String(c.id))
 			var g: Vector2 = groups.get(c.group, Vector2.ZERO)
 			groups[c.group] = g + r
 		for g in groups:

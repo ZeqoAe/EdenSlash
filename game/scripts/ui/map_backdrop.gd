@@ -103,9 +103,9 @@ func show_zone(zone_id: String, with_minimap := false) -> void:
 		map = null
 	var cached = _cache.get(key)
 	var m: ProcMap = cached if cached != null and is_instance_valid(cached) else null
-	if m == null or (with_minimap and m.minimap_info().texture == null):
-		if m != null and not m.is_inside_tree():
-			m.free()
+	if m != null and with_minimap:
+		m.ensure_minimap()  # la map du titre n'a pas de mini-carte : on la complète au lieu de tout régénérer (P2)
+	if m == null:
 		m = ProcMap.new()
 		m.biome = biome
 		add_child(m)

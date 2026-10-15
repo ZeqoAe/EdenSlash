@@ -18,8 +18,15 @@ func subtitle() -> String:
 
 
 func refresh() -> void:
-	clear()
 	var all := ClassGear.entries()
+	# P2 : rouvrir le Registre sans rien de changé ne reconstruit pas les 60 fiches (et garde le défilement)
+	var opened: Array = []
+	for e in all:
+		opened.append(Progression.class_unlocked(String(e.cid)))
+	var locks: Array = ["armory", "pantheon", "dungeons", "forge", "tower", "siege"].map(func(u): return Unlocks.is_open(u))
+	if unchanged([all, opened, locks, _filter, _profile, GearPower.target_level(), view_size()]):
+		return
+	clear()
 	var n_ok := all.filter(func(e): return int(e.status) >= ClassGear.STATUS_EQUIPPED).size()
 	heading("Registre de l'équipement", "%d / %d équipées" % [n_ok, all.size()])
 	var unlocked := all.filter(func(e): return Progression.class_unlocked(String(e.cid)))
@@ -47,9 +54,11 @@ func refresh() -> void:
 	shown.sort_custom(_less_equipped)
 	if shown.is_empty():
 		empty("Aucune classe ici." if _filter != 2 else "✔ Toutes ces classes sont équipées.")
+		built()
 		return
 	for e in shown:
 		_row(e)
+	built()
 
 
 ## Les moins équipées d'abord : état, puis part de la puissance attendue, puis classes débloquées, puis le nom.

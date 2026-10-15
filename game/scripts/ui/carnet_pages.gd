@@ -84,6 +84,8 @@ static func chips(parent: Control, labels: Array, current: int, on_pick: Callabl
 ## Contenu défilant reconstruit à chaque ouverture.
 class ScrollPage extends VBoxContainer:
 	var _box: VBoxContainer
+	var _sig := 0
+	var _sig_next := 0
 
 	func _init() -> void:
 		var panel := ItemWidgets.panel(self, 0, true)
@@ -97,9 +99,28 @@ class ScrollPage extends VBoxContainer:
 		sc.add_child(_box)
 
 	func clear() -> void:
+		_sig = 0
 		for c in _box.get_children():
 			_box.remove_child(c)
 			c.queue_free()
+
+	## La page est-elle déjà construite pour ces données ? (P2 : rouvrir un onglet inchangé ne reconstruit rien et garde le
+	## défilement.) [param data] : tout ce qui change l'affichage ; à appeler avant clear(), et ne renvoie vrai que si
+	## la page n'a pas été vidée depuis.
+	## Taille de la fenêtre (une mise en page qui en dépend fait partie de la signature).
+	func view_size() -> Vector2:
+		return get_viewport().get_visible_rect().size if is_inside_tree() else Vector2.ZERO
+
+	func unchanged(data: Variant) -> bool:
+		var h := hash(var_to_str(data)) | 1
+		if h == _sig and _box.get_child_count() > 0:
+			return true
+		_sig_next = h
+		return false
+
+	## À appeler une fois la page reconstruite : mémorise la signature prise par unchanged().
+	func built() -> void:
+		_sig = _sig_next
 
 	## En-tête de page : titre à gauche, compteur doré à droite.
 	func heading(text: String, counter: String) -> void:
@@ -266,6 +287,12 @@ class AchievementsPage extends ScrollPage:
 
 	func refresh() -> void:
 		Achievements.refresh()
+		# P2 : rouvrir l'onglet sans nouveau progrès ne reconstruit pas les 40 fiches
+		var state: Array = [_filter, Profile.title, Achievements.titles(), Profile.achievements, view_size()]
+		for a in Achievements.LIST:
+			state.append(Achievements.progress(a))
+		if unchanged(state):
+			return
 		clear()
 		var cnt := Achievements.count()
 		heading("Succès", "%d / %d" % [int(cnt.x), int(cnt.y)])
@@ -289,10 +316,12 @@ class AchievementsPage extends ScrollPage:
 		if shown.is_empty():
 			var first: Dictionary = todo[0] if not todo.is_empty() else {}
 			empty("Aucun succès obtenu pour l'instant." + ((" Commence par « %s »." % first.name) if not first.is_empty() else ""))
+			built()
 			return
 		var g := cards_grid()
 		for a in shown:
 			_achievement(g, a)
+		built()
 
 	static func _ratio(a: Dictionary) -> float:
 		var p := Achievements.progress(a)

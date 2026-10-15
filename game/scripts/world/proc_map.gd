@@ -1253,6 +1253,12 @@ func _build_minimap() -> void:
 	_minimap = ImageTexture.create_from_image(img)
 
 
+## Dessine la mini-carte d'une map déjà générée sans elle (survol du titre réutilisé par le lobby).
+func ensure_minimap() -> void:
+	if _minimap == null and _splat != null:
+		_build_minimap()
+
+
 ## Informations pour la mini-carte : texture et passage monde -> pixel.
 func minimap_info() -> Dictionary:
 	return {"texture": _minimap, "ppm": MINIMAP_RES / size}

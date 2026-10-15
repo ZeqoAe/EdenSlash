@@ -288,6 +288,11 @@ class ItemSlot extends Button:
 		flat = true
 		mouse_filter = Control.MOUSE_FILTER_STOP
 
+	func _ready() -> void:
+		# le moteur active _process à l'entrée dans l'arbre : seulement pour une pièce éveillée (aura animée) ;
+		# sinon 200 cases d'une grille se redessineraient à chaque image (P2)
+		set_process(item.get("awakened", false))
+
 	func set_item(it: Dictionary) -> void:
 		item = it
 		if not it.is_empty():
