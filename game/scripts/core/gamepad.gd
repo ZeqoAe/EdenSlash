@@ -5,7 +5,8 @@ extends Node
 ## B esquive, Y saut, A interagir / valider, Menu pause, Vue carte, croix : zoom (haut / bas),
 ## objectifs (gauche), équiper l'objet trouvé (droite).
 ## Dans les menus (jeu en pause ou lobby) c'est UiNav qui navigue (croix ou stick gauche : cadre doré,
-## A valide, B retour, X clic droit, LB / RB onglets, stick droit défile) ; Y passe en « curseur libre »
+## A valide, B retour, X clic droit, LB / RB onglets, stick droit défile ; le cadre n'apparaît qu'après un premier
+## mouvement de croix / stick, avec une petite barre d'aide A / B / LB-RB en bas à gauche) ; Y passe en « curseur libre »
 ## où le stick gauche déplace la souris et A clique (ancien comportement, pour les zones sans bouton).
 ## [member active] : la dernière entrée vient de la manette (visée automatique, libellés des
 ## touches) ; la souris ou le clavier la rendent au clavier.

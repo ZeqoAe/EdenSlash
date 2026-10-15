@@ -135,6 +135,10 @@ Tout se passe sur la branche `claude/optimistic-gauss-p2g2pq`. Ne pas travailler
 
 ## Numéro de version (obligatoire à chaque envoi)
 À **chaque push** :
+Le cadre n'apparaît qu'après un mouvement de croix / stick (`UiNav.shown`, `reveal()` ; A le montre sans valider) ; l'aide est une barre de
+3 icônes en bas à gauche (A Valider · B Retour · LB/RB Onglets, `hint_items()`), seulement quand `Gamepad.active`. Saut explicite : meta
+`nav_left|right|up|down` sur un contrôle. Paramètres (0.1.167) = `SettingsMenu extends PageScreen` : lignes titre / contrôle, interrupteurs
+`UiTheme.Switch`, infobulle fixe en pied (meta `hint`), plancher de texte `UiTheme.MIN_TEXT` (14) et `UiTheme.text_size()`.
 1. augmenter de 1 le dernier chiffre de `Version.NUMBER` dans `game/scripts/core/version.gd`
    (0.1.7 → 0.1.8) ;
 2. ajouter une ligne dans `CHANGELOG.md` (version, contenu en une phrase, session) ;

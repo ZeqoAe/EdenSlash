@@ -91,10 +91,55 @@ func _ready() -> void:
 	await probe("Héros : classe", 0.8)
 	lobby._hero.close_ui()
 	lobby._settings.open()
-	for t in 6:
-		lobby._settings._tabs.current_tab = t
-		await probe("Paramètres : onglet %d" % t, 0.8)
+	for t in lobby._settings._pages.size():
+		lobby._settings.show_page(t)
+		await probe("Paramètres : page %d (%s)" % [t, lobby._settings._tab_buttons[t].text], 0.95)
+	# Touches : un saut de groupe à la croix gauche (de la touche au bouton de son groupe) et retour
+	lobby._settings.show_page(2)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var first_key: Button = null
+	for c in UiNav.candidates():
+		if c is Button and c.has_meta("nav_left"):
+			first_key = c
+			break
+	check("Paramètres > Touches : un bouton de touche mène à son groupe", first_key != null)
+	if first_key != null:
+		UiNav.cursor = first_key
+		check("croix gauche : saute au groupe", UiNav.move(Vector2.LEFT) and UiNav.cursor == first_key.get_meta("nav_left"))
+		check("croix droite : revient à la première touche du groupe", UiNav.move(Vector2.RIGHT) and UiNav.cursor.has_meta("nav_left"))
+	# interrupteurs à glissière : valider bascule le réglage et la sauvegarde le garde
+	lobby._settings.show_page(1)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var sw: UiTheme.Switch = null
+	for c in UiNav.candidates():
+		if c is UiTheme.Switch:
+			sw = c
+			break
+	check("Paramètres > Combat : des interrupteurs navigables", sw != null)
+	if sw != null:
+		var before := sw.button_pressed
+		UiNav.cursor = sw
+		UiNav.shown = true
+		UiNav.activate()
+		await get_tree().process_frame
+		await get_tree().process_frame
+		check("A sur un interrupteur : il bascule", sw.button_pressed != before)
 	lobby._settings.close()
+	# barre d'aide et cadre doré
+	UiNav.shown = false
+	await get_tree().process_frame
+	check("cadre doré caché tant qu'aucune croix n'a bougé", not UiNav._frame.visible)
+	UiNav.reveal()
+	await get_tree().process_frame
+	check("reveal() montre le cadre", UiNav.shown and UiNav._frame.visible)
+	var labels: Array = UiNav.hint_items().map(func(it): return it[1])
+	check("barre d'aide : Valider · Retour (+ Onglets si l'écran en a)", labels.slice(0, 2) == ["Valider", "Retour"] and labels.size() <= 3)
+	Gamepad.active = false
+	await get_tree().process_frame
+	check("souris : barre d'aide et cadre cachés", not UiNav._bar.visible and not UiNav._frame.visible and not UiNav.shown)
+	Gamepad.active = true
 	var w := Welcome.new()
 	lobby.add_child(w)
 	await probe("accueil : 3 départs")

@@ -127,10 +127,10 @@ func _test_save_load() -> void:
 func _test_menu() -> void:
 	var menu := SettingsMenu.new()
 	add_child(menu)
-	for t in menu._tabs.get_tab_count():
+	for t in menu._pages.size():
 		menu.open(t)
 		await get_tree().process_frame
-	check("menu : 6 onglets", menu._tabs.get_tab_count() == 6 and menu.is_open())
+	check("menu : 6 onglets", menu._pages.size() == 6 and menu.is_open())
 	var b := Button.new()
 	menu._start_listening("interact", 0, b)
 	menu._input(_key(KEY_G))

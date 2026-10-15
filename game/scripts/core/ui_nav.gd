@@ -7,16 +7,28 @@ extends CanvasLayer
 ##     les écrans) ; gauche / droite sur un curseur : règle les curseurs de volume, etc. ;
 ##   - B (Rond) : retour (Échap) ; LB / RB (L1 / R1) : onglet précédent / suivant ;
 ##   - stick droit : fait défiler ; Y (Triangle) : curseur libre (le stick déplace la souris).
+## Le cadre n'apparaît qu'après un premier mouvement de croix / stick (un appui sur A le fait d'abord
+## apparaître, sans rien valider) ; l'aide est une petite barre d'icônes dans le coin bas gauche,
+## seulement quand la manette est la dernière entrée utilisée.
 ## Un menu déroulant ouvert (OptionButton) garde la navigation native de Godot.
 
 const REPEAT_FIRST := 0.38
 const REPEAT_NEXT := 0.11
 const DIRS := {&"left": Vector2.LEFT, &"right": Vector2.RIGHT, &"up": Vector2.UP, &"down": Vector2.DOWN}
+const BAR_H := 28.0
+const BAR_FONT := 15
+## Couleur des boutons de face (Xbox : disque coloré ; PlayStation : symbole coloré sur disque sombre).
+const GLYPH_COLORS := {"A": Color(0.45, 0.85, 0.4), "B": Color(0.95, 0.35, 0.3), "X": Color(0.35, 0.6, 0.95), "Y": Color(0.98, 0.82, 0.3),
+	"Croix": Color(0.45, 0.7, 1.0), "Rond": Color(0.95, 0.4, 0.4), "Carré": Color(0.95, 0.6, 0.85), "Triangle": Color(0.4, 0.9, 0.7)}
 
 var cursor: Control
 var free_mode := false  # curseur libre : le stick gauche déplace la souris (ancien comportement)
+var shown := false  # le cadre doré est visible (après un mouvement de croix / stick)
 var _frame: Control
-var _hint: Label
+var _bar: Control
+var _bar_sig := ""
+var _tabs_t := 0.0
+var _tabs_ok := false
 var _held := {}  # direction -> temps avant répétition
 var _last_center := Vector2(200, 200)
 var _popup_ctl: OptionButton
@@ -31,19 +43,13 @@ func _ready() -> void:
 	_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_frame.draw.connect(_draw_frame)
 	add_child(_frame)
-	_hint = Label.new()
-	_hint.add_theme_font_size_override("font_size", 15)
-	_hint.add_theme_color_override("font_color", Color(1, 0.93, 0.7))
-	_hint.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
-	_hint.add_theme_constant_override("outline_size", 6)
-	_hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_hint.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_hint.offset_top = -34
-	_hint.offset_bottom = -8
-	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_hint)
+	_bar = Control.new()
+	_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_bar.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_bar.draw.connect(_draw_bar)
+	add_child(_bar)
 	_frame.visible = false
-	_hint.visible = false
+	_bar.visible = false
 
 
 ## La navigation à la manette est active : dernière entrée = manette, dans un menu, curseur libre coupé.
@@ -159,6 +165,14 @@ func move(dir: Vector2) -> bool:
 	if cursor == null or not is_instance_valid(cursor) or not cursor.is_visible_in_tree():
 		pick_default()
 		return cursor != null
+	# saut explicite : un contrôle peut désigner celui où mène chaque direction (meta « nav_left »...),
+	# par exemple de la touche d'une action au bouton de son groupe (Paramètres > Touches)
+	var jump_key := "nav_left" if dir.x < -0.5 else ("nav_right" if dir.x > 0.5 else ("nav_up" if dir.y < -0.5 else "nav_down"))
+	if cursor.has_meta(jump_key):
+		var to: Variant = cursor.get_meta(jump_key)
+		if to is Control and is_instance_valid(to) and navigable(to as Control):
+			_set_cursor(to as Control)
+			return true
 	# liste : haut / bas change la sélection (chapitres du Guide...)
 	if cursor is ItemList and absf(dir.y) > 0.5 and (cursor as ItemList).item_count > 0:
 		var il := cursor as ItemList
@@ -246,6 +260,25 @@ func right_click() -> void:
 
 
 # --- onglets ------------------------------------------------------------------------------
+## Y a-t-il des onglets à changer avec LB / RB sur l'écran du dessus ?
+func has_tabs() -> bool:
+	var best_layer := -99999
+	var pages := 0
+	for n in get_tree().get_nodes_in_group("tab_screens"):
+		if n.has_method("is_open") and n.is_open() and layer_of(n) >= best_layer:
+			best_layer = layer_of(n)
+			pages = (n as PageScreen)._pages.size() if n is PageScreen else 2
+	var tc_layer := -99999
+	var tc_count := 0
+	for t in get_tree().root.find_children("*", "TabContainer", true, false):
+		if (t as TabContainer).is_visible_in_tree() and layer_of(t) >= tc_layer:
+			tc_layer = layer_of(t)
+			tc_count = (t as TabContainer).get_tab_count()
+	if tc_count > 1 and tc_layer >= best_layer:
+		return true
+	return pages > 1
+
+
 ## Onglet suivant (+1) ou précédent (-1) de l'écran du dessus. Renvoie vrai si un onglet a changé.
 func step_tab(delta: int) -> bool:
 	var best: Node = null
@@ -284,7 +317,10 @@ func _input(ev: InputEvent) -> void:
 				get_viewport().set_input_as_handled()  # la navigation native de Godot ne s'en mêle pas
 			JOY_BUTTON_A:
 				if ev.pressed:
-					activate()
+					if shown:
+						activate()
+					else:
+						reveal()  # cadre caché : le premier appui le montre, sans rien valider
 				get_viewport().set_input_as_handled()
 			JOY_BUTTON_LEFT_SHOULDER:
 				if ev.pressed and step_tab(-1):
@@ -295,9 +331,10 @@ func _input(ev: InputEvent) -> void:
 			JOY_BUTTON_Y:
 				if ev.pressed:
 					free_mode = true
+					shown = false
 					get_viewport().set_input_as_handled()
 			JOY_BUTTON_X:
-				if ev.pressed and cursor != null and is_instance_valid(cursor):
+				if ev.pressed and shown and cursor != null and is_instance_valid(cursor):
 					right_click()
 					get_viewport().set_input_as_handled()
 	elif ev is InputEventJoypadMotion and ev.axis in [JOY_AXIS_LEFT_X, JOY_AXIS_LEFT_Y]:
@@ -308,13 +345,19 @@ func _process(delta: float) -> void:
 	var menu := Gamepad.active and Gamepad.menu_mode()
 	if not Gamepad.active:
 		free_mode = false  # la souris reprend la main : retour à la navigation au cadre
-	_frame.visible = menu and not free_mode and cursor != null
-	_hint.visible = menu
+	if not menu or free_mode:
+		shown = false  # le cadre ne revient qu'après un nouveau mouvement de croix / stick
+	_frame.visible = menu and shown and cursor != null
+	_bar.visible = menu
 	if not menu:
 		cursor = null
 		_held.clear()
 		return
-	_hint.text = hint_text()
+	_tabs_t -= delta
+	if _tabs_t <= 0.0:
+		_tabs_t = 0.3
+		_tabs_ok = has_tabs()
+	_refresh_bar()
 	if free_mode:
 		return
 	if _popup_open():
@@ -345,7 +388,10 @@ func _process(delta: float) -> void:
 	if not _held.has(key):
 		_held.clear()
 		_held[key] = REPEAT_FIRST
-		move(_axis(dir))
+		if shown:
+			move(_axis(dir))
+		else:
+			reveal()  # premier mouvement : le cadre apparaît sur l'entrée par défaut
 	else:
 		_held[key] = due - delta
 		if _held[key] <= 0.0:
@@ -359,13 +405,102 @@ func _axis(d: Vector2) -> Vector2:
 	return Vector2(0.0, signf(d.y))
 
 
-## Aide en bas de l'écran, avec les boutons de la manette branchée.
-func hint_text() -> String:
+## Montre le cadre doré sur le contrôle courant (ou celui par défaut).
+func reveal() -> void:
+	shown = true
+	if cursor == null or not is_instance_valid(cursor) or not cursor.is_visible_in_tree():
+		pick_default()
+	_pulse = 0.0
+	_frame.queue_redraw()
+
+
+# --- barre d'aide -------------------------------------------------------------------------
+## Entrées de la barre d'aide : [noms des boutons, libellé]. Valider, Retour, et Onglets s'il y en a.
+func hint_items() -> Array:
+	var a := Settings.pad_name(JOY_BUTTON_A)
+	var b := Settings.pad_name(JOY_BUTTON_B)
 	if free_mode:
-		return "%s : valider (clic)   ·   %s : retour   ·   stick gauche : souris   ·   %s : revenir au cadre" % [Settings.pad_name(JOY_BUTTON_A), Settings.pad_name(JOY_BUTTON_B), Settings.pad_name(JOY_BUTTON_Y)]
-	return "%s : valider   ·   %s : retour   ·   %s : clic droit   ·   %s / %s : onglets   ·   croix : naviguer   ·   stick droit : défiler   ·   %s : souris" % [
-		Settings.pad_name(JOY_BUTTON_A), Settings.pad_name(JOY_BUTTON_B), Settings.pad_name(JOY_BUTTON_X), Settings.pad_name(JOY_BUTTON_LEFT_SHOULDER),
-		Settings.pad_name(JOY_BUTTON_RIGHT_SHOULDER), Settings.pad_name(JOY_BUTTON_Y)]
+		return [[[a], "Clic"], [[b], "Retour"], [[Settings.pad_name(JOY_BUTTON_Y)], "Cadre"]]
+	var items: Array = [[[a], "Valider"], [[b], "Retour"]]
+	if _tabs_ok:
+		items.append([[Settings.pad_name(JOY_BUTTON_LEFT_SHOULDER), Settings.pad_name(JOY_BUTTON_RIGHT_SHOULDER)], "Onglets"])
+	return items
+
+
+## Recalcule la taille de la barre quand son contenu change.
+func _refresh_bar() -> void:
+	var items := hint_items()
+	var sig := str(items) + Settings.pad_layout()
+	if sig == _bar_sig:
+		return
+	_bar_sig = sig
+	var w := 14.0
+	var font := UiTheme.bold_font()
+	for it in items:
+		w += _glyphs_width(it[0]) + 6.0 + font.get_string_size(it[1], HORIZONTAL_ALIGNMENT_LEFT, -1, BAR_FONT).x + 16.0
+	_bar.offset_left = 14.0
+	_bar.offset_right = 14.0 + w
+	_bar.offset_bottom = -6.0
+	_bar.offset_top = -6.0 - BAR_H
+	_bar.queue_redraw()
+
+
+func _glyphs_width(names: Array) -> float:
+	var w := 0.0
+	for n in names:
+		w += _glyph_width(String(n)) + 4.0
+	return w - 4.0
+
+
+func _glyph_width(n: String) -> float:
+	if GLYPH_COLORS.has(n):
+		return 22.0
+	return UiTheme.bold_font().get_string_size(n, HORIZONTAL_ALIGNMENT_LEFT, -1, 13).x + 14.0
+
+
+func _draw_bar() -> void:
+	_bar.draw_style_box(UiTheme.flat_box(Color(0.04, 0.03, 0.08, 0.85), Color(UiTheme.GOLD_DIM, 0.55), 1, 14, false), Rect2(Vector2.ZERO, _bar.size))
+	var font := UiTheme.bold_font()
+	var x := 14.0
+	var cy := _bar.size.y * 0.5
+	for it in hint_items():
+		for n in it[0]:
+			x += _draw_glyph(String(n), x, cy) + 4.0
+		x += 2.0
+		var ty := cy + (font.get_ascent(BAR_FONT) - font.get_descent(BAR_FONT)) * 0.5
+		_bar.draw_string(font, Vector2(x, ty), it[1], HORIZONTAL_ALIGNMENT_LEFT, -1, BAR_FONT, Color(1, 0.93, 0.7))
+		x += font.get_string_size(it[1], HORIZONTAL_ALIGNMENT_LEFT, -1, BAR_FONT).x + 16.0
+
+
+## Icône d'un bouton : disque coloré (Xbox), symbole coloré sur disque sombre (PlayStation) ou pastille
+## de texte (LB / RB, L1 / R1). Renvoie sa largeur.
+func _draw_glyph(n: String, x: float, cy: float) -> float:
+	var w := _glyph_width(n)
+	var font := UiTheme.bold_font()
+	if not GLYPH_COLORS.has(n):
+		_bar.draw_style_box(UiTheme.flat_box(Color(0.3, 0.28, 0.38), Color(0.75, 0.72, 0.85), 1, 7, false), Rect2(x, cy - 10.0, w, 20.0))
+		var ty := cy + (font.get_ascent(13) - font.get_descent(13)) * 0.5
+		_bar.draw_string(font, Vector2(x, ty), n, HORIZONTAL_ALIGNMENT_CENTER, w, 13, Color(1, 1, 1))
+		return w
+	var c := Vector2(x + 11.0, cy)
+	var col: Color = GLYPH_COLORS[n]
+	if Settings.pad_layout() == "ps":
+		_bar.draw_circle(c, 11.0, Color(0.12, 0.12, 0.18))
+		match n:
+			"Croix":
+				_bar.draw_line(c + Vector2(-5, -5), c + Vector2(5, 5), col, 2.4)
+				_bar.draw_line(c + Vector2(-5, 5), c + Vector2(5, -5), col, 2.4)
+			"Rond":
+				_bar.draw_arc(c, 5.2, 0.0, TAU, 20, col, 2.4)
+			"Carré":
+				_bar.draw_rect(Rect2(c - Vector2(5, 5), Vector2(10, 10)), col, false, 2.4)
+			_:
+				_bar.draw_polyline(PackedVector2Array([c + Vector2(0, -6), c + Vector2(6, 5), c + Vector2(-6, 5), c + Vector2(0, -6)]), col, 2.4)
+	else:
+		_bar.draw_circle(c, 11.0, col)
+		var ty := cy + (font.get_ascent(14) - font.get_descent(14)) * 0.5
+		_bar.draw_string(font, Vector2(x, ty), n, HORIZONTAL_ALIGNMENT_CENTER, 22.0, 14, Color(0.06, 0.05, 0.1))
+	return w
 
 
 func _draw_frame() -> void:

@@ -12,7 +12,9 @@ const GOLD_DIM := Color(0.72, 0.55, 0.26)
 const INK := Color(0.05, 0.04, 0.09)
 const PANEL_BG := Color(0.09, 0.07, 0.16, 0.94)
 const TEXT := Color(0.95, 0.93, 0.98)
-const MUTED := Color(0.72, 0.70, 0.80)
+const MUTED := Color(0.78, 0.76, 0.86)
+## Plancher de lisibilité du texte permanent (px à 1600 × 900) ; 12 seulement pour un chiffre secondaire.
+const MIN_TEXT := 14
 const HP := Color(0.9, 0.16, 0.24)
 const BUFF := Color(0.45, 0.92, 0.55)
 const DEBUFF := Color(1.0, 0.36, 0.36)
@@ -147,7 +149,7 @@ static func _add_version_overlay() -> void:
 	layer.name = "VersionOverlay"
 	var l := Label.new()
 	l.text = "Alt + clic droit : noter un problème   ·   " + Version.label()
-	l.add_theme_font_size_override("font_size", 12)
+	l.add_theme_font_size_override("font_size", MIN_TEXT)
 	l.add_theme_color_override("font_color", Color(1, 1, 1, 0.75))
 	l.add_theme_constant_override("outline_size", 3)
 	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
@@ -157,8 +159,8 @@ static func _add_version_overlay() -> void:
 	l.anchor_top = 1.0
 	l.anchor_right = 1.0
 	l.anchor_bottom = 1.0
-	l.offset_left = -520.0
-	l.offset_top = -22.0
+	l.offset_left = -560.0
+	l.offset_top = -24.0
 	l.offset_right = -8.0
 	l.offset_bottom = -4.0
 	layer.add_child(l)
@@ -238,6 +240,64 @@ static func build_theme() -> Theme:
 	t.set_color("title_color", "Window", GOLD)
 	t.set_font("title_font", "Window", title_font())
 	return t
+
+
+## Taille de texte jamais sous le plancher de lisibilité.
+static func text_size(size: int) -> int:
+	return maxi(size, MIN_TEXT)
+
+
+## Interrupteur à glissière (remplace les gros boutons « Activé / Désactivé ») : un Button à bascule, donc
+## navigable à la manette et lu comme un BaseButton (pressed, toggled), dessiné en pastille qui glisse.
+class Switch extends Button:
+	const W := 60.0
+	const H := 30.0
+	var _t := 0.0  # position du bouton : 0 = éteint, 1 = allumé
+	const BG_OFF := Color(0.1, 0.09, 0.16)
+	const BG_ON := Color(0.45, 0.33, 0.12)
+	const EDGE_OFF := Color(0.5, 0.48, 0.6, 0.8)
+	var _track := UiTheme.flat_box(BG_OFF, EDGE_OFF, 2, 15, false)
+
+	func _init() -> void:
+		toggle_mode = true
+		focus_mode = Control.FOCUS_NONE
+		custom_minimum_size = Vector2(W, H)
+		size_flags_horizontal = Control.SIZE_SHRINK_END
+		size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var empty := StyleBoxEmpty.new()
+		for st in ["normal", "hover", "pressed", "hover_pressed", "disabled", "focus"]:
+			add_theme_stylebox_override(st, empty)
+
+	func _process(delta: float) -> void:
+		var goal := 1.0 if button_pressed else 0.0
+		if not is_equal_approx(_t, goal):
+			_t = move_toward(_t, goal, delta * 9.0)
+			queue_redraw()
+
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_MOUSE_ENTER or what == NOTIFICATION_MOUSE_EXIT or what == NOTIFICATION_VISIBILITY_CHANGED:
+			queue_redraw()
+
+	## Position de départ sans animation (valeur lue depuis les réglages).
+	func set_on(on: bool) -> void:
+		set_pressed_no_signal(on)
+		_t = 1.0 if on else 0.0
+		queue_redraw()
+
+	func _draw() -> void:
+		var area := Rect2((size - Vector2(W, H)) * 0.5, Vector2(W, H))
+		_track.bg_color = BG_OFF.lerp(BG_ON, _t)
+		_track.border_color = EDGE_OFF.lerp(UiTheme.GOLD, _t)
+		draw_style_box(_track, area)
+		var hot := is_hovered() and not disabled
+		if hot:
+			draw_rect(area.grow(2.0), Color(UiTheme.GOLD, 0.35), false, 2.0)
+		var r := H * 0.5 - 5.0
+		var cx := lerpf(area.position.x + H * 0.5, area.end.x - H * 0.5, _t)
+		var col := Color(0.62, 0.6, 0.72).lerp(Color(1.0, 0.94, 0.78), _t)
+		if disabled:
+			col = col.darkened(0.4)
+		draw_circle(Vector2(cx, area.position.y + H * 0.5), r, col)
 
 
 static func _tab(bg: Color, border: Color) -> StyleBoxFlat:

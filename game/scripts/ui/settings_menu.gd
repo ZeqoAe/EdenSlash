@@ -1,220 +1,40 @@
 class_name SettingsMenu
-extends CanvasLayer
-## Menu Paramètres (lobby et menu pause) : mode de jeu, combat automatique,
-## touches, affichage, son, caméra et interface. Chaque changement est appliqué
-## et sauvegardé tout de suite (Settings).
+extends PageScreen
+## Paramètres (lobby, écran titre et menu pause), plein écran dans le même cadre que le Carnet :
+## six pages à onglets (mode de jeu, combat, touches, affichage, son, caméra et interface).
+## Chaque ligne est un titre à gauche et un contrôle à droite (interrupteur à glissière, liste, curseur) ;
+## le détail d'un réglage s'affiche dans le cadre fixe du bas quand on le survole (ou que le cadre
+## manette est dessus). Chaque changement est appliqué et sauvegardé tout de suite (Settings).
 
-signal closed
+const ACCENT := UiTheme.GOLD
+const TEXT := Color(0.95, 0.93, 0.98)
+const COL_W := 1180  # largeur de la colonne de réglages
+const KEY_W := 230  # largeur d'une case de touche
+const OPTION_W := 460
+const ROW_H := 46
+const HINT_DEFAULT := "Survole un réglage pour en savoir plus."
 
-const ACCENT := Color(0.98, 0.78, 0.35)
-const LABEL_W := 330
-
-var _root: Control
-var _tabs: TabContainer
 var _refreshers: Array[Callable] = []
+var _switches: Array[UiTheme.Switch] = []
+var _hinted: Array[Control] = []  # lignes, cartes et boutons qui portent une infobulle (meta « hint »)
+var _hot: Control
+var _hint_shown := "\u0001"
+var _page_hints: Array[String] = []
+var _page_actions: Array[Control] = []
+var _footer_actions: HBoxContainer
+var _hint: Label
 var _status: Label
+var _status_t := 0.0
 var _listen_action := ""
 var _listen_idx := -1
 var _listen_button: Button
 var _reset_all: Button
 var _reset_armed_at := -10.0
+var _tester: Label
+var _pad_listen := ""  # action de manette en cours d'assignation
+var _pad_buttons := {}
+var _pad_listen_id := 0
 
-
-func _ready() -> void:
-	layer = 30
-	process_mode = Node.PROCESS_MODE_ALWAYS
-	_root = Control.new()
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var dim := ColorRect.new()
-	dim.color = Color(0.02, 0.01, 0.05, 0.75)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_root.add_child(dim)
-	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", Hud.style(Color(0.07, 0.06, 0.12, 0.97)))
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.position = Vector2(-540, -370)
-	panel.custom_minimum_size = Vector2(1080, 740)
-	_root.add_child(panel)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
-	panel.add_child(v)
-	var title := Hud._label(v, "PARAMÈTRES", 30, ACCENT)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_tabs = TabContainer.new()
-	_tabs.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_tabs.add_theme_font_size_override("font_size", 17)
-	v.add_child(_tabs)
-	_build_game_tab()
-	_build_combat_tab()
-	_build_keys_tab()
-	_build_display_tab()
-	_build_audio_tab()
-	_build_camera_tab()
-	_status = Hud._label(v, "", 14, Color(0.6, 1.0, 0.65))
-	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var bottom := HBoxContainer.new()
-	bottom.alignment = BoxContainer.ALIGNMENT_CENTER
-	bottom.add_theme_constant_override("separation", 16)
-	v.add_child(bottom)
-	_reset_all = _button(bottom, "Tout réinitialiser", _on_reset_all, 300)
-	_button(bottom, "Fermer", close, 220)
-	_root.visible = false
-	add_child(_root)
-	Settings.changed.connect(_refresh)
-
-
-func open(tab := -1) -> void:
-	if tab >= 0:
-		_tabs.current_tab = tab
-	_status.text = ""
-	_refresh()
-	_root.visible = true
-
-
-func close() -> void:
-	_stop_listening()
-	_root.visible = false
-	closed.emit()
-
-
-func is_open() -> bool:
-	return _root.visible
-
-
-func _process(_delta: float) -> void:
-	if _reset_armed_at > 0.0 and Time.get_ticks_msec() / 1000.0 - _reset_armed_at > 4.0:
-		_reset_armed_at = -10.0
-		_reset_all.text = "Tout réinitialiser"
-
-
-func _refresh() -> void:
-	for r in _refreshers:
-		r.call()
-
-
-# --- onglet Mode de jeu ----------------------------------------------------------------
-func _build_game_tab() -> void:
-	var v := _tab("Mode de jeu")
-	_section(v, "Modes de jeu prêts à l'emploi")
-	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 10)
-	v.add_child(grid)
-	for id in Settings.PRESETS:
-		var p: Dictionary = Settings.PRESETS[id]
-		var b := Button.new()
-		b.custom_minimum_size = Vector2(330, 96)
-		b.focus_mode = Control.FOCUS_NONE
-		b.clip_text = true
-		var lbl := Label.new()
-		lbl.text = "%s\n%s" % [p.name, p.desc]
-		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		lbl.add_theme_font_size_override("font_size", 13)
-		lbl.set_anchors_preset(Control.PRESET_FULL_RECT)
-		lbl.offset_left = 10
-		lbl.offset_right = -10
-		lbl.offset_top = 6
-		lbl.offset_bottom = -6
-		lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		b.add_child(lbl)
-		b.pressed.connect(func():
-			Settings.apply_preset(id)
-			_say("Mode « %s » activé" % p.name))
-		grid.add_child(b)
-		var normal := Hud.style(Color(0.12, 0.1, 0.2, 0.95))
-		var chosen := Hud.style(Color(0.2, 0.15, 0.3, 1.0))
-		chosen.border_color = ACCENT
-		chosen.set_border_width_all(3)
-		b.add_theme_stylebox_override("hover", Hud.style(Color(0.22, 0.18, 0.34)))
-		_refreshers.append(func():
-			var on: bool = Settings.current_preset() == id
-			b.add_theme_stylebox_override("normal", chosen if on else normal)
-			lbl.add_theme_color_override("font_color", ACCENT if on else Color(0.92, 0.92, 0.96)))
-	_section(v, "Réglages détaillés")
-	_option(v, "Déplacement", "game", "move_mode", [
-		["keyboard", "Clavier (ZQSD / flèches)"], ["click", "Souris : clic gauche (maintenu = suivre le curseur)"],
-		["rts", "Souris : clic droit (style RTS / MOBA)"]])
-	_option(v, "Visée des attaques et compétences", "game", "aim_mode", [
-		["smart", "Intelligente : cible verrouillée, sinon curseur, sinon monstre proche"],
-		["cursor", "Suit le curseur : le héros regarde toujours la souris"],
-		["action", "Action : vue de dos, la caméra tourne vers le curseur"],
-		["nearest", "Monstre le plus proche"]])
-	var info := _note(v, "")
-	_refreshers.append(func():
-		var lines: PackedStringArray = []
-		match Settings.move_mode():
-			"click":
-				lines.append("Clic gauche sur le sol : se déplacer (maintenu : suivre le curseur). Clic sur un monstre : l'attaquer. Les touches de déplacement marchent toujours.")
-			"rts":
-				lines.append("Clic droit sur le sol : se déplacer. Clic droit sur un monstre : l'attaquer. Clic gauche : attaquer vers le curseur. La caméra tourne au clic molette.")
-			_:
-				lines.append("Touches de déplacement + clic gauche pour attaquer (sur un monstre : auto-attaque).")
-		if Settings.aim_mode() == "cursor":
-			lines.append("Visée au curseur : attaques et compétences partent toujours vers la souris (le clic ne verrouille plus de cible).")
-		elif Settings.aim_mode() == "action":
-			lines.append("Mode action : le héros regarde le curseur ; écarte le curseur à gauche ou à droite et la caméra tourne derrière lui (plus le curseur est loin du centre, plus elle tourne vite). Molette : zoom du plan rapproché à la vue large.")
-		info.text = "\n".join(lines))
-
-
-# --- onglet Combat ---------------------------------------------------------------------
-func _build_combat_tab() -> void:
-	var v := _tab("Combat")
-	_section(v, "Aide au combat")
-	var lv_row := HBoxContainer.new()
-	lv_row.add_theme_constant_override("separation", 10)
-	v.add_child(lv_row)
-	var lv_note := _note(v, "")
-	for id in Settings.ASSIST:
-		var b := _button(lv_row, String(Settings.ASSIST[id].name), func(): Settings.set_assist(id), 200)
-		b.toggle_mode = true
-		b.add_theme_stylebox_override("pressed", Hud.style(Color(0.2, 0.34, 0.5, 1.0)))
-		_refreshers.append(func(): b.set_pressed_no_signal(Settings.assist_level() == id))
-	_refreshers.append(func():
-		var cur := Settings.assist_level()
-		lv_note.text = String(Settings.ASSIST[cur].desc) if Settings.ASSIST.has(cur) else "Personnalisée : tes réglages détaillés ci-dessous ne correspondent à aucun niveau.")
-	_section(v, "Attaque de base")
-	_option(v, "Mode d'attaque", "game", "attack_mode", [
-		["manual", "Manuel : clic pour attaquer"], ["auto", "Automatique : frappe seul les monstres au contact"]])
-	_note(v, "Automatique : quand tu ne te déplaces pas, le héros frappe le monstre le plus proche à portée. Se déplacer arrête l'attaque (pour esquiver).")
-	_section(v, "Compétences automatiques")
-	_note(v, "Une compétence en AUTO (clique sur son bouton) se lance toute seule dès qu'elle est rechargée et qu'un monstre est à sa portée (« AUTO » sur la barre). Les autres restent au clavier.")
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 18)
-	v.add_child(row)
-	for i in 4:
-		var c := _toggle_button(230)
-		c.toggled.connect(func(on): Settings.set_auto_skill(i, on))
-		row.add_child(c)
-		_refreshers.append(func():
-			var on := Settings.auto_skill(i)
-			c.set_pressed_no_signal(on)
-			var key := Settings.action_label("skill_%d" % (i + 1), 1)
-			var label := "Case %d" % (i + 1) if key == str(i + 1) else "Case %d (%s)" % [i + 1, key]  # touche par défaut : pas de doublon
-			c.text = "%s : %s" % [label, "AUTO" if on else "manuel"])
-	var buttons := HBoxContainer.new()
-	buttons.add_theme_constant_override("separation", 10)
-	v.add_child(buttons)
-	_button(buttons, "Toutes en automatique", func(): Settings.set_v("game", "auto_skills", [true, true, true, true]), 260)
-	_button(buttons, "Toutes en manuel", func(): Settings.set_v("game", "auto_skills", [false, false, false, false]), 260)
-	_option(v, "Cible des compétences automatiques", "game", "auto_target", [
-		["any", "N'importe quel monstre à portée"], ["locked", "Seulement la cible verrouillée (clic sur un monstre)"]])
-	_section(v, "Prise en main")
-	_check(v, "Mémoire des touches", "game", "key_memory")
-	_note(v, "Jusqu'à 3 appuis de sorts sont gardés et joués dans l'ordre : marteler la touche d'une case donne toute la chaîne, taper 1-2-3 pendant un sort les lance l'un après l'autre. Plus de « Trop tôt ». L'esquive et le saut partent tout de suite et vident la mémoire. Seule l'annulation parfaite (esquive juste après un impact) reste à la main.")
-	_check(v, "Tenir la touche d'une case enchaîne toute la chaîne", "game", "hold_chain")
-	_check(v, "Anneau bleu à chaque impact de sort (moment de l'annulation parfaite)", "interface", "perfect_hint")
-	_note(v, "L'anneau annonce le bon moment pour esquiver et faire l'annulation parfaite (recharge réduite, Fluidité). Il n'apparaît jamais en Duel.")
-	_section(v, "Jeu automatique")
-	_check(v, "Sorts et enchaînements automatiques", "game", "auto_combo")
-	_note(v, "Les 4 sorts de ta barre (ton preset) partent seuls dès qu'ils sont prêts et qu'un ennemi est à portée, et leurs enchaînements dès l'ouverture de la barre. L'annulation parfaite (esquive juste après un impact : Fluidité, recharge réduite) reste un geste à faire toi-même. Pas dans les duels de la Tour ni en Duel.")
-	_check(v, "Déplacement automatique", "game", "auto_move")
-	_note(v, "Le héros va seul vers les monstres (à distance de tir pour un archer ou un mage), puis vers l'objectif (donjon, coffre et escalier de la Tour) et ouvre coffres et passages. Te déplacer toi-même reprend la main tant que tu appuies.")
-	_check(v, "Choix des cartes automatique", "game", "auto_cards")
-	_note(v, "À chaque choix de cartes : un nouveau sort tant qu'une case de la barre est libre, sinon la carte de plus haute rareté. Avec les trois options, le jeu se joue tout seul (mode de jeu « Bot » dans Contrôles).")
-
-
-# --- onglet Touches --------------------------------------------------------------------
 ## Touches rangées en quatre groupes.
 const KEY_GROUPS := [
 	["Déplacement", ["move_forward", "move_back", "move_left", "move_right", "jump", "dodge"]],
@@ -222,25 +42,310 @@ const KEY_GROUPS := [
 	["Sorts", ["skill_1", "skill_2", "skill_3", "skill_4"]],
 	["Interface", ["interact", "map", "objectives", "pause", "camera_rotate", "unstuck", "help", "feedback", "extract", "quick_equip"]],
 ]
-var _tester: Label
-var _pad_listen := ""  # action de manette en cours d'assignation
-var _pad_buttons := {}
-var _pad_listen_id := 0
 
 
-func _build_keys_tab() -> void:
-	var v := _tab("Touches", false)
-	_tester = Hud._label(v, "Test : appuie sur une touche pour voir l'action qu'elle déclenche.", 15, ACCENT)
-	_note(v, "Clique sur une case puis appuie sur une touche ou un bouton de souris.  Échap : annuler  ·  Suppr / Retour : effacer.  Une touche déjà prise est retirée de l'autre action.")
+func _init() -> void:
+	super("Paramètres", 30)
+
+
+func _ready() -> void:
+	super._ready()
+	_build_footer()
+	_build_game_page()
+	_build_combat_page()
+	_build_keys_page()
+	_build_display_page()
+	_build_audio_page()
+	_build_camera_page()
+	page_changed.connect(_on_page_changed)
+	Settings.changed.connect(_refresh)
+
+
+func open(tab := -1) -> void:
+	_say("")
+	super.open(tab)
+	_refresh()
+	for s in _switches:
+		s.set_on(s.button_pressed)  # position de départ sans animation
+
+
+func close() -> void:
+	close_ui()
+
+
+func close_ui() -> void:
+	_stop_listening()
+	_stop_pad_listening()
+	if _hot != null and is_instance_valid(_hot) and _hot.has_meta("row_panel"):
+		(_hot as PanelContainer).add_theme_stylebox_override("panel", _row_box(false))
+	_hot = null
+	super.close_ui()
+
+
+func _process(delta: float) -> void:
+	if _reset_armed_at > 0.0 and Time.get_ticks_msec() / 1000.0 - _reset_armed_at > 4.0:
+		_reset_armed_at = -10.0
+		_reset_all.text = "Tout réinitialiser"
+	if not is_open():
+		return
+	if _status_t > 0.0:
+		_status_t -= delta
+		if _status_t <= 0.0:
+			_status.text = ""
+			_status.visible = false
+	_update_hot()
+
+
+func _refresh() -> void:
+	for r in _refreshers:
+		r.call()
+	_hint_shown = "\u0001"  # l'infobulle dynamique est relue
+
+
+func _on_page_changed(i: int) -> void:
+	for k in _page_actions.size():
+		if _page_actions[k] != null:
+			_page_actions[k].visible = k == i
+	_hint_shown = "\u0001"
+
+
+# --- cadre du bas : infobulle fixe, état et actions ------------------------------------------------------
+func _build_footer() -> void:
+	var v: VBoxContainer = _content.get_parent()
+	var foot := HBoxContainer.new()
+	foot.add_theme_constant_override("separation", 14)
+	foot.custom_minimum_size = Vector2(0, 76)
+	v.add_child(foot)
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var box := UiTheme.flat_box(Color(0.05, 0.04, 0.1, 0.92), Color(UiTheme.GOLD_DIM, 0.55), 1, 10, false)
+	box.content_margin_left = 16
+	box.content_margin_right = 16
+	panel.add_theme_stylebox_override("panel", box)
+	foot.add_child(panel)
+	var pv := VBoxContainer.new()
+	pv.add_theme_constant_override("separation", 0)
+	pv.alignment = BoxContainer.ALIGNMENT_CENTER
+	panel.add_child(pv)
+	_status = _text(pv, "", 15, Color(0.6, 1.0, 0.65))
+	_status.visible = false
+	_hint = _text(pv, "", 15, UiTheme.MUTED)
+	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_hint.custom_minimum_size = Vector2(300, 0)
+	_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var actions := HBoxContainer.new()
+	actions.add_theme_constant_override("separation", 10)
+	actions.alignment = BoxContainer.ALIGNMENT_END
+	foot.add_child(actions)
+	_footer_actions = actions
+	_reset_all = _button(actions, "Tout réinitialiser", _on_reset_all, 230)
+	var gap := Control.new()  # marge sous le pied : la barre d'aide manette y est posée
+	gap.custom_minimum_size = Vector2(0, 8)
+	v.add_child(gap)
+
+
+
+## Boutons propres à une page, dans le pied (visibles seulement sur cette page).
+func _page_buttons(page: int) -> HBoxContainer:
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 10)
+	_footer_actions.add_child(h)
+	_footer_actions.move_child(h, 0)
+	while _page_actions.size() <= page:
+		_page_actions.append(null)
+	_page_actions[page] = h
+	h.visible = false
+	return h
+
+
+## Ligne ou contrôle sous le pointeur (ou sous le cadre manette) : son détail s'affiche dans le pied.
+func _update_hot() -> void:
+	var hot: Control = null
+	if Gamepad.active and UiNav.shown and UiNav.cursor != null and is_instance_valid(UiNav.cursor) and is_ancestor_of(UiNav.cursor):
+		hot = _hinted_parent(UiNav.cursor)
+	else:
+		var mouse := get_viewport().get_mouse_position()
+		if _content.get_global_rect().has_point(mouse):
+			for c in _hinted:
+				if c.is_visible_in_tree() and c.get_global_rect().has_point(mouse):
+					hot = c
+					break
+	if hot != _hot:
+		if _hot != null and is_instance_valid(_hot) and _hot.has_meta("row_panel"):
+			(_hot as PanelContainer).add_theme_stylebox_override("panel", _row_box(false))
+		_hot = hot
+		if _hot != null and _hot.has_meta("row_panel"):
+			(_hot as PanelContainer).add_theme_stylebox_override("panel", _row_box(true))
+	var text := ""
+	if _hot != null:
+		var h: Variant = _hot.get_meta("hint")
+		text = String(h.call()) if h is Callable else String(h)
+	elif current_page() < _page_hints.size():
+		text = _page_hints[current_page()]
+	if text != _hint_shown:
+		_hint_shown = text
+		_hint.text = text
+
+
+func _hinted_parent(c: Node) -> Control:
+	var n := c
+	while n != null and n != self:
+		if n is Control and (n as Control).has_meta("hint"):
+			return n as Control
+		n = n.get_parent()
+	return null
+
+
+func _say(text: String) -> void:
+	_status.text = text
+	_status.visible = text != ""
+	_status_t = 4.0 if text != "" else 0.0
+
+
+## 2 clics en 4 s : tous les paramètres (touches comprises) reviennent par défaut.
+func _on_reset_all() -> void:
+	if _reset_armed_at < 0.0:
+		_reset_armed_at = Time.get_ticks_msec() / 1000.0
+		_reset_all.text = "Confirmer ?"
+		return
+	_reset_armed_at = -10.0
+	_reset_all.text = "Tout réinitialiser"
+	Settings.reset_all()
+	_say("Tous les paramètres sont revenus par défaut")
+
+
+# --- page Mode de jeu ------------------------------------------------------------------------------------
+func _build_game_page() -> void:
+	var v := _page("Mode de jeu", HINT_DEFAULT)
+	_section(v, "Modes prêts à l'emploi")
+	var grid := GridContainer.new()
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	v.add_child(grid)
+	for id in Settings.PRESETS:
+		var p: Dictionary = Settings.PRESETS[id]
+		var b := Button.new()
+		b.text = String(p.name)
+		b.custom_minimum_size = Vector2(0, 58)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.focus_mode = Control.FOCUS_NONE
+		b.clip_text = true
+		b.add_theme_font_size_override("font_size", 17)
+		b.set_meta("hint", String(p.desc))
+		_hinted.append(b)
+		b.pressed.connect(func():
+			Settings.apply_preset(id)
+			_say("Mode « %s » activé" % p.name))
+		grid.add_child(b)
+		var normal := UiTheme.flat_box(Color(0.12, 0.1, 0.2, 0.95), Color(0.5, 0.48, 0.6, 0.7), 1, 10, false)
+		var chosen := UiTheme.flat_box(Color(0.3, 0.22, 0.1, 1.0), ACCENT, 3, 10, false)
+		b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.22, 0.18, 0.34), ACCENT, 1, 10, false))
+		_refreshers.append(func():
+			var on: bool = Settings.current_preset() == id
+			b.add_theme_stylebox_override("normal", chosen if on else normal)
+			b.add_theme_color_override("font_color", ACCENT if on else TEXT))
+	_section(v, "Réglages détaillés")
+	_option(v, "Déplacement", "game", "move_mode", [
+		["keyboard", "Clavier (ZQSD / flèches)", "Touches de déplacement, clic gauche pour attaquer (sur un monstre : auto-attaque)."],
+		["click", "Souris : clic gauche", "Clic gauche sur le sol : se déplacer (maintenu : suivre le curseur). Clic sur un monstre : l'attaquer. Les touches de déplacement marchent toujours."],
+		["rts", "Souris : clic droit (RTS / MOBA)", "Clic droit sur le sol : se déplacer ; sur un monstre : l'attaquer. Clic gauche : attaquer vers le curseur. Caméra au clic molette."]])
+	_option(v, "Visée des attaques et sorts", "game", "aim_mode", [
+		["smart", "Intelligente", "Cible verrouillée, sinon curseur, sinon monstre le plus proche."],
+		["cursor", "Suit le curseur", "Attaques et compétences partent toujours vers la souris : le clic ne verrouille plus de cible."],
+		["action", "Action (vue de dos)", "Le héros regarde le curseur ; écarte-le à gauche ou à droite et la caméra tourne derrière lui, d'autant plus vite que le curseur est loin du centre. Molette : zoom."],
+		["nearest", "Monstre le plus proche", "Le héros vise toujours le monstre le plus proche."]])
+
+
+func _assist_hint() -> String:
+	var cur := Settings.assist_level()
+	return String(Settings.ASSIST[cur].desc) if Settings.ASSIST.has(cur) else "Personnalisée : tes réglages ne correspondent à aucun niveau."
+
+
+# --- page Combat -----------------------------------------------------------------------------------------
+func _build_combat_page() -> void:
+	var v := _page("Combat", HINT_DEFAULT)
+	_section(v, "Aide au combat")
+	var lv := _row(v, "Niveau d'aide", _assist_hint)
+	for id in Settings.ASSIST:
+		var b := _button(lv, String(Settings.ASSIST[id].name), func():
+			Settings.set_assist(id)
+			_refresh(), 150)
+		b.toggle_mode = true
+		b.add_theme_stylebox_override("pressed", UiTheme.flat_box(Color(0.32, 0.23, 0.12, 1.0), ACCENT, 2, 8, false))
+		b.add_theme_stylebox_override("hover_pressed", UiTheme.flat_box(Color(0.38, 0.27, 0.14, 1.0), ACCENT, 2, 8, false))
+		_refreshers.append(func(): b.set_pressed_no_signal(Settings.assist_level() == id))
+	_section(v, "Attaque de base")
+	_option(v, "Mode d'attaque", "game", "attack_mode", [
+		["manual", "Manuel (clic)", "Tu attaques en cliquant."],
+		["auto", "Automatique (au contact)", "Quand tu ne te déplaces pas, le héros frappe le monstre le plus proche à portée. Se déplacer arrête l'attaque, pour esquiver."]])
+	_section(v, "Compétences automatiques")
+	var cells := _row(v, "Cases en automatique", "Une compétence en AUTO se lance seule dès qu'elle est rechargée et qu'un monstre est à portée. Les autres restent au clavier.")
+	cells.add_theme_constant_override("separation", 34)
+	for i in 4:
+		var cell := HBoxContainer.new()
+		cell.add_theme_constant_override("separation", 8)
+		cells.add_child(cell)
+		var name_lbl := _text(cell, "", 16, TEXT)
+		name_lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var sw := _switch()
+		sw.toggled.connect(func(on): Settings.set_auto_skill(i, on))
+		cell.add_child(sw)
+		_refreshers.append(func():
+			sw.set_pressed_no_signal(Settings.auto_skill(i))
+			var key := Settings.action_label("skill_%d" % (i + 1), 1)
+			name_lbl.text = "Case %d" % (i + 1) if key == str(i + 1) else "Case %d · %s" % [i + 1, key])  # touche par défaut : pas de doublon
+	var all := _row(v, "Toutes les cases")
+	_button(all, "En automatique", func(): Settings.set_v("game", "auto_skills", [true, true, true, true]), 200)
+	_button(all, "En manuel", func(): Settings.set_v("game", "auto_skills", [false, false, false, false]), 200)
+	_option(v, "Cible des compétences auto", "game", "auto_target", [
+		["any", "Tout monstre à portée", "La compétence part sur n'importe quel monstre à portée."],
+		["locked", "Cible verrouillée seulement", "La compétence ne part que sur le monstre sur lequel tu as cliqué."]])
+	_section(v, "Prise en main")
+	_check(v, "Mémoire des touches", "game", "key_memory",
+		"Jusqu'à 3 appuis de sorts sont gardés et joués dans l'ordre : taper 1-2-3 pendant un sort les lance l'un après l'autre. L'esquive et le saut partent tout de suite et vident la mémoire.")
+	_check(v, "Tenir une touche enchaîne le sort", "game", "hold_chain",
+		"Garder la touche d'une case enfoncée donne toute la chaîne du sort.")
+	_check(v, "Anneau d'annulation parfaite", "interface", "perfect_hint",
+		"Un anneau bleu annonce le bon moment pour esquiver après un impact de sort (annulation parfaite : recharge réduite). Il n'apparaît jamais en Duel.")
+	_section(v, "Jeu automatique")
+	_check(v, "Sorts et enchaînements automatiques", "game", "auto_combo",
+		"Les 4 sorts de ta barre partent seuls dès qu'ils sont prêts et qu'un monstre est à portée. L'annulation parfaite reste un geste à faire toi-même. Pas dans les duels de la Tour ni en Duel.")
+	_check(v, "Déplacement automatique", "game", "auto_move",
+		"Le héros va seul vers les monstres (à distance de tir pour un archer ou un mage), puis vers l'objectif, et ouvre coffres et passages. Te déplacer toi-même reprend la main.")
+	_check(v, "Choix des cartes automatique", "game", "auto_cards",
+		"À chaque choix : un nouveau sort tant qu'une case de la barre est libre, sinon la carte la plus rare. Avec les trois options, le jeu se joue tout seul.")
+
+
+# --- page Touches ----------------------------------------------------------------------------------------
+func _build_keys_page() -> void:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UiTheme.panel_box(28, 18))
+	var idx := add_page("Touches", panel)
+	_page_hints.append("Clique sur une case, puis appuie sur une touche ou un bouton de souris. Échap : annuler · Suppr : effacer. Une touche déjà prise est retirée de l'autre action.")
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 26)
+	panel.add_child(h)
+	# groupes : un bouton chacun, à gauche (la croix gauche d'une touche y mène)
+	var side := VBoxContainer.new()
+	side.add_theme_constant_override("separation", 8)
+	side.custom_minimum_size = Vector2(230, 0)
+	h.add_child(side)
+	_section(side, "Groupes")
+	var main := VBoxContainer.new()
+	main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	main.add_theme_constant_override("separation", 8)
+	h.add_child(main)
+	_tester = _text(main, "Test : appuie sur une touche pour voir l'action qu'elle déclenche.", 16, ACCENT)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	v.add_child(scroll)
-	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 12)
-	grid.add_theme_constant_override("v_separation", 6)
-	scroll.add_child(grid)
+	main.add_child(scroll)
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 2)
+	scroll.add_child(col)
 	var order: Array = []
 	for g in KEY_GROUPS:
 		order.append(["#", g[0]])
@@ -251,86 +356,99 @@ func _build_keys_tab() -> void:
 	for a in Settings.ACTIONS:  # une action oubliée des groupes reste visible
 		if not order.any(func(o): return o[0] == a[0]):
 			order.append(a)
+	var chip: Button
+	var first_key: Button
 	for a in order:
 		if String(a[0]) == "#":
-			var gh := Hud._label(grid, String(a[1]), 18, ACCENT)
-			gh.add_theme_font_override("font", UiTheme.bold_font())
-			Hud._label(grid, "", 8, ACCENT)
-			Hud._label(grid, "", 8, ACCENT)
+			var header := _group_header(col, String(a[1]))
+			chip = _group_chip(side, scroll, header, String(a[1]))
+			first_key = null
 			continue
 		var action: String = a[0]
-		var name_lbl := Hud._label(grid, a[1], 16, Color(0.92, 0.92, 0.96))
-		name_lbl.custom_minimum_size = Vector2(LABEL_W + 40, 0)
-		for idx in 2:
-			var b := Button.new()
-			b.custom_minimum_size = Vector2(250, 36)
-			b.focus_mode = Control.FOCUS_NONE
-			b.add_theme_font_size_override("font_size", 15)
-			b.add_theme_stylebox_override("normal", Hud.style(Color(0.12, 0.1, 0.2, 0.95)))
-			b.add_theme_stylebox_override("hover", Hud.style(Color(0.22, 0.18, 0.34)))
-			b.pressed.connect(_start_listening.bind(action, idx, b))
-			grid.add_child(b)
+		var row := _row(col, String(a[1]))
+		for i in 2:
+			var b := _key_button(row)
+			b.pressed.connect(_start_listening.bind(action, i, b))
+			if i == 0:
+				b.set_meta("nav_left", chip)  # croix gauche : retour au groupe
+				if first_key == null:
+					first_key = b
+					chip.set_meta("nav_right", b)
+			var slot := i
 			_refreshers.append(func():
 				if b == _listen_button:
 					return
 				var list: Array = Settings.binds.get(action, [])
-				b.text = Settings.event_label(list[idx]) if idx < list.size() else "—")
-	var h := HBoxContainer.new()
-	h.alignment = BoxContainer.ALIGNMENT_CENTER
-	v.add_child(h)
-	_button(h, "Touches par défaut", func():
-		Settings.reset_bindings()
-		_say("Touches par défaut rétablies"), 280)
-	_build_pad_section(grid)
-
-
-## Manette : un bouton par action ; clic (ou A) puis appuie sur le bouton voulu de la manette.
-func _build_pad_section(grid: GridContainer) -> void:
-	var gh := Hud._label(grid, "Manette", 18, ACCENT)
-	gh.add_theme_font_override("font", UiTheme.bold_font())
-	Hud._label(grid, "Déplacement : stick gauche (fixe) · stick droit : caméra", 13, UiTheme.MUTED)
-	var layout_btn := _option_button(grid)
+				b.text = Settings.event_label(list[slot]) if slot < list.size() else "—")
+	# manette
+	var pad_header := _group_header(col, "Manette")
+	var pad_chip := _group_chip(side, scroll, pad_header, "Manette")
+	_text(col, "Déplacement : stick gauche (fixe) · caméra : stick droit.", 15, UiTheme.MUTED)
+	_option(col, "Noms des boutons", "interface", "pad_labels", [
+		["auto", "Automatique"], ["xbox", "Xbox (A B X Y)"], ["ps", "PlayStation"]])
+	var pad_first: Button = null
 	for a in Settings.PAD_ACTIONS:
 		var action: String = a
-		Hud._label(grid, Settings.action_name(action), 16, Color(0.92, 0.92, 0.96)).custom_minimum_size = Vector2(LABEL_W + 40, 0)
-		var b := Button.new()
-		b.custom_minimum_size = Vector2(250, 36)
-		b.focus_mode = Control.FOCUS_NONE
-		b.add_theme_font_size_override("font_size", 15)
-		b.add_theme_stylebox_override("normal", Hud.style(Color(0.12, 0.1, 0.2, 0.95)))
-		b.add_theme_stylebox_override("hover", Hud.style(Color(0.22, 0.18, 0.34)))
+		var row := _row(col, Settings.action_name(action))
+		var b := _key_button(row)
 		b.pressed.connect(_start_pad_listening.bind(action, b))
-		grid.add_child(b)
-		Hud._label(grid, "", 8, ACCENT)
+		b.set_meta("nav_left", pad_chip)
+		if pad_first == null:
+			pad_first = b
+			pad_chip.set_meta("nav_right", b)
 		_pad_buttons[action] = b
 		_refreshers.append(func():
 			if _pad_listen != action:
 				b.text = Settings.pad_action_label(action))
-	var rb := Button.new()
-	rb.text = "Manette par défaut"
-	rb.custom_minimum_size = Vector2(250, 40)
-	rb.focus_mode = Control.FOCUS_NONE
-	rb.pressed.connect(func():
+	# pied : remises à zéro de cette page
+	var acts := _page_buttons(idx)
+	_button(acts, "Touches par défaut", func():
+		Settings.reset_bindings()
+		_say("Touches par défaut rétablies"), 230)
+	_button(acts, "Manette par défaut", func():
 		Settings.reset_pad_bindings()
-		_say("Manette par défaut rétablie"))
-	grid.add_child(rb)
-	Hud._label(grid, "", 8, ACCENT)
-	Hud._label(grid, "", 8, ACCENT)
+		_say("Manette par défaut rétablie"), 230)
 
 
-## Bouton d'option : disposition des noms de boutons (auto, Xbox, PlayStation).
-func _option_button(grid: GridContainer) -> Button:
-	var lb := Button.new()
-	lb.custom_minimum_size = Vector2(250, 36)
-	lb.focus_mode = Control.FOCUS_NONE
-	var names := {"auto": "Noms : automatique", "xbox": "Noms : Xbox (A B X Y)", "ps": "Noms : PlayStation"}
-	_refreshers.append(func(): lb.text = String(names.get(String(Settings.get_v("interface", "pad_labels")), "auto")))
-	lb.pressed.connect(func():
-		var order := ["auto", "xbox", "ps"]
-		var cur := String(Settings.get_v("interface", "pad_labels"))
-		Settings.set_v("interface", "pad_labels", order[(order.find(cur) + 1) % order.size()]))
-	grid.add_child(lb)
-	return lb
+func _group_header(parent: Control, text: String) -> Control:
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	parent.add_child(box)
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(0, 10)
+	box.add_child(gap)
+	var l := _text(box, text, 20, ACCENT)
+	l.add_theme_font_override("font", UiTheme.bold_font())
+	var line := ColorRect.new()
+	line.color = Color(UiTheme.GOLD_DIM, 0.45)
+	line.custom_minimum_size = Vector2(0, 1)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(line)
+	return box
+
+
+## Bouton de groupe : fait défiler la liste jusqu'à l'en-tête du groupe.
+func _group_chip(parent: Control, scroll: ScrollContainer, header: Control, text: String) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	b.custom_minimum_size = Vector2(0, 44)
+	b.add_theme_font_size_override("font_size", 17)
+	_neutral(b)
+	b.pressed.connect(func(): scroll.scroll_vertical = int(header.position.y))
+	parent.add_child(b)
+	return b
+
+
+func _key_button(row: Control) -> Button:
+	var b := Button.new()
+	b.custom_minimum_size = Vector2(KEY_W, 38)
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_size_override("font_size", 16)
+	b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.12, 0.1, 0.2, 0.95), Color(0.5, 0.48, 0.6, 0.7), 1, 8, false))
+	row.add_child(b)
+	return b
 
 
 func _start_pad_listening(action: String, b: Button) -> void:
@@ -373,7 +491,7 @@ func _stop_listening() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if not _root.visible:
+	if not is_open():
 		return
 	if _pad_listen != "":
 		var d := Settings.describe_pad(event)
@@ -403,15 +521,14 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			_assign(event)
 		return
-	if _tester != null and _tester.is_visible_in_tree() and (event is InputEventKey or event is InputEventMouseButton) and event.pressed 			and not (event is InputEventKey and (event as InputEventKey).physical_keycode == KEY_ESCAPE):
+	if _tester != null and _tester.is_visible_in_tree() and (event is InputEventKey or event is InputEventMouseButton) and event.pressed \
+			and not (event is InputEventKey and (event as InputEventKey).physical_keycode == KEY_ESCAPE):
 		var hits: PackedStringArray = []
 		for a in Settings.ACTIONS:
 			if event.is_action_pressed(a[0]):
 				hits.append(String(a[1]))
 		_tester.text = "Test : cette touche déclenche « %s »." % " / ".join(hits) if not hits.is_empty() else "Test : cette touche n'est liée à aucune action."
-	if event is InputEventKey and event.pressed and not event.echo and (event.is_action("pause") or event.physical_keycode == KEY_ESCAPE):
-		get_viewport().set_input_as_handled()
-		close()
+	super._input(event)  # Échap : ferme
 
 
 func _assign(event: InputEvent) -> void:
@@ -430,18 +547,20 @@ func _assign(event: InputEvent) -> void:
 	_say(msg)
 
 
-# --- onglet Affichage ------------------------------------------------------------------
-func _build_display_tab() -> void:
-	var v := _tab("Affichage")
+# --- page Affichage --------------------------------------------------------------------------------------
+func _build_display_page() -> void:
+	var v := _page("Affichage", HINT_DEFAULT)
+	_section(v, "Fenêtre")
 	_option(v, "Mode de fenêtre", "display", "window_mode", [
 		["windowed", "Fenêtré"], ["maximized", "Fenêtré agrandi"],
-		["fullscreen", "Plein écran (fenêtre sans bordure)"], ["exclusive", "Plein écran exclusif"]])
+		["fullscreen", "Plein écran (sans bordure)"], ["exclusive", "Plein écran exclusif"]])
 	var res := _option(v, "Résolution (mode fenêtré)", "display", "resolution",
 		Settings.RESOLUTIONS.map(func(r): return [r, r.replace("x", " × ")]))
 	_refreshers.append(func(): res.disabled = Settings.get_v("display", "window_mode") != "windowed")
-	_check(v, "Synchronisation verticale (VSync)", "display", "vsync")
+	_check(v, "Synchronisation verticale (VSync)", "display", "vsync", "Évite les déchirures d'image ; peut ajouter un léger délai.")
 	_option(v, "Limite d'images par seconde", "display", "max_fps", [
 		[0, "Illimitée"], [30, "30"], [60, "60"], [120, "120"], [144, "144"], [165, "165"], [240, "240"]])
+	_section(v, "Image")
 	_option(v, "Qualité graphique", "display", "quality", [["low", "Basse (PC modeste)"], ["medium", "Moyenne"],
 		["high", "Haute"], ["ultra", "Ultra"]])
 	_option(v, "Anticrénelage (MSAA)", "display", "msaa", [[0, "Désactivé"], [2, "2×"], [4, "4×"], [8, "8×"]])
@@ -449,142 +568,200 @@ func _build_display_tab() -> void:
 		[0.75, "75 %"], [0.85, "85 %"], [1.0, "100 %"], [1.1, "110 %"], [1.25, "125 %"], [1.5, "150 %"]])
 
 
-# --- onglet Son ------------------------------------------------------------------------
-func _build_audio_tab() -> void:
-	var v := _tab("Son")
+# --- page Son --------------------------------------------------------------------------------------------
+func _build_audio_page() -> void:
+	var v := _page("Son")
+	_section(v, "Volumes")
 	_slider(v, "Volume général", "audio", "master", 0.0, 1.0, 0.05, func(x): return "%d %%" % roundi(x * 100))
 	_slider(v, "Effets sonores", "audio", "sfx", 0.0, 1.0, 0.05, func(x): return "%d %%" % roundi(x * 100))
 	_slider(v, "Musique", "audio", "music", 0.0, 1.0, 0.05, func(x): return "%d %%" % roundi(x * 100))
 
 
-# --- onglet Caméra et interface ----------------------------------------------------------
-func _build_camera_tab() -> void:
-	var v := _tab("Caméra & interface")
+# --- page Caméra et interface ----------------------------------------------------------------------------
+func _build_camera_page() -> void:
+	var v := _page("Caméra & interface", HINT_DEFAULT)
 	_section(v, "Caméra")
 	_slider(v, "Sensibilité de rotation", "camera", "rotate_speed", 0.25, 3.0, 0.05, func(x): return "× %.2f" % x)
 	_check(v, "Inverser l'inclinaison (haut / bas)", "camera", "invert_y")
 	_slider(v, "Distance de départ (zoom)", "camera", "distance", 7.0, 28.0, 1.0, func(x): return "%d m" % roundi(x))
 	_slider(v, "Tremblements de l'écran", "camera", "shake", 0.0, 1.5, 0.05, func(x): return "%d %%" % roundi(x * 100))
-	_slider(v, "Mode action : vitesse de rotation au curseur", "camera", "action_turn", 0.3, 2.5, 0.05, func(x): return "%d %%" % roundi(x * 100))
+	_slider(v, "Rotation au curseur (mode Action)", "camera", "action_turn", 0.3, 2.5, 0.05, func(x): return "%d %%" % roundi(x * 100))
 	_section(v, "Interface et ressenti")
 	_option(v, "Chiffres de dégâts", "interface", "damage_numbers", [
-		["all", "Tous"], ["dealt", "Seulement les dégâts infligés"], ["crit", "Coups critiques et dégâts subis"], ["off", "Masqués"]])
-	_check(v, "Arrêt sur image à l'impact (poids des coups)", "interface", "hit_stop")
+		["all", "Tous"], ["dealt", "Dégâts infligés seulement"], ["crit", "Critiques et dégâts subis"], ["off", "Masqués"]])
+	_check(v, "Arrêt sur image à l'impact", "interface", "hit_stop", "Une très courte pause à chaque coup lourd donne du poids aux frappes.")
 	_check(v, "Afficher les FPS", "interface", "show_fps")
-	_check(v, "Marqueur au sol des clics de déplacement", "interface", "move_marker")
-	_check(v, "Zone de mes attaques au sol (en bleu, pour apprendre la portée des sorts)", "interface", "attack_zone")
-	_section(v, "Effets visuels (lisibilité et performances)")
-	_note(v, "Les zones d'attaque (avertissements rouges, cercles au sol) restent toujours visibles : seuls les décors lumineux des sorts et des skins sont concernés.")
-	var who := [["all", "Tout afficher"], ["dim_others", "Atténuer ceux des autres héros"], ["hide_others", "Masquer ceux des autres héros"],
-		["hide_mine", "Masquer les miens"], ["hide_all", "Tout masquer (les miens et ceux des autres)"]]
-	_option(v, "Effets de sorts et d'impacts des héros", "interface", "fx_spells", who)
-	_slider(v, "Intensité des effets de sorts (opacité et éclat : plus d'impact)", "interface", "fx_intensity", 0.5, 1.6, 0.05, func(x): return "%d %%" % roundi(x * 100))
-	_option(v, "Auras de skin (pierres étoilées, auras de collection…)", "interface", "fx_auras", who)
-	_option(v, "Étincelles, poussière et éclairs d'impact", "interface", "fx_particles", [
-		["all", "Tous"], ["reduced", "Réduits (moitié)"], ["off", "Aucun"]])
-	_check(v, "Mode dev (F10 : objets, ressources, progression, actions en run — pour tester)", "interface", "dev_mode")
+	_check(v, "Marqueur des clics de déplacement", "interface", "move_marker", "Un repère au sol à l'endroit où tu as cliqué pour te déplacer.")
+	_check(v, "Zone de mes attaques au sol", "interface", "attack_zone", "Montre en bleu la zone des sorts que tu lances, pour apprendre leur portée.")
+	_section(v, "Effets visuels")
+	var who := [["all", "Tout afficher"], ["dim_others", "Atténuer ceux des autres"], ["hide_others", "Masquer ceux des autres"],
+		["hide_mine", "Masquer les miens"], ["hide_all", "Tout masquer"]]
+	var fx_hint := "Les zones d'attaque (avertissements rouges, cercles au sol) restent toujours visibles : seuls les décors lumineux des sorts et des skins sont concernés."
+	_option(v, "Effets de sorts et d'impacts", "interface", "fx_spells", who.map(func(w): return [w[0], w[1], fx_hint]))
+	_slider(v, "Intensité des effets de sorts", "interface", "fx_intensity", 0.5, 1.6, 0.05, func(x): return "%d %%" % roundi(x * 100),
+		"Opacité et éclat des effets de sorts : plus haut, plus d'impact ; plus bas, plus de lisibilité.")
+	_option(v, "Auras de skin", "interface", "fx_auras", who.map(func(w): return [w[0], w[1], "Pierres étoilées, auras de collection… " + fx_hint]))
+	_option(v, "Étincelles, poussière et éclairs", "interface", "fx_particles", [
+		["all", "Tous"], ["reduced", "Réduits de moitié"], ["off", "Aucun"]])
+	_section(v, "Développement")
+	_check(v, "Mode dev (F10)", "interface", "dev_mode", "Objets, ressources, progression et actions en run, pour tester.")
 
 
-# --- briques d'interface ---------------------------------------------------------------
-func _tab(title: String, scroll := true) -> VBoxContainer:
-	var margin := MarginContainer.new()
-	margin.name = title
-	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 14)
-	_tabs.add_child(margin)
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
-	if scroll:
-		var sc := ScrollContainer.new()
-		sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-		margin.add_child(sc)
-		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		sc.add_child(v)
-	else:
-		margin.add_child(v)
-	return v
+# --- briques d'interface ---------------------------------------------------------------------------------
+## Une page : cadre orné, défilement, colonne centrée. Renvoie la colonne où poser les lignes.
+func _page(title: String, hint := "") -> VBoxContainer:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", UiTheme.panel_box(28, 18))
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(scroll)
+	var h := HBoxContainer.new()
+	h.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(h)
+	var left := Control.new()
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(left)
+	var col := VBoxContainer.new()
+	col.custom_minimum_size = Vector2(COL_W, 0)
+	col.add_theme_constant_override("separation", 2)
+	h.add_child(col)
+	var right := Control.new()
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	h.add_child(right)
+	add_page(title, panel)
+	_page_hints.append(hint)
+	return col
+
+
+## Bouton discret : filet gris, or au survol (l'or est réservé à ce qui est choisi).
+func _neutral(b: Button) -> void:
+	b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.12, 0.1, 0.2, 0.95), Color(0.5, 0.48, 0.6, 0.7), 1, 8, false))
+	b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.22, 0.18, 0.34), ACCENT, 1, 8, false))
+
+
+func _text(parent: Control, text: String, size: int, color: Color) -> Label:
+	return Hud._label(parent, text, UiTheme.text_size(size), color)
 
 
 func _section(parent: Control, text: String) -> void:
-	Hud._label(parent, text, 19, ACCENT)
+	if parent.get_child_count() > 0:
+		var gap := Control.new()
+		gap.custom_minimum_size = Vector2(0, 12)
+		parent.add_child(gap)
+	var l := _text(parent, text, 20, ACCENT)
+	l.add_theme_font_override("font", UiTheme.bold_font())
+	var line := ColorRect.new()
+	line.color = Color(UiTheme.GOLD_DIM, 0.45)
+	line.custom_minimum_size = Vector2(0, 1)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(line)
 
 
-func _note(parent: Control, text: String) -> Label:
-	var l := Hud._label(parent, text, 14, Color(0.8, 0.8, 0.88))
-	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size = Vector2(1000, 0)
-	return l
+func _row_box(hot: bool) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(1, 1, 1, 0.06) if hot else Color(1, 1, 1, 0.0)
+	sb.border_color = Color(UiTheme.GOLD_DIM, 0.28)
+	sb.border_width_bottom = 1
+	sb.set_corner_radius_all(4)
+	sb.content_margin_left = 14
+	sb.content_margin_right = 10
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
+	return sb
 
 
-func _row(parent: Control, text: String) -> HBoxContainer:
+## Ligne : titre à gauche, contrôles à droite (renvoie la boîte des contrôles). [param hint] : texte
+## du pied quand on survole la ligne, ou Callable qui le calcule.
+func _row(parent: Control, text: String, hint: Variant = "") -> HBoxContainer:
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(0, ROW_H)
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_theme_stylebox_override("panel", _row_box(false))
+	panel.set_meta("row_panel", true)
+	parent.add_child(panel)
 	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 14)
-	parent.add_child(h)
-	var l := Hud._label(h, text, 16, Color(0.92, 0.92, 0.96))
-	l.custom_minimum_size = Vector2(LABEL_W, 0)
-	return h
+	h.add_theme_constant_override("separation", 12)
+	panel.add_child(h)
+	var l := _text(h, text, 17, TEXT)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var controls := HBoxContainer.new()
+	controls.add_theme_constant_override("separation", 10)
+	controls.alignment = BoxContainer.ALIGNMENT_END
+	controls.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(controls)
+	if (hint is String and hint != "") or hint is Callable:
+		panel.set_meta("hint", hint)
+		_hinted.append(panel)
+	return controls
 
 
+## La valeur courante [param cur] est-elle le choix [param value] ?
+static func _same(value: Variant, cur: Variant) -> bool:
+	if cur is float or value is float:
+		return (cur is float or cur is int) and (value is float or value is int) and is_equal_approx(float(value), float(cur))
+	return typeof(value) == typeof(cur) and value == cur
+
+
+## Liste déroulante. Chaque choix : [valeur, libellé, détail (facultatif, affiché dans le pied)].
 func _option(parent: Control, text: String, section: String, key: String, choices: Array) -> OptionButton:
+	var hint: Variant = ""
+	if choices.any(func(c): return c.size() > 2):
+		hint = func() -> String:
+			var cur: Variant = Settings.get_v(section, key)
+			for c in choices:
+				if c.size() > 2 and _same(c[0], cur):
+					return String(c[2])
+			return ""
+	var row := _row(parent, text, hint)
 	var o := OptionButton.new()
-	o.custom_minimum_size = Vector2(560, 34)
+	o.custom_minimum_size = Vector2(OPTION_W, 38)
 	o.focus_mode = Control.FOCUS_NONE
-	o.add_theme_font_size_override("font_size", 15)
+	o.add_theme_font_size_override("font_size", 16)
+	_neutral(o)
+	o.add_theme_stylebox_override("pressed", o.get_theme_stylebox("hover"))
 	for c in choices:
 		o.add_item(String(c[1]))
 	o.item_selected.connect(func(i): Settings.set_v(section, key, choices[i][0]))
-	_row(parent, text).add_child(o)
+	row.add_child(o)
 	_refreshers.append(func():
 		var cur: Variant = Settings.get_v(section, key)
 		for i in choices.size():
-			if typeof(choices[i][0]) == typeof(cur) and choices[i][0] == cur or (cur is float and is_equal_approx(float(choices[i][0]), cur)):
+			if _same(choices[i][0], cur):
 				o.select(i))
 	return o
 
 
-func _check(parent: Control, text: String, section: String, key: String) -> Button:
-	var c := _toggle_button(200)
+## Interrupteur à glissière.
+func _check(parent: Control, text: String, section: String, key: String, hint := "") -> UiTheme.Switch:
+	var row := _row(parent, text, hint)
+	var c := _switch()
 	c.toggled.connect(func(on): Settings.set_v(section, key, on))
-	_row(parent, text).add_child(c)
-	_refreshers.append(func():
-		var on := bool(Settings.get_v(section, key))
-		c.set_pressed_no_signal(on)
-		c.text = "✔  Activé" if on else "Désactivé")
+	row.add_child(c)
+	_refreshers.append(func(): c.set_pressed_no_signal(bool(Settings.get_v(section, key))))
 	return c
 
 
-## Bouton bascule bien lisible (vert si activé).
-func _toggle_button(width: int) -> Button:
-	var b := Button.new()
-	b.toggle_mode = true
-	b.custom_minimum_size = Vector2(width, 34)
-	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_font_size_override("font_size", 15)
-	var off := Hud.style(Color(0.14, 0.12, 0.2, 0.95))
-	off.border_color = Color(0.5, 0.5, 0.6, 0.6)
-	off.set_border_width_all(1)
-	var on := Hud.style(Color(0.16, 0.36, 0.2, 1.0))
-	on.border_color = Color(0.55, 1.0, 0.6)
-	on.set_border_width_all(2)
-	b.add_theme_stylebox_override("normal", off)
-	b.add_theme_stylebox_override("hover", Hud.style(Color(0.22, 0.18, 0.34)))
-	b.add_theme_stylebox_override("pressed", on)
-	b.add_theme_stylebox_override("hover_pressed", on)
-	b.add_theme_color_override("font_pressed_color", Color(0.75, 1.0, 0.78))
-	b.add_theme_color_override("font_hover_pressed_color", Color(0.75, 1.0, 0.78))
-	return b
+func _switch() -> UiTheme.Switch:
+	var s := UiTheme.Switch.new()
+	_switches.append(s)
+	return s
 
 
-func _slider(parent: Control, text: String, section: String, key: String, lo: float, hi: float, step: float, fmt: Callable) -> HSlider:
-	var h := _row(parent, text)
+func _slider(parent: Control, text: String, section: String, key: String, lo: float, hi: float, step: float, fmt: Callable, hint := "") -> HSlider:
+	var row := _row(parent, text, hint)
 	var s := HSlider.new()
 	s.min_value = lo
 	s.max_value = hi
 	s.step = step
-	s.custom_minimum_size = Vector2(420, 28)
+	s.scrollable = false  # la molette fait défiler la page, elle ne règle pas le curseur
+	s.custom_minimum_size = Vector2(380, 30)
+	s.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	s.focus_mode = Control.FOCUS_NONE
-	h.add_child(s)
-	var val := Hud._label(h, "", 15, ACCENT)
+	row.add_child(s)
+	var val := _text(row, "", 17, ACCENT)
+	val.custom_minimum_size = Vector2(80, 0)
+	val.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	s.value_changed.connect(func(x):
 		val.text = fmt.call(x)
 		Settings.set_v(section, key, x))
@@ -600,24 +777,7 @@ func _button(parent: Control, text: String, cb: Callable, width := 250) -> Butto
 	b.custom_minimum_size = Vector2(width, 42)
 	b.focus_mode = Control.FOCUS_NONE
 	b.add_theme_font_size_override("font_size", 16)
-	b.add_theme_stylebox_override("normal", Hud.style(Color(0.16, 0.12, 0.26, 0.95)))
-	b.add_theme_stylebox_override("hover", Hud.style(Color(0.28, 0.2, 0.42, 1.0)))
+	_neutral(b)
 	b.pressed.connect(cb)
 	parent.add_child(b)
 	return b
-
-
-func _say(text: String) -> void:
-	_status.text = text
-
-
-## 2 clics en 4 s : tous les paramètres (touches comprises) reviennent par défaut.
-func _on_reset_all() -> void:
-	if _reset_armed_at < 0.0:
-		_reset_armed_at = Time.get_ticks_msec() / 1000.0
-		_reset_all.text = "Confirmer : tout réinitialiser ?"
-		return
-	_reset_armed_at = -10.0
-	_reset_all.text = "Tout réinitialiser"
-	Settings.reset_all()
-	_say("Tous les paramètres sont revenus par défaut")
