@@ -283,15 +283,26 @@ func _test_registry_skip() -> void:
 	var second: Node = page._box.get_child(0)
 	page.refresh()
 	check("Registre : de nouveau stable", page._box.get_child(0) == second)
-	var cid := String(GameData.classes.keys()[0])
+	# une classe qui n'est pas celle du héros choisi (celle-ci lit l'équipement porté, pas son préréglage enregistré)
+	var cid := ""
+	for k in GameData.classes.keys():
+		if String(k) != Profile.selected_class:
+			cid = String(k)
+			break
 	Profile.expertise[cid] = 99999  # change la maîtrise, pas le Registre : rien à reconstruire
 	page.refresh()
 	check("Registre : donnée sans rapport, pas de reconstruction", page._box.get_child(0) == second)
-	var w := Items.generate(20, 0.5, "weapon")  # un équipement qui change : la fiche de la classe doit se refaire
-	Profile.vault.append(w)
+	# un équipement qui change : la fiche de la classe doit se refaire (on tire jusqu'à une arme de puissance différente :
+	# deux armes tirées au hasard ont parfois exactement la même, et la fiche est alors la même)
+	var before := var_to_str(ClassGear.entry(cid, ClassGear.vault_map()))
 	var p: Dictionary = Profile._class_presets(cid)
 	var s: Dictionary = p.sets[clampi(int(p.active), 0, p.sets.size() - 1)]
-	s.slots["weapon"] = String(w.uid)
+	for _try in 40:
+		var w := Items.generate(20, 0.5, "weapon")
+		Profile.vault.append(w)
+		s.slots["weapon"] = String(w.uid)
+		if var_to_str(ClassGear.entry(cid, ClassGear.vault_map())) != before:
+			break
 	page.refresh()
 	check("Registre : équipement changé, page reconstruite", page._box.get_child(0) != second)
 	page.queue_free()
@@ -402,12 +413,14 @@ func _test_player_weapon() -> void:
 	await get_tree().process_frame
 	check("run : 5 gains d'or, le modèle d'arme est le même", player._weapon == w0 and is_instance_valid(w0))
 	var other := ""
+	var wtype := Items.weapon_type_of(Profile.equipped.get("weapon", {}))  # le type de l'arme réellement portée (la clé des apparences)
 	for e in GameData.eden_items:
-		if String(e.get("slot", "")) == "weapon" and String(e.get("wtype", "")) == Items.default_weapon_type("warrior") and String(e.get("code", "")) != Profile.weapon_code():
+		if String(e.get("slot", "")) == "weapon" and String(e.get("wtype", "")) == wtype and String(e.get("code", "")) != Profile.weapon_code():
 			other = String(e.code)
 			break
+	check("run : une autre apparence existe pour le type d'arme porté (%s)" % wtype, other != "")
 	if other != "":
-		Profile.skins[Items.default_weapon_type("warrior")] = other  # une autre apparence d'arme
+		Profile.skins[wtype] = other  # une autre apparence d'arme
 		Profile.changed.emit()
 		await get_tree().process_frame
 		check("run : apparence d'arme changée, le modèle est rechargé", player._weapon != w0 and player._weapon_code == Profile.weapon_code())

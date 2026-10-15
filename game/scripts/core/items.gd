@@ -916,7 +916,11 @@ static func describe(item: Dictionary, detailed := true) -> String:
 		lines.append("[color=#8a86a0]+ %d autre%s statistique%s[/color]" % [hidden, "s" if hidden > 1 else "", "s" if hidden > 1 else ""])
 	if item.has("passive"):
 		lines.append("")
-		lines.append("[color=#ffd76a]✶ Passif — %s : %s[/color]" % [item.passive.get("name", ""), item.passive.get("desc", "")])
+		# passif d'Eden : son nom d'origine est un libellé anglais sans intérêt (souvent le nom de la pièce), seul l'effet est écrit
+		if item.passive.has("eden") or String(item.passive.get("name", "")) == "":
+			lines.append("[color=#ffd76a]✶ Passif : %s[/color]" % item.passive.get("desc", ""))
+		else:
+			lines.append("[color=#ffd76a]✶ Passif — %s : %s[/color]" % [item.passive.get("name", ""), item.passive.get("desc", "")])
 	# joaillerie et forge (Craft)
 	var extra_lines: Array = []
 	var rolls: Array = item.get("up_rolls", [])

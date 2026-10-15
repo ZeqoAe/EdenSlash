@@ -1110,7 +1110,9 @@ func _build_ui() -> void:
 	_dev_button.offset_bottom = -98
 	_dev_button.pressed.connect(func(): Dev.open())
 	root.add_child(_dev_button)
-	Settings.changed.connect(func(): _dev_button.visible = Dev.enabled())
+	Settings.changed.connect(func():
+		_dev_button.visible = Dev.enabled()
+		_refresh_compass())
 
 	_build_compass(root)
 	# écrans plein écran
@@ -1164,6 +1166,9 @@ func _build_compass(root: Control) -> void:
 ## Met à jour la boussole : le conseil du moment (Compass.advice), ou rien hors du lobby.
 func _refresh_compass() -> void:
 	if _compass == null:
+		return
+	if not Settings.show_compass():
+		_compass.visible = false
 		return
 	var adv := Compass.advice()
 	_compass.visible = not adv.is_empty()

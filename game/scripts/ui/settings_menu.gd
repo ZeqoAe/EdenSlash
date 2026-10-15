@@ -628,6 +628,7 @@ func _build_camera_page() -> void:
 		["all", "Tous"], ["dealt", "Dégâts infligés seulement"], ["crit", "Critiques et dégâts subis"], ["off", "Masqués"]])
 	_check(v, "Arrêt sur image à l'impact", "interface", "hit_stop", "Une très courte pause à chaque coup lourd donne du poids aux frappes.")
 	_check(v, "Afficher les FPS", "interface", "show_fps")
+	_check(v, "Afficher la boussole d'objectif", "interface", "compass", "Dans le menu principal, une pastille te dit la prochaine chose utile à faire.")
 	_check(v, "Marqueur des clics de déplacement", "interface", "move_marker", "Un repère au sol à l'endroit où tu as cliqué pour te déplacer.")
 	_check(v, "Zone de mes attaques au sol", "interface", "attack_zone", "Montre en bleu la zone des sorts que tu lances, pour apprendre leur portée.")
 	_section(v, "Effets visuels")

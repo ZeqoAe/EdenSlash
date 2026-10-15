@@ -244,6 +244,9 @@ script avec `class_name`, lancer une fois `--import` pour mettre à jour le cach
 Intégration (passe P4, `conception/nuit_15_10/R_P4.md`) : `test_p4_flow` (hub de bout en bout, sans changer de scène),
 `test_p4_activities` (chaque activité lancée depuis le lobby, jouée, bilan, retour ; ~7 min ; `-- duel,tower` pour un
 sous-ensemble) et `test_p4_migration` (vieilles sauvegardes ; `P4_REAL_SAVES=<dossier>` charge aussi de vrais profils).
+Français (passe P10) : `test_texts_fr` signale tout mot anglais lisible par le joueur (objets, passifs, sorts, talents, cartes, trophées…) ;
+un nom d'Eden nouveau passe par `data/names_fr.json` (`tools/names_fr_build.py`, lexique `names_fr_extra5.py`, talents `names_fr_talents.py`).
+Les tests de simulation (`test_siege`…) attendent des événements, jamais des durées (`_wait` en images de physique, cartes fermées d'office).
 Plusieurs sessions dans le même dossier : lancer la suite sur une copie de `game/` avec `config/custom_user_dir_name` à part.
 
 ## IA d'entraînement (apprentissage par renforcement)

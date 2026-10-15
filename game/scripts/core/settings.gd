@@ -110,7 +110,7 @@ const DEFAULTS := {
 	"camera": {"rotate_speed": 1.0, "invert_y": false, "distance": 15.0, "shake": 1.0, "action_turn": 1.0},
 	# dev_mode : écran de test (F10), réservé aux tests
 	"interface": {"damage_numbers": "all", "hit_stop": true, "show_fps": false, "move_marker": true, "attack_zone": false, "dev_mode": false,
-		"tower_unlock_all": true, "perfect_hint": true, "pad_labels": "auto",
+		"tower_unlock_all": true, "perfect_hint": true, "pad_labels": "auto", "compass": true,
 		"fx_spells": "all", "fx_auras": "all", "fx_particles": "all", "fx_intensity": 1.0},
 }
 
@@ -317,6 +317,11 @@ func hold_chain() -> bool:
 ## Anneau bleu bref à chaque impact de sort : c'est le moment de l'annulation parfaite.
 func perfect_hint() -> bool:
 	return bool(get_v("interface", "perfect_hint"))
+
+
+## La boussole d'objectif du menu principal (Compass) : le conseil du moment.
+func show_compass() -> bool:
+	return bool(get_v("interface", "compass"))
 
 
 ## Choix des cartes automatique : nouveau sort tant qu'une case est libre, sinon la plus rare.

@@ -409,6 +409,22 @@ def main():
     for n in items:
         items[n] = EX.ITEMS.get(n) or translate_item(n)
     out["items"] = items
+    # talents (arbre de talents du héros) : noms de data/talents.json, traduits par names_fr_talents.py
+    import names_fr_talents as TAL  # noqa: E402
+    ttab = TAL.table()
+    talents = {}
+    missing = []
+    for cid, tree in json.loads((DATA / "talents.json").read_text(encoding="utf-8")).items():
+        for t in tree.get("talents", {}).values():
+            n = t["name"].strip()
+            fr = ttab.get(n.lower())
+            if fr is None:
+                missing.append(n)
+                fr = translate_item(n)
+            talents[n] = fr
+    out["talents"] = talents
+    if missing:
+        print("talents sans traduction :", sorted(set(missing)))
     if report and "--items" in sys.argv:
         for w, n in sorted(UNKNOWN.items(), key=lambda x: -x[1]):
             print(w, n)

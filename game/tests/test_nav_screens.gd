@@ -58,6 +58,12 @@ func _ready() -> void:
 	await probe("lobby : menu de gauche")
 	check("lobby : la boussole montre un conseil cliquable", lobby._compass.visible and lobby._compass.text != "" and not lobby._compass_go.is_empty())
 	check("lobby : la boussole est un contrôle atteignable à la manette", UiNav.candidates().has(lobby._compass))
+	# P10 : l'option « Afficher la boussole d'objectif » (activée par défaut) la masque aussitôt
+	check("réglage « boussole » activé par défaut", Settings.show_compass())
+	Settings.set_v("interface", "compass", false)
+	check("boussole masquée par le réglage, et plus un contrôle de navigation", not lobby._compass.visible and not UiNav.candidates().has(lobby._compass))
+	Settings.set_v("interface", "compass", true)
+	check("boussole de retour quand le réglage est remis", lobby._compass.visible and lobby._compass.text != "")
 	# P8 : petites cartes d'information : au-dessus de tout, navigables, B les ferme sans perdre le cadre
 	var prev_ctl: Control = lobby._menu["play"]
 	UiNav.cursor = prev_ctl

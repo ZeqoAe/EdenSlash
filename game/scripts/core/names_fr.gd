@@ -1,6 +1,6 @@
 class_name NamesFr
 extends RefCounted
-## Noms français des objets, monstres, zones, panoplies et apparences d'Eden.
+## Noms français des objets, monstres, zones, panoplies, apparences et talents d'Eden.
 ## Table : res://data/names_fr.json (anglais exact -> français), générée par tools/names_fr_build.py
 ## et retouchable à la main (section « overrides », conservée à chaque génération).
 ## Appliquée UNE fois, au chargement des données (GameData._ready -> apply) : les dictionnaires
@@ -90,3 +90,9 @@ static func apply(gd: Node) -> void:
 			s["name"] = lookup("sets", String(s.get("name", "")))
 	_rename(gd.cosmetics, "cosmetics")
 	_rename(gd.collection, "collection")
+	# talents des arbres de héros (data/talents.json) : « Katana Specialization » -> « Spécialisation katana »
+	for cid in gd.talents:
+		for t: Dictionary in (gd.talents[cid].get("talents", {}) as Dictionary).values():
+			if not t.has("name_en"):
+				t["name_en"] = String(t.get("name", ""))
+				t["name"] = lookup("talents", String(t.name_en).strip_edges())

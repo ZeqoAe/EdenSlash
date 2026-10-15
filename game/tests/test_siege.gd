@@ -4,6 +4,7 @@ extends Node
 ## godot --headless --path game res://tests/test_siege.tscn
 
 var fails := 0
+var _world: Node  # la partie en cours : _wait() y ferme toute carte qui s'ouvre (niveau gagné…) pour que la partie ne reste pas en pause
 
 
 func check(label: String, ok: bool) -> void:
@@ -135,13 +136,13 @@ func _launch(diff: int) -> Node:
 	Profile.records["epochs_cleared"] = 2
 	Tower.start_siege("warrior", _zone(), diff, ["cleric", "knight"])
 	var world: Node = load("res://scenes/world.tscn").instantiate()
+	_world = world
 	get_tree().root.add_child.call_deferred(world)
-	await get_tree().create_timer(2.0).timeout
-	await _wait(func(): return world.director != null and world.director.tower != null and world.cards != null, 40.0)
-	await get_tree().create_timer(1.0).timeout
+	await _wait(func(): return world.is_inside_tree() and world.director != null and world.director.tower != null and world.cards != null and world.player != null, 40.0)
 	var d: RunDirector = world.director
 	var player: Player = world.player
 	player.immortal = true  # les vagues ne doivent pas nous tuer pendant le test
+	await _wait(func(): return world.cards.is_open(), 5.0)  # le choix de départ, s'il y en a un
 	world.cards._queue.clear()
 	world.cards._show_next()  # ferme le choix de départ (dépause)
 	var td: SiegeDirector = d.tower
@@ -166,11 +167,30 @@ func _drive(world: Node, until: Callable, frames := 7000) -> void:
 		await get_tree().physics_frame
 
 
-## Attend (au plus [param secs] s de jeu) que [param cond] soit vraie : le test ne dépend pas de la vitesse de la machine.
+## Attend (au plus [param secs] s de jeu, comptées en images de physique : le test ne dépend pas de la vitesse de la machine)
+## que [param cond] soit vraie. Une carte qui s'ouvre pendant l'attente (niveau gagné en tuant un rival) est prise aussitôt :
+## sinon la partie reste en pause et la condition n'arrive jamais.
 func _wait(cond: Callable, secs := 10.0) -> void:
 	var t := 0.0
 	while t < secs and not cond.call():
 		t += get_physics_process_delta_time()
+		_close_cards()
+		await get_tree().physics_frame
+
+
+func _close_cards() -> void:
+	if is_instance_valid(_world) and _world.get("cards") != null and _world.cards.is_open():
+		_world.cards._choose(0)
+
+
+## Achève [param c] : un coup à 1 PV, répété à chaque image jusqu'à la mort (les rivaux IA se soignent ou s'esquivent).
+func _kill(c: Combatant, killer: Combatant) -> void:
+	for _i in 600:
+		if c.is_dead:
+			return
+		c.hp = 1.0
+		c.take_damage(1000.0, killer)
+		_close_cards()
 		await get_tree().physics_frame
 
 
@@ -213,10 +233,11 @@ func _test_full_game_won() -> void:
 	player.immortal = true
 	# les deux alliés tombent : victoire
 	for a in td._allies:
-		a.hp = 1.0
-		a.take_damage(1000.0, player)
+		await _kill(a, player)
 	await _wait(func(): return td.phase == "done")
-	check("les deux rivaux tombés : dernier debout", td.phase == "done" and Siege.outcome == "won" and not Siege.ffa)
+	check("les deux rivaux tombés : dernier debout (phase %s, issue %s, rival 1 %s, rival 2 %s, joueur %s)" % [td.phase, Siege.outcome,
+		"mort" if td._allies[0].is_dead else "debout", "mort" if td._allies[1].is_dead else "debout", "mort" if player.is_dead else "debout"],
+		td.phase == "done" and Siege.outcome == "won" and not Siege.ffa)
 	await _wait(func(): return not Tower.siege, 8.0)
 	var legend := Profile.reward_chests.filter(func(c): return c.type == "look_legend")
 	check("bilan : un coffre d'apparence légendaire dans les coffres, titre gagné", legend.size() == 1 and Siege.TITLE in Profile.extra_titles)
@@ -259,8 +280,7 @@ func _test_eliminated() -> void:
 	td._ffa_t = Siege.TRUCE + 0.1
 	await _wait(func(): return td.phase == "ffa")
 	player.immortal = false
-	player.hp = 1.0
-	player.take_damage(1e9, td._allies[0])
+	await _kill(player, td._allies[0])
 	await _wait(func(): return td.phase == "done")
 	check("joueur éliminé en chacun pour soi : classé 3e, partie finie", Siege.outcome == "eliminated" and Siege.rank == 3 and td.phase == "done")
 	await _wait(func(): return not Tower.siege, 8.0)

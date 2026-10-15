@@ -753,6 +753,19 @@ est dans les rapports `conception/nuit_15_10/R_E*.md` ; la passe P6 le rend lisi
 - **Pages Donjon, Siège, Ruée** : sous la difficulté choisie, la jauge de la première difficulté plus dure encore fermée par la PE.
 - Parcours de la première heure : Survie, bilan, boussole « une pièce est achetable », Armurerie, « À équiper : Héros >
   Équipement » (le dernier pas après un achat), boussole suivante. Test : `tests/test_compass.tscn`.
+- **Option** (P10) : Paramètres > Caméra et interface > « Afficher la boussole d'objectif » (`Settings.show_compass()`, activée
+  par défaut) ; désactivée, la pastille disparaît du lobby (la ligne « Ta quête » des bilans reste).
+
+## Tout le jeu en français (passe P10, 0.1.190)
+
+Aucun texte lisible ne doit rester en anglais. Les noms d'Eden passent par une seule table (`data/names_fr.json`, `NamesFr.apply`,
+générée par `tools/names_fr_build.py`, ids inchangés, nom d'origine dans `name_en`) : équipement, panoplies, monstres, zones,
+apparences, collection et, depuis P10, **talents** (section `talents`, lexique à la main dans `tools/names_fr_talents.py`).
+- **Passif d'une pièce d'Eden** : seul l'effet est écrit (« ✶ Passif : à l'impact, 10 % de chances : Puissance »). Son nom d'origine
+  était un libellé anglais sans intérêt (souvent le nom de la pièce) ; le passif d'un trophée de la run garde son nom français.
+- **Test** : `tests/test_texts_fr.tscn` parcourt les cartes des 5 947 pièces, panoplies, trophées, boons, cartes de classe, succès, titres,
+  sorts, certificats, talents, monstres, zones et toutes les constantes de texte des scripts, et signale les mots anglais courants
+  (liste de contrôle `ENGLISH`). Un nouveau texte d'Eden à afficher : le passer par la table, relancer ce test.
 
 ## Plafond de niveau par zone
 
