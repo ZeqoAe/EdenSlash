@@ -12,6 +12,10 @@ const ROWS := [["adventure", "Aventure"], ["challenge", "Défis"], ["versus", "A
 const LIST := [
 	{"id": "survival", "row": "adventure", "group": "pve", "name": "Survie", "sub": "Horde, coffres et boss", "gain": "Maîtrise, insignes, pièces", "gives": ["piece", "mastery", "insignia", "stars"],
 		"desc": "Explore la carte, tiens face à la horde, bats le boss."},
+	# Survivant (conception/survivor) : sans verrou ni lien avec la progression ; visible en mode dev tant que le
+	# mode n'est pas fini (Survivor.READY, voir hidden)
+	{"id": "survivor", "row": "adventure", "img": "survival", "group": "pve", "name": "Survivant", "sub": "Une run, tout se gagne aux cartes", "gain": "Apparences, titres", "gives": ["look", "title"],
+		"desc": "Vingt minutes, une carte : arme, pièces et sorts se gagnent aux cartes."},
 	{"id": "dungeon", "row": "adventure", "unlock": "dungeons", "group": "pve", "name": "Donjons", "sub": "Salles, boss et alliés IA", "gain": "Panoplies, plans, cristaux", "gives": ["panoply", "plan", "crystal", "fortify"],
 		"desc": "Quatre salles, un boss."},
 	{"id": "tower", "row": "adventure", "unlock": "tower", "group": "pve", "name": "La Tour", "sub": "200 étages, une seule vie", "gain": "Cristaux, gemmes, apparences", "gives": ["crystal", "gem", "look"],
@@ -38,6 +42,11 @@ const LIST := [
 ## Activité pas encore ouverte (fil d'éveil) : grisée, avec sa condition.
 static func locked(a: Dictionary) -> bool:
 	return a.has("unlock") and not Unlocks.is_open(String(a.unlock))
+
+
+## Activité absente du menu Jouer : le Survivant tant qu'il est en chantier (hors mode dev).
+static func hidden(a: Dictionary) -> bool:
+	return String(a.get("id", "")) == "survivor" and not Survivor.visible()
 
 
 static func get_def(id: String) -> Dictionary:

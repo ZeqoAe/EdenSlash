@@ -432,6 +432,8 @@ func _choose(i: int) -> void:
 static func auto_pick(options: Array, random_cards := false) -> Dictionary:
 	if options.is_empty():
 		return {}
+	if Survivor.active and SurvivorCards.handles():
+		return SurvivorCards.auto_pick(options, random_cards)  # Survivant : ses priorités (S3)
 	var skills := options.filter(func(o): return String(o.get("type", "")) == "skill")
 	if not skills.is_empty() and Run.skills.size() < Run.MAX_SKILLS:
 		return skills[0]

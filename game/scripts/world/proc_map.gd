@@ -282,6 +282,8 @@ func _place_pois() -> void:
 		chest_boxes = SlotChests.layout(chests.size(), rng)
 		for k in chests.size():
 			chest_tiers[k] = int(SlotChests.BOXES[chest_boxes[k]].look)
+		if Survivor.active:
+			SurvivorDirector.layout_map(chest_boxes, chest_tiers, rng)  # coffres du Survivant (S4)
 	# marchands ambulants : la clairière de l'ancien village, puis deux autres
 	if not royale:
 		merchant_spots.append(Vector3(v2.x, 0, v2.y))
@@ -292,7 +294,7 @@ func _place_pois() -> void:
 			_occupied.append([p, 8.0])
 	# lieux utilisables une fois
 	for kind in STATIONS:
-		for k in (int(STATIONS[kind].count) if not royale else (4 if kind == "well" else 0)):
+		for k in (Survivor.station_count(kind, int(STATIONS[kind].count)) if not royale else (4 if kind == "well" else 0)):
 			var p := _free_point(36.0, 50.0)
 			if p != Vector2.INF:
 				stations.append({"pos": Vector3(p.x, 0, p.y), "kind": kind})
@@ -302,7 +304,7 @@ func _place_pois() -> void:
 	for k in (0 if royale else kinds.size()):
 		var p := _free_point(40.0, 55.0)
 		if p != Vector2.INF:
-			shrine_spots.append({"pos": Vector3(p.x, 0, p.y), "reward": kinds[k]})
+			shrine_spots.append({"pos": Vector3(p.x, 0, p.y), "reward": Survivor.shrine_reward(kinds[k])})
 			_occupied.append([p, 18.0])
 	for k in (0 if royale else 16):
 		var p := _free_point(36.0, 60.0)

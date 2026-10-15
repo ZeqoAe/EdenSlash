@@ -180,6 +180,8 @@ func _weapon_type() -> Dictionary:
 
 ## Type de l'arme principale : toujours celui de la classe (0.1.128).
 func _weapon_type_id() -> String:
+	if Survivor.active and not foe and not built:
+		return Survivor.weapon_type()  # Survivant : l'arme portée, de n'importe quel type
 	return Items.default_weapon_type(class_id)
 
 
@@ -264,10 +266,11 @@ func recalc_stats() -> void:
 	var own := foe or built  # héros ennemi ou profil type : ses propres stats
 	var bare := _bare()  # duel à l'arme : ni pièces ni bonus de méta, seulement l'arme de la classe
 	var eq := _foe_equipment_stats() if own else ({} if bare else Profile.equipment_stats())
-	var arc := {} if own or bare else Archive.bonus()  # bonus permanents de l'archive
+	var sv := Survivor.active and not own  # Survivant : rien du compte (ni archive, ni aura)
+	var arc := {} if own or bare or sv else Archive.bonus()  # bonus permanents de l'archive
 	for k in arc:
 		eq[k] = float(eq.get(k, 0.0)) + float(arc[k])
-	var aura := {} if own or bare else Profile.aura_stats(class_id)  # auras portées (pierres étoilées, pierres de lune)
+	var aura := {} if own or bare or sv else Profile.aura_stats(class_id)  # auras portées (pierres étoilées, pierres de lune)
 	for k in aura:
 		eq[k] = float(eq.get(k, 0.0)) + float(aura[k])
 	var ps := foe_extra.duplicate() if own else ({} if bare else Run.passive_stats())
@@ -401,10 +404,12 @@ func gain_xp(amount: int) -> void:
 	if is_dead:
 		return
 	if Run.active and Run.survival and not foe and not Royale.active:
-		amount = roundi(float(amount) * Epochs.xp_boost(level))
+		amount = roundi(float(amount) * (Survivor.xp_mult(level) if Survivor.active else Epochs.xp_boost(level)))
 	xp += amount
 	# Survie : niveau plafonné sur chaque map (Epochs.CAPS), l'expérience en trop attend la suivante
 	var cap := Epochs.cap(Run.stage) if Run.active and Run.survival and not foe else 9999
+	if Survivor.active and not foe:
+		cap = Survivor.level_cap(cap)
 	if Royale.active and not foe:
 		cap = Royale.LEVEL_CAP
 	if level >= cap:
@@ -953,6 +958,8 @@ func _start_attack(aim: Vector3) -> void:
 		action["target"] = global_position + to_aim.limit_length(float(action.range))
 	var anims: Array = s.get("anims", ["attack01"])
 	var anim_name := String(anims[_swing % anims.size()])
+	if Survivor.active and not foe and not has_anim(anim_name):
+		anim_name = Survivor.fallback_anim(class_id, _swing)  # arme d'un autre type : gestes de l'arme de la classe
 	_swing += 1
 	var rate := cast_speed if WeaponAttacks.rate_stat(s) == "cast_speed" else atk_speed
 	rate *= 1.0 + float(mods.get("speed", 0.0))

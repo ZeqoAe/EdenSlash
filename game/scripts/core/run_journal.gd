@@ -34,6 +34,8 @@ static func path() -> String:
 
 
 static func mode_name() -> String:
+	if Run.survivor:
+		return "survivor"  # (la dernière carte est close après Run.active : Modes.current() n'y voit plus le mode)
 	var m := Modes.current()
 	return "run" if m == "menu" else m
 
@@ -163,6 +165,8 @@ static func end_map(result: String, extra := {}) -> void:
 		"counters": counters.duplicate(),
 	}
 	line.merge(ctx, true)
+	if Run.survivor:
+		line.merge(SurvivorRewards.journal(), true)  # zone, palier, puis cartes par famille, pièces… (S6)
 	line.merge(extra, true)
 	last_line = line
 	var f := FileAccess.open(path(), FileAccess.READ_WRITE if FileAccess.file_exists(path()) else FileAccess.WRITE)

@@ -178,6 +178,8 @@ func roll_offers() -> Array:
 		var item := Items.generate(director.loot_level(lvl + 1) if director else lvl, 0.4, "", Run.class_id, 2)
 		out.append({"item": item, "price": Items.buy_price(item)})
 	out.append(_supply_offer(Craft.random_loot(lv, 1, director.gem_level(lvl) if director else -1), 1, 60 + 8 * lvl))
+	if Survivor.active:
+		out = out.filter(func(o): return not o.has("bag"))  # Survivant : ni fournitures ni équipement (cartes et clé)
 	return out
 
 

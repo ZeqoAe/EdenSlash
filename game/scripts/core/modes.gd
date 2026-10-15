@@ -3,8 +3,8 @@ extends RefCounted
 ## Mode de jeu en cours (conception, lot 4) : une seule source, lue par les règles (ModeRules), le
 ## journal de run et, peu à peu, par les tests dispersés `Tower.active` / `Duel.active` /
 ## `Training.active`. Ces drapeaux restent les vrais interrupteurs (le mode est déduit d'eux) : rien
-## ne peut donc se désynchroniser. Modes : menu, survival (Survie), run (ancienne run de farm),
-## tower, duel, training. Plus tard : dungeon, challenge, arena.
+## ne peut donc se désynchroniser. Modes : menu, survival (Survie), survivor (Survivant), run (ancienne
+## run de farm), tower, dungeon, duel, royale, training.
 
 ## Mode imposé (essais d'équilibrage, tests) : prioritaire sur les drapeaux.
 static var forced := ""
@@ -22,6 +22,8 @@ static func current() -> String:
 	if Training.active:
 		return "training"
 	if Run.active:
+		if Survivor.active:
+			return "survivor"  # (garde Run.survival : le socle de la Survie sert de base)
 		return "survival" if Run.survival else "run"
 	return "menu"
 

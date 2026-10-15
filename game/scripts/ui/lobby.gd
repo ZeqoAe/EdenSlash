@@ -1405,6 +1405,8 @@ func _show_menu(id: String) -> void:
 			_menu_play()
 		"survival", "zones":
 			_menu_survival()
+		"survivor":
+			_menu_survivor()
 		"training":
 			_menu_training()
 		"dungeon":
@@ -1455,7 +1457,7 @@ func _menu_play() -> void:
 		grid.add_theme_constant_override("h_separation", 10)
 		grid.add_theme_constant_override("v_separation", 10)
 		_sub.add_child(grid)
-		var cards := Activities.LIST.filter(func(x): return x.row == row[0] and not x.get("soon", false))  # les « Bientôt » restent cachés
+		var cards := Activities.LIST.filter(func(x): return x.row == row[0] and not x.get("soon", false) and not Activities.hidden(x))  # les « Bientôt » restent cachés
 		for a in cards:
 			grid.add_child(_activity_card(a, Vector2(230, 112)))
 		for _k in (3 - cards.size() % 3) % 3:
@@ -1545,6 +1547,41 @@ func _menu_survival() -> void:
 	var go := MenuWidgets.gold_button("Lancer la run", 22, Vector2(0, 56))
 	go.pressed.connect(_launch)
 	_pin(go)
+
+
+## Survivant : une phrase, la zone (décor, monstres et boss ; aucune n'est plus dure), puis Lancer. Le palier vient
+## au lot S8. Aucune condition : le mode ne dépend pas de la progression.
+var _sv_zone := ""
+
+
+func _menu_survivor() -> void:
+	_activity_head("survivor")
+	_activity_desc("survivor")
+	_section("Zone")
+	var zones := Survivor.zones()
+	if not _sv_zone in zones:
+		_sv_zone = Profile.selected_zone if Profile.selected_zone in zones else String(zones[0])
+	for z in zones:
+		var zd := GameData.zone(String(z))
+		var boss := String(GameData.monster(int(zd.get("dungeon", {}).get("boss", 0))).get("name", ""))
+		var zid := String(z)
+		var r := _row(String(zd.get("name", zid)), "Boss : %s" % boss if boss != "" else "", "pin", func():
+			_sv_zone = zid
+			_show_menu("survivor"), 56.0)
+		r.mark(zid == _sv_zone)
+	var go := MenuWidgets.gold_button("Lancer le Survivant", 22, Vector2(0, 56))
+	go.pressed.connect(_start_survivor)
+	_pin(go)
+
+
+func _start_survivor() -> void:
+	if _launching:
+		return
+	_launching = true
+	if backdrop:
+		backdrop.release()
+	Survivor.start(Profile.selected_class, _sv_zone, 1)
+	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
 ## Zone d'entraînement : description, puis Entrer.

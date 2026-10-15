@@ -112,6 +112,8 @@ func _ready() -> void:
 	await probe("lobby : Jouer")
 	lobby._show_menu("survival")
 	await probe("lobby : Survie")
+	lobby._show_menu("survivor")
+	await probe("lobby : Survivant (zones, Lancer)")
 	lobby._show_menu("duel")
 	await probe("lobby : Duel")
 	lobby._show_menu("")

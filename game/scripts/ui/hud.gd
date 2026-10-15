@@ -312,9 +312,9 @@ func _pad_card_input(event: InputEvent) -> bool:
 
 
 ## Survie seulement : les Premiers pas et les fiches de découverte parlent de la Survie (pas du Duel, de la
-## Tour, du Battle royale ni de l'entraînement, qui peuvent pourtant garder le drapeau de la Survie).
+## Tour, du Battle royale, du Survivant ni de l'entraînement, qui peuvent pourtant garder le drapeau de la Survie).
 func _survival_mode() -> bool:
-	return Run.survival and not Duel.active and not Tower.active and not Royale.active and not Training.active
+	return Run.survival and not Duel.active and not Tower.active and not Royale.active and not Training.active and not Survivor.active
 
 
 func _update_tutorial() -> void:

@@ -71,6 +71,9 @@ var start_zone := ""  # zone choisie au lobby (première étape)
 ## Survie (DESIGN.md, « Boucle de jeu et Survie ») : époque de 3 maps, départ avec l'équipement du hub,
 ## coffres d'emplacement ; false pour la Tour, le Duel, l'entraînement.
 var survival := false
+## Survivant (Survivor) : vrai de son lancement jusqu'au lancement suivant (le bilan et « Rejouer » le lisent après la
+## fin de la run, quand Survivor.active est déjà retombé). Un Survivant garde aussi `survival` (socle de la Survie).
+var survivor := false
 var epoch := 1
 ## Pièces choisies dans les coffres de la run (Eden id) : achetables au hub ensuite.
 var seen_items: Array = []
@@ -109,6 +112,8 @@ const ANVIL_SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "bac
 
 
 func start(cid: String) -> void:
+	Survivor.reset()  # tout lancement repart sans Survivant (Survivor.start le remet ensuite)
+	survivor = false
 	active = true
 	class_id = cid
 	skills.clear()
@@ -192,6 +197,12 @@ func finish(res: String) -> void:
 	result = res
 	var map_min := RunJournal.map_minutes()  # temps de la carte en cours (avant que le journal la close)
 	RunJournal.end_map(res)
+	if survivor:
+		# Survivant : aucun lien avec la progression du compte (ni maîtrise, ni insignes, ni records) ; le hub est
+		# remis tel qu'au départ, puis ses seules récompenses (SurvivorRewards, lot S6)
+		Survivor.finish(res, mini(kills, KILL_CAP_PER_MAP))
+		Profile.save_profile()
+		return
 	Profile.record_max("best_combo", combo_best)
 	Profile.runs_done += 1
 	var counted := mini(kills, KILL_CAP_PER_MAP * maxi(stage, 1))
@@ -297,6 +308,8 @@ func pick_up(item: Dictionary) -> bool:
 ## Type de l'arme principale : toujours celui de la classe (0.1.128) ; l'arme secondaire,
 ## trouvée en jeu, peut être de n'importe quel type.
 func weapon_type() -> String:
+	if Survivor.active:
+		return Survivor.weapon_type()  # Survivant : l'arme portée, de n'importe quel type
 	return Items.default_weapon_type(class_id)
 
 
@@ -389,6 +402,8 @@ func skill_card_mod(skill_id: int, key: String) -> float:
 
 
 func rerolls_left() -> int:
+	if Survivor.active and SurvivorCards.handles():
+		return SurvivorCards.rerolls_left()
 	return maxi(0, 1 + int(passive_stats().get("rerolls", 0)) - rerolls_used)
 
 
@@ -641,6 +656,8 @@ func _at_cap(p: Dictionary) -> bool:
 
 
 func roll_cards(n := 3, skills_only := false, kind := "") -> Array:
+	if Survivor.active and SurvivorCards.handles():
+		return SurvivorCards.roll(n, "skill" if skills_only else kind)
 	var pool: Array = []
 	var owned := all_skills().map(func(s): return int(s.id))
 	if skills.size() < MAX_SKILLS:
@@ -785,6 +802,10 @@ func _describe_card(c: Dictionary) -> Dictionary:
 
 
 func apply_card(card: Dictionary) -> void:
+	if Survivor.owns(card):
+		Survivor.apply_card(card)  # cartes « sv_… » du Survivant
+		changed.emit()
+		return
 	Tutorial.on_card(card)
 	match card.type:
 		"skill":
@@ -990,6 +1011,8 @@ func fill_from_preset() -> void:
 
 ## Bannit la carte pour la run ; renvoie une carte de remplacement (ou {}).
 func ban_card(card: Dictionary, shown: Array) -> Dictionary:
+	if Survivor.active and SurvivorCards.handles():
+		return SurvivorCards.ban(card, shown)
 	if bans_used >= Cards.BANS_PER_RUN or String(card.get("type", "")) in ["trophy", "gear", "anvil", "scroll"]:
 		return {}
 	bans_used += 1

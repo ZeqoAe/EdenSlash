@@ -120,6 +120,9 @@ récompenses) et `core/royale_director.gd` (carte `ProcMap.generate_royale`, 7 `
 coffres du joueur, anneau visible). Le « chacun pour soi » est général : `Combatant.ffa_id` / `set_ffa()` / `clear_ffa()` + groupe « ffa » (le Siège s'en sert aussi).
 Activité Battle royale dans JcJ (verrou `royale` : Ligue Argent). Test : `tests/test_royale.tscn` ; partie complète en pilote automatique :
 `world.tscn -- --royale --autoplay` (ligne de suivi `[royale]` toutes les 15 s, `--royale-diff=0..3`).
+Survivant (en chantier, lots S1-S8 de `conception/survivor/` : `SPEC.md` corrigé par `DECISIONS_JOUEUR.md` qui prime) : socle S1 (0.1.194)
+`core/survivor.gd` (état, `Survivor.start`, hub jamais modifié : `HUB_KEYS` + `hub_save`) et squelettes `survivor_{pool,gear,cards,director,rewards}.gd`
+branchés par des crochets `Survivor.active` / `sv` (`run_director.gd`) ; activité visible en mode dev (`Survivor.READY`) ; `world.tscn -- --survivor` ; test `test_sv1`.
 Matières des activités (0.1.165, lot E1 de la nuit du 15/10, `DESIGN.md` « Matières et cristaux des activités ») : `core/activity_loot.gd`
 (cristaux et coffres de forge / du joaillier au niveau des Donjons, de la Ruée, du Siège et de la Tour, avec `focus` des coffres dans
 `Rewards`), `Forge.GOLD_PER_CRYSTAL` = 125, compteur d'Armurerie calculé (`Completion.armory_total`), plus de coffre de trophées. Test : `test_loot`.

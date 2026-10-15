@@ -131,6 +131,15 @@ func _ready() -> void:
 				if arg.begins_with("--royale-diff="):
 					Royale.difficulty = int(arg.trim_prefix("--royale-diff="))
 			Royale.start(Profile.selected_class)
+		elif "--survivor" in OS.get_cmdline_user_args():
+			var sv_palier := 1  # test : un Survivant (--palier=1..5, zone choisie au lobby ou --sv-zone=…)
+			var sv_zone := Profile.selected_zone
+			for arg in OS.get_cmdline_user_args():
+				if arg.begins_with("--palier="):
+					sv_palier = int(arg.trim_prefix("--palier="))
+				elif arg.begins_with("--sv-zone="):
+					sv_zone = arg.trim_prefix("--sv-zone=")
+			Survivor.start(Profile.selected_class, sv_zone, sv_palier)
 		elif "--tower" in OS.get_cmdline_user_args():
 			var diff := 1  # test : la Tour (--tower-diff=0..3, --tower-floor=N)
 			var from := 1
@@ -213,7 +222,7 @@ func _ready() -> void:
 			_print_report()
 			get_tree().quit())
 	var zone_bonus := int(GameData.zone(Run.zone_id).get("level_bonus", 0))
-	if zone_bonus > 0 and player.level < 1 + zone_bonus and not Royale.active:
+	if zone_bonus > 0 and player.level < 1 + zone_bonus and not Royale.active and not Survivor.active:  # (Survivant : niveau 1 partout)
 		player.level = 1 + zone_bonus
 		player.recalc_stats()
 		player.hp = player.max_hp
@@ -245,6 +254,8 @@ func _ready() -> void:
 	elif Tower.active:
 		# la Tour : une seule carte de départ, de rareté aléatoire
 		_offer("Ta carte de départ", [Run.roll_cards(6).pick_random()])  # Tour, donjons, Siège, Ruée
+	elif Survivor.active:
+		SurvivorCards.start_offers(self)  # Survivant : une compétence ou une arme (S3)
 	# première compétence : choix parmi 3 cartes de compétence
 	elif Run.skills.is_empty():
 		var n := int(Run.class_data().get("start_skills", 3))

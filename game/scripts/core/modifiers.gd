@@ -4,7 +4,8 @@ extends RefCounted
 ## Défi du jour et les étages-épreuves de la Tour. Chaque modificateur change des clés d'un profil de
 ## ModeRules : "mul" multiplie, "add" ajoute, "set" remplace. `cost` : difficulté ajoutée (pour les
 ## récompenses par rang). Les clés dont le consommateur n'existe pas encore (élites, enclume…) seront
-## lues quand leur mode arrivera.
+## lues quand leur mode arrivera. Le Survivant (profil « survivor ») lit ses règles par Survivor.rule : un
+## modificateur sur l'une de ses clés (resurrections, boss_hp…) s'y applique sans autre code.
 
 const LIST := {
 	"heal_half": {"text": "Soins reçus divisés par deux", "cost": 1, "effect": {"heal_mult": ["mul", 0.5]}},

@@ -71,7 +71,26 @@ const ROYALE := {
 	"hit_cap": 0.18, "burst_cap": 0.4, "burst_window": 2.0, "burst_excess": 0.3,
 	"caps": PvpCaps.CAPS,
 }
+## Survivant (conception/survivor/SPEC.md, corrigé par DECISIONS_JOUEUR.md) : valeurs de départ, recalées par mesure
+## au lot S7. Pas de règle de duel ici (aucun combat entre héros) : ce profil sert aux familles « cartes », « héros »,
+## « monstres » et « boss » du mode. Aucune clé de gains de progression (le mode n'en donne pas).
+const SURVIVOR := {
+	# cartes (§2.2) : poids des familles, pitié, relances, bannissements, « Passer »
+	"w_piece_new": 1.0, "w_piece_up": 0.8, "w_weapon_up": 2.5, "w_spell_new": 3.0, "w_spell_up": 1.1, "w_evolution": 4.0,
+	"pity_after": 6, "luck_per_min": 0.02, "base_rerolls": 2, "bans": 3, "skip_gold_base": 15, "skip_gold_per_level": 3,
+	# pièces (DECISIONS §1) : qualité 100 à 120 %, jet parfait = 120 %
+	"quality_min": 1.0, "perfect_quality": 1.2,
+	# héros (§8.1) : expérience ×2 au niveau 1, ×1,15 à partir du niveau 10 ; une résurrection
+	"xp_start": 2.0, "xp_end": 1.15, "xp_until": 10, "resurrections": 1,
+	# monstres (§8.2) : PV hp0 × hp_growth^minutes, dégâts atk0 × atk_growth^minutes, vivants au plus
+	"hp0": 0.5, "hp_growth": 1.12, "atk0": 0.5, "atk_growth": 1.07, "alive_start": 18, "alive_end": 110,
+	# gardiens (5 / 10 / 15 min) et boss final (§8.2-8.3) : PV fixes, rage du boss après boss_rage_at s
+	"guardian_hp": [40000.0, 150000.0, 450000.0], "boss_hp": 1500000.0, "boss_rage_at": 240.0,
+	# paliers I à V (§8.5, lot S8) : monstres, gardiens et boss ×
+	"palier_mult": [1.0, 1.5, 2.2, 3.2, 4.5],
+}
 const PROFILES := {
+	"survivor": SURVIVOR,
 	"royale": ROYALE,
 	"siege": PVP_SIEGE,
 	"duel": PVP,

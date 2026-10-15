@@ -500,6 +500,25 @@ l'époque II avec un équipement d'époque I à +10.
 - **Tour** : 3 / 4 / 5 / 6 cristaux par étage (avant 1 à 2,5, `ActivityLoot.TOWER_PER_FLOOR`) : entre l'époque I gagnée et les
   Donjons (époque II), c'est la seule source de cristaux (≈ 120 / h en Normal, sous un Donjon Normal à 180).
 
+## Survivant (mode à part, en chantier : lots S1 à S8 de `conception/survivor/`)
+
+Spécification : `conception/survivor/SPEC.md`, corrigée par `DECISIONS_JOUEUR.md` (qui prime). Une run pure façon Vampire
+Survivors : 20 minutes sur une seule carte, boss à 20:00, tout le build (arme, pièces, sorts) se gagne aux cartes de niveau.
+Mode « pour s'amuser » : **aucun lien avec la progression du compte** (ni équipement du hub, ni maîtrise, ni insignes, ni
+découvertes, ni verrou) ; seules les classes et les apparences débloquées comptent ; récompense de fin : des coffres
+d'apparence (lot S6). Socle (S1, 0.1.194) :
+- Lancement (`Survivor.start`) : héros niveau 1 sans arme ni pièce (seulement les potions de départ), zone au choix parmi
+  les 8 décors de la Survie (aucune n'est plus dure), époque I carte 1 pour les règles communes ; `Run.survival` reste vrai
+  (socle de la Survie), `Run.survivor` et `Survivor.active` disent le mode (`Modes.current() == "survivor"`).
+- **Le hub n'est jamais modifié** : équipement copié puis remis (comme la Survie), réserve de fournitures laissée au hub, et
+  toute la progression du compte (`Survivor.HUB_KEYS`) photographiée au départ, écrite telle quelle par les sauvegardes faites
+  en pleine run, remise à la fin (avant les récompenses du mode).
+- Déjà propre au mode : pas de rage de carte, une seule carte (le boss vaincu termine la run), ni autel du scribe ni autel de
+  la fortune, sanctuaires « trophée » changés en cartes, marchand sans fournitures, ni archive ni auras dans les stats,
+  expérience ×2 au niveau 1 → ×1,15 au niveau 10, puissance des pièces « Survivant » = niveau du héros (90 au plus).
+- Règles chiffrées : profil `survivor` de `ModeRules` (modifiable en mode dev). Visible au menu Jouer en mode dev seulement
+  tant que `Survivor.READY` est faux (passé à vrai à la fin de S6).
+
 ## Étapes et sources (refonte 0.1.91, façon Megabonk)
 
 - **Une run = 3 étapes** : la zone choisie, puis une zone à la hauteur du héros (au moins la suivante :

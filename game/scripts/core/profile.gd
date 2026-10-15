@@ -348,6 +348,7 @@ func save_profile() -> void:
 		"seen_gear": seen_gear, "starter_done": starter_done, "insignia": insignia, "wheel": wheel, "unlocked_features": unlocked_features,
 		"new_features": new_features, "tutorial": tutorial, "contracts": contracts,
 		"achievements": achievements, "plans": plans, "pantheon": pantheon, "extra_titles": extra_titles, "title": title, "seen_trophies": seen_trophies, "weapon_legend": weapon_legend}
+	Survivor.hub_save(d)  # en plein Survivant : la progression du compte est écrite telle qu'au départ (rien de la run)
 	SafeFile.write(save_path, JSON.stringify(d))  # .tmp relu puis renommé, ancien fichier gardé en .bak
 	changed.emit()
 

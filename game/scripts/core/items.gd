@@ -513,6 +513,9 @@ static func _level_k(level: int) -> float:
 ## Niveau de puissance d'un objet (niveau de run où il est tombé) : règle ses stats,
 ## ses coûts et sa valeur. Le niveau affiché ("level") est celui d'Eden.
 static func power_level(item: Dictionary) -> int:
+	if item.get("sv", false):
+		# pièce du Survivant : un seul niveau, celui du héros de la run, plafonné à 90 (hors run : 90)
+		return clampi(Run.hero_level if Run.active and Run.hero_level > 0 else Survivor.MAX_ITEM_LEVEL, 1, Survivor.MAX_ITEM_LEVEL)
 	var cap := power_cap(item)
 	return mini(Run.hero_level, cap) if Run.active and Run.hero_level > 0 else cap
 

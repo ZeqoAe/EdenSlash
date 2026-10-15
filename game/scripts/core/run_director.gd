@@ -117,6 +117,7 @@ var orbs: XpOrbs  # orbes d'expérience au sol
 var tower: TowerDirector  # mode Tour : étages successifs (Tower)
 var duel: DuelDirector  # mode Duel : manches contre un héros (Duel)
 var royale: RoyaleDirector  # mode Battle royale : huit héros, un anneau (Royale)
+var sv: SurvivorDirector  # mode Survivant : 20 minutes, une carte, tout aux cartes (Survivor) ; null sinon
 
 
 func start(p: Player) -> void:
@@ -155,6 +156,8 @@ func start(p: Player) -> void:
 		add_child(tower)
 		tower.setup(self)
 		return
+	if Survivor.active:
+		sv = SurvivorDirector.new(self)
 	map = world.new_run_map(_seed)
 	_place_player(map.start)
 	if map.breakables:
@@ -176,7 +179,9 @@ func start(p: Player) -> void:
 		return
 	_refresh_chest_labels()
 	GiantAltar.attach(self)  # mesures : --giants=N
-	if Run.survival:
+	if sv and sv.start_message() != "":
+		message.emit(sv.start_message(), 4.5)
+	elif Run.survival:
 		message.emit("%s · %s\nTu pars avec ton équipement du hub : les coffres de la carte le remplacent le temps de la run, puis trouve le donjon" % [zone.name, Epochs.get_def(Run.epoch).name], 4.5)
 	else:
 		message.emit("%s\nCasse tout, ouvre les coffres, forge ton équipement, puis trouve le donjon" % zone.name, 3.5)
@@ -210,6 +215,8 @@ func _journal_context() -> Dictionary:
 
 
 func time_left() -> float:
+	if sv:
+		return maxf(0.0, Survivor.RUN_TIME - time)  # Survivant : le boss à 20:00, pas de rage
 	return maxf(0.0, RUN_TIME - time)
 
 
@@ -248,14 +255,17 @@ func _process(delta: float) -> void:
 		return
 	time += delta
 	_update_extraction(delta)
-	if state == "explore" and time >= RUN_TIME:
-		_start_rage()
+	if sv:
+		sv.update(delta)
+	elif state == "explore" and time >= RUN_TIME:
+		_start_rage()  # (pas de rage de carte en Survivant : le boss arrive à 20:00)
 	if state == "rage" and rage_tier() != _rage_tier:
 		_raise_rage(rage_tier())
 	match state:
 		"explore", "rage":
 			_update_discovery()
-			_update_spawns(delta)
+			if sv == null or not sv.update_spawns(delta):
+				_update_spawns(delta)
 			_update_shrines(delta)
 			_update_merchants(delta)
 			_update_breakables(delta)
@@ -278,8 +288,10 @@ func _objective_text() -> String:
 		return who + ("\n" + boss_rage_text() if Run.survival else "")
 	if state == "cleared":
 		return "Boss vaincu ! Portail vers l'étape %d/%d" % [Run.stage + 1, STAGES] if next_zone_id() != "" else "Boss vaincu !"
+	if sv and sv.objective_text() != "":
+		return sv.objective_text()
 	var t := time_left()
-	var clock := rage_text() if state == "rage" else "%02d:%02d avant la rage" % [int(t) / 60, int(t) % 60]
+	var clock := rage_text() if state == "rage" else "%02d:%02d" % [int(t) / 60, int(t) % 60] + ("" if sv else " avant la rage")
 	return "%s\nDonjon %s   ·   Sceaux %d/%d   ·   Coffres %d/%d   ·   Sanctuaires %d/%d" % [clock,
 		"✔" if dungeon_found else "?", seals, SEALS_NEEDED, chests_opened, map.chests.size(), shrines_captured, map.shrines.size()]
 
@@ -450,11 +462,14 @@ func _interact(it: Interactable) -> void:
 			ScreenFade.run(get_tree(), _next_stage.bind(String(it.get_meta("zone", ""))))
 		"dungeon":
 			# le bot de test (--boss-after) ignore les sceaux
-			if seals < SEALS_NEEDED and not (player.autoplay and time > _autoplay_dungeon_time()):
+			if sv and sv.try_enter_boss():
+				pass  # Survivant : portail du boss (S4)
+			elif seals < SEALS_NEEDED and not (player.autoplay and time > _autoplay_dungeon_time()):
 				message.emit("L'entrée est scellée : %d/%d sceaux\nLes gardiens d'élite les portent" % [seals, SEALS_NEEDED], 3.0)
 				_near = null
 				return
-			ScreenFade.run(get_tree(), _enter_arena)
+			else:
+				ScreenFade.run(get_tree(), _enter_arena)
 		_:
 			if it.kind == "merchant":
 				Tutorial.event("merchant")
@@ -466,6 +481,8 @@ func _interact(it: Interactable) -> void:
 # --- monstres --------------------------------------------------------------------------
 ## Niveau des monstres : monte avec le temps, +3 en rage, +palier du camp.
 func _monster_level(tier: int) -> int:
+	if sv and sv.monster_level(tier) > 0:
+		return sv.monster_level(tier)  # Survivant : courbe par minute (S4)
 	# les zones suivantes : monstres de plus haut niveau (+1 par palier de zone en plus)
 	var bonus := float(zone.get("level_bonus", 0))
 	var tier_extra := float(GameData.zone_index(String(zone.get("id", "")))) * 0.5
@@ -479,6 +496,8 @@ func _monster_level(tier: int) -> int:
 
 ## Niveau maximal du butin et des monstres (hors rage) de la zone en cours.
 func max_level() -> int:
+	if sv and sv.max_level() > 0:
+		return sv.max_level()  # Survivant : 90 au plus (S4)
 	if Run.survival:
 		return Epochs.cap(Run.stage)
 	return int(zone.get("max_level", ZONE_MAX_LEVEL.get(String(zone.get("id", "")), 30)))
@@ -648,15 +667,16 @@ const ZONE_DAMAGE := [0.55, 0.8]
 func _spawn_monster(id: int, pos: Vector3, level: int, boss := false, into: Monster = null) -> Monster:
 	var m := into if into != null else Monster.new()  # [param into] : un monstre déjà créé (géant de l'autel)
 	m.configure(GameData.monster(id), boss, level)
+	var own := sv != null and sv.scale_monster(m, boss)  # Survivant : sa courbe remplace les trois blocs suivants (S4)
 	var zi := GameData.zone_index(String(zone.get("id", ""))) if not Run.survival else Run.stage - 1
-	if zi >= 0 and zi < ZONE_DAMAGE.size():
+	if zi >= 0 and zi < ZONE_DAMAGE.size() and not own:
 		m.atk *= float(ZONE_DAMAGE[zi])
-	if Run.survival:
+	if Run.survival and not own:
 		var em := Epochs.monster_mult(Run.epoch)  # époques suivantes : monstres plus coriaces
 		m.max_hp *= em * float(Modifiers.apply("mob_hp", 1.0, ModeRules.modifiers)) * (1.0 + Epochs.HEROIC_HP * Run.heroic_rank)
 		m.hp = m.max_hp
 		m.atk *= em * (1.0 + Epochs.HEROIC_ATK * Run.heroic_rank)
-	if state == "explore":
+	if state == "explore" and not own:
 		# montée en puissance sur les premières minutes de chaque carte : le joueur doit
 		# pouvoir se mettre en place avant que ça devienne punitif
 		var k := lerpf(EARLY_EASE, 1.0, clampf(time / EARLY_RAMP, 0.0, 1.0))
@@ -737,6 +757,10 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 			world._offer("Gardien vaincu ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
 	Run.add_gold(roundi((1 + m.level * KILL_GOLD * (KILL_GOLD_ELITE if m.is_elite else 1.0)) * (GREED_GOLD if greed else 1.0)),
 		"boss" if m.is_boss else ("elites" if m.is_elite else "monstres"))
+	if sv and sv.on_monster_died(m):
+		if m == _boss:
+			_on_boss_killed()
+		return  # Survivant : son butin (potions, clés, cartes ; S4)
 	# coffres de récompense (ouverts hors run, menu Coffres) : boss du donjon 100 %, élites 20 %,
 	# monstres 0,5 % ; en Survie, forge ou joaillier (l'équipement s'achète au hub)
 	var n_chests := 1 if m.is_boss else (1 if (m.is_elite and randf() < 0.2) or randf() < 0.005 else 0)
@@ -902,6 +926,8 @@ func _enter_arena() -> void:
 		_boss.max_hp = Epochs.boss_hp(Run.epoch, Run.stage) * float(Modifiers.apply("mob_hp", 1.0, ModeRules.modifiers)) \
 			* (1.0 + Epochs.HEROIC_HP * Run.heroic_rank)
 		_boss.hp = _boss.max_hp
+	if sv:
+		sv.setup_boss(_boss)  # Survivant : PV fixes du boss final, palier (S4)
 	var dungeon: Dictionary = zone.get("dungeon", {})
 	if _boss.brain:
 		_boss.brain.announce.connect(func(t): message.emit(t, 2.5))
@@ -942,7 +968,7 @@ var _boss_rage := 0
 func boss_rage_tier() -> int:
 	if state != "boss" or not Run.survival:
 		return 0
-	var at := Epochs.boss_rage_at(Run.stage)
+	var at := _boss_rage_start()
 	if _boss_time < at:
 		return 0
 	return clampi(int((_boss_time - at) / RAGE_STEP) + 1, 1, RAGE_TIERS.size())
@@ -953,7 +979,14 @@ func boss_rage_next_in() -> float:
 	var tier := boss_rage_tier()
 	if tier >= RAGE_TIERS.size():
 		return -1.0
-	return maxf(0.0, Epochs.boss_rage_at(Run.stage) + RAGE_STEP * tier - _boss_time)
+	return maxf(0.0, _boss_rage_start() + RAGE_STEP * tier - _boss_time)
+
+
+## Début de la rage du boss (s dans l'arène) : celui de la carte (Survie), ou celui du Survivant.
+func _boss_rage_start() -> float:
+	if sv and sv.boss_rage_at() >= 0.0:
+		return sv.boss_rage_at()
+	return Epochs.boss_rage_at(Run.stage)
 
 
 ## Dégâts du boss au palier [param tier] de sa rage (ses PV ne changent pas : on ne peut plus le finir à temps).
@@ -1027,6 +1060,8 @@ func _update_extraction(delta: float) -> void:
 
 
 func _on_boss_killed() -> void:
+	if sv and sv.on_boss_killed():
+		return  # Survivant : une seule carte, rien n'ouvre de zone ni d'époque
 	Tutorial.event("boss")
 	if Run.survival:
 		Profile.records["boss_" + String(zone.get("id", ""))] = 1  # ouvre le donjon de cette zone
@@ -1072,8 +1107,8 @@ func give_look_chest() -> void:
 ## zone suivante, et plus loin si le héros a déjà dépassé son début (sinon monstres et butin,
 ## plafonnés au niveau de la zone, seraient sous le sien).
 func next_zone_id() -> String:
-	if Run.stage >= STAGES:
-		return ""
+	if Run.stage >= STAGES or sv:
+		return ""  # (le Survivant se joue sur une seule carte)
 	if Run.survival:
 		return Epochs.zone(Run.epoch, Run.stage + 1)
 	var cur := GameData.zone_index(String(zone.get("id", "")))
@@ -1088,7 +1123,7 @@ func next_zone_id() -> String:
 
 func _emit_zone() -> void:
 	var title := String(zone.get("name", ""))
-	if not Training.active and not Tower.active and not Duel.active:
+	if not Training.active and not Tower.active and not Duel.active and sv == null:
 		title = "%s · étape %d/%d" % [title, Run.stage, STAGES]
 	zone_changed.emit({"name": title, "levels": [1 + int(zone.get("level_bonus", 0)), max_level()]})
 
@@ -1421,6 +1456,8 @@ func _drop_offhand(pos: Vector3) -> void:
 
 ## Survie : coffre d'emplacement ouvert, 3 pièces (ou cartes) au choix, une relance par coffre.
 func _open_slot_chest(box: String) -> void:
+	if sv and sv.open_chest(box):
+		return  # Survivant : coffres du Survivant (S4)
 	var title := SlotChests.title(box)
 	if SlotChests.is_cards(box):
 		var kind := String(SlotChests.BOXES[box].cards)
@@ -1534,6 +1571,8 @@ func scroll_cards(n: int) -> Array:
 
 func _use_station(it: Interactable) -> void:
 	Sfx.event_at(self, it.global_position, "station", -4.0)
+	if sv and sv.use_station(it):
+		return  # Survivant : enclume +2, stèle (S4)
 	match it.kind:
 		"anvil" when Run.survival:
 			if Run.anvil_stage == Run.stage:
@@ -1731,6 +1770,8 @@ func _capture(sh: Shrine) -> void:
 	Tutorial.event("shrine")
 	Profile.record_add("shrines", 1)
 	sh.update_visual()
+	if sv and sv.capture(sh):
+		return  # Survivant : récompense du sanctuaire (S4)
 	match sh.reward:
 		"trophy":
 			if Run.trophies.size() < Run.MAX_TROPHIES:

@@ -14,6 +14,8 @@ func show_results() -> void:
 
 ## Description du bilan (voir ResultsPanel) d'après l'état de Run et du profil.
 func spec() -> Dictionary:
+	if Run.survivor:
+		return survivor_spec()
 	var cls := Run.class_data()
 	var epoch_name: String = Epochs.get_def(Run.epoch).name
 	var sub := "%s · %s" % [cls.get("name_fr", ""), epoch_name]
@@ -33,6 +35,26 @@ func spec() -> Dictionary:
 		"quest": Compass.after("survival", {"unlocked": Run.unlocked_epoch, "seen": Run.seen_items.size()}),
 		"buttons": [
 			{"text": "Rejouer (%s)" % epoch_name, "primary": true, "disabled": not Run.survival or Run.epoch > Epochs.unlocked(), "call": _replay},
+			{"text": "Retour au lobby", "call": _finish},
+		],
+	}
+
+
+## Bilan d'un Survivant (lot S1 : le minimum ; S6 y met les coffres d'apparence, le Codex et le bloc « Ton build »).
+## Aucune ligne de progression : le mode n'en donne pas.
+func survivor_spec() -> Dictionary:
+	var zone := String(GameData.zone(Survivor.zone_id).get("name", Survivor.zone_id))
+	return {
+		"title": TITLES.get(Run.result, "FIN"),
+		"tone": "win" if Run.result == "victoire" else "lose",
+		"subtitle": "%s · Survivant · %s" % [Run.class_data().get("name_fr", ""), zone],
+		"tiles": [[str(Run.max_level), "niveau atteint"], [Run.duration_text(), "durée"], [str(Run.kills), "monstres"],
+			[str(Run.elites), "élites"]],
+		"gained": [],
+		"kept": chest_rows(Run.new_reward_chests()),
+		"lost": lost_rows(false),
+		"buttons": [
+			{"text": "Rejouer", "primary": true, "call": _replay},
 			{"text": "Retour au lobby", "call": _finish},
 		],
 	}
@@ -152,9 +174,13 @@ static func insignia_notes() -> Array:
 ## Rejouer : même classe, même époque, sans repasser par le lobby.
 func _replay() -> void:
 	var epoch := Run.epoch
+	var survivor := Run.survivor
 	Profile.end_run_survival()
 	get_tree().paused = false
-	Run.start_survival(Profile.selected_class, epoch)
+	if survivor:
+		Survivor.start(Profile.selected_class, Survivor.zone_id, Survivor.palier)  # même zone, même palier
+	else:
+		Run.start_survival(Profile.selected_class, epoch)
 	get_tree().change_scene_to_file("res://scenes/world.tscn")
 
 
