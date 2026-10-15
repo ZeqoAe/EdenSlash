@@ -123,6 +123,10 @@ emplacements, Siège Normal sans PE ; panoplie des Esprits : modèles fixes nive
 Infobulles d'objets (0.1.172, lot U6 de la nuit du 15/10) : `Items.describe(item, detailed)` (carte courte : stat principale en gros, 5 lignes, passif,
 gemmes, panoplie x / N ; complète : tout) et `ItemWidgets.item_card` (suit Maj, comparaison ▲ / ▼ avec la pièce portée, enclume de Survie comprise) ;
 test `test_tooltips`, captures `tests/shot_tips.tscn`.
+Atelier poli (nuit du 15/10, lot U5, `conception/nuit_15_10/R_U5.md`) : bourse commune (`ui/workshop_purse.gd`), Armurerie = catalogue entier
+filtrable (statut / emplacement / époque / classe, silhouettes « à découvrir », `Completion.armory_ids` donne l'époque), Fabrication en cartes par
+donjon, Forge = un panneau avant → après (`ForgeBench`, `MerchantPages.ForgePage.ba_table`), fusion de gemmes au taux 25 (`Forge.fuse_price`).
+Test : `tests/test_workshop.tscn` ; captures : `tests/shot_atelier.tscn`, `tests/shot_merchant.tscn`.
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

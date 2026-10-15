@@ -87,8 +87,18 @@ func _ready() -> void:
 	lobby._archive.close_ui()
 	lobby._workshop.open(0)
 	await probe("Atelier : Armurerie", 0.8)
+	Profile.seen_gear = SlotChests.pool("head", 1, 1).slice(0, 4).map(func(e): return int(e.id))
+	lobby._workshop.page(0).refresh()
+	await probe("Atelier : Armurerie avec des pièces découvertes (filtres, pages, achat)", 0.8)
+	Profile.seen_gear = []
 	lobby._workshop.show_page(1)
 	await probe("Atelier : Fabrication", 0.8)
+	lobby._workshop.show_page(2)
+	await probe("Atelier : Forge (établis)", 0.8)
+	var forge_items: Array = Profile.all_items()
+	if not forge_items.is_empty():
+		lobby._workshop.page(2).grid.select_item(forge_items[0])
+		await probe("Atelier : Forge avec une pièce choisie", 0.8)
 	lobby._workshop.close_ui()
 	lobby._show_menu("rush")
 	await probe("lobby : Ruée des boss", 0.8)

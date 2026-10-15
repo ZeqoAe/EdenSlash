@@ -232,6 +232,22 @@ chacune avec son rôle :
   (cerveau battu par les 5 familles), le palier 6 devient : +10 % dégâts, +5 % critique, esquive → hâte puis furie 4 s,
   recharge 4 s (au lieu de 3 s / 8 s).
 
+### Atelier (lot U5 de la nuit du 15/10 : Armurerie, Fabrication, Forge)
+
+- **Bourse commune** (`ui/workshop_purse.gd`) dans l'en-tête de l'Atelier : insignes (acquérir) et cristaux (optimiser).
+- **Armurerie** (`ui/gear_shop_page.gd`) : tout le catalogue des coffres d'emplacement (`Completion.armory_ids()` : pièce → première
+  époque qui la propose), compteur « découvertes / total ». Statuts : à acheter (défaut), possédées (✓), à découvrir (case « ? » avec
+  emplacement et niveau, époque où la trouver dans le détail : jamais le nom), toutes. Filtres : emplacement, époque, classe (les armes de
+  son type seulement). 72 pièces par page. Le détail compare avec la pièce portée : verdict, PE et trois écarts au plus. Après un achat,
+  la pièce reste choisie (un double clic n'achète pas deux fois).
+- **Fabrication** (`ui/fabrication_page.gd`) : une carte par donjon ; avec le plan : emplacement + « Fabriquer · N cristaux » (ce qu'il
+  manque en rouge) ; sans plan : « Il tombe en terminant ce donjon » ou la condition d'ouverture ; sans aucun plan : bandeau d'état vide.
+- **Forge** (`ui/forge_bench.gd`) : un panneau, six établis en haut, la pièce et son tableau **avant → après** (stats principales, qualité,
+  cristaux), le coût en cristaux (rouge s'il en manque), la barre de verdict compacte et l'action principale en bas. Prix en mots
+  (`MerchantPages.price_words`). La fusion de gemmes garde l'ancien taux (`Forge.FUSE_GOLD_PER_CRYSTAL` 25, `Forge.fuse_price` : 2 à 7
+  cristaux hors run) : le taux de 125 la rendait presque gratuite.
+- **Marchand de run** : plus de phrases d'aide (une ligne sur l'or perdu en fin de run), plus de page de fabrication de mythiques.
+
 ## Classe + arme (builds exotiques)
 
 - On choisit **une classe** (sorts, passifs, talents, attributs) puis **une arme**, au choix

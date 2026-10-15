@@ -4,7 +4,7 @@ extends CanvasLayer
 ## tirées pour lui (cartes d'amélioration de la run, clés, équipement, fournitures),
 ## rachat des objets contre de l'or (les mythiques et légendaires : coffres de récompense seulement).
 ## La Forge (améliorer, réforger, polir, sertir, enchanter, fusionner) s'ouvre depuis la
-## fiche d'un objet pendant la run (open_forge), partout sur la carte.
+## fiche d'un objet (open_forge), partout sur la carte ; l'Atelier du lobby a la sienne (ForgeBench).
 
 const TITLE := "Marchand ambulant"
 
@@ -60,15 +60,14 @@ func open(npc: Node = null, tab := 0) -> void:
 		offers = roll_offers()
 		if npc:
 			npc.set_meta("offers", offers)
-	_screen.set_title(TITLE, "Achète des cartes et des clés, revends ton butin : l'or est perdu en fin de run")
+	_screen.set_title(TITLE)
 	_screen.show_wallet(true)
 	_screen.open(tab)
 
 
 ## Forge sur l'objet [param item] (déjà choisi dans la grille).
 func open_forge(item: Dictionary = {}) -> void:
-	_forge.set_title("Forge", "Or : amélioration · cristaux : réforge et polissage · fournitures : gemmes et enchantements" if Profile.in_run
-		else "Hors run : fournitures de ta réserve · cristaux pour tout (1 cristal pour %d or)" % Forge.GOLD_PER_CRYSTAL)
+	_forge.set_title("Forge")
 	_forge.show_wallet(true)
 	_forge.open(0)
 	var fp: MerchantPages.ForgePage = _forge.page(0)
@@ -170,7 +169,7 @@ func roll_offers() -> Array:
 		out.append({"card": c, "price": int(base + 14 * lvl)})
 	out.append({"keys": 1, "price": 45 + 8 * lvl, "card": {"type": "key", "title": "Clé ×1", "subtitle": "Ouvre un coffre de la carte sans payer",
 		"desc": "Une clé ouvre n'importe quel coffre de la carte (son prix en or monte à chaque coffre ouvert). Perdue en fin de run.", "icon": Items.material_icon("keys")}})
-	var lv := director.loot_level(lvl) if director else lvl
+	var lv := director.supply_level(lvl) if director else lvl  # Survie : fournitures au niveau des pièces de la carte
 	var flv := Craft.fortify_level_at(lv)
 	out.append(_supply_offer(Craft.fortify_key(["power", "guard"].pick_random(), flv), 2, 30 + 5 * lvl))
 	for key in ["drill", Craft.stone_key(["safety", "lucky"].pick_random())]:
@@ -178,7 +177,7 @@ func roll_offers() -> Array:
 	while out.size() < 8 and not Run.survival:  # Survie : l'équipement vient des coffres d'emplacement
 		var item := Items.generate(director.loot_level(lvl + 1) if director else lvl, 0.4, "", Run.class_id, 2)
 		out.append({"item": item, "price": Items.buy_price(item)})
-	out.append(_supply_offer(Craft.random_loot(lv, 1), 1, 60 + 8 * lvl))
+	out.append(_supply_offer(Craft.random_loot(lv, 1, director.gem_level(lvl) if director else -1), 1, 60 + 8 * lvl))
 	return out
 
 

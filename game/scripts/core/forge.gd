@@ -118,11 +118,23 @@ static func upgrade_crystals(level: int, from: int, to: int) -> int:
 	return total
 
 
+## La fusion garde l'ancien taux (1 cristal pour 25 or) : les gemmes se fusionnent beaucoup, ce n'est pas le poste
+## de dépense de la forge (2 à 7 cristaux selon la taille), alors que le taux de 125 la rendait presque gratuite.
+const FUSE_GOLD_PER_CRYSTAL := 25
+
+
+## Prix d'une fusion de gemmes de la taille [param tier] : de l'or en run, des cristaux hors run.
+static func fuse_price(tier: int) -> Dictionary:
+	if Profile.in_run:
+		return {"gold": fuse_cost(tier)}
+	return {"crystal": maxi(1, ceili(fuse_cost(tier) / float(FUSE_GOLD_PER_CRYSTAL)))}
+
+
 static func fuse(type: String, tier: int) -> String:
 	var key := Craft.gem_key(type, tier)
 	if Profile.bag_count(key) < FUSE_COUNT:
 		return "Il faut %d gemmes identiques." % FUSE_COUNT
-	if not Profile.pay(price(fuse_cost(tier))):
+	if not Profile.pay(fuse_price(tier)):
 		return "Pas assez d'or." if Profile.in_run else "Pas assez de cristaux."
 	Profile.take_bag(key, FUSE_COUNT)
 	var out := Craft.gem_key(type, tier + 1)

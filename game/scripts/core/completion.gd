@@ -52,7 +52,8 @@ static func armory_ids() -> Dictionary:
 				for cid in (by_type.values() if box == "weapon" else [by_type.values()[0]]):
 					Profile._view_class = String(cid)
 					for e in SlotChests.pool(box, ep, stage):
-						_armory_ids[int(e.id)] = true
+						if not _armory_ids.has(int(e.id)):
+							_armory_ids[int(e.id)] = ep  # la première époque dont un coffre la propose
 	Profile._view_class = saved
 	return _armory_ids
 
