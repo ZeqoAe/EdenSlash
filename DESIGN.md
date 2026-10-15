@@ -173,6 +173,28 @@ polir aux cristaux, percer, sertir, enchanter, fusionner des gemmes.
   des coffres (1, meilleur en rage) et se vendent chez les marchands ambulants. Tout se fait
   dans la **Forge** (fiche d'un objet pendant la run).
 
+### Matières et cristaux des activités (0.1.165, lot E1 de la nuit du 15/10)
+
+Un parchemin de fortification doit avoir un niveau au moins égal à celui de la pièce, et la Survie plafonne ses
+fournitures au niveau 35 : sans autre source, aucune pièce de niveau 40 à 100 ne pouvait passer +1. Les activités
+hors Survie donnent donc des **coffres de forge et du joaillier au niveau de l'activité** (`core/activity_loot.gd`),
+chacune avec son rôle :
+
+| Activité | Cristaux (Normal / Héroïque / Mythique) | Coffres de matières |
+|---|---|---|
+| Donjon | 30 / 90 / 170 | forge ×1 ; + joaillier en Héroïque ; forge ×2 + joaillier en Mythique (niveau du donjon : 14-60, 29-75, 90) |
+| Ruée des boss | 8 / 18 / 34 par boss (64 / 144 / 272 pour huit) | à 4 boss : forge ×1 ; à 8 : parchemins (×1 en Normal, ×2 sinon), pierres rares, gemmes (niveau du dernier boss : 60 / 75 / 90) |
+| Siège | 4 / 10 / 18 par vague + 10 / 40 / 110 boss tombé (30 / 90 / 200) | boss tombé : formules d'enchantement ×1 / 2 / 3, + forge en Héroïque et Mythique |
+| Tour | 1 / 1,5 / 2 / 2,5 par étage monté (Facile à Hardcore) | gemmes tous les 10 étages, forge tous les 50 (niveau de l'étage) |
+
+- Un coffre porte une spécialité (`focus`) : « parchemins » (2-3 puissance, 2-4 garde), « pierres » (4 pierres rares
+  en plus), « gemmes » (3 gemmes d'un rang de plus), « formules » (3 formules au niveau le plus haut, 1 gemme).
+- **Cristaux = optimiser** : hors run, `Forge.GOLD_PER_CRYSTAL` passe de 25 à **125** (1 cristal pour 125 or). Une
+  pièce de niveau 85 à +10 coûte ≈ 750 cristaux si chaque tentative réussit, ≈ 1 300 avec des pierres de
+  protection : **4 à 5 clears Mythiques**. Un donjon Normal (30 cristaux) paie un +3 ou +4 sur une pièce de niveau 30.
+- Le démontage rend 1 à 3 cristaux (avant : 1 à 8) et un coffre de forge 2 à 3 au niveau 30 (avant : 3 à 9) : un
+  cristal vaut 5 fois plus d'or, ils restent un complément. Le coffre de trophées n'existe plus.
+
 ## Classe + arme (builds exotiques)
 
 - On choisit **une classe** (sorts, passifs, talents, attributs) puis **une arme**, au choix

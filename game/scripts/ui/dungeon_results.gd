@@ -47,8 +47,8 @@ func show_results(got: Dictionary) -> void:
 	if victory or bool(got.get("rush", false)) or siege:
 		var r: Dictionary = got.get("reward", {})
 		var lines: PackedStringArray = []
-		for c in r.get("chests", []):
-			lines.append(String(Rewards.TYPES[c.type].name))
+		if not (r.get("chests", []) as Array).is_empty():
+			lines.append(ActivityLoot.chests_text(r.chests))  # « Coffre de set, Coffre de forge ×2… »
 		lines.append("%d cristaux" % int(r.get("crystals", 0)))
 		if String(r.get("plan", "")) != "":
 			lines.append("un plan de fabrication !")

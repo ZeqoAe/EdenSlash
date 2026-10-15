@@ -7,16 +7,16 @@ extends RefCounted
 ## - équipement : un objet mythique (légendaire : 20 %, 35 % pour un coffre de boss) ;
 ## - forge : parchemins de fortification, pierres de sûreté, ciseaux, parfois un parchemin béni, cristaux ;
 ## - joaillier : gemmes et parchemins d'enchantement ;
-## - set : choisir 1 pièce mythique parmi 3 pièces d'un même set ;
-## - trophées : choisir 1 trophée parmi 3.
+## - set : choisir 1 pièce mythique parmi 3 pièces d'un même set.
 ## Objets : au coffre commun ; fournitures : à la réserve (emportée à la prochaine run).
+## Les coffres de forge et du joaillier peuvent porter une `focus` (voir ActivityLoot) : la spécialité de
+## l'activité qui les donne (parchemins, pierres, gemmes ou formules d'enchantement).
 
 const TYPES := {
 	"gear": {"name": "Coffre d'équipement", "desc": "Un objet mythique (parfois légendaire) de ton niveau.", "color": Color(1.0, 0.55, 0.15)},
 	"forge": {"name": "Coffre de forge", "desc": "Pierres de chance et de protection, ciseaux de sertissage, cristaux.", "color": Color(0.85, 0.85, 0.9)},
 	"jewel": {"name": "Coffre du joaillier", "desc": "Gemmes et parchemins d'enchantement.", "color": Color(0.42, 0.9, 0.42)},
 	"set": {"name": "Coffre de set", "desc": "Choisis 1 pièce mythique (parfois légendaire) parmi 3 pièces d'un même set.", "color": Color(1.0, 0.84, 0.25)},
-	"trophy": {"name": "Coffre de trophées", "desc": "Choisis 1 trophée parmi 3.", "color": Color(1.0, 0.82, 0.3)},
 	# coffres d'apparence (boss de Survie, paliers de la Tour) : une apparence au hasard, jamais
 	# un doublon ; leur qualité fixe la rareté de l'apparence
 	"look_common": {"name": "Coffre d'apparence commun", "desc": "Une apparence que tu n'as pas encore, commune ou spéciale.", "color": Color(0.75, 0.8, 0.9)},
@@ -27,7 +27,7 @@ const TYPES := {
 	"aura_rare": {"name": "Coffre d'auras rare", "desc": "Une aura rare que tu n'as pas encore.", "color": Color(0.45, 0.8, 1.0)},
 	"aura_legend": {"name": "Coffre d'auras légendaire", "desc": "Une aura légendaire que tu n'as pas encore.", "color": Color(1.0, 0.7, 0.95)},
 }
-const ORDER := ["aura_legend", "aura_rare", "look_legend", "look_epic", "look_rare", "look_common", "set", "trophy", "gear", "forge", "jewel"]
+const ORDER := ["aura_legend", "aura_rare", "look_legend", "look_epic", "look_rare", "look_common", "set", "gear", "forge", "jewel"]
 ## Raretés (de la collection d'Eden) de chaque coffre d'apparence, du commun au légendaire.
 const LOOKS := {"look_common": [0, 1], "look_rare": [2, 3], "look_epic": [4], "look_legend": [5]}
 const LOOK_TYPES := ["look_common", "look_rare", "look_epic", "look_legend"]
@@ -61,12 +61,22 @@ static func roll_aura(type: String) -> Dictionary:
 	return free.pick_random() if not free.is_empty() else {}
 
 
-static func make(type: String, plevel: int, boss := false) -> Dictionary:
+static func make(type: String, plevel: int, boss := false, focus := "") -> Dictionary:
 	var c := {"id": "%d_%d" % [Time.get_ticks_usec(), randi() % 100000], "type": type, "plevel": maxi(plevel, 1),
 		"zone": Run.zone_id if Run.active else ""}
 	if boss:
 		c["boss"] = true
+	if focus != "":
+		c["focus"] = focus
 	return c
+
+
+## Sauvegarde d'avant 0.1.165 : le coffre de trophées n'existe plus (il donnait des pièces de set, comme un coffre de set).
+static func migrate(chests: Array) -> Array:
+	for c in chests:
+		if String(c.get("type", "")) == "trophy":
+			c["type"] = "set"
+	return chests
 
 
 ## Zone d'où vient [param chest] (objets de son époque d'Eden) ; anciens coffres : la
@@ -109,11 +119,11 @@ static func roll_type(boss := false) -> String:
 ## Objet de butin (LootDrop) représentant un coffre.
 static func loot_item(chest: Dictionary) -> Dictionary:
 	var t: Dictionary = TYPES[chest.type]
-	return {"chest": chest, "name": String(t.name), "icon": MenuWidgets.ICONS % "chest", "rarity": 3 if chest.type in ["set", "trophy"] else 2}
+	return {"chest": chest, "name": String(t.name), "icon": MenuWidgets.ICONS % "chest", "rarity": 3 if chest.type == "set" else 2}
 
 
 static func is_choice(chest: Dictionary) -> bool:
-	return chest.type in ["set", "trophy"]
+	return chest.type == "set"
 
 
 ## Propositions d'un coffre à choix (tirées une fois, gardées dans le coffre).
@@ -127,15 +137,12 @@ static func offer(chest: Dictionary) -> Array:
 	var out: Array = []
 	var lv := int(chest.plevel)
 	Items.reward_zone = zone_of(chest)
-	if false:
-		pass  # (ancien coffre de trophées : il donne des pièces de set, comme un coffre de set)
-	else:
-		var pieces := set_pieces(lv)
-		var rar := top_rarity(chest)
-		for e in pieces:
-			out.append(Items.from_template(e, lv, rar))
-		while out.size() < 3:
-			out.append(Items.generate(lv, 1.0, "", Profile.selected_class, Items.MYTHIC, "", Items.MYTHIC))
+	var pieces := set_pieces(lv)
+	var rar := top_rarity(chest)
+	for e in pieces:
+		out.append(Items.from_template(e, lv, rar))
+	while out.size() < 3:
+		out.append(Items.generate(lv, 1.0, "", Profile.selected_class, Items.MYTHIC, "", Items.MYTHIC))
 	Items.reward_zone = ""
 	if String(chest.get("archetype", "")) != "":
 		for it in out:
@@ -169,6 +176,18 @@ static func set_pieces(plevel: int) -> Array:
 	return out
 
 
+## Cristaux d'un coffre de forge de niveau [param lv] : 1-2 + 1 par 30 niveaux (avant 0.1.165 : 3-6 + 1 par 10,
+## quand un cristal valait 5 fois moins d'or).
+static func _forge_crystals(lv: int) -> Vector2i:
+	return Vector2i(1 + lv / 30, 2 + lv / 30)
+
+
+## Rang des gemmes d'un coffre du joaillier de niveau [param lv] (0 brut … 4 royal) : le niveau du coffre / 12,
+## un rang de plus pour un coffre « gemmes » (Tour, Ruée), un de moins pour un coffre « formules » (Siège).
+static func gem_tier(lv: int, focus: String) -> int:
+	return clampi(lv / 12 + (1 if focus == "gem" else (-1 if focus == "enchant" else 0)), 0, Craft.GEM_TIERS.size() - 1)
+
+
 ## Contenu possible d'un coffre, en texte (mêmes règles que [method open] : l'aperçu ne ment pas).
 static func preview(chest: Dictionary) -> String:
 	var lv := int(chest.plevel)
@@ -177,11 +196,23 @@ static func preview(chest: Dictionary) -> String:
 		"gear":
 			return "Un objet mythique de niveau %d (légendaire : %s)." % [lv, _legend_text(chest)]
 		"forge":
+			match String(chest.get("focus", "")):
+				"scroll":
+					return "2-3 parchemins de puissance et 2-4 de garde (niveau %d), 1-2 pierres de sûreté, 1 pierre de chance, 2 pierres, parfois des ciseaux (50 %%) et un parchemin béni (20 %%), %d-%d cristaux." % [
+						Craft.fortify_level_at(lv), _forge_crystals(lv).x, _forge_crystals(lv).y]
+				"stone":
+					return "1 parchemin de puissance et 1 de garde (niveau %d), 2 pierres de sûreté, 1 pierre de chance, 4 pierres choisies parmi les plus rares, %d-%d cristaux." % [
+						Craft.fortify_level_at(lv), _forge_crystals(lv).x, _forge_crystals(lv).y]
 			return "1-2 parchemins de puissance et 1-3 de garde (niveau %d), 1-2 pierres de sûreté, 1 pierre de chance, 2 pierres, parfois des ciseaux (50 %%) et un parchemin béni (20 %%), %d-%d cristaux." % [
-				Craft.fortify_level_at(lv), 3 + lv / 10, 6 + lv / 10]
+				Craft.fortify_level_at(lv), _forge_crystals(lv).x, _forge_crystals(lv).y]
 		"jewel":
-			return "2 gemmes de rang %d et 1 parchemin d'enchantement." % (clampi(lv / 12, 0, Craft.GEM_TIERS.size() - 1) + 1)
-		"set", "trophy":
+			match String(chest.get("focus", "")):
+				"gem":
+					return "3 gemmes de rang %d et 1 parchemin d'enchantement." % (gem_tier(lv, "gem") + 1)
+				"enchant":
+					return "3 parchemins d'enchantement (jusqu'au niveau %d) et 1 gemme de rang %d." % [Craft.scroll_level_for(lv), gem_tier(lv, "enchant") + 1]
+			return "2 gemmes de rang %d et 1 parchemin d'enchantement." % (gem_tier(lv, "") + 1)
+		"set":
 			return "3 pièces mythiques d'un même set au choix (déjà possédées : jamais proposées) ; légendaire : %s." % _legend_text(chest)
 	if AURAS.has(t):
 		var left := GameData.collection.filter(func(x): return x.has("aura") and not Profile.collected(x) and (AURAS[t] as Array).has(int(x.get("rarity", 0)))).size()
@@ -268,23 +299,32 @@ static func open(chest: Dictionary) -> Dictionary:
 		"forge":
 			# parchemins de fortification du niveau du coffre et pierres de sûreté
 			var flv := Craft.fortify_level_at(lv)
-			got.supplies = {Craft.fortify_key("power", flv): randi_range(1, 2), Craft.fortify_key("guard", flv): randi_range(1, 3),
-				Craft.stone_key("safety"): randi_range(1, 2), Craft.stone_key("lucky"): 1}
-			for i in 2:
-				var st := Craft.random_stone(2)
+			var focus := String(chest.get("focus", ""))
+			var scrolls := [randi_range(1, 2), randi_range(1, 3)]
+			if focus == "scroll":
+				scrolls = [randi_range(2, 3), randi_range(2, 4)]
+			elif focus == "stone":
+				scrolls = [1, 1]
+			got.supplies = {Craft.fortify_key("power", flv): scrolls[0], Craft.fortify_key("guard", flv): scrolls[1],
+				Craft.stone_key("safety"): 2 if focus == "stone" else randi_range(1, 2), Craft.stone_key("lucky"): 1}
+			for i in (4 if focus == "stone" else 2):
+				var st := Craft.random_stone(4 if focus == "stone" else 2)
 				got.supplies[st] = int(got.supplies.get(st, 0)) + 1
-			if randf() < 0.5:
+			if focus != "stone" and randf() < 0.5:
 				got.supplies["drill"] = 1
 			if randf() < 0.2:
 				got.supplies[Craft.BLESSED] = 1
-			got.crystal = randi_range(3, 6) + lv / 10
+			got.crystal = randi_range(_forge_crystals(lv).x, _forge_crystals(lv).y)
 		"jewel":
-			for i in 2:
-				var g := Craft.gem_key(Craft.GEMS.keys().pick_random(), clampi(lv / 12, 0, Craft.GEM_TIERS.size() - 1))
+			var focus := String(chest.get("focus", ""))
+			var tier := gem_tier(lv, focus)
+			for i in (1 if focus == "enchant" else (3 if focus == "gem" else 2)):
+				var g := Craft.gem_key(Craft.GEMS.keys().pick_random(), tier)
 				got.supplies[g] = int(got.supplies.get(g, 0)) + 1
 			var slv := Craft.scroll_level_for(lv)
-			var sc := Craft.scroll_key(Craft.ENCHANTS.keys().pick_random(), slv) if slv > 0 else Craft.random_stone(1)
-			got.supplies[sc] = 1
+			for i in (3 if focus == "enchant" else 1):
+				var sc := Craft.scroll_key(Craft.ENCHANTS.keys().pick_random(), slv) if slv > 0 else Craft.random_stone(1)
+				got.supplies[sc] = int(got.supplies.get(sc, 0)) + 1
 	Items.reward_zone = ""
 	_give(got)
 	Profile.reward_chests.erase(chest)

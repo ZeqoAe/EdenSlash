@@ -643,10 +643,13 @@ static func _merge(a: Dictionary, b: Dictionary) -> Dictionary:
 	return out
 
 
-## Désassemblage : des cristaux selon la rareté (et l'amélioration de l'objet).
+## Désassemblage : un peu de cristaux selon la rareté (et l'amélioration de l'objet) : 1 à 3, +1 par 3 niveaux
+## d'amélioration. Avant 0.1.165 c'était 1 à 8, mais un cristal vaut maintenant 5 fois plus d'or
+## (`Forge.GOLD_PER_CRYSTAL`) : le démontage reste un complément, pas la source (les clears de Donjon, de Ruée,
+## de Siège et de Tour en donnent 30 à 320, voir ActivityLoot).
 static func disassemble_yield(item: Dictionary) -> Dictionary:
 	var r := int(item.rarity)
-	return {"crystal": 1 + r + r / 3 * 2 + int(item.get("upgrade", 0)) / 3}
+	return {"crystal": 1 + r / 2 + int(item.get("upgrade", 0)) / 3}
 
 
 static func sell_price(item: Dictionary) -> int:

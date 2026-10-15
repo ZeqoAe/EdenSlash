@@ -5,7 +5,8 @@ extends RefCounted
 ## deux alliés IA. Trois difficultés : Normal (niveau de l'époque), Héroïque (+15), Mythique (niveau 90).
 ## Il réutilise l'infrastructure de la Tour (salles, directeur, bilan) : `Tower.dungeon` est la zone du
 ## donjon en cours ("" : pas de donjon). Butin : un coffre de set (pièce mythique au choix, légendaire
-## plus probable en Héroïque et Mythique), des cristaux, et un plan de fabrication une fois sur dix.
+## plus probable en Héroïque et Mythique), des cristaux, des coffres de matières au niveau du donjon
+## (ActivityLoot : de quoi monter les pièces de ce niveau) et un plan de fabrication une fois sur dix.
 
 const ROOMS := ["monsters", "elite", "monsters", "boss"]
 const DIFF_NAMES := ["Normal", "Héroïque", "Mythique"]
@@ -46,13 +47,15 @@ static func rush_level(f: int, diff: int) -> int:
 	return level(String(rush_zone(f).id), diff)
 
 
-## Butin de la Ruée : cristaux pour chaque boss battu ; si les 8 sont tombés, un coffre d'équipement
-## (le 1er de chaque difficulté : un coffre d'apparence) et le titre de la difficulté.
+## Butin de la Ruée : cristaux pour chaque boss battu ; des coffres de matières de haut niveau (un de forge à
+## la moitié, quatre dont pierres rares et gemmes si les 8 sont tombés) ; si les 8 sont tombés, un coffre
+## d'équipement (le 1er de chaque difficulté : un coffre d'apparence) et le titre de la difficulté.
 static func rush_reward(reached: int, diff: int) -> Dictionary:
-	var out := {"chests": [], "crystals": 15 * reached * (diff + 1), "plan": "", "rush": true, "title": ""}
+	var out := {"chests": [], "crystals": ActivityLoot.rush_crystals(reached, diff), "plan": "", "rush": true, "title": ""}
 	Profile.materials["crystal"] = int(Profile.materials.get("crystal", 0)) + int(out.crystals)
 	var key := "rush_best_%d" % diff
 	Profile.records[key] = maxi(int(Profile.records.get(key, 0)), reached)
+	out.chests.append_array(ActivityLoot.rush_chests(rush_level(rush_floors(), diff), reached, diff))
 	if reached >= rush_floors():
 		var lv := rush_level(rush_floors(), diff)
 		var c := Rewards.make("gear", lv, true)
@@ -163,7 +166,7 @@ static func total_cleared() -> int:
 ## les cristaux le profil (sauvegardés par l'appelant).
 static func reward(zid: String, diff: int) -> Dictionary:
 	var lv := level(zid, diff)
-	var out := {"chests": [], "crystals": 20 * (diff + 1), "plan": ""}
+	var out := {"chests": [], "crystals": ActivityLoot.dungeon_crystals(diff), "plan": ""}
 	var boss := diff >= 1
 	var c := Rewards.make("set", lv, boss)
 	c["zone"] = zid
@@ -174,6 +177,7 @@ static func reward(zid: String, diff: int) -> Dictionary:
 		var c2 := Rewards.make("gear", lv, true)
 		Profile.reward_chests.append(c2)
 		out.chests.append(c2)
+	out.chests.append_array(ActivityLoot.dungeon_chests(lv, diff))
 	Profile.materials["crystal"] = int(Profile.materials.get("crystal", 0)) + int(out.crystals)
 	if randf() < 0.1 or (cleared(zid, diff) == 0 and diff >= 1 and not "plan_" + zid in Profile.plans):
 		var plan := "plan_" + zid

@@ -77,15 +77,15 @@ func _test_settle() -> void:
 	Profile.extra_titles = []
 	Profile.materials["crystal"] = 0
 	var lost := Siege.settle(zid, 0, 3, "")
-	check("siège perdu en vague 3 : des cristaux, aucun coffre", int(lost.crystals) == 36 and lost.chests.is_empty() and Profile.reward_chests.is_empty())
+	check("siège perdu en vague 3 : des cristaux, aucun coffre", int(lost.crystals) == ActivityLoot.siege_crystals(3, 0, false) and lost.chests.is_empty() and Profile.reward_chests.is_empty())
 	var boss := Siege.settle(zid, 0, Siege.WAVES + 1, "eliminated")
-	check("boss tombé puis éliminé : coffre d'équipement seul", boss.chests.size() == 1 and boss.chests[0].type == "gear")
+	check("boss tombé puis éliminé : coffre d'équipement + formules d'enchantement", boss.chests.size() == 2 and boss.chests[0].type == "gear" and boss.chests[1].type == "jewel" and boss.chests[1].get("focus", "") == "enchant")
 	var esc := Siege.settle(zid, 0, Siege.WAVES + 1, "escaped")
-	check("cœur emporté : équipement + coffre d'apparence épique", esc.chests.size() == 2 and esc.chests[1].type == "look_epic")
+	check("cœur emporté : équipement + formules + coffre d'apparence épique", esc.chests.size() == 3 and esc.chests[2].type == "look_epic")
 	var won := Siege.settle(zid, 1, Siege.WAVES + 1, "won")
-	check("dernier debout : équipement + coffre d'apparence LÉGENDAIRE + titre", won.chests.size() == 2 and won.chests[1].type == "look_legend" and won.title == Siege.TITLE and Siege.TITLE in Profile.extra_titles)
+	check("dernier debout : équipement + matières + coffre d'apparence LÉGENDAIRE + titre", won.chests.size() == 5 and won.chests[4].type == "look_legend" and won.title == Siege.TITLE and Siege.TITLE in Profile.extra_titles)
 	var won2 := Siege.settle(zid, 1, Siege.WAVES + 1, "won")
-	check("2e victoire : plus de titre, mais toujours le coffre légendaire", won2.title == "" and won2.chests[1].type == "look_legend" and Siege.wins() == 2)
+	check("2e victoire : plus de titre, mais toujours le coffre légendaire", won2.title == "" and won2.chests[4].type == "look_legend" and Siege.wins() == 2)
 	check("records : meilleure vague et siège gagné", int(Profile.records.get("siege_best_1", 0)) == Siege.WAVES + 1 and Siege.clears(zid, 1) == 2)
 
 

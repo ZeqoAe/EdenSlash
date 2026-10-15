@@ -117,13 +117,14 @@ static func wins() -> int:
 
 
 ## Butin du siège terminé (appelé après le rechargement de la sauvegarde) : [param reached] = dernière vague
-## vaincue (6 : le boss est tombé). Cristaux selon la progression ; le boss tombé donne un coffre d'équipement ;
+## vaincue (6 : le boss est tombé). Cristaux selon la progression ; le boss tombé donne un coffre d'équipement
+## et des coffres de formules d'enchantement hautes (ActivityLoot) ;
 ## le dernier debout, un coffre d'apparence légendaire (et un titre la 1re fois) ; le cœur emporté, un coffre
 ## d'apparence épique.
 static func settle(zid: String, diff: int, reached: int, result: String) -> Dictionary:
 	var lv := level(zid, diff) + 1
 	var boss_down := reached > WAVES
-	var out := {"chests": [], "crystals": 12 * mini(reached, WAVES) * (diff + 1) + (40 * (diff + 1) if boss_down else 0),
+	var out := {"chests": [], "crystals": ActivityLoot.siege_crystals(reached, diff, boss_down),
 		"title": "", "outcome": result, "boss": boss_down}
 	Profile.materials["crystal"] = int(Profile.materials.get("crystal", 0)) + int(out.crystals)
 	var key := "siege_best_%d" % diff
@@ -133,6 +134,7 @@ static func settle(zid: String, diff: int, reached: int, result: String) -> Dict
 		var gear := Rewards.make("gear", lv, true)
 		Profile.reward_chests.append(gear)
 		out.chests.append(gear)
+		out.chests.append_array(ActivityLoot.siege_chests(lv, diff))  # formules d'enchantement hautes
 	match result:
 		"won":
 			var look := Rewards.make(Rewards.look_type(3), lv, true)

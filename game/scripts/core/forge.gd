@@ -91,8 +91,10 @@ static func fusable() -> Array:
 
 
 ## Hors run (forge depuis l'équipement du lobby), l'or n'existe pas : ce qui coûte de l'or en
-## run se paie en cristaux, 1 cristal pour 25 or.
-const GOLD_PER_CRYSTAL := 25
+## run se paie en cristaux, 1 cristal pour 125 or (0.1.165 : 25 avant ; les cristaux des Donjons, de la Ruée,
+## du Siège et de la Tour ont été recalés avec, voir ActivityLoot). Une pièce de niveau 85 à +10 coûte ≈ 750
+## cristaux si chaque tentative réussit, ≈ 1 300 avec des pierres de protection : 4 à 5 clears Mythiques.
+const GOLD_PER_CRYSTAL := 125
 
 
 ## Prix d'une action de forge valant [param gold] or : en or pendant la run, en cristaux hors run.
@@ -105,6 +107,15 @@ static func price(gold: int) -> Dictionary:
 ## Prix en texte simple (boutons) : « 90 or » ou « 4 crist. ».
 static func price_label(cost: Dictionary) -> String:
 	return ("%d or" % int(cost.gold)) if cost.has("gold") else "%d crist." % int(cost.get("crystal", 0))
+
+
+## Cristaux pour amener une pièce de niveau [param level] de +[param from] à +[param to] si chaque tentative
+## réussit (sans compter les échecs ni les parchemins) : la somme des prix de `Items.upgrade_cost`.
+static func upgrade_crystals(level: int, from: int, to: int) -> int:
+	var total := 0
+	for u in range(from, to):
+		total += int(price(int(Items.upgrade_cost({"level": level, "upgrade": u}).gold)).get("crystal", 0))
+	return total
 
 
 static func fuse(type: String, tier: int) -> String:

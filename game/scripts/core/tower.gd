@@ -468,11 +468,16 @@ static func finish() -> Dictionary:
 			Profile.reward_chests.append(Rewards.make(Rewards.look_type(LOOK_TIERS[i]), 30, true))
 			looks += 1
 	var climbed := maxi(0, reached - start_floor + 1)
+	# cristaux et coffres de gemmes / de forge de l'ascension (ActivityLoot : le rôle de la Tour)
+	var crystals := ActivityLoot.tower_crystals(climbed, difficulty)
+	Profile.materials["crystal"] = int(Profile.materials.get("crystal", 0)) + crystals
+	var mats := ActivityLoot.tower_chests(start_floor, reached, level_for)
 	var xp := roundi((climbed * 12 + Run.kills / 3) * [0.75, 1.0, 1.3, 1.6][difficulty])
 	var lv := Profile.add_expertise(cid, xp)
 	Profile._lobby_view()
 	Profile.save_profile()
-	return {"best": best(), "new_record": reached > old, "xp": xp, "levels": lv, "items": found.size(), "looks": looks}
+	return {"best": best(), "new_record": reached > old, "xp": xp, "levels": lv, "items": found.size(), "looks": looks,
+		"crystals": crystals, "chests": mats}
 
 
 ## Fin d'un donjon : butin si le boss est tombé, sauvegarde rechargée (comme la Tour).

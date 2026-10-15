@@ -29,6 +29,48 @@ static func weapons_total() -> int:
 	return n
 
 
+static var _armory_ids: Dictionary = {}
+
+
+## Pièces d'Eden que les coffres d'emplacement de la Survie peuvent proposer (donc découvrir pour
+## l'Armurerie), hors trophées : {id d'Eden -> true}. Calculé une fois sur les mêmes tirages que la Survie
+## (`SlotChests.pool`, pour chaque époque, carte, emplacement et type d'arme) ; hors du lobby (en run),
+## renvoie ce qui est déjà calculé.
+static func armory_ids() -> Dictionary:
+	if not _armory_ids.is_empty() or Profile.in_run:
+		return _armory_ids
+	# un coffre d'arme ne propose que le type de l'arme de la classe : une classe par type d'arme
+	var by_type := {}
+	for cid in GameData.classes:
+		by_type[Items.default_weapon_type(String(cid))] = String(cid)
+	var saved := Profile._view_class
+	for ep in range(1, Epochs.count() + 1):
+		for stage in range(1, 4):
+			for box in SlotChests.BOXES:
+				if SlotChests.is_cards(box) or box == "trophy":
+					continue
+				for cid in (by_type.values() if box == "weapon" else [by_type.values()[0]]):
+					Profile._view_class = String(cid)
+					for e in SlotChests.pool(box, ep, stage):
+						_armory_ids[int(e.id)] = true
+	Profile._view_class = saved
+	return _armory_ids
+
+
+## Total de l'Armurerie (calculé, 0.1.165 ; c'était 154 écrit en dur).
+static func armory_total() -> int:
+	return armory_ids().size()
+
+
+## Pièces découvertes qui sont de l'équipement (les trophées de la Survie entrent aussi dans `seen_gear`).
+static func armory_done() -> int:
+	var n := 0
+	for id in Profile.seen_gear:
+		if String(GameData.eden_by_id.get(int(id), {}).get("slot", "")) != "trophy":
+			n += 1
+	return n
+
+
 ## [[nom, obtenu, total, détail]] pour les dix catégories.
 static func categories() -> Array:
 	var classes := int(Achievements.value("classes"))
@@ -42,7 +84,7 @@ static func categories() -> Array:
 		["Certificats", Profile.unlocked_certificates().size(), certs_total(), "certificats débloqués"],
 		["Trophées", Profile.seen_trophies.size(), Trophies.KINDS.size(), "effets de trophée découverts"],
 		["Armes", Profile.weapon_legend.size(), weapons_total(), "variantes menées à l'effet légendaire"],
-		["Équipement", Profile.seen_gear.size(), maxi(Profile.seen_gear.size(), 154), "pièces découvertes en Survie"],
+		["Équipement", armory_done(), maxi(armory_done(), armory_total()), "pièces découvertes en Survie"],
 		["Époques et Tour", Epochs.total_stars() + mini(tower / 50, 4), Epochs.count() * 3 + 4, "étoiles d'époque et paliers de la Tour"],
 		["Activités", league, League.RANKS.size() - 1, "rangs de la Ligue"],
 		["Succès", int(Achievements.count().x), int(Achievements.count().y), "succès obtenus"],

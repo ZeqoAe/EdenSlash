@@ -243,7 +243,7 @@ func load_profile() -> void:
 		dev.enabled = false
 	selected_zone = String(d.get("selected_zone", "limestone"))
 	starter_trophy = String(d.get("starter_trophy", ""))
-	reward_chests = d.get("reward_chests", [])
+	reward_chests = Rewards.migrate(d.get("reward_chests", []))
 	if d.has("vault"):
 		vault = d.get("vault", []).map(_migrate)
 		loadout = d.get("loadout", {})
