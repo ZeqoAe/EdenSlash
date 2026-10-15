@@ -1046,9 +1046,7 @@ func _build_ui() -> void:
 		_refresh_ui()
 		if _current == "duel":
 			_show_menu("duel"))  # conditions d'inscription à jour
-	_archive = _screen("Carnet", [["Vue d'ensemble", CarnetPages.OverviewPage.new()], ["Succès et titres", CarnetPages.AchievementsPage.new()],
-		["Cartes", CarnetPages.CardsPage.new()], ["Trophées", CarnetPages.TrophiesPage.new()], ["Collection", ArchivePages.CollectionPage.new()]])
-	_archive.set_title("Carnet", "Archive des trésors : chaque entrée donne un bonus permanent à tous les héros")
+	_archive = _screen("Carnet", CarnetPages.tabs())  # chaque onglet donne son sous-titre
 	_workshop = _screen("Atelier", [["Armurerie", GearShopPage.new()], ["Fabrication", FabricationPage.new()], ["Forge", ForgeBench.new()]])
 	_workshop.set_title("Atelier", "Armurerie · Fabrication des plans · Forge (améliorer, enchanter, sertir, polir, réajuster, démonter)")
 	_chests = _screen("Coffres", [["Coffres", ChestsPage.new()], ["Roulette", WheelPage.new()]])

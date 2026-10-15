@@ -62,6 +62,18 @@ func _ready() -> void:
 	await probe("Carnet : vue d'ensemble")
 	lobby._archive.show_page(1)
 	await probe("Carnet : succès", 0.8)
+	var subs := {}
+	for i in lobby._archive.page_count():
+		lobby._archive.show_page(i)
+		subs[lobby._archive._subtitle.text] = true
+		if i >= 2:
+			await probe("Carnet : onglet %d" % i, 0.8)
+	check("Carnet : un sous-titre différent par onglet", subs.size() == lobby._archive.page_count() and not subs.has(""))
+	lobby._archive.show_page(2)
+	CarnetPages.open_hero(lobby._archive.page(2), "cards")
+	check("Carnet > Cartes : le lien ouvre Héros > Cartes", lobby._hero.is_open() and not lobby._archive.is_open())
+	lobby._hero.close_ui()
+	lobby._archive.open(0)
 	lobby._archive.close_ui()
 	lobby._workshop.open(0)
 	await probe("Atelier : Armurerie", 0.8)

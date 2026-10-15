@@ -54,18 +54,29 @@ func _ready() -> void:
 	add_child(o)
 	await get_tree().process_frame
 	o.refresh()
-	check("vue d'ensemble construite", o._box.get_child_count() > 12)
+	check("vue d'ensemble : bandeau et dix catégories", _grid_of(o)!=null and _grid_of(o).get_child_count() == 10 and o.subtitle() != "")
 	var a := CarnetPages.AchievementsPage.new()
 	add_child(a)
 	a.refresh()
-	check("page des succès construite", a._box.get_child_count() > Achievements.LIST.size())
+	check("page des succès : une fiche par succès", _grid_of(a) != null and _grid_of(a).get_child_count() == Achievements.LIST.size())
+	a._filter = 2
+	a.refresh()
+	check("filtre « Obtenus » : seulement les obtenus", _grid_of(a).get_child_count() == int(Achievements.count().x))
 	var c := CarnetPages.CardsPage.new()
 	add_child(c)
 	c.refresh()
-	check("grimoire des cartes construit", c._box.get_child_count() > 10)
+	check("cartes : compteurs et prochaines à débloquer", c._box.get_child_count() > 5 and c.subtitle() != "")
 	var t := CarnetPages.TrophiesPage.new()
 	add_child(t)
 	t.refresh()
-	check("codex des trophées construit", t._box.get_child_count() > 20)
+	check("codex des trophées : le trophée découvert seul", _grid_of(t) != null and _grid_of(t).get_child_count() == 1)
 	print("TOUT EST OK (0 échec(s))" if fails == 0 else "ÉCHECS : %d" % fails)
 	get_tree().quit(fails)
+
+
+## La grille de fiches d'une page du Carnet (null s'il n'y en a pas).
+func _grid_of(page: CarnetPages.ScrollPage) -> GridContainer:
+	for ch in page._box.get_children():
+		if ch is GridContainer and not ch.is_queued_for_deletion():
+			return ch
+	return null

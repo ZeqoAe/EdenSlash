@@ -111,6 +111,10 @@ section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : 
 aide au combat en 4 niveaux ; lot 5 Duel à l'arme / équipé…). Le détail de chaque lot est dans
 `conception/<équipe>/raffinement_3.md`.
 
+Carnet (nuit du 15/10, lot U7, rapport `conception/nuit_15_10/R_U7.md`) : onglets construits par `CarnetPages.tabs()` (en ajouter un à la fin : la
+Collection garde l'indice 4) ; chaque page donne son sous-titre par `subtitle()` (lu par `PageScreen`, rétrocompatible) ; Carnet > Cartes = compteurs +
+lien vers Héros > Cartes (pas de doublon) ; vue d'ensemble = bandeau + 10 cartes cliquables, plus de « Déblocages » ; plus aucune mention d'Eden côté joueur.
+
 ## Journal de run
 `core/run_journal.gd` écrit une ligne JSON par carte jouée dans `user://journal.jsonl`
 (`%APPDATA%/Godot/app_userdata/Eden Slash/`, hors git) : style (coffres / farm / mixte), or par source

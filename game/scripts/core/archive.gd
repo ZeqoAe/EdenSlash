@@ -174,9 +174,9 @@ static func refusal(item: Dictionary) -> String:
 	if Profile.in_run:
 		return "On n'archive qu'entre les runs (au lobby)."
 	if int(item.get("rarity", 0)) < Items.ARCHIVE_MIN_RARITY:
-		return "Seuls les objets mythiques (orange) et légendaires (or) s'archivent, comme dans Eden."
+		return "Seuls les objets mythiques (orange) et légendaires (or) s'archivent."
 	if not item.has("eden") or not GameData.eden_by_id.get(int(item.eden), {}).has("arch"):
-		return "Cet objet n'a pas d'entrée dans l'archive d'Eden."
+		return "Cet objet n'a pas d'entrée dans l'archive."
 	var keys := keys_for(item)
 	if keys.is_empty():
 		return "Cet objet n'a pas d'entrée dans l'archive."
@@ -214,16 +214,15 @@ static func bonus_text(b: Dictionary) -> String:
 
 ## Où trouver l'objet.
 static func source_text(e: Dictionary) -> String:
-	var eden := (" Dans Eden : %s." % String(e.src)) if String(e.get("src", "")) != "" else ""
 	if is_collection(e):
-		return "Trésor de collection : butin des boss (1 chance sur 4, 1 sur 2 s'ils sont enragés).%s" % eden
+		return "Butin des boss."
 	var zi := GameData.zone_of_eden_level(int(e.level))
 	var zone := String(GameData.zones[zi].get("name", "")) if not GameData.zones.is_empty() else ""
 	if int(e.rarity) >= Items.LEGENDARY:
-		return "Niveau %d d'Eden. Légendaire : butin du boss de %s (30 %%, 50 %% s'il est enragé).%s" % [int(e.level), zone, eden]
+		return "Légendaire : boss de %s." % zone
 	if int(e.rarity) >= Items.MYTHIC:
-		return "Niveau %d d'Eden. Mythique : butin du boss de %s, ou fabrication chez un marchand ambulant de cette zone.%s" % [int(e.level), zone, eden]
-	return "Niveau %d d'Eden : tombe dans %s.%s" % [int(e.level), zone, eden]
+		return "Mythique : boss de %s ou marchand." % zone
+	return "Tombe dans %s." % zone
 
 
 ## Description d'un trésor de collection (carte au survol).
@@ -233,20 +232,20 @@ static func collection_text(x: Dictionary) -> String:
 		if int(c[0]) == int(x.cat):
 			cat = "%s · %s" % [c[2], c[1]]
 	var lines := ["[img=52x52]%s[/img]  [font_size=20][b][color=#%s]%s[/color][/b][/font_size]" % [x.icon, Items.RARITIES[clampi(int(x.get("rarity", 0)), 0, 5)].color.to_html(false), x.name],
-		"[color=#9a98a8]%s%s[/color]" % [cat, " · boutique d'Eden" if x.get("mall", false) else ""]]
+		"[color=#9a98a8]%s[/color]" % cat]
 	if x.has("aura"):
 		var parts: PackedStringArray = []
 		for s in x.aura.stat:
 			parts.append(Items.stat_text(s, x.aura.stat[s]))
 		lines.append("[color=#ffd76a]✶ Aura (%s) : %s pendant les runs[/color]" % [AURA_KINDS.get(String(x.aura.kind), "aura"), ", ".join(parts)])
-		lines.append("[color=#c8c8d4]Effet lumineux d'Eden autour du héros ; une pierre étoilée et une pierre de lune se portent ensemble (onglet Tenues).[/color]")
+		lines.append("[color=#c8c8d4]Effet lumineux autour du héros ; une pierre étoilée et une pierre de lune se portent ensemble (Héros > Apparence).[/color]")
 	elif x.has("skin"):
 		lines.append("[color=#c8c8d4]Apparence d'arme : se choisit dans « Apparences d'armes » pour %s.[/color]" % (
 			"n'importe quelle arme" if String(x.skin.wtype) == "" else String(GameData.weapon_type(String(x.skin.wtype)).get("name", "son type d'arme"))))
 	elif GameData.cosmetic_by_code.has(String(x.get("code", ""))):
-		lines.append("[color=#c8c8d4]Se porte avec n'importe quelle classe (onglet Tenues).[/color]")
+		lines.append("[color=#c8c8d4]Se porte avec n'importe quelle classe (Héros > Apparence).[/color]")
 	elif x.has("mount"):
-		lines.append("[color=#c8c8d4]Monture d'Eden (vitesse +%d %% dans Eden) : pièce de collection.[/color]" % int(x.mount.speed))
+		lines.append("[color=#c8c8d4]Monture : pièce de collection.[/color]")
 	else:
 		lines.append("[color=#c8c8d4]Pièce de collection.[/color]")
 	return "\n".join(lines)

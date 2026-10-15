@@ -3,7 +3,8 @@ extends CanvasLayer
 ## Écran plein écran à pages (menu pause, marchand, collection) dans le style du
 ## grimoire : fond sombre, en-tête doré (titre, onglets, bourse, fermer), pages.
 ## Une page est un Control ; si elle a une méthode refresh(), elle est appelée à
-## l'ouverture et au changement d'onglet.
+## l'ouverture et au changement d'onglet. Si elle a une méthode subtitle() -> String, le
+## texte renvoyé remplace le sous-titre de l'écran tant que cette page est affichée.
 
 signal closed
 signal page_changed(index: int)
@@ -13,6 +14,7 @@ var pause_game := false  # met le jeu en pause tant que l'écran est ouvert
 var _root: Control
 var _title_label: Label
 var _subtitle: Label
+var _base_sub := ""  # sous-titre de l'écran (set_title), quand la page n'en donne pas
 var _tabs: HBoxContainer
 var _tab_buttons: Array[Button] = []
 var _pages: Array[Control] = []
@@ -151,14 +153,28 @@ func show_page(i: int) -> void:
 		_pages[k].visible = k == _current
 		_tab_buttons[k].set_pressed_no_signal(k == _current)
 	refresh()
+	_update_subtitle()
 	page_changed.emit(_current)
 
 
 func set_title(t: String, sub := "") -> void:
 	title = t
 	_title_label.text = t
+	_base_sub = sub
+	_update_subtitle()
+
+
+## Sous-titre de la page affichée (sa méthode subtitle()), sinon celui de l'écran.
+func _update_subtitle() -> void:
+	var sub := _base_sub
+	if not _pages.is_empty() and _pages[_current].has_method("subtitle"):
+		sub = String(_pages[_current].subtitle())
 	_subtitle.text = sub
 	_subtitle.visible = sub != ""
+
+
+func page_count() -> int:
+	return _pages.size()
 
 
 ## Bourse (or et matériaux de la run) dans l'en-tête.
