@@ -62,7 +62,7 @@ func _results() -> Node:
 func _hub() -> String:
 	var parts := ["loadout=" + _norm(Profile.loadout), "presets=" + _norm(Profile.presets), "vault=%d" % Profile.vault.size()]
 	for k in Survivor.HUB_KEYS:
-		parts.append("%s=%s" % [k, _norm(Profile.get(k))])
+		parts.append("%s=%s" % [k, _norm(SurvivorRewards.hub_view(k, Profile.get(k)))])
 	return "\n".join(parts)
 
 
@@ -164,7 +164,7 @@ func _launch(zone := "limestone") -> Node:
 	if not await _until(func(): return _world() != null, 90.0, "monde"):
 		return null
 	var w := _world()
-	if await _until(func(): return w.cards.is_open(), 10.0, "choix de départ"):
+	if await _until(func(): return w.cards.is_open(), 90.0, "choix de départ"):  # (charge de la machine : il arrive après 10 s, et tient la pause tant qu'il est ouvert)
 		w.cards._opened_at -= CardPicker.CONFIRM_DELAY_MS
 		w.cards._choose(0)
 	w.player.autoplay = true  # les choix suivants se font seuls (CardPicker.auto_pick)
@@ -191,7 +191,7 @@ func _victory_run() -> void:
 	# 60 s de pilote (temps accéléré) : ni pièce, ni fourniture, ni coffre de récompense au sol
 	Engine.time_scale = 4.0
 	var kills0 := Run.kills
-	await _until(func(): return d.time >= 60.0, 90.0, "60 s de carte")
+	await _until(func(): return d.time >= 60.0, 300.0, "60 s de carte")
 	Engine.time_scale = 1.0
 	var drops: Array = get_tree().get_nodes_in_group("loot").map(func(n): return n.item)
 	var bad := drops.filter(func(it): return not String(it.get("consumable", "")).begins_with("potion:"))
