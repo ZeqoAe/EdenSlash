@@ -527,7 +527,7 @@ l'époque II avec un équipement d'époque I à +10.
 | Phase | Ce qui se passe |
 |---|---|
 | 0:00 → 10:00 | Exploration d'une map générée : farmer, ouvrir les **coffres** (or ou clé), capturer les **sanctuaires**, trouver les **marchands ambulants** et l'**entrée du donjon**. Monstres de la zone, élites ponctuelles (clés). |
-| 10:00 → … | **Rage** : monstres plus forts, monstres de niveau supérieur, élites en masse. Plus d'XP et de butin. |
+| 10:00 → … | **Rage** : monstres plus forts, monstres de niveau supérieur, élites en masse. Plus d'XP et de butin. **Escalade** (passe P9, idée du joueur) : chaque minute de rage, PV et dégâts des monstres de la carte ×1,1 (10:00), ×2 (11:00), ×11 (12:00), puis ×101 (13:00 et après) ; le boss n'est pas concerné (l'arène arrête le chronomètre). Le HUD affiche « RAGE ×2 · 0:42 » (multiplicateur, temps avant le palier suivant). La rage est un chronomètre : vers 12 min il faut être au boss ou s'extraire. |
 | N'importe quand | Si l'entrée du donjon est découverte **et 3 sceaux réunis** : entrer → **arène du boss**. |
 | Boss | Combat direct dans une arène dédiée. Attaques annoncées par des **zones rouges au sol** (cercle, ligne, cône au corps à corps, projectiles à distance) + monstres invoqués autour. Être touché = **étourdi** 1 à 1,5 s. **Miroir** toutes les 12–17 s pendant 3 s : frapper le boss renvoie 60 % des dégâts. L'onde circulaire (bord jaune) se **saute**. |
 | Fin | Victoire (boss vaincu) ou défaite → bilan → lobby. Le bilan (même composant dans tous les modes) sépare **Gagné** (maîtrise, étoiles, déblocages), **Gardé** (insignes dont 25 de participation, pièces découvertes, coffres, fournitures d'une run réussie) et **Perdu** (or, clés, fournitures d'une run perdue). |
@@ -535,6 +535,8 @@ l'époque II avec un équipement d'époque I à +10.
 ## Pression constante (easy to play, hard to master)
 
 - **Tous les monstres de la map traquent le héros** : jamais besoin d'aller les chercher.
+  Ils suivent le maillage de navigation point par point (passe P9 : ils faisaient demi-tour vers le départ de leur
+  chemin et n'avançaient qu'au tiers de leur vitesse ; maintenant 95 %, la horde reste à ~18 m d'un héros qui court, `tests/test_pursuit`).
 - Flux continu de meutes (4 → 9 monstres, toutes les 6 → 3,5 s ; en rage 8–12 toutes les 2 s).
 - **Vagues alternées** toutes les 45 s (30 s en rage) : *encerclement* (anneau de monstres
   + une élite, difficile) puis *horde* (beaucoup de monstres plus faibles, facile).

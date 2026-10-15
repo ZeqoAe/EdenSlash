@@ -320,7 +320,8 @@ func _build_right() -> void:
 		b.tooltip_text = String(f[1])
 		b.icon = MenuWidgets.icon(String(f[2]))
 		b.expand_icon = false
-		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		# icône à gauche du nom (centrée, Godot la dessine sous le texte) ; seule, au centre
+		b.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT if b.text != "" else HORIZONTAL_ALIGNMENT_CENTER
 		b.add_theme_constant_override("icon_max_width", 15 if not _narrow() else 20)
 		b.add_theme_constant_override("h_separation", 4)
 		b.focus_mode = Control.FOCUS_NONE
@@ -679,8 +680,8 @@ Elle ouvre les difficultés Héroïque et Mythique des donjons et les butins lé
 func _style_family(b: Button, on: bool) -> void:
 	var sb := UiTheme.flat_box(Color(0.62, 0.45, 0.14, 1.0) if on else Color(0.08, 0.07, 0.16, 0.92),
 		UiTheme.GOLD if on else Color(0.45, 0.36, 0.22, 0.8), 1, 7, false)
-	sb.content_margin_left = 8
-	sb.content_margin_right = 8
+	sb.content_margin_left = 6
+	sb.content_margin_right = 6
 	b.add_theme_stylebox_override("normal", sb)
 	b.add_theme_stylebox_override("pressed", sb)
 	b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.3, 0.22, 0.09, 1.0), UiTheme.GOLD, 1, 7, false))

@@ -31,6 +31,7 @@ var _base_scale := Vector3.ONE
 var _hit_time := 0.45
 var _map: Node3D  # ProcMap ou MapLoader (path_between)
 var _path := PackedVector3Array()
+var _path_i := 0  # point de passage visé dans _path
 var _path_timer := 0.0
 var _status_label: Label3D
 
@@ -404,11 +405,16 @@ func _path_step(goal: Vector3) -> Vector3:
 	if _path_timer <= 0.0:
 		_path_timer = randf_range(0.4, 0.7)
 		_path = _map.path_between(global_position, goal)
-	for p in _path:
-		var d := p - global_position
+		_path_i = 1  # le 1er point est la position du monstre au calcul
+	# Point de passage suivant : on avance dans le chemin et on ne revient jamais en arrière (avant la passe P9,
+	# le premier point à plus de 1,2 m était souvent le départ du chemin, resté derrière : le monstre
+	# faisait demi-tour à chaque instant et n'avançait qu'à un tiers de sa vitesse).
+	while _path_i < _path.size():
+		var d := _path[_path_i] - global_position
 		d.y = 0.0
 		if d.length() > 1.2:
 			return d.normalized()
+		_path_i += 1
 	return to.normalized()
 
 

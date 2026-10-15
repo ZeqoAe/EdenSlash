@@ -410,7 +410,7 @@ func _update_objectives() -> void:
 		"cleared":
 			_clock_label.text = "Victoire"
 		"rage":
-			_clock_label.text = "RAGE !"
+			_clock_label.text = director.rage_text()
 		_:
 			_clock_label.text = "⏳ %02d:%02d" % [int(t) / 60, int(t) % 60]
 	_clock_label.add_theme_color_override("font_color", Color(1.0, 0.4, 0.35) if rage or t < 60.0 else Color.WHITE)
@@ -466,12 +466,22 @@ func _update_objectives() -> void:
 						used += 1 if it.used else 0
 			lines.append("◇ Sanctuaires %d / %d · lieux %d / %d" % [director.shrines_captured,
 				director.map.shrines.size() if director.map else 0, used, total])
-			lines.append("Rage dans %02d:%02d" % [int(t) / 60, int(t) % 60] if not rage else "RAGE : monstres et butin plus forts")
+			lines.append("Rage dans %02d:%02d" % [int(t) / 60, int(t) % 60] if not rage else _rage_line())
 	for i in _obj_lines.size():
 		var shown := i < lines.size()
 		_obj_lines[i].visible = shown
 		_obj_lines[i].text = lines[i] if shown else ""
 		_obj_lines[i].add_theme_color_override("font_color", Color(0.55, 1.0, 0.6) if shown and lines[i].begins_with("✔") else Color(0.92, 0.9, 0.98))
+
+
+## Ligne d'objectif en rage : le multiplicateur des monstres et le prochain palier.
+func _rage_line() -> String:
+	var tier := director.rage_tier()
+	var left := director.rage_next_in()
+	var now := "Rage : monstres ×%s" % RunDirector.fmt_mult(RunDirector.rage_mult(tier))
+	if left < 0.0:
+		return now + " : file au boss"
+	return now + ", ×%s dans %d:%02d" % [RunDirector.fmt_mult(RunDirector.rage_mult(tier + 1)), int(left) / 60, int(left) % 60]
 
 
 # --- mini-carte ronde (haut droite) ------------------------------------------------------

@@ -30,6 +30,12 @@ const FOG_RES := 128
 ## même niveau, +3 pendant la rage (plus durs, mais le butin reste plafonné).
 const ZONE_MAX_LEVEL := {"limestone": 15}
 const RAGE_LEVEL_BONUS := 3
+## Escalade de la rage (retour du joueur, 15/10) : la rage est un chronomètre qui force la fin de la carte.
+## Une minute par palier, PV et dégâts des monstres de la carte (pas du boss) × RAGE_TIERS[palier - 1],
+## en plus de la rage elle-même (+3 niveaux, dégâts ×1,3, vitesse ×1,25) ; le dernier palier dure.
+const RAGE_STEP := 60.0
+const RAGE_TIERS := [1.1, 2.0, 11.0, 101.0]
+var _rage_tier := 0
 
 var world: Node  # world.gd
 var map  # ProcMap
@@ -242,6 +248,8 @@ func _process(delta: float) -> void:
 	_update_extraction(delta)
 	if state == "explore" and time >= RUN_TIME:
 		_start_rage()
+	if state == "rage" and rage_tier() != _rage_tier:
+		_raise_rage(rage_tier())
 	match state:
 		"explore", "rage":
 			_update_discovery()
@@ -268,7 +276,7 @@ func _objective_text() -> String:
 	if state == "cleared":
 		return "Boss vaincu ! Portail vers l'étape %d/%d" % [Run.stage + 1, STAGES] if next_zone_id() != "" else "Boss vaincu !"
 	var t := time_left()
-	var clock := "RAGE !" if state == "rage" else "%02d:%02d avant la rage" % [int(t) / 60, int(t) % 60]
+	var clock := rage_text() if state == "rage" else "%02d:%02d avant la rage" % [int(t) / 60, int(t) % 60]
 	return "%s\nDonjon %s   ·   Sceaux %d/%d   ·   Coffres %d/%d   ·   Sanctuaires %d/%d" % [clock,
 		"✔" if dungeon_found else "?", seals, SEALS_NEEDED, chests_opened, map.chests.size(), shrines_captured, map.shrines.size()]
 
@@ -281,6 +289,69 @@ func _start_rage() -> void:
 	world.set_rage_mood(true)
 	for node in get_tree().get_nodes_in_group("monsters"):
 		(node as Monster).enrage()
+	_rage_tier = 0
+
+
+## Palier de rage (1 à RAGE_TIERS.size(), 0 hors rage) : un de plus chaque minute de rage.
+func rage_tier() -> int:
+	if state != "rage":
+		return 0
+	return clampi(int((time - RUN_TIME) / RAGE_STEP) + 1, 1, RAGE_TIERS.size())
+
+
+## Multiplicateur de PV et de dégâts des monstres au palier [param tier] (1 hors rage).
+static func rage_mult(tier: int) -> float:
+	return float(RAGE_TIERS[tier - 1]) if tier >= 1 and tier <= RAGE_TIERS.size() else 1.0
+
+
+## Secondes avant le palier suivant (-1 au dernier palier ou hors rage).
+func rage_next_in() -> float:
+	var tier := rage_tier()
+	if tier < 1 or tier >= RAGE_TIERS.size():
+		return -1.0
+	return maxf(0.0, RUN_TIME + RAGE_STEP * tier - time)
+
+
+## Texte court de la rage : « RAGE ×2 · 0:42 » (multiplicateur, temps avant le palier suivant).
+func rage_text() -> String:
+	var tier := maxi(rage_tier(), 1)
+	var txt := "RAGE ×%s" % fmt_mult(rage_mult(tier))
+	var left := rage_next_in()
+	if left >= 0.0:
+		txt += " · %d:%02d" % [int(left) / 60, int(left) % 60]
+	return txt
+
+
+## Multiplicateur en texte : « 2 », « 101 », « 1,1 ».
+static func fmt_mult(m: float) -> String:
+	return str(int(m)) if is_equal_approx(m, roundf(m)) else ("%.1f" % m).replace(".", ",")
+
+
+## Passe au palier de rage [param tier] : les monstres de la carte prennent le nouveau multiplicateur.
+func _raise_rage(tier: int) -> void:
+	_rage_tier = tier
+	for node in get_tree().get_nodes_in_group("monsters"):
+		_apply_rage_mult(node as Monster)
+	match tier:
+		2:
+			message.emit("LA RAGE MONTE !\nMonstres deux fois plus forts", 3.5)
+		3:
+			message.emit("LA RAGE DÉBORDE !\nMonstres onze fois plus forts : file au boss", 4.0)
+		4:
+			message.emit("FUREUR TOTALE !\nRejoins le boss ou quitte la carte", 4.0)
+
+
+## Met [param m] au multiplicateur du palier en cours (PV gardés en proportion) ; ni boss ni allié.
+func _apply_rage_mult(m: Monster) -> void:
+	if m == null or m.is_dead or m.is_boss or m.team != Combatant.Team.MONSTER:
+		return
+	var k := rage_mult(_rage_tier) / float(m.get_meta("rage_mult", 1.0))
+	if is_equal_approx(k, 1.0):
+		return
+	m.max_hp *= k
+	m.hp *= k
+	m.atk *= k
+	m.set_meta("rage_mult", rage_mult(_rage_tier))
 
 
 # --- découvertes et interactions ---------------------------------------------------------
@@ -598,6 +669,7 @@ func _spawn_monster(id: int, pos: Vector3, level: int, boss := false) -> Monster
 	m.rotation.y = randf() * TAU
 	if state == "rage":
 		m.enrage()
+		_apply_rage_mult(m)
 	m.died.connect(_on_monster_died)
 	return m
 

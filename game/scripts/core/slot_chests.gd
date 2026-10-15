@@ -95,6 +95,11 @@ static func offer(box: String, epoch: int, stage: int, n := 3) -> Array:
 		return trophy_offer(epoch, stage, n)
 	var p := pool(box, epoch, stage)
 	p.shuffle()
+	# la pièce déjà portée (équipement du hub) n'est pas reproposée, sauf s'il ne reste qu'elle (retour du joueur)
+	var worn := worn_eden(box)
+	var fresh := p.filter(func(e): return not worn.has(int(e.id)))
+	if not fresh.is_empty():
+		p = fresh
 	var m := Epochs.map_def(epoch, stage)
 	var out: Array = []
 	for e in p.slice(0, n):
@@ -103,6 +108,20 @@ static func offer(box: String, epoch: int, stage: int, n := 3) -> Array:
 		if m.get("awakened", false) and GameData.is_awakened(e):
 			it["awakened"] = true
 		out.append(it)
+	return out
+
+
+## Modèles d'Eden des pièces portées dans les emplacements du coffre [param box] (arme secondaire comprise
+## pour le coffre d'arme).
+static func worn_eden(box: String) -> Array:
+	var out: Array = []
+	var slots: Array = (BOXES.get(box, {}) as Dictionary).get("slots", []).duplicate()
+	if "weapon" in slots:
+		slots.append("offhand")
+	for s in slots:
+		var it: Dictionary = Profile.equipped.get(s, {})
+		if it.has("eden"):
+			out.append(int(it.eden))
 	return out
 
 

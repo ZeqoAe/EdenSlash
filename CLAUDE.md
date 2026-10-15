@@ -233,6 +233,9 @@ s'il a la bonne version.
 Alt + clic droit sur n'importe quoi dans le jeu enregistre une note dans `feedback/<date>_note/`
 (`rapport.json` : note, type, élément visé, version ; `capture.png` avec un repère rouge).
 Le dossier n'est pas dans git : la session locale les lit au début du travail.
+Suivi lisible par le joueur : `feedback/_SUIVI.md` (une ligne par note : date, résumé, statut, version) ; y ajouter chaque nouvelle note.
+Passe P9 (0.1.189, notes) : rage en paliers ×1,1 / ×2 / ×11 / ×101 par minute (`RunDirector.RAGE_TIERS`), horde qui suit vraiment
+son chemin (`Monster._path_step`, `tests/test_pursuit`), pièce portée jamais reproposée (`SlotChests.worn_eden`), cadenas des activités.
 
 ## Tests
 `Godot --headless --path game res://tests/<test>.tscn` pour test_build, test_hud,

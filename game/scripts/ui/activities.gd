@@ -64,12 +64,17 @@ static func card(a: Dictionary, size := Vector2(0, 118)) -> Button:
 	b.add_theme_stylebox_override("hover", hv)
 	b.add_theme_stylebox_override("pressed", hv)
 	_art(b, a, 0.86)
+	var lock: LockOverlay = null
 	if soon:
 		var gray := ColorRect.new()
-		gray.color = Color(0.05, 0.04, 0.1, 0.45)
+		# verrouillée : l'image presque noire, un cadenas enchaîné au centre (retour du joueur, 15/10)
+		gray.color = Color(0.03, 0.03, 0.06, 0.74) if locked(a) else Color(0.05, 0.04, 0.1, 0.45)
 		gray.set_anchors_preset(Control.PRESET_FULL_RECT)
 		gray.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		b.add_child(gray)
+		if locked(a):
+			lock = LockOverlay.new()
+			b.add_child(lock)
 	var tv := VBoxContainer.new()
 	tv.set_anchors_preset(Control.PRESET_FULL_RECT)
 	tv.offset_left = 16
@@ -84,7 +89,9 @@ static func card(a: Dictionary, size := Vector2(0, 118)) -> Button:
 	t.add_theme_constant_override("outline_size", 6)
 	t.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var is_locked := locked(a)  # grisée : le sous-titre dit comment l'ouvrir
-	var st := Hud._label(tv, ("🔒 " + _short_condition(String(a.unlock))) if is_locked else String(a.sub), 13, Color(0.92, 0.9, 0.98, 0.95))
+	if lock != null:
+		lock.title = t  # le cadenas se place au-dessus du nom
+	var st := Hud._label(tv, _short_condition(String(a.unlock)) if is_locked else String(a.sub), 13, Color(0.92, 0.9, 0.98, 0.95))
 	if is_locked:
 		st.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # la condition tient sur deux lignes plutôt que d'être coupée
 	else:
@@ -199,3 +206,59 @@ static func _tag(a: Dictionary) -> Control:
 	var l := Hud._label(p, " %s " % text, 11, col)
 	l.add_theme_font_override("font", UiTheme.bold_font())
 	return p
+
+
+## Activité verrouillée : un cadenas doré au centre sur deux bouts de chaîne en croix (dessinés, pas
+## d'image), au-dessus du nom ; la condition d'ouverture reste écrite sous le nom.
+class LockOverlay extends Control:
+	const STEEL := Color(0.62, 0.62, 0.7, 0.9)
+	const STEEL_DARK := Color(0.08, 0.08, 0.12, 0.9)
+	var title: Control:  # nom de l'activité : le cadenas reste au-dessus, même si la condition tient sur deux lignes
+		set(v):
+			title = v
+			v.item_rect_changed.connect(queue_redraw)
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		set_anchors_preset(Control.PRESET_FULL_RECT)
+
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_RESIZED:
+			queue_redraw()
+
+	func _draw() -> void:
+		var k := clampf(size.y / 118.0, 0.7, 1.3) * 0.8  # taille du cadenas suivant la hauteur de l'étiquette
+		var top := size.y * 0.5
+		if is_instance_valid(title):
+			top = title.get_global_rect().position.y - get_global_rect().position.y + 4.0
+		var c := Vector2(size.x * 0.5, clampf(top - 17.0 * k, 16.0 * k, size.y * 0.32))
+		var arm := Vector2(52, 17) * k / 0.8
+		_chain(c - arm, c + arm)
+		_chain(c + Vector2(arm.x, -arm.y), c + Vector2(-arm.x, arm.y))
+		# anse du cadenas
+		draw_arc(c + Vector2(0, -6) * k, 9.0 * k, PI, TAU, 18, STEEL_DARK, 7.0 * k, true)
+		draw_arc(c + Vector2(0, -6) * k, 9.0 * k, PI, TAU, 18, Color(0.9, 0.78, 0.45), 4.0 * k, true)
+		# corps et trou de serrure
+		var body := Rect2(c + Vector2(-14, -7) * k, Vector2(28, 22) * k)
+		draw_rect(body.grow(2.0 * k), STEEL_DARK)
+		draw_rect(body, Color(0.93, 0.74, 0.3))
+		draw_rect(Rect2(body.position, Vector2(body.size.x, 5.0 * k)), Color(1.0, 0.88, 0.55))
+		draw_circle(c + Vector2(0, 2) * k, 3.2 * k, Color(0.16, 0.1, 0.04))
+		draw_rect(Rect2(c + Vector2(-1.3, 2) * k, Vector2(2.6, 7) * k), Color(0.16, 0.1, 0.04))
+
+	## Chaîne de [param a] à [param b] : maillons ovales qui se chevauchent, de face puis de profil.
+	func _chain(a: Vector2, b: Vector2) -> void:
+		var d := b - a
+		var n := maxi(int(d.length() / 9.0), 2)
+		var ang := d.angle()
+		for i in n:
+			var p := a + d * ((i + 0.5) / n)
+			_link(p, ang, Vector2(7.0, 3.6) if i % 2 == 0 else Vector2(7.0, 1.2))
+
+	func _link(p: Vector2, ang: float, r: Vector2) -> void:
+		var pts := PackedVector2Array()
+		for j in 17:
+			var t := TAU * j / 16.0
+			pts.append(p + Vector2(cos(t) * r.x, sin(t) * r.y).rotated(ang))
+		draw_polyline(pts, STEEL_DARK, 4.0, true)
+		draw_polyline(pts, STEEL, 2.0, true)
