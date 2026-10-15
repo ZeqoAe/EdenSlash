@@ -63,9 +63,10 @@ const PVP_SIEGE := {
 	"caps": PVP["caps"],
 }
 ## Battle royale : héros nus qui montent de niveau en pillant ; huit héros qui se frappent (échelle réduite), pas
-## d'acharnement (l'anneau fait pression), soins presque entiers (les potions comptent).
+## d'acharnement (l'anneau fait pression), soins presque entiers (les potions comptent). Passe M1 : échelle 0,05 -> 0,04
+## (parties de 4 à 6 min mesurées ; un combat plus long laisse le temps de fuir ou d'arriver en troisième).
 const ROYALE := {
-	"dmg_scale": 0.05, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": 0.8,
+	"dmg_scale": 0.04, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": 0.8,
 	"max_mitigation": PvpCaps.MAX_MITIGATION, "pressure_start": 100000.0,
 	"pressure_step": PvpCaps.PRESSURE_STEP, "pct_weight": 0.75,
 	"hit_cap": 0.18, "burst_cap": 0.4, "burst_window": 2.0, "burst_excess": 0.3,

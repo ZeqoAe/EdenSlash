@@ -677,6 +677,18 @@ func _update_idle(input_dir: Vector3, delta: float) -> void:
 			_try_auto_attack(move.length() > 0.1)
 
 
+var _bot_dash_at := 0.0
+
+
+## Pilote automatique du Battle royale (mesures de la passe M1) : un joueur moyen file aux coffres en esquivant de
+## temps en temps (une esquive toutes les 0,6 à 1,4 s en trajet, aucune au contact d'un adversaire).
+func _autoplay_dash() -> bool:
+	if _time < _bot_dash_at or Vector2(velocity.x, velocity.z).length() < 2.0 or nearest_monster(14.0) != null:
+		return false
+	_bot_dash_at = _time + randf_range(0.6, 1.4)
+	return true
+
+
 ## Compétence demandée au clavier (prête), sinon compétence automatique.
 func _try_skill_input() -> bool:
 	if _chain_input() != 0:
@@ -2485,6 +2497,8 @@ func _autoplay_input() -> Vector2:
 
 
 func _autoplay_wants(action: String) -> bool:
+	if action == "dodge" and Royale.active:
+		return _autoplay_dash()
 	var m := nearest_monster(40.0)
 	if m == null:
 		return false

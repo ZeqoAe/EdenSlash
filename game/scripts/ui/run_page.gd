@@ -125,9 +125,10 @@ func refresh() -> void:
 			String(ws.desc) + ("\n" + mt if mt != "" else "\nPas encore améliorée (cartes d'amélioration d'arme)."), UiTheme.GOLD)
 	for ch in _cards.get_children():
 		ch.queue_free()
-	# trophées : collection de la run, tous actifs
-	ItemWidgets.section(_cards, "Trophées (%d / %d)" % [Run.trophies.size(), Run.MAX_TROPHIES], 15)
-	if Run.trophies.is_empty():
+	# trophées : collection de la run, tous actifs (le Battle royale n'en donne pas : passe M1)
+	if not Royale.active:
+		ItemWidgets.section(_cards, "Trophées (%d / %d)" % [Run.trophies.size(), Run.MAX_TROPHIES], 15)
+	if Run.trophies.is_empty() and not Royale.active:
 		_row(_cards, "", "Aucun trophée", "", UiTheme.MUTED, 0, 0, Vector2i(-1, -1), "Coffres et sanctuaires : jusqu'à %d trophées par run, tous d'effets différents, tous actifs" % Run.MAX_TROPHIES)
 	for t in Run.trophies:
 		_row(_cards, String(t.get("icon", "")), "✔ %s · %s" % [String(t.get("passive", {}).get("name", "")), Items.display_name(t)],
@@ -145,8 +146,16 @@ Total : " + Cards.total_text(p, Run.power(pid)) if not (p.get("stat", {}) as Dic
 	for ch in _stats.get_children():
 		ch.queue_free()
 	var secs := (Time.get_ticks_msec() - Run.started_at) / 1000
-	for e in [[str(player.level if player else Run.max_level), "niveau"], ["%d:%02d" % [secs / 60, secs % 60], "durée"],
-			[str(Run.kills), "monstres"], [str(Run.elites), "élites"], [str(Run.gold), "or gagné"], [str(Run.loot.size()), "objets"]]:
+	var tiles := [[str(player.level if player else Run.max_level), "niveau"], ["%d:%02d" % [secs / 60, secs % 60], "durée"],
+			[str(Run.kills), "monstres"], [str(Run.elites), "élites"], [str(Run.gold), "or gagné"], [str(Run.loot.size()), "objets"]]
+	var rd = _royale()
+	if rd != null:
+		# Battle royale (passe M1) : ni monstres, ni or, ni objets ; les chiffres de la partie
+		var t := int(rd.player_time())
+		tiles = [[str(player.level if player else 1), "niveau"], ["%d:%02d" % [t / 60, t % 60], "durée"],
+			["%d / %d" % [rd.alive_count(), Royale.PLAYERS], "en vie"], [str(Royale.kills), "éliminations"],
+			[str(rd.chests_opened), "coffres"], [str(Potions.count("heal")), "soins"]]
+	for e in tiles:
 		ResultsPanel.tile(_stats, String(e[0]), String(e[1]), "", false, 100.0)
 	_bag_title.visible = not Profile.bag.is_empty()
 	_bag.visible = not Profile.bag.is_empty()
@@ -154,6 +163,15 @@ Total : " + Cards.total_text(p, Run.power(pid)) if not (p.get("stat", {}) as Dic
 	for k in Profile.bag.keys():
 		parts.append("[img=20x20]%s[/img] %s ×%d" % [Craft.icon(k), Craft.label(k), Profile.bag_count(k)])
 	_bag.text = "\n".join(parts)
+
+
+## Directeur du Battle royale de la partie en cours (null hors Battle royale).
+func _royale():
+	if not Royale.active:
+		return null
+	var w: Node = player.get_parent() if player != null else get_tree().current_scene  # le monde (parent du héros)
+	var d = w.get("director") if w != null else null
+	return d.royale if d != null and d.get("royale") != null else null
 
 
 ## Ligne de la grille des sorts : on la glisse sur une autre pour échanger leurs places (Run.swap_spells).

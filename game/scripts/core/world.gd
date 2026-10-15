@@ -196,7 +196,7 @@ func _ready() -> void:
 		elif Duel.active:
 			duel_end(false)
 		elif Royale.active:
-			royale_end(Royale.PLAYERS)
+			royale_end(director.royale.leave_place() if director.royale else Royale.PLAYERS)  # (spectateur : sa place)
 		else:
 			end_run("abandon"))
 	if Training.active:
@@ -491,7 +491,7 @@ func _on_player_died(_who: Combatant, _killer: Combatant) -> void:
 		player.respawn(player.global_position)
 		return
 	if Royale.active:
-		director.royale.player_down()  # Battle royale : une seule vie ; le directeur annonce la place
+		director.royale.player_down(_killer)  # Battle royale : une seule vie ; le directeur annonce la place, puis spectateur
 		return
 	if Duel.active:
 		director.duel.player_down()  # manche perdue ; la manche suivante le relève
@@ -696,8 +696,11 @@ func royale_end(place: int) -> void:
 	var kills := Royale.kills
 	var level := player.level
 	var chests: int = director.royale.chests_opened if director.royale else 0
-	var secs: float = director.royale.elapsed if director.royale else 0.0
+	var secs: float = director.royale.player_time() if director.royale else 0.0
 	var got := Royale.finish(place)
+	if "--auto-quit" in OS.get_cmdline_user_args():
+		get_tree().quit()  # mesures (--royale --autoplay --auto-quit) : la ligne de fin est déjà écrite
+		return
 	var r := RoyaleResults.new()
 	add_child(r)
 	r.show_results(place, kills, level, chests, secs, got)

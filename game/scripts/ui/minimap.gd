@@ -19,11 +19,14 @@ const ICONS := {
 	"chest1": Color(1.0, 0.45, 0.35),
 	"chest2": Color(1.0, 0.95, 0.4),
 	"fort": Color(1.0, 0.35, 0.25),
+	"drop": Color(1.0, 0.85, 0.35),  # Battle royale : largage
+	"bounty": Color(1.0, 0.3, 0.25),  # Battle royale : héros mis à prix
 }
 ## Légende de la grande carte : [type, nom].
 const LEGEND := [["dungeon", "Donjon"], ["merchant", "Marchand"], ["shrine", "Sanctuaire"], ["fort", "Fort d'élite (sceau)"],
 	["chest", "Coffre"], ["chest1", "Coffre ouvragé"], ["chest2", "Coffre doré"], ["anvil", "Enclume"], ["scribe", "Autel du scribe"],
-	["well", "Fontaine de vie"], ["magnet", "Pierre d'aimant"], ["greed", "Autel de cupidité"], ["challenge", "Stèle du défi"], ["fortune", "Autel de la fortune"], ["giant", "Autel du géant"]]
+	["well", "Fontaine de vie"], ["magnet", "Pierre d'aimant"], ["greed", "Autel de cupidité"], ["challenge", "Stèle du défi"], ["fortune", "Autel de la fortune"], ["giant", "Autel du géant"],
+	["drop", "Largage"], ["bounty", "Héros mis à prix"]]
 
 var player: Player
 var director: RunDirector
@@ -55,7 +58,10 @@ func _draw() -> void:
 	var cam := get_viewport().get_camera_3d()
 	var yaw := cam.global_rotation.y if cam and not big else 0.0
 	var scale_ := zoom / ppm
-	var center_img := Vector2(player.global_position.x, player.global_position.z) * ppm
+	var focus := player.global_position
+	if Royale.active and director.royale != null and director.royale.spectating and is_instance_valid(director.royale.watched):
+		focus = director.royale.watched.global_position  # spectateur (passe M1) : la carte suit le héros regardé
+	var center_img := Vector2(focus.x, focus.z) * ppm
 	if big:
 		scale_ = minf(size.x, size.y) / tex.get_width()
 		center_img = Vector2(tex.get_width(), tex.get_height()) * 0.5
@@ -96,6 +102,9 @@ func _draw() -> void:
 		elif m[1] == "fort":
 			_diamond(sp, 7.5 * k, Color(0, 0, 0, 0.6))
 			_diamond(sp, 6.0 * k, col)
+		elif m[1] == "drop" or m[1] == "bounty":
+			_star(sp, 9.0 * k, Color(0, 0, 0, 0.7))
+			_star(sp, 7.0 * k, col)
 		else:
 			draw_circle(sp, 7.0 * k, Color(0, 0, 0, 0.6))
 			draw_circle(sp, 5.5 * k, col)
@@ -175,9 +184,20 @@ func _draw_legend() -> void:
 			draw_arc(p, 6.0, 0.0, TAU, 16, col, 2.5)
 		elif k == "fort":
 			_diamond(p, 7.0, col)
+		elif k == "drop" or k == "bounty":
+			_star(p, 7.0, col)
 		else:
 			draw_circle(p, 6.0, col)
 		draw_string(font, p + Vector2(16, 5), String(kinds[i][1]), HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_TEXT, Color(0.93, 0.9, 0.98))
+
+
+## Étoile à cinq branches (largage, héros mis à prix : visibles de partout, au bord quand ils sont loin).
+func _star(c: Vector2, r: float, col: Color) -> void:
+	var pts := PackedVector2Array()
+	for i in 10:
+		var a := -PI / 2.0 + i * PI / 5.0
+		pts.append(c + Vector2(cos(a), sin(a)) * (r if i % 2 == 0 else r * 0.45))
+	draw_colored_polygon(pts, col)
 
 
 func _inside(p: Vector2) -> bool:

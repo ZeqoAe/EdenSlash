@@ -2,8 +2,8 @@ class_name Royale
 extends RefCounted
 ## Battle royale (idée 9 de conception/IDEES_EN_VRAC.md) : 8 héros (toi et 7 héros scriptés) tombent nus,
 ## niveau 1, sur une grande carte remplie de coffres. Le niveau monte par coffres et éliminations, un anneau
-## se referme en quatre phases (3 min 30 en tout), le dernier debout gagne. Chacun pour soi : voir
-## Combatant.ffa_id. Le déroulement est dans RoyaleDirector ; ici l'état de la partie, le calendrier de
+## se referme en cinq phases (9 min 50 en tout), le dernier debout gagne. Largages et héros mis à prix (passe M1).
+## Chacun pour soi : voir Combatant.ffa_id. Le déroulement est dans RoyaleDirector ; ici l'état de la partie, le calendrier de
 ## l'anneau, les héros adverses et les récompenses.
 ##
 ## Comme le Duel, la sauvegarde n'est pas écrite pendant la partie (elle est rechargée à la sortie) :
@@ -15,25 +15,45 @@ const COUNTDOWN := 6.0
 const START_RADIUS := 260.0  # anneau de départ : toute la carte (512 m)
 ## Phases de l'anneau : attente (le cercle ne bouge pas), resserrement, rayon final, dégâts par seconde
 ## hors de l'anneau (part des PV max). La dernière est la mort subite, sans resserrement.
+## Passe M1 : 9 min 50 en tout (avant 3 min 30, parties de 2 à 3 min : le joueur n'avait pas le temps de s'équiper).
 const PHASES := [
-	{"hold": 35.0, "shrink": 15.0, "radius": 170.0, "dps": 0.02},
-	{"hold": 30.0, "shrink": 15.0, "radius": 110.0, "dps": 0.04},
-	{"hold": 30.0, "shrink": 15.0, "radius": 60.0, "dps": 0.07},
-	{"hold": 25.0, "shrink": 20.0, "radius": 14.0, "dps": 0.12},
-	{"hold": 25.0, "shrink": 0.0, "radius": 14.0, "dps": 0.2},
+	{"hold": 110.0, "shrink": 45.0, "radius": 190.0, "dps": 0.02},
+	{"hold": 90.0, "shrink": 40.0, "radius": 130.0, "dps": 0.03},
+	{"hold": 75.0, "shrink": 35.0, "radius": 80.0, "dps": 0.05},
+	{"hold": 60.0, "shrink": 30.0, "radius": 42.0, "dps": 0.08},
+	{"hold": 50.0, "shrink": 25.0, "radius": 14.0, "dps": 0.12},
+	{"hold": 30.0, "shrink": 0.0, "radius": 14.0, "dps": 0.2},
 ]
 ## Qualités de coffre : raretés de l'équipement proposé (min, max), chance, expérience (en niveaux),
-## potions lâchées (chance du premier, nombre sûr), cartes proposées (chance).
+## potions lâchées (chance du premier, nombre sûr), cartes proposées (chance). La 4e est le largage (passe M1).
 const CHEST_TIERS := [
 	{"min_r": 0, "max_r": 2, "luck": 0.25, "xp": 0.55, "potion": 0.4, "potions": 0, "card": 0.0},
 	{"min_r": 1, "max_r": 3, "luck": 0.45, "xp": 0.85, "potion": 1.0, "potions": 1, "card": 0.35},
 	{"min_r": 3, "max_r": 5, "luck": 0.75, "xp": 1.3, "potion": 1.0, "potions": 2, "card": 0.8},
+	{"min_r": 4, "max_r": 5, "luck": 0.9, "xp": 2.0, "potion": 1.0, "potions": 2, "card": 1.0},
 ]
+## Largage (passe M1) : annoncé au début de chaque resserrement (sauf le dernier), il tombe dans le prochain anneau
+## DROP_DELAY s plus tard ; le premier héros qui l'atteint prend le meilleur coffre de la partie.
+const DROP_TIER := 3
+const DROP_DELAY := 15.0
+## Mis à prix (passe M1) : le héros qui compte le plus d'éliminations, à partir de BOUNTY_KILLS, est visible de tous
+## sur la carte ; l'éliminer rapporte BOUNTY_XP niveau de plus.
+const BOUNTY_KILLS := 3
+const BOUNTY_XP := 1.0
+## Réapprovisionnement (passe M1) : les 64 coffres de la carte partent en moins d'une minute ; une vague de nouveaux
+## coffres tombe dans l'anneau à RESTOCK_FIRST s puis à chaque resserrement et à chaque nouvel anneau :
+## RESTOCK_PER_HERO par héros en vie (RESTOCK_MAX au plus), plus souvent dorés à chaque vague.
+const RESTOCK_FIRST := 50.0
+const RESTOCK_PER_HERO := 3
+const RESTOCK_MAX := 22
+## Objets cassés (jarres, caisses) : expérience en niveaux, la même pour le joueur et les héros scriptés.
+const BREAK_XP := 0.03
+const GEM_XP := 0.1
 ## Expérience d'une élimination (en niveaux).
 const KILL_XP := 1.0
 ## Difficulté des adversaires : -1 = mélange (de facile à hardcore), sinon 0 à 3 pour les sept.
 const MIX := [0, 1, 1, 2, 2, 2, 3]
-const DURATION := 210.0
+const DURATION := 590.0
 
 static var active := false
 static var difficulty := -1
@@ -155,7 +175,10 @@ static func sheet(cid: String, lv: int, gear: Dictionary) -> Player:
 static func make_ai(cid: String, diff: int, index: int) -> ClassRival:
 	var r := ClassRival.new()
 	r.setup(cid, 1, diff)
-	r.set_meta("royale", {"cid": cid, "diff": diff, "gear": {}, "lv": 1, "prog": 0.0, "chests": 0, "potions": 2, "potion_cd": 0.0, "index": index})
+	r.set_meta("royale", {"cid": cid, "diff": diff, "gear": {}, "lv": 1, "prog": 0.0, "chests": 0, "potions": 2, "potion_cd": 0.0, "index": index,
+		"kills": 0, "flee_until": 0.0})
+	# course hors combat : celle d'un héros de la classe (le Facile flâne un peu)
+	r.travel_speed = Player.BASE_SPEED * (1.0 + float(GameData.class_data(cid).get("base", {}).get("move_speed", 0.0))) * (0.92 if diff <= 0 else 1.0)
 	refresh_ai(r, false)
 	return r
 
@@ -170,7 +193,7 @@ static func refresh_ai(r: ClassRival, keep_ratio := true) -> void:
 	r.use_sheet(h)
 	h.free()
 	r.hp = r.max_hp * ratio
-	r.display_name = "%s · niv. %d" % [GameData.class_data(String(st.cid)).get("name_fr", st.cid), lv]
+	r.display_name = String(GameData.class_data(String(st.cid)).get("name_fr", st.cid))  # (le niveau : plaque et cadre de cible)
 
 
 ## Niveaux gagnés par [param r] : [param amount] niveaux (fractions comprises).
@@ -194,18 +217,38 @@ static func ai_open_chest(r: ClassRival, tier: int) -> void:
 	var st: Dictionary = r.get_meta("royale")
 	st.chests = int(st.chests) + 1
 	var def: Dictionary = CHEST_TIERS[clampi(tier, 0, CHEST_TIERS.size() - 1)]
-	var best: Dictionary = {}
-	for it in chest_items(tier, int(st.lv), String(st.cid)):
-		if best.is_empty() or int(it.get("rarity", 0)) > int(best.get("rarity", 0)):
-			best = it
+	# la pièce qui gagne le plus sur ce qu'il porte (note pondérée par le profil de sa classe, comme le Bot du joueur)
+	var prof := ClassGear.profile(String(st.cid))
 	var gear: Dictionary = st.gear
-	var slot := String(best.get("slot", ""))
-	if slot != "" and slot != "trophy" and (not gear.has(slot) or int(best.get("rarity", 0)) > int(gear[slot].get("rarity", 0))):
-		gear[slot] = best
+	var best: Dictionary = {}
+	var best_gain := 0.0
+	for it in chest_items(tier, int(st.lv), String(st.cid)):
+		var slot := String(it.get("slot", ""))
+		if slot == "" or slot == "trophy":
+			continue
+		var gain := Items.rating(it, prof) - (Items.rating(gear[slot], prof) if gear.has(slot) else 0.0)
+		if gain > best_gain:
+			best_gain = gain
+			best = it
+	if not best.is_empty():
+		gear[String(best.slot)] = best
 	if randf() < float(def.potion) * (1.0 if int(def.potions) > 0 else 0.6):
 		st.potions = int(st.potions) + 1
 	ai_award(r, float(def.xp))
 	refresh_ai(r)
+
+
+## Rapport de forces de [param a] contre [param b] (> 1 : [param a] gagnerait) : PV restants × puissance de frappe, la
+## règle de Lanchester d'un duel (chacun met PV / dégâts de l'autre à tomber).
+static func power_ratio(a: Combatant, b: Combatant) -> float:
+	return (a.hp * strike(a)) / maxf(b.hp * strike(b), 0.001)
+
+
+## Puissance de frappe d'un héros du Battle royale (joueur : sa puissance × ses multiplicateurs ; scripté : son attaque).
+static func strike(c: Combatant) -> float:
+	if c is Player:
+		return (c as Player).power() * (c as Player).dmg_mult
+	return maxf(float(c.get("atk")), 1.0)
 
 
 ## Place finale du joueur éliminé alors qu'il restait [param alive] héros en vie (lui compris).

@@ -64,6 +64,12 @@ var flee_radius := 0.0  # 0 : pas de bord
 var goal := Vector3.INF
 var _travel_next_at := 0.0  # prochain saut ou esquive du trajet
 var _travel_dash_at := 0.0  # esquive en l'air prévue après le saut
+## Trajet du Battle royale (passe M1) : course d'un héros (Player.BASE_SPEED × vitesse de la classe, 0 = move_speed) et
+## esquives enchaînées comme celles du joueur (Player.DODGE_DISTANCE en Player.DODGE_TIME), sans user ses charges de
+## combat. TRAVEL_GAP : temps de course entre deux esquives, par difficulté (le Hardcore enchaîne comme un bon joueur).
+const TRAVEL_GAP := [2.0, 1.0, 0.65, 0.47]
+var travel_speed := 0.0
+var _travel_hops := 0
 
 
 ## Classe [param class_id] au niveau [param lvl] (PV et dégâts d'un héros de ce niveau).
@@ -523,26 +529,39 @@ func _update_goal(delta: float) -> Vector3:
 		return Vector3.ZERO
 	face_direction(to, delta, 12.0)
 	var step := _path_step(goal)
-	# trajet long : la course s'enchaîne avec des sauts et des esquives (un saut, puis une esquive en l'air, ou une esquive au sol)
-	if dist > 9.0 and not has_status("root"):
+	# trajet long : la course s'enchaîne avec des esquives de trajet (comme le joueur qui file aux coffres) et, une fois
+	# sur quatre, un saut suivi d'une esquive en l'air
+	if dist > 8.0 and not has_status("root") and not has_status("chill"):
 		if _travel_dash_at > 0.0 and _time >= _travel_dash_at:
 			_travel_dash_at = 0.0
-			if _can_dodge():
-				_dodge(step, false)
-				return _dash_vel
+			return _travel_dash(step)
 		elif _time >= _travel_next_at and _time >= _dash_until and _jump_req <= 0.0:
-			_travel_next_at = _time + randf_range(0.7, 1.5)
-			var roll := randf()
-			if roll < 0.5 and is_on_floor():
+			_travel_hops += 1
+			if _travel_hops % 4 == 0 and is_on_floor():
 				_jump(step)
-				_travel_dash_at = _time + 0.26 if _charges >= 1.0 and randf() < 0.75 else 0.0
+				_travel_dash_at = _time + 0.26
+				_travel_next_at = _time + 0.6 + _travel_gap()
 				return _dash_vel
-			elif _can_dodge() and _charges >= 1.0:
-				_dodge(step, false)
-				return _dash_vel
+			return _travel_dash(step)
 	if _time >= _dash_until and is_on_floor():
 		play(_anim("run", "move02"), 0.15)
-	return step * move_speed
+	return step * (travel_speed if travel_speed > 0.0 else move_speed)
+
+
+func _travel_gap() -> float:
+	return float(TRAVEL_GAP[difficulty]) * randf_range(0.85, 1.15)
+
+
+## Esquive de trajet : le bond du joueur (6 m en 0,32 s), sans invulnérabilité ni charge de combat.
+func _travel_dash(dir: Vector3) -> Vector3:
+	dir.y = 0.0
+	dir = dir.normalized() if dir.length() > 0.1 else forward()
+	_dash_vel = dir * (Player.DODGE_DISTANCE / Player.DODGE_TIME)
+	_dash_until = _time + Player.DODGE_TIME
+	_travel_next_at = _dash_until + _travel_gap()
+	face_direction(dir, 1.0, 100.0)
+	play(_anim("dodge", "jump02"), 0.05, 1.6, true)
+	return _dash_vel
 
 
 ## Fuite : s'éloigne du héros en tournant autour de lui, se rabat vers le centre près du

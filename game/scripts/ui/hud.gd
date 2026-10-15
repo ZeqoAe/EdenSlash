@@ -632,6 +632,7 @@ func _build_action_bar(root: Control) -> void:
 	bottom.size = Vector2(900, 196)
 	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(bottom)
+	_action_root = bottom
 	var bar := Panel.new()
 	bar.add_theme_stylebox_override("panel", UiTheme.panel_box())
 	bar.position = Vector2(150, 104)
@@ -745,6 +746,7 @@ func _process(delta: float) -> void:
 	_clock += delta
 	_refresh_potions()
 	_update_damage_counter(delta)
+	_update_kill_feed()
 	# vie basse : bords de l'écran qui pulsent en rouge
 	var hp_ratio := player.hp / maxf(player.max_hp, 1.0)
 	_low_hp.modulate.a = 0.0 if hp_ratio >= 0.3 or player.is_dead else (0.5 + 0.5 * (1.0 - hp_ratio / 0.3)) * (0.65 + 0.35 * sin(_clock * 6.0))
@@ -959,11 +961,50 @@ func _update_arrow() -> void:
 	_arrow.rotation = dir.angle() + PI / 2.0
 
 
+## Battle royale (passe M1) : fil des éliminations sous la mini-carte, les 4 dernières lignes, 8 s chacune.
+var _feed_box: VBoxContainer
+var _feed_sig := ""
+var _action_root: Control  # barre du bas (vie, sorts, niveau) : cachée quand le joueur éliminé regarde la fin
+
+
+func _update_kill_feed() -> void:
+	if not Royale.active or director == null or director.royale == null:
+		if _feed_box:
+			_feed_box.visible = false
+		return
+	if _feed_box == null:
+		_feed_box = VBoxContainer.new()
+		_feed_box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		_feed_box.position = Vector2(-372, 252)
+		_feed_box.custom_minimum_size = Vector2(356, 0)
+		_feed_box.add_theme_constant_override("separation", 2)
+		_feed_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_root.add_child(_feed_box)
+	if _action_root:
+		_action_root.visible = not director.royale.spectating
+	var now: float = director.royale.elapsed
+	var lines: Array = director.royale.kill_feed.filter(func(e): return now - float(e[1]) < 8.0)
+	_feed_box.visible = not lines.is_empty()
+	var sig := str(lines)
+	if sig == _feed_sig:
+		return
+	_feed_sig = sig
+	for c in _feed_box.get_children():
+		c.queue_free()
+	for e in lines:
+		var t := String(e[0])
+		var mine := t.begins_with("Tu ")
+		var l := _label(_feed_box, t, UiTheme.MIN_TEXT, Color(1.0, 0.85, 0.4) if mine else Color(0.93, 0.9, 0.98))
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		l.add_theme_constant_override("outline_size", 5)
+		l.add_theme_color_override("font_outline_color", Color(0.05, 0.02, 0.08, 0.95))
+
+
 ## Compteur de dégâts cumulés : grossit à chaque coup, la barre montre les 3 s avant la remise
 ## à zéro ; le record de la run et le record absolu en dessous.
 func _update_damage_counter(delta: float) -> void:
 	var now := Run.combo_now()
-	if Duel.active or now <= 0.0:  # en duel il n'a pas de sens (les coups sont plafonnés)
+	if Duel.active or Royale.active or now <= 0.0:  # en duel il n'a pas de sens (les coups sont plafonnés) ; Battle royale : le fil des éliminations
 		_dmg_box.modulate.a = move_toward(_dmg_box.modulate.a, 0.0, delta * 2.0)
 		_dmg_shown = 0.0
 		return

@@ -64,20 +64,20 @@ func _test_ffa() -> void:
 	root.queue_free()
 
 
-## Calendrier de l'anneau : 3 min 30, rayons décroissants, centres emboîtés.
+## Calendrier de l'anneau : 9 min 50 (passe M1), rayons décroissants, centres emboîtés.
 func _test_ring() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
 	var c0 := Vector2(256, 256)
 	var centers := Royale.roll_centers(c0, rng)
 	check("5 centres pour 5 phases (+ la carte)", centers.size() == Royale.PHASES.size() + 1 and centers[0] == c0)
-	check("calendrier : 3 min 30", is_equal_approx(Royale.total_time(), Royale.DURATION) and Royale.DURATION == 210.0)
+	check("calendrier : 9 min 50 (%.0f s)" % Royale.total_time(), is_equal_approx(Royale.total_time(), Royale.DURATION) and Royale.DURATION == 590.0)
 	var r0 := Royale.ring_at(0.0, centers)
 	check("départ : toute la carte, phase d'attente", is_equal_approx(float(r0.radius), Royale.START_RADIUS) and r0.state == "hold" and int(r0.phase) == 0)
 	var prev := 1e9
 	var mono := true
 	var nested := true
-	for t in range(0, 241, 2):
+	for t in range(0, 601, 2):
 		var rg := Royale.ring_at(float(t), centers)
 		if float(rg.radius) > prev + 0.001:
 			mono = false
@@ -87,9 +87,9 @@ func _test_ring() -> void:
 			nested = false
 	check("le rayon ne fait que décroître", mono)
 	check("chaque anneau reste dans celui de départ", nested)
-	var mid := Royale.ring_at(35.0 + 7.5, centers)
-	check("à mi-resserrement le rayon est entre les deux (%.0f)" % float(mid.radius), mid.state == "shrink" and float(mid.radius) < 260.0 and float(mid.radius) > 170.0)
-	var last := Royale.ring_at(205.0, centers)
+	var mid := Royale.ring_at(float(Royale.PHASES[0].hold) + float(Royale.PHASES[0].shrink) * 0.5, centers)
+	check("à mi-resserrement le rayon est entre les deux (%.0f)" % float(mid.radius), mid.state == "shrink" and float(mid.radius) < 260.0 and float(mid.radius) > float(Royale.PHASES[0].radius))
+	var last := Royale.ring_at(Royale.DURATION - 5.0, centers)
 	check("dernier cercle : mort subite", last.state == "final" and float(last.dps) >= 0.2 and float(last.radius) <= 14.5)
 	var dps := Royale.PHASES.map(func(p): return float(p.dps))
 	var rising := true
@@ -289,8 +289,14 @@ func _test_game_loss() -> void:
 	p.take_damage(1e9, killer, false)
 	await get_tree().physics_frame
 	await get_tree().physics_frame
-	check("joueur tombé avec 7 adversaires : 8e place", rd.phase == "over" and rd._place == 8)
-	await get_tree().create_timer(3.6).timeout
+	# (passe M1) éliminé : il regarde la fin, place fixée ; Échap / Options ouvre le bilan
+	check("joueur tombé avec 7 adversaires : 8e place, spectateur", rd.spectating and rd._place == 8 and rd.leave_place() == 8)
+	var ev := InputEventAction.new()
+	ev.action = "pause"
+	ev.pressed = true
+	rd._unhandled_input(ev)
+	check("Échap en spectateur : partie finie à la 8e place", rd.phase == "over" and rd._place == 8)
+	await get_tree().create_timer(1.0).timeout
 	check("bilan de défaite : partie terminée, place 8", world._ended and Royale.rank == 8 and not Royale.active)
 	world.queue_free()
 	await get_tree().create_timer(0.5).timeout

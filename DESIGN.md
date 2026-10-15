@@ -500,6 +500,23 @@ l'époque II avec un équipement d'époque I à +10.
 - **Tour** : 3 / 4 / 5 / 6 cristaux par étage (avant 1 à 2,5, `ActivityLoot.TOWER_PER_FLOOR`) : entre l'époque I gagnée et les
   Donjons (époque II), c'est la seule source de cristaux (≈ 120 / h en Normal, sous un Donjon Normal à 180).
 
+## Battle royale (passe M1, 0.1.201 ; mode codé en 0.1.161, idée 9 de `conception/IDEES_EN_VRAC.md`)
+
+- 8 héros nus au niveau 1, chacun pour soi, dernier debout. **9 min 50** d'anneau en 5 resserrements (`Royale.PHASES` :
+  rayons 190 / 130 / 80 / 42 / 14 m, dégâts hors anneau 2 → 20 % des PV par seconde), puis 30 s de mort subite.
+- Niveaux : coffres (0,55 / 0,85 / 1,3 / largage 2 niveaux), objets cassés (0,03, cristal 0,1), élimination (1 niveau et
+  25 % des PV). Les héros scriptés gagnent exactement la même chose que le joueur.
+- **Réapprovisionnement** : 3 coffres par héros en vie (22 au plus) tombent dans l'anneau à 50 s puis à chaque resserrement et à chaque nouvel anneau,
+  plus souvent dorés à chaque vague. **Largage** : à chaque resserrement sauf le dernier, un coffre de 4e qualité (rareté 4-5,
+  carte sûre) tombe 15 s plus tard dans le prochain anneau (pilier doré, étoile sur la carte, visible de partout).
+- **Mis à prix** : le héros qui compte le plus d'éliminations (3 au moins) est visible de tous sur la carte ; l'éliminer
+  rapporte un niveau de plus et une potion.
+- Héros scriptés (`RoyaleDirector.BRAIN`, par difficulté) : trajet à la vitesse d'un joueur qui esquive (Hardcore ≈ 11 m/s),
+  coffres choisis par valeur / trajet, attaque seulement avec l'avantage (rapport PV × frappe, exigence qui baisse à chaque
+  anneau), fuite s'il est dépassé et a de quoi boire, traque des affaiblis à partir du 3e anneau.
+- Duel entre héros : échelle des dégâts 0,04 (`ModeRules.ROYALE`).
+- Éliminé : on regarde la fin (spectateur) ou on ouvre le bilan ; la place est fixée à la mort.
+
 ## Survivant (mode à part, en chantier : lots S1 à S8 de `conception/survivor/`)
 
 Spécification : `conception/survivor/SPEC.md`, corrigée par `DECISIONS_JOUEUR.md` (qui prime). Une run pure façon Vampire

@@ -423,7 +423,7 @@ func _menu_arenas() -> void:
 
 
 ## Battle royale : le niveau des sept héros IA, puis Lancer. Tout le monde part nu, niveau 1.
-var _royale_diff := -1
+var _royale_diff := Royale.difficulty  # (passe M1) le choix de la partie précédente reste coché
 
 
 func _menu_royale() -> void:
@@ -440,7 +440,7 @@ func _menu_royale() -> void:
 			_royale_diff = k
 			_show_menu("royale"))
 		row.add_child(b)
-	for line in ["Coffres à piller", "Une zone qui se referme"]:
+	for line in ["Coffres et largages à piller", "Une zone qui se referme", "Le meilleur chasseur est mis à prix"]:
 		Hud._label(_sub, "•  " + line, 15, UiTheme.TEXT)
 	var best := int(Profile.records.get("royale_best", 0))
 	var rec := Hud._label(_sub, "Victoires : %d · meilleure place : %s · éliminations : %d" % [int(Profile.records.get("royale_wins", 0)),

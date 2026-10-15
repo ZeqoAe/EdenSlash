@@ -208,7 +208,25 @@ difficile ; une fois vaincu, la zone devient un JcJ à trois, le survivant gagne
   coffre d'apparence au top 3 (légendaire / épique / rare), titre « Dernier debout » à la première victoire.
 - **Verrou** : Ligue rang Argent (ou 6 victoires de duel), `Unlocks` « royale ».
 - Pas encore : cerveaux du Panthéon comme adversaires (`MlDuelPilot` demande un héros `foe` visé sur un seul adversaire),
-  équipes (duo / trio), spectateur après la mort, largage animé.
+  équipes (duo / trio), largage animé des héros au départ.
+
+**Passe M1 (0.1.201, retour du joueur : « les bots farment trop lentement, ils ne se déplacent pas avec le dash »)** — détail
+et mesures dans `conception/nuit_15_10/R_M1.md`.
+- **Héros scriptés** : trajet du joueur (course `Player.BASE_SPEED` × vitesse de la classe + esquives de 6 m enchaînées,
+  `ClassRival.TRAVEL_GAP` : Facile 7,7 m/s, Hardcore 10,9 m/s sur sol plat) ; ils cassent jarres et caisses en passant (même
+  expérience que le joueur) ; coffres choisis par valeur / trajet (Difficile, Hardcore) ; cerveau `RoyaleDirector.BRAIN`
+  (vue, rapport de forces `Royale.power_ratio` pour attaquer, fuite avec potions, traque des affaiblis) ; pillage d'abord,
+  agressivité qui monte à chaque anneau (`ENGAGE_RAMP`), poursuites abandonnées au bout de 5 s ; pièce gardée = meilleure note
+  pondérée de la classe.
+- **Partie de 9 min 50** (5 anneaux, `Royale.PHASES`) et **réapprovisionnement** : une vague de coffres dans l'anneau à 50 s
+  puis à chaque resserrement et à chaque nouvel anneau (les 64 coffres de départ partent en 45 s).
+- **Idées retenues** (5 proposées) : **largages annoncés** (coffre de 4e qualité qui tombe dans le prochain anneau à chaque
+  resserrement, pilier doré, étoile sur la carte) et **héros mis à prix** (3 éliminations ou plus : visible de partout,
+  l'éliminer rapporte un niveau de plus). Proposées, pas faites : contrats de partie, zone de puissance dans l'anneau, série
+  d'éliminations.
+- **Détails** : spectateur après la mort (la caméra suit le tueur, puis le mieux placé ; Échap / Options = bilan, la place
+  est gardée), fil des éliminations sous la mini-carte, bilan Gagné / Gardé / Perdu (maîtrise dans Gagné), menu pause sans
+  or ni trophée (chiffres de la partie), difficulté du lobby gardée d'une partie à l'autre, cadre de cible sans niveau en double.
 
 ## 10. MOBA 4v4 (rang 10)
 **Idée du joueur** : un mode MOBA 4v4.

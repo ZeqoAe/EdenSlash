@@ -119,7 +119,9 @@ Battle royale (0.1.161, idée 9, détail dans `conception/IDEES_EN_VRAC.md`) : `
 récompenses) et `core/royale_director.gd` (carte `ProcMap.generate_royale`, 7 `ClassRival` qui pillent / fuient l'anneau / se battent via `ClassRival.goal`,
 coffres du joueur, anneau visible). Le « chacun pour soi » est général : `Combatant.ffa_id` / `set_ffa()` / `clear_ffa()` + groupe « ffa » (le Siège s'en sert aussi).
 Activité Battle royale dans JcJ (verrou `royale` : Ligue Argent). Test : `tests/test_royale.tscn` ; partie complète en pilote automatique :
-`world.tscn -- --royale --autoplay` (ligne de suivi `[royale]` toutes les 15 s, `--royale-diff=0..3`).
+`world.tscn -- --royale --autoplay` (ligne de suivi `[royale]` toutes les 15 s, `--royale-diff=0..3`, `--auto-quit` : quitte à la fin).
+Passe M1 (0.1.201, `R_M1.md`) : 9 min 50 d'anneau, cerveau des scriptés `RoyaleDirector.BRAIN` (trajet en esquives
+`ClassRival.TRAVEL_GAP`, coffres par valeur, `Royale.power_ratio`), réapprovisionnement, largages, mis à prix, spectateur ; test `test_m1`.
 Survivant (en chantier, lots S1-S8 de `conception/survivor/` : `SPEC.md` corrigé par `DECISIONS_JOUEUR.md` qui prime) : socle S1 (0.1.194)
 `core/survivor.gd` (état, `Survivor.start`, hub jamais modifié : `HUB_KEYS` + `hub_save`) et squelettes `survivor_{pool,gear,cards,director,rewards}.gd`
 branchés par des crochets `Survivor.active` / `sv` (`run_director.gd`) ; activité visible en mode dev (`Survivor.READY`) ; `world.tscn -- --survivor` ; test `test_sv1`.
