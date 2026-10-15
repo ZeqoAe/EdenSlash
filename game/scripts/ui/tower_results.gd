@@ -10,7 +10,7 @@ func show_results(result: String, floor_reached: int, got: Dictionary) -> void:
 	var diff: String = Tower.DIFF_NAMES[Tower.difficulty]
 	var cls := Run.class_data()
 	var record := bool(got.get("new_record", false))
-	var duels := Tower.duel_index(floor_reached) - Tower.duel_index(Tower.start_floor - 1)
+	var heroes := int(got.get("heroes", Tower.duel_index(floor_reached) - Tower.duel_index(Tower.start_floor - 1)))
 	var gained: Array = [row("Maîtrise %s" % cls.get("name_fr", ""), "+%d" % int(got.get("xp", 0)), "", "expertise")]
 	if int(got.get("levels", 0)) > 0:
 		gained.append(row("Niveau %d de maîtrise" % Profile.expertise_level(Run.class_id), "", "", "expertise"))
@@ -20,7 +20,9 @@ func show_results(result: String, floor_reached: int, got: Dictionary) -> void:
 	if int(got.get("items", 0)) > 0:
 		kept.append(row("Objets des coffres", str(int(got.items)), "Ils rejoignent ton coffre commun", "equipment"))
 	if int(got.get("crystals", 0)) > 0:
-		kept.append(row("Cristaux", str(int(got.crystals)), ResourceHelp.tip("crystal"), "crystal"))
+		var cursed := int(got.get("cursed", 0))
+		kept.append(row("Cristaux", str(int(got.crystals)), ("Dont %d pour %d étage%s maudit%s" % [int(got.get("cursed_crystals", 0)), cursed,
+			"s" if cursed > 1 else "", "s" if cursed > 1 else ""]) if cursed > 0 else ResourceHelp.tip("crystal"), "crystal"))
 	kept.append_array(chest_rows(got.get("chests", [])))
 	if int(got.get("looks", 0)) > 0:
 		kept.append(row("Coffre d'apparence", "×%d" % int(got.looks) if int(got.looks) > 1 else "", "Palier franchi", "chest"))
@@ -36,8 +38,8 @@ func show_results(result: String, floor_reached: int, got: Dictionary) -> void:
 		"tiles": [
 			["%d / %d" % [floor_reached, Tower.FLOORS], "étage atteint", "", record],
 			[str(int(got.get("best", 0))), "record %s" % diff.to_lower()],
-			["%d / %d" % [duels, Tower.duel_count()], "duels gagnés"],
-			[str(Run.max_level), "niveau"],
+			[str(heroes), "héros battus"],
+			[str(int(got.get("bosses", 0))), "boss vaincus"],
 			[Run.duration_text(), "durée"],
 			[str(Run.kills), "monstres"],
 		],

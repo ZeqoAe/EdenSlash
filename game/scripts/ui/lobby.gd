@@ -810,7 +810,7 @@ func _menu_tower() -> void:
 		var d := _tower_diff
 		var from := Tower.checkpoint(d)
 		if from > 1:
-			_row("Reprendre l'ascension", "Étage %d · %s" % [from, Tower.DIFF_NAMES[d]], "continue", func(): _start_tower(d, from), 64.0)
+			_row("Reprendre l'ascension", "Étage %d · %s · %s" % [from, TowerPages.floor_what(Tower.spec(from, d)), Tower.DIFF_NAMES[d]], "continue", func(): _start_tower(d, from), 64.0)
 	_section("Difficulté")
 	const DIFF_ICONS := ["heart", "defense", "attack", "power"]
 	for i in Tower.DIFF_NAMES.size():
@@ -873,7 +873,7 @@ func _menu_tower_floors() -> void:
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 6)
 		_sub.add_child(h)
-		var icon := "upgrade" if fl > Tower.best(diff) else "new"
+		var icon := TowerPages.floor_icon(fl)  # type de l'étage (monstres, élites, ombre, halte, boss…)
 		var r := MenuWidgets.RowButton.new(("🔒 " if not open else "") + String(line[0]), String(line[1]), icon, 56.0)
 		r.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		r.disabled = not open
@@ -887,6 +887,7 @@ func _menu_tower_floors() -> void:
 		info.tooltip_text = "Fiche de l'étage"
 		info.pressed.connect(func(): TowerPages.info_popup(_sub, Tower.spec(fl, diff)))
 		h.add_child(info)
+	TowerPages.legend(_sub)
 	var go := MenuWidgets.gold_button("Commencer à l'étage %d" % _tower_sel, 22, Vector2(0, 58))
 	go.disabled = not Tower.unlocked(_tower_sel, diff)
 	go.pressed.connect(_start_tower.bind(diff, _tower_sel))

@@ -410,7 +410,7 @@ func _update_objectives() -> void:
 			if PvpCaps.pressure() > 1.05:
 				_clock_label.text += " · acharnement ×%.1f" % PvpCaps.pressure()
 		"tower":
-			_clock_label.text = director.tower.clock_text() if Tower.siege else "%s %d/%d" % ["Salle" if Tower.is_dungeon() else "Étage", Tower.floor_n, Tower.top()]
+			_clock_label.text = director.tower.clock_text()  # « Étage 12/200 · Ombre », « Salle 2/4 », Siège : son horloge
 		"boss":
 			# Survie (passe P11) : temps avant la rage du boss, puis son palier
 			_clock_label.text = "BOSS"

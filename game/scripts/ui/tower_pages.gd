@@ -12,21 +12,43 @@ static func _count(n: int, one: String, many: String) -> String:
 	return "%d %s" % [n, one if n <= 1 else many]
 
 
+## Icône du type de l'étage [param f] (Tower.TYPE_ICONS).
+static func floor_icon(f: int) -> String:
+	return String(Tower.TYPE_ICONS.get(Tower.floor_type(f), "attack"))
+
+
+## Ce qui attend à l'étage, en quelques mots : « Ombre · Mage », « Boss : Latif, Roi du ciel », « Élites · Bond, Éventail ».
+static func floor_what(s: Dictionary) -> String:
+	match String(s.type):
+		"duel":
+			return "Duelliste %d/%d : %s" % [int(s.index), Tower.count_type("duel", 1, Tower.FLOORS), Tower.hero_title(s)]
+		"shadow":
+			return Tower.hero_title(s)
+		"boss":
+			return "Boss : %s" % BossLibrary.full_name(String(s.boss_id)) if String(s.get("boss_id", "")) != "" else "Boss"
+		"rest":
+			return "Halte"
+		"cursed":
+			return "Maudit · %s" % String(Tower.CURSES.get(String(s.curse), {}).get("name", ""))
+		"elite":
+			return "Élites · %s" % ", ".join(_mech_names(s))
+	return "Monstres · élite : %s" % ", ".join(_mech_names(s))
+
+
+static func _mech_names(s: Dictionary) -> PackedStringArray:
+	var out: PackedStringArray = []
+	for b in s.get("mechanics", []):
+		var nm := BossBricks.name_of(String(b))
+		if not nm in out:
+			out.append(nm)
+	return out
+
+
 ## Titre et sous-titre de la ligne de l'étage [param f].
 static func floor_line(f: int, diff: int) -> Array:
 	var s := Tower.spec(f, diff)
-	var what := ""
-	match String(s.type):
-		"duel":
-			what = "Duel %d/%d : %s" % [int(s.index), Tower.duel_count(), GameData.class_data(String(s["class"])).get("name_fr", "")]
-		"boss":
-			what = "Boss : %s" % GameData.monster(int(s.boss)).get("name", "?")
-		"elite":
-			what = "%s et %s" % [_count(int(s.count), "monstre", "monstres"), _count(int(s.elites), "élite", "élites")]
-		_:
-			what = _count(int(s.count), "monstre", "monstres")
 	var state := "battu" if f <= Tower.best(diff) else ("à battre" if f == Tower.best(diff) + 1 else ("ouvert (mode dev)" if Tower.dev_unlock_all() else "verrouillé"))
-	return ["Étage %d · %s" % [f, what], "%s · niveau %d · %s" % [s.zone.name, int(s.level), state]]
+	return ["Étage %d · %s" % [f, floor_what(s)], "%s · niveau %d · %s" % [s.zone.name, int(s.level), state]]
 
 
 static func _gold() -> String:
@@ -41,22 +63,32 @@ static func info_text(s: Dictionary) -> String:
 	lines.append("[color=#b8b8c8]%s · niveau %d · %s[/color]" % [s.zone.name, int(s.level), Tower.DIFF_NAMES[int(s.diff)]])
 	lines.append("")
 	match String(s.type):
-		"duel":
+		"duel", "shadow":
 			lines.append_array(_duel_lines(s))
 		"boss":
 			lines.append_array(_boss_lines(s))
+		"rest":
+			lines.append("[font_size=19][b]Halte[/b][/font_size]")
+			lines.append("Pas de combat : reprends ton souffle avant le boss.")
 		_:
 			lines.append_array(_monster_lines(s))
 	lines.append("")
-	lines.append("[color=#9fd0ff]Récompense : une carte, puis un coffre.[/color]")
+	var gives := String(Tower.TYPE_GIVES.get(String(s.type), Tower.TYPE_GIVES.monsters))
+	lines.append("[color=#9fd0ff]Récompense : %s[/color]" % (gives.left(1).to_lower() + gives.substr(1)))
 	return "\n".join(lines)
 
 
 static func _duel_lines(s: Dictionary) -> PackedStringArray:
 	var out: PackedStringArray = []
 	var r := Tower.make_rival(s)
-	var cd := GameData.class_data(r.cid)
-	out.append("[font_size=19]Duel %d/%d : [b]%s[/b][/font_size]" % [int(s.index), Tower.duel_count(), cd.get("name_fr", r.cid)])
+	out.append("[font_size=19][b]%s[/b][/font_size]" % floor_what(s))
+	match String(s.get("kind", "")):
+		"self":
+			out.append("Ta classe, tes sorts et ton équipement, joués par l'IA.")
+		"brain":
+			out.append("Un cerveau d'IA la joue, avec tous ses sorts : le défi le plus dur de la Tour.")
+		"class":
+			out.append("Un héros joué par l'IA : ses coups sont annoncés au sol.")
 	out.append("")
 	out.append("[color=%s][b]Sorts[/b][/color]" % _gold())
 	if r._skills.is_empty():
@@ -75,41 +107,71 @@ static func _duel_lines(s: Dictionary) -> PackedStringArray:
 
 static func _boss_lines(s: Dictionary) -> PackedStringArray:
 	var out: PackedStringArray = []
-	var st := Tower.monster_stats(int(s.boss), s, true)
-	var dungeon: Dictionary = s.zone.get("dungeon", {})
-	out.append("[font_size=19]Boss : [b]%s[/b][/font_size]" % st.name)
-	if String(dungeon.get("intro", "")) != "":
-		out.append(String(dungeon.intro))
-	out.append("Ses attaques sont annoncées en rouge au sol. Des renforts arrivent toutes les 14 s.")
+	var bid := String(s.get("boss_id", ""))
+	if bid == "":
+		out.append("[font_size=19]Boss : [b]%s[/b][/font_size]" % Tower.monster_stats(int(s.boss), s, true).name)
+		return out
+	out.append("[font_size=19]Boss : [b]%s[/b][/font_size]" % BossLibrary.full_name(bid))
+	out.append(BossLibrary.intro(bid))
+	out.append("")
+	out.append("[color=%s][b]Mécaniques[/b][/color]" % _gold())
+	for t in BossLibrary.brick_types(bid):
+		out.append("• [b]%s[/b] : %s" % [BossBricks.name_of(String(t)), BossBricks.hint_of(String(t))])
+	out.append("Ses attaques sont annoncées en rouge au sol.")
 	return out
 
 
 static func _monster_lines(s: Dictionary) -> PackedStringArray:
 	var out: PackedStringArray = []
 	var line := "[font_size=19][b]%s[/b][/font_size], %d en même temps au plus" % [_count(int(s.count), "monstre", "monstres"), int(s.alive)]
-	if String(s.type) == "elite":
-		line += " · dont %s dès le début" % _count(int(s.elites), "élite", "élites")
 	out.append(line)
+	if String(s.get("curse", "")) != "":
+		var c: Dictionary = Tower.CURSES.get(String(s.curse), {})
+		out.append("[color=#ff8070][b]Malédiction : %s[/b][/color] · %s" % [String(c.get("name", "")), String(c.get("desc", ""))])
 	out.append("")
-	var ids: Array = s.zone.get("monsters", [])
-	var elites: PackedStringArray = []
-	var plain: PackedStringArray = []
-	if String(s.type) == "elite":
-		for id in s.zone.get("elites", []).slice(0, 5):
-			var nm := String(Tower.monster_stats(int(id), s).name)
-			if not nm in elites:
-				elites.append(nm)
-	for id in ids.slice(0, 10):
-		var nm := String(Tower.monster_stats(int(id), s).name)
-		if not nm in plain and not nm in elites:
-			plain.append(nm)
-	if not elites.is_empty():
-		out.append("[color=#ffb070][b]Élites[/b][/color]")
-		out.append("  ·  ".join(elites))
+	var mechs: Array = s.get("mechanics", [])
+	if not mechs.is_empty():
+		out.append("[color=#ffb070][b]%s[/b][/color]" % _count(mechs.size(), "Élite", "Élites"))
+		for b in mechs:
+			out.append("• [b]%s[/b] : %s" % [BossBricks.name_of(String(b)), BossBricks.hint_of(String(b))])
 		out.append("")
-	out.append("[color=%s][b]Monstres[/b][/color]" % _gold())
-	out.append("  ·  ".join(plain))
+	var plain: PackedStringArray = []
+	for id in Tower.floor_species(int(s.floor)):
+		var nm := String(Tower.monster_stats(int(id), s).name)
+		if not nm in plain:
+			plain.append(nm)
+	if not plain.is_empty():
+		out.append("[color=%s][b]Monstres[/b][/color]" % _gold())
+		out.append("  ·  ".join(plain))
 	return out
+
+
+## Légende des types d'étage (icône et nom ; au survol : ce que le type donne), sous la liste des étages.
+static func legend(parent: Control) -> HFlowContainer:
+	var flow := HFlowContainer.new()
+	flow.add_theme_constant_override("h_separation", 14)
+	flow.add_theme_constant_override("v_separation", 4)
+	parent.add_child(flow)
+	for t in ["monsters", "elite", "shadow", "cursed", "rest", "boss"]:
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 4)
+		h.tooltip_text = "%s : %s" % [Tower.TYPE_NAMES[t], String(Tower.TYPE_GIVES[t]).left(1).to_lower() + String(Tower.TYPE_GIVES[t]).substr(1)]
+		h.mouse_filter = Control.MOUSE_FILTER_PASS
+		var ic := TextureRect.new()
+		ic.texture = MenuWidgets.icon(String(Tower.TYPE_ICONS[t]))
+		ic.custom_minimum_size = Vector2(20, 20)
+		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.add_child(ic)
+		var l := Label.new()
+		l.text = String(Tower.TYPE_NAMES[t])
+		l.add_theme_font_size_override("font_size", 14)
+		l.add_theme_color_override("font_color", UiTheme.MUTED)
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.add_child(l)
+		flow.add_child(h)
+	return flow
 
 
 ## Panneau de la fiche : se ferme par Échap / B, par un clic à côté ou par Fermer.

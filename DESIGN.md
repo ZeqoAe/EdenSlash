@@ -400,8 +400,44 @@ pool de boss aux mécaniques différentes, réutilisables partout (Tour, Ruée, 
 - **Page Donjons** (`ui/dungeon_page.gd`) : en haut le donjon choisi (boss, mécaniques avec leur conseil en infobulle, pièces,
   victoires) et sa difficulté (jauge de PE) ; dessous « Je cherche » : filtres **pièce**, **panoplie**, **mécanique**, puis la liste
   (ouverts d'abord, fermés grisés avec leur condition) ; alliés IA ; « Entrer : <donjon> » épinglé. « Rejouer » relance le même boss.
-- **Pas encore** : la Tour, la Ruée, le Siège, la Survie et le Survivant gardent leurs boss ; ils passeront par
-  `BossLibrary.spawn(id, palier, {director, pos, level, …})` (API dans `conception/nuit_15_10/R_M2.md`).
+- **Pas encore** : la Ruée, le Siège, la Survie et le Survivant gardent leurs boss ; ils passeront par
+  `BossLibrary.spawn(id, palier, {director, pos, level, …})` (API dans `conception/nuit_15_10/R_M2.md`). La Tour y passe (M3).
+
+## La Tour : types d'étage (passe M3, nuit du 15/10)
+
+Retour du joueur : « les petites vagues de monstres étaient ennuyeuses : des élites au minimum à chaque étage, des étages
+de boss, des étages d'"ombres" (une IA qui joue une classe) ».
+
+- **Plan par bloc de 10 étages** (le palier de reprise), fixe pour un bloc donné (`Tower.block_plan`, graine 2026) : place 9
+  **halte**, place 10 **boss** ; bloc 1 : **duellistes** aux étages 1, 4 et 7 (ils ouvrent le Duel libre puis la Ligue,
+  inchangé) et élites au 5 ; blocs suivants : **2 ombres** (une par moitié, jamais côte à côte), **1 étage d'élites**, **1 étage
+  maudit** à partir du bloc 3, le reste en **monstres**. Sur 200 étages : 81 de monstres, 20 d'élites, 18 maudits, 38 ombres,
+  3 duellistes, 20 haltes, 20 boss. La page des étages et la fiche montrent le type (icône, légende avec ce qu'il donne).
+- **Monstres** : 3 espèces de la zone (4 dès l'étage 40) de rôles différents (`Tower.floor_species` ; rôles et leurs stats du
+  composant de P15, `SpawnDirector.role_of` / `apply_role` : tireur,
+  chargeur, colosse, essaim, soigneur, mêlée), apparues à tour de rôle en groupes du même côté ; **au moins une élite** à chaque étage
+  (une de plus tous les 70 étages), avec **une mécanique propre** : une brique de `BossBricks` (11 au choix : flaques, météores,
+  bond, ruée, éventail, couronne d'orbes, ondes, marque, barrière, rage, saut d'ombre), annoncée au sol, coups plafonnés à
+  25 % des PV, nom « Yack · Bond », escorte de 2 monstres ; les élites d'un étage lancent leur mécanique à 3,5 s d'écart.
+  20 + 0,3 × étage monstres (70 au plus), 10 à 24 en même temps.
+- **Élites** : 3 élites à mécanique (une de plus tous les 50 étages), moitié moins de monstres. **Maudit** : Menace (PV × 1,6),
+  Rage (monstres enragés) ou Horde (× 1,8 monstres) ; coffre rare au moins et 4 cristaux × (difficulté + 1) en plus.
+- **Ombres** (`ClassRival`, le moteur des duellistes) : une classe de la liste (les 60, celles de base d'abord) ; **une sur
+  quatre est « ton ombre »** (ta classe, les sorts de ton préréglage, ton équipement) ; en Hardcore dès l'étage 100 (Difficile
+  dès le 150), une sur deux est **éveillée** : un cerveau d'IA figé (`pantheon_<palier>.json`) dans un héros équipé comme l'ombre
+  scriptée de l'étage (PV × 0,5 des siens, soins moitié moins : il esquive et se soigne mieux), repli sur l'IA scriptée s'il
+  manque. IA un cran plus dure aux étages 80 et 150 ; PV × 3 et dégâts × 1,8 de ceux d'un duelliste (dont les PV doublent : 0,9,
+  ils tombaient en 8 s au pilote). Nom « Ombre · Mage »,
+  barre de vie, coups annoncés au sol, aide limitée à « Assisté » comme en duel.
+- **Boss** (`Tower.boss_id`) : un des 6 boss de la zone de l'étage (bibliothèque M2), jamais le même deux fois dans la zone ;
+  le dernier boss de chaque zone est son **gardien** (le boss d'origine). PV **fixes** (P11) : boss de donjon Normal de son
+  niveau × 0,8 × `BOSS_CURVE` (1 jusqu'à l'étage 50, 5 au 70, 5,5 au 100, 9 au 130, 7 au 200 : l'équipement attendu monte)
+  × difficulté ; palier des mécaniques 0 / 1 / 2 selon l'étage (± 1 en Facile / Hardcore). Pas de renforts génériques.
+  Monstres, élites et ombres des étages hauts : PV × √courbe, dégâts × courbe^0,6.
+- **Halte** : 60 % des PV rendus, une carte, puis le coffre ; aucun combat. Entre deux étages : 50 % des PV rendus (avant 35 %).
+- Inchangés : une seule vie, reprise par paliers de 10 (kit complet + cartes), 4 difficultés, cristaux 3 à 6 par étage, gemmes
+  tous les 10, forge tous les 50, apparences aux étages 50 / 100 / 150 / 200, maîtrise. Bilan : héros battus, boss vaincus,
+  cristaux des étages maudits. Mesures : `tools/tower_run.tscn` (rapport `conception/nuit_15_10/R_M3.md`).
 
 ## Roguelite : héritage
 

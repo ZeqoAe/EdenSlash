@@ -1,12 +1,25 @@
 class_name TowerDirector
 extends Node
 ## Déroulement d'un étage de la Tour (voir Tower) : une salle fermée (arène des donjons, décor
-## de la zone de l'étage), des vagues de monstres jusqu'au compte de l'étage, une élite tous
-## les 5 étages, un boss tous les 10 ; étage vidé : une carte, puis un coffre au centre (son
-## objet s'équipe s'il est meilleur), puis l'escalier vers l'étage suivant.
+## de la zone de l'étage) ; selon le type de l'étage (Tower.floor_type) : monstres d'espèces et de rôles mélangés avec au
+## moins une élite à mécanique, élites, héros joué par l'IA (duelliste, ombre, ombre éveillée), boss de la bibliothèque,
+## halte ; étage vidé : une carte, puis un coffre au centre (son objet s'équipe s'il est meilleur), puis l'escalier.
+##
+## Interface gardée stable pour les directeurs qui le prolongent (SiegeDirector ; les Donjons et la Ruée passent par les
+## mêmes fonctions, Tower.is_dungeon()) :
+##   champs : d, phase ("fight", "cards", "chest", "stairs", "done" ; le Siège ajoute les siens), left, _spawn_t, _adds_t,
+##            _obj_t, _boss, _rival, _center, _goal, _allies ;
+##   à surcharger : setup(director), begin(f), update(delta), _update_fight(delta), _cleared(), _room_word(), interact(it),
+##            target(), objective_text(), clock_text() (texte de l'horloge du HUD) ;
+##   outils : _spawn(id, pos, lvl, boss), _spawn_boss(zone, lvl), _spawn_lieutenant(f, lvl), _spawn_rival(f, lvl),
+##            _spawn_allies(), _make_ally(cid), _place_allies(), _ring(min, max), alive(), _spawn_chest(), open_chest(it),
+##            _spawn_stairs().
+## Les ajouts de la passe M3 (élites à mécanique, mélange d'espèces, malédictions, ombres, halte, boss de la bibliothèque)
+## ne s'appliquent qu'à la Tour elle-même (pas aux Donjons, à la Ruée ni au Siège).
 
 const SPAWN_EVERY := 0.7  # secondes entre deux groupes
 const BOSS_ADDS_EVERY := 14.0
+const ESCORT := 2  # monstres qui entourent chaque élite à son apparition (comptés dans l'étage)
 
 var d: RunDirector
 var phase := "fight"  # fight, cards, chest, stairs, done
@@ -18,6 +31,13 @@ var _boss: Monster
 var _rival: ClassRival  # duelliste de l'étage
 var _center := Vector3.ZERO
 var _goal: Interactable  # coffre ou escalier à atteindre (flèche de l'objectif)
+var _adds_on := true  # renforts génériques toutes les BOSS_ADDS_EVERY s (pas pour un boss de la bibliothèque)
+var _hero: Player  # ombre éveillée : héros ennemi piloté par un cerveau d'IA (sinon null)
+var _pilot: MlDuelPilot
+var _mix: Array = []  # espèces de l'étage (Tour), jouées à tour de rôle : jamais un pack d'une seule espèce
+var _mix_i := 0
+var _curse := ""  # malédiction de l'étage (Tower.CURSES), "" sinon
+var _elites_alive: Array = []  # élites de l'étage (objectif)
 
 
 func setup(director: RunDirector) -> void:
@@ -99,21 +119,40 @@ func begin(f: int) -> void:
 	phase = "fight"
 	_spawn_t = 1.5
 	_adds_t = BOSS_ADDS_EVERY
+	_adds_on = true
 	_boss = null
 	d._boss = null
 	_rival = null
+	_free_hero()
+	_mix = []
+	_mix_i = 0
+	_curse = ""
+	_elites_alive = []
+	var tower := not Tower.is_dungeon()  # la Tour elle-même (pas un donjon, la Ruée ni le Siège)
 	if Tower.is_duel_floor(f):
 		left = 0
 		_spawn_rival(f, lvl)
-		d.message.emit("Étage %d / %d\nDuel %d/%d : %s" % [f, Tower.top(), Tower.duel_index(f), Tower.duel_count(),
-			GameData.class_data(_rival.cid).get("name_fr", _rival.cid)], 3.5)
+		d.message.emit(_hero_intro(f), 3.5)
 	elif Tower.is_boss_floor(f):
 		left = 0
 		_spawn_boss(z, lvl)
 		if Tower.dungeon_boss != "":
 			d.message.emit("BOSS : %s\n%s" % [BossLibrary.full_name(Tower.dungeon_boss), BossLibrary.intro(Tower.dungeon_boss)], 4.5)
+		elif tower and _boss != null and _boss.has_meta("boss_id"):
+			var bid := String(_boss.get_meta("boss_id"))
+			d.message.emit("Étage %d · BOSS\n%s\n%s" % [f, BossLibrary.full_name(bid), BossLibrary.intro(bid)], 4.5)
 		else:
 			d.message.emit("%s %d / %d\nBOSS : %s" % [_room_word(), f, Tower.top(), _boss.display_name], 3.5)
+	elif tower and Tower.floor_type(f) == "rest":
+		left = 0
+		_begin_halt(f)
+	elif tower:
+		left = Tower.monster_count(f)
+		_curse = Tower.curse_of(f)
+		_prepare_mix(f, lvl)
+		for i in Tower.elite_count(f):
+			_spawn_elite(f, i, lvl)
+		d.message.emit(_floor_intro(f), 3.0)
 	else:
 		left = Tower.monster_count(f)
 		if Tower.is_elite_floor(f):
@@ -129,7 +168,93 @@ func _spawn(id: int, pos: Vector3, lvl: int, boss := false) -> Monster:
 	m.hp = m.max_hp
 	m.atk *= Tower.monster_atk_mult(Tower.floor_n, -1, boss)
 	m.xp_reward = 0
+	match _curse:  # étage maudit de la Tour
+		"menace":
+			m.max_hp *= Tower.CURSE_HP
+			m.hp = m.max_hp
+		"frenzy":
+			m.enrage()
 	return m
+
+
+## Élite [param i] de l'étage [param f] (Tour) : une élite de la zone, plus coriace, avec une mécanique propre (une brique
+## de BossBricks, annoncée au sol comme celles des boss, coups plafonnés), son nom suivi de sa mécanique, et une escorte.
+func _spawn_elite(f: int, i: int, lvl: int) -> Monster:
+	var id: int = d._elites[(absi(hash([Tower.PLAN_SEED, f, i])) % d._elites.size())] if not d._elites.is_empty() else d._pick_monster(lvl)
+	var pos := _ring(8.0, 14.0)
+	var m := _spawn(id, pos, lvl + 1)
+	m.max_hp *= Tower.rule("elite_hp")
+	m.hp = m.max_hp
+	var brick := Tower.elite_brick(f, i)
+	var br := BossBrain.new()
+	br.boss = m
+	m.brain = br
+	m.add_child(br)
+	br.setup_bricks([BossBricks.normalize({"type": brick})], d, "lava", ["none"], 1.0, Tower.ELITE_HIT_CAP)
+	if not br._brick_t.is_empty():
+		br._brick_t[0] = float(br._brick_t[0]) + 3.5 * i  # les élites d'un étage ne lancent pas leur mécanique ensemble
+	m.display_name = "%s · %s" % [m.display_name, BossBricks.name_of(brick)]
+	_elites_alive.append(m)
+	for k in ESCORT:
+		if left <= 0:
+			break
+		if _mix.is_empty():
+			_spawn(d._pick_monster(lvl), _near(pos, 3.5), lvl)
+		else:
+			_spawn_mixed(_next_species(), _near(pos, 3.5), lvl)
+		left -= 1
+	return m
+
+
+## Monstre du mélange de l'étage (Tour), avec son rôle (SpawnDirector.apply_role, passe P15 : PV, dégâts, vitesse, attaque
+## du tireur ou du chargeur ; « PV par point de budget ≈ 1 » : un groupe mélangé pèse autant qu'avant).
+func _spawn_mixed(id: int, pos: Vector3, lvl: int) -> Monster:
+	var m := _spawn(id, pos, lvl)
+	SpawnDirector.apply_role(m, SpawnDirector.role_of(id))
+	return m
+
+
+## Espèces de l'étage [param f] (Tour) : Tower.floor_species (tirées par étage ; la fiche de l'étage montre les mêmes).
+func _prepare_mix(f: int, _lvl: int) -> void:
+	_mix = Tower.floor_species(f)
+
+
+## Espèce suivante du mélange de l'étage (à tour de rôle, le départ tiré : les groupes de 3 en ont 3 différentes).
+func _next_species() -> int:
+	if _mix_i == 0:
+		_mix_i = randi() % _mix.size()
+	_mix_i += 1
+	return int(_mix[_mix_i % _mix.size()])
+
+
+## Point au sol près de [param p] (groupe d'un même côté).
+func _near(p: Vector3, spread: float) -> Vector3:
+	var a := randf() * TAU
+	var q := p + Vector3(cos(a), 0, sin(a)) * randf_range(0.8, spread)
+	var g: Vector3 = d.map.ground_at(q.x, q.z)
+	return g if g != Vector3.INF else p
+
+
+## Halte (Tour) : pas de combat ; une part des PV rendue, une carte au choix, puis le coffre et l'escalier.
+func _begin_halt(f: int) -> void:
+	var p := d.player
+	p.heal(p.max_hp * Tower.rule("rest_heal"))
+	Tower.reached = f
+	phase = "cards"
+	d.message.emit("Étage %d · Halte\nReprends ton souffle" % f, 3.0)
+	d.world._offer("Halte : choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
+
+
+## Texte d'entrée d'un étage de monstres, d'élites ou maudit.
+func _floor_intro(f: int) -> String:
+	var n := Tower.elite_count(f)
+	match Tower.floor_type(f):
+		"elite":
+			return "Étage %d · Élites\n%d élites à abattre" % [f, n]
+		"cursed":
+			var c: Dictionary = Tower.CURSES.get(_curse, {})
+			return "Étage %d · Maudit : %s\n%s" % [f, String(c.get("name", "")), String(c.get("desc", ""))]
+	return "Étage %d / %d\n%s" % [f, Tower.top(), "Une élite en vue" if n <= 1 else "%d élites en vue" % n]
 
 
 func _spawn_boss(z: Dictionary, lvl: int) -> void:
@@ -140,6 +265,15 @@ func _spawn_boss(z: Dictionary, lvl: int) -> void:
 			"atk_mult": Tower.monster_atk_mult(Tower.floor_n, -1, true)})
 		if _boss != null:
 			_boss.xp_reward = 0
+			return
+	if not Tower.is_dungeon() and Tower.boss_id(Tower.floor_n) != "":
+		# la Tour (passe M3) : un boss de la bibliothèque, PV fixes de l'étage, palier selon l'étage et la difficulté
+		var f := Tower.floor_n
+		_boss = BossLibrary.spawn(Tower.boss_id(f), Tower.boss_tier(f), {"director": d, "pos": _center, "level": lvl + 1,
+			"hp": Tower.boss_hp_fixed(f), "atk_mult": Tower.monster_atk_mult(f, -1, true)})
+		if _boss != null:
+			_boss.xp_reward = 0
+			_adds_on = false  # ses invocations sont ses mécaniques
 			return
 	var dungeon: Dictionary = z.get("dungeon", {})
 	_boss = _spawn(int(dungeon.get("boss", d._pick_monster(lvl))), _center, lvl + 1, true)
@@ -174,15 +308,96 @@ func _spawn_lieutenant(f: int, lvl: int) -> String:
 	return BossLibrary.short_name(lid)
 
 
-## Duel : un héros de la classe suivante de la liste, au centre, face au joueur.
+## Duel ou ombre : un héros joué par l'IA, au centre, face au joueur (ombre éveillée : un cerveau d'IA, sinon le héros
+## scripté ClassRival).
 func _spawn_rival(f: int, lvl: int) -> void:
-	var r := Tower.make_rival(Tower.spec(f))
+	var s := Tower.spec(f)
+	if String(s.get("kind", "")) == "brain" and _spawn_brain_hero(s):
+		return
+	if String(s.get("kind", "")) == "brain":
+		s["kind"] = "class"  # cerveau absent ou d'une autre version : l'ombre scriptée
+	var r := Tower.make_rival(s)
 	d.add_child(r)
 	r.global_position = _center + Vector3.UP * 0.4
 	r.look_at(Vector3(d.player.global_position.x, r.global_position.y, d.player.global_position.z), Vector3.UP)
 	r.rotate_y(PI)
 	r.died.connect(d._on_monster_died)
 	_rival = r
+
+
+## Ombre éveillée (passe M3) : un héros ennemi (Player) piloté par un cerveau d'IA figé (celui du Panthéon, dans git), avec
+## l'équipement de l'ombre scriptée de l'étage, PV et dégâts ramenés à ceux de cette ombre × Tower.BRAIN_HP / BRAIN_DMG.
+## false si le cerveau manque ou ne correspond pas à cette version de l'arène.
+func _spawn_brain_hero(s: Dictionary) -> bool:
+	var cid := String(s["class"])
+	var lv := int(s.level)
+	var h := Player.new()
+	h.foe = true
+	h.class_id = cid
+	h.level = lv
+	var kit := Duel.kit_from_grid(cid, [])
+	h.kit_skills = kit.skills
+	h.kit_chains = kit.chains
+	# l'équipement de l'ombre scriptée du même étage (avec le build « opti », sa défense le rendait intouchable hors des règles
+	# du duel : 46 dégâts sur un coup de 36 000, mesuré)
+	h.built = true
+	h.foe_gear = {}
+	for it in s.get("gear", []):
+		h.foe_gear[String(it.slot)] = it
+	d.add_child(h)
+	# PV et dégâts : ceux de l'ombre scriptée qu'il remplace (× BRAIN_HP / BRAIN_DMG)
+	var ref_s := s.duplicate()
+	ref_s["kind"] = "class"
+	var ref := Tower.make_rival(ref_s)
+	var magic := String(h.cls.get("dmg_type", "phys")) in ["mag", "magic"]
+	var own_atk := maxf(h.matk if magic else h.atk, 1.0)
+	var want_hp := ref.max_hp * Tower.BRAIN_HP
+	h.foe_extra = {"hp_pct": maxf(0.0, want_hp / maxf(h.max_hp, 1.0) - 1.0), "dmg_pct": maxf(0.0, ref.atk * Tower.BRAIN_DMG / own_atk - 1.0),
+		"heal_pct": -0.5}  # (le cerveau se soigne au bon moment : un Psalmiste remontait à 100 % face à un guerrier)
+	ref.free()
+	h.recalc_stats()
+	h.max_hp = maxf(h.max_hp, want_hp)  # (les % de PV s'ajoutent à ceux de l'équipement : la valeur voulue, au moins)
+	var pilot := MlDuelPilot.new()
+	d.add_child(pilot)
+	var was := Duel.mode
+	Duel.mode = "pantheon"  # MlDuelPilot.brain_path : la copie figée (pantheon_<palier>.json), la même pour tous
+	var ok := pilot.setup(h, d.player, Tower.shadow_brain(int(s.diff)), _center)
+	Duel.mode = was
+	if not ok:
+		h.queue_free()
+		pilot.queue_free()
+		return false
+	h.global_position = _center + Vector3.UP * 0.4
+	h.face_direction(d.player.global_position - h.global_position, 1.0, 100.0)
+	h.hp = h.max_hp
+	h.display_name = "<Duel> " + Tower.hero_title(s)
+	h.died.connect(func(_w, _k):
+		Run.kills += 1
+		Profile.record_add("kills", 1))
+	_hero = h
+	_pilot = pilot
+	return true
+
+
+## Retire l'ombre éveillée et son cerveau (étage suivant, fin).
+func _free_hero() -> void:
+	for n in [_hero, _pilot]:
+		if is_instance_valid(n):
+			n.queue_free()
+	_hero = null
+	_pilot = null
+
+
+## Texte d'entrée d'un étage de héros : « Étage 4 · Duelliste 2/3\nPrêtre » ou « Étage 23 · Ombre\nOmbre · Mage ».
+func _hero_intro(f: int) -> String:
+	var s := Tower.spec(f)
+	if is_instance_valid(_hero):
+		s["kind"] = "brain"
+	elif String(s.get("kind", "")) == "brain":
+		s["kind"] = "class"
+	if Tower.floor_type(f) == "duel":
+		return "Étage %d · Duelliste %d/%d\n%s" % [f, Tower.duel_index(f), Tower.count_type("duel", 1, Tower.FLOORS), Tower.hero_title(s)]
+	return "Étage %d · %s\n%s" % [f, Tower.TYPE_NAMES.shadow, Tower.hero_title(s)]
 
 
 ## Point au sol autour du centre de la salle, à distance du héros.
@@ -225,12 +440,18 @@ func _update_fight(delta: float) -> void:
 	_spawn_t -= delta
 	if left > 0 and _spawn_t <= 0.0 and alive() < Tower.max_alive(f):
 		_spawn_t = SPAWN_EVERY
+		var at := _ring(9.0, 22.0)
 		for i in mini(3, left):
-			_spawn(d._pick_monster(lvl), _ring(9.0, 22.0), lvl)
+			if _mix.is_empty():
+				_spawn(d._pick_monster(lvl), _ring(9.0, 22.0), lvl)
+			else:
+				_spawn_mixed(_next_species(), _near(at, 3.0), lvl)  # groupe mélangé, du même côté
 			left -= 1
+	if is_instance_valid(_hero) and not _hero.is_dead:
+		return  # ombre éveillée encore debout
 	if is_instance_valid(_boss) and not _boss.is_dead:
 		_adds_t -= delta
-		if _adds_t <= 0.0 and alive() < Tower.max_alive(f):
+		if _adds_on and _adds_t <= 0.0 and alive() < Tower.max_alive(f):
 			_adds_t = BOSS_ADDS_EVERY
 			for i in 3 + f / 40:
 				_spawn(d._pick_monster(lvl), _ring(6.0, 12.0), maxi(1, lvl - 1))
@@ -243,6 +464,9 @@ func _cleared() -> void:
 	var f := Tower.floor_n
 	Tower.reached = f
 	d.player.heal(d.player.max_hp * 0.1)
+	if _curse != "":
+		Tower.cursed_cleared += 1  # cristaux en plus à la fin de l'ascension
+	_free_hero()
 	if f >= Tower.top():
 		phase = "done"
 		d.message.emit("DONJON TERMINÉ !" if Tower.is_dungeon() else "SOMMET DE LA TOUR ATTEINT !", 5.0)
@@ -339,14 +563,30 @@ func objective_text() -> String:
 	match phase:
 		"fight":
 			if is_instance_valid(_boss) and not _boss.is_dead:
-				return "Étage %d · Vaincs %s" % [f, _boss.display_name]
+				return "Étage %d · Vaincs %s" % [f, _boss.display_name.trim_prefix("<Boss> ")]
+			if is_instance_valid(_hero) and not _hero.is_dead:
+				return "Étage %d · Bats %s" % [f, _hero.display_name.trim_prefix("<Duel> ")]
 			if is_instance_valid(_rival) and not _rival.is_dead:
-				return "Étage %d · Duel %d/%d : bats %s" % [f, Tower.duel_index(f), Tower.duel_count(), GameData.class_data(_rival.cid).get("name_fr", "")]
+				return "Étage %d · Bats %s" % [f, _rival.display_name.trim_prefix("<Duel> ")]
+			var elites := _elites_alive.filter(func(m): return is_instance_valid(m) and not m.is_dead).size()
+			if elites > 0:
+				return "%s %d · Élites : %d · Monstres restants : %d" % [_room_word(), f, elites, left + alive()]
 			return "%s %d · Monstres restants : %d" % [_room_word(), f, left + alive()]
 		"cards":
-			return "%s %d vidée · Choisis une carte" % [_room_word(), f]
+			if not Tower.is_dungeon() and Tower.floor_type(f) == "rest":
+				return "Étage %d · Halte · Choisis une carte" % f
+			return "%s %d %s · Choisis une carte" % [_room_word(), f, "vidée" if Tower.is_dungeon() else "vidé"]
 		"chest":
 			return "Ouvre le coffre au centre [%s]" % Settings.action_label("interact", 1)
 		"stairs":
+			if not Tower.is_dungeon() and f < Tower.top():
+				return "Monte à l'étage %d · %s [%s]" % [f + 1, Tower.TYPE_NAMES.get(Tower.floor_type(f + 1), ""), Settings.action_label("interact", 1)]
 			return "%s [%s]" % ["Passe à la salle suivante" if Tower.is_dungeon() else "Monte à l'étage %d" % (f + 1), Settings.action_label("interact", 1)]
 	return "Sommet atteint"
+
+
+## Horloge du HUD : « Étage 12/200 · Ombre » (Tour), « Salle 2/4 » (Donjons, Ruée) ; le Siège a la sienne.
+func clock_text() -> String:
+	if Tower.is_dungeon():
+		return "%s %d/%d" % [_room_word(), Tower.floor_n, Tower.top()]
+	return "Étage %d/%d · %s" % [Tower.floor_n, Tower.top(), Tower.TYPE_NAMES.get(Tower.floor_type(Tower.floor_n), "")]

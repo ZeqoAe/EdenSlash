@@ -31,7 +31,7 @@ func _ready() -> void:
 	for f in range(1, Tower.FLOORS + 1):
 		var sp := Tower.spec(f)
 		match String(sp.type):
-			"duel":
+			"duel", "shadow":
 				duels += 1
 				check_duel(f, sp)
 			"boss":
@@ -40,7 +40,8 @@ func _ready() -> void:
 				elites += 1
 		rising = rising and int(sp.level) >= prev
 		prev = int(sp.level)
-		if int(sp.get("count", 0)) > int(Tower.RULES.monsters_max[0]) or int(sp.get("alive", 0)) > int(Tower.RULES.alive_max[0]):
+		var horde := Tower.CURSE_HORDE if String(sp.get("curse", "")) == "horde" else 1.0  # étage maudit « Horde » : au-delà, voulu
+		if int(sp.get("count", 0)) > ceili(Tower.RULES.monsters_max[0] * horde) or int(sp.get("alive", 0)) > ceili(Tower.RULES.alive_max[0] * (1.3 if horde > 1.0 else 1.0)):
 			check("effectifs sous les plafonds, étage %d" % f, false)
 	check("niveaux jamais en baisse d'un étage à l'autre", rising)
 	check("200 étages : des duels, des boss et des élites", duels > 20 and bosses >= 4 and elites >= 4)

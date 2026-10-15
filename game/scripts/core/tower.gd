@@ -5,9 +5,13 @@ extends RefCounted
 ## s'équipe pour l'ascension s'il est meilleur. Le héros part avec le préréglage d'équipement
 ## de sa classe ; tout ce que les coffres donnent rejoint le coffre commun à la fin, que
 ## l'ascension soit gagnée ou perdue.
-## Étages : un duel sur trois (un héros d'une classe en 1 contre 1, ClassRival, l'IA de
-## l'entraînement ; les 60 classes, celles de base d'abord), les autres des vagues de
-## monstres, une élite tous les 5, un boss tous les 10 ; le décor change tous les 25 étages.
+## Étages (passe M3, retour du joueur : « les petites vagues étaient ennuyeuses ») : par blocs de 10 (le palier de
+## reprise), plan fixe tiré de la graine du bloc (block_plan) : monstres (espèces et rôles mélangés, toujours au moins
+## une élite à mécanique), élites (plusieurs élites à mécanique), ombres (un héros d'une classe joué par l'IA : ClassRival,
+## parfois ta propre classe avec ton kit, ou un cerveau d'IA en Difficile / Hardcore aux étages hauts), étage maudit
+## (Menace, rage ou horde : coffre meilleur et cristaux en plus), halte (étage 9 du bloc : soin, carte, coffre) et boss
+## (étage 10 : un boss de la bibliothèque, BossLibrary, PV fixes) ; les duellistes des étages 1, 4 et 7 ouvrent le Duel
+## libre et la Ligue (Unlocks). Le décor change tous les 25 étages.
 ## Difficulté choisie au lancement (IA des duellistes, force des monstres), puis l'étage de
 ## départ : ceux déjà battus ou le suivant. Un record par difficulté. Une seule vie.
 ## Tout est réglable dans le mode dev (page Tour) : règles générales et réglages étage par
@@ -24,23 +28,60 @@ const LOOK_FLOORS := [50, 100, 150, 200]
 const LOOK_TIERS := [1, 2, 3, 3]
 const DIFF_NAMES := ["Facile", "Normal", "Difficile", "Hardcore"]
 const DIFF_DESC := [
-	"Duellistes lents à réagir, monstres affaiblis.",
-	"Duellistes qui esquivent et punissent parfois.",
-	"Duellistes qui lisent tes coups, annulent et se replacent.",
-	"Duellistes au réflexe parfait : esquive au dernier moment, combos sans pause, chaque temps mort puni.",
+	"Ombres lentes à réagir, monstres affaiblis.",
+	"Ombres qui esquivent et punissent parfois.",
+	"Ombres qui lisent tes coups, annulent et se replacent.",
+	"Ombres au réflexe parfait : esquive au dernier moment, combos sans pause, chaque temps mort puni.",
 ]
-const TYPES := ["monsters", "elite", "duel", "boss"]
-const TYPE_NAMES := {"monsters": "Monstres", "elite": "Monstres et élite", "duel": "Duel", "boss": "Boss"}
+const TYPES := ["monsters", "elite", "duel", "boss", "shadow", "rest", "cursed"]
+const TYPE_NAMES := {"monsters": "Monstres", "elite": "Élites", "duel": "Duelliste", "boss": "Boss", "shadow": "Ombre",
+	"rest": "Halte", "cursed": "Maudit"}
+## Icône de chaque type (pages de la Tour, fiche, HUD) et ce qu'il donne, en une phrase (fiche de l'étage).
+const TYPE_ICONS := {"monsters": "attack", "elite": "power", "duel": "weapon", "boss": "stats", "shadow": "class",
+	"rest": "heart", "cursed": "speed"}
+const TYPE_GIVES := {
+	"monsters": "Une carte, puis un coffre.",
+	"elite": "Une carte, puis un coffre plus généreux.",
+	"duel": "Une carte, puis un coffre ; chaque duelliste battu ouvre un peu plus le Duel.",
+	"shadow": "Une carte, puis un coffre plus généreux.",
+	"boss": "Une carte, un coffre mythique ou légendaire, et tes PV rendus.",
+	"rest": "Des PV rendus, une carte et un coffre, sans combat.",
+	"cursed": "Une carte, un meilleur coffre et des cristaux en plus.",
+}
+## Malédictions des étages maudits : {name, desc}. Effets dans TowerDirector (PV, rage, nombre).
+const CURSES := {
+	"menace": {"name": "Menace", "desc": "Les monstres sont bien plus coriaces."},
+	"frenzy": {"name": "Rage", "desc": "Les monstres sont enragés : plus rapides et plus forts."},
+	"horde": {"name": "Horde", "desc": "Deux fois plus de monstres, plus nombreux en même temps."},
+}
+const CURSE_HP := 1.6  # Menace : PV des monstres
+const CURSE_HORDE := 1.8  # Horde : nombre de monstres (et × 1,3 en même temps)
+const CURSE_CRYSTALS := 4  # cristaux en plus par étage maudit franchi (× la difficulté, comme TOWER_PER_FLOOR)
+## Mécaniques des élites (briques de BossBricks, une par élite, tirée par étage) : jamais d'invocation (réservée aux
+## boss), d'arène ni de placement (lisibles seulement en duel face au boss).
+const ELITE_BRICKS := ["puddles", "meteors", "leap", "rampage", "fan", "ring_burst", "stomp", "marks", "barrier", "enrage", "blink"]
+const ELITE_HIT_CAP := 0.25  # un coup d'élite retire au plus cette part des PV max du héros
+## [étage, facteur] : PV des boss selon l'étage (équipement attendu : époque I jusqu'au 50, II vers 70, III vers 100,
+## IV au-delà de 130) ; mesuré avec tools/tower_run (--god), voir conception/nuit_15_10/R_M3.md.
+const BOSS_CURVE := [[1, 1.0], [50, 1.0], [70, 5.0], [100, 5.5], [130, 9.0], [200, 7.0]]
+## Boss d'un étage mesuré trop court ou trop long avec la courbe seule (le boss de chaque étage est fixe) : × ce facteur.
+const BOSS_FLOOR_ADJ := {160: 3.0, 190: 0.6, 200: 0.5}
+## Ombre éveillée (cerveau d'IA, équipement de l'ombre scriptée de l'étage) : PV et dégâts × ceux de l'ombre scriptée qu'elle
+## remplace (elle esquive, enchaîne et se soigne mieux : PV × 0,5 et soins reçus moitié moins, mesuré).
+const BRAIN_HP := 0.5
+const BRAIN_DMG := 1.0
+const ATK_CURVE_EXP := 0.6  # dégâts des monstres et des ombres × BOSS_CURVE ^ ceci (équipement attendu des étages hauts)
+const PLAN_SEED := 2026
 const DUEL_SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots"]
 ## Règles par défaut (modifiables dans le mode dev, page Tour) : [valeur, nom, pas].
 const RULES := {
 	"level_per_floor": [0.5, "Niveaux par étage", 0.05],
-	"monsters_base": [8.0, "Monstres à l'étage 1", 1.0],
-	"monsters_per_floor": [0.25, "Monstres en plus par étage", 0.05],
-	"monsters_max": [40.0, "Monstres au plus", 1.0],
-	"alive_base": [6.0, "Monstres en même temps (étage 1)", 1.0],
+	"monsters_base": [20.0, "Monstres à l'étage 1", 1.0],
+	"monsters_per_floor": [0.3, "Monstres en plus par étage", 0.05],
+	"monsters_max": [70.0, "Monstres au plus", 1.0],
+	"alive_base": [10.0, "Monstres en même temps (étage 1)", 1.0],
 	"alive_per_floor": [0.05, "En même temps : en plus par étage", 0.01],
-	"alive_max": [16.0, "En même temps au plus", 1.0],
+	"alive_max": [24.0, "En même temps au plus", 1.0],
 	"monster_ramp": [0.02, "Monstres : force en plus par étage d'une zone", 0.005],
 	"monster_zone_step": [0.1, "Monstres : force en plus par zone", 0.01],
 	"monster_easy": [0.7, "Monstres : force en Facile", 0.05],
@@ -48,13 +89,18 @@ const RULES := {
 	"monster_hard": [1.3, "Monstres : force en Difficile", 0.05],
 	"monster_hardcore": [1.6, "Monstres : force en Hardcore", 0.05],
 	"elite_count_per_50": [1.0, "Élites en plus tous les 50 étages", 1.0],
-	"duel_hp": [0.45, "Duellistes : PV (× ceux de l'entraînement)", 0.05],
+	"duel_hp": [0.9, "Duellistes : PV (× ceux de l'entraînement)", 0.05],
 	"duel_atk": [1.0, "Duellistes : dégâts", 0.05],
 	"duel_gear": [1.0, "Duellistes : force de leur équipement", 0.1],
 	"duel_skills_every": [3.0, "Duellistes : un sort de plus tous les N duels", 1.0],
-	"boss_hp": [0.3, "Boss : PV (× ceux des donjons)", 0.05],
+	"boss_hp": [0.8, "Boss : PV (× les PV fixes d'un boss de donjon Normal)", 0.05],
 	"boss_atk": [1.0, "Boss : dégâts", 0.05],
-	"heal_between": [0.35, "PV rendus en montant (part)", 0.05],
+	"heal_between": [0.5, "PV rendus en montant (part)", 0.05],
+	"elite_hp": [3.0, "Élites : PV (× ceux d'une élite)", 0.1],
+	"shadow_hp": [3.0, "Ombres : PV (× ceux des duellistes)", 0.1],
+	"shadow_atk": [1.8, "Ombres : dégâts (× ceux des duellistes)", 0.1],
+	"elites_per_70": [1.0, "Élites en plus tous les 70 étages (étage de monstres)", 1.0],
+	"rest_heal": [0.6, "Halte : PV rendus (part)", 0.05],
 }
 const DIFF_RULE := ["monster_easy", "monster_normal", "monster_hard", "monster_hardcore"]
 
@@ -74,6 +120,9 @@ static var reached := 0  # dernier étage vidé
 static var found: Array = []  # objets des coffres de l'ascension (rejoignent le coffre commun)
 static var _order: Array = []  # classes des duels, dans l'ordre (toujours le même)
 static var _gear_cache := {}  # "étage_difficulté" -> équipement du duelliste
+static var _plans := {}  # bloc de 10 étages -> plan (block_plan)
+static var _boss_cache := {}  # étage -> boss de la bibliothèque (boss_id)
+static var cursed_cleared := 0  # étages maudits franchis pendant l'ascension (cristaux en plus)
 
 
 ## Lance l'ascension avec la classe [param cid], en [param diff], à l'étage [param from].
@@ -118,6 +167,7 @@ static func start(cid: String, diff := 1, from := 1) -> void:
 	floor_n = start_floor
 	reached = start_floor - 1
 	found = []
+	cursed_cleared = 0
 	Run.start(cid)
 	# le préréglage d'équipement de la classe sert de base (Profile.begin_run) ; une arme
 	# commune s'il n'y en a pas
@@ -179,15 +229,44 @@ static func zone_for(f: int) -> Dictionary:
 	return GameData.zones[clampi((f - 1) / FLOORS_PER_ZONE, 0, GameData.zones.size() - 1)]
 
 
-## Type par défaut : duel un étage sur trois (1, 4, 7…), boss tous les 10, élite tous les 5.
+## Type par défaut de l'étage [param f] : sa place dans le plan de son bloc de 10 étages.
 static func default_type(f: int) -> String:
-	if f % 10 == 0:
-		return "boss"
-	if f % 3 == 1:
-		return "duel"
-	if f % 5 == 0:
-		return "elite"
-	return "monsters"
+	var b := (clampi(f, 1, FLOORS) - 1) / 10
+	return String(block_plan(b)[(clampi(f, 1, FLOORS) - 1) % 10])
+
+
+## Plan du bloc [param b] (étages 10 b + 1 à 10 b + 10, le palier de reprise) : 10 types, toujours les mêmes pour
+## un bloc donné (graine PLAN_SEED). Place 9 : halte ; place 10 : boss. Bloc 0 : duellistes aux étages 1, 4 et 7 (ils
+## ouvrent le Duel libre puis la Ligue : Unlocks), élites au 5. Blocs suivants : deux ombres (une par moitié de bloc,
+## jamais côte à côte), un étage d'élites, un étage maudit à partir du bloc 2, le reste en monstres.
+static func block_plan(b: int) -> Array:
+	if _plans.has(b):
+		return _plans[b]
+	var plan: Array = []
+	plan.resize(10)
+	plan.fill("monsters")
+	plan[8] = "rest"
+	plan[9] = "boss"
+	if b == 0:
+		plan[0] = "duel"
+		plan[3] = "duel"
+		plan[6] = "duel"
+		plan[4] = "elite"
+	else:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash([PLAN_SEED, b])
+		var s1 := rng.randi_range(0, 3)
+		var s2 := rng.randi_range(5, 7) if s1 == 3 else rng.randi_range(4, 7)
+		plan[s1] = "shadow"
+		plan[s2] = "shadow"
+		var free: Array = range(8).filter(func(i): return plan[i] == "monsters")
+		var e: int = free[rng.randi_range(0, free.size() - 1)]
+		plan[e] = "elite"
+		free.erase(e)
+		if b >= 2:
+			plan[free[rng.randi_range(0, free.size() - 1)]] = "cursed"
+	_plans[b] = plan
+	return plan
 
 
 static func floor_type(f: int) -> String:
@@ -221,8 +300,53 @@ static func is_elite_floor(f: int) -> bool:
 	return floor_type(f) == "elite"
 
 
+## Étage contre un héros joué par l'IA : duelliste ou ombre (règles du face-à-face : aide limitée, pas d'arrêt sur impact).
 static func is_duel_floor(f: int) -> bool:
-	return floor_type(f) == "duel"
+	return floor_type(f) in ["duel", "shadow"]
+
+
+static func is_shadow_floor(f: int) -> bool:
+	return floor_type(f) == "shadow"
+
+
+## Rang de l'étage [param f] parmi les ombres (1 pour la première, 0 si ce n'en est pas une).
+static func shadow_index(f: int) -> int:
+	if not is_shadow_floor(f):
+		return 0
+	var n := 0
+	for k in range(1, f + 1):
+		if is_shadow_floor(k):
+			n += 1
+	return n
+
+
+## Sorte d'ombre de l'étage [param f] en difficulté [param diff] : "self" (ta classe et ton kit : une ombre sur quatre),
+## "brain" (un cerveau d'IA : Hardcore dès l'étage 100, Difficile dès le 150, une ombre sur deux ; repli sur l'IA
+## scriptée s'il manque), "class" (une classe de la liste) ; "" si l'étage n'est pas une ombre.
+static func shadow_kind(f: int, diff := -1) -> String:
+	var k := shadow_index(f)
+	if k == 0:
+		return ""
+	var d := difficulty if diff < 0 else diff
+	if k % 4 == 0:
+		return "self"
+	if k % 2 == 1 and ((d >= 3 and f >= 100) or (d == 2 and f >= 150)):
+		return "brain"
+	return "class"
+
+
+## Difficulté de l'IA du héros de l'étage [param f] : celle de l'ascension pour les duellistes, puis un cran de plus aux
+## étages 80 et 150 pour les ombres (au plus Hardcore).
+static func duel_ai(f: int, diff := -1) -> int:
+	var d := difficulty if diff < 0 else diff
+	if not is_shadow_floor(f):
+		return d
+	return mini(d + (1 if f >= 80 else 0) + (1 if f >= 150 else 0), ClassRival.DIFF.size() - 1)
+
+
+## Cerveau d'IA d'une ombre éveillée (copie figée du Panthéon, dans git) selon la difficulté.
+static func shadow_brain(diff := -1) -> String:
+	return "hardcore" if (difficulty if diff < 0 else diff) >= 3 else "difficile"
 
 
 static func duel_index(f: int) -> int:
@@ -261,6 +385,8 @@ static func duel_class(f: int) -> String:
 	var c := String(floor_edit(f).get("class", ""))
 	if c != "" and GameData.classes.has(c):
 		return c
+	if shadow_kind(f) == "self":
+		return Run.class_id if active and Run.class_id != "" else Profile.selected_class  # ton ombre : ta classe
 	var o := duel_order()
 	return String(o[(maxi(duel_index(f), 1) - 1) % o.size()])
 
@@ -278,7 +404,15 @@ static func monster_count(f: int) -> int:
 		return Dungeons.room_monsters(f, dungeon_diff)
 	if floor_edit(f).has("count"):
 		return maxi(0, int(floor_edit(f).count))
-	return mini(int(rule("monsters_base") + f * rule("monsters_per_floor")), int(rule("monsters_max")))
+	var n := mini(int(rule("monsters_base") + f * rule("monsters_per_floor")), int(rule("monsters_max")))
+	match floor_type(f):
+		"elite":
+			return n / 2  # les élites font l'étage : moins de monstres ordinaires
+		"cursed":
+			return roundi(n * CURSE_HORDE) if curse_of(f) == "horde" else n
+		"duel", "shadow", "boss", "rest":
+			return 0
+	return n
 
 
 static func max_alive(f: int) -> int:
@@ -286,15 +420,89 @@ static func max_alive(f: int) -> int:
 		return Siege.max_alive(dungeon_diff)
 	if is_dungeon():
 		return Dungeons.room_alive(dungeon_diff)
-	return mini(int(rule("alive_base") + f * rule("alive_per_floor")), int(rule("alive_max")))
+	var n := mini(int(rule("alive_base") + f * rule("alive_per_floor")), int(rule("alive_max")))
+	return roundi(n * 1.3) if floor_type(f) == "cursed" and curse_of(f) == "horde" else n
 
 
+## Élites de l'étage : au moins une à chaque étage de monstres (une de plus tous les 70 étages), trois et plus aux étages
+## d'élites (une de plus tous les 50), aucune aux duels, ombres, haltes et boss.
 static func elite_count(f: int) -> int:
 	if siege:
 		return Siege.elite_count(f, dungeon_diff)
 	if is_dungeon():
 		return Dungeons.room_elites(dungeon_diff)
-	return 1 + int(f / 50 * rule("elite_count_per_50"))
+	match floor_type(f):
+		"elite":
+			return 3 + int(f / 50 * rule("elite_count_per_50"))
+		"monsters", "cursed":
+			return 1 + int(f / 70 * rule("elites_per_70"))
+	return 0
+
+
+## Mécanique (brique de BossBricks) de la [param i]-ième élite de l'étage [param f] : tirée par étage, jamais deux fois
+## la même sur un étage.
+static func elite_brick(f: int, i: int) -> String:
+	var start := absi(hash([PLAN_SEED, "elite", f])) % ELITE_BRICKS.size()
+	return String(ELITE_BRICKS[(start + i * 3) % ELITE_BRICKS.size()])
+
+
+## Rôle d'un monstre pour composer un étage : celui du composant d'apparition de la passe P15 (SpawnDirector.role_of :
+## essaim, mêlée, chargeur, tireur, colosse, soigneur, d'après le modèle).
+static func role_of(id: int, _pool: Array = []) -> String:
+	return SpawnDirector.role_of(id)
+
+
+## Espèces de l'étage [param f] : 3 espèces de sa zone (4 à partir de l'étage 40), de rôles différents quand la zone le
+## permet (role_of), tirées par étage parmi celles de son niveau ; le directeur les fait apparaître à tour de rôle (des
+## groupes mélangés, jamais un pack d'une seule espèce). Vide hors de la Tour.
+static func floor_species(f: int) -> Array:
+	var out: Array = []
+	if is_dungeon():
+		return out
+	var z := zone_for(f)
+	var roster: Array = z.get("monsters", []).map(func(x): return int(x))
+	if roster.is_empty():
+		return out
+	var lvl := level_for(f)
+	var start := 1 + int(z.get("level_bonus", 0))
+	var n := clampi(3 + int((lvl - start) * roster.size() / 10.0), mini(3, roster.size()), roster.size())
+	var options := roster.slice(0, n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([PLAN_SEED, "mix", f])
+	var by_role := {}
+	for id in options:
+		var r := role_of(int(id), options)
+		if not by_role.has(r):
+			by_role[r] = []
+		by_role[r].append(int(id))
+	var roles: Array = by_role.keys()
+	roles.sort()
+	for k in range(roles.size() - 1, 0, -1):
+		var j := rng.randi_range(0, k)
+		var tmp = roles[k]
+		roles[k] = roles[j]
+		roles[j] = tmp
+	var want := mini(3 if f < 40 else 4, options.size())
+	for r in roles:
+		if out.size() >= want:
+			break
+		var list: Array = by_role[r]
+		out.append(list[rng.randi_range(0, list.size() - 1)])
+	var guard := 0
+	while out.size() < want and guard < 40:
+		guard += 1
+		var id := int(options[rng.randi_range(0, options.size() - 1)])
+		if not id in out:
+			out.append(id)
+	return out
+
+
+## Malédiction de l'étage maudit [param f] (CURSES), "" sinon.
+static func curse_of(f: int) -> String:
+	if floor_type(f) != "cursed":
+		return ""
+	var keys := CURSES.keys()
+	return String(keys[absi(hash([PLAN_SEED, "curse", f])) % keys.size()])
 
 
 ## Force des monstres de l'étage : zone, étage dans la zone, difficulté.
@@ -309,13 +517,71 @@ static func monster_hp_mult(f: int, diff := -1, boss := false) -> float:
 		return Siege.hp_mult(boss, floor_type(f) == "elite")
 	if is_dungeon():
 		return Dungeons.hp_mult(boss, floor_type(f) == "elite", allies.size())
-	return monster_mult(f, diff) * float(floor_edit(f).get("hp", 1.0)) * (rule("boss_hp") if boss else 1.0)
+	# étages hauts (passe M3) : PV × la racine de la courbe des boss, dégâts × sa puissance 0,3 (équipement attendu plus fort)
+	return monster_mult(f, diff) * float(floor_edit(f).get("hp", 1.0)) * (rule("boss_hp") if boss else sqrt(boss_curve(f)))
 
 
 static func monster_atk_mult(f: int, diff := -1, boss := false) -> float:
 	if is_dungeon():
 		return 1.0 + 0.3 * dungeon_diff
-	return monster_mult(f, diff) * float(floor_edit(f).get("atk", 1.0)) * (rule("boss_atk") if boss else 1.0)
+	return monster_mult(f, diff) * float(floor_edit(f).get("atk", 1.0)) * (rule("boss_atk") if boss else 1.0) * pow(boss_curve(f), ATK_CURVE_EXP)
+
+
+## Boss de la bibliothèque (BossLibrary) de l'étage de boss [param f] : un des 6 boss de la zone de l'étage, jamais le même
+## deux fois dans une zone (ordre tiré une fois par zone) ; le dernier boss de chaque zone est son gardien (le boss d'origine).
+static func boss_id(f: int) -> String:
+	if _boss_cache.has(f):
+		return _boss_cache[f]
+	var zi := clampi((f - 1) / FLOORS_PER_ZONE, 0, GameData.zones.size() - 1)
+	var zid := String(GameData.zones[zi].id)
+	var pool: Array = BossLibrary.for_zone(zid)
+	var keeper := BossLibrary.zone_boss(zid)
+	var floors: Array = range(zi * FLOORS_PER_ZONE + 1, mini((zi + 1) * FLOORS_PER_ZONE, FLOORS) + 1).filter(func(k): return default_type(k) == "boss")
+	var id := keeper
+	if not pool.is_empty() and f != int(floors.back() if not floors.is_empty() else -1):
+		var others := pool.filter(func(x): return x != keeper)
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash([PLAN_SEED, "boss", zid])
+		for i in range(others.size() - 1, 0, -1):
+			var j := rng.randi_range(0, i)
+			var tmp = others[i]
+			others[i] = others[j]
+			others[j] = tmp
+		var k := maxi(floors.find(f), 0)
+		id = String(others[k % others.size()]) if not others.is_empty() else keeper
+	if id == "" and not pool.is_empty():
+		id = String(pool[0])
+	_boss_cache[f] = id
+	return id
+
+
+## Palier du boss de l'étage [param f] (rythme des mécaniques, Impatience en Mythique) : selon l'étage (0 jusqu'au 60,
+## 1 jusqu'au 130, 2 ensuite), un cran de moins en Facile, un de plus en Hardcore.
+static func boss_tier(f: int, diff := -1) -> int:
+	var d := difficulty if diff < 0 else diff
+	var t := (0 if f <= 60 else (1 if f <= 130 else 2)) + (-1 if d == 0 else (1 if d >= 3 else 0))
+	return clampi(t, 0, BossLibrary.PACE.size() - 1)
+
+
+## PV fixes du boss de l'étage [param f] (passe P11 : indépendants du héros) : ceux d'un boss de donjon Normal de son
+## niveau, × le boss (BossLibrary), × la règle « boss_hp », × la courbe des étages (BOSS_CURVE), × la force de la difficulté.
+static func boss_hp_fixed(f: int, diff := -1) -> float:
+	var d := difficulty if diff < 0 else diff
+	var id := boss_id(f)
+	var k := float(BossLibrary.get_def(id).get("hp", 1.0)) if id != "" else 1.0
+	return Dungeons.boss_hp(level_for(f) + 1, 0) * k * rule("boss_hp") * boss_curve(f) * float(BOSS_FLOOR_ADJ.get(f, 1.0)) * rule(DIFF_RULE[d]) * float(floor_edit(f).get("hp", 1.0))
+
+
+## Équipement attendu aux étages hauts (passe M3, mesuré au pilote : un héros de l'époque III ou IV tuait un boss de donjon
+## Normal de l'étage 130 en 4 s) : PV des boss × ce facteur, interpolé entre les étages de BOSS_CURVE.
+static func boss_curve(f: int) -> float:
+	var prev: Array = BOSS_CURVE[0]
+	for pt in BOSS_CURVE:
+		if f <= int(pt[0]):
+			var span := maxf(float(int(pt[0]) - int(prev[0])), 1.0)
+			return lerpf(float(prev[1]), float(pt[1]), clampf(float(f - int(prev[0])) / span, 0.0, 1.0))
+		prev = pt
+	return float(BOSS_CURVE[-1][1])
 
 
 ## Équipement du duelliste de l'étage (tiré une fois pour l'étage et la difficulté).
@@ -342,26 +608,57 @@ static func spec(f: int, diff := -1) -> Dictionary:
 	var z := zone_for(f)
 	var s := {"floor": f, "type": floor_type(f), "zone": z, "level": level_for(f), "diff": d}
 	match String(s.type):
-		"duel":
+		"duel", "shadow":
 			s["class"] = duel_class(f)
 			s["skills"] = duel_skills(f)
-			s["gear"] = duel_gear(f, d)
 			s["index"] = duel_index(f)
+			s["ai"] = duel_ai(f, d)
+			s["kind"] = shadow_kind(f, d) if s.type == "shadow" else "duel"
+			s["gear"] = self_gear() if s.kind == "self" else duel_gear(f, d)
 		"boss":
-			s["boss"] = int(z.get("dungeon", {}).get("boss", 0))
+			s["boss_id"] = boss_id(f)
+			s["boss"] = int(BossLibrary.get_def(String(s.boss_id)).get("monster", z.get("dungeon", {}).get("boss", 0)))
+			s["tier"] = boss_tier(f, d)
+		"rest":
+			pass
 		_:
 			s["count"] = monster_count(f)
 			s["alive"] = max_alive(f)
-			if s.type == "elite":
-				s["elites"] = elite_count(f)
+			s["elites"] = elite_count(f)
+			s["mechanics"] = range(int(s.elites)).map(func(i): return elite_brick(f, i))
+			if s.type == "cursed":
+				s["curse"] = curse_of(f)
 	return s
+
+
+## Équipement de « ton ombre » : une copie de celui que tu portes (pendant l'ascension : celui de l'ascension).
+static func self_gear() -> Array:
+	var out: Array = []
+	for slot in DUEL_SLOTS:
+		if Profile.equipped.has(slot):
+			out.append(Profile.equipped[slot])
+	return out
+
+
+## Sorts de « ton ombre » : ceux de ton préréglage actif (sinon ceux de la classe), sans renforcement ni soin.
+static func self_skills(cid: String, n: int) -> Array:
+	var flat: Array = []
+	for col in SpellPresets.active(cid).get("cols", []):
+		for id in col:
+			flat.append(int(id))
+	var out: Array = Duel.scripted_spells(cid, flat) if not flat.is_empty() else []
+	if out.is_empty():
+		out = Duel.spell_choices(cid)
+	return out.slice(0, maxi(n, 4))
 
 
 ## Duelliste prêt à placer (aussi pour la fiche : créé, lu puis libéré).
 static func make_rival(s: Dictionary) -> ClassRival:
 	var f := int(s.floor)
 	var r := ClassRival.new()
-	r.setup(String(s["class"]), int(s.level), int(s.diff), rule("duel_hp") * float(floor_edit(f).get("hp", 1.0)), int(s.skills))
+	r.setup(String(s["class"]), int(s.level), int(s.get("ai", s.diff)), rule("duel_hp") * float(floor_edit(f).get("hp", 1.0)), int(s.skills))
+	if String(s.get("kind", "")) == "self":
+		r._skills = self_skills(r.cid, int(s.skills))  # ton ombre : les sorts de ton préréglage
 	# puissance des objets : celle du niveau de l'étage (Items.power_level), même hors partie
 	var was_active := Run.active
 	var was_level := Run.hero_level
@@ -371,8 +668,27 @@ static func make_rival(s: Dictionary) -> ClassRival:
 	Run.active = was_active
 	Run.hero_level = was_level
 	r.atk *= rule("duel_atk") * float(floor_edit(f).get("atk", 1.0))
-	r.display_name = "<Duel> %s" % GameData.class_data(r.cid).get("name_fr", r.cid)
+	if String(s.get("type", "")) == "shadow":
+		# une ombre est un vrai combat d'étage (passe M3, mesuré au pilote : les duellistes tombaient en 3 à 8 s)
+		r.max_hp *= rule("shadow_hp") * sqrt(boss_curve(f))
+		r.hp = r.max_hp
+		r.atk *= rule("shadow_atk") * pow(boss_curve(f), ATK_CURVE_EXP)
+	r.display_name = "<Duel> %s" % hero_title(s)
 	return r
+
+
+## Nom du héros de l'étage [param s] (spec) : « Guerrier » (duelliste), « Ombre · Guerrier », « Ton ombre · Guerrier »,
+## « Ombre éveillée · Guerrier » (cerveau d'IA).
+static func hero_title(s: Dictionary) -> String:
+	var cname := String(GameData.class_data(String(s.get("class", ""))).get("name_fr", s.get("class", "")))
+	match String(s.get("kind", "duel")):
+		"self":
+			return "Ton ombre · %s" % cname
+		"brain":
+			return "Ombre éveillée · %s" % cname
+		"class":
+			return "Ombre · %s" % cname
+	return cname
 
 
 ## Stats d'un monstre de l'étage (fiche) : {name, hp, atk, def, level}.
@@ -392,8 +708,10 @@ static func chest_item(f: int, class_id: String) -> Dictionary:
 	if is_boss_floor(f):
 		var rar := Items.LEGENDARY if randf() < 0.25 + f / 400.0 else Items.MYTHIC
 		return Items.generate(lv, 1.0, "", class_id, rar, "", rar)
-	var luck := clampf(f / 120.0, 0.0, 1.5) + (0.4 if is_elite_floor(f) else 0.0) + (0.3 if is_duel_floor(f) else 0.0)
-	return Items.generate(lv, luck, "", class_id, 1 if f >= 20 else 0, "", 3)  # commun à épique
+	var bonus := {"elite": 0.4, "duel": 0.3, "shadow": 0.4, "rest": 0.2, "cursed": 0.8}
+	var luck := clampf(f / 120.0, 0.0, 1.5) + float(bonus.get(floor_type(f), 0.0))
+	var floor_rar := 2 if floor_type(f) == "cursed" else (1 if f >= 20 else 0)  # étage maudit : rare au moins
+	return Items.generate(lv, luck, "", class_id, floor_rar, "", 3)  # commun à épique
 
 
 # --- progression ------------------------------------------------------------------------------
@@ -477,7 +795,8 @@ static func finish() -> Dictionary:
 	var climbed := maxi(0, reached - start_floor + 1)
 	Quests.end_run("tower", false, {"reached": reached, "climbed": climbed})  # quêtes (passe M5)
 	# cristaux et coffres de gemmes / de forge de l'ascension (ActivityLoot : le rôle de la Tour)
-	var crystals := ActivityLoot.tower_crystals(climbed, difficulty)
+	var cursed_bonus := cursed_cleared * CURSE_CRYSTALS * (difficulty + 1)  # étages maudits franchis
+	var crystals := ActivityLoot.tower_crystals(climbed, difficulty) + cursed_bonus
 	Profile.materials["crystal"] = int(Profile.materials.get("crystal", 0)) + crystals
 	var mats := ActivityLoot.tower_chests(start_floor, reached, level_for)
 	var xp := roundi((climbed * 12 + Run.kills / 3) * [0.75, 1.0, 1.3, 1.6][difficulty])
@@ -485,7 +804,17 @@ static func finish() -> Dictionary:
 	Profile._lobby_view()
 	Profile.save_profile()
 	return {"best": best(), "new_record": reached > old, "xp": xp, "levels": lv, "items": found.size(), "looks": looks,
-		"crystals": crystals, "chests": mats}
+		"crystals": crystals, "chests": mats, "cursed": cursed_cleared, "cursed_crystals": cursed_bonus,
+		"heroes": duel_index(reached) - duel_index(start_floor - 1), "bosses": count_type("boss", start_floor, reached)}
+
+
+## Étages du type [param t] entre [param from] et [param to] compris.
+static func count_type(t: String, from: int, to: int) -> int:
+	var n := 0
+	for f in range(maxi(from, 1), mini(to, FLOORS) + 1):
+		if floor_type(f) == t:
+			n += 1
+	return n
 
 
 ## Fin d'un donjon : butin si le boss est tombé, sauvegarde rechargée (comme la Tour).

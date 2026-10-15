@@ -165,6 +165,10 @@ Quêtes (passe M5, `DESIGN.md` « Quêtes ») : le Défi de maîtrise est devenu
 `core/quest_pool.gd`, page Jouer > Quêtes `ui/quests_page.gd`, carte du HUD `ui/quest_badge.gd`) : 3 quêtes par jour, 2 par semaine, relance,
 série à paliers cosmétiques, contrats de classe listés dessous. Bus unique : `Quests.end_run(activité, gagné, extra)` en fin de chaque mode,
 `Quests.event("zone_hit" | "chest_open")` ; état dans `Profile.records.quests`. Une activité nouvelle : une entrée dans `QuestPool.ACTS` et des quêtes.
+La Tour, types d'étage (passe M3, `DESIGN.md` « La Tour : types d'étage », `R_M3.md`) : plan par bloc de 10 (`Tower.block_plan` :
+monstres mélangés + élite à mécanique `BossBricks`, élites, ombres `ClassRival` / ton ombre / ombre éveillée `MlDuelPilot`, maudit,
+halte, boss `BossLibrary` à PV fixes × `BOSS_CURVE`) ; duellistes des étages 1, 4, 7 inchangés (Unlocks). Interface de `TowerDirector`
+documentée en tête (SiegeDirector la prolonge). Test `test_m3`, captures `shot_m3`, mesures `tools/tower_run.tscn`.
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,
