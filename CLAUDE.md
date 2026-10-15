@@ -320,6 +320,8 @@ de `c_node` pour sa scène d'Eden (S002 → bgm007…). Ajouter une zone : sa pi
 Réglages d'image communs dans `game/scripts/world/gfx.gd` (qualité graphique), shaders dans
 `game/shaders/` (terrain, herbe, personnages, décor, effets). Pour comparer un changement de
 rendu : `res://tests/bench_gfx.tscn -- <zone> [effet]` (même vue à chaque fois).
+Auras (P16) : `python tools/fx_aura_fix.py` relit les .nif (noms des variantes, textures bloquées, masques, panneaux face caméra,
+pistes sur leur propre cycle) ; à relancer après toute reconversion d'aura. Planche + relevé : `res://tools/look_audit.tscn -- auras|weapons`.
 
 ## Performances (passe P2, `conception/nuit_15_10/R_P2.md`)
 Mesures headless : `PERF_ARGS="--only=boot,lobby,pages,leaks,detail,run --fat" EDEN_PROFILE=<fichier> Godot --headless --path game res://tools/perf_ui.tscn`

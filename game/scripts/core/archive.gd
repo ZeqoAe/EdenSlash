@@ -271,6 +271,23 @@ static func skins(wtype: String) -> Array:
 	return out
 
 
+## Apparence choisie pour le type d'arme [param wtype] ({code, icon, name…} ; vide : aucune, l'arme
+## garde son modèle). Sert à l'emplacement « Arme » de Héros > Apparence (il montrait l'arme portée).
+static func chosen_skin(wtype: String) -> Dictionary:
+	var code := String(Profile.skins.get(wtype, ""))
+	if code == "":
+		return {}
+	var all := skins(wtype)
+	for i in all.size():
+		var sk: Dictionary = all[i]
+		if String(sk.get("code", "")) == code:
+			var out := sk.duplicate()
+			if not out.has("name"):
+				out["name"] = "%s · modèle %d" % [String(GameData.weapon_type(wtype).get("name", wtype)), i + 1]
+			return out
+	return {}
+
+
 static func skin_unlocked(_wtype: String, _index: int) -> bool:
 	return true  # les apparences listées sont toutes disponibles
 

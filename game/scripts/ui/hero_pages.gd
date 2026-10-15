@@ -148,6 +148,7 @@ class AppearancePage extends HBoxContainer:
 			var b: ItemWidgets.TipButton = _slots[id]
 			var icon := ""
 			var name := ""
+			var sub := ""  # seconde ligne de l'infobulle
 			match id:
 				"body", "head", "back":
 					var path := Profile.outfit_of(cid) if id == "body" else String(w.get(id, ""))
@@ -164,12 +165,18 @@ class AppearancePage extends HBoxContainer:
 						icon = String(worn_a[0].icon)
 						name = String(worn_a[0].name)
 				"weapon":
+					# l'apparence choisie pour ce type d'arme, sinon l'arme portée (P16 : l'emplacement montrait
+					# toujours l'arme d'origine alors que le héros portait l'apparence)
 					var wi: Dictionary = Profile.equipped.get("weapon", {})
-					icon = String(wi.get("icon", ""))
-					name = Items.display_name(wi) if not wi.is_empty() else ""
+					var wt := Items.weapon_type_of(wi) if not wi.is_empty() else String(GameData.class_data(cid).get("weapon_type", ""))
+					var sk := Archive.chosen_skin(wt)
+					icon = String(sk.get("icon", wi.get("icon", "")))
+					name = String(sk.get("name", Items.display_name(wi) if not wi.is_empty() else ""))
+					if not sk.is_empty() and not wi.is_empty():
+						sub = "\n[color=#c8c8d4]Arme portée : %s[/color]" % Items.display_name(wi)
 			b.icon = UiTheme.texture(icon) if icon != "" else null
 			b.text = "" if icon != "" else "＋"
-			b.tip = "[b]%s[/b]" % name if name != "" else "[color=#c8c8d4]Vide : clique pour choisir[/color]"
+			b.tip = "[b]%s[/b]%s" % [name, sub] if name != "" else "[color=#c8c8d4]Vide : clique pour choisir[/color]"
 			b.set_meta("report", "Emplacement d'apparence %s : %s%s" % [id, name if name != "" else "vide",
 				(" (%s)" % String(w.get(id, ""))) if id in ["head", "back"] and String(w.get(id, "")) != "" else ""])
 			var on: bool = id == _slot

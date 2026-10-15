@@ -10,6 +10,7 @@ import json
 import os
 import struct
 import sys
+import time
 
 from PIL import Image
 
@@ -188,9 +189,26 @@ def share_variants(names):
 # (5 premiers caractères) ; les pièces correspondantes sont masquées dans toutes les
 # variantes de couleur. "*" : textures de halo carré masquées dans toutes les auras.
 AURA_BAD = {'*': ['s0084104', 's0014104'],
-            's8071': ['s8071101', 's8071103'], 's8191': ['s8191115'], 's8281': ['s8281154', 's8071204'],
-            's8741': ['s8341101', 's12963107', 's8741151'], 's8521': ['s8521101']}
+            's8071': ['s8071101', 's8071103'], 's8191': ['s8191115'], 's8281': ['s8281154', 's8071204', 's8281351'],
+            's8741': ['s8341101', 's12963107', 's8741151']}
+# 's8521' (poissons et oiseaux, s8521101) n'est plus masqué depuis P16 : les « boîtes » venaient des rotations
+# « non définies » (-3,4e38) mal lues, corrigées dans scripts/combat/eden_fx.gd (voir tools/fx_aura_fix.py).
 AURA_BAD_NODES = {'s8311': ['Plane01', 'Plane13']}  # cône plein
+
+
+def _dump_retry(path, data, tries=10):
+    """Écrit le JSON en réessayant : un fichier lu au même moment par un Godot (tests d'autres sessions)
+    refuse l'écriture sous Windows (« Invalid argument »)."""
+    text = json.dumps(data, separators=(',', ':'))
+    for k in range(tries):
+        try:
+            with open(path, 'w', encoding='utf-8') as f:
+                f.write(text)
+            return
+        except OSError:
+            if k == tries - 1:
+                raise
+            time.sleep(0.5)
 
 
 def hide_aura_parts(names):
@@ -216,11 +234,11 @@ def hide_aura_parts(names):
             tex = _node_textures(os.path.join(OUT, fx.get('glb', n) + '.glb'))
             for node, info in fx.get('materials', {}).items():
                 uri = info.get('tex', tex.get(node, ''))
-                if (node in nodes or os.path.basename(uri)[:-4] in AURA_BAD['*']) and not info.get('hide'):
+                # variante à son propre maillage (s82813) : ses pièces sont retrouvées par leur texture
+                if (node in nodes or os.path.basename(uri)[:-4] in bad) and not info.get('hide'):
                     info['hide'] = True
                     total += 1
-            with open(js, 'w', encoding='utf-8') as f:
-                json.dump(fx, f, separators=(',', ':'))
+            _dump_retry(js, fx)
     return total
 
 

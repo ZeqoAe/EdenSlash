@@ -28,6 +28,12 @@ static var _legacy := -1
 var _offset := Transform3D.IDENTITY
 var _scope := -1  # propriétaire d'une aura : 1 moi, 0 un autre héros, -1 aperçu (voir Settings.fx_factor)
 var _recheck := 0.0
+var _billboards: Array = []  # [Node3D, mode Gamebryo] : nœuds tournés vers la caméra
+## Auras refaites par tools/fx_aura_fix.py ("loop_tracks") : chaque piste couvre son propre cycle et se lit
+## modulo sa longueur, interpolée entre deux images (_w) ; sinon (sorts) bloquée sur sa dernière image.
+var _wrap := false
+var _w := 0.0
+var orphans := 0  # maillages masqués faute d'entrée dans le .fx.json (0 attendu : voir test_p16)
 
 
 ## 1 si l'effet de [param node] est celui de mon héros, 0 si c'est celui d'un autre héros (adversaire,
@@ -201,6 +207,8 @@ func _ready() -> void:
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			if info.has("tex"):
 				_set_tex(_mats[name][0], _texture("res://assets/fx/" + String(info.tex)))
+			if info.has("wrap"):
+				(_mats[name][0] as StandardMaterial3D).texture_repeat = false
 			continue
 		var m := ShaderMaterial.new()
 		m.shader = SHADER
@@ -234,10 +242,32 @@ func _ready() -> void:
 		var c: Array = info.get("color", [1, 1, 1])
 		var k := GLOW_BOOST if add else 1.0
 		m.set_shader_parameter("color", Color(c[0] * k, c[1] * k, c[2] * k, minf(1.0, float(info.get("alpha", 1.0)) * ALPHA_BOOST) * alpha_mul))
+		if info.has("wrap"):
+			m.set_shader_parameter("wrap_mode", int(info.wrap))  # texture bloquée au bord (Gamebryo)
+		for key in ["dark", "detail"]:  # masque et texture de détail (auras)
+			if info.has(key) and info[key] is Dictionary:
+				var t := _texture("res://assets/fx/" + String(info[key].get("tex", "")))
+				if t:
+					m.set_shader_parameter(key + "_tex", t)
+					m.set_shader_parameter("use_" + key, 1.0)
+					m.set_shader_parameter(key + "_wrap", int(info[key].get("wrap", 3)))
 		mi.material_override = m
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_mats[name] = [m, info]
+	# maillage sans entrée dans le .fx.json (nom décalé d'une variante) : jamais affiché avec le
+	# matériau brut du glTF (mur opaque, plaque blanche) ; tools/fx_aura_fix.py répare les noms
+	for n: Node in root.find_children("*", "MeshInstance3D", true, false):
+		if not mats.has(String(n.name)):
+			(n as MeshInstance3D).visible = false
+			orphans += 1
+	# nœuds « panneau » (NiBillboardNode) : face à la caméra (lune, soleil des auras)
+	var bb: Dictionary = _data.get("billboards", {})
+	for name in bb:
+		if _nodes.has(name):
+			_billboards.append([_nodes[name], int(bb[name])])
+	_wrap = loop and bool(_data.get("loop_tracks", false))
 	_apply(0)
+	_face_camera()
 
 
 func _process(delta: float) -> void:
@@ -248,14 +278,45 @@ func _process(delta: float) -> void:
 			visible = Settings.fx_factor("fx_auras", _scope) > 0.0  # réglage changé pendant la partie
 	_t += delta * (1.0 if loop else SPELL_TIME)
 	var dur := float(_data.get("duration", 1.0))
-	if _t >= dur:
+	if _wrap:
+		_t = fmod(_t, 3600.0)  # pistes de cycles différents : pas de retour commun à la durée de l'effet
+	elif _t >= dur:
 		if not loop:
 			queue_free()
 			return
 		_t = fmod(_t, maxf(dur, 0.01))
 	if follow and is_instance_valid(follow):
 		global_transform = follow.global_transform * _offset
-	_apply(int(_t * float(_data.get("fps", 30.0))))
+	var f := _t * float(_data.get("fps", 30.0))
+	_w = f - floorf(f) if _wrap else 0.0
+	_apply(int(f))
+	_face_camera()
+
+
+## Nœuds « panneau » d'Eden : leur axe Z local vise la caméra, leur axe Y reste en haut. Modes 1, 5, 9
+## (rotation autour de la verticale seulement : colonnes, rideaux) ; les autres (0, 2, 10…) font
+## entièrement face à l'écran (lune et soleil des pierres de lune, halos).
+func _face_camera() -> void:
+	if _billboards.is_empty() or not is_inside_tree():
+		return
+	var cam := get_viewport().get_camera_3d()
+	if cam == null:
+		return
+	var cb := cam.global_basis.orthonormalized()
+	for e in _billboards:
+		var n := e[0] as Node3D
+		if not is_instance_valid(n):
+			continue
+		var y := cb.y
+		var z := cb.z
+		if int(e[1]) in [1, 5, 9]:
+			y = Vector3.UP
+			z = Vector3(cb.z.x, 0.0, cb.z.z)
+			if z.length_squared() < 1e-6:
+				z = Vector3(cb.y.x, 0.0, cb.y.z)  # caméra à la verticale
+			z = z.normalized()
+		var x := y.cross(z).normalized()
+		n.global_basis = Basis(x, z.cross(x), z) * Basis.from_scale(n.global_basis.get_scale())
 
 
 func _apply(i: int) -> void:
@@ -266,39 +327,110 @@ func _apply(i: int) -> void:
 			continue
 		var tr: Dictionary = nodes[name]
 		if tr.has("t"):
-			var v: Array = tr.t[mini(i, tr.t.size() - 1)]
-			n.position = Vector3(v[0], v[1], v[2])
+			var v := _vec(tr.t, i)
+			if absf(v.x) < 1e30:  # -3,4e38 : valeur « non définie » de Gamebryo
+				n.position = v
 		if tr.has("r"):
-			var q: Array = tr.r[mini(i, tr.r.size() - 1)]
-			n.quaternion = Quaternion(q[0], q[1], q[2], q[3]).normalized()
+			# -3,4e38 (« rotation non définie », s84311, s848xx, s852xx) : rotation d'origine gardée, sinon la
+			# base devient non finie et la pièce disparaît
+			var qq := _quat(tr.r, i)
+			if qq.length_squared() > 0.5:
+				n.quaternion = qq
 		if tr.has("s"):
-			var s := float(tr.s[mini(i, tr.s.size() - 1)])
-			n.scale = Vector3.ONE * maxf(s, 0.0001)
+			var s := _f(tr.s, i)
+			if s < 1e30:
+				n.scale = Vector3.ONE * maxf(s, 0.0001)
 		if tr.has("vis"):
-			n.visible = float(tr.vis[mini(i, tr.vis.size() - 1)]) > 0.5
+			n.visible = float(tr.vis[_idx(tr.vis.size(), i)]) > 0.5
 	for name in _mats:
 		var m: Material = _mats[name][0]
 		var info: Dictionary = _mats[name][1]
 		var col := _get_color(m)
 		if info.has("alpha_t"):
-			col.a = minf(1.0, float(info.alpha_t[mini(i, info.alpha_t.size() - 1)]) * ALPHA_BOOST) * alpha_mul
+			col.a = minf(1.0, _f(info.alpha_t, i) * ALPHA_BOOST) * alpha_mul
 		if info.has("color_t"):
-			var c: Array = info.color_t[mini(i, info.color_t.size() - 1)]
+			var c := _vec(info.color_t, i)
 			var k := (GLOW_BOOST if _legacy == 0 else 1.3) if info.get("blend", "mix") == "add" else 1.0
-			col = Color(c[0] * k, c[1] * k, c[2] * k, col.a)
+			col = Color(c.x * k, c.y * k, c.z * k, col.a)
 		if info.has("alpha_t") or info.has("color_t"):
 			_set_color(m, col)
-		var su := float(_track(info, "uv_su", i, 1.0))
-		var sv := float(_track(info, "uv_sv", i, 1.0))
-		var u := float(_track(info, "uv_u", i, 0.0))
-		var v := float(_track(info, "uv_v", i, 0.0))
-		if info.has("uv_su") or info.has("uv_sv") or info.has("uv_u") or info.has("uv_v"):
-			# échelle autour du centre de la texture, comme Gamebryo
-			_set_uv(m, Vector2(su, sv), Vector2(0.5 * (1.0 - su) + u, 0.5 * (1.0 - sv) + v))
+		_apply_uv(m, info, i, "uv")
+		if info.has("dark"):
+			_apply_uv(m, info.dark, i, "dark")
+		if info.has("detail"):
+			_apply_uv(m, info.detail, i, "detail")
 		if info.has("flip"):
-			var f: Dictionary = info.flip
-			var uri: String = f.textures[int(f.frames[mini(i, f.frames.size() - 1)])]
+			var fl: Dictionary = info.flip
+			var uri: String = fl.textures[int(fl.frames[_idx(fl.frames.size(), i)])]
 			_set_tex(m, _texture("res://assets/fx/" + uri))
+
+
+## Image [param i] d'une piste de [param n] images : modulo (auras refaites), sinon la dernière image reste.
+func _idx(n: int, i: int) -> int:
+	return posmod(i, n) if _wrap else mini(i, n - 1)
+
+
+## Poids de l'image suivante (0 : pas d'interpolation, ou fin de cycle : la piste repart de son début).
+func _next_w(n: int, i: int) -> float:
+	return _w if _wrap and n > 1 and posmod(i, n) < n - 1 else 0.0
+
+
+func _f(a: Array, i: int) -> float:
+	var x := float(a[_idx(a.size(), i)])
+	var w := _next_w(a.size(), i)
+	return lerpf(x, float(a[_idx(a.size(), i + 1)]), w) if w > 0.0 else x
+
+
+func _vec(a: Array, i: int) -> Vector3:
+	var p: Array = a[_idx(a.size(), i)]
+	var v := Vector3(p[0], p[1], p[2])
+	var w := _next_w(a.size(), i)
+	if w > 0.0 and absf(v.x) < 1e30:
+		var q: Array = a[_idx(a.size(), i + 1)]
+		if absf(float(q[0])) < 1e30:
+			v = v.lerp(Vector3(q[0], q[1], q[2]), w)
+	return v
+
+
+## Rotation de la piste (quaternion nul : clé « non définie », à ignorer).
+func _quat(a: Array, i: int) -> Quaternion:
+	var p: Array = a[_idx(a.size(), i)]
+	var q := Quaternion(p[0], p[1], p[2], p[3])
+	if absf(q.x) > 2.0 or q.length_squared() < 1e-8:
+		return Quaternion(0.0, 0.0, 0.0, 0.0)
+	q = q.normalized()
+	var w := _next_w(a.size(), i)
+	if w > 0.0:
+		var p2: Array = a[_idx(a.size(), i + 1)]
+		var q2 := Quaternion(p2[0], p2[1], p2[2], p2[3])
+		if absf(q2.x) <= 2.0 and q2.length_squared() > 1e-8:
+			q = q.slerp(q2.normalized(), w)
+	return q
+
+
+## Transformation d'une texture du matériau ([param pre] : « uv » texture de base, « dark » masque, « detail ») :
+## valeurs fixes du .nif ("uv0" : u, v, échelle u, échelle v, rotation), remplacées par les pistes animées.
+func _apply_uv(m: Material, info: Dictionary, i: int, pre: String) -> void:
+	var anim := info.has("uv_su") or info.has("uv_sv") or info.has("uv_u") or info.has("uv_v") or (loop and info.has("uv_rot"))
+	if not anim and not (i == 0 and info.has("uv0")):  # transformation fixe : posée une fois
+		return
+	var u0: Array = info.get("uv0", [0.0, 0.0, 1.0, 1.0, 0.0])
+	var su := _track(info, "uv_su", i, u0[2])
+	var sv := _track(info, "uv_sv", i, u0[3])
+	var u := _track(info, "uv_u", i, u0[0])
+	var v := _track(info, "uv_v", i, u0[1])
+	# rotation : auras seulement (leurs textures bloquées au bord sont connues, voir tools/fx_aura_fix.py ;
+	# une texture de sort répétée qui tourne montrerait ses voisines dans les coins du quad)
+	var rot := _track(info, "uv_rot", i, u0[4]) if loop else 0.0
+	# échelle et rotation autour du centre de la texture, puis décalage, comme Gamebryo (le shader centre)
+	var sc := Vector2(su, sv)
+	var off := Vector2(u, v)
+	if pre == "uv":
+		_set_uv(m, sc, off, rot)
+	elif m is ShaderMaterial:
+		m.set_shader_parameter(pre + "_scale", sc)
+		m.set_shader_parameter(pre + "_offset", off)
+		m.set_shader_parameter(pre + "_rot", rot)
 
 
 static func _legacy_material(src: BaseMaterial3D, info: Dictionary) -> StandardMaterial3D:
@@ -329,13 +461,15 @@ static func _get_color(m: Material) -> Color:
 	return m.get_shader_parameter("color") if m is ShaderMaterial else (m as StandardMaterial3D).albedo_color
 
 
-static func _set_uv(m: Material, sc: Vector2, off: Vector2) -> void:
+static func _set_uv(m: Material, sc: Vector2, off: Vector2, rot := 0.0) -> void:
 	if m is ShaderMaterial:
 		m.set_shader_parameter("uv_scale", sc)
 		m.set_shader_parameter("uv_offset", off)
+		m.set_shader_parameter("uv_rot", rot)
 	else:
 		(m as StandardMaterial3D).uv1_scale = Vector3(sc.x, sc.y, 1.0)
-		(m as StandardMaterial3D).uv1_offset = Vector3(off.x, off.y, 0.0)
+		# matériau standard : uv × échelle + décalage (le centrage est fait ici)
+		(m as StandardMaterial3D).uv1_offset = Vector3(0.5 * (1.0 - sc.x) + off.x, 0.5 * (1.0 - sc.y) + off.y, 0.0)
 
 
 static func _set_tex(m: Material, t: Texture2D) -> void:
@@ -345,11 +479,8 @@ static func _set_tex(m: Material, t: Texture2D) -> void:
 		(m as StandardMaterial3D).albedo_texture = t
 
 
-static func _track(info: Dictionary, key: String, i: int, default: float) -> float:
-	if not info.has(key):
-		return default
-	var a: Array = info[key]
-	return float(a[mini(i, a.size() - 1)])
+func _track(info: Dictionary, key: String, i: int, default: float) -> float:
+	return _f(info[key], i) if info.has(key) else default
 
 
 static func _texture(path: String) -> Texture2D:
