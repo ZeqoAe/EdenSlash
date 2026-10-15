@@ -407,18 +407,9 @@ static func button(parent: Control, text: String, cb: Callable, width := 0.0) ->
 
 ## Demande confirmation avant de toucher à la sauvegarde du joueur.
 static func confirm(host: Node, text: String, cb: Callable) -> void:
-	var d := ConfirmationDialog.new()
-	d.title = "Mode dev"
-	d.dialog_text = text + "\n\nCela modifie ta sauvegarde (%d)." % Profile.slot
-	d.ok_button_text = "Confirmer"
-	d.cancel_button_text = "Annuler"
-	d.process_mode = Node.PROCESS_MODE_ALWAYS
-	d.confirmed.connect(cb)
-	d.visibility_changed.connect(func():
-		if not d.visible:
-			d.queue_free())
-	host.add_child(d)
-	d.popup_centered()
+	InfoCard.ask(host, "Mode dev", text + "
+
+Cela modifie ta sauvegarde (%d)." % Profile.slot, "Confirmer", cb, false)
 
 
 static func column(parent: Control, title: String, width := 0.0) -> VBoxContainer:

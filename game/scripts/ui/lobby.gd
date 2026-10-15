@@ -19,6 +19,7 @@ const MENU := [
 ## Largeur du panneau central : fixe (la page Jouer, en grille, est plus large) ; il ne « saute » plus d'une page à l'autre.
 const PANEL_W := 580.0
 const PLAY_W := 760.0
+const NEWS_CARDS := 3  # nouveautés montrées en cartes, puis « Tout voir dans le Guide »
 const PANEL_BOTTOM := 36.0  # marge entre le bas du panneau et le bas de l'écran
 ## Arguments de test qui ouvrent un écran au démarrage (captures, tests).
 const SCREEN_ARGS := ["--grimoire", "--talents", "--info", "--inventory", "--appearance", "--chests", "--cards", "--settings", "--armory"]
@@ -29,6 +30,7 @@ var _archive: PageScreen
 var _workshop: PageScreen
 var _chests: PageScreen
 var _launching := false
+var _cards: InfoCard  # pile de petites cartes d'information (nouveautés, avis)
 var _open_screen := ""  # test : écran ouvert au démarrage (--inventory, --talents, --appearance, --archive=0...)
 var _settings: SettingsMenu
 var _heroic := 0  # rang héroïque choisi pour la Survie
@@ -1168,12 +1170,8 @@ func _welcome_flow() -> void:
 		return
 	var notice := SafeFile.take_notice()
 	if notice != "":
-		var nd := AcceptDialog.new()  # une sauvegarde abîmée a été remplacée par sa dernière copie saine
-		nd.title = "Sauvegarde"
-		nd.dialog_text = notice
-		nd.ok_button_text = "Compris"
-		add_child(nd)
-		nd.popup_centered()
+		# une sauvegarde abîmée a été remplacée par sa dernière copie saine
+		info_cards().add_card({"id": "save_notice", "kicker": "Sauvegarde", "title": "Copie saine rechargée", "body": notice, "icon": "save"})
 	Tutorial.init_for_save()
 	if Tutorial.mode() == "":
 		var w := Welcome.new()
@@ -1185,27 +1183,46 @@ func _welcome_flow() -> void:
 		return
 	var news := Tutorial.news_to_show()
 	var pending := Tutorial.take_card()
-	if pending != "":
+	if pending != "" and not pending in news:
 		news.append(pending)
 	Profile.save_profile()
 	if news.is_empty():
 		return
-	var dlg := AcceptDialog.new()
-	dlg.title = "Nouveau dans cette version (%s)" % Version.NUMBER
-	var txt := ""
-	for id in news:
-		var c: Dictionary = Tutorial.CARDS[id]
-		txt += "• %s — %s
-" % [c.title, " ".join(c.lines)]
-	dlg.dialog_text = txt
-	dlg.ok_button_text = "Compris"
-	dlg.add_button("Tout voir dans le Guide", true, "guide")
-	dlg.custom_action.connect(func(_a):
-		dlg.hide()
-		Guide.open_on(self, "news"))
-	dlg.min_size = Vector2(760, 0)
-	add_child(dlg)
-	dlg.popup_centered()
+	_show_news(news)
+
+
+## Les nouveautés en petites cartes : une par fiche, la plus récente d'abord, trois au plus, puis le Guide.
+func _show_news(news: Array) -> void:
+	var cards := info_cards()
+	# sur une petite fenêtre, moins de cartes : la dernière place est celle de « Tout voir dans le Guide »
+	var room := cards.capacity()
+	var shown := news.size() if news.size() <= mini(room, NEWS_CARDS) else mini(room - 1, NEWS_CARDS)
+	shown = maxi(1, shown)
+	for id in news.slice(0, shown):
+		var spec := Tutorial.card_spec(String(id))
+		spec["kicker"] = "Nouveau"
+		spec["buttons"] = [{"label": "Compris", "kind": "primary"},
+				{"label": "Guide", "kind": "plain", "cb": func(): _guide_from_cards(String(id))}]
+		cards.add_card(spec)
+	if news.size() > shown:
+		cards.add_card({"id": "news_more", "icon": "new",
+				"title": "%d autres nouveautés" % (news.size() - shown), "body": "Tu les retrouves toutes dans le Guide.",
+				"buttons": [{"label": "Tout voir dans le Guide", "kind": "primary", "cb": func(): _guide_from_cards("news")},
+						{"label": "Plus tard", "kind": "link"}]})
+
+
+## Un bouton « Guide » d'une carte : les cartes se retirent (elles ne restent pas au-dessus du Guide) et le cadre de la manette y entre.
+func _guide_from_cards(chapter: String) -> void:
+	info_cards().dismiss_all("guide")
+	Guide.open_on(self, chapter)
+	UiNav.cursor = null
+
+
+## Pile de petites cartes d'information (en haut à droite, sous la carte du héros ; B ou Échap ferment la première).
+func info_cards() -> InfoCard:
+	if _cards == null or not is_instance_valid(_cards):
+		_cards = InfoCard.in_layer(self)
+	return _cards
 
 
 ## Entrée du fil d'éveil (Unlocks) d'un bouton du menu de gauche.
@@ -1267,6 +1284,7 @@ func _fit_scroll() -> void:
 		var info_left := get_viewport().get_visible_rect().size.x - 28.0 - maxf(372.0, _info_bar.get_combined_minimum_size().x)
 		if info_left < _sub_panel.position.x + _sub_panel.custom_minimum_size.x:
 			bottom = 100.0  # le panneau passerait sous le pied de page
+	news = Tutorial.news_sorted(news)
 	var avail := get_viewport().get_visible_rect().size.y - _sub_panel.position.y - bottom - 28.0 - (foot_h + 10.0 if foot_h > 0.0 else 0.0)
 	var want := clampf(_sub.get_combined_minimum_size().y, 0.0, maxf(avail, 120.0))
 	if absf(_scroll.custom_minimum_size.y - want) > 0.5:

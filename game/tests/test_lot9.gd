@@ -87,6 +87,17 @@ func _ready() -> void:
 		if c.lines.size() > 3 or "%" in all or "Eden" in all or not String(c.chapter) in chapter_ids:
 			bad_cards.append(id)
 	check("fiches : 3 lignes au plus, sans %% ni Eden, chapitre connu %s" % str(bad_cards), bad_cards.is_empty())
+	# P8 : texte des petites cartes (nouveautés, fiches en jeu) : une ou deux phrases courtes, sans tiret long ni jargon
+	var bad_short: Array = []
+	for id in Tutorial.CARDS:
+		var c: Dictionary = Tutorial.CARDS[id]
+		var sh := String(c.get("short", ""))
+		var spec := Tutorial.card_spec(id)
+		if sh == "" or sh.length() > 125 or String(c.title).length() > 26 or "—" in sh or "–" in sh or "—" in String(c.title) or "%" in sh or "Eden" in sh 				or MenuWidgets.icon(String(c.get("icon", ""))) == null or String(spec.body) != sh or String(spec.title) != String(c.title):
+			bad_short.append(id)
+	check("cartes d'information : texte court (125 signes), titre court, sans tiret long ni %%, icône %s" % str(bad_short), bad_short.is_empty())
+	var sorted_news := Tutorial.news_sorted(["cards", "hub_gear", "chain", "dungeons"])
+	check("nouveautés : la plus récente d'abord, puis l'ordre d'écriture", sorted_news == ["hub_gear", "dungeons", "cards", "chain"])
 	var bad_steps: Array = []
 	for s in Tutorial.STEPS:
 		if "%" in String(s.text) or "Eden" in String(s.text):

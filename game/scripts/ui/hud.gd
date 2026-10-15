@@ -26,11 +26,7 @@ var _assist_label: Label
 var _steps_panel: PanelContainer
 var _steps_head: Label
 var _steps_text: Label
-var _card_panel: PanelContainer
-var _card_title: Label
-var _card_body: Label
-var _card_id := ""
-var _card_until := 0.0
+var _cards: InfoCard  # fiche de découverte : une petite carte à droite, sous le compteur de dégâts
 var _buff_row: HudWidgets.StatusRow
 var _debuff_row: HudWidgets.StatusRow
 var _durations := {}  # "cible:effet" -> [fin, durée totale]
@@ -298,51 +294,18 @@ func _build_tutorial(root: Control) -> void:
 	_steps_text = _label(v, "", 16, Color.WHITE)
 	_steps_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_steps_text.custom_minimum_size = Vector2(PANEL_W - 36.0, 0)
-	_card_panel = PanelContainer.new()
-	_card_panel.add_theme_stylebox_override("panel", UiTheme.panel_box(18, 12))
-	_card_panel.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
-	_card_panel.offset_left = -400
-	_card_panel.offset_right = -14
-	_card_panel.offset_top = -70  # sous le compteur de dégâts cumulés (il finit vers y = 370)
-	_card_panel.visible = false
-	root.add_child(_card_panel)
-	var cv := VBoxContainer.new()
-	cv.add_theme_constant_override("separation", 6)
-	_card_panel.add_child(cv)
-	_card_title = _label(cv, "", 20, UiTheme.GOLD)
-	UiTheme.title(_card_title, 20)
-	_card_body = _label(cv, "", 15, Color.WHITE)
-	_card_body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_card_body.custom_minimum_size = Vector2(350, 0)
-	var br := HBoxContainer.new()
-	br.add_theme_constant_override("separation", 6)
-	cv.add_child(br)
-	for b in [["Compris", func(): _card_panel.visible = false],
-			["Plus de détails", func():
-				_card_panel.visible = false
-				Guide.open_on(get_parent(), _card_id)],
-			["Plus de conseils", func():
-				Profile.tutorial["cards_off"] = true
-				Profile.save_profile()
-				_card_panel.visible = false]]:
-		var btn := Button.new()
-		btn.text = String(b[0])
-		btn.focus_mode = Control.FOCUS_NONE
-		btn.pressed.connect(b[1])
-		br.add_child(btn)
+	_cards = InfoCard.in_control(root)  # sous le compteur de dégâts cumulés (il finit vers y = 370)
 
 
-## Manette : L3 ferme la fiche de découverte, R3 ouvre le Guide à son chapitre (rien d'autre à la souris).
+## Manette : L3 ferme la fiche de découverte, R3 ouvre le Guide à son chapitre (en jeu B reste à l'action).
 func _pad_card_input(event: InputEvent) -> bool:
-	if not (event is InputEventJoypadButton and event.pressed) or _card_panel == null or not _card_panel.visible:
+	if not (event is InputEventJoypadButton and event.pressed) or _cards == null or _cards.count() == 0:
 		return false
 	if event.button_index == JOY_BUTTON_LEFT_STICK:
-		_card_panel.visible = false
+		_cards.dismiss_top("pad")
 		return true
 	if event.button_index == JOY_BUTTON_RIGHT_STICK:
-		_card_panel.visible = false
-		Guide.open_on(get_parent(), _card_id)
-		return true
+		return _cards.press_top(1)
 	return false
 
 
@@ -359,21 +322,24 @@ func _update_tutorial() -> void:
 		var s := Tutorial.current_step()
 		_steps_head.text = Tutorial.progress_text()
 		_steps_text.text = Tutorial.step_text(s)
-	if _card_panel.visible and Time.get_ticks_msec() / 1000.0 > _card_until:
-		_card_panel.visible = false
-	if not _card_panel.visible and director != null and not director.state in ["boss", "duel", "tower", "royale"] and _survival_mode():
+	if _cards.count() == 0 and director != null and not director.state in ["boss", "duel", "tower", "royale"] and _survival_mode():
 		var id := Tutorial.take_card()
 		if id != "":
-			var c: Dictionary = Tutorial.CARDS[id]
-			_card_id = id
-			_card_title.text = String(c.title)
-			_card_body.text = "
-".join((c.lines as Array).map(func(l): return "• " + String(l)))
-			if Gamepad.active:
-				_card_body.text += "
-[%s : compris · %s : Guide]" % [Settings.pad_name(JOY_BUTTON_LEFT_STICK), Settings.pad_name(JOY_BUTTON_RIGHT_STICK)]
-			_card_until = Time.get_ticks_msec() / 1000.0 + 20.0
-			_card_panel.visible = true
+			_show_card(id)
+
+
+## La fiche de découverte `id` en petite carte : « Compris », « Guide » (à son chapitre), « Plus de conseils ».
+func _show_card(id: String) -> void:
+	var spec := Tutorial.card_spec(id)
+	spec["duration"] = 20.0
+	spec["buttons"] = [{"label": "Compris", "kind": "primary"},
+			{"label": "Guide", "kind": "plain", "cb": func(): Guide.open_on(get_parent(), id)},
+			{"label": "Plus de conseils", "kind": "link", "cb": func():
+				Profile.tutorial["cards_off"] = true
+				Profile.save_profile()}]
+	if Gamepad.active:
+		spec["hint"] = "%s : compris · %s : Guide" % [Settings.pad_name(JOY_BUTTON_LEFT_STICK), Settings.pad_name(JOY_BUTTON_RIGHT_STICK)]
+	_cards.add_card(spec)
 
 
 func _build_objectives(root: Control) -> void:
@@ -796,6 +762,7 @@ func _process(delta: float) -> void:
 	var w := get_parent()
 	var picking: bool = w != null and w.get("cards") != null and w.cards.is_open()
 	_left.visible = not picking
+	_cards.visible = not picking  # la fiche attend (son compte à rebours aussi) que le choix de carte soit fini
 	if picking:
 		_target_box.visible = false
 

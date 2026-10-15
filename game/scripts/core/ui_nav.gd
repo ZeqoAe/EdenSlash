@@ -125,6 +125,16 @@ static func rect_of(c: Control) -> Rect2:
 
 
 # --- déplacement --------------------------------------------------------------------------
+## Place le cadre doré sur [param c] (bouton d'une carte qui apparaît, contrôle retrouvé à sa fermeture) ;
+## sans effet quand la manette n'est pas la dernière entrée utilisée.
+func focus(c: Control) -> void:
+	if c == null or not is_instance_valid(c) or not Gamepad.active:
+		return
+	_set_cursor(c)
+	if Gamepad.menu_mode() and not free_mode:
+		shown = true
+
+
 ## Place le curseur sur le candidat le plus proche du dernier point (ou le premier).
 func pick_default() -> void:
 	var list := candidates()

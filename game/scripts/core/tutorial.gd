@@ -27,38 +27,55 @@ const STEPS := [
 ## annoncée comme nouveauté aux sauvegardes plus anciennes). Pas de pourcentage : le détail est dans le Guide.
 const CARDS := {
 	"cards": {"title": "Les cartes", "on": "cards_open", "version": "0.1.141", "chapter": "cards",
+		"short": "À chaque niveau, choisis une carte parmi trois. Sa couleur dit sa rareté.", "icon": "grimoire",
 		"lines": ["À chaque niveau, choisis une carte parmi trois : sa couleur dit sa rareté.", "Tu peux en bannir, en garder pour plus tard ou relancer le tirage.", "Tes sorts, tes enchaînements et ton arme grandissent par cartes."]},
 	"weapon_up": {"title": "L'arme grandit", "on": "weapon_up", "version": "0.1.141", "chapter": "cards",
+		"short": "Chaque carte d'arme monte son niveau. Au niveau 4, son effet légendaire s'éveille.", "icon": "weapon",
 		"lines": ["Chaque carte d'arme monte son niveau (8 au plus).", "Au niveau 4, l'effet légendaire de ta variante s'active.", "Un boss de carte t'offre toujours une amélioration d'arme."]},
 	"chain": {"title": "Enchaînements", "on": "chain_open", "version": "0.1.141", "chapter": "cards",
+		"short": "Rappuie sur la touche d'un sort pendant que la barre se remplit : le sort suivant part, plus fort.", "icon": "power",
 		"lines": ["Rappuie sur la touche d'un sort pendant que la barre se remplit : le sort suivant part, plus fort.", "En Assisté, un appui trop tôt est gardé.", "Tenir la touche joue toute la chaîne."]},
 	"perfect": {"title": "Annulation parfaite", "on": "perfect", "version": "0.1.141", "chapter": "cards",
+		"short": "Esquive juste après l'impact d'un sort pour gagner de la Fluidité et raccourcir ta recharge.", "icon": "speed",
 		"lines": ["Esquive juste après l'impact d'un sort (anneau bleu) : tu gagnes de la Fluidité et ta recharge raccourcit.", "C'est le geste d'expert : l'automatique ne le fait pas.", "Esquiver avant l'impact te rend ton sort."]},
 	"trophy": {"title": "Trophées", "on": "trophy", "version": "0.1.141", "chapter": "cards",
+		"short": "12 trophées au plus, tous différents. Ils se perdent à la fin de la run.", "icon": "expertise",
 		"lines": ["12 trophées au plus, tous d'effets différents.", "Ils se perdent à la fin de la run.", "Chacun déclenche un effet sous condition : coup, esquive, élimination…"]},
 	"offhand": {"title": "Arme secondaire", "on": "offhand", "version": "0.1.141", "chapter": "cards",
+		"short": "L'arme secondaire frappe seule, avec des dégâts réduits. Elle a ses propres améliorations.", "icon": "weapon",
 		"lines": ["Elle frappe seule, sans animation, avec des dégâts réduits.", "Elle a ses propres améliorations."]},
 	"anvil": {"title": "L'enclume", "on": "anvil", "version": "0.1.141", "chapter": "run",
+		"short": "Un bonus de +0 à +7 sur un emplacement, une fois par carte, jusqu'à la fin de la run.", "icon": "upgrade",
 		"lines": ["Un bonus de +0 à +7 sur un emplacement d'équipement, une fois par carte.", "Il s'ajoute au +N de ta pièce (+12 au plus) jusqu'à la fin de la run."]},
 	"fortune": {"title": "Autel de la fortune", "on": "fortune", "version": "0.1.141", "chapter": "run",
+		"short": "Huit étages : encaisse ou monte tenter le suivant. Une case est piégée et fait tout perdre.", "icon": "gem",
 		"lines": ["Huit étages : encaisse ou monte tenter l'étage suivant.", "Une case est piégée : elle fait tout perdre.", "Les gains sont des insignes et des coffres d'apparence."]},
 	"merchant": {"title": "Marchands", "on": "merchant", "version": "0.1.141", "chapter": "run",
+		"short": "Cartes, clés et fournitures contre de l'or. L'or ne sort pas de la run : dépense-le.", "icon": "misc",
 		"lines": ["Cartes, clés et fournitures contre de l'or.", "L'or ne sort pas de la run : dépense-le."]},
 	"shrine": {"title": "Sanctuaires", "on": "shrine", "version": "0.1.141", "chapter": "run",
+		"short": "Reste dans le cercle pour capturer le sanctuaire. Il offre un trophée, des clés ou une carte.", "icon": "pin",
 		"lines": ["Reste dans le cercle pour capturer le sanctuaire.", "Il offre un trophée, des clés ou une carte."]},
 	"reward_chest": {"title": "Coffres de récompense", "on": "reward_chest", "version": "0.1.141", "chapter": "run",
+		"short": "Un coffre ramassé est toujours gardé, même si tu tombes. Ouvre-le dans le menu Coffres.", "icon": "chest",
 		"lines": ["Un coffre ramassé est toujours gardé, même si tu tombes.", "Ouvre-le dans le menu Coffres."]},
 	"rage": {"title": "La rage", "on": "rage", "version": "0.1.141", "chapter": "run",
+		"short": "Passé le temps imparti, la horde enrage : plus dure, plus de butin. Vise le boss et le portail.", "icon": "attack",
 		"lines": ["Passé le temps imparti, la horde enrage : plus dure, plus de butin.", "Le boss et le portail restent ton objectif."]},
 	"portal": {"title": "Les étapes", "on": "portal", "version": "0.1.141", "chapter": "run",
+		"short": "Chaque époque a 3 cartes. Le boss ouvre le portail vers la suivante, et tu gardes tout.", "icon": "play",
 		"lines": ["Chaque époque a 3 cartes : le boss ouvre le portail vers la suivante.", "Tu gardes niveau, cartes et équipement d'une carte à l'autre."]},
 	"results": {"title": "Ce que tu gardes", "on": "results", "version": "0.1.141", "chapter": "run",
+		"short": "Gardés : la maîtrise, les insignes et les coffres. Perdus : l'or, les clés et les trouvailles.", "icon": "save",
 		"lines": ["Toujours gardés : la maîtrise, les insignes, les coffres de récompense.", "Perdus : l'or, les clés et les trouvailles de la run.", "Ton équipement du hub reste intact."]},
 	"assist": {"title": "Aide au combat", "on": "", "version": "0.1.134", "chapter": "controls",
+		"short": "Manuel, Assisté, Détente ou Bot : règle ton aide au combat dans Paramètres > Combat.", "icon": "settings",
 		"lines": ["Manuel, Assisté, Détente ou Bot : Paramètres > Combat.", "Assisté garde les appuis de sorts et annonce l'annulation parfaite."]},
 	"dungeons": {"title": "Donjons", "on": "", "version": "0.1.150", "chapter": "modes",
+		"short": "Plusieurs salles, un boss et un butin propre à chaque donjon. Seul ou avec des alliés.", "icon": "defense",
 		"lines": ["Plusieurs salles, un boss, un butin propre à chaque donjon.", "Joue-les seul ou avec des alliés IA."]},
-	"hub_gear": {"title": "Ton équipement part en Survie", "on": "", "version": "0.1.173", "chapter": "gear",
+	"hub_gear": {"title": "Équipement du hub", "on": "", "version": "0.1.173", "chapter": "gear",
+		"short": "Tu pars avec l'équipement porté au hub. Après la run, il est exactement comme avant.", "icon": "armor",
 		"lines": ["Tu pars avec l'équipement que tu portes au hub : pièces, +N, gemmes, enchantements.", "Les trouvailles de coffre le remplacent le temps de la run.", "Après la run, ton équipement est exactement comme avant."]},
 }
 
@@ -99,6 +116,24 @@ static func current_step() -> Dictionary:
 
 static func progress_text() -> String:
 	return "Premiers pas %d / %d" % [steps_done().size(), STEPS.size()]
+
+
+## Contenu d'une petite carte d'information (`InfoCard`) pour une fiche : titre, une ou deux phrases, icône.
+static func card_spec(card_id: String) -> Dictionary:
+	var c: Dictionary = CARDS.get(card_id, {})
+	return {"id": card_id, "title": String(c.get("title", "")), "body": String(c.get("short", " ".join(PackedStringArray(c.get("lines", []))))),
+		"icon": String(c.get("icon", "info"))}
+
+
+## Fiches triées de la plus récente à la plus ancienne (à version égale : l'ordre d'écriture de `CARDS`).
+static func news_sorted(ids: Array) -> Array:
+	var order := CARDS.keys()
+	var out := ids.duplicate()
+	out.sort_custom(func(a, b):
+		var va := _vkey(String(CARDS[a].version))
+		var vb := _vkey(String(CARDS[b].version))
+		return va > vb if va != vb else order.find(a) < order.find(b))
+	return out
 
 
 ## Chapitre du Guide où se trouve une fiche ("" si l'identifiant n'est pas une fiche).

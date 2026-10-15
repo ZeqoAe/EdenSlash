@@ -31,6 +31,14 @@ func reach() -> Array:
 	return [seen.size(), all.size()]
 
 
+## Appui sur B (Rond) : ferme la carte du dessus.
+func back_event() -> InputEventJoypadButton:
+	var e := InputEventJoypadButton.new()
+	e.button_index = JOY_BUTTON_B
+	e.pressed = true
+	return e
+
+
 func probe(label: String, min_ratio := 0.9) -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -48,6 +56,52 @@ func _ready() -> void:
 	add_child(lobby)
 	await get_tree().create_timer(1.5).timeout
 	await probe("lobby : menu de gauche")
+	check("lobby : la boussole montre un conseil cliquable", lobby._compass.visible and lobby._compass.text != "" and not lobby._compass_go.is_empty())
+	check("lobby : la boussole est un contrôle atteignable à la manette", UiNav.candidates().has(lobby._compass))
+	# P8 : petites cartes d'information : au-dessus de tout, navigables, B les ferme sans perdre le cadre
+	var prev_ctl: Control = lobby._menu["play"]
+	UiNav.cursor = prev_ctl
+	lobby._show_news(Tutorial.news_sorted(["trophy", "chain", "cards", "dungeons", "hub_gear"]))
+	await get_tree().create_timer(0.6).timeout
+	var stack: InfoCard = lobby.info_cards()
+	check("cartes : 3 nouveautés puis « Tout voir dans le Guide », la plus récente d'abord", stack.ids() == ["hub_gear", "dungeons", "cards", "news_more"])
+	check("cartes : le cadre de la manette part sur le bouton principal de la carte du dessus", UiNav.cursor == stack.primary_button())
+	check("cartes : le calque des cartes est au-dessus de tout", UiNav.layer_of(stack.primary_button()) == InfoCard.LAYER)
+	await probe("lobby : pile de cartes (boutons, croix)")
+	UiNav.cursor = stack.primary_button()
+	stack._input(back_event())
+	await get_tree().create_timer(0.5).timeout
+	check("cartes : B ferme la carte du dessus et le cadre passe à la suivante", stack.ids() == ["dungeons", "cards", "news_more"] and UiNav.cursor == stack.primary_button())
+	for i in 3:
+		stack._input(back_event())
+		await get_tree().create_timer(0.5).timeout
+	check("cartes : B ferme tout, le cadre revient où il était", stack.count() == 0 and UiNav.cursor == prev_ctl)
+	lobby.info_cards().add_card({"id": "x", "title": "Essai", "body": "Un texte court."})
+	await get_tree().create_timer(0.5).timeout
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.physical_keycode = KEY_ESCAPE
+	esc.pressed = true
+	stack._input(esc)
+	await get_tree().create_timer(0.5).timeout
+	check("cartes : Échap ferme aussi la carte", stack.count() == 0)
+	var hit := [false]
+	var ask := InfoCard.ask(lobby, "Quitter ?", "Texte de confirmation.", "Quitter", func(): hit[0] = true)
+	await get_tree().create_timer(0.5).timeout
+	check("confirmation : le cadre part sur « Annuler » (choix prudent)", UiNav.cursor == ask.cancel_button)
+	await probe("lobby : petite confirmation")
+	UiNav.cursor = ask.cancel_button
+	ask._input(back_event())
+	await get_tree().create_timer(0.4).timeout
+	check("confirmation : B annule sans rien faire et rend le cadre", not hit[0] and not is_instance_valid(ask) and UiNav.cursor == prev_ctl)
+	ask = InfoCard.ask(lobby, "Quitter ?", "Texte de confirmation.", "Quitter", func(): hit[0] = true)
+	await get_tree().create_timer(0.3).timeout
+	ask.ok_button.pressed.emit()
+	await get_tree().create_timer(0.4).timeout
+	check("confirmation : le bouton principal valide", hit[0])
+	lobby._compass_open(lobby._compass_go)
+	await probe("lobby : page ouverte par la boussole")
+	lobby._show_menu("")
 	lobby._on_menu("play")
 	await probe("lobby : Jouer")
 	lobby._show_menu("survival")
@@ -223,6 +277,19 @@ func _ready() -> void:
 	await probe("pause : confirmation de « Quitter le jeu »", 0.9)
 	world.pause_menu._confirm.hide_now()
 	world.pause_menu.close()
+	# P8 : la fiche de découverte en jeu est une petite carte sous le HUD ; L3 la ferme, R3 ouvre le Guide
+	var hud: Hud = world.hud
+	hud._show_card("results")
+	await get_tree().create_timer(0.7).timeout
+	var crect := UiNav.rect_of(hud._cards.primary_button())
+	check("en jeu : une petite carte à droite, dans la fenêtre", hud._cards.count() == 1 and get_viewport().get_visible_rect().encloses(crect) and crect.position.x > 1100.0)
+	check("en jeu : boutons Compris, Guide (R3) et Plus de conseils", hud._cards.buttons().size() == 3 and (hud._cards.buttons()[1] as Button).text == "Guide")
+	var l3 := InputEventJoypadButton.new()
+	l3.button_index = JOY_BUTTON_LEFT_STICK
+	l3.pressed = true
+	check("en jeu : L3 ferme la carte", hud._pad_card_input(l3))
+	await get_tree().create_timer(0.5).timeout
+	check("en jeu : carte fermée", hud._cards.count() == 0)
 	var r := ResultsScreen.new()
 	world.add_child(r)
 	Run.result = "victoire"

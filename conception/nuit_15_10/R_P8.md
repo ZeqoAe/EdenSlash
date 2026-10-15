@@ -1,0 +1,20 @@
+# R_P8 : petites cartes d'information (passe P8, version 0.1.187)
+
+Retour du joueur : les pop-ups du Guide sont moches (gros bandeau noir qui couvre le menu, texte brut sur une ligne, la manette ne peut pas fermer avec B).
+
+## Fait
+- **`ui/info_card.gd` (`InfoCard`)** : pile de cartes de 400 px de large, à droite (lobby : sous la carte du héros, calque 118 ; HUD : milieu droit sous le compteur de dégâts), sans fond plein écran. Une carte : icône dorée, titre Cinzel court, 2-3 lignes, boutons discrets (principal doré, « Guide » verre, lien « Plus de conseils »), croix, mot « Nouveau » à droite des boutons. Entrée (fondu + glissement), sortie (fondu, puis la pile se referme), durée automatique (en pause quand la souris est dessus ou que la carte est cachée), id unique, `closed` / `on_close`.
+- **Manette** : B (et Échap, et la croix) ferment la carte du dessus ; le cadre doré de `UiNav` part sur le bouton principal de la carte (nouvelle `UiNav.focus()`), passe à la carte suivante, puis revient au contrôle qu'il occupait (jamais perdu). A = bouton principal. En jeu (B reste à l'action) : L3 ferme, R3 = Guide, comme avant.
+- **Nouveautés du lobby** : une carte par nouveauté (`Tutorial.card_spec`), la plus récente d'abord (`news_sorted`), 3 au plus puis une carte « N autres nouveautés » avec « Tout voir dans le Guide » ; sur une fenêtre de 720 px de haut, 2 + la carte « Tout voir » (`capacity()`, pour ne pas couvrir les ressources du pied). « Guide » retire toutes les cartes puis ouvre le Guide.
+- **Fiches de découverte en jeu** : même carte (20 s, « Compris », « Guide », « Plus de conseils »), cachée et en attente pendant le choix de carte (avant, elle s'écoulait derrière).
+- **Plus de fenêtre native** : l'avis de sauvegarde abîmée (lobby) est une carte ; `DevPages.confirm` et `PauseMenu.Confirm` passent par `InfoCard.ask` (dialogue centré de 440 px, « Annuler » présélectionné, clic à côté / B / Échap = annuler, bouton rouge pour le geste destructif) ; `InventoryPage.InfoDialog` (statistiques, panoplies) allégé (540×480, fond léger, B ferme, cadre rendu). Restent des menus contextuels (`PopupPanel` / `PopupMenu` : classes, grimoire, éditeur de mode dev), qui ne sont pas des avis.
+- **Textes** : chaque fiche a `short` (une ou deux phrases, 125 signes au plus, sans tiret long ni pourcentage ni jargon) et `icon` ; titre « Équipement du hub » (au lieu de « Ton équipement part en Survie »). Les listes `lines` restent dans le Guide.
+
+## Tests et captures
+`test_p8` (pile, doublons, durée, croix, keep, capacité 4 / 3, confirmation, nouveautés du lobby), `test_nav_screens` (carte du lobby : B, Échap, cadre rendu, atteignabilité 12 / 12 ; confirmation ; carte en jeu, L3), `test_lot9` (qualité des textes courts, tri), `test_nav_entry`, `test_hud`, `test_pages`, `test_results`, `test_p1`, `test_build`, `test_controls`, `test_nav`, `test_p4_flow` verts. Captures regardées (1600×900 et 1280×720, compte avancé et neuf) : `tests/shot_p8.tscn` (`P8_STATE=neuf|avance P8_RES=1280x720 P8_WHAT=lobby|jeu P8_CARD=<fiche>`, APPDATA détourné). L'ancien pop-up natif n'apparaît pas dans les captures du viewport (fenêtre à part) : l' « avant » est la capture du joueur.
+
+## Décisions, pièges
+- Au lobby les cartes restent jusqu'à fermeture (rien de bloquant à la souris) ; à la manette elles prennent le calque du dessus (3 B pour tout fermer) : c'est le prix de « B ferme ».
+- Retouches hors lot (minimales) : `core/ui_nav.gd` (`focus()`), `core/tutorial.gd`, `ui/lobby.gd` (`_welcome_flow`, `_show_news`, `info_cards`), `ui/hud.gd`, `ui/pause_menu.gd` (classe `Confirm` réduite à un habillage de `InfoCard.Ask`, API et champs gardés pour `test_results`), `ui/dev_pages.gd`, `ui/inventory_page.gd`.
+- Une autre session a écrasé une fois `tests/test_nav_screens.gd` pendant mon travail (mon bloc a disparu, je l'ai remis) : à surveiller.
+- Reste : aucune carte pour les fiches de lieux (scribe, fontaine) ; les cartes ne sont pas encore proposées pour d'autres avis (succès gagné, titre) : `InfoCard` est prêt pour cela.

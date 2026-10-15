@@ -1128,32 +1128,36 @@ class MagicCircle extends Control:
 		draw_colored_polygon(glow, Color(0.4, 0.5, 1.0, 0.12))
 
 
-## Fenêtre d'information (statistiques détaillées, sets).
+## Fenêtre d'information (statistiques détaillées, sets) : compacte, B / Échap ou la croix la ferment.
 class InfoDialog extends CanvasLayer:
+	var _prev: Control
+
 	static func open(host: Node, title: String, bbcode: String) -> void:
 		var d := InfoDialog.new()
 		d.layer = 95
 		d.process_mode = Node.PROCESS_MODE_ALWAYS
 		host.get_tree().root.add_child(d)
 		var dim := ColorRect.new()
-		dim.color = Color(0, 0, 0, 0.6)
+		dim.color = Color(0.02, 0.01, 0.05, 0.5)
 		dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 		dim.gui_input.connect(func(ev):
 			if ev is InputEventMouseButton and ev.pressed:
-				d.queue_free())
+				d.close())
 		d.add_child(dim)
+		var center := CenterContainer.new()
+		center.set_anchors_preset(Control.PRESET_FULL_RECT)
+		center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		d.add_child(center)
 		var panel := PanelContainer.new()
 		panel.add_theme_stylebox_override("panel", InventoryPage.frame_box(12, 0.98))
-		panel.set_anchors_preset(Control.PRESET_CENTER)
-		panel.custom_minimum_size = Vector2(620, 600)
-		panel.position = Vector2(-310, -300)
-		d.add_child(panel)
+		panel.custom_minimum_size = Vector2(540, 480)
+		center.add_child(panel)
 		var v := VBoxContainer.new()
 		v.add_theme_constant_override("separation", 10)
 		panel.add_child(v)
 		var t := Label.new()
 		t.text = title
-		UiTheme.title(t, 24)
+		UiTheme.title(t, 22)
 		v.add_child(t)
 		var r := ItemWidgets.rich(v, 15)
 		r.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -1162,14 +1166,22 @@ class InfoDialog extends CanvasLayer:
 		var close := Button.new()
 		close.text = "Fermer"
 		close.focus_mode = Control.FOCUS_NONE
-		close.custom_minimum_size = Vector2(0, 40)
-		close.pressed.connect(d.queue_free)
+		close.custom_minimum_size = Vector2(0, 38)
+		close.pressed.connect(d.close)
 		v.add_child(close)
+		if is_instance_valid(UiNav.cursor):
+			d._prev = UiNav.cursor
+		UiNav.focus(close)
 
-	func _unhandled_input(event: InputEvent) -> void:
-		if event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel"):
+	func close() -> void:
+		if is_instance_valid(_prev) and _prev.is_visible_in_tree():
+			UiNav.focus(_prev)
+		queue_free()
+
+	func _input(event: InputEvent) -> void:
+		if event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel") 				or (event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B):
 			get_viewport().set_input_as_handled()
-			queue_free()
+			close()
 
 
 ## Amélioration rapide depuis l'inventaire (pendant la run) : coût, chances, pierres de

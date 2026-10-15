@@ -152,6 +152,11 @@ fenêtre à toute taille ; Guide F1 `ui/guide.gd` (un `PageScreen`) = seule aide
 Détails = l'ancienne `InfoPage`) bâtis depuis les touches réelles, `Tutorial.CARDS` (champ `chapter`) et `Activities.LIST` (rôles dans `Guide.ROLES`).
 Premiers pas seulement en Survie (`Modes.current()`). Fiche nouvelle : une entrée de `Tutorial.CARDS` avec son chapitre ; `on: ""` + version = annoncée
 aux anciennes sauvegardes. Test : `test_lot9` (tailles de fenêtre comprises), captures `tests/shot_u2.tscn` (`SHOT_TAG=1280x720`).
+Petites cartes d'information (passe P8, `ui/info_card.gd`, `conception/nuit_15_10/R_P8.md`) : plus aucune fenêtre native. `InfoCard.in_layer(host)` (lobby, calque 118) /
+`InfoCard.in_control(parent)` (HUD) = pile de cartes de 400 px à droite, `add_card({id, title, body, icon, kicker, buttons, duration, hint})` ; B / Échap / croix la ferment
+(lobby ; en jeu L3 / R3), le cadre de `UiNav.focus()` va sur le bouton principal puis revient où il était. Confirmation destructive : `InfoCard.ask(...)` (centrée, compacte,
+« Annuler » préselectionné ; `PauseMenu.Confirm` et `DevPages.confirm` l'utilisent). Une fiche : `short` (≤ 125 signes) + `icon` dans `Tutorial.CARDS` ; `Tutorial.card_spec`, `news_sorted`.
+Tests : `test_p8`, `test_nav_screens` (cartes du lobby, de la confirmation et du HUD), `test_lot9` ; captures `tests/shot_p8.tscn`.
 
 ## Écran Héros (lot U4, `conception/nuit_15_10/R_U4.md`)
 Équipement : `InventoryPage` + `EquipmentPage.PresetBar` (3 préréglages, « Gérer » copie / renomme ; `preset_bar.extra_actions` = point d'entrée de
