@@ -58,6 +58,7 @@ var _reward_bar: ProgressBar
 var _reward_text: Label
 var _reward_nums: Label
 var _footer: Label
+var _info_bar: Control  # pied de page (insignes, cristaux, heure) : le panneau central lui laisse la place
 var _gear_band: Label  # « 3 / 60 classes équipées » (Registre de l'équipement)
 var _gear_sep: VSeparator
 var _clock: Label
@@ -404,7 +405,7 @@ func _menu_arenas() -> void:
 				taken.append(allies[i])
 		Duel.bare = true
 		_start_team("arena%d" % _team_size, allies, _random_classes(_team_size, taken)))
-	_pin_go(go, "" if ready else "Ton preset de sorts doit avoir 4 cases remplies.")
+	_pin_go(go, "" if ready else "Ton préréglage de sorts doit avoir 4 cases remplies.")
 
 
 ## Battle royale : le niveau des sept héros IA, puis Lancer. Tout le monde part nu, niveau 1.
@@ -425,7 +426,7 @@ func _menu_royale() -> void:
 			_royale_diff = k
 			_show_menu("royale"))
 		row.add_child(b)
-	for line in ["8 héros, 1 survivant", "Coffres à piller", "Une zone qui se referme"]:
+	for line in ["Coffres à piller", "Une zone qui se referme"]:
 		Hud._label(_sub, "•  " + line, 15, UiTheme.TEXT)
 	var best := int(Profile.records.get("royale_best", 0))
 	var rec := Hud._label(_sub, "Victoires : %d · meilleure place : %s · éliminations : %d" % [int(Profile.records.get("royale_wins", 0)),
@@ -473,13 +474,13 @@ func _menu_league() -> void:
 	if League.rank_index() >= League.RANKS.size() - 1:
 		Hud._label(_sub, "Rang maximal atteint : la Ligue ne rapporte plus que de la maîtrise.", 14, UiTheme.MUTED)
 	else:
-		Hud._label(_sub, "Prochain rang : %s — %d victoire(s) d'affilée contre l'IA %s (%d / %d)" % [League.rank_name(nxt), League.WINS_PER_RANK,
+		Hud._label(_sub, "Prochain rang : %s — %s d'affilée contre l'IA %s (%d / %d)" % [League.rank_name(nxt), GearPower.plural(League.WINS_PER_RANK, "victoire"),
 			String(ClassRival.NAMES[League.DIFFICULTY[nxt]]).to_lower(), League.streak(), League.WINS_PER_RANK], 15, UiTheme.TEXT).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var ready := Duel.is_ready_bare(Profile.selected_class)
 	var go := MenuWidgets.gold_button("Combat de Ligue", 22, Vector2(0, 58))
 	go.disabled = not ready
 	go.pressed.connect(func(): _start_ranked("league", ""))
-	_pin_go(go, "" if ready else "Ton preset de sorts doit avoir 4 cases remplies.")
+	_pin_go(go, "" if ready else "Ton préréglage de sorts doit avoir 4 cases remplies.")
 
 
 ## Panthéon : les six cerveaux dans l'ordre, avec leurs récompenses.
@@ -492,7 +493,7 @@ func _menu_pantheon() -> void:
 		var done := Pantheon.beaten(id)
 		var open := Pantheon.available(i) and Pantheon.brain_file_present(id)
 		var st: Dictionary = Profile.pantheon.get(id, {})
-		var rewards := "Pièce « %s », coffre d'apparence%s, titre « %s »" % [String(Items.SLOT_NAMES.get(String(b.slot), String(b.slot))).to_lower(), (", coffre d'auras" if String(b.aura) != "" else ""), b.title]
+		var rewards := "Pièce « %s », coffre d'apparence%s, titre « %s »" % [String(Items.SLOT_NAMES.get(String(b.slot), String(b.slot))).to_lower(), (", coffre d'aura" if String(b.aura) != "" else ""), b.title]
 		var state := ""
 		if done:
 			state = "✔ Battu" + (" · éveillé" if st.get("awake", false) else " (%d/5 familles)" % (st.get("families", []) as Array).size())
@@ -567,14 +568,14 @@ func _menu_duel() -> void:
 	_duel_tab = "free"
 	Duel.mode = "free"
 	Duel.pilot = Duel.pilot if Duel.mode == "free" else ""
-	# deux modes : à l'arme (rien que le preset de sorts, niveau au choix) ou équipé (tout compte)
+	# deux modes : à l'arme (rien que le préréglage de sorts, niveau au choix) ou équipé (tout compte)
 	var modes := HBoxContainer.new()
 	modes.add_theme_constant_override("separation", 8)
 	_sub.add_child(modes)
 	for m in [[true, "À l'arme"], [false, "Équipé"]]:
 		var mb := MenuWidgets.glass_button(String(m[1]) + ("  ✔" if Duel.bare == bool(m[0]) else ""), 16, Vector2(0, 42))
 		mb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		mb.tooltip_text = "Aucune pièce ni bonus de méta : l'arme de ta classe et ton preset de sorts, niveau au choix. Les deux héros sont à armes égales." if bool(m[0]) 			else "Tout ce que tu as réglé compte : équipement, maîtrise, certificats. Le niveau est celui de ton équipement."
+		mb.tooltip_text = "Aucune pièce ni bonus de méta : l'arme de ta classe et ton préréglage de sorts, niveau au choix. Les deux héros sont à armes égales." if bool(m[0]) 			else "Tout ce que tu as réglé compte : équipement, maîtrise, certificats. Le niveau est celui de ton équipement."
 		mb.pressed.connect(func():
 			Duel.bare = bool(m[0])
 			_show_menu("duel"))
@@ -923,19 +924,22 @@ func _build_ui() -> void:
 	root.add_child(logo_box)
 	MenuWidgets.logo(logo_box, 64)
 	# menu de gauche
+	# fenêtre basse (1280 × 720) : menu plus compact, il ne passe plus sous le panneau de zone ni sous le pied de page
+	var compact := get_viewport().get_visible_rect().size.y < 840.0
+	var top := 150.0 if compact else 196.0
 	var left := VBoxContainer.new()
-	left.position = Vector2(44, 196)
-	left.add_theme_constant_override("separation", 12)
+	left.position = Vector2(44, top)
+	left.add_theme_constant_override("separation", 8 if compact else 12)
 	root.add_child(left)
 	for m in MENU:
-		var b := MenuWidgets.SideButton.new(m[1], m[2], 60.0)
+		var b := MenuWidgets.SideButton.new(m[1], m[2], 48.0 if compact else 60.0)
 		b.pressed.connect(_on_menu.bind(String(m[0])))
 		left.add_child(b)
 		_menu[m[0]] = b
 	# sous-menu central
 	var sp := PanelContainer.new()
 	sp.add_theme_stylebox_override("panel", MenuWidgets.glass(14))
-	sp.position = Vector2(372, 196)
+	sp.position = Vector2(372, top)
 	sp.custom_minimum_size = Vector2(PANEL_W, 0)
 	sp.visible = false
 	root.add_child(sp)
@@ -986,7 +990,7 @@ func _build_ui() -> void:
 	zc.add_theme_stylebox_override("panel", MenuWidgets.glass(14, UiTheme.GOLD, 0.88))
 	zc.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	zc.offset_left = 44
-	zc.offset_right = 760
+	zc.offset_right = 760 if get_viewport().get_visible_rect().size.x >= 1400.0 else 726  # 1280 : ne passe pas sous le pied de page
 	zc.offset_top = -136
 	zc.offset_bottom = -28
 	root.add_child(zc)
@@ -1012,7 +1016,7 @@ func _build_ui() -> void:
 	zh.add_child(VSeparator.new())
 	var rv := VBoxContainer.new()
 	rv.alignment = BoxContainer.ALIGNMENT_CENTER
-	rv.custom_minimum_size = Vector2(250, 0)
+	rv.custom_minimum_size = Vector2(250 if get_viewport().get_visible_rect().size.x >= 1400.0 else 210, 0)
 	zh.add_child(rv)
 	var rh := HBoxContainer.new()
 	rv.add_child(rh)
@@ -1057,6 +1061,7 @@ func _build_ui() -> void:
 	fade.tween_interval(8.0)
 	fade.tween_property(orbit_hint, "modulate:a", 0.0, 1.5)
 	root.add_child(info)
+	_info_bar = info
 	var ih := HBoxContainer.new()
 	ih.add_theme_constant_override("separation", 10)
 	ih.alignment = BoxContainer.ALIGNMENT_END
@@ -1239,11 +1244,16 @@ func _fit_scroll() -> void:
 	if _scroll == null or not is_inside_tree():
 		return
 	var foot_h := _foot.get_combined_minimum_size().y if _foot.get_child_count() > 0 else 0.0
-	var avail := get_viewport().get_visible_rect().size.y - _sub_panel.position.y - PANEL_BOTTOM - 28.0 - (foot_h + 10.0 if foot_h > 0.0 else 0.0)
+	var bottom := PANEL_BOTTOM
+	if _info_bar != null:
+		var info_left := get_viewport().get_visible_rect().size.x - 28.0 - maxf(372.0, _info_bar.get_combined_minimum_size().x)
+		if info_left < _sub_panel.position.x + _sub_panel.custom_minimum_size.x:
+			bottom = 100.0  # le panneau passerait sous le pied de page
+	var avail := get_viewport().get_visible_rect().size.y - _sub_panel.position.y - bottom - 28.0 - (foot_h + 10.0 if foot_h > 0.0 else 0.0)
 	var want := clampf(_sub.get_combined_minimum_size().y, 0.0, maxf(avail, 120.0))
 	if absf(_scroll.custom_minimum_size.y - want) > 0.5:
 		_scroll.custom_minimum_size.y = want
-		_sub_panel.size = Vector2.ZERO
+	_sub_panel.size = Vector2.ZERO  # toujours : le bouton épinglé change sans que la zone qui défile change de hauteur
 	if _scroll_keep > 0:
 		var keep := _scroll_keep
 		_scroll_keep = 0
@@ -1424,11 +1434,12 @@ func _menu_training() -> void:
 ## Défi de maîtrise : la Survie du jour (deux modificateurs, trois classes) et les contrats de la classe.
 func _menu_mastery() -> void:
 	_activity_head("mastery")
-	_section("Aujourd'hui (%s)" % Challenge.today())
+	_section("Aujourd'hui, %s" % _date_fr(Challenge.today()))
 	for m in Challenge.modifiers_today():
 		Hud._label(_sub, "• " + String(Modifiers.LIST[m].text), 15, UiTheme.TEXT)
 	if Challenge.done_today():
 		Hud._label(_sub, "✔ Réussi aujourd'hui", 14, UiTheme.BUFF)
+	_section("Lancer avec")
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	_sub.add_child(row)
@@ -1446,6 +1457,15 @@ func _menu_mastery() -> void:
 	for id in st.active:
 		var t := Contracts.template(String(id))
 		Hud._label(_sub, "%s  —  %d / %d  (+%d)" % [String(t.text) % int(t.target), Contracts.progress(cls, String(id)), int(t.target), int(t.reward)], 14, UiTheme.TEXT)
+
+
+## « 2026-10-15 » -> « 15 octobre ».
+func _date_fr(iso: String) -> String:
+	var p := iso.split("-")
+	var months := ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+	if p.size() != 3 or int(p[1]) < 1 or int(p[1]) > 12:
+		return iso
+	return "%d %s" % [int(p[2]), months[int(p[1]) - 1]]
 
 
 func _start_challenge(cid: String) -> void:
@@ -1470,7 +1490,7 @@ func _menu_dungeon() -> void:
 	_dungeon_pickers("dungeon", false)
 	_dungeon_allies_picker()
 	var open_now := Dungeons.is_open(_dg_zone) and Dungeons.power_ok(_dg_zone, _dg_diff)
-	var go := MenuWidgets.gold_button("Entrer dans %s" % Dungeons.name_of(_dg_zone), 22, Vector2(0, 58))
+	var go := MenuWidgets.gold_button("Entrer : %s" % Dungeons.name_of(_dg_zone), 22, Vector2(0, 58))
 	go.disabled = not open_now
 	go.pressed.connect(_start_dungeon)
 	_pin_go(go, ("" if Dungeons.power_ok(_dg_zone, _dg_diff) else Dungeons.power_text(_dg_zone, _dg_diff)) if Dungeons.is_open(_dg_zone) else Dungeons.condition(_dg_zone))
@@ -1551,7 +1571,7 @@ func _menu_siege() -> void:
 	var rec := Hud._label(_sub, "Victoires : %d · meilleur siège (%s) : %s" % [Siege.wins(), Dungeons.DIFF_NAMES[_dg_diff], ("boss vaincu" if best > Siege.WAVES else "vague %d / %d" % [best, Siege.WAVES])], 13, UiTheme.MUTED)
 	rec.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var open_now := Siege.playable(_dg_zone, _dg_diff)
-	var go := MenuWidgets.gold_button("Lancer le Siège de %s" % Dungeons.name_of(_dg_zone), 22, Vector2(0, 58))
+	var go := MenuWidgets.gold_button("Lancer le Siège : %s" % Dungeons.name_of(_dg_zone), 22, Vector2(0, 58))
 	go.disabled = not open_now
 	var why := ""
 	if not Unlocks.is_open("siege"):
@@ -1717,8 +1737,9 @@ func _refresh_ui() -> void:
 	_reward_nums.text = ("%s / %s" % [GearPower.fmt(roundi(prog.x)), GearPower.fmt(roundi(prog.y))]) if lvl < Profile.EXPERTISE_MAX else ""
 	_dev_button.visible = Dev.enabled()
 	var n_chests := Profile.reward_chests.size()
-	_menu.chests.set_badge(("%d" % n_chests if n_chests > 0 else "") + (" ★" if Wheel.free_left() > 0 else ""))
-	_footer.text = "%d insignes · %d cristaux" % [Profile.insignia, int(Profile.materials.get("crystal", 0))]
+	_menu.chests.set_badge((("%d" % n_chests if n_chests > 0 else "") + (" ★" if Wheel.free_left() > 0 else "")) if Unlocks.is_open("chests") else "")
+	var crystals := int(Profile.materials.get("crystal", 0))
+	_footer.text = "%s %s · %s %s" % [GearPower.fmt(Profile.insignia), "insigne" if Profile.insignia < 2 else "insignes", GearPower.fmt(crystals), "cristal" if crystals < 2 else "cristaux"]
 	var reg := Unlocks.is_open("collection")
 	_gear_band.visible = reg
 	_gear_sep.visible = reg

@@ -123,17 +123,17 @@ static func requirements(cid: String) -> Array:
 		for col in p.get("cols", []):
 			if int(col[0]) != 0:
 				n += 1
-		return [{"ok": n >= 4, "label": "Preset de sorts actif, 4 cases remplies",
-			"hint": ("Preset « %s » : %d case(s) sur 4" % [p.name, n]) if not p.is_empty() else "Aucun preset actif (Grimoire > Créer un preset)", "section": "grimoire"}]
+		return [{"ok": n >= 4, "label": "Préréglage de sorts actif, 4 cases remplies",
+			"hint": ("« %s » : %d / 4 cases" % [p.name, n]) if not p.is_empty() else "Aucun préréglage actif (Grimoire > Créer un préréglage)", "section": "grimoire"}]
 	var mains := 0
 	for col in p.get("cols", []):
 		if int(col[0]) != 0:
 			mains += 1
-	out.append({"ok": mains >= 4, "label": "Preset de sorts actif, 4 cases remplies",
-		"hint": ("Preset « %s » : %d case(s) sur 4" % [p.name, mains]) if not p.is_empty() else "Aucun preset actif (Grimoire > Créer un preset)", "section": "grimoire"})
+	out.append({"ok": mains >= 4, "label": "Préréglage de sorts actif, 4 cases remplies",
+		"hint": ("« %s » : %d / 4 cases" % [p.name, mains]) if not p.is_empty() else "Aucun préréglage actif (Grimoire > Créer un préréglage)", "section": "grimoire"})
 	var pts := Profile.talent_points(cid)
 	var spent := Profile.talent_spent(cid)
-	out.append({"ok": spent >= pts, "label": "Points de maîtrise attribués", "hint": "%d / %d point(s) attribués" % [spent, pts], "section": "class"})
+	out.append({"ok": spent >= pts, "label": "Points de talent attribués", "hint": "%d / %d points" % [spent, pts], "section": "class"})
 	var open := 0
 	var filled := 0
 	for pos in CertBoard.POS.size():
@@ -142,7 +142,7 @@ static func requirements(cid: String) -> Array:
 			if String(Profile.cert_board[pos]) != "":
 				filled += 1
 	var need := mini(open, Profile.unlocked_certificates().size())
-	out.append({"ok": filled >= need, "label": "Certificats posés", "hint": "%d / %d emplacement(s) occupé(s)" % [filled, need], "section": "class"})
+	out.append({"ok": filled >= need, "label": "Certificats posés", "hint": "%d / %d emplacements" % [filled, need], "section": "class"})
 	var missing: PackedStringArray = []
 	if not Profile.equipped.has("weapon"):
 		missing.append("arme")

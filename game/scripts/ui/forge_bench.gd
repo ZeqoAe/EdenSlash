@@ -35,8 +35,9 @@ var _armed_at := -10.0  # démontage : second clic pour confirmer
 
 func _init() -> void:
 	super._init()
-	grid_cols = 9
-	right_width = 760.0
+	var narrow := (Engine.get_main_loop() as SceneTree).root.get_visible_rect().size.x < 1500.0  # 1280 : la page tient dans l'écran
+	grid_cols = 5 if narrow else 9
+	right_width = 600.0 if narrow else 760.0
 	title = "Forge"
 	heads = false
 
@@ -196,7 +197,7 @@ func _bench_enchant(it: Dictionary) -> void:
 	var cur := "aucun"
 	if it.has("enchant"):
 		var e: Dictionary = it.enchant
-		cur = "%s Lv%d" % [String(Craft.ENCHANTS.get(String(e.get("type", "")), {}).get("name", "?")), int(e.get("lv", 1))]
+		cur = "%s niv. %d" % [String(Craft.ENCHANTS.get(String(e.get("type", "")), {}).get("name", "?")), int(e.get("lv", 1))]
 	_enchant(it)
 	detail.text = _head_text(it) + "\n\n" + ba_table([["Enchantement", cur, "au choix" if not Profile.bag_keys("scroll").is_empty() else "", 0]])
 

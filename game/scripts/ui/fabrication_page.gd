@@ -42,7 +42,7 @@ static func craft(zid: String, slot: String) -> Dictionary:
 	if Profile.amount("crystal") < c:
 		return {"error": "Il te faut %d cristaux." % c}
 	if Profile.inventory.size() >= Profile.INVENTORY_MAX:
-		return {"error": "Inventaire plein."}
+		return {"error": "Coffre commun plein."}
 	var d := maxi(best_diff(zid), 0)
 	var rar := Items.LEGENDARY if d >= 2 else Items.MYTHIC
 	# modèle d'Eden du niveau du donjon (et non de la zone choisie au lobby) ; arme du type de la classe choisie
@@ -66,7 +66,7 @@ var _pick := {}  # zone -> emplacement choisi dans la liste
 
 
 func subtitle() -> String:
-	return "Plans de donjon, contre des cristaux"
+	return "Plans de donjon, en cristaux"
 
 
 func _ready() -> void:
@@ -203,7 +203,7 @@ func _card(zid: String, got: bool) -> void:
 			_msg.text = String(r.error)
 		else:
 			_msg.add_theme_color_override("font_color", UiTheme.BUFF)
-			_msg.text = "Fabriqué : %s (dans ton inventaire)" % Items.display_name(r)
+			_msg.text = "Fabriqué : %s (dans ton coffre commun)" % Items.display_name(r)
 		refresh())
 	row.add_child(b)
 	var info := "Pièce %s" % ("légendaire" if best >= 2 else "mythique")

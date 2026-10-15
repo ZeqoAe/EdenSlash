@@ -20,6 +20,7 @@ const FAMILIES := [["all", "Tous", "all"], ["weapon", "Armes", "weapon"], ["armo
 	["acc", "Accessoires", "ring"], ["cons", "Fournitures", "potion"], ["mat", "Matériaux", "gem"], ["misc", "Divers", "misc"]]
 const SORTS := ["Rareté", "Niveau", "Nom", "Type", "Amélioration"]
 const COLUMNS := 9
+const COLUMNS_NARROW := 6  # fenêtre étroite (1280 px) : la grille ne doit pas pousser la page hors de l'écran
 const CELL := 66.0
 const ICON_GOLD := Color(0.98, 0.8, 0.42)
 const MAT_NAMES := {"crystal": "Cristaux", "keys": "Clés"}
@@ -105,6 +106,19 @@ static func card_box(active := false) -> StyleBoxFlat:
 	return sb
 
 
+## Fenêtre étroite ou basse (1280 × 720) : colonnes en moins, cases et marges plus petites.
+func _narrow() -> bool:
+	return get_viewport().get_visible_rect().size.x < 1500.0
+
+
+func _short() -> bool:
+	return get_viewport().get_visible_rect().size.y < 840.0
+
+
+func _cols() -> int:
+	return COLUMNS_NARROW if _narrow() else COLUMNS
+
+
 func _ready() -> void:
 	add_theme_constant_override("separation", 14)
 	_build_center()
@@ -120,10 +134,10 @@ func _exit_tree() -> void:
 func _build_center() -> void:
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", frame_box())
-	panel.custom_minimum_size = Vector2(540, 0)
+	panel.custom_minimum_size = Vector2(520 if _narrow() else 540, 0)
 	add_child(panel)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
+	v.add_theme_constant_override("separation", 6 if _short() else 10)
 	panel.add_child(v)
 	preset_bar = EquipmentPage.PresetBar.new()
 	preset_bar.changed.connect(_on_preset_changed)
@@ -152,13 +166,13 @@ func _build_center() -> void:
 	pw.alignment = BoxContainer.ALIGNMENT_CENTER
 	pw.add_theme_constant_override("separation", 12)
 	v.add_child(pw)
-	pw.add_child(gold_icon("power", 46))
+	pw.add_child(gold_icon("power", 36 if _short() else 46))
 	var pv := VBoxContainer.new()
 	pv.add_theme_constant_override("separation", -4)
 	pw.add_child(pv)
 	Hud._label(pv, "Puissance d'équipement", 14, UiTheme.TEXT)
 	_power = Label.new()
-	UiTheme.title(_power, 30, UiTheme.GOLD)
+	UiTheme.title(_power, 24 if _short() else 30, UiTheme.GOLD)
 	pv.add_child(_power)
 	# panoplie active
 	var set_card := PanelContainer.new()
@@ -210,7 +224,7 @@ func _doll_column(parent: Control, slots: Array) -> void:
 		var cell := VBoxContainer.new()
 		cell.add_theme_constant_override("separation", 0)
 		col.add_child(cell)
-		var s := ItemWidgets.ItemSlot.new(78.0)
+		var s := ItemWidgets.ItemSlot.new(52.0 if _short() else 78.0)
 		s.slot_id = slot
 		s.source = "equipped"
 		s.placeholder = ""
@@ -302,10 +316,12 @@ func _build_right() -> void:
 	v.add_child(fams)
 	for f in FAMILIES:
 		var b := Button.new()
-		b.text = String(f[1])
+		b.text = String(f[1]) if not _narrow() or String(f[0]) == "all" else ""  # 1280 : les noms seraient coupés, l'icône et l'infobulle suffisent
+		b.tooltip_text = String(f[1])
 		b.icon = MenuWidgets.icon(String(f[2]))
 		b.expand_icon = false
-		b.add_theme_constant_override("icon_max_width", 15)
+		b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		b.add_theme_constant_override("icon_max_width", 15 if not _narrow() else 20)
 		b.add_theme_constant_override("h_separation", 4)
 		b.focus_mode = Control.FOCUS_NONE
 		b.toggle_mode = true
@@ -332,7 +348,7 @@ func _build_right() -> void:
 	sbox.add_child(shb)
 	shb.add_child(gold_icon("search", 20))
 	_search = LineEdit.new()
-	_search.placeholder_text = "Rechercher un objet…"
+	_search.placeholder_text = "Rechercher…"
 	_search.flat = true
 	_search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_search.text_changed.connect(func(_t): _refresh_grid())
@@ -342,7 +358,7 @@ func _build_right() -> void:
 	_slot_chip = Button.new()
 	_slot_chip.focus_mode = Control.FOCUS_NONE
 	_slot_chip.visible = false
-	_slot_chip.tooltip_text = "Revoir tout l'inventaire"
+	_slot_chip.tooltip_text = "Revoir tous les objets"
 	_slot_chip.pressed.connect(func():
 		_slot_filter = ""
 		_refresh_grid())
@@ -362,7 +378,7 @@ func _build_right() -> void:
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	v.add_child(scroll)
 	_grid = GridContainer.new()
-	_grid.columns = COLUMNS
+	_grid.columns = _cols()
 	_grid.add_theme_constant_override("h_separation", 7)
 	_grid.add_theme_constant_override("v_separation", 7)
 	scroll.add_child(_grid)
@@ -688,7 +704,7 @@ func _refresh_grid() -> void:
 		list.sort_custom(func(a, b): return EquipmentPage._power_of(a.item) > EquipmentPage._power_of(b.item))
 	else:
 		list = _sorted(list)
-	_count.text = "%d objet(s)" % list.size() if list.size() == all.size() else "%d / %d" % [list.size(), all.size()]
+	_count.text = GearPower.plural(list.size(), "objet") if list.size() == all.size() else "%d / %d" % [list.size(), all.size()]
 	_slot_chip.visible = _slot_filter != ""
 	_slot_chip.text = "%s ✕" % Items.SLOT_NAMES.get(_slot_filter, "")
 	if _slot_filter != "" and list.is_empty():
@@ -701,7 +717,7 @@ func _refresh_grid() -> void:
 	for e in list:
 		_grid.add_child(_cell(e))
 	# cases vides jusqu'à remplir les lignes (inventaire sans limite : la grille s'allonge)
-	var n := maxi(COLUMNS * 5, ceili(float(list.size()) / COLUMNS) * COLUMNS)
+	var n := maxi(_cols() * 5, ceili(float(list.size()) / _cols()) * _cols())
 	for i in n - list.size():
 		_grid.add_child(_empty_cell())
 
@@ -802,7 +818,7 @@ func _refresh_detail() -> void:
 			"keys": "Ouvre un coffre de la carte sans payer.",
 			"gold": "Coffres de la carte, marchands ambulants, amélioration +1 à +10 (Forge)."}.get(key, ""))
 		_d_flavor.text = "[color=#9a98a8]%s[/color]" % ("Fournitures : gardées à l'extraction ou à la victoire, perdues si le héros tombe." if String(e.kind) == "stack" else
-			("Gardés entre les runs (on les obtient en démontant des objets)." if key == "crystal" else "Perdu(es) en fin de run : à dépenser !"))
+			("Gardés entre les runs (on les obtient en démontant des objets)." if key == "crystal" else "Perdus en fin de run : à dépenser !"))
 		_d_set.text = "[b]Utilisation[/b]\n[color=#c8c8d4]%s[/color]" % ("Forge : gemmes, formules d'enchantement, parchemins de fortification, pierres de sûreté ; fusion de 3 gemmes identiques." if String(e.kind) == "stack" else "Voir l'aide « ? » : Monnaies.")
 		for b in [_b_equip, _b_dismantle]:
 			b.disabled = true
@@ -1057,7 +1073,7 @@ func _show_sets() -> void:
 		if s.is_empty():
 			continue
 		var worn := int(counts.get(sid, 0))
-		lines.append("[b][color=#%s]%s[/color][/b]  — %d pièce(s) portée(s)" % [Items.SET_COLOR.to_html(false), s.name, worn])
+		lines.append("[b][color=#%s]%s[/color][/b]  — %s" % [Items.SET_COLOR.to_html(false), s.name, GearPower.plural(worn, "pièce portée", "pièces portées")])
 		for n in Items.set_tiers(sid):
 			lines.append("   [color=%s](%d) %s[/color]" % ["#7fe08a" if worn >= n else "#c8c8d4", n, " ; ".join(Items.bonus_lines(Items.set_bonus(sid, n)))])
 		lines.append("")

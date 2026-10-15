@@ -14,7 +14,7 @@ var _profile := ""  # "" : tous les profils
 
 
 func subtitle() -> String:
-	return "Ce qui manque à chaque classe, et où le trouver"
+	return "Ce qui manque à chaque classe"
 
 
 func refresh() -> void:
@@ -71,6 +71,7 @@ static func _plural(n: int, word: String) -> String:
 
 func _row(e: Dictionary) -> void:
 	var cid := String(e.cid)
+	var narrow := get_viewport().get_visible_rect().size.x < 1500.0  # 1280 : colonnes plus serrées, la ligne tient dans l'écran
 	var open := Progression.class_unlocked(cid)
 	var v := card(_box)
 	var pc: PanelContainer = v.get_parent()
@@ -78,7 +79,7 @@ func _row(e: Dictionary) -> void:
 	if not open:
 		pc.modulate = Color(1, 1, 1, 0.62)
 	var top := HBoxContainer.new()
-	top.add_theme_constant_override("separation", 14)
+	top.add_theme_constant_override("separation", 10 if narrow else 14)
 	v.add_child(top)
 	var icon := TextureRect.new()
 	icon.texture = UiTheme.texture(String(GameData.class_data(cid).get("icon", "")))
@@ -89,7 +90,7 @@ func _row(e: Dictionary) -> void:
 	top.add_child(icon)
 	var names := VBoxContainer.new()
 	names.add_theme_constant_override("separation", -2)
-	names.custom_minimum_size = Vector2(220, 0)
+	names.custom_minimum_size = Vector2(170 if narrow else 220, 0)
 	names.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(names)
 	Hud._label(names, ClassGear.class_label(cid), 18, UiTheme.TEXT)
@@ -97,20 +98,20 @@ func _row(e: Dictionary) -> void:
 	# puissance d'équipement face à la puissance attendue
 	var pw := VBoxContainer.new()
 	pw.add_theme_constant_override("separation", 2)
-	pw.custom_minimum_size = Vector2(250, 0)
+	pw.custom_minimum_size = Vector2(190 if narrow else 250, 0)
 	pw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(pw)
 	var pl := Hud._label(pw, "PE %s / %s" % [GearPower.fmt(int(e.pe)), GearPower.fmt(int(e.expected))], 14, UiTheme.TEXT)
 	pl.mouse_filter = Control.MOUSE_FILTER_PASS
 	pl.tooltip_text = "Puissance d'équipement du préréglage actif · attendue au niveau %d · %s" % [GearPower.target_level(), e.tier]
-	var pb := _progress(minf(float(e.ratio), 1.0), 1.0, Vector2(230, 8))
+	var pb := _progress(minf(float(e.ratio), 1.0), 1.0, Vector2(170 if narrow else 230, 8))
 	pb.step = 0.0
 	pb.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pw.add_child(pb)
 	# compteurs
 	var slots := Items.SLOTS.size()
 	var nums := HBoxContainer.new()
-	nums.add_theme_constant_override("separation", 18)
+	nums.add_theme_constant_override("separation", 10 if narrow else 18)
 	nums.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nums.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	top.add_child(nums)
@@ -118,7 +119,7 @@ func _row(e: Dictionary) -> void:
 	var ws := String(e.weapon_state)
 	var wb := _count(nums, "Arme", "✗" if ws == "none" else wname, ws == "ok",
 		"Arme principale (%s)%s" % [wname.to_lower(), {"ok": "", "base": " : celle de départ", "none": " : aucune"}[ws]])
-	wb.custom_minimum_size = Vector2(118, 0)
+	wb.custom_minimum_size = Vector2(96 if narrow else 118, 0)
 	_count(nums, "Pièces", "%d / %d" % [int(e.filled) - int(e.base), slots], int(e.filled) - int(e.base) >= slots,
 		"%s de départ, %s" % [_plural(int(e.base), "pièce"), _plural(slots - int(e.filled), "emplacement vide")] if int(e.base) + slots - int(e.filled) > 0 else "Les %d emplacements portent une vraie pièce" % slots)
 	_count(nums, "Panoplie", "%d / %d" % [int(e.arch), ClassGear.PANOPLY], int(e.arch) >= ClassGear.PANOPLY,
@@ -128,7 +129,7 @@ func _row(e: Dictionary) -> void:
 	_count(nums, "Gemmes", "%d / %d" % [int(e.gems), int(e.gem_max)], int(e.gems) >= int(e.gem_max), "Gemmes serties (Forge)")
 	_count(nums, "Enchant.", "%d / %d" % [int(e.enchants), slots], int(e.enchants) >= slots, "Pièces enchantées (Forge)")
 	var st := Hud._label(top, String(ClassGear.STATUS[int(e.status)]), 15, STATUS_COLORS[int(e.status)])
-	st.custom_minimum_size = Vector2(110, 0)
+	st.custom_minimum_size = Vector2(96 if narrow else 110, 0)
 	st.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	st.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	# ce qui manque d'abord, et où le trouver
@@ -164,7 +165,7 @@ func _row(e: Dictionary) -> void:
 func _count(parent: Control, title: String, value: String, done: bool, tip: String) -> VBoxContainer:
 	var b := VBoxContainer.new()
 	b.add_theme_constant_override("separation", -3)
-	b.custom_minimum_size = Vector2(62, 0)
+	b.custom_minimum_size = Vector2(52 if get_viewport().get_visible_rect().size.x < 1500.0 else 62, 0)
 	b.mouse_filter = Control.MOUSE_FILTER_PASS
 	b.tooltip_text = tip
 	parent.add_child(b)

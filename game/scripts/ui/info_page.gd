@@ -137,7 +137,7 @@ func _hero() -> String:
 		["Vitesse de déplacement", "100 % + classe + équipement + cartes (+30 % Sanctuaire, +30 % Hâte)"],
 		["Zone, portée", "100 % + cartes + équipement (taille des sorts et allonge des coups)"],
 	])
-	t += _note("Les talents d'expertise, certificats de maîtrise et cartes de la run ajoutent leurs bonus en % dans ces formules.")
+	t += _note("Les talents, certificats de maîtrise et cartes de la run ajoutent leurs bonus en % dans ces formules.")
 	return t
 
 

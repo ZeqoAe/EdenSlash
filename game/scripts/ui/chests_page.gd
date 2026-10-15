@@ -16,6 +16,9 @@ var _choices: HBoxContainer
 var _card_box: CenterContainer
 var _card_scroll: ScrollContainer  # fiche de l'objet choisi : visible seulement quand il y en a une
 var _all_btn: Button
+var _shop := false  # panneau de gauche : la boutique d'insignes au lieu de la liste des coffres
+var _shop_note: Label
+var _chips: HFlowContainer
 var _current: Dictionary = {}  # coffre à choix en cours
 var _shown: Dictionary = {}  # coffre affiché (fermé) à droite
 
@@ -26,7 +29,7 @@ const STAGE_COMPACT := 110.0  # une fois ouvert : de la place pour le contenu et
 func _ready() -> void:
 	add_theme_constant_override("separation", 16)
 	var left := ItemWidgets.panel(self, 560)
-	ItemWidgets.section(left, "Tes coffres")
+	_chips = CarnetPages.chips(left, ["Tes coffres", "Boutique"], 0, _set_shop)
 	_all_btn = MenuWidgets.glass_button("Ouvrir tout", 16, Vector2(0, 42))
 	_all_btn.tooltip_text = "Ouvre d'un coup tous les coffres sans choix, puis affiche un récapitulatif. Les coffres de set restent à ouvrir un par un."
 	_all_btn.pressed.connect(func(): open_many(Profile.reward_chests.filter(func(c): return not Rewards.is_choice(c))))
@@ -94,10 +97,13 @@ func refresh() -> void:
 		_preview(Profile.reward_chests.filter(func(c): return Rewards.ORDER.has(c.type))
 			.reduce(func(a, c): return c if a.is_empty() or Rewards.kind_rank(Rewards.kind_of(c)) < Rewards.kind_rank(Rewards.kind_of(a)) else a, {}))
 	var openable := Profile.reward_chests.filter(func(c): return not Rewards.is_choice(c)).size()
-	_all_btn.visible = openable > 0
+	_all_btn.visible = openable > 0 and not _shop
 	_all_btn.text = "Ouvrir tout (%d)" % openable
 	for c in _list.get_children():
 		c.queue_free()
+	if _shop:
+		_fill_shop()
+		return
 	var by := {}  # un groupe par type et par spécialité : « forge » et « forge · parchemins » restent distincts
 	for ch in Profile.reward_chests:
 		if not Rewards.ORDER.has(ch.type):
@@ -114,6 +120,63 @@ func refresh() -> void:
 		var empty := Hud._label(_list, "Aucun coffre pour l'instant.\nLes boss, les donjons et la Tour en donnent.", 16, UiTheme.MUTED)
 		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+
+## Bascule entre la liste des coffres et la boutique (coffres d'apparence et d'auras contre des insignes).
+func _set_shop(index: int) -> void:
+	_shop = index == 1
+	for i in _chips.get_child_count():
+		(_chips.get_child(i) as Button).set_pressed_no_signal(i == index)
+	refresh()
+
+
+## Boutique : un coffre d'apparence ou d'aura par rareté, limité par semaine ; il rejoint « Tes coffres ».
+func _fill_shop() -> void:
+	var head := Hud._label(_list, GearPower.plural(Profile.insignia, "insigne"), 17, UiTheme.GOLD)
+	head.tooltip_text = "Gagnés en Survie. Les limites repartent chaque lundi."
+	head.mouse_filter = Control.MOUSE_FILTER_PASS
+	_shop_note = Hud._label(_list, "", 14, UiTheme.BUFF)
+	_shop_note.visible = false
+	for type in Economy.SHOP_CHESTS:
+		_list.add_child(_shop_row(String(type)))
+
+
+func _shop_row(type: String) -> Control:
+	var t: Dictionary = Rewards.TYPES[type]
+	var price := int(Economy.SHOP_CHESTS[type].price)
+	var left := Economy.chest_left(type)
+	var full := not Economy.chest_has_content(type)
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", InventoryPage.card_box())
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 12)
+	p.add_child(h)
+	h.add_child(_badge(t))
+	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	v.add_theme_constant_override("separation", 0)
+	h.add_child(v)
+	var n := Hud._label(v, String(t.name), 18, (t.color as Color).lightened(0.25))
+	n.add_theme_font_override("font", UiTheme.bold_font())
+	n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var sub := "Collection complète" if full else ("Reviens lundi" if left == 0 else "%s · %d restant%s cette semaine" % [GearPower.plural(price, "insigne"), left, "s" if left > 1 else ""])
+	var d := Hud._label(v, sub, 13, UiTheme.MUTED)
+	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var b := MenuWidgets.glass_button("Acheter", 16, Vector2(110, 44))
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var short := price - Profile.insignia
+	b.disabled = not Economy.can_buy_chest(type)
+	b.tooltip_text = String(t.desc) if not b.disabled or short <= 0 or left == 0 or full else "Il te manque %s" % GearPower.plural(short, "insigne")
+	b.pressed.connect(func():
+		if Economy.buy_chest(type):
+			Sfx.ui("confirm")
+			refresh()
+			if _shop_note != null:
+				_shop_note.text = "%s ajouté à Tes coffres." % String(t.name)
+				_shop_note.visible = true)
+	h.add_child(b)
+	return p
 
 
 ## Pastille d'un type de coffre : un disque de sa couleur avec son icône (le type se reconnaît sans la couleur).

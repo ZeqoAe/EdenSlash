@@ -15,6 +15,7 @@ var _root: Control
 var _title_label: Label
 var _subtitle: Label
 var _base_sub := ""  # sous-titre de l'écran (set_title), quand la page n'en donne pas
+var _tbox: VBoxContainer  # titre + sous-titre : largeur fixe, les onglets ne bougent pas d'une page à l'autre
 var _tabs: HBoxContainer
 var _tab_buttons: Array[Button] = []
 var _pages: Array[Control] = []
@@ -78,11 +79,14 @@ func _ready() -> void:
 	var tbox := VBoxContainer.new()
 	tbox.add_theme_constant_override("separation", -2)
 	head.add_child(tbox)
+	_tbox = tbox
 	_title_label = Label.new()
 	_title_label.text = title
 	UiTheme.title(_title_label, 32)
 	tbox.add_child(_title_label)
 	_subtitle = Hud._label(tbox, "", 14, UiTheme.MUTED)
+	_subtitle.clip_text = true  # un sous-titre long est abrégé plutôt que de pousser l'écran hors de la fenêtre
+	_subtitle.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_tabs = HBoxContainer.new()
 	_tabs.add_theme_constant_override("separation", 6)
 	_tabs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -109,6 +113,8 @@ func _ready() -> void:
 	_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(_content)
 	_root.visible = false
+	get_viewport().size_changed.connect(_fit_header)
+	_fit_header()
 
 
 ## Ajoute une page (onglet [param name]) et renvoie son indice.
@@ -122,15 +128,26 @@ func add_page(name: String, page: Control) -> int:
 	b.text = name
 	b.toggle_mode = true
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(150, 42)
-	b.add_theme_font_size_override("font_size", 17)
 	b.add_theme_font_override("font", UiTheme.title_font())
 	b.pressed.connect(show_page.bind(i))
 	_tabs.add_child(b)
 	_tab_buttons.append(b)
 	for t in _tab_buttons:  # une seule page : pas d'onglet
 		t.visible = _tab_buttons.size() > 1
+	_fit_header()
 	return i
+
+
+## En-tête adapté à la largeur de la fenêtre : à 1280 px, six onglets de 150 px et un titre de 340 px
+## ne tiennent plus (la page entière débordait de l'écran) ; la largeur du titre ne dépend jamais de la page.
+func _fit_header() -> void:
+	if _tbox == null or not is_inside_tree():
+		return
+	var wide := get_viewport().get_visible_rect().size.x >= 1500.0
+	_tbox.custom_minimum_size.x = 340.0 if wide else 230.0
+	for b in _tab_buttons:
+		b.custom_minimum_size = Vector2(150.0 if wide else 0.0, 42.0)
+		b.add_theme_font_size_override("font_size", 17 if wide else 15)
 
 
 ## Page suivante (+1) ou précédente (-1) : L1 / R1 (LB / RB) à la manette.
@@ -170,6 +187,8 @@ func _update_subtitle() -> void:
 	if not _pages.is_empty() and _pages[_current].has_method("subtitle"):
 		sub = String(_pages[_current].subtitle())
 	_subtitle.text = sub
+	_subtitle.tooltip_text = sub
+	_subtitle.mouse_filter = Control.MOUSE_FILTER_PASS
 	_subtitle.visible = sub != ""
 
 

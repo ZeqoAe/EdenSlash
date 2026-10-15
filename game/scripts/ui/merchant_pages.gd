@@ -166,7 +166,7 @@ class SellPage extends ItemPage:
 				var items := sel.duplicate()
 				var got := Profile.disassemble_many(items) if recycle else Profile.sell_many(items)
 				grid.clear_selection()
-				done("%d objet(s) %s : %s" % [items.size(), "désassemblé(s)" if recycle else "vendu(s)", ItemWidgets.materials_text(got, true)]), true, true)
+				done("%s %s : %s" % [GearPower.plural(items.size(), "objet"), ("désassemblé" if items.size() < 2 else "désassemblés") if recycle else ("vendu" if items.size() < 2 else "vendus"), ItemWidgets.materials_text(got, true)]), true, true)
 
 
 # --- marchand : acheter ----------------------------------------------------------------------
@@ -501,7 +501,7 @@ class ForgePage extends ItemPage:
 		var cur := ""
 		if it.has("enchant"):
 			var e: Dictionary = it.enchant
-			cur = " · actuel : %s Lv%d" % [String(Craft.ENCHANTS.get(String(e.get("type", "")), {}).get("name", "?")), int(e.get("lv", 1))]
+			cur = " · actuel : %s niv. %d" % [String(Craft.ENCHANTS.get(String(e.get("type", "")), {}).get("name", "?")), int(e.get("lv", 1))]
 		_head("Enchantement" + cur)
 		for k in scrolls:
 			var key: String = k

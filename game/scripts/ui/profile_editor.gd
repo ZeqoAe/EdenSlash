@@ -110,8 +110,8 @@ func _ready() -> void:
 		_refresh_all(), 110)
 	_btn(acts, "Remplir automatiquement", func():
 		RivalBuilds.auto_fill(build)
-		_msg.text = "Pièces d'Eden du niveau %d (mythiques) et certificats de la classe posés." % int(build.level)
-		_refresh_all(), 230).tooltip_text = "Pour chaque emplacement, la meilleure pièce d'Eden jusqu'au niveau du profil (l'arme de la classe), en mythique ; les certificats de la classe."
+		_msg.text = "Pièces du niveau %d (mythiques) et certificats de la classe posés." % int(build.level)
+		_refresh_all(), 230).tooltip_text = "Pour chaque emplacement, la meilleure pièce jusqu'au niveau du profil (l'arme de la classe), en mythique ; les certificats de la classe."
 	_btn(acts, "Enregistrer", func():
 		if String(build.get("name", "")).strip_edges() == "":
 			build["name"] = "Profil"
@@ -128,7 +128,7 @@ func _ready() -> void:
 	var apply := _btn(acts, "Appliquer à mon héros", func():
 		_msg.text = RivalBuilds.apply_to_hero(build), 220)
 	apply.disabled = not bool(Settings.get_v("interface", "dev_mode"))
-	apply.tooltip_text = "Mode dev : la classe du profil devient la tienne, ses objets rejoignent ton coffre et s'équipent, avec son preset de sorts, ses certificats et son apparence." \
+	apply.tooltip_text = "Mode dev : la classe du profil devient la tienne, ses objets rejoignent ton coffre et s'équipent, avec son préréglage de sorts, ses certificats et son apparence." \
 		if not apply.disabled else "Réservé au mode dev (Paramètres > Caméra & interface) : crée des objets."
 	if on_use.is_valid():
 		var use := MenuWidgets.gold_button("Utiliser pour le duel", 17, Vector2(240, 38))
@@ -359,9 +359,9 @@ func _item_editor(ed: VBoxContainer) -> void:
 	var r1 := HBoxContainer.new()
 	r1.add_theme_constant_override("separation", 6)
 	ed.add_child(r1)
-	_btn(r1, "Choisir dans le catalogue d'Eden" if e.is_empty() else "Changer : %s" % e.name, func(): _open_picker(s), 0).size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_btn(r1, "Choisir dans le catalogue" if e.is_empty() else "Changer : %s" % e.name, func(): _open_picker(s), 0).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if e.is_empty():
-		Hud._label(ed, "Aucune pièce : choisis-en une dans le catalogue (tous les objets d'Eden, recherche par nom).", 13, UiTheme.MUTED)
+		Hud._label(ed, "Aucune pièce : choisis-en une dans le catalogue (recherche par nom).", 13, UiTheme.MUTED)
 		return
 	_btn(r1, "Retirer", func():
 		gear.erase(s)
@@ -463,7 +463,7 @@ func _item_editor(ed: VBoxContainer) -> void:
 	var el := SpinBox.new()
 	el.min_value = 1
 	el.max_value = Craft.MAX_SCROLL_LV
-	el.prefix = "Lv"
+	el.prefix = "Niv. "
 	el.value = int(ep[2]) if ep.size() >= 3 else 1
 	er.add_child(el)
 	var set_en := func():
@@ -501,7 +501,7 @@ func _open_picker(slot: String) -> void:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	box.add_child(v)
-	Hud._label(v, "%s : catalogue d'Eden (profil niveau %d)" % [Items.SLOT_NAMES.get(slot, slot), _lv()], 20, UiTheme.GOLD)
+	Hud._label(v, "%s : catalogue (profil niveau %d)" % [Items.SLOT_NAMES.get(slot, slot), _lv()], 20, UiTheme.GOLD)
 	var pool: Array = GameData.eden_items.filter(func(x): return String(x.get("slot", "")) == slot)
 	# --- filtres
 	var f1 := HBoxContainer.new()
@@ -642,7 +642,7 @@ func _open_picker(slot: String) -> void:
 			lst.set_item_custom_fg_color(i, rc.color)
 			lst.set_item_tooltip(i, "Stats : " + ", ".join(stats_txt))
 			ids.append(int(x.id))
-		count.text = "%d objet(s)" % shown.size()
+		count.text = GearPower.plural(shown.size(), "objet")
 	var show_card := func(i: int):
 		for c in card_box.get_children():
 			c.queue_free()
@@ -877,7 +877,7 @@ func _page_talents() -> void:
 	var data: Dictionary = GameData.talents.get(cid, {})
 	var tree: Dictionary = data.get("talents", {})
 	var pts := RivalBuilds.talent_points(build)
-	_section(_page, "Maîtrise : %d point(s) attribué(s) · il faudrait la maîtrise niveau %d (2 points par niveau) · fiche au survol" % [pts, ceili(pts / 2.0)])
+	_section(_page, "Maîtrise : %s · il faudrait la maîtrise niveau %d (2 points par niveau) · fiche au survol" % [GearPower.plural(pts, "point attribué", "points attribués"), ceili(pts / 2.0)])
 	var bar := HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 6)
 	_page.add_child(bar)
@@ -1030,7 +1030,7 @@ func _open_skin_picker(wt: String, look: Dictionary) -> void:
 	var froms := ["", "base", "eden", "skin"]
 	var src := OptionButton.new()
 	src.focus_mode = Control.FOCUS_NONE
-	for t in ["Tout", "Modèles de base", "Armes d'Eden de ce type", "Apparences d'armes d'Eden (archive)"]:
+	for t in ["Tout", "Modèles de base", "Armes de ce type", "Apparences d'armes (archive)"]:
 		src.add_item(t)
 	f.add_child(src)
 	var lst := ItemList.new()
@@ -1106,7 +1106,7 @@ func _dye_row(cat: String, look: Dictionary) -> void:
 		var sw := Button.new()
 		sw.custom_minimum_size = Vector2(44, 28)
 		sw.focus_mode = Control.FOCUS_NONE
-		sw.tooltip_text = String(v.get("name", "")) if String(v.get("name", "")) != "" else "Coloris d'Eden"
+		sw.tooltip_text = String(v.get("name", "")) if String(v.get("name", "")) != "" else "Coloris"
 		sw.add_theme_stylebox_override("normal", UiTheme.flat_box(Color8(int(cols[0][0]), int(cols[0][1]), int(cols[0][2])),
 			UiTheme.GOLD if str(cols) == str(shown) else UiTheme.GOLD_DIM, 2, 6))
 		sw.pressed.connect(func():

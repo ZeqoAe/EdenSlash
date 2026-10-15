@@ -119,9 +119,9 @@ static func label(key: String) -> String:
 		"gem":
 			return "%s %s" % [GEMS[p[1]].name, GEM_TIERS[int(p[2])]]
 		"scroll":
-			return "Enchantement : %s Lv%d" % [ENCHANTS[p[1]].name, int(p[2])]
+			return "Enchantement : %s niv. %d" % [ENCHANTS[p[1]].name, int(p[2])]
 		"fortify":
-			return "%s Lv%d" % [FORTIFY[p[1]].name, int(p[2])]
+			return "%s niv. %d" % [FORTIFY[p[1]].name, int(p[2])]
 		"stone":
 			return String(STONES[p[1]].name)
 		"blessed":
@@ -133,33 +133,19 @@ static func label(key: String) -> String:
 	return key
 
 
-## Nom d'origine dans Eden (affiché en sous-titre).
-static func eden_name(key: String) -> String:
-	var p := key.split(":")
-	match p[0]:
-		"scroll":
-			return "Enchant-%s Lv%d" % [ENCHANTS[p[1]].eden, int(p[2])]
-		"fortify":
-			return "%s Lv%d" % [FORTIFY[p[1]].eden, int(p[2])]
-		"stone":
-			return String(STONES[p[1]].eden)
-	return ""
-
-
 static func describe_key(key: String) -> String:
 	var p := key.split(":")
 	match p[0]:
 		"gem":
 			return "Gemme à sertir : %s." % _stats_text(gem_stats({"type": p[1], "tier": int(p[2])}))
 		"scroll":
-			var e: Dictionary = ENCHANTS[p[1]]
 			var lv := int(p[2])
-			return "Formule d'enchantement (%s).\n%s +%d : %s.\nS'applique à une pièce d'équipement de niveau %d ou plus (remplace l'enchantement en place)." % [
-				eden_name(key), e.eden_stat, enchant_points(p[1], lv), _stats_text(enchant_stats({"type": p[1], "lv": lv})), enchant_min_level(lv)]
+			return "Formule d'enchantement : %s.\nS'applique à une pièce d'équipement de niveau %d ou plus (remplace l'enchantement en place)." % [
+				_stats_text(enchant_stats({"type": p[1], "lv": lv})), enchant_min_level(lv)]
 		"fortify":
 			var lv := int(p[2])
-			return "Fortifie %s de niveau %d ou moins (%s).\nRéussite assurée jusqu'à +%d. Ne sert que de +1 à +10.\nLe parchemin disparaît après la tentative." % [
-				FORTIFY[p[1]].what, lv, eden_name(key), fortify_safe(p[1], lv)]
+			return "Fortifie %s de niveau %d ou moins.\nRéussite assurée jusqu'à +%d. Ne sert que de +1 à +10.\nLe parchemin disparaît après la tentative." % [
+				FORTIFY[p[1]].what, lv, fortify_safe(p[1], lv)]
 		"stone":
 			var s: Dictionary = STONES[p[1]]
 			var txt := "Protège l'objet pendant la fortification : il ne redescend pas en cas d'échec."
@@ -168,7 +154,7 @@ static func describe_key(key: String) -> String:
 			txt += "\nUtilisable de +%d à +%d → +%d. Une pierre par tentative, détruite quel que soit le résultat." % [int(s.from), int(s.to), int(s.to) + 1]
 			return txt
 		"blessed":
-			return "Création d'Eden Slash : une tentative de fortification sans parchemin ni or, et protégée (l'objet ne redescend pas). Peut s'accompagner d'une pierre de sûreté."
+			return "Une tentative de fortification sans parchemin ni or, protégée : l'objet ne redescend pas. Peut s'accompagner d'une pierre de sûreté."
 		"drill":
 			return "Perce un emplacement de gemme (2 max ; le 2e réussit à 70 %)."
 		"potion":
@@ -388,7 +374,7 @@ static func apply_scroll(item: Dictionary, key: String) -> String:
 	var replaced := item.has("enchant")
 	item["enchant"] = {"type": p[1], "lv": int(p[2])}
 	Profile.save_profile()
-	return "Enchantement %s Lv%d appliqué%s." % [ENCHANTS[p[1]].name, int(p[2]), " (remplace l'ancien)" if replaced else ""]
+	return "Enchantement %s niv. %d appliqué%s." % [ENCHANTS[p[1]].name, int(p[2]), " (remplace l'ancien)" if replaced else ""]
 
 
 # --- fortification -----------------------------------------------------------------------------

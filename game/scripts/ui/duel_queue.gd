@@ -517,7 +517,7 @@ func _recap_column(parent: Control, who: String, cid: String, kit: Array, col: C
 		t.mouse_filter = Control.MOUSE_FILTER_PASS
 		flow.add_child(t)
 	if kit.is_empty():
-		Hud._label(v, "Cerveau d'IA entraîné : il joue les 12 sorts de son preset" if who == "Adversaire" and Duel.pilot != "" else "Auto-attaque de l'arme seulement", 13, UiTheme.MUTED)
+		Hud._label(v, "Cerveau d'IA entraîné : il joue les 12 sorts de son préréglage" if who == "Adversaire" and Duel.pilot != "" else "Auto-attaque de l'arme seulement", 13, UiTheme.MUTED)
 	if who == "Toi" and not Duel.bare:
 		Hud._label(v, "Maîtrise et certificats posés · PE %s" % GearPower.fmt(GearPower.hero_power()), 13, UiTheme.TEXT)
 	elif who == "Toi":

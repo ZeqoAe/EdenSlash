@@ -270,7 +270,9 @@ chacune avec son rôle :
 - **Puits sobres** : coffres d'apparence et d'auras achetés avec des insignes (`Economy.SHOP_CHESTS` : rare 150 ×3,
   mythique 300 ×2, légendaire 600 ×1, aura rare 400 ×1, aura légendaire 900 ×1 par semaine ; fermés quand la collection
   de la rareté est complète) ; **leçon de maîtrise** : 200 insignes → 300 points pour une classe en retard, 3 par jour.
-  **À brancher** : boutons d'achat (menu Coffres : `Economy.buy_chest` ; Héros > Maîtrise : `Economy.buy_lesson`).
+  Boutons (passe P1) : Coffres > « Boutique » (une ligne par coffre, solde, restants de la semaine, « Reviens lundi » ou
+  « Collection complète » quand fermé) ; Héros > Classe : « Leçon · 200 insignes · 3 restantes » à droite de la barre de
+  maîtrise, visible seulement pour une classe en retard et hors run.
 - **Maîtrise des 60 classes** : rattrapage ×1,5 en Survie pour une classe à 3 niveaux ou plus sous la meilleure du compte
   (jusqu'au niveau 20) ; 1re victoire de la classe à chaque époque : +600 / 900 / 1 200 / 1 500 ; **part de l'arbre** : 10 %
   de toute maîtrise gagnée va aux voisines de l'arbre (classe d'origine et classes qui en descendent) débloquées et plus

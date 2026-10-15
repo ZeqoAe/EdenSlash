@@ -83,8 +83,12 @@ static func card(a: Dictionary, size := Vector2(0, 118)) -> Button:
 	t.add_theme_font_override("font", UiTheme.bold_font())
 	t.add_theme_constant_override("outline_size", 6)
 	t.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	var st := Hud._label(tv, String(a.sub), 13, Color(0.92, 0.9, 0.98, 0.95))
-	st.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	var is_locked := locked(a)  # grisée : le sous-titre dit comment l'ouvrir
+	var st := Hud._label(tv, ("🔒 " + _short_condition(String(a.unlock))) if is_locked else String(a.sub), 13, Color(0.92, 0.9, 0.98, 0.95))
+	if is_locked:
+		st.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # la condition tient sur deux lignes plutôt que d'être coupée
+	else:
+		st.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var tag := _tag(a)
 	if tag != null:
 		tag.position = Vector2(10, 10)
@@ -95,6 +99,14 @@ static func card(a: Dictionary, size := Vector2(0, 118)) -> Button:
 	ch.offset_bottom = -8
 	ch.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	return b
+
+
+## Condition d'ouverture abrégée pour l'étiquette (jusqu'à la première virgule ou parenthèse) ; l'infobulle donne le détail.
+static func _short_condition(id: String) -> String:
+	var c := Unlocks.condition(id)
+	for sep in [" (", ", "]:
+		c = c.get_slice(sep, 0)
+	return c.trim_suffix(".")
 
 
 ## Bandeau en tête de la page d'une activité : l'illustration et son nom.

@@ -134,7 +134,7 @@ static func power_text(zid: String, diff: int) -> String:
 static func condition(zid: String) -> String:
 	if not Unlocks.is_open("dungeons"):
 		return Unlocks.condition("dungeons")
-	return "Bats le boss de %s en Survie." % String(zone(zid).get("name", zid))
+	return "Bats le boss de la zone %s en Survie." % String(zone(zid).get("name", zid))
 
 
 ## Salles du donjon [param zid] : {type, level} dans l'ordre.

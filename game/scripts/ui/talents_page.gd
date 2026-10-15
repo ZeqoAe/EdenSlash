@@ -18,6 +18,7 @@ var _tabs: HBoxContainer
 var _level_label: Label
 var _bar: ProgressBar
 var _bar_text: Label
+var _lesson: Button  # leçon de maîtrise (classe en retard) : 200 insignes, 3 par jour
 var _track: HBoxContainer
 var _sub_buttons := {}  # id -> Button
 var _sub_pages := {}  # id -> Control
@@ -55,6 +56,12 @@ func _ready() -> void:
 	_bar_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_bar_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_bar_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var lesson_gap := Control.new()
+	lesson_gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(lesson_gap)
+	_lesson = MenuWidgets.glass_button("", 15, Vector2(0, 34))
+	_lesson.pressed.connect(_buy_lesson)
+	head.add_child(_lesson)
 	# parcours de maîtrise
 	var tp := PanelContainer.new()
 	tp.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.07, 0.06, 0.13, 0.95), UiTheme.GOLD_DIM, 1, 10))
@@ -262,7 +269,8 @@ func refresh() -> void:
 	_bar.max_value = prog.y
 	_bar.value = prog.x
 	_bar_text.text = "%d / %d" % [prog.x, prog.y] if lvl < Profile.EXPERTISE_MAX else "Niveau maximal"
-	_bar.tooltip_text = "Points d'expertise de la classe : chaque run en rapporte."
+	_bar.tooltip_text = "Points de maîtrise de la classe : chaque run en rapporte."
+	_refresh_lesson(c)
 	var free := Profile.talent_points(c) - Profile.talent_spent(c)
 	_points.text = "Points de talent : %d / %d" % [free, Profile.talent_points(c)]
 	_sub_buttons["talents"].text = "Talents" + ("  (%d)" % free if free > 0 else "")
@@ -277,6 +285,28 @@ func refresh() -> void:
 			_grid.add_child(_cell(cell, tree))
 	_refresh_certs()
 	show_sub(sub)
+
+
+## Leçon de maîtrise : seulement pour une classe en retard sur la meilleure du compte.
+func _refresh_lesson(c: String) -> void:
+	_lesson.visible = Economy.lagging(c) and Progression.class_unlocked(c) and not Run.active
+	if not _lesson.visible:
+		return
+	var left := Economy.lessons_left()
+	_lesson.text = "Leçon · %s · %d restante%s" % [GearPower.plural(Economy.LESSON_COST, "insigne"), left, "s" if left > 1 else ""]
+	_lesson.disabled = not Economy.can_buy_lesson(c)
+	if left == 0:
+		_lesson.tooltip_text = "Reviens demain."
+	elif Profile.insignia < Economy.LESSON_COST:
+		_lesson.tooltip_text = "Il te manque %s." % GearPower.plural(Economy.LESSON_COST - Profile.insignia, "insigne")
+	else:
+		_lesson.tooltip_text = "+%d points de maîtrise pour cette classe. %d leçons par jour." % [Economy.LESSON_MASTERY, Economy.LESSONS_PER_DAY]
+
+
+func _buy_lesson() -> void:
+	if Economy.buy_lesson(_cls()) >= 0:
+		Sfx.ui("confirm")
+		refresh()
 
 
 # --- sorts de la classe ----------------------------------------------------------------------

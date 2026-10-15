@@ -912,7 +912,7 @@ func talent_block(cls: String, id) -> String:
 	if talent_rank(cls, id) >= int(c.max):
 		return "niveau maximal"
 	if talent_spent(cls) >= talent_points(cls):
-		return "plus de points (monte l'expertise de la classe)"
+		return "plus de points (monte la maîtrise de la classe)"
 	if talent_spent(cls) < int(c.get("spent", 0)):
 		return "%d points à dépenser dans l'arbre d'abord" % int(c.spent)
 	if int(c.req) > 0 and talent_rank(cls, c.req) < int(c.req_pts):

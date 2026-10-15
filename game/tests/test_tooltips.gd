@@ -77,7 +77,7 @@ func _ready() -> void:
 	check("+N dans le nom", txt.contains("+4 "))
 	check("passif", txt.contains("Passif — Test : +3 % de dégâts"))
 	check("gemme sertie et emplacement vide", txt.contains("Grenat") and txt.contains("Emplacement de gemme vide"))
-	check("enchantement", txt.contains("Rééducation Lv3"))
+	check("enchantement", txt.contains("Rééducation niv. 3"))
 	check("panoplie de donjon avec sa progression x / 6", txt.contains("Panoplie de donjon · Tempête") and txt.contains("0 / 6"))
 	check("carte courte : seulement le prochain palier", txt.contains("2 pièces") and not txt.contains("6 pièces"))
 	check("carte complète : tous les paliers", _plain(Items.describe(leg, true)).contains("6 pièces"))

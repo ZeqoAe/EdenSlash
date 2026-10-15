@@ -37,9 +37,14 @@ func _ready() -> void:
 	_spin_paid.pressed.connect(_on_spin)
 	left.add_child(_spin_paid)
 	ItemWidgets.section(left, "Gains")
+	var legend_scroll := ScrollContainer.new()  # 9 gains : la liste défile quand la fenêtre est basse
+	legend_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	legend_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	left.add_child(legend_scroll)
 	_legend = VBoxContainer.new()
 	_legend.add_theme_constant_override("separation", 6)
-	left.add_child(_legend)
+	_legend.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	legend_scroll.add_child(_legend)
 	var right := ItemWidgets.panel(self, 0, true)
 	_wheel = WheelCanvas.new()
 	_wheel.size_flags_vertical = Control.SIZE_EXPAND_FILL

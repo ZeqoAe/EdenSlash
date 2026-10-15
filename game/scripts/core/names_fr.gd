@@ -39,6 +39,8 @@ static func lookup(section: String, name: String) -> String:
 ## Repli : nom d'origine sans les scories d'Eden (tirets parasites, « Serial Number », « Version »).
 static func clean(name: String) -> String:
 	var s := name.strip_edges()
+	if s.begins_with("Costume d'Eden L"):
+		return "Tenue n°" + s.trim_prefix("Costume d'Eden L")
 	for junk in [" Serial Number", " Version", " Ver."]:
 		s = s.replace(junk, "")
 	s = s.replace("- ", " ").replace(" - ", " ")

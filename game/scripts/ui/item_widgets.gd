@@ -64,18 +64,18 @@ static func icon_bb(k: String) -> String:
 
 ## Matériaux en texte : court pour les boutons, avec icônes d'Eden pour le détail.
 static func materials_text(m: Dictionary, short := false) -> String:
-	const SHORT := {"crystal": "crist.", "gold": "or", "keys": "clé(s)"}
+	const SHORT := {"crystal": "crist.", "gold": "or"}
 	var parts: PackedStringArray = []
 	for k in m:
 		if short:
-			parts.append("%d %s" % [int(m[k]), SHORT.get(k, k)])
+			parts.append("%d %s" % [int(m[k]), "clé" if k == "keys" and int(m[k]) < 2 else ("clés" if k == "keys" else SHORT.get(k, k))])
 		else:
 			parts.append("%s%d %s" % [icon_bb(k), int(m[k]), res_name(k)])
 	return (" " if short else ", ").join(parts)
 
 
 static func res_name(k: String) -> String:
-	return {"gold": "or", "keys": "clé(s)"}.get(k, Items.MATERIALS.get(k, k))
+	return {"gold": "or", "keys": "clés"}.get(k, String(Items.MATERIALS.get(k, k)).to_lower())
 
 
 ## Coût avec ce qui manque en rouge.
@@ -447,6 +447,9 @@ class ItemGrid extends VBoxContainer:
 	func _option(parent: Control, labels: Array) -> OptionButton:
 		var o := OptionButton.new()
 		o.focus_mode = Control.FOCUS_NONE
+		o.fit_to_longest_item = false  # largeur du choix affiché : la rangée de filtres tient dans un panneau étroit (1280 px)
+		o.clip_text = true
+		o.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		o.add_theme_font_size_override("font_size", 14)
 		for l in labels:
 			o.add_item(String(l))
@@ -531,7 +534,7 @@ class ItemGrid extends VBoxContainer:
 				e.can_drop = can_drop
 				e.on_drop = on_drop
 				_grid.add_child(e)
-		_count.text = "%d objet(s)%s" % [_shown.size(), (" · %d sélectionné(s)" % _selection.size()) if multi and not _selection.is_empty() else ""]
+		_count.text = "%s%s" % [GearPower.plural(_shown.size(), "objet"), (" · %s" % GearPower.plural(_selection.size(), "sélectionné", "sélectionnés")) if multi and not _selection.is_empty() else ""]
 		_empty.text = _empty_text if _items.is_empty() else ""
 		_empty.visible = _items.is_empty()
 

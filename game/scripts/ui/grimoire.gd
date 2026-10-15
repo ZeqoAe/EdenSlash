@@ -368,13 +368,13 @@ func _build_presets(parent: Control) -> void:
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, 6)
 	parent.add_child(gap)
-	_section(parent, "Presets de sorts")
+	_section(parent, "Préréglages de sorts")
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
 	parent.add_child(row)
-	var load_b := _small_button(row, "Charger un preset ▾", 220)
+	var load_b := _small_button(row, "Charger un préréglage ▾", 220)
 	load_b.pressed.connect(func(): _load_menu(load_b))
-	_small_button(row, "Créer un preset", 200).pressed.connect(_open_editor)
+	_small_button(row, "Créer un préréglage", 200).pressed.connect(_open_editor)
 	_preset_label = Hud._label(row, "", 14, UiTheme.MUTED)
 	_preset_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_preset_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -426,9 +426,9 @@ func _build_presets(parent: Control) -> void:
 	Hud._label(bar, "Nom", 14, UiTheme.TEXT)
 	_name_edit = LineEdit.new()
 	_name_edit.custom_minimum_size = Vector2(240, 0)
-	_name_edit.placeholder_text = "Nom du preset"
+	_name_edit.placeholder_text = "Nom du préréglage"
 	bar.add_child(_name_edit)
-	_small_button(bar, "Enregistrer le preset", 200).pressed.connect(_save_editor)
+	_small_button(bar, "Enregistrer le préréglage", 200).pressed.connect(_save_editor)
 	_small_button(bar, "Vider", 90).pressed.connect(func():
 		_edit_cols = SpellPresets.empty_cols()
 		_refresh_cells())
@@ -451,7 +451,7 @@ func _refresh_presets() -> void:
 		return
 	var p := SpellPresets.active(_class_id)
 	var n := SpellPresets.list(_class_id).size()
-	_preset_label.text = ("Preset actif : %s" % p.name if not p.is_empty() else "Aucun preset actif : les sorts se rangent dans l'ordre où on les obtient") + "  ·  %d enregistré(s)" % n
+	_preset_label.text = ("Préréglage actif : %s" % p.name if not p.is_empty() else "Aucun préréglage actif : les sorts se rangent dans l'ordre où on les obtient") + "  ·  %s" % GearPower.plural(n, "enregistré", "enregistrés")
 	_editor.visible = false
 
 
@@ -512,7 +512,7 @@ func _open_editor() -> void:
 		for c in mini((p.cols as Array).size(), SpellPresets.COLS):
 			for r in mini((p.cols[c] as Array).size(), SpellPresets.ROWS):
 				_edit_cols[c][r] = int(p.cols[c][r])
-	_name_edit.text = String(p.get("name", "Preset %d" % (SpellPresets.list(_class_id).size() + 1)))
+	_name_edit.text = String(p.get("name", "Préréglage %d" % (SpellPresets.list(_class_id).size() + 1)))
 	_preset_msg.text = ""
 	_editor.visible = true
 	_set_compact(true)
@@ -543,12 +543,12 @@ func _save_editor() -> void:
 		return
 	var nm := _name_edit.text.strip_edges()
 	if nm == "":
-		nm = "Preset %d" % (SpellPresets.list(_class_id).size() + 1)
+		nm = "Préréglage %d" % (SpellPresets.list(_class_id).size() + 1)
 	SpellPresets.store(_class_id, nm, _edit_cols.duplicate(true))
 	_apply_preset()
 	_refresh_presets()
 	_set_compact(false)
-	_preset_msg.text = "Preset « %s » enregistré et chargé." % nm
+	_preset_msg.text = "Préréglage « %s » enregistré et chargé." % nm
 
 
 func _load_menu(anchor: Control) -> void:
@@ -567,12 +567,12 @@ func _load_menu(anchor: Control) -> void:
 		if id == 2000:
 			SpellPresets.remove(_class_id, act)
 			_refresh_presets()
-			_preset_msg.text = "Preset supprimé."
+			_preset_msg.text = "Préréglage supprimé."
 			return
 		SpellPresets.set_active(_class_id, -1 if id == 1000 else id)
 		_apply_preset()
 		_refresh_presets()
-		_preset_msg.text = ("Preset « %s » chargé." % l[id].name) if id < 1000 else "Plus de preset : ordre d'obtention.")
+		_preset_msg.text = ("Préréglage « %s » chargé." % l[id].name) if id < 1000 else "Plus de préréglage : ordre d'obtention.")
 	_root.add_child(pm)
 	pm.popup_hide.connect(pm.queue_free)
 	var r := anchor.get_global_rect()

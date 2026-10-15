@@ -13,7 +13,7 @@ const LIST := [
 	{"id": "win_10", "name": "Conquérant", "desc": "Gagner 10 Survies.", "c": "runs_won", "n": 10, "title": "Conquérant"},
 	{"id": "kills_1k", "name": "Chasseur", "desc": "Vaincre 1 000 monstres.", "c": "kills", "n": 1000, "title": ""},
 	{"id": "kills_10k", "name": "Faucheur", "desc": "Vaincre 10 000 monstres.", "c": "kills", "n": 10000, "title": "Faucheur"},
-	{"id": "kills_50k", "name": "Fléau d'Eden", "desc": "Vaincre 50 000 monstres.", "c": "kills", "n": 50000, "title": "Fléau d'Eden"},
+	{"id": "kills_50k", "name": "Fléau des monstres", "desc": "Vaincre 50 000 monstres.", "c": "kills", "n": 50000, "title": "Fléau des monstres"},
 	{"id": "elite_10", "name": "Briseur de gardiens", "desc": "Vaincre 10 élites.", "c": "elite_kills", "n": 10, "title": ""},
 	{"id": "elite_100", "name": "Chasseur d'élites", "desc": "Vaincre 100 élites.", "c": "elite_kills", "n": 100, "title": "Chasseur d'élites"},
 	{"id": "boss_1", "name": "Tueur de boss", "desc": "Vaincre un boss.", "c": "boss_kills", "n": 1, "title": ""},

@@ -326,4 +326,4 @@ static func apply_to_hero(b: Dictionary) -> String:
 		Profile.talents[cid] = (b.talents as Dictionary).duplicate()
 	Profile.save_profile()
 	Profile.changed.emit()
-	return "« %s » appliqué : %d objet(s) équipés (et rangés dans le coffre), preset de sorts, certificats, maîtrise, apparence." % [b.name, made.size()]
+	return "« %s » appliqué : %s (et rangés dans le coffre), préréglage de sorts, certificats, maîtrise, apparence." % [b.name, GearPower.plural(made.size(), "objet équipé", "objets équipés")]

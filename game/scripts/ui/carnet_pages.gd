@@ -262,7 +262,7 @@ class AchievementsPage extends ScrollPage:
 	var _filter := 0  # 0 tous, 1 en cours, 2 obtenus
 
 	func subtitle() -> String:
-		return "Des défis relevés, des titres à porter"
+		return "Défis relevés, titres à porter"
 
 	func refresh() -> void:
 		Achievements.refresh()
@@ -393,7 +393,7 @@ class CardsPage extends ScrollPage:
 ## Codex des trophées : les effets découverts d'abord.
 class TrophiesPage extends ScrollPage:
 	func subtitle() -> String:
-		return "Les effets de trophée découverts"
+		return "Effets de trophée découverts"
 
 	func refresh() -> void:
 		clear()

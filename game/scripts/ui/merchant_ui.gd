@@ -141,7 +141,7 @@ func buy(o: Dictionary) -> void:
 	RunJournal.gold_out(int(o.price), "marchand")
 	if o.has("item"):
 		if not Profile.buy(o.item, int(o.price)):
-			message("Inventaire plein", 1.5)
+			message("Sac plein", 1.5)
 			return
 	elif o.has("bag"):
 		Profile.gold -= int(o.price)

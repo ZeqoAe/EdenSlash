@@ -34,7 +34,8 @@ class CollectionPage extends HBoxContainer:
 	func _ready() -> void:
 		add_theme_constant_override("separation", 14)
 		# catégories
-		var left := ItemWidgets.panel(self, 250)
+		var narrow := get_viewport().get_visible_rect().size.x < 1500.0  # 1280 : colonnes et panneaux plus étroits
+		var left := ItemWidgets.panel(self, 220 if narrow else 250)
 		ItemWidgets.section(left, "Catégories")
 		var ts := ScrollContainer.new()
 		ts.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -81,7 +82,7 @@ class CollectionPage extends HBoxContainer:
 		gs.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		mid.add_child(gs)
 		_grid = GridContainer.new()
-		_grid.columns = 9
+		_grid.columns = 6 if narrow else 9
 		_grid.add_theme_constant_override("h_separation", 6)
 		_grid.add_theme_constant_override("v_separation", 6)
 		gs.add_child(_grid)
@@ -90,12 +91,12 @@ class CollectionPage extends HBoxContainer:
 		_detail.size_flags_vertical = Control.SIZE_FILL
 		_detail.visible = false  # n'apparaît qu'avec une entrée choisie
 		# liste de l'archive et dépôt
-		var right := ItemWidgets.panel(self, 400)
+		var right := ItemWidgets.panel(self, 360 if narrow else 400)
 		ItemWidgets.section(right, "Avancement")
 		_list_text = ItemWidgets.rich(right, 13)
 		_list_text.custom_minimum_size = Vector2(0, 230)
 		_list_text.size_flags_vertical = Control.SIZE_FILL
-		ItemWidgets.section(right, "Coffre", 16)
+		ItemWidgets.section(right, "Coffre commun", 16)
 		_vault_grid = ItemWidgets.ItemGrid.new(false, 6, 56.0)
 		_vault_grid.source = ""
 		_vault_grid.dim_fn = func(it): return Archive.refusal(it) != ""

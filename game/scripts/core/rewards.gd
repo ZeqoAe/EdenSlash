@@ -25,8 +25,8 @@ const TYPES := {
 	"look_epic": {"name": "Coffre d'apparence mythique", "desc": "Une apparence mythique.", "color": Color(1.0, 0.55, 0.15), "icon": "collection"},
 	"look_legend": {"name": "Coffre d'apparence légendaire", "desc": "Une apparence légendaire.", "color": Color(1.0, 0.86, 0.3), "icon": "collection"},
 	# coffres d'auras (Panthéon) : une aura de la collection que tu n'as pas
-	"aura_rare": {"name": "Coffre d'auras rare", "desc": "Une aura rare.", "color": Color(0.45, 0.8, 1.0), "icon": "new"},
-	"aura_legend": {"name": "Coffre d'auras légendaire", "desc": "Une aura légendaire.", "color": Color(1.0, 0.7, 0.95), "icon": "new"},
+	"aura_rare": {"name": "Coffre d'aura rare", "desc": "Une aura rare.", "color": Color(0.45, 0.8, 1.0), "icon": "new"},
+	"aura_legend": {"name": "Coffre d'aura légendaire", "desc": "Une aura légendaire.", "color": Color(1.0, 0.7, 0.95), "icon": "new"},
 }
 const ORDER := ["aura_legend", "aura_rare", "look_legend", "look_epic", "look_rare", "look_common", "set", "gear", "forge", "jewel"]
 ## Spécialités des coffres de forge et de joaillier (voir ActivityLoot) : le contenu insiste sur une matière.
@@ -133,7 +133,7 @@ static func zone_of(chest: Dictionary) -> String:
 
 
 ## Rareté d'un objet de coffre : mythique, ou légendaire (20 %, 35 % pour un coffre de boss) si ta PE
-## atteint la moitié de celle d'un équipement correct du niveau du coffre (sinon : mythique).
+## atteint GearPower.LEGEND_RATIO fois celle d'un équipement correct du niveau du coffre (sinon : mythique).
 static func top_rarity(chest: Dictionary) -> int:
 	return Items.LEGENDARY if legendary_open(chest) and randf() < (0.35 if chest.get("boss", false) else 0.2) else Items.MYTHIC
 

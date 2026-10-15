@@ -106,6 +106,11 @@ static func summary(level: int) -> String:
 	return "PE %s / %s attendue (niveau %d) · %s" % [fmt(p), fmt(expected(level)), level, t[1]]
 
 
+## « 3 objets », « 1 objet », « 0 objet » (le français met le singulier à 0 et à 1).
+static func plural(n: int, one: String, many := "") -> String:
+	return "%s %s" % [fmt(n), one if n < 2 else (many if many != "" else one + "s")]
+
+
 static func fmt(n: int) -> String:
 	var s := str(absi(n))
 	var out := ""

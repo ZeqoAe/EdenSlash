@@ -938,7 +938,7 @@ static func describe(item: Dictionary, detailed := true) -> String:
 			extra_lines.append("[color=#8a86a0]◇ Emplacement de gemme vide[/color]")
 	if item.has("enchant"):
 		var e: Dictionary = item.enchant
-		extra_lines.append("[color=#8fd8ff]✦ %s Lv%d : %s[/color]" % [Craft.ENCHANTS.get(String(e.type), {}).get("name", "?"), int(e.lv), Craft._stats_text(Craft.enchant_stats(e))])
+		extra_lines.append("[color=#8fd8ff]✦ %s niv. %d : %s[/color]" % [Craft.ENCHANTS.get(String(e.type), {}).get("name", "?"), int(e.lv), Craft._stats_text(Craft.enchant_stats(e))])
 	if not extra_lines.is_empty():
 		lines.append("")
 		lines.append_array(extra_lines)

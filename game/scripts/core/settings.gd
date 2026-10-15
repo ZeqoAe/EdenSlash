@@ -128,7 +128,7 @@ const PRESETS := {
 		"game": {"move_mode": "keyboard", "aim_mode": "action", "attack_mode": "manual"}},
 	"relax": {"name": "Détente", "desc": "ZQSD pour se déplacer : attaque de base, compétences et enchaînements se lancent seuls sur les monstres à portée (sans annulation parfaite).",
 		"game": {"move_mode": "keyboard", "aim_mode": "nearest", "attack_mode": "auto", "auto_skills": [true, true, true, true], "auto_combo": true}},
-	"bot": {"name": "Bot (tout automatique)", "desc": "Le héros se déplace, frappe et enchaîne ses sorts tout seul (ton preset de sorts), sans annulation parfaite ; bouger toi-même reprend la main.",
+	"bot": {"name": "Bot (tout automatique)", "desc": "Le héros se déplace, frappe et enchaîne ses sorts tout seul (ton préréglage de sorts), sans annulation parfaite ; bouger toi-même reprend la main.",
 		"game": {"move_mode": "keyboard", "aim_mode": "nearest", "attack_mode": "auto", "auto_skills": [true, true, true, true],
 			"auto_combo": true, "auto_move": true, "auto_cards": true}},
 }
@@ -491,7 +491,13 @@ static func event_label(e: Dictionary) -> String:
 		if names.has(k):
 			return names[k]
 		var shown := KEY_NONE if DisplayServer.get_name() == "headless" else DisplayServer.keyboard_get_keycode_from_physical(k)
-		var label := OS.get_keycode_string(shown if shown != KEY_NONE else k)
+		var key_shown: int = shown if shown != KEY_NONE else k
+		var symbols := {KEY_COMMA: ",", KEY_PERIOD: ".", KEY_SEMICOLON: ";", KEY_COLON: ":", KEY_SLASH: "/", KEY_BACKSLASH: "\\",
+			KEY_MINUS: "-", KEY_EQUAL: "=", KEY_QUOTELEFT: "`", KEY_APOSTROPHE: "'", KEY_BRACKETLEFT: "[", KEY_BRACKETRIGHT: "]",
+			KEY_DELETE: "Suppr", KEY_INSERT: "Inser", KEY_HOME: "Début", KEY_END: "Fin", KEY_PAGEUP: "Page ↑", KEY_PAGEDOWN: "Page ↓"}
+		if symbols.has(key_shown):
+			return symbols[key_shown]
+		var label := OS.get_keycode_string(key_shown)
 		return label.to_upper() if label.length() == 1 else label
 	return "—"
 

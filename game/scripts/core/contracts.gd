@@ -11,7 +11,7 @@ const TEMPLATES := [
 	{"id": "chests", "text": "Ouvrir %d coffres de la carte", "target": 20, "reward": 500, "counter": "chests", "max": false},
 	{"id": "perfects", "text": "Réussir %d annulations parfaites", "target": 25, "reward": 600, "counter": "perfects", "max": false},
 	{"id": "levels", "text": "Atteindre le niveau %d en une run", "target": 25, "reward": 600, "counter": "max_level", "max": true},
-	{"id": "wins", "text": "Gagner %d Survie(s)", "target": 1, "reward": 800, "counter": "wins", "max": false},
+	{"id": "wins", "text": "Gagner %d Survie", "target": 1, "reward": 800, "counter": "wins", "max": false},
 ]
 
 

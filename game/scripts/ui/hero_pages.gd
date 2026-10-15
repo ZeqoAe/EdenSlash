@@ -663,7 +663,7 @@ class CardsPage extends HBoxContainer:
 	func _sep(text: String) -> void:
 		ItemWidgets.section(_grid, text, 15)
 		_cur = GridContainer.new()
-		_cur.columns = 6
+		_cur.columns = 6 if get_viewport().get_visible_rect().size.x >= 1500.0 else 4  # 1280 : la page ne doit pas sortir de l'écran
 		_cur.add_theme_constant_override("h_separation", 8)
 		_cur.add_theme_constant_override("v_separation", 8)
 		_grid.add_child(_cur)

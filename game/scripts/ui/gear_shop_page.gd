@@ -74,6 +74,15 @@ static func make(e: Dictionary) -> Dictionary:
 	return it
 
 
+## Fenêtre de 1280 × 720 : moins de colonnes et de lignes (la grille passait sous la fiche de droite).
+func _grid_cols() -> int:
+	return COLS if get_viewport().get_visible_rect().size.x >= 1500.0 else 9
+
+
+func _grid_rows() -> int:
+	return ROWS if get_viewport().get_visible_rect().size.y >= 840.0 else 6
+
+
 func _ready() -> void:
 	add_theme_constant_override("separation", 14)
 	Completion.armory_ids.call_deferred()  # le catalogue se calcule une fois (près d'une seconde) : au chargement plutôt qu'au premier clic
@@ -104,7 +113,7 @@ func _ready() -> void:
 	holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.add_child(holder)
 	_grid = GridContainer.new()
-	_grid.columns = COLS
+	_grid.columns = _grid_cols()
 	_grid.add_theme_constant_override("h_separation", 6)
 	_grid.add_theme_constant_override("v_separation", 6)
 	holder.add_child(_grid)
@@ -133,6 +142,7 @@ func _ready() -> void:
 func _option(parent: Control, labels: Array) -> OptionButton:
 	var o := OptionButton.new()
 	o.focus_mode = Control.FOCUS_NONE
+	o.fit_to_longest_item = false  # largeur du choix affiché (1280 px : la page ne doit pas sortir de l'écran)
 	o.add_theme_font_size_override("font_size", 14)
 	for l in labels:
 		o.add_item(String(l))
@@ -236,7 +246,7 @@ func _apply() -> void:
 		return true)
 	var rank := {"buy": 0, "owned": 1, "locked": 2}
 	_rows.sort_custom(func(a, b): return _sort_key(a, status == "all", rank) < _sort_key(b, status == "all", rank))
-	var per := COLS * ROWS
+	var per := _grid_cols() * _grid_rows()
 	var pages := maxi(1, ceili(_rows.size() / float(per)))
 	_page = clampi(_page, 0, pages - 1)
 	# la pièce choisie reste choisie après son achat, même si le filtre ne la montre plus (pas d'achat en double par un double clic)
