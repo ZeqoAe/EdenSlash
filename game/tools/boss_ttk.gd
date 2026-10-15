@@ -6,6 +6,7 @@ extends Node
 ##         --hub=new|E.C.N[.G] --level=15 --cards=15 --trophies=4 --finds=0.7 --anvil=1 [--seed=1] [--max=600]
 ##         [--human=0.5] [--pure]
 ##   Donjon / Ruée : --mode=dungeon --zone=<zone|rush> --diff=0..2 [--floor=N] (kit du préréglage, une carte par salle)
+##   [--boss=<id>] : donjon à la carte d'un boss de la bibliothèque (BossLibrary, passe M2)
 ## Sans --human : héros invincible (on ne mesure que ses dégâts) ; avec : il encaisse la part de coups non évitée et
 ## peut mourir (rage du boss comprise). --pure : boss sans mécaniques de salle (DPS du héros seul).
 ## Ligne lue par tools/boss_ttk.py : « [ttk] … ». Profil jetable : variable EDEN_PROFILE (le vrai n'est jamais touché).
@@ -25,6 +26,10 @@ var mode := "survival"
 var zid := "limestone"
 var diff := 0
 var floor_n := -1
+var _taken := 0.0
+var _max_hit := 0.0
+var _hp_last := 0.0
+var boss_id := ""  # donjon à la carte (passe M2) : boss de la bibliothèque (sa zone est prise)
 var world: Node
 const TOTEM_TIME := 8.0
 
@@ -50,6 +55,7 @@ func _ready() -> void:
 			"zone": zid = kv[1]
 			"diff": diff = int(kv[1])
 			"floor": floor_n = int(kv[1])
+			"boss": boss_id = kv[1]
 			"seed": seed(int(kv[1]))
 	Settings.reset_all(false)
 	Profile.selected_class = cid
@@ -57,7 +63,9 @@ func _ready() -> void:
 	if hub != "new":
 		Profile.install_gear(StarterGear.scenario(hub, cid))
 	if mode == "dungeon":
-		Tower.start_dungeon(cid, zid, diff, [])
+		if BossLibrary.has(boss_id):
+			zid = Dungeons.boss_zone(boss_id)
+		Tower.start_dungeon(cid, zid, diff, [], boss_id)
 		for i in n_cards:  # une carte par salle avant le boss
 			_pick(Run.roll_cards(3))
 	else:
@@ -109,12 +117,21 @@ func _ready() -> void:
 		return
 	if "--pure" in OS.get_cmdline_user_args() and boss.brain:
 		boss.brain.mechanics = []
+		boss.brain.bricks = []
 		boss.brain._reflect_timer = 1.0e9
 	await get_tree().physics_frame  # PV définitifs (Menace appliquée en différé)
 	var hp0 := boss.max_hp
+	# dégâts subis (en PV max du héros par minute, et le plus gros coup) : avec --human seulement (sinon invincible)
+	_hp_last = p.hp
+	p.health_changed.connect(func(now, _m):
+		if now < _hp_last:
+			_taken += _hp_last - now
+			_max_hit = maxf(_max_hit, _hp_last - now)
+		_hp_last = now)
 	var t := 0.0
 	var res := "temps"
 	var shield_t := 0.0
+	var crystal_t := 0.0
 	var shot_at := -1.0
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--shot="):
@@ -139,6 +156,13 @@ func _ready() -> void:
 				if is_instance_valid(tt) and not tt.is_dead:
 					tt.take_damage(tt.max_hp * 10.0 + 1.0, p)
 			shield_t = 0.0
+		# cristaux de soin (bibliothèque de boss, passe M2) : cassés comme les totems, après TOTEM_TIME
+		var crys := get_tree().get_nodes_in_group("monsters").filter(func(m): return m.display_name == "Cristal de soin" and not m.is_dead)
+		crystal_t = crystal_t + dt if not crys.is_empty() else 0.0
+		if crystal_t > TOTEM_TIME:
+			for c in crys:
+				c.take_damage(c.max_hp * 10.0 + 1.0, p)
+			crystal_t = 0.0
 		if not is_instance_valid(boss) or boss.is_dead:
 			res = "tué"
 			break
@@ -147,10 +171,11 @@ func _ready() -> void:
 			break
 	var mag := String(p.cls.get("dmg_type", "phys")) == "mag"
 	var left := boss.hp if is_instance_valid(boss) and not boss.is_dead else 0.0
-	print("[ttk] mode=%s époque=%d carte=%d zone=%s diff=%d classe=%s hub=%s niveau=%d cartes=%d trophées=%d trouvailles=%.1f enclume=%d résultat=%s ttk=%.1f pv_boss=%.0f boss_niv=%d dps=%.0f atk=%.0f pv=%.0f rage=%d" % [
+	print("[ttk] mode=%s époque=%d carte=%d zone=%s diff=%d classe=%s hub=%s niveau=%d cartes=%d trophées=%d trouvailles=%.1f enclume=%d résultat=%s ttk=%.1f pv_boss=%.0f boss_niv=%d dps=%.0f atk=%.0f pv=%.0f rage=%d boss=%s subis_min=%.2f coup_max=%.2f" % [
 		mode, epoch, stage, Run.zone_id, diff, cid, hub, level, n_cards, Run.trophies.size(), finds, anvil, res, t, hp0,
 		boss.level if is_instance_valid(boss) else 0, (hp0 - left) / maxf(t, 0.1), p.matk if mag else p.atk, p.max_hp,
-		d._boss_rage])
+		d._boss_rage, Tower.dungeon_boss if Tower.dungeon_boss != "" else "-",
+		_taken / maxf(p.max_hp, 1.0) / maxf(t / 60.0, 0.01), _max_hit / maxf(p.max_hp, 1.0)])
 	get_tree().quit()
 
 

@@ -101,6 +101,9 @@ en Mythique). Ruée des boss (0.1.152) : « zone » `Dungeons.RUSH` du moteur de
 entre deux, soin partiel ; cristaux à chaque boss, coffre d'équipement + d'apparence (1re fois) et titre à la fin (`Dungeons.rush_reward`) ; débloquée
 avec les Donjons. Tests : `test_lot17` (restes), `test_lot18` (panoplies, fabrication, Ruée).
 Restes : Épreuves de maîtrise (moteur de leçons), signatures de famille, images des activités et des fiches (session locale).
+Bibliothèque de boss et donjons à la carte (passe M2, `conception/nuit_15_10/R_M2.md`) : `core/boss_library.gd` + `data/bosses.json` (48 boss,
+6 par zone), mécaniques = briques paramétrées de `ai/boss_bricks.gd` (29, 10 familles) lancées par `BossBrain` ; `BossLibrary.spawn(id, palier, ctx)`
+pour tous les modes (seuls les Donjons l'utilisent : `Tower.dungeon_boss`, page `ui/dungeon_page.gd`, lieutenant en salle 3). Test `test_m2`.
 Idées en vrac du joueur (15/10, 0.1.153 à 0.1.158, classement et état dans `conception/IDEES_EN_VRAC.md`) : options de lisibilité des effets
 (`Settings.fx_factor`, jamais les zones d'attaque), Roulette quotidienne (`core/wheel.gd`, Coffres > Roulette), puissance d'équipement
 (`core/gear_power.gd` : verrous Héroïque / Mythique des donjons et butin légendaire), potions (`core/potions.gd`, touches C / V), Forge unifiée

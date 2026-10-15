@@ -186,6 +186,9 @@ static func offer(chest: Dictionary) -> Array:
 		out.append(Items.from_template(e, lv, rar))
 	while out.size() < 3:
 		out.append(Items.generate(lv, 1.0, "", Profile.selected_class, Items.MYTHIC, "", Items.MYTHIC))
+	var aimed := Dungeons.slot_pieces(chest)  # donjon à la carte (passe M2) : pièces des emplacements de son boss
+	if not aimed.is_empty():
+		out = aimed
 	Items.reward_zone = ""
 	if String(chest.get("archetype", "")) != "":
 		for it in out:
@@ -256,6 +259,8 @@ static func preview(chest: Dictionary) -> String:
 					return "3 parchemins d'enchantement (jusqu'au niveau %d) et 1 gemme de rang %d." % [Craft.scroll_level_for(lv), gem_tier(lv, "enchant") + 1]
 			return "2 gemmes de rang %d et 1 parchemin d'enchantement." % (gem_tier(lv, "") + 1)
 		"set":
+			if chest.has("slots"):
+				return Dungeons.chest_preview(chest)
 			return "3 pièces mythiques d'un même set au choix (déjà possédées : jamais proposées) ; légendaire : %s." % _legend_text(chest)
 	if AURAS.has(t):
 		var left := GameData.collection.filter(func(x): return x.has("aura") and not Profile.collected(x) and (AURAS[t] as Array).has(int(x.get("rarity", 0)))).size()

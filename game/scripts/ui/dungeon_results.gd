@@ -15,7 +15,8 @@ func show_results(got: Dictionary) -> void:
 	var rooms := int(got.get("rooms", 0))
 	var title: String = TITLES[victory]
 	var progress := ["%d / %d" % [rooms, Dungeons.rush_floors() if rush else Dungeons.ROOMS.size()], "salles franchies"]
-	var place := Dungeons.name_of(zid)
+	var bid := String(got.get("boss", ""))
+	var place := Dungeons.dungeon_name(bid) if bid != "" else Dungeons.name_of(zid)  # donjon à la carte (passe M2)
 	if rush:
 		title = "RUÉE TERMINÉE !" if victory else "RUÉE INTERROMPUE"
 		place = "La Ruée des boss"
@@ -65,7 +66,7 @@ func show_results(got: Dictionary) -> void:
 				if siege:
 					Tower.start_siege(Profile.selected_class, zid, diff, Dungeons.last_allies)
 				else:
-					Tower.start_dungeon(Profile.selected_class, zid, diff, Dungeons.last_allies)
+					Tower.start_dungeon(Profile.selected_class, zid, diff, Dungeons.last_allies, bid)
 				get_tree().change_scene_to_file("res://scenes/world.tscn")},
 			{"text": "Retour au lobby", "call": func():
 				get_tree().paused = false

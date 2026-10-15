@@ -358,6 +358,41 @@ Les costumes d'Eden tombent sur les boss (1 chance sur 4, 1 sur 2 s'il est enrag
 - Le roster de la zone se dévoile avec la progression (monstres les plus forts en fin de run).
 - « Nouvelle partie » reverrouille les zones.
 
+## Bibliothèque de boss et donjons à la carte (passe M2, nuit du 15/10)
+
+Vision du joueur : « farmer des donjons DE SON CHOIX pour affronter les boss qui donnent les pièces dont on a besoin ; un ÉNORME
+pool de boss aux mécaniques différentes, réutilisables partout (Tour, Ruée, Siège, Survie, Survivant) ».
+
+- **Bibliothèque** (`core/boss_library.gd`, données `data/bosses.json`) : **48 boss**, 6 par zone (le boss d'origine de la zone
+  + 5 élites nommées d'Eden promues boss). Un boss = un monstre (modèle, animations), un nom et un titre, **2 à 4 briques** de
+  mécaniques, un jeu d'attaques de base (`kit`), des PV × `hp` sur les PV fixes du palier (passe P11 : `Dungeons.boss_hp`,
+  jamais d'après le héros), une zone (décor, niveau, monstres des salles) et un **thème de butin** (panoplie + 2 emplacements).
+- **Briques** (`ai/boss_bricks.gd`, `BossBricks.DEFS`) : une mécanique = une fonction + des paramètres, **aucun code propre à un
+  boss**. 29 briques en 10 familles : zones au sol (flaques, météores, rayons, damier, balayage), invocations (renforts,
+  compagnon, illusions, nuée, tourelles), fureur (rage à 30 %, impatience au fil du temps), boucliers (totems, barrière à briser
+  sinon il se soigne, cristaux de soin), charges (ruée, bond), projectiles (spirale, couronne d'orbes, éventail), arène qui se
+  resserre, placement (cercle sûr, tourbillon, bourrasque, regard : passer dans son dos, marque qui suit puis se fige, saut
+  d'ombre), riposte (miroir), ondes à sauter. Sortes : périodique (`every`, × 0,7 en 2e phase), seuil de PV (`at`), à
+  l'apparition (`start`), autonome (`passive`). Les 9 mécaniques des boss de zone d'avant sont ces briques avec leurs paramètres
+  d'origine : la Survie ne change pas.
+- **Lisibilité, jamais de mort en un coup** : toute attaque est annoncée au sol (zone rouge qui se remplit, cercle sûr vert, mur
+  rouge de l'arène, orbes visibles) ; un coup d'un boss de la bibliothèque retire au plus **40 %** des PV max du héros
+  (`BossLibrary.HIT_CAP`), une zone persistante au plus le tiers par seconde. Annonces courtes au centre de l'écran.
+- **Paliers** : Normal / Héroïque / Mythique = PV fixes de la difficulté, mécaniques plus fréquentes (× 1 / 0,85 / 0,72) ; en
+  Mythique l'Impatience s'ajoute à tout boss qui ne l'a pas.
+- **Donjons à la carte** : un donjon par boss (`Dungeons.catalog`), dans sa zone (mêmes niveaux, difficultés, PE requise et
+  ouverture que le donjon de la zone). Salles : monstres, élites, **lieutenant** (un autre boss de la zone, une seule mécanique,
+  25 % des PV du boss), boss ; 44 + 6 × difficulté monstres par salle (+8 avec le lieutenant), PV × 3,5, élites 5 + difficulté
+  (pilote : donjon fini en 2 à 6 min, joueur estimé 6 à 10 min ; voir `R_M2.md`). **Farmable à volonté**. Butin : le coffre de set propose **3 pièces de ses 2 emplacements** (le 1er,
+  le 2e, puis le 1er), à **sa panoplie**, mythiques ou légendaires (selon la PE, comme avant), et en Mythique une pièce d'armure
+  sur quatre est **éveillée** quand le modèle existe ; jamais une pièce déjà possédée. Plans, cristaux et coffres de matières
+  (lot E1) inchangés. Chaque panoplie s'obtient aux **9 emplacements** sur ses 6 donjons ; record par boss (`dgb_<boss>_<diff>`).
+- **Page Donjons** (`ui/dungeon_page.gd`) : en haut le donjon choisi (boss, mécaniques avec leur conseil en infobulle, pièces,
+  victoires) et sa difficulté (jauge de PE) ; dessous « Je cherche » : filtres **pièce**, **panoplie**, **mécanique**, puis la liste
+  (ouverts d'abord, fermés grisés avec leur condition) ; alliés IA ; « Entrer : <donjon> » épinglé. « Rejouer » relance le même boss.
+- **Pas encore** : la Tour, la Ruée, le Siège, la Survie et le Survivant gardent leurs boss ; ils passeront par
+  `BossLibrary.spawn(id, palier, {director, pos, level, …})` (API dans `conception/nuit_15_10/R_M2.md`).
+
 ## Roguelite : héritage
 
 - Chaque run **repart de zéro** : pas d'or, pas de matériaux, pas de butin.

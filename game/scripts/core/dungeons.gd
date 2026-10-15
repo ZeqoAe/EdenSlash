@@ -13,8 +13,11 @@ const ROOMS := ["monsters", "elite", "monsters", "boss"]
 const DIFF_NAMES := ["Normal", "Héroïque", "Mythique"]
 const MYTHIC_LEVEL := 90
 const HEROIC_BONUS := 15
-const MONSTER_HP := 1.8  # PV des monstres (profil « donjon »)
-const ELITE_HP := 2.5
+## PV des monstres et des élites des salles (profil « donjon ») ; passe M2 : 1,8 / 2,5 -> 3,5 / 4 et salles plus peuplées
+## (room_monsters) : le pilote vidait une salle en 15 s (donjon de 2 à 4 min) ; plus (4 / 4,5 et 50 monstres) les salles tuaient
+## le pilote avant le boss. Mesuré : voir conception/nuit_15_10/R_M2.md.
+const MONSTER_HP := 3.5
+const ELITE_HP := 4.0
 const BOSS_HP := 25.0  # × les PV de base d'un monstre de son niveau
 const ALLY_HP_STEP := 0.5  # PV des monstres en plus par allié
 const MAX_ALLIES := 2
@@ -97,6 +100,8 @@ static func zone(zid: String) -> Dictionary:
 static func name_of(zid: String) -> String:
 	if zid == RUSH:
 		return "Ruée des boss"
+	if zid == Tower.dungeon and Tower.dungeon_boss != "":
+		return dungeon_name(Tower.dungeon_boss)  # donjon à la carte en cours (HUD, bilans)
 	var z := zone(zid)
 	return String(z.get("dungeon", {}).get("name", z.get("name", zid)))
 
@@ -146,6 +151,20 @@ static func condition(zid: String) -> String:
 	return "Bats le boss de la zone %s en Survie." % String(zone(zid).get("name", zid))
 
 
+## Monstres de la salle [param f] en difficulté [param diff] (la salle du lieutenant en a un peu plus), en même temps au plus,
+## élites de la 2e salle.
+static func room_monsters(f: int, diff: int) -> int:
+	return 44 + 6 * diff + (8 if f == LIEUTENANT_ROOM else 0)
+
+
+static func room_alive(diff: int) -> int:
+	return 16 + 2 * diff
+
+
+static func room_elites(diff: int) -> int:
+	return 5 + diff
+
+
 ## Salles du donjon [param zid] : {type, level} dans l'ordre.
 static func rooms(zid: String, diff: int) -> Array:
 	var lv := level(zid, diff)
@@ -179,14 +198,22 @@ static func total_cleared() -> int:
 
 
 ## Butin d'un donjon terminé : {chests, crystals, plan}. Les coffres rejoignent le menu Coffres, le plan et
-## les cristaux le profil (sauvegardés par l'appelant).
-static func reward(zid: String, diff: int) -> Dictionary:
+## les cristaux le profil (sauvegardés par l'appelant). [param bid] : boss de la bibliothèque (donjon à la carte) :
+## le coffre propose 3 pièces de ses deux emplacements, à sa panoplie.
+static func reward(zid: String, diff: int, bid := "") -> Dictionary:
 	var lv := level(zid, diff)
 	var out := {"chests": [], "crystals": ActivityLoot.dungeon_crystals(diff), "plan": ""}
 	var boss := diff >= 1
 	var c := Rewards.make("set", lv, boss)
 	c["zone"] = zid
 	c["archetype"] = archetype(zid)  # ses 3 pièces portent la panoplie du donjon
+	if BossLibrary.has(bid):
+		var th := BossLibrary.loot(bid)
+		c["archetype"] = String(th.archetype)
+		c["slots"] = (th.slots as Array).duplicate()
+		c["boss_id"] = bid
+		c["diff"] = diff
+		Profile.records[boss_key(bid, diff)] = boss_cleared(bid, diff) + 1
 	Profile.reward_chests.append(c)
 	out.chests.append(c)
 	if diff >= 2:
@@ -204,3 +231,129 @@ static func reward(zid: String, diff: int) -> Dictionary:
 			out.plan = plan
 	Profile.records["dungeon_%s_%d" % [zid, diff]] = cleared(zid, diff) + 1
 	return out
+
+
+# --- donjons à la carte (passe M2) ---------------------------------------------------------------
+## Chaque boss de la bibliothèque (BossLibrary, 6 par zone) a son donjon dans sa zone : mêmes salles, niveau et
+## difficultés que le donjon de la zone ; son boss final et son butin (panoplie + deux emplacements) le distinguent.
+## La 3e salle est gardée par un lieutenant (un autre boss de la zone, une seule mécanique). Farmable à volonté.
+const LIEUTENANT_ROOM := 3
+## Mythique : chance qu'une pièce d'armure soit « éveillée » (légendaire à aura) quand le modèle existe.
+const AWAKEN_CHANCE := 0.25
+const AWAKEN_SLOTS := ["head", "chest", "legs", "gloves", "boots"]
+
+
+## Donjons (ids de boss) qui répondent à [param f] : {slot, archetype, family, zone, open} ("" ou absent : tous).
+static func catalog(f := {}) -> Array:
+	var out: Array = []
+	for id in BossLibrary.ids():
+		var d := BossLibrary.get_def(id)
+		if String(f.get("slot", "")) != "" and not String(f.slot) in (d.get("slots", []) as Array):
+			continue
+		if String(f.get("archetype", "")) != "" and String(d.get("archetype", "")) != String(f.archetype):
+			continue
+		if String(f.get("family", "")) != "" and not String(f.family) in BossLibrary.families_of(id):
+			continue
+		if String(f.get("zone", "")) != "" and String(d.zone) != String(f.zone):
+			continue
+		if f.get("open", false) and not is_open(String(d.zone)):
+			continue
+		out.append(id)
+	return out
+
+
+static func boss_zone(bid: String) -> String:
+	return String(BossLibrary.get_def(bid).get("zone", ""))
+
+
+## Nom du donjon du boss [param bid] (« Grotte de Latif »).
+static func dungeon_name(bid: String) -> String:
+	return String(BossLibrary.get_def(bid).get("lair", BossLibrary.short_name(bid)))
+
+
+static func boss_key(bid: String, diff: int) -> String:
+	return "dgb_%s_%d" % [bid, diff]
+
+
+static func boss_cleared(bid: String, diff: int) -> int:
+	return int(Profile.records.get(boss_key(bid, diff), 0))
+
+
+## Lieutenant du donjon de [param bid] : le boss suivant de la même zone (jamais lui-même).
+static func lieutenant_of(bid: String) -> String:
+	var zl := BossLibrary.for_zone(boss_zone(bid))
+	if zl.size() < 2:
+		return ""
+	return String(zl[(zl.find(bid) + 1) % zl.size()])
+
+
+## Emplacements du butin en texte (« Torse · Jambes »).
+static func slot_text(bid: String) -> String:
+	return " · ".join((BossLibrary.loot(bid).slots as Array).map(func(s): return String(Items.SLOT_NAMES.get(s, s))))
+
+
+## Aperçu d'un coffre de donjon à la carte (même règle que slot_pieces).
+static func chest_preview(chest: Dictionary) -> String:
+	var slots: Array = (chest.get("slots", []) as Array).map(func(s): return String(Items.SLOT_NAMES.get(s, s)).to_lower())
+	var set_name := String(Items.SETS.get(String(chest.get("archetype", "")), {}).get("name", ""))
+	return "3 pièces au choix (%s), panoplie %s ; légendaire : %s%s." % [" ou ".join(slots), set_name, Rewards._legend_text(chest),
+		" ; une pièce d'armure peut être éveillée" if int(chest.get("diff", 0)) >= 2 else ""]
+
+
+## Propositions d'un coffre de donjon à la carte : 3 pièces d'Eden des emplacements du boss (le 1er, le 2e, puis le 1er
+## encore), au niveau du donjon, mythiques ou légendaires (Rewards.top_rarity : selon la PE), éveillées parfois en
+## Mythique ; jamais une pièce déjà possédée ni deux fois la même.
+static func slot_pieces(chest: Dictionary) -> Array:
+	var slots: Array = chest.get("slots", [])
+	if slots.is_empty():
+		return []
+	var lv := int(chest.get("plevel", 1))
+	var target := _eden_level(lv)
+	var wtype := Profile.main_weapon_type()
+	var skip: Dictionary = GearShopPage.owned_ids()
+	var out: Array = []
+	for i in 3:
+		var slot := String(slots[i % slots.size()])
+		var rar := Rewards.top_rarity(chest)
+		var awaken := int(chest.get("diff", 0)) >= 2 and slot in AWAKEN_SLOTS and randf() < AWAKEN_CHANCE
+		var e := _template(slot, wtype, target, Items.LEGENDARY if awaken else rar, awaken, skip)
+		if e.is_empty() and awaken:
+			awaken = false
+			e = _template(slot, wtype, target, rar, false, skip)
+		if e.is_empty() and rar != Items.MYTHIC:
+			rar = Items.MYTHIC
+			e = _template(slot, wtype, target, rar, false, skip)
+		if e.is_empty():
+			continue
+		skip[int(e.id)] = true
+		var it := Items.from_template(e, lv, Items.LEGENDARY if awaken else rar)
+		if awaken:
+			it["awakened"] = true
+		out.append(it)
+	return out
+
+
+## Niveau d'Eden des pièces d'un donjon de niveau [param lv] (la zone dont la tranche de niveaux le contient).
+static func _eden_level(lv: int) -> int:
+	for i in GameData.zones.size():
+		if lv <= int(GameData.zone_run_levels(i).y):
+			return GameData.eden_level_at(i, lv)
+	return GameData.eden_level_at(GameData.zones.size() - 1, lv)
+
+
+## Modèle d'Eden de [param slot] (arme : du type [param wtype]) à la rareté [param rar], le plus haut sans dépasser
+## [param target] (à 6 niveaux près), sinon le plus bas au-dessus ; hors [param skip].
+static func _template(slot: String, wtype: String, target: int, rar: int, awaken: bool, skip: Dictionary) -> Dictionary:
+	var c: Array = GameData.eden_items.filter(func(e): return String(e.get("slot", "")) == slot 		and (slot != "weapon" or String(e.get("wtype", "")) == wtype) and int(e.get("rarity", 0)) == rar 		and GameData.is_awakened(e) == awaken and Trophies.in_pool(e) and not skip.has(int(e.id)))
+	if c.is_empty():
+		return {}
+	var below := c.filter(func(e): return int(e.level) <= target)
+	if not below.is_empty():
+		var top := 0
+		for e in below:
+			top = maxi(top, int(e.level))
+		return below.filter(func(e): return int(e.level) >= top - 6).pick_random()
+	var low := 1000
+	for e in c:
+		low = mini(low, int(e.level))
+	return c.filter(func(e): return int(e.level) <= low + 4).pick_random()

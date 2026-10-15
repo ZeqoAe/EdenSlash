@@ -1,0 +1,1419 @@
+{
+ "_doc": "Bibliothèque de boss (passe M2, BossLibrary) : un boss = un monstre (modèle), 2 à 4 briques de mécaniques (BossBricks.DEFS : type + paramètres qui remplacent les défauts), PV × hp (sur les PV fixes du palier), panoplie (archetype) et emplacements (slots) de son butin de donjon, zone (décor, niveau, monstres des salles). legacy : boss de zone d'origine (mêmes mécaniques qu'en Survie). kit : attaques de base permises.",
+ "bosses": [
+  {
+   "id": "mori",
+   "monster": 58470,
+   "zone": "limestone",
+   "name": "Mori Mori",
+   "title": "",
+   "archetype": "storm",
+   "slots": [
+    "chest",
+    "legs"
+   ],
+   "legacy": true,
+   "bricks": [
+    {
+     "type": "adds"
+    },
+    {
+     "type": "puddles"
+    }
+   ],
+   "hazard": "poison",
+   "lair": "Mine d'Andrew V",
+   "intro": "Mori, roi des champignons, répand ses spores : évite les flaques vertes !",
+   "hp": 1.0
+  },
+  {
+   "id": "appacka",
+   "monster": 57501,
+   "zone": "limestone",
+   "name": "Appacka",
+   "title": "Taureau laineux",
+   "archetype": "frost",
+   "slots": [
+    "weapon",
+    "necklace"
+   ],
+   "bricks": [
+    {
+     "type": "rampage"
+    },
+    {
+     "type": "stomp"
+    }
+   ],
+   "hazard": "poison",
+   "kit": [
+    "slams",
+    "charge",
+    "cleave"
+   ],
+   "lair": "Galerie d'Appacka",
+   "hp": 1.0
+  },
+  {
+   "id": "kozbane",
+   "monster": 57502,
+   "zone": "limestone",
+   "name": "Kozbane",
+   "title": "Angelly foudroyant",
+   "archetype": "blood",
+   "slots": [
+    "head",
+    "gloves"
+   ],
+   "bricks": [
+    {
+     "type": "fan"
+    },
+    {
+     "type": "ring_burst"
+    },
+    {
+     "type": "blink"
+    }
+   ],
+   "hazard": "shock",
+   "kit": [
+    "barrage",
+    "nova",
+    "slams"
+   ],
+   "lair": "Galerie de Kozbane",
+   "hp": 1.0
+  },
+  {
+   "id": "granite",
+   "monster": 57503,
+   "zone": "limestone",
+   "name": "Mains de granit",
+   "title": "Esprit de la mine",
+   "archetype": "falcon",
+   "slots": [
+    "boots",
+    "back"
+   ],
+   "bricks": [
+    {
+     "type": "grid"
+    },
+    {
+     "type": "totems"
+    }
+   ],
+   "hazard": "poison",
+   "kit": [
+    "slams",
+    "cleave",
+    "nova"
+   ],
+   "lair": "Galerie des Mains de granit",
+   "hp": 0.92
+  },
+  {
+   "id": "sapo",
+   "monster": 57504,
+   "zone": "limestone",
+   "name": "Sapo",
+   "title": "Champignon venimeux",
+   "archetype": "phoenix",
+   "slots": [
+    "ring",
+    "weapon"
+   ],
+   "bricks": [
+    {
+     "type": "puddles",
+     "count": 4
+    },
+    {
+     "type": "marks"
+    },
+    {
+     "type": "crystals"
+    }
+   ],
+   "hazard": "poison",
+   "lair": "Galerie de Sapo",
+   "hp": 0.92
+  },
+  {
+   "id": "rockfist",
+   "monster": 57505,
+   "zone": "limestone",
+   "name": "Poing de pierre",
+   "title": "Mal invoqué",
+   "archetype": "wind",
+   "slots": [
+    "legs",
+    "boots"
+   ],
+   "bricks": [
+    {
+     "type": "leap"
+    },
+    {
+     "type": "shrink"
+    },
+    {
+     "type": "enrage"
+    }
+   ],
+   "hazard": "lava",
+   "kit": [
+    "slams",
+    "cleave",
+    "charge"
+   ],
+   "lair": "Antre du Poing de pierre",
+   "hp": 1.0
+  },
+  {
+   "id": "angela",
+   "monster": 58475,
+   "zone": "rainbowfall",
+   "name": "Angela",
+   "title": "",
+   "archetype": "frost",
+   "slots": [
+    "chest",
+    "legs"
+   ],
+   "legacy": true,
+   "bricks": [
+    {
+     "type": "clones"
+    },
+    {
+     "type": "puddles"
+    },
+    {
+     "type": "lasers"
+    }
+   ],
+   "hazard": "shadow",
+   "lair": "Antre de la sorcière",
+   "intro": "Angela, sorcière du marais noir, se dédouble : trouve la vraie !",
+   "hp": 1.0
+  },
+  {
+   "id": "noctas",
+   "monster": 57512,
+   "zone": "rainbowfall",
+   "name": "Noctas",
+   "title": "Prince luisant de la forêt",
+   "archetype": "blood",
+   "slots": [
+    "weapon",
+    "necklace"
+   ],
+   "bricks": [
+    {
+     "type": "spiral"
+    },
+    {
+     "type": "blink"
+    },
+    {
+     "type": "reflect"
+    }
+   ],
+   "hazard": "shadow",
+   "kit": [
+    "barrage",
+    "nova",
+    "cleave"
+   ],
+   "lair": "Clairière de Noctas",
+   "hp": 1.0
+  },
+  {
+   "id": "buster",
+   "monster": 57513,
+   "zone": "rainbowfall",
+   "name": "Buster",
+   "title": "Bourgeon toxique",
+   "archetype": "falcon",
+   "slots": [
+    "head",
+    "gloves"
+   ],
+   "bricks": [
+    {
+     "type": "puddles"
+    },
+    {
+     "type": "swarm"
+    },
+    {
+     "type": "gale"
+    }
+   ],
+   "hazard": "poison",
+   "lair": "Clairière de Buster",
+   "hp": 0.96
+  },
+  {
+   "id": "strawman",
+   "monster": 57514,
+   "zone": "rainbowfall",
+   "name": "Homme de paille",
+   "title": "Rôdeur de la forêt",
+   "archetype": "phoenix",
+   "slots": [
+    "boots",
+    "back"
+   ],
+   "bricks": [
+    {
+     "type": "sweep"
+    },
+    {
+     "type": "turrets"
+    }
+   ],
+   "hazard": "shadow",
+   "lair": "Champ de l'Homme de paille",
+   "hp": 0.96
+  },
+  {
+   "id": "kino",
+   "monster": 57517,
+   "zone": "rainbowfall",
+   "name": "Kino le Compagnon",
+   "title": "Maître des totems",
+   "archetype": "wind",
+   "slots": [
+    "ring",
+    "weapon"
+   ],
+   "bricks": [
+    {
+     "type": "totems",
+     "count": 4
+    },
+    {
+     "type": "ring_burst"
+    },
+    {
+     "type": "frenzy"
+    }
+   ],
+   "hazard": "shadow",
+   "kit": [
+    "slams",
+    "nova",
+    "barrage"
+   ],
+   "lair": "Cercle des totems",
+   "hp": 0.92
+  },
+  {
+   "id": "galapagos",
+   "monster": 57519,
+   "zone": "rainbowfall",
+   "name": "Galapagos",
+   "title": "Sorcier-guérisseur",
+   "archetype": "salvo",
+   "slots": [
+    "legs",
+    "boots"
+   ],
+   "bricks": [
+    {
+     "type": "crystals"
+    },
+    {
+     "type": "safe_zone"
+    },
+    {
+     "type": "adds"
+    }
+   ],
+   "hazard": "poison",
+   "kit": [
+    "barrage",
+    "slams",
+    "nova"
+   ],
+   "lair": "Clairière de Galapagos",
+   "hp": 0.88
+  },
+  {
+   "id": "ulicul",
+   "monster": 58480,
+   "zone": "beluga",
+   "name": "Ulicul",
+   "title": "",
+   "archetype": "blood",
+   "slots": [
+    "chest",
+    "legs"
+   ],
+   "legacy": true,
+   "bricks": [
+    {
+     "type": "stomp"
+    },
+    {
+     "type": "adds"
+    }
+   ],
+   "hazard": "frost",
+   "lair": "Repaire des Vileshark",
+   "intro": "Ulicul l'ogre sauvage fait trembler le sol : saute par-dessus ses ondes !",
+   "hp": 1.0
+  },
+  {
+   "id": "bukabuka",
+   "monster": 57528,
+   "zone": "beluga",
+   "name": "Buka Buka",
+   "title": "Crabe aux trois gueules",
+   "archetype": "falcon",
+   "slots": [
+    "weapon",
+    "necklace"
+   ],
+   "bricks": [
+    {
+     "type": "fan"
+    },
+    {
+     "type": "rampage"
+    },
+    {
+     "type": "barrier"
+    }
+   ],
+   "hazard": "frost",
+   "lair": "Grotte de Buka Buka",
+   "hp": 0.92
+  },
+  {
+   "id": "latif",
+   "monster": 58356,
+   "zone": "beluga",
+   "name": "Latif",
+   "title": "Roi du ciel",
+   "archetype": "phoenix",
+   "slots": [
+    "head",
+    "gloves"
+   ],
+   "bricks": [
+    {
+     "type": "gale"
+    },
+    {
+     "type": "meteors"
+    },
+    {
+     "type": "marks"
+    }
+   ],
+   "hazard": "frost",
+   "kit": [
+    "barrage",
+    "charge",
+    "nova"
+   ],
+   "lair": "Grotte de Latif",
+   "hp": 1.0
+  },
+  {
+   "id": "lertia",
+   "monster": 58357,
+   "zone": "beluga",
+   "name": "Lertia",
+   "title": "Descendante d'Azul",
+   "archetype": "wind",
+   "slots": [
+    "boots",
+    "back"
+   ],
+   "bricks": [
+    {
+     "type": "spiral"
+    },
+    {
+     "type": "safe_zone"
+    },
+    {
+     "type": "enrage"
+    }
+   ],
+   "hazard": "frost",
+   "kit": [
+    "barrage",
+    "nova",
+    "slams"
+   ],
+   "lair": "Grotte de Lertia",
+   "hp": 1.0
+  },
+  {
+   "id": "gilbert",
+   "monster": 58358,
+   "zone": "beluga",
+   "name": "Gilbert",
+   "title": "Chef des Vileshark",
+   "archetype": "salvo",
+   "slots": [
+    "ring",
+    "weapon"
+   ],
+   "bricks": [
+    {
+     "type": "swarm"
+    },
+    {
+     "type": "leap"
+    },
+    {
+     "type": "shrink"
+    }
+   ],
+   "hazard": "frost",
+   "kit": [
+    "cleave",
+    "charge",
+    "slams"
+   ],
+   "lair": "Grotte de Gilbert",
+   "hp": 0.96
+  },
+  {
+   "id": "starnoc",
+   "monster": 57535,
+   "zone": "beluga",
+   "name": "Starnoc",
+   "title": "le Balafré",
+   "archetype": "rampart",
+   "slots": [
+    "legs",
+    "boots"
+   ],
+   "bricks": [
+    {
+     "type": "rampage"
+    },
+    {
+     "type": "gaze"
+    },
+    {
+     "type": "frenzy"
+    }
+   ],
+   "hazard": "frost",
+   "kit": [
+    "cleave",
+    "charge",
+    "slams"
+   ],
+   "lair": "Grotte de Starnoc",
+   "hp": 1.0
+  },
+  {
+   "id": "doubledoor",
+   "monster": 58484,
+   "zone": "wetlands",
+   "name": "Double-porte",
+   "title": "",
+   "archetype": "falcon",
+   "slots": [
+    "chest",
+    "legs"
+   ],
+   "legacy": true,
+   "bricks": [
+    {
+     "type": "totems"
+    },
+    {
+     "type": "lasers"
+    },
+    {
+     "type": "puddles"
+    }
+   ],
+   "hazard": "poison",
+   "lair": "Marais maudit",
+   "intro": "Doubledoor, hôte de la magie, se protège derrière des totems : détruis-les !",
+   "hp": 1.0
+  },
+  {
+   "id": "argus",
+   "monster": 58360,
+   "zone": "wetlands",
+   "name": "Argus",
+   "title": "Roi des Behelders",
+   "archetype": "phoenix",
+   "slots": [
+    "weapon",
+    "necklace"
+   ],
+   "bricks": [
+    {
+     "type": "gaze"
+    },
+    {
+     "type": "lasers"
+    },
+    {
+     "type": "barrier"
+    }
+   ],
+   "hazard": "shock",
+   "kit": [
+    "barrage",
+    "nova",
+    "slams"
+   ],
+   "lair": "Marais d'Argus",
+   "hp": 0.92
+  },
+  {
+   "id": "penochi",
+   "monster": 57537,
+   "zone": "wetlands",
+   "name": "Penochi",
+   "title": "Fleur destructrice",
+   "archetype": "wind",
+   "slots": [
+    "head",
+    "gloves"
+   ],
+   "bricks": [
+    {
+     "type": "puddles"
+    },
+    {
+     "type": "grid"
+    },
+    {
+     "type": "crystals"
+    }
+   ],
+   "hazard": "poison",
+   "lair": "Marais de Penochi",
+   "hp": 0.92
+  },
+  {
+   "id": "ankit",
+   "monster": 57539,
+   "zone": "wetlands",
+   "name": "Ankit",
+   "title": "Monstre scintillant",
+   "archetype": "salvo",
+   "slots": [
+    "boots",
+    "back"
+   ],
+   "bricks": [
+    {
+     "type": "ring_burst"
+    },
+    {
+     "type": "blink"
+    },
+    {
+     "type": "reflect"
+    }
+   ],
+   "hazard": "shock",
+   "kit": [
+    "barrage",
+    "nova",
+    "slams"
+   ],
+   "lair": "Marais d'Ankit",
+   "hp": 1.0
+  },
+  {
+   "id": "lanka",
+   "monster": 57540,
+   "zone": "wetlands",
+   "name": "Lanka",
+   "title": "Sorcière d'Anura",
+   "archetype": "rampart",
+   "slots": [
+    "ring",
+    "weapon"
+   ],
+   "bricks": [
+    {
+     "type": "clones"
+    },
+    {
+     "type": "marks"
+    },
+    {
+     "type": "sweep"
+    }
+   ],
+   "hazard": "poison",
+   "kit": [
+    "barrage",
+    "nova",
+    "slams"
+   ],
+   "lair": "Marais de Lanka",
+   "hp": 0.96
+  },
+  {
+   "id": "ripper",
+   "monster": 58359,
+   "zone": "wetlands",
+   "name": "Éventreur des marais",
+   "title": "Créature magique",
+   "archetype": "storm",
+   "slots": [
+    "legs",
+    "boots"
+   ],
+   "bricks": [
+    {
+     "type": "rampage"
+    },
+    {
+     "type": "swarm"
+    },
+    {
+     "type": "enrage"
+    }
+   ],
+   "hazard": "poison",
+   "kit": [
+    "cleave",
+    "charge",
+    "slams"
+   ],
+   "lair": "Bourbier de l'Éventreur",
+   "hp": 0.96
+  },
+  {
+   "id": "miller",
+   "monster": 58488,
+   "zone": "avila",
+   "name": "Meunier",
+   "title": "",
+   "archetype": "phoenix",
+   "slots": [
+    "chest",
+    "legs"
+   ],
+   "legacy": true,
+   "bricks": [
+    {
+     "type": "meteors"
+    },
+    {
+     "type": "stomp"
+    }
+   ],
+   "hazard": "lava",
+   "lair": "Cœur du volcan",
+   "intro": "Miller, bête de flammes géante : la lave monte, reste mobile !",
+   "hp": 1.0
+  },
+  {
+   "id": "lalo",
+   "monster": 58364,
+   "zone": "avila",
+   "name": "Lalo",
+   "title": "Roi de la forêt de piques",
+   "archetype": "wind",
+   "slots": [
+    "weapon",
+    "necklace"
+   ],
+   "bricks": [
+    {
+     "type": "grid"
+    },
+    {
+     "type": "leap"
+    },
+    {
+     "type": "barrier"
+    }
+   ],
+   "hazard": "lava",
+   "kit": [
+    "cleave",
+    "slams",
+    "charge"
+   ],
+   "lair": "Caldeira de Lalo",
+   "hp": 0.92
+  },
+  {
+   "id": "belmont",
+   "monster": 58365,
+   "zone": "avila",
+   "name": "Belmont",
+   "title": "Roi des tortues",
+   "archetype": "salvo",
+   "slots": [
+    "head",
+    "gloves"
+   ],
+   "bricks": [
+    {
+     "type": "shrink"
+    },
+    {
+     "type": "stomp"
+    },
+    {
+     "type": "crystals"
+    }
+   ],
+   "hazard": "lava",
+   "kit": [
+    "slams",
+    "nova"
+   ],
+   "lair": "Caldeira de Belmont",
+   "hp": 0.92
+  },
+  {
+   "id": "scald",
+   "monster": 58366,
+   "zone": "avila",
+   "name": "Scald",
+   "title": "Soldat des abysses",
+   "archetype": "rampart",
+   "slots": [
+    "boots",
+    "back"
+   ],
+   "bricks": [
+    {
+     "type": "puddles"
+    },
+    {
+     "type": "rampage"
+    },
+    {
+     "type": "frenzy"
+    }
+   ],
+   "hazard": "lava",
+   "lair": "Caldeira de Scald",
+   "hp": 1.0
+  },
+  {
+   "id": "alonzo",
+   "monster": 58367,
+   "zone": "avila",
+   "name": "Alonzo",
+   "title": "Sorcier zélote",
+   "archetype": "storm",
+   "slots": [
+    "ring",
+    "weapon"
+   ],
+   "bricks": [
+    {
+     "type": "spiral"
+    },
+    {
+     "type": "safe_zone"
+    },
+    {
+     "type": "turrets"
+    }
+   ],
+   "hazard": "lava",
+   "kit": [
+    "barrage",
+    "nova",
+    "slams"
+   ],
+   "lair": "Caldeira d'Alonzo",
+   "hp": 0.96
+  },
+  {
+   "id": "palao",
+   "monster": 57556,
+   "zone": "avila",
+   "name": "Palao",
+   "title": "Poing de flamme",
+   "archetype": "frost",
+   "slots": [
+    "legs",
+    "boots"
+   ],
+   "bricks": [
+    {
+     "type": "meteors"
+    },
+    {
+     "type": "gale"
+    },
+    {
+     "type": "enrage"
+    }
+   ],
+   "hazard": "lava",
+   "kit": [
+    "cleave",
+    "charge",
+    "slams"
+   ],
+   "lair": "Caldeira de Palao",
+   "hp": 1.0
+  },
+  {
+   "id": "abby",
+   "monster": 58486,
+   "zone": "arid",
+   "name": "Abby",
+   "title": "Reine des insectes",
+   "archetype": "wind",
+   "slots": [
+    "chest",
+    "legs"
+   ],
+   "legacy": true,
+   "bricks": [
+    {
+     "type": "adds"
+    },
+    {
+     "type": "vortex"
+    },
+    {
+     "type": "puddles"
+    }
+   ],
+   "hazard": "poison",
+   "lair": "Fosse du fourmilion",
+   "intro": "La reine des insectes appelle sa nichée et t'attire dans sa fosse !",
+   "hp": 1.0
+  },
+  {
+   "id": "steck",
+   "monster": 58370,
+   "zone": "arid",
+   "name": "Steck",
+   "title": "Gardien du Serment de rubis",
+   "archetype": "salvo",
+   "slots": [
+    "weapon",
+    "necklace"
+   ],
+   "bricks": [
+    {
+     "type": "totems"
+    },
+    {
+     "type": "gaze"
+    },
+    {
+     "type": "stomp"
+    }
+   ],
+   "hazard": "poison",
+   "kit": [
+    "slams",
+    "nova",
+    "cleave"
+   ],
+   "lair": "Ruines de Steck",
+   "hp": 0.92
+  },
+  {
+   "id": "barend",
+   "monster": 58371,
+   "zone": "arid",
+   "name": "Barend",
+   "title": "le Tortionnaire",
+   "archetype": "rampart",
+   "slots": [
+    "head",
+    "gloves"
+   ],
+   "bricks": [
+    {
+     "type": "marks"
+    },
+    {
+     "type": "rampage"
+    },
+    {
+     "type": "reflect"
+    }
+   ],
+   "hazard": "shadow",
+   "kit": [
+    "cleave",
+    "charge",
+    "slams"
+   ],
+   "lair": "Ruines de Barend",
+   "hp": 1.0
+  },
+  {
+   "id": "ghoulpriest",
+   "monster": 58372,
+   "zone": "arid",
+   "name": "Prêtre goule",
+   "title": "Gardien du tombeau",
+   "archetype": "storm",
+   "slots": [
+    "boots",
+    "back"
+   ],
+   "bricks": [
+    {
+     "type": "swarm"
+    },
+    {
+     "type": "crystals"
+    },
+    {
+     "type": "sweep"
+    }
+   ],
+   "hazard": "shadow",
+   "kit": [
+    "barrage",
+    "nova",
+    "slams"
+   ],
+   "lair": "Tombeau du Prêtre goule",
+   "hp": 0.88
+  },
+  {
+   "id": "vivian",
+   "monster": 57577,
+   "zone": "arid",
+   "name": "Vivian",
+   "title": "Rose du désert",
+   "archetype": "frost",
+   "slots": [
+    "ring",
+    "weapon"
+   ],
+   "bricks": [
+    {
+     "type": "ring_burst"
+    },
+    {
+     "type": "puddles"
+    },
+    {
+     "type": "vortex"
+    }
+   ],
+   "hazard": "poison",
+   "kit": [
+    "barrage",
+    "nova",
+    "cleave"
+   ],
+   "lair": "Ruines de Vivian",
+   "hp": 1.0
+  },
+  {
+   "id": "bb",
+   "monster": 57574,
+   "zone": "arid",
+   "name": "B.B.",
+   "title": "Loup vicieux",
+   "archetype": "blood",
+   "slots": [
+    "legs",
+    "boots"
+   ],
+   "bricks": [
+    {
+     "type": "leap"
+    },
+    {
+     "type": "swarm",
+     "count": 3
+    },
+    {
+     "type": "frenzy"
+    }
+   ],
+   "hazard": "poison",
+   "kit": [
+    "cleave",
+    "charge",
+    "slams"
+   ],
+   "lair": "Tanière de B.B.",
+   "hp": 0.96
+  },
+  {
+   "id": "pross",
+   "monster": 58502,
+   "zone": "delphi",
+   "name": "Pross",
+   "title": "",
+   "archetype": "salvo",
+   "slots": [
+    "chest",
+    "legs"
+   ],
+   "legacy": true,
+   "bricks": [
+    {
+     "type": "pet",
+     "monster": 58503
+    },
+    {
+     "type": "lasers"
+    },
+    {
+     "type": "adds"
+    },
+    {
+     "type": "meteors"
+    }
+   ],
+   "hazard": "shock",
+   "lair": "Laboratoire de Pross",
+   "intro": "Pross, le savant fou, lâche l'Expérience 627 : rayons et bombardements !",
+   "hp": 1.0
+  },
+  {
+   "id": "halsey",
+   "monster": 58375,
+   "zone": "delphi",
+   "name": "Halsey",
+   "title": "Surveillant violent",
+   "archetype": "rampart",
+   "slots": [
+    "weapon",
+    "necklace"
+   ],
+   "bricks": [
+    {
+     "type": "rampage"
+    },
+    {
+     "type": "shrink"
+    },
+    {
+     "type": "adds"
+    }
+   ],
+   "hazard": "shock",
+   "kit": [
+    "cleave",
+    "charge",
+    "slams"
+   ],
+   "lair": "Camp du Surveillant",
+   "hp": 0.96
+  },
+  {
+   "id": "fran",
+   "monster": 58373,
+   "zone": "delphi",
+   "name": "Fran",
+   "title": "Belle et mortelle",
+   "archetype": "storm",
+   "slots": [
+    "head",
+    "gloves"
+   ],
+   "bricks": [
+    {
+     "type": "puddles"
+    },
+    {
+     "type": "safe_zone"
+    },
+    {
+     "type": "clones"
+    }
+   ],
+   "hazard": "poison",
+   "lair": "Repaire de Fran",
+   "hp": 0.96
+  },
+  {
+   "id": "colbert",
+   "monster": 58374,
+   "zone": "delphi",
+   "name": "Colbert",
+   "title": "Bête de la peste",
+   "archetype": "frost",
+   "slots": [
+    "boots",
+    "back"
+   ],
+   "bricks": [
+    {
+     "type": "gale"
+    },
+    {
+     "type": "puddles"
+    },
+    {
+     "type": "enrage"
+    }
+   ],
+   "hazard": "poison",
+   "lair": "Repaire de Colbert",
+   "hp": 1.0
+  },
+  {
+   "id": "rafi",
+   "monster": 57589,
+   "zone": "delphi",
+   "name": "Rafi",
+   "title": "Ravageur à la hache",
+   "archetype": "blood",
+   "slots": [
+    "ring",
+    "weapon"
+   ],
+   "bricks": [
+    {
+     "type": "sweep"
+    },
+    {
+     "type": "leap"
+    },
+    {
+     "type": "barrier"
+    }
+   ],
+   "hazard": "shock",
+   "kit": [
+    "cleave",
+    "charge",
+    "slams"
+   ],
+   "lair": "Repaire de Rafi",
+   "hp": 0.92
+  },
+  {
+   "id": "disa",
+   "monster": 57587,
+   "zone": "delphi",
+   "name": "Disa",
+   "title": "Experte du feu",
+   "archetype": "falcon",
+   "slots": [
+    "legs",
+    "boots"
+   ],
+   "bricks": [
+    {
+     "type": "spiral"
+    },
+    {
+     "type": "meteors"
+    },
+    {
+     "type": "turrets"
+    }
+   ],
+   "hazard": "lava",
+   "kit": [
+    "barrage",
+    "nova",
+    "slams"
+   ],
+   "lair": "Repaire de Disa",
+   "hp": 0.96
+  },
+  {
+   "id": "wushu",
+   "monster": 58510,
+   "zone": "blackflame",
+   "name": "Wushu",
+   "title": "",
+   "archetype": "rampart",
+   "slots": [
+    "chest",
+    "legs"
+   ],
+   "legacy": true,
+   "bricks": [
+    {
+     "type": "pet",
+     "monster": 58511
+    },
+    {
+     "type": "meteors"
+    },
+    {
+     "type": "clones"
+    },
+    {
+     "type": "vortex"
+    }
+   ],
+   "hazard": "lava",
+   "lair": "Trône du roi sorcier",
+   "intro": "Wushu, le roi sorcier, et son familier Jiku règnent sur le pic de flamme noire !",
+   "hp": 1.0
+  },
+  {
+   "id": "lancelot",
+   "monster": 57599,
+   "zone": "blackflame",
+   "name": "Lancelot",
+   "title": "Chevalier noir",
+   "archetype": "storm",
+   "slots": [
+    "weapon",
+    "necklace"
+   ],
+   "bricks": [
+    {
+     "type": "rampage"
+    },
+    {
+     "type": "gaze"
+    },
+    {
+     "type": "barrier"
+    }
+   ],
+   "hazard": "lava",
+   "kit": [
+    "cleave",
+    "charge",
+    "slams"
+   ],
+   "lair": "Bastion de Lancelot",
+   "hp": 0.92
+  },
+  {
+   "id": "morley",
+   "monster": 58379,
+   "zone": "blackflame",
+   "name": "Morley",
+   "title": "Chef du culte de Mara",
+   "archetype": "frost",
+   "slots": [
+    "head",
+    "gloves"
+   ],
+   "bricks": [
+    {
+     "type": "crystals"
+    },
+    {
+     "type": "lasers"
+    },
+    {
+     "type": "marks"
+    }
+   ],
+   "hazard": "shadow",
+   "kit": [
+    "barrage",
+    "nova",
+    "slams"
+   ],
+   "lair": "Bastion de Morley",
+   "hp": 0.92
+  },
+  {
+   "id": "flamecore",
+   "monster": 58378,
+   "zone": "blackflame",
+   "name": "Cœur de flamme",
+   "title": "Écoulement abyssal",
+   "archetype": "blood",
+   "slots": [
+    "boots",
+    "back"
+   ],
+   "bricks": [
+    {
+     "type": "ring_burst"
+    },
+    {
+     "type": "shrink"
+    },
+    {
+     "type": "meteors"
+    }
+   ],
+   "hazard": "lava",
+   "kit": [
+    "nova",
+    "barrage",
+    "slams"
+   ],
+   "lair": "Brasier abyssal",
+   "hp": 1.0
+  },
+  {
+   "id": "clovis",
+   "monster": 58380,
+   "zone": "blackflame",
+   "name": "Clovis",
+   "title": "Chevalier maléfique",
+   "archetype": "falcon",
+   "slots": [
+    "ring",
+    "weapon"
+   ],
+   "bricks": [
+    {
+     "type": "blink"
+    },
+    {
+     "type": "grid"
+    },
+    {
+     "type": "reflect"
+    }
+   ],
+   "hazard": "shadow",
+   "kit": [
+    "cleave",
+    "slams",
+    "nova"
+   ],
+   "lair": "Bastion de Clovis",
+   "hp": 1.0
+  },
+  {
+   "id": "tucker",
+   "monster": 57594,
+   "zone": "blackflame",
+   "name": "Tucker",
+   "title": "l'Homoncule",
+   "archetype": "phoenix",
+   "slots": [
+    "legs",
+    "boots"
+   ],
+   "bricks": [
+    {
+     "type": "swarm"
+    },
+    {
+     "type": "stomp"
+    },
+    {
+     "type": "frenzy"
+    },
+    {
+     "type": "spiral"
+    }
+   ],
+   "hazard": "lava",
+   "lair": "Bastion de Tucker",
+   "hp": 0.96
+  }
+ ]
+}

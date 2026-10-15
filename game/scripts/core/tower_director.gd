@@ -110,13 +110,17 @@ func begin(f: int) -> void:
 	elif Tower.is_boss_floor(f):
 		left = 0
 		_spawn_boss(z, lvl)
-		d.message.emit("%s %d / %d\nBOSS : %s" % [_room_word(), f, Tower.top(), _boss.display_name], 3.5)
+		if Tower.dungeon_boss != "":
+			d.message.emit("BOSS : %s\n%s" % [BossLibrary.full_name(Tower.dungeon_boss), BossLibrary.intro(Tower.dungeon_boss)], 4.5)
+		else:
+			d.message.emit("%s %d / %d\nBOSS : %s" % [_room_word(), f, Tower.top(), _boss.display_name], 3.5)
 	else:
 		left = Tower.monster_count(f)
 		if Tower.is_elite_floor(f):
 			for i in Tower.elite_count(f):
 				_spawn(d._elites.pick_random() if not d._elites.is_empty() else d._pick_monster(lvl), _ring(8.0, 14.0), lvl + 1)
-		d.message.emit("%s %d / %d%s" % [_room_word(), f, Tower.top(), "\nÉlite en vue !" if Tower.is_elite_floor(f) else ""], 2.5)
+		var lt := _spawn_lieutenant(f, lvl)
+		d.message.emit("%s %d / %d%s" % [_room_word(), f, Tower.top(), "\nÉlite en vue !" if Tower.is_elite_floor(f) else ("\nUn lieutenant garde la salle : %s" % lt if lt != "" else "")], 2.5)
 
 
 func _spawn(id: int, pos: Vector3, lvl: int, boss := false) -> Monster:
@@ -129,6 +133,14 @@ func _spawn(id: int, pos: Vector3, lvl: int, boss := false) -> Monster:
 
 
 func _spawn_boss(z: Dictionary, lvl: int) -> void:
+	if Tower.dungeon_boss != "":
+		# donjon à la carte (passe M2) : le boss vient de la bibliothèque (PV fixes du palier × le boss, alliés en plus)
+		var hp := BossLibrary.hp(Tower.dungeon_boss, lvl + 1, Tower.dungeon_diff) * (1.0 + Dungeons.ALLY_HP_STEP * Tower.allies.size())
+		_boss = BossLibrary.spawn(Tower.dungeon_boss, Tower.dungeon_diff, {"director": d, "pos": _center, "level": lvl + 1, "hp": hp,
+			"atk_mult": Tower.monster_atk_mult(Tower.floor_n, -1, true)})
+		if _boss != null:
+			_boss.xp_reward = 0
+			return
 	var dungeon: Dictionary = z.get("dungeon", {})
 	_boss = _spawn(int(dungeon.get("boss", d._pick_monster(lvl))), _center, lvl + 1, true)
 	_boss.display_name = "<Boss> " + _boss.display_name
@@ -143,6 +155,23 @@ func _spawn_boss(z: Dictionary, lvl: int) -> void:
 		_boss.brain.setup(dungeon, d)
 		_boss.brain.enraged_phase.connect(func(): d.message.emit("%s entre en fureur !" % _boss.display_name, 2.5))
 		_boss.reflect_started.connect(func(): d.message.emit("Miroir ! Ne frappe pas pendant 3 s", 2.0))
+
+
+## Salle du lieutenant d'un donjon à la carte (Dungeons.LIEUTENANT_ROOM) : un autre boss de la zone, une seule
+## mécanique, une part des PV du boss ; il compte parmi les monstres de la salle. Renvoie son nom ("" : pas de lieutenant).
+func _spawn_lieutenant(f: int, lvl: int) -> String:
+	if Tower.dungeon_boss == "" or f != Dungeons.LIEUTENANT_ROOM:
+		return ""
+	var lid := Dungeons.lieutenant_of(Tower.dungeon_boss)
+	if lid == "":
+		return ""
+	var hp := BossLibrary.hp(Tower.dungeon_boss, lvl + 1, Tower.dungeon_diff) * (1.0 + Dungeons.ALLY_HP_STEP * Tower.allies.size())
+	var m := BossLibrary.spawn(lid, Tower.dungeon_diff, {"director": d, "pos": _ring(9.0, 14.0), "level": lvl, "hp": hp, "lieutenant": true,
+		"atk_mult": Tower.monster_atk_mult(f, -1, true)})
+	if m == null:
+		return ""
+	m.xp_reward = 0
+	return BossLibrary.short_name(lid)
 
 
 ## Duel : un héros de la classe suivante de la liste, au centre, face au joueur.

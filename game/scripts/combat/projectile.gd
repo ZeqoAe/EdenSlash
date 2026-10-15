@@ -9,6 +9,8 @@ const HIT_RADIUS := 0.9
 var dir := Vector3.FORWARD
 var damage := 50.0
 var source: Combatant
+var speed := SPEED  # orbes lents des motifs de boss (BossBricks)
+var life := LIFE
 var _t := 0.0
 
 
@@ -44,7 +46,7 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_t += delta
-	global_position += dir * SPEED * delta
+	global_position += dir * speed * delta
 	var struck := false
 	var src: Combatant = source if is_instance_valid(source) else null
 	for target in Combatant.hostile_targets(get_tree(), src):
@@ -54,5 +56,5 @@ func _physics_process(delta: float) -> void:
 			break
 	if struck:
 		queue_free()
-	elif _t > LIFE:
+	elif _t > life:
 		queue_free()

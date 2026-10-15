@@ -64,6 +64,8 @@ static var dungeon := ""
 static var rush := false  # la Ruée des boss : « donjon » dont les salles sont les boss des 8 zones
 static var siege := false  # Le Siège : « donjon » à 5 vagues puis le boss, puis le chacun pour soi (Siege)
 static var dungeon_diff := 0
+## Donjon à la carte (passe M2) : boss de la bibliothèque (BossLibrary) du donjon en cours ("" : Ruée, Siège, Tour).
+static var dungeon_boss := ""
 static var allies: Array = []
 static var difficulty := 1
 static var start_floor := 1
@@ -75,11 +77,14 @@ static var _gear_cache := {}  # "étage_difficulté" -> équipement du duelliste
 
 
 ## Lance l'ascension avec la classe [param cid], en [param diff], à l'étage [param from].
-## Lance le donjon de la zone [param zid] en difficulté [param diff] avec les alliés IA [param ally_ids].
-static func start_dungeon(cid: String, zid: String, diff: int, ally_ids: Array) -> void:
+## Lance le donjon de la zone [param zid] en difficulté [param diff] avec les alliés IA [param ally_ids] ; [param boss_id] :
+## le boss de la bibliothèque choisi (donjon à la carte), par défaut celui de la zone.
+static func start_dungeon(cid: String, zid: String, diff: int, ally_ids: Array, boss_id := "") -> void:
 	start(cid, 1, 1)
 	dungeon = zid
 	rush = zid == Dungeons.RUSH
+	if not rush:
+		dungeon_boss = boss_id if BossLibrary.has(boss_id) and BossLibrary.get_def(boss_id).zone == zid else BossLibrary.zone_boss(zid)
 	siege = false
 	dungeon_diff = clampi(diff, 0, Dungeons.DIFF_NAMES.size() - 1)
 	allies = ally_ids.slice(0, Dungeons.MAX_ALLIES)
@@ -93,6 +98,7 @@ static func start_dungeon(cid: String, zid: String, diff: int, ally_ids: Array) 
 ## Lance Le Siège de la zone [param zid] : deux alliés IA (complétés au hasard), cinq vagues, le boss, le chacun pour soi.
 static func start_siege(cid: String, zid: String, diff: int, ally_ids: Array) -> void:
 	start_dungeon(cid, zid, diff, [])
+	dungeon_boss = ""  # (le Siège garde son boss de zone ; la bibliothèque y viendra plus tard)
 	siege = true
 	rush = false
 	allies = Siege.fill_allies(ally_ids)
@@ -101,6 +107,7 @@ static func start_siege(cid: String, zid: String, diff: int, ally_ids: Array) ->
 
 static func start(cid: String, diff := 1, from := 1) -> void:
 	dungeon = ""
+	dungeon_boss = ""
 	rush = false
 	siege = false
 	Siege.reset()
@@ -268,7 +275,7 @@ static func monster_count(f: int) -> int:
 	if siege:
 		return Siege.wave_count(f, dungeon_diff)
 	if is_dungeon():
-		return 14 + 4 * dungeon_diff + (4 if f == 3 else 0)
+		return Dungeons.room_monsters(f, dungeon_diff)
 	if floor_edit(f).has("count"):
 		return maxi(0, int(floor_edit(f).count))
 	return mini(int(rule("monsters_base") + f * rule("monsters_per_floor")), int(rule("monsters_max")))
@@ -278,7 +285,7 @@ static func max_alive(f: int) -> int:
 	if siege:
 		return Siege.max_alive(dungeon_diff)
 	if is_dungeon():
-		return 12 + 2 * dungeon_diff
+		return Dungeons.room_alive(dungeon_diff)
 	return mini(int(rule("alive_base") + f * rule("alive_per_floor")), int(rule("alive_max")))
 
 
@@ -286,7 +293,7 @@ static func elite_count(f: int) -> int:
 	if siege:
 		return Siege.elite_count(f, dungeon_diff)
 	if is_dungeon():
-		return 3 + dungeon_diff
+		return Dungeons.room_elites(dungeon_diff)
 	return 1 + int(f / 50 * rule("elite_count_per_50"))
 
 
@@ -492,6 +499,7 @@ static func _finish_dungeon() -> Dictionary:
 	var cid := Run.class_id
 	var zid := dungeon
 	var diff := dungeon_diff
+	var bid := dungeon_boss
 	Profile.in_run = false
 	Profile.reload_keep_records()
 	Profile.gold = 0
@@ -504,7 +512,7 @@ static func _finish_dungeon() -> Dictionary:
 	elif was_rush:
 		rew = Dungeons.rush_reward(reached, diff)  # des cristaux même si la Ruée s'arrête avant la fin
 	elif victory:
-		rew = Dungeons.reward(zid, diff)
+		rew = Dungeons.reward(zid, diff, bid)
 	var xp := (reached * 40 + (150 if victory else 0)) * (1 + diff)
 	var lv := Profile.add_expertise(cid, xp)
 	Quests.end_run("siege" if was_siege else ("rush" if was_rush else "dungeon"), victory, {"rooms": reached, "reached": reached, "diff": diff,
@@ -513,13 +521,14 @@ static func _finish_dungeon() -> Dictionary:
 	Profile._lobby_view()
 	Profile.save_profile()
 	dungeon = ""
+	dungeon_boss = ""
 	rush = false
 	siege = false
 	allies = []
 	var rank := Siege.rank
 	Siege.reset()
 	return {"dungeon": true, "rush": was_rush, "siege": was_siege, "outcome": sg_outcome, "rank": rank, "victory": victory, "rooms": reached,
-		"xp": xp, "levels": lv, "reward": rew, "zone": zid, "diff": diff}
+		"xp": xp, "levels": lv, "reward": rew, "zone": zid, "diff": diff, "boss": bid}
 
 
 static func leave(tree: SceneTree) -> void:

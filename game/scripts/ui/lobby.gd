@@ -1615,15 +1615,9 @@ var _dg_diff := 0
 var _dg_allies: Array = ["", ""]
 
 
+## Donjons à la carte (passe M2) : boss, pièces et panoplie choisis dans la liste filtrable (DungeonPage).
 func _menu_dungeon() -> void:
-	_activity_head("dungeon")
-	_dungeon_pickers("dungeon", false)
-	_dungeon_allies_picker()
-	var open_now := Dungeons.is_open(_dg_zone) and Dungeons.power_ok(_dg_zone, _dg_diff)
-	var go := MenuWidgets.gold_button("Entrer : %s" % Dungeons.name_of(_dg_zone), 22, Vector2(0, 58))
-	go.disabled = not open_now
-	go.pressed.connect(_start_dungeon)
-	_pin_go(go, ("" if Dungeons.power_ok(_dg_zone, _dg_diff) else PE_LOW) if Dungeons.is_open(_dg_zone) else Dungeons.condition(_dg_zone))
+	DungeonPage.fill(self)
 
 
 ## Choix de la zone (un donjon par zone, ouvert quand son boss est battu en Survie) et de la difficulté, pour les
@@ -1845,7 +1839,7 @@ func _start_dungeon() -> void:
 		backdrop.release()
 	var allies: Array = _dg_allies.filter(func(c): return String(c) != "")
 	Dungeons.last_allies = allies
-	Tower.start_dungeon(Profile.selected_class, _dg_zone, _dg_diff, allies)
+	Tower.start_dungeon(Profile.selected_class, _dg_zone, _dg_diff, allies, DungeonPage.sel)
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
