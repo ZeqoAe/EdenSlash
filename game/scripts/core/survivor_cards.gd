@@ -41,6 +41,7 @@ const GOLD_CARD := [30, 6]  # carte de repli « Bourse » : base + par niveau
 static var rng := RandomNumberGenerator.new()  # graine fixée par le simulateur et les tests
 static var minutes_override := -1.0  # tests et simulateur : minutes de carte (sinon le chronomètre du directeur)
 static var _seeded := false
+static var _floor := ""  # rareté minimale des améliorations du choix en cours (pitié de l'offre) ; "" : aucune
 
 
 ## Les cartes du Survivant remplacent celles de la Survie (Run.roll_cards, ban_card, rerolls_left, CardPicker).
@@ -198,6 +199,9 @@ static func _build(n: int, kind: String, luck: float, exclude_keys: Array = [], 
 	var out: Array = []
 	var used := {}
 	luck += Survivor.rule("luck_per_min") * minutes()
+	# pitié de l'offre (lot S7) : après pity_dry choix d'affilée sans carte forte, améliorations au moins PITY_TIER
+	var pity := kind == "" and track and Survivor.dry >= int(Survivor.rule("pity_dry"))
+	_floor = Survivor.PITY_TIER if pity else ""
 	# 1. cartes gardées au choix précédent (telles quelles : même pièce, même passif de palier)
 	if kind == "" and track:
 		for k in Run.kept:
@@ -235,10 +239,29 @@ static func _build(n: int, kind: String, luck: float, exclude_keys: Array = [], 
 			if t == "sv_heal" and _hp_part() >= HEAL_BELOW:
 				continue
 			out.append(fallback_card(t))
+	_floor = ""
 	_shuffle(out)
 	if track:
 		_track(all_keys, out)
+	if kind == "" and track:
+		if pity:
+			Survivor.pity_given += 1
+		Survivor.dry = 0 if pity or out.any(is_strong) else Survivor.dry + 1
 	return out
+
+
+## Carte « forte » (pitié de l'offre) : arme, nouvelle pièce, nouveau sort, évolution, ou amélioration rare et mieux ou
+## qui apporte un passif. Les améliorations communes sans passif et les cartes de repli ne le sont pas.
+static func is_strong(c: Dictionary) -> bool:
+	var tier := Cards.TIER_ORDER.find(String(c.get("tier", "common")))
+	match String(c.get("type", "")):
+		"sv_weapon", "sv_piece", "skill", "chain", "sv_evolution":
+			return true
+		"sv_piece_up", "sv_weapon_up":
+			return tier >= 1 or not (c.get("offer", {}).get("passives", []) as Array).is_empty()
+		"upgrade":
+			return tier >= 1
+	return false
 
 
 ## Prend un candidat au poids dans [param pool] et l'ajoute à [param out] (sa carte) ; vrai si une carte a été ajoutée.
@@ -312,6 +335,10 @@ static func at_least(tier: String, low: String) -> String:
 	return tier if Cards.TIER_ORDER.find(tier) >= Cards.TIER_ORDER.find(low) else low
 
 
+static func _floored(tier: String) -> String:
+	return at_least(tier, _floor) if _floor != "" else tier
+
+
 # --- cartes ---------------------------------------------------------------------------------------------------------------
 ## Carte du candidat [param c] ({} : rien à proposer). [param shown] : cartes déjà dans le choix (armes de types différents).
 static func card_for(c: Dictionary, luck := 0.0, shown: Array = []) -> Dictionary:
@@ -322,11 +349,11 @@ static func card_for(c: Dictionary, luck := 0.0, shown: Array = []) -> Dictionar
 			var ex: Array = shown.filter(func(x): return x.has("item")).map(func(x): return int(x.item.get("eden", 0)))
 			return new_piece_card(String(c.slot), ex)
 		"piece_up", "weapon_up":
-			return up_card(String(c.slot), roll_tier(luck))
+			return up_card(String(c.slot), _floored(roll_tier(luck)))
 		"spell_new":
 			return spell_card(int(c.id))
 		"spell_up":
-			return spell_up_card(int(c.id), roll_tier(luck))
+			return spell_up_card(int(c.id), _floored(roll_tier(luck)))
 		"evo":
 			return evolution_card(String(c.id))
 	return {}

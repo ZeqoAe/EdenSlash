@@ -172,6 +172,9 @@ La Tour, types d'étage (passe M3, `DESIGN.md` « La Tour : types d'étage », `
 monstres mélangés + élite à mécanique `BossBricks`, élites, ombres `ClassRival` / ton ombre / ombre éveillée `MlDuelPilot`, maudit,
 halte, boss `BossLibrary` à PV fixes × `BOSS_CURVE`) ; duellistes des étages 1, 4, 7 inchangés (Unlocks). Interface de `TowerDirector`
 documentée en tête (SiegeDirector la prolonge). Test `test_m3`, captures `shot_m3`, mesures `tools/tower_run.tscn`.
+Survivant, équilibrage (S7, 0.1.209, `conception/survivor/R_S7.md`) : réglages en tête de `core/survivor.gd` ; mesures
+`python tools/sim_survivor.py --project <copie>/game` (runs au pilote) et `--probe --fight` (sonde de builds, `tools/sv_build_probe`) ;
+`test_sv7` relit `tests/sv7_mesures.json` : changer un réglage demande de refaire les mesures.
 Atelier de conception (0.1.131, dossier `conception/`) : 5 équipes, réponses du joueur dans
 `REPONSES_JOUEUR_1.md` (font foi). **Référence pour coder : `conception/CONCEPT_FINAL.md`**, dont la
 section 9 donne les lots dans l'ordre (lot 1 corrections, lot 2 prise en main : mémoire des touches,

@@ -679,14 +679,14 @@ d'apparence (lot S6). Socle (S1, 0.1.194) :
   gardien (pièces d'emplacements libres) ; enclume (+2 sur les pièces les plus proches d'un passif). **Rien du compte** : ni
   talents, ni certificats, ni plateau, ni sorts fermés par la maîtrise (le kit entier est ouvert), ni cartes débloquées.
 - **Déroulé** (S4, `core/survivor_director.gd`) : chronologie fixe (`SurvivorDirector.timeline`) : gardien à 5:00, 10:00 et
-  15:00 (annoncé 10 s avant, un géant de P12 à 18 m du héros, PV fixes 40 000 / 150 000 / 450 000 × palier × Menace, coups
+  15:00 (annoncé 10 s avant, un géant de P12 à 18 m du héros, PV fixes 50 000 / 220 000 / 700 000 × palier × Menace, coups
   plafonnés à 30 % des PV du héros ; vaincu : coffre du gardien et or, la Menace ne monte pas) ; portail du boss ouvert à
   15:00 (sans sceau, entrée en avance comptée pour l'« Audace » de S6) ; « le boss arrive dans 1:00 » et horde finale à 19:00 ;
-  entrée forcée dans l'arène à 20:00 (attend un héros debout). Boss : PV fixes 1 500 000 × palier × Menace (jamais d'après le
+  entrée forcée dans l'arène à 20:00 (attend un héros debout). Boss : PV fixes 6 000 000 × palier × Menace (jamais d'après le
   héros), rage du boss après 4:00 (paliers de P11). Boss vaincu = victoire ; seconde chute = défaite ; abandon au menu pause ;
   pas d'extraction.
 - **Monstres** : `SurvivorDirector.spawn_plan(t)` donne la composition par minute : vivants 18 → 110, meutes toutes les
-  6 → 1,8 s de 4 → 12, vagues alternées toutes les 45 → 25 s, élites dès 8:00 (40 s, puis 20 s par deux après 15:00), niveau
+  6 → 1,8 s de 3 → 12, vagues alternées toutes les 45 → 25 s, élites dès 8:00 (40 s, puis 20 s par deux après 15:00), niveau
   1 + 1,8 par minute (90 au plus ; sans le plancher « héros − 1 » qui emballait la run), PV × 0,5 × 1,12^min, dégâts × 0,5 × 1,07^min, × palier. Le
   composant de spawn de P15 (`RunDirector.spawner`) prend les meutes et les vagues quand il est là (`--spawn=legacy` : celui du
   Survivant). Plus de plafond de niveau du héros par carte (90).
@@ -715,6 +715,15 @@ d'apparence (lot S6). Socle (S1, 0.1.194) :
   de classe (page du mode et choix de classe ouverts) et Retour au lobby ; rien de « Perdu » ni de maîtrise. Les quêtes reçoivent le
   temps de carte. Page du lobby : trois lignes de récompenses (✔ une fois gagnées). L'apparence du hub (tenue, accessoires, aura,
   skin d'arme du type) s'affiche pendant la run. Le hub reste intact (hors coffres d'apparence, titres et plafonds).
+- **Équilibrage** (S7, `conception/survivor/R_S7.md`, réglages en tête de `core/survivor.gd`) : expérience ×2 → ×1,15 (niveau 10)
+  → ×0,35 (niveau 35) : niveau 40 à 20:00 (53 avant) ; ouverture douce (dégâts ×0,3 et PV ×0,6 à 0:00, ×1 à 3:00 ; 1re vague à
+  1:15 ; ni vague avec élite avant 4:00 ni camp d'élite avant 3:00) ; spawn de P15 (escouades, événements, anneau espacé) piloté
+  par `spawn_plan` ; puissance des monstres ordinaires selon l'équipement DE LA RUN comparé à la bande attendue par minute (PV
+  ×0,9-1,3, dégâts ×0,9-1,15) ; dégâts du boss ×1 (pas la courbe des monstres) ; plafonds du héros : critique 75 % (surplus en
+  dégâts critiques), dégâts critiques +250 %, vitesses ×2,5 ; pitié de l'offre (3 choix sans carte forte → améliorations au moins
+  épiques) ; set à 3 pièces portées ×0,17 (5/5 ≈ 1 run sur 23 pour qui le cherche). Mesuré (30 runs au pilote) : victoire 40 % au
+  joueur moyen, aucune mort avant 3:00, boss en 2:10, gardiens en 30-60 s ; sonde de 312 builds : le meilleur type de build bat le
+  boss 1,1 fois plus souvent que le médian. `tests/test_sv7` lit `tests/sv7_mesures.json` (à refaire si un réglage change).
 
 ## Étapes et sources (refonte 0.1.91, façon Megabonk)
 

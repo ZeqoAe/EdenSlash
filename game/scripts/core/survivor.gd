@@ -29,6 +29,77 @@ const WAKE_AT := [6, 8, 10]  # paliers où une pièce gagne un passif
 const BASE_REROLLS := 2  # relances offertes de base
 const BANS := 3
 
+## --- Équilibrage (lot S7, conception/survivor/R_S7.md : mesures au pilote, tools/sim_survivor.py) -------------------
+## Valeurs lues par le profil « survivor » de ModeRules (modifiables en mode dev) ; le détail des mesures est dans R_S7.
+## Cibles : run de 20 min ; niveau 38 (± 4) à 20:00 ; gardiens vaincus en 30-90 s par un build correct ; boss final en
+## 1 min 30 à 3 min pour une bonne run, rage du boss (4:00) pour une run sans synergie ; victoire ≈ 35-50 % au joueur moyen.
+## Héros : expérience × XP_START au niveau 1 → × XP_END au niveau XP_UNTIL → × XP_LATE au niveau XP_LATE_AT et au-delà
+## (à la place de Epochs.xp_boost). Sans la 3e borne le héros prenait 3 à 5 niveaux par minute après 12:00 (horde dense,
+## il tue tout) : niveau 53 à 20:00 pour une cible de 38, et des monstres de 16 niveaux en dessous.
+const XP_START := 2.0
+const XP_END := 1.15
+const XP_UNTIL := 10
+const XP_LATE := 0.35
+const XP_LATE_AT := 35
+## Monstres (SurvivorDirector.spawn_plan) : niveau 1 + LEVEL_PER_MIN par minute ; PV × HP0 × HP_GROWTH^minutes, dégâts
+## × ATK0 × ATK_GROWTH^minutes ; vivants ALIVE[0] → ALIVE[1] ; meutes toutes les PACK_EVERY s de PACK_SIZE monstres
+## (budget de SpawnDirector, deux escouades de deux côtés dès PACK_SPLIT) ; vagues (événements de SpawnDirector) toutes
+## les WAVE_EVERY s, budget × SPAWN_PACE ; élites ponctuelles dès ELITES_FROM s, toutes les ELITE_EVERY s.
+const LEVEL_PER_MIN := 1.8
+const HP0 := 0.5
+const HP_GROWTH := 1.12
+const ATK0 := 0.5
+const ATK_GROWTH := 1.07
+const ALIVE := [18, 110]
+const PACK_EVERY := [6.0, 1.8]
+const PACK_SIZE := [3, 12]
+const PACK_SPLIT := 7.0
+const WAVE_EVERY := [45.0, 25.0]
+const SPAWN_PACE := [0.7, 0.7]
+const ELITES_FROM := 480.0
+const ELITE_EVERY := [40.0, 20.0]
+## Ouverture (le héros part nu, niveau 1, parfois sans arme) : dégâts des monstres × OPENING[0] et PV × OPENING[1] à 0:00,
+## × 1 à OPENING[2] s ; 1re vague à FIRST_WAVE s ; vagues « dures » (encerclement ou escorte, avec une élite) seulement dès
+## HARD_WAVES_FROM s, élites des camps dès CAMPS_FROM s. Mesuré avant : 4 runs sur 15 perdues avant 2:30 (élites de camp et
+## escorte dans la 1re minute), puis 5 sur 10 sans elles (50 monstres la 1re minute, le héros nu en tue 20 à 30).
+const OPENING := [0.3, 0.6, 180.0]
+const FIRST_WAVE := 75.0
+const HARD_WAVES_FROM := 240.0
+const CAMPS_FROM := 180.0
+## Puissance des monstres selon l'équipement de la RUN (pas du hub : le Survivant n'en a pas) : indice d'équipement
+## (MonsterScaling.gear_index, pièces portées / PE attendue au niveau du héros) comparé à la bande [bas, haut] attendue à
+## chaque minute (POWER_BAND, une ligne toutes les 5 min, mesurée au pilote moyen) ; dans la bande rien ne change ; au-dessus
+## les monstres ordinaires prennent jusqu'à POWER_HP[1] PV et POWER_ATK[1] dégâts, en dessous ils perdent jusqu'à
+## POWER_HP[0] / POWER_ATK[0] (un tirage pauvre n'est jamais une run perdue) ; lissé (MonsterScaling.SMOOTH_TIME) ; gardiens
+## et boss jamais (PV fixes).
+const POWER_BAND := [[0.0, 0.25], [1.0, 1.25], [1.4, 1.6], [1.65, 2.0], [1.85, 2.3]]
+const POWER_HP := [0.9, 1.3]
+const POWER_ATK := [0.9, 1.15]
+## Gardiens (5 / 10 / 15 min) et boss final : PV FIXES (× palier × Menace), rage du boss après BOSS_RAGE_AT s d'arène.
+## Dégâts du boss × BOSS_ATK × palier (et non la courbe des monstres ordinaires, ×1,93 à 20:00 : deux fois ceux du boss d'une
+## carte de Survie ; le pilote moyen tombait en 30 s dans l'arène).
+const GUARDIAN_HP := [50000.0, 220000.0, 700000.0]
+const BOSS_HP := 6000000.0
+const BOSS_RAGE_AT := 240.0
+const BOSS_ATK := 1.0
+## Butin des monstres : potions seulement (part des monstres ordinaires, des élites).
+const POTION_DROP := [0.03, 0.3]
+## Garde-fous du build : critique (physique et magique) plafonnée à CRIT_CAP, le surplus devient des dégâts critiques
+## (× CRIT_OVERFLOW) ; dégâts critiques au plus + CRIT_DMG_CAP, vitesses d'attaque et d'incantation au plus × SPEED_CAP ;
+## plafond d'un passif cumulé = son max (statistiques entières) ou PASSIVE_CAP_MULT × max. Mesuré avant (sonde, niveau
+## 38) : critique 300 % (perdue au-delà de 100 %), dégâts critiques +300 %, vitesse d'attaque ×3,2 en médiane et ×4 au plus :
+## les attributs des pièces de niveau 90 (chance, agilité) se multiplient entre eux, et un build « tout en pièces +10 »
+## faisait ×2,7 les dégâts du build médian.
+const CRIT_CAP := 0.75
+const CRIT_OVERFLOW := 0.25
+const CRIT_DMG_CAP := 2.5
+const SPEED_CAP := 2.5
+const PASSIVE_CAP_MULT := 1.5
+## Pitié de l'offre : après PITY_DRY choix de niveau d'affilée sans carte forte (SurvivorCards.is_strong), l'offre suivante
+## a ses améliorations au moins PITY_TIER (et une carte forte garantie).
+const PITY_DRY := 3
+const PITY_TIER := "epic"
+
 ## Propriétés du profil qui forment la progression du compte : gardées intactes par un Survivant (voir l'en-tête).
 ## Les choix d'apparence (tenue, accessoires, titre porté) et le tutoriel n'en font pas partie.
 const HUB_KEYS := ["seen_gear", "insignia", "materials", "stash", "expertise", "talents", "certificates", "unlocked_classes",
@@ -42,6 +113,8 @@ static var palier := 1  # difficulté I à V (lot S8)
 static var bans_used := 0
 static var picks := {}  # famille de carte -> nombre de cartes prises (journal, S3)
 static var since := {}  # cible -> choix depuis sa dernière apparition (pitié, S3)
+static var dry := 0  # choix de niveau d'affilée sans carte forte (pitié de l'offre, S7)
+static var pity_given := 0  # offres garanties données dans la run (journal, mesures)
 static var _hub := {}  # instantané de la progression du compte (HUB_KEYS)
 static var lobby_request := ""  # bilan -> lobby : "class" ouvre la page du mode et le choix de classe (lu une fois par le lobby)
 
@@ -52,6 +125,8 @@ static func reset() -> void:
 	bans_used = 0
 	picks = {}
 	since = {}
+	dry = 0
+	pity_given = 0
 	_hub = {}
 	SurvivorRewards.reset()
 
@@ -160,16 +235,35 @@ static func fallback_anim(cid: String, swing: int) -> String:
 	return String(anims[swing % anims.size()])
 
 
-## Multiplicateur d'expérience (à la place de Epochs.xp_boost) : xp_start au niveau 1, xp_end à partir de xp_until.
+## Multiplicateur d'expérience (à la place de Epochs.xp_boost) : xp_start au niveau 1, xp_end au niveau xp_until, puis
+## en baisse jusqu'à xp_late au niveau xp_late_at et au-delà (lot S7).
 static func xp_mult(level: int) -> float:
 	var until := maxf(rule("xp_until"), 2.0)
-	return lerpf(rule("xp_start"), rule("xp_end"), clampf((level - 1) / (until - 1.0), 0.0, 1.0))
+	if level <= until:
+		return lerpf(rule("xp_start"), rule("xp_end"), clampf((level - 1) / (until - 1.0), 0.0, 1.0))
+	var late := maxf(rule("xp_late_at"), until + 1.0)
+	return lerpf(rule("xp_end"), rule("xp_late"), clampf((level - until) / (late - until), 0.0, 1.0))
 
 
 ## Niveau maximal du héros : aucun plafond par carte (SPEC §8.1), seulement celui des monstres et des pièces (90,
 ## SurvivorDirector.MAX_LEVEL) ; [param default] (plafond de la Survie) hors Survivant.
 static func level_cap(default: int) -> int:
 	return SurvivorDirector.MAX_LEVEL if active else default
+
+
+## Garde-fous des statistiques du héros (crochet de Player.recalc_stats, Survivant seulement) : critique physique et
+## magique plafonnées à crit_cap, le surplus le plus grand devient des dégâts critiques (× crit_overflow) ; dégâts
+## critiques, vitesses d'attaque et d'incantation plafonnés (voir CRIT_CAP en tête de fichier).
+static func cap_hero(p: Object) -> void:
+	var cap := rule("crit_cap")
+	if not active or cap <= 0.0:
+		return
+	var over := maxf(maxf(float(p.crit) - cap, float(p.mcrit) - cap), 0.0)
+	p.crit = minf(float(p.crit), cap)
+	p.mcrit = minf(float(p.mcrit), cap)
+	p.crit_dmg = minf(float(p.crit_dmg) + over * rule("crit_overflow"), rule("crit_dmg_cap"))
+	p.atk_speed = minf(float(p.atk_speed), rule("speed_cap"))
+	p.cast_speed = minf(float(p.cast_speed), rule("speed_cap"))
 
 
 ## Nombre de lieux [param kind] posés sur la carte : ni autel du scribe (fournitures du hub) ni autel de la fortune

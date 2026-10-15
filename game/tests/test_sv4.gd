@@ -7,6 +7,9 @@ extends Node
 
 const WORLD := "res://scenes/world.tscn"
 
+## PV fixes du lot S7 (core/survivor.gd).
+const G := Survivor.GUARDIAN_HP
+const B := Survivor.BOSS_HP
 var fails := 0
 
 
@@ -114,24 +117,26 @@ func _unit() -> void:
 	var p20 := SurvivorDirector.spawn_plan(1199.0)
 	print("   courbe : 0:00 %s\n   10:00 %s\n   20:00 %s" % [p0, p10, p20])
 	check("vivants : 18 au départ, 110 à 20:00", int(p0.alive_max) == 18 and int(p20.alive_max) == 110)
-	check("PV des monstres ×0,5 au départ, ×1,55 à 10:00, ×4,8 à 20:00", is_equal_approx(float(p0.hp_mult), 0.5)
-		and absf(float(p10.hp_mult) - 1.55) < 0.02 and absf(float(p20.hp_mult) - 4.8) < 0.1)
-	check("dégâts des monstres ×0,5 → ×1,93", is_equal_approx(float(p0.atk_mult), 0.5) and absf(float(p20.atk_mult) - 1.93) < 0.03)
-	check("meutes toutes les 6 s de 4 monstres, puis 1,8 s de 12", is_equal_approx(float(p0.pack_every), 6.0) and int(p0.pack_size) == 4
+	# (réglages du lot S7 : courbe et ouverture en tête de core/survivor.gd)
+	check("PV des monstres : ouverture ×%.2f au départ, ×1,55 à 10:00, ×4,8 à 20:00" % float(p0.hp_mult), is_equal_approx(float(p0.hp_mult), Survivor.HP0 * Survivor.OPENING[1])
+		and absf(float(p10.hp_mult) - Survivor.HP0 * pow(Survivor.HP_GROWTH, 10.0)) < 0.02 and absf(float(p20.hp_mult) - Survivor.HP0 * pow(Survivor.HP_GROWTH, 1199.0 / 60.0)) < 0.1)
+	check("dégâts des monstres : ouverture ×%.2f → ×1,93" % float(p0.atk_mult), is_equal_approx(float(p0.atk_mult), Survivor.ATK0 * Survivor.OPENING[0])
+		and absf(float(p20.atk_mult) - Survivor.ATK0 * pow(Survivor.ATK_GROWTH, 1199.0 / 60.0)) < 0.03)
+	check("meutes toutes les 6 s de %d monstres, puis 1,8 s de 12" % int(Survivor.PACK_SIZE[0]), is_equal_approx(float(p0.pack_every), 6.0) and int(p0.pack_size) == int(Survivor.PACK_SIZE[0])
 		and absf(float(p20.pack_every) - 1.8) < 0.05 and int(p20.pack_size) == 12)
 	check("élites : aucune avant 8:00, toutes les 40 s, 20 s après 15:00", float(p0.elite_every) == 0.0 and float(SurvivorDirector.spawn_plan(479.0).elite_every) == 0.0
 		and float(p10.elite_every) == 40.0 and float(SurvivorDirector.spawn_plan(901.0).elite_every) == 20.0)
 	check("niveau des monstres : 1 + 1,8 par minute (37 à 20:00)", int(p0.level) == 1 and int(SurvivorDirector.spawn_plan(1200.0).level) == 37)
 	check("au-delà de 20:00 (renforts de l'arène) : la courbe de 20:00", is_equal_approx(float(SurvivorDirector.spawn_plan(1500.0).hp_mult), float(SurvivorDirector.spawn_plan(1200.0).hp_mult)))
 	check("horde finale : densité maximale à 19:00", SurvivorDirector.spawn_plan(1141.0).final and int(SurvivorDirector.spawn_plan(1141.0).alive_max) == 110)
-	check("gardiens à PV fixes : 40 000 / 150 000 / 450 000", SurvivorDirector.guardian_hp(0) == 40000.0 and SurvivorDirector.guardian_hp(1) == 150000.0
-		and SurvivorDirector.guardian_hp(2) == 450000.0)
-	check("boss final à PV fixes : 1 500 000", SurvivorDirector.final_boss_hp() == 1500000.0)
+	check("gardiens à PV fixes : %s" % str(Survivor.GUARDIAN_HP), SurvivorDirector.guardian_hp(0) == G[0] and SurvivorDirector.guardian_hp(1) == G[1]
+		and SurvivorDirector.guardian_hp(2) == G[2])
+	check("boss final à PV fixes : %d" % int(B), SurvivorDirector.final_boss_hp() == B)
 	Run.hero_level = 40
-	check("PV fixes indépendants du niveau du héros", SurvivorDirector.final_boss_hp() == 1500000.0 and SurvivorDirector.guardian_hp(1) == 150000.0)
+	check("PV fixes indépendants du niveau du héros", SurvivorDirector.final_boss_hp() == B and SurvivorDirector.guardian_hp(1) == G[1])
 	Survivor.palier = 2
-	check("palier II : gardiens et boss ×1,5, monstres aussi", SurvivorDirector.final_boss_hp() == 2250000.0 and SurvivorDirector.guardian_hp(0) == 60000.0
-		and is_equal_approx(float(SurvivorDirector.spawn_plan(0.0).hp_mult), 0.75))
+	check("palier II : gardiens et boss ×1,5, monstres aussi", SurvivorDirector.final_boss_hp() == B * 1.5 and SurvivorDirector.guardian_hp(0) == G[0] * 1.5
+		and is_equal_approx(float(SurvivorDirector.spawn_plan(0.0).hp_mult), 1.5 * Survivor.HP0 * Survivor.OPENING[1]))
 	Survivor.palier = 1
 	check("niveau du héros : plus de plafond de carte (90)", Survivor.level_cap(15) == 90)
 	var rng := RandomNumberGenerator.new()
@@ -210,7 +215,7 @@ func _victory_run() -> void:
 	d.time = 299.6
 	check("gardien 1 à 5:00", await _until(func(): return _guardians(w).size() >= 1, 5.0, "gardien 1"))
 	var g: Monster = _guardians(w)[0] if not _guardians(w).is_empty() else null
-	check("gardien 1 : géant aux PV fixes 40 000 (%s), à environ 18 m" % (str(roundi(g.max_hp)) if g else "?"), g != null and is_equal_approx(g.max_hp, 40000.0)
+	check("gardien 1 : géant aux PV fixes %d (%s), à environ 18 m" % [int(G[0]), str(roundi(g.max_hp)) if g else "?"], g != null and is_equal_approx(g.max_hp, G[0])
 		and absf(d._flat(g.global_position, w.player.global_position) - SurvivorDirector.GUARDIAN_DIST) < 6.0)
 	var gold0 := Profile.gold
 	if g:
@@ -222,14 +227,14 @@ func _victory_run() -> void:
 	d.time = 599.6
 	check("gardien 2 à 10:00", await _until(func(): return _guardians(w).size() >= 1, 5.0, "gardien 2"))
 	g = _guardians(w)[0] if not _guardians(w).is_empty() else null
-	check("gardien 2 : 150 000 × Menace ×1,2 (%s)" % (str(roundi(g.max_hp)) if g else "?"), g != null and is_equal_approx(g.max_hp, 180000.0))
+	check("gardien 2 : %d × Menace ×1,2 (%s)" % [int(G[1]), str(roundi(g.max_hp)) if g else "?"], g != null and is_equal_approx(g.max_hp, G[1] * 1.2))
 	if g:
 		g.take_damage(g.max_hp * 10.0 + 1e7, w.player)
 	Menace.level = 0
 	# gardien 3 et portail à 15:00
 	d.time = 899.6
-	check("gardien 3 à 15:00 (450 000)", await _until(func(): return _guardians(w).any(func(m): return int(m.get_meta("sv_guardian")) == 2), 5.0, "gardien 3")
-		and _guardians(w).any(func(m): return is_equal_approx(m.max_hp, 450000.0)))
+	check("gardien 3 à 15:00 (%d)" % int(G[2]), await _until(func(): return _guardians(w).any(func(m): return int(m.get_meta("sv_guardian")) == 2), 5.0, "gardien 3")
+		and _guardians(w).any(func(m): return is_equal_approx(m.max_hp, G[2])))
 	d.time = 905.5
 	await _wait(0.3)
 	check("portail du boss ouvert à 15:00 (trace vers le donjon)", d.sv.portal_open() and d.dungeon_found)
@@ -243,8 +248,8 @@ func _victory_run() -> void:
 	await _wait(0.5)
 	var boss: Monster = d._boss
 	check("arène forcée (pas en avance), à 20:00", d.sv.arena_forced and d.sv.early_seconds() == 0.0 and d.sv.arena_at >= 1199.0)
-	check("boss : PV fixes 1 500 000 × Menace ×1,4 (%s), jamais d'après le héros" % (str(roundi(boss.max_hp)) if boss else "?"),
-		boss != null and is_equal_approx(boss.max_hp, 1500000.0 * 1.4))
+	check("boss : PV fixes %d × Menace ×1,4 (%s), jamais d'après le héros" % [int(B), str(roundi(boss.max_hp)) if boss else "?"],
+		boss != null and is_equal_approx(boss.max_hp, B * 1.4))
 	check("rage du boss après 4:00", is_equal_approx(d._boss_rage_start(), 240.0) and d.boss_rage_tier() == 0)
 	d._boss_time = 241.0
 	check("rage du boss : palier 1 à 4:01", d.boss_rage_tier() == 1)
@@ -259,7 +264,7 @@ func _victory_run() -> void:
 	line = RunJournal.last_line
 	check("journal : mode survivor, minutes, gardiens, arène (%s)" % [line.keys().filter(func(k): return String(k).begins_with("sv_"))],
 		line.get("mode", "") == "survivor" and (line.get("sv_minutes", []) as Array).size() >= 1 and (line.get("sv_guardians", []) as Array).size() == 3
-		and bool(line.get("sv_arena_forced", false)) and int(line.get("sv_boss_hp", 0)) == 1500000)
+		and bool(line.get("sv_arena_forced", false)) and int(line.get("sv_boss_hp", 0)) == int(B))
 	Profile.end_run_survival()
 	check("victoire : hub intact", _hub() == hub)
 

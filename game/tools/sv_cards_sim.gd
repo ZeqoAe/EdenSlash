@@ -11,7 +11,7 @@ extends Node
 ##   pilote : choix du pilote (--autoplay : un peu de hasard) ; bot : choix strict du Bot ; chercheur : vise un set.
 
 const CLASSES := ["warrior", "thief", "hunter", "cleric", "magician"]
-const LEVEL_UPS := 37
+const LEVEL_UPS := 37  # (S7 : levels=N, chests=N, free=N pour rejouer les valeurs mesurées au pilote)
 const CHESTS := 14
 const GUARDIANS := [5.0, 10.0, 15.0]
 const ANVILS := 3
@@ -32,12 +32,15 @@ func _ready() -> void:
 	Profile.reset_all()
 	Profile.in_run = false
 	var runs := int(args.get("runs", "200"))
+	level_ups = int(args.get("levels", str(LEVEL_UPS)))
+	chests_n = int(args.get("chests", str(CHESTS)))
+	free_n = int(args.get("free", str(FREE_CHOICES)))
 	var seed_v := int(args.get("seed", "1"))
 	var who: Array = ["pilote", "bot", "chercheur"] if not args.has("who") else [String(args.who)]
 	# réglages du profil « survivor » à essayer (ex. set_damp=0.15 w_piece_new=0.8), le temps de la simulation
 	var over := {}
 	for k in args:
-		if not k in ["runs", "seed", "who"]:
+		if not k in ["runs", "seed", "who", "levels", "chests", "free"]:
 			over[k] = float(args[k])
 	if not over.is_empty():
 		var modes: Dictionary = DevEdits.data.get("modes", {})
@@ -94,6 +97,7 @@ static func simulate(runs: int, seed_v: int, who: String) -> Dictionary:
 				"free":
 					_choose(Run.roll_cards(3), random, agg, func(): return Run.roll_cards(3))
 		_measure(agg)
+		agg["pity"] = int(agg.get("pity", 0)) + Survivor.pity_given
 		if target != "":
 			var got := int(Items.set_counts(Profile.equipped).get(target, 0))
 			agg.target5 += 1 if got >= 5 else 0
@@ -108,17 +112,17 @@ static func simulate(runs: int, seed_v: int, who: String) -> Dictionary:
 ## Chronologie d'une run : montées de niveau régulières, coffres et lieux au hasard, gardiens à heure fixe.
 static func _events(rng: RandomNumberGenerator) -> Array:
 	var out: Array = []
-	for k in LEVEL_UPS:
-		out.append({"t": 20.0 * (k + 1) / (LEVEL_UPS + 1), "kind": "level"})
+	for k in level_ups:
+		out.append({"t": 20.0 * (k + 1) / (level_ups + 1), "kind": "level"})
 	var layout: Array = SurvivorDirector.LAYOUT.duplicate()
-	for k in CHESTS:
+	for k in mini(chests_n, layout.size()):
 		var box := String(layout.pop_at(rng.randi() % layout.size()))
 		out.append({"t": rng.randf_range(0.5, 19.5), "kind": "chest", "box": box})
 	for t in GUARDIANS:
 		out.append({"t": float(t) + 0.01, "kind": "guardian", "box": SurvivorDirector.GUARDIAN_BOX})
 	for k in ANVILS:
 		out.append({"t": rng.randf_range(2.0, 19.0), "kind": "anvil", "box": SurvivorDirector.ANVIL_BOX})
-	for k in FREE_CHOICES:
+	for k in free_n:
 		out.append({"t": rng.randf_range(1.0, 19.5), "kind": "free"})
 	out.sort_custom(func(a, b): return float(a.t) < float(b.t))
 	return out
@@ -126,6 +130,9 @@ static func _events(rng: RandomNumberGenerator) -> Array:
 
 ## Set visé par le joueur « chercheur » ("" : il ne cherche pas de set).
 static var target := ""
+static var level_ups := LEVEL_UPS
+static var chests_n := CHESTS
+static var free_n := FREE_CHOICES
 
 
 ## Note d'une carte pour le chercheur : sur un emplacement de set, seulement les pièces du set visé ; le reste comme le Bot.
@@ -262,6 +269,7 @@ static func report(r: Dictionary, who: String) -> void:
 		_mean(r.sum_up), _mean(r.plus10), _hist(r.plus10), _hist(r.max_up)])
 	print("sorts (sur 6) : %s · niveau moyen : %.1f · sorts au niveau 10 : %.2f (%s)" % [_hist(r.spells), _mean(r.spell_lvl),
 		_mean(r.spell10), _hist(r.spell10)])
+	print("offres garanties (pitié de l'offre, S7) : %.2f par run" % (float(r.get("pity", 0)) / n))
 	print("passifs de la run : %.1f en moyenne · évolutions : %.2f par run" % [_mean(r.passives), float(r.evos) / n])
 	var pr: Array = r.passive_runs.keys()
 	pr.sort_custom(func(a, b): return int(r.passive_runs[a]) > int(r.passive_runs[b]))

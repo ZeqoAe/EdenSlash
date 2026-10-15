@@ -86,15 +86,23 @@ const SURVIVOR := {
 	"quality_min": 1.0, "perfect_quality": 1.2,
 	# mélange des propositions de pièces (lot S2, SurvivorPool.weight) : type d'armure de la classe ×armor_pref, set dont le
 	# héros porte déjà set_damp_from pièces ×set_damp (4e et 5e pièces rares : 5/5 ≈ 1 run sur 25 pour un joueur qui le
-	# cherche, mesuré avec le vrai tirage des cartes, tools/sv_cards_sim, lot S3) ; puissance d'un passif de pièce (1 = une
+	# cherche, mesuré avec le vrai tirage des cartes, tools/sv_cards_sim, lot S3 ; S7 : 0,14 → 0,17 avec les montées de niveau et
+	# coffres mesurés au pilote, 39 et 12 : 1 run sur 23) ; puissance d'un passif de pièce (1 = une
 	# carte commune)
-	"armor_pref": 2.0, "set_damp": 0.14, "set_damp_from": 3, "passive_power": 1.0,
-	# héros (§8.1) : expérience ×2 au niveau 1, ×1,15 à partir du niveau 10 ; une résurrection
-	"xp_start": 2.0, "xp_end": 1.15, "xp_until": 10, "resurrections": 1,
-	# monstres (§8.2) : PV hp0 × hp_growth^minutes, dégâts atk0 × atk_growth^minutes, vivants au plus
-	"hp0": 0.5, "hp_growth": 1.12, "atk0": 0.5, "atk_growth": 1.07, "alive_start": 18, "alive_end": 110,
-	# gardiens (5 / 10 / 15 min) et boss final (§8.2-8.3) : PV fixes, rage du boss après boss_rage_at s
-	"guardian_hp": [40000.0, 150000.0, 450000.0], "boss_hp": 1500000.0, "boss_rage_at": 240.0,
+	"armor_pref": 2.0, "set_damp": 0.17, "set_damp_from": 3, "passive_power": 1.0,
+	# héros, monstres, gardiens, boss, butin, garde-fous : valeurs mesurées au lot S7, documentées en tête de core/survivor.gd
+	"xp_start": Survivor.XP_START, "xp_end": Survivor.XP_END, "xp_until": Survivor.XP_UNTIL, "xp_late": Survivor.XP_LATE,
+	"xp_late_at": Survivor.XP_LATE_AT, "resurrections": 1, "opening": Survivor.OPENING, "hard_waves_from": Survivor.HARD_WAVES_FROM,
+	"camps_from": Survivor.CAMPS_FROM,
+	"level_per_min": Survivor.LEVEL_PER_MIN, "hp0": Survivor.HP0, "hp_growth": Survivor.HP_GROWTH, "atk0": Survivor.ATK0,
+	"atk_growth": Survivor.ATK_GROWTH, "alive_start": Survivor.ALIVE[0], "alive_end": Survivor.ALIVE[1],
+	"pack_every": Survivor.PACK_EVERY, "pack_size": Survivor.PACK_SIZE, "pack_split": Survivor.PACK_SPLIT,
+	"wave_every": Survivor.WAVE_EVERY, "spawn_pace": Survivor.SPAWN_PACE, "elites_from": Survivor.ELITES_FROM,
+	"elite_every": Survivor.ELITE_EVERY, "power_band": Survivor.POWER_BAND, "power_hp": Survivor.POWER_HP,
+	"power_atk": Survivor.POWER_ATK, "guardian_hp": Survivor.GUARDIAN_HP, "boss_hp": Survivor.BOSS_HP,
+	"boss_rage_at": Survivor.BOSS_RAGE_AT, "boss_atk": Survivor.BOSS_ATK, "potion_drop": Survivor.POTION_DROP, "crit_cap": Survivor.CRIT_CAP,
+	"crit_overflow": Survivor.CRIT_OVERFLOW, "crit_dmg_cap": Survivor.CRIT_DMG_CAP,
+	"speed_cap": Survivor.SPEED_CAP, "passive_cap_mult": Survivor.PASSIVE_CAP_MULT, "pity_dry": Survivor.PITY_DRY,
 	# paliers I à V (§8.5, lot S8) : monstres, gardiens et boss ×
 	"palier_mult": [1.0, 1.5, 2.2, 3.2, 4.5],
 }

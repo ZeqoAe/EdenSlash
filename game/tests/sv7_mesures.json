@@ -1,0 +1,73 @@
+{
+ "source": "tools/sim_survivor.py (30 runs au pilote, 5 classes x 2 graines x 3 profils ; sonde de 312 builds), lot S7, 0.1.209",
+ "constants": {
+  "xp_start": 2.0,
+  "xp_end": 1.15,
+  "xp_late": 0.35,
+  "xp_late_at": 35,
+  "hp0": 0.5,
+  "hp_growth": 1.12,
+  "atk0": 0.5,
+  "atk_growth": 1.07,
+  "opening": [
+   0.3,
+   0.6,
+   180.0
+  ],
+  "guardian_hp": [
+   50000.0,
+   220000.0,
+   700000.0
+  ],
+  "boss_hp": 6000000.0,
+  "boss_atk": 1.0,
+  "boss_rage_at": 240.0,
+  "power_band": [
+   [
+    0.0,
+    0.25
+   ],
+   [
+    1.0,
+    1.25
+   ],
+   [
+    1.4,
+    1.6
+   ],
+   [
+    1.65,
+    2.0
+   ],
+   [
+    1.85,
+    2.3
+   ]
+  ],
+  "crit_cap": 0.75,
+  "crit_dmg_cap": 2.5,
+  "speed_cap": 2.5
+ },
+ "runs": {
+  "n": 30,
+  "level_20": 40.0,
+  "victory_time": 1336.5,
+  "win": {
+   "0.3": 0.4,
+   "0.5": 0.4,
+   "0.7": 0.6
+  },
+  "early_deaths_mid": 0,
+  "guardian_ttk": 37,
+  "boss_ttk": 130.5,
+  "cards_20": 70.0
+ },
+ "probe": {
+  "n": 312,
+  "ttk_median": 128.7,
+  "ttk_q10": 58.2,
+  "ttk_q90": 230.1,
+  "win_ratio": 1.1298733548547306,
+  "dps_ratio_strategy": 1.2955500590990676
+ }
+}

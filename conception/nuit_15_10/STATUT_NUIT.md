@@ -26,5 +26,6 @@
 | S3 Survivant : cartes (`conception/survivor/R_S3.md`) | sous-agent | fait | 0.1.198 |
 | S5 Survivant : interface en run (`conception/survivor/R_S5.md`) | sous-agent | fait | 0.1.203 |
 | S6 Survivant : fin de run, coffres d'apparence seulement (`conception/survivor/R_S6.md`) | sous-agent | fait | 0.1.204 |
+| S7 Survivant : équilibrage par mesures (`conception/survivor/R_S7.md`) | sous-agent | fait | 0.1.209 |
 
 Note : le lancement de sessions séparées est refusé quand le tour vient d'un événement automatique ; l'orchestrateur utilise alors des sous-agents.

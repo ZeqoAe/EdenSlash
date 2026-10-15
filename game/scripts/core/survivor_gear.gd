@@ -229,14 +229,14 @@ static func worn() -> Array:
 
 # --- passifs de la run ------------------------------------------------------------------------------------------------
 ## Plafond de puissance du passif [param id] (en cartes communes) : son max pour les statistiques à unité entière ou
-## déjà plafonnées (projectiles, perforation, rebonds, zone), 1,5 × max sinon.
+## déjà plafonnées (projectiles, perforation, rebonds, zone), passive_cap_mult (1,5) × max sinon.
 static func boon_cap(id: String) -> float:
 	var d := Boons.get_def(id)
 	if d.is_empty():
 		return 0.0
 	var mx := float(d.get("max", 10))
 	var whole := (d.get("stat", {}) as Dictionary).keys().any(func(k): return k in WHOLE_STATS)
-	return mx if whole else mx * 1.5
+	return mx if whole else mx * Survivor.rule("passive_cap_mult")
 
 
 ## Ajoute [param power] au passif [param id] de la run, au plus jusqu'à son plafond ; renvoie la puissance ajoutée.

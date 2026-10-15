@@ -50,6 +50,7 @@ const FINAL_HORDE_AT := 1140.0  # 19:00 : « le boss arrive dans 1:00 », densit
 const FINAL_HORDE := 30  # monstres de la horde finale, en anneau autour du héros
 const CHALLENGE_GOLD := [40, 12]  # stèle du défi réussie : or (base + par niveau), et un coffre doré gratuit
 const MSG_THROTTLE := 3.0  # secondes entre deux messages répétés (portail fermé, enclume vide)
+const POWER_SAMPLE := 2.0  # s entre deux mesures de l'équipement de la run (puissance des monstres)
 
 var d: RunDirector
 var _next := 0  # prochain événement de la chronologie
@@ -62,13 +63,16 @@ var guardians: Array = []  # {n, t, level, hp, ttk} : un par gardien apparu
 var _minutes: Array = []  # journal : une ligne par minute de carte
 var _minute := 0
 var _pack_t := 3.0
-var _wave_t := 45.0
+var _wave_t := Survivor.FIRST_WAVE
 var _elite_t := 0.0
 var _despawn_t := 2.0
 var _wave_hard := false
 var _challenges: Array = []  # stèles du défi en cours : {pos, elites}
 var _msg_at := {}  # message -> instant du dernier affichage (anti-répétition)
 var _base_context: Callable  # contexte de la carte du directeur (journal de run)
+var power := Vector2.ONE  # coefficients lissés [PV, dégâts] des monstres ordinaires (équipement de la run)
+var gear_idx := 0.0  # indice d'équipement de la run (dernière mesure)
+var _power_t := 0.0
 
 
 func _init(director: RunDirector) -> void:
@@ -113,23 +117,50 @@ static func spawn_plan(t: float) -> Dictionary:
 	var k := mins / (Survivor.RUN_TIME / 60.0)
 	var final := t >= FINAL_HORDE_AT
 	var pk := palier_mult()
-	var pack_every: Array = r("pack_every", [6.0, 1.8])
-	var pack_size: Array = r("pack_size", [4, 12])
-	var wave_every: Array = r("wave_every", [45.0, 25.0])
-	var elite_every: Array = r("elite_every", [40.0, 20.0])
-	var elites_from := float(r("elites_from", 480.0))
+	var pack_every: Array = r("pack_every", Survivor.PACK_EVERY)
+	var pack_size: Array = r("pack_size", Survivor.PACK_SIZE)
+	var wave_every: Array = r("wave_every", Survivor.WAVE_EVERY)
+	var elite_every: Array = r("elite_every", Survivor.ELITE_EVERY)
+	var pace: Array = r("spawn_pace", Survivor.SPAWN_PACE)
+	var elites_from := float(r("elites_from", Survivor.ELITES_FROM))
+	var opening: Array = r("opening", Survivor.OPENING)
+	var ramp := clampf(t / maxf(float(opening[2]), 1.0), 0.0, 1.0)
+	var ease := lerpf(float(opening[0]), 1.0, ramp)
+	var ease_hp := lerpf(float(opening[1]), 1.0, ramp)
 	return {
 		"minute": mins,
-		"alive_max": roundi(lerpf(float(r("alive_start", 18)), float(r("alive_end", 110)), 1.0 if final else k)),
+		"alive_max": roundi(lerpf(float(r("alive_start", Survivor.ALIVE[0])), float(r("alive_end", Survivor.ALIVE[1])), 1.0 if final else k)),
 		"pack_every": float(pack_every[1]) if final else lerpf(float(pack_every[0]), float(pack_every[1]), k),
 		"pack_size": roundi(lerpf(float(pack_size[0]), float(pack_size[1]), 1.0 if final else k)),
 		"wave_every": lerpf(float(wave_every[0]), float(wave_every[1]), k),
+		"pace": lerpf(float(pace[0]), float(pace[1]), k),
 		"elite_every": 0.0 if t < elites_from else float(elite_every[1] if t >= Survivor.BOSS_OPEN_AT else elite_every[0]),
-		"level": clampi(roundi(1.0 + float(r("level_per_min", 1.8)) * mins), 1, MAX_LEVEL),
-		"hp_mult": float(r("hp0", 0.5)) * pow(float(r("hp_growth", 1.12)), mins) * pk,
-		"atk_mult": float(r("atk0", 0.5)) * pow(float(r("atk_growth", 1.07)), mins) * pk,
+		"level": clampi(roundi(1.0 + float(r("level_per_min", Survivor.LEVEL_PER_MIN)) * mins), 1, MAX_LEVEL),
+		"hp_mult": float(r("hp0", Survivor.HP0)) * pow(float(r("hp_growth", Survivor.HP_GROWTH)), mins) * pk * ease_hp,
+		"atk_mult": float(r("atk0", Survivor.ATK0)) * pow(float(r("atk_growth", Survivor.ATK_GROWTH)), mins) * pk * ease,
+		"hard": t >= float(r("hard_waves_from", Survivor.HARD_WAVES_FROM)),
 		"final": final,
 	}
+
+
+## Bande d'indice d'équipement attendue à [param t] secondes de carte (Survivor.POWER_BAND, une ligne toutes les 5 min,
+## interpolée) : [bas, haut].
+static func power_band(t: float) -> Array:
+	var band: Array = r("power_band", Survivor.POWER_BAND)
+	var x := clampf(t / 300.0, 0.0, float(band.size() - 1))
+	var i := mini(floori(x), band.size() - 2)
+	var f := x - i
+	return [lerpf(float(band[i][0]), float(band[i + 1][0]), f), lerpf(float(band[i][1]), float(band[i + 1][1]), f)]
+
+
+## Coefficients visés [PV, dégâts] des monstres ordinaires pour un indice d'équipement de la run [param index] à
+## [param t] : MonsterScaling.target face à la bande de la minute, bornés par power_hp / power_atk (plus étroits que
+## ceux de la Survie : les pièces de la run SONT la progression attendue).
+static func power_target(index: float, t: float) -> Vector2:
+	var k := MonsterScaling.target(index, power_band(t))
+	var hp: Array = r("power_hp", Survivor.POWER_HP)
+	var atk: Array = r("power_atk", Survivor.POWER_ATK)
+	return Vector2(clampf(k.x, float(hp[0]), float(hp[1])), clampf(k.y, float(atk[0]), float(atk[1])))
 
 
 ## Message d'ouverture de la carte.
@@ -163,7 +194,12 @@ func _fire(ev: Dictionary) -> void:
 			d.message.emit("Le portail du boss est ouvert !\nEntre quand tu veux : le boss arrive à 20:00", 4.0)
 		"final_horde":
 			d.message.emit("Le boss arrive dans 1:00 !\nLa horde se déchaîne", 4.0)
-			_ring(FINAL_HORDE, monster_level(0), 16.0)
+			var sp := _squads()
+			if sp != null:
+				sp._event("encircle", d.time / 60.0, false)  # encerclement annoncé (cercles au sol), rôles mélangés
+				sp.wave(false, d.time / 60.0)  # puis une ruée ou une tenaille
+			else:
+				_ring(FINAL_HORDE, monster_level(0), 16.0)
 		"boss":
 			enter_arena(true)
 
@@ -210,25 +246,32 @@ func update_spawns(delta: float) -> bool:
 		if alive > int(cap * 0.8):
 			alive -= d._despawn_far()
 	_update_camps()
+	_update_power(delta)
 	var sp = _squads()  # composant de spawn de P15 (escouades mélangées par rôle, anneau espacé) s'il est là
 	if sp != null:
-		sp._tick_common(delta)
+		sp.pace = float(plan.pace)  # budget des événements (encerclement, escorte, ruée, tenaille)
+		sp.tick(delta)  # soigneurs, secteurs qui refroidissent, mesures
 	_pack_t -= delta
 	if _pack_t <= 0.0:
 		_pack_t = float(plan.pack_every)
 		if alive < cap:
-			if sp != null:
-				sp.spawn_squad(sp._pick_squad(), float(mini(int(plan.pack_size), cap - alive)), monster_level(0))
+			var budget := float(mini(int(plan.pack_size), cap - alive))
+			if sp != null and budget >= float(r("pack_split", Survivor.PACK_SPLIT)):
+				# deux escouades mélangées de deux côtés (angle d'or, MIN_GAP_DEG) plutôt qu'un gros groupe
+				var a: float = sp.pack(budget * 0.55, monster_level(0))
+				sp.spawn_squad(sp._pick_squad(), budget * 0.45, monster_level(0), [a] if a != INF else [])
+			elif sp != null:
+				sp.pack(budget, monster_level(0))
 			else:
-				_pack(mini(int(plan.pack_size), cap - alive), monster_level(0), 20.0, 28.0)
+				_pack(int(budget), monster_level(0), 20.0, 28.0)
 	_wave_t -= delta
 	if _wave_t <= 0.0:
 		_wave_t = float(plan.wave_every)
-		_wave_hard = not _wave_hard
+		_wave_hard = not _wave_hard and bool(plan.hard)  # (ouverture : seulement des vagues légères, sans élite)
 		var lvl := monster_level(1)
 		var mins := float(plan.minute)
 		if sp != null:
-			sp._event(sp._pick_event(_wave_hard), mins, false)  # encerclement annoncé, escorte, ruée, tenaille
+			sp.wave(_wave_hard, mins)  # encerclement annoncé, élite escortée, ruée d'essaim, tenaille
 			if _wave_hard and float(plan.elite_every) > 0.0:
 				_elite(1)
 		elif _wave_hard:
@@ -248,17 +291,23 @@ func update_spawns(delta: float) -> bool:
 	return true
 
 
-## Composant de spawn de la passe P15 (RunDirector.spawner, SpawnDirector) quand il est en place et pas en mode
-## « --spawn=legacy » ; null : le spawn propre au Survivant (meutes, anneaux). Appels dynamiques : le Survivant ne
-## dépend pas de sa présence.
-func _squads() -> Variant:
-	var sp = d.get("spawner")
-	if sp == null or "--spawn=legacy" in OS.get_cmdline_user_args():
+## Composant de spawn de la passe P15 (RunDirector.spawner, SpawnDirector : interface tick / pack / wave / pace) quand il
+## est en place et pas en mode « --spawn=legacy » ; null : le spawn propre au Survivant (meutes, anneaux).
+func _squads() -> SpawnDirector:
+	if d.spawner == null or SpawnDirector.legacy:
 		return null
-	for f in ["_tick_common", "spawn_squad", "_pick_squad", "_event", "_pick_event"]:
-		if not sp.has_method(f):
-			return null
-	return sp
+	return d.spawner
+
+
+## Puissance des monstres selon l'équipement de la run (MonsterScaling, voir Survivor.POWER_BAND) : mesurée toutes les
+## POWER_SAMPLE s, lissée ; appliquée aux monstres ordinaires qui apparaissent (scale_monster).
+func _update_power(delta: float) -> void:
+	_power_t -= delta
+	if _power_t > 0.0:
+		return
+	_power_t = POWER_SAMPLE
+	gear_idx = MonsterScaling.gear_index()
+	power = MonsterScaling.smooth(power, power_target(gear_idx, d.time), POWER_SAMPLE)
 
 
 func _alive() -> int:
@@ -268,8 +317,8 @@ func _alive() -> int:
 ## Gardiens d'élite des camps (comme en Survie : une fois chacun, puis toutes les 2 min) : une clé et un choix de
 ## cartes ; ils ne portent plus de sceau utile (le portail du boss n'en demande pas).
 func _update_camps() -> void:
-	if d._elites.is_empty():
-		return
+	if d._elites.is_empty() or d.time < float(r("camps_from", Survivor.CAMPS_FROM)):
+		return  # (ouverture : les camps d'élite dorment)
 	for k in d.map.camps.size():
 		var camp: Dictionary = d.map.camps[k]
 		if not camp.elite or d._flat(d.player.global_position, camp.pos) > RunDirector.CAMP_ACTIVATE or d.time < float(d._camp_ready_at.get(k, 0.0)):
@@ -330,33 +379,40 @@ func max_level() -> int:
 
 
 ## PV et dégâts d'un monstre qui apparaît : la courbe par minute × palier (à la place de la zone, de l'époque et de la
-## montée du début de la Survie). Gardien : PV fixes ; boss : dégâts seulement (PV fixes posés par setup_boss).
+## montée du début de la Survie). Gardien : PV fixes ; boss : dégâts × boss_atk × palier (PV fixes posés par setup_boss).
 func scale_monster(m: Monster, boss: bool) -> bool:
 	var plan := spawn_plan(d.time)
-	m.atk *= float(plan.atk_mult)
+	m.atk *= float(r("boss_atk", Survivor.BOSS_ATK)) * palier_mult() if boss else float(plan.atk_mult)
 	if m.has_meta("sv_guardian"):
 		m.max_hp = guardian_hp(int(m.get_meta("sv_guardian")))
 	elif not boss:
 		m.max_hp *= float(plan.hp_mult)
+		if d.state == "explore" and not (m is GiantMonster):
+			# équipement de la run au-dessus / en dessous de la bande attendue (lissé, plafonné avec Menace et pacte)
+			var greed_k := RunDirector.GREED_MONSTERS if d.greed else 1.0
+			var k := MonsterScaling.capped(power, Menace.hp_mult() * greed_k, greed_k)
+			m.max_hp *= k.x
+			m.atk *= k.y
 	m.hp = m.max_hp
 	return true
 
 
 ## PV fixes du gardien [param n] (0, 1, 2) × palier, avant la Menace (SPEC §8.2) : jamais d'après le héros.
 static func guardian_hp(n: int) -> float:
-	var hp: Array = r("guardian_hp", [40000.0, 150000.0, 450000.0])
+	var hp: Array = r("guardian_hp", Survivor.GUARDIAN_HP)
 	return float(hp[clampi(n, 0, hp.size() - 1)]) * palier_mult()
 
 
 ## PV fixes du boss final × palier, avant la Menace (SPEC §8.3).
 static func final_boss_hp() -> float:
-	return float(r("boss_hp", 1500000.0)) * palier_mult()
+	return float(r("boss_hp", Survivor.BOSS_HP)) * palier_mult()
 
 
 ## Monstre vaincu (après l'or et la clé d'élite) : ni équipement, ni coffre de récompense, ni fourniture, ni arme
-## secondaire, ni sceau ; seulement des potions (3 % monstre, 30 % élite).
+## secondaire, ni sceau ; seulement des potions (Survivor.POTION_DROP : monstre, élite).
 func on_monster_died(m: Monster) -> bool:
-	if not m.is_boss and randf() < (RunDirector.POTION_ELITE if m.is_elite else RunDirector.POTION_MONSTER):
+	var drop: Array = r("potion_drop", Survivor.POTION_DROP)
+	if not m.is_boss and randf() < float(drop[1] if m.is_elite else drop[0]):
 		d._drop_potion(m.global_position, Potions.roll_kind())
 	return true
 
@@ -528,7 +584,7 @@ func setup_boss(boss: Monster) -> void:
 
 ## Début de la rage du boss, en secondes dans l'arène (4:00).
 func boss_rage_at() -> float:
-	return float(r("boss_rage_at", 240.0))
+	return float(r("boss_rage_at", Survivor.BOSS_RAGE_AT))
 
 
 ## Boss vaincu : une seule carte, la run est gagnée (bilan après 6 s, en pause pendant un choix de carte).
@@ -599,11 +655,60 @@ func _sample_minute() -> void:
 	var row := {"m": m, "state": d.state, "level": d.player.level, "hp": snappedf(d.player.hp / maxf(d.player.max_hp, 1.0), 0.01),
 		"alive": _alive(), "kills": Run.kills, "mlvl": monster_level(0), "hp_mult": snappedf(float(plan.hp_mult), 0.01),
 		"atk_mult": snappedf(float(plan.atk_mult), 0.01), "menace": Menace.level, "gold": Profile.gold,
-		"skills": Run.skills.size(), "pieces": SurvivorGear.worn().size()}
+		"skills": Run.all_skills().size(), "pieces": SurvivorGear.worn().size(), "cards": cards_taken(),
+		"taken": roundi(damage_taken()), "max_hp": roundi(d.player.max_hp), "gear_index": snappedf(gear_idx, 0.01),
+		"power": [snappedf(power.x, 0.01), snappedf(power.y, 0.01)], "pity": Survivor.pity_given}
 	_minutes.append(row)
-	print("[sv] %02d:00 · %s · niveau %d · PV %d %% · monstres %d (niv. %d, PV ×%.2f, dégâts ×%.2f) · tués %d · Menace %d · or %d · sorts %d · pièces %d" % [
+	print("[sv] %02d:00 · %s · niveau %d · PV %d %% · monstres %d (niv. %d, PV ×%.2f, dégâts ×%.2f) · tués %d · Menace %d · or %d · sorts %d · pièces %d · cartes %d · subis %d · pv_max %d · indice %.2f · puissance ×%.2f/×%.2f · pitié %d%s" % [
 		m, d.state, row.level, roundi(float(row.hp) * 100.0), row.alive, row.mlvl, row.hp_mult, row.atk_mult, row.kills, row.menace,
-		row.gold, row.skills, row.pieces])
+		row.gold, row.skills, row.pieces, row.cards, row.taken, row.max_hp, gear_idx, power.x, power.y, Survivor.pity_given,
+		(" · boss PV %d %%" % roundi(100.0 * d._boss.hp / maxf(d._boss.max_hp, 1.0))) if d.state == "boss" and is_instance_valid(d._boss) else ""])
+	print("[sv-build] " + build_line())
+
+
+## Cartes prises dans la run : cartes du Survivant (arme, pièces, améliorations, évolutions, repli) + niveaux de sorts
+## (un nouveau sort = 1, chaque amélioration = 1). « Passer » n'en est pas une.
+static func cards_taken() -> int:
+	var n := 0
+	for k in Survivor.picks:
+		if String(k) != "skip":
+			n += int(Survivor.picks[k])
+	for s in Run.all_skills():
+		n += int(s.rank)
+	return n
+
+
+## Dégâts subis par le héros depuis le début de la run (compteurs du journal).
+static func damage_taken() -> float:
+	var t := 0.0
+	for k in ["normal", "elite", "boss", "autre"]:
+		t += float(RunJournal.counters.get("dmg_taken_" + k, 0.0))
+	return t
+
+
+## Build en une ligne (mesures, ligne « [sv-build] ») : arme et +N, set le plus porté, pièces et +N, sorts et niveaux,
+## passifs (nombre, au plafond), évolutions, statistiques clés du héros.
+func build_line() -> String:
+	var w: Dictionary = Profile.equipped.get("weapon", {})
+	var counts := Items.set_counts(Profile.equipped)
+	var best_set := ""
+	for sid in counts:
+		if best_set == "" or int(counts[sid]) > int(counts[best_set]):
+			best_set = String(sid)
+	var ups: PackedStringArray = []
+	var plus10 := 0
+	for s in Items.SLOTS:
+		var it: Dictionary = Profile.equipped.get(s, {})
+		if not it.is_empty():
+			ups.append("%s+%d" % [s, int(it.get("upgrade", 0))])
+			plus10 += 1 if int(it.get("upgrade", 0)) >= 10 else 0
+	var capped := Run.passive_power.keys().filter(func(id): return float(Run.passive_power[id]) >= SurvivorGear.boon_cap(String(id)) - 0.001).size()
+	var evos := Run.passives.keys().filter(func(id): return not (Boons.get_def(String(id)).get("requires", []) as Array).is_empty())
+	var p := d.player
+	return "arme=%s+%d set=%s:%d pièces=%d plus10=%d up=%s sorts=%s passifs=%d plafond=%d évolutions=%d crit=%.2f mcrit=%.2f critdmg=%.2f vit=%.2f recharge=%.2f dégâts=%.2f atk=%d matk=%d pv=%d" % [
+		Items.weapon_type_of(w) if not w.is_empty() else "-", int(w.get("upgrade", 0)), SurvivorPool.family(best_set) if best_set != "" else "-",
+		int(counts.get(best_set, 0)), SurvivorGear.worn().size(), plus10, ",".join(ups), ",".join(PackedStringArray(Run.all_skills().map(func(s): return str(int(s.rank))))),
+		Run.passive_power.size(), capped, evos.size(), p.crit, p.mcrit, p.crit_dmg, p.atk_speed, p.cdr, p.dmg_mult, roundi(p.atk), roundi(p.matk), roundi(p.max_hp)]
 
 
 func _journal_context() -> Dictionary:

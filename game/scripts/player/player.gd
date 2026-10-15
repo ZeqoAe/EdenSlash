@@ -334,6 +334,8 @@ func recalc_stats() -> void:
 	pickup_mult = 1.0 + ps.get("pickup", 0.0)
 	xp_mult = 1.0 + ps.get("xp_pct", 0.0)
 	execute = minf(ps.get("execute", 0.0), 0.3)
+	if sv:
+		Survivor.cap_hero(self)  # Survivant : critique, dégâts critiques et vitesses plafonnés (lot S7)
 	if PvpCaps.active():
 		PvpCaps.soften(self)  # duel équipé : bonus en % ramenés avant les plafonds
 	pvp_capped = PvpCaps.apply(self) if PvpCaps.active() else []  # duel : plafonds JcJ

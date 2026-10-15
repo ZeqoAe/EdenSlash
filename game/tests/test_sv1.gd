@@ -164,8 +164,8 @@ func _unit() -> void:
 		and Profile.bag.keys().all(func(k): return String(k).begins_with("potion:")))
 	check("la réserve de fournitures reste au hub (%s)" % Profile.stash, Profile.stash == {"drill": 3})
 	check("zone choisie, époque I carte 1", Run.zone_id == "beluga" and Survivor.zone_id == "beluga" and Run.epoch == 1 and Run.stage == 1)
-	check("profil de règles « survivor »", ModeRules.profile_name() == "survivor" and is_equal_approx(Survivor.rule("boss_hp"), 1500000.0))
-	check("expérience ×2 au niveau 1, ×1,15 au niveau 10 et après", is_equal_approx(Survivor.xp_mult(1), 2.0) and is_equal_approx(Survivor.xp_mult(10), 1.15) and is_equal_approx(Survivor.xp_mult(40), 1.15))
+	check("profil de règles « survivor »", ModeRules.profile_name() == "survivor" and is_equal_approx(Survivor.rule("boss_hp"), Survivor.BOSS_HP))
+	check("expérience ×2 au niveau 1, ×1,15 au niveau 10, puis en baisse (lot S7)", is_equal_approx(Survivor.xp_mult(1), 2.0) and is_equal_approx(Survivor.xp_mult(10), 1.15) and is_equal_approx(Survivor.xp_mult(40), Survivor.XP_LATE))
 	check("arme : celle de la classe tant qu'aucune n'est portée", Run.weapon_type() == Items.default_weapon_type("warrior"))
 	Profile.equipped["weapon"] = {"slot": "weapon", "wtype": "bow", "eden": 0, "sv": true}
 	check("arme portée d'un autre type : son type (%s)" % Run.weapon_type(), Run.weapon_type() == "bow")
