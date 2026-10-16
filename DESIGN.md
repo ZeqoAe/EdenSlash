@@ -783,7 +783,8 @@ d'apparence (lot S6). Socle (S1, 0.1.194) :
 - **Cartes** (S3, `core/survivor_cards.gd`) : à chaque montée de niveau, 3 cartes sur des cibles différentes : une carte
   d'**équipement** (une arme tant qu'aucune n'est portée, sinon nouvelle pièce d'un emplacement libre ou amélioration +2 d'une
   pièce ou de l'arme, +4 en légendaire, jusqu'à +10 ; à +6 / +8 / +10 le passif gagné est écrit sur la carte), une carte de
-  **sort** (nouveau sort du kit entier de la classe, 6 au plus, ou amélioration de niveau 1 à 10 : effet de `Cards.skill_upgrade`
+  **sort** (nouveau sort du kit entier de la classe, **12 au plus** depuis S9 : la grille entière, 4 cases × le sort et ses 2
+  enchaînements ; au-delà de 6 sorts les améliorations de sort se partagent le poids de 6, `spell_up_norm`), ou amélioration de niveau 1 à 10 : effet de `Cards.skill_upgrade`
   cumulé, niveau 5 au moins épique, niveau 10 légendaire ; un nouveau sort tant que le héros en a moins de 2), une carte libre au
   poids (profil `survivor` : `w_*`, pitié ×2 après 6 choix, évolution légendaire quand ses passifs sont portés) ; au plus 2
   nouvelles pièces ; cartes de repli (or, soin, relance) seulement s'il manque des cartes. Plus de carte commune.
@@ -818,7 +819,9 @@ d'apparence (lot S6). Socle (S1, 0.1.194) :
   et Passer sous la rangée (manette : LB relance, RB passe). Trois fiches à la 1re rencontre, dans le choix lui-même (première
   carte, pièce à vie, paliers). Pause : page **Build** d'abord (emplacements verrouillés, sorts x / 10, passifs cumulés, sets
   2 / 3 / 5, statistiques), pas de page d'inventaire. HUD : frise des 20 minutes (gardiens, portail, boss) puis jauge de la
-  rage du boss, « Équipement x / 9 · Sorts x / 6 », niveau de chaque sort en chiffre sur sa case.
+  rage du boss, « Équipement x / 9 · Sorts x / 12 », niveau de chaque sort en chiffre sur sa case.
+- **Orbes d'expérience** (S9, `world/xp_orbs.gd`, toutes les runs) : 300 orbes au sol au plus ; au-delà, la nouvelle orbe apparaît
+  sous le monstre et reprend la valeur de l'orbe oubliée la plus loin du héros (jamais perdue, toujours visible là où il se bat).
 - **Fin de run et récompenses** (S6, `core/survivor_rewards.gd`) : **seulement des coffres d'apparence** (jamais d'insignes, de maîtrise,
   de cristaux, de découvertes ni de puissance). Trois paliers d'avancée : tenir 10 minutes (temps de carte, pauses exclues) → coffre
   commun ; trois gardiens vaincus → rare ; boss vaincu → mythique (**légendaire dès le palier II**) et un titre de victoire par

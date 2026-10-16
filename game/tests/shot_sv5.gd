@@ -42,7 +42,8 @@ static func rich_state(level := 34, minutes := 14.0) -> void:
 	var w := SurvivorCards.weapon_card()
 	Run.apply_card(w)
 	var skills: Array = Run.class_data().skills
-	for k in mini(5, skills.size()):
+	var n_spells := int(OS.get_environment("SV5_SPELLS")) if OS.get_environment("SV5_SPELLS") != "" else 5  # S9 : 12 = grille pleine
+	for k in mini(n_spells, skills.size()):
 		Run.apply_card(SurvivorCards.spell_card(int(skills[k].id)))
 	var ranks := [7, 4, 10, 2, 1]
 	for k in Run.all_skills().size():
@@ -113,6 +114,7 @@ func _cards() -> void:
 
 
 func _world(what: String) -> void:
+	await get_tree().process_frame  # (« build » seul : la racine monte encore ses enfants)
 	Profile.reset_all()
 	Profile.tutorial = {"mode": "skip", "steps": [], "seen": [], "version": Version.NUMBER}
 	Profile.selected_class = "warrior"
@@ -120,6 +122,8 @@ func _world(what: String) -> void:
 	var world: Node = load("res://scenes/world.tscn").instantiate()
 	get_tree().root.add_child(world)
 	await get_tree().create_timer(1.5, true, false, true).timeout
+	while world.cards == null:  # (le monde se monte en plusieurs images)
+		await get_tree().process_frame
 	world.cards._queue.clear()
 	world.cards._show_next()
 	world.player.dev_invincible = true
@@ -136,7 +140,7 @@ func _world(what: String) -> void:
 	world.director.time = 14.0 * 60.0 + 12.0
 	if what in ["build", "tout"]:
 		world.pause_menu.open()
-		await _shot("build", 1.0)
+		await _shot("build", 3.0)  # (le fondu d'entrée du monde doit être fini)
 		world.pause_menu.close()
 		await get_tree().process_frame
 	if what in ["hud", "tout"]:

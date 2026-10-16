@@ -86,6 +86,8 @@ const ROYALE := {
 const SURVIVOR := {
 	# cartes (§2.2) : poids des familles, pitié, relances, bannissements, « Passer »
 	"w_piece_new": 1.0, "w_piece_up": 0.8, "w_weapon_up": 2.5, "w_spell_new": 3.0, "w_spell_up": 1.1, "w_evolution": 4.0,
+	# au-delà de spell_up_norm sorts (12 au plus, lot S9), les améliorations de sort se partagent le poids de spell_up_norm sorts
+	"spell_up_norm": 6.0,
 	"pity_after": 6, "luck_per_min": 0.02, "base_rerolls": 2, "bans": 3, "skip_gold_base": 15, "skip_gold_per_level": 3,
 	# pièces (DECISIONS §1) : qualité 100 à 120 %, jet parfait = 120 %
 	"quality_min": 1.0, "perfect_quality": 1.2,

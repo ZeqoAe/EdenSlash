@@ -4,7 +4,7 @@ extends HBoxContainer
 ##   1. Équipement : l'arme en grand (+N, jauge des paliers +6 / +8 / +10, auto-attaque), les 8 emplacements (icône,
 ##      couleur de rareté, +N, cadenas, losanges des paliers atteints ; « Libre » sinon), les statistiques du héros.
 ##      Une pièce ne se retire ni ne se change : un clic le rappelle sobrement. Survol : la carte de la pièce.
-##   2. Sorts : 6 au plus, niveau x / 10 (jauge, losanges aux niveaux 5 et 10) et effet cumulé.
+##   2. Sorts : 12 au plus (Survivor.SPELL_MAX), niveau x / 10 (jauge, losanges aux niveaux 5 et 10) et effet cumulé.
 ##   3. Passifs actifs (valeur cumulée de toutes les pièces, « max » au plafond) et bonus de set (2 / 3 / 5 pièces).
 
 signal resume_requested
@@ -210,8 +210,9 @@ func _refresh_spells() -> void:
 		v.add_child(SurvivorCardView.Segments.new(mx, rank, 0, [5, 10], UiTheme.GOLD))
 		var tot := Hud._label(v, SurvivorCardView.spell_total(s).replace("[b]", "").replace("[/b]", ""), UiTheme.MIN_TEXT, UiTheme.MUTED)
 		tot.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	for i in Survivor.SPELL_MAX - all.size():
-		var free := Hud._label(_spells, "+  Libre", 15, Color(UiTheme.MUTED, 0.6))
+	var left := Survivor.SPELL_MAX - all.size()  # places libres en une ligne (12 lignes « Libre » noyaient la colonne)
+	if left > 0:
+		var free := Hud._label(_spells, "+  %d place%s libre%s" % [left, "s" if left > 1 else "", "s" if left > 1 else ""], 15, Color(UiTheme.MUTED, 0.6))
 		free.custom_minimum_size = Vector2(0, 30)
 
 

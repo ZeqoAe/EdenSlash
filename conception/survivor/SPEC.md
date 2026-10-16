@@ -18,6 +18,8 @@
 | Sets | Bonus à **2, 3 et 5 pièces** par famille (Assaut, Vivacité, Sortilège, Grâce) ; 5/5 ≈ 1 run sur 23 pour qui le cherche | `SurvivorPool` |
 | Boucle | 20 min, gardiens à 5 / 10 / 15 min, portail du boss à 15:00, boss forcé à 20:00, rage du boss après 4:00 ; réglages mesurés de S7 (boss 6 000 000 PV, gardiens 50 000 / 220 000 / 700 000) | `core/survivor_director.gd` |
 | **Paliers I à V** | I Normal · II Endurci (monstres plus rapides) · III Implacable (soins reçus ÷ 2) · IV Cauchemar (Menace 2 dès le départ, une mécanique de boss en plus) · V Légende (deux gardiens à 15:00, deux mécaniques de boss en plus, rage du boss après 3:00). Chaque palier garde les règles du précédent ; PV et dégâts × `palier_mult` (valeurs mesurées : `R_S8.md`). **Un palier s'ouvre en gagnant le précédent dans ce mode** (mode dev : tous) | `Survivor.PALIERS`, `ModeRules.SURVIVOR.palier_mult` |
+| Sorts (S9) | **12 au plus** (`Survivor.SPELL_MAX`) : la grille entière de la Survie, 4 cases × le sort et ses 2 enchaînements (retour du joueur : « 6 au lieu des douze ») ; au-delà de 6 sorts, les améliorations de sort se partagent le poids de 6 (`spell_up_norm`) ; §5 « 6 sorts » remplacé | `SurvivorCards.candidates` |
+| Orbes (S9) | Sol plein (300 orbes) : la nouvelle orbe apparaît sous le monstre et reprend l'orbe oubliée la plus loin du héros (avant : ajoutée à la plus proche, souvent loin derrière : « plus d'orbes » vers 15 min) | `XpOrbs.spawn`, `R_S9.md` |
 | Lobby | Page du mode : trois idées, classe, **sélecteur de palier** (le plus haut gagné par défaut, les fermés grisés avec leur condition), coffres d'apparence du palier choisi, zone, Lancer | `ui/lobby.gd` `_menu_survivor` |
 
 Demande du joueur (15/10, mot pour mot dans le brief de l'orchestrateur) : à côté de la Survie actuelle (progression,
@@ -310,7 +312,7 @@ Le titre de la carte : « Taille lourde — +4 → +6 », lignes = `WeaponAttack
 
 ## 5. Les sorts
 
-- **Pool** : sorts de la classe débloqués (`Progression.skill_unlocked`), jusqu'à **6 sorts** (`SPELL_MAX`) : les 4 cases,
+- **(Remplacé, S9 : 12 sorts, la grille entière ; voir en tête.)** **Pool** : sorts de la classe débloqués (`Progression.skill_unlocked`), jusqu'à **6 sorts** (`SPELL_MAX`) : les 4 cases,
   puis des enchaînements (types `skill` et `chain` existants, `Run.arrange` selon le préréglage du Grimoire).
   **DÉCISION** : 6 et non 12 (Survie) : 6 × 9 améliorations = 54 cartes possibles, déjà autant que tout l'équipement ;
   au-delà les choix se dilueraient (§9).

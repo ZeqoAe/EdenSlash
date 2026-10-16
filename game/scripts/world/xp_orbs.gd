@@ -3,7 +3,7 @@ extends Node3D
 ## Orbes d'expérience lâchées par les monstres : le héros les ramasse en passant dans sa
 ## zone de collecte (agrandie par la carte Aimant) ; la carte Rappel les ramène toutes.
 ## Toutes les orbes sont dessinées en un seul appel (MultiMesh) : la rage en lâche des
-## centaines. Au-delà de MAX_ORBS, une nouvelle orbe s'ajoute à la plus proche.
+## centaines. Au-delà de MAX_ORBS, la nouvelle orbe reprend la valeur de l'orbe la plus loin du héros (jamais perdue).
 
 const MAX_ORBS := 300
 const MAGNET := 3.5  # rayon de collecte de base (m) : les orbes y sont attirées
@@ -17,6 +17,11 @@ var _mm: MultiMesh
 var _player: Player
 var _recall_until := -1.0
 var _t := 0.0
+## Mesures (lignes « [sv-xp] », test_sv9) : orbes posées, orbes oubliées reprises par une nouvelle (plein), expérience
+## lâchée / ramassée / reprise (brute, avant le multiplicateur du héros).
+var stats := {"spawned": 0, "recycled": 0, "xp_in": 0.0, "xp_got": 0.0, "xp_recycled": 0.0}
+## Pilote automatique avec la vraie zone de collecte (--human-magnet) : mesure ce qu'un joueur ramasse.
+var _human_magnet := "--human-magnet" in OS.get_cmdline_user_args()
 
 
 func _ready() -> void:
@@ -52,19 +57,44 @@ func spawn(at: Vector3, value: float) -> void:
 	if value <= 0.0:
 		return
 	var p := at + Vector3(randf_range(-0.5, 0.5), 0.35, randf_range(-0.5, 0.5))
+	stats.xp_in += value
 	if _pos.size() >= MAX_ORBS:
-		var best := 0
-		var best_d := INF
-		for i in _pos.size():
-			var d := _pos[i].distance_squared_to(p)
-			if d < best_d:
-				best_d = d
-				best = i
-		_val[best] += value
-		return
+		# plein : l'orbe oubliée la plus loin du héros rejoint la nouvelle (lot S9). Avant, la nouvelle s'ajoutait à l'orbe la
+		# plus proche d'elle, souvent laissée loin derrière : passé 300 orbes au sol, plus aucune n'apparaissait sous les
+		# monstres et l'expérience partait là où le héros ne retournait pas (mesuré : 78 % des lâchers à plus de 12 m).
+		var far := _farthest_free(p)
+		value += _val[far]
+		stats.recycled += 1
+		stats.xp_recycled += _val[far]
+		_remove(far)
+	stats.spawned += 1
 	_pos.append(p)
 	_val.append(value)
 	_pull.append(0)
+
+
+## Indice de l'orbe la plus loin du héros (de [param from] sans héros) parmi celles qui ne volent pas déjà vers lui.
+func _farthest_free(from: Vector3) -> int:
+	var ref := _player.global_position if _player != null and is_instance_valid(_player) else from
+	var best := 0
+	var best_d := -1.0
+	for i in _pos.size():
+		var d := _pos[i].distance_squared_to(ref) if _pull[i] == 0 else -0.5
+		if d > best_d:
+			best_d = d
+			best = i
+	return best
+
+
+## Retrait rapide : la dernière orbe prend la place de [param i].
+func _remove(i: int) -> void:
+	var last := _pos.size() - 1
+	_pos[i] = _pos[last]
+	_val[i] = _val[last]
+	_pull[i] = _pull[last]
+	_pos.resize(last)
+	_val.resize(last)
+	_pull.resize(last)
 
 
 ## Carte Rappel : toutes les orbes reviennent vers le héros.
@@ -87,6 +117,7 @@ func collect_all_now() -> void:
 
 
 func _give(total: float) -> void:
+	stats.xp_got += total
 	if total > 0.0 and _player and not _player.is_dead:
 		_player.gain_xp(roundi(total * _player.xp_mult))
 
@@ -98,7 +129,7 @@ func _process(delta: float) -> void:
 		if _player == null:
 			return
 	var pp := _player.global_position + Vector3.UP * 0.6
-	var radius := (AUTOPLAY_MAGNET if _player.autoplay and not _player.autoplay_idle else MAGNET) * _player.pickup_mult
+	var radius := (AUTOPLAY_MAGNET if _player.autoplay and not _player.autoplay_idle and not _human_magnet else MAGNET) * _player.pickup_mult
 	var recalling := _t < _recall_until
 	var gained := 0.0
 	var i := _pos.size() - 1
@@ -110,14 +141,7 @@ func _process(delta: float) -> void:
 		if _pull[i] == 1:
 			if d < COLLECT or _player.is_dead:
 				gained += _val[i]
-				# retrait rapide : la dernière orbe prend la place
-				var last := _pos.size() - 1
-				_pos[i] = _pos[last]
-				_val[i] = _val[last]
-				_pull[i] = _pull[last]
-				_pos.resize(last)
-				_val.resize(last)
-				_pull.resize(last)
+				_remove(i)
 			else:
 				_pos[i] += to / d * minf(d, maxf(9.0, d * 5.0) * delta)
 		i -= 1

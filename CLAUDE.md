@@ -110,6 +110,8 @@ dans `Compass` si elle change la quête + `test_nav_screens`. Les activités « 
 Spécification : `conception/survivor/SPEC.md` (sa tête « Décisions finales » prime) ; rapports `R_S1` à `R_S8`.
 Lancement direct : `world.tscn -- --survivor`. Tests `test_sv1` à `test_sv8` ; `test_sv7` relit `tests/sv7_mesures.json` :
 changer un réglage demande de refaire les mesures (`tools/sim_survivor.py`).
+S9 (`R_S9.md`) : 12 sorts au plus (`Survivor.SPELL_MAX` = la grille 4 × 3, poids des améliorations borné par `spell_up_norm`) ;
+orbes : sol plein = la nouvelle reprend l'orbe la plus loin (`XpOrbs.spawn`) ; collecte réelle mesurée par `--extra=--human-magnet`, `test_sv9`.
 
 ### Boss et bibliothèque
 `core/boss_library.gd` + `data/bosses.json` (48 boss, 6 par zone), mécaniques = briques `ai/boss_bricks.gd` (29, 10 familles)

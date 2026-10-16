@@ -223,7 +223,7 @@ func _rolls() -> void:
 	check("une carte de sort quand c'est possible (%d)" % bad.spell, bad.spell == 0)
 	check("cibles toutes différentes (%d)" % bad.keys, bad.keys == 0)
 	check("jamais de carte commune, de trophée ni d'équipement de la Survie (%d)" % bad.boon, bad.boon == 0)
-	check("6 sorts : plus de nouveau sort (%d)" % bad.spells6, bad.spells6 == 0)
+	check("%d sorts : plus de nouveau sort (%d)" % [Survivor.SPELL_MAX, bad.spells6], bad.spells6 == 0)
 	check("emplacement pris jamais reproposé (%d)" % bad.filled, bad.filled == 0)
 	check("sort mené au niveau 5 : au moins épique (%d) ; au niveau 10 : légendaire (%d)" % [bad.tier5, bad.tier10], bad.tier5 == 0 and bad.tier10 == 0)
 	check("sans arme : une arme proposée (%d)" % bad.noweapon, bad.noweapon == 0)
@@ -300,9 +300,15 @@ func _apply() -> void:
 	check("4 nouveaux sorts : les 4 cases", Run.skills.size() == 4)
 	var ch := SurvivorCards.spell_card(int(ids[4]))
 	Run.apply_card(ch)
-	Run.apply_card(SurvivorCards.spell_card(int(ids[5])))
-	check("5e et 6e sorts : enchaînements (%s)" % ch.type, ch.type == "chain" and Run.all_skills().size() == 6)
-	check("6 sorts : plus de nouveau sort", SurvivorCards.spell_card(int(ids[6])).is_empty() if ids.size() > 6 else true)
+	var chained: bool = String(ch.type) == "chain"
+	for i in range(5, Survivor.SPELL_MAX):
+		var c := SurvivorCards.spell_card(int(ids[i]))
+		chained = chained and String(c.get("type", "")) == "chain"
+		Run.apply_card(c)
+	check("la grille entière : 12 sorts, les 4 cases et 2 enchaînements par case (%s)" % ch.type,
+		Survivor.SPELL_MAX == Run.MAX_SKILLS * (1 + Run.MAX_CHAIN) and chained and Run.all_skills().size() == Survivor.SPELL_MAX
+		and range(Run.MAX_SKILLS).all(func(k): return Run.chain_of(k).size() == Run.MAX_CHAIN))
+	check("%d sorts : plus de nouveau sort" % Survivor.SPELL_MAX, SurvivorCards.spell_card(int(ids[Survivor.SPELL_MAX])).is_empty() if ids.size() > Survivor.SPELL_MAX else true)
 	var sid := int(ids[0])
 	var tiers: Array = []
 	for i in 9:

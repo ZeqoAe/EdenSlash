@@ -8,7 +8,7 @@ extends RefCounted
 ##   +4 en légendaire, jusqu'à +10 ; le passif du palier +6 / +8 / +10 est tiré QUAND la carte est proposée
 ##   (SurvivorGear.upgrade_offer) et écrit sur la carte ; une relance ou un bannissement en tirent un autre) ;
 ## - sort : Nouveau sort (« skill » puis « chain », types de Run : tout le kit de la classe, sans la maîtrise du compte,
-##   6 sorts au plus) et Amélioration de sort (« upgrade » de Run, niveau 1 à 10, Cards.skill_upgrade) ;
+##   Survivor.SPELL_MAX sorts au plus : la grille de 12) et Amélioration de sort (« upgrade » de Run, niveau 1 à 10, Cards.skill_upgrade) ;
 ## - Évolution (« sv_evolution » : évolution légendaire de Boons quand ses passifs sont portés) ;
 ## - repli (« sv_gold », « sv_heal », « sv_reroll ») : seulement s'il reste moins de 3 cartes valables.
 ## Plus aucune carte commune (Boons) : leurs effets sont les passifs des pièces (SurvivorGear).
@@ -160,9 +160,13 @@ static func candidates() -> Array:
 		var fam_w := Survivor.rule("w_spell_new") * (1.0 if owned.size() < 2 else (2.0 / 3.0 if owned.size() < Run.MAX_SKILLS else 1.0 / 3.0))
 		for s in open:
 			add.call({"fam": "spell", "kind": "spell_new", "key": "spell:%d" % int(s.id), "id": int(s.id), "w": fam_w / open.size()})
+	# au-delà de spell_up_norm sorts, le poids de chacun baisse : la famille « sort » pèse autant qu'avec spell_up_norm
+	# sorts (12 sorts ne noient pas l'équipement sous les améliorations de sort, lot S9)
+	var up_w := Survivor.rule("w_spell_up") * minf(1.0, Survivor.rule("spell_up_norm") / maxf(1.0, owned.size())) \
+		if Survivor.rule("spell_up_norm") > 0.0 else Survivor.rule("w_spell_up")
 	for s in owned:
 		if int(s.rank) < int(Cards.rules().max_rank):
-			add.call({"fam": "spell", "kind": "spell_up", "key": "spup:%d" % int(s.id), "id": int(s.id), "w": Survivor.rule("w_spell_up")})
+			add.call({"fam": "spell", "kind": "spell_up", "key": "spup:%d" % int(s.id), "id": int(s.id), "w": up_w})
 	for id in evolutions_open():
 		add.call({"fam": "evo", "kind": "evo", "key": "evo:" + id, "id": id, "w": Survivor.rule("w_evolution")})
 	return out

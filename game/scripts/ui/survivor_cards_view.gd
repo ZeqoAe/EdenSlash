@@ -119,7 +119,8 @@ static func _upgrade(v: VBoxContainer, card: Dictionary, col: Color) -> void:
 	var q0 := float(item.get("quality", 1.0))
 	var q1 := minf(q0 + float(SurvivorCards.QUALITY_UP.get(String(card.get("tier", "common")), 0.0)), Survivor.rule("perfect_quality"))
 	after["quality"] = q1
-	var lines := delta_lines(item, after, 2)
+	var two := gained.size() > 1  # légendaire qui éveille deux passifs : carte resserrée (1280 × 720, test_sv5)
+	var lines := delta_lines(item, after, 1 if two else 2)
 	if q1 > q0 + 0.0001:
 		lines.append("[color=#b4b0c8]Jet[/color]  %d → [b][color=#7fe08a]%d[/color][/b] / %d  [color=#7fe08a]▲[/color]" % [roundi(q0 * 100.0), roundi(q1 * 100.0), roundi(Survivor.rule("perfect_quality") * 100.0)])
 	if gained.is_empty():
@@ -129,9 +130,9 @@ static func _upgrade(v: VBoxContainer, card: Dictionary, col: Color) -> void:
 	if slot == "weapon" and offer.has("auto"):
 		var auto := WeaponAttacks.upgrade_lines(WeaponAttacks.spec_for(item), Run.weapon_ups.get("weapon", {}), offer.auto)
 		if not auto.is_empty():
-			_rich(v, "[color=#ffcf6b]Auto-attaque[/color]  " + " · ".join(auto.slice(0, 2)), 14)
+			_rich(v, "[color=#ffcf6b]Auto-attaque[/color]  " + " · ".join(auto.slice(0, 1 if two else 2)), 14)
 	var owned: Array = (item.get("sv_passives", []) as Array).map(func(p): return String(Boons.get_def(String(p.id)).get("name", p.id)))
-	if not owned.is_empty():
+	if not owned.is_empty() and not two:
 		var l := _label(v, "Acquis : " + " · ".join(PackedStringArray(owned)), UiTheme.MIN_TEXT, DIM)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 

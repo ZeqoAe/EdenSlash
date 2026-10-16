@@ -7,6 +7,8 @@ journaux bruts et résume minute par minute.
     python tools/sim_survivor.py --reparse <dossier>          # relit des journaux déjà faits
     python tools/sim_survivor.py --project <copie>/game ...   # mesure une copie propre (run_tests.preparer_copie)
 
+Collecte réelle (lot S9) : --extra=--human-magnet donne au pilote la zone de collecte d'un joueur (sinon 40 m : il ne va
+pas chercher les orbes) ; lignes [sv-xp] (orbes au sol, reprises, expérience lâchée / ramassée).
 Profils de joueur (--human : part des coups évités, SPEC §8.4) : débutant 0,3, moyen 0,5, bon 0,7. Le pilote prend ses
 cartes avec SurvivorCards.auto_pick (un peu de hasard) et reste sur la carte jusqu'à l'entrée forcée de 20:00.
 Chaque processus a son propre dossier utilisateur (APPDATA) : ni le profil ni le journal du joueur ne sont touchés.
@@ -67,6 +69,10 @@ def parse(log):
             mm = re.search(pat, rest)
             if mm:
                 r[key][mi] = float(mm.group(1))
+    # expérience (lot S9) : orbes au sol, reprises (sol plein), xp lâchée / ramassée cumulées
+    r["xp"] = {}
+    for m in re.finditer(r"\[sv-xp\] (\d+):00 · niveau \d+ · au sol (\d+) · posées \d+ · reprises (\d+) · xp lâchée (\d+) · ramassée (\d+)", out):
+        r["xp"][int(m.group(1))] = {"ground": int(m.group(2)), "recycled": int(m.group(3)), "in": int(m.group(4)), "got": int(m.group(5))}
     for m in re.finditer(r"\[sv\] gardien (\d) vaincu en (\d+) s", out):
         r["guardians"][int(m.group(1))] = int(m.group(2))
     r["gold_spent"] = sum(int(x) for x in re.findall(r"\[sv\] pilote : marchand à [\d:]+, (\d+) or", out))
@@ -129,6 +135,10 @@ def summary(res):
     print("\nniveau par minute (médiane, tous profils) : " + " ".join("%d:%s" % (m, fmt(med([r["levels"].get(m) for r in res]))) for m in range(1, 21)))
     print("or : restant à la dernière minute de carte (médiane) %s ; marchands %s or (médiane) ; erreurs de script %d" % (
         fmt(med([r.get("gold_20") for r in res])), fmt(med([r.get("gold_spent") for r in res])), sum(r.get("script_errors", 0) for r in res)))
+    coll = [r["xp"][max(r["xp"])]["got"] / max(1, r["xp"][max(r["xp"])]["in"]) for r in res if r.get("xp")]
+    if coll:
+        print("expérience ramassée / lâchée (médiane) : %d %% ; orbes reprises (sol plein) : %s" % (
+            round(100 * statistics.median(coll)), [r["xp"][max(r["xp"])]["recycled"] for r in res if r.get("xp")]))
     deaths = sorted(r.get("t", 0) for r in res if r.get("res") == "defaite")
     print("défaites : %d, minutes de mort : %s" % (len(deaths), [round(t / 60.0, 1) for t in deaths]))
     for r in res:

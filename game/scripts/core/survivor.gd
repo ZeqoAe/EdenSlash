@@ -22,7 +22,10 @@ const READY := true
 const RUN_TIME := 1200.0  # 20 minutes de carte, puis le boss
 const BOSS_OPEN_AT := 900.0  # le portail du boss s'ouvre à 15:00 (entrée en avance possible)
 const GUARDIAN_TIMES := [300.0, 600.0, 900.0]  # géants gardiens à 5, 10 et 15 minutes
-const SPELL_MAX := 6  # sorts pris au plus (4 cases + enchaînements)
+## Sorts pris au plus : la grille entière de la run, comme en Survie (Run.MAX_SKILLS cases × (1 + Run.MAX_CHAIN) : le sort
+## et ses deux enchaînements), soit 12 (lot S9 : 6 au départ, le joueur attendait sa grille complète). Contre la dilution,
+## le poids d'amélioration de chaque sort baisse au-delà de spell_up_norm sorts (SurvivorCards.candidates).
+const SPELL_MAX := 12
 const MAX_ITEM_LEVEL := 90  # puissance des pièces : celle du héros, plafonnée à 90
 const UP_STEP := 2  # +N d'une carte d'amélioration de pièce (commune)
 const WAKE_AT := [6, 8, 10]  # paliers où une pièce gagne un passif

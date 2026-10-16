@@ -785,6 +785,11 @@ func _sample_minute() -> void:
 		row.gold, row.skills, row.pieces, row.cards, row.taken, row.max_hp, gear_idx, power.x, power.y, Survivor.pity_given,
 		(" · boss PV %d %%" % roundi(100.0 * d._boss.hp / maxf(d._boss.max_hp, 1.0))) if d.state == "boss" and is_instance_valid(d._boss) else ""])
 	print("[sv-build] " + build_line())
+	if d.orbs != null:  # expérience (lot S9) : orbes au sol, posées, reprises (sol plein), lâchée / ramassée / reprise
+		var o: Dictionary = d.orbs.stats
+		print("[sv-xp] %02d:00 · niveau %d · au sol %d · posées %d · reprises %d · xp lâchée %d · ramassée %d · reprise %d" % [
+			m, d.player.level, d.orbs.count(), int(o.spawned), int(o.recycled), roundi(float(o.xp_in)), roundi(float(o.xp_got)),
+			roundi(float(o.xp_recycled))])
 
 
 ## Cartes prises dans la run : cartes du Survivant (arme, pièces, améliorations, évolutions, repli) + niveaux de sorts
