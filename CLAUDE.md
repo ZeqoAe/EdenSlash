@@ -163,6 +163,8 @@ Chacun pour soi général : `Combatant.ffa_id` / `set_ffa()` / `clear_ffa()`, gr
 Spécification `conception/autochess/SPEC.md` (+ annexes A, B ; lots AC-A à AC-J). Données (AC-A, `R_AC_A.md`) : `core/autochess_data.gd`
 (`AutochessData` : réglages en tête ; traits, objets, atouts avec clés d'effet `effect` + `params` / `tiers`, appliquées par AC-H), 60 unités
 `data/autochess_units.json` générées par `tools/autochess_units.py` (rôle, allonge, sort signature ; aucun cerveau : IA scriptée seule) ; test `test_ac_data`.
+Partie (AC-B, `R_AC_B.md`) : `core/autochess.gd` (`Autochess` : machine d'étapes sans scène prep → combat → recap, actions `buy` / `sell` / `reroll` / `buy_xp` / `place` / `equip` / `choose`,
+stratèges `decide` / `choose`, combat injecté `fight(a, b, ctx)`, sauvegarde `user://autochess_save.json` au début de chaque préparation), réserve `core/autochess_pool.gd` ; test `test_ac_game`.
 
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à
