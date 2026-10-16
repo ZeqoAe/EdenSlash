@@ -4,6 +4,10 @@ Demande du joueur (mot à mot) : « un mode comme TFT, où tu pourrais placer te
 auto ; faudrait réfléchir à comment se passe le déroulé de la game, l'économie de ce mode, les bonus à mettre en place entre
 chaque manche, etc. … faire un autochess avec nos IA cerveaux ; je suis sur ça. » Une équipe dédiée code ce mode.
 
+**Décision du joueur (16/10, après la 1re version)** : « enlève les idées de cerveau si c'est coûteux, mieux vaut 0 qu'un seul
+cerveau qui va oblitérer le board, mais il faut que nos IA scriptées jouent très bien ». **Aucun cerveau neuronal dans ce
+mode** : toutes les unités sont pilotées par l'IA scriptée (§4.1), dont la qualité se mesure (§4.2).
+
 Ce document est prêt à coder : chaque point ouvert est tranché (**DÉCISION**, justification courte). Les chiffres marqués
 « (réglage) » sont des valeurs de départ que le lot de mesure AC-J recale. Annexes : `ANNEXE_A_UNITES.md` (les 60 unités :
 coût, traits, portée, sort signature, mana), `ANNEXE_B_OBJETS.md` (9 composants, 36 objets, butin). Sonde technique de la
@@ -26,9 +30,9 @@ texte permanent (infobulle) ; aucune mention du jeu d'origine ; manette partout 
 | Combat d'un héros contre un autre | **Des escouades de 10 contre 10** qui esquivent, enchaînent et se soignent avec nos vrais sorts, nos vraies armes et nos vrais boss (48) |
 
 Différence avec un autochess classique : les pièces ne sont pas des pions qui tapent sur place. Chaque unité est un héros du
-jeu (corps, tenue, arme, auto-attaque, sort signature, esquives) ; un **capitaine** par équipe est piloté par un de nos
-**cerveaux d'IA** et se bat comme un joueur expert. Les manches « gardien » opposent ton escouade à un boss de la
-bibliothèque avec ses mécaniques.
+jeu (corps, tenue, arme, auto-attaque, sort signature) qui **joue bien** : les soigneurs restent derrière et soignent le
+plus bas, les tireurs gardent leur portée, les assassins plongent sur l'arrière-ligne, les tanks protègent, tout le monde
+esquive les zones rouges. Les manches « gardien » opposent ton escouade à un boss de la bibliothèque avec ses mécaniques.
 
 ---
 
@@ -69,15 +73,16 @@ Le jeu est solo : la préparation peut aussi se mettre en pause (menu pause). Du
 - **Égalité** (les deux équipes debout à 45 s) : les deux perdent, chacun prend les dégâts de ce qui reste en face.
 - Deux stratèges éliminés à la même manche : le mieux placé est celui qui avait le plus de PV avant la manche, puis celui
   dont l'équipe valait le plus (somme des coûts × étoiles), puis le tirage.
-- Éliminé : on regarde la fin (spectateur, plateau du choix) ou on ouvre le bilan ; la partie se termine seule en
-  arrière-plan (combats simulés, §4.3), sans attendre.
+- Éliminé : on regarde la fin (spectateur, plateau du choix) ou on ouvre le bilan ; ouvrir le bilan arrête la partie
+  (la place est déjà fixée).
 
 ### 2.4 Appariement
 - Chaque manche JcJ : appariement au hasard parmi les vivants **sans retrouver un des 3 derniers adversaires** (2, puis 1
   quand il reste 4 vivants ou moins).
 - Nombre impair : un stratège affronte un **fantôme** (copie de l'équipe d'un autre vivant, prise au début de la manche) ; le
   propriétaire du fantôme ne gagne ni ne perd rien.
-- Le joueur voit toujours **son** combat en vrai ; les autres sont résolus par le simulateur (§4.3).
+- Les 4 combats de la manche sont de **vrais combats**, joués en même temps (§4.3) ; le joueur regarde le sien et peut passer
+  sur un autre.
 
 ### 2.5 Sauvegarde et reprise
 **DÉCISION : une partie en cours, sauvegardée au début de chaque préparation** (`user://autochess_save.json` par
@@ -92,7 +97,7 @@ place actuelle des vivants, récompenses de cette place seulement si elle est da
 
 ### 3.1 Plateau
 - **Hexagones**, 7 colonnes × 4 rangées par camp (28 cases), 7 × 8 au total ; case de 2,0 m (pointe en haut) : plateau de
-  ≈ 14 × 13 m, posé dans une arène de rayon 15 m (même rayon que l'arène des cerveaux, `MlArena.RADIUS`).
+  ≈ 14 × 13 m, posé dans une arène de rayon 15 m.
 - **Banc** : 9 cases en ligne devant le plateau. Plateau limité au **niveau du stratège** (1 à 10) + Couronnes.
 - Placement libre sur ses 4 rangées pendant la préparation ; l'équipe adverse apparaît en miroir.
 - **DÉCISION : les cases ne servent qu'au placement.** En combat, les unités bougent librement (déplacement, esquive et
@@ -115,15 +120,11 @@ place actuelle des vivants, récompenses de cette place seulement si elle est da
 - Fusion automatique dès la 3e copie (banc ou plateau, même banc plein) ; la ★2 prend la place de l'exemplaire du plateau.
 
 ### 3.3 Combat
-- **Ciblage** : l'ennemi le plus proche ; on le garde tant qu'il vit, sauf s'il reste hors de portée 1,5 s alors qu'un autre
-  est à portée. Mêlée = 1 case (2 m), lance / faux-fusil = 2, sceptre / guitare / bâton de métal = 3, arc / bâton / canon /
-  grimoire = 4.
+- **Portée** : mêlée = 1 case (2 m), lance / faux-fusil = 2, sceptre / guitare / bâton de métal = 3, arc / bâton / canon /
+  grimoire = 4. Ciblage, placement, usage des sorts et esquive : §4.1.
 - **Mana** : 0 au départ (+ objets) ; +10 par auto-attaque ; +1 par tranche de 1 % des PV max perdus (15 au plus par coup) ;
   mana max = recharge du sort signature × 10 (40 à 140) : **le sort revient au rythme de sa recharge du jeu**. Mana pleine →
   le sort part (annonce rouge au sol seulement pour les sorts, jamais pour les auto-attaques : lisibilité à 20 unités).
-- **Le capitaine** (couronne au-dessus de la tête) : une unité par équipe, choisie en préparation (par défaut la plus chère,
-  puis la plus étoilée). Il est piloté par un cerveau (§4) avec **4 sorts** (signature + 3 meilleurs sorts propres) sur leurs
-  recharges, sans mana.
 - **Durée** : échelle des dégâts du profil `autochess` de `ModeRules` réglée pour une médiane de 25 s (réglage). Un coup
   retire au plus 20 % des PV max (hors gardiens), comme les plafonds JcJ.
 - **Mort subite** à 30 s : « Fureur » : dégâts infligés +50 %, puis encore +50 % toutes les 5 s ; soins reçus divisés par
@@ -132,38 +133,84 @@ place actuelle des vivants, récompenses de cette place seulement si elle est da
 
 ---
 
-## 4. Cerveaux d'IA et adversaires
+## 4. IA de combat des unités et adversaires
 
-### 4.1 Ce que savent les cerveaux actuels
-| Fait (code) | Conséquence pour l'Échiquier |
+**Aucun cerveau neuronal** (décision du joueur, voir en tête) : ni capitaine, ni `MlDuelPilot`, ni réentraînement. Toutes les
+unités des 8 stratèges ont **la même IA scriptée, au même réglage** : la différence entre stratèges vient de leurs décisions
+(§4.4), jamais de mains plus habiles.
+
+### 4.1 IA de combat des unités (`ai/autochess_unit.gd`, sous-classe de `ClassRival`)
+Socle repris de `ClassRival` : lecture des coups annoncés et esquive (`read`, charges, recharge), rotation autour de la
+cible, annulation, visée anticipée, réglages par difficulté (`DIFF`). Réglage commun de toutes les unités :
+`AutochessData.UNIT_DIFF` = **Difficile** (réaction 0,16 s, lecture 0,7 ; réglage : le Hardcore esquive presque tout et
+allonge les combats).
+
+**Équipes** : `Combatant.ffa_id` = 2 × plateau + camp. Ennemis = l'autre identifiant **du même plateau** ; alliés = le même
+identifiant (soins, boucliers, renforts et soutien `_support` ne visent que lui). Les listes d'unités viennent du directeur
+(`board.units[camp]`), jamais des groupes `monsters` / `ffa` (4 plateaux tournent en même temps).
+
+**Boucle** : déplacement et esquive à chaque image (socle) ; **décision de cible et de sort 4 fois par seconde**, décalée
+d'une unité à l'autre (coût lissé).
+
+| Rôle (`ANNEXE_A`) | Place et distance | Cible | Sort à mana pleine |
+|---|---|---|---|
+| **Tank** | devant, au contact | l'ennemi qui frappe un allié fragile (s'interpose entre lui et l'allié), sinon le plus proche | provocation / renfort dès le début ; zone si 2 ennemis ou plus dedans |
+| **Combattant** | au contact | meilleur score à portée + 1 case ; suit le focus d'équipe | zone sur le plus grand groupe, sinon sur la cible |
+| **Assassin** | plonge au début sur l'arrière-ligne (contourne par le côté le moins garni) | l'ennemi d'arrière-ligne le plus fragile, soigneurs et mages d'abord ; ensuite le plus fragile à 4 cases ou moins | sur sa cible ; déplacement pour plonger, ou pour se dégager sous 30 % de PV |
+| **Tireur** / **Mage** | garde sa portée (entre portée − 1 et portée) ; **recule** quand une mêlée arrive à 1,5 case et que l'esquive est prête, vers ses alliés, jamais dans un coin | meilleur score à portée ; focus d'équipe | zone où elle touche le plus d'ennemis (2 au moins), sinon sur la cible ; ligne / projectile sur l'alignement le plus garni |
+| **Soigneur** | derrière la ligne de ses alliés, à portée du plus avancé ; n'avance jamais au contact | ennemi le plus proche à portée, sans avancer | soin sur l'allié à portée au plus bas % de PV ; attend jusqu'à 2 s qu'un allié passe sous 70 % plutôt que de soigner des PV pleins |
+| **Soutien** | comme le soigneur | idem | renfort au début du combat si la mana de départ suffit, sinon quand 3 alliés ou plus sont à portée et engagés |
+
+- **Score de cible** = faiblesse (PV effectifs bas : PV × défense qui compte contre l'attaquant) + menace (dégâts infligés
+  sur les 3 dernières secondes, objets portés, coût × étoiles) + achèvement (cible sous 20 % à portée : priorité) − distance
+  (en temps de trajet). Poids par rôle dans `AutochessData.AI_WEIGHTS` (réglage).
+- **Focus d'équipe** : chaque camp tient une cible désignée (meilleur score atteignable par 2 alliés ou plus), recalculée
+  toutes les secondes ; +30 % de score pour qui l'a à portée + 1 case. Jamais plus de 3 unités de mêlée sur la même cible
+  (la 4e prend la suivante : pas de bouchon).
+- **Reciblage** : cible morte → nouvelle cible à la décision suivante (≤ 0,25 s) ; cible hors d'atteinte 1,5 s → reciblage ;
+  sinon on ne change que si le nouveau score dépasse l'ancien de 25 % (pas de danse entre deux cibles).
+- **Sorts selon leur type** (`kind`) : `ground` / `spin` / `cone` / `fan` = zone, posée où elle touche le plus d'ennemis ;
+  `bolt` / `line` = sur la cible ou l'alignement le plus garni ; `heal` = allié le plus bas ; `buff` = début du combat ou
+  mêlée engagée ; `dash` / `blink` = rejoindre une cible hors de portée ou fuir une menace (tireur rattrapé, assassin
+  blessé). Une zone peut attendre **1,5 s au plus** une meilleure occasion (2 cibles), puis part sur la cible.
+- **Esquive** : lit les zones rouges de **tous** les sorts ennemis et des gardiens (pas les auto-attaques : combats sans fin),
+  sort du côté de son camp ou hors de la zone ; charges et recharge du socle.
+- **Plateau** : bornes = l'hexagone du plateau moins 0,5 m ; un recul bloqué glisse le long du bord (comme `flee_radius`).
+  Aucune unité ne sort, jamais (testé).
+- Étourdie, gelée, renversée : rien (socle). Pendant un sort, pas de reciblage.
+
+### 4.2 Mesurer « joue très bien » : banc d'essai
+- **Outil** `tools/autochess_ai_bench.tscn` : combats en miroir exact (mêmes unités, étoiles, objets, placement retourné) ;
+  camp A = IA complète, camp B = **IA naïve** (`AutochessUnit.naive` : ennemi le plus proche, aucun focus, aucun recul,
+  sort dès la mana pleine sur la cible, aucune esquive de zone, soigneur qui avance comme un combattant). 40 compositions
+  (8 par archétype : plongeurs, tireurs, mur, sorts, soins) × 2 côtés × 3 graines = 240 combats ; ligne `[ac_bench]` par
+  combat.
+
+| Mesure | Cible |
 |---|---|
-| Entraînés en 1 contre 1, niveau 10, sans équipement (`ml_arena.gd`) | savent esquiver, enchaîner, punir ; ne connaissent ni mana ni objets |
-| Voient **leur héros et l'adversaire le plus proche** (+ centre d'arène, rayon 15 m) ; aucun allié | « le plus proche » est exactement le ciblage d'un autochess ; aucun soutien d'allié |
-| Pilotent un `Player` (`MlDuelPilot.setup`), une décision toutes les 3 images (20 / s), ≈ 5 ms chacune | 1 capitaine ≈ 100 ms par seconde de jeu : **2 capitaines ≈ 3,3 ms par image** à 60 i/s (6,7 en ×2) |
-| Un seul cerveau joue les 60 classes (`ML_CLASSES`, ordre fixe) | toute unité peut être capitaine |
-| 6 cerveaux figés dans git (`data/cerveaux/pantheon_<id>.json`) | **on s'en sert** : ils ne bougent pas avec l'entraînement, l'équilibre reste mesurable |
+| IA complète contre naïve, en miroir | ≥ 75 % de victoires |
+| Chaque comportement seul (activé un à un sur la naïve) | ≥ 55 % contre la naïve, sinon il est retiré ou corrigé |
+| Soins gaspillés (sur des PV pleins) | ≤ 15 % |
+| Ennemis touchés par sort de zone | ≥ 2 en moyenne |
+| Tireurs et mages : temps à portée de leur cible / temps au contact d'une mêlée | ≥ 70 % / ≤ 20 % |
+| Unités hors du plateau | 0 |
+| Durée médiane d'un miroir / égalités | 20-35 s / < 3 % |
 
-### 4.2 Qui pilote quoi
-- **DÉCISION : unités ordinaires = IA scriptée de `ClassRival`** (déjà faite pour les équipes : alliés `ally`, soutien,
-  esquive), dans une sous-classe `ai/autochess_unit.gd` qui ajoute ciblage du §3.3, mana et sort signature. Un cerveau par
-  unité est impossible : 20 × 5 ms toutes les 3 images ≈ 33 ms par image.
-- **Capitaine = cerveau** : `pantheon_difficile` pour les 8 stratèges (même force pour tous : équitable). Les atouts
-  « Capitaine aguerri » et « Esprit éveillé » le changent (§5.3). Repli si le fichier manque ou ne correspond pas
-  (`setup` renvoie false) : le capitaine reste un `ClassRival` Hardcore, sans message au joueur.
-- **Réentraînement (option AC-K, après la v1)** : scénario « escouade » dans l'arène (3 contre 3 puis 5 contre 5, observations
-  de 2 alliés et 3 ennemis) → nouveau fichier `cerveau_escouade.json`. Changer les observations rend les anciens modèles
-  inutilisables (`--nouveau`) : le scénario a **son propre** cerveau, les 6 actuels ne bougent pas.
+- **Scénarios unitaires** (`test_ac_unit_ai`) : le soigneur soigne l'allié le plus bas ; l'assassin atteint l'arrière-ligne
+  en moins de 3 s ; le tireur recule devant une mêlée ; le tank s'interpose devant un plongeur ; l'unité quitte une zone
+  rouge avant l'impact ; reciblage ≤ 0,25 s après une mort ; deux plateaux voisins ne se touchent pas.
 
 ### 4.3 Combats que le joueur ne regarde pas
-- **DÉCISION par défaut : simulateur rapide** `core/autochess_sim.gd` (de la donnée pure, aucun nœud) : mêmes fiches, mana,
-  traits, objets, atouts ; positions en cases, pas de 0,1 s ; sort signature réduit à ses effets (dégâts, soin, bouclier,
-  contrôle, rayon en cases) ; capitaine = bonus de 15 % (réglage, mesuré contre le vrai). Il sert aussi à l'équilibrage (§9).
-- **Calibrage obligatoire** (test `test_ac_sim_real`) : 100 équipes jouées des deux façons → même vainqueur ≥ 75 %, écart moyen
-  des survivants ≤ 1,5 ; sinon on corrige le facteur de l'unité (`sim_factor` dans `autochess_units.json`).
-- Si `R_AC2.md` montre que 3 combats réels invisibles (sans rendu, loin du plateau visible) tiennent dans le budget, on les
-  joue en vrai et le simulateur ne sert plus qu'à l'équilibrage.
-- Budget (réglage, à confirmer par AC2) : combat regardé ≤ 20 unités + 2 capitaines, logique ≤ 8 ms par image en ×1 ;
-  3 combats simulés ≤ 30 ms au total, faits pendant le bilan de manche.
+- **DÉCISION : tous les combats sont de vrais combats.** Mesure d'AC2 (relayée par la coordination) : ≈ 0,1 ms par unité et
+  par image, 160 unités tiennent. Les 4 plateaux d'une manche JcJ (≤ 80 unités ≈ 8 ms) ou les 8 d'une manche de gardien
+  (≤ 88 unités) sont posés à 300 m les uns des autres dans le même monde ; seul le plateau regardé est rendu (les autres :
+  invisibles, sans effets, sons ni chiffres de dégâts). Un seul moteur de combat : aucun écart entre ce qu'on voit et ce qui
+  compte.
+- **Simulateur de données** `core/autochess_sim.gd` (aucun nœud, pas de 0,1 s ; mêmes fiches, mana, traits, objets, atouts ;
+  rôles simplifiés) : **outil d'équilibrage** (des milliers de parties, §9) et **repli** si une machine ne tient pas l'image
+  (plus de 20 ms pendant 2 s : les plateaux cachés encore en cours sont finis par le simulateur). Calibré sur le vrai
+  combat : même vainqueur ≥ 75 %, écart moyen des survivants ≤ 1,5 (`test_ac_sim_real`, facteur `sim_factor` par unité).
+- Vitesse ×2 : `Engine.time_scale` 2 (à vérifier par AC2 : nombre de pas physiques par seconde réelle, donc coût).
 
 ### 4.4 Adversaires IA (stratèges)
 Scriptés (`core/autochess_ai.gd`), pas de réseau de neurones : la stratégie se règle et se lit.
@@ -232,7 +279,7 @@ choix : Argent 50 % / Or 35 % / Éclat 15 % (réglage ; jamais deux Éclats de s
 | Or | Intérêts composés | plafond des intérêts : 5 → 10 (à 100 or) |
 | Or | Pacte de sang | −15 PV de joueur, +25 or tout de suite |
 | Or | Insigne | un Insigne tout de suite |
-| Or | Capitaine aguerri | capitaine : +40 % de PV, cerveau `pantheon_hardcore` |
+| Or | Chef de guerre | ton unité la plus chère : +30 % de PV et d'attaque |
 | Or | Héritage | une classe verte et une de ses ascensions sur le plateau : +20 % de PV et d'attaque aux deux |
 | Or | Écho de recrue | chaque 4e unité achetée arrive en double |
 | Or | Riposte | quand une de tes unités esquive, elle rend 60 % de sa frappe |
@@ -242,7 +289,7 @@ choix : Argent 50 % / Or 35 % / Éclat 15 % (réglage ; jamais deux Éclats de s
 | Or | Main sûre | tes sorts signature coûtent 20 % de mana de moins |
 | Éclat | Couronne | +1 unité sur le plateau |
 | Éclat | Héros légendaire | une unité de coût 5 ★2 au choix parmi 3 |
-| Éclat | Esprit éveillé | 2e capitaine (cerveau) ; tes capitaines +20 % de dégâts |
+| Éclat | Ordre de bataille | les 6 premières secondes : +25 % de vitesse d'attaque et de déplacement ; le 1er sort de chaque unité part à mi-mana |
 | Éclat | Menace | gardiens deux fois plus forts, butin doublé ; +2 or par gardien vaincu |
 | Éclat | Trésor du dragon | +30 or tout de suite, plus d'intérêts |
 | Éclat | Niveau 11 | niveau maximal 11 ; +10 XP tout de suite |
@@ -319,7 +366,7 @@ réserve + copies possédées = total, à chaque instant.
 |---|---|---|
 | Page du lobby (rangée **Affrontements**, après Battle royale) | « Choisis ta difficulté » | 4 boutons (Recrue, Vétéran, Champion, Légende ; fermés « 🔒 » avec leur condition), 3 lignes de récompenses (✔ si gagnées), **Reprendre la partie** s'il y en a une, Lancer (épinglé) |
 | Plateau (préparation) | « Compose ton équipe » | plateau 3D vu de 3/4 (caméra fixe, deux zooms), banc ; en bas la boutique (5 cartes : portrait, nom, coût, 2 icônes de trait), or au centre, niveau + XP + [Acheter XP] à gauche, [Actualiser] et verrou à droite ; colonne gauche : traits (actifs en or, pastilles 2 / 4 / 6) ; colonne droite : 8 stratèges (portrait, PV, série) ; en haut : frise de l'étape (● JcJ, ◆ choix, ☠ gardien) et minuteur ; [Prêt] |
-| Combat | « Regarde » | boutique repliée, [×2], barre de PV et mana au-dessus de chaque unité, couronne du capitaine ; compteur de dégâts (option) |
+| Combat | « Regarde » | boutique repliée, [×2], barre de PV et mana au-dessus de chaque unité ; compteur de dégâts (option) ; la colonne des stratèges permet de regarder un autre plateau |
 | Atout | « Choisis un atout » | 3 grandes cartes, [Relancer] en dessous |
 | Choix partagé | « Prends ton héros » | 9 cartes en anneau, ordre des stratèges en haut |
 | Fiche d'unité | « Qui est-ce ? » | survol ou curseur posé : stats, sort (texte court ; chiffres en infobulle), 2 traits, objets, étoiles |
@@ -344,7 +391,7 @@ réserve + copies possédées = total, à chaque instant.
 
 - Titres de victoire : Stratège (Recrue), Tacticien (Vétéran), Grand tacticien (Champion), Maître de l'Échiquier (Légende).
 - Titres d'exploit (une fois, toute difficulté) : **Trois étoiles** (une unité de coût 4 ou 5 ★3), **Pur sang** (un trait de
-  famille à 9), **Invaincu** (1re place avec 70 PV ou plus), **Sans capitaine** (1re place sans jamais nommer de capitaine).
+  famille à 9), **Invaincu** (1re place avec 70 PV ou plus), **Frugal** (1re place sans jamais actualiser la boutique).
 - Ouverture : Recrue et Vétéran dès le départ ; Champion après un top 4 en Vétéran ; Légende après une 1re place en
   Champion (mode dev : tout). Plafonds dans `Profile.records["ac_rewards"]` (comme `sv_rewards`, rien à migrer).
 - Quêtes : `Quests.end_run("autochess", top4, {place, rounds_won})` ; entrée `QuestPool.ACTS` ; pastilles `gives` :
@@ -362,22 +409,24 @@ par manche). `Modes.current()` rend `"autochess"`, ajouté à `Modes.SEALED`.
 |---|---|---|---|---|---|---|
 | **AC-A** Données | tables §5-6 (éco, XP, boutique, réserve, dégâts), traits, objets, atouts **en données** avec clés d'effet ; unités générées | `core/autochess_data.gd`, `data/autochess_units.json`, `tools/autochess_units.py` | — | — | `test_ac_data` : 60 unités, 12 / famille, 6 / trait d'arme, coûts 10/15/15/10/10, taux = 100, 36 recettes | S (≈ 400) |
 | **AC-B** Partie | machine d'étapes sans scène, boutique, réserve, achat / vente / fusion, XP, or, séries, dégâts, appariement, fantôme, places, sauvegarde ; combat **injecté** (fonction) | `core/autochess.gd`, `core/autochess_pool.gd` | — | A | `test_ac_game` : 500 parties au hasard sans erreur ; invariant de réserve ; fusion banc plein ; revenu attendu ; même graine = même partie ; reprise identique | M (≈ 900) |
-| **AC-C** Simulateur | combat de données (§4.3), traits, objets, atouts par clés d'effet ; outil de combat isolé | `core/autochess_sim.gd`, `tools/autochess_fight.tscn` | — | A | `test_ac_sim` : déterminisme ; médiane 20-35 s sur 50 équipes types ; chaque trait change le résultat attendu | M (≈ 900) |
-| **AC-E** Combat réel | directeur du combat (apparition en miroir, fin, mort subite, ×2), unité (`ClassRival` + ciblage, mana, sort, étoiles), capitaine (`MlDuelPilot`), profil `autochess` | `core/autochess_director.gd`, `ai/autochess_unit.gd` | `core/modes.gd`, `core/mode_rules.gd`, lancement dans `world.gd` / `run_director.gd` | A | `test_ac_fight` : 5 contre 5 fini en 15-45 s ; sorts lancés à mana pleine ; capitaine piloté (ou repli) ; égalité à 45 s ; ×2 | L (≈ 1 100) |
+| **AC-E** Combat réel | directeur : 4 (ou 8) plateaux à 300 m, apparition en miroir, équipes par `ffa_id`, fin, mort subite, égalité, ×2, rendu du seul plateau regardé ; squelette d'unité (fiche, étoiles, mana, sort signature, ciblage « le plus proche ») ; profil `autochess` | `core/autochess_director.gd`, `ai/autochess_unit.gd` (squelette) | `core/modes.gd`, `core/mode_rules.gd`, lancement dans `world.gd` / `run_director.gd` | A | `test_ac_fight` : 5 contre 5 fini en 15-45 s ; sorts à mana pleine ; égalité à 45 s ; 4 plateaux en même temps sans interférence ; budget d'image mesuré (80 unités) | L (≈ 900) |
+| **AC-U** IA de combat | rôles, score de cible, focus d'équipe, recul, plongée, protection, soins, sorts par type, esquive des zones, bornes, reciblage (§4.1) ; IA naïve ; banc d'essai | `ai/autochess_unit.gd` (après le squelette d'AC-E), `tools/autochess_ai_bench.tscn` | — | E (squelette) | `test_ac_unit_ai` (scénarios du §4.2) ; banc : cibles du §4.2 tenues ; rapport `R_AC_U.md` | L (≈ 1 000) |
 | **AC-F** Plateau | grille hexagonale 3D, banc, curseur de case (manette / souris / glisser), stratège qui marche, miroir adverse | `world/autochess_board.gd`, `world/autochess_bench.gd`, `ui/autochess_cursor.gd` | — | A, B | `test_ac_board` : placement limité au niveau, banc plein, curseur atteint toutes les cases | M (≈ 800) |
-| **AC-D** IA stratèges | 4 difficultés, 3 tempéraments, compo, éco, placement, objets, atouts | `core/autochess_ai.gd` | — | B, C | sur 200 parties simulées : Légende top 4 ≥ 75 % contre 7 Recrues ; Recrue top 4 ≤ 25 % contre 7 Légendes | M (≈ 800) |
-| **AC-H** Effets | objets et atouts : effets appliqués aux fiches et déclencheurs (frappe, sort, chute, seuil de PV), **même code** pour le simulateur et le combat réel | `core/autochess_items.gd`, `core/autochess_augments.gd` | — | A (C, E pour brancher) | `test_ac_effects` : chaque objet / atout a un effet mesurable dans le simulateur ; 3 vérifiés en combat réel | M (≈ 900) |
+| **AC-C** Simulateur | combat de données (§4.3) : outil d'équilibrage et repli ; mêmes clés d'effet ; calibré sur le vrai | `core/autochess_sim.gd`, `tools/autochess_fight.tscn` | — | A, U | `test_ac_sim` : déterminisme, médiane 20-35 s ; `test_ac_sim_real` : même vainqueur ≥ 75 % | M (≈ 900) |
+| **AC-D** IA stratèges | 4 difficultés, 3 tempéraments, compo, éco, placement (selon les rôles du §4.1), objets, atouts | `core/autochess_ai.gd` | — | B, C | sur 200 parties simulées : Légende top 4 ≥ 75 % contre 7 Recrues ; Recrue top 4 ≤ 25 % contre 7 Légendes | M (≈ 800) |
+| **AC-H** Effets | objets et atouts : effets appliqués aux fiches et déclencheurs (frappe, sort, chute, seuil de PV), **même code** pour le combat réel et le simulateur | `core/autochess_items.gd`, `core/autochess_augments.gd` | — | A (E, C pour brancher) | `test_ac_effects` : chaque objet / atout a un effet mesurable en combat réel (5 contre 5 court) ; mêmes effets dans le simulateur | M (≈ 900) |
 | **AC-G** Interface | boutique, traits, stratèges, frise, atouts, choix partagé, fiche d'unité, bilan de manche | `ui/autochess_hud.gd`, `ui/autochess_shop.gd`, `ui/autochess_traits.gd`, `ui/autochess_players.gd`, `ui/autochess_augments.gd`, `ui/autochess_carousel.gd`, `ui/autochess_unit_card.gd` | — | B, F | `test_ac_ui` ; `tests/shot_ac.tscn` sans ligne `[débord]` en 1280×720 ; `test_nav_screens` | L (≈ 1 200) |
 | **AC-I** Entrée et fin | activité, page du lobby, bilan, récompenses, quêtes, fiches, Guide | `core/autochess_rewards.gd`, `ui/autochess_results.gd` | `ui/activities.gd`, `ui/lobby.gd`, `core/quest_pool.gd`, `core/tutorial.gd`, `ui/guide.gd`, `ResourceHelp` | B, G | `test_ac_rewards` (plafonds, mode scellé : hub intact), `test_p4_activities -- autochess`, `test_texts_fr` | M (≈ 600) |
-| **AC-J** Mesure | parties entre IA en masse, rapport, calibrage simulateur / réel, réglages | `tools/autochess_games.tscn`, `tools/autochess_report.py`, `tests/ac_mesures.json` | — | C, D, H (E pour calibrer) | §9 tenu ; `test_ac_sim_real` ; rapport `R_AC_J.md` | M |
-| AC-K (option) | cerveau d'escouade (§4.2) | `ia/` (scénario), `cerveau_escouade.json` | `ml_arena.gd` (scénario neuf, à la fin des listes) | v1 finie | taux de victoire du capitaine escouade > capitaine actuel | L |
+| **AC-J** Mesure | parties entre IA en masse (simulateur), parties réelles au pilote, rapport, réglages | `tools/autochess_games.tscn`, `tools/autochess_report.py`, `tests/ac_mesures.json` | — | C, D, H, U | §9 tenu ; rapport `R_AC_J.md` | M |
 
 **Vagues (équipe de 4 agents au plus, fichiers disjoints)** :
 1. AC-A seul (court, fige les clés de données et d'effet dont tout dépend).
-2. **AC-B, AC-C, AC-E, AC-F en parallèle.**
-3. **AC-D, AC-H, AC-G en parallèle** (AC-H branche ses effets dans C et E par les points d'appel prévus en AC-A ; il ne
-   réécrit pas ces fichiers : C et E appellent `AutochessItems.apply` / `AutochessAugments.on_event` dès leur lot).
-4. AC-I puis AC-J (AC-J peut commencer dès la vague 3 sur le simulateur).
+2. **AC-B, AC-E, AC-F en parallèle** ; AC-E livre d'abord le squelette de `ai/autochess_unit.gd` (fiche, mana, sort, ciblage
+   simple), puis s'en tient à `autochess_director.gd`.
+3. **AC-U, AC-H, AC-G, AC-C en parallèle** (AC-U seul dans `autochess_unit.gd` ; AC-H branche ses effets par les points
+   d'appel prévus en AC-A : E, U et C appellent `AutochessItems.apply` / `AutochessAugments.on_event`, AC-H ne réécrit pas
+   leurs fichiers).
+4. **AC-D et AC-I** en parallèle, puis AC-J (qui peut commencer dès que C et D tournent).
 
 Pièges : dossier partagé (tests sur une copie, `python tools/run_tests.py`), commit par chemins explicites ; `--import` après
 chaque nouveau `class_name` ; version + CHANGELOG à chaque envoi de code ; aucun `taskkill` global.
@@ -400,6 +449,7 @@ chaque nouveau `class_name` ; version + CHANGELOG à chaque envoi de code ; aucu
 | Combat (réel, `--autoplay`) | médiane 22-28 s ; 90 % sous 40 s ; égalités < 3 % |
 | Partie (réel, durées mesurées × manches du simulateur) | vainqueur : 25-30 min (×1) ; 1er éliminé avant 4-1 dans moins de 20 % des parties |
 | Échelle des difficultés | §8 AC-D ; joueur au pilote Vétéran : top 4 ≈ 50 % en Vétéran |
+| IA de combat (banc du §4.2) | IA complète ≥ 75 % contre la naïve ; autres cibles du §4.2 |
 | Simulateur contre réel | même vainqueur ≥ 75 % |
 
 - Réglages en tête de `core/autochess_data.gd` ; tout changement refait `tests/ac_mesures.json` (comme `sv7_mesures.json`).
@@ -416,9 +466,10 @@ chaque nouveau `class_name` ; version + CHANGELOG à chaque envoi de code ; aucu
 | Où et quand | Affrontements, après Battle royale ; **ouvert dès le départ** | scellé : rien du compte n'y change la force |
 | Classes non débloquées | toutes dans la réserve | réserve identique pour les 8 |
 | Combat sur la grille ou libre | libre (cases pour placer) | des héros qui se battent vraiment ; réutilise `ClassRival` |
-| Cerveau pour chaque unité | non : 1 capitaine par équipe | budget (§4.2) ; garde le cerveau visible et spécial |
-| Prendre la main du capitaine | non en v1 | autochess = décisions ; variante « Commandant » possible plus tard |
-| Combats cachés | simulateur, calibré | budget ; à revoir selon `R_AC2.md` |
+| Cerveaux d'IA | **aucun** (ni capitaine, ni réentraînement) | décision du joueur : mieux vaut 0 qu'un cerveau qui écrase le plateau |
+| Qualité de l'IA des unités | même IA scriptée (Difficile) pour les 8 stratèges, mesurée au banc (§4.2) | « il faut que nos IA scriptées jouent très bien » ; équitable |
+| Prendre la main d'une unité | non | autochess = décisions |
+| Combats cachés | vrais combats sur plateaux invisibles ; simulateur en repli et pour l'équilibrage | mesure d'AC2 : 160 unités tiennent |
 | Objets | composants → 36 objets | sensation « porteur » ; nos pièces sont trop lourdes ici |
 | Réserve partagée | oui | peu de code, vraie lecture des autres plateaux |
 | Moment des atouts | 2-1 / 3-2 / 4-2 | partie de 25 min (§2.1) |
@@ -428,4 +479,3 @@ chaque nouveau `class_name` ; version + CHANGELOG à chaque envoi de code ; aucu
 | Maîtrise ou insignes | non : apparences et titres | mode scellé |
 | Classement (rangs Bronze → Platine) | pas en v1 ; les difficultés et titres en tiennent lieu | taille |
 | Multijoueur | non | aucun réseau dans le jeu |
-| Stratège appris par renforcement (le simulateur comme terrain d'entraînement en Python) | idée pour après la v1 (AC-L) | le simulateur le rend possible, la v1 n'en a pas besoin |
