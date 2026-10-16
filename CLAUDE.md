@@ -158,6 +158,11 @@ cartes du Survivant via `SurvivorGear.adopt` / `SurvivorCards.up_card`, rendu `S
 `Royale.AI_GEAR_SCALE`, mesure `tools/br3_ai_probe`), pièces au sol à la mort et fiche `ui/royale_gear_sheet.gd` ; test `test_br3`.
 Chacun pour soi général : `Combatant.ffa_id` / `set_ffa()` / `clear_ffa()`, groupe « ffa ».
 
+### L'Échiquier (autochess, en cours)
+Spécification `conception/autochess/SPEC.md` (+ annexes A, B ; lots AC-A à AC-J). Données (AC-A, `R_AC_A.md`) : `core/autochess_data.gd`
+(`AutochessData` : réglages en tête ; traits, objets, atouts avec clés d'effet `effect` + `params` / `tiers`, appliquées par AC-H), 60 unités
+`data/autochess_units.json` générées par `tools/autochess_units.py` (rôle, allonge, sort signature ; aucun cerveau : IA scriptée seule) ; test `test_ac_data`.
+
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à
   paliers `armory_price`, puits `SHOP_CHESTS`, leçon de maîtrise) ; participation `Run.INSIGNIA_BASE` ; JcJ plafonné au jour
