@@ -176,6 +176,9 @@ La Tour, types d'étage (passe M3, `DESIGN.md` « La Tour : types d'étage », `
 monstres mélangés + élite à mécanique `BossBricks`, élites, ombres `ClassRival` / ton ombre / ombre éveillée `MlDuelPilot`, maudit,
 halte, boss `BossLibrary` à PV fixes × `BOSS_CURVE`) ; duellistes des étages 1, 4, 7 inchangés (Unlocks). Interface de `TowerDirector`
 documentée en tête (SiegeDirector la prolonge). Test `test_m3`, captures `shot_m3`, mesures `tools/tower_run.tscn`.
+Passe M8 (`R_M8.md`) : dégâts × `TowerBalance.solo_mult(classe)` dans la Tour (`data/tower_solo.json`, régénéré par `tools/m8_matrix.py solo`),
+coups de boss de la Tour plafonnés à `Tower.BOSS_HIT_CAP`, boss sorti de la salle ramené au centre (`TowerDirector._rescue_boss`) ; mesures
+`tools/m8_tower.tscn` (`--pilot=bot`, `--dodge` : `PilotDodge`, esquive des zones rouges et recul des tireurs, mesures seulement) ; `test_m8`, `shot_m8` (`M8_RES=1280x720`).
 Survivant, équilibrage (S7, 0.1.209, `conception/survivor/R_S7.md`) : réglages en tête de `core/survivor.gd` ; mesures
 `python tools/sim_survivor.py --project <copie>/game` (runs au pilote) et `--probe --fight` (sonde de builds, `tools/sv_build_probe`) ;
 `test_sv7` relit `tests/sv7_mesures.json` : changer un réglage demande de refaire les mesures.

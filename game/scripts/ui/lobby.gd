@@ -879,6 +879,11 @@ func _menu_tower_floors() -> void:
 		r.disabled = not open
 		r.modulate = Color.WHITE if open else Color(1, 1, 1, 0.45)
 		r.mark(fl == _tower_sel)
+		if fl == _tower_sel:
+			(func():  # petite fenêtre (1280 × 720) : l'étage choisi reste visible au-dessus du bouton épinglé
+				await get_tree().process_frame
+				if is_instance_valid(r) and is_instance_valid(_scroll):
+					_scroll.ensure_control_visible(r)).call_deferred()
 		r.pressed.connect(func():
 			_tower_sel = fl
 			_show_menu("tower_floors"))

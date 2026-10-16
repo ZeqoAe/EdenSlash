@@ -65,7 +65,10 @@ const ELITE_HIT_CAP := 0.25  # un coup d'élite retire au plus cette part des PV
 ## IV au-delà de 130) ; mesuré avec tools/tower_run (--god), voir conception/nuit_15_10/R_M3.md.
 const BOSS_CURVE := [[1, 1.0], [50, 1.0], [70, 5.0], [100, 5.5], [130, 9.0], [200, 7.0]]
 ## Boss d'un étage mesuré trop court ou trop long avec la courbe seule (le boss de chaque étage est fixe) : × ce facteur.
-const BOSS_FLOOR_ADJ := {160: 3.0, 190: 0.6, 200: 0.5}
+const BOSS_FLOOR_ADJ := {100: 0.7, 150: 2.5, 160: 3.0, 190: 0.6, 200: 0.5}  # 100 et 150 : passe M8
+## Un coup de boss de la Tour retire au plus cette part des PV max du héros (passe M8 : une seule vie, seul, et le corps à
+## corps passe le combat dans ses zones ; la bibliothèque en prend 40 % ailleurs : BossLibrary.HIT_CAP).
+const BOSS_HIT_CAP := 0.25
 ## Ombre éveillée (cerveau d'IA, équipement de l'ombre scriptée de l'étage) : PV et dégâts × ceux de l'ombre scriptée qu'elle
 ## remplace (elle esquive, enchaîne et se soigne mieux : PV × 0,5 et soins reçus moitié moins, mesuré).
 const BRAIN_HP := 0.5

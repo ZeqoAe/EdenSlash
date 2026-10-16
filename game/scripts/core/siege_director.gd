@@ -167,6 +167,7 @@ func update(delta: float) -> void:
 			_update_ring(delta)
 	if d.player.autoplay:
 		d.player.autoplay_target = target()
+	_rescue_boss()  # boss sorti de l'arène : ramené au centre (TowerDirector, passe M8)
 	_obj_t -= delta
 	if _obj_t <= 0.0:
 		_obj_t = 0.25

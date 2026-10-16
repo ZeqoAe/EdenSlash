@@ -7,7 +7,7 @@ extends RefCounted
 ## une zone (décor, niveau, monstres des salles) et un thème de butin (panoplie + deux emplacements).
 ##
 ## API (voir conception/nuit_15_10/R_M2.md) :
-##   BossLibrary.spawn(id, tier, {director, pos, level, [hp], [hp_mult], [atk_mult], [main], [lieutenant]}) -> Monster
+##   BossLibrary.spawn(id, tier, {director, pos, level, [hp], [hp_mult], [atk_mult], [main], [lieutenant], [hit_cap]}) -> Monster
 ##   BossLibrary.ids() / get_def(id) / for_zone(zid) / zone_boss(zid) / full_name(id) / bricks_of(id, tier)
 ##   BossLibrary.hp(id, level, tier, rush) / families_of(id) / mechanic_names(id) / loot(id)
 ## Palier (tier) : 0 Normal, 1 Héroïque, 2 Mythique : PV fixes du palier, mécaniques plus fréquentes (PACE), et en
@@ -138,7 +138,8 @@ static func hp(id: String, level: int, tier: int, rush := false) -> float:
 ##   director (RunDirector, obligatoire : apparition, invocations, messages), pos (Vector3), level (int) ;
 ##   hp (PV imposés ; sinon hp()), hp_mult (alliés, trio…), atk_mult ;
 ##   main (défaut true : devient le boss de la salle, director._boss, cible des invocations) ;
-##   lieutenant (true : mini-boss, une seule brique sans invocation, PV LIEUTENANT_HP).
+##   lieutenant (true : mini-boss, une seule brique sans invocation, PV LIEUTENANT_HP) ;
+##   hit_cap (part des PV max du héros qu'un coup retire au plus ; défaut HIT_CAP, la Tour : Tower.BOSS_HIT_CAP).
 static func spawn(id: String, tier: int, ctx: Dictionary) -> Monster:
 	var def := get_def(id)
 	var d = ctx.get("director")
@@ -167,5 +168,5 @@ static func spawn(id: String, tier: int, ctx: Dictionary) -> Monster:
 		m.brain.announce.connect(func(t): d.message.emit(t, 2.5))
 		m.brain.enraged_phase.connect(func(): d.message.emit("%s entre en fureur !" % short_name(id), 2.5))
 		m.reflect_started.connect(func(): d.message.emit("Miroir ! Ne frappe pas pendant 3 s", 2.0))
-	m.brain.setup_bricks(list, d, String(def.get("hazard", "lava")), def.get("kit", []), float(PACE[tier]), HIT_CAP)
+	m.brain.setup_bricks(list, d, String(def.get("hazard", "lava")), def.get("kit", []), float(PACE[tier]), float(ctx.get("hit_cap", HIT_CAP)))
 	return m

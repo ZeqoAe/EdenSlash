@@ -4,7 +4,7 @@ extends Node
 ## et les dégâts subis.
 ##   godot --headless --fixed-fps 60 --path game res://tools/tower_run.tscn -- --from=1 --floors=10 --diff=1 --class=warrior
 ##         --hub=E.C.N.G [--human=0.5] [--max=1800] [--seed=1]
-## --god : héros invincible (temps pour tuer). --hub : équipement du hub (StarterGear.scenario, « new » : compte neuf) ; --human : part des coups évitée (Run.test_taken).
+## --dodge : le pilote sort des zones rouges annoncées (PilotDodge, passe M8). --god : héros invincible (temps pour tuer). --hub : équipement du hub (StarterGear.scenario, « new » : compte neuf) ; --human : part des coups évitée (Run.test_taken).
 ## Une ligne « [tour-étage] » par étage, puis « [tour] » (bilan). Profil jetable (EDEN_PROFILE).
 
 var from := 1
@@ -39,6 +39,7 @@ func _ready() -> void:
 		Profile.install_gear(StarterGear.scenario(hub, cid))
 	Tower.start(cid, diff, from)
 	Run.test_taken = 1.0 - clampf(human, 0.0, 0.95)
+	PilotDodge.enabled = "--dodge" in OS.get_cmdline_user_args()  # passe M8 : le pilote sort des zones rouges
 	var world: Node = load("res://scenes/world.tscn").instantiate()
 	get_tree().root.add_child.call_deferred(world)
 	await get_tree().create_timer(3.0).timeout

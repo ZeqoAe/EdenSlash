@@ -4,7 +4,7 @@ extends Node
 ## héros, en aide au combat « Bot » du jeu, entre dans l'arène du boss et frappe jusqu'à sa mort.
 ##   godot --headless --fixed-fps 60 --path game res://tools/boss_ttk.tscn -- --epoch=1 --stage=1 --class=warrior
 ##         --hub=new|E.C.N[.G] --level=15 --cards=15 --trophies=4 --finds=0.7 --anvil=1 [--seed=1] [--max=600]
-##         [--human=0.5] [--pure]
+##         [--human=0.5] [--pure] [--dodge]
 ##   Donjon / Ruée : --mode=dungeon --zone=<zone|rush> --diff=0..2 [--floor=N] (kit du préréglage, une carte par salle)
 ##   [--boss=<id>] : donjon à la carte d'un boss de la bibliothèque (BossLibrary, passe M2)
 ## Sans --human : héros invincible (on ne mesure que ses dégâts) ; avec : il encaisse la part de coups non évitée et
@@ -83,6 +83,7 @@ func _ready() -> void:
 				Run.add_trophy(offer.pick_random())
 	if human >= 0.0:
 		Run.test_taken = 1.0 - clampf(human, 0.0, 0.95)
+	PilotDodge.enabled = "--dodge" in OS.get_cmdline_user_args()  # passe M8 : le pilote sort des zones rouges
 	world = load("res://scenes/world.tscn").instantiate()
 	get_tree().root.add_child.call_deferred(world)
 	await get_tree().create_timer(3.0).timeout

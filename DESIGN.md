@@ -479,8 +479,10 @@ de boss, des étages d'"ombres" (une IA qui joue une classe) ».
   60 classes (boss des étages 30, 50 et 100, sans mécaniques, équipement attendu), à son pire boss, ramené à 1,1 fois la
   médiane ; jamais de baisse, au plus × 1,8 (33 classes aidées, Barde × 1,54). Régénérer : `tools/m8_matrix.py solo`.
   **Coups de boss plafonnés à 25 % des PV max** dans la Tour (`Tower.BOSS_HIT_CAP`, 40 % ailleurs) : une seule vie, seul,
-  et le corps à corps passe le combat dans les zones du boss. Boss de l'étage 150 : PV × 2,5 (`BOSS_FLOOR_ADJ`, tombait en
-  13 s à 2 min 20 avec l'équipement de l'époque IV, médiane 43 s). Bornes vérifiées par `test_m8` (écart max / min ≤ 2,5 aux boss de référence).
+  et le corps à corps passe le combat dans les zones du boss. `BOSS_FLOOR_ADJ` : étage 100 × 0,7 (médiane 2 min 47 au
+  pilote, deux fois les boss voisins), étage 150 × 2,5 (13 s à 2 min 20 avec l'équipement de l'époque IV, médiane 43 s).
+  Un boss sorti de la salle (il tombait sans fin, intouchable) revient au centre (`TowerDirector._rescue_boss`, aussi en
+  Donjon, Ruée et Siège). Bornes vérifiées par `test_m8` (écart max / min ≤ 2,5 aux boss de référence).
 
 ## Roguelite : héritage
 

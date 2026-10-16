@@ -270,7 +270,7 @@ func _spawn_boss(z: Dictionary, lvl: int) -> void:
 		# la Tour (passe M3) : un boss de la bibliothèque, PV fixes de l'étage, palier selon l'étage et la difficulté
 		var f := Tower.floor_n
 		_boss = BossLibrary.spawn(Tower.boss_id(f), Tower.boss_tier(f), {"director": d, "pos": _center, "level": lvl + 1,
-			"hp": Tower.boss_hp_fixed(f), "atk_mult": Tower.monster_atk_mult(f, -1, true)})
+			"hp": Tower.boss_hp_fixed(f), "atk_mult": Tower.monster_atk_mult(f, -1, true), "hit_cap": Tower.BOSS_HIT_CAP})
 		if _boss != null:
 			_boss.xp_reward = 0
 			_adds_on = false  # ses invocations sont ses mécaniques
@@ -428,10 +428,23 @@ func update(delta: float) -> void:
 					_spawn_chest()
 	if d.player.autoplay:
 		d.player.autoplay_target = target()
+	_rescue_boss()
 	_obj_t -= delta
 	if _obj_t <= 0.0:
 		_obj_t = 0.25
 		d.objective_changed.emit(objective_text())
+
+
+## Filet (passe M8) : un boss sorti de la salle (sous le sol ou au-delà du bord) tombait sans fin et ne pouvait plus être
+## touché (vu au pilote : l'Homme de paille de l'étage 40, à 18 % de ses PV, des kilomètres plus bas trois minutes après) ;
+## il revient au centre de la salle.
+func _rescue_boss() -> void:
+	if not is_instance_valid(_boss) or _boss.is_dead or d.map == null:
+		return
+	var off := _boss.global_position - _center
+	if off.y < -6.0 or Vector2(off.x, off.z).length() > d.map.size * 0.5 + 4.0:
+		_boss.global_position = _center + Vector3.UP * 0.5
+		_boss.velocity = Vector3.ZERO
 
 
 func _update_fight(delta: float) -> void:

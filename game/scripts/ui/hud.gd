@@ -887,7 +887,7 @@ func _update_target() -> void:
 	_target_bar.max_value = 1.0
 	_target_trail.max_value = 1.0
 	_target_bar.value = ratio
-	_target_hp.text = "%s / %s" % [_big_number(ceilf(t.hp)), _big_number(t.max_hp)]
+	_target_hp.text = "%s / %s" % [_big_number(minf(ceilf(t.hp), ceilf(t.max_hp))), _big_number(ceilf(t.max_hp))]  # (jamais « 39 045 / 39 044 »)
 	if _target_trail.value > ratio:
 		_target_trail.value = move_toward(_target_trail.value, ratio, get_process_delta_time() * 0.5)
 	else:

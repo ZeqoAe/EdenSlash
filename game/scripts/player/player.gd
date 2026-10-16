@@ -321,6 +321,8 @@ func recalc_stats() -> void:
 	area_mult = 1.0 + ps.get("area", 0.0) + eq.get("area", 0.0)
 	reach_mult = 1.0 + ps.get("reach", 0.0) + eq.get("reach", 0.0)
 	dmg_mult = maxf(0.1, 1.0 + ps.get("dmg_pct", 0.0) + eq.get("dmg_pct", 0.0))
+	if Tower.active and not Tower.is_dungeon() and not foe and bot == null:
+		dmg_mult *= TowerBalance.solo_mult(Run.class_id)  # la Tour, seul : les classes aux dégâts faibles rattrapées (passe M8)
 	elite_mult = 1.0 + ps.get("elite_dmg", 0.0) + eq.get("elite_dmg", 0.0)
 	basic_mult = 1.0 + ps.get("basic_dmg", 0.0) + eq.get("basic_dmg", 0.0)
 	extra_proj = int(floorf(ps.get("proj", 0.0) + eq.get("proj", 0.0) + 0.001))
@@ -713,6 +715,8 @@ func _wants(action: String) -> bool:
 		return false
 	if autoplay:
 		return false if autoplay_idle else _autoplay_wants(action)
+	if PilotDodge.enabled and action == "dodge" and _auto_move() and PilotDodge.wants_dash(self):
+		return true  # mesures (--dodge, passe M8) : aide « Bot » qui esquive les zones rouges
 	if action == "attack":
 		return Input.is_action_pressed(action) and (_pad() or not _ui_has_mouse())
 	return Input.is_action_just_pressed(action)
@@ -880,6 +884,8 @@ func _try_auto_attack(moving: bool) -> bool:
 func _try_auto_skill() -> bool:
 	if autoplay or foe or _tower_duel():
 		return false
+	if PilotDodge.enabled and not PilotDodge.threat(self).is_empty():
+		return false  # mesures (--dodge) : pas de sort lancé dans une zone rouge
 	for i in 4:
 		if not Settings.auto_skill(i) or cooldown_left(i) > 0.0:
 			continue
@@ -1128,8 +1134,8 @@ func _update_action(input_dir: Vector3, delta: float) -> void:
 	while not _hits.is_empty() and _state_time >= _hits[0]:
 		_hits.pop_front()
 		_resolve_hit()
-	# enchaînement : la touche de la case pendant l'action (barre du bon timing)
-	if _chain_input() == 2:
+	# enchaînement : la touche de la case pendant l'action (barre du bon timing) ; mesures (--dodge) : l'esquive passe avant
+	if not (PilotDodge.enabled and PilotDodge.wants_dash(self)) and _chain_input() == 2:
 		return
 	# l'esquive annule toute action (une compétence pas encore sortie est perdue) ;
 	# juste après l'impact d'une compétence : annulation parfaite
@@ -2449,6 +2455,11 @@ func current_target() -> Combatant:
 
 # --- bot de test (captures d'écran automatiques) ------------------------------------
 func _autoplay_input() -> Vector2:
+	var esc := PilotDodge.move_input(self) if PilotDodge.enabled else Vector2.INF
+	if esc == Vector2.INF and PilotDodge.enabled:
+		esc = PilotDodge.kite_input(self)
+	if esc != Vector2.INF:
+		return esc  # mesures (--dodge, passe M8) : sort de la zone rouge, un tireur garde ses distances
 	var m := nearest_monster(40.0)
 	var to := Vector3.ZERO
 	var goal := autoplay_target if autoplay else _auto_objective()
@@ -2499,6 +2510,8 @@ func _autoplay_input() -> Vector2:
 
 
 func _autoplay_wants(action: String) -> bool:
+	if PilotDodge.enabled and not PilotDodge.threat(self).is_empty():
+		return action == "dodge" and PilotDodge.wants_dash(self)  # mesures (--dodge) : il sort de la zone avant de frapper
 	if action == "dodge" and Royale.active:
 		return _autoplay_dash()
 	var m := nearest_monster(40.0)
