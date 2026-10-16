@@ -33,6 +33,18 @@ static func is_pvp() -> bool:
 	return current() in ["duel", "royale"] or Siege.ffa  # + le chacun pour soi du Siège
 
 
+## Modes scellés (lot H2, NIVEAU_HEROS §2.3) : le Survivant et le Battle royale.
+const SEALED := ["survivor", "royale"]
+
+
+## Mode scellé : le héros ne joue qu'avec sa partie (niveau, cartes et pièces de la run). Rien de la
+## progression du compte en combat : ni talents, ni certificats, ni plateau, ni archive, ni auras, ni
+## sorts fermés par la maîtrise, ni cartes à débloquer. Classes et apparences débloquées restent permises ;
+## les récompenses de fin (maîtrise du Battle royale) aussi. Lu par Run et Player à chaque usage.
+static func sealed() -> bool:
+	return Survivor.active or Royale.active or forced in SEALED
+
+
 ## Mode où les records, les cartes à débloquer et les succès comptent (règle commune : partout sauf
 ## l'entraînement).
 static func counts_records() -> bool:

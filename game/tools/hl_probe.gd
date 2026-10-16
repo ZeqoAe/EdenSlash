@@ -5,6 +5,7 @@ extends "res://tools/progression_sim.gd"
 ##   godot --headless --path game res://tools/hl_probe.tscn -- [--class=warrior] [--levels=15,25,35,45,60,75,90]
 ##         [--mep=…] [--mapmult=…]           puissance par carte, M′ suggéré, retard dans la bande, héros au-dessus
 ##   godot --headless --path game res://tools/hl_probe.tscn -- --talents   effet des talents et certificats (§2.2)
+##   godot --headless --path game res://tools/hl_probe.tscn -- --sealed    même compte opti en Aventure et en Battle royale (lot H2)
 ##
 ## 1) indices bruts de kits types (époque.carte.+N.rang des gemmes) à plusieurs niveaux de héros ;
 ## 2) R par carte : jeu actuel (plafond 15 / 25 / 35, Epochs.MONSTER_MULT) | refonte H (décote, monstres 0,85 / 1,3 / 2,3 / 4,4)
@@ -36,6 +37,8 @@ func _ready() -> void:
 	setup()
 	if "--talents" in OS.get_cmdline_user_args():
 		talents_probe()
+	elif "--sealed" in OS.get_cmdline_user_args():
+		sealed_probe()
 	else:
 		ratio_probe()
 	get_tree().quit()
@@ -166,3 +169,41 @@ func talents_probe() -> void:
 	Profile._sync_certificates()
 	cid = keep_c
 	Profile.selected_class = keep_c
+
+
+## Lot H2 : compte « opti » (talents et plateau du build opti, archive de 100 entrées) contre compte neuf, même kit 2.3.5.3 au
+## niveau 60, en Aventure puis en Battle royale (Royale.active : mode scellé, plafonds JcJ compris des deux côtés).
+func sealed_probe() -> void:
+	print("== mode scellé : compte opti / compte neuf, kit 2.3.5.3, niveau 60 ==")
+	var keep_t: Dictionary = Profile.talents.duplicate(true)
+	var keep_b: Array = Profile.cert_board.duplicate()
+	var keep_a: Dictionary = Profile.archive.duplicate(true)
+	var arc := {}
+	for e: Dictionary in GameData.eden_items:
+		if e.has("arch") and arc.size() < 100:
+			arc["e%d" % int(e.id)] = {}  # (100 entrées : paliers 10, 25, 50 et 100 de l'archive)
+	for c in CLASSES:
+		cid = c
+		Profile.selected_class = c
+		var b := Duel.opti_build(c, 90)
+		var gear := StarterGear.scenario("2.3.5.3", c)
+		var line := "  %-9s" % c
+		for mode in ["Aventure", "Battle royale"]:
+			Royale.active = mode == "Battle royale"
+			Profile.talents = {}
+			Profile.cert_board = ["", "", "", "", "", "", ""]
+			Profile.archive = {}
+			Profile._sync_certificates()
+			var bare := power_index(gear, 60)
+			Profile.talents = {c: (b.get("talents", {}) as Dictionary).duplicate()}
+			Profile.cert_board = RivalBuilds.cert_board(b)
+			Profile.archive = arc.duplicate(true)
+			Profile._sync_certificates()
+			var full := power_index(gear, 60)
+			line += "  %s ×%.2f" % [mode, full / bare]
+		Royale.active = false
+		print(line + "  (%d certificats, archive %d)" % [Profile.certificates.size(), arc.size()])
+	Profile.talents = keep_t
+	Profile.cert_board = keep_b
+	Profile.archive = keep_a
+	Profile._sync_certificates()

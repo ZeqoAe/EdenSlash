@@ -228,6 +228,13 @@ Un niveau **du compte**, de 1 à 90, partagé par les 60 classes ; il ne redesce
 - **Pas encore branché** (lots suivants) : port des pièces selon le niveau (H3), stats et monstres au niveau du héros, bandes de
   niveau des cartes (H4), activités à min(niveau, niveau de l'activité) (H5). Talents et certificats restent à la maîtrise de la
   classe.
+- **Modes scellés** (lot H2, `Modes.sealed()`) : en **Survivant** et en **Battle royale**, le héros ne joue qu'avec sa partie
+  (niveau, cartes et pièces de la run). Rien du compte ne s'applique en combat : ni talents (stats et sorts), ni certificats
+  (plateau et ses liens, insensibilité aux renversements, cartes de certificat), ni archive, ni aura ; tout le kit de la classe et
+  toutes les cartes communes sont proposés, sans la maîtrise ni les déblocages du compte. Restent permis : classes et apparences
+  débloquées ; les gains de fin (maîtrise, insignes plafonnés du Battle royale) sont gardés. Mesure (`hl_probe --sealed`, kit
+  2.3.5.3 au niveau 60, compte opti / compte neuf) : Battle royale ×2,19-2,64 avant, ×1,00 après ; Aventure ×2,39-2,99. Duel
+  équipé, Arènes et Gantelet gardent talents et certificats ; Duel à l'arme, Ligue et Panthéon inchangés (règle JcJ : lot H5).
 
 ## Grimoire et infobulles
 
@@ -1032,6 +1039,7 @@ doit se lire avant de lancer ; la Ruée et le Siège puisent dans la bibliothèq
 
 - 8 héros nus au niveau 1, chacun pour soi, dernier debout. **9 min 50** d'anneau en 5 resserrements (`Royale.PHASES` :
   rayons 190 / 130 / 80 / 42 / 14 m, dégâts hors anneau 2 → 20 % des PV par seconde), puis 30 s de mort subite.
+- **Mode scellé** (lot H2) : aucun talent, certificat, archive ni aura du compte ; le kit entier et toutes les cartes (voir « Niveau de héros »).
 - Niveaux : coffres (0,55 / 0,85 / 1,3 / largage 2 niveaux), cristaux (0,1 ; une vingtaine sur la carte : plus aucune jarre, caisse ni tas d'or, passe BR2), élimination (25 % des PV
   et de l'expérience selon l'écart de niveau, lot BR1 : 1 niveau entre égaux, ± 0,15 par niveau d'écart avec la victime, de
   0,2 à 2 ; `Royale.kill_xp`). Les héros scriptés gagnent exactement la même chose que le joueur, y compris quand ils

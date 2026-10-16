@@ -301,11 +301,11 @@ func recalc_stats() -> void:
 	if hand_off and offhand_item().is_empty():
 		hand_off = false  # arme secondaire retirée : la principale revient en main
 	var eq := _foe_equipment_stats() if own else ({} if bare else Profile.equipment_stats())
-	var sv := Survivor.active and not own  # Survivant : rien du compte (ni archive, ni aura)
-	var arc := {} if own or bare or sv else Archive.bonus()  # bonus permanents de l'archive
+	var sealed := Modes.sealed() and not own  # Survivant, Battle royale : rien du compte, ni archive ni aura (lot H2)
+	var arc := {} if own or bare or sealed else Archive.bonus()  # bonus permanents de l'archive
 	for k in arc:
 		eq[k] = float(eq.get(k, 0.0)) + float(arc[k])
-	var aura := {} if own or bare or sv else Profile.aura_stats(class_id)  # auras portées (pierres étoilées, pierres de lune)
+	var aura := {} if own or bare or sealed else Profile.aura_stats(class_id)  # auras portées (pierres étoilées, pierres de lune)
 	for k in aura:
 		eq[k] = float(eq.get(k, 0.0)) + float(aura[k])
 	var ps := foe_extra.duplicate() if own else ({} if bare else Run.passive_stats())
@@ -379,7 +379,7 @@ func recalc_stats() -> void:
 	pickup_mult = 1.0 + ps.get("pickup", 0.0)
 	xp_mult = 1.0 + ps.get("xp_pct", 0.0)
 	execute = minf(ps.get("execute", 0.0), 0.3)
-	if sv:
+	if Survivor.active and not own:
 		Survivor.cap_hero(self)  # Survivant : critique, dégâts critiques et vitesses plafonnés (lot S7)
 	if PvpCaps.active():
 		PvpCaps.soften(self)  # duel équipé : bonus en % ramenés avant les plafonds
@@ -2118,7 +2118,7 @@ func _dive_impact() -> void:
 func knock_immune() -> bool:
 	if foe or built or _bare():
 		return false
-	var keys: Array = [] if Survivor.active else Profile.certificates.duplicate()  # (Survivant : pas de certificats du compte)
+	var keys: Array = [] if Modes.sealed() else Profile.certificates.duplicate()  # (mode scellé : pas de certificats du compte)
 	for pid in Run.passives:
 		if String(pid).begins_with("cert:"):
 			keys.append(String(pid).trim_prefix("cert:"))

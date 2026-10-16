@@ -364,8 +364,10 @@ func certificate_card(key: String) -> Dictionary:
 
 
 ## Certificats qui peuvent tomber en run : ceux de la classe jouée et tous ceux débloqués,
-## sauf ceux posés sur le plateau (déjà acquis pour la run).
+## sauf ceux posés sur le plateau (déjà acquis pour la run). Aucun en mode scellé (lot H2).
 func certificate_pool() -> Array:
+	if Modes.sealed():
+		return []
 	var keys: Array = Profile.unlocked_certificates().map(func(x): return String(x.key))
 	for c in GameData.talents.get(class_id, {}).get("certificates", []):
 		var k := "%s/%s" % [class_id, c]
@@ -586,8 +588,8 @@ func passive_stats() -> Dictionary:
 		var p := passive_def(pid)
 		for s in p.get("stat", {}):
 			total[s] = total.get(s, 0.0) + float(p.stat[s]) * power(pid)
-	if Survivor.active:
-		return total  # Survivant : ni talents, ni certificats, ni plateau (aucun lien avec la progression du compte)
+	if Modes.sealed():
+		return total  # Survivant, Battle royale : ni talents, ni certificats, ni plateau (lot H2)
 	# talents de la classe jouée (arbre d'Eden)
 	var tree: Dictionary = GameData.talents.get(class_id, {}).get("talents", {})
 	for id in Profile.talents.get(class_id, {}):
@@ -612,8 +614,8 @@ func passive_stats() -> Dictionary:
 func skill_talent(skill_id: int) -> Dictionary:
 	# cartes de classe prises sur ce sort (puissance, cadence)
 	var out := {"dmg": skill_card_mod(skill_id, "dmg"), "cd": skill_card_mod(skill_id, "cd"), "duration": 0.0, "power": 0.0}
-	if Survivor.active:
-		return out  # Survivant : pas de talents de classe
+	if Modes.sealed():
+		return out  # Survivant, Battle royale : pas de talents de classe (lot H2)
 	var tree: Dictionary = GameData.talents.get(class_id, {}).get("talents", {})
 	for id in Profile.talents.get(class_id, {}):
 		var eff: Dictionary = tree.get(id, {}).get("effect", {})
@@ -653,16 +655,17 @@ func roll_cards(n := 3, skills_only := false, kind := "") -> Array:
 		return SurvivorCards.roll(n, "skill" if skills_only else kind)
 	var pool: Array = []
 	var owned := all_skills().map(func(s): return int(s.id))
+	var sealed := Modes.sealed()  # (lot H2) mode scellé : le kit entier, toutes les cartes, sans la maîtrise du compte
 	if skills.size() < MAX_SKILLS:
 		for s in class_data().get("skills", []):
-			if not int(s.id) in owned and Progression.skill_unlocked(class_id, int(s.id)):
+			if not int(s.id) in owned and (sealed or Progression.skill_unlocked(class_id, int(s.id))):
 				pool.append({"type": "skill", "id": int(s.id), "weight": 3.0 if skills.size() < 2 else 2.0})
 	elif not skills_only:
 		# cases pleines : les autres sorts de la classe deviennent des enchaînements
 		var room: Array = range(skills.size()).filter(func(i): return chain_of(i).size() < MAX_CHAIN)
 		if not room.is_empty():
 			for s in class_data().get("skills", []):
-				if not int(s.id) in owned and Progression.skill_unlocked(class_id, int(s.id)):
+				if not int(s.id) in owned and (sealed or Progression.skill_unlocked(class_id, int(s.id))):
 					pool.append({"type": "chain", "id": int(s.id), "slot": _chain_slot_for(int(s.id), room), "weight": 2.0})
 	if not skills_only:
 		for s in all_skills():
@@ -682,7 +685,7 @@ func roll_cards(n := 3, skills_only := false, kind := "") -> Array:
 		for p in Boons.all() + certs:
 			if int(passives.get(p.id, 0)) >= mini(int(p.get("max", 1)), 99 if p.get("instant", false) else Cards.MAX_LEVEL):
 				continue
-			if String(p.id) in banned or (boons.has(String(p.id)) and not Cards.card_unlocked(String(p.id))):
+			if String(p.id) in banned or (boons.has(String(p.id)) and not sealed and not Cards.card_unlocked(String(p.id))):
 				continue  # bannie pour la run, ou carte pas encore débloquée (méta-progression)
 			if not p.get("requires", []).all(func(r): return passives.has(r)):
 				continue

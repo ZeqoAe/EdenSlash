@@ -180,6 +180,9 @@ Détail : DESIGN « Économie et progression » ; `R_E3.md`, `R_E6.md`, `R_P5.md
 **Niveau de héros** (lot H1) : `core/hero_level.gd` (`HeroLevel` : niveau 1-90 du compte dans `records.hero_xp`, courbe, XP au kill par
 `Monster._on_death` en Survie / Donjons / Tour / Ruée / Siège, versée par `Quests.end_run`, ligne du bilan `ResultsPanel.show_spec`,
 migration `ensure`), jauge `ui/hero_level_gauge.gd` ; port des pièces, stats et monstres : lots H3-H5 (`conception/progression/NIVEAU_HEROS.md`, `R_H1.md`).
+**Modes scellés** (lot H2, `R_H2.md`) : `Modes.sealed()` (Survivant, Battle royale) coupe talents, certificats, plateau, archive, auras,
+sorts fermés par la maîtrise et cartes à débloquer (`Run.passive_stats` / `skill_talent` / `roll_cards` / `certificate_pool`,
+`Player.recalc_stats` / `knock_immune`) ; tout nouvel effet du compte en combat passe par ce test ; `test_h2`, `hl_probe --sealed`.
 
 ### Quêtes et quête commune
 `core/quests.gd` (bus unique `Quests.end_run(activité, gagné, extra)` en fin de chaque mode, `Quests.event`), pool
