@@ -1086,6 +1086,7 @@ func _on_boss_killed() -> void:
 		give_look_chest()
 		# une amélioration d'arme garantie à chaque boss de carte
 		world._offer("Boss vaincu ! Améliore ton arme", Run.roll_cards(3, false, "weapon"))
+		offer_plans()
 	var next := next_zone_id()
 	if next != "":
 		# les zones jusqu'à celle de l'étape suivante s'ouvrent aussi pour les prochaines runs
@@ -1106,6 +1107,30 @@ func _on_boss_killed() -> void:
 		message.emit("Boss vaincu !\nRamasse le butin", 3.0)
 	await get_tree().create_timer(6.0, false).timeout  # en pause pendant un choix de carte (sinon le bilan le recouvrait)
 	boss_defeated.emit()
+
+
+## Lot A4 : coffre de plans du boss de carte : une pièce non découverte du palier, au choix parmi 3 (sans relance), qui
+## devient fabricable à l'Atelier ; tout le palier découvert : des insignes à la place.
+func offer_plans() -> void:
+	if not Run.survival or Run.survivor:
+		return
+	Tutorial.event("boss_plans")
+	var items := Run.plan_offer(Run.epoch, Run.stage)
+	if items.is_empty():
+		Run.plan_fallback()
+		message.emit("Tous les plans de cette carte sont trouvés : +%d insignes" % Run.PLAN_INSIGNIA, 3.5)
+		return
+	world._offer("Coffre de plans : choisis une pièce à fabriquer", items.map(func(it): return plan_card(it)))
+
+
+## Carte d'un plan : la pièce telle qu'un coffre d'emplacement la montre, et son prix à l'Atelier.
+static func plan_card(it: Dictionary) -> Dictionary:
+	var c := item_card(it, "plan")
+	c["subtitle"] = "Plan · " + String(c.subtitle)
+	var e: Dictionary = GameData.eden_by_id.get(int(it.get("eden", -1)), {})
+	if not e.is_empty():
+		c["desc"] = "%s\n[color=#9a98a8]Se fabrique à l'Atelier · %d insignes[/color]" % [String(c.desc), Economy.base_price(e)]
+	return c
 
 
 ## Survie, boss vaincu : un coffre d'apparence (menu Coffres, jamais perdu), d'autant plus rare

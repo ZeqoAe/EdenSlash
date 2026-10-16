@@ -15,7 +15,9 @@ extends Node
 ##   --hubvalue  pièces choisies sur leur PE (le niveau compte) au lieu de leur valeur en Survie (niveau du héros 35) ;
 ##   --decote    décote de palier en Survie : niveau de puissance × clamp(niveau de la pièce / palier de la carte, 0,5, 1)
 ##               (émulée ici sur une copie des pièces, sans toucher Items : le vrai réglage est le lot A6) ;
-##   --heroic= / --mythic=  autres GearPower.DIFF_RATIO.
+##   --heroic= / --mythic=  autres GearPower.DIFF_RATIO ;
+##   --bossplans  coffre de plans du boss de chaque carte finie (lot A4) : la meilleure (sur sa valeur) de 3 pièces non
+##               découvertes du palier (SlotChests.plan_candidates) ; tout découvert : Run.PLAN_INSIGNIA insignes.
 ## Jalons : kit80_ok (9 pièces ≥ 78, légendaires, +5), kit90_ok (≥ 86), kit90_opti (≥ 86, +10, gemmes ≥ 4, ench. ≥ 7),
 ## dungeon_0 (1er donjon Normal). Colonne H : -- --refonte --hubvalue --decote --mult=0.85,1.3,2.3,4.4 (12 comptes, 50 h ≈ 10 min).
 ##
@@ -95,6 +97,8 @@ var refonte := "--refonte" in OS.get_cmdline_user_args()
 var plans_by_boss := "--plans=boss" in OS.get_cmdline_user_args()
 var hubvalue := "--hubvalue" in OS.get_cmdline_user_args()
 var decote := "--decote" in OS.get_cmdline_user_args()
+var boss_plans := "--bossplans" in OS.get_cmdline_user_args()  # lot A4 (voir l'en-tête)
+var plan_rng := RandomNumberGenerator.new()  # tirages du coffre de plans à part : les autres tirages restent ceux de la série sans
 var diff_ratios: Array = GearPower.DIFF_RATIO.duplicate()
 ## Donjon sans salles de remplissage (refonte, lot A2) ; approximation de PR1 du plan par boss (plan après un donjon déjà fini).
 const REFONTE_DUNGEON_MIN := 7.0
@@ -501,6 +505,8 @@ func survival_run(acc: Dictionary, ep: int) -> String:
 		if rng.randf() < clear_chance(float(rs[k]), k, talent):
 			minutes += MAP_MIN
 			_map_loot(acc, ep, stage, MAP_MIN, bag)
+			if boss_plans:
+				_boss_plan(acc, ep, stage)  # carte finie = boss vaincu
 			if k == 2:
 				victory = true
 		else:
@@ -562,6 +568,38 @@ func _map_loot(acc: Dictionary, ep: int, stage: int, minutes: float, bag: Dictio
 	for i in maxi(n_chests, 0):
 		var t := "forge" if rng.randf() < 0.6 else "jewel"
 		_open_chest(acc, Rewards.make(t, supply if t == "forge" else gem_lv, false))
+
+
+## Lot A4, --bossplans : coffre de plans du boss de la carte : 3 pièces non découvertes du palier tirées au hasard, le joueur
+## prend celle qui vaut le plus (il vise son manque) ; tout le palier découvert : des insignes à la place.
+func _boss_plan(acc: Dictionary, ep: int, stage: int) -> void:
+	var known := {}
+	for id in acc.seen:
+		known[int(id)] = true
+	var p := SlotChests.plan_candidates(ep, stage, known, Items.default_weapon_type(cid))
+	if p.is_empty():
+		acc.insignia = int(acc.insignia) + Run.PLAN_INSIGNIA
+		acc.insignia_total = int(acc.insignia_total) + Run.PLAN_INSIGNIA
+		return
+	for i in range(p.size() - 1, 0, -1):
+		var j := plan_rng.randi_range(0, i)
+		var t = p[i]
+		p[i] = p[j]
+		p[j] = t
+	var best: Dictionary = {}
+	var best_v := -INF
+	for e in p.slice(0, Run.PLAN_CHOICES):
+		var it: Dictionary = _cache.get(int(e.id), {})
+		if it.is_empty():
+			it = Items.from_eden(e)
+			it["quality"] = 1.0
+			_cache[int(e.id)] = it
+		var v := _value(it) - _value(acc.gear.get(String(e.slot), {}), true)
+		if v > best_v:
+			best_v = v
+			best = e
+	acc.seen[int(best.id)] = best
+	acc["boss_plans"] = int(acc.get("boss_plans", 0)) + 1
 
 
 ## Ouvre un coffre de récompense (vrai contenu : Rewards.open) et verse son contenu au compte.
@@ -930,6 +968,7 @@ func kit_tier(acc: Dictionary, need_up := 10, need_gem := 3, need_ench := 5) -> 
 func simulate(accounts: int, skill: String, max_hours: float, seed_value: int) -> Dictionary:
 	setup()
 	rng.seed = seed_value
+	plan_rng.seed = seed_value + 7919
 	seed(seed_value)
 	var all: Array = []
 	for a in accounts:
@@ -1027,6 +1066,8 @@ func print_report(res: Dictionary, skill: String) -> void:
 				up += "%s:%d+%d " % [slot, int(it.get("level", 0)), int(it.get("upgrade", 0))]
 		print("  équipement final du compte 1 : %s" % up)
 		print("  insignes gagnés %d (dépensés %d), cristaux gagnés %d (dépensés %d), runs %d dont %d gagnées" % [acc.insignia_total, acc.spent_insignia, acc.crystals_total, acc.spent_crystals, acc.runs, acc.won_runs])
+		if boss_plans:
+			print("  plans des boss de carte (A4) : %d, pièces découvertes %d" % [int(acc.get("boss_plans", 0)), (acc.seen as Dictionary).size()])
 
 
 ## Gains à l'heure de chaque activité (barèmes du jeu, durées supposées) : cristaux, insignes, fournitures.

@@ -80,6 +80,13 @@ var epoch := 1
 var seen_items: Array = []
 ## Armes des autres types découvertes avec une arme choisie (SlotChests.weapon_family) : Armurerie aussi.
 var seen_family: Array = []
+## Lot A4 : coffre de plans du boss de chaque carte (DESIGN.md, « Coffre de plans ») : une pièce non découverte du palier, au
+## choix parmi PLAN_CHOICES ; acquise tout de suite (Profile.seen_gear, sauvegardé), donc gardée même si la run est perdue ensuite.
+## Tout le palier découvert : PLAN_INSIGNIA insignes à la place (crédités tout de suite, comptés au bilan).
+const PLAN_CHOICES := 3
+const PLAN_INSIGNIA := 30
+var boss_plans: Array = []  # id d'Eden des plans gagnés aux coffres des boss de la run (bilan)
+var plan_insignia := 0
 ## Améliorations d'arme de la run (cartes « weapon_up », WeaponAttacks.roll_upgrade) par
 ## emplacement ("weapon", "offhand") : {rank, dmg, crit, speed, area, …, sig}. Elles restent sur
 ## l'emplacement quand l'arme change.
@@ -152,6 +159,8 @@ func start(cid: String) -> void:
 	epoch = 1
 	seen_items = []
 	seen_family = []
+	boss_plans = []
+	plan_insignia = 0
 	weapon_ups = {}
 	trophies = []
 	Profile.begin_run()
@@ -218,8 +227,8 @@ func finish(res: String) -> void:
 		for id in seen_items + seen_family:
 			if not int(id) in Profile.seen_gear:
 				Profile.seen_gear.append(int(id))
-		# 25 de participation (dès 10 monstres vaincus), 25 par carte atteinte : même une défaite en carte 1
-		# paie de quoi acheter une pièce de l'Armurerie en 1 ou 2 runs (prix 50 à 73 pour l'époque I)
+		# barème Economy.survival_insignia_parts (lots E5, A5) : participation (dès 10 monstres) et 1re carte au prorata,
+		# 35 par carte suivante atteinte, 15 par boss de carte, monstres / 40, victoire ; les plans des boss sont déjà acquis
 		insignia_parts = Economy.survival_insignia_parts(stage, counted, elites, epoch, res == "victoire", map_min)  # barème unique (lots E5, E6)
 		insignia_gain = Economy.survival_insignia(stage, counted, elites, epoch, res == "victoire", map_min)
 		if Challenge.active:
@@ -228,7 +237,7 @@ func finish(res: String) -> void:
 			insignia_gain = roundi(insignia_gain * (1.0 + Epochs.HEROIC_INSIGNIA * heroic_rank))
 		insignia_gain = Menace.add_insignia(insignia_gain, stage)  # Menace atteinte, cartes sous pacte (passe P12)
 		Profile.insignia += insignia_gain
-		insignia_gain += fortune_insignia  # (déjà crédités à l'autel)
+		insignia_gain += fortune_insignia + plan_insignia  # (déjà crédités à l'autel et au coffre de plans)
 	if res == "victoire":
 		Profile.runs_won += 1
 		unlocked_name = Profile.unlock_after(zone_id)
@@ -433,6 +442,55 @@ func discover_weapons() -> void:
 	for id in SlotChests.weapon_family(epoch, stage):
 		if not int(id) in seen_family:
 			seen_family.append(int(id))
+
+
+## Lot A4 : plans encore à découvrir au palier de la carte [param st] de l'époque [param ep] (ni au compte, ni dans les
+## trouvailles de la run, ni portés) : tous les emplacements de l'Atelier, arme du type de la classe.
+func plan_pool(ep: int, st: int) -> Array:
+	var known := {}
+	for id in Profile.seen_gear + seen_items + seen_family + boss_plans:
+		known[int(id)] = true
+	for it in Profile.equipped.values():
+		if it is Dictionary and it.has("eden"):
+			known[int(it.eden)] = true
+	return SlotChests.plan_candidates(ep, st, known, Items.default_weapon_type(class_id))
+
+
+## Lot A4 : [param n] plans au hasard (pièces +0 du palier, comme un coffre d'emplacement) ; [] si tout est découvert.
+func plan_offer(ep: int, st: int, n := PLAN_CHOICES) -> Array:
+	var p := plan_pool(ep, st)
+	p.shuffle()
+	var m := Epochs.map_def(ep, st)
+	var out: Array = []
+	for e in p.slice(0, n):
+		var it := Items.from_template(e, Epochs.cap(st), int(m.rarity))
+		it["upgrade"] = 0
+		if m.get("awakened", false) and GameData.is_awakened(e):
+			it["awakened"] = true
+		out.append(it)
+	return out
+
+
+## Lot A4 : plan choisi au coffre du boss : acquis tout de suite et sauvegardé (gardé même si la run est perdue ensuite) ;
+## une arme fait aussi découvrir ses sœurs des autres types, comme une arme choisie dans un coffre (lot E4).
+func grant_plan(item: Dictionary) -> void:
+	if not item.has("eden") or int(item.eden) in boss_plans:
+		return
+	var ids: Array = [int(item.eden)]
+	if String(item.get("slot", "")) == "weapon":
+		ids.append_array(SlotChests.weapon_family(epoch, stage))
+	for id in ids:
+		if not int(id) in Profile.seen_gear:
+			Profile.seen_gear.append(int(id))
+	boss_plans.append(int(item.eden))
+	Profile.save_profile()
+
+
+## Lot A4 : tout le palier est déjà découvert : des insignes à la place du plan (crédités tout de suite).
+func plan_fallback() -> void:
+	plan_insignia += PLAN_INSIGNIA
+	Profile.insignia += PLAN_INSIGNIA
+	Profile.save_profile()
 
 
 ## Effets des trophées de la run (un par trophée).
@@ -884,6 +942,8 @@ func apply_card(card: Dictionary) -> void:
 			Profile.changed.emit()
 		"scroll":
 			Profile.add_bag(String(card.key))  # autel du scribe : le parchemin choisi
+		"plan":
+			grant_plan(card.item)  # coffre de plans du boss de carte (lot A4)
 	if card.type in ["skill", "chain"]:
 		arrange()
 	changed.emit()

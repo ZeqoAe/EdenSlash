@@ -446,7 +446,7 @@ func _offer(title: String, options: Array, reroll := Callable(), own_rerolls := 
 	if Settings.auto_cards():
 		var pick := CardPicker.auto_pick(options)
 		Run.apply_card(pick)
-		var what: String = {"scroll": "Parchemin choisi"}.get(String(pick.get("type", "")),
+		var what: String = {"scroll": "Parchemin choisi", "plan": "Plan choisi"}.get(String(pick.get("type", "")),
 			"Pièce choisie" if pick.has("item") else "Carte choisie")
 		hud.show_message("%s : %s" % [what, String(pick.get("title", "?"))], 2.0)
 		return

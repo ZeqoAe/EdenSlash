@@ -88,6 +88,22 @@ static func pool(box: String, epoch: int, stage: int, wtype := "") -> Array:
 	return out
 
 
+## Lot A4 (coffre de plans du boss de carte) : modèles d'Eden du palier de la carte [param stage] de l'époque [param epoch]
+## que l'Atelier fabrique (tous les coffres de pièce sauf les trophées ; arme du type [param wtype], par défaut celui de la
+## classe) et dont l'id n'est pas dans [param known] (id -> vrai : plans déjà découverts). Sans doublon.
+static func plan_candidates(epoch: int, stage: int, known: Dictionary, wtype := "") -> Array:
+	var seen := known.duplicate()
+	var out: Array = []
+	for box in BOXES:
+		if is_cards(box) or box == "trophy":
+			continue
+		for e in pool(box, epoch, stage, wtype):
+			if not seen.has(int(e.id)):
+				seen[int(e.id)] = true
+				out.append(e)
+	return out
+
+
 ## [param n] pièces au hasard d'un coffre [param box] (sans doublon), +0, puissance plafonnée
 ## au niveau maximal de la map.
 static func offer(box: String, epoch: int, stage: int, n := 3) -> Array:

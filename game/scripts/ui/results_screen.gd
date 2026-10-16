@@ -166,6 +166,10 @@ static func gained_rows() -> Array:
 static func kept_rows(supplies_kept: bool) -> Array:
 	var out: Array = []
 	out.append(row("Insignes", "+%d" % Run.insignia_gain, insignia_tip() + "\n\n" + ResourceHelp.hint("insignia"), "upgrade"))
+	for id in Run.boss_plans:  # coffres de plans des boss de carte (lot A4)
+		var e: Dictionary = GameData.eden_by_id.get(int(id), {})
+		out.append(row("Plan trouvé : %s" % String(e.get("name", "?")), String(Items.SLOT_NAMES.get(String(e.get("slot", "")), "")),
+			"Se fabrique à l'Atelier avec des insignes", "equipment"))
 	if not Run.seen_items.is_empty():
 		out.append(row("Pièces découvertes", str(Run.seen_items.size()), "À acheter à l'Armurerie avec des insignes", "equipment"))
 	out.append_array(chest_rows(Run.new_reward_chests()))
@@ -219,7 +223,7 @@ static func insignia_lines() -> Array:
 	var base := 0
 	for l in out:
 		base += int(l[1])
-	var bonus := Run.insignia_gain - Run.fortune_insignia - Menace.insignia_extra - base
+	var bonus := Run.insignia_gain - Run.fortune_insignia - Run.plan_insignia - Menace.insignia_extra - base
 	if bonus > 0:
 		var who := "Défi du jour" if Run.heroic_rank <= 0 else ("Rang héroïque %d" % Run.heroic_rank if not Challenge.active else "Défi et rang héroïque")
 		out.append([who, bonus])
@@ -230,6 +234,8 @@ static func insignia_lines() -> Array:
 		out.append([label, Menace.insignia_extra])
 	if Run.fortune_insignia > 0:
 		out.append(["Autel de la fortune", Run.fortune_insignia])
+	if Run.plan_insignia > 0:
+		out.append(["Plans des boss déjà trouvés", Run.plan_insignia])
 	return out
 
 

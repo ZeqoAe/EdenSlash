@@ -93,6 +93,9 @@ dans `Compass` si elle change la quête + `test_nav_screens`. Les activités « 
   découvrir les 17 types, `SlotChests.weapon_family`) ; **plus d'enclume** en Survie (N2 : le +N est celui du hub) ; une arme
   trouvée va dans le sac (`Run.bag_weapon`, HUD + [G]), auto-attaques `combat/weapon_attacks.gd` (2 variantes, 8 rangs d'amélioration),
   trophées = collection de la run (`Run.trophies`, 12 au plus, `Trophies.KINDS`, outil `tools/rework_trophies.py`).
+- Coffre de plans du boss de carte (A4) : `RunDirector.offer_plans` → 1 pièce parmi 3 non découvertes du palier (`Run.plan_offer`,
+  `SlotChests.plan_candidates`), acquise tout de suite (`Run.grant_plan`, gardée en défaite), sinon 30 insignes ; test `test_a4`,
+  mesure `progression_sim --bossplans`, rapport `conception/progression/R_A4.md`.
 - Monstres : rôles et escouades `core/spawn_director.gd` (P15, `--spawn=legacy` pour comparer), puissance selon l'indice
   d'équipement `core/monster_scaling.gd`, rage par paliers `RunDirector.RAGE_TIERS` (×1,1 / 2 / 11 / 101 par minute),
   début doux `EARLY_EASE` / `EARLY_RAMP`. Pacte, géants et **Menace** (`core/menace.gd`, +20 % de PV par cran, plafond 5,

@@ -482,6 +482,15 @@ plus du palier de la carte (`SlotChests.POOL_WINDOW`) : un type sans pièce proc
 Le même écart vaut pour les coffres : plus de légendaire de niveau 1 proposée au palier 60. L'arme secondaire trouvée en jeu
 est tirée comme un coffre d'arme de son type.
 
+**Coffre de plans des boss de carte (lot A4 de la refonte Aventure)** : à la mort du boss de chaque carte, après l'amélioration
+d'arme, le joueur choisit **1 pièce parmi 3 non découvertes** du palier de la carte (`Run.plan_offer`, `SlotChests.plan_candidates` :
+tous les coffres de pièce sauf les trophées, arme du type de la classe ; jamais une pièce déjà dans `Profile.seen_gear`, choisie
+dans un coffre de la run ou portée). Pas de relance. Le plan est **acquis tout de suite** (`Profile.seen_gear`, sauvegardé) : gardé
+même si la run est perdue ou abandonnée ensuite ; une arme fait aussi découvrir ses sœurs des autres types (lot E4). Palier entièrement
+découvert : **30 insignes** à la place (`Run.PLAN_INSIGNIA`, ligne de l'infobulle des insignes). Bilan : « Plan trouvé : <pièce> ».
+Pourquoi : une carte gagnée donne au moins un plan, au choix (le joueur vise son manque) ; aucune nouvelle monnaie. Fiche
+`boss_plans`. Mesure (`progression_sim --bossplans`) : voir `conception/progression/R_A4.md`.
+
 **Fournitures de la Survie (0.1.179, lot E4)** : les parchemins de fortification, les formules d'enchantement (autel du
 scribe, marchands, objets à casser) et les coffres de forge sont au niveau **des pièces de la carte d'époque** (le plus haut
 de l'armure et de l'arme : parchemins Lv 30 / 40 / 50 en époque I, 50 / 60 / 60 en II, 70 / 70 / 80 en III, 80 / 90 / 90 en IV ;
