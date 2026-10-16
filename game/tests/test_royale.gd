@@ -333,6 +333,9 @@ func _test_game_loss() -> void:
 	var kst: Dictionary = killer.get_meta("royale")
 	var k_xp := float(kst.lv) + float(kst.prog)
 	p.hp = 1.0
+	p.evasion_chance = 0.0  # (esquive et parade du héros sont tirées au hasard : le coup fatal doit toujours porter)
+	p.parry_chance = 0.0
+	p.shield_until = 0.0
 	p.take_damage(1e9, killer, false)
 	await get_tree().physics_frame
 	await get_tree().physics_frame

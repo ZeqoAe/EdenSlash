@@ -156,6 +156,9 @@ func _test_manual_and_revive() -> void:
 	var lv := p.level
 	var alive1 := rd.alive_count()
 	p.hp = 1.0
+	p.evasion_chance = 0.0  # (esquive et parade du héros sont tirées au hasard : le coup fatal doit toujours porter)
+	p.parry_chance = 0.0
+	p.shield_until = 0.0
 	p.take_damage(1e9, rd.ais[4], false)
 	await get_tree().physics_frame
 	await get_tree().physics_frame
@@ -179,6 +182,9 @@ func _test_manual_and_revive() -> void:
 	check("scripté tombé après 2 min : définitif", st5.has("place") and rd.revives.is_empty())
 	p.shield_until = 0.0
 	p.hp = 1.0
+	p.evasion_chance = 0.0  # (esquive et parade du héros sont tirées au hasard : le coup fatal doit toujours porter)
+	p.parry_chance = 0.0
+	p.shield_until = 0.0
 	p.take_damage(1e9, rd.ais[6], false)
 	await get_tree().physics_frame
 	await get_tree().physics_frame

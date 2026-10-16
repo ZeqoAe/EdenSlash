@@ -183,7 +183,9 @@ func _test_ai() -> void:
 			full_at = i + 1
 			score0 = Royale.gear_score(st.gear, "warrior", lv)
 	var w: Dictionary = st.gear.get("weapon", {})
-	check("héros scripté : équipement complet en %d coffres (9 emplacements)" % full_at, full_at == 9)
+	# (un coffre peut, rarement, offrir à un scripté un remplacement « nettement meilleur » que le meilleur choix retient avant
+	# le dernier emplacement vide : 9 coffres au plus tôt, jamais plus de 11 ; le joueur, lui, remplit toujours en 8 coffres)
+	check("héros scripté : équipement complet en %d coffres (9 emplacements)" % full_at, full_at >= 9 and full_at <= 11)
 	check("héros scripté : une seule arme, du type de sa classe", Items.weapon_type_of(w) == Items.default_weapon_type("warrior") and (st.gear as Dictionary).size() == 9)
 	check("héros scripté : jamais une pièce moins bonne (%d)" % worse, worse == 0)
 	check("héros scripté : les coffres suivants améliorent ses pièces (note %.1f → %.1f)" % [score0, Royale.gear_score(st.gear, "warrior", int(st.lv))],
@@ -283,10 +285,14 @@ func _test_world() -> void:
 	var g1 := rd.ground.size()
 	var killer: ClassRival = rd.ais[3]
 	p.hp = 1.0
+	p.evasion_chance = 0.0  # (esquive et parade du héros sont tirées au hasard : le coup fatal doit toujours porter)
+	p.parry_chance = 0.0
+	p.shield_until = 0.0
 	p.take_damage(1e9, killer, false)
 	await get_tree().physics_frame
 	await get_tree().physics_frame
-	check("joueur tombé : %d pièces au sol, il garde son arme" % (rd.ground.size() - g1), rd.ground.size() - g1 == worn_n \
+	check("joueur tombé : %d pièces au sol sur %d, il garde son arme (mort %s, phase %s, équipé %s)" % [rd.ground.size() - g1, worn_n, p.is_dead, rd.phase,
+		Profile.equipped.keys()], rd.ground.size() - g1 == worn_n \
 		and Profile.equipped.keys() == ["weapon"])
 	if rd.spectating and rd.watched != null and is_instance_valid(rd.watched):
 		var ev := InputEventAction.new()

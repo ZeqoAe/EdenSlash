@@ -88,8 +88,13 @@ func _test_game() -> void:
 	var rd: RoyaleDirector = await _boot()
 	var d: RunDirector = world.director
 	var p: Player = world.player
+	# (lot BR4 : tout le monde est d'abord à bord de l'aigle, hors du groupe « ffa » ; ici on les pose d'un coup, la
+	# partie démarre. Pas de réanimation dans ce test : elle est vérifiée par test_br4, ici on suit l'élimination définitive.)
+	rd.jump.land_all()
 	rd.phase = "fight"
+	rd._player_revived = true
 	for a in rd.ais:
+		a.get_meta("royale")["revived"] = true
 		a.passive = true
 	var a0: ClassRival = rd.ais[0]
 	var a1: ClassRival = rd.ais[1]
@@ -178,6 +183,9 @@ func _test_game() -> void:
 	# spectateur : le joueur tombe avec 6 adversaires en vie
 	var alive := rd.alive_count()
 	p.hp = 1.0
+	p.evasion_chance = 0.0  # (esquive et parade du héros sont tirées au hasard : le coup fatal doit toujours porter)
+	p.parry_chance = 0.0
+	p.shield_until = 0.0
 	p.take_damage(1e9, rd.ais[2], false)
 	await get_tree().physics_frame
 	await get_tree().physics_frame
