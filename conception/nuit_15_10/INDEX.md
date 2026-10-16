@@ -63,6 +63,7 @@ S = Survivant (`conception/survivor/`).
 | `R_P15.md` | spawn varié (rôles, escouades, événements), niveau et puissance des monstres | 0.1.206 |
 | `R_P16.md` | notes du joueur : auras d'Eden (`tools/fx_aura_fix.py`), apparence d'arme | 0.1.200 |
 | `R_P17.md` | documentation : CLAUDE.md réécrit, DESIGN.md réorganisé et corrigé, CHANGELOG vérifié, cet index | 0.1.212 |
+| `R_P18.md` | régression complète sur HEAD : suite verte, parcours de tous les modes (`test_p18_modes`), migrations, équilibrage, perfs | 0.1.213 |
 
 ## Passes M — modes
 | Rapport | Contenu | Version |
