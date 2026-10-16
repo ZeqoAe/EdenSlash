@@ -233,7 +233,7 @@ func _build_found() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 40)
 	_body.add_child(row)
-	_hero_card(row, Profile.selected_class, "Toi", Color(0.6, 0.8, 1.0))
+	_hero_card(row, Profile.selected_class, HeroLook.name_or("Toi"), Color(0.6, 0.8, 1.0))
 	var vs := Hud._label(row, "VS", 40, UiTheme.GOLD)
 	vs.add_theme_font_override("font", UiTheme.title_font())
 	_hero_card(row, opp_class, opp_name, Color(1.0, 0.6, 0.55))

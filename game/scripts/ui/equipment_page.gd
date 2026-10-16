@@ -210,9 +210,18 @@ class HeroPreview extends SubViewportContainer:
 		disk.position.y = -0.04
 		_vp.add_child(disk)
 
+	## Visage montré à la place de celui du profil (aperçu de la création de personnage) ; null = celui du profil.
+	var look_override = null
+
+	## Pivote le héros de [param angle] radians (stick droit de la manette).
+	func turn(angle: float) -> void:
+		_pivot.rotation.y += angle
+
 	func show_hero(class_id: String, weapon_code: String) -> void:
+		var look: Dictionary = HeroLook.sanitize(look_override) if look_override is Dictionary else HeroLook.current()
 		var key := class_id + "|" + weapon_code + "|" + Profile.outfit_of(class_id) + "|" + "|".join(Profile.worn_parts(class_id)) \
-			+ "|" + "|".join(Profile.worn_auras(class_id).map(func(x): return str(int(x.id)))) + "|" + str(Profile.dye_map(class_id)) + "|" + str(Profile.aura_tint(class_id))
+			+ "|" + "|".join(Profile.worn_auras(class_id).map(func(x): return str(int(x.id)))) + "|" + str(Profile.dye_map(class_id)) + "|" + str(Profile.aura_tint(class_id)) \
+			+ "|" + str(look)
 		if key == _shown:
 			return
 		_shown = key
@@ -221,7 +230,7 @@ class HeroPreview extends SubViewportContainer:
 		var cls := GameData.class_data(class_id)
 		if cls.is_empty() or not ResourceLoader.exists(String(cls.get("model", ""))):
 			return
-		var model := EdenModel.instantiate_hero(cls, Profile.outfit_of(class_id), Profile.worn_parts(class_id), Profile.dye_map(class_id))
+		var model := EdenModel.instantiate_hero(cls, Profile.outfit_of(class_id), Profile.worn_parts(class_id), Profile.dye_map(class_id), look)
 		model.scale = Vector3.ONE * GameData.HERO_SCALE
 		_pivot.add_child(model)
 		EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, weapon_code))

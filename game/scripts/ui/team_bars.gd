@@ -55,7 +55,7 @@ func _add_row(c: Combatant, mine: bool) -> void:
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_box.add_child(h)
 	var cid := String(c.get("class_id") if c is Player else c.get("cid"))
-	var name := "Toi" if c == duel.d.player else String(GameData.class_data(cid).get("name_fr", cid))
+	var name := HeroLook.name_or("Toi") if c == duel.d.player else String(GameData.class_data(cid).get("name_fr", cid))
 	var n := Hud._label(h, name, 14, ALLY if mine else FOE)
 	n.custom_minimum_size = Vector2(118, 0)
 	n.clip_text = true

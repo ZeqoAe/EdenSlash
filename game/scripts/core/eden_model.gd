@@ -112,7 +112,8 @@ static func _character_material(src: BaseMaterial3D, texture: Texture2D) -> Shad
 ## Héros d'une classe : corps animé commun (squelette, visage, animations) habillé de
 ## pièces séparées (tenue, cheveux) ; [param outfit] remplace la tenue de la classe (skin).
 ## Les anciennes classes à modèle complet (data/classes.json -> model) restent gérées.
-static func instantiate_hero(cls: Dictionary, outfit := "", extra: Array = [], dyes: Dictionary = {}) -> Node3D:
+## [param look] : visage du héros du joueur (HeroLook : coiffure, couleurs des cheveux et des yeux) ; vide = celui de la classe.
+static func instantiate_hero(cls: Dictionary, outfit := "", extra: Array = [], dyes: Dictionary = {}, look: Dictionary = {}) -> Node3D:
 	var body := String(cls.get("body_model", ""))
 	if body == "" or not ResourceLoader.exists(body):
 		return instantiate(String(cls.get("model", "")))
@@ -121,10 +122,14 @@ static func instantiate_hero(cls: Dictionary, outfit := "", extra: Array = [], d
 	var parts: Array = cls.get("parts", [])
 	if outfit != "" and ResourceLoader.exists(outfit):
 		parts = [outfit] + parts.slice(1)
+	if not look.is_empty():
+		parts = HeroLook.with_hair(cls, parts, look)
 	for p in parts + extra:
 		dress(node, String(p))
 		if dyes.has(String(p)):
 			apply_dye(node, String(p), dyes[String(p)])
+	if not look.is_empty():
+		HeroLook.apply(node, cls, look)
 	return node
 
 

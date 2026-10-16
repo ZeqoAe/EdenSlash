@@ -27,6 +27,7 @@ func _ready() -> void:
 	_test_before_wakening_thread()
 	_test_empty_and_broken()
 	_test_night_fields()
+	_test_hero_fields()
 	var real := OS.get_environment("P4_REAL_SAVES")
 	if real != "":
 		_test_real_saves(real)
@@ -36,6 +37,21 @@ func _ready() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PATH))
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit(1 if fails > 0 else 0)
+
+
+## Création de personnage (C1) : un profil d'avant n'a ni nom ni visage ; il garde tout le reste et la création lui sera proposée
+## une fois ; enregistré puis relu, le nom et le visage tiennent.
+func _test_hero_fields() -> void:
+	_load({"selected_class": "warrior", "runs_done": 3, "outfits": {"warrior": "res://assets/player/outfits/l205_43413f.glb"}})
+	check("C1 : profil d'avant sans nom ni visage, tenue gardée, création à proposer", Profile.hero_name == "" and HeroLook.is_default(Profile.hero_look)
+		and HeroLook.needs_creation() and Profile.outfit_of("warrior").ends_with("l205_43413f.glb") and Profile.runs_done == 3)
+	Profile.hero_name = "Kaelis"
+	Profile.hero_look = {"hair": "l104", "hair_color": "red", "eyes": "amber"}
+	Profile.hero_made = true
+	Profile.save_profile()
+	Profile._clear()
+	Profile.load_profile()
+	check("C1 : nom et visage relus après sauvegarde", Profile.hero_name == "Kaelis" and Profile.hero_look.hair == "l104" and Profile.hero_made)
 
 
 ## Charge [param d] comme le fait load_slot (profil vidé, chargé, vue du hub, équipement de départ).

@@ -156,6 +156,8 @@ func _ready() -> void:
 	_attach_weapon(_foe_weapon_code() if foe else Profile.weapon_code())
 	_model_base = model.transform
 	_build_trail()
+	if not foe and Profile.hero_name != "":
+		display_name = Profile.hero_name  # le héros du joueur porte son nom (création de personnage)
 	_build_ground_ring()
 	statuses_changed.connect(recalc_stats)
 	statuses_changed.connect(_update_stealth_visual)
@@ -547,6 +549,9 @@ func _update_trail() -> void:
 	if _trail_on:
 		_trail_points.append([_blade_base.global_position, _blade_tip.global_position])
 	if _trail_points.size() > 10 or (not _trail_on and not _trail_points.is_empty()):
+	var look := {} if foe else HeroLook.current()  # visage du héros du joueur (création de personnage)
+	if not look.is_empty():
+		parts = HeroLook.with_hair(cls, parts, look)
 		_trail_points.pop_front()
 	if _trail_points.size() < 2:
 		return
@@ -556,6 +561,8 @@ func _update_trail() -> void:
 		var c := Color(1.0, 0.9, 0.75, a * 0.75)
 		mesh.surface_set_color(Color(c.r, c.g, c.b, 0.0))
 		mesh.surface_add_vertex(_trail_points[i][0])
+	if not look.is_empty():
+		HeroLook.apply(model, cls, look)
 		mesh.surface_set_color(c)
 		mesh.surface_add_vertex(_trail_points[i][1])
 	mesh.surface_end()

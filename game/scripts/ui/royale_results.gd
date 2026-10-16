@@ -36,7 +36,8 @@ func show_results(place: int, kills: int, level: int, chests: int, secs: float, 
 	show_spec({
 		"title": "VICTOIRE !" if won else ("TOP %d" % place if place <= 3 else "ÉLIMINÉ"),
 		"tone": "win" if place <= 3 else "lose",
-		"subtitle": "Dernier debout sur %d héros" % Royale.PLAYERS if won else "Place %d sur %d" % [place, Royale.PLAYERS],
+		"subtitle": ("%s · " % Profile.hero_name if Profile.hero_name != "" else "")
+			+ ("Dernier debout sur %d héros" % Royale.PLAYERS if won else "Place %d sur %d" % [place, Royale.PLAYERS]),
 		"tiles": tiles,
 		"gained": rep.gained,
 		"kept": rep.kept,

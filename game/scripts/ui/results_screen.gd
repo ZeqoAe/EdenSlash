@@ -16,9 +16,8 @@ func show_results() -> void:
 func spec() -> Dictionary:
 	if Run.survivor:
 		return survivor_spec()
-	var cls := Run.class_data()
 	var epoch_name: String = Epochs.get_def(Run.epoch).name
-	var sub := "%s · %s" % [cls.get("name_fr", ""), epoch_name]
+	var sub := "%s · %s" % [HeroLook.who(Run.class_id), epoch_name]  # « Nom · Classe » (création de personnage)
 	if Run.heroic_rank > 0:
 		sub += " · rang héroïque %d" % Run.heroic_rank
 	var kept := Run.result in ["victoire", "extraction"]
@@ -46,7 +45,7 @@ func survivor_spec() -> Dictionary:
 	var last := SurvivorRewards.last
 	var zone := String(GameData.zone(Survivor.zone_id).get("name", Survivor.zone_id))
 	var tier := int(last.get("tier", Survivor.palier))
-	var sub := "%s · Survivant · %s" % [Run.class_data().get("name_fr", ""), zone]
+	var sub := "%s · Survivant · %s" % [HeroLook.who(Run.class_id), zone]
 	if tier > 1:
 		sub += " · palier %s" % Survivor.numeral(tier)
 	var won := Run.result == "victoire"

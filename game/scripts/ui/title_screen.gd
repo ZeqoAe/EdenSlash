@@ -167,8 +167,11 @@ func _show_root() -> void:
 func _summary_text(s: Dictionary) -> String:
 	if s.is_empty():
 		return "vide"
+	var who := String(GameData.class_data(String(s["class"])).get("name_fr", s["class"]))
+	if String(s.get("name", "")) != "":
+		who = "%s · %s" % [s.name, who]  # nom du héros (création de personnage)
 	return "%s · %d run%s · %d victoire%s · niveau max %d" % [
-		GameData.class_data(String(s["class"])).get("name_fr", s["class"]), int(s.runs), "s" if int(s.runs) > 1 else "",
+		who, int(s.runs), "s" if int(s.runs) > 1 else "",
 		int(s.wins), "s" if int(s.wins) > 1 else "", int(s.best)]
 
 

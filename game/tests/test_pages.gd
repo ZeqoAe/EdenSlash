@@ -413,6 +413,22 @@ func _test_lobby() -> void:
 	lobby._open_hero()
 	await _frames()
 	check("Héros : ouvert sur l'équipement", hero.is_open() and hero.current == "equipment" and hero.page.visible and not hero.talents.visible)
+	# création de personnage (C1) : bouton « Personnage » de Héros ; l'écran tient dans 1280 x 720 (aucun contrôle coupé)
+	check("Héros : bouton « Personnage » visible hors run", hero._creator_button.visible)
+	get_tree().root.size = Vector2i(1280, 720)
+	await _frames()
+	var hc := hero.open_creator()
+	await _frames(3)
+	var vp: Vector2 = hc.get_viewport().get_visible_rect().size
+	var cut: Array = []
+	for b: Control in [hc.ok_button, hc.keep_button, hc.random_button, hc.reset_button, hc.name_edit, hc.preview] + hc._hair_swatches.values() + hc._eye_swatches.values():
+		var r := b.get_global_rect()
+		if r.end.x > vp.x + 1.0 or r.end.y > vp.y + 1.0 or r.size.x < 8.0 or r.size.y < 8.0:
+			cut.append(b.name)
+	check("création de personnage : tout tient dans 1280 x 720 %s" % str(cut), cut.is_empty())
+	hc.close_ui()
+	get_tree().root.size = Vector2i(1600, 900)
+	await _frames()
 	check("Héros : fiche d'objet masquée sans sélection, 3 préréglages + « Gérer »", not hero.page._d_card.visible and hero.page.preset_bar.visible and hero.page.preset_bar.get_child_count() == 4)
 	var worn_head: Dictionary = Profile.equipped.get("head", {})
 	var spare := Items.generate(30, 0.9, "head", Profile.selected_class)

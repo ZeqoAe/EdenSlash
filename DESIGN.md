@@ -169,6 +169,20 @@ Vitalité, Posture du chasseur, Désarmé (ne peut plus attaquer), Ange gardien 
   (Détails) : plus de page d'aide à part dans l'écran Héros.
 
 ### Équipement des 60 classes (lot E3 de la nuit du 15/10, `core/class_gear.gd`)
+### Création de personnage (lot C1, `core/hero_look.gd`, `ui/hero_creator.gd`)
+
+- **Nom du héros** (`Profile.hero_name`) : 3 à 16 signes, lettres (accents compris), chiffres, espace, tiret, au moins une lettre,
+  filtre de mots grossiers (mots entiers pour les plus courts : « Conan » passe), « Au hasard » propose un nom. Affiché : badge du
+  lobby (avec le titre porté), titre de l'écran Héros, bilans (« Nom · Classe »), Ligue, plaques et file du Duel / des Arènes,
+  fil de la Battle royale, résumé de la sauvegarde à l'écran titre. Les adversaires gardent le nom de leur classe.
+- **Visage** (`Profile.hero_look`, vaut pour toutes les classes ; vide = celui de la classe) : 6 coiffures (variante grise de
+  chaque coiffure, teinte), 12 couleurs de cheveux, 8 couleurs d'yeux (masque des iris, shader `use_eye`) ; « Aléatoire »,
+  « Réinitialiser ». Une coiffure choisie avec la couleur « D'origine » garde la couleur de la classe (ou la plus proche).
+  Les apparences débloquées (tenue, tête, dos, auras) restent réglées par classe dans Héros > Apparence : elles se portent
+  avec le visage choisi. Pas de couleur de peau, de corps féminin ni d'autre visage : il n'existe qu'un corps et qu'un visage.
+- **Quand** : une fois après l'accueil (compte neuf, juste après le choix de la classe, avant l'échauffement) ; une fois pour
+  un ancien compte, pré-rempli, « Garder tel quel » ; ensuite Héros > « Personnage » (hors run), gratuit, petite confirmation.
+
 
 - **7 profils de stats** (`data/class_profiles.json`, généré par `tools/gen_class_profiles.py`, à relancer si une classe
   change) : type de dégâts réel (après `GameData._balance_damage_types`), défense de base 6 = classe de garde, sinon

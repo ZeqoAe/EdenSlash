@@ -41,7 +41,7 @@ func show_results(won: bool, score: String, opponent: String, diff: int, total: 
 	var team := Duel.mode in ["arena2", "arena3", "gauntlet"]
 	# en équipe, le sous-titre nomme le mode (le premier adversaire n'est qu'un parmi d'autres)
 	var sub := "%s · %s" % [Duel.mode_title(), ClassRival.NAMES[diff]] if team \
-		else "%s contre %s · %s" % [Run.class_data().get("name_fr", ""), cd.get("name_fr", opponent), ClassRival.NAMES[diff]]
+		else "%s contre %s · %s" % [HeroLook.who(Run.class_id), cd.get("name_fr", opponent), ClassRival.NAMES[diff]]
 	var wins_tile: Array = [str(total), "victoires", "Victoires contre cette classe, dans cette difficulté"]
 	if team:
 		var key := "%s_wins" % Duel.mode if Duel.mode != "gauntlet" else "gauntlet_%d_wins" % (Duel.extra_foes.size() + 1)

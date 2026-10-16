@@ -23,6 +23,10 @@ uniform vec3 dye2 = vec3(1.0);
 // parties sans masque d'une pièce recolorée (lueurs, plumes d'énergie) : teinte sur la luminosité
 uniform float use_tint = 0.0;
 uniform vec3 tint = vec3(1.0);
+// couleur des yeux du héros (création de personnage, HeroLook) : masque des iris, teinte gardant leur dégradé
+uniform float use_eye = 0.0;
+uniform sampler2D eye_mask : filter_linear_mipmap;
+uniform vec3 eye_color = vec3(1.0);
 
 void fragment() {
 	vec4 t = texture(albedo_tex, UV) * albedo_color;
@@ -38,6 +42,11 @@ void fragment() {
 	if (use_tint > 0.5) {
 		float l = dot(t.rgb, vec3(0.299, 0.587, 0.114));
 		t.rgb = clamp(pow(tint, vec3(2.2)) * l * 2.2, 0.0, 1.0);
+	}
+	if (use_eye > 0.5) {
+		float k = texture(eye_mask, UV).r;
+		float v = max(t.r, max(t.g, t.b));
+		t.rgb = mix(t.rgb, clamp(pow(eye_color, vec3(2.2)) * v * 1.9, 0.0, 1.0), k);
 	}
 	if (use_vertex_color > 0.5) {
 		t.rgb *= COLOR.rgb;

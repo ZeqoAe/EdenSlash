@@ -54,6 +54,7 @@ var _badge: PanelContainer  # badge de la classe (en haut à droite) : un clic o
 var _badge_icon: TextureRect
 var _badge_name: Label
 var _badge_sub: Label
+var _badge_hero: Label  # nom du héros (et titre porté) au-dessus de la classe ; caché sans nom
 var _zone_thumb: TextureRect
 var _zone_name: Label
 var _zone_sub: Label
@@ -581,7 +582,8 @@ func _duel_tabs() -> void:
 ## Ligue : cinq rangs contre l'IA scriptée, à l'arme niveau 10, aide Assistée au plus.
 func _menu_league() -> void:
 	var nxt := League.target_rank()
-	Hud._label(_sub, "Rang : %s" % League.rank_name(), 24, UiTheme.GOLD).add_theme_font_override("font", UiTheme.title_font())
+	var rank_text := ("%s · rang %s" % [Profile.hero_name, League.rank_name()]) if Profile.hero_name != "" else "Rang : %s" % League.rank_name()
+	Hud._label(_sub, rank_text, 24, UiTheme.GOLD).add_theme_font_override("font", UiTheme.title_font())
 	if League.rank_index() >= League.RANKS.size() - 1:
 		Hud._label(_sub, "Rang maximal atteint : la Ligue ne rapporte plus que de la maîtrise.", 14, UiTheme.MUTED)
 	else:
@@ -942,7 +944,8 @@ func _show_hero() -> void:
 	var cls := GameData.class_data(Profile.selected_class)
 	if cls.is_empty() or not ResourceLoader.exists(cls.model):
 		return
-	var model := EdenModel.instantiate_hero(cls, Profile.outfit_of(Profile.selected_class), Profile.worn_parts(Profile.selected_class), Profile.dye_map(Profile.selected_class))
+	var model := EdenModel.instantiate_hero(cls, Profile.outfit_of(Profile.selected_class), Profile.worn_parts(Profile.selected_class),
+		Profile.dye_map(Profile.selected_class), HeroLook.current())
 	model.scale = Vector3.ONE * GameData.HERO_SCALE
 	model.rotation.y = -0.45  # trois-quarts, tourné vers le menu
 	backdrop.hero_root.add_child(model)
@@ -1089,6 +1092,11 @@ func _build_ui() -> void:
 	bv.alignment = BoxContainer.ALIGNMENT_CENTER
 	bv.add_theme_constant_override("separation", 0)
 	bh.add_child(bv)
+	_badge_hero = Hud._label(bv, "", 15, UiTheme.GOLD)
+	_badge_hero.add_theme_font_override("font", UiTheme.bold_font())
+	_badge_hero.clip_text = true
+	_badge_hero.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_badge_hero.custom_minimum_size.x = 240.0
 	_badge_name = Hud._label(bv, "", 21, Color(1, 0.97, 0.9))
 	_badge_name.add_theme_font_override("font", UiTheme.bold_font())
 	_badge_sub = Hud._label(bv, "", 14, UiTheme.MUTED)
@@ -1356,8 +1364,14 @@ func _welcome_flow() -> void:
 		add_child(w)
 		w.finished.connect(func(warmup: bool):
 			_refresh_ui()
-			if warmup:
-				_start_training())
+			# création de personnage (C1) : juste après le choix de la classe, avant l'échauffement ou la première Survie
+			_open_creator(true, func(_ok: bool):
+				if warmup:
+					_start_training()))
+		return
+	if HeroLook.needs_creation():
+		# ancien compte : la création s'ouvre une fois, pré-remplie (« Garder tel quel »), puis les nouveautés
+		_open_creator(true, func(_ok: bool): _show_news_flow())
 		return
 	var news := Tutorial.news_to_show()
 	var pending := Tutorial.take_card()
@@ -1365,6 +1379,11 @@ func _welcome_flow() -> void:
 		news.append(pending)
 	news = Tutorial.news_sorted(news)
 	Profile.save_profile()
+	_show_news_flow()
+
+
+## Nouveautés de la version (une carte par fiche) et fiche en attente.
+func _show_news_flow() -> void:
 	if news.is_empty():
 		return
 	_show_news(news)
@@ -2182,6 +2201,8 @@ func _refresh_ui() -> void:
 	_zone_name.text = String(zone.get("name", ""))
 	_zone_sub.visible = false
 	_zone_thumb.texture = _snapshot
+	_badge_hero.text = HeroLook.full_name()
+	_badge_hero.visible = _badge_hero.text != ""
 	var prog := Profile.expertise_progress(cid)
 	_reward_bar.max_value = maxf(prog.y, 1.0)
 	_reward_bar.value = prog.x
@@ -2220,3 +2241,14 @@ func _screen(t: String, pages: Array) -> PageScreen:
 func _open_hero(section := "") -> void:
 	_hero.zone_texture = _snapshot
 	_hero.open(section)
+
+
+## Création de personnage (HeroCreator) ; à la fermeture, le héros du lobby et le badge suivent.
+func _open_creator(first := false, then: Callable = Callable()) -> HeroCreator:
+	return HeroCreator.open_on(self, first, func(ok: bool):
+		_show_hero()
+		_refresh_ui()
+		if _hero.is_open():
+			_hero.refresh()
+		if then.is_valid():
+			then.call(ok))

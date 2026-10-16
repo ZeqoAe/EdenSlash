@@ -84,6 +84,11 @@ var reward_chests: Array = []  # coffres de récompense à ouvrir hors run (Rewa
 var runs_done := 0
 var runs_won := 0
 var best_level := 1
+## Création de personnage (HeroLook, lot C1) : nom du héros ("" : pas encore choisi), visage {hair, hair_color, eyes}
+## (vide = celui de la classe), création faite ou ignorée (« Garder tel quel ») : l'écran ne s'ouvre plus de lui-même.
+var hero_name := ""
+var hero_look := {}
+var hero_made := false
 
 
 var save_path := SAVE_PATH
@@ -291,6 +296,11 @@ func load_profile() -> void:
 	title = String(d.get("title", ""))
 	seen_trophies = d.get("seen_trophies", [])
 	weapon_legend = d.get("weapon_legend", [])
+	# création de personnage (C1) : ancien compte = sans nom ni visage choisi, l'écran s'ouvrira une fois, pré-rempli
+	var hn := HeroLook.tidy(String(d.get("hero_name", "")))
+	hero_name = hn if HeroLook.valid_name(hn) else ""
+	hero_look = HeroLook.sanitize(d.get("hero_look", {}))
+	hero_made = bool(d.get("hero_made", false))
 	Unlocks.migrate(d.has("unlocked_features"))
 
 
@@ -347,7 +357,8 @@ func save_profile() -> void:
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level,
 		"seen_gear": seen_gear, "starter_done": starter_done, "insignia": insignia, "wheel": wheel, "unlocked_features": unlocked_features,
 		"new_features": new_features, "tutorial": tutorial, "contracts": contracts,
-		"achievements": achievements, "plans": plans, "pantheon": pantheon, "extra_titles": extra_titles, "title": title, "seen_trophies": seen_trophies, "weapon_legend": weapon_legend}
+		"achievements": achievements, "plans": plans, "pantheon": pantheon, "extra_titles": extra_titles, "title": title, "seen_trophies": seen_trophies, "weapon_legend": weapon_legend,
+		"hero_name": hero_name, "hero_look": hero_look, "hero_made": hero_made}
 	Survivor.hub_save(d)  # en plein Survivant : la progression du compte est écrite telle qu'au départ (rien de la run)
 	SafeFile.write(save_path, JSON.stringify(d))  # .tmp relu puis renommé, ancien fichier gardé en .bak
 	changed.emit()
@@ -715,7 +726,7 @@ func slot_summary(i: int) -> Dictionary:
 		"wins": int(d.get("runs_won", 0)), "best": int(d.get("best_level", 1)),
 		"zones": int(d.get("unlocked_zones", 1)), "items": (d.get("vault", []) as Array).size(),
 		"archive": (d.get("archive", {}) as Dictionary).size(), "expertise": maxi(lv, 1),
-		"saved_at": String(d.get("saved_at", ""))}
+		"saved_at": String(d.get("saved_at", "")), "name": String(d.get("hero_name", ""))}
 
 
 ## Charge l'emplacement [param i].
@@ -762,6 +773,9 @@ func _clear() -> void:
 	loadout = {}
 	presets = {}
 	_view_class = ""
+	hero_name = ""
+	hero_look = {}
+	hero_made = false
 	runs_done = 0
 	runs_won = 0
 	best_level = 1
@@ -808,6 +822,9 @@ func reset_all() -> void:
 	loadout = {}
 	presets = {}
 	_view_class = ""
+	hero_name = ""
+	hero_look = {}
+	hero_made = false
 	runs_done = 0
 	runs_won = 0
 	best_level = 1

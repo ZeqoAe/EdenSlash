@@ -36,6 +36,7 @@ var _side: VBoxContainer
 var _nav := {}  # section -> Button
 var _pages := {}  # section -> Control
 var _help_button: Button
+var _creator_button: Button
 
 
 func _init(layer_index := 6) -> void:
@@ -134,6 +135,22 @@ func _build_top(parent: Control) -> void:
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(sp)
 	_help_button = Button.new()
+	# création de personnage (C1) : nom, coiffure, couleurs (hors run)
+	_creator_button = Button.new()
+	_creator_button.text = "  Personnage"
+	_creator_button.icon = MenuWidgets.icon("user")
+	_creator_button.expand_icon = false
+	_creator_button.add_theme_constant_override("icon_max_width", 20)
+	_creator_button.tooltip_text = "Personnage : ton nom, ta coiffure, tes couleurs"
+	_creator_button.focus_mode = Control.FOCUS_NONE
+	_creator_button.custom_minimum_size = Vector2(0, 44)
+	_creator_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_creator_button.add_theme_font_override("font", UiTheme.bold_font())
+	_creator_button.add_theme_font_size_override("font_size", 16)
+	_creator_button.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.06, 0.05, 0.12, 0.9), UiTheme.GOLD_DIM, 2, 22, false))
+	_creator_button.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.25, 0.18, 0.07, 0.95), UiTheme.GOLD, 2, 22, false))
+	_creator_button.pressed.connect(open_creator)
+	top.add_child(_creator_button)
 	_help_button.text = "?"
 	_help_button.tooltip_text = "Aide"
 	_help_button.focus_mode = Control.FOCUS_NONE
@@ -244,6 +261,12 @@ func show_section(id: String) -> void:
 
 
 ## « ? » : le Guide, sur ses formules (il se ferme avec F1 ou Échap).
+## « Personnage » : la création de personnage par-dessus l'écran (nom, coiffure, couleurs) ; l'aperçu suit à la fermeture.
+func open_creator() -> HeroCreator:
+	var c := HeroCreator.open_on(self, false, func(_ok: bool): refresh())
+	return c
+
+
 func _open_guide() -> void:
 	Guide.open_on(get_tree().current_scene, "details")
 
@@ -271,6 +294,12 @@ func refresh() -> void:
 	var cid := _cls()
 	var cd := GameData.class_data(cid)
 	_class_icon.texture = UiTheme.texture(String(cd.get("icon", "")))
+	_title.text = HeroLook.name_or("Héros")
+	_title.add_theme_font_size_override("font_size", 42 if _title.text.length() <= 8 else 30)  # un long nom tient à 1280 px
+	_creator_button.visible = not Profile.in_run
+	# sous 1500 px de large, l'icône seule (l'infobulle nomme le bouton) : la carte de la classe reste dans l'écran
+	_creator_button.text = "  Personnage" if get_viewport().get_visible_rect().size.x >= 1500.0 else ""
+	_creator_button.custom_minimum_size.x = 0.0 if _creator_button.text != "" else 52.0
 	_class_name.text = "%s   ▾" % cd.get("name_fr", cid)
 	_class_name.add_theme_color_override("font_color", ClassPicker.tier_color(cid))
 	_class_level.text = ("Niv. %d" % page.player.level) if page.player else "Maîtrise niv. %d" % Profile.expertise_level(cid)
