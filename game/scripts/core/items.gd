@@ -524,6 +524,15 @@ static func power_level(item: Dictionary) -> int:
 	return mini(Run.hero_level, cap) if Run.active and Run.hero_level > 0 else cap
 
 
+## Niveau de héros requis pour porter [param item] (lot H3, `HeroLevel.wear_block`) : son niveau affiché (celui d'Eden,
+## ou celui de sa création) ; 0 = portable à tout niveau (pièces de départ, du Survivant et du Battle royale, trophées).
+static func required_level(item: Dictionary) -> int:
+	if item.is_empty() or item.get("starter", false) or item.get("sv", false) or String(item.get("slot", "")) == "trophy":
+		return 0
+	var lv := int(item.get("level", 0)) if item.has("eden") else int(item.get("plevel", item.get("level", 0)))
+	return clampi(lv, 0, HeroLevel.MAX_LEVEL)
+
+
 ## Plafond de puissance : le niveau de l'objet d'Eden, ramené à l'échelle des niveaux de run
 ## de sa zone s'il est plus haut (les objets de Limestone, niveaux d'Eden 1-13, vont jusqu'au
 ## niveau 18 de la zone) ; les objets sans niveau (trophées) suivent toujours le héros.

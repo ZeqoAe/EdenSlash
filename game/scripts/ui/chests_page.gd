@@ -371,6 +371,7 @@ func _show_loot(got: Dictionary, first_card := true) -> void:
 	for it in got.get("items", []):
 		var v := _tile()
 		var s := ItemWidgets.ItemSlot.new(84.0)
+		s.wear_check = true  # lot H3 : au-dessus du niveau de héros, en rouge
 		s.set_item(it)
 		s.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		s.pressed.connect(func(): _show_card(it))
@@ -434,7 +435,7 @@ func _show_card(it: Dictionary) -> void:
 		c.queue_free()
 	_card_scroll.visible = not it.is_empty()
 	if not it.is_empty():
-		_card_box.add_child(ItemWidgets.item_card(it))
+		_card_box.add_child(ItemWidgets.item_card(it, HeroLevel.lock_line(it)))
 
 
 func _show_choices(chest: Dictionary) -> void:
@@ -452,6 +453,7 @@ func _show_choices(chest: Dictionary) -> void:
 		v.custom_minimum_size = Vector2(230, 0)
 		_choices.add_child(v)
 		var s := ItemWidgets.ItemSlot.new(96.0)
+		s.wear_check = true
 		s.set_item(it)
 		s.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		s.pressed.connect(func(): _show_card(it))

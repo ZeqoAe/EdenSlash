@@ -71,7 +71,7 @@ func _test_armory() -> void:
 	check("armurerie : compteur « découvertes / total » avec le vrai total", page._count.text.contains(GearPower.fmt(total)) and page._count.text.begins_with("%d /" % Completion.armory_done()) and page._count.text.ends_with("plans découverts"))
 	check("armurerie : la première pièce est choisie, bouton d'achat avec son prix", page._buy.visible and page._buy.text.begins_with("Fabriquer · ") and page._buy.text.contains("insignes") and page._buy.text.contains(GearPower.fmt(GearShopPage.price(page._row_of(page._sel).e))))
 	# A3 : plus jamais « acheter » pour une pièce, statuts et ligne « Plan trouvé »
-	check("fabriquer : statuts À fabriquer / Fabriquées / Plans à découvrir / Tous", STATUS_LABELS == page.STATUSES.map(func(s): return String(s[1])))
+	check("fabriquer : statuts À fabriquer / Fabriquées / Plans à découvrir / Tous / Portables", STATUS_LABELS == page.STATUSES.map(func(s): return String(s[1])))
 	var texts := _page_texts(page)
 	check("fabriquer : aucun texte ne parle d'acheter une pièce (%s)" % "|".join(texts.filter(func(t): return t.to_lower().contains("achet"))), texts.all(func(t): return not t.to_lower().contains("achet")))
 	var first_id := int(page._row_of(page._sel).id)
@@ -132,7 +132,7 @@ func _test_armory() -> void:
 	await get_tree().process_frame
 
 
-const STATUS_LABELS := ["À fabriquer", "Fabriquées", "Plans à découvrir", "Tous"]
+const STATUS_LABELS := ["À fabriquer", "Fabriquées", "Plans à découvrir", "Tous", "Portables"]
 
 
 ## Tous les textes lisibles de la page (étiquettes, boutons, listes déroulantes, infobulles).

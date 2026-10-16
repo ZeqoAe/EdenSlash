@@ -14,6 +14,7 @@ func _ready() -> void:
 	Training.active = true
 	Settings.reset_all()
 	Profile.reset_all()
+	Profile.records[HeroLevel.KEY] = HeroLevel.total_for(HeroLevel.MAX_LEVEL)  # lot H3 : niveau 90, toutes les pièces se portent
 	Profile.selected_class = "warrior"
 	var lobby: Node = load("res://scenes/lobby.tscn").instantiate()
 	add_child(lobby)

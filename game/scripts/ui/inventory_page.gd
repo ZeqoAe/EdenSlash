@@ -25,6 +25,7 @@ const CELL := 66.0
 const ICON_GOLD := Color(0.98, 0.8, 0.42)
 const MAT_NAMES := {"crystal": "Cristaux", "keys": "Clés"}
 const MAT_RARITY := {"crystal": 3, "keys": 2}
+const LOCK_WORN := Color(1.0, 0.69, 0.44)  # lot H3 : pièce portée au-dessus du niveau de héros (gardée)
 
 var player: Player  # null hors run
 
@@ -227,6 +228,7 @@ func _doll_column(parent: Control, slots: Array) -> void:
 		var s := ItemWidgets.ItemSlot.new(52.0 if _short() else 78.0)
 		s.slot_id = slot
 		s.source = "equipped"
+		s.wear_check = true  # pièce portée au-dessus du niveau de héros : signalée (lot H3)
 		s.placeholder = ""
 		s.ghost = _ghost_icon(slot)
 		s.can_drop = func(data): return _can_drop_on(slot, data)
@@ -268,6 +270,8 @@ func _drop_on(slot: String, data) -> void:
 		Profile.swap_weapons()
 		_after_change({"kind": "item", "item": Profile.equipped.get(slot, {})})
 	elif slot == "offhand":
+		if _refused(data.item):
+			return
 		Profile.equip_offhand(data.item)
 		_after_change({"kind": "item", "item": data.item})
 	else:
@@ -411,6 +415,7 @@ func _build_detail(parent: Control) -> void:
 	top.add_theme_constant_override("separation", 12)
 	left.add_child(top)
 	_d_slot = ItemWidgets.ItemSlot.new(92.0)
+	_d_slot.wear_check = true
 	_d_slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(_d_slot)
 	var tv := VBoxContainer.new()
@@ -730,6 +735,7 @@ func _cell(e: Dictionary) -> Control:
 	s.set_item(entry_display(e))
 	s.source = "inventory" if String(e.kind) == "item" else ""
 	s.show_compare = String(e.kind) == "item"
+	s.wear_check = String(e.kind) == "item"
 	s.badge = ("%d" % int(e.count)) if e.has("count") else ""
 	if String(e.kind) == "item" and not Profile.in_run and not Profile.item_users(String(e.item.uid)).is_empty():
 		s.badge = "★"
@@ -779,7 +785,8 @@ func _is_equipped(it: Dictionary) -> bool:
 
 # --- fiche de l'objet ------------------------------------------------------------------------
 ## Message court au-dessus de la grille (objet démonté, équipement copié...) ; "" l'efface.
-func _say(text: String) -> void:
+func _say(text: String, color := UiTheme.BUFF) -> void:
+	_msg.add_theme_color_override("font_color", color)
 	_msg.text = text
 	_msg.visible = text != ""
 
@@ -836,6 +843,12 @@ func _refresh_detail() -> void:
 	var kind := String(GameData.weapon_type(Items.weapon_type_of(it)).get("name", "")) if it.slot == "weapon" else ""
 	_d_type.text = slot_name + ((" · " + kind) if kind != "" else "") + ("  · porté" if equipped else "")
 	_d_level.text = "Niv. %d%s" % [int(it.level), ("   +%d" % int(it.get("upgrade", 0))) if int(it.get("upgrade", 0)) > 0 else ""]
+	# lot H3 : au-dessus du niveau de héros, le niveau en rouge (orange si la pièce est déjà portée : elle reste) ; la phrase
+	# entière en infobulle, sur le bouton et au refus (1280 px : la fiche n'a pas la place d'une ligne de plus)
+	var req := HeroLevel.wear_block(it)
+	_d_level.add_theme_color_override("font_color", UiTheme.TEXT if req == 0 else (LOCK_WORN if equipped else ItemWidgets.LOCK_TEXT))
+	_d_level.tooltip_text = "" if req == 0 else HeroLevel.lock_text(it) + (" · déjà portée, elle reste" if equipped else "")
+	_d_level.mouse_filter = Control.MOUSE_FILTER_PASS if req > 0 else Control.MOUSE_FILTER_IGNORE
 	_d_stats.text = _stats_compare(it, equipped)
 	if it.slot == "weapon":
 		var ws := WeaponAttacks.spec_for(it)
@@ -853,14 +866,21 @@ func _refresh_detail() -> void:
 	_refresh_compare(it, equipped)
 	_b_equip.disabled = false
 	_b_equip.text = "Retirer" if equipped else "Équiper"
+	_b_equip.tooltip_text = ""
+	if req > 0 and not equipped:
+		_b_equip.disabled = true  # lot H3 : le bouton dit pourquoi
+		_b_equip.text = "Niveau %d requis" % req
+		_b_equip.tooltip_text = HeroLevel.lock_text(it)
 	if it.slot == "trophy":
 		_b_equip.disabled = true  # ancien trophée : les trophées se trouvent pendant la run (collection)
 		_b_equip.tooltip_text = "Les trophées ne s'équipent plus : jusqu'à %d par run, trouvés dans les coffres de trophée." % Run.MAX_TROPHIES
 	var off: Dictionary = Profile.equipped.get("offhand", {})
 	_b_offhand.visible = it.slot == "weapon" and worn_slot != "offhand" and (worn_slot != "weapon" or Profile.can_be_main(off))
 	_b_offhand.text = "Échanger" if worn_slot == "weapon" else "Secondaire"
-	if it.slot == "weapon" and not equipped and not Profile.can_be_main(it):
+	if it.slot == "weapon" and not equipped and not Profile.can_be_main(it) and req == 0:
 		_b_equip.text = "Équiper (secondaire)"  # une arme d'un autre type que la classe
+		_b_offhand.visible = false
+	if req > 0 and not equipped:
 		_b_offhand.visible = false
 	if SurvivorGear.locked(String(it.slot)):
 		_b_equip.disabled = true  # Survivant : la pièce posée reste toute la run, l'emplacement aussi
@@ -960,13 +980,32 @@ func _set_bbcode(it: Dictionary) -> String:
 func _equip(it: Dictionary) -> void:
 	if it.is_empty() or _is_equipped(it):
 		return
+	if _refused(it):
+		return
 	Profile.equip(it)
 	_after_change({"kind": "item", "item": it})
 
 
-func _unequip(slot: String) -> void:
+## Lot H3 : pièce au-dessus du niveau de héros ; le dit en une ligne (« Niveau 60 requis · tu es niveau 34 »).
+func _refused(it: Dictionary) -> bool:
+	var t := HeroLevel.lock_text(it)
+	if t == "":
+		return false
+	_select({"kind": "item", "item": it})
+	_say(t, ItemWidgets.LOCK_TEXT)
+	Sfx.ui("error")
+	return true
+
+
+func _unequip(slot: String, confirmed := false) -> void:
 	var it: Dictionary = Profile.equipped.get(slot, {})
 	if it.is_empty():
+		return
+	var req := HeroLevel.wear_block(it)
+	if req > 0 and not confirmed:
+		# pièce portée d'avant le niveau de héros : la retirer, c'est ne plus pouvoir la remettre tout de suite
+		InfoCard.ask(self, "Retirer cette pièce ?", "Tu ne pourras la remettre qu'au niveau %d." % req,
+			"Retirer", func(): _unequip(slot, true))
 		return
 	Profile.unequip(slot)
 	_after_change({"kind": "item", "item": it})
@@ -992,6 +1031,8 @@ func _on_equip() -> void:
 
 func _on_offhand() -> void:
 	if _selected.get("kind", "") != "item" or _selected.item.get("slot", "") != "weapon":
+		return
+	if not _is_equipped(_selected.item) and _refused(_selected.item):
 		return
 	Profile.equip_offhand(_selected.item)
 	_after_change({"kind": "item", "item": _selected.item})

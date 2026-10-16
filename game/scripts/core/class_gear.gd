@@ -117,6 +117,20 @@ static func fits(item: Dictionary, slot: String, cid: String) -> bool:
 	return s == slot and slot in Items.SLOTS
 
 
+## [param item] se porte au niveau de héros actuel (lot H3 ; pièces de départ toujours).
+static func wearable(item: Dictionary) -> bool:
+	return HeroLevel.can_wear(item)
+
+
+## Pièces portées par [param cid] au-dessus du niveau de héros (comptes d'avant le niveau de héros : gardées, signalées).
+static func over_level(cid: String, by_uid: Dictionary = {}) -> int:
+	var n := 0
+	for it in gear_of(cid, by_uid).values():
+		if not wearable(it):
+			n += 1
+	return n
+
+
 ## Emplacements choisis à la main dans le préréglage actif : ni pièce de départ, ni pièce posée par le
 ## dernier « Équiper le meilleur ».
 static func choice_slots(cid: String) -> Array:
@@ -154,6 +168,7 @@ static func _uid(it) -> String:
 ## valeur pour le profil de la classe ; puis, panoplie par panoplie, ses meilleures pièces sont essayées par
 ## paliers (2, 4, 6) et gardées si l'ensemble vaut plus ; enfin des échanges pièce par pièce.
 ## [param keep] : emplacement -> objet qui ne bouge pas (« garder mes choix »).
+## Lot H3 : seulement les pièces portables au niveau de héros, et celles que la classe porte déjà (jamais retirées d'office).
 static func best_gear(cid: String, keep: Dictionary = {}) -> Dictionary:
 	var prof := profile(cid)
 	var cache := {}
@@ -161,7 +176,12 @@ static func best_gear(cid: String, keep: Dictionary = {}) -> Dictionary:
 	var cands := {}
 	for slot in slots:
 		cands[slot] = []
+	var worn := {}
+	for it in gear_of(cid).values():
+		worn[_uid(it)] = true
 	for it in Profile.vault:
+		if not wearable(it) and not worn.has(_uid(it)):
+			continue
 		for slot in slots:
 			if fits(it, slot, cid):
 				cands[slot].append(it)
@@ -294,7 +314,7 @@ static func best_weapon(cid: String) -> Dictionary:
 	var cache := {}
 	var best: Dictionary = {}
 	for it in Profile.vault:
-		if fits(it, "weapon", cid) and (best.is_empty() or _value(it, prof, cache) > _value(best, prof, cache)):
+		if fits(it, "weapon", cid) and wearable(it) and (best.is_empty() or _value(it, prof, cache) > _value(best, prof, cache)):
 			best = it
 	return best
 
@@ -305,11 +325,20 @@ static func family_plan(cid: String) -> Dictionary:
 	var to: Array = []
 	var skip: Array = []
 	var gears := {}
+	var over := 0  # pièces au-dessus du niveau de héros : pas copiées (lot H3), la classe garde la sienne
 	for t in classes_of(profile_id(cid)):
 		if t == cid:
 			continue
 		var g := src.duplicate()
-		var w: Dictionary = src.get("weapon", {})
+		var mine := gear_of(t)
+		for slot in src:
+			if not wearable(src[slot]) and _uid(mine.get(slot)) != _uid(src[slot]):
+				over += 1
+				if mine.has(slot):
+					g[slot] = mine[slot]
+				else:
+					g.erase(slot)
+		var w: Dictionary = g.get("weapon", {})
 		if w.is_empty() or not fits(w, "weapon", t):
 			w = best_weapon(t)
 		if w.is_empty():
@@ -320,7 +349,7 @@ static func family_plan(cid: String) -> Dictionary:
 			g.erase("offhand")
 		to.append(t)
 		gears[t] = g
-	return {"to": to, "skip": skip, "gears": gears}
+	return {"to": to, "skip": skip, "gears": gears, "over": over}
 
 
 ## « Appliquer à la famille » : le préréglage actif de [param cid] copié dans le préréglage actif des classes du
@@ -339,7 +368,10 @@ static func apply_family(cid: String) -> String:
 		_write(t, plan.gears[t], {})
 	_after_write(to)
 	var skip: Array = plan.skip
-	return "Copié vers %s %s%s." % [_plural(to.size(), "classe"), fam, (" (%s sans arme de leur type)" % _plural(skip.size(), "autre")) if not skip.is_empty() else ""]
+	var msg := "Copié vers %s %s%s." % [_plural(to.size(), "classe"), fam, (" (%s sans arme de leur type)" % _plural(skip.size(), "autre")) if not skip.is_empty() else ""]
+	if int(plan.over) > 0:
+		msg += " Pièces au-dessus de ton niveau laissées de côté."
+	return msg
 
 
 # --- annulation -------------------------------------------------------------------------------
@@ -404,7 +436,8 @@ static func menu_actions(cid: String) -> Array:
 ## spirits, plus10, gems, gem_max, enchants, status, need, activity, unlock}. [param by_uid] : vault_map.
 static func entry(cid: String, by_uid: Dictionary = {}) -> Dictionary:
 	var g := gear_of(cid, by_uid)
-	var e := {"cid": cid, "profile": profile_id(cid), "pe": GearPower.gear_power(g), "expected": GearPower.expected(GearPower.target_level())}
+	var e := {"cid": cid, "profile": profile_id(cid), "pe": GearPower.gear_power(g), "expected": GearPower.expected(GearPower.target_level()),
+		"over": over_level(cid, by_uid)}
 	e["ratio"] = float(e.pe) / maxf(float(e.expected), 1.0)
 	e["tier"] = String(GearPower.tier(float(e.ratio))[1])
 	var w: Dictionary = g.get("weapon", {})

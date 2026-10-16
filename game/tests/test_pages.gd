@@ -25,6 +25,7 @@ func _ready() -> void:
 	check("profil de test", Profile.save_path.begins_with("user://profile_test"))
 	_test_slots()
 	Profile.reset_all()
+	Profile.records[HeroLevel.KEY] = HeroLevel.total_for(HeroLevel.MAX_LEVEL)  # lot H3 : niveau 90, toutes les pièces se portent
 	_test_presets()
 	_test_items()
 	_test_archive()

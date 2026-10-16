@@ -126,6 +126,7 @@ func _test_all_auras() -> void:
 
 func _test_weapon_slot() -> void:
 	Profile.reset_all()  # compte neuf en mémoire (rien n'est sauvegardé : Training.active)
+	Profile.records[HeroLevel.KEY] = HeroLevel.total_for(HeroLevel.MAX_LEVEL)  # lot H3 : niveau 90, toutes les pièces se portent
 	Profile.selected_class = "samurai"
 	Profile._lobby_view()  # préréglage du samouraï (la sauvegarde, qui le ferait, est coupée)
 	var w := Items.generate(30, 0.6, "weapon", "samurai")

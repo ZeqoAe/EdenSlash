@@ -179,7 +179,9 @@ est un plan, on la fabrique en insignes, `Completion.plan_place` dit où le trou
 Détail : DESIGN « Économie et progression » ; `R_E3.md`, `R_E6.md`, `R_P5.md`.
 **Niveau de héros** (lot H1) : `core/hero_level.gd` (`HeroLevel` : niveau 1-90 du compte dans `records.hero_xp`, courbe, XP au kill par
 `Monster._on_death` en Survie / Donjons / Tour / Ruée / Siège, versée par `Quests.end_run`, ligne du bilan `ResultsPanel.show_spec`,
-migration `ensure`), jauge `ui/hero_level_gauge.gd` ; port des pièces, stats et monstres : lots H3-H5 (`conception/progression/NIVEAU_HEROS.md`, `R_H1.md`).
+migration `ensure`), jauge `ui/hero_level_gauge.gd` ; stats et monstres : lots H4-H5 (`conception/progression/NIVEAU_HEROS.md`, `R_H1.md`).
+Port des pièces (H3, `R_H3.md`) : `Items.required_level`, `HeroLevel.wear_block` / `lock_text` / `lock_line` (hub seulement ; départ,
+Survivant, Battle royale et trouvailles de run exemptés) ; `Profile.equip(item, force)` renvoie false si refusé ; case rouge `ItemSlot.wear_check` ; `test_h3`, `shot_h3`.
 **Modes scellés** (lot H2, `R_H2.md`) : `Modes.sealed()` (Survivant, Battle royale) coupe talents, certificats, plateau, archive, auras,
 sorts fermés par la maîtrise et cartes à débloquer (`Run.passive_stats` / `skill_talent` / `roll_cards` / `certificate_pool`,
 `Player.recalc_stats` / `knock_immune`) ; tout nouvel effet du compte en combat passe par ce test ; `test_h2`, `hl_probe --sealed`.

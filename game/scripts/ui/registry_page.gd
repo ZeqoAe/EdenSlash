@@ -130,7 +130,8 @@ func _row(e: Dictionary) -> void:
 		"Arme principale (%s)%s" % [wname.to_lower(), {"ok": "", "base": " : celle de départ", "none": " : aucune"}[ws]])
 	wb.custom_minimum_size = Vector2(96 if narrow else 118, 0)
 	_count(nums, "Pièces", "%d / %d" % [int(e.filled) - int(e.base), slots], int(e.filled) - int(e.base) >= slots,
-		"%s de départ, %s" % [_plural(int(e.base), "pièce"), _plural(slots - int(e.filled), "emplacement vide")] if int(e.base) + slots - int(e.filled) > 0 else "Les %d emplacements portent une vraie pièce" % slots)
+		("%s de départ, %s" % [_plural(int(e.base), "pièce"), _plural(slots - int(e.filled), "emplacement vide")] if int(e.base) + slots - int(e.filled) > 0 else "Les %d emplacements portent une vraie pièce" % slots)
+		+ ("\n%s au-dessus de ton niveau de héros (gardée%s)" % [_plural(int(e.over), "pièce"), "s" if int(e.over) > 1 else ""] if int(e.get("over", 0)) > 0 else ""))
 	_count(nums, "Panoplie", "%d / %d" % [int(e.arch), ClassGear.PANOPLY], int(e.arch) >= ClassGear.PANOPLY,
 		("Panoplie de donjon : %s" % e.arch_name) if String(e.arch_name) != "" else "Panoplie de donjon (Donjons, fabrication)")
 	_count(nums, "Esprits", "%d / %d" % [int(e.spirits), ClassGear.PANOPLY], int(e.spirits) >= ClassGear.PANOPLY, "Panoplie des Esprits (Panthéon, Armurerie)")

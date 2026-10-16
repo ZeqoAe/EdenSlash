@@ -30,6 +30,7 @@ func _ready() -> void:
 			break
 		w = Items.generate(30, 0.6, "weapon", "samurai")
 	Profile.inventory.append(w)
+	Profile.records[HeroLevel.KEY] = HeroLevel.total_for(HeroLevel.MAX_LEVEL)  # lot H3 : niveau 90, toutes les pièces se portent
 	Profile.equip(w)
 	var lobby: Node = load("res://scenes/lobby.tscn").instantiate()
 	add_child(lobby)

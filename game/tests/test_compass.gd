@@ -15,6 +15,7 @@ func check(label: String, ok: bool) -> void:
 func _reset() -> void:
 	Settings.reset_all()
 	Profile.reset_all()
+	Profile.records[HeroLevel.KEY] = HeroLevel.total_for(HeroLevel.MAX_LEVEL)  # lot H3 : niveau 90, toutes les pièces se portent
 	Profile.selected_class = "warrior"
 	Profile._lobby_view()
 

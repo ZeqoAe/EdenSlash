@@ -294,7 +294,7 @@ static func apply_to_hero(b: Dictionary) -> String:
 		var it: Dictionary = made[slot]
 		it["uid"] = "%d_%d" % [Time.get_ticks_usec(), randi() % 100000]  # un vrai objet, à part du profil
 		Profile.inventory.append(it)
-		Profile.equip(it)
+		Profile.equip(it, true)  # outil de développement : le build tel quel, sans le niveau de héros
 	var grid := Duel.grid12(b.get("spells", []))
 	var kit := Duel.kit_from_grid(cid, grid)
 	var cols := SpellPresets.empty_cols()

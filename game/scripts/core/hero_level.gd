@@ -15,7 +15,9 @@ extends RefCounted
 ## - Lecture : [method level], [method xp_in_level], [method xp_needed], [method xp_left], [method progress] ; signaux
 ##   [member events] (`xp_changed(total)`, `level_up(from, to)`).
 ##
-## Ce lot ne branche ni le port des pièces (H3), ni les stats, ni les monstres (H4) : le niveau existe, se gagne et se voit.
+## - Port des pièces (lot H3) : [method wear_block], [method lock_text], [method lock_line] ; une pièce de niveau N ne
+##   s'équipe au hub que si le niveau de héros ≥ N (`Profile.equip`, `ClassGear.best_gear`).
+## Les stats et les monstres (H4) ne lisent pas encore ce niveau.
 
 const MAX_LEVEL := 90
 const NEED_BASE := 105.0
@@ -293,6 +295,39 @@ static func item_level(it) -> int:
 		return 0
 	var lv := int(it.get("level", 0)) if it.has("eden") else int(it.get("plevel", it.get("level", 0)))
 	return clampi(lv, 0, MAX_LEVEL)
+
+
+# --- port des pièces (lot H3) ------------------------------------------------------------------
+## Niveau requis si [param item] ne peut pas être porté maintenant, 0 sinon (`Items.required_level` > niveau de héros).
+## Le port se vérifie au hub (coffre commun, préréglages : l'équipement de l'Aventure, des activités et du Duel équipé).
+## Jamais pendant une partie (Survie, Survivant : les pièces trouvées ne valent que la partie ; elles suivront le niveau
+## de héros au lot H4a), ni dans les modes scellés (Survivant, Battle royale : leurs propres pièces).
+static func wear_block(item: Dictionary) -> int:
+	if item.is_empty() or Profile.in_run or Modes.sealed():
+		return 0
+	var req := Items.required_level(item)
+	return req if req > level() else 0
+
+
+static func can_wear(item: Dictionary) -> bool:
+	return wear_block(item) == 0
+
+
+## « Niveau 60 requis · tu es niveau 34 » ("" : la pièce se porte).
+static func lock_text(item: Dictionary) -> String:
+	var req := wear_block(item)
+	return "" if req <= 0 else "Niveau %d requis · tu es niveau %d" % [req, level()]
+
+
+## Ligne de la carte d'objet (BBCode, "" : rien à dire). Une pièce déjà portée au-dessus du niveau (compte d'avant le
+## niveau de héros) reste portée : elle est seulement signalée.
+static func lock_line(item: Dictionary) -> String:
+	var t := lock_text(item)
+	if t == "":
+		return ""
+	if Profile.slot_of(item) != "":
+		return "\n\n[color=#ffb070]%s. Déjà portée : elle reste.[/color]" % t
+	return "\n\n[color=#ff7a7a][b]%s[/b][/color]" % t
 
 
 ## Message de migration (une fois, au lobby) : "" s'il n'y en a pas (ou plus).

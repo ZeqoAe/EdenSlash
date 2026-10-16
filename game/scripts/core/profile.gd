@@ -483,13 +483,19 @@ func _default_weapon(cls: String) -> void:
 	var wtype := Items.default_weapon_type(cls)
 	var best: Dictionary = {}
 	for it in vault:
-		if it.slot == "weapon" and Items.weapon_type_of(it) == wtype:
+		if it.slot == "weapon" and Items.weapon_type_of(it) == wtype and _auto_ok(it):
 			if best.is_empty() or int(it.rarity) * 20 + int(it.get("upgrade", 0)) > int(best.rarity) * 20 + int(best.get("upgrade", 0)):
 				best = it
 	if best.is_empty():
 		best = Items.generate(1, -1.0, "weapon", cls, 0, wtype)
 		vault.append(best)
 	loadout["weapon"] = best.uid
+
+
+## Pièce qu'un choix automatique (arme par défaut, butin rangé) peut poser : portable au niveau de héros (lot H3). Un
+## compte pas encore passé au niveau de héros n'est pas filtré (sa migration le met au-dessus des pièces portées).
+func _auto_ok(it: Dictionary) -> bool:
+	return not records.has(HeroLevel.KEY) or HeroLevel.can_wear(it)
 
 
 func preset_names(cls: String) -> Array:
@@ -585,7 +591,7 @@ func end_run(item) -> void:
 				break
 		if not replaced and vault.size() < VAULT_MAX:
 			vault.append(kept)
-			if not loadout.has(kept.slot):
+			if not loadout.has(kept.slot) and _auto_ok(kept):
 				loadout[kept.slot] = kept.uid
 	_lobby_view()
 	save_profile()
@@ -675,7 +681,7 @@ func select_weapon_type(wtype: String) -> void:
 		_sync_vault()  # l'équipement de la classe affichée reste dans son préréglage
 	var best: Dictionary = {}
 	for it in vault:
-		if it.slot == "weapon" and Items.weapon_type_of(it) == wtype:
+		if it.slot == "weapon" and Items.weapon_type_of(it) == wtype and _auto_ok(it):
 			if best.is_empty() or int(it.rarity) * 20 + int(it.get("upgrade", 0)) > int(best.rarity) * 20 + int(best.get("upgrade", 0)):
 				best = it
 	if best.is_empty():
@@ -1157,40 +1163,47 @@ func add_gold(amount: int) -> void:
 	changed.emit()
 
 
-func equip(item: Dictionary) -> void:
+## Équipe [param item] ; false si c'est refusé. Hub : une pièce au-dessus du niveau de héros ne s'équipe pas
+## (lot H3, `HeroLevel.wear_block` ; [param force] : outils de développement).
+func equip(item: Dictionary, force := false) -> bool:
 	var slot: String = item.slot
 	if slot == "trophy" or SurvivorGear.locked(slot):
-		return  # les trophées ne s'équipent plus (collection de la run) ; Survivant : emplacement verrouillé à vie
+		return false  # les trophées ne s'équipent plus (collection de la run) ; Survivant : emplacement verrouillé à vie
 	if is_same(equipped.get("offhand"), item):
 		swap_weapons()  # l'arme secondaire devient l'arme principale (si elle est du type de la classe)
-		return
+		return true
 	if slot == "weapon" and not can_be_main(item):
-		equip_offhand(item)  # arme d'un autre type : seulement en arme secondaire
-		return
+		return equip_offhand(item, force)  # arme d'un autre type : seulement en arme secondaire
+	if not force and HeroLevel.wear_block(item) > 0:
+		return false
 	inventory.erase(item)
 	if equipped.has(slot):
 		inventory.append(equipped[slot])
 	equipped[slot] = item
 	save_profile()
+	return true
 
 
 ## Arme secondaire (passe N2 : ne frappe pas seule, « Changer d'arme » la met en main) : une arme de
-## l'inventaire, ou l'arme principale (les deux s'échangent alors).
-func equip_offhand(item: Dictionary) -> void:
+## l'inventaire, ou l'arme principale (les deux s'échangent alors). false si c'est refusé.
+func equip_offhand(item: Dictionary, force := false) -> bool:
 	if item.get("slot", "") != "weapon" or SurvivorGear.locked("weapon"):
-		return
+		return false
 	var main: Dictionary = equipped.get("weapon", {})
 	var old: Dictionary = equipped.get("offhand", {})
 	if is_same(main, item):
 		if old.is_empty() or not can_be_main(old):
-			return
+			return false
 		equipped["weapon"] = old
 	else:
+		if not force and HeroLevel.wear_block(item) > 0:
+			return false
 		inventory.erase(item)
 		if not old.is_empty():
 			inventory.append(old)
 	equipped["offhand"] = item
 	save_profile()
+	return true
 
 
 ## Échange l'arme principale et l'arme secondaire.

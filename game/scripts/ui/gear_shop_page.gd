@@ -12,7 +12,8 @@ const COLS := 12
 const ROWS := 7
 const CELL := 70.0
 ## Statuts affichables : [id, libellé].
-const STATUSES := [["buy", "À fabriquer"], ["owned", "Fabriquées"], ["locked", "Plans à découvrir"], ["all", "Tous"]]
+## « wear » (lot H3) : les plans trouvés que le niveau de héros permet de porter (fabriquer au-dessus reste permis).
+const STATUSES := [["buy", "À fabriquer"], ["owned", "Fabriquées"], ["locked", "Plans à découvrir"], ["all", "Tous"], ["wear", "Portables"]]
 
 var _f_status: OptionButton
 var _f_slot: OptionButton
@@ -239,8 +240,12 @@ func _apply() -> void:
 	var epoch := _f_epoch.selected  # 0 : toutes
 	var cid := String(_class_ids[_f_class.selected]) if _f_class.selected >= 0 and _f_class.selected < _class_ids.size() else ""
 	var wtype := Items.default_weapon_type(cid) if cid != "" else ""
+	var hl := HeroLevel.level()
 	_rows = _all.filter(func(r):
-		if status != "all" and r.state != status:
+		if status == "wear":
+			if r.state == "locked" or int(r.level) > hl:
+				return false
+		elif status != "all" and r.state != status:
 			return false
 		if slot != "" and r.slot != slot:
 			return false
@@ -249,7 +254,7 @@ func _apply() -> void:
 		if wtype != "" and r.slot == "weapon" and String(r.e.get("wtype", "")) != wtype:
 			return false
 		return true)
-	var kk := "k1" if status == "all" else "k0"
+	var kk := "k1" if status in ["all", "wear"] else "k0"
 	_rows.sort_custom(func(a, b): return a[kk] < b[kk])
 	var per := _grid_cols() * _grid_rows()
 	var pages := maxi(1, ceili(_rows.size() / float(per)))
@@ -305,6 +310,7 @@ func _fill_grid(per: int) -> void:
 			s.show_compare = row.state == "buy"
 			s.badge = "✓" if row.state == "owned" else "%d" % price(row.e)
 			s.dim = row.state == "owned"
+			s.wear_check = true  # au-dessus du niveau de héros : en rouge (lot H3)
 			cell = s
 		cell.set("selected", int(row.id) == _sel)
 		cell.pressed.connect(_select.bind(int(row.id)))
@@ -324,6 +330,8 @@ func _empty_text() -> String:
 			return "Tu n'as encore fabriqué aucune pièce."
 		"locked":
 			return "Tous les plans sont découverts."
+		"wear":
+			return "Aucun plan à ton niveau pour l'instant."
 	return "Aucun plan pour ces filtres."
 
 
@@ -364,13 +372,17 @@ func _show_detail() -> void:
 		_buy.text = "Dans ton coffre"
 		_buy.disabled = true
 		if not Profile.equipped.values().any(func(w): return int(w.get("eden", -1)) == int(row.id)):
-			_short.text = "À équiper : Héros > Équipement"  # la fabrication ne la pose pas : le dernier pas du parcours
-			_short.add_theme_color_override("font_color", UiTheme.BUFF)
+			var lock := HeroLevel.lock_text(it)
+			_short.text = lock if lock != "" else "À équiper : Héros > Équipement"  # la fabrication ne la pose pas : le dernier pas du parcours
+			_short.add_theme_color_override("font_color", UiTheme.BUFF if lock == "" else UiTheme.DEBUFF)
 	else:
 		_buy.text = "Fabriquer · %s insignes" % GearPower.fmt(p)
 		_buy.disabled = Profile.insignia < p
 		if Profile.insignia < p:
 			_short.text = "Il te manque %s insignes" % GearPower.fmt(p - Profile.insignia)
+		elif HeroLevel.wear_block(it) > 0:
+			_short.text = "À porter au niveau %d · tu es niveau %d" % [HeroLevel.wear_block(it), HeroLevel.level()]  # fabriquer reste permis
+			_short.add_theme_color_override("font_color", UiTheme.MUTED)
 
 
 ## Un plan pas encore découvert : la silhouette de la pièce et où le trouver.

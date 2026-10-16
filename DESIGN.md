@@ -225,9 +225,19 @@ Un niveau **du compte**, de 1 à 90, partagé par les 60 classes ; il ne redesce
   niveau de run plafonné à 35, I → 43, II → 60, III → 75, IV → 85 + 1 par rang héroïque fini ; 90 avec un donjon Mythique fini ;
   niveau de la plus haute pièce portée dans le préréglage actif de chaque classe, pièces de départ exclues). Aucune pièce n'est
   déséquipée. Une carte au lobby, une fois : « Ton héros est niveau N. Il garde ce niveau dans toutes les classes. »
-- **Pas encore branché** (lots suivants) : port des pièces selon le niveau (H3), stats et monstres au niveau du héros, bandes de
-  niveau des cartes (H4), activités à min(niveau, niveau de l'activité) (H5). Talents et certificats restent à la maîtrise de la
-  classe.
+- **Port des pièces** (lot H3) : une pièce de niveau N ne s'équipe que si le niveau de héros ≥ N (`Items.required_level` = niveau
+  affiché ; `HeroLevel.wear_block`). Vérifié au hub, d'où vient l'équipement de l'Aventure, des Donjons, de la Tour, de la Ruée,
+  du Siège et du Duel équipé / Arènes / Gantelet : `Profile.equip` / `equip_offhand` refusent, « Équiper le meilleur » et l'arme
+  par défaut ne prennent que des pièces portables, « Appliquer à la famille » ne copie pas une pièce trop haute (la classe garde
+  la sienne). Jamais bloquées : pièces de départ, pièces du Survivant et du Battle royale, trouvailles d'une partie (en Survie
+  jusqu'au lot H4a, qui créera les pièces des coffres au niveau du héros). Duel à l'arme, Ligue, Panthéon : inchangés.
+  - Refus : « Niveau 60 requis · tu es niveau 34 » (bouton de la fiche, message de l'inventaire, carte de l'objet) ; case d'objet
+    à fond rouge sombre, icône éteinte, niveau requis en rouge (inventaire, poupée, Fabriquer, coffres).
+  - Pièce déjà portée au-dessus du niveau (compte d'avant) : **reste portée**, signalée (« Déjà portée : elle reste »), comptée au
+    Registre ; la retirer demande une confirmation (« Tu ne pourras la remettre qu'au niveau 60. »).
+  - Fabriquer : permis au-dessus du niveau (préparer la suite), « À porter au niveau 53 · tu es niveau 34 » ; filtre « Portables ».
+- **Pas encore branché** (lots suivants) : stats et monstres au niveau du héros, bandes de niveau des cartes (H4), activités à
+  min(niveau, niveau de l'activité) (H5). Talents et certificats restent à la maîtrise de la classe.
 - **Modes scellés** (lot H2, `Modes.sealed()`) : en **Survivant** et en **Battle royale**, le héros ne joue qu'avec sa partie
   (niveau, cartes et pièces de la run). Rien du compte ne s'applique en combat : ni talents (stats et sorts), ni certificats
   (plateau et ses liens, insensibilité aux renversements, cartes de certificat), ni archive, ni aura ; tout le kit de la classe et

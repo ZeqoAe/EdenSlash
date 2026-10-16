@@ -16,6 +16,7 @@ func _ready() -> void:
 	Settings.reset_all()
 	Profile.selected_class = "warrior"
 	Profile.reset_all()
+	Profile.records[HeroLevel.KEY] = HeroLevel.total_for(HeroLevel.MAX_LEVEL)  # lot H3 : niveau 90, toutes les pièces se portent
 
 	# --- capes (A6) -----------------------------------------------------------------------------------
 	check("coffre de cape", SlotChests.BOXES.has("back") and SlotChests.title("back") == "Coffre de cape")

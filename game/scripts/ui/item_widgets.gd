@@ -265,6 +265,11 @@ class CardButton extends Button:
 
 
 # --- case d'objet ---------------------------------------------------------------------------
+## Pièce au-dessus du niveau de héros (lot H3) : fond rouge sombre, icône éteinte, niveau requis en rouge.
+const LOCK_BG := Color(0.3, 0.05, 0.07, 0.95)
+const LOCK_TEXT := Color(1.0, 0.42, 0.4)
+
+
 class ItemSlot extends Button:
 	signal activated  # double-clic ou clic droit
 
@@ -281,6 +286,7 @@ class ItemSlot extends Button:
 	var card_extra: Callable  # func(item) -> String : lignes ajoutées à la carte au survol
 	var card_text := ""  # carte au survol entièrement fournie (trésors de collection)
 	var show_compare := false  # ▲ / ▼ : mieux ou moins bien que la pièce portée
+	var wear_check := false  # lot H3 : pièce au-dessus du niveau de héros en rouge (coffre, équipement, fabrication, coffres)
 
 	func _init(size_px := 64.0) -> void:
 		custom_minimum_size = Vector2(size_px, size_px)
@@ -311,6 +317,8 @@ class ItemSlot extends Button:
 			return ItemWidgets.tip_card(card_text + extra, Items.color_of(item))
 		if for_text != Items.display_name(item):
 			extra += "\n\n[color=#c8c8d4]%s[/color]" % for_text  # consigne propre à la case
+		if wear_check:
+			extra = HeroLevel.lock_line(item) + extra
 		return ItemWidgets.item_card(item, extra)
 
 	func _gui_input(event: InputEvent) -> void:
@@ -322,8 +330,11 @@ class ItemSlot extends Button:
 	func _draw() -> void:
 		var r := Rect2(Vector2.ZERO, size)
 		var col: Color = Items.color_of(item) if not item.is_empty() else Color(0.35, 0.3, 0.25)
+		var req := HeroLevel.wear_block(item) if wear_check else 0  # niveau de héros requis (0 : portable)
 		var bg := StyleBoxFlat.new()
 		bg.bg_color = Color(0.06, 0.05, 0.1, 0.95) if not is_hovered() else Color(0.13, 0.1, 0.2, 1.0)
+		if req > 0:
+			bg.bg_color = ItemWidgets.LOCK_BG if not is_hovered() else ItemWidgets.LOCK_BG.lightened(0.12)
 		bg.border_color = UiTheme.GOLD if selected else (col if not item.is_empty() else Color(0.3, 0.26, 0.2, 0.8))
 		bg.set_border_width_all(3 if selected else 2)
 		bg.set_corner_radius_all(8)
@@ -343,7 +354,7 @@ class ItemSlot extends Button:
 		draw_rect(r.grow(-4.0), glow)
 		var tex := UiTheme.texture(String(item.get("icon", "")))
 		if tex:
-			draw_texture_rect(tex, r.grow(-6.0), false, Color(1, 1, 1, 0.45 if dim else 1.0))
+			draw_texture_rect(tex, r.grow(-6.0), false, Color(1, 1, 1, 0.45 if dim or req > 0 else 1.0))
 		if item.get("awakened", false):
 			# éveillé : aura dorée qui pulse autour de la pièce
 			var t := Time.get_ticks_msec() / 1000.0
@@ -355,21 +366,24 @@ class ItemSlot extends Button:
 		var up := int(item.get("upgrade", 0))
 		if up > 0:
 			HudWidgets.text_center(self, "+%d" % up, Vector2(size.x - 13.0, 11.0), font, 13, Color(1, 0.88, 0.45), 4)
-		if item.has("set"):
+		if item.has("set") and (req == 0 or badge == ""):
 			HudWidgets.diamond(self, Vector2(9, 9), 5.0, Items.SET_COLOR)
 		var sockets: Array = item.get("sockets", [])
 		for i in sockets.size():
 			var p := Vector2(9.0 + i * 11.0, size.y - 9.0)
 			draw_circle(p, 4.5, Color(0, 0, 0, 0.8))
 			draw_circle(p, 3.2, Color(0.75, 0.55, 1.0) if sockets[i] != null else Color(0.35, 0.33, 0.4))
-		if show_compare and item.has("slot"):
+		if show_compare and item.has("slot") and req == 0:
 			var c := Items.compare_to_equipped(item)
 			if absf(c) >= 0.02:
 				HudWidgets.text_center(self, "▲" if c > 0 else "▼", Vector2(size.x - 10.0, 12.0), font, 14,
 					Color(0.45, 1.0, 0.5) if c > 0 else Color(1.0, 0.45, 0.4), 4)
+		if req > 0:  # le niveau requis, en rouge (en haut à gauche si un badge occupe le bas)
+			var at := Vector2(size.x - 11.0, size.y - 9.0) if badge == "" else Vector2(13.0, 11.0)
+			HudWidgets.text_center(self, str(req), at, font, 12, ItemWidgets.LOCK_TEXT, 4)
 		if badge != "":
 			HudWidgets.text_center(self, badge, Vector2(size.x * 0.5, size.y - 8.0), font, 11, Color(1, 1, 1, 0.9), 4)
-		elif int(item.get("level", 1)) > 0:
+		elif req == 0 and int(item.get("level", 1)) > 0:
 			HudWidgets.text_center(self, str(int(item.get("level", 1))), Vector2(size.x - 11.0, size.y - 9.0), font, 11, Color(1, 1, 1, 0.75), 3)
 
 	func _get_drag_data(_at: Vector2) -> Variant:
