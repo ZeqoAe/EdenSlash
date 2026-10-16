@@ -18,7 +18,7 @@ const PATH := "res://data/bosses.json"
 const HIT_CAP := 0.4
 const PACE := [1.0, 0.85, 0.72]
 const MYTHIC_EXTRA := "frenzy"
-## PV d'un lieutenant (mini-boss de la 3e salle d'un donjon) : part des PV du boss du donjon.
+## PV d'un lieutenant (mini-boss de la 2e salle d'un donjon, lot A2 ; Dungeons.LIEUTENANT_HP en plus) : part des PV du boss du donjon.
 const LIEUTENANT_HP := 0.25
 
 static var _defs: Array = []

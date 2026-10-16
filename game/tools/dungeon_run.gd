@@ -2,8 +2,9 @@ extends Node
 ## Passe M2 : un donjon à la carte joué en entier par le pilote automatique (aide « Bot » : déplacement, attaques et
 ## sorts automatiques ; cartes et passage des salles seuls), pour mesurer sa durée, la mort ou non, et les dégâts subis.
 ##   godot --headless --fixed-fps 60 --path game res://tools/dungeon_run.tscn -- --boss=latif --diff=0 --class=warrior
-##         --hub=E.C.N.G [--human=0.5] [--max=1500] [--seed=1]
-## --human : part des coups évitée (Run.test_taken) ; sans : 0,5. Ligne lue : « [donjon] … ». Profil jetable (EDEN_PROFILE).
+##         --hub=E.C.N.G [--human=0.5] [--max=1500] [--seed=1] [--god=1]
+## --human : part des coups évitée (Run.test_taken) ; sans : 0,5. --god=1 : héros invincible (durée pure des salles, lot A2).
+## Ligne lue : « [donjon] … » (salles = secondes écoulées à l'entrée de chaque salle). Profil jetable (EDEN_PROFILE).
 
 var boss := "latif"
 var diff := 0
@@ -11,6 +12,7 @@ var cid := "warrior"
 var hub := "new"
 var human := 0.5
 var max_t := 1500.0
+var god := false
 var _taken := 0.0
 var _hp_last := 0.0
 var _room_t: Array = []
@@ -29,6 +31,7 @@ func _ready() -> void:
 			"human": human = float(kv[1])
 			"max": max_t = float(kv[1])
 			"seed": seed(int(kv[1]))
+			"god": god = kv[1] != "0"
 	Settings.reset_all(false)
 	Profile.selected_class = cid
 	Profile.save_profile()
@@ -43,6 +46,7 @@ func _ready() -> void:
 	world.cards._queue.clear()
 	world.cards._show_next()
 	p.autoplay = true
+	p.dev_invincible = god
 	for k in Settings.PRESETS.bot.game:
 		Settings.data["game"][k] = Settings.PRESETS.bot.game[k]
 	world.revives_left = 0
@@ -55,6 +59,7 @@ func _ready() -> void:
 	var room := Tower.floor_n
 	var boss_t0 := -1.0
 	var res := "temps"
+	var last := Tower.top()  # (Tower.finish remet la Tour à zéro : top() ne vaut plus celui du donjon)
 	while t < max_t:
 		await get_tree().physics_frame
 		t += get_physics_process_delta_time()
@@ -64,7 +69,7 @@ func _ready() -> void:
 			if Tower.is_boss_floor(room):
 				boss_t0 = t
 		if not Tower.active:
-			res = "victoire" if Tower.reached >= 4 else "défaite"
+			res = "victoire" if Tower.reached >= last else "défaite"
 			break
 		if not is_instance_valid(p) or p.is_dead:
 			res = "mort"

@@ -20,7 +20,8 @@ const LIST := {
 	"tower": {"name": "La Tour", "cond": "Gagne l'époque I (boss de la 3e carte).", "legacy": true},
 	"duel_free": {"name": "Duel libre", "cond": "Bats un premier duelliste de la Tour.", "legacy": true},
 	"league": {"name": "Ligue", "cond": "Bats 3 duellistes de la Tour (ou gagne 3 duels).", "legacy": true},
-	"dungeons": {"name": "Donjons", "cond": "Gagne l'époque II.", "legacy": false},
+	"dungeons": {"name": "Donjons", "cond": "Gagne l'époque I (boss de la 3e carte).", "legacy": false},
+	"rush": {"name": "Ruée des boss", "cond": "Gagne l'époque II.", "legacy": false},
 	"royale": {"name": "Battle royale", "cond": "Atteins le rang Argent de la Ligue (ou gagne 6 duels).", "legacy": false},
 	"siege": {"name": "Le Siège", "cond": "Gagne l'époque II (les difficultés plus dures demandent de la puissance d'équipement).", "legacy": false},
 	"gauntlet": {"name": "Gantelet", "cond": "Atteins le rang Or de la Ligue.", "legacy": false},
@@ -55,11 +56,15 @@ static func test(id: String) -> bool:
 		"league":
 			return int(Profile.records.get("duel_wins", 0)) >= 3 or Tower.duelists_beaten() >= 3
 		"dungeons":
-			return Epochs.unlocked() >= 3
+			# lot A2 : dès l'époque I gagnée (avant : l'époque II) ; chaque donjon s'ouvre ensuite avec le boss de sa zone
+			return Epochs.unlocked() >= 2
+		"rush":
+			# la Ruée garde l'époque II (ses 8 boss couvrent toutes les zones) ; une Ruée déjà jouée reste ouverte
+			return Epochs.unlocked() >= 3 or range(3).any(func(d): return int(Profile.records.get("rush_best_%d" % d, 0)) > 0)
 		"royale":
 			return League.rank_index() >= 2 or int(Profile.records.get("duel_wins", 0)) >= 6
 		"siege":
-			return test("dungeons")  # la puissance d'équipement est vérifiée au lancement (Siege.power_ok)
+			return Epochs.unlocked() >= 3  # la puissance d'équipement est vérifiée au lancement (Siege.power_ok)
 		"gauntlet", "arenas":
 			return League.rank_index() >= 3
 		"pantheon":

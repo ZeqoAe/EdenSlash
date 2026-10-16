@@ -14,6 +14,7 @@ const SLOT_ORDER := ["weapon", "head", "chest", "legs", "gloves", "boots", "back
 const ARCH_ORDER := ["storm", "frost", "blood", "falcon", "phoenix", "wind", "salvo", "rampart"]
 const CARD_W := 270.0
 const PE_LOW := "Puissance d'équipement insuffisante"  # (même phrase que le lobby)
+const FAR_NORMAL := "Trop faible ici : essaie d'abord une zone plus basse."
 
 
 ## Remplit la page (panneau défilant [code]lobby._sub[/code], bouton épinglé).
@@ -60,7 +61,9 @@ static func fill(lobby) -> void:
 			lobby._dg_diff = di
 			lobby._show_menu("dungeon"))
 		dr.add_child(b)
-	lobby._pe_gauge(Dungeons.power_required(zid, diff))
+	# lot A2 : PE requise (Héroïque, Mythique) ou conseillée (Normal), estimation et récompenses, comme la Ruée et le Siège
+	DifficultyPanel.add(sub, Dungeons.power_required(zid, diff), Dungeons.advised(zid, diff), rewards(sel, diff),
+		FAR_NORMAL if diff == 0 else "")
 	lobby._pe_next(zid, false)
 	# --- filtres et liste -----------------------------------------------------------------------
 	lobby._section("Je cherche", "Filtre les donjons d'après la pièce, la panoplie ou les mécaniques du boss.")
@@ -93,6 +96,17 @@ static func fill(lobby) -> void:
 	go.disabled = not (is_open and Dungeons.power_ok(zid, diff))
 	go.pressed.connect(func(): lobby._start_dungeon())
 	lobby._pin_go(go, ("" if Dungeons.power_ok(zid, diff) else PE_LOW) if is_open else Dungeons.condition(zid))
+
+
+## Récompenses courtes du donjon de [param bid] en difficulté [param diff] : cristaux, coffre de pièces (et d'équipement en
+## Mythique), plan à la 1re victoire (Dungeons.reward).
+static func rewards(bid: String, diff: int) -> Array:
+	var out: Array = ["%d cristaux" % ActivityLoot.dungeon_crystals(diff), "3 pièces au choix"]
+	if diff >= 2:
+		out.append("coffre d'équipement")
+	if not Dungeons.has_plan(bid):
+		out.append("son plan de donjon")
+	return out
 
 
 static func _arch_name(a: String) -> String:

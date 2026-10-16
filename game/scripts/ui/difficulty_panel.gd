@@ -29,8 +29,9 @@ static func verdict(have: int, advised: int) -> Array:
 
 
 ## Ajoute le bloc à [param parent] : PE requise [param need] (0 : aucune), PE conseillée [param advised], récompenses
-## [param rewards] (courtes, « 272 cristaux »…). Renvoie le nom de l'estimation.
-static func add(parent: Control, need: int, advised: int, rewards: Array) -> String:
+## [param rewards] (courtes, « 272 cristaux »…) ; [param far_hint] remplace l'avertissement « Hors de portée » (Donjons en
+## Normal : il n'y a pas de difficulté plus basse, mais un donjon plus bas). Renvoie le nom de l'estimation.
+static func add(parent: Control, need: int, advised: int, rewards: Array, far_hint := "") -> String:
 	var have := GearPower.hero_power()
 	var v := verdict(have, advised)
 	var box := VBoxContainer.new()
@@ -67,7 +68,8 @@ static func add(parent: Control, need: int, advised: int, rewards: Array) -> Str
 		var rw := Hud._label(box, "Récompenses : " + " · ".join(rewards), 14, UiTheme.MUTED)
 		rw.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if WARN.has(String(v[0])):
-		var w := Hud._label(box, "⚠ " + String(WARN[String(v[0])]), 14, v[1])
+		var warn := far_hint if far_hint != "" and String(v[0]) == String(VERDICTS[-1][1]) else String(WARN[String(v[0])])
+		var w := Hud._label(box, "⚠ " + warn, 14, v[1])
 		w.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return String(v[0])
 

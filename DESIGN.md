@@ -512,7 +512,9 @@ enchantements, panoplies ; simulation, joueur moyen : ≈ 6 000 à l'époque I g
 l'époque II avec un équipement d'époque I à +10.
 - **Donjons** (`GearPower.DIFF_RATIO`) : Normal 0, **Héroïque ×3,6** (1re zone ≈ 25 300, s'ouvre vers l'époque III, puis
   zone après zone jusqu'à ≈ 55 000), **Mythique ×3,1** (niveau 90 : 55 800, après l'époque IV, équipement amélioré). La Ruée
-  se juge au niveau de son 4e boss (Héroïque ≈ 41 500).
+  se juge au niveau de son 4e boss (Héroïque ≈ 41 500). Lot A2 : le Normal s'ouvre dès l'époque I gagnée (zone par zone) ;
+  Héroïque reste plus loin (un kit de l'époque I à +10 et gemmes ≈ 15 800, sous les 25 300 de la 1re zone). PE **conseillée**
+  (`Dungeons.ADVISED` 1,3 / 3,8 / 3,3 × la PE attendue, jamais sous la requise) affichée avec l'estimation (`DifficultyPanel`).
 - **Siège** (`Siege.POWER_RATIO`) : Normal 0, Héroïque ×4, Mythique ×3,4 (61 200 : ≈ équipement complet).
 - **Butin légendaire des coffres** (`GearPower.LEGEND_RATIO`) : ×1,8 (coffre de niveau 40 : ≈ 16 200, vers l'époque II ;
   niveau 90 : 32 400, vers l'époque III gagnée).
@@ -520,8 +522,8 @@ l'époque II avec un équipement d'époque I à +10.
   fermé dit seulement « Puissance d'équipement insuffisante ».
 - Bilan de la Survie : l'infobulle des insignes lit `Run.insignia_parts` (participation au prorata d'une run courte, cartes
   suivantes, monstres et élites plafonnés, victoire, bonus du défi / du rang héroïque, autel) ; les lignes font le total.
-- **Tour** : 3 / 4 / 5 / 6 cristaux par étage (avant 1 à 2,5, `ActivityLoot.TOWER_PER_FLOOR`) : entre l'époque I gagnée et les
-  Donjons (époque II), c'est la seule source de cristaux (≈ 120 / h en Normal, sous un Donjon Normal à 180).
+- **Tour** : 3 / 4 / 5 / 6 cristaux par étage (avant 1 à 2,5, `ActivityLoot.TOWER_PER_FLOOR`) : ≈ 120 / h en Normal, sous un
+  Donjon Normal (30 par donjon de ≈ 6 min, ≈ 200-300 / h) ; depuis le lot A2 les deux s'ouvrent ensemble, à l'époque I gagnée.
 
 ## Déroulement d'une run (10 minutes + rage)
 
@@ -915,9 +917,13 @@ pool de boss aux mécaniques différentes, réutilisables partout (Tour, Ruée, 
 - **Paliers** : Normal / Héroïque / Mythique = PV fixes de la difficulté, mécaniques plus fréquentes (× 1 / 0,85 / 0,72) ; en
   Mythique l'Impatience s'ajoute à tout boss qui ne l'a pas.
 - **Donjons à la carte** : un donjon par boss (`Dungeons.catalog`), dans sa zone (mêmes niveaux, difficultés, PE requise et
-  ouverture que le donjon de la zone). Salles : monstres, élites, **lieutenant** (un autre boss de la zone, une seule mécanique,
-  25 % des PV du boss), boss ; 44 + 6 × difficulté monstres par salle (+8 avec le lieutenant), PV × 3,5, élites 5 + difficulté
-  (pilote : donjon fini en 2 à 6 min, joueur estimé 6 à 10 min ; voir `R_M2.md`). **Farmable à volonté**. Butin : le coffre de set propose **3 pièces de ses 2 emplacements** (le 1er,
+  ouverture que le donjon de la zone). **Ouverture (lot A2)** : époque I gagnée (`Unlocks` « dungeons »), puis chaque zone quand
+  son boss est battu en Survie (les zones d'une époque gagnée d'office) ; jamais de reverrouillage. La Ruée (entrée « rush ») et le
+  Siège gardent l'époque II. **Trois salles, aucune de monstres seuls (lot A2)** : 1) **élites à mécanique**, une à la fois avec
+  2 monstres d'escorte, la suivante quand elle tombe (`Dungeons.ELITES` 3 + difficulté, une brique de `Tower.ELITE_BRICKS`
+  chacune, tirée par donjon, PV × `ELITE_ROOM_HP` 2) ; 2) le **lieutenant** seul (un autre boss de la zone, une seule mécanique,
+  25 % × `LIEUTENANT_HP` 3 des PV du boss) ; 3) le **boss**. Durée au pilote (`tools/dungeon_run`, `R_A2.md`) : Normal 3:15 à
+  8:30, médiane ≈ 5:50 ; Héroïque et Mythique 3:45 à 9:15, médiane ≈ 4:45. **Farmable à volonté**. Butin : le coffre de set propose **3 pièces de ses 2 emplacements** (le 1er,
   le 2e, puis le 1er), à **sa panoplie**, mythiques ou légendaires (selon la PE, comme avant), et en Mythique une pièce d'armure
   sur quatre est **éveillée** quand le modèle existe ; jamais une pièce déjà possédée. Cristaux et coffres de matières
   (lot E1) inchangés. Chaque panoplie s'obtient aux **9 emplacements** sur ses 6 donjons ; record par boss (`dgb_<boss>_<diff>`).
@@ -934,7 +940,8 @@ pool de boss aux mécaniques différentes, réutilisables partout (Tour, Ruée, 
   du boss d'origine de la zone (`BossLibrary.zone_boss`), qui garde la meilleure difficulté finie dans la zone (record
   `plan_diff_<boss>`) ; un plan inconnu reste tel quel.
 - **Page Donjons** (`ui/dungeon_page.gd`) : en haut le donjon choisi (boss, mécaniques avec leur conseil en infobulle, pièces,
-  victoires) et sa difficulté (jauge de PE) ; dessous « Je cherche » : filtres **pièce**, **panoplie**, **mécanique**, puis la liste
+  victoires) et sa difficulté (PE requise ou conseillée, estimation, récompenses : cristaux, 3 pièces, son plan à la 1re
+  victoire ; lot A2) ; dessous « Je cherche » : filtres **pièce**, **panoplie**, **mécanique**, puis la liste
   (ouverts d'abord, fermés grisés avec leur condition) ; alliés IA ; « Entrer : <donjon> » épinglé. « Rejouer » relance le même boss.
 - **État (16/10)** : la Tour (M3), la Ruée et le Siège (M6) passent par la bibliothèque. **Pas encore** : la Survie et le Survivant
   gardent leurs boss (le Survivant leur ajoute des briques aux paliers IV-V, `Survivor.EXTRA_BRICKS`) ; ils passeront par
@@ -1292,7 +1299,7 @@ est dans les rapports `conception/nuit_15_10/R_E*.md` ; la passe P6 le rend lisi
   classe choisie. Ordre : première Survie ; pièce du coffre commun que « Équiper le meilleur » poserait ; pièce achetable avec
   les insignes ; coffres à ouvrir ; ce qui manque à la classe (emplacement vide, niveau, panoplie de donjon ou Esprits, +10,
   gemmes, enchantements) avec l'activité qui le donne ; échelon suivant du fil d'éveil ; classe suivante du Registre.
-  Jamais en partie. Une activité fermée est remplacée par son échelon (« Gagne l'époque II : les Donjons s'ouvrent »).
+  Jamais en partie. Une activité fermée est remplacée par son échelon (« Gagne l'époque I : Forge, Tour et Donjons s'ouvrent »).
 - **Bilans** : une ligne « Ta quête » (`spec.quest`, `Compass.after(mode, gains)`) dit ce que le gain change (« plan obtenu »,
   « panoplie Tempête 2 / 6 : un coffre de set donne +1 pièce », « 170 cristaux pour la Forge », « Esprits 1 / 6 »…), puis la suite.
 - **Pages Donjon, Siège, Ruée** : sous la difficulté choisie, la jauge de la première difficulté plus dure encore fermée par la PE.

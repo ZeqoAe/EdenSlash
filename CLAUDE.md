@@ -71,10 +71,10 @@ dans `Compass` si elle change la quête + `test_nav_screens`. Les activités « 
 |---|---|---|---|---|
 | Survie | pièces (découverte), maîtrise, insignes, étoiles | dès le départ | `core/run.gd`, `run_director.gd`, `epochs.gd` | DESIGN « Survie » |
 | Survivant | apparences, titres (aucun lien avec le compte) | dès le départ | `core/survivor*.gd` | `conception/survivor/SPEC.md` |
-| Donjons | panoplies, plans, cristaux, parchemins | époque II gagnée | `core/dungeons.gd`, `ui/dungeon_page.gd` | DESIGN « Bibliothèque de boss » |
+| Donjons | panoplies, plans, cristaux, parchemins | époque I gagnée (A2) | `core/dungeons.gd`, `ui/dungeon_page.gd` | DESIGN « Bibliothèque de boss » |
 | La Tour | cristaux, gemmes, apparences | époque I gagnée | `core/tower.gd`, `tower_director.gd` | DESIGN « La Tour » |
 | Quêtes | maîtrise des classes en retard, apparences (lot A5) | 3 Survies | `core/quests.gd`, `ui/quests_page.gd` | DESIGN « Quêtes » |
-| Ruée des boss | parchemins, pierres, cristaux, titres | avec les Donjons | `core/rush.gd`, `rush_director.gd` | DESIGN « Ruée et Siège » |
+| Ruée des boss | parchemins, pierres, cristaux, titres | époque II (entrée `rush`) | `core/rush.gd`, `rush_director.gd` | DESIGN « Ruée et Siège » |
 | Le Siège | formules, cristaux, apparences | époque II (Normal sans PE) | `core/siege.gd`, `siege_director.gd` | DESIGN « Ruée et Siège » |
 | Duel (Libre, Ligue, Panthéon, Gantelet) | rangs, titres, maîtrise, Esprits | 1er duelliste de la Tour | `core/duel.gd`, `league.gd`, `pantheon.gd` | section « Duel » ci-dessous |
 | Arènes 2v2 / 3v3 | titres, maîtrise, insignes | rang Or de la Ligue | `core/duel_director.gd` | `R_M7.md` |
@@ -129,6 +129,8 @@ Détail : DESIGN « Bibliothèque de boss et donjons à la carte », `R_M2.md`, 
   salles de la Tour (`Tower.dungeon`), alliés IA (`ClassRival.ally`). Test `test_m2`. **Plans de donjon** (lot A1) : un par boss
   (`plan_<boss>`, 48) à la 1re victoire, fabriqués en insignes (`ui/fabrication_page.gd`, `Dungeons.plan_diff`) ; anciens `plan_<zone>`
   convertis par `Dungeons.migrate_plans()` (paresseux, idempotent). Test `test_a1`, rapport `conception/progression/R_A1.md`.
+  Lot A2 : ouverts à l'époque I gagnée ; 3 salles (élites une à une, `TowerDirector._begin_dungeon_room`, lieutenant, boss), réglages
+  `Dungeons.ELITE_ROOM_HP` / `LIEUTENANT_HP` mesurés par `tools/dungeon_run` (`--god=1`), PE conseillée `Dungeons.advised` ; `test_a2`.
 - **La Tour** : `core/tower.gd` (`block_plan` par bloc de 10, `BOSS_CURVE`, `BOSS_FLOOR_ADJ`), `core/tower_director.gd` (interface
   documentée en tête, prolongée par `SiegeDirector`), équilibre entre classes `core/tower_balance.gd` + `data/tower_solo.json`
   (régénéré par `tools/m8_matrix.py solo`). Tests `test_m3`, `test_m8`. Rapports `R_M3.md`, `R_M8.md`.

@@ -2061,9 +2061,9 @@ func _menu_rush() -> void:
 	_rush_mods()
 	_dungeon_allies_picker()
 	var go := MenuWidgets.gold_button("Lancer la Ruée", 22, Vector2(0, 58))
-	go.disabled = not Unlocks.is_open("dungeons") or not Dungeons.power_ok(Dungeons.RUSH, _dg_diff)
+	go.disabled = not Unlocks.is_open("rush") or not Dungeons.power_ok(Dungeons.RUSH, _dg_diff)
 	go.pressed.connect(_start_rush)
-	_pin_go(go, Unlocks.condition("dungeons") if not Unlocks.is_open("dungeons") else (PE_LOW if go.disabled else ""))
+	_pin_go(go, Unlocks.condition("rush") if not Unlocks.is_open("rush") else (PE_LOW if go.disabled else ""))
 
 
 ## Les huit boss du tirage proposé (« ??? » à l'aveugle), sa graine et « Nouveau tirage ».
@@ -2120,7 +2120,7 @@ func _rush_mods() -> void:
 
 
 func _start_rush() -> void:
-	if _launching or not Unlocks.is_open("dungeons") or not Dungeons.power_ok(Dungeons.RUSH, _dg_diff):
+	if _launching or not Unlocks.is_open("rush") or not Dungeons.power_ok(Dungeons.RUSH, _dg_diff):
 		return
 	_launching = true
 	if backdrop:

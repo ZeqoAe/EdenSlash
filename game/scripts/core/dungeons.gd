@@ -1,7 +1,7 @@
 class_name Dungeons
 extends RefCounted
-## Donjons (lot 13) : un donjon d'Eden par zone, en quatre salles (monstres, élites, monstres, boss),
-## joué avec ton équipement synchronisé, les 12 sorts de ton préréglage, une carte par salle et jusqu'à
+## Donjons (lot 13) : un donjon d'Eden par zone, en trois salles (lot A2 : élites à mécanique, lieutenant, boss ; plus de
+## salle de monstres seuls), joué avec ton équipement synchronisé, les 12 sorts de ton préréglage, une carte par salle et jusqu'à
 ## deux alliés IA. Trois difficultés : Normal (niveau de l'époque), Héroïque (+15), Mythique (niveau 90).
 ## Il réutilise l'infrastructure de la Tour (salles, directeur, bilan) : `Tower.dungeon` est la zone du
 ## donjon en cours ("" : pas de donjon). Butin : un coffre de set (pièce mythique au choix, légendaire
@@ -9,15 +9,23 @@ extends RefCounted
 ## (ActivityLoot : de quoi monter les pièces de ce niveau) et, à la 1re victoire contre un boss, son plan de donjon
 ## (lot A1 : un plan par boss, 48 ; voir « Plans de donjon » plus bas).
 
-const ROOMS := ["monsters", "elite", "monsters", "boss"]
+const ROOMS := ["elite", "lieutenant", "boss"]
 const DIFF_NAMES := ["Normal", "Héroïque", "Mythique"]
 const MYTHIC_LEVEL := 90
 const HEROIC_BONUS := 15
-## PV des monstres et des élites des salles (profil « donjon ») ; passe M2 : 1,8 / 2,5 -> 3,5 / 4 et salles plus peuplées
-## (room_monsters) : le pilote vidait une salle en 15 s (donjon de 2 à 4 min) ; plus (4 / 4,5 et 50 monstres) les salles tuaient
-## le pilote avant le boss. Mesuré : voir conception/nuit_15_10/R_M2.md.
+## PV des monstres et des élites des salles (profil « donjon », repris par le Siège) ; passe M2 : 1,8 / 2,5 -> 3,5 / 4 (R_M2).
+## Lot A2 : plus de salle de monstres seuls ; les monstres ne sont plus que l'escorte des élites.
 const MONSTER_HP := 3.5
 const ELITE_HP := 4.0
+## Lot A2 (mesuré au pilote, tools/dungeon_run, conception/progression/R_A2.md) : élites de la 1re salle (ELITES + difficulté,
+## chacune une mécanique de BossBricks, PV × ELITE_ROOM_HP en plus d'ELITE_HP) et lieutenant de la 2e (PV × LIEUTENANT_HP en plus
+## de la part de lieutenant de BossLibrary) : donjon de 5 à 7 minutes, boss compris.
+const ELITES := 3
+const ELITE_ROOM_HP := 2.0
+const LIEUTENANT_HP := 3.0
+## PE conseillée (rapport à la PE attendue du niveau du donjon, GearPower) : Normal, Héroïque, Mythique ; affichée avec
+## l'estimation (DifficultyPanel). Normal n'exige rien ; Héroïque et Mythique exigent DIFF_RATIO.
+const ADVISED := [1.3, 3.8, 3.3]
 const BOSS_HP := 25.0  # × les PV de base d'un monstre de son niveau
 const ALLY_HP_STEP := 0.5  # PV des monstres en plus par allié
 const MAX_ALLIES := 2
@@ -117,7 +125,7 @@ static func level(zid: String, diff: int) -> int:
 	return base + (HEROIC_BONUS if diff == 1 else 0)
 
 
-## Le donjon [param zid] est ouvert : donjons débloqués (époque II) et le boss de sa zone battu en Survie
+## Le donjon [param zid] est ouvert : donjons débloqués (époque I gagnée, lot A2) et le boss de sa zone battu en Survie
 ## (ou son époque déjà gagnée).
 static func is_open(zid: String) -> bool:
 	if not Unlocks.is_open("dungeons"):
@@ -141,6 +149,11 @@ static func power_ok(zid: String, diff: int) -> bool:
 	return GearPower.meets(power_required(zid, diff))
 
 
+## PE conseillée pour le donjon [param zid] en difficulté [param diff] (jamais sous la PE requise).
+static func advised(zid: String, diff: int) -> int:
+	return maxi(GearPower.required(level(zid, diff), float(ADVISED[clampi(diff, 0, 2)])), power_required(zid, diff))
+
+
 static func power_text(zid: String, diff: int) -> String:
 	var need := power_required(zid, diff)
 	if need <= 0:
@@ -154,10 +167,10 @@ static func condition(zid: String) -> String:
 	return "Bats le boss de la zone %s en Survie." % String(zone(zid).get("name", zid))
 
 
-## Monstres de la salle [param f] en difficulté [param diff] (la salle du lieutenant en a un peu plus), en même temps au plus,
-## élites de la 2e salle.
-static func room_monsters(f: int, diff: int) -> int:
-	return 44 + 6 * diff + (8 if f == LIEUTENANT_ROOM else 0)
+## Monstres seuls de la salle [param f] : aucun depuis le lot A2 (les élites viennent avec leur escorte, TowerDirector.ESCORT
+## chacune) ; monstres en même temps au plus ; élites de la 1re salle (une à la fois).
+static func room_monsters(_f: int, _diff: int) -> int:
+	return 0
 
 
 static func room_alive(diff: int) -> int:
@@ -165,7 +178,14 @@ static func room_alive(diff: int) -> int:
 
 
 static func room_elites(diff: int) -> int:
-	return 5 + diff
+	return ELITES + diff
+
+
+## Mécanique (brique de BossBricks, parmi Tower.ELITE_BRICKS) de la [param i]-ième élite du donjon de [param bid] : tirée par
+## donjon, jamais deux fois la même dans la salle.
+static func elite_brick(bid: String, i: int) -> String:
+	var start := absi(hash(["dungeon_elite", bid])) % Tower.ELITE_BRICKS.size()
+	return String(Tower.ELITE_BRICKS[(start + i * 3) % Tower.ELITE_BRICKS.size()])
 
 
 ## Salles du donjon [param zid] : {type, level} dans l'ordre.
@@ -312,8 +332,8 @@ static func migrate_plans() -> bool:
 # --- donjons à la carte (passe M2) ---------------------------------------------------------------
 ## Chaque boss de la bibliothèque (BossLibrary, 6 par zone) a son donjon dans sa zone : mêmes salles, niveau et
 ## difficultés que le donjon de la zone ; son boss final et son butin (panoplie + deux emplacements) le distinguent.
-## La 3e salle est gardée par un lieutenant (un autre boss de la zone, une seule mécanique). Farmable à volonté.
-const LIEUTENANT_ROOM := 3
+## La 2e salle est gardée par un lieutenant (un autre boss de la zone, une seule mécanique). Farmable à volonté.
+const LIEUTENANT_ROOM := 2
 ## Mythique : chance qu'une pièce d'armure soit « éveillée » (légendaire à aura) quand le modèle existe.
 const AWAKEN_CHANCE := 0.25
 const AWAKEN_SLOTS := ["head", "chest", "legs", "gloves", "boots"]

@@ -54,8 +54,8 @@ const LIST := [
 	{"id": "tw_floor", "act": "tower", "text": "Atteindre l'étage %d de la Tour", "stat": "reached", "mode": "best", "when": {"min_climbed": 3},
 		"dyn": "tower_floor", "tier": 2, "min": 14, "need": "tower"},
 	# --- Ruée des boss ---------------------------------------------------------------------------------------------
-	{"id": "rs_bosses", "act": "rush", "text": "Vaincre %d boss de la Ruée", "stat": "rooms", "mode": "best", "d": 3, "w": 6, "tier": 2, "min": 12, "need": "dungeons"},
-	{"id": "rs_clear", "act": "rush", "text": "Terminer la Ruée des boss", "stat": "win", "mode": "sum", "when": {"won": true}, "d": 0, "w": 1, "tier": 3, "min": 35, "need": "dungeons"},
+	{"id": "rs_bosses", "act": "rush", "text": "Vaincre %d boss de la Ruée", "stat": "rooms", "mode": "best", "d": 3, "w": 6, "tier": 2, "min": 12, "need": "rush"},
+	{"id": "rs_clear", "act": "rush", "text": "Terminer la Ruée des boss", "stat": "win", "mode": "sum", "when": {"won": true}, "d": 0, "w": 1, "tier": 3, "min": 35, "need": "rush"},
 	# --- Le Siège --------------------------------------------------------------------------------------------------
 	{"id": "sg_wave", "act": "siege", "text": "Tenir jusqu'à la vague %d du Siège", "stat": "reached", "mode": "best", "d": 3, "w": 5, "tier": 2, "min": 10, "need": "siege"},
 	{"id": "sg_boss", "act": "siege", "text": "Vaincre le boss du Siège", "stat": "boss_down", "mode": "sum", "d": 1, "w": 2, "tier": 3, "min": 16, "need": "siege"},

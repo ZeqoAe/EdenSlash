@@ -19,8 +19,8 @@ const SLOT_NOUN := {
 }
 ## Échelons du fil d'éveil, dans l'ordre où le joueur les rencontre : [entrée de Unlocks, texte, page].
 const LADDER := [
-	["forge", "Gagne l'époque I : la Forge et la Tour s'ouvrent", {"menu": "survival"}],
-	["dungeons", "Gagne l'époque II : les Donjons s'ouvrent", {"menu": "survival"}],
+	["forge", "Gagne l'époque I : Forge, Tour et Donjons s'ouvrent", {"menu": "survival"}],
+	["siege", "Gagne l'époque II : le Siège et la Ruée s'ouvrent", {"menu": "survival"}],
 	["league", "Bats trois duellistes de la Tour : la Ligue s'ouvre", {"menu": "tower"}],
 	["royale", "Ligue Argent : ouvre la Battle royale", {"menu": "duel", "tab": "league"}],
 	["arenas", "Ligue Or : ouvre les Arènes et le Gantelet", {"menu": "duel", "tab": "league"}],
@@ -210,7 +210,7 @@ static func _forge_step(cid: String, e: Dictionary) -> Dictionary:
 ## Le conseil « ouvre cette entrée du fil d'éveil » (Unlocks) : le texte de LADDER.
 static func ladder_step(unlock: String) -> Dictionary:
 	for l in LADDER:
-		if String(l[0]) == unlock or (unlock == "siege" and String(l[0]) == "dungeons") or (unlock == "tower" and String(l[0]) == "forge"):
+		if String(l[0]) == unlock or (unlock == "rush" and String(l[0]) == "siege") or (unlock in ["tower", "dungeons"] and String(l[0]) == "forge"):
 			return _make("ladder_" + String(l[0]), String(l[1]), l[2], Unlocks.condition(String(l[0])), "rank")
 	return {}
 

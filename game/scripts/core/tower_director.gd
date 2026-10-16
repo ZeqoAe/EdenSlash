@@ -15,7 +15,8 @@ extends Node
 ##            _spawn_allies(), _make_ally(cid), _place_allies(), _ring(min, max), alive(), _spawn_chest(), open_chest(it),
 ##            _spawn_stairs().
 ## Les ajouts de la passe M3 (élites à mécanique, mélange d'espèces, malédictions, ombres, halte, boss de la bibliothèque)
-## ne s'appliquent qu'à la Tour elle-même (pas aux Donjons, à la Ruée ni au Siège).
+## ne s'appliquent qu'à la Tour elle-même (pas à la Ruée ni au Siège) ; les Donjons (lot A2) reprennent les élites à mécanique
+## dans leur 1re salle (_begin_dungeon_room).
 
 const SPAWN_EVERY := 0.7  # secondes entre deux groupes
 const BOSS_ADDS_EVERY := 14.0
@@ -38,6 +39,8 @@ var _mix: Array = []  # espèces de l'étage (Tour), jouées à tour de rôle : 
 var _mix_i := 0
 var _curse := ""  # malédiction de l'étage (Tower.CURSES), "" sinon
 var _elites_alive: Array = []  # élites de l'étage (objectif)
+var _lieutenant: Monster  # lieutenant de la salle d'un donjon (objectif)
+var _elites_next := 0  # élites de la salle d'un donjon encore à venir (une à la fois, lot A2)
 
 
 func setup(director: RunDirector) -> void:
@@ -128,6 +131,8 @@ func begin(f: int) -> void:
 	_mix_i = 0
 	_curse = ""
 	_elites_alive = []
+	_lieutenant = null
+	_elites_next = 0
 	var tower := not Tower.is_dungeon()  # la Tour elle-même (pas un donjon, la Ruée ni le Siège)
 	if Tower.is_duel_floor(f):
 		left = 0
@@ -154,12 +159,7 @@ func begin(f: int) -> void:
 			_spawn_elite(f, i, lvl)
 		d.message.emit(_floor_intro(f), 3.0)
 	else:
-		left = Tower.monster_count(f)
-		if Tower.is_elite_floor(f):
-			for i in Tower.elite_count(f):
-				_spawn(d._elites.pick_random() if not d._elites.is_empty() else d._pick_monster(lvl), _ring(8.0, 14.0), lvl + 1)
-		var lt := _spawn_lieutenant(f, lvl)
-		d.message.emit("%s %d / %d%s" % [_room_word(), f, Tower.top(), "\nÉlite en vue !" if Tower.is_elite_floor(f) else ("\nUn lieutenant garde la salle : %s" % lt if lt != "" else "")], 2.5)
+		_begin_dungeon_room(f, lvl)
 
 
 func _spawn(id: int, pos: Vector3, lvl: int, boss := false) -> Monster:
@@ -177,32 +177,47 @@ func _spawn(id: int, pos: Vector3, lvl: int, boss := false) -> Monster:
 	return m
 
 
-## Élite [param i] de l'étage [param f] (Tour) : une élite de la zone, plus coriace, avec une mécanique propre (une brique
-## de BossBricks, annoncée au sol comme celles des boss, coups plafonnés), son nom suivi de sa mécanique, et une escorte.
+## Salle d'un donjon (lot A2 : plus de salle de monstres seuls) : salle 1, des élites à mécanique, une à la fois avec son
+## escorte (la suivante arrive quand elle tombe : une mécanique à lire à la fois) ; salle 2, le lieutenant seul ; le boss
+## (salle 3) passe par _spawn_boss. Sans lieutenant possible : des élites.
+func _begin_dungeon_room(f: int, lvl: int) -> void:
+	left = 0
+	var lt := _spawn_lieutenant(f, lvl) if Tower.floor_type(f) == "lieutenant" else ""
+	if lt == "":
+		_elites_next = Dungeons.room_elites(Tower.dungeon_diff) - 1
+		_spawn_elite(f, 0, lvl)
+		d.message.emit("%s %d / %d · Élites\n%d élites à abattre, une à une" % [_room_word(), f, Tower.top(), _elites_next + 1], 3.0)
+		return
+	d.message.emit("%s %d / %d · Lieutenant\n%s garde la salle" % [_room_word(), f, Tower.top(), lt], 3.0)
+
+
+## Élite [param i] de l'étage [param f] (Tour, salle des élites d'un donjon) : une élite de la zone, plus coriace, avec une
+## mécanique propre (une brique de BossBricks, annoncée au sol comme celles des boss, coups plafonnés), son nom suivi de sa
+## mécanique, et une escorte.
 func _spawn_elite(f: int, i: int, lvl: int) -> Monster:
 	var id: int = d._elites[(absi(hash([Tower.PLAN_SEED, f, i])) % d._elites.size())] if not d._elites.is_empty() else d._pick_monster(lvl)
 	var pos := _ring(8.0, 14.0)
 	var m := _spawn(id, pos, lvl + 1)
-	m.max_hp *= Tower.rule("elite_hp")
+	m.max_hp *= Dungeons.ELITE_ROOM_HP if Tower.is_dungeon() else Tower.rule("elite_hp")
 	m.hp = m.max_hp
-	var brick := Tower.elite_brick(f, i)
+	var brick := Dungeons.elite_brick(Tower.dungeon_boss, i) if Tower.is_dungeon() else Tower.elite_brick(f, i)
 	var br := BossBrain.new()
 	br.boss = m
 	m.brain = br
 	m.add_child(br)
 	br.setup_bricks([BossBricks.normalize({"type": brick})], d, "lava", ["none"], 1.0, Tower.ELITE_HIT_CAP)
-	if not br._brick_t.is_empty():
+	if not br._brick_t.is_empty() and not Tower.is_dungeon():
 		br._brick_t[0] = float(br._brick_t[0]) + 3.5 * i  # les élites d'un étage ne lancent pas leur mécanique ensemble
 	m.display_name = "%s · %s" % [m.display_name, BossBricks.name_of(brick)]
 	_elites_alive.append(m)
 	for k in ESCORT:
-		if left <= 0:
+		if left <= 0 and not Tower.is_dungeon():  # donjon : l'escorte vient en plus (aucun monstre seul dans la salle)
 			break
 		if _mix.is_empty():
 			_spawn(d._pick_monster(lvl), _near(pos, 3.5), lvl)
 		else:
 			_spawn_mixed(_next_species(), _near(pos, 3.5), lvl)
-		left -= 1
+		left = maxi(left - 1, 0)
 	return m
 
 
@@ -292,19 +307,21 @@ func _spawn_boss(z: Dictionary, lvl: int) -> void:
 
 
 ## Salle du lieutenant d'un donjon à la carte (Dungeons.LIEUTENANT_ROOM) : un autre boss de la zone, une seule
-## mécanique, une part des PV du boss ; il compte parmi les monstres de la salle. Renvoie son nom ("" : pas de lieutenant).
+## mécanique, une part des PV du boss (× Dungeons.LIEUTENANT_HP, lot A2 : il fait la salle à lui seul) ; il compte parmi les
+## monstres de la salle. Renvoie son nom ("" : pas de lieutenant).
 func _spawn_lieutenant(f: int, lvl: int) -> String:
 	if Tower.dungeon_boss == "" or f != Dungeons.LIEUTENANT_ROOM:
 		return ""
 	var lid := Dungeons.lieutenant_of(Tower.dungeon_boss)
 	if lid == "":
 		return ""
-	var hp := BossLibrary.hp(Tower.dungeon_boss, lvl + 1, Tower.dungeon_diff) * (1.0 + Dungeons.ALLY_HP_STEP * Tower.allies.size())
+	var hp := BossLibrary.hp(Tower.dungeon_boss, lvl + 1, Tower.dungeon_diff) * (1.0 + Dungeons.ALLY_HP_STEP * Tower.allies.size()) * Dungeons.LIEUTENANT_HP
 	var m := BossLibrary.spawn(lid, Tower.dungeon_diff, {"director": d, "pos": _ring(9.0, 14.0), "level": lvl, "hp": hp, "lieutenant": true,
 		"atk_mult": Tower.monster_atk_mult(f, -1, true)})
 	if m == null:
 		return ""
 	m.xp_reward = 0
+	_lieutenant = m
 	return BossLibrary.short_name(lid)
 
 
@@ -469,6 +486,12 @@ func _update_fight(delta: float) -> void:
 			for i in 3 + f / 40:
 				_spawn(d._pick_monster(lvl), _ring(6.0, 12.0), maxi(1, lvl - 1))
 		return
+	if _elites_next > 0 and not _elites_alive.any(func(m): return is_instance_valid(m) and not m.is_dead):
+		# donjon : l'élite suivante entre quand la précédente tombe (son escorte peut rester)
+		_spawn_elite(f, _elites_alive.size(), lvl)
+		_elites_next -= 1
+		d.message.emit("Élite %d / %d" % [_elites_alive.size(), _elites_alive.size() + _elites_next], 2.0)
+		return
 	if left <= 0 and alive() == 0:
 		_cleared()
 
@@ -581,7 +604,11 @@ func objective_text() -> String:
 				return "Étage %d · Bats %s" % [f, _hero.display_name.trim_prefix("<Duel> ")]
 			if is_instance_valid(_rival) and not _rival.is_dead:
 				return "Étage %d · Bats %s" % [f, _rival.display_name.trim_prefix("<Duel> ")]
+			if is_instance_valid(_lieutenant) and not _lieutenant.is_dead:
+				return "%s %d · Vaincs %s" % [_room_word(), f, _lieutenant.display_name.trim_prefix("<Boss> ")]
 			var elites := _elites_alive.filter(func(m): return is_instance_valid(m) and not m.is_dead).size()
+			if Tower.is_dungeon() and elites > 0:  # une élite à la fois
+				return "%s %d · Élite %d / %d" % [_room_word(), f, _elites_alive.size() - elites + 1, _elites_alive.size() + _elites_next]
 			if elites > 0:
 				return "%s %d · Élites : %d · Monstres restants : %d" % [_room_word(), f, elites, left + alive()]
 			return "%s %d · Monstres restants : %d" % [_room_word(), f, left + alive()]

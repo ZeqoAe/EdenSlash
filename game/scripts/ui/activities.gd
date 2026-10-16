@@ -24,7 +24,7 @@ const LIST := [
 		"desc": ""},
 	{"id": "trials", "row": "challenge", "img": "training", "group": "pve", "name": "Épreuves de maîtrise", "sub": "Leçons chronométrées", "soon": true, "gain": "Médailles, maîtrise", "gives": ["mastery"],
 		"desc": "Une leçon par famille de classes, au chrono : bronze, argent, or."},
-	{"id": "rush", "row": "challenge", "unlock": "dungeons", "img": "dungeon", "group": "pve", "name": "Ruée des boss", "sub": "Les 8 boss à la suite", "gain": "Titres, cristaux, coffres", "gives": ["fortify", "stone", "crystal", "title"],
+	{"id": "rush", "row": "challenge", "unlock": "rush", "img": "dungeon", "group": "pve", "name": "Ruée des boss", "sub": "Les 8 boss à la suite", "gain": "Titres, cristaux, coffres", "gives": ["fortify", "stone", "crystal", "title"],
 		"desc": "Les huit boss à la suite, une carte entre deux."},
 	{"id": "siege", "row": "challenge", "unlock": "siege", "img": "arena3", "group": "pvp", "tag": "JcE + JcJ", "name": "Le Siège", "sub": "Vagues, boss, chacun pour soi", "gain": "Apparence légendaire, cristaux", "gives": ["formula", "crystal", "look"],
 		"desc": "5 vagues, un boss, puis chacun pour soi. Le dernier debout gagne."},

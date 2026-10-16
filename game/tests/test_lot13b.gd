@@ -24,7 +24,7 @@ func _ready() -> void:
 	var player: Player = world.player
 	check("directeur de salles actif, salle 1", d.state == "tower" and Tower.floor_n == 1 and d.tower != null)
 	check("un allié IA a été créé et placé près du héros", d.tower._allies.size() == 1 and is_instance_valid(d.tower._allies[0]) and d.tower._allies[0].global_position.distance_to(player.global_position) < 8.0)
-	check("monstres de la salle apparaissent avec les PV du profil donjon", d.tower.alive() > 0 or d.tower.left > 0)
+	check("salle 1 : des élites (et leur escorte)", d.tower.alive() > 0 and d.tower._elites_alive.size() == 1)  # une à la fois (lot A2)
 	world.cards._queue.clear()
 	world.cards._show_next()  # ferme le choix de départ (dépause)
 	await get_tree().create_timer(0.5).timeout
@@ -36,6 +36,7 @@ func _ready() -> void:
 	for mm in get_tree().get_nodes_in_group("monsters"):
 		mm.queue_free()
 	d.tower.left = 0
+	d.tower._elites_next = 0  # (lot A2 : les élites suivantes n'entrent pas)
 	await get_tree().create_timer(1.0).timeout
 	check("salle vidée : choix de carte", d.tower.phase == "cards" or d.tower.phase == "stairs")
 	world.cards._queue.clear()
@@ -44,10 +45,10 @@ func _ready() -> void:
 	check("donjon : pas de coffre, directement le passage", d.tower.phase == "stairs")
 	d.tower.begin(2)
 	await get_tree().create_timer(0.5).timeout
-	check("salle 2 : élites", Tower.floor_type(2) == "elite" and Tower.floor_n == 2)
-	d.tower.begin(4)
+	check("salle 2 : le lieutenant", Tower.floor_type(2) == "lieutenant" and Tower.floor_n == 2 and is_instance_valid(d.tower._lieutenant))
+	d.tower.begin(3)
 	await get_tree().create_timer(0.5).timeout
-	check("salle 4 : le boss de la zone", is_instance_valid(d.tower._boss) and d.tower._boss.is_boss)
+	check("salle 3 : le boss de la zone", is_instance_valid(d.tower._boss) and d.tower._boss.is_boss)
 	world.queue_free()
 	Tower.active = false
 	Tower.dungeon = ""

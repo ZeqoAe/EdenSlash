@@ -152,12 +152,12 @@ func _in_game() -> void:
 	d.tower.begin(Dungeons.LIEUTENANT_ROOM)
 	await get_tree().create_timer(0.5).timeout
 	var lts := get_tree().get_nodes_in_group("monsters").filter(func(m): return m.is_boss)
-	check("3e salle : un lieutenant (un boss de la zone, une seule mécanique)", lts.size() == 1 and lts[0].brain.bricks.size() <= 1 and lts[0].display_name.contains("lieutenant"))
+	check("2e salle : un lieutenant (un boss de la zone, une seule mécanique)", lts.size() == 1 and lts[0].brain.bricks.size() <= 1 and lts[0].display_name.contains("lieutenant"))
 	# salle du boss : le boss choisi
-	d.tower.begin(4)
+	d.tower.begin(Tower.top())
 	await get_tree().create_timer(0.5).timeout
-	check("4e salle : le boss choisi (Latif)", is_instance_valid(d.tower._boss) and d.tower._boss.get_meta("boss_id", "") == "latif" and d._boss == d.tower._boss)
-	check("PV du boss : ceux de la bibliothèque", is_instance_valid(d._boss) and absf(d._boss.max_hp - BossLibrary.hp("latif", Tower.level_for(4), 0)) < BossLibrary.hp("latif", Tower.level_for(4), 0) * 0.5)
+	check("3e salle : le boss choisi (Latif)", is_instance_valid(d.tower._boss) and d.tower._boss.get_meta("boss_id", "") == "latif" and d._boss == d.tower._boss)
+	check("PV du boss : ceux de la bibliothèque", is_instance_valid(d._boss) and absf(d._boss.max_hp - BossLibrary.hp("latif", Tower.level_for(Tower.top()), 0)) < BossLibrary.hp("latif", Tower.level_for(Tower.top()), 0) * 0.5)
 	d.tower.phase = "done"  # salle figée : retirer les boss ne termine pas le donjon
 	_clear()
 	# chaque boss : apparition, chaque brique, mort
