@@ -197,6 +197,8 @@ pastilles `ui/gain_chips.gd`. Détail : DESIGN « Quêtes », « La quête commu
 - **Objets** : `Items.describe(item, detailed)` et `ItemWidgets.item_card` (Maj déplie, comparaison ▲ / ▼).
 - **HUD** `ui/hud.gd` (pile `_left`, Premiers pas et fiches seulement en Survie), pause `ui/pause_menu.gd`, Guide F1 `ui/guide.gd`
   (seule aide du jeu, 6 onglets), accueil `ui/welcome.gd`, tutoriel `core/tutorial.gd`, Paramètres `ui/settings_menu.gd`.
+- **Curseurs** (K1, `R_K1.md`) : `ui/cursor_sets.gd` (`CursorSets.LIST`, 9 jeux dessinés par `tools/make_cursors.py` en 32 / 48 px, points chauds générés
+  `cursor_hotspots.gd`, posés par `Settings` via `Input.set_custom_mouse_cursor`), réticule de visée `ui/aim_reticle.gd` (visée Curseur / Action), aperçu `cursor_preview.gd` ; test `test_k1`.
 - **Création de personnage** (C1, `R_C1.md`) : `core/hero_look.gd` (nom, coiffure, couleurs ; `Profile.hero_name / hero_look / hero_made`),
   écran `ui/hero_creator.gd` (après l'accueil, Héros > « Personnage ») ; tout modèle du héros du joueur passe le visage à
   `EdenModel.instantiate_hero(..., look)` (et `Player._dress_model`). Masque des iris : `tools/gen_eye_mask.py`. Test `test_c1`, captures `shot_c1`.

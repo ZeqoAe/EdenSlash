@@ -64,6 +64,7 @@ insignes de participation `Run.INSIGNIA_BASE` 25 ; plus d'enclume en Survie (pas
   - Quêtes (passe M5, retour du joueur : « le Défi de maîtrise ressemble à des quêtes journalières »)
 - **Partie E — Textes**
   - Tout le jeu en français (passe P10, 0.1.190)
+  - Curseurs et réticule de visée (lot K1)
 - **Partie F — Archives : décisions remplacées (gardées pour mémoire, ne plus coder d'après elles)**
   - Combos d'auto-attaque (3 coups, le 3e = coup final)
   - Classe + arme (builds exotiques)
@@ -1346,6 +1347,14 @@ apparences, collection et, depuis P10, **talents** (section `talents`, lexique �
 - **Test** : `tests/test_texts_fr.tscn` parcourt les cartes des 5 947 pièces, panoplies, trophées, boons, cartes de classe, succès, titres,
   sorts, certificats, talents, monstres, zones et toutes les constantes de texte des scripts, et signale les mots anglais courants
   (liste de contrôle `ENGLISH`). Un nouveau texte d'Eden à afficher : le passer par la table, relancer ce test.
+
+## Curseurs et réticule de visée (lot K1, `ui/cursor_sets.gd`, `ui/aim_reticle.gd`, rapport `R_K1.md`)
+
+- **Curseur au choix** (Paramètres > Caméra & interface > « Curseur et visée ») : Classique (système) et neuf jeux dessinés au script
+  (`tools/make_cursors.py` : Gantelet, Lame, Cristal, Orbe, Plume, Flamme, Rune, Étoile, Ombre), chacun avec flèche, main (boutons), texte
+  et poing (glisser), en 32 px (48 px quand l'interface est à 125 % ou plus). Aperçu direct dans les Paramètres ; aucun effet sur le jeu.
+- **Réticule de visée** en jeu seulement avec la visée « Curseur » ou le mode Action (jamais en pause ni à la manette) : point (défaut),
+  croix, cercle ou aucun, taille et couleur au choix ; cerné de sombre, ne bloque aucun clic.
 
 # Partie F — Archives : décisions remplacées (gardées pour mémoire, ne plus coder d'après elles)
 

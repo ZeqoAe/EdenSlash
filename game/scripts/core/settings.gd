@@ -114,7 +114,9 @@ const DEFAULTS := {
 	# dev_mode : écran de test (F10), réservé aux tests
 	"interface": {"damage_numbers": "all", "hit_stop": true, "show_fps": false, "move_marker": true, "attack_zone": false, "dev_mode": false,
 		"tower_unlock_all": true, "perfect_hint": true, "pad_labels": "auto", "compass": true,
-		"fx_spells": "all", "fx_auras": "all", "fx_particles": "all", "fx_intensity": 1.0},
+		"fx_spells": "all", "fx_auras": "all", "fx_particles": "all", "fx_intensity": 1.0,
+		# curseur de souris (CursorSets) et réticule de visée en jeu (AimReticle) ; valeur inconnue = défaut
+		"cursor_set": "classic", "reticle": "dot", "reticle_size": 1.0, "reticle_color": "gold"},
 }
 
 ## Modes de jeu prêts à l'emploi (réglages du menu Contrôles).
@@ -148,6 +150,12 @@ func _ready() -> void:
 	if not OS.get_cmdline_user_args().is_empty() or " ".join(OS.get_cmdline_args()).contains("res://tests/"):
 		save_path = TEST_SAVE_PATH
 	UiTheme.apply_global()
+	if DisplayServer.get_name() != "headless":  # réticule de visée en jeu : un calque au-dessus de tout
+		var layer := CanvasLayer.new()
+		layer.layer = 100
+		layer.process_mode = Node.PROCESS_MODE_ALWAYS
+		layer.add_child(AimReticle.new())
+		add_child(layer)
 	reset_all(false)
 	load_settings()
 	apply_bindings()
@@ -659,6 +667,9 @@ func _apply_section(section: String) -> void:
 	match section:
 		"display":
 			_apply_display()
+			CursorSets.apply()  # la taille du curseur suit celle de l'interface
+		"interface":
+			CursorSets.apply()
 		"audio":
 			var bus := AudioServer.get_bus_index("Master")
 			AudioServer.set_bus_volume_db(bus, linear_to_db(maxf(float(get_v("audio", "master")), 0.0001)))

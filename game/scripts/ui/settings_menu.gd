@@ -631,6 +631,7 @@ func _build_camera_page() -> void:
 	_check(v, "Afficher la boussole d'objectif", "interface", "compass", "Dans le menu principal, une pastille te dit la prochaine chose utile à faire.")
 	_check(v, "Marqueur des clics de déplacement", "interface", "move_marker", "Un repère au sol à l'endroit où tu as cliqué pour te déplacer.")
 	_check(v, "Zone de mes attaques au sol", "interface", "attack_zone", "Montre en bleu la zone des sorts que tu lances, pour apprendre leur portée.")
+	_build_cursor_rows(v)
 	_section(v, "Effets visuels")
 	var who := [["all", "Tout afficher"], ["dim_others", "Atténuer ceux des autres"], ["hide_others", "Masquer ceux des autres"],
 		["hide_mine", "Masquer les miens"], ["hide_all", "Tout masquer"]]
@@ -643,6 +644,20 @@ func _build_camera_page() -> void:
 		["all", "Tous"], ["reduced", "Réduits de moitié"], ["off", "Aucun"]])
 	_section(v, "Développement")
 	_check(v, "Mode dev (F10)", "interface", "dev_mode", "Objets, ressources, progression et actions en run, pour tester.")
+
+
+## Curseur de souris et réticule de visée (CursorSets, AimReticle) : aperçu direct à droite de chaque réglage.
+func _build_cursor_rows(v: Control) -> void:
+	_section(v, "Curseur et visée")
+	_option(v, "Curseur de la souris", "interface", "cursor_set", CursorSets.LIST)
+	var reticle_hint := "S'affiche en jeu avec la visée « Curseur » ou le mode Action. Il ne gêne jamais les clics."
+	_option(v, "Réticule de visée", "interface", "reticle", AimReticle.SHAPES.map(func(e): return [e[0], e[1], reticle_hint]))
+	_slider(v, "Taille du réticule", "interface", "reticle_size", AimReticle.SIZE_MIN, AimReticle.SIZE_MAX, 0.1, func(x): return "%d %%" % roundi(x * 100), reticle_hint)
+	_option(v, "Couleur du réticule", "interface", "reticle_color", AimReticle.COLORS.map(func(e): return [e[0], e[1], reticle_hint]))
+	var row := _row(v, "Aperçu", "Les quatre formes du curseur, puis le réticule sur fond clair et sur fond sombre.")
+	var prev := CursorPreview.new()
+	row.add_child(prev)
+	_refreshers.append(prev.refresh)
 
 
 # --- briques d'interface ---------------------------------------------------------------------------------

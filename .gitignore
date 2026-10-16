@@ -31,3 +31,6 @@ game/data/cerveaux/*
 
 # Versions a partager (Creer_version.bat)
 build/
+
+# curseurs (lot K1) : importés au premier lancement, lus directement sinon
+game/assets/ui/cursors/*.import
