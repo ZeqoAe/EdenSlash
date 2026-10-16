@@ -76,3 +76,19 @@ Adaptés : `test_gear_run`, `test_farm`, `test_build`, `test_tooltips`, `test_e4
 Suite complète sur une copie propre (HEAD + N2) : 85 / 87 verts ; `test_br2` (plantage à la sortie, identique sur HEAD) et `test_m1`
 (réparé en 0.1.220 par BR5) ne viennent pas de N2. Pièges : dossier de brouillon partagé entre sessions (noms `n2_*`), plusieurs sessions
 modifient les mêmes fichiers (`player.gd`, `profile.gd`, `DESIGN.md`…) : commit par morceaux, jamais le fichier entier.
+
+## Suite (0.1.231)
+
+- **Battle royale** : une arme choisie dans un coffre du Battle royale partait au sac (la Survie et le Battle royale partagent
+  `Run.survival`) ; elle est de nouveau portée tout de suite comme le veut BR3 (`Run.apply_card`, `not Royale.active`). C'est la cause de
+  l'échec intermittent « pièce de coffre portée » de `test_royale` (seulement quand la pièce tirée était une arme) ; vérification ajoutée à `test_n2`.
+- **Autres modes, vérifiés** (copie propre de 0.1.230 : `test_n2`, `test_build`, `test_gear_run`, `test_farm`, `test_royale`, `test_br3`,
+  `test_sv1`, `test_sv3`, `test_duel_modes`, `test_controls`, `test_p4_flow` verts) : Survivant et Battle royale n'ont pas d'arme secondaire
+  (`SurvivorGear` verrouille l'arme ; le Battle royale part nu) → l'action ne fait rien, case cachée. Duel / Arènes / Gantelet : la recharge
+  d'échange est de 4 s (`SWAP_CD_PVP`) ; les durées de manche mesurées ne bougent pas (les adversaires n'ont jamais d'arme secondaire, et
+  l'échange n'ajoute pas de dégâts : l'arme en main remplace l'autre, 0,35 s sans auto-attaque). Le seul changement en JcJ est la perte,
+  pour le joueur, des frappes automatiques de sa secondaire (60 %) : la manche du joueur équipé d'une secondaire est donc un peu plus longue.
+- **Mesures (27 % → 10 % de boss atteint, 90 % → 83 % de survie à 7 min)** : voulu dans le sens (le joueur trouvait l'enclume « trop
+  cheat »), mais la marche est haute à la carte 1 pour un compte neuf. Avis : acceptable tant que la survie reste au-dessus de 80 % ; si le
+  journal réel montre que le boss de la carte 1 n'est presque jamais atteint, baisser `Epochs.BOSS_HP_MAP[0]` de 20 % (ce que valait
+  l'attaque perdue) plutôt que de rendre une amélioration en run.

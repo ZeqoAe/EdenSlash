@@ -856,7 +856,7 @@ func apply_card(card: Dictionary) -> void:
 				# arme va dans le sac, le joueur l'équipe s'il le veut (passe N2)
 				if card.item.has("eden") and not int(card.item.eden) in seen_items:
 					seen_items.append(int(card.item.eden))
-				if String(card.item.get("slot", "")) == "weapon":
+				if String(card.item.get("slot", "")) == "weapon" and not Royale.active:  # (Battle royale : portée tout de suite, ses règles)
 					discover_weapons()
 					bag_weapon(card.item)
 				else:

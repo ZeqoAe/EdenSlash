@@ -86,6 +86,12 @@ func _test_bag() -> void:
 	check("annonce au HUD pour chaque arme rangée (%d)" % got.size(), got.size() == 2 and world.hud._better_box.visible)
 	check("[G] : l'arme rangée s'équipe (secondaire : autre type)", world.hud.quick_equip() and is_same(Profile.equipped.get("offhand"), o))
 	check("comparaison d'une arme d'un autre type : avec l'arme secondaire", Items.compare_to_equipped(o) == 0.0)
+	# Battle royale : ses règles (BR3) gardent la pièce de coffre portée tout de suite, arme comprise
+	Royale.active = true
+	var rw: Dictionary = SlotChests.offer("weapon", 1, 1)[0]
+	Run.apply_card({"type": "gear", "item": rw})
+	Royale.active = false
+	check("Battle royale : une arme de coffre est portée tout de suite", is_same(Profile.equipped.get("weapon"), rw))
 
 
 func _test_swap() -> void:
