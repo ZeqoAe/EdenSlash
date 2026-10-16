@@ -179,6 +179,8 @@ Interface (AC-G, `R_AC_G.md`) : écran jouable `scenes/autochess.tscn` (`ui/auto
 7 stratèges au hasard, `power_fight`), cadre `ui/autochess_hud.gd` + `autochess_shop` / `_traits` / `_players` / `_unit_card` / `_augments` / `_carousel` ; test `test_ac_ui`, captures `tests/shot_ac.tscn`.
 Simulateur (AC-C, `R_AC_C.md`) : `core/autochess_sim.gd` (`AutochessSim.fight` injectable dans `Autochess.fight`, `run` = repli d'un combat commencé ;
 même couche d'effets et même fiche que le vrai, réglages `TUNE` calés sur lui : 88-96 % de même vainqueur) ; outil `tools/autochess_fight.tscn` (`--calib`, `--compare --sweep`, `--units`, `--bench`) ; test `test_ac_sim`.
+IA de combat (AC-U, `R_AC_U.md`) : `ai/autochess_unit.gd` (comportements `roles` / `target` / `spells` / `dodge`, `retreat` coupé ; `ai_full`, `naive`, `fight.ai`) ;
+banc `tools/autochess_ai_bench.tscn` (`--ai=full --vs=naive`, 240 miroirs : 99 %) ; test `test_ac_unit_ai` ; un changement d'IA se mesure au banc avant d'être gardé.
 
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à
