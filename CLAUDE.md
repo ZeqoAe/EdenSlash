@@ -168,6 +168,9 @@ stratèges `decide` / `choose`, combat injecté `fight(a, b, ctx)`, sauvegarde `
 Plateau (AC-F, `R_AC_F.md`) : `world/autochess_board.gd` (`AutochessBoard` : hexagones 7 × 8, adversaire en miroir, figurines, stratège ; `set_state` lit aussi
 `Autochess.players[i]`, signaux `unit_placed` / `unit_sold` / `item_given`), bancs `world/autochess_bench.gd`, curseur `ui/autochess_cursor.gd` (cases navigables
 par UiNav, calque `AutochessCursor.LAYER` à partager avec la boutique) ; démo `tools/acf_demo.tscn`, test `test_ac_board`, captures `tests/shot_acf.tscn`.
+Effets (AC-H, `R_AC_H.md`) : couche pure `core/autochess_effects.gd` (`AutochessEffects` : `context`, `apply_stats`, `start` / `tick` / `attack` / `cast` /
+`spell_hit`, `on_trigger`, `result` ; PV, mana, boucliers, déclencheurs, plafonds) + `autochess_items.gd` / `autochess_traits.gd` / `autochess_augments.gd`,
+même code pour le simulateur (AC-C) et le vrai combat (AC-E) ; test `test_ac_effects` (mini-simulateur de test).
 
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à
