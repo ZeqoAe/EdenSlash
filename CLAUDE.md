@@ -165,6 +165,9 @@ Spécification `conception/autochess/SPEC.md` (+ annexes A, B ; lots AC-A à AC-
 `data/autochess_units.json` générées par `tools/autochess_units.py` (rôle, allonge, sort signature ; aucun cerveau : IA scriptée seule) ; test `test_ac_data`.
 Partie (AC-B, `R_AC_B.md`) : `core/autochess.gd` (`Autochess` : machine d'étapes sans scène prep → combat → recap, actions `buy` / `sell` / `reroll` / `buy_xp` / `place` / `equip` / `choose`,
 stratèges `decide` / `choose`, combat injecté `fight(a, b, ctx)`, sauvegarde `user://autochess_save.json` au début de chaque préparation), réserve `core/autochess_pool.gd` ; test `test_ac_game`.
+Plateau (AC-F, `R_AC_F.md`) : `world/autochess_board.gd` (`AutochessBoard` : hexagones 7 × 8, adversaire en miroir, figurines, stratège ; `set_state` lit aussi
+`Autochess.players[i]`, signaux `unit_placed` / `unit_sold` / `item_given`), bancs `world/autochess_bench.gd`, curseur `ui/autochess_cursor.gd` (cases navigables
+par UiNav, calque `AutochessCursor.LAYER` à partager avec la boutique) ; démo `tools/acf_demo.tscn`, test `test_ac_board`, captures `tests/shot_acf.tscn`.
 
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à
