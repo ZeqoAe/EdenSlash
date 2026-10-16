@@ -26,6 +26,7 @@ func _ready() -> void:
 	_test_vault_without_new_fields()
 	_test_before_wakening_thread()
 	_test_empty_and_broken()
+	_test_night_fields()
 	var real := OS.get_environment("P4_REAL_SAVES")
 	if real != "":
 		_test_real_saves(real)
@@ -212,6 +213,90 @@ func _test_empty_and_broken() -> void:
 	check("classe inconnue : la vue du hub ne plante pas", true)
 	Profile.selected_class = "warrior"
 	Profile._lobby_view()
+
+
+## Passe P18 : les champs ajoutés pendant la nuit du 15/10 (quêtes, Survivant, SafeFile) sur des sauvegardes d'avant eux.
+func _test_night_fields() -> void:
+	# --- sauvegarde de 0.1.185 (avant les quêtes et le Survivant) : rien de neuf dans records ---
+	Profile.reset_all()
+	Profile.runs_done = 12
+	Profile.insignia = 777
+	Profile.records["epochs_cleared"] = 2
+	Profile.save_profile()
+	var d: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(Profile.save_path))
+	(d.records as Dictionary).erase("quests")
+	(d.records as Dictionary).erase("sv_rewards")
+	_load(d)
+	var st := Quests.state()
+	check("avant les quêtes : parties, insignes, records gardés", Profile.runs_done == 12 and Profile.insignia == 777 and Profile.records.get("epochs_cleared") == 2)
+	check("avant les quêtes : quêtes tirées pour aujourd'hui (%d du jour, %d de la semaine)" % [(st.daily as Array).size(), (st.weekly as Array).size()],
+		String(st.day) == Quests.today() and (not Quests.enabled() or ((st.daily as Array).size() == Quests.DAILY and (st.weekly as Array).size() == Quests.WEEKLY)))
+	check("avant le Survivant : palier I seul ouvert, aucune victoire", SurvivorRewards.wins(1) == 0 and not Survivor.palier_open(2, false))
+	_roundtrip("avant quêtes")
+	# --- quêtes d'un ancien jour, avec une quête retirée du jeu depuis : série et compteurs gardés, tirage neuf, rien ne plante ---
+	d = JSON.parse_string(FileAccess.get_file_as_string(Profile.save_path))
+	d.records["quests"] = {"day": "2026-01-01", "week": "2026-W01", "rerolled": true, "done": 12,
+		"daily": [{"id": "quete_disparue", "t": 3, "p": 1, "done": false, "param": "", "r": {"insignia": 40}, "s": []}], "weekly": [],
+		"series": {"n": 5, "last": "2025-12-31", "claimed": [3.0], "best": 5}}
+	_load(d)
+	st = Quests.state()
+	var known: bool = (st.daily as Array).all(func(q): return not Quests.def_of(q).is_empty())
+	check("quêtes d'un ancien jour : nouveau tirage, plus de quête inconnue, relance rendue", String(st.day) == Quests.today() and known and not bool(st.rerolled))
+	check("quêtes d'un ancien jour : compteur et palier de série gardés", int(st.done) == 12 and int(st.series.best) == 5 and 3 in (st.series.claimed as Array).map(func(x): return int(x)))
+	d.records.quests["day"] = Quests.today()
+	d.records.quests["week"] = Quests.week_of(Quests.today())
+	_load(d)
+	var ins := Profile.insignia
+	var done: Array = Quests.end_run("survival", true)
+	check("quête inconnue du jour : fin de partie sans erreur ni récompense fantôme", done is Array and Profile.insignia == ins)
+	# --- Survivant d'avant les paliers (S6) : la 1re victoire au palier I ouvre le palier II ---
+	d = JSON.parse_string(FileAccess.get_file_as_string(Profile.save_path))
+	d.records["sv_rewards"] = {"day": "2026-01-01", "today": ["time"], "first": ["time:1", "win:1"]}
+	_load(d)
+	check("Survivant d'avant les paliers : victoire comptée, palier II ouvert", SurvivorRewards.wins(1) == 1 and Survivor.palier_open(2, false) and not Survivor.palier_open(3, false))
+	check("Survivant d'avant les paliers : récompense de victoire au palier I déjà prise", (SurvivorRewards.board(1)[2] as Dictionary).done)
+	_roundtrip("Survivant S6")
+	# --- coupure du jeu en plein Survivant : la sauvegarde écrite en pleine run garde la progression du hub, rien de la run ---
+	Profile.reset_all()
+	Profile.insignia = 500
+	Profile.stash = {"drill": 3}
+	Profile.reward_chests = []
+	Profile.save_profile()
+	var vault_n := Profile.vault.size()
+	Survivor.start("warrior", "limestone", 1)
+	Profile.insignia += 999
+	Profile.records["kills"] = 123456
+	Profile.reward_chests.append(Rewards.make("forge", 20, true))
+	Profile.materials["crystal"] = 4000
+	Profile.save_profile()  # (une sauvegarde en pleine run, puis le jeu est coupé)
+	Run.active = false
+	Run.survivor = false
+	Run.survival = false
+	Survivor.reset()
+	ModeRules.modifiers = []
+	Profile.in_run = false
+	Profile._clear()
+	Profile.load_profile()
+	Profile._lobby_view()
+	check("coupure en plein Survivant : insignes, cristaux, records, coffres et réserve du hub (%d ins., %d cr.)" % [Profile.insignia, Profile.amount("crystal")],
+		Profile.insignia == 500 and Profile.amount("crystal") == 0 and not Profile.records.has("kills") and Profile.reward_chests.is_empty()
+		and int(Profile.stash.get("drill", 0)) == 3)
+	check("coupure en plein Survivant : coffre commun intact (%d -> %d)" % [vault_n, Profile.vault.size()], Profile.vault.size() == vault_n)
+	# --- coupure en pleine écriture du profil : fichier principal tronqué -> dernière copie saine (.bak) ---
+	Profile.insignia = 601
+	Profile.save_profile()
+	Profile.insignia = 602
+	Profile.save_profile()  # .bak = 601, principal = 602
+	var f := FileAccess.open(Profile.save_path, FileAccess.WRITE)
+	f.store_string('{"insignia": 9')  # écriture coupée net
+	f.close()
+	SafeFile.notices = []
+	Profile._clear()
+	Profile.load_profile()
+	check("profil tronqué : copie saine rechargée (%d insignes) et message prévu" % Profile.insignia, Profile.insignia == 601 and SafeFile.take_notice() != "")
+	Profile.save_profile()
+	check("profil tronqué : la sauvegarde suivante remet un fichier principal sain", SafeFile.json_ok(FileAccess.get_file_as_string(Profile.save_path)))
+	Profile._remove_copies(Profile.save_path)
 
 
 func _test_real_saves(dir_path: String) -> void:

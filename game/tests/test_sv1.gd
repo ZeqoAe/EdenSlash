@@ -255,10 +255,18 @@ func _flow() -> void:
 	world.player.autoplay = true
 	await _wait(6.0)
 	check("le héros joue (vivant, une arme ou une compétence prise)", not world.player.is_dead and (not Run.skills.is_empty() or Profile.equipped.has("weapon")))
-	# défaite
+	# défaite (P18 : un choix de niveau ouvert entre-temps tient la pause et retenait la mort : le prendre, puis recommencer)
 	world.revives_left = 0
-	world.player.hp = 1.0
-	world.player.take_damage(1e9, null, false)
+	for i in 8:
+		if _results() != null:
+			break
+		if world.cards.is_open():
+			world.cards._opened_at -= CardPicker.CONFIRM_DELAY_MS
+			world.cards._choose(0)
+		elif not world.player.is_dead:
+			world.player.hp = 1.0
+			world.player.take_damage(1e9, null, false)
+		await _wait(1.0)
 	check("défaite : bilan", await _until(func(): return _results() != null, 20.0, "bilan"))
 	var panel := _results()
 	await _wait(ResultsPanel.LOCK_SECS + 1.5)

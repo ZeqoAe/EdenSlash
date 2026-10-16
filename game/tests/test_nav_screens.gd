@@ -373,6 +373,24 @@ func _ready() -> void:
 	var fp := FortunePopup.open(world, 10, 10, Callable())
 	await probe("autel de la fortune", 0.7)
 	fp.queue_free()
+	# P18 : marchand en run et file d'attente du Duel (match trouvé, draft), absents jusque-là (R_P4 §6)
+	world.merchant_ui.open()
+	await get_tree().create_timer(0.4, true).timeout
+	await probe("marchand en run", 0.9)
+	world.merchant_ui.close_ui()
+	get_tree().paused = false
+	var dq := DuelQueue.open(self, "Duel", "", "thief", 10, 1, Callable())
+	DuelQueue.speed = 0.0  # (décomptes figés : l'écran reste le temps de la sonde ; variable de classe, remise après)
+	await get_tree().process_frame
+	dq._enter(DuelQueue.Phase.FOUND)
+	await probe("file du Duel : match trouvé", 0.9)
+	dq.me_accepted = true
+	dq._enter(DuelQueue.Phase.DRAFT)
+	await get_tree().create_timer(0.3, true).timeout
+	await probe("file du Duel : draft", 0.8)
+	dq._finish("test")
+	DuelQueue.speed = 1.0
+	await get_tree().process_frame
 	world.queue_free()
 	await get_tree().process_frame
 	var title: Node = load("res://scenes/title.tscn").instantiate()

@@ -401,7 +401,13 @@ func _test_lobby() -> void:
 			if c is MenuWidgets.RowButton:
 				check("page %s : ligne assez haute pour son texte" % pid, c.size.y >= c._content.get_combined_minimum_size().y)
 	lobby._show_menu("play")
-	check("page Jouer : les « Bientôt » sont cachés", not lobby._sub.get_children().any(func(c): return c is GridContainer and c.get_child_count() > 3))
+	# (P18 : compté d'après Activities.LIST ; la rangée Aventure a 4 cartes depuis le Survivant, 0.1.210)
+	var n_cards := 0
+	for c in lobby._sub.get_children():
+		if c is GridContainer:
+			n_cards += c.get_children().filter(func(b): return b is Button).size()  # (sans les cases vides de fin de rangée)
+	var shown: Array = Activities.LIST.filter(func(x): return String(x.row) != "" and not x.get("soon", false) and not Activities.hidden(x))
+	check("page Jouer : les « Bientôt » sont cachés (%d cartes, %d attendues)" % [n_cards, shown.size()], n_cards == shown.size())
 	# écran Héros : une section à la fois, classe, talents, apparence, aide
 	var hero: HeroScreen = lobby._hero
 	lobby._open_hero()

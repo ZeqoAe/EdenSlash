@@ -37,7 +37,7 @@ OUTILS = {
 }
 # Délai maximal par test (s) ; les tests longs connus ont plus.
 TIMEOUT_DEFAUT = 600
-TIMEOUTS = {"test_p4_activities": 1500, "test_siege": 900, "test_p13": 900, "test_royale": 900}
+TIMEOUTS = {"test_p4_activities": 1500, "test_p18_modes": 1200, "test_siege": 900, "test_p13": 900, "test_royale": 900}
 
 VERT, ROUGE, JAUNE, GRIS, RESET = "\033[32m", "\033[31m", "\033[33m", "\033[90m", "\033[0m"
 _print_lock = threading.Lock()

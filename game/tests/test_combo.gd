@@ -50,4 +50,6 @@ func _ready() -> void:
 
 func _shot(cid: String, i: int) -> void:
 	DirAccess.make_dir_recursive_absolute("user://shots")
-	get_viewport().get_texture().get_image().save_png("user://shots/combo_%s_%d.png" % [cid, i])
+	var img := get_viewport().get_texture().get_image()
+	if img != null:  # (sans rendu, --headless : pas d'image, rien à écrire ; P18)
+		img.save_png("user://shots/combo_%s_%d.png" % [cid, i])

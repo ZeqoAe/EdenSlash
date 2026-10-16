@@ -26,7 +26,7 @@ func _ready() -> void:
 		_t0 = Time.get_ticks_msec() / 1000.0
 		_run.call_deferred()
 		return
-	var d: Node = (load("res://tests/test_p4_activities.gd") as GDScript).new()
+	var d: Node = (get_script() as GDScript).new()  # (le script de la scène : test_p18_modes le prolonge)
 	d.name = "P4Driver"
 	get_tree().root.add_child.call_deferred(d)
 
@@ -129,7 +129,7 @@ func _make_preset(cid: String) -> void:
 
 # --- le déroulé ---------------------------------------------------------------------------------------------------
 func _run() -> void:
-	var wanted: Array = ALL
+	var wanted: Array = _default_list()
 	var args := OS.get_cmdline_user_args()
 	if not args.is_empty() and args[0] != "":
 		wanted = Array(args[0].split(","))
@@ -217,6 +217,8 @@ func _activity(act_in: String) -> Dictionary:
 			lobby._start_royale()
 		"challenge":
 			lobby._start_challenge("warrior")
+		_:
+			_launch_extra(act, lobby)  # activités ajoutées par un test qui prolonge celui-ci (test_p18_modes)
 	if act in ["duel", "league", "pantheon"]:
 		var q = await _drive_queue(lobby)
 		out["queue"] = q
@@ -236,6 +238,7 @@ func _activity(act_in: String) -> Dictionary:
 	await _wait(1.0)
 	check("%s : le HUD est là et le héros vit" % act, world.hud != null and is_instance_valid(player) and not player.is_dead)
 	await _wait(6.0)
+	await _check_world(act, world, player)
 	if act == "survival_win":
 		# trois cartes par le portail, le boss de la dernière tombe : victoire d'époque, ce qu'elle ouvre au hub
 		var d: RunDirector = world.director
@@ -295,13 +298,36 @@ func _activity(act_in: String) -> Dictionary:
 		out.note = "pas de retour au lobby"
 	elif not _clean_state():
 		out.note = "état non remis à zéro (Run %s Duel %s Tour %s Royale %s pause %s)" % [Run.active, Duel.active, Tower.active, Royale.active, get_tree().paused]
+	_check_after(act, out)
 	return out
+
+
+# --- crochets pour un test qui prolonge celui-ci (test_p18_modes) ---------------------------------------------------
+## Activités jouées sans argument en ligne de commande.
+func _default_list() -> Array:
+	return ALL
+
+
+## Lance une activité que ce test ne connaît pas (le lobby est [param lobby]).
+func _launch_extra(_act: String, _lobby: Node) -> void:
+	pass
+
+
+## Contrôles en pleine partie, quelques secondes après le lancement.
+func _check_world(_act: String, _world: Node, _player: Player) -> void:
+	await get_tree().process_frame
+
+
+## Contrôles après le retour au lobby ([param out] : le résultat, modifiable).
+func _check_after(_act: String, _out: Dictionary) -> void:
+	pass
 
 
 ## Termine la partie en cours comme un joueur le ferait (mort, victoire de duel, abandon) et attend son bilan, boutons dégelés.
 func _end_game(act: String, world: Node, player: Player) -> ResultsPanel:
 	var duelish: bool = act in ["duel", "league", "pantheon", "gauntlet", "arena2", "arena3"]
-	if act == "survivor":
+	var survivor := act.begins_with("survivor")  # (survivor2 à survivor5 : paliers, test_p18_modes)
+	if survivor:
 		for i in 3:  # le premier choix (arme ou sort) tient la pause : le prendre, puis tomber comme en Survie
 			if world.cards.is_open():
 				world.cards._opened_at -= CardPicker.CONFIRM_DELAY_MS
@@ -314,7 +340,7 @@ func _end_game(act: String, world: Node, player: Player) -> ResultsPanel:
 			if world.cards.is_open():
 				world.cards._opened_at -= CardPicker.CONFIRM_DELAY_MS
 				world.cards._choose(0)
-	elif act in ["survival", "challenge", "survivor"]:
+	elif act in ["survival", "challenge"] or survivor:
 		world.revives_left = 0
 		player.dev_invincible = false
 		for i in 6:

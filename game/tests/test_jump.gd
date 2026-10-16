@@ -57,7 +57,9 @@ func _combo_test() -> void:
 			_schedule("dodge", 0.05, 0.05)
 			get_tree().create_timer(0.16).timeout.connect(func():
 				DirAccess.make_dir_recursive_absolute("user://shots")
-				get_viewport().get_texture().get_image().save_png("user://shots/combo_cancel.png"))
+				var img := get_viewport().get_texture().get_image()
+				if img != null:  # (sans rendu, --headless : pas d'image ; P18)
+					img.save_png("user://shots/combo_cancel.png"))
 		if dodged and t > 0.5 and player.is_on_floor():
 			break
 	print("saut > sort > esquive : hauteur %.2f m, en l'air %.2f s, fluidité %d, recharge restante %.1f s" % [
