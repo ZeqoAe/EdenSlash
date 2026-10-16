@@ -114,6 +114,11 @@ func _ready() -> void:
 	await probe("lobby : Survie")
 	lobby._show_menu("survivor")
 	await probe("lobby : Survivant (zones, Lancer)")
+	Profile.records["sv_rewards"] = {"wins": {"1": 1, "2": 1}}  # lot S8 : paliers I à III ouverts, IV et V grisés
+	lobby._sv_palier = 0
+	lobby._show_menu("survivor")
+	await probe("lobby : Survivant (sélecteur de palier)")
+	Profile.records.erase("sv_rewards")
 	lobby._show_menu("duel")
 	await probe("lobby : Duel")
 	lobby._show_menu("")

@@ -12,9 +12,9 @@ const ROWS := [["adventure", "Aventure"], ["challenge", "Défis"], ["versus", "A
 const LIST := [
 	{"id": "survival", "row": "adventure", "group": "pve", "name": "Survie", "sub": "Horde, coffres et boss", "gain": "Maîtrise, insignes, pièces", "gives": ["piece", "mastery", "insignia", "stars"],
 		"desc": "Explore la carte, tiens face à la horde, bats le boss."},
-	# Survivant (conception/survivor) : sans verrou ni lien avec la progression ; visible en mode dev tant que le
-	# mode n'est pas fini (Survivor.READY, voir hidden)
-	{"id": "survivor", "row": "adventure", "img": "survival", "group": "pve", "name": "Survivant", "sub": "Une run, tout se gagne aux cartes", "gain": "Apparences, titres", "gives": ["look", "title"],
+	# Survivant (conception/survivor) : sans verrou ni lien avec la progression, ouvert à tous (Survivor.READY, lot S8) ;
+	# illustration provisoire : l'écran de la Survie retourné, au crépuscule (une image dédiée est à faire, session locale)
+	{"id": "survivor", "row": "adventure", "img": "survivor", "group": "pve", "name": "Survivant", "sub": "Tout se gagne aux cartes", "gain": "Apparences, titres", "gives": ["look", "title"],
 		"desc": "Vingt minutes, une carte : arme, pièces et sorts se gagnent aux cartes."},
 	{"id": "dungeon", "row": "adventure", "unlock": "dungeons", "group": "pve", "name": "Donjons", "sub": "Choisis ton boss et ton butin", "gain": "Panoplies, plans, cristaux", "gives": ["panoply", "plan", "crystal", "fortify"],
 		"desc": "Quatre salles, un boss."},
@@ -44,7 +44,7 @@ static func locked(a: Dictionary) -> bool:
 	return a.has("unlock") and not Unlocks.is_open(String(a.unlock))
 
 
-## Activité absente du menu Jouer : le Survivant tant qu'il est en chantier (hors mode dev).
+## Activité absente du menu Jouer : le Survivant s'il redevenait un chantier (Survivor.READY faux, hors mode dev).
 static func hidden(a: Dictionary) -> bool:
 	return String(a.get("id", "")) == "survivor" and not Survivor.visible()
 

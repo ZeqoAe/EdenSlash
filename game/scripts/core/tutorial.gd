@@ -80,8 +80,13 @@ const CARDS := {
 	"quests": {"title": "Quêtes", "on": "", "version": "0.1.196", "chapter": "modes",
 		"short": "Trois quêtes par jour et deux par semaine, dans Jouer. Elles donnent insignes, cristaux et apparences.", "icon": "new",
 		"lines": ["Trois quêtes par jour et deux par semaine, dans Jouer > Quêtes. Le Défi du jour est l'une d'elles.", "Une quête du jour accomplie par jour prolonge ta série, qui offre des apparences.", "Aucune n'est obligatoire : tu peux changer une quête du jour, une fois par jour."]},
+	# Survivant, nouveauté annoncée au lobby (lot S8 : le mode est ouvert à tous) ; rangée au chapitre Modes du Guide.
+	"survivor": {"title": "Survivant", "on": "", "version": "0.1.210", "chapter": "modes",
+		"short": "Nouveau mode : vingt minutes, tu pars sans rien et tout se gagne aux cartes. Jouer > Aventure.", "icon": "clock",
+		"lines": ["Vingt minutes sur une carte : arme, pièces et sorts se gagnent aux cartes.", "Chaque pièce prise reste à vie ; le boss arrive à 20:00.",
+			"Cinq paliers de difficulté ; il donne des apparences et des titres."]},
 	# Survivant (lot S5) : montrées dans le choix de cartes lui-même (CardPicker._show_tip), à la 1re rencontre ; jamais
-	# annoncées comme nouveautés (« news » : le mode s'annonce une fois prêt, lot S6).
+	# annoncées comme nouveautés (le mode s'annonce par la fiche « survivor »).
 	"sv_first": {"title": "Survivant : 1re carte", "on": "", "version": "0.1.194", "chapter": "cards", "news": false,
 		"short": "Choisis une arme ou un sort pour commencer. Pièces, armes et sorts se gagnent ensuite aux cartes.", "icon": "grimoire",
 		"lines": ["En Survivant, tu pars sans arme ni pièce : la première carte donne une arme ou un sort.", "Tout le reste se gagne aux cartes, niveau après niveau."]},

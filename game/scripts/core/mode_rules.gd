@@ -103,8 +103,9 @@ const SURVIVOR := {
 	"boss_rage_at": Survivor.BOSS_RAGE_AT, "boss_atk": Survivor.BOSS_ATK, "potion_drop": Survivor.POTION_DROP, "crit_cap": Survivor.CRIT_CAP,
 	"crit_overflow": Survivor.CRIT_OVERFLOW, "crit_dmg_cap": Survivor.CRIT_DMG_CAP,
 	"speed_cap": Survivor.SPEED_CAP, "passive_cap_mult": Survivor.PASSIVE_CAP_MULT, "pity_dry": Survivor.PITY_DRY,
-	# paliers I à V (§8.5, lot S8) : monstres, gardiens et boss ×
-	"palier_mult": [1.0, 1.5, 2.2, 3.2, 4.5],
+	# paliers I à V (§8.5, lot S8) : PV et dégâts des monstres, gardiens et boss × ; les autres règles de chaque palier
+	# (vitesse, soins, Menace, mécaniques du boss, gardiens, rage) sont dans Survivor.PALIERS ; mesures dans R_S8
+	"palier_mult": [1.0, 1.45, 1.7, 1.75, 2.1],
 }
 const PROFILES := {
 	"survivor": SURVIVOR,

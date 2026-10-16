@@ -128,9 +128,9 @@ Activité Battle royale dans JcJ (verrou `royale` : Ligue Argent). Test : `tests
 `world.tscn -- --royale --autoplay` (ligne de suivi `[royale]` toutes les 15 s, `--royale-diff=0..3`, `--auto-quit` : quitte à la fin).
 Passe M1 (0.1.201, `R_M1.md`) : 9 min 50 d'anneau, cerveau des scriptés `RoyaleDirector.BRAIN` (trajet en esquives
 `ClassRival.TRAVEL_GAP`, coffres par valeur, `Royale.power_ratio`), réapprovisionnement, largages, mis à prix, spectateur ; test `test_m1`.
-Survivant (en chantier, lots S1-S8 de `conception/survivor/` : `SPEC.md` corrigé par `DECISIONS_JOUEUR.md` qui prime) : socle S1 (0.1.194)
+Survivant (lots S1-S8 de `conception/survivor/`, ouvert à tous depuis 0.1.210 : `SPEC.md`, sa tête « Décisions finales » prime) : socle S1 (0.1.194)
 `core/survivor.gd` (état, `Survivor.start`, hub jamais modifié : `HUB_KEYS` + `hub_save`) et squelettes `survivor_{pool,gear,cards,director,rewards}.gd`
-branchés par des crochets `Survivor.active` / `sv` (`run_director.gd`) ; activité visible en mode dev (`Survivor.READY`) ; `world.tscn -- --survivor` ; test `test_sv1`.
+branchés par des crochets `Survivor.active` / `sv` (`run_director.gd`) ; activité ouverte à tous (`Survivor.READY`) ; `world.tscn -- --survivor` ; test `test_sv1`.
 S2 pièces et arme : `SurvivorPool` (13 sets de niveau 90, bonus 2/3/5 via `Items.set_def` en Survivant), `SurvivorGear` (stats d'origine, qualité 100-120 %,
 passif fixe `fixed_passive` + paliers tirés à la proposition `upgrade_offer` / `apply_upgrade`, `equip` verrouillé à vie, `weapon_offers`) ; `test_sv2`, `tools/sv_set_sim.tscn`.
 S3 cartes : `SurvivorCards` (`roll` : équipement + sort garantis, poids `w_*`, pitié ; `first_offer` armes / compétences ; `chest_cards` ;
@@ -142,6 +142,10 @@ S5 interface : `ui/survivor_cards_view.gd` (rendu des cartes, délégué par `Ca
 S6 fin de run : `SurvivorRewards` (`track` par le directeur, `plan` / `settle` : coffres d'apparence seulement, une fois par palier d'avancée et de difficulté puis
 au plus un commun et un rare par jour, plafonds dans `Profile.records["sv_rewards"]`, titres de victoire ; `build()` pour le bilan), bilan `ResultsScreen.survivor_spec`
 (colonne « Ton build » de `ResultsPanel`, Rejouer / Changer de classe via `Survivor.lobby_request`), `Quests.end_run("survivor", …, quest_extra())` ; `test_sv6`, `shot_sv6`.
+S7 équilibrage (`R_S7.md`, constantes en tête de `core/survivor.gd`, `tests/sv7_mesures.json` lu par `test_sv7`) ; mesures : `tools/sim_survivor.py`
+(`--palier 1,2,…`, pilote qui dépense son or : `SurvivorDirector.pilot_target` / `_pilot_shop`). S8 paliers I-V : `Survivor.PALIERS` (une règle de plus par
+palier : vitesse, soins ÷ 2, Menace de départ, mécaniques de boss `EXTRA_BRICKS`, gardien jumeau, rage) + `palier_mult` du profil, ouverts par
+`SurvivorRewards.wins` (victoires dans ce mode seulement) ; sélecteur `_survivor_tiers` du lobby ; `test_sv8`, `shot_sv8` ; `R_S8.md`.
 Matières des activités (0.1.165, lot E1 de la nuit du 15/10, `DESIGN.md` « Matières et cristaux des activités ») : `core/activity_loot.gd`
 (cristaux et coffres de forge / du joaillier au niveau des Donjons, de la Ruée, du Siège et de la Tour, avec `focus` des coffres dans
 `Rewards`), `Forge.GOLD_PER_CRYSTAL` = 125, compteur d'Armurerie calculé (`Completion.armory_total`), plus de coffre de trophées. Test : `test_loot`.

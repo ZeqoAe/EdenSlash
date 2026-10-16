@@ -48,7 +48,7 @@ func survivor_spec() -> Dictionary:
 	var tier := int(last.get("tier", Survivor.palier))
 	var sub := "%s · Survivant · %s" % [Run.class_data().get("name_fr", ""), zone]
 	if tier > 1:
-		sub += " · palier %s" % ["", "II", "III", "IV", "V"][clampi(tier, 1, 5) - 1]
+		sub += " · palier %s" % Survivor.numeral(tier)
 	var won := Run.result == "victoire"
 	var boss := "vaincu" if won else ("atteint" if bool(last.get("boss", false)) else "—")
 	var kept := survivor_chest_rows(last)
@@ -59,9 +59,11 @@ func survivor_spec() -> Dictionary:
 		"title": TITLES.get(Run.result, "FIN"),
 		"tone": "win" if won else "lose",
 		"subtitle": sub,
-		"notes": ["Titre gagné : « %s »" % String(last.title)] if bool(last.get("new_title", false)) else [],
+		"notes": survivor_notes(last),
 		"tiles": [[str(Run.max_level), "niveau atteint"], [SurvivorDirector.clock(float(last.get("time", 0.0))), "durée"],
-			[str(Run.kills), "monstres"], [str(Run.elites), "élites"], ["%d / %d" % [int(last.get("guardians", 0)), SurvivorRewards.GUARDIANS], "gardiens"],
+			[str(Run.kills), "monstres"], [str(Run.elites), "élites"],
+			["%d / %d" % [mini(int(last.get("guardians", 0)), int(last.get("guardians_total", SurvivorRewards.GUARDIANS))),
+				int(last.get("guardians_total", SurvivorRewards.GUARDIANS))], "gardiens"],
 			[boss, "boss", "Le boss t'attend à %s." % SurvivorDirector.clock(Survivor.RUN_TIME)]],
 		"kept": kept,
 		"build": survivor_build_rows(last.get("build", {})),
@@ -73,6 +75,16 @@ func survivor_spec() -> Dictionary:
 			{"text": "Retour au lobby", "call": _finish},
 		],
 	}
+
+
+## Annonces dorées du bilan d'un Survivant : titre nouveau, palier de difficulté ouvert par la victoire (lot S8).
+static func survivor_notes(last: Dictionary) -> Array:
+	var out: Array = []
+	if bool(last.get("new_title", false)):
+		out.append("Titre gagné : « %s »" % String(last.title))
+	if int(last.get("opened", 0)) > 0:
+		out.append("Palier %s ouvert !" % Survivor.numeral(int(last.opened)))
+	return out
 
 
 ## Coffres d'apparence de la run : un par palier d'avancée atteint (avec la raison au survol), puis ceux des quêtes.

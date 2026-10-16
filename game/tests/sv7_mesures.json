@@ -1,5 +1,5 @@
 {
- "source": "tools/sim_survivor.py (30 runs au pilote, 5 classes x 2 graines x 3 profils ; sonde de 312 builds), lot S7, 0.1.209",
+ "source": "tools/sim_survivor.py (30 runs au pilote, 5 classes x 2 graines x 3 profils, pilote qui dépense son or, lot S8 0.1.210 ; sonde de 312 builds du lot S7 0.1.209 : PV du boss inchangés)",
  "constants": {
   "xp_start": 2.0,
   "xp_end": 1.15,
@@ -20,7 +20,7 @@
    700000.0
   ],
   "boss_hp": 6000000.0,
-  "boss_atk": 1.0,
+  "boss_atk": 1.4,
   "boss_rage_at": 240.0,
   "power_band": [
    [
@@ -51,16 +51,16 @@
  "runs": {
   "n": 30,
   "level_20": 40.0,
-  "victory_time": 1336.5,
+  "victory_time": 1315.5,
   "win": {
-   "0.3": 0.4,
-   "0.5": 0.4,
-   "0.7": 0.6
+   "0.3": 0.3,
+   "0.5": 0.6,
+   "0.7": 0.7
   },
   "early_deaths_mid": 0,
   "guardian_ttk": 37,
-  "boss_ttk": 130.5,
-  "cards_20": 70.0
+  "boss_ttk": 109.5,
+  "cards_20": 86.0
  },
  "probe": {
   "n": 312,

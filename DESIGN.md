@@ -473,6 +473,14 @@ de boss, des étages d'"ombres" (une IA qui joue une classe) ».
 - Inchangés : une seule vie, reprise par paliers de 10 (kit complet + cartes), 4 difficultés, cristaux 3 à 6 par étage, gemmes
   tous les 10, forge tous les 50, apparences aux étages 50 / 100 / 150 / 200, maîtrise. Bilan : héros battus, boss vaincus,
   cristaux des étages maudits. Mesures : `tools/tower_run.tscn` (rapport `conception/nuit_15_10/R_M3.md`).
+- **Équilibre entre classes (passe M8, `R_M8.md`)** : la Tour se joue seul ; les classes dont le kit soigne, protège ou
+  renforce y tuaient un boss deux à trois fois moins vite qu'un mage. **Dégâts × un facteur par classe** dans la Tour
+  seulement (`TowerBalance.solo_mult`, `data/tower_solo.json`, jamais en Donjon, Ruée ou Siège) : temps pour tuer mesuré des
+  60 classes (boss des étages 30, 50 et 100, sans mécaniques, équipement attendu), à son pire boss, ramené à 1,1 fois la
+  médiane ; jamais de baisse, au plus × 1,8 (33 classes aidées, Barde × 1,54). Régénérer : `tools/m8_matrix.py solo`.
+  **Coups de boss plafonnés à 25 % des PV max** dans la Tour (`Tower.BOSS_HIT_CAP`, 40 % ailleurs) : une seule vie, seul,
+  et le corps à corps passe le combat dans les zones du boss. Boss de l'étage 150 : PV × 2,5 (`BOSS_FLOOR_ADJ`, tombait en
+  13 s à 2 min 20 avec l'équipement de l'époque IV, médiane 43 s). Bornes vérifiées par `test_m8` (écart max / min ≤ 2,5 aux boss de référence).
 
 ## Roguelite : héritage
 
@@ -633,9 +641,9 @@ l'époque II avec un équipement d'époque I à +10.
 - Duel entre héros : échelle des dégâts 0,04 (`ModeRules.ROYALE`).
 - Éliminé : on regarde la fin (spectateur) ou on ouvre le bilan ; la place est fixée à la mort.
 
-## Survivant (mode à part, en chantier : lots S1 à S8 de `conception/survivor/`)
+## Survivant (mode à part, lots S1 à S8 de `conception/survivor/`, ouvert à tous depuis 0.1.210)
 
-Spécification : `conception/survivor/SPEC.md`, corrigée par `DECISIONS_JOUEUR.md` (qui prime). Une run pure façon Vampire
+Spécification : `conception/survivor/SPEC.md` (sa tête « Décisions finales » prime sur `DECISIONS_JOUEUR.md` et sur le corps). Une run pure façon Vampire
 Survivors : 20 minutes sur une seule carte, boss à 20:00, tout le build (arme, pièces, sorts) se gagne aux cartes de niveau.
 Mode « pour s'amuser » : **aucun lien avec la progression du compte** (ni équipement du hub, ni maîtrise, ni insignes, ni
 découvertes, ni verrou) ; seules les classes et les apparences débloquées comptent ; récompense de fin : des coffres
@@ -649,8 +657,9 @@ d'apparence (lot S6). Socle (S1, 0.1.194) :
 - Déjà propre au mode : pas de rage de carte, une seule carte (le boss vaincu termine la run), ni autel du scribe ni autel de
   la fortune, sanctuaires « trophée » changés en cartes, marchand sans fournitures, ni archive ni auras dans les stats,
   expérience ×2 au niveau 1 → ×1,15 au niveau 10, puissance des pièces « Survivant » = niveau du héros (90 au plus).
-- Règles chiffrées : profil `survivor` de `ModeRules` (modifiable en mode dev). Visible au menu Jouer en mode dev seulement
-  tant que `Survivor.READY` est faux (passé à vrai à la fin de S6).
+- Règles chiffrées : profil `survivor` de `ModeRules` (modifiable en mode dev). **Visible et jouable par tous dès le départ**
+  (`Survivor.READY`, lot S8) : activité de la rangée Aventure (2e, illustration provisoire `assets/ui/activities/survivor.jpg`),
+  quêtes du Survivant tirables, nouveauté « Survivant » et entrée au Guide (chapitre Modes).
 - **Pièces et arme** (S2, `core/survivor_pool.gd`, `core/survivor_gear.gd`) : pool = les 13 sets d'Eden de niveau 90 (tête,
   torse, jambes, gants, bottes ; 5 en plates, 5 en cuir, 3 en tissu), plus les pièces de niveau 90 hors set pour la cape, le
   collier et la bague ; armes des 17 types (modèles de niveau 90). Stats d'origine de la pièce, puissance = niveau du héros (90
@@ -724,6 +733,17 @@ d'apparence (lot S6). Socle (S1, 0.1.194) :
   épiques) ; set à 3 pièces portées ×0,17 (5/5 ≈ 1 run sur 23 pour qui le cherche). Mesuré (30 runs au pilote) : victoire 40 % au
   joueur moyen, aucune mort avant 3:00, boss en 2:10, gardiens en 30-60 s ; sonde de 312 builds : le meilleur type de build bat le
   boss 1,1 fois plus souvent que le médian. `tests/test_sv7` lit `tests/sv7_mesures.json` (à refaire si un réglage change).
+- **Paliers I à V** (S8, `Survivor.PALIERS`, `conception/survivor/R_S8.md`) : chaque palier garde les règles du précédent et en
+  ajoute une, écrite en une phrase sur la page du mode (détail au survol) : **I Normal** ; **II Endurci** : monstres plus rapides
+  (×1,15) ; **III Implacable** : soins reçus divisés par deux (modificateur `heal_half`, retiré en fin de run) ; **IV Cauchemar** :
+  Menace 2 dès le départ et une mécanique de boss en plus (`EXTRA_BRICKS`, d'une famille que le boss n'a pas, annoncée à l'entrée) ;
+  **V Légende** : deux gardiens à 15:00, deux mécaniques de boss en plus, rage du boss après 3:00, monstres ×1,2. PV et dégâts des
+  monstres, gardiens et boss × `palier_mult` (1 / 1,45 / 1,7 / 1,75 / 2,1), installé sur les monstres ordinaires pendant les 5
+  premières minutes (le héros part nu), entier pour gardiens et boss. **Un palier s'ouvre en gagnant le précédent dans ce mode**
+  (`Profile.records["sv_rewards"].wins` ; jamais par la progression du compte ; mode dev : tous) ; bilan « Palier II ouvert ! ».
+  Récompenses : celles de S6 par palier (boss vaincu = coffre légendaire dès le II, titre du palier). Page du mode : cinq boutons
+  I à V (le choisi en or, les fermés « 🔒 » grisés avec leur condition), le palier par défaut est celui de la run qui vient de finir,
+  sinon le plus haut gagné. Dégâts du boss ×1,4 (S8 : le pilote dépense son or, voir R_S8).
 
 ## Étapes et sources (refonte 0.1.91, façon Megabonk)
 

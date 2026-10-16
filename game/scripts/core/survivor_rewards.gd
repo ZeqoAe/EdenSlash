@@ -10,7 +10,8 @@ extends RefCounted
 ## Le titre de victoire (un par palier) est cosmétique.
 ##
 ## L'état des plafonds vit dans `Profile.records["sv_rewards"]` (pas de clé de sauvegarde nouvelle) : Survivor.finish
-## appelle settle APRÈS avoir remis les records du hub, donc ce qui est écrit ici est gardé.
+## appelle settle APRÈS avoir remis les records du hub, donc ce qui est écrit ici est gardé. Lot S8 : `wins` (palier ->
+## victoires) y vit aussi ; une victoire ouvre le palier suivant (Survivor.palier_open).
 
 const TIME_MIN := 600.0  # « tenir 10 minutes » (secondes de carte)
 const GUARDIANS := 3
@@ -36,7 +37,8 @@ static func reset() -> void:
 
 ## Suivi de la run : appelé par SurvivorDirector.update.
 static func track(sv: SurvivorDirector) -> void:
-	stats = {"time": sv.d.time, "guardians": sv.guardians_killed(), "arena": sv.arena_at >= 0.0, "early": sv.early_seconds()}
+	stats = {"time": sv.d.time, "guardians": sv.guardians_killed(), "total": SurvivorDirector.guardian_total(), "arena": sv.arena_at >= 0.0,
+		"early": sv.early_seconds()}
 
 
 # --- plafonds ----------------------------------------------------------------------------------------------------------
@@ -106,11 +108,30 @@ static func title_of(tier: int) -> String:
 	return String(TITLES[clampi(tier, 1, TITLES.size()) - 1])
 
 
+## Victoires au palier [param tier] (lot S8 : une victoire ouvre le palier suivant). Les profils d'avant S8 n'ont que la
+## première récompense « win:<palier> » : elle compte pour une victoire.
+static func wins(tier: int) -> int:
+	var s: Variant = Profile.records.get(KEY, {})
+	if not s is Dictionary:
+		return 0
+	var n := int((s as Dictionary).get("wins", {}).get(str(tier), 0))
+	if n == 0 and _first_key("win", tier) in (s as Dictionary).get("first", []):
+		n = 1
+	return n
+
+
 ## Récompenses de la run terminée sur [param res] (victoire, defaite, abandon) au palier [param tier] : coffres
 ## d'apparence et titre, rangés tout de suite dans le menu Coffres. Appelé par Survivor.finish après la remise du hub.
 static func settle(res: String, counted_kills: int, tier := -1) -> void:
 	tier = clampi(tier if tier > 0 else Survivor.palier, 1, 5)
+	var opened := 0  # palier ouvert par cette victoire (0 : aucun)
+	if res == "victoire" and tier < Survivor.PALIERS.size() and not Survivor.palier_open(tier + 1, false):
+		opened = tier + 1
 	var st := _state()
+	if res == "victoire":
+		var w: Dictionary = st.get("wins", {})
+		w[str(tier)] = maxi(int(w.get(str(tier), 0)), wins(tier)) + 1
+		st["wins"] = w
 	var given: Array = []
 	for g in plan(res, tier):
 		Profile.chest_add(String(g.type), maxi(Run.max_level, 1))
@@ -127,8 +148,9 @@ static func settle(res: String, counted_kills: int, tier := -1) -> void:
 		new_title = not title in Profile.extra_titles
 		Profile.add_title(title)
 	last = {"res": res, "tier": tier, "time": float(stats.get("time", 0.0)), "guardians": int(stats.get("guardians", 0)),
+		"guardians_total": int(stats.get("total", GUARDIANS)),
 		"boss": res == "victoire" or bool(stats.get("arena", false)), "kills": counted_kills, "chests": given, "title": title,
-		"new_title": new_title, "build": build()}
+		"new_title": new_title, "opened": opened, "build": build()}
 
 
 # --- bilan : le build final -------------------------------------------------------------------------------------------

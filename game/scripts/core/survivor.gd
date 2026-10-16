@@ -17,8 +17,8 @@ extends RefCounted
 ## `Run.survival` reste vrai pendant un Survivant (comme le Battle royale) : la carte générée, les coffres, les cartes et
 ## les lieux de la Survie servent de base, et chaque différence passe par un crochet `Survivor.active` / `sv`.
 
-## Visible et jouable hors mode dev : passé à true à la fin du lot S6 (avant : visible en mode dev seulement).
-const READY := false
+## Visible et jouable par tous dès le départ (lot S8, DECISIONS §5 : aucun verrou lié à la progression du compte).
+const READY := true
 const RUN_TIME := 1200.0  # 20 minutes de carte, puis le boss
 const BOSS_OPEN_AT := 900.0  # le portail du boss s'ouvre à 15:00 (entrée en avance possible)
 const GUARDIAN_TIMES := [300.0, 600.0, 900.0]  # géants gardiens à 5, 10 et 15 minutes
@@ -77,11 +77,12 @@ const POWER_HP := [0.9, 1.3]
 const POWER_ATK := [0.9, 1.15]
 ## Gardiens (5 / 10 / 15 min) et boss final : PV FIXES (× palier × Menace), rage du boss après BOSS_RAGE_AT s d'arène.
 ## Dégâts du boss × BOSS_ATK × palier (et non la courbe des monstres ordinaires, ×1,93 à 20:00 : deux fois ceux du boss d'une
-## carte de Survie ; le pilote moyen tombait en 30 s dans l'arène).
+## carte de Survie ; le pilote moyen tombait en 30 s dans l'arène). S8 : 1 -> 1,4 : le pilote dépense désormais son or (coffres,
+## marchands : ~85 cartes à 20:00 au lieu de 70) et battait le boss en 1:35 ; le débutant gagnait autant que le joueur moyen (60 %).
 const GUARDIAN_HP := [50000.0, 220000.0, 700000.0]
 const BOSS_HP := 6000000.0
 const BOSS_RAGE_AT := 240.0
-const BOSS_ATK := 1.0
+const BOSS_ATK := 1.4
 ## Butin des monstres : potions seulement (part des monstres ordinaires, des élites).
 const POTION_DROP := [0.03, 0.3]
 ## Garde-fous du build : critique (physique et magique) plafonnée à CRIT_CAP, le surplus devient des dégâts critiques
@@ -99,6 +100,34 @@ const PASSIVE_CAP_MULT := 1.5
 ## a ses améliorations au moins PITY_TIER (et une carte forte garantie).
 const PITY_DRY := 3
 const PITY_TIER := "epic"
+
+## --- Paliers de difficulté I à V (lot S8, SPEC §8.5, conception/survivor/R_S8.md) -----------------------------------
+## Chaque palier garde les règles du précédent et en ajoute UNE, lisible (`rule`, une phrase courte affichée au lobby ; le
+## détail chiffré est dans l'infobulle `tip`). Les PV et dégâts des monstres, gardiens et boss sont × `palier_mult` du profil
+## « survivor » (ModeRules, modifiable en mode dev). Clés : speed (vitesse des monstres ×), heal_half (soins reçus ÷ 2),
+## menace (Menace de départ, P12 : PV des monstres, gardiens et boss), bricks (mécaniques de boss ajoutées au boss final,
+## BossBricks), twin (un second gardien à 15:00), rage_at (rage du boss, s d'arène), revives (résurrections).
+## Un palier s'ouvre en gagnant le précédent dans ce mode (SurvivorRewards.wins) ; le mode dev les ouvre tous.
+## Mesures (pilote, profil « bon » 0,7, cibles : II ≈ 30 %, III ≈ 20 %, IV ≈ 10 %, V ≈ 3-5 % de victoires) : R_S8.
+const PALIERS := [
+	{"name": "Normal", "rule": "La run de base", "tip": "Vingt minutes, trois gardiens, le boss à 20:00.",
+		"speed": 1.0, "heal_half": false, "menace": 0, "bricks": 0, "twin": false, "rage_at": 240.0, "revives": 1},
+	{"name": "Endurci", "rule": "Monstres plus rapides", "tip": "Monstres, gardiens et boss plus résistants et plus forts ; les monstres courent plus vite.",
+		"speed": 1.15, "heal_half": false, "menace": 0, "bricks": 0, "twin": false, "rage_at": 240.0, "revives": 1},
+	{"name": "Implacable", "rule": "Soins reçus divisés par deux", "tip": "En plus : tous les soins que tu reçois sont divisés par deux.",
+		"speed": 1.15, "heal_half": true, "menace": 0, "bricks": 0, "twin": false, "rage_at": 240.0, "revives": 1},
+	{"name": "Cauchemar", "rule": "Menace dès le départ, boss plus retors", "tip": "En plus : la Menace part à 2 et le boss final a une mécanique de plus.",
+		"speed": 1.15, "heal_half": true, "menace": 2, "bricks": 1, "twin": false, "rage_at": 240.0, "revives": 1},
+	{"name": "Légende", "rule": "Deux gardiens à 15:00, boss enragé plus tôt", "tip": "En plus : deux gardiens surgissent à 15:00, le boss a deux mécaniques de plus et enrage après 3 minutes.",
+		"speed": 1.2, "heal_half": true, "menace": 2, "bricks": 2, "twin": true, "rage_at": 180.0, "revives": 1},
+]
+const NUMERALS := ["I", "II", "III", "IV", "V"]
+## Le multiplicateur du palier s'installe sur les monstres ordinaires pendant les PALIER_RAMP premières secondes (le héros
+## part nu : au palier V, sans ça, 5 pilotes sur 5 tombaient avant 2:30) ; gardiens et boss l'ont en entier.
+const PALIER_RAMP := 300.0
+## Mécaniques que les paliers IV et V ajoutent au boss final, dans l'ordre (la première absente de son kit) : des briques
+## « every » annoncées (au sol ou orbes visibles), lisibles, d'une famille qu'il n'a pas (six familles différentes).
+const EXTRA_BRICKS := ["marks", "ring_burst", "sweep", "leap", "stomp", "swarm"]
 
 ## Propriétés du profil qui forment la progression du compte : gardées intactes par un Survivant (voir l'en-tête).
 ## Les choix d'apparence (tenue, accessoires, titre porté) et le tutoriel n'en font pas partie.
@@ -162,6 +191,8 @@ static func start(cid: String, zone: String, p := 1) -> void:
 	Run.stage = 1
 	Run.zone_id = z
 	Run.start_zone = z
+	# palier : « soins reçus ÷ 2 » passe par la table commune des modificateurs (Combatant.heal) ; retirée par finish
+	ModeRules.modifiers = ["heal_half"] if bool(tier_rule("heal_half")) else []
 	Profile.save_profile()  # la réserve remise est écrite tout de suite
 	Run.changed.emit()
 
@@ -172,6 +203,7 @@ static func finish(res: String, counted_kills: int) -> Array:
 	var moved := restore_hub()
 	Profile.bag = {}
 	active = false
+	ModeRules.modifiers = []  # (règles du palier : rien ne suit le héros dans un autre mode)
 	SurvivorRewards.settle(res, counted_kills)
 	return moved
 
@@ -289,3 +321,34 @@ static func rule(key: String) -> float:
 ## Visible au menu Jouer : une fois le mode fini (READY), ou en mode dev pendant le développement.
 static func visible() -> bool:
 	return READY or bool(Settings.get_v("interface", "dev_mode"))
+
+
+# --- paliers (lot S8) ---------------------------------------------------------------------------------------------------
+## Règle [param key] du palier [param p] (défaut : celui de la run en cours), voir PALIERS.
+static func tier_rule(key: String, p := -1) -> Variant:
+	var t: Dictionary = PALIERS[clampi(p if p > 0 else palier, 1, PALIERS.size()) - 1]
+	return t.get(key)
+
+
+## « II » pour le palier 2.
+static func numeral(p: int) -> String:
+	return String(NUMERALS[clampi(p, 1, NUMERALS.size()) - 1])
+
+
+## Palier [param p] ouvert : le I toujours ; les suivants après une victoire au précédent DANS CE MODE (aucun lien avec la
+## progression du compte) ; tous en mode dev ([param dev] faux : par les victoires seulement).
+static func palier_open(p: int, dev := true) -> bool:
+	if p <= 1:
+		return true
+	if p > PALIERS.size():
+		return false
+	return (dev and bool(Settings.get_v("interface", "dev_mode"))) or SurvivorRewards.wins(p - 1) > 0
+
+
+## Plus haut palier ouvert ([param dev] faux : ouvert par les victoires, le choix par défaut de la page du mode).
+static func top_palier(dev := true) -> int:
+	var top := 1
+	for p in range(2, PALIERS.size() + 1):
+		if palier_open(p, dev):
+			top = p
+	return top

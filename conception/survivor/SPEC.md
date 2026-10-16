@@ -1,4 +1,24 @@
-# Survivant — spécification du mode « survivor » (S0, 15/10/2026)
+# Survivant — spécification du mode « survivor » (S0, 15/10/2026 ; version finale S8, 16/10/2026)
+
+> **Version finale (lot S8) : ce qui suit immédiatement remplace `DECISIONS_JOUEUR.md` et le reste de ce document là où ils
+> diffèrent.** Le corps (§0 à §12) est la conception d'origine de S0, gardée pour l'historique et les justifications ; les
+> passages devenus faux sont signalés « (remplacé) ». Règles détaillées et à jour : `DESIGN.md`, section « Survivant » ; chiffres
+> mesurés : `R_S7.md` (équilibrage), `R_S8.md` (paliers).
+
+## Décisions finales (S1 à S8)
+
+| Sujet | Règle finale | Code |
+|---|---|---|
+| Place | Activité **Survivant**, menu Jouer, rangée Aventure, 2e (après la Survie). **Visible et jouable par tous dès le départ** (`Survivor.READY`), aucun verrou | `ui/activities.gd`, `core/survivor.gd` |
+| Lien avec le compte | **Aucun** : ni équipement du hub, ni maîtrise, ni insignes, ni découvertes, ni talents, ni certificats, ni sorts fermés par la maîtrise (le kit entier est ouvert). Seules les classes et les apparences débloquées comptent. Le hub n'est jamais modifié (`Survivor.HUB_KEYS`) | `Survivor.start / finish` |
+| Récompenses | **Seulement des coffres d'apparence et des titres** : tenir 10 min → commun ; 3 gardiens → rare ; boss vaincu → mythique (**légendaire dès le palier II**) + titre du palier ; une fois par palier d'avancée **et par palier de difficulté**, puis au plus un commun et un rare par jour. Pas d'insignes, pas de maîtrise (les §6.4 et §7 d'origine sont remplacés) | `core/survivor_rewards.gd` |
+| Départ | Niveau 1, sans arme ni pièce ; **1re carte obligatoire : une arme ou une compétence** ; 2 relances de base | `SurvivorCards.first_offer` |
+| Pièces | Pool = les **13 sets d'Eden de niveau 90** (+ pièces de niveau 90 hors set pour cape, collier, bague), **stats d'origine**, puissance = niveau du héros (90 au plus), **qualité 100-120 %** seule part aléatoire (jet parfait 120 %). Pièce gardée à vie dans son emplacement | `core/survivor_pool.gd`, `core/survivor_gear.gd` |
+| Passifs | 1 passif **fixe** par pièce (jamais deux fois le même dans un set) + 3 passifs tirés à +6, +8, +10, **écrits sur la carte d'amélioration** (relancer / bannir en tire un autre) | `SurvivorGear.upgrade_offer` |
+| Sets | Bonus à **2, 3 et 5 pièces** par famille (Assaut, Vivacité, Sortilège, Grâce) ; 5/5 ≈ 1 run sur 23 pour qui le cherche | `SurvivorPool` |
+| Boucle | 20 min, gardiens à 5 / 10 / 15 min, portail du boss à 15:00, boss forcé à 20:00, rage du boss après 4:00 ; réglages mesurés de S7 (boss 6 000 000 PV, gardiens 50 000 / 220 000 / 700 000) | `core/survivor_director.gd` |
+| **Paliers I à V** | I Normal · II Endurci (monstres plus rapides) · III Implacable (soins reçus ÷ 2) · IV Cauchemar (Menace 2 dès le départ, une mécanique de boss en plus) · V Légende (deux gardiens à 15:00, deux mécaniques de boss en plus, rage du boss après 3:00). Chaque palier garde les règles du précédent ; PV et dégâts × `palier_mult` (valeurs mesurées : `R_S8.md`). **Un palier s'ouvre en gagnant le précédent dans ce mode** (mode dev : tous) | `Survivor.PALIERS`, `ModeRules.SURVIVOR.palier_mult` |
+| Lobby | Page du mode : trois idées, classe, **sélecteur de palier** (le plus haut gagné par défaut, les fermés grisés avec leur condition), coffres d'apparence du palier choisi, zone, Lancer | `ui/lobby.gd` `_menu_survivor` |
 
 Demande du joueur (15/10, mot pour mot dans le brief de l'orchestrateur) : à côté de la Survie actuelle (progression,
 découverte du stuff, équipement du hub), un **vrai mode survivor à une seule boucle** où **tout passe par les cartes** :
@@ -41,6 +61,7 @@ directe du mot du joueur et se distingue de « Survie » par le sous-titre.
 Place dans le menu Jouer : activité **JcE, rangée « Aventure », 2e position** (Survie, Survivant, Donjons, La Tour).
 Sous-titre : « Une run, tout se gagne aux cartes ». Gains affichés (`gives`) : `mastery`, `insignia`, `look`, `title`.
 
+**(Remplacé : aucun verrou, le mode est ouvert à tous dès le départ, voir en tête.)**
 **DÉCISION — verrou** : `Unlocks.LIST["survivor"]`, condition « Termine une première Survie (quelle que soit l'issue). »
 (`Profile.runs_done >= 1`, `legacy: true`). Justification : les Premiers pas (`core/tutorial.gd`) apprennent les
 contrôles dans la Survie ; le Survivant s'ouvre après une seule run (5 à 10 min), donc un compte presque neuf y joue,
@@ -160,6 +181,8 @@ rempli ; le menu pause n'offre aucun déséquipement). Pas d'arme secondaire, pa
 
 ### 3.2 Fabrication d'une pièce (`SurvivorGear.make_piece(slot, ctx)`)
 
+**(Remplacé : stats d'origine des 13 sets de niveau 90, qualité 100-120 %, passif fixe par pièce ; voir en tête et `R_S2.md`.)**
+
 Champs ajoutés à l'objet (format `Items.from_template` existant) : `sv: true`, `full` (stats à 100 % de jet),
 `jets` (stat → jet), `boon` ({`id`, `tier`}), `boon_stage` (0 à 3), `set` (panoplie, facultatif).
 
@@ -221,6 +244,8 @@ pour obliger des choix sur 9 emplacements, assez court pour voir les paliers en 
 et rend le jet parfait **atteignable par l'investissement**, pas seulement par la chance.
 
 ### 3.5 Panoplies de la run
+
+**(Remplacé : les 13 sets de niveau 90, bonus à 2 / 3 / 5 pièces par famille ; voir en tête et `R_S2.md`.)**
 
 **DÉCISION — les panoplies du Survivant sont les archétypes de `Items.SETS`** (Tempête, Givre éternel, Lame sanglante,
 Œil du faucon, Phénix, Vent céleste, Salve, Rempart, et Esprits), bonus à **2 / 4 / 6 pièces** avec effets déclenchés,
@@ -343,6 +368,8 @@ choix comptent.
 
 ### 6.4 Butin de fin de run (méta)
 
+**(Remplacé : seulement des coffres d'apparence et des titres, voir en tête et `R_S6.md`.)**
+
 | Gain | Règle (réglage) |
 |---|---|
 | **Insignes** | participation 25 (dès 10 monstres, au prorata des 10 premières minutes, comme E6) + 2 par minute de carte tenue (40 au plus) + monstres comptés / 25 (au plus 1 500) + élites × 2 + victoire 50 ; × palier (1 / 1,2 / 1,4 / 1,6 / 1,8) ; × Menace et pacte (`Menace.add_insignia`, 1 « carte ») ; **Audace** : entrer dans l'arène avant 20:00 donne +5 % par minute d'avance (25 % au plus). Cible **≈ 450 insignes / h** au palier I (entre Survie I 360 et IV 670), ≈ 700 au palier V : ligne `"survivant_1"` dans `Economy.INSIGNIA_PER_HOUR`, contrôlée par `test_e5`. |
@@ -355,6 +382,8 @@ choix comptent.
 ---
 
 ## 7. Lien avec la quête commune et le hub
+
+**(Remplacé : aucun lien avec la progression du compte, DECISIONS §5 ; le pool est le même pour tous les comptes, voir en tête.)**
 
 Principe : **le Survivant ne lit jamais l'équipement porté au hub** ; c'est la **collection du compte** qui élargit ce que
 ses cartes peuvent proposer, et le Survivant rend de la collection en retour.
@@ -431,9 +460,11 @@ build « focalisé » (une panoplie à 6, pièces +10) doit battre le boss en mo
 
 ### 8.5 Paliers I à V (lot S8)
 
-Monstres, gardiens et boss × 1 / 1,5 / 2,2 / 3,2 / 4,5 (PV et dégâts) ; rareté des pièces +0 / +0,5 / +1 / +1,5 / +2 crans ;
-insignes × 1 / 1,2 / 1,4 / 1,6 / 1,8. Un palier s'ouvre en gagnant le précédent (`Profile.survivor.wins[p]`). Titre au
-palier V.
+**(Remplacé : voir « Décisions finales » en tête et `R_S8.md`.)** Chaque palier ajoute une règle lisible (vitesse, soins,
+Menace de départ, mécaniques du boss, gardiens, rage) en plus d'un multiplicateur de PV et de dégâts mesuré ; ni rareté des
+pièces ni insignes ; l'ouverture est gardée dans `Profile.records["sv_rewards"].wins` ; un titre par palier.
+Version d'origine : monstres, gardiens et boss × 1 / 1,5 / 2,2 / 3,2 / 4,5 (PV et dégâts) ; rareté des pièces +0 / +0,5 / +1 /
++1,5 / +2 crans ; insignes × 1 / 1,2 / 1,4 / 1,6 / 1,8. Un palier s'ouvre en gagnant le précédent. Titre au palier V.
 
 ### 8.6 Validation
 

@@ -31,16 +31,17 @@ PROFILES = {"0.3": "débutant", "0.5": "moyen", "0.7": "bon"}
 
 
 def run_one(job):
-    cls, seed, human, a, idx, out_dir = job
-    ud = os.path.join(out_dir, "ud", "%s_%d_%s" % (cls, seed, human))
+    cls, seed, human, a, idx, out_dir, palier = job
+    tag = ("p%d-" % palier if palier > 1 else "") + "%s_%d_%s" % (cls, seed, human)
+    ud = os.path.join(out_dir, "ud", tag)
     os.makedirs(ud, exist_ok=True)
     env = dict(os.environ)
     env["APPDATA"] = ud
     env.pop("EDEN_PROFILE", None)
-    log = os.path.join(out_dir, "%s_%d_%s.log" % (cls, seed, human))
+    log = os.path.join(out_dir, tag + ".log")
     cmd = [a.godot, "--headless", "--fixed-fps", "60", "--path", a.project, "res://scenes/world.tscn", "--", "--survivor", "--autoplay",
            "--auto-quit", "--class=" + cls, "--seed=%d" % seed, "--human=%s" % human, "--quit-at=%d" % a.quit_at,
-           "--palier=%d" % a.palier] + (a.extra.split() if a.extra else [])
+           "--palier=%d" % palier] + (a.extra.split() if a.extra else [])
     with open(log, "w", encoding="utf-8", errors="replace") as f:
         try:
             subprocess.run(cmd, env=env, stdout=f, stderr=subprocess.STDOUT, timeout=a.timeout)
@@ -52,8 +53,11 @@ def run_one(job):
 def parse(log):
     name = os.path.basename(log)[:-4]
     cls, seed, human = name.rsplit("_", 2)
+    palier = 1
+    if cls.startswith("p") and "-" in cls:
+        palier, cls = int(cls[1:cls.index("-")]), cls[cls.index("-") + 1:]
     out = open(log, encoding="utf-8", errors="replace").read()
-    r = {"cls": cls, "seed": int(seed), "human": human, "res": "?", "levels": {}, "cards": {}, "taken": {}, "maxhp": {},
+    r = {"cls": cls, "seed": int(seed), "human": human, "palier": palier, "gold_spent": 0, "res": "?", "levels": {}, "cards": {}, "taken": {}, "maxhp": {},
          "gidx": {}, "guardians": {}, "log": log}
     for m in re.finditer(r"\[sv\] (\d+):00 · (\w+) · niveau (\d+) · PV (\d+) %.*?tués (\d+)(.*)", out):
         mi = int(m.group(1))
@@ -65,6 +69,10 @@ def parse(log):
                 r[key][mi] = float(mm.group(1))
     for m in re.finditer(r"\[sv\] gardien (\d) vaincu en (\d+) s", out):
         r["guardians"][int(m.group(1))] = int(m.group(2))
+    r["gold_spent"] = sum(int(x) for x in re.findall(r"\[sv\] pilote : marchand à [\d:]+, (\d+) or", out))
+    golds = re.findall(r"\[sv\] \d+:00 · explore .*? or (\d+) ·", out)
+    r["gold_20"] = int(golds[-1]) if golds else None
+    r["script_errors"] = out.count("SCRIPT ERROR")
     m = re.search(r"\[sv\] entrée dans l'arène à (\d+):(\d+) \((\w+)\), niveau (\d+)", out)
     if m:
         r["arena_t"] = int(m.group(1)) * 60 + int(m.group(2))
@@ -96,7 +104,7 @@ def fmt(x, f="%.0f"):
 def summary(res):
     by = {}
     for r in res:
-        by.setdefault(r["human"], []).append(r)
+        by.setdefault(("p%d " % r.get("palier", 1)) + r["human"], []).append(r)
     print("\n=== Survivant : %d runs ===" % len(res))
     print("profil | runs | tient 10 min | 3 gardiens | boss atteint | victoire | durée médiane | niveau 5/10/15/20 | cartes à 20:00 | subis %PV/min | gardiens s | boss s")
     for h in sorted(by):
@@ -116,9 +124,11 @@ def summary(res):
         gt = [med([r["guardians"].get(i) for r in rs]) for i in (1, 2, 3)]
         bt = med([r.get("boss_ttk") for r in rs])
         print("%s %s | %d | %d %% | %d %% | %d %% | %d %% | %s | %s | %s | %s | %s | %s" % (
-            h, PROFILES.get(h, ""), n, 100 * t10 // n, 100 * g3 // n, 100 * reach // n, 100 * won // n, fmt(med([r.get("t") for r in rs])),
+            h, PROFILES.get(h.split()[-1], ""), n, 100 * t10 // n, 100 * g3 // n, 100 * reach // n, 100 * won // n, fmt(med([r.get("t") for r in rs])),
             "/".join(fmt(x) for x in lv), fmt(cards20), fmt(med(taken)), "/".join(fmt(x) for x in gt), fmt(bt)))
     print("\nniveau par minute (médiane, tous profils) : " + " ".join("%d:%s" % (m, fmt(med([r["levels"].get(m) for r in res]))) for m in range(1, 21)))
+    print("or : restant à la dernière minute de carte (médiane) %s ; marchands %s or (médiane) ; erreurs de script %d" % (
+        fmt(med([r.get("gold_20") for r in res])), fmt(med([r.get("gold_spent") for r in res])), sum(r.get("script_errors", 0) for r in res)))
     deaths = sorted(r.get("t", 0) for r in res if r.get("res") == "defaite")
     print("défaites : %d, minutes de mort : %s" % (len(deaths), [round(t / 60.0, 1) for t in deaths]))
     for r in res:
@@ -208,7 +218,7 @@ def main():
     ap.add_argument("--seeds", type=int, default=1)
     ap.add_argument("--seed-base", dest="seed_base", type=int, default=1000)
     ap.add_argument("--human", default="0.3,0.5,0.7")
-    ap.add_argument("--palier", type=int, default=1)
+    ap.add_argument("--palier", default="1", help="palier(s) I à V, liste possible : 1,2,3")
     ap.add_argument("--quit-at", dest="quit_at", type=int, default=1800)
     ap.add_argument("--timeout", type=int, default=7200)
     ap.add_argument("--jobs", type=int, default=8)
@@ -246,10 +256,11 @@ def main():
         os.makedirs(out_dir, exist_ok=True)
         print("journaux : %s" % out_dir, flush=True)
         jobs = []
-        for s in range(a.seeds):
-            for h in a.human.split(","):
-                for cls in a.classes.split(","):
-                    jobs.append((cls, a.seed_base + s * 7919, h, a, len(jobs), out_dir))
+        for pal in [int(x) for x in str(a.palier).split(",")]:
+            for s in range(a.seeds):
+                for h in a.human.split(","):
+                    for cls in a.classes.split(","):
+                        jobs.append((cls, a.seed_base + s * 7919, h, a, len(jobs), out_dir, pal))
         with ThreadPoolExecutor(max_workers=a.jobs) as ex:
             res = list(ex.map(run_one, jobs))
     summary(res)

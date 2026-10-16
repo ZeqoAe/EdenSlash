@@ -1268,10 +1268,10 @@ func _update_route(delta: float) -> void:
 		route = PackedVector3Array()
 		if _trail and is_instance_valid(_trail):
 			_trail.visible = false
-		player.autoplay_target = map.dungeon if player.autoplay and state != "boss" and time > _autoplay_dungeon_time() else Vector3.INF
+		player.autoplay_target = map.dungeon if player.autoplay and state != "boss" and time > _autoplay_dungeon_time() else (sv.pilot_target() if sv else Vector3.INF)
 		return
 	route = map.path_between(player.global_position, map.dungeon)
-	player.autoplay_target = objective_target() if player.autoplay and time > _autoplay_dungeon_time() else Vector3.INF
+	player.autoplay_target = objective_target() if player.autoplay and time > _autoplay_dungeon_time() else (sv.pilot_target() if sv else Vector3.INF)  # Survivant : le pilote dépense son or (S8)
 	_draw_trail()
 
 

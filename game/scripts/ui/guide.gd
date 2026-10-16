@@ -23,6 +23,7 @@ const RUN_ORDER := ["portal", "rage", "anvil", "merchant", "shrine", "fortune", 
 ## Rôle de chaque activité : ce qu'elle est seule à apporter.
 const ROLES := {
 	"survival": "Le cœur du jeu : tu y découvres de nouvelles pièces et ta classe y gagne de la maîtrise.",
+	"survivor": "[ul]Vingt minutes sur une carte : tu pars sans arme ni pièce, tout se gagne aux cartes.\nChaque pièce prise reste à vie ; elle gagne un passif à +6, +8 et +10.\nTrois gardiens à 5, 10 et 15 minutes, puis le boss à 20:00. Cinq paliers, chacun ouvert par une victoire au précédent.\nUn mode à part : il donne des apparences et des titres, rien d'autre.[/ul]",
 	"dungeon": "Quatre salles et un boss, seul ou avec des alliés IA. Chaque donjon a sa panoplie et ses plans.",
 	"tower": "Monte étage après étage, avec une seule vie, contre des duellistes de toutes les classes. Elle donne des cristaux et des gemmes.",
 	"quests": "Trois quêtes par jour, deux par semaine, des défis de classe. Le Défi du jour est une Survie avec deux contraintes.",

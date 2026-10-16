@@ -135,8 +135,10 @@ func _unit() -> void:
 	Run.hero_level = 40
 	check("PV fixes indépendants du niveau du héros", SurvivorDirector.final_boss_hp() == B and SurvivorDirector.guardian_hp(1) == G[1])
 	Survivor.palier = 2
-	check("palier II : gardiens et boss ×1,5, monstres aussi", SurvivorDirector.final_boss_hp() == B * 1.5 and SurvivorDirector.guardian_hp(0) == G[0] * 1.5
-		and is_equal_approx(float(SurvivorDirector.spawn_plan(0.0).hp_mult), 1.5 * Survivor.HP0 * Survivor.OPENING[1]))
+	var pm := float(ModeRules.SURVIVOR.palier_mult[1])  # (lot S8 : valeur mesurée, R_S8)
+	check("palier II : gardiens et boss ×%s, monstres aussi" % pm, is_equal_approx(SurvivorDirector.final_boss_hp(), B * pm) and is_equal_approx(SurvivorDirector.guardian_hp(0), G[0] * pm)
+		and is_equal_approx(float(SurvivorDirector.spawn_plan(0.0).hp_mult), Survivor.HP0 * Survivor.OPENING[1])  # (installé sur PALIER_RAMP)
+		and is_equal_approx(float(SurvivorDirector.spawn_plan(600.0).hp_mult), pm * Survivor.HP0 * pow(Survivor.HP_GROWTH, 10.0)))
 	Survivor.palier = 1
 	check("niveau du héros : plus de plafond de carte (90)", Survivor.level_cap(15) == 90)
 	var rng := RandomNumberGenerator.new()

@@ -133,16 +133,17 @@ func _test_draw() -> void:
 		JSON.stringify(Quests.daily()) != daily_before and JSON.stringify(Quests.weekly()) == weekly_before)
 	Quests.set_day("2026-10-19")
 	check("état : lundi, nouvelle semaine", JSON.stringify(Quests.weekly()) != weekly_before)
-	# quêtes réservées au Survivant : tirées seulement quand le mode est visible
+	# quêtes réservées au Survivant : tirées seulement quand le mode est visible (lot S8 : ouvert à tous, Survivor.READY)
 	_reset(false)
 	Profile.runs_done = 5
 	Profile.unlocked_features = ["daily"]
 	var sv_drawn := false
-	for day in range(1, 29):
-		for q in Quests.draw("daily", "2026-11-%02d" % day) + Quests.draw("weekly", "2026-11-%02d" % day):
+	for day in range(1, 60):
+		for q in Quests.draw("daily", "2026-11-%02d" % day) + Quests.draw("weekly", "2026-12-%02d" % day):
 			if String(QuestPool.get_def(String(q.id)).act) == "survivor":
 				sv_drawn = true
-	check("Survivant : aucune quête tant que le mode n'est pas visible", not sv_drawn and not Survivor.visible())
+	check("Survivant : quêtes tirées hors mode dev seulement si le mode est visible (READY = %s)" % Survivor.READY,
+		sv_drawn == Survivor.visible() and Survivor.visible() == Survivor.READY)
 	_reset(true)
 	var sv_dev := false
 	for day in range(1, 60):

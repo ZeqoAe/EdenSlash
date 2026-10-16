@@ -82,6 +82,10 @@ func _init(director: RunDirector) -> void:
 	# liée plutôt qu'une fonction anonyme : une variable statique qui garde une fonction anonyme fait planter la sortie)
 	_base_context = RunJournal.context
 	RunJournal.context = _journal_context
+	# palier (lot S8) : Menace de départ (après Menace.reset du directeur), résurrections
+	Menace.level = maxi(Menace.level, int(Survivor.tier_rule("menace")))
+	if d.world and "revives_left" in d.world:
+		d.world.revives_left = int(Survivor.tier_rule("revives"))
 
 
 ## Règle du profil « survivor » (ModeRules, modifiable en mode dev) ; [param fallback] si la clé n'y est pas.
@@ -116,7 +120,7 @@ static func spawn_plan(t: float) -> Dictionary:
 	var mins := clampf(t / 60.0, 0.0, Survivor.RUN_TIME / 60.0)
 	var k := mins / (Survivor.RUN_TIME / 60.0)
 	var final := t >= FINAL_HORDE_AT
-	var pk := palier_mult()
+	var pk := lerpf(1.0, palier_mult(), clampf(t / Survivor.PALIER_RAMP, 0.0, 1.0))  # (installé sur 5 min, S8)
 	var pack_every: Array = r("pack_every", Survivor.PACK_EVERY)
 	var pack_size: Array = r("pack_size", Survivor.PACK_SIZE)
 	var wave_every: Array = r("wave_every", Survivor.WAVE_EVERY)
@@ -165,7 +169,8 @@ static func power_target(index: float, t: float) -> Vector2:
 
 ## Message d'ouverture de la carte.
 func start_message() -> String:
-	return "%s · Survivant\nTiens 20 minutes : le boss arrive à 20:00" % String(d.zone.get("name", ""))
+	var tier := "" if Survivor.palier <= 1 else " · palier %s : %s" % [Survivor.numeral(Survivor.palier), String(Survivor.tier_rule("name"))]
+	return "%s · Survivant%s\nTiens 20 minutes : le boss arrive à 20:00" % [String(d.zone.get("name", "")), tier]
 
 
 ## Chaque image, en exploration comme dans l'arène : chronologie, défis, journal minute par minute.
@@ -175,6 +180,8 @@ func update(_delta: float) -> void:
 	if d.state != "explore":
 		return
 	_update_challenges()
+	if d.player.autoplay:
+		_pilot_shop()
 	while _next < _events.size() and d.time >= float(_events[_next].t):
 		var ev: Dictionary = _events[_next]
 		if ev.id == "boss" and not _can_force():
@@ -189,6 +196,8 @@ func _fire(ev: Dictionary) -> void:
 			d.message.emit("Un gardien approche !\nIl surgit dans %d secondes" % int(GUARDIAN_WARN), 3.0)
 		"guardian":
 			spawn_guardian(int(ev.n))
+			if int(ev.n) == Survivor.GUARDIAN_TIMES.size() - 1 and bool(Survivor.tier_rule("twin")):
+				spawn_guardian(int(ev.n))  # palier V : deux gardiens à 15:00
 		"portal":
 			d.dungeon_found = true  # la trace mène au portail
 			d.message.emit("Le portail du boss est ouvert !\nEntre quand tu veux : le boss arrive à 20:00", 4.0)
@@ -383,6 +392,7 @@ func max_level() -> int:
 func scale_monster(m: Monster, boss: bool) -> bool:
 	var plan := spawn_plan(d.time)
 	m.atk *= float(r("boss_atk", Survivor.BOSS_ATK)) * palier_mult() if boss else float(plan.atk_mult)
+	m.move_speed *= float(Survivor.tier_rule("speed"))  # palier II et plus : monstres plus rapides
 	if m.has_meta("sv_guardian"):
 		m.max_hp = guardian_hp(int(m.get_meta("sv_guardian")))
 	elif not boss:
@@ -459,6 +469,11 @@ func _on_guardian_died(n: int, g: GiantMonster) -> void:
 ## Gardiens vaincus.
 func guardians_killed() -> int:
 	return guardians.filter(func(e): return float(e.ttk) >= 0.0).size()
+
+
+## Gardiens de la run : trois, quatre au palier V (deux à 15:00).
+static func guardian_total() -> int:
+	return Survivor.GUARDIAN_TIMES.size() + (1 if bool(Survivor.tier_rule("twin")) else 0)
 
 
 # --- coffres, lieux, sanctuaires ------------------------------------------------------------------------------------
@@ -565,6 +580,78 @@ func try_enter_boss() -> bool:
 	return true
 
 
+# --- pilote automatique (mesures, --autoplay) -------------------------------------------------------------------------
+## Le pilote dépense son or comme un joueur (lot S8 ; avant, il finissait la carte avec ~50 000 or) : il va au coffre
+## qu'il peut payer le plus proche (toute la carte), puis aux marchands qu'il n'a pas visités, et y achète des cartes
+## (SurvivorCards.auto_pick) puis des clés. Rien de tout ça pour un joueur (ni pour l'aide « Bot »).
+const PILOT_RETARGET := 1.0  # s entre deux choix de cible
+var _pilot_t := 0.0
+var _pilot_goal := Vector3.INF
+
+
+## Cible du pilote (RunDirector._update_route) ; Vector3.INF : rien à acheter (il combat et farme comme avant).
+func pilot_target() -> Vector3:
+	if d.player == null or not d.player.autoplay or d.state != "explore" or d.map == null:
+		return Vector3.INF
+	if d.time < _pilot_t:
+		return _pilot_goal
+	_pilot_t = d.time + PILOT_RETARGET
+	_pilot_goal = Vector3.INF
+	var p := d.player.global_position
+	var best := INF
+	for it in d.map.interactables:
+		if not is_instance_valid(it) or it.used:
+			continue
+		var ok := false
+		if it.kind == "chest":
+			ok = Profile.keys > 0 or Profile.gold >= d.chest_price(int(it.get_meta("tier", 0)), String(it.get_meta("box", "")))
+		elif it.kind == "merchant":
+			ok = not it.has_meta("pilot_done") and Profile.gold >= _pilot_card_price()
+		if ok and d._flat(p, it.global_position) < best:
+			best = d._flat(p, it.global_position)
+			_pilot_goal = it.global_position
+	return _pilot_goal
+
+
+## Prix d'une carte de marchand au niveau du héros (MerchantUI.roll_offers : 50 à 70 + 14 par niveau).
+func _pilot_card_price() -> int:
+	return 70 + 14 * d.player.level
+
+
+## Au contact d'un marchand pas encore visité : achète ses cartes (la meilleure d'abord, au choix du Bot) puis ses clés.
+func _pilot_shop() -> void:
+	var ui = d.world.get("merchant_ui") if d.world else null
+	if ui == null:
+		return
+	for it in d.map.interactables:
+		if not is_instance_valid(it) or it.kind != "merchant" or it.has_meta("pilot_done"):
+			continue
+		if d._flat(d.player.global_position, it.global_position) > it.radius:
+			continue
+		it.set_meta("pilot_done", true)
+		var offers: Array = it.get_meta("offers") if it.has_meta("offers") else ui.roll_offers()
+		it.set_meta("offers", offers)
+		var spent := Profile.gold
+		while true:
+			var buyable := offers.filter(_pilot_can_buy)
+			if buyable.is_empty():
+				break
+			var pick: Dictionary = SurvivorCards.auto_pick(buyable.map(func(o): return o.card), true)
+			var o: Dictionary = buyable.filter(func(x): return x.card == pick).front() if not pick.is_empty() else buyable[0]
+			ui.buy(o)
+			if not o.get("sold", false):
+				break
+		for o in offers:
+			if o.has("keys") and not o.get("sold", false) and int(o.price) <= Profile.gold:
+				ui.buy(o)
+		print("[sv] pilote : marchand à %s, %d or dépensés" % [clock(d.time), spent - Profile.gold])
+
+
+## Offre de marchand que le pilote peut prendre : une carte (ni clé ni fourniture) pas encore vendue, dans ses moyens.
+static func _pilot_can_buy(o: Dictionary) -> bool:
+	return not o.get("sold", false) and not o.has("keys") and not o.has("bag") and o.has("card") and int(o.price) <= Profile.gold
+
+
 func _say(text: String, duration: float) -> void:
 	if d.time - float(_msg_at.get(text.get_slice("\n", 0), -INF)) < MSG_THROTTLE:
 		return
@@ -579,12 +666,46 @@ func setup_boss(boss: Monster) -> void:
 	boss_hp = final_boss_hp()
 	boss.max_hp = boss_hp
 	boss.hp = boss.max_hp
+	if int(Survivor.tier_rule("bricks")) > 0:
+		_add_boss_bricks.call_deferred(boss, int(Survivor.tier_rule("bricks")))  # après BossBrain.setup (mécaniques de la zone)
 	print("[sv] boss %s · PV %d (× Menace %s) · niveau %d" % [boss.display_name.trim_prefix("<Boss> "), roundi(boss_hp), Menace.mult_text(), boss.level])
 
 
-## Début de la rage du boss, en secondes dans l'arène (4:00).
+## Paliers IV et V : [param n] mécaniques de plus pour le boss final (Survivor.EXTRA_BRICKS, d'une famille qu'il n'a pas),
+## ajoutées à son cerveau comme les siennes (annoncées au sol, rythme et fureur communs).
+func _add_boss_bricks(boss: Monster, n: int) -> void:
+	if not is_instance_valid(boss) or boss.brain == null:
+		return
+	var b: BossBrain = boss.brain
+	var added: Array = []
+	for t in extra_bricks(b.bricks, n):
+		var br := BossBricks.normalize({"type": t})
+		b.bricks.append(br)
+		b._brick_t.append(float(br.first))
+		added.append(BossBricks.name_of(t))
+	if not added.is_empty():
+		d.message.emit("Palier %s · le boss gagne : %s" % [Survivor.numeral(Survivor.palier), ", ".join(added)], 3.0)
+		print("[sv] boss : mécaniques du palier %s" % ", ".join(added))
+
+
+## Types des [param n] briques ajoutées à un boss qui a déjà [param have] (briques normalisées) : dans l'ordre de
+## Survivor.EXTRA_BRICKS, jamais une famille déjà présente.
+static func extra_bricks(have: Array, n: int) -> Array:
+	var fams: Array = have.map(func(br): return BossBricks.family_of(String(br.get("type", ""))))
+	var out: Array = []
+	for t in Survivor.EXTRA_BRICKS:
+		if out.size() >= n:
+			break
+		var f := BossBricks.family_of(String(t))
+		if not f in fams:
+			out.append(String(t))
+			fams.append(f)
+	return out
+
+
+## Début de la rage du boss, en secondes dans l'arène (4:00 ; plus tôt au palier V).
 func boss_rage_at() -> float:
-	return float(r("boss_rage_at", Survivor.BOSS_RAGE_AT))
+	return minf(float(r("boss_rage_at", Survivor.BOSS_RAGE_AT)), float(Survivor.tier_rule("rage_at")))
 
 
 ## Boss vaincu : une seule carte, la run est gagnée (bilan après 6 s, en pause pendant un choix de carte).
@@ -628,8 +749,8 @@ func objective_text() -> String:
 
 ## Ligne courte sous l'horloge du HUD (à la place des sceaux) : les gardiens vaincus.
 func status_text() -> String:
-	var n := Survivor.GUARDIAN_TIMES.size()
-	var k := guardians_killed()
+	var n := guardian_total()
+	var k := mini(guardians_killed(), n)
 	return "Gardiens  " + "◆ ".repeat(k) + "◇ ".repeat(maxi(0, n - k))
 
 

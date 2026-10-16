@@ -1637,9 +1637,10 @@ func _menu_survival() -> void:
 	_pin(go)
 
 
-## Survivant : une phrase, la zone (décor, monstres et boss ; aucune n'est plus dure), puis Lancer. Le palier vient
-## au lot S8. Aucune condition : le mode ne dépend pas de la progression.
+## Survivant : une phrase, la classe, le palier (lot S8 : I à V, chacun ouvert par une victoire au précédent), ses coffres
+## d'apparence, la zone (décor, monstres et boss ; aucune n'est plus dure), puis Lancer. Aucune condition de progression.
 var _sv_zone := ""
+var _sv_palier := 0  # 0 : le plus haut palier ouvert (choisi à la 1re ouverture de la page)
 
 
 func _menu_survivor() -> void:
@@ -1651,7 +1652,8 @@ func _menu_survivor() -> void:
 	cr.pressed.connect(func(): HeroPages.class_menu(cr, Profile.selected_class, func(id: String):
 		_select_class(id)
 		_show_menu("survivor")))
-	_survivor_rewards(1)
+	_survivor_tiers()
+	_survivor_rewards(_sv_palier)
 	_section("Zone")
 	var zones := Survivor.zones()
 	if not _sv_zone in zones:
@@ -1667,6 +1669,41 @@ func _menu_survivor() -> void:
 	var go := MenuWidgets.gold_button("Lancer le Survivant", 22, Vector2(0, 56))
 	go.pressed.connect(_start_survivor)
 	_pin(go)
+
+
+## Survivant (lot S8) : les cinq paliers en une rangée (le choisi en or, un fermé grisé avec sa condition), puis ce que le
+## palier choisi ajoute, en une phrase (le détail au survol).
+func _survivor_tiers() -> void:
+	if _sv_palier <= 0 or _sv_palier > Survivor.top_palier():
+		# par défaut : celui de la run qui vient de finir (bilan -> lobby), sinon le plus haut palier gagné (le mode dev ouvre les autres)
+		var last := int(SurvivorRewards.last.get("tier", 0))
+		_sv_palier = last if last > 0 and Survivor.palier_open(last) else Survivor.top_palier(false)
+	_section("Palier", "Chaque palier garde les règles du précédent et en ajoute une. Gagne un palier pour ouvrir le suivant.")
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 8)
+	_sub.add_child(h)
+	for p in range(1, Survivor.PALIERS.size() + 1):
+		var open := Survivor.palier_open(p)
+		var t: Dictionary = Survivor.PALIERS[p - 1]
+		var b := MenuWidgets.glass_button(Survivor.numeral(p) if open else "🔒 " + Survivor.numeral(p), 18, Vector2(0, 44))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.disabled = not open
+		b.tooltip_text = ("%s · %s" % [String(t.name), String(t.rule)]) if open else "Gagne le palier %s pour l'ouvrir." % Survivor.numeral(p - 1)
+		if p == _sv_palier:
+			b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.14, 0.11, 0.24, 0.96), UiTheme.GOLD, 2, 12))
+			b.add_theme_color_override("font_color", UiTheme.GOLD)
+		elif not open:
+			b.add_theme_color_override("font_disabled_color", UiTheme.MUTED)
+		var pp := p
+		b.pressed.connect(func():
+			_sv_palier = pp
+			_show_menu("survivor"))
+		h.add_child(b)
+	var cur: Dictionary = Survivor.PALIERS[_sv_palier - 1]
+	var l := Hud._label(_sub, "%s · %s" % [String(cur.name), String(cur.rule)], 15, UiTheme.TEXT)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.mouse_filter = Control.MOUSE_FILTER_STOP
+	l.tooltip_text = String(cur.tip)
 
 
 ## Survivant (lot S5) : le mode en trois idées, une icône et quelques mots chacune.
@@ -1723,7 +1760,7 @@ func _start_survivor() -> void:
 	_launching = true
 	if backdrop:
 		backdrop.release()
-	Survivor.start(Profile.selected_class, _sv_zone, 1)
+	Survivor.start(Profile.selected_class, _sv_zone, clampi(_sv_palier, 1, Survivor.top_palier()))
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 

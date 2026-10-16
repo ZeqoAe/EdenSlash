@@ -2,12 +2,12 @@ extends Node
 ## Intégration (passe P4) : chaque activité est lancée depuis le lobby (vraies fonctions de lancement, vraie scène du jeu),
 ## jouée quelques secondes en pilote automatique, terminée, son bilan est lu et « Retour au lobby » est pressé.
 ## Le pilote vit dans la racine (il survit aux changements de scène). Console : chercher ensuite ERROR / SCRIPT ERROR.
-## godot --headless --path game res://tests/test_p4_activities.tscn [-- survival,training,tower,dungeon0,dungeon1,dungeon2,rush,siege,
+## godot --headless --path game res://tests/test_p4_activities.tscn [-- survival,survivor,training,tower,dungeon0,dungeon1,dungeon2,rush,siege,
 ##   duel,league,pantheon,gauntlet,arena2,arena3,royale,challenge]
 
 const LOBBY := "res://scenes/lobby.tscn"
-const ALL := ["survival+r", "survival_win", "training", "tower+r", "dungeon0+r", "dungeon1", "dungeon2", "rush+r", "siege+r", "duel+r", "league", "pantheon",
-	"gauntlet", "arena2+r", "arena3", "royale+r", "challenge"]
+const ALL := ["survival+r", "survival_win", "survivor+r", "training", "tower+r", "dungeon0+r", "dungeon1", "dungeon2", "rush+r", "siege+r", "duel+r", "league",
+	"pantheon", "gauntlet", "arena2+r", "arena3", "royale+r", "challenge"]
 const HARD_LIMIT := 1500.0  # secondes : au-delà, le pilote s'arrête en échec
 
 var fails := 0
@@ -176,6 +176,9 @@ func _activity(act_in: String) -> Dictionary:
 	match act:
 		"survival", "survival_win":
 			lobby._start_run()
+		"survivor":
+			lobby._show_menu("survivor")  # (zone et palier par défaut de la page, lot S8)
+			lobby._start_survivor()
 		"training":
 			lobby._start_training()
 		"tower":
@@ -298,6 +301,12 @@ func _activity(act_in: String) -> Dictionary:
 ## Termine la partie en cours comme un joueur le ferait (mort, victoire de duel, abandon) et attend son bilan, boutons dégelés.
 func _end_game(act: String, world: Node, player: Player) -> ResultsPanel:
 	var duelish: bool = act in ["duel", "league", "pantheon", "gauntlet", "arena2", "arena3"]
+	if act == "survivor":
+		for i in 3:  # le premier choix (arme ou sort) tient la pause : le prendre, puis tomber comme en Survie
+			if world.cards.is_open():
+				world.cards._opened_at -= CardPicker.CONFIRM_DELAY_MS
+				world.cards._choose(0)
+			await _wait(0.4)
 	if act == "survival_win":
 		# la victoire arrive d'elle-même 6 s après le boss, une fois choisie l'amélioration d'arme (le choix tient la pause, P13)
 		for i in 8:
@@ -305,7 +314,7 @@ func _end_game(act: String, world: Node, player: Player) -> ResultsPanel:
 			if world.cards.is_open():
 				world.cards._opened_at -= CardPicker.CONFIRM_DELAY_MS
 				world.cards._choose(0)
-	elif act in ["survival", "challenge"]:
+	elif act in ["survival", "challenge", "survivor"]:
 		world.revives_left = 0
 		player.dev_invincible = false
 		for i in 6:
