@@ -3,6 +3,7 @@
 
     python tools/boss_ttk.py                       # 4 scénarios × 4 époques × 3 cartes × 5 classes (héros invincible)
     python tools/boss_ttk.py --epochs 1 --scenarios rush,bonne --human 0.5   # le héros encaisse et peut mourir
+    python tools/boss_ttk.py --scenarios bande,bande-10 --pure              # lot H4a : héros au haut de la bande de chaque carte
 
 Scénarios (niveau, cartes, trophées, part des emplacements trouvés en run, emplacements passés à l'enclume, par carte) :
   rush    : boss atteint tôt, presque rien ramassé ;
@@ -29,6 +30,11 @@ SCENARIOS = {
     "doree": [(15, 18, 6, 1.0, 3), (25, 29, 10, 1.0, 6), (35, 38, 12, 1.0, 9)],
 }
 HUB = {1: "new", 2: "1.3.5.1", 3: "2.3.10.3", 4: "3.3.10.4"}
+# Lot H4a (Aventure au niveau de héros) : --level = niveau de HÉROS. Scénarios « bande » : héros au haut de la bande de la carte,
+# équipement « correct » de la carte (ses pièces à +5), cartes, trophées et trouvailles d'une bonne run ; « bande-10 » : même
+# run, équipement en retard de 10 niveaux (les pièces de la carte d'avant +5, héros au même niveau).
+BANDS = {1: [23, 33, 43], 2: [48, 53, 60], 3: [65, 70, 75], 4: [80, 85, 90]}
+BAND_RUN = [(16, 4, 0.7), (27, 7, 0.7), (36, 10, 0.7)]  # cartes, trophées, trouvailles
 HUB_GOLD = {1: "1.3.10.3", 2: "2.3.10.4", 3: "3.3.10.4", 4: "4.3.10.4"}
 # Donjons / Ruée (--dungeons) : équipement du hub d'un joueur qui y arrive (Normal dès l'époque II, Héroïque vers
 # l'époque III, Mythique après l'époque IV) et d'un joueur sur-équipé ; 3 cartes (une par salle) avant le boss.
@@ -48,6 +54,14 @@ def run_one(job):
                 "--cards=3", "--seed=%d" % (a.seed + idx), "--max=%d" % a.max]
         if DUNGEON_ZONES[ep - 1] == "rush":
             cmd.append("--floor=4")
+    elif sc.startswith("bande"):
+        lv = BANDS[ep][st - 1]
+        cards, tro, finds = BAND_RUN[st - 1]
+        anvil = 0
+        pe, ps = (ep, st - 1) if st > 1 else (ep - 1, 3)
+        hub = "%d.%d.5" % (ep, st) if sc == "bande" else ("%d.%d.5" % (pe, ps) if pe >= 1 else "new")
+        cmd += ["--epoch=%d" % ep, "--stage=%d" % st, "--class=" + cls, "--hub=" + hub, "--level=%d" % lv, "--cards=%d" % cards,
+                "--trophies=%d" % tro, "--finds=%s" % (finds if sc == "bande" else 0.0), "--anvil=0", "--seed=%d" % (a.seed + idx), "--max=%d" % a.max]
     else:
         lv, cards, tro, finds, anvil = SCENARIOS[sc][st - 1]
         hub = HUB_GOLD[ep] if sc == "doree" else HUB[ep]
@@ -55,6 +69,8 @@ def run_one(job):
                 "--trophies=%d" % tro, "--finds=%s" % finds, "--anvil=%d" % anvil, "--seed=%d" % (a.seed + idx), "--max=%d" % a.max]
     if a.human:
         cmd.append("--human=%s" % a.human)
+    if a.extra:
+        cmd += a.extra.split()
     if a.pure:
         cmd.append("--pure")
     try:
@@ -64,8 +80,13 @@ def run_one(job):
     m = re.search(r"résultat=(\S+) ttk=([\d.]+) pv_boss=(\d+) boss_niv=(\d+) dps=(\d+) atk=(\d+) pv=(\d+)", out)
     if not m:
         return {"sc": sc, "ep": ep, "st": st, "cls": cls, "res": "erreur"}
-    return {"sc": sc, "ep": ep, "st": st, "cls": cls, "res": m.group(1), "ttk": float(m.group(2)), "hp": int(m.group(3)),
-            "dps": int(m.group(5)), "atk": int(m.group(6)), "pv": int(m.group(7))}
+    r = {"sc": sc, "ep": ep, "st": st, "cls": cls, "res": m.group(1), "ttk": float(m.group(2)), "hp": int(m.group(3)),
+         "dps": int(m.group(5)), "atk": int(m.group(6)), "pv": int(m.group(7))}
+    t = re.search(r"subis_min=([\d.]+) coup_max=([\d.]+)", out)
+    if t:
+        r["taken"] = float(t.group(1))  # PV max du héros perdus par minute (avec --human)
+        r["hit"] = float(t.group(2))  # plus gros coup, en PV max
+    return r
 
 
 def main():
@@ -80,6 +101,7 @@ def main():
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--human", default="", help="part des coups évités (le héros peut mourir) ; vide : invincible")
     ap.add_argument("--pure", action="store_true", help="boss sans mécaniques de salle : DPS du héros seul")
+    ap.add_argument("--extra", default="", help="arguments en plus pour la sonde (ex. « --boss-scale=0.8 », lot H4a)")
     ap.add_argument("--dungeons", action="store_true", help="donjons et Ruée : scénarios donjon (attendu) et donjon+ (sur-équipé), "
                     "époques = zones (1 Limestone, 2 Wetlands, 3 Blackflame, 4 Ruée), cartes = difficulté + 1")
     a = ap.parse_args()
@@ -109,6 +131,13 @@ def main():
                 cells.append("%5.0f [%d/%d] %7d %6d" % (statistics.median(r["ttk"] for r in rs), won, len(rs),
                                                          statistics.median(r["hp"] for r in rs), statistics.median(r["dps"] for r in rs)))
             print("%-8s E%d | %s" % (sc, ep, " | ".join(cells)))
+            if a.human:
+                dead = []
+                for st in map(int, a.stages.split(",")):
+                    rs = [r for r in res if r["sc"] == sc and r["ep"] == ep and r["st"] == st and "taken" in r]
+                    dead.append("morts %d/%d, subis %.1f PV max / min, coup max %.2f" % (sum(1 for r in rs if r["res"] == "mort"), len(rs),
+                                statistics.median(r["taken"] for r in rs) if rs else -1, statistics.median(r["hit"] for r in rs) if rs else -1))
+                print("%-8s    | %s" % ("", " | ".join(dead)))
 
 
 if __name__ == "__main__":

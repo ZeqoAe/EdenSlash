@@ -17,7 +17,8 @@ extends RefCounted
 ##
 ## - Port des pièces (lot H3) : [method wear_block], [method lock_text], [method lock_line] ; une pièce de niveau N ne
 ##   s'équipe au hub que si le niveau de héros ≥ N (`Profile.equip`, `ClassGear.best_gear`).
-## Les stats et les monstres (H4) ne lisent pas encore ce niveau.
+## - Aventure (lot H4a) : le héros s'y bat à ce niveau (`Run.hero_level`, fixé au départ de la partie : stats de base,
+##   pièces à leur niveau) ; monstres au niveau du héros borné par la bande de la carte (`Epochs.BANDS`).
 
 const MAX_LEVEL := 90
 const NEED_BASE := 105.0
@@ -299,14 +300,20 @@ static func item_level(it) -> int:
 
 # --- port des pièces (lot H3) ------------------------------------------------------------------
 ## Niveau requis si [param item] ne peut pas être porté maintenant, 0 sinon (`Items.required_level` > niveau de héros).
-## Le port se vérifie au hub (coffre commun, préréglages : l'équipement de l'Aventure, des activités et du Duel équipé).
-## Jamais pendant une partie (Survie, Survivant : les pièces trouvées ne valent que la partie ; elles suivront le niveau
-## de héros au lot H4a), ni dans les modes scellés (Survivant, Battle royale : leurs propres pièces).
+## Le port se vérifie au hub (coffre commun, préréglages : l'équipement de l'Aventure, des activités et du Duel équipé)
+## et pendant la partie (lot H4a : les coffres de l'Aventure ne donnent jamais de pièce au-dessus du niveau de héros,
+## SlotChests.run_piece) ; jamais dans les modes scellés (Survivant, Battle royale : leurs propres pièces).
 static func wear_block(item: Dictionary) -> int:
-	if item.is_empty() or Profile.in_run or Modes.sealed():
+	if item.is_empty() or Modes.sealed():
 		return 0
 	var req := Items.required_level(item)
-	return req if req > level() else 0
+	return req if req > wear_level() else 0
+
+
+## Niveau qui décide du port : en Aventure, celui de la partie (`Run.hero_level`, fixé au départ : le même que le niveau de
+## héros, sauf essais et outils de mesure) ; sinon le niveau de héros.
+static func wear_level() -> int:
+	return Run.hero_level if Epochs.adventure() and Run.hero_level > 0 else level()
 
 
 static func can_wear(item: Dictionary) -> bool:
@@ -316,7 +323,7 @@ static func can_wear(item: Dictionary) -> bool:
 ## « Niveau 60 requis · tu es niveau 34 » ("" : la pièce se porte).
 static func lock_text(item: Dictionary) -> String:
 	var req := wear_block(item)
-	return "" if req <= 0 else "Niveau %d requis · tu es niveau %d" % [req, level()]
+	return "" if req <= 0 else "Niveau %d requis · tu es niveau %d" % [req, wear_level()]
 
 
 ## Ligne de la carte d'objet (BBCode, "" : rien à dire). Une pièce déjà portée au-dessus du niveau (compte d'avant le

@@ -2,6 +2,7 @@ extends Node
 ## Passe P11 : temps pour tuer (TTK) un boss selon la puissance du héros. Une run est reconstituée (équipement du
 ## hub, trouvailles de la carte, enclume, niveau, cartes tirées comme le pilote automatique, trophées), puis le
 ## héros, en aide au combat « Bot » du jeu, entre dans l'arène du boss et frappe jusqu'à sa mort.
+## Lot H4a : --level est le niveau de HÉROS (stats, pièces à leur niveau, boss au niveau de la carte pour ce héros + 1).
 ##   godot --headless --fixed-fps 60 --path game res://tools/boss_ttk.tscn -- --epoch=1 --stage=1 --class=warrior
 ##         --hub=new|E.C.N[.G] --level=15 --cards=15 --trophies=4 --finds=0.7 --anvil=1 [--seed=1] [--max=600]
 ##         [--human=0.5] [--pure] [--dodge]
@@ -57,6 +58,9 @@ func _ready() -> void:
 			"floor": floor_n = int(kv[1])
 			"boss": boss_id = kv[1]
 			"seed": seed(int(kv[1]))
+			"boss-scale": Epochs.test_boss = float(kv[1])  # lot H4a : essai d'un réglage des PV du boss
+			"mult-scale": Epochs.test_mult = float(kv[1])
+			"atk-scale": Epochs.test_atk = float(kv[1])
 	Settings.reset_all(false)
 	Profile.selected_class = cid
 	Profile.save_profile()  # équipement de départ d'un compte neuf (une fois par classe)
@@ -69,6 +73,8 @@ func _ready() -> void:
 		for i in n_cards:  # une carte par salle avant le boss
 			_pick(Run.roll_cards(3))
 	else:
+		# lot H4a : --level = niveau de héros (le héros se bat à ce niveau ; le niveau de run ne donne que les cartes)
+		Profile.records[HeroLevel.KEY] = HeroLevel.total_for(level)
 		Run.start_survival(cid, epoch)
 		Run.stage = stage
 		Run.zone_id = Epochs.zone(epoch, stage)

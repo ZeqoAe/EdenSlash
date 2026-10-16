@@ -1211,6 +1211,10 @@ func _on_xp(xp: int, xp_next: int, level: int) -> void:
 	_xp_orb.big_text = str(level)
 	_xp_orb.small_text = "%d %%" % floori(ratio * 100.0)
 	_xp_orb.tooltip_text = "Niveau %d\nExpérience : %d / %d (%d %%)" % [level, xp, xp_next, floori(ratio * 100.0)]
+	if Epochs.adventure():
+		# lot H4a : le niveau de run ne donne que des cartes ; le héros se bat à son niveau de héros
+		_xp_orb.caption = "RUN"
+		_xp_orb.tooltip_text = "Run %d : chaque niveau donne une carte.\nTon héros se bat au niveau %d.\nExpérience : %d / %d" % [level, Run.hero_level, xp, xp_next]
 
 
 # --- fabrique de widgets ---

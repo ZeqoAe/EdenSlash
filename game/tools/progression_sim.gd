@@ -235,6 +235,7 @@ func power_index(gear: Dictionary, lv: int) -> float:
 	Run.class_id = cid
 	Profile.equipped = gear
 	hero.level = lv
+	Run.hero_level = lv  # lot H4a : en Aventure, les stats suivent Run.hero_level (le niveau de héros), plus Player.level
 	hero.recalc_stats()
 	var mag := String(hero.cls.get("dmg_type", "phys")) == "mag"
 	var main := hero.matk if mag else hero.atk
@@ -326,7 +327,13 @@ func map_mult(ep: int, k: int) -> float:
 	if map_mult_override.size() >= 12:
 		return float(map_mult_override[i])
 	if _game_map_mult == null:
-		_game_map_mult = (load("res://scripts/core/epochs.gd") as Script).get_script_constant_map().get("MAP_MULT", [])
+		var raw: Array = (load("res://scripts/core/epochs.gd") as Script).get_script_constant_map().get("MAP_MULT", [])
+		_game_map_mult = []
+		for row in raw:  # lot H4a : table par époque (4 × 3) ; aplatie dans l'ordre des cartes
+			if row is Array:
+				_game_map_mult.append_array(row)
+			else:
+				_game_map_mult.append(row)
 	var game: Array = _game_map_mult
 	if game.size() >= 12 and not _mep_given:
 		return float(game[i])
@@ -421,7 +428,7 @@ func _value_at(it: Dictionary, lv: int) -> float:
 
 
 func monster_mult(ep: int) -> float:
-	return float(mult[clampi(ep, 1, mult.size()) - 1]) if not mult.is_empty() else Epochs.monster_mult(ep)
+	return float(mult[clampi(ep, 1, mult.size()) - 1]) if not mult.is_empty() else Epochs.old_monster_mult(ep)
 
 
 static func sigmoid(x: float) -> float:
@@ -554,7 +561,7 @@ func _map_loot(acc: Dictionary, ep: int, stage: int, minutes: float, bag: Dictio
 				acc.seen[int(e.id)] = e
 	var m := Epochs.map_def(ep, stage)
 	var supply := maxi(int(m.armor), int(m.weapon))
-	var loot_lv := maxi(1, int(Epochs.cap(stage) * 0.8))
+	var loot_lv := maxi(1, int(Epochs.old_cap(stage) * 0.8))
 	var gem_lv := loot_lv + RunDirector.GEM_EPOCH_LEVELS * (ep - 1)
 	Run.active = true  # plafonds de la Survie (formules) : vrai chemin du jeu
 	Run.survival = true

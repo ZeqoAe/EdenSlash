@@ -5,6 +5,8 @@ extends RefCounted
 ## carte (sort, passif, certificat). Un coffre d'équipement propose 3 pièces d'Eden tirées
 ## parmi toutes celles de son emplacement au palier et à la rareté de la map, avec une
 ## relance par coffre ; les pièces restent à +0 ; une arme va dans le sac (passe N2).
+## Lot H4a : en Aventure, une pièce n'est jamais plus haute que le niveau de héros (elle se porte toujours) : sous le
+## palier de la carte, la pièce du palier est ramenée au niveau du héros ([method run_piece]).
 
 ## name : titre du coffre ; slots : emplacements d'objets ; cards : type de cartes ;
 ## look : apparence (ProcMap.CHEST_LOOKS : 0 coffre, 1 ouvragé, 2 doré) ; price : × prix.
@@ -104,8 +106,8 @@ static func plan_candidates(epoch: int, stage: int, known: Dictionary, wtype := 
 	return out
 
 
-## [param n] pièces au hasard d'un coffre [param box] (sans doublon), +0, puissance plafonnée
-## au niveau maximal de la map.
+## [param n] pièces au hasard d'un coffre [param box] (sans doublon), +0, au niveau de la carte pour le héros
+## ([method run_piece]).
 static func offer(box: String, epoch: int, stage: int, n := 3) -> Array:
 	if box == "trophy":
 		return trophy_offer(epoch, stage, n)
@@ -119,12 +121,25 @@ static func offer(box: String, epoch: int, stage: int, n := 3) -> Array:
 	var m := Epochs.map_def(epoch, stage)
 	var out: Array = []
 	for e in p.slice(0, n):
-		var it := Items.from_template(e, Epochs.cap(stage), int(m.rarity) if String(e.slot) != "trophy" else int(e.rarity))
+		var it := run_piece(e, int(m.rarity) if String(e.slot) != "trophy" else int(e.rarity))
 		it["upgrade"] = 0
 		if m.get("awakened", false) and GameData.is_awakened(e):
 			it["awakened"] = true
 		out.append(it)
 	return out
+
+
+## Pièce de la run tirée du modèle d'Eden [param e] à la rareté [param rarity]. En Aventure (lot H4a), jamais au-dessus
+## du niveau de héros de la partie (`Run.hero_level`) : une pièce d'un palier plus haut est ramenée à ce niveau (même
+## modèle, même nom ; `"from_level"` garde le palier d'origine) et se porte donc toujours ; sa puissance est celle du
+## niveau du héros (Items.power_level). La pièce du palier reste à l'Armurerie (seen_items) à son vrai niveau.
+static func run_piece(e: Dictionary, rarity: int) -> Dictionary:
+	var it := Items.from_template(e, maxi(int(e.get("level", 1)), 1), rarity)
+	var h := Run.hero_level
+	if Epochs.adventure() and h > 0 and int(it.get("level", 0)) > h:
+		it["from_level"] = int(it.level)
+		it["level"] = h
+	return it
 
 
 ## Modèles d'Eden des pièces portées dans les emplacements du coffre [param box] (arme secondaire comprise
@@ -165,7 +180,7 @@ static func trophy_offer(epoch: int, stage: int, n := 3) -> Array:
 			var d := absi(int(e.level) - lv)
 			if best.is_empty() or d < absi(int(best.level) - lv) or (d == absi(int(best.level) - lv) and randf() < 0.5):
 				best = e
-		out.append(Items.from_template(best, Epochs.cap(stage), int(best.rarity)))
+		out.append(run_piece(best, int(best.rarity)))
 	return out
 
 
@@ -184,7 +199,7 @@ static func offhand_offer(epoch: int, stage: int, n := 3) -> Array:
 		var p := pool("weapon", epoch, stage, wt)
 		if p.is_empty():
 			continue
-		var it := Items.from_template(p.pick_random(), Epochs.cap(stage), int(Epochs.map_def(epoch, stage).rarity))
+		var it := run_piece(p.pick_random(), int(Epochs.map_def(epoch, stage).rarity))
 		it["upgrade"] = 0
 		it["auto_variant"] = randi() % 2
 		out.append(it)

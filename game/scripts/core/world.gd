@@ -84,7 +84,8 @@ func _open_for_test() -> void:
 
 
 ## Mesures d'équilibrage : --class=<id> (classe du profil), --hub=new | <époque>.<carte>.<+N>[.<palier de gemme>]
-## (équipement du hub, voir StarterGear.scenario), avant le départ de la run (profil séparé : EDEN_PROFILE).
+## (équipement du hub, voir StarterGear.scenario), --hero-level=N (niveau de héros, lot H4a), avant le départ de la run
+## (profil séparé : EDEN_PROFILE).
 func _apply_scenario_args() -> void:
 	var hub := ""
 	for arg in OS.get_cmdline_user_args():
@@ -93,6 +94,9 @@ func _apply_scenario_args() -> void:
 			Profile.save_profile()  # change la vue du hub vers cette classe (équipement de départ compris)
 		elif arg.begins_with("--hub="):
 			hub = arg.trim_prefix("--hub=")
+		elif arg.begins_with("--hero-level="):
+			# lot H4a : niveau de héros du profil de mesure (le héros de l'Aventure se bat à ce niveau)
+			Profile.records[HeroLevel.KEY] = HeroLevel.total_for(int(arg.trim_prefix("--hero-level=")))
 	if hub != "":
 		# mesures : réglages par défaut en mémoire (settings_test.cfg, partagé avec les tests, faussait le bot)
 		Settings.reset_all(false)
@@ -169,10 +173,16 @@ func _ready() -> void:
 			for i in range(Epochs.count(), 0, -1):
 				if Epochs.zone(i, 1) == Profile.selected_zone:
 					ep = i
+			var st := 1
 			for arg in OS.get_cmdline_user_args():
 				if arg.begins_with("--epoch="):
 					ep = int(arg.trim_prefix("--epoch="))
+				elif arg.begins_with("--stage="):
+					st = clampi(int(arg.trim_prefix("--stage=")), 1, RunDirector.STAGES)  # mesures (lot H4a) : départ à la carte N
 			Run.start_survival(Profile.selected_class, ep)
+			if st > 1:
+				Run.stage = st
+				Run.zone_id = Epochs.zone(Run.epoch, st)
 	_build_environment()
 
 	player = Player.new()
@@ -237,7 +247,7 @@ func _ready() -> void:
 			_print_report()
 			get_tree().quit())
 	var zone_bonus := int(GameData.zone(Run.zone_id).get("level_bonus", 0))
-	if zone_bonus > 0 and player.level < 1 + zone_bonus and not Royale.active and not Survivor.active:  # (Survivant : niveau 1 partout)
+	if zone_bonus > 0 and player.level < 1 + zone_bonus and not Royale.active and not Survivor.active and not Epochs.adventure():  # (Survivant : niveau 1 partout ; Aventure : niveau de run 1, lot H4a)
 		player.level = 1 + zone_bonus
 		player.recalc_stats()
 		player.hp = player.max_hp
@@ -430,6 +440,19 @@ func _parse_args() -> void:
 			Run.max_level = maxi(Run.max_level, player.level)
 			player.recalc_stats()
 			player.hp = player.max_hp
+		elif arg.begins_with("--mult-scale="):
+			Epochs.test_mult = float(arg.trim_prefix("--mult-scale="))  # mesures (lot H4a) : M′ de la carte × N
+		elif arg.begins_with("--atk-scale="):
+			Epochs.test_atk = float(arg.trim_prefix("--atk-scale="))  # mesures (lot H4a) : dégâts des monstres et du boss × N
+		elif arg.begins_with("--boss-scale="):
+			Epochs.test_boss = float(arg.trim_prefix("--boss-scale="))  # mesures (lot H4a) : PV du boss × N
+		elif arg.begins_with("--start-run="):
+			# mesures (lot H4a, départ à la carte 2 ou 3) : niveau de run N atteint en jeu, une carte par niveau comme les
+			# cartes d'avant (choisies par le pilote automatique)
+			var to := int(arg.trim_prefix("--start-run="))
+			get_tree().create_timer(1.0).timeout.connect(func():
+				while player.level < to:
+					player.gain_xp(GameData.xp_to_next(player.level) - player.xp))
 
 
 ## Propose des cartes ; en mode bot (et au pilote automatique), le choix se fait seul, équipement compris
@@ -541,8 +564,8 @@ func end_run(result: String) -> void:
 	Run.finish(result)
 	if "--auto-quit" in OS.get_cmdline_user_args():
 		# mesures : une ligne de bilan puis on quitte
-		print("[fin] résultat=%s niveau=%d temps=%.0f étape=%d tués=%d élites=%d insignes=%d pv=%d atk=%d matk=%d" % [result, player.level,
-			director.time, Run.stage, Run.kills, Run.elites, Run.insignia_gain, player.max_hp, player.atk, player.matk])
+		print("[fin] résultat=%s niveau=%d temps=%.0f étape=%d tués=%d élites=%d insignes=%d pv=%d atk=%d matk=%d héros=%d" % [result, player.level,
+			director.time, Run.stage, Run.kills, Run.elites, Run.insignia_gain, player.max_hp, player.atk, player.matk, Run.hero_level])
 		print("[fournitures] sac=%s coffres=%s armes découvertes=%d" % [Profile.bag, Profile.reward_chests.map(func(c): return "%s:%d" % [c.type, int(c.plevel)]),
 			Run.seen_family.size()])
 		get_tree().quit()

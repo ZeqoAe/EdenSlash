@@ -1,9 +1,14 @@
 class_name Epochs
 extends RefCounted
 ## Époques de la Survie (DESIGN.md, « Boucle de jeu et Survie ») : une run = 3 maps d'une
-## même époque. La puissance est normalisée (on repart du niveau 1, plafond de niveau par map) ;
-## l'époque choisit les pièces d'Eden des coffres d'emplacement (palier et rareté de chaque map)
+## même époque. L'époque choisit les pièces d'Eden des coffres d'emplacement (palier et rareté de chaque map)
 ## et la force des monstres. Battre le boss de la 3e map débloque l'époque suivante.
+##
+## Lot H4a (NIVEAU_HEROS.md §1.4) : le héros joue au NIVEAU DE HÉROS (`HeroLevel`, fixe pendant la partie :
+## `Run.hero_level`, stats de base, puissance des pièces à leur vrai niveau, jusqu'à 90). Chaque carte a une BANDE de
+## niveau ([member BANDS]) : ses monstres sont au niveau du héros borné par la bande ([method map_level]) ; PV ×
+## [member MAP_MULT], dégâts × [member MAP_ATK] / [member BOSS_ATK] de la carte, × montée dans le temps ([method time_ramp]). Le niveau de run (`Player.level`,
+## repart de 1, sans plafond) ne donne plus que des cartes. Plus de plafond 15 / 25 / 35 ni de niveau de départ par carte.
 
 ## armor / weapon : niveau d'Eden des pièces proposées ; rarity : Items.MYTHIC ou LEGENDARY ;
 ## awakened : pièces « Awaken » d'Eden (légendaires avec aura).
@@ -17,39 +22,156 @@ const LIST := [
 	{"name": "Époque IV", "zones": ["avila", "arid", "blackflame"], "maps": [
 		{"armor": 80, "weapon": 80, "rarity": 5}, {"armor": 85, "weapon": 85, "rarity": 5}, {"armor": 80, "weapon": 90, "rarity": 5, "awakened": true}]},
 ]
-## Niveau maximal du héros (et des monstres hors rage) sur chaque map de la run.
-const CAPS := [15, 25, 35]
-## Niveau de départ des monstres de chaque map.
-const LEVEL_BONUS := [0, 12, 22]
-## PV et dégâts des monstres par époque (la difficulté vient des monstres, pas du niveau).
-## Passe E6 (avant 1,35 / 1,75 / 2,2) : l'équipement du hub multiplie la puissance du héros en Survie par
-## ≈ 6 à 7 entre les pièces +0 de l'époque I et un équipement complet d'époque IV (+10, gemmes, enchantements) ; avec
-## l'ancien écart, l'époque IV tombait ≈ 10 h après le premier lancement (simulation tools/progression_sim). Chaque
-## époque demande maintenant l'équipement de la précédente bien monté : II ≈ pièces de l'époque I à +5 et
-## quelques gemmes, III ≈ pièces de l'époque II à +10, IV ≈ un équipement complet (R_E6.md).
-## Passe P5 : époque I adoucie (1 → 0,85, PV et dégâts) : au pilote automatique (joueur moyen, 40 % de coups évités,
-## compte neuf) seuls 53 % des runs tenaient 7 min sur la 1re carte et la simulation donnait 13 runs avant la 1re
-## victoire (cible 5-8). Les époques II à IV ne bougent pas (R_P5.md).
-const MONSTER_MULT := [0.85, 1.7, 3.4, 7.0]
+## Bande de niveau [bas, haut] de chaque carte (époque × carte, lot H4a, NIVEAU_HEROS.md §1.4) : monstres au niveau du
+## héros borné par la bande. Un héros sous la bande y joue à son niveau d'équipement mais affronte des monstres du bas
+## de la bande ; au-dessus, il écrase la carte (pas de synchronisation en Aventure).
+const BANDS := [
+	[[1, 23], [18, 33], [28, 43]],
+	[[38, 48], [43, 53], [48, 60]],
+	[[55, 65], [60, 70], [65, 75]],
+	[[70, 80], [75, 85], [80, 90]],
+]
+## PV des monstres et des boss de chaque carte (M′ ; remplace l'ancien multiplicateur par époque, lot H4a). Ils s'appliquent
+## à des monstres de niveau 1 à 90 (×1,1 par niveau) face à des pièces qui comptent à leur niveau. I-1 : un compte neuf atteint
+## le boss une fois sur deux (pilote) ; les autres : le boss tombe en ≈ 1 / 1,5 / 2 min pour un héros au haut de la bande avec
+## les pièces de la carte à +5 (sonde tools/boss_ttk.py, scénario « bande »). Creux des 3es cartes III et IV : leurs pièces
+## éveillées. Mesures : R_H4a.md.
+const MAP_MULT := [
+	[0.35, 1.3, 2.1],
+	[4.4, 7.0, 24.0],
+	[46.0, 121.0, 25.0],
+	[410.0, 770.0, 290.0],
+]
+## Dégâts des monstres de chaque carte (lot H4a) : M′ règle les PV (temps pour tuer, sonde boss_ttk) ; les dégâts ont leur
+## table, car les PV et la défense du héros montent plus vite que ses dégâts avec le niveau. BOSS_ATK : dégâts des boss.
+const MAP_ATK := [
+	[0.35, 0.22, 1.2],
+	[0.6, 0.8, 1.9],
+	[9.6, 14.7, 3.7],
+	[43.0, 71.0, 34.0],
+]
+const BOSS_ATK := [
+	[0.35, 0.22, 1.2],
+	[0.6, 0.8, 1.9],
+	[9.6, 14.7, 3.7],
+	[43.0, 71.0, 34.0],
+]
+## Montée des monstres dans le temps de chaque carte (lot H4a) : le héros ne prend plus de niveau pendant la carte (seules
+## les cartes le font grandir) ; PV et dégâts des monstres qui apparaissent × (1 + TIME_RAMP)^minutes, au plus TIME_RAMP_MAX
+## (≈ 7 min de carte : ×1,5 ; la rage garde ses paliers).
+const TIME_RAMP := 0.02
+const TIME_RAMP_MAX := 2.0
+## Défense des monstres de l'Aventure : celle de leur niveau, au plus celle du niveau DEF_LEVEL[carte] (lot H4a). La défense
+## d'un monstre suit ×1,1 par niveau et réduit les coups de 100 / (100 + défense) : au niveau 90 elle dépassait 10 000 et
+## un coup ne faisait plus que 1 % (sonde boss_ttk, R_H4a.md) ; plafonnée, elle reste celle des cartes d'avant les bandes.
+const DEF_LEVEL := [18, 28, 38]
+## PE conseillée de chaque carte (page de la Survie) : PE de l'équipement « correct » de la carte (ses pièces à +5, sonde de
+## R_H4a) rapportée à la PE attendue (GearPower.expected) au niveau de la carte pour le héros ; carte I-1 : l'équipement de
+## départ d'un compte neuf (elle se joue dès le niveau 1).
+const ADVISED_RATIO := [[0.66, 1.35, 1.25], [1.2, 1.17, 1.52], [1.39, 1.6, 1.6], [1.75, 1.74, 1.72]]
+## Rang des gemmes et des coffres du joaillier de l'Aventure : échelle de niveaux de butin [début, fin] de chaque carte
+## (celle d'avant le lot H4a, gardée telle quelle : l'économie des gemmes ne bouge pas avec les bandes). La place du héros
+## dans la bande de la carte choisit le point de l'échelle ; + RunDirector.GEM_EPOCH_LEVELS par époque.
+const GEM_SCALE := [[1, 15], [13, 25], [23, 35]]
+## Modèle d'avant le lot H4a (plafond de niveau 15 / 25 / 35 par carte, monstres ×0,85 / 1,7 / 3,4 / 7 par époque) :
+## SANS EFFET dans le jeu. Gardé pour tools/progression_sim (modèle par défaut, sans --heros), tools/hl_probe (« jeu
+## d'avant ») et le calcul des PV de boss de référence ([member BOSS_HP_MAP]).
+const OLD_CAPS := [15, 25, 35]
+const OLD_MONSTER_MULT := [0.85, 1.7, 3.4, 7.0]
 ## PV des boss de la Survie (passe P11, retour du joueur : « nos dégâts scalent à l'infini, le boss de la 3e carte a des
-## PV ridicules ») : FIXES par carte et par époque, jamais calculés d'après le niveau ou la PE du héros (sinon il
-## suffirait de foncer au boss). PV = BOSS_HP_MAP[carte] × BOSS_HP_EPOCH[époque] (× rangs héroïques, × Menace).
-## Réglés au pilote (tools/boss_ttk.py, R_P11.md) pour qu'une BONNE run de la carte (niveau plafond, cartes, trophées,
-## enclume, trouvailles) le tue en ≈ 1 / 1,5 / 2 min ; une run « rushée » (boss atteint tôt) met 4 à 8 min et se
-## heurte à la rage du boss. Avant : ≈ 40 000 à 120 000 PV partout (le niveau d'Eden du boss), tué en 5-15 s aux cartes 2-3.
+## PV ridicules ») : FIXES par carte et par époque, jamais calculés d'après la PE du héros ni sa progression dans la run
+## (sinon il suffirait de foncer au boss). Lot H4a : ils suivent le NIVEAU du boss (celui du héros borné par la bande + 1,
+## fixe pendant la partie) comme tout monstre (×1,1 par niveau) : [method boss_hp].
+## PV au niveau de référence (plafond d'avant + 1) = BOSS_HP_MAP[carte] × BOSS_HP_EPOCH[époque] × BOSS_HP_ADJ, puis
+## × M′ de la carte / ancien multiplicateur d'époque (même rapport de force que les monstres) × 1,1^(niveau − référence).
+## Réglés au pilote (tools/boss_ttk.py, R_P11.md) pour qu'une BONNE run de la carte le tue en ≈ 1 / 1,5 / 2 min ; une run
+## « rushée » met 4 à 8 min et se heurte à la rage du boss.
 const BOSS_HP_MAP := [80000.0, 370000.0, 1750000.0]
 ## Facteur d'époque des PV du boss : les dégâts d'une bonne run grandissent avec l'équipement du hub de l'époque
 ## (mesurés au pilote, combats longs : ×1 / ×1,7-2,4 / ×3,9-4,9 / ×3,9-6,9 selon la carte).
 const BOSS_HP_EPOCH := [1.0, 2.0, 4.0, 5.5]
+## Réglage par carte des PV des boss (lot H4a, mesuré au pilote : R_H4a.md).
+const BOSS_HP_ADJ := [
+	[1.0, 1.0, 1.0],
+	[1.0, 1.0, 1.0],
+	[1.0, 1.0, 1.0],
+	[1.0, 1.0, 1.0],
+]
 ## Rage du boss (passe P11) : après BOSS_RAGE_AT[carte] secondes dans l'arène, les dégâts du boss suivent les paliers de
 ## la rage de la carte (RunDirector.RAGE_TIERS, une minute par palier : ×1,1, ×2, ×11, ×101). Environ deux fois le
 ## temps d'une bonne run : une run ordinaire passe encore, une run rushée ne finit pas le combat.
 const BOSS_RAGE_AT := [150.0, 180.0, 240.0]
 
 
-## PV fixes du boss de la carte [param stage] de l'époque [param epoch] (sans rang héroïque ni Menace).
-static func boss_hp(epoch: int, stage: int) -> float:
-	return float(BOSS_HP_MAP[clampi(stage, 1, BOSS_HP_MAP.size()) - 1]) * float(BOSS_HP_EPOCH[clampi(epoch, 1, BOSS_HP_EPOCH.size()) - 1])
+## Mesures d'équilibrage seulement (arguments --mult-scale= / --boss-scale= du monde, tools/sim_survie.py --extra) : facteurs
+## sur M′ et sur les PV des boss, pour essayer un réglage sans toucher aux tables. 1 en jeu.
+static var test_mult := 1.0
+static var test_boss := 1.0
+static var test_atk := 1.0
+
+
+## PV fixes du boss de la carte [param stage] de l'époque [param epoch] (sans rang héroïque ni Menace), au niveau
+## [param level] du boss (par défaut : le haut de la bande + 1, héros au sommet de la carte).
+static func boss_hp(epoch: int, stage: int, level := -1) -> float:
+	var e := clampi(epoch, 1, BANDS.size())
+	var s := clampi(stage, 1, 3)
+	var ref := int(OLD_CAPS[s - 1]) + 1
+	var lv := level if level > 0 else int(band(e, s).y) + 1
+	return float(BOSS_HP_MAP[s - 1]) * float(BOSS_HP_EPOCH[e - 1]) * float(BOSS_HP_ADJ[e - 1][s - 1]) * test_boss \
+		* float(MAP_MULT[e - 1][s - 1]) / float(OLD_MONSTER_MULT[e - 1]) * pow(1.1, lv - ref)
+
+
+## Partie d'Aventure en cours (la Survie : ni Survivant, ni Battle royale, qui gardent le socle de la Survie).
+static func adventure() -> bool:
+	return Run.active and Run.survival and not Survivor.active and not Royale.active
+
+
+## Bande de niveau de la carte [param stage] de l'époque [param epoch] : (bas, haut).
+static func band(epoch: int, stage: int) -> Vector2i:
+	var b: Array = BANDS[clampi(epoch, 1, BANDS.size()) - 1][clampi(stage, 1, 3) - 1]
+	return Vector2i(int(b[0]), int(b[1]))
+
+
+## Niveau de la carte pour un héros de niveau [param hero_level] : son niveau borné par la bande (monstres, butin).
+static func map_level(epoch: int, stage: int, hero_level: int) -> int:
+	var b := band(epoch, stage)
+	return clampi(hero_level, b.x, b.y)
+
+
+## PV des monstres de la carte (M′).
+static func map_mult(epoch: int, stage: int) -> float:
+	return float(MAP_MULT[clampi(epoch, 1, MAP_MULT.size()) - 1][clampi(stage, 1, 3) - 1]) * test_mult
+
+
+## Dégâts des monstres (ou du boss, [param boss]) de la carte.
+static func map_atk(epoch: int, stage: int, boss := false) -> float:
+	var t: Array = BOSS_ATK if boss else MAP_ATK
+	return float(t[clampi(epoch, 1, t.size()) - 1][clampi(stage, 1, 3) - 1]) * test_atk
+
+
+## Montée des monstres au temps [param t] (s) de la carte.
+static func time_ramp(t: float) -> float:
+	return minf(pow(1.0 + TIME_RAMP, maxf(t, 0.0) / 60.0), TIME_RAMP_MAX)
+
+
+## Niveau de butin du rang des gemmes ([member GEM_SCALE]) pour un héros de niveau [param hero_level] sur la carte.
+static func gem_scale_level(epoch: int, stage: int, hero_level: int) -> int:
+	var b := band(epoch, stage)
+	var g: Array = GEM_SCALE[clampi(stage, 1, 3) - 1]
+	var t := clampf(float(map_level(epoch, stage, hero_level) - b.x) / float(maxi(b.y - b.x, 1)), 0.0, 1.0)
+	return roundi(lerpf(float(g[0]), float(g[1]), t))
+
+
+## PE conseillée de la carte [param stage] de l'époque [param epoch] pour un héros de niveau [param hero_level].
+static func advised_power(epoch: int, stage: int, hero_level: int) -> int:
+	var r := float(ADVISED_RATIO[clampi(epoch, 1, ADVISED_RATIO.size()) - 1][clampi(stage, 1, 3) - 1])
+	return GearPower.required(map_level(epoch, stage, hero_level), r)
+
+
+## « Niv. 18-33 » : la bande d'une carte en texte court.
+static func band_text(epoch: int, stage: int) -> String:
+	var b := band(epoch, stage)
+	return "Niv. %d-%d" % [b.x, b.y]
 
 
 static func boss_rage_at(stage: int) -> float:
@@ -81,16 +203,14 @@ static func zone(epoch: int, stage: int) -> String:
 	return String(z[clampi(stage, 1, z.size()) - 1])
 
 
-static func cap(stage: int) -> int:
-	return int(CAPS[clampi(stage, 1, CAPS.size()) - 1])
+## Plafond de niveau de la carte d'avant le lot H4a (sans effet dans le jeu : outils de mesure, voir [member OLD_CAPS]).
+static func old_cap(stage: int) -> int:
+	return int(OLD_CAPS[clampi(stage, 1, OLD_CAPS.size()) - 1])
 
 
-static func level_bonus(stage: int) -> int:
-	return int(LEVEL_BONUS[clampi(stage, 1, LEVEL_BONUS.size()) - 1])
-
-
-static func monster_mult(epoch: int) -> float:
-	return float(MONSTER_MULT[clampi(epoch, 1, MONSTER_MULT.size()) - 1])
+## Multiplicateur d'époque des monstres d'avant le lot H4a (sans effet dans le jeu, voir [member OLD_MONSTER_MULT]).
+static func old_monster_mult(epoch: int) -> float:
+	return float(OLD_MONSTER_MULT[clampi(epoch, 1, OLD_MONSTER_MULT.size()) - 1])
 
 
 ## Étoiles d'époque (3 par époque) : ★1 gagner l'époque, ★2 la gagner sans résurrection, ★3 réussir le défi
@@ -184,10 +304,14 @@ static func clear(epoch: int) -> String:
 	return ""
 
 
-## Texte court d'une map : « palier 23 · mythique ».
+## Texte court d'une map : « niveau 23 · mythique » (niveau des pièces de ses coffres : en Aventure, jamais au-dessus du
+## niveau de héros de la partie, lot H4a).
 static func map_text(epoch: int, stage: int) -> String:
 	var m := map_def(epoch, stage)
-	return "palier %d · %s" % [int(m.armor), rarity_name(m)]
+	var lv := int(m.armor)
+	if adventure() and Run.hero_level > 0:
+		lv = mini(lv, Run.hero_level)
+	return "niveau %d · %s" % [lv, rarity_name(m)]
 
 
 static func rarity_name(m: Dictionary) -> String:

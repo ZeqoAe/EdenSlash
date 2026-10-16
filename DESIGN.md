@@ -10,8 +10,9 @@ garde les décisions remplacées pour mémoire. Les chiffres cités renvoient à
 c'est le code qui fait foi. Points d'entrée du code et outils : `CLAUDE.md`, « État du jeu ». Règles opérationnelles du Duel
 (échelles, plafonds, profils « opti ») : `CLAUDE.md`, « Duel (JcJ) ».
 
-Chiffres clés vérifiés dans le code (16/10, 0.1.212) : monstres par époque `Epochs.MONSTER_MULT` ×0,85 / 1,7 / 3,4 / 7 ; boss de
-la Survie `Epochs.BOSS_HP_MAP` 80 000 / 370 000 / 1 750 000 × `BOSS_HP_EPOCH` 1 / 2 / 4 / 5,5, rage du boss `BOSS_RAGE_AT`
+Chiffres clés vérifiés dans le code (16/10, 0.1.212 ; lot H4a) : Aventure au niveau de héros, monstres par carte `Epochs.BANDS`
+(I-1 1-23 … IV-3 80-90) × `Epochs.MAP_MULT` (remplace `MONSTER_MULT`) ; boss de
+la Survie `Epochs.BOSS_HP_MAP` 80 000 / 370 000 / 1 750 000 × `BOSS_HP_EPOCH` 1 / 2 / 4 / 5,5 au niveau de référence, × 1,1 par niveau du boss, rage du boss `BOSS_RAGE_AT`
 2:30 / 3:00 / 4:00 ; rage de la carte `RunDirector.RAGE_TIERS` ×1,1 / 2 / 11 / 101 ; Menace +20 % de PV par cran, plafond 5
 (`Menace.STEP`, `MAX`) ; verrous de PE `GearPower.DIFF_RATIO` 0 / 3,6 / 3,1, `Siege.POWER_RATIO` 0 / 4 / 3,4, `LEGEND_RATIO` 1,8 ;
 insignes de participation `Run.INSIGNIA_BASE` 25 ; plus d'enclume en Survie (passe N2) ; boss hors Survie
@@ -229,15 +230,17 @@ Un niveau **du compte**, de 1 à 90, partagé par les 60 classes ; il ne redesce
   affiché ; `HeroLevel.wear_block`). Vérifié au hub, d'où vient l'équipement de l'Aventure, des Donjons, de la Tour, de la Ruée,
   du Siège et du Duel équipé / Arènes / Gantelet : `Profile.equip` / `equip_offhand` refusent, « Équiper le meilleur » et l'arme
   par défaut ne prennent que des pièces portables, « Appliquer à la famille » ne copie pas une pièce trop haute (la classe garde
-  la sienne). Jamais bloquées : pièces de départ, pièces du Survivant et du Battle royale, trouvailles d'une partie (en Survie
-  jusqu'au lot H4a, qui créera les pièces des coffres au niveau du héros). Duel à l'arme, Ligue, Panthéon : inchangés.
+  la sienne). Jamais bloquées : pièces de départ, pièces du Survivant et du Battle royale, trophées. Depuis le lot H4a le port se
+  vérifie aussi pendant la partie : les coffres de l'Aventure ne donnent jamais de pièce au-dessus du niveau de héros (voir
+  « Aventure au niveau de héros »). Duel à l'arme, Ligue, Panthéon : inchangés.
   - Refus : « Niveau 60 requis · tu es niveau 34 » (bouton de la fiche, message de l'inventaire, carte de l'objet) ; case d'objet
     à fond rouge sombre, icône éteinte, niveau requis en rouge (inventaire, poupée, Fabriquer, coffres).
   - Pièce déjà portée au-dessus du niveau (compte d'avant) : **reste portée**, signalée (« Déjà portée : elle reste »), comptée au
     Registre ; la retirer demande une confirmation (« Tu ne pourras la remettre qu'au niveau 60. »).
   - Fabriquer : permis au-dessus du niveau (préparer la suite), « À porter au niveau 53 · tu es niveau 34 » ; filtre « Portables ».
-- **Pas encore branché** (lots suivants) : stats et monstres au niveau du héros, bandes de niveau des cartes (H4), activités à
-  min(niveau, niveau de l'activité) (H5). Talents et certificats restent à la maîtrise de la classe.
+- **Aventure** (lot H4a) : le héros s'y bat à son niveau de héros, les cartes ont des bandes de niveau (voir « Aventure au niveau
+  de héros », partie B). Pas encore branché : activités à min(niveau, niveau de l'activité) (H5). Talents et certificats restent à
+  la maîtrise de la classe.
 - **Modes scellés** (lot H2, `Modes.sealed()`) : en **Survivant** et en **Battle royale**, le héros ne joue qu'avec sa partie
   (niveau, cartes et pièces de la run). Rien du compte ne s'applique en combat : ni talents (stats et sorts), ni certificats
   (plateau et ses liens, insensibilité aux renversements, cartes de certificat), ni archive, ni aura ; tout le kit de la classe et
@@ -425,13 +428,43 @@ run (dès 10 monstres tués) + 25 pour la 1re carte, 35 par carte suivante et 15
 les premiers niveaux de chaque run montent plus vite (XP ×2 au niveau 1, ×1 au niveau 10) et le début de chaque carte est plus doux
 (monstres à 45 % puis 100 % sur 5 min). Mesures et plafonds : `conception/nuit_15_10/N1_survie_equipement.md`.
 
-**Époques** : une run = 3 maps d'une même époque ; la puissance est normalisée (on repart du
-niveau 1, la puissance d'une pièce suit le niveau du héros, plafonné à chaque map) ; l'époque
-change les pièces d'Eden proposées (modèles, panoplies, raretés) et la difficulté des monstres.
-Battre le boss final d'une époque débloque la suivante. **Ce qui compte dans une pièce** (la normalisation par le
-niveau ne change pas) : sa rareté (×0,85 commune à ×1,32 légendaire sur les stats de base), son jet de qualité, son
+**Époques** : une run = 3 maps d'une même époque ; l'époque change les pièces d'Eden proposées (modèles, panoplies,
+raretés) et la difficulté des monstres. Battre le boss final d'une époque débloque la suivante. Depuis le lot H4a, plus de
+puissance normalisée ni de plafond 15 / 25 / 35 : voir « Aventure au niveau de héros » ci-dessous. **Ce qui compte dans une
+pièce** : son niveau (×1,08 par niveau, jusqu'à 90), sa rareté (×0,85 commune à ×1,32 légendaire sur les stats de base), son jet de qualité, son
 +N du hub (+10 % des stats de base par niveau, ×2 à +10), ses gemmes (valeurs plates suivant le niveau du héros comme
 les pièces : × 0,09 × 1,08^(niveau − 1), passe E6), son enchantement, son passif d'arme et les bonus de panoplie (2 / 4 / 6 pièces).
+
+### Aventure au niveau de héros (lot H4a, conception `conception/progression/NIVEAU_HEROS.md` §1.4, rapport `R_H4a.md`)
+
+- **Deux niveaux** : le héros se bat à son **niveau de héros** (compte, 1 à 90 ; fixé au départ de la partie, `Run.hero_level` :
+  stats de base, puissance des pièces à leur niveau, gemmes) ; le **niveau de run** (`Player.level`, repart de 1, sans plafond
+  par carte) ne donne que des cartes (HUD : orbe « RUN » ; or et prix de la partie le suivent comme avant). Un monstre rapporte
+  au niveau de run ce que vaut un monstre de ce niveau de run (élite ×4, boss ×8), quel que soit son niveau de carte.
+- **Bandes de niveau** (`Epochs.BANDS`) : monstres au niveau de héros (−1 au début de la carte, −0,5 à la rage) borné par la
+  bande de la carte, + palier du camp, +3 en rage ; boss = niveau de la carte pour le héros + 1. Un héros sous la bande affronte
+  le bas de la bande ; au-dessus, il écrase la carte (pas de synchronisation en Aventure).
+
+  | Carte | I-1 | I-2 | I-3 | II-1 | II-2 | II-3 | III-1 | III-2 | III-3 | IV-1 | IV-2 | IV-3 |
+  |---|---|---|---|---|---|---|---|---|---|---|---|---|
+  | Bande | 1-23 | 18-33 | 28-43 | 38-48 | 43-53 | 48-60 | 55-65 | 60-70 | 65-75 | 70-80 | 75-85 | 80-90 |
+
+- **Force des monstres** : PV × `Epochs.MAP_MULT` de la carte (M′, remplace l'ancien multiplicateur par époque), dégâts ×
+  `MAP_ATK` (monstres) ou `BOSS_ATK` (boss), × montée dans le temps de la carte (`Epochs.TIME_RAMP` 2 % par minute, au plus
+  `TIME_RAMP_MAX` ; pas pour le boss). Défense des monstres plafonnée à celle du niveau `DEF_LEVEL` (18 / 28 / 38) : au-delà, ×1,1
+  par niveau annulait les coups du héros. Valeurs et mesures : `R_H4a.md`. `Epochs.OLD_CAPS` / `OLD_MONSTER_MULT` (modèle
+  d'avant) restent pour les outils seulement.
+- **Boss** : PV fixes (voir « Boss : PV fixes ») au niveau du boss : `Epochs.boss_hp(époque, carte, niveau)` = PV de référence
+  (`BOSS_HP_MAP` × `BOSS_HP_EPOCH` × `BOSS_HP_ADJ` × M′ / ancien multiplicateur) × 1,1^(niveau − plafond d'avant − 1). Un compte
+  neuf (niveau 1) trouve sur I-1 un boss de niveau 2.
+- **Coffres de la partie** : une pièce n'est **jamais au-dessus du niveau de héros** (`SlotChests.run_piece`) : sous le palier de
+  la carte, la pièce du palier est ramenée au niveau du héros (même modèle, « niveau 12 · mythique » au titre du coffre ; la
+  vraie pièce reste à l'Armurerie à son niveau). Le port se vérifie donc aussi en partie (`HeroLevel.wear_block`). Butin des
+  autels et coffres de récompense : au plus le niveau de la carte pour le héros (`RunDirector.loot_level`) ; rang des gemmes :
+  l'échelle d'avant (`Epochs.GEM_SCALE`, selon la place du héros dans la bande).
+- **Page de la Survie** : sous l'époque choisie, ses trois cartes avec leur bande (« Niv. 18-33 ») et la **PE conseillée** pour
+  le héros (`Epochs.advised_power` : la PE des pièces de la carte à +5 au niveau de la carte, l'équipement de départ pour I-1),
+  colorée selon la PE du héros (estimation de `DifficultyPanel`), détail en infobulle.
 
 | Époque | Maps (zones) | Armures | Armes | Raretés |
 |---|---|---|---|---|
@@ -504,7 +537,8 @@ victoire ou extraction ; les coffres de forge et du joaillier sont toujours gard
 **Équilibrage global (passe E6, 0.1.182)** — mesures et modèle dans `conception/nuit_15_10/R_E6.md`, simulation
 `res://tools/progression_sim.tscn` (compte neuf de bout en bout avec les vraies formules ; `--probe` : puissance des
 équipements types ; `--mult=…` : essai d'autres écarts d'époque), bornes vérifiées par `tests/test_e6`.
-- **Écart d'époque** (`Epochs.MONSTER_MULT`, PV et dégâts des monstres) : **×0,85 / ×1,7 / ×3,4 / ×7** (avant ×1 / 1,35 / 1,75 / 2,2 ;
+- **Écart d'époque** (remplacé au lot H4a par `Epochs.MAP_MULT`, une valeur par carte, voir « Aventure au niveau de héros » ;
+  `Epochs.OLD_MONSTER_MULT` garde l'ancienne table pour les outils) : **×0,85 / ×1,7 / ×3,4 / ×7** (avant ×1 / 1,35 / 1,75 / 2,2 ;
   époque I adoucie de ×1 à ×0,85 par la passe P5 : un joueur moyen au compte neuf atteint le boss de la carte 1 une run sur deux,
   1re victoire en 5-6 runs).
   En Survie la puissance d'une pièce suit le niveau du héros, mais son +N (×2 à +10), sa rareté, ses gemmes et son
@@ -604,15 +638,16 @@ un niveau corrélé au nôtre, et des PV et des dégâts quand on commence à ê
   maillage pas encore calculé (asynchrone) → le sol suffit ; 8 points refusés → sans le test du chemin ; puis l'ancien tirage.
 - **Signal d'arrivée** : flèche au bord de l'écran (rouge : élite ; jaune : groupe dans le dos), chevron au-dessus du point
   quand il est dans la vue, 2,6 s, sous les cadres du haut et au-dessus de la barre de sorts.
-- **Niveau** : niveau du monstre = max(courbe du temps, niveau du héros + décalage) + palier, plafonné (Epochs.CAPS, +3 en rage) ;
+- **Niveau** : Aventure (lot H4a) : niveau de héros + décalage, borné par la bande de la carte (`Epochs.BANDS`), + palier, +3 en
+  rage ; ailleurs : max(courbe du temps, niveau du héros + décalage) + palier, plafonné par la zone ;
   décalage −1 au début de la carte → −0,5 à l'heure de la rage (avant : −1 tout le temps).
 - **Puissance** (`MonsterScaling`, Survie) : indice d'équipement = PE de l'équipement porté (trouvailles de la carte
   comprises) / PE attendue au niveau du héros (départ 0,68, pièces de la carte à +0 0,94, époque I à +3 1,2, époque I optimisée
   1,9, époque II optimisée 2,4). Bande neutre par époque (`EPOCH_BAND` : I 0,6-0,95, II 1-1,35, III 1,9-2,45, IV 2,2-2,7) ;
   au-dessus, PV × (1 + 0,6 ln(indice / haut)) et dégâts × (1 + 0,35 ln(…)), en dessous de même ; bornes PV ×0,9-1,6, dégâts
   ×0,9-1,4 ; lissé (45 s), seulement pour les monstres qui apparaissent. Cartes, trophées et améliorations d'arme n'y comptent pas.
-- **Empilement** (PV d'un monstre normal) : niveau × époque (`MONSTER_MULT`) × rangs héroïques × montée du début × rôle ×
-  [puissance × Menace × pacte ≤ ×2,6] × rage ; dégâts : niveau × zone × époque × rangs × montée × rôle × [puissance × pacte ≤ ×1,6]
+- **Empilement** (PV d'un monstre normal) : niveau × carte (`MAP_MULT`) × temps (`Epochs.time_ramp`) × rangs héroïques × montée
+  du début × rôle × [puissance × Menace × pacte ≤ ×2,6] × rage ; dégâts : niveau × zone × carte × temps × rangs × montée × rôle × [puissance × pacte ≤ ×1,6]
   × rage. La puissance cède sa place sous ces plafonds, jamais en dessous de ×1 ; la rage (chronomètre) reste hors plafond.
 - **Mesures** : ligne `[spawn]` toutes les 30 s au pilote automatique (`--auto-quit`, `--trace`), résumée par `tools/sim_survie.py` ;
   `--spawn=legacy` rejoue l'ancien spawn ; journal de run : `spawn_species`, `spawn_spread`, `power_hp`, `gear_index`…
@@ -653,6 +688,8 @@ Décision du joueur : **PV FIXES par carte et par époque, démesurés, jamais c
 il suffirait de foncer au boss) ; il faut avoir fait **une bonne run** (niveau, cartes, trophées, enclume, trouvailles) pour le battre.
 
 - **Survie** : PV = `Epochs.BOSS_HP_MAP[carte]` × `Epochs.BOSS_HP_EPOCH[époque]` × rangs héroïques × Menace (P12, ×1 à ×2).
+  **Lot H4a** : la table ci-dessous est la référence d'avant ; les PV suivent maintenant le niveau du boss (niveau de la carte pour
+  le héros + 1, fixe pendant la partie, jamais la PE ni le niveau de run) : voir « Aventure au niveau de héros ».
 
   | | Carte 1 | Carte 2 | Carte 3 |
   |---|---|---|---|
@@ -682,8 +719,8 @@ il suffirait de foncer au boss) ; il faut avoir fait **une bonne run** (niveau, 
 
 ## Zones et biomes (progression)
 
-> État 16/10 : en Survie, les zones sont celles des époques (`Epochs.LIST`), le héros part niveau 1 avec un plafond par carte
-> (`Epochs.CAPS` 15 / 25 / 35) et une époque gagnée ouvre la suivante ; la table des zones et des boss d'origine reste juste.
+> État 16/10 : en Survie, les zones sont celles des époques (`Epochs.LIST`), le héros joue à son niveau de héros, chaque carte a
+> sa bande de niveau (`Epochs.BANDS`, lot H4a) et une époque gagnée ouvre la suivante ; la table des zones et des boss d'origine reste juste.
 
 Données : `tools/build_biomes.py` lit une map d'Eden par biome (textures du sol, décors les plus
 fréquents, monstres des camps, élites, boss) ; le terrain reste généré.
@@ -806,7 +843,7 @@ polir aux cristaux, percer, sertir, enchanter, fusionner des gemmes.
 
 ## Plafond de niveau par zone
 
-> État 16/10 : en Survie, plafond par carte d'époque (`Epochs.CAPS`) ; `RunDirector.ZONE_MAX_LEVEL` ne concerne plus que Limestone.
+> État 16/10 : en Survie, bande de niveau par carte (`Epochs.BANDS`, lot H4a, plus de plafond) ; `RunDirector.ZONE_MAX_LEVEL` ne concerne plus que l'ancienne run.
 
 - Limestone (map 1) : butin au niveau 15 maximum, monstres plafonnés au niveau 15 (18 en rage
   et pour le boss). Les maps suivantes prendront le relais (`RunDirector.ZONE_MAX_LEVEL`).
@@ -1268,6 +1305,10 @@ chacune avec son rôle :
   puissance (« plevel ») est le niveau de run où il est tombé : stats = référence du jeu ×
   rapport de l'objet dans Eden × rareté. Au-delà du niveau 40 d'Eden (où les objets courants
   s'arrêtent), le butin courant prend un modèle courant du bon niveau.
+- **Puissance et niveau de héros** (lots H3, H4a) : une pièce se porte si son niveau ≤ niveau de héros, et en Aventure elle compte
+  à son niveau (`Items.power_level` = min(niveau de héros, niveau de la pièce), jusqu'à 90 : plus de plafond 15 / 25 / 35). Une
+  pièce sous le niveau du héros pèse donc moins d'elle-même (retard d'équipement) ; les pièces de départ valent min(niveau de
+  héros, leur niveau). Les coffres de l'Aventure ne donnent rien au-dessus du niveau de héros (voir « Aventure au niveau de héros »).
 - **6 raretés** : commun, spécial, rare, épique (jets aléatoires : qualité 70-90 %, 75-95 %,
   80-100 %, 85-100 %), **mythique** (toujours 100 %) et **légendaire** (101-120 %). Mythiques et
   légendaires : seulement sur les boss (garanti, 30 % de légendaire, 50 % si enragé) ou par

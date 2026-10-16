@@ -26,7 +26,10 @@ const COMBO_RESET_MS := 3000
 var combo_damage := 0.0
 var combo_best := 0.0
 var _combo_last := 0
-var hero_level := 0  # niveau du héros de la run (puissance des objets : Items.power_level)
+## Niveau de combat de la partie (stats de base du héros, puissance des pièces : Items.power_level). Aventure (lot H4a) :
+## le niveau de héros (HeroLevel), fixe pendant la partie ; ailleurs, le niveau de la partie (Player.level) ou celui que
+## l'activité impose. Le niveau de run de l'Aventure (cartes seulement) est Player.level.
+var hero_level := 0
 var banned: Array = []  # cartes bannies pour la run (ids)
 var kept: Array = []  # cartes gardées pour le prochain choix : [{type, id, tier}]
 var bans_used := 0
@@ -182,6 +185,7 @@ func start_survival(cid: String, ep: int, rank := 0) -> void:
 	epoch = clampi(ep, 1, Epochs.count())
 	zone_id = Epochs.zone(epoch, 1)
 	start_zone = zone_id
+	hero_level = HeroLevel.level()  # lot H4a : on joue au niveau de héros (l'XP de la partie n'est versée qu'au bilan)
 	changed.emit()
 
 
@@ -463,7 +467,7 @@ func plan_offer(ep: int, st: int, n := PLAN_CHOICES) -> Array:
 	var m := Epochs.map_def(ep, st)
 	var out: Array = []
 	for e in p.slice(0, n):
-		var it := Items.from_template(e, Epochs.cap(st), int(m.rarity))
+		var it := Items.from_template(e, maxi(int(e.get("level", 1)), 1), int(m.rarity))  # le plan : la pièce à son vrai niveau
 		it["upgrade"] = 0
 		if m.get("awakened", false) and GameData.is_awakened(e):
 			it["awakened"] = true

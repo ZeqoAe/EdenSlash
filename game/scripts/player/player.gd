@@ -293,9 +293,18 @@ func kit_skill_def(id: int) -> Dictionary:
 
 
 # --- statistiques -------------------------------------------------------------------
+## Niveau de combat (stats de base) : en Aventure, le niveau de héros de la partie (lot H4a : `Run.hero_level`, fixe) ;
+## ailleurs, le niveau de la partie. En Aventure, [member level] est le niveau de run : il ne donne que des cartes.
+func stat_level() -> int:
+	if not foe and Epochs.adventure() and Run.hero_level > 0:
+		return Run.hero_level
+	return level
+
+
 func recalc_stats() -> void:
-	if Run.active and not foe:
-		Run.hero_level = level  # puissance des objets portés (suit le niveau, plafonnée)
+	if Run.active and not foe and not Epochs.adventure():
+		Run.hero_level = level  # puissance des objets portés (suit le niveau de la partie)
+	var slv := stat_level()
 	var own := foe or built  # héros ennemi ou profil type : ses propres stats
 	var bare := _bare()  # duel à l'arme : ni pièces ni bonus de méta, seulement l'arme de la classe
 	if hand_off and offhand_item().is_empty():
@@ -326,16 +335,16 @@ func recalc_stats() -> void:
 	var buff_pct := {"str": 0.3 if has_status("might") else 0.0, "agi": 0.3 if has_status("swift") else 0.0,
 		"int": 0.3 if has_status("grace") else 0.0, "wis": 0.3 if has_status("grace") else 0.0, "lck": 0.0}
 	for a in Items.ATTRIBUTES:
-		attrs[a] = (float(ab.get(a, 6.0)) + float(ag.get(a, 1.0)) * (level - 1) + eq.get(a, 0.0)) * (1.0 + ps.get(a + "_pct", 0.0) + float(buff_pct[a]))
+		attrs[a] = (float(ab.get(a, 6.0)) + float(ag.get(a, 1.0)) * (slv - 1) + eq.get(a, 0.0)) * (1.0 + ps.get(a + "_pct", 0.0) + float(buff_pct[a]))
 	var s_str: float = attrs.str
 	var s_agi: float = attrs.agi
 	var s_int: float = attrs.int
 	var s_wis: float = attrs.wis
 	var s_lck: float = attrs.lck
 	var hp_buff := (0.2 if has_status("survival") else 0.0) + (0.15 if has_status("vitality") else 0.0)
-	max_hp = maxf(1.0, (GameData.player_max_hp(level) * float(base.get("hp", 1.0)) + s_str * 2.0 + s_wis * 1.5) * (1.0 + ps.get("hp_pct", 0.0) + eq.get("hp_pct", 0.0) + hp_buff) + eq.get("hp", 0.0))
-	atk = (GameData.player_atk(level) * float(base.get("atk", 1.0)) + eq.get("patk", 0.0) + s_str * 0.6) * (1.0 + ps.get("atk_pct", 0.0))
-	matk = (GameData.player_atk(level) * float(base.get("matk", 0.5)) + eq.get("matk", 0.0) + s_int * 0.6) * (1.0 + ps.get("atk_pct", 0.0) + ps.get("matk_pct", 0.0))
+	max_hp = maxf(1.0, (GameData.player_max_hp(slv) * float(base.get("hp", 1.0)) + s_str * 2.0 + s_wis * 1.5) * (1.0 + ps.get("hp_pct", 0.0) + eq.get("hp_pct", 0.0) + hp_buff) + eq.get("hp", 0.0))
+	atk = (GameData.player_atk(slv) * float(base.get("atk", 1.0)) + eq.get("patk", 0.0) + s_str * 0.6) * (1.0 + ps.get("atk_pct", 0.0))
+	matk = (GameData.player_atk(slv) * float(base.get("matk", 0.5)) + eq.get("matk", 0.0) + s_int * 0.6) * (1.0 + ps.get("atk_pct", 0.0) + ps.get("matk_pct", 0.0))
 	if has_status("marduk"):
 		atk *= 1.3
 		matk *= 1.3
@@ -347,7 +356,7 @@ func recalc_stats() -> void:
 		var k := 1.3 if has_status("marduk") else 1.0
 		basic_atk = maxf(0.0, atk + float(d.patk) * (1.0 + ps.get("atk_pct", 0.0)) * k)
 		basic_matk = maxf(0.0, matk + float(d.matk) * (1.0 + ps.get("atk_pct", 0.0) + ps.get("matk_pct", 0.0)) * k)
-	defense = (4.0 + level * 2.0 + eq.get("def", 0.0) + float(base.get("def", 0.0)) + s_str * 0.25) * (1.0 + ps.get("def_pct", 0.0))
+	defense = (4.0 + slv * 2.0 + eq.get("def", 0.0) + float(base.get("def", 0.0)) + s_str * 0.25) * (1.0 + ps.get("def_pct", 0.0))
 	crit = 0.05 + float(base.get("crit", 0.0)) + eq.get("crit", 0.0) + ps.get("crit", 0.0) + s_lck * 0.0012 + s_agi * 0.0004 + (0.25 if has_status("keen") else 0.0)
 	mcrit = 0.05 + eq.get("mcrit", 0.0) + ps.get("crit", 0.0) + ps.get("mcrit", 0.0) + s_lck * 0.0012 + s_wis * 0.0004 + (0.25 if has_status("keen") else 0.0)
 	crit_dmg = 0.5 + eq.get("crit_dmg", 0.0) + ps.get("crit_dmg", 0.0) + s_lck * 0.0015
@@ -396,7 +405,7 @@ func recalc_stats() -> void:
 func stat_sheet() -> Array:
 	var pc := func(v: float) -> String: return "%d %%" % roundi(v * 100)
 	var rows := [
-		["Niveau", str(level)], ["PV", "%d / %d" % [hp, max_hp]],
+		["Niveau", str(stat_level())], ["PV", "%d / %d" % [hp, max_hp]],
 		["— Attributs —", ""],
 		["Force", str(roundi(attrs.get("str", 0.0)))], ["Agilité", str(roundi(attrs.get("agi", 0.0)))],
 		["Intelligence", str(roundi(attrs.get("int", 0.0)))], ["Sagesse", str(roundi(attrs.get("wis", 0.0)))],
@@ -453,8 +462,8 @@ func gain_xp(amount: int) -> void:
 	if Run.active and Run.survival and not foe and not Royale.active:
 		amount = roundi(float(amount) * (Survivor.xp_mult(level) if Survivor.active else Epochs.xp_boost(level)))
 	xp += amount
-	# Survie : niveau plafonné sur chaque map (Epochs.CAPS), l'expérience en trop attend la suivante
-	var cap := Epochs.cap(Run.stage) if Run.active and Run.survival and not foe else 9999
+	# Aventure (lot H4a) : niveau de run sans plafond (cartes seulement) ; Survivant : son plafond par palier
+	var cap := 9999
 	if Survivor.active and not foe:
 		cap = Survivor.level_cap(cap)
 	if Royale.active and not foe:
@@ -465,7 +474,8 @@ func gain_xp(amount: int) -> void:
 		xp -= GameData.xp_to_next(level)
 		level += 1
 		Run.max_level = maxi(Run.max_level, level)
-		Run.hero_level = level
+		if not Epochs.adventure():
+			Run.hero_level = level
 		recalc_stats()
 		hp = max_hp
 		health_changed.emit(hp, max_hp)

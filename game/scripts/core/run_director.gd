@@ -488,32 +488,52 @@ func _interact(it: Interactable) -> void:
 
 # --- monstres --------------------------------------------------------------------------
 ## Niveau des monstres : monte avec le temps, +3 en rage, +palier du camp.
+## Aventure (lot H4a) : le niveau de héros + décalage (MonsterScaling), borné par la bande de la carte (Epochs.BANDS),
+## + palier du camp, +3 en rage ; la montée dans le temps passe par les PV et dégâts (Epochs.time_ramp).
 func _monster_level(tier: int) -> int:
 	if sv and sv.monster_level(tier) > 0:
 		return sv.monster_level(tier)  # Survivant : courbe par minute (S4)
+	var offset := spawner.level_offset() if spawner else -1.0  # niveau du héros + décalage (MonsterScaling)
+	var cap := max_level() + (RAGE_LEVEL_BONUS if state in ["rage", "boss"] else 0)
+	if Epochs.adventure():
+		var b := Epochs.band(Run.epoch, Run.stage)
+		var lv := clampi(roundi(float(Run.hero_level) + offset), b.x, b.y) + tier + (RAGE_LEVEL_BONUS if state == "rage" else 0)
+		return clampi(lv, 1, cap)
 	# les zones suivantes : monstres de plus haut niveau (+1 par palier de zone en plus)
 	var bonus := float(zone.get("level_bonus", 0))
 	var tier_extra := float(GameData.zone_index(String(zone.get("id", "")))) * 0.5
-	if Run.survival:
-		bonus = float(Epochs.level_bonus(Run.stage))  # puissance normalisée : la map, pas la zone
-		tier_extra = 0.0
 	var base := 1.0 + bonus + time / 60.0 * 0.9 + (float(RAGE_LEVEL_BONUS) if state == "rage" else 0.0)
-	var cap := max_level() + (RAGE_LEVEL_BONUS if state in ["rage", "boss"] else 0)
-	var offset := spawner.level_offset() if spawner else -1.0  # niveau du héros + décalage (MonsterScaling)
 	return clampi(roundi(maxf(base, player.level + offset + tier_extra) + tier), 1, cap)
 
 
-## Niveau maximal du butin et des monstres (hors rage) de la zone en cours.
+## Niveau du boss de la carte : un de plus que les monstres (Aventure : le niveau de la carte pour le héros + 1).
+func _boss_level() -> int:
+	if Epochs.adventure():
+		return card_level() + 1
+	return mini(maxi(player.level + 1, _monster_level(2)), max_level() + RAGE_LEVEL_BONUS)
+
+
+## Aventure (lot H4a) : niveau de la carte pour le héros (son niveau borné par la bande) ; ailleurs, le niveau de la partie.
+func card_level() -> int:
+	if Epochs.adventure():
+		return Epochs.map_level(Run.epoch, Run.stage, Run.hero_level)
+	return player.level if player else 1
+
+
+## Niveau maximal du butin et des monstres (hors rage) de la zone en cours (Aventure : le haut de la bande de la carte).
 func max_level() -> int:
 	if sv and sv.max_level() > 0:
 		return sv.max_level()  # Survivant : 90 au plus (S4)
-	if Run.survival:
-		return Epochs.cap(Run.stage)
+	if Epochs.adventure():
+		return Epochs.band(Run.epoch, Run.stage).y
 	return int(zone.get("max_level", ZONE_MAX_LEVEL.get(String(zone.get("id", "")), 30)))
 
 
-## Niveau d'un objet donné dans cette zone (plafonné).
+## Niveau d'un objet donné dans cette zone (plafonné). Aventure : jamais au-dessus du niveau de la carte ni du niveau de
+## héros (lot H4a : ce que rapporte la carte se porte).
 func loot_level(level: int) -> int:
+	if Epochs.adventure():
+		return clampi(level, 1, maxi(mini(card_level(), Run.hero_level), 1))
 	return clampi(level, 1, max_level())
 
 
@@ -534,7 +554,10 @@ const GEM_EPOCH_LEVELS := 8
 
 
 ## Niveau qui fixe le rang des gemmes et des coffres du joaillier : le niveau du moment, plus un rang par époque.
+## Aventure (lot H4a) : l'échelle d'avant les bandes (Epochs.GEM_SCALE, au point de la bande où est le héros).
 func gem_level(level: int) -> int:
+	if Epochs.adventure():
+		return Epochs.gem_scale_level(Run.epoch, Run.stage, Run.hero_level) + GEM_EPOCH_LEVELS * (Run.epoch - 1)
 	return loot_level(level) + (GEM_EPOCH_LEVELS * (Run.epoch - 1) if Run.survival else 0)
 
 
@@ -685,10 +708,19 @@ func _spawn_monster(id: int, pos: Vector3, level: int, boss := false, into: Mons
 	if zi >= 0 and zi < ZONE_DAMAGE.size() and not own:
 		m.atk *= float(ZONE_DAMAGE[zi])
 	if Run.survival and not own:
-		var em := Epochs.monster_mult(Run.epoch)  # époques suivantes : monstres plus coriaces
-		m.max_hp *= em * float(Modifiers.apply("mob_hp", 1.0, ModeRules.modifiers)) * (1.0 + Epochs.HEROIC_HP * Run.heroic_rank)
+		# PV × M′ de la carte, dégâts × MAP_ATK de la carte (lot H4a), les deux × montée dans le temps de la carte (pas pour le
+		# boss : PV fixes, Epochs.boss_hp)
+		var ramp := 1.0 if boss else Epochs.time_ramp(time)
+		m.max_hp *= Epochs.map_mult(Run.epoch, Run.stage) * ramp * float(Modifiers.apply("mob_hp", 1.0, ModeRules.modifiers)) * (1.0 + Epochs.HEROIC_HP * Run.heroic_rank)
 		m.hp = m.max_hp
-		m.atk *= em * (1.0 + Epochs.HEROIC_ATK * Run.heroic_rank)
+		m.atk *= Epochs.map_atk(Run.epoch, Run.stage, boss) * ramp * (1.0 + Epochs.HEROIC_ATK * Run.heroic_rank)
+		if Epochs.adventure():
+			# défense plafonnée (Epochs.DEF_LEVEL) : à haut niveau, ×1,1 par niveau annulait les coups du héros
+			var dl := mini(m.level, int(Epochs.DEF_LEVEL[clampi(Run.stage, 1, 3) - 1]))
+			m.defense = minf(m.defense, float(m.data.get("def", 0)) * pow(1.1, dl - int(m.data.get("level", dl))))
+			# niveau de run (cartes) : un monstre vaut ce que vaut un monstre du niveau de run (élite ×4, boss ×8, géant…), quel
+			# que soit son niveau de carte (lot H4a : le besoin reste KILLS_PER_LEVEL + 2,5 × niveau, en monstres)
+			m.xp_reward = maxi(1, roundi(float(m.xp_reward) * float(GameData.monster_xp(player.level)) / float(maxi(GameData.monster_xp(m.level), 1))))
 	if state == "explore" and not own:
 		# montée en puissance sur les premières minutes de chaque carte : le joueur doit
 		# pouvoir se mettre en place avant que ça devienne punitif
@@ -932,13 +964,13 @@ func _enter_arena() -> void:
 	var boss_id := int(zone.dungeon.boss)
 	var c := Vector3(map.size * 0.5, 0, map.size * 0.5)
 	c.y = map.height_at(c.x, c.z)
-	_boss = _spawn_monster(boss_id, c, mini(maxi(player.level + 1, _monster_level(2)), max_level() + RAGE_LEVEL_BONUS), true)
+	_boss = _spawn_monster(boss_id, c, _boss_level(), true)
 	_boss.display_name = "<Boss> " + _boss.display_name
 	_boss_time = 0.0
 	_boss_rage = 0
 	if Run.survival:
 		# PV fixes par carte et par époque (passe P11) ; la Menace s'y applique ensuite (Menace.apply, en différé)
-		_boss.max_hp = Epochs.boss_hp(Run.epoch, Run.stage) * float(Modifiers.apply("mob_hp", 1.0, ModeRules.modifiers)) \
+		_boss.max_hp = Epochs.boss_hp(Run.epoch, Run.stage, _boss.level) * float(Modifiers.apply("mob_hp", 1.0, ModeRules.modifiers)) \
 			* (1.0 + Epochs.HEROIC_HP * Run.heroic_rank)
 		_boss.hp = _boss.max_hp
 	if sv:

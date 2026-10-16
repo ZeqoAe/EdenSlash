@@ -131,6 +131,7 @@ func _test_world() -> void:
 	# arme principale : toujours celle de la classe
 	check("arme principale : type de la classe", String(player.auto_spec().wtype) == Items.default_weapon_type(Run.class_id))
 	var foreign := Items.generate(1, 0.0, "weapon", Run.class_id, 0, "cannon" if Run.weapon_type() != "cannon" else "bow")
+	foreign["level"] = 1  # lot H4a : le port se vérifie aussi en partie ; une pièce de niveau 1 se porte toujours
 	Profile.inventory.append(foreign)
 	Profile.equip(foreign)
 	check("arme d'un autre type : équipée en secondaire", is_same(Profile.equipped.get("offhand"), foreign) and Profile.can_be_main(Profile.equipped.weapon))

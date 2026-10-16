@@ -4,9 +4,9 @@ extends RefCounted
 ## leur donner des PV et des dégâts quand on commence à être stuffé : je sens que je peux rouler sur le contenu »).
 ## Monstres normaux et élites seulement : les boss gardent leurs PV fixes (passe P11, Epochs.boss_hp).
 ##
-## 1. Niveau : niveau du monstre = max(courbe du temps, niveau du héros + décalage) + palier (élite, camp), plafonné
-##    comme le butin (Epochs.CAPS, +3 en rage). Le décalage va de LEVEL_OFFSET[0] au début de la carte à
-##    LEVEL_OFFSET[1] à l'heure de la rage : un héros qui monte vite trouve des monstres à sa hauteur.
+## 1. Niveau : Aventure (lot H4a) : niveau de héros + décalage, borné par la bande de la carte (Epochs.BANDS), + palier
+##    (élite, camp), +3 en rage ; ailleurs : max(courbe du temps, niveau du héros + décalage) + palier, plafonné par la
+##    zone. Le décalage va de LEVEL_OFFSET[0] au début de la carte à LEVEL_OFFSET[1] à l'heure de la rage.
 ## 2. Puissance : l'indice d'équipement du héros (gear_index : PE de l'équipement porté, trouvailles de la carte
 ##    comprises, rapportée à la PE attendue au niveau du héros : un nombre sans niveau, ≈ note moyenne / 10)
 ##    est comparé à la bande pour laquelle l'époque est réglée (EPOCH_BAND). Dans la bande : rien ne change (l'équipement
@@ -16,10 +16,10 @@ extends RefCounted
 ##    progression attendue de la run (courbe du temps, bâtir son jeu doit payer). La valeur suivie est lissée
 ##    (SMOOTH_TIME) et ne s'applique qu'aux monstres qui apparaissent : jamais de saut.
 ##
-## Empilement des PV d'un monstre normal (Survie) : niveau (×1,1 par niveau) × époque (Epochs.MONSTER_MULT) × rangs
-## héroïques × montée du début de carte (EARLY_EASE) × rôle (SpawnDirector.ROLES) × [puissance × Menace × pacte,
-## plafonné à STACK_HP_CAP] × rage (paliers voulus démesurés : c'est un chronomètre, hors plafond).
-## Dégâts : niveau × zone (ZONE_DAMAGE) × époque × rangs × montée × rôle × [puissance × pacte ≤ STACK_ATK_CAP] × rage.
+## Empilement des PV d'un monstre normal (Survie) : niveau (×1,1 par niveau) × carte (Epochs.MAP_MULT) × montée dans le
+## temps (Epochs.time_ramp) × rangs héroïques × montée du début de carte (EARLY_EASE) × rôle (SpawnDirector.ROLES) ×
+## [puissance × Menace × pacte, plafonné à STACK_HP_CAP] × rage (paliers voulus démesurés : c'est un chronomètre).
+## Dégâts : niveau × zone (ZONE_DAMAGE) × carte × temps × rangs × montée × rôle × [puissance × pacte ≤ STACK_ATK_CAP] × rage.
 
 const LEVEL_OFFSET := [-1.0, -0.5]  # niveau du monstre - niveau du héros : début de carte, heure de la rage
 const HP_RANGE := [0.9, 1.6]

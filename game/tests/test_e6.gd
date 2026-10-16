@@ -152,9 +152,17 @@ func _test_gems() -> void:
 
 
 func _test_epochs() -> void:
-	var m: Array = Epochs.MONSTER_MULT
-	check("monstres : ×0,85 à l'époque I (adoucie, passe P5), de plus en plus forts", float(m[0]) <= 1.0 and float(m[0]) >= 0.8 and float(m[1]) > 1.0 and float(m[2]) > float(m[1]) and float(m[3]) > float(m[2]))
-	check("époque IV : ≥ ×5 (un équipement complet est attendu)", float(m[3]) >= 5.0)
+	# lot H4a : M′ par carte (Epochs.MAP_MULT) à la place du multiplicateur par époque ; la plus faible carte de chaque époque
+	# reste au-dessus de la plus forte de l'époque d'avant (l'équipement de la précédente bien monté est attendu)
+	var lo := []
+	var hi := []
+	for ep in range(1, 5):
+		var row: Array = Epochs.MAP_MULT[ep - 1]
+		lo.append(row.min())
+		hi.append(row.max())
+	check("monstres : époque I ≤ ×1 (adoucie, passes P5 et H4a), de plus en plus forts d'une époque à l'autre (%s)" % str(Epochs.MAP_MULT),
+		float(hi[0]) <= 1.0 and float(lo[1]) > float(hi[0]) and float(lo[2]) > float(hi[1]) and float(lo[3]) > float(hi[2]))
+	check("époque IV : bien plus forte que l'époque III (un équipement complet est attendu)", float(lo[3]) >= 5.0 * float(lo[2]))
 
 
 ## Pas de boucle insignes → cristaux : une pièce rachetable à l'Armurerie ne se démonte que pour ses améliorations.
@@ -304,6 +312,12 @@ func _test_h7_heros() -> void:
 	sim.refonte = true
 	sim.plans_by_boss = true
 	sim.hubvalue = true
+	# M′ du document (§1.4) : le jeu a depuis le lot H4a son propre Epochs.MAP_MULT, mesuré au pilote (R_H4a.md)
+	var doc_mult: Array = []
+	for ep in range(1, 5):
+		for k in range(1, 4):
+			doc_mult.append(float(Sim.HERO_PROBE_MULT[ep - 1][k - 1]) * float(Sim.HERO_EPOCH_FACTOR[ep - 1]))
+	sim.map_mult_override = doc_mult
 	add_child(sim)
 	var res: Dictionary = sim.simulate(12, "moyen", 50.0, 1) if full else sim.simulate(6, "moyen", 45.0, 11)
 	var e1: Dictionary = sim.milestone(res, "epoch_1")

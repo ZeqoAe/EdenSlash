@@ -1,6 +1,6 @@
 extends Node
 ## Passe P11 (conception/nuit_15_10/R_P11.md) : boss de la Survie à PV FIXES par carte et par époque (jamais d'après
-## le niveau ou la PE du héros), rage du boss (ses coups montent chaque minute après Epochs.BOSS_RAGE_AT), et temps
+## le niveau de run ou la PE du héros ; lot H4a : au niveau du boss, celui de la carte pour le héros + 1), rage du boss (ses coups montent chaque minute après Epochs.BOSS_RAGE_AT), et temps
 ## pour tuer mesuré par la sonde res://tools/boss_ttk.tscn : une bonne run tue le boss de la carte 1 en 30 s à 2 min,
 ## une run rushée n'a pas fini le boss de la carte 2 au début de sa rage.
 ## godot --headless --path game res://tests/test_p11.tscn [-- --no-probe]  (la sonde lance 2 combats, ≈ 1 min)
@@ -36,11 +36,12 @@ func _test_table() -> void:
 	var ok := true
 	for e in range(1, 5):
 		for k in range(1, 4):
-			if k > 1 and Epochs.boss_hp(e, k) <= Epochs.boss_hp(e, k - 1):
+			# lot H4a : M′ par carte (creux des pièces éveillées de III-3 / IV-3) : la 3e carte reste au-dessus de la 1re
+			if k == 3 and Epochs.boss_hp(e, k) <= Epochs.boss_hp(e, 1):
 				ok = false
 			if e > 1 and Epochs.boss_hp(e, k) <= Epochs.boss_hp(e - 1, k):
 				ok = false
-	check("PV des boss croissants par carte et par époque (%s)" % str(Epochs.BOSS_HP_MAP), ok)
+	check("PV des boss croissants d'une époque à l'autre, 3e carte au-dessus de la 1re (%s)" % str(Epochs.BOSS_HP_MAP), ok)
 	check("carte 2 ≥ 4 × carte 1 et carte 3 ≥ 4 × carte 2 (dégâts du héros ×4 et ×3 d'une carte à l'autre, mesurés)",
 		Epochs.boss_hp(1, 2) >= 4.0 * Epochs.boss_hp(1, 1) and Epochs.boss_hp(1, 3) >= 4.0 * Epochs.boss_hp(1, 2))
 	var rage_ok := true
@@ -61,15 +62,17 @@ func _test_fixed_hp() -> void:
 	d.debug_enter_dungeon()
 	await get_tree().physics_frame
 	var hp_low := d._boss.max_hp
-	check("boss de la carte 2 (époque %d) au niveau 3 : %.0f PV = table (%.0f)" % [Run.epoch, hp_low, Epochs.boss_hp(Run.epoch, 2)],
-		is_equal_approx(hp_low, Epochs.boss_hp(Run.epoch, 2) * (1.0 + Epochs.HEROIC_HP * Run.heroic_rank)))
+	# lot H4a : PV fixés par le niveau du boss (niveau de héros borné par la bande + 1), jamais par le niveau de run ni la PE
+	var table := Epochs.boss_hp(Run.epoch, 2, Epochs.map_level(Run.epoch, 2, Run.hero_level) + 1)
+	check("boss de la carte 2 (époque %d), héros %d, run niveau 3 : %.0f PV = table (%.0f)" % [Run.epoch, Run.hero_level, hp_low, table],
+		is_equal_approx(hp_low, table * (1.0 + Epochs.HEROIC_HP * Run.heroic_rank)))
 	d.state = "explore"
 	p.level = 35
 	Profile.install_gear(StarterGear.scenario("4.3.10.4", Run.class_id))
 	p.recalc_stats()
 	d.debug_enter_dungeon()
 	await get_tree().physics_frame
-	check("niveau 35 et équipement d'époque IV : mêmes PV (%.0f)" % d._boss.max_hp, is_equal_approx(d._boss.max_hp, hp_low))
+	check("run niveau 35 et équipement d'époque IV : mêmes PV (%.0f)" % d._boss.max_hp, is_equal_approx(d._boss.max_hp, hp_low))
 
 
 ## Rage du boss : rien avant BOSS_RAGE_AT, puis ×1,1, ×2, ×11 sur ses dégâts (pas ses PV), une minute par palier.

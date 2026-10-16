@@ -84,9 +84,11 @@ dans `Compass` si elle change la quête + `test_nav_screens`. Les activités « 
 Épreuves de maîtrise : « Bientôt » (pas de moteur de leçons). Zone d'entraînement : `core/training.gd`.
 
 ### Survie (mode principal)
-- Une run = 3 cartes d'une **époque** (`core/epochs.gd` : `LIST` zones / niveaux des pièces / raretés, plafonds de niveau `CAPS`
-  15 / 25 / 35, monstres `MONSTER_MULT` ×0,85 / 1,7 / 3,4 / 7, rangs héroïques 1-10 après l'époque IV, étoiles d'époque).
-  Lancement `Run.start_survival`, déroulé `core/run_director.gd`, monde `core/world.gd`, carte `ProcMap`.
+- Une run = 3 cartes d'une **époque** (`core/epochs.gd` : `LIST` zones / niveaux des pièces / raretés, rangs héroïques 1-10 après
+  l'époque IV, étoiles d'époque). Lancement `Run.start_survival`, déroulé `core/run_director.gd`, monde `core/world.gd`, carte `ProcMap`.
+- **Au niveau de héros** (lot H4a, `R_H4a.md`) : `Run.hero_level` = niveau de héros fixé au départ (stats `Player.stat_level`, pièces à
+  leur niveau) ; `Player.level` = niveau de run (cartes seulement, sans plafond) ; bandes `Epochs.BANDS`, `MAP_MULT`, `time_ramp`,
+  `boss_hp(époque, carte, niveau)` ; coffres jamais au-dessus du niveau (`SlotChests.run_piece`). Mesures : `sim_survie.py --hero-level --stage`.
 - **Part avec l'équipement du hub** (décision du joueur du 15/10, N1, 0.1.170) : `Profile.begin_run` copie le préréglage actif et
   prend un instantané (`_hub_snapshot`) que `Profile.end_run_survival` restaure ; les trouvailles ne valent que la run.
   Compte neuf : `core/starter_gear.gd`. Détail : `conception/nuit_15_10/N1_survie_equipement.md`.
@@ -101,7 +103,7 @@ dans `Compass` si elle change la quête + `test_nav_screens`. Les activités « 
   d'équipement `core/monster_scaling.gd`, rage par paliers `RunDirector.RAGE_TIERS` (×1,1 / 2 / 11 / 101 par minute),
   début doux `EARLY_EASE` / `EARLY_RAMP`. Pacte, géants et **Menace** (`core/menace.gd`, +20 % de PV par cran, plafond 5,
   `world/giant_altar.gd`, `ai/giant_monster.gd`).
-- **Boss à PV fixes**, jamais d'après le héros : `Epochs.boss_hp` (`BOSS_HP_MAP` × `BOSS_HP_EPOCH`) et rage du boss
+- **Boss à PV fixes**, jamais d'après la PE ni le niveau de run : `Epochs.boss_hp` (`BOSS_HP_MAP` × `BOSS_HP_EPOCH`, × 1,1 par niveau du boss) et rage du boss
   `Epochs.BOSS_RAGE_AT` (2:30 / 3:00 / 4:00) ; mécaniques `ai/boss_brain.gd`.
 - Mode farm façon Megabonk : objets à casser `world/breakables.gd`, sites, plateaux, autels (fortune `core/fortune.gd`).
   Vues de la carte : `res://tools/map_shots.tscn -- <graine> [zone]` ; test `tests/test_farm.tscn`.

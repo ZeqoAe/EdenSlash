@@ -177,7 +177,7 @@ func _test_exempt() -> void:
 	_set_level(5)
 	var high := _piece("ring", 80)
 	Profile.in_run = true
-	check("pendant une run : trouvailles jamais bloquées (lot H4a)", HeroLevel.wear_block(high) == 0)
+	check("pendant une partie aussi : port vérifié (lot H4a : les coffres ne donnent rien au-dessus du niveau)", HeroLevel.wear_block(high) == 80)
 	Profile.in_run = false
 	Survivor.active = true
 	check("Survivant : jamais bloqué", HeroLevel.wear_block(high) == 0)

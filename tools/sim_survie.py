@@ -5,6 +5,7 @@ boss de la map 1, le bat-il, à quel niveau, en combien de temps.
 
     python tools/sim_survie.py --hub new --classes warrior,magician --seeds 3 --epoch 1
     python tools/sim_survie.py --hub 1.3.10.3 --boss-after 360
+    python tools/sim_survie.py --hub 2.1.5 --epoch 2 --stage 2 --hero-level 48   # lot H4a : carte II-2, héros niveau 48
 
 --hub : « new » (équipement de départ d'un compte neuf) ou « E.C.N[.G] » (voir StarterGear.scenario).
 Un profil jetable par processus (variable EDEN_PROFILE) : le vrai profil n'est jamais touché.
@@ -28,6 +29,10 @@ def run_one(job):
     cmd = [GODOT, "--headless", "--fixed-fps", "60", "--path", GAME, "res://scenes/world.tscn", "--", "--autoplay",
            "--auto-quit", "--class=" + cls, "--hub=" + a.hub, "--epoch=%d" % a.epoch, "--seed=%d" % seed,
            "--boss-after=%d" % a.boss_after, "--quit-at=%d" % a.quit_at, "--human=%s" % a.human, "--fight=%s" % a.fight] + (["--rush=%s" % a.rush] if a.rush else []) + (a.extra.split() if a.extra else [])
+    if a.hero_level:
+        cmd.append("--hero-level=%d" % a.hero_level)
+    if a.stage > 1:
+        cmd.append("--stage=%d" % a.stage)
     try:
         out = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=a.timeout, encoding="utf-8", errors="replace").stdout
     except subprocess.TimeoutExpired:
@@ -100,6 +105,8 @@ def main():
     ap.add_argument("--classes", default="warrior")
     ap.add_argument("--seeds", type=int, default=2)
     ap.add_argument("--epoch", type=int, default=1)
+    ap.add_argument("--stage", type=int, default=1, help="carte de départ (1 à 3, lot H4a)")
+    ap.add_argument("--hero-level", dest="hero_level", type=int, default=0, help="niveau de héros du profil (lot H4a ; 0 : compte neuf, niveau 1)")
     ap.add_argument("--boss-after", dest="boss_after", type=int, default=420)
     ap.add_argument("--quit-at", dest="quit_at", type=int, default=900)
     ap.add_argument("--timeout", type=int, default=900)
@@ -116,7 +123,7 @@ def main():
             jobs.append((cls, a.seed_base + s * 7919, a, len(jobs)))
     with ThreadPoolExecutor(max_workers=a.jobs) as ex:
         res = list(ex.map(run_one, jobs))
-    print("hub=%s époque=%d boss-après=%ds coups évités=%s rush=%s" % (a.hub, a.epoch, a.boss_after, a.human, a.rush or "-"))
+    print("hub=%s époque=%d carte=%d niveau de héros=%s boss-après=%ds coups évités=%s rush=%s" % (a.hub, a.epoch, a.stage, a.hero_level or 1, a.boss_after, a.human, a.rush or "-"))
     for r in res:
         print(" ", r)
     n = len(res)

@@ -145,10 +145,13 @@ func _ready() -> void:
 	check("autel du scribe de l'époque IV : formules de niveau 9", Craft.scroll_level_for(d.supply_level(1)) == Craft.MAX_SCROLL_LV)
 	Run.epoch = 1
 	Run.stage = 1
+	var hl_was := Run.hero_level
+	Run.hero_level = 1  # lot H4a : le rang des gemmes suit la place du héros dans la bande de la carte
 	var gem_e1 := d.gem_level(1)
 	Run.epoch = 3
 	check("gemmes : un rang de plus par époque (héros niveau 1 : %d en époque I, %d en III)" % [gem_e1, d.gem_level(1)],
 		gem_e1 == 1 and d.gem_level(1) == 1 + 2 * RunDirector.GEM_EPOCH_LEVELS)
+	Run.hero_level = hl_was
 	Run.survival = false
 	check("hors Survie : fournitures au niveau du butin, comme avant", d.supply_level(12) == d.loot_level(12) and d.gem_level(12) == d.loot_level(12))
 	d.free()

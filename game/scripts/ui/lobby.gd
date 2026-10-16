@@ -1636,6 +1636,8 @@ func _menu_survival() -> void:
 		if not open:
 			r.modulate = Color(1, 1, 1, 0.5)
 		r.mark(i == _epoch)
+		if open and i == _epoch:
+			_survival_maps(i)  # lot H4a : les cartes de l'époque choisie, sous sa ligne
 	if Epochs.heroic_open() and Epochs.heroic_best(_epoch) >= 0:
 		var top := mini(Epochs.heroic_best(_epoch) + 1, Epochs.HEROIC_MAX)
 		_heroic = clampi(_heroic, 0, top)
@@ -1665,6 +1667,34 @@ func _menu_survival() -> void:
 	var go := MenuWidgets.gold_button("Lancer la run", 22, Vector2(0, 56))
 	go.pressed.connect(_launch)
 	_pin(go)
+
+
+## Survie (lot H4a) : les trois cartes de l'époque [param ep], chacune avec sa bande de niveau et la PE conseillée pour le
+## héros (estimation colorée de DifficultyPanel ; le détail en infobulle).
+func _survival_maps(ep: int) -> void:
+	var hl := HeroLevel.level()
+	var have := GearPower.hero_power()
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	var pad := MarginContainer.new()
+	pad.add_theme_constant_override("margin_left", 24)
+	pad.add_theme_constant_override("margin_right", 12)
+	pad.add_child(box)
+	_sub.add_child(pad)
+	for st in range(1, 4):
+		var adv := Epochs.advised_power(ep, st, hl)
+		var v := DifficultyPanel.verdict(have, adv)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		row.mouse_filter = Control.MOUSE_FILTER_STOP
+		row.tooltip_text = "Monstres au niveau de ton héros (%d), entre %d et %d sur cette carte.\nPE conseillée %s · la tienne %s.\n%s" % [
+			hl, Epochs.band(ep, st).x, Epochs.band(ep, st).y, GearPower.fmt(adv), GearPower.fmt(have), String(v[2])]
+		box.add_child(row)
+		var name := Hud._label(row, "%d. %s" % [st, String(GameData.zone(Epochs.zone(ep, st)).get("name", ""))], 15, UiTheme.TEXT)
+		name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		Hud._label(row, Epochs.band_text(ep, st), 15, UiTheme.MUTED)
+		Hud._label(row, "PE conseillée %s" % GearPower.fmt(adv), 15, v[1])
 
 
 ## Survivant : une phrase, la classe, le palier (lot S8 : I à V, chacun ouvert par une victoire au précédent), ses coffres

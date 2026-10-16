@@ -75,7 +75,7 @@ func _test_worn_not_offered() -> void:
 	if pool.size() < 2:
 		check("coffre de casque : au moins 2 pièces au palier (%d)" % pool.size(), false)
 		return
-	var worn := Items.from_template(pool[0], Epochs.cap(1), int(pool[0].rarity))
+	var worn := Items.from_template(pool[0], int(pool[0].level), int(pool[0].rarity))
 	var was: Dictionary = Profile.equipped.get("head", {})
 	Profile.equipped["head"] = worn
 	var seen := false

@@ -311,21 +311,21 @@ func _test_power(d: RunDirector) -> void:
 	sp.power = Vector2.ONE
 
 
-## Niveau : suit celui du héros (décalage -1 au début, 0 à l'heure de la rage), plafonné.
+## Niveau : suit celui du héros (décalage -1 au début, 0 à l'heure de la rage), plafonné. Lot H4a : en Aventure, le niveau de
+## héros de la partie (Run.hero_level), borné par la bande de la carte.
 func _test_level(d: RunDirector) -> void:
-	var p: Player = world.player
-	var was := p.level
-	p.level = 12
+	var was := Run.hero_level
+	Run.hero_level = 12
 	d.time = 0.0
 	var early := d._monster_level(0)
 	d.time = RunDirector.RUN_TIME
 	var late := d._monster_level(0)
-	p.level = 3
+	Run.hero_level = 3
 	d.time = 0.0
 	var low := d._monster_level(0)
 	var want_late := roundi(12.0 + MonsterScaling.LEVEL_OFFSET[1])
 	check("niveau des monstres : héros 12 → %d au début, %d à 10 min ; héros 3 → %d" % [early, late, low], early == 11 and late == want_late and low <= 3)
-	p.level = was
+	Run.hero_level = was
 	d.time = RunDirector.EARLY_RAMP + 1.0
 
 

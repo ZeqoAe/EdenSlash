@@ -64,8 +64,9 @@ func _ready() -> void:
 	_close_cards()
 	check("Survie : départ avec l'équipement du hub (époque %d, %d pièces)" % [Run.epoch, Profile.equipped.size()], Run.survival and Profile.equipped.has("weapon") and Profile.in_run)
 	var starts: Array = d.start_weapon_cards()
+	var tiers: Array = SlotChests.pool("weapon", Run.epoch, 1).map(func(e): return int(e.level))
 	check("arme de départ : l'arme de la classe (%s), ses 2 variantes, palier de la map" % Run.weapon_type(), starts.size() == 2 \
-		and starts.all(func(c): return c.item.slot == "weapon" and Items.weapon_type_of(c.item) == Run.weapon_type() and int(c.item.level) in SlotChests.pool("weapon", Run.epoch, 1).map(func(e): return int(e.level))) \
+		and starts.all(func(c): return c.item.slot == "weapon" and Items.weapon_type_of(c.item) == Run.weapon_type() and int(c.item.get("from_level", c.item.level)) in tiers and int(c.item.level) <= Run.hero_level) \
 		and int(starts[0].item.auto_variant) == 0 and int(starts[1].item.auto_variant) == 1)
 	Run.apply_card(starts[0])
 	check("arme choisie en Survie : dans le sac, pas équipée d'office (passe N2)", Profile.inventory.any(func(x): return String(x.uid) == String(starts[0].item.uid))
@@ -84,8 +85,9 @@ func _ready() -> void:
 	d._interact(chest)
 	var cards: Array = world.cards._cards
 	var tier := int(Epochs.map_def(Run.epoch, Run.stage).armor)
-	check("coffre de casque : 3 casques mythiques du palier %d" % tier, chest.used and cards.size() == 3
-		and cards.all(func(c): return c.type == "gear" and c.item.slot == "head" and int(c.item.level) == tier and int(c.item.rarity) == Items.MYTHIC))
+	# lot H4a : pièce du palier, ramenée au niveau de héros s'il est plus bas (from_level garde le palier)
+	check("coffre de casque : 3 casques mythiques du palier %d, au niveau %d" % [tier, mini(tier, Run.hero_level)], chest.used and cards.size() == 3
+		and cards.all(func(c): return c.type == "gear" and c.item.slot == "head" and int(c.item.get("from_level", c.item.level)) == tier and int(c.item.level) == mini(tier, Run.hero_level) and int(c.item.rarity) == Items.MYTHIC))
 	check("une relance propre au coffre", world.cards._own_rerolls == 1)
 	Run.apply_card(cards[0])
 	check("casque choisi : porté et noté pour le hub", Profile.equipped.has("head") and int(cards[0].item.eden) in Run.seen_items)
