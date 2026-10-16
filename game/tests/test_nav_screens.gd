@@ -277,6 +277,17 @@ func _ready() -> void:
 	g.close()
 	lobby.queue_free()
 	await get_tree().process_frame
+	# lot AC-G : l'Échiquier (premier héros ; préparation : cases, boutique, boutons, traits, stratèges)
+	AutochessScreen.config = {"seed": 3, "save_path": "", "fast": true}
+	var ac: AutochessScreen = load("res://scenes/autochess.tscn").instantiate()
+	add_child(ac)
+	await get_tree().create_timer(0.8).timeout
+	await probe("Échiquier : premier héros (4 cartes, Voir le plateau)", 0.95)
+	ac.choice.chosen.emit(0)
+	await probe("Échiquier : préparation (cases, boutique, boutons, stratèges)", 0.95)
+	ac.queue_free()
+	AutochessScreen.config = {}
+	await get_tree().process_frame
 	# en run : choix de cartes, menu pause
 	Run.start_survival("warrior", 1)
 	var world: Node = load("res://scenes/world.tscn").instantiate()

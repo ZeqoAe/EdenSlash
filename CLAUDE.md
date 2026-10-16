@@ -171,6 +171,8 @@ par UiNav, calque `AutochessCursor.LAYER` à partager avec la boutique) ; démo 
 Effets (AC-H, `R_AC_H.md`) : couche pure `core/autochess_effects.gd` (`AutochessEffects` : `context`, `apply_stats`, `start` / `tick` / `attack` / `cast` /
 `spell_hit`, `on_trigger`, `result` ; PV, mana, boucliers, déclencheurs, plafonds) + `autochess_items.gd` / `autochess_traits.gd` / `autochess_augments.gd`,
 même code pour le simulateur (AC-C) et le vrai combat (AC-E) ; test `test_ac_effects` (mini-simulateur de test).
+Interface (AC-G, `R_AC_G.md`) : écran jouable `scenes/autochess.tscn` (`ui/autochess_screen.gd`, `AutochessScreen.config` : seed, resume, autoplay ;
+7 stratèges au hasard, `power_fight`), cadre `ui/autochess_hud.gd` + `autochess_shop` / `_traits` / `_players` / `_unit_card` / `_augments` / `_carousel` ; test `test_ac_ui`, captures `tests/shot_ac.tscn`.
 
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à
