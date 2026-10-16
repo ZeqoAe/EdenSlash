@@ -259,18 +259,15 @@ func _test_fights() -> void:
 				if String(e.type) == "damage" and int(e.get("src", -1)) >= 0 and float(e.amount) > 0.0 \
 						and int(a.ctx.units[int(e.src)].side) == int(a.ctx.units[int(e.dst)].side):
 					ally_dmg += 1
-			for side in 2:
-				for u in a.nodes[side]:
-					if not is_instance_valid(u):
-						continue
-					var au := u as AutochessUnit
-					units += 1
-					casts += int(au.ac_stats.casts)
-					layer_casts += int(a.ctx.units[au.ac_fid].st.casts)
-					cast_units += 1 if int(au.ac_stats.casts) + int(au.ac_stats.recasts) > 0 else 0
-					foreign += int(au.ac_stats.foreign)
-					autos += int(au.ac_stats.autos)
-					clamps += int(au.ac_stats.out)
+			for fid in a.stats:
+				var st: Dictionary = a.stats[fid]
+				units += 1
+				casts += int(st.casts)
+				layer_casts += int(a.ctx.units[fid].st.casts)
+				cast_units += 1 if int(st.casts) + int(st.recasts) > 0 else 0
+				foreign += int(st.foreign)
+				autos += int(st.autos)
+				clamps += int(st.out)
 	var med := _median(durations)
 	durations.sort()
 	print("[ac_fight] %d combats 5 contre 5 : médiane %.1f s (min %.1f, max %.1f), égalités %d, sorts %d (%d unités sur %d), auto-attaques %d, bornes corrigées %d" % [
@@ -301,10 +298,8 @@ func _test_parallel() -> void:
 		for b in dir.arenas:
 			if a != b and (a.origin as Vector3).distance_to(b.origin) < AutochessData.BOARD_SPACING - 0.1:
 				sep = false
-		for side in 2:
-			for u in a.nodes[side]:
-				if is_instance_valid(u):
-					foreign += int((u as AutochessUnit).ac_stats.foreign)
+		for fid in a.stats:
+			foreign += int(a.stats[fid].foreign)
 	check("4 plateaux 10 contre 10 en même temps, finis (%s)" % str(res.map(func(r): return "%.0f s" % float(r.duration))), ok)
 	check("plateaux à %d m les uns des autres, aucun coup de l'un sur l'autre (%d)" % [int(AutochessData.BOARD_SPACING), foreign], sep and foreign == 0)
 	var med := _median(phys_ms)
@@ -386,6 +381,7 @@ func _test_game() -> void:
 		strats.append(Autochess.RandomStrategist.new())
 	g.start(41, strats)
 	var real_rounds := 0
+	var preloads := -1
 	var pvp_ok := false
 	var monsters_ok := false
 	var guard := 0
@@ -398,6 +394,7 @@ func _test_game() -> void:
 				var kind := g.round_kind()
 				var hp_before: Array = g.players.map(func(p): return int(p.hp))
 				var n := g.fights.size()
+				preloads = maxi(preloads, AutochessDirector.prepare(g))
 				var res: Array = await dir.play_round(g)
 				real_rounds += 1
 				var valid := res.size() == n and res.all(func(r): return int(r.winner) >= -1 and float(r.duration) > 0.0)
@@ -412,4 +409,5 @@ func _test_game() -> void:
 	check("manches de monstres jouées en vrai, résultats rendus à la machine", monsters_ok)
 	check("manche JcJ 2-1 : combats réels injectés dans Autochess.finish_combat (PV de joueur entamés)", pvp_ok)
 	check("réserve intacte après les manches réelles", g.pool_ok())
+	check("préchargement des modèles de la partie (%d chargements lancés)" % preloads, preloads >= 0)
 	dir.set_speed(1.0)

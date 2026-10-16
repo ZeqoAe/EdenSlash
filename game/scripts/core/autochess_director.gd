@@ -35,7 +35,7 @@ static var speed := 1.0
 const HALF_X := 7.5  # m : demi-largeur du plateau (bords des cases, 7 colonnes de 2 m + décalage d'une demi-case)
 const HALF_Z := 7.2  # m : demi-profondeur (8 rangées de 1,73 m + pointe des hexagones)
 const FLOOR_Y := AutochessBoard.TOP  # dessus des cases : pieds des unités
-const SPAWN_PER_FRAME := 6  # plateaux cachés : unités créées par image (création 18-48 ms par unité, R_AC2 §5)
+const SPAWN_PER_FRAME := 3  # plateaux cachés : unités créées par image (création 18-48 ms par unité, R_AC2 §5 ; voir prepare)
 const TICK := 0.05  # s : pas de la couche d'effets
 const FALLBACK_MS := 20.0  # image plus longue que ça…
 const FALLBACK_AFTER := 2.0  # … pendant ce temps (s réelles) : plateaux cachés finis par le combat de données
@@ -187,6 +187,30 @@ func clear() -> void:
 		view.show_figures(true)
 
 
+## Préchargement (pendant la préparation) des modèles des unités de la partie [param g] : corps, tenues et armes des
+## classes de tous les plateaux et bancs, chargés sur un fil du moteur ; l'apparition du combat ne lit plus le disque.
+static func prepare(g: Autochess) -> int:
+	var ids := {}
+	for p in g.players:
+		for u in (p.board as Array) + (p.bench as Array):
+			if u is Dictionary and String(u.get("id", "")) != "":
+				ids[String(u.id)] = true
+	var n := 0
+	for id in ids:
+		var cls := GameData.class_data(String(id))
+		var paths: Array = [String(cls.get("body_model", cls.get("model", "")))] + (cls.get("parts", []) as Array)
+		var w: Dictionary = EdenModel.weapon_entry(cls, "")
+		for k in w:
+			if w[k] is String and String(w[k]).ends_with(".glb"):
+				paths.append(String(w[k]))
+		for path in paths:
+			var sp := String(path)
+			if sp != "" and ResourceLoader.exists(sp) and not ResourceLoader.has_cached(sp):
+				if ResourceLoader.load_threaded_request(sp) == OK:
+					n += 1
+	return n
+
+
 # --- Plateaux ---------------------------------------------------------------------------------------------------------
 func _make_arena(i: int, f: Dictionary, origin: Vector3, shown: bool) -> Dictionary:
 	var fctx: Dictionary = f.get("ctx", {})
@@ -198,7 +222,7 @@ func _make_arena(i: int, f: Dictionary, origin: Vector3, shown: bool) -> Diction
 	root.global_position = origin
 	_build_bounds(root)
 	return {"index": i, "fight": f, "fight_boards": boards, "origin": origin, "ctx": ctx, "root": root, "nodes": [[], []],
-		"by_fid": {}, "pending": (boards[0] as Array).size() + (boards[1] as Array).size(), "running": false, "done": false,
+		"by_fid": {}, "stats": {}, "pending": (boards[0] as Array).size() + (boards[1] as Array).size(), "running": false, "done": false,
 		"t": 0.0, "acc": 0.0, "shown": shown, "mode": "real", "fury": false, "seed": int(fctx.get("seed", i)), "result": {}}
 
 
@@ -366,6 +390,9 @@ func _process(_delta: float) -> void:
 	_last_us = now
 	budget_frames.append(ms)
 	if fallback_ms <= 0.0:
+		return
+	if not _queue.is_empty():
+		_slow = 0.0  # images d'apparition : pas une machine trop lente
 		return
 	_slow = _slow + ms / 1000.0 if ms > fallback_ms else 0.0
 	if _slow >= fallback_after:

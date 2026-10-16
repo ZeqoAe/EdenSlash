@@ -23,7 +23,7 @@ const RETARGET_EVERY := 0.25  # s : décision de cible (SPEC §4.1 : 4 fois par 
 const ZONE_WAIT := 1.5  # s : un sort qui ne trouve pas sa cible à portée part quand même sur elle après ce délai
 const HEAL_WAIT := AutochessData.AI_HEAL_WAIT  # s : le soigneur attend qu'un allié soit blessé, puis soigne le plus bas
 const CHAIN_FACTOR := 0.6  # ★3 : dégâts du 2e sort (sans mana) en part du sort signature
-const BAR_SIZE := Vector2(1.25, 0.24)  # m : barres de PV (haut) et de mana (bas) au-dessus de l'unité
+const BAR_SIZE := Vector2(1.7, 0.3)  # m : barres de PV (haut) et de mana (bas) au-dessus de l'unité
 const BAR_Y := 2.75
 const SIDE_COLORS := [Color(0.35, 0.9, 0.45), Color(0.95, 0.3, 0.28)]  # PV : son camp vert, l'adversaire rouge
 const MANA_COLOR := Color(0.35, 0.62, 1.0)
@@ -83,6 +83,8 @@ func setup_unit(u: Dictionary, side: int, fid: int, arena: Dictionary, director:
 	# corrections d'AC2 : pas de repli sous 30 % de PV (le bond réflexe est coupé dans take_damage)
 	_retreat_ready = INF
 	set_ffa(2 * int(arena.get("index", 0)) + side)
+	if arena.get("stats") is Dictionary:
+		arena.stats[fid] = ac_stats  # compteurs gardés après la chute (le nœud est libéré)
 	sync()
 
 
@@ -165,10 +167,10 @@ func _make_overhead() -> void:
 	_ac_name.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_ac_name.no_depth_test = true
 	_ac_name.fixed_size = true
-	_ac_name.pixel_size = 0.0008
+	_ac_name.pixel_size = 0.0007
 	_ac_name.font_size = 24
 	_ac_name.outline_size = 8
-	_ac_name.position.y = BAR_Y + 0.32
+	_ac_name.position.y = BAR_Y + 0.38
 	var st := "" if not _ac_monster.is_empty() else "★".repeat(clampi(stars(), 1, 3)) + " "
 	_ac_name.text = st + unit_label()
 	_ac_name.modulate = AutochessBoard.STAR_COLORS[clampi(stars(), 1, 3) - 1] if _ac_monster.is_empty() else Color(0.9, 0.85, 0.8)

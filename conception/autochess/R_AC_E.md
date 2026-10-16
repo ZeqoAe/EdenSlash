@@ -4,7 +4,8 @@
 - `game/scripts/core/autochess_director.gd` (`AutochessDirector`, Node3D) : joue en même temps tous les combats d'une manche
   de la machine `Autochess` (AC-B). Un plateau par combat, à `AutochessData.BOARD_SPACING` (300 m) les uns des autres, sol et
   murs physiques ; camps en miroir aux cases d'`AutochessBoard.cell_position` (monstres et gardien : cases de devant) ;
-  le plateau regardé apparaît d'un coup, les autres 6 unités par image. Couche d'effets `AutochessEffects` (AC-H) = vérité :
+  le plateau regardé apparaît d'un coup, les autres 3 unités par image ; `prepare(partie)` précharge (fil du moteur) les
+  modèles de toutes les unités des plateaux et bancs pendant la préparation. Couche d'effets `AutochessEffects` (AC-H) = vérité :
   `context` (fiche `base_sheet`), `start`, `set_pos` et `tick` (pas de 0,05 s) à chaque image ; fin quand un camp tombe ;
   « Fureur » annoncée à 30 s (signal `fury_started` ; les dégâts, eux, sont dans la couche) ; égalité à 45 s (`draw_at`,
   profil `autochess`) ; ×1 / ×2 par `Engine.time_scale` pendant le combat seulement (rendu à 1 à la fin, `set_speed`,
@@ -25,11 +26,15 @@
 - `core/modes.gd` : `Modes.current()` = « autochess » tant qu'`AutochessDirector.active` (posé par un directeur dans l'arbre,
   `owns_mode`), ajouté à `Modes.SEALED` et à `Modes.sealed()`. `core/mode_rules.gd` : profil `autochess` (`dmg_scale`,
   `draw_at`, et pour lecture `hit_cap`, Fureur, `unit_diff` d'`AutochessData`). Aucun autre mode ne change.
-- Test `test_ac_fight` (≈ 30 vérifications, ≈ 2-3 min ; `AC_FIGHT_QUICK=1` : 10 combats au lieu de 20).
+- Test `test_ac_fight` (≈ 35 vérifications, ≈ 2-3 min ; `AC_FIGHT_QUICK=1` : 10 combats au lieu de 20). Compteurs par unité
+  gardés après la chute dans `arène.stats[fid]` (sorts, auto-attaques, soins, bornes corrigées). Captures
+  `tests/shot_ac_fight.tscn` (1280 × 720 : début, mêlée, suite), regardées : barres, étoiles et noms lisibles.
 
 ## Chiffres (headless, `dmg_scale` 0,10)
-- 5 contre 5 (coûts 1-3, 15 % de ★2), ×2 : médiane **23 s** (17-38 s), 0 égalité ; ~2/3 des unités lancent leur sort.
-- 4 plateaux 10 contre 10 en même temps (80 unités) : image physique médiane **11 ms** (sous les 20 ms du repli).
+- 20 combats 5 contre 5 (coûts 1-3, 15 % de ★2), ×2 : médiane **24-26 s** (17-45 s), 0 égalité ; 80 % des unités lancent
+  leur sort au moins une fois (les tanks à 140 de mana, rarement).
+- 4 plateaux 10 contre 10 en même temps (80 unités) : image physique médiane **6 ms** (p95 20-80 ms : apparitions, d'où
+  le repli suspendu tant que des unités apparaissent).
 - ×2 : 2,0 × le temps réel. Égalité à 45,0 s ; Fureur à 30,0 s. Manches 1-2 à 2-1 d'une partie au hasard jouées en vrai.
 
 ## Décisions
@@ -64,7 +69,7 @@ survivants restent sur place pendant le bilan). Combat instantané sans scène :
 - IA fine (rôles, focus, plongée, sorts par type) : AC-U. Mécaniques du gardien (briques de boss) : à faire (aujourd'hui un
   gros monstre à la fiche de la couche). Préchargement des modèles pendant la préparation (création 18-48 ms par unité).
 - Lancement `world.tscn -- --autochess` non fait (l'écran `scenes/autochess.tscn` d'AC-G en tient lieu).
-- Bornes corrigées souvent (≈ 100 par combat) : unités qui poussent contre un bord (tireurs qui reculent) ; AC-U.
+- Bornes corrigées souvent (≈ 250 images par combat) : unités qui poussent contre un bord (tireurs qui reculent) ; AC-U.
 
 ## Pièges
 - `AutochessDirector.active` pilote le mode scellé : un directeur créé pour un outil (`owns_mode = false`) ne scelle rien.
