@@ -192,18 +192,20 @@ func _test_game_win() -> void:
 	var d: RunDirector = world.director
 	var p: Player = world.player
 	check("partie montée : mode, état, 7 héros IA", Royale.active and d.state == "royale" and rd.ais.size() == 7 and Run.active)
-	var ids := {}
-	for n in get_tree().get_nodes_in_group("ffa"):
-		ids[(n as Combatant).ffa_id] = true
-	check("8 héros en chacun pour soi, identifiants distincts", get_tree().get_nodes_in_group("ffa").size() == 8 and ids.size() == 8)
+	# (lot BR4) largage : tout le monde à bord de l'aigle, chacun vise un point d'atterrissage différent
+	check("largage en cours : les 8 à bord, hors du chacun pour soi", rd.phase == "drop" and rd.jump.count_airborne() == 8
+		and rd.ais.all(func(a): return a.passive and rd.jump.on_board(a)) and get_tree().get_nodes_in_group("ffa").is_empty())
 	var closest := INF
-	var pts: Array = [p.global_position]
-	for a in rd.ais:
-		pts.append(a.global_position)
+	var pts: Array = rd.jump.riders.values().map(func(st): return st.target)
 	for i in pts.size():
 		for j in range(i + 1, pts.size()):
 			closest = minf(closest, Vector2(pts[i].x - pts[j].x, pts[i].z - pts[j].z).length())
-	check("spawns distincts et éloignés (plus proches : %.0f m)" % closest, closest >= 25.0)
+	check("points d'atterrissage distincts et éloignés (plus proches : %.0f m)" % closest, closest >= 25.0)
+	rd.jump.land_all()
+	var ids := {}
+	for n in get_tree().get_nodes_in_group("ffa"):
+		ids[(n as Combatant).ffa_id] = true
+	check("au sol : 8 héros en chacun pour soi, identifiants distincts", get_tree().get_nodes_in_group("ffa").size() == 8 and ids.size() == 8)
 	var naked := true
 	for a in rd.ais:
 		var st: Dictionary = a.get_meta("royale")
@@ -218,7 +220,7 @@ func _test_game_win() -> void:
 			tiers[int(it.get_meta("tier", 0))] += 1
 	check("64 coffres en 3 qualités (%s)" % [tiers], n_chests == 64 and tiers[1] == 18 and tiers[2] == 8 and tiers[0] == 38)
 	check("ni camps, ni sanctuaires, ni marchands sur la carte", d.map.camps.is_empty() and d.map.shrines.is_empty() and d.map.merchant_spots.is_empty())
-	check("le décompte est en cours", rd.phase == "countdown" and rd.ais.all(func(a): return a.passive))
+	check("au sol : les héros scriptés jouent", rd.ais.all(func(a): return not a.passive and not rd.jump.airborne(a)))
 	# coffre doré ouvert par le joueur
 	var gold: Interactable = null
 	for it in d.map.interactables:
@@ -246,6 +248,7 @@ func _test_game_win() -> void:
 	check("page Héros du menu pause : on remet l'ancienne pièce (échange)", is_same(Profile.equipped.chest, piece_a) and Profile.inventory.any(func(x): return is_same(x, piece_b)))
 	# anneau : un héros hors de l'anneau perd des PV
 	rd.phase = "fight"
+	rd.elapsed = Royale.REVIVE_WINDOW + 10.0  # (après les deux premières minutes : pas de retour, lot BR4)
 	var victim: ClassRival = rd.ais[0]
 	victim.global_position = Vector3(8, 5, 8)
 	var hp0 := victim.hp
@@ -283,7 +286,9 @@ func _test_game_win() -> void:
 func _test_game_loss() -> void:
 	var rd: RoyaleDirector = await _boot_game()
 	var p: Player = world.player
+	rd.jump.land_all()
 	rd.phase = "fight"
+	rd.elapsed = Royale.REVIVE_WINDOW + 10.0  # (après les deux premières minutes : pas de retour, lot BR4)
 	var killer: ClassRival = rd.ais[3]
 	p.hp = 1.0
 	p.take_damage(1e9, killer, false)

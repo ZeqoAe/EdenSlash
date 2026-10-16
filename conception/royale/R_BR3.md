@@ -34,8 +34,19 @@ l'arme) et **réutiliser le système du Survivant** pour les pièces et les amé
 - Remplacement « nettement meilleur » gardé (consigne) mais rare en vrai : une pièce du Survivant suit déjà le niveau.
 
 ## Mesures (`world.tscn -- --royale --autoplay --auto-quit`)
-Avant (0.1.214, Hardcore / Normal) : joueur 8 pièces portées + **39 dans le sac** (Normal, 46 coffres) ; scriptés de
-Normal à 8-14 coffres : 4 à 6 pièces seulement. Après : voir la fin de ce fichier.
+Une partie Hardcore et une Normale, avant (0.1.214) et après (0.1.216, copie propre) ; note d'équipement = somme des notes de
+classe (scriptés : pièces comptées à AI_GEAR_SCALE).
+
+| | Avant Hardcore | Avant Normal | Après Hardcore | Après Normal |
+|---|---|---|---|---|
+| Scriptés, note moyenne à 60 / 120 / 240 s | 43 / 53 / 64 | 27 / 33 / 31 | 28 / 33 / 45 | 28 / 33 / 49 |
+| Scriptés éliminés tôt (6-10 coffres) : pièces | 8 | 4 à 6 | 7 à 9 | 6 à 9 |
+| Joueur : pièces portées / dans le sac | 7 / 5 | 8 / **39** | 9 / 0 | 9 / 0 |
+| Joueur : note, niveau, place | 41, niv. 7, 8e (166 s) | 55, niv. 40, 1er | **189**, niv. 40, 1er | **147**, niv. 30, 1er |
+
+**À surveiller (lot BR1, équilibrage)** : le joueur est bien plus fort qu'avant (pièces du Survivant à son niveau, +N,
+passifs) alors que les scriptés gardent leur niveau d'équipement : le pilote gagne les deux parties. Une partie par cas
+seulement ; le réglage reste à faire avec les mesures de dégâts / PV de BR1 (`AI_GEAR_SCALE`, poids des cartes).
 
 ## Tests
 `test_br3` (nouveau, 29 vérifications, vert 3 fois) ; `test_royale`, `test_cards`, `test_nav_screens` (+ fiche

@@ -62,6 +62,9 @@ func _draw() -> void:
 	if Royale.active and director.royale != null and director.royale.spectating and is_instance_valid(director.royale.watched):
 		focus = director.royale.watched.global_position  # spectateur (passe M1) : la carte suit le héros regardé
 	var center_img := Vector2(focus.x, focus.z) * ppm
+	var jump: RoyaleDrop = director.royale.jump if Royale.active and director.royale != null else null
+	if jump != null and jump.airborne(player):
+		scale_ *= 0.4  # largage (lot BR4) : vue large pour choisir où atterrir
 	if big:
 		scale_ = minf(size.x, size.y) / tex.get_width()
 		center_img = Vector2(tex.get_width(), tex.get_height()) * 0.5
@@ -113,10 +116,17 @@ func _draw() -> void:
 		_draw_ring(w2s, director.royale.ring.center, float(director.royale.ring.radius), Color(0.7, 0.45, 1.0, 0.95))
 		if float(director.royale.ring.next_radius) < float(director.royale.ring.radius) - 1.0:
 			_draw_ring(w2s, director.royale.ring.next_center, float(director.royale.ring.next_radius), Color(1, 1, 1, 0.8))
-	# monstres (Battle royale : les autres héros ne se voient que de près)
+	# largage (lot BR4) : la ligne du vol (pointillés) et l'aigle
+	if jump != null and jump.flying():
+		draw_dashed_line(w2s.call(jump.a), w2s.call(jump.b), Color(0.6, 0.9, 1.0, 0.85), 2.0, 8.0)
+		var ep: Vector2 = w2s.call(jump.eagle_pos())
+		if _inside(ep):
+			draw_circle(ep, 6.5 * k, Color(0, 0, 0, 0.6))
+			draw_circle(ep, 5.0 * k, Color(0.6, 0.9, 1.0))
+	# monstres (Battle royale : les autres héros ne se voient que de près, et pas à bord de l'aigle)
 	for node in get_tree().get_nodes_in_group("monsters"):
 		var mo := node as Monster
-		if Royale.active and mo.global_position.distance_to(player.global_position) > 45.0:
+		if Royale.active and (mo.global_position.distance_to(player.global_position) > 45.0 or not mo.visible):
 			continue
 		var sp: Vector2 = w2s.call(mo.global_position)
 		if not _inside(sp):

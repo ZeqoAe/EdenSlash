@@ -2250,8 +2250,12 @@ func _afterimage() -> void:
 	tw.tween_callback(ghost.queue_free)
 
 
+## Battle royale (lot BR4) : invulnérable jusqu'à cet instant (_time) après un retour en jeu.
+var shield_until := 0.0
+
+
 func is_invulnerable() -> bool:
-	return _state == "dodge" or dev_invincible
+	return _state == "dodge" or dev_invincible or _time < shield_until
 
 
 func take_damage(amount: float, source: Combatant = null, is_crit := false, dot := false) -> void:
