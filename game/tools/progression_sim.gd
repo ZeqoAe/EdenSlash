@@ -19,6 +19,23 @@ extends Node
 ## Jalons : kit80_ok (9 pièces ≥ 78, légendaires, +5), kit90_ok (≥ 86), kit90_opti (≥ 86, +10, gemmes ≥ 4, ench. ≥ 7),
 ## dungeon_0 (1er donjon Normal). Colonne H : -- --refonte --hubvalue --decote --mult=0.85,1.3,2.3,4.4 (12 comptes, 50 h ≈ 10 min).
 ##
+## Lot H7 (niveau de héros, conception/progression/NIVEAU_HEROS.md §1.3, §1.4, §5 ; rapport R_H7.md) : modèle du jeu À VENIR
+## (lots H1, H3, H4) ; sans ces drapeaux rien ne change.
+##   --heros            niveau de héros H (1-90, compte) : XP au kill (monstre de son niveau = 1, écart × clamp(1,1^(niveau des
+##                      monstres − H), 0,1, 3), +20 % sur victoire, activités ×0,6), besoin a × g^L ; pièce portable si son niveau
+##                      ≤ H (pièces de départ : toujours), achat, plans et trouvailles de run aussi ; cartes = bandes de niveau
+##                      [bas, haut] (haut = plus haute pièce de la carte, bas = haut de la carte d'avant − 5) ; monstres au niveau
+##                      clamp(H, bas, haut) ; pièces comptées à leur niveau (sans plafond 15 / 25 / 35 ni décote) ;
+##                      R = I(pièces, H) / (I de référence × 1,1^(niveau des monstres − 15/25/35)) / MAP_MULT(carte) ;
+##                      pièces choisies sur leur PE (comme --hubvalue) ; jalons hero10 … hero90.
+##   --hero-level=N     (implique --heros) le compte part du niveau N (compte migré, NIVEAU_HEROS §3) ;
+##   --xp=a,g           autre courbe d'XP (défaut 105,1.035 ; aussi --a= / --g= de l'annexe) ;
+##   --mep=e1,e2,e3,e4  facteur d'époque du M′ de la sonde (défaut 0.75,0.7,0.5,0.8 : MAP_MULT de NIVEAU_HEROS §1.4) ;
+##   --mapmult=12 valeurs  MAP_MULT entier (I-1 … IV-3), prime sur --mep ; --epochcap : H plafonné au haut de l'époque en
+##                      cours ; --sync : héros ramené au haut de la bande. Si le jeu a un Epochs.MAP_MULT (lot H4b), il sert
+##                      de défaut. Colonne « niveau de héros » du §5 : -- --heros --refonte --plans=boss --hubvalue (12 comptes, 50 h).
+## Sonde : res://tools/hl_probe.tscn (puissance par carte et M′ suggéré, retard dans la bande, talents et certificats).
+##
 ## Rien n'est sauvegardé (Training.active pendant la simulation) ; le profil chargé n'est que la mémoire du processus.
 ##
 ## Modèle d'une Survie (une run = 3 cartes de l'époque) :
@@ -88,35 +105,38 @@ const DECOTE_FLOOR := 0.5
 const KIT_GOALS := [["kit80_ok", 78, 5, -1, 0], ["kit90_ok", 86, 5, -1, 0], ["kit90_opti", 86, 10, 4, 7]]
 const GEAR_SLOTS := ["weapon", "chest", "legs", "head", "gloves", "boots", "back", "necklace", "ring"]
 
+## Lot H7 : niveau de héros (voir l'en-tête ; valeurs de NIVEAU_HEROS.md §1.3-§1.4).
+const HERO_MAX := 90
+const HERO_XP_A := 105.0  # besoin du niveau L → L+1 : HERO_XP_A × HERO_XP_G^L « monstres de son niveau »
+const HERO_XP_G := 1.035
+const HERO_GAP := 1.1  # XP × clamp(HERO_GAP^(niveau des monstres − H), HERO_GAP_MIN, HERO_GAP_MAX)
+const HERO_GAP_MIN := 0.1
+const HERO_GAP_MAX := 3.0
+const HERO_WIN_XP := 1.2  # victoire : +20 % de l'XP de la partie
+const HERO_ACTIVITY_XP := 0.6  # activités : XP par minute ≈ ×0,6 de l'Aventure (monstres au niveau du héros)
+const HERO_BAND_OVERLAP := 5  # bas de la bande = haut de la carte d'avant − 5
+const HERO_MARKS := [10, 20, 30, 43, 50, 60, 70, 75, 80, 85, 90]
+## M′ de la sonde hl_probe (kit de la carte à +5 aligné sur la colonne H de REFONTE_AVENTURE §3.1), par époque et carte,
+## puis facteur d'époque (balayage de PR2) : MAP_MULT = HERO_PROBE_MULT × HERO_EPOCH_FACTOR (table de NIVEAU_HEROS §1.4).
+const HERO_PROBE_MULT := [[0.9, 1.06, 1.11], [4.2, 4.2, 5.75], [34.0, 35.0, 24.0], [244.0, 357.0, 124.0]]
+const HERO_EPOCH_FACTOR := [0.75, 0.7, 0.5, 0.8]
+var heros := "--heros" in OS.get_cmdline_user_args()
+var hero_start := 1
+var xp_a := HERO_XP_A
+var xp_g := HERO_XP_G
+var mep: Array = HERO_EPOCH_FACTOR.duplicate()
+var map_mult_override: Array = []  # --mapmult= : 12 valeurs (I-1 … IV-3)
+var epochcap := "--epochcap" in OS.get_cmdline_user_args()
+var sync := "--sync" in OS.get_cmdline_user_args()
+var _mep_given := false
+var _cur: Dictionary = {}  # compte en cours (niveau de héros lu par les choix de pièces)
+var _game_map_mult = null  # Epochs.MAP_MULT du jeu s'il existe (lu une fois)
+
 
 func _ready() -> void:
 	if get_tree().current_scene != self:
 		return  # utilisé comme bibliothèque (test_e6)
-	var accounts := 12
-	var skill := "moyen"
-	var hours := 90.0
-	var seed_value := 1
-	for a in OS.get_cmdline_user_args():
-		if a.begins_with("--accounts="):
-			accounts = int(a.trim_prefix("--accounts="))
-		elif a.begins_with("--skill="):
-			skill = a.trim_prefix("--skill=")
-		elif a.begins_with("--hours="):
-			hours = float(a.trim_prefix("--hours="))
-		elif a.begins_with("--seed="):
-			seed_value = int(a.trim_prefix("--seed="))
-		elif a.begins_with("--class="):
-			cid = a.trim_prefix("--class=")
-		elif a.begins_with("--mult="):
-			mult = Array(a.trim_prefix("--mult=").split(",")).map(func(x): return float(x))
-		elif a.begins_with("--heroic="):
-			diff_ratios[1] = float(a.trim_prefix("--heroic="))
-		elif a.begins_with("--mythic="):
-			diff_ratios[2] = float(a.trim_prefix("--mythic="))
-		elif a == "--trace":
-			trace = true
-		elif a == "--quiet":
-			quiet = true
+	var opt := parse_args()
 	if "--probe" in OS.get_cmdline_user_args():
 		setup()
 		probe()
@@ -126,11 +146,57 @@ func _ready() -> void:
 		gates_table()
 		get_tree().quit()
 		return
-	var res := simulate(accounts, skill, hours, seed_value)
-	print_report(res, skill)
+	var res := simulate(int(opt.accounts), String(opt.skill), float(opt.hours), int(opt.seed))
+	print_report(res, String(opt.skill))
 	activity_table()
 	loop_table()
 	get_tree().quit()
+
+
+## Options de la ligne de commande (aussi lues par la sonde hl_probe) : règle les variables et renvoie
+## {accounts, skill, hours, seed}.
+func parse_args() -> Dictionary:
+	var opt := {"accounts": 12, "skill": "moyen", "hours": 90.0, "seed": 1}
+	var floats := func(s: String) -> Array: return Array(s.split(",")).map(func(x): return float(x))
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--accounts="):
+			opt.accounts = int(a.trim_prefix("--accounts="))
+		elif a.begins_with("--skill="):
+			opt.skill = a.trim_prefix("--skill=")
+		elif a.begins_with("--hours="):
+			opt.hours = float(a.trim_prefix("--hours="))
+		elif a.begins_with("--seed="):
+			opt.seed = int(a.trim_prefix("--seed="))
+		elif a.begins_with("--class="):
+			cid = a.trim_prefix("--class=")
+		elif a.begins_with("--mult="):
+			mult = floats.call(a.trim_prefix("--mult="))
+		elif a.begins_with("--heroic="):
+			diff_ratios[1] = float(a.trim_prefix("--heroic="))
+		elif a.begins_with("--mythic="):
+			diff_ratios[2] = float(a.trim_prefix("--mythic="))
+		elif a.begins_with("--hero-level="):
+			heros = true
+			hero_start = clampi(int(a.trim_prefix("--hero-level=")), 1, HERO_MAX)
+		elif a.begins_with("--xp="):
+			var xg: Array = floats.call(a.trim_prefix("--xp="))
+			xp_a = float(xg[0])
+			if xg.size() > 1:
+				xp_g = float(xg[1])
+		elif a.begins_with("--a="):
+			xp_a = float(a.trim_prefix("--a="))
+		elif a.begins_with("--g="):
+			xp_g = float(a.trim_prefix("--g="))
+		elif a.begins_with("--mep="):
+			mep = floats.call(a.trim_prefix("--mep="))
+			_mep_given = true
+		elif a.begins_with("--mapmult="):
+			map_mult_override = floats.call(a.trim_prefix("--mapmult="))
+		elif a == "--trace":
+			trace = true
+		elif a == "--quiet":
+			quiet = true
+	return opt
 
 
 ## Prépare le héros de mesure (une fois).
@@ -161,7 +227,6 @@ func power_index(gear: Dictionary, lv: int) -> float:
 	var keep := Profile.equipped
 	Run.active = true
 	Run.survival = true
-	Run.slot_bonus = {}
 	Run.passives = {}
 	Run.class_id = cid
 	Profile.equipped = gear
@@ -183,6 +248,8 @@ func power_index(gear: Dictionary, lv: int) -> float:
 ## pièces du hub qui valent moins (« le temps de la run ») : l'équipement réel de la carte k est, emplacement par
 ## emplacement, le meilleur des deux (RUN_FIND : part des emplacements trouvés en run).
 func ratios(gear: Dictionary, ep: int, with_finds := true) -> Array:
+	if heros:
+		return hero_ratios(gear, ep, with_finds)
 	var out: Array = []
 	for k in 3:
 		var g := run_gear(gear, ep, k + 1) if with_finds else gear
@@ -219,6 +286,104 @@ static func decoted(gear: Dictionary, ep: int, stage: int, lv: int) -> Dictionar
 	return out
 
 
+# --- niveau de héros (lot H7, --heros) ------------------------------------------------------------
+## Haut de la bande de la carte [param k] de l'époque [param ep] : niveau d'Eden de sa plus haute pièce.
+static func band_hi(ep: int, k: int) -> int:
+	var m := Epochs.map_def(ep, k)
+	return maxi(int(m.armor), int(m.weapon))
+
+
+## Bas de la bande : haut de la carte d'avant − HERO_BAND_OVERLAP (1 pour la 1re carte).
+static func band_lo(ep: int, k: int) -> int:
+	if ep <= 1 and k <= 1:
+		return 1
+	return band_hi(ep if k > 1 else ep - 1, k - 1 if k > 1 else 3) - HERO_BAND_OVERLAP
+
+
+## XP (« monstres de son niveau ») du niveau [param l] au suivant.
+static func xp_need(l: int, a := HERO_XP_A, g := HERO_XP_G) -> float:
+	return a * pow(g, l)
+
+
+## Facteur d'XP d'un monstre de niveau [param monster_lv] pour un héros de niveau [param h].
+static func xp_gap(monster_lv: int, h: int) -> float:
+	return clampf(pow(HERO_GAP, monster_lv - h), HERO_GAP_MIN, HERO_GAP_MAX)
+
+
+## Niveau des monstres de la carte pour un héros de niveau [param h].
+static func band_level(ep: int, k: int, h: int) -> int:
+	return clampi(h, band_lo(ep, k), band_hi(ep, k))
+
+
+## M′ de la carte [param k] de l'époque [param ep] (remplace Epochs.MONSTER_MULT) : --mapmult, sinon Epochs.MAP_MULT
+## s'il existe (lot H4b) et sans --mep, sinon HERO_PROBE_MULT × facteur d'époque.
+func map_mult(ep: int, k: int) -> float:
+	var i := (clampi(ep, 1, 4) - 1) * 3 + clampi(k, 1, 3) - 1
+	if map_mult_override.size() >= 12:
+		return float(map_mult_override[i])
+	if _game_map_mult == null:
+		_game_map_mult = (load("res://scripts/core/epochs.gd") as Script).get_script_constant_map().get("MAP_MULT", [])
+	var game: Array = _game_map_mult
+	if game.size() >= 12 and not _mep_given:
+		return float(game[i])
+	return float(HERO_PROBE_MULT[clampi(ep, 1, 4) - 1][clampi(k, 1, 3) - 1]) * float(mep[clampi(ep, 1, mep.size()) - 1])
+
+
+## Niveau de héros du compte en cours (35 hors simulation : sonde).
+func hero_level() -> int:
+	return int(_cur.get("hl", 1)) if heros and not _cur.is_empty() else 35
+
+
+## Pièce portable au niveau de héros [param h] (pièces de départ : toujours).
+static func wearable_at(it: Dictionary, h: int) -> bool:
+	return it.is_empty() or it.get("starter", false) or int(it.get("level", 0)) <= h
+
+
+func wearable(it: Dictionary) -> bool:
+	return not heros or wearable_at(it, hero_level())
+
+
+## Rapport de puissance aux 3 cartes avec le niveau de héros : pièces à leur niveau, monstres dans la bande, MAP_MULT.
+func hero_ratios(gear: Dictionary, ep: int, with_finds := true) -> Array:
+	var out: Array = []
+	var h := hero_level()
+	for k in 3:
+		var g := run_gear(gear, ep, k + 1) if with_finds else gear
+		var hh := mini(h, band_hi(ep, k + 1)) if sync else h
+		var ref := float(base_index[k]) * pow(1.1, band_level(ep, k + 1, h) - int(HERO_LEVELS[k]))
+		out.append(power_index(g, hh) / ref / map_mult(ep, k + 1))
+	return out
+
+
+## XP de héros [param units] versée au compte ; jalons heroN.
+func add_hero_xp(acc: Dictionary, units: float) -> void:
+	acc.hxp = float(acc.hxp) + units
+	var cap := HERO_MAX
+	if epochcap:
+		cap = band_hi(mini(int(acc.cleared) + 1, Epochs.count()), 3)
+	while int(acc.hl) < cap and float(acc.hxp) >= xp_need(int(acc.hl), xp_a, xp_g):
+		acc.hxp = float(acc.hxp) - xp_need(int(acc.hl), xp_a, xp_g)
+		acc.hl = int(acc.hl) + 1
+		if int(acc.hl) in HERO_MARKS:
+			_note(acc, "hero%d" % int(acc.hl))
+	if int(acc.hl) >= cap:
+		acc.hxp = minf(float(acc.hxp), xp_need(int(acc.hl), xp_a, xp_g))
+
+
+## XP d'une partie d'Aventure : minutes réparties sur les cartes atteintes (MAP_MIN par carte finie), monstres au niveau
+## de la bande de chaque carte ; +20 % sur victoire.
+func hero_run_xp(acc: Dictionary, ep: int, minutes: float, victory: bool) -> void:
+	var units := 0.0
+	var h := int(acc.hl)
+	var k := 1
+	while minutes > 0.01 and k <= 3:
+		var t := minf(minutes, MAP_MIN)
+		units += t * KILLS_PER_MIN * xp_gap(band_level(ep, k, h), h)
+		minutes -= t
+		k += 1
+	add_hero_xp(acc, units * (HERO_WIN_XP if victory else 1.0))
+
+
 var _run_kits := {}
 
 
@@ -228,12 +393,14 @@ func run_gear(gear: Dictionary, ep: int, stage: int) -> Dictionary:
 		_run_kits[key] = StarterGear.scenario("%d.%d.0" % [ep, stage], cid)
 	var kit: Dictionary = _run_kits[key]
 	var out := gear.duplicate()
-	var lv: int = HERO_LEVELS[stage - 1]
+	var lv: int = hero_level() if heros else HERO_LEVELS[stage - 1]
 	var i := 0
 	for slot in kit:
 		i += 1
 		if float(i) / float(kit.size()) > RUN_FIND:
 			break
+		if not wearable(kit[slot]):
+			continue
 		if not out.has(slot) or _value_at(kit[slot], lv) > _value_at(out[slot], lv):
 			out[slot] = kit[slot]
 	return out
@@ -270,14 +437,21 @@ func boss_chance(r: float, k: int, talent: float) -> float:
 
 # --- un compte ---------------------------------------------------------------------------------------
 func new_account(skill: String) -> Dictionary:
-	return {"skill": float(SKILLS.get(skill, 0.0)), "min": 0.0, "runs": 0, "insignia": 0, "crystals": 0, "mastery": 0,
+	var acc := {"skill": float(SKILLS.get(skill, 0.0)), "min": 0.0, "runs": 0, "insignia": 0, "crystals": 0, "mastery": 0,
 		"cleared": 0, "bag": {}, "gear": StarterGear.items(cid), "seen": {}, "bought": {}, "events": {}, "curve": [],
 		"spent_insignia": 0, "spent_crystals": 0, "won_runs": 0, "insignia_total": 0, "crystals_total": 0}
+	if heros:
+		acc["hl"] = hero_start
+		acc["hxp"] = 0.0
+		for s in acc.gear:
+			acc.gear[s]["starter"] = true  # pièces de départ : portables à tout niveau
+		_cur = acc
+	return acc
 
 
 func _note(acc: Dictionary, key: String) -> void:
 	if not acc.events.has(key):
-		acc.events[key] = {"h": acc.min / 60.0, "runs": int(acc.runs), "pe": pe(acc), "lvl": avg_level(acc)}
+		acc.events[key] = {"h": acc.min / 60.0, "runs": int(acc.runs), "pe": pe(acc), "lvl": avg_level(acc), "hl": int(acc.get("hl", 0))}
 
 
 ## Passe P5 : verrous de PE du jeu (sans la marge de niveau du modèle) franchis par le compte : donjons et Siège
@@ -314,6 +488,7 @@ func _add_bag(acc: Dictionary, key: String, n := 1) -> void:
 
 ## Une Survie à l'époque [param ep] : renvoie le résultat ; gains versés au compte.
 func survival_run(acc: Dictionary, ep: int) -> String:
+	_cur = acc
 	acc.runs = int(acc.runs) + 1
 	var talent: float = float(acc.skill) - LEARN * exp(-float(int(acc.runs) - 1) / LEARN_RUNS)
 	var rs := ratios(acc.gear, ep)
@@ -352,9 +527,12 @@ func survival_run(acc: Dictionary, ep: int) -> String:
 		if ep > int(acc.cleared):
 			acc.cleared = ep
 			_note(acc, "epoch_%d" % ep)
+	if heros:
+		hero_run_xp(acc, ep, minutes, victory)
 	if trace:
-		print("  run %3d  %5.1f h  E%d  %s carte %d  R %.2f/%.2f/%.2f  talent %+.2f  insignes %5d (+%d)  cristaux %5d  PE %d" % [acc.runs, float(acc.min) / 60.0,
-			ep, "VICTOIRE" if victory else "défaite ", stage, rs[0], rs[1], rs[2], talent, acc.insignia, ins, acc.crystals, pe(acc)])
+		print("  run %3d  %5.1f h  E%d  %s carte %d  R %.2f/%.2f/%.2f  talent %+.2f  insignes %5d (+%d)  cristaux %5d  PE %d%s" % [acc.runs, float(acc.min) / 60.0,
+			ep, "VICTOIRE" if victory else "défaite ", stage, rs[0], rs[1], rs[2], talent, acc.insignia, ins, acc.crystals, pe(acc),
+			("  niveau de héros %d" % int(acc.hl)) if heros else ""])
 	return "victoire" if victory else "defaite"
 
 
@@ -410,6 +588,8 @@ func _offer_piece(acc: Dictionary, it: Dictionary) -> void:
 		return
 	if slot == "weapon" and Items.weapon_type_of(it) != Items.default_weapon_type(cid):
 		return
+	if not wearable(it):
+		return  # --heros : niveau requis au-dessus du niveau de héros
 	var cur: Dictionary = acc.gear.get(slot, {})
 	if cur.is_empty() or _value(it, true) > _value(cur, true) * 1.08:
 		acc.gear[slot] = it
@@ -417,7 +597,7 @@ func _offer_piece(acc: Dictionary, it: Dictionary) -> void:
 
 ## Valeur d'une pièce pour le choix (note commune au niveau 35, enclume exclue) ; [param bare] : sans +N, gemmes
 ## ni enchantement (ce que vaut la pièce elle-même : le joueur rachète une meilleure base puis la remonte).
-## --hubvalue (lot A7) : sa PE hors run (le niveau de la pièce compte) au lieu de sa note en Survie.
+## --hubvalue (lot A7) : sa PE hors run (le niveau de la pièce compte) au lieu de sa note en Survie ; --heros aussi.
 func _value(it: Dictionary, bare := false) -> float:
 	if it.is_empty():
 		return 0.0
@@ -428,7 +608,7 @@ func _value(it: Dictionary, bare := false) -> float:
 		x.erase("sockets")
 		x.erase("enchant")
 		x.erase("up_rolls")
-	if hubvalue:
+	if hubvalue or heros:
 		Run.active = false
 		return float(GearPower.item_power(x))
 	Run.active = true
@@ -450,6 +630,8 @@ func shop(acc: Dictionary) -> void:
 			var e: Dictionary = acc.seen[id]
 			if String(e.slot) != slot or acc.bought.has(id):
 				continue
+			if heros and int(e.get("level", 0)) > int(acc.hl):
+				continue  # pas encore portable : le joueur attend son niveau
 			var it: Dictionary = _cache.get(id, {})
 			if it.is_empty():
 				it = Items.from_eden(e)
@@ -482,6 +664,8 @@ func craft_dungeon(acc: Dictionary) -> void:
 	for k in plans:
 		var p: Dictionary = plans[k]
 		var lv := Dungeons.level(String(p.zone), int(p.diff))
+		if heros and lv > int(acc.hl):
+			continue  # pièce du plan pas encore portable
 		var rar := Items.LEGENDARY if int(p.diff) >= 2 else Items.MYTHIC
 		for slot in p.slots:
 			var ck := "%s|%d|%s" % [k, int(p.diff), slot]
@@ -657,6 +841,7 @@ func pe(acc: Dictionary) -> int:
 
 ## Une session d'activité (environ 30 min) : la meilleure ouverte pour les cristaux et matières.
 func activity_session(acc: Dictionary) -> String:
+	_cur = acc
 	var power := pe(acc)
 	var minutes := 0.0
 	var label := ""
@@ -713,6 +898,8 @@ func activity_session(acc: Dictionary) -> String:
 		acc["tower"] = (from + floors) % 200
 		minutes = 30.0
 	acc.min = float(acc.min) + minutes
+	if heros:
+		add_hero_xp(acc, minutes * KILLS_PER_MIN * HERO_ACTIVITY_XP)
 	return label
 
 
@@ -788,6 +975,7 @@ static func milestone(res: Dictionary, key: String) -> Dictionary:
 	var rs: Array = []
 	var ps: Array = []
 	var ls: Array = []
+	var hls: Array = []
 	var n := 0
 	for acc in res.accounts:
 		if acc.events.has(key):
@@ -796,19 +984,37 @@ static func milestone(res: Dictionary, key: String) -> Dictionary:
 			rs.append(int(acc.events[key].runs))
 			ps.append(int(acc.events[key].get("pe", 0)))
 			ls.append(float(acc.events[key].get("lvl", 0.0)))
+			hls.append(int(acc.events[key].get("hl", 0)))
 	if n * 2 < (res.accounts as Array).size():
-		return {"h": -1.0, "runs": -1, "pe": -1, "lvl": -1.0, "share": float(n) / maxf(1.0, (res.accounts as Array).size())}
+		return {"h": -1.0, "runs": -1, "pe": -1, "lvl": -1.0, "hl": -1, "share": float(n) / maxf(1.0, (res.accounts as Array).size())}
 	return {"h": snappedf(_median(hs), 0.1), "runs": int(_median(rs)), "pe": int(_median(ps)), "lvl": _median(ls),
-		"share": float(n) / float((res.accounts as Array).size())}
+		"hl": int(_median(hls)), "share": float(n) / float((res.accounts as Array).size())}
 
 
 func print_report(res: Dictionary, skill: String) -> void:
 	print("== progression d'un compte neuf (%s, %d comptes, classe %s) ==" % [skill, (res.accounts as Array).size(), cid])
-	for key in ["epoch_1", "epoch_2", "epoch_3", "epoch_4", "dungeon_1", "dungeon_2", "kit_1", "kit_2", "kit_3", "kit_4",
+	if heros:
+		var mm := []
+		for ep in range(1, 5):
+			mm.append("%.2f/%.2f/%.2f" % [map_mult(ep, 1), map_mult(ep, 2), map_mult(ep, 3)])
+		print("  niveau de héros (H7) : XP %.0f × %.3f^L, départ %d, MAP_MULT %s%s%s" % [xp_a, xp_g, hero_start, " | ".join(mm),
+			", plafond d'époque" if epochcap else "", ", synchronisé" if sync else ""])
+	var keys := ["epoch_1", "epoch_2", "epoch_3", "epoch_4", "dungeon_1", "dungeon_2", "kit_1", "kit_2", "kit_3", "kit_4",
 			"open_dungeon_1", "open_dungeon_1_all", "open_dungeon_2", "open_dungeon_2_all", "open_siege_1", "open_siege_2",
-			"open_rush_1", "open_rush_2", "legend_60", "legend_90", "dungeon_0", "kit80_ok", "kit90_ok", "kit90_opti"]:
+			"open_rush_1", "open_rush_2", "legend_60", "legend_90", "dungeon_0", "kit80_ok", "kit90_ok", "kit90_opti"]
+	if heros:
+		for lv in HERO_MARKS:
+			keys.append("hero%d" % lv)
+	for key in keys:
 		var m := milestone(res, key)
-		print("  %-18s : %s" % [key, ("médiane %.1f h, %d runs, PE %d, niveau des pièces %.0f (%.0f %% des comptes)" % [m.h, m.runs, m.pe, m.lvl, 100.0 * float(m.share)]) if float(m.h) >= 0.0 else "non atteint par la moitié des comptes (%.0f %%)" % (100.0 * float(m.share))])
+		var hl_txt: String = (", héros %d" % int(m.hl)) if heros else ""
+		print("  %-18s : %s" % [key, ("médiane %.1f h, %d runs, PE %d, niveau des pièces %.0f%s (%.0f %% des comptes)" % [m.h, m.runs, m.pe, m.lvl, hl_txt, 100.0 * float(m.share)]) if float(m.h) >= 0.0 else "non atteint par la moitié des comptes (%.0f %%)" % (100.0 * float(m.share))])
+	if heros:
+		var hls := []
+		for acc in res.accounts:
+			hls.append(int(acc.hl))
+		hls.sort()
+		print("  niveau de héros final : min %d, médiane %d, max %d" % [hls[0], hls[hls.size() / 2], hls[-1]])
 	if not quiet:
 		var acc: Dictionary = res.accounts[0]
 		print("  courbe du compte 1 (toutes les 5 runs) :")

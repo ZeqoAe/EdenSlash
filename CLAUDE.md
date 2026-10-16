@@ -197,7 +197,8 @@ pastilles `ui/gain_chips.gd`. Détail : DESIGN « Quêtes », « La quête commu
 |---|---|
 | `python tools/run_tests.py` | toute la suite (voir « Tests ») |
 | `python tools/sim_survie.py` | Survie au pilote automatique en parallèle (`--hub new\|E.C.N.G`, `--human`), test `test_gear_run` |
-| `res://tools/progression_sim.tscn` | compte neuf de bout en bout avec les vraies formules (`--probe`, `--mult=`, `--gates`, `--trace`), bornes `test_e6` ; refonte Aventure (A7, `R_A7.md`) : `--refonte [--plans=boss] --hubvalue --decote`, jalons `kit80_ok` / `kit90_ok` / `kit90_opti` / `dungeon_0` |
+| `res://tools/progression_sim.tscn` | compte neuf de bout en bout avec les vraies formules (`--probe`, `--mult=`, `--gates`, `--trace`), bornes `test_e6` ; refonte Aventure (A7, `R_A7.md`) : `--refonte [--plans=boss] --hubvalue --decote`, jalons `kit80_ok` / `kit90_ok` / `kit90_opti` / `dungeon_0` ; niveau de héros (H7, `R_H7.md`) : `--heros [--hero-level=N --xp=a,g --mep= --mapmult=]`, bandes, `MAP_MULT`, port selon H, jalons `hero10`…`hero90` |
+| `res://tools/hl_probe.tscn` | sonde du niveau de héros : puissance par carte et M′ suggéré, retard dans la bande (`--talents` : talents et certificats) |
 | `python tools/boss_ttk.py` | temps pour tuer les boss (sonde `res://tools/boss_ttk.tscn`, `--dungeons`, `--human`), test `test_p11` |
 - **Création de personnage** (C1, `R_C1.md`) : `core/hero_look.gd` (nom, coiffure, couleurs ; `Profile.hero_name / hero_look / hero_made`),
   écran `ui/hero_creator.gd` (après l'accueil, Héros > « Personnage ») ; tout modèle du héros du joueur passe le visage à

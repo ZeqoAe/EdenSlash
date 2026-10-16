@@ -31,8 +31,10 @@ func _ready() -> void:
 	_test_dismantle()
 	_test_gates()
 	_test_a7_decote()
+	_test_h7_model()
 	await _test_progression()
 	await _test_a7_refonte()
+	await _test_h7_heros()
 	Run.active = false
 	Run.survival = false
 	Profile.reset_all()
@@ -256,6 +258,77 @@ func _test_a7_refonte() -> void:
 	check("A7 : 1er donjon juste après l'époque I (≤ époque I + 1 h) — %s h" % d0.h, float(d0.h) >= 0.0 and float(d0.h) <= float(e1.h) + 1.0)
 	check("A7 : plans de donjon gagnés et fabriqués (%d plans, %d pièces)" % [plans, crafted], plans >= 6 and crafted >= 1)
 	check("A7 : équipement 80-90 correct atteint vers 30 h (≤ 40 h) — %s h" % k80.h, float(k80.h) > 15.0 and float(k80.h) <= 40.0)
+	sim.queue_free()
+
+
+## Lot H7 : modèle du niveau de héros de l'outil (--heros, conception/progression/NIVEAU_HEROS.md §1.3-§1.4) : courbe d'XP,
+## écart de niveau, bandes des cartes, MAP_MULT, port des pièces ; sans le drapeau, l'outil ne change pas.
+func _test_h7_model() -> void:
+	var need_ok := true
+	for p in [[10, 148], [30, 295], [43, 462], [60, 829], [80, 1650], [89, 2240]]:
+		need_ok = need_ok and absf(Sim.xp_need(int(p[0])) / float(p[1]) - 1.0) < 0.01
+	check("H7 : besoin d'XP 105 × 1,035^L (niv. 10 : %.0f, 60 : %.0f, 89 : %.0f, comme le §1.3)" % [Sim.xp_need(10), Sim.xp_need(60), Sim.xp_need(89)], need_ok)
+	check("H7 : écart de niveau ×%.2f (10 au-dessus) / ×%.2f (10 en dessous), plancher ×0,1, plafond ×3" % [Sim.xp_gap(50, 40), Sim.xp_gap(30, 40)],
+		absf(Sim.xp_gap(50, 40) - 2.594) < 0.01 and absf(Sim.xp_gap(30, 40) - 0.386) < 0.01 and Sim.xp_gap(1, 60) == 0.1 and Sim.xp_gap(90, 60) == 3.0)
+	var bands := [[1, 23], [18, 33], [28, 43], [38, 48], [43, 53], [48, 60], [55, 65], [60, 70], [65, 75], [70, 80], [75, 85], [80, 90]]
+	var doc_mult := [0.68, 0.80, 0.83, 2.9, 2.9, 4.0, 17.0, 17.5, 12.0, 195.0, 286.0, 99.0]
+	var band_ok := true
+	var mult_ok := true
+	var got := []
+	for ep in range(1, 5):
+		for k in range(1, 4):
+			var i := (ep - 1) * 3 + k - 1
+			band_ok = band_ok and Sim.band_lo(ep, k) == int(bands[i][0]) and Sim.band_hi(ep, k) == int(bands[i][1])
+			var m := float(Sim.HERO_PROBE_MULT[ep - 1][k - 1]) * float(Sim.HERO_EPOCH_FACTOR[ep - 1])
+			mult_ok = mult_ok and absf(m / float(doc_mult[i]) - 1.0) < 0.02
+			got.append("%d-%d" % [Sim.band_lo(ep, k), Sim.band_hi(ep, k)])
+	check("H7 : bandes des cartes du §1.4 (%s)" % ", ".join(got), band_ok)
+	check("H7 : MAP_MULT de l'outil = table du §1.4 (M′ de la sonde × facteur d'époque)", mult_ok)
+	check("H7 : monstres au niveau du héros, bornés par la bande (I-2 : %d / %d / %d pour un héros 5 / 25 / 60)" % [Sim.band_level(1, 2, 5), Sim.band_level(1, 2, 25), Sim.band_level(1, 2, 60)],
+		Sim.band_level(1, 2, 5) == 18 and Sim.band_level(1, 2, 25) == 25 and Sim.band_level(1, 2, 60) == 33)
+	check("H7 : pièce portable si son niveau ≤ H, pièces de départ toujours",
+		Sim.wearable_at({"level": 50}, 50) and not Sim.wearable_at({"level": 51}, 50) and Sim.wearable_at({"level": 80, "starter": true}, 1) and Sim.wearable_at({}, 1))
+	var sim: Node = Sim.new()
+	var acc: Dictionary = sim.new_account("moyen")
+	check("H7 : sans --heros, l'outil ne change pas (aucun niveau de héros, toute pièce portable)", not sim.heros and not acc.has("hl") and sim.wearable({"level": 90}))
+	sim.free()
+
+
+## Lot H7 : colonne « niveau de héros » de NIVEAU_HEROS.md §5 (--heros --refonte --plans=boss --hubvalue). Par défaut 6 comptes,
+## 45 h, graine 11 (bornes larges) ; -- --full : la mesure du document (12 comptes, 50 h, graine 1), médianes à ± 15 %.
+func _test_h7_heros() -> void:
+	var full := "--full" in OS.get_cmdline_user_args()
+	var sim: Node = Sim.new()
+	sim.quiet = true
+	sim.heros = true
+	sim.refonte = true
+	sim.plans_by_boss = true
+	sim.hubvalue = true
+	add_child(sim)
+	var res: Dictionary = sim.simulate(12, "moyen", 50.0, 1) if full else sim.simulate(6, "moyen", 45.0, 11)
+	var e1: Dictionary = sim.milestone(res, "epoch_1")
+	var e2: Dictionary = sim.milestone(res, "epoch_2")
+	var e4: Dictionary = sim.milestone(res, "epoch_4")
+	var d0: Dictionary = sim.milestone(res, "dungeon_0")
+	var h90: Dictionary = sim.milestone(res, "hero90")
+	var k80: Dictionary = sim.milestone(res, "kit80_ok")
+	print("      niveau de héros : époque I %s h (H %d), II %s h (H %d), IV %s h (H %d), 1er donjon %s h, niveau 90 %s h, équipement 80-90 correct %s h (%.0f %%)"
+		% [e1.h, e1.hl, e2.h, e2.hl, e4.h, e4.hl, d0.h, h90.h, k80.h, 100.0 * float(k80.share)])
+	var over := 0
+	for a in res.accounts:
+		for slot in a.gear:
+			if not Sim.wearable_at(a.gear[slot], int(a.hl)):
+				over += 1
+	check("H7 : aucune pièce portée au-dessus du niveau de héros (%d)" % over, over == 0)
+	check("H7 : 1er donjon juste après l'époque I (≤ époque I + 1 h) — %s h / %s h" % [d0.h, e1.h], float(d0.h) >= 0.0 and float(d0.h) <= float(e1.h) + 1.0)
+	if full:
+		# NIVEAU_HEROS.md §5, colonne « moyen » : époque I 2,8 (H 35), II 10,6 (H 64), IV 31,2 (H 90), niveau 90 29,3, 80-90 correct 37,4
+		for p in [["époque I", e1, 2.8], ["époque II", e2, 10.6], ["époque IV", e4, 31.2], ["niveau 90", h90, 29.3], ["équipement 80-90 correct", k80, 37.4]]:
+			check("H7 (mesure du document) : %s %s h, document %.1f h (± 15 %%)" % [p[0], p[1].h, p[2]], absf(float(p[1].h) / float(p[2]) - 1.0) <= 0.15)
+	else:
+		check("H7 : époque I 2 à 5 h, héros déjà haut (H ≥ 25) — %s h, H %d" % [e1.h, e1.hl], float(e1.h) >= 2.0 and float(e1.h) <= 5.0 and int(e1.hl) >= 25)
+		check("H7 : niveau 90 entre 22 et 38 h (document 29,3 h) — %s h" % h90.h, float(h90.h) >= 22.0 and float(h90.h) <= 38.0)
+		check("H7 : le niveau suit le contenu (H ≥ 50 à l'époque II) — H %d" % int(e2.hl), int(e2.hl) >= 50)
 	sim.queue_free()
 
 
