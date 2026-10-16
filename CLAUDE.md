@@ -134,6 +134,9 @@ Règles opérationnelles dans la section « Duel (JcJ) » plus bas. Ligue `core/
 Arènes / Gantelet en équipes dans `core/duel_director.gd` (`Duel.make_ally`, `Duel.team_classes`, `Duel.hazards`, `ui/team_bars.gd`).
 Battle royale : `core/royale.gd`, `core/royale_director.gd` (`RoyaleDirector.BRAIN`), carte `ProcMap.generate_royale` ; test
 `test_royale`, partie complète `world.tscn -- --royale --autoplay [--royale-diff=0..3] [--auto-quit]` (ligne `[royale]`).
+Largage et réanimation (lot BR4) : `core/royale_drop.gd` (aigle, saut, chute, planeur ; héros en l'air hors du groupe « ffa », physique
+coupée ; `RoyaleDirector.phase` « drop » puis « fight » : `elapsed` part au dernier atterrissage, `clock` dès le vol) ; retour une fois
+avant `Royale.REVIVE_WINDOW` (`RoyaleDirector.revives`, `_revive_player` / `_revive_ai`, arme seule) ; test `test_br4`, captures `shot_br4`.
 Équipement du BR (lot BR3) : `core/royale_loot.gd` (emplacements vides d'abord, arme gardée, puis améliorations ; joueur = pièces et
 cartes du Survivant via `SurvivorGear.adopt` / `SurvivorCards.up_card`, rendu `SurvivorCardView` ; scriptés = `RoyaleLoot.offer`,
 `Royale.AI_GEAR_SCALE`, mesure `tools/br3_ai_probe`), pièces au sol à la mort et fiche `ui/royale_gear_sheet.gd` ; test `test_br3`.

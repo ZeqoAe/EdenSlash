@@ -11,7 +11,14 @@ extends RefCounted
 
 const PLAYERS := 8
 const LEVEL_CAP := 40
-const COUNTDOWN := 6.0
+## Largage (lot BR4) : secondes de vol avant l'ouverture des portes de l'aigle (on ne peut pas sauter avant).
+const COUNTDOWN := 3.0
+## Réanimation (lot BR4) : un héros éliminé dans les REVIVE_WINDOW premières secondes de combat revient une fois,
+## REVIVE_DELAY s plus tard, planeur ouvert au-dessus d'un point sûr de l'anneau, PV pleins, invulnérable REVIVE_SHIELD s
+## après l'atterrissage ; il garde son niveau, son arme et ses cartes, pas ses pièces (lâchées à sa chute).
+const REVIVE_WINDOW := 120.0
+const REVIVE_DELAY := 5.0
+const REVIVE_SHIELD := 4.0
 const START_RADIUS := 260.0  # anneau de départ : toute la carte (512 m)
 ## Phases de l'anneau : attente (le cercle ne bouge pas), resserrement, rayon final, dégâts par seconde
 ## hors de l'anneau (part des PV max). La dernière est la mort subite, sans resserrement.

@@ -970,6 +970,25 @@ doit se lire avant de lancer ; la Ruée et le Siège puisent dans la bibliothèq
   coffres choisis par valeur / trajet, attaque seulement avec l'avantage (rapport PV × frappe, exigence qui baisse à chaque
   anneau), fuite s'il est dépassé et a de quoi boire, traque des affaiblis à partir du 3e anneau.
 - Duel entre héros : échelle des dégâts 0,04 (`ModeRules.ROYALE`).
+- **Largage (lot BR4, 0.1.217, retour du joueur : « plus de spawn fixe, comme Fortnite »)** : `core/royale_drop.gd`. Plus de
+  point d'apparition ni de compte à rebours : les 8 héros sont à bord d'un aigle géant qui traverse la carte en ligne droite
+  d'un bord à l'autre (direction et décalage tirés à la graine, 95 m au-dessus du point le plus haut, 30 m/s : 15 à 22 s de
+  vol ; ligne en pointillés et aigle sur la mini-carte, vue large pendant le vol, coffres visibles à 200 m). Portes ouvertes
+  après `Royale.COUNTDOWN` (3 s) ; [Sauter] saute, saut automatique en fin de vol. Chute libre dirigée (17 m/s à
+  l'horizontale, 16 m/s de chute, [Esquive] maintenue : piqué à 34 m/s) ; le planeur s'ouvre seul à 26 m du sol ([Sauter]
+  l'ouvre plus tôt : 6 m/s de chute, 12 m/s à l'horizontale) ; l'atterrissage rend la main. **Personne n'attaque ni n'est
+  attaquable en l'air** (hors du chacun pour soi jusqu'au sol) ; rien ne s'ouvre ni ne se casse sous un héros en l'air.
+  Les héros scriptés et le pilote automatique visent chacun un coffre à portée de chute (55 m au moins entre deux
+  cibles, les dorés d'abord), leurs sauts répartis sur le vol (tôt, au milieu, tard). Ceux qui ont atterri pillent et se
+  battent déjà ; **l'anneau et le temps de combat (`elapsed`) ne partent qu'à l'atterrissage du dernier** (au plus tard 20 s
+  après la fin du vol : les retardataires sont posés). Les coups et le fil des éliminations suivent l'horloge totale (`clock`).
+- **Réanimation (lot BR4)** : un héros éliminé dans les **2 premières minutes de combat** (`Royale.REVIVE_WINDOW` 120 s)
+  revient une fois, 5 s plus tard (« Tu es éliminé : retour dans N s »), planeur ouvert au-dessus d'un point de l'anneau
+  (le prochain s'il se resserre) le plus loin possible des héros en vie, PV pleins, **invulnérable 4 s** après l'atterrissage.
+  Il garde son niveau, son arme, ses sorts et ses cartes ; ses pièces sont tombées au sol à sa chute (il repart avec l'arme
+  seule). Il n'a pas de place tant qu'il doit revenir (compté en vie). Chaque héros ne compte qu'**une fois** au compteur
+  d'éliminations (sa première chute) ; l'expérience et les PV de l'élimination sont donnés à chaque fois. Même règle pour
+  les héros scriptés. Après 2 min, ou à la 2e chute : mort définitive.
 - Éliminé : on regarde la fin (spectateur) ou on ouvre le bilan ; la place est fixée à la mort.
 - **Équipement (lot BR3, 0.1.216, retour du joueur : « je ne veux pas qu'elles changent », « finir avec 5 arcs »)** :
   `core/royale_loot.gd`. L'arme de départ (une des deux variantes de l'arme de la classe) est **gardée toute la partie** :

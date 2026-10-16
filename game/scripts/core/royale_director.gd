@@ -1,7 +1,7 @@
 class_name RoyaleDirector
 extends Node
 ## Déroulement d'une partie de Battle royale (voir Royale) : la carte de Survie remplie de coffres, huit héros
-## (le joueur et sept héros scripté) parachutés à des points tirés au sort, nus et au niveau 1, un anneau qui se
+## (le joueur et sept héros scripté) largués d'un aigle où chacun veut (RoyaleDrop, lot BR4), nus et au niveau 1, un anneau qui se
 ## referme en quatre phases, le dernier debout gagne. Les héros scriptés pillent les coffres, fuient l'anneau et
 ## se battent quand un adversaire est proche (ClassRival.goal) ; leur niveau et leur équipement montent comme ceux
 ## du joueur (Royale.ai_open_chest).
@@ -38,15 +38,23 @@ const TIER_VALUE := [0.55, 0.9, 1.4, 2.8]
 const TRAVEL_EST := 10.0  # vitesse de trajet estimée (m/s) pour le choix des coffres
 
 var d: RunDirector
-var phase := "countdown"  # countdown, fight, over
-var elapsed := 0.0  # secondes de combat (après le compte à rebours)
+var phase := "drop"  # drop (largage, lot BR4), fight, over
+## Secondes de combat : l'horloge de l'anneau, de la réanimation et du bilan. Elle part quand le dernier héros a
+## atterri (ou au plus tard RoyaleDrop.LATE s après la fin du vol) : l'anneau ne bouge pas pendant le largage.
+var elapsed := 0.0
+## Secondes depuis le départ de l'aigle (largage compris) : horloge des coups (PvpCaps.elapsed) et du fil des éliminations.
+var clock := 0.0
+## Largage (lot BR4) : l'aigle et les héros à bord ou en l'air.
+var jump: RoyaleDrop
+## Réanimations en attente (lot BR4) : [{st: état du héros scripté (meta « royale ») ou {} pour le joueur, player, t: secondes}]
+var revives: Array = []
+var _player_revived := false
 var ais: Array = []  # ClassRival (libérés à leur mort : toujours tester is_instance_valid)
 var ai_stats: Array = []  # état de chaque héros scripté (meta « royale »), gardé après sa mort (bilan, mesures)
 var centers: Array = []
 var ring: Dictionary = {}
 var chests_opened := 0
 var rng := RandomNumberGenerator.new()
-var _t := Royale.COUNTDOWN
 var _chests: Array = []  # coffres de la carte (Interactable)
 var _claims := {}  # coffre -> héros scripté qui s'y rend
 var _wall: MeshInstance3D
@@ -99,9 +107,15 @@ func setup(director: RunDirector) -> void:
 	p.hp = p.max_hp
 	d._place_player(_spawns[0])
 	_spawn_ais()
+	# largage (lot BR4) : tout le monde à bord de l'aigle, chacun saute où il veut
+	jump = RoyaleDrop.new()
+	jump.name = "RoyaleDrop"
+	add_child(jump)
+	jump.setup(d, rng, [p] + ais)
+	jump.landed.connect(_on_landed)
 	_build_walls()
 	d.zone_changed.emit({"name": "Battle royale · %s" % d.zone.get("name", ""), "levels": [1, Royale.LEVEL_CAP]})
-	d.message.emit("Battle royale\n%d héros, un seul survivant. Pille les coffres, reste dans l'anneau !" % Royale.PLAYERS, 4.0)
+	d.message.emit("Battle royale\n%d héros, un seul survivant. Saute au-dessus d'un coffre !" % Royale.PLAYERS, 4.0)
 	d.world._offer("Ton arme de %s : choisis sa variante" % String(GameData.weapon_type(Run.weapon_type()).get("name", "classe")).to_lower(),
 		RoyaleLoot.start_weapon_cards(d.start_weapon_cards()))  # lot BR3 : armes du Survivant (jet, passif fixe)
 	if p.autoplay:
@@ -208,20 +222,23 @@ func _apply_walls() -> void:
 # --- boucle -----------------------------------------------------------------------------
 func update(delta: float) -> void:
 	_obj_t -= delta
-	if phase == "countdown":
-		_t -= delta
-		var n := ceili(_t)
-		if n != ceili(_t + delta) and n > 0 and n <= 5:
-			d.message.emit(str(n), 0.8)
-		if _t <= 0.0:
+	if phase != "over":
+		clock += delta
+		PvpCaps.elapsed = clock
+	if jump != null:
+		jump.update(delta)
+	_tick_revives(delta)
+	if phase == "drop":
+		# largage : ceux qui ont atterri pillent (et se battent) ; l'anneau attend que tout le monde soit au sol
+		_ai_orders(delta)
+		_ai_breakables(delta)
+		if jump == null or jump.count_airborne() == 0 or jump.t >= jump.duration + RoyaleDrop.LATE:
+			if jump != null:
+				jump.land_all()
 			phase = "fight"
-			for a in ais:
-				if is_instance_valid(a):
-					a.passive = false
-			d.message.emit("C'EST PARTI !", 1.2)
+			d.message.emit("Tout le monde est au sol : l'anneau démarre !", 2.0)
 	elif phase == "fight":
 		elapsed += delta
-		PvpCaps.elapsed = elapsed
 		d.time = elapsed
 		var was_phase := int(ring.get("phase", 0))
 		var was_state := String(ring.get("state", ""))
@@ -240,12 +257,7 @@ func update(delta: float) -> void:
 		if _ring_tick <= 0.0:
 			_ring_tick = 1.0
 			_ring_damage()
-		_order_t -= delta
-		if _order_t <= 0.0:
-			_order_t = ORDER_EVERY
-			for a in ais:
-				if is_instance_valid(a) and not a.is_dead:
-					_order(a)
+		_ai_orders(delta)
 		_ai_breakables(delta)
 		if spectating:
 			_update_spectator()
@@ -290,6 +302,8 @@ func status_text() -> String:
 			what = "L'anneau se resserre (%d s)" % ceili(left)
 		_:
 			what = "Dernier cercle"
+	if phase == "drop":
+		what = "Largage"
 	return "Battle royale · %s\n%d / %d en vie · éliminations %d · coffres %d" % [what, alive_count(), Royale.PLAYERS, Royale.kills, chests_opened]
 
 
@@ -298,7 +312,21 @@ func alive_count() -> int:
 	for a in ais:
 		if is_instance_valid(a) and not a.is_dead:
 			n += 1
-	return n
+	return n + revives.size()  # (un héros qui va revenir est encore en jeu)
+
+
+## Héros scriptés éliminés qui vont revenir (lot BR4).
+func pending_ais() -> int:
+	return revives.filter(func(rv): return not rv.has("player")).size()
+
+
+func _ai_orders(delta: float) -> void:
+	_order_t -= delta
+	if _order_t <= 0.0:
+		_order_t = ORDER_EVERY
+		for a in ais:
+			if is_instance_valid(a) and not a.is_dead and not (jump != null and jump.airborne(a)):
+				_order(a)
 
 
 # --- anneau ---------------------------------------------------------------------------------
@@ -319,7 +347,7 @@ func _ring_damage() -> void:
 	var dps := float(ring.dps)
 	var members: Array = [d.player] + ais
 	for m in members:
-		if not is_instance_valid(m) or m.is_dead:
+		if not is_instance_valid(m) or m.is_dead or (jump != null and jump.airborne(m)):
 			continue
 		if _outside(m.global_position):
 			m.take_damage(maxf(1.0, m.max_hp * dps), null, false, true)
@@ -612,7 +640,7 @@ func _ai_breakables(delta: float) -> void:
 		return
 	_touch_t = 0.1
 	for a in ais:
-		if is_instance_valid(a) and not a.is_dead:
+		if is_instance_valid(a) and not a.is_dead and not (jump != null and jump.airborne(a)):
 			_breaker = a
 			d.map.breakables.touch(a.global_position)
 	_breaker = null
@@ -623,10 +651,20 @@ func _on_ai_died(who: Combatant, killer: Combatant) -> void:
 	who.clear_ffa()
 	if phase == "over":
 		return
+	# réanimation (lot BR4) : tombé dans les deux premières minutes, il reviendra (pas encore de place) ; chaque
+	# héros ne compte qu'une fois au compteur d'éliminations (sa première chute), l'expérience est donnée à chaque fois
+	var st_r: Dictionary = who.get_meta("royale", {})
+	var back := _can_revive(st_r)
+	var first := not bool(st_r.get("counted", false))
+	st_r["counted"] = true
+	if back:
+		st_r["revived"] = true
+		revives.append({"st": st_r, "t": Royale.REVIVE_DELAY})
 	var left := alive_count()
-	who.set_meta("place", left + 1)
-	if who.has_meta("royale"):
-		who.get_meta("royale")["place"] = left + 1
+	if not back:
+		who.set_meta("place", left + 1)
+		if who.has_meta("royale"):
+			who.get_meta("royale")["place"] = left + 1
 	who.set_meta("died_at", elapsed)
 	var tag := who.get_node_or_null("RoyaleTag") as Label3D
 	if tag:
@@ -637,22 +675,25 @@ func _on_ai_died(who: Combatant, killer: Combatant) -> void:
 	if killer != null and is_instance_valid(killer) and killer != who:
 		var xp := Royale.KILL_XP + (Royale.BOUNTY_XP if was_bounty else 0.0)
 		if killer == d.player:
-			Royale.kills += 1
+			Royale.kills += 1 if first else 0
 			d.player.gain_xp(maxi(1, ceili(float(GameData.xp_to_next(d.player.level)) * xp)))
 			d.player.heal(d.player.max_hp * 0.25)
 			line = "Tu élimines %s" % name
-			Profile.record_add("kills", 1)
+			if first:
+				Profile.record_add("kills", 1)
 		elif killer is ClassRival and killer.has_meta("royale"):
 			var kst: Dictionary = killer.get_meta("royale")
-			kst.kills = int(kst.get("kills", 0)) + 1
+			kst.kills = int(kst.get("kills", 0)) + (1 if first else 0)
 			Royale.ai_award(killer as ClassRival, xp)
 			killer.heal(killer.max_hp * 0.25)
 			line = "%s élimine %s" % [killer.display_name.get_slice(" ·", 0), name]
 	if was_bounty:
 		bounty = null
 		line += " : la prime tombe"
+	if back:
+		line += " : il reviendra"
 	feed(line)
-	if not spectating:
+	if not spectating and not back:
 		d.message.emit("%d restant%s" % [left, "s" if left > 1 else ""], 1.6)
 	if randf() < 0.7 or was_bounty:
 		d._drop_potion(who.global_position, Potions.roll_kind())
@@ -664,11 +705,11 @@ func _on_ai_died(who: Combatant, killer: Combatant) -> void:
 
 
 ## Fil des éliminations (en haut à droite du HUD, Hud.feed) : les 4 dernières lignes.
-var kill_feed: Array = []  # [texte, secondes de combat]
+var kill_feed: Array = []  # [texte, instant (clock)]
 
 
 func feed(line: String) -> void:
-	kill_feed.append([line, elapsed])
+	kill_feed.append([line, clock])
 	if kill_feed.size() > 4:
 		kill_feed.pop_front()
 
@@ -721,9 +762,17 @@ func player_down(killer: Combatant = null) -> void:
 	for a in ais:
 		if is_instance_valid(a) and not a.is_dead:
 			left += 1
+	left += pending_ais()  # (lot BR4 : ceux qui vont revenir sont encore en jeu)
 	_place = left
 	_down_at = elapsed
 	_fall_player()  # lot BR3 : tes pièces tombent au sol (sauf l'arme)
+	if not _player_revived and _can_revive({}):
+		# réanimation (lot BR4) : tombé dans les deux premières minutes, il revient une fois
+		_player_revived = true
+		_down_at = -1.0
+		revives.append({"st": {}, "player": true, "t": Royale.REVIVE_DELAY})
+		feed("Tu es éliminé : tu reviendras")
+		return
 	feed("Tu es éliminé (%de)" % left)
 	if left <= 2:
 		_finish(left)  # un seul héros restant : il a gagné
@@ -815,6 +864,121 @@ func chests_left() -> int:
 		if is_instance_valid(it) and not (it as Interactable).used:
 			n += 1
 	return n
+
+
+# --- largage et réanimation (lot BR4) --------------------------------------------------------------
+## Un héros éliminé peut-il revenir ? Une fois, dans les Royale.REVIVE_WINDOW premières secondes de combat.
+func _can_revive(st: Dictionary) -> bool:
+	return phase != "over" and elapsed < Royale.REVIVE_WINDOW and not bool(st.get("revived", false))
+
+
+func _tick_revives(delta: float) -> void:
+	for rv in revives.duplicate():
+		rv.t = float(rv.t) - delta
+		if float(rv.t) > 0.0:
+			continue
+		revives.erase(rv)
+		if phase == "over":
+			continue
+		if rv.has("player"):
+			_revive_player()
+		else:
+			_revive_ai(rv.st)
+
+
+## Revenant : il ne garde que son arme (ses pièces sont tombées au sol à sa chute, lot BR3).
+static func keep_weapon(gear: Dictionary) -> Dictionary:
+	return {"weapon": gear["weapon"]} if gear.has("weapon") else {}
+
+
+func _revive_player() -> void:
+	var p := d.player
+	Profile.equipped = keep_weapon(Profile.equipped)
+	Profile.inventory = Profile.inventory.filter(func(x): return x is Dictionary and String(x.get("slot", "")) == "weapon")
+	var pt := revive_point()
+	p.respawn(pt + Vector3.UP * RoyaleDrop.GLIDE_AT)
+	Profile.changed.emit()  # (fiche du héros recalculée sans les pièces)
+	p.recalc_stats()
+	p.hp = p.max_hp
+	p.health_changed.emit(p.hp, p.max_hp)
+	p.set_meta("revive_shield", true)
+	jump.drop_in(p, pt)
+	if d.world.rig != null:
+		d.world.rig.target = p
+	feed("Tu reviens dans la partie")
+	d.message.emit("De retour !\nPlus de seconde chance", 2.5)
+
+
+func _revive_ai(st: Dictionary) -> void:
+	var k := ai_stats.find(st)
+	if k < 0:
+		return
+	st.gear = keep_weapon(st.gear)
+	st["mode"] = ""
+	var r := Royale.make_ai(String(st.cid), int(st.diff), int(st.index))
+	r.set_meta("royale", st)
+	Royale.refresh_ai(r, false)
+	d.add_child(r)
+	r.set_ffa(int(st.index))
+	r.died.connect(_on_ai_died)
+	_tag(r)
+	var pt := revive_point()
+	r.global_position = pt + Vector3.UP * RoyaleDrop.GLIDE_AT
+	r.set_meta("revive_shield", true)
+	jump.drop_in(r, pt)
+	ais[k] = r
+	feed("%s revient dans la partie" % r.display_name.get_slice(" ·", 0))
+
+
+## Point de retour d'un revenant : au sol, dans la zone sûre (le prochain anneau s'il se resserre), le plus loin
+## possible des héros en vie.
+func revive_point() -> Vector3:
+	var shrinking := float(ring.next_radius) < float(ring.radius) - 1.0
+	var c: Vector2 = ring.next_center if shrinking else ring.center
+	var rad := (float(ring.next_radius) if shrinking else float(ring.radius)) * 0.75
+	var others: Array = ([d.player] + ais).filter(func(m): return is_instance_valid(m) and not m.is_dead)
+	var best := Vector3.INF
+	var best_d := -1.0
+	for i in 48:
+		var q := c + Vector2.RIGHT.rotated(rng.randf() * TAU) * sqrt(rng.randf()) * rad
+		var g: Vector3 = d.map.ground_at(q.x, q.y)
+		if g == Vector3.INF:
+			continue
+		var near := INF
+		for m in others:
+			near = minf(near, Vector2((m as Node3D).global_position.x - q.x, (m as Node3D).global_position.z - q.y).length())
+		if near > best_d:
+			best_d = near
+			best = g
+	return best if best != Vector3.INF else _ground(c, d.map.height_at(c.x, c.y))
+
+
+## Un héros a atterri (largage ou retour) : le revenant est invulnérable quelques secondes.
+func _on_landed(c: Combatant) -> void:
+	if c is ClassRival:
+		_refresh_tag(c as ClassRival)
+	if not c.has_meta("revive_shield"):
+		return
+	c.remove_meta("revive_shield")
+	if c is Player:
+		(c as Player).shield_until = (c as Player)._time + Royale.REVIVE_SHIELD
+	elif c is ClassRival:
+		(c as ClassRival)._invuln_until = (c as ClassRival)._time + Royale.REVIVE_SHIELD
+	Vfx.ring(c, c.global_position, 2.4, Color(0.5, 0.9, 1.0, 0.8))
+	DamageNumber.spawn_text(c, "PROTÉGÉ", Color(0.6, 0.95, 1.0))
+
+
+## Aide du largage et du retour (HUD, au centre en bas) ; vide : rien à afficher.
+func drop_hint() -> String:
+	for rv in revives:
+		if rv.has("player"):
+			return "Tu es éliminé : retour dans %d s" % maxi(1, ceili(float(rv.t)))
+	return jump.hint() if jump != null else ""
+
+
+## Le joueur est-il au sol (largage fini pour lui) ? Les coffres et objets cassables ne réagissent pas en l'air.
+func player_grounded() -> bool:
+	return jump == null or not jump.airborne(d.player)
 
 
 # --- réapprovisionnement -------------------------------------------------------------------------
@@ -1004,7 +1168,7 @@ func markers() -> Array:
 		var tier := int((it as Interactable).get_meta("tier", 0))
 		if tier == Royale.DROP_TIER:
 			continue
-		if not (it as Interactable).used and Vector2(it.global_position.x - pp.x, it.global_position.z - pp.z).length() < 80.0:
+		if not (it as Interactable).used and Vector2(it.global_position.x - pp.x, it.global_position.z - pp.z).length() < (80.0 if player_grounded() else 200.0):
 			out.append([it.global_position, "chest" if tier == 0 else "chest%d" % tier])
 	for it in d.map.interactables:
 		if is_instance_valid(it) and it.kind == "well" and not it.used:
@@ -1043,8 +1207,8 @@ func farm_target() -> Vector3:
 
 ## Horloge du HUD : phase de l'anneau et temps avant son resserrement.
 func clock_text() -> String:
-	if phase == "countdown":
-		return "Largage des héros · %d" % maxi(0, ceili(_t))
+	if phase == "drop":
+		return "Largage · %d / %d au sol" % [Royale.PLAYERS - (jump.count_airborne() if jump != null else 0), Royale.PLAYERS]
 	var n := mini(int(ring.get("phase", 0)) + 1, Royale.PHASES.size() - 1)
 	match String(ring.get("state", "hold")):
 		"hold":
@@ -1064,6 +1228,11 @@ func objective_lines() -> Array[String]:
 		out.append("◉ Tu regardes %s" % who)
 		out.append("◇ [%s] : son équipement" % Settings.action_label("interact", 1))
 		out.append("◇ [%s] : bilan de la partie" % Settings.action_label("pause", 1))
+		return out
+	if phase == "drop":
+		out.append("◆ Saute au-dessus d'un coffre")
+		out.append("◇ Personne ne frappe en l'air")
+		out.append("◇ L'anneau part quand tous sont au sol")
 		return out
 	out.append("⚔ Reste dans l'anneau violet")
 	if bounty == d.player:

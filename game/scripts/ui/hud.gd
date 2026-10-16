@@ -977,6 +977,8 @@ func _update_kill_feed() -> void:
 	if not Royale.active or director == null or director.royale == null:
 		if _feed_box:
 			_feed_box.visible = false
+		if _drop_box:
+			_drop_box.visible = false
 		return
 	if _feed_box == null:
 		_feed_box = VBoxContainer.new()
@@ -988,7 +990,8 @@ func _update_kill_feed() -> void:
 		_root.add_child(_feed_box)
 	if _action_root:
 		_action_root.visible = not director.royale.spectating
-	var now: float = director.royale.elapsed
+	_update_drop_hint()
+	var now: float = director.royale.clock
 	var lines: Array = director.royale.kill_feed.filter(func(e): return now - float(e[1]) < 8.0)
 	_feed_box.visible = not lines.is_empty()
 	var sig := str(lines)
@@ -1004,6 +1007,33 @@ func _update_kill_feed() -> void:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		l.add_theme_constant_override("outline_size", 5)
 		l.add_theme_color_override("font_outline_color", Color(0.05, 0.02, 0.08, 0.95))
+
+
+## Battle royale, largage et retour (lot BR4) : une ligne au centre en bas (« [Espace] Sauter », « retour dans 4 s »).
+var _drop_box: PanelContainer
+var _drop_label: Label
+
+
+func _update_drop_hint() -> void:
+	var text: String = director.royale.drop_hint()
+	if _drop_box == null:
+		if text == "":
+			return
+		_drop_box = PanelContainer.new()
+		_drop_box.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.06, 0.04, 0.1, 0.88), UiTheme.GOLD, 2, 18))
+		_drop_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_drop_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+		_drop_box.position = Vector2(0, -340)
+		_root.add_child(_drop_box)
+		_drop_label = _label(_drop_box, "", 22, Color(1.0, 0.92, 0.7))
+		_drop_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_drop_box.visible = text != ""
+	if text == _drop_label.text:
+		return
+	_drop_label.text = text
+	_drop_box.reset_size()
+	_drop_box.offset_left = -_drop_box.size.x * 0.5
+	_drop_box.offset_right = _drop_box.size.x * 0.5
 
 
 ## Compteur de dégâts cumulés : grossit à chaque coup, la barre montre les 3 s avant la remise

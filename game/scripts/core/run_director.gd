@@ -233,9 +233,10 @@ func _process(delta: float) -> void:
 	RunJournal.tick(delta, player.global_position)
 	if state == "royale":
 		royale.update(delta)
-		_update_interactions()
-		_update_breakables(delta)
-		_keep_on_map()
+		if royale.player_grounded():  # (largage, lot BR4 : rien ne s'ouvre ni ne se casse sous un héros en l'air)
+			_update_interactions()
+			_update_breakables(delta)
+			_keep_on_map()
 		return
 	if state == "duel":
 		duel.update(delta)
