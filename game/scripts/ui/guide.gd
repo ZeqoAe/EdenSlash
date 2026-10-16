@@ -230,9 +230,9 @@ static func blocks_for(id: String) -> Array:
 				"Il faut des cristaux et des fournitures (parchemins, gemmes, formules).",
 				"Les cristaux viennent des Donjons, de la Ruée, du Siège et de la Tour, qui donnent aussi des coffres de forge et de joaillier.",
 				"En Survie, les fournitures ne sont gardées qu'après une victoire ou une extraction."]) + _lock("forge")})
-			out.append({"id": "craft", "title": "Fabrication", "text": bullets([
-				"Atelier > Fabrication. Un plan de donjon permet de fabriquer une pièce de sa panoplie, contre des cristaux.",
-				"Les plans tombent dans les donjons."])})
+			out.append({"id": "craft", "title": "Plans de donjon", "text": bullets([
+				"Atelier > Plans de donjon. Le plan d'un boss fabrique une pièce de sa panoplie, en insignes.",
+				"Chaque boss de donjon donne son plan la première fois qu'il tombe."])})
 			out.append({"id": "sets", "title": "Panoplies", "text": bullets([
 				"Porter 2, 4 ou 6 pièces d'une même panoplie active ses bonus.",
 				"Chaque donjon a la sienne. Le Panthéon, en Duel, donne celle des Esprits."])})

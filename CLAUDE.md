@@ -119,8 +119,10 @@ PV des boss hors Survie : `Dungeons.boss_hp` (fixes par niveau et difficulté). 
 Détail : DESIGN « Bibliothèque de boss et donjons à la carte », `R_M2.md`, `R_P11.md`.
 
 ### Donjons, Tour, Ruée, Siège
-- **Donjons** : `core/dungeons.gd` (un donjon par boss, `Dungeons.catalog`, archétypes `ARCHETYPES` + `Items.SETS`, plans
-  `Profile.plans`), moteur de salles de la Tour (`Tower.dungeon`), alliés IA (`ClassRival.ally`). Test `test_m2`.
+- **Donjons** : `core/dungeons.gd` (un donjon par boss, `Dungeons.catalog`, archétypes `ARCHETYPES` + `Items.SETS`), moteur de
+  salles de la Tour (`Tower.dungeon`), alliés IA (`ClassRival.ally`). Test `test_m2`. **Plans de donjon** (lot A1) : un par boss
+  (`plan_<boss>`, 48) à la 1re victoire, fabriqués en insignes (`ui/fabrication_page.gd`, `Dungeons.plan_diff`) ; anciens `plan_<zone>`
+  convertis par `Dungeons.migrate_plans()` (paresseux, idempotent). Test `test_a1`, rapport `conception/progression/R_A1.md`.
 - **La Tour** : `core/tower.gd` (`block_plan` par bloc de 10, `BOSS_CURVE`, `BOSS_FLOOR_ADJ`), `core/tower_director.gd` (interface
   documentée en tête, prolongée par `SiegeDirector`), équilibre entre classes `core/tower_balance.gd` + `data/tower_solo.json`
   (régénéré par `tools/m8_matrix.py solo`). Tests `test_m3`, `test_m8`. Rapports `R_M3.md`, `R_M8.md`.

@@ -255,7 +255,7 @@ static func after(mode: String, got: Dictionary = {}) -> String:
 				parts.append("%s à l'Armurerie" % GearPower.plural(seen, "pièce", "pièces"))
 		"dungeon", "rush":
 			if String(got.get("plan", "")) != "":
-				parts.append("plan obtenu : Atelier > Fabrication")
+				parts.append("plan obtenu : Atelier > Plans de donjon")
 			var arch := String(got.get("archetype", ""))
 			if arch != "" and Items.SETS.has(arch):
 				parts.append("panoplie %s %d / %d : un coffre de set à ouvrir" % [String(Items.SETS[arch].name), archetype_count(arch), ClassGear.PANOPLY])

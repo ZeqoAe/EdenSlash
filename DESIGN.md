@@ -865,8 +865,20 @@ pool de boss aux mécaniques différentes, réutilisables partout (Tour, Ruée, 
   25 % des PV du boss), boss ; 44 + 6 × difficulté monstres par salle (+8 avec le lieutenant), PV × 3,5, élites 5 + difficulté
   (pilote : donjon fini en 2 à 6 min, joueur estimé 6 à 10 min ; voir `R_M2.md`). **Farmable à volonté**. Butin : le coffre de set propose **3 pièces de ses 2 emplacements** (le 1er,
   le 2e, puis le 1er), à **sa panoplie**, mythiques ou légendaires (selon la PE, comme avant), et en Mythique une pièce d'armure
-  sur quatre est **éveillée** quand le modèle existe ; jamais une pièce déjà possédée. Plans, cristaux et coffres de matières
+  sur quatre est **éveillée** quand le modèle existe ; jamais une pièce déjà possédée. Cristaux et coffres de matières
   (lot E1) inchangés. Chaque panoplie s'obtient aux **9 emplacements** sur ses 6 donjons ; record par boss (`dgb_<boss>_<diff>`).
+- **Plans de donjon par boss** (lot A1 de la refonte Aventure) : **48 plans**, un par boss (`plan_<boss>` dans `Profile.plans`),
+  **garanti à la 1re victoire contre ce boss** (toute difficulté), jamais en double (`Dungeons.reward` ; sans boss choisi : celui
+  d'origine de la zone). Le plan fabrique à l'Atelier (onglet « Plans de donjon », `ui/fabrication_page.gd`) une pièce d'un des
+  **2 emplacements du boss**, à **sa panoplie** (arme du type de la classe choisie), **en insignes** (plus en cristaux : les cristaux
+  servent la Forge) ; il n'est pas consommé. Niveau = donjon du boss à la **meilleure difficulté finie contre lui**
+  (`Dungeons.plan_diff`), mythique, **légendaire après une victoire en Mythique** ; prix = `Economy.base_price` d'une pièce de ce
+  niveau et de cette rareté (le prix plein de l'Armurerie : mythique 30 + niveau, légendaire 80 + 2 × niveau ; Normal de Monts
+  Calcaires 44, Mythique 260). Page : compteur « x / 48 plans », plans trouvés (emplacement, « Fabriquer · N insignes », ce qui
+  manque en rouge), plans des donjons ouverts (« Il tombe en battant <boss> »), les autres en une ligne. **Migration** sans perte,
+  paresseuse et idempotente (`Dungeons.migrate_plans`, appelée par la page et par `reward`) : un ancien `plan_<zone>` devient le plan
+  du boss d'origine de la zone (`BossLibrary.zone_boss`), qui garde la meilleure difficulté finie dans la zone (record
+  `plan_diff_<boss>`) ; un plan inconnu reste tel quel.
 - **Page Donjons** (`ui/dungeon_page.gd`) : en haut le donjon choisi (boss, mécaniques avec leur conseil en infobulle, pièces,
   victoires) et sa difficulté (jauge de PE) ; dessous « Je cherche » : filtres **pièce**, **panoplie**, **mécanique**, puis la liste
   (ouverts d'abord, fermés grisés avec leur condition) ; alliés IA ; « Entrer : <donjon> » épinglé. « Rejouer » relance le même boss.
@@ -1098,9 +1110,9 @@ chacune avec son rôle :
   **Promotion de Ligue** : + 40 × rang insignes et un coffre d'apparence (Bronze et Argent rare, Or mythique, Platine légendaire),
   une seule fois puisque le rang est gardé à vie. **Mort subite** (duel à l'arme et équipé, Arènes, Gantelet) : passé 90 s de
   manche, l'acharnement double en plus toutes les 5 s (les duels avec un soigneur duraient 95 à 120 s).
-- **Plans** : le plan d'une zone tombe à coup sûr au 1er donjon terminé de chaque difficulté (Normal compris), sinon une
-  fois sur dix. **Fabrication** : les 9 emplacements (arme du type de la classe choisie, collier, anneau compris), modèle
-  d'Eden du niveau du donjon (et non plus de la zone choisie au lobby).
+- **Plans** (remplacé par le lot A1 : un plan par boss, en insignes, voir « Bibliothèque de boss ») : le plan d'une zone tombait au
+  1er donjon terminé de chaque difficulté, sinon une fois sur dix. **Fabrication** : modèle d'Eden du niveau du donjon (et non de la
+  zone choisie au lobby), arme du type de la classe choisie.
 - **Siège Normal** : aucune PE requise (Héroïque et Mythique : voir « Verrous de PE (passe P5) »).
 - **Panoplie des Esprits universelle** : chaque pièce est un modèle fixe, légendaire de niveau d'Eden 70, quelle que soit la
   zone. Gagnée, elle s'ajoute à `seen_gear` (id `Pantheon.shop_id`) : l'Armurerie la revend (220 insignes) pour toutes

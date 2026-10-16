@@ -124,10 +124,10 @@ func _flow() -> void:
 	var zid := String(Dungeons.zone_ids()[0])
 	check("Fabrication : sans plan, rien n'est fabriqué (message d'erreur)", FabricationPage.craft(zid, "head").has("error"))
 	Profile.plans = ["plan_" + zid]
-	check("Fabrication : le plan est reconnu", zid in FabricationPage.known())
+	check("Fabrication : le plan est reconnu", BossLibrary.zone_boss(zid) in FabricationPage.known())
 	var fab_before := Profile.vault.size() + Profile.inventory.size()
-	Profile.materials["crystal"] = 100000
-	var fr := FabricationPage.craft(zid, "head")
+	Profile.insignia = 100000
+	var fr := FabricationPage.craft(zid, String(FabricationPage.slots_of(zid)[0]))
 	check("Fabrication : une pièce de la panoplie du donjon est fabriquée (%s)" % [str(fr.get("error", "ok"))], not fr.has("error") and fr.get("archetype", "") == Dungeons.archetype(zid))
 	check("Fabrication : la pièce est au coffre ou au sac", Profile.vault.size() + Profile.inventory.size() > fab_before)
 

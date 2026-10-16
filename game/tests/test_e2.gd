@@ -104,18 +104,24 @@ func _test_dungeons() -> void:
 	Profile.unlocked_features = ["dungeons"]
 	var zid := "wetlands"
 	var r := Dungeons.reward(zid, 0)
-	check("1er donjon Normal terminé : plan sûr", r.plan == "plan_" + zid and Profile.plans.has("plan_" + zid))
-	Profile.materials["crystal"] = 5000
+	var zb := BossLibrary.zone_boss(zid)
+	check("1er donjon Normal terminé : plan sûr (celui du boss, lot A1)", r.plan == Dungeons.plan_id(zb) and Dungeons.has_plan(zb))
+	Profile.insignia = 100000  # lot A1 : fabrication en insignes
+	# boss dont le butin compte l'arme, puis les bijoux (lot A1 : deux emplacements par boss)
 	for slot in ["weapon", "necklace", "ring"]:
-		var it := FabricationPage.craft(zid, slot)
-		check("fabrication : %s de la panoplie" % slot, not it.has("error") and String(it.slot) == slot and it.get("archetype", "") == Dungeons.archetype(zid))
+		var bid := String(Dungeons.catalog({"slot": slot, "zone": zid})[0])
+		Dungeons.reward(zid, 0, bid)
+		var it := FabricationPage.craft(bid, slot)
+		check("fabrication : %s de la panoplie" % slot, not it.has("error") and String(it.slot) == slot and it.get("archetype", "") == String(BossLibrary.loot(bid).archetype))
 	Profile.selected_class = "magician"
-	var w := FabricationPage.craft(zid, "weapon")
+	var w := FabricationPage.craft(String(Dungeons.catalog({"slot": "weapon", "zone": zid})[0]), "weapon")
 	check("arme fabriquée du type de la classe choisie", Items.weapon_type_of(w) == Items.default_weapon_type(Profile.selected_class))
+	var hb := String(Dungeons.catalog({"slot": "head", "zone": zid})[0])
+	Dungeons.reward(zid, 0, hb)
 	Profile.selected_zone = "blackflame"
-	var a := FabricationPage.craft(zid, "head")
+	var a := FabricationPage.craft(hb, "head")
 	Profile.selected_zone = "limestone"
-	var b := FabricationPage.craft(zid, "head")
+	var b := FabricationPage.craft(hb, "head")
 	check("niveau de la pièce fabriquée : celui du donjon, pas de la zone du lobby (%d / %d)" % [int(a.level), int(b.level)], absi(int(a.level) - int(b.level)) <= 12 and int(a.level) <= Dungeons.level(zid, 0))
 	Profile.unlocked_features = ["dungeons", "siege"]
 	Profile.records["boss_" + zid] = 1

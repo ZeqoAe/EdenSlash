@@ -136,24 +136,27 @@ func _test_fabrication() -> void:
 	add_child(page)
 	await get_tree().process_frame
 	page.refresh()
-	var zones := Dungeons.zone_ids().size()
-	check("fabrication : sans plan, l'état vide dit quoi faire", page._banner.visible and page._grid.get_child_count() == 0 and page._todo_grid.get_child_count() == zones)
-	check("fabrication : compteur de plans", page._count.text == "0 / %d plans" % zones)
-	Profile.plans = ["plan_limestone"]
+	# lot A1 : un plan par boss (48), fabriqué en insignes ; les cristaux ne servent plus ici
+	var total := Dungeons.plan_total()
+	check("fabrication : sans plan, l'état vide dit quoi faire", page._banner.visible and page._grid.get_child_count() == 0)
+	check("fabrication : compteur de plans", page._count.text == "0 / %d plans" % total)
+	Profile.plans = ["plan_limestone"]  # ancien plan de zone : converti en plan du boss d'origine
+	Profile.insignia = 500
 	page.refresh()
 	await get_tree().process_frame
-	check("fabrication : avec un plan, plus de bandeau, une carte à fabriquer", not page._banner.visible and page._grid.get_child_count() == 1 and page._todo_grid.get_child_count() == zones - 1)
+	check("fabrication : avec un plan, plus de bandeau, une carte à fabriquer", not page._banner.visible and page._grid.get_child_count() == 1 and page._count.text == "1 / %d plans" % total)
+	var price := FabricationPage.cost(BossLibrary.zone_boss("limestone"))
 	var b := _button_with(page, "Fabriquer")
-	check("fabrication : bouton avec le coût en cristaux", b != null and b.text.contains("60 cristaux") and not b.disabled)
+	check("fabrication : bouton avec le coût en insignes", b != null and b.text == "Fabriquer · %d insignes" % price and not b.disabled)
 	if b:
 		b.pressed.emit()
-		check("fabrication : une pièce fabriquée, cristaux payés", Profile.inventory.size() == 1 and Profile.amount("crystal") == 440 and page._msg.text.begins_with("Fabriqué"))
-	Profile.materials["crystal"] = 10
+		check("fabrication : une pièce fabriquée, insignes payés, cristaux gardés", Profile.inventory.size() == 1 and Profile.insignia == 500 - price and Profile.amount("crystal") == 500 and page._msg.text.begins_with("Fabriqué"))
+	Profile.insignia = price - 5
 	page.refresh()
 	await get_tree().process_frame
 	var b2 := _button_with(page, "Fabriquer")
-	check("fabrication : trop peu de cristaux : bouton grisé, ce qui manque dit", b2 != null and b2.disabled and _label_with(page, "il te manque 50 cristaux") != null)
-	check("fabrication : accord de « cristal »", FabricationPage.crystals_text(1) == "1 cristal" and FabricationPage.crystals_text(2) == "2 cristaux")
+	check("fabrication : trop peu d'insignes : bouton grisé, ce qui manque dit", b2 != null and b2.disabled and _label_with(page, "il te manque 5 insignes") != null)
+	check("fabrication : accord de « insigne »", FabricationPage.insignia_text(1) == "1 insigne" and FabricationPage.insignia_text(2) == "2 insignes")
 	page.queue_free()
 	await get_tree().process_frame
 

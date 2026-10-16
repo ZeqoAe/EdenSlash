@@ -43,7 +43,7 @@ func _ready() -> void:
 	var chests0 := Profile.reward_chests.size()
 	var win := Tower.finish()
 	check("victoire : un coffre de set + 2 coffres de matières (Héroïque), des cristaux, record gardé", win.victory and Profile.reward_chests.size() == chests0 + 3 and Dungeons.cleared(zids[0], 1) == 1 and int(win.reward.crystals) == ActivityLoot.dungeon_crystals(1))
-	check("1re victoire en Héroïque : un plan de fabrication", Profile.plans.has("plan_" + zids[0]))
+	check("1re victoire en Héroïque : un plan de fabrication", Dungeons.has_plan(BossLibrary.zone_boss(zids[0])))
 	check("la Tour est de nouveau la Tour", not Tower.is_dungeon() and not Tower.active)
 	# le mode Tour normal n'est pas touché
 	Tower.start("warrior", 1, 1)

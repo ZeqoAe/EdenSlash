@@ -34,19 +34,23 @@ func _ready() -> void:
 	check("4 pièces d'archétype : bonus de la panoplie à 4", int(Items.set_counts(gear).get("frost", 0)) == 4 and Items.active_set_bonuses(gear).any(func(b): return b.set == "frost" and b.pieces == 4))
 	check("l'infobulle montre la panoplie de donjon", Items.describe(gear["head"]).contains("Panoplie de donjon"))
 	# --- fabrication
+	# lot A1 : plan du boss d'origine de Delphi (l'ancien « plan_delphi » est converti), payé en insignes
+	var pross := BossLibrary.zone_boss("delphi")
+	var pslot := String(FabricationPage.slots_of(pross)[0])
 	Profile.plans = []
-	Profile.materials["crystal"] = 1000
-	check("sans plan : rien à fabriquer", FabricationPage.craft("delphi", "head").has("error"))
+	Profile.insignia = 1000
+	check("sans plan : rien à fabriquer", FabricationPage.craft("delphi", pslot).has("error"))
 	Profile.plans = ["plan_delphi"]
 	Profile.records["dungeon_delphi_1"] = 1
 	var before := Profile.inventory.size()
-	var made := FabricationPage.craft("delphi", "head")
-	check("avec le plan : une pièce mythique de l'archétype, 120 cristaux", not made.has("error") and made.archetype == "salvo" and int(made.rarity) == Items.MYTHIC and Profile.amount("crystal") == 880 and Profile.inventory.size() == before + 1)
-	Profile.materials["crystal"] = 10
-	check("sans cristaux : refusé", FabricationPage.craft("delphi", "head").has("error"))
-	Profile.materials["crystal"] = 1000
-	Profile.records["dungeon_delphi_2"] = 1
-	check("donjon fini en Mythique : pièce légendaire", int(FabricationPage.craft("delphi", "chest").rarity) == Items.LEGENDARY)
+	var price := FabricationPage.cost(pross)
+	var made := FabricationPage.craft("delphi", pslot)
+	check("avec le plan : une pièce mythique de l'archétype, %d insignes" % price, not made.has("error") and made.archetype == "salvo" and int(made.rarity) == Items.MYTHIC and Profile.insignia == 1000 - price and Profile.inventory.size() == before + 1)
+	Profile.insignia = 10
+	check("sans insignes : refusé", FabricationPage.craft("delphi", pslot).has("error"))
+	Profile.insignia = 1000
+	Profile.records[Dungeons.boss_key(pross, 2)] = 1
+	check("donjon fini en Mythique : pièce légendaire", int(FabricationPage.craft("delphi", String(FabricationPage.slots_of(pross)[1])).rarity) == Items.LEGENDARY)
 	# --- Ruée des boss
 	Tower.start_dungeon("warrior", Dungeons.RUSH, 1, [])
 	check("Ruée : 8 étages, tous des boss, un par zone", Tower.rush and Tower.top() == 8 and Tower.floor_type(5) == "boss" and Tower.zone_for(5).id == GameData.zones[4].id and Tower.is_boss_floor(1))

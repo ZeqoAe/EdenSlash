@@ -6,8 +6,8 @@ extends RefCounted
 ## Il réutilise l'infrastructure de la Tour (salles, directeur, bilan) : `Tower.dungeon` est la zone du
 ## donjon en cours ("" : pas de donjon). Butin : un coffre de set (pièce mythique au choix, légendaire
 ## plus probable en Héroïque et Mythique), des cristaux, des coffres de matières au niveau du donjon
-## (ActivityLoot : de quoi monter les pièces de ce niveau) et le plan de fabrication de la zone (sûr au 1er donjon
-## terminé de chaque difficulté, sinon une fois sur dix).
+## (ActivityLoot : de quoi monter les pièces de ce niveau) et, à la 1re victoire contre un boss, son plan de donjon
+## (lot A1 : un plan par boss, 48 ; voir « Plans de donjon » plus bas).
 
 const ROOMS := ["monsters", "elite", "monsters", "boss"]
 const DIFF_NAMES := ["Normal", "Héroïque", "Mythique"]
@@ -21,7 +21,6 @@ const ELITE_HP := 4.0
 const BOSS_HP := 25.0  # × les PV de base d'un monstre de son niveau
 const ALLY_HP_STEP := 0.5  # PV des monstres en plus par allié
 const MAX_ALLIES := 2
-const PLAN_CHANCE := 0.1  # plan de fabrication après un donjon déjà terminé dans cette difficulté
 ## PV des boss de donjon, de la Ruée et du Siège (passe P11) : FIXES par niveau et difficulté, plus d'après les données
 ## d'Eden de chaque boss (elles donnaient un boss Mythique de Limestone à 990 millions de PV, jamais tué, et un boss
 ## Héroïque de Blackflame tué en 15 s). PV = BOSS_REF_HP × BOSS_GROWTH^(niveau − 15) × BOSS_DIFF[difficulté], comme
@@ -203,7 +202,8 @@ static func total_cleared() -> int:
 
 ## Butin d'un donjon terminé : {chests, crystals, plan}. Les coffres rejoignent le menu Coffres, le plan et
 ## les cristaux le profil (sauvegardés par l'appelant). [param bid] : boss de la bibliothèque (donjon à la carte) :
-## le coffre propose 3 pièces de ses deux emplacements, à sa panoplie.
+## le coffre propose 3 pièces de ses deux emplacements, à sa panoplie ; sans boss, celui d'origine de la zone
+## (pour le plan et le record). [code]plan[/code] : « plan_<boss> » s'il vient de tomber (1re victoire contre lui), sinon "".
 static func reward(zid: String, diff: int, bid := "") -> Dictionary:
 	var lv := level(zid, diff)
 	var out := {"chests": [], "crystals": ActivityLoot.dungeon_crystals(diff), "plan": ""}
@@ -226,15 +226,87 @@ static func reward(zid: String, diff: int, bid := "") -> Dictionary:
 		out.chests.append(c2)
 	out.chests.append_array(ActivityLoot.dungeon_chests(lv, diff))
 	Profile.materials["crystal"] = int(Profile.materials.get("crystal", 0)) + int(out.crystals)
-	# plan : sûr au 1er donjon terminé de chaque difficulté (un seul plan par zone : la fabrication suit ensuite
-	# la meilleure difficulté terminée), sinon une fois sur dix
-	if randf() < PLAN_CHANCE or cleared(zid, diff) == 0:
-		var plan := "plan_" + zid
-		if not plan in Profile.plans:
-			Profile.plans.append(plan)
-			out.plan = plan
+	# plan de donjon (lot A1) : garanti à la 1re victoire contre ce boss, jamais en double ; la fabrication suit
+	# ensuite la meilleure difficulté finie contre lui (plan_diff)
+	var pbid := bid if BossLibrary.has(bid) else BossLibrary.zone_boss(zid)
+	if pbid != "" and pbid != bid:
+		Profile.records[boss_key(pbid, diff)] = boss_cleared(pbid, diff) + 1
+	migrate_plans()
+	if pbid != "" and not plan_id(pbid) in Profile.plans:
+		Profile.plans.append(plan_id(pbid))
+		out.plan = plan_id(pbid)
 	Profile.records["dungeon_%s_%d" % [zid, diff]] = cleared(zid, diff) + 1
 	return out
+
+
+# --- plans de donjon (lot A1) --------------------------------------------------------------------------------------
+## Un plan par boss de la bibliothèque (« plan_<boss> », 48), garanti à la 1re victoire contre lui, jamais en double. Il
+## fabrique à l'Atelier (FabricationPage), en insignes, une pièce d'un des deux emplacements du boss à sa panoplie ; niveau
+## et rareté suivent la meilleure difficulté finie contre lui. Avant A1, un plan par zone (« plan_<zone> ») : migrate_plans.
+const PLAN_PREFIX := "plan_"
+## Record gardé par la migration : meilleure difficulté finie dans la zone d'un ancien plan, comptée pour son boss.
+const PLAN_DIFF_KEY := "plan_diff_"
+
+
+static func plan_id(bid: String) -> String:
+	return PLAN_PREFIX + bid
+
+
+static func has_plan(bid: String) -> bool:
+	migrate_plans()
+	return plan_id(bid) in Profile.plans
+
+
+## Nombre de plans de donjon à trouver (un par boss).
+static func plan_total() -> int:
+	return BossLibrary.ids().size()
+
+
+## Plans de donjon trouvés (ids de boss), dans l'ordre de la bibliothèque.
+static func plans_known() -> Array:
+	migrate_plans()
+	return BossLibrary.ids().filter(func(id): return plan_id(String(id)) in Profile.plans)
+
+
+## Où tombe le plan du boss [param bid].
+static func plan_source(bid: String) -> String:
+	return "Il tombe en battant %s." % BossLibrary.short_name(bid)
+
+
+## Meilleure difficulté finie contre le boss [param bid] (-1 : jamais battu) ; un plan converti garde celle de sa zone.
+static func plan_diff(bid: String) -> int:
+	var best := int(Profile.records.get(PLAN_DIFF_KEY + bid, -1))
+	for d in DIFF_NAMES.size():
+		if boss_cleared(bid, d) > 0:
+			best = maxi(best, d)
+	return best
+
+
+## Conversion paresseuse et idempotente des anciens plans par zone : « plan_<zone> » devient le plan du boss d'origine
+## de la zone (BossLibrary.zone_boss), qui garde la meilleure difficulté finie dans la zone (record PLAN_DIFF_KEY) :
+## il fabrique au même niveau qu'avant. Rien ne se perd : un plan inconnu reste tel quel. Rend true si quelque chose a changé
+## (la sauvegarde suit celle de l'appelant). Appelée par la page de fabrication et par reward ; profile.gd n'y touche pas.
+static func migrate_plans() -> bool:
+	var zones := zone_ids()
+	var changed := false
+	for p in Profile.plans.duplicate():
+		var zid := String(p).trim_prefix(PLAN_PREFIX)
+		if not String(p).begins_with(PLAN_PREFIX) or not zid in zones:
+			continue
+		var bid := BossLibrary.zone_boss(zid)
+		if bid == "":
+			continue
+		Profile.plans.erase(p)
+		if not plan_id(bid) in Profile.plans:
+			Profile.plans.append(plan_id(bid))
+		var best := -1
+		for d in DIFF_NAMES.size():
+			if cleared(zid, d) > 0:
+				best = d
+		if best > int(Profile.records.get(PLAN_DIFF_KEY + bid, -1)):
+			Profile.records[PLAN_DIFF_KEY + bid] = best
+		changed = true
+	return changed
 
 
 # --- donjons à la carte (passe M2) ---------------------------------------------------------------

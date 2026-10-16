@@ -48,7 +48,7 @@ func show_results(got: Dictionary) -> void:
 		if int(r.get("crystals", 0)) > 0:
 			kept.append(row("Cristaux", str(int(r.crystals)), ResourceHelp.tip("crystal"), "crystal"))
 		if String(r.get("plan", "")) != "":
-			kept.append(row("Plan de fabrication", "", "À fabriquer à l'Atelier", "equipment"))
+			kept.append(row("Plan de donjon", BossLibrary.short_name(String(r.plan).trim_prefix(Dungeons.PLAN_PREFIX)), ResourceHelp.tip("plan"), "equipment"))
 		if String(r.get("title", "")) != "":
 			gained.append(row("Titre « %s »" % String(r.title), "", "", "user"))
 	var quest := {}
