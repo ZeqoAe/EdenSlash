@@ -112,6 +112,7 @@ static func tile(parent: Control, value: String, caption: String, tip := "", hig
 
 
 func show_spec(spec: Dictionary) -> void:
+	spec = HeroLevel.decorate(spec)  # niveau de héros gagné par la partie (lot H1), une fois
 	layer = 30
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	add_to_group("results_panel")  # le HUD se retire derrière le bilan (Hud._menu_open)

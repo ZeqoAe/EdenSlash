@@ -26,6 +26,7 @@ insignes de participation `Run.INSIGNIA_BASE` 25 ; plus d'enclume en Survie (pas
   - Statistiques d'Eden
   - Sorts complets
   - Expertise, talents et certificats
+  - Niveau de héros (lot H1)
   - Grimoire et infobulles
   - Auto-attaque des armes (refonte 0.1.127, demande du joueur du 14/10/2026)
   - Effets déclenchés (procs)
@@ -205,6 +206,27 @@ Vitalité, Posture du chasseur, Désarmé (ne peut plus attaquer), Ange gardien 
   « Il manque : … → activité » (arme / pièces / niveau → Survie puis Armurerie, panoplie → Donjons ou Panthéon, +10 →
   Forge, gemmes → la Tour, enchantements → le Siège). Moins équipées d'abord ; un clic ouvre l'équipement de la classe.
   Lobby : « N / 60 classes équipées » dans le pied de page (un clic ouvre le Registre).
+
+## Niveau de héros (lot H1, 0.1.230 ; conception `conception/progression/NIVEAU_HEROS.md`)
+
+Un niveau **du compte**, de 1 à 90, partagé par les 60 classes ; il ne redescend jamais (`core/hero_level.gd`, `HeroLevel`).
+- **Courbe** : passer du niveau L à L+1 demande `NEED_BASE` × `NEED_GROWTH`^L = 105 × 1,035^L XP (148 au niveau 10, 461 au 43,
+  2 243 au 89 ; 63 229 pour le 90). État : `Profile.records["hero_xp"]` (XP totale, le niveau en est calculé).
+- **Gain** : au kill, seulement en Survie, Donjons, Tour, Ruée et Siège (`HeroLevel.MODES` / `ACTS`) ; jamais en Survivant,
+  Battle royale, Duel (toutes formes), entraînement, Défi du jour. Un monstre ordinaire vaut 1, une élite 4, un boss 8, × l'écart
+  de niveau clamp(1,1^(niveau du monstre − niveau du héros), 0,1, 3) : 10 niveaux au-dessus ×2,6, 10 en dessous ×0,39. Seuls
+  comptent les monstres abattus par le camp du héros. L'XP de la partie est **versée au bilan** (`Quests.end_run` →
+  `HeroLevel.settle`), +20 % si la partie est gagnée ; une partie quittée sans bilan ne donne rien.
+- **Affichage** : badge de classe du lobby (« Héros niv. 34 » + barre fine), en-tête de l'écran Héros (« Niv. 34 »), détail en
+  infobulle ; bilan, bloc Gagné : « Niveau de héros 34 → 35 · +1 niveau » (ou « XP de héros · +N ») et l'annonce « Ton héros
+  passe au niveau 35. ».
+- **Comptes d'avant** (migration une fois, idempotente) : niveau de départ = max(barème des époques gagnées : aucune → meilleur
+  niveau de run plafonné à 35, I → 43, II → 60, III → 75, IV → 85 + 1 par rang héroïque fini ; 90 avec un donjon Mythique fini ;
+  niveau de la plus haute pièce portée dans le préréglage actif de chaque classe, pièces de départ exclues). Aucune pièce n'est
+  déséquipée. Une carte au lobby, une fois : « Ton héros est niveau N. Il garde ce niveau dans toutes les classes. »
+- **Pas encore branché** (lots suivants) : port des pièces selon le niveau (H3), stats et monstres au niveau du héros, bandes de
+  niveau des cartes (H4), activités à min(niveau, niveau de l'activité) (H5). Talents et certificats restent à la maîtrise de la
+  classe.
 
 ## Grimoire et infobulles
 

@@ -323,6 +323,7 @@ static func event(kind: String, n := 1) -> void:
 ## [param extra] (ce que Run ne sait pas : étage atteint, place, difficulté…). À appeler APRÈS le rechargement de la sauvegarde
 ## (Tour, Duel…) et AVANT son enregistrement.
 static func end_run(act: String, won: bool, extra := {}) -> Array:
+	HeroLevel.settle(act, won)  # XP de héros de la partie (lot H1) : versée ici, montrée au bilan
 	var ctx := run_ctx(act, won, extra)
 	_run = {}
 	_announced = {}

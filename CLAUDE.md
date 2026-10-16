@@ -175,6 +175,9 @@ est un plan, on la fabrique en insignes, `Completion.plan_place` dit où le trou
 `ui/forge_bench.gd` ; bourse `ui/workshop_purse.gd` ; noms internes `_buy` / « armory » inchangés, lot A3) ; roulette `core/wheel.gd` ; potions
 `core/potions.gd`. Simulation d'un compte neuf : `res://tools/progression_sim.tscn` (`--gates` : PE requise par zone).
 Détail : DESIGN « Économie et progression » ; `R_E3.md`, `R_E6.md`, `R_P5.md`.
+**Niveau de héros** (lot H1) : `core/hero_level.gd` (`HeroLevel` : niveau 1-90 du compte dans `records.hero_xp`, courbe, XP au kill par
+`Monster._on_death` en Survie / Donjons / Tour / Ruée / Siège, versée par `Quests.end_run`, ligne du bilan `ResultsPanel.show_spec`,
+migration `ensure`), jauge `ui/hero_level_gauge.gd` ; port des pièces, stats et monstres : lots H3-H5 (`conception/progression/NIVEAU_HEROS.md`, `R_H1.md`).
 
 ### Quêtes et quête commune
 `core/quests.gd` (bus unique `Quests.end_run(activité, gagné, extra)` en fin de chaque mode, `Quests.event`), pool

@@ -131,6 +131,7 @@ func _build_top(parent: Control) -> void:
 	_title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	UiTheme.title(_title, 42, UiTheme.GOLD)
 	top.add_child(_title)
+	top.add_child(HeroLevelGauge.new(16, 140.0))  # niveau de héros du compte (lot H1)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(sp)

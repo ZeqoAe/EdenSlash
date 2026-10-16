@@ -1100,6 +1100,7 @@ func _build_ui() -> void:
 	_badge_name = Hud._label(bv, "", 21, Color(1, 0.97, 0.9))
 	_badge_name.add_theme_font_override("font", UiTheme.bold_font())
 	_badge_sub = Hud._label(bv, "", 14, UiTheme.MUTED)
+	bv.add_child(HeroLevelGauge.new(14, 130.0, "Héros niv."))  # niveau de héros du compte (lot H1)
 	# zone et prochaine récompense (en bas à gauche)
 	var zc := PanelContainer.new()
 	zc.add_theme_stylebox_override("panel", MenuWidgets.glass(14, UiTheme.GOLD, 0.88))
@@ -1358,6 +1359,11 @@ func _welcome_flow() -> void:
 	if notice != "":
 		# une sauvegarde abîmée a été remplacée par sa dernière copie saine
 		info_cards().add_card({"id": "save_notice", "kicker": "Sauvegarde", "title": "Copie saine rechargée", "body": notice, "icon": "save"})
+	var hero_note := HeroLevel.take_note()
+	if hero_note != "":
+		# compte d'avant le niveau de héros (lot H1) : son niveau de départ, une fois
+		info_cards().add_card({"id": "hero_level", "kicker": "Nouveau", "title": "Niveau de héros", "body": hero_note, "icon": "class"})
+		Profile.save_profile()
 	Tutorial.init_for_save()
 	if Tutorial.mode() == "":
 		var w := Welcome.new()

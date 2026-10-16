@@ -579,6 +579,7 @@ func _on_damaged(_amount: float, _source: Combatant) -> void:
 
 
 func _on_death(_killer: Combatant) -> void:
+	HeroLevel.on_kill(self, _killer)  # XP de héros (lot H1), modes de progression seulement
 	if is_instance_valid(_telegraph):
 		_telegraph.queue_free()  # un monstre mort ne frappe plus
 	_set_state("dead")
