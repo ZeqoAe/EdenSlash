@@ -68,12 +68,17 @@ const PVP_SIEGE := {
 ## Battle royale : héros nus qui montent de niveau en pillant ; huit héros qui se frappent (échelle réduite), pas
 ## d'acharnement (l'anneau fait pression), soins presque entiers (les potions comptent). Passe M1 : échelle 0,05 -> 0,04
 ## (parties de 4 à 6 min mesurées ; un combat plus long laisse le temps de fuir ou d'arriver en troisième).
+## Lot BR1 (retour du joueur : « deux niveau 9, 2 000 PV, coups de 10 à 50 : interminable ») : échelle 0,04 -> 0,055 et
+## plafonds du duel équipé (critiques ×2 au plus, dégâts +100 %) : l'équipement raccourcissait surtout les combats par
+## les critiques. Duel entre deux scriptés de même niveau (tools/royale_duel_probe, 8 paires, Hardcore), médiane aux
+## niveaux 9 / 20 / 40 : nus 41 / 39 / 37 s -> 28 / 26 / 24 s ; toutes les cases (niveaux 1 à 40, nus à légendaires +10)
+## 17-41 s -> 17-31 s.
 const ROYALE := {
-	"dmg_scale": 0.04, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": 0.8,
+	"dmg_scale": 0.055, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": 0.8,
 	"max_mitigation": PvpCaps.MAX_MITIGATION, "pressure_start": 100000.0,
 	"pressure_step": PvpCaps.PRESSURE_STEP, "pct_weight": 0.75,
 	"hit_cap": 0.18, "burst_cap": 0.4, "burst_window": 2.0, "burst_excess": 0.3,
-	"caps": PvpCaps.CAPS,
+	"caps": PVP["caps"],
 }
 ## Survivant (conception/survivor/SPEC.md, corrigé par DECISIONS_JOUEUR.md) : valeurs de départ, recalées par mesure
 ## au lot S7. Pas de règle de duel ici (aucun combat entre héros) : ce profil sert aux familles « cartes », « héros »,

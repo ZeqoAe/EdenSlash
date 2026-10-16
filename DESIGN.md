@@ -959,17 +959,28 @@ doit se lire avant de lancer ; la Ruée et le Siège puisent dans la bibliothèq
 
 - 8 héros nus au niveau 1, chacun pour soi, dernier debout. **9 min 50** d'anneau en 5 resserrements (`Royale.PHASES` :
   rayons 190 / 130 / 80 / 42 / 14 m, dégâts hors anneau 2 → 20 % des PV par seconde), puis 30 s de mort subite.
-- Niveaux : coffres (0,55 / 0,85 / 1,3 / largage 2 niveaux), cristaux (0,1 ; une vingtaine sur la carte : plus aucune jarre, caisse ni tas d'or, passe BR2), élimination (1 niveau et
-  25 % des PV). Les héros scriptés gagnent exactement la même chose que le joueur.
+- Niveaux : coffres (0,55 / 0,85 / 1,3 / largage 2 niveaux), cristaux (0,1 ; une vingtaine sur la carte : plus aucune jarre, caisse ni tas d'or, passe BR2), élimination (25 % des PV
+  et de l'expérience selon l'écart de niveau, lot BR1 : 1 niveau entre égaux, ± 0,15 par niveau d'écart avec la victime, de
+  0,2 à 2 ; `Royale.kill_xp`). Les héros scriptés gagnent exactement la même chose que le joueur, y compris quand ils
+  éliminent le joueur (avant BR1 : rien).
+- **Niveau maximal par anneau (lot BR1)** : 14 / 20 / 26 / 32 / 36 puis 40 (`Royale.LEVEL_CAPS`, annoncé à chaque nouvel
+  anneau, « niveau 12 / 14 » dans les objectifs) ; l'expérience au-delà est perdue. Mesure avant (6 parties au pilote) :
+  scriptés jusqu'au niveau 21-23 et pilote jusqu'à 25 avant le 2e resserrement ; un scripté à 23 puis 29 en éliminant
+  deux héros 12 et 16 niveaux plus faibles. Après : 20 au plus avant 285 s, vainqueurs au niveau 17-32 (19-40 avant).
 - **Réapprovisionnement** : 3 coffres par héros en vie (22 au plus) tombent dans l'anneau à 50 s puis à chaque resserrement et à chaque nouvel anneau,
   plus souvent dorés à chaque vague. **Largage** : à chaque resserrement sauf le dernier, un coffre de 4e qualité (rareté 4-5,
   carte sûre) tombe 15 s plus tard dans le prochain anneau (pilier doré, étoile sur la carte, visible de partout).
 - **Mis à prix** : le héros qui compte le plus d'éliminations (3 au moins) est visible de tous sur la carte ; l'éliminer
-  rapporte un niveau de plus et une potion.
+  rapporte un niveau de plus (en plus de l'élimination) et une potion.
 - Héros scriptés (`RoyaleDirector.BRAIN`, par difficulté) : trajet à la vitesse d'un joueur qui esquive (Hardcore ≈ 11 m/s),
   coffres choisis par valeur / trajet, attaque seulement avec l'avantage (rapport PV × frappe, exigence qui baisse à chaque
   anneau), fuite s'il est dépassé et a de quoi boire, traque des affaiblis à partir du 3e anneau.
-- Duel entre héros : échelle des dégâts 0,04 (`ModeRules.ROYALE`).
+- Duel entre héros (lot BR1, retour du joueur : « deux niveau 9, 2 000 PV, coups de 10 à 50 : interminable ») : échelle
+  des dégâts 0,055 (0,04 avant) et plafonds du duel équipé (critiques ×2 au plus, dégâts +100 %), `ModeRules.ROYALE` ; les
+  autres modes gardent leurs profils. Deux scriptés de même niveau (`tools/royale_duel_probe`, 8 paires, Hardcore, niveaux
+  1 / 9 / 20 / 40, nus à légendaires +10) : médianes 17-41 s → 17-31 s ; combats entre héros d'écart ≤ 2 niveaux en partie :
+  médiane 22 s (4 à 58 s) → 14 s (4 à 30 s).
+- Tirage des sept héros scriptés : jamais la Lame noire ni la Lame de lumière (`Royale.AI_EXCLUDED`, retour du joueur).
 - **Largage (lot BR4, 0.1.217, retour du joueur : « plus de spawn fixe, comme Fortnite »)** : `core/royale_drop.gd`. Plus de
   point d'apparition ni de compte à rebours : les 8 héros sont à bord d'un aigle géant qui traverse la carte en ligne droite
   d'un bord à l'autre (direction et décalage tirés à la graine, 95 m au-dessus du point le plus haut, 30 m/s : 15 à 22 s de
@@ -1007,9 +1018,11 @@ doit se lire avant de lancer ; la Ruée et le Siège puisent dans la bibliothèq
   légendaire).
 - Héros scriptés : même remplissage (un emplacement vide par coffre), puis améliorations internes (mise à niveau, rareté,
   forge +N : leurs pièces ne suivent pas leur niveau), l'option au plus grand gain de note ; jamais deux armes ni une pièce
-  moins bonne. Ils remplissent plus vite qu'avant : leurs pièces comptent pour `Royale.AI_GEAR_SCALE` (0,62) dans leurs
-  stats pour garder leur niveau d'équipement d'avant (`tools/br3_ai_probe` : -26 % à 3 coffres, +23 % à 9, +3 à +10 %
-  de 12 à 30).
+  moins bonne. Lot BR1 : leurs pièces comptent en entier (`Royale.AI_GEAR_SCALE` 0,62 → 1)
+  et leurs PV et leur attaque prennent +5 % par niveau au-delà du 3e (+25 % au plus, `Royale.ai_level_factor`), l'équivalent
+  des cartes de montée de niveau qu'ils ne tirent pas : au même niveau, leur force √(PV × frappe) face au joueur au pilote
+  revient à celle de 0.1.214 (Hardcore 1,1 / 1,2 / 1,1 aux niveaux 1-5 / 6-10 / 11-15 ; Normal 0,7 / 0,7 / 0,7), elle
+  était tombée à 1,0 / 0,9 / 0,8 et 0,6 / 0,5 / 0,5 avec les cartes du Survivant (lot BR3).
 - **À la mort** (joueur compris) : toutes les pièces tombent au sol **sauf l'arme** (repère lumineux à la couleur de la
   rareté, nom de près) ; [F] « Prendre » : la pièce est portée, l'ancienne reste au sol à sa place (ses passifs quittent la
   run). Un héros scripté s'arrête pour une pièce meilleure que la sienne à moins de 35 m dans l'anneau.

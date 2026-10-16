@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tools/royale_duel_probe.gd" id="1"]
+
+[node name="RoyaleDuelProbe" type="Node"]
+script = ExtResource("1")

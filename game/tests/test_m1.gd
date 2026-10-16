@@ -167,11 +167,13 @@ func _test_game() -> void:
 	rd._update_bounty()
 	check("mis à prix à %d éliminations, visible de partout" % Royale.BOUNTY_KILLS, rd.bounty == a1 and rd.markers().any(func(m): return m[1] == "bounty"))
 	var k0 := float(st0.lv) + float(st0.prog)
+	var gain := Royale.kill_xp(a0.level, a1.level, true)  # (lot BR1 : selon l'écart de niveau, plafonné par l'anneau)
 	a1.hp = 1.0
 	a1.take_damage(1e9, a0, false)
 	await get_tree().physics_frame
 	check("prime : l'éliminer rapporte %.0f niveau de plus (%.1f → %.1f)" % [Royale.BOUNTY_XP, k0, float(st0.lv) + float(st0.prog)],
-		float(st0.lv) + float(st0.prog) >= k0 + Royale.KILL_XP + Royale.BOUNTY_XP - 0.01 and rd.bounty == null)
+		float(st0.lv) + float(st0.prog) >= minf(k0 + gain, float(Royale.level_cap_now)) - 0.01 and gain >= Royale.KILL_XP_MIN + Royale.BOUNTY_XP - 0.01
+		and rd.bounty == null)
 	check("fil des éliminations : « X élimine Y : la prime tombe »", rd.kill_feed.any(func(e): return String(e[0]).ends_with("la prime tombe")))
 	# spectateur : le joueur tombe avec 6 adversaires en vie
 	var alive := rd.alive_count()

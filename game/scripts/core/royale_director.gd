@@ -144,7 +144,7 @@ func spawn_points(n: int) -> Array:
 
 
 func _spawn_ais() -> void:
-	var classes: Array = GameData.classes.keys().filter(func(x): return x != Run.class_id)
+	var classes: Array = GameData.classes.keys().filter(func(x): return x != Run.class_id and not x in Royale.AI_EXCLUDED)
 	classes.shuffle()
 	for i in AI_COUNT:
 		var r := Royale.make_ai(String(classes[i]), Royale.difficulty_for(i), i + 1)
@@ -243,6 +243,7 @@ func update(delta: float) -> void:
 		var was_phase := int(ring.get("phase", 0))
 		var was_state := String(ring.get("state", ""))
 		ring = Royale.ring_at(elapsed, centers)
+		Royale.level_cap_now = Royale.level_cap(int(ring.phase))  # niveau maximal de l'anneau (lot BR1)
 		_apply_walls()
 		if int(ring.phase) != was_phase or String(ring.state) != was_state:
 			_announce_ring()
@@ -286,7 +287,8 @@ func _announce_ring() -> void:
 			d.message.emit("DERNIER CERCLE : les dégâts explosent", 3.0)
 		"hold":
 			if int(ring.phase) > 0:
-				d.message.emit("Anneau %d/%d : nouvelle zone marquée en blanc" % [int(ring.phase) + 1, Royale.PHASES.size() - 1], 3.0)
+				d.message.emit("Anneau %d/%d : nouvelle zone marquée en blanc\nNiveau maximal : %d" % [int(ring.phase) + 1,
+					Royale.PHASES.size() - 1, Royale.level_cap_now], 3.0)
 			else:
 				d.message.emit("Un premier anneau se refermera bientôt : surveille la carte", 3.0)
 
@@ -673,7 +675,8 @@ func _on_ai_died(who: Combatant, killer: Combatant) -> void:
 	var name := who.display_name.get_slice(" ·", 0)
 	var line := "%s est éliminé par l'anneau" % name
 	if killer != null and is_instance_valid(killer) and killer != who:
-		var xp := Royale.KILL_XP + (Royale.BOUNTY_XP if was_bounty else 0.0)
+		var xp := Royale.kill_xp(killer.level, who.level, was_bounty)  # (lot BR1 : selon l'écart de niveau)
+		_log_kill(killer, who)
 		if killer == d.player:
 			Royale.kills += 1 if first else 0
 			d.player.gain_xp(maxi(1, ceili(float(GameData.xp_to_next(d.player.level)) * xp)))
@@ -702,6 +705,16 @@ func _on_ai_died(who: Combatant, killer: Combatant) -> void:
 		watched = killer if killer != null and is_instance_valid(killer) and not killer.is_dead and killer != d.player else null
 	_update_bounty()
 	_check_end()
+
+
+## Mesures (pilote automatique, lot BR1) : une ligne par élimination entre héros (niveaux, durée du combat).
+func _log_kill(killer: Combatant, who: Combatant) -> void:
+	if not d.player.autoplay:
+		return
+	var who_name := "joueur" if who == d.player else String(who.get_meta("royale", {}).get("cid", "?"))
+	var killer_name := "joueur" if killer == d.player else String(killer.get_meta("royale", {}).get("cid", "?"))
+	print("[royale] élimination %3.0f s : %s niv. %d -> %s niv. %d · combat %.0f s%s" % [elapsed, killer_name, killer.level, who_name, who.level,
+		Royale.fight_time(killer, who), " · prime" if who == bounty else ""])
 
 
 ## Fil des éliminations (en haut à droite du HUD, Hud.feed) : les 4 dernières lignes.
@@ -766,6 +779,15 @@ func player_down(killer: Combatant = null) -> void:
 	_place = left
 	_down_at = elapsed
 	_fall_player()  # lot BR3 : tes pièces tombent au sol (sauf l'arme)
+	if killer != null and is_instance_valid(killer) and killer != d.player:
+		_log_kill(killer, d.player)
+		if killer is ClassRival and killer.has_meta("royale") and not killer.is_dead:
+			# lot BR1 : le héros scripté qui t'élimine gagne comme pour un autre héros (expérience, PV, compteur une fois)
+			var kst: Dictionary = killer.get_meta("royale")
+			kst.kills = int(kst.get("kills", 0)) + (0 if _player_revived else 1)
+			Royale.ai_award(killer as ClassRival, Royale.kill_xp(killer.level, d.player.level, d.player == bounty))
+			killer.heal(killer.max_hp * 0.25)
+			_update_bounty()
 	if not _player_revived and _can_revive({}):
 		# réanimation (lot BR4) : tombé dans les deux premières minutes, il revient une fois
 		_player_revived = true
@@ -1240,8 +1262,8 @@ func objective_lines() -> Array[String]:
 	elif not active_drop().is_empty():
 		out.append("◆ Largage : repère doré sur la carte")
 	else:
-		out.append("◇ Coffres ouverts : %d · niveau %d / %d" % [chests_opened, d.player.level, Royale.LEVEL_CAP])
-	out.append("◇ Chaque élimination : un niveau et des PV")
+		out.append("◇ Coffres ouverts : %d · niveau %d / %d" % [chests_opened, d.player.level, Royale.level_cap_now])
+	out.append("◇ Élimine plus fort que toi : plus de niveaux")
 	return out
 
 
@@ -1269,6 +1291,20 @@ func _debug(delta: float) -> void:
 	print("[royale] %3.0f s · anneau %d %s r=%.0f · vivants %d · toi niv. %d (%d PV, %d coffres%s) · bots moy. %.1f (équipement %.1f) · coffres restants %d · %s" % [elapsed,
 		int(ring.phase) + 1, ring.state, float(ring.radius), alive_count(), d.player.level, int(d.player.hp), chests_opened, ", spectateur" if spectating else "",
 		sum / maxf(n, 1.0), note / maxf(n, 1.0), chests_left(), " ".join(lv)])
+	_log_force()
+
+
+## Mesures (lot BR1) : force de chaque héros en vie, √(PV max × puissance de frappe) (Royale.strike), avec son niveau et
+## ses coffres : l'issue d'un duel suit le rapport des forces (PvpCaps.damage_mult).
+func _log_force() -> void:
+	var out: Array = []
+	for c in [d.player] + ais:
+		if not is_instance_valid(c) or c.is_dead:
+			continue
+		var st: Dictionary = c.get_meta("royale", {})
+		var n := chests_opened if c == d.player else int(st.get("chests", 0))
+		out.append("%s:%d/%d/%.0f" % ["joueur" if c == d.player else String(st.get("cid", "?")), c.level, n, sqrt(c.max_hp * Royale.strike(c))])
+	print("[royale] force %3.0f s · %s" % [elapsed, " ".join(out)])
 
 
 # --- équipement des héros tombés (lot BR3) ------------------------------------------------------------

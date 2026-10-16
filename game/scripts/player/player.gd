@@ -415,7 +415,7 @@ func gain_xp(amount: int) -> void:
 	if Survivor.active and not foe:
 		cap = Survivor.level_cap(cap)
 	if Royale.active and not foe:
-		cap = Royale.LEVEL_CAP
+		cap = Royale.level_cap_now  # (niveau maximal de l'anneau, lot BR1)
 	if level >= cap:
 		xp = mini(xp, GameData.xp_to_next(level) - 1)
 	while xp >= GameData.xp_to_next(level) and level < cap:

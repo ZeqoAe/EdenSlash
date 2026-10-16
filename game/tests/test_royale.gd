@@ -18,6 +18,7 @@ func _ready() -> void:
 	await _test_ffa()
 	_test_ring()
 	_test_rules()
+	_test_snowball()
 	await _test_ai_duels()
 	await _test_travel()
 	await _test_spell_swap()
@@ -126,12 +127,49 @@ func _test_rules() -> void:
 	check("3 pièces par coffre", Royale.chest_items(2, 10, "warrior").size() == 3)
 
 
-## Deux héros scriptés de même niveau et de même équipement (règles du royale) se battent 20 à 70 s.
+## Lot BR1 : boule de neige bridée (expérience d'une élimination selon l'écart de niveau, niveau maximal par anneau),
+## force des héros scriptés, classes retirées du tirage, échelle des dégâts propre au Battle royale.
+func _test_snowball() -> void:
+	check("élimination à même niveau : 1 niveau", is_equal_approx(Royale.kill_xp(10, 10), 1.0))
+	check("victime 5 niveaux plus faible : 0,25 niveau", is_equal_approx(Royale.kill_xp(15, 10), 0.25))
+	check("victime 5 niveaux plus forte : 1,75 niveau", is_equal_approx(Royale.kill_xp(10, 15), 1.75))
+	check("bornes : 0,2 à 2 niveaux, prime +1", is_equal_approx(Royale.kill_xp(30, 1), Royale.KILL_XP_MIN) and is_equal_approx(Royale.kill_xp(1, 30), Royale.KILL_XP_MAX)
+		and is_equal_approx(Royale.kill_xp(10, 10, true), 1.0 + Royale.BOUNTY_XP))
+	var caps: Array = []
+	var rising := true
+	for i in Royale.PHASES.size():
+		caps.append(Royale.level_cap(i))
+		if i > 0 and caps[i] < caps[i - 1]:
+			rising = false
+	check("niveau maximal par anneau : sous 24 avant le 3e anneau, croissant, 40 au dernier (%s)" % [caps], int(caps[1]) < 24 and rising
+		and int(caps[caps.size() - 1]) == Royale.LEVEL_CAP)
+	Royale.active = true
+	Royale.level_cap_now = Royale.level_cap(0)
+	var r := Royale.make_ai("warrior", 2, 1)
+	Royale.ai_award(r, 40.0)
+	check("un scripté s'arrête au niveau maximal de l'anneau (%d)" % int(r.get_meta("royale").lv), int(r.get_meta("royale").lv) == Royale.level_cap(0))
+	var hp_cap: float = r.max_hp
+	Royale.level_cap_now = Royale.LEVEL_CAP
+	Royale.ai_award(r, 1.0)
+	check("... et repart quand l'anneau se resserre", int(r.get_meta("royale").lv) == Royale.level_cap(0) + 1 and r.max_hp > hp_cap)
+	r.free()
+	check("force des scriptés : rien aux premiers niveaux, au plus +25 %", is_equal_approx(Royale.ai_level_factor(1), 1.0)
+		and is_equal_approx(Royale.ai_level_factor(40), 1.0 + Royale.AI_LEVEL_BONUS_MAX) and Royale.ai_level_factor(8) > 1.0)
+	check("les deux Lames ne sont jamais tirées", "black_blade" in Royale.AI_EXCLUDED and "light_blade" in Royale.AI_EXCLUDED)
+	check("échelle du Battle royale 0,055, plafonds du duel équipé", is_equal_approx(PvpCaps.damage_scale(), 0.055)
+		and is_equal_approx(float(ModeRules.rule("caps").crit_dmg), 1.0))
+	Royale.active = false
+	check("les autres modes gardent leur échelle", is_equal_approx(ModeRules.num("dmg_scale", 0.0, "duel_a"), 0.030)
+		and is_equal_approx(ModeRules.num("dmg_scale", 0.0, "duel_b"), PvpCaps.DAMAGE_SCALE) and is_equal_approx(ModeRules.num("dmg_scale", 0.0, "arena3"), 0.024)
+		and is_equal_approx(ModeRules.num("dmg_scale", 0.0, "siege"), 0.018))
+
+
+## Deux héros scriptés de même niveau et de même équipement (règles du royale) : 15 à 40 s visés (lot BR1, marge de mesure).
 func _test_ai_duels() -> void:
 	Royale.active = true
 	for lv in [1, 12]:
 		var t: float = await _ai_duel("warrior", "magician", lv, lv / 3, 2)
-		check("duel scripté niveau %d : %.0f s (20 à 70 s)" % [lv, t], t >= 20.0 and t <= 70.0)
+		check("duel scripté niveau %d : %.0f s (12 à 45 s)" % [lv, t], t >= 12.0 and t <= 45.0)
 	Royale.active = false
 
 
@@ -192,6 +230,7 @@ func _test_game_win() -> void:
 	var d: RunDirector = world.director
 	var p: Player = world.player
 	check("partie montée : mode, état, 7 héros IA", Royale.active and d.state == "royale" and rd.ais.size() == 7 and Run.active)
+	check("aucune des deux Lames parmi les sept", rd.ais.all(func(a): return not String(a.get_meta("royale").cid) in Royale.AI_EXCLUDED))
 	# (lot BR4) largage : tout le monde à bord de l'aigle, chacun vise un point d'atterrissage différent
 	check("largage en cours : les 8 à bord, hors du chacun pour soi", rd.phase == "drop" and rd.jump.count_airborne() == 8
 		and rd.ais.all(func(a): return a.passive and rd.jump.on_board(a)) and get_tree().get_nodes_in_group("ffa").is_empty())
@@ -259,10 +298,11 @@ func _test_game_win() -> void:
 	# élimination
 	var kills0 := Royale.kills
 	var lv0 := p.level
+	var xp0 := p.xp
 	rd.ais[1].hp = 1.0
 	rd.ais[1].take_damage(1e9, p, false)  # (un coup entre héros est plafonné : PV à 1)
 	await get_tree().physics_frame
-	check("élimination comptée, niveau gagné", Royale.kills == kills0 + 1 and p.level > lv0 and rd.alive_count() == 7)
+	check("élimination comptée, expérience gagnée", Royale.kills == kills0 + 1 and (p.level > lv0 or p.xp > xp0) and rd.alive_count() == 7)
 	check("... et l'adversaire quitte le chacun pour soi", get_tree().get_nodes_in_group("ffa").size() == 7)
 	# tous les autres tombent : victoire
 	for i in range(2, 7):
@@ -290,10 +330,13 @@ func _test_game_loss() -> void:
 	rd.phase = "fight"
 	rd.elapsed = Royale.REVIVE_WINDOW + 10.0  # (après les deux premières minutes : pas de retour, lot BR4)
 	var killer: ClassRival = rd.ais[3]
+	var kst: Dictionary = killer.get_meta("royale")
+	var k_xp := float(kst.lv) + float(kst.prog)
 	p.hp = 1.0
 	p.take_damage(1e9, killer, false)
 	await get_tree().physics_frame
 	await get_tree().physics_frame
+	check("le scripté qui t'élimine gagne comme pour un autre héros (lot BR1)", int(kst.kills) == 1 and float(kst.lv) + float(kst.prog) > k_xp + 0.5)
 	# (passe M1) éliminé : il regarde la fin, place fixée ; Échap / Options ouvre le bilan
 	check("joueur tombé avec 7 adversaires : 8e place, spectateur", rd.spectating and rd._place == 8 and rd.leave_place() == 8)
 	var ev := InputEventAction.new()

@@ -75,6 +75,8 @@ static func board_add(c: Combatant, key: String, v: float) -> void:
 static func note_hit(src: Combatant, dst: Combatant, dmg: float) -> void:
 	board_add(src, "dealt", dmg)
 	board_add(dst, "taken", dmg)
+	if Royale.active:
+		Royale.note_fight(src, dst, elapsed)  # durée des combats (mesures, lot BR1)
 	var frac := dmg / maxf(dst.max_hp, 1.0)
 	if src is Player and not (src as Player).foe:
 		best_dealt = maxf(best_dealt, frac)

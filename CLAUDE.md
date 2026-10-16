@@ -137,6 +137,9 @@ Battle royale : `core/royale.gd`, `core/royale_director.gd` (`RoyaleDirector.BRA
 Largage et réanimation (lot BR4) : `core/royale_drop.gd` (aigle, saut, chute, planeur ; héros en l'air hors du groupe « ffa », physique
 coupée ; `RoyaleDirector.phase` « drop » puis « fight » : `elapsed` part au dernier atterrissage, `clock` dès le vol) ; retour une fois
 avant `Royale.REVIVE_WINDOW` (`RoyaleDirector.revives`, `_revive_player` / `_revive_ai`, arme seule) ; test `test_br4`, captures `shot_br4`.
+Équilibre (lot BR1, `conception/royale/R_BR1.md`) : échelle 0,055 du profil `royale`, `Royale.kill_xp` (écart de niveau), `LEVEL_CAPS` par
+anneau, force des scriptés (`AI_GEAR_SCALE`, `ai_level_factor`), `AI_EXCLUDED` ; mesures : `tools/royale_duel_probe.tscn` (durée d'un duel par
+niveau et équipement, `--tournament`, essais `--scale=` / `--caps=`) et les lignes `[royale] élimination` / `[royale] force` du pilote.
 Équipement du BR (lot BR3) : `core/royale_loot.gd` (emplacements vides d'abord, arme gardée, puis améliorations ; joueur = pièces et
 cartes du Survivant via `SurvivorGear.adopt` / `SurvivorCards.up_card`, rendu `SurvivorCardView` ; scriptés = `RoyaleLoot.offer`,
 `Royale.AI_GEAR_SCALE`, mesure `tools/br3_ai_probe`), pièces au sol à la mort et fiche `ui/royale_gear_sheet.gd` ; test `test_br3`.

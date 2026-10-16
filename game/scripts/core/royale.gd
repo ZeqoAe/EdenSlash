@@ -44,7 +44,7 @@ const CHEST_TIERS := [
 const DROP_TIER := 3
 const DROP_DELAY := 15.0
 ## Mis à prix (passe M1) : le héros qui compte le plus d'éliminations, à partir de BOUNTY_KILLS, est visible de tous
-## sur la carte ; l'éliminer rapporte BOUNTY_XP niveau de plus.
+## sur la carte ; l'éliminer rapporte BOUNTY_XP niveau de plus (en plus de l'élimination, voir [method kill_xp]).
 const BOUNTY_KILLS := 3
 const BOUNTY_XP := 1.0
 ## Réapprovisionnement (passe M1) : les 64 coffres de la carte partent en moins d'une minute ; une vague de nouveaux
@@ -56,8 +56,20 @@ const RESTOCK_MAX := 22
 ## Objets cassés (jarres, caisses) : expérience en niveaux, la même pour le joueur et les héros scriptés.
 const BREAK_XP := 0.03
 const GEM_XP := 0.1
-## Expérience d'une élimination (en niveaux).
+## Expérience d'une élimination (en niveaux), la même règle pour le joueur et les héros scriptés (lot BR1 : boule de
+## neige bridée, un scripté montait au niveau 24 en éliminant des héros bien plus faibles) : KILL_XP entre deux héros de
+## même niveau ; chaque niveau de la victime au-dessus du vainqueur ajoute KILL_GAP, chaque niveau en dessous en retire
+## autant, entre KILL_XP_MIN et KILL_XP_MAX (voir [method kill_xp]).
 const KILL_XP := 1.0
+const KILL_GAP := 0.15
+const KILL_XP_MIN := 0.2
+const KILL_XP_MAX := 2.0
+## Niveau maximal par anneau (indice de Royale.PHASES, attente et resserrement compris ; le dernier vaut pour la mort
+## subite) : l'expérience au-delà est perdue, pour tous (lot BR1). Mesuré avant (0.1.218, pilote, 6 parties) : scriptés
+## jusqu'au niveau 21-23 et pilote jusqu'à 25 avant le 2e resserrement (245 s), un vainqueur au niveau 40 à 440 s.
+const LEVEL_CAPS := [14, 20, 26, 32, 36, 40]
+## Classes jamais tirées pour les sept héros scriptés (lot BR1, retour du joueur : les deux Lames écrasaient la partie).
+const AI_EXCLUDED := ["black_blade", "light_blade"]
 ## Difficulté des adversaires : -1 = mélange (de facile à hardcore), sinon 0 à 3 pour les sept.
 const MIX := [0, 1, 1, 2, 2, 2, 3]
 const DURATION := 590.0
@@ -68,6 +80,8 @@ static var rank := 0  # place finale du joueur (1 = vainqueur), 0 tant que la pa
 static var kills := 0
 static var last_report: Dictionary = {}
 static var zone_id := "limestone"
+## Niveau maximal du moment (LEVEL_CAPS, tenu à jour par RoyaleDirector à chaque anneau).
+static var level_cap_now := LEVEL_CAP
 
 
 ## Rayon, centre et phase de l'anneau à l'instant [param t] (secondes de combat). [param centers] : le
@@ -141,6 +155,8 @@ static func start(cid: String) -> void:
 	Profile.bag = {}
 	Potions.start_run()
 	PvpCaps.reset_stats()
+	level_cap_now = level_cap(0)
+	fights = {}
 	Run.changed.emit()
 
 
@@ -207,10 +223,24 @@ static func make_ai(cid: String, diff: int, index: int) -> ClassRival:
 
 ## Lot BR3 : un héros scripté remplit maintenant ses emplacements vides d'abord (RoyaleLoot), donc plus vite qu'avant
 ## (3 pièces au hasard, la meilleure gardée) ; le joueur a demandé de ne pas changer leur niveau d'équipement : leurs
-## pièces comptent pour AI_GEAR_SCALE dans leurs statistiques (qualité et bonus), mesuré par tools/br3_ai_probe (note
+## pièces comptaient pour 0,62 dans leurs statistiques (AI_GEAR_SCALE : qualité et bonus), mesuré par tools/br3_ai_probe (note
 ## d'équipement face à l'ancienne règle : -26 % à 3 coffres, +23 % à 9, +3 à +10 % de 12 à 30). Les pièces elles-mêmes
 ## (fiche, pièces au sol) sont intactes.
-const AI_GEAR_SCALE := 0.62
+## Lot BR1 : avec les cartes du Survivant (pièces à son niveau, +N, passifs, cartes de montée de niveau), le joueur au
+## pilote était devenu bien plus fort que les scriptés au même niveau et au même nombre de coffres (force √(PV × frappe) des
+## scriptés / celle du joueur, 6 parties : Hardcore 1,10 / 1,24 / 1,06 aux niveaux 1-5 / 6-10 / 11-15 en 0.1.214, 1,02 /
+## 0,86 / 0,82 en 0.1.218 ; Normal 0,67 / 0,74 / 0,69 puis 0,61 / 0,49 / 0,47). Leurs pièces comptent de nouveau en entier, et
+## leurs PV et leur attaque prennent AI_LEVEL_BONUS par niveau au-delà de AI_LEVEL_BONUS_FROM (AI_LEVEL_BONUS_MAX au plus) :
+## l'équivalent des cartes de montée de niveau qu'ils ne tirent pas.
+const AI_GEAR_SCALE := 1.0
+const AI_LEVEL_BONUS := 0.05
+const AI_LEVEL_BONUS_FROM := 3
+const AI_LEVEL_BONUS_MAX := 0.25
+
+
+## Facteur des PV et de l'attaque d'un héros scripté de niveau [param lv] (AI_LEVEL_BONUS).
+static func ai_level_factor(lv: int) -> float:
+	return 1.0 + clampf(AI_LEVEL_BONUS * float(lv - AI_LEVEL_BONUS_FROM), 0.0, AI_LEVEL_BONUS_MAX)
 
 
 ## Copie de l'équipement [param gear] d'un héros scripté telle qu'elle compte dans ses statistiques (AI_GEAR_SCALE).
@@ -236,6 +266,9 @@ static func refresh_ai(r: ClassRival, keep_ratio := true) -> void:
 	var h := sheet(String(st.cid), lv, ai_gear(st.gear))
 	r.use_sheet(h)
 	h.free()
+	var k := ai_level_factor(lv)
+	r.max_hp *= k
+	r.atk *= k
 	r.hp = r.max_hp * ratio
 	r.display_name = String(GameData.class_data(String(st.cid)).get("name_fr", st.cid))  # (le niveau : plaque et cadre de cible)
 
@@ -245,12 +278,12 @@ static func ai_award(r: ClassRival, amount: float) -> void:
 	var st: Dictionary = r.get_meta("royale")
 	st.prog = float(st.prog) + amount
 	var up := false
-	while float(st.prog) >= 1.0 and int(st.lv) < LEVEL_CAP:
+	while float(st.prog) >= 1.0 and int(st.lv) < level_cap_now:
 		st.prog = float(st.prog) - 1.0
 		st.lv = int(st.lv) + 1
 		up = true
-	if int(st.lv) >= LEVEL_CAP:
-		st.prog = 0.0
+	if int(st.lv) >= level_cap_now:
+		st.prog = minf(float(st.prog), 0.99)  # (au plafond de l'anneau : le reste est perdu, comme pour le joueur)
 	if up:
 		refresh_ai(r)
 
@@ -282,6 +315,51 @@ static func strike(c: Combatant) -> float:
 	if c is Player:
 		return (c as Player).power() * (c as Player).dmg_mult
 	return maxf(float(c.get("atk")), 1.0)
+
+
+## Expérience (en niveaux) d'une élimination par un héros de niveau [param killer_lv] d'un héros de niveau
+## [param victim_lv] ; [param bounty] : la victime était mise à prix. Exemples : même niveau 1 ; 5 niveaux en dessous 0,25 ;
+## 5 au-dessus 1,75.
+static func kill_xp(killer_lv: int, victim_lv: int, bounty := false) -> float:
+	var xp := clampf(KILL_XP + KILL_GAP * float(victim_lv - killer_lv), KILL_XP_MIN, KILL_XP_MAX)
+	return xp + (BOUNTY_XP if bounty else 0.0)
+
+
+## Niveau maximal pendant la phase [param phase] de l'anneau (LEVEL_CAPS).
+static func level_cap(phase: int) -> int:
+	return int(LEVEL_CAPS[clampi(phase, 0, LEVEL_CAPS.size() - 1)])
+
+
+## Combats entre héros (mesures du pilote automatique, lot BR1) : paire d'identifiants -> [premier coup, dernier coup] en
+## secondes de combat ; un combat recommence après FIGHT_GAP s sans coup entre les deux.
+const FIGHT_GAP := 8.0
+static var fights: Dictionary = {}
+
+
+static func _pair(a: Combatant, b: Combatant) -> String:
+	var x := a.get_instance_id()
+	var y := b.get_instance_id()
+	return "%d-%d" % [mini(x, y), maxi(x, y)]
+
+
+## Coup entre deux héros (PvpCaps.note_hit) à l'instant [param now].
+static func note_fight(src: Combatant, dst: Combatant, now: float) -> void:
+	if src == null or dst == null or not is_instance_valid(src) or src == dst:
+		return
+	var k := _pair(src, dst)
+	var f: Array = fights.get(k, [now, now])
+	if now - float(f[1]) > FIGHT_GAP:
+		f = [now, now]
+	f[1] = now
+	fights[k] = f
+
+
+## Durée du combat en cours entre [param a] et [param b] (0 s'il n'y en a pas).
+static func fight_time(a: Combatant, b: Combatant) -> float:
+	if a == null or b == null or not is_instance_valid(a) or not is_instance_valid(b):
+		return 0.0
+	var f: Array = fights.get(_pair(a, b), [0.0, 0.0])
+	return float(f[1]) - float(f[0])
 
 
 ## Place finale du joueur éliminé alors qu'il restait [param alive] héros en vie (lui compris).
