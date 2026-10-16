@@ -48,6 +48,7 @@ sous-ensemble) et `test_p4_migration` (vieilles sauvegardes ; `P4_REAL_SAVES=<do
 Français (passe P10) : `test_texts_fr` signale tout mot anglais lisible par le joueur (objets, passifs, sorts, talents, cartes, trophées…) ;
 un nom d'Eden nouveau passe par `data/names_fr.json` (`tools/names_fr_build.py`, lexique `names_fr_extra5.py`, talents `names_fr_talents.py`).
 Les tests de simulation (`test_siege`…) attendent des événements, jamais des durées (`_wait` en images de physique, cartes fermées d'office).
+Tests instables (passe T1, `conception/nuit_15_10/R_T1.md`) : une carte (`ProcMap`) lance son calcul de navigation sur un fil du moteur, donc un test qui la génère attend `_region.navigation_mesh != null` avant `quit()` (plantage 0xC0000005 sinon) ; ne jamais comparer l'équipement ou le bonus de départ de deux mondes tirés au hasard (mesurer dans un seul monde) ; fixer les valeurs tirées au hasard que le contrôle lit (qualité d'une pièce, coffres d'origine de la carte) ; un lambda sur plusieurs lignes dans un appel plante le parseur (utiliser une méthode).
 Plusieurs sessions dans le même dossier : lancer la suite sur une copie de `game/` avec `config/custom_user_dir_name` à part.
 Captures d'écran (outils `tests/shot_*.tscn`, APPDATA détourné, variable `*_RES=1280x720`) : les écrans à pages doivent tenir dans
 1280×720 (`tests/shot_p1.tscn`, `P1_STATE=neuf|avance`, lignes `[débord]`) ; un écran nouveau entre dans `test_nav_screens` et `test_pages`.

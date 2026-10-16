@@ -59,8 +59,20 @@ func _ready() -> void:
 	s.generate_run(4321)
 	check("Survie : jarres (%d) et caisses (%d) inchangées" % [s.breakables.count("pot"), s.breakables.count("crate")],
 		s.breakables.count("pot") > 100 and s.breakables.count("crate") > 100)
+	# Le calcul de navigation d'une carte tourne sur un fil du moteur : quitter avant sa fin plante Godot à l'arrêt
+	# (code 0xC0000005). On attend donc l'événement « maillage posé » de chaque carte, jamais une durée.
+	await _nav_baked(m)
+	await _nav_baked(s)
 	print("TOUT EST OK (0 échec(s))" if fails == 0 else "ÉCHECS : %d" % fails)
 	get_tree().quit(fails)
+
+
+func _nav_baked(map: ProcMap) -> void:
+	var frames := 0
+	while map._region.navigation_mesh == null and frames < 3600:
+		await get_tree().physics_frame
+		frames += 1
+	check("carte : maillage de navigation posé", map._region.navigation_mesh != null)
 
 
 func _distinct(a: Array) -> bool:

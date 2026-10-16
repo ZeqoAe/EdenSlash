@@ -231,6 +231,16 @@ func _rush_scene() -> void:
 	await get_tree().create_timer(0.5).timeout
 
 
+func _roles_species() -> Dictionary:
+	var roles := {}
+	var species := {}
+	for m in get_tree().get_nodes_in_group("monsters"):
+		if m.has_meta("role"):
+			roles[String(m.get_meta("role"))] = true
+			species[int(m.data.get("id", 0))] = true
+	return {"roles": roles, "species": species}
+
+
 func _siege_scene() -> void:
 	Profile.reset_all()
 	Profile.records["epochs_cleared"] = 2
@@ -238,13 +248,11 @@ func _siege_scene() -> void:
 	Tower.start_siege("warrior", zid, 0, ["cleric", "knight"])
 	var world := await _launch()
 	var td: SiegeDirector = world.director.tower
-	await _wait(func(): return td.alive() >= 8, 15.0)
-	var roles := {}
-	var species := {}
-	for m in get_tree().get_nodes_in_group("monsters"):
-		if m.has_meta("role"):
-			roles[String(m.get_meta("role"))] = true
-			species[int(m.data.get("id", 0))] = true
+	# les escouades arrivent l'une après l'autre : on attend l'événement (au moins 2 rôles et 2 espèces en jeu), pas une durée
+	await _wait(func(): return td.alive() >= 8 and _roles_species().roles.size() >= 2 and _roles_species().species.size() >= 2, 60.0)
+	var rs := _roles_species()
+	var roles: Dictionary = rs.roles
+	var species: Dictionary = rs.species
 	check("vague 1 : escouades par rôle (%s), plusieurs espèces (%d)" % [roles.keys(), species.size()], roles.size() >= 2 and species.size() >= 2)
 	check("alliés : comportement d'équipe (lisent les zones rouges)", td._allies.size() == 2 and td._allies[0]._team_mode())
 	# vague 3 : le lieutenant (vagues 1 et 2 vidées d'office)

@@ -61,6 +61,28 @@ func _data() -> void:
 	check("esquive du pilote coupée par défaut", not PilotDodge.enabled)
 
 
+## Dégâts du héros [param p] comme dans un donjon (indicateur levé le temps du calcul), puis remis tel quel.
+func _dmg_as_dungeon(p: Player) -> float:
+	var saved := Tower.dungeon
+	Tower.dungeon = "limestone"
+	p.recalc_stats()
+	var v := p.dmg_mult
+	Tower.dungeon = saved
+	p.recalc_stats()
+	return v
+
+
+## Dégâts du héros [param p] comme dans la Tour (indicateur « donjon » retiré le temps du calcul), puis remis tel quel.
+func _dmg_as_tower(p: Player) -> float:
+	var saved := Tower.dungeon
+	Tower.dungeon = ""
+	p.recalc_stats()
+	var v := p.dmg_mult
+	Tower.dungeon = saved
+	p.recalc_stats()
+	return v
+
+
 func _scene() -> void:
 	Tower.start("bard", 1, 10)
 	var world: Node = load("res://scenes/world.tscn").instantiate()
@@ -72,7 +94,10 @@ func _scene() -> void:
 	world.cards._show_next()
 	var td: TowerDirector = world.director.tower
 	p.recalc_stats()
+	# (le bonus de dégâts de départ varie d'une partie à l'autre : le facteur de la Tour se mesure dans UN SEUL monde, en
+	# basculant l'indicateur « donjon », jamais en comparant deux mondes tirés séparément)
 	var tower_mult := p.dmg_mult
+	var as_dungeon := _dmg_as_dungeon(p)
 	var boss = td._boss
 	check("boss de l'étage 10 en jeu, coups plafonnés à %.0f %% des PV" % (Tower.BOSS_HIT_CAP * 100.0),
 		is_instance_valid(boss) and boss.brain != null and is_equal_approx(boss.brain.hit_cap, Tower.BOSS_HIT_CAP))
@@ -109,9 +134,14 @@ func _scene() -> void:
 	get_tree().root.add_child.call_deferred(world)
 	await get_tree().create_timer(3.0).timeout
 	world.player.recalc_stats()
-	var k := tower_mult / maxf(world.player.dmg_mult, 0.01)
-	check("Tour : dégâts du Barde × son multiplicateur, pas en donjon (%.2f / %.2f = %.2f, attendu %.2f)" % [tower_mult, world.player.dmg_mult, k,
+	var k := tower_mult / maxf(as_dungeon, 0.01)
+	check("Tour : dégâts du Barde × son multiplicateur, pas en donjon (%.2f / %.2f = %.2f, attendu %.2f)" % [tower_mult, as_dungeon, k,
 		TowerBalance.solo_mult("bard")], absf(k - TowerBalance.solo_mult("bard")) < 0.03)
+	# vrai donjon : aucun facteur ; sans l'indicateur « donjon », le même héros au même équipement retrouverait le facteur
+	var in_dungeon: float = world.player.dmg_mult
+	var as_tower := _dmg_as_tower(world.player)
+	check("donjon : pas de multiplicateur de la Tour (%.2f ; en Tour : %.2f)" % [in_dungeon, as_tower],
+		Tower.is_dungeon() and absf(as_tower / maxf(in_dungeon, 0.01) - TowerBalance.solo_mult("bard")) < 0.03)
 	Tower.active = false
 	world.queue_free()
 	await get_tree().create_timer(0.3).timeout

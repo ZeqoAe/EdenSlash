@@ -111,6 +111,11 @@ func _test_game() -> void:
 	for a in rd.ais:
 		a.global_position = Vector3(30, 5, 30) + Vector3(a.get_meta("royale").index * 3.0, 0, 0)
 	a0.global_position = spot + Vector3.UP * 0.5
+	# (la carte est tirée au hasard : un coffre d'origine peut se trouver plus près que les deux coffres de l'essai ;
+	# on met les autres de côté le temps du choix, pour que seuls ces deux-là comptent)
+	var map_chests: Array = rd._chests
+	rd._chests = []
+	rd._release(a0)
 	var near := rd._spawn_chest(spot + Vector3(8, 0, 0), 0)
 	var gold := rd._spawn_chest(spot + Vector3(-22, 0, 0), 2)
 	var smart := rd._pick_chest(a0, Vector2(spot.x, spot.z), Vector2(spot.x, spot.z), 60.0, [], true)
@@ -120,6 +125,7 @@ func _test_game() -> void:
 	var naive := rd._pick_chest(a0, Vector2(spot.x, spot.z), Vector2(spot.x, spot.z), 60.0, [], false)
 	a0.get_meta("royale").diff = diff0
 	rd._release(a0)
+	rd._chests = map_chests + [near, gold]
 	check("choix pondéré : le coffre doré à 22 m plutôt que le simple à 8 m", smart == gold)
 	check("sans pondération (Facile) : le plus proche", naive == near)
 	# fuite : un Hardcore au contact d'un adversaire bien plus fort fuit (mode E) ; à force égale il se bat

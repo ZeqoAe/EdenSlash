@@ -39,7 +39,8 @@ func _ready() -> void:
 	Profile.set_dye(cls, "head", RED)
 	world = load("res://scenes/world.tscn").instantiate()
 	get_tree().root.add_child.call_deferred(world)
-	await get_tree().create_timer(6.0).timeout
+	# on attend l'événement (monde prêt, héros habillé), pas une durée : sous forte charge 6 s ne suffisent pas
+	await _wait_for(_hero_dressed)
 	check("en jeu : l'Œil de rose du héros est teint (%d surface)" % _dyed(world.player, ROSE), _dyed(world.player, ROSE) > 0)
 	Profile.set_worn(cls, "head", worn_was)
 	Profile.set_dye(cls, "head", dye_was)
@@ -141,10 +142,13 @@ func _test_auto_pick() -> void:
 func _test_bot_offers() -> void:
 	Settings.set_assist("bot")
 	var d: RunDirector = world.director
-	var inv0 := Profile.inventory.size()
+	# (la pièce tirée est portée tout de suite : si son emplacement était vide, le sac ne grossit pas ; on compte donc
+	# le sac et ce qui est porté ensemble)
+	var inv0 := Profile.inventory.size() + Profile.equipped.size()
 	var loot0: int = Run.loot.size()
 	world._offer("Coffre : choisis une pièce d'équipement", d.gear_cards(3, 2), func(): return d.gear_cards(3, 2))
-	check("Bot : coffre d'équipement choisi seul (sac %d -> %d), pas d'écran" % [inv0, Profile.inventory.size()], not world.cards.is_open() and (Profile.inventory.size() > inv0 or Run.loot.size() > loot0))
+	check("Bot : coffre d'équipement choisi seul (sac et porté %d -> %d), pas d'écran" % [inv0, Profile.inventory.size() + Profile.equipped.size()],
+		not world.cards.is_open() and (Profile.inventory.size() + Profile.equipped.size() > inv0 or Run.loot.size() > loot0))
 	var inv1 := Profile.inventory.size()
 	world._offer("Arme secondaire trouvée : choisis-en une", SlotChests.offhand_offer(1, 1).map(func(it): return RunDirector.weapon_card(it, "offhand")))
 	check("Bot : arme secondaire choisie seule, rangée dans le sac (passe N2)", not world.cards.is_open() and Profile.inventory.size() == inv1 + 1)
@@ -169,11 +173,19 @@ func _test_autoplay_run() -> void:
 	var cards0 := Run.skills.size() + Run.passives.size()
 	var open_seen := 0
 	Engine.time_scale = AUTOPLAY_SCALE
-	var limit := Time.get_ticks_msec() + int(AUTOPLAY_SECS * 1000.0 * 1.5)  # garde-fou : la machine de test tient rarement ×3
-	while d.time - t0 < AUTOPLAY_SECS and Time.get_ticks_msec() < limit:
+	# on attend le temps de JEU voulu (jamais une durée réelle : sous charge le jeu avance plus lentement) ; garde-fou
+	# seulement si le jeu ne progresse plus du tout pendant 60 s réelles
+	var last_time := d.time
+	var stall := Time.get_ticks_msec()
+	while d.time - t0 < AUTOPLAY_SECS:
 		await get_tree().create_timer(0.25, true, false, true).timeout
 		if world.cards.is_open() or get_tree().paused:
 			open_seen += 1
+		if d.time > last_time:
+			last_time = d.time
+			stall = Time.get_ticks_msec()
+		elif Time.get_ticks_msec() - stall > 60000:
+			break
 	Engine.time_scale = 1.0
 	p.autoplay = false
 	p.dev_invincible = false
@@ -244,6 +256,18 @@ func _test_boss_choice() -> void:
 	await get_tree().process_frame
 	check("choix fini : le jeu reprend", not get_tree().paused)
 	Gamepad._set_active(false)
+
+
+func _hero_dressed() -> bool:
+	return world.get("player") != null and world.get("director") != null and world.get("cards") != null and _dyed(world.player, ROSE) > 0
+
+
+## Attend que [param cond] soit vraie (images de rendu ; garde-fou large, jamais une durée en secondes).
+func _wait_for(cond: Callable, max_frames := 6000) -> void:
+	var n := 0
+	while n < max_frames and not cond.call():
+		await get_tree().process_frame
+		n += 1
 
 
 func _clear() -> void:

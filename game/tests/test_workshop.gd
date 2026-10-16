@@ -197,6 +197,7 @@ func _test_forge() -> void:
 	await get_tree().process_frame
 	var it := Items.generate(30, 1.0, "chest", "warrior", 0, "", 0)
 	it["upgrade"] = 2
+	it["quality"] = 0.8  # (la qualité est tirée au hasard : au plafond, « Polir » dirait « maximale » au lieu de « jusqu'à »)
 	Profile.inventory = [it]
 	var need := Craft.fortify_key(Craft.fortify_kind(it), Craft.fortify_level_for(it))
 	Profile.stash = {need: 5}

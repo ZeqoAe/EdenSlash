@@ -51,10 +51,16 @@ func _ready() -> void:
 		check("équipe : le premier adversaire est un héros piloté par un cerveau", is_instance_valid(dd._foe) and dd._foe.foe and dd._foes.size() == 1)
 		for _i in 80:
 			await get_tree().physics_frame
-		_kill(dd._foes[0], world.player)
+		# (sous charge, un coup peut tomber pendant un temps d'invulnérabilité : on attend que l'adversaire soit vraiment tombé)
+		var scripted = dd._foes[0]
+		for _i in 240:
+			if scripted.is_dead:
+				break
+			_kill(scripted, world.player)
+			await get_tree().physics_frame
 		for _i in 10:
 			await get_tree().physics_frame
-		check("l'adversaire scripté tombé, le cerveau debout : la manche continue", dd.phase == "fight" and Duel.wins == 0)
+		check("l'adversaire scripté tombé, le cerveau debout : la manche continue", scripted.is_dead and dd.phase == "fight" and Duel.wins == 0)
 		for _i in 240:  # (sous charge, le coup peut tomber pendant un temps d'invulnérabilité : on le répète)
 			if Duel.wins >= 1:
 				break
