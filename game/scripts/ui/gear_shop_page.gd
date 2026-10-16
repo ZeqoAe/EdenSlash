@@ -1,16 +1,18 @@
 class_name GearShopPage
 extends HBoxContainer
-## Atelier > Armurerie (hub) : le catalogue des pièces que les coffres d'emplacement de la Survie peuvent proposer
-## (Completion.armory_ids). Une pièce choisie une fois dans un coffre est « découverte » (Profile.seen_gear) et
-## s'achète avec les insignes gagnés en Survie ; achetée, elle rejoint le coffre commun (+0) : collection, JcJ
-## non normalisé et toute l'optimisation du hub (forge, gemmes, enchantements). Les pièces pas encore découvertes
-## se voient en silhouette (« À découvrir »), avec l'époque où les trouver. Filtres : statut, emplacement, époque, classe.
+## Atelier > Fabriquer (hub, ex-Armurerie ; lot A3 de la refonte) : le catalogue des pièces que les coffres d'emplacement
+## de la Survie peuvent proposer (Completion.armory_ids). Une pièce choisie une fois dans un coffre est « découverte »
+## (Profile.seen_gear) : c'est son plan. Elle se fabrique avec les insignes gagnés en Survie (mêmes prix qu'avant) ;
+## fabriquée, elle rejoint le coffre commun (+0) : collection, JcJ non normalisé et toute l'optimisation du hub (forge,
+## gemmes, enchantements). Les plans pas encore trouvés se voient en silhouette (« Plans à découvrir »), avec l'époque
+## et la carte où les trouver. Filtres : statut, emplacement, époque, classe. Les noms internes (`_buy`, `_on_buy`,
+## états « buy » / « owned » / « locked ») restent ceux d'avant : seuls les textes lus par le joueur changent.
 
 const COLS := 12
 const ROWS := 7
 const CELL := 70.0
 ## Statuts affichables : [id, libellé].
-const STATUSES := [["buy", "À acheter"], ["owned", "Possédées"], ["locked", "À découvrir"], ["all", "Toutes"]]
+const STATUSES := [["buy", "À fabriquer"], ["owned", "Fabriquées"], ["locked", "Plans à découvrir"], ["all", "Tous"]]
 
 var _f_status: OptionButton
 var _f_slot: OptionButton
@@ -38,7 +40,7 @@ var _just_bought := false
 
 
 func subtitle() -> String:
-	return "Pièces découvertes en Survie"
+	return "Pièces dont tu as le plan"
 
 
 ## Prix en insignes : selon la rareté et le niveau de la pièce, remisé quand son palier est entamé (Economy, lot E5).
@@ -56,7 +58,7 @@ static func owned_ids() -> Dictionary:
 	return out
 
 
-## Pièce [param id] déjà achetée (dans le coffre commun ou portée) ?
+## Pièce [param id] déjà fabriquée (dans le coffre commun ou portée) ?
 static func owned(id: int) -> bool:
 	for it in Profile.all_items():
 		if int(it.get("eden", -1)) == id:
@@ -64,7 +66,7 @@ static func owned(id: int) -> bool:
 	return false
 
 
-## Aperçu (ou pièce achetée) de la pièce [param e] : +0, à son niveau.
+## Aperçu (ou pièce fabriquée) de la pièce [param e] : +0, à son niveau.
 static func make(e: Dictionary) -> Dictionary:
 	var it := Items.from_template(e, int(e.level), int(e.rarity))
 	it["upgrade"] = 0
@@ -89,7 +91,7 @@ func _ready() -> void:
 	var left := ItemWidgets.panel(self, 0, true)
 	var hh := HBoxContainer.new()
 	left.add_child(hh)
-	var head := Hud._label(hh, "Armurerie", 20, UiTheme.GOLD)
+	var head := Hud._label(hh, "Fabriquer", 20, UiTheme.GOLD)
 	head.add_theme_font_override("font", UiTheme.title_font())
 	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_count = Hud._label(hh, "", 18, UiTheme.TEXT)
@@ -134,7 +136,7 @@ func _ready() -> void:
 	sc.add_child(_detail_box)
 	_short = Hud._label(right, "", 15, UiTheme.DEBUFF)
 	_short.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_buy = MenuWidgets.gold_button("Acheter", 20, Vector2(0, 52))
+	_buy = MenuWidgets.gold_button("Fabriquer", 20, Vector2(0, 52))
 	_buy.pressed.connect(_on_buy)
 	right.add_child(_buy)
 
@@ -207,7 +209,7 @@ func refresh() -> void:
 	_apply()
 
 
-## Tout le catalogue avec l'état de chaque pièce : « buy » (découverte, à acheter), « owned », « locked ».
+## Tout le catalogue avec l'état de chaque pièce : « buy » (plan trouvé, à fabriquer), « owned » (fabriquée), « locked » (plan à découvrir).
 func _build_all() -> void:
 	var have := owned_ids()
 	var seen := {}
@@ -252,11 +254,11 @@ func _apply() -> void:
 	var per := _grid_cols() * _grid_rows()
 	var pages := maxi(1, ceili(_rows.size() / float(per)))
 	_page = clampi(_page, 0, pages - 1)
-	# la pièce choisie reste choisie après son achat, même si le filtre ne la montre plus (pas d'achat en double par un double clic)
+	# la pièce choisie reste choisie après sa fabrication, même si le filtre ne la montre plus (pas de double fabrication par un double clic)
 	if _row_of(_sel).is_empty() or (not _rows.any(func(r): return int(r.id) == _sel) and not _just_bought):
 		_sel = int(_rows[0].id) if not _rows.is_empty() else -1
 	_just_bought = false
-	_count.text = "%s / %s découvertes" % [GearPower.fmt(Completion.armory_done()), GearPower.fmt(maxi(Completion.armory_done(), Completion.armory_total()))]
+	_count.text = "%s / %s plans découverts" % [GearPower.fmt(Completion.armory_done()), GearPower.fmt(maxi(Completion.armory_done(), Completion.armory_total()))]
 	_prev.visible = pages > 1
 	_next.visible = pages > 1
 	_page_label.visible = pages > 1
@@ -294,7 +296,7 @@ func _fill_grid(per: int) -> void:
 			var sil := Silhouette.new(CELL)
 			sil.slot_name = String(Items.SLOT_NAMES.get(row.slot, row.slot))
 			sil.level = int(row.level)
-			sil.tooltip_text = "Pas encore découverte"
+			sil.tooltip_text = "Plan pas encore découvert"
 			cell = sil
 		else:
 			var it := make(row.e)
@@ -316,13 +318,13 @@ func _fill_grid(per: int) -> void:
 func _empty_text() -> String:
 	match String(STATUSES[maxi(_f_status.selected, 0)][0]):
 		"buy":
-			return "Aucune pièce découverte pour l'instant.\nEn Survie, chaque coffre d'emplacement en révèle trois." if Completion.armory_done() == 0 \
-				else "Rien à acheter pour l'instant.\nLa Survie révèle d'autres pièces, époque après époque."
+			return "Aucun plan trouvé pour l'instant.\nEn Survie, chaque coffre d'emplacement en révèle trois." if Completion.armory_done() == 0 \
+				else "Rien à fabriquer pour l'instant.\nLa Survie révèle d'autres plans, époque après époque."
 		"owned":
-			return "Tu ne possèdes encore aucune pièce de l'Armurerie."
+			return "Tu n'as encore fabriqué aucune pièce."
 		"locked":
-			return "Tout est découvert."
-	return "Aucune pièce pour ces filtres."
+			return "Tous les plans sont découverts."
+	return "Aucun plan pour ces filtres."
 
 
 func _select(id: int) -> void:
@@ -352,30 +354,36 @@ func _show_detail() -> void:
 	r.scroll_active = false
 	r.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	r.text = Items.describe(it) + _compare_text(it)
+	var place := Completion.plan_place(int(row.id))
+	if place != "":
+		var pl := Hud._label(_detail_box, "Plan trouvé : %s" % place, 15, UiTheme.MUTED)
+		pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		pl.tooltip_text = "La première carte dont un coffre propose cette pièce."
 	var p := price(row.e)
 	if row.state == "owned":
 		_buy.text = "Dans ton coffre"
 		_buy.disabled = true
 		if not Profile.equipped.values().any(func(w): return int(w.get("eden", -1)) == int(row.id)):
-			_short.text = "À équiper : Héros > Équipement"  # l'achat ne la pose pas : le dernier pas du parcours
+			_short.text = "À équiper : Héros > Équipement"  # la fabrication ne la pose pas : le dernier pas du parcours
 			_short.add_theme_color_override("font_color", UiTheme.BUFF)
 	else:
-		_buy.text = "Acheter · %s insignes" % GearPower.fmt(p)
+		_buy.text = "Fabriquer · %s insignes" % GearPower.fmt(p)
 		_buy.disabled = Profile.insignia < p
 		if Profile.insignia < p:
 			_short.text = "Il te manque %s insignes" % GearPower.fmt(p - Profile.insignia)
 
 
-## Une pièce pas encore découverte : sa silhouette et où la trouver.
+## Un plan pas encore découvert : la silhouette de la pièce et où le trouver.
 func _detail_locked(row: Dictionary) -> void:
 	var big := Silhouette.new(120.0)
 	big.disabled = true
 	big.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_detail_box.add_child(big)
-	var t := Hud._label(_detail_box, "Pièce à découvrir", 22, UiTheme.GOLD)
+	var t := Hud._label(_detail_box, "Plan à découvrir", 22, UiTheme.GOLD)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var lines := ["%s · niveau %d" % [String(Items.SLOT_NAMES.get(row.slot, row.slot)), int(row.level)]]
-	lines.append("Coffres d'emplacement · %s" % String(Epochs.get_def(int(row.epoch)).name) if int(row.epoch) > 0 else "Coffres d'emplacement de la Survie")
+	var place := Completion.plan_place(int(row.id))
+	lines.append("Plan à trouver : %s" % place if place != "" else "Coffres d'emplacement de la Survie")
 	for l in lines:
 		var lab := Hud._label(_detail_box, l, 16, UiTheme.MUTED)
 		lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -433,7 +441,7 @@ func _on_buy() -> void:
 	refresh()
 
 
-## Case d'une pièce pas encore découverte : un « ? », son emplacement et son niveau (rien de plus : pas de spoiler).
+## Case d'un plan pas encore découvert : un « ? », son emplacement et son niveau (rien de plus : pas de spoiler).
 class Silhouette extends Button:
 	var selected := false
 	var slot_name := ""

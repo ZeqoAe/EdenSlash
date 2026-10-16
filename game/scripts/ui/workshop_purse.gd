@@ -1,7 +1,7 @@
 class_name WorkshopPurse
 extends HBoxContainer
-## Bourse commune de l'Atelier (en-tête de l'écran, quel que soit l'onglet) : insignes pour acquérir
-## (Armurerie), cristaux pour optimiser (Fabrication, Forge). Se met à jour seule.
+## Bourse commune de l'Atelier (en-tête de l'écran, quel que soit l'onglet) : insignes pour fabriquer
+## (Fabriquer, Plans de donjon), cristaux pour optimiser (Forge). Se met à jour seule.
 
 var _insignia: Label
 var _crystals: Label

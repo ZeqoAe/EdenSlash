@@ -1142,16 +1142,21 @@ chacune avec son rôle :
   basses (`Profile.add_expertise`, `last_shared`) ; le Défi de maîtrise propose de préférence des classes en retard. Une classe
   jouée après la première monte au niveau 20 en ≈ 3,6 Survies gagnées au lieu de 6,6 (contrats compris).
 
-### Atelier (lot U5 de la nuit du 15/10 : Armurerie, Fabrication, Forge)
+### Atelier (lot U5 de la nuit du 15/10 ; textes du lot A3 de la refonte Aventure : Fabriquer, Plans de donjon, Forge)
 
-- **Bourse commune** (`ui/workshop_purse.gd`) dans l'en-tête de l'Atelier : insignes (acquérir) et cristaux (optimiser).
-- **Armurerie** (`ui/gear_shop_page.gd`) : tout le catalogue des coffres d'emplacement (`Completion.armory_ids()` : pièce → première
-  époque qui la propose), compteur « découvertes / total ». Statuts : à acheter (défaut), possédées (✓), à découvrir (case « ? » avec
-  emplacement et niveau, époque où la trouver dans le détail : jamais le nom), toutes. Filtres : emplacement, époque, classe (les armes de
-  son type seulement). 72 pièces par page. Le détail compare avec la pièce portée : verdict, PE et trois écarts au plus. Après un achat,
-  la pièce reste choisie (un double clic n'achète pas deux fois).
-- **Fabrication** (`ui/fabrication_page.gd`) : une carte par donjon ; avec le plan : emplacement + « Fabriquer · N cristaux » (ce qu'il
-  manque en rouge) ; sans plan : « Il tombe en terminant ce donjon » ou la condition d'ouverture ; sans aucun plan : bandeau d'état vide.
+- **Bourse commune** (`ui/workshop_purse.gd`) dans l'en-tête de l'Atelier : insignes (fabriquer) et cristaux (optimiser).
+- **Fabriquer** (ex-Armurerie, `ui/gear_shop_page.gd`) : une pièce découverte en Survie (`Profile.seen_gear`) est son **plan** ; elle se
+  **fabrique** en insignes, aux mêmes prix qu'avant (`Economy.armory_price`) : le mot « acheter » ne désigne plus une pièce. Tout le
+  catalogue des coffres d'emplacement (`Completion.armory_ids()` : pièce → première époque qui la propose ; `Completion.plan_place(id)` :
+  « Époque I · Monts Calcaires », la première carte), compteur « N / total plans découverts ». Statuts : **À fabriquer** (défaut),
+  **Fabriquées** (✓), **Plans à découvrir** (case « ? » avec emplacement et niveau, « Plan à trouver : époque · carte » dans le détail :
+  jamais le nom), **Tous**. Bouton « Fabriquer · N insignes ». Une pièce dont le plan est trouvé dit « Plan trouvé : époque · carte ».
+  Filtres : emplacement, époque, classe (les armes de son type seulement). 72 pièces par page. Le détail compare avec la pièce portée :
+  verdict, PE et trois écarts au plus. Après une fabrication, la pièce reste choisie (un double clic ne fabrique pas deux fois).
+  Carnet : la catégorie « Plans » compte les plans découverts.
+- **Plans de donjon** (ex-Fabrication, `ui/fabrication_page.gd`, lot A1) : un plan par boss (48, compteur « x / 48 plans ») ; avec le
+  plan : l'un des 2 emplacements du boss + « Fabriquer · N insignes » (ce qu'il manque en rouge) ; sans plan, donjon ouvert : « Il tombe
+  en battant <boss> » ; donjons fermés : une ligne ; sans aucun plan : bandeau d'état vide.
 - **Forge** (`ui/forge_bench.gd`) : un panneau, six établis en haut, la pièce et son tableau **avant → après** (stats principales, qualité,
   cristaux), le coût en cristaux (rouge s'il en manque), la barre de verdict compacte et l'action principale en bas. Prix en mots
   (`MerchantPages.price_words`). La fusion de gemmes garde l'ancien taux (`Forge.FUSE_GOLD_PER_CRYSTAL` 25, `Forge.fuse_price` : 2 à 7

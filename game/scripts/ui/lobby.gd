@@ -1219,7 +1219,7 @@ func _build_ui() -> void:
 		if _current == "duel":
 			_show_menu("duel"))  # conditions d'inscription à jour
 	_archive = _screen("Carnet", CarnetPages.tabs())  # chaque onglet donne son sous-titre
-	_workshop = _screen("Atelier", [["Armurerie", GearShopPage.new()], ["Fabrication", FabricationPage.new()], ["Forge", ForgeBench.new()]])
+	_workshop = _screen("Atelier", [["Fabriquer", GearShopPage.new()], ["Plans de donjon", FabricationPage.new()], ["Forge", ForgeBench.new()]])
 	_workshop.set_title("Atelier")  # chaque onglet donne son sous-titre
 	_workshop.add_header_control(WorkshopPurse.new())  # insignes et cristaux, quel que soit l'onglet
 	_chests = _screen("Coffres", [["Coffres", ChestsPage.new()], ["Roulette", WheelPage.new()]])

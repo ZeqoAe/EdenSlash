@@ -187,7 +187,7 @@ class ScrollPage extends VBoxContainer:
 class OverviewPage extends ScrollPage:
 	## Catégorie -> page du Carnet ou section du Héros où la retrouver.
 	const LINKS := {"Succès": "tab:Achievements", "Cartes": "tab:Cards", "Trophées": "tab:Trophies", "Classes": "hero:class", "Maîtrise": "hero:class",
-		"Équipement": "tab:Registry"}
+		"Plans": "tab:Registry"}
 
 	func subtitle() -> String:
 		return "Ta progression d'un coup d'œil"

@@ -189,5 +189,5 @@ func _test_misc() -> void:
 	var total := Completion.armory_total()
 	print("  Armurerie : %d pièces possibles" % total)
 	check("compteur de l'Armurerie calculé (plus de 100 pièces)", total > 100)
-	check("la catégorie Équipement utilise ce total", Completion.categories().any(func(c): return c[0] == "Équipement" and int(c[2]) == maxi(total, Completion.armory_done())))
+	check("la catégorie Plans utilise ce total", Completion.categories().any(func(c): return c[0] == "Plans" and int(c[2]) == maxi(total, Completion.armory_done())))
 	check("démontage : 1 à 3 cristaux (+1 par 3 niveaux d'amélioration)", Items.disassemble_yield({"rarity": 4, "upgrade": 0}).crystal == 3 and Items.disassemble_yield({"rarity": 0}).crystal == 1 and Items.disassemble_yield({"rarity": 5, "upgrade": 9}).crystal == 6)

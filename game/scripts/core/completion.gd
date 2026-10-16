@@ -33,14 +33,16 @@ static var _armory_ids: Dictionary = {}
 static var _armory_jobs: Array = []  # tirages restant à faire : [époque, carte, coffre, type d'arme]
 static var _armory_next := 0
 static var _armory_part: Dictionary = {}
+static var _armory_stages: Dictionary = {}  # id d'Eden -> carte (1 à 3) de cette première époque
+static var _armory_stage_part: Dictionary = {}
 const ARMORY_CACHE := "user://armory_cache.json"
 ## Fichiers dont dépend le tirage des coffres : si l'un change, le cache disque n'est plus bon.
 const ARMORY_SOURCES := ["res://scripts/core/slot_chests.gd", "res://scripts/core/epochs.gd", "res://scripts/core/trophies.gd",
 	"res://scripts/core/game_data.gd", "res://scripts/core/items.gd", "res://data/dev_edits.json", "res://data/eden_catalog.json"]
 
 
-## Pièces d'Eden que les coffres d'emplacement de la Survie peuvent proposer (donc découvrir pour
-## l'Armurerie), hors trophées : {id d'Eden -> époque dont un coffre la propose en premier}. Calculé une fois sur les
+## Pièces d'Eden que les coffres d'emplacement de la Survie peuvent proposer (donc découvrir un plan à fabriquer
+## dans l'Atelier), hors trophées : {id d'Eden -> époque dont un coffre la propose en premier}. Calculé une fois sur les
 ## mêmes tirages que la Survie (`SlotChests.pool`, pour chaque époque, carte, emplacement et type d'arme) ; le calcul
 ## dure près d'une seconde, donc il est gardé sur disque (cache par version, P2) et `warm_armory()` le fait par
 ## tranches pendant que le lobby s'affiche. Hors du lobby (en run), renvoie ce qui est déjà calculé.
@@ -56,7 +58,7 @@ static func armory_ids() -> Dictionary:
 	return _armory_ids
 
 
-## Prépare le catalogue de l'Armurerie sans bloquer l'affichage : cache disque, sinon une tranche de quelques
+## Prépare le catalogue des plans sans bloquer l'affichage : cache disque, sinon une tranche de quelques
 ## millisecondes par image (un appel à `armory_ids()` entre-temps termine le travail d'un coup).
 static func warm_armory() -> void:
 	if not _armory_ids.is_empty() or Profile.in_run or _armory_load_cache():
@@ -77,6 +79,7 @@ static func _armory_prepare() -> void:
 	if not _armory_jobs.is_empty():
 		return
 	_armory_part = {}
+	_armory_stage_part = {}
 	_armory_next = 0
 	# un coffre d'arme ne propose que le type de l'arme de la classe : un tirage par type d'arme
 	var types := {}
@@ -101,12 +104,14 @@ static func _armory_step() -> void:
 
 static func _armory_finish() -> void:
 	_armory_ids = _armory_part
+	_armory_stages = _armory_stage_part
 	_armory_jobs = []
 	_armory_next = 0
 	_armory_part = {}
+	_armory_stage_part = {}
 	var f := FileAccess.open(ARMORY_CACHE, FileAccess.WRITE)
 	if f:
-		f.store_string(JSON.stringify({"key": _armory_key(), "ids": _armory_ids}))
+		f.store_string(JSON.stringify({"key": _armory_key(), "ids": _armory_ids, "stages": _armory_stages}))
 		f.close()
 
 
@@ -123,23 +128,37 @@ static func _armory_load_cache() -> bool:
 	if not FileAccess.file_exists(ARMORY_CACHE):
 		return false
 	var d: Variant = JSON.parse_string(FileAccess.get_file_as_string(ARMORY_CACHE))
-	if not d is Dictionary or String(d.get("key", "")) != _armory_key() or not d.get("ids") is Dictionary:
+	if not d is Dictionary or String(d.get("key", "")) != _armory_key() or not d.get("ids") is Dictionary or not d.get("stages") is Dictionary:
 		return false
 	var out := {}
 	for k in d.ids:
 		out[int(k)] = int(d.ids[k])
 	if out.is_empty():
 		return false
+	var stages := {}
+	for k in d.stages:
+		stages[int(k)] = int(d.stages[k])
 	_armory_ids = out
+	_armory_stages = stages
 	return true
 
 
-## Total de l'Armurerie (calculé, 0.1.165 ; c'était 154 écrit en dur).
+## Total des plans à découvrir (calculé, 0.1.165 ; c'était 154 écrit en dur).
 static func armory_total() -> int:
 	return armory_ids().size()
 
 
-## Pièces découvertes qui sont de l'équipement (les trophées de la Survie et les pièces des Esprits du Panthéon
+## Où trouver le plan de la pièce [param id] : « Époque I · Monts Calcaires » (la première carte dont un coffre la
+## propose), ou "" si aucun coffre ne la propose (pièce des Esprits, pièce vue hors des tirages actuels).
+static func plan_place(id: int) -> String:
+	var ep := int(armory_ids().get(id, 0))
+	if ep <= 0:
+		return ""
+	var zid := Epochs.zone(ep, int(_armory_stages.get(id, 1)))
+	return "%s · %s" % [String(Epochs.get_def(ep).name), String(GameData.zone(zid).get("name", zid))]
+
+
+## Plans découverts : les pièces de l'équipement (les trophées de la Survie et les pièces des Esprits du Panthéon
 ## entrent aussi dans `seen_gear`, hors du compte).
 static func armory_done() -> int:
 	var n := 0
@@ -162,7 +181,7 @@ static func categories() -> Array:
 		["Certificats", Profile.unlocked_certificates().size(), certs_total(), "certificats débloqués"],
 		["Trophées", Profile.seen_trophies.size(), Trophies.KINDS.size(), "effets de trophée découverts"],
 		["Armes", Profile.weapon_legend.size(), weapons_total(), "variantes menées à l'effet légendaire"],
-		["Équipement", armory_done(), maxi(armory_done(), armory_total()), "pièces découvertes en Survie"],
+		["Plans", armory_done(), maxi(armory_done(), armory_total()), "plans de pièces découverts"],
 		["Époques et Tour", Epochs.total_stars() + mini(tower / 50, 4), Epochs.count() * 3 + 4, "étoiles d'époque et paliers de la Tour"],
 		["Activités", league, League.RANKS.size() - 1, "rangs de la Ligue"],
 		["Succès", int(Achievements.count().x), int(Achievements.count().y), "succès obtenus"],

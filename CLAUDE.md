@@ -163,8 +163,9 @@ Maîtrise des classes (`Profile.add_expertise`, part de l'arbre, rattrapage), ta
 verrous de PE `core/gear_power.gd` (`DIFF_RATIO`, `LEGEND_RATIO`, `GearPower.required`) ; profils de stats des 60 classes
 `core/class_gear.gd` (`data/class_profiles.json`, `tools/gen_class_profiles.py`), Registre `ui/registry_page.gd` ; Carnet
 (`ui/carnet_pages.gd`, `CarnetPages.tabs()` : ajouter un onglet à la fin, la Collection garde l'indice 4) avec succès
-`core/achievements.gd` et complétion `core/completion.gd` ; Atelier (Armurerie `ui/gear_shop_page.gd`, Fabrication
-`ui/fabrication_page.gd`, Forge `ui/forge_bench.gd`, bourse `ui/workshop_purse.gd`) ; roulette `core/wheel.gd` ; potions
+`core/achievements.gd` et complétion `core/completion.gd` ; Atelier (**Fabriquer** `ui/gear_shop_page.gd` : une pièce découverte
+est un plan, on la fabrique en insignes, `Completion.plan_place` dit où le trouver ; **Plans de donjon** `ui/fabrication_page.gd` ; Forge
+`ui/forge_bench.gd` ; bourse `ui/workshop_purse.gd` ; noms internes `_buy` / « armory » inchangés, lot A3) ; roulette `core/wheel.gd` ; potions
 `core/potions.gd`. Simulation d'un compte neuf : `res://tools/progression_sim.tscn` (`--gates` : PE requise par zone).
 Détail : DESIGN « Économie et progression » ; `R_E3.md`, `R_E6.md`, `R_P5.md`.
 

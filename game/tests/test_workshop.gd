@@ -1,5 +1,5 @@
 extends Node
-## Atelier (lot U5) : Armurerie (états, filtres, pages, compteur, prix), Fabrication (cartes, état vide, fabriquer),
+## Atelier (lot U5, textes du lot A3) : Fabriquer (ex-Armurerie : états, filtres, pages, compteur, prix), Fabrication (cartes, état vide, fabriquer),
 ## Forge (avant → après, coûts en cristaux, établis), bourse commune et prix de la fusion de gemmes.
 ## godot --headless --path game res://tests/test_workshop.tscn
 
@@ -68,14 +68,22 @@ func _test_armory() -> void:
 		by[r.state] += 1
 	check("armurerie : 2 à acheter, 1 possédée, le reste à découvrir", by.buy == 2 and by.owned == 1 and by.locked == page._all.size() - 3)
 	check("armurerie : par défaut, seules les pièces à acheter", page._rows.size() == 2 and page._rows.all(func(r): return r.state == "buy"))
-	check("armurerie : compteur « découvertes / total » avec le vrai total", page._count.text.contains(GearPower.fmt(total)) and page._count.text.begins_with("%d /" % Completion.armory_done()))
-	check("armurerie : la première pièce est choisie, bouton d'achat avec son prix", page._buy.visible and page._buy.text.contains("Acheter") and page._buy.text.contains(GearPower.fmt(GearShopPage.price(page._row_of(page._sel).e))))
+	check("armurerie : compteur « découvertes / total » avec le vrai total", page._count.text.contains(GearPower.fmt(total)) and page._count.text.begins_with("%d /" % Completion.armory_done()) and page._count.text.ends_with("plans découverts"))
+	check("armurerie : la première pièce est choisie, bouton d'achat avec son prix", page._buy.visible and page._buy.text.begins_with("Fabriquer · ") and page._buy.text.contains("insignes") and page._buy.text.contains(GearPower.fmt(GearShopPage.price(page._row_of(page._sel).e))))
+	# A3 : plus jamais « acheter » pour une pièce, statuts et ligne « Plan trouvé »
+	check("fabriquer : statuts À fabriquer / Fabriquées / Plans à découvrir / Tous", STATUS_LABELS == page.STATUSES.map(func(s): return String(s[1])))
+	var texts := _page_texts(page)
+	check("fabriquer : aucun texte ne parle d'acheter une pièce (%s)" % "|".join(texts.filter(func(t): return t.to_lower().contains("achet"))), texts.all(func(t): return not t.to_lower().contains("achet")))
+	var first_id := int(page._row_of(page._sel).id)
+	check("fabriquer : le plan dit où il a été trouvé (époque, carte)", Completion.plan_place(first_id).begins_with("Époque ") and Completion.plan_place(first_id).contains(" · ")
+		and page._detail_box.find_children("*", "Label", true, false).any(func(l): return (l as Label).text.begins_with("Plan trouvé : Époque ")))
+	check("fabriquer : l'époque I commence à Monts Calcaires", Completion.plan_place(int(SlotChests.pool("head", 1, 1)[0].id)) == "Époque I · %s" % String(GameData.zone("limestone").get("name", "")))
 	# à découvrir : silhouettes, pas de bouton, époque indiquée
 	page._f_status.select(2)
 	page._apply()
-	check("armurerie : « À découvrir » : que des silhouettes, pas de bouton d'achat", not page._rows.is_empty() and page._rows.all(func(r): return r.state == "locked") and not page._buy.visible)
+	check("armurerie : « Plans à découvrir » : que des silhouettes, pas de bouton", not page._rows.is_empty() and page._rows.all(func(r): return r.state == "locked") and not page._buy.visible)
 	check("armurerie : les cases à découvrir sont des silhouettes", page._grid.get_child(0) is GearShopPage.Silhouette)
-	check("armurerie : le détail d'une pièce à découvrir dit où la trouver", page._detail_box.find_children("*", "Label", true, false).any(func(l): return (l as Label).text.contains("Époque")))
+	check("armurerie : le détail d'une pièce à découvrir dit où la trouver", page._detail_box.find_children("*", "Label", true, false).any(func(l): return (l as Label).text.begins_with("Plan à trouver : Époque")))
 	# toutes + pages
 	page._f_status.select(3)
 	page._apply()
@@ -122,6 +130,25 @@ func _test_armory() -> void:
 	check("armurerie : rien de découvert : un message utile et pas de panneau vide", page._empty.visible and page._empty.text.contains("Survie") and not page._right.visible)
 	page.queue_free()
 	await get_tree().process_frame
+
+
+const STATUS_LABELS := ["À fabriquer", "Fabriquées", "Plans à découvrir", "Tous"]
+
+
+## Tous les textes lisibles de la page (étiquettes, boutons, listes déroulantes, infobulles).
+func _page_texts(node: Node) -> Array:
+	var out: Array = []
+	for n in [node] + node.find_children("*", "", true, false):
+		if n is Label or n is Button:
+			out.append(String(n.text))
+		if n is OptionButton:
+			for i in n.item_count:
+				out.append(n.get_item_text(i))
+		if n is RichTextLabel:
+			out.append(n.get_parsed_text())
+		if n is Control and n.tooltip_text != "":
+			out.append(String(n.tooltip_text))
+	return out
 
 
 func _slot_index(page: GearShopPage, slot: String) -> int:
