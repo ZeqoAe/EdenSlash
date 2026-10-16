@@ -114,8 +114,19 @@ const SURVIVOR := {
 	# (vitesse, soins, Menace, mécaniques du boss, gardiens, rage) sont dans Survivor.PALIERS ; mesures dans R_S8
 	"palier_mult": [1.0, 1.45, 1.7, 1.75, 2.1],
 }
+## L'Échiquier (autochess, lot AC-E) : les unités se battent par la couche d'effets AutochessEffects (pas par PvpCaps).
+## dmg_scale = part des PV d'une unité de même coût retirée par une auto-attaque avant défense (même sens que l'échelle du
+## duel ; R_AC2 §4 : 0,20 avec le prototype en règles de duel) ; AutochessDirector.base_sheet l'applique à l'attaque et aux
+## sorts. Valeur mesurée par test_ac_fight (médiane des 5 contre 5 entre 15 et 45 s, cible 25 s ; R_AC_E). Plafond d'un coup,
+## Fureur (mort subite) et égalité : ceux d'AutochessData (la couche d'effets les lit là), recopiés ici pour la lecture.
+const AUTOCHESS := {
+	"dmg_scale": 0.10, "hit_cap": AutochessData.HIT_CAP, "sudden_after": AutochessData.SUDDEN_AT,
+	"fury_step": AutochessData.FURY_STEP, "fury_damage": AutochessData.FURY_DAMAGE, "fury_heal_mult": AutochessData.FURY_HEAL_MULT,
+	"draw_at": AutochessData.DRAW_AT, "unit_diff": AutochessData.UNIT_DIFF,
+}
 const PROFILES := {
 	"survivor": SURVIVOR,
+	"autochess": AUTOCHESS,
 	"royale": ROYALE,
 	"siege": PVP_SIEGE,
 	"duel": PVP,

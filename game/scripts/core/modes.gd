@@ -4,7 +4,7 @@ extends RefCounted
 ## journal de run et, peu à peu, par les tests dispersés `Tower.active` / `Duel.active` /
 ## `Training.active`. Ces drapeaux restent les vrais interrupteurs (le mode est déduit d'eux) : rien
 ## ne peut donc se désynchroniser. Modes : menu, survival (Survie), survivor (Survivant), run (ancienne
-## run de farm), tower, dungeon, duel, royale, training.
+## run de farm), tower, dungeon, duel, royale, training, autochess (L'Échiquier : AutochessDirector.active).
 
 ## Mode imposé (essais d'équilibrage, tests) : prioritaire sur les drapeaux.
 static var forced := ""
@@ -13,6 +13,8 @@ static var forced := ""
 static func current() -> String:
 	if forced != "":
 		return forced
+	if AutochessDirector.active:
+		return "autochess"
 	if Royale.active:
 		return "royale"
 	if Duel.active:
@@ -33,8 +35,8 @@ static func is_pvp() -> bool:
 	return current() in ["duel", "royale"] or Siege.ffa  # + le chacun pour soi du Siège
 
 
-## Modes scellés (lot H2, NIVEAU_HEROS §2.3) : le Survivant et le Battle royale.
-const SEALED := ["survivor", "royale"]
+## Modes scellés (lot H2, NIVEAU_HEROS §2.3) : le Survivant, le Battle royale et L'Échiquier (autochess, lot AC-E).
+const SEALED := ["survivor", "royale", "autochess"]
 
 
 ## Mode scellé : le héros ne joue qu'avec sa partie (niveau, cartes et pièces de la run). Rien de la
@@ -42,7 +44,7 @@ const SEALED := ["survivor", "royale"]
 ## sorts fermés par la maîtrise, ni cartes à débloquer. Classes et apparences débloquées restent permises ;
 ## les récompenses de fin (maîtrise du Battle royale) aussi. Lu par Run et Player à chaque usage.
 static func sealed() -> bool:
-	return Survivor.active or Royale.active or forced in SEALED
+	return Survivor.active or Royale.active or AutochessDirector.active or forced in SEALED
 
 
 ## Mode où les records, les cartes à débloquer et les succès comptent (règle commune : partout sauf
