@@ -356,7 +356,7 @@ pleine run, le hub retrouve exactement son équipement d'avant (`Profile.begin_r
 achetables à l'Armurerie. **Compte neuf** : `StarterGear` donne à chaque classe, une fois, 8 pièces d'Eden
 communes, spéciales ou rares (la plus rare possible) du palier 10-30, le plus proche de 20 (arme du type de la classe, tête, torse,
 jambes, gants, bottes, bague, collier), à +0 : le hub n'est jamais vide. **Boucle d'amorçage** : 25 insignes de participation par
-run (dès 10 monstres tués) + 25 par carte atteinte, de quoi acheter une pièce de l'époque I (50 à 73) en 1 ou 2 runs, même perdues
+run (dès 10 monstres tués) + 25 pour la 1re carte, 35 par carte suivante et 15 par boss de carte (lot A5), de quoi acheter une pièce de l'époque I (50 à 73) en 1 ou 2 runs, même perdues
 (passe E6 : sur la 1re carte, ces 50 sont au prorata des 10 minutes avant la rage, voir « Équilibrage global ») ;
 les premiers niveaux de chaque run montent plus vite (XP ×2 au niveau 1, ×1 au niveau 10) et le début de chaque carte est plus doux
 (monstres à 45 % puis 100 % sur 5 min). Mesures et plafonds : `conception/nuit_15_10/N1_survie_equipement.md`.
@@ -1098,8 +1098,8 @@ chacune avec son rôle :
 - **Insignes du JcJ contre l'IA plafonnés au jour** (`League.win_insignia`, `royale_insignia`) : 1re victoire du jour de
   chaque mode 50 (Arènes 2v2) / 75 (3v3) / 60 (Gantelet 1v2) / 90 (1v3), puis 10 ; Battle royale : la meilleure place
   du jour paie la différence avec la précédente (110 / 70 / 45 / 28 / 18 / 11 / 7 / 4), + 3 par élimination. Une heure
-  de JcJ rapporte ≈ 180-190 insignes (première heure du jour ≈ 300-450 si on gagne tout), contre ≈ 360 (époque I) à
-  670 (époque IV) pour une heure de Survie gagnée.
+  de JcJ rapporte ≈ 180-190 insignes (première heure du jour ≈ 300-450 si on gagne tout), contre ≈ 540 (époque I) à
+  850 (époque IV) pour une heure de Survie gagnée (barème du lot A5, victoire de ≈ 2 000 monstres).
 - **Arènes, Gantelet, Ligue (passe M7)** : la difficulté des héros IA se choisit (Facile à Hardcore, Difficile par défaut) ;
   la 1re victoire du jour paie ses insignes × la difficulté rapportée à Difficile (Facile ≈ 60 %, Hardcore ≈ 118 %). Les alliés
   ont la fiche d'un héros de leur classe × la difficulté, comme les adversaires (avant : PV d'entraînement × 3 à × 8) et la
@@ -1122,9 +1122,16 @@ chacune avec son rôle :
 
 ### Insignes et maîtrise des 60 classes (lot E5 de la nuit du 15/10, `core/economy.gd`)
 
-- **Barème unique** (`Economy.INSIGNIA_PER_HOUR`, contrôlé par `test_e5`) : la Survie est la référence (≈ 360 insignes / h
-  gagnée en époque I, 670 en époque IV, formule `Economy.survival_insignia`) ; le JcJ contre l'IA reste en dessous (≈ 400
-  la 1re heure du jour, puis ≈ 60) ; Donjons, Ruée, Siège et Tour ne donnent pas d'insignes (cristaux et matières).
+- **Barème unique** (`Economy.INSIGNIA_PER_HOUR`, contrôlé par `test_e5`) : la Survie est la référence (≈ 540 insignes / h
+  gagnée en époque I, 850 en époque IV pour une victoire réelle de ≈ 2 000 monstres et 20 élites, formule
+  `Economy.survival_insignia`) ; le JcJ contre l'IA reste en dessous (≈ 400 la 1re heure du jour, puis ≈ 60) ; Donjons, Ruée,
+  Siège, Tour et Quêtes ne donnent pas d'insignes.
+- **Survie sans « bash » (lot A5 de la refonte Aventure)** : participation 25 (dès 10 monstres) + 25 pour la 1re carte (les deux
+  au prorata du temps sur la 1re carte, passe E6), **35 par carte suivante atteinte**, **monstres / 40** (au lieu de / 20),
+  élites × 2, **15 par boss de carte vaincu** (un par carte finie), victoire 60 × époque (`Economy.survival_insignia_parts`,
+  ligne « Boss de carte vaincu » au bilan). Une victoire rapporte à l'heure 0 à +7 % d'avant (1 800 à 2 500 monstres) ; une
+  défaite express (1, 3, 5 min), une défaite en carte 2 ou une rage farmée en carte 1 jamais plus qu'avant (`test_e5`). La 1re
+  carte reste à 25 pour qu'un abandon express ne paie pas plus.
 - **Armurerie à paliers** (`Economy.armory_price`) : la 1re pièce d'un palier (même emplacement, type d'arme, niveau, rareté,
   éveil) coûte le prix plein, les autres pièces de ce palier (autres panoplies ou attributs, utiles à d'autres classes)
   15 %. Pièces des Esprits : jamais de remise. Kit d'une classe : 1,8 h (époque I) à 3,3-3,9 h ; collection d'une époque :
@@ -1257,10 +1264,12 @@ Le Défi de maîtrise n'est plus une page à part : c'est la quête « Défi du 
 - **Défis de classe** : les contrats de `core/contracts.gd`, inchangés, listés sous les quêtes pour la classe choisie.
 - **Une quête n'est jamais obligatoire**, rien ne se perd en les ratant. **Relance** : une quête du jour non faite se change une fois par
   jour (le Défi du jour aussi).
-- **Récompenses sobres** (jamais d'équipement) : du jour, une seule au tirage : insignes 40 / 70 / 100 (au plus 300 par jour), cristaux
-  20 / 35 / 50, maîtrise 150 / 250 / 350 pour la classe la plus en retard (`Quests.laggard`), ou un coffre de parchemins ; le Défi du jour
-  garde ses gains propres. De la semaine : 350 insignes + un coffre d'apparence rare, ou 150 cristaux + un coffre de parchemins. Les
-  quêtes du Survivant (aucun lien avec le compte) ne donnent que des coffres d'apparence.
+- **Récompenses** (lot A5 : « pas de quêtes obligatoires » ; jamais d'insignes, de cristaux, de fournitures ni d'équipement) : du
+  jour, une seule au tirage : maîtrise 150 / 250 / 350 pour la classe la plus en retard (`Quests.laggard`, 7 tirages sur 10), sinon un
+  coffre d'apparence (commun, rare pour les grandes quêtes) ; le Défi du jour garde ses gains propres. De la semaine : 600 de maîtrise
+  + un coffre d'apparence rare, ou un coffre d'apparence épique. Sans classe en retard, la maîtrise devient un coffre d'apparence.
+  Une quête tirée avant A5 garde sa récompense figée (insignes, cristaux, coffre de parchemins), payée telle quelle. Les quêtes du
+  Survivant (aucun lien avec le compte) ne donnent que des coffres d'apparence.
 - **Série** : une quête du jour accomplie par jour prolonge la série (`Quests.series_n`). Un jour manqué est pardonné ; au-delà, la
   série retombe à son dernier palier gagné (jamais à zéro). Paliers cosmétiques à 3, 7, 14, 30, 60 et 100 jours (coffres d'apparence et
   d'aura, titres « Régulier » et « Inlassable »), chacun donné une seule fois.

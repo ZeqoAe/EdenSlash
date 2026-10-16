@@ -102,8 +102,8 @@ func _insignia_cases() -> void:
 	var sum := 0
 	for l in ResultsScreen.insignia_lines():
 		sum += int(l[1])
-	check("insignes : victoire, cartes 2 et 3, défi et autel, somme exacte (%d / %d) : %s" % [sum, Run.insignia_gain, tip.replace("\n", " | ")],
-		sum == Run.insignia_gain and tip.contains("Victoire : +120") and tip.contains("Cartes 2 et 3 atteintes : +50")
+	check("insignes : victoire, cartes 2 et 3, boss de carte, défi et autel, somme exacte (%d / %d) : %s" % [sum, Run.insignia_gain, tip.replace("\n", " | ")],
+		sum == Run.insignia_gain and tip.contains("Victoire : +120") and tip.contains("Cartes 2 et 3 atteintes : +70") and tip.contains("3 boss de carte vaincus : +45")
 		and tip.contains("Défi du jour : +") and tip.contains("Autel de la fortune : +40") and not tip.contains("Run courte"))
 	# moins de 10 monstres : la participation dit quoi faire
 	Run.start_survival("warrior", 1)
@@ -140,7 +140,7 @@ func _survival() -> void:
 	check("Survie : défaite (ton rouge), titre et sous-titre", spec.title == "DÉFAITE" and spec.tone == "lose" and String(spec.subtitle).contains("Époque I"))
 	check("Survie : insignes gardés = ceux de la run", spec.kept[0].value == "+%d" % Run.insignia_gain and Run.insignia_gain >= 25)
 	var tip := String(spec.kept[0].tip)
-	check("Survie : participation (10 monstres) dans l'infobulle des insignes : %s" % [tip.replace("\n", " | ")], tip.contains("Participation : +50") and tip.contains("Carte 2 atteinte : +25"))
+	check("Survie : participation (10 monstres), carte 2 et boss de carte dans l'infobulle des insignes : %s" % [tip.replace("\n", " | ")], tip.contains("Participation : +50") and tip.contains("Carte 2 atteinte : +35") and tip.contains("Boss de carte vaincu : +15"))
 	var tip_sum := 0
 	for l in ResultsScreen.insignia_lines():
 		tip_sum += int(l[1])

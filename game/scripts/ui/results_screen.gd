@@ -209,6 +209,10 @@ static func insignia_lines() -> Array:
 	var maps := int(p.get("maps", 0))
 	if maps > 0:
 		out.append(["Carte 2 atteinte" if Run.stage <= 2 else ("Cartes 2 et 3 atteintes" if Run.stage == 3 else "Cartes 2 à %d atteintes" % Run.stage), maps])
+	var bosses := int(p.get("bosses", 0))
+	if bosses > 0:
+		var n := bosses / Economy.MAP_BOSS_INSIGNIA
+		out.append(["Boss de carte vaincu" if n <= 1 else "%d boss de carte vaincus" % n, bosses])
 	if int(p.get("fights", 0)) > 0:
 		out.append(["Monstres et élites", int(p.fights)])
 	if int(p.get("victory", 0)) > 0:

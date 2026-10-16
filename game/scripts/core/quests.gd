@@ -18,9 +18,10 @@ extends RefCounted
 ## {day, daily: [q], rerolled, week, weekly: [q], series: {n, last, claimed, best}, done}.
 ## Une quête q = {id, t (cible), p (progression), done, param, r (récompense), s (valeurs vues, quêtes de variété)}.
 ##
-## Récompenses sobres : insignes (plafonnés par la taille de la quête), cristaux, maîtrise de la classe la plus en retard,
-## coffres de fournitures, coffres d'apparence ; jamais d'équipement. Pas de punition : une quête ratée se rejoue le lendemain
-## (ou se relance une fois par jour), la série n'oublie que ce qui dépasse le dernier palier gagné.
+## Récompenses (lot A5, « jamais obligatoires ») : maîtrise de la classe la plus en retard et coffres d'apparence, rien
+## d'autre — ni insignes, ni cristaux, ni fournitures, ni équipement. Une quête tirée avant A5 garde sa récompense figée
+## (`q.r`, payée telle quelle par [method grant]). Pas de punition : une quête ratée se rejoue le lendemain (ou se relance une
+## fois par jour), la série n'oublie que ce qui dépasse le dernier palier gagné.
 
 const DAILY := 3
 const WEEKLY := 2
@@ -37,13 +38,13 @@ const SERIES_GIFTS := [
 	{"n": 60, "chest": "aura_legend"},
 	{"n": 100, "chest": "look_legend", "title": "Inlassable"},
 ]
-## Récompenses du jour selon la taille de la quête (1 à 3).
-const R_INSIGNIA := [40, 70, 100]
-const R_CRYSTAL := [20, 35, 50]
+## Récompenses du jour selon la taille de la quête (1 à 3) : maîtrise de la classe en retard (MASTERY_SHARE des tirages),
+## sinon un coffre d'apparence (LOOK_CHESTS).
 const R_MASTERY := [150, 250, 350]
-## Récompenses de la semaine (la première quête : insignes et coffre d'apparence ; la seconde : cristaux et coffre de forge).
-const W_INSIGNIA := 350
-const W_CRYSTAL := 150
+const MASTERY_SHARE := 0.7
+const LOOK_CHESTS := ["look_common", "look_common", "look_rare"]
+## Récompenses de la semaine : la première quête, maîtrise et coffre d'apparence rare ; la seconde, coffre d'apparence épique.
+const W_MASTERY := 600
 ## Partie plus courte que cela : ne compte pour aucune quête.
 const MIN_SECS := 30.0
 
@@ -239,7 +240,8 @@ static func _pick_class(r: RandomNumberGenerator) -> String:
 	return String(pool[r.randi() % pool.size()])
 
 
-## Récompense d'une quête : {insignia | crystal | mastery | chest (+ lv, focus) | title}.
+## Récompense d'une quête : {mastery | chest} (lot A5). Les anciennes clés (insignia, crystal, chest de forge avec lv
+## et focus) ne sont plus tirées mais restent payées par [method grant] pour les quêtes tirées avant.
 static func _roll_reward(d: Dictionary, period: String, index: int, r: RandomNumberGenerator) -> Dictionary:
 	if String(d.get("special", "")) == "challenge":
 		return {}  # la maîtrise ×2 et les 600 points du premier succès sont déjà ceux du défi
@@ -249,23 +251,11 @@ static func _roll_reward(d: Dictionary, period: String, index: int, r: RandomNum
 		return {"chest": "look_rare" if period == "weekly" else "look_common"}
 	if period == "weekly":
 		if index % 2 == 0:
-			return {"insignia": W_INSIGNIA, "chest": "look_rare"}
-		return {"crystal": W_CRYSTAL, "chest": "forge", "focus": "scroll", "lv": scroll_level()}
-	var roll := r.randf()
-	if roll < 0.40:
-		return {"insignia": int(R_INSIGNIA[tier])}
-	if roll < 0.65 and Unlocks.is_open("forge"):
-		return {"crystal": int(R_CRYSTAL[tier])}
-	if roll < 0.85 and laggard() != "":
+			return {"mastery": W_MASTERY, "chest": "look_rare"} if laggard() != "" else {"chest": "look_rare"}
+		return {"chest": "look_epic"}
+	if r.randf() < MASTERY_SHARE and laggard() != "":
 		return {"mastery": int(R_MASTERY[tier])}
-	if Unlocks.is_open("forge"):
-		return {"chest": "forge", "focus": "scroll", "lv": scroll_level()}
-	return {"insignia": int(R_INSIGNIA[tier])}
-
-
-## Niveau des coffres de fournitures des quêtes : suit l'avancée dans les époques.
-static func scroll_level() -> int:
-	return 15 * clampi(Epochs.unlocked(), 1, 4)
+	return {"chest": String(LOOK_CHESTS[tier])}
 
 
 ## La classe ouverte la moins maîtrisée (sous le niveau de rattrapage), "" s'il n'y en a plus.
@@ -606,9 +596,11 @@ static func grant(r: Dictionary) -> String:
 		if cid != "":
 			Profile.add_expertise(cid, int(r.mastery), false)
 			parts.append("+%d maîtrise (%s)" % [int(r.mastery), ClassGear.class_label(cid)])
-		else:
-			Profile.insignia += int(r.mastery) / 2
-			parts.append("+%d insignes" % (int(r.mastery) / 2))
+		elif String(r.get("chest", "")) == "":
+			# plus de classe en retard (toutes au niveau de rattrapage) : un coffre d'apparence à la place (lot A5)
+			var lc := Rewards.make("look_common", 20, true)
+			Profile.reward_chests.append(lc)
+			parts.append(Rewards.name_of(lc).to_lower())
 	if String(r.get("chest", "")) != "":
 		var c := Rewards.make(String(r.chest), int(r.get("lv", 20)), true, String(r.get("focus", "")))
 		Profile.reward_chests.append(c)

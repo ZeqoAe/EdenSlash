@@ -178,14 +178,25 @@ func _test_coverage_and_budget() -> void:
 	check("couverture : %d jours tirés touchent toutes les activités (manque : %s)" % [days, missing], missing.is_empty())
 	var avg := total_min / days
 	check("équilibre : %.0f min en moyenne (max %.0f) pour finir les trois quêtes du jour" % [avg, max_min], avg >= 20.0 and avg <= 45.0 and max_min <= 60.0)
-	# récompenses du jour : plafond d'insignes
-	var cap := 0
+	# lot A5 : récompenses = maîtrise des classes en retard et apparences, jamais d'insignes, de cristaux ni de fournitures
+	var kinds := {}
+	var bad := 0
 	for i in 60:
-		var s := 0
-		for q in Quests.draw("daily", "2027-01-%02d" % (1 + i % 28) if i < 28 else "2027-02-%02d" % (1 + i % 28)):
-			s += int((q.r as Dictionary).get("insignia", 0))
-		cap = maxi(cap, s)
-	check("récompenses : au plus %d insignes par jour par les quêtes" % cap, cap <= 300)
+		var key := "2027-01-%02d" % (1 + i % 28) if i < 28 else "2027-02-%02d" % (1 + i % 28)
+		for q in Quests.draw("daily", key) + Quests.draw("weekly", key):
+			var r: Dictionary = q.r
+			for k in r:
+				kinds[k if k != "chest" else String(r.chest)] = true
+			if int(r.get("insignia", 0)) > 0 or int(r.get("crystal", 0)) > 0 or (r.has("chest") and not (String(r.chest).begins_with("look") or String(r.chest).begins_with("aura"))):
+				bad += 1
+	check("A5 : 60 jours de quêtes, ni insignes, ni cristaux, ni fournitures (%d écart(s)) ; récompenses vues : %s" % [bad, kinds.keys()],
+		bad == 0 and kinds.has("mastery") and kinds.keys().any(func(k): return String(k).begins_with("look")))
+	# lot A5 : une quête tirée avant (récompense figée en insignes) est payée telle quelle
+	var old := {"id": "sv_kills", "t": 1, "p": 0, "done": false, "param": "", "r": {"insignia": 70, "crystal": 20}, "s": []}
+	Profile.insignia = 0
+	Profile.materials["crystal"] = 0
+	var txt := Quests.grant(old.r)
+	check("A5 : récompense figée d'une ancienne quête payée telle quelle (%s)" % txt, Profile.insignia == 70 and int(Profile.materials.crystal) == 20)
 
 
 func _set_daily(ids: Array, rewards: Array = []) -> Array:

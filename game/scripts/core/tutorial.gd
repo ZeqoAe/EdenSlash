@@ -78,7 +78,7 @@ const CARDS := {
 		"short": "Plusieurs salles, un boss et un butin propre à chaque donjon. Seul ou avec des alliés.", "icon": "defense",
 		"lines": ["Plusieurs salles, un boss, un butin propre à chaque donjon.", "Joue-les seul ou avec des alliés IA."]},
 	"quests": {"title": "Quêtes", "on": "", "version": "0.1.196", "chapter": "modes",
-		"short": "Trois quêtes par jour et deux par semaine, dans Jouer. Elles donnent insignes, cristaux et apparences.", "icon": "new",
+		"short": "Trois quêtes par jour et deux par semaine, dans Jouer. Elles donnent maîtrise et apparences.", "icon": "new",
 		"lines": ["Trois quêtes par jour et deux par semaine, dans Jouer > Quêtes. Le Défi du jour est l'une d'elles.", "Une quête du jour accomplie par jour prolonge ta série, qui offre des apparences.", "Aucune n'est obligatoire : tu peux changer une quête du jour, une fois par jour."]},
 	# Survivant, nouveauté annoncée au lobby (lot S8 : le mode est ouvert à tous) ; rangée au chapitre Modes du Guide.
 	"survivor": {"title": "Survivant", "on": "", "version": "0.1.210", "chapter": "modes",

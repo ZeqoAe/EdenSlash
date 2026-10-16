@@ -32,8 +32,9 @@ func _ready() -> void:
 
 
 func _test_rates() -> void:
-	check("Survie : formule inchangée (défaite carte 1, 40 monstres, 1 élite = 52)", Economy.survival_insignia(1, 40, 1, 1, false) == 25 + 25 + 2 + 2)
+	check("Survie : défaite carte 1, 40 monstres, 1 élite = 53 (monstres / 40, lot A5)", Economy.survival_insignia(1, 40, 1, 1, false) == 25 + 25 + 1 + 2)
 	check("Survie : pas de participation sous 10 monstres", Economy.survival_insignia(1, 9, 0, 1, false) == 25)
+	_test_a5_rates()
 	var r1 := Economy.survival_insignia_per_hour(1)
 	var r4 := Economy.survival_insignia_per_hour(4)
 	check("Survie : %d / h (époque I) à %d / h (époque IV), proches des cibles" % [r1, r4],
@@ -47,6 +48,34 @@ func _test_rates() -> void:
 		pvp <= int(Economy.INSIGNIA_PER_HOUR.jcj) and int(Economy.INSIGNIA_PER_HOUR.jcj) <= r4)
 	check("JcJ : heures suivantes (10 par victoire, ≈ 6 / h) sous la Survie I", League.REPEAT_INSIGNIA * 6 <= int(Economy.INSIGNIA_PER_HOUR.jcj_suite) and int(Economy.INSIGNIA_PER_HOUR.jcj_suite) < r1)
 	check("Donjons, Tour, Siège : aucune source d'insigne", int(Economy.INSIGNIA_PER_HOUR.donjons) == 0 and int(Economy.INSIGNIA_PER_HOUR.tour) == 0 and int(Economy.INSIGNIA_PER_HOUR.siege) == 0)
+
+
+## Barème d'avant A5 (E5 + prorata d'E6) : 25 par carte atteinte, monstres / 20, pas de boss de carte.
+func _before_a5(stage: int, kills: int, elites: int, ep: int, won: bool, map1 := -1.0) -> int:
+	var entry := float((Run.INSIGNIA_BASE if kills >= 10 else 0) + 25)
+	if stage <= 1 and map1 >= 0.0:
+		entry *= clampf(map1 / Economy.ENTRY_MINUTES, 0.0, 1.0)
+	return roundi(entry) + 25 * (stage - 1) + kills / 20 + elites * 2 + (60 * ep if won else 0)
+
+
+## Lot A5 « sans bash » : boss de carte payés, monstres moitié moins ; une victoire à ± 10 % d'avant, une défaite express
+## jamais mieux payée.
+func _test_a5_rates() -> void:
+	var p := Economy.survival_insignia_parts(3, 2000, 20, 1, true)
+	check("A5 : victoire = 3 boss de carte (+%d) et 2 cartes suivantes (+%d)" % [int(p.bosses), int(p.maps)], int(p.bosses) == 45 and int(p.maps) == 70)
+	check("A5 : défaite en carte 2 = 1 boss de carte", int(Economy.survival_insignia_parts(2, 900, 6, 1, false).bosses) == 15)
+	check("A5 : défaite en carte 1 = aucun boss", int(Economy.survival_insignia_parts(1, 400, 3, 1, false, 8.0).bosses) == 0)
+	for ep in [1, 4]:
+		for kills in [1800, 2000, 2500]:  # victoire réelle : modèle progression_sim ≈ 1 800, journal de run ≈ 2 500
+			var now := Economy.survival_insignia(3, kills, 20, ep, true)
+			var was := _before_a5(3, kills, 20, ep, true)
+			check("A5 : victoire, époque %d, %d monstres : %d insignes (avant %d, %+.0f %%)" % [ep, kills, now, was, 100.0 * (float(now) / was - 1.0)],
+				absf(float(now) / was - 1.0) <= 0.10)
+	# [minutes de jeu, carte atteinte, monstres, élites, minutes sur la 1re carte]
+	for c in [[1.0, 1, 10, 0, 1.0], [3.0, 1, 150, 1, 3.0], [5.0, 1, 400, 3, 5.0], [15.0, 2, 1200, 9, 11.0], [60.0, 1, Run.KILL_CAP_PER_MAP, 40, 60.0]]:
+		var now2 := Economy.survival_insignia(int(c[1]), int(c[2]), int(c[3]), 1, false, float(c[4]) if int(c[1]) == 1 else -1.0)
+		var was2 := _before_a5(int(c[1]), int(c[2]), int(c[3]), 1, false, float(c[4]) if int(c[1]) == 1 else -1.0)
+		check("A5 : défaite après %.0f min (carte %d, %d monstres) : %d insignes, pas plus qu'avant (%d)" % [c[0], c[1], c[2], now2, was2], now2 <= was2)
 
 
 func _test_armory() -> void:

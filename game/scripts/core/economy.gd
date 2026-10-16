@@ -15,20 +15,24 @@ extends RefCounted
 # --- barème des insignes ---------------------------------------------------------------------------------------
 ## Durée estimée d'une Survie victorieuse (3 cartes + boss + portail), en minutes.
 const SURVIVAL_MINUTES := 35.0
-## Survie victorieuse type : monstres et élites vaincus sur les 3 cartes.
-const SURVIVAL_KILLS := 600
-const SURVIVAL_ELITES := 10
+## Survie victorieuse type : monstres et élites vaincus sur les 3 cartes. Lot A5 : la victoire réelle (journal de run
+## ≈ 2 500 monstres, modèle progression_sim ≈ 1 800) au lieu des 600 d'E5, qui sous-estimaient les monstres.
+const SURVIVAL_KILLS := 2000
+const SURVIVAL_ELITES := 20
 ## Cible d'insignes par heure de chaque activité (100 % de victoires ; JcJ : 1re heure du jour). Contrôlée par test_e5.
+## Survie : avant A5, la même victoire de 2 000 monstres rapportait 514 / h (I) et 823 / h (IV).
 const INSIGNIA_PER_HOUR := {
-	"survie_1": 360, "survie_4": 670,  # référence (survival_insignia)
+	"survie_1": 540, "survie_4": 849,  # référence (survival_insignia)
 	"jcj": 450,  # Arènes, Gantelet, Battle royale : 1re victoire du jour pleine, puis 10 (League.win_insignia)
 	"jcj_suite": 60,  # heures suivantes du même jour
 	"donjons": 0, "tour": 0, "siege": 0,  # rôle : cristaux et matières (ActivityLoot), pas d'insignes
 }
 
 
-## Insignes d'une Survie (Run.finish) : participation dès 10 monstres, 25 par carte atteinte, monstres / 20,
-## élites × 2, victoire 60 × époque (avant Défi ×1,5 et rang héroïque).
+## Insignes d'une Survie (Run.finish) : participation dès 10 monstres, 25 pour la 1re carte, 35 par carte suivante
+## atteinte, monstres / 40, élites × 2, 15 par boss de carte vaincu, victoire 60 × époque (avant Défi ×1,5 et rang
+## héroïque). Lot A5 (« sans bash ») : la progression (cartes, boss) paie plus, le nombre de monstres moitié moins ;
+## une victoire de 1 800 à 2 500 monstres rapporte à l'heure 0 à +7 % d'avant, une défaite express jamais plus (test_e5).
 ## Passe E6 : une run arrêtée sur la 1re carte ne touche la participation et les 25 de la 1re carte qu'au prorata
 ## du temps joué sur cette carte ([param map1_minutes] / ENTRY_MINUTES, les 10 minutes avant la rage ; négatif : pas de
 ## prorata). Sans ça, abandonner au bout d'une minute rapportait 50 insignes, soit ≈ 2 000 à l'heure, 4 à 6 fois une
@@ -36,16 +40,26 @@ const INSIGNIA_PER_HOUR := {
 const ENTRY_MINUTES := 10.0
 static func survival_insignia(stage: int, kills: int, elites: int, epoch: int, victory: bool, map1_minutes := -1.0) -> int:
 	var p := survival_insignia_parts(stage, kills, elites, epoch, victory, map1_minutes)
-	return int(p.participation) + int(p.maps) + int(p.fights) + int(p.victory)
+	return int(p.participation) + int(p.maps) + int(p.fights) + int(p.bosses) + int(p.victory)
 
 
 ## Détail du barème (bilan de la Survie, Run.insignia_parts) : participation (avec les 25 de la 1re carte, au prorata
-## sur la 1re carte), cartes suivantes atteintes, monstres et élites, victoire.
+## sur la 1re carte), cartes suivantes atteintes, monstres et élites, boss de carte (un par carte finie : les cartes
+## quittées et, sur victoire, la dernière), victoire.
+const MAP_INSIGNIA := 25  # 1re carte (dans la participation, au prorata : une run express ne paie pas plus qu'avant A5)
+const NEXT_MAP_INSIGNIA := 35
+const KILLS_PER_INSIGNIA := 40
+const ELITE_INSIGNIA := 2
+const MAP_BOSS_INSIGNIA := 15
+const VICTORY_INSIGNIA := 60  # × époque
 static func survival_insignia_parts(stage: int, kills: int, elites: int, epoch: int, victory: bool, map1_minutes := -1.0) -> Dictionary:
-	var entry := float((Run.INSIGNIA_BASE if kills >= 10 else 0) + 25)
+	var entry := float((Run.INSIGNIA_BASE if kills >= 10 else 0) + MAP_INSIGNIA)
 	if stage <= 1 and map1_minutes >= 0.0:
 		entry *= clampf(map1_minutes / ENTRY_MINUTES, 0.0, 1.0)
-	return {"participation": roundi(entry), "maps": 25 * (stage - 1), "fights": kills / 20 + elites * 2, "victory": 60 * epoch if victory else 0}
+	var bosses := maxi(0, stage - 1) + (1 if victory else 0)
+	return {"participation": roundi(entry), "maps": NEXT_MAP_INSIGNIA * maxi(0, stage - 1),
+		"fights": kills / KILLS_PER_INSIGNIA + elites * ELITE_INSIGNIA, "bosses": MAP_BOSS_INSIGNIA * bosses,
+		"victory": VICTORY_INSIGNIA * epoch if victory else 0}
 
 
 ## Insignes à l'heure d'une Survie victorieuse type de l'époque [param ep].

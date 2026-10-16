@@ -73,7 +73,7 @@ dans `Compass` si elle change la quête + `test_nav_screens`. Les activités « 
 | Survivant | apparences, titres (aucun lien avec le compte) | dès le départ | `core/survivor*.gd` | `conception/survivor/SPEC.md` |
 | Donjons | panoplies, plans, cristaux, parchemins | époque II gagnée | `core/dungeons.gd`, `ui/dungeon_page.gd` | DESIGN « Bibliothèque de boss » |
 | La Tour | cristaux, gemmes, apparences | époque I gagnée | `core/tower.gd`, `tower_director.gd` | DESIGN « La Tour » |
-| Quêtes | insignes, cristaux, maîtrise, apparences | 3 Survies | `core/quests.gd`, `ui/quests_page.gd` | DESIGN « Quêtes » |
+| Quêtes | maîtrise des classes en retard, apparences (lot A5) | 3 Survies | `core/quests.gd`, `ui/quests_page.gd` | DESIGN « Quêtes » |
 | Ruée des boss | parchemins, pierres, cristaux, titres | avec les Donjons | `core/rush.gd`, `rush_director.gd` | DESIGN « Ruée et Siège » |
 | Le Siège | formules, cristaux, apparences | époque II (Normal sans PE) | `core/siege.gd`, `siege_director.gd` | DESIGN « Ruée et Siège » |
 | Duel (Libre, Ligue, Panthéon, Gantelet) | rangs, titres, maîtrise, Esprits | 1er duelliste de la Tour | `core/duel.gd`, `league.gd`, `pantheon.gd` | section « Duel » ci-dessous |
@@ -150,7 +150,8 @@ Chacun pour soi général : `Combatant.ffa_id` / `set_ffa()` / `clear_ffa()`, gr
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à
   paliers `armory_price`, puits `SHOP_CHESTS`, leçon de maîtrise) ; participation `Run.INSIGNIA_BASE` ; JcJ plafonné au jour
-  (`League.win_insignia`, `royale_insignia`). Seule la Survie (et les quêtes, le JcJ plafonné) en donne.
+  (`League.win_insignia`, `royale_insignia`). Seule la Survie en donne (lot A5, `R_A5.md` : cartes et boss de
+  carte surtout, monstres / 40), plus le JcJ plafonné ; les quêtes ne paient que maîtrise et apparences.
 - **Cristaux = optimiser** (Forge) : `Forge.GOLD_PER_CRYSTAL` 125 hors run ; sources hors Survie `core/activity_loot.gd`
   (Donjons, Ruée, Siège, Tour : cristaux et coffres de forge / du joaillier au niveau de l'activité).
 - **Fournitures** (parchemins, gemmes, formules, pierres) : coffres de matières (`core/rewards.gd`, `focus`), en Survie au niveau

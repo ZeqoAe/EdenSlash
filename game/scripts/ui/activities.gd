@@ -20,7 +20,7 @@ const LIST := [
 		"desc": "Quatre salles, un boss."},
 	{"id": "tower", "row": "adventure", "unlock": "tower", "group": "pve", "name": "La Tour", "sub": "200 étages, une seule vie", "gain": "Cristaux, gemmes, apparences", "gives": ["crystal", "gem", "look"],
 		"desc": "Une carte et un coffre par étage, des duels de toutes les classes."},
-	{"id": "quests", "row": "challenge", "unlock": "daily", "img": "training", "group": "pve", "tag": "Chaque jour", "name": "Quêtes", "sub": "Du jour, de la semaine et de classe", "gain": "Insignes, cristaux, maîtrise, apparences", "gives": ["insignia", "crystal", "mastery", "look"],
+	{"id": "quests", "row": "challenge", "unlock": "daily", "img": "training", "group": "pve", "tag": "Chaque jour", "name": "Quêtes", "sub": "Du jour, de la semaine et de classe", "gain": "Maîtrise, apparences", "gives": ["mastery", "look"],
 		"desc": ""},
 	{"id": "trials", "row": "challenge", "img": "training", "group": "pve", "name": "Épreuves de maîtrise", "sub": "Leçons chronométrées", "soon": true, "gain": "Médailles, maîtrise", "gives": ["mastery"],
 		"desc": "Une leçon par famille de classes, au chrono : bronze, argent, or."},

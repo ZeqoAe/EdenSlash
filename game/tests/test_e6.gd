@@ -43,7 +43,7 @@ func _ready() -> void:
 ## Insignes : prorata du temps sur la 1re carte, rien ne change dès la 2e carte ni pour une victoire.
 func _test_insignia() -> void:
 	var full := Economy.survival_insignia(1, 40, 1, 1, false)
-	check("défaite en carte 1 sans durée connue : barème d'E5 (%d)" % full, full == 25 + 25 + 2 + 2)
+	check("défaite en carte 1 sans durée connue : barème d'A5, monstres / 40 (%d)" % full, full == 25 + 25 + 1 + 2)
 	check("défaite après %d min sur la 1re carte : participation entière" % int(Economy.ENTRY_MINUTES),
 		Economy.survival_insignia(1, 40, 1, 1, false, Economy.ENTRY_MINUTES) == full)
 	var quick := Economy.survival_insignia(1, 10, 0, 1, false, 1.0)
