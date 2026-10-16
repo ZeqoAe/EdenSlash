@@ -193,7 +193,7 @@ pastilles `ui/gain_chips.gd`. Détail : DESIGN « Quêtes », « La quête commu
 |---|---|
 | `python tools/run_tests.py` | toute la suite (voir « Tests ») |
 | `python tools/sim_survie.py` | Survie au pilote automatique en parallèle (`--hub new\|E.C.N.G`, `--human`), test `test_gear_run` |
-| `res://tools/progression_sim.tscn` | compte neuf de bout en bout avec les vraies formules (`--probe`, `--mult=`, `--gates`, `--trace`), bornes `test_e6` |
+| `res://tools/progression_sim.tscn` | compte neuf de bout en bout avec les vraies formules (`--probe`, `--mult=`, `--gates`, `--trace`), bornes `test_e6` ; refonte Aventure (A7, `R_A7.md`) : `--refonte [--plans=boss] --hubvalue --decote`, jalons `kit80_ok` / `kit90_ok` / `kit90_opti` / `dungeon_0` |
 | `python tools/boss_ttk.py` | temps pour tuer les boss (sonde `res://tools/boss_ttk.tscn`, `--dungeons`, `--human`), test `test_p11` |
 | `python tools/sim_survivor.py` | Survivant au pilote (`--palier 1,2,…`, `--probe --fight` : sonde `tools/sv_build_probe.tscn`) |
 | `res://tools/sv_set_sim.tscn`, `sv_cards_sim.tscn` | tirages des panoplies et des cartes du Survivant |

@@ -30,7 +30,9 @@ func _ready() -> void:
 	_test_epochs()
 	_test_dismantle()
 	_test_gates()
+	_test_a7_decote()
 	await _test_progression()
+	await _test_a7_refonte()
 	Run.active = false
 	Run.survival = false
 	Profile.reset_all()
@@ -198,6 +200,62 @@ func _test_progression() -> void:
 	# passe P11 : les boss à PV fixes ralentissent les époques, pas la PE : le verrou Mythique s'ouvre un peu avant la fin de
 	# l'époque IV (20 comptes : 95 % de son temps ; 6 comptes ici, bruit ± 10 %)
 	check("P5 : Mythique pas avant la fin de l'époque IV (≥ 80 %% de son temps) — %s h / %s h" % [m2.h, e4.h], float(m2.h) < 0.0 or float(m2.h) >= 0.8 * float(e4.h))
+	sim.queue_free()
+
+
+## Lot A7 : décote de palier de l'outil (--decote, émulée sur une copie des pièces ; le vrai réglage est le lot A6).
+func _test_a7_decote() -> void:
+	var m41: Dictionary = Epochs.map_def(4, 1)
+	var low := {"slot": "chest", "eden": 1, "level": 43}
+	var at := {"slot": "chest", "eden": 1, "level": int(m41.armor)}
+	var tiny := {"slot": "chest", "eden": 1, "level": 5}
+	var f_low := Sim.decote_factor(low, 4, 1)
+	check("décote : pièce au palier ×1, pièce 43 en carte IV-1 ×%.2f, plancher ×%.1f" % [f_low, Sim.DECOTE_FLOOR],
+		Sim.decote_factor(at, 4, 1) == 1.0 and is_equal_approx(f_low, 43.0 / float(m41.armor)) and Sim.decote_factor(tiny, 4, 1) == Sim.DECOTE_FLOOR)
+	check("décote : l'arme suit le palier d'arme de la carte, une pièce sans niveau d'Eden n'est pas touchée",
+		is_equal_approx(Sim.decote_factor({"slot": "weapon", "eden": 1, "level": 43}, 4, 1), clampf(43.0 / float(m41.weapon), 0.5, 1.0))
+		and Sim.decote_factor({"slot": "chest", "level": 5}, 4, 1) == 1.0)
+	# sur une vraie pièce d'époque I : le niveau de puissance en run baisse, la pièce d'origine reste intacte
+	var e: Dictionary = SlotChests.pool("chest", 1, 3)[0]
+	var it := Items.from_eden(e)
+	var g := Sim.decoted({"chest": it}, 4, 1, 35)
+	Run.active = true
+	Run.hero_level = 35
+	var before := Items.power_level(it)
+	var after := Items.power_level(g.chest)
+	var stats_lower := float(Items.stats(g.chest).values().reduce(func(a, b): return a + b, 0.0)) < float(Items.stats(it).values().reduce(func(a, b): return a + b, 0.0))
+	Run.active = false
+	check("décote : pièce %d en carte IV-1 au niveau 35 : puissance %d -> %d, stats plus basses, original intact" % [int(it.level), before, after],
+		after < before and after == maxi(1, roundi(mini(35, Items.power_cap(it)) * Sim.decote_factor(it, 4, 1))) and stats_lower and it.has("eden"))
+
+
+## Lot A7 : la refonte de la conception (REFONTE_AVENTURE.md §3.1, colonne H : --refonte --hubvalue --decote, monstres
+## 0,85 / 1,3 / 2,3 / 4,4) dans l'outil : donjons dès l'époque I, plans de donjon fabriqués, équipement 80-90 correct vers 30 h.
+## Mesure complète (12 comptes, 50 h, graine 1, colonnes A / E / B / D / G / H) : voir l'en-tête de tools/progression_sim.gd.
+func _test_a7_refonte() -> void:
+	var sim: Node = Sim.new()
+	sim.quiet = true
+	sim.refonte = true
+	sim.hubvalue = true
+	sim.decote = true
+	sim.mult = [0.85, 1.3, 2.3, 4.4]
+	add_child(sim)
+	var res: Dictionary = sim.simulate(6, "moyen", 45.0, 11)
+	var e1: Dictionary = sim.milestone(res, "epoch_1")
+	var d0: Dictionary = sim.milestone(res, "dungeon_0")
+	var e4: Dictionary = sim.milestone(res, "epoch_4")
+	var k80: Dictionary = sim.milestone(res, "kit80_ok")
+	var plans := 0
+	var crafted := 0
+	for acc in res.accounts:
+		plans += (acc.get("dplans", {}) as Dictionary).size()
+		crafted += int(acc.get("dcrafted", 0))
+	print("      refonte (H) : époque I %s h, 1er donjon %s h, époque IV %s h, équipement 80-90 correct %s h (%.0f %%), %d plans, %d pièces fabriquées sur plan"
+		% [e1.h, d0.h, e4.h, k80.h, 100.0 * float(k80.share), plans, crafted])
+	check("A7 : époque I à peine changée par la refonte (2 à 5 h ; 6 comptes, bruit ± 1 h) — %s h" % e1.h, float(e1.h) >= 2.0 and float(e1.h) <= 5.0)
+	check("A7 : 1er donjon juste après l'époque I (≤ époque I + 1 h) — %s h" % d0.h, float(d0.h) >= 0.0 and float(d0.h) <= float(e1.h) + 1.0)
+	check("A7 : plans de donjon gagnés et fabriqués (%d plans, %d pièces)" % [plans, crafted], plans >= 6 and crafted >= 1)
+	check("A7 : équipement 80-90 correct atteint vers 30 h (≤ 40 h) — %s h" % k80.h, float(k80.h) > 15.0 and float(k80.h) <= 40.0)
 	sim.queue_free()
 
 

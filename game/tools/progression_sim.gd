@@ -7,6 +7,18 @@ extends Node
 ##         [--hours=90] [--seed=1] [--class=warrior] [--quiet] [--trace] [--mult=1,1.7,3.4,7] [--probe]
 ## --trace : une ligne par run du 1er compte ; --mult : autres Epochs.MONSTER_MULT ; --probe : puissance d'équipements types.
 ##
+## Lot A7 (refonte « Aventure », conception/progression/REFONTE_AVENTURE.md §3.1, colonnes A / E / B / D / G / H) :
+##   --refonte   Donjons dès l'époque I gagnée (zones des époques gagnées), donjon de 7 min, plans de donjon fabriqués en
+##               insignes (Economy.base_price du modèle, panoplie du donjon, légendaire en Mythique) ;
+##   --plans=boss  avec --refonte : un plan par boss (6 par zone, 2 emplacements chacun, lot A1) au lieu de l'approximation
+##               de PR1 (un plan par zone et difficulté : sûr au 1er donjon fini, sinon 10 %, les 9 emplacements) ;
+##   --hubvalue  pièces choisies sur leur PE (le niveau compte) au lieu de leur valeur en Survie (niveau du héros 35) ;
+##   --decote    décote de palier en Survie : niveau de puissance × clamp(niveau de la pièce / palier de la carte, 0,5, 1)
+##               (émulée ici sur une copie des pièces, sans toucher Items : le vrai réglage est le lot A6) ;
+##   --heroic= / --mythic=  autres GearPower.DIFF_RATIO.
+## Jalons : kit80_ok (9 pièces ≥ 78, légendaires, +5), kit90_ok (≥ 86), kit90_opti (≥ 86, +10, gemmes ≥ 4, ench. ≥ 7),
+## dungeon_0 (1er donjon Normal). Colonne H : -- --refonte --hubvalue --decote --mult=0.85,1.3,2.3,4.4 (12 comptes, 50 h ≈ 10 min).
+##
 ## Rien n'est sauvegardé (Training.active pendant la simulation) ; le profil chargé n'est que la mémoire du processus.
 ##
 ## Modèle d'une Survie (une run = 3 cartes de l'époque) :
@@ -61,6 +73,20 @@ var _cache := {}
 var trace := false
 var mult: Array = []  # --mult=1,1.8,3,4.5 : essai d'autres Epochs.MONSTER_MULT sans toucher le jeu
 var no_boss := "--no-boss" in OS.get_cmdline_user_args()  # passe P11 : sans l'enjeu du boss (comparaison avant / après)
+## Lot A7 : drapeaux de la refonte (voir l'en-tête) ; des variables pour que test_e6 les règle sans ligne de commande.
+var refonte := "--refonte" in OS.get_cmdline_user_args()
+var plans_by_boss := "--plans=boss" in OS.get_cmdline_user_args()
+var hubvalue := "--hubvalue" in OS.get_cmdline_user_args()
+var decote := "--decote" in OS.get_cmdline_user_args()
+var diff_ratios: Array = GearPower.DIFF_RATIO.duplicate()
+## Donjon sans salles de remplissage (refonte, lot A2) ; approximation de PR1 du plan par boss (plan après un donjon déjà fini).
+const REFONTE_DUNGEON_MIN := 7.0
+const ZONE_PLAN_CHANCE := 0.1
+## Décote de palier : plancher du facteur (une pièce très sous le palier compte au moins pour la moitié de son niveau).
+const DECOTE_FLOOR := 0.5
+## Jalons d'équipement : [clé, niveau d'Eden minimal des 9 pièces, +N minimal, rang des 2 gemmes (-1 : sans), enchantement].
+const KIT_GOALS := [["kit80_ok", 78, 5, -1, 0], ["kit90_ok", 86, 5, -1, 0], ["kit90_opti", 86, 10, 4, 7]]
+const GEAR_SLOTS := ["weapon", "chest", "legs", "head", "gloves", "boots", "back", "necklace", "ring"]
 
 
 func _ready() -> void:
@@ -83,6 +109,10 @@ func _ready() -> void:
 			cid = a.trim_prefix("--class=")
 		elif a.begins_with("--mult="):
 			mult = Array(a.trim_prefix("--mult=").split(",")).map(func(x): return float(x))
+		elif a.begins_with("--heroic="):
+			diff_ratios[1] = float(a.trim_prefix("--heroic="))
+		elif a.begins_with("--mythic="):
+			diff_ratios[2] = float(a.trim_prefix("--mythic="))
 		elif a == "--trace":
 			trace = true
 		elif a == "--quiet":
@@ -156,7 +186,36 @@ func ratios(gear: Dictionary, ep: int, with_finds := true) -> Array:
 	var out: Array = []
 	for k in 3:
 		var g := run_gear(gear, ep, k + 1) if with_finds else gear
+		if decote:
+			g = decoted(g, ep, k + 1, HERO_LEVELS[k])
 		out.append(power_index(g, HERO_LEVELS[k]) / float(base_index[k]) / monster_mult(ep))
+	return out
+
+
+## Lot A7, --decote : facteur de palier d'une pièce d'Eden à la carte [param stage] de l'époque [param ep] :
+## clamp(niveau de la pièce / palier, DECOTE_FLOOR, 1) ; palier = niveau d'arme de la carte pour l'arme, d'armure sinon.
+static func decote_factor(item: Dictionary, ep: int, stage: int) -> float:
+	if not item.has("eden"):
+		return 1.0
+	var m := Epochs.map_def(ep, stage)
+	var pal := maxi(1, int(m.weapon) if String(item.get("slot", "")) == "weapon" else int(m.armor))
+	return clampf(float(item.get("level", pal)) / float(pal), DECOTE_FLOOR, 1.0)
+
+
+## Copie de [param gear] où chaque pièce d'Eden a le niveau de puissance décoté (niveau du héros [param lv] borné par le
+## plafond de la pièce, × decote_factor) : même calcul que le lot A6 dans Items.power_level, sans toucher le jeu.
+static func decoted(gear: Dictionary, ep: int, stage: int, lv: int) -> Dictionary:
+	var out := {}
+	for slot in gear:
+		var it: Dictionary = gear[slot]
+		var f := decote_factor(it, ep, stage)
+		if f >= 1.0:
+			out[slot] = it
+			continue
+		var x := it.duplicate()
+		x.erase("eden")  # pièce sans niveau d'Eden : Items.power_cap lit « plevel »
+		x["plevel"] = maxi(1, roundi(mini(lv, Items.power_cap(it)) * f))
+		out[slot] = x
 	return out
 
 
@@ -358,6 +417,7 @@ func _offer_piece(acc: Dictionary, it: Dictionary) -> void:
 
 ## Valeur d'une pièce pour le choix (note commune au niveau 35, enclume exclue) ; [param bare] : sans +N, gemmes
 ## ni enchantement (ce que vaut la pièce elle-même : le joueur rachète une meilleure base puis la remonte).
+## --hubvalue (lot A7) : sa PE hors run (le niveau de la pièce compte) au lieu de sa note en Survie.
 func _value(it: Dictionary, bare := false) -> float:
 	if it.is_empty():
 		return 0.0
@@ -368,6 +428,9 @@ func _value(it: Dictionary, bare := false) -> float:
 		x.erase("sockets")
 		x.erase("enchant")
 		x.erase("up_rolls")
+	if hubvalue:
+		Run.active = false
+		return float(GearPower.item_power(x))
 	Run.active = true
 	Run.hero_level = 35
 	var v := Items.rating(x)
@@ -407,6 +470,88 @@ func shop(acc: Dictionary) -> void:
 			var piece := best.duplicate(true)
 			piece["uid"] = "sim%d" % rng.randi()
 			acc.gear[slot] = piece
+
+
+## Lot A7, --refonte : plans de donjon fabriqués en insignes (pièce au niveau du donjon dans la difficulté du plan,
+## légendaire en Mythique, mythique sinon, à la panoplie du donjon), au prix de l'Armurerie (Economy.base_price du
+## modèle) ; seulement si sa base vaut mieux que la pièce portée (même marge que l'Armurerie).
+func craft_dungeon(acc: Dictionary) -> void:
+	if not refonte:
+		return
+	var plans: Dictionary = acc.get("dplans", {})
+	for k in plans:
+		var p: Dictionary = plans[k]
+		var lv := Dungeons.level(String(p.zone), int(p.diff))
+		var rar := Items.LEGENDARY if int(p.diff) >= 2 else Items.MYTHIC
+		for slot in p.slots:
+			var ck := "%s|%d|%s" % [k, int(p.diff), slot]
+			var it: Dictionary = _cache.get(ck, {})
+			if it.is_empty():
+				var tpl := Items.eden_template(String(slot), Items.default_weapon_type(cid), lv, rar)
+				if tpl.is_empty():
+					continue
+				it = Items.from_template(tpl, lv, rar)
+				it["quality"] = 1.0
+				it["archetype"] = String(p.archetype)
+				it["_price"] = Economy.base_price(tpl)
+				_cache[ck] = it
+			if _value(it) <= _value(acc.gear.get(slot, {}), true) * 1.08:
+				continue
+			var price := int(it._price)
+			if int(acc.insignia) >= price:
+				acc.insignia = int(acc.insignia) - price
+				acc.spent_insignia = int(acc.spent_insignia) + price
+				acc["dcrafted"] = int(acc.get("dcrafted", 0)) + 1
+				var piece := it.duplicate(true)
+				piece.erase("_price")
+				piece["uid"] = "simd%d" % rng.randi()
+				acc.gear[slot] = piece
+
+
+## Lot A7 : plan de donjon gagné en finissant le donjon [param zone] en [param diff] (--refonte). Par défaut (PR1) un plan
+## par zone et difficulté, sûr au 1er donjon fini puis 10 % ; --plans=boss : le plan du boss affronté, sûr à sa 1re
+## victoire, au niveau de la meilleure difficulté finie contre lui (lot A1). Le joueur affronte d'abord les boss sans plan.
+func dungeon_plan(acc: Dictionary, zone: String, diff: int) -> void:
+	var plans: Dictionary = acc.get("dplans", {})
+	var clears: Dictionary = acc.get("dclears", {})
+	acc["dplans"] = plans
+	acc["dclears"] = clears
+	if not plans_by_boss:
+		var dk := "%s_%d" % [zone, diff]
+		if not plans.has(dk) and (not clears.has(dk) or rng.randf() < ZONE_PLAN_CHANCE):
+			plans[dk] = {"zone": zone, "diff": diff, "slots": GEAR_SLOTS, "archetype": Dungeons.archetype(zone)}
+		clears[dk] = true
+		return
+	var bosses := BossLibrary.for_zone(zone)
+	if bosses.is_empty():
+		return
+	var bid := String(bosses[rng.randi() % bosses.size()])
+	for b in bosses:
+		if not plans.has(b) or int(plans[b].diff) < diff:
+			bid = String(b)
+			break
+	if not plans.has(bid) or int(plans[bid].diff) < diff:
+		var th := BossLibrary.loot(bid)
+		plans[bid] = {"zone": zone, "diff": diff, "slots": (th.get("slots", []) as Array).duplicate(), "archetype": String(th.get("archetype", Dungeons.archetype(zone)))}
+
+
+## Lot A7 : jalons d'équipement KIT_GOALS (9 emplacements au niveau voulu, légendaires ou mieux, +N, gemmes, enchantement).
+func note_kits(acc: Dictionary) -> void:
+	for spec in KIT_GOALS:
+		var ok := true
+		for slot in GEAR_SLOTS:
+			var it: Dictionary = acc.gear.get(slot, {})
+			if it.is_empty() or int(it.get("level", 0)) < int(spec[1]) or int(it.get("upgrade", 0)) < int(spec[2]) or int(it.get("rarity", 0)) < Items.LEGENDARY:
+				ok = false
+				break
+			if int(spec[3]) >= 0:
+				var s: Array = it.get("sockets", [])
+				if s.size() < 2 or s.any(func(g): return not g is Dictionary or int(g.tier) < int(spec[3])) \
+						or int(it.get("enchant", {}).get("lv", 0)) < int(spec[4]):
+					ok = false
+					break
+		if ok:
+			_note(acc, String(spec[0]))
 
 
 ## Atelier (Forge ouverte : époque I gagnée) : +N avec parchemin et cristaux, gemmes, enchantement.
@@ -515,17 +660,23 @@ func activity_session(acc: Dictionary) -> String:
 	var power := pe(acc)
 	var minutes := 0.0
 	var label := ""
-	if int(acc.cleared) >= 2:
+	if int(acc.cleared) >= (1 if refonte else 2):
 		# le donjon le plus payant ouvert : PE suffisante ET pièces assez hautes (le héros y est au niveau du donjon,
 		# ses pièces y valent leur propre niveau : une pièce de niveau 45 ne tient pas un donjon de niveau 90)
+		# --refonte : Donjons dès l'époque I gagnée, seulement les zones des époques gagnées
 		var lvl_avg := avg_level(acc)
 		var zone := "limestone"
 		var diff := 0
 		var best_lv := -1
+		var open_z: Array = []
+		for ep in range(1, mini(int(acc.cleared), Epochs.count()) + 1):
+			open_z.append_array(Epochs.get_def(ep).zones)
 		for d in [0, 1, 2]:
 			for z in Dungeons.zone_ids():
+				if refonte and not String(z) in open_z:
+					continue
 				var lv := Dungeons.level(String(z), d)
-				if power < GearPower.required(lv, float(GearPower.DIFF_RATIO[d])) or lvl_avg < lv - DUNGEON_LEVEL_SLACK:
+				if power < GearPower.required(lv, float(diff_ratios[d])) or lvl_avg < lv - DUNGEON_LEVEL_SLACK:
 					continue
 				if d > diff or (d == diff and lv > best_lv):
 					diff = d
@@ -533,9 +684,11 @@ func activity_session(acc: Dictionary) -> String:
 					best_lv = lv
 		label = "donjon_%d" % diff
 		while minutes < 30.0:
-			minutes += DUNGEON_MIN
+			minutes += REFONTE_DUNGEON_MIN if refonte else DUNGEON_MIN
 			if rng.randf() < 0.85:
 				var lv := Dungeons.level(zone, diff)
+				if refonte:
+					dungeon_plan(acc, zone, diff)
 				acc.crystals = int(acc.crystals) + ActivityLoot.dungeon_crystals(diff)
 				acc.crystals_total = int(acc.crystals_total) + ActivityLoot.dungeon_crystals(diff)
 				var mats := ActivityLoot.dungeon_chests(lv, diff)
@@ -603,7 +756,9 @@ func simulate(accounts: int, skill: String, max_hours: float, seed_value: int) -
 				survival_run(acc, ep)
 			next_activity = int(acc.cleared) >= 1 and rng.randf() > SURVIVAL_SHARE
 			shop(acc)
+			craft_dungeon(acc)
 			workshop(acc)
+			note_kits(acc)
 			_note_gates(acc)
 			if int(acc.cleared) >= Epochs.count():
 				_note(acc, "epoch_all")
@@ -651,7 +806,7 @@ func print_report(res: Dictionary, skill: String) -> void:
 	print("== progression d'un compte neuf (%s, %d comptes, classe %s) ==" % [skill, (res.accounts as Array).size(), cid])
 	for key in ["epoch_1", "epoch_2", "epoch_3", "epoch_4", "dungeon_1", "dungeon_2", "kit_1", "kit_2", "kit_3", "kit_4",
 			"open_dungeon_1", "open_dungeon_1_all", "open_dungeon_2", "open_dungeon_2_all", "open_siege_1", "open_siege_2",
-			"open_rush_1", "open_rush_2", "legend_60", "legend_90"]:
+			"open_rush_1", "open_rush_2", "legend_60", "legend_90", "dungeon_0", "kit80_ok", "kit90_ok", "kit90_opti"]:
 		var m := milestone(res, key)
 		print("  %-18s : %s" % [key, ("médiane %.1f h, %d runs, PE %d, niveau des pièces %.0f (%.0f %% des comptes)" % [m.h, m.runs, m.pe, m.lvl, 100.0 * float(m.share)]) if float(m.h) >= 0.0 else "non atteint par la moitié des comptes (%.0f %%)" % (100.0 * float(m.share))])
 	if not quiet:
