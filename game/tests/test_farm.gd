@@ -1,5 +1,5 @@
 extends Node
-## Mode farm (carte de la run) : objets cassables, coffres d'équipement par qualité, enclume,
+## Mode farm (carte de la run) : objets cassables, coffres d'équipement par qualité,
 ## autel du scribe, fontaine, aimant, cupidité, défi :
 ## godot --headless --path game res://tests/test_farm.tscn
 
@@ -36,7 +36,7 @@ func _ready() -> void:
 	var kinds := {}
 	for st in map.stations:
 		kinds[st.kind] = int(kinds.get(st.kind, 0)) + 1
-	check("lieux : %s" % [kinds], kinds.size() == ProcMap.STATIONS.size())
+	check("lieux (sans enclume en Survie, passe N2) : %s" % [kinds], kinds.size() == ProcMap.STATIONS.size() - 1 and not kinds.has("anvil"))
 	check("%d lieux de décor, %d plateaux" % [map.sites.size(), map.plateaus.size()], map.sites.size() >= 18 and map.plateaus.size() >= 5)
 
 	# jarre : un coup suffit, de l'or
@@ -68,7 +68,8 @@ func _ready() -> void:
 		and starts.all(func(c): return c.item.slot == "weapon" and Items.weapon_type_of(c.item) == Run.weapon_type() and int(c.item.level) in SlotChests.pool("weapon", Run.epoch, 1).map(func(e): return int(e.level))) \
 		and int(starts[0].item.auto_variant) == 0 and int(starts[1].item.auto_variant) == 1)
 	Run.apply_card(starts[0])
-	check("arme choisie : portée tout de suite", Profile.equipped.has("weapon") and String(Profile.equipped.weapon.uid) == String(starts[0].item.uid))
+	check("arme choisie en Survie : dans le sac, pas équipée d'office (passe N2)", Profile.inventory.any(func(x): return String(x.uid) == String(starts[0].item.uid))
+		and String(Profile.equipped.weapon.uid) != String(starts[0].item.uid))
 	# coffre de casque : 3 casques du palier de la map, au choix, une relance
 	var chest: Interactable = null
 	for it in map.interactables:
@@ -89,15 +90,8 @@ func _ready() -> void:
 	Run.apply_card(cards[0])
 	check("casque choisi : porté et noté pour le hub", Profile.equipped.has("head") and int(cards[0].item.eden) in Run.seen_items)
 	_close_cards()
-	# enclume : un emplacement, tirage de -2 à +10, une fois par carte
-	_use("anvil")
-	cards = world.cards._cards
-	check("enclume : choix d'emplacements", not cards.is_empty() and cards.all(func(c): return c.type == "anvil_slot"))
-	Run.apply_card(cards.filter(func(c): return c.slot == "head")[0])
-	var hb := int(Run.slot_bonus.get("head", 99))
-	check("enclume : casque +%d (entre +0 et +7), s'ajoute au +N de la pièce (plafond +%d)" % [hb, Run.UPGRADE_CAP], hb >= 0 and hb <= 7 		and Run.slot_upgrade(int(Profile.equipped.head.get("upgrade", 0)), "head") == mini(hb + int(Profile.equipped.head.get("upgrade", 0)), maxi(Run.UPGRADE_CAP, int(Profile.equipped.head.get("upgrade", 0)))))
-	_close_cards()
-	check("enclume : une seule par carte", d.map.interactables.filter(func(i): return is_instance_valid(i) and i.kind == "anvil" and not i.used).is_empty())
+	# passe N2 : plus d'enclume sur les cartes de la Survie
+	check("Survie : aucune enclume sur la carte", d.map.interactables.filter(func(i): return is_instance_valid(i) and i.kind == "anvil").is_empty())
 	# autel du scribe
 	_use("scribe")
 	cards = world.cards._cards

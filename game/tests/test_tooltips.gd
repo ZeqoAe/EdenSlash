@@ -147,17 +147,12 @@ func _ready() -> void:
 		n_ok += 1
 		c.queue_free()
 	check("%d cartes construites dans le widget" % n_ok, n_ok == sample.size())
-	# --- Survie : l'enclume de l'emplacement compte pour la pièce portée ---------------------------------
+	# --- Survie : la pièce portée telle qu'elle est (plus d'enclume, passe N2) ---------------------------
 	Run.start_survival("warrior", 1)
 	Run.hero_level = 5
 	var piece: Dictionary = Profile.equipped["chest"]
-	Run.slot_bonus["chest"] = 3
-	var eff := Items.anvil_applied(piece, "chest")
-	check("enclume : +N de la pièce + bonus d'emplacement", int(eff.upgrade) == mini(int(piece.get("upgrade", 0)) + 3, maxi(Run.UPGRADE_CAP, int(piece.get("upgrade", 0)))))
-	check("enclume : la pièce d'origine ne change pas", int(piece.get("upgrade", 0)) < int(eff.upgrade))
 	var rc := _plain(ItemWidgets.card_text(piece, "", true))
-	check("enclume : la carte de la pièce portée montre le +N total et la ligne d'enclume", rc.contains("+%d " % int(eff.upgrade)) and rc.contains("Enclume de la run : +3"))
+	check("Survie : pas de ligne d'enclume sur la pièce portée", not rc.contains("Enclume"))
 	check("en run : pas de « Prochaine amélioration »", not rc.contains("Prochaine amélioration"))
-	Run.slot_bonus.clear()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit(1 if fails > 0 else 0)

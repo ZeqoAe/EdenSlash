@@ -19,7 +19,7 @@ const CHAPTERS := [
 ## Anciens identifiants de chapitre (appels existants) -> nouvel identifiant ou « chapitre:bloc ».
 const ALIASES := {"commands": "controls", "steps": "controls:steps", "tips": "controls:tips", "news": "news"}
 ## Ordre des fiches du chapitre « Survie » (le déroulé d'abord).
-const RUN_ORDER := ["portal", "rage", "anvil", "merchant", "shrine", "fortune", "giant", "reward_chest", "results"]
+const RUN_ORDER := ["portal", "rage", "merchant", "shrine", "fortune", "giant", "reward_chest", "results"]
 ## Rôle de chaque activité : ce qu'elle est seule à apporter.
 const ROLES := {
 	"survival": "Le cœur du jeu : tu y découvres de nouvelles pièces et ta classe y gagne de la maîtrise.",
@@ -184,7 +184,7 @@ static func blocks_for(id: String) -> Array:
 			}.get(Settings.move_mode(), ["Attaquer", l.call("attack")])
 			var skills := " ".join([1, 2, 3, 4].map(func(i): return l.call("skill_%d" % i)))
 			out.append({"id": "fight", "title": "Combat", "text": table([hit, ["Sorts 1 à 4", skills],
-				["Potion de soin", l.call("potion_1")], ["Potion d'effet", l.call("potion_2")], ["S'extraire (10 s)", l.call("extract")]])})
+				["Changer d'arme", l.call("swap_weapon")], ["Potion de soin", l.call("potion_1")], ["Potion d'effet", l.call("potion_2")], ["S'extraire (10 s)", l.call("extract")]])})
 			out.append({"id": "world", "title": "Monde", "text": table([["Interagir (coffre, PNJ, donjon)", l.call("interact")],
 				["Carte", l.call("map")], ["Objectifs", l.call("objectives")], ["Équiper la trouvaille", l.call("quick_equip")],
 				["Se débloquer", l.call("unstuck")]])})

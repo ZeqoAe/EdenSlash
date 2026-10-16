@@ -90,8 +90,8 @@ dans `Compass` si elle change la quête + `test_nav_screens`. Les activités « 
   prend un instantané (`_hub_snapshot`) que `Profile.end_run_survival` restaure ; les trouvailles ne valent que la run.
   Compte neuf : `core/starter_gear.gd`. Détail : `conception/nuit_15_10/N1_survie_equipement.md`.
 - Coffres d'emplacement (`core/slot_chests.gd`, 30 par carte, cape comprise ; arme = type de la classe ; une arme choisie fait
-  découvrir les 17 types, `SlotChests.weapon_family`), enclume additive (+0 à +7 sur le +N du hub, total ≤ `Run.UPGRADE_CAP` 12),
-  arme secondaire trouvée en jeu, auto-attaques `combat/weapon_attacks.gd` (2 variantes par type, 8 rangs d'amélioration),
+  découvrir les 17 types, `SlotChests.weapon_family`) ; **plus d'enclume** en Survie (N2 : le +N est celui du hub) ; une arme
+  trouvée va dans le sac (`Run.bag_weapon`, HUD + [G]), auto-attaques `combat/weapon_attacks.gd` (2 variantes, 8 rangs d'amélioration),
   trophées = collection de la run (`Run.trophies`, 12 au plus, `Trophies.KINDS`, outil `tools/rework_trophies.py`).
 - Monstres : rôles et escouades `core/spawn_director.gd` (P15, `--spawn=legacy` pour comparer), puissance selon l'indice
   d'équipement `core/monster_scaling.gd`, rage par paliers `RunDirector.RAGE_TIERS` (×1,1 / 2 / 11 / 101 par minute),
@@ -102,6 +102,10 @@ dans `Compass` si elle change la quête + `test_nav_screens`. Les activités « 
 - Mode farm façon Megabonk : objets à casser `world/breakables.gd`, sites, plateaux, autels (fortune `core/fortune.gd`).
   Vues de la carte : `res://tools/map_shots.tscn -- <graine> [zone]` ; test `tests/test_farm.tscn`.
 - Détail : DESIGN « Boucle de jeu et Survie », « Apparition des monstres », « Pacte, géants et Menace », « Boss : PV fixes ».
+
+- **Deux armes** (N2, tous les modes, `R_N2.md`) : principale = type de la classe, secondaire = un autre type qui ne frappe jamais
+  seule ; action `swap_weapon` (`Player.swap_weapon`, `hand_off`, recharge `WeaponAttacks.SWAP_CD` / `SWAP_CD_PVP`) ; en main, ses
+  attaques ne servent qu'aux auto-attaques (`Player.basic_atk`), les compétences lisent toujours l'arme principale. Test `test_n2`.
 
 ### Survivant (mode à part, ouvert à tous)
 `core/survivor.gd` (état, réglages en tête, paliers `Survivor.PALIERS` I à V, `HUB_KEYS` : le compte n'est jamais modifié),
@@ -190,6 +194,9 @@ pastilles `ui/gain_chips.gd`. Détail : DESIGN « Quêtes », « La quête commu
 - **Objets** : `Items.describe(item, detailed)` et `ItemWidgets.item_card` (Maj déplie, comparaison ▲ / ▼).
 - **HUD** `ui/hud.gd` (pile `_left`, Premiers pas et fiches seulement en Survie), pause `ui/pause_menu.gd`, Guide F1 `ui/guide.gd`
   (seule aide du jeu, 6 onglets), accueil `ui/welcome.gd`, tutoriel `core/tutorial.gd`, Paramètres `ui/settings_menu.gd`.
+- **Création de personnage** (C1, `R_C1.md`) : `core/hero_look.gd` (nom, coiffure, couleurs ; `Profile.hero_name / hero_look / hero_made`),
+  écran `ui/hero_creator.gd` (après l'accueil, Héros > « Personnage ») ; tout modèle du héros du joueur passe le visage à
+  `EdenModel.instantiate_hero(..., look)` (et `Player._dress_model`). Masque des iris : `tools/gen_eye_mask.py`. Test `test_c1`, captures `shot_c1`.
 - Rapports : `R_U1` à `R_U10`, `R_P1`, `R_P3`, `R_P8`.
 
 ### Outils de mesure et de test
@@ -200,9 +207,6 @@ pastilles `ui/gain_chips.gd`. Détail : DESIGN « Quêtes », « La quête commu
 | `res://tools/progression_sim.tscn` | compte neuf de bout en bout avec les vraies formules (`--probe`, `--mult=`, `--gates`, `--trace`), bornes `test_e6` ; refonte Aventure (A7, `R_A7.md`) : `--refonte [--plans=boss] --hubvalue --decote`, jalons `kit80_ok` / `kit90_ok` / `kit90_opti` / `dungeon_0` ; niveau de héros (H7, `R_H7.md`) : `--heros [--hero-level=N --xp=a,g --mep= --mapmult=]`, bandes, `MAP_MULT`, port selon H, jalons `hero10`…`hero90` |
 | `res://tools/hl_probe.tscn` | sonde du niveau de héros : puissance par carte et M′ suggéré, retard dans la bande (`--talents` : talents et certificats) |
 | `python tools/boss_ttk.py` | temps pour tuer les boss (sonde `res://tools/boss_ttk.tscn`, `--dungeons`, `--human`), test `test_p11` |
-- **Création de personnage** (C1, `R_C1.md`) : `core/hero_look.gd` (nom, coiffure, couleurs ; `Profile.hero_name / hero_look / hero_made`),
-  écran `ui/hero_creator.gd` (après l'accueil, Héros > « Personnage ») ; tout modèle du héros du joueur passe le visage à
-  `EdenModel.instantiate_hero(..., look)` (et `Player._dress_model`). Masque des iris : `tools/gen_eye_mask.py`. Test `test_c1`, captures `shot_c1`.
 | `python tools/sim_survivor.py` | Survivant au pilote (`--palier 1,2,…`, `--probe --fight` : sonde `tools/sv_build_probe.tscn`) |
 | `res://tools/sv_set_sim.tscn`, `sv_cards_sim.tscn` | tirages des panoplies et des cartes du Survivant |
 | `res://tools/tower_run.tscn`, `m8_tower.tscn`, `python tools/m8_matrix.py` | Tour (`--pilot=bot`, `--dodge`), facteurs par classe |

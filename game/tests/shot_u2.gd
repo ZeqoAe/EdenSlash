@@ -48,7 +48,7 @@ func _ready() -> void:
 	for i in Guide.CHAPTERS.size():
 		g.show_page(i)
 		await _shot("guide_%d_%s" % [i, Guide.CHAPTERS[i][0]])
-	g.select("anvil")
-	await _shot("guide_fiche_enclume", 1.2)
+	g.select("offhand")
+	await _shot("guide_fiche_deux_armes", 1.2)
 	g.close()
 	get_tree().quit()

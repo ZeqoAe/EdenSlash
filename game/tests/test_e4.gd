@@ -32,7 +32,6 @@ func _ready() -> void:
 	check("une cape mythique ou légendaire sur les 12 cartes", capes_ok)
 	var offer := SlotChests.offer("back", 2, 1)
 	check("coffre de cape : 3 capes à +0", offer.size() == 3 and offer.all(func(it): return String(it.slot) == "back" and int(it.upgrade) == 0))
-	check("l'enclume vise aussi la cape", "back" in Run.ANVIL_SLOTS)
 	check("les capes comptent dans l'Armurerie", Completion.armory_ids().has(int(SlotChests.pool("back", 1, 1)[0].id)))
 	var with_cape := StarterGear.scenario("2.3.10.4", "warrior")
 	check("mesures : équipement optimisé avec cape (9 pièces), « .0 » sans", with_cape.has("back") and with_cape.size() == 9 \

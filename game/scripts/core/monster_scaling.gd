@@ -7,8 +7,8 @@ extends RefCounted
 ## 1. Niveau : niveau du monstre = max(courbe du temps, niveau du héros + décalage) + palier (élite, camp), plafonné
 ##    comme le butin (Epochs.CAPS, +3 en rage). Le décalage va de LEVEL_OFFSET[0] au début de la carte à
 ##    LEVEL_OFFSET[1] à l'heure de la rage : un héros qui monte vite trouve des monstres à sa hauteur.
-## 2. Puissance : l'indice d'équipement du héros (gear_index : PE de l'équipement porté, trouvailles de la carte et
-##    enclume compris, rapportée à la PE attendue au niveau du héros : un nombre sans niveau, ≈ note moyenne / 10)
+## 2. Puissance : l'indice d'équipement du héros (gear_index : PE de l'équipement porté, trouvailles de la carte
+##    comprises, rapportée à la PE attendue au niveau du héros : un nombre sans niveau, ≈ note moyenne / 10)
 ##    est comparé à la bande pour laquelle l'époque est réglée (EPOCH_BAND). Dans la bande : rien ne change (l'équipement
 ##    attendu de l'époque et les trouvailles ordinaires de la carte ne rendent pas les monstres plus forts). Au-dessus,
 ##    PV et dégâts montent de HP_SLOPE / ATK_SLOPE par unité de ln(indice / haut de la bande) ; en dessous, ils baissent
@@ -41,16 +41,10 @@ static func level_offset(t: float, rage_at: float) -> float:
 	return lerpf(float(LEVEL_OFFSET[0]), float(LEVEL_OFFSET[1]), clampf(t / maxf(rage_at, 1.0), 0.0, 1.0))
 
 
-## Indice d'équipement du héros en run : PE de l'équipement porté (enclume de la Survie comprise) / PE attendue
-## à son niveau. ≈ 0,4 pour l'équipement de départ, ≈ 1 pour des mythiques améliorés, ≈ 2 pour un équipement optimisé.
+## Indice d'équipement du héros en run : PE de l'équipement porté / PE attendue à son niveau. ≈ 0,4 pour
+## l'équipement de départ, ≈ 1 pour des mythiques améliorés, ≈ 2 pour un équipement optimisé.
 static func gear_index(gear: Dictionary = {}) -> float:
-	var g := (gear if not gear.is_empty() else Profile.equipped).duplicate()
-	if Run.active and Run.survival:
-		for slot in g:
-			if Run.slot_bonus.has(slot) and g[slot] is Dictionary and not (g[slot] as Dictionary).is_empty():
-				var it: Dictionary = (g[slot] as Dictionary).duplicate()
-				it["upgrade"] = Run.slot_upgrade(int(it.get("upgrade", 0)), slot)
-				g[slot] = it
+	var g := gear if not gear.is_empty() else Profile.equipped
 	var lv := Run.hero_level if Run.active and Run.hero_level > 0 else GearPower.target_level()
 	return float(GearPower.gear_power(g)) / maxf(float(GearPower.expected(lv)), 1.0)
 

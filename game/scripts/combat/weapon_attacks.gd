@@ -26,11 +26,16 @@ extends RefCounted
 ## + un bonus majeur ; légendaire : + l'effet légendaire de la variante (« sig »), puis, une fois
 ## acquis, deux bonus mineurs et un majeur.
 
-## Arme secondaire : part de ses dégâts et de ses statistiques d'objet.
-const OFFHAND_DMG := 0.6
-const OFFHAND_STATS := 0.5
-## Cadence de base (attaques par seconde à 100 % de vitesse, × speed de l'arme) : celle de
-## l'arme secondaire, qui frappe seule sans animation.
+## Deux armes (passe N2, tous les modes) : l'arme principale est toujours du type de la classe ; l'arme
+## secondaire, de n'importe quel type, ne frappe jamais seule : l'action « Changer d'arme » la met en main.
+## En main, seules ses attaques physique / magique comptent, et seulement pour les auto-attaques (ses
+## variantes, ses améliorations de run) ; les compétences gardent les stats de l'arme principale.
+## Recharge entre deux échanges (s), plus longue entre héros (Duel, Arènes, Battle royale…).
+const SWAP_CD := 1.0
+const SWAP_CD_PVP := 4.0
+## Après un échange, pas d'auto-attaque pendant ce temps (s) : l'échange ne sert pas à frapper plus vite.
+const SWAP_LOCK := 0.35
+## Cadence de base (attaques par seconde à 100 % de vitesse, × speed de l'arme).
 const BASE_RATE := 1.1
 
 ## Statistiques auxquelles une arme réagit (affichées dans le grimoire et les infobulles).
@@ -584,7 +589,7 @@ static func rival_step(wtype: String) -> Dictionary:
 ## Texte du grimoire / des infobulles (BBCode) ; [param atk] : attaque du héros (-1 : sans
 ## les dégâts chiffrés).
 static func bbcode(s: Dictionary, atk := -1.0, offhand := false) -> String:
-	var mult := float(s.get("mult", 1.0)) * (OFFHAND_DMG if offhand else 1.0)
+	var mult := float(s.get("mult", 1.0))
 	var magic := String(s.get("dmg_type", "phys")) == "mag"
 	var lines: PackedStringArray = []
 	lines.append("[b][color=#ffcf6b]%s[/color][/b]  [color=#9a98a8](auto-attaque%s)[/color]" % [s.get("name", "?"), " de l'arme secondaire" if offhand else ""])
@@ -624,5 +629,5 @@ static func bbcode(s: Dictionary, atk := -1.0, offhand := false) -> String:
 	if s.has("sig"):
 		lines.append("[color=#ffb347]★ Légendaire — %s[/color]" % sig_text(s))
 	if offhand:
-		lines.append("[color=#9a98a8]Arme secondaire : frappe seule (%d %% des dégâts, %d %% de ses stats d'objet).[/color]" % [roundi(OFFHAND_DMG * 100.0), roundi(OFFHAND_STATS * 100.0)])
+		lines.append("[color=#9a98a8]Arme secondaire : ne frappe pas seule. [%s] : la prendre en main.[/color]" % Settings.action_label("swap_weapon", 1))
 	return "\n".join(lines)

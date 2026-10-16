@@ -838,7 +838,7 @@ func _obs_for(me: Player, opps: Array, class_obs: Array, last_button: int, low_h
 	o.append(clampf(p._state_len / 2.0, 0.0, 1.0) if acting else 0.0)
 	# anciennes observations du combo (0.1.127 : plus de combo) : arme secondaire, même nombre
 	o.append(1.0 if not p.offhand_spec().is_empty() else 0.0)
-	o.append(clampf(p._off_ready_at - p._time, 0.0, 1.0))
+	o.append(clampf(p.swap_left(), 0.0, 1.0))  # (passe N2 : l'arme secondaire ne frappe plus seule ; même nombre d'observations)
 	o.append(p.dodge_cooldown().x / Player.DODGE_COOLDOWN)
 	o.append(clampf((p._skill_lock_until - p._time) / 1.5, 0.0, 1.0))
 	o.append(1.0 if p.is_on_floor() else 0.0)

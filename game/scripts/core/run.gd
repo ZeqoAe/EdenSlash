@@ -40,8 +40,9 @@ var gold := 0
 var started_at := 0
 var resurrections := 0  # résurrections utilisées (étoile « sans résurrection »)
 var rage_stages: Array = []  # cartes où la rage a démarré
-var offhand_used := false
-var anvil_stages: Array = []  # cartes où l'enclume a servi
+var offhand_used := false  # arme changée pendant la run (défi d'époque « sans changer d'arme »)
+## Arme trouvée en Survie rangée dans le sac de la run (passe N2 : jamais équipée d'office) ; le HUD l'annonce.
+signal weapon_bagged(item: Dictionary)
 var heroic_rank := 0  # rang héroïque de la run (0 : normale)
 var stars_gained := 0  # étoiles nouvellement gagnées à la fin de la run (bilan)
 var heroic_rewards: Array = []  # récompenses du rang héroïque (bilan)
@@ -79,10 +80,6 @@ var epoch := 1
 var seen_items: Array = []
 ## Armes des autres types découvertes avec une arme choisie (SlotChests.weapon_family) : Armurerie aussi.
 var seen_family: Array = []
-## Enclume de la Survie : emplacement -> bonus tiré (+0 à +7), AJOUTÉ au +N de la pièce portée dans
-## cet emplacement (celui du hub), quelle qu'elle soit, jusqu'à la fin de la run ; le total est
-## plafonné à UPGRADE_CAP (voir slot_upgrade).
-var slot_bonus: Dictionary = {}
 ## Améliorations d'arme de la run (cartes « weapon_up », WeaponAttacks.roll_upgrade) par
 ## emplacement ("weapon", "offhand") : {rank, dmg, crit, speed, area, …, sig}. Elles restent sur
 ## l'emplacement quand l'arme change.
@@ -91,7 +88,6 @@ var weapon_ups: Dictionary = {}
 ## d'effets différents, jusqu'à MAX_TROPHIES ; leurs effets agissent tous (trophy_procs).
 const MAX_TROPHIES := 12
 var trophies: Array = []
-var anvil_stage := 0  # map où l'enclume a servi (une fois par map)
 var insignia_gain := 0  # insignes gagnés à la fin de la run (bilan)
 ## Détail des insignes de la Survie (Economy.survival_insignia_parts : participation, maps, fights, victory), avant Défi,
 ## rang héroïque et autel de la fortune ; le bilan peut l'afficher tel quel (participation au prorata, monstres plafonnés).
@@ -103,12 +99,6 @@ static var test_fight_range := 4.0
 ## Mesures (--rush=<m>, passe P11) : en route vers le boss, le bot suit le chemin du donjon et ne combat qu'en deçà
 ## de cette distance, comme un joueur qui file au boss (la horde le suit depuis P9) ; < 0 : comme le reste du temps.
 static var test_rush_range := -1.0
-## Tirage de l'enclume : valeur -> poids (le plus souvent +2 à +4, moyenne ≈ +3,2, rarement +6/+7).
-## Elle rattrape surtout les pièces peu améliorées : sur une pièce +10 du hub, le plafond coupe vite.
-const ANVIL_ROLLS := {0: 4, 1: 8, 2: 12, 3: 15, 4: 14, 5: 10, 6: 6, 7: 3}
-## +N maximal d'une pièce en Survie (+10 du hub + enclume) : ×2,2 sur ses stats de base au plus.
-const UPGRADE_CAP := 12
-const ANVIL_SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "necklace", "ring"]
 
 
 func start(cid: String) -> void:
@@ -151,7 +141,6 @@ func start(cid: String) -> void:
 	resurrections = 0
 	rage_stages = []
 	offhand_used = false
-	anvil_stages = []
 	heroic_rank = 0
 	stars_gained = 0
 	heroic_rewards = []
@@ -163,10 +152,8 @@ func start(cid: String) -> void:
 	epoch = 1
 	seen_items = []
 	seen_family = []
-	slot_bonus = {}
 	weapon_ups = {}
 	trophies = []
-	anvil_stage = 0
 	Profile.begin_run()
 	Potions.start_run()
 	RunJournal.begin_run()
@@ -186,7 +173,6 @@ func start_survival(cid: String, ep: int, rank := 0) -> void:
 	epoch = clampi(ep, 1, Epochs.count())
 	zone_id = Epochs.zone(epoch, 1)
 	start_zone = zone_id
-	offhand_used = Profile.equipped.has("offhand")  # défi « sans arme secondaire » : celle du hub compte
 	changed.emit()
 
 
@@ -866,13 +852,16 @@ func apply_card(card: Dictionary) -> void:
 			add_trophy(card.item)  # collection de la run : l'effet agit tout de suite
 		"gear":
 			if survival:
-				# coffre d'emplacement : la pièce est portée tout de suite (l'ancienne reste dans le sac)
-				Profile.inventory.append(card.item)
-				Profile.equip(card.item)
+				# coffre d'emplacement : l'armure est portée tout de suite (l'ancienne reste dans le sac) ; une
+				# arme va dans le sac, le joueur l'équipe s'il le veut (passe N2)
 				if card.item.has("eden") and not int(card.item.eden) in seen_items:
 					seen_items.append(int(card.item.eden))
 				if String(card.item.get("slot", "")) == "weapon":
 					discover_weapons()
+					bag_weapon(card.item)
+				else:
+					Profile.inventory.append(card.item)
+					Profile.equip(card.item)
 				Profile.changed.emit()
 			else:
 				pick_up(card.item)  # choix de trophée ou d'équipement (coffres de la carte) : dans le sac
@@ -884,27 +873,12 @@ func apply_card(card: Dictionary) -> void:
 				var ws := weapon_spec(String(card.id))
 				Profile.note_weapon_legend("%s:%d" % [ws.get("wtype", "?"), int(ws.get("variant", 0))])
 		"offhand":
-			offhand_used = true
-			# arme secondaire trouvée en jeu : portée tout de suite (l'ancienne reste dans le sac)
-			Profile.inventory.append(card.item)
-			Profile.equip_offhand(card.item)
+			# arme d'un autre type trouvée en jeu : dans le sac, jamais équipée d'office (passe N2)
 			if card.item.has("eden") and not int(card.item.eden) in seen_items:
 				seen_items.append(int(card.item.eden))
 			discover_weapons()
+			bag_weapon(card.item)
 			Profile.changed.emit()
-		"anvil_slot":
-			if not stage in anvil_stages:
-				anvil_stages.append(stage)
-			anvil_result = anvil_roll(String(card.slot))
-		"anvil":
-			if not stage in anvil_stages:
-				anvil_stages.append(stage)
-			# enclume de la carte : +1 garanti sur la pièce portée choisie
-			var it: Dictionary = Profile.equipped.get(String(card.slot), {})
-			if not it.is_empty():
-				var res := Craft.upgrade_free(it)
-				anvil_result = String(res.get("text", ""))
-				Profile.changed.emit()
 		"scroll":
 			Profile.add_bag(String(card.key))  # autel du scribe : le parchemin choisi
 	if card.type in ["skill", "chain"]:
@@ -912,37 +886,12 @@ func apply_card(card: Dictionary) -> void:
 	changed.emit()
 
 
-## Résultat de la dernière enclume (affiché par le directeur de run).
-var anvil_result := ""
-
-
-## +N effectif d'une pièce portée dans [param slot] : son +N (hub) plus le bonus d'enclume de
-## l'emplacement, plafonné à UPGRADE_CAP.
-func slot_upgrade(piece_up: int, slot: String) -> int:
-	return clampi(piece_up + int(slot_bonus.get(slot, 0)), 0, maxi(UPGRADE_CAP, piece_up))
-
-
-## Enclume de la Survie : tire l'amélioration de l'emplacement [param slot] (remplace la
-## précédente) ; renvoie le texte du résultat.
-func anvil_roll(slot: String) -> String:
-	var total := 0
-	for v in ANVIL_ROLLS:
-		total += int(ANVIL_ROLLS[v])
-	var r := randi() % total
-	var got := 0
-	for v in ANVIL_ROLLS:
-		r -= int(ANVIL_ROLLS[v])
-		if r < 0:
-			got = int(v)
-			break
-	slot_bonus[slot] = got
-	anvil_stage = stage
-	Profile.changed.emit()
-	var name := String(Items.SLOT_NAMES.get(slot, slot))
-	var up := slot_upgrade(int(Profile.equipped.get(slot, {}).get("upgrade", 0)), slot)
-	if got >= 6:
-		return "Coup de maître ! %s +%d (total +%d)" % [name, got, up]
-	return "%s +%d (total +%d)" % [name, got, up]
+## Survie : arme trouvée rangée dans le sac de la run (rendue comme le reste à la fin : Profile.end_run_survival) ;
+## sac plein : elle est perdue, le HUD le dit. Le joueur l'équipe lui-même (pause > Héros, ou [G] « Équiper la trouvaille »).
+func bag_weapon(item: Dictionary) -> bool:
+	var ok := Profile.add_item(item)
+	weapon_bagged.emit(item if ok else {})
+	return ok
 
 
 ## Range les sorts pris selon le preset actif de la classe (Grimoire, SpellPresets) : sorts
@@ -1031,7 +980,7 @@ func fill_from_preset() -> void:
 func ban_card(card: Dictionary, shown: Array) -> Dictionary:
 	if Survivor.active and SurvivorCards.handles():
 		return SurvivorCards.ban(card, shown)
-	if bans_used >= Cards.BANS_PER_RUN or String(card.get("type", "")) in ["trophy", "gear", "anvil", "scroll"]:
+	if bans_used >= Cards.BANS_PER_RUN or String(card.get("type", "")) in ["trophy", "gear", "offhand", "scroll"]:
 		return {}
 	bans_used += 1
 	banned.append(str(card.id))
@@ -1045,7 +994,7 @@ func ban_card(card: Dictionary, shown: Array) -> Dictionary:
 
 ## Garde la carte pour le prochain choix (même rareté).
 func keep_card(card: Dictionary) -> bool:
-	if locks_used >= Cards.LOCKS_PER_RUN or String(card.get("type", "")) in ["trophy", "gear", "anvil", "scroll"]:
+	if locks_used >= Cards.LOCKS_PER_RUN or String(card.get("type", "")) in ["trophy", "gear", "offhand", "scroll"]:
 		return false
 	if kept.any(func(k): return String(k.type) == String(card.type) and str(k.id) == str(card.id)):
 		return false

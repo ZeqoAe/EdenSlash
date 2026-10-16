@@ -294,7 +294,10 @@ func _place_pois() -> void:
 			_occupied.append([p, 8.0])
 	# lieux utilisables une fois
 	for kind in STATIONS:
-		for k in (Survivor.station_count(kind, int(STATIONS[kind].count)) if not royale else (4 if kind == "well" else 0)):
+		var n := Survivor.station_count(kind, int(STATIONS[kind].count)) if not royale else (4 if kind == "well" else 0)
+		if kind == "anvil" and not Survivor.active:
+			n = 0  # passe N2 : plus d'enclume en Survie (on part avec l'équipement du hub) ; le Survivant garde la sienne
+		for k in n:
 			var p := _free_point(36.0, 50.0)
 			if p != Vector2.INF:
 				stations.append({"pos": Vector3(p.x, 0, p.y), "kind": kind})

@@ -3,7 +3,7 @@ extends RefCounted
 ## Table commune des modificateurs de règles (conception, §3.2) : lue par les rangs héroïques, le
 ## Défi du jour et les étages-épreuves de la Tour. Chaque modificateur change des clés d'un profil de
 ## ModeRules : "mul" multiplie, "add" ajoute, "set" remplace. `cost` : difficulté ajoutée (pour les
-## récompenses par rang). Les clés dont le consommateur n'existe pas encore (élites, enclume…) seront
+## récompenses par rang). Les clés dont le consommateur n'existe pas encore (élites…) seront
 ## lues quand leur mode arrivera. Le Survivant (profil « survivor ») lit ses règles par Survivor.rule : un
 ## modificateur sur l'une de ses clés (resurrections, boss_hp…) s'y applique sans autre code.
 
@@ -11,7 +11,6 @@ const LIST := {
 	"heal_half": {"text": "Soins reçus divisés par deux", "cost": 1, "effect": {"heal_mult": ["mul", 0.5]}},
 	"elites_double": {"text": "Élites deux fois plus nombreuses", "cost": 2, "effect": {"elite_count": ["mul", 2.0]}},
 	"chests_plus": {"text": "Or +30 % (et monstres +15 % de PV)", "cost": 1, "effect": {"chest_gold": ["mul", 1.3], "mob_hp": ["mul", 1.15]}},
-	"anvil_cap": {"text": "Enclume plafonnée à +6", "cost": 1, "effect": {"anvil_max": ["set", 6]}},
 	"one_life": {"text": "Une seule vie", "cost": 3, "effect": {"resurrections": ["set", 0]}},
 	"double_bolts": {"text": "Projectiles des monstres doublés", "cost": 2, "effect": {"mob_projectiles": ["mul", 2.0]}},
 }

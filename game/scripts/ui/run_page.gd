@@ -118,7 +118,7 @@ func refresh() -> void:
 		var ws := Run.weapon_spec(slot)
 		var it: Dictionary = Profile.equipped.get(slot, {})
 		if ws.is_empty():
-			_row(_skills, "", "Arme secondaire : aucune", "", UiTheme.MUTED, 0, 0, Vector2i(-1, -1), "Les boss en lâchent toujours une, les élites parfois")
+			_row(_skills, "", "Arme secondaire : aucune", "", UiTheme.MUTED, 0, 0, Vector2i(-1, -1), "Équipe une arme d'un autre type (Héros) pour pouvoir changer d'arme en combat")
 			continue
 		var mt := WeaponAttacks.mods_text(ws, Run.weapon_ups.get(slot, {}))
 		_row(_skills, String(it.get("icon", GameData.weapon_type(String(ws.wtype)).get("icon", ""))),

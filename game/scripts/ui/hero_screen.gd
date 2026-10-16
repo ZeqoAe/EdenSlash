@@ -134,7 +134,6 @@ func _build_top(parent: Control) -> void:
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(sp)
-	_help_button = Button.new()
 	# création de personnage (C1) : nom, coiffure, couleurs (hors run)
 	_creator_button = Button.new()
 	_creator_button.text = "  Personnage"
@@ -151,6 +150,7 @@ func _build_top(parent: Control) -> void:
 	_creator_button.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.25, 0.18, 0.07, 0.95), UiTheme.GOLD, 2, 22, false))
 	_creator_button.pressed.connect(open_creator)
 	top.add_child(_creator_button)
+	_help_button = Button.new()
 	_help_button.text = "?"
 	_help_button.tooltip_text = "Aide"
 	_help_button.focus_mode = Control.FOCUS_NONE
@@ -260,13 +260,13 @@ func show_section(id: String) -> void:
 		_nav[k].set_pressed_no_signal(k == current)
 
 
-## « ? » : le Guide, sur ses formules (il se ferme avec F1 ou Échap).
 ## « Personnage » : la création de personnage par-dessus l'écran (nom, coiffure, couleurs) ; l'aperçu suit à la fermeture.
 func open_creator() -> HeroCreator:
 	var c := HeroCreator.open_on(self, false, func(_ok: bool): refresh())
 	return c
 
 
+## « ? » : le Guide, sur ses formules (il se ferme avec F1 ou Échap).
 func _open_guide() -> void:
 	Guide.open_on(get_tree().current_scene, "details")
 

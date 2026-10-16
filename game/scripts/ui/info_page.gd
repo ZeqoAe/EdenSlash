@@ -94,9 +94,9 @@ func _money() -> String:
 	])
 	t += _sub("Sur la carte")
 	t += _note("• 30 coffres d'emplacement : chacun vise un emplacement (arme, casque, torse, jambières, gants, bottes, bijoux, trophée) ou un type de carte (sort, passif, certificat). Un coffre d'équipement propose 3 pièces de l'époque, avec une relance ; elles arrivent à +0.
-• Enclume : tire un bonus de +0 à +7 pour un emplacement ; il s'ajoute au +N de la pièce portée dans cet emplacement (total +12 au plus) jusqu'à la fin de la run.
+• Une arme trouvée va dans ton sac : équipe-la toi-même (menu pause, Héros). « Changer d'arme » passe de l'arme principale à la secondaire en plein combat.
 • Ton équipement du hub n'est jamais modifié par une run : les pièces trouvées en coffre servent pendant la run, et chaque pièce choisie devient achetable à l'Armurerie avec tes insignes.
-• Lieux à usage unique (piliers de lumière) : enclume, autel du scribe, fontaine de vie, pierre d'aimant, autel de cupidité (pacte : plus de gains, monstres plus forts sur la carte), stèle du défi, autel de la fortune (pyramide : encaisser ou tenter l'étage suivant), autel du géant (un géant à vaincre : une carte, mais la Menace monte jusqu'à la fin de la run).
+• Lieux à usage unique (piliers de lumière) : autel du scribe, fontaine de vie, pierre d'aimant, autel de cupidité (pacte : plus de gains, monstres plus forts sur la carte), stèle du défi, autel de la fortune (pyramide : encaisser ou tenter l'étage suivant), autel du géant (un géant à vaincre : une carte, mais la Menace monte jusqu'à la fin de la run).
 • Sanctuaires : reste dans le cercle pendant que les monstres affluent. Marchands ambulants : cartes, clés, fournitures.")
 	return t
 
@@ -147,7 +147,7 @@ func _damage() -> String:
 	t += "[b]Dégâts = Attaque × Puissance de l'action × aléa (92 à 108 %) × Critique × Statuts × Flow × (1 + Dégâts %) × Élites[/b]\n"
 	t += _table(["Facteur", "Détail"], [
 		["Attaque", "physique ou magique selon l'arme (auto-attaque) ou le sort"],
-		["Puissance de l'action", "auto-attaque de l'arme (% de son arme, cartes « Main lourde »), arme secondaire 60 %, sort (% indiqué dans le grimoire), ×2 sur un combo réussi (ex. cible gelée)"],
+		["Puissance de l'action", "auto-attaque de l'arme (% de son arme, cartes « Main lourde »), arme secondaire en main : ses propres attaques (ses stats ne servent pas aux sorts), sort (% indiqué dans le grimoire), ×2 sur un combo réussi (ex. cible gelée)"],
 		["Critique", "× (1 + dégâts critiques) si le coup est critique (chance = critique physique ou magique)"],
 		["Statuts du héros", "Fureur ×1,25 · Cicatrice ×0,7 · Marduk : attaque ×1,3"],
 		["Flow", "+10 % par annulation parfaite enchaînée (jusqu'à +40 %, 3 s)"],

@@ -72,10 +72,9 @@ func _ready() -> void:
 	Profile.equipped["chest"] = _gear(2, "chest", 20)
 	Profile.equipped["back"] = _gear(3, "back", 30)
 	await _shot("hub_5_comparaison", [ItemWidgets.item_card(my, "", 0), ItemWidgets.item_card(lg, "", 0), ItemWidgets.item_card(lg, "", 1)])
-	# --- Survie : pièce portée avec l'enclume, nouvelle pièce proposée ---------------------------------------
+	# --- Survie : pièce portée, nouvelle pièce proposée -------------------------------------------------------
 	Run.start_survival("warrior", 1)
 	Run.hero_level = 12
-	Run.slot_bonus["chest"] = 4
 	var worn: Dictionary = Profile.equipped["chest"]
 	var offer := _gear(4, "chest", 30)
 	await _shot("run_1", [ItemWidgets.item_card(worn, "", 0), ItemWidgets.item_card(offer, "", 0), ItemWidgets.item_card(offer, "", 1)])

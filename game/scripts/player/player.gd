@@ -104,8 +104,17 @@ var _state_len := 0.0
 var _hits: Array = []  # instants d'impact restants de l'action en cours
 var _action: Dictionary = {}  # compétence / attaque en cours
 var _auto: Dictionary = {}  # auto-attaque de l'arme principale (WeaponAttacks.spec_for)
-var _off: Dictionary = {}  # auto-attaque de l'arme secondaire ({} : aucune)
-var _off_ready_at := 0.0  # prochaine frappe de l'arme secondaire
+var _off: Dictionary = {}  # auto-attaque de l'arme secondaire ({} : aucune) ; elle ne frappe jamais seule (passe N2)
+## Arme secondaire en main (action « Changer d'arme », passe N2) : ses auto-attaques et son modèle ; les
+## compétences gardent les stats de l'arme principale (celle de la classe).
+var hand_off := false
+var _swap_ready_at := 0.0  # prochain échange possible (WeaponAttacks.SWAP_CD)
+var _swap_lock_until := 0.0  # pas d'auto-attaque juste après un échange (WeaponAttacks.SWAP_LOCK)
+## Attaques physique et magique des auto-attaques : celles du héros, sauf avec l'arme secondaire en main
+## (les stats d'arme de la secondaire à la place de celles de la principale).
+var basic_atk := 0.0
+var basic_matk := 0.0
+signal weapon_swapped(off: bool)
 var _auto_count := {}  # coups portés par emplacement d'arme (effets légendaires « tous les N coups »)
 var _sig_ready := {}  # recharge interne des effets légendaires à l'impact, par emplacement
 var _swing := 0  # attaques de base portées (alterne les animations de l'arme)
@@ -147,17 +156,17 @@ func _ready() -> void:
 		class_id = Run.class_id if Run.active else Profile.selected_class
 	cls = GameData.class_data(class_id)
 	display_name = cls.get("name_fr", "Héros")
+	if not foe and Profile.hero_name != "":
+		display_name = Profile.hero_name  # le héros du joueur porte son nom (création de personnage)
 	kfm = "m"
 	setup_model(cls.get("body_model", cls.get("model", "res://assets/player/body/body_m.glb")), "", GameData.HERO_SCALE)
 	_dress_model()
 	_slim_collision()
 	floor_max_angle = deg_to_rad(55.0)
 	floor_snap_length = 0.7
-	_attach_weapon(_foe_weapon_code() if foe else Profile.weapon_code())
+	_attach_weapon(_foe_weapon_code() if foe else Profile.weapon_code(hand_slot()))
 	_model_base = model.transform
 	_build_trail()
-	if not foe and Profile.hero_name != "":
-		display_name = Profile.hero_name  # le héros du joueur porte son nom (création de personnage)
 	_build_ground_ring()
 	statuses_changed.connect(recalc_stats)
 	statuses_changed.connect(_update_stealth_visual)
@@ -180,11 +189,19 @@ func _weapon_type() -> Dictionary:
 	return GameData.weapon_type(_weapon_type_id())
 
 
-## Type de l'arme principale : toujours celui de la classe (0.1.128).
+## Type de l'arme en main : l'arme principale est toujours du type de la classe (0.1.128) ; l'arme
+## secondaire en main, le sien (passe N2).
 func _weapon_type_id() -> String:
+	if hand_off and not offhand_item().is_empty():
+		return Items.weapon_type_of(offhand_item())
 	if Survivor.active and not foe and not built:
 		return Survivor.weapon_type()  # Survivant : l'arme portée, de n'importe quel type
 	return Items.default_weapon_type(class_id)
+
+
+## Emplacement de l'arme en main : "weapon" (principale) ou "offhand" (secondaire, après un échange).
+func hand_slot() -> String:
+	return "offhand" if hand_off and not offhand_item().is_empty() else "weapon"
 
 
 ## Améliorations d'arme de la run pour l'emplacement [param slot] ("weapon", "offhand").
@@ -194,11 +211,25 @@ func weapon_mods(slot: String) -> Dictionary:
 	return Run.weapon_ups.get(slot, {})
 
 
-## Arme principale portée (celle du héros ennemi : son équipement).
+## Arme en main : la principale, ou la secondaire après un échange (celle du héros ennemi : son équipement).
 func weapon_item() -> Dictionary:
 	if _bare():
 		return {"auto_variant": Duel.bare_variant}  # l'arme de la classe, sans aucune stat
+	if hand_slot() == "offhand":
+		return offhand_item()
+	return main_item()
+
+
+## Arme principale portée, du type de la classe (ses stats servent aux compétences, quelle que soit l'arme en main).
+func main_item() -> Dictionary:
 	return foe_gear.get("weapon", {}) if foe or built else Profile.equipped.get("weapon", {})
+
+
+## Arme rangée (celle qui n'est pas en main ; {} sans arme secondaire) : aperçu du HUD.
+func stowed_item() -> Dictionary:
+	if offhand_item().is_empty():
+		return {}
+	return main_item() if hand_slot() == "offhand" else offhand_item()
 
 
 ## Héros du joueur en duel à l'arme (Duel.bare).
@@ -206,7 +237,7 @@ func _bare() -> bool:
 	return Duel.active and Duel.bare and not foe and not built
 
 
-## Arme secondaire portée ({} : aucune). Elle frappe seule, sans animation (WeaponAttacks.OFFHAND_DMG).
+## Arme secondaire portée ({} : aucune). Elle ne frappe pas seule : « Changer d'arme » la met en main.
 func offhand_item() -> Dictionary:
 	if _bare():
 		return {}
@@ -267,6 +298,8 @@ func recalc_stats() -> void:
 		Run.hero_level = level  # puissance des objets portés (suit le niveau, plafonnée)
 	var own := foe or built  # héros ennemi ou profil type : ses propres stats
 	var bare := _bare()  # duel à l'arme : ni pièces ni bonus de méta, seulement l'arme de la classe
+	if hand_off and offhand_item().is_empty():
+		hand_off = false  # arme secondaire retirée : la principale revient en main
 	var eq := _foe_equipment_stats() if own else ({} if bare else Profile.equipment_stats())
 	var sv := Survivor.active and not own  # Survivant : rien du compte (ni archive, ni aura)
 	var arc := {} if own or bare or sv else Archive.bonus()  # bonus permanents de l'archive
@@ -306,6 +339,14 @@ func recalc_stats() -> void:
 	if has_status("marduk"):
 		atk *= 1.3
 		matk *= 1.3
+	basic_atk = atk
+	basic_matk = matk
+	if hand_slot() == "offhand" and not bare:
+		# arme secondaire en main : ses attaques remplacent celles de la principale, pour les auto-attaques seulement
+		var d := _hand_weapon_delta()
+		var k := 1.3 if has_status("marduk") else 1.0
+		basic_atk = maxf(0.0, atk + float(d.patk) * (1.0 + ps.get("atk_pct", 0.0)) * k)
+		basic_matk = maxf(0.0, matk + float(d.matk) * (1.0 + ps.get("atk_pct", 0.0) + ps.get("matk_pct", 0.0)) * k)
 	defense = (4.0 + level * 2.0 + eq.get("def", 0.0) + float(base.get("def", 0.0)) + s_str * 0.25) * (1.0 + ps.get("def_pct", 0.0))
 	crit = 0.05 + float(base.get("crit", 0.0)) + eq.get("crit", 0.0) + ps.get("crit", 0.0) + s_lck * 0.0012 + s_agi * 0.0004 + (0.25 if has_status("keen") else 0.0)
 	mcrit = 0.05 + eq.get("mcrit", 0.0) + ps.get("crit", 0.0) + ps.get("mcrit", 0.0) + s_lck * 0.0012 + s_wis * 0.0004 + (0.25 if has_status("keen") else 0.0)
@@ -332,7 +373,7 @@ func recalc_stats() -> void:
 	bounce_bonus = int(floorf(ps.get("bounce", 0.0) + eq.get("bounce", 0.0) + 0.001))
 	_auto = WeaponAttacks.spec_for(weapon_item(), String(_weapon_type_id()))
 	var oh := offhand_item()
-	_off = WeaponAttacks.spec_for(oh) if not oh.is_empty() else {}
+	_off = WeaponAttacks.spec_for(oh) if not oh.is_empty() else {}  # (aperçu ; elle ne frappe pas seule)
 	dot_bonus = 1.0 + ps.get("dot_pct", 0.0) + eq.get("dot_pct", 0.0)
 	dot_duration = 1.0 + ps.get("dot_dur", 0.0)
 	pickup_mult = 1.0 + ps.get("pickup", 0.0)
@@ -400,7 +441,7 @@ func dot_duration_mult() -> float:
 
 func _on_profile_changed() -> void:
 	# chaque gain d'or ou de fourniture émet Profile.changed : le modèle d'arme ne se recharge que si l'arme change (P2)
-	var code := Profile.weapon_code()
+	var code := Profile.weapon_code(hand_slot())
 	if code != _weapon_code:
 		_attach_weapon(code)
 	recalc_stats()
@@ -479,10 +520,19 @@ func use_build(b: Dictionary, lv: int) -> void:
 	built = true
 
 
-## Stats de l'équipement du héros ennemi (comme Profile.equipment_stats, sets compris).
+## Écart d'attaque physique / magique (stats d'objet) entre l'arme secondaire et la principale : {patk, matk}.
+func _hand_weapon_delta() -> Dictionary:
+	var a := Items.stats(offhand_item())
+	var b := Items.stats(main_item())
+	return {"patk": float(a.get("patk", 0.0)) - float(b.get("patk", 0.0)), "matk": float(a.get("matk", 0.0)) - float(b.get("matk", 0.0))}
+
+
+## Stats de l'équipement du héros ennemi (comme Profile.equipment_stats, sets compris ; jamais l'arme secondaire).
 func _foe_equipment_stats() -> Dictionary:
 	var total := {}
 	for slot in foe_gear:
+		if slot == "offhand":
+			continue  # arme secondaire : aucune stat (passe N2)
 		var st := Items.stats(foe_gear[slot])
 		for s in st:
 			total[s] = float(total.get(s, 0.0)) + float(st[s])
@@ -499,6 +549,9 @@ func _dress_model() -> void:
 	var parts: Array = cls.get("parts", [])
 	var outfit := String(foe_look.get("body", "")) if foe else Profile.outfit_of(class_id)
 	var dyes := RivalBuilds.look_dyes(foe_look, cls) if foe else Profile.dye_map(class_id)
+	var look := {} if foe else HeroLook.current()  # visage du héros du joueur (création de personnage)
+	if not look.is_empty():
+		parts = HeroLook.with_hair(cls, parts, look)
 	for i in parts.size():
 		var part := outfit if i == 0 and outfit != "" and ResourceLoader.exists(outfit) else String(parts[i])
 		EdenModel.dress(model, part)
@@ -508,6 +561,8 @@ func _dress_model() -> void:
 		EdenModel.dress(model, String(p))
 		if dyes.has(String(p)):
 			EdenModel.apply_dye(model, String(p), dyes[String(p)])
+	if not look.is_empty():
+		HeroLook.apply(model, cls, look)
 	if foe:
 		EdenFx.attach_aura_ids(self, RivalBuilds.aura_ids(foe_look), GameData.HERO_SCALE, false, RivalBuilds.aura_tint(foe_look))
 	else:
@@ -549,9 +604,6 @@ func _update_trail() -> void:
 	if _trail_on:
 		_trail_points.append([_blade_base.global_position, _blade_tip.global_position])
 	if _trail_points.size() > 10 or (not _trail_on and not _trail_points.is_empty()):
-	var look := {} if foe else HeroLook.current()  # visage du héros du joueur (création de personnage)
-	if not look.is_empty():
-		parts = HeroLook.with_hair(cls, parts, look)
 		_trail_points.pop_front()
 	if _trail_points.size() < 2:
 		return
@@ -561,8 +613,6 @@ func _update_trail() -> void:
 		var c := Color(1.0, 0.9, 0.75, a * 0.75)
 		mesh.surface_set_color(Color(c.r, c.g, c.b, 0.0))
 		mesh.surface_add_vertex(_trail_points[i][0])
-	if not look.is_empty():
-		HeroLook.apply(model, cls, look)
 		mesh.surface_set_color(c)
 		mesh.surface_add_vertex(_trail_points[i][1])
 	mesh.surface_end()
@@ -601,7 +651,8 @@ func _physics_process(delta: float) -> void:
 			if _state_time >= _stun_len:
 				_state = "idle"
 				_stun_fx.visible = false
-	_update_offhand()
+	if _wants("swap_weapon"):
+		swap_weapon()
 	var was_air := not is_on_floor()
 	var before := global_position
 	move_and_slide()
@@ -908,7 +959,7 @@ func _try_auto_skill() -> bool:
 
 ## Portée de l'attaque de base (WeaponAttacks.reach) : corps à corps, tir ou incantation.
 func attack_reach() -> float:
-	var m := weapon_mods("weapon")
+	var m := weapon_mods(hand_slot())
 	return WeaponAttacks.reach(auto_spec(), reach_mult * (1.0 + float(m.get("reach", 0.0))), area_mult * (1.0 + float(m.get("area", 0.0))))
 
 
@@ -970,13 +1021,16 @@ func monster_under_mouse() -> Combatant:
 ## les animations de l'arme alternent. Plus de combo, ni d'étourdissement ou d'attraction :
 ## elle grandit avec les cartes (projectiles, zone, portée, vitesse, perforation, rebonds).
 func _start_attack(aim: Vector3) -> void:
+	if _time < _swap_lock_until:
+		return  # échange d'arme en cours (WeaponAttacks.SWAP_LOCK)
 	var s := auto_spec()
 	face_direction(aim - global_position, 1.0, 100.0)
-	var mods := weapon_mods("weapon")
+	var hs := hand_slot()
+	var mods := weapon_mods(hs)
 	var action := WeaponAttacks.action_for(s, self, mods)
-	action["wslot"] = "weapon"
-	_auto_count["weapon"] = int(_auto_count.get("weapon", 0)) + 1
-	if WeaponAttacks.empower(action, s, mods, int(_auto_count.weapon)):
+	action["wslot"] = hs
+	_auto_count[hs] = int(_auto_count.get(hs, 0)) + 1
+	if WeaponAttacks.empower(action, s, mods, int(_auto_count[hs])):
 		Vfx.flash(self, global_position + Vector3.UP * 1.2, 1.4, Color(1.0, 0.7, 0.3))
 	_break_stealth()
 	if String(action.get("kind", "")) == "cast":
@@ -985,7 +1039,7 @@ func _start_attack(aim: Vector3) -> void:
 		action["target"] = global_position + to_aim.limit_length(float(action.range))
 	var anims: Array = s.get("anims", ["attack01"])
 	var anim_name := String(anims[_swing % anims.size()])
-	if Survivor.active and not foe and not has_anim(anim_name):
+	if (Survivor.active or hand_off) and not foe and not has_anim(anim_name):
 		anim_name = Survivor.fallback_anim(class_id, _swing)  # arme d'un autre type : gestes de l'arme de la classe
 	_swing += 1
 	var rate := cast_speed if WeaponAttacks.rate_stat(s) == "cast_speed" else atk_speed
@@ -995,56 +1049,40 @@ func _start_attack(aim: Vector3) -> void:
 		_announce_cast(action, _hits[0] if not _hits.is_empty() else 0.3)
 
 
-## Arme secondaire : frappe seule l'ennemi le plus proche à sa portée, à sa propre cadence et
-## sans animation (WeaponAttacks.OFFHAND_DMG des dégâts) ; pas pendant un étourdissement ni
-## une invisibilité (elle la romprait).
-func _update_offhand() -> void:
-	if _off.is_empty() or _state == "stun" or _time < _off_ready_at or has_status("invisible"):
-		return
-	var m := _monster_in_reach(WeaponAttacks.reach(_off, reach_mult, area_mult), false)
-	if m == null:
-		return
-	var mods := weapon_mods("offhand")
-	var rate := (cast_speed if WeaponAttacks.rate_stat(_off) == "cast_speed" else atk_speed) * float(_off.get("speed", 1.0)) \
-		* WeaponAttacks.BASE_RATE * (1.0 + float(mods.get("speed", 0.0)))
-	_off_ready_at = _time + 1.0 / maxf(rate, 0.1)
-	var a := WeaponAttacks.action_for(_off, self, mods)
-	a["mult"] = float(a.mult) * WeaponAttacks.OFFHAND_DMG
-	a["offhand"] = true
-	a["wslot"] = "offhand"
-	_auto_count["offhand"] = int(_auto_count.get("offhand", 0)) + 1
-	WeaponAttacks.empower(a, _off, mods, int(_auto_count.offhand))
-	var to := m.global_position - global_position
-	to.y = 0.0
-	var fwd := to.normalized() if to.length() > 0.1 else forward()
-	_last_combat = _time
-	match String(a.get("kind", "")):
-		"bolt":
-			_fire_bolts(a, false, fwd)
-		"cast":
-			a["target"] = m.global_position
-			_announce_cast(a, 0.0)
-			get_tree().create_timer(float(a.delay), false).timeout.connect(_cast_land.bind(a))
-		_:
-			_off_strike(a, m)
-			for i in range(1, int(a.get("hits", 1))):
-				get_tree().create_timer(0.14 * i, false).timeout.connect(_off_strike.bind(a, m))
+## Changer d'arme (passe N2, tous les modes) : l'arme secondaire passe en main, ou la principale revient.
+## Instantané, recharge courte (plus longue entre héros), pas d'auto-attaque pendant WeaponAttacks.SWAP_LOCK ;
+## l'auto-attaque en cours s'arrête (ses coups restants ne partent pas). Les compétences ne changent pas.
+## Renvoie false si l'échange est impossible (pas d'arme secondaire, recharge, étourdi, héros ennemi).
+func swap_weapon() -> bool:
+	if foe or built or is_dead or _bare() or offhand_item().is_empty() or _time < _swap_ready_at or _state in ["stun", "skill"]:
+		return false
+	hand_off = not hand_off
+	if Run.active:
+		Run.offhand_used = true  # défi d'époque « Finir sans changer d'arme »
+	_swap_ready_at = _time + swap_cooldown()
+	_swap_lock_until = _time + WeaponAttacks.SWAP_LOCK
+	if _state == "attack":
+		_hits.clear()
+		_action = {}
+		_state = "idle"
+	_auto = {}
+	recalc_stats()
+	_attach_weapon(Profile.weapon_code(hand_slot()))
+	if not Vfx.silent:
+		Vfx.flash(self, global_position + Vector3.UP * 1.2, 1.1, Color(0.75, 0.9, 1.0))
+		Sfx.event_at(self, global_position, "pickup", -8.0)
+	weapon_swapped.emit(hand_off)
+	return true
 
 
-## Un coup de mêlée de l'arme secondaire vers [param m] (sa position du moment).
-func _off_strike(a: Dictionary, m: Combatant) -> void:
-	if is_dead:
-		return
-	var fwd := forward()
-	if is_instance_valid(m) and not m.is_dead:
-		var to := m.global_position - global_position
-		to.y = 0.0
-		if to.length() > 0.1:
-			fwd = to.normalized()
-	var origin := global_position + (fwd * float(a.get("offset", 1.8)) if String(a.get("kind", "")) == "slam" else Vector3.ZERO)
-	var h := _resolve_area(a, origin, fwd, false)
-	if h:
-		_on_basic_hit(a, h)
+## Recharge d'échange d'arme (s) : plus longue entre héros (Duel, Arènes, Battle royale).
+func swap_cooldown() -> float:
+	return WeaponAttacks.SWAP_CD_PVP if (Duel.active or Royale.active) else WeaponAttacks.SWAP_CD
+
+
+## Temps restant avant le prochain échange (s).
+func swap_left() -> float:
+	return maxf(0.0, _swap_ready_at - _time)
 
 
 ## Incantation : points d'impact (la cible, puis les zones en plus autour d'elle) annoncés en
@@ -1544,7 +1582,8 @@ func _hit_monster(m: Combatant, dir: Vector3, action: Dictionary, is_skill: bool
 		mult *= 2.0
 	var magic: bool = action.get("dmg_type", "phys") == "mag"
 	var is_crit := randf() < (mcrit if magic else crit) + float(action.get("crit_bonus", 0.0))
-	var dmg := (matk if magic else atk) * mult * randf_range(0.92, 1.08) * damage_dealt_mult() * (1.0 + crit_dmg if is_crit else 1.0) * flow_mult() * dmg_mult
+	var hit_atk := (basic_matk if magic else basic_atk) if action.get("basic", false) else (matk if magic else atk)  # compétences : arme principale
+	var dmg := hit_atk * mult * randf_range(0.92, 1.08) * damage_dealt_mult() * (1.0 + crit_dmg if is_crit else 1.0) * flow_mult() * dmg_mult
 	if mon and (mon.is_elite or mon.is_boss):
 		dmg *= elite_mult
 	elif execute > 0.0 and m.hp - dmg <= m.max_hp * execute:

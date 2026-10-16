@@ -582,12 +582,14 @@ static func compare_to_equipped(item: Dictionary) -> float:
 	if not slot in SLOTS:
 		return 0.0
 	var worn: Dictionary = Profile.equipped.get(slot, {})
+	if slot == "weapon" and not Profile.can_be_main(item) and not (Survivor.active or Royale.active):
+		worn = Profile.equipped.get("offhand", {})  # arme d'un autre type : comparée à l'arme secondaire (passe N2 ; le Survivant et le Battle royale portent n'importe quel type)
 	if worn.is_empty():
 		return 1.0
 	if String(worn.get("uid", "")) == String(item.get("uid", "-")):
 		return 0.0
-	var a := rating(anvil_applied(worn, slot))  # en Survie, l'enclume de l'emplacement compte pour les deux pièces
-	return (rating(anvil_applied(item, slot)) - a) / maxf(a, 0.01)
+	var a := rating(worn)
+	return (rating(item) - a) / maxf(a, 0.01)
 
 
 static func _add_affix(item: Dictionary, stat: String) -> void:
@@ -859,17 +861,6 @@ static func _set_block(sid: String, title: String, detailed: bool) -> Array:
 	return out
 
 
-## Pièce portée dans [param slot] telle qu'elle compte pour le héros : en Survie, avec le bonus d'enclume de
-## l'emplacement ajouté à son +N (copie ; la pièce d'origine ne change pas).
-static func anvil_applied(item: Dictionary, slot: String) -> Dictionary:
-	if item.is_empty() or not (Run.active and Run.survival and Run.slot_bonus.has(slot)):
-		return item
-	var it := item.duplicate()
-	it["upgrade"] = Run.slot_upgrade(int(item.get("upgrade", 0)), slot)
-	it["anvil"] = int(Run.slot_bonus.get(slot, 0))
-	return it
-
-
 ## Nom en tête de carte : pour une pièce de panoplie, sans le nom de la panoplie entre parenthèses (il est
 ## écrit plus bas, avec le nombre de pièces portées).
 static func card_name(item: Dictionary) -> String:
@@ -969,8 +960,6 @@ static func describe(item: Dictionary, detailed := true) -> String:
 		lines.append_array(_set_block(arch, "Panoplie de donjon · %s" % SETS[arch].name, detailed))
 	if detailed:
 		var foot: Array = []
-		if int(item.get("anvil", 0)) > 0:
-			foot.append("Enclume de la run : +%d" % int(item.anvil))
 		if up < MAX_UPGRADE and not Run.active and not is_unique(item):
 			foot.append("Prochaine amélioration : %d %% de réussite" % roundi(Craft.success_chance(item) * 100))
 		if item.has("eden"):

@@ -4,7 +4,7 @@ extends RefCounted
 ## payant de la map vise un emplacement (arme, tête, torse…, cape, bijoux, trophée) ou un type de
 ## carte (sort, passif, certificat). Un coffre d'équipement propose 3 pièces d'Eden tirées
 ## parmi toutes celles de son emplacement au palier et à la rareté de la map, avec une
-## relance par coffre ; les pièces restent à +0 (l'enclume améliore les emplacements).
+## relance par coffre ; les pièces restent à +0 ; une arme va dans le sac (passe N2).
 
 ## name : titre du coffre ; slots : emplacements d'objets ; cards : type de cartes ;
 ## look : apparence (ProcMap.CHEST_LOOKS : 0 coffre, 1 ouvragé, 2 doré) ; price : × prix.

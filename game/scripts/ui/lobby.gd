@@ -1373,17 +1373,17 @@ func _welcome_flow() -> void:
 		# ancien compte : la création s'ouvre une fois, pré-remplie (« Garder tel quel »), puis les nouveautés
 		_open_creator(true, func(_ok: bool): _show_news_flow())
 		return
+	_show_news_flow()
+
+
+## Nouveautés de la version (une carte par fiche) et fiche en attente.
+func _show_news_flow() -> void:
 	var news := Tutorial.news_to_show()
 	var pending := Tutorial.take_card()
 	if pending != "" and not pending in news:
 		news.append(pending)
 	news = Tutorial.news_sorted(news)
 	Profile.save_profile()
-	_show_news_flow()
-
-
-## Nouveautés de la version (une carte par fiche) et fiche en attente.
-func _show_news_flow() -> void:
 	if news.is_empty():
 		return
 	_show_news(news)

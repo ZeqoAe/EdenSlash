@@ -14,7 +14,7 @@ var _label: Label3D
 const STATION_COLORS := {"anvil": Color(1.0, 0.6, 0.3), "scribe": Color(0.6, 0.75, 1.0), "well": Color(0.5, 1.0, 0.7),
 	"magnet": Color(0.3, 1.0, 0.95), "greed": Color(1.0, 0.82, 0.3), "challenge": Color(1.0, 0.35, 0.3),
 	"fortune": Color(1.0, 0.6, 0.95), "giant": Color(1.0, 0.38, 0.22)}
-const STATION_VERBS := {"anvil": "forger (+1 gratuit sur une pièce portée)", "scribe": "choisir un parchemin d'enchantement",
+const STATION_VERBS := {"anvil": "renforcer une pièce portée", "scribe": "choisir un parchemin d'enchantement",
 	"well": "boire (tous les PV)", "magnet": "attirer toute l'expérience et le butin",
 	"greed": "pacte : plus d'or, de butin et d'insignes, des monstres plus forts", "challenge": "défi : vaincre une escouade d'élites (coffre de récompense)",
 	"fortune": "tenter la pyramide de la fortune (8 étages, une case piégée par étage)",

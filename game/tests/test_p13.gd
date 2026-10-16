@@ -137,7 +137,7 @@ func _test_auto_pick() -> void:
 	check("auto : rien à choisir = rien", CardPicker.auto_pick([]).is_empty())
 
 
-## Aide « Bot » : coffre d'équipement, arme secondaire, enclume, trophées, niveau : rien ne reste ouvert.
+## Aide « Bot » : coffre d'équipement, arme secondaire, trophées, niveau : rien ne reste ouvert.
 func _test_bot_offers() -> void:
 	Settings.set_assist("bot")
 	var d: RunDirector = world.director
@@ -145,10 +145,9 @@ func _test_bot_offers() -> void:
 	var loot0: int = Run.loot.size()
 	world._offer("Coffre : choisis une pièce d'équipement", d.gear_cards(3, 2), func(): return d.gear_cards(3, 2))
 	check("Bot : coffre d'équipement choisi seul (sac %d -> %d), pas d'écran" % [inv0, Profile.inventory.size()], not world.cards.is_open() and (Profile.inventory.size() > inv0 or Run.loot.size() > loot0))
+	var inv1 := Profile.inventory.size()
 	world._offer("Arme secondaire trouvée : choisis-en une", SlotChests.offhand_offer(1, 1).map(func(it): return RunDirector.weapon_card(it, "offhand")))
-	check("Bot : arme secondaire choisie seule (%s)" % String(Profile.equipped.get("offhand", {}).get("name", "")), not world.cards.is_open() and not Profile.equipped.get("offhand", {}).is_empty())
-	world._offer("Enclume : choisis un emplacement", d.anvil_slot_cards().slice(0, 3))
-	check("Bot : enclume choisie seule", not world.cards.is_open() and not Run.slot_bonus.is_empty())
+	check("Bot : arme secondaire choisie seule, rangée dans le sac (passe N2)", not world.cards.is_open() and Profile.inventory.size() == inv1 + 1)
 	world._offer("Trophées", d.trophy_cards(3))
 	check("Bot : trophée choisi seul (%d)" % Run.trophies.size(), not world.cards.is_open())
 	world._offer("Niveau ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))

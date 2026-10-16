@@ -1174,8 +1174,8 @@ func equip(item: Dictionary) -> void:
 	save_profile()
 
 
-## Arme secondaire (WeaponAttacks.OFFHAND_DMG) : une arme de l'inventaire, ou l'arme principale
-## (les deux s'échangent alors).
+## Arme secondaire (passe N2 : ne frappe pas seule, « Changer d'arme » la met en main) : une arme de
+## l'inventaire, ou l'arme principale (les deux s'échangent alors).
 func equip_offhand(item: Dictionary) -> void:
 	if item.get("slot", "") != "weapon" or SurvivorGear.locked("weapon"):
 		return
@@ -1338,20 +1338,16 @@ func buy(item: Dictionary, price: int) -> bool:
 	return true
 
 
-## Somme des statistiques de l'équipement porté, bonus de set compris.
+## Somme des statistiques de l'équipement porté, bonus de set compris. L'arme secondaire n'en donne aucune
+## (passe N2) : en main, ses attaques ne servent qu'aux auto-attaques (Player.basic_atk).
 func equipment_stats() -> Dictionary:
 	var total := {}
 	for slot in equipped:
-		var it: Dictionary = equipped[slot]
-		if slot == "trophy":
+		if slot in ["trophy", "offhand"]:
 			continue
-		if Run.active and Run.survival and Run.slot_bonus.has(slot):
-			it = it.duplicate()  # Survie : l'enclume s'ajoute au +N de la pièce (plafond Run.UPGRADE_CAP)
-			it["upgrade"] = Run.slot_upgrade(int(it.get("upgrade", 0)), slot)
-		var st := Items.stats(it)
-		var k := WeaponAttacks.OFFHAND_STATS if slot == "offhand" else 1.0  # arme secondaire : une partie de ses stats
+		var st := Items.stats(equipped[slot])
 		for s in st:
-			total[s] = total.get(s, 0.0) + float(st[s]) * k
+			total[s] = total.get(s, 0.0) + float(st[s])
 	for b in Items.active_set_bonuses(set_gear()):
 		for s in b.stat:
 			total[s] = total.get(s, 0.0) + float(b.stat[s])
@@ -1370,9 +1366,10 @@ func set_gear() -> Dictionary:
 	return g
 
 
-## Modèle de l'arme portée : son apparence choisie dans l'archive, sinon le sien.
-func weapon_code() -> String:
-	var w: Dictionary = equipped.get("weapon", {})
+## Modèle de l'arme portée dans [param slot] ("weapon", ou "offhand" quand elle est en main) : son
+## apparence choisie dans l'archive, sinon le sien.
+func weapon_code(slot := "weapon") -> String:
+	var w: Dictionary = equipped.get(slot, {})
 	if w.is_empty():
 		return ""
 	var skin := String(skins.get(Items.weapon_type_of(w), ""))

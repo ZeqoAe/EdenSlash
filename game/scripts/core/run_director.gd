@@ -125,6 +125,8 @@ func start(p: Player) -> void:
 	Menace.reset()  # Menace et pacte : propres à chaque run (passe P12)
 	RunJournal.context = _journal_context
 	player = p
+	if not Run.weapon_bagged.is_connected(_pilot_weapon):
+		Run.weapon_bagged.connect(_pilot_weapon)
 	zone = GameData.zone(Run.zone_id)
 	_roster = zone.monsters.map(func(x): return int(x))
 	_elites = zone.get("elites", []).map(func(x): return int(x))
@@ -1347,9 +1349,6 @@ func fog_texture() -> Texture2D:
 
 # --- objets cassables, coffres d'équipement, lieux utilisables ------------------------------
 func _update_breakables(delta: float) -> void:
-	if Run.anvil_result != "":
-		message.emit("Enclume : %s" % Run.anvil_result, 2.5)
-		Run.anvil_result = ""
 	_gold_pop_timer -= delta
 	if _gold_pop > 0 and _gold_pop_timer <= 0.0:
 		DamageNumber.spawn_text(player, "+%d or" % _gold_pop, Color(1.0, 0.85, 0.3))
@@ -1443,12 +1442,20 @@ static func weapon_card(it: Dictionary, type: String) -> Dictionary:
 		head += "\n[color=#ffb347]★ %s[/color]" % WeaponAttacks.sig_text(s)
 	var lines := String(c.desc).split("\n")
 	if type == "offhand":
-		var cur: Dictionary = Profile.equipped.get("offhand", {})
-		lines[0] = "[color=#7dff8a]Emplacement libre[/color]" if cur.is_empty() else "Remplace : %s" % WeaponAttacks.variant_label(cur)
-		head += "\n[color=#9a98a8]Arme secondaire : frappe seule, %d %% des dégâts et %d %% de ses stats.[/color]" % [
-			roundi(WeaponAttacks.OFFHAND_DMG * 100.0), roundi(WeaponAttacks.OFFHAND_STATS * 100.0)]
+		lines[0] = "[color=#9a98a8]Va dans ton sac : à toi de l'équiper[/color]"  # (passe N2 : jamais équipée d'office)
+	elif type == "gear" and Run.survival and not Royale.active and not Survivor.active:
+		lines[0] += "  [color=#9a98a8]· va dans ton sac[/color]"
 	c["desc"] = head + "\n" + "\n".join(lines.slice(0, 4))
 	return c
+
+
+## Pilote automatique (--autoplay, mesures) : une arme principale rangée dans le sac (passe N2) est équipée si elle vaut
+## mieux que celle portée, comme le ferait un joueur ; il ne touche pas à l'arme secondaire (il ne change jamais d'arme).
+func _pilot_weapon(item: Dictionary) -> void:
+	if player == null or not is_instance_valid(player) or not player.autoplay or item.is_empty():
+		return
+	if Profile.can_be_main(item) and Items.compare_to_equipped(item) > 0.02 and Profile.inventory.any(func(x): return is_same(x, item)):
+		Profile.equip(item)
 
 
 ## Survie : arme secondaire lâchée par une élite ou un boss ; ramassée, elle propose 3 armes
@@ -1491,32 +1498,6 @@ func _open_slot_chest(box: String) -> void:
 		func(): return SlotChests.offer(box, Run.epoch, Run.stage).map(func(it): return weapon_card(it, "gear") if it.slot == "weapon" else item_card(it, "gear")), 1)
 
 
-## Enclume : emplacements montrés à la fois (le choix en montre 3, comme un coffre ; la relance passe aux suivants).
-const ANVIL_PAGE := 3
-
-
-## Survie : enclume, un emplacement au choix (sa pièce actuelle, son bonus actuel), les 9 emplacements
-## rangés du plus utile au moins utile : pièce portée d'abord, puis le +N total le plus bas, l'arme en tête.
-func anvil_slot_cards() -> Array:
-	var slots: Array = Run.ANVIL_SLOTS.duplicate()
-	var key := func(s: String) -> int:
-		var it: Dictionary = Profile.equipped.get(s, {})
-		return (0 if not it.is_empty() else 1000) + 10 * Run.slot_upgrade(int(it.get("upgrade", 0)), s) + (0 if s == "weapon" else 1)
-	slots.sort_custom(func(a, b): return key.call(a) < key.call(b) or (key.call(a) == key.call(b) and Run.ANVIL_SLOTS.find(a) < Run.ANVIL_SLOTS.find(b)))
-	var out: Array = []
-	for slot in slots:
-		var it: Dictionary = Profile.equipped.get(slot, {})
-		var cur := int(Run.slot_bonus.get(slot, 0))
-		var up := int(it.get("upgrade", 0))
-		out.append({"type": "anvil_slot", "id": slot, "slot": slot, "title": String(Items.SLOT_NAMES.get(slot, slot)),
-			"subtitle": ("Bonus actuel +%d (remplacé) · total +%d" % [cur, Run.slot_upgrade(up, slot)]) if Run.slot_bonus.has(slot) else "Pièce à +%d, sans bonus de run" % up,
-			"desc": (Items.display_name(it) if not it.is_empty() else "Vide : le bonus s'appliquera à la pièce que tu y mettras") \
-				+ "\nTirage de +0 à +7 (le plus souvent +2 à +4), ajouté au +N de la pièce (total +%d au plus)" % Run.UPGRADE_CAP,
-			"icon": String(it.get("icon", "")) if not it.is_empty() else "",
-			"color": Items.color_of(it) if not it.is_empty() else Color(0.75, 0.7, 0.6)})
-	return out
-
-
 ## Carte de choix pour l'objet [param it] : stats, set, passif, comparaison avec la pièce portée.
 static func item_card(it: Dictionary, type: String) -> Dictionary:
 	var lines: PackedStringArray = []
@@ -1548,27 +1529,6 @@ static func item_card(it: Dictionary, type: String) -> Dictionary:
 		"desc": cmp_txt + "\n" + "\n".join(lines), "icon": String(it.get("icon", "")), "color": Items.color_of(it)}
 
 
-## Enclume : l'arme et les 3 pièces portées les moins améliorées (pas au maximum).
-func anvil_cards() -> Array:
-	var pieces: Array = []
-	for slot in Profile.equipped:
-		var it: Dictionary = Profile.equipped[slot]
-		if slot != "offhand" and not Items.is_unique(it) and int(it.get("upgrade", 0)) < Items.MAX_UPGRADE:
-			pieces.append(it)
-	pieces.sort_custom(func(a, b): return (a.slot == "weapon" and b.slot != "weapon") or (a.slot == b.slot) or \
-		((a.slot == "weapon") == (b.slot == "weapon") and int(a.get("upgrade", 0)) < int(b.get("upgrade", 0))))
-	var out: Array = []
-	for it: Dictionary in pieces.slice(0, 4):
-		var up := int(it.get("upgrade", 0))
-		var c := item_card(it, "anvil")
-		c["slot"] = String(it.slot)
-		c["subtitle"] = "%s · +%d → +%d" % [Items.SLOT_NAMES.get(it.slot, it.slot), up, up + 1]
-		c["desc"] = ("[color=#7dff8a]Palier +%d : stat bonus en plus[/color]\n" % (up + 1) if (up + 1) in Items.MILESTONES else "Stats de l'objet +10 %\n") + \
-			"\n".join(String(c.desc).split("\n").slice(1))
-		out.append(c)
-	return out
-
-
 ## Autel du scribe : parchemins d'enchantement du niveau de la carte (Survie : de ses pièces, plafonnés par époque :
 ## Craft.SURVIVAL_SCROLL_MAX), au choix.
 func scroll_cards(n: int) -> Array:
@@ -1588,28 +1548,8 @@ func _use_station(it: Interactable) -> void:
 	if sv and sv.use_station(it):
 		return  # Survivant : enclume +2, stèle (S4)
 	match it.kind:
-		"anvil" when Run.survival:
-			if Run.anvil_stage == Run.stage:
-				message.emit("L'enclume a déjà servi sur cette carte (une fois par carte)", 2.5)
-				return
-			for a in map.interactables:
-				if is_instance_valid(a) and a.kind == "anvil":
-					a.use_up()  # une seule enclume par carte
-			# 3 emplacements à la fois (les plus utiles d'abord) ; la relance montre les suivants, en boucle
-			var all := anvil_slot_cards()
-			var pages := ceili(all.size() / float(ANVIL_PAGE))
-			var page := [0]
-			var next := func() -> Array:
-				page[0] = (page[0] + 1) % pages
-				return all.slice(page[0] * ANVIL_PAGE, (page[0] + 1) * ANVIL_PAGE)
-			world._offer("Enclume : choisis un emplacement", all.slice(0, ANVIL_PAGE), next, 2 * (pages - 1))
 		"anvil":
-			var cards := anvil_cards()
-			if cards.is_empty():
-				message.emit("Rien à forger : équipe une pièce (au plus +%d)" % Items.MAX_UPGRADE, 2.5)
-				return
-			it.use_up()
-			world._offer("Enclume : +1 garanti sur une pièce portée", cards)
+			it.use_up()  # plus d'enclume hors Survivant (passe N2) : ProcMap n'en pose plus
 		"scribe":
 			it.use_up()
 			world._offer("Autel du scribe : choisis un parchemin d'enchantement", scroll_cards(3))

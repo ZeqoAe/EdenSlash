@@ -1,6 +1,6 @@
 extends Node
 ## 0.1.164 : la Survie part avec l'équipement du hub. Compte neuf équipé, instantané et restauration
-## (fin de run et reprise après fermeture), +N additif plafonné, gemmes suivant le niveau, économie des insignes :
+## (fin de run et reprise après fermeture), plus d'enclume (passe N2), gemmes suivant le niveau, économie des insignes :
 ## godot --headless --path game res://tests/test_gear_run.tscn
 
 var fails := 0
@@ -54,7 +54,7 @@ func _ready() -> void:
 	check("Survie : équipement du hub porté au départ", _uids(Profile.equipped) == hub_uids)
 	check("Survie : ce sont des copies (le coffre n'est pas touché)", not is_same(Profile.equipped.chest, Profile.vault[Profile.vault.map(func(i): return i.uid).find(Profile.equipped.chest.uid)]))
 	check("Survie : or, clés et sac à zéro", Profile.gold == 0 and Profile.keys == 0 and Profile.inventory.is_empty())
-	check("Survie : pas d'arme secondaire au hub, défi « sans arme secondaire » intact", not Run.offhand_used)
+	check("Survie : défi « sans changer d'arme » intact au départ", not Run.offhand_used)
 	Run.hero_level = 5
 	check("Survie : l'équipement du hub compte dans les stats", float(Profile.equipment_stats().get("hp", 0)) > 50.0)
 
@@ -64,7 +64,6 @@ func _ready() -> void:
 	Run.apply_card({"type": "gear", "item": found})
 	check("coffre : la pièce trouvée est portée tout de suite", String(Profile.equipped.head.uid) == String(found.uid) and int(found.eden) in Run.seen_items)
 	Profile.equipped.chest["upgrade"] = 9  # forge, enchantement… de la copie de la run
-	Run.slot_bonus["boots"] = 4
 	Profile.vault.append(Items.generate(1, 0.0, "ring"))  # (piège) quelque chose écrit dans le coffre en pleine run
 	Profile.save_profile()
 	# fermeture du jeu en pleine run : la sauvegarde ne contient que l'équipement du hub
@@ -97,25 +96,15 @@ func _ready() -> void:
 	Run.active = false
 	Run.survival = false
 
-	# --- +N : l'enclume s'ajoute, plafond ---------------------------------------------------------------
+	# --- +N : celui du hub, sans enclume en run (passe N2) ---------------------------------------------
 	Run.start_survival("warrior", 1)
-	Run.slot_bonus = {"weapon": 7, "head": 3, "chest": 0}
-	check("+N : +10 du hub et enclume +7 : plafonné à +%d" % Run.UPGRADE_CAP, Run.slot_upgrade(10, "weapon") == Run.UPGRADE_CAP)
-	check("+N : +0 du hub et enclume +3 : +3", Run.slot_upgrade(0, "head") == 3)
-	check("+N : sans bonus d'enclume, le +N du hub", Run.slot_upgrade(6, "legs") == 6)
 	var w: Dictionary = Profile.equipped.weapon
 	w["upgrade"] = 4
 	Run.hero_level = 10
-	Run.slot_bonus.erase("weapon")
 	var base := float(Profile.equipment_stats().get("patk", 0))
-	Run.slot_bonus["weapon"] = 6
-	var boosted := float(Profile.equipment_stats().get("patk", 0))
-	check("+N : l'enclume s'ajoute au +4 de l'arme (%.0f → %.0f)" % [base, boosted], boosted > base * 1.1)
-	for i in 400:
-		Run.anvil_roll("head")
-		check_roll(Run.slot_bonus.head)
-	check("enclume : tirage entre +0 et +7 (400 tirages)", _roll_ok)
-	check("enclume : le tirage remplace le précédent (pas de cumul)", int(Run.slot_bonus.head) <= 7)
+	w["upgrade"] = 6
+	check("+N : le +N de la pièce compte tel quel (%.0f → %.0f)" % [base, float(Profile.equipment_stats().get("patk", 0))], float(Profile.equipment_stats().get("patk", 0)) > base)
+	check("+N : plus de bonus d'enclume de run", not "slot_bonus" in Run)
 
 	# --- gemmes : leurs valeurs plates suivent le niveau du héros en Survie ------------------------
 	var item := {"slot": "chest", "sockets": [{"type": "garnet", "tier": 3}]}
@@ -154,10 +143,3 @@ func _ready() -> void:
 	print("\n%d échec(s)" % fails)
 	get_tree().quit(1 if fails > 0 else 0)
 
-
-var _roll_ok := true
-
-
-func check_roll(v: int) -> void:
-	if v < 0 or v > 7:
-		_roll_ok = false

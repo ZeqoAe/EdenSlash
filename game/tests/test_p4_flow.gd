@@ -169,7 +169,7 @@ func _flow() -> void:
 	var weapon_up := int(Profile.equipped.weapon.get("upgrade", 0))
 	Run.start_survival("warrior", 1)
 	check("Survie 2 : l'équipement du hub (après Forge et Meilleur) est porté", _uids(Profile.equipped) == hub2)
-	check("Survie 2 : le +N de l'arme est celui du hub (%d)" % weapon_up, int(Profile.equipped.weapon.get("upgrade", 0)) == weapon_up or Run.slot_upgrade(weapon_up, "weapon") >= weapon_up)
+	check("Survie 2 : le +N de l'arme est celui du hub (%d)" % weapon_up, int(Profile.equipped.weapon.get("upgrade", 0)) == weapon_up)
 	Profile.equipped.chest["upgrade"] = 3  # (la run modifie sa copie)
 	Run.finish("defaite")
 	Profile.end_run_survival()

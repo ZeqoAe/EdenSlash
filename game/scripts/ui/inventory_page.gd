@@ -485,8 +485,7 @@ func _build_detail(parent: Control) -> void:
 	acts.add_child(spacer)
 	_b_equip = _action(acts, "Équiper", "", _on_equip, true)
 	_b_offhand = _action(acts, "Secondaire", "", _on_offhand)
-	_b_offhand.tooltip_text = "Arme secondaire : son auto-attaque part seule, à %d %% des dégâts et %d %% de ses stats." % [
-		roundi(WeaponAttacks.OFFHAND_DMG * 100.0), roundi(WeaponAttacks.OFFHAND_STATS * 100.0)]
+	_b_offhand.tooltip_text = "Arme secondaire : elle ne frappe pas seule ; « Changer d'arme » la met en main en plein combat."
 	_b_upgrade = _action(acts, "Forge", "upgrade", _on_upgrade)
 	_b_dismantle = _action(acts, "Démonter", "dismantle", _on_dismantle)
 
@@ -655,7 +654,7 @@ func refresh() -> void:
 			s.tooltip_text = "%s : vide (glisse un objet ici)" % SLOT_CAPTIONS.get(slot, Items.SLOT_NAMES[slot])
 		if slot in ["weapon", "offhand"]:
 			s.tooltip_text = ("Arme principale : une arme de type « %s » (celui de la classe)" % GameData.weapon_type(Profile.main_weapon_type()).get("name", "")) \
-				if slot == "weapon" else "Arme secondaire : n'importe quelle arme ; elle frappe seule (%d %% des dégâts)" % roundi(WeaponAttacks.OFFHAND_DMG * 100.0)
+				if slot == "weapon" else "Arme secondaire : n'importe quelle arme ; [%s] en combat la met en main" % Settings.action_label("swap_weapon", 1)
 		s.queue_redraw()
 	_preview.show_hero(cid, Profile.weapon_code())
 	preset_bar.refresh(cid)
@@ -1018,7 +1017,7 @@ func _on_upgrade() -> void:
 	var w := get_tree().get_first_node_in_group("world")
 	if Profile.in_run and Run.survival:
 		if w:
-			w.hud.show_message("Survie : l'amélioration des pièces se fait au hub (Atelier) ; en run, l'enclume ajoute un bonus à un emplacement, une fois par carte", 3.0)
+			w.hud.show_message("Survie : l'amélioration des pièces se fait au hub (Atelier)", 3.0)
 		return
 	var mu: MerchantUI
 	if Profile.in_run and w:

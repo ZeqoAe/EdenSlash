@@ -169,7 +169,7 @@ func _test_world() -> void:
 	check("arme secondaire : 3 armes d'autres types (%d)" % offers.size(), offers.size() == 3 \
 		and offers.all(func(it): return Items.weapon_type_of(it) != Run.weapon_type() and it.has("auto_variant")))
 	check("coffre d'arme : armes du type de la classe", SlotChests.offer("weapon", 1, 1).all(func(it): return Items.weapon_type_of(it) == Run.weapon_type()))
-	# arme secondaire : frappe seule, à sa cadence
+	# arme secondaire (passe N2) : ne frappe jamais seule ; « Changer d'arme » la met en main
 	var off := Items.generate(1, 0.0, "weapon", Run.class_id, 0, "bow")
 	off["auto_variant"] = 0
 	Profile.inventory.append(off)
@@ -177,10 +177,9 @@ func _test_world() -> void:
 	player.recalc_stats()
 	check("arme secondaire portée", not player.offhand_spec().is_empty() and String(player.offhand_spec().wtype) == "bow")
 	var hp_o := m.hp
-	player._off_ready_at = 0.0
 	for i in 40:
 		await get_tree().physics_frame
-	check("arme secondaire : tire seule", m.hp < hp_o)
+	check("arme secondaire : ne tire pas seule", is_equal_approx(m.hp, hp_o) or player._state == "attack")
 	Profile.unequip("offhand")
 	player.recalc_stats()
 	check("arme secondaire retirée", player.offhand_spec().is_empty())

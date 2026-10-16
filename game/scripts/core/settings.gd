@@ -18,7 +18,7 @@ const ACTIONS := [
 	["objectives", "Afficher les objectifs"], ["pause", "Menu / pause"],
 	["camera_rotate", "Tourner la caméra (maintenu)"], ["unstuck", "Se débloquer"], ["help", "Aide"],
 	["feedback", "Signaler un problème"], ["extract", "S'extraire (10 s)"], ["quick_equip", "Équiper l'objet trouvé"],
-	["potion_1", "Potion de soin"], ["potion_2", "Potion d'effet"],
+	["potion_1", "Potion de soin"], ["potion_2", "Potion d'effet"], ["swap_weapon", "Changer d'arme"],
 ]
 ## Paires d'actions qui peuvent partager une touche (jamais utilisées en même temps).
 const SHARED_OK := [["move_order", "camera_rotate"]]
@@ -51,6 +51,7 @@ const DEFAULT_BINDS := {
 	"quick_equip": [{"k": KEY_G}],
 	"potion_1": [{"k": KEY_C}],
 	"potion_2": [{"k": KEY_V}],
+	"swap_weapon": [{"k": KEY_Z}],  # (W sur AZERTY, Z sur QWERTY : sous la main gauche, libre)
 }
 ## Manette (disposition fixe, non modifiable ; voir Gamepad) : {"b": bouton} ou
 ## {"a": axe, "v": sens}, et le libellé affiché quand on joue à la manette.
@@ -64,10 +65,11 @@ const PAD_BINDS := {
 	"pause": [{"b": JOY_BUTTON_START}], "map": [{"b": JOY_BUTTON_BACK}],
 	"objectives": [{"b": JOY_BUTTON_DPAD_LEFT}], "quick_equip": [{"b": JOY_BUTTON_DPAD_RIGHT}],
 	"potion_1": [{"b": JOY_BUTTON_DPAD_UP}], "potion_2": [{"b": JOY_BUTTON_DPAD_DOWN}],
+	"swap_weapon": [{"b": JOY_BUTTON_RIGHT_STICK}],
 }
 ## Actions dont la manette est réassignable (le déplacement reste au stick gauche).
 const PAD_ACTIONS := ["attack", "dodge", "jump", "interact", "skill_1", "skill_2", "skill_3", "skill_4",
-	"pause", "map", "objectives", "quick_equip", "potion_1", "potion_2", "extract", "help", "unstuck", "feedback"]
+	"pause", "map", "objectives", "quick_equip", "potion_1", "potion_2", "extract", "help", "unstuck", "feedback", "swap_weapon"]
 ## Noms des boutons selon la disposition (Godot : A = bouton du bas, B = droite, X = gauche, Y = haut).
 const PAD_NAMES := {
 	"xbox": {JOY_BUTTON_A: "A", JOY_BUTTON_B: "B", JOY_BUTTON_X: "X", JOY_BUTTON_Y: "Y", JOY_BUTTON_LEFT_SHOULDER: "LB",
@@ -84,6 +86,7 @@ const PAD_LABELS := {
 	"attack": "Carré", "dodge": "Rond", "jump": "Triangle", "interact": "Croix",
 	"skill_1": "R1", "skill_2": "R2", "skill_3": "L1", "skill_4": "L2",
 	"pause": "Options", "map": "Share", "objectives": "← (croix)", "quick_equip": "→ (croix)", "potion_1": "↑ (croix)", "potion_2": "↓ (croix)",
+	"swap_weapon": "R3",
 	"move_forward": "Stick gauche", "move_back": "Stick gauche", "move_left": "Stick gauche", "move_right": "Stick gauche",
 }
 

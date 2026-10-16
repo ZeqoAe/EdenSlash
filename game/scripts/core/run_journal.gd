@@ -156,7 +156,7 @@ static func end_map(result: String, extra := {}) -> void:
 		"time": snappedf(_time, 0.1), "combat_share": snappedf(combat_share, 0.01),
 		"chest_share": snappedf(chest_share, 0.01), "style_index": snappedf(idx, 0.01), "style": style,
 		"dist": roundi(_dist), "level": Run.max_level, "cards": Run.passives.size() + Run.skills.size(),
-		"trophies": Run.trophies.size(), "anvil": Run.anvil_stage, "kills": Run.kills,
+		"trophies": Run.trophies.size(), "swapped": Run.offhand_used, "kills": Run.kills,
 		"dmg_taken_min": snappedf(taken / minutes, 0.1), "max_hit_frac": snappedf(float(counters.get("max_hit_frac", 0.0)), 0.001),
 		"dps_boss_10s": snappedf(float(counters.get("boss_dmg_10s", 0.0)) / BOSS_WINDOW, 0.1),
 		"ttk_normal": _avg("ttk_normal_sum", "ttk_normal_n"), "ttk_elite": _avg("ttk_elite_sum", "ttk_elite_n"),

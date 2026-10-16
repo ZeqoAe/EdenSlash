@@ -41,12 +41,10 @@ const CARDS := {
 	"trophy": {"title": "Trophées", "on": "trophy", "version": "0.1.141", "chapter": "cards",
 		"short": "12 trophées au plus, tous différents. Ils se perdent à la fin de la run.", "icon": "expertise",
 		"lines": ["12 trophées au plus, tous d'effets différents.", "Ils se perdent à la fin de la run.", "Chacun déclenche un effet sous condition : coup, esquive, élimination…"]},
-	"offhand": {"title": "Arme secondaire", "on": "offhand", "version": "0.1.141", "chapter": "cards",
-		"short": "L'arme secondaire frappe seule, avec des dégâts réduits. Elle a ses propres améliorations.", "icon": "weapon",
-		"lines": ["Elle frappe seule, sans animation, avec des dégâts réduits.", "Elle a ses propres améliorations."]},
-	"anvil": {"title": "L'enclume", "on": "anvil", "version": "0.1.141", "chapter": "run",
-		"short": "Un bonus de +0 à +7 sur un emplacement, une fois par carte, jusqu'à la fin de la run.", "icon": "upgrade",
-		"lines": ["Un bonus de +0 à +7 sur un emplacement d'équipement, une fois par carte.", "Il s'ajoute au +N de ta pièce (+12 au plus) jusqu'à la fin de la run."]},
+	"offhand": {"title": "Deux armes", "on": "offhand", "version": "0.1.229", "chapter": "cards",
+		"short": "Ton arme secondaire ne frappe pas seule : « Changer d'arme » la met en main, même en plein combat.", "icon": "weapon",
+		"lines": ["Arme principale : celle de ta classe. Arme secondaire : n'importe quel autre type.", "« Changer d'arme » (Paramètres > Touches) les échange en plein combat.",
+			"En main, la secondaire change ton auto-attaque. Tes sorts restent ceux de ta classe."]},
 	"fortune": {"title": "Autel de la fortune", "on": "fortune", "version": "0.1.141", "chapter": "run",
 		"short": "Huit étages : encaisse ou monte tenter le suivant. Une case est piégée et fait tout perdre.", "icon": "gem",
 		"lines": ["Huit étages : encaisse ou monte tenter l'étage suivant.", "Une case est piégée : elle fait tout perdre.", "Les gains sont des insignes et des coffres d'apparence."]},
@@ -223,8 +221,6 @@ static func on_card(card: Dictionary) -> void:
 			event("trophy")
 		"offhand":
 			event("offhand")
-		"anvil", "anvil_slot":
-			event("anvil")
 		"skill", "chain", "upgrade", "passive":
 			event("card")
 

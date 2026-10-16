@@ -14,7 +14,7 @@ Chiffres clés vérifiés dans le code (16/10, 0.1.212) : monstres par époque `
 la Survie `Epochs.BOSS_HP_MAP` 80 000 / 370 000 / 1 750 000 × `BOSS_HP_EPOCH` 1 / 2 / 4 / 5,5, rage du boss `BOSS_RAGE_AT`
 2:30 / 3:00 / 4:00 ; rage de la carte `RunDirector.RAGE_TIERS` ×1,1 / 2 / 11 / 101 ; Menace +20 % de PV par cran, plafond 5
 (`Menace.STEP`, `MAX`) ; verrous de PE `GearPower.DIFF_RATIO` 0 / 3,6 / 3,1, `Siege.POWER_RATIO` 0 / 4 / 3,4, `LEGEND_RATIO` 1,8 ;
-insignes de participation `Run.INSIGNIA_BASE` 25 ; enclume plafonnée à +12 (`Run.UPGRADE_CAP`) ; boss hors Survie
+insignes de participation `Run.INSIGNIA_BASE` 25 ; plus d'enclume en Survie (passe N2) ; boss hors Survie
 `Dungeons.boss_hp` = 106 000 × 1,09^(niveau − 15) × [1 ; 3,4 ; 2,5] ; Survivant : paliers `Survivor.PALIERS` I à V,
 `palier_mult` 1 / 1,45 / 1,7 / 1,75 / 2,1 (`ModeRules`), boss 6 000 000 PV (`Survivor.BOSS_HP`), dégâts ×1,4 (`BOSS_ATK`).
 
@@ -168,7 +168,6 @@ Vitalité, Posture du chasseur, Désarmé (ne peut plus attaquer), Ange gardien 
   description d'un sort n'est plus répétée sous « Effets » ; LB / RB changent de section ; « ? » ouvre le Guide
   (Détails) : plus de page d'aide à part dans l'écran Héros.
 
-### Équipement des 60 classes (lot E3 de la nuit du 15/10, `core/class_gear.gd`)
 ### Création de personnage (lot C1, `core/hero_look.gd`, `ui/hero_creator.gd`)
 
 - **Nom du héros** (`Profile.hero_name`) : 3 à 16 signes, lettres (accents compris), chiffres, espace, tiret, au moins une lettre,
@@ -183,6 +182,7 @@ Vitalité, Posture du chasseur, Désarmé (ne peut plus attaquer), Ange gardien 
 - **Quand** : une fois après l'accueil (compte neuf, juste après le choix de la classe, avant l'échauffement) ; une fois pour
   un ancien compte, pré-rempli, « Garder tel quel » ; ensuite Héros > « Personnage » (hors run), gratuit, petite confirmation.
 
+### Équipement des 60 classes (lot E3 de la nuit du 15/10, `core/class_gear.gd`)
 
 - **7 profils de stats** (`data/class_profiles.json`, généré par `tools/gen_class_profiles.py`, à relancer si une classe
   change) : type de dégâts réel (après `GameData._balance_damage_types`), défense de base 6 = classe de garde, sinon
@@ -244,12 +244,22 @@ Vitalité, Posture du chasseur, Désarmé (ne peut plus attaquer), Ange gardien 
   variantes au départ de la Survie n'existe plus depuis 0.1.170 (on part avec l'arme du hub) ; `RunDirector.start_weapon_cards`
   ne sert plus qu'au Battle royale.
 - **Arme principale = arme de la classe**, toujours (la case n'accepte que ce type). Une arme
-  d'un autre type ne peut être que l'**arme secondaire** : son auto-attaque part **seule**, sans
-  animation, vers l'ennemi le plus proche, à **60 % des dégâts** et avec **50 % de ses stats
-  d'objet** ; elle ne compte pas pour les sets. En Survie, elle se **trouve en jeu** : le boss en
+  d'un autre type ne peut être que l'**arme secondaire**.
+- **Deux armes, « Changer d'arme » (passe N2, 0.1.229, tous les modes)** : l'arme secondaire **ne frappe jamais seule**
+  et ne donne **aucune stat** au héros. L'action « Changer d'arme » (clavier : la touche sous la main gauche, W en AZERTY,
+  Z en QWERTY ; manette : R3 ; réassignables, `Settings` `swap_weapon`) la **met en main** instantanément, en plein combat,
+  puis remet l'arme principale. En main, la secondaire donne **son type d'auto-attaque** (sa variante, ses améliorations de
+  run « offhand », son modèle) et **ses attaques physique / magique, pour les auto-attaques seulement** (`Player.basic_atk`) ;
+  les **compétences gardent toujours les stats de l'arme principale** (celle de la classe) : elles ne lisent jamais la
+  secondaire. Les panoplies et passifs d'objet comptent l'arme principale, quelle que soit l'arme en main. Recharge
+  `WeaponAttacks.SWAP_CD` 1 s (`SWAP_CD_PVP` 4 s entre héros : Duel, Arènes, Battle royale), pas d'auto-attaque pendant
+  `SWAP_LOCK` 0,35 s, l'auto-attaque en cours s'arrête ; impossible pendant un sort ou étourdi. Sans arme secondaire (Duel à
+  l'arme, Survivant, Battle royale pour l'instant) l'action ne fait rien et la case du HUD est cachée. Le pilote automatique
+  et les héros ennemis ne changent jamais d'arme. En Survie, l'arme secondaire se **trouve en jeu** : le boss en
   lâche toujours une, une élite parfois (40 % sans arme secondaire, 12 % avec) ; ramassée, elle
-  propose 3 armes d'autres types (variante au hasard, une relance). Les coffres d'arme ne donnent
-  que l'arme de la classe.
+  propose 3 armes d'autres types (variante au hasard, une relance) qui vont **dans le sac** (voir « Coffres d'emplacement »).
+  Les coffres d'arme ne donnent que l'arme de la classe. HUD : petite case ronde au-dessus de l'esquive (arme rangée,
+  touche, recharge).
 - **Améliorations d'arme** (cartes de niveau « weapon_up », 8 niveaux par emplacement, l'arme
   principale souvent, la secondaire si elle est portée) : **commune** = dégâts (+15 %) ; **rare** =
   dégâts + un bonus mineur (critique +5 %, cadence +8 %, zone +10 %, portée +12 %, durée des
@@ -396,19 +406,23 @@ Mythique = orange, légendaire = jaune, éveillé = jaune avec une aura sur l'ic
 **Coffres d'emplacement** (les 30 coffres payants de la map) : arme, tête, torse, jambes, gants,
 bottes, cape (2 coffres depuis 0.1.179, pris aux gants et aux bottes : les 9 emplacements de la PE se trouvent tous
 en Survie ; une cape pèse ≈ 1/9 de la PE), bijoux (bague, collier, boucles), trophée, carte de sort, carte de passif, carte de
-certificat. L'enclume vise aussi la cape. Un coffre d'équipement propose **3 pièces au hasard** parmi toutes les pièces de son
+certificat. Un coffre d'équipement propose **3 pièces au hasard** parmi toutes les pièces de son
 emplacement au palier et à la rareté de la map (au palier 23 : 6 panoplies), avec **une relance
 par coffre**. Le coffre d'arme propose l'arme principale, toujours du type de la classe (`SlotChests.offer`, `Profile.main_weapon_type`) ;
 les autres types viennent en arme secondaire (voir « Auto-attaque des armes »).
+**Une arme trouvée va dans le sac de la run** (passe N2 : coffre d'arme et arme secondaire, jamais équipée d'office) ;
+le HUD l'annonce 8 s et [G] « Équiper la trouvaille » la porte (principale si elle est du type de la classe, sinon
+secondaire), sinon menu pause > Héros (comparaison ▲ / ▼ avec l'arme du même rôle). Comme toute trouvaille, elle
+n'est pas gardée en fin de run (achetable à l'Armurerie). Sac plein : l'arme est perdue. Les pièces d'armure
+restent portées tout de suite.
 Départ : l'arme du hub (plus de choix d'arme au départ depuis 0.1.170). Les monstres ne lâchent plus
 d'équipement (or, expérience, fournitures, clés).
 
-**Enclume, une fois par map** (remaniée en 0.1.170) : on choisit un emplacement, il reçoit un tirage pondéré de
-+0 à +7 (le plus souvent +2 à +4, moyenne ≈ +3,2), **ajouté au +N de la pièce portée** dans cet emplacement (celui du
-hub), quelle qu'elle soit, pour toute la run ; **le total est plafonné à +12** (`Run.UPGRADE_CAP`, ×2,2 sur les
-stats de base). Elle rattrape donc surtout les pièces peu améliorées (une pièce +10 gagne au plus +2), sans faire
-exploser les stats ; plus de tirages négatifs (le hub compte maintenant). Un nouveau tirage sur le même emplacement
-remplace l'ancien. Les cartes d'amélioration d'arme restent plafonnées (niveau 8 par arme, `WeaponAttacks.MAX_RANK`) ;
+**Plus d'enclume en Survie** (passe N2, 0.1.229, demande du joueur : on part avec son équipement et on rentre avec,
+l'améliorer en run serait de la triche) : aucune enclume sur les cartes de la Survie (`ProcMap` n'en pose que pour le
+Survivant, qui garde la sienne), plus de bonus de +N en run ; le +N est celui que le joueur a monté au hub. Le défi
+d'époque IV « Utiliser l'enclume sur les 3 cartes » devient « Ouvrir 45 coffres » (`Epochs.CHEST_CHALLENGE`) ; le défi
+de l'époque III devient « Finir sans changer d'arme ». Les cartes d'amélioration d'arme restent plafonnées (niveau 8 par arme, `WeaponAttacks.MAX_RANK`) ;
 les cartes de sort ont leur propre plafond de rang ; elles s'ajoutent aux stats de l'équipement sans le remplacer.
 
 **Cartes** : la montée de niveau propose toujours des cartes ; les coffres de cartes (sort,
@@ -541,7 +555,7 @@ un niveau corrélé au nôtre, et des PV et des dégâts quand on commence à ê
   quand il est dans la vue, 2,6 s, sous les cadres du haut et au-dessus de la barre de sorts.
 - **Niveau** : niveau du monstre = max(courbe du temps, niveau du héros + décalage) + palier, plafonné (Epochs.CAPS, +3 en rage) ;
   décalage −1 au début de la carte → −0,5 à l'heure de la rage (avant : −1 tout le temps).
-- **Puissance** (`MonsterScaling`, Survie) : indice d'équipement = PE de l'équipement porté (trouvailles de la carte et enclume
+- **Puissance** (`MonsterScaling`, Survie) : indice d'équipement = PE de l'équipement porté (trouvailles de la carte
   comprises) / PE attendue au niveau du héros (départ 0,68, pièces de la carte à +0 0,94, époque I à +3 1,2, époque I optimisée
   1,9, époque II optimisée 2,4). Bande neutre par époque (`EPOCH_BAND` : I 0,6-0,95, II 1-1,35, III 1,9-2,45, IV 2,2-2,7) ;
   au-dessus, PV × (1 + 0,6 ln(indice / haut)) et dégâts × (1 + 0,35 ln(…)), en dessous de même ; bornes PV ×0,9-1,6, dégâts
@@ -688,7 +702,7 @@ guet, arches, ossements, mines, campements, marchés), **8 plateaux** (et cuvett
 un réseau de sentiers ; **30 coffres** payants (or ou clé, +18 % à chaque coffre ouvert) en 3 qualités qui
 proposent **une pièce d'équipement au choix parmi 3** : coffre (spécial → épique), coffre ouvragé (rare →
 mythique, ×2,5), coffre doré (épique → légendaire, ×6, pilier de lumière) ; des **lieux à usage unique**
-(pilier de lumière) : 3 **enclumes** (+1 garanti sur une pièce portée), 2 **autels du scribe** (parchemin
+(pilier de lumière) : 2 **autels du scribe** (parchemin
 d'enchantement au choix), 3 **fontaines de vie**, 2 **pierres d'aimant** (toute l'XP et le butin), 1 **autel de
 cupidité** (pacte : +50 % d'or, de butin et d'insignes, monstres +25 % jusqu'à la fin de la carte), 2 **autels du géant**
 (un géant à vaincre : une carte, mais la Menace monte, voir « Pacte, géants et Menace »), 2 **stèles du défi** (3 élites : coffre de récompense
@@ -1225,7 +1239,7 @@ chacune avec son rôle :
   paliers, bonus d'amélioration, chance de la prochaine amélioration (hors run), niveau de puissance. Les pages qui affichent
   une fiche à demeure (Atelier, marchand, Équipement) montrent toujours la carte complète. Une statistique plate et son
   pourcentage du même nom (Défense 231 et Défense 4 %) tiennent sur une seule ligne. En Survie, la pièce portée s'affiche et se
-  compare avec le bonus d'enclume de son emplacement. Rien ne parle du jeu d'origine.
+  compare telle quelle ; une arme d'un autre type que la classe se compare à l'arme secondaire. Rien ne parle du jeu d'origine.
 
 ## Choix et coffres de récompense (lot U3 de la nuit du 15/10)
 
@@ -1376,7 +1390,6 @@ Invisibilité : les monstres perdent ta trace ; attaquer ou lancer un sort la ro
 | Gemmes | cristaux (3 coups), jarres, coffres du joaillier |
 | Parchemins d'enchantement | autels du scribe (au choix), coffres ouvragés et dorés, marchands |
 | Pierres de sûreté, parchemin béni | coffres ouvragés et dorés, stèles du défi, élites |
-| +1 sans risque | enclumes (3 par carte) |
 | Équipement commun → épique | monstres (5 %), coffres simples (choix de 3), marchands |
 | Équipement rare → mythique | coffres ouvragés (mythique 7 % par proposition) |
 | Équipement épique → légendaire | coffres dorés (légendaire 15 %, mythique 22 % par proposition) |

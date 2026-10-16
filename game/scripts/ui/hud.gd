@@ -20,6 +20,7 @@ var _hp_orb: HudWidgets.Orb
 var _xp_orb: HudWidgets.Orb
 var _slots: Array[HudWidgets.SkillSlot] = []
 var _dodge: HudWidgets.SkillSlot
+var _swap: HudWidgets.SkillSlot  # arme rangée : « Changer d'arme » (passe N2), visible avec une arme secondaire
 var _potion_slots: Array = []  # cases de potions (soin, effet)
 var _queue_strip: HudWidgets.QueueStrip
 var _assist_label: Label
@@ -102,6 +103,7 @@ func setup(p: Player, d: RunDirector) -> void:
 		_zone_extra = parts[1])
 	director.message.connect(show_message)
 	director.better_item.connect(show_better)
+	Run.weapon_bagged.connect(show_bagged)  # (l'échange d'arme, lui, reste discret : éclair, son et case de l'arme rangée)
 	_on_hp(player.hp, player.max_hp)
 	_on_xp(player.xp, GameData.xp_to_next(player.level), player.level)
 	_refresh_skills()
@@ -673,6 +675,13 @@ func _build_action_bar(root: Control) -> void:
 	_dodge.size = Vector2(50, 50)
 	_dodge.tooltip_text = "Esquive (invulnérable)"
 	bottom.add_child(_dodge)
+	_swap = HudWidgets.SkillSlot.new()
+	_swap.round = true
+	_swap.empty = false
+	_swap.position = Vector2(x0 + 4 * 76.0 + 14.0, 62)
+	_swap.size = Vector2(42, 42)
+	_swap.visible = false
+	bottom.add_child(_swap)
 	for i in 2:
 		var ps := HudWidgets.PotionSlot.new()
 		ps.position = Vector2(174 + i * 50.0, 138)
@@ -805,6 +814,7 @@ func _process(delta: float) -> void:
 	_assist_label.add_theme_color_override("font_color", info.get("color", Color.WHITE))
 	var dc := player.dodge_cooldown()
 	_dodge.set_cooldown(dc.x, dc.y)
+	_update_swap()
 	_update_tutorial()
 	_update_statuses()
 	_update_target()
@@ -1063,6 +1073,32 @@ static func _big_number(v: float) -> String:
 			out += " "
 		out += s[i]
 	return out
+
+
+## Case de l'arme rangée (passe N2) : son icône, la touche « Changer d'arme », la recharge ; cachée sans arme secondaire.
+func _update_swap() -> void:
+	var it := player.stowed_item()
+	_swap.visible = not it.is_empty()
+	if it.is_empty():
+		return
+	_swap.icon = UiTheme.texture(String(it.get("icon", "")))
+	_swap.key_text = Settings.action_label("swap_weapon", 1)
+	_swap.tooltip_text = "Changer d'arme (%s) : prendre en main %s" % [_swap.key_text, Items.display_name(it)]
+	_swap.set_cooldown(player.swap_left(), player.swap_cooldown())
+
+
+## Survie : arme trouvée rangée dans le sac (passe N2) ; 8 s pour l'équiper avec [G] (principale si elle est du type
+## de la classe, sinon secondaire). [param item] vide : sac plein, l'arme est perdue.
+func show_bagged(item: Dictionary) -> void:
+	if item.is_empty():
+		show_message("Sac plein : l'arme trouvée est perdue", 2.0)
+		return
+	better_item = item
+	_better_until = Time.get_ticks_msec() / 1000.0 + 8.0
+	var where := "arme principale" if Profile.can_be_main(item) else "arme secondaire"
+	_better_label.text = "[img=34x34]%s[/img]  [b][color=#%s]%s[/color][/b]\n[color=#c8c8d4]Dans ton sac — [b]%s[/b] : équiper en %s[/color]" % [
+		String(item.get("icon", "")), Items.color_of(item).to_html(false), Items.display_name(item), Settings.action_label("quick_equip", 1), where]
+	_better_box.visible = true
 
 
 ## Objet ramassé meilleur que la pièce portée : 8 s pour l'équiper avec [G].

@@ -181,7 +181,7 @@ func _ready() -> void:
 
 
 ## Trouvailles de la run : la part [member finds] des emplacements reçoit la pièce mythique +0 de la carte
-## (coffres d'emplacement) quand elle vaut mieux que celle du hub ; l'enclume ajoute +4 sur [member anvil] emplacements.
+## (coffres d'emplacement) quand elle vaut mieux que celle du hub.
 func _run_finds() -> void:
 	var kit := StarterGear.scenario("%d.%d.0" % [epoch, stage], cid)
 	var i := 0
@@ -192,9 +192,7 @@ func _run_finds() -> void:
 		var cur: Dictionary = Profile.equipped.get(slot, {})
 		if cur.is_empty() or Items.rating(kit[slot]) > Items.rating(cur):
 			Profile.equipped[slot] = kit[slot]
-	var slots := Profile.equipped.keys()
-	for k in mini(anvil, slots.size()):
-		Run.slot_bonus[String(slots[k])] = 4
+	# (--anvil : sans effet depuis la passe N2, plus d'enclume en Survie)
 
 
 ## Carte choisie comme le pilote automatique : une compétence tant qu'il en manque, sinon au hasard.

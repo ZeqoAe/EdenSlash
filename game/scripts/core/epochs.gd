@@ -98,9 +98,11 @@ static func monster_mult(epoch: int) -> float:
 const CHALLENGES := [
 	"Vaincre le boss de la 3e carte avant la rage",
 	"Finir avec 12 trophées",
-	"Finir sans arme secondaire",
-	"Utiliser l'enclume sur les 3 cartes",
+	"Finir sans changer d'arme",
+	"Ouvrir 45 coffres",
 ]
+## Défi de l'époque IV (passe N2 : plus d'enclume en Survie) : coffres ouverts sur la run (texte ci-dessus).
+const CHEST_CHALLENGE := 45
 
 
 static func star_mask(epoch: int) -> int:
@@ -141,7 +143,7 @@ static func earned_mask(epoch: int) -> int:
 		3:
 			ok = not Run.offhand_used
 		4:
-			ok = Run.anvil_stages.size() >= 3
+			ok = Run.chests_total >= CHEST_CHALLENGE
 	if ok:
 		m |= 4
 	return m

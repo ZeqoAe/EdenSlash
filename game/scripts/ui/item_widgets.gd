@@ -16,7 +16,7 @@ static func compare_text(item: Dictionary, worn, detailed := true) -> String:
 	if worn == null or not (worn is Dictionary) or worn.is_empty() or is_same(worn, item) or String(worn.get("uid", "")) == String(item.get("uid", "-")):
 		return ""
 	var slot := String(item.get("slot", ""))
-	var head := "[color=#8a86a0]Porté : %s[/color]" % Items.display_name(Items.anvil_applied(worn, slot))
+	var head := "[color=#8a86a0]Porté : %s[/color]" % Items.display_name(worn)
 	if slot in Items.SLOTS:
 		var c := Items.compare_to_equipped(item)
 		var dpe := GearPower.delta_if_equipped(item)
@@ -24,7 +24,7 @@ static func compare_text(item: Dictionary, worn, detailed := true) -> String:
 			"#c8c8d4" if absf(c) < 0.02 else ("#7fe08a" if c > 0.0 else "#ff7a7a"), "▲ Meilleur" if c >= 0.02 else ("▼ Moins bien" if c <= -0.02 else "≈ Équivalent"),
 			"+" if c >= 0.0 else "", roundi(c * 100.0), "#7fe08a" if dpe >= 0 else "#ff7a7a", "+" if dpe >= 0 else "", GearPower.fmt(dpe)]
 	return "\n\n%s\n%s\n%s" % [Items.SEPARATOR, head, diff_text(
-		Items.stats(Items.anvil_applied(worn, slot)), Items.stats(Items.anvil_applied(item, slot)), slot, detailed,
+		Items.stats(worn), Items.stats(item), slot, detailed,
 		Items._level_k(Items.power_level(item)))]
 
 
@@ -149,14 +149,14 @@ static func item_card(item: Dictionary, extra := "", mode := -1) -> Control:
 
 
 ## Texte complet de la carte d'[param item] (BBCode) : carte, comparaison avec la pièce portée au même emplacement
-## (l'objet porté s'affiche avec le bonus d'enclume de la Survie), [param extra].
+## (une arme d'un autre type que la classe : avec l'arme secondaire), [param extra].
 static func card_text(item: Dictionary, extra := "", detailed := false) -> String:
 	var slot := String(item.get("slot", ""))
 	var worn = Profile.equipped.get(slot, null)
-	var is_worn: bool = worn is Dictionary and not worn.is_empty() and String(worn.get("uid", "")) == String(item.get("uid", "-"))
-	var shown := Items.anvil_applied(item, slot) if is_worn else item
+	if slot == "weapon" and not Profile.can_be_main(item) and not (Survivor.active or Royale.active):
+		worn = Profile.equipped.get("offhand", null)
 	var hint := "" if detailed else "\n\n[color=#6c6882]Maj : détails[/color]"
-	return Items.describe(shown, detailed) + compare_text(item, worn, detailed) + extra + hint
+	return Items.describe(item, detailed) + compare_text(item, worn, detailed) + extra + hint
 
 
 class ItemCard extends PanelContainer:
@@ -353,12 +353,7 @@ class ItemSlot extends Button:
 			draw_rect(r.grow(-6.0), Color(1.0, 0.9, 0.5, 0.08 + 0.06 * sin(t * 2.0)))
 		var font := UiTheme.bold_font()
 		var up := int(item.get("upgrade", 0))
-		if slot_id != "" and Run.active and Run.survival and Run.slot_bonus.has(slot_id):
-			# Survie : +N de la pièce plus le bonus d'enclume de l'emplacement (total plafonné)
-			var tot := Run.slot_upgrade(up, slot_id)
-			HudWidgets.text_center(self, "+%d" % tot, Vector2(size.x - 13.0, 11.0), font, 13,
-				Color(1.0, 0.85, 0.3) if tot >= Run.UPGRADE_CAP - 2 else Color(0.6, 1.0, 0.65), 4)
-		elif up > 0:
+		if up > 0:
 			HudWidgets.text_center(self, "+%d" % up, Vector2(size.x - 13.0, 11.0), font, 13, Color(1, 0.88, 0.45), 4)
 		if item.has("set"):
 			HudWidgets.diamond(self, Vector2(9, 9), 5.0, Items.SET_COLOR)

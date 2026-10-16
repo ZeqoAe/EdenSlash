@@ -336,7 +336,7 @@ func _refresh_detail() -> void:
 				var sp := WeaponAttacks.spec_for({"auto_variant": i, "slot": "weapon"}, wt)
 				parts.append(("[color=#ffcf6b]━━━━━━━━━━[/color]\n" if i > 0 else "") + WeaponAttacks.bbcode(sp, _atk(String(sp.dmg_type))))
 			parts.append("[color=#c8c8d4]Améliorations d'arme (cartes de niveau, %d niveaux par arme) : commune = dégâts ; rare = dégâts + un bonus (critique, cadence, zone, portée…) ; épique = + un bonus majeur (projectile, perforation, rebond, grande zone) ; légendaire = + l'effet légendaire de la variante (★).[/color]" % WeaponAttacks.MAX_RANK)
-			parts.append("[color=#9a98a8]Arme secondaire (trouvée en jeu sur les élites et les boss de la Survie, de n'importe quel type) : son auto-attaque part seule, à %d %% des dégâts.[/color]" % roundi(WeaponAttacks.OFFHAND_DMG * 100.0))
+			parts.append("[color=#9a98a8]Arme secondaire (n'importe quel type) : elle ne frappe pas seule. [%s] la met en main : son auto-attaque remplace celle de l'arme principale ; tes sorts ne changent pas.[/color]" % Settings.action_label("swap_weapon", 1))
 			if Run.active:
 				for slot in ["weapon", "offhand"]:
 					var ws := Run.weapon_spec(slot)
