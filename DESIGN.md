@@ -1,8 +1,78 @@
-# Eden Slash — conception d'une run
+# Eden Slash — règles de jeu
 
 Direction artistique : celle d'Eden Eternal (textures de sol, arbres, rochers, maisons,
 coffres, PNJ, monstres, armes et tenues du jeu d'origine). Les maps de combat sont
 générées à chaque run, avec nos propres collisions simples.
+
+Comment lire ce fichier (passe P17, 16/10/2026, `conception/nuit_15_10/R_P17.md`) : une section par système, rangées en
+parties. Quand deux passages se contredisent, **le plus récent (numéro de version ou passe la plus haute) prime** ; la partie F
+garde les décisions remplacées pour mémoire. Les chiffres cités renvoient à une constante du code (nom entre accents graves) :
+c'est le code qui fait foi. Points d'entrée du code et outils : `CLAUDE.md`, « État du jeu ». Règles opérationnelles du Duel
+(échelles, plafonds, profils « opti ») : `CLAUDE.md`, « Duel (JcJ) ».
+
+Chiffres clés vérifiés dans le code (16/10, 0.1.212) : monstres par époque `Epochs.MONSTER_MULT` ×0,85 / 1,7 / 3,4 / 7 ; boss de
+la Survie `Epochs.BOSS_HP_MAP` 80 000 / 370 000 / 1 750 000 × `BOSS_HP_EPOCH` 1 / 2 / 4 / 5,5, rage du boss `BOSS_RAGE_AT`
+2:30 / 3:00 / 4:00 ; rage de la carte `RunDirector.RAGE_TIERS` ×1,1 / 2 / 11 / 101 ; Menace +20 % de PV par cran, plafond 5
+(`Menace.STEP`, `MAX`) ; verrous de PE `GearPower.DIFF_RATIO` 0 / 3,6 / 3,1, `Siege.POWER_RATIO` 0 / 4 / 3,4, `LEGEND_RATIO` 1,8 ;
+insignes de participation `Run.INSIGNIA_BASE` 25 ; enclume plafonnée à +12 (`Run.UPGRADE_CAP`) ; boss hors Survie
+`Dungeons.boss_hp` = 106 000 × 1,09^(niveau − 15) × [1 ; 3,4 ; 2,5] ; Survivant : paliers `Survivor.PALIERS` I à V,
+`palier_mult` 1 / 1,45 / 1,7 / 1,75 / 2,1 (`ModeRules`), boss 6 000 000 PV (`Survivor.BOSS_HP`), dégâts ×1,4 (`BOSS_ATK`).
+
+## Table des matières
+
+- **Partie A — Héros et combat**
+  - Toutes les classes d'Eden (60 jouables)
+  - Classes réglées à la main (6)
+  - Statistiques d'Eden
+  - Sorts complets
+  - Expertise, talents et certificats
+  - Grimoire et infobulles
+  - Auto-attaque des armes (refonte 0.1.127, demande du joueur du 14/10/2026)
+  - Effets déclenchés (procs)
+  - Maniabilité (hard to master)
+  - Saut, une mécanique de build
+  - Impact visuel
+  - Cartes de build (roguelite)
+  - Cartes de build (0.1.30)
+- **Partie B — La Survie (mode principal)**
+  - Boucle de jeu et Survie (refonte 0.1.123, décisions du joueur du 14/10/2026)
+  - Déroulement d'une run (10 minutes + rage)
+  - Pression constante (easy to play, hard to master)
+  - Apparition des monstres et puissance (passe P15, retour du joueur du 15/10)
+  - Pacte, géants et Menace (passe P12, 0.1.191, idée du joueur inspirée de Megabonk)
+  - Boss : PV fixes et rage du boss (passe P11, retour du joueur du 15/10)
+  - Zones et biomes (progression)
+  - Monnaies, coffres et zones (refonte 0.1.25)
+  - Sceaux du donjon
+  - Map générée
+  - Marchands ambulants (remplacent le village)
+  - Extraction
+  - Plafond de niveau par zone
+- **Partie C — Les autres activités**
+  - Survivant (mode à part, lots S1 à S8 de `conception/survivor/`, ouvert à tous depuis 0.1.210)
+  - Bibliothèque de boss et donjons à la carte (passe M2, nuit du 15/10)
+  - La Tour : types d'étage (passe M3, nuit du 15/10)
+  - Ruée des boss et Siège sur la bibliothèque (passe M6, nuit du 15/10)
+  - Battle royale (passe M1, 0.1.201 ; mode codé en 0.1.161, idée 9 de `conception/IDEES_EN_VRAC.md`)
+- **Partie D — Économie et progression**
+  - Joaillerie et forge (comme dans Eden)
+  - Équipement
+  - Sets d'équipement (façon Eden)
+  - Choix et coffres de récompense (lot U3 de la nuit du 15/10)
+  - La quête commune se voit (passe P6, 0.1.186)
+  - Quêtes (passe M5, retour du joueur : « le Défi de maîtrise ressemble à des quêtes journalières »)
+- **Partie E — Textes**
+  - Tout le jeu en français (passe P10, 0.1.190)
+- **Partie F — Archives : décisions remplacées (gardées pour mémoire, ne plus coder d'après elles)**
+  - Combos d'auto-attaque (3 coups, le 3e = coup final)
+  - Classe + arme (builds exotiques)
+  - Roguelite : héritage
+  - Étapes et sources (refonte 0.1.91, façon Megabonk)
+  - Méta-progression des cartes et classes (0.1.33)
+  - Équipement en run (0.1.34)
+  - Ordre de réalisation
+
+# Partie A — Héros et combat
 
 ## Toutes les classes d'Eden (60 jouables)
 
@@ -48,28 +118,6 @@ Types de compétences du moteur : `dash`, `spin`, `cone`, `fan`, `flurry`, `line
 `bolt` (projectile : volée, dispersion, perforation), `ground` (zone au sol à l'endroit visé),
 `heal` (soin en % des PV), `blink` (téléportation sans traverser les murs).
 Chaque classe : 9 compétences d'Eden adaptées, 2 passifs propres (icônes d'Eden) + passifs communs.
-
-## Combos d'auto-attaque (3 coups, le 3e = coup final)
-
-| Classe | Coup 1 | Coup 2 | Coup 3 |
-|---|---|---|---|
-| Samouraï | taille ascendante 100 % | taille descendante 115 % | salto avant 220 %, impact à la retombée, renverse 1 s |
-| Guerrier | hache 130 %, 3 cibles max | crochet 100 % : attire de 3 m, renverse 1 s | tour complet 180 % (4,2 m) |
-| Voleur | tourbillon 80 % | ruée de 4 m + tourbillon 100 % | bond de 5 m + fumigène 140 % : invisible 2 s, Évasion 4 s (40 % d'esquive) |
-| Chasseur | flèche 100 % | 3 flèches 70 % | pluie de flèches 150 % (zone 4 m à 12 m) |
-| Clerc | éclat sacré 90 % (zone 2,5 m) | marteau céleste 130 %, renverse 1 s | prière : soin 6 % + Régénération 3 s |
-| Magicien | explosion arcanique 100 % | puits gravitationnel 80 % : aspire vers le centre, ralentit | pas éthéré : repli de 6 m + invisible 2,5 s |
-
-Invisibilité : les monstres perdent ta trace ; attaquer ou lancer un sort la rompt.
-
-## Grimoire et infobulles
-
-- **Grimoire** (lobby et menu pause) : par classe, statistiques de base, passifs, combo coup par
-  coup, 9 compétences avec infobulle détaillée générée depuis les vraies valeurs (type de dégâts
-  physique / magique, % de l'attaque et valeur chiffrée, bonus de critique, cibles, effets et
-  durées, combos d'états) et tableau des rangs 1 → 5 (+20 % de dégâts, -8 % de recharge par rang).
-- **Cartes d'objet** : icône d'Eden, nom à la couleur de la rareté, qualité, stats du type de base
-  avec le bonus (qualité, amélioration) entre parenthèses, affixes en bleu, bonus de set.
 
 ## Statistiques d'Eden
 
@@ -144,6 +192,119 @@ Vitalité, Posture du chasseur, Désarmé (ne peut plus attaquer), Ange gardien 
   Forge, gemmes → la Tour, enchantements → le Siège). Moins équipées d'abord ; un clic ouvre l'équipement de la classe.
   Lobby : « N / 60 classes équipées » dans le pied de page (un clic ouvre le Registre).
 
+## Grimoire et infobulles
+
+- **Grimoire** (lobby et menu pause) : par classe, statistiques de base, passifs, combo coup par
+  coup, 9 compétences avec infobulle détaillée générée depuis les vraies valeurs (type de dégâts
+  physique / magique, % de l'attaque et valeur chiffrée, bonus de critique, cibles, effets et
+  durées, combos d'états) et tableau des rangs 1 → 5 (+20 % de dégâts, -8 % de recharge par rang).
+- **Cartes d'objet** : icône d'Eden, nom à la couleur de la rareté, qualité, stats du type de base
+  avec le bonus (qualité, amélioration) entre parenthèses, affixes en bleu, bonus de set.
+
+## Auto-attaque des armes (refonte 0.1.127, demande du joueur du 14/10/2026)
+
+- **Plus de combo** (ni coup final, saut, étourdissement ou attraction) : chaque type d'arme a
+  **une seule auto-attaque**, répétée, volontairement **faible en début de run**. Sa force vient
+  des **cartes** : chaque arme a une forme qui réagit à certaines statistiques (« Grandit avec »
+  dans le grimoire). Catalogue : `scripts/combat/weapon_attacks.gd` (`WeaponAttacks.SPECS`).
+- Formes : **taille** en arc (katana, hache, épée, espadon, faux, cestes, dagues), **estoc** en
+  ligne (rapière, lance : longueur × portée), **impact** au sol (marteau), **onde** autour du
+  héros (guitare), **projectiles** (arc, dagues de lancer, baguette, canon, grimoire, boule de
+  feu) et **incantation** (sceptre, bâton : zone au point visé après un délai réglé par la
+  **vitesse d'incantation**).
+- Cartes : **Projectile supplémentaire** (+1 flèche à l'arc, +1 zone à l'incantation, +1 frappe
+  pour la mêlée), **Perforation**, **Ricochet** (rebond vers un ennemi à 8 m), **Cadence**
+  (vitesse d'attaque), **Incantation vive** (vitesse d'incantation), **Main lourde** (dégâts de
+  l'auto-attaque), Lame large (zone), Allonge (portée), **Onde de choc** (chance à l'impact),
+  évolution **Tempête d'acier** (Main lourde + Projectile supplémentaire). Les effets « coup final »
+  des sets et trophées passent sur « impact d'une auto-attaque » (avec une chance).
+- **Deux variantes par arme** (0.1.128), aux synergies différentes : katana Iaï (critique) /
+  Lame du vent (projectile perçant) ; hache Taille large / Hache de jet (rebonds, saignement) ;
+  dagues Lacération / Dagues de lancer ; arc Flèche / Pluie de flèches (zones) ; sceptre Éclat
+  sacré / Orbe de lumière (rebonds, soin) ; bâton Météore / Boule de feu ; épée Taille /
+  Tourbillon ; rapière Estoc / Rafale d'estocs (3 frappes) ; espadon Taille lourde / Onde
+  tranchante (traverse tout) ; marteau Impact / Onde sismique ; baguette Trait d'ombre /
+  Malédiction (poison) ; cestes Directs / Poing de chi ; canon Obus / Mitraille (4 plombs) ;
+  lance Estoc / Lance de jet ; guitare Onde sonore / Notes vagabondes ; grimoire Pages / Glyphe
+  (ralentit) ; faux Faux / Salve. L'arme (son modèle d'Eden) décide de la variante. Le choix entre les deux
+  variantes au départ de la Survie n'existe plus depuis 0.1.170 (on part avec l'arme du hub) ; `RunDirector.start_weapon_cards`
+  ne sert plus qu'au Battle royale.
+- **Arme principale = arme de la classe**, toujours (la case n'accepte que ce type). Une arme
+  d'un autre type ne peut être que l'**arme secondaire** : son auto-attaque part **seule**, sans
+  animation, vers l'ennemi le plus proche, à **60 % des dégâts** et avec **50 % de ses stats
+  d'objet** ; elle ne compte pas pour les sets. En Survie, elle se **trouve en jeu** : le boss en
+  lâche toujours une, une élite parfois (40 % sans arme secondaire, 12 % avec) ; ramassée, elle
+  propose 3 armes d'autres types (variante au hasard, une relance). Les coffres d'arme ne donnent
+  que l'arme de la classe.
+- **Améliorations d'arme** (cartes de niveau « weapon_up », 8 niveaux par emplacement, l'arme
+  principale souvent, la secondaire si elle est portée) : **commune** = dégâts (+15 %) ; **rare** =
+  dégâts + un bonus mineur (critique +5 %, cadence +8 %, zone +10 %, portée +12 %, durée des
+  effets +1 s, soin, délai d'incantation -12 % ; chaque arme a ses bonus de prédilection, le
+  critique pour l'arc) ; **épique** = + un bonus majeur (+1 projectile ou frappe, +1 perforation,
+  +1 rebond, +25 % de zone, explosion plus large) ; **légendaire** = + l'**effet légendaire** de la
+  variante (« tous les N coups » renforcé, état infligé à chaque coup, explosion ou foudre à
+  l'impact), puis deux bonus mineurs et un majeur. Les améliorations restent sur l'emplacement
+  quand l'arme change (`Run.weapon_ups`).
+- **Trophées** (0.1.130, demande du joueur) : ils ne sont **plus de l'équipement** (ni case, ni
+  trophée de départ, ni butin, coffres de récompense ou marchand). C'est une **collection de la
+  run** (`Run.trophies`) : jusqu'à **12 trophées, tous d'effets différents, tous actifs**, perdus
+  en fin de run. **67 effets** (`Trophies.KINDS`), chacun porté par 5 trophées d'Eden ou plus
+  (`tools/rework_trophies.py`) ; un coffre de trophée propose 3 effets que la collection n'a pas
+  encore, chacun avec le trophée d'Eden du niveau le plus proche de la map (variantes de niveau :
+  `Trophies.level_mult`, plus forts aux dernières époques). Sources : 4 coffres de trophée par map
+  en Survie, sanctuaires des trophées ; collection pleine : des cartes à la place. Effet unique :
+  pas d'amélioration (`Items.is_unique`). Menu pause, page Run : la collection.
+- Duel : l'auto-attaque entre héros garde × `PvpCaps.BASIC_MULT`. L'adversaire scripté répète
+  l'auto-attaque de son arme (pause plus longue tous les 3 coups).
+
+## Effets déclenchés (procs)
+
+Un proc = déclencheur + chance + recharge interne + effet (`scripts/combat/procs.gd`).
+- Déclencheurs : impact, impact d'une compétence, critique, monstre tué, impact d'une auto-attaque,
+  esquive, annulation parfaite, dégâts subis, passage sous 30 % de PV.
+- Effets : foudre en chaîne, gel (immobilise, annule l'attaque annoncée ; le boss résiste),
+  ralenti, brûlure, électrocution (+15 % de dégâts subis), explosion, nova de givre, buffs
+  temporaires (Frénésie, Œil acéré, Hâte, Barrière, Fureur), soin, recharges réduites, Écho.
+- Réactions en chaîne limitées à 2 niveaux (une explosion qui tue peut en déclencher une autre).
+
+## Maniabilité (hard to master)
+
+- Saut **nerveux** par défaut : ~2 m, 0,5 s en l'air, chute plus rapide que la montée.
+  Relâcher Espace tôt = petit saut (~1,2 m). Saut encore possible juste après un rebord,
+  et un saut demandé juste avant l'atterrissage part tout seul.
+- Saut et esquive s'enchaînent **sans délai** :
+  - esquive → saut : garde l'élan (saut-esquive ~12 m) ;
+  - saut → **esquive aérienne** (une par saut, invulnérable, à l'horizontale) ;
+  - saut et esquive annulent l'attaque de base à tout moment, une compétence après son 1er impact.
+- Recharge de l'esquive au sol : 0,45 s (l'esquive aérienne n'en a pas).
+- **Compétences en l'air** : le héros reste suspendu pendant le sort (+10 % de dégâts).
+  Esquive → sort possible dès la moitié de l'esquive.
+- **Annulation parfaite** : esquiver dans les 0,28 s après l'impact d'une compétence →
+  « PARFAIT ! », esquive plus longue et gratuite (même en l'air), images rémanentes,
+  -25 % sur la recharge restante, et **Fluidité** +10 % de dégâts par palier (4 max, 3 s).
+  Enchaînement type : saut → sort → esquive parfaite → sort…
+  Esquiver avant l'impact annule la compétence, dont la recharge est rendue (« Sort rendu »).
+  Un anneau bleu bref annonce le moment à chaque impact de sort (jamais en Duel).
+- **Mémoire des touches** (0.1.133, joueur seulement, `Player._queue_*`) : jusqu'à 3 appuis de sorts
+  gardés et joués dans l'ordre ; plus de « Trop tôt » ; l'enchaînement part dès que la barre est
+  ouverte et que le dernier coup du sort en cours est porté ; un appui qui n'a pas pu partir s'efface
+  après 1,2 s ; un sort en recharge n'est gardé que s'il lui reste 0,3 s au plus ; esquive, saut et
+  étourdissement vident la file. Tenir la touche d'une case enchaîne toute la chaîne. Une zone au sol
+  visée à moins de 3 m d'un monstre se pose sur lui.
+- **Aide au combat** (0.1.134, `Settings.ASSIST`) : Manuel, Assisté (défaut : mémoire, maintien,
+  anneau), Détente (attaque, sorts et enchaînements automatiques), Bot (+ déplacement et cartes ; depuis
+  0.1.193 aussi l'équipement, l'arme secondaire, l'enclume et les trophées : `CardPicker.auto_pick`, meilleure rareté puis
+  note pondérée par le profil de la classe). Un choix de carte ouvert tient la pause, même au bout d'un fondu (arène du boss).
+  L'automatique ne fait plus d'annulation parfaite : c'est le geste du joueur. Étiquette au HUD,
+  ligne au bilan ; coupée dans les duels de la Tour et en Duel.
+
+## Saut, une mécanique de build
+
+Passifs (cartes de niveau) : **Saut aérien** (+1 saut en l'air, ×2), **Bond puissant**
+(+20 % de hauteur, ×2), **Frappe plongeante** (attaquer en l'air → plongeon : dégâts de zone
++ étourdissement, ×3), **Apesanteur** (saut flottant : -25 % de gravité, ×2 ; pour les builds
+aériens / mages), **Pas aérien** (+1 esquive en l'air, ×2).
+
 ## Impact visuel
 
 Arcs de lame épais et lumineux (cœur blanc, bloom), ondes de choc au sol avec poussière,
@@ -151,348 +312,32 @@ Arcs de lame épais et lumineux (cœur blanc, bloom), ondes de choc au sol avec 
 Salto du Samouraï : bond de ~4 m avec rotation complète, onde de choc à la retombée.
 Toupie du Guerrier : 3 tours réels du modèle, un coup par tour, annulable par esquive ou saut.
 
-## Monnaies, coffres et zones (refonte 0.1.25)
+## Cartes de build (roguelite)
 
-Deux boucles : les **monstres** donnent les ressources d'équipement (objets au sol, or,
-coffres de récompense) ; les **coffres de la carte, sanctuaires, élites et marchands**
-donnent les **cartes d'amélioration de la run** (on repart toujours niveau 1 : l'équipement,
-les trophées et les sorts se combinent aux cartes de la run, c'est la boucle rejouable).
+- En plus des passifs de classe, des cartes communes à toutes les classes (`scripts/core/boons.gd`)
+  avec une **rareté** (commune, rare, épique, légendaire) qui règle leur fréquence et leur couleur.
+- Stats de build : zone d'effet, portée, dégâts, dégâts contre élites, coup final, effets sur la
+  durée, exécution des monstres faibles, relances.
+- **Évolutions** (légendaires) : n'apparaissent qu'avec leurs cartes prérequises
+  (Lame statique → Seigneur de la tempête, Fil de givre → Éclat glacial, Braise + Cadavres
+  explosifs → Lame du phénix, Coup de grâce → Tempête d'acier).
+- **Relance** des cartes proposées : 1 par run, +1 par carte « Bonne étoile ».
+- Pistes suivantes : bannir une carte, cartes « malédiction » à fort bonus, reliques d'élite,
+  projectiles (lames fantômes), invocations, synergies entre classes.
 
-| Monnaie / ressource | Où l'obtenir | À quoi elle sert | Fin de run |
-|---|---|---|---|
-| **Or** (pièces) | monstres, vente d'objets aux marchands, sanctuaires des clés | coffres de la carte (prix qui monte à chaque coffre), marchands ambulants, amélioration +1 → +10 (seulement de l'or), fusion de gemmes, fabrication | **perdu** |
-| **Clés** | élites (1 chacune), sanctuaires des clés (2), marchands | ouvrir un coffre de la carte sans payer (utilisée en priorité) | **perdues** |
-| **Cristaux** | démonter un objet (selon la rareté) | réforger une stat bonus, polir la qualité ; fabrication | **gardés** |
-| **Fournitures** (gemmes, parchemins, ciseaux, pierres de chance / protection) | butin, coffres de la carte, marchands, coffres de forge et du joaillier | forge : sertir, enchanter, améliorer sans risque | réserve gardée (victoire, extraction), perdues si le héros tombe |
-| **Cartes d'amélioration** | passage de niveau, coffres de la carte, sanctuaires des cartes, gardiens d'élite, marchands | build de la run (sorts, améliorations, passifs) | la run seulement |
-| **Choix de trophée** (3 au choix) | sanctuaires des trophées, coffres de trophées | un trophée (buff sous condition) qui rejoint le sac / le coffre | gardé comme tout objet |
-| **Coffres de récompense** | boss du donjon (100 %), élites (20 %), monstres (0,5 %) | menu **Coffres** hors run : équipement (mythique / légendaire), forge, joaillier, set au choix, trophée au choix ; **seule source des mythiques et légendaires** | **jamais perdus** (rangés dès qu'on les ramasse) |
-| **Points d'expertise** | fin de run | maîtrise de la classe (talents, sorts, certificats) | gardés |
-| **Archive et trésors de collection** | mythiques / légendaires archivés, boss | bonus permanents, apparences | gardés |
+## Cartes de build (0.1.30)
 
-**Sur la carte** (512 × 512 m, refonte 0.1.90 façon Megabonk) : plus de **1 000 objets à casser**
-(jarres, caisses, tonneaux : or, un peu d'XP, parfois des soins, une fourniture ou une clé ; tas d'or
-ramassés en passant ; cristaux à briser en 3 coups : des gemmes), **24 lieux de décor** (ruines, tours de
-guet, arches, ossements, mines, campements, marchés), **8 plateaux** (et cuvettes) avec un trésor en haut,
-un réseau de sentiers ; **30 coffres** payants (or ou clé, +18 % à chaque coffre ouvert) en 3 qualités qui
-proposent **une pièce d'équipement au choix parmi 3** : coffre (spécial → épique), coffre ouvragé (rare →
-mythique, ×2,5), coffre doré (épique → légendaire, ×6, pilier de lumière) ; des **lieux à usage unique**
-(pilier de lumière) : 3 **enclumes** (+1 garanti sur une pièce portée), 2 **autels du scribe** (parchemin
-d'enchantement au choix), 3 **fontaines de vie**, 2 **pierres d'aimant** (toute l'XP et le butin), 1 **autel de
-cupidité** (pacte : +50 % d'or, de butin et d'insignes, monstres +25 % jusqu'à la fin de la carte), 2 **autels du géant**
-(un géant à vaincre : une carte, mais la Menace monte, voir « Pacte, géants et Menace »), 2 **stèles du défi** (3 élites : coffre de récompense
-mythique / légendaire et fournitures), 1 **autel de la fortune** (idée du joueur : pyramide de 8 étages,
-étages 1 à 7 de 8 à 2 cases dont une piégée ; encaisser ou monter, la case piégée fait tout perdre ; gains :
-or, clés, puis coffres de forge, joaillier, équipement, set, trophées ; sommet (1 chance sur 8) : une
-apparence dorée de la collection, `core/fortune.gd`). Ancien fonctionnement : 10 coffres à prix doublé, choix de cartes ; 10 **sanctuaires** à capturer (rester 14 s dans
-le cercle pendant que les monstres affluent ; hors du cercle la capture redescend) : cartes,
-trophées ou clés ; 3 **marchands ambulants** qui se promènent (cartes, clé, fournitures,
-équipement, rachat du butin, fabrication) ; les **élites** donnent une clé, les gardiens des
-camps un choix de cartes en plus de leur sceau. Le village n'existe plus (décor du menu
-seulement). La **Forge** (fiche d'un objet, Échap > Héros) : améliorer à l'or, réforger et
-polir aux cristaux, percer, sertir, enchanter, fusionner des gemmes.
+- Chaque carte proposée a une **rareté tirée** (commune ×1, rare ×1,5, épique ×2,2,
+  légendaire ×3, poids 60 / 27 / 10 / 3) qui multiplie ce qu'elle apporte ; un passif se
+  prend jusqu'à **10 fois** ; la carte affiche le total avant → après.
+- **Améliorations de sort** : dégâts (sorts d'attaque), soins (sorts de soin) ou durée des
+  effets (buffs), moins de recharge, et à partir de rare un bonus d'attribut au lancement.
+- **Orbes d'expérience** : l'expérience tombe sous le monstre ; zone de collecte (carte
+  Aimant), Rappel (tout revient), Érudit (+XP), Venin tenace (effets sur la durée).
+- Tout se règle dans le mode dev, page **Cartes** (Cards, Boons, DevCards ;
+  data/dev_edits.json -> cards, card_rules).
 
-## Joaillerie et forge (comme dans Eden)
-
-- **Emplacements de gemmes** : 2 max par objet, percés aux **ciseaux de sertissage**
-  (1er sûr, 2e à 70 % ; en cas d'échec les ciseaux se brisent, l'objet est intact).
-- **Gemmes** : Rubis (Force), Émeraude (Agilité), Saphir (Intelligence), Perle (Sagesse),
-  Topaze (Chance), Grenat (PV), Onyx (Défense), Améthyste (Critique) ; 5 qualités
-  (brut, taillé, pur, parfait, royal : ×1 / 2 / 3,5 / 5,5 / 8). Sertir dans un emplacement
-  occupé détruit l'ancienne gemme.
-- **Parchemins d'enchantement** (noms d'Eden) : Chant rapide, Violence, Optimisation,
-  Explosion musculaire (armes et gants) ; Légèreté, Compréhension, Rééducation, Récupération
-  (armures). Lv1 à Lv5 selon le niveau du butin, objet de niveau (Lv-1)×10 minimum ;
-  un enchantement par objet (le nouveau remplace l'ancien).
-- **Amélioration à risque** : réussite 100 % jusqu'à +3, puis 90 / 80 / 70 / 60 / 50 / 40 /
-  30 % jusqu'à +10. Chaque réussite : stats de base +10 % et **une stat aléatoire** (doublée
-  aux paliers +4, +6, +8, +10). Échec : matériaux perdus ; vers +6 et au-delà, l'objet perd un
-  niveau (et sa dernière stat aléatoire). **Pierre de chance** : +10 % (3 max par essai).
-  **Pierre de protection** : pas de perte de niveau. Coût : **de l'or seulement**.
-- Les fournitures tombent des monstres (4 %, 7 % en rage), des élites (35 %), des boss (3),
-  des coffres (1, meilleur en rage) et se vendent chez les marchands ambulants. Tout se fait
-  dans la **Forge** (fiche d'un objet pendant la run).
-
-### Matières et cristaux des activités (0.1.165, lot E1 de la nuit du 15/10)
-
-Un parchemin de fortification doit avoir un niveau au moins égal à celui de la pièce, et la Survie plafonne ses
-fournitures au niveau 35 : sans autre source, aucune pièce de niveau 40 à 100 ne pouvait passer +1. Les activités
-hors Survie donnent donc des **coffres de forge et du joaillier au niveau de l'activité** (`core/activity_loot.gd`),
-chacune avec son rôle :
-
-| Activité | Cristaux (Normal / Héroïque / Mythique) | Coffres de matières |
-|---|---|---|
-| Donjon | 30 / 90 / 170 | forge ×1 ; + joaillier en Héroïque ; forge ×2 + joaillier en Mythique (niveau du donjon : 14-60, 29-75, 90) |
-| Ruée des boss | 8 / 18 / 34 par boss (64 / 144 / 272 pour huit) | à 4 boss : forge ×1 ; à 8 : parchemins (×1 en Normal, ×2 sinon), pierres rares, gemmes (niveau du dernier boss : 60 / 75 / 90) |
-| Siège | 4 / 10 / 18 par vague + 10 / 40 / 110 boss tombé (30 / 90 / 200) | boss tombé : formules d'enchantement ×1 / 2 / 3, + forge en Héroïque et Mythique |
-| Tour | 3 / 4 / 5 / 6 par étage monté (Facile à Hardcore ; passe E6, avant 1 à 2,5) | gemmes tous les 10 étages, forge tous les 50 (niveau de l'étage) |
-
-- Un coffre porte une spécialité (`focus`) : « parchemins » (2-3 puissance, 2-4 garde), « pierres » (4 pierres rares
-  en plus), « gemmes » (3 gemmes d'un rang de plus), « formules » (3 formules au niveau le plus haut, 1 gemme).
-- **Cristaux = optimiser** : hors run, `Forge.GOLD_PER_CRYSTAL` passe de 25 à **125** (1 cristal pour 125 or). Une
-  pièce de niveau 85 à +10 coûte ≈ 750 cristaux si chaque tentative réussit, ≈ 1 300 avec des pierres de
-  protection : **4 à 5 clears Mythiques**. Un donjon Normal (30 cristaux) paie un +3 ou +4 sur une pièce de niveau 30.
-- Le démontage rend 1 à 3 cristaux (avant : 1 à 8) et un coffre de forge 2 à 3 au niveau 30 (avant : 3 à 9) : un
-  cristal vaut 5 fois plus d'or, ils restent un complément. Le coffre de trophées n'existe plus.
-
-### Maîtrise et insignes du JcJ, plans, panoplie des Esprits (lot E2 de la nuit du 15/10)
-
-- **Maîtrise partout** : formule commune `League.mastery_for(manches, palier, part)` = (40 + 20 × palier + 150 × manche
-  gagnée) × part. Ligue : inchangée (palier = rang visé, part 1). Panthéon : palier = rang du cerveau (1-6), part 1, à chaque
-  victoire. Duel libre, Arènes, Gantelet : palier = difficulté + 1, part 0,5 × difficulté (Facile 0,5 … Hardcore 1) ;
-  Gantelet +25 % par adversaire en plus ; duel libre contre un adversaire affaibli (préparation PV / dégâts < 1, adversaire
-  de l'éditeur) : rien. Battle royale : « manches » 2 pour la victoire, 1 pour le podium, palier = éliminations (4 au plus).
-  Les modes classés ignorent la préparation de l'adversaire du duel libre.
-- **Insignes du JcJ contre l'IA plafonnés au jour** (`League.win_insignia`, `royale_insignia`) : 1re victoire du jour de
-  chaque mode 50 (Arènes 2v2) / 75 (3v3) / 60 (Gantelet 1v2) / 90 (1v3), puis 10 ; Battle royale : la meilleure place
-  du jour paie la différence avec la précédente (110 / 70 / 45 / 28 / 18 / 11 / 7 / 4), + 3 par élimination. Une heure
-  de JcJ rapporte ≈ 180-190 insignes (première heure du jour ≈ 300-450 si on gagne tout), contre ≈ 360 (époque I) à
-  670 (époque IV) pour une heure de Survie gagnée.
-- **Arènes, Gantelet, Ligue (passe M7)** : la difficulté des héros IA se choisit (Facile à Hardcore, Difficile par défaut) ;
-  la 1re victoire du jour paie ses insignes × la difficulté rapportée à Difficile (Facile ≈ 60 %, Hardcore ≈ 118 %). Les alliés
-  ont la fiche d'un héros de leur classe × la difficulté, comme les adversaires (avant : PV d'entraînement × 3 à × 8) et la
-  même difficulté qu'eux ; les équipes sont de familles différentes ; les adversaires soignent et renforcent leur camp
-  comme les alliés (Arènes et Gantelet). Arènes : niveau au choix (10 par défaut), échelle 0,026 (2v2) / 0,024 (3v3),
-  acharnement dès 25 s / 20 s. **Arène piégée** (option) : passé 10 s, toutes les 8 s, une zone de feu par paire de héros
-  debout (rayon 3,2 m, 1,4 s d'annonce) retire 12 % des PV max à tout héros dedans, tous camps, esquive possible.
-  **Promotion de Ligue** : + 40 × rang insignes et un coffre d'apparence (Bronze et Argent rare, Or mythique, Platine légendaire),
-  une seule fois puisque le rang est gardé à vie. **Mort subite** (duel à l'arme et équipé, Arènes, Gantelet) : passé 90 s de
-  manche, l'acharnement double en plus toutes les 5 s (les duels avec un soigneur duraient 95 à 120 s).
-- **Plans** : le plan d'une zone tombe à coup sûr au 1er donjon terminé de chaque difficulté (Normal compris), sinon une
-  fois sur dix. **Fabrication** : les 9 emplacements (arme du type de la classe choisie, collier, anneau compris), modèle
-  d'Eden du niveau du donjon (et non plus de la zone choisie au lobby).
-- **Siège Normal** : aucune PE requise (Héroïque et Mythique : voir « Verrous de PE (passe P5) »).
-- **Panoplie des Esprits universelle** : chaque pièce est un modèle fixe, légendaire de niveau d'Eden 70, quelle que soit la
-  zone. Gagnée, elle s'ajoute à `seen_gear` (id `Pantheon.shop_id`) : l'Armurerie la revend (220 insignes) pour toutes
-  les classes ; battre le Champion y ouvre l'arme des Esprits des 17 types. **Éveil** : avec 6 pièces éveillées portées
-  (cerveau battu par les 5 familles), le palier 6 devient : +10 % dégâts, +5 % critique, esquive → hâte puis furie 4 s,
-  recharge 4 s (au lieu de 3 s / 8 s).
-
-### Insignes et maîtrise des 60 classes (lot E5 de la nuit du 15/10, `core/economy.gd`)
-
-- **Barème unique** (`Economy.INSIGNIA_PER_HOUR`, contrôlé par `test_e5`) : la Survie est la référence (≈ 360 insignes / h
-  gagnée en époque I, 670 en époque IV, formule `Economy.survival_insignia`) ; le JcJ contre l'IA reste en dessous (≈ 400
-  la 1re heure du jour, puis ≈ 60) ; Donjons, Ruée, Siège et Tour ne donnent pas d'insignes (cristaux et matières).
-- **Armurerie à paliers** (`Economy.armory_price`) : la 1re pièce d'un palier (même emplacement, type d'arme, niveau, rareté,
-  éveil) coûte le prix plein, les autres pièces de ce palier (autres panoplies ou attributs, utiles à d'autres classes)
-  15 %. Pièces des Esprits : jamais de remise. Kit d'une classe : 1,8 h (époque I) à 3,3-3,9 h ; collection d'une époque :
-  16 h (I), 28 h (II), ≈ 58 h (III-IV ; ≈ 33 h au rang héroïque 5) au lieu de 44 / 84 / 230 h
-  (`GearShopPage.price` = `Economy.armory_price`).
-- **Puits sobres** : coffres d'apparence et d'auras achetés avec des insignes (`Economy.SHOP_CHESTS` : rare 150 ×3,
-  mythique 300 ×2, légendaire 600 ×1, aura rare 400 ×1, aura légendaire 900 ×1 par semaine ; fermés quand la collection
-  de la rareté est complète) ; **leçon de maîtrise** : 200 insignes → 300 points pour une classe en retard, 3 par jour.
-  Boutons (passe P1) : Coffres > « Boutique » (une ligne par coffre, solde, restants de la semaine, « Reviens lundi » ou
-  « Collection complète » quand fermé) ; Héros > Classe : « Leçon · 200 insignes · 3 restantes » à droite de la barre de
-  maîtrise, visible seulement pour une classe en retard et hors run.
-- **Maîtrise des 60 classes** : rattrapage ×1,5 en Survie pour une classe à 3 niveaux ou plus sous la meilleure du compte
-  (jusqu'au niveau 20) ; 1re victoire de la classe à chaque époque : +600 / 900 / 1 200 / 1 500 ; **part de l'arbre** : 10 %
-  de toute maîtrise gagnée va aux voisines de l'arbre (classe d'origine et classes qui en descendent) débloquées et plus
-  basses (`Profile.add_expertise`, `last_shared`) ; le Défi de maîtrise propose de préférence des classes en retard. Une classe
-  jouée après la première monte au niveau 20 en ≈ 3,6 Survies gagnées au lieu de 6,6 (contrats compris).
-
-### Atelier (lot U5 de la nuit du 15/10 : Armurerie, Fabrication, Forge)
-
-- **Bourse commune** (`ui/workshop_purse.gd`) dans l'en-tête de l'Atelier : insignes (acquérir) et cristaux (optimiser).
-- **Armurerie** (`ui/gear_shop_page.gd`) : tout le catalogue des coffres d'emplacement (`Completion.armory_ids()` : pièce → première
-  époque qui la propose), compteur « découvertes / total ». Statuts : à acheter (défaut), possédées (✓), à découvrir (case « ? » avec
-  emplacement et niveau, époque où la trouver dans le détail : jamais le nom), toutes. Filtres : emplacement, époque, classe (les armes de
-  son type seulement). 72 pièces par page. Le détail compare avec la pièce portée : verdict, PE et trois écarts au plus. Après un achat,
-  la pièce reste choisie (un double clic n'achète pas deux fois).
-- **Fabrication** (`ui/fabrication_page.gd`) : une carte par donjon ; avec le plan : emplacement + « Fabriquer · N cristaux » (ce qu'il
-  manque en rouge) ; sans plan : « Il tombe en terminant ce donjon » ou la condition d'ouverture ; sans aucun plan : bandeau d'état vide.
-- **Forge** (`ui/forge_bench.gd`) : un panneau, six établis en haut, la pièce et son tableau **avant → après** (stats principales, qualité,
-  cristaux), le coût en cristaux (rouge s'il en manque), la barre de verdict compacte et l'action principale en bas. Prix en mots
-  (`MerchantPages.price_words`). La fusion de gemmes garde l'ancien taux (`Forge.FUSE_GOLD_PER_CRYSTAL` 25, `Forge.fuse_price` : 2 à 7
-  cristaux hors run) : le taux de 125 la rendait presque gratuite.
-- **Marchand de run** : plus de phrases d'aide (une ligne sur l'or perdu en fin de run), plus de page de fabrication de mythiques.
-
-## Classe + arme (builds exotiques)
-
-- On choisit **une classe** (sorts, passifs, talents, attributs) puis **une arme**, au choix
-  parmi 6 types : katana, hache, dague, arc, sceptre, bâton (lobby, ou l'arme équipée).
-- **Le combo d'auto-attaque, la posture, la portée et le type de dégâts du combo suivent
-  l'arme** (hache = combo du Guerrier, bâton = combo magique du Magicien…) ; les sorts restent
-  ceux de la classe : magicien à la hache, guerrier au bâton, voleur à l'arc…
-- Les stats de base de l'arme dépendent de son type (hache surtout physique, bâton surtout
-  magique) : un build exotique doit composer avec ses attributs.
-- Le butin d'armes suit l'arme en main ; choisir un type dans le lobby équipe la meilleure arme
-  de ce type de l'héritage (ou une arme commune neuve).
-
-## Extraction
-
-- Touche **X** (modifiable) ou menu pause : **10 s à survivre**, une vague encercle aussitôt le
-  héros. Mourir annule l'extraction.
-- Réussite : **tout l'équipement et l'inventaire rejoignent l'héritage** (améliorations,
-  gemmes, enchantements compris), l'équipement porté devient l'équipement de départ ;
-  +60 d'expertise. L'or, les matériaux et les fournitures restent perdus, et aucune zone n'est
-  débloquée (il faut battre le boss pour ça).
-- Victoire contre le boss : 1 objet gardé au choix (inchangé) ; défaite ou abandon : idem.
-
-## Zones et biomes (progression)
-
-Données : `tools/build_biomes.py` lit une map d'Eden par biome (textures du sol, décors les plus
-fréquents, monstres des camps, élites, boss) ; le terrain reste généré.
-
-| Zone | Map d'Eden | Héros au départ | Ambiance |
-|---|---|---|---|
-| Limestone Mtn. | s002 | niv. 1 | prairies, roches calcaires |
-| Rainbowfall Forest | s004 | niv. 4 | forêt luxuriante, brume verte |
-| Beluga Bay | s006 | niv. 7 | côte, palmiers, sable |
-| Wetlands | s007 | niv. 10 | marais sombre, brouillard |
-| Avila Volcano | s009 | niv. 13 | roche noire, arbres morts, ciel rougeâtre |
-| Arid Wilds | s011 | niv. 16 | désert de sable |
-| Delphi Forest | s012 | niv. 19 | forêt volcanique, lys, griffons, foreuses de Pross |
-| Blackflame Peak | s013 | niv. 22 | pic de roche noire, lave, culte de Mara |
-
-### Salles de boss (un vrai boss nommé d'Eden par zone)
-
-| Zone | Boss | Salle | Mécaniques |
-|---|---|---|---|
-| Limestone | Mori, roi des champignons | piliers | renforts à 75/50/25 %, flaques de poison |
-| Rainbowfall | Angela, sorcière du marais noir | marais (mares de poison) | se dédouble (illusions), flaques d'ombre, rayons en croix |
-| Beluga | Ulicul, ogre sauvage | givre | 3 ondes de choc à sauter, renforts |
-| Wetlands | Doubledoor, hôte de la magie | cristaux (piliers, foudre) | bouclier : 3 totems à détruire, rayons, poison |
-| Avila | Miller, bête de flammes géante | lave | pluie de météores (laisse de la lave), ondes de choc |
-| Arid | Abby, reine des insectes | piliers | renforts, tourbillon qui attire, poison |
-| Delphi | Pross, le savant fou (+ Expérience 627) | cristaux | compagnon, rayons, renforts, météores |
-| Blackflame | Wushu, roi sorcier (+ Jiku) | lave | compagnon, météores, illusions, tourbillon |
-
-Données : `tools/build_biomes.py` (DUNGEONS) ; mécaniques : `scripts/ai/boss_brain.gd`
-(bibliothèque : adds, puddles, meteors, stomp, clones, totems, lasers, pet, vortex, reflect),
-dangers au sol : `scripts/combat/hazard.gd` ; agencements : `ProcMap.generate_arena`.
-Les costumes d'Eden tombent sur les boss (1 chance sur 4, 1 sur 2 s'il est enragé).
-
-- Une zone se **débloque en battant le boss de la précédente** (choix dans le lobby).
-- Le héros commence la run au niveau de la zone ; les monstres d'Eden sont ramenés au niveau
-  de la run (dans les deux sens), +½ niveau par palier de zone ; butin plafonné plus haut.
-- Le roster de la zone se dévoile avec la progression (monstres les plus forts en fin de run).
-- « Nouvelle partie » reverrouille les zones.
-
-## Bibliothèque de boss et donjons à la carte (passe M2, nuit du 15/10)
-
-Vision du joueur : « farmer des donjons DE SON CHOIX pour affronter les boss qui donnent les pièces dont on a besoin ; un ÉNORME
-pool de boss aux mécaniques différentes, réutilisables partout (Tour, Ruée, Siège, Survie, Survivant) ».
-
-- **Bibliothèque** (`core/boss_library.gd`, données `data/bosses.json`) : **48 boss**, 6 par zone (le boss d'origine de la zone
-  + 5 élites nommées d'Eden promues boss). Un boss = un monstre (modèle, animations), un nom et un titre, **2 à 4 briques** de
-  mécaniques, un jeu d'attaques de base (`kit`), des PV × `hp` sur les PV fixes du palier (passe P11 : `Dungeons.boss_hp`,
-  jamais d'après le héros), une zone (décor, niveau, monstres des salles) et un **thème de butin** (panoplie + 2 emplacements).
-- **Briques** (`ai/boss_bricks.gd`, `BossBricks.DEFS`) : une mécanique = une fonction + des paramètres, **aucun code propre à un
-  boss**. 29 briques en 10 familles : zones au sol (flaques, météores, rayons, damier, balayage), invocations (renforts,
-  compagnon, illusions, nuée, tourelles), fureur (rage à 30 %, impatience au fil du temps), boucliers (totems, barrière à briser
-  sinon il se soigne, cristaux de soin), charges (ruée, bond), projectiles (spirale, couronne d'orbes, éventail), arène qui se
-  resserre, placement (cercle sûr, tourbillon, bourrasque, regard : passer dans son dos, marque qui suit puis se fige, saut
-  d'ombre), riposte (miroir), ondes à sauter. Sortes : périodique (`every`, × 0,7 en 2e phase), seuil de PV (`at`), à
-  l'apparition (`start`), autonome (`passive`). Les 9 mécaniques des boss de zone d'avant sont ces briques avec leurs paramètres
-  d'origine : la Survie ne change pas.
-- **Lisibilité, jamais de mort en un coup** : toute attaque est annoncée au sol (zone rouge qui se remplit, cercle sûr vert, mur
-  rouge de l'arène, orbes visibles) ; un coup d'un boss de la bibliothèque retire au plus **40 %** des PV max du héros
-  (`BossLibrary.HIT_CAP`), une zone persistante au plus le tiers par seconde. Annonces courtes au centre de l'écran.
-- **Paliers** : Normal / Héroïque / Mythique = PV fixes de la difficulté, mécaniques plus fréquentes (× 1 / 0,85 / 0,72) ; en
-  Mythique l'Impatience s'ajoute à tout boss qui ne l'a pas.
-- **Donjons à la carte** : un donjon par boss (`Dungeons.catalog`), dans sa zone (mêmes niveaux, difficultés, PE requise et
-  ouverture que le donjon de la zone). Salles : monstres, élites, **lieutenant** (un autre boss de la zone, une seule mécanique,
-  25 % des PV du boss), boss ; 44 + 6 × difficulté monstres par salle (+8 avec le lieutenant), PV × 3,5, élites 5 + difficulté
-  (pilote : donjon fini en 2 à 6 min, joueur estimé 6 à 10 min ; voir `R_M2.md`). **Farmable à volonté**. Butin : le coffre de set propose **3 pièces de ses 2 emplacements** (le 1er,
-  le 2e, puis le 1er), à **sa panoplie**, mythiques ou légendaires (selon la PE, comme avant), et en Mythique une pièce d'armure
-  sur quatre est **éveillée** quand le modèle existe ; jamais une pièce déjà possédée. Plans, cristaux et coffres de matières
-  (lot E1) inchangés. Chaque panoplie s'obtient aux **9 emplacements** sur ses 6 donjons ; record par boss (`dgb_<boss>_<diff>`).
-- **Page Donjons** (`ui/dungeon_page.gd`) : en haut le donjon choisi (boss, mécaniques avec leur conseil en infobulle, pièces,
-  victoires) et sa difficulté (jauge de PE) ; dessous « Je cherche » : filtres **pièce**, **panoplie**, **mécanique**, puis la liste
-  (ouverts d'abord, fermés grisés avec leur condition) ; alliés IA ; « Entrer : <donjon> » épinglé. « Rejouer » relance le même boss.
-- **Pas encore** : la Survie et le Survivant gardent leurs boss ; ils passeront par
-  `BossLibrary.spawn(id, palier, {director, pos, level, …})` (API dans `conception/nuit_15_10/R_M2.md`). La Tour (M3), la Ruée et
-  le Siège (M6) y passent.
-
-## Ruée des boss et Siège sur la bibliothèque (passe M6, nuit du 15/10)
-
-Retour du joueur : le Siège Normal fait, un Mythique tenté « vraiment dur, logique : je n'avais pas la puissance ». La difficulté
-doit se lire avant de lancer ; la Ruée et le Siège puisent dans la bibliothèque de boss.
-
-- **Ruée** (`core/rush.gd`, `core/rush_director.gd`) : **8 boss tirés** dans la bibliothèque, un par zone dans l'ordre des zones
-  (niveau croissant en Normal et Héroïque ; en Mythique, tous niveau 90, PV × 0,8 → × 1,2 du 1er au 8e). Le tirage varie les
-  mécaniques (deux boss qui se suivent ne partagent pas de famille quand la zone le permet ; les boss du tirage précédent sont évités)
-  et se fait à partir d'une **graine affichée** (« tirage n° 4821 ») : il reste le même tant que la Ruée n'est pas vaincue (on
-  réessaie les mêmes boss), « Nouveau tirage » en donne un autre, une Ruée vaincue aussi. PV fixes du palier (P11, × 0,6), sans
-  renforts génériques ; carte et 50 % des PV entre deux boss. HUD : « Boss 3/8 », sous-ligne « Ensuite : Buster ».
-- **Modificateurs de la Ruée** (au choix, gardés) : *Sans répit* (aucun soin entre deux boss, cristaux +30 %), *Boss enragés*
-  (dégâts × 1,25, mécaniques × 0,85 d'intervalle, +40 %), *À l'aveugle* (boss à venir cachés sur la page et au HUD, +15 %).
-  Récompenses inchangées sinon (lot E1 : cristaux, parchemins, pierres et gemmes du niveau du dernier boss, coffre d'équipement,
-  apparence la 1re fois, titre), cristaux × (1 + bonus). Bilan : les boss vaincus et les modificateurs.
-- **Siège** : le **boss du jour** de la zone (un des 6 boss de la bibliothèque, change chaque jour, PV × 3,2 d'un boss de donjon)
-  et un **lieutenant** par vague d'élites (vagues 3 et 5 : un autre boss de la zone, une mécanique, 0,4 × les PV d'un boss de
-  donjon). Vagues en **escouades par rôle** (composant de P15 : compositions débloquées vague après vague, jamais plus de 3 fois la
-  même espèce, tireurs et soigneurs en retrait) qui arrivent du bord de l'arène à l'angle d'or, arrivée dans le dos signalée ; un
-  **événement annoncé** par vague (tenaille, encerclement aux cercles orange, ruée d'essaim, élite escortée, tenaille : les vagues
-  d'élites ont un événement léger, leur lieutenant fait le pic).
-  Alliés IA en comportement d'équipe (M7 : ils lisent les zones rouges, se replient sous 30 % de PV) — aussi en Donjon et Ruée.
-- **Objectifs du Siège** (une étoile chacun, retenues par zone et difficulté) : *Le boss tombe*, *Personne ne tombe* (aucun allié
-  à terre avant la chute du boss ; sous-ligne du HUD « alliés 2/2 »), *Avant sa fureur* ; les deux derniers ajoutent chacun
-  +25 % de cristaux au siège.
-- **Lisibilité de la difficulté** (`ui/difficulty_panel.gd`, pages Ruée et Siège) : « PE requise · la tienne » (ou « PE
-  conseillée » en Normal) sur une jauge, une **estimation** — *Facile* (≥ 1,35 × la PE conseillée), *Équilibré* (≥ 0,95),
-  *Difficile* (≥ 0,7), *Hors de portée* —, les **récompenses** de la difficulté et, si elle est trop haute, un avertissement d'une
-  phrase. La difficulté reste permise (mode dev compris). PE conseillée = `ADVISED` × PE attendue du niveau (au moins la requise),
-  mesurée au pilote (`tools/m6_run.tscn`, `R_M6.md`) : Ruée [1,3 ; 3,7 ; 3,4], Siège [1,3 ; 4,1 ; 3,6] — « Équilibré » avec
-  l'équipement de l'époque II gagnée en Normal, au verrou de PE en Héroïque, avec l'équipement complet optimisé en Mythique (le
-  verrou seul y est « Difficile »). Verrous et PV inchangés (le Normal passe à l'ouverture, l'Héroïque au verrou). Ruée au pilote :
-  10 à 15 min en « Équilibré », 5 min en « Facile », 30 à 40 min en « Hors de portée ».
-
-## La Tour : types d'étage (passe M3, nuit du 15/10)
-
-Retour du joueur : « les petites vagues de monstres étaient ennuyeuses : des élites au minimum à chaque étage, des étages
-de boss, des étages d'"ombres" (une IA qui joue une classe) ».
-
-- **Plan par bloc de 10 étages** (le palier de reprise), fixe pour un bloc donné (`Tower.block_plan`, graine 2026) : place 9
-  **halte**, place 10 **boss** ; bloc 1 : **duellistes** aux étages 1, 4 et 7 (ils ouvrent le Duel libre puis la Ligue,
-  inchangé) et élites au 5 ; blocs suivants : **2 ombres** (une par moitié, jamais côte à côte), **1 étage d'élites**, **1 étage
-  maudit** à partir du bloc 3, le reste en **monstres**. Sur 200 étages : 81 de monstres, 20 d'élites, 18 maudits, 38 ombres,
-  3 duellistes, 20 haltes, 20 boss. La page des étages et la fiche montrent le type (icône, légende avec ce qu'il donne).
-- **Monstres** : 3 espèces de la zone (4 dès l'étage 40) de rôles différents (`Tower.floor_species` ; rôles et leurs stats du
-  composant de P15, `SpawnDirector.role_of` / `apply_role` : tireur,
-  chargeur, colosse, essaim, soigneur, mêlée), apparues à tour de rôle en groupes du même côté ; **au moins une élite** à chaque étage
-  (une de plus tous les 70 étages), avec **une mécanique propre** : une brique de `BossBricks` (11 au choix : flaques, météores,
-  bond, ruée, éventail, couronne d'orbes, ondes, marque, barrière, rage, saut d'ombre), annoncée au sol, coups plafonnés à
-  25 % des PV, nom « Yack · Bond », escorte de 2 monstres ; les élites d'un étage lancent leur mécanique à 3,5 s d'écart.
-  20 + 0,3 × étage monstres (70 au plus), 10 à 24 en même temps.
-- **Élites** : 3 élites à mécanique (une de plus tous les 50 étages), moitié moins de monstres. **Maudit** : Menace (PV × 1,6),
-  Rage (monstres enragés) ou Horde (× 1,8 monstres) ; coffre rare au moins et 4 cristaux × (difficulté + 1) en plus.
-- **Ombres** (`ClassRival`, le moteur des duellistes) : une classe de la liste (les 60, celles de base d'abord) ; **une sur
-  quatre est « ton ombre »** (ta classe, les sorts de ton préréglage, ton équipement) ; en Hardcore dès l'étage 100 (Difficile
-  dès le 150), une sur deux est **éveillée** : un cerveau d'IA figé (`pantheon_<palier>.json`) dans un héros équipé comme l'ombre
-  scriptée de l'étage (PV × 0,5 des siens, soins moitié moins : il esquive et se soigne mieux), repli sur l'IA scriptée s'il
-  manque. IA un cran plus dure aux étages 80 et 150 ; PV × 3 et dégâts × 1,8 de ceux d'un duelliste (dont les PV doublent : 0,9,
-  ils tombaient en 8 s au pilote). Nom « Ombre · Mage »,
-  barre de vie, coups annoncés au sol, aide limitée à « Assisté » comme en duel.
-- **Boss** (`Tower.boss_id`) : un des 6 boss de la zone de l'étage (bibliothèque M2), jamais le même deux fois dans la zone ;
-  le dernier boss de chaque zone est son **gardien** (le boss d'origine). PV **fixes** (P11) : boss de donjon Normal de son
-  niveau × 0,8 × `BOSS_CURVE` (1 jusqu'à l'étage 50, 5 au 70, 5,5 au 100, 9 au 130, 7 au 200 : l'équipement attendu monte)
-  × difficulté ; palier des mécaniques 0 / 1 / 2 selon l'étage (± 1 en Facile / Hardcore). Pas de renforts génériques.
-  Monstres, élites et ombres des étages hauts : PV × √courbe, dégâts × courbe^0,6.
-- **Halte** : 60 % des PV rendus, une carte, puis le coffre ; aucun combat. Entre deux étages : 50 % des PV rendus (avant 35 %).
-- Inchangés : une seule vie, reprise par paliers de 10 (kit complet + cartes), 4 difficultés, cristaux 3 à 6 par étage, gemmes
-  tous les 10, forge tous les 50, apparences aux étages 50 / 100 / 150 / 200, maîtrise. Bilan : héros battus, boss vaincus,
-  cristaux des étages maudits. Mesures : `tools/tower_run.tscn` (rapport `conception/nuit_15_10/R_M3.md`).
-- **Équilibre entre classes (passe M8, `R_M8.md`)** : la Tour se joue seul ; les classes dont le kit soigne, protège ou
-  renforce y tuaient un boss deux à trois fois moins vite qu'un mage. **Dégâts × un facteur par classe** dans la Tour
-  seulement (`TowerBalance.solo_mult`, `data/tower_solo.json`, jamais en Donjon, Ruée ou Siège) : temps pour tuer mesuré des
-  60 classes (boss des étages 30, 50 et 100, sans mécaniques, équipement attendu), à son pire boss, ramené à 1,1 fois la
-  médiane ; jamais de baisse, au plus × 1,8 (33 classes aidées, Barde × 1,54). Régénérer : `tools/m8_matrix.py solo`.
-  **Coups de boss plafonnés à 25 % des PV max** dans la Tour (`Tower.BOSS_HIT_CAP`, 40 % ailleurs) : une seule vie, seul,
-  et le corps à corps passe le combat dans les zones du boss. `BOSS_FLOOR_ADJ` : étage 100 × 0,7 (médiane 2 min 47 au
-  pilote, deux fois les boss voisins), étage 150 × 2,5 (13 s à 2 min 20 avec l'équipement de l'époque IV, médiane 43 s).
-  Un boss sorti de la salle (il tombait sans fin, intouchable) revient au centre (`TowerDirector._rescue_boss`, aussi en
-  Donjon, Ruée et Siège). Bornes vérifiées par `test_m8` (écart max / min ≤ 2,5 aux boss de référence).
-
-## Roguelite : héritage
-
-- Chaque run **repart de zéro** : pas d'or, pas de matériaux, pas de butin.
-- On part avec son **équipement de départ**, choisi dans le lobby parmi l'**héritage**
-  (katana commun au tout début).
-- À la fin de la run (victoire, défaite ou abandon), on **garde 1 objet** au choix, avec son
-  amélioration (+8 reste +8). Une pièce d'héritage portée pendant la run est mise à jour.
-- Lobby : **Nouvelle partie** efface l'héritage et les statistiques (2 clics pour confirmer).
-- Les 3 premières minutes, les monstres montent de 60 % à 100 % de leurs PV et dégâts.
+# Partie B — La Survie (mode principal)
 
 ## Boucle de jeu et Survie (refonte 0.1.123, décisions du joueur du 14/10/2026)
 
@@ -500,7 +345,7 @@ de boss, des étages d'"ombres" (une IA qui joue une classe) ».
 certificats et passifs, les points de maîtrise (maîtrise de classe, déjà en place) ; les
 cosmétiques ; l'équipement **pour la collection et le JcJ non normalisé** (achat au hub).
 
-**En Survie, on part avec l'équipement du hub (0.1.164, décision du joueur du 15/10 : elle remplace celle de
+**En Survie, on part avec l'équipement du hub (0.1.170, lot N1 ; numéroté « 0.1.164 » dans les rapports, numéro jamais publié ; décision du joueur du 15/10 : elle remplace celle de
 0.1.123 « on part sans équipement »)** : le préréglage actif de la classe (pièces, +N, gemmes, enchantements,
 panoplies, arme secondaire) est porté dès la première seconde ; toute l'optimisation (Armurerie, Atelier :
 forge, gemmes, enchantements) sert donc la Survie et la progression entre les runs est réelle. La run travaille
@@ -539,11 +384,12 @@ bottes, cape (2 coffres depuis 0.1.179, pris aux gants et aux bottes : les 9 emp
 en Survie ; une cape pèse ≈ 1/9 de la PE), bijoux (bague, collier, boucles), trophée, carte de sort, carte de passif, carte de
 certificat. L'enclume vise aussi la cape. Un coffre d'équipement propose **3 pièces au hasard** parmi toutes les pièces de son
 emplacement au palier et à la rareté de la map (au palier 23 : 6 panoplies), avec **une relance
-par coffre**. Les armes sont de tous les types : changer d'arme change le combo d'auto-attaque.
-Départ : l'arme du hub (plus de choix d'arme au départ depuis 0.1.164). Les monstres ne lâchent plus
+par coffre**. Le coffre d'arme propose l'arme principale, toujours du type de la classe (`SlotChests.offer`, `Profile.main_weapon_type`) ;
+les autres types viennent en arme secondaire (voir « Auto-attaque des armes »).
+Départ : l'arme du hub (plus de choix d'arme au départ depuis 0.1.170). Les monstres ne lâchent plus
 d'équipement (or, expérience, fournitures, clés).
 
-**Enclume, une fois par map** (remaniée en 0.1.164) : on choisit un emplacement, il reçoit un tirage pondéré de
+**Enclume, une fois par map** (remaniée en 0.1.170) : on choisit un emplacement, il reçoit un tirage pondéré de
 +0 à +7 (le plus souvent +2 à +4, moyenne ≈ +3,2), **ajouté au +N de la pièce portée** dans cet emplacement (celui du
 hub), quelle qu'elle soit, pour toute la run ; **le total est plafonné à +12** (`Run.UPGRADE_CAP`, ×2,2 sur les
 stats de base). Elle rattrape donc surtout les pièces peu améliorées (une pièce +10 gagne au plus +2), sans faire
@@ -555,7 +401,7 @@ les cartes de sort ont leur propre plafond de rang ; elles s'ajoutent aux stats 
 passif, certificat) permettent de viser un type.
 
 **Hub, collection** : une pièce choisie au moins une fois dans un coffre de Survie devient
-achetable au hub (collection, JcJ), avec une monnaie gagnée en run selon la distance parcourue.
+achetable au hub (Atelier > Armurerie : collection, JcJ), avec des insignes gagnés en run (`Economy.survival_insignia`).
 
 **Les 17 types d'arme (0.1.179, lot E4)** : l'arme principale est du type de la classe, l'arme secondaire est libre.
 Décision : **une arme choisie en Survie** (coffre d'arme ou arme secondaire) fait **découvrir les armes de tous les
@@ -626,149 +472,30 @@ l'époque II avec un équipement d'époque I à +10.
 - **Tour** : 3 / 4 / 5 / 6 cristaux par étage (avant 1 à 2,5, `ActivityLoot.TOWER_PER_FLOOR`) : entre l'époque I gagnée et les
   Donjons (époque II), c'est la seule source de cristaux (≈ 120 / h en Normal, sous un Donjon Normal à 180).
 
-## Battle royale (passe M1, 0.1.201 ; mode codé en 0.1.161, idée 9 de `conception/IDEES_EN_VRAC.md`)
+## Déroulement d'une run (10 minutes + rage)
 
-- 8 héros nus au niveau 1, chacun pour soi, dernier debout. **9 min 50** d'anneau en 5 resserrements (`Royale.PHASES` :
-  rayons 190 / 130 / 80 / 42 / 14 m, dégâts hors anneau 2 → 20 % des PV par seconde), puis 30 s de mort subite.
-- Niveaux : coffres (0,55 / 0,85 / 1,3 / largage 2 niveaux), objets cassés (0,03, cristal 0,1), élimination (1 niveau et
-  25 % des PV). Les héros scriptés gagnent exactement la même chose que le joueur.
-- **Réapprovisionnement** : 3 coffres par héros en vie (22 au plus) tombent dans l'anneau à 50 s puis à chaque resserrement et à chaque nouvel anneau,
-  plus souvent dorés à chaque vague. **Largage** : à chaque resserrement sauf le dernier, un coffre de 4e qualité (rareté 4-5,
-  carte sûre) tombe 15 s plus tard dans le prochain anneau (pilier doré, étoile sur la carte, visible de partout).
-- **Mis à prix** : le héros qui compte le plus d'éliminations (3 au moins) est visible de tous sur la carte ; l'éliminer
-  rapporte un niveau de plus et une potion.
-- Héros scriptés (`RoyaleDirector.BRAIN`, par difficulté) : trajet à la vitesse d'un joueur qui esquive (Hardcore ≈ 11 m/s),
-  coffres choisis par valeur / trajet, attaque seulement avec l'avantage (rapport PV × frappe, exigence qui baisse à chaque
-  anneau), fuite s'il est dépassé et a de quoi boire, traque des affaiblis à partir du 3e anneau.
-- Duel entre héros : échelle des dégâts 0,04 (`ModeRules.ROYALE`).
-- Éliminé : on regarde la fin (spectateur) ou on ouvre le bilan ; la place est fixée à la mort.
-
-## Survivant (mode à part, lots S1 à S8 de `conception/survivor/`, ouvert à tous depuis 0.1.210)
-
-Spécification : `conception/survivor/SPEC.md` (sa tête « Décisions finales » prime sur `DECISIONS_JOUEUR.md` et sur le corps). Une run pure façon Vampire
-Survivors : 20 minutes sur une seule carte, boss à 20:00, tout le build (arme, pièces, sorts) se gagne aux cartes de niveau.
-Mode « pour s'amuser » : **aucun lien avec la progression du compte** (ni équipement du hub, ni maîtrise, ni insignes, ni
-découvertes, ni verrou) ; seules les classes et les apparences débloquées comptent ; récompense de fin : des coffres
-d'apparence (lot S6). Socle (S1, 0.1.194) :
-- Lancement (`Survivor.start`) : héros niveau 1 sans arme ni pièce (seulement les potions de départ), zone au choix parmi
-  les 8 décors de la Survie (aucune n'est plus dure), époque I carte 1 pour les règles communes ; `Run.survival` reste vrai
-  (socle de la Survie), `Run.survivor` et `Survivor.active` disent le mode (`Modes.current() == "survivor"`).
-- **Le hub n'est jamais modifié** : équipement copié puis remis (comme la Survie), réserve de fournitures laissée au hub, et
-  toute la progression du compte (`Survivor.HUB_KEYS`) photographiée au départ, écrite telle quelle par les sauvegardes faites
-  en pleine run, remise à la fin (avant les récompenses du mode).
-- Déjà propre au mode : pas de rage de carte, une seule carte (le boss vaincu termine la run), ni autel du scribe ni autel de
-  la fortune, sanctuaires « trophée » changés en cartes, marchand sans fournitures, ni archive ni auras dans les stats,
-  expérience ×2 au niveau 1 → ×1,15 au niveau 10, puissance des pièces « Survivant » = niveau du héros (90 au plus).
-- Règles chiffrées : profil `survivor` de `ModeRules` (modifiable en mode dev). **Visible et jouable par tous dès le départ**
-  (`Survivor.READY`, lot S8) : activité de la rangée Aventure (2e, illustration provisoire `assets/ui/activities/survivor.jpg`),
-  quêtes du Survivant tirables, nouveauté « Survivant » et entrée au Guide (chapitre Modes).
-- **Pièces et arme** (S2, `core/survivor_pool.gd`, `core/survivor_gear.gd`) : pool = les 13 sets d'Eden de niveau 90 (tête,
-  torse, jambes, gants, bottes ; 5 en plates, 5 en cuir, 3 en tissu), plus les pièces de niveau 90 hors set pour la cape, le
-  collier et la bague ; armes des 17 types (modèles de niveau 90). Stats d'origine de la pièce, puissance = niveau du héros (90
-  au plus) ; seule part aléatoire : la qualité, 100 à 120 % (jet parfait = 120 %). Chaque pièce a un **passif fixe** (effet
-  d'une carte commune, `Cards.PASSIVE_EFFECTS`, table déterministe, jamais deux fois le même dans un set) et gagne à +6, +8 et
-  +10 un passif tiré **quand la carte d'amélioration est proposée** (affiché, différent des siens) : 4 passifs distincts à +10,
-  cumulés dans la run (`Run.passive_power`), plafonnés par effet. Emplacements et arme **verrouillés à vie** (aucun retrait ni
-  remplacement, même au menu pause). **Panoplies** à 2 / 3 / 5 pièces, en Survivant seulement : 2 = stat de la famille du set
-  (attribut dominant : Assaut +6 % d'attaque, Vivacité +8 % de vitesse d'attaque, Sortilège +8 % d'attaque magique, Grâce +8 %
-  de PV) ; 3 = les deux stats propres au set ; 5 = bonus fort + effet de la famille (explosion d'auto-attaque, foudre sur
-  critique, écho de compétence, barrière et soin) + stat du type d'armure. Propositions : type d'armure de la classe ×2,
-  jamais deux pièces du même set dans une offre, set déjà porté à 3 pièces ×0,14 (S3, mesuré avec le vrai tirage des cartes) :
-  un 5/5 ≈ 1 run sur 25 pour un joueur qui le cherche (`tools/sv_cards_sim.tscn`), jamais sans le chercher.
-- **Cartes** (S3, `core/survivor_cards.gd`) : à chaque montée de niveau, 3 cartes sur des cibles différentes : une carte
-  d'**équipement** (une arme tant qu'aucune n'est portée, sinon nouvelle pièce d'un emplacement libre ou amélioration +2 d'une
-  pièce ou de l'arme, +4 en légendaire, jusqu'à +10 ; à +6 / +8 / +10 le passif gagné est écrit sur la carte), une carte de
-  **sort** (nouveau sort du kit entier de la classe, 6 au plus, ou amélioration de niveau 1 à 10 : effet de `Cards.skill_upgrade`
-  cumulé, niveau 5 au moins épique, niveau 10 légendaire ; un nouveau sort tant que le héros en a moins de 2), une carte libre au
-  poids (profil `survivor` : `w_*`, pitié ×2 après 6 choix, évolution légendaire quand ses passifs sont portés) ; au plus 2
-  nouvelles pièces ; cartes de repli (or, soin, relance) seulement s'il manque des cartes. Plus de carte commune.
-  **Premier choix** : seulement des armes (types différents) et des compétences, obligatoire. **Relancer** 2 fois par run (+
-  passifs « relances ») : une amélioration relancée tire un autre passif ; **bannir** 3 fois (un sort, un type d'arme, un set,
-  le passif d'une amélioration, une évolution ; pas l'amélioration de sort) ; **garder** (la carte revient telle quelle) ;
-  **Passer** : 15 + 3 × niveau d'or, jamais au premier choix. Coffres (`chest_cards`) : emplacement libre = 3 pièces de cet
-  emplacement, pris = son amélioration d'abord ; arme = 3 améliorations de raretés différentes ; sort ; doré (rareté +) ;
-  gardien (pièces d'emplacements libres) ; enclume (+2 sur les pièces les plus proches d'un passif). **Rien du compte** : ni
-  talents, ni certificats, ni plateau, ni sorts fermés par la maîtrise (le kit entier est ouvert), ni cartes débloquées.
-- **Déroulé** (S4, `core/survivor_director.gd`) : chronologie fixe (`SurvivorDirector.timeline`) : gardien à 5:00, 10:00 et
-  15:00 (annoncé 10 s avant, un géant de P12 à 18 m du héros, PV fixes 50 000 / 220 000 / 700 000 × palier × Menace, coups
-  plafonnés à 30 % des PV du héros ; vaincu : coffre du gardien et or, la Menace ne monte pas) ; portail du boss ouvert à
-  15:00 (sans sceau, entrée en avance comptée pour l'« Audace » de S6) ; « le boss arrive dans 1:00 » et horde finale à 19:00 ;
-  entrée forcée dans l'arène à 20:00 (attend un héros debout). Boss : PV fixes 6 000 000 × palier × Menace (jamais d'après le
-  héros), rage du boss après 4:00 (paliers de P11). Boss vaincu = victoire ; seconde chute = défaite ; abandon au menu pause ;
-  pas d'extraction.
-- **Monstres** : `SurvivorDirector.spawn_plan(t)` donne la composition par minute : vivants 18 → 110, meutes toutes les
-  6 → 1,8 s de 3 → 12, vagues alternées toutes les 45 → 25 s, élites dès 8:00 (40 s, puis 20 s par deux après 15:00), niveau
-  1 + 1,8 par minute (90 au plus ; sans le plancher « héros − 1 » qui emballait la run), PV × 0,5 × 1,12^min, dégâts × 0,5 × 1,07^min, × palier. Le
-  composant de spawn de P15 (`RunDirector.spawner`) prend les meutes et les vagues quand il est là (`--spawn=legacy` : celui du
-  Survivant). Plus de plafond de niveau du héros par carte (90).
-- **Ce qui reste / disparaît** : or (monstres, objets cassés, défis, gardiens ; coffres et marchands), clés, XP, potions (3 % /
-  30 %), fontaine, aimant, sanctuaires, camps d'élite (clé + carte), pacte et autels du géant (P12 inchangé) **restent** ; 30
-  coffres du Survivant (2 par emplacement d'armure et de bijou, 2 d'arme, 6 de sort ouvragés, 6 dorés) dont le contenu vient
-  de `SurvivorCards.chest_cards` ; l'enclume donne +2 sur une pièce portée ; la stèle du défi donne un coffre doré ; plus de
-  butin d'équipement, de coffre de récompense, de fourniture, de gemme, d'arme secondaire ni de sceau.
-- **Interface** (S5, `ui/survivor_cards_view.gd`, `ui/survivor_build_page.gd`, `ui/survivor_hud.gd`) : cartes rendues par famille
-  (pièce : statistique principale en gros, 4 lignes, barre du jet 100 → 120 et ★ au jet parfait, set x / 5 et son prochain
-  bonus, passif fixe, « Gardée à vie » ; amélioration : « +4 → +6 », jauge des paliers, passif tiré encadré d'or, avant → après
-  ▲ ; sort : niveau n → n + 1 sur 10, « Ce niveau » puis « Total ») ; Bannir / Garder épinglés en bas de chaque carte, Relancer
-  et Passer sous la rangée (manette : LB relance, RB passe). Trois fiches à la 1re rencontre, dans le choix lui-même (première
-  carte, pièce à vie, paliers). Pause : page **Build** d'abord (emplacements verrouillés, sorts x / 10, passifs cumulés, sets
-  2 / 3 / 5, statistiques), pas de page d'inventaire. HUD : frise des 20 minutes (gardiens, portail, boss) puis jauge de la
-  rage du boss, « Équipement x / 9 · Sorts x / 6 », niveau de chaque sort en chiffre sur sa case.
-- **Fin de run et récompenses** (S6, `core/survivor_rewards.gd`) : **seulement des coffres d'apparence** (jamais d'insignes, de maîtrise,
-  de cristaux, de découvertes ni de puissance). Trois paliers d'avancée : tenir 10 minutes (temps de carte, pauses exclues) → coffre
-  commun ; trois gardiens vaincus → rare ; boss vaincu → mythique (**légendaire dès le palier II**) et un titre de victoire par
-  palier (Survivant, endurci, implacable, légendaire, Maître des survivants). Chaque palier d'avancée paie **une fois par palier de
-  difficulté** ; ensuite, au plus **un coffre commun (10 minutes) et un rare (boss vaincu) par jour** : le total est borné (15 coffres
-  « première fois » en tout), aucun farm cosmétique. Même une défaite ou un abandon paient ce qui a été atteint ; pas de titre hors
-  victoire. Plafonds dans `Profile.records["sv_rewards"]` (rien à migrer). Bilan (`ResultsScreen.survivor_spec`) : six tuiles (niveau,
-  durée, monstres, élites, gardiens x / 3, boss), titre gagné, bloc Gardé (les coffres, raison au survol), bloc **Ton build** (arme,
-  pièces x / 8, panoplie, pièces à +10, jets parfaits, sorts), ligne « Ta quête », boutons Rejouer (même classe, zone, palier), Changer
-  de classe (page du mode et choix de classe ouverts) et Retour au lobby ; rien de « Perdu » ni de maîtrise. Les quêtes reçoivent le
-  temps de carte. Page du lobby : trois lignes de récompenses (✔ une fois gagnées). L'apparence du hub (tenue, accessoires, aura,
-  skin d'arme du type) s'affiche pendant la run. Le hub reste intact (hors coffres d'apparence, titres et plafonds).
-- **Équilibrage** (S7, `conception/survivor/R_S7.md`, réglages en tête de `core/survivor.gd`) : expérience ×2 → ×1,15 (niveau 10)
-  → ×0,35 (niveau 35) : niveau 40 à 20:00 (53 avant) ; ouverture douce (dégâts ×0,3 et PV ×0,6 à 0:00, ×1 à 3:00 ; 1re vague à
-  1:15 ; ni vague avec élite avant 4:00 ni camp d'élite avant 3:00) ; spawn de P15 (escouades, événements, anneau espacé) piloté
-  par `spawn_plan` ; puissance des monstres ordinaires selon l'équipement DE LA RUN comparé à la bande attendue par minute (PV
-  ×0,9-1,3, dégâts ×0,9-1,15) ; dégâts du boss ×1 (pas la courbe des monstres) ; plafonds du héros : critique 75 % (surplus en
-  dégâts critiques), dégâts critiques +250 %, vitesses ×2,5 ; pitié de l'offre (3 choix sans carte forte → améliorations au moins
-  épiques) ; set à 3 pièces portées ×0,17 (5/5 ≈ 1 run sur 23 pour qui le cherche). Mesuré (30 runs au pilote) : victoire 40 % au
-  joueur moyen, aucune mort avant 3:00, boss en 2:10, gardiens en 30-60 s ; sonde de 312 builds : le meilleur type de build bat le
-  boss 1,1 fois plus souvent que le médian. `tests/test_sv7` lit `tests/sv7_mesures.json` (à refaire si un réglage change).
-- **Paliers I à V** (S8, `Survivor.PALIERS`, `conception/survivor/R_S8.md`) : chaque palier garde les règles du précédent et en
-  ajoute une, écrite en une phrase sur la page du mode (détail au survol) : **I Normal** ; **II Endurci** : monstres plus rapides
-  (×1,15) ; **III Implacable** : soins reçus divisés par deux (modificateur `heal_half`, retiré en fin de run) ; **IV Cauchemar** :
-  Menace 2 dès le départ et une mécanique de boss en plus (`EXTRA_BRICKS`, d'une famille que le boss n'a pas, annoncée à l'entrée) ;
-  **V Légende** : deux gardiens à 15:00, deux mécaniques de boss en plus, rage du boss après 3:00, monstres ×1,2. PV et dégâts des
-  monstres, gardiens et boss × `palier_mult` (1 / 1,45 / 1,7 / 1,75 / 2,1), installé sur les monstres ordinaires pendant les 5
-  premières minutes (le héros part nu), entier pour gardiens et boss. **Un palier s'ouvre en gagnant le précédent dans ce mode**
-  (`Profile.records["sv_rewards"].wins` ; jamais par la progression du compte ; mode dev : tous) ; bilan « Palier II ouvert ! ».
-  Récompenses : celles de S6 par palier (boss vaincu = coffre légendaire dès le II, titre du palier). Page du mode : cinq boutons
-  I à V (le choisi en or, les fermés « 🔒 » grisés avec leur condition), le palier par défaut est celui de la run qui vient de finir,
-  sinon le plus haut gagné. Dégâts du boss ×1,4 (S8 : le pilote dépense son or, voir R_S8).
-
-## Étapes et sources (refonte 0.1.91, façon Megabonk)
-
-- **Une run = 3 étapes** : la zone choisie, puis une zone à la hauteur du héros (au moins la suivante :
-  niveau 17 en fin d'étape 1 → Avila 13-30 ; sinon monstres et butin, plafonnés au niveau de la zone,
-  resteraient sous le sien ; les zones franchies se débloquent). Le boss d'une étape vaincu, un
-  **portail** apparaît dans sa salle : il mène à la carte de la zone suivante (minuterie, sceaux et coffres
-  remis à zéro ; niveau, cartes, équipement, or et clés gardés ; la zone suivante est aussi débloquée).
-  Victoire après le boss de la 3e étape (ou de la dernière zone). +120 d'expertise par étape franchie.
-- **Où trouver quoi** :
-
-| Ce qu'on cherche | Où |
+| Phase | Ce qui se passe |
 |---|---|
-| Or | jarres, caisses, tas d'or (ramassés en passant), monstres, défis |
-| Parchemins de fortification (chaque +1) | caisses et tonneaux surtout, coffres simples, élites |
-| Gemmes | cristaux (3 coups), jarres, coffres du joaillier |
-| Parchemins d'enchantement | autels du scribe (au choix), coffres ouvragés et dorés, marchands |
-| Pierres de sûreté, parchemin béni | coffres ouvragés et dorés, stèles du défi, élites |
-| +1 sans risque | enclumes (3 par carte) |
-| Équipement commun → épique | monstres (5 %), coffres simples (choix de 3), marchands |
-| Équipement rare → mythique | coffres ouvragés (mythique 7 % par proposition) |
-| Équipement épique → légendaire | coffres dorés (légendaire 15 %, mythique 22 % par proposition) |
-| Mythique / légendaire garantis, sets | coffres de récompense : boss d'étape (100 %), stèles du défi (100 %), élites (20 %) |
+| 0:00 → 10:00 | Exploration d'une map générée : farmer, ouvrir les **coffres** (or ou clé), capturer les **sanctuaires**, trouver les **marchands ambulants** et l'**entrée du donjon**. Monstres de la zone, élites ponctuelles (clés). |
+| 10:00 → … | **Rage** : monstres plus forts, monstres de niveau supérieur, élites en masse. Plus d'XP et de butin. **Escalade** (passe P9, idée du joueur) : chaque minute de rage, PV et dégâts des monstres de la carte ×1,1 (10:00), ×2 (11:00), ×11 (12:00), puis ×101 (13:00 et après) ; le boss n'est pas concerné (l'arène arrête le chronomètre). Le HUD affiche « RAGE ×2 · 0:42 » (multiplicateur, temps avant le palier suivant). La rage est un chronomètre : vers 12 min il faut être au boss ou s'extraire. |
+| N'importe quand | Si l'entrée du donjon est découverte **et 3 sceaux réunis** : entrer → **arène du boss**. |
+| Boss | Combat direct dans une arène dédiée. Attaques annoncées par des **zones rouges au sol** (cercle, ligne, cône au corps à corps, projectiles à distance) + monstres invoqués autour. Être touché = **étourdi** 1 à 1,5 s. **Miroir** toutes les 12–17 s pendant 3 s : frapper le boss renvoie 60 % des dégâts. L'onde circulaire (bord jaune) se **saute**. PV fixes par carte et par époque, **rage du boss** après 2:30 / 3:00 / 4:00 (passe P11, voir « Boss : PV fixes et rage du boss »). |
+| Fin | Victoire (boss vaincu) ou défaite → bilan → lobby. Le bilan (même composant dans tous les modes) sépare **Gagné** (maîtrise, étoiles, déblocages), **Gardé** (insignes dont 25 de participation, pièces découvertes, coffres, fournitures d'une run réussie) et **Perdu** (or, clés, fournitures d'une run perdue). |
+
+## Pression constante (easy to play, hard to master)
+
+- **Tous les monstres de la map traquent le héros** : jamais besoin d'aller les chercher.
+  Ils suivent le maillage de navigation point par point (passe P9 : ils faisaient demi-tour vers le départ de leur
+  chemin et n'avançaient qu'au tiers de leur vitesse ; maintenant 95 %, la horde reste à ~18 m d'un héros qui court, `tests/test_pursuit`).
+- Flux continu d'escouades mélangées (budget 4 → 9, toutes les 6 → 3,5 s ; en rage 8–12 toutes les 2 s), de tous les
+  côtés (passe P15, voir « Apparition des monstres et puissance »).
+- **Vagues alternées** toutes les 45 s (30 s en rage) : un événement dur (*encerclement* annoncé ou *élite escortée*) puis un
+  léger (*ruée d'essaim* ou *tenaille*).
+- Chaque attaque de monstre est **annoncée au sol** selon son modèle : cône au corps à corps,
+  ligne de charge (le monstre fonce), cercle d'écrasement, trait de tir. Sortir de la zone,
+  esquiver (Maj) ou **sauter** au bon moment évite le coup.
+- Les monstres ont ~2,4× leurs PV d'Eden et frappent fort : l'auto-attaque seule ne suffit
+  pas, il faut kiter et placer ses compétences. 1 seule résurrection par run.
 
 ## Apparition des monstres et puissance (passe P15, retour du joueur du 15/10)
 
@@ -874,30 +601,93 @@ il suffirait de foncer au boss) ; il faut avoir fait **une bonne run** (niveau, 
 - **Progression** (`tools/progression_sim`, terme `C_BOSS` : un boss de carte 2-3 tombe ≈ 3 fois sur 4 pour un compte neuf, 9 sur 10
   avec des pièces mythiques) : époques gagnées à 2,4 / 8,5 / 17,6 / 30,5 h (avant 1,9 / 6,9 / 14,5 / 24,0), 1re victoire en 7 runs.
 
-## Déroulement d'une run (10 minutes + rage)
+## Zones et biomes (progression)
 
-| Phase | Ce qui se passe |
-|---|---|
-| 0:00 → 10:00 | Exploration d'une map générée : farmer, ouvrir les **coffres** (or ou clé), capturer les **sanctuaires**, trouver les **marchands ambulants** et l'**entrée du donjon**. Monstres de la zone, élites ponctuelles (clés). |
-| 10:00 → … | **Rage** : monstres plus forts, monstres de niveau supérieur, élites en masse. Plus d'XP et de butin. **Escalade** (passe P9, idée du joueur) : chaque minute de rage, PV et dégâts des monstres de la carte ×1,1 (10:00), ×2 (11:00), ×11 (12:00), puis ×101 (13:00 et après) ; le boss n'est pas concerné (l'arène arrête le chronomètre). Le HUD affiche « RAGE ×2 · 0:42 » (multiplicateur, temps avant le palier suivant). La rage est un chronomètre : vers 12 min il faut être au boss ou s'extraire. |
-| N'importe quand | Si l'entrée du donjon est découverte **et 3 sceaux réunis** : entrer → **arène du boss**. |
-| Boss | Combat direct dans une arène dédiée. Attaques annoncées par des **zones rouges au sol** (cercle, ligne, cône au corps à corps, projectiles à distance) + monstres invoqués autour. Être touché = **étourdi** 1 à 1,5 s. **Miroir** toutes les 12–17 s pendant 3 s : frapper le boss renvoie 60 % des dégâts. L'onde circulaire (bord jaune) se **saute**. PV fixes par carte et par époque, **rage du boss** après 2:30 / 3:00 / 4:00 (passe P11, voir « Boss : PV fixes et rage du boss »). |
-| Fin | Victoire (boss vaincu) ou défaite → bilan → lobby. Le bilan (même composant dans tous les modes) sépare **Gagné** (maîtrise, étoiles, déblocages), **Gardé** (insignes dont 25 de participation, pièces découvertes, coffres, fournitures d'une run réussie) et **Perdu** (or, clés, fournitures d'une run perdue). |
+> État 16/10 : en Survie, les zones sont celles des époques (`Epochs.LIST`), le héros part niveau 1 avec un plafond par carte
+> (`Epochs.CAPS` 15 / 25 / 35) et une époque gagnée ouvre la suivante ; la table des zones et des boss d'origine reste juste.
 
-## Pression constante (easy to play, hard to master)
+Données : `tools/build_biomes.py` lit une map d'Eden par biome (textures du sol, décors les plus
+fréquents, monstres des camps, élites, boss) ; le terrain reste généré.
 
-- **Tous les monstres de la map traquent le héros** : jamais besoin d'aller les chercher.
-  Ils suivent le maillage de navigation point par point (passe P9 : ils faisaient demi-tour vers le départ de leur
-  chemin et n'avançaient qu'au tiers de leur vitesse ; maintenant 95 %, la horde reste à ~18 m d'un héros qui court, `tests/test_pursuit`).
-- Flux continu d'escouades mélangées (budget 4 → 9, toutes les 6 → 3,5 s ; en rage 8–12 toutes les 2 s), de tous les
-  côtés (passe P15, voir « Apparition des monstres et puissance »).
-- **Vagues alternées** toutes les 45 s (30 s en rage) : un événement dur (*encerclement* annoncé ou *élite escortée*) puis un
-  léger (*ruée d'essaim* ou *tenaille*).
-- Chaque attaque de monstre est **annoncée au sol** selon son modèle : cône au corps à corps,
-  ligne de charge (le monstre fonce), cercle d'écrasement, trait de tir. Sortir de la zone,
-  esquiver (Maj) ou **sauter** au bon moment évite le coup.
-- Les monstres ont ~2,4× leurs PV d'Eden et frappent fort : l'auto-attaque seule ne suffit
-  pas, il faut kiter et placer ses compétences. 1 seule résurrection par run.
+| Zone | Map d'Eden | Héros au départ | Ambiance |
+|---|---|---|---|
+| Limestone Mtn. | s002 | niv. 1 | prairies, roches calcaires |
+| Rainbowfall Forest | s004 | niv. 4 | forêt luxuriante, brume verte |
+| Beluga Bay | s006 | niv. 7 | côte, palmiers, sable |
+| Wetlands | s007 | niv. 10 | marais sombre, brouillard |
+| Avila Volcano | s009 | niv. 13 | roche noire, arbres morts, ciel rougeâtre |
+| Arid Wilds | s011 | niv. 16 | désert de sable |
+| Delphi Forest | s012 | niv. 19 | forêt volcanique, lys, griffons, foreuses de Pross |
+| Blackflame Peak | s013 | niv. 22 | pic de roche noire, lave, culte de Mara |
+
+### Salles de boss (un vrai boss nommé d'Eden par zone)
+
+| Zone | Boss | Salle | Mécaniques |
+|---|---|---|---|
+| Limestone | Mori, roi des champignons | piliers | renforts à 75/50/25 %, flaques de poison |
+| Rainbowfall | Angela, sorcière du marais noir | marais (mares de poison) | se dédouble (illusions), flaques d'ombre, rayons en croix |
+| Beluga | Ulicul, ogre sauvage | givre | 3 ondes de choc à sauter, renforts |
+| Wetlands | Doubledoor, hôte de la magie | cristaux (piliers, foudre) | bouclier : 3 totems à détruire, rayons, poison |
+| Avila | Miller, bête de flammes géante | lave | pluie de météores (laisse de la lave), ondes de choc |
+| Arid | Abby, reine des insectes | piliers | renforts, tourbillon qui attire, poison |
+| Delphi | Pross, le savant fou (+ Expérience 627) | cristaux | compagnon, rayons, renforts, météores |
+| Blackflame | Wushu, roi sorcier (+ Jiku) | lave | compagnon, météores, illusions, tourbillon |
+
+Données : `tools/build_biomes.py` (DUNGEONS) ; mécaniques : `scripts/ai/boss_brain.gd`
+(bibliothèque : adds, puddles, meteors, stomp, clones, totems, lasers, pet, vortex, reflect),
+dangers au sol : `scripts/combat/hazard.gd` ; agencements : `ProcMap.generate_arena`.
+Les costumes d'Eden tombent sur les boss (1 chance sur 4, 1 sur 2 s'il est enragé).
+
+- Une zone se **débloque en battant le boss de la précédente** (choix dans le lobby).
+- Le héros commence la run au niveau de la zone ; les monstres d'Eden sont ramenés au niveau
+  de la run (dans les deux sens), +½ niveau par palier de zone ; butin plafonné plus haut.
+- Le roster de la zone se dévoile avec la progression (monstres les plus forts en fin de run).
+- « Nouvelle partie » reverrouille les zones.
+
+## Monnaies, coffres et zones (refonte 0.1.25)
+
+> État 16/10 : la description de la carte (0.1.90) reste juste. Périmé dans la table : les trophées ne sont plus de l'équipement
+> (0.1.130, collection de la run) et le coffre de trophées n'existe plus (E1) ; les mythiques / légendaires de la Survie viennent des
+> coffres d'emplacement ; la Forge est fermée pendant la Survie (Atelier hors run) ; insignes et cristaux : partie D.
+
+Deux boucles : les **monstres** donnent les ressources d'équipement (objets au sol, or,
+coffres de récompense) ; les **coffres de la carte, sanctuaires, élites et marchands**
+donnent les **cartes d'amélioration de la run** (on repart toujours niveau 1 : l'équipement,
+les trophées et les sorts se combinent aux cartes de la run, c'est la boucle rejouable).
+
+| Monnaie / ressource | Où l'obtenir | À quoi elle sert | Fin de run |
+|---|---|---|---|
+| **Or** (pièces) | monstres, vente d'objets aux marchands, sanctuaires des clés | coffres de la carte (prix qui monte à chaque coffre), marchands ambulants, amélioration +1 → +10 (seulement de l'or), fusion de gemmes, fabrication | **perdu** |
+| **Clés** | élites (1 chacune), sanctuaires des clés (2), marchands | ouvrir un coffre de la carte sans payer (utilisée en priorité) | **perdues** |
+| **Cristaux** | démonter un objet (selon la rareté) | réforger une stat bonus, polir la qualité ; fabrication | **gardés** |
+| **Fournitures** (gemmes, parchemins, ciseaux, pierres de chance / protection) | butin, coffres de la carte, marchands, coffres de forge et du joaillier | forge : sertir, enchanter, améliorer sans risque | réserve gardée (victoire, extraction), perdues si le héros tombe |
+| **Cartes d'amélioration** | passage de niveau, coffres de la carte, sanctuaires des cartes, gardiens d'élite, marchands | build de la run (sorts, améliorations, passifs) | la run seulement |
+| **Choix de trophée** (3 au choix) | sanctuaires des trophées, coffres de trophées | un trophée (buff sous condition) qui rejoint le sac / le coffre | gardé comme tout objet |
+| **Coffres de récompense** | boss du donjon (100 %), élites (20 %), monstres (0,5 %) | menu **Coffres** hors run : équipement (mythique / légendaire), forge, joaillier, set au choix, trophée au choix ; **seule source des mythiques et légendaires** | **jamais perdus** (rangés dès qu'on les ramasse) |
+| **Points d'expertise** | fin de run | maîtrise de la classe (talents, sorts, certificats) | gardés |
+| **Archive et trésors de collection** | mythiques / légendaires archivés, boss | bonus permanents, apparences | gardés |
+
+**Sur la carte** (512 × 512 m, refonte 0.1.90 façon Megabonk) : plus de **1 000 objets à casser**
+(jarres, caisses, tonneaux : or, un peu d'XP, parfois des soins, une fourniture ou une clé ; tas d'or
+ramassés en passant ; cristaux à briser en 3 coups : des gemmes), **24 lieux de décor** (ruines, tours de
+guet, arches, ossements, mines, campements, marchés), **8 plateaux** (et cuvettes) avec un trésor en haut,
+un réseau de sentiers ; **30 coffres** payants (or ou clé, +18 % à chaque coffre ouvert) en 3 qualités qui
+proposent **une pièce d'équipement au choix parmi 3** : coffre (spécial → épique), coffre ouvragé (rare →
+mythique, ×2,5), coffre doré (épique → légendaire, ×6, pilier de lumière) ; des **lieux à usage unique**
+(pilier de lumière) : 3 **enclumes** (+1 garanti sur une pièce portée), 2 **autels du scribe** (parchemin
+d'enchantement au choix), 3 **fontaines de vie**, 2 **pierres d'aimant** (toute l'XP et le butin), 1 **autel de
+cupidité** (pacte : +50 % d'or, de butin et d'insignes, monstres +25 % jusqu'à la fin de la carte), 2 **autels du géant**
+(un géant à vaincre : une carte, mais la Menace monte, voir « Pacte, géants et Menace »), 2 **stèles du défi** (3 élites : coffre de récompense
+mythique / légendaire et fournitures), 1 **autel de la fortune** (idée du joueur : pyramide de 8 étages,
+étages 1 à 7 de 8 à 2 cases dont une piégée ; encaisser ou monter, la case piégée fait tout perdre ; gains :
+or, clés, puis coffres de forge, joaillier, équipement, set, trophées ; sommet (1 chance sur 8) : une
+apparence dorée de la collection, `core/fortune.gd`). Ancien fonctionnement : 10 coffres à prix doublé, choix de cartes ; 10 **sanctuaires** à capturer (rester 14 s dans
+le cercle pendant que les monstres affluent ; hors du cercle la capture redescend) : cartes,
+trophées ou clés ; 3 **marchands ambulants** qui se promènent (cartes, clé, fournitures,
+équipement, rachat du butin, fabrication) ; les **élites** donnent une clé, les gardiens des
+camps un choix de cartes en plus de leur sceau. Le village n'existe plus (décor du menu
+seulement). La **Forge** (fiche d'un objet, Échap > Héros) : améliorer à l'or, réforger et
+polir aux cristaux, percer, sertir, enchanter, fusionner des gemmes.
 
 ## Sceaux du donjon
 
@@ -906,48 +696,10 @@ il suffirait de foncer au boss) ; il faut avoir fait **une bonne run** (niveau, 
   élites ont 30 % de chances d'en lâcher un.
 - La clairière de l'ancien village (un marchand ambulant y démarre) est du côté du départ.
 
-## Maniabilité (hard to master)
-
-- Saut **nerveux** par défaut : ~2 m, 0,5 s en l'air, chute plus rapide que la montée.
-  Relâcher Espace tôt = petit saut (~1,2 m). Saut encore possible juste après un rebord,
-  et un saut demandé juste avant l'atterrissage part tout seul.
-- Saut et esquive s'enchaînent **sans délai** :
-  - esquive → saut : garde l'élan (saut-esquive ~12 m) ;
-  - saut → **esquive aérienne** (une par saut, invulnérable, à l'horizontale) ;
-  - saut et esquive annulent l'attaque de base à tout moment, une compétence après son 1er impact.
-- Recharge de l'esquive au sol : 0,45 s (l'esquive aérienne n'en a pas).
-- **Compétences en l'air** : le héros reste suspendu pendant le sort (+10 % de dégâts).
-  Esquive → sort possible dès la moitié de l'esquive.
-- **Annulation parfaite** : esquiver dans les 0,28 s après l'impact d'une compétence →
-  « PARFAIT ! », esquive plus longue et gratuite (même en l'air), images rémanentes,
-  -25 % sur la recharge restante, et **Fluidité** +10 % de dégâts par palier (4 max, 3 s).
-  Enchaînement type : saut → sort → esquive parfaite → sort…
-  Esquiver avant l'impact annule la compétence, dont la recharge est rendue (« Sort rendu »).
-  Un anneau bleu bref annonce le moment à chaque impact de sort (jamais en Duel).
-- **Mémoire des touches** (0.1.133, joueur seulement, `Player._queue_*`) : jusqu'à 3 appuis de sorts
-  gardés et joués dans l'ordre ; plus de « Trop tôt » ; l'enchaînement part dès que la barre est
-  ouverte et que le dernier coup du sort en cours est porté ; un appui qui n'a pas pu partir s'efface
-  après 1,2 s ; un sort en recharge n'est gardé que s'il lui reste 0,3 s au plus ; esquive, saut et
-  étourdissement vident la file. Tenir la touche d'une case enchaîne toute la chaîne. Une zone au sol
-  visée à moins de 3 m d'un monstre se pose sur lui.
-- **Aide au combat** (0.1.134, `Settings.ASSIST`) : Manuel, Assisté (défaut : mémoire, maintien,
-  anneau), Détente (attaque, sorts et enchaînements automatiques), Bot (+ déplacement et cartes ; depuis
-  0.1.193 aussi l'équipement, l'arme secondaire, l'enclume et les trophées : `CardPicker.auto_pick`, meilleure rareté puis
-  note pondérée par le profil de la classe). Un choix de carte ouvert tient la pause, même au bout d'un fondu (arène du boss).
-  L'automatique ne fait plus d'annulation parfaite : c'est le geste du joueur. Étiquette au HUD,
-  ligne au bilan ; coupée dans les duels de la Tour et en Duel.
-
-## Saut, une mécanique de build
-
-Passifs (cartes de niveau) : **Saut aérien** (+1 saut en l'air, ×2), **Bond puissant**
-(+20 % de hauteur, ×2), **Frappe plongeante** (attaquer en l'air → plongeon : dégâts de zone
-+ étourdissement, ×3), **Apesanteur** (saut flottant : -25 % de gravité, ×2 ; pour les builds
-aériens / mages), **Pas aérien** (+1 esquive en l'air, ×2).
-
 ## Map générée
 
 - Terrain ~512 × 512 m, relief doux, bordure de falaises, chemins qui relient les lieux.
-- Lieux placés aléatoirement à bonne distance : départ, entrée du donjon, 10 coffres payants,
+- Lieux placés aléatoirement à bonne distance : départ, entrée du donjon, 10 coffres payants (30 depuis 0.1.90, voir « Monnaies, coffres et zones »),
   10 sanctuaires, 3 marchands ambulants, camps de monstres, camps d'élites.
 - Décor Eden (arbres, rochers, buissons, ruines) dispersé hors des chemins et clairières.
   Collisions simples (cylindre / boîte), petits objets sans collision.
@@ -959,6 +711,382 @@ aériens / mages), **Pas aérien** (+1 esquive en l'air, ×2).
 - Un seul écran par marchand : **Boutique** (3 cartes, 1 clé, fournitures, équipement rare ou
   épique, parfois un trophée ; offres tirées pour ce marchand), **Vendre** (filtres, sélection
   multiple, sélections rapides), **Fabriquer** (mythiques de la zone, or + cristaux).
+
+## Extraction
+
+> État 16/10 : l'extraction existe toujours (+60 de maîtrise, fournitures gardées, `Run.finish`) mais l'« héritage » n'existe
+> plus : en Survie le hub est restauré comme à toute fin de run (`Profile.end_run_survival` ; `Profile.end_run_extract` n'est plus appelé).
+
+- Touche **X** (modifiable) ou menu pause : **10 s à survivre**, une vague encercle aussitôt le
+  héros. Mourir annule l'extraction.
+- Réussite : **tout l'équipement et l'inventaire rejoignent l'héritage** (améliorations,
+  gemmes, enchantements compris), l'équipement porté devient l'équipement de départ ;
+  +60 d'expertise. L'or, les matériaux et les fournitures restent perdus, et aucune zone n'est
+  débloquée (il faut battre le boss pour ça).
+- Victoire contre le boss : 1 objet gardé au choix (inchangé) ; défaite ou abandon : idem.
+
+## Plafond de niveau par zone
+
+> État 16/10 : en Survie, plafond par carte d'époque (`Epochs.CAPS`) ; `RunDirector.ZONE_MAX_LEVEL` ne concerne plus que Limestone.
+
+- Limestone (map 1) : butin au niveau 15 maximum, monstres plafonnés au niveau 15 (18 en rage
+  et pour le boss). Les maps suivantes prendront le relais (`RunDirector.ZONE_MAX_LEVEL`).
+
+# Partie C — Les autres activités
+
+## Survivant (mode à part, lots S1 à S8 de `conception/survivor/`, ouvert à tous depuis 0.1.210)
+
+Spécification : `conception/survivor/SPEC.md` (sa tête « Décisions finales » prime sur `DECISIONS_JOUEUR.md` et sur le corps). Une run pure façon Vampire
+Survivors : 20 minutes sur une seule carte, boss à 20:00, tout le build (arme, pièces, sorts) se gagne aux cartes de niveau.
+Mode « pour s'amuser » : **aucun lien avec la progression du compte** (ni équipement du hub, ni maîtrise, ni insignes, ni
+découvertes, ni verrou) ; seules les classes et les apparences débloquées comptent ; récompense de fin : des coffres
+d'apparence (lot S6). Socle (S1, 0.1.194) :
+- Lancement (`Survivor.start`) : héros niveau 1 sans arme ni pièce (seulement les potions de départ), zone au choix parmi
+  les 8 décors de la Survie (aucune n'est plus dure), époque I carte 1 pour les règles communes ; `Run.survival` reste vrai
+  (socle de la Survie), `Run.survivor` et `Survivor.active` disent le mode (`Modes.current() == "survivor"`).
+- **Le hub n'est jamais modifié** : équipement copié puis remis (comme la Survie), réserve de fournitures laissée au hub, et
+  toute la progression du compte (`Survivor.HUB_KEYS`) photographiée au départ, écrite telle quelle par les sauvegardes faites
+  en pleine run, remise à la fin (avant les récompenses du mode).
+- Déjà propre au mode : pas de rage de carte, une seule carte (le boss vaincu termine la run), ni autel du scribe ni autel de
+  la fortune, sanctuaires « trophée » changés en cartes, marchand sans fournitures, ni archive ni auras dans les stats,
+  expérience ×2 au niveau 1 → ×1,15 au niveau 10, puissance des pièces « Survivant » = niveau du héros (90 au plus).
+- Règles chiffrées : profil `survivor` de `ModeRules` (modifiable en mode dev). **Visible et jouable par tous dès le départ**
+  (`Survivor.READY`, lot S8) : activité de la rangée Aventure (2e, illustration provisoire `assets/ui/activities/survivor.jpg`),
+  quêtes du Survivant tirables, nouveauté « Survivant » et entrée au Guide (chapitre Modes).
+- **Pièces et arme** (S2, `core/survivor_pool.gd`, `core/survivor_gear.gd`) : pool = les 13 sets d'Eden de niveau 90 (tête,
+  torse, jambes, gants, bottes ; 5 en plates, 5 en cuir, 3 en tissu), plus les pièces de niveau 90 hors set pour la cape, le
+  collier et la bague ; armes des 17 types (modèles de niveau 90). Stats d'origine de la pièce, puissance = niveau du héros (90
+  au plus) ; seule part aléatoire : la qualité, 100 à 120 % (jet parfait = 120 %). Chaque pièce a un **passif fixe** (effet
+  d'une carte commune, `Cards.PASSIVE_EFFECTS`, table déterministe, jamais deux fois le même dans un set) et gagne à +6, +8 et
+  +10 un passif tiré **quand la carte d'amélioration est proposée** (affiché, différent des siens) : 4 passifs distincts à +10,
+  cumulés dans la run (`Run.passive_power`), plafonnés par effet. Emplacements et arme **verrouillés à vie** (aucun retrait ni
+  remplacement, même au menu pause). **Panoplies** à 2 / 3 / 5 pièces, en Survivant seulement : 2 = stat de la famille du set
+  (attribut dominant : Assaut +6 % d'attaque, Vivacité +8 % de vitesse d'attaque, Sortilège +8 % d'attaque magique, Grâce +8 %
+  de PV) ; 3 = les deux stats propres au set ; 5 = bonus fort + effet de la famille (explosion d'auto-attaque, foudre sur
+  critique, écho de compétence, barrière et soin) + stat du type d'armure. Propositions : type d'armure de la classe ×2,
+  jamais deux pièces du même set dans une offre, set déjà porté à 3 pièces ×0,14 (S3, mesuré avec le vrai tirage des cartes) :
+  un 5/5 ≈ 1 run sur 25 pour un joueur qui le cherche (`tools/sv_cards_sim.tscn`), jamais sans le chercher.
+- **Cartes** (S3, `core/survivor_cards.gd`) : à chaque montée de niveau, 3 cartes sur des cibles différentes : une carte
+  d'**équipement** (une arme tant qu'aucune n'est portée, sinon nouvelle pièce d'un emplacement libre ou amélioration +2 d'une
+  pièce ou de l'arme, +4 en légendaire, jusqu'à +10 ; à +6 / +8 / +10 le passif gagné est écrit sur la carte), une carte de
+  **sort** (nouveau sort du kit entier de la classe, 6 au plus, ou amélioration de niveau 1 à 10 : effet de `Cards.skill_upgrade`
+  cumulé, niveau 5 au moins épique, niveau 10 légendaire ; un nouveau sort tant que le héros en a moins de 2), une carte libre au
+  poids (profil `survivor` : `w_*`, pitié ×2 après 6 choix, évolution légendaire quand ses passifs sont portés) ; au plus 2
+  nouvelles pièces ; cartes de repli (or, soin, relance) seulement s'il manque des cartes. Plus de carte commune.
+  **Premier choix** : seulement des armes (types différents) et des compétences, obligatoire. **Relancer** 2 fois par run (+
+  passifs « relances ») : une amélioration relancée tire un autre passif ; **bannir** 3 fois (un sort, un type d'arme, un set,
+  le passif d'une amélioration, une évolution ; pas l'amélioration de sort) ; **garder** (la carte revient telle quelle) ;
+  **Passer** : 15 + 3 × niveau d'or, jamais au premier choix. Coffres (`chest_cards`) : emplacement libre = 3 pièces de cet
+  emplacement, pris = son amélioration d'abord ; arme = 3 améliorations de raretés différentes ; sort ; doré (rareté +) ;
+  gardien (pièces d'emplacements libres) ; enclume (+2 sur les pièces les plus proches d'un passif). **Rien du compte** : ni
+  talents, ni certificats, ni plateau, ni sorts fermés par la maîtrise (le kit entier est ouvert), ni cartes débloquées.
+- **Déroulé** (S4, `core/survivor_director.gd`) : chronologie fixe (`SurvivorDirector.timeline`) : gardien à 5:00, 10:00 et
+  15:00 (annoncé 10 s avant, un géant de P12 à 18 m du héros, PV fixes 50 000 / 220 000 / 700 000 × palier × Menace, coups
+  plafonnés à 30 % des PV du héros ; vaincu : coffre du gardien et or, la Menace ne monte pas) ; portail du boss ouvert à
+  15:00 (sans sceau, entrée en avance comptée pour l'« Audace » de S6) ; « le boss arrive dans 1:00 » et horde finale à 19:00 ;
+  entrée forcée dans l'arène à 20:00 (attend un héros debout). Boss : PV fixes 6 000 000 × palier × Menace (jamais d'après le
+  héros), rage du boss après 4:00 (paliers de P11). Boss vaincu = victoire ; seconde chute = défaite ; abandon au menu pause ;
+  pas d'extraction.
+- **Monstres** : `SurvivorDirector.spawn_plan(t)` donne la composition par minute : vivants 18 → 110, meutes toutes les
+  6 → 1,8 s de 3 → 12, vagues alternées toutes les 45 → 25 s, élites dès 8:00 (40 s, puis 20 s par deux après 15:00), niveau
+  1 + 1,8 par minute (90 au plus ; sans le plancher « héros − 1 » qui emballait la run), PV × 0,5 × 1,12^min, dégâts × 0,5 × 1,07^min, × palier. Le
+  composant de spawn de P15 (`RunDirector.spawner`) prend les meutes et les vagues quand il est là (`--spawn=legacy` : celui du
+  Survivant). Plus de plafond de niveau du héros par carte (90).
+- **Ce qui reste / disparaît** : or (monstres, objets cassés, défis, gardiens ; coffres et marchands), clés, XP, potions (3 % /
+  30 %), fontaine, aimant, sanctuaires, camps d'élite (clé + carte), pacte et autels du géant (P12 inchangé) **restent** ; 30
+  coffres du Survivant (2 par emplacement d'armure et de bijou, 2 d'arme, 6 de sort ouvragés, 6 dorés) dont le contenu vient
+  de `SurvivorCards.chest_cards` ; l'enclume donne +2 sur une pièce portée ; la stèle du défi donne un coffre doré ; plus de
+  butin d'équipement, de coffre de récompense, de fourniture, de gemme, d'arme secondaire ni de sceau.
+- **Interface** (S5, `ui/survivor_cards_view.gd`, `ui/survivor_build_page.gd`, `ui/survivor_hud.gd`) : cartes rendues par famille
+  (pièce : statistique principale en gros, 4 lignes, barre du jet 100 → 120 et ★ au jet parfait, set x / 5 et son prochain
+  bonus, passif fixe, « Gardée à vie » ; amélioration : « +4 → +6 », jauge des paliers, passif tiré encadré d'or, avant → après
+  ▲ ; sort : niveau n → n + 1 sur 10, « Ce niveau » puis « Total ») ; Bannir / Garder épinglés en bas de chaque carte, Relancer
+  et Passer sous la rangée (manette : LB relance, RB passe). Trois fiches à la 1re rencontre, dans le choix lui-même (première
+  carte, pièce à vie, paliers). Pause : page **Build** d'abord (emplacements verrouillés, sorts x / 10, passifs cumulés, sets
+  2 / 3 / 5, statistiques), pas de page d'inventaire. HUD : frise des 20 minutes (gardiens, portail, boss) puis jauge de la
+  rage du boss, « Équipement x / 9 · Sorts x / 6 », niveau de chaque sort en chiffre sur sa case.
+- **Fin de run et récompenses** (S6, `core/survivor_rewards.gd`) : **seulement des coffres d'apparence** (jamais d'insignes, de maîtrise,
+  de cristaux, de découvertes ni de puissance). Trois paliers d'avancée : tenir 10 minutes (temps de carte, pauses exclues) → coffre
+  commun ; trois gardiens vaincus → rare ; boss vaincu → mythique (**légendaire dès le palier II**) et un titre de victoire par
+  palier (Survivant, endurci, implacable, légendaire, Maître des survivants). Chaque palier d'avancée paie **une fois par palier de
+  difficulté** ; ensuite, au plus **un coffre commun (10 minutes) et un rare (boss vaincu) par jour** : le total est borné (15 coffres
+  « première fois » en tout), aucun farm cosmétique. Même une défaite ou un abandon paient ce qui a été atteint ; pas de titre hors
+  victoire. Plafonds dans `Profile.records["sv_rewards"]` (rien à migrer). Bilan (`ResultsScreen.survivor_spec`) : six tuiles (niveau,
+  durée, monstres, élites, gardiens x / 3, boss), titre gagné, bloc Gardé (les coffres, raison au survol), bloc **Ton build** (arme,
+  pièces x / 8, panoplie, pièces à +10, jets parfaits, sorts), ligne « Ta quête », boutons Rejouer (même classe, zone, palier), Changer
+  de classe (page du mode et choix de classe ouverts) et Retour au lobby ; rien de « Perdu » ni de maîtrise. Les quêtes reçoivent le
+  temps de carte. Page du lobby : trois lignes de récompenses (✔ une fois gagnées). L'apparence du hub (tenue, accessoires, aura,
+  skin d'arme du type) s'affiche pendant la run. Le hub reste intact (hors coffres d'apparence, titres et plafonds).
+- **Équilibrage** (S7, `conception/survivor/R_S7.md`, réglages en tête de `core/survivor.gd`) : expérience ×2 → ×1,15 (niveau 10)
+  → ×0,35 (niveau 35) : niveau 40 à 20:00 (53 avant) ; ouverture douce (dégâts ×0,3 et PV ×0,6 à 0:00, ×1 à 3:00 ; 1re vague à
+  1:15 ; ni vague avec élite avant 4:00 ni camp d'élite avant 3:00) ; spawn de P15 (escouades, événements, anneau espacé) piloté
+  par `spawn_plan` ; puissance des monstres ordinaires selon l'équipement DE LA RUN comparé à la bande attendue par minute (PV
+  ×0,9-1,3, dégâts ×0,9-1,15) ; dégâts du boss ×1 (pas la courbe des monstres ; ×1,4 depuis S8, `Survivor.BOSS_ATK`) ; plafonds du héros : critique 75 % (surplus en
+  dégâts critiques), dégâts critiques +250 %, vitesses ×2,5 ; pitié de l'offre (3 choix sans carte forte → améliorations au moins
+  épiques) ; set à 3 pièces portées ×0,17 (5/5 ≈ 1 run sur 23 pour qui le cherche). Mesuré (30 runs au pilote) : victoire 40 % au
+  joueur moyen, aucune mort avant 3:00, boss en 2:10, gardiens en 30-60 s ; sonde de 312 builds : le meilleur type de build bat le
+  boss 1,1 fois plus souvent que le médian. `tests/test_sv7` lit `tests/sv7_mesures.json` (à refaire si un réglage change).
+- **Paliers I à V** (S8, `Survivor.PALIERS`, `conception/survivor/R_S8.md`) : chaque palier garde les règles du précédent et en
+  ajoute une, écrite en une phrase sur la page du mode (détail au survol) : **I Normal** ; **II Endurci** : monstres plus rapides
+  (×1,15) ; **III Implacable** : soins reçus divisés par deux (modificateur `heal_half`, retiré en fin de run) ; **IV Cauchemar** :
+  Menace 2 dès le départ et une mécanique de boss en plus (`EXTRA_BRICKS`, d'une famille que le boss n'a pas, annoncée à l'entrée) ;
+  **V Légende** : deux gardiens à 15:00, deux mécaniques de boss en plus, rage du boss après 3:00, monstres ×1,2. PV et dégâts des
+  monstres, gardiens et boss × `palier_mult` (1 / 1,45 / 1,7 / 1,75 / 2,1), installé sur les monstres ordinaires pendant les 5
+  premières minutes (le héros part nu), entier pour gardiens et boss. **Un palier s'ouvre en gagnant le précédent dans ce mode**
+  (`Profile.records["sv_rewards"].wins` ; jamais par la progression du compte ; mode dev : tous) ; bilan « Palier II ouvert ! ».
+  Récompenses : celles de S6 par palier (boss vaincu = coffre légendaire dès le II, titre du palier). Page du mode : cinq boutons
+  I à V (le choisi en or, les fermés « 🔒 » grisés avec leur condition), le palier par défaut est celui de la run qui vient de finir,
+  sinon le plus haut gagné. Dégâts du boss ×1,4 (S8 : le pilote dépense son or, voir R_S8).
+
+## Bibliothèque de boss et donjons à la carte (passe M2, nuit du 15/10)
+
+Vision du joueur : « farmer des donjons DE SON CHOIX pour affronter les boss qui donnent les pièces dont on a besoin ; un ÉNORME
+pool de boss aux mécaniques différentes, réutilisables partout (Tour, Ruée, Siège, Survie, Survivant) ».
+
+- **Bibliothèque** (`core/boss_library.gd`, données `data/bosses.json`) : **48 boss**, 6 par zone (le boss d'origine de la zone
+  + 5 élites nommées d'Eden promues boss). Un boss = un monstre (modèle, animations), un nom et un titre, **2 à 4 briques** de
+  mécaniques, un jeu d'attaques de base (`kit`), des PV × `hp` sur les PV fixes du palier (passe P11 : `Dungeons.boss_hp`,
+  jamais d'après le héros), une zone (décor, niveau, monstres des salles) et un **thème de butin** (panoplie + 2 emplacements).
+- **Briques** (`ai/boss_bricks.gd`, `BossBricks.DEFS`) : une mécanique = une fonction + des paramètres, **aucun code propre à un
+  boss**. 29 briques en 10 familles : zones au sol (flaques, météores, rayons, damier, balayage), invocations (renforts,
+  compagnon, illusions, nuée, tourelles), fureur (rage à 30 %, impatience au fil du temps), boucliers (totems, barrière à briser
+  sinon il se soigne, cristaux de soin), charges (ruée, bond), projectiles (spirale, couronne d'orbes, éventail), arène qui se
+  resserre, placement (cercle sûr, tourbillon, bourrasque, regard : passer dans son dos, marque qui suit puis se fige, saut
+  d'ombre), riposte (miroir), ondes à sauter. Sortes : périodique (`every`, × 0,7 en 2e phase), seuil de PV (`at`), à
+  l'apparition (`start`), autonome (`passive`). Les 9 mécaniques des boss de zone d'avant sont ces briques avec leurs paramètres
+  d'origine : la Survie ne change pas.
+- **Lisibilité, jamais de mort en un coup** : toute attaque est annoncée au sol (zone rouge qui se remplit, cercle sûr vert, mur
+  rouge de l'arène, orbes visibles) ; un coup d'un boss de la bibliothèque retire au plus **40 %** des PV max du héros
+  (`BossLibrary.HIT_CAP`), une zone persistante au plus le tiers par seconde. Annonces courtes au centre de l'écran.
+- **Paliers** : Normal / Héroïque / Mythique = PV fixes de la difficulté, mécaniques plus fréquentes (× 1 / 0,85 / 0,72) ; en
+  Mythique l'Impatience s'ajoute à tout boss qui ne l'a pas.
+- **Donjons à la carte** : un donjon par boss (`Dungeons.catalog`), dans sa zone (mêmes niveaux, difficultés, PE requise et
+  ouverture que le donjon de la zone). Salles : monstres, élites, **lieutenant** (un autre boss de la zone, une seule mécanique,
+  25 % des PV du boss), boss ; 44 + 6 × difficulté monstres par salle (+8 avec le lieutenant), PV × 3,5, élites 5 + difficulté
+  (pilote : donjon fini en 2 à 6 min, joueur estimé 6 à 10 min ; voir `R_M2.md`). **Farmable à volonté**. Butin : le coffre de set propose **3 pièces de ses 2 emplacements** (le 1er,
+  le 2e, puis le 1er), à **sa panoplie**, mythiques ou légendaires (selon la PE, comme avant), et en Mythique une pièce d'armure
+  sur quatre est **éveillée** quand le modèle existe ; jamais une pièce déjà possédée. Plans, cristaux et coffres de matières
+  (lot E1) inchangés. Chaque panoplie s'obtient aux **9 emplacements** sur ses 6 donjons ; record par boss (`dgb_<boss>_<diff>`).
+- **Page Donjons** (`ui/dungeon_page.gd`) : en haut le donjon choisi (boss, mécaniques avec leur conseil en infobulle, pièces,
+  victoires) et sa difficulté (jauge de PE) ; dessous « Je cherche » : filtres **pièce**, **panoplie**, **mécanique**, puis la liste
+  (ouverts d'abord, fermés grisés avec leur condition) ; alliés IA ; « Entrer : <donjon> » épinglé. « Rejouer » relance le même boss.
+- **État (16/10)** : la Tour (M3), la Ruée et le Siège (M6) passent par la bibliothèque. **Pas encore** : la Survie et le Survivant
+  gardent leurs boss (le Survivant leur ajoute des briques aux paliers IV-V, `Survivor.EXTRA_BRICKS`) ; ils passeront par
+  `BossLibrary.spawn(id, palier, {director, pos, level, …})` (API dans `conception/nuit_15_10/R_M2.md`). La Tour (M3), la Ruée et
+  le Siège (M6) y passent.
+
+## La Tour : types d'étage (passe M3, nuit du 15/10)
+
+Retour du joueur : « les petites vagues de monstres étaient ennuyeuses : des élites au minimum à chaque étage, des étages
+de boss, des étages d'"ombres" (une IA qui joue une classe) ».
+
+- **Plan par bloc de 10 étages** (le palier de reprise), fixe pour un bloc donné (`Tower.block_plan`, graine 2026) : place 9
+  **halte**, place 10 **boss** ; bloc 1 : **duellistes** aux étages 1, 4 et 7 (ils ouvrent le Duel libre puis la Ligue,
+  inchangé) et élites au 5 ; blocs suivants : **2 ombres** (une par moitié, jamais côte à côte), **1 étage d'élites**, **1 étage
+  maudit** à partir du bloc 3, le reste en **monstres**. Sur 200 étages : 81 de monstres, 20 d'élites, 18 maudits, 38 ombres,
+  3 duellistes, 20 haltes, 20 boss. La page des étages et la fiche montrent le type (icône, légende avec ce qu'il donne).
+- **Monstres** : 3 espèces de la zone (4 dès l'étage 40) de rôles différents (`Tower.floor_species` ; rôles et leurs stats du
+  composant de P15, `SpawnDirector.role_of` / `apply_role` : tireur,
+  chargeur, colosse, essaim, soigneur, mêlée), apparues à tour de rôle en groupes du même côté ; **au moins une élite** à chaque étage
+  (une de plus tous les 70 étages), avec **une mécanique propre** : une brique de `BossBricks` (11 au choix : flaques, météores,
+  bond, ruée, éventail, couronne d'orbes, ondes, marque, barrière, rage, saut d'ombre), annoncée au sol, coups plafonnés à
+  25 % des PV, nom « Yack · Bond », escorte de 2 monstres ; les élites d'un étage lancent leur mécanique à 3,5 s d'écart.
+  20 + 0,3 × étage monstres (70 au plus), 10 à 24 en même temps.
+- **Élites** : 3 élites à mécanique (une de plus tous les 50 étages), moitié moins de monstres. **Maudit** : Menace (PV × 1,6),
+  Rage (monstres enragés) ou Horde (× 1,8 monstres) ; coffre rare au moins et 4 cristaux × (difficulté + 1) en plus.
+- **Ombres** (`ClassRival`, le moteur des duellistes) : une classe de la liste (les 60, celles de base d'abord) ; **une sur
+  quatre est « ton ombre »** (ta classe, les sorts de ton préréglage, ton équipement) ; en Hardcore dès l'étage 100 (Difficile
+  dès le 150), une sur deux est **éveillée** : un cerveau d'IA figé (`pantheon_<palier>.json`) dans un héros équipé comme l'ombre
+  scriptée de l'étage (PV × 0,5 des siens, soins moitié moins : il esquive et se soigne mieux), repli sur l'IA scriptée s'il
+  manque. IA un cran plus dure aux étages 80 et 150 ; PV × 3 et dégâts × 1,8 de ceux d'un duelliste (dont les PV doublent : 0,9,
+  ils tombaient en 8 s au pilote). Nom « Ombre · Mage »,
+  barre de vie, coups annoncés au sol, aide limitée à « Assisté » comme en duel.
+- **Boss** (`Tower.boss_id`) : un des 6 boss de la zone de l'étage (bibliothèque M2), jamais le même deux fois dans la zone ;
+  le dernier boss de chaque zone est son **gardien** (le boss d'origine). PV **fixes** (P11) : boss de donjon Normal de son
+  niveau × 0,8 × `BOSS_CURVE` (1 jusqu'à l'étage 50, 5 au 70, 5,5 au 100, 9 au 130, 7 au 200 : l'équipement attendu monte)
+  × difficulté ; palier des mécaniques 0 / 1 / 2 selon l'étage (± 1 en Facile / Hardcore). Pas de renforts génériques.
+  Monstres, élites et ombres des étages hauts : PV × √courbe, dégâts × courbe^0,6.
+- **Halte** : 60 % des PV rendus, une carte, puis le coffre ; aucun combat. Entre deux étages : 50 % des PV rendus (avant 35 %).
+- Inchangés : une seule vie, reprise par paliers de 10 (kit complet + cartes), 4 difficultés, cristaux 3 à 6 par étage, gemmes
+  tous les 10, forge tous les 50, apparences aux étages 50 / 100 / 150 / 200, maîtrise. Bilan : héros battus, boss vaincus,
+  cristaux des étages maudits. Mesures : `tools/tower_run.tscn` (rapport `conception/nuit_15_10/R_M3.md`).
+- **Équilibre entre classes (passe M8, `R_M8.md`)** : la Tour se joue seul ; les classes dont le kit soigne, protège ou
+  renforce y tuaient un boss deux à trois fois moins vite qu'un mage. **Dégâts × un facteur par classe** dans la Tour
+  seulement (`TowerBalance.solo_mult`, `data/tower_solo.json`, jamais en Donjon, Ruée ou Siège) : temps pour tuer mesuré des
+  60 classes (boss des étages 30, 50 et 100, sans mécaniques, équipement attendu), à son pire boss, ramené à 1,1 fois la
+  médiane ; jamais de baisse, au plus × 1,8 (33 classes aidées, Barde × 1,54). Régénérer : `tools/m8_matrix.py solo`.
+  **Coups de boss plafonnés à 25 % des PV max** dans la Tour (`Tower.BOSS_HIT_CAP`, 40 % ailleurs) : une seule vie, seul,
+  et le corps à corps passe le combat dans les zones du boss. `BOSS_FLOOR_ADJ` : étage 100 × 0,7 (médiane 2 min 47 au
+  pilote, deux fois les boss voisins), étage 150 × 2,5 (13 s à 2 min 20 avec l'équipement de l'époque IV, médiane 43 s).
+  Un boss sorti de la salle (il tombait sans fin, intouchable) revient au centre (`TowerDirector._rescue_boss`, aussi en
+  Donjon, Ruée et Siège). Bornes vérifiées par `test_m8` (écart max / min ≤ 2,5 aux boss de référence).
+
+## Ruée des boss et Siège sur la bibliothèque (passe M6, nuit du 15/10)
+
+Retour du joueur : le Siège Normal fait, un Mythique tenté « vraiment dur, logique : je n'avais pas la puissance ». La difficulté
+doit se lire avant de lancer ; la Ruée et le Siège puisent dans la bibliothèque de boss.
+
+- **Ruée** (`core/rush.gd`, `core/rush_director.gd`) : **8 boss tirés** dans la bibliothèque, un par zone dans l'ordre des zones
+  (niveau croissant en Normal et Héroïque ; en Mythique, tous niveau 90, PV × 0,8 → × 1,2 du 1er au 8e). Le tirage varie les
+  mécaniques (deux boss qui se suivent ne partagent pas de famille quand la zone le permet ; les boss du tirage précédent sont évités)
+  et se fait à partir d'une **graine affichée** (« tirage n° 4821 ») : il reste le même tant que la Ruée n'est pas vaincue (on
+  réessaie les mêmes boss), « Nouveau tirage » en donne un autre, une Ruée vaincue aussi. PV fixes du palier (P11, × 0,6), sans
+  renforts génériques ; carte et 50 % des PV entre deux boss. HUD : « Boss 3/8 », sous-ligne « Ensuite : Buster ».
+- **Modificateurs de la Ruée** (au choix, gardés) : *Sans répit* (aucun soin entre deux boss, cristaux +30 %), *Boss enragés*
+  (dégâts × 1,25, mécaniques × 0,85 d'intervalle, +40 %), *À l'aveugle* (boss à venir cachés sur la page et au HUD, +15 %).
+  Récompenses inchangées sinon (lot E1 : cristaux, parchemins, pierres et gemmes du niveau du dernier boss, coffre d'équipement,
+  apparence la 1re fois, titre), cristaux × (1 + bonus). Bilan : les boss vaincus et les modificateurs.
+- **Siège** : le **boss du jour** de la zone (un des 6 boss de la bibliothèque, change chaque jour, PV × 3,2 d'un boss de donjon)
+  et un **lieutenant** par vague d'élites (vagues 3 et 5 : un autre boss de la zone, une mécanique, 0,4 × les PV d'un boss de
+  donjon). Vagues en **escouades par rôle** (composant de P15 : compositions débloquées vague après vague, jamais plus de 3 fois la
+  même espèce, tireurs et soigneurs en retrait) qui arrivent du bord de l'arène à l'angle d'or, arrivée dans le dos signalée ; un
+  **événement annoncé** par vague (tenaille, encerclement aux cercles orange, ruée d'essaim, élite escortée, tenaille : les vagues
+  d'élites ont un événement léger, leur lieutenant fait le pic).
+  Alliés IA en comportement d'équipe (M7 : ils lisent les zones rouges, se replient sous 30 % de PV) — aussi en Donjon et Ruée.
+- **Objectifs du Siège** (une étoile chacun, retenues par zone et difficulté) : *Le boss tombe*, *Personne ne tombe* (aucun allié
+  à terre avant la chute du boss ; sous-ligne du HUD « alliés 2/2 »), *Avant sa fureur* ; les deux derniers ajoutent chacun
+  +25 % de cristaux au siège.
+- **Lisibilité de la difficulté** (`ui/difficulty_panel.gd`, pages Ruée et Siège) : « PE requise · la tienne » (ou « PE
+  conseillée » en Normal) sur une jauge, une **estimation** — *Facile* (≥ 1,35 × la PE conseillée), *Équilibré* (≥ 0,95),
+  *Difficile* (≥ 0,7), *Hors de portée* —, les **récompenses** de la difficulté et, si elle est trop haute, un avertissement d'une
+  phrase. La difficulté reste permise (mode dev compris). PE conseillée = `ADVISED` × PE attendue du niveau (au moins la requise),
+  mesurée au pilote (`tools/m6_run.tscn`, `R_M6.md`) : Ruée [1,3 ; 3,7 ; 3,4], Siège [1,3 ; 4,1 ; 3,6] — « Équilibré » avec
+  l'équipement de l'époque II gagnée en Normal, au verrou de PE en Héroïque, avec l'équipement complet optimisé en Mythique (le
+  verrou seul y est « Difficile »). Verrous et PV inchangés (le Normal passe à l'ouverture, l'Héroïque au verrou). Ruée au pilote :
+  10 à 15 min en « Équilibré », 5 min en « Facile », 30 à 40 min en « Hors de portée ».
+
+## Battle royale (passe M1, 0.1.201 ; mode codé en 0.1.161, idée 9 de `conception/IDEES_EN_VRAC.md`)
+
+- 8 héros nus au niveau 1, chacun pour soi, dernier debout. **9 min 50** d'anneau en 5 resserrements (`Royale.PHASES` :
+  rayons 190 / 130 / 80 / 42 / 14 m, dégâts hors anneau 2 → 20 % des PV par seconde), puis 30 s de mort subite.
+- Niveaux : coffres (0,55 / 0,85 / 1,3 / largage 2 niveaux), objets cassés (0,03, cristal 0,1), élimination (1 niveau et
+  25 % des PV). Les héros scriptés gagnent exactement la même chose que le joueur.
+- **Réapprovisionnement** : 3 coffres par héros en vie (22 au plus) tombent dans l'anneau à 50 s puis à chaque resserrement et à chaque nouvel anneau,
+  plus souvent dorés à chaque vague. **Largage** : à chaque resserrement sauf le dernier, un coffre de 4e qualité (rareté 4-5,
+  carte sûre) tombe 15 s plus tard dans le prochain anneau (pilier doré, étoile sur la carte, visible de partout).
+- **Mis à prix** : le héros qui compte le plus d'éliminations (3 au moins) est visible de tous sur la carte ; l'éliminer
+  rapporte un niveau de plus et une potion.
+- Héros scriptés (`RoyaleDirector.BRAIN`, par difficulté) : trajet à la vitesse d'un joueur qui esquive (Hardcore ≈ 11 m/s),
+  coffres choisis par valeur / trajet, attaque seulement avec l'avantage (rapport PV × frappe, exigence qui baisse à chaque
+  anneau), fuite s'il est dépassé et a de quoi boire, traque des affaiblis à partir du 3e anneau.
+- Duel entre héros : échelle des dégâts 0,04 (`ModeRules.ROYALE`).
+- Éliminé : on regarde la fin (spectateur) ou on ouvre le bilan ; la place est fixée à la mort.
+
+# Partie D — Économie et progression
+
+## Joaillerie et forge (comme dans Eden)
+
+- **Emplacements de gemmes** : 2 max par objet, percés aux **ciseaux de sertissage**
+  (1er sûr, 2e à 70 % ; en cas d'échec les ciseaux se brisent, l'objet est intact).
+- **Gemmes** : Rubis (Force), Émeraude (Agilité), Saphir (Intelligence), Perle (Sagesse),
+  Topaze (Chance), Grenat (PV), Onyx (Défense), Améthyste (Critique) ; 5 qualités
+  (brut, taillé, pur, parfait, royal : ×1 / 2 / 3,5 / 5,5 / 8). Sertir dans un emplacement
+  occupé détruit l'ancienne gemme.
+- **Parchemins d'enchantement** (noms d'Eden) : Chant rapide, Violence, Optimisation,
+  Explosion musculaire (armes et gants) ; Légèreté, Compréhension, Rééducation, Récupération
+  (armures). Lv1 à Lv5 selon le niveau du butin, objet de niveau (Lv-1)×10 minimum ;
+  un enchantement par objet (le nouveau remplace l'ancien).
+- **Amélioration à risque** : réussite 100 % jusqu'à +3, puis 90 / 80 / 70 / 60 / 50 / 40 /
+  30 % jusqu'à +10. Chaque réussite : stats de base +10 % et **une stat aléatoire** (doublée
+  aux paliers +4, +6, +8, +10). Échec : matériaux perdus ; vers +6 et au-delà, l'objet perd un
+  niveau (et sa dernière stat aléatoire). **Pierre de chance** : +10 % (3 max par essai).
+  **Pierre de protection** : pas de perte de niveau. Coût : **de l'or seulement**.
+- Les fournitures tombent des monstres (4 %, 7 % en rage), des élites (35 %), des boss (3),
+  des coffres (1, meilleur en rage) et se vendent chez les marchands ambulants. Tout se fait
+  dans la **Forge** (fiche d'un objet pendant la run).
+
+### Matières et cristaux des activités (0.1.165, lot E1 de la nuit du 15/10)
+
+Un parchemin de fortification doit avoir un niveau au moins égal à celui de la pièce, et la Survie plafonnait ses
+fournitures au niveau 35 (jusqu'au lot E4, 0.1.179 : elles suivent maintenant les pièces de la carte) : sans autre source, aucune pièce de niveau 40 à 100 ne pouvait passer +1. Les activités
+hors Survie donnent donc des **coffres de forge et du joaillier au niveau de l'activité** (`core/activity_loot.gd`),
+chacune avec son rôle :
+
+| Activité | Cristaux (Normal / Héroïque / Mythique) | Coffres de matières |
+|---|---|---|
+| Donjon | 30 / 90 / 170 | forge ×1 ; + joaillier en Héroïque ; forge ×2 + joaillier en Mythique (niveau du donjon : 14-60, 29-75, 90) |
+| Ruée des boss | 8 / 18 / 34 par boss (64 / 144 / 272 pour huit) | à 4 boss : forge ×1 ; à 8 : parchemins (×1 en Normal, ×2 sinon), pierres rares, gemmes (niveau du dernier boss : 60 / 75 / 90) |
+| Siège | 4 / 10 / 18 par vague + 10 / 40 / 110 boss tombé (30 / 90 / 200) | boss tombé : formules d'enchantement ×1 / 2 / 3, + forge en Héroïque et Mythique |
+| Tour | 3 / 4 / 5 / 6 par étage monté (Facile à Hardcore ; passe E6, avant 1 à 2,5) | gemmes tous les 10 étages, forge tous les 50 (niveau de l'étage) |
+
+- Un coffre porte une spécialité (`focus`) : « parchemins » (2-3 puissance, 2-4 garde), « pierres » (4 pierres rares
+  en plus), « gemmes » (3 gemmes d'un rang de plus), « formules » (3 formules au niveau le plus haut, 1 gemme).
+- **Cristaux = optimiser** : hors run, `Forge.GOLD_PER_CRYSTAL` passe de 25 à **125** (1 cristal pour 125 or). Une
+  pièce de niveau 85 à +10 coûte ≈ 750 cristaux si chaque tentative réussit, ≈ 1 300 avec des pierres de
+  protection : **4 à 5 clears Mythiques**. Un donjon Normal (30 cristaux) paie un +3 ou +4 sur une pièce de niveau 30.
+- Le démontage rend 1 à 3 cristaux (avant : 1 à 8) et un coffre de forge 2 à 3 au niveau 30 (avant : 3 à 9) : un
+  cristal vaut 5 fois plus d'or, ils restent un complément. Le coffre de trophées n'existe plus.
+
+### Maîtrise et insignes du JcJ, plans, panoplie des Esprits (lot E2 de la nuit du 15/10)
+
+- **Maîtrise partout** : formule commune `League.mastery_for(manches, palier, part)` = (40 + 20 × palier + 150 × manche
+  gagnée) × part. Ligue : inchangée (palier = rang visé, part 1). Panthéon : palier = rang du cerveau (1-6), part 1, à chaque
+  victoire. Duel libre, Arènes, Gantelet : palier = difficulté + 1, part 0,5 × difficulté (Facile 0,5 … Hardcore 1) ;
+  Gantelet +25 % par adversaire en plus ; duel libre contre un adversaire affaibli (préparation PV / dégâts < 1, adversaire
+  de l'éditeur) : rien. Battle royale : « manches » 2 pour la victoire, 1 pour le podium, palier = éliminations (4 au plus).
+  Les modes classés ignorent la préparation de l'adversaire du duel libre.
+- **Insignes du JcJ contre l'IA plafonnés au jour** (`League.win_insignia`, `royale_insignia`) : 1re victoire du jour de
+  chaque mode 50 (Arènes 2v2) / 75 (3v3) / 60 (Gantelet 1v2) / 90 (1v3), puis 10 ; Battle royale : la meilleure place
+  du jour paie la différence avec la précédente (110 / 70 / 45 / 28 / 18 / 11 / 7 / 4), + 3 par élimination. Une heure
+  de JcJ rapporte ≈ 180-190 insignes (première heure du jour ≈ 300-450 si on gagne tout), contre ≈ 360 (époque I) à
+  670 (époque IV) pour une heure de Survie gagnée.
+- **Arènes, Gantelet, Ligue (passe M7)** : la difficulté des héros IA se choisit (Facile à Hardcore, Difficile par défaut) ;
+  la 1re victoire du jour paie ses insignes × la difficulté rapportée à Difficile (Facile ≈ 60 %, Hardcore ≈ 118 %). Les alliés
+  ont la fiche d'un héros de leur classe × la difficulté, comme les adversaires (avant : PV d'entraînement × 3 à × 8) et la
+  même difficulté qu'eux ; les équipes sont de familles différentes ; les adversaires soignent et renforcent leur camp
+  comme les alliés (Arènes et Gantelet). Arènes : niveau au choix (10 par défaut), échelle 0,026 (2v2) / 0,024 (3v3),
+  acharnement dès 25 s / 20 s. **Arène piégée** (option) : passé 10 s, toutes les 8 s, une zone de feu par paire de héros
+  debout (rayon 3,2 m, 1,4 s d'annonce) retire 12 % des PV max à tout héros dedans, tous camps, esquive possible.
+  **Promotion de Ligue** : + 40 × rang insignes et un coffre d'apparence (Bronze et Argent rare, Or mythique, Platine légendaire),
+  une seule fois puisque le rang est gardé à vie. **Mort subite** (duel à l'arme et équipé, Arènes, Gantelet) : passé 90 s de
+  manche, l'acharnement double en plus toutes les 5 s (les duels avec un soigneur duraient 95 à 120 s).
+- **Plans** : le plan d'une zone tombe à coup sûr au 1er donjon terminé de chaque difficulté (Normal compris), sinon une
+  fois sur dix. **Fabrication** : les 9 emplacements (arme du type de la classe choisie, collier, anneau compris), modèle
+  d'Eden du niveau du donjon (et non plus de la zone choisie au lobby).
+- **Siège Normal** : aucune PE requise (Héroïque et Mythique : voir « Verrous de PE (passe P5) »).
+- **Panoplie des Esprits universelle** : chaque pièce est un modèle fixe, légendaire de niveau d'Eden 70, quelle que soit la
+  zone. Gagnée, elle s'ajoute à `seen_gear` (id `Pantheon.shop_id`) : l'Armurerie la revend (220 insignes) pour toutes
+  les classes ; battre le Champion y ouvre l'arme des Esprits des 17 types. **Éveil** : avec 6 pièces éveillées portées
+  (cerveau battu par les 5 familles), le palier 6 devient : +10 % dégâts, +5 % critique, esquive → hâte puis furie 4 s,
+  recharge 4 s (au lieu de 3 s / 8 s).
+
+### Insignes et maîtrise des 60 classes (lot E5 de la nuit du 15/10, `core/economy.gd`)
+
+- **Barème unique** (`Economy.INSIGNIA_PER_HOUR`, contrôlé par `test_e5`) : la Survie est la référence (≈ 360 insignes / h
+  gagnée en époque I, 670 en époque IV, formule `Economy.survival_insignia`) ; le JcJ contre l'IA reste en dessous (≈ 400
+  la 1re heure du jour, puis ≈ 60) ; Donjons, Ruée, Siège et Tour ne donnent pas d'insignes (cristaux et matières).
+- **Armurerie à paliers** (`Economy.armory_price`) : la 1re pièce d'un palier (même emplacement, type d'arme, niveau, rareté,
+  éveil) coûte le prix plein, les autres pièces de ce palier (autres panoplies ou attributs, utiles à d'autres classes)
+  15 %. Pièces des Esprits : jamais de remise. Kit d'une classe : 1,8 h (époque I) à 3,3-3,9 h ; collection d'une époque :
+  16 h (I), 28 h (II), ≈ 58 h (III-IV ; ≈ 33 h au rang héroïque 5) au lieu de 44 / 84 / 230 h
+  (`GearShopPage.price` = `Economy.armory_price`).
+- **Puits sobres** : coffres d'apparence et d'auras achetés avec des insignes (`Economy.SHOP_CHESTS` : rare 150 ×3,
+  mythique 300 ×2, légendaire 600 ×1, aura rare 400 ×1, aura légendaire 900 ×1 par semaine ; fermés quand la collection
+  de la rareté est complète) ; **leçon de maîtrise** : 200 insignes → 300 points pour une classe en retard, 3 par jour.
+  Boutons (passe P1) : Coffres > « Boutique » (une ligne par coffre, solde, restants de la semaine, « Reviens lundi » ou
+  « Collection complète » quand fermé) ; Héros > Classe : « Leçon · 200 insignes · 3 restantes » à droite de la barre de
+  maîtrise, visible seulement pour une classe en retard et hors run.
+- **Maîtrise des 60 classes** : rattrapage ×1,5 en Survie pour une classe à 3 niveaux ou plus sous la meilleure du compte
+  (jusqu'au niveau 20) ; 1re victoire de la classe à chaque époque : +600 / 900 / 1 200 / 1 500 ; **part de l'arbre** : 10 %
+  de toute maîtrise gagnée va aux voisines de l'arbre (classe d'origine et classes qui en descendent) débloquées et plus
+  basses (`Profile.add_expertise`, `last_shared`) ; le Défi de maîtrise propose de préférence des classes en retard. Une classe
+  jouée après la première monte au niveau 20 en ≈ 3,6 Survies gagnées au lieu de 6,6 (contrats compris).
+
+### Atelier (lot U5 de la nuit du 15/10 : Armurerie, Fabrication, Forge)
+
+- **Bourse commune** (`ui/workshop_purse.gd`) dans l'en-tête de l'Atelier : insignes (acquérir) et cristaux (optimiser).
+- **Armurerie** (`ui/gear_shop_page.gd`) : tout le catalogue des coffres d'emplacement (`Completion.armory_ids()` : pièce → première
+  époque qui la propose), compteur « découvertes / total ». Statuts : à acheter (défaut), possédées (✓), à découvrir (case « ? » avec
+  emplacement et niveau, époque où la trouver dans le détail : jamais le nom), toutes. Filtres : emplacement, époque, classe (les armes de
+  son type seulement). 72 pièces par page. Le détail compare avec la pièce portée : verdict, PE et trois écarts au plus. Après un achat,
+  la pièce reste choisie (un double clic n'achète pas deux fois).
+- **Fabrication** (`ui/fabrication_page.gd`) : une carte par donjon ; avec le plan : emplacement + « Fabriquer · N cristaux » (ce qu'il
+  manque en rouge) ; sans plan : « Il tombe en terminant ce donjon » ou la condition d'ouverture ; sans aucun plan : bandeau d'état vide.
+- **Forge** (`ui/forge_bench.gd`) : un panneau, six établis en haut, la pièce et son tableau **avant → après** (stats principales, qualité,
+  cristaux), le coût en cristaux (rouge s'il en manque), la barre de verdict compacte et l'action principale en bas. Prix en mots
+  (`MerchantPages.price_words`). La fusion de gemmes garde l'ancien taux (`Forge.FUSE_GOLD_PER_CRYSTAL` 25, `Forge.fuse_price` : 2 à 7
+  cristaux hors run) : le taux de 125 la rendait presque gratuite.
+- **Marchand de run** : plus de phrases d'aide (une ligne sur l'or perdu en fin de run), plus de page de fabrication de mythiques.
 
 ## Équipement
 
@@ -973,78 +1101,17 @@ aériens / mages), **Pas aérien** (+1 esquive en l'air, ×2).
 - **6 raretés** : commun, spécial, rare, épique (jets aléatoires : qualité 70-90 %, 75-95 %,
   80-100 %, 85-100 %), **mythique** (toujours 100 %) et **légendaire** (101-120 %). Mythiques et
   légendaires : seulement sur les boss (garanti, 30 % de légendaire, 50 % si enragé) ou par
-  fabrication (mythiques) ; ils portent le passif d'arme et les effets de set d'Eden.
+  fabrication (mythiques) [avant 0.1.123 ; en Survie ils viennent maintenant des coffres d'emplacement, à la rareté de la carte
+  d'époque (`Epochs.LIST`), et les monstres ne lâchent plus d'équipement] ; ils portent le passif d'arme et les effets de set d'Eden.
 - **Amélioration +1 → +10** : augmente les stats de base à chaque niveau ; aux paliers
   **+4, +6, +8, +10**, une stat aléatoire de l'objet est en plus augmentée (ou un affixe ajouté).
 - **Désassemblage** → des **cristaux** selon la rareté (gardés entre les runs). **Vente** → or
   **+ la moitié de l'or** investi dans les améliorations.
 
-## Auto-attaque des armes (refonte 0.1.127, demande du joueur du 14/10/2026)
-
-- **Plus de combo** (ni coup final, saut, étourdissement ou attraction) : chaque type d'arme a
-  **une seule auto-attaque**, répétée, volontairement **faible en début de run**. Sa force vient
-  des **cartes** : chaque arme a une forme qui réagit à certaines statistiques (« Grandit avec »
-  dans le grimoire). Catalogue : `scripts/combat/weapon_attacks.gd` (`WeaponAttacks.SPECS`).
-- Formes : **taille** en arc (katana, hache, épée, espadon, faux, cestes, dagues), **estoc** en
-  ligne (rapière, lance : longueur × portée), **impact** au sol (marteau), **onde** autour du
-  héros (guitare), **projectiles** (arc, dagues de lancer, baguette, canon, grimoire, boule de
-  feu) et **incantation** (sceptre, bâton : zone au point visé après un délai réglé par la
-  **vitesse d'incantation**).
-- Cartes : **Projectile supplémentaire** (+1 flèche à l'arc, +1 zone à l'incantation, +1 frappe
-  pour la mêlée), **Perforation**, **Ricochet** (rebond vers un ennemi à 8 m), **Cadence**
-  (vitesse d'attaque), **Incantation vive** (vitesse d'incantation), **Main lourde** (dégâts de
-  l'auto-attaque), Lame large (zone), Allonge (portée), **Onde de choc** (chance à l'impact),
-  évolution **Tempête d'acier** (Main lourde + Projectile supplémentaire). Les effets « coup final »
-  des sets et trophées passent sur « impact d'une auto-attaque » (avec une chance).
-- **Deux variantes par arme** (0.1.128), aux synergies différentes : katana Iaï (critique) /
-  Lame du vent (projectile perçant) ; hache Taille large / Hache de jet (rebonds, saignement) ;
-  dagues Lacération / Dagues de lancer ; arc Flèche / Pluie de flèches (zones) ; sceptre Éclat
-  sacré / Orbe de lumière (rebonds, soin) ; bâton Météore / Boule de feu ; épée Taille /
-  Tourbillon ; rapière Estoc / Rafale d'estocs (3 frappes) ; espadon Taille lourde / Onde
-  tranchante (traverse tout) ; marteau Impact / Onde sismique ; baguette Trait d'ombre /
-  Malédiction (poison) ; cestes Directs / Poing de chi ; canon Obus / Mitraille (4 plombs) ;
-  lance Estoc / Lance de jet ; guitare Onde sonore / Notes vagabondes ; grimoire Pages / Glyphe
-  (ralentit) ; faux Faux / Salve. L'arme (son modèle d'Eden) décide de la variante ; au départ de
-  la Survie, le joueur choisit entre les deux variantes de l'arme de sa classe.
-- **Arme principale = arme de la classe**, toujours (la case n'accepte que ce type). Une arme
-  d'un autre type ne peut être que l'**arme secondaire** : son auto-attaque part **seule**, sans
-  animation, vers l'ennemi le plus proche, à **60 % des dégâts** et avec **50 % de ses stats
-  d'objet** ; elle ne compte pas pour les sets. En Survie, elle se **trouve en jeu** : le boss en
-  lâche toujours une, une élite parfois (40 % sans arme secondaire, 12 % avec) ; ramassée, elle
-  propose 3 armes d'autres types (variante au hasard, une relance). Les coffres d'arme ne donnent
-  que l'arme de la classe.
-- **Améliorations d'arme** (cartes de niveau « weapon_up », 8 niveaux par emplacement, l'arme
-  principale souvent, la secondaire si elle est portée) : **commune** = dégâts (+15 %) ; **rare** =
-  dégâts + un bonus mineur (critique +5 %, cadence +8 %, zone +10 %, portée +12 %, durée des
-  effets +1 s, soin, délai d'incantation -12 % ; chaque arme a ses bonus de prédilection, le
-  critique pour l'arc) ; **épique** = + un bonus majeur (+1 projectile ou frappe, +1 perforation,
-  +1 rebond, +25 % de zone, explosion plus large) ; **légendaire** = + l'**effet légendaire** de la
-  variante (« tous les N coups » renforcé, état infligé à chaque coup, explosion ou foudre à
-  l'impact), puis deux bonus mineurs et un majeur. Les améliorations restent sur l'emplacement
-  quand l'arme change (`Run.weapon_ups`).
-- **Trophées** (0.1.130, demande du joueur) : ils ne sont **plus de l'équipement** (ni case, ni
-  trophée de départ, ni butin, coffres de récompense ou marchand). C'est une **collection de la
-  run** (`Run.trophies`) : jusqu'à **12 trophées, tous d'effets différents, tous actifs**, perdus
-  en fin de run. **67 effets** (`Trophies.KINDS`), chacun porté par 5 trophées d'Eden ou plus
-  (`tools/rework_trophies.py`) ; un coffre de trophée propose 3 effets que la collection n'a pas
-  encore, chacun avec le trophée d'Eden du niveau le plus proche de la map (variantes de niveau :
-  `Trophies.level_mult`, plus forts aux dernières époques). Sources : 4 coffres de trophée par map
-  en Survie, sanctuaires des trophées ; collection pleine : des cartes à la place. Effet unique :
-  pas d'amélioration (`Items.is_unique`). Menu pause, page Run : la collection.
-- Duel : l'auto-attaque entre héros garde × `PvpCaps.BASIC_MULT`. L'adversaire scripté répète
-  l'auto-attaque de son arme (pause plus longue tous les 3 coups).
-
-## Effets déclenchés (procs)
-
-Un proc = déclencheur + chance + recharge interne + effet (`scripts/combat/procs.gd`).
-- Déclencheurs : impact, impact d'une compétence, critique, monstre tué, impact d'une auto-attaque,
-  esquive, annulation parfaite, dégâts subis, passage sous 30 % de PV.
-- Effets : foudre en chaîne, gel (immobilise, annule l'attaque annoncée ; le boss résiste),
-  ralenti, brûlure, électrocution (+15 % de dégâts subis), explosion, nova de givre, buffs
-  temporaires (Frénésie, Œil acéré, Hâte, Barrière, Fureur), soin, recharges réduites, Écho.
-- Réactions en chaîne limitées à 2 niveaux (une explosion qui tue peut en déclencher une autre).
-
 ## Sets d'équipement (façon Eden)
+
+> État 16/10 : les pièces portent les panoplies d'Eden (bonus 2 / 4 / 6) ; `Items.SETS` = les 6 archétypes ci-dessous + `salvo`,
+> `rampart` (panoplies de donjon, `Dungeons.ARCHETYPES`) + `pantheon` (Esprits). Le Survivant a ses propres paliers 2 / 3 / 5.
 
 - 30 % des objets rares et épiques sont des **pièces de set** (nom et cadre verts).
 - 6 sets, bonus à **2 / 4 / 6 pièces** : Tempête (foudre), Givre éternel (gel), Lame sanglante
@@ -1060,19 +1127,6 @@ Un proc = déclencheur + chance + recharge interne + effet (`scripts/combat/proc
   une fiche à demeure (Atelier, marchand, Équipement) montrent toujours la carte complète. Une statistique plate et son
   pourcentage du même nom (Défense 231 et Défense 4 %) tiennent sur une seule ligne. En Survie, la pièce portée s'affiche et se
   compare avec le bonus d'enclume de son emplacement. Rien ne parle du jeu d'origine.
-
-## Cartes de build (roguelite)
-
-- En plus des passifs de classe, des cartes communes à toutes les classes (`scripts/core/boons.gd`)
-  avec une **rareté** (commune, rare, épique, légendaire) qui règle leur fréquence et leur couleur.
-- Stats de build : zone d'effet, portée, dégâts, dégâts contre élites, coup final, effets sur la
-  durée, exécution des monstres faibles, relances.
-- **Évolutions** (légendaires) : n'apparaissent qu'avec leurs cartes prérequises
-  (Lame statique → Seigneur de la tempête, Fil de givre → Éclat glacial, Braise + Cadavres
-  explosifs → Lame du phénix, Coup de grâce → Tempête d'acier).
-- **Relance** des cartes proposées : 1 par run, +1 par carte « Bonne étoile ».
-- Pistes suivantes : bannir une carte, cartes « malédiction » à fort bonus, reliques d'élite,
-  projectiles (lames fantômes), invocations, synergies entre classes.
 
 ## Choix et coffres de récompense (lot U3 de la nuit du 15/10)
 
@@ -1120,7 +1174,7 @@ Le Défi de maîtrise n'est plus une page à part : c'est la quête « Défi du 
   aujourd'hui ». Rien dans le Carnet : les quêtes se lancent, elles ne se consultent pas.
 - **Du jour (3)** : le Défi du jour (la Survie de l'époque I, deux contraintes, maîtrise ×2, +600 la 1re victoire, insignes ×1,5 : règles de
   `core/challenge.gd`, inchangées, avec ses trois classes proposées) puis deux quêtes d'autres activités tirées du pool (≈ 40 quêtes :
-  Survie, Survivant [mode dev], Donjons, Tour, Ruée, Siège, Duel, Arènes, Gantelet, Battle royale, coffres du menu, variété). Tirage
+  Survie, Survivant (ouvert à tous depuis 0.1.210), Donjons, Tour, Ruée, Siège, Duel, Arènes, Gantelet, Battle royale, coffres du menu, variété). Tirage
   déterministe par date (`Quests.draw`), figé dans `Profile.records.quests` ; les quêtes dont l'activité est fermée ne sont pas tirées.
   Budget : ≈ 22 min pour le Défi du jour (la Survie qu'on jouerait de toute façon) + 2 quêtes de 11 min au plus ≈ 40 min au total ; une
   même Survie fait avancer plusieurs quêtes de Survie.
@@ -1143,6 +1197,8 @@ Le Défi de maîtrise n'est plus une page à part : c'est la quête « Défi du 
   ou, à défaut, la plus avancée. Succès « Aventurier appliqué » et « Constance ».
 - Test : `tests/test_quests.tscn`.
 
+# Partie E — Textes
+
 ## Tout le jeu en français (passe P10, 0.1.190)
 
 Aucun texte lisible ne doit rester en anglais. Les noms d'Eden passent par une seule table (`data/names_fr.json`, `NamesFr.apply`,
@@ -1154,31 +1210,80 @@ apparences, collection et, depuis P10, **talents** (section `talents`, lexique �
   sorts, certificats, talents, monstres, zones et toutes les constantes de texte des scripts, et signale les mots anglais courants
   (liste de contrôle `ENGLISH`). Un nouveau texte d'Eden à afficher : le passer par la table, relancer ce test.
 
-## Plafond de niveau par zone
+# Partie F — Archives : décisions remplacées (gardées pour mémoire, ne plus coder d'après elles)
 
-- Limestone (map 1) : butin au niveau 15 maximum, monstres plafonnés au niveau 15 (18 en rage
-  et pour le boss). Les maps suivantes prendront le relais (`RunDirector.ZONE_MAX_LEVEL`).
+## Combos d'auto-attaque (3 coups, le 3e = coup final)
 
-## Ordre de réalisation
+> Archive : remplacé en 0.1.127 par « Auto-attaque des armes » (plus de combo, deux variantes par type d'arme).
 
-1. Générateur de map (DA Eden) + run de 10 min + rage + lieux à découvrir.
-2. Équipement à jets, matériaux, marchand (vendre / désassembler / améliorer), boutique.
-3. Arène du boss, attaques annoncées, invocations.
-4. Performance pour des vagues de centaines de monstres.
+| Classe | Coup 1 | Coup 2 | Coup 3 |
+|---|---|---|---|
+| Samouraï | taille ascendante 100 % | taille descendante 115 % | salto avant 220 %, impact à la retombée, renverse 1 s |
+| Guerrier | hache 130 %, 3 cibles max | crochet 100 % : attire de 3 m, renverse 1 s | tour complet 180 % (4,2 m) |
+| Voleur | tourbillon 80 % | ruée de 4 m + tourbillon 100 % | bond de 5 m + fumigène 140 % : invisible 2 s, Évasion 4 s (40 % d'esquive) |
+| Chasseur | flèche 100 % | 3 flèches 70 % | pluie de flèches 150 % (zone 4 m à 12 m) |
+| Clerc | éclat sacré 90 % (zone 2,5 m) | marteau céleste 130 %, renverse 1 s | prière : soin 6 % + Régénération 3 s |
+| Magicien | explosion arcanique 100 % | puits gravitationnel 80 % : aspire vers le centre, ralentit | pas éthéré : repli de 6 m + invisible 2,5 s |
 
-## Cartes de build (0.1.30)
+Invisibilité : les monstres perdent ta trace ; attaquer ou lancer un sort la rompt.
 
-- Chaque carte proposée a une **rareté tirée** (commune ×1, rare ×1,5, épique ×2,2,
-  légendaire ×3, poids 60 / 27 / 10 / 3) qui multiplie ce qu'elle apporte ; un passif se
-  prend jusqu'à **10 fois** ; la carte affiche le total avant → après.
-- **Améliorations de sort** : dégâts (sorts d'attaque), soins (sorts de soin) ou durée des
-  effets (buffs), moins de recharge, et à partir de rare un bonus d'attribut au lancement.
-- **Orbes d'expérience** : l'expérience tombe sous le monstre ; zone de collecte (carte
-  Aimant), Rappel (tout revient), Érudit (+XP), Venin tenace (effets sur la durée).
-- Tout se règle dans le mode dev, page **Cartes** (Cards, Boons, DevCards ;
-  data/dev_edits.json -> cards, card_rules).
+## Classe + arme (builds exotiques)
+
+> Archive : depuis 0.1.127 l'arme principale est toujours du type de la classe ; une arme d'un autre type n'est que l'arme
+> secondaire (« Auto-attaque des armes ») ; 17 types d'arme (« Boucle de jeu et Survie », lot E4).
+
+- On choisit **une classe** (sorts, passifs, talents, attributs) puis **une arme**, au choix
+  parmi 6 types : katana, hache, dague, arc, sceptre, bâton (lobby, ou l'arme équipée).
+- **Le combo d'auto-attaque, la posture, la portée et le type de dégâts du combo suivent
+  l'arme** (hache = combo du Guerrier, bâton = combo magique du Magicien…) ; les sorts restent
+  ceux de la classe : magicien à la hache, guerrier au bâton, voleur à l'arc…
+- Les stats de base de l'arme dépendent de son type (hache surtout physique, bâton surtout
+  magique) : un build exotique doit composer avec ses attributs.
+- Le butin d'armes suit l'arme en main ; choisir un type dans le lobby équipe la meilleure arme
+  de ce type de l'héritage (ou une arme commune neuve).
+
+## Roguelite : héritage
+
+> Archive : remplacé par la Survie avec l'équipement du hub (0.1.170, N1) : plus d'objet gardé au choix, le hub est restauré en
+> fin de run (`Profile.end_run_survival`) ; début de carte doux = `RunDirector.EARLY_EASE` 0,45 → 1 sur `EARLY_RAMP` 300 s.
+
+- Chaque run **repart de zéro** : pas d'or, pas de matériaux, pas de butin.
+- On part avec son **équipement de départ**, choisi dans le lobby parmi l'**héritage**
+  (katana commun au tout début).
+- À la fin de la run (victoire, défaite ou abandon), on **garde 1 objet** au choix, avec son
+  amélioration (+8 reste +8). Une pièce d'héritage portée pendant la run est mise à jour.
+- Lobby : **Nouvelle partie** efface l'héritage et les statistiques (2 clics pour confirmer).
+- Les 3 premières minutes, les monstres montent de 60 % à 100 % de leurs PV et dégâts.
+
+## Étapes et sources (refonte 0.1.91, façon Megabonk)
+
+> Archive partielle : depuis 0.1.123 une run = les 3 cartes d'une époque (zones fixes, `Epochs.LIST`) ; les monstres ne lâchent
+> plus d'équipement (lignes « Équipement » de la table périmées) ; les fournitures suivent « Fournitures de la Survie » (E4).
+
+- **Une run = 3 étapes** : la zone choisie, puis une zone à la hauteur du héros (au moins la suivante :
+  niveau 17 en fin d'étape 1 → Avila 13-30 ; sinon monstres et butin, plafonnés au niveau de la zone,
+  resteraient sous le sien ; les zones franchies se débloquent). Le boss d'une étape vaincu, un
+  **portail** apparaît dans sa salle : il mène à la carte de la zone suivante (minuterie, sceaux et coffres
+  remis à zéro ; niveau, cartes, équipement, or et clés gardés ; la zone suivante est aussi débloquée).
+  Victoire après le boss de la 3e étape (ou de la dernière zone). +120 d'expertise par étape franchie.
+- **Où trouver quoi** :
+
+| Ce qu'on cherche | Où |
+|---|---|
+| Or | jarres, caisses, tas d'or (ramassés en passant), monstres, défis |
+| Parchemins de fortification (chaque +1) | caisses et tonneaux surtout, coffres simples, élites |
+| Gemmes | cristaux (3 coups), jarres, coffres du joaillier |
+| Parchemins d'enchantement | autels du scribe (au choix), coffres ouvragés et dorés, marchands |
+| Pierres de sûreté, parchemin béni | coffres ouvragés et dorés, stèles du défi, élites |
+| +1 sans risque | enclumes (3 par carte) |
+| Équipement commun → épique | monstres (5 %), coffres simples (choix de 3), marchands |
+| Équipement rare → mythique | coffres ouvragés (mythique 7 % par proposition) |
+| Équipement épique → légendaire | coffres dorés (légendaire 15 %, mythique 22 % par proposition) |
+| Mythique / légendaire garantis, sets | coffres de récompense : boss d'étape (100 %), stèles du défi (100 %), élites (20 %) |
 
 ## Méta-progression des cartes et classes (0.1.33)
+
+> Archive : prix des coffres de la carte +18 % par coffre ouvert depuis 0.1.90 ; fil d'éveil des activités : `core/unlocks.gd`.
 
 - **Classes** : règles par famille (Progression.UNLOCKS) — voir AUDIT.md partie 1.
 - **Cartes** : 12 disponibles d'emblée, 18 à débloquer par exploits cumulés (Cards.UNLOCK) ;
@@ -1187,6 +1292,9 @@ apparences, collection et, depuis P10, **talents** (section `talents`, lexique �
 
 ## Équipement en run (0.1.34)
 
+> Archive partielle : la puissance d'une pièce suit toujours le niveau du héros ; l'état actuel (hub, enclume, Forge fermée pendant
+> la Survie, Atelier hors run) est dans « Boucle de jeu et Survie » et « Atelier ».
+
 - Puissance d'un objet = niveau du héros de la run, plafonnée au niveau de l'objet
   (Items.power_cap) ; hors run : la puissance maximale. Améliorations, gemmes, enchantements
   gardés entre les runs.
@@ -1194,3 +1302,12 @@ apparences, collection et, depuis P10, **talents** (section `talents`, lexique �
   (Craft._upgrade_roll), réforgeable aux cristaux.
 - Comparateur (Items.rating, Items.compare_to_equipped) : ▲ / ▼, % sur la fiche, alerte en
   run et touche G (quick_equip).
+
+## Ordre de réalisation
+
+> Archive : ordre du prototype (0.1.0 à 0.1.30), fait.
+
+1. Générateur de map (DA Eden) + run de 10 min + rage + lieux à découvrir.
+2. Équipement à jets, matériaux, marchand (vendre / désassembler / améliorer), boutique.
+3. Arène du boss, attaques annoncées, invocations.
+4. Performance pour des vagues de centaines de monstres.
