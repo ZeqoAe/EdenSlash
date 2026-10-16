@@ -179,6 +179,7 @@ Interface (AC-G, `R_AC_G.md`) : écran jouable `scenes/autochess.tscn` (`ui/auto
 7 stratèges au hasard, `power_fight`), cadre `ui/autochess_hud.gd` + `autochess_shop` / `_traits` / `_players` / `_unit_card` / `_augments` / `_carousel` ; test `test_ac_ui`, captures `tests/shot_ac.tscn`.
 Simulateur (AC-C, `R_AC_C.md`) : `core/autochess_sim.gd` (`AutochessSim.fight` injectable dans `Autochess.fight`, `run` = repli d'un combat commencé ;
 même couche d'effets et même fiche que le vrai, réglages `TUNE` calés sur lui : 88-96 % de même vainqueur) ; outil `tools/autochess_fight.tscn` (`--calib`, `--compare --sweep`, `--units`, `--bench`) ; test `test_ac_sim`.
+Stratèges IA (AC-D, `R_AC_D.md`) : `core/autochess_ai.gd` (`AutochessAi.make(difficulté, tempérament, graine)`, `lineup` = les 8 stratèges, `restore` après reprise ; 4 difficultés × 3 tempéraments, actions publiques seules, plan et hasard dans `meta`) ; banc `tools/autochess_ai_games.tscn` (`--setup`, `--fight=power|effects|sim`, `--a=` réglages d'essai) ; test `test_ac_ai`.
 IA de combat (AC-U, `R_AC_U.md`) : `ai/autochess_unit.gd` (comportements `roles` / `target` / `spells` / `dodge`, `retreat` coupé ; `ai_full`, `naive`, `fight.ai`) ;
 banc `tools/autochess_ai_bench.tscn` (`--ai=full --vs=naive`, 240 miroirs : 99 %) ; test `test_ac_unit_ai` ; un changement d'IA se mesure au banc avant d'être gardé.
 
