@@ -1676,6 +1676,27 @@ func _menu_survivor() -> void:
 	_pin(go)
 
 
+## Ce que le Survivant donne : trois coffres d'apparence selon l'avancée (✔ une fois gagnés), le titre au boss.
+func _survivor_rewards(tier: int) -> void:
+	_section("Coffres d'apparence", "Chaque palier d'avancée donne son coffre une fois ; ensuite, un coffre commun et un coffre rare au plus par jour.")
+	for g in SurvivorRewards.board(tier):
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		_sub.add_child(h)
+		var mark := Hud._label(h, "✔" if bool(g.done) else "◇", 15, UiTheme.GOLD if bool(g.done) else UiTheme.MUTED)
+		mark.custom_minimum_size = Vector2(18, 0)
+		var t := Hud._label(h, String(g.text) + ("  ·  titre « %s »" % String(g.title) if String(g.title) != "" else ""), 15, UiTheme.TEXT)
+		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var c: Dictionary = Rewards.TYPES[String(g.type)]
+		var n := Hud._label(h, String(c.name).trim_prefix("Coffre d'apparence "), 15, c.color)
+		n.tooltip_text = String(c.name)
+		n.mouse_filter = Control.MOUSE_FILTER_STOP
+		var gap := Control.new()  # la rareté ne touche pas la barre de défilement
+		gap.custom_minimum_size = Vector2(10, 0)
+		h.add_child(gap)
+
+
 ## Survivant (lot S8) : les cinq paliers en une rangée (le choisi en or, un fermé grisé avec sa condition), puis ce que le
 ## palier choisi ajoute, en une phrase (le détail au survol).
 func _survivor_tiers() -> void:
@@ -1736,27 +1757,6 @@ func _survivor_overview() -> void:
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		l.custom_minimum_size = Vector2(90, 0)
-
-
-## Ce que le Survivant donne : trois coffres d'apparence selon l'avancée (✔ une fois gagnés), le titre au boss.
-func _survivor_rewards(tier: int) -> void:
-	_section("Coffres d'apparence", "Chaque palier d'avancée donne son coffre une fois ; ensuite, un coffre commun et un coffre rare au plus par jour.")
-	for g in SurvivorRewards.board(tier):
-		var h := HBoxContainer.new()
-		h.add_theme_constant_override("separation", 8)
-		_sub.add_child(h)
-		var mark := Hud._label(h, "✔" if bool(g.done) else "◇", 15, UiTheme.GOLD if bool(g.done) else UiTheme.MUTED)
-		mark.custom_minimum_size = Vector2(18, 0)
-		var t := Hud._label(h, String(g.text) + ("  ·  titre « %s »" % String(g.title) if String(g.title) != "" else ""), 15, UiTheme.TEXT)
-		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		var c: Dictionary = Rewards.TYPES[String(g.type)]
-		var n := Hud._label(h, String(c.name).trim_prefix("Coffre d'apparence "), 15, c.color)
-		n.tooltip_text = String(c.name)
-		n.mouse_filter = Control.MOUSE_FILTER_STOP
-		var gap := Control.new()  # la rareté ne touche pas la barre de défilement
-		gap.custom_minimum_size = Vector2(10, 0)
-		h.add_child(gap)
 
 
 func _start_survivor() -> void:

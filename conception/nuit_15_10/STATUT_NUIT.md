@@ -30,3 +30,24 @@
 | S8 Survivant : paliers I-V, mode ouvert à tous, documentation (`conception/survivor/R_S8.md`) | sous-agent | fait | 0.1.210 |
 
 Note : le lancement de sessions séparées est refusé quand le tour vient d'un événement automatique ; l'orchestrateur utilise alors des sous-agents.
+
+## Plan de l'orchestrateur (le joueur est parti pour des heures : lancer la suite sans s'arrêter, pas de rapport tant qu'il ne le demande pas)
+
+Fait depuis le tableau : U9 0.1.180, E4 0.1.179, P1 0.1.183, P2 0.1.186, P3 0.1.181, P4 0.1.185, P5 0.1.184, P6 0.1.188, P8 0.1.187, P9 0.1.189,
+P10 0.1.190, P11 0.1.192, P12 0.1.191, P13 0.1.193, M5 0.1.196 (quêtes).
+En cours : S3 (cartes Survivant), S4 (déroulé de la run Survivant), P14 (suite de tests verte), P15 (spawn varié, scaling des monstres),
+M1 (Battle royale), M2 (bibliothèque de boss + Donjons à la carte), P16 (bugs skins : aura, arme).
+File d'attente, dans l'ordre :
+1. S7 équilibrage par mesures · S8 paliers (le paramètre `tier` de `SurvivorRewards.settle` / `board` est prêt), doc, mode visible (lever `Survivor.READY`). S1 à S6 faits.
+2. M3 La Tour (après M2) : un élite au minimum par étage, étages de boss (bibliothèque), étages « Ombres » (IA qui joue une classe), vagues moins ennuyeuses.
+3. M6 Ruée des boss + Siège (après M2) : bibliothèque de boss, lisibilité de la difficulté (jauge de PE), équilibre.
+4. M7 Arènes (duel, duo, trio) et Gantelet : polissage et idées.
+5. Nettoyage de CLAUDE.md / DESIGN.md, passe de régression complète (tools/run_tests.py de P14), nouvelles notes feedback/ (suivi : feedback/_SUIVI.md).
+6. Restes connus : image de la carte Quêtes (session locale), tools/reparer_cache_uid.py à lancer au calme, pas d'annonce quand un coffre du menu accomplit une quête.
+
+## Mise à jour finale (0.1.213)
+Tout le plan est poussé : S3 0.1.198 · P14 0.1.199 · P16 0.1.200 · M1 0.1.201 · M2 0.1.202 · S5 0.1.203 · S6 0.1.204 · M7 0.1.205 · P15 0.1.206 ·
+M3 0.1.207 · M6 0.1.208 · S7 0.1.209 · S8 0.1.210 (Survivant visible) · M8 0.1.211 · P17 0.1.212 (doc) · P18 0.1.213 (régression : 80/82 verts puis tous verts).
+Restes pour le joueur : valider l'équilibrage au ressenti (Survie époque I : temps pour tuer « moyen » 26-55 % plus lent qu'en P11 ; Survivant palier II trop facile
+au pilote, débutant un peu fort ; Tour : bruit ±40 %, boss 100/150/200 hors borne entre classes) ; illustrations dédiées (Quêtes, Survivant) à demander à la session locale ;
+tools/reparer_cache_uid.py à lancer au calme ; code mort `Profile.end_run_extract`.

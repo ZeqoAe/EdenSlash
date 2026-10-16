@@ -37,7 +37,7 @@ func _ready() -> void:
 	# cartes et passifs
 	var b := ItemWidgets.panel(self, 0, true)
 	b.get_parent().visible = not Survivor.active and not Duel.active  # Survivant : passifs et sets sont sur la page Build (lot S5) ; duel : ni trophée ni carte (passe M7)
-	ItemWidgets.section(b, "Trophée et cartes")
+	ItemWidgets.section(b, "Cartes" if Royale.active else "Trophée et cartes")  # (Battle royale : pas de trophée, passe M1)
 	var sb := ScrollContainer.new()
 	sb.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	sb.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
