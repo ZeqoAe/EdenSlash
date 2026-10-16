@@ -391,6 +391,15 @@ func _ready() -> void:
 	dq._finish("test")
 	DuelQueue.speed = 1.0
 	await get_tree().process_frame
+	# lot BR3 : fiche d'équipement d'un héros du Battle royale (près de sa dépouille, ou en spectateur)
+	var br_gear := {}
+	for s in ["weapon", "head", "chest", "ring"]:
+		br_gear[s] = Items.generate(10, 0.5, s, "warrior")
+	var sheet := RoyaleGearSheet.open(world, {"name": "Guerrier", "cid": "warrior", "lv": 12, "kills": 2, "place": 4, "gear": br_gear, "drops": {}})
+	await probe("Battle royale : fiche d'équipement", 0.9)
+	sheet._input(back_event())
+	check("fiche d'équipement : B la ferme et rend la main", not sheet.is_open() and not get_tree().paused)
+	await get_tree().process_frame
 	world.queue_free()
 	await get_tree().process_frame
 	var title: Node = load("res://scenes/title.tscn").instantiate()

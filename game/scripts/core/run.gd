@@ -717,6 +717,9 @@ func roll_cards(n := 3, skills_only := false, kind := "") -> Array:
 			pool = pool.filter(func(c): return c.type == "passive" and not c.get("cert", false))
 		"cert":
 			pool = pool.filter(func(c): return c.get("cert", false))
+	if Royale.active:
+		# Battle royale (lot BR3) : cartes de sorts et de bonus seulement ; l'arme se renforce par les coffres (sv_weapon_up)
+		pool = pool.filter(func(c): return c.type != "weapon_up")
 	var picks: Array = []
 	# cartes gardées au choix précédent : proposées d'abord, avec leur rareté
 	if not skills_only and kind == "":
@@ -742,6 +745,10 @@ func roll_cards(n := 3, skills_only := false, kind := "") -> Array:
 				picks.append(_describe_card(c))
 				pool.erase(c)
 				break
+	if Royale.active:
+		# Battle royale (lot BR3) : l'amélioration de sort du Survivant (niveau 5 au moins épique, 10 légendaire), même carte
+		picks = picks.map(func(c): return SurvivorCards.spell_up_card(int(c.id), String(c.get("tier", "common"))) if String(c.type) == "upgrade" else c) \
+			.filter(func(c): return not c.is_empty())
 	return picks
 
 
@@ -811,6 +818,10 @@ func _describe_card(c: Dictionary) -> Dictionary:
 func apply_card(card: Dictionary) -> void:
 	if Survivor.owns(card):
 		Survivor.apply_card(card)  # cartes « sv_… » du Survivant
+		changed.emit()
+		return
+	if RoyaleLoot.owns(card):
+		RoyaleLoot.apply_card(card)  # Battle royale : pièces et améliorations du système du Survivant (lot BR3)
 		changed.emit()
 		return
 	Tutorial.on_card(card)

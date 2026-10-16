@@ -121,6 +121,8 @@ static func start(cid: String) -> void:
 	kills = 0
 	last_report = {}
 	Run.start(cid)  # Profile.begin_run : copie du profil, rien n'est écrit tant que active
+	for id in RoyaleLoot.NO_PASSIVES:
+		Run.banned.append("passive:" + String(id))  # (lot BR3 : passifs de pièce sans objet ici)
 	Run.survival = true  # départ sans équipement, les pièces des coffres sont portées tout de suite
 	Run.epoch = 1
 	zone_id = String(Epochs.zone(randi_range(1, mini(4, Epochs.count())), 1))
@@ -147,6 +149,19 @@ static func chest_items(tier: int, lv: int, cid: String, n := 3) -> Array:
 	for i in n:
 		out.append(Items.generate(loot_level(lv), float(def.luck), "", cid, int(def.min_r), "", int(def.max_r)))
 	return out
+
+
+## Note de l'équipement [param gear] (emplacement -> pièce) d'un héros de la classe [param cid] au niveau [param lv] :
+## somme des notes pondérées par le profil de la classe (mesures, choix des héros scriptés).
+static func gear_score(gear: Dictionary, cid: String, lv: int) -> float:
+	var prof := ClassGear.profile(cid)
+	var was := Run.hero_level
+	Run.hero_level = lv  # (la puissance d'une pièce suit le niveau du héros qui la porte)
+	var s := 0.0
+	for slot in gear:
+		s += Items.rating(gear[slot], prof)
+	Run.hero_level = was
+	return s
 
 
 ## Fiche d'un héros scripté de la classe [param cid], niveau [param lv], portant [param gear] (emplacement -> pièce) :
@@ -183,13 +198,35 @@ static func make_ai(cid: String, diff: int, index: int) -> ClassRival:
 	return r
 
 
+## Lot BR3 : un héros scripté remplit maintenant ses emplacements vides d'abord (RoyaleLoot), donc plus vite qu'avant
+## (3 pièces au hasard, la meilleure gardée) ; le joueur a demandé de ne pas changer leur niveau d'équipement : leurs
+## pièces comptent pour AI_GEAR_SCALE dans leurs statistiques (qualité et bonus), mesuré par tools/br3_ai_probe (note
+## d'équipement face à l'ancienne règle : -26 % à 3 coffres, +23 % à 9, +3 à +10 % de 12 à 30). Les pièces elles-mêmes
+## (fiche, pièces au sol) sont intactes.
+const AI_GEAR_SCALE := 0.62
+
+
+## Copie de l'équipement [param gear] d'un héros scripté telle qu'elle compte dans ses statistiques (AI_GEAR_SCALE).
+static func ai_gear(gear: Dictionary) -> Dictionary:
+	var out := {}
+	for slot in gear:
+		var it: Dictionary = (gear[slot] as Dictionary).duplicate()
+		it["quality"] = float(it.get("quality", 1.0)) * AI_GEAR_SCALE
+		var aff: Dictionary = (it.get("affixes", {}) as Dictionary).duplicate()
+		for k in aff:
+			aff[k] = float(aff[k]) * AI_GEAR_SCALE
+		it["affixes"] = aff
+		out[slot] = it
+	return out
+
+
 ## Recalcule les PV, l'attaque et la défense de [param r] d'après son niveau et son équipement. Ses PV gardent leur part.
 static func refresh_ai(r: ClassRival, keep_ratio := true) -> void:
 	var st: Dictionary = r.get_meta("royale")
 	var ratio := r.hp / r.max_hp if keep_ratio and r.max_hp > 0.0 else 1.0
 	var lv: int = st.lv
 	r.level = lv
-	var h := sheet(String(st.cid), lv, st.gear)
+	var h := sheet(String(st.cid), lv, ai_gear(st.gear))
 	r.use_sheet(h)
 	h.free()
 	r.hp = r.max_hp * ratio
@@ -211,27 +248,16 @@ static func ai_award(r: ClassRival, amount: float) -> void:
 		refresh_ai(r)
 
 
-## Un coffre de qualité [param tier] ouvert par le héros scripté [param r] : il garde la meilleure des trois pièces
-## proposées (si elle bat celle de son emplacement), gagne de l'expérience et parfois une potion.
+## Un coffre de qualité [param tier] ouvert par le héros scripté [param r] : comme le joueur (RoyaleLoot.offer), une pièce
+## par emplacement vide, puis des améliorations de ses pièces ; il prend l'option qui gagne le plus (note pondérée par
+## le profil de sa classe), gagne de l'expérience et parfois une potion.
 static func ai_open_chest(r: ClassRival, tier: int) -> void:
 	var st: Dictionary = r.get_meta("royale")
 	st.chests = int(st.chests) + 1
 	var def: Dictionary = CHEST_TIERS[clampi(tier, 0, CHEST_TIERS.size() - 1)]
-	# la pièce qui gagne le plus sur ce qu'il porte (note pondérée par le profil de sa classe, comme le Bot du joueur)
-	var prof := ClassGear.profile(String(st.cid))
-	var gear: Dictionary = st.gear
-	var best: Dictionary = {}
-	var best_gain := 0.0
-	for it in chest_items(tier, int(st.lv), String(st.cid)):
-		var slot := String(it.get("slot", ""))
-		if slot == "" or slot == "trophy":
-			continue
-		var gain := Items.rating(it, prof) - (Items.rating(gear[slot], prof) if gear.has(slot) else 0.0)
-		if gain > best_gain:
-			best_gain = gain
-			best = it
-	if not best.is_empty():
-		gear[String(best.slot)] = best
+	var pick := RoyaleLoot.best(RoyaleLoot.offer(tier, int(st.lv), String(st.cid), st.gear))
+	if not pick.is_empty():
+		RoyaleLoot.apply_option(pick, st.gear)
 	if randf() < float(def.potion) * (1.0 if int(def.potions) > 0 else 0.6):
 		st.potions = int(st.potions) + 1
 	ai_award(r, float(def.xp))

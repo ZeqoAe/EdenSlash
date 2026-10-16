@@ -26,10 +26,16 @@ const FOOT_H := 56.0  # Survivant : place des boutons Bannir / Garder épinglés
 ## Hauteur maximale d'une carte : 470 px hors Survivant ; en Survivant, ce que l'écran laisse (titre, fiche, boutons),
 ## entre 430 et 600 px.
 func card_cap() -> float:
-	if not SurvivorCards.on():
+	if not _sv_cards():
 		return 470.0
 	var free := get_viewport().get_visible_rect().size.y - 180.0 - (_tip.get_combined_minimum_size().y + 18.0 if _tip.visible else 0.0)
 	return clampf(free, 430.0, 600.0)
+
+## Le choix en cours a des cartes rendues par SurvivorCardView (Survivant, ou pièces et sorts du Battle royale) : leurs
+## boutons sont épinglés en bas et la carte peut être plus haute.
+func _sv_cards() -> bool:
+	return SurvivorCards.on() or _cards.any(func(c): return SurvivorCardView.handles(c))
+
 
 var _queue: Array = []  # [titre, cartes, relance (Callable)]
 var _reroll_fn: Callable
@@ -190,7 +196,7 @@ func _fit_heights() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 	var tallest := 380.0
-	var sv := SurvivorCards.on()
+	var sv := _sv_cards()
 	for b in _buttons:
 		if is_instance_valid(b):
 			tallest = maxf(tallest, (b.get_meta("content") as Control).get_combined_minimum_size().y + 36.0 + (FOOT_H - 18.0 if sv else 0.0))
@@ -209,7 +215,7 @@ func _fit_heights() -> void:
 func _descriptions(cards: Array) -> Dictionary:
 	var each: Array = []
 	var lines: Array = []
-	var gear := cards.size() >= 2 and not SurvivorCards.on()  # (Survivant : SurvivorCardView rend chaque carte en entier)
+	var gear := cards.size() >= 2 and not SurvivorCards.on() and not cards.any(func(c): return SurvivorCardView.handles(c))  # (SurvivorCardView rend chaque carte en entier)
 	for c in cards:
 		each.append(String(c.desc))
 		gear = gear and c.has("item")
@@ -561,6 +567,13 @@ static func auto_pick(options: Array, random_cards := false) -> Dictionary:
 		return {}
 	if Survivor.active and SurvivorCards.handles():
 		return SurvivorCards.auto_pick(options, random_cards)  # Survivant : ses priorités (S3)
+	if options.all(func(o): return o.has("royale_gain")):
+		# Battle royale : coffre (pièces pour les emplacements vides, améliorations) : le plus grand gain de note (RoyaleLoot)
+		var top: Dictionary = options[0]
+		for o in options:
+			if float(o.royale_gain) > float(top.royale_gain):
+				top = o
+		return top
 	var skills := options.filter(func(o): return String(o.get("type", "")) == "skill")
 	if not skills.is_empty() and Run.skills.size() < Run.MAX_SKILLS:
 		return skills[0]

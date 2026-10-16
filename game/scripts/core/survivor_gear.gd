@@ -56,7 +56,9 @@ static func _r(rng: RandomNumberGenerator) -> RandomNumberGenerator:
 
 # --- passifs fixes ----------------------------------------------------------------------------------------------------
 ## Passif fixe du modèle d'Eden [param e] (pièce de set, pièce hors set ou arme) ; "" si aucun.
-static func fixed_passive(e: Dictionary) -> String:
+## [param any_model] (Battle royale, pièces des coffres de tout niveau) : un modèle hors du pool du Survivant prend son
+## rang d'après son numéro d'Eden (toujours le même passif pour le même modèle) au lieu du premier de la liste.
+static func fixed_passive(e: Dictionary, any_model := false) -> String:
 	if e.is_empty():
 		return ""
 	var sid := String(e.get("set", ""))
@@ -69,10 +71,10 @@ static func fixed_passive(e: Dictionary) -> String:
 	if e.has("wtype"):
 		var wt := String(e.wtype)
 		var pool := _existing(WEAPON_PASSIVES)
-		var rank := _rank(SurvivorPool.weapons(wt), e)
+		var rank := _rank(SurvivorPool.weapons(wt), e, any_model)
 		return String(pool[(rank + 3 * maxi(SurvivorPool.weapon_types().find(wt), 0)) % pool.size()]) if not pool.is_empty() else ""
 	var pool2 := _existing(SLOT_PASSIVES.get(String(e.slot), Cards.PASSIVE_EFFECTS))
-	return String(pool2[_rank(SurvivorPool.pieces(String(e.slot)), e) % pool2.size()]) if not pool2.is_empty() else ""
+	return String(pool2[_rank(SurvivorPool.pieces(String(e.slot)), e, any_model) % pool2.size()]) if not pool2.is_empty() else ""
 
 
 static func _existing(ids: Array) -> Array:
@@ -80,11 +82,13 @@ static func _existing(ids: Array) -> Array:
 	return ids.filter(func(id): return id in ok)
 
 
-## Rang du modèle [param e] dans [param list], par numéro d'Eden croissant (0 s'il n'y est pas).
-static func _rank(list: Array, e: Dictionary) -> int:
+## Rang du modèle [param e] dans [param list], par numéro d'Eden croissant (0 s'il n'y est pas ; son numéro d'Eden avec
+## [param by_id]).
+static func _rank(list: Array, e: Dictionary, by_id := false) -> int:
 	var ids: Array = list.map(func(x): return int(x.id))
 	ids.sort()
-	return maxi(ids.find(int(e.id)), 0)
+	var i := ids.find(int(e.id))
+	return i if i >= 0 else (absi(int(e.get("id", 0))) if by_id else 0)
 
 
 ## Ids des passifs d'une pièce (fixe puis paliers).
@@ -123,6 +127,45 @@ static func from_eden(e: Dictionary, rng: RandomNumberGenerator = null) -> Dicti
 	var fp := fixed_passive(e)
 	item["sv_passives"] = [{"id": fp, "at": 0, "power": Survivor.rule("passive_power")}] if fp != "" else []
 	return item
+
+
+## Pièce venue d'ailleurs (coffre du Battle royale) faite pièce « à la Survivant » : rareté, niveau et stats gardés,
+## puissance au niveau du héros (`sv`), jet de qualité de 100 à 120 % (tiré, ou le sien ramené dans la fourchette avec
+## [param keep_quality]), passif fixe de son modèle (fixed_passive, any_model) ; le passif d'Eden est remplacé. Hors
+## Survivant : ni verrou ni bonus de set du Survivant (Survivor.active).
+static func adopt(item: Dictionary, rng: RandomNumberGenerator = null, keep_quality := false) -> Dictionary:
+	if item.is_empty():
+		return item
+	item.erase("passive")
+	item["sv"] = true
+	var lo := Survivor.rule("quality_min")
+	var hi := Survivor.rule("perfect_quality")
+	item["quality"] = clampf(float(item.get("quality", 1.0)), lo, hi) if keep_quality else roll_quality(rng)
+	if not item.has("sv_passives"):
+		var e: Dictionary = GameData.eden_by_id.get(int(item.get("eden", -1)), {})
+		var fp := fixed_passive(e, true) if not e.is_empty() else ""
+		var all := Cards.passive_effects()
+		var guard := 0
+		while fp != "" and ("passive:" + fp) in Run.banned and guard < all.size():
+			guard += 1
+			fp = String(all[(all.find(fp) + 1) % all.size()])  # passif banni de la partie : le suivant de la liste
+		item["sv_passives"] = [{"id": fp, "at": 0, "power": Survivor.rule("passive_power")}] if fp != "" else []
+	return item
+
+
+## Retire de la run les passifs de [param item] (pièce enlevée : Battle royale, pièce tombée ou échangée). Le plafond
+## d'un passif n'est pas rejoué : on retire la puissance de la pièce, sans descendre sous zéro.
+static func release(item: Dictionary) -> void:
+	for p in item.get("sv_passives", []):
+		var id := String(p.id)
+		if not Run.passives.has(id):
+			continue
+		Run.passive_power[id] = maxf(0.0, float(Run.passive_power.get(id, 0.0)) - float(p.get("power", 1.0)))
+		Run.passives[id] = int(Run.passives[id]) - 1
+		if int(Run.passives[id]) <= 0 or float(Run.passive_power[id]) <= 0.0001:
+			Run.passives.erase(id)
+			Run.passive_power.erase(id)
+	Run.changed.emit()
 
 
 ## Nouvelle pièce pour l'emplacement [param slot] ({} : aucune). [param ctx] : rng, eden (modèle imposé), et le contexte

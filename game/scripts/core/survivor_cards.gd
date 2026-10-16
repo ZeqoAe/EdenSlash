@@ -374,6 +374,13 @@ static func weapon_card(exclude: Array = []) -> Dictionary:
 	var item := SurvivorGear.make_weapon(wt, {"rng": _rng()})
 	if item.is_empty():
 		return {}
+	return weapon_item_card(item)
+
+
+## Carte « Arme » de l'arme [param item] (variante d'auto-attaque, stats, passif fixe, jet). Partagée avec le Battle
+## royale (arme de départ, RoyaleLoot).
+static func weapon_item_card(item: Dictionary) -> Dictionary:
+	var wt := Items.weapon_type_of(item)
 	var c := RunDirector.item_card(item, "sv_weapon")
 	var s := WeaponAttacks.spec_for(item)
 	var lines: PackedStringArray = ["[color=#ffcf6b][b]%s[/b][/color] : %s" % [s.name, s.desc]]

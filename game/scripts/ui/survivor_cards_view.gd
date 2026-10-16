@@ -20,9 +20,10 @@ const DIM := Color(0.7, 0.68, 0.8)
 const TRACK := Color(0.16, 0.14, 0.25)
 
 
-## La carte est-elle rendue ici ? (Survivant en cours, carte d'une famille du Survivant.)
+## La carte est-elle rendue ici ? (Survivant en cours, carte d'une famille du Survivant ; Battle royale : ses pièces, ses
+## améliorations de pièce et ses sorts passent par les mêmes cartes, lot BR3.)
 static func handles(card: Dictionary) -> bool:
-	return SurvivorCards.on() and SurvivorCards.FAMILY.has(String(card.get("type", "")))
+	return (SurvivorCards.on() or Royale.active) and SurvivorCards.FAMILY.has(String(card.get("type", "")))
 
 
 ## Ligne du haut de la carte (à côté de la pastille de la touche) : ce qu'est la carte, en trois mots.

@@ -166,6 +166,9 @@ func _draw_legend() -> void:
 	for m in director.markers():
 		seen[String(m[1])] = true
 	var kinds: Array = LEGEND.filter(func(e): return seen.has(String(e[0])))
+	if Royale.active:  # mêmes noms que les coffres de la partie (ProcMap.ROYALE_LOOKS)
+		var names := {"chest": "Coffre commun", "chest1": "Coffre rare"}
+		kinds = kinds.map(func(e): return [e[0], names.get(String(e[0]), e[1])])
 	if kinds.is_empty():
 		return
 	var font := get_theme_default_font()
@@ -176,9 +179,6 @@ func _draw_legend() -> void:
 	for i in kinds.size():
 		var k: String = kinds[i][0]
 		var p := box.position + Vector2(18, 16 + row * i)
-	if Royale.active:  # mêmes noms que les coffres de la partie (ProcMap.ROYALE_LOOKS)
-		var names := {"chest": "Coffre commun", "chest1": "Coffre rare"}
-		kinds = kinds.map(func(e): return [e[0], names.get(String(e[0]), e[1])])
 		var col: Color = ICONS.get(k, Color.WHITE)
 		if k.begins_with("chest"):
 			var r := 4.0 if k == "chest" else 5.5

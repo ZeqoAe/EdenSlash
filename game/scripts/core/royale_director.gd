@@ -103,7 +103,7 @@ func setup(director: RunDirector) -> void:
 	d.zone_changed.emit({"name": "Battle royale · %s" % d.zone.get("name", ""), "levels": [1, Royale.LEVEL_CAP]})
 	d.message.emit("Battle royale\n%d héros, un seul survivant. Pille les coffres, reste dans l'anneau !" % Royale.PLAYERS, 4.0)
 	d.world._offer("Ton arme de %s : choisis sa variante" % String(GameData.weapon_type(Run.weapon_type()).get("name", "classe")).to_lower(),
-		d.start_weapon_cards())
+		RoyaleLoot.start_weapon_cards(d.start_weapon_cards()))  # lot BR3 : armes du Survivant (jet, passif fixe)
 	if p.autoplay:
 		print("[royale] %s contre %s · carte %s · %d coffres" % [Run.class_id, ais.map(func(a): return String(a.get_meta("royale").cid)), Run.zone_id, _chests.size()])
 
@@ -251,6 +251,7 @@ func update(delta: float) -> void:
 			_update_spectator()
 		elif d.player.autoplay:
 			d.player.autoplay_target = _ring_goal() if _outside(d.player.global_position, 0.92) else Vector3.INF
+			_autoplay_pickup()
 		if elapsed >= Royale.DURATION + 20.0:
 			_timeout()
 	if _end_t >= 0.0:
@@ -413,6 +414,9 @@ func _order(r: ClassRival) -> void:
 			r.goal = prey.global_position
 			st["mode"] = "H"
 			return
+	# une pièce tombée d'un héros éliminé, meilleure que la sienne et proche (lot BR3)
+	if _ai_ground(r, pos):
+		return
 	# sinon un coffre dans la zone sûre (le prochain anneau quand il approche)
 	var soon := shrinking and (state == "shrink" or float(ring.left) < 30.0)
 	var chest := _pick_chest(r, flat, nc if soon else cc, (nr * 0.95) if soon else (cr * 0.97), foes, bool(brain.smart))
@@ -652,6 +656,7 @@ func _on_ai_died(who: Combatant, killer: Combatant) -> void:
 		d.message.emit("%d restant%s" % [left, "s" if left > 1 else ""], 1.6)
 	if randf() < 0.7 or was_bounty:
 		d._drop_potion(who.global_position, Potions.roll_kind())
+	_fall(who)  # lot BR3 : ses pièces tombent (sauf l'arme), sa dépouille garde sa fiche
 	if who == watched:
 		watched = killer if killer != null and is_instance_valid(killer) and not killer.is_dead and killer != d.player else null
 	_update_bounty()
@@ -718,6 +723,7 @@ func player_down(killer: Combatant = null) -> void:
 			left += 1
 	_place = left
 	_down_at = elapsed
+	_fall_player()  # lot BR3 : tes pièces tombent au sol (sauf l'arme)
 	feed("Tu es éliminé (%de)" % left)
 	if left <= 2:
 		_finish(left)  # un seul héros restant : il a gagné
@@ -754,6 +760,11 @@ func player_time() -> float:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# spectateur : [F] montre l'équipement du héros suivi (lot BR3)
+	if spectating and phase != "over" and event.is_action_pressed("interact") and watched != null and is_instance_valid(watched) and watched.has_meta("royale"):
+		get_viewport().set_input_as_handled()
+		inspect(record_of(watched))
+		return
 	# spectateur : Échap / B ouvre le bilan (pas le menu pause : il n'y a plus rien à y faire)
 	if spectating and phase != "over" and (event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel")):
 		get_viewport().set_input_as_handled()
@@ -788,8 +799,11 @@ func _finish(place: int) -> void:
 		d.message.emit("%s remporte la partie" % winner.display_name.get_slice(" ·", 0), 3.0)
 	d.player.autoplay_target = Vector3.INF
 	if d.player.autoplay:
-		var order: Array = ai_stats.map(func(st): return "%s:%d(niv.%d,%d élim.,%d coffres)" % [String(st.cid).substr(0, 6),
-			int(st.get("place", 1)), int(st.lv), int(st.get("kills", 0)), int(st.chests)])
+		var order: Array = ai_stats.map(func(st): return "%s:%d(niv.%d,%d élim.,%d coffres,%d pièces,note %.1f)" % [String(st.cid).substr(0, 6),
+			int(st.get("place", 1)), int(st.lv), int(st.get("kills", 0)), int(st.chests), (st.gear as Dictionary).size(),
+			Royale.gear_score(Royale.ai_gear(st.gear), String(st.cid), int(st.lv))])
+		print("[royale] équipement du joueur : %d pièces portées, %d dans le sac, note %.1f" % [Profile.equipped.size(), Profile.inventory.size(),
+			Royale.gear_score(Profile.equipped, Run.class_id, d.player.level)])
 		print("[royale] fin : place %d · %d éliminations · niveau %d · %d coffres · joueur %.0f s · partie %.0f s · coffres restants %d · %s" % [place,
 			Royale.kills, d.player.level, chests_opened, player_time(), elapsed, chests_left(), " ".join(order)])
 	_end_t = 3.0
@@ -873,6 +887,9 @@ func _announce_drop() -> void:
 	drops.append({"node": it, "land": elapsed + Royale.DROP_DELAY, "pos": pos})
 	var tw := it.create_tween()
 	tw.tween_property(it, "global_position", pos, Royale.DROP_DELAY).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_SINE)
+	tw.tween_callback(func():
+		mark.queue_free()
+		it.set_aura_visible(true))
 	d.message.emit("Largage dans %d s : le meilleur coffre de la partie\nRepère doré sur la carte" % int(Royale.DROP_DELAY), 3.5)
 	Sfx.ui("chest", -6.0)
 
@@ -917,9 +934,16 @@ func open_chest(it: Interactable) -> void:
 	d.message.emit("%s ouvert" % it.title, 1.5)
 	if tier == Royale.DROP_TIER:
 		feed("Tu t'empares du largage")
+	# lot BR3 : une pièce par emplacement vide, puis des améliorations des pièces portées (l'arme de départ est gardée)
 	var roll := func() -> Array:
-		return Royale.chest_items(tier, p.level, Run.class_id).map(func(x): return RunDirector.weapon_card(x, "gear") if x.slot == "weapon" else RunDirector.item_card(x, "gear"))
-	d.world._offer("%s : choisis une pièce d'équipement" % it.title, roll.call(), roll, 1)
+		return RoyaleLoot.player_cards(tier, p.level)
+	var gear_cards: Array = roll.call()
+	if gear_cards.is_empty():
+		d.world._offer("%s : choisis une carte" % it.title, Run.roll_cards(3), func(): return Run.roll_cards(3), 1)  # tout est au maximum
+	else:
+		var pieces := gear_cards.filter(func(c): return c.has("item")).size()
+		d.world._offer("%s : %s" % [it.title, "choisis une pièce" if pieces == gear_cards.size() else ("améliore une pièce" if pieces == 0 else "une pièce ou une amélioration")],
+			gear_cards, roll, 1)
 	# potions
 	var n_potions := int(def.potions) + (1 if randf() < float(def.potion) * (1.0 if int(def.potions) == 0 else 0.0) else 0)
 	for i in n_potions:
@@ -999,6 +1023,9 @@ func farm_target() -> Vector3:
 	var dr := active_drop()
 	if not dr.is_empty() and not _outside(dr.pos, 0.85) and Vector2(dr.pos.x - pp.x, dr.pos.z - pp.z).length() < 90.0:
 		return dr.pos
+	var gp := _ground_for(Profile.equipped, Run.class_id, d.player.level, pp, 40.0)  # pièce tombée meilleure que la sienne (lot BR3)
+	if gp != null:
+		return gp.global_position
 	var best := Vector3.INF
 	var bd := INF
 	for it in _chests:
@@ -1035,6 +1062,7 @@ func objective_lines() -> Array[String]:
 	if spectating:
 		var who := watched.display_name.get_slice(" ·", 0) if watched != null and is_instance_valid(watched) else "—"
 		out.append("◉ Tu regardes %s" % who)
+		out.append("◇ [%s] : son équipement" % Settings.action_label("interact", 1))
 		out.append("◇ [%s] : bilan de la partie" % Settings.action_label("pause", 1))
 		return out
 	out.append("⚔ Reste dans l'anneau violet")
@@ -1061,15 +1089,170 @@ func _debug(delta: float) -> void:
 	var lv: Array = []
 	var sum := 0.0
 	var n := 0
+	var note := 0.0
 	for st in ai_stats:
 		var dead: bool = st.has("place")
 		if not dead:
-	tw.tween_callback(func():
-		mark.queue_free()
-		it.set_aura_visible(true))
 			sum += float(st.lv) + float(st.prog)
+			note += Royale.gear_score(Royale.ai_gear(st.gear), String(st.cid), int(st.lv))
 			n += 1
 		lv.append("%s%d%s%s%d" % [String(st.cid).substr(0, 3), int(st.lv), "x" if dead else "", "" if dead else String(st.get("mode", "?")), int(st.chests)])
-	print("[royale] %3.0f s · anneau %d %s r=%.0f · vivants %d · toi niv. %d (%d PV, %d coffres%s) · bots moy. %.1f · coffres restants %d · %s" % [elapsed,
+	print("[royale] %3.0f s · anneau %d %s r=%.0f · vivants %d · toi niv. %d (%d PV, %d coffres%s) · bots moy. %.1f (équipement %.1f) · coffres restants %d · %s" % [elapsed,
 		int(ring.phase) + 1, ring.state, float(ring.radius), alive_count(), d.player.level, int(d.player.hp), chests_opened, ", spectateur" if spectating else "",
-		sum / maxf(n, 1.0), chests_left(), " ".join(lv)])
+		sum / maxf(n, 1.0), note / maxf(n, 1.0), chests_left(), " ".join(lv)])
+
+
+# --- équipement des héros tombés (lot BR3) ------------------------------------------------------------
+## Un héros scripté s'arrête pour une pièce tombée meilleure que la sienne à moins de GROUND_SIGHT m.
+const GROUND_SIGHT := 35.0
+## Héros tombés : {name, cid, lv, kills, place, gear (emplacement -> pièce à sa mort), drops (emplacement -> pièce au
+## sol), remains (Interactable : sa dépouille), node_id}.
+var fallen: Array = []
+## Pièces au sol (Interactable « gear_drop », RoyaleLoot.make_drop).
+var ground: Array = []
+var _sheet: RoyaleGearSheet = null
+
+
+## Fiche d'un héros scripté, en vie ou tombé (RoyaleGearSheet).
+func record_of(r: Combatant) -> Dictionary:
+	for f in fallen:
+		if int(f.get("node_id", 0)) == r.get_instance_id():
+			return f
+	var st: Dictionary = r.get_meta("royale", {})
+	return {"name": r.display_name.get_slice(" ·", 0), "cid": String(st.get("cid", "")), "lv": int(st.get("lv", r.level)),
+		"kills": int(st.get("kills", 0)), "place": int(st.get("place", 0)), "gear": st.get("gear", {}), "drops": {}}
+
+
+## Ouvre la fiche d'équipement [param rec] (une seule à la fois).
+func inspect(rec: Dictionary) -> void:
+	if rec.is_empty() or (_sheet != null and is_instance_valid(_sheet) and _sheet.is_open()):
+		return
+	_sheet = RoyaleGearSheet.open(d.world, rec)
+
+
+## [F] près d'une dépouille (sa fiche) ou d'une pièce au sol (la prendre) : RunDirector._interact.
+func interact(it: Interactable) -> void:
+	match it.kind:
+		"remains":
+			inspect(it.get_meta("record", {}))
+		"gear_drop" when not d.player.is_dead:
+			_player_take(it)
+
+
+## Un héros scripté tombe : ses pièces (sauf l'arme) au sol autour de lui ; sa dépouille garde sa fiche.
+func _fall(who: Combatant) -> void:
+	if not who.has_meta("royale") or not is_instance_valid(d.map):
+		return
+	var st: Dictionary = who.get_meta("royale")
+	var rec := record_of(who)
+	rec["gear"] = (st.gear as Dictionary).duplicate()
+	rec["place"] = int(st.get("place", 0))
+	rec["lv"] = int(st.lv)
+	rec["kills"] = int(st.get("kills", 0))
+	rec["node_id"] = who.get_instance_id()
+	var pos := who.global_position
+	rec["drops"] = _scatter(RoyaleLoot.drops_of(st.gear), pos)
+	var rem := Interactable.new()
+	rem.setup("remains", String(rec.name), "", "", 1.0, 2.4)
+	rem.set_meta("record", rec)
+	rem.set_meta("prompt", "[F] Voir son équipement — %s" % String(rec.name))
+	d.map.add_child(rem)
+	rem.global_position = pos
+	rem.add_beam(Color(0.78, 0.74, 1.0), 5.0)
+	for tag in rem.get_children():
+		if tag is Label3D:
+			(tag as Label3D).visibility_range_end = 12.0  # (nom de la dépouille : de près, comme les pièces)
+	d.map.interactables.append(rem)
+	rec["remains"] = rem
+	fallen.append(rec)
+
+
+## Le joueur tombe : ses pièces portées (sauf l'arme) restent au sol, à prendre par les autres.
+func _fall_player() -> void:
+	var items := RoyaleLoot.drops_of(Profile.equipped)
+	if items.is_empty() or not is_instance_valid(d.map):
+		return
+	RoyaleLoot.strip(items)  # (leurs passifs quittent la run)
+	_scatter(items, d.player.global_position)
+
+
+## Pose [param items] au sol autour de [param pos] ; renvoie emplacement -> Interactable.
+func _scatter(items: Array, pos: Vector3) -> Dictionary:
+	var out := {}
+	var spots := RoyaleLoot.spread(d.map, pos, items.size())
+	for i in items.size():
+		var node := RoyaleLoot.make_drop(d.map, items[i], spots[i])
+		d.map.interactables.append(node)
+		ground.append(node)
+		out[String(items[i].slot)] = node
+	return out
+
+
+func _take_drop(node: Interactable) -> void:
+	ground.erase(node)
+	d.map.interactables.erase(node)
+	node.used = true
+	node.queue_free()
+
+
+## Le joueur prend la pièce au sol [param node] : elle est portée, la sienne (s'il en avait une) reste à sa place.
+func _player_take(node: Interactable) -> void:
+	if not is_instance_valid(node) or node.used:
+		return
+	var it: Dictionary = node.get_meta("item")
+	var at := node.global_position
+	_take_drop(node)
+	# pièce du Survivant (jet ramené entre 100 et 120, passif fixe) ; celle de l'emplacement reste au sol à sa place
+	var worn := RoyaleLoot.wear(SurvivorGear.adopt(it, null, true))
+	if not worn.is_empty():
+		_scatter([worn], at)
+	Sfx.ui("pickup", -6.0)
+	d.message.emit("Pièce portée : %s" % Items.display_name(it), 1.6)
+
+
+## Pièce au sol la plus proche de [param pos] (moins de [param reach] m, dans l'anneau) qui bat celle de son
+## emplacement dans [param gear] ; null : aucune.
+func _ground_for(gear: Dictionary, cid: String, lv: int, pos: Vector3, reach: float) -> Interactable:
+	var best: Interactable = null
+	var bd := reach
+	for n in ground:
+		if not is_instance_valid(n) or n.used:
+			continue
+		var dd := Vector2(n.global_position.x - pos.x, n.global_position.z - pos.z).length()
+		if dd < bd and not _outside(n.global_position, 0.9) and RoyaleLoot.better(n.get_meta("item"), gear, cid, lv):
+			bd = dd
+			best = n
+	return best
+
+
+## Héros scripté : va prendre une pièce tombée meilleure que la sienne, proche ; vrai s'il s'en occupe.
+func _ai_ground(r: ClassRival, pos: Vector3) -> bool:
+	var st: Dictionary = r.get_meta("royale")
+	var n := _ground_for(st.gear, String(st.cid), int(st.lv), pos, GROUND_SIGHT)
+	if n == null:
+		return false
+	if Vector2(n.global_position.x - pos.x, n.global_position.z - pos.z).length() > RoyaleLoot.PICK_RANGE + 0.6:
+		_release(r)
+		r.goal = n.global_position
+		st["mode"] = "G"
+		return true
+	var it: Dictionary = n.get_meta("item")
+	var worn: Dictionary = st.gear.get(String(it.slot), {})
+	var at := n.global_position
+	_take_drop(n)
+	st.gear[String(it.slot)] = it
+	if not worn.is_empty():
+		_scatter([worn], at)
+	Royale.refresh_ai(r)
+	r.goal = Vector3.INF
+	st["mode"] = "O"
+	return true
+
+
+## Pilote automatique : prend en passant une pièce tombée meilleure que la sienne.
+func _autoplay_pickup() -> void:
+	if ground.is_empty() or d.player.is_dead:
+		return
+	var n := _ground_for(Profile.equipped, Run.class_id, d.player.level, d.player.global_position, RoyaleLoot.PICK_RANGE)
+	if n != null:
+		_player_take(n)

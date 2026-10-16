@@ -420,6 +420,8 @@ func _interact(it: Interactable) -> void:
 			tower.interact(it)
 		"chest" when state == "royale":
 			royale.open_chest(it)  # Battle royale : coffres gratuits, qualité = ce qu'ils donnent
+		"remains", "gear_drop" when state == "royale":
+			royale.interact(it)  # Battle royale : fiche d'un héros tombé, pièce au sol (lot BR3)
 		"chest":
 			# une clé si on en a, sinon le prix en or (qui monte à chaque coffre ouvert)
 			var tier := int(it.get_meta("tier", 0))

@@ -971,6 +971,32 @@ doit se lire avant de lancer ; la Ruée et le Siège puisent dans la bibliothèq
   anneau), fuite s'il est dépassé et a de quoi boire, traque des affaiblis à partir du 3e anneau.
 - Duel entre héros : échelle des dégâts 0,04 (`ModeRules.ROYALE`).
 - Éliminé : on regarde la fin (spectateur) ou on ouvre le bilan ; la place est fixée à la mort.
+- **Équipement (lot BR3, 0.1.216, retour du joueur : « je ne veux pas qu'elles changent », « finir avec 5 arcs »)** :
+  `core/royale_loot.gd`. L'arme de départ (une des deux variantes de l'arme de la classe) est **gardée toute la partie** :
+  aucun coffre ne propose d'arme. Un coffre propose d'abord **une pièce par emplacement vide** (3 au plus, emplacements
+  différents, de la qualité du coffre) ; une pièce posée reste. Tant que l'équipement est incomplet, une pièce pour un
+  emplacement pris n'apparaît que si elle est **nettement meilleure** (note de classe × 1,3 et + 0,6). **Équipement complet**
+  (les 9 emplacements, cape comprise) : le coffre ne propose plus que des **améliorations de pièces portées**.
+- Pièces et améliorations = **celles du Survivant** (mêmes cartes, même rendu) : une pièce de coffre devient une pièce du
+  Survivant (`SurvivorGear.adopt` : jet 100-120 %, passif fixe de son modèle, puissance au niveau du héros) ; amélioration
+  +2 (+4 en légendaire) jusqu'à +10, passif tiré et montré aux paliers +6 / +8 / +10, jet relevé dès rare ; l'amélioration
+  de l'arme porte aussi celle de l'auto-attaque. Rareté des améliorations par coffre : bois / argent / or / largage =
+  chance 0 / 0,3 / 0,6 / 1,2, au moins commune / commune / rare / épique. Passifs sans objet ici (Cadavres explosifs,
+  Aimant) bannis d'office. Relance : une par coffre ; ni « Passer », ni bannir, ni garder (propres au Survivant).
+- Montées de niveau : sorts et bonus seulement (aucune carte d'arme ni de pièce, plus de technique d'arme : elle vient de
+  l'amélioration de l'arme) ; l'amélioration de sort est celle du Survivant (niveau 1 à 10, niveau 5 au moins épique, 10
+  légendaire).
+- Héros scriptés : même remplissage (un emplacement vide par coffre), puis améliorations internes (mise à niveau, rareté,
+  forge +N : leurs pièces ne suivent pas leur niveau), l'option au plus grand gain de note ; jamais deux armes ni une pièce
+  moins bonne. Ils remplissent plus vite qu'avant : leurs pièces comptent pour `Royale.AI_GEAR_SCALE` (0,62) dans leurs
+  stats pour garder leur niveau d'équipement d'avant (`tools/br3_ai_probe` : -26 % à 3 coffres, +23 % à 9, +3 à +10 %
+  de 12 à 30).
+- **À la mort** (joueur compris) : toutes les pièces tombent au sol **sauf l'arme** (repère lumineux à la couleur de la
+  rareté, nom de près) ; [F] « Prendre » : la pièce est portée, l'ancienne reste au sol à sa place (ses passifs quittent la
+  run). Un héros scripté s'arrête pour une pièce meilleure que la sienne à moins de 35 m dans l'anneau.
+- **Inspection** : la dépouille d'un héros garde sa fiche ; [F] près d'elle ouvre la fiche d'équipement (9 emplacements,
+  carte de chaque pièce comparée à la tienne, « au sol » / « déjà ramassée » / arme gardée) ; en spectateur, [F] montre
+  l'équipement du héros suivi. Jeu en pause pendant la fiche ; B / Échap la ferme.
 
 # Partie D — Économie et progression
 
