@@ -160,8 +160,8 @@ func _test_epochs() -> void:
 		var row: Array = Epochs.MAP_MULT[ep - 1]
 		lo.append(row.min())
 		hi.append(row.max())
-	check("monstres : époque I ≤ ×1 (adoucie, passes P5 et H4a), de plus en plus forts d'une époque à l'autre (%s)" % str(Epochs.MAP_MULT),
-		float(hi[0]) <= 1.0 and float(lo[1]) > float(hi[0]) and float(lo[2]) > float(hi[1]) and float(lo[3]) > float(hi[2]))
+	check("monstres : 1re carte ≤ ×1 (compte neuf, passes P5 et H4a), de plus en plus forts d'une époque à l'autre (%s)" % str(Epochs.MAP_MULT),
+		float(Epochs.MAP_MULT[0][0]) <= 1.0 and float(lo[1]) > float(hi[0]) and float(lo[2]) > float(hi[1]) and float(lo[3]) > float(hi[2]))
 	check("époque IV : bien plus forte que l'époque III (un équipement complet est attendu)", float(lo[3]) >= 5.0 * float(lo[2]))
 
 

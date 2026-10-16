@@ -54,7 +54,9 @@ func _test_rage() -> void:
 	d._process(0.0)
 	check("le dernier palier dure (%s, ×101)" % d.rage_text(), d.rage_tier() == 4 and d.rage_text() == "RAGE ×101" and is_equal_approx(m.max_hp, hp0 * 101.0))
 	var late := d._spawn_monster(id, d._near_player(8.0), 5)
-	check("un monstre qui apparaît au palier 4 naît ×101 (%.0f PV)" % late.max_hp, is_equal_approx(late.max_hp, hp0 * 101.0))
+	# lot H4a : la montée dans le temps de la carte (Epochs.time_ramp) s'ajoute pour un monstre né plus tard
+	var ramp := Epochs.time_ramp(d.time) / Epochs.time_ramp(RunDirector.RUN_TIME - 1.0) if Epochs.adventure() else 1.0
+	check("un monstre qui apparaît au palier 4 naît ×101 (%.0f PV)" % late.max_hp, is_equal_approx(late.max_hp, hp0 * 101.0 * ramp))
 	var boss := d._spawn_monster(id, d._near_player(9.0), 5, true)
 	check("le boss n'est pas multiplié par la rage", not boss.has_meta("rage_mult"))
 	d.time = RunDirector.RUN_TIME + 20.0
