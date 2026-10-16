@@ -614,6 +614,8 @@ func _region_of(p: Vector3) -> int:
 
 ## Ajoute une instance de décor au lot (et sa collision si demandé).
 func _add_instance(batch: Dictionary, prop: Dictionary, pos: Vector3, collide := true, yaw := INF, scale_mult := 1.0) -> void:
+	if royale and ROYALE_NO_DECOR.has(String(prop.model)):
+		return
 	var s := rng.randf_range(prop.scale[0], prop.scale[1]) * scale_mult
 	var basis := Basis(Vector3.UP, rng.randf() * TAU if yaw == INF else yaw).scaled(Vector3.ONE * s)
 	var xf := Transform3D(basis, pos)
@@ -917,6 +919,34 @@ const CHEST_LOOKS := [
 ]
 
 
+## Coffres du Battle royale (passe BR2) : de vrais coffres au trésor (le tonneau « Coffre secret » d'Eden n'y sert plus), la
+## couleur de leur aura suit la qualité : commun (blanc bleuté, bois et acier), rare (rouge, acier gravé), doré (or) et
+## largage (or éclatant, grand faisceau). Les couleurs sont celles des repères de la mini-carte (Minimap.ICONS).
+const ROYALE_LOOKS := [
+	{"title": "Coffre commun", "model": "uc020", "scale": 2.4, "col": Color(0.72, 0.88, 1.0), "beam": 14.0, "halo": 3.3, "sparks": 3},
+	{"title": "Coffre rare", "model": "uc008", "scale": 1.7, "col": Color(1.0, 0.42, 0.33), "beam": 19.0, "halo": 3.4, "sparks": 5},
+	{"title": "Coffre doré", "model": "uc007", "scale": 1.9, "col": Color(1.0, 0.86, 0.3), "beam": 28.0, "halo": 3.8, "sparks": 8},
+	{"title": "Largage", "model": "uc009", "scale": 2.8, "col": Color(1.0, 0.95, 0.55), "beam": 60.0, "halo": 5.0, "sparks": 12},
+]
+
+
+## Battle royale : caisses, tonneaux et sacs du décor des lieux (ils ressemblaient trop à un coffre ou à du butin).
+const ROYALE_NO_DECOR := ["uc006", "uc002_1", "uc017", "uc018", "uc026"]
+
+
+## Coffre du Battle royale de la qualité [param tier] (0 commun, 1 rare, 2 doré, 3 largage), prêt à poser.
+static func make_royale_chest(tier: int, with_aura := true) -> Interactable:
+	var t := clampi(tier, 0, ROYALE_LOOKS.size() - 1)
+	var look: Dictionary = ROYALE_LOOKS[t]
+	var it := Interactable.new()
+	it.setup("chest", String(look.title), "res://assets/maps/objects/%s.glb" % look.model, "", float(look.scale), 3.0)
+	it.set_meta("tier", t)
+	if with_aura:
+		it.add_chest_aura(look.col, float(look.beam), float(look.halo), int(look.sparks))
+	it.style_label(look.col, 1.4 * float(look.scale) + 0.9)
+	return it
+
+
 func _build_chests() -> void:
 	var npcs: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/npcs.json"))
 	var data: Dictionary = npcs.get("chest", {})
@@ -924,8 +954,10 @@ func _build_chests() -> void:
 		var c: Vector3 = chests[k]
 		var tier := int(chest_tiers[k]) if k < chest_tiers.size() else 0
 		var look: Dictionary = CHEST_LOOKS[tier]
-		var chest := Interactable.new()
-		if String(look.model) == "":
+		var chest: Interactable = make_royale_chest(tier) if royale else Interactable.new()
+		if royale:
+			pass  # coffre, halo et faisceau tout faits (ROYALE_LOOKS)
+		elif String(look.model) == "":
 			chest.setup("chest", String(look.title), "res://assets/monsters/%s/%s.glb" % [data.model, data.model],
 				"res://assets/monsters/textures/%s.png" % data.texture, 1.0, 3.0)
 		else:
@@ -1135,7 +1167,7 @@ func _scatter_breakables() -> void:
 		if float(pl.h) > 0.0:
 			_crowd(pl.c, rng.randi_range(6, 10), 2.0, float(pl.r) * 0.7, 1.0)
 			_put_breakable("gem", pl.c + Vector2(rng.randf_range(-4, 4), rng.randf_range(-4, 4)))
-	for k in 9:
+	for k in (4 if royale else 9):
 		var p := _free_point(20.0, 40.0)
 		if p != Vector2.INF:
 			_put_breakable("gem", p)
@@ -1145,6 +1177,8 @@ func _scatter_breakables() -> void:
 
 
 func _put_breakable(kind: String, p: Vector2) -> void:
+	if royale and kind != "gem":
+		return  # Battle royale : plus de jarres, caisses ni tas d'or (BR2) ; il ne reste que quelques cristaux
 	if p.x < 6.0 or p.y < 6.0 or p.x > size - 6.0 or p.y > size - 6.0 or _near(_decor_pts, p, 2.2):
 		return
 	breakables.add(kind, Vector3(p.x, height_at(p.x, p.y), p.y), rng)

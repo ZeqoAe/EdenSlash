@@ -6,7 +6,7 @@ extends Control
 const ICONS := {
 	"merchant": Color(1.0, 1.0, 1.0),
 	"dungeon": Color(0.85, 0.35, 1.0),
-	"chest": Color(1.0, 0.85, 0.3),
+	"chest": Color(0.72, 0.88, 1.0),  # blanc bleuté, comme l'aura des coffres communs
 	"shrine": Color(0.55, 1.0, 0.6),
 	"anvil": Color(1.0, 0.6, 0.3),
 	"scribe": Color(0.6, 0.75, 1.0),
@@ -176,6 +176,9 @@ func _draw_legend() -> void:
 	for i in kinds.size():
 		var k: String = kinds[i][0]
 		var p := box.position + Vector2(18, 16 + row * i)
+	if Royale.active:  # mêmes noms que les coffres de la partie (ProcMap.ROYALE_LOOKS)
+		var names := {"chest": "Coffre commun", "chest1": "Coffre rare"}
+		kinds = kinds.map(func(e): return [e[0], names.get(String(e[0]), e[1])])
 		var col: Color = ICONS.get(k, Color.WHITE)
 		if k.begins_with("chest"):
 			var r := 4.0 if k == "chest" else 5.5

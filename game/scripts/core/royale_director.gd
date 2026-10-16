@@ -805,7 +805,6 @@ func chests_left() -> int:
 
 # --- réapprovisionnement -------------------------------------------------------------------------
 var _restocks := 0
-var _chest_npc: Dictionary = {}
 
 
 ## Vague de nouveaux coffres dans l'anneau (Royale.RESTOCK_PER_HERO par héros en vie), plus souvent dorés à chaque vague.
@@ -829,23 +828,12 @@ func _restock() -> void:
 		d.message.emit("De nouveaux coffres tombent dans l'anneau", 2.5)
 
 
-## Coffre de la qualité [param tier] posé en [param pos] (même allure que ceux de la carte, ProcMap.CHEST_LOOKS).
+## Coffre de la qualité [param tier] posé en [param pos] (le même que ceux de la carte, ProcMap.make_royale_chest).
 func _spawn_chest(pos: Vector3, tier: int) -> Interactable:
-	var look: Dictionary = ProcMap.CHEST_LOOKS[tier]
-	var it := Interactable.new()
-	if String(look.model) == "":
-		if _chest_npc.is_empty():
-			_chest_npc = (JSON.parse_string(FileAccess.get_file_as_string("res://data/npcs.json")) as Dictionary).get("chest", {})
-		it.setup("chest", String(look.title), "res://assets/monsters/%s/%s.glb" % [_chest_npc.model, _chest_npc.model],
-			"res://assets/monsters/textures/%s.png" % _chest_npc.texture, 1.0, 3.0)
-	else:
-		it.setup("chest", String(look.title), "res://assets/maps/objects/%s.glb" % look.model, "", float(look.scale), 3.0)
-	it.set_meta("tier", tier)
+	var it := ProcMap.make_royale_chest(tier)
 	d.map.add_child(it)
 	it.global_position = pos
 	it.rotation.y = rng.randf() * TAU
-	if String(look.model) != "":
-		it.add_beam(look.light, 10.0 if tier == 1 else 18.0)
 	d.map.interactables.append(it)
 	_chests.append(it)
 	return it
@@ -869,13 +857,17 @@ func _announce_drop() -> void:
 			break
 	if pos == Vector3.INF:
 		pos = _ground(nc, 0.0)
-	var it := Interactable.new()
-	it.setup("chest", "Largage", "res://assets/maps/objects/uc009.glb", "", 1.9, 3.0)
-	it.set_meta("tier", Royale.DROP_TIER)
+	var it := ProcMap.make_royale_chest(Royale.DROP_TIER)
 	it.used = true  # en l'air : ni le joueur ni les héros scriptés ne l'ouvrent avant l'atterrissage
 	d.map.add_child(it)
 	it.global_position = pos + Vector3.UP * 60.0
-	it.add_beam(Color(1.0, 0.85, 0.35), 60.0)
+	# repère au point d'atterrissage (halo et faisceau au sol) ; l'aura du coffre ne s'allume qu'une fois posé
+	var look: Dictionary = ProcMap.ROYALE_LOOKS[Royale.DROP_TIER]
+	var mark := Interactable.make_aura(look.col, float(look.beam), float(look.halo), 0)
+	d.map.add_child(mark)
+	mark.global_position = pos
+	it.tree_exited.connect(mark.queue_free)
+	it.set_aura_visible(false)
 	d.map.interactables.append(it)
 	_chests.append(it)
 	drops.append({"node": it, "land": elapsed + Royale.DROP_DELAY, "pos": pos})
@@ -1072,6 +1064,9 @@ func _debug(delta: float) -> void:
 	for st in ai_stats:
 		var dead: bool = st.has("place")
 		if not dead:
+	tw.tween_callback(func():
+		mark.queue_free()
+		it.set_aura_visible(true))
 			sum += float(st.lv) + float(st.prog)
 			n += 1
 		lv.append("%s%d%s%s%d" % [String(st.cid).substr(0, 3), int(st.lv), "x" if dead else "", "" if dead else String(st.get("mode", "?")), int(st.chests)])

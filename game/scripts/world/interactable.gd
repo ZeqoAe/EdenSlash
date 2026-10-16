@@ -66,6 +66,9 @@ func prompt() -> String:
 
 
 func _prompt() -> String:
+	if has_meta("prompt"):  # invite propre (Battle royale : pièce au sol, dépouille) : texte ou Callable
+		var p = get_meta("prompt")
+		return String(p.call()) if p is Callable else String(p)
 	match kind:
 		"chest":
 			return "[F] Ouvrir — %s" % title
@@ -124,6 +127,108 @@ func add_beam(col: Color, height := 16.0) -> void:
 	ring.position.y = 0.12
 	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_beam.add_child(ring)
+
+
+## Coffre du Battle royale (passe BR2), repérable de loin : halo qui pulse au sol, faisceau qui s'éteint vers le haut,
+## quelques étincelles qui montent. Tout est additif et sans lumière dynamique (64 coffres et des vagues) ; [param beam_h]
+## est la hauteur du faisceau, [param halo_r] le rayon du halo. Le tout se cache à l'ouverture (même nœud que [method add_beam]).
+func add_chest_aura(col: Color, beam_h: float, halo_r: float, sparks := 6) -> void:
+	_beam = make_aura(col, beam_h, halo_r, sparks)
+	add_child(_beam)
+
+
+## Montre ou cache l'aura du coffre (le largage n'a la sienne qu'une fois posé).
+func set_aura_visible(v: bool) -> void:
+	if _beam:
+		_beam.visible = v
+
+
+## L'aura seule (halo, faisceau, étincelles), à poser n'importe où : voir [method add_chest_aura].
+static func make_aura(col: Color, beam_h: float, halo_r: float, sparks := 6) -> Node3D:
+	var root := Node3D.new()
+	var halo := MeshInstance3D.new()
+	var plane := PlaneMesh.new()
+	plane.size = Vector2.ONE * halo_r * 2.0
+	halo.mesh = plane
+	halo.material_override = _aura_material(_HALO_SHADER, col)
+	halo.position.y = 0.18
+	halo.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	halo.visibility_range_end = 150.0
+	root.add_child(halo)
+	var pillar := MeshInstance3D.new()
+	var cyl := CylinderMesh.new()
+	cyl.top_radius = 0.18
+	cyl.bottom_radius = 0.55
+	cyl.height = beam_h
+	cyl.radial_segments = 10
+	cyl.rings = 1
+	cyl.cap_top = false
+	cyl.cap_bottom = false
+	pillar.mesh = cyl
+	var bm := _aura_material(_BEAM_SHADER, col)
+	bm.set_shader_parameter("height", beam_h)
+	pillar.material_override = bm
+	pillar.position.y = beam_h * 0.5
+	pillar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	pillar.visibility_range_end = 260.0
+	root.add_child(pillar)
+	if sparks > 0:
+		var p := CPUParticles3D.new()
+		p.amount = sparks
+		p.lifetime = 2.4
+		p.local_coords = true
+		p.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
+		p.emission_sphere_radius = halo_r * 0.45
+		p.direction = Vector3.UP
+		p.spread = 8.0
+		p.gravity = Vector3.ZERO
+		p.initial_velocity_min = 0.5
+		p.initial_velocity_max = 1.1
+		p.scale_amount_min = 0.5
+		p.scale_amount_max = 1.0
+		var q := QuadMesh.new()
+		q.size = Vector2.ONE * 0.26
+		var sm := StandardMaterial3D.new()
+		sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		sm.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+		sm.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
+		sm.vertex_color_use_as_albedo = true
+		sm.albedo_color = col.lightened(0.5)
+		q.material = sm
+		p.mesh = q
+		var ramp := Gradient.new()
+		ramp.set_color(0, Color(1, 1, 1, 0.0))
+		ramp.set_color(1, Color(1, 1, 1, 0.0))
+		ramp.add_point(0.25, Color(1, 1, 1, 1.0))
+		p.color_ramp = ramp
+		p.position.y = 0.4
+		p.visibility_range_end = 55.0
+		p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(p)
+	return root
+
+
+## Nom du coffre : de la couleur de sa qualité, à hauteur du coffre, lisible à courte portée seulement.
+func style_label(col: Color, height: float, range_end := 30.0) -> void:
+	if _label == null:
+		return
+	_label.modulate = col.lightened(0.35)
+	_label.position.y = height
+	_label.visibility_range_end = range_end
+	_label.font_size = 34
+	_label.outline_size = 12
+
+
+static func _aura_material(shader: Shader, col: Color) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = shader
+	m.set_shader_parameter("col", col)
+	return m
+
+
+const _BEAM_SHADER: Shader = preload("res://shaders/chest_beam.gdshader")
+const _HALO_SHADER: Shader = preload("res://shaders/chest_halo.gdshader")
 
 
 ## Lieu utilisé : son nom s'éteint (le décor reste).

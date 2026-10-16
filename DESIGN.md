@@ -959,7 +959,7 @@ doit se lire avant de lancer ; la Ruée et le Siège puisent dans la bibliothèq
 
 - 8 héros nus au niveau 1, chacun pour soi, dernier debout. **9 min 50** d'anneau en 5 resserrements (`Royale.PHASES` :
   rayons 190 / 130 / 80 / 42 / 14 m, dégâts hors anneau 2 → 20 % des PV par seconde), puis 30 s de mort subite.
-- Niveaux : coffres (0,55 / 0,85 / 1,3 / largage 2 niveaux), objets cassés (0,03, cristal 0,1), élimination (1 niveau et
+- Niveaux : coffres (0,55 / 0,85 / 1,3 / largage 2 niveaux), cristaux (0,1 ; une vingtaine sur la carte : plus aucune jarre, caisse ni tas d'or, passe BR2), élimination (1 niveau et
   25 % des PV). Les héros scriptés gagnent exactement la même chose que le joueur.
 - **Réapprovisionnement** : 3 coffres par héros en vie (22 au plus) tombent dans l'anneau à 50 s puis à chaque resserrement et à chaque nouvel anneau,
   plus souvent dorés à chaque vague. **Largage** : à chaque resserrement sauf le dernier, un coffre de 4e qualité (rareté 4-5,
