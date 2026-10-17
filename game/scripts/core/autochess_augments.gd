@@ -10,16 +10,18 @@ extends RefCounted
 
 ## Effet -> où il est appliqué.
 const COMBAT_EFFECTS := ["stats_equipe", "premier_coup", "soin_equipe", "mana_equipe", "unite_la_plus_chere", "lignee",
-	"contre_attaque", "bouclier_avant", "cout_mana", "depart_rapide"]
+	"contre_attaque", "bouclier_avant", "cout_mana", "depart_rapide", "bouclier_equipe", "porteur", "trio_de_tete"]
 const GAME_EFFECTS := ["or", "relance_gratuite", "xp", "composant_au_choix", "unites_famille", "plafond_interets",
 	"pv_contre_or", "objet", "achat_double", "trait_compte", "butin_gardien", "place_plateau", "unite_au_choix",
-	"gardiens_renforces", "or_sans_interets", "niveau_max", "fusion_rapide", "objets_au_choix"]
+	"gardiens_renforces", "or_sans_interets", "niveau_max", "fusion_rapide", "objets_au_choix", "trait_au_choix",
+	"copie_unite"]
 
 
-## « combat » (ce fichier), « partie » (Autochess) ou « les deux » (Menace : butin et gardien plus fort).
+## « combat » (ce fichier), « partie » (Autochess) ou « les deux » (Menace : butin et gardien plus fort ; atouts de trait
+## du lot ACX-3 : un compte de plus à la partie, un bonus aux porteurs du trait en combat).
 static func scope(id: String) -> String:
 	var eff := String(AutochessData.augment(id).get("effect", ""))
-	if eff == "gardiens_renforces":
+	if eff == "gardiens_renforces" or eff == "trait_plus":
 		return "les deux"
 	if eff in COMBAT_EFFECTS:
 		return "combat"
@@ -78,6 +80,22 @@ static func prepare_team(ctx: Dictionary) -> void:
 			var cb := absi(int(b.col) - 3)
 			return ca < cb or (ca == cb and x < y))
 		team["front"] = front
+		# lot ACX-3 : unités les plus chères (Trinité) et porteur d'étendard (le plus d'objets, puis le plus cher)
+		var top := ids.duplicate()
+		top.sort_custom(func(x, y):
+			var a: Dictionary = ctx.units[x]
+			var b: Dictionary = ctx.units[y]
+			if int(a.cost) != int(b.cost):
+				return int(a.cost) > int(b.cost)
+			if int(a.stars) != int(b.stars):
+				return int(a.stars) > int(b.stars)
+			return x < y)
+		team["top"] = top
+		var bearer := -1
+		for f in top:
+			if bearer < 0 or (ctx.units[f].items as Array).size() > (ctx.units[bearer].items as Array).size():
+				bearer = f
+		team["bearer"] = bearer
 
 
 # --- Fiche ---------------------------------------------------------------------------------------------------------
@@ -106,6 +124,20 @@ static func stat_mods(u: Dictionary, ctx: Dictionary, acc: Dictionary) -> void:
 				if (team.get("heirs", {}) as Dictionary).has(int(u.fid)):
 					acc["hp_pct"] += float(p.hp_pct)
 					acc["atk_pct"] += float(p.atk_pct)
+			"trait_plus":  # Serment du Rempart… (lot ACX-3) : bonus des porteurs du trait
+				if String(p.trait) in (u.get("traits", []) as Array):
+					var st: Dictionary = p.get("stats", {})
+					for k in st:
+						if acc.has(k):
+							acc[k] = float(acc[k]) + float(st[k])
+			"porteur":  # Porte-étendard
+				if int(team.get("bearer", -1)) == int(u.fid):
+					acc["atk_pct"] += float(p.atk_pct)
+					acc["spell_pct"] += float(p.spell_pct)
+			"trio_de_tete":  # Trinité
+				if int(u.fid) in (team.get("top", []) as Array).slice(0, int(p.count)):
+					acc["hp_pct"] += float(p.hp_pct)
+					acc["atk_pct"] += float(p.atk_pct)
 
 
 ## Mana du prochain sort, en part de la mana max (Ordre de bataille : 1er sort à mi-mana).
@@ -131,6 +163,11 @@ static func on_event(trigger: String, ev: Dictionary, ctx: Dictionary) -> void:
 					var p: Dictionary = a.params
 					for f in (ctx.team[side].get("front", []) as Array).slice(0, int(p.count)):
 						AutochessEffects.shield(ctx, f, float(ctx.units[f].hp_max) * float(p.shield_pct), float(p.dur), "garde_du_corps")
+				for a in with_effect(ctx, side, "bouclier_equipe"):  # Ligne de boucliers (lot ACX-3)
+					for f in AutochessEffects.living(ctx, side):
+						if _units(ctx.units[f]):
+							AutochessEffects.shield(ctx, f, float(ctx.units[f].hp_max) * float(a.params.shield_pct), float(a.params.dur),
+								"ligne_de_boucliers")
 				for a in with_effect(ctx, side, "depart_rapide"):  # Ordre de bataille
 					var p: Dictionary = a.params
 					for f in AutochessEffects.living(ctx, side):

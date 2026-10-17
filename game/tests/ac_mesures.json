@@ -1,6 +1,6 @@
 {
- "_doc": "L'Échiquier (autochess), lot AC-J : chiffres de référence de la dernière mesure (conception/autochess/R_AC_J.md), relus par tests/test_ac_sim_real. Changer AutochessSim.TUNE, dmg_scale ou les données du mode demande de refaire la mesure et ce fichier.",
- "version": "0.1.255",
+ "_doc": "L'Échiquier (autochess), lot AC-J : chiffres de référence de la dernière mesure (conception/autochess/R_AC_J.md), relus par tests/test_ac_sim_real. Changer AutochessSim.TUNE, dmg_scale ou les données du mode demande de refaire la mesure et ce fichier. Lot ACX-3 (R_ACX3.md) : parties refaites avec les 45 atouts et les objets utilitaires (269 parties « echelle » ; l7r, r7l, pilote : chiffres d'AC-J), format Éclair à part (300 parties).",
+ "version": "ACX-3",
  "tune": {
   "auto_hit": 0.4,
   "auto_lock": 1.5,
@@ -82,24 +82,40 @@
  },
  "games": {
   "setup": "echelle",
-  "n": 2000,
+  "n": 269,
   "check_games": 8,
   "check_seed": 9001,
-  "fight_median": 22.8,
-  "rounds": 33.3,
-  "minutes": 29.6,
-  "minutes_x2": 22.7,
+  "fight_median": 22.5,
+  "rounds": 33.5,
+  "minutes": 29.7,
+  "minutes_x2": 22.8,
   "ladder": [
-   7.13,
-   4.6,
-   3.22,
-   3.05
+   7.14,
+   4.65,
+   3.19,
+   3.02
   ],
   "l7r_top4": 1.0,
   "r7l_top4": 0.0,
   "pilote_top4": 0.46,
-  "first_out_before_41": 0.07,
-  "draws": 0.007,
-  "meta_top_share": 0.33
+  "first_out_before_41": 0.11,
+  "draws": 0.008,
+  "meta_top_share": 0.3
+ },
+ "eclair": {
+  "setup": "echelle",
+  "format": "eclair",
+  "n": 300,
+  "fight_median": 22.6,
+  "rounds": 18.4,
+  "minutes": 14.4,
+  "minutes_x2": 10.6,
+  "ladder": [
+   6.9,
+   4.58,
+   3.24,
+   3.28
+  ],
+  "meta_top_share": 0.18
  }
 }

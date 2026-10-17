@@ -339,6 +339,10 @@ const AUGMENT_CASES := {
 	"chef_de_guerre": ["sac", "dealt", "holder", 1], "riposte": ["assaut_esquive", "dealt_proc", "holder", 1],
 	"garde_du_corps": ["assaut", "shielded", "holder", 1], "main_sure": ["sac", "casts", "holder", 1],
 	"ordre_de_bataille": ["sac", "attacks", "holder", 1],
+	# lot ACX-3
+	"ligne_de_boucliers": ["assaut", "shielded", "holder", 1], "porte_etendard": ["sac", "dealt", "holder", 1],
+	"trinite": ["sac", "dealt", "holder", 1], "grand_grimoire": ["sac", "casts", "holder", 1],
+	"serment_rempart": ["assaut", "hp_end", "holder", 1],
 }
 
 
@@ -484,7 +488,7 @@ func _game_effect(id: String, g0: Autochess, g1: Autochess) -> bool:
 		"heros_legendaire":
 			return "heros" in _kinds(p1) and not "heros" in _kinds(p0)
 		"tresor_du_dragon":
-			return int(p1.gold) == int(p0.gold) + 30 and int(g1.income_for(0, 2, 2).interest) == 0
+			return int(p1.gold) == int(p0.gold) + int(AutochessData.augment(id).params.gold) and int(g1.income_for(0, 2, 2).interest) == 0
 		"niveau_11":
 			return int(p1.max_level) == 11 and int(p0.max_level) == 10
 		"etoile_filante":
@@ -498,6 +502,36 @@ func _game_effect(id: String, g0: Autochess, g1: Autochess) -> bool:
 			p0["board"] = [_bu(g0, "warrior", [3, 0]), _bu(g0, "berserker", [2, 0]), _bu(g0, "sage", [4, 0])]
 			p1["board"] = [_bu(g1, "warrior", [3, 0]), _bu(g1, "berserker", [2, 0]), _bu(g1, "sage", [4, 0])]
 			return int(g1.trait_counts(0).get("fracas", 0)) == int(g0.trait_counts(0).get("fracas", 0)) + 1
+		# lot ACX-3
+		"maitre_armes", "grand_coeur":
+			var guard := 0
+			while not g1.pending(0).is_empty() and String(g1.pending(0).kind) != "famille" and guard < 5:
+				g1.choose(0, 0)  # (l'ouverture de 1-1 passe d'abord)
+				guard += 1
+			var c: Dictionary = g1.pending(0)
+			if String(c.get("kind", "")) != "famille":
+				return false
+			var t := String(c.options[0])
+			var want := 2 if id == "grand_coeur" else 1
+			var kind_ok := String(AutochessData.TRAITS[t].kind) == ("famille" if id == "grand_coeur" else "arme")
+			var before := int(g1.trait_counts(0).get(t, 0))
+			g1.choose(0, 0)
+			return kind_ok and int(g1.trait_counts(0).get(t, 0)) == before + want
+		"recrue_doree":
+			var hs := (p1.pending as Array).filter(func(c): return String(c.kind) == "heros")
+			return hs.size() == 1 and int(hs[0].stars) == 1 and AutochessPool.cost_of(String(hs[0].options[0])) == 3
+		"atelier", "miroir_des_ames":
+			var want: Array = AutochessData.augment(id).params.items
+			return want.all(func(x): return x in p1.items) and not "pince" in p0.items
+		"serment_rempart", "pacte_ombre", "piste_traque", "flamme_ferveur", "savoir_arcane":
+			var t := String(AutochessData.augment(id).params.trait)
+			return int(g1.trait_counts(0).get(t, 0)) == int(g0.trait_counts(0).get(t, 0)) + 1
+		"jumeaux":
+			for g in [g0, g1]:
+				g.players[0]["board"] = [_bu(g, "warrior", [3, 0])]
+			(p1.augments as Array).erase(id)
+			g1._take_augment(0, id)
+			return g1.units_of(0).size() == g0.units_of(0).size() + 1
 	return false
 
 

@@ -109,6 +109,14 @@ func _ready() -> void:
 		screen._sync()
 		screen.cursor._set_slot(AutochessBoard.items_slot((p.items as Array).size() - 1), "keys")
 		await _shot("2_objet")
+		# lot ACX-3 : fiche d'un composant, ses 8 recettes (celles qu'on peut faire en tête)
+		(p.items as Array).append("lame")
+		(p.items as Array).append("gant")
+		screen._sync()
+		screen.cursor._set_slot(AutochessBoard.items_slot((p.items as Array).size() - 2), "keys")
+		await _shot("2b_recettes")
+		(p.items as Array).resize((p.items as Array).size() - 2)
+		screen._sync()
 		# manette : cadre doré sur une carte de la boutique, fiche de cette unité
 		Gamepad._set_active(true)
 		UiNav.focus(screen.hud.shop.cards[2])
@@ -175,6 +183,10 @@ func _ready() -> void:
 				screen.meter.set_tab("heal")
 				await _shot("7c_compteur_soins")
 				screen.meter.set_tab("dealt")
+		# lot ACX-3 : coup au stratège (projectiles en vol, puis le chiffre sur la figurine)
+		await get_tree().create_timer(0.3).timeout
+		get_viewport().get_texture().get_image().save_png("user://shots/ac_%d_7d_coup.png" % get_window().size.x)
+		print("[shot] ac_%d_7d_coup (coups : %s)" % [get_window().size.x, str(screen.strikes)])
 		frames.sort()
 		if not frames.is_empty():
 			print("[shot] combat rendu dans l'arène : image médiane %.1f ms, p95 %.1f ms (%d images)" % [frames[frames.size() / 2],

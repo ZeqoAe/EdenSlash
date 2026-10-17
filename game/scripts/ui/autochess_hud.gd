@@ -723,8 +723,16 @@ func refresh(g: Autochess, me: int, foe := -1, scouted := -1) -> void:
 	var p: Dictionary = g.players[me]
 	_stage.text = "Étape %d · manche %d" % [g.stage, g.round_i]
 	_kind.text = String(KIND_NAMES.get(g.round_kind(), ""))
-	if AutochessData.is_augment_round(g.stage, g.round_i):
+	if g.is_augment_round():
 		_kind.text += " · atout"
+	if g.format != "classique":  # lot ACX-3 : format court
+		_kind.text = "%s · %s" % [String(AutochessData.FORMATS.get(g.format, {}).get("name", "")), _kind.text]
+	_kind.tooltip_text = String(AutochessData.FORMATS.get(g.format, {}).get("tip", ""))
+	if g.day_rule != "":
+		var rd: Dictionary = AutochessData.DAY_RULES.get(g.day_rule, {})
+		_kind.tooltip_text = ("%s\n" % _kind.tooltip_text if _kind.tooltip_text != "" else "") + "Règle du jour : %s. %s" % [String(rd.get("name", "")), String(rd.get("short", ""))]
+	_kind.mouse_filter = Control.MOUSE_FILTER_PASS if _kind.tooltip_text != "" else Control.MOUSE_FILTER_IGNORE
+	_frieze.rules = g.rules
 	_frieze.set_stage(g.stage, g.round_i)
 	_level.text = "Niveau %d" % int(p.level)
 	var need := AutochessData.xp_to_next(int(p.level))
@@ -741,11 +749,11 @@ func refresh(g: Autochess, me: int, foe := -1, scouted := -1) -> void:
 		_xp_text.text = "%d / %d" % [int(p.xp), need]
 	_xp_bar.tooltip_text = "Niveau 2 à la prochaine manche" if need <= 0 and not maxed else ("%d / %d XP" % [int(p.xp), need] if not maxed else "Niveau maximal")
 	odds.set_level(int(p.level))
-	xp_button.text = "Acheter de l'XP · %d" % AutochessData.XP_BUY_COST
+	xp_button.text = "Acheter de l'XP · %d" % g.xp_cost()
 	xp_button.disabled = maxed or need <= 0
-	xp_button.tooltip_text = "+%d XP pour %d or" % [AutochessData.XP_BUY_AMOUNT, AutochessData.XP_BUY_COST]
+	xp_button.tooltip_text = "+%d XP pour %d or" % [AutochessData.XP_BUY_AMOUNT, g.xp_cost()]
 	var free := int(p.free_rerolls)
-	reroll_button.text = "Actualiser · offert" if free > 0 else "Actualiser · %d" % AutochessData.REROLL_COST
+	reroll_button.text = "Actualiser · offert" if free > 0 else "Actualiser · %d" % g.reroll_cost()
 	reroll_button.tooltip_text = "Cinq nouvelles offres."
 	var locked := bool(p.locked)
 	lock_button.text = "Verrouillée" if locked else "Verrouiller"
@@ -754,7 +762,7 @@ func refresh(g: Autochess, me: int, foe := -1, scouted := -1) -> void:
 		_locked = int(locked)
 		style_button(lock_button, "sun" if locked else "plain")
 	_gold.text = "%d" % int(p.gold)
-	var cap := int(g._interest_cap(p)) if not g._has_effect(p, "or_sans_interets") else 0
+	var cap := g.interest_cap(me)
 	_interest.cap = cap
 	_interest.custom_minimum_size = Vector2(maxf(cap, 1) * s(13.0) + 4.0, s(26.0))
 	_interest.have = AutochessData.interest(int(p.gold), cap)
@@ -773,7 +781,7 @@ func refresh(g: Autochess, me: int, foe := -1, scouted := -1) -> void:
 func _refresh_income(g: Autochess, me: int, cap: int) -> void:
 	var st := g.stage
 	var rd := g.round_i + 1
-	if rd > AutochessData.rounds_in(st):
+	if rd > g.rounds_in(st):
 		st += 1
 		rd = 1
 	var inc := g.income_for(me, st, rd)
@@ -792,7 +800,7 @@ func _refresh_income(g: Autochess, me: int, cap: int) -> void:
 	var tip := "Prochaine manche : +%d or" % total
 	if not parts.is_empty():
 		tip += "\n" + " · ".join(parts)
-	if AutochessData.round_kind(st, rd) == "jcj" or AutochessData.round_kind(g.stage, g.round_i) == "jcj":
+	if g.kind_at(st, rd) == "jcj" or g.round_kind() == "jcj":
 		tip += "\nVictoire contre un stratège : +%d or" % AutochessData.PVP_WIN_GOLD
 	income_chip.tooltip_text = tip
 	_gold_tab.tooltip_text = tip + ("\nIntérêts : +1 or par tranche de 10, %d au plus." % cap if cap > 0 else "\nPlus aucun intérêt.")
@@ -962,6 +970,7 @@ func _process(delta: float) -> void:
 class Frieze extends Control:
 	var stage := 1
 	var round_i := 1
+	var rules: Dictionary = {}  # règles de la partie (Autochess.rules : format Éclair, lot ACX-3)
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_PASS
@@ -972,16 +981,16 @@ class Frieze extends Control:
 			return
 		stage = st
 		round_i = rd
-		var n := AutochessData.rounds_in(st)
+		var n := AutochessData.rounds_in(st, rules)
 		custom_minimum_size = Vector2(n * AutochessHud.s(24.0) + AutochessHud.s(10.0), AutochessHud.s(34.0))
 		var parts: Array = []
 		for r in range(1, n + 1):
-			parts.append(String(AutochessHud.KIND_NAMES.get(AutochessData.round_kind(st, r), "")))
+			parts.append(String(AutochessHud.KIND_NAMES.get(AutochessData.round_kind(st, r, rules), "")))
 		tooltip_text = "Étape %d : %s" % [st, ", ".join(parts).to_lower()]
 		queue_redraw()
 
 	func _draw() -> void:
-		var n := AutochessData.rounds_in(stage)
+		var n := AutochessData.rounds_in(stage, rules)
 		var step := AutochessHud.s(24.0)
 		var cy := size.y * 0.5 + AutochessHud.s(3.0)
 		var ink := AutochessHud.INK
@@ -993,7 +1002,7 @@ class Frieze extends Control:
 			var c := Vector2(AutochessHud.s(14.0) + (r - 1) * step, cy)
 			var past := r < round_i
 			var cur := r == round_i
-			var kind := AutochessData.round_kind(stage, r)
+			var kind := AutochessData.round_kind(stage, r, rules)
 			var col := AutochessHud.PAPER_300
 			if cur:
 				col = AutochessHud.candy("soleil")
@@ -1021,7 +1030,7 @@ class Frieze extends Control:
 				draw_colored_polygon(pts, col)
 				pts.append(pts[0])
 				draw_polyline(pts, ink, 2.0, true)
-			if AutochessData.is_augment_round(stage, r):
+			if AutochessData.is_augment_round(stage, r, rules):
 				AutochessHud.draw_star(self, c + Vector2(0, -rad - AutochessHud.s(7.0)), AutochessHud.s(6.0),
 					AutochessHud.candy("soleil"), 1.5)
 

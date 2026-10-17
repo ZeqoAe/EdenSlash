@@ -273,6 +273,24 @@ func _ready() -> void:
 	_note("frise", BossTimeline.when_text({"in": 6.0}) + " " + BossTimeline.when_text({"now": true}) + " " + BossTimeline.when_text({"in": -1.0, "at": 0.35}))
 	check("HUD de boss v2 : chaque mécanique a un nom français", (BossBricks.DEFS.keys() + BossBrain.KIT).all(func(t): return BossBar.mech_name(String(t)) != ""))
 
+	# 5d. L'Échiquier (lot ACX-3) : recettes des composants, outils (les formats, règles du jour, atouts et le guide sont
+	# des constantes, déjà parcourues en 1)
+	var ac_card := AutochessUnitCard.new()
+	var n_rec := 0
+	for c in AutochessData.BASE_COMPONENTS:
+		var rc: Control = ac_card._recipes(String(c), [])
+		for row in rc.get_children():
+			for l in row.get_children():
+				if l is Label and (l as Label).text.length() > 3:
+					_note("Échiquier (recettes)", (l as Label).text)
+					n_rec += 1
+		rc.free()
+	ac_card.free()
+	for u in AutochessData.UTILITY_ITEMS:
+		var ud: Dictionary = AutochessData.SPECIAL_ITEMS[u]
+		_note("Échiquier (outils)", "%s : %s %s" % [String(ud.name), String(ud.short), String(ud.tip)])
+	check("Échiquier : %d recettes de composants et %d outils relus" % [n_rec, AutochessData.UTILITY_ITEMS.size()], n_rec >= 64)
+
 	# 6. bilan : tout texte signalé
 	var total := 0
 	for src in flagged:

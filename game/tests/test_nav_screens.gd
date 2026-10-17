@@ -332,6 +332,12 @@ func _ready() -> void:
 	await probe("Échiquier : premier héros (4 cartes, Voir le plateau)", 0.95)
 	ac.choice.chosen.emit(0)
 	await probe("Échiquier : préparation (cases, boutique, boutons, stratèges)", 0.95)
+	# lot ACX-3 : première partie guidée (« Passer le guide » atteignable, la partie continue derrière)
+	var ac_guide := AutochessGuide.new()
+	ac._ui.add_child(ac_guide)
+	await probe("Échiquier : première partie guidée (Passer le guide)", 0.95)
+	check("Échiquier : « Passer le guide » atteignable à la manette", UiNav.candidates().has(ac_guide.skip_button))
+	ac_guide.queue_free()
 	ac.game.abandon(0)  # lot AC-I : le bilan de fin (Rejouer, Statistiques, Retour au lobby)
 	ac._show_end()
 	await get_tree().create_timer(ResultsPanel.LOCK_SECS + 0.3).timeout

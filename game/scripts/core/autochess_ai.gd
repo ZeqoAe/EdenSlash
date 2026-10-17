@@ -85,7 +85,13 @@ const AUGMENT_BASE := {
 	"main_sure": 6.0,
 	"couronne": 9.0, "heros_legendaire": 8.0, "ordre_de_bataille": 7.0, "menace": 4.0, "tresor_du_dragon": 7.0,
 	"niveau_11": 6.0, "etoile_filante": 6.0, "arsenal": 7.0, "double_trait": 7.0,
+	# lot ACX-3 (R_ACX3.md) : atouts de trait et d'unité
+	"maitre_armes": 5.0, "recrue_doree": 5.0, "atelier": 4.0, "ligne_de_boucliers": 5.0, "porte_etendard": 5.0,
+	"serment_rempart": 5.0, "pacte_ombre": 5.0, "piste_traque": 5.0, "flamme_ferveur": 5.0, "savoir_arcane": 5.0,
+	"jumeaux": 5.5, "grand_grimoire": 7.0, "trinite": 7.0, "miroir_des_ames": 6.0, "grand_coeur": 6.0,
 }
+## Lot ACX-3 : courbe de niveau du format Éclair (aucune XP offerte : tout s'achète).
+const ECLAIR_CURVE := [[1, 2, 3], [2, 1, 4], [2, 3, 5], [2, 6, 6], [3, 2, 7], [3, 5, 8], [4, 1, 9]]
 const ECON_AUGMENTS := ["tirelire", "interets_composes", "tresor_du_dragon", "relance_offerte", "apprenti", "echo_recrue"]
 ## Puissance moyenne par place attendue d'un bon plateau à chaque niveau (★2 bon marché, puis ★2 de coût 3, 4…).
 const QUALITY_TARGET := [1.0, 1.0, 1.2, 1.4, 1.6, 1.7, 1.9, 2.2, 2.6, 2.9, 3.2, 3.4]
@@ -310,7 +316,9 @@ func _update_plan() -> void:
 	var pl := _plan()
 	var fam := String(pl.get("family", ""))
 	var st := _g.stage
-	match difficulty:
+	# Éclair (lot ACX-3) : partie trop courte pour les trois plans de la Légende : elle relit les plateaux comme le Champion
+	var d := 2 if difficulty == 3 and _no_interest() else difficulty
+	match d:
 		0:  # suit ses premières unités, en change souvent
 			if fam == "" or (st >= 2 and _g.round_i == 1 and rng.randf() < RECRUE_REPLAN) or rng.randf() < RECRUE_REPLAN * 0.3:
 				var all := _g.units_of(_pi)
@@ -625,11 +633,21 @@ func _curve_name() -> String:
 	return "econome"
 
 
+## Format sans intérêts (Éclair) : l'or qui dort ne rapporte rien, on le dépense.
+func _no_interest() -> bool:
+	return not bool(_g.rule("interest", true))
+
+
 func _target_level() -> int:
 	var lvl := 1
-	for row in CURVES[String(_k("curve", _curve_name()))]:
+	var curve: Array = ECLAIR_CURVE if _no_interest() else CURVES[String(_k("curve", _curve_name()))]
+	for row in curve:
 		if _g.stage > int(row[0]) or (_g.stage == int(row[0]) and _g.round_i >= int(row[1])):
 			lvl = maxi(lvl, int(row[2]))
+	if _no_interest():
+		if difficulty == 1:
+			lvl -= 1 if _g.stage >= 2 else 0  # Vétéran : un niveau derrière
+		return clampi(lvl, 1, int(_p.max_level))
 	if temperament == "relanceur" and difficulty >= 2 and _g.stage <= 3:
 		lvl = mini(lvl, 6)  # reste au niveau 6 pour chercher les ★2 bon marché
 	return mini(lvl, int(_p.max_level))
@@ -669,6 +687,9 @@ func _floors() -> Dictionary:
 					unit_floor = maxi(unit_floor, int(_k("econ", ECON_FLOOR)))
 	if st <= 1:
 		unit_floor = 0
+	if _no_interest():  # Éclair : rien à garder pour les intérêts ; l'XP d'abord, puis les unités
+		unit_floor = 0 if difficulty >= 2 else mini(unit_floor, 6)
+		level_floor = 0
 	var strong := mini(unit_floor, (g / 10) * 10)
 	if hp < 40 or st <= 1:
 		strong = 0
@@ -682,6 +703,10 @@ func _roll_floor() -> int:
 	var lvl := _level()
 	if st <= 1:
 		return -1
+	if _no_interest():  # Éclair : relancer quand le niveau visé est atteint (or gardé : un achat d'XP)
+		if lvl < _target_level():
+			return -1
+		return _g.xp_cost() if difficulty >= 2 else (12 if _gold() > 16 else -1)
 	if difficulty == 1:
 		if hp < 30:
 			return 10
@@ -754,7 +779,7 @@ func _spend() -> void:
 	_buy_pass(int(fl.unit), int(fl.strong))
 	var roll_to := _roll_floor()
 	var guard := 0
-	while roll_to >= 0 and _gold() - AutochessData.REROLL_COST >= roll_to and guard < MAX_ROLLS:
+	while roll_to >= 0 and _gold() - _g.reroll_cost() >= roll_to and guard < MAX_ROLLS:
 		guard += 1
 		if not _g.reroll(_pi):
 			break
@@ -764,7 +789,7 @@ func _spend() -> void:
 
 func _level_up(target: int, level_floor: int) -> void:
 	var guard := 0
-	while _level() < target and _gold() - AutochessData.XP_BUY_COST >= level_floor and guard < 30:
+	while _level() < target and _gold() - _g.xp_cost() >= level_floor and guard < 30:
 		guard += 1
 		if not _g.buy_xp(_pi):
 			break
@@ -772,7 +797,7 @@ func _level_up(target: int, level_floor: int) -> void:
 	if _g.stage >= 2 and _level() < mini(target + 1, int(_p.max_level)):
 		var left := AutochessData.xp_to_next(_level()) - int(_p.xp)
 		var floor_v := int(_floors().unit) if difficulty <= 2 else level_floor
-		if left > 0 and left <= AutochessData.XP_BUY_AMOUNT and _gold() - AutochessData.XP_BUY_COST >= floor_v:
+		if left > 0 and left <= AutochessData.XP_BUY_AMOUNT and _gold() - _g.xp_cost() >= floor_v:
 			_g.buy_xp(_pi)
 
 
@@ -781,7 +806,7 @@ func _level_excess() -> void:
 	if temperament != "montee_rapide" or difficulty < 2:
 		return
 	var guard := 0
-	while _gold() - AutochessData.XP_BUY_COST >= ECON_FLOOR and _level() < mini(_target_level() + 1, int(_p.max_level)) \
+	while _gold() - _g.xp_cost() >= ECON_FLOOR and _level() < mini(_target_level() + 1, int(_p.max_level)) \
 			and guard < 20:
 		guard += 1
 		if not _g.buy_xp(_pi):
@@ -901,9 +926,9 @@ func _spend_recrue() -> void:
 				_g.sell(_pi, int(bench[rng.randi_range(0, bench.size() - 1)].uid))
 			if not _g.buy(_pi, slot):
 				break
-		if _gold() >= AutochessData.XP_BUY_COST and rng.randf() < RECRUE_XP:
+		if _gold() >= _g.xp_cost() and rng.randf() < RECRUE_XP:
 			_g.buy_xp(_pi)
-		if _gold() >= AutochessData.REROLL_COST and _g.stage >= 2 and rng.randf() < RECRUE_ROLL:
+		if _gold() >= _g.reroll_cost() and _g.stage >= 2 and rng.randf() < RECRUE_ROLL:
 			_g.reroll(_pi)
 
 
@@ -1166,12 +1191,103 @@ func _manage_items() -> bool:
 		_items_recrue()
 		return (_p.items as Array).size() != before
 	_crowns()
+	_utilities()
 	var guard := 0
 	while guard < 24:
 		guard += 1
 		if not _items_step():
 			break
 	return (_p.items as Array).size() != before
+
+
+## Lot ACX-3 : objets utilitaires du banc d'objets. Miroir : copie de l'unité bon marché qui vaut le plus (une ★2 qui se
+## complète d'abord) ; Pince : libère les objets d'une unité du banc (ils repartent sur le plateau) ; Creuset : change les
+## objets mal assortis d'une unité ; Marteau : défait les objets d'une unité du banc ou mal assortis (étape 3 et plus).
+func _utilities() -> void:
+	var guard := 0
+	while guard < 8:
+		guard += 1
+		var used := false
+		var items: Array = _p.items
+		var bc := _board_ctx()
+		var on_board := {}
+		for u in bc.chosen:
+			on_board[int(u.uid)] = true
+		for k in items.size():
+			var it := String(items[k])
+			var target := -1
+			match it:
+				"miroir":
+					var bv := 0.9
+					var late := _g.stage >= 4 or items.size() >= 7  # plus tard : la meilleure copie, même modeste
+					for u in _g.units_of(_pi):
+						if not _g.utility_ok(_pi, u, it):
+							continue
+						var v := _buy_value(String(u.id), bc)
+						if v > bv or (late and target < 0):
+							bv = maxf(v, bv)
+							target = int(u.uid)
+				"pince", "marteau_reforge":
+					for u in _g.bench_units(_pi):
+						if not on_board.has(int(u.uid)) and not (u.items as Array).is_empty() and _g.utility_ok(_pi, u, it):
+							target = int(u.uid)
+							break
+					if target < 0 and it == "pince":
+						target = _misplaced_items()
+					if target < 0 and it == "marteau_reforge" and _g.stage >= 3:
+						target = _worst_items(1.0)
+				"creuset":
+					target = _worst_items(1.2)
+			if target >= 0 and _g.equip(_pi, k, target):
+				used = true
+				break
+		if not used:
+			return
+
+
+## Pince : unité du plateau (pas le porteur) dont les objets complets iraient nettement mieux sur le porteur, qui a la
+## place de les prendre ; -1 sinon.
+func _misplaced_items() -> int:
+	var carry := _carry_uid(_p.board)
+	var cu: Dictionary = {}
+	for u in _p.board:
+		if int(u.uid) == carry:
+			cu = u
+	if cu.is_empty() or _role(cu) == "tank":
+		return -1
+	var room := AutochessData.MAX_ITEMS_PER_UNIT - (cu.items as Array).size()
+	for u in _p.board:
+		if int(u.uid) == carry:
+			continue
+		var full := (u.items as Array).filter(func(x): return AutochessData.ITEMS.has(String(x)))
+		if full.is_empty() or full.size() > room or full.size() != (u.items as Array).size():
+			continue
+		var here := 0.0
+		var there := 0.0
+		for x in full:
+			here += item_score(String(x), _role(u))
+			there += item_score(String(x), _role(cu))
+		if there > here + 0.8 * full.size():
+			return int(u.uid)
+	return -1
+
+
+## Unité du plateau dont les objets complets vont le plus mal à son rôle (note moyenne sous [param below]) ; -1 sinon.
+func _worst_items(below: float) -> int:
+	var best := -1
+	var bv := below
+	for u in _p.board:
+		var full := (u.items as Array).filter(func(x): return AutochessData.ITEMS.has(String(x)))
+		if full.is_empty():
+			continue
+		var s := 0.0
+		for x in full:
+			s += item_score(String(x), _role(u))
+		s /= float(full.size())
+		if s < bv:
+			bv = s
+			best = int(u.uid)
+	return best
 
 
 func _items_recrue() -> void:
@@ -1277,6 +1393,14 @@ func _augment_rating(id: String) -> float:
 		return r
 	var hp := int(_p.hp)
 	var st := _g.stage
+	if _no_interest():  # Éclair : ni intérêts ni XP offerte
+		match id:
+			"interets_composes":
+				return 0.0
+			"tresor_du_dragon", "apprenti":
+				r += 1.5
+			"pacte_de_sang":
+				return 0.0 if hp < 30 else 4.0
 	match id:
 		"pacte_de_sang":
 			r = 7.0 if hp >= 70 else (4.0 if hp >= 50 else 0.0)
@@ -1306,6 +1430,46 @@ func _augment_rating(id: String) -> float:
 			r -= 1.0 if hp < 50 else 0.0
 		"renfort":
 			r += 1.0 if st <= 2 else 0.0
+		"serment_rempart", "pacte_ombre", "piste_traque", "flamme_ferveur", "savoir_arcane":  # lot ACX-3
+			var t := String(AutochessData.augment(id).params.trait)
+			var c := int(_g.trait_counts(_pi).get(t, 0))
+			if t == String(_plan().get("family", "")) or t in _meta().get("cands", []):
+				r += 2.0 + (1.0 if AutochessData.trait_tier(t, c + 1) > AutochessData.trait_tier(t, c) else 0.0)
+			elif c >= 2:
+				r += 0.5
+			else:
+				r -= 2.0
+		"maitre_armes":
+			var counts := _g.trait_counts(_pi)
+			for w in _plan().get("weapons", []):
+				if int(counts.get(String(w), 0)) % 2 == 1:
+					r += 1.0
+		"grand_coeur":
+			var fam := String(_plan().get("family", ""))
+			if fam != "" and int(_g.trait_counts(_pi).get(fam, 0)) % 3 >= 1:
+				r += 1.5
+		"jumeaux":
+			var bc := _board_ctx()
+			var top := ""
+			for u in _p.board:
+				if AutochessPool.cost_of(String(u.id)) <= 4 and (top == "" or AutochessPool.cost_of(String(u.id)) > AutochessPool.cost_of(top)):
+					top = String(u.id)
+			if top != "" and int(bc.n1.get(top, 0)) + 1 >= _need(top):
+				r += 1.5
+		"porte_etendard":
+			var carry := _carry_uid(_p.board)
+			for u in _p.board:
+				if int(u.uid) == carry and (u.items as Array).size() >= 2:
+					r += 1.0
+		"atelier":
+			for u in _g.bench_units(_pi):
+				if not (u.items as Array).is_empty():
+					r += 0.5
+		"grand_grimoire":
+			var casters := 0
+			for u in _p.board:
+				casters += 1 if String(info(String(u.id)).role) in ["mage", "soigneur", "soutien"] else 0
+			r += 0.4 * casters - 0.8
 	if difficulty >= 3:
 		if id in ECON_AUGMENTS:
 			r -= 0.8 * maxf(0.0, float(st - 2))

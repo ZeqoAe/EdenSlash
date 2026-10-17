@@ -11,6 +11,7 @@ const W := 250.0
 const STAR_COLORS := AutochessBoard.STAR_COLORS
 const TAIL := 12.0  # px : longueur de la queue de la bulle
 const SHADOW := 6.0  # px : ombre dure de la bulle (réservée en bas du rectangle)
+const RECIPE_W := 1.5  # fiche d'un composant (recettes, lot ACX-3) : bulle plus large
 
 var _icon: TextureRect
 var _name: Label
@@ -89,10 +90,12 @@ func show_unit(u: Dictionary, counts: Dictionary = {}, from_shop := false) -> vo
 	var id := String(u.get("id", ""))
 	var stars := clampi(int(u.get("stars", 1)), 1, AutochessData.MAX_STARS)
 	var items: Array = u.get("items", [])
-	var key := "u:%s/%d/%s/%s/%s" % [id, stars, ",".join(items), str(counts), from_shop]
+	var planned := AutochessPlanner.is_planned(id)
+	var key := "u:%s/%d/%s/%s/%s/%s/%s" % [id, stars, ",".join(items), str(counts), from_shop, planned, Gamepad.active]
 	if key == _what and visible:
 		return
 	_what = key
+	custom_minimum_size.x = AutochessHud.s(W)
 	var d := AutochessData.unit(id)
 	if d.is_empty():
 		hide_card()
@@ -190,16 +193,26 @@ func show_unit(u: Dictionary, counts: Dictionary = {}, from_shop := false) -> vo
 			_body.add_child(item_row(String(it)))
 	elif from_shop:
 		pass
+	# planificateur (lot ACX-3) : héros visé, ou la touche pour le viser
+	var pl := AutochessHud.ink_lbl("◎ Héros visé" if planned else ("Viser : stick droit" if Gamepad.active else "Viser : T"), 13,
+		AutochessHud.candy("fraise", 2) if planned else AutochessHud.INK_300, 800)
+	pl.name = "AcPlanLine"
+	pl.tooltip_text = "Planificateur : les héros visés sont marqués d'une cible dans la boutique (%d au plus)." % AutochessPlanner.MAX
+	pl.mouse_filter = Control.MOUSE_FILTER_PASS
+	_body.add_child(pl)
 	visible = true
 	reset_size()
 
 
-## Objet [param id] du banc d'objets (composant, objet complet, emblème, marteau).
-func show_item(id: String) -> void:
-	var key := "i:" + id
+## Objet [param id] du banc d'objets (composant, objet complet, emblème, outil). [param have] : composants du stratège
+## (banc d'objets et composants seuls sur ses héros) : la fiche d'un composant liste ses 8 recettes, celles qu'on peut
+## faire tout de suite en tête (lot ACX-3, n° 19).
+func show_item(id: String, have: Array = []) -> void:
+	var key := "i:%s/%s" % [id, ",".join(have)]
 	if key == _what and visible:
 		return
 	_what = key
+	custom_minimum_size.x = AutochessHud.s(W)
 	var info := Autochess.parse_item(id)
 	var d := AutochessData.item(String(info.id))
 	if d.is_empty():
@@ -216,7 +229,9 @@ func show_item(id: String) -> void:
 	var parts: Array = d.get("parts", [])
 	if AutochessData.COMPONENTS.has(String(info.id)):
 		_role.text = "Composant"
-	elif String(info.id) in ["embleme", "couronne", "marteau_reforge"]:
+	elif String(info.id) in AutochessData.UTILITY_ITEMS:
+		_role.text = "Outil · pose-le sur un héros"
+	elif String(info.id) in ["embleme", "couronne"]:
 		_role.text = "Objet rare"
 	else:
 		_role.text = "Objet"
@@ -234,6 +249,10 @@ func show_item(id: String) -> void:
 		r.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		r.custom_minimum_size.x = AutochessHud.s(W) - 26.0
 		_body.add_child(r)
+	elif AutochessData.COMPONENTS.has(String(info.id)) and String(info.id) != "insigne":
+		_body.add_child(_sep())
+		_body.add_child(_recipes(String(info.id), have))
+		custom_minimum_size.x = AutochessHud.s(W * RECIPE_W)  # une recette par ligne, sans coupure
 	elif AutochessData.COMPONENTS.has(String(info.id)):
 		var r := AutochessHud.ink_lbl("Pose-le sur un héros : deux composants font un objet.", 14, AutochessHud.INK_300, 700)
 		r.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -241,6 +260,43 @@ func show_item(id: String) -> void:
 		_body.add_child(r)
 	visible = true
 	reset_size()
+
+
+## Recettes du composant [param comp] (8 objets complets) : celles qu'on peut faire avec [param have] d'abord, en encre
+## pleine avec une pastille pomme ; les autres en encre claire. Une ligne : « + Arc court : Transe de combat ».
+func _recipes(comp: String, have: Array) -> Control:
+	var box := VBoxContainer.new()
+	box.name = "AcRecipes"
+	box.add_theme_constant_override("separation", 0)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var rows: Array = []
+	for other in AutochessData.BASE_COMPONENTS:
+		var made := AutochessData.combine(comp, String(other))
+		if made == "":
+			continue
+		var pool := have.duplicate()
+		pool.erase(comp)  # le composant montré compte une fois
+		var ready := String(other) in pool
+		rows.append([ready, String(other), made])
+	rows.sort_custom(func(a, b): return bool(a[0]) and not bool(b[0]))
+	var title := AutochessHud.ink_lbl("Recettes", 13, AutochessHud.INK_300, 900)
+	box.add_child(title)
+	for r in rows:
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 4)
+		h.mouse_filter = Control.MOUSE_FILTER_PASS
+		h.tooltip_text = String(AutochessData.item(String(r[2])).get("tip", ""))
+		h.set_meta("ready", bool(r[0]))
+		var dot := AutochessHud.ink_lbl("●" if bool(r[0]) else "·", 12, AutochessHud.candy("pomme", 2) if bool(r[0]) else AutochessHud.INK_300, 900)
+		dot.custom_minimum_size.x = 10
+		h.add_child(dot)
+		var txt := "+ %s : %s" % [String(AutochessData.item(String(r[1])).get("name", "")), String(AutochessData.item(String(r[2])).get("name", ""))]
+		var l := AutochessHud.ink_lbl(txt, 13, AutochessHud.INK if bool(r[0]) else AutochessHud.INK_300, 800 if bool(r[0]) else 600)
+		l.clip_text = true
+		l.custom_minimum_size.x = AutochessHud.s(W * RECIPE_W) - 40.0
+		h.add_child(l)
+		box.add_child(h)
+	return box
 
 
 func hide_card() -> void:

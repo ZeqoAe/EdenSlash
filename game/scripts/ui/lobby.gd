@@ -579,6 +579,7 @@ const AC_DIFF_LINES := ["Des débutants : ils dépensent tout et changent souven
 	"Ils lisent ton plateau et assemblent leurs objets.", "Les meilleurs stratèges : chaque pièce d'or compte."]
 var _ac_diff := -1  # -1 : celle de la dernière partie, sinon la plus haute ouverte par les parties
 var _ac_seed: LineEdit
+var _ac_format := "classique"  # lot ACX-3 : Classique ou Éclair
 
 
 func _menu_autochess() -> void:
@@ -612,6 +613,45 @@ func _menu_autochess() -> void:
 		h.add_child(b)
 	var dl := Hud._label(_sub, String(AC_DIFF_LINES[_ac_diff]), 15, UiTheme.MUTED)
 	dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# lot ACX-3 : format de la partie (Classique, Éclair) et partie du jour
+	_section("Format", "Éclair : une partie courte ; ses coffres demandent une place deux fois meilleure.")
+	var fr := HBoxContainer.new()
+	fr.add_theme_constant_override("separation", 8)
+	_sub.add_child(fr)
+	for f in ["classique", "eclair"]:
+		var fd: Dictionary = AutochessData.FORMATS[f]
+		var fb := MenuWidgets.glass_button(String(fd.name), 16, Vector2(0, 40))
+		fb.name = "AcFormat_" + f
+		fb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		fb.tooltip_text = String(fd.short) + ("\n" + String(fd.tip) if fd.has("tip") else "")
+		if f == _ac_format:
+			fb.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.14, 0.11, 0.24, 0.96), UiTheme.GOLD, 2, 12))
+			fb.add_theme_color_override("font_color", UiTheme.GOLD)
+		var ff := String(f)
+		fb.pressed.connect(func():
+			_ac_format = ff
+			_show_menu("autochess"))
+		fr.add_child(fb)
+	var day := Quests.today()
+	var rule: Dictionary = AutochessData.DAY_RULES[AutochessData.daily_rule(day)]
+	var ds := AutochessRewards.daily_state()
+	_section("Partie du jour", "La même partie pour tous ce jour-là : Éclair, stratèges Vétéran, et une règle du jour.")
+	var rl := Hud._label(_sub, "Règle du jour : %s · %s" % [String(rule.name), String(rule.short)], 15, UiTheme.TEXT)
+	rl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var rec_day := "Record du jour : %s" % (AutochessPlayers.place_text(int(ds.best)) if int(ds.best) > 0 else "pas encore joué")
+	if int(ds.best_ever) > 0:
+		rec_day += " · meilleur : %s · %d jour%s joué%s" % [AutochessPlayers.place_text(int(ds.best_ever)), int(ds.days),
+			"s" if int(ds.days) > 1 else "", "s" if int(ds.days) > 1 else ""]
+	Hud._label(_sub, rec_day, 14, Color(0.6, 0.85, 1.0)).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var dbtn := MenuWidgets.glass_button("Jouer la partie du jour", 18, Vector2(0, 44))
+	dbtn.name = "AcDaily"
+	dbtn.tooltip_text = "Graine du %s : mêmes boutiques et mêmes adversaires pour tous." % day
+	dbtn.pressed.connect(func():
+		if _ac_saved().is_empty():
+			_start_autochess(false, {"daily": true})
+		else:
+			InfoCard.ask(self, "Nouvelle partie ?", "La partie en cours sera perdue.", "Partie du jour", _start_autochess.bind(false, {"daily": true}), true))
+	_sub.add_child(dbtn)
 	_section("Coffres d'apparence", "Chaque place donne son coffre une fois par difficulté ; ensuite, un coffre commun et un coffre rare au plus par jour.")
 	for g in AutochessRewards.board(_ac_diff):
 		var row := HBoxContainer.new()
@@ -689,7 +729,7 @@ func _start_autochess(resume := false, extra := {}) -> void:
 	_launching = true
 	if backdrop:
 		backdrop.release()
-	var cfg := {"diff": clampi(_ac_diff, 0, AutochessData.DIFFICULTIES.size() - 1), "resume": resume}
+	var cfg := {"diff": clampi(_ac_diff, 0, AutochessData.DIFFICULTIES.size() - 1), "resume": resume, "format": _ac_format}
 	LastActivity.record("autochess", {"diff": int(cfg.diff)})
 	if is_instance_valid(_ac_seed) and _ac_seed.text.strip_edges().is_valid_int():
 		cfg["seed"] = absi(_ac_seed.text.strip_edges().to_int())

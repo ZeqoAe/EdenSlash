@@ -64,6 +64,13 @@ var save_path := Autochess.SAVE_PATH
 ## Lot AC-I : difficulté (-1 : stratèges au hasard, sans récompense), fin de partie (bilan commun), durée jouée.
 var diff := -1
 var auto_quit := false
+## Lot ACX-3 : format (« classique », « eclair »), règle du jour, partie du jour (graine, difficulté et règle du jour fixées).
+var format := "classique"
+var day_rule := ""
+var daily := false
+var guide: AutochessGuide  # première partie guidée (null : finie, passée ou pilote automatique)
+var strikes: Array = []  # coups au stratège lancés (tests) : {from, to, damage, loser}
+var _card_id := ""  # héros montré par la fiche (planificateur : T, clic du stick droit)
 var results: AutochessResults
 var _pilot: Variant = null  # stratège du pilote automatique (Vétéran quand les adversaires sont des AutochessAi)
 var _played := 0.0  # s de partie (temps réel, pauses exclues), gardées dans meta.aci.secs
@@ -131,6 +138,9 @@ func _ready() -> void:
 	real_combat = bool(cfg.get("real", not fast))
 	diff = int(cfg.get("diff", -1))
 	auto_quit = bool(cfg.get("auto_quit", false))
+	format = String(cfg.get("format", "classique"))
+	day_rule = String(cfg.get("rule", ""))
+	daily = bool(cfg.get("daily", false))
 	var seed_ := int(cfg.get("seed", 0))
 	var resume := bool(cfg.get("resume", false))
 	for a in OS.get_cmdline_user_args():
@@ -144,6 +154,16 @@ func _ready() -> void:
 			diff = clampi(int(a.get_slice("=", 1)), 0, AutochessData.DIFFICULTIES.size() - 1)
 		elif a == "--auto-quit":
 			auto_quit = true
+		elif a.begins_with("--ac-format="):
+			format = a.get_slice("=", 1)
+		elif a == "--ac-daily":
+			daily = true
+	if daily:  # partie du jour : la même pour tous les joueurs ce jour-là
+		var day := Quests.today()
+		seed_ = AutochessData.daily_seed(day)
+		diff = AutochessData.DAILY_DIFF
+		format = AutochessData.DAILY_FORMAT
+		day_rule = AutochessData.daily_rule(day)
 	_build_world()
 	board = AutochessBoard.new()
 	board.arena_style = true  # tracé au sol de l'arène (AC-V)
@@ -233,6 +253,12 @@ func _ready() -> void:
 	cursor.confirm_sell = _confirm_sell
 	AutochessUnit.show_names = bool(opt("names"))
 	new_game(seed_ if seed_ != 0 else randi(), resume)
+	if AutochessGuide.wanted() and not autoplay and not fast:
+		guide = AutochessGuide.new()
+		_ui.add_child(guide)
+		_ui.move_child(guide, 0)  # sous le cadre : la fiche d'unité passe par-dessus
+		guide.finished.connect(func(_s): guide = null)
+		guide.observe(game, me)
 
 
 ## Réglage de l'Échiquier (Settings, section « autochess » : no_timer, names, recap_always).
@@ -248,16 +274,20 @@ func new_game(seed_: int, resume := false) -> void:
 		if game != null:
 			var saved: Dictionary = (game.players[me].get("meta", {}) as Dictionary).get("aci", {})
 			diff = int(saved.get("diff", diff))
+			daily = bool(saved.get("daily", false))
+			format = game.format
+			day_rule = game.day_rule
 			_played = float(saved.get("secs", 0.0))
 			game.set_strategists(_resumed_strategists(game))
 	if game == null:
 		game = Autochess.new()
 		game.save_path = save_path
+		game.configure(format, day_rule)
 		game.start(seed_, _lineup(seed_))
 		_played = 0.0
 	var meta: Dictionary = game.players[me].meta
 	if not meta.get("aci") is Dictionary:
-		meta["aci"] = {"diff": diff, "flags": {}, "secs": _played}
+		meta["aci"] = {"diff": diff, "flags": {}, "secs": _played, "daily": daily}
 		game.save()  # la difficulté est gardée dès la 1re préparation (la reprise retrouve les mêmes stratèges)
 	_pilot = AutochessAi.make(1, "econome", game.seed_value) if diff >= 0 else Autochess.RandomStrategist.new()
 	if diff >= 0 and not AutochessRewards.has_snapshot():
@@ -755,7 +785,91 @@ func _resolve_combat() -> void:
 				moments.banner("Défaite", "fraise", line, "error", -10.0, 0.75, [0.1, 0.4, 0.16], 0.55)
 	if real and not autoplay and not rctx.is_empty() and opt("recap_always"):
 		_open_detail()  # réglage « Toujours montrer le bilan » : l'ancien bilan, qui retient la manche suivante
+	if real and not fast and not autoplay and speed <= 1 and my_fight >= 0:
+		_strike(my_fight)
 	_dirty = true
+
+
+## Lot ACX-3 (étude BM-AUTO §6 n° 13) : coup au stratège. Les survivants du camp gagnant du combat [param i] tirent sur la
+## figurine du stratège perdant (projectiles de la couleur du camp, 1,2 s au plus), qui encaisse ses PV perdus (chiffre
+## fraise, secousse de sa ligne dans la colonne des stratèges). Sauté en ×2 et plus, au pilote et en durées réduites.
+const STRIKE_MAX := 6
+const STRIKE_FLY := 0.42
+const STRIKE_GAP := 0.08
+
+
+func _strike(i: int) -> void:
+	if i < 0 or i >= director.arenas.size() or i >= game.results.size():
+		return
+	var f: Dictionary = game.fights[i]
+	var w := int(game.results[i].winner)
+	if w < 0:
+		return
+	var loser_side := 1 - w
+	var loser_pi := int(f.a) if loser_side == 0 else int(f.b)
+	if loser_pi < 0:
+		return  # écho (fantôme) ou monstres : personne à frapper
+	var mine := loser_pi == me
+	var target: Node3D = board.strategist if mine else board.foe_strategist
+	if target == null or not is_instance_valid(target):
+		return
+	var dmg := int((game.players[loser_pi].last as Dictionary).get("damage", 0))
+	if dmg <= 0:
+		return
+	var from: Array = []
+	for n in director.arenas[i].nodes[w]:
+		if is_instance_valid(n) and not (n as AutochessUnit).is_dead:
+			from.append((n as Node3D).global_position + Vector3.UP * 1.2)
+	if from.is_empty():
+		return
+	from = from.slice(0, STRIKE_MAX)
+	var to := target.global_position + Vector3.UP * 1.3
+	strikes.append({"from": from.size(), "damage": dmg, "loser": loser_pi})
+	var col := AutochessHud.candy("fraise") if mine else AutochessHud.candy("pomme")
+	for k in from.size():
+		var orb := MeshInstance3D.new()
+		var sph := SphereMesh.new()
+		sph.radius = 0.2
+		sph.height = 0.4
+		var mat := StandardMaterial3D.new()
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.albedo_color = col.lightened(0.25)
+		mat.emission_enabled = true
+		mat.emission = col
+		sph.material = mat
+		orb.mesh = sph
+		orb.visible = false
+		add_child(orb)
+		orb.global_position = from[k]
+		var a: Vector3 = from[k]
+		var tw := create_tween()
+		tw.tween_interval(STRIKE_GAP * k)
+		tw.tween_callback(func(): orb.visible = true)
+		tw.tween_method(_orb_step.bind(orb, a, to), 0.0, 1.0, STRIKE_FLY)
+		tw.tween_callback(orb.queue_free)
+		if k == 0:
+			tw.tween_callback(_strike_hit.bind(target, loser_pi, dmg, mine))
+
+
+## Trajet d'un projectile du coup au stratège : en cloche de 2 m, de [param a] à [param b] ([param t] de 0 à 1).
+func _orb_step(t: float, orb: MeshInstance3D, a: Vector3, b: Vector3) -> void:
+	if is_instance_valid(orb):
+		orb.global_position = a.lerp(b, t) + Vector3.UP * sin(t * PI) * 2.0
+
+
+func _strike_hit(target: Node3D, pi: int, dmg: int, mine: bool) -> void:
+	if not is_instance_valid(target):
+		return
+	var wp := target.global_position + Vector3.UP * 2.4
+	var at := camera.unproject_position(wp) if camera != null and not camera.is_position_behind(wp) else get_viewport().get_visible_rect().size * 0.5
+	moments.burst(at, "−%d" % dmg, "fraise" if mine else "pomme", "error" if mine else "confirm", -9.0, 0.8 if mine else 1.2,
+		[0.1, 0.35, 0.12] if mine else [])
+	hud.players.flash(pi)
+	if not UiFeel.reduce_motion:
+		var home := target.position
+		var tw := create_tween()
+		for d in [0.25, -0.2, 0.12, 0.0]:
+			tw.tween_property(target, "position", home + Vector3(float(d), 0.0, 0.0), 0.05)
 
 
 ## [Détail] du bandeau : le bilan complet de la dernière manche jouée (meilleur héros, barres, totaux).
@@ -937,7 +1051,8 @@ func end_info() -> Dictionary:
 	var meta: Dictionary = p.meta.get("aci", {})
 	return {"diff": maxi(diff, 0), "place": int(p.place) if int(p.place) > 0 else 1, "stage": game.stage, "hp": int(p.hp), "rerolls": int(p.stats.rerolls),
 		"rounds": game.rounds_played + 1, "rounds_won": int(p.stats.won), "secs": _played, "abandoned": bool(p.get("abandoned", false)),
-		"flags": (meta.get("flags", {}) as Dictionary).duplicate()}
+		"flags": (meta.get("flags", {}) as Dictionary).duplicate(), "format": game.format, "rule": game.day_rule,
+		"daily": bool(meta.get("daily", daily)), "team": p.get("final_board", []) if not bool(p.alive) else game.board_snapshot(me)}
 
 
 ## Exploits de plateau (AutochessRewards.track) et durée jouée, gardés dans meta.aci (sauvegardés avec la partie).
@@ -956,7 +1071,7 @@ func _track() -> void:
 ## Bilan : Rejouer (même difficulté, nouvelle graine).
 func _replay() -> void:
 	_close_results()
-	new_game(randi(), false)
+	new_game(AutochessData.daily_seed(Quests.today()) if daily else randi(), false)  # partie du jour : la même graine
 
 
 ## Bilan : Statistiques (bilan détaillé d'AC-V) ; le bilan revient quand on le ferme.
@@ -1032,6 +1147,9 @@ func _sync() -> void:
 	board.set_state(game.players[me])
 	_counts = game.trait_counts(me)
 	hud.refresh(game, me, foe, scouted)
+	if guide != null:
+		guide.observe(game, me)
+		guide.visible = phase == "prep" and not choice.visible and not carousel.visible
 
 
 func _tick_carousel(delta: float) -> void:
@@ -1117,20 +1235,26 @@ func _update_card() -> void:
 		var tab: Control = hud._gold_tab
 		if tab.is_visible_in_tree():  # la bulle passe au-dessus de l'onglet de l'or
 			target = target.merge(Rect2(Vector2(target.position.x, tab.get_global_rect().position.y), Vector2(target.size.x, 1.0)))
+	_card_id = ""
 	if not s.is_empty() and String(s.get("zone", "")) == "items":
 		var it := board.item_at(s)
 		if it != "":
-			card.show_item(it)
+			card.show_item(it, have_components())
 		else:
 			card.hide_card()
 	elif not s.is_empty() and not board.unit_at(s).is_empty():
 		card.show_unit(board.unit_at(s), _counts)
+		_card_id = String(board.unit_at(s).get("id", ""))
 	elif shop_id != "":
 		card.show_unit({"id": shop_id, "stars": 1, "items": []}, _counts, true)
+		_card_id = shop_id
 	else:
 		card.hide_card()
 	if card.visible and target.size != Vector2.ZERO:
-		card.place_near(target, hud.frame_rects())
+		var avoid := hud.frame_rects()
+		if guide != null and guide.is_visible_in_tree():
+			avoid.append(guide.get_global_rect())  # (lot ACX-3) la fiche évite aussi le guide
+		card.place_near(target, avoid)
 
 
 ## Lot ACX-1 : survol (souris) ou cadre de la manette sur un trait de la colonne → ses unités (plateau, banc) s'entourent
@@ -1178,6 +1302,36 @@ func _update_highlight() -> void:
 	hud.shop.mark_trait(t)
 	hud.traits.set_marked(t)
 	hud.traits.preview(rising)
+
+
+## Composants du joueur (banc d'objets, puis composants seuls sur ses héros) : recettes de la fiche d'un composant.
+func have_components() -> Array:
+	var out: Array = []
+	for it in game.players[me].items:
+		if AutochessData.COMPONENTS.has(String(it)):
+			out.append(String(it))
+	for u in game.units_of(me):
+		var lc := AutochessAi.loose_component(u)
+		if lc != "":
+			out.append(lc)
+	return out
+
+
+## Planificateur (lot ACX-3) : vise ou retire le héros montré par la fiche (T, clic du stick droit).
+func _plan_toggle() -> void:
+	if _card_id == "" or phase == "over":
+		return
+	var nm := AutochessData.unit_name(_card_id)
+	var was := AutochessPlanner.is_planned(_card_id)
+	var on := AutochessPlanner.toggle(_card_id)
+	if on:
+		hud.toast("%s visé · %d / %d" % [nm, AutochessPlanner.planned().size(), AutochessPlanner.MAX])
+		UiFeel.cue("confirm", -12.0, 1.2)
+	elif was:
+		hud.toast("%s n'est plus visé" % nm)
+	else:
+		hud.toast("%d héros visés au plus" % AutochessPlanner.MAX)
+	_dirty = true
 
 
 # --- actions --------------------------------------------------------------------------------------------------------
@@ -1270,6 +1424,8 @@ func _buy(slot: int) -> void:
 		Sfx.ui("confirm", -8.0)
 		_star_moments(before)
 		_dirty = true
+		if guide != null:
+			guide.step_done("buy")
 		_tip_check()
 		return
 	if int(p.gold) < AutochessPool.cost_of(id):
@@ -1381,7 +1537,8 @@ func _swap_bench_board() -> void:
 		if game.players[me].board.size() >= game.board_cap(me) or cell.x < 0:
 			hud.toast("Plateau plein")
 			return
-		game.place(me, uid, cell)
+		if game.place(me, uid, cell) and guide != null:
+			guide.step_done("place")
 	elif String(s.zone) == "board":
 		if not game.to_bench(me, uid):
 			hud.toast("Banc plein")
@@ -1431,7 +1588,8 @@ func _on_placed(u: Dictionary, _from: Dictionary, to: Dictionary) -> void:
 		var uid := int(u.get("uid", 0))
 		match String(to.get("zone", "")):
 			"board":
-				game.place(me, uid, Vector2i(int(to.col), int(to.row)))
+				if game.place(me, uid, Vector2i(int(to.col), int(to.row))) and guide != null:
+					guide.step_done("place")
 			"bench":
 				game.to_bench(me, uid, int(to.index))
 	_dirty = true
@@ -1630,8 +1788,8 @@ func _quit() -> void:
 # --- fiches de découverte (lot AC-I) ----------------------------------------------------------------------------------
 ## Fiche de la 1re rencontre (boutique, deux copies d'une unité, trait actif ou atout), une à la fois, en préparation.
 func _tip_check() -> void:
-	if phase != "prep" or cards == null or cards.count() > 0 or autoplay:
-		return
+	if phase != "prep" or cards == null or cards.count() > 0 or autoplay or guide != null:
+		return  # (lot ACX-3 : la première partie guidée remplace ces fiches)
 	for id in TIPS:
 		if Tutorial.card_pending(id) and _tip_due(id):
 			Tutorial.mark_seen(id)
@@ -1696,6 +1854,9 @@ func _input(ev: InputEvent) -> void:
 			if phase == "combat":
 				_skip()  # lot ACX-2 : passer le combat (le curseur de cases est coupé en combat)
 				get_viewport().set_input_as_handled()
+		JOY_BUTTON_RIGHT_STICK:
+			_plan_toggle()  # lot ACX-3 : planificateur
+			get_viewport().set_input_as_handled()
 
 
 ## Gâchettes : gauche = actualiser, droite = verrou (sur le front de l'appui).
@@ -1742,6 +1903,8 @@ func _unhandled_input(ev: InputEvent) -> void:
 			_cycle_view(1)
 		KEY_P:
 			_skip()
+		KEY_T:
+			_plan_toggle()
 		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5:
 			if _can_act():
 				_buy(k - KEY_1)

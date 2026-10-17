@@ -61,6 +61,49 @@ var history: Array = []  # une ligne par combat (tests de déterminisme, journal
 var _limbo: Dictionary = {}  # unité reçue banc plein, absorbée par la fusion
 ## Lot ACX-2 : pile d'annulation des stratèges humains (le jeu est solo : aucun abus possible), voir undo().
 var _undo: Dictionary = {}  # pi -> [{label, player, pool, rng}]
+## Lot ACX-3 : format (AutochessData.FORMATS : « classique », « eclair ») et règle du jour (DAY_RULES, "" : aucune), fixés
+## par configure() avant start() et sauvegardés avec la partie ; `rules` = les deux en un dictionnaire (rules_for).
+var format := "classique"
+var day_rule := ""
+var rules: Dictionary = AutochessData.rules_for()
+
+
+## Format et règle du jour de la partie (avant start(), ou relus par from_dict()).
+func configure(fmt := "classique", rule := "") -> void:
+	rules = AutochessData.rules_for(fmt, rule)
+	format = String(rules.format)
+	day_rule = String(rules.rule)
+
+
+## Règle [param key] de la partie (format, puis règle du jour), [param default] si aucune.
+func rule(key: String, default: Variant = null) -> Variant:
+	return rules.get(key, default)
+
+
+## PV de départ d'un stratège (100, 40 en Éclair).
+func max_hp() -> int:
+	return int(rules.get("player_hp", AutochessData.PLAYER_HP))
+
+
+func reroll_cost() -> int:
+	return int(rules.get("reroll_cost", AutochessData.REROLL_COST))
+
+
+func xp_cost() -> int:
+	return int(rules.get("xp_cost", AutochessData.XP_BUY_COST))
+
+
+## Type de la manche [param st]-[param rd] selon le format (ouverture, monstres, jcj, choix, gardien).
+func kind_at(st: int, rd: int) -> String:
+	return AutochessData.round_kind(st, rd, rules)
+
+
+func rounds_in(st: int) -> int:
+	return AutochessData.rounds_in(st, rules)
+
+
+func is_augment_round(st := -1, rd := -1) -> bool:
+	return AutochessData.is_augment_round(stage if st < 0 else st, round_i if rd < 0 else rd, rules)
 
 
 # --- Lancement ----------------------------------------------------------------------------------------------------
@@ -100,10 +143,10 @@ func _new_player(i: int) -> Dictionary:
 	for _k in AutochessData.SHOP_SIZE:
 		shop.append("")
 	return {
-		"id": i, "human": false, "hp": AutochessData.PLAYER_HP, "hp_before": AutochessData.PLAYER_HP, "alive": true,
+		"id": i, "human": false, "hp": max_hp(), "hp_before": max_hp(), "alive": true,
 		"place": 0, "abandoned": false, "gold": 0, "level": AutochessData.LEVEL_AT_START, "xp": 0,
 		"max_level": AutochessData.MAX_LEVEL, "board": [], "bench": bench, "items": [], "shop": shop, "locked": false,
-		"free_rerolls": 0, "streak": 0, "recent": [], "ghost_last": false, "augments": [], "crowns": 0, "trait_bonus": {},
+		"free_rerolls": 0, "streak": 0, "recent": [], "ghost_last": false, "augments": [], "crowns": int(rule("crowns", 0)), "trait_bonus": {},
 		"buys": 0, "pending": [], "ready": false, "income": {}, "last": {}, "final_board": [],
 		"stats": {"won": 0, "lost": 0, "gold_spent": 0, "rerolls": 0, "xp_bought": 0},
 		"meta": {},  # libre pour le stratège (AC-D) : sauvegardé avec la partie
@@ -116,11 +159,11 @@ func round_key() -> String:
 
 
 func round_kind() -> String:
-	return AutochessData.round_kind(stage, round_i)
+	return AutochessData.round_kind(stage, round_i, rules)
 
 
 func prep_time() -> float:
-	return AutochessData.prep_time(stage, round_i)
+	return AutochessData.prep_time(stage, round_i, rules)
 
 
 func is_over() -> bool:
@@ -202,10 +245,12 @@ func trait_counts(pi: int) -> Dictionary:
 		out[t] = int(out.get(t, 0)) + int(p.trait_bonus[t])
 	for aid in p.augments:
 		var a := AutochessData.augment(String(aid))
-		if String(a.get("effect", "")) == "trait_compte" and String(a.params.get("kind", "")) == "arme":
+		if String(a.get("effect", "")) == "trait_compte" and String(a.params.get("kind", "")) in ["arme", "tous"]:
+			var need := int(AutochessData.WEAPON_THRESHOLDS[0]) if int(a.params.get("active_only", 1)) == 1 else 1
+			var every := String(a.params.get("kind", "")) == "tous"  # Double trait (lot ACX-3) : familles comprises
 			for t in out.keys():
-				var active := int(out[t]) >= int(AutochessData.trait_thresholds(t)[0])
-				if String(AutochessData.TRAITS.get(t, {}).get("kind", "")) == "arme" and active:
+				var active := int(out[t]) >= need
+				if (every or String(AutochessData.TRAITS.get(t, {}).get("kind", "")) == "arme") and active:
 					out[t] = int(out[t]) + int(a.params.get("count", 1))
 	return out
 
@@ -249,17 +294,19 @@ func income_for(pi: int, st := -1, rd := -1) -> Dictionary:
 	var out := {"base": 0, "interest": 0, "streak": 0, "bonus": 0, "total": 0, "xp": 0}
 	if st == 1 and rd == 1:
 		return out
-	var kind := AutochessData.round_kind(st, rd)
+	var kind := AutochessData.round_kind(st, rd, rules)
 	var base := 0
 	if st == 1:
-		base = AutochessData.START_GOLD if rd == 2 else AutochessData.base_income(st, rd)
+		base = int(rule("start_gold", AutochessData.START_GOLD)) + int(rule("start_gold_bonus", 0)) if rd == 2 \
+			else AutochessData.base_income(st, rd, rules)
 	elif kind != "choix":
-		base = AutochessData.base_income(st, rd)
+		base = AutochessData.base_income(st, rd, rules)
 	if base > 0:
 		out.base = base
-		if not _has_effect(p, "or_sans_interets"):
+		if not _has_effect(p, "or_sans_interets") and bool(rule("interest", true)):
 			out.interest = AutochessData.interest(int(p.gold), _interest_cap(p))
-		out.streak = AutochessData.streak_gold(int(p.streak))
+		if bool(rule("streak", true)):
+			out.streak = AutochessData.streak_gold(int(p.streak))
 	for aid in p.augments:
 		var a := AutochessData.augment(String(aid))
 		if String(a.effect) == "or" and String(a.trigger) == "debut_manche":
@@ -267,7 +314,7 @@ func income_for(pi: int, st := -1, rd := -1) -> Dictionary:
 	out.total = int(out.base) + int(out.interest) + int(out.streak) + int(out.bonus)
 	# niveau 2 donné à 1-2 (sans XP cette manche-là), puis +2 XP par manche
 	if not (st == 1 and rd <= 2):
-		out.xp = AutochessData.XP_PER_ROUND + int(_effect_param(p, "xp", "xp_round", 0))
+		out.xp = int(rule("xp_per_round", AutochessData.XP_PER_ROUND)) + int(_effect_param(p, "xp", "xp_round", 0))
 	return out
 
 
@@ -275,7 +322,7 @@ func _round_income(p: Dictionary) -> void:
 	var inc := income_for(int(p.id))
 	p.gold = int(p.gold) + int(inc.total)
 	if stage == 1 and round_i == 2:
-		p.level = maxi(int(p.level), AutochessData.LEVEL_AT_FIRST_ROUND)
+		p.level = maxi(int(p.level), int(rule("level_at_first", AutochessData.LEVEL_AT_FIRST_ROUND)))
 	_add_xp(p, int(inc.xp))
 	p.free_rerolls = int(_effect_param(p, "relance_gratuite", "rerolls", 0))
 	p.income = inc
@@ -297,7 +344,16 @@ func _add_xp(p: Dictionary, n: int) -> void:
 
 
 func _interest_cap(p: Dictionary) -> int:
-	return int(_effect_param(p, "plafond_interets", "cap", AutochessData.INTEREST_CAP))
+	var base := int(rule("interest_cap", AutochessData.INTEREST_CAP))
+	return maxi(base, int(_effect_param(p, "plafond_interets", "cap", base)))
+
+
+## Plafond des intérêts du stratège [param pi] (règle du jour, Intérêts composés) ; 0 sans intérêts (Éclair, Trésor).
+func interest_cap(pi: int) -> int:
+	var p: Dictionary = players[pi]
+	if not bool(rule("interest", true)) or _has_effect(p, "or_sans_interets"):
+		return 0
+	return _interest_cap(p)
 
 
 func _has_effect(p: Dictionary, effect: String) -> bool:
@@ -334,10 +390,10 @@ func _begin_prep() -> void:
 	if kind == "ouverture":
 		for pi in alive_ids():
 			_offer(pi, {"kind": "ouverture", "options": _opening_options()})
-	if AutochessData.is_augment_round(stage, round_i):
+	if is_augment_round():
 		_roll_augment_rarity()
 		for pi in alive_ids():
-			_offer(pi, {"kind": "atout", "rarity": augment_rarity, "rerolls": AutochessData.AUGMENT_REROLLS,
+			_offer(pi, {"kind": "atout", "rarity": augment_rarity, "rerolls": int(rule("augment_rerolls", AutochessData.AUGMENT_REROLLS)),
 				"options": _augment_options(players[pi])})
 	if kind == "choix":
 		_start_carousel()
@@ -400,7 +456,7 @@ func next_round() -> bool:
 		return false
 	rounds_played += 1
 	round_i += 1
-	if round_i > AutochessData.rounds_in(stage):
+	if round_i > rounds_in(stage):
 		stage += 1
 		round_i = 1
 	_begin_prep()
@@ -518,9 +574,9 @@ func reroll(pi: int) -> bool:
 	var p: Dictionary = players[pi]
 	if int(p.free_rerolls) > 0:
 		p.free_rerolls = int(p.free_rerolls) - 1
-	elif int(p.gold) >= AutochessData.REROLL_COST:
-		p.gold = int(p.gold) - AutochessData.REROLL_COST
-		p.stats.gold_spent = int(p.stats.gold_spent) + AutochessData.REROLL_COST
+	elif int(p.gold) >= reroll_cost():
+		p.gold = int(p.gold) - reroll_cost()
+		p.stats.gold_spent = int(p.stats.gold_spent) + reroll_cost()
 	else:
 		return false
 	_undo.erase(pi)  # jamais d'annulation au-delà d'une actualisation (la boutique ne se repêche pas)
@@ -534,11 +590,11 @@ func buy_xp(pi: int) -> bool:
 	if not _can_act(pi):
 		return false
 	var p: Dictionary = players[pi]
-	if int(p.level) >= int(p.max_level) or int(p.gold) < AutochessData.XP_BUY_COST:
+	if int(p.level) >= int(p.max_level) or int(p.gold) < xp_cost():
 		return false
 	_undo.erase(pi)
-	p.gold = int(p.gold) - AutochessData.XP_BUY_COST
-	p.stats.gold_spent = int(p.stats.gold_spent) + AutochessData.XP_BUY_COST
+	p.gold = int(p.gold) - xp_cost()
+	p.stats.gold_spent = int(p.stats.gold_spent) + xp_cost()
 	p.stats.xp_bought = int(p.stats.xp_bought) + 1
 	_add_xp(p, AutochessData.XP_BUY_AMOUNT)
 	changed.emit(pi)
@@ -631,11 +687,10 @@ func equip(pi: int, item_idx: int, uid: int) -> bool:
 	var snap := _snapshot(pi)
 	var it := String(p.items[item_idx])
 	(p.items as Array).remove_at(item_idx)
-	if it == "marteau_reforge":
-		if (u.items as Array).is_empty():
+	if it in AutochessData.UTILITY_ITEMS:
+		if not _use_utility(pi, u, it):
 			(p.items as Array).insert(item_idx, it)
 			return false
-		_reforge(p, u)
 	elif not _equip_raw(pi, u, it):
 		(p.items as Array).insert(item_idx, it)
 		return false
@@ -862,7 +917,7 @@ func _reequip(pi: int, u: Dictionary, items: Array) -> void:
 func _equip_raw(pi: int, u: Dictionary, it: String) -> bool:
 	var p: Dictionary = players[pi]
 	var items: Array = u.items
-	if it == "marteau_reforge" or it == "couronne" or it == "":
+	if it in AutochessData.UTILITY_ITEMS or it == "couronne" or it == "":
 		return false
 	if AutochessData.COMPONENTS.has(it):
 		var k := -1
@@ -900,6 +955,54 @@ func _item_bench_add(p: Dictionary, it: String) -> bool:
 	if it == "" or (p.items as Array).size() >= AutochessData.ITEM_BENCH_SIZE:
 		return false
 	(p.items as Array).append(it)
+	return true
+
+
+## Peut-on poser l'objet utilitaire [param it] sur l'unité [param u] du stratège [param pi] (sans rien changer) ?
+## [param in_bench] : l'objet est encore au banc d'objets (sa case se libérera).
+func utility_ok(pi: int, u: Dictionary, it: String, in_bench := true) -> bool:
+	var p: Dictionary = players[pi]
+	var items: Array = u.get("items", [])
+	var free := AutochessData.ITEM_BENCH_SIZE - (p.items as Array).size() + (1 if in_bench else 0)
+	match it:
+		"marteau_reforge":
+			return not items.is_empty()
+		"pince":
+			return not items.is_empty() and free >= items.size()
+		"creuset":
+			return items.any(func(x): return AutochessData.ITEMS.has(String(x)))
+		"miroir":
+			var id := String(u.get("id", ""))
+			return id != "" and AutochessPool.cost_of(id) <= int(AutochessData.SPECIAL_ITEMS.miroir.params.max_cost) \
+				and pool.remaining(id) > 0 and can_receive(pi, id)
+	return false
+
+
+## Objet utilitaire (lot ACX-3) posé sur une unité : Marteau (composants au banc), Pince (objets intacts au banc), Creuset
+## (objets complets changés au hasard de la partie), Miroir (copie ★1 prise à la réserve). Faux si sans effet.
+func _use_utility(pi: int, u: Dictionary, it: String) -> bool:
+	var p: Dictionary = players[pi]
+	if not utility_ok(pi, u, it, false):
+		return false
+	match it:
+		"marteau_reforge":
+			_reforge(p, u)
+		"pince":
+			for x in u.items:
+				_item_bench_add(p, String(x))
+			u.items = []
+		"creuset":
+			for k in (u.items as Array).size():
+				var cur := String(u.items[k])
+				if AutochessData.ITEMS.has(cur):
+					u.items[k] = String(_pick(AutochessData.ITEMS.keys().filter(func(x): return x != cur), 1)[0])
+		"miroir":
+			var id := String(u.id)
+			if pool.take(id) != 1:
+				return false
+			if not _add_unit(pi, _make_unit(id, 1, 1)):
+				pool.give(id)
+				return false
 	return true
 
 
@@ -1046,7 +1149,7 @@ func _resolve(pi: int, idx: int) -> void:
 		"objet", "composant":
 			_item_bench_add(p, String(opt))
 		"famille":
-			p.trait_bonus[String(opt)] = int(p.trait_bonus.get(String(opt), 0)) + 1
+			p.trait_bonus[String(opt)] = int(p.trait_bonus.get(String(opt), 0)) + int(c.get("count", 1))
 		"heros":
 			var stars := int(c.get("stars", 1))
 			var got := pool.take(String(opt), int(pow(AutochessData.COPIES_PER_STAR, stars - 1)))
@@ -1067,6 +1170,10 @@ func _opening_options() -> Array:
 
 
 func _roll_augment_rarity() -> void:
+	if String(rule("first_rarity", "")) != "" and last_rarity == "":  # règle du jour « Pluie d'éclats »
+		augment_rarity = String(rule("first_rarity", ""))
+		last_rarity = augment_rarity
+		return
 	var w: Dictionary = AutochessData.AUGMENT_RARITY_WEIGHTS.duplicate()
 	if last_rarity == "eclat":
 		w.eclat = 0
@@ -1121,8 +1228,30 @@ func _take_augment(pi: int, id: String) -> void:
 			p.hp = maxi(1, int(p.hp) + int(prm.player_hp))
 			p.gold = int(p.gold) + int(prm.gold)
 		"objet":
-			for _k in int(prm.get("count", 1)):
-				_item_bench_add(p, String(prm.item))
+			if prm.has("items"):
+				for it in prm.items:
+					_item_bench_add(p, String(it))
+			else:
+				for _k in int(prm.get("count", 1)):
+					_item_bench_add(p, String(prm.item))
+		"trait_plus":  # lot ACX-3 : un trait précis compte une unité de plus (le bonus de combat est dans AutochessAugments)
+			var t := String(prm.trait)
+			p.trait_bonus[t] = int(p.trait_bonus.get(t, 0)) + int(prm.get("count", 1))
+		"trait_au_choix":  # Maître d'armes : un trait d'arme au choix
+			var ts: Array = AutochessData.weapon_traits() if String(prm.get("kind", "arme")) == "arme" else AutochessData.family_traits()
+			_offer(pi, {"kind": "famille", "count": int(prm.get("count", 1)), "options": _pick(ts, int(prm.get("choices", 3)))})
+		"copie_unite":  # Jumeaux : une copie ★1 de l'unité la plus chère du plateau (coût max_cost au plus)
+			var best: Dictionary = {}
+			for u in p.board:
+				var c := AutochessPool.cost_of(String(u.id))
+				if c > int(prm.get("max_cost", 4)) or pool.remaining(String(u.id)) <= 0:
+					continue
+				if best.is_empty() or c > AutochessPool.cost_of(String(best.id)) \
+						or (c == AutochessPool.cost_of(String(best.id)) and int(u.stars) > int(best.stars)):
+					best = u
+			if not best.is_empty() and can_receive(pi, String(best.id)) and pool.take(String(best.id)) == 1:
+				if not _add_unit(pi, _make_unit(String(best.id), 1, 1)):
+					pool.give(String(best.id))
 		"place_plateau":
 			p.crowns = int(p.crowns) + int(prm.slots)
 		"unite_au_choix":
@@ -1138,7 +1267,8 @@ func _take_augment(pi: int, id: String) -> void:
 				_offer(pi, {"kind": "objet", "options": _pick(AutochessData.ITEMS.keys(), int(prm.choices))})
 		"trait_compte":
 			if String(prm.kind) == "famille":
-				_offer(pi, {"kind": "famille", "options": _pick(AutochessData.family_traits(), int(prm.choices))})
+				_offer(pi, {"kind": "famille", "count": int(prm.get("count", 1)),
+					"options": _pick(AutochessData.family_traits(), int(prm.choices))})
 
 
 ## Renfort : unités de coût [param cost] de la famille la plus nombreuse du stratège (au hasard s'il n'a rien).
@@ -1286,6 +1416,21 @@ func _fight_entry(kind: String, a: int, b: int, ghost_of: int, board_a: Array, b
 	return {"kind": kind, "a": a, "b": b, "ghost_of": ghost_of, "board_a": board_a, "board_b": board_b, "ctx": ctx}
 
 
+## Lot ACX-3 (n° 12) : adversaires possibles du stratège [param pi] à la prochaine manche JcJ, d'après la seule règle
+## publique d'appariement (les AutochessData.avoid_recent derniers adversaires sont évités) : rien de caché n'est lu, le
+## hasard de la partie n'est pas touché. {cands: [stratèges], ghost: un fantôme est possible (nombre impair de vivants)}.
+func likely_opponents(pi: int) -> Dictionary:
+	var alive := alive_ids()
+	var out := {"cands": [], "ghost": alive.size() % 2 == 1}
+	if not pi in alive or alive.size() < 2:
+		return out
+	var k := AutochessData.avoid_recent(alive.size())
+	var others := alive.filter(func(o): return o != pi)
+	var free := others.filter(func(o): return not _recent(pi, o, k) and not _recent(o, pi, k))
+	out.cands = free if not free.is_empty() else others
+	return out
+
+
 func _recent(a: int, b: int, k: int) -> bool:
 	if k <= 0:
 		return false
@@ -1389,7 +1534,7 @@ func _pvp_outcome(pi: int, won: bool, draw: bool, enemy_stars: Array, opp: int, 
 		p.stats.won = int(p.stats.won) + 1
 		p.last = {"result": "victoire", "damage": 0, "gold": AutochessData.PVP_WIN_GOLD, "opponent": opp, "ghost": ghost}
 	else:
-		var dmg := AutochessData.pvp_damage(stage, enemy_stars)
+		var dmg := roundi(AutochessData.pvp_damage(stage, enemy_stars) * float(rule("damage_mult", 1.0)))
 		p.hp = int(p.hp) - dmg
 		p.streak = mini(int(p.streak), 0) - 1
 		p.stats.lost = int(p.stats.lost) + 1
@@ -1400,7 +1545,9 @@ func _pve_outcome(pi: int, won: bool, enemy_standing: Array, guardian: bool) -> 
 	var p: Dictionary = players[pi]
 	var gold0 := int(p.gold)
 	var mult := int(_effect_param(p, "gardiens_renforces", "loot_mult", 1)) if guardian else 1
-	_apply_loot(pi, AutochessData.loot(stage, round_i, won), mult)
+	_apply_loot(pi, AutochessData.loot(stage, round_i, won, rules), mult)
+	if int(rule("pve_components", 0)) > 0:  # règle du jour « Jour de forge »
+		_apply_loot(pi, {"composants": int(rule("pve_components", 0))}, 1)
 	if guardian and won:
 		for _k in int(_effect_param(p, "butin_gardien", "items", 0)):
 			_offer(pi, {"kind": "objet", "options": _pick(AutochessData.ITEMS.keys(), AutochessData.ITEM_CHOICES)})
@@ -1409,7 +1556,7 @@ func _pve_outcome(pi: int, won: bool, enemy_standing: Array, guardian: bool) -> 
 	if won:
 		p.stats.won = int(p.stats.won) + 1
 	else:
-		dmg = AutochessData.pve_damage(stage, enemy_standing.size(), guardian)
+		dmg = roundi(AutochessData.pve_damage(stage, enemy_standing.size(), guardian) * float(rule("damage_mult", 1.0)))
 		p.hp = int(p.hp) - dmg
 		p.stats.lost = int(p.stats.lost) + 1
 	p.last = {"result": "victoire" if won else "defaite", "damage": dmg, "gold": int(p.gold) - gold0, "opponent": -1,
@@ -1435,6 +1582,9 @@ func _apply_loot(pi: int, loot: Dictionary, mult: int) -> void:
 			"marteau":
 				for _k in int(v) * mult:
 					_item_bench_add(p, "marteau_reforge")
+			"pince", "creuset", "miroir":
+				for _k in int(v) * mult:
+					_item_bench_add(p, String(key))
 			"or":
 				p.gold = int(p.gold) + int(v) * mult
 			"heros_cout":
@@ -1579,7 +1729,7 @@ func to_dict() -> Dictionary:
 		"version": SAVE_VERSION, "seed": str(seed_value), "rng": str(rng.state), "stage": stage, "round": round_i,
 		"rounds_played": rounds_played, "phase": phase, "pool": pool.to_dict(), "players": players.duplicate(true),
 		"carousel": carousel.duplicate(true), "augment_rarity": augment_rarity, "last_rarity": last_rarity,
-		"next_uid": next_uid, "history": history.duplicate(),
+		"next_uid": next_uid, "history": history.duplicate(), "format": format, "rule": day_rule,
 	}
 
 
@@ -1587,6 +1737,7 @@ func from_dict(d: Dictionary) -> bool:
 	if int(d.get("version", 0)) != SAVE_VERSION or (d.get("players", []) as Array).size() != AutochessData.PLAYERS:
 		return false
 	d = _ints(d.duplicate(true)) as Dictionary
+	configure(String(d.get("format", "classique")), String(d.get("rule", "")))
 	seed_value = String(d.seed).to_int()
 	rng.seed = seed_value
 	rng.state = String(d.rng).to_int()

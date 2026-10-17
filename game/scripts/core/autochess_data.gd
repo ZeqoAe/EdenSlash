@@ -163,17 +163,18 @@ const MONSTER_WAVES := {"1-2": {"sbires": 2}, "1-3": {"sbires": 3}, "1-4": {"eli
 const AUGMENT_ROUNDS := ["2-1", "3-2", "4-2"]
 const CAROUSEL_COSTS := {2: [1, 3], 3: [2, 4]}  # 4 et plus : CAROUSEL_COSTS_LATE
 const CAROUSEL_COSTS_LATE := [3, 5]
-## Butin par manche (annexe B). Clés : composants, insigne (chance 0-1), objets_au_choix, marteau, or, heros_cout.
+## Butin par manche (annexe B). Clés : composants, insigne (chance 0-1), objets_au_choix, marteau, or, heros_cout ; objets
+## utilitaires (lot ACX-3) : pince, creuset, miroir.
 ## Les monstres paient même perdus. Gardien d'une étape au-delà de 7 : celui de 7-7.
 const LOOT := {
 	"1-2": {"win": {"composants": 1}, "loss": {"composants": 1}},
 	"1-3": {"win": {"composants": 1, "or": 2}, "loss": {"composants": 1, "or": 2}},
 	"1-4": {"win": {"composants": 1, "or": 3, "heros_cout": 2}, "loss": {"composants": 1, "or": 3, "heros_cout": 2}},
 	"2-7": {"win": {"composants": 2}, "loss": {"composants": 1}},
-	"3-7": {"win": {"objets_au_choix": 1}, "loss": {"composants": 1}},
-	"4-7": {"win": {"composants": 2, "insigne": 0.5}, "loss": {"composants": 1}},
+	"3-7": {"win": {"objets_au_choix": 1, "miroir": 1}, "loss": {"composants": 1}},
+	"4-7": {"win": {"composants": 2, "insigne": 0.5, "pince": 1}, "loss": {"composants": 1}},
 	"5-7": {"win": {"objets_au_choix": 1, "marteau": 1}, "loss": {"composants": 1}},
-	"6-7": {"win": {"insigne": 1.0, "composants": 1}, "loss": {"composants": 1}},
+	"6-7": {"win": {"insigne": 1.0, "composants": 1, "creuset": 1}, "loss": {"composants": 1}},
 	"7-7": {"win": {"objets_au_choix": 2}, "loss": {"composants": 1}},
 }
 const ITEM_CHOICES := 3  # objets au choix : cartes à 3
@@ -192,6 +193,36 @@ const DIFFICULTIES := [
 	{"id": "champion", "name": "Champion", "mix": [0, 2, 3, 2]},
 	{"id": "legende", "name": "Légende", "mix": [0, 0, 3, 4]},
 ]
+## Formats de partie (lot ACX-3, étude BM-AUTO §6 n° 16) : « classique » = les réglages ci-dessus ; « eclair » = partie
+## courte (12-15 min visées, mesurées : R_ACX3.md). Clés d'un format (absentes : réglages ci-dessus) : player_hp,
+## stage1 (manches de l'étape 1), start_gold (or à 1-2), early_income, base_income, interest (faux : aucun), streak
+## (faux : aucune série), xp_per_round, level_at_first (niveau donné à 1-2), augment_rounds, prep_time, prep_stage1,
+## damage_mult (PV perdus), loot (butin propre, clés « 1-2 »…), reward_halved (récompenses de place divisées par deux).
+const FORMATS := {
+	"classique": {"name": "Classique", "short": "La partie entière : huit stratèges, 100 PV, environ 30 minutes."},
+	"eclair": {"name": "Éclair", "short": "Partie courte : 40 PV, revenu fixe, l'expérience s'achète.",
+		"tip": "40 PV · 7 or par manche, sans intérêts ni séries · aucune XP offerte · atouts en 2-1 et 3-1 · préparation de 18 s ; PV perdus +10 %.",
+		"player_hp": 40, "stage1": ["ouverture", "monstres"], "start_gold": 6, "base_income": 7, "interest": false,
+		"streak": false, "xp_per_round": 0, "level_at_first": 3, "augment_rounds": ["2-1", "3-1"], "prep_time": 18.0,
+		"prep_stage1": 12.0, "damage_mult": 1.1, "reward_halved": true,
+		"loot": {"1-2": {"win": {"composants": 2, "heros_cout": 2}, "loss": {"composants": 2, "heros_cout": 2}}}},
+}
+## Règle du jour (lot ACX-3, n° 17) : une parmi 8, tirée à la graine du jour, la même pour les 8 stratèges (douce, jamais
+## injuste). Clés : start_gold_bonus, reroll_cost, xp_cost, pve_components, first_rarity, crowns, interest_cap,
+## augment_rerolls.
+const DAY_RULES := {
+	"tresor": {"name": "Trésor de départ", "short": "Chaque stratège commence avec 8 or de plus.", "start_gold_bonus": 8},
+	"boutique": {"name": "Boutique généreuse", "short": "Actualiser la boutique coûte 1 or.", "reroll_cost": 1},
+	"ecole": {"name": "Jour d'école", "short": "L'expérience coûte 3 or au lieu de 4.", "xp_cost": 3},
+	"forge": {"name": "Jour de forge", "short": "Monstres et gardiens lâchent un composant de plus.", "pve_components": 1},
+	"eclats": {"name": "Pluie d'éclats", "short": "Le premier atout est toujours un Éclat.", "first_rarity": "eclat"},
+	"grand_plateau": {"name": "Grand plateau", "short": "Une place de plus sur le plateau pour tous.", "crowns": 1},
+	"banquiers": {"name": "Banquiers", "short": "Les intérêts montent jusqu'à 7 or.", "interest_cap": 7},
+	"indecis": {"name": "Jour d'hésitation", "short": "Chaque choix d'atout se relance deux fois.", "augment_rerolls": 2},
+}
+const DAILY_DIFF := 1  # partie du jour : sept stratèges du mélange Vétéran (la même pour tous les joueurs)
+const DAILY_FORMAT := "eclair"
+
 const TEMPERAMENTS := {
 	"econome": {"name": "Économe", "short": "Garde son or pour les intérêts."},
 	"relanceur": {"name": "Relanceur", "short": "Cherche des trois étoiles bon marché."},
@@ -435,9 +466,21 @@ const SPECIAL_ITEMS := {
 	"couronne": {"name": "Couronne", "parts": ["insigne", "insigne"], "trigger": "immediat", "effect": "place_plateau",
 		"params": {"slots": 1}, "short": "Une unité de plus sur le plateau.", "tip": "Ne s'équipe pas : +1 place sur le plateau."},
 	"marteau_reforge": {"name": "Marteau de réforge", "parts": [], "trigger": "immediat", "effect": "reforge",
-		"params": {}, "short": "Rend au banc les composants d'une unité.",
+		"params": {}, "short": "Rend au banc les composants d'une unité.", "icon": "heavy_finisher",
 		"tip": "Retire les objets d'une unité : leurs composants reviennent au banc d'objets."},
+	# objets utilitaires (lot ACX-3, n° 19) : banc d'objets seulement, posés sur une unité comme un objet
+	"pince": {"name": "Pince", "parts": [], "trigger": "immediat", "effect": "retire_objets", "params": {}, "icon": "recall",
+		"short": "Retire les objets d'une unité, intacts.",
+		"tip": "Les objets de l'unité reviennent au banc d'objets tels quels (rien n'est défait)."},
+	"creuset": {"name": "Creuset", "parts": [], "trigger": "immediat", "effect": "refonte_objets", "params": {}, "icon": "ember",
+		"short": "Change les objets complets d'une unité.",
+		"tip": "Chaque objet complet de l'unité devient un autre objet complet, au hasard (emblèmes et composants restent)."},
+	"miroir": {"name": "Miroir", "parts": [], "trigger": "immediat", "effect": "copie_unite", "params": {"max_cost": 3},
+		"icon": "echo", "short": "Une copie d'un héros bon marché.",
+		"tip": "Pose-le sur un héros de coût 3 ou moins : une copie à une étoile arrive (prise à la réserve)."},
 }
+## Objets qui ne se posent que sur une unité pour agir sur elle (jamais portés).
+const UTILITY_ITEMS := ["marteau_reforge", "pince", "creuset", "miroir"]
 
 # --- Atouts (§5.3) ------------------------------------------------------------------------------------------------
 ## « trigger » : moment de l'effet (immediat : à la prise ; debut_manche ; debut_combat ; passif…), « effect » + « params »
@@ -513,8 +556,8 @@ const AUGMENTS := {
 		"params": {"guardian_mult": 2.0, "loot_mult": 2, "gold": 2}, "short": "Gardiens plus forts, butin doublé.",
 		"tip": "Gardiens deux fois plus forts, butin doublé ; +2 or par gardien vaincu."},
 	"tresor_du_dragon": {"icon": "phoenix_blade", "rarity": "eclat", "name": "Trésor du dragon", "trigger": "immediat", "effect": "or_sans_interets",
-		"params": {"gold": 30}, "short": "Beaucoup d'or tout de suite, mais plus d'intérêts.",
-		"tip": "+30 or tout de suite ; plus aucun intérêt."},
+		"params": {"gold": 40}, "short": "Beaucoup d'or tout de suite, mais plus d'intérêts.",
+		"tip": "+40 or tout de suite ; plus aucun intérêt."},
 	"niveau_11": {"icon": "storm_lord", "rarity": "eclat", "name": "Niveau 11", "trigger": "immediat", "effect": "niveau_max",
 		"params": {"max_level": 11, "xp_now": 10}, "short": "Tu peux monter un niveau plus haut.",
 		"tip": "Niveau maximal 11 ; +10 XP tout de suite."},
@@ -525,8 +568,59 @@ const AUGMENTS := {
 		"params": {"count": 2, "choices": 3}, "short": "Deux objets complets au choix.",
 		"tip": "2 objets complets au choix (cartes à 3)."},
 	"double_trait": {"icon": "glass_cannon", "rarity": "eclat", "name": "Double trait", "trigger": "passif", "effect": "trait_compte",
-		"params": {"kind": "arme", "count": 1, "active_only": 1}, "short": "Tous tes traits d'arme actifs comptent une unité de plus.",
-		"tip": "+1 au compte de tous tes traits d'arme actifs."},
+		"params": {"kind": "tous", "count": 1, "active_only": 0}, "short": "Tous tes traits comptent une unité de plus.",
+		"tip": "+1 au compte de chacun de tes traits présents sur le plateau (familles et armes)."},
+	# --- lot ACX-3 (n° 20) : 15 atouts de plus, de trait et d'unité ---
+	"maitre_armes": {"icon": "keen_edge", "rarity": "argent", "name": "Maître d'armes", "trigger": "immediat",
+		"effect": "trait_au_choix", "params": {"kind": "arme", "count": 1, "choices": 3},
+		"short": "Un trait d'arme au choix compte une unité de plus.", "tip": "+1 au compte d'un trait d'arme au choix (parmi 3)."},
+	"recrue_doree": {"icon": "light_step", "rarity": "argent", "name": "Recrue dorée", "trigger": "immediat",
+		"effect": "unite_au_choix", "params": {"cost": 3, "stars": 1, "choices": 3},
+		"short": "Un héros de coût 3 au choix.", "tip": "Une unité de coût 3 au choix parmi 3."},
+	"atelier": {"icon": "magnet", "rarity": "argent", "name": "Atelier", "trigger": "immediat", "effect": "objet",
+		"params": {"items": ["pince", "creuset"]}, "short": "Une Pince et un Creuset pour tes objets.",
+		"tip": "Une Pince (retire les objets intacts) et un Creuset (change les objets complets) tout de suite."},
+	"ligne_de_boucliers": {"icon": "featherfall", "rarity": "argent", "name": "Ligne de boucliers", "trigger": "debut_combat",
+		"effect": "bouclier_equipe", "params": {"shield_pct": 0.12, "dur": 5.0},
+		"short": "Tes unités commencent le combat sous un bouclier.",
+		"tip": "Au début du combat : bouclier de 12 % des PV pendant 5 s pour toutes tes unités."},
+	"porte_etendard": {"icon": "long_reach", "rarity": "argent", "name": "Porte-étendard", "trigger": "debut_combat",
+		"effect": "porteur", "params": {"atk_pct": 0.25, "spell_pct": 0.25},
+		"short": "Ton héros le mieux équipé frappe plus fort.",
+		"tip": "Ton unité qui porte le plus d'objets (puis la plus chère) : +25 % d'attaque et de puissance des sorts."},
+	"serment_rempart": {"icon": "toughness", "rarity": "or", "name": "Serment du Rempart", "trigger": "passif",
+		"effect": "trait_plus", "params": {"trait": "rempart", "count": 1, "stats": {"hp": 150}},
+		"short": "Un Rempart de plus ; les Rempart ont plus de PV.", "tip": "+1 au compte de Rempart ; Rempart : +150 PV."},
+	"pacte_ombre": {"icon": "dive_strike", "rarity": "or", "name": "Pacte de l'Ombre", "trigger": "passif",
+		"effect": "trait_plus", "params": {"trait": "ombre", "count": 1, "stats": {"crit": 0.15}},
+		"short": "Une Ombre de plus ; les Ombre critiquent plus souvent.", "tip": "+1 au compte d'Ombre ; Ombre : +15 % de critique."},
+	"piste_traque": {"icon": "hunter_eye", "rarity": "or", "name": "Piste de la Traque", "trigger": "passif",
+		"effect": "trait_plus", "params": {"trait": "traque", "count": 1, "stats": {"as_pct": 0.15}},
+		"short": "Une Traque de plus ; les Traque tirent plus vite.",
+		"tip": "+1 au compte de Traque ; Traque : +15 % de vitesse d'attaque."},
+	"flamme_ferveur": {"icon": "vigor", "rarity": "or", "name": "Flamme de la Ferveur", "trigger": "passif",
+		"effect": "trait_plus", "params": {"trait": "ferveur", "count": 1, "stats": {"hp_pct": 0.12}},
+		"short": "Une Ferveur de plus ; les Ferveur sont plus robustes.", "tip": "+1 au compte de Ferveur ; Ferveur : +12 % de PV."},
+	"savoir_arcane": {"icon": "arcana", "rarity": "or", "name": "Savoir arcane", "trigger": "passif",
+		"effect": "trait_plus", "params": {"trait": "arcane", "count": 1, "stats": {"mana_start": 20}},
+		"short": "Un Arcane de plus ; les Arcane commencent avec de la mana.",
+		"tip": "+1 au compte d'Arcane ; Arcane : +20 mana au début du combat."},
+	"jumeaux": {"icon": "air_dash", "rarity": "or", "name": "Jumeaux", "trigger": "immediat", "effect": "copie_unite",
+		"params": {"max_cost": 4}, "short": "Une copie de ton héros le plus cher.",
+		"tip": "Une copie à une étoile de ton unité la plus chère du plateau (coût 4 au plus), prise à la réserve."},
+	"grand_grimoire": {"icon": "lingering", "rarity": "eclat", "name": "Grand grimoire", "trigger": "passif",
+		"effect": "stats_equipe", "params": {"spell_pct": 0.35, "mana_start": 30},
+		"short": "Les sorts de tes unités frappent plus fort et partent plus tôt.",
+		"tip": "+35 % de puissance des sorts et +30 mana au début du combat pour toutes tes unités."},
+	"trinite": {"icon": "high_jump", "rarity": "eclat", "name": "Trinité", "trigger": "debut_combat", "effect": "trio_de_tete",
+		"params": {"count": 3, "hp_pct": 0.25, "atk_pct": 0.25}, "short": "Tes trois héros les plus chers sont plus forts.",
+		"tip": "Tes 3 unités les plus chères (puis les plus étoilées) : +25 % de PV et d'attaque."},
+	"miroir_des_ames": {"icon": "echo", "rarity": "eclat", "name": "Miroir des âmes", "trigger": "immediat", "effect": "objet",
+		"params": {"items": ["miroir", "miroir", "pince"]}, "short": "Deux Miroirs et une Pince.",
+		"tip": "Deux Miroirs (copie à une étoile d'une unité de coût 3 ou moins) et une Pince, tout de suite."},
+	"grand_coeur": {"icon": "glacial_shatter", "rarity": "eclat", "name": "Grand cœur", "trigger": "immediat",
+		"effect": "trait_compte", "params": {"kind": "famille", "count": 2, "choices": 3},
+		"short": "Une famille au choix compte deux unités de plus.", "tip": "+2 au compte d'une famille au choix (parmi 3)."},
 }
 
 static var _units: Dictionary = {}
@@ -617,11 +711,38 @@ static func streak_gold(streak: int) -> int:
 	return 0
 
 
-## Revenu de base d'une manche (« 1-2 » … ; 0 à l'ouverture).
-static func base_income(stage: int, round_i: int) -> int:
+## Revenu de base d'une manche (« 1-2 » … ; 0 à l'ouverture) ; [param r] : règles de la partie (rules_for).
+static func base_income(stage: int, round_i: int, r: Dictionary = {}) -> int:
 	if stage <= 1:
-		return int(EARLY_INCOME.get("%d-%d" % [stage, round_i], 0))
-	return BASE_INCOME
+		return int((r.get("early_income", EARLY_INCOME) as Dictionary).get("%d-%d" % [stage, round_i], 0))
+	return int(r.get("base_income", BASE_INCOME))
+
+
+# --- Formats et règle du jour (lot ACX-3) -------------------------------------------------------------------------------
+## Règles d'une partie : le format [param format] (FORMATS) puis la règle du jour [param day_rule] (DAY_RULES, "" : aucune),
+## en un seul dictionnaire (clés absentes : réglages par défaut). « format » et « rule » y sont rappelés.
+static func rules_for(format := "classique", day_rule := "") -> Dictionary:
+	var out: Dictionary = (FORMATS.get(format, FORMATS.classique) as Dictionary).duplicate(true)
+	out["format"] = format if FORMATS.has(format) else "classique"
+	out["rule"] = day_rule if DAY_RULES.has(day_rule) else ""
+	if out.rule != "":
+		out.merge((DAY_RULES[day_rule] as Dictionary).duplicate(true), true)
+	return out
+
+
+## Jour (« 2026-10-17 ») -> graine de la partie du jour (la même pour tous les joueurs ce jour-là ; > 0).
+static func daily_seed(day: String) -> int:
+	var h := 0
+	for c in ("echiquier:" + day).to_utf8_buffer():
+		h = (h * 131 + int(c)) % 2147483629
+	return maxi(h, 1)
+
+
+## Règle du jour [param day] : une des 8 de DAY_RULES, tirée par la graine du jour (ordre fixe des clés).
+static func daily_rule(day: String) -> String:
+	var keys := DAY_RULES.keys()
+	keys.sort()
+	return String(keys[daily_seed(day) % keys.size()])
 
 
 # --- PV de joueur -------------------------------------------------------------------------------------------------
@@ -643,22 +764,23 @@ static func pve_damage(stage: int, standing: int, guardian := false) -> int:
 
 
 # --- Déroulé ------------------------------------------------------------------------------------------------------
-static func rounds_in(stage: int) -> int:
-	return STAGE1_ROUNDS.size() if stage <= 1 else STAGE_ROUNDS.size()
+static func rounds_in(stage: int, r: Dictionary = {}) -> int:
+	return (r.get("stage1", STAGE1_ROUNDS) as Array).size() if stage <= 1 else STAGE_ROUNDS.size()
 
 
-## Type de la manche « étape-manche » : ouverture, monstres, jcj, choix, gardien.
-static func round_kind(stage: int, round_i: int) -> String:
-	var list: Array = STAGE1_ROUNDS if stage <= 1 else STAGE_ROUNDS
+## Type de la manche « étape-manche » : ouverture, monstres, jcj, choix, gardien ; [param r] : règles (rules_for).
+static func round_kind(stage: int, round_i: int, r: Dictionary = {}) -> String:
+	var list: Array = r.get("stage1", STAGE1_ROUNDS) if stage <= 1 else STAGE_ROUNDS
 	return String(list[clampi(round_i, 1, list.size()) - 1])
 
 
-static func is_augment_round(stage: int, round_i: int) -> bool:
-	return ("%d-%d" % [stage, round_i]) in AUGMENT_ROUNDS
+static func is_augment_round(stage: int, round_i: int, r: Dictionary = {}) -> bool:
+	return ("%d-%d" % [stage, round_i]) in (r.get("augment_rounds", AUGMENT_ROUNDS) as Array)
 
 
-static func prep_time(stage: int, round_i: int) -> float:
-	return (PREP_TIME_STAGE1 if stage <= 1 else PREP_TIME) + (PREP_AUGMENT_BONUS if is_augment_round(stage, round_i) else 0.0)
+static func prep_time(stage: int, round_i: int, r: Dictionary = {}) -> float:
+	return (float(r.get("prep_stage1", PREP_TIME_STAGE1)) if stage <= 1 else float(r.get("prep_time", PREP_TIME))) \
+		+ (PREP_AUGMENT_BONUS if is_augment_round(stage, round_i, r) else 0.0)
 
 
 ## Coûts [min, max] des unités du choix partagé d'une étape.
@@ -672,9 +794,12 @@ static func avoid_recent(alive: int) -> int:
 
 
 ## Butin d'une manche ({} si rien) ; [param won] : victoire. Gardien au-delà de 7 : celui de 7-7.
-static func loot(stage: int, round_i: int, won: bool) -> Dictionary:
+static func loot(stage: int, round_i: int, won: bool, r: Dictionary = {}) -> Dictionary:
 	var key := "%d-%d" % [stage, round_i]
-	if not LOOT.has(key) and stage > 7 and round_kind(stage, round_i) == "gardien":
+	var own: Dictionary = r.get("loot", {})
+	if own.has(key):
+		return (own[key] as Dictionary).get("win" if won else "loss", {})
+	if not LOOT.has(key) and stage > 7 and round_kind(stage, round_i, r) == "gardien":
 		key = "7-7"
 	return (LOOT.get(key, {}) as Dictionary).get("win" if won else "loss", {})
 

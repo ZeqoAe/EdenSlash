@@ -15,6 +15,8 @@ extends Node
 ##   --fight=F      sim (défaut, AutochessSim) | power (combat provisoire d'AC-B)
 ##   --out=chemin   fichier JSONL, lignes ajoutées (défaut user://autochess_games.jsonl)
 ##   --ai=clé:val,… réglages d'essai de toutes les IA (AutochessAi.tune)
+##   --format=F     classique (défaut) | eclair (lot ACX-3, AutochessData.FORMATS)
+##   --rule=R       règle du jour (AutochessData.DAY_RULES ; « day » : une par partie, à tour de rôle)
 ## Ligne « [ac_games] » de bilan (parties, bloquées, secondes par partie).
 
 const DEFAULT_OUT := "user://autochess_games.jsonl"
@@ -26,6 +28,8 @@ var setup := "echelle"
 var fight_name := "sim"
 var out_path := DEFAULT_OUT
 var ai_tune := {}
+var format := "classique"
+var day_rule := ""
 var stuck := 0
 var _fight := Callable()
 var _out: FileAccess
@@ -82,6 +86,10 @@ func _ready() -> void:
 				out_path = v
 			"ai":
 				ai_tune = parse_tune(v)
+			"format":
+				format = v
+			"rule":
+				day_rule = v
 	if not setup in SETUPS:
 		print("[ac_games] mise en place inconnue : %s (%s)" % [setup, ", ".join(SETUPS)])
 		get_tree().quit(1)
@@ -173,6 +181,12 @@ func play(gs: int, name: String) -> Dictionary:
 		recs.append(Rec.new(ai))
 	var g := Autochess.new()
 	g.save_path = ""
+	var rule := day_rule
+	if rule == "day":
+		var keys := AutochessData.DAY_RULES.keys()
+		keys.sort()
+		rule = String(keys[gs % keys.size()])
+	g.configure(format, rule)
 	g.start(gs, recs, _fight)
 	var t_prep := 0.0
 	var t_recap := 0.0
@@ -236,7 +250,7 @@ func play(gs: int, name: String) -> Dictionary:
 			"place": int(p.place), "out": oa[0], "out_min": oa[1], "out_n": oa[2], "hp": int(p.hp), "level": rec.econ.level_end,
 			"board": l.get("board", []), "traits": l.get("traits", {}), "augs": p.augments, "offers": rec.offers,
 			"econ": rec.econ, "stats": p.stats, "s3": stars3})
-	return {"v": Version.NUMBER, "setup": name, "seed": gs, "fight": fight_name, "rounds": g.rounds_played,
+	return {"v": Version.NUMBER, "setup": name, "seed": gs, "fight": fight_name, "format": g.format, "rule": g.day_rule, "rounds": g.rounds_played,
 		"last": g.round_key(), "min": {"prep": snappedf(t_prep / 60.0, 0.01), "recap": snappedf(t_recap / 60.0, 0.01),
 		"fight": snappedf(t_fight / 60.0, 0.01), "fight_pve": snappedf(t_fight_pve / 60.0, 0.01), "total": snappedf(total, 0.01)},
 		"jcj": jcj, "draws": draws, "pve": pve, "players": players, "ms": Time.get_ticks_msec() - t_start}

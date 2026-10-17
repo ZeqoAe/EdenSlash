@@ -7,6 +7,7 @@ extends HBoxContainer
 ## dans le coin et mini ★★ / ★★★ du résultat. Survol d'un trait de la colonne : les cartes de ce trait s'entourent de lagon.
 ## Achat : clic, A à la manette (UiNav), touches 1 à 5 (l'écran). Une carte trop chère reste navigable mais grisée ; une case
 ## achetée reste vide jusqu'à la prochaine actualisation.
+## Lot ACX-3 : les héros visés du planificateur (AutochessPlanner) portent une cible fraise en haut à droite.
 
 signal buy_requested(slot: int)
 
@@ -125,6 +126,9 @@ func _build_card(b: Button) -> void:
 	var key := AutochessHud.key_chip("")
 	key.name = "Key"
 	b.add_child(key)
+	var plan := PlanMark.new()
+	plan.name = "Plan"
+	b.add_child(plan)
 
 
 ## Tuile de trait : aplat de la couleur du trait, contour d'encre, flèche pomme quand le trait monterait.
@@ -166,8 +170,9 @@ func refresh(g: Autochess, pi: int) -> void:
 	var p: Dictionary = g.players[pi]
 	var wide := get_viewport_rect().size.x >= 1500.0
 	var counts := g.trait_counts(pi)
-	var sig := "%s|%d|%s|%s|%s|%s|%s" % [str(p.shop), int(p.gold), str(g.units_of(pi).map(func(u): return [u.id, u.stars])), wide,
-		Gamepad.active, str(counts), str(p.augments)]
+	var planned := AutochessPlanner.planned()
+	var sig := "%s|%d|%s|%s|%s|%s|%s|%s" % [str(p.shop), int(p.gold), str(g.units_of(pi).map(func(u): return [u.id, u.stars])), wide,
+		Gamepad.active, str(counts), str(p.augments), str(planned)]
 	if sig == _sig:
 		return
 	_sig = sig
@@ -185,6 +190,8 @@ func refresh(g: Autochess, pi: int) -> void:
 		var pips: Pips = b.find_child("Pips", true, false)
 		var mini: MiniStars = b.find_child("Stars", true, false)
 		var star: StarSticker = b.get_node("StarUp")
+		var plan: PlanMark = b.get_node("Plan")
+		plan.visible = id != "" and id in planned
 		_key(b, i)
 		b.set_meta("unit_id", id)
 		if id == "":
@@ -248,7 +255,8 @@ func refresh(g: Autochess, pi: int) -> void:
 			var csb := AutochessHud.sticker(AutochessHud.trait_candy(t, 0 if fam else 1), 8.0, 0.0, 2.0, 5.0, 0.0)
 			chip.add_theme_stylebox_override("panel", csb)
 		var afford := int(p.gold) >= cost
-		info[i] = {"id": id, "star_up": star_up, "stars": stars, "rising": rising, "afford": afford, "cost": cost}
+		info[i] = {"id": id, "star_up": star_up, "stars": stars, "rising": rising, "afford": afford, "cost": cost,
+			"planned": id in planned}
 		b.modulate = Color(1, 1, 1, 1) if afford else Color(0.82, 0.8, 0.88, 0.85)
 		var tip := "%s · %s" % [AutochessData.unit_name(id), String(AutochessData.ROLES.get(String(d.get("role", "")), {}).get("name", ""))]
 		if star_up:
@@ -257,6 +265,7 @@ func refresh(g: Autochess, pi: int) -> void:
 			tip += "\nTrois copies : une étoile de plus."
 		for t in rising:
 			tip += "\n%s monte d'un palier." % String(AutochessData.TRAITS.get(t, {}).get("name", t))
+		tip += "\nHéros visé (T pour l'enlever)." if id in planned else "\nT : viser ce héros."
 		b.tooltip_text = tip
 		_style(b, cost, star_up, false, afford)
 	_apply_mark()
@@ -394,6 +403,29 @@ class StarSticker extends Control:
 		draw_set_transform(c, deg_to_rad(-12.0))
 		AutochessHud.draw_star(self, Vector2(0, 2), size.x * 0.5, AutochessHud.INK, 1.0)
 		AutochessHud.draw_star(self, Vector2.ZERO, size.x * 0.5, AutochessHud.candy("soleil"), 2.5)
+
+
+## Cible fraise du planificateur (lot ACX-3) : héros visé, en haut à droite sous la touche.
+class PlanMark extends Control:
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		anchor_left = 1.0
+		anchor_right = 1.0
+		var d := AutochessHud.s(22.0)
+		offset_left = -d - AutochessHud.s(5.0)
+		offset_right = -AutochessHud.s(5.0)
+		offset_top = AutochessHud.s(30.0)
+		offset_bottom = AutochessHud.s(30.0) + d
+		visible = false
+
+	func _draw() -> void:
+		var c := size * 0.5
+		var r := size.x * 0.5 - 1.0
+		draw_circle(c + Vector2(0, 2), r, AutochessHud.INK)
+		draw_circle(c, r, AutochessHud.candy("fraise"))
+		draw_circle(c, r * 0.62, AutochessHud.PAPER)
+		draw_circle(c, r * 0.3, AutochessHud.candy("fraise"))
+		draw_arc(c, r, 0.0, TAU, 24, AutochessHud.INK, 2.0, true)
 
 
 ## Mini étoiles du résultat de la fusion (★★ ou ★★★).

@@ -144,22 +144,25 @@ static func exploits() -> Array:
 
 
 ## Paliers atteints à la place [param place] (un abandon compte sa place du moment : rien au-delà de la 4e).
-static func reached(place: int) -> Array:
+## [param halved] : format Éclair (lot ACX-3, étude BM-AUTO §8 Q5 : récompenses divisées par deux) : il faut une place
+## deux fois meilleure (2e = top 4, 1re = tout).
+static func reached(place: int, halved := false) -> Array:
 	var out: Array = []
 	if place <= 0:
 		return out
+	var eff := place * 2 - 1 if halved else place
 	for m in MILESTONES:
-		if place <= int(m.place):
+		if eff <= int(m.place):
 			out.append(String(m.id))
 	return out
 
 
 ## Ce que la place [param place] à la difficulté [param d] donnerait : [{id, type, text, kind ("first" | "daily")}].
 ## Ne change rien.
-static func plan(place: int, d: int) -> Array:
+static func plan(place: int, d: int, halved := false) -> Array:
 	var st := _state()
 	var out: Array = []
-	var reach := reached(place)
+	var reach := reached(place, halved)
 	for m in MILESTONES:
 		var id := String(m.id)
 		if not id in reach:
@@ -276,7 +279,11 @@ static func settle(info: Dictionary) -> Dictionary:
 	if int(st.best.get(dk, 0)) == 0 or place < int(st.best.get(dk, 0)):
 		st.best[dk] = place
 	var given: Array = []
-	for g in plan(place, d):
+	var halved := bool(AutochessData.FORMATS.get(String(info.get("format", "classique")), {}).get("reward_halved", false))
+	var daily := {}
+	if bool(info.get("daily", false)) and not abandoned:
+		daily = _settle_daily(st, place, String(info.get("rule", "")))
+	for g in plan(place, d, halved):
 		Profile.chest_add(String(g.type), CHEST_LEVEL)
 		if String(g.kind) == "first":
 			(st.first as Array).append(_first_key(String(g.id), d))
@@ -300,8 +307,45 @@ static func settle(info: Dictionary) -> Dictionary:
 	if opened >= 0 and not diff_open(opened, false):
 		opened = -1
 	last = {"diff": d, "place": place, "abandoned": abandoned, "early": place != clampi(int(info.get("place", 8)), 1, AutochessData.PLAYERS),
-		"chests": given, "titles": titles, "opened": opened}
+		"chests": given, "titles": titles, "opened": opened, "halved": halved, "daily": daily}
 	return last
+
+
+# --- partie du jour (lot ACX-3, n° 17) --------------------------------------------------------------------------------
+## Record de la partie du jour : {day, best (meilleure place du jour, 0 : pas jouée), games, rule, best_ever, days}.
+static func daily_state() -> Dictionary:
+	var dl: Variant = _state().get("daily", {})
+	var d: Dictionary = (dl as Dictionary).duplicate() if dl is Dictionary else {}
+	if String(d.get("day", "")) != Quests.today():
+		d["day"] = Quests.today()
+		d["best"] = 0
+		d["games"] = 0
+	for k in ["best_ever", "days", "games", "best"]:
+		d[k] = int(d.get(k, 0))
+	return d
+
+
+static func _settle_daily(st: Dictionary, place: int, rule: String) -> Dictionary:
+	var dl: Variant = st.get("daily", {})
+	var d: Dictionary = (dl as Dictionary).duplicate() if dl is Dictionary else {}
+	var today := Quests.today()
+	if String(d.get("day", "")) != today:
+		d["day"] = today
+		d["best"] = 0
+		d["games"] = 0
+		d["days"] = int(d.get("days", 0)) + 1
+	var before := int(d.get("best", 0))
+	d["games"] = int(d.get("games", 0)) + 1
+	d["rule"] = rule
+	var new_best := before == 0 or place < before
+	if new_best:
+		d["best"] = place
+	var ever := int(d.get("best_ever", 0))
+	if ever == 0 or place < ever:
+		d["best_ever"] = place
+	st["daily"] = d
+	return {"place": place, "best": int(d.best), "new_best": new_best and before > 0, "first": before == 0,
+		"best_ever": int(d.best_ever)}
 
 
 ## Valeur [param v] de la propriété du hub [param k] sans ce que l'Échiquier a le droit de donner (coffres d'apparence,
@@ -318,6 +362,7 @@ static func hub_view(k: String, v: Variant) -> Variant:
 			r.erase("last_activity")
 			r.erase("quests_done")  # (une quête accomplie par la partie : permis, elle ne donne que de l'apparence)
 			r.erase("quest_series_best")
+			r.erase("goals")  # (lot GX-3 : objectifs suivis, créés vides au premier accès : un état de menu, pas une progression)
 			return r
 		"extra_titles":
 			var names: Array = TITLES.duplicate()

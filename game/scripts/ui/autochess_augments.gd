@@ -34,7 +34,7 @@ const KIND_OF_EFFECT := {
 	"pv_contre_or": "Économie", "or_sans_interets": "Économie", "niveau_max": "Économie", "achat_double": "Économie",
 	"unites_famille": "Unités", "unite_au_choix": "Unités", "place_plateau": "Unités", "trait_compte": "Unités",
 	"fusion_rapide": "Unités", "composant_au_choix": "Objets", "objet": "Objets", "objets_au_choix": "Objets",
-	"butin_gardien": "Objets",
+	"butin_gardien": "Objets", "trait_plus": "Traits", "trait_au_choix": "Traits", "copie_unite": "Unités",
 }
 
 var cards: Array = []  # Button par option
@@ -108,6 +108,14 @@ func open(c: Dictionary) -> void:
 	var sub := String(SUBTITLES.get(kind, ""))
 	if kind == "atout":
 		sub = "Rareté %s · %s" % [String(AutochessData.RARITY_NAMES.get(String(c.get("rarity", "")), "")), sub.to_lower()]
+	elif kind == "heros" and int(c.get("stars", 2)) < 2:  # lot ACX-3 : Recrue dorée (coût 3, une étoile)
+		_title.text = "Choisis un héros"
+		sub = "Il rejoint ton banc."
+	elif kind == "famille":
+		var weapon := not opts.is_empty() and String(AutochessData.TRAITS.get(String(opts[0]), {}).get("kind", "")) == "arme"
+		if weapon:
+			_title.text = "Choisis un trait d'arme"
+		sub = ("Il compte" if weapon else "Elle compte") + (" deux unités de plus." if int(c.get("count", 1)) >= 2 else " une unité de plus.")
 	_sub.text = sub
 	for b in cards:
 		_row.remove_child(b)

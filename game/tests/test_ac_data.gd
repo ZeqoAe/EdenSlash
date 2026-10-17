@@ -149,12 +149,24 @@ func _ready() -> void:
 			stat_keys_ok = stat_keys_ok and k in A.STAT_KEYS
 	check("stats des composants : clés connues", stat_keys_ok)
 
-	# 8. atouts : 30, 10 Argent / 11 Or / 9 Éclat
-	var au_ok := A.AUGMENTS.size() == 30 and A.augments_of("argent").size() == 10 and A.augments_of("or").size() == 11 and A.augments_of("eclat").size() == 9
+	# 8. atouts : 45 depuis le lot ACX-3, 15 Argent / 17 Or / 13 Éclat
+	var au_ok := A.AUGMENTS.size() == 45 and A.augments_of("argent").size() == 15 and A.augments_of("or").size() == 17 and A.augments_of("eclat").size() == 13
 	for id in A.AUGMENTS:
 		var d: Dictionary = A.AUGMENTS[id]
 		au_ok = au_ok and d.trigger in A.TRIGGERS and String(d.effect) != "" and A.AUGMENT_RARITY_WEIGHTS.has(d.rarity)
-	check("30 atouts (10 / 11 / 9), déclencheurs et raretés connus", au_ok)
+		au_ok = au_ok and Boons.ICONS.has(String(d.get("icon", "")))
+		if String(d.effect) == "trait_plus":
+			au_ok = au_ok and A.TRAITS.has(String(d.params.trait))
+	check("45 atouts (15 / 17 / 13), déclencheurs, raretés, icônes et traits connus", au_ok)
+	# 8 bis. formats et règles du jour (lot ACX-3)
+	var fr_ok := A.FORMATS.has("classique") and A.FORMATS.has("eclair") and A.DAY_RULES.size() == 8
+	var ec := A.rules_for("eclair")
+	fr_ok = fr_ok and int(ec.player_hp) == 40 and A.rounds_in(1, ec) == 2 and A.round_kind(1, 2, ec) == "monstres" 		and A.is_augment_round(3, 1, ec) and not A.is_augment_round(3, 2, ec) and A.rounds_in(1) == 4
+	fr_ok = fr_ok and A.daily_seed("2026-10-17") == A.daily_seed("2026-10-17") and A.daily_seed("2026-10-17") != A.daily_seed("2026-10-18")
+	fr_ok = fr_ok and A.DAY_RULES.has(A.daily_rule("2026-10-17")) and String(A.rules_for("classique", "ecole").rule) == "ecole"
+	for u in A.UTILITY_ITEMS:
+		fr_ok = fr_ok and A.SPECIAL_ITEMS.has(u)
+	check("formats (classique, Éclair), 8 règles du jour, graine du jour stable, objets utilitaires connus", fr_ok)
 	var w := 0
 	for r in A.AUGMENT_RARITY_WEIGHTS:
 		w += int(A.AUGMENT_RARITY_WEIGHTS[r])
