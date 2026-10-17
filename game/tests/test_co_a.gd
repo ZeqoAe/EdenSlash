@@ -37,8 +37,8 @@ func _rules() -> void:
 		and Colisee.loss_for(Colisee.LOSS_FAST, 6) == 50 and Colisee.loss_for(Colisee.LOSS_FAST, 7) == 100)
 	check("mort subite : manche 12 (Classique), 7 (Éclair)", Colisee.new("classique", 1).sudden_round() == 12
 		and Colisee.new("eclair", 1).sudden_round() == 7)
-	check("formats : 6, 4 et 8 équipes ; Grand tournoi verrouillé", Colisee.new("classique", 1).n == 6 and Colisee.new("eclair", 1).n == 4
-		and Colisee.new("grand", 1).n == 8 and bool(Colisee.FORMATS.grand.get("locked", false)))
+	check("formats : 6, 4 et 8 équipes ; Grand tournoi ouvert (sonde du lot CO-C)", Colisee.new("classique", 1).n == 6
+		and Colisee.new("eclair", 1).n == 4 and Colisee.new("grand", 1).n == 8 and not bool(Colisee.FORMATS.grand.get("locked", false)))
 	check("profil de règles : pas d'acharnement ni de mort subite, coup plafonné", float(Colisee.PROFILE.pressure_start) > 1000.0
 		and float(Colisee.PROFILE.sudden_after) > 1000.0 and is_equal_approx(float(Colisee.PROFILE.hit_cap), 0.15))
 

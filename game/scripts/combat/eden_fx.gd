@@ -48,7 +48,7 @@ static func _owner_scope(node: Node) -> int:
 
 ## Joue l'effet [param name] à [param pos], orienté selon [param yaw].
 static func play(parent: Node, name: String, pos: Vector3, yaw := 0.0, scale_ := 1.0, p_follow: Node3D = null) -> EdenFx:
-	if Vfx.silent:
+	if Vfx.muted(parent):
 		return null
 	if name == "" or parent == null or not parent.is_inside_tree():
 		return null

@@ -30,11 +30,12 @@ const LEVEL := 60
 ## Barème : [[dernière manche, perte], …] ; la dernière ligne (manche 0) vaut pour toutes les suivantes.
 const LOSS_CLASSIC := [[3, 20], [6, 25], [9, 35], [11, 50], [0, 100]]
 const LOSS_FAST := [[2, 25], [4, 35], [6, 50], [0, 100]]
-## Formats. locked : caché du lobby (Grand tournoi : décision de la sonde CO-C, R_CO_C.md).
+## Formats. locked : fermé au lobby. Grand tournoi : ouvert par la sonde de performances du lot CO-C (R_CO_C.md : 24 héros en
+## Hardcore, image médiane 7,1-7,6 ms et p95 10-12 ms avec rendu, comme 18 héros ; la colonne compacte des 8 équipes : lot CO-L).
 const FORMATS := {
 	"classique": {"name": "Classique", "teams": 6, "prep": 30.0, "loss": LOSS_CLASSIC},
 	"eclair": {"name": "Éclair", "teams": 4, "prep": 25.0, "loss": LOSS_FAST},
-	"grand": {"name": "Grand tournoi", "teams": 8, "prep": 30.0, "loss": LOSS_CLASSIC, "locked": true},
+	"grand": {"name": "Grand tournoi", "teams": 8, "prep": 30.0, "loss": LOSS_CLASSIC},
 }
 const FORMAT_ORDER := ["classique", "eclair", "grand"]
 ## Combat : compte à rebours, anneau de feu dès RING_START s, fin forcée à FIGHT_TIME s (égalité : PV restants).
@@ -467,9 +468,10 @@ static func visible() -> bool:
 
 ## Ouvre une partie du jeu : Run (héros [param cid], mode scellé : rien du compte, équipement mis de côté comme au Battle
 ## royale), règles, TeamMatch (« colisee », [param p_format], directeur du combat), machine de partie (Colisee.game).
+## [param n_teams] : nombre d'équipes imposé (sonde de performances : 2 = une seule arène) ; -1 : celui du format.
 ## Ensuite : change_scene_to_file("res://scenes/world.tscn") (RunDirector monte le directeur).
-static func begin(cid: String, p_format := "classique", p_diff := 1, seed_value := 0) -> Colisee:
-	var g := Colisee.new(p_format, seed_value)
+static func begin(cid: String, p_format := "classique", p_diff := 1, seed_value := 0, n_teams := -1) -> Colisee:
+	var g := Colisee.new(p_format, seed_value, n_teams)
 	g.diff = clampi(p_diff, 0, DIFFS.size() - 1)
 	g.team_diffs = team_difficulties(g.diff, g.n, g.rng)
 	g.classes = compose_teams(g.n, cid, g.rng)
@@ -477,6 +479,9 @@ static func begin(cid: String, p_format := "classique", p_diff := 1, seed_value 
 	Run.start(cid)
 	Run.zone_id = Duel.ZONE
 	Run.fill_from_preset()
+	if Run.skills.is_empty():
+		for sk in Run.class_data().get("skills", []).slice(0, 4):  # sans préréglage : les 4 premiers sorts de la classe
+			Run.skills.append({"id": int(sk.id), "rank": 1})
 	Profile.equipped = {}
 	Profile.inventory = []
 	Profile.gold = 0

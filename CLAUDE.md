@@ -260,12 +260,18 @@ comme le Survivant, coffres d'apparence plafonnés, titres, `Quests.end_run("aut
 
 ### Le Colisée (modes d'équipes, en cours ; étude `conception/benchmark/ARENA.md`, lots CO-A à CO-L)
 Machine de partie sans scène (CO-A, `R_CO_A.md`) : `core/colisee.gd` (`Colisee` : formats `FORMATS` Classique 6 × 3 / Éclair 4 × 3 / Grand tournoi 8 × 3
-`locked`, barème, appariement tournant à 2 manches d'avance, exempt, égalités, éliminations simultanées, trios `compose_teams`, `simulate` « au tableau »,
+(ouvert par la sonde du lot CO-C), barème, appariement tournant à 2 manches d'avance, exempt, égalités, éliminations simultanées, trios `compose_teams`, `simulate` « au tableau »,
 `resolve_board`, profil `PROFILE` enregistré au lancement par `register_rules` — jamais dans `ModeRules.PROFILES` —, `begin` / `finish`, partie en cours
 `Colisee.game`) ; le directeur rend les éliminations de `report` à `TeamMatch.eliminate` dans le même ordre ; `READY` faux = activité cachée hors mode dev ; test `test_co_a`.
 Carte (CO-B, `R_CO_B.md`) : `ProcMap.generate_colisee(graine, n)` (arènes en grille à 120 m, plates sur 24 m, falaises, 4 piliers, fleurs ; `colisee_arenas`),
 `world/colisee_arena.gd` (`ColiseeArena.build_all`, `spawn_point`, `set_shown`), anneau de feu `world/colisee_ring.gd` (`ColiseeRing.STEPS`, `radius_at`, signal
 `warned`, `Combatant.heal_taken` dehors) + `shaders/colisee_ring.gdshader`, fleurs `world/colisee_flower.gd` ; test `test_co_b`, captures `tests/shot_co_map.tscn`.
+Combat (CO-C, `R_CO_C.md`) : `core/colisee_director.gd` (`ColiseeDirector`, monté par TeamMatch : manches prep → compte à rebours → combats simultanés réels →
+bandeau → `Colisee.report` ; héros recréés à chaque manche (`TeamMatch.make_hero`, l'arène regardée d'abord, 3 par image), au repos = arène `PARK` ; combats
+cachés : héros invisibles, `anim.active` faux, `Vfx.hidden_arenas` + `Vfx.muted(nœud)` coupent EdenFx / Sfx / DamageNumber / Vfx / dessin des télégraphes ;
+repli au tableau (33 ms cumulés 3 s, `--co-nofallback`) ; `watch` / `next_watch`, caméra sur un allié ; `probe` pour la sonde). Lancement direct
+`world.tscn -- --colisee [--co-format= --co-diff=0..4 --co-seed=]`, page minimale `ui/colisee_page.gd` (activité « colisee » cachée hors mode dev) ;
+sonde `tools/colisee_probe.tscn -- --teams=6|8` (avec `--fixed-fps 60`), mesures `tests/co_mesures.json` ; test `test_co_c`.
 
 ### Les Deux Voies (MOBA 4 contre 4, en cours ; « Bientôt », caché)
 Étude `conception/benchmark/MOBA.md` (spécification § 7, lots MB-0 à MB-K, croquis `moba_maquettes/`), essai `R_MB0.md` (budgets § 6).

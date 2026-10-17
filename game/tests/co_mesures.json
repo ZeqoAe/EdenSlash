@@ -1,0 +1,211 @@
+{
+ "$description": "Sonde de performances du Colisée (lot CO-C, R_CO_C.md) : tools/colisee_probe.tscn, --fixed-fps 60, Hardcore, 1re manche, 30 s de combats simultanés (2 premières s à part), 3 essais par cas ; durée d'une image en ms réelles. PC : Ryzen 7 9800X3D, RTX 5070, 31 Go ; 8 à 14 Godot actifs pendant les mesures (autres sessions).",
+ "criteres": {
+  "image_mediane_ms": 8.0,
+  "image_p95_ms": 16.0,
+  "apparition_heros_s": 1.5
+ },
+ "decision": "Grand tournoi 8 x 3 ouvert (FORMATS.grand sans locked)",
+ "cas": [
+  {
+   "equipes": 2,
+   "heros": 6,
+   "fenetre": false,
+   "essais": [
+    {
+     "med": 3.35,
+     "p95": 5.23,
+     "p99": 22.16,
+     "max": 88.34,
+     "apparition_ms": 73.1,
+     "lancement_ms": 2072,
+     "godots": 14,
+     "graine": 4242
+    },
+    {
+     "med": 2.91,
+     "p95": 5.0,
+     "p99": 16.45,
+     "max": 88.37,
+     "apparition_ms": 52.9,
+     "lancement_ms": 1890,
+     "godots": 14,
+     "graine": 4243
+    },
+    {
+     "med": 3.07,
+     "p95": 4.85,
+     "p99": 12.16,
+     "max": 52.02,
+     "apparition_ms": 69.5,
+     "lancement_ms": 1833,
+     "godots": 12,
+     "graine": 4244
+    }
+   ],
+   "med_max": 3.35,
+   "p95_max": 5.23,
+   "passe": true
+  },
+  {
+   "equipes": 6,
+   "heros": 18,
+   "fenetre": false,
+   "essais": [
+    {
+     "med": 3.92,
+     "p95": 5.3,
+     "p99": 13.93,
+     "max": 26.92,
+     "apparition_ms": 130.3,
+     "lancement_ms": 1943,
+     "godots": 12,
+     "graine": 4242
+    },
+    {
+     "med": 4.0,
+     "p95": 5.82,
+     "p99": 13.12,
+     "max": 58.69,
+     "apparition_ms": 129.5,
+     "lancement_ms": 2009,
+     "godots": 14,
+     "graine": 4243
+    },
+    {
+     "med": 4.19,
+     "p95": 5.86,
+     "p99": 13.27,
+     "max": 26.34,
+     "apparition_ms": 136.8,
+     "lancement_ms": 2038,
+     "godots": 12,
+     "graine": 4244
+    }
+   ],
+   "med_max": 4.19,
+   "p95_max": 5.86,
+   "passe": true
+  },
+  {
+   "equipes": 6,
+   "heros": 18,
+   "fenetre": true,
+   "essais": [
+    {
+     "med": 7.36,
+     "p95": 9.86,
+     "p99": 17.39,
+     "max": 41.23,
+     "apparition_ms": 121.6,
+     "lancement_ms": 2453,
+     "godots": 12,
+     "graine": 4242
+    },
+    {
+     "med": 7.54,
+     "p95": 11.58,
+     "p99": 16.07,
+     "max": 40.73,
+     "apparition_ms": 97.3,
+     "lancement_ms": 2030,
+     "godots": 10,
+     "graine": 4243
+    },
+    {
+     "med": 6.36,
+     "p95": 9.43,
+     "p99": 16.16,
+     "max": 108.21,
+     "apparition_ms": 105.0,
+     "lancement_ms": 2054,
+     "godots": 10,
+     "graine": 4244
+    }
+   ],
+   "med_max": 7.54,
+   "p95_max": 11.58,
+   "passe": true
+  },
+  {
+   "equipes": 8,
+   "heros": 24,
+   "fenetre": false,
+   "essais": [
+    {
+     "med": 4.39,
+     "p95": 6.15,
+     "p99": 11.35,
+     "max": 43.71,
+     "apparition_ms": 152.6,
+     "lancement_ms": 2036,
+     "godots": 12,
+     "graine": 4242
+    },
+    {
+     "med": 4.59,
+     "p95": 7.0,
+     "p99": 13.24,
+     "max": 55.38,
+     "apparition_ms": 130.7,
+     "lancement_ms": 2157,
+     "godots": 12,
+     "graine": 4243
+    },
+    {
+     "med": 4.57,
+     "p95": 6.28,
+     "p99": 10.12,
+     "max": 24.43,
+     "apparition_ms": 158.7,
+     "lancement_ms": 2134,
+     "godots": 12,
+     "graine": 4244
+    }
+   ],
+   "med_max": 4.59,
+   "p95_max": 7.0,
+   "passe": true
+  },
+  {
+   "equipes": 8,
+   "heros": 24,
+   "fenetre": true,
+   "essais": [
+    {
+     "med": 7.56,
+     "p95": 11.32,
+     "p99": 17.48,
+     "max": 41.9,
+     "apparition_ms": 132.5,
+     "lancement_ms": 2132,
+     "godots": 8,
+     "graine": 4242
+    },
+    {
+     "med": 7.48,
+     "p95": 11.93,
+     "p99": 16.84,
+     "max": 28.35,
+     "apparition_ms": 116.3,
+     "lancement_ms": 2107,
+     "godots": 8,
+     "graine": 4243
+    },
+    {
+     "med": 7.13,
+     "p95": 10.12,
+     "p99": 16.57,
+     "max": 28.45,
+     "apparition_ms": 148.8,
+     "lancement_ms": 2155,
+     "godots": 10,
+     "graine": 4244
+    }
+   ],
+   "med_max": 7.56,
+   "p95_max": 11.93,
+   "passe": true
+  }
+ ]
+}

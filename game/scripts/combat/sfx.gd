@@ -74,7 +74,7 @@ const REWARD_BY_RARITY := [1, 1, 2, 3, 4, 5]
 
 
 static func play_at(parent: Node, pos: Vector3, wav: String, vol := 0.0, pitch_jitter := 0.06) -> void:
-	if Vfx.silent:
+	if Vfx.muted(parent):
 		return
 	if wav == "" or parent == null or not parent.is_inside_tree():
 		return

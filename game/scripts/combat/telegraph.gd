@@ -68,6 +68,8 @@ static func spawn(parent: Node, pos: Vector3, yaw: float, props: Dictionary) -> 
 	parent.get_tree().current_scene.add_child(t)
 	t.global_position = pos + Vector3.UP * 0.12
 	t.rotation.y = yaw
+	if Vfx.muted(parent):
+		t.visible = false  # combat caché du Colisée (lot CO-C) : la zone frappe, rien n'est dessiné
 	return t
 
 

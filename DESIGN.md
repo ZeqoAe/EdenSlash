@@ -1337,6 +1337,10 @@ performances le permet), une seule couronne. Les règles complètes sont celles 
   s'abriter des tirs, 1 ou 2 **fleurs de vie** (15 % des PV et une barrière de 4 s au premier qui passe, repousse en 20 s). **Anneau de
   feu** : 22 m, puis 16 m à 25 s, 11 m à 40 s, 6 m à 55 s, 3 m à 70 s ; chaque resserrement est annoncé 4 s avant (prochain anneau en
   pointillés) ; dehors on perd 5 % de ses PV par seconde, un peu plus à chaque seconde, et les soins reçus sont divisés par deux.
+- **Combats** (lot CO-C, `R_CO_C.md`) : à chaque manche, tous les combats se jouent en même temps, chacun dans son arène ; on regarde
+  le sien (les autres se jouent pour de vrai, sans rien montrer). Un combat finit quand un trio est à terre, ou à 85 s. Si tu tombes,
+  tes alliés continuent et la caméra les suit ; ton combat fini, elle passe à un combat encore en cours. Le **Grand tournoi** (8 trios)
+  est ouvert : la mesure de performances le permet (24 héros aussi fluides que 18).
 
 ## L'Assaut (étude `conception/benchmark/TACTIQUE.md`, en cours : lots TAC-0 à TAC-14)
 

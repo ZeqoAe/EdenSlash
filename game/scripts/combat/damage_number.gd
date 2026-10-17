@@ -82,7 +82,7 @@ static func _pop(label: Label3D, big: float) -> Tween:
 
 ## Texte flottant (ESQUIVE, SAUT, RENVOI...).
 static func spawn_text(target: Node3D, text: String, color: Color) -> void:
-	if Vfx.silent:
+	if Vfx.muted(target):
 		return
 	if not target.is_inside_tree():
 		return
@@ -122,7 +122,7 @@ static func spawn_text(target: Node3D, text: String, color: Color) -> void:
 
 
 static func spawn(target: Node3D, amount: float, crit: bool, on_player: bool, dot := false, capped := false) -> void:
-	if Vfx.silent:
+	if Vfx.muted(target):
 		return
 	if not target.is_inside_tree():
 		return

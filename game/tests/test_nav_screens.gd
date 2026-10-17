@@ -211,6 +211,8 @@ func _ready() -> void:
 	RoyalePage.pick = "classic"
 	lobby._show_menu("autochess")
 	await probe("lobby : L'Échiquier (difficultés, graine, Lancer)", 0.8)
+	lobby._show_menu("colisee")
+	await probe("lobby : Le Colisée (format, adversaires, Entrer)", 0.8)  # (lot CO-C : page minimale)
 	# lot HUB-1 : les quêtes sont le Journal (écran à onglets) ; « quests » l'ouvre
 	Profile.unlocked_features.append("daily")
 	lobby._show_menu("quests")

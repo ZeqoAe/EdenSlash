@@ -147,6 +147,18 @@ func _ready() -> void:
 					Run.skills.append({"id": int(sk.id), "rank": 1})
 		elif "--assault" in OS.get_cmdline_user_args():
 			Assault.launch(Profile.selected_class, Assault.args_options(OS.get_cmdline_user_args()))  # L'Assaut (lot TAC-0)
+		elif "--colisee" in OS.get_cmdline_user_args():
+			var co_fmt := "classique"  # test : Le Colisée (--co-format=classique|eclair|grand, --co-diff=0..4, --co-seed=N ; lot CO-C)
+			var co_diff := 2
+			var co_seed := 0
+			for arg in OS.get_cmdline_user_args():
+				if arg.begins_with("--co-format="):
+					co_fmt = arg.trim_prefix("--co-format=")
+				elif arg.begins_with("--co-diff="):
+					co_diff = int(arg.trim_prefix("--co-diff="))
+				elif arg.begins_with("--co-seed="):
+					co_seed = int(arg.trim_prefix("--co-seed="))
+			Colisee.begin(Profile.selected_class, co_fmt, co_diff, co_seed)
 		elif "--royale" in OS.get_cmdline_user_args():
 			for arg in OS.get_cmdline_user_args():  # test : Battle royale (--royale-diff=0..3)
 				if arg.begins_with("--royale-diff="):

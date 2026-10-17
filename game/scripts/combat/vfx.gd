@@ -4,6 +4,21 @@ extends RefCounted
 
 ## Aucun effet visuel, son ni chiffre de dégâts (arène ML sans fenêtre : plus rapide).
 static var silent := false
+## Combats cachés du Colisée (lot CO-C) : arènes (Combatant.arena_id) dont ni effet, ni son, ni chiffre ne sont montrés.
+static var hidden_arenas: Dictionary = {}
+
+
+## Rien à montrer pour [param n] : tout est coupé (silent), ou [param n] (un combattant, ou un nœud porté par lui) se bat
+## dans une arène cachée (Colisée : seule l'arène regardée a des effets, des sons et des chiffres).
+static func muted(n: Node) -> bool:
+	if silent:
+		return true
+	if hidden_arenas.is_empty() or n == null:
+		return false
+	var c := n as Combatant
+	if c == null and n.get_parent() is Combatant:
+		c = n.get_parent() as Combatant
+	return c != null and hidden_arenas.has(c.arena_id)
 
 
 static func _material(color: Color) -> StandardMaterial3D:
@@ -20,7 +35,7 @@ static func _material(color: Color) -> StandardMaterial3D:
 
 ## Arc horizontal (portée [param radius], ouverture [param arc] en degrés) devant [param fwd].
 static func slash(parent: Node, pos: Vector3, fwd: Vector3, radius: float, arc: float, color := Color(1.0, 0.85, 0.6, 0.9)) -> void:
-	if Vfx.silent:
+	if Vfx.muted(parent):
 		return
 	var mesh := ImmediateMesh.new()
 	var segs := 24
@@ -57,7 +72,7 @@ static func slash(parent: Node, pos: Vector3, fwd: Vector3, radius: float, arc: 
 
 ## Onde circulaire au sol (tourbillons, buffs).
 static func ring(parent: Node, pos: Vector3, radius: float, color := Color(1.0, 0.75, 0.3, 0.8)) -> void:
-	if Vfx.silent:
+	if Vfx.muted(parent):
 		return
 	var mesh := ImmediateMesh.new()
 	var segs := 40
@@ -96,7 +111,7 @@ static func _spawn(parent: Node, mesh: Mesh, pos: Vector3, color: Color, life: f
 
 ## Onde de choc au sol : double anneau, gerbe de poussière et éclair de lumière.
 static func shockwave(parent: Node, pos: Vector3, radius: float, color := Color(1.0, 0.8, 0.45)) -> void:
-	if Vfx.silent:
+	if Vfx.muted(parent):
 		return
 	if parent == null or not parent.is_inside_tree():
 		return
@@ -139,7 +154,7 @@ static func shockwave(parent: Node, pos: Vector3, radius: float, color := Color(
 
 ## Éclair de lumière bref à l'impact (billboard qui grossit et s'efface).
 static func flash(parent: Node, pos: Vector3, size: float, color := Color(1.0, 0.9, 0.6)) -> void:
-	if Vfx.silent or Settings.fx_particles() == "off":
+	if Vfx.muted(parent) or Settings.fx_particles() == "off":
 		return
 	if parent == null or not parent.is_inside_tree():
 		return
@@ -180,7 +195,7 @@ static func _radial() -> Texture2D:
 
 ## Petite gerbe d'étincelles à l'impact.
 static func spark(parent: Node, pos: Vector3, color := Color(1.0, 0.9, 0.6), crit := false) -> void:
-	if Vfx.silent or Settings.fx_particles() == "off":
+	if Vfx.muted(parent) or Settings.fx_particles() == "off":
 		return
 	if parent == null or not parent.is_inside_tree():
 		return
@@ -214,7 +229,7 @@ static func spark(parent: Node, pos: Vector3, color := Color(1.0, 0.9, 0.6), cri
 
 ## Éclair en zigzag de [param from] à [param to] (foudre des procs).
 static func bolt(parent: Node, from: Vector3, to: Vector3, color := Color(0.75, 0.8, 1.0, 1.0)) -> void:
-	if Vfx.silent:
+	if Vfx.muted(parent):
 		return
 	var mesh := ImmediateMesh.new()
 	var segs := 9

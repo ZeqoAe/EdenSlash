@@ -34,6 +34,10 @@ const LIST := [
 	# en tête des Affrontements, seule activité ouverte de la rangée sur un compte neuf.
 	{"id": "autochess", "row": "versus", "group": "pvp", "tag": "Stratégie", "name": "L'Échiquier", "sub": "8 stratèges, une seule couronne", "gain": "Apparences, titres", "gives": ["look", "title"],
 		"desc": "Recrute des héros, place-les sur le plateau et regarde-les se battre."},
+	# Le Colisée (étude ARENA, lots CO-A à CO-L) : scellé et ouvert à tous ; caché du menu tant que Colisee.READY est faux (mode dev :
+	# visible) ; l'image des Arènes en attendant la sienne
+	{"id": "colisee", "row": "versus", "group": "pvp", "tag": "Équipes", "name": "Le Colisée", "sub": "6 trios, une seule couronne", "gain": "Apparences, titres", "gives": ["look", "title"],
+		"img": "arenas", "desc": "Toi et deux alliés IA contre cinq trios, manche après manche."},
 	{"id": "duel", "row": "versus", "unlock": "duel_free", "group": "pvp", "name": "Duel", "sub": "1 contre 1, à l'arme ou équipé", "gain": "Rangs, titres, maîtrise", "gives": ["rank", "title", "mastery", "spirit"],
 		"desc": "Un héros adverse, piloté par l'IA, à armes égales ou avec ton build."},
 	{"id": "arenas", "row": "versus", "unlock": "arenas", "group": "pvp", "name": "Arènes", "sub": "2 contre 2 ou 3 contre 3", "gain": "Titres, maîtrise", "gives": ["title", "mastery", "insignia"],
@@ -57,7 +61,8 @@ static func locked(a: Dictionary) -> bool:
 
 ## Activité absente du menu Jouer : le Survivant s'il redevenait un chantier (Survivor.READY faux, hors mode dev).
 static func hidden(a: Dictionary) -> bool:
-	return String(a.get("id", "")) == "survivor" and not Survivor.visible()
+	var id := String(a.get("id", ""))
+	return (id == "survivor" and not Survivor.visible()) or (id == "colisee" and not Colisee.visible())  # (Colisée : lot CO-C)
 
 
 ## Sous-titre d'une étiquette : fixe, sauf les Quêtes (combien sont faites aujourd'hui).

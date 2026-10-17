@@ -1817,6 +1817,8 @@ func _show_menu(id: String) -> void:
 			_menu_royale()
 		"autochess":
 			_menu_autochess()
+		"colisee":
+			ColiseePage.build(self)  # (lot CO-C : page minimale, activité cachée hors mode dev tant que Colisee.READY est faux)
 		"rush":
 			_menu_rush()
 		"siege":

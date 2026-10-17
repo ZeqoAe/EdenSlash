@@ -452,6 +452,9 @@ func _update_objectives() -> void:
 				_clock_label.text = director.boss_rage_text() if tier > 0 else "BOSS · %d:%02d" % [int(left) / 60, int(left) % 60]
 		"cleared":
 			_clock_label.text = "Victoire"
+		"team":
+			# modes d'équipes (lot CO-C) : l'horloge et la ligne viennent du directeur du mode (clock_text, sub_text)
+			_clock_label.text = director.team.clock_text() if is_instance_valid(director.team) and director.team.has_method("clock_text") else ""
 		"rage":
 			_clock_label.text = director.rage_text()
 		_:
@@ -471,6 +474,8 @@ func _update_objectives() -> void:
 		_seal_label.text = extra + (("%s · %s" % [Dungeons.name_of(Tower.dungeon), Dungeons.DIFF_NAMES[Tower.dungeon_diff]]) if Tower.is_dungeon() else "%s · record : étage %d" % [Tower.DIFF_NAMES[Tower.difficulty], Tower.best()])
 		if director.tower and director.tower.has_method("sub_text"):
 			_seal_label.text = extra + director.tower.sub_text()  # Ruée : le boss suivant ; Siège : alliés debout (passe M6)
+	if director.state == "team":
+		_seal_label.text = director.team.sub_text() if is_instance_valid(director.team) and director.team.has_method("sub_text") else ""
 	if director.sv:
 		_seal_label.text = extra.trim_suffix(" · ")  # Survivant : les gardiens sont sur la frise (SurvivorHud), pas de sceau
 	if Training.active:
@@ -478,7 +483,7 @@ func _update_objectives() -> void:
 		_clock_label.text = ""
 	_seal_label.get_parent().visible = _seal_label.text != "" or _gold_label.visible
 	# objectifs : le duel, la Tour et l'entraînement n'en ont pas (rien à déplier)
-	var has_objectives: bool = not director.state in ["duel", "tower"] and not Training.active
+	var has_objectives: bool = not director.state in ["duel", "tower", "team"] and not Training.active
 	_obj_chevron.visible = has_objectives
 	var chests_total: int = director.map.chests.size() if director.map and "chests" in director.map else 0
 	var sig := "%s|%s|%d|%d|%d" % [director.state, director.dungeon_found, director.seals, director.chests_opened, director.shrines_captured]
