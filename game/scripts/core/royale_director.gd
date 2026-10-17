@@ -357,7 +357,7 @@ func _ring_damage() -> void:
 			m.take_damage(maxf(1.0, m.max_hp * dps), null, false, true)
 			if m == d.player and not m.is_dead and _warn_t <= 0.0:
 				_warn_t = 3.0
-				d.message.emit("Hors de l'anneau ! (%d %% des PV par seconde)" % roundi(dps * 100.0), 1.8)
+				d.message.emit("Hors de l'anneau !\nSuis la flèche violette", 1.8)  # (lot BR-I1 : sans pourcentage ; la flèche montre la zone sûre)
 	_warn_t = maxf(0.0, _warn_t - 1.0)
 
 

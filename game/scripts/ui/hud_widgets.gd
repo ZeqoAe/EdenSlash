@@ -180,7 +180,16 @@ class SkillSlot extends Control:
 			else:
 				draw_texture_rect(icon, inner, false, Color(1, 1, 1, 1.0 if fraction <= 0.0 else 0.8))
 		elif empty:
-			HudWidgets.text_center(self, "—", c, UiTheme.bold_font(), 20, Color(1, 1, 1, 0.25), 0)
+			# case vide : trame de points (Bible § 10 : jamais « — » ; la touche reste dessous)
+			var y := inner.position.y + 4.0
+			var row := 0
+			while y < inner.end.y - 2.0:
+				var x := inner.position.x + (4.0 if row % 2 == 0 else 7.5)
+				while x < inner.end.x - 2.0:
+					draw_circle(Vector2(x, y), 1.3, Color(1, 1, 1, 0.16))
+					x += 7.0
+				y += 7.0
+				row += 1
 		HudWidgets.sweep(self, inner if not round else rect.grow(-3.0), fraction, Color(0.02, 0.0, 0.06, 0.72), round)
 		if left > 0.0:
 			var t := "%.1f" % left if left < 10.0 else str(int(left))

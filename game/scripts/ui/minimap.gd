@@ -144,6 +144,8 @@ func _draw() -> void:
 			draw_circle(sp, 4.0, Color(1.0, 0.6, 0.15))
 		else:
 			draw_circle(sp, 2.3, Color(0.95, 0.25, 0.25))
+	if Royale.active:
+		RoyaleMap.minimap_overlay(self, w2s)  # ligne vers la zone sûre, repère personnel (lot BR-I1)
 	# héros
 	var hp: Vector2 = w2s.call(player.global_position)
 	var f := player.forward()

@@ -4,6 +4,8 @@ extends CharacterBody3D
 
 signal died(who: Combatant, killer: Combatant)
 signal health_changed(hp: float, max_hp: float)
+## Coup encaissé (après défense et plafonds) et son auteur (null : anneau, poison…) ; arc de coup reçu du HUD (lot BR-I1).
+signal damaged(amount: float, source: Combatant)
 
 enum Team { PLAYER, MONSTER }
 
@@ -410,6 +412,7 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 	if Training.active and source and source.team == Team.PLAYER and team != Team.PLAYER:
 		Training.record(dmg)
 	health_changed.emit(hp, max_hp)
+	damaged.emit(dmg, source)
 	if not dot and has_status("sleep"):
 		statuses.erase("sleep")  # un coup réveille
 		statuses_changed.emit()

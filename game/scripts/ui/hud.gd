@@ -86,6 +86,7 @@ var _clock := 0.0
 var _low_hp: TextureRect
 var _root: Control
 var _sv_hud: SurvivorHud  # Survivant : frise des 20 minutes (null ailleurs)
+var _royale: RoyaleHud  # Battle royale : HUD d'état v2, flèches, repère, grande carte (lot BR-I1 ; null ailleurs)
 
 
 func setup(p: Player, d: RunDirector) -> void:
@@ -274,6 +275,10 @@ func _build() -> void:
 	root.add_child(_big_map)
 	_big_map.setup(player, director)
 	add_child(root)
+	if Royale.active:
+		_royale = RoyaleHud.attach(self, root)
+	elif Duel.active:
+		HitArc.attach(root, player)  # arc de coup reçu en Duel et en Arènes aussi (lot BR-I1)
 
 
 # --- objectifs (haut gauche) -------------------------------------------------------------
@@ -810,7 +815,7 @@ func _process(delta: float) -> void:
 	_queue_strip.set_items(waiting)
 	var lv := Settings.assist_level()
 	var info: Dictionary = Settings.ASSIST.get(lv, {})
-	_assist_label.text = String(info.get("tag", ""))
+	_assist_label.text = String(info.get("tag", "")) if not Royale.active else ""  # (Battle royale : pas de mot technique)
 	_assist_label.add_theme_color_override("font_color", info.get("color", Color.WHITE))
 	var dc := player.dodge_cooldown()
 	_dodge.set_cooldown(dc.x, dc.y)
@@ -948,7 +953,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _pad_card_input(event):
 		get_viewport().set_input_as_handled()
 		return
-	if event.is_action_pressed("map"):
+	if event.is_action_pressed("map") and _royale != null:
+		_royale.toggle_map()  # Battle royale : grande carte v2 (lot BR-I1)
+	elif event.is_action_pressed("map"):
 		_big_map.visible = not _big_map.visible
 		if _big_map.visible:
 			hide_banner()
@@ -1001,6 +1008,9 @@ func _update_kill_feed() -> void:
 	if _action_root:
 		_action_root.visible = not director.royale.spectating
 	_update_drop_hint()
+	if _royale != null:
+		_feed_box.visible = false  # (lot BR-I1 : le fil est en pastilles sous la mini-carte, RoyaleHud)
+		return
 	var now: float = director.royale.clock
 	var lines: Array = director.royale.kill_feed.filter(func(e): return now - float(e[1]) < 8.0)
 	_feed_box.visible = not lines.is_empty()
@@ -1037,7 +1047,7 @@ func _update_drop_hint() -> void:
 		_root.add_child(_drop_box)
 		_drop_label = _label(_drop_box, "", 22, Color(1.0, 0.92, 0.7))
 		_drop_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_drop_box.visible = text != ""
+	_drop_box.visible = text != "" and not (_royale != null and _royale.map_open())  # (la grande carte du vol dit déjà tout)
 	if text == _drop_label.text:
 		return
 	_drop_label.text = text
@@ -1209,7 +1219,7 @@ func _on_xp(xp: int, xp_next: int, level: int) -> void:
 	_xp_orb.trail = _xp_orb.value
 	_last_level = level
 	_xp_orb.big_text = str(level)
-	_xp_orb.small_text = "%d %%" % floori(ratio * 100.0)
+	_xp_orb.small_text = "%d %%" % floori(ratio * 100.0) if not Royale.active else ""  # (Battle royale : pas de pourcentage à l'écran)
 	_xp_orb.tooltip_text = "Niveau %d\nExpérience : %d / %d (%d %%)" % [level, xp, xp_next, floori(ratio * 100.0)]
 	if Epochs.adventure():
 		# lot H4a : le niveau de run ne donne que des cartes ; le héros se bat à son niveau de héros
