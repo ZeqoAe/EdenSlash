@@ -179,6 +179,8 @@ func _draw() -> void:
 			draw_circle(sp, 2.3, UiTheme.color("bonbon.fraise.base"))
 	if Royale.active:
 		RoyaleMap.minimap_overlay(self, w2s)  # ligne vers la zone sûre, repère personnel (lot BR-I1)
+	if TeamMatch.active and AssaultHud.current != null and is_instance_valid(AssaultHud.current):
+		AssaultHud.current.minimap_overlay(self, w2s)  # (lot TAC-7) L'Assaut : vue de l'équipe, sites, derniers vus, bruits, repère
 	# héros
 	var hp: Vector2 = w2s.call(player.global_position)
 	var f := player.forward()

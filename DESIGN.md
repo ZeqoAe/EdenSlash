@@ -1431,6 +1431,13 @@ empêche ou la désamorce ; une vie par manche, or entre les manches. Ce qui est
   clarté) ; un outil (Pinces en Défense, Gants en Attaque, Talisman, Bottes feutrées). Ce qu'on achète se revend au même prix
   pendant la phase ; on le garde si l'on survit, on perd tout en tombant. « Achat conseillé », « Racheter », et la colonne de
   l'équipe : le plan des alliés (achat complet, on économise, on force) et ce qui leur manque.
+- **HUD** (lot TAC-7) : en haut, le bandeau du score (les 4 + 4 héros, une croix quand ils sont à terre, la jauge d'ultime
+  de tes alliés, le score sur la couleur et le blason de chaque équipe, le minuteur, puis la mèche de la Charge en rouge) et
+  la ligne de la Charge (qui la porte, où elle est, la pose et le désamorçage avec leur avancée) ; en bas, l'or et ce que
+  rapportera une défaite, les sorts 2 et 3 cadenassés avec leur prix tant qu'ils ne sont pas achetés, l'ultime et ses 7
+  crans, la fiole, les utilitaires et l'outil, le bouclier au-dessus de la vie ; sur la mini-carte, ce que voit ton équipe,
+  les « ? » des derniers vus et les bruits ; dessous, le lieu où tu es et les éliminations. Annonces une à la fois
+  (« 2 contre 4 ! », « À toi de jouer ! »), repère au clic molette, barrières d'encre aux départs pendant l'achat.
 
 # Partie D — Économie et progression
 

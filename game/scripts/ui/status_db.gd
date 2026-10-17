@@ -91,9 +91,15 @@ static var _skill_icons := {}
 const SPELL_ICONS := {"spell_str": "fury", "spell_agi": "haste", "spell_int": "keen", "spell_wis": "regen"}
 
 
+## Effets de L'Assaut sans icône du jeu : pictogrammes maison (insensibilité commune, ébloui, enduit amer).
+const ASSAULT_ICO := {"cc": "st_resolve", "blind": "spark", "bitter": "st_bleed"}
+
+
 static func icon(status: String) -> Texture2D:
 	if status.begins_with("imm_"):  # insensibilité à un contrôle : icône du contrôle
 		status = status.trim_prefix("imm_")
+	if ASSAULT_ICO.has(status):  # (L'Assaut, lots TAC-4 / TAC-5 : effets sans icône du jeu ; lot TAC-7)
+		return Ico.tex(String(ASSAULT_ICO[status]), 40)
 	if Trophies.STATUSES.has(status):  # buffs des trophées : icône du buff le plus proche
 		status = String(Trophies.STATUSES[status].icon)
 	if SPELL_ICONS.has(status):  # bonus d'attribut des sorts améliorés

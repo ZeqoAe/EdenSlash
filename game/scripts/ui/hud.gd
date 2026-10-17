@@ -96,6 +96,7 @@ var _low_hp: TextureRect
 var _root: Control
 var _sv_hud: SurvivorHud  # Survivant : frise des 20 minutes (null ailleurs)
 var _royale: RoyaleHud  # Battle royale : HUD d'état v2, flèches, repère, grande carte (lot BR-I1 ; null ailleurs)
+var _assault: AssaultHud  # L'Assaut : score, Charge, or, cases achetées, mini-carte, mort et ordres (lots TAC-7 / TAC-8 ; null ailleurs)
 var _boss_bar: BossBar  # barre de boss v2, frise « À venir », annonces à 3 niveaux (lot DNG-2)
 var _map_holder: Control  # support de la mini-carte ronde (haut droite)
 var _loot: VBoxContainer  # colonne du fil du butin à droite (lot HUD-2) ; Battle royale et Survivant : null (fil dans la pile de gauche)
@@ -301,6 +302,8 @@ func _build() -> void:
 		_sv_hud = SurvivorHud.attach(self, root, director)  # Survivant : HUD v2 (lot SVX-2 : XP pleine largeur, chrono et frise, collection, vie)
 	elif Duel.active:
 		HitArc.attach(root, player)  # arc de coup reçu en Duel et en Arènes aussi (lot BR-I1)
+	elif Modes.current() == "assault":
+		_assault = AssaultHud.attach(self, root)  # (lot TAC-7) HUD de L'Assaut
 
 
 # --- objectifs (haut gauche) -------------------------------------------------------------
@@ -1256,6 +1259,8 @@ func show_message(text: String, duration: float) -> void:
 		return  # annonce d'une mécanique du boss : alerte à 3 niveaux (HudAlert, lot DNG-2)
 	if _royale != null and _royale.announce_message(text, duration):
 		return  # Battle royale : annonces centrales une à la fois, DA v2 (lot BR-I3, RoyaleAnnounce)
+	if _assault != null and _assault.announce_message(text, duration):
+		return  # L'Assaut : annonces du mode (lot TAC-7, AssaultAnnounce)
 	for pre in FEED_PREFIXES:
 		if text.begins_with(pre) and not text.contains("\n"):
 			feed(text)

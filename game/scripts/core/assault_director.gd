@@ -275,6 +275,7 @@ func _start_round() -> void:
 	defuse_t = 0.0
 	charge_pos = Vector3.INF
 	blasted = []
+	_round_snapshot()  # (lots TAC-7 / TAC-8) or du début de manche, ordres oubliés, barrières d'encre
 	_ten_said = false
 	_defuse_said = false
 	target_site = Assault.SITES[rng.randi() % 2]
@@ -367,6 +368,7 @@ func _on_damaged(amount: float, src: Combatant, victim: Combatant) -> void:
 	if not _dmg.has(vk):
 		_dmg[vk] = {}
 	_dmg[vk][sk] = float(_dmg[vk].get(sk, 0.0)) + amount
+	_track_hit(vk, sk, amount, src, victim)  # (lot TAC-8) dégâts de la partie, dernier coup reçu
 	if src != null and is_instance_valid(src):
 		PvpCaps.board_add(src, "dealt", amount)
 
@@ -402,6 +404,7 @@ func _ko(vk: String, killer: Combatant) -> void:
 		_stop_defuse()
 	if _verbose():
 		print("[assault] %s (%s) tombe, par %s" % [vk, classes.get(vk, "?"), kk if kk != "" else "le décor"])
+	_note_ko(vk, kk, assists)  # (lots TAC-7 / TAC-8) fil des éliminations, « seul contre trois »
 	_handle(Assault.ko(vk, kk, assists))
 
 
@@ -435,6 +438,7 @@ func update(delta: float) -> void:
 			for k in heroes:
 				if k != player_key:
 					_agent(String(k))
+		_apply_orders()  # (lot TAC-8) ordres du joueur à ses alliés
 		_player_actions(delta)
 		_ai_actions(delta)
 	_obj_t -= delta
@@ -490,6 +494,7 @@ func _handle(ev: Array) -> void:
 					if h is ClassRival:
 						(h as ClassRival).passive = false
 				TeamMatch.set_phase("fight")
+				_show_barriers(false)  # (lot TAC-7) les barrières d'encre tombent
 				_close_shop()  # (lot TAC-5) la manche commence : l'écran d'achat se ferme, le paquetage s'applique
 				for k in heroes:
 					_apply_kit(String(k))
@@ -525,6 +530,7 @@ func _end_round(e: Dictionary) -> void:
 	plant_by = ""
 	_stop_defuse()
 	TeamMatch.end_round(w, {"how": e.how, "attack": Assault.attack})
+	_note_round(e)  # (lot TAC-8) carte de fin de manche
 	var line := "manche %d gagnée par l'équipe %d (%s, %s) en %.1f s : %d - %d" % [int(e.round), w,
 		"attaque" if w == Assault.attack else "défense", Assault.HOW[String(e.how)].to_lower(), Assault.round_time,
 		int(Assault.score[0]), int(Assault.score[1])]
@@ -1526,12 +1532,278 @@ func results_spec(won: bool, score: Array, rounds: int, hist: Array, forfeit: bo
 func _replay(cid: String) -> void:
 	Assault.launch(cid, {"map": String(layout.get("id", "arena"))})
 	get_tree().paused = false
-	get_tree().change_scene_to_file.call_deferred("res://scenes/world.tscn")
+	LoadScreen.go(get_tree(), "res://scenes/world.tscn")  # (lot PERF-1 : écran de chargement)
 
 
 func _to_lobby() -> void:
 	get_tree().paused = false
-	get_tree().change_scene_to_file.call_deferred("res://scenes/lobby.tscn")
+	LoadScreen.to_lobby(get_tree())  # (lot PERF-1)
+
+
+# --- HUD, mort, ordres et bilan (lots TAC-7 et TAC-8, équipe TAC-D) ------------------------------------------------------
+## Ce que l'interface lit (AssaultHud, AssaultRecap, AssaultResults) : dégâts donnés de chaque héros sur la partie, dernier coup
+## reçu de chaque héros de la manche (récapitulatif de mort), fil des éliminations, or gagné dans la manche, moments
+## (« 1 contre 3 » gagné), ordres du joueur à ses alliés scriptés. Rien ici ne change une règle du jeu.
+
+## Dégâts donnés à des adversaires sur toute la partie (clé -> PV).
+var dmg_total: Dictionary = {}
+## Dernier coup reçu de chaque héros dans la manche : clé -> {src, cid, move, dmg, back (dans le dos), hp (PV qui restent au
+## tireur), t}.
+var last_hits: Dictionary = {}
+## Éliminations de la partie : [{t (TeamMatch.elapsed), round, victim, killer, assists, team (équipe de la victime)}].
+var ko_log: Array = []
+## Or de chaque héros au début de la manche (Assault.stats[clé].gold) : la carte de fin de manche dit ce qui a été gagné.
+var round_earn0: Dictionary = {}
+## Une ligne par manche finie pour la carte de fin de manche et le bilan : {n, winner, how, gold (or gagné par le joueur),
+## kills (ses éliminations dans la manche), by (« Élouan à 0,4 s »…), clutch (manche gagnée seul contre 3 ou plus)}.
+var round_cards: Array = []
+## Le joueur seul debout contre 3 adversaires ou plus dans cette manche (« Dernier rempart » s'il la gagne).
+var _clutch_now := false
+var clutch_won := 0
+## Qui a désamorcé la dernière Charge (carte de fin de manche).
+var defuse_last := ""
+## Ordres du joueur à ses alliés scriptés (lot TAC-8) : clé -> {kind, at (point visé), t}, jusqu'à la fin de la manche.
+## _apply_orders les pose sur le cadre du héros après son agent (ancre, laisse ; ClassRival seul : son but) ; le stratège
+## d'équipe (lot TAC-6) peut les lire ici (orders, order_goal) pour les intégrer à son plan (lot TAC-11).
+var orders: Dictionary = {}
+const ORDERS := {"go_a": "Va en A", "go_b": "Va en B", "go_ping": "Va au repère", "hold": "Tiens ta place", "group": "Regroupez-vous",
+	"back": "Recule"}
+const ORDER_REPLIES := {"go_a": "J'y vais : A !", "go_b": "J'y vais : B !", "go_ping": "Je vais au repère !", "hold": "Je tiens !",
+	"group": "Je vous rejoins !", "back": "Je recule !"}
+## Point repère posé par le joueur (ping, lot TAC-7) : l'écran, la mini-carte et l'ordre « Va au repère » le lisent.
+var ping := Vector3.INF
+var ping_ms := 0
+var _barriers: Array = []
+
+
+func _track_hit(vk: String, sk: String, amount: float, src: Combatant, victim: Combatant) -> void:
+	if Assault.team_of(vk) == Assault.team_of(sk):
+		return
+	dmg_total[sk] = float(dmg_total.get(sk, 0.0)) + amount
+	var back := false
+	if is_instance_valid(victim) and is_instance_valid(src):
+		var to := src.global_position - victim.global_position
+		to.y = 0.0
+		var fw := victim.forward()
+		fw.y = 0.0
+		back = to.length() > 0.5 and fw.length() > 0.1 and fw.normalized().dot(to.normalized()) < -0.35
+	var mv: Dictionary = src.get_meta("move", {}) if is_instance_valid(src) and not src is Player else {}
+	last_hits[vk] = {"src": sk, "cid": String(classes.get(sk, "")), "move": String(mv.get("name", "")), "dmg": amount, "back": back,
+		"t": TeamMatch.elapsed, "src_ref": weakref(src)}
+
+
+func _note_ko(vk: String, kk: String, assists: Array) -> void:
+	ko_log.append({"t": TeamMatch.elapsed, "round": Assault.round_n, "victim": vk, "killer": kk, "assists": assists.duplicate(),
+		"team": Assault.team_of(vk)})
+	if ko_log.size() > 200:
+		ko_log.pop_front()
+	if player_key != "" and Assault.phase in ["live", "planted"]:
+		var mine := Assault.alive_keys(0).filter(func(k): return String(k) != vk)
+		var theirs := Assault.alive_keys(1).filter(func(k): return String(k) != vk)
+		if mine.size() == 1 and String(mine[0]) == player_key and theirs.size() >= 3:
+			_clutch_now = true
+
+
+func _note_round(e: Dictionary) -> void:
+	var w := int(e.winner)
+	var gold := 0
+	var kills := 0
+	if player_key != "" and Assault.stats.has(player_key):
+		gold = int(Assault.stats[player_key].gold) - int(round_earn0.get(player_key, 0))
+		kills = ko_log.filter(func(k): return int(k.round) == Assault.round_n and String(k.killer) == player_key).size()
+	var by := ""
+	if String(e.how) == "defuse":
+		for i in range(events.size() - 1, -1, -1):
+			if String(events[i].get("type", "")) == "defused":
+				defuse_last = String(events[i].get("by", ""))
+				break
+		if defuse_last != "":
+			by = "%s, à %s s de l'explosion" % [hero_name(defuse_last), ("%.1f" % maxf(_fuse_at_defuse, 0.0)).replace(".", ",")]
+	elif String(e.how) == "charge":
+		by = "posée par %s" % hero_name(Assault.planter) if Assault.planter != "" else ""
+	var clutch := _clutch_now and w == TeamMatch.player_team and player_key != "" and bool(Assault.alive.get(player_key, false))
+	if clutch:
+		clutch_won += 1
+	_clutch_now = false
+	round_cards.append({"n": int(e.round), "winner": w, "how": String(e.how), "gold": gold, "kills": kills, "by": by, "clutch": clutch,
+		"score": (e.score as Array).duplicate(), "match": int(e.match)})
+
+
+## Début de manche : or de départ de chacun, ordres oubliés.
+func _round_snapshot() -> void:
+	orders = {}
+	_show_barriers(true)
+	last_hits = {}
+	_clutch_now = false
+	defuse_last = ""
+	for k in Assault.stats:
+		round_earn0[k] = int(Assault.stats[k].gold)
+
+
+## Nom court d'un héros pour l'interface : « Toi », sinon le nom de sa classe.
+func hero_name(key: String) -> String:
+	if key == "":
+		return ""
+	if key == player_key:
+		return "Toi"
+	var cid := String(classes.get(key, ""))
+	return String(GameData.class_data(cid).get("name_fr", cid))
+
+
+## Récapitulatif de la chute du joueur (AssaultRecap) : qui, avec quoi, dans le dos ou non, PV qui restent au tireur, tes
+## dégâts donnés et tes éliminations / aides de la partie.
+func death_recap() -> Dictionary:
+	var lh: Dictionary = last_hits.get(player_key, {})
+	var src = (lh.get("src_ref") as WeakRef).get_ref() if lh.has("src_ref") else null
+	var sk := String(lh.get("src", ""))
+	var st: Dictionary = Assault.stats.get(player_key, {})
+	return {"killer": sk, "name": hero_name(sk), "cid": String(lh.get("cid", "")), "role": role_of(sk) if sk != "" else "",
+		"move": String(lh.get("move", "")), "dmg": float(lh.get("dmg", 0.0)), "back": bool(lh.get("back", false)),
+		"killer_hp": int((src as Combatant).hp) if src is Combatant and not (src as Combatant).is_dead else -1,
+		"blast": player_key in blasted, "dealt": float(dmg_total.get(player_key, 0.0)), "kills": int(st.get("kills", 0)),
+		"assists": int(st.get("assists", 0))}
+
+
+## Ordre du joueur [param kind] (ORDERS) à ses alliés scriptés [param keys] (vide : toute l'équipe debout). Rend les
+## réponses [{key, text, ok}] : un allié qui se bat répond « Pas pour l'instant ».
+func give_order(kind: String, keys: Array = [], at := Vector3.INF) -> Array:
+	var out: Array = []
+	if not ORDERS.has(kind) or not Assault.phase in ["buy", "live", "planted"]:
+		return out
+	if kind == "go_ping":
+		at = ping if at == Vector3.INF else at
+		if at == Vector3.INF:
+			return out
+	if keys.is_empty():
+		keys = Assault.alive_keys(TeamMatch.player_team)
+	var group := Vector3.ZERO
+	var n := 0
+	for k in Assault.alive_keys(TeamMatch.player_team):
+		var h := hero(String(k))
+		if h != null and String(k) != player_key:
+			group += h.global_position
+			n += 1
+	for k in keys:
+		var key := String(k)
+		var h := hero(key)
+		if key == player_key or h == null or h.is_dead or Assault.team_of(key) != TeamMatch.player_team:
+			continue
+		if engaged_foe(h, THREAT) != null and Assault.phase != "buy":
+			out.append({"key": key, "text": "Pas pour l'instant : je me bats !", "ok": false})
+			continue
+		var p := at
+		match kind:
+			"go_a":
+				p = site_pos("A")
+			"go_b":
+				p = site_pos("B")
+			"hold":
+				p = h.global_position
+			"group":
+				p = group / maxf(n, 1.0) if n > 0 else h.global_position
+			"back":
+				p = layout.spawns["attack" if Assault.team_of(key) == Assault.attack else "defense"].pos
+		orders[key] = {"kind": kind, "at": _ground(p), "t": TeamMatch.elapsed}
+		out.append({"key": key, "text": String(ORDER_REPLIES.get(kind, "Compris !")), "ok": true})
+	return out
+
+
+## Point où l'ordre en cours envoie [param key] (Vector3.INF : aucun ordre).
+func order_goal(key: String) -> Vector3:
+	var o: Dictionary = orders.get(key, {})
+	if o.is_empty():
+		return Vector3.INF
+	var i := int(key.right(1))
+	var off := Vector3(cos(i * 1.7) * 1.8, 0, sin(i * 1.7) * 1.8) if String(o.kind) != "hold" else Vector3.ZERO
+	return _ground((o.at as Vector3) + off)
+
+
+## Chaque image, après les agents : un allié qui a un ordre du joueur rejoint son point et l'y tient (il se bat si on le
+## gêne) ; jamais celui qui pose ou désamorce, ni celui que son stratège envoie poser ou désamorcer.
+func _apply_orders() -> void:
+	if orders.is_empty() or not Assault.phase in ["live", "planted"]:
+		return
+	var cs = get("coaches")
+	for key in orders.keys():
+		var r := hero(String(key)) as ClassRival
+		if r == null or r.is_dead or String(key) == plant_by or String(key) == defuse_by:
+			continue
+		var busy := false
+		if cs is Array:
+			for co in cs:
+				var o: Dictionary = (co as Object).get("orders").get(key, {}) if co != null else {}
+				busy = busy or String(o.get("do", "")) in ["plant", "defuse"]
+		if busy:
+			continue
+		var at := order_goal(String(key))
+		if "anchor" in r:
+			var near := Vector2(r.global_position.x - at.x, r.global_position.z - at.z).length() < 2.5
+			r.set("anchor", at)
+			r.set("mode", "hold" if near or String(orders[key].kind) == "hold" else "move")
+			r.set("leash", 10.0)
+			r.set("face", Vector3.ZERO)
+		elif engaged_foe(r) == null:
+			r.goal = at
+
+
+## « Rejouer » du bilan : la même partie (carte, format, difficultés), avec la classe du joueur.
+func _replay_same(info: Dictionary) -> void:
+	Assault.launch(String(info.get("cid", Run.class_id)), {"map": String(info.get("map", "bourg")), "format": String(info.get("format", "assault")),
+		"diff_allies": int(info.get("diff_allies", 2)), "diff_foes": int(info.get("diff_foes", 2))})
+	get_tree().paused = false
+	LoadScreen.go(get_tree(), "res://scenes/world.tscn")  # (lot PERF-1 : écran de chargement)
+
+
+## Repère du joueur (ping) : posé en [param p], ou retiré s'il est tout près du précédent. Vrai s'il est posé.
+func set_ping(p: Vector3) -> bool:
+	if ping != Vector3.INF and Vector2(p.x - ping.x, p.z - ping.z).length() < 4.0:
+		ping = Vector3.INF
+		return false
+	ping = p
+	ping_ms = Time.get_ticks_msec()
+	return true
+
+
+## Nom du lieu (« Halle », « Site A ») le plus proche de [param p] ("" sans carte faite à la main).
+func place_of(p: Vector3) -> String:
+	if map != null and map.has_method("place_name"):
+		return String(map.call("place_name", p))
+	return ""
+
+
+## Barrières d'encre des deux départs pendant l'achat (TACTIQUE § 7.2) : visibles de la couleur du camp, tombent à la manche.
+func _show_barriers(on: bool) -> void:
+	for b in _barriers:
+		if is_instance_valid(b):
+			b.queue_free()
+	_barriers = []
+	if not on or layout.is_empty():
+		return
+	for side in ["attack", "defense"]:
+		var sp: Dictionary = layout.spawns[side]
+		var t := Assault.attack if side == "attack" else Assault.defense()
+		var b := AssaultBarrier.new()
+		_markers.add_child(b)
+		b.build(sp.pos, sp.half + Vector2(1.5, 1.5), TeamMatch.color(t, "base"), map)
+		_barriers.append(b)
+
+
+## Tout ce que le bilan et les récompenses lisent de la partie (avant Assault.finish, qui ne remet rien à zéro de ces chiffres).
+func match_info(won: bool, forfeit: bool) -> Dictionary:
+	var heroes_rows: Array = []
+	for t in 2:
+		for k in Assault.members[t]:
+			var key := String(k)
+			var st: Dictionary = Assault.stats.get(key, {})
+			heroes_rows.append({"key": key, "team": t, "cid": String(classes.get(key, "")), "name": hero_name(key), "role": role_of(key),
+				"kills": int(st.get("kills", 0)), "deaths": int(st.get("deaths", 0)), "assists": int(st.get("assists", 0)),
+				"plants": int(st.get("plants", 0)), "defuses": int(st.get("defuses", 0)), "gold": int(st.get("gold", 0)),
+				"dmg": float(dmg_total.get(key, 0.0)), "me": key == player_key})
+	return {"won": won, "forfeit": forfeit, "score": [int(Assault.score[0]), int(Assault.score[1])], "rounds": Assault.round_n,
+		"format": Assault.format, "map": String(layout.get("id", "bourg")), "map_name": String(layout.get("name", "")),
+		"diff_allies": int(diffs[0]), "diff_foes": int(diffs[1]), "history": Assault.history.duplicate(true), "heroes": heroes_rows,
+		"player": player_key, "cid": Run.class_id, "clutch": clutch_won, "secs": TeamMatch.elapsed, "watch": watch,
+		"half": int(Assault.num("half")), "max_rounds": int(Assault.num("max_rounds")), "round_cards": round_cards.duplicate(true)}
 
 
 func _verbose() -> bool:

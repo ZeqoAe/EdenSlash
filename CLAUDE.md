@@ -363,6 +363,11 @@ si l'on survit, `buy` / `sell` (revente au prix payé pendant la phase) / `sell_
 onglets LB / RB ou Q / E, clic / A acheter, clic droit / X revendre, [T] conseillé, [R] racheter, [B] fermer / rouvrir, cartes qui défilent en 1280 × 720) ; directeur : `shop_*`,
 `_buy_phase_start`, `_apply_kit` (dégâts d'arme, bouclier `assault_shield` absorbé par `AssaultCombat.absorb`, outils), `owned_slots` (sorts achetés, ultime à 7 points `ult_pts`),
 `can_cast` / `on_cast` (`Player.use_skill`), `_round_inventory` (qui tombe perd tout), touches [C] fiole, [V] / [X] utilitaires ; objets des IA `_ai_items` ; captures `tests/shot_tac5.tscn` ; test `test_tac5`.
+HUD (TAC-7, `R_TAC_7.md`) : `ui/assault_hud.gd` (`AssaultHud`, posé par `Hud._build` si `Modes.current() == "assault"` : bandeau du score `ScoreBand`, ligne de la
+Charge `ChargeLine.state`, or `GoldBox`, cases à acheter et ultime `SlotMark.state_of`, objets `ItemRow`, bouclier `ShieldMark`, colonne `SideColumn` (lieu, fil des K.O.,
+repère) ; pile du haut recalée à chaque image (`_layout`) ; mini-carte `minimap_overlay` : vue de l'équipe, derniers vus, bruits), annonces `ui/assault_announce.gd`
+(crochet de `Hud.show_message`), barrières d'encre `world/assault_barrier.gd` ; directeur : bloc « HUD, mort, ordres et bilan » (`dmg_total`, `last_hits`, `ko_log`,
+`round_cards`, `ping`, `place_of`) ; captures `tests/shot_tac7.tscn` ; test `test_tac7`.
 
 ### Classes maison (lot CHR-1, `conception/art/R_CHR1.md`, limites : `conception/art/CHR.md`)
 `data/classes_custom.json` -> `GameData.custom_classes` (à part : `GameData.classes` reste les 60 d'Eden, aucun tirage des modes à IA,
