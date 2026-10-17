@@ -1,175 +1,175 @@
-# Bible de style d'Eden Slash (v1, 17/10/2026)
+# Bible de style d'Eden Slash, v2 : la DA du jeu appliquée à l'interface (17/10/2026)
 
-Fait foi pour tous les départements (`ORGANISATION.md`, règle 1). Piste retenue par la DA : **bronze et émail**
-(à confirmer par le joueur, `pistes/comparaison.html`). Valeurs exactes : `tokens.json`. Images de référence :
-`bible/composants.png` (tous les composants, tous les états), `bible/maquette_lobby.png`, `bible/palette.png`, `bible/typo.png`.
-Toutes les tailles sont données en px à 1600×900 ; à 1280×720 elles sont multipliées par 0,8, jamais sous le plancher du texte.
+Fait foi pour tous les départements (`ORGANISATION.md`, règle 1). La v1 (« bronze et émail », un thème inventé) est
+abandonnée et archivée dans `archive_v1/`. **On n'invente pas de thème : on applique partout la DA qui existe déjà dans les
+classes, les monstres, les icônes et les effets du jeu.** Les icônes et assets du jeu de base (sorts, objets, classes, statuts,
+illustrations) sont **gardés** ; le travail porte sur ce que nous n'avons pas : boutons, menus, sous-menus, cadres, jauges, onglets,
+fenêtres, et le **ressenti du clic**.
+
+Valeurs exactes : `tokens.json` (v2). Images : `bible/da_reelle.jpg` (la DA mesurée), `bible/palette_reelle.png`, `bible/typo.png`,
+`pistes/b_*.jpg` (piste retenue sur écrans réels), `pistes/comparaison.html`. Tailles en px à 1600×900 (× 0,8 à 1280×720).
 
 ---
 
-## 1. Principes
-1. **Un objet d'orfèvre, pas une application.** Chaque surface a une matière : bronze (cadres, actions), émail (sélection,
-   accents), nuit (fonds), parchemin (le texte, et les pages « papier »). Aucun rectangle arrondi uni.
-2. **Trois profondeurs, jamais deux fois la même l'une dans l'autre.** Fenêtre (double filet, ombre large) > carte (filet
-   simple, ombre courte) > ligne (aucun cadre, un séparateur). Un bouton n'est jamais dans une boîte qui ressemble à un bouton.
-3. **Une idée et un bouton primaire par écran.** Le primaire est la seule plaque d'or poli de l'écran.
-4. **La couleur dit l'état, la forme le confirme.** Toute information portée par une couleur l'est aussi par une forme, une
-   position ou un mot (rareté = couleur + rivets ; verrou = gris + cadenas + condition ; gain = vert + ▲).
-5. **Le monde d'abord.** La scène 3D reste visible, l'interface est calme ; ce qui bouge a une raison ; la lisibilité du combat
-   passe avant l'éclat des effets.
+## 1. La DA qui existe déjà (mesurée sur les assets)
+![DA réelle](bible/da_reelle.jpg)
 
-## 2. Couleurs (palette fermée)
-![palette](bible/palette.png)
+| Source | Ce qu'on mesure | Ce qu'on en retient pour l'interface |
+|---|---|---|
+| Icônes de sorts et de classes (339 fichiers) | saturation moyenne 0,58 à 0,65, valeur 0,8 ; 57 à 65 % de pixels vifs ; **5 teintes de fond** : soleil `#FFD02D`, mandarine `#F68622`, pomme `#BBF235`, lagon `#2FC3FF`, améthyste `#CC27FF` (saturation 0,8) | les 5 « bonbons » sont la palette d'accent de l'interface, et les couleurs des 5 familles |
+| Forme des icônes | carré à coins **très arrondis** (≈ 20 % du côté), dégradé clair en haut à gauche → saturé en bas à droite, **reflet blanc** sur l'arête haute, **rayons de soleil** derrière le sujet, étincelles en étoile à 4 branches, sujet **contouré** brun-encre, ombré en 2 ou 3 tons nets | coins ronds, reflet blanc, rayons, étoiles, contour, aplats cel |
+| Icônes d'état | cadre épais **bleu-nuit encre** (`#1A0E23`, `#1E233A`), tuile saturée, symbole blanc contouré | l'**encre** `#221A3A` est la couleur de contour de toute l'interface |
+| Héros (60 classes) | chibi, grosses têtes, yeux d'anime, tenues sombres (noir, bordeaux, blanc, or) et **armes pastel lumineuses** (menthe, rose, bleu) | l'interface reste claire et colorée autour de héros plutôt sombres : elle ne doit pas les noyer |
+| Monstres | ronds, trapus, très colorés (ours orange, gobelin sarcelle, méduse lilas), toon doux | rondeur, gaieté, jamais d'angle agressif |
+| Scènes | monde **clair** : ciel `#CCDEF3`, herbe `#ACB47F`, chemin `#CEBFA7` ; les décors et textures sont plus doux (saturation 0,42) que les icônes | le contour d'encre sépare l'interface d'un fond clair ; pas d'interface sombre plaquée sur un monde ensoleillé |
+| Effets | textures douces, halos blancs, couleurs pastel | lueurs blanches et pastel, pas de néon |
 
-| Famille | Jetons | Usage | Part de l'écran |
-|---|---|---|---|
-| Nuit | 950, 900, 800, 700, 600, 500 | fonds (950 page plein écran, 900 page, 800 fenêtre, 700 carte / bouton, 600 survol), 500 filets décoratifs | ≈ 70 % |
-| Parchemin | 100 (texte), 300 (secondaire), 500 (légende), désactivé | **tout le texte** ; jamais de blanc pur | ≈ 15 % |
-| Bronze | 800, 700, 500, or-400, or-300, or-200 | bordures (500), titres et valeurs clés (or-400), reflets (or-300), focus et onglet actif (or-200) | ≈ 10 % |
-| Émail | bleu 700 / 500 / 300, sarcelle 500 / 300, grenat 700 / 500 / 300 | bleu = **sélection** ; sarcelle = ornement rare ; grenat = action destructive | ≈ 4 % |
-| Sémantique | danger, succès, info, alerte, pv, pv-trace, énergie, xp | texte de perte / gain, jauges | ≈ 1 % |
+![Palette mesurée](bible/palette_reelle.png)
 
-Contrastes mesurés sur nuit-800 : parchemin-100 13,8:1, -300 7,7:1, -500 4,6:1 (plancher AA), or-400 8,5:1, bordure bronze-500
-4,6:1 (seuil des contours : 3:1). **Interdits** : blanc `#FFFFFF` et noir `#000000` purs, rouge et vert purs, couleur de rareté en
-fond plein d'une carte, dégradés multicolores, néon.
+## 2. Principes
+1. **Autocollant d'encre et de bonbon.** Tout élément d'interface est une pièce découpée : contour d'encre de 3 px, aplat de couleur
+   en deux tons nets (cel), reflet blanc, ombre dure décalée. Comme les icônes et les personnages du jeu.
+2. **Clair dehors, encre dedans.** Les panneaux sont du papier crème ; les zones denses (listes, grilles, tuiles de bilan, HUD) sont
+   des puits d'encre. Deux surfaces seulement.
+3. **Les 5 bonbons ont un sens.** Soleil = action principale et récompense ; lagon = focus et sélection ; pomme = gain, validation ;
+   fraise = vie, danger, compteur ; mandarine = onglet actif, nouveauté ; améthyste = épique, magie. Rareté = code des icônes du jeu.
+4. **Chaque clic se sent.** Survol, appui, relâchement, son, vibration : l'élément s'écrase sur son ombre et rebondit (§ 7).
+5. **Le manga pour les moments, le calme pour le reste.** Traits de vitesse, éclats, étoiles et onomatopées seulement sur un
+   événement (victoire, récompense, montée de niveau, critique) ; au repos, l'écran est calme et lisible.
 
-**Raretés** (`couleur.rarete.*` : `base` pour le métal du cadre, `texte` pour le nom, `eclat` pour la lueur) : Commun gris chaud,
-Spécial vert, Rare bleu, Épique violet, Mythique orange, Légendaire or. On garde les teintes que les joueurs connaissent, ternies
-d'un cran pour s'accorder au bronze. La rareté se lit aussi sans couleur (§ 5, case d'objet).
+## 3. Couleurs
+| Famille | Jetons (`couleur.*`) | Usage |
+|---|---|---|
+| Encre | 900, **700** `#221A3A`, 500 `#2E2450`, 300, 100 | contours, texte sur papier, ombres dures ; 500 = puits sombres |
+| Papier | blanc, **100** `#FFF8EC`, 200, 300 | fonds des panneaux, onglets inactifs, bande d'ombre des boutons clairs |
+| Bonbons | soleil, mandarine, pomme, lagon, améthyste, fraise × clair / base / foncé | actions, états, familles, raretés |
+| Texte | sur papier, sur encre, sur bonbon (blanc **toujours contouré d'encre**), gain, perte, désactivé | — |
 
-**Familles de classes** (`couleur.famille.*`, données `family` 1 à 5) : Rempart ocre `#C9973F`, Ombre braise `#D0683A`, Traque
-mousse `#74A04A`, Ferveur ciel `#5AA7C8`, Arcane améthyste `#9C6AD0`. Usage : losange d'emblème, liseré de portrait, trait de la
-famille dans l'Échiquier ; **jamais** sur un cadre d'objet (réservé à la rareté).
+Contrastes mesurés : encre sur papier 15,6:1 ; encre-300 sur papier 5,6:1 ; papier sur encre-500 13,4:1 ; gain `#3E7F0A` sur papier
+4,7:1 ; désactivé `#6F6787` sur gris 4,1:1. **Le blanc sur un bonbon ne fait que 1,5:1** : le texte blanc sur couleur n'est lisible
+que grâce à son contour d'encre (7 à 10:1 entre encre et bonbon) ; jamais de texte blanc sans contour. Le focus manette utilise le
+lagon **foncé** `#0B7DB5` (4,3:1 sur papier) doublé d'un liseré blanc.
+**Raretés** : Commun lilas-gris, Spécial pomme, Rare lagon, Épique améthyste, Mythique mandarine, Légendaire soleil (+ rayons
+tournants et étoile). **Familles** : Rempart soleil, Ombre mandarine, Traque pomme, Ferveur lagon, Arcane améthyste (les couleurs
+des icônes de classes). **Interdits** : noir pur, gris neutres froids, dégradés multicolores, néon, verre dépoli, fonds sombres pleins
+derrière un écran de menu.
 
-## 3. Typographie
+## 4. Typographie
 ![typo](bible/typo.png)
 
-| Rôle | Police | Licence | Graisses |
-|---|---|---|---|
-| Titres (écran, fenêtre, bilan, bouton primaire, noms de zone) | **Alegreya SC** (Huerta Tipográfica) | SIL OFL 1.1, aucun nom réservé (vérifié dans `google/fonts`, `ofl/alegreyasc/OFL.txt`) | ExtraBold 800, Bold 700 |
-| Texte, boutons, chiffres | **Alegreya Sans** (Huerta Tipográfica) | SIL OFL 1.1, aucun nom réservé (`ofl/alegreyasans/OFL.txt`) | Medium 500, Bold 700, ExtraBold 800 |
-| Variante de titre, si le joueur la choisit | Grenze Gotisch (Omnibus-Type) | SIL OFL 1.1, aucun nom réservé (`ofl/grenzegotisch/OFL.txt`) | Bold 700, ≥ 36 px seulement |
-
-Pourquoi : une famille calligraphique humaniste (plume, contrastes doux) qui a une vraie personnalité sans être un pastiche
-médiéval ; petites capitales dessinées (pas des capitales réduites) ; tous les accents du français, `Œ`, `œ`, guillemets ;
-chiffres alignés et tabulaires. Cinzel (« Trajan » de toutes les affiches de fantasy) et Nunito (police ronde d'application)
-sont abandonnées. Les fichiers OFL accompagnent les polices dans `game/assets/fonts/`.
-
-**Échelle (7 tailles, aucune autre)** : affiche 56 · titre d'écran 36 · titre de panneau 28 · sous-titre 22 · fort / bouton 19 ·
-texte 17 · légende 15 (plancher ; Alegreya Sans a un œil plus petit que Nunito : 15 px Alegreya ≈ 14 px Nunito). HUD : chiffres 24.
-Règles :
-- Petites capitales (Alegreya SC) seulement pour les titres de 6 mots au plus ; jamais de capitales en Sans, sauf les badges (15 px,
-  approche +6 %).
-- Chiffres : `lnum` + `tnum` partout où un nombre change ou s'aligne (Godot : `FontVariation.opentype_features`).
-- Interlignes : 1,15 titres, 1,4 texte, 1,5 paragraphes ; lignes de 45 à 75 signes.
-- Français : espace fine insécable avant `; : ! ?` et dans les guillemets « », espace insécable dans les milliers (`1 232`).
-- Texte posé sur la scène 3D : toujours sur une plaque `voile.hud-plaque` (65 %), sinon contour 2 px nuit-950 à 80 %.
-
-## 4. Formes
-**Coins coupés à 45°, jamais arrondis** (chanfrein, `forme.chanfrein` : fenêtre 10, carte 6, bouton 5, case 4, badge 3, infobulle 4).
-Seuls arrondis permis : la piste de l'interrupteur, les pierres serties, l'intérieur d'une jauge (2 px).
-- Godot : `StyleBoxFlat` avec `corner_radius_* = chanfrein` et **`corner_detail = 1`** donne exactement un coin coupé, bordure comprise.
-  Les dégradés et l'usure passent par un shader commun `ui_plate.gdshader` (SDF du rectangle chanfreiné, filet, dégradé vertical,
-  bruit) ou par des textures 9-slice fabriquées par script (`tools/art/`).
-
-| Niveau | Bordure | Fond | Ombre | Ornement |
-|---|---|---|---|---|
-| Fenêtre | double filet : 2 px bronze dégradé (or-300 en haut → bronze-800 en bas), 3 px d'écart, 1 px bronze-700 | nuit-800, dégradé +4 % de clarté en haut, grain 3,5 % | 0 / 6 / 18 px, noir 55 % | deux incrustations d'émail sarcelle (28×4) en haut ; cartouche de titre |
-| Carte | 1 px bronze-500 (ou rareté) | nuit-700 | 0 / 2 / 6 px, noir 40 % | aucun |
-| Ligne | aucune | transparent, survol nuit-600 | aucune | séparateur 1 px nuit-500 fondu sur 24 px aux deux bouts |
-| Bouton | 1 px bronze dégradé + biseau 1 px (haut or-300 35 %, bas bronze-800) | dégradé nuit-600 → nuit-700 | aucune | aucun |
-| Case | 2 px couleur de rareté (`base`) | creux : dégradé radial `#2A2535` → `#15121C` + ombre intérieure | aucune | rivets selon la rareté |
-
-**Matière** : métal = dégradé vertical clair en haut, sombre en bas, reflet de 1 px or-300 sur l'arête haute ; **usure** = bruit le long
-du contour (amplitude 0,6 px, `forme.usure`), pour que deux coins ne soient jamais parfaitement identiques ; émail = aplat légèrement
-dégradé avec un reflet clair de 30 % sur la moitié haute ; grain des fonds = bruit fractal tuilé 256 px à 3,5 %.
-**Lueur** : une seule, réservée au focus manette (or-200, 6 px, respire entre 25 et 45 % en 1,6 s) et, plus lente, au légendaire.
-**Ornements** permis : coins des fenêtres, cartouche de titre d'écran, séparateur orné (sous un titre d'écran ou de bilan seulement),
-cadre des bilans de victoire. **Interdits** : losange posé au milieu d'un filet, volutes sur tous les bords, chaînes et cadenas en
-clip-art, cadre dans un cadre, ombres colorées, verre dépoli, pilules (sauf l'interrupteur).
-
-## 5. Composants (tous les états : `bible/composants.png`)
-| Composant | Normal | Survol (120 ms) | Pressé (80 ms) | Désactivé | Focus manette | Sélectionné |
-|---|---|---|---|---|---|---|
-| Bouton secondaire (44 px) | plaque nuit, filet bronze-500, texte parchemin 19 Bold | filet or-300 → bronze-500, fond +1 cran, texte `#FFF7E6` | descend de 1 px, dégradé inversé, texte or-200 | fond nuit-800, filet nuit-500, texte désactivé **+ raison** (cadenas + condition en légende ou infobulle) | anneau or-200 2 px à 3 px du bord, lueur qui respire ; le bouton prend aussi l'état survol | fond émail bleu-700, barre d'émail 3 px à gauche, texte or-200 |
-| Bouton primaire (56 px, un par écran) | plaque d'or poli (dégradé `#E3BC70` → `#A57B42`, cassure à 50 %), texte encre `#1A1208` en Alegreya SC 22 (7,3:1) | plus clair d'un cran | dégradé inversé, 1 px plus bas | plaque nuit-700, texte désactivé | idem | — |
-| Bouton destructif | plaque grenat-500, filet grenat-300 | grenat plus clair | idem pressé | idem désactivé | idem | — |
-| Tertiaire (texte) | parchemin-300, sans cadre | or-200 + trait bronze dessous | or-200 | parchemin-500 | anneau | — |
-| Onglet d'écran (40 px) | texte parchemin-300 sur un rail (filet bronze-700 en bas) | texte parchemin-100 + trait bronze | — | parchemin-500 + cadenas | anneau | plaque surélevée chanfreinée en haut, **filet d'émail bleu 3 px** en bas, texte or-200 ; LB / RB dessinés de part et d'autre |
-| Sous-onglet | contrôle segmenté discret : texte seul, séparateurs fins | trait bronze | — | idem | anneau | fond nuit-600 + trait d'émail 2 px |
-| Filtre | liste déroulante chanfreinée (jamais une rangée de pilules) | — | — | — | anneau | — |
-| Case d'objet (48 / 64 / 88) | creux + cadre de rareté ; niveau en chiffres tabulaires 15 Bold sur plaque nuit-950 85 % en bas à droite | cadre or-300, infobulle après 350 ms | 1 px plus bas | icône à 40 % + cadenas | anneau | barre d'émail sous la case |
-| Case vide | silhouette de l'emplacement (casque, épée…) à 28 %, cadre nuit-500 | cadre bronze | — | — | anneau | — |
-| Jauge | embouts de métal, creux nuit-950, remplissage dégradé (clair en haut), reflet 5 px à 18 % | — | — | — | — | — |
-| Carte d'activité | image, voile bas 0 → 85 %, titre Alegreya SC 24, une ligne 15, pastille de rôle à filet d'émail, 2 icônes de récompense au plus | image +4 % de clarté, filet or-300, glisse de 2 px vers le haut | — | image désaturée 80 % et assombrie 45 %, petit cadenas, la **condition** en ligne de texte | anneau | — |
-| Infobulle (360 px max) | fond nuit-950 97 %, filet bronze 1 px, chanfrein 4 ; nom 22 en couleur de rareté, méta 15, lignes 17, pied avec les touches | apparaît après 350 ms, fondu 120 ms | — | — | suit le focus | — |
-| Fenêtre | voir § 4 ; titre dans un cartouche en haut à gauche, fermeture = bouton carré chanfreiné 36 px (croix gravée) | — | — | — | — | — |
-| Séparateur | filet 1 px nuit-500 fondu ; orné : deux filets bronze + petite plaque hexagonale (jamais un losange) | — | — | — | — | — |
-| Badge (22 px) | plaque chanfreinée 3, texte 15 ExtraBold ; info émail bleu, nouveau grenat, compteur or-400 sur encre | — | — | — | — | — |
-| Interrupteur | piste arrondie 56×28, éteint nuit-700, allumé émail bleu-500 + filet bronze, pastille or-200 | filet or-300 | — | — | anneau | — |
-
-**États vides** : une image (objet de la page en silhouette ou illustration), une phrase, **une action** (« Les boss en donnent :
-lancer une Survie »). Les grilles grandissent avec le contenu (jamais 45 cases vides).
-**Touches** : dessinées (pastille parchemin-300, texte encre, 22 px de haut ; boutons de manette ronds, touches clavier chanfreinées).
-
-## 6. Iconographie
-Deux familles, et seulement deux :
-1. **Pictogrammes d'interface** (menus, actions, monnaies, statistiques) : silhouettes **pleines** dessinées sur une grille de 32 px,
-   affichées à 20 / 24 / 32 ; un seul trait intérieur gravé (1,5 px) pour le détail ; bords légèrement irréguliers ; couleur
-   parchemin-100 ou or-400 avec un biseau de lumière en haut à gauche (1 px or-200 à 40 %). Vocabulaire du monde : insigne = écu,
-   cristal = gemme taillée, Carnet = livre relié à fermoir, Héros = heaume, Atelier = enclume, Coffres = coffre, Paramètres = rouage
-   de bronze. **Interdits** : pictogrammes d'application (maison, épingle de carte, horloge, silhouette de personne, disquette).
-2. **Icônes de contenu** (objets, sorts, talents, statuts, classes) : peintes, vue de trois quarts, **lumière en haut à gauche**
-   (principale chaude, contre-jour froid), silhouette lisible à 32 px en noir pur, sujet à 80 % du cadre, fond neutre sombre
-   uni (pas de dégradé saturé), aucun texte ni lettre. **La rareté est portée par le cadre** (case, § 5), jamais par la peinture.
-   Les icônes du client d'origine sont remplacées par le département ICO (règle 3 de l'organisation).
-
-## 7. Illustration (cartes d'activité, fonds, écrans de fin)
-- **Base : des vues du vrai jeu** (comme les cartes actuelles), retouchées ou repeintes par-dessus, plutôt que des peintures
-  inventées : le menu montre le monde où l'on va jouer.
-- Lumière de jour ou d'heure dorée, saturation modérée (celle du jeu, pas plus), un sujet, horizon au tiers, place libre en bas
-  pour le texte (voile 0 → 85 %).
-- **On évite** : rendu lisse et brillant « image générée », reflets d'objectif, symétrie héroïque centrée, foules de particules,
-  violet-cyan néon, détails partout, mains et visages en gros plan, texte ou runes inventés, personnages qui ne sont pas nos classes.
-- Formats : carte d'activité 960×320, fond de menu 1920×1080, bannière de zone 1280×360.
-
-## 8. Effets (lisibilité avant éclat)
-- Les **zones d'attaque ennemies** ont la priorité absolue : bord net clair (2 px), intérieur danger désaturé à 35 % au plus, montée
-  en opacité pendant l'armement ; jamais modifiées par `Settings.fx_factor`. Jamais de rouge plein sur la moitié de l'écran.
-- Couleurs réservées : ennemi = orange / grenat, allié et joueur = bleu / sarcelle / or, soins = vert doux.
-- Effets du joueur : 30 % de l'écran au plus, durée de flash 60 ms ; secousse de caméra 6 px au plus (réglable, coupée en « réduire
-  les animations »).
-- Textes flottants : empilés (jamais l'un sur l'autre), 3 tailles (normal, critique, soin), Alegreya Sans ExtraBold avec contour.
-
-## 9. Mouvement (`tokens.json` → `mouvement`)
-| Quoi | Durée | Courbe |
+| Rôle | Police | Licence (vérifiée dans `google/fonts`) |
 |---|---|---|
-| Pression d'un bouton | 80 ms | sortie (cubique) |
-| Survol | 120 ms | sortie |
-| Focus manette (le cadre glisse vers le contrôle) | 140 ms | sortie |
-| Apparition d'un panneau, d'une infobulle | 180 ms (fondu + 16 px) ; sortie 70 % de la durée | sortie / entrée |
-| Changement de page, d'onglet | 220 à 280 ms (fondu enchaîné + 24 px) | sortie |
-| Récompense (carte retournée, coffre ouvert) | 450 ms, dépassement 6 % au plus | ressort |
-| Nombre qui défile (bilan) | 700 ms, tabulaire | sortie |
+| Titres, logo, boutons primaires, grands chiffres | **Mochiy Pop One** : pop japonaise ronde et épaisse, l'allure des titres de jeux d'animation | SIL OFL 1.1, « Mochiypop Project Authors », aucun nom réservé |
+| Texte, boutons, listes, chiffres | **M PLUS Rounded 1c** : gothique arrondie japonaise, ouverte, 7 graisses | SIL OFL 1.1 (M+ Fonts Project), sous-ensembles latin et latin-ext |
 
-Ce qui bouge : focus, récompenses, nombres, ce qui vient d'apparaître. **Ce qui reste calme** : fonds, cadres, textes, icônes au
-repos (aucun flottement permanent). Une seule animation « qui attire » par écran. Option « réduire les animations » : fondus seuls.
+Les deux ont tous les accents du français, `Œ œ Ç « »` (vérifié au rendu). Cinzel (serif romaine) est hors DA ; Nunito est ronde mais
+générique : M PLUS Rounded 1c garde la rondeur avec une allure de jeu japonais. **Sous-ensembler** M PLUS Rounded (latin + latin-ext +
+ponctuation, `pyftsubset`) : le fichier complet porte les glyphes japonais (plusieurs Mo par graisse).
+**Échelle** : affiche 56 · titre d'écran 34 · titre de panneau 26 · sous-titre 22 · bouton 19 · texte 17 · légende 15 (plancher).
+Logo 74, chiffre héros 44, chiffres du HUD 26.
+**Contour d'encre** (`Label.outline_size`, vrai contour, pas une ombre) : 3 px jusqu'à 19 px, 5 px à 22-26, 7 px à 34, 9 px à 44-56,
+12 px au logo ; approche +0,03 em quand le texte est contouré (sinon les lettres se collent). Titres d'écran et logo inclinés de −3°.
+Chiffres : tabulaires (`tnum`) partout où ils changent. Français : espace fine insécable avant `; : ! ?`, espace insécable des milliers.
 
-## 10. Son (principes)
-- Chaque son d'interface a la matière de son objet : bronze = petits clics métalliques sourds, émail = « tink » clair pour confirmer,
-  parchemin = froissé bref pour les pages, coffre = bois et serrure.
-- Courts (< 150 ms pour l'interface), jamais le même son pour confirmer et annuler ; survol presque inaudible (−24 dB), mouvement du
-  focus manette = tic discret.
-- Récompenses : 6 signatures qui montent avec la rareté ; le légendaire a sa propre petite phrase.
-- La musique baisse de 4 dB sur les bilans et les choix de carte ; aucun son d'interface pendant un télégraphe de boss.
+## 5. Formes (piste « autocollant manga », `forme.*`)
+| Élément | Rayon | Contour | Remplissage | Ombre | Détails |
+|---|---|---|---|---|---|
+| Panneau | 18 | 3 px encre | papier-100 ; trame manga dans le bas (22 %) | dure 7 px encre + douce 14/24 px à 25 % si posé sur la scène | titre en Mochiy contouré, incliné −3°, posé à cheval sur le bord |
+| Puits | 14 | 3 px encre | encre-500 | aucune | texte papier ; listes, grilles, tuiles |
+| Bouton | 14 | 3 px encre | 2 tons cel : 12 % reflet clair, 50 % base, 38 % foncé, bords nets | dure 5 px | trait de reflet blanc 16×6 incliné −12° en haut à gauche |
+| Case d'objet | 14 | 3 px encre | 2 tons de la rareté | dure 4 px | niveau dans une pastille d'encre ; légendaire : rayons tournants + étoile |
+| Onglet | 12 en haut | 3 px encre, sans bas | inactif papier-200 (40 px) ; actif mandarine (48 px, dépasse) | — | l'onglet actif « sort » du panneau |
+| Jauge | 12 | 3 px encre | creux encre-500 ; remplissage 2 tons + bord droit d'encre ; trace claire des dégâts | dure 3 px | graduations d'encre pour les boss |
+| Pastille | 10 | 3 px encre | fraise (compteur), mandarine (nouveau) | dure 3 px | inclinée 8° |
+| Carte d'activité | 16 | 3 px encre | **vraie image du jeu** + voile bas encre 0 → 85 % | dure 6 px | étiquette de rôle autocollante inclinée −4°, 2 icônes du jeu au plus |
+| Infobulle | 14 | 3 px encre | papier | dure 4 px | nom en couleur de rareté (foncé), queue de bulle vers l'élément |
 
-## 11. À faire / à ne pas faire (grille de la revue)
+**Godot** : un shader commun `ui_sticker.gdshader` (rectangle arrondi par SDF : contour, deux tons à bord net, reflet, trame, ombre
+dure) posé sur un `Panel` / `StyleBoxTexture` ; à défaut, `StyleBoxFlat` (fond, `border_width` 3 encre, `corner_radius` 14,
+`anti_aliasing`) + une seconde boîte d'encre décalée de 5 px pour l'ombre dure, et une texture `GradientTexture2D` à interpolation
+constante pour les deux tons. Le contour d'encre ne descend jamais sous 2 px à 1280×720.
+
+## 6. Composants et états (`pistes/b_kit.jpg`)
+| Composant | Repos | Survol | Appui | Désactivé | Focus manette | Sélectionné |
+|---|---|---|---|---|---|---|
+| Bouton (52 px) | papier, texte encre 19 | monte de 3 px, ombre 8 px, −1° | descend de 5 px sur son ombre (ombre 0) | gris lilas tramé, contour encre-300, texte désactivé **+ cadenas et condition** | liseré blanc 6 px + anneau lagon foncé 3 px + monte de 3 px ; respire (§ 8) | fond lagon, texte blanc contouré |
+| Bouton primaire (64 px, un par écran) | soleil, Mochiy 26 blanc contouré | idem + rayons de soleil derrière (15 % d'opacité) | idem | tramé | idem | — |
+| Action douce | lagon | idem | idem | idem | idem | — |
+| Destructif | fraise, et demande une confirmation `InfoCard.ask` | idem | maintien 0,6 s (anneau qui se remplit) | idem | idem | — |
+| Onglet | papier-200 | texte foncé, monte de 2 px | s'écrase | tramé + cadenas | anneau lagon | mandarine, plus haut, dépasse du panneau ; LB / RB dessinés à côté |
+| Case d'objet | 2 tons de rareté | monte de 3 px + infobulle après 300 ms | s'écrase | icône à 40 % + cadenas | anneau | coche pomme autocollante dans le coin |
+| Case vide | papier tramé, silhouette de l'emplacement à 30 % | contour lagon | — | — | anneau | — |
+| Carte d'activité | image + voile | monte de 4 px, −1°, ombre 10 px, image +6 % de clarté | s'écrase | image en gris 85 %, cadenas + **condition écrite** | anneau | — |
+| Interrupteur | piste encre contourée, bouton blanc | — | le bouton s'aplatit | tramé | anneau | piste pomme |
+| Jauge | — | — | — | — | — | se remplit par à-coups (§ 7) |
+
+**États vides** : une illustration ou une icône du jeu en grand, une phrase, une action (« Les boss en donnent : lancer une Survie »).
+Les grilles grandissent avec le contenu. **Touches** : pastilles rondes de couleur (A pomme, B fraise, X lagon, Y soleil), lettre blanche contourée.
+
+## 7. Ressenti du clic (spécification)
+Implémentation : un autoload `UiFeel` branché sur tous les `BaseButton` (comme `UiNav`) : `mouse_entered`, `mouse_exited`,
+`focus_entered`, `button_down`, `button_up`, `pressed`, et un appui sur un bouton désactivé (`gui_input`). `pivot_offset = size / 2`
+(bas-centre pour les cartes), un seul `Tween` par contrôle (le précédent est tué), jamais d'animation de `size` (seulement `scale`,
+`position` d'un enfant visuel, `modulate`) pour ne pas déplacer la mise en page. Réglage « Réduire les animations » : échelle et
+particules coupées, il reste couleur, son et vibration.
+
+| Élément | Survol / focus (entrée) | Appui (`button_down`) | Relâchement (`pressed`) | Son | Vibration (faible, fort, s) | Particules |
+|---|---|---|---|---|---|---|
+| Bouton | 90 ms ressort : échelle 1,04, visuel −3 px, ombre 8 px ; sortie 140 ms | 60 ms quad-in : échelle (1,06 ; 0,90), visuel +5 px, ombre 0 | 220 ms ressort : (0,97 ; 1,05) → 1,0 | survol −26 dB « tic » de bois ; appui −14 dB « pop » mat ; relâchement −12 dB « clic » clair ; hauteur ±3 % | focus (0,06 ; 0 ; 0,025) ; appui (0,18 ; 0 ; 0,04) | aucune |
+| Bouton primaire | idem + rayons derrière, 0 → 15 % en 120 ms | idem | idem + **anneau** blanc qui s'élargit (rayon +24 px, 260 ms, 80 % → 0) + **4 étincelles** en étoile (soleil, blanc, lagon, fraise), 300 ms, vers l'extérieur | « pop » −9 dB + petit carillon montant | (0,25 ; 0,12 ; 0,07) | 4 étoiles + anneau |
+| Bouton refusé (désactivé) | — | — | **secousse** horizontale ±4 px, 3 allers-retours en 240 ms ; cadenas qui saute de 2 px ; la condition s'affiche en infobulle | « bonk » sourd −14 dB | (0 ; 0,35 ; 0,09) | aucune |
+| Onglet | 90 ms : monte de 2 px | 60 ms : s'écrase | le nouvel onglet monte à 48 px en ressort 200 ms ; le contenu glisse de 24 px vers le sens du changement (260 ms) en fondu | « flip » de page −16 dB | (0,1 ; 0 ; 0,03) | aucune |
+| Case d'objet | 90 ms : 1,06 + monte de 3 px ; infobulle après 300 ms (apparition 160 ms en ressort depuis 0,9) | 60 ms : 0,92 | équiper : la pièce « saute » vers son emplacement (arc de 280 ms) puis l'emplacement fait 1,15 → 1,0 | « clac » d'équipement −12 dB, selon la matière (métal, tissu, bijou) | (0,15 ; 0 ; 0,04) | légendaire : 6 étincelles soleil |
+| Carte d'activité | 120 ms : monte de 4 px, −1°, image +6 % | 60 ms : 0,97 | 220 ms ressort, puis la page s'ouvre | « swoosh » −14 dB | (0,15 ; 0 ; 0,04) | aucune |
+| Interrupteur | — | le bouton s'aplatit (1,2 ; 0,8) 60 ms | glisse 160 ms ressort ; la piste change de couleur en 120 ms | « clic-clac » −16 dB, plus aigu à l'allumage | (0,1 ; 0 ; 0,03) | allumage : 2 petites étoiles pomme |
+| Choix de carte (`CardPicker`) | la carte monte de 8 px, 1,03, −1,5° | 0,96 | la carte choisie fait 1,12 en 180 ms puis file vers le HUD (350 ms) ; les autres tombent et s'effacent (220 ms) | « shing » −10 dB | (0,25 ; 0,1 ; 0,06) | traits de vitesse derrière la carte choisie |
+| Récompense (coffre, bilan) | — | — | ouverture en 520 ms élastique ; rayons de soleil tournants (1 tour / 12 s) ; nombres qui défilent en 800 ms ; chaque gain apparaît avec 70 ms de décalage | signature par rareté (6 notes qui montent) −6 dB | (0,3 ; 0,45 ; 0,18) | confettis des 5 bonbons, 24 au plus, 1,2 s |
+| Navigation manette | le cadre de focus **glisse** d'un contrôle à l'autre en 120 ms (sortie cubique) au lieu de sauter | A = appui puis relâchement réels | — | tic de focus −22 dB (rien si le focus ne bouge pas) | focus (0,06 ; 0 ; 0,025) | aucune |
+
+Règles : jamais deux sons d'interface à moins de 40 ms (le second est ignoré) ; jamais de vibration pendant un télégraphe de boss ;
+pas de particules sur un écran déjà chargé (plus de 40 contrôles visibles) ; toute animation d'interface tourne aussi en pause (`PROCESS_MODE_ALWAYS`).
+
+## 8. Vocabulaire manga (quand et où)
+| Signe | Où | Quand |
+|---|---|---|
+| Traits de vitesse (rayons blancs fins depuis un centre) | derrière « Victoire ! », la carte choisie, le coffre qui s'ouvre | sur l'événement, 1 à 2 s, puis disparaît |
+| Rayons de soleil (comme le fond des icônes) | derrière le bouton primaire survolé, la case légendaire, la récompense | en boucle lente (1 tour / 12 s) |
+| Étincelles en étoile à 4 branches | logo, coins des récompenses, relâchement du primaire | 1 à 4 à la fois |
+| Bulle de dialogue (queue vers la source) | avis du lobby, astuces, infobulles, PNJ | permanent, mais une seule bulle par écran |
+| « ! » rond fraise | nouveauté, alerte | permanent tant que non vu |
+| Onomatopées stylisées en Mochiy contouré : « Critique ! », « Parfait ! », « Esquive ! », « Niveau ! » | au-dessus du héros dans le HUD | 600 ms, une à la fois, empilées jamais superposées |
+| Trame de points | ombre des panneaux, états désactivés | permanent |
+| Confettis des 5 bonbons | bilans de victoire, récompenses rares | 1,2 s |
+Interdits : gouttes de sueur et visages dessinés sur l'interface, textes en japonais, lignes de vitesse au repos.
+
+## 9. Icônes et illustrations (on garde l'existant)
+- **Toutes les icônes du jeu restent** (sorts, objets, classes, statuts, monnaies) : on les pose dans nos cases (rayon 14, contour
+  d'encre, rareté), sans les repeindre.
+- Pictogrammes **manquants** seulement (menus, actions sans icône) : dessinés dans le style des icônes d'état (symbole blanc
+  contouré d'encre sur tuile bonbon arrondie, reflet en haut) ; ils remplacent les pictogrammes génériques blancs de `assets/ui/icons/`.
+- Illustrations d'activités : les **vues du jeu** actuelles restent la base (cadrées en autocollant, voile bas) ; on les éclaircit
+  plutôt que de les assombrir ; pas d'illustration peinte qui ne ressemble pas au jeu.
+
+## 10. HUD et effets
+- Même famille : jauges contourées d'encre, chiffres en M PLUS Rounded 900 contourés, emplacements de sorts = cases autocollantes
+  (vides : trame + chiffre de la touche, jamais « — »).
+- Télégraphes d'attaque ennemis : bord net clair 2 px + intérieur fraise/mandarine à 35 % au plus, qui monte pendant l'armement ;
+  jamais modifiés par `Settings.fx_factor`.
+- Textes flottants : empilés, Mochiy pour les critiques et onomatopées, M PLUS Rounded 900 pour les dégâts normaux, contour d'encre.
+
+## 11. Mouvement et son (résumé)
+Durées et courbes : `tokens.json` → `mouvement` (appui 60, relâchement 220 ressort, survol 90 / 140, focus 120, page 260, récompense
+520 élastique, compteur 800). Ce qui bouge : ce qu'on touche, ce qui arrive, ce qu'on gagne. Ce qui reste calme : fonds, panneaux,
+textes au repos. Sons : matière « jouet » (bois, plastique, carillon, papier) courts (< 150 ms), hauteur ±3 %, signatures de rareté ;
+la musique baisse de 4 dB sur les bilans.
+
+## 12. À faire / à ne pas faire (grille de la revue)
 | À faire | À ne pas faire |
 |---|---|
-| Coins coupés, 3 profondeurs, un primaire | Rectangles arrondis partout, cadre dans un cadre |
-| Texte en parchemin, 7 tailles, chiffres tabulaires | Blanc pur, tailles au hasard, texte sous 15 px (Alegreya Sans) |
-| Sélection en émail bleu, focus en anneau clair | Or pour tout (titre, survol, sélection, focus) |
-| Verrou = gris + cadenas + condition écrite | Chaînes, transparence sur la scène |
-| Pictogrammes maison pleins, cadre de rareté | Icônes d'application, fonds de rareté pleins |
-| États vides avec image et action | Grand cadre vide avec une phrase |
-| Mots du jeu : partie, menu principal, panoplie, stratégie | run, lobby, set, RTS / MOBA, JcE / JcJ en pastille, % dans le texte permanent |
+| Contour d'encre 3 px, deux tons cel, reflet, ombre dure | Rectangles plats à filet doré, dégradés lisses sans contour |
+| Panneaux papier, puits d'encre | Grands fonds sombres pleins sur un monde clair |
+| Texte blanc seulement contouré d'encre | Texte blanc ou pastel sur bonbon sans contour |
+| Les icônes du jeu dans nos cases | Repeindre ou remplacer les icônes du jeu |
+| Un clic = écrasement + rebond + son + vibration | Boutons qui changent seulement de couleur |
+| Manga sur les événements | Effets manga permanents |
+| Mots du jeu : partie, menu principal, panoplie, stratégie | run, lobby, set, RTS / MOBA, % dans le texte permanent |

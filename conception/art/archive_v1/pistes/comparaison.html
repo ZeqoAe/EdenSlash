@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trois pistes visuelles</title>
+<!-- Page de comparaison des pistes (Direction artistique, 17/10/2026). Images générées en local (ComfyUI, FLUX.1-schnell,
+     prompts : prompts_pistes.json, graines 7100-7151) : ce sont des planches d'ambiance, pas des éléments finis.
+     Ouvrir dans un navigateur ; rendu figé : comparaison.png -->
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@700;800&family=Alegreya+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--n950:#0C0B11;--n900:#12101A;--n800:#1B1824;--n700:#25212F;--n500:#4A4458;--p100:#ECE4D2;--p300:#B4AC9C;--p500:#8A8374;--b700:#6E4F27;--b500:#A57B42;--or400:#D9AE5C;--or200:#F3DDA5;--eb500:#1F4E79;--eb300:#4F86B8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--n950);color:var(--p100);font:500 17px/1.45 "Alegreya Sans",sans-serif;font-variant-numeric:lining-nums}
+main{max-width:1560px;margin:0 auto;padding:32px 16px 64px}
+h1{font:800 40px/1.1 "Alegreya SC",serif;color:var(--or400);letter-spacing:.03em;margin:0}
+h2{font:800 28px/1.1 "Alegreya SC",serif;color:var(--or400);letter-spacing:.03em;margin:0 0 4px}
+h3{font:800 20px/1.2 "Alegreya SC",serif;color:var(--p100);letter-spacing:.04em;margin:18px 0 8px}
+.lead{color:var(--p300);max-width:1000px;margin:8px 0 28px}
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+@media (max-width:1100px){.cols{grid-template-columns:1fr}}
+.col{background:var(--n800);padding:20px;position:relative;clip-path:polygon(8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px),0 8px)}
+.col.rec{background:linear-gradient(180deg,#2A2433,var(--n800) 120px);outline:2px solid var(--b500);outline-offset:-2px}
+.tag{display:inline-block;font:800 14px "Alegreya Sans";letter-spacing:.06em;text-transform:uppercase;color:var(--p500);margin-bottom:6px}
+.rec .tag{color:#1A1208;background:var(--or400);padding:2px 8px}
+.sub{color:var(--p300);margin:0 0 14px;min-height:50px}
+img{display:block;width:100%;height:auto;background:#000}
+.kit{aspect-ratio:3/2;object-fit:cover;margin-bottom:10px}
+.els{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.els figure{margin:0;background:#000}
+.els figure.w{grid-column:span 3}
+.els img{aspect-ratio:1/1;object-fit:contain}
+.els figure.w img{aspect-ratio:3/1;object-fit:cover}
+figcaption{font:700 14px "Alegreya Sans";color:var(--p500);padding:4px 6px;background:var(--n900)}
+.pal{display:flex;height:26px;margin:14px 0 4px}
+.pal i{flex:1}
+ul{margin:6px 0 0;padding-left:20px}
+li{margin:3px 0}
+.plus li::marker{content:"+  ";color:#7CC79A;font-weight:800}
+.moins li::marker{content:"−  ";color:#E2685E;font-weight:800}
+table{border-collapse:collapse;width:100%;margin-top:10px;font-size:15px}
+td,th{padding:5px 6px;border-bottom:1px solid var(--n500);text-align:left}
+th{color:var(--p500);font-weight:700}
+td.s{white-space:nowrap;color:var(--or200);font-variant-numeric:tabular-nums lining-nums}
+section{margin-top:36px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:1100px){.two{grid-template-columns:1fr}}
+.box{background:var(--n800);padding:20px 24px}
+.q{counter-reset:q;list-style:none;padding:0}
+.q li{counter-increment:q;padding:12px 16px 12px 56px;position:relative;background:var(--n800);margin:8px 0}
+.q li::before{content:counter(q);position:absolute;left:16px;top:10px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font:800 16px "Alegreya Sans";color:#1A1208;background:var(--or400)}
+.q b{color:var(--or200)}
+small{color:var(--p500)}
+a{color:#7FB2E5}
+</style>
+</head>
+<body>
+<main>
+<h1>Trois pistes pour l'interface</h1>
+<p class="lead">Mêmes cinq éléments dans les trois matières (cadre de fenêtre, bouton, case d'objet, jauge, icône d'épée), générés en local
+en 5 à 15 secondes chacun. Ce sont des <b>planches d'ambiance</b> : elles montrent une matière et une lumière, pas des pièces prêtes à
+poser (les ornements seront redessinés, simplifiés et assemblés en code). Les notes vont de 1 à 5.</p>
+
+<div class="cols">
+  <!-- A -->
+  <div class="col">
+    <span class="tag">Piste A</span>
+    <h2>Parchemin enluminé</h2>
+    <p class="sub">Vélin vieilli, encre sépia, feuille d'or, rehauts lapis et vermillon. Le menu est un manuscrit posé sur la table.</p>
+    <img class="kit" src="variantes/a_kit_0.jpg" alt="Planche d'ambiance parchemin enluminé">
+    <div class="els">
+      <figure><img src="variantes/a_cadre_0.jpg" alt="Cadre"><figcaption>Cadre</figcaption></figure>
+      <figure><img src="variantes/a_case_1.jpg" alt="Case"><figcaption>Case</figcaption></figure>
+      <figure><img src="variantes/a_epee_0.jpg" alt="Épée"><figcaption>Épée</figcaption></figure>
+      <figure class="w"><img src="variantes/a_bouton_1.jpg" alt="Bouton"><figcaption>Bouton</figcaption></figure>
+      <figure class="w"><img src="variantes/a_jauge_0.jpg" alt="Jauge"><figcaption>Jauge</figcaption></figure>
+    </div>
+    <div class="pal"><i style="background:#EDE3C8"></i><i style="background:#C9B48A"></i><i style="background:#5A3E22"></i><i style="background:#C8A040"></i><i style="background:#2D4F8E"></i><i style="background:#B23A2A"></i></div>
+    <h3>Pour</h3><ul class="plus"><li>Très « fait main », impossible à confondre avec une interface générée.</li><li>Parfait pour le Carnet, les quêtes, le Guide, le Registre.</li></ul>
+    <h3>Contre</h3><ul class="moins"><li>Fond clair : tout le texte passe en sombre, éblouit la nuit, jure avec le HUD et la scène 3D.</li><li>Bords déchirés difficiles à étirer (9-slice) ; textures lourdes.</li><li>Les raretés (couleurs vives) se lisent mal sur le crème.</li></ul>
+    <table><tr><th>Critère</th><th>Note</th></tr>
+      <tr><td>Lisibilité sur la scène 3D et au HUD</td><td class="s">2</td></tr>
+      <tr><td>Accord avec le monde toon lumineux</td><td class="s">3</td></tr>
+      <tr><td>Faisable en code (StyleBox, 9-slice, shader)</td><td class="s">2</td></tr>
+      <tr><td>Ne « sent pas l'IA »</td><td class="s">5</td></tr>
+      <tr><td>Continuité avec l'existant (or sur nuit)</td><td class="s">1</td></tr></table>
+  </div>
+  <!-- B -->
+  <div class="col rec">
+    <span class="tag">Recommandée · piste B</span>
+    <h2>Bronze et émail</h2>
+    <p class="sub">Bronze patiné, gravé à la main, coins chanfreinés, incrustations d'émail champlevé bleu nuit et sarcelle. Un objet d'orfèvre.</p>
+    <img class="kit" src="variantes/b_kit_1.jpg" alt="Planche d'ambiance bronze et émail">
+    <div class="els">
+      <figure><img src="variantes/b_cadre_1.jpg" alt="Cadre"><figcaption>Cadre</figcaption></figure>
+      <figure><img src="variantes/b_case_1.jpg" alt="Case"><figcaption>Case</figcaption></figure>
+      <figure><img src="variantes/b_epee_0.jpg" alt="Épée"><figcaption>Épée</figcaption></figure>
+      <figure class="w"><img src="variantes/b_bouton_1.jpg" alt="Bouton"><figcaption>Bouton</figcaption></figure>
+      <figure class="w"><img src="variantes/b_jauge_1.jpg" alt="Jauge"><figcaption>Jauge</figcaption></figure>
+    </div>
+    <div class="pal"><i style="background:#12101A"></i><i style="background:#25212F"></i><i style="background:#A57B42"></i><i style="background:#D9AE5C"></i><i style="background:#1F4E79"></i><i style="background:#1F6E6A"></i><i style="background:#ECE4D2"></i></div>
+    <h3>Pour</h3><ul class="plus"><li>Prolonge l'or sur nuit actuel : le joueur reconnaît son jeu, la refonte peut se faire écran par écran.</li><li>Fond sombre : lisible sur la scène et au HUD ; les raretés y brillent.</li><li>Formes nettes (chanfreins, filets) reproductibles en code ; l'émail donne une 2e couleur d'état (la sélection).</li></ul>
+    <h3>Contre</h3><ul class="moins"><li>Peut tomber dans le « MMO générique » si l'on garde les volutes de FLUX : ornements à redessiner, sobres.</li><li>Demande un vrai travail de matière (dégradés, biseaux, usure) pour ne pas paraître plat.</li></ul>
+    <table><tr><th>Critère</th><th>Note</th></tr>
+      <tr><td>Lisibilité sur la scène 3D et au HUD</td><td class="s">5</td></tr>
+      <tr><td>Accord avec le monde toon lumineux</td><td class="s">4</td></tr>
+      <tr><td>Faisable en code (StyleBox, 9-slice, shader)</td><td class="s">5</td></tr>
+      <tr><td>Ne « sent pas l'IA »</td><td class="s">4</td></tr>
+      <tr><td>Continuité avec l'existant (or sur nuit)</td><td class="s">5</td></tr></table>
+  </div>
+  <!-- C -->
+  <div class="col">
+    <span class="tag">Piste C</span>
+    <h2>Cristal et ardoise</h2>
+    <p class="sub">Ardoise sombre taillée au ciseau, veines de cristal qui luisent cyan et violet. Froid, minéral, magique.</p>
+    <img class="kit" src="variantes/c_kit_0.jpg" alt="Planche d'ambiance cristal et ardoise">
+    <div class="els">
+      <figure><img src="variantes/c_cadre_1.jpg" alt="Cadre"><figcaption>Cadre</figcaption></figure>
+      <figure><img src="variantes/c_case_1.jpg" alt="Case"><figcaption>Case</figcaption></figure>
+      <figure><img src="variantes/c_epee_0.jpg" alt="Épée"><figcaption>Épée</figcaption></figure>
+      <figure class="w"><img src="variantes/c_bouton_1.jpg" alt="Bouton"><figcaption>Bouton</figcaption></figure>
+      <figure class="w"><img src="variantes/c_jauge_0.jpg" alt="Jauge"><figcaption>Jauge</figcaption></figure>
+    </div>
+    <div class="pal"><i style="background:#0E1116"></i><i style="background:#1E242C"></i><i style="background:#3A434F"></i><i style="background:#5FD4E8"></i><i style="background:#8A6BE0"></i><i style="background:#C9D3DD"></i></div>
+    <h3>Pour</h3><ul class="plus"><li>Très lisible pour le texte (fond neutre) ; effets de cristal faciles en shader.</li><li>Ambiance forte pour la Tour, les donjons, le Panthéon.</li></ul>
+    <h3>Contre</h3><ul class="moins"><li>Sombre et froid face à un monde chibi coloré et ensoleillé : décalage net.</li><li>Les veines lumineuses ressemblent aux interfaces « néon » générées en masse.</li><li>Rupture complète avec l'existant.</li></ul>
+    <table><tr><th>Critère</th><th>Note</th></tr>
+      <tr><td>Lisibilité sur la scène 3D et au HUD</td><td class="s">4</td></tr>
+      <tr><td>Accord avec le monde toon lumineux</td><td class="s">2</td></tr>
+      <tr><td>Faisable en code (StyleBox, 9-slice, shader)</td><td class="s">4</td></tr>
+      <tr><td>Ne « sent pas l'IA »</td><td class="s">2</td></tr>
+      <tr><td>Continuité avec l'existant (or sur nuit)</td><td class="s">2</td></tr></table>
+  </div>
+</div>
+
+<section>
+  <h2>La piste B en situation</h2>
+  <p class="lead">Maquette du lobby sur une vraie vue du jeu (même scène qu'aujourd'hui), puis tous les composants dans tous leurs états,
+  dessinés uniquement avec les jetons de <code>tokens.json</code> : c'est ce que le kit d'interface reproduira dans Godot.</p>
+  <div class="two">
+    <figure style="margin:0"><img src="../../audit/02_lobby_neuf_1600.jpg" alt="Lobby actuel"><figcaption>Aujourd'hui (0.1.256)</figcaption></figure>
+    <figure style="margin:0"><img src="../bible/maquette_lobby.png" alt="Maquette du lobby en bronze et émail"><figcaption>Piste B : menu en texte gravé, une plaque pour l'entrée active, condition d'ouverture écrite, monnaies à icônes maison</figcaption></figure>
+  </div>
+  <figure style="margin:20px 0 0"><img src="../bible/composants.png" alt="Planche des composants bronze et émail"><figcaption>Boutons, onglets, cases par rareté, jauges, fenêtre, infobulle, carte d'activité</figcaption></figure>
+  <figure style="margin:20px 0 0"><img src="../bible/typo.png" alt="Spécimen typographique"><figcaption>Polices proposées (OFL 1.1) face aux polices actuelles</figcaption></figure>
+</section>
+
+<section>
+  <h2>Pourquoi B</h2>
+  <div class="box">
+    <p>Elle répond au reproche du joueur (formes trop géométriques, polices génériques) sans casser ce qui marche : l'or sur nuit, les
+    contrastes de 10 à 16:1, la navigation manette, la scène 3D derrière les menus. Le métal se dessine en code (chanfreins, filets,
+    dégradés, biseaux, usure par bruit) : chaque bouton aura ses cinq états sans une seule image à repeindre, et les ornements générés
+    puis nettoyés ne servent qu'aux coins des fenêtres et aux titres. L'émail donne enfin une deuxième couleur qui ne soit pas l'or :
+    la sélection et le focus cessent de se confondre avec le survol. Le parchemin de la piste A reste permis comme <b>matière secondaire</b>
+    pour les pages « papier » (Carnet, quêtes, Guide), jamais pour un menu de jeu.</p>
+  </div>
+</section>
+
+<section>
+  <h2>À trancher par le joueur</h2>
+  <ol class="q">
+    <li><b>Piste</b> : bronze et émail (B), ou plutôt parchemin (A) ou cristal (C) ?</li>
+    <li><b>Police des titres</b> : Alegreya SC (sobre, lisible) ou Grenze Gotisch (plus marquée, gothique) ? Le texte reste en Alegreya Sans.</li>
+    <li><b>Ornements</b> : sobres (coins et titres seulement, comme la maquette) ou riches (volutes gravées sur les fenêtres, comme les planches) ?</li>
+  </ol>
+  <p><small>Toutes les images de cette page sont originales (générées en local ou dessinées en CSS) ; aucune image du jeu d'origine. Planches complètes :
+  <a href="planche_a_parchemin.jpg">A</a>, <a href="planche_b_bronze.jpg">B</a>, <a href="planche_c_ardoise.jpg">C</a> ; 36 images dans <code>variantes/</code>.</small></p>
+</section>
+</main>
+</body>
+</html>

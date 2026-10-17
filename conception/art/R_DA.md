@@ -1,53 +1,42 @@
-# R_DA : Direction artistique, vague 1 (17/10/2026)
+# R_DA : Direction artistique (17/10/2026), v2 après le retour du joueur
 
 Aucun fichier de `game/` modifié : pas de changement de version.
 
-## Produit
+## Ce qui a changé depuis la v1
+Le joueur a corrigé deux points : (1) les icônes et assets du jeu de base **restent** (pas de remplacement) ; on améliore ce que
+nous avons fait nous-mêmes (boutons, menus, cadres, jauges, onglets) et le **ressenti du clic** ; (2) la DA **existe déjà** (classes,
+monstres, icônes : très coloré, animé / manga) : on l'applique, on n'invente pas de thème. La piste « bronze et émail » et sa bible
+sont archivées dans `archive_v1/` ; l'audit est gardé et corrigé.
+
+## Produit (v2)
 | Fichier | Contenu |
 |---|---|
-| `AUDIT_UI.md` + `audit/` | critique de 28 écrans (45 captures 1600×900 et 1280×720, comptes neuf et avancé), contrastes mesurés, liste de 13 signes « prototype / IA », ce qu'on garde, priorités ; `audit/icones_planche.png` (les 4 familles d'icônes actuelles) |
-| `BIBLE.md` | principes, palette fermée, typographie, formes, composants et états, icônes, illustration, effets, mouvement, son, grille de revue |
-| `tokens.json` | couleurs (dont raretés et familles), typo, espacements, chanfreins, bordures, ombres, lueurs, tailles, durées, courbes (équivalents Godot), niveaux sonores |
-| `bible/composants.png` (+ `.html`) | chaque composant dans tous ses états, en CSS pur à partir des jetons : la cible du kit d'interface |
-| `bible/maquette_lobby.png` (+ `.html`) | le lobby refait dans la piste B sur une vraie vue du jeu sans interface |
-| `bible/palette.png`, `bible/typo.png` | palette et spécimen (Alegreya SC + Alegreya Sans, variante Grenze Gotisch, face à Cinzel + Nunito) |
-| `pistes/comparaison.html` (+ `comparaison.jpg`) | les 3 pistes côte à côte, notes, recommandation, 3 questions au joueur |
-| `pistes/variantes/`, `planche_*.jpg`, `prompts_pistes.json` | 36 images ComfyUI (FLUX.1-schnell, 5 à 15 s chacune, graines 7100-7151) : planche, cadre, bouton, case, jauge, épée × 2 graines × 3 pistes |
+| `bible/da_reelle.jpg` | planche de la DA existante : 20 monstres et 20 héros rendus par le jeu (planche des 60 classes : `tests/test_outfit.tscn -- all`), icônes de classes / sorts / états / objets agrandies |
+| `bible/palette_reelle.png` | couleurs mesurées sur ≈ 1 400 fichiers (icônes, textures des héros, des monstres, des effets, vues d'activités) : saturation, valeur, dominantes ; les 5 teintes des fonds d'icônes |
+| `BIBLE.md` v2 | la DA mesurée, principes, couleurs, typographie, formes « autocollant », composants et états, **spécification du clic** (durées, courbes, échelles, sons, vibrations, particules par élément), vocabulaire manga, icônes gardées, HUD, grille de revue |
+| `tokens.json` v2 | encre, papier, 6 bonbons × 3 tons (= familles et raretés), texte, typo et contours, rayons, ombres dures, cel, trame, mouvement (durées, courbes Godot, échelles), sons, vibrations manette |
+| `pistes/comparaison.html` | 3 pistes d'interface dans la DA (A bonbon glossy, **B autocollant manga**, C gelée de nuit), chacune sur 4 écrans réels : lobby, menu Jouer, bilan, composants avec états et clic image par image (`pistes/<a|b|c>_<écran>.jpg`, source `pistes/maquettes.html?p=&e=`) |
+| `bible/typo.png` (+ `.html`) | Mochiy Pop One + M PLUS Rounded 1c face à Cinzel + Nunito |
+| `AUDIT_UI.md` | audit gardé, corrigé (icônes du jeu conservées, diagnostic « l'interface ne parle pas la langue du jeu ») |
 
-Méthode des captures : copie propre de HEAD (`tools/run_tests.py preparer_copie` dans `%TEMP%/eden_da`), APPDATA détourné, outils
-`shot_p1`, `shot_hud`, `shot_cards`, `shot_results`, `shot_registry`, `shot_ac`, `world.tscn -- --card-shot | --gear-shot | --pause=1`,
-plus deux scènes de capture écrites dans la copie seulement (écran titre, lobby sans interface). Aucun débord à 1280×720.
+## Décision
+**Piste B, autocollant manga** : contour d'encre de 3 px (la couleur des cadres d'icônes d'état), aplats en deux tons nets (l'ombrage
+des personnages), reflet blanc et rayons (les icônes de sorts), 5 bonbons (les familles), ombre dure sur laquelle tout s'écrase au clic.
+Panneaux papier, puits d'encre pour les listes et le HUD. Polices Mochiy Pop One + M PLUS Rounded 1c (SIL OFL 1.1, vérifiées).
+Question au joueur (une seule, facultative) : panneaux papier clairs (B) ou panneaux nuit (C) pour les écrans de menu ?
 
-## Recommandation
-**Piste B, bronze et émail.** Elle garde ce qui marche (or sur nuit, contrastes de 10 à 16:1, manette, scène 3D derrière les menus),
-remplace la forme unique (rectangle arrondi à filet doré) par une famille de formes reproductible en code (coins coupés via
-`StyleBoxFlat.corner_detail = 1`, double filet réservé aux fenêtres, biseaux, usure par bruit) et ajoute une couleur d'état qui
-n'est pas l'or (émail bleu = sélection). Polices : Alegreya SC (titres) + Alegreya Sans (texte), OFL 1.1 vérifiées. Le parchemin
-reste une matière secondaire pour les pages « papier ».
-
-## À trancher par le joueur
-1. Piste : B (bronze et émail), A (parchemin) ou C (cristal) ?
-2. Police des titres : Alegreya SC (sobre) ou Grenze Gotisch (marquée) ?
-3. Ornements : sobres (coins et titres) ou riches (volutes gravées sur les fenêtres) ?
-
-## Chantiers de l'équipe (dans l'ordre)
-1. **TYP** (dès la réponse 2) : polices + OFL dans `game/assets/fonts/`, `FontVariation` (lnum, tnum), échelle de 7 tailles dans
-   `UiTheme.text_size`, plancher 15 avec Alegreya Sans ; chasse aux 15 réglages sous le plancher et aux mots anglais / % permanents
-   (avec `test_texts_fr`).
-2. **UIK** (dès la réponse 1) : `UiTheme` v2 lu depuis `tokens.json` ; chanfreins, trois profondeurs, onglets en rail, focus en anneau
-   clair, sélection en émail, désactivé avec raison ; shader `ui_plate.gdshader` ; fin de `frame/panel.png`. Revue REV à chaque écran.
-3. **ICO** : ~40 pictogrammes maison pleins (remplacent `assets/ui/icons/`, puis monnaies) ; ensuite les icônes de contenu peintes
-   (objets, sorts, classes, statuts) qui remplacent celles du client d'origine (gros lot, avec LORA).
-4. **LORA** (en parallèle dès maintenant) : jeu de données = vues du jeu + planches B retenues ; sert ICO et ILL.
-5. **ILL** : lettrage du logo, cartes d'activité repeintes sur des vues du jeu, états vides, fond du titre.
-6. **FX** : télégraphes lisibles (bord net, intérieur désaturé), textes flottants empilés (audit `20_hud_donjon`).
-7. **ANI** : `UiMotion` (durées et courbes de `tokens.json`), focus qui glisse, nombres qui défilent, option « réduire les animations ».
-8. **SND** : sons d'interface par matière (bronze, émail, parchemin), signatures de rareté.
-9. **CHR, PRP** : après la vague 3.
-
-## Premiers écrans à refaire (effet de levier)
-1. **Écran titre + lobby** (premier contact ; maquette prête).
-2. **Menu Jouer + pages d'activité** (cartes : image, voile, titre, une ligne ; verrous sans chaînes).
-3. **`ResultsPanel`** : un composant, 6 bilans d'un coup.
-4. **En-tête `PageScreen`** : Héros, Atelier, Carnet, Coffres, Paramètres, Guide d'un coup.
-5. **`CardPicker`** (choix de carte et d'équipement), puis le **HUD**.
+## Chantiers (le plus visible d'abord, sans remplacement d'icônes)
+| Ordre | Écran / chantier | Département | Contenu |
+|---|---|---|---|
+| 0 | Socle | TYP + UIK + ANI | polices (sous-ensembles latin), `UiTheme` v2 lu depuis `tokens.json`, shader `ui_sticker.gdshader`, autoload `UiFeel` (clic, sons, vibrations) branché sur tous les `BaseButton` |
+| 1 | Écran titre | UIK | logo Mochiy contouré, un primaire soleil, deux boutons papier, étincelles |
+| 2 | Lobby | UIK | menu en boutons autocollants, carte du héros, zone, bourse, avis en bulle (`pistes/b_lobby.jpg`) |
+| 3 | Menu Jouer + pages d'activité | UIK | cartes d'activité autocollantes (vraies images), verrous avec condition, onglets (`pistes/b_jouer.jpg`) |
+| 4 | `PageScreen` commun | UIK | en-tête, onglets, Fermer : Héros, Atelier, Carnet, Coffres, Paramètres, Guide d'un coup |
+| 5 | Bilans communs (`ResultsPanel`) | UIK + ANI + SND | « Victoire ! » contouré, traits de vitesse, tuile héroïne, nombres qui défilent, confettis, signatures sonores (`pistes/b_bilan.jpg`) |
+| 6 | HUD | UIK + FX | jauges et cases de sorts autocollantes, chiffres contourés, onomatopées, télégraphes lisibles |
+| 7 | `CardPicker`, infobulles, `InfoCard` | UIK + ANI | choix de carte avec le clic spécifié, bulles |
+| 8 | Pictogrammes manquants | ICO | seulement les menus et actions sans icône du jeu, style des icônes d'état ; remplacent `assets/ui/icons/` |
+| 9 | Sons d'interface | SND | matière « jouet » (bois, plastique, carillon, papier), 6 signatures de rareté |
+| 10 | L'Échiquier, écrans restants | UIK | passe de cohérence écran par écran (REV) |
+LORA : utile plus tard pour des illustrations d'activité dans le style du jeu ; pas bloquant pour l'interface.
