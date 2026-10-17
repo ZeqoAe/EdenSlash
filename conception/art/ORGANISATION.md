@@ -9,7 +9,12 @@ une **revue** indépendante avant chaque intégration.
 1. La bible `conception/art/BIBLE.md` fait foi (palette, polices, formes, icônes, mouvement, son). Aucun livrable ne la contredit ;
    une proposition de changement passe par la Direction artistique.
 2. Une idée par écran, textes français courts, aucun pourcentage dans le texte permanent, aucune mention du jeu d'origine côté joueur.
-3. Aucune image du jeu d'origine n'est copiée ou « améliorée » dans les livrables : tout est original (génération locale, procédural, dessin).
+3. **Direction artistique = celle du jeu qu'on a déjà** (décision du joueur, 17/10) : monde très coloré, style animé / manga, tel que le
+   montrent les premières classes, les monstres, les icônes. On ne réinvente pas un thème (la piste « bronze et émail » ne colle pas) :
+   on **applique cette DA partout**. Les icônes et assets existants du jeu (sorts, objets, classes, statuts) se GARDENT : ce qui compte,
+   c'est de refaire tout ce qui n'a pas ce niveau : boutons, menus, sous-menus, cadres, jauges, transitions, et le **ressenti du clic**
+   (survol, pression, relâchement, son, secousse, lueur). Plus tard, pour des jeux produits à la chaîne, la DA sera choisie au départ
+   du projet ; ici elle existe déjà.
 4. Rien n'est intégré au jeu sans passer la revue (capture 1280×720 et 1600×900, manette, performances, test).
 5. Les assets lourds restent hors du dépôt tant qu'ils ne sont pas validés (`conception/art/` pour les essais) ; un asset validé entre
    dans `game/assets/` avec son script de fabrication (`tools/art/`) pour pouvoir le refaire.
