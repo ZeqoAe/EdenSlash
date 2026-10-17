@@ -139,7 +139,7 @@ func _build_bar(root: Control) -> void:
 ## Ligne du tueur : « Assassin · niv. 14 » (l'anneau : « L'anneau t'a rattrapé »).
 static func headline(r: Dictionary) -> String:
 	if String(r.get("name", "")) == "":
-		return "L'anneau t'a rattrapé"
+		return "Un météore t'a écrasé" if String(r.get("cause", "")) == "meteor" else "L'anneau t'a rattrapé"  # (lot BR-R1)
 	return "%s · niv. %d" % [String(r.name), int(r.get("lv", 1))]
 
 

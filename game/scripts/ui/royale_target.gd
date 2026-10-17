@@ -114,6 +114,8 @@ func show_target(t: Combatant, p: Player, bounty: Combatant) -> void:
 	if fresh:
 		_trail = ratio
 		var cid := String(t.get_meta("royale", {}).get("cid", ""))
+		if cid == "" and t.has_meta("guardian"):
+			cid = String(t.get("cid"))  # (lot BR-R1 : le gardien de l'autel a la tuile de sa classe)
 		_tones = RoyaleHudStyle.family_tones(cid)
 		_icon.texture = UiTheme.texture(String(GameData.class_data(cid).get("icon", ""))) if cid != "" else null
 		_tile.queue_redraw()

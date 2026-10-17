@@ -82,6 +82,12 @@ static var last_report: Dictionary = {}
 static var zone_id := "limestone"
 ## Niveau maximal du moment (LEVEL_CAPS, tenu à jour par RoyaleDirector à chaque anneau).
 static var level_cap_now := LEVEL_CAP
+## Partie choisie à la page du mode (lot BR-R1) : modificateur (RoyaleMods ; "" : classique), partie personnalisée (sans ligue ni
+## récompense, pour s'entraîner) et sa graine (0 : au hasard). Gardés d'une partie à l'autre (« Rejouer »). Mesures : arguments
+## --royale-mod=<id> et --royale-seed=<n> de world.tscn.
+static var mod := ""
+static var custom := false
+static var custom_seed := 0
 
 
 ## Rayon, centre et phase de l'anneau à l'instant [param t] (secondes de combat). [param centers] : le
@@ -94,8 +100,8 @@ static func ring_at(t: float, centers: Array) -> Dictionary:
 		var ph: Dictionary = PHASES[i]
 		var to_r := float(ph.radius)
 		var to_c: Vector2 = centers[i + 1]
-		var hold := float(ph.hold)
-		var shrink := float(ph.shrink)
+		var hold := float(ph.hold) * RoyaleMods.ring_factor(false)  # (lot BR-R1 : anneau pressé)
+		var shrink := float(ph.shrink) * RoyaleMods.ring_factor(true)
 		var lt := t - t0
 		if lt < hold:
 			return {"phase": i, "state": "hold" if i < PHASES.size() - 1 else "final", "radius": from_r, "center": from_c, "next_radius": to_r, "next_center": to_c,
@@ -115,7 +121,7 @@ static func ring_at(t: float, centers: Array) -> Dictionary:
 static func total_time() -> float:
 	var s := 0.0
 	for ph in PHASES:
-		s += float(ph.hold) + float(ph.shrink)
+		s += float(ph.hold) * RoyaleMods.ring_factor(false) + float(ph.shrink) * RoyaleMods.ring_factor(true)
 	return s
 
 
@@ -141,6 +147,15 @@ static func start(cid: String) -> void:
 	rank = 0
 	kills = 0
 	last_report = {}
+	for arg in OS.get_cmdline_user_args():  # (mesures, lot BR-R1)
+		if arg.begins_with("--royale-mod="):
+			mod = arg.trim_prefix("--royale-mod=")
+		elif arg.begins_with("--royale-seed="):
+			custom_seed = int(arg.trim_prefix("--royale-seed="))
+		elif arg.begins_with("--royale-places="):  # essai de densité : coffres des lieux ★ / ★★ / ★★★ (ProcMap.place_chests_try)
+			ProcMap.place_chests_try = Array(arg.trim_prefix("--royale-places=").split("/")).map(func(t): return Array(String(t).split(",")).map(func(x): return int(x)))
+	if custom_seed > 0:
+		seed(custom_seed)  # partie personnalisée : la même carte, les mêmes adversaires
 	Run.start(cid)  # Profile.begin_run : copie du profil, rien n'est écrit tant que active
 	for id in RoyaleLoot.NO_PASSIVES:
 		Run.banned.append("passive:" + String(id))  # (lot BR3 : passifs de pièce sans objet ici)
@@ -159,6 +174,7 @@ static func start(cid: String) -> void:
 	reset_stats()  # (lot BR-I2 : récapitulatif de mort, bilan)
 	level_cap_now = level_cap(0)
 	fights = {}
+	fight_log = []
 	Run.changed.emit()
 
 
@@ -324,7 +340,7 @@ static func strike(c: Combatant) -> float:
 ## 5 au-dessus 1,75.
 static func kill_xp(killer_lv: int, victim_lv: int, bounty := false) -> float:
 	var xp := clampf(KILL_XP + KILL_GAP * float(victim_lv - killer_lv), KILL_XP_MIN, KILL_XP_MAX)
-	return xp + (BOUNTY_XP if bounty else 0.0)
+	return xp + (BOUNTY_XP if bounty else 0.0) + RoyaleMods.kill_bonus()  # (lot BR-R1 : chasse ouverte)
 
 
 ## Niveau maximal pendant la phase [param phase] de l'anneau (LEVEL_CAPS).
@@ -336,6 +352,8 @@ static func level_cap(phase: int) -> int:
 ## secondes de combat ; un combat recommence après FIGHT_GAP s sans coup entre les deux.
 const FIGHT_GAP := 8.0
 static var fights: Dictionary = {}
+## Densité (lot BR-R1, mesures) : chaque combat qui commence {t (horloge), pos (au sol), guard (contre le gardien de l'autel)}.
+static var fight_log: Array = []
 
 
 static func _pair(a: Combatant, b: Combatant) -> String:
@@ -385,9 +403,11 @@ static func note_fight(src: Combatant, dst: Combatant, now: float, dmg := 0.0) -
 	if not (src is Player) and not (dst is Player) and is_instance_valid(dst):
 		RoyaleCues.heard(dst.global_position, "fight")  # (lot BR-I3 : « Voir les sons », combat entre deux autres héros)
 	var k := _pair(src, dst)
-	var f: Array = fights.get(k, [now, now])
-	if now - float(f[1]) > FIGHT_GAP:
+	var f: Array = fights.get(k, [])
+	if f.is_empty() or now - float(f[1]) > FIGHT_GAP:
 		f = [now, now]
+		if is_instance_valid(dst):
+			fight_log.append({"t": now, "pos": dst.global_position, "guard": src.has_meta("guardian") or dst.has_meta("guardian")})
 	f[1] = now
 	fights[k] = f
 
@@ -417,7 +437,12 @@ static func mastery_for(place: int, n_kills: int) -> int:
 ## jour : League.royale_insignia), la maîtrise de la classe [param cid], le coffre d'apparence et le titre sont
 ## crédités ; renvoie {insignia, mastery, chest, title, text: [lignes], first_win}.
 static func settle(place: int, n_kills: int, cid: String) -> Dictionary:
-	var out := {"insignia": 0, "mastery": 0, "chest": "", "title": "", "text": [], "first_win": false, "place": place, "kills": n_kills}
+	var out := {"insignia": 0, "mastery": 0, "chest": "", "title": "", "text": [], "first_win": false, "place": place, "kills": n_kills, "league": {}}
+	if custom:
+		out.text.append("Partie personnalisée : sans récompense")
+		return out
+	Profile.records["royale_crown"] = place == 1  # (lot BR-R1 : couronne portée la partie suivante)
+	_career(place, n_kills, cid)
 	var ins := League.royale_insignia(place, n_kills)
 	out.insignia = ins
 	Profile.insignia += ins
@@ -443,7 +468,24 @@ static func settle(place: int, n_kills: int, cid: String) -> Dictionary:
 		out.chest = Rewards.look_type(tier)
 		Profile.chest_add(out.chest, 20)
 		out.text.append("Coffre d'apparence %s" % ["rare", "épique", "légendaire"][clampi(tier - 1, 0, 2)])
+	out.league = RoyaleLeague.report(place, n_kills, difficulty)  # (lot BR-R1 : Ligue royale, apparences et titres seulement)
+	for line in out.league.text:
+		out.text.append(line)
 	return out
+
+
+## Carrière du mode (lot BR-R1, backlog P2 n° 24 ; page du mode) : podiums, record d'éliminations, dégâts, victoires par classe.
+static func _career(place: int, n_kills: int, cid: String) -> void:
+	if place <= 3:
+		Profile.record_add("royale_podiums", 1)
+	Profile.record_max("royale_best_kills", n_kills)
+	Profile.record_add("royale_dealt", roundf(float(stats.get("dealt", 0.0))))
+	if place == 1:
+		var by = Profile.records.get("royale_class_wins", {})
+		if not by is Dictionary:
+			by = {}
+		by[cid] = int(by.get(cid, 0)) + 1
+		Profile.records["royale_class_wins"] = by
 
 
 ## Fin de partie : sauvegarde rechargée, récompenses. Renvoie le bilan (voir [method settle]).
@@ -462,10 +504,18 @@ static func finish(place: int) -> Dictionary:
 	Profile.bag = {}
 	rank = place
 	last_report = settle(place, n_kills, cid)
-	Quests.end_run("royale", place == 1, {"place": place, "pkills": n_kills})  # quêtes (passe M5)
+	if not custom:
+		Quests.end_run("royale", place == 1, quest_extra(place, n_kills))  # quêtes (passe M5 ; défis du mode, lot BR-R1)
 	Profile._lobby_view()
 	Profile.save_profile()
 	return last_report
+
+
+## Ce que la partie compte pour les quêtes (Quests.end_run) : place, éliminations et les défis du mode (lot BR-R1, backlog P2
+## n° 25) : atterri dans un lieu ★★★ (land3), sans réanimation (revives), mis à prix éliminé (bounty_kill), gardien vaincu (altar).
+static func quest_extra(place: int, n_kills: int) -> Dictionary:
+	return {"place": place, "pkills": n_kills, "land3": int(stats.get("land3", 0)), "revives": int(stats.get("revived", 0)),
+		"bounty_kill": int(stats.get("bounty_kill", 0)), "altar": int(stats.get("altar", 0))}
 
 
 static func leave(tree: SceneTree) -> void:

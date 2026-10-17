@@ -266,6 +266,8 @@ func update(delta: float) -> void:
 		var st: Dictionary = riders[c]
 		if String(st.state) == "ride":
 			c.global_position = eagle_pos() + Vector3.UP * 1.5
+			if c == d.player and not d.player.autoplay and not thanked and Input.is_action_just_pressed("interact") and not get_tree().paused:
+				thank()
 			if _wants_jump(c, st):
 				jump(c)
 		else:
@@ -300,6 +302,13 @@ func jump(c: Combatant) -> void:
 	_pose(c, "jump", "jump01")
 	if c == d.player:
 		Sfx.ui("chest", -10.0)
+		RoyaleHud.moment("jump")  # (lot BR-R1 : petite fête au saut)
+		var tr := RoyaleLooks.make_trail(RoyaleLooks.trail())  # traînée de chute choisie (apparence du mode)
+		if tr != null:
+			c.add_child(tr)
+			st["trail"] = tr
+	elif c is ClassRival and randf() < AI_THANKS and d.get("royale") != null:
+		d.royale.feed("%s remercie l'aigle" % (c as ClassRival).display_name.get_slice(" ·", 0))
 
 
 func _fall(c: Combatant, st: Dictionary, delta: float) -> void:
@@ -347,8 +356,9 @@ func _fall(c: Combatant, st: Dictionary, delta: float) -> void:
 ## Planeur ouvert : descente lente, on se dirige moins vite.
 func _open(c: Combatant, st: Dictionary) -> void:
 	st.state = "glide"
+	_drop_trail(st)
 	if st.glider == null:
-		st.glider = _make_glider(Color(1.0, 0.76, 0.32) if c == d.player else Color(0.6, 0.46, 1.0))
+		st.glider = _make_glider(RoyaleLooks.glider().col if c == d.player else Color(0.6, 0.46, 1.0))  # (voile choisie, lot BR-R1)
 		c.add_child(st.glider)
 	_pose(c, "idle", "stand01")
 
@@ -414,6 +424,7 @@ static func _make_glider(col: Color) -> Node3D:
 
 func _land(c: Combatant, st: Dictionary, g: Vector3) -> void:
 	riders.erase(c)
+	_drop_trail(st)
 	if st.glider != null and is_instance_valid(st.glider):
 		(st.glider as Node).queue_free()
 	c.visible = true
@@ -449,6 +460,7 @@ func land_all() -> void:
 func _forget(c) -> void:
 	var st: Dictionary = riders[c]
 	riders.erase(c)
+	_drop_trail(st)
 	if st.glider != null and is_instance_valid(st.glider):
 		(st.glider as Node).queue_free()
 
@@ -473,6 +485,30 @@ func _camera(_delta: float) -> void:
 	d.world.rig.distance = lerpf(_cam_dist, CAM_FAR, clampf((h - GLIDE_AT * 0.5) / (ALT - GLIDE_AT * 0.5), 0.0, 1.0))
 
 
+## Remercier l'aigle (lot BR-R1, backlog P2 n° 23) : à bord, [Interagir] ; une fois par vol, une ligne au fil et un « Merci ! ».
+var thanked := false
+const AI_THANKS := 0.3  # part des scriptés qui le remercient en sautant
+
+
+func thank() -> void:
+	if thanked:
+		return
+	thanked = true
+	Sfx.ui("ui_star", -8.0)
+	RoyaleHud.moment("thanks")
+	if d.get("royale") != null:
+		d.royale.feed("Tu remercies l'aigle")
+
+
+## La traînée de chute s'arrête (planeur ouvert, atterrissage) : ses dernières particules s'effacent.
+func _drop_trail(st: Dictionary) -> void:
+	var tr = st.get("trail")
+	if tr != null and is_instance_valid(tr):
+		(tr as CPUParticles3D).emitting = false
+		get_tree().create_timer(1.0).timeout.connect(tr.queue_free)
+	st.erase("trail")
+
+
 ## Aide à l'écran pour le joueur (vide : rien à dire).
 func hint() -> String:
 	var p := d.player
@@ -483,7 +519,8 @@ func hint() -> String:
 		"ride":
 			if t < Royale.COUNTDOWN:
 				return "Saut possible dans %d" % ceili(Royale.COUNTDOWN - t)
-			return "[%s] Sauter · saut auto dans %d s" % [Settings.action_label("jump", 1), maxi(0, ceili(duration - t))]
+			return "[%s] Sauter · saut auto dans %d s%s" % [Settings.action_label("jump", 1), maxi(0, ceili(duration - t)),
+				"" if thanked else " · [%s] Merci l'aigle" % Settings.action_label("interact", 1)]
 		"fall":
 			return "Dirige ta chute · [%s] Piqué · [%s] Planeur" % [Settings.action_label("dodge", 1), Settings.action_label("jump", 1)]
 	return "Dirige ton planeur"

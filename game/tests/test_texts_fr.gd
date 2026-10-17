@@ -239,7 +239,7 @@ func _ready() -> void:
 	check("Survivant : aucun « run / build / set / lobby » côté joueur %s" % str(sv_bad.slice(0, 4)), sv_bad.is_empty())
 
 	# 5e. Battle royale, lot BR-I3 : annonces, onomatopées, fiches, intentions, sons, aide du largage
-	var br_src := FileAccess.get_file_as_string("res://scripts/core/royale_director.gd") + FileAccess.get_file_as_string("res://scripts/ui/royale_hud.gd")
+	var br_src := FileAccess.get_file_as_string("res://scripts/core/royale_director.gd") + FileAccess.get_file_as_string("res://scripts/ui/royale_hud.gd") 		+ FileAccess.get_file_as_string("res://scripts/core/royale_event.gd") + FileAccess.get_file_as_string("res://scripts/core/royale_drop.gd")  # (lot BR-R1)
 	var br_rx := RegEx.create_from_string("(?:message\\.emit|push|feed|word)\\(\"([^\"]+)\"")
 	var br_texts: Array = []
 	for m in br_rx.search_all(br_src):
@@ -250,6 +250,15 @@ func _ready() -> void:
 		br_texts.append(String(RoyaleDirector.INTENT[k]))
 	for k in RoyaleCues.KINDS:
 		br_texts.append(String(RoyaleCues.KINDS[k][0]))
+	# lot BR-R1 : modificateurs, page du mode, ligue, apparences
+	for m in RoyaleMods.LIST + [RoyaleMods.CLASSIC]:
+		br_texts.append(String(m.name) + " : " + String(m.line))
+	for r in RoyalePage.RULES:
+		br_texts.append(String(r[0]) + " — " + String(r[1]))
+	for t in RoyaleLeague.RANKS + RoyaleLeague.RANK_TITLE.filter(func(x): return x != "") + [RoyaleLeague.season_name()]:
+		br_texts.append(String(t))
+	for e in RoyaleLooks.GLIDERS + RoyaleLooks.TRAILS:
+		br_texts.append(String(e.name) + " " + String(e.get("text", "")))
 	var br_bad: Array = []
 	for t in br_texts:
 		_note("Battle royale (annonces, fiches)", String(t))

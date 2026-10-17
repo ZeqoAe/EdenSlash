@@ -75,6 +75,15 @@ const LIST := [
 		"d": 1, "w": 3, "tier": 2, "min": 12, "need": "royale"},
 	{"id": "ry_kills", "act": "royale", "text": "Éliminer %d héros en Battle royale", "stat": "pkills", "mode": "sum", "d": 4, "w": 15, "tier": 2, "min": 12, "need": "royale"},
 	{"id": "ry_win", "act": "royale", "text": "Gagner une Battle royale", "stat": "win", "mode": "sum", "d": 0, "w": 1, "tier": 3, "min": 14, "need": "royale"},
+	# défis du mode (lot BR-R1, backlog BM-BR P2 n° 25 ; Royale.quest_extra)
+	{"id": "ry_land3", "act": "royale", "text": "Atterrir dans un lieu ★★★ en Battle royale", "stat": "land3", "mode": "sum", "d": 1, "w": 3, "tier": 1, "min": 10,
+		"need": "royale"},
+	{"id": "ry_bounty", "act": "royale", "text": "Éliminer le héros mis à prix en Battle royale", "stat": "bounty_kill", "mode": "sum", "d": 1, "w": 2, "tier": 2,
+		"min": 14, "need": "royale"},
+	{"id": "ry_altar", "act": "royale", "text": "Vaincre le gardien de l'autel en Battle royale", "stat": "altar", "mode": "sum", "d": 1, "w": 2, "tier": 2,
+		"min": 12, "need": "royale"},
+	{"id": "ry_clean", "act": "royale", "text": "Gagner une Battle royale sans réanimation", "stat": "win", "mode": "sum", "when": {"won": true, "max_revives": 0},
+		"d": 0, "w": 1, "tier": 3, "min": 16, "need": "royale"},
 	# --- L'Échiquier (lot AC-I : mode scellé, récompenses d'apparence seulement, voir Quests._roll_reward) -------------
 	{"id": "ac_top4", "act": "autochess", "text": "Finir dans les 4 premiers à l'Échiquier", "stat": "run", "mode": "sum", "when": {"max_place": 4},
 		"d": 1, "w": 3, "tier": 2, "min": 25},

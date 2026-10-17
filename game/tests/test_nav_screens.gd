@@ -194,6 +194,10 @@ func _ready() -> void:
 	await probe("lobby : Ruée des boss", 0.8)
 	lobby._show_menu("royale")
 	await probe("lobby : Battle royale", 0.8)
+	RoyalePage.pick = "custom"  # (lot BR-R1 : partie personnalisée, modificateur et graine)
+	lobby._show_menu("royale")
+	await probe("lobby : Battle royale personnalisée", 0.8)
+	RoyalePage.pick = "classic"
 	lobby._show_menu("autochess")
 	await probe("lobby : L'Échiquier (difficultés, graine, Lancer)", 0.8)
 	# lot HUB-1 : les quêtes sont le Journal (écran à onglets) ; « quests » l'ouvre

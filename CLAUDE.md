@@ -199,6 +199,12 @@ niveau et équipement, `--tournament`, essais `--scale=` / `--caps=`) et les lig
 cartes du Survivant via `SurvivorGear.adopt` / `SurvivorCards.up_card`, rendu `SurvivorCardView` ; scriptés = `RoyaleLoot.offer`,
 `Royale.AI_GEAR_SCALE`, mesure `tools/br3_ai_probe`), pièces au sol à la mort et fiche `ui/royale_gear_sheet.gd` ; test `test_br3`.
 Chacun pour soi général : `Combatant.ffa_id` / `set_ffa()` / `clear_ffa()`, groupe « ffa ».
+Contenu et règles (lot BR-R1, `conception/royale/R_BRR1.md`) : page du mode `ui/royale_page.gd` (`RoyalePage` : Classique / Du jour / Personnalisée,
+Ligue, carrière, apparences ; « Continuer » : `memo` / `restore`), modificateurs `core/royale_mods.gd` (`Royale.mod`, du jour `RoyaleMods.today_id`),
+autel du gardien `core/royale_event.gd` (2e anneau, `RoyaleEvent.make_guardian`, hors du compteur), Ligue royale `core/royale_league.gd` (saison = mois, points
+jamais perdus, apparences et titres seulement), voiles / traînées / couronne `core/royale_looks.gd`, partie personnalisée (`Royale.custom`, `custom_seed` :
+sans ligue ni récompense). Mesures : `python tools/royale_games.py --projet <copie> -n 6 --diff 3 [--mod m]` (ligne `[royale] densité`),
+`royale_duel_probe -- --guardian` ; test `test_brr1`, captures `shot_brr1` (`BRR1_RES`).
 
 ### L'Échiquier (autochess, en cours)
 Spécification `conception/autochess/SPEC.md` (+ annexes A, B ; lots AC-A à AC-J). Données (AC-A, `R_AC_A.md`) : `core/autochess_data.gd`

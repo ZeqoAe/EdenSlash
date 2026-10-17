@@ -65,8 +65,11 @@ var royale := false
 var places: Array = []
 const PLACE_COUNT := [6, 8]
 const PLACE_RADIUS := 24.0
-## Coffres d'un lieu selon sa richesse (★, ★★, ★★★) : [nombre, dont rares, dont dorés].
-const PLACE_CHESTS := [[3, 1, 0], [4, 2, 1], [6, 2, 2]]
+## Coffres d'un lieu selon sa richesse (★, ★★, ★★★) : [nombre, dont rares, dont dorés]. Lot BR-R1 (densité mesurée,
+## `conception/royale/R_BRR1.md`) : [3, 1, 0], [4, 2, 1], [6, 2, 2] avant ; les lieux ne voyaient que 16 à 18 % des combats.
+const PLACE_CHESTS := [[4, 1, 0], [6, 2, 1], [9, 3, 2]]
+## Mesures de densité (lot BR-R1, `--royale-places=4,1,0/6,2,1/8,3,2` de world.tscn) : autre répartition à l'essai ([] : PLACE_CHESTS).
+static var place_chests_try: Array = []
 ## Richesse des lieux d'une carte, dans l'ordre (un ★★★, trois ★★, le reste ★), puis mélangée.
 const PLACE_STARS := [3, 2, 2, 2]
 ## Noms des lieux par décor : [nom, « à » + nom].
@@ -310,6 +313,9 @@ func _place_pois() -> void:
 			if at < order.size():
 				chest_tiers[order[at]] = tier
 				at += 1
+	if royale:
+		for k in chest_tiers.size():
+			chest_tiers[k] = RoyaleMods.chest_tier(int(chest_tiers[k]))  # (ruée vers l'or : une qualité de plus, lot BR-R1)
 	# Survie : chaque coffre vise un emplacement ou un type de cartes (SlotChests), son
 	# apparence suit sa catégorie (équipement, cartes, bijoux et trophées)
 	chest_boxes = []
@@ -329,7 +335,7 @@ func _place_pois() -> void:
 			_occupied.append([p, 8.0])
 	# lieux utilisables une fois
 	for kind in STATIONS:
-		var n := Survivor.station_count(kind, int(STATIONS[kind].count)) if not royale else (4 if kind == "well" else 0)
+		var n := Survivor.station_count(kind, int(STATIONS[kind].count)) if not royale else (RoyaleMods.well_count() if kind == "well" else 0)
 		if kind == "anvil" and not Survivor.active:
 			n = 0  # passe N2 : plus d'enclume en Survie (on part avec l'équipement du hub) ; le Survivant garde la sienne
 		for k in n:
@@ -400,7 +406,8 @@ func _place_royale_places(fixed: Dictionary) -> void:
 		sites.append({"pos": Vector3(p.x, 0, p.y), "kind": kind, "yaw": rng.randf() * TAU})
 		_occupied.append([p, 14.0])
 		# coffres en couronne autour du décor : les dorés d'abord, puis les rares
-		var def: Array = PLACE_CHESTS[clampi(s - 1, 0, PLACE_CHESTS.size() - 1)]
+		var pcs: Array = place_chests_try if place_chests_try.size() == 3 else PLACE_CHESTS
+		var def: Array = pcs[clampi(s - 1, 0, pcs.size() - 1)]
 		var a0 := rng.randf() * TAU
 		var count := int(def[0])
 		for c in count:
@@ -1062,7 +1069,8 @@ const ROYALE_LOOKS := [
 	{"title": "Largage", "model": "uc009", "scale": 2.8, "col": Color("ffe27a"), "beam": 60.0, "halo": 5.0, "sparks": 14},
 ]
 ## Repères de la mini-carte du Battle royale (Minimap.icon_color) : les couleurs des coffres ci-dessus.
-const ROYALE_ICONS := {"chest": Color("c9c3d6"), "chest1": Color("22b8f0"), "chest2": Color("ffc928"), "drop": Color("ffe27a")}
+const ROYALE_ICONS := {"chest": Color("c9c3d6"), "chest1": Color("22b8f0"), "chest2": Color("ffc928"), "drop": Color("ffe27a"),
+	"altar": Color("ff9a3d"), "hero": Color("ff4d6d")}  # (lot BR-R1 : autel du gardien, héros en chasse ouverte)
 
 
 ## Battle royale : caisses, tonneaux et sacs du décor des lieux (ils ressemblaient trop à un coffre ou à du butin).

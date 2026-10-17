@@ -533,38 +533,17 @@ var _royale_diff := Royale.difficulty  # (passe M1) le choix de la partie préc�
 
 
 func _menu_royale() -> void:
-	_activity_head("royale")
-	_section("Adversaires")
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-	_sub.add_child(row)
-	for opt in [[-1, "Mélange"], [0, "Facile"], [1, "Normal"], [2, "Difficile"], [3, "Hardcore"]]:
-		var b := MenuWidgets.glass_button(("✔ " if _royale_diff == int(opt[0]) else "") + String(opt[1]), 14, Vector2(0, 40))
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var k: int = opt[0]
-		b.pressed.connect(func():
-			_royale_diff = k
-			_show_menu("royale"))
-		row.add_child(b)
-	for line in ["Coffres et largages à piller", "Une zone qui se referme", "Le meilleur chasseur est mis à prix"]:
-		Hud._label(_sub, "•  " + line, 15, UiTheme.TEXT)
-	var best := int(Profile.records.get("royale_best", 0))
-	var rec := Hud._label(_sub, "Victoires : %d · meilleure place : %s · éliminations : %d" % [int(Profile.records.get("royale_wins", 0)),
-		str(best) if best > 0 else "—", int(Profile.records.get("royale_kills", 0))], 14, Color(0.6, 0.85, 1.0))
-	rec.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var go := MenuWidgets.gold_button("Lancer le Battle royale", 22, Vector2(0, 58))
-	go.disabled = not Unlocks.is_open("royale")
-	go.pressed.connect(_start_royale)
-	_pin_go(go, "" if Unlocks.is_open("royale") else Unlocks.lock_text("royale"))
+	RoyalePage.build(self)  # (lot BR-R1 : page du mode v2, ui/royale_page.gd)
 
 
 func _start_royale() -> void:
 	if _launching or not Unlocks.is_open("royale"):
 		return
 	_launching = true
-	LastActivity.record("royale", {"diff": _royale_diff})
+	LastActivity.record("royale", RoyalePage.memo(_royale_diff))
 	if backdrop:
 		backdrop.release()
+	RoyalePage.apply()  # modificateur, partie personnalisée et graine (lot BR-R1)
 	Royale.difficulty = _royale_diff
 	Royale.start(Profile.selected_class)
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
@@ -1548,6 +1527,7 @@ func _continue_last() -> void:
 				_start_tower(int(o.get("diff", 1)), int(o.get("from", 1)))
 		"royale":
 			_royale_diff = int(o.get("diff", _royale_diff))
+			RoyalePage.restore(o)
 			_start_royale()
 		"autochess":
 			_ac_diff = int(o.get("diff", _ac_diff))

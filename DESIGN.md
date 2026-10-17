@@ -1168,8 +1168,8 @@ doit se lire avant de lancer ; la Ruée et le Siège puisent dans la bibliothèq
   de héros, [F] son équipement. Tombé avant 2 min : le récapitulatif dit « Retour dans N s » (plus de ligne dans le fil).
 - **Lieux nommés (lot BR-I2)** : 6 à 8 par carte (`ProcMap.places`, `RoyaleDirector.places()`), chacun autour d'un décor
   (ruines, tour, arche, ossements, mine, campement, marché) avec un nom français (« Ruines du col », « Mine d'éclats »…),
-  une richesse ★ / ★★ / ★★★ (un ★★★, trois ★★, le reste ★) et ses coffres en couronne (★ : 3 dont 1 rare ; ★★ : 4 dont
-  2 rares et 1 doré ; ★★★ : 6 dont 2 rares et 2 dorés), **pris sur les 64 coffres de la carte : mêmes totaux** (38 / 18 / 8).
+  une richesse ★ / ★★ / ★★★ (un ★★★, trois ★★, le reste ★) et ses coffres en couronne (lot BR-R1 : ★ : 4 dont 1 rare ; ★★ : 6 dont
+  2 rares et 1 doré ; ★★★ : 9 dont 3 rares et 2 dorés), **pris sur les 64 coffres de la carte : mêmes totaux** (38 / 18 / 8).
   Du **couvert** dans chaque lieu : deux murets et un gros rocher (deux rochers au large des ruines), jamais cassables.
   Atterrir dans un lieu l'annonce (« Tu atterris aux Ruines du col »).
 - **Équipement (lot BR3, 0.1.216, retour du joueur : « je ne veux pas qu'elles changent », « finir avec 5 arcs »)** :
@@ -1208,6 +1208,35 @@ doit se lire avant de lancer ; la Ruée et le Siège puisent dans la bibliothèq
   retour, fin : `Royale.stats`), Gagné / Gardé (dont le coffre d'apparence), « Rejouer » et « Menu principal ».
 - **Couleurs (lot BR-I2)** : coffres au code de rareté de la Bible (commun lilas-gris, rare lagon, doré soleil, largage soleil
   clair), les mêmes sur la mini-carte ; plaques des scriptés en PV (plus de pourcentage).
+- **Page du mode v2 (lot BR-R1, `ui/royale_page.gd`)** : la partie (Classique, Du jour, Personnalisée) et une carte qui dit le
+  modificateur en une phrase, les adversaires en pastilles, les règles en quatre lignes (détail en infobulle), la Ligue royale de la
+  saison, la carrière (parties, victoires, podiums, meilleure place, éliminations, record, dégâts, gardiens, classe la plus gagnante),
+  les apparences du mode ; « Lancer » épinglé. Tient dans 1280×720 et 1600×900 (la page défile).
+- **Modificateurs (lot BR-R1, `core/royale_mods.gd`)** : un « du jour » qui tourne chaque jour (jamais deux fois de suite), la partie
+  classique toujours là. Pluie de météores (2 zones fraise toutes les 9 s près de héros tirés au hasard, 1,8 s d'annonce, 12 % des PV
+  max, l'esquive passe), Ruée vers l'or (chaque coffre monte d'une qualité), Anneau pressé (attente × 0,55, resserrement × 0,8 :
+  6 min 08), Sources de vie (12 fontaines au lieu de 4), Chasse ouverte (tous les héros sur la carte, +0,5 niveau par élimination,
+  traque dès le 2e anneau). Les scriptés sortent des zones (selon la difficulté), vont boire blessés, traquent plus tôt. Annoncé au
+  départ, sur la carte du vol et dans l'objectif. Aucun réglage de combat ne change.
+- **Autel du gardien (lot BR-R1, `core/royale_event.gd`, événement de milieu de partie)** : au 2e anneau, un autel s'éveille dans la
+  zone qui restera sûre jusqu'au 4e (pilier mandarine, losange sur les cartes, annonce). Un gardien (héros scripté plus grand,
+  niveau médian des vivants + 3, PV × 3,2, attaque × 0,55) ne quitte jamais l'autel (13 m, cercle au sol) et se remet quand personne
+  n'est là : l'ignorer ne coûte rien. L'achever : un niveau et le trésor de l'autel (coffre de largage) posé sur place, que tout le
+  monde peut venir prendre. Au resserrement du 4e anneau, s'il tient encore, il s'en va et laisse le trésor. Les scriptés y vont
+  s'ils sont en forme et de taille (le Facile seulement s'il passe à côté). Hors du compteur des héros ; « Gardien » dans la chronologie.
+- **Ligue royale (lot BR-R1, `core/royale_league.gd`)** : une saison par mois, des points à chaque partie classée (place + 2 par
+  élimination, 5 au plus, × 0,5 / 0,75 / 1 / 1,25 selon la difficulté ; jamais perdus, aucune connexion demandée), Bronze, Argent
+  (30), Or (80), Platine (150). Chaque rang atteint dans la saison : un coffre d'apparence (rare, épique, légendaire), une fois par
+  saison ; la 1re fois : un titre (« Voltigeur d'argent / d'or / de platine »). Les parties personnalisées ne comptent pas.
+- **Apparences du mode (lot BR-R1, `core/royale_looks.gd`)** : 8 voiles de planeur et 4 traînées de chute gagnées en jouant (parties,
+  podium, éliminations, victoires, rangs de la Ligue), choisies à la page du mode ; la **couronne** du vainqueur se porte pendant la
+  partie qui suit une victoire. Rien ne change le combat.
+- **Remercier l'aigle** : à bord, [Interagir] (LB sur la carte du vol) : « Merci l'aigle ! », une ligne au fil ; des scriptés le font
+  aussi ; petite fête au saut (« Hop ! »).
+- **Partie personnalisée** : modificateur et graine au choix (même graine : même carte, mêmes adversaires, même anneau), sans ligue,
+  ni insignes, ni maîtrise, ni quête, ni record. **Défis du mode** dans les quêtes : atterrir dans un lieu ★★★, éliminer le mis à prix,
+  vaincre le gardien, gagner sans réanimation.
+- **Densité mesurée (lot BR-R1, `tools/royale_games.py`)** : voir `conception/royale/R_BRR1.md`.
 
 ## L'Échiquier (autochess, `conception/autochess/SPEC.md` ; entrée et fin : lot AC-I, rapport `conception/autochess/R_AC_I.md`)
 

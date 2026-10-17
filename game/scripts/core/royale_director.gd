@@ -78,13 +78,24 @@ var drops: Array = []
 var _drop_phase := -1
 ## Héros mis à prix (passe M1) : celui qui compte le plus d'éliminations (au moins Royale.BOUNTY_KILLS).
 var bounty: Combatant = null
+## Lot BR-R1 : l'autel du gardien (événement de milieu de partie), les météores (modificateur), la densité (mesures).
+var event: RoyaleEvent
+var meteors: Array = []  # Telegraph des météores en l'air
+var meteor_stats := {"fell": 0, "hits": 0, "kills": 0}
+var landings: Array = []  # richesse (0 : hors des lieux, 1 à 3 ★) du lieu de chaque atterrissage du largage
+var _meteor_t := 0.0
+var _fight_clock0 := -1.0  # horloge au départ de l'anneau
+var _first_land := -1.0  # horloge du premier atterrissage
 
 
 func setup(director: RunDirector) -> void:
 	d = director
-	rng.randomize()
+	if Royale.custom_seed > 0:
+		rng.seed = Royale.custom_seed  # (lot BR-R1 : partie personnalisée, la même carte à chaque fois)
+	else:
+		rng.randomize()
 	d.zone = GameData.zone(Run.zone_id)
-	d.map = d.world.new_royale_map(randi())
+	d.map = d.world.new_royale_map(rng.randi() if Royale.custom_seed > 0 else randi())
 	d.world._apply_biome_env()
 	Music.play(Music.DUEL)
 	d.state = "royale"
@@ -115,12 +126,22 @@ func setup(director: RunDirector) -> void:
 	jump.setup(d, rng, [p] + ais)
 	jump.landed.connect(_on_landed)
 	_build_walls()
+	event = RoyaleEvent.new()
+	add_child(event)
+	event.setup(self)
+	if Royale.mod == "meteors" and p.autoplay:
+		PilotDodge.enabled = true  # (mesures : le pilote sort des zones des météores comme un joueur moyen)
+	if RoyaleLooks.crowned():
+		p.add_child(RoyaleLooks.make_crown())  # (lot BR-R1 : vainqueur de la partie précédente)
 	d.zone_changed.emit({"name": "Battle royale · %s" % d.zone.get("name", ""), "levels": [1, Royale.LEVEL_CAP]})
-	d.message.emit("Battle royale !\n%d héros, un seul survivant : choisis où sauter" % Royale.PLAYERS, 4.0)
+	var mod_line := RoyaleMods.announce()
+	d.message.emit("Battle royale !\n%s" % ("%s : choisis où sauter" % String(mod_line[0]) if not mod_line.is_empty()
+		else "%d héros, un seul survivant : choisis où sauter" % Royale.PLAYERS), 4.0)
 	d.world._offer("Ton arme de %s : choisis sa variante" % String(GameData.weapon_type(Run.weapon_type()).get("name", "classe")).to_lower(),
 		RoyaleLoot.start_weapon_cards(d.start_weapon_cards()))  # lot BR3 : armes du Survivant (jet, passif fixe)
 	if p.autoplay:
-		print("[royale] %s contre %s · carte %s · %d coffres" % [Run.class_id, ais.map(func(a): return String(a.get_meta("royale").cid)), Run.zone_id, _chests.size()])
+		print("[royale] %s contre %s · carte %s · %d coffres · modificateur %s · difficulté %d" % [Run.class_id, ais.map(func(a): return String(a.get_meta("royale").cid)),
+			Run.zone_id, _chests.size(), Royale.mod if Royale.mod != "" else "classique", Royale.difficulty])
 
 
 ## Points de largage éloignés les uns des autres (au moins ~90 m si la carte le permet), dans l'anneau de départ.
@@ -146,7 +167,11 @@ func spawn_points(n: int) -> Array:
 
 func _spawn_ais() -> void:
 	var classes: Array = GameData.classes.keys().filter(func(x): return x != Run.class_id and not x in Royale.AI_EXCLUDED)
-	classes.shuffle()
+	for i in range(classes.size() - 1, 0, -1):  # (mélange à la graine de la partie : partie personnalisée rejouable, lot BR-R1)
+		var j := rng.randi_range(0, i)
+		var tmp = classes[i]
+		classes[i] = classes[j]
+		classes[j] = tmp
 	for i in AI_COUNT:
 		var r := Royale.make_ai(String(classes[i]), Royale.difficulty_for(i), i + 1)
 		d.add_child(r)
@@ -253,7 +278,9 @@ func update(delta: float) -> void:
 			if jump != null:
 				jump.land_all()
 			phase = "fight"
-			d.message.emit("Tous au sol !\nL'anneau démarre", 2.0)
+			_fight_clock0 = clock
+			var ml := RoyaleMods.announce()
+			d.message.emit("Tous au sol !\n%s" % ("L'anneau démarre" if ml.is_empty() else String(ml[1])), 2.5 if ml.is_empty() else 4.0)
 	elif phase == "fight":
 		elapsed += delta
 		d.time = elapsed
@@ -271,6 +298,9 @@ func update(delta: float) -> void:
 		if _restocks == 0 and elapsed >= Royale.RESTOCK_FIRST:
 			_restock()
 		_update_drops()
+		if event != null:
+			event.update(delta)  # (lot BR-R1 : autel du gardien)
+		_update_meteors(delta)
 		_ring_tick -= delta
 		if _ring_tick <= 0.0:
 			_ring_tick = 1.0
@@ -282,7 +312,7 @@ func update(delta: float) -> void:
 		elif d.player.autoplay:
 			d.player.autoplay_target = _ring_goal() if _outside(d.player.global_position, 0.92) else Vector3.INF
 			_autoplay_pickup()
-		if elapsed >= Royale.DURATION + 20.0:
+		if elapsed >= Royale.total_time() + 20.0:  # (anneau pressé : calendrier plus court, lot BR-R1)
 			_timeout()
 	if _end_t >= 0.0:
 		_end_t -= delta
@@ -403,6 +433,13 @@ func _order(r: ClassRival) -> void:
 	_refresh_tag(r)
 	var pos := r.global_position
 	var flat := Vector2(pos.x, pos.z)
+	# lot BR-R1 : sortir de la zone d'un météore (selon la difficulté, comme un joueur qui lit la zone ou non)
+	var away := _meteor_escape(r, int(st.diff))
+	if away != Vector3.INF:
+		_release(r)
+		r.goal = away
+		st["mode"] = "D"
+		return
 	var cc: Vector2 = ring.center
 	var cr: float = ring.radius
 	var nc: Vector2 = ring.next_center
@@ -432,8 +469,24 @@ func _order(r: ClassRival) -> void:
 		if dd < fd:
 			fd = dd
 			foe = f
+	# lot BR-R1 (sources de vie) : blessé et sans adversaire au contact, il va boire à une fontaine proche
+	if foe == null or fd > CONTACT:
+		var well := _well_for(r, flat)
+		if well != null:
+			var wp := well.global_position
+			if Vector2(wp.x - pos.x, wp.z - pos.z).length() < CHEST_RANGE:
+				well.use_up()
+				r.heal(r.max_hp)
+				Vfx.ring(r, r.global_position, 3.0, Color(0.5, 1.0, 0.7, 0.9))
+				r.goal = Vector3.INF
+			else:
+				_release(r)
+				r.goal = wp
+			st["mode"] = "S"
+			return
 	if foe != null:
 		var ratio := Royale.power_ratio(r, foe)
+		var guard := foe.has_meta("guardian")  # (le gardien de l'autel ne poursuit pas : on ne le fuit que presque mort)
 		if elapsed < float(st.flee_until):
 			if fd < float(brain.sight) * 1.5:
 				_flee(r, foe)
@@ -454,8 +507,11 @@ func _order(r: ClassRival) -> void:
 		var ignored: bool = int(st.get("ignore", 0)) == foe.get_instance_id() and elapsed < float(st.get("ignore_until", 0.0)) 			and (fd > CONTACT * 0.5 or not hunted)
 		if not ignored and (fd < CONTACT or (fd < float(brain.sight) and hunted)):
 			# fuite : seulement s'il peut boire ensuite ou s'il est écrasé, et pas deux fois de suite
-			if float(brain.flee) > 0.0 and ratio < float(brain.flee) and elapsed >= float(st.get("flee_cd", 0.0)) \
-					and (int(st.potions) > 0 or ratio < float(brain.flee) * 0.6):
+			var flee_now := float(brain.flee) > 0.0 and ratio < float(brain.flee) and elapsed >= float(st.get("flee_cd", 0.0)) \
+					and (int(st.potions) > 0 or ratio < float(brain.flee) * 0.6)
+			if guard:
+				flee_now = float(brain.flee) > 0.0 and r.hp < r.max_hp * 0.3 and elapsed >= float(st.get("flee_cd", 0.0))
+			if flee_now:
 				st.flee_until = elapsed + FLEE_TIME
 				st.flee_cd = elapsed + FLEE_COOLDOWN
 				_flee(r, foe)
@@ -466,8 +522,16 @@ func _order(r: ClassRival) -> void:
 		if not ignored and fd < float(brain.sight) and ratio >= want:
 			_fight(r, foe)
 			return
-	# traque : un héros affaibli, occupé contre un autre, ou mis à prix
-	if float(brain.hunt) > 0.0 and int(ring.phase) >= HUNT_PHASE:
+	# lot BR-R1 : l'autel du gardien, s'il est assez fort et en forme
+	if event != null:
+		var ag := event.ai_goal(r, st)
+		if ag != Vector3.INF:
+			_release(r)
+			r.goal = ag
+			st["mode"] = "A"
+			return
+	# traque : un héros affaibli, occupé contre un autre, ou mis à prix (chasse ouverte : dès le 2e anneau, lot BR-R1)
+	if float(brain.hunt) > 0.0 and int(ring.phase) >= (RoyaleMods.HUNT_PHASE if Royale.mod == "hunt" else HUNT_PHASE):
 		var prey := _prey(r, foes, brain)
 		if prey != null:
 			_release(r)
@@ -550,7 +614,7 @@ func _refresh_tag(r: ClassRival) -> void:
 
 ## Intention d'un héros scripté selon son ordre (st.mode) : montrée au-dessus des scriptés Facile et Normal (lot BR-I3).
 const INTENT := {"L": "pille", "O": "pille", "W": "attend le largage", "B": "pille", "F": "attaque", "H": "chasse", "E": "fuit",
-	"R": "rejoint l'anneau"}
+	"R": "rejoint l'anneau", "G": "fouille", "A": "va à l'autel", "D": "esquive", "S": "va boire"}
 
 
 ## Ligne au-dessus de la plaque de [param r] : [texte, couleur] (« ▲ chasse », « ▼ fuit », « pille »…).
@@ -608,7 +672,7 @@ func _prey(r: ClassRival, foes: Array, brain: Dictionary) -> Combatant:
 	for f in foes:
 		var c := f as Combatant
 		var dd := r.global_position.distance_to(c.global_position)
-		if dd > float(brain.hunt) * (1.6 if c == bounty else 1.0):
+		if c.has_meta("guardian") or dd > float(brain.hunt) * (1.6 if c == bounty else 1.0) * (RoyaleMods.HUNT_REACH if Royale.mod == "hunt" else 1.0):
 			continue
 		var busy := false
 		if c is ClassRival:
@@ -733,7 +797,14 @@ func _on_ai_died(who: Combatant, killer: Combatant) -> void:
 	var was_bounty := who == bounty
 	var name := who.display_name.get_slice(" ·", 0)
 	var line := "%s est éliminé par l'anneau" % name
-	if killer != null and is_instance_valid(killer) and killer != who:
+	if env_cause(who) == "meteor" and (killer == null or not is_instance_valid(killer)):
+		line = "%s est écrasé par un météore" % name  # (lot BR-R1)
+		meteor_stats.kills = int(meteor_stats.kills) + 1
+	elif killer != null and is_instance_valid(killer) and killer.has_meta("guardian"):
+		line = "%s tombe face au gardien de l'autel" % name
+	if event != null:
+		event.note_death(who.global_position)
+	if killer != null and is_instance_valid(killer) and killer != who and not killer.has_meta("guardian"):
 		var xp := Royale.kill_xp(killer.level, who.level, was_bounty)  # (lot BR1 : selon l'écart de niveau)
 		_log_kill(killer, who)
 		if killer == d.player:
@@ -741,6 +812,8 @@ func _on_ai_died(who: Combatant, killer: Combatant) -> void:
 			d.player.gain_xp(maxi(1, ceili(float(GameData.xp_to_next(d.player.level)) * xp)))
 			d.player.heal(d.player.max_hp * 0.25)
 			line = "Tu élimines %s" % name
+			if was_bounty:
+				Royale.stats["bounty_kill"] = 1  # (défi du mode, lot BR-R1)
 			if first:
 				Profile.record_add("kills", 1)
 				timeline_add("kill", name)  # (lot BR-I2 : la première seulement)
@@ -765,6 +838,14 @@ func _on_ai_died(who: Combatant, killer: Combatant) -> void:
 		watched = killer if killer != null and is_instance_valid(killer) and not killer.is_dead and killer != d.player else null
 	_update_bounty()
 	_check_end()
+
+
+## Ce qui a frappé [param c] sans auteur dans les 3 dernières secondes (« meteor » ; "" : l'anneau ou rien).
+func env_cause(c: Combatant) -> String:
+	if c == null or not is_instance_valid(c) or not c.has_meta("env_hit"):
+		return ""
+	var e: Array = c.get_meta("env_hit")
+	return String(e[0]) if elapsed - float(e[1]) <= 3.0 else ""
 
 
 ## Mesures (pilote automatique, lot BR1) : une ligne par élimination entre héros (niveaux, durée du combat).
@@ -839,6 +920,8 @@ func player_down(killer: Combatant = null) -> void:
 	left += pending_ais()  # (lot BR4 : ceux qui vont revenir sont encore en jeu)
 	_place = left
 	_down_at = elapsed
+	if event != null:
+		event.note_death(d.player.global_position)
 	var recap := death_recap(killer, left)  # (lot BR-I2 : avant que le vainqueur ne se soigne)
 	_fall_player()  # lot BR3 : tes pièces tombent au sol (sauf l'arme)
 	if killer != null and is_instance_valid(killer) and killer != d.player:
@@ -853,6 +936,7 @@ func player_down(killer: Combatant = null) -> void:
 	if not _player_revived and _can_revive({}):
 		# réanimation (lot BR4) : tombé dans les deux premières minutes, il revient une fois
 		_player_revived = true
+		Royale.stats["revived"] = 1  # (défi « gagner sans réanimation », lot BR-R1)
 		_down_at = -1.0
 		revives.append({"st": {}, "player": true, "t": Royale.REVIVE_DELAY})
 		recap["revive"] = true
@@ -946,7 +1030,7 @@ func spectate_step(dir: int) -> void:
 ## s'il vient de lui), dégâts donnés et reçus, temps survécu. Sans tueur (ou lui-même) : l'anneau.
 func death_recap(killer: Combatant, place: int) -> Dictionary:
 	var r := {"place": place, "dealt": float(Royale.stats.get("dealt", 0.0)), "taken": float(Royale.stats.get("taken", 0.0)), "survived": elapsed,
-		"name": "", "cid": "", "lv": 0, "killer_hp": -1, "move": "", "dmg": 0.0}
+		"name": "", "cid": "", "lv": 0, "killer_hp": -1, "move": "", "dmg": 0.0, "cause": env_cause(d.player)}
 	if killer != null and is_instance_valid(killer) and killer != d.player:
 		var st: Dictionary = killer.get_meta("royale", {})
 		r.name = killer.display_name.get_slice(" ·", 0)
@@ -1019,7 +1103,70 @@ func _finish(place: int) -> void:
 			Royale.gear_score(Profile.equipped, Run.class_id, d.player.level)])
 		print("[royale] fin : place %d · %d éliminations · niveau %d · %d coffres · joueur %.0f s · partie %.0f s · coffres restants %d · %s" % [place,
 			Royale.kills, d.player.level, chests_opened, player_time(), elapsed, chests_left(), " ".join(order)])
+		print(density_line())
 	_end_t = 3.0
+
+
+## Densité de la partie (lot BR-R1, backlog P1 n° 20) : mesures du pilote, une ligne JSON après « [royale] densité ».
+##   first : 1er combat (s après le 1er atterrissage) ; fights : combats entre héros (sans le gardien) ; per_min : combats par
+##   minute de combat ; dead : part du temps (du 1er atterrissage à la fin) sans aucun combat en cours ; gap : plus long temps
+##   mort (s) ; places : combats par lieu [hors lieu, ★, ★★, ★★★] ; land : atterrissages du largage par lieu (même ordre) ;
+##   minutes : combats commencés à chaque minute de combat ; guard : combats contre le gardien ; meteors : {fell, hits, kills}.
+func density() -> Dictionary:
+	var t0 := _fight_clock0 if _fight_clock0 >= 0.0 else 0.0
+	var first_land := _first_land if _first_land >= 0.0 else t0
+	var end := clock
+	var ivals: Array = []
+	var places_n := [0, 0, 0, 0]
+	var per_min: Array = []
+	var guard := 0
+	var first := INF
+	for f in Royale.fight_log:
+		if bool(f.get("guard", false)):
+			guard += 1
+			continue
+		var t := float(f.t)
+		first = minf(first, t)
+		places_n[clampi(int(place_at(f.pos).get("stars", 0)), 0, 3)] += 1
+		var m := int(maxf(0.0, t - t0) / 60.0)
+		while per_min.size() <= m:
+			per_min.append(0)
+		per_min[m] += 1
+	for k in Royale.fights:
+		var fr: Array = Royale.fights[k]
+		ivals.append([float(fr[0]), float(fr[1]) + 2.0])
+	ivals.sort_custom(func(a, b): return float(a[0]) < float(b[0]))
+	var covered := 0.0
+	var gap := 0.0
+	var cur := first_land
+	for iv in ivals:
+		var a := maxf(float(iv[0]), first_land)
+		var b := minf(float(iv[1]), end)
+		if b <= cur:
+			continue
+		if a > cur:
+			gap = maxf(gap, a - cur)
+			a = maxf(a, cur)
+		covered += b - a
+		cur = b
+	gap = maxf(gap, end - cur)
+	var land := [0, 0, 0, 0]
+	for s in landings:
+		land[clampi(int(s), 0, 3)] += 1
+	var span := maxf(end - first_land, 1.0)
+	var n := Royale.fight_log.size() - guard
+	return {"first": (first - first_land) if first < INF else -1.0, "fights": n, "per_min": n / maxf((end - t0) / 60.0, 0.1),
+		"dead": 1.0 - clampf(covered / span, 0.0, 1.0), "gap": gap, "places": places_n, "land": land, "minutes": per_min, "guard": guard,
+		"meteors": meteor_stats, "span": span, "mod": Royale.mod, "diff": Royale.difficulty, "place": _place,
+		"wells": d.map.interactables.filter(func(i): return is_instance_valid(i) and i.kind == "well" and i.used).size(),
+		"altar": {"state": event.state if event != null else "", "winner": event.winner if event != null else "",
+			"awake": event.awake_at if event != null else -1.0, "first_hit": event.first_hit_at if event != null else -1.0,
+			"end": event.end_at if event != null else -1.0, "hitters": event.hitters.size() if event != null else 0,
+			"deaths": event.deaths_near if event != null else 0}}
+
+
+func density_line() -> String:
+	return "[royale] densité " + JSON.stringify(density())
 
 
 func chests_left() -> int:
@@ -1123,8 +1270,14 @@ func revive_point() -> Vector3:
 func _on_landed(c: Combatant) -> void:
 	if c is ClassRival:
 		_refresh_tag(c as ClassRival)
+	if not c.has_meta("revive_shield"):
+		landings.append(int(place_at(c.global_position).get("stars", 0)))  # (densité, lot BR-R1)
+		if _first_land < 0.0:
+			_first_land = clock
 	if c == d.player and not c.has_meta("revive_shield"):
 		var pl := place_at(c.global_position)  # lot BR-I2 : le lieu nommé où l'on atterrit
+		if int(pl.get("stars", 0)) >= 3:
+			Royale.stats["land3"] = 1  # (défi du mode, lot BR-R1)
 		if not pl.is_empty():
 			d.message.emit("Tu atterris %s\n%s" % [String(pl.at), "★".repeat(int(pl.stars))], 2.5)
 			timeline_add("jump", String(pl.name))
@@ -1154,6 +1307,110 @@ func player_grounded() -> bool:
 	return jump == null or not jump.airborne(d.player)
 
 
+# --- modificateurs (lot BR-R1, RoyaleMods) ------------------------------------------------------------
+## Part des zones de météore lues par un scripté (Facile … Hardcore) : les autres, il les encaisse (même règle que le pilote).
+const METEOR_READ := [0.45, 0.7, 0.85, 0.95]
+
+
+## Pluie de météores : une vague toutes les RoyaleMods.METEOR_EVERY s, près de héros tirés au hasard.
+func _update_meteors(delta: float) -> void:
+	if Royale.mod != "meteors" or elapsed < RoyaleMods.METEOR_FROM:
+		return
+	meteors = meteors.filter(func(t): return is_instance_valid(t) and not t.is_queued_for_deletion())
+	_meteor_t -= delta
+	if _meteor_t > 0.0:
+		return
+	_meteor_t = RoyaleMods.METEOR_EVERY + rng.randf_range(-RoyaleMods.METEOR_JITTER, RoyaleMods.METEOR_JITTER)
+	var pool: Array = ([d.player] + ais).filter(func(m): return is_instance_valid(m) and not m.is_dead and not (jump != null and jump.airborne(m)))
+	for i in mini(RoyaleMods.METEOR_PER_WAVE, pool.size()):
+		var k := rng.randi_range(i, pool.size() - 1)
+		var tmp = pool[i]
+		pool[i] = pool[k]
+		pool[k] = tmp
+		meteor_at((pool[i] as Node3D).global_position)
+
+
+## Un météore tombe près de [param near] : zone fraise annoncée RoyaleMods.METEOR_DELAY s, boule de feu qui descend, impact.
+func meteor_at(near: Vector3) -> Telegraph:
+	var q := Vector2(near.x, near.z) + Vector2.RIGHT.rotated(rng.randf() * TAU) * rng.randf() * RoyaleMods.METEOR_OFFSET
+	var g := _ground(q, near.y)
+	var tg := Telegraph.spawn(d, g, 0.0, {"shape": "circle", "radius": RoyaleMods.METEOR_RADIUS, "delay": RoyaleMods.METEOR_DELAY, "damage": 0.0})
+	tg.set_meta("meteor", true)
+	tg.resolved.connect(_meteor_hit.bind(g))
+	meteors.append(tg)
+	meteor_stats.fell = int(meteor_stats.fell) + 1
+	# la boule de feu (lisible de loin : elle annonce aussi la zone à ceux qui ne regardent pas le sol)
+	var ball := MeshInstance3D.new()
+	var sm := SphereMesh.new()
+	sm.radius = 0.9
+	sm.height = 1.8
+	ball.mesh = sm
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color("ff9a3d")
+	mat.emission_enabled = true
+	mat.emission = Color("ff6a1f")
+	mat.emission_energy_multiplier = 2.0
+	ball.material_override = mat
+	ball.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	tg.add_child(ball)
+	ball.position = Vector3(6.0, 45.0, 0.0)
+	ball.create_tween().tween_property(ball, "position", Vector3.ZERO, RoyaleMods.METEOR_DELAY).set_ease(Tween.EASE_IN)
+	return tg
+
+
+## Impact d'un météore en [param at] : chaque héros au sol dans la zone (sans esquive) perd RoyaleMods.METEOR_DMG de ses PV max.
+func _meteor_hit(_hit: bool, at: Vector3) -> void:
+	Vfx.ring(d, at + Vector3.UP * 0.2, RoyaleMods.METEOR_RADIUS + 1.0, Color(1.0, 0.55, 0.25, 0.9))
+	Sfx.event_at(d, at, "rock", -2.0)
+	for m in [d.player] + ais:
+		if not is_instance_valid(m) or m.is_dead or (jump != null and jump.airborne(m)):
+			continue
+		var c := m as Combatant
+		if Vector2(c.global_position.x - at.x, c.global_position.z - at.z).length() > RoyaleMods.METEOR_RADIUS + c.radius:
+			continue
+		if c.has_method("is_invulnerable") and c.is_invulnerable():
+			if c == d.player:
+				DamageNumber.spawn_text(c, "ESQUIVE !", Color(0.7, 1.0, 0.7))
+			continue
+		meteor_stats.hits = int(meteor_stats.hits) + 1
+		c.set_meta("env_hit", ["meteor", elapsed])
+		c.take_damage(maxf(1.0, c.max_hp * RoyaleMods.METEOR_DMG), null, false, true)
+
+
+## Point hors de la zone d'un météore pour le scripté [param r] (Vector3.INF : il n'est dans aucune, ou ne l'a pas lue).
+func _meteor_escape(r: ClassRival, diff: int) -> Vector3:
+	if meteors.is_empty():
+		return Vector3.INF
+	var pos := r.global_position
+	for t in meteors:
+		var tg := t as Telegraph
+		if tg == null or not is_instance_valid(tg) or tg.is_queued_for_deletion() or not tg.contains(pos, r.radius + 0.6):
+			continue
+		if absi(hash([tg.get_instance_id(), r.get_instance_id()])) % 100 >= int(float(METEOR_READ[clampi(diff, 0, 3)]) * 100.0):
+			continue
+		var out := Vector2(pos.x - tg.global_position.x, pos.z - tg.global_position.z)
+		var dir := out.normalized() if out.length() > 0.3 else Vector2.RIGHT.rotated(rng.randf() * TAU)
+		var spot := Vector2(tg.global_position.x, tg.global_position.z) + dir * (tg.radius + 2.5)
+		return _ground(spot, pos.y)
+	return Vector3.INF
+
+
+## Sources de vie : fontaine libre la plus proche de [param flat] pour un scripté blessé (null : il n'y va pas).
+func _well_for(r: ClassRival, flat: Vector2) -> Interactable:
+	if Royale.mod != "wells" or r.hp >= r.max_hp * RoyaleMods.WELL_HP:
+		return null
+	var best: Interactable = null
+	var bd := RoyaleMods.WELL_SIGHT
+	for it in d.map.interactables:
+		if not is_instance_valid(it) or it.kind != "well" or it.used or _outside(it.global_position, 0.9):
+			continue
+		var dd := flat.distance_to(Vector2(it.global_position.x, it.global_position.z))
+		if dd < bd:
+			bd = dd
+			best = it
+	return best
+
+
 # --- réapprovisionnement -------------------------------------------------------------------------
 var _restocks := 0
 
@@ -1172,7 +1429,7 @@ func _restock() -> void:
 		if g == Vector3.INF or _chests.any(func(it): return is_instance_valid(it) and not it.used and Vector2(it.global_position.x - q.x, it.global_position.z - q.y).length() < 9.0):
 			continue
 		var roll := rng.randf()
-		_spawn_chest(g, 2 if roll < 0.08 + 0.04 * _restocks else (1 if roll < 0.4 else 0))
+		_spawn_chest(g, RoyaleMods.chest_tier(2 if roll < 0.08 + 0.04 * _restocks else (1 if roll < 0.4 else 0)))  # (ruée vers l'or, lot BR-R1)
 		placed += 1
 	_restocks += 1
 	if placed > 0:
@@ -1355,6 +1612,12 @@ func markers() -> Array:
 		out.append([dr.pos, "drop"])
 	if bounty != null and is_instance_valid(bounty) and not bounty.is_dead and bounty != d.player:
 		out.append([bounty.global_position, "bounty"])
+	if event != null and not event.marker().is_empty():
+		out.append(event.marker())  # (lot BR-R1 : autel du gardien, puis son trésor)
+	if Royale.mod == "hunt":
+		for a in ais:  # chasse ouverte : tout le monde sur la carte
+			if is_instance_valid(a) and not a.is_dead and a != bounty and not (jump != null and jump.airborne(a)):
+				out.append([a.global_position, "hero"])
 	return out
 
 
@@ -1402,6 +1665,9 @@ func farm_target() -> Vector3:
 	var gp := _ground_for(Profile.equipped, Run.class_id, d.player.level, pp, 40.0)  # pièce tombée meilleure que la sienne (lot BR3)
 	if not gp.is_empty():
 		return (gp.bag as Node3D).global_position
+	var pilot := pilot_goal(pp)  # (lot BR-R1 : autel, trésor, fontaine)
+	if pilot != Vector3.INF:
+		return pilot
 	var best := Vector3.INF
 	var bd := INF
 	for it in _chests:
@@ -1415,6 +1681,30 @@ func farm_target() -> Vector3:
 			bd = dd
 			best = p
 	return best
+
+
+## Pilote automatique (mesures, lot BR-R1) : le trésor de l'autel s'il est proche, l'autel s'il est de taille, une fontaine
+## s'il est blessé (sources de vie). Vector3.INF : rien de tout ça.
+func pilot_goal(pp: Vector3) -> Vector3:
+	var p := d.player
+	if event != null:
+		if event.treasure_open() and not _outside(event.treasure.global_position, 0.85) \
+				and Vector2(event.pos.x - pp.x, event.pos.z - pp.z).length() < 100.0:
+			return event.treasure.global_position
+		if event.active() and p.hp >= p.max_hp * RoyaleEvent.AI_HP and p.level >= event.guardian.level - 3 \
+				and Vector2(event.pos.x - pp.x, event.pos.z - pp.z).length() < RoyaleEvent.AI_REACH:
+			return event.pos
+	if Royale.mod == "wells" and p.hp < p.max_hp * RoyaleMods.WELL_HP:
+		var best := Vector3.INF
+		var bd := RoyaleMods.WELL_SIGHT
+		for it in d.map.interactables:
+			if is_instance_valid(it) and it.kind == "well" and not it.used and not _outside(it.global_position, 0.9):
+				var dd := Vector2(it.global_position.x - pp.x, it.global_position.z - pp.z).length()
+				if dd < bd:
+					bd = dd
+					best = it.global_position
+		return best
+	return Vector3.INF
 
 
 ## Horloge du HUD : phase de l'anneau et temps avant son resserrement.
@@ -1445,8 +1735,11 @@ func objective_lines() -> Array[String]:
 		out.append("◇ L'anneau part quand tous sont au sol")
 		return out
 	out.append("⚔ Reste dans l'anneau violet")
+	var ev := event.objective() if event != null else ""
 	if bounty == d.player:
 		out.append("★ Tu es mis à prix : tous te voient")
+	elif ev != "":
+		out.append(ev)  # (lot BR-R1 : autel du gardien)
 	elif not active_drop().is_empty():
 		out.append("◆ Largage : repère doré sur la carte")
 	else:

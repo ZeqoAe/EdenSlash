@@ -318,6 +318,11 @@ func _input(ev: InputEvent) -> void:
 				handled = false
 		JOY_BUTTON_RIGHT_STICK:
 			zoom_at(cursor if cursor_shown else _view.size * 0.5, 1)
+		JOY_BUTTON_LEFT_SHOULDER:
+			if ride and _rd() != null and _rd().jump != null:
+				_rd().jump.thank()  # (lot BR-R1 : remercier l'aigle)
+			else:
+				handled = false
 		_:
 			handled = false
 	if handled:
@@ -381,6 +386,8 @@ func refresh() -> void:
 			if is_instance_valid(c) and j.on_board(c):
 				aboard += 1
 		_footer.text = "À bord : %d · Sautés : %d" % [aboard, Royale.PLAYERS - aboard]
+		if Royale.mod != "":
+			_footer.text = "%s · %s" % [RoyaleMods.name_of(Royale.mod), _footer.text]  # (lot BR-R1 : le modificateur de la partie)
 		var most := 0
 		var hot := ""
 		for pl in RoyalePing.places(rd):
@@ -391,6 +398,8 @@ func refresh() -> void:
 			_footer.text += "
 %d héros %s : %s" % [most, "visent" if most > 1 else "vise", hot]  # (lieux nommés du lot BR-I2 : où vont les autres)
 		_hint.text = ("Stick : curseur · X : repère · R3 : zoom" if pad else "Clic : repère · Molette : zoom")
+		if rd.jump != null and not rd.jump.thanked:
+			_hint.text += " · %s : merci l'aigle" % ("LB" if pad else Settings.action_label("interact", 1))  # (lot BR-R1)
 	else:
 		_ring_line.visible = true
 		_ring_line.text = ring_text(rd)
@@ -476,7 +485,16 @@ func _legend_rows() -> Array:
 		["bounty", "Héros mis à prix"], ["chests", "Coffres : commun, rare, doré"]]
 	if not RoyalePing.places(_rd()).is_empty():
 		rows.insert(1, ["place", "Lieu (★ : richesse du butin)"])
+	var rd := _rd()
+	if rd != null and rd.get("event") != null and not rd.event.marker().is_empty():
+		rows.insert(rows.size() - 1, ["altar", "Autel du gardien"])  # (lot BR-R1)
 	return rows
+
+
+## Losange mandarine contouré d'encre (autel du gardien, son trésor).
+func _altar_mark(ci: CanvasItem, c: Vector2, r: float) -> void:
+	var pts := PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)])
+	RoyaleHudStyle.draw_inked_polygon(ci, pts, RoyaleHudStyle.MANDARIN[1], 3.0)
 
 
 func _draw_legend() -> void:
@@ -504,6 +522,8 @@ func _draw_legend() -> void:
 				_star(_legend, c, 9.0, RoyaleHudStyle.SUN[1])
 			"bounty":
 				_star(_legend, c, 9.0, RoyaleHudStyle.STRAWBERRY[1])
+			"altar":
+				_altar_mark(_legend, c, 9.0)
 			"chests":
 				var cols := _chest_colors()
 				for k in 3:
@@ -566,8 +586,8 @@ func _draw_view() -> void:
 	var k := clampf(sc * 2.0, 0.8, 1.6)
 	for m in rd.markers():
 		var sp := world_to_view(m[0])
-		if not Rect2(Vector2.ZERO, sz).grow(-4.0).has_point(sp):
-			continue
+		if sz.x <= 8.0 or sz.y <= 8.0 or not Rect2(Vector2.ZERO, sz).grow(-4.0).has_point(sp):
+			continue  # (taille nulle tant que la carte n'est pas posée : plus d'erreur de Rect2 négatif, lot BR-R1)
 		var kind := String(m[1])
 		if kind.begins_with("chest"):
 			_square(v, sp, (3.5 if kind == "chest" else 5.0) * k, _marker_color(kind))
@@ -575,6 +595,11 @@ func _draw_view() -> void:
 			_star(v, sp, 11.0, RoyaleHudStyle.SUN[1])
 		elif kind == "bounty":
 			_star(v, sp, 11.0, RoyaleHudStyle.STRAWBERRY[1])
+		elif kind == "altar":
+			_altar_mark(v, sp, 11.0)  # (lot BR-R1 : autel du gardien)
+		elif kind == "hero":
+			v.draw_circle(sp, 5.5, RoyaleHudStyle.INK)
+			v.draw_circle(sp, 3.5, RoyaleHudStyle.STRAWBERRY[1])
 		else:
 			v.draw_circle(sp, 6.0, RoyaleHudStyle.INK)
 			v.draw_circle(sp, 4.0, _marker_color(kind))

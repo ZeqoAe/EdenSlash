@@ -25,12 +25,14 @@ const RULES := [
 	["Hors de l'anneau", "danger", 3], ["Tu es mis à prix", "bounty_me", 3], ["Victoire", "win", 4], ["remporte la partie", "end", 4],
 	["Éliminé", "end", 4], ["Mis à prix", "bounty", 2], ["est mis à prix", "bounty", 2], ["Largage", "drop", 2], ["largage", "drop", 2],
 	["Dernier cercle", "ring", 2], ["L'anneau", "ring", 2], ["Anneau", "ring", 2], ["anneau", "ring", 2], ["Tous au sol", "ring", 2],
+	["autel", "altar", 2], ["Gardien", "altar", 2], ["gardien", "altar", 2], ["Pluie de météores", "mod", 1], ["Ruée vers l'or", "mod", 1],
+	["Anneau pressé", "mod", 1], ["Sources de vie", "mod", 1], ["Chasse ouverte", "mod", 1],
 	["héros restant", "count", 1], ["Tu atterris", "place", 1], ["De retour", "info", 2], ["Coffres", "info", 1],
 	["ouvert", "loot", 0], ["Pièce portée", "loot", 0], ["Équipé", "loot", 0],
 ]
 ## Ton d'UiTheme de chaque sorte (« papier » : texte d'encre ; les bonbons : texte blanc contouré).
 const TONES := {"danger": "fraise", "bounty_me": "fraise", "win": "soleil", "end": "papier", "bounty": "soleil", "drop": "soleil",
-	"ring": "amethyste", "count": "papier", "place": "lagon", "info": "papier", "loot": "papier"}
+	"ring": "amethyste", "count": "papier", "place": "lagon", "info": "papier", "loot": "papier", "altar": "mandarine", "mod": "mandarine"}
 
 var player: Node3D
 var current: Dictionary = {}  # {title, sub, kind, prio, left, shown}

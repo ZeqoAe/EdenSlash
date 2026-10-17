@@ -10,7 +10,7 @@ extends ResultsPanel
 const MOMENTS := {
 	"jump": ["Saut", RoyaleStyle.PAPER_200], "kill": ["1re élim.", RoyaleStyle.APPLE_LIGHT], "drop": ["Largage", RoyaleStyle.SUN_LIGHT],
 	"bounty": ["Mis à prix", RoyaleStyle.STRAWBERRY_LIGHT], "revive": ["Retour", Color("86ddff")], "down": ["", RoyaleStyle.STRAWBERRY_LIGHT],
-	"win": ["N°1", RoyaleStyle.SUN],
+	"win": ["N°1", RoyaleStyle.SUN], "altar": ["Gardien", RoyaleStyle.MANDARIN],
 }
 const TIMELINE_W := 900.0
 
@@ -30,6 +30,9 @@ static func report_rows(got: Dictionary) -> Dictionary:
 			continue  # déjà en tête de « Gagné »
 		if line.begins_with("Titre : "):
 			out.gained.append(row("Titre " + line.trim_prefix("Titre : "), "", "", "user"))
+		elif line.begins_with("Ligue royale : "):  # (lot BR-R1) « Ligue royale : +7 points (Argent) »
+			var rest := line.trim_prefix("Ligue royale : ")
+			out.gained.append(row("Ligue royale · %s" % rest.get_slice("(", 1).trim_suffix(")"), rest.get_slice(" (", 0), RoyaleLeague.season_name(), "upgrade"))
 		else:
 			out.kept.append(reward_row(line))
 	return out

@@ -4,6 +4,7 @@ extends Node
 ##   godot --headless --fixed-fps 60 --path game res://tools/royale_duel_probe.tscn [-- --levels=1,9,20,40 --diff=3 --gear=nu,commun,dore,amel,max]
 ##   ... --scale=0.055 --caps=duel_b --basic=0.8 : essai d'un réglage du profil « royale » (DevEdits, rien n'est écrit)
 ##   ... -- --tournament=20 --gear=dore [--rounds=6] : chaque classe contre 6 autres (taux de victoire par classe)
+##   ... -- --guardian --levels=10,15,20 --gear=commun,dore : chaque héros seul contre le gardien de l'autel (lot BR-R1)
 ## Ligne par duel : [br1] niveau · pièces · paire : durée, vainqueur, PV, dégâts infligés (part des PV max de l'autre).
 
 const PAIRS := [["warrior", "magician"], ["black_blade", "light_blade"], ["cleric", "hunter"], ["assassin", "paladin"],
@@ -38,6 +39,7 @@ func _ready() -> void:
 	if not over.is_empty():
 		DevEdits.data["modes"] = {"royale": over}
 	Royale.active = true
+	guardian = args.has("guardian") or "--guardian" in OS.get_cmdline_user_args()
 	if args.has("gearscale"):
 		_gear_scale_table()
 		return
@@ -131,6 +133,10 @@ func _gear_scale_table() -> void:
 	get_tree().quit()
 
 
+## Lot BR-R1 : --guardian = chaque héros contre le gardien de l'autel (RoyaleEvent.make_guardian) au lieu d'un autre héros.
+var guardian := false
+
+
 func _run_batch(cases: Array, diff: int) -> void:
 	var duels: Array = []
 	var idx := 0
@@ -143,6 +149,14 @@ func _run_batch(cases: Array, diff: int) -> void:
 		var pos := Vector3((idx % 8) * 400.0, 0.5, (idx / 8) * 400.0)
 		var hs: Array = []
 		for i in 2:
+			if i == 1 and guardian:
+				# lot BR-R1 (--guardian) : le gardien de l'autel, au niveau du héros + RoyaleEvent.LEVEL_ADD
+				var gd := RoyaleEvent.make_guardian(String(RoyaleEvent.GUARD_CLASSES[idx % RoyaleEvent.GUARD_CLASSES.size()]), mini(lv + RoyaleEvent.LEVEL_ADD, Royale.LEVEL_CAP))
+				root.add_child(gd)
+				gd.global_position = pos + Vector3(5.0, 0, 0)
+				gd.set_ffa(idx * 2 + i + 1)
+				hs.append(gd)
+				continue
 			var r := Royale.make_ai(String(pair[i]), diff, idx * 2 + i + 1)
 			var st: Dictionary = r.get_meta("royale")
 			st.lv = lv

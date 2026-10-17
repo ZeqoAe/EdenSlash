@@ -263,12 +263,14 @@ func _update_goal(rd: RoyaleDirector) -> void:
 			sub = "★ Tu es mis à prix : tous te voient"
 		elif edge != null and not edge.safe_zone().is_empty() and bool(edge.safe_zone()[2]):
 			sub = "Rejoins la zone sûre !"
+		elif rd.event != null and rd.event.objective() != "":
+			sub = rd.event.objective()  # (lot BR-R1 : autel du gardien, losange sur la carte)
 		elif not rd.active_drop().is_empty():
 			sub = "★ Largage : étoile dorée sur la carte"
 		elif rd.bounty != null and is_instance_valid(rd.bounty) and not rd.bounty.is_dead:
 			sub = "★ %s est mis à prix" % rd.bounty.display_name.get_slice(" ·", 0)
 		else:
-			sub = "Pille, monte de niveau, reste dans l'anneau"
+			sub = "Pille, monte de niveau, reste dans l'anneau" if Royale.mod == "" else "%s en cours" % RoyaleMods.name_of(Royale.mod)  # (lot BR-R1)
 	if _goal_title.text != title:
 		_goal_title.text = title
 	if _goal_sub.text != sub:
@@ -452,6 +454,12 @@ static func moment(kind: String) -> void:
 			UiFeel.ring(at, 30.0)
 			UiFeel.sparkle(at, 6, ["soleil", "papier", "soleil", "mandarine"], 24.0)
 			current.announce.word("Trésor !", RoyaleHudStyle.SUN)
+		"jump":  # (lot BR-R1, backlog P2 n° 23 : petite fête au saut)
+			UiFeel.sparkle(current._hero_screen(), 4, ["soleil", "lagon", "pomme", "fraise"], 20.0)
+			current.announce.word("Hop !", RoyaleHudStyle.LAGOON)
+		"thanks":  # remercier l'aigle
+			UiFeel.sparkle(current._hero_screen(), 4, ["fraise", "papier", "fraise", "soleil"], 18.0)
+			current.announce.word("Merci l'aigle !", RoyaleHudStyle.STRAWBERRY)
 
 
 ## Position du héros à l'écran (repère de la fenêtre, pour UiFeel).

@@ -212,6 +212,9 @@ func _ai_duel(cid_a: String, cid_b: String, lv: int, chests: int, diff: int) -> 
 func _boot_game() -> RoyaleDirector:
 	Profile.reset_all()
 	Royale.difficulty = 1
+	Royale.mod = ""  # (lot BR-R1 : partie classique)
+	Royale.custom = false
+	Royale.custom_seed = 0
 	Royale.start("magician")
 	world = load("res://scenes/world.tscn").instantiate()
 	get_tree().root.add_child.call_deferred(world)
@@ -259,6 +262,9 @@ func _test_game_win() -> void:
 			tiers[int(it.get_meta("tier", 0))] += 1
 	check("64 coffres en 3 qualités (%s)" % [tiers], n_chests == 64 and tiers[1] == 18 and tiers[2] == 8 and tiers[0] == 38)
 	check("ni camps, ni sanctuaires, ni marchands sur la carte", d.map.camps.is_empty() and d.map.shrines.is_empty() and d.map.merchant_spots.is_empty())
+	check("partie classique (lot BR-R1) : 4 fontaines, autel du gardien en attente, aucun météore",
+		d.map.interactables.filter(func(i): return is_instance_valid(i) and i.kind == "well").size() == 4 and rd.event != null and rd.event.state == "wait"
+		and rd.meteors.is_empty())
 	check("au sol : les héros scriptés jouent", rd.ais.all(func(a): return not a.passive and not rd.jump.airborne(a)))
 	# coffre doré ouvert par le joueur
 	var gold: Interactable = null
