@@ -26,7 +26,7 @@ from ico_core import REG, GROUPS, OUT_SVG, OUT_PNG, GODOT, HERE, ROOT, render_sv
 def load_defs():
     sys.path.insert(0, HERE)
     import importlib
-    for m in ("ico_defs_a", "ico_defs_b", "ico_defs_c"):
+    for m in ("ico_defs_a", "ico_defs_b", "ico_defs_c", "ico_defs_d"):
         if os.path.exists(os.path.join(HERE, m + ".py")):
             importlib.import_module(m)
 

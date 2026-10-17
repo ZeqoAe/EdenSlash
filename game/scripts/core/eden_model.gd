@@ -130,6 +130,10 @@ static func instantiate_hero(cls: Dictionary, outfit := "", extra: Array = [], d
 			apply_dye(node, String(p), dyes[String(p)])
 	if not look.is_empty():
 		HeroLook.apply(node, cls, look)
+	if cls.has("look"):  # classe faite à la main (lot CHR-1, ClassLook)
+		var s_look := HeroLook.sanitize(look)
+		ClassLook.apply(node, cls, {"outfit": outfit, "worn_head": extra.any(func(x): return String(x).get_file().begins_with("head_")),
+			"hair_set": s_look.hair != "" or s_look.hair_color != ""})
 	return node
 
 

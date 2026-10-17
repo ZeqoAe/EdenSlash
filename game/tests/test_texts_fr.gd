@@ -118,8 +118,8 @@ func _ready() -> void:
 	check("%d scripts de classe parcourus (constantes de texte)" % n_scripts, n_scripts > 100)
 
 	# 2. données chargées : classes (sorts, certificats, passifs), monstres, zones
-	for cid in GameData.classes:  # « name » = nom anglais d'origine, jamais affiché (name_fr l'est)
-		var cd: Dictionary = (GameData.classes[cid] as Dictionary).duplicate()
+	for cid in GameData.classes.keys() + GameData.custom_classes.keys():  # « name » = nom anglais d'origine, jamais affiché (name_fr l'est) ; classes maison (CHR-1) comprises
+		var cd: Dictionary = GameData.class_data(String(cid)).duplicate()
 		cd.erase("name")
 		_walk("classe " + str(cid), cd)
 	for mid in GameData.monsters:  # « title » : titre d'origine, jamais affiché
@@ -155,7 +155,7 @@ func _ready() -> void:
 			_note("trophée " + String(kind), String(p.name) + " : " + String(p.desc))
 	for b in Boons.all():
 		_walk("boon " + String(b.get("id", "")), b)
-	for cid in GameData.classes:
+	for cid in GameData.classes.keys() + GameData.custom_classes.keys():
 		for c in Cards.class_cards(String(cid)):
 			_walk("carte de classe " + String(cid), c)
 	_walk("succès", Achievements.LIST)

@@ -215,7 +215,10 @@ func _ready() -> void:
 		EdenModel.dress(model, String(p))
 		if dyes.has(String(p)):
 			EdenModel.apply_dye(model, String(p), dyes[String(p)])
-	EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, weapon_code))
+	if cls.has("look"):  # classe faite à la main (lot CHR-1 : doubles de brume du Ninja du Tourbillon)
+		ClassLook.apply(model, cls, {"outfit": body, "worn_head": String(look.get("head", "")) != ""})
+	if not cls.get("weapon_hidden", false):
+		EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, weapon_code))
 	EdenFx.attach_aura_ids(self, RivalBuilds.aura_ids(look), GameData.HERO_SCALE, false, RivalBuilds.aura_tint(look))
 	_base_scale = model.scale
 	_player = get_tree().get_first_node_in_group("player") as Combatant
@@ -811,6 +814,8 @@ func _start_attack() -> void:
 	var rng := float(act.get("range", 0.0))
 	var at := global_position
 	var props := {"delay": delay, "damage": dmg, "source": self, "crit": is_crit}
+	if has_meta("mist_double"):
+		props.merge({"color": Telegraph.PLAYER_COLOR, "small": true})  # double de brume (lot CHR-1) : zone bleue du camp du joueur
 	if kind == "ground":
 		at = global_position + to.limit_length(maxf(rng, 4.0))
 		props.merge({"shape": "circle", "radius": r})

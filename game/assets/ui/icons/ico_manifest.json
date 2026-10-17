@@ -279,6 +279,11 @@
   "group": "Signes d'interface",
   "desc": "chevron › (aller)"
  },
+ "cls_whirl_ninja": {
+  "kind": "tile",
+  "group": "Ninja du Tourbillon (classe maison)",
+  "desc": "Classe : Ninja du Tourbillon (tourbillon)"
+ },
  "cmp_down": {
   "kind": "glyph",
   "group": "Signes d'interface",
@@ -713,6 +718,26 @@
   "kind": "glyph",
   "group": "Signes d'interface",
   "desc": "balance (pacte)"
+ },
+ "sk_whirl_double": {
+  "kind": "tile",
+  "group": "Ninja du Tourbillon (classe maison)",
+  "desc": "Double de brume : deux silhouettes dans la fumée"
+ },
+ "sk_whirl_orb": {
+  "kind": "tile",
+  "group": "Ninja du Tourbillon (classe maison)",
+  "desc": "Sphère tourbillon : sphère d'énergie en spirale"
+ },
+ "sk_whirl_star": {
+  "kind": "tile",
+  "group": "Ninja du Tourbillon (classe maison)",
+  "desc": "Étoiles filantes : trois étoiles de lancer en éventail"
+ },
+ "sk_whirl_ult": {
+  "kind": "tile",
+  "group": "Ninja du Tourbillon (classe maison)",
+  "desc": "Étoile du Tourbillon : grande étoile à lames de vent autour d'une sphère"
  },
  "skull": {
   "kind": "glyph",

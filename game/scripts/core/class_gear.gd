@@ -36,7 +36,8 @@ static func data() -> Dictionary:
 
 
 static func profile_id(cid: String) -> String:
-	return String(data().get("classes", {}).get(cid, ""))
+	# classe faite à la main (data/classes_custom.json, lot CHR-1) : son profil est dans ses données (« gear_profile »)
+	return String(data().get("classes", {}).get(cid, GameData.class_data(cid).get("gear_profile", "")))
 
 
 ## Profil de stats de la classe : {id, name, dmg, focus, armor, desc, weights} ; {} si la classe est inconnue.

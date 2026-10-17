@@ -304,6 +304,14 @@ directeur : `_pick_carrier` (toi si tu attaques, sinon pas celui qui ouvre), `_d
 voit l'endroit), `markers()` (mini-carte, via `RunDirector.markers` en état « team »), `_interrupted` (un contrôle annule pose et désamorçage), `blasted` (explosion 9 m) ;
 `--assault-rule=clé:valeur` ; mesures IA contre IA `python tools/assault_games.py --games 8 -j 2 [--win 4 --rule buy_time:2]` ; test `test_tac3`.
 
+### Classes maison (lot CHR-1, `conception/art/R_CHR1.md`, limites : `conception/art/CHR.md`)
+`data/classes_custom.json` -> `GameData.custom_classes` (à part : `GameData.classes` reste les 60 d'Eden, aucun tirage des modes à IA,
+pas dans `ML_CLASSES`) ; `class_data()` lit les deux. Prototype : « Ninja du Tourbillon » (`whirl_ninja`, famille Voleur, ouvert, arme cachée).
+Clés en plus : `look` (`core/class_look.gd` : teintures, `hair_gain`, bandeau par code, traits peints sur le visage, mèches, rubans
+Verlet), `auto` + `steps` (auto-attaque de classe, `Player._class_auto`), formes de sort `clone` / `orb` / `ult` (`combat/ninja_arts.gd`),
+poses procédurales `player/proc_pose.gd` (SkeletonModifier3D). Planches d'animations : `tools/anim_sheet.tscn`. Test `test_chr1` ;
+captures `tests/shot_chr1.tscn` (sortie hors dépôt : les images de ce design restent dans `C:\AI\chr1\`).
+
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à
   paliers `armory_price`, puits `SHOP_CHESTS`, leçon de maîtrise) ; participation `Run.INSIGNIA_BASE` ; JcJ plafonné au jour

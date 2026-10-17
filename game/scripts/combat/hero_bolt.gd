@@ -15,6 +15,7 @@ const STYLES := {
 	"nature": {"color": Color(0.5, 1.0, 0.45), "size": Vector3(0.34, 0.34, 0.34), "speed": 24.0},
 	"holy": {"color": Color(1.0, 0.95, 0.6), "size": Vector3(0.3, 0.3, 0.8), "speed": 28.0},
 	"shadow": {"color": Color(0.7, 0.45, 1.0), "size": Vector3(0.1, 0.1, 0.8), "speed": 34.0},
+	"shuriken": {"color": Color(0.85, 0.92, 1.0), "size": Vector3(0.3, 0.3, 0.3), "speed": 22.0},  # étoile qui tourne (lot CHR-1)
 }
 
 var shooter: Player
@@ -28,6 +29,7 @@ var style := "arrow"
 var _speed := 30.0
 var _travel := 0.0
 var _hit: Array = []
+var _spin: Node3D  # étoile de lancer : tourne sur elle-même
 
 
 static func fire(p: Player, pos: Vector3, direction: Vector3, act: Dictionary) -> HeroBolt:
@@ -50,7 +52,10 @@ func _ready() -> void:
 	_speed = float(st.speed)
 	var mesh := MeshInstance3D.new()
 	var size: Vector3 = st.size
-	if size.x == size.z:
+	if style == "shuriken":
+		_spin = NinjaArts.shuriken_node()  # étoile de lancer à 4 branches (lot CHR-1) à la place de la boule
+		add_child(_spin)
+	elif size.x == size.z:
 		var s := SphereMesh.new()
 		s.radius = size.x * 0.5
 		s.height = size.x
@@ -67,7 +72,10 @@ func _ready() -> void:
 	m.emission_energy_multiplier = 2.5
 	mesh.material_override = m
 	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	add_child(mesh)
+	if _spin == null:
+		add_child(mesh)
+	else:
+		mesh.free()
 	# traînée lumineuse
 	var trail := MeshInstance3D.new()
 	var tb := BoxMesh.new()
@@ -91,6 +99,8 @@ func _physics_process(delta: float) -> void:
 		return
 	var step := _speed * delta
 	global_position += dir * step
+	if _spin:
+		_spin.rotate_y(delta * 26.0)
 	_travel += step
 	if AssaultVision.current != null and AssaultVision.blocks_segment(global_position - dir * step, global_position):
 		queue_free()  # (lot TAC-2, L'Assaut) le projectile s'arrête au mur ou au muret

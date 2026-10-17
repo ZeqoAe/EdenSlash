@@ -38,7 +38,7 @@ const SKILL_LEVELS := [2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16]
 
 # --- classes ---------------------------------------------------------------------------------
 static func class_unlocked(cls: String) -> bool:
-	return cls in START_CLASSES or cls in Profile.unlocked_classes
+	return cls in START_CLASSES or cls in Profile.unlocked_classes or bool(GameData.custom_classes.get(cls, {}).get("open", false))
 
 
 ## Condition de déblocage : [mode, [[classe, niveau], ...]] ; vide pour les classes de base.

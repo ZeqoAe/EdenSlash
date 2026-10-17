@@ -1,0 +1,94 @@
+{
+ "_doc": "Classes faites à la main (lot CHR-1, conception/art/R_CHR1.md) : même format que data/classes.json (tools/build_classes.py), lues par GameData.custom_classes. Hors des 60 classes d'Eden : jamais tirées par les modes à IA (Battle royale, Siège, Échiquier, Arènes, Tour), pas d'arbre de talents ni de cerveau. Clés en plus : look (ClassLook), auto (auto-attaque propre : Player.auto_spec), open (ouverte dès le départ), proto (prototype).",
+ "whirl_ninja": {
+  "class_id": 901,
+  "custom": true,
+  "proto": true,
+  "open": true,
+  "body": "m",
+  "tier": "green",
+  "family": 2,
+  "parent": "whirl_ninja",
+  "name": "Whirl Ninja",
+  "name_fr": "Ninja du Tourbillon",
+  "lore_fr": "Un ninja à l'énergie débordante : il se démultiplie en doubles de brume, fait pleuvoir les étoiles de lancer et concentre le vent dans sa paume jusqu'à en faire une sphère qui hurle.",
+  "lore": "Un ninja à l'énergie débordante : il se démultiplie en doubles de brume, fait pleuvoir les étoiles de lancer et concentre le vent dans sa paume jusqu'à en faire une sphère qui hurle.",
+  "icon": "res://assets/ui/icons/ico_cls_whirl_ninja.png",
+  "weapon_name": "Gantelets",
+  "weapon_type": "cestus",
+  "weapon_hidden": true,
+  "gear_profile": "vivacite",
+  "dmg_type": "phys",
+  "weapons": ["W31301", "W31401", "W31501", "W31601"],
+  "body_model": "res://assets/player/body/body_m.glb",
+  "model": "res://assets/player/body/body_m.glb",
+  "parts": ["res://assets/player/outfits/cos_l238.glb", "res://assets/player/hairs/l103_a1c527.glb"],
+  "appearance": {"outfit": "cos_l238", "hair": "l103", "face": "#LFACE"},
+  "look": {
+   "dye": {
+    "res://assets/player/outfits/cos_l238.glb": [[250, 128, 32], [36, 34, 48], [250, 128, 32]]
+   },
+   "hair_tint": [255, 222, 110],
+   "hair_gain": 1.8,
+   "band": {"color": [34, 46, 92], "plate_color": [118, 126, 146], "height": 0.235, "tilt": 0.035, "radius": [0.25, 0.255], "width": 0.06, "plate": [0.062, 0.125]},
+   "face_marks": {"color": [92, 58, 50], "lines": [[112, 298, 178, 302, 5], [108, 314, 176, 316, 5], [112, 330, 174, 330, 5]]},
+   "spikes": {"color": [255, 222, 84], "list": [
+    [0.38, 0.02, 0.0, 0.22, 0.07, 0.6, 0.0],
+    [0.36, -0.06, 0.08, 0.2, 0.065, 0.9, 0.5],
+    [0.36, -0.06, -0.08, 0.2, 0.065, 0.9, -0.5],
+    [0.33, -0.12, 0.0, 0.22, 0.07, 1.6, 0.0],
+    [0.3, -0.14, 0.12, 0.18, 0.06, 1.4, 0.9],
+    [0.3, -0.14, -0.12, 0.18, 0.06, 1.4, -0.9],
+    [0.22, -0.04, 0.17, 0.16, 0.055, 0.5, 2.2],
+    [0.22, -0.04, -0.17, 0.16, 0.055, 0.5, -2.2],
+    [0.3, 0.12, 0.06, 0.14, 0.05, -0.9, 0.3],
+    [0.3, 0.12, -0.06, 0.14, 0.05, -0.9, -0.3]
+   ]},
+   "ribbon": {"color": [34, 46, 92], "length": 0.42, "width": 0.042, "anchor": [0.25, -0.24, 0.085]}
+  },
+  "anims": {"idle": "stand01", "battle": "battle10", "run": "move02", "attacks": ["attack21", "attack22"], "hurt": "hurt13", "death": "death01", "jump": "jump01", "dodge": "jump02"},
+  "auto": {
+   "name": "Taï-jutsu", "shape": "slash", "anims": ["attack21", "attack22", "attack20"], "mult": 0.5, "radius": 2.6, "arc": 120,
+   "speed": 1.45, "hit_fx": "s00141", "scales": ["hits", "atk_speed", "crit"], "favor": ["speed"],
+   "desc": "Enchaînement à mains nues : direct, crochet, puis coup de pied retourné plus fort qui repousse.",
+   "steps": [
+    {"anim": "attack21", "mult": 1.0},
+    {"anim": "attack22", "mult": 1.1},
+    {"anim": "attack20", "mult": 1.9, "radius": 3.0, "arc": 200, "spin_turns": 1, "pose": "kick", "push": 2.2, "hit_fx": "s00241"}
+   ],
+   "sig": {"name": "Rafale du tourbillon", "type": "every", "n": 5, "proj": 3}
+  },
+  "combo": [
+   {"name": "Direct", "anim": "attack21", "mult": 0.8, "arc": 120, "radius": 2.6, "hit_fx": "s00141"},
+   {"name": "Crochet", "anim": "attack22", "mult": 0.9, "arc": 140, "radius": 2.6, "hit_fx": "s00141"},
+   {"name": "Coup de pied retourné", "anim": "attack20", "mult": 1.6, "arc": 200, "radius": 3.0, "finisher": true, "hit_fx": "s00241"}
+  ],
+  "start_skills": 3,
+  "base": {"hp": 1.04, "def": 2.5, "atk": 1.05, "matk": 0.5},
+  "attributes": {"base": {"str": 11, "agi": 15, "int": 6, "wis": 5, "lck": 9}, "growth": {"str": 2.3, "agi": 3.0, "int": 1.0, "wis": 0.9, "lck": 1.6}},
+  "unlock": {},
+  "passives": [
+   {"id": "c901a", "eden": 901001, "name": "Endurance du tourbillon", "stat": {"atk_speed": 0.12, "hp_pct": 0.05}, "max": 1, "desc": "+12 % de vitesse d'attaque, +5 % de PV max.", "icon": "res://assets/ui/icons/ico_sk_whirl_orb.png"},
+   {"id": "c901b", "eden": 901002, "name": "Volonté inflexible", "stat": {"dmg_pct": 0.06}, "max": 1, "desc": "+6 % de dégâts.", "icon": "res://assets/ui/icons/ico_sk_whirl_star.png"}
+  ],
+  "skills": [
+   {"id": 990101, "kind": "clone", "name": "Double de brume", "mult": 1.0, "radius": 0.0, "arc": 0, "cooldown": 16.0,
+    "clones": 2, "duration": 6.0, "anim": "magic01", "dmg_type": "phys",
+    "desc": "Signe des mains : deux doubles de brume surgissent, frappent et attirent les coups pendant 6 s, puis s'évanouissent.",
+    "icon": "res://assets/ui/icons/ico_sk_whirl_double.png", "eden_name": "", "fx": {"cast": "s125521", "hit": ""}},
+   {"id": 990102, "kind": "bolt", "name": "Étoiles filantes", "mult": 0.8, "radius": 0.0, "arc": 0, "cooldown": 5.0,
+    "range": 13.0, "volley": 5, "spread": 46.0, "pierce": 1, "projectile": "shuriken", "applies": {"bleed": 3.0},
+    "anim": "shoot50", "dmg_type": "phys", "crit_bonus": 0.1,
+    "desc": "Lance cinq étoiles en éventail (13 m) : 80 % chacune, traversent un ennemi et font saigner (3 s).",
+    "icon": "res://assets/ui/icons/ico_sk_whirl_star.png", "eden_name": "", "fx": {"cast": "", "hit": "s00141"}},
+   {"id": 990103, "kind": "orb", "name": "Sphère tourbillon", "mult": 1.0, "radius": 2.6, "arc": 360, "cooldown": 8.0,
+    "dash": 6.0, "applies": {"stun": 0.8}, "anim": "shoot74", "dmg_type": "phys",
+    "desc": "Fonce (6 m) la sphère en main : elle broie ce qui est devant (6 coups de 40 %), puis éclate (220 %, renverse 0,8 s).",
+    "icon": "res://assets/ui/icons/ico_sk_whirl_orb.png", "eden_name": "", "fx": {"cast": "", "hit": ""}},
+   {"id": 990104, "kind": "ult", "name": "Étoile du Tourbillon", "mult": 1.0, "radius": 6.0, "arc": 360, "cooldown": 32.0,
+    "range": 14.0, "hold": 0.8, "applies": {"stun": 1.0}, "anim": "shoot63", "dmg_type": "phys",
+    "desc": "Charge une étoile-sphère géante bras levé, puis la lance (14 m) : elle tranche au passage, explose sur le premier gros ennemi (550 %, 6 m) et laisse un tourbillon.",
+    "icon": "res://assets/ui/icons/ico_sk_whirl_ult.png", "eden_name": "", "fx": {"cast": "", "hit": "s18441"}}
+  ]
+ }
+}

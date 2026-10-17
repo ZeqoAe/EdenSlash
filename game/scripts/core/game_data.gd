@@ -67,6 +67,12 @@ func _ready() -> void:
 		biomes = _load_json("res://data/biomes.json")
 	levels = _load_json("res://data/levels.json")
 	classes = _load_json("res://data/classes.json")
+	if FileAccess.file_exists(CUSTOM_CLASSES):
+		var cc = _load_json(CUSTOM_CLASSES)  # classes faites à la main (lot CHR-1) : à part des 60 d'Eden
+		if cc is Dictionary:
+			for k in cc:
+				if not String(k).begins_with("_") and cc[k] is Dictionary:
+					custom_classes[k] = cc[k]
 	# passifs communs (Corps aguerri, sauts…) recopiés dans chaque classe : ce sont des cartes
 	# communes à toutes les classes (Boons.all) ; la classe ne garde que ses certificats d'Eden
 	for cid in classes:
@@ -196,10 +202,19 @@ func zone_index(id: String) -> int:
 
 ## Passifs communs à toutes les classes (cartes communes), tirés de data/classes.json.
 var common_passives: Array = []
+## Classes faites à la main (lot CHR-1 : data/classes_custom.json, même format) : jouables par le joueur (sélecteur de
+## classe), mais hors de [member classes] : aucun tirage des modes à IA, aucune liste des 60 classes d'Eden ne les voit.
+const CUSTOM_CLASSES := "res://data/classes_custom.json"
+var custom_classes: Dictionary = {}
 
 
 func class_data(id: String) -> Dictionary:
-	return classes.get(id, {})
+	return classes.get(id, custom_classes.get(id, {}))
+
+
+## Classe faite à la main (data/classes_custom.json) ?
+func is_custom_class(id: String) -> bool:
+	return custom_classes.has(id)
 
 
 ## Clés d'animation d'Eden (motion.ini) : instants d'impact, sons, traînée.

@@ -34,6 +34,9 @@ static func families() -> Array:
 				var c: Dictionary = GameData.classes[id]
 				if String(c.get("tier", "")) == "orange" and String(c.get("parent", "")) == g:
 					ids.append(String(id))
+		for id in GameData.custom_classes:  # classes faites à la main (lot CHR-1) : en bas de leur famille
+			if int(GameData.custom_classes[id].get("family", 1)) == fam:
+				ids.append(String(id))
 		out.append({"family": fam, "name": FAMILY_NAMES[fam], "classes": ids})
 	return out
 
@@ -209,7 +212,7 @@ func _show_detail(id: String, refused := false) -> void:
 	var lines: PackedStringArray = []
 	lines.append("[b][color=#%s]%s[/color][/b]" % [tier_color(id).to_html(false), cd.get("name_fr", id)])
 	lines.append(("Ascension de %s" % GameData.class_data(String(cd.get("parent", ""))).get("name_fr", "")) if orange
-		else "Classe de base · famille %s" % FAMILY_NAMES.get(int(cd.get("family", 1)), ""))
+		else ("Création maison (prototype) · famille %s" if cd.get("custom", false) else "Classe de base · famille %s") % FAMILY_NAMES.get(int(cd.get("family", 1)), ""))
 	lines.append("Arme : %s · %s" % [cd.get("weapon_name", ""), "dégâts magiques" if cd.get("dmg_type", "phys") == "mag" else "dégâts physiques"])
 	var skills: Array = cd.get("skills", [])
 	var shared := skills.filter(func(s): return s.get("shared", false)).size()

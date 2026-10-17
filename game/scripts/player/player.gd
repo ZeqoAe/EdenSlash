@@ -118,6 +118,7 @@ signal weapon_swapped(off: bool)
 var _auto_count := {}  # coups portés par emplacement d'arme (effets légendaires « tous les N coups »)
 var _sig_ready := {}  # recharge interne des effets légendaires à l'impact, par emplacement
 var _swing := 0  # attaques de base portées (alterne les animations de l'arme)
+var _combo_at := -10.0  # dernier coup d'une auto-attaque à étapes (spec « steps ») : au-delà de 1,1 s, l'enchaînement repart
 var _last_skill := {}  # dernière compétence portée (pour l'Écho)
 var _target: Combatant  # cible verrouillée par clic (auto-attaque)
 var _move_goal := Vector3.INF  # point visé par un clic de déplacement (modes souris)
@@ -248,7 +249,19 @@ func offhand_item() -> Dictionary:
 func auto_spec() -> Dictionary:
 	if _auto.is_empty():
 		_auto = WeaponAttacks.spec_for(weapon_item(), _weapon_type_id())
+		_class_auto(_auto)
 	return _auto
+
+
+## Classe faite à la main avec sa propre auto-attaque (clé « auto » : taï-jutsu du Ninja du Tourbillon, lot CHR-1) : elle
+## remplace celle de l'arme principale de son type ; l'arme secondaire en main garde la sienne. Les 60 classes d'Eden n'ont
+## pas cette clé.
+func _class_auto(spec: Dictionary) -> void:
+	var own: Dictionary = cls.get("auto", {})
+	if own.is_empty() or hand_off or _weapon_type_id() != String(cls.get("weapon_type", "")):
+		return
+	for k in own:
+		spec[k] = own[k]
 
 
 func offhand_spec() -> Dictionary:
@@ -381,6 +394,7 @@ func recalc_stats() -> void:
 	pierce_bonus = int(floorf(ps.get("pierce", 0.0) + eq.get("pierce", 0.0) + 0.001))
 	bounce_bonus = int(floorf(ps.get("bounce", 0.0) + eq.get("bounce", 0.0) + 0.001))
 	_auto = WeaponAttacks.spec_for(weapon_item(), String(_weapon_type_id()))
+	_class_auto(_auto)
 	var oh := offhand_item()
 	_off = WeaponAttacks.spec_for(oh) if not oh.is_empty() else {}  # (aperçu ; elle ne frappe pas seule)
 	dot_bonus = 1.0 + ps.get("dot_pct", 0.0) + eq.get("dot_pct", 0.0)
@@ -573,6 +587,11 @@ func _dress_model() -> void:
 			EdenModel.apply_dye(model, String(p), dyes[String(p)])
 	if not look.is_empty():
 		HeroLook.apply(model, cls, look)
+	if cls.has("look"):  # classe faite à la main (lot CHR-1) : teintures, bandeau, traits du visage, mèches, rubans
+		var s_look := HeroLook.sanitize(look)
+		ClassLook.apply(model, cls, {"outfit": String(foe_look.get("body", "")) if foe else outfit,
+			"worn_head": String(foe_look.get("head", "")) != "" if foe else Profile.worn.get(class_id, {}).has("head"),
+			"hair_set": s_look.hair != "" or s_look.hair_color != ""})
 	if foe:
 		EdenFx.attach_aura_ids(self, RivalBuilds.aura_ids(foe_look), GameData.HERO_SCALE, false, RivalBuilds.aura_tint(foe_look))
 	else:
@@ -584,6 +603,8 @@ func _attach_weapon(code: String) -> void:
 	if _weapon:
 		_weapon.queue_free()
 		_weapon = null
+	if cls.get("weapon_hidden", false) and not hand_off:
+		return  # classe qui se bat à mains nues (Ninja du Tourbillon, lot CHR-1) : l'arme ne se voit pas
 	_weapon = EdenModel.attach_weapon(model, EdenModel.weapon_entry(cls, code))
 	if _weapon:
 		_blade_base = _weapon.find_child("W1", true, false) as Node3D
@@ -977,7 +998,7 @@ func attack_reach() -> float:
 func skill_reach(s: Dictionary) -> float:
 	if s.get("kind", "") in ["buff", "heal"]:
 		return 6.0
-	if s.get("kind", "") in ["bolt", "ground", "blink"]:
+	if s.get("kind", "") in ["bolt", "ground", "blink", "ult"]:
 		return float(s.get("range", 10.0)) * reach_mult
 	return maxf(skill_radius(s), ATTACK_RANGE) + float(s.get("dash", 0.0)) * reach_mult * 0.8
 
@@ -1049,12 +1070,29 @@ func _start_attack(aim: Vector3) -> void:
 		action["target"] = global_position + to_aim.limit_length(float(action.range))
 	var anims: Array = s.get("anims", ["attack01"])
 	var anim_name := String(anims[_swing % anims.size()])
+	var step := {}
+	if s.has("steps"):
+		# enchaînement à étapes (auto-attaque de classe, lot CHR-1) : repart du 1er coup après une pause
+		if _time - _combo_at > 1.1:
+			_swing = 0
+		_combo_at = _time
+		step = (s.steps as Array)[_swing % (s.steps as Array).size()]
+		anim_name = String(step.get("anim", anim_name))
+		action["mult"] = float(action.mult) * float(step.get("mult", 1.0))
+		for k in ["radius", "arc"]:
+			if step.has(k):
+				action[k] = float(step[k]) * (area_mult if k == "radius" else 1.0)
+		for k in ["spin_turns", "push", "hit_fx"]:
+			if step.has(k):
+				action[k] = step[k]
 	if (Survivor.active or hand_off) and not foe and not has_anim(anim_name):
 		anim_name = Survivor.fallback_anim(class_id, _swing)  # arme d'un autre type : gestes de l'arme de la classe
 	_swing += 1
 	var rate := cast_speed if WeaponAttacks.rate_stat(s) == "cast_speed" else atk_speed
 	rate *= 1.0 + float(mods.get("speed", 0.0))
 	_begin_action("attack", anim_name, rate * 1.25 * float(s.get("speed", 1.0)), action)
+	if step.has("pose") and model:
+		ProcPose.on(model).hold(String(step.pose), _state_len * 0.8)  # geste absent des animations d'Eden (coup de pied)
 	if String(action.get("kind", "")) == "cast":
 		_announce_cast(action, _hits[0] if not _hits.is_empty() else 0.3)
 
@@ -1272,6 +1310,9 @@ func _resolve_hit() -> void:
 			hit = _resolve_area(_action, global_position, forward(), is_skill) if float(_action.get("radius", 0.0)) > 0.0 else null
 		"move":
 			hit = _resolve_area(_action, global_position, forward(), is_skill) if float(_action.get("radius", 0.0)) > 0.0 else null
+		"clone", "orb", "ult":
+			NinjaArts.resolve(self, _action)  # sorts du Ninja du Tourbillon (lot CHR-1)
+			return
 		"ground":
 			var a := _action.duplicate()
 			a["arc"] = 360.0
@@ -1634,7 +1675,7 @@ func _hit_monster(m: Combatant, dir: Vector3, action: Dictionary, is_skill: bool
 		# attraction vers le héros (grappin) ou le centre de la zone (vortex)
 		m.knockback(-dir * sqrt(28.0 * pull))
 	else:
-		m.knockback(dir * (2.5 if is_skill else 0.6))
+		m.knockback(dir * float(action.get("push", 2.5 if is_skill else 0.6)))
 	for s in action.get("applies", {}):
 		if pvp_basic and s in Combatant.CC_TYPES:
 			continue
@@ -1961,6 +2002,8 @@ func _cast_skill(s: Dictionary, slot: int, step: int, forced_aim := Vector3.INF)
 	EdenFx.play(self, String(fx.get("cast", "")), global_position, rotation.y, EdenFx.cast_scale(String(fx.get("cast", "")), s, skill_radius(s)), self)
 	_begin_action("skill", String(s.anim), 1.15 * (cast_speed if action.dmg_type == "mag" else atk_speed), action)
 	_skill_lock_until = _time + _state_len * 0.92 + SKILL_RECOVERY
+	if NinjaArts.handles(String(s.kind)):
+		NinjaArts.on_cast(self, s, action, aim)  # charge, poses, sphère en main (lot CHR-1)
 
 
 const GROUND_SNAP := 3.0
