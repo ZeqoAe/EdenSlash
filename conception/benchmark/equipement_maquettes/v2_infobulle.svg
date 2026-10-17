@@ -1,0 +1,132 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="'M PLUS Rounded 1c', 'Nunito', sans-serif">
+  <!-- Maquette maison BM-GEAR (17/10/2026) : infobulle d'objet v2 (carte survolée + pièce portée côte à côte), DA BIBLE v2.
+       Aucun élément tiers. Notes en fraise = spécification. -->
+  <defs>
+    <style>
+      .t { fill: #221A3A; font-size: 17px; }
+      .s { fill: #6B5E86; font-size: 15px; }
+      .g { fill: #3E7F0A; font-size: 16px; font-weight: 800; }
+      .r { fill: #C21E45; font-size: 16px; font-weight: 800; }
+      .tw { fill: #FFFFFF; stroke: #221A3A; stroke-width: 4; paint-order: stroke; font-weight: 800; }
+      .pop { font-family: 'Mochiy Pop One', 'M PLUS Rounded 1c', sans-serif; }
+      .note { fill: #C21E45; font-size: 13px; font-weight: 700; }
+      .b { font-weight: 800; }
+    </style>
+    <pattern id="trame" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#221A3A" opacity="0.18"/></pattern>
+  </defs>
+  <rect width="1600" height="900" fill="#2E2450"/>
+  <text x="40" y="50" class="pop tw" font-size="26">Infobulle d'objet v2 : survolée (grande) · portée (petite, à droite)</text>
+
+  <!-- case survolée -->
+  <rect x="64" y="140" width="80" height="80" rx="14" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/>
+  <path d="M146 180 L176 170 L176 190 Z" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+
+  <!-- CARTE SURVOLÉE -->
+  <rect x="186" y="96" width="560" height="740" rx="16" fill="#221A3A"/>
+  <rect x="180" y="90" width="560" height="740" rx="16" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+  <!-- bandeau de rareté -->
+  <rect x="183" y="93" width="554" height="96" rx="13" fill="#FF8A1F"/>
+  <rect x="200" y="106" width="70" height="70" rx="14" fill="#FFB566" stroke="#221A3A" stroke-width="3"/>
+  <text x="286" y="132" class="tw" font-size="22">Casque du Bouclier antique</text>
+  <text x="286" y="160" class="tw" font-size="15">Mythique · Tête · niveau 53 · plates</text>
+  <rect x="640" y="152" width="84" height="26" rx="10" fill="#221A3A"/><text x="682" y="170" fill="#FFF8EC" font-size="14" text-anchor="middle" class="b">+5</text>
+  <!-- verdict -->
+  <rect x="200" y="204" width="520" height="52" rx="12" fill="#8FD62E" stroke="#221A3A" stroke-width="3"/>
+  <text x="216" y="237" class="tw" font-size="19">▲ Meilleure pour Guerrier</text>
+  <text x="704" y="237" class="t b" text-anchor="end" font-size="16">PE 948  (+621)</text>
+  <!-- stat principale -->
+  <text x="204" y="304" class="pop" font-size="40" fill="#221A3A">2 724</text>
+  <text x="340" y="302" class="t">PV</text>
+  <text x="430" y="302" class="g">+1 161</text>
+  <!-- stats secondaires, triées par poids du profil -->
+  <g>
+    <text x="204" y="346" class="t">★ Force <tspan class="b">111</tspan></text><text x="430" y="346" class="g">+40</text>
+    <text x="204" y="374" class="t">★ Défense <tspan class="b">88</tspan></text><text x="430" y="374" class="g">+22</text>
+    <text x="204" y="402" class="t">   Agilité <tspan class="b">164</tspan></text><text x="430" y="402" class="r">−26</text>
+    <text x="204" y="430" class="s">   Sagesse 165 · Esquive 2 · Recharge 4</text>
+  </g>
+  <text x="520" y="346" class="note">★ = compte pour</text>
+  <text x="520" y="362" class="note">le profil de la classe</text>
+  <text x="520" y="378" class="note">(Puissance) ; le reste</text>
+  <text x="520" y="394" class="note">en gris, sans %</text>
+  <!-- gemmes, enchantement -->
+  <line x1="200" y1="452" x2="720" y2="452" stroke="#E9DFCB" stroke-width="3"/>
+  <g stroke="#221A3A" stroke-width="3">
+    <path d="M214 470 l14 0 l8 10 l-15 18 l-15 -18 z" fill="#FF4D6D"/>
+    <path d="M250 470 l14 0 l8 10 l-15 18 l-15 -18 z" fill="url(#trame)"/>
+  </g>
+  <text x="286" y="490" class="t">Rubis taillé · <tspan class="s">emplacement libre</tspan></text>
+  <text x="204" y="526" class="t" fill="#0B7DB5">✦ Violence niv. 4</text>
+  <!-- panoplie -->
+  <rect x="200" y="546" width="520" height="92" rx="12" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+  <text x="216" y="574" fill="#FFF8EC" class="b" font-size="16">Bouclier antique</text>
+  <g stroke="#221A3A" stroke-width="2"><circle cx="388" cy="568" r="8" fill="#8FD62E"/><circle cx="408" cy="568" r="8" fill="#8FD62E"/><circle cx="428" cy="568" r="8" fill="#C3F07A"/><circle cx="448" cy="568" r="8" fill="#2E2450"/><circle cx="468" cy="568" r="8" fill="#2E2450"/></g>
+  <text x="488" y="574" fill="#C9BFEA" font-size="14">2 → 3 / 5 avec elle</text>
+  <text x="216" y="602" fill="#C3F07A" font-size="15">2 : Défense augmentée ✓</text>
+  <text x="216" y="626" fill="#C9BFEA" font-size="15">5 : PV max fortement augmentés</text>
+  <!-- provenance -->
+  <rect x="200" y="652" width="520" height="66" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/>
+  <text x="216" y="678" class="t" font-size="15"><tspan class="b">Plan ✓</tspan> Époque II · Avila · fabriquer : 83 insignes</text>
+  <text x="216" y="704" class="t" font-size="15"><tspan class="b">Aussi</tspan> : Donjon de Mains de granit (pièce directe)</text>
+  <!-- pied : touches -->
+  <rect x="200" y="732" width="520" height="80" rx="12" fill="url(#trame)" stroke="#221A3A" stroke-width="2"/>
+  <g font-size="14">
+    <circle cx="226" cy="760" r="14" fill="#FFC928" stroke="#221A3A" stroke-width="3"/><text x="226" y="765" class="tw" font-size="12" text-anchor="middle">Maj</text>
+    <text x="246" y="765" class="t" font-size="14">détails</text>
+    <circle cx="330" cy="760" r="14" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/><text x="330" y="765" class="tw" font-size="12" text-anchor="middle">X</text>
+    <text x="350" y="765" class="t" font-size="14">équiper</text>
+    <circle cx="440" cy="760" r="14" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/><text x="440" y="765" class="tw" font-size="12" text-anchor="middle">L</text>
+    <text x="460" y="765" class="t" font-size="14">garder 🔒</text>
+    <circle cx="570" cy="760" r="14" fill="#B43BEB" stroke="#221A3A" stroke-width="3"/><text x="570" y="765" class="tw" font-size="12" text-anchor="middle">F</text>
+    <text x="590" y="765" class="t" font-size="14">objectif ★</text>
+    <text x="216" y="798" class="s" font-size="13">Manette : Y détails · X équiper · LB / RB comparer (arme 2, préréglage)</text>
+  </g>
+
+  <!-- CARTE PORTÉE (petite) -->
+  <rect x="766" y="96" width="360" height="420" rx="16" fill="#221A3A"/>
+  <rect x="760" y="90" width="360" height="420" rx="16" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+  <rect x="763" y="93" width="354" height="34" rx="13" fill="#E9DFCB"/>
+  <text x="780" y="117" class="t b" font-size="15">PORTÉE</text>
+  <rect x="780" y="140" width="56" height="56" rx="12" fill="#B43BEB" stroke="#221A3A" stroke-width="3"/>
+  <text x="848" y="162" class="t b" font-size="16" fill="#7A1DB0">Couronne du Marcheur</text>
+  <text x="848" y="186" class="s" font-size="14">Épique · Tête · niveau 30 · +3</text>
+  <text x="784" y="236" class="pop" font-size="28" fill="#221A3A">1 563</text><text x="890" y="234" class="t">PV</text>
+  <text x="784" y="270" class="t">★ Force 71 · ★ Défense 66</text>
+  <text x="784" y="296" class="s">Agilité 190</text>
+  <text x="784" y="330" class="s">Panoplie Marcheur 1 / 5</text>
+  <text x="784" y="366" class="r" font-size="15">Enlevée : perd la gemme Onyx</text>
+  <text x="784" y="388" class="s" font-size="14">(elle revient au sac avec la pièce)</text>
+  <text x="784" y="430" class="note">Côte à côte (GW2, WoW), mêmes lignes alignées ;</text>
+  <text x="784" y="446" class="note">les écarts restent sur la grande carte seulement.</text>
+  <text x="784" y="472" class="note">Arme : si le type diffère, compare à l'arme 2.</text>
+
+  <!-- spécification -->
+  <rect x="1150" y="90" width="420" height="740" rx="16" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+  <text x="1170" y="128" class="pop" font-size="20" fill="#221A3A">Règles</text>
+  <g class="t" font-size="15">
+    <text x="1170" y="164">1. Verdict d'abord, en un mot coloré :</text>
+    <text x="1186" y="186">Meilleure / Équivalente / Moins bonne,</text>
+    <text x="1186" y="208">jugé sur le PROFIL de la classe choisie</text>
+    <text x="1186" y="230">(Items.rating), pas sur la PE seule.</text>
+    <text x="1170" y="264">2. Stat principale en grand, puis 3 stats</text>
+    <text x="1186" y="286">triées par poids du profil (★).</text>
+    <text x="1170" y="320">3. Pas de % dans le texte permanent :</text>
+    <text x="1186" y="342">« Meilleur +24 % » devient « ▲ Meilleure »</text>
+    <text x="1186" y="364">et l'écart de PE ; le % va derrière Maj.</text>
+    <text x="1170" y="398">4. Panoplie en pastilles : ce que la pièce</text>
+    <text x="1186" y="420">ajoute (pastille claire) se voit.</text>
+    <text x="1170" y="454">5. « Où l'obtenir » (plan, prix, donjon)</text>
+    <text x="1186" y="476">sur toute pièce : la boucle « je vois →</text>
+    <text x="1186" y="498">je sais comment l'avoir ».</text>
+    <text x="1170" y="532">6. Ce qu'on perd en retirant (gemme,</text>
+    <text x="1186" y="554">panoplie qui tombe) en fraise.</text>
+    <text x="1170" y="588">7. Pied : touches dessinées (BIBLE § 6).</text>
+    <text x="1170" y="622">8. Apparition : 300 ms, ressort 160 ms</text>
+    <text x="1186" y="644">depuis 0,9 ; queue vers la case.</text>
+    <text x="1170" y="678">9. Largeur fixe 560 / 360 px (1600×900),</text>
+    <text x="1186" y="700">× 0,8 à 1280×720 ; jamais hors écran.</text>
+    <text x="1170" y="734">10. Niveau trop haut : bandeau fraise</text>
+    <text x="1186" y="756">« Niveau 53 requis · tu es 34 » à la</text>
+    <text x="1186" y="778">place du verdict.</text>
+  </g>
+</svg>

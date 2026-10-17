@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="'M PLUS Rounded 1c', 'Nunito', sans-serif">
+  <!-- Maquette maison BM-GEAR (17/10/2026) : Atelier > Forge > Améliorer, version 2 (jauge de persévérance, viser +N, coût attendu),
+       DA BIBLE v2. Aucun élément tiers. Notes en fraise = spécification. -->
+  <defs>
+    <style>
+      .t { fill: #221A3A; font-size: 17px; }
+      .s { fill: #6B5E86; font-size: 15px; }
+      .tp { fill: #FFF8EC; font-size: 16px; }
+      .sp { fill: #C9BFEA; font-size: 14px; }
+      .g { fill: #3E7F0A; font-weight: 800; }
+      .tw { fill: #FFFFFF; stroke: #221A3A; stroke-width: 4; paint-order: stroke; font-weight: 800; }
+      .pop { font-family: 'Mochiy Pop One', 'M PLUS Rounded 1c', sans-serif; }
+      .note { fill: #C21E45; font-size: 13px; font-weight: 700; }
+      .b { font-weight: 800; }
+    </style>
+    <pattern id="trame" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#221A3A" opacity="0.18"/></pattern>
+  </defs>
+  <rect width="1600" height="900" fill="#CCDEF3"/>
+
+  <!-- en-tête Atelier -->
+  <text x="30" y="62" class="pop tw" font-size="34" transform="rotate(-3 30 62)">Atelier</text>
+  <g>
+    <rect x="420" y="26" width="160" height="42" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="500" y="54" class="t b" text-anchor="middle">Fabriquer</text>
+    <rect x="590" y="26" width="200" height="42" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="690" y="54" class="t b" text-anchor="middle">Plans de donjon</text>
+    <rect x="800" y="18" width="140" height="50" rx="12" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/><text x="870" y="51" class="tw" font-size="19" text-anchor="middle">Forge</text>
+  </g>
+  <rect x="1150" y="22" width="430" height="46" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+  <text x="1170" y="52" class="tp">◆ <tspan class="b">1 240</tspan> insignes    ✧ <tspan class="b">420</tspan> cristaux    ✕ Échap</text>
+
+  <!-- établis -->
+  <g font-size="15">
+    <rect x="440" y="94" width="130" height="44" rx="12" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/><text x="505" y="122" class="tw" font-size="15" text-anchor="middle">Améliorer</text>
+    <rect x="578" y="100" width="122" height="38" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="639" y="125" class="t" font-size="15" text-anchor="middle">Enchanter</text>
+    <rect x="708" y="100" width="122" height="38" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="769" y="125" class="t" font-size="15" text-anchor="middle">Sertir</text>
+    <rect x="838" y="100" width="122" height="38" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="899" y="125" class="t" font-size="15" text-anchor="middle">Polir</text>
+    <rect x="968" y="100" width="122" height="38" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="1029" y="125" class="t" font-size="15" text-anchor="middle">Réajuster</text>
+    <rect x="1098" y="100" width="122" height="38" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="1159" y="125" class="t" font-size="15" text-anchor="middle">Démonter</text>
+    <rect x="1228" y="100" width="122" height="38" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="1289" y="125" class="t" font-size="15" text-anchor="middle">Reporter</text>
+    <circle cx="1346" cy="102" r="11" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/><text x="1346" y="107" class="tw" font-size="12" text-anchor="middle">!</text>
+  </g>
+
+  <!-- liste des pièces (puits) -->
+  <rect x="24" y="94" width="390" height="780" rx="18" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+  <text x="44" y="128" class="tp b">Pièces portées d'abord</text>
+  <g stroke="#221A3A" stroke-width="3">
+    <rect x="44" y="146" width="64" height="64" rx="14" fill="#FFC928"/><rect x="118" y="146" width="64" height="64" rx="14" fill="#FF8A1F"/>
+    <rect x="192" y="146" width="64" height="64" rx="14" fill="#FF8A1F"/><rect x="266" y="146" width="64" height="64" rx="14" fill="#FF8A1F"/>
+    <rect x="44" y="220" width="64" height="64" rx="14" fill="#B43BEB"/><rect x="118" y="220" width="64" height="64" rx="14" fill="#B43BEB"/>
+    <rect x="192" y="220" width="64" height="64" rx="14" fill="#22B8F0"/><rect x="266" y="220" width="64" height="64" rx="14" fill="#22B8F0"/>
+  </g>
+  <rect x="40" y="142" width="72" height="72" rx="16" fill="none" stroke="#0B7DB5" stroke-width="4"/>
+  <g font-size="12">
+    <rect x="76" y="192" width="30" height="16" rx="8" fill="#221A3A"/><text x="91" y="204" class="tp" font-size="12" text-anchor="middle">+5</text>
+    <rect x="150" y="192" width="30" height="16" rx="8" fill="#221A3A"/><text x="165" y="204" class="tp" font-size="12" text-anchor="middle">+7</text>
+    <rect x="224" y="192" width="30" height="16" rx="8" fill="#221A3A"/><text x="239" y="204" class="tp" font-size="12" text-anchor="middle">+3</text>
+    <rect x="298" y="192" width="30" height="16" rx="8" fill="#221A3A"/><text x="313" y="204" class="tp" font-size="12" text-anchor="middle">+10</text>
+  </g>
+  <text x="44" y="320" class="sp">Le +N se lit sur la case (pastille d'encre).</text>
+  <text x="44" y="342" class="sp">Les pièces du sac suivent, triées par PE.</text>
+  <text x="44" y="380" class="sp">Barre du bas : « Tout à +5 » (porté) :</text>
+  <text x="44" y="400" class="sp">8 tentatives, ≈ 140 cristaux.</text>
+  <rect x="44" y="812" width="350" height="44" rx="12" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/><text x="219" y="840" class="tw" font-size="16" text-anchor="middle">Tout l'équipement à +5 · ≈ 140 ✧</text>
+
+  <!-- panneau central -->
+  <rect x="446" y="160" width="640" height="714" rx="18" fill="#221A3A"/>
+  <rect x="440" y="154" width="640" height="714" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+  <rect x="443" y="700" width="634" height="164" fill="url(#trame)"/>
+  <rect x="470" y="178" width="96" height="96" rx="18" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+  <text x="584" y="208" class="t b" font-size="20" fill="#D9900B">Hache du Fendoir</text>
+  <text x="584" y="234" class="s">Légendaire · Arme · niveau 70</text>
+  <text x="584" y="262" class="pop" font-size="30" fill="#221A3A">+5 → +6</text>
+  <!-- piste des 10 crans -->
+  <g stroke="#221A3A" stroke-width="3">
+    <circle cx="490" cy="312" r="15" fill="#FFC928"/><circle cx="550" cy="312" r="15" fill="#FFC928"/><circle cx="610" cy="312" r="15" fill="#FFC928"/>
+    <circle cx="670" cy="312" r="15" fill="#FFC928"/><circle cx="730" cy="312" r="15" fill="#FFC928"/>
+    <circle cx="790" cy="312" r="17" fill="#FFF8EC" stroke="#0B7DB5" stroke-width="4"/>
+    <circle cx="850" cy="312" r="15" fill="#E9DFCB"/><circle cx="910" cy="312" r="15" fill="#E9DFCB"/>
+    <circle cx="970" cy="312" r="15" fill="#E9DFCB"/><circle cx="1030" cy="312" r="15" fill="#E9DFCB"/>
+  </g>
+  <g font-size="12" class="t">
+    <text x="670" y="346" text-anchor="middle" font-size="12">+4 🎁</text><text x="790" y="346" text-anchor="middle" font-size="12">+6 🎁</text>
+    <text x="910" y="346" text-anchor="middle" font-size="12">+8 🎁</text><text x="1030" y="346" text-anchor="middle" font-size="12">+10 🎁</text>
+  </g>
+  <text x="470" y="372" class="note">🎁 = palier à stat bonus (+4, +6, +8, +10) : la piste les montre d'avance.</text>
+  <!-- avant / après -->
+  <g>
+    <text x="470" y="412" class="t">Attaque physique</text><text x="720" y="412" class="t">1 180</text><text x="790" y="412" class="s">→</text><text x="830" y="412" class="t g">1 298</text>
+    <text x="470" y="440" class="t">Force</text><text x="720" y="440" class="t">210</text><text x="790" y="440" class="s">→</text><text x="830" y="440" class="t g">231</text>
+    <text x="470" y="468" class="t">Stat bonus</text><text x="720" y="468" class="s">—</text><text x="790" y="468" class="s">→</text><text x="830" y="468" class="t g">+1 au hasard</text>
+    <text x="470" y="496" class="t">Puissance du héros</text><text x="720" y="496" class="t">5 960</text><text x="790" y="496" class="s">→</text><text x="830" y="496" class="t g">6 080</text>
+  </g>
+  <!-- chance + persévérance -->
+  <circle cx="540" cy="584" r="56" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+  <path d="M540 528 A56 56 0 1 1 487 601" fill="none" stroke="#8FD62E" stroke-width="12"/>
+  <text x="540" y="594" class="tw" font-size="26" text-anchor="middle">60 %</text>
+  <text x="540" y="664" class="s" text-anchor="middle" font-size="14">chance</text>
+  <text x="620" y="552" class="t b">Persévérance</text>
+  <rect x="620" y="564" width="430" height="26" rx="12" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+  <rect x="620" y="564" width="194" height="26" rx="12" fill="#B43BEB" stroke="#221A3A" stroke-width="3"/>
+  <text x="826" y="583" class="sp" font-size="14" fill="#FFF8EC">45 % · à 100 % : réussite assurée</text>
+  <text x="620" y="618" class="t" font-size="15">Chaque échec : jauge +20 %, chance +6 %.</text>
+  <text x="620" y="642" class="t" font-size="15"><tspan class="b">Échec</tspan> : la pièce reste à +5. Rien d'autre n'est perdu.</text>
+  <text x="620" y="666" class="s" font-size="14">Jauge propre à la pièce, gardée tant qu'elle n'a pas réussi.</text>
+  <!-- viser -->
+  <rect x="470" y="700" width="580" height="54" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+  <text x="488" y="733" class="tp">Viser</text>
+  <rect x="546" y="710" width="86" height="34" rx="10" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/><text x="589" y="733" class="t b" text-anchor="middle">+8 ▾</text>
+  <text x="646" y="726" class="sp">3 crans · attendu ≈ 190 ✧ · au pire 260 ✧</text>
+  <text x="646" y="746" class="sp">tu en as 420 · ≈ 1 Donjon Héroïque</text>
+  <rect x="470" y="770" width="580" height="64" rx="16" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+  <text x="760" y="811" class="tw pop" font-size="22" text-anchor="middle">Fortifier · 44 ✧</text>
+  <text x="470" y="856" class="s" font-size="14">Maintenir A : enchaîne jusqu'à +8, arrêt à chaque palier 🎁.</text>
+
+  <!-- retours -->
+  <rect x="1110" y="154" width="466" height="714" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+  <text x="1130" y="192" class="pop" font-size="20" fill="#221A3A">Retours (BIBLE § 7)</text>
+  <g class="t" font-size="15">
+    <text x="1130" y="228"><tspan class="b">Appui</tspan> : coup de marteau 0,5 s sur l'icône</text>
+    <text x="1146" y="250">(écrasement 0,9 → 1,08), « tchink » métal.</text>
+    <text x="1130" y="284"><tspan class="b">Réussite</tspan> : le cran s'allume en soleil,</text>
+    <text x="1146" y="306">« Réussi ! » en Mochiy contouré, 4 étoiles,</text>
+    <text x="1146" y="328">nombres qui défilent 800 ms, vibration forte.</text>
+    <text x="1130" y="362"><tspan class="b">Palier 🎁</tspan> : la stat tirée « tombe » dans</text>
+    <text x="1146" y="384">la table comme une carte (rayons de soleil).</text>
+    <text x="1130" y="418"><tspan class="b">Échec</tspan> : « Raté… » lagon, pas de fraise :</text>
+    <text x="1146" y="440">la jauge de persévérance se remplit sous</text>
+    <text x="1146" y="462">les yeux (l'échec avance, il ne punit pas).</text>
+    <text x="1130" y="496"><tspan class="b">+10</tspan> : traits de vitesse, confettis,</text>
+    <text x="1146" y="518">la case prend un liseré soleil à vie.</text>
+    <text x="1130" y="562" class="b">Garde-fous</text>
+    <text x="1130" y="590">· Démonter / Réajuster : maintien 0,6 s.</text>
+    <text x="1130" y="614">· Pièce gardée 🔒 : ni démontée ni vendue.</text>
+    <text x="1130" y="638">· « Réduire les animations » : 0,15 s.</text>
+    <text x="1130" y="682" class="b">Reporter (onglet neuf)</text>
+    <text x="1130" y="710">Une pièce neuve du même emplacement</text>
+    <text x="1130" y="732">reprend le +N de l'ancienne moins 2</text>
+    <text x="1130" y="754">(+7 → +5), gratuit ; l'ancienne revient</text>
+    <text x="1130" y="776">à +0. Le « remonter de zéro » des 60</text>
+    <text x="1130" y="798">classes et des 12 paliers devient court.</text>
+    <text x="1130" y="836" class="note">Q8 de REFONTE_AVENTURE à rouvrir (§ 8).</text>
+  </g>
+</svg>
