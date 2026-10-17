@@ -49,8 +49,11 @@ d'équipe (CO-D) est faite en parallèle par une autre équipe : coordination pa
 - **Économie d'une partie** (`test_co_f`, machine seule, 3 parties Classique de 10 manches, IA Hardcore) : or reçu moyen par héros
   encore en lice à la manche 10 : **139-148** ; pièces portées : **8 / 8** (équipement complet vers la manche 8, puis améliorations) ;
   4 atouts (moins après une fusion) et 2 sorts de plus ; jamais d'or négatif.
-- **Valeur d'une pièce en combat** (banc des atouts, `R_CO_E.md` § 3, pseudo-atouts « gear:2 » et « gear:5 ») : voir R_CO_E § 3 (même
-  banc, mêmes combats 3 contre 3 en miroir).
+- **Valeur d'une pièce en combat** (banc des atouts, `R_CO_E.md` § 3 : trio contre le même trio, Hardcore, 30 combats chacun) : 2 pièces
+  d'enclume par héros gagnent 63 %, 5 pièces 62 % ; écart de force par héros et par pièce ≈ +0,06 logit (un atout moyen d'Argent vaut à peu
+  près 1,5 pièce). Les pièces pèsent peu : l'échelle relative du JcJ (dégâts × √(PV) ÷ √(puissance) des deux héros, `PvpCaps.damage_mult`)
+  écrase les stats d'équipement, et l'arme reste celle de la classe. **À reprendre au lot CO-I** (calibrage) : un multiplicateur des stats de
+  pièce propre au profil « colisee », ou des enclumes moins chères, si les parties réelles montrent que l'or ne se sent pas.
 - **Fiche** : une pièce d'enclume de pièce relève les PV d'un Guerrier de 15 260 à 15 712 (+3 %) ; un héros scripté équipé de 6 pièces
   a plus de PV que nu (`test_co_f`).
 

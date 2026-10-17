@@ -187,7 +187,7 @@ func _take() -> void:
 	check("recette : la 3e pièce fusionne en Tempête et libère deux places (%s)" % str(b.augments), got == "tempete" and b.augments == ["tempete"])
 	var fx := ColiseeAugments.effects_for(b)
 	check("Tempête : Braise, Givre et Foudre × 1,5", is_equal_approx(float(fx.braise.burn_time), 4.5) and is_equal_approx(float(fx.givre.chill_time), 2.25)
-		and is_equal_approx(float(fx.foudre.bounce), 0.6))
+		and is_equal_approx(float(fx.foudre.bounce), 0.75))
 	check("Tempête : plus de pièce de recette proposée", not ColiseeAugments.eligible("braise", b, {}))
 	var hp0 := int(g.hp[1])
 	ColiseeAugments.take(b, "pacte_de_sang", g)
@@ -303,7 +303,7 @@ func _effects() -> void:
 	ColiseeAugments.begin_fight(null, [])
 	var sh := ColiseeAugments.shield_left(a)
 	var taken := _hit(a, base, amt, false)
-	check("Bouclier d'entrée : 15 %% des PV au début du combat (%.0f), le coup est absorbé" % sh, absf(sh / a.max_hp - 0.15) < 0.01 and taken <= 0.5)
+	check("Bouclier d'entrée : 20 %% des PV au début du combat (%.0f), le coup est absorbé" % sh, absf(sh / a.max_hp - 0.2) < 0.01 and taken <= 0.5)
 	# Sangsue
 	a = _hero(cid, 1, ["sangsue"], Vector3(0, 0, -4))
 	a.hp = a.max_hp * 0.5
@@ -317,7 +317,7 @@ func _effects() -> void:
 	var f2 := foe2.hp
 	_hit(foe, a, amt)
 	check("Braise et Givre : la cible brûle et ralentit", foe.has_status("burn") and foe.has_status("chill"))
-	check("Foudre : 40 %% du coup sur un voisin à 4 m (%.0f)" % (f2 - foe2.hp), f2 - foe2.hp > 0.5)
+	check("Foudre : 50 %% du coup sur un voisin à 4 m (%.0f)" % (f2 - foe2.hp), f2 - foe2.hp > 0.5)
 	foe.statuses.clear()
 	foe._dots.clear()
 	foe2.hp = foe2.max_hp
@@ -368,7 +368,7 @@ func _effects() -> void:
 	_hit(v2, hh, amt, false)
 	check("Chasseur de têtes : un K.O. coupe la recharge de moitié (%.1f s)" % (float(hh._skill_ready[sid]) - hh._time),
 		v2.is_dead and absf(float(hh._skill_ready[sid]) - hh._time - 5.0) < 0.05)
-	check("Serment : un allié tombe, bouclier de 25 %% des PV", absf(ColiseeAugments.shield_left(oath) / oath.max_hp - 0.25) < 0.01)
+	check("Serment : un allié tombe, bouclier de 15 %% des PV", absf(ColiseeAugments.shield_left(oath) / oath.max_hp - 0.15) < 0.01)
 	var kb: ColiseeBuild = ColiseeAugments.state(hh).b
 	check("K.O. compté pour l'or de la manche", kb.round_kos >= 1)
 	# Ancre

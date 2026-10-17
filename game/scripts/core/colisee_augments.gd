@@ -68,8 +68,8 @@ const LIST := [
 		"text": "Tes coups te soignent un peu.", "tip": "Vol de vie : 6 % des dégâts infligés.", "roles": [0.7, 1.0, 0.6, 0.3],
 		"params": {"leech": 0.06}},
 	{"id": "bouclier_entree", "name": "Bouclier d'entrée", "rarity": "argent", "theme": "survie", "tags": ["tank"], "icon": "res://assets/ui/status/barrier.png",
-		"text": "Tu commences chaque combat protégé.", "tip": "Bouclier de 15 % des PV max pendant 6 s au début du combat.",
-		"roles": [0.9, 0.7, 0.7, 0.8], "params": {"shield_pct": 0.15, "shield_time": 6.0}},
+		"text": "Tu commences chaque combat protégé.", "tip": "Bouclier de 20 % des PV max pendant 8 s au début du combat.",
+		"roles": [0.9, 0.7, 0.7, 0.8], "params": {"shield_pct": 0.2, "shield_time": 8.0}},
 	{"id": "esquive_agile", "name": "Esquive agile", "rarity": "argent", "theme": "mobilite", "tags": ["ranged"], "icon": "res://assets/ui/status/evasion.png",
 		"text": "Ton esquive revient plus vite.", "tip": "Recharge de l'esquive −25 %.", "roles": [0.4, 0.8, 0.9, 0.7],
 		"params": {"dodge_cd": 0.25}},
@@ -83,8 +83,8 @@ const LIST := [
 		"text": "Ton sort le plus long part deux fois.", "tip": "Sorts de 10 s de recharge ou plus : un 2e coup 0,6 s après, à 50 %.",
 		"roles": [0.5, 0.7, 1.0, 0.8], "params": {"echo_mult": 0.5, "echo_delay": 0.6, "min_cd": 10.0, "window": 1.2}},
 	{"id": "serment", "name": "Serment", "rarity": "or", "theme": "equipe", "tags": ["equipe"], "ico": "st_angel",
-		"text": "Quand un allié tombe, tu es protégé.", "tip": "Un allié à terre : bouclier de 25 % de tes PV max pendant 5 s.",
-		"roles": [0.6, 0.7, 0.9, 1.0], "params": {"shield_pct": 0.25, "shield_time": 5.0}},
+		"text": "Quand un allié tombe, tu es protégé.", "tip": "Un allié à terre : bouclier de 15 % de tes PV max pendant 4 s.",
+		"roles": [0.6, 0.7, 0.9, 1.0], "params": {"shield_pct": 0.15, "shield_time": 4.0}},
 	{"id": "garde_rapprochee", "name": "Garde rapprochée", "rarity": "or", "theme": "equipe", "tags": ["equipe", "tank"], "ico": "boss_barrier",
 		"text": "Tes alliés proches prennent moins de coups.", "tip": "Alliés à 6 m de toi : −10 % de dégâts reçus (une seule garde).",
 		"roles": [1.0, 0.7, 0.5, 0.8], "params": {"radius": 6.0, "taken": 0.9}},
@@ -116,8 +116,8 @@ const LIST := [
 		"text": "Tes coups ralentissent.", "tip": "Ralenti 1,5 s (toutes les 3 s par cible) ; 1/3 de « Tempête ».",
 		"roles": [0.8, 0.8, 0.9, 0.6], "params": {"chill_time": 1.5, "cd": 3.0}, "recipe": true, "goes": ["braise", "foudre"]},
 	{"id": "foudre", "name": "Foudre", "rarity": "or", "theme": "recette", "tags": ["melee", "ranged"], "icon": "res://assets/ui/status/shock.png",
-		"text": "Tes coups sautent sur un voisin.", "tip": "Rebond de 40 % du coup sur un adversaire à 4 m ; 1/3 de « Tempête ».",
-		"roles": [0.5, 0.9, 1.0, 0.5], "params": {"bounce": 0.4, "range": 4.0}, "recipe": true, "goes": ["braise", "givre"]},
+		"text": "Tes coups sautent sur un voisin.", "tip": "Rebond de 50 % du coup sur un adversaire à 4 m ; 1/3 de « Tempête ».",
+		"roles": [0.5, 0.9, 1.0, 0.5], "params": {"bounce": 0.5, "range": 4.0}, "recipe": true, "goes": ["braise", "givre"]},
 	{"id": "mise", "name": "Mise", "rarity": "or", "theme": "or", "tags": [], "ico": "scales",
 		"text": "Gagne la manche : beaucoup d'or. Perds-la : rien.", "tip": "Victoire : +15 or de plus ; défaite : aucun or de manche.",
 		"roles": [0.6, 0.6, 0.6, 0.6], "params": {"win_gold": 15}},
@@ -633,7 +633,7 @@ static func begin_fight(dir: Node, fights: Array) -> void:
 		_snapshot_cds(st)
 		var fx: Dictionary = st.fx
 		if fx.has("bouclier_entree"):
-			_shield(st, (c as Combatant).max_hp * float(fx.bouclier_entree.get("shield_pct", 0.15)), now + float(fx.bouclier_entree.get("shield_time", 6.0)))
+			_shield(st, (c as Combatant).max_hp * float(fx.bouclier_entree.get("shield_pct", 0.2)), now + float(fx.bouclier_entree.get("shield_time", 8.0)))
 			_note("bouclier_entree")
 		if fx.has("ombre_jumelle") and dir != null:
 			_spawn_double(dir, c as Combatant, st)
@@ -813,7 +813,7 @@ static func post_hit(dst: Combatant, src: Combatant, dmg: float, dot: bool) -> v
 			var nb := _neighbor(dst, float(fx.foudre.get("range", 4.0)))
 			if nb != null:
 				_note("foudre")
-				deal_true(nb, dmg * float(fx.foudre.get("bounce", 0.4)), src)
+				deal_true(nb, dmg * float(fx.foudre.get("bounce", 0.5)), src)
 		if fx.has("marque_du_chasseur"):
 			sd.mark_team = int(ss.team)
 			sd.mark_until = now + float(fx.marque_du_chasseur.get("time", 4.0))
@@ -893,7 +893,7 @@ static func _on_ko(victim: Combatant, killer: Combatant) -> void:
 		if not Combatant.same_arena(o.c, victim):
 			continue
 		var sp: Dictionary = o.fx.serment
-		_shield(o, (o.c as Combatant).max_hp * float(sp.get("shield_pct", 0.25)), now + float(sp.get("shield_time", 5.0)))
+		_shield(o, (o.c as Combatant).max_hp * float(sp.get("shield_pct", 0.15)), now + float(sp.get("shield_time", 4.0)))
 		_note("serment")
 
 
@@ -978,8 +978,11 @@ static func tick(delta: float) -> void:
 	i = 0
 	while i < doubles.size():
 		var d: Array = doubles[i]
-		if not is_instance_valid(d[0]) or float(d[1]) <= now or (d[0] as Combatant).is_dead:
-			_free_double(d[0])
+		if not is_instance_valid(d[0]) or (d[0] as Combatant).is_dead:
+			doubles.remove_at(i)  # (un double tombé disparaît comme un héros : ClassRival._on_death)
+		elif float(d[1]) <= now:
+			# fin du double : il « tombe » (jamais libéré vivant : un héros qui le visait le perdrait sous les pieds)
+			deal_true(d[0] as Combatant, (d[0] as Combatant).hp + 1.0, null, true)
 			doubles.remove_at(i)
 		else:
 			i += 1
