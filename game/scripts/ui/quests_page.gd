@@ -138,9 +138,7 @@ static func _row(q: Dictionary, index: int, period: String, on_launch: Callable,
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 10)
 	v.add_child(top)
-	var mark := Hud._label(top, "◆" if done else "◇", 17, UiTheme.BUFF if done else UiTheme.GOLD_DIM)
-	mark.custom_minimum_size = Vector2(20, 0)
-	mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	Ico.mark(top, "quest_done" if done else "quest_todo", 18)
 	var col := VBoxContainer.new()
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.add_theme_constant_override("separation", 0)
@@ -223,8 +221,7 @@ static func _class_row(c: Dictionary) -> Control:
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 10)
 	v.add_child(top)
-	var mark := Hud._label(top, "◇", 17, UiTheme.GOLD_DIM)
-	mark.custom_minimum_size = Vector2(20, 0)
+	Ico.mark(top, "quest_todo", 18)
 	var t := Hud._label(top, String(c.title), 16, UiTheme.TEXT)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

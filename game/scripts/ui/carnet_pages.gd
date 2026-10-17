@@ -348,7 +348,7 @@ class AchievementsPage extends ScrollPage:
 		var top := HBoxContainer.new()
 		top.add_theme_constant_override("separation", 8)
 		v.add_child(top)
-		Hud._label(top, "★" if own else "☆", 20, UiTheme.GOLD if own else UiTheme.MUTED)
+		Ico.mark(top, "star" if own else "star_empty", 22)
 		var name_l := Hud._label(top, String(a.name), 17, UiTheme.GOLD if own else UiTheme.TEXT)
 		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		name_l.clip_text = true  # (UIK2 : un nom et un titre longs ne poussent plus la grille hors de l'écran à 1280 px)

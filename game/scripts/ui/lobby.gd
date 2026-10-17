@@ -387,8 +387,7 @@ func _req_list(reqs: Array) -> void:
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 8)
 		_sub.add_child(h)
-		var mark := Hud._label(h, "✘", 20, Color(1.0, 0.45, 0.4))
-		mark.custom_minimum_size = Vector2(22, 0)
+		Ico.mark(h, "cross", 20)
 		var v := VBoxContainer.new()
 		v.add_theme_constant_override("separation", 0)
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -597,7 +596,8 @@ func _menu_autochess() -> void:
 	_sub.add_child(h)
 	for d in AutochessData.DIFFICULTIES.size():
 		var open := AutochessRewards.diff_open(d)
-		var b := MenuWidgets.glass_button(AutochessRewards.diff_name(d) if open else "🔒 " + AutochessRewards.diff_name(d), 16, Vector2(0, 44))
+		var b := MenuWidgets.glass_button(AutochessRewards.diff_name(d), 16, Vector2(0, 44))
+		Ico.lock(b, not open)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.disabled = not open
 		b.tooltip_text = String(AC_DIFF_LINES[d]) if open else AutochessRewards.diff_condition(d)
@@ -657,8 +657,7 @@ func _menu_autochess() -> void:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
 		_sub.add_child(row)
-		var mark := Hud._label(row, "✔" if bool(g.done) else "◇", 15, UiTheme.GOLD if bool(g.done) else UiTheme.MUTED)
-		mark.custom_minimum_size = Vector2(18, 0)
+		Ico.mark(row, "quest_done" if bool(g.done) else "quest_todo", 16)
 		var t := Hud._label(row, String(g.text) + ("  ·  titre « %s »" % String(g.title) if String(g.title) != "" else ""), 15, UiTheme.TEXT)
 		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -744,7 +743,8 @@ func _duel_tabs() -> void:
 	_sub.add_child(row)
 	for t in [["free", "Libre", ""], ["league", "Ligue", "league"], ["pantheon", "Panthéon", "pantheon"], ["gauntlet", "Gantelet", "gauntlet"]]:
 		var open: bool = String(t[2]) == "" or Unlocks.is_open(String(t[2]))
-		var b := MenuWidgets.glass_button(("🔒 " if not open else ("▶ " if _duel_tab == t[0] else "")) + String(t[1]), 15, Vector2(0, 38))
+		var b := MenuWidgets.glass_button(("" if not open else ("▶ " if _duel_tab == t[0] else "")) + String(t[1]), 15, Vector2(0, 38))
+		Ico.lock(b, not open)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.modulate = Color.WHITE if open else Color(1, 1, 1, 0.45)
 		b.tooltip_text = "" if open else Unlocks.lock_text(String(t[2]))
@@ -993,7 +993,7 @@ func _menu_tower() -> void:
 		if from > 1:
 			_row("Reprendre l'ascension", "Étage %d · %s · %s" % [from, TowerPages.floor_what(Tower.spec(from, d)), Tower.DIFF_NAMES[d]], "continue", func(): _start_tower(d, from), 64.0)
 	_section("Difficulté")
-	const DIFF_ICONS := ["heart", "defense", "attack", "power"]
+	const DIFF_ICONS := ["res://assets/ui/icons/ico_rank_1_64.png", "res://assets/ui/icons/ico_rank_2_64.png", "res://assets/ui/icons/ico_rank_3_64.png", "res://assets/ui/icons/ico_rank_4_64.png"]  # médailles (lot ICO-1)
 	for i in Tower.DIFF_NAMES.size():
 		var di := i
 		_row("%s  ·  %d / %d" % [Tower.DIFF_NAMES[i], Tower.best(i), Tower.FLOORS], String(Tower.DIFF_DESC[i]), DIFF_ICONS[i % DIFF_ICONS.size()], func():
@@ -2040,8 +2040,7 @@ func _survivor_rewards(tier: int) -> void:
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 8)
 		_sub.add_child(h)
-		var mark := Hud._label(h, "✔" if bool(g.done) else "◇", 15, UiTheme.GOLD if bool(g.done) else UiTheme.MUTED)
-		mark.custom_minimum_size = Vector2(18, 0)
+		Ico.mark(h, "quest_done" if bool(g.done) else "quest_todo", 16)
 		var t := Hud._label(h, String(g.text) + ("  ·  titre « %s »" % String(g.title) if String(g.title) != "" else ""), 15, UiTheme.TEXT)
 		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -2068,7 +2067,8 @@ func _survivor_tiers() -> void:
 	for p in range(1, Survivor.PALIERS.size() + 1):
 		var open := Survivor.palier_open(p)
 		var t: Dictionary = Survivor.PALIERS[p - 1]
-		var b := MenuWidgets.glass_button(Survivor.numeral(p) if open else "🔒 " + Survivor.numeral(p), 18, Vector2(0, 44))
+		var b := MenuWidgets.glass_button(Survivor.numeral(p), 18, Vector2(0, 44))
+		Ico.lock(b, not open)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.disabled = not open
 		b.tooltip_text = ("%s · %s" % [String(t.name), String(t.rule)]) if open else "Gagne le palier %s pour l'ouvrir." % Survivor.numeral(p - 1)
@@ -2181,7 +2181,8 @@ func _dungeon_pickers(menu: String, siege: bool) -> void:
 		var done := false
 		for d in Dungeons.DIFF_NAMES.size():
 			done = done or (Siege.clears(String(zid), d) if siege else Dungeons.cleared(String(zid), d)) > 0
-		var b := MenuWidgets.glass_button(("🔒 " if not open else ("✔ " if done else "")) + Dungeons.name_of(String(zid)), 14, Vector2(0, 40))
+		var b := MenuWidgets.glass_button(Dungeons.name_of(String(zid)), 14, Vector2(0, 40))
+		Ico.state(b, not open, done)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.modulate = Color.WHITE if open else Color(1, 1, 1, 0.45)
 		b.tooltip_text = "Niveau %d (Normal)" % Dungeons.level(String(zid), 0) if open else Dungeons.condition(String(zid))
@@ -2198,7 +2199,8 @@ func _dungeon_pickers(menu: String, siege: bool) -> void:
 	_sub.add_child(dr)
 	for i in Dungeons.DIFF_NAMES.size():
 		var ok_pe := Siege.power_ok(_dg_zone, i) if siege else Dungeons.power_ok(_dg_zone, i)
-		var b := MenuWidgets.glass_button(("🔒 " if not ok_pe else ("✔ " if i == _dg_diff else "")) + "%s (niv. %d)" % [Dungeons.DIFF_NAMES[i], Dungeons.level(_dg_zone, i)], 14, Vector2(0, 40))
+		var b := MenuWidgets.glass_button("%s (niv. %d)" % [Dungeons.DIFF_NAMES[i], Dungeons.level(_dg_zone, i)], 14, Vector2(0, 40))
+		Ico.state(b, not ok_pe, i == _dg_diff)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.modulate = Color.WHITE if ok_pe else Color(1, 1, 1, 0.5)
 		b.tooltip_text = Siege.power_text(_dg_zone, i) if siege else Dungeons.power_text(_dg_zone, i)
@@ -2383,7 +2385,7 @@ func _menu_rush() -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.tooltip_text = "Meilleur : %d / %d boss\nBoss de niveau %d à %d · titre « %s » si les %d tombent" % [best, Dungeons.rush_floors(), Dungeons.rush_level(1, i), Dungeons.rush_level(Dungeons.rush_floors(), i), Dungeons.RUSH_TITLES[i], Dungeons.rush_floors()]
 		if not Dungeons.power_ok(Dungeons.RUSH, i):
-			b.text = "🔒 " + b.text
+			Ico.lock(b)
 			b.modulate = Color(1, 1, 1, 0.5)
 			b.tooltip_text += "\n" + Dungeons.power_text(Dungeons.RUSH, i)
 		var di := i

@@ -268,7 +268,7 @@ static func _lock(unlock_id: String) -> String:
 
 ## Condition d'ouverture d'une entrée encore verrouillée, en gris.
 static func _lock_line(unlock_id: String) -> String:
-	return "\n[color=#9a98a8]🔒 %s[/color]" % Unlocks.condition(unlock_id)
+	return "\n[color=#9a98a8]" + Ico.LOCK_BB + " %s[/color]" % Unlocks.condition(unlock_id)
 
 
 static func _card_block(cid: String) -> Dictionary:

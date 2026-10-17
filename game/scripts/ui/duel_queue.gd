@@ -391,8 +391,7 @@ func _refresh_draft() -> void:
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 8)
 		_req_box.add_child(h)
-		var mark := Hud._label(h, "✔" if r.ok else "✘", 18, UiTheme.BUFF if r.ok else Color(1.0, 0.45, 0.4))
-		mark.custom_minimum_size = Vector2(22, 0)
+		Ico.mark(h, "check" if r.ok else "cross", 20)
 		var l := Hud._label(h, "%s : %s" % [r.label, r.hint], 14, UiTheme.TEXT)
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		if not r.ok and open_hero.is_valid() and String(r.section) != "grimoire":
@@ -426,8 +425,7 @@ func _refresh_req_only() -> void:
 	for r in Duel.requirements(cid):
 		var h := HBoxContainer.new()
 		_req_box.add_child(h)
-		var mark := Hud._label(h, "✔" if r.ok else "✘", 18, UiTheme.BUFF if r.ok else Color(1.0, 0.45, 0.4))
-		mark.custom_minimum_size = Vector2(22, 0)
+		Ico.mark(h, "check" if r.ok else "cross", 20)
 		Hud._label(h, "%s : %s" % [r.label, r.hint], 14, UiTheme.TEXT)
 	if _validate:
 		_validate.disabled = me_locked or not Duel.is_ready(cid)

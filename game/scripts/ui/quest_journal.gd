@@ -172,7 +172,7 @@ class JournalPage extends Control:
 					var row := HBoxContainer.new()
 					row.add_theme_constant_override("separation", 10)
 					_col.add_child(row)
-					Hud._label(row, "◆" if got else "◇", 17, UiTheme.BUFF if got else UiTheme.GOLD_DIM).custom_minimum_size = Vector2(20, 0)
+					Ico.mark(row, "quest_done" if got else "quest_todo", 18)
 					var t := Hud._label(row, "%d jours : %s" % [int(g.n), Quests.gift_text(g)], 16, UiTheme.MUTED if got else UiTheme.TEXT)
 					t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 				_note("Un jour d'absence est pardonné ; au-delà, la série retombe à son dernier palier gagné, jamais à zéro.")

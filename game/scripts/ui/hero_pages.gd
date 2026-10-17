@@ -718,7 +718,7 @@ class CardsPage extends HBoxContainer:
 				lines.append("[color=#ffd76a]%s[/color]" % Procs.describe(pr))
 			if not ok:
 				var p := Cards.unlock_progress(id)
-				lines.append("\n[color=#ffcf6b]🔒 Pour la débloquer : %s — %d / %d[/color]" % [Cards.unlock_text(id), int(p.x), int(p.y)])
+				lines.append("\n[color=#ffcf6b]" + Ico.LOCK_BB + " Pour la débloquer : %s — %d / %d[/color]" % [Cards.unlock_text(id), int(p.x), int(p.y)])
 			_detail.text = "\n".join(lines))
 		return b
 

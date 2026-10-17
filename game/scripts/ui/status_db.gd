@@ -103,7 +103,8 @@ static func icon(status: String) -> Texture2D:
 		return UiTheme.texture(own)
 	if EDEN_ICONS.has(status):
 		return UiTheme.texture(String(EDEN_ICONS[status]))
-	return UiTheme.texture(String(_skill_icon_map().get(status, "")))
+	var sk := String(_skill_icon_map().get(status, ""))
+	return UiTheme.texture(sk) if sk != "" else Ico.tex("st_" + status, 40)  # dernier recours : pictogramme maison (lot ICO-1)
 
 
 ## Icône d'Eden du sort qui donne l'effet (buff du sort ou effet appliqué aux monstres),

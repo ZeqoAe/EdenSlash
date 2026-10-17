@@ -321,7 +321,7 @@ func _refresh_detail() -> void:
 • %s : %s (jusqu'à %d fois)" % [String(d.name).get_slice(" : ", 1), " ; ".join(Cards.skill_mod_lines(d, 0.0, 1.0)), int(d.max)]
 			var need := Progression.skill_level_of(_class_id, int(sk.id))
 			if not Progression.skill_unlocked(_class_id, int(sk.id)):
-				txt += "\n\n[color=#ffcf6b]🔒 Débloqué au niveau %d de maîtrise de la classe[/color]" % need
+				txt += "\n\n[color=#ffcf6b]" + Ico.LOCK_BB + " Débloqué au niveau %d de maîtrise de la classe[/color]" % need
 			_detail.text = txt
 		"weapon":
 			var wt := String(_selected.data)

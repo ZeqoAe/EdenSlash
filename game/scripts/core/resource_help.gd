@@ -6,7 +6,7 @@ extends RefCounted
 
 ## id -> {name, icon (nom d'icône du menu, ou "item:<chemin>" / "craft:<clé>"), get (où l'obtenir), spend (où la dépenser)}
 const KINDS := {
-	"insignia": {"name": "Insignes", "icon": "upgrade",
+	"insignia": {"name": "Insignes", "icon": "ico:res_insignia",
 		"get": "Survie (cartes et boss), première victoire du jour en JcJ.",
 		"spend": "Atelier (pièces et plans de donjon), boutique des Coffres (apparences), leçons de maîtrise."},
 	"crystal": {"name": "Cristaux", "icon": "item:crystal",
@@ -24,34 +24,34 @@ const KINDS := {
 	"formula": {"name": "Formules", "icon": "craft:scroll:optimize:5",
 		"get": "Siège (formules hautes), coffres du joaillier, scribe de la Survie.",
 		"spend": "Forge > Enchanter : un enchantement par pièce."},
-	"plan": {"name": "Plans", "icon": "equipment",
+	"plan": {"name": "Plans", "icon": "ico:res_plan",
 		"get": "Donjons : chaque boss donne son plan la première fois qu'il tombe.",
 		"spend": "Atelier > Plans de donjon : une pièce à la panoplie du boss, en insignes."},
-	"piece": {"name": "Pièces", "icon": "armor",
+	"piece": {"name": "Pièces", "icon": "ico:res_piece",
 		"get": "Survie : les coffres d'emplacement révèlent des plans.",
 		"spend": "Atelier > Fabriquer : une pièce dont tu as le plan, en insignes."},
-	"panoply": {"name": "Panoplies", "icon": "chest",
+	"panoply": {"name": "Panoplies", "icon": "ico:res_panoply",
 		"get": "Donjons : un coffre de set, trois pièces à choisir.",
 		"spend": "Héros > Équipement : 2, 4 et 6 pièces portées donnent des bonus."},
-	"spirit": {"name": "Esprits", "icon": "class",
+	"spirit": {"name": "Esprits", "icon": "ico:res_spirit",
 		"get": "Panthéon : chaque cerveau battu donne une pièce des Esprits.",
 		"spend": "Atelier > Fabriquer (insignes) puis Héros > Équipement, pour toutes les classes."},
-	"mastery": {"name": "Maîtrise", "icon": "expertise",
+	"mastery": {"name": "Maîtrise", "icon": "ico:res_mastery",
 		"get": "Toutes les activités. La Survie en donne le plus.",
 		"spend": "Rien à dépenser : chaque niveau ouvre sorts, certificats et talents."},
-	"look": {"name": "Apparences", "icon": "collection",
+	"look": {"name": "Apparences", "icon": "ico:res_look",
 		"get": "Coffres d'apparence : Tour, Siège, Ruée, Battle royale, Échiquier, Roulette.",
 		"spend": "Héros > Apparence."},
-	"title": {"name": "Titres", "icon": "user",
+	"title": {"name": "Titres", "icon": "ico:res_title",
 		"get": "Ruée, Ligue, Panthéon, Battle royale, Échiquier, succès.",
 		"spend": "Carnet > Succès et titres : choisis celui que tu portes."},
-	"rank": {"name": "Rangs", "icon": "stats",
+	"rank": {"name": "Rangs", "icon": "ico:res_rank",
 		"get": "Ligue : trois victoires d'affilée par rang.",
 		"spend": "Ils ouvrent Battle royale, Arènes, Gantelet et Panthéon."},
-	"stars": {"name": "Étoiles", "icon": "new",
+	"stars": {"name": "Étoiles", "icon": "ico:res_star",
 		"get": "Survie : victoire, sans résurrection, défi de l'époque.",
 		"spend": "Elles font avancer les époques jusqu'aux rangs héroïques."},
-	"cards": {"name": "Cartes", "icon": "grimoire",
+	"cards": {"name": "Cartes", "icon": "ico:res_card",
 		"get": "Survie : chaque niveau gagné propose des cartes.",
 		"spend": "Elles renforcent le build de la partie en cours."},
 }
@@ -102,10 +102,12 @@ static func icon(kind: String) -> Texture2D:
 		return UiTheme.texture(Items.material_icon(name.trim_prefix("item:")))
 	if name.begins_with("craft:"):
 		return UiTheme.texture(Craft.icon(name.trim_prefix("craft:")))
+	if name.begins_with("ico:"):  # pictogramme maison en couleurs (lot ICO-1)
+		return Ico.tex(name.trim_prefix("ico:"), 24)
 	return MenuWidgets.icon(name)
 
 
 ## Les ressources qui gardent leurs couleurs d'origine (les autres sont teintées comme les icônes du menu).
 static func is_item_icon(kind: String) -> bool:
 	var name := String(KINDS.get(kind, {}).get("icon", ""))
-	return name.begins_with("item:") or name.begins_with("craft:")
+	return name.begins_with("item:") or name.begins_with("craft:") or name.begins_with("ico:")

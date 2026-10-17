@@ -346,7 +346,7 @@ func _refresh_spells(c: String) -> void:
 		if s.get("shared", false):
 			tip = "[color=#9fd0ff]Sort partagé (classe d'origine)[/color]\n" + tip
 		if not ok:
-			tip += "\n\n[color=#ffcf6b]🔒 Débloqué à la maîtrise %d[/color]" % Progression.skill_level_of(c, int(s.id))
+			tip += "\n\n[color=#ffcf6b]" + Ico.LOCK_BB + " Débloqué à la maîtrise %d[/color]" % Progression.skill_level_of(c, int(s.id))
 		tip += "\n[color=#ffcf6b]Clic : ouvrir dans le Grimoire[/color]"
 		b.tooltip_text = " "
 		b.tip = "[img=48x48]%s[/img]  [b]%s[/b]\n%s" % [String(s.get("icon", "")), s.get("name", ""), tip]
@@ -562,8 +562,9 @@ class CertChip extends ItemWidgets.TipButton:
 			var m := Hud._label(self, "✔", 18, Color(0.5, 1.0, 0.6))
 			m.position = Vector2(44, 2)
 		elif not ok:
-			var m := Hud._label(self, "🔒", 14, UiTheme.MUTED)
-			m.position = Vector2(42, 44)
+			var m := Ico.rect("lock", 16)
+			add_child(m)
+			m.position = Vector2(40, 40)
 		tooltip_text = " "
 		tip = TalentsPage.cert_tip(k, ok, lvl) + ("\n[color=#ffcf6b]Clic : poser sur le plateau (ou glisser)[/color]" if ok and not on else ("\n[color=#ffcf6b]Clic : retirer[/color]" if on else ""))
 		tip_border = col

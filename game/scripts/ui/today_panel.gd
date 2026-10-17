@@ -96,10 +96,7 @@ func _quest_button(q: Dictionary) -> Button:
 	h.add_theme_constant_override("separation", 8)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(h)
-	var mark := Hud._label(h, "◆" if done else "◇", 16, UiTheme.BUFF if done else UiTheme.GOLD_DIM)
-	mark.custom_minimum_size = Vector2(18, 0)
-	mark.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	mark.size_flags_vertical = Control.SIZE_FILL
+	Ico.mark(h, "quest_done" if done else "quest_todo", 16)
 	var title := Hud._label(h, Quests.title(q), 15, UiTheme.MUTED if done else UiTheme.TEXT)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.clip_text = true

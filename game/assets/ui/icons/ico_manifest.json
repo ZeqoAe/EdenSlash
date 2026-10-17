@@ -1,0 +1,882 @@
+{
+ "act_arena": {
+  "kind": "tile",
+  "group": "Activités",
+  "desc": "Arènes : amphithéâtre"
+ },
+ "act_autochess": {
+  "kind": "tile",
+  "group": "Activités",
+  "desc": "L'Échiquier : pion"
+ },
+ "act_duel": {
+  "kind": "tile",
+  "group": "Activités",
+  "desc": "Duel : épées croisées"
+ },
+ "act_dungeon": {
+  "kind": "tile",
+  "group": "Activités",
+  "desc": "Donjons : porte voûtée"
+ },
+ "act_gauntlet": {
+  "kind": "tile",
+  "group": "Activités",
+  "desc": "Gantelet : poing"
+ },
+ "act_league": {
+  "kind": "tile",
+  "group": "Activités",
+  "desc": "Ligue : écu à chevrons"
+ },
+ "act_pantheon": {
+  "kind": "tile",
+  "group": "Activités",
+  "desc": "Panthéon : temple"
+ },
+ "act_quests": {
+  "kind": "tile",
+  "group": "Activités",
+  "desc": "Quêtes : parchemin"
+ },
+ "act_royale": {
+  "kind": "tile",
+  "group": "Activités",
+  "desc": "Battle royale : zone et couronne"
+ },
+ "act_rush": {
+  "kind": "tile",
+  "group": "Activités",
+  "desc": "Ruée des boss : tête cornue"
+ },
+ "act_siege": {
+  "kind": "tile",
+  "group": "Activités",
+  "desc": "Le Siège : muraille et fanion"
+ },
+ "act_survival": {
+  "kind": "tile",
+  "group": "Activités",
+  "desc": "Survie : feu de camp"
+ },
+ "act_survivor": {
+  "kind": "tile",
+  "group": "Activités",
+  "desc": "Survivant : éclair"
+ },
+ "act_tower": {
+  "kind": "tile",
+  "group": "Activités",
+  "desc": "La Tour"
+ },
+ "act_training": {
+  "kind": "tile",
+  "group": "Activités",
+  "desc": "Entraînement : cible"
+ },
+ "alert": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "attention (triangle)"
+ },
+ "arrow_right": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "flèche (→)"
+ },
+ "boss_adds": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Renforts"
+ },
+ "boss_barrage": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Salve de tirs"
+ },
+ "boss_barrier": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Barrière"
+ },
+ "boss_blink": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Saut d'ombre"
+ },
+ "boss_charge": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Charge"
+ },
+ "boss_cleave": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Griffes"
+ },
+ "boss_clones": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Illusions"
+ },
+ "boss_crystals": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Cristaux de soin"
+ },
+ "boss_enrage": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Rage"
+ },
+ "boss_fan": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Éventail"
+ },
+ "boss_frenzy": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Impatience : sablier"
+ },
+ "boss_gale": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Bourrasque"
+ },
+ "boss_gaze": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Regard"
+ },
+ "boss_grid": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Damier"
+ },
+ "boss_hit": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Coup (attaque sans nom)"
+ },
+ "boss_lasers": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Rayons"
+ },
+ "boss_leap": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Bond"
+ },
+ "boss_marks": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Marque"
+ },
+ "boss_meteors": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Pluie de météores"
+ },
+ "boss_nova": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Nova"
+ },
+ "boss_pet": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Compagnon : patte"
+ },
+ "boss_phase2": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Fureur"
+ },
+ "boss_puddles": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Flaques"
+ },
+ "boss_rampage": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Ruée : chevrons"
+ },
+ "boss_reflect": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Miroir"
+ },
+ "boss_ring_burst": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Couronne d'orbes"
+ },
+ "boss_safe_zone": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Cercle sûr"
+ },
+ "boss_shrink": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "L'arène se resserre"
+ },
+ "boss_slams": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Frappes au sol : marteau"
+ },
+ "boss_spiral": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Spirale"
+ },
+ "boss_stomp": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Ondes de choc"
+ },
+ "boss_swarm": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Nuée"
+ },
+ "boss_sweep": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Balayage"
+ },
+ "boss_totems": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Totems"
+ },
+ "boss_turrets": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Tourelles"
+ },
+ "boss_vortex": {
+  "kind": "sym",
+  "group": "Mécaniques de boss",
+  "desc": "Tourbillon"
+ },
+ "check": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "coche (✔)"
+ },
+ "chevron_down": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "chevron ▾ (déplier)"
+ },
+ "chevron_right": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "chevron › (aller)"
+ },
+ "cmp_down": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "moins bien (▼)"
+ },
+ "cmp_up": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "mieux (▲)"
+ },
+ "coin": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "pièce d'or"
+ },
+ "cross": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "croix (✘ : refusé, manque)"
+ },
+ "crown": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "couronne (record, meilleur)"
+ },
+ "diff_heroic": {
+  "kind": "tile",
+  "group": "Rangs et difficultés",
+  "desc": "Difficulté Héroïque : deux chevrons"
+ },
+ "diff_mythic": {
+  "kind": "tile",
+  "group": "Rangs et difficultés",
+  "desc": "Difficulté Mythique : trois chevrons"
+ },
+ "diff_normal": {
+  "kind": "tile",
+  "group": "Rangs et difficultés",
+  "desc": "Difficulté Normal : un chevron"
+ },
+ "fam_arcane": {
+  "kind": "tile",
+  "group": "Familles de classes",
+  "desc": "Arcane : étoile"
+ },
+ "fam_ferveur": {
+  "kind": "tile",
+  "group": "Familles de classes",
+  "desc": "Ferveur : croix de soin"
+ },
+ "fam_ombre": {
+  "kind": "tile",
+  "group": "Familles de classes",
+  "desc": "Ombre : croissant"
+ },
+ "fam_rempart": {
+  "kind": "tile",
+  "group": "Familles de classes",
+  "desc": "Rempart : écu"
+ },
+ "fam_traque": {
+  "kind": "tile",
+  "group": "Familles de classes",
+  "desc": "Traque : arc"
+ },
+ "follow": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "suivre (signet)"
+ },
+ "gem": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "gemme (améthyste)"
+ },
+ "gem_empty": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "emplacement de gemme vide (◇)"
+ },
+ "goal": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "objectif suivi (fanion)"
+ },
+ "grave": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "chute (✝) : pierre tombale"
+ },
+ "heart": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "cœur (vie)"
+ },
+ "help": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "aide (?)"
+ },
+ "hourglass": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "sablier (minuteur)"
+ },
+ "info": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "information (i)"
+ },
+ "key_cap": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Touche de clavier (vide : le jeu pose la lettre)"
+ },
+ "key_mouse_l": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Souris : clic gauche"
+ },
+ "key_mouse_r": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Souris : clic droit"
+ },
+ "key_mouse_wheel": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Souris : molette"
+ },
+ "key_wide": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Grande touche de clavier (Espace, Maj, Entrée)"
+ },
+ "lock": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "cadenas (fermé)"
+ },
+ "mana": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "goutte (magie)"
+ },
+ "mode_sealed": {
+  "kind": "tile",
+  "group": "Raretés et modes",
+  "desc": "Mode scellé : sceau de cire"
+ },
+ "new": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "nouveau (« ! » rond mandarine)"
+ },
+ "pad_a": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette : A (validation)"
+ },
+ "pad_b": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette : B (retour)"
+ },
+ "pad_circle": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette PlayStation : rond"
+ },
+ "pad_cross": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette PlayStation : croix"
+ },
+ "pad_dpad": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette : croix directionnelle"
+ },
+ "pad_l1": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette : L1"
+ },
+ "pad_l2": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette : L2"
+ },
+ "pad_lb": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette : LB"
+ },
+ "pad_lt": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette : LT"
+ },
+ "pad_menu": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette : Menu"
+ },
+ "pad_r1": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette : R1"
+ },
+ "pad_r2": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette : R2"
+ },
+ "pad_rb": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette : RB"
+ },
+ "pad_rt": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette : RT"
+ },
+ "pad_square": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette PlayStation : carré"
+ },
+ "pad_stick": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette : stick"
+ },
+ "pad_triangle": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette PlayStation : triangle"
+ },
+ "pad_x": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette : X"
+ },
+ "pad_y": {
+  "kind": "glyph",
+  "group": "Touches",
+  "desc": "Manette : Y"
+ },
+ "plus": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "ajouter (+)"
+ },
+ "quest_achv": {
+  "kind": "tile",
+  "group": "Résultats et quêtes",
+  "desc": "Succès : médaille étoilée"
+ },
+ "quest_contract": {
+  "kind": "tile",
+  "group": "Résultats et quêtes",
+  "desc": "Contrats : acte à sceau"
+ },
+ "quest_daily": {
+  "kind": "tile",
+  "group": "Résultats et quêtes",
+  "desc": "Défi du jour : calendrier"
+ },
+ "quest_done": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "étape faite (losange pomme, coche)"
+ },
+ "quest_todo": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "étape à faire (losange creux)"
+ },
+ "rank_0": {
+  "kind": "tile",
+  "group": "Rangs et difficultés",
+  "desc": "Non classé"
+ },
+ "rank_1": {
+  "kind": "tile",
+  "group": "Rangs et difficultés",
+  "desc": "Bronze"
+ },
+ "rank_2": {
+  "kind": "tile",
+  "group": "Rangs et difficultés",
+  "desc": "Argent"
+ },
+ "rank_3": {
+  "kind": "tile",
+  "group": "Rangs et difficultés",
+  "desc": "Or"
+ },
+ "rank_4": {
+  "kind": "tile",
+  "group": "Rangs et difficultés",
+  "desc": "Platine"
+ },
+ "rar_0": {
+  "kind": "glyph",
+  "group": "Raretés et modes",
+  "desc": "Rareté : Commun"
+ },
+ "rar_1": {
+  "kind": "glyph",
+  "group": "Raretés et modes",
+  "desc": "Rareté : Spécial"
+ },
+ "rar_2": {
+  "kind": "glyph",
+  "group": "Raretés et modes",
+  "desc": "Rareté : Rare"
+ },
+ "rar_3": {
+  "kind": "glyph",
+  "group": "Raretés et modes",
+  "desc": "Rareté : Épique"
+ },
+ "rar_4": {
+  "kind": "glyph",
+  "group": "Raretés et modes",
+  "desc": "Rareté : Mythique"
+ },
+ "rar_5": {
+  "kind": "glyph",
+  "group": "Raretés et modes",
+  "desc": "Rareté : Légendaire"
+ },
+ "refresh": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "rejouer / recommencer (↻)"
+ },
+ "res_card": {
+  "kind": "tile",
+  "group": "Ressources",
+  "desc": "Cartes"
+ },
+ "res_draw": {
+  "kind": "tile",
+  "group": "Résultats et quêtes",
+  "desc": "Égalité"
+ },
+ "res_flee": {
+  "kind": "tile",
+  "group": "Résultats et quêtes",
+  "desc": "Abandon : porte et flèche"
+ },
+ "res_insignia": {
+  "kind": "tile",
+  "group": "Ressources",
+  "desc": "Insignes : médaille à ruban"
+ },
+ "res_level": {
+  "kind": "tile",
+  "group": "Ressources",
+  "desc": "Niveau de héros : flèche vers le haut"
+ },
+ "res_look": {
+  "kind": "tile",
+  "group": "Ressources",
+  "desc": "Apparences : cintre"
+ },
+ "res_lose": {
+  "kind": "tile",
+  "group": "Résultats et quêtes",
+  "desc": "Défaite : nuage de pluie"
+ },
+ "res_mastery": {
+  "kind": "tile",
+  "group": "Ressources",
+  "desc": "Maîtrise : livre et étoile"
+ },
+ "res_panoply": {
+  "kind": "tile",
+  "group": "Ressources",
+  "desc": "Panoplies : casque"
+ },
+ "res_pe": {
+  "kind": "tile",
+  "group": "Ressources",
+  "desc": "Puissance d'équipement : écu et éclair"
+ },
+ "res_piece": {
+  "kind": "tile",
+  "group": "Ressources",
+  "desc": "Pièces : plastron"
+ },
+ "res_plan": {
+  "kind": "tile",
+  "group": "Ressources",
+  "desc": "Plans : rouleau de plan"
+ },
+ "res_rank": {
+  "kind": "tile",
+  "group": "Ressources",
+  "desc": "Rangs : chevrons"
+ },
+ "res_record": {
+  "kind": "tile",
+  "group": "Résultats et quêtes",
+  "desc": "Record : éclat"
+ },
+ "res_spirit": {
+  "kind": "tile",
+  "group": "Ressources",
+  "desc": "Esprits : fantôme"
+ },
+ "res_star": {
+  "kind": "tile",
+  "group": "Ressources",
+  "desc": "Étoiles d'époque"
+ },
+ "res_title": {
+  "kind": "tile",
+  "group": "Ressources",
+  "desc": "Titres : bannière"
+ },
+ "res_win": {
+  "kind": "tile",
+  "group": "Résultats et quêtes",
+  "desc": "Victoire : coupe"
+ },
+ "scales": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "balance (pacte)"
+ },
+ "skull": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "crâne (menace)"
+ },
+ "slot_back": {
+  "kind": "sym",
+  "group": "Emplacements",
+  "desc": "Cape"
+ },
+ "slot_boots": {
+  "kind": "sym",
+  "group": "Emplacements",
+  "desc": "Bottes"
+ },
+ "slot_chest": {
+  "kind": "sym",
+  "group": "Emplacements",
+  "desc": "Torse"
+ },
+ "slot_gloves": {
+  "kind": "sym",
+  "group": "Emplacements",
+  "desc": "Gants"
+ },
+ "slot_head": {
+  "kind": "sym",
+  "group": "Emplacements",
+  "desc": "Tête"
+ },
+ "slot_legs": {
+  "kind": "sym",
+  "group": "Emplacements",
+  "desc": "Jambes"
+ },
+ "slot_necklace": {
+  "kind": "sym",
+  "group": "Emplacements",
+  "desc": "Collier"
+ },
+ "slot_offhand": {
+  "kind": "sym",
+  "group": "Emplacements",
+  "desc": "Arme secondaire : écu"
+ },
+ "slot_ring": {
+  "kind": "sym",
+  "group": "Emplacements",
+  "desc": "Bague"
+ },
+ "slot_trophy": {
+  "kind": "sym",
+  "group": "Emplacements",
+  "desc": "Trophée"
+ },
+ "slot_weapon": {
+  "kind": "sym",
+  "group": "Emplacements",
+  "desc": "Arme"
+ },
+ "spark": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "éclat (✶ passif, ✦ nouveau plan)"
+ },
+ "st_angel": {
+  "kind": "tile",
+  "group": "Statuts",
+  "desc": "Ange gardien : ailes et halo"
+ },
+ "st_bleed": {
+  "kind": "tile",
+  "group": "Statuts",
+  "desc": "Saignement : goutte"
+ },
+ "st_disarm": {
+  "kind": "tile",
+  "group": "Statuts",
+  "desc": "Désarmé : épée barrée"
+ },
+ "st_fear": {
+  "kind": "tile",
+  "group": "Statuts",
+  "desc": "Terreur : fantôme effrayé"
+ },
+ "st_grace": {
+  "kind": "tile",
+  "group": "Statuts",
+  "desc": "Grâce de sagesse : étincelle"
+ },
+ "st_hunter_stance": {
+  "kind": "tile",
+  "group": "Statuts",
+  "desc": "Posture du chasseur : œil de cible"
+ },
+ "st_might": {
+  "kind": "tile",
+  "group": "Statuts",
+  "desc": "Puissance : poing"
+ },
+ "st_resolve": {
+  "kind": "tile",
+  "group": "Statuts",
+  "desc": "Résolution : écu à étoile"
+ },
+ "st_root": {
+  "kind": "tile",
+  "group": "Statuts",
+  "desc": "Immobilisé : racines"
+ },
+ "st_sleep": {
+  "kind": "tile",
+  "group": "Statuts",
+  "desc": "Endormi : Z"
+ },
+ "st_survival": {
+  "kind": "tile",
+  "group": "Statuts",
+  "desc": "Survie : cœur"
+ },
+ "st_swift": {
+  "kind": "tile",
+  "group": "Statuts",
+  "desc": "Célérité : aile"
+ },
+ "st_thorns": {
+  "kind": "tile",
+  "group": "Statuts",
+  "desc": "Épines"
+ },
+ "st_titan": {
+  "kind": "tile",
+  "group": "Statuts",
+  "desc": "Mur du titan : bloc"
+ },
+ "st_vitality": {
+  "kind": "tile",
+  "group": "Statuts",
+  "desc": "Vitalité : croix verte"
+ },
+ "star": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "étoile pleine (★)"
+ },
+ "star_empty": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "étoile vide (☆)"
+ },
+ "swap": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "échanger (⇄)"
+ },
+ "swords": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "épées croisées (⚔)"
+ },
+ "unlock": {
+  "kind": "glyph",
+  "group": "Signes d'interface",
+  "desc": "cadenas ouvert"
+ }
+}

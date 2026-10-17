@@ -19,6 +19,7 @@ const DIRS := {&"left": Vector2.LEFT, &"right": Vector2.RIGHT, &"up": Vector2.UP
 const BAR_H := 28.0
 const BAR_FONT := 15
 ## Couleur des boutons de face (Xbox : disque coloré ; PlayStation : symbole coloré sur disque sombre).
+const GLYPH_ICON := {"A": "pad_a", "B": "pad_b", "X": "pad_x", "Y": "pad_y", "Croix": "pad_cross", "Rond": "pad_circle", "Carré": "pad_square", "Triangle": "pad_triangle"}  # pictogrammes (lot ICO-1)
 const GLYPH_COLORS := {"A": Color(0.45, 0.85, 0.4), "B": Color(0.95, 0.35, 0.3), "X": Color(0.35, 0.6, 0.95), "Y": Color(0.98, 0.82, 0.3),
 	"Croix": Color(0.45, 0.7, 1.0), "Rond": Color(0.95, 0.4, 0.4), "Carré": Color(0.95, 0.6, 0.85), "Triangle": Color(0.4, 0.9, 0.7)}
 
@@ -515,6 +516,10 @@ func _draw_glyph(n: String, x: float, cy: float) -> float:
 		return w
 	var c := Vector2(x + 11.0, cy)
 	var col: Color = GLYPH_COLORS[n]
+	var gt := Ico.tex(String(GLYPH_ICON.get(n, "")), 24)
+	if gt != null:
+		_bar.draw_texture_rect(gt, Rect2(x - 1.0, cy - 12.0, 24.0, 24.0), false)
+		return w
 	if Settings.pad_layout() == "ps":
 		_bar.draw_circle(c, 11.0, Color(0.12, 0.12, 0.18))
 		match n:

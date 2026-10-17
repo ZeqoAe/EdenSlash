@@ -272,7 +272,8 @@ static func _diff_tabs(lobby, zid: String, diff: int) -> Control:
 		var on := i == diff
 		var won := Dungeons.boss_cleared(sel, i) > 0
 		var b := Button.new()
-		b.text = ("🔒 " if not ok_pe else "") + "%s · %d" % [Dungeons.DIFF_NAMES[i], Dungeons.level(zid, i)] + (" ✔" if won else "")
+		b.text = "%s · %d" % [Dungeons.DIFF_NAMES[i], Dungeons.level(zid, i)]
+		Ico.state(b, not ok_pe, won)
 		b.focus_mode = Control.FOCUS_NONE
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.size_flags_vertical = Control.SIZE_SHRINK_END

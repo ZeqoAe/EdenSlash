@@ -342,6 +342,8 @@ func _ghost_icon(slot: String) -> String:
 		var cls := GameData.class_data(_cls())
 		var ws: Array = GameData.weapon_type(String(cls.get("weapon_type", "katana"))).get("weapons", [])
 		return String(ws[0].icon) if not ws.is_empty() else ""
+	if Ico.has("slot_" + slot):  # silhouette de l'emplacement (lot ICO-1) plutôt qu'une pièce au hasard
+		return Ico.path("slot_" + slot, 64)
 	var list: Array = Items.icons().get(slot, [])
 	return String(list[0]) if not list.is_empty() else ""
 

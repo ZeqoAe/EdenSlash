@@ -169,7 +169,8 @@ func _chip(id: String) -> Button:
 	b.focus_mode = Control.FOCUS_NONE
 	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	b.clip_text = true
-	b.text = ("%s" if open else "🔒 %s") % cd.get("name_fr", id)
+	b.text = "%s" % cd.get("name_fr", id)
+	Ico.lock(b, not open)
 	if open and Profile.expertise_level(id) > 1:
 		b.text += "  · %d" % Profile.expertise_level(id)
 	b.icon = UiTheme.texture(String(cd.get("icon", "")))
@@ -219,7 +220,7 @@ func _show_detail(id: String, refused := false) -> void:
 	if open:
 		lines.append("[color=#8fe39a]Débloquée[/color] · maîtrise niveau %d" % Profile.expertise_level(id))
 	else:
-		lines.append("[color=#ffcf6b]🔒 Pour la débloquer : %s[/color]" % Progression.mission_line(id))
+		lines.append("[color=#ffcf6b]" + Ico.LOCK_BB + " Pour la débloquer : %s[/color]" % Progression.mission_line(id))
 		if refused:
 			lines.append("[color=#ff8a8a]Classe encore verrouillée.[/color]")
 	_detail.text = "\n".join(lines)
