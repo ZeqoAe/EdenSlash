@@ -28,6 +28,7 @@ const FADE_IN := 0.08
 const FADE_OUT := 0.16
 
 var pose_name := ""
+var skip: Array = []  # poses remplacées par des animations neuves (ClassPremium, méta « proc_skip » du modèle)
 var _pose: Dictionary = {}
 var _weight := 0.0
 var _until := 0.0  # instant (s, horloge du moteur) où la pose commence à retomber
@@ -37,7 +38,7 @@ var _order: Array = []  # indices des os de la pose, parent d'abord
 
 ## Pose [param name] tenue [param duration] s (puis retombée en FADE_OUT s).
 func hold(name: String, duration: float) -> void:
-	if not POSES.has(name):
+	if not POSES.has(name) or name in skip:
 		return
 	if name != pose_name:
 		pose_name = name
@@ -62,9 +63,11 @@ static func on(model: Node3D) -> ProcPose:
 		return null
 	for c in sk.get_children():
 		if c is ProcPose:
+			(c as ProcPose).skip = model.get_meta("proc_skip", [])
 			return c
 	var p := ProcPose.new()
 	p.name = "ProcPose"
+	p.skip = model.get_meta("proc_skip", [])
 	sk.add_child(p)
 	return p
 

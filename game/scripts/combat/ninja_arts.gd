@@ -57,6 +57,7 @@ static func on_cast(p: Player, s: Dictionary, action: Dictionary, aim := Vector3
 			p._skill_lock_until += hold
 			t_hit += hold
 			_pose(p, "raise", t_hit)
+			ClassPremium.play_ult(p, t_hit)  # « Héros détaillé » : charge bras levés puis lancer (animations neuves)
 			action["_vis"] = HandFx.make(p, "Bip01 R Hand", Vector3(0, 0.95, 0), 0.62, t_hit, true)
 			_camera_punch(p, t_hit)
 			p._shake(0.25)

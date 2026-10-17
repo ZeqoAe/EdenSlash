@@ -603,6 +603,8 @@ func _build_display_page() -> void:
 	_option(v, "Anticrénelage (MSAA)", "display", "msaa", [[0, "Désactivé"], [2, "2×"], [4, "4×"], [8, "8×"]])
 	_option(v, "Taille de l'interface", "display", "ui_scale", [
 		[0.75, "75 %"], [0.85, "85 %"], [1.0, "100 %"], [1.1, "110 %"], [1.25, "125 %"], [1.5, "150 %"]])
+	_check(v, "Héros détaillé", "display", "hero_detail",  # lot CHR-2 (ClassPremium)
+		"Classes maison : tête détaillée, mèches et rubans qui bougent, animations propres (si installées sur ce PC).")
 	# lot HUB-1, P0-9 : le HUD en partie a sa propre taille et son opacité (les menus gardent la taille de l'interface)
 	_section(v, "HUD en partie")
 	# lot HUD-2 (BM-HUB P1-3) : profils prêts à l'emploi avant tout éditeur libre

@@ -22,6 +22,7 @@ func check(label: String, ok: bool) -> void:
 func _ready() -> void:
 	check("profil de test", Profile.save_path == Profile.TEST_SAVE_PATH)
 	Settings.reset_all()
+	Settings.set_v("display", "hero_detail", false)  # apparence et poses de CHR-1 (le « Héros détaillé » : test_chr2)
 	Profile.reset_all()
 	_test_data()
 	await _test_world()

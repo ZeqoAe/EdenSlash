@@ -34,3 +34,6 @@ build/
 
 # curseurs (lot K1) : importés au premier lancement, lus directement sinon
 game/assets/ui/cursors/*.import
+
+# « Héros détaillé » (lot CHR-2) : têtes et textures de designs inspirés, hors du dépôt public
+game/assets/player/premium/

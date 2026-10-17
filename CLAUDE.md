@@ -361,6 +361,11 @@ Clés en plus : `look` (`core/class_look.gd` : teintures, `hair_gain`, bandeau p
 Verlet), `auto` + `steps` (auto-attaque de classe, `Player._class_auto`), formes de sort `clone` / `orb` / `ult` (`combat/ninja_arts.gd`),
 poses procédurales `player/proc_pose.gd` (SkeletonModifier3D). Planches d'animations : `tools/anim_sheet.tscn`. Test `test_chr1` ;
 captures `tests/shot_chr1.tscn` (sortie hors dépôt : les images de ce design restent dans `C:\AI\chr1\`).
+**Héros détaillé** (lot CHR-2, `conception/art/R_CHR2.md`) : clé `look.premium` -> `core/class_premium.gd` (`ClassPremium`, réglage
+`display.hero_detail`) : bibliothèque d'animations Blender (`tools/art/chr2_anims.py` -> `tools/chr2/chr2_anim_build.gd` ->
+`assets/player/anims/chr2_ninja.res`) jouée à la place d'animations d'Eden de **même longueur** (`Combatant.play`, méta `anim_remap` ; le
+calage du jeu lit toujours l'animation d'Eden), tête GLB (`tools/art/chr2_head.py`, os neufs + `SpringBoneSimulator3D`), textures
+`tools/art/chr2_tex.py` ; fichiers du design dans `game/assets/player/premium/` (ignoré par git, hors dépôt). Test `test_chr2`, mesure `tools/chr2/chr2_perf.tscn`.
 
 ### Jouer ensemble (Mode amis, multijoueur, en cours ; étude `conception/benchmark/NETWORK.md`, lots NET-A à NET-M)
 Hôte autoritaire sur ENet en paquets bruts (aucun `@rpc`, l'API multijoueur de l'arbre n'est pas touchée) : `core/net/` — `NetProtocol`

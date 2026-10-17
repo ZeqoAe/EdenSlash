@@ -11,6 +11,7 @@ extends RefCounted
 ##   face_marks : traits peints sur la texture du visage (repère 512 px de lfaces01b : [x0, y0, x1, y1, épaisseur]) ;
 ##   spikes     : mèches en pointes ajoutées sur la tête (cônes, couleur des cheveux) ;
 ##   ribbon     : deux rubans de bandeau à ressort derrière la tête (chaîne de points, rendu en bande, suit la tête).
+##   premium    : « Héros détaillé » (lot CHR-2, ClassPremium) : animations neuves, tête détaillée, tenue 2048.
 ## Appelé par Player._dress_model, EdenModel.instantiate_hero et ClassRival._ready.
 
 const FACE_TEX := "res://assets/player/textures/lfaces01b__4c3821.png"
@@ -30,6 +31,8 @@ static func apply(model: Node3D, cls: Dictionary, opts: Dictionary = {}) -> void
 	if outfit == "" and parts.size() >= 1 and dyes.has(String(parts[0])):
 		EdenModel.apply_dye(model, String(parts[0]), dyes[String(parts[0])])
 	var hair_set: bool = opts.get("hair_set", false)
+	if ClassPremium.apply(model, cls, opts):
+		return  # tête détaillée (lot CHR-2) : visage, cheveux, bandeau et rubans sont dans la pièce
 	if not hair_set and parts.size() >= 2 and look.has("hair_tint"):
 		var c: Array = look.hair_tint
 		HeroLook._tint_part(model, String(parts[1]), Color8(int(c[0]), int(c[1]), int(c[2])))

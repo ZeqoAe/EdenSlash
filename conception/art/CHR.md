@@ -113,3 +113,6 @@ de pied, aucun signe de mains**, des courses d'Eden génériques (pas de course 
   (2) `SpringBoneSimulator3D` sur les chaînes de cheveux existantes (1-2 j) ; (3) un contour encré du shader toon (1 j).
 - **Ne pas investir** maintenant : mouvement par IA, texture IA projetée, coiffures image → 3D ; à reprendre si un vrai artiste 3D
   ou animateur rejoint le projet (une demi-journée de son travail vaut ici plusieurs jours d'agent).
+
+## Suite : lot CHR-2
+L'exploration « classe premium » (tête neuve, mèches 3D, 10 os à ressorts, 7 animations Blender, coûts mesurés, reciblage et mouvement par IA évalués) est dans `R_CHR2.md` : plusieurs « dur » de ce tableau sont devenus « moyen ».

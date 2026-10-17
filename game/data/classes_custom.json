@@ -1,5 +1,5 @@
 {
- "_doc": "Classes faites à la main (lot CHR-1, conception/art/R_CHR1.md) : même format que data/classes.json (tools/build_classes.py), lues par GameData.custom_classes. Hors des 60 classes d'Eden : jamais tirées par les modes à IA (Battle royale, Siège, Échiquier, Arènes, Tour), pas d'arbre de talents ni de cerveau. Clés en plus : look (ClassLook), auto (auto-attaque propre : Player.auto_spec), open (ouverte dès le départ), proto (prototype).",
+ "_doc": "Classes faites à la main (lot CHR-1, conception/art/R_CHR1.md) : même format que data/classes.json (tools/build_classes.py), lues par GameData.custom_classes. Hors des 60 classes d'Eden : jamais tirées par les modes à IA (Battle royale, Siège, Échiquier, Arènes, Tour), pas d'arbre de talents ni de cerveau. Clés en plus : look (ClassLook ; look.premium : « Héros détaillé », ClassPremium, lot CHR-2), auto (auto-attaque propre : Player.auto_spec), open (ouverte dès le départ), proto (prototype).",
  "whirl_ninja": {
   "class_id": 901,
   "custom": true,
@@ -44,7 +44,22 @@
     [0.3, 0.12, 0.06, 0.14, 0.05, -0.9, 0.3],
     [0.3, 0.12, -0.06, 0.14, 0.05, -0.9, -0.3]
    ]},
-   "ribbon": {"color": [34, 46, 92], "length": 0.42, "width": 0.042, "anchor": [0.25, -0.24, 0.085]}
+   "ribbon": {"color": [34, 46, 92], "length": 0.42, "width": 0.042, "anchor": [0.25, -0.24, 0.085]},
+   "premium": {
+    "anims": "res://assets/player/anims/chr2_ninja.res",
+    "remap": {"battle": "ninja_guard", "move02": "ninja_run", "attack20": "ninja_kick", "magic01": "ninja_seal", "shoot50": "ninja_throw"},
+    "skip_poses": ["kick", "seal", "raise"],
+    "ult": ["ninja_ult_charge", "ninja_ult_throw", 0.12],
+    "dir": "res://assets/player/premium/whirl_ninja",
+    "head": "chr2_head.glb",
+    "outfit_tex": "outfit.png", "outfit_src": "g238as01b__270eaa.png",
+    "springs": [
+     {"root": "PremiumHair_L1", "end": "PremiumHair_L2", "stiff": 2.0, "drag": 0.5, "gravity": 0.3, "radius": 0.02, "tail": 0.06},
+     {"root": "PremiumHair_R1", "end": "PremiumHair_R2", "stiff": 2.0, "drag": 0.5, "gravity": 0.3, "radius": 0.02, "tail": 0.06},
+     {"root": "PremiumRibbon_L1", "end": "PremiumRibbon_L3", "stiff": 0.6, "drag": 0.35, "gravity": 0.8, "radius": 0.015, "tail": 0.1},
+     {"root": "PremiumRibbon_R1", "end": "PremiumRibbon_R3", "stiff": 0.6, "drag": 0.35, "gravity": 0.8, "radius": 0.015, "tail": 0.1}
+    ]
+   }
   },
   "anims": {"idle": "stand01", "battle": "battle10", "run": "move02", "attacks": ["attack21", "attack22"], "hurt": "hurt13", "death": "death01", "jump": "jump01", "dodge": "jump02"},
   "auto": {

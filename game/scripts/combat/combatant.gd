@@ -269,6 +269,8 @@ func setup_model(glb_path: String, texture_path := "", model_scale := 1.0) -> vo
 
 
 func play(anim_name: String, blend := 0.15, speed := 1.0, restart := false) -> void:
+	if model and model.has_meta("anim_remap"):  # « Héros détaillé » (lot CHR-2) : même longueur, même impact
+		anim_name = String((model.get_meta("anim_remap") as Dictionary).get(anim_name, anim_name))
 	if anim == null or not anim.has_animation(anim_name):
 		return
 	if anim_name == _current_anim and not restart and anim.is_playing():
