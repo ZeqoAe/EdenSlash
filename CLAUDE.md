@@ -183,6 +183,7 @@ Stratèges IA (AC-D, `R_AC_D.md`) : `core/autochess_ai.gd` (`AutochessAi.make(di
 IA de combat (AC-U, `R_AC_U.md`) : `ai/autochess_unit.gd` (comportements `roles` / `target` / `spells` / `dodge`, `retreat` coupé ; `ai_full`, `naive`, `fight.ai`) ;
 banc `tools/autochess_ai_bench.tscn` (`--ai=full --vs=naive`, 240 miroirs : 99 %) ; test `test_ac_unit_ai` ; un changement d'IA se mesure au banc avant d'être gardé.
 Mise en scène (AC-V, `R_AC_V.md`) : arène du Duel `world/autochess_arena.gd` (`AutochessArena` : décor par étape, plateau `arena_style` tracé au sol, caméra du combat), vrai combat dans l'écran (`config.real`), barres d'équipe `ui/autochess_team_bars.gd`, compteur `ui/autochess_meter.gd`, bilans de manche et de partie `ui/autochess_recap.gd`, chiffres `core/autochess_stats.gd` (compteurs de la couche) ; test `test_ac_stats`.
+Mesure et calibrage (AC-J, `R_AC_J.md`) : parties entre IA `tools/autochess_games.tscn` (`--setup=echelle|l7r|r7l|pilote|legendes`, une ligne JSON par partie) + `python tools/autochess_report.py` (top 4 relatif, méta, écarts au §9 ; `--run`) ; réglages mesurés : mana par rôle `AutochessData.ROLE_MANA`, traits, `dmg_scale` 0,11 ; `tests/ac_mesures.json` relu par `test_ac_sim_real` (tout réglage refait la mesure).
 
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à

@@ -48,7 +48,7 @@
    "skill_name": "Sceau des lames",
    "skill_kind": "spin",
    "spell_type": "zone",
-   "mana": 60,
+   "mana": 80,
    "second_skill_id": 50044,
    "sim_factor": 1.0,
    "provisional": true
@@ -178,7 +178,7 @@
    "skill_name": "Cure de vie",
    "skill_kind": "heal",
    "spell_type": "soin",
-   "mana": 80,
+   "mana": 40,
    "second_skill_id": 50103,
    "sim_factor": 1.0,
    "provisional": true
@@ -204,7 +204,7 @@
    "skill_name": "Musique de vie",
    "skill_kind": "heal",
    "spell_type": "soin",
-   "mana": 130,
+   "mana": 70,
    "second_skill_id": 50111,
    "sim_factor": 1.0,
    "provisional": true
@@ -230,7 +230,7 @@
    "skill_name": "Réaction de fusion",
    "skill_kind": "ground",
    "spell_type": "zone",
-   "mana": 140,
+   "mana": 50,
    "second_skill_id": 50127,
    "sim_factor": 1.0,
    "provisional": true
@@ -256,7 +256,7 @@
    "skill_name": "Flèche d'ombre",
    "skill_kind": "bolt",
    "spell_type": "cible",
-   "mana": 80,
+   "mana": 40,
    "second_skill_id": 50148,
    "sim_factor": 1.0,
    "provisional": true
@@ -282,7 +282,7 @@
    "skill_name": "Marteau du tonnerre",
    "skill_kind": "spin",
    "spell_type": "zone",
-   "mana": 110,
+   "mana": 140,
    "second_skill_id": 50052,
    "sim_factor": 1.0,
    "provisional": true
@@ -308,7 +308,7 @@
    "skill_name": "Coup de queue du drake",
    "skill_kind": "cone",
    "spell_type": "zone",
-   "mana": 60,
+   "mana": 80,
    "second_skill_id": 50446,
    "sim_factor": 1.0,
    "provisional": true
@@ -334,7 +334,7 @@
    "skill_name": "Coup provocant",
    "skill_kind": "cone",
    "spell_type": "zone",
-   "mana": 80,
+   "mana": 110,
    "second_skill_id": 50695,
    "sim_factor": 1.0,
    "provisional": true
@@ -516,7 +516,7 @@
    "skill_name": "Gouttes du ciel",
    "skill_kind": "heal",
    "spell_type": "soin",
-   "mana": 140,
+   "mana": 80,
    "second_skill_id": 50124,
    "sim_factor": 1.0,
    "provisional": true
@@ -542,7 +542,7 @@
    "skill_name": "Aura : protection du marteau",
    "skill_kind": "heal",
    "spell_type": "soin",
-   "mana": 140,
+   "mana": 80,
    "second_skill_id": 50432,
    "sim_factor": 1.0,
    "provisional": true
@@ -568,7 +568,7 @@
    "skill_name": "Métal sombre",
    "skill_kind": "ground",
    "spell_type": "zone",
-   "mana": 110,
+   "mana": 70,
    "second_skill_id": 50703,
    "sim_factor": 1.0,
    "provisional": true
@@ -594,7 +594,7 @@
    "skill_name": "Aérolithe",
    "skill_kind": "ground",
    "spell_type": "zone",
-   "mana": 140,
+   "mana": 50,
    "second_skill_id": 50139,
    "sim_factor": 1.0,
    "provisional": true
@@ -646,7 +646,7 @@
    "skill_name": "Tonnerre hanté",
    "skill_kind": "ground",
    "spell_type": "zone",
-   "mana": 70,
+   "mana": 40,
    "second_skill_id": 50917,
    "sim_factor": 1.0,
    "provisional": true
@@ -906,7 +906,7 @@
    "skill_name": "Source de vie",
    "skill_kind": "heal",
    "spell_type": "soin",
-   "mana": 140,
+   "mana": 80,
    "second_skill_id": 56086,
    "sim_factor": 1.0,
    "provisional": true
@@ -932,7 +932,7 @@
    "skill_name": "Frappe d'examen",
    "skill_kind": "heal",
    "spell_type": "soin",
-   "mana": 140,
+   "mana": 80,
    "second_skill_id": 50877,
    "sim_factor": 1.0,
    "provisional": true
@@ -958,7 +958,7 @@
    "skill_name": "Marteau de l'archange",
    "skill_kind": "cone",
    "spell_type": "zone",
-   "mana": 90,
+   "mana": 50,
    "second_skill_id": 56132,
    "sim_factor": 1.0,
    "provisional": true
@@ -984,7 +984,7 @@
    "skill_name": "Vent polaire du nord",
    "skill_kind": "ground",
    "spell_type": "zone",
-   "mana": 130,
+   "mana": 50,
    "second_skill_id": 50774,
    "sim_factor": 1.0,
    "provisional": true
@@ -1010,7 +1010,7 @@
    "skill_name": "Tempête des chimères",
    "skill_kind": "spin",
    "spell_type": "zone",
-   "mana": 70,
+   "mana": 40,
    "second_skill_id": 56062,
    "sim_factor": 1.0,
    "provisional": true
@@ -1036,7 +1036,7 @@
    "skill_name": "Venue de la mort",
    "skill_kind": "ground",
    "spell_type": "zone",
-   "mana": 110,
+   "mana": 40,
    "second_skill_id": 50904,
    "sim_factor": 1.0,
    "provisional": true
@@ -1062,7 +1062,7 @@
    "skill_name": "Estoc à la cheville",
    "skill_kind": "cone",
    "spell_type": "zone",
-   "mana": 100,
+   "mana": 140,
    "second_skill_id": 50818,
    "sim_factor": 1.0,
    "provisional": true
@@ -1218,7 +1218,7 @@
    "skill_name": "Faux silencieuse",
    "skill_kind": "ground",
    "spell_type": "zone",
-   "mana": 110,
+   "mana": 70,
    "second_skill_id": 50885,
    "sim_factor": 1.0,
    "provisional": true
@@ -1244,7 +1244,7 @@
    "skill_name": "Notes explosives",
    "skill_kind": "heal",
    "spell_type": "soin",
-   "mana": 140,
+   "mana": 80,
    "second_skill_id": 50718,
    "sim_factor": 1.0,
    "provisional": true
@@ -1270,7 +1270,7 @@
    "skill_name": "Attraction vers le bas",
    "skill_kind": "spin",
    "spell_type": "zone",
-   "mana": 130,
+   "mana": 50,
    "second_skill_id": 50777,
    "sim_factor": 1.0,
    "provisional": true
@@ -1322,7 +1322,7 @@
    "skill_name": "Marteau de tonnerre",
    "skill_kind": "ground",
    "spell_type": "zone",
-   "mana": 80,
+   "mana": 110,
    "second_skill_id": 56037,
    "sim_factor": 1.0,
    "provisional": true
@@ -1478,7 +1478,7 @@
    "skill_name": "Marteau du premier roi",
    "skill_kind": "cone",
    "spell_type": "zone",
-   "mana": 110,
+   "mana": 70,
    "second_skill_id": 56139,
    "sim_factor": 1.0,
    "provisional": true
@@ -1504,7 +1504,7 @@
    "skill_name": "Contre-attaque de l'élu",
    "skill_kind": "ground",
    "spell_type": "zone",
-   "mana": 110,
+   "mana": 70,
    "second_skill_id": 56095,
    "sim_factor": 1.0,
    "provisional": true
@@ -1530,7 +1530,7 @@
    "skill_name": "Hypnose temporelle",
    "skill_kind": "ground",
    "spell_type": "zone",
-   "mana": 100,
+   "mana": 40,
    "second_skill_id": 56070,
    "sim_factor": 1.0,
    "provisional": true

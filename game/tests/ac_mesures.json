@@ -1,9 +1,105 @@
 {
  "_doc": "L'Échiquier (autochess), lot AC-J : chiffres de référence de la dernière mesure (conception/autochess/R_AC_J.md), relus par tests/test_ac_sim_real. Changer AutochessSim.TUNE, dmg_scale ou les données du mode demande de refaire la mesure et ce fichier.",
- "version": "0.1.252",
- "tune": {"auto_hit": 0.4, "auto_lock": 1.5, "spell_hit": 0.5, "spell_lock": 1.2, "spell_gap": 0.25, "zone_dodge": 0.6, "reach_k": 0.95, "hit_slack": 1.2, "focus_hp": 16.0, "inertia": 2.5, "assassin_back": 4.0, "move_fudge": 1.0},
- "dmg_scale": 0.12,
- "calib": {"n": 100, "seeds": [1, 2], "agree": [0.93, 0.92], "dur_real": [18.8, 17.9], "dur_sim": [18.0, 17.4], "dur_gap": [0.04, 0.03], "surv_gap": [0.58, 0.67], "autos": [[0.584, 0.582], [0.578, 0.581]], "hits_per_cast": [[0.83, 0.83], [0.79, 0.76]]},
- "short": {"n": 16, "seed": 4, "agree_min": 0.70, "dur_gap_max": 0.30},
- "games": {"setup": "echelle", "n": 2000, "check_games": 8, "check_seed": 9001, "fight_median": 21.3, "rounds": 33.4, "minutes": 28.8, "minutes_x2": 22.3, "ladder": [7.08, 4.31, 3.43, 3.19], "l7r_top4": 0.98, "r7l_top4": 0.0, "pilote_top4": 0.62, "first_out_before_41": 0.12, "draws": 0.004, "meta_top_share": 0.66}
+ "version": "0.1.255",
+ "tune": {
+  "auto_hit": 0.4,
+  "auto_lock": 1.5,
+  "spell_hit": 0.5,
+  "spell_lock": 1.2,
+  "spell_gap": 0.25,
+  "zone_dodge": 0.6,
+  "reach_k": 0.95,
+  "hit_slack": 1.2,
+  "focus_hp": 16.0,
+  "inertia": 2.5,
+  "assassin_back": 4.0,
+  "move_fudge": 1.0
+ },
+ "dmg_scale": 0.11,
+ "calib": {
+  "n": 100,
+  "seeds": [
+   1,
+   2
+  ],
+  "agree": [
+   0.88,
+   0.89
+  ],
+  "dur_real": [
+   18.5,
+   18.8
+  ],
+  "dur_sim": [
+   19.2,
+   18.9
+  ],
+  "dur_gap": [
+   0.04,
+   0.01
+  ],
+  "surv_gap": [
+   0.76,
+   0.7
+  ],
+  "autos": [
+   [
+    0.571,
+    0.561
+   ],
+   [
+    0.567,
+    0.558
+   ]
+  ],
+  "hits_per_cast": [
+   [
+    0.8,
+    0.85
+   ],
+   [
+    0.87,
+    0.83
+   ]
+  ],
+  "before_ac_j": {
+   "agree": [
+    0.89,
+    0.89
+   ],
+   "dur_gap": [
+    0.07,
+    0.08
+   ],
+   "note": "TUNE d'AC-C sur le vrai combat d'AC-U, avant recalage"
+  }
+ },
+ "short": {
+  "n": 16,
+  "seed": 4,
+  "agree_min": 0.7,
+  "dur_gap_max": 0.3
+ },
+ "games": {
+  "setup": "echelle",
+  "n": 2000,
+  "check_games": 8,
+  "check_seed": 9001,
+  "fight_median": 22.8,
+  "rounds": 33.3,
+  "minutes": 29.6,
+  "minutes_x2": 22.7,
+  "ladder": [
+   7.13,
+   4.6,
+   3.22,
+   3.05
+  ],
+  "l7r_top4": 1.0,
+  "r7l_top4": 0.0,
+  "pilote_top4": 0.46,
+  "first_out_before_41": 0.07,
+  "draws": 0.007,
+  "meta_top_share": 0.33
+ }
 }

@@ -67,7 +67,7 @@ func _ready() -> void:
 			and int(sig.get("id", -1)) == int(u.skill_id) and not sig.get("shared", false) \
 			and String(u.skill_name) == String(sig.get("name", "")) and String(u.skill_kind) == String(sig.get("kind", "")) \
 			and String(u.spell_type) == String(A.SPELL_TYPES.get(String(sig.get("kind", "")), "")) \
-			and int(u.mana) == A.mana_for(float(sig.get("cooldown", 0.0))) and int(u.mana) >= A.MANA_MIN and int(u.mana) <= A.MANA_MAX \
+			and int(u.mana) == A.mana_for(float(sig.get("cooldown", 0.0)), String(u.role)) and int(u.mana) >= A.MANA_MIN and int(u.mana) <= A.MANA_MAX \
 			and int(u.second_skill_id) != int(u.skill_id) and sk.any(func(s): return int(s.id) == int(u.second_skill_id)) \
 			and String(u.name) == String(cd.name_fr) and A.unit_name(id) == String(cd.name_fr) \
 			and float(u.sim_factor) > 0.0 and not u.has("brain") and not u.has("captain_skill_ids")

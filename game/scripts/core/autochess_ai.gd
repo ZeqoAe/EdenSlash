@@ -78,13 +78,13 @@ const FRONT_ROLES := ["tank", "combattant", "assassin"]
 const CARRY_ROLES := ["tireur", "mage", "assassin", "combattant"]
 ## Note de base des atouts (Vétéran ; Champion et Légende y ajoutent le contexte).
 const AUGMENT_BASE := {
-	"tirelire": 5.0, "relance_offerte": 5.0, "apprenti": 5.0, "composant": 6.0, "renfort": 4.5, "peau_dure": 5.0,
+	"tirelire": 5.0, "relance_offerte": 5.0, "apprenti": 5.0, "composant": 5.0, "renfort": 4.5, "peau_dure": 5.0,
 	"premier_sang": 4.0, "esquive_aiguisee": 5.0, "ralliement": 4.0, "mana_vive": 5.0,
-	"interets_composes": 5.0, "pacte_de_sang": 6.0, "insigne": 6.0, "chef_de_guerre": 6.0, "heritage": 3.5,
+	"interets_composes": 5.0, "pacte_de_sang": 5.5, "insigne": 6.0, "chef_de_guerre": 6.0, "heritage": 3.5,
 	"echo_recrue": 5.0, "riposte": 5.0, "garde_du_corps": 6.0, "coeur_de_famille": 6.0, "forge_de_campagne": 4.5,
 	"main_sure": 6.0,
 	"couronne": 9.0, "heros_legendaire": 8.0, "ordre_de_bataille": 7.0, "menace": 4.0, "tresor_du_dragon": 7.0,
-	"niveau_11": 6.0, "etoile_filante": 6.0, "arsenal": 8.0, "double_trait": 7.0,
+	"niveau_11": 6.0, "etoile_filante": 6.0, "arsenal": 7.0, "double_trait": 7.0,
 }
 const ECON_AUGMENTS := ["tirelire", "interets_composes", "tresor_du_dragon", "relance_offerte", "apprenti", "echo_recrue"]
 ## Puissance moyenne par place attendue d'un bon plateau à chaque niveau (★2 bon marché, puis ★2 de coût 3, 4…).

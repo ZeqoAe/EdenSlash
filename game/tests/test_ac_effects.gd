@@ -304,7 +304,9 @@ func test_traits() -> void:
 	# Effets des paliers hauts qui ne se voient pas au palier 1
 	var c9 := AutochessEffects.context(fctx({"rempart": 9}), [[mk("warrior", [3, 1]), mk("hunter", [2, 3])], bags()])
 	var c0 := AutochessEffects.context(fctx({}), [[mk("warrior", [3, 1]), mk("hunter", [2, 3])], bags()])
-	check("Rempart à 9 : PV de toute l'équipe +20 %", is_equal_approx(float(c9.units[1].hp_max), float(c0.units[1].hp_max) * 1.2))
+	var team_hp := float(AutochessData.TRAITS.rempart.tiers[2].team_hp_pct)  # réglage (AC-J : 0,10)
+	check("Rempart à 9 : PV de toute l'équipe +%.0f %%" % (100.0 * team_hp), team_hp > 0.0
+		and is_equal_approx(float(c9.units[1].hp_max), float(c0.units[1].hp_max) * (1.0 + team_hp)))
 	var arc := sim([mk("magician", [3, 1])], bags(), fctx({"arcane": 9}), 8.0)
 	check("Arcane à 9 : le 1er sort part deux fois", _count(arc, "recast") >= 1)
 	var omb := sim([mk("thief", [3, 1])], bags(), fctx({"ombre": 3}), 1.0)

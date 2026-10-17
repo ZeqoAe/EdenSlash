@@ -79,6 +79,10 @@ const MANA_PER_ATTACK := 10
 const MANA_PER_HP_PCT := 1.0  # +1 mana par tranche de 1 % des PV max perdus
 const MANA_PER_HIT_CAP := 15
 const MANA_PER_COOLDOWN := 10  # mana max = recharge du sort (s, arrondie) × 10
+## Mana max selon le rôle, en % de la recharge × 10 (lot AC-J, R_AC_J.md : 2 000 parties entre IA ; sans lui, mages
+## 27 % et soigneurs 37 % de top 4 relatif, tanks 67 %, aucune victoire Arcane ni Ferveur) : le sort des lanceurs revient
+## plus vite, celui des tanks moins souvent. Rôles absents : 100.
+const ROLE_MANA := {"mage": 35, "soigneur": 55, "soutien": 60, "tank": 140}
 const MANA_MIN := 40
 const MANA_MAX := 140
 const FIGHT_TARGET := 25.0  # s, médiane visée (échelle des dégâts du profil « autochess » de ModeRules)
@@ -184,7 +188,7 @@ const RARITY_NAMES := {"argent": "Argent", "or": "Or", "eclat": "Éclat"}
 ## « mix » : nombre d'IA de chaque difficulté (Recrue, Vétéran, Champion, Légende) parmi les 7 adversaires.
 const DIFFICULTIES := [
 	{"id": "recrue", "name": "Recrue", "mix": [5, 2, 0, 0]},
-	{"id": "veteran", "name": "Vétéran", "mix": [2, 3, 2, 0]},
+	{"id": "veteran", "name": "Vétéran", "mix": [1, 4, 2, 0]},
 	{"id": "champion", "name": "Champion", "mix": [0, 2, 3, 2]},
 	{"id": "legende", "name": "Légende", "mix": [0, 0, 3, 4]},
 ]
@@ -210,8 +214,8 @@ const WEAPON_THRESHOLDS := [2, 4, 6]
 const TRAITS := {
 	"rempart": {"name": "Rempart", "kind": "famille", "family": 1, "scope": "porteurs", "effect": "trait_rempart",
 		"short": "Les Rempart encaissent mieux ; à neuf, toute l'équipe gagne des PV.",
-		"tip": "Défense des Rempart +20 / +45 / +80 ; à 9 : PV de toute l'équipe +20 %.",
-		"tiers": [{"def": 20}, {"def": 45}, {"def": 80, "team_hp_pct": 0.20}]},
+		"tip": "Défense des Rempart +5 / +20 / +40 ; à 9 : PV de toute l'équipe +10 %.",
+		"tiers": [{"def": 5}, {"def": 20}, {"def": 40, "team_hp_pct": 0.10}]},
 	"ombre": {"name": "Ombre", "kind": "famille", "family": 2, "scope": "porteurs", "effect": "trait_ombre",
 		"short": "Les Ombre bondissent sur l'arrière ennemi et frappent plus fort en critique.",
 		"tip": "Au début du combat, saut sur la rangée arrière ennemie ; dégâts critiques +20 / 40 / 70 %.",
@@ -228,12 +232,12 @@ const TRAITS := {
 			{"every": 4.0, "heal_pct": 0.25, "heal_taken_pct": 0.30}]},
 	"arcane": {"name": "Arcane", "kind": "famille", "family": 5, "scope": "porteurs", "effect": "trait_arcane",
 		"short": "Les sorts des Arcane frappent plus fort ; à neuf, le premier part deux fois.",
-		"tip": "Puissance des sorts des Arcane +20 / 45 / 80 % ; à 9 : le 1er sort de chaque Arcane est lancé deux fois.",
-		"tiers": [{"spell_pct": 0.20}, {"spell_pct": 0.45}, {"spell_pct": 0.80, "double_first": 1}]},
+		"tip": "Puissance des sorts des Arcane +70 / 130 / 200 % ; à 9 : le 1er sort de chaque Arcane est lancé deux fois.",
+		"tiers": [{"spell_pct": 0.70}, {"spell_pct": 1.30}, {"spell_pct": 2.00, "double_first": 1}]},
 	"escrime": {"name": "Escrime", "kind": "arme", "weapons": ["sword"], "scope": "porteurs", "effect": "trait_escrime",
 		"short": "Bloquent des attaques et ripostent.",
-		"tip": "Parade de 15 / 30 / 50 % des attaques, riposte à 80 % de la frappe.",
-		"tiers": [{"parry": 0.15, "riposte": 0.8}, {"parry": 0.30, "riposte": 0.8}, {"parry": 0.50, "riposte": 0.8}]},
+		"tip": "Parade de 5 / 10 / 18 % des attaques, riposte à 80 % de la frappe.",
+		"tiers": [{"parry": 0.05, "riposte": 0.8}, {"parry": 0.10, "riposte": 0.8}, {"parry": 0.18, "riposte": 0.8}]},
 	"tir": {"name": "Tir", "kind": "arme", "weapons": ["bow"], "scope": "porteurs", "effect": "trait_tir",
 		"short": "Tirent de plus en plus vite ; à six, les flèches traversent.",
 		"tip": "Vitesse d'attaque +15 / 35 / 60 % après 3 s de combat ; à 6 : les flèches traversent.",
@@ -241,8 +245,8 @@ const TRAITS := {
 	"elementaire": {"name": "Élémentaire", "kind": "arme", "weapons": ["staff"], "scope": "porteurs",
 		"effect": "trait_elementaire",
 		"short": "Leurs sorts laissent une zone qui brûle ; à six, elle ralentit.",
-		"tip": "Le sort laisse une zone : 10 / 25 / 50 % de ses dégâts par seconde pendant 3 s ; à 6 : ralentit.",
-		"tiers": [{"zone_pct": 0.10, "dur": 3.0}, {"zone_pct": 0.25, "dur": 3.0}, {"zone_pct": 0.50, "dur": 3.0, "slow": 1}]},
+		"tip": "Le sort laisse une zone : 25 / 50 / 85 % de ses dégâts par seconde pendant 3 s ; à 6 : ralentit.",
+		"tiers": [{"zone_pct": 0.25, "dur": 3.0}, {"zone_pct": 0.50, "dur": 3.0}, {"zone_pct": 0.85, "dur": 3.0, "slow": 1}]},
 	"tranchant": {"name": "Tranchant", "kind": "arme", "weapons": ["katana", "dagger"], "scope": "porteurs",
 		"effect": "trait_tranchant",
 		"short": "Achèvent les ennemis presque vaincus.",
@@ -254,8 +258,8 @@ const TRAITS := {
 		"tiers": [{"every": 4, "stun": 0.5}, {"every": 3, "stun": 0.5}, {"every": 2, "stun": 0.5}]},
 	"estoc": {"name": "Estoc", "kind": "arme", "weapons": ["rapier", "spear"], "scope": "porteurs", "effect": "trait_estoc",
 		"short": "Percent les armures.",
-		"tip": "Ignorent 20 / 40 / 70 % de la défense.",
-		"tiers": [{"armor_pen": 0.20}, {"armor_pen": 0.40}, {"armor_pen": 0.70}]},
+		"tip": "Ignorent 5 / 15 / 30 % de la défense.",
+		"tiers": [{"armor_pen": 0.05}, {"armor_pen": 0.15}, {"armor_pen": 0.30}]},
 	"poudre": {"name": "Poudre", "kind": "arme", "weapons": ["cannon", "gunscythe"], "scope": "porteurs",
 		"effect": "trait_poudre",
 		"short": "Leurs attaques explosent autour de la cible.",
@@ -263,19 +267,19 @@ const TRAITS := {
 		"tiers": [{"radius": 1, "splash": 0.20}, {"radius": 1, "splash": 0.40}, {"radius": 1, "splash": 0.70}]},
 	"choeur": {"name": "Chœur", "kind": "arme", "weapons": ["scepter", "guitar"], "scope": "equipe", "effect": "trait_choeur",
 		"short": "Toute l'équipe regagne de la mana en continu.",
-		"tip": "Toute l'équipe gagne 2 / 4 / 7 mana par seconde.",
-		"tiers": [{"mana_per_s": 2}, {"mana_per_s": 4}, {"mana_per_s": 7}]},
+		"tip": "Toute l'équipe gagne 3 / 6 / 10 mana par seconde.",
+		"tiers": [{"mana_per_s": 3}, {"mana_per_s": 6}, {"mana_per_s": 10}]},
 	"malediction": {"name": "Malédiction", "kind": "arme", "weapons": ["grimoire", "rod"], "scope": "ennemis",
 		"effect": "trait_malediction",
 		"short": "Affaiblissent les ennemis les plus forts.",
-		"tip": "À 3 s, les 2 / 4 / tous les ennemis les plus forts : attaque et défense −15 / 25 / 35 %.",
-		"tiers": [{"at": 3.0, "targets": 2, "down": 0.15}, {"at": 3.0, "targets": 4, "down": 0.25},
-			{"at": 3.0, "targets": 0, "down": 0.35}]},  # targets 0 : tous
+		"tip": "À 3 s, les 2 / 4 / tous les ennemis les plus forts : attaque et défense −30 / 40 / 55 %.",
+		"tiers": [{"at": 3.0, "targets": 2, "down": 0.30}, {"at": 3.0, "targets": 4, "down": 0.40},
+			{"at": 3.0, "targets": 0, "down": 0.55}]},  # targets 0 : tous
 	"impact": {"name": "Impact", "kind": "arme", "weapons": ["greatsword", "cestus"], "scope": "porteurs",
 		"effect": "trait_impact",
 		"short": "Chaque coup sur la même cible frappe plus fort.",
-		"tip": "Chaque coup sur la même cible : +5 / 8 / 12 % de dégâts (10 fois au plus).",
-		"tiers": [{"stack_pct": 0.05, "max": 10}, {"stack_pct": 0.08, "max": 10}, {"stack_pct": 0.12, "max": 10}]},
+		"tip": "Chaque coup sur la même cible : +7 / 11 / 16 % de dégâts (10 fois au plus).",
+		"tiers": [{"stack_pct": 0.07, "max": 10}, {"stack_pct": 0.11, "max": 10}, {"stack_pct": 0.16, "max": 10}]},
 }
 
 # --- Objets (§5.5, annexe B) --------------------------------------------------------------------------------------
@@ -573,9 +577,12 @@ static func spell_mult(stars: int) -> float:
 	return float(SPELL_RANK_MULT[clampi(stars, 1, MAX_STARS) - 1])
 
 
-## Mana max d'un sort de recharge [param cooldown] s (arrondie à la seconde, × 10, bornée à 40-140).
-static func mana_for(cooldown: float) -> int:
-	return clampi(int(floor(cooldown + 0.5)) * MANA_PER_COOLDOWN, MANA_MIN, MANA_MAX)
+## Mana max d'un sort de recharge [param cooldown] s (arrondie à la seconde, × 10, bornée à 40-140), puis × ROLE_MANA du
+## rôle [param role] (en %, arrondi à la dizaine, bornée à 40-140 ; calcul entier recopié dans tools/autochess_units.py).
+static func mana_for(cooldown: float, role := "") -> int:
+	var m := clampi(int(floor(cooldown + 0.5)) * MANA_PER_COOLDOWN, MANA_MIN, MANA_MAX)
+	var k := int(ROLE_MANA.get(role, 100))
+	return clampi((m * k + 500) / 1000 * 10, MANA_MIN, MANA_MAX) if k != 100 else m
 
 
 ## Allonge en mètres d'une portée en cases (mêlée : MELEE_REACH).

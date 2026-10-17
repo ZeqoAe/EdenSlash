@@ -37,6 +37,8 @@ WEAPON_RANGE = {
     "spear": 2, "gunscythe": 2, "scepter": 3, "guitar": 3, "rod": 3, "bow": 4, "staff": 4, "cannon": 4, "grimoire": 4,
 }
 MANA_MIN, MANA_MAX, MANA_PER_CD = 40, 140, 10
+# Mana selon le rôle, en % (AutochessData.ROLE_MANA, lot AC-J) : lanceurs plus souvent, tanks moins souvent.
+ROLE_MANA = {"mage": 35, "soigneur": 55, "soutien": 60, "tank": 140}
 CELL = 2.0  # m (AutochessData.CELL)
 MELEE_REACH = 3.2  # m : allonge d'une arme de mêlée (ClassRival._attack_range sans « attack_range »)
 # Distance de combat préférée selon le rôle (AutochessData.ROLES[*].distance) : m, ou écart sous l'allonge (négatif).
@@ -99,9 +101,12 @@ def place_of(rng: int) -> str:
     return "avant" if rng <= 1 else ("milieu" if rng == 2 else "arriere")
 
 
-def mana_of(cooldown: float) -> int:
-    """Mana max = recharge (arrondie à la seconde) × 10, bornée à 40-140 (AutochessData.mana_for)."""
-    return int(max(MANA_MIN, min(MANA_MAX, math.floor(cooldown + 0.5) * MANA_PER_CD)))
+def mana_of(cooldown: float, role: str = "") -> int:
+    """Mana max = recharge (arrondie à la seconde) × 10, bornée à 40-140, puis × ROLE_MANA du rôle (en %, arrondi à la
+    dizaine, borné à 40-140 ; AutochessData.mana_for, même calcul entier)."""
+    m = int(max(MANA_MIN, min(MANA_MAX, math.floor(cooldown + 0.5) * MANA_PER_CD)))
+    k = ROLE_MANA.get(role, 100)
+    return m if k == 100 else max(MANA_MIN, min(MANA_MAX, (m * k + 500) // 1000 * 10))
 
 
 def attack_range_m(rng: int) -> float:
@@ -152,7 +157,7 @@ def build() -> dict:
             "skill_name": sig["name"],
             "skill_kind": sig["kind"],
             "spell_type": SPELL_TYPE[sig["kind"]],
-            "mana": mana_of(float(sig.get("cooldown", 0.0))),
+            "mana": mana_of(float(sig.get("cooldown", 0.0)), role),
             "second_skill_id": int(second[1]["id"]) if second else 0,
             "sim_factor": 1.0,
             "provisional": True,
