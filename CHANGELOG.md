@@ -261,3 +261,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.250 | L'Échiquier, lot AC-V (2-3/3) : HUD par-dessus l'arène comme en Duel (les deux équipes en haut : portraits, étoiles, PV, mana ; chronomètre, Fureur, vitesse), compteur de dégâts en direct façon TFT (dégâts, subis, soins, boucliers), bilan de chaque manche (MVP, barres classées, totaux) et bilan de la partie (bouton Statistiques) | session locale (AC-V) |
 | 0.1.251 | L'Échiquier, lot AC-U (suite) : IA de combat des unités affinée (mêlées mieux placées, zones visées sur la place réelle des ennemis) | session AC-U |
 | 0.1.252 | L'Échiquier, lot AC-J (1/3) : le combat de données recalé sur le vrai combat (même vainqueur 9 fois sur 10) ; outils de mesure de masse des parties entre IA | session AC-J |
+| 0.1.253 | L'Échiquier, lot AC-J (2/3) : 2 800 parties entre IA mesurées (durées, échelle des difficultés, méta) ; test qui garde le combat de données calé sur le vrai | session AC-J |
