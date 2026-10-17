@@ -29,6 +29,7 @@ var _selected := {}  # {kind: "skill" | "weapon" | "passive", data}
 var _rank := 1
 var _buttons: Array = []  # [Button, sélection] pour l'état enfoncé
 var _preset_label: Label
+var _preset_icons: HBoxContainer  # lot GX-4 : les 4 sorts principaux du préréglage actif, en petites cases
 var _preset_msg: Label
 var _editor: VBoxContainer
 var _cells: Array = []  # [case][rang] -> Button
@@ -87,7 +88,8 @@ func _ready() -> void:
 
 	# --- gauche : portrait, statistiques, attributs par niveau, arme de la classe ---
 	var lscroll := ScrollContainer.new()
-	lscroll.custom_minimum_size = Vector2(LEFT_W, 0)
+	var narrow := (get_viewport().get_visible_rect().size.x if is_inside_tree() else 1600.0) < 1500.0  # 1280 px : l'écran tient (lot GX-4)
+	lscroll.custom_minimum_size = Vector2(LEFT_W - (30.0 if narrow else 0.0), 0)
 	lscroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	body.add_child(lscroll)
 	var left := VBoxContainer.new()
@@ -107,12 +109,12 @@ func _ready() -> void:
 	head.add_child(_header_name)
 	_header_lore = Hud._label(left, "", 14, UiTheme.MUTED)
 	_header_lore.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_header_lore.custom_minimum_size = Vector2(LEFT_W - 20, 0)
+	_header_lore.custom_minimum_size = Vector2(LEFT_W - 20 - (30.0 if narrow else 0.0), 0)
 	_section(left, "Statistiques de base")
 	_stats = _rich(left, 15)
 	_stats.fit_content = true
 	_stats.scroll_active = false
-	_stats.custom_minimum_size = Vector2(LEFT_W - 20, 0)
+	_stats.custom_minimum_size = Vector2(LEFT_W - 20 - (30.0 if narrow else 0.0), 0)
 	_section(left, "Arme de la classe")
 	_weapon_box = VBoxContainer.new()
 	left.add_child(_weapon_box)
@@ -147,7 +149,7 @@ func _ready() -> void:
 
 	# --- droite : détail de la sélection ---
 	var right := PanelContainer.new()
-	right.custom_minimum_size = Vector2(RIGHT_W, 0)
+	right.custom_minimum_size = Vector2(RIGHT_W - (40.0 if narrow else 0.0), 0)
 	right.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.07, 0.06, 0.13, 0.95), UiTheme.GOLD_DIM, 2, 10))
 	body.add_child(right)
 	var rv := VBoxContainer.new()
@@ -375,7 +377,15 @@ func _build_presets(parent: Control) -> void:
 	var load_b := _small_button(row, "Charger un préréglage ▾", 220)
 	load_b.pressed.connect(func(): _load_menu(load_b))
 	_small_button(row, "Créer un préréglage", 200).pressed.connect(_open_editor)
-	_preset_label = Hud._label(row, "", 14, UiTheme.MUTED)
+	# ligne du dessous : les sorts du préréglage actif en petites cases, puis son nom (la rangée des boutons ne s'élargit pas)
+	var info := HBoxContainer.new()
+	info.add_theme_constant_override("separation", 10)
+	parent.add_child(info)
+	_preset_icons = HBoxContainer.new()
+	_preset_icons.add_theme_constant_override("separation", 4)
+	_preset_icons.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	info.add_child(_preset_icons)
+	_preset_label = Hud._label(info, "", 14, UiTheme.MUTED)
 	_preset_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_preset_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_preset_msg = Hud._label(parent, "", 14, UiTheme.BUFF)
@@ -453,6 +463,49 @@ func _refresh_presets() -> void:
 	var n := SpellPresets.list(_class_id).size()
 	_preset_label.text = ("Préréglage actif : %s" % p.name if not p.is_empty() else "Aucun préréglage actif : les sorts se rangent dans l'ordre où on les obtient") + "  ·  %s" % GearPower.plural(n, "enregistré", "enregistrés")
 	_editor.visible = false
+	# lot GX-4 : le préréglage se lit d'un coup d'œil (sort principal de chaque case, ses enchaînements au survol)
+	if _preset_icons:
+		for c in _preset_icons.get_children():
+			c.queue_free()
+		_preset_icons.visible = not p.is_empty()
+		if not p.is_empty():
+			var cols: Array = p.get("cols", [])
+			for c in SpellPresets.COLS:
+				var col: Array = cols[c] if c < cols.size() else []
+				var tr := TextureRect.new()
+				tr.custom_minimum_size = Vector2(30, 30)
+				tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+				tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+				var names: PackedStringArray = []
+				for r in col.size():
+					var sk := _skill_by_id(int(col[r]))
+					if not sk.is_empty():
+						names.append(String(sk.name))
+						if r == 0:
+							tr.texture = UiTheme.texture(String(sk.get("icon", "")))
+				tr.tooltip_text = ("Case %d : %s" % [c + 1, " → ".join(names)]) if not names.is_empty() else "Case %d : vide" % (c + 1)
+				tr.modulate = Color.WHITE if tr.texture else Color(1, 1, 1, 0.3)
+				_preset_icons.add_child(tr)
+
+
+## Nom libre pour la copie de [param base] : « Boss (copie) », puis « Boss (copie 2) »…
+func _copy_name(base: String) -> String:
+	var taken := SpellPresets.list(_class_id).map(func(x): return String(x.name))
+	var nm := "%s (copie)" % base
+	var k := 2
+	while nm in taken:
+		nm = "%s (copie %d)" % [base, k]
+		k += 1
+	return nm.left(40)
+
+
+func _skill_by_id(id: int) -> Dictionary:
+	if id == 0:
+		return {}
+	for s in GameData.class_data(_class_id).get("skills", []):
+		if int(s.id) == id:
+			return s
+	return {}
 
 
 func _spell_at(at: Vector2i) -> Dictionary:
@@ -562,8 +615,15 @@ func _load_menu(anchor: Control) -> void:
 	pm.set_item_checked(pm.item_count - 1, act < 0)
 	if act >= 0:
 		pm.add_separator()
+		pm.add_item("Dupliquer « %s »" % l[act].name, 3000)
 		pm.add_item("Supprimer « %s »" % l[act].name, 2000)
 	pm.id_pressed.connect(func(id):
+		if id == 3000:
+			var nm := _copy_name(String(l[act].name))
+			SpellPresets.store(_class_id, nm, (l[act].cols as Array).duplicate(true))
+			_refresh_presets()
+			_preset_msg.text = "Copie « %s » enregistrée et chargée : modifie-la avec « Créer un préréglage »." % nm
+			return
 		if id == 2000:
 			SpellPresets.remove(_class_id, act)
 			_refresh_presets()

@@ -6,7 +6,7 @@ extends Node
 ## Hors run, equipped / inventory montrent l'héritage ; pendant une run, ce sont
 ## les objets de la run (copies de l'équipement de départ + butin).
 ## L'héritage est un coffre commun à toutes les classes ; chaque classe a son propre
-## équipement, en 3 préréglages nommés (presets) : changer de classe change d'équipement.
+## équipement, en 5 préréglages nommés (presets) : changer de classe change d'équipement.
 ## 3 emplacements de sauvegarde (écran titre : continuer, charger, nouvelle partie) ;
 ## l'emplacement 1 est l'ancien fichier profile.json.
 
@@ -18,7 +18,11 @@ const LAST_SLOT_PATH := "user://last_slot.txt"
 const TEST_SAVE_PATH := "user://profile_test.json"
 const INVENTORY_MAX := 100000  # inventaire sans limite de place
 const VAULT_MAX := 100000
-const PRESETS_PER_CLASS := 3
+## Lot GX-4 (étude BM-GEAR, Q6) : 5 préréglages par classe (Survie, Donjons, Duel équipé, essais…) au lieu de 3 ; une
+## vieille sauvegarde garde ses 3 et reçoit 2 préréglages vides (`_class_presets` complète la liste, rien n'est perdu).
+const PRESETS_PER_CLASS := 5
+## Noms d'usage proposés au renommage (« Gérer »).
+const PRESET_USES := ["Survie", "Donjons", "Tour", "Duel", "Essai"]
 
 signal changed
 signal class_unlocked(cls: String)  # mission remplie : nouvelle classe jouable
@@ -511,8 +515,49 @@ func set_active_preset(cls: String, index: int) -> void:
 	if in_run:
 		return
 	_sync_vault()
-	_class_presets(cls).active = clampi(index, 0, PRESETS_PER_CLASS - 1)
+	var p := _class_presets(cls)
+	var old: Dictionary = p.sets[clampi(int(p.active), 0, p.sets.size() - 1)]
+	if old.has("look"):
+		old["look"] = _look_snapshot(cls)  # la tenue liée suit les retouches faites pendant qu'il était actif
+	p.active = clampi(index, 0, PRESETS_PER_CLASS - 1)
+	var nw: Dictionary = p.sets[int(p.active)]
+	if nw.get("look", null) is Dictionary:
+		_apply_look(cls, nw.look)
 	_lobby_view()
+	save_profile()
+
+
+# --- tenue liée à un préréglage (lot GX-4, étude BM-GEAR P2 : « tenue enregistrée par préréglage ») -----------------
+## L'apparence (tenue, tête, dos, auras, couleurs) n'a aucun lien avec la puissance : un préréglage peut garder la sienne.
+## Clé « look » du préréglage ({outfit, worn}) ; sans elle, changer de préréglage ne touche pas à l'apparence.
+func _look_snapshot(cls: String) -> Dictionary:
+	return {"outfit": String(outfits.get(cls, "")), "worn": (worn.get(cls, {}) as Dictionary).duplicate(true)}
+
+
+func _apply_look(cls: String, look: Dictionary) -> void:
+	if String(look.get("outfit", "")) == "":
+		outfits.erase(cls)
+	else:
+		outfits[cls] = String(look.outfit)
+	worn[cls] = (look.get("worn", {}) as Dictionary).duplicate(true)
+
+
+func preset_has_look(cls: String, index := -1) -> bool:
+	var p := _class_presets(cls)
+	var i := int(p.active) if index < 0 else index
+	return i >= 0 and i < p.sets.size() and (p.sets[i] as Dictionary).has("look")
+
+
+## Lie (ou délie) l'apparence actuelle au préréglage actif de [param cls].
+func bind_preset_look(cls: String, on: bool) -> void:
+	if in_run:
+		return
+	var p := _class_presets(cls)
+	var cur: Dictionary = p.sets[clampi(int(p.active), 0, p.sets.size() - 1)]
+	if on:
+		cur["look"] = _look_snapshot(cls)
+	else:
+		cur.erase("look")
 	save_profile()
 
 
@@ -532,6 +577,33 @@ func copy_active_preset(cls: String, index: int) -> void:
 	if index != int(p.active):
 		p.sets[index].slots = _active_slots(cls).duplicate()
 	save_profile()
+
+
+## Équipement du préréglage [param index] de [param cls] (hors partie) : emplacement -> objet. Le préréglage actif de la
+## classe affichée donne l'équipement porté (lot GX-4 : comparaison de deux préréglages).
+func preset_gear(cls: String, index: int) -> Dictionary:
+	if in_run:
+		return {}
+	if index == active_preset(cls) and cls == _view_class:
+		return equipped.duplicate()
+	var p := _class_presets(cls)
+	if index < 0 or index >= p.sets.size():
+		return {}
+	var by_uid := {}
+	for it in equipped.values() + inventory:
+		by_uid[String(it.get("uid", ""))] = it
+	var out := {}
+	var slots: Dictionary = p.sets[index].slots
+	for slot in slots:
+		var it: Dictionary = by_uid.get(String(slots[slot]), {})
+		if not it.is_empty():
+			out[slot] = it
+	return out
+
+
+## Le nom [param name] est encore celui d'origine d'un préréglage (« Préréglage 2 ») : la barre n'en montre que le numéro.
+static func preset_default_name(name: String) -> bool:
+	return name.begins_with("Préréglage ") and name.trim_prefix("Préréglage ").is_valid_int()
 
 
 ## Classes et préréglages qui utilisent l'objet [param uid] : ["Guerrier · Préréglage 2", ...].

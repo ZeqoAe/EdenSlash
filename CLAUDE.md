@@ -278,6 +278,9 @@ sur le niveau de héros, fiche `two_levels`, boussole « → Survie, carte II-2 
 Plans de donjon), « ★ Objectif » et filtre « ★ Objectifs » ; fiche `Items.describe(item, detailed, worn)` (verdict `Items.verdict` au profil × niveau,
 jamais de % hors Maj) ; clés d'objet `locked` (jamais démontée, `Profile.is_locked`) et `new` ; `InventoryPage.useless_items` + démontage en masse
 annulable ; « Le meilleur ▲N » (`PresetBar.best_plan`) ; `RunDirector.plan_badge` (« Nouveau plan ») ; `test_gx3`, `shot_gx3`.
+**Tout monter, préréglages** (lot GX-4, `R_GX4.md`) : Forge « Tout monter à +5 » (`Forge.even_pieces` / `plan_even` / `even_step` / `even_all`, séance
+`ForgeBench._even_*` annulable) ; gemmes `Craft.remove_gem` / `gem_value_text`, `Forge.fuse_all` ; `Profile.PRESETS_PER_CLASS` 5 (`_class_presets` complète),
+`preset_gear`, tenue liée (clé `look`), `PresetBar.compare_plan` ; recherche `ItemGrid.enable_search` / `name_matches` ; X dessiné (meta `pad_x`, `UiNav.x_hint`) ; `test_gx4`, `shot_gx4`.
 **Modes scellés** (lot H2, `R_H2.md`) : `Modes.sealed()` (Survivant, Battle royale) coupe talents, certificats, plateau, archive, auras,
 sorts fermés par la maîtrise et cartes à débloquer (`Run.passive_stats` / `skill_talent` / `roll_cards` / `certificate_pool`,
 `Player.recalc_stats` / `knock_immune`) ; tout nouvel effet du compte en combat passe par ce test ; `test_h2`, `hl_probe --sealed`.

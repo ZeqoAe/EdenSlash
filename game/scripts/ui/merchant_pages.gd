@@ -616,17 +616,30 @@ class ForgePage extends ItemPage:
 			var b := button("Percer un emplacement (%s) · ciseaux ×%d" % ["sûr" if sockets.is_empty() else "70 %", Profile.bag_count("drill")], func(): done(Craft.drill(it)), Profile.bag_count("drill") > 0)
 			b.icon = UiTheme.texture(Craft.icon("drill"))
 			b.add_theme_constant_override("icon_max_width", 26)
+		# lot GX-4 : chaque gemme sertie avec ce qu'elle donne sur cette pièce, et « Retirer » (gratuit : elle revient au sac)
+		for i in sockets.size():
+			var g = sockets[i]
+			if not g is Dictionary:
+				continue
+			var idx: int = i
+			var gk := Craft.gem_key(String(g.type), int(g.tier))
+			var rb := button("Retirer %s (%s) · gratuit" % [Craft.label(gk), Craft.gem_value_text(gk)], func(): done(Craft.remove_gem(it, idx)))
+			rb.icon = UiTheme.texture(Craft.icon(gk))
+			rb.add_theme_constant_override("icon_max_width", 26)
+			rb.tooltip_text = "La gemme revient dans ton sac ; l'emplacement reste percé."
 		var slot := sockets.find(null)
 		for k in Profile.bag_keys("gem"):
 			var key: String = k
 			var target := slot if slot >= 0 else 0
-			var b := button("Sertir %s ×%d%s" % [Craft.label(key), Profile.bag_count(key), "" if slot >= 0 or sockets.is_empty() else " (remplace l'emplacement 1)"],
+			var b := button("Sertir %s · %s ×%d%s" % [Craft.label(key), Craft.gem_value_text(key), Profile.bag_count(key), "" if slot >= 0 or sockets.is_empty() else " (l'emplacement 1 revient au sac)"],
 				func(): done(Craft.insert_gem(it, key, target)), not sockets.is_empty())
 			b.icon = UiTheme.texture(Craft.icon(key))
 			b.add_theme_constant_override("icon_max_width", 26)
 			b.tooltip_text = Craft.describe_key(key)
 		if Profile.bag_keys("gem").is_empty():
 			_note("Aucune gemme : butin, coffres de joaillier, marchands.")
+		elif sockets.is_empty():
+			_note("Perce d'abord un emplacement pour sertir une gemme.")
 
 	func _enchant(it: Dictionary) -> void:
 		var scrolls := Profile.bag_keys("scroll")
@@ -659,6 +672,12 @@ class ForgePage extends ItemPage:
 	func _fusion() -> void:
 		_section("Fusion de gemmes · %d identiques → la taille au-dessus" % Forge.FUSE_COUNT)
 		var list := Forge.fusable()
+		# lot GX-4 : « Tout fusionner » (les plus petites d'abord, les gemmes obtenues refusionnent si elles le peuvent)
+		var all := Forge.fuse_all_plan()
+		if int(all.count) > 1:
+			var fb := button("Tout fusionner · %s · %s" % [GearPower.plural(int(all.count), "fusion", "fusions"), MerchantPages.price_words(all.cost)],
+				func(): done(String(Forge.fuse_all().text), 2.2), Profile.can_afford(Forge.fuse_price(0)))
+			fb.tooltip_text = "Les plus petites tailles d'abord ; une gemme obtenue fusionne à son tour s'il y en a trois. S'arrête si le prix manque."
 		for g in list:
 			var type: String = g.type
 			var tier: int = g.tier

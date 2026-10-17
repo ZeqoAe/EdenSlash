@@ -15,6 +15,9 @@ class AppearancePage extends HBoxContainer:
 	const LEFT_SLOTS := [["body", "body", "Tenue", ""], ["head", "head", "Tête", ""], ["back", "back", "Dos", ""]]
 	## Une seule aura à la fois (pierre étoilée, pierre de lune ou autre : même rôle).
 	const RIGHT_SLOTS := [["aura", "aura", "Aura", ""], ["weapon", "weapon", "Arme", ""]]
+	## Provenance d'une apparence verrouillée (lot GX-4 : les boss n'en sont qu'une source ; aucun lien avec la puissance).
+	const LOOK_FROM := "boss et coffres d'apparence"
+	const LOOK_WHERE := "Coffres d'apparence : Tour, Siège, Ruée, Battle royale, Échiquier, Survivant, Roulette."
 	var _cat := "body"
 	var _slot := "body"
 	var _aura_kind := ""  # auras : type de l'emplacement cliqué ("" : toutes)
@@ -365,7 +368,7 @@ class AppearancePage extends HBoxContainer:
 		var list := GameData.cosmetics.filter(func(c): return cat_of(c) == _cat)
 		var owned := list.filter(func(c): return Profile.outfit_unlocked(String(c.id)))
 		_count.text = "%d / %d débloqués" % [owned.size(), list.size()]
-		_hint.text = "%d à découvrir : butin des boss" % (list.size() - owned.size()) if owned.size() < list.size() else ""
+		_hint.text = "%d à découvrir : %s" % [list.size() - owned.size(), LOOK_FROM] if owned.size() < list.size() else ""
 		_hint.visible = _hint.text != ""
 		_grid.add_child(_cell({}, cid))
 		# débloqués d'abord, puis le reste
@@ -386,7 +389,7 @@ class AppearancePage extends HBoxContainer:
 		_grid.columns = 5
 		var got := GameData.auras.filter(func(x): return Profile.collected(x))
 		_count.text = "%d / %d débloquées" % [got.size(), GameData.auras.size()]
-		_hint.text = "%d à découvrir : butin des boss" % (GameData.auras.size() - got.size()) if got.size() < GameData.auras.size() else ""
+		_hint.text = "%d à découvrir : %s" % [GameData.auras.size() - got.size(), LOOK_FROM] if got.size() < GameData.auras.size() else ""
 		_hint.visible = _hint.text != ""
 		var kinds: Array = ["star", "luna", "other"]
 		_grid.add_child(_aura_cell({}, cid, ""))
@@ -470,7 +473,7 @@ class AppearancePage extends HBoxContainer:
 		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		ic.modulate = Color.WHITE if ok else Color(0.35, 0.35, 0.4, 0.8)
 		b.add_child(ic)
-		b.tip = Archive.collection_text(x) + ("" if ok else "\n[color=#ff9a7a]Verrouillée : butin des boss[/color]\n[color=#9a98a8]Clic : aperçu[/color]")
+		b.tip = Archive.collection_text(x) + ("" if ok else "\n[color=#ff9a7a]Verrouillée : %s[/color]\n[color=#9a98a8]%s[/color]\n[color=#9a98a8]Clic : aperçu[/color]" % [LOOK_FROM, LOOK_WHERE])
 		b.pressed.connect(func():
 			_shown_code = code  # aperçu même verrouillée
 			if ok:
@@ -511,7 +514,7 @@ class AppearancePage extends HBoxContainer:
 		else:
 			b.text = String(x.name) if ok else "🔒 " + String(x.name)
 			b.icon = UiTheme.texture(String(x.icon))
-			b.tip = Archive.collection_text(x) + ("" if ok else "\n[color=#ff9a7a]Verrouillée : butin des boss[/color]")
+			b.tip = Archive.collection_text(x) + ("" if ok else "\n[color=#ff9a7a]Verrouillée : %s[/color]\n[color=#9a98a8]%s[/color]" % [LOOK_FROM, LOOK_WHERE])
 			if not ok:
 				b.modulate = Color(0.6, 0.6, 0.65)
 		b.pressed.connect(func():
@@ -548,7 +551,7 @@ class AppearancePage extends HBoxContainer:
 		else:
 			b.text = String(c.name) if ok else "🔒 " + String(c.name)
 			b.icon = UiTheme.texture(String(c.get("icon", "")))
-			b.tooltip_text = String(c.name) + ("" if ok else "\nVerrouillé : butin des boss")
+			b.tooltip_text = String(c.name) + ("" if ok else "\nVerrouillé : %s\n%s" % [LOOK_FROM, LOOK_WHERE])
 			if not ok:
 				b.modulate = Color(0.6, 0.6, 0.65)
 		b.pressed.connect(func():

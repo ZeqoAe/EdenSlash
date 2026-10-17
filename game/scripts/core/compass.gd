@@ -312,10 +312,13 @@ static func _forge_step(cid: String, e: Dictionary) -> Dictionary:
 	if not Unlocks.is_open("forge"):
 		return ladder_step("forge")
 	var cheapest := -1
+	var under5 := 0  # lot GX-4 : pièces sous +5, que « Tout monter à +5 » monte d'un coup
 	for it in ClassGear.gear_of(cid).values():
 		var up := int(it.get("upgrade", 0))
 		if up >= Items.MAX_UPGRADE or Items.is_unique(it):
 			continue
+		if up < Forge.EVEN_TARGET:
+			under5 += 1
 		var cost := Forge.upgrade_crystals(int(it.get("level", 1)), up, up + 1)
 		if cheapest < 0 or cost < cheapest:
 			cheapest = cost
@@ -325,6 +328,7 @@ static func _forge_step(cid: String, e: Dictionary) -> Dictionary:
 	var left := Items.SLOTS.size() - int(e.plus10)
 	if have >= cheapest:
 		return _make("forge", "%s : une pièce peut monter → Forge" % GearPower.plural(have, "cristal", "cristaux"), {"workshop": 2},
+			("%s sous +5 : à la Forge, « Tout monter à +5 » les monte toutes, la moins montée d'abord." % GearPower.plural(under5, "pièce")) if under5 > 1 else
 			"%s à monter à +10. Chaque niveau coûte des cristaux, parfois un parchemin." % GearPower.plural(left, "pièce"), "crystal")
 	var where := "Donjons" if Unlocks.is_open("dungeons") else "Tour"
 	return _make("crystals", "Forge : il manque des cristaux → %s" % where, {"menu": "dungeon"} if where == "Donjons" else {"menu": "tower"},

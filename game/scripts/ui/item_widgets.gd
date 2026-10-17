@@ -523,6 +523,9 @@ class ItemGrid extends VBoxContainer:
 	var can_drop: Callable
 	var on_drop: Callable
 	var card_extra: Callable  # func(item) -> String : ajout à la carte au survol
+	var compare := true  # ▲ / ▼ de comparaison sur les cases (la Forge les coupe : le +N reste lisible)
+	var first_fn: Callable  # func(item) -> bool : ces pièces d'abord, quel que soit le tri (la Forge : les pièces portées)
+	var _search: LineEdit  # recherche par nom (enable_search, lot GX-4)
 	var _items: Array = []
 	var _shown: Array = []
 	var _selection: Array = []
@@ -580,6 +583,34 @@ class ItemGrid extends VBoxContainer:
 	func set_empty_text(t: String) -> void:
 		_empty_text = t
 
+	## Ajoute une recherche par nom au-dessus des filtres (lot GX-4) : le texte filtre les cases au fil de la frappe.
+	func enable_search(placeholder := "Chercher") -> LineEdit:
+		if _search:
+			return _search
+		_search = LineEdit.new()
+		_search.placeholder_text = placeholder
+		_search.clear_button_enabled = true
+		_search.custom_minimum_size = Vector2(0, 34)
+		_search.add_theme_font_size_override("font_size", 14)
+		_search.text_changed.connect(func(_t): refresh())
+		add_child(_search)
+		move_child(_search, 0)
+		return _search
+
+	## Le nom de [param it] contient [param q] (sans tenir compte des accents ni de la casse).
+	static func name_matches(it: Dictionary, q: String) -> bool:
+		if q.strip_edges() == "":
+			return true
+		var hay := (Items.display_name(it) + " " + String(Items.SLOT_NAMES.get(String(it.get("slot", "")), ""))).to_lower()
+		return _plain(hay).contains(_plain(q.strip_edges().to_lower()))
+
+	## Minuscules sans accents (é → e…) pour la recherche.
+	static func _plain(s: String) -> String:
+		var out := s
+		for pair in [["é", "e"], ["è", "e"], ["ê", "e"], ["ë", "e"], ["à", "a"], ["â", "a"], ["î", "i"], ["ï", "i"], ["ô", "o"], ["û", "u"], ["ù", "u"], ["ç", "c"], ["œ", "oe"]]:
+			out = out.replace(pair[0], pair[1])
+		return out
+
 	func set_items(items: Array) -> void:
 		_items = items
 		_selection = _selection.filter(func(x): return _items.any(func(y): return is_same(x, y)))
@@ -626,16 +657,19 @@ class ItemGrid extends VBoxContainer:
 				return false
 			if sf >= 0 and it.slot != Items.SLOTS[sf]:
 				return false
+			if _search and not name_matches(it, _search.text):
+				return false
 			return true)
 		var key := _sort.selected
-		_shown.sort_custom(func(a, b): return _sort_key(a, key) > _sort_key(b, key))
+		var first := first_fn
+		_shown.sort_custom(func(a, b): return _sort_key(a, key) + (1e7 if first.is_valid() and first.call(a) else 0.0) > _sort_key(b, key) + (1e7 if first.is_valid() and first.call(b) else 0.0))
 		for c in _grid.get_children():
 			c.queue_free()
 		for i in _shown.size():
 			var it: Dictionary = _shown[i]
 			var s := ItemWidgets.ItemSlot.new(cell)
 			s.set_item(it)
-			s.show_compare = true
+			s.show_compare = compare
 			s.source = source
 			s.selected = _selection.any(func(x): return is_same(x, it))
 			s.badge = String(badge_fn.call(it)) if badge_fn.is_valid() else ""

@@ -33,6 +33,16 @@ var _tab_buttons := {}
 var _pinned: VBoxContainer  # l'action principale, en bas du panneau
 var _busy := false
 var _armed_at := -10.0  # démontage : second clic pour confirmer
+## « Tout monter à +N » (lot GX-4) : la rangée au-dessus de la grille, la cible, la séance en cours.
+var even_target := Forge.EVEN_TARGET
+var even_stones := false
+var _even_row: HBoxContainer
+var _even_btn: Button
+var _even_minus: Button
+var _even_plus: Button
+var _even := {}  # séance en cours : {target, stones, tries, fails, bonus, start_crystal, total, stop_asked}
+## Durée d'un essai de « Tout monter » (la barre de forge se remplit à chaque essai).
+const EVEN_TRY_SECS := 0.16
 
 
 func _init() -> void:
@@ -64,6 +74,11 @@ func _ready() -> void:
 	grid.selection_changed.connect(func():
 		if not _busy:
 			_bar.idle())
+	# lot GX-4 : les pièces portées d'abord (le +N reste lisible : pas de ▲ / ▼ sur la case), une recherche, « Tout monter »
+	grid.compare = false
+	grid.first_fn = func(it): return _worn(it)
+	grid.enable_search("Chercher une pièce")
+	_build_even_row()
 	visibility_changed.connect(_on_visibility)
 
 
@@ -90,6 +105,8 @@ func refresh() -> void:
 
 
 func _on_selection() -> void:
+	if not _even.is_empty():  # « Tout monter » en cours : « Arrêter » reste seul en bas
+		return
 	if _pinned:
 		for c in _pinned.get_children():
 			_pinned.remove_child(c)
@@ -100,7 +117,8 @@ func _on_selection() -> void:
 func show_detail(sel: Array) -> void:
 	_sync_tabs()
 	if sel.is_empty():
-		detail.text = "[center]\n[img=72x72]%s[/img]\n\n[font_size=20][b]Choisis une pièce[/b][/font_size]\n[color=#c8c8d4]dans la grille, à gauche.[/color]%s[/center]" % [Items.material_icon("crystal"), _crystal_hint()]
+		detail.text = "[center]\n[img=72x72]%s[/img]\n\n[font_size=20][b]Choisis une pièce[/b][/font_size]\n[color=#c8c8d4]dans la grille, à gauche%s.[/color]%s[/center]" % [Items.material_icon("crystal"),
+			", ou « Tout monter » pour toutes les pièces portées" if bench == "upgrade" and not Forge.even_pieces(even_target).is_empty() else "", _crystal_hint()]
 		if bench == "gems":
 			_fusion()
 		return
@@ -172,6 +190,211 @@ func _build_tabs() -> Control:
 func _sync_tabs() -> void:
 	for id in _tab_buttons:
 		(_tab_buttons[id] as Button).set_pressed_no_signal(id == bench)
+	_sync_even()
+
+
+# --- tout l'équipement à +N (lot GX-4) ----------------------------------------------------------------------------
+## Rangée « Tout monter à +5 » au-dessus de la grille (établi Améliorer) : ‹ +N › et le bouton, qui dit combien de pièces
+## portées sont encore en dessous.
+func _build_even_row() -> void:
+	var left := grid.get_parent()
+	_even_row = HBoxContainer.new()
+	_even_row.add_theme_constant_override("separation", 6)
+	left.add_child(_even_row)
+	left.move_child(_even_row, grid.get_index())
+	_even_minus = ItemWidgets.action_button(_even_row, "‹", func():
+		even_target = maxi(1, even_target - 1)
+		_sync_even(), 40)
+	_even_minus.tooltip_text = "Viser un cran plus bas"
+	_even_btn = ForgeWidgets.candy_button("", "lagon", 15, 40)
+	_even_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_even_btn.clip_text = true
+	_even_btn.pressed.connect(_ask_even)
+	_even_row.add_child(_even_btn)
+	_even_plus = ItemWidgets.action_button(_even_row, "›", func():
+		even_target = mini(Items.MAX_UPGRADE, even_target + 1)
+		_sync_even(), 40)
+	_even_plus.tooltip_text = "Viser un cran plus haut"
+	for b in [_even_minus, _even_plus]:
+		(b as Button).custom_minimum_size.y = 40
+	_sync_even()
+
+
+func _sync_even() -> void:
+	if _even_row == null:
+		return
+	_even_row.visible = bench == "upgrade" and not Profile.in_run
+	if not _even_row.visible:
+		return
+	var n := Forge.even_pieces(even_target).size()
+	var worn := Items.SLOTS.filter(func(s): return Profile.equipped.get(s) is Dictionary and not Items.is_unique(Profile.equipped[s])).size()
+	if worn == 0:
+		_even_btn.text = "Aucune pièce portée"
+	elif n == 0:
+		_even_btn.text = "Tout est à +%d ✓" % even_target
+	else:
+		_even_btn.text = "Tout monter à +%d · %s" % [even_target, GearPower.plural(n, "pièce")]
+	_even_btn.disabled = n == 0 or _busy
+	_even_btn.tooltip_text = "Monte les pièces portées (préréglage actif) jusqu'à +%d, la moins montée d'abord : coût attendu et au pire avant de commencer, arrêt possible à tout moment." % even_target
+	_even_minus.disabled = _busy or even_target <= 1
+	_even_plus.disabled = _busy or even_target >= Items.MAX_UPGRADE
+
+
+## Confirmation : ce qui monte, le coût attendu et au pire (cristaux, parchemins), ce qu'on a ; pierres de chance en option.
+func _ask_even() -> void:
+	if _busy:
+		return
+	var target := even_target
+	var plan := Forge.plan_even(target)
+	if (plan.pieces as Array).is_empty():
+		return
+	var have := Profile.amount("crystal")
+	var e_cost := int((plan.cost as Dictionary).get("crystal", 0))
+	var worst := int((plan.cost_max as Dictionary).get("crystal", 0))
+	var lines: PackedStringArray = []
+	lines.append("%s, %s." % [GearPower.plural(plan.pieces.size(), "pièce portée", "pièces portées"), GearPower.plural(int(plan.steps), "cran", "crans")])
+	lines.append("Cristaux : attendu ≈ %s, au pire %s (tu en as %s)" % [_nb(GearPower.fmt(e_cost)), _nb(GearPower.fmt(worst)), _nb(GearPower.fmt(have))])
+	for kind in plan.scrolls:
+		var s: Array = plan.scrolls[kind]
+		lines.append("%s : ≈ %d, au pire %d (tu en as %d)" % ["Parchemins de puissance" if kind == "power" else "Parchemins de garde", int(s[0]), int(s[1]), int(s[2])])
+	if have < worst:
+		lines.append("S'il en manque, la Forge s'arrête : rien n'est perdu.")
+	lines.append("Un échec ne coûte que l'essai. Tu peux arrêter à tout moment.")
+	var a := InfoCard.ask(self, "Tout monter à +%d ?" % target, "\n".join(lines), "Monter", func(): _even_start(target), false)
+	var v := a.title_label.get_parent()
+	# la liste des pièces (case, +N → +cible) et l'option des pierres de chance
+	var list := HFlowContainer.new()
+	list.add_theme_constant_override("h_separation", 8)
+	list.add_theme_constant_override("v_separation", 6)
+	for p in plan.pieces:
+		var cell := VBoxContainer.new()
+		cell.add_theme_constant_override("separation", 0)
+		var s := ItemWidgets.ItemSlot.new(44.0)
+		s.set_item(p.item)
+		cell.add_child(s)
+		var l := Hud._label(cell, "+%d → +%d" % [int(p.from), target], 13, UiTheme.TEXT)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		list.add_child(cell)
+	v.add_child(list)
+	v.move_child(list, 2)
+	if _has_stones():
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 10)
+		var sw := UiTheme.Switch.new()
+		sw.button_pressed = even_stones
+		sw.toggled.connect(func(on): even_stones = on)
+		row.add_child(sw)
+		var sl := Hud._label(row, "Utiliser mes pierres de chance (les plus petites d'abord)", 15, UiTheme.TEXT)
+		sl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		v.add_child(row)
+		v.move_child(row, v.get_child_count() - 2)
+
+
+func _has_stones() -> bool:
+	for id in Craft.STONES:
+		if Profile.bag_count(Craft.stone_key(String(id))) > 0:
+			return true
+	return false
+
+
+## Début de la séance : la barre de forge se remplit à chaque essai, « Arrêter » remplace l'action principale.
+func _even_start(target: int) -> void:
+	if _busy:
+		return
+	_busy = true
+	_even = {"target": target, "stones": even_stones, "tries": 0, "fails": 0, "bonus": [], "start_crystal": Profile.amount("crystal"),
+		"total": Forge.even_pieces(target).size(), "steps": _steps_left(target), "stop_asked": false, "stop": ""}
+	_disable(actions)
+	for c in _pinned.get_children():
+		_pinned.remove_child(c)
+		c.queue_free()
+	var stop := ForgeWidgets.candy_button("Arrêter", "fraise", 18, 50)
+	stop.pressed.connect(func():
+		_even.stop_asked = true
+		stop.disabled = true
+		stop.text = "Arrêt après cet essai…")
+	_pinned.add_child(stop)
+	_sync_even()
+	_even_next()
+
+
+func _even_next() -> void:
+	var target := int(_even.target)
+	var left := Forge.even_pieces(target)
+	if left.is_empty() or bool(_even.stop_asked):
+		_even_finish()
+		return
+	left.sort_custom(func(a, b): return int(a.get("upgrade", 0)) * 100 + Items.SLOTS.find(a.slot) < int(b.get("upgrade", 0)) * 100 + Items.SLOTS.find(b.slot))
+	var cur: Dictionary = left[0]
+	var done_n := int(_even.steps) - _steps_left(target)
+	_bar.caption = "Cran %d / %d" % [mini(done_n + 1, int(_even.steps)), int(_even.steps)]
+	_bar.line = "%s · +%d → +%d" % [Items.display_name(cur), int(cur.get("upgrade", 0)), int(cur.get("upgrade", 0)) + 1]
+	# la fiche montre la pièce en cours et le bilan de la séance
+	detail.text = _head_text(cur) + "\n\n" + ba_table([["Amélioration", "+%d" % int(cur.get("upgrade", 0)), "+%d" % (int(cur.get("upgrade", 0)) + 1), 1],
+		["Persévérance", "%d %%" % roundi(Craft.pity(cur) * 100.0), "", 0],
+		["Essais", str(int(_even.tries)), "", 0], ["Ratés", str(int(_even.fails)), "", 0],
+		["Cristaux dépensés", GearPower.fmt(int(_even.start_crystal) - Profile.amount("crystal")), "", 0]])
+	_got_verdict = false
+	_bar.work(0.01 if fast else EVEN_TRY_SECS, func():
+		if not is_visible_in_tree():  # l'Atelier s'est fermé : la réserve n'est plus la bourse, on s'arrête là
+			_even.stop_asked = true
+			_even_finish()
+			return
+		var s := Forge.even_step(target, bool(_even.stones))
+		if s.has("done"):
+			_even_finish()
+			return
+		if s.has("stop"):
+			_even.stop = String(s.stop)
+			_even["blocked"] = s.get("item", {})
+			_even_finish()
+			return
+		_even.tries = int(_even.tries) + 1
+		if not bool(s.r.ok):
+			_even.fails = int(_even.fails) + 1
+		else:
+			grid.refresh()  # le +N de la case suit
+			if String(s.r.get("stat", "")) != "":
+				(_even.bonus as Array).append("%s : %s" % [Items.SLOT_NAMES.get(String(s.item.slot), ""), Items.stat_text(String(s.r.stat), float(s.r.value))])
+		_even_next())
+
+
+## Crans encore à faire pour amener les pièces portées à +[param target].
+func _steps_left(target: int) -> int:
+	var n := 0
+	for it in Forge.even_pieces(target):
+		n += target - int(it.get("upgrade", 0))
+	return n
+
+
+## Fin de la séance : le résumé dans le bandeau (pomme si tout est monté, lagon si arrêt), la grille relue.
+func _even_finish() -> void:
+	var target := int(_even.target)
+	var left := Forge.even_pieces(target).size()
+	var reached := int(_even.total) - left
+	var spent := int(_even.start_crystal) - Profile.amount("crystal")
+	var head := ""
+	if left == 0:
+		head = "Tout l'équipement à +%d" % target
+	elif bool(_even.stop_asked):
+		head = "Arrêté : %d pièce%s sur %d à +%d" % [reached, "s" if reached > 1 else "", int(_even.total), target]
+	else:
+		var it: Dictionary = _even.get("blocked", {})
+		var what := "plus assez de cristaux" if String(_even.stop) == "crystal" else ("plus de %s" % Craft.label(Craft.fortify_key(Craft.fortify_kind(it), Craft.fortify_level_for(it))).to_lower() if not it.is_empty() else "plus de parchemin")
+		head = "Arrêt : %s · %d pièce%s sur %d à +%d" % [what, reached, "s" if reached > 1 else "", int(_even.total), target]
+	var txt := "%s\n%s (%s) · %s" % [head, GearPower.plural(int(_even.tries), "essai", "essais"), GearPower.plural(int(_even.fails), "raté", "ratés"), GearPower.plural(spent, "cristal", "cristaux")]
+	var bonus: Array = _even.bonus
+	if not bonus.is_empty():
+		txt += "\nStats bonus : " + ", ".join(bonus.slice(0, 4)) + (" + %d" % (bonus.size() - 4) if bonus.size() > 4 else "")
+	_busy = false
+	_got_verdict = true
+	_even = {}
+	Profile.save_profile()
+	_bar.verdict(left == 0, txt, left > 0)
+	UiFeel.cue("ui_forge_ok" if left == 0 else "ui_forge_fail", -9.0)
+	if ui:
+		ui.message(txt.get_slice("\n", 0), 2.5)
+	refresh()
 
 
 # --- les établis ---------------------------------------------------------------------------------
@@ -225,7 +448,8 @@ func _bench_gems(it: Dictionary) -> void:
 		rows.append(["Emplacements", "%d / %d" % [sockets.size(), Craft.MAX_SOCKETS], "complet", 0])
 	for i in sockets.size():
 		var g = sockets[i]
-		rows.append(["Gemme %d" % (i + 1), Craft.label(Craft.gem_key(String(g.type), int(g.tier))) if g is Dictionary else "vide", "", 0])
+		var gk := Craft.gem_key(String(g.type), int(g.tier)) if g is Dictionary else ""
+		rows.append(["Gemme %d" % (i + 1), ("%s · %s" % [Craft.label(gk), Craft.gem_value_text(gk)]) if g is Dictionary else "vide", "", 0])
 	_gems(it)
 	detail.text = _head_text(it) + "\n\n" + ba_table(rows)
 
@@ -414,6 +638,8 @@ class ForgeBar extends PanelContainer:
 	## Au repos : rien à montrer.
 	func idle() -> void:
 		_working = false
+		caption = ""
+		line = ""
 		visible = false
 		_style(Color(0.07, 0.06, 0.12, 0.95), UiTheme.GOLD_DIM)
 		_title.text = ""
@@ -437,14 +663,22 @@ class ForgeBar extends PanelContainer:
 			_working = false
 			done_cb.call())
 
+	## Titre pendant le travail (« Tout monter » : « Pièce 3 / 7 ») et ligne de droite, gardés d'un essai à l'autre.
+	var caption := ""
+	var line := ""
+
 	func _process(delta: float) -> void:
 		if _working:
 			_dots += delta * 4.0
-			_title.text = "Forge en cours" + ".".repeat(int(_dots) % 4)
+			_title.text = (caption if caption != "" else "Forge en cours") + ".".repeat(int(_dots) % 4)
+			if line != "":
+				_msg.text = line
 
 	## [param soft] : un échec de la Forge qui remplit la persévérance (lagon : il avance, il ne punit pas).
 	func verdict(ok: bool, text: String, soft := false) -> void:
 		_working = false
+		caption = ""
+		line = ""
 		visible = true
 		_bar.value = 1.0
 		var col := ForgeWidgets.POMME if ok else (ForgeWidgets.LAGON if soft else ForgeWidgets.FRAISE)

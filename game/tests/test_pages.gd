@@ -431,7 +431,7 @@ func _test_lobby() -> void:
 	hc.close_ui()
 	get_tree().root.size = Vector2i(1600, 900)
 	await _frames()
-	check("Héros : fiche d'objet masquée sans sélection, 3 préréglages + « Gérer »", not hero.page._d_card.visible and hero.page.preset_bar.visible and hero.page.preset_bar.get_child_count() == 4)
+	check("Héros : fiche d'objet masquée sans sélection, 5 préréglages + « Gérer »", not hero.page._d_card.visible and hero.page.preset_bar.visible and hero.page.preset_bar.get_child_count() == Profile.PRESETS_PER_CLASS + 1)
 	var worn_head: Dictionary = Profile.equipped.get("head", {})
 	var spare := Items.generate(30, 0.9, "head", Profile.selected_class)
 	Profile.inventory.append(spare)
@@ -455,7 +455,7 @@ func _test_lobby() -> void:
 		if (b as Button).text == "Action de test":
 			entry = b
 	check("préréglages : le menu « Gérer » reçoit les actions ajoutées (copie, renommage, équiper le meilleur)", entry != null
-		and pb._pop.find_children("*", "Button", true, false).filter(func(b): return (b as Button).text.begins_with("Copier vers")).size() == 2)
+		and pb._pop.find_children("*", "Button", true, false).filter(func(b): return (b as Button).text == "Copier ici").size() == Profile.PRESETS_PER_CLASS - 1)
 	entry.pressed.emit()
 	check("préréglages : l'action ajoutée reçoit la classe affichée", act.called == Profile.selected_class)
 	pb.extra_actions.clear()

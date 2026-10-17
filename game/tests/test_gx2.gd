@@ -166,7 +166,7 @@ func _test_forge_ui() -> void:
 	check("forge : persévérance écrite avant l'appui", all.contains("Persévérance"))
 	check("forge : conséquence d'un échec non punitive écrite", all.contains("Rien d'autre n'est perdu") and not all.contains("redescend"))
 	check("forge : viser +8 avec le coût attendu et au pire", all.contains("attendu") and all.contains("au pire") and _button_with(fb, "Fortifier jusqu'à +8") != null)
-	var plus := _button_with(fb, "›")
+	var plus := _button_with(fb._pinned, "›")  # le › de « Viser » (celui de « Tout monter », lot GX-4, est au-dessus de la grille)
 	if plus:
 		plus.pressed.emit()
 		await get_tree().process_frame

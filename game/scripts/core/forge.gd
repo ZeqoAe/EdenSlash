@@ -179,6 +179,141 @@ static func upgrade_crystals(level: int, from: int, to: int) -> int:
 	return total
 
 
+# --- tout l'équipement à +N (lot GX-4) ---------------------------------------------------------------------------
+## « Tout monter à +5 » : la boussole (Compass._forge_step) et la mesure H56 (`progression_sim --even` : équipement 80-90
+## correct ≈ 32 h au lieu de 35-36) veulent toutes les pièces à +5 avant d'en pousser une plus haut. Un essai à la fois,
+## mêmes règles que « Fortifier » (lot GX-2 : persévérance, aucune rétrogradation, un parchemin et le prix par essai) ;
+## rien n'est changé au coût.
+const EVEN_TARGET := 5
+
+
+## Pièces portées (préréglage actif, 9 emplacements de la poupée : ni trophée, ni arme secondaire, qui ne donnent pas de
+## stats) encore sous +[param target], dans l'ordre de la poupée.
+static func even_pieces(target: int) -> Array:
+	var out: Array = []
+	for slot in Items.SLOTS:
+		var it = Profile.equipped.get(slot)
+		if it is Dictionary and not (it as Dictionary).is_empty() and not Items.is_unique(it) and int(it.get("upgrade", 0)) < target:
+			out.append(it)
+	return out
+
+
+## Parchemins de fortification du sac utilisables par au moins une pièce du genre [param kind] dans [param pieces].
+static func _scrolls_usable(kind: String, pieces: Array) -> int:
+	var low := 9999
+	for it in pieces:
+		if Craft.fortify_kind(it) == kind:
+			low = mini(low, Craft._item_level(it))
+	var n := 0
+	for k in Profile.bag_keys("fortify:" + kind):
+		if int(String(k).split(":")[2]) >= low:
+			n += Profile.bag_count(k)
+	return n
+
+
+## Ce que coûterait « Tout monter à +[param target] » (sans pierre) : {pieces: [{item, from, plan}], steps, tries, tries_max,
+## cost (attendu), cost_max (au pire), scrolls: {genre: [attendus, au pire, utilisables dans le sac]}, no_scroll: [pièces
+## sans parchemin qui convienne]}. Les coûts suivent Craft.plan_upgrade (cristaux hors partie).
+static func plan_even(target: int) -> Dictionary:
+	var pieces: Array = []
+	var cost := {}
+	var cost_max := {}
+	var scrolls := {}
+	var no_scroll: Array = []
+	var steps := 0
+	var tries := 0.0
+	var worst := 0
+	var todo := even_pieces(target)
+	for it in todo:
+		var p := Craft.plan_upgrade(it, target)
+		pieces.append({"item": it, "from": int(it.get("upgrade", 0)), "plan": p})
+		steps += int(p.steps)
+		tries += float(p.tries)
+		worst += int(p.tries_max)
+		for k in p.cost:
+			cost[k] = int(cost.get(k, 0)) + int(p.cost[k])
+		for k in p.cost_max:
+			cost_max[k] = int(cost_max.get(k, 0)) + int(p.cost_max[k])
+		var kind := Craft.fortify_kind(it)
+		var s: Array = scrolls.get(kind, [0, 0, 0])
+		s[0] = int(s[0]) + int(p.scrolls)
+		s[1] = int(s[1]) + int(p.scrolls_max)
+		scrolls[kind] = s
+		if Craft.fortify_for(it) == "":
+			no_scroll.append(it)
+	for kind in scrolls:
+		scrolls[kind][2] = _scrolls_usable(String(kind), todo)
+	return {"pieces": pieces, "steps": steps, "tries": tries, "tries_max": worst, "cost": cost, "cost_max": cost_max,
+		"scrolls": scrolls, "no_scroll": no_scroll}
+
+
+## La plus petite pierre de chance du sac utilisable sur [param it] ("" : aucune, ou réussite déjà assurée).
+static func smallest_stone(it: Dictionary) -> String:
+	if Craft.success_chance(it) >= 0.999:
+		return ""
+	var best := ""
+	for id in Craft.STONES:
+		var key := Craft.stone_key(String(id))
+		if Profile.bag_count(key) > 0 and Craft.stone_usable(it, key) \
+				and (best == "" or float(Craft.STONES[id].bonus) < float(Craft.STONES[best.split(":")[1]].bonus)):
+			best = key
+	return best
+
+
+## Un essai de « Tout monter à +[param target] » : la pièce la moins montée d'abord (ordre de la poupée à égalité : une
+## pièce ratée est reprise aussitôt, sa persévérance monte), en sautant celles qui n'ont pas de parchemin ou dont le prix
+## manque ; [param stones] : avec la plus petite pierre de chance du sac quand la réussite n'est pas assurée. Renvoie
+## {item, r, stone} après un essai, {done: true} quand tout est à +N, {stop: "crystal" | "scroll", item} quand plus rien
+## ne peut monter (la première pièce bloquée).
+static func even_step(target: int, stones := false) -> Dictionary:
+	var cands := even_pieces(target)
+	if cands.is_empty():
+		return {"done": true}
+	cands.sort_custom(func(a, b): return int(a.get("upgrade", 0)) * 100 + Items.SLOTS.find(a.slot) < int(b.get("upgrade", 0)) * 100 + Items.SLOTS.find(b.slot))
+	var why := ""
+	var blocked: Dictionary = {}
+	for it in cands:
+		var reason := ""
+		if Craft.fortify_for(it) == "":
+			reason = "scroll"
+		elif not Profile.can_afford(price(int(Items.upgrade_cost(it).gold))):
+			reason = "crystal"
+		if reason != "":
+			if why == "" or reason == "crystal":
+				why = reason
+				blocked = it
+			continue
+		var stone := smallest_stone(it) if stones else ""
+		var r := Profile.upgrade_item(it, stone)
+		if bool(r.get("error", false)):
+			return {"stop": "error", "item": it, "text": String(r.get("text", ""))}
+		return {"item": it, "r": r, "stone": stone}
+	return {"stop": why, "item": blocked}
+
+
+## « Tout monter » d'un coup (sans animation : tests, outils) : enchaîne [method even_step] jusqu'à la fin ou au manque ;
+## renvoie {tries, fails, done, stop, item, bonus: [textes des stats bonus], spent: {clé: quantité}}.
+static func even_all(target: int, stones := false) -> Dictionary:
+	var before := {"crystal": Profile.amount("crystal")}
+	var out := {"tries": 0, "fails": 0, "done": false, "stop": "", "item": {}, "bonus": []}
+	while int(out.tries) < 600:
+		var s := even_step(target, stones)
+		if s.has("done"):
+			out.done = true
+			break
+		if s.has("stop"):
+			out.stop = String(s.stop)
+			out.item = s.get("item", {})
+			break
+		out.tries = int(out.tries) + 1
+		if not bool(s.r.ok):
+			out.fails = int(out.fails) + 1
+		elif String(s.r.get("stat", "")) != "":
+			(out.bonus as Array).append("%s +%d : %s" % [Items.display_name(s.item), int(s.item.upgrade), Items.stat_text(String(s.r.stat), float(s.r.value))])
+	out["spent"] = {"crystal": int(before.crystal) - Profile.amount("crystal")}
+	return out
+
+
 ## La fusion garde l'ancien taux (1 cristal pour 25 or) : les gemmes se fusionnent beaucoup, ce n'est pas le poste
 ## de dépense de la forge (2 à 7 cristaux selon la taille), alors que le taux de 125 la rendait presque gratuite.
 const FUSE_GOLD_PER_CRYSTAL := 25
@@ -202,3 +337,47 @@ static func fuse(type: String, tier: int) -> String:
 	Profile.add_bag(out)
 	Profile.save_profile()
 	return "%d × %s → %s" % [FUSE_COUNT, Craft.label(key), Craft.label(out)]
+
+
+## Fusions possibles tout de suite (gemmes en paquets de 3, sans compter les cascades) et leur prix total.
+static func fuse_all_plan() -> Dictionary:
+	var n := 0
+	var cost := {}
+	for g in fusable():
+		var k := int(g.count) / FUSE_COUNT
+		if k <= 0:
+			continue
+		n += k
+		var fp := fuse_price(int(g.tier))
+		for key in fp:
+			cost[key] = int(cost.get(key, 0)) + int(fp[key]) * k
+	return {"count": n, "cost": cost}
+
+
+## « Tout fusionner » (lot GX-4) : fusionne les plus petites tailles d'abord (les gemmes obtenues peuvent fusionner à leur
+## tour), tant que le prix suit. Renvoie {count, text}.
+static func fuse_all() -> Dictionary:
+	var n := 0
+	var before := {}
+	for k in Profile.bag_keys("gem"):
+		before[k] = Profile.bag_count(k)
+	var guard := 0
+	while guard < 500:
+		guard += 1
+		var list := fusable().filter(func(g): return int(g.count) >= FUSE_COUNT)
+		if list.is_empty():
+			break
+		list.sort_custom(func(a, b): return int(a.tier) < int(b.tier))
+		var g: Dictionary = list[0]
+		if not Profile.can_afford(fuse_price(int(g.tier))):
+			break
+		fuse(String(g.type), int(g.tier))
+		n += 1
+	if n == 0:
+		return {"count": 0, "text": "Rien à fusionner : il faut %d gemmes identiques." % FUSE_COUNT}
+	var parts: PackedStringArray = []  # ce qu'on a de plus qu'avant (les tailles intermédiaires refondues ne comptent pas)
+	for k in Profile.bag_keys("gem"):
+		var d := Profile.bag_count(k) - int(before.get(k, 0))
+		if d > 0:
+			parts.append("%s ×%d" % [Craft.label(String(k)), d])
+	return {"count": n, "text": "%s : %s" % [GearPower.plural(n, "fusion", "fusions"), ", ".join(parts)]}

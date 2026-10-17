@@ -644,7 +644,7 @@ func _offer_piece(acc: Dictionary, it: Dictionary) -> void:
 		return  # --heros : niveau requis au-dessus du niveau de héros
 	var cur: Dictionary = acc.gear.get(slot, {})
 	if cur.is_empty() or _value(it, true) > _value(cur, true) * 1.08:
-		acc.gear[slot] = it
+		_wear(acc, slot, it)
 
 
 ## Valeur d'une pièce pour le choix (note commune au niveau 35, enclume exclue) ; [param bare] : sans +N, gemmes
@@ -703,7 +703,7 @@ func shop(acc: Dictionary) -> void:
 			acc.bought[int(best.eden)] = true
 			var piece := best.duplicate(true)
 			piece["uid"] = "sim%d" % rng.randi()
-			acc.gear[slot] = piece
+			_wear(acc, slot, piece)
 
 
 ## Lot A7, --refonte : plans de donjon fabriqués en insignes (pièce au niveau du donjon dans la difficulté du plan,
@@ -741,7 +741,7 @@ func craft_dungeon(acc: Dictionary) -> void:
 				var piece := it.duplicate(true)
 				piece.erase("_price")
 				piece["uid"] = "simd%d" % rng.randi()
-				acc.gear[slot] = piece
+				_wear(acc, slot, piece)
 
 
 ## Lot A7 : plan de donjon gagné en finissant le donjon [param zone] en [param diff] (--refonte). Par défaut (PR1) un plan
@@ -859,7 +859,18 @@ func _gems(acc: Dictionary, it: Dictionary) -> void:
 				best_k = String(k)
 		if best_k != "":
 			_add_bag(acc, best_k, -1)
+			if cur is Dictionary:
+				_add_bag(acc, Craft.gem_key(String(cur.type), int(cur.tier)), 1)  # lot GX-4 : l'ancienne gemme revient au sac
 			sockets[i] = {"type": best_k.split(":")[1], "tier": best_t}
+
+
+## Pose [param piece] dans [param slot] ; lot GX-4 (« Retirer » gratuit) : les gemmes de la pièce remplacée reviennent au sac.
+func _wear(acc: Dictionary, slot: String, piece: Dictionary) -> void:
+	var old: Dictionary = acc.gear.get(slot, {})
+	for g in old.get("sockets", []):
+		if g is Dictionary:
+			_add_bag(acc, Craft.gem_key(String(g.type), int(g.tier)), 1)
+	acc.gear[slot] = piece
 
 
 func _enchant(acc: Dictionary, it: Dictionary) -> void:

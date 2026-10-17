@@ -1,7 +1,7 @@
 class_name InventoryPage
 extends HBoxContainer
 ## Inventaire (maquette de l'utilisateur) :
-## - au centre, les 3 préréglages d'équipement de la classe (hors run), le héros entouré de son
+## - au centre, les 5 préréglages d'équipement de la classe (hors run), le héros entouré de son
 ##   équipement (5 cases de chaque côté), la puissance d'équipement, la panoplie active, les 5
 ##   statistiques principales et un bouton « Détail » (toutes les statistiques) ;
 ## - à droite, l'inventaire sans limite de place : familles (Tous, Armes, Armures,
@@ -299,6 +299,7 @@ func _doll_column(parent: Control, slots: Array) -> void:
 			_select({"kind": "item", "item": it} if not it.is_empty() else {})
 			_refresh_grid())
 		s.activated.connect(func(): _unequip(slot))
+		s.set_meta("pad_x", "Retirer")  # manette : X = clic droit, dessiné dans la barre d'aide (lot GX-4)
 		s.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		cell.add_child(s)
 		var cap := Hud._label(cell, String(SLOT_CAPTIONS.get(slot, Items.SLOT_NAMES[slot])), 12, UiTheme.MUTED)
@@ -765,9 +766,7 @@ func refresh() -> void:
 	_power.text = GearPower.fmt(GearPower.hero_power())
 	_power.tooltip_text = GearPower.summary(maxi(Profile.best_level, 1)) + "
 Elle ouvre les difficultés Héroïque et Mythique des donjons et les butins légendaires."
-	var sets := Items.active_set_bonuses(Profile.set_gear())
-	_set_text.text = ("%s · %d pièces" % [Items.set_def(sets[-1].set).get("name", ""), int(sets[-1].pieces)]) if not sets.is_empty() else "Aucune panoplie active"
-	_set_text.add_theme_color_override("font_color", UiTheme.TEXT if not sets.is_empty() else UiTheme.MUTED)
+	_set_preview()
 	_useless_dirty = true
 	_base_stats = _hero_stats(_stats_player())
 	for k in _stat_vals:
@@ -938,6 +937,8 @@ func _cell(e: Dictionary) -> Control:
 	s.activated.connect(func():
 		if String(e.kind) == "item":
 			_equip(e.item))
+	if String(e.kind) == "item":
+		s.set_meta("pad_x", "Équiper")  # manette : X = clic droit (lot GX-4)
 	return s
 
 
@@ -1444,6 +1445,37 @@ func _show_stat_detail() -> void:
 			lines.append("%s : [b]%s[/b]" % [row[0], row[1]])
 	var extra := "" if player else "\n\n[color=#9a98a8]Hors partie : héros niveau %d avec l'équipement porté, les talents, les certificats et la collection.[/color]" % _level()
 	InfoDialog.open(self, "Statistiques — %s" % GameData.class_data(_cls()).get("name_fr", ""), "\n".join(lines).strip_edges() + extra)
+
+
+## Aperçu de la panoplie (lot GX-4) : la panoplie la plus portée, même sans bonus encore (« 1 / 6 · bonus à 2 »), le
+## palier suivant ; au survol, ses paliers (✓ = actif). Sans aucune pièce de panoplie : d'où elles viennent.
+func _set_preview() -> void:
+	var counts := Items.set_counts(Profile.set_gear())
+	var best := ""
+	for sid in counts:
+		if not Items.set_def(String(sid)).is_empty() and (best == "" or int(counts[sid]) > int(counts[best])):
+			best = String(sid)
+	if best == "":
+		_set_text.text = "Aucune panoplie portée"
+		_set_text.tooltip_text = "Les panoplies viennent des donjons (coffre de set) ; 2, 4 et 6 pièces portées donnent des bonus."
+		_set_text.add_theme_color_override("font_color", UiTheme.MUTED)
+		return
+	var n := int(counts[best])
+	var tiers := Items.set_tiers(best)
+	var full := int(tiers[-1]) if not tiers.is_empty() else n
+	var next := 0
+	for t in tiers:
+		if int(t) > n:
+			next = int(t)
+			break
+	var nm := String(Items.set_def(best).get("name", ""))
+	_set_text.text = "%s · %d / %d · %s" % [nm, n, full, ("bonus à %d" % next) if next > 0 else "complète"]
+	var tips: PackedStringArray = [nm]
+	for t in tiers:
+		tips.append("%s %d : %s" % ["✓" if n >= int(t) else "·", int(t), " ; ".join(Items.bonus_lines(Items.set_bonus(best, int(t))))])
+	_set_text.tooltip_text = "\n".join(tips)
+	_set_text.mouse_filter = Control.MOUSE_FILTER_PASS
+	_set_text.add_theme_color_override("font_color", UiTheme.TEXT if n >= (int(tiers[0]) if not tiers.is_empty() else 2) else UiTheme.MUTED)
 
 
 func _show_sets() -> void:

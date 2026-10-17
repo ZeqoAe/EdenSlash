@@ -313,7 +313,8 @@ static func drill(item: Dictionary) -> String:
 	return "Emplacement percé (%d / %d)." % [sockets.size(), MAX_SOCKETS]
 
 
-## Sertit la gemme [param key] dans l'emplacement [param slot] (l'ancienne gemme est détruite).
+## Sertit la gemme [param key] dans l'emplacement [param slot]. Lot GX-4 (étude BM-GEAR, « désertir gratuit ») : l'ancienne
+## gemme revient dans le sac au lieu d'être détruite.
 static func insert_gem(item: Dictionary, key: String, slot: int) -> String:
 	if Items.is_unique(item):
 		return Items.UNIQUE_TEXT
@@ -325,8 +326,37 @@ static func insert_gem(item: Dictionary, key: String, slot: int) -> String:
 	var p := key.split(":")
 	var old = sockets[slot]
 	sockets[slot] = {"type": p[1], "tier": int(p[2])}
+	if old is Dictionary:
+		Profile.add_bag(gem_key(String(old.type), int(old.tier)))
 	Profile.save_profile()
-	return "%s sertie%s." % [label(key), " (l'ancienne gemme est détruite)" if old is Dictionary else ""]
+	return "%s sertie%s." % [label(key), (" (%s revient dans ton sac)" % label(gem_key(String(old.type), int(old.tier)))) if old is Dictionary else ""]
+
+
+## Retire la gemme de l'emplacement [param slot] (gratuit, lot GX-4) : elle revient dans le sac, l'emplacement reste percé.
+static func remove_gem(item: Dictionary, slot: int) -> String:
+	var sockets: Array = item.get("sockets", [])
+	if slot < 0 or slot >= sockets.size() or not sockets[slot] is Dictionary:
+		return "Aucune gemme à retirer."
+	var g: Dictionary = sockets[slot]
+	var key := gem_key(String(g.type), int(g.tier))
+	sockets[slot] = null
+	Profile.add_bag(key)
+	Profile.save_profile()
+	return "%s retirée : elle est dans ton sac." % label(key)
+
+
+## Ce que la gemme [param key] donne sur une pièce (« Force +8 ») : en Survie, les valeurs plates suivent le niveau du héros.
+static func gem_value_text(key: String) -> String:
+	var p := key.split(":")
+	if p.size() != 3 or p[0] != "gem":
+		return ""
+	var st := gem_stats({"type": p[1], "tier": int(p[2])})
+	var k := gem_run_factor()
+	if k != 1.0:
+		for s in st:
+			if not String(s) in Items.PERCENT_STATS:
+				st[s] = float(st[s]) * k
+	return _stats_text(st)
 
 
 # --- enchantement --------------------------------------------------------------------------------

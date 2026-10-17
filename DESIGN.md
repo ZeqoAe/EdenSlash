@@ -160,7 +160,12 @@ Vitalité, Posture du chasseur, Désarmé (ne peut plus attaquer), Ange gardien 
 
 ### Écran Héros (lot U4 de la nuit du 15/10, 0.1.175)
 
-- **Équipement** : 3 préréglages par classe en haut de la page (un clic change, « Gérer » copie l'équipement
+- **Équipement** : 5 préréglages par classe en haut de la page (lot GX-4 ; 3 avant, une vieille sauvegarde reçoit 2 préréglages
+  vides ; un préréglage qui garde son nom d'origine ne montre que son numéro). « Gérer » : pour chaque autre préréglage « Copier
+  ici » et « Comparer » (PE de chacun, emplacement par emplacement ce qui change, « Passer à »), noms d'usage en un clic (Survie,
+  Donjons, Tour, Duel, Essai), **tenue liée** (clé `look` du préréglage : tenue, tête, dos, auras, couleurs reviennent quand on
+  le reprend ; aucune stat). Panoplie : la plus portée, même sans bonus (« 3 / 6 · bonus à 4 », paliers au survol). Manette : la
+  barre d'aide dessine X (« Équiper » dans le sac, « Retirer » sur la poupée, meta `pad_x`). Avant GX-4 : un clic change, « Gérer » copie l'équipement
   porté vers un autre préréglage ou renomme ; `EquipmentPage.PresetBar.extra_actions` reçoit les actions
   ajoutées plus tard, ex. « Équiper le meilleur »). La fiche d'objet est cachée sans sélection ; une pièce
   choisie montre la pièce portée à côté (▲ / ▼ en %, puissance d'équipement). Pas de préréglages ni de Forge
@@ -1240,8 +1245,10 @@ rapports `R_AC_*` ; ici, ce que le mode est dans le jeu.
   (1er sûr, 2e à 70 % ; en cas d'échec les ciseaux se brisent, l'objet est intact).
 - **Gemmes** : Rubis (Force), Émeraude (Agilité), Saphir (Intelligence), Perle (Sagesse),
   Topaze (Chance), Grenat (PV), Onyx (Défense), Améthyste (Critique) ; 5 qualités
-  (brut, taillé, pur, parfait, royal : ×1 / 2 / 3,5 / 5,5 / 8). Sertir dans un emplacement
-  occupé détruit l'ancienne gemme.
+  (brut, taillé, pur, parfait, royal : ×1 / 2 / 3,5 / 5,5 / 8). Lot GX-4 : sertir dans un emplacement
+  occupé **renvoie l'ancienne gemme au sac** (plus rien n'est détruit) ; « Retirer » est gratuit (`Craft.remove_gem`) ; chaque
+  bouton dit ce que la gemme donne sur la pièce (`Craft.gem_value_text`) ; « Tout fusionner » (`Forge.fuse_all`) fusionne les
+  plus petites tailles d'abord, en cascade, tant que le prix suit.
 - **Parchemins d'enchantement** (noms d'Eden) : Chant rapide, Violence, Optimisation,
   Explosion musculaire (armes et gants) ; Légèreté, Compréhension, Rééducation, Récupération
   (armures). Lv1 à Lv5 selon le niveau du butin, objet de niveau (Lv-1)×10 minimum ;
@@ -1255,6 +1262,13 @@ rapports `R_AC_*` ; ici, ce que le mode est dans le jeu.
   essai, même icône). Le parchemin béni : un essai gratuit. **Viser +N** : coût attendu et au pire (`Craft.plan_upgrade`, sans
   pierre, persévérance comprise), puis « Fortifier jusqu'à +N » enchaîne les essais et s'arrête à chaque palier à stat bonus.
   La piste des 10 crans montre les paliers d'avance ; chance, persévérance et conséquence d'un échec sont écrites avant l'appui.
+- **Tout monter à +5** (lot GX-4, levier proposé par H56) : à la Forge (établi Améliorer), un bouton monte les 9 pièces portées du
+  préréglage actif (ni trophée, ni arme secondaire) jusqu'à +5 (‹ › : +1 à +10), **la moins montée d'abord** (`Forge.even_step`),
+  avec les mêmes règles qu'un essai à la main (persévérance, aucune rétrogradation, un parchemin et le prix par essai). Avant :
+  une confirmation avec les pièces, le coût **attendu et au pire** en cristaux et en parchemins, et ce qu'on a (`Forge.plan_even`) ;
+  pierres de chance en option (les plus petites d'abord). Pendant : la barre de forge par essai (« Cran 7 / 22 »), « Arrêter »
+  (après l'essai en cours). Faute de cristaux ou de parchemin, la séance s'arrête proprement (ce qui est monté le reste) ; une
+  pièce sans parchemin est sautée, les autres continuent. Le coût de la Forge ne change pas.
 - **Réajuster** (Atelier et marchand) : le nouveau jet d'une stat bonus est posé à côté de l'ancien (`item.reroll`) ; le joueur
   garde **l'ancien ou le nouveau** (`Forge.reforge_choose`), au même prix ; tant qu'il n'a pas choisi, la pièce garde l'ancien.
 - Les fournitures tombent des monstres (4 %, 7 % en rage), des élites (35 %), des boss (3),

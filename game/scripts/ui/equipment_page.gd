@@ -1,7 +1,7 @@
 class_name EquipmentPage
 extends RefCounted
 ## Éléments partagés de l'écran Équipement (la page elle-même est InventoryPage) :
-## - PresetBar : les 3 préréglages d'équipement de la classe, copie et renommage ;
+## - PresetBar : les 5 préréglages d'équipement de la classe, copie, comparaison et renommage ;
 ## - HeroPreview : aperçu 3D du héros (équipement, apparence, éditeur d'adversaire).
 
 
@@ -11,7 +11,7 @@ static func _power_of(it: Dictionary) -> int:
 
 
 # --- préréglages d'équipement ---------------------------------------------------------------
-## Les 3 préréglages de la classe affichée (hors run) : un clic change de préréglage (l'équipement
+## Les 5 préréglages de la classe affichée (hors run) : un clic change de préréglage (l'équipement
 ## porté reste enregistré dans l'ancien), « Gérer » copie l'équipement porté vers un autre
 ## préréglage ou renomme l'actif. [member extra_actions] : entrées ajoutées au menu « Gérer »
 ## (« Équiper le meilleur », « Appliquer à la famille »...), chacune
@@ -40,6 +40,7 @@ class PresetBar extends HBoxContainer:
 		var active := Profile.active_preset(cid)
 		for i in names.size():
 			add_child(_chip(i, String(names[i]), i == active))
+		# lot GX-4 : 5 préréglages ; ceux qui gardent leur nom d'origine ne montrent que leur numéro (place pour les noms choisis)
 		_more = Button.new()
 		_more.text = "Gérer ▾"
 		_more.focus_mode = Control.FOCUS_NONE
@@ -73,10 +74,12 @@ class PresetBar extends HBoxContainer:
 		b.toggle_mode = true
 		b.set_pressed_no_signal(on)
 		b.focus_mode = Control.FOCUS_NONE
-		b.text = text
+		var plain := Profile.preset_default_name(text) and not on  # l'actif garde son nom entier
+		b.text = str(i + 1) if plain else text
 		b.clip_text = true
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.custom_minimum_size = Vector2(0, 38)
+		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		b.size_flags_horizontal = Control.SIZE_FILL if plain else Control.SIZE_EXPAND_FILL
+		b.custom_minimum_size = Vector2(38 if plain else 0, 38)
 		b.add_theme_font_size_override("font_size", 14)
 		b.add_theme_font_override("font", UiTheme.bold_font())
 		b.add_theme_stylebox_override("normal", _box(on))
@@ -86,7 +89,7 @@ class PresetBar extends HBoxContainer:
 		b.add_theme_color_override("font_color", Color(0.12, 0.08, 0.02) if on else Color(0.92, 0.88, 0.8))
 		b.add_theme_color_override("font_pressed_color", Color(0.12, 0.08, 0.02))
 		b.add_theme_color_override("font_hover_pressed_color", Color(0.12, 0.08, 0.02))
-		b.tooltip_text = pieces_text(piece_count(_cid, i))
+		b.tooltip_text = "%s · %s" % [text, pieces_text(piece_count(_cid, i))]
 		b.pressed.connect(func():
 			if not on:
 				Profile.set_active_preset(_cid, i)
@@ -105,13 +108,40 @@ class PresetBar extends HBoxContainer:
 		_pop.add_child(v)
 		var t := Hud._label(v, String(names[active]), 16, UiTheme.GOLD)
 		t.add_theme_font_override("font", UiTheme.bold_font())
+		# lot GX-4 : une ligne par autre préréglage : son nom et ses pièces, « Copier ici » et « Comparer »
 		for j in names.size():
 			if j == active:
 				continue
 			var jj := j
-			v.add_child(_entry("Copier vers « %s » · %s" % [names[j], pieces_text(piece_count(_cid, j))], func():
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 6)
+			v.add_child(row)
+			var nl := Hud._label(row, "%s · %s" % [names[j], pieces_text(piece_count(_cid, j))], 14, UiTheme.TEXT)
+			nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			nl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			nl.custom_minimum_size = Vector2(170, 0)
+			nl.clip_text = true
+			nl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			var cp := _entry("Copier ici", func():
 				Profile.copy_active_preset(_cid, jj)
-				changed.emit("Équipement copié vers « %s »." % names[jj])))
+				changed.emit("Équipement copié vers « %s »." % names[jj]))
+			cp.custom_minimum_size = Vector2(104, 34)
+			cp.alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cp.tooltip_text = "Copie l'équipement porté dans « %s » (il remplace ce qu'il contient)." % names[j]
+			row.add_child(cp)
+			var cmp := _entry("Comparer", func(): _open_compare(jj))
+			cmp.custom_minimum_size = Vector2(104, 34)
+			cmp.alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cmp.disabled = piece_count(_cid, j) == 0
+			cmp.tooltip_text = "Pièce par pièce, ce qui change entre « %s » et « %s »." % [names[active], names[j]]
+			row.add_child(cmp)
+		# lot GX-4 : la tenue (apparence) peut suivre le préréglage ; aucun effet sur la puissance
+		var bound := Profile.preset_has_look(_cid)
+		var lk := _entry("✓ Tenue liée à ce préréglage · délier" if bound else "Lier ma tenue à ce préréglage", func():
+			Profile.bind_preset_look(_cid, not bound)
+			changed.emit("Tenue déliée : elle ne change plus avec le préréglage." if bound else "Tenue liée : elle revient quand tu reprends « %s »." % names[active]))
+		lk.tooltip_text = "Tenue, tête, dos, auras et couleurs reviennent quand tu reprends ce préréglage. Seulement l'apparence : aucune stat."
+		v.add_child(lk)
 		for a in extra_actions + ClassGear.menu_actions(_cid):  # meilleur équipement, famille, annulation (lot E3)
 			var act: Dictionary = a
 			var b := _entry(String(act.label), func():
@@ -129,6 +159,19 @@ class PresetBar extends HBoxContainer:
 			_pop.hide()
 			changed.emit(""))
 		v.add_child(ed)
+		# noms d'usage en un clic (lot GX-4, étude BM-GEAR Q6 : préréglages nommés par usage)
+		var uses := HFlowContainer.new()
+		uses.add_theme_constant_override("h_separation", 6)
+		uses.add_theme_constant_override("v_separation", 6)
+		v.add_child(uses)
+		for u in Profile.PRESET_USES:
+			var nm := String(u)
+			var ub := _entry(nm, func():
+				Profile.rename_preset(_cid, active, nm)
+				changed.emit("Préréglage renommé « %s »." % nm))
+			ub.custom_minimum_size = Vector2(0, 32)
+			ub.alignment = HORIZONTAL_ALIGNMENT_CENTER
+			uses.add_child(ub)
 		add_child(_pop)
 		_pop.popup_hide.connect(_pop.queue_free)
 		_pop.reset_size()
@@ -177,6 +220,38 @@ class PresetBar extends HBoxContainer:
 		pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		v.move_child(pl, v.get_child_count() - 2)
 
+	## Comparaison de deux préréglages (lot GX-4, étude BM-GEAR P2) : la PE de chacun et, emplacement par emplacement, ce
+	## qui change (pièce de l'actif → pièce de l'autre) ; « Passer à » change de préréglage.
+	static func compare_plan(cid: String, j: int) -> Dictionary:
+		var a := Profile.preset_gear(cid, Profile.active_preset(cid))
+		var b := Profile.preset_gear(cid, j)
+		var rows: Array = []
+		for slot in Items.SLOTS + ["offhand"]:
+			var x: Dictionary = a.get(slot, {})
+			var y: Dictionary = b.get(slot, {})
+			if String(x.get("uid", "")) != String(y.get("uid", "")):
+				rows.append({"slot": slot, "old": x, "new": y})
+		return {"rows": rows, "pe_a": GearPower.hero_power(a), "pe_b": GearPower.hero_power(b), "same": a.size() - rows.filter(func(r): return not (r.old as Dictionary).is_empty()).size()}
+
+	func _open_compare(j: int) -> void:
+		var names := Profile.preset_names(_cid)
+		var active := Profile.active_preset(_cid)
+		var plan := compare_plan(_cid, j)
+		var d := int(plan.pe_b) - int(plan.pe_a)
+		var rows: Array = plan.rows
+		var text := "Puissance : %s → %s (%s%s)" % [GearPower.fmt(int(plan.pe_a)), GearPower.fmt(int(plan.pe_b)), "+" if d >= 0 else "−", GearPower.fmt(absi(d))]
+		text += "\n" + ("Mêmes pièces partout." if rows.is_empty() else "%s · %s en commun" % [GearPower.plural(rows.size(), "emplacement change", "emplacements changent"), GearPower.plural(int(plan.same), "pièce", "pièces")])
+		var a := InfoCard.ask(self, "« %s » → « %s »" % [names[active], names[j]], text, "Passer à « %s »" % names[j], func():
+			Profile.set_active_preset(_cid, j)
+			changed.emit("Préréglage « %s »." % names[j]), false, "Fermer")
+		var list := VBoxContainer.new()
+		list.add_theme_constant_override("separation", 4)
+		for row in rows.slice(0, 10):
+			list.add_child(_best_row(row))
+		var v := a.title_label.get_parent()
+		v.add_child(list)
+		v.move_child(list, v.get_child_count() - 2)
+
 	## Ligne de l'aperçu : emplacement, pièce actuelle → pièce recommandée (cases avec leur carte au survol).
 	static func _best_row(row: Dictionary) -> Control:
 		var h := HBoxContainer.new()
@@ -192,7 +267,8 @@ class PresetBar extends HBoxContainer:
 			h.add_child(s)
 			if k == "old":
 				Hud._label(h, "→", 18, UiTheme.TEXT).size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var nm := Hud._label(h, Items.display_name(row.new), UiTheme.MIN_TEXT, Items.color_of(row.new))
+		var empty_new := (row.new as Dictionary).is_empty()  # comparaison de préréglages : l'autre peut n'avoir rien ici
+		var nm := Hud._label(h, "vide" if empty_new else Items.display_name(row.new), UiTheme.MIN_TEXT, UiTheme.MUTED if empty_new else Items.color_of(row.new))
 		nm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		nm.custom_minimum_size = Vector2(200, 0)
 		nm.clip_text = true

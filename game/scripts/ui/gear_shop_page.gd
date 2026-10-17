@@ -24,6 +24,7 @@ var _f_status: OptionButton
 var _f_slot: OptionButton
 var _f_epoch: OptionButton
 var _f_class: OptionButton
+var _f_search: LineEdit  # recherche par nom (lot GX-4)
 var _slot_ids: Array = []  # emplacement de chaque entrée de _f_slot ("" : tous)
 var _class_ids: Array = []  # classe de chaque entrée de _f_class ("" : toutes)
 var _count: Label
@@ -155,9 +156,18 @@ func _ready() -> void:
 	_f_slot = _option(bar, ["Emplacement"])
 	_f_epoch = _option(bar, ["Époque"])
 	_f_class = _option(bar, ["Classe"])
-	var sp := Control.new()
-	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bar.add_child(sp)
+	# lot GX-4 : recherche par nom dans les plans découverts (les plans à découvrir restent anonymes)
+	_f_search = LineEdit.new()
+	_f_search.placeholder_text = "Chercher"
+	_f_search.clear_button_enabled = true
+	_f_search.custom_minimum_size = Vector2(110, 0)
+	_f_search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_f_search.add_theme_font_size_override("font_size", 14)
+	_f_search.text_changed.connect(func(_t):
+		_page = 0
+		_sel = -1
+		_apply())
+	bar.add_child(_f_search)
 	_prev = _pager_button(bar, "‹", -1)
 	_page_label = Hud._label(bar, "", 15, UiTheme.MUTED)
 	_page_label.custom_minimum_size = Vector2(70, 0)
@@ -333,7 +343,10 @@ func _apply() -> void:
 	var cid := String(_class_ids[_f_class.selected]) if _f_class.selected >= 0 and _f_class.selected < _class_ids.size() else ""
 	var wtype := Items.default_weapon_type(cid) if cid != "" else ""
 	var hl := HeroLevel.level()
+	var q := _f_search.text.strip_edges() if _f_search else ""
 	_rows = _all.filter(func(r):
+		if q != "" and (r.state == "locked" or not ItemWidgets.ItemGrid.name_matches(r.e, q)):
+			return false
 		if status == "wear":
 			if r.state == "locked" or int(r.level) > hl:
 				return false

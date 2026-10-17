@@ -454,9 +454,28 @@ func hint_items() -> Array:
 	if free_mode:
 		return [[[a], "Clic"], [[b], "Retour"], [[Settings.pad_name(JOY_BUTTON_Y)], "Cadre"]]
 	var items: Array = [[[a], "Valider"], [[b], "Retour"]]
+	# lot GX-4 : ce que fait X (clic droit) sur le contrôle visé, dessiné dans la barre (meta « pad_x » du contrôle ou d'un parent :
+	# « Équiper » dans le sac, « Retirer » sur la poupée…)
+	var x := x_hint()
+	if x != "":
+		items.append([[Settings.pad_name(JOY_BUTTON_X)], x])
 	if _tabs_ok:
 		items.append([[Settings.pad_name(JOY_BUTTON_LEFT_SHOULDER), Settings.pad_name(JOY_BUTTON_RIGHT_SHOULDER)], "Onglets"])
 	return items
+
+
+## Action du bouton X sur le contrôle visé (meta « pad_x » du contrôle ou du plus proche parent qui en a une), "" sinon.
+func x_hint() -> String:
+	if not shown or cursor == null or not is_instance_valid(cursor):
+		return ""
+	var n: Node = cursor
+	for _i in 6:
+		if n == null:
+			break
+		if n.has_meta("pad_x"):
+			return String(n.get_meta("pad_x"))
+		n = n.get_parent()
+	return ""
 
 
 ## Recalcule la taille de la barre quand son contenu change.
