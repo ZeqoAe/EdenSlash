@@ -254,6 +254,12 @@ Entrée et fin (AC-I, `R_AC_I.md`) : activité en tête des Affrontements, page 
 comme le Survivant, coffres d'apparence plafonnés, titres, `Quests.end_run("autochess")`) puis bilan commun `ui/autochess_results.gd` ; fiches `ac_shop` /
 `ac_stars` / `ac_traits` ; direct `scenes/autochess.tscn -- --ac-diff=1 [--autoplay --auto-quit]` ; test `test_ac_rewards`.
 
+### Le Colisée (modes d'équipes, en cours ; étude `conception/benchmark/ARENA.md`, lots CO-A à CO-L)
+Machine de partie sans scène (CO-A, `R_CO_A.md`) : `core/colisee.gd` (`Colisee` : formats `FORMATS` Classique 6 × 3 / Éclair 4 × 3 / Grand tournoi 8 × 3
+`locked`, barème, appariement tournant à 2 manches d'avance, exempt, égalités, éliminations simultanées, trios `compose_teams`, `simulate` « au tableau »,
+`resolve_board`, profil `PROFILE` enregistré au lancement par `register_rules` — jamais dans `ModeRules.PROFILES` —, `begin` / `finish`, partie en cours
+`Colisee.game`) ; le directeur rend les éliminations de `report` à `TeamMatch.eliminate` dans le même ordre ; `READY` faux = activité cachée hors mode dev ; test `test_co_a`.
+
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à
   paliers `armory_price`, puits `SHOP_CHESTS`, leçon de maîtrise) ; participation `Run.INSIGNIA_BASE` ; JcJ plafonné au jour

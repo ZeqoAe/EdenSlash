@@ -92,7 +92,7 @@ func open_journal() -> QuestJournal:
 
 func open(page := -1) -> void:
 	_screen.set_title("Pause", "%s · niveau %d · %s" % [Run.class_data().get("name_fr", ""), player.level, Run.duration_text()])
-	_screen.show_wallet(not Royale.active and not Duel.active)  # Battle royale, duel : ni or, ni clés, ni cristaux (passes M1, M7)
+	_screen.show_wallet(not Modes.hero_match())  # Battle royale, duel, modes d'équipes : ni or, ni clés, ni cristaux (passes M1, M7, lot CO-A)
 	_screen.open(page)
 
 
@@ -112,6 +112,12 @@ func close() -> void:
 static func leave_texts() -> Dictionary:
 	if Training.active:
 		return {"button": "Quitter l'entraînement", "title": "Quitter l'entraînement ?", "text": "Rien de l'entraînement n'est gardé.", "ok": "Quitter"}
+	if TeamMatch.active:  # (lot CO-A : modes d'équipes, « Quitter le Colisée ? »)
+		var t := TeamMatch.title()
+		for art in ["Le ", "La ", "Les ", "L'"]:
+			if t.begins_with(art):
+				t = art.to_lower() + t.substr(art.length())
+		return {"button": "Abandonner la partie", "title": "Quitter %s ?" % t, "text": "Ton équipe quitte la partie : elle prend la dernière place encore en jeu.", "ok": "Abandonner"}
 	if Royale.active:
 		return {"button": "Abandonner la partie", "title": "Abandonner le Battle royale ?", "text": "Tu termines dernier (%de). Seules les récompenses de cette place sont gardées." % Royale.PLAYERS, "ok": "Abandonner"}
 	if Duel.active and Duel.mode in ["arena2", "arena3"]:  # (lot HUD-2 : les Arènes ont leurs mots, pas ceux du duel)

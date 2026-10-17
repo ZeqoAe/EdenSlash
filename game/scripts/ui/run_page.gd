@@ -67,7 +67,7 @@ func _ready() -> void:
 	acts.add_child(row)
 	ItemWidgets.action_button(row, "Grimoire", func(): grimoire_requested.emit()).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	ItemWidgets.action_button(row, "Paramètres", func(): settings_requested.emit()).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if not (Training.active or Duel.active or Tower.active or Royale.active or Survivor.active):  # (Survivant : pas d'extraction)
+	if not (Training.active or Modes.hero_match() or Tower.active or Survivor.active):  # (Survivant : pas d'extraction ; duel, Battle royale, modes d'équipes non plus, lot CO-A)
 		var ex := ItemWidgets.action_button(acts, "S'extraire", func(): extract_requested.emit())
 		ex.tooltip_text = "Quitte la carte en gardant la partie : compte 10 s sans être touché%s" % [" (touche %s)" % Settings.action_label("extract", 1) if InputMap.has_action("extract") else ""]
 	ItemWidgets.action_button(acts, PauseMenu.leave_texts().button, func(): lobby_requested.emit())

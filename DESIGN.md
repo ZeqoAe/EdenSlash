@@ -57,6 +57,7 @@ insignes de participation `Run.INSIGNIA_BASE` 25 ; plus d'enclume en Survie (pas
   - Ruée des boss et Siège sur la bibliothèque (passe M6, nuit du 15/10)
   - Battle royale (passe M1, 0.1.201 ; mode codé en 0.1.161, idée 9 de `conception/IDEES_EN_VRAC.md`)
   - L'Échiquier (autochess, `conception/autochess/SPEC.md` ; entrée et fin : lot AC-I)
+  - Le Colisée (étude `conception/benchmark/ARENA.md`, en cours : lots CO-A à CO-L)
 - **Partie D — Économie et progression**
   - Joaillerie et forge (comme dans Eden)
   - Équipement
@@ -1294,6 +1295,19 @@ rapports `R_AC_*` ; ici, ce que le mode est dans le jeu.
   d'apparence seulement (`Quests._roll_reward`, comme le Survivant).
 - **Fiches** (à la 1re rencontre, dans l'écran du mode) : « Achète et place » (boutique, intérêts), « Trois copies, une
   étoile », « Traits et atouts » ; rangées au Guide, chapitre Modes, sous L'Échiquier.
+
+## Le Colisée (étude `conception/benchmark/ARENA.md`, en cours : lots CO-A à CO-L)
+
+Mode scellé, joué seul contre des IA scriptées : 6 trios (Classique ; Éclair 4 trios ; Grand tournoi 8 trios si la sonde de
+performances le permet), une seule couronne. Les règles complètes sont celles de l'étude (§ 6) ; ici, ce qui est codé.
+- **Partie** (lot CO-A, `R_CO_A.md`) : 100 PV par équipe ; une manche perdue coûte 20 (manches 1-3), 25 (4-6), 35 (7-9), 50 (10-11),
+  puis 100 (mort subite à la manche 12 : la partie finit au plus tard là) ; Éclair 25 / 35 / 50 / 100 dès la manche 7. On ne revoit
+  pas une équipe avant d'avoir vu toutes les autres encore en lice (sauf quand les éliminations le rendent impossible : le moins
+  possible). Nombre impair : une équipe exempte, jamais deux fois de suite. Égalité au temps (85 s) : l'équipe qui garde la plus
+  grande part de ses PV gagne ; égalité exacte : les deux perdent la moitié. Places 1 à 3 = victoire. Partie médiane simulée :
+  18,9 min (Classique), 11,8 min (Éclair).
+- **Trios** : trois familles différentes, aucune classe deux fois dans la partie ; héros à la fiche « à l'arme » niveau 60 ; ton
+  équipement, ton or et ton sac sont mis de côté pendant la partie (rien du compte n'y change la force).
 
 # Partie D — Économie et progression
 

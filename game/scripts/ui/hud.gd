@@ -461,7 +461,7 @@ func _update_objectives() -> void:
 	var extra := _zone_extra + " · " if _zone_extra != "" else ""  # étape ou niveau, en police ordinaire
 	_seal_label.text = extra + "Sceaux  " + "◆ ".repeat(mini(director.seals, need)) + "◇ ".repeat(maxi(0, need - director.seals))
 	_gold_label.text = "%d or · %d clé%s" % [Profile.gold, Profile.keys, "s" if Profile.keys > 1 else ""]
-	_gold_label.visible = not Duel.active and not Tower.active and not Royale.active and not Training.active
+	_gold_label.visible = not Modes.hero_match() and not Tower.active and not Training.active  # (lot CO-A : ni en mode d'équipes)
 	if Royale.active and director.royale:
 		_seal_label.text = "%d / %d en vie · %d élimination%s" % [director.royale.alive_count(), Royale.PLAYERS, Royale.kills, "s" if Royale.kills > 1 else ""]
 	if Duel.active:
@@ -1125,7 +1125,7 @@ func _update_damage_counter(delta: float) -> void:
 ## Le compteur de dégâts a-t-il un sens ici ? Pas en duel (coups plafonnés), ni en Battle royale (fil des éliminations), ni
 ## au Survivant (bruit face à une horde, lot SVX-2) ; seulement dans le profil Standard (lot HUD-2).
 func _dmg_allowed() -> bool:
-	return not (Duel.active or Royale.active or Survivor.active) and HudV2.shows("dmg")
+	return not (Modes.hero_match() or Survivor.active) and HudV2.shows("dmg")  # (lot CO-A : ni en mode d'équipes)
 
 
 ## Colonne de droite (lot HUD-2) : mini-carte, compteur de dégâts, carte de notification, fil du butin, chacun sous le
