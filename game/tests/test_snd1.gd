@@ -14,12 +14,14 @@ func check(label: String, ok: bool) -> void:
 		fails += 1
 
 
-func _players() -> Array:
-	var out := []
-	for c in get_tree().current_scene.get_children():
-		if c is AudioStreamPlayer:
-			out.append(c)
-	return out
+var played := 0  # sons d'interface lancés (comptés à l'ajout : un son court se libère tout seul en fin de lecture)
+var last: AudioStreamPlayer
+
+
+func _on_added(n: Node) -> void:
+	if n is AudioStreamPlayer:
+		played += 1
+		last = n as AudioStreamPlayer
 
 
 func _ready() -> void:
@@ -27,6 +29,7 @@ func _ready() -> void:
 	Settings.reset_all(false)
 	Settings.apply_all()
 	Vfx.silent = false
+	get_tree().node_added.connect(_on_added)
 	# --- fichiers
 	var files := {}
 	for k in Sfx.UI:
@@ -71,22 +74,20 @@ func _ready() -> void:
 		and Sfx.reward(5) == "ui_reward_5" and Sfx.reward(99) == "ui_reward_5")
 	# --- anti-répétition : pas deux fois le même son dans les 40 ms
 	await get_tree().process_frame
-	var n0 := _players().size()
+	var n0 := played
 	Sfx.ui("ui_press", -15.0)
 	Sfx.ui("ui_press", -15.0)
-	check("même son deux fois de suite : un seul joué", _players().size() == n0 + 1)
+	check("même son deux fois de suite : un seul joué", played == n0 + 1)
 	await get_tree().create_timer(0.06, true, false, true).timeout
 	Sfx.ui("ui_press", -15.0)
-	check("après 40 ms : rejoué", _players().size() == n0 + 2)
+	check("après 40 ms : rejoué", played == n0 + 2)
 	# --- volume « Effets sonores »
 	Settings.set_v("audio", "sfx", 0.5)
 	Settings.apply_all()
 	await get_tree().create_timer(0.06, true, false, true).timeout
 	Sfx.ui("ui_release", -13.0)
-	var last: AudioStreamPlayer = _players()[-1]
 	check("volume « Effets sonores » appliqué (%.1f dB)" % last.volume_db, is_equal_approx(last.volume_db, -13.0 + linear_to_db(0.5)))
 	Sfx.ui("click", -8.0)
-	last = _players()[-1]
 	check("ancien nom « click » : correction de volume", is_equal_approx(last.volume_db, -8.0 + linear_to_db(0.5) - 5.0))
 	Settings.set_v("audio", "sfx", 1.0)
 	Settings.apply_all()
@@ -94,9 +95,9 @@ func _ready() -> void:
 	Settings.set_v("interface", "ui_reduce_motion", true)
 	UiFeel.read_settings()
 	await get_tree().create_timer(0.06, true, false, true).timeout
-	var n1 := _players().size()
+	var n1 := played
 	UiFeel.page_sound(true)
-	check("« Réduire les animations » : le son reste", _players().size() == n1 + 1)
+	check("« Réduire les animations » : le son reste", played == n1 + 1)
 	Settings.set_v("interface", "ui_reduce_motion", false)
 	UiFeel.read_settings()
 	# --- poids
