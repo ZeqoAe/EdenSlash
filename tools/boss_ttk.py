@@ -4,6 +4,7 @@
     python tools/boss_ttk.py                       # 4 scénarios × 4 époques × 3 cartes × 5 classes (héros invincible)
     python tools/boss_ttk.py --epochs 1 --scenarios rush,bonne --human 0.5   # le héros encaisse et peut mourir
     python tools/boss_ttk.py --scenarios bande,bande-10 --pure              # lot H4a : héros au haut de la bande de chaque carte
+    python tools/boss_ttk.py --scenarios bande,bande-10,bande+10 --human 0.5 --repeat 4   # lot H4b : % de boss battus par carte
 
 Scénarios (niveau, cartes, trophées, part des emplacements trouvés en run, emplacements passés à l'enclume, par carte) :
   rush    : boss atteint tôt, presque rien ramassé ;
@@ -35,6 +36,14 @@ HUB = {1: "new", 2: "1.3.5.1", 3: "2.3.10.3", 4: "3.3.10.4"}
 # run, équipement en retard de 10 niveaux (les pièces de la carte d'avant +5, héros au même niveau).
 BANDS = {1: [23, 33, 43], 2: [48, 53, 60], 3: [65, 70, 75], 4: [80, 85, 90]}
 BAND_RUN = [(16, 4, 0.7), (27, 7, 0.7), (36, 10, 0.7)]  # cartes, trophées, trouvailles
+# Lot H4b : équipement « retard 10 » (bande-10) et « avance 10 » (bande+10) de chaque carte, choisis pour ≈ 10 niveaux de pièce
+# d'écart (×1,08 par niveau ; +0 → +5 ≈ 5 niveaux ; mythique → légendaire ≈ 3 niveaux) ; PE relevées dans R_H4b.md.
+# bande-10 : héros au haut de la bande ; bande+10 : (niveau de héros, kit) : héros 10 niveaux au-dessus (90 au plus).
+BAND_LATE = {(1, 1): "new", (1, 2): "1.1.5", (1, 3): "1.2.5", (2, 1): "1.3.0", (2, 2): "1.3.5", (2, 3): "2.2.5",
+             (3, 1): "2.3.0", (3, 2): "2.3.5", (3, 3): "3.1.5", (4, 1): "3.2.5", (4, 2): "3.3.5", (4, 3): "3.3.5"}
+BAND_AHEAD = {(1, 1): (33, "1.2.5"), (1, 2): (43, "1.3.5"), (1, 3): (53, "2.2.5"), (2, 1): (58, "2.2.10"), (2, 2): (63, "2.3.5"),
+              (2, 3): (70, "3.2.5"), (3, 1): (75, "3.3.5"), (3, 2): (80, "4.1.5"), (3, 3): (85, "4.2.5"), (4, 1): (90, "4.3.5"),
+              (4, 2): (90, "4.3.10.4"), (4, 3): (90, "4.3.10.4")}
 HUB_GOLD = {1: "1.3.10.3", 2: "2.3.10.4", 3: "3.3.10.4", 4: "4.3.10.4"}
 # Donjons / Ruée (--dungeons) : équipement du hub d'un joueur qui y arrive (Normal dès l'époque II, Héroïque vers
 # l'époque III, Mythique après l'époque IV) et d'un joueur sur-équipé ; 3 cartes (une par salle) avant le boss.
@@ -57,9 +66,12 @@ def run_one(job):
     elif sc.startswith("bande"):
         lv = BANDS[ep][st - 1]
         cards, tro, finds = BAND_RUN[st - 1]
-        anvil = 0
-        pe, ps = (ep, st - 1) if st > 1 else (ep - 1, 3)
-        hub = "%d.%d.5" % (ep, st) if sc == "bande" else ("%d.%d.5" % (pe, ps) if pe >= 1 else "new")
+        if sc == "bande":
+            hub = "%d.%d.5" % (ep, st)
+        elif sc == "bande+10":
+            lv, hub = BAND_AHEAD[(ep, st)]
+        else:
+            hub = BAND_LATE[(ep, st)]
         cmd += ["--epoch=%d" % ep, "--stage=%d" % st, "--class=" + cls, "--hub=" + hub, "--level=%d" % lv, "--cards=%d" % cards,
                 "--trophies=%d" % tro, "--finds=%s" % (finds if sc == "bande" else 0.0), "--anvil=0", "--seed=%d" % (a.seed + idx), "--max=%d" % a.max]
     else:
@@ -101,6 +113,7 @@ def main():
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--human", default="", help="part des coups évités (le héros peut mourir) ; vide : invincible")
     ap.add_argument("--pure", action="store_true", help="boss sans mécaniques de salle : DPS du héros seul")
+    ap.add_argument("--repeat", type=int, default=1, help="lot H4b : combats par classe et par carte (graines différentes)")
     ap.add_argument("--extra", default="", help="arguments en plus pour la sonde (ex. « --boss-scale=0.8 », lot H4a)")
     ap.add_argument("--dungeons", action="store_true", help="donjons et Ruée : scénarios donjon (attendu) et donjon+ (sur-équipé), "
                     "époques = zones (1 Limestone, 2 Wetlands, 3 Blackflame, 4 Ruée), cartes = difficulté + 1")
@@ -111,8 +124,9 @@ def main():
     for sc in a.scenarios.split(","):
         for ep in map(int, a.epochs.split(",")):
             for st in map(int, a.stages.split(",")):
-                for cls in a.classes.split(","):
-                    jobs.append((sc, ep, st, cls, a, len(jobs)))
+                for _r in range(a.repeat):
+                    for cls in a.classes.split(","):
+                        jobs.append((sc, ep, st, cls, a, len(jobs)))
     with ThreadPoolExecutor(max_workers=a.jobs) as ex:
         res = list(ex.map(run_one, jobs))
     for r in res:

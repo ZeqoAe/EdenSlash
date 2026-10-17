@@ -6,6 +6,8 @@ extends "res://tools/progression_sim.gd"
 ##         [--mep=…] [--mapmult=…]           puissance par carte, M′ suggéré, retard dans la bande, héros au-dessus
 ##   godot --headless --path game res://tools/hl_probe.tscn -- --talents   effet des talents et certificats (§2.2)
 ##   godot --headless --path game res://tools/hl_probe.tscn -- --sealed    même compte opti en Aventure et en Battle royale (lot H2)
+##   godot --headless --path game res://tools/hl_probe.tscn -- --calage=p1,…,p12 [--late=q1,…,q12]   M′ de l'outil recalé sur le jeu
+##         (lot H4b : chances de finir chaque carte mesurées dans le jeu avec l'équipement correct, et en retard de 10 niveaux)
 ##
 ## 1) indices bruts de kits types (époque.carte.+N.rang des gemmes) à plusieurs niveaux de héros ;
 ## 2) R par carte : jeu actuel (plafond 15 / 25 / 35, Epochs.MONSTER_MULT) | refonte H (décote, monstres 0,85 / 1,3 / 2,3 / 4,4)
@@ -39,6 +41,8 @@ func _ready() -> void:
 		talents_probe()
 	elif "--sealed" in OS.get_cmdline_user_args():
 		sealed_probe()
+	elif Array(OS.get_cmdline_user_args()).any(func(a): return String(a).begins_with("--calage=")):
+		calage_probe()
 	else:
 		ratio_probe()
 	get_tree().quit()
@@ -207,3 +211,75 @@ func sealed_probe() -> void:
 	Profile.cert_board = keep_b
 	Profile.archive = keep_a
 	Profile._sync_certificates()
+
+
+## Équipement « retard 10 » de chaque carte (comme tools/boss_ttk.py, BAND_LATE ; "new" : départ).
+const LATE_KITS := ["new", "1.1.5", "1.2.5", "1.3.0", "1.3.5", "2.2.5", "2.3.0", "2.3.5", "3.1.5", "3.2.5", "3.3.5", "3.3.5"]
+
+
+## Lot H4b (--calage=p1,…,p12) : pour chaque carte, le M′ de l'outil qui donne à l'équipement « correct » (pièces de la carte à
+## +5, trouvailles de la run, héros au haut de la bande ; carte I-1 : le compte neuf, niveau 1 et équipement de départ) la chance
+## de finir la carte mesurée dans le jeu (joueur moyen appris :
+## sigmoïde(C_MAP + BETA ln R) × sigmoïde(C_BOSS + BETA ln R)). Avec --late=q1,…,q12 (chances mesurées en retard de 10 niveaux) :
+## M′ ajusté sur les deux points (moindres carrés des logits, chances bornées à 5-95 %), chance prévue en retard face à la mesure.
+func calage_probe() -> void:
+	var target: Array = []
+	var late: Array = []
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--calage="):
+			target = Array(a.trim_prefix("--calage=").split(",")).map(func(x): return float(x))
+		elif a.begins_with("--late="):
+			late = Array(a.trim_prefix("--late=").split(",")).map(func(x): return float(x))
+	seed(7)
+	print("== calage (lot H4b), classe %s : carte | chance mesurée | R brut (kit +5, trouvailles) | R visé | M′ de l'outil | retard : R brut, prévu, mesuré ==" % cid)
+	var mm: Array = []
+	for ep in range(1, 5):
+		for k in range(1, 4):
+			var i := (ep - 1) * 3 + k - 1
+			_cur = {"hl": band_hi(ep, k)}
+			var g := run_gear(StarterGear.scenario("%d.%d.5" % [ep, k], cid), ep, k)
+			var raw := raw_ratio(g, ep, k)
+			if i == 0:
+				# compte neuf : héros niveau 1, équipement de départ, monstres au bas de la bande
+				_cur = {"hl": 1}
+				g = run_gear(StarterGear.items(cid), ep, k)
+				raw = power_index(g, 1) / (float(base_index[0]) * pow(1.1, band_level(ep, k, 1) - int(HERO_LEVELS[0])))
+			var p := clampf(float(target[i]), 0.02, 0.98)
+			var lo := -6.0
+			var hi := 6.0
+			for it in 60:
+				var mid := (lo + hi) * 0.5
+				if clear_chance(exp(mid), k - 1, 0.0) < p:
+					lo = mid
+				else:
+					hi = mid
+			var r := exp((lo + hi) * 0.5)
+			var m := raw / r
+			var spec: String = LATE_KITS[i]
+			var lg := run_gear(StarterGear.items(cid) if spec == "new" else StarterGear.scenario(spec, cid), ep, k)
+			var lraw := raw_ratio(lg, ep, k)
+			if late.size() > i and i > 0:
+				# deux points (équipement correct et retard) : M′ qui minimise la somme des écarts de logit
+				var q := clampf(float(late[i]), 0.05, 0.95)
+				var pc := clampf(p, 0.05, 0.95)
+				var best := INF
+				var m0 := m
+				for step in range(-600, 601):
+					var mt := m0 * exp(float(step) * 0.005)
+					var e1 := _logit(clampf(clear_chance(raw / mt, k - 1, 0.0), 0.001, 0.999)) - _logit(pc)
+					var e2 := _logit(clampf(clear_chance(lraw / mt, k - 1, 0.0), 0.001, 0.999)) - _logit(q)
+					if e1 * e1 + e2 * e2 < best:
+						best = e1 * e1 + e2 * e2
+						m = mt
+			mm.append(m)
+			var line := "  %d-%d  %.2f  %.3f  %.3f  %.3f  prévu %.2f" % [ep, k, p, raw, r, m, clear_chance(raw / m, k - 1, 0.0)]
+			line += "  | retard %.3f prévu %.2f" % [lraw, clear_chance(lraw / m, k - 1, 0.0)]
+			if late.size() > i:
+				line += " mesuré %.2f" % float(late[i])
+			print(line)
+	_cur = {}
+	print("  HERO_GAME_MULT := [%s]" % ", ".join(range(4).map(func(e): return "[%s]" % ", ".join(mm.slice(e * 3, e * 3 + 3).map(func(x): return "%.3f" % x)))))
+
+
+static func _logit(p: float) -> float:
+	return log(p / (1.0 - p))

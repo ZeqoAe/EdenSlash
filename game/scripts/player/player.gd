@@ -2552,7 +2552,7 @@ func _autoplay_input() -> Vector2:
 	else:
 		to = m.global_position - global_position
 		# au contact (corps à corps), ou à distance de tir (archer, mage) en déplacement automatique
-		var stop := 2.2 + m.radius if autoplay or attack_reach() <= 6.0 else attack_reach() * 0.7
+		var stop := 2.2 + m.radius if (autoplay and not Run.test_ranged) or attack_reach() <= 6.0 else attack_reach() * 0.7
 		if to.length() < stop:
 			return Vector2.ZERO
 		var map := get_tree().get_first_node_in_group("map") as Node3D
@@ -2578,6 +2578,8 @@ func _autoplay_wants(action: String) -> bool:
 	if m == null:
 		return false
 	var close := global_position.distance_to(m.global_position) < 2.6 + m.radius
+	if Run.test_ranged and attack_reach() > 6.0:
+		close = global_position.distance_to(m.global_position) < attack_reach() + m.radius  # mesures (--ranged, lot H4b)
 	if action == "attack":
 		return close
 	if action.begins_with("skill_"):

@@ -51,7 +51,7 @@ const MAP_ATK := [
 	[1.1, 0.6, 0.5],
 ]
 const BOSS_ATK := [
-	[0.35, 0.22, 1.2],
+	[0.525, 0.22, 1.2],
 	[0.15, 0.18, 0.27],
 	[0.6, 0.42, 0.05],
 	[0.33, 0.18, 0.15],
@@ -93,7 +93,7 @@ const BOSS_HP_EPOCH := [1.0, 2.0, 4.0, 5.5]
 ## Réglage par carte des PV des boss (lot H4a, mesuré au pilote : R_H4a.md) : le pilote automatique frappe 2 à 3 fois moins
 ## que la sonde ; un combat trop long croise la rage du boss (2:30 à la 1re carte), qui tue.
 const BOSS_HP_ADJ := [
-	[1.0, 1.0, 1.0],
+	[1.5, 1.0, 1.0],
 	[0.6, 1.0, 1.0],
 	[0.8, 1.0, 1.0],
 	[0.7, 0.6, 0.45],
@@ -109,6 +109,7 @@ const BOSS_RAGE_AT := [150.0, 180.0, 240.0]
 static var test_mult := 1.0
 static var test_boss := 1.0
 static var test_atk := 1.0
+static var test_boss_atk := 1.0  # lot H4b : dégâts du boss seul (--boss-atk-scale=)
 
 
 ## PV fixes du boss de la carte [param stage] de l'époque [param epoch] (sans rang héroïque ni Menace), au niveau
@@ -147,7 +148,7 @@ static func map_mult(epoch: int, stage: int) -> float:
 ## Dégâts des monstres (ou du boss, [param boss]) de la carte.
 static func map_atk(epoch: int, stage: int, boss := false) -> float:
 	var t: Array = BOSS_ATK if boss else MAP_ATK
-	return float(t[clampi(epoch, 1, t.size()) - 1][clampi(stage, 1, 3) - 1]) * test_atk
+	return float(t[clampi(epoch, 1, t.size()) - 1][clampi(stage, 1, 3) - 1]) * test_atk * (test_boss_atk if boss else 1.0)
 
 
 ## Montée des monstres au temps [param t] (s) de la carte.

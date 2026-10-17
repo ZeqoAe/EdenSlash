@@ -414,6 +414,12 @@ func _parse_args() -> void:
 			Run.test_rush_range = float(arg.trim_prefix("--rush="))
 		elif arg.begins_with("--human="):
 			Run.test_taken = 1.0 - clampf(float(arg.trim_prefix("--human=")), 0.0, 0.95)
+		elif arg == "--ranged":
+			Run.test_ranged = true  # mesures (lot H4b) : le pilote d'un tireur tire à sa portée
+		elif arg.begins_with("--boss-at="):
+			# mesures (lot H4b, avec --bot-mode : l'aide « Bot » du jeu joue la carte comme un joueur, sans aller au boss) : entrée
+			# dans l'arène du boss après N s de carte (hors pauses), comme un joueur qui file au boss
+			get_tree().create_timer(float(arg.trim_prefix("--boss-at="))).timeout.connect(func(): director.debug_enter_dungeon())
 		elif arg == "--god":
 			# test : héros invincible (mesures de performance sur une longue run)
 			get_tree().create_timer(0.5).timeout.connect(func(): player.dev_invincible = true)
@@ -446,6 +452,8 @@ func _parse_args() -> void:
 			Epochs.test_atk = float(arg.trim_prefix("--atk-scale="))  # mesures (lot H4a) : dégâts des monstres et du boss × N
 		elif arg.begins_with("--boss-scale="):
 			Epochs.test_boss = float(arg.trim_prefix("--boss-scale="))  # mesures (lot H4a) : PV du boss × N
+		elif arg.begins_with("--boss-atk-scale="):
+			Epochs.test_boss_atk = float(arg.trim_prefix("--boss-atk-scale="))  # mesures (lot H4b) : dégâts du boss seul × N
 		elif arg.begins_with("--start-run="):
 			# mesures (lot H4a, départ à la carte 2 ou 3) : niveau de run N atteint en jeu, une carte par niveau comme les
 			# cartes d'avant (choisies par le pilote automatique)

@@ -61,6 +61,7 @@ func _ready() -> void:
 			"boss-scale": Epochs.test_boss = float(kv[1])  # lot H4a : essai d'un réglage des PV du boss
 			"mult-scale": Epochs.test_mult = float(kv[1])
 			"atk-scale": Epochs.test_atk = float(kv[1])
+			"boss-atk-scale": Epochs.test_boss_atk = float(kv[1])  # lot H4b : dégâts du boss seul
 	Settings.reset_all(false)
 	Profile.selected_class = cid
 	Profile.save_profile()  # équipement de départ d'un compte neuf (une fois par classe)

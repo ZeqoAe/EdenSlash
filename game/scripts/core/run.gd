@@ -109,6 +109,9 @@ static var test_fight_range := 4.0
 ## Mesures (--rush=<m>, passe P11) : en route vers le boss, le bot suit le chemin du donjon et ne combat qu'en deçà
 ## de cette distance, comme un joueur qui file au boss (la horde le suit depuis P9) ; < 0 : comme le reste du temps.
 static var test_rush_range := -1.0
+## Mesures (--ranged, lot H4b) : un tireur (portée d'auto-attaque > 6 m) tire à sa portée comme l'aide « Bot » du jeu, au lieu
+## de se battre au contact (sans le drapeau, le pilote joue toutes les classes au corps à corps : mesures d'avant inchangées).
+static var test_ranged := false
 
 
 func start(cid: String) -> void:

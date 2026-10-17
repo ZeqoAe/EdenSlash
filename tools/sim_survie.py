@@ -6,6 +6,7 @@ boss de la map 1, le bat-il, à quel niveau, en combien de temps.
     python tools/sim_survie.py --hub new --classes warrior,magician --seeds 3 --epoch 1
     python tools/sim_survie.py --hub 1.3.10.3 --boss-after 360
     python tools/sim_survie.py --hub 2.1.5 --epoch 2 --stage 2 --hero-level 48   # lot H4a : carte II-2, héros niveau 48
+    python tools/sim_survie.py --bot --hub 2.2.5 --epoch 2 --stage 2 --hero-level 53 --boss-after 360 --human 0.5   # lot H4b : aide « Bot »
 
 --hub : « new » (équipement de départ d'un compte neuf) ou « E.C.N[.G] » (voir StarterGear.scenario).
 Un profil jetable par processus (variable EDEN_PROFILE) : le vrai profil n'est jamais touché.
@@ -26,9 +27,11 @@ def run_one(job):
     cls, seed, a, idx = job
     env = dict(os.environ)
     env["EDEN_PROFILE"] = "user://sim_%d_%s_%d.json" % (os.getpid(), cls, idx)
-    cmd = [GODOT, "--headless", "--fixed-fps", "60", "--path", GAME, "res://scenes/world.tscn", "--", "--autoplay",
-           "--auto-quit", "--class=" + cls, "--hub=" + a.hub, "--epoch=%d" % a.epoch, "--seed=%d" % seed,
-           "--boss-after=%d" % a.boss_after, "--quit-at=%d" % a.quit_at, "--human=%s" % a.human, "--fight=%s" % a.fight] + (["--rush=%s" % a.rush] if a.rush else []) + (a.extra.split() if a.extra else [])
+    # --bot (lot H4b) : l'aide « Bot » du jeu joue (déplacement, attaques, sorts, enchaînements, cartes) au lieu du pilote de
+    # mesure, et le héros entre dans l'arène du boss à --boss-after (sans marcher jusqu'au donjon)
+    pilot = ["--bot-mode", "--boss-at=%d" % a.boss_after] if a.bot else ["--autoplay", "--boss-after=%d" % a.boss_after]
+    cmd = [GODOT, "--headless", "--fixed-fps", "60", "--path", GAME, "res://scenes/world.tscn", "--"] + pilot + [
+           "--auto-quit", "--class=" + cls, "--hub=" + a.hub, "--epoch=%d" % a.epoch, "--seed=%d" % seed, "--quit-at=%d" % a.quit_at, "--human=%s" % a.human, "--fight=%s" % a.fight] + (["--rush=%s" % a.rush] if a.rush else []) + (a.extra.split() if a.extra else [])
     if a.hero_level:
         cmd.append("--hero-level=%d" % a.hero_level)
     if a.stage > 1:
@@ -52,6 +55,9 @@ def run_one(job):
         r["boss_t"] = int(m.group(1))
         r["boss_lvl"] = int(m.group(2))
     r["won_boss"] = "boss vaincu" in out
+    m = re.search(r"boss vaincu à (\d+) s", out)
+    if m and r.get("boss_t") is not None:
+        r["boss_fight"] = int(m.group(1)) - r["boss_t"]  # durée du combat du boss (s)
     # passe P15 : dernière ligne de mesure du spawn (avant le boss), voir SpawnDirector.stats_line
     sp = re.findall(r"\[spawn\] t=(\d+) \w+ espèces=(\d+) top=([\d.]+) espèces_fenêtre=([\d.]+) identiques=([\d.]+) par_point=([\d.]+) dispersion=([\d.]+) secteurs=([\d.]+) std=(\d+) pv×([\d.]+) dég×([\d.]+) indice=([\d.]+) monstres=(\d+) .*? dégâts_subis_min=([\d.]+) pv_max=(\d+) ttk=([-\d.]+) niv=(\d+)", out)
     if sp:
@@ -115,6 +121,7 @@ def main():
     ap.add_argument("--rush", default="", help="en route vers le boss : suit le chemin du donjon, ne combat qu'à moins de N mètres (P11 : joueur qui file au boss)")
     ap.add_argument("--seed-base", dest="seed_base", type=int, default=1000)
     ap.add_argument("--extra", default="", help="arguments en plus pour le jeu (ex. « --no-cape » : coffres de cape remplacés)")
+    ap.add_argument("--bot", action="store_true", help="lot H4b : l'aide « Bot » du jeu (sensation d'un joueur) au lieu du pilote ; boss à --boss-after")
     ap.add_argument("--human", default="0", help="part des coups évités par un joueur humain (0 : le bot brut, 0.3 débutant, 0.5 bon joueur)")
     a = ap.parse_args()
     jobs = []
@@ -123,7 +130,7 @@ def main():
             jobs.append((cls, a.seed_base + s * 7919, a, len(jobs)))
     with ThreadPoolExecutor(max_workers=a.jobs) as ex:
         res = list(ex.map(run_one, jobs))
-    print("hub=%s époque=%d carte=%d niveau de héros=%s boss-après=%ds coups évités=%s rush=%s" % (a.hub, a.epoch, a.stage, a.hero_level or 1, a.boss_after, a.human, a.rush or "-"))
+    print("hub=%s époque=%d carte=%d niveau de héros=%s boss-après=%ds coups évités=%s rush=%s%s" % (a.hub, a.epoch, a.stage, a.hero_level or 1, a.boss_after, a.human, a.rush or "-", " aide Bot" if a.bot else ""))
     for r in res:
         print(" ", r)
     n = len(res)
