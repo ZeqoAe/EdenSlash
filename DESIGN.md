@@ -1349,6 +1349,11 @@ empêche ou la désamorce ; une vie par manche, or entre les manches. Ce qui est
   B au nord-est sous le balcon à +2,5 m), une place à fontaine, une halle et son passage, des maisons qui coupent la vue,
   des murets (on voit par-dessus, les coups au sol s'y arrêtent ; depuis une terrasse on tire par-dessus), deux carrés de
   hautes herbes. Trajets : l'Attaque met 12 à 13 s pour un site, la Défense 5 à 6 s (7 s d'avance).
+- **Vue et bruits** (lot TAC-2) : un adversaire n'est montré que si ton équipe le voit (22 m, pas à travers un mur plein ni une
+  brume ; dans les hautes herbes à 3 m seulement) ; sinon il disparaît (modèle, carte, barre), et un « ? » marque 4 s l'endroit
+  où il a été vu. Ce que ton héros ne voit pas est assombri. Murs et murets arrêtent les coups, les zones au sol demandent de
+  voir le point visé. On entend les pas (course) à 14 m, les esquives à 18 m, les coups et les sorts à 24 m, la pose et le
+  désamorçage partout : « Voir les sons » est activé dans ce mode. L'IA ne sait que ce que son équipe voit et entend.
 
 # Partie D — Économie et progression
 

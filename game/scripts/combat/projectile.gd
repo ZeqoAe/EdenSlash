@@ -47,6 +47,9 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_t += delta
 	global_position += dir * speed * delta
+	if AssaultVision.current != null and AssaultVision.blocks_segment(global_position - dir * speed * delta, global_position):
+		queue_free()  # (lot TAC-2, L'Assaut) l'orbe s'arrête au mur
+		return
 	var struck := false
 	var src: Combatant = source if is_instance_valid(source) else null
 	for target in Combatant.hostile_targets(get_tree(), src):

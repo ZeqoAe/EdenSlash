@@ -166,6 +166,8 @@ func _draw() -> void:
 		var mo := node as Monster
 		if Royale.active and (mo.global_position.distance_to(player.global_position) > 45.0 or not mo.visible):
 			continue
+		if TeamMatch.active and not mo.visible:
+			continue  # (lot TAC-2, L'Assaut) un adversaire que ton équipe ne voit pas n'est pas sur la carte
 		var sp: Vector2 = w2s.call(mo.global_position)
 		if not _inside(sp):
 			continue

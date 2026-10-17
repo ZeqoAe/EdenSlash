@@ -347,6 +347,8 @@ func _resolve() -> void:
 	for target in Combatant.hostile_targets(get_tree(), src):
 		if damage <= 0.0 or not contains(target.global_position, target.radius):
 			continue
+		if AssaultVision.current != null and AssaultVision.blocks_zone(self, src, target):
+			continue  # (lot TAC-2, L'Assaut) murs et murets arrêtent le coup
 		var player := target as Player
 		if player == null:
 			# allié IA (ClassRival) : même règle, sans les compteurs du joueur

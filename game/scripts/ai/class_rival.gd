@@ -276,6 +276,16 @@ func _teammates() -> Array:
 		+ get_tree().get_nodes_in_group("foe_heroes")
 
 
+## L'Assaut (lot TAC-2) : un héros scripté ne vise que ce que son équipe voit, ou ce qui le touche presque (AssaultVision,
+## perception honnête) ; hors Assaut, rien ne change.
+func _hostile_pool() -> Array:
+	return AssaultVision.filter_seen(self, super._hostile_pool())
+
+
+func _can_target() -> bool:
+	return super._can_target() and AssaultVision.perceives(self, _player)
+
+
 ## Cible en équipe (passe M7) : le plus faible à portée raisonnable plutôt que le plus proche (Normal et plus : un
 ## héros à moitié de PV « vaut » FOCUS m de moins) ; en duel et en Facile, le plus proche comme avant.
 const FOCUS := [0.0, 5.0, 8.0, 11.0]
@@ -579,7 +589,9 @@ func _cancel_attack() -> void:
 
 func _update_idle(delta: float) -> Vector3:
 	var v := super._update_idle(delta)
-	if is_passive() or not _can_target():
+	if goal != Vector3.INF and not is_passive() and AssaultVision.active():
+		_set_state("chase")  # (lot TAC-2, L'Assaut) personne en vue : il rejoint son poste
+	elif is_passive() or not _can_target():
 		play(_anim("idle", "stand01"), 0.3)
 	return v
 
@@ -588,6 +600,8 @@ func _update_idle(delta: float) -> Vector3:
 ## fonce dès que son coup est prêt ; à distance, il recule en gardant le héros à portée.
 func _update_chase(delta: float) -> Vector3:
 	if is_passive() or not _can_target():
+		if goal != Vector3.INF and not is_passive() and AssaultVision.active():
+			return _update_goal(delta)  # (lot TAC-2, L'Assaut) personne en vue : il rejoint son poste
 		_set_state("idle")
 		return Vector3.ZERO
 	if flee:

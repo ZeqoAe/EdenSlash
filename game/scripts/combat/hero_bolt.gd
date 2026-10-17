@@ -92,6 +92,9 @@ func _physics_process(delta: float) -> void:
 	var step := _speed * delta
 	global_position += dir * step
 	_travel += step
+	if AssaultVision.current != null and AssaultVision.blocks_segment(global_position - dir * step, global_position):
+		queue_free()  # (lot TAC-2, L'Assaut) le projectile s'arrête au mur ou au muret
+		return
 	for node in shooter.foes():
 		var mo := node as Combatant
 		if mo == null or mo.is_dead or _hit.has(mo):

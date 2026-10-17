@@ -5,8 +5,8 @@ extends Node
 ## spectateur), la machine de manche pure Assault (achat -> manche -> pose / désamorçage -> fin -> mi-temps /
 ## prolongation) et sa fin de partie. world.gd lui rend la mort du joueur (player_down) et l'abandon (abandon).
 ##
-## Options de la partie (TeamMatch.spec, posées par Assault.launch) : map (« arena » : arène simple du lot TAC-0 ;
-## « bourg » : lot TAC-1), format, diff_allies / diff_foes (0-3), watch (vrai : le joueur regarde 8 IA), first_attack,
+## Options de la partie (TeamMatch.spec, posées par Assault.launch) : map (« bourg », par défaut, lot TAC-1 ; « arena » : arène
+## simple du lot TAC-0), format, diff_allies / diff_foes (0-3), watch (vrai : le joueur regarde 8 IA), first_attack,
 ## seed, speed (Engine.time_scale, mesures), allies / foes (classes imposées), et toute règle de Assault.RULES.
 ##
 ## IA (lot TAC-0, provisoire) : un agent minimal par héros scripté (_agent) — les attaquants vont ensemble au site de la
@@ -46,6 +46,10 @@ var _prompt := ""
 var _dmg: Dictionary = {}
 var _markers: Node3D
 var _charge_mark: Node3D
+## Vue d'équipe, brouillard, voile et bruits (lot TAC-2) ; « Voir les sons » de ton équipe.
+var vision: AssaultVision
+var cues: AssaultCues
+var _plant_noise_t := 0.0
 var _ended := false
 ## Événements de la machine vus par le directeur (tests, mesures).
 var events: Array = []
@@ -63,7 +67,11 @@ func setup(director: RunDirector) -> void:
 	if spec.has("speed"):
 		Engine.time_scale = float(spec.speed)
 	d.zone = GameData.zone(Run.zone_id)
-	_build_map(String(spec.get("map", "arena")))
+	_build_map(String(spec.get("map", "bourg")))  # (le Bourg par défaut ; « arena » : l'arène d'essai du lot TAC-0)
+	vision = AssaultVision.new()
+	d.add_child(vision)
+	vision.setup(map, self)
+	_build_cues()
 	_compose_teams(spec)
 	var keys := [[], []]
 	for t in 2:
@@ -364,9 +372,17 @@ func _ko(vk: String, killer: Combatant) -> void:
 
 # --- boucle ----------------------------------------------------------------------------------------
 
+## Mesure de l'image (--assault-perf) : durée de chaque image (s), temps des scripts et de la physique (ms), pendant la manche.
+var perf: Array = []
+var _perf_on := "--assault-perf" in OS.get_cmdline_user_args()
+
+
 func update(delta: float) -> void:
 	if _ended:
 		return
+	if _perf_on and Assault.phase in ["live", "planted"]:
+		perf.append([delta / maxf(Engine.time_scale, 0.01), Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
+			Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0, float(vision.stats.ms) if vision != null else 0.0])
 	TeamMatch.elapsed += delta
 	if Assault.phase in ["live", "planted"]:
 		PvpCaps.elapsed += delta
@@ -413,7 +429,8 @@ func _print_trace() -> void:
 		var g := "-" if r == null or r.goal == Vector3.INF else "(%.0f,%.0f)" % [r.goal.x, r.goal.z]
 		parts.append("%s%s:(%.0f,%.0f)>%s %s pv%d%s" % [k, "*" if k == carrier else "", h.global_position.x, h.global_position.z, g,
 			r._state if r != null else "joueur", int(h.hp), " passif" if r != null and r.passive else ""])
-	print("[assault] t=%.1f %s plant=%s %.1f | %s" % [Assault.round_time, Assault.phase, plant_by, plant_t, " ".join(parts)])
+	print("[assault] t=%.1f %s plant=%s %.1f vision=%.2f ms | %s" % [Assault.round_time, Assault.phase, plant_by, plant_t,
+		float(vision.stats.ms) if vision != null else 0.0, " ".join(parts)])
 
 
 ## Ligne d'objectif du HUD : manche, côté, score, temps ou mèche.
@@ -509,9 +526,31 @@ func engaged_foe(h: Combatant, within := ENGAGE) -> Combatant:
 	return best
 
 
-## [param h] perçoit-il [param c] ? Lot TAC-0 : oui (la distance décide) ; remplacé par la vue d'équipe (TAC-2).
+## [param h] perçoit-il [param c] ? Ce que son équipe voit, ou ce qui le touche presque (AssaultVision, lot TAC-2).
 func can_perceive(h: Combatant, c: Combatant) -> bool:
-	return h != null and c != null
+	return h != null and c != null and AssaultVision.perceives(h, c)
+
+
+## Héros dont l'écran montre la vue (voile, sons, ce qui est caché) : le joueur, ou celui que suit la caméra.
+func view_hero() -> Combatant:
+	var p := d.player
+	if player_key != "" and not p.is_dead:
+		return p
+	var t = d.world.rig.target if d.world.rig != null else null
+	if t is Combatant and is_instance_valid(t) and not (t as Combatant).is_dead and t != p:
+		return t
+	return _first_alive(0)
+
+
+## « Voir les sons » (activé dans ce mode) : un calque au-dessus du monde, sous le HUD.
+func _build_cues() -> void:
+	var layer := CanvasLayer.new()
+	layer.name = "AssaultCuesLayer"
+	layer.layer = 4
+	d.add_child(layer)
+	cues = AssaultCues.new()
+	layer.add_child(cues)
+	cues.setup_assault(vision)
 
 
 func _agent(key: String) -> void:
@@ -594,6 +633,7 @@ func _dist2(a: Vector3, b: Vector3) -> float:
 
 
 func _progress_plant(c: Combatant, delta: float) -> void:
+	_charge_noise(c, "plant", plant_t, delta)
 	plant_t += delta
 	if plant_t >= Assault.num("plant_time"):
 		charge_pos = _ground(c.global_position)
@@ -603,11 +643,21 @@ func _progress_plant(c: Combatant, delta: float) -> void:
 		_handle(Assault.plant(s, key_of(c)))
 
 
+## Pose et désamorçage s'entendent sur toute la carte, avec la direction (TACTIQUE § 7.7) : au début, puis toutes les 1,5 s.
+func _charge_noise(c: Combatant, kind: String, done: float, delta: float) -> void:
+	_plant_noise_t -= delta
+	if done <= 0.0 or _plant_noise_t <= 0.0:
+		_plant_noise_t = 1.5
+		if vision != null:
+			vision.noise(c.global_position, kind, Assault.team_of(key_of(c)), INF)
+
+
 func _defuse_full() -> float:
 	return Assault.num("defuse_time")
 
 
 func _progress_defuse(c: Combatant, delta: float) -> void:
+	_charge_noise(c, "defuse", defuse_t, delta)
 	defuse_t += delta
 	if defuse_t >= _defuse_full():
 		var k := key_of(c)
@@ -722,6 +772,9 @@ func _finish(forfeit := false) -> void:
 	var line := "[assault] fin : %s %s, %s, %.0f s" % ["victoire" if won else "défaite", "(abandon)" if forfeit else "",
 		Assault.summary(), TeamMatch.elapsed]
 	print(line)
+	if _perf_on and not perf.is_empty():
+		print(perf_line())
+		perf.clear()
 	var score := [int(Assault.score[0]), int(Assault.score[1])]
 	var rounds := Assault.round_n
 	var hist := Assault.history.duplicate(true)
@@ -734,6 +787,25 @@ func _finish(forfeit := false) -> void:
 	var r := ResultsPanel.new()
 	d.world.add_child(r)
 	r.show_spec(results_spec(won, score, rounds, hist, forfeit, res))
+
+
+func _exit_tree() -> void:
+	if _perf_on and not perf.is_empty():
+		print(perf_line())  # (arrêt par --quit-at : la mesure de la manche en cours)
+
+
+## Médianes et 90e centiles de la mesure d'image (--assault-perf).
+func perf_line() -> String:
+	var cols: Array = [[], [], [], []]
+	for p in perf:
+		for i in 4:
+			cols[i].append(float(p[i]))
+	var q := func(a: Array, k: float) -> float: return float(a[clampi(int(a.size() * k), 0, a.size() - 1)])
+	for c in cols:
+		c.sort()
+	return "[assault] perf : image %.2f ms (90e %.2f), scripts %.2f ms, physique %.2f ms, vision %.2f ms (90e %.2f), %d images" % [
+		q.call(cols[0], 0.5) * 1000.0, q.call(cols[0], 0.9) * 1000.0, q.call(cols[1], 0.5), q.call(cols[2], 0.5), q.call(cols[3], 0.5),
+		q.call(cols[3], 0.9), perf.size()]
 
 
 ## Bilan provisoire (lot TAC-8 : frise des manches, tableau des 8, récompenses scellées) : score, manches, boutons.

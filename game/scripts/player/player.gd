@@ -1335,9 +1335,14 @@ func _resolve_area(action: Dictionary, origin: Vector3, fwd: Vector3, is_skill: 
 	if not foe and action.get("kind", "") != "buff":
 		get_tree().call_group("breakables", "hit_area", origin, fwd, radius, arc)  # jarres, caisses, cristaux
 	var targets: Array = []
+	var walls := AssaultVision.current != null  # (lot TAC-2, L'Assaut) murs et murets arrêtent les coups
+	if walls and origin.distance_to(global_position) > 2.0 and AssaultVision.blocks_shot(global_position, origin):
+		return null  # zone posée derrière un mur : sans effet
 	for node in foes():
 		var m := node as Combatant
 		if m == null or m.is_dead:
+			continue
+		if walls and AssaultVision.blocks_shot(origin, m.global_position):
 			continue
 		var to := m.global_position - origin
 		to.y = 0.0

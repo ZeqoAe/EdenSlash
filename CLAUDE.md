@@ -287,6 +287,12 @@ car les scriptés tombés sont libérés) ; direct `world.tscn -- --assault [--a
 Carte (TAC-1, `R_TAC_1.md`) : format `data/assault_maps/<id>.json` (murs, murets, terrasses + rampes, herbes, fontaine, sites, départs, lieux, postes d'IA),
 `world/assault_map.gd` (`AssaultMap.build` dans `ProcMap.generate_assault(id)` ; couches `SIGHT` / `SHOT` ; `floor_at` pour les terrasses ; `place_name`) ; carte
 `bourg` (`--assault-map=bourg`) ; aperçu `tools/assault_map_shots.tscn -- bourg --res=1600x900` ; test `test_tac1` (trajets mesurés contre le plan).
+Vue et bruits (TAC-2, `R_TAC_2.md`) : `world/assault_vision.gd` (`AssaultVision.current` : vue d'équipe 10 fois par seconde — 22 m, murs `SIGHT`, herbes 3 m,
+invisible 5 m, brumes `smokes` —, adversaires non vus cachés (`visible`, mini-carte, barre de cible), fantôme « ? » 4 s, voile (polygone de visibilité -> SubViewport
+-> quad plein écran), bruits `noise` (pas 14 m, esquive 18 m, combat 24 m, Charge : toute la carte) ; API de perception pour l'IA : `sees`, `visible_foes`, `seen_by`,
+`last_seen`, `heard_since`, `los`, signaux `spotted` / `lost` / `heard`) ; coups qui testent le décor (`blocks_zone` dans `Telegraph._resolve`, `blocks_shot` dans
+`Player._resolve_area`, `blocks_segment` dans `HeroBolt` / `Projectile`, tous gardés par `AssaultVision.current`) ; ciblage honnête de `ClassRival`
+(`_hostile_pool` / `_can_target` filtrés, poste rejoint sans cible en vue) ; « Voir les sons » `ui/assault_cues.gd` ; test `test_tac2`.
 
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à
