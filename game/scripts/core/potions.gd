@@ -44,6 +44,8 @@ static func icon_path(kind: String) -> String:
 
 ## Les potions servent-elles dans ce mode ? (en run, pas en duel).
 static func allowed() -> bool:
+	if TeamMatch.active:
+		return Run.active and TeamMatch.allows("potions")  # (lot MODE-0) mode d'équipes : selon sa fiche (non par défaut)
 	return Run.active and not Duel.active and not Siege.ffa  # ni en duel, ni dans le chacun pour soi du Siège
 
 

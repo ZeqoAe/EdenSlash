@@ -369,6 +369,8 @@ static func live_ctx() -> Dictionary:
 
 ## L'activité de la partie en cours ("" : menu, entraînement).
 static func current_act() -> String:
+	if TeamMatch.active:
+		return TeamMatch.act()  # (lot MODE-0) colisee, moba, assault : l'activité de la fiche du mode
 	if Royale.active:
 		return "royale"
 	if Duel.active:

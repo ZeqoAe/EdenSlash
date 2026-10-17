@@ -75,9 +75,14 @@ static func gold_out(amount: int, usage: String) -> void:
 	add("gold_out_" + usage, amount)
 
 
+## Mode d'équipes (lot MODE-0) sans journal dans sa fiche (le cas de tous) : rien n'est écrit.
+static func _team_off() -> bool:
+	return TeamMatch.active and not TeamMatch.allows("journal")
+
+
 ## Une image de jeu : temps de la carte, temps en combat, distance parcourue.
 static func tick(delta: float, pos: Vector3) -> void:
-	if not Run.active or Training.active or Royale.active:
+	if not Run.active or Training.active or Royale.active or _team_off():
 		return
 	_time += delta
 	_since_hit += delta
@@ -90,7 +95,7 @@ static func tick(delta: float, pos: Vector3) -> void:
 
 ## Coup porté par le héros du joueur au monstre [param m].
 static func player_hit(m: Combatant, dmg: float) -> void:
-	if not Run.active or Training.active or Duel.active or Royale.active:
+	if not Run.active or Training.active or Duel.active or Royale.active or _team_off():
 		return
 	_since_hit = 0.0
 	if not m.has_meta("jr_t0"):
@@ -104,7 +109,7 @@ static func player_hit(m: Combatant, dmg: float) -> void:
 
 
 static func monster_died(m: Combatant) -> void:
-	if not Run.active or Training.active or Duel.active or Royale.active or not m.has_meta("jr_t0"):
+	if not Run.active or Training.active or Duel.active or Royale.active or _team_off() or not m.has_meta("jr_t0"):
 		return
 	var kind := "boss" if m.get("is_boss") else ("elite" if m.get("is_elite") else "normal")
 	add("ttk_%s_sum" % kind, _time - float(m.get_meta("jr_t0")))
@@ -117,7 +122,7 @@ static func monster_died(m: Combatant) -> void:
 
 ## Dégâts reçus par le héros du joueur.
 static func damage_taken(amount: float, source: Combatant, max_hp: float) -> void:
-	if not Run.active or Training.active or Duel.active or Royale.active:
+	if not Run.active or Training.active or Duel.active or Royale.active or _team_off():
 		return
 	var kind := "autre"
 	if source != null:
@@ -135,7 +140,7 @@ static func _avg(sum_key: String, n_key: String) -> float:
 ## Ferme la carte en cours et écrit sa ligne. [param result] : etape, victoire, defaite, abandon,
 ## extraction. [param extra] : champs propres au mode (étage de la Tour, manches du Duel…).
 static func end_map(result: String, extra := {}) -> void:
-	if Training.active or Royale.active or _time < MIN_MAP_TIME:
+	if Training.active or Royale.active or _team_off() or _time < MIN_MAP_TIME:
 		begin_map()
 		return
 	var ctx: Dictionary = context.call() if context.is_valid() else {}

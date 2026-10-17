@@ -346,8 +346,8 @@ func _migrate(item: Dictionary) -> Dictionary:
 
 
 func save_profile() -> void:
-	if Training.active or Tower.active or Duel.active or Royale.active:
-		return  # entraînement, Tour : rien n'est gardé (la sauvegarde est rechargée à la sortie)
+	if Training.active or Tower.active or Duel.active or Royale.active or (TeamMatch.active and not TeamMatch.allows("save")):
+		return  # entraînement, Tour, modes d'équipes (lot MODE-0) : rien n'est gardé (la sauvegarde est rechargée à la sortie)
 	if not in_run:
 		_sync_vault()
 	if not in_run and selected_class != _view_class:

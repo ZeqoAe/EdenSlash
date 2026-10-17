@@ -311,6 +311,14 @@ func power() -> float:
 ## Chacun pour soi (Battle royale, bascule du Siège) : un combattant avec un [member ffa_id] >= 0 est l'ennemi
 ## de tous les autres membres du groupe « ffa », quel que soit son camp. -1 : les camps (Team) décident.
 var ffa_id := -1
+## Arène (lot MODE-0, TeamMatch : combats simultanés du Colisée à 300 m) : -1 = partout (tous les modes d'avant). Un
+## combattant d'arène >= 0 ne voit et ne frappe que sa propre arène (ffa_foes, hostile_heroes, hostile_targets).
+var arena_id := -1
+
+
+## Même arène (ou l'un des deux est « partout ») : seul filtre d'arène du jeu.
+static func same_arena(a: Combatant, b: Combatant) -> bool:
+	return a == null or b == null or a.arena_id < 0 or b.arena_id < 0 or a.arena_id == b.arena_id
 
 
 func set_ffa(id: int) -> void:
@@ -326,9 +334,11 @@ func clear_ffa() -> void:
 ## Les autres combattants vivants du groupe « ffa » (cibles d'un combattant en chacun pour soi).
 static func ffa_foes(tree: SceneTree, source) -> Array:
 	var out: Array = []
+	var arena: int = source.arena_id if source is Combatant else -1
 	for n in tree.get_nodes_in_group("ffa"):
 		var c := n as Combatant
-		if c != null and not c.is_dead and c != source and c.ffa_id >= 0 and c.ffa_id != source.ffa_id:
+		if c != null and not c.is_dead and c != source and c.ffa_id >= 0 and c.ffa_id != source.ffa_id \
+				and (arena < 0 or c.arena_id < 0 or c.arena_id == arena):
 			out.append(c)
 	return out
 
@@ -341,7 +351,7 @@ static func hostile_heroes(tree: SceneTree, source = null) -> Array:
 	var out: Array = []
 	for n in tree.get_nodes_in_group("heroes"):
 		var c := n as Combatant
-		if c != null and not c.is_dead and (source == null or not is_instance_valid(source) or c.team != source.team):
+		if c != null and not c.is_dead and (source == null or not is_instance_valid(source) or (c.team != source.team and same_arena(c, source))):
 			out.append(c)
 	return out
 
@@ -356,7 +366,7 @@ static func hostile_targets(tree: SceneTree, source = null) -> Array:
 		# (passe M7 : et les héros ennemis pilotés par un cerveau, que les alliés IA ne pouvaient pas toucher)
 		for n in tree.get_nodes_in_group("monsters") + tree.get_nodes_in_group("foe_heroes"):
 			var c := n as Combatant
-			if c != null and not c.is_dead and c != source:
+			if c != null and not c.is_dead and c != source and same_arena(c, source):
 				out.append(c)
 		return out
 	return hostile_heroes(tree, source)

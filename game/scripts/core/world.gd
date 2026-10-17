@@ -217,6 +217,8 @@ func _ready() -> void:
 			Training.leave(get_tree())
 		elif Tower.active:
 			tower_end("abandon")
+		elif TeamMatch.abandon():
+			pass  # modes d'équipes (lot MODE-0) : le directeur du mode clôt la partie
 		elif Duel.active:
 			Duel.forfeit = true  # le bilan dit « Abandon » (passe M7)
 			duel_end(false)
@@ -247,7 +249,7 @@ func _ready() -> void:
 			_print_report()
 			get_tree().quit())
 	var zone_bonus := int(GameData.zone(Run.zone_id).get("level_bonus", 0))
-	if zone_bonus > 0 and player.level < 1 + zone_bonus and not Royale.active and not Survivor.active and not Epochs.adventure():  # (Survivant : niveau 1 partout ; Aventure : niveau de run 1, lot H4a)
+	if zone_bonus > 0 and player.level < 1 + zone_bonus and not Royale.active and not Survivor.active and not TeamMatch.active and not Epochs.adventure():  # (Survivant : niveau 1 partout ; Aventure : niveau de run 1, lot H4a)
 		player.level = 1 + zone_bonus
 		player.recalc_stats()
 		player.hp = player.max_hp
@@ -274,8 +276,8 @@ func _ready() -> void:
 	rig.global_position = player.global_position
 	director.prompt_changed.connect(hud.show_prompt)
 	director.npc_opened.connect(_on_npc_opened)
-	if Duel.active:
-		pass  # duel : le build du preset, pas de carte
+	if Duel.active or TeamMatch.active:
+		pass  # duel : le build du preset, pas de carte (modes d'équipes, lot MODE-0 : le kit vient du directeur du mode)
 	elif Tower.active:
 		# la Tour : une seule carte de départ, de rareté aléatoire
 		_offer("Ta carte de départ", [Run.roll_cards(6).pick_random()])  # Tour, donjons, Siège, Ruée
@@ -487,7 +489,7 @@ func _offer(title: String, options: Array, reroll := Callable(), own_rerolls := 
 func _on_level_up(lvl: int) -> void:
 	Sfx.ui("level_up", -6.0)
 	Vfx.shockwave(player, player.global_position, 5.0, Color(1.0, 0.85, 0.4))
-	if Training.active or Tower.active or Duel.active:
+	if Training.active or Tower.active or Duel.active or (TeamMatch.active and not TeamMatch.allows("level_cards")):
 		return  # entraînement : les cartes se choisissent dans le panneau ; Tour : une par étage
 	_offer("Niveau %d ! Choisis une carte" % lvl, Run.roll_cards(3), func(): return Run.roll_cards(3))
 
@@ -536,6 +538,8 @@ func _on_player_died(_who: Combatant, _killer: Combatant) -> void:
 		await get_tree().create_timer(1.0).timeout
 		player.respawn(player.global_position)
 		return
+	if TeamMatch.player_down(_killer):
+		return  # modes d'équipes (lot MODE-0) : le directeur du mode décide (manche perdue, spectateur, relève)
 	if Royale.active:
 		director.royale.player_down(_killer)  # Battle royale : une seule vie ; le directeur annonce la place, puis spectateur
 		return
@@ -810,7 +814,7 @@ func _apply_biome_env() -> void:
 
 ## Après 10 minutes : ciel et brouillard rougeâtres.
 func set_rage_mood(on: bool) -> void:
-	if not Duel.active and not Tower.active:
+	if not Duel.active and not Tower.active and not TeamMatch.active:
 		if on:
 			Music.play(Music.RAGE)
 		else:
@@ -822,7 +826,7 @@ func set_rage_mood(on: bool) -> void:
 
 ## Ambiance plus sombre dans les donjons.
 func set_dungeon_mood(on: bool) -> void:
-	if not Duel.active and not Tower.active:
+	if not Duel.active and not Tower.active and not TeamMatch.active:
 		if on:
 			Music.play(Music.BOSS)
 		else:

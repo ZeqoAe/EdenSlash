@@ -51,7 +51,11 @@ que grâce à son contour d'encre (7 à 10:1 entre encre et bonbon) ; jamais de 
 lagon **foncé** `#0B7DB5` (4,3:1 sur papier) doublé d'un liseré blanc.
 **Raretés** : Commun lilas-gris, Spécial pomme, Rare lagon, Épique améthyste, Mythique mandarine, Légendaire soleil (+ rayons
 tournants et étoile). **Familles** : Rempart soleil, Ombre mandarine, Traque pomme, Ferveur lagon, Arcane améthyste (les couleurs
-des icônes de classes). **Interdits** : noir pur, gris neutres froids, dégradés multicolores, néon, verre dépoli, fonds sombres pleins
+des icônes de classes). **Équipes** (modes d'équipes, lot MODE-0, jetons `couleur.equipe`, ordre fixe) : Azur (rond), Braise
+(carré), Citron (triangle), Améthyste (losange), Menthe (étoile), Griotte (croix), Marine (hexagone), Perle (anneau) ; 2 équipes =
+azur / braise. Une couleur d'équipe ne va **jamais sans son motif** (blason `TeamSigil`) : les 8 restent distinctes pour les trois
+daltonismes (écart ≥ 11, `tools/team_palette_check.py`). Elle sert au blason, au classement, au contour et au sol, **jamais** aux
+barres de vie (pomme = mon équipe, fraise = adversaires). **Interdits** : noir pur, gris neutres froids, dégradés multicolores, néon, verre dépoli, fonds sombres pleins
 derrière un écran de menu.
 
 ## 4. Typographie

@@ -117,6 +117,7 @@ var orbs: XpOrbs  # orbes d'expérience au sol
 var tower: TowerDirector  # mode Tour : étages successifs (Tower)
 var duel: DuelDirector  # mode Duel : manches contre un héros (Duel)
 var royale: RoyaleDirector  # mode Battle royale : huit héros, un anneau (Royale)
+var team: Node  # modes d'équipes (lot MODE-0, TeamMatch) : directeur du mode, monté par TeamMatch.mount
 var spawner: SpawnDirector  # apparition des monstres de la carte (passe P15) ; null hors carte
 var sv: SurvivorDirector  # mode Survivant : 20 minutes, une carte, tout aux cartes (Survivor) ; null sinon
 
@@ -136,6 +137,12 @@ func start(p: Player) -> void:
 		royale = RoyaleDirector.new()
 		add_child(royale)
 		royale.setup(self)
+		return
+	if TeamMatch.active:
+		# modes d'équipes (lot MODE-0) : le directeur du mode (fiche « director ») monte sa carte, ses équipes et ses héros ;
+		# il est appelé à chaque image par update(delta) s'il l'a
+		state = "team"
+		team = TeamMatch.mount(self)
 		return
 	if Duel.active:
 		# duel : une arène, pas de grande carte
@@ -243,6 +250,10 @@ func _process(delta: float) -> void:
 	if state == "duel":
 		duel.update(delta)
 		_keep_on_map()
+		return
+	if state == "team":
+		if is_instance_valid(team) and team.has_method("update"):
+			team.call("update", delta)  # (lot MODE-0 : le directeur du mode tient aussi le héros sur sa carte)
 		return
 	if state == "tower":
 		tower.update(delta)
@@ -773,8 +784,8 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 	kills += 1
 	RunJournal.monster_died(who)
 	var m := who as Monster
-	if Duel.active:
-		return  # duel : rien à gagner sur l'adversaire
+	if Duel.active or TeamMatch.active:
+		return  # duel, modes d'équipes : rien à gagner sur l'adversaire
 	if Tower.active:
 		# la Tour : ni expérience (le niveau suit l'étage), ni butin (le coffre de l'étage)
 		Run.kills += 1
@@ -1072,7 +1083,7 @@ func boss_rage_text() -> String:
 
 ## Extraction : 10 s à survivre (une vague fonce sur le héros), puis on garde tout.
 func start_extraction() -> void:
-	if Tower.active or Duel.active or Royale.active or sv:
+	if Tower.active or Modes.hero_match() or sv:  # (Duel, Battle royale, modes d'équipes)
 		return  # la Tour : on monte ou on tombe (Survivant : pas d'extraction, le boss arrive à 20:00)
 	if extracting or state == "cleared" or player == null or player.is_dead:
 		return
@@ -1203,7 +1214,7 @@ func next_zone_id() -> String:
 
 func _emit_zone() -> void:
 	var title := String(zone.get("name", ""))
-	if not Training.active and not Tower.active and not Duel.active and sv == null:
+	if not Training.active and not Tower.active and not Duel.active and not TeamMatch.active and sv == null:
 		title = "%s · étape %d/%d" % [title, Run.stage, STAGES]
 	zone_changed.emit({"name": title, "levels": [1 + int(zone.get("level_bonus", 0)), max_level()]})
 

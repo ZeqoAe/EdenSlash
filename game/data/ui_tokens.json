@@ -34,6 +34,18 @@
       "mythique": {"ref": "bonbon.mandarine"},
       "legendaire": {"ref": "bonbon.soleil", "eclat": "#FFFFFF", "$description": "+ rayons de soleil tournants (comme le fond des icônes de sorts) et une étoile autocollant"}
     },
+    "equipe": {
+      "$description": "lot MODE-0 : couleurs des équipes des modes d'équipes (Colisée, Deux Voies, Assaut ; TeamMatch.color). Ordre fixe : 2 équipes = azur / braise, 6 = les 6 premières, 8 = toutes. Toujours avec le MOTIF de l'équipe (TeamSigil) : daltonismes complets simulés, écart CIEDE2000 ≥ 11 entre deux équipes (≥ 26 en vision normale), contrôle tools/team_palette_check.py. Ne remplace jamais pomme / fraise des barres de vie (amis / ennemis) : la couleur d'équipe sert au blason, au classement, au contour et au sol.",
+      "ordre": ["azur", "braise", "citron", "amethyste", "menthe", "griotte", "marine", "perle"],
+      "azur": {"clair": {"$value": "#76D3F6", "$type": "color"}, "base": {"$value": "#22B8F0", "$type": "color"}, "fonce": {"$value": "#177DA3", "$type": "color"}, "nom": "Azur", "motif": "rond"},
+      "braise": {"clair": {"$value": "#FFB674", "$type": "color"}, "base": {"$value": "#FF8A1F", "$type": "color"}, "fonce": {"$value": "#AD5E15", "$type": "color"}, "nom": "Braise", "motif": "carre"},
+      "citron": {"clair": {"$value": "#FAEC7F", "$type": "color"}, "base": {"$value": "#F7E030", "$type": "color"}, "fonce": {"$value": "#A89821", "$type": "color"}, "nom": "Citron", "motif": "triangle"},
+      "amethyste": {"clair": {"$value": "#D085F3", "$type": "color"}, "base": {"$value": "#B43BEB", "$type": "color"}, "fonce": {"$value": "#7A28A0", "$type": "color"}, "nom": "Améthyste", "motif": "losange"},
+      "menthe": {"clair": {"$value": "#6CC5B8", "$type": "color"}, "base": {"$value": "#12A18C", "$type": "color"}, "fonce": {"$value": "#0C6D5F", "$type": "color"}, "nom": "Menthe", "motif": "etoile"},
+      "griotte": {"clair": {"$value": "#CD7091", "$type": "color"}, "base": {"$value": "#AE184E", "$type": "color"}, "fonce": {"$value": "#761035", "$type": "color"}, "nom": "Griotte", "motif": "croix"},
+      "marine": {"clair": {"$value": "#7291C5", "$type": "color"}, "base": {"$value": "#1C4EA2", "$type": "color"}, "fonce": {"$value": "#13356E", "$type": "color"}, "nom": "Marine", "motif": "hexagone"},
+      "perle": {"clair": {"$value": "#F0EEF8", "$type": "color"}, "base": {"$value": "#E7E4F3", "$type": "color"}, "fonce": {"$value": "#9D9BA5", "$type": "color"}, "nom": "Perle", "motif": "anneau"}
+    },
     "texte": {
       "sur-papier": {"$value": "#221A3A", "$type": "color"},
       "sur-papier-2": {"$value": "#6B5E86", "$type": "color"},

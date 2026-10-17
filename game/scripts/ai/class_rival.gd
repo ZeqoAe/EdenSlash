@@ -261,12 +261,14 @@ func is_invulnerable() -> bool:
 ## Équipes (passe M7) : Arènes et Gantelet, plusieurs héros par camp ; passe M6 : aussi les alliés des Donjons, de la Ruée
 ## et du Siège (ils lisent les zones rouges du boss, se replient sous 30 % de PV, visent le plus faible).
 func _team_mode() -> bool:
-	return Duel.team_mode() or (Tower.active and Tower.is_dungeon())
+	return Duel.team_mode() or (Tower.active and Tower.is_dungeon()) or TeamMatch.active  # (lot MODE-0 : modes d'équipes)
 
 
 ## Équipiers de ce héros (lui compris) : le joueur et ses alliés, ou les adversaires de son camp.
 func _teammates() -> Array:
 	if ffa_id >= 0:
+		if TeamMatch.team_of(self) >= 0:
+			return TeamMatch.allies(self, true, true)  # (lot MODE-0) son équipe, dans son arène
 		return [self]  # chacun pour soi : soutien pour soi seul
 	if ally:
 		return get_tree().get_nodes_in_group("heroes")
@@ -460,6 +462,8 @@ func _read_zones() -> void:
 		var src = tg.source
 		if is_instance_valid(src) and (src == self or src.team == team) and src.ffa_id < 0:
 			continue  # ses coups et ceux de son camp
+		if is_instance_valid(src) and ((TeamMatch.active and ffa_id >= 0 and src.ffa_id == ffa_id) or not Combatant.same_arena(self, src)):
+			continue  # (lot MODE-0) équipe d'un mode d'équipes (même ffa_id), ou une autre arène
 		var iid := tg.get_instance_id()
 		if _seen_zones.has(iid) or not tg.contains(global_position, radius):
 			continue
@@ -784,7 +788,7 @@ func _start_attack() -> void:
 			if _state == "attack":
 				Sfx.play_at(self, global_position, String(snd[1]), -6.0))
 	play(anim_name, 0.06, speed, true)
-	if sk.is_empty() and (Duel.active or Royale.active or Siege.ffa):
+	if sk.is_empty() and (Modes.hero_match() or Siege.ffa):  # (Duel, Battle royale, modes d'équipes, Siège)
 		mult *= PvpCaps.basic_mult()  # auto-attaque entre héros en duel
 	var is_crit := randf() < crit_chance
 	var dmg := atk * mult * damage_dealt_mult() * randf_range(0.9, 1.1) * (1.0 + crit_bonus if is_crit else 1.0)

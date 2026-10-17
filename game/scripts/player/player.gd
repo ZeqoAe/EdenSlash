@@ -1085,9 +1085,9 @@ func swap_weapon() -> bool:
 	return true
 
 
-## Recharge d'échange d'arme (s) : plus longue entre héros (Duel, Arènes, Battle royale).
+## Recharge d'échange d'arme (s) : plus longue entre héros (Duel, Arènes, Battle royale, modes d'équipes).
 func swap_cooldown() -> float:
-	return WeaponAttacks.SWAP_CD_PVP if (Duel.active or Royale.active) else WeaponAttacks.SWAP_CD
+	return WeaponAttacks.SWAP_CD_PVP if Modes.hero_match() else WeaponAttacks.SWAP_CD
 
 
 ## Temps restant avant le prochain échange (s).
@@ -1652,7 +1652,7 @@ func _hit_monster(m: Combatant, dir: Vector3, action: Dictionary, is_skill: bool
 ## Micro-arrêt sur impact : donne du poids aux coups. Il ralentit tout le jeu : jamais quand
 ## un autre héros se bat (Duel, duellistes de la Tour), ni pour un héros piloté par une IA.
 func _hit_pause(duration: float) -> void:
-	if not Settings.get_v("interface", "hit_stop") or Duel.active or foe or bot != null:
+	if not Settings.get_v("interface", "hit_stop") or Duel.active or TeamMatch.active or foe or bot != null:  # (lot MODE-0 : ni en mode d'équipes)
 		return
 	if Tower.active and Tower.is_duel_floor(Tower.floor_n):
 		return

@@ -199,6 +199,11 @@ niveau et équipement, `--tournament`, essais `--scale=` / `--caps=`) et les lig
 cartes du Survivant via `SurvivorGear.adopt` / `SurvivorCards.up_card`, rendu `SurvivorCardView` ; scriptés = `RoyaleLoot.offer`,
 `Royale.AI_GEAR_SCALE`, mesure `tools/br3_ai_probe`), pièces au sol à la mort et fiche `ui/royale_gear_sheet.gd` ; test `test_br3`.
 Chacun pour soi général : `Combatant.ffa_id` / `set_ffa()` / `clear_ffa()`, groupe « ffa ».
+**Modes d'équipes** (socle MODE-0, `conception/benchmark/R_MODE0.md` : Colisée, Deux Voies, Assaut) : `core/team_match.gd` (`TeamMatch` : fiches `MODES` /
+`register`, équipes, camp = `ffa_id` 100 + équipe, arène `Combatant.arena_id` (filtre `same_arena` de `ffa_foes` / `hostile_*`), manches, élimination, `result`,
+spectateur, `make_hero` sans état de Duel, directeur monté par `RunDirector.start` (`mount`), mort et abandon rendus par world.gd) ; API `Modes.current / kind /
+sealed / is_pvp / team_match / hero_match` (remplace peu à peu `Duel.active or Royale.active`) ; profil `ModeRules.register` ; couleurs `couleur.equipe` (8 + motif,
+`ui/team_sigil.gd`, `tools/team_palette_check.py`). Un mode d'équipes ne pose JAMAIS `Duel.active` / `Royale.active` ; test `test_mode0`.
 Contenu et règles (lot BR-R1, `conception/royale/R_BRR1.md`) : page du mode `ui/royale_page.gd` (`RoyalePage` : Classique / Du jour / Personnalisée,
 Ligue, carrière, apparences ; « Continuer » : `memo` / `restore`), modificateurs `core/royale_mods.gd` (`Royale.mod`, du jour `RoyaleMods.today_id`),
 autel du gardien `core/royale_event.gd` (2e anneau, `RoyaleEvent.make_guardian`, hors du compteur), Ligue royale `core/royale_league.gd` (saison = mois, points

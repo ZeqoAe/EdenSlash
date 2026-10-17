@@ -149,11 +149,18 @@ const PROFILES := {
 static var forced := ""
 ## Modificateurs actifs (ids de Modifiers.LIST).
 static var modifiers: Array = []
+## Profils enregistrés à l'exécution (lot MODE-0) : un mode d'équipes (TeamMatch) déclare le sien par [method register]
+## (lu comme ceux de PROFILES, mode dev et modificateurs compris). Un nom de PROFILES ne peut pas être remplacé.
+static var _extra: Dictionary = {}
 
 
 static func profile_name() -> String:
 	if forced != "":
 		return forced
+	if TeamMatch.active:
+		# (lot MODE-0) profil de la fiche du mode d'équipes ; pas encore enregistré : "" -> chiffres du duel
+		var tp := TeamMatch.rules_profile()
+		return tp if has_profile(tp) else ""
 	if Siege.ffa:
 		return "siege"
 	var m := Modes.current()
@@ -170,11 +177,23 @@ static func rule(key: String, fallback: Variant = null, profile := "") -> Varian
 	var p := profile if profile != "" else profile_name()
 	if p == "":
 		p = "duel"  # hors mode : les chiffres du duel (fiches, comparaisons)
-	var base: Variant = PROFILES.get(p, {}).get(key, fallback)
+	var base: Variant = PROFILES.get(p, _extra.get(p, {})).get(key, fallback)
 	var edits: Dictionary = DevEdits.data.get("modes", {}).get(p, {})
 	if edits.has(key):
 		base = edits[key]
 	return Modifiers.apply(key, base, modifiers)
+
+
+## Enregistre le profil [param name] (lot MODE-0 : modes d'équipes) ; refusé (faux) pour un nom de PROFILES.
+static func register(name: String, profile: Dictionary) -> bool:
+	if PROFILES.has(name):
+		return false
+	_extra[name] = profile
+	return true
+
+
+static func has_profile(name: String) -> bool:
+	return name != "" and (PROFILES.has(name) or _extra.has(name))
 
 
 static func num(key: String, fallback := 0.0, profile := "") -> float:
