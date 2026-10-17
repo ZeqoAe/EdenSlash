@@ -76,6 +76,11 @@ func _test_tables() -> void:
 			if ep > 1 and Epochs.boss_hp(ep, st) <= Epochs.boss_hp(ep - 1, st):
 				mono = false
 	check("PV des boss au sommet des bandes : croissants d'une époque à l'autre, 3e carte au-dessus de la 1re", mono)
+	# lot H4b : dégâts du boss à part, réglages de mesure neutres en jeu, boss d'I-1 plus solide (1re run punitive)
+	check("H4b : dégâts du boss = BOSS_ATK de la carte (%.3f en I-1), réglages de mesure neutres (--boss-atk-scale, --ranged)" % Epochs.map_atk(1, 1, true),
+		is_equal_approx(Epochs.map_atk(1, 1, true), float(Epochs.BOSS_ATK[0][0])) and Epochs.test_boss_atk == 1.0 and not Run.test_ranged)
+	check("H4b : boss d'I-1 plus solide que ses monstres (PV ×%.2f, dégâts ×%.2f)" % [float(Epochs.BOSS_HP_ADJ[0][0]), Epochs.map_atk(1, 1, true) / Epochs.map_atk(1, 1)],
+		float(Epochs.BOSS_HP_ADJ[0][0]) > 1.0 and Epochs.map_atk(1, 1, true) > Epochs.map_atk(1, 1))
 	check("PE conseillée : > 0, plus haute en haut de la bande (I-2 : %d au niveau 18, %d au 33)" % [Epochs.advised_power(1, 2, 1), Epochs.advised_power(1, 2, 90)],
 		Epochs.advised_power(1, 1, 1) > 0 and Epochs.advised_power(1, 2, 90) > Epochs.advised_power(1, 2, 1))
 	check("rang des gemmes : échelle d'avant (I-1 : %d à %d ; III-3 en haut : %d)" % [Epochs.gem_scale_level(1, 1, 1), Epochs.gem_scale_level(1, 1, 23), Epochs.gem_scale_level(3, 3, 90)],

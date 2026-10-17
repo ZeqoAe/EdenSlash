@@ -221,7 +221,8 @@ const LATE_KITS := ["new", "1.1.5", "1.2.5", "1.3.0", "1.3.5", "2.2.5", "2.3.0",
 ## +5, trouvailles de la run, héros au haut de la bande ; carte I-1 : le compte neuf, niveau 1 et équipement de départ) la chance
 ## de finir la carte mesurée dans le jeu (joueur moyen appris :
 ## sigmoïde(C_MAP + BETA ln R) × sigmoïde(C_BOSS + BETA ln R)). Avec --late=q1,…,q12 (chances mesurées en retard de 10 niveaux) :
-## M′ ajusté sur les deux points (moindres carrés des logits, chances bornées à 5-95 %), chance prévue en retard face à la mesure.
+## M′ ajusté sur les deux points (moindres carrés des logits, chances bornées à 5-95 % ; un retard sans victoire ne compte que si
+## la prévision dépasse 5 %), chance prévue en retard face à la mesure.
 func calage_probe() -> void:
 	var target: Array = []
 	var late: Array = []
@@ -267,7 +268,10 @@ func calage_probe() -> void:
 				for step in range(-600, 601):
 					var mt := m0 * exp(float(step) * 0.005)
 					var e1 := _logit(clampf(clear_chance(raw / mt, k - 1, 0.0), 0.001, 0.999)) - _logit(pc)
-					var e2 := _logit(clampf(clear_chance(lraw / mt, k - 1, 0.0), 0.001, 0.999)) - _logit(q)
+					var pl := clear_chance(lraw / mt, k - 1, 0.0)
+					var e2 := _logit(clampf(pl, 0.001, 0.999)) - _logit(q)
+					if q <= 0.05 and pl <= 0.05:
+						e2 = 0.0  # mesure censurée (aucune victoire sur 20) : toute prévision sous 5 % lui va
 					if e1 * e1 + e2 * e2 < best:
 						best = e1 * e1 + e2 * e2
 						m = mt

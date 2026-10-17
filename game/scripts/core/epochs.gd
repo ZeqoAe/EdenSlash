@@ -44,17 +44,20 @@ const MAP_MULT := [
 ]
 ## Dégâts des monstres de chaque carte (lot H4a) : M′ règle les PV (temps pour tuer, sonde boss_ttk) ; les dégâts ont leur
 ## table, car les PV et la défense du héros montent plus vite que ses dégâts avec le niveau. BOSS_ATK : dégâts des boss.
+## Lot H4b (R_H4b.md) : réglés carte par carte à la sensation d'un joueur (aide « Bot » du jeu, coups évités 0,5 ; sonde
+## tools/boss_ttk.py, 20 combats par cas) : un héros au haut de la bande, pièces de la carte à +5, bat le boss 60 à 75 % du temps.
+## I-1 : boss plus dur que ses monstres (compte neuf : 55 % en débutant, 75 % en bon joueur).
 const MAP_ATK := [
 	[0.35, 0.22, 1.2],
-	[0.25, 0.3, 0.45],
-	[1.4, 1.0, 0.12],
-	[1.1, 0.6, 0.5],
+	[0.45, 0.6, 0.45],
+	[3.5, 1.0, 0.24],
+	[2.2, 1.2, 0.75],
 ]
 const BOSS_ATK := [
 	[0.525, 0.22, 1.2],
-	[0.15, 0.18, 0.27],
-	[0.6, 0.42, 0.05],
-	[0.33, 0.18, 0.15],
+	[0.162, 0.36, 0.27],
+	[1.5, 0.42, 0.1],
+	[0.66, 0.3, 0.225],
 ]
 ## Montée des monstres dans le temps de chaque carte (lot H4a) : le héros ne prend plus de niveau pendant la carte (seules
 ## les cartes le font grandir) ; PV et dégâts des monstres qui apparaissent × (1 + TIME_RAMP)^minutes, au plus TIME_RAMP_MAX
@@ -90,13 +93,13 @@ const BOSS_HP_MAP := [80000.0, 370000.0, 1750000.0]
 ## Facteur d'époque des PV du boss : les dégâts d'une bonne run grandissent avec l'équipement du hub de l'époque
 ## (mesurés au pilote, combats longs : ×1 / ×1,7-2,4 / ×3,9-4,9 / ×3,9-6,9 selon la carte).
 const BOSS_HP_EPOCH := [1.0, 2.0, 4.0, 5.5]
-## Réglage par carte des PV des boss (lot H4a, mesuré au pilote : R_H4a.md) : le pilote automatique frappe 2 à 3 fois moins
-## que la sonde ; un combat trop long croise la rage du boss (2:30 à la 1re carte), qui tue.
+## Réglage par carte des PV des boss (lots H4a, H4b : R_H4a.md, R_H4b.md), avec BOSS_ATK : mesuré à l'aide « Bot » (sonde
+## boss_ttk et parties entières sim_survie --bot) ; le pilote de mesure (--autoplay) frappe 2 à 3 fois moins et reste plus bas.
 const BOSS_HP_ADJ := [
 	[1.5, 1.0, 1.0],
-	[0.6, 1.0, 1.0],
-	[0.8, 1.0, 1.0],
-	[0.7, 0.6, 0.45],
+	[1.1, 1.61, 1.0],
+	[1.6, 1.3, 1.5],
+	[0.7, 1.17, 0.81],
 ]
 ## Rage du boss (passe P11) : après BOSS_RAGE_AT[carte] secondes dans l'arène, les dégâts du boss suivent les paliers de
 ## la rage de la carte (RunDirector.RAGE_TIERS, une minute par palier : ×1,1, ×2, ×11, ×101). Environ deux fois le

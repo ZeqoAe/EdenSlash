@@ -460,6 +460,13 @@ les pièces : × 0,09 × 1,08^(niveau − 1), passe E6), son enchantement, son p
 - **Boss** : PV fixes (voir « Boss : PV fixes ») au niveau du boss : `Epochs.boss_hp(époque, carte, niveau)` = PV de référence
   (`BOSS_HP_MAP` × `BOSS_HP_EPOCH` × `BOSS_HP_ADJ` × M′ / ancien multiplicateur) × 1,1^(niveau − plafond d'avant − 1). Un compte
   neuf (niveau 1) trouve sur I-1 un boss de niveau 2.
+- **Équilibre mesuré** (lot H4b, `R_H4b.md`) : à la sensation d'un joueur (aide « Bot » du jeu, coups évités 0,5 ; sonde
+  `tools/boss_ttk.py` et parties entières `tools/sim_survie.py --bot`), un héros au haut de la bande avec les pièces de la carte à
+  +5 bat le boss 60 à 75 % du temps ; 10 niveaux d'avance : 80-100 % ; 10 niveaux de retard d'équipement : 40-55 % à l'époque I (les
+  stats du héros y pèsent plus que les pièces), ≈ 25 % à l'époque II, 0-20 % aux époques III-IV. Compte neuf sur I-1 : 55 % pour un
+  débutant, 75 % pour un bon joueur (boss d'I-1 : PV et dégâts ×1,5 sur ses monstres). Leviers par carte : `BOSS_HP_ADJ` (PV du boss)
+  et `BOSS_ATK` (ses dégâts), `MAP_ATK` (monstres et renforts). Le simulateur de progression lit son propre M′ (`HERO_GAME_MULT`,
+  recalé sur ces chances), jamais `Epochs.MAP_MULT`.
 - **Coffres de la partie** : une pièce n'est **jamais au-dessus du niveau de héros** (`SlotChests.run_piece`) : sous le palier de
   la carte, la pièce du palier est ramenée au niveau du héros (même modèle, « niveau 12 · mythique » au titre du coffre ; la
   vraie pièce reste à l'Armurerie à son niveau). Le port se vérifie donc aussi en partie (`HeroLevel.wear_block`). Butin des

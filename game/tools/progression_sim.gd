@@ -35,8 +35,10 @@ extends Node
 ##   --xp=a,g           autre courbe d'XP (défaut 105,1.035 ; aussi --a= / --g= de l'annexe) ;
 ##   --mep=e1,e2,e3,e4  facteur d'époque du M′ de la sonde (défaut 0.75,0.7,0.5,0.8 : MAP_MULT de NIVEAU_HEROS §1.4) ;
 ##   --mapmult=12 valeurs  MAP_MULT entier (I-1 … IV-3), prime sur --mep ; --epochcap : H plafonné au haut de l'époque en
-##                      cours ; --sync : héros ramené au haut de la bande. Si le jeu a un Epochs.MAP_MULT (lot H4b), il sert
-##                      de défaut. Colonne « niveau de héros » du §5 : -- --heros --refonte --plans=boss --hubvalue (12 comptes, 50 h).
+##                      cours ; --sync : héros ramené au haut de la bande. Défaut (lot H4b) : HERO_GAME_MULT, le M′ de l'outil
+##                      recalé sur les chances mesurées dans le jeu (Epochs.MAP_MULT du jeu n'est pas dans l'espace de l'outil).
+##                      Le jeu : -- --heros --refonte --plans=boss --hubvalue --bossplans (12 comptes, 50 h ; R_H4b.md) ;
+##                      le modèle du document (§5) : sans --bossplans, avec --mep=0.75,0.7,0.5,0.8.
 ## Sonde : res://tools/hl_probe.tscn (puissance par carte et M′ suggéré, retard dans la bande, talents et certificats).
 ##
 ## Rien n'est sauvegardé (Training.active pendant la simulation) ; le profil chargé n'est que la mémoire du processus.
@@ -125,6 +127,13 @@ const HERO_MARKS := [10, 20, 30, 43, 50, 60, 70, 75, 80, 85, 90]
 ## puis facteur d'époque (balayage de PR2) : MAP_MULT = HERO_PROBE_MULT × HERO_EPOCH_FACTOR (table de NIVEAU_HEROS §1.4).
 const HERO_PROBE_MULT := [[0.9, 1.06, 1.11], [4.2, 4.2, 5.75], [34.0, 35.0, 24.0], [244.0, 357.0, 124.0]]
 const HERO_EPOCH_FACTOR := [0.75, 0.7, 0.5, 0.8]
+## Lot H4b (R_H4b.md) : M′ de l'outil recalé sur le jeu. Pour chaque carte, le M′ qui rend les chances de finir la carte mesurées
+## dans le jeu (aide « Bot », coups évités 0,5 ; sonde tools/boss_ttk.py, 20 combats, et parties entières sim_survie --bot) avec
+## l'équipement correct (pièces de la carte à +5, trouvailles, héros au haut de la bande ; I-1 : compte neuf) et en retard de 10
+## niveaux (ajustement sur les deux points) ; calcul : res://tools/hl_probe.tscn -- --calage=… --late=…
+## Le jeu règle PV, dégâts, défense plafonnée et boss par des tables à part (Epochs.MAP_MULT, MAP_ATK, BOSS_ATK, DEF_LEVEL,
+## BOSS_HP_ADJ) que l'indice de l'outil (racine(PV effectifs × DPS)) ne sait pas lire : seules les chances mesurées passent.
+const HERO_GAME_MULT := [[0.497, 1.131, 1.378], [2.524, 2.908, 10.849], [17.327, 26.100, 18.205], [47.397, 162.432, 23.736]]
 var heros := "--heros" in OS.get_cmdline_user_args()
 var hero_start := 1
 var xp_a := HERO_XP_A
@@ -135,7 +144,6 @@ var epochcap := "--epochcap" in OS.get_cmdline_user_args()
 var sync := "--sync" in OS.get_cmdline_user_args()
 var _mep_given := false
 var _cur: Dictionary = {}  # compte en cours (niveau de héros lu par les choix de pièces)
-var _game_map_mult = null  # Epochs.MAP_MULT du jeu s'il existe (lu une fois)
 
 
 func _ready() -> void:
@@ -321,23 +329,14 @@ static func band_level(ep: int, k: int, h: int) -> int:
 	return clampi(h, band_lo(ep, k), band_hi(ep, k))
 
 
-## M′ de la carte [param k] de l'époque [param ep] (remplace Epochs.MONSTER_MULT) : --mapmult, sinon Epochs.MAP_MULT
-## s'il existe (lot H4b) et sans --mep, sinon HERO_PROBE_MULT × facteur d'époque.
+## M′ de la carte [param k] de l'époque [param ep] (remplace Epochs.MONSTER_MULT) : --mapmult, sinon HERO_PROBE_MULT × facteur
+## d'époque avec --mep, sinon HERO_GAME_MULT (lot H4b : recalé sur le jeu).
 func map_mult(ep: int, k: int) -> float:
 	var i := (clampi(ep, 1, 4) - 1) * 3 + clampi(k, 1, 3) - 1
 	if map_mult_override.size() >= 12:
 		return float(map_mult_override[i])
-	if _game_map_mult == null:
-		var raw: Array = (load("res://scripts/core/epochs.gd") as Script).get_script_constant_map().get("MAP_MULT", [])
-		_game_map_mult = []
-		for row in raw:  # lot H4a : table par époque (4 × 3) ; aplatie dans l'ordre des cartes
-			if row is Array:
-				_game_map_mult.append_array(row)
-			else:
-				_game_map_mult.append(row)
-	var game: Array = _game_map_mult
-	if game.size() >= 12 and not _mep_given:
-		return float(game[i])
+	if not _mep_given:
+		return float(HERO_GAME_MULT[clampi(ep, 1, 4) - 1][clampi(k, 1, 3) - 1])
 	return float(HERO_PROBE_MULT[clampi(ep, 1, 4) - 1][clampi(k, 1, 3) - 1]) * float(mep[clampi(ep, 1, mep.size()) - 1])
 
 

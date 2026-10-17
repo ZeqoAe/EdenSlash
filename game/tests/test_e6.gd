@@ -297,6 +297,10 @@ func _test_h7_model() -> void:
 	check("H7 : pièce portable si son niveau ≤ H, pièces de départ toujours",
 		Sim.wearable_at({"level": 50}, 50) and not Sim.wearable_at({"level": 51}, 50) and Sim.wearable_at({"level": 80, "starter": true}, 1) and Sim.wearable_at({}, 1))
 	var sim: Node = Sim.new()
+	sim.heros = true
+	check("H4b : M′ de l'outil par défaut = HERO_GAME_MULT (recalé sur le jeu, pas Epochs.MAP_MULT : %.2f en II-3)" % sim.map_mult(2, 3),
+		is_equal_approx(sim.map_mult(2, 3), float(Sim.HERO_GAME_MULT[1][2])) and is_equal_approx(sim.map_mult(4, 2), float(Sim.HERO_GAME_MULT[3][1])))
+	sim.heros = false
 	var acc: Dictionary = sim.new_account("moyen")
 	check("H7 : sans --heros, l'outil ne change pas (aucun niveau de héros, toute pièce portable)", not sim.heros and not acc.has("hl") and sim.wearable({"level": 90}))
 	sim.free()

@@ -112,7 +112,9 @@ Illustrations (lot ILL-2, `conception/art/R_ILL2.md`) : carte d'activité = `ass
   début doux `EARLY_EASE` / `EARLY_RAMP`. Pacte, géants et **Menace** (`core/menace.gd`, +20 % de PV par cran, plafond 5,
   `world/giant_altar.gd`, `ai/giant_monster.gd`).
 - **Boss à PV fixes**, jamais d'après la PE ni le niveau de run : `Epochs.boss_hp` (`BOSS_HP_MAP` × `BOSS_HP_EPOCH`, × 1,1 par niveau du boss) et rage du boss
-  `Epochs.BOSS_RAGE_AT` (2:30 / 3:00 / 4:00) ; mécaniques `ai/boss_brain.gd`.
+  `Epochs.BOSS_RAGE_AT` (2:30 / 3:00 / 4:00) ; mécaniques `ai/boss_brain.gd`. Équilibre par carte (H4b, `R_H4b.md`) : `BOSS_HP_ADJ`, `BOSS_ATK`,
+  `MAP_ATK`, mesurés à l'aide « Bot » (`boss_ttk.py --scenarios bande,bande-10,bande+10 --human 0.5 --repeat 2`, `sim_survie.py --bot`) ;
+  `progression_sim --heros` lit `HERO_GAME_MULT` (recalé par `hl_probe --calage`), jamais `Epochs.MAP_MULT`.
 - Mode farm façon Megabonk : objets à casser `world/breakables.gd`, sites, plateaux, autels (fortune `core/fortune.gd`).
   Vues de la carte : `res://tools/map_shots.tscn -- <graine> [zone]` ; test `tests/test_farm.tscn`.
 - Détail : DESIGN « Boucle de jeu et Survie », « Apparition des monstres », « Pacte, géants et Menace », « Boss : PV fixes ».
