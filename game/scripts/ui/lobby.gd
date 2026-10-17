@@ -2000,6 +2000,7 @@ func _menu_survivor() -> void:
 		_show_menu("survivor")))
 	_survivor_tiers()
 	_survivor_rewards(_sv_palier)
+	SurvivorCodexPage.lobby_card(_sub, _sv_palier, self)  # (lot SVX-3) records, classes gagnées, défis, Codex du mode
 	_section("Zone")
 	var zones := Survivor.zones()
 	if not _sv_zone in zones:

@@ -306,7 +306,7 @@ func _refresh_passives() -> void:
 		e.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	# évolutions (lot SVX-2), en tête de colonne : prêtes (elles viennent aux prochains choix) ou ce qu'il manque
 	var at := 0
-	for ev in SurvivorCardView.evo_paths():
+	for ev in SurvivorCardView.evo_paths().slice(0, 4):  # (lot SVX-3 : 20 recettes ; les 4 plus proches)
 		var miss: Array = ev.missing
 		var txt := ("◆ Évolution prête : %s (prochains choix)" % String(ev.name)) if miss.is_empty() else ("◆ %s : il manque %s" % [String(ev.name), ", ".join(PackedStringArray(miss))])
 		var l := Hud._label(_passives, txt, UiTheme.MIN_TEXT, UiTheme.color("bonbon.soleil.clair") if miss.is_empty() else UiTheme.color("bonbon.amethyste.clair"))

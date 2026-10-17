@@ -294,9 +294,10 @@ func _flow() -> void:
 	lobby._sv_palier = 0
 	lobby._show_menu("survivor")
 	var txt := _all_text(lobby._sub)
-	check("page du mode : section Palier, I à III ouverts, IV choisi par défaut, V grisé", txt.contains("Palier") and txt.contains("III\n") and txt.contains("🔒 V")
+	check("page du mode : section Palier, I à III ouverts, IV choisi par défaut, V grisé", txt.contains("Palier") and txt.contains("III\n")
 		and lobby._sv_palier == 4 and txt.contains(String(Survivor.PALIERS[3].rule)))
-	var locked: Array = lobby._sub.find_children("*", "Button", true, false).filter(func(x): return x.text == "🔒 V")
+	# (lot ICO-1 : le cadenas est un pictogramme posé par Ico.lock, plus un « 🔒 » dans le texte)
+	var locked: Array = lobby._sub.find_children("*", "Button", true, false).filter(func(x): return x.text == "V")
 	check("palier V : bouton grisé avec sa condition", locked.size() == 1 and locked[0].disabled and String(locked[0].tooltip_text).contains("IV"))
 	var b2: Array = lobby._sub.find_children("*", "Button", true, false).filter(func(x): return x.text == "II")
 	if not b2.is_empty():

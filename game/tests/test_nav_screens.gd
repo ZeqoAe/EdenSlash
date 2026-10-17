@@ -433,6 +433,11 @@ func _ready() -> void:
 	await get_tree().create_timer(ResultsPanel.LOCK_SECS + 0.3, true).timeout
 	await probe("bilan : Survivant", 0.9)
 	rsv.queue_free()
+	# lot SVX-3 : Codex du Survivant (six onglets : Évolutions, Armes, Panoplies, Bestiaire, Records, Défis)
+	var cx := SurvivorCodexPage.open_on(world)
+	await probe("Survivant : Codex", 0.9)
+	cx.close_ui()
+	cx.queue_free()
 	Run.survivor = false
 	SurvivorRewards.reset()
 	get_tree().paused = false

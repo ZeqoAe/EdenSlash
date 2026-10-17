@@ -33,12 +33,13 @@ static var last := {}
 static func reset() -> void:
 	stats = {}
 	last = {}
+	SurvivorCodex.reset_run()  # (lot SVX-3) ce que la partie voit pour le Codex
 
 
 ## Suivi de la run : appelé par SurvivorDirector.update.
 static func track(sv: SurvivorDirector) -> void:
 	stats = {"time": sv.d.time, "guardians": sv.guardians_killed(), "total": SurvivorDirector.guardian_total(), "arena": sv.arena_at >= 0.0,
-		"early": sv.early_seconds()}
+		"early": sv.early_seconds(), "arena_at": sv.arena_at, "ttk": sv.guardians.map(func(e): return float(e.ttk))}
 
 
 # --- plafonds ----------------------------------------------------------------------------------------------------------
@@ -103,6 +104,11 @@ static func plan(res: String, tier := 1) -> Array:
 	return out
 
 
+## Tous les titres que le mode peut donner : un par palier (victoire), puis ceux des défis (SurvivorRecords, lot SVX-3).
+static func mode_titles() -> Array:
+	return TITLES + SurvivorRecords.titles()
+
+
 ## Titre de victoire du palier [param tier].
 static func title_of(tier: int) -> String:
 	return String(TITLES[clampi(tier, 1, TITLES.size()) - 1])
@@ -135,11 +141,15 @@ static func settle(res: String, counted_kills: int, tier := -1) -> void:
 	var given: Array = []
 	for g in plan(res, tier):
 		Profile.chest_add(String(g.type), maxi(Run.max_level, 1))
+		g["ref"] = Profile.reward_chests.back()  # (lot SVX-3) le bilan l'ouvre sous les yeux du joueur
 		if String(g.kind) == "first":
 			(st.first as Array).append(_first_key(String(g.id), tier))
 		else:
 			(st.today as Array).append(String(g.id))
 		given.append(g)
+	# (lot SVX-3) Codex, records et défis du mode : écrits dans le même état (rien du compte)
+	var news := SurvivorCodex.settle(st, res, tier)
+	var recs := SurvivorRecords.settle(st, res, tier)
 	Profile.records[KEY] = st
 	var title := ""
 	var new_title := false
@@ -150,7 +160,7 @@ static func settle(res: String, counted_kills: int, tier := -1) -> void:
 	last = {"res": res, "tier": tier, "time": float(stats.get("time", 0.0)), "guardians": int(stats.get("guardians", 0)),
 		"guardians_total": int(stats.get("total", GUARDIANS)),
 		"boss": res == "victoire" or bool(stats.get("arena", false)), "kills": counted_kills, "chests": given, "title": title,
-		"new_title": new_title, "opened": opened, "build": build()}
+		"new_title": new_title, "opened": opened, "build": build(), "codex": news, "records": recs}
 
 
 # --- bilan : le build final -------------------------------------------------------------------------------------------
@@ -208,7 +218,7 @@ static func hub_view(k: String, v: Variant) -> Variant:
 			r.erase("last_activity")
 			return r
 		"extra_titles":
-			return (v as Array).filter(func(t): return not String(t) in TITLES)
+			return (v as Array).filter(func(t): return not String(t) in mode_titles())
 	return v
 
 

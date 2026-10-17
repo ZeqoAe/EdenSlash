@@ -875,6 +875,17 @@ func _test_survivor_screens() -> void:
 	picker._queue.clear()
 	picker._show_next()
 	picker.queue_free()
+	# lot SVX-3 : le Codex du Survivant tient dans 1280 × 720 (en-tête et six onglets)
+	preload("res://tests/shot_svx3.gd").fill_codex()
+	var cx := SurvivorCodexPage.open_on(self)
+	var cx_bad: Array = []
+	for i in SurvivorCodexPage.TABS.size():
+		cx.show_page(i)
+		await _frames(3)
+		if cx._right.get_global_rect().end.x > 1281.0 or cx.page(i).get_global_rect().end.x > 1281.0 or cx.page(i).get_global_rect().end.y > 721.0:
+			cx_bad.append(String(SurvivorCodexPage.TABS[i][1]))
+	check("Survivant, Codex : en-tête et six onglets dans 1280 × 720 %s" % [cx_bad], cx_bad.is_empty())
+	cx.queue_free()
 	Run.finish("abandon")
 	Profile.end_run_survival()
 	get_tree().paused = false

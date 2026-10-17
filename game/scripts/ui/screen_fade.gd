@@ -26,9 +26,15 @@ func is_open() -> bool:
 
 
 ## Apparition depuis le noir (début d'une run, après un chargement).
+## Calque : juste sous le choix de carte (CardPicker, 20) : le monde et le HUD sortent du noir, mais le premier choix de
+## carte, ouvert dès l'arrivée (Survivant, première compétence), est lisible tout de suite (lot SVX-3 : avant, le voile
+## couvrait aussi les cartes pendant la première image, longue au chargement, puis le fondu).
+const REVEAL_LAYER := 19
+
+
 static func reveal(tree: SceneTree, duration := 0.7) -> void:
 	var f := ScreenFade.new()
-	f.layer = 90
+	f.layer = REVEAL_LAYER
 	f.process_mode = Node.PROCESS_MODE_ALWAYS
 	# (différé : la racine est « occupée à installer ses enfants » quand le monde est lancé directement en ligne de commande)
 	tree.root.add_child.call_deferred(f)

@@ -74,6 +74,7 @@ var _base_context: Callable  # contexte de la carte du directeur (journal de run
 var power := Vector2.ONE  # coefficients lissés [PV, dégâts] des monstres ordinaires (équipement de la run)
 var gear_idx := 0.0  # indice d'équipement de la run (dernière mesure)
 var _power_t := 0.0
+var events: SurvivorEvents  # (lot SVX-3) élites lisibles, gardiens variés, Nuée (7:30) et Chasseur (12:30)
 
 
 func _init(director: RunDirector) -> void:
@@ -193,6 +194,9 @@ func update(delta: float) -> void:
 	_sample_density(delta)
 	_sample_minute()
 	SurvivorRewards.track(self)  # suivi pour les récompenses de fin (S6)
+	if events == null:
+		events = SurvivorEvents.new(self)
+	events.tick()
 	if d.state != "explore":
 		return
 	_update_challenges()

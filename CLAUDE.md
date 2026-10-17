@@ -140,6 +140,11 @@ vie en jauge, grille 4 × 3 et touches dessinées, `SurvivorMoments` : « Niveau
 panneau « Ton équipement » avec `hero_preview`, barre Relancer / Bannir / Garder / Passer en mode visée) ; dégâts par source
 `core/survivor_log.gd` (`SurvivorLog.tag` posé par `Player._hit_monster` et `Procs.run`) ; pause « Équipement » (« Qui fait le travail ») ;
 bilan `ui/survivor_bilan.gd`. Plus de « run / build / set » côté joueur. Tests `test_svx2`, captures `shot_svx2`.
+SVX-3 (`R_SVX3.md`) : évolutions `core/survivor_evo.gd` (`SurvivorEvo` : 20 recettes, arme à +6 / sort niveau 10 / deux passifs, `Boons.get_def`
+y retombe, jamais en Survie ; `hint`, `paths`, coffre du gardien) ; Codex `core/survivor_codex.gd` + page `ui/survivor_codex_page.gd` (carte
+« Records et Codex » de la page du mode) ; records et défis `core/survivor_records.gd` (titres : `SurvivorRewards.mode_titles()`) ; tout dans
+`records["sv_rewards"]` ; élites à modificateur, gardiens variés, Nuée 7:30 et Chasseur 12:30 `core/survivor_events.gd` (`SurvivorDirector.events`) ;
+bilan : coffres « Ouvrir mes coffres », `_fit_bilan` (1280 × 720) ; fondu d'arrivée sous le choix de carte (`ScreenFade.REVEAL_LAYER`). `test_svx3`, `shot_svx3`.
 
 ### Boss et bibliothèque
 `core/boss_library.gd` + `data/bosses.json` (48 boss, 6 par zone), mécaniques = briques `ai/boss_bricks.gd` (29, 10 familles)

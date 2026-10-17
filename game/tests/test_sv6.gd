@@ -88,7 +88,7 @@ func _hub() -> String:
 				v.erase("quests_done")  # (une quête du Survivant accomplie par la partie : permis, elle ne donne que de l'apparence)
 				v.erase("quest_series_best")
 			"extra_titles":
-				v = (v as Array).filter(func(t): return not String(t) in SurvivorRewards.TITLES)
+				v = (v as Array).filter(func(t): return not String(t) in SurvivorRewards.mode_titles())
 		parts.append("%s=%s" % [k, _norm(v)])
 	return "\n".join(parts)
 
@@ -215,7 +215,7 @@ func _rewards() -> void:
 ## Le bilan : victoire et mort, statistiques, coffres, équipement final, boutons ; jamais de gain de compte.
 func _bilan() -> void:
 	Quests.set_day("2026-10-20")
-	Profile.extra_titles = Profile.extra_titles.filter(func(t): return not String(t) in SurvivorRewards.TITLES)  # titres à regagner
+	Profile.extra_titles = Profile.extra_titles.filter(func(t): return not String(t) in SurvivorRewards.mode_titles())  # titres à regagner
 	for res in ["victoire", "defaite", "abandon"]:
 		Survivor.start("magician", "beluga", 1)
 		Run.hero_level = 20
@@ -322,7 +322,7 @@ func _quests_and_journal() -> void:
 ## Le vrai chemin : lobby (page du mode) -> monde (apparence du hub) -> mort -> bilan -> Rejouer -> victoire -> Changer de classe.
 func _flow() -> void:
 	Quests.set_day("2026-10-30")
-	Profile.extra_titles = Profile.extra_titles.filter(func(t): return not String(t) in SurvivorRewards.TITLES)
+	Profile.extra_titles = Profile.extra_titles.filter(func(t): return not String(t) in SurvivorRewards.mode_titles())
 	Profile.selected_class = "warrior"
 	# l'apparence du hub : tenue, accessoire de tête, aura, skin d'arme
 	var body: Dictionary = {}
@@ -407,7 +407,9 @@ func _flow() -> void:
 	check("Changer de classe : la page du mode est ouverte, la demande est consommée", lobby._current == "survivor" and Survivor.lobby_request == "")
 	check("état propre au lobby", not Run.active and not Survivor.active and not get_tree().paused and not Profile.in_run)
 	check("hub identique à la fin du parcours " + _hub_diff(hub), _hub() == hub)
-	check("la page du mode montre ✔ pour les paliers déjà gagnés", _has_text(lobby._sub, "✔"))
+	# (lot ICO-1 : la coche est un pictogramme, Ico.mark « quest_done »)
+	check("la page du mode montre la coche des paliers déjà gagnés", lobby._sub.find_children("*", "TextureRect", true, false).any(
+		func(t): return t.texture != null and String(t.texture.resource_path).contains("quest_done")))
 	Settings.set_v("interface", "dev_mode", false)
 
 

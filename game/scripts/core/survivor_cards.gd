@@ -111,16 +111,9 @@ static func spells_open() -> Array:
 	return Run.class_data().get("skills", []).filter(func(s): return not int(s.id) in owned and not str(int(s.id)) in Run.banned)
 
 
-## Évolutions possibles : légendaires de Boons dont tous les prérequis sont des passifs portés (puissance ≥ 1).
+## Évolutions possibles (recette remplie : passifs portés, arme à +6, sort niveau 10 ; SurvivorEvo, lot SVX-3).
 static func evolutions_open() -> Array:
-	var out: Array = []
-	for d in Boons.all():
-		var req: Array = d.get("requires", [])
-		if req.is_empty() or Run.passives.has(String(d.id)) or _banned("evo:" + String(d.id)):
-			continue
-		if req.all(func(r): return float(Run.passive_power.get(String(r), 0.0)) >= 1.0 - 0.001):
-			out.append(String(d.id))
-	return out
+	return SurvivorEvo.open()
 
 
 ## Pièce dont la prochaine amélioration (+2) éveille un passif ?
@@ -524,13 +517,7 @@ static func spell_up_card(id: int, tier: String) -> Dictionary:
 
 
 static func evolution_card(id: String) -> Dictionary:
-	var d := Boons.get_def(id)
-	if d.is_empty():
-		return {}
-	var req: Array = (d.get("requires", []) as Array).map(func(r): return String(Boons.get_def(String(r)).get("name", r)))
-	return {"type": "sv_evolution", "id": id, "sv_key": "evo:" + id, "tier": "legendary", "title": String(d.name),
-		"subtitle": "Évolution légendaire", "desc": "%s\n[color=#9a98a8]Grâce à : %s[/color]" % [String(d.get("desc", "")), ", ".join(PackedStringArray(req))],
-		"icon": String(d.get("icon", Boons.ICONS.get(id, "")))}
+	return SurvivorEvo.card(id)
 
 
 static func fallback_card(t: String) -> Dictionary:
@@ -621,13 +608,18 @@ static func chest_cards(box: String) -> Array:
 		"sv_gold":
 			out = _build(3, "", 0.6)
 		"sv_guardian":
+			# (lot SVX-3, BM-SURV SV-P1) une évolution prête est offerte par le coffre du gardien
+			for id in evolutions_open().slice(0, 1):
+				var ev := evolution_card(String(id))
+				if not ev.is_empty():
+					out.append(ev)
 			var free := SurvivorGear.free_slots().filter(func(s): return s != "weapon" and s in SurvivorPool.slots())
 			_shuffle(free)
-			for s in free.slice(0, 3):
+			for s in free.slice(0, 3 - out.size()):
 				var c := new_piece_card(String(s))
 				if not c.is_empty():
 					out.append(c)
-			if out.is_empty():
+			if not out.any(func(c): return String(c.type) == "sv_piece"):
 				for s in _worn_upgradable():
 					if out.size() >= 3:
 						break
@@ -698,8 +690,7 @@ static func apply(card: Dictionary) -> void:
 				item["quality"] = minf(float(item.get("quality", 1.0)) + float(QUALITY_UP.get(String(card.get("tier", "common")), 0.0)), Survivor.rule("perfect_quality"))
 				Profile.changed.emit()
 		"sv_evolution":
-			Run.passives[String(card.id)] = 1
-			Run.passive_power[String(card.id)] = 1.0
+			SurvivorEvo.apply(card)  # (évolution de sort : le sort lui-même devient plus fort, lot SVX-3)
 		"sv_gold":
 			Run.add_gold(GOLD_CARD[0] + GOLD_CARD[1] * Run.hero_level, "cartes")
 		"sv_heal":
@@ -726,7 +717,7 @@ static func still_valid(c: Dictionary) -> bool:
 		"upgrade":
 			return Run.skill_rank(int(c.id)) + 1 == int(c.get("rank_to", -1))
 		"sv_evolution":
-			return not Run.passives.has(String(c.id))
+			return SurvivorEvo.still_valid(c)
 	return false
 
 

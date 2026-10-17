@@ -101,9 +101,10 @@ func guardian_state(n: int) -> int:
 	return 1 if director.time >= at - SurvivorDirector.GUARDIAN_WARN and director.time < at + 1.0 else 0
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if director == null or not is_instance_valid(director) or hud.player == null:
 		return
+	SurvivorCodex.observe(get_tree(), delta)  # (lot SVX-3) monstres vus pour le Codex
 	var p := hud.player
 	xp.set_xp(p.xp, GameData.xp_to_next(p.level), p.level)
 	hp.set_hp(p.hp, p.max_hp)
@@ -164,14 +165,35 @@ func _watch() -> void:
 func _on_level(lvl: int) -> void:
 	if moments != null:
 		moments.level_up(lvl)
+	_level_wave()
 	if lvl >= _milestone + 10 and lvl % 10 == 0:
 		_milestone = lvl
 		SurvivorLog.moment(director.time if director else 0.0, "Niveau %d" % lvl, "level")
 
 
+## Montée de niveau (lot SVX-3, BM-SURV § 7.3) : onde blanche qui repousse d'environ 2 m les monstres à moins de LEVEL_WAVE m
+## (élites, géants et boss à peine : Monster.knockback) ; un instant de répit avant le choix de carte.
+const LEVEL_WAVE := 4.0
+const LEVEL_PUSH := 7.5  # impulsion (amortie à 14 m/s² : ≈ 2 m)
+
+
+func _level_wave() -> void:
+	var p := hud.player
+	if p == null or not is_instance_valid(p) or not p.is_inside_tree():
+		return
+	Vfx.ring(p, p.global_position, LEVEL_WAVE, Color(1.0, 1.0, 1.0, 0.85))
+	for m in Procs.monsters_near(p, p.global_position, LEVEL_WAVE):
+		var dir: Vector3 = m.global_position - p.global_position
+		dir.y = 0.0
+		if dir.length() > 0.01:
+			m.knockback(dir.normalized() * LEVEL_PUSH)
+
+
 func _on_picked(card: Dictionary) -> void:
 	var t := String(card.get("type", ""))
 	var now := director.time if director else 0.0
+	if t == "sv_weapon" and card.has("item"):
+		SurvivorCodex.note_weapon(card.item)  # (lot SVX-3) Codex : armes portées
 	if t == "sv_evolution":
 		var name := String(card.get("title", ""))
 		moments.evolution(name)
@@ -332,6 +354,17 @@ class Clock extends Control:
 			draw_circle(c, rad, fill)
 			var mark: String = ["%d" % int(float(Survivor.GUARDIAN_TIMES[i]) / 60.0), "!", "✓"][st]
 			SurvivorHud.ink_text(self, body, mark, c.x, c.y + 5.0, UiTheme.MIN_TEXT, Color.WHITE if st == 1 else ink, 4 if st == 1 else 0)
+		# (lot SVX-3) événements nommés : losange mandarine (initiale), il palpite pendant l'annonce et l'événement
+		for e in SurvivorEvents.timeline():
+			var ex := r.position.x + r.size.x * float(e.t) / total
+			var ec := Vector2(ex, r.get_center().y)
+			var live := d.time >= float(e.t) - SurvivorEvents.WARN and d.time < float(e.t) + 30.0
+			var s := 8.0 + (1.5 * pulse if live else 0.0)
+			var dia := PackedVector2Array([ec + Vector2(0, -s), ec + Vector2(s, 0), ec + Vector2(0, s), ec + Vector2(-s, 0)])
+			var past := d.time >= float(e.t) + 30.0
+			draw_colored_polygon(dia, UiTheme.color("papier.300") if past else UiTheme.color("bonbon.mandarine.base"))
+			draw_polyline(dia + PackedVector2Array([dia[0]]), ink, 2.0, true)
+			SurvivorHud.ink_text(self, body, String(e.name).left(1), ec.x, ec.y + 4.0, 11, ink)
 		# boss : case améthyste au bout de la frise, couronne soleil
 		var br := Rect2(r.end.x - 4.0, r.get_center().y - 14.0, 28.0, 28.0)
 		SurvivorHud.round_rect(self, br, UiTheme.color("bonbon.amethyste.base"), 8, 3, ink)

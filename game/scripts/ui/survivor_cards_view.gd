@@ -518,41 +518,14 @@ static func card_passives(card: Dictionary) -> Array:
 
 
 ## Indice d'évolution de la carte (« ◆ Évolution : + Braise → Lame du phénix », « ◆ Évolution prête : … ») ; "" sinon.
-## Une évolution s'ouvre quand tous ses passifs requis sont portés à pleine puissance (SurvivorCards.evolutions_open).
+## Recettes de passifs, d'arme (+6) et de sort (niveau 10) : SurvivorEvo.hint (lot SVX-3).
 static func evo_hint(card: Dictionary) -> String:
-	if String(card.get("type", "")) == "sv_evolution":
-		return ""
-	for b in card_passives(card):
-		var bid := String(b.id)
-		for d in Boons.all():
-			var req: Array = d.get("requires", [])
-			if not bid in req or Run.passives.has(String(d.id)) or ("evo:" + String(d.id)) in Run.banned:
-				continue
-			var missing: Array = []
-			for r in req:
-				var pw := float(Run.passive_power.get(String(r), 0.0)) + (float(b.get("power", 1.0)) if String(r) == bid else 0.0)
-				if pw < 1.0 - 0.001:
-					missing.append(String(Boons.get_def(String(r)).get("name", r)))
-			if missing.is_empty():
-				return "◆ Évolution prête : %s" % String(d.name)
-			return "◆ Évolution : + %s → %s" % [" + ".join(PackedStringArray(missing)), String(d.name)]
-	return ""
+	return SurvivorEvo.hint(card)
 
 
-## Évolutions en route (un passif requis au moins porté) : [{id, name, missing: [noms]}] ; prêtes : missing vide.
+## Évolutions en route (un ingrédient au moins acquis) : [{id, name, missing: [noms]}] ; prêtes : missing vide.
 static func evo_paths() -> Array:
-	var out: Array = []
-	for d in Boons.all():
-		var req: Array = d.get("requires", [])
-		if req.is_empty() or Run.passives.has(String(d.id)) or ("evo:" + String(d.id)) in Run.banned:
-			continue
-		var have := req.filter(func(r): return float(Run.passive_power.get(String(r), 0.0)) > 0.0)
-		if have.is_empty():
-			continue
-		var missing: Array = req.filter(func(r): return float(Run.passive_power.get(String(r), 0.0)) < 1.0 - 0.001) \
-			.map(func(r): return String(Boons.get_def(String(r)).get("name", r)))
-		out.append({"id": String(d.id), "name": String(d.name), "missing": missing})
-	return out
+	return SurvivorEvo.paths()
 
 
 ## Synergie écrite sur la carte (pastille verte) : évolution, sinon panoplie poursuivie (« ◆ Tempête 3 / 5 : bonus ! »).
@@ -655,8 +628,7 @@ static func build_v2(v: VBoxContainer, card: Dictionary, tones: Array) -> void:
 			_name_v2(head5, String(card.get("title", "")), ink)
 			_big_v2(head5, "Évolution", "")
 			_box_v2(v, "", fr(String(d3.get("desc", ""))), "amethyste", 4)
-			var req: Array = (d3.get("requires", []) as Array).map(func(r): return String(Boons.get_def(String(r)).get("name", r)))
-			_line_v2(v, "Grâce à : " + ", ".join(PackedStringArray(req)), dim, 2)
+			_line_v2(v, "Grâce à : " + SurvivorEvo.ingredients(String(card.id)), dim, 2)
 		_:
 			var head6 := _icon_row_v2(v, String(card.get("icon", "")), 54, tones)
 			_name_v2(head6, String(card.get("title", "")), ink)

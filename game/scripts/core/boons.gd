@@ -237,7 +237,7 @@ static func get_def(id: String) -> Dictionary:
 	for b in all():
 		if b.id == id:
 			return b
-	return {}
+	return SurvivorEvo.def(id)  # évolutions propres au Survivant (lot SVX-3), jamais proposées en Survie
 
 
 ## Procs d'une carte de puissance [param stacks] (somme des multiplicateurs de rareté des

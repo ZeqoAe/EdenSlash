@@ -26,6 +26,7 @@ static func decorate(r: ResultsPanel) -> Control:
 	var at := r._scroll.get_index() if r._scroll != null else body.get_child_count() - 1
 	body.add_child(box)
 	body.move_child(box, at)
+	_records_and_chests(box, r)  # (lot SVX-3) « Nouveau record ! », défis, coffres qui s'ouvrent un à un, Codex
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 14)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -37,6 +38,7 @@ static func decorate(r: ResultsPanel) -> Control:
 	var director: Variant = r.get_parent().get("director") if r.get_parent() != null else null
 	if tall and director != null and director.get("sv") != null and not (director.sv._minutes as Array).is_empty():
 		var c := _well(box, "Ta partie minute par minute")
+		c.get_parent().name = "Courbe"
 		var chart := Chart.new()
 		chart.rows = director.sv._minutes
 		chart.guardians = director.sv.guardians
@@ -45,11 +47,138 @@ static func decorate(r: ResultsPanel) -> Control:
 	if not SurvivorLog.moments.is_empty():
 		_moments(box, 6 if tall else 4)
 	r._appear(box, 0.25)
+	if r.is_inside_tree():
+		_fit_bilan.call_deferred(r, box)  # (lot SVX-3) tient dans la fenêtre, même à 1280 × 720 avec records et coffres
 	if Run.result == "victoire" and r.is_inside_tree():
 		var tw := r.create_tween()
 		tw.tween_interval(0.35)
 		tw.tween_callback(func(): UiFeel.confetti(Vector2(r.get_viewport().get_visible_rect().size.x * 0.5, vh * 0.16), 24))
 	return box
+
+
+## Lot SVX-3 : une rangée « Nouveau record ! » (records battus, première victoire de la classe, défis accomplis, découvertes du
+## Codex) et « Tes coffres » (les coffres d'apparence gagnés apparaissent l'un après l'autre ; « Ouvrir mes coffres » les
+## ouvre un à un, 520 ms chacun : rayons, puis l'apparence gagnée). Rien si la partie n'a rien de tout ça. Ensuite le bilan se
+## resserre s'il dépasse la fenêtre (_fit_bilan).
+static func _records_and_chests(box: VBoxContainer, r: ResultsPanel) -> void:
+	var last := SurvivorRewards.last
+	var rec: Dictionary = last.get("records", {})
+	var lines: Array = []
+	for e in rec.get("records", []):
+		lines.append("%s : %s  (avant %s)" % [String(e.text), SurvivorRecords.fmt(String(e.key), float(e.new)), SurvivorRecords.fmt(String(e.key), float(e.old))])
+	if bool(rec.get("first_win", false)):
+		lines.push_front("Première victoire avec cette classe  ·  %d / %d classes" % [int(rec.get("won", 1)), GameData.classes.size()])
+	var defis: Array = rec.get("defis", [])
+	var chests: Array = (last.get("chests", []) as Array).filter(func(g): return g.has("ref"))
+	var news: Array = SurvivorCodex.last_new
+	if lines.is_empty() and defis.is_empty() and chests.is_empty() and news.is_empty():
+		return
+	var row := HBoxContainer.new()
+	row.name = "SurvivorRecords"
+	row.add_theme_constant_override("separation", 14)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(row)
+	var big := not (rec.get("records", []) as Array).is_empty()
+	var v := _well(row, "Nouveau record !" if big else ("Première victoire !" if bool(rec.get("first_win", false)) else "Codex du Survivant"))
+	v.get_child(0).add_theme_color_override("font_color", UiTheme.color("bonbon.soleil.base") if big else UiTheme.color("bonbon.soleil.clair"))
+	for l in lines.slice(0, 3):
+		_line(v, String(l), UiTheme.TEXT)
+	if not defis.is_empty():
+		var titled: Array = defis.filter(func(d): return String(d.title) != "")
+		var dl := _line(v, ("Défi accompli : %s" % String(defis[0].text)) if defis.size() == 1 else "%d défis accomplis" % defis.size(), UiTheme.color("bonbon.pomme.clair"))
+		if not titled.is_empty():
+			dl.text += "  ·  titre « %s »" % String(titled[0].title)
+		dl.tooltip_text = "\n".join(PackedStringArray(defis.map(func(d): return String(d.text) + ("  ·  titre « %s »" % String(d.title) if String(d.title) != "" else ""))))
+		dl.mouse_filter = Control.MOUSE_FILTER_PASS
+	if not news.is_empty():
+		var parts: PackedStringArray = []
+		for n in news.slice(0, 2):
+			parts.append(String(n.text))
+		var nl := _line(v, "Codex : " + "  ·  ".join(parts) + ("  ·  +%d" % (news.size() - 2) if news.size() > 2 else ""), UiTheme.color("bonbon.lagon.clair"))
+		nl.name = "CodexLine"
+		nl.tooltip_text = "\n".join(PackedStringArray(news.map(func(n): return String(n.text))))
+		nl.mouse_filter = Control.MOUSE_FILTER_PASS
+	if not chests.is_empty():
+		var v2 := _well(row, "Tes coffres")
+		var flow := HFlowContainer.new()
+		flow.add_theme_constant_override("h_separation", 8)
+		flow.add_theme_constant_override("v_separation", 6)
+		flow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v2.add_child(flow)
+		var chips: Array = []
+		for g in chests:
+			var c := ChestChip.new()
+			c.chest = g.ref
+			c.type = String(g.type)
+			c.why = "%s · %s" % [String(g.text), "première fois" if String(g.get("kind", "")) == "first" else "une fois par jour"]
+			flow.add_child(c)
+			chips.append(c)
+		var open := MenuWidgets.glass_button("Ouvrir mes coffres", 16, Vector2(0, 38))
+		open.name = "OpenChests"
+		open.tooltip_text = "Ils s'ouvrent l'un après l'autre ; sinon ils t'attendent dans le menu Coffres."
+		open.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		flow.add_child(open)  # (à la suite des coffres : une rangée de moins)
+		open.pressed.connect(_open_all.bind(r, chips, open))
+		_reveal(r, chips)
+		# la liste « Gardé » du bilan ne dit plus rien de neuf quand elle ne contient que ces coffres
+		if r._scroll != null and (ResultsScreen.survivor_chest_rows(last) as Array).size() == chests.size():
+			r._scroll.visible = false
+
+
+## Le bilan dépasse la fenêtre (1280 × 720, partie riche) : il se resserre, dans l'ordre : moments marquants, ligne du Codex,
+## lignes de record au-delà de deux, une source de dégâts de moins.
+static func _fit_bilan(r: ResultsPanel, box: VBoxContainer) -> void:
+	if not is_instance_valid(r) or not is_instance_valid(box) or r._panel == null:
+		return
+	r._fit()
+	var vh := r.get_viewport().get_visible_rect().size.y - 24.0  # (marge du cadre papier)
+	var steps: Array = [box.get_node_or_null("Courbe"), box.get_node_or_null("Moments"), box.find_child("CodexLine", true, false)]
+	for s in steps:
+		if r._panel.get_combined_minimum_size().y <= vh:
+			return
+		if s != null:
+			(s as Control).visible = false
+			r._fit()
+	var rec := box.get_node_or_null("SurvivorRecords")
+	# (lignes de record en trop : seulement si leur puits est le plus haut de la rangée)
+	if rec != null and r._panel.get_combined_minimum_size().y > vh and (rec.get_child_count() < 2 or (rec.get_child(0) as Control).get_combined_minimum_size().y > (rec.get_child(1) as Control).get_combined_minimum_size().y):
+		var col: Node = rec.get_child(0).get_child(0)
+		for i in range(col.get_child_count() - 1, 2, -1):
+			if r._panel.get_combined_minimum_size().y <= vh:
+				break
+			(col.get_child(i) as Control).visible = false
+		r._fit()
+
+
+## Les coffres gagnés apparaissent l'un après l'autre (fermés : leur rareté) ; « Réduire les animations » : tous d'un coup.
+static func _reveal(r: ResultsPanel, chips: Array) -> void:
+	if not r.is_inside_tree() or UiFeel.reduce_motion:
+		return
+	for c in chips:
+		(c as ChestChip).modulate.a = 0.0
+	var tw := r.create_tween()
+	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.tween_interval(0.6)
+	for c in chips:
+		tw.tween_property(c, "modulate:a", 1.0, 0.12)
+		tw.tween_callback(UiFeel.pop_in.bind(c))
+		tw.tween_interval(0.35)
+
+
+## « Ouvrir mes coffres » : ils s'ouvrent l'un après l'autre (rayons 520 ms, puis l'apparence gagnée) ; un bilan quitté avant
+## la fin laisse les autres fermés dans le menu Coffres (rien ne se perd).
+static func _open_all(r: ResultsPanel, chips: Array, btn: Button) -> void:
+	btn.disabled = true
+	btn.text = "Coffres ouverts"
+	if UiFeel.reduce_motion or not r.is_inside_tree():
+		for c in chips:
+			(c as ChestChip).open_now(false)
+		return
+	var tw := r.create_tween()
+	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	for c in chips:
+		tw.tween_callback((c as ChestChip).open_now.bind(true))
+		tw.tween_interval(0.62)
 
 
 ## Puits d'encre titré (BIBLE § 2 : zones denses = puits d'encre) ; renvoie sa colonne.
@@ -138,8 +267,7 @@ static func _gear(v: VBoxContainer, tall: bool) -> void:
 		for s in spells.slice(0, 3):
 			names.append("%s %d" % [String(s.name), int(s.rank)])
 		_line(v, "Sorts : " + " · ".join(names) + ("  +%d autre%s" % [spells.size() - 3, "s" if spells.size() > 4 else ""] if spells.size() > 3 else ""), UiTheme.TEXT)
-	var evos: Array = Run.passives.keys().filter(func(id): return not (Boons.get_def(String(id)).get("requires", []) as Array).is_empty()) \
-		.map(func(id): return String(Boons.get_def(String(id)).get("name", id)))
+	var evos: Array = SurvivorEvo.taken().map(func(id): return String(Boons.get_def(String(id)).get("name", id)))
 	if not evos.is_empty() or tall:
 		_line(v, ("Évolution : %s" % ", ".join(PackedStringArray(evos)) if not evos.is_empty() else "Aucune évolution") + "  ·  passifs éveillés : %d" % int(b.get("awake", 0)), UiTheme.MUTED)
 
@@ -154,6 +282,7 @@ static func _line(v: Control, text: String, col: Color) -> Label:
 ## Moments marquants : pastilles « 5:37 · Gardien 1 vaincu en 0:37 », dans l'ordre de la partie.
 static func _moments(box: VBoxContainer, n: int) -> void:
 	var v := _well(box, "Moments marquants")
+	v.get_parent().name = "Moments"
 	var flow := HFlowContainer.new()
 	flow.add_theme_constant_override("h_separation", 8)
 	flow.add_theme_constant_override("v_separation", 6)
@@ -186,6 +315,70 @@ static func _tone(kind: String) -> String:
 		"set", "upgrade":
 			return "mandarine"
 	return "lagon"
+
+
+## Un coffre d'apparence du bilan (lot SVX-3) : fermé (couleur du coffre), puis ouvert (rayons 520 ms, l'apparence gagnée).
+## Ouvrir = Rewards.open (comme le menu Coffres : l'apparence rejoint la collection).
+class ChestChip extends Control:
+	var chest: Dictionary = {}
+	var type := ""
+	var why := ""
+	var got := ""
+	var _t := -1.0  # temps depuis l'ouverture (-1 : fermé)
+
+	func _init() -> void:
+		custom_minimum_size = Vector2(140, 52)
+		mouse_filter = Control.MOUSE_FILTER_PASS
+		process_mode = Node.PROCESS_MODE_ALWAYS
+
+	func _ready() -> void:
+		tooltip_text = "%s\n%s" % [String(Rewards.TYPES.get(type, {}).get("name", "Coffre")), why]
+
+	## Ouvre le coffre (s'il est encore dans le menu Coffres) ; [param fx] : rayons, étincelles et son.
+	func open_now(fx := true) -> void:
+		if _t >= 0.0:
+			return
+		_t = 0.0 if fx else 1.0
+		if Profile.reward_chests.has(chest):
+			var res := Rewards.open(chest)
+			var looks: Array = res.get("looks", [])
+			got = String(looks[0].get("name", "")) if not looks.is_empty() else "Cristaux"
+		else:
+			got = "Ouvert"
+		tooltip_text = "%s : %s" % [String(Rewards.TYPES.get(type, {}).get("name", "Coffre")), got]
+		if fx and is_inside_tree():
+			Sfx.ui("confirm")
+			UiFeel.sparkle(get_global_rect().get_center(), 10, ["soleil", "fraise", "lagon"])
+		queue_redraw()
+
+	func _process(delta: float) -> void:
+		if _t >= 0.0 and _t < 1.0:
+			_t = minf(1.0, _t + delta / 0.52)
+			queue_redraw()
+
+	func _draw() -> void:
+		var col: Color = Rewards.TYPES.get(type, {}).get("color", Color.WHITE)
+		var r := Rect2(Vector2.ZERO, size)
+		var ink := UiTheme.color("encre.900")
+		var k := clampf(_t, 0.0, 1.0)
+		var c := Vector2(23, size.y * 0.5)
+		if _t >= 0.0 and k < 1.0:
+			for i in 10:  # rayons (BIBLE § 7 : ouverture de coffre 520 ms)
+				var a := TAU * i / 10.0 + k * 1.2
+				draw_line(c, c + Vector2(cos(a), sin(a)) * (16.0 + 40.0 * k), Color(col.lightened(0.4), 1.0 - k), 4.0, true)
+		SurvivorHud.round_rect(self, r, UiTheme.color("encre.700"), 12, 2, ink)
+		var box := Rect2(c - Vector2(15, 13), Vector2(30, 27))
+		SurvivorHud.round_rect(self, box, col.darkened(0.2) if _t < 0.0 else col, 7, 2, ink)
+		if _t < 0.0:
+			SurvivorHud.round_rect(self, Rect2(box.position, Vector2(30, 10)), col.lightened(0.25), 7, 2, ink)  # couvercle fermé
+		else:
+			SurvivorHud.round_rect(self, Rect2(box.position + Vector2(-2, -9 * k), Vector2(34, 9)), col.lightened(0.35), 5, 2, ink)
+		var font := UiTheme.bold_font()
+		var name := String(Rewards.TYPES.get(type, {}).get("name", "Coffre")).trim_prefix("Coffre d'apparence ").capitalize()
+		var line1 := name if _t < 0.0 else got
+		var line2 := "à ouvrir" if _t < 0.0 else name
+		draw_string(font, Vector2(44, 23), line1, HORIZONTAL_ALIGNMENT_LEFT, size.x - 48, 15 if _t < 0.0 else 13, col.lightened(0.3) if _t >= 0.0 else UiTheme.TEXT)
+		draw_string(UiTheme.label_font(), Vector2(44, 41), line2, HORIZONTAL_ALIGNMENT_LEFT, size.x - 48, 13, UiTheme.MUTED)
 
 
 ## Les 9 cases de l'équipement (arme + 8) : rareté, icône, +N, éveil en points soleil, jet parfait.
