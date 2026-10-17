@@ -118,9 +118,20 @@ static func tile(parent: Control, value: String, caption: String, tip := "", hig
 	var big := Hud._label(v, value, 26, Color(1.0, 0.9, 0.55) if highlight else UiTheme.GOLD)
 	big.add_theme_font_override("font", UiTheme.bold_font())
 	big.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var cap := Hud._label(v, caption, UiTheme.MIN_TEXT, UiTheme.MUTED)
+	var record := caption.contains("Record !")
+	var cap := Hud._label(v, caption.replace(" · Record !", "").replace("Record !", "").strip_edges(), UiTheme.MIN_TEXT, UiTheme.MUTED)
 	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cap.clip_text = true
+	if record:  # bilan v2 (lot DNG-2) : « Record ! » en pastille mandarine sur la tuile
+		var pill := BossBar.pill("Record !", "mandarine", 13, 8.0)
+		DungeonPage.overlay(p).add_child(pill)
+		pill.anchor_left = 1.0
+		pill.anchor_right = 1.0
+		pill.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		pill.offset_left = 6.0
+		pill.offset_right = 6.0
+		pill.offset_top = -13.0
+		p.set_meta("record", true)
 	return p
 
 
@@ -428,22 +439,44 @@ static func loot_entry(item: Dictionary) -> Dictionary:
 
 
 func _add_stars(list: Array) -> void:
+	# bilan v2 (lot DNG-2) : un autocollant par objectif, soleil s'il est tenu, gris tramé sinon ; « nouvelle » en mandarine
 	var h := HBoxContainer.new()
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
-	h.add_theme_constant_override("separation", 22)
+	h.add_theme_constant_override("separation", 14)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_body.add_child(h)
 	for s in list:
 		var done := bool(s.get("done", false))
-		var l := Hud._label(h, "%s %s%s" % ["★" if done else "☆", String(s.get("label", "")), " · nouvelle" if bool(s.get("new", false)) else ""], 18,
-			UiTheme.GOLD if done else UiTheme.MUTED)
-		if String(s.get("tip", "")) != "":
-			l.tooltip_text = String(s.tip)
-			l.mouse_filter = Control.MOUSE_FILTER_PASS
+		var p := PanelContainer.new()
+		p.add_theme_stylebox_override("panel", UiTheme.sticker("soleil" if done else "gris_nuit", {"radius": 14, "shadow": 4, "pad": Vector2(14, 4),
+			"gloss": done, "trame": not done}))
+		p.mouse_filter = Control.MOUSE_FILTER_PASS if String(s.get("tip", "")) != "" else Control.MOUSE_FILTER_IGNORE
+		p.tooltip_text = String(s.get("tip", ""))
+		h.add_child(p)
+		var l := Label.new()
+		l.text = "%s %s" % ["★" if done else "☆", String(s.get("label", ""))]
+		l.add_theme_font_override("font", UiTheme.bold_font())
+		l.add_theme_font_size_override("font_size", 17)
+		l.add_theme_color_override("font_color", Color.WHITE if done else UiTheme.MUTED)
+		l.add_theme_constant_override("outline_size", 4 if done else 0)
+		l.add_theme_color_override("font_outline_color", UiTheme.color("encre.700"))
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p.add_child(l)
+		if bool(s.get("new", false)):
+			var tag := BossBar.pill("nouvelle", "mandarine", 12, 8.0)
+			tag.position = Vector2(-8, -16)
+			DungeonPage.overlay(p).add_child(tag)
 	_appear(h, 0.1)
 
 
+## Ton de bonbon d'une rareté (bible § 3 : lilas-gris, pomme, lagon, améthyste, mandarine, soleil).
+static func rarity_tone(r: int) -> String:
+	return ["gris", "pomme", "lagon", "amethyste", "mandarine", "soleil"][clampi(r, 0, 5)]
+
+
 func _add_loot(list: Array, missing: String) -> void:
+	# bilan v2 (lot DNG-2) : le butin en cases autocollantes de la couleur de la rareté (icône du jeu si l'objet en a une),
+	# nom et détail dessous ; la pièce qui manque encore en pomme
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -452,46 +485,71 @@ func _add_loot(list: Array, missing: String) -> void:
 	if not list.is_empty():
 		var h := HBoxContainer.new()
 		h.alignment = BoxContainer.ALIGNMENT_CENTER
-		h.add_theme_constant_override("separation", 10)
+		h.add_theme_constant_override("separation", 12)
 		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		v.add_child(h)
 		_loot_row = h
 		var shown := list.slice(0, 5)
 		for e in shown:
-			var col: Color = Items.RARITIES[clampi(int(e.get("rarity", 0)), 0, Items.RARITIES.size() - 1)].color
-			var p := PanelContainer.new()
-			p.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.06, 0.05, 0.11, 0.95), col, 2, 8, false))
-			p.custom_minimum_size = Vector2(170, 0)
-			if String(e.get("tip", "")) != "":
-				p.tooltip_text = String(e.tip)
-			else:
-				p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			h.add_child(p)
+			var r := int(e.get("rarity", 0))
+			var card := HBoxContainer.new()
+			card.add_theme_constant_override("separation", 8)
+			card.mouse_filter = Control.MOUSE_FILTER_PASS if String(e.get("tip", "")) != "" else Control.MOUSE_FILTER_IGNORE
+			card.tooltip_text = String(e.get("tip", ""))
+			h.add_child(card)
+			var it: Dictionary = e.get("item", {})
+			var tex: Texture2D = UiTheme.texture(String(it.get("icon", ""))) if not it.is_empty() else null
+			if tex == null:
+				tex = ResourceHelp.icon("plan") if String(e.get("name", "")).begins_with("Plan") else MenuWidgets.icon("chest")
+			var cell := DungeonPage.cell(tex, "", rarity_tone(r), false, 56)
+			cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			cell.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			card.add_child(cell)
 			var c := VBoxContainer.new()
 			c.add_theme_constant_override("separation", 0)
+			c.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			p.add_child(c)
-			var n := Hud._label(c, String(e.get("name", "")), 15, col.lightened(0.2))
+			card.add_child(c)
+			var col: Color = Items.RARITIES[clampi(r, 0, Items.RARITIES.size() - 1)].color
+			var n := Hud._label(c, String(e.get("name", "")), 15, col.lightened(0.15))
 			n.add_theme_font_override("font", UiTheme.bold_font())
 			n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			n.custom_minimum_size = Vector2(150, 0)
-			n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			n.custom_minimum_size = Vector2(118, 0)
 			var sub := Hud._label(c, String(e.get("sub", "")), UiTheme.MIN_TEXT, UiTheme.MUTED)
-			sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			sub.custom_minimum_size = Vector2(118, 0)
 		if list.size() > shown.size():
 			Hud._label(h, "+%d" % (list.size() - shown.size()), 20, UiTheme.MUTED).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	if missing != "":
-		var m := Hud._label(v, missing, 16, KEPT)
+		var mp := PanelContainer.new()
+		mp.add_theme_stylebox_override("panel", UiTheme.sticker("pomme", {"radius": 12, "shadow": 3, "pad": Vector2(14, 3), "gloss": false}))
+		mp.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		mp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(mp)
+		var m := Label.new()
+		m.text = missing
+		m.add_theme_font_override("font", UiTheme.bold_font())
+		m.add_theme_font_size_override("font_size", 15)
+		m.add_theme_color_override("font_color", Color.WHITE)
+		m.add_theme_constant_override("outline_size", 4)
+		m.add_theme_color_override("font_outline_color", UiTheme.color("encre.700"))
 		m.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		m.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		m.custom_minimum_size = Vector2(WIDTH - 90.0, 0)
+		if missing.length() > 80:
+			m.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			m.custom_minimum_size = Vector2(minf(WIDTH - 120.0, 760.0), 0)
+		m.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		mp.add_child(m)
 	_appear(v, 0.15)
 
 
 ## « Ce qui t'a battu » : les coups des dernières secondes (HitLog.report), la mécanique fautive et son conseil.
+## Bilan v2 (lot DNG-2) : puits d'encre au bord fraise, titre fraise, une pastille de mécanique par ligne, conseil en soleil.
 func _add_defeat(rep: Dictionary, note: String) -> void:
 	var p := PanelContainer.new()
-	p.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.12, 0.04, 0.05, 0.92), Color(LOSE, 0.75), 1, 10, false))
+	var sb := UiTheme.well_style(Vector2(16, 10), 14)
+	sb.border_color = UiTheme.color("bonbon.fraise.base")
+	sb.set_border_width_all(3)
+	p.add_theme_stylebox_override("panel", sb)
 	p.custom_minimum_size = Vector2(WIDTH - 90.0, 0)
 	p.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -504,24 +562,31 @@ func _add_defeat(rep: Dictionary, note: String) -> void:
 	var head := HBoxContainer.new()
 	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(head)
-	var t := Hud._label(head, "CE QUI T'A BATTU", 17, LOSE)
-	t.add_theme_font_override("font", UiTheme.bold_font())
+	var t := Label.new()
+	UiTheme.title(t, 20, UiTheme.color("bonbon.fraise.base"))
+	t.text = "Ce qui t'a battu"
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(t)
 	var hits := int(rep.get("hits", 0))
 	Hud._label(head, "les %d dernières secondes · %d coup%s" % [roundi(float(rep.get("window", HitLog.WINDOW))), hits, "s" if hits > 1 else ""],
-		UiTheme.MIN_TEXT, UiTheme.MUTED)
+		UiTheme.MIN_TEXT, UiTheme.MUTED).size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	for l in defeat_lines(rep):
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 8)
 		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		v.add_child(h)
+		var ch := BossBar.chip(String(l.get("brick", "")) if String(l.get("brick", "")) != "" else "melee", 26)
+		ch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		h.add_child(ch)
 		var a := Hud._label(h, String(l.text), 16, UiTheme.TEXT)
 		a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		a.clip_text = true
-		var b := Hud._label(h, String(l.value), 17, LOST)
+		var b := Hud._label(h, String(l.value), 17, UiTheme.color("bonbon.fraise.clair"))
 		b.add_theme_font_override("font", UiTheme.bold_font())
 	if String(rep.get("tip", "")) != "":
 		var tip := Hud._label(v, String(rep.tip), 16, UiTheme.GOLD)
+		tip.add_theme_font_override("font", UiTheme.bold_font())
 		tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		tip.custom_minimum_size = Vector2(WIDTH - 130.0, 0)
 	if note != "":
@@ -529,7 +594,7 @@ func _add_defeat(rep: Dictionary, note: String) -> void:
 	_appear(p, 0.1)
 
 
-## Lignes du bloc « Ce qui t'a battu » : {text (« Pluie de météores · Latif »), value (« −48 % PV · coup final »)}.
+## Lignes du bloc « Ce qui t'a battu » : {text (« Pluie de météores · Latif »), value (« −48 % PV · coup final »), brick}.
 static func defeat_lines(rep: Dictionary) -> Array:
 	var out: Array = []
 	for l in rep.get("lines", []):
@@ -537,7 +602,8 @@ static func defeat_lines(rep: Dictionary) -> Array:
 		var text := ("%s · %s" % [mech, String(l.name)]) if mech != "" else String(l.name)
 		if int(l.get("count", 1)) > 1:
 			text += " (×%d)" % int(l.count)
-		out.append({"text": text, "value": "−%s PV%s" % [HitLog.pct(float(l.share)), " · coup final" if bool(l.get("final", false)) else ""]})
+		out.append({"text": text, "value": "−%s PV%s" % [HitLog.pct(float(l.share)), " · coup final" if bool(l.get("final", false)) else ""],
+			"brick": String(l.get("brick", ""))})
 	return out
 
 

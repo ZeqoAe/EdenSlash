@@ -637,6 +637,7 @@ func _build_camera_page() -> void:
 	_check(v, "Afficher la boussole d'objectif", "interface", "compass", "Dans le menu principal, une pastille te dit la prochaine chose utile à faire.")
 	_check(v, "Marqueur des clics de déplacement", "interface", "move_marker", "Un repère au sol à l'endroit où tu as cliqué pour te déplacer.")
 	_check(v, "Zone de mes attaques au sol", "interface", "attack_zone", "Montre en bleu la zone des sorts que tu lances, pour apprendre leur portée.")
+	_check(v, "Frise « À venir » des boss", "interface", "boss_timeline", "Pendant un combat de boss, la liste de ses prochaines mécaniques avec leur compte à rebours, à droite.")
 	# lot BR-I3 : confort et accessibilité (Battle royale d'abord ; l'arc de coup reçu du Duel suit aussi les couleurs)
 	_section(v, "Accessibilité")
 	_check(v, "Voir les sons", "interface", "sound_cues", "Battle royale : un arc autour du héros montre d'où vient un son important (coffre, combat, pas, anneau), avec son nom.")

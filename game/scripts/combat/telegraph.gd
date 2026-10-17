@@ -1,15 +1,31 @@
 class_name Telegraph
 extends Node3D
-## Zone rouge au sol qui annonce une attaque : le contour apparaît, l'intérieur
+## Zone au sol qui annonce une attaque : le contour apparaît, l'intérieur
 ## se remplit pendant [member delay], puis les dégâts tombent sur le héros s'il
 ## est encore dedans (l'esquive rend invulnérable).
 ##   shape : "circle" (rayon), "ring" (rayon intérieur / extérieur),
 ##           "line" (longueur, largeur), "cone" (rayon, angle)
+## Télégraphes v2 (lot DNG-2, bible § 10 ; maquette donjons_maquettes/v2_barre_boss.svg) pour les attaques ennemies :
+##   - danger : bord net (bande d'encre et liseré clair), intérieur hachuré fraise (lisible sans la couleur) et cœur qui
+##     monte jusqu'au bord pendant l'armement, 35 % d'opacité au plus ; compte à rebours sur les grosses zones ;
+##   - sûr (zone sans dégâts, verte) : pomme, bord en pointillés et mot « SÛR » ;
+##   - zone immense (anneau autour d'un cercle sûr, plus de la moitié de l'écran) : seul le bord du sûr est peint, le voile
+##     s'efface en s'en éloignant ; jamais un écran rouge plein ;
+##   - un son court à l'armement des zones de boss (Sfx « tele_arm »).
+## Les annonces discrètes (small : monstres ordinaires, arrivées, zones du héros) et les traits de projectiles gardent le
+## dessin simple. Seul l'aspect change : formes, délais, dégâts et règles de touche sont ceux d'avant.
 
 signal resolved(hit: bool)
 
-const COLOR := Color(1.0, 0.12, 0.08)
+const COLOR := Color("ff4d6d")  # fraise (bible § 3 : danger)
 const PLAYER_COLOR := Color(0.25, 0.6, 1.0)  # zone des attaques du héros (option)
+const SAFE_COLOR := Color("8fd62e")  # pomme
+const INK := Color("221a3a")
+const PAPER := Color("fff8ec")
+const WIDE_RING := 30.0  # un anneau plus grand couvre l'écran : on peint son bord intérieur (le sûr), pas sa surface
+const WIDE_CIRCLE := 16.0
+const FILL_ALPHA := 0.22  # cœur qui monte (avec les hachures, 35 % au plus)
+const COUNT_MIN_R := 5.5  # compte à rebours sur les zones d'au moins ce rayon
 
 var shape := "circle"
 var radius := 4.0
@@ -28,6 +44,12 @@ var color := COLOR
 
 var _t := 0.0
 var _fill: MeshInstance3D
+var safe := false  # (déduit) zone sûre : pointillés pomme et « SÛR »
+var wide := false  # (déduit) danger immense : seul le bord du sûr est peint
+var v2 := false  # (déduit) dessin v2 (attaque ennemie qui n'est ni discrète ni un trait de projectile)
+var _count: Label3D
+var _hatch: ShaderMaterial
+static var _hatch_shader: Shader
 
 
 static func spawn(parent: Node, pos: Vector3, yaw: float, props: Dictionary) -> Telegraph:
@@ -42,6 +64,51 @@ static func spawn(parent: Node, pos: Vector3, yaw: float, props: Dictionary) -> 
 
 func _ready() -> void:
 	add_to_group("telegraphs")  # les héros scriptés en équipe les lisent pour esquiver (ClassRival._read_zones, passe M7)
+	safe = damage <= 0.0 and color.g > 0.75 and color.r < 0.6
+	var trail := damage <= 0.0 and not safe and shape == "line" and width < 1.2  # trait de la trajectoire d'un projectile
+	v2 = not small and not trail and not color.is_equal_approx(PLAYER_COLOR)
+	if not v2:
+		_ready_simple()
+		return
+	wide = not safe and ((shape == "ring" and radius >= WIDE_RING) or (shape == "circle" and radius >= WIDE_CIRCLE))
+	var body := MeshInstance3D.new()
+	body.mesh = _shape_mesh(1.0)
+	body.material_override = _mat_color(SAFE_COLOR, 0.2) if safe else _hatch_mat()
+	body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(body)
+	# bord net : bande d'encre, liseré clair au milieu (pointillés pour le sûr : la forme dit « sûr » sans la couleur)
+	var ink := MeshInstance3D.new()
+	ink.mesh = _border_mesh(0.28, 0.0, safe)
+	ink.material_override = _mat_color(INK, 0.9)
+	ink.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ink.position.y = 0.012
+	add_child(ink)
+	var light := MeshInstance3D.new()
+	light.mesh = _border_mesh(0.08, 0.1, safe)
+	light.material_override = _mat_color(Color.WHITE if safe else PAPER, 0.95)
+	light.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	light.position.y = 0.02
+	add_child(light)
+	if jumpable:
+		_jump_edge()
+	if not wide:
+		_fill = MeshInstance3D.new()
+		_fill.mesh = body.mesh
+		_fill.material_override = _mat_color(SAFE_COLOR if safe else color, 0.16 if safe else FILL_ALPHA)
+		_fill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_fill.position.y = 0.006
+		_fill.scale = Vector3(0.01, 1, 0.01) if shape != "line" else Vector3(1, 1, 0.01)
+		add_child(_fill)
+	if safe:
+		_word("SÛR", 34)
+	elif not wide and shape in ["circle", "ring"] and radius >= COUNT_MIN_R and delay >= 1.2:
+		_count = _word("", 28)
+	if not safe and damage > 0.0 and _boss_source():
+		Sfx.ui("tele_arm", -18.0)
+
+
+## Dessin d'avant (annonce discrète, zone du héros, trait de projectile) : fond léger, liseré, intérieur qui se remplit.
+func _ready_simple() -> void:
 	var outline := MeshInstance3D.new()
 	outline.mesh = _shape_mesh(1.0)
 	outline.material_override = _mat(0.08 if small else 0.12)  # fond léger : le héros reste visible
@@ -53,17 +120,7 @@ func _ready() -> void:
 	border.position.y = 0.01
 	add_child(border)
 	if jumpable:
-		# bord jaune : on peut l'éviter en sautant
-		var edge := MeshInstance3D.new()
-		var torus := TorusMesh.new()
-		torus.inner_radius = radius - 0.25
-		torus.outer_radius = radius
-		edge.mesh = torus
-		edge.scale = Vector3(1, 0.05, 1)
-		var em := _mat(0.9)
-		em.albedo_color = Color(1.0, 0.85, 0.2, 0.9)
-		edge.material_override = em
-		add_child(edge)
+		_jump_edge()
 	outline.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(outline)
 	_fill = MeshInstance3D.new()
@@ -72,6 +129,68 @@ func _ready() -> void:
 	_fill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_fill.scale = Vector3(0.01, 1, 0.01) if shape != "line" else Vector3(1, 1, 0.01)
 	add_child(_fill)
+
+
+## Bord jaune : on peut l'éviter en sautant.
+func _jump_edge() -> void:
+	var edge := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = radius - 0.25
+	torus.outer_radius = radius
+	edge.mesh = torus
+	edge.scale = Vector3(1, 0.05, 1)
+	var em := _mat(0.9)
+	em.albedo_color = Color(1.0, 0.85, 0.2, 0.9)
+	edge.material_override = em
+	add_child(edge)
+
+
+## L'attaque vient-elle d'un boss (ou d'une élite à mécaniques) ? Seules ces zones sonnent à l'armement.
+func _boss_source() -> bool:
+	return is_instance_valid(source) and (bool(source.get("is_boss")) or source.get("brain") != null)
+
+
+## Mot posé au centre de la zone, face caméra, contouré d'encre (« SÛR », compte à rebours).
+func _word(text: String, fs: int) -> Label3D:
+	var l := Label3D.new()
+	l.text = text
+	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	l.no_depth_test = true
+	l.fixed_size = true
+	l.pixel_size = 0.0011
+	l.font = UiTheme.title_font()
+	l.font_size = fs
+	l.outline_size = 10
+	l.modulate = Color.WHITE
+	l.outline_modulate = INK
+	l.position = Vector3(0, 0.5, 0)
+	l.render_priority = 2
+	l.outline_render_priority = 1
+	add_child(l)
+	return l
+
+
+## Intérieur hachuré (shaders/telegraph.gdshader) ; zone immense : le voile s'efface à 5 m du bord intérieur.
+func _hatch_mat() -> ShaderMaterial:
+	if _hatch_shader == null:
+		_hatch_shader = load("res://shaders/telegraph.gdshader") as Shader
+	var m := ShaderMaterial.new()
+	m.shader = _hatch_shader
+	m.render_priority = 1
+	m.set_shader_parameter("tint", Color(color, 1.0))
+	_hatch = m
+	if wide:
+		m.set_shader_parameter("base_alpha", 0.1)
+		m.set_shader_parameter("hatch_alpha", 0.24)
+		m.set_shader_parameter("inner_r", inner if shape == "ring" else 0.0)
+		m.set_shader_parameter("fade_len", 5.0)
+	return m
+
+
+func _mat_color(c: Color, alpha: float) -> StandardMaterial3D:
+	var m := _mat(alpha)
+	m.albedo_color = Color(c, alpha)
+	return m
 
 
 func _mat(alpha: float) -> StandardMaterial3D:
@@ -122,13 +241,14 @@ func _shape_mesh(k: float) -> Mesh:
 	return im
 
 
-## Bande de largeur [param w] le long du contour de la forme.
-func _border_mesh(w: float) -> Mesh:
+## Bande de largeur [param w] le long du contour de la forme, décalée de [param off] vers l'intérieur ; [param dashed] :
+## en pointillés (un segment sur deux, cercles et anneaux).
+func _border_mesh(w: float, off := 0.0, dashed := false) -> Mesh:
 	var im := ImmediateMesh.new()
 	im.surface_begin(Mesh.PRIMITIVE_TRIANGLES)
 	var band := func(a: Vector3, b: Vector3, n: Vector3) -> void:
 		# segment a→b, épaisseur vers l'intérieur (n)
-		for v in [a, b, b + n * w, a, b + n * w, a + n * w]:
+		for v in [a + n * off, b + n * off, b + n * (off + w), a + n * off, b + n * (off + w), a + n * (off + w)]:
 			im.surface_add_vertex(v)
 	match shape:
 		"line":
@@ -155,6 +275,8 @@ func _border_mesh(w: float) -> Mesh:
 			for ring in ([radius, inner] if shape == "ring" and inner > 0.0 else [radius]):
 				var inward := 1.0 if is_equal_approx(float(ring), radius) else -1.0
 				for i in segs:
+					if dashed and i % 2 == 1:
+						continue
 					var a0 := TAU * i / segs
 					var a1 := TAU * (i + 1) / segs
 					var d0 := Vector3(sin(a0), 0, cos(a0))
@@ -167,10 +289,15 @@ func _border_mesh(w: float) -> Mesh:
 func _process(delta: float) -> void:
 	_t += delta
 	var p := clampf(_t / delay, 0.0, 1.0)
-	if shape == "line":
-		_fill.scale = Vector3(1, 1, maxf(p, 0.01))
-	else:
-		_fill.scale = Vector3(maxf(p, 0.01), 1, maxf(p, 0.01))
+	if _fill != null:
+		if shape == "line":
+			_fill.scale = Vector3(1, 1, maxf(p, 0.01))
+		else:
+			_fill.scale = Vector3(maxf(p, 0.01), 1, maxf(p, 0.01))
+	if _count != null:
+		_count.text = ("%.1f s" % maxf(delay - _t, 0.0)).replace(".", ",")
+	if wide and _hatch != null:
+		_hatch.set_shader_parameter("center", global_position)  # (posée après _ready par spawn)
 	if _t >= delay:
 		_resolve()
 
@@ -205,9 +332,11 @@ func _resolve() -> void:
 			hit = true
 	resolved.emit(hit)
 	# éclat final puis disparition
+	if _count != null:
+		_count.visible = false
 	var flash := MeshInstance3D.new()
 	flash.mesh = _shape_mesh(1.0)
-	flash.material_override = _mat(0.85)
+	flash.material_override = _mat(0.85 if not wide else 0.3)
 	add_child(flash)
 	var tw := create_tween()
 	tw.tween_property(flash.material_override, "albedo_color:a", 0.0, 0.25)

@@ -182,6 +182,7 @@ func _in_game() -> void:
 				m.brain._busy = false
 				BossBricks.run(m.brain, br)
 				await get_tree().create_timer(0.6).timeout
+				_check_zones("%s/%s" % [id, br.type])
 				if not is_instance_valid(m):
 					bad.append("%s : disparu pendant %s" % [id, br.type])
 					break
@@ -195,6 +196,8 @@ func _in_game() -> void:
 				bad.append("%s : ne meurt pas" % id)
 			_clear()
 	Engine.time_scale = 1.0
+	check("télégraphes v2 (%d zones de boss) : une zone immense est peinte par son bord, jamais en plein %s" % [zone_seen, str(zone_bad.slice(0, 4))],
+		zone_seen > 20 and zone_bad.is_empty())
 	check("chaque boss apparaît, chaque brique s'exécute, il meurt %s" % str(bad.slice(0, 6)), bad.is_empty())
 	check("jamais de mort en un coup : un coup ≤ %d %% des PV max %s" % [int(BossLibrary.HIT_CAP * 100), str(one_shot)], one_shot.is_empty())
 	# barrière : absorbe, puis brisée
@@ -212,6 +215,22 @@ func _in_game() -> void:
 	Tower.dungeon = ""
 	Tower.dungeon_boss = ""
 	Run.active = false
+
+
+var zone_seen := 0
+var zone_bad: Array = []
+
+
+## Télégraphes v2 (lot DNG-2) : chaque zone de boss au dessin v2 ; une zone qui couvre l'écran ne peint que son bord.
+func _check_zones(tag: String) -> void:
+	for n in get_tree().current_scene.get_children() if get_tree().current_scene else []:
+		var t := n as Telegraph
+		if t == null or t.small or not t.v2:
+			continue
+		zone_seen += 1
+		var big := (t.shape == "ring" and t.radius >= Telegraph.WIDE_RING) or (t.shape == "circle" and t.radius >= Telegraph.WIDE_CIRCLE)
+		if big and t.damage > 0.0 and not t.wide:
+			zone_bad.append(tag)
 
 
 func _clear() -> void:

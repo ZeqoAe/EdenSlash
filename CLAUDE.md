@@ -145,6 +145,11 @@ lancées par `BossBrain` ; `BossLibrary.spawn(id, palier, ctx)` sert les Donjons
 Survivant gardent leurs boss). Coup plafonné à `BossLibrary.HIT_CAP` (40 %), `Tower.BOSS_HIT_CAP` (25 %) dans la Tour.
 PV des boss hors Survie : `Dungeons.boss_hp` (fixes par niveau et difficulté). Boss sorti de la salle : `TowerDirector._rescue_boss`.
 Détail : DESIGN « Bibliothèque de boss et donjons à la carte », `R_M2.md`, `R_P11.md`.
+HUD de boss v2 (lot DNG-2, `conception/dungeons/R_DNG2.md`) : `ui/boss_bar.gd` (`BossBar` remplace le cadre de cible pour un boss : médaillon
+`ui/boss_portrait.gd`, seuils réels `BossBrain.thresholds`, mécanique en cours `active_cast`, fureur `fury`, flèche hors vue), frise « À venir »
+`ui/boss_timeline.gd` (`BossBrain.upcoming`, réglage `interface/boss_timeline`), annonces à 3 niveaux `ui/hud_alert.gd` (`BossBar.SEVERITY`,
+`alert_text` : 28 signes au plus), télégraphes v2 `combat/telegraph.gd` + `shaders/telegraph.gdshader` (hachures, sûr en pointillés, zone
+immense peinte par son bord ; l'aspect seul). Les ajouts au cerveau sont en lecture seule : rien n'y change le combat. Test `test_dng2`, captures `shot_dng2`.
 
 ### Donjons, Tour, Ruée, Siège
 - **Donjons** : `core/dungeons.gd` (un donjon par boss, `Dungeons.catalog`, archétypes `ARCHETYPES` + `Items.SETS`), moteur de
@@ -153,6 +158,8 @@ Détail : DESIGN « Bibliothèque de boss et donjons à la carte », `R_M2.md`, 
   convertis par `Dungeons.migrate_plans()` (paresseux, idempotent). Test `test_a1`, rapport `conception/progression/R_A1.md`.
   Lot A2 : ouverts à l'époque I gagnée ; 3 salles (élites une à une, `TowerDirector._begin_dungeon_room`, lieutenant, boss), réglages
   `Dungeons.ELITE_ROOM_HP` / `LIEUTENANT_HP` mesurés par `tools/dungeon_run` (`--god=1`), PE conseillée `Dungeons.advised` ; `test_a2`.
+  Page v2 (DNG-2) : `ui/dungeon_page.gd` (fiche à médaillon, mécaniques en pastilles, onglets de difficulté, butin en cases `DungeonPage.cell`,
+  liste par zone avec médailles N / H / M) ; journal des 48 boss : Carnet > « Rencontres » (`ui/encounter_journal.gd`, dernier onglet).
 - **La Tour** : `core/tower.gd` (`block_plan` par bloc de 10, `BOSS_CURVE`, `BOSS_FLOOR_ADJ`), `core/tower_director.gd` (interface
   documentée en tête, prolongée par `SiegeDirector`), équilibre entre classes `core/tower_balance.gd` + `data/tower_solo.json`
   (régénéré par `tools/m8_matrix.py solo`). Tests `test_m3`, `test_m8`. Rapports `R_M3.md`, `R_M8.md`.

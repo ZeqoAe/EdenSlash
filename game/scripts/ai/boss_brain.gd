@@ -43,6 +43,14 @@ var _thresholds_done := {}
 var _totems: Array = []
 var _casts: Array = []  # [[instant (HitLog.clock), type]] : dernières mécaniques et attaques lancées (« Ce qui t'a battu »)
 const KIT := ["slams", "charge", "cleave", "barrage", "nova"]
+# --- lecture seule pour le HUD de boss v2 (lot DNG-2) : rien de ce qui suit ne change le combat ------------------
+## Une mécanique ou une attaque de base vient d'être lancée (barre de boss, frise « À venir », annonces).
+signal brick_started(type: String)
+var age := 0.0  # s de combat depuis l'apparition (pauses exclues) : minuteur de l'Impatience
+var last_cast := ""  # dernière mécanique ou attaque lancée
+var last_cast_at := -100.0  # (en [member age])
+## Durée pendant laquelle une mécanique reste « en cours » sur la barre (sinon tant que le boss incante).
+const ACTIVE_SECS := 2.5
 
 
 ## Mécaniques du boss d'après la salle (zone) ; [param dir] : directeur de run (invocations).
@@ -97,6 +105,8 @@ func stagger(t: float) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if boss != null and not boss.is_dead:
+		age += delta  # (lot DNG-2 : horloge du HUD seulement)
 	if boss == null or boss.is_dead or _busy:
 		return
 	if _stagger > 0.0:
@@ -144,6 +154,71 @@ func note_cast(type: String) -> void:
 		_casts.pop_front()
 	if is_instance_valid(boss) and boss.has_meta("boss_id"):
 		Encounters.saw(String(boss.get_meta("boss_id")), type)
+	last_cast = type
+	last_cast_at = age
+	brick_started.emit(type)
+
+
+# --- lecture seule (HUD de boss v2, lot DNG-2) ------------------------------------------------------------------
+## Mécanique ou attaque en cours ("" : aucune) : la dernière lancée, tant que le boss incante ou pendant ACTIVE_SECS.
+func active_cast() -> String:
+	if last_cast == "" or last_cast in ["pet", "frenzy"]:
+		return ""
+	return last_cast if _busy or age - last_cast_at <= ACTIVE_SECS else ""
+
+
+## Seuils de PV réels : [{at (part des PV), type (brique, ou « phase2 » : la fureur à mi-vie), done}], du plus haut au plus bas.
+func thresholds() -> Array:
+	var out: Array = [{"at": PHASE2_AT, "type": "phase2", "done": _phase2}]
+	for i in bricks.size():
+		var br: Dictionary = bricks[i]
+		if String(br.kind) != "at":
+			continue
+		for th in br.at:
+			out.append({"at": float(th), "type": String(br.type), "done": _thresholds_done.has("%d_%s" % [i, th])})
+	out.sort_custom(func(a, b): return float(a.at) > float(b.at))
+	return out
+
+
+## Les [param n] prochaines mécaniques : [{type, in (s ; -1 : à un seuil), at (part des PV pour un seuil), now}]. D'abord celle en
+## cours, puis les périodiques dans l'ordre de leur minuteur (le vrai, celui qui les lance), puis les seuils pas encore passés.
+func upcoming(n := 4) -> Array:
+	var out: Array = []
+	var cur := active_cast()
+	if cur != "":
+		out.append({"type": cur, "in": 0.0, "at": -1.0, "now": true})
+	var timed: Array = []
+	for i in bricks.size():
+		var br: Dictionary = bricks[i]
+		if String(br.kind) == "every" and float(br.every) > 0.0 and i < _brick_t.size():
+			if String(br.type) == cur:
+				continue
+			timed.append({"type": String(br.type), "in": maxf(float(_brick_t[i]), 0.0), "at": -1.0, "now": false})
+	if _reflect_timer < 1.0e8 and cur != "reflect":
+		timed.append({"type": "reflect", "in": maxf(_reflect_timer, 0.0), "at": -1.0, "now": false})
+	if _phase2 and "nova" in kit and cur != "nova":
+		timed.append({"type": "nova", "in": maxf(_nova_timer, 0.0), "at": -1.0, "now": false})
+	timed.sort_custom(func(a, b): return float(a.in) < float(b.in))
+	out.append_array(timed)
+	var seen := {}
+	for th in thresholds():
+		if not bool(th.done) and String(th.type) != "phase2" and not seen.has(th.type):
+			seen[th.type] = true
+			out.append({"type": String(th.type), "in": -1.0, "at": float(th.at), "now": false})
+	return out.slice(0, n)
+
+
+## Fureur chronométrée : l'Impatience (brique « frenzy ») -> {left (s avant le 1er cran, 0 ensuite), steps (crans pris)} ;
+## {} : ce boss n'en a pas.
+func fury() -> Dictionary:
+	for br in bricks:
+		if String(br.type) == "frenzy":
+			var p: Dictionary = br.get("p", {})
+			var after := float(p.get("after", 120.0))
+			var step := maxf(float(p.get("step", 30.0)), 1.0)
+			var steps := 0 if age < after else mini(int((age - after) / step) + 1, int(p.get("max", 6)))
+			return {"left": maxf(after - age, 0.0), "steps": steps}
+	return {}
 
 
 ## La mécanique responsable d'un coup de ce boss reçu maintenant : la dernière lancée dont la fenêtre (HitLog.window_of)

@@ -262,6 +262,17 @@ func _ready() -> void:
 	check("Battle royale : %d annonces et fiches, ni « run / build / lobby / spawn / loot / ping » %s" % [br_texts.size(), str(br_bad.slice(0, 4))],
 		br_texts.size() > 20 and br_bad.is_empty())
 
+	# 5c. HUD de boss v2, page Donjons v2, journal des rencontres (lot DNG-2) : noms, consignes, annonces, lignes de butin
+	for t in BossBricks.DEFS.keys() + BossBrain.KIT:
+		_note("barre de boss", BossBar.mech_name(String(t)) + " · " + String(BossBar.CAST_HINT.get(t, "")))
+		_note("page Donjons", BossBricks.hint_of(String(t)))
+	for k in BossBar.SHORT:
+		_note("annonce courte", String(BossBar.SHORT[k]))
+	for id in BossLibrary.ids():
+		_note("journal des rencontres", DungeonPage.missing_line(String(id), Encounters.missing_slots(String(id)), BossLibrary.loot(String(id)).slots))
+	_note("frise", BossTimeline.when_text({"in": 6.0}) + " " + BossTimeline.when_text({"now": true}) + " " + BossTimeline.when_text({"in": -1.0, "at": 0.35}))
+	check("HUD de boss v2 : chaque mécanique a un nom français", (BossBricks.DEFS.keys() + BossBrain.KIT).all(func(t): return BossBar.mech_name(String(t)) != ""))
+
 	# 6. bilan : tout texte signalé
 	var total := 0
 	for src in flagged:

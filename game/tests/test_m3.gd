@@ -165,6 +165,9 @@ func _scene() -> void:
 	check("étage 10 : boss de la bibliothèque, PV fixes", is_instance_valid(td._boss) and td._boss.has_meta("boss_id")
 		and String(td._boss.get_meta("boss_id")) == Tower.boss_id(10) and absf(td._boss.max_hp - Tower.boss_hp_fixed(10)) < 1.0)
 	check("boss : pas de renforts génériques (ses invocations sont ses mécaniques)", not td._adds_on)
+	var bar: BossBar = world.hud._boss_bar  # barre de boss v2 (lot DNG-2)
+	check("étage 10 : barre de boss v2, difficulté de la Tour (« %s »)" % bar._diff.text, bar.visible and bar.current() == td._boss
+		and bar._diff.text == Tower.DIFF_NAMES[Tower.difficulty])
 	# ombres
 	var shadows: Array = range(1, Tower.FLOORS + 1).filter(func(f): return Tower.floor_type(f) == "shadow")
 	td.begin(shadows[0])

@@ -91,6 +91,7 @@ var _low_hp: TextureRect
 var _root: Control
 var _sv_hud: SurvivorHud  # Survivant : frise des 20 minutes (null ailleurs)
 var _royale: RoyaleHud  # Battle royale : HUD d'état v2, flèches, repère, grande carte (lot BR-I1 ; null ailleurs)
+var _boss_bar: BossBar  # barre de boss v2, frise « À venir », annonces à 3 niveaux (lot DNG-2)
 
 
 func setup(p: Player, d: RunDirector) -> void:
@@ -178,6 +179,7 @@ func _build() -> void:
 	_build_tutorial(root)
 	_build_minimap(root)
 	_build_target(root)
+	_boss_bar = BossBar.attach(root, self)  # boss : barre v2 à la place du cadre de cible (lot DNG-2)
 	_build_action_bar(root)
 
 	# --- messages (centre) ---
@@ -850,6 +852,8 @@ func _process(delta: float) -> void:
 	_cards.visible = not picking  # la fiche attend (son compte à rebours aussi) que le choix de carte soit fini
 	if picking:
 		_target_box.visible = false
+		if _boss_bar != null:
+			_boss_bar.hide_all()
 
 
 # --- buffs / debuffs -----------------------------------------------------------------------
@@ -894,6 +898,9 @@ func _update_target() -> void:
 		t = boss
 	if t == null:
 		t = player.nearest_monster(9.0)
+	if _boss_bar != null and _boss_bar.show_for(t, director):  # boss : barre de boss v2 (lot DNG-2)
+		_target_box.visible = false
+		return
 	if t == null:
 		_target_box.visible = false
 		return
@@ -1166,6 +1173,8 @@ func show_prompt(text: String) -> void:
 
 func show_message(text: String, duration: float) -> void:
 	text = text.replace("<Boss> ", "").replace("<Duel> ", "")  # (les noms de combattants portent une étiquette interne)
+	if _boss_bar != null and _boss_bar.take_message(text, duration):
+		return  # annonce d'une mécanique du boss : alerte à 3 niveaux (HudAlert, lot DNG-2)
 	if _royale != null and _royale.announce_message(text, duration):
 		return  # Battle royale : annonces centrales une à la fois, DA v2 (lot BR-I3, RoyaleAnnounce)
 	for pre in FEED_PREFIXES:

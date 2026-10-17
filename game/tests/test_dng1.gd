@@ -329,7 +329,8 @@ func _hud_fit(world: Node, res: Vector2i) -> void:
 	hud.show_message("Double-porte, hôte de la magie, se protège derrière des totems : détruis-les tous avant qu'il ne te noie sous ses sorts !", 4.0)
 	Run.add_combo_damage(987654321.0)
 	await get_tree().create_timer(0.6).timeout
-	for n in [hud._banner, hud._target_box, hud._dmg_box]:
+	var target: Control = hud._boss_bar.panel if hud._boss_bar != null and hud._boss_bar.visible else hud._target_box  # boss : barre v2 (lot DNG-2)
+	for n in [hud._banner, target, hud._dmg_box]:
 		_rect_in(n as Control, vp, "%s %dx%d" % [n.name if n.name != "" else n.get_class(), res.x, res.y])
 	var b := (hud._banner as Control).get_global_rect()
 	check("bandeau d'annonce à l'écart de la mini-carte (fin %.0f, mini-carte dès %.0f) en %dx%d" % [b.end.x, vp.x - 246.0, res.x, res.y], b.end.x <= vp.x - 246.0 + 1.0)

@@ -121,6 +121,7 @@ const DEFAULTS := {
 	# dev_mode : écran de test (F10), réservé aux tests
 	"interface": {"damage_numbers": "all", "hit_stop": true, "show_fps": false, "move_marker": true, "attack_zone": false, "dev_mode": false,
 		"tower_unlock_all": true, "perfect_hint": true, "pad_labels": "auto", "compass": true,
+		"boss_timeline": true,  # frise « À venir » des combats de boss (lot DNG-2)
 		# HUD en partie (lot HUB-1, P0-9) : taille et opacité, à part de la taille de l'interface (display.ui_scale)
 		"hud_scale": 1.0, "hud_opacity": 1.0,
 		"fx_spells": "all", "fx_auras": "all", "fx_particles": "all", "fx_intensity": 1.0,

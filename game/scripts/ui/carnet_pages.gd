@@ -17,6 +17,7 @@ static func tabs() -> Array:
 		["Trophées", TrophiesPage.new()],
 		["Collection", ArchivePages.CollectionPage.new()],
 		["Registre", RegistryPage.new()],
+		["Rencontres", EncounterJournal.new()],  # journal des 48 boss (lot DNG-2)
 	]
 
 

@@ -60,6 +60,10 @@ const UI := {
 	"ui_forge_ok": "ui/forge_ok.wav",  # forge réussie
 	"ui_forge_fail": "ui/forge_fail.wav",  # forge ratée
 	"ui_hit": ["ui/hit_1.wav", "ui/hit_2.wav", "ui/hit_3.wav"],  # coup reçu léger (HUD)
+	# combat de boss (lot DNG-2) : annonces à 3 niveaux et armement des zones, sons de la bibliothèque SND-1
+	"alert_crit": "ui/banner.wav",  # annonce critique (bulle fraise) : impact bref
+	"alert_mid": "ui/notify.wav",  # annonce moyenne (bulle lagon)
+	"tele_arm": "ui/tick.wav",  # armement d'une zone de boss (télégraphe v2), court et discret
 }
 
 ## Correction de volume (dB) des anciens noms passés à la bibliothèque SND-1, pour garder leur niveau d'avant.

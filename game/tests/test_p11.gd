@@ -94,6 +94,11 @@ func _test_boss_rage() -> void:
 	d._update_boss(RunDirector.RAGE_STEP)
 	check("deux minutes plus tard : dégâts ×11, PV inchangés", d.boss_rage_tier() == 3 and is_equal_approx(b.atk, atk0 * 11.0) and is_equal_approx(b.max_hp, hp0))
 	check("objectif du combat : « %s »" % d._objective_text().replace("\n", " / "), d._objective_text().contains("RAGE ×11"))
+	# barre de boss v2 (lot DNG-2) : la rage de la Survie chronométrée, l'encoche de la fureur à mi-vie, PV fixes intacts
+	var bar: BossBar = world.hud._boss_bar
+	bar.show_for(b, d)
+	check("barre de boss v2 : rage « %s », encoche à mi-vie, PV fixes" % bar._fury.text, bar._fury.text.begins_with("Rage ×")
+		and bar._gauge.marks.any(func(mk): return is_equal_approx(float(mk.at), 0.5)) and is_equal_approx(b.max_hp, hp0))
 
 
 ## Sonde de DPS (vrai combat, héros invincible, aide « Bot », boss sans mécaniques) : bornes de temps pour tuer.

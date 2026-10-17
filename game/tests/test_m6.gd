@@ -213,6 +213,12 @@ func _rush_scene() -> void:
 	check("boss 1 = 1er boss du tirage, de la bibliothèque, sans renforts génériques", is_instance_valid(td._boss) and String(td._boss.get_meta("boss_id", "")) == lineup[0] and not td._adds_on)
 	check("PV du boss : ceux de la Ruée (%d)" % int(td._boss.max_hp), is_equal_approx(td._boss.max_hp, Rush.boss_hp(1, Tower.level_for(1) + 1, 0, 0) * Menace.hp_mult()))
 	check("HUD : « Boss 1/8 » et le boss suivant dans l'objectif", td.clock_text() == "Boss 1/8" and BossLibrary.short_name(lineup[1]) in td.objective_text())
+	var bar: BossBar = world.hud._boss_bar  # barre de boss v2 (lot DNG-2)
+	if world.cards.is_open():
+		world.cards._choose(0)
+	await _wait(func(): return bar.visible and bar.current() == td._boss, 3.0)
+	check("Ruée : barre de boss v2 sur le boss du tirage (« %s », barre %s, suivi %s), pastilles de ses mécaniques" % [bar._diff.text, bar.visible, bar.current() == td._boss],
+		bar.visible and bar.current() == td._boss and bar._diff.text == Dungeons.DIFF_NAMES[0] and bar._chips.size() >= 1)
 	var p: Player = world.player
 	p.hp = p.max_hp * 0.4
 	td._boss.hp = 1.0

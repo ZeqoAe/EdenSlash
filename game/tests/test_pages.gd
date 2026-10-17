@@ -524,7 +524,7 @@ func _test_lobby() -> void:
 	Profile.save_profile()
 	lobby._archive.open(4)
 	await _frames()
-	check("Carnet : vue d'ensemble, succès, cartes, trophées, collection, registre ; Atelier : Fabriquer, Plans de donjon et Forge", lobby._archive._pages.size() == 6 and lobby._archive.page(5) is RegistryPage and lobby._workshop._pages.size() == 3)
+	check("Carnet : vue d'ensemble, succès, cartes, trophées, collection, registre, rencontres ; Atelier : Fabriquer, Plans de donjon et Forge", lobby._archive._pages.size() == 7 and lobby._archive.page(5) is RegistryPage and lobby._archive.page(6) is EncounterJournal and lobby._workshop._pages.size() == 3)
 	check("Atelier : onglets Fabriquer, Plans de donjon, Forge (plus d'Armurerie)", lobby._workshop._tab_buttons.map(func(t): return String(t.text)) == ["Fabriquer", "Plans de donjon", "Forge"])
 	check("Collection : catalogue affiché", lobby._archive.is_open() and lobby._archive.page(4)._grid.get_child_count() > 0)
 	lobby._archive.close_ui()

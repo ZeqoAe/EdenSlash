@@ -161,6 +161,14 @@ func _ready() -> void:
 	lobby._archive.page(reg_i)._open_class(Profile.selected_class)
 	check("Registre : une classe ouvre Héros > Équipement", lobby._hero.is_open() and not lobby._archive.is_open())
 	lobby._hero.close_ui()
+	# Carnet > Rencontres (lot DNG-2) : grille des 48 boss et fiche ; une tuile change la fiche
+	var enc_i: int = lobby._archive.page_count() - 1
+	lobby._archive.open(enc_i)
+	await probe("Carnet : Rencontres (grille et fiche)", 0.8)
+	var ej: EncounterJournal = lobby._archive.page(enc_i)
+	if ej.tiles.size() > 1:
+		ej.tiles[1].pressed.emit()
+		await probe("Carnet : Rencontres, une autre fiche", 0.8)
 	lobby._archive.open(0)
 	lobby._archive.close_ui()
 	lobby._workshop.open(0)
@@ -202,6 +210,9 @@ func _ready() -> void:
 	await probe("lobby : Le Siège", 0.8)
 	lobby._show_menu("dungeon")
 	await probe("lobby : Donjons", 0.8)
+	if DungeonPage.cards.size() > 1:  # page Donjons v2 (lot DNG-2) : une tuile choisit un autre donjon
+		DungeonPage.cards[1].pressed.emit()
+		await probe("lobby : Donjons, un autre donjon choisi", 0.8)
 	lobby._show_menu("tower")
 	await probe("lobby : Tour, difficulté", 0.8)
 	lobby._show_menu("tower_floors")
