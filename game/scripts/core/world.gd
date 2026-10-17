@@ -19,6 +19,7 @@ extends Node3D
 ##   --shot-prefix=nom     préfixe des captures (lancements en parallèle)
 ##   --tower               lance la Tour (--tower-floor=N : à l'étage N, --tower-diff=0..3)
 ##   --assault             lance L'Assaut (lot TAC-0 ; options : Assault.args_options)
+##   --moba                lance Les Deux Voies (lot MB-C ; options : Moba.args_options, ex. --moba-heroes=watch --moba-diff=2)
 
 const REVIVES_PER_RUN := 1
 
@@ -145,6 +146,8 @@ func _ready() -> void:
 			if Run.skills.is_empty():
 				for sk in Run.class_data().get("skills", []).slice(0, 4):
 					Run.skills.append({"id": int(sk.id), "rank": 1})
+		elif "--moba" in OS.get_cmdline_user_args():
+			Moba.launch(Profile.selected_class, Moba.args_options(OS.get_cmdline_user_args()))  # Les Deux Voies (lot MB-C)
 		elif "--assault" in OS.get_cmdline_user_args():
 			Assault.launch(Profile.selected_class, Assault.args_options(OS.get_cmdline_user_args()))  # L'Assaut (lot TAC-0)
 		elif "--colisee" in OS.get_cmdline_user_args():

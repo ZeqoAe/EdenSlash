@@ -298,6 +298,14 @@ Carte (MB-B, `R_MB_B.md`) : `world/moba_map.gd` (`MobaMap extends ProcMap`, `gen
 maillage précuit `assets/maps/moba/navmesh.res` (tampon `LAYOUT_VERSION` : recuire par `tools/moba_map_tool.tscn -- --bake` à tout changement
 de géométrie), `nav_ready()` à attendre avant un chemin ou `quit()` ; vues `-- --res=1280x720 --shots=<dossier>` ; test `test_mb_map`.
 
+Partie (MB-C, `R_MB_C.md`) : état `core/moba.gd` (`Moba` : `launch`, options `args_options` (`--moba-heroes=all|none|watch`, `--moba-diff`,
+`--moba-power=1.2,1.0`, `--moba-speed`, `--moba-until`, `--moba-stop=tower`, `--moba-tune=clé:valeur`, `--moba-trace`, `--moba-perf`), règles pures
+`structure_damage` / `structure_hp` / `tower_streak` / `decide`, `finish`) ; directeur `core/moba_director.gd` (`MobaDirector` : structures, sbires recyclés
+et vagues entrelacées (l'ordre des nœuds = l'ordre de jeu dans l'image : créer un camp d'abord le fait frapper le premier), grille de 8 m, cibles des
+sbires et des tours, appel à l'aide, réapparition, fontaine, fin) ; `world/moba_structure.gd` (tour / Cœur hors de « heroes » / « monsters », points =
+unités × 100, protections, réparation par tiers), `ai/moba_minion.gd` (horde, recyclé, coup sans zone rouge), `world/moba_bolt.gd`, `ai/moba_rival.gd`
+(IA simple de voie en attendant MB-E ; niveau = niveau attendu en attendant MB-D) ; direct `world.tscn -- --moba` ; activité « moba » cachée (« Bientôt ») ;
+test `test_mb_lanes` (relance le jeu en `--fixed-fps 60 --moba-speed=4` : 20 min de vagues égales sans chute, × 1,2 : T1 adverse vers 9 min).
 ### L'Assaut (4 contre 4 tactique, en cours ; « Bientôt », caché)
 Étude `conception/benchmark/TACTIQUE.md` (spécification § 7, lots TAC-0 à TAC-14, plans masse `tactique_maquettes/plan_*.svg`). Socle (TAC-0, `R_TAC_0.md`) :
 `core/assault.gd` (`Assault` : profil `RULES` enregistré par `ensure_rules`, machine de manche pure achat → manche → pose / désamorçage → fin, mi-temps,

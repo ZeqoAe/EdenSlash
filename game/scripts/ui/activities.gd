@@ -49,6 +49,11 @@ const LIST := [
 	{"id": "assault", "row": "versus", "group": "pvp", "tag": "4 contre 4", "name": "L'Assaut", "sub": "Pose la Charge, une vie par manche",
 		"soon": true, "gain": "Apparences, titres", "gives": ["look", "title"],
 		"desc": "Attaque ou défends deux sites : une vie par manche, de l'or entre les manches."},
+	# Les Deux Voies (lots MB-A à MB-K, conception/benchmark/MOBA.md) : 4 contre 4 sur deux voies, scellé ; « Bientôt » (caché) tant
+	# que le mode n'est pas jouable de bout en bout (héros en partie, boutique, IA, HUD, bilan) ; lancement direct : world.tscn -- --moba
+	{"id": "moba", "row": "versus", "group": "pvp", "tag": "4 contre 4", "name": "Les Deux Voies", "sub": "Deux voies, une jungle, un Cœur à abattre",
+		"soon": true, "gain": "Apparences, titres, maîtrise", "gives": ["look", "title", "mastery"],
+		"desc": "Avec trois alliés IA, défends ton Cœur et abats celui d'en face."},
 	{"id": "training", "row": "", "group": "", "name": "Zone d'entraînement", "sub": "Sorts, armes et cartes, sans enjeu", "gain": "Rien (banc d'essai)",
 		"desc": ""},
 ]

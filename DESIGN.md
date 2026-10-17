@@ -1325,6 +1325,14 @@ de bout en bout).
   et buissons ; rivière au gué partout praticable, avec la fosse du Colosse côté Soleil et celle du Gardien côté Brumes ; 4 camps par
   moitié. La carte est la même à chaque partie, en miroir : chaque équipe a la Voie du Soleil en haut.
 
+- **Tours, Cœur et sbires** (lot MB-C, `R_MB_C.md`) : toutes les 30 s, chaque voie reçoit 3 sbires mêlée et 2 tireurs (un bélier
+  une vague sur 3, puis sur 2 dès 12:00 ; un géant de plus quand la T2 d'en face est tombée). Une tour tire sur les sbires d'abord,
+  puis sur les héros, et sur le héros qui frappe un de ses héros ; ses tirs de suite sur un même héros font de plus en plus mal. Sans
+  sbire ennemi près d'elle, une structure ne prend qu'un tiers des dégâts ; une T1 prend moitié moins avant 4:00 ; la T2 ne peut pas
+  être touchée tant que la T1 de sa voie tient, ni le Cœur tant que ses deux T2 tiennent. Hors combat, une structure se répare
+  doucement jusqu'au haut du tiers de PV où elle est : une poussée tenue gagne des tiers pour de bon, un sbire égaré ne l'use pas.
+  Des vagues égales ne font tomber aucune tour en 20 min ; des sbires 20 % plus forts font tomber la première tour vers 9 min.
+  Détruire le Cœur gagne ; à 25:00, le plus de structures détruites l'emporte.
 ## Le Colisée (étude `conception/benchmark/ARENA.md`, en cours : lots CO-A à CO-L)
 
 Mode scellé, joué seul contre des IA scriptées : 6 trios (Classique ; Éclair 4 trios ; Grand tournoi 8 trios si la sonde de

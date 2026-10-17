@@ -86,18 +86,26 @@ const RULES := {
 # --- sbires (§ 7.5, budgets R_MB0 § 6) -----------------------------------------------------------------------------------
 ## Par genre : ids des monstres (camp bleu, camp rouge) ; hits = auto-attaques d'un héros au niveau attendu pour le tuer ;
 ## hero = part des PV max d'un héros retirée par un coup (après sa défense) ; minion = part des PV d'un sbire mêlée retirée
-## par un coup sur un sbire ; struct = unités de dégâts sur une structure ; tower = part de ses PV retirée par un tir de tour ;
-## speed (m/s), aggro (m : portée de recherche), reach (m : portée du coup) ; xp, gold.
+## par un coup sur un sbire ; struct = unités de dégâts sur une structure ; tower = part des PV d'un sbire ordinaire retirée
+## par un tir de tour ; speed (m/s), aggro (m : portée de recherche), reach (m : portée du coup) ; xp, gold.
+## Calibrage du lot MB-C (R_MB_C § 3, 13 réglages × 6 parties de vagues seules) : des combats de sbires courts (un mêlée en
+## ≈ 3 coups) pour que deux vagues égales s'annulent avant la suivante (sinon elles s'empilent en grosses vagues qui
+## écrasent une tour, des deux côtés), et des coups de siège forts (struct) : un camp × 1,2 fait tomber une T1 adverse en
+## 7:14-11:17 (médiane 9:45 sur 6 parties, dans les deux sens), des vagues égales laissent toutes les tours à 94 % ou plus
+## après 20 min.
 const MINIONS := {
-	"melee": {"name": "Sbire", "ids": [56005, 56001], "hits": 4.0, "hero": 0.03, "minion": 0.125, "struct": 1.0, "tower": 0.5,
+	"melee": {"name": "Sbire", "ids": [56005, 56001], "hits": 4.0, "hero": 0.03, "minion": 0.375, "struct": 3.4, "tower": 0.5,
 		"speed": 4.0, "aggro": 9.0, "reach": 1.6, "xp": 30, "gold": 20},
-	"ranged": {"name": "Sbire tireur", "ids": [56003, 56003], "hits": 3.0, "hero": 0.025, "minion": 0.1, "struct": 0.8, "tower": 1.0,
+	"ranged": {"name": "Sbire tireur", "ids": [56003, 56003], "hits": 3.0, "hero": 0.025, "minion": 0.3, "struct": 2.72, "tower": 1.0,
 		"speed": 4.0, "aggro": 11.0, "reach": 8.0, "xp": 20, "gold": 15},
-	"ram": {"name": "Bélier", "ids": [56007, 56002], "hits": 10.0, "hero": 0.05, "minion": 0.2, "struct": 2.0, "tower": 0.25,
+	"ram": {"name": "Bélier", "ids": [56007, 56002], "hits": 10.0, "hero": 0.05, "minion": 0.6, "struct": 6.8, "tower": 0.25,
 		"speed": 3.8, "aggro": 9.0, "reach": 2.2, "xp": 60, "gold": 45},
-	"giant": {"name": "Géant", "ids": [56006, 56004], "hits": 25.0, "hero": 0.06, "minion": 0.3, "struct": 3.0, "tower": 0.1,
+	"giant": {"name": "Géant", "ids": [56006, 56004], "hits": 25.0, "hero": 0.06, "minion": 0.9, "struct": 10.2, "tower": 0.1,
 		"speed": 3.6, "aggro": 9.0, "reach": 2.6, "xp": 90, "gold": 60},
 }
+## Hasard des sbires (rythme des coups, pas, décalage dans la voie), en part du hasard d'un monstre du jeu : faible, pour que
+## deux vagues égales restent égales (lot MB-C).
+const JITTER := 0.3
 ## Vague : 3 mêlées + 2 tireurs ; un bélier une vague sur RAM_EVERY ; un géant par vague dans une voie dont la T2 adverse
 ## est tombée (et un de plus à la Marée, lot MB-F).
 const WAVE := ["melee", "melee", "melee", "ranged", "ranged"]
@@ -116,6 +124,10 @@ const HELP_TIME := 2.0  # … pendant 2 s
 const TOWER := {"range": 9.0, "period": 1.0, "hero_shot": 0.10, "streak": 0.4, "streak_max": 2.2, "streak_reset": 5.0,
 	"hp_t1": 110.0, "hp_t2": 130.0, "radius": 2.0, "height": 7.0}
 const CORE := {"range": 10.0, "period": 0.5, "hero_shot": 0.06, "hp_mult": 1.5, "radius": 3.2, "height": 6.0}
+## Réparation hors combat (lot MB-C) : unités par seconde après REPAIR_DELAY s sans coup, jusqu'au haut du tiers en cours
+## (un sbire égaré n'use pas une tour à la longue ; une poussée tenue gagne des tiers pour de bon).
+const REPAIR := 0.2
+const REPAIR_DELAY := 8.0
 const PROTECT_RADIUS := 12.0
 const PROTECT_MULT := 0.34  # − 66 % de dégâts subis sans sbire ennemi proche
 const TOWER_AT := [0.11, 0.30]  # T2, T1 : part de la voie depuis sa base

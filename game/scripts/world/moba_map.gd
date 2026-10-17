@@ -468,7 +468,7 @@ func _build_lanes() -> void:
 		lane_cum.append(cum_side)
 		lane_len[li] = (cum_side[0] as PackedFloat32Array)[-1]
 		moba.lanes.append({"name": MobaData.LANE_NAMES[li], "len": lane_len[li]})
-	# tours : T1 au tiers de la voie, T2 à l'angle de la base, sur le bord extérieur de la voie
+	# tours : T1 au tiers de la voie, T2 à l'angle de la base, sur le bord extérieur de la voie (côté coteaux)
 	for side in 2:
 		for li in 2:
 			for tier in [1, 2]:
@@ -476,7 +476,7 @@ func _build_lanes() -> void:
 				var d: float = f * lane_len[li]
 				var p := lane_point(side, li, d)
 				var perp: Vector3 = lane_perp[li][side][lane_index(side, li, d)]
-				var outward := 1.0 if (li == 0) == (side == 0) else -1.0
+				var outward := -1.0 if (li == 0) == (side == 0) else 1.0  # (côté extérieur de l'anneau des voies, loin de la jungle)
 				var tp := p + perp * (LANE_W * 0.5 + 1.0) * outward
 				tp.y = height_at(tp.x, tp.z)
 				moba.towers[side].append({"lane": li, "tier": tier, "pos": tp, "along": d})
