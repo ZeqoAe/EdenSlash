@@ -207,7 +207,7 @@ func _ready() -> void:
 	add_child(tools)
 	tools.setup(player, director)
 
-	cards = CardPicker.new()
+	cards = SurvivorPicker.new() if Survivor.active else CardPicker.new()  # (Survivant : choix de carte v2, lot SVX-2)
 	add_child(cards)
 	pause_menu = PauseMenu.new()
 	add_child(pause_menu)

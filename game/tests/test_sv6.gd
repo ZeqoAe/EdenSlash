@@ -212,7 +212,7 @@ func _rewards() -> void:
 	Profile.skins.erase("sword")
 
 
-## Le bilan : victoire et mort, statistiques, coffres, build final, boutons ; jamais de gain de compte.
+## Le bilan : victoire et mort, statistiques, coffres, équipement final, boutons ; jamais de gain de compte.
 func _bilan() -> void:
 	Quests.set_day("2026-10-20")
 	Profile.extra_titles = Profile.extra_titles.filter(func(t): return not String(t) in SurvivorRewards.TITLES)  # titres à regagner
@@ -237,22 +237,23 @@ func _bilan() -> void:
 		var texts := JSON.stringify(spec)
 		check("%s : titre « %s », ton %s" % [res, spec.title, spec.tone], spec.title == ResultsScreen.TITLES[res] and spec.tone == ("win" if res == "victoire" else "lose"))
 		check("%s : sous-titre classe, mode, zone" % res, spec.subtitle.contains("Survivant") and spec.subtitle.contains(String(GameData.zone("beluga").name)))
-		check("%s : 6 tuiles (niveau, durée 21:00, monstres, élites, gardiens 3 / 3, boss)" % res, spec.tiles.size() == 6 and spec.tiles[0][0] == "31"
-			and spec.tiles[1][0] == "21:00" and spec.tiles[2][0] == "812" and spec.tiles[4][0] == "3 / 3" and spec.tiles[5][1] == "boss")
-		check("%s : boss %s" % [res, spec.tiles[5][0]], spec.tiles[5][0] == ("vaincu" if res == "victoire" else "atteint"))
+		# bilan v2 (lot SVX-2) : 4 tuiles (niveau, monstres, gardiens, boss), la durée dans le sous-titre
+		check("%s : 4 tuiles (niveau, monstres, gardiens 3 / 3, boss), durée 21:00 au sous-titre" % res, spec.tiles.size() == 4 and spec.tiles[0][0] == "31"
+			and spec.tiles[1][0] == "812" and spec.tiles[2][0] == "3 / 3" and spec.tiles[3][1] == "boss" and String(spec.subtitle).ends_with("21:00"))
+		check("%s : boss %s" % [res, spec.tiles[3][0]], spec.tiles[3][0] == ("vaincu" if res == "victoire" else "atteint"))
 		check("%s : aucune ligne de progression du compte (ni insignes, ni maîtrise, ni pièces découvertes)" % res,
 			not spec.has("gained") and not spec.has("lost") and not texts.contains("Insignes") and not texts.contains("Maîtrise")
 			and not texts.contains("découvertes") and not texts.contains("Fournitures"))
 		var kept: Array = spec.kept
 		check("%s : coffres d'apparence dans Gardé (%d lignes)" % [res, kept.size()], kept.size() >= 1 and kept.all(func(k): return String(k.text).contains("apparence")))
 		check("%s : titre annoncé seulement à la victoire" % res, (spec.notes.size() == 1 and spec.notes[0].contains("Survivant")) == (res == "victoire"))
-		var b: Array = spec.build
+		var b: Array = spec.gear
 		var names := b.map(func(x): return String(x.text))
-		check("%s : build : arme, pièces 3 / 8, sorts (%s)" % [res, names], b.size() >= 4 and b[0].icon == "weapon" and b[1].text == "Pièces" and b[1].value == "3 / 8"
+		check("%s : équipement final : arme, pièces 3 / 8, sorts (%s)" % [res, names], b.size() >= 4 and b[0].icon == "weapon" and b[1].text == "Pièces" and b[1].value == "3 / 8"
 			and names.has(String(Run.class_data().skills[0].name)) and b.any(func(x): return x.value == "niv. 4"))
 		check("%s : le détail des pièces au survol (tête +6)" % res, String(b[1].tip).contains("Tête : +6"))
-		check("%s : boutons Rejouer, Changer de classe, Retour au menu" % res, spec.buttons.size() == 3 and spec.buttons[0].text == "Rejouer" and spec.buttons[0].primary
-			and spec.buttons[1].text == "Changer de classe" and spec.buttons[2].text == "Retour au menu")
+		check("%s : boutons Rejouer, Changer de classe, Menu principal" % res, spec.buttons.size() == 3 and spec.buttons[0].text == "Rejouer" and spec.buttons[0].primary
+			and spec.buttons[1].text == "Changer de classe" and spec.buttons[2].text == "Menu principal")
 		rs.free()
 		Profile.end_run_survival()
 		Quests.set_day("2026-10-%d" % (21 + ["victoire", "defaite", "abandon"].find(res)))
@@ -263,8 +264,8 @@ func _bilan() -> void:
 	Run.finish("defaite")
 	var rs2 := ResultsScreen.new()
 	var s2 := rs2.spec()
-	check("mort à 3:20 : aucun coffre, la phrase « Tiens 10 minutes »", s2.kept.is_empty() and String(s2.footnote).contains("10 minutes") and s2.tiles[5][0] == "—"
-		and s2.tiles[4][0] == "0 / 3")
+	check("mort à 3:20 : aucun coffre, la phrase « Tiens 10 minutes »", s2.kept.is_empty() and String(s2.footnote).contains("10 minutes") and s2.tiles[3][0] == "—"
+		and s2.tiles[2][0] == "0 / 3")
 	rs2.free()
 	Profile.end_run_survival()
 	# plafond du jour atteint : la phrase change
@@ -371,8 +372,8 @@ func _flow() -> void:
 	var panel := _results()
 	await _wait(ResultsPanel.LOCK_SECS + 1.5)
 	var texts := _all_text(panel)
-	check("bilan à l'écran : « DÉFAITE », « Gardiens », « Ton build », coffre d'apparence", texts.contains("DÉFAITE") and texts.contains("gardiens") and texts.contains("TON BUILD")
-		and texts.contains("apparence"))
+	check("bilan à l'écran : « DÉFAITE », « Gardiens », « Ton équipement final », coffre d'apparence", texts.contains("DÉFAITE") and texts.contains("gardiens")
+		and texts.contains("TON ÉQUIPEMENT FINAL") and texts.contains("QUI A FAIT LE TRAVAIL") and texts.contains("apparence") and not texts.contains("BUILD"))
 	check("bilan à l'écran : trois boutons", panel.buttons.size() == 3 and panel.buttons[1].text == "Changer de classe")
 	var shot_dir := ProjectSettings.globalize_path("user://shots/sv6")
 	DirAccess.make_dir_recursive_absolute(shot_dir)
@@ -396,7 +397,7 @@ func _flow() -> void:
 	panel = _results()
 	await _wait(ResultsPanel.LOCK_SECS + 1.5)
 	texts = _all_text(panel)
-	check("bilan de victoire : « VICTOIRE », titre gagné, build", texts.contains("VICTOIRE") and texts.contains("Titre gagné") and texts.contains("TON BUILD"))
+	check("bilan de victoire : « VICTOIRE », titre gagné, équipement final", texts.contains("VICTOIRE") and texts.contains("Titre gagné") and texts.contains("TON ÉQUIPEMENT FINAL"))
 	check("hub identique après la victoire " + _hub_diff(hub), _hub() == hub)
 	# Changer de classe : le lobby s'ouvre sur la page du mode
 	panel.buttons[1].pressed.emit()

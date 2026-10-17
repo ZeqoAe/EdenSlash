@@ -35,6 +35,7 @@ func _ready() -> void:
 	await _test_title()
 	await _test_lobby()
 	await _test_run_screens()
+	await _test_survivor_screens()
 	print("\n%s (%d échec(s))" % ["TOUT EST OK" if fails == 0 else "ÉCHECS", fails])
 	get_tree().quit(1 if fails > 0 else 0)
 
@@ -846,3 +847,35 @@ func _test_run_screens() -> void:
 	check("coffre de set : 3 pièces mythiques ou légendaires au choix", pieces.size() == 3 and pieces.all(func(it): return int(it.rarity) >= Items.MYTHIC))
 	Profile.reward_chests.erase(sc)
 	Profile.save_profile()
+
+
+## Survivant (lot SVX-2) : la page « Équipement » de la pause et le choix de carte v2 tiennent dans 1280 × 720.
+func _test_survivor_screens() -> void:
+	var old := get_tree().root.size
+	get_tree().root.size = Vector2i(1280, 720)
+	Survivor.start("warrior", "limestone")
+	preload("res://tests/shot_sv5.gd").rich_state()
+	var layer := CanvasLayer.new()
+	add_child(layer)
+	var page := SurvivorBuildPage.new()
+	page.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(page)
+	page.refresh()
+	await _frames(3)
+	check("Survivant, page Équipement : tient en largeur à 1280 (%d px), colonne « Qui fait le travail » repliée" % roundi(page.get_combined_minimum_size().x),
+		page.get_combined_minimum_size().x <= 1240.0 and not page.work_open)
+	layer.queue_free()
+	var picker := SurvivorPicker.new()
+	add_child(picker)
+	picker.offer("Niveau 34 ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
+	await _frames(4)
+	var vr := Rect2(Vector2.ZERO, Vector2(1280, 720)).grow(1.0)
+	check("Survivant, choix de carte v2 : cartes, panneau et barre dans la fenêtre", vr.encloses(picker._row.get_global_rect()) and vr.encloses(picker.panel.get_global_rect())
+		and vr.encloses((picker._reroll.get_parent() as Control).get_global_rect()))
+	picker._queue.clear()
+	picker._show_next()
+	picker.queue_free()
+	Run.finish("abandon")
+	Profile.end_run_survival()
+	get_tree().paused = false
+	get_tree().root.size = old

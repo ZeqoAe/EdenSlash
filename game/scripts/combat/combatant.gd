@@ -421,6 +421,7 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 	DamageNumber.spawn(self, dmg, crit, team == Team.PLAYER, dot, capped)
 	if source and source.team == Team.PLAYER and team != Team.PLAYER and Run.active:
 		Run.add_combo_damage(dmg)
+		SurvivorLog.note(dmg, dot)  # dégâts par source du Survivant (lot SVX-2)
 	_on_damaged(dmg, source)
 	if hp <= 0.0:
 		is_dead = true

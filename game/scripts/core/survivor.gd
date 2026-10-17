@@ -113,7 +113,7 @@ const PITY_TIER := "epic"
 ## Un palier s'ouvre en gagnant le précédent dans ce mode (SurvivorRewards.wins) ; le mode dev les ouvre tous.
 ## Mesures (pilote, profil « bon » 0,7, cibles : II ≈ 30 %, III ≈ 20 %, IV ≈ 10 %, V ≈ 3-5 % de victoires) : R_S8.
 const PALIERS := [
-	{"name": "Normal", "rule": "La run de base", "tip": "Vingt minutes, trois gardiens, le boss à 20:00.",
+	{"name": "Normal", "rule": "La partie de base", "tip": "Vingt minutes, trois gardiens, le boss à 20:00.",
 		"speed": 1.0, "heal_half": false, "menace": 0, "bricks": 0, "twin": false, "rage_at": 240.0, "revives": 1},
 	{"name": "Endurci", "rule": "Monstres plus rapides", "tip": "Monstres, gardiens et boss plus résistants et plus forts ; les monstres courent plus vite.",
 		"speed": 1.15, "heal_half": false, "menace": 0, "bricks": 0, "twin": false, "rage_at": 240.0, "revives": 1},

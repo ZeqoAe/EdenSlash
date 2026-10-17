@@ -366,7 +366,7 @@ func _rerolls_and_bans() -> void:
 			set_card = c
 			break
 	var sid := String(set_card.item.set)
-	check("pièce de set : « Bannir le set »", SurvivorCards.ban_label(set_card) == "Bannir le set")
+	check("pièce de panoplie : « Bannir la panoplie »", SurvivorCards.ban_label(set_card) == "Bannir la panoplie")  # (lot SVX-2 : plus de « set » côté joueur)
 	Run.ban_card(set_card, [set_card])
 	var no_set := true
 	for i in 300:

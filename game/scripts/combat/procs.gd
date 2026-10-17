@@ -45,6 +45,14 @@ static func fire(player: Player, trigger: String, target: Combatant = null, pos 
 
 
 static func run(player: Player, p: Dictionary, target: Combatant, pos: Vector3) -> void:
+	var prev_tag := SurvivorLog.tag  # dégâts par source du Survivant (lot SVX-2) : l'effet déclenché, pas le coup qui l'a lancé
+	if p.has("id"):
+		SurvivorLog.tag = SurvivorLog.proc_tag(String(p.id))
+	_run(player, p, target, pos)
+	SurvivorLog.tag = prev_tag
+
+
+static func _run(player: Player, p: Dictionary, target: Combatant, pos: Vector3) -> void:
 	var r := float(p.get("radius", 3.0)) * player.area_mult
 	var dur := float(p.get("duration", 2.0))
 	match String(p.effect):

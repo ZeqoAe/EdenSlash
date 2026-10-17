@@ -1,11 +1,14 @@
 class_name SurvivorBuildPage
 extends HBoxContainer
-## Page « Build » du menu pause en Survivant (lot S5, SPEC §10.2) : tout le build de la run sur un écran, rien à régler.
+## Page « Équipement » du menu pause en Survivant (lot S5, SPEC §10.2 ; v2 lot SVX-2) : toute la partie sur un écran, rien à régler.
 ##   1. Équipement : l'arme en grand (+N, jauge des paliers +6 / +8 / +10, auto-attaque), les 8 emplacements (icône,
 ##      couleur de rareté, +N, cadenas, losanges des paliers atteints ; « Libre » sinon), les statistiques du héros.
 ##      Une pièce ne se retire ni ne se change : un clic le rappelle sobrement. Survol : la carte de la pièce.
 ##   2. Sorts : 12 au plus (Survivor.SPELL_MAX), niveau x / 10 (jauge, losanges aux niveaux 5 et 10) et effet cumulé.
-##   3. Passifs actifs (valeur cumulée de toutes les pièces, « max » au plafond) et bonus de set (2 / 3 / 5 pièces).
+##   3. Passifs actifs (valeur cumulée de toutes les pièces, « max » au plafond), évolutions possibles (« il manque… ») et
+##      bonus de panoplie (2 / 3 / 5 pièces).
+##   4. « Qui fait le travail » (lot SVX-2) : dégâts par seconde de chaque source sur les 30 dernières secondes (SurvivorLog) :
+##      arme, sorts, passifs, évolutions, panoplies ; repliable (◂ / ▸), repliée d'office sous 1500 px de large.
 
 signal resume_requested
 
@@ -23,6 +26,10 @@ var _spells_title: Label
 var _spells: VBoxContainer
 var _passives: VBoxContainer
 var _sets: VBoxContainer
+var _work_col: Control  # colonne « Qui fait le travail »
+var _work: VBoxContainer
+var _work_toggle: Button
+var work_open := true
 
 
 func _ready() -> void:
@@ -80,15 +87,52 @@ func _ready() -> void:
 	_passives = VBoxContainer.new()
 	_passives.add_theme_constant_override("separation", 6)
 	col.add_child(_passives)
-	ItemWidgets.section(col, "Sets", 18)
+	ItemWidgets.section(col, "Panoplies", 18)
 	_sets = VBoxContainer.new()
 	_sets.add_theme_constant_override("separation", 6)
 	col.add_child(_sets)
 	ItemWidgets.action_button(c, "▶  Reprendre", func(): resume_requested.emit(), 0, true)
+	# 4. qui fait le travail (dégâts par source, 30 dernières secondes)
+	var d := ItemWidgets.panel(self, 0)
+	_work_col = d.get_parent() as Control
+	var dh := HBoxContainer.new()
+	d.add_child(dh)
+	var dt := ItemWidgets.section(dh, "Qui fait le travail", 18)
+	dt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	dt.tooltip_text = "Dégâts par seconde de chaque source sur les %d dernières secondes de jeu" % SurvivorLog.WINDOW
+	dt.mouse_filter = Control.MOUSE_FILTER_PASS
+	_work_toggle = Button.new()
+	_work_toggle.focus_mode = Control.FOCUS_NONE
+	_work_toggle.tooltip_text = "Replier / déplier la colonne"
+	_work_toggle.pressed.connect(func(): set_work_open(not work_open))
+	dh.add_child(_work_toggle)
+	var sd := ScrollContainer.new()
+	sd.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	sd.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	d.add_child(sd)
+	_work = VBoxContainer.new()
+	_work.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_work.add_theme_constant_override("separation", 8)
+	sd.add_child(_work)
+	set_work_open(get_viewport().get_visible_rect().size.x >= 1500.0)
 
 
 func subtitle() -> String:
-	return "Ton build : tout se gagne aux cartes, rien ne se retire"
+	return "Tout se gagne aux cartes"
+
+
+## Colonne « Qui fait le travail » dépliée (250 px) ou repliée (le bouton seul).
+func set_work_open(on: bool) -> void:
+	work_open = on
+	_work_toggle.text = "◂" if on else "▸"
+	_work_toggle.tooltip_text = "Replier la colonne" if on else "Qui fait le travail : les dégâts de chaque source"
+	_work.get_parent().visible = on
+	for c in _work_toggle.get_parent().get_children():
+		if c != _work_toggle:
+			(c as Control).visible = on
+	_work_col.custom_minimum_size.x = 250.0 if on else 0.0
+	if on:
+		_refresh_work()
 
 
 func _process(_delta: float) -> void:
@@ -104,6 +148,7 @@ func refresh() -> void:
 	_refresh_spells()
 	_refresh_passives()
 	_refresh_sets()
+	_refresh_work()
 
 
 # --- équipement --------------------------------------------------------------------------------------------------------
@@ -259,10 +304,15 @@ func _refresh_passives() -> void:
 		t.add_theme_font_override("font", UiTheme.bold_font())
 		var e := Hud._label(v, SurvivorCardView.fr(SurvivorCardView.effect_text(String(id), pw)), UiTheme.MIN_TEXT, UiTheme.TEXT)
 		e.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var evo := SurvivorCards.evolutions_open()
-	for id in evo:
-		var l := Hud._label(_passives, "★ Évolution possible : %s" % String(Boons.get_def(String(id)).get("name", id)), UiTheme.MIN_TEXT, Color(1.0, 0.7, 0.3))
+	# évolutions (lot SVX-2), en tête de colonne : prêtes (elles viennent aux prochains choix) ou ce qu'il manque
+	var at := 0
+	for ev in SurvivorCardView.evo_paths():
+		var miss: Array = ev.missing
+		var txt := ("◆ Évolution prête : %s (prochains choix)" % String(ev.name)) if miss.is_empty() else ("◆ %s : il manque %s" % [String(ev.name), ", ".join(PackedStringArray(miss))])
+		var l := Hud._label(_passives, txt, UiTheme.MIN_TEXT, UiTheme.color("bonbon.soleil.clair") if miss.is_empty() else UiTheme.color("bonbon.amethyste.clair"))
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_passives.move_child(l, at)
+		at += 1
 
 
 ## Sets portés : nom, pièces sur 5, les paliers 2 / 3 / 5 (actifs en vert).
@@ -292,7 +342,63 @@ func _refresh_sets() -> void:
 				UiTheme.MIN_TEXT, Items.SET_COLOR if on else UiTheme.MUTED)
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if not any:
-		Hud._label(_sets, "Aucun : 2 pièces d'un même set donnent un bonus", UiTheme.MIN_TEXT, UiTheme.MUTED)
+		Hud._label(_sets, "Aucune : 2 pièces d'une même panoplie donnent un bonus", UiTheme.MIN_TEXT, UiTheme.MUTED)
+
+
+# --- qui fait le travail -------------------------------------------------------------------------------------------------
+## Dégâts par seconde de chaque source sur les 30 dernières secondes : icône, nom, barre, nombre, genre (part au survol).
+func _refresh_work() -> void:
+	if _work == null or not work_open:
+		return
+	for ch in _work.get_children():
+		ch.queue_free()
+	var rows := SurvivorLog.rows(SurvivorLog.WINDOW)
+	var whole := rows.is_empty()
+	if whole:
+		rows = SurvivorLog.rows()  # (rien depuis 30 s : la partie entière)
+	if rows.is_empty():
+		var e := Hud._label(_work, "Rien encore : frappe d'abord !", UiTheme.MIN_TEXT, UiTheme.MUTED)
+		e.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		return
+	var top := float(rows[0].dmg)
+	for r in rows.slice(0, 8):
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		h.mouse_filter = Control.MOUSE_FILTER_PASS
+		h.tooltip_text = "%s (%s)\n%d %% des dégâts%s" % [String(r.name), String(r.kind), roundi(float(r.share) * 100.0),
+			"" if whole else " · %s par seconde" % Items.fmt_num(roundi(float(r.dps)))]
+		_work.add_child(h)
+		var ic := TextureRect.new()
+		ic.texture = UiTheme.texture(String(r.icon)) if String(r.icon) != "" else null
+		ic.custom_minimum_size = Vector2(30, 30)
+		ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.add_child(ic)
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 1)
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.add_child(v)
+		var top_row := HBoxContainer.new()
+		top_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(top_row)
+		var n := Hud._label(top_row, String(r.name), 15, UiTheme.TEXT)
+		n.add_theme_font_override("font", UiTheme.bold_font())
+		n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		n.clip_text = true
+		n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		n.custom_minimum_size = Vector2(60, 0)
+		var val := Hud._label(top_row, Items.fmt_num(roundi(float(r.dmg) if whole else float(r.dps))), 15, UiTheme.GOLD)
+		val.add_theme_font_override("font", UiTheme.number_font())
+		var bar := SurvivorCardView.Bar.new()
+		bar.ratio = float(r.dmg) / maxf(top, 1.0)
+		bar.color = UiTheme.color("bonbon.amethyste.base") if String(r.kind) == "évolution" else (UiTheme.color("bonbon.mandarine.base") if String(r.kind) == "arme" else UiTheme.color("bonbon.lagon.base"))
+		v.add_child(bar)
+		var k := Hud._label(v, String(r.kind), UiTheme.MIN_TEXT - 1, UiTheme.MUTED)
+		k.clip_text = true
+	var cap := Hud._label(_work, "dégâts de la partie" if whole else "par seconde, %d dernières secondes" % SurvivorLog.WINDOW, UiTheme.MIN_TEXT - 1, UiTheme.MUTED)
+	cap.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 
 ## Case d'un emplacement : icône, couleur de rareté, +N, cadenas, losanges des paliers (+6, +8, +10) ; vide : « Libre ».

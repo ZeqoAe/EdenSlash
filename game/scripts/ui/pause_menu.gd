@@ -27,11 +27,11 @@ func setup(p: Player) -> void:
 	_screen.pause_game = true
 	add_child(_screen)
 	if Survivor.active:
-		# Survivant (lot S5) : la page Build d'abord (tout le build, rien ne se retire) ; pas d'inventaire ni de coffre
+		# Survivant (lot S5) : la page Équipement d'abord (toute la partie, rien ne se retire) ; pas d'inventaire ni de coffre
 		build = SurvivorBuildPage.new()
 		build.player = player
 		build.resume_requested.connect(close)
-		_screen.add_page("Build", build)
+		_screen.add_page("Équipement", build)  # (lot SVX-2 : plus de « Build » côté joueur)
 	_run = RunPage.new()
 	_run.player = player
 	_screen.add_page("Partie", _run)  # (lot BR-I2 : pas de « run » au Battle royale)

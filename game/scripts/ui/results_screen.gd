@@ -10,6 +10,8 @@ const TITLES := {"victoire": "VICTOIRE !", "defaite": "DÉFAITE", "abandon": "PA
 func show_results() -> void:
 	Tutorial.event("results")
 	show_spec(spec())
+	if Run.survivor:
+		SurvivorBilan.decorate(self)  # bilan v2 du Survivant (lot SVX-2) : dégâts par source, équipement final, moments
 
 
 ## Description du bilan (voir ResultsPanel) d'après l'état de Run et du profil.
@@ -39,41 +41,44 @@ func spec() -> Dictionary:
 	}
 
 
-## Bilan d'un Survivant (lot S6) : l'avancée (niveau, durée, gardiens, boss), le titre gagné, les coffres d'apparence (les
-## seules récompenses du mode : jamais d'insignes, de maîtrise ni de découverte) et le build final. Rien n'est perdu.
+## Bilan d'un Survivant (lot S6 ; v2 lot SVX-2, maquette v2_bilan.svg) : « Classe · Survivant · palier · zone · durée »,
+## quatre tuiles (niveau, monstres, gardiens, boss), le titre gagné, les coffres d'apparence (les seules récompenses du mode :
+## jamais d'insignes, de maîtrise ni de découverte), « Ce qui t'a battu » après une chute ; les blocs du Survivant
+## (dégâts par source, équipement final, courbe, moments) sont posés par SurvivorBilan. Rien n'est perdu.
+## « gear » : l'équipement final en lignes (lu par les tests et les outils ; le bilan le montre en cases).
 func survivor_spec() -> Dictionary:
 	var last := SurvivorRewards.last
 	var zone := String(GameData.zone(Survivor.zone_id).get("name", Survivor.zone_id))
 	var tier := int(last.get("tier", Survivor.palier))
-	var sub := "%s · Survivant · %s" % [HeroLook.who(Run.class_id), zone]
-	if tier > 1:
-		sub += " · palier %s" % Survivor.numeral(tier)
+	var sub := "%s · Survivant · palier %s · %s · %s" % [HeroLook.who(Run.class_id), Survivor.numeral(tier), zone, SurvivorDirector.clock(float(last.get("time", 0.0)))]
 	var won := Run.result == "victoire"
 	var boss := "vaincu" if won else ("atteint" if bool(last.get("boss", false)) else "—")
 	var kept := survivor_chest_rows(last)
 	var note := ""
 	if kept.is_empty():
 		note = "Tiens 10 minutes pour gagner un coffre d'apparence." if SurvivorRewards.reached(Run.result).is_empty() else "Récompenses du jour déjà prises."
-	return {
+	var spec := {
 		"title": TITLES.get(Run.result, "FIN"),
 		"tone": "win" if won else "lose",
 		"subtitle": sub,
 		"notes": survivor_notes(last),
-		"tiles": [[str(Run.max_level), "niveau atteint"], [SurvivorDirector.clock(float(last.get("time", 0.0))), "durée"],
-			[str(Run.kills), "monstres"], [str(Run.elites), "élites"],
+		"tiles": [[str(Run.max_level), "niveau"], [number(Run.kills), "monstres", "%d élites" % Run.elites],
 			["%d / %d" % [mini(int(last.get("guardians", 0)), int(last.get("guardians_total", SurvivorRewards.GUARDIANS))),
 				int(last.get("guardians_total", SurvivorRewards.GUARDIANS))], "gardiens"],
 			[boss, "boss", "Le boss t'attend à %s." % SurvivorDirector.clock(Survivor.RUN_TIME)]],
 		"kept": kept,
-		"build": survivor_build_rows(last.get("build", {})),
+		"gear": survivor_build_rows(last.get("build", {})),
 		"quest": Quests.report_line(),
 		"footnote": note,
 		"buttons": [
 			{"text": "Rejouer", "primary": true, "call": _replay},
 			{"text": "Changer de classe", "call": _change_class},
-			{"text": "Retour au menu", "call": _finish},
+			{"text": "Menu principal", "call": _finish},
 		],
 	}
+	if Run.result == "defaite" and HitLog.died():
+		spec["defeat"] = HitLog.report()  # « Ce qui t'a battu » (lot DNG-1), aussi en Survivant
+	return spec
 
 
 ## Annonces dorées du bilan d'un Survivant : titre nouveau, palier de difficulté ouvert par la victoire (lot S8).
@@ -97,7 +102,7 @@ static func survivor_chest_rows(last: Dictionary) -> Array:
 	return out
 
 
-## Le build final : arme, pièces, panoplie, passifs et sorts (détail au survol).
+## L'équipement final : arme, pièces, panoplie, passifs et sorts (détail au survol).
 static func survivor_build_rows(b: Dictionary) -> Array:
 	var out: Array = []
 	if b.is_empty():

@@ -1,7 +1,8 @@
 extends Node
 ## Lot S5 du Survivant (interface en run) : rendu de toutes les cartes sur 200 états de run tirés au hasard (aucune
 ## carte vide, aucune carte qui déborde de son cadre à 1280 × 720, en-tête court, jamais « Eden », virgule décimale),
-## fiches de découverte à la 1re rencontre (une fois), manette (cadre sur la 1re carte, croix, LB relance, RB passe),
+## fiches de découverte à la 1re rencontre (une fois), manette (cadre sur la 1re carte, croix, X relance, B passe : choix v2
+## SurvivorPicker du lot SVX-2),
 ## page Build de la pause (emplacements verrouillés : un clic ne retire rien), HUD (frise, niveau des sorts) :
 ## godot --headless --path game res://tests/test_sv5.tscn   (SV5_STATES=N : nombre d'états, 200 par défaut)
 
@@ -51,7 +52,7 @@ func _settle() -> void:
 # --- fiches de découverte et manette ------------------------------------------------------------------------------
 func _tips_and_pad() -> void:
 	Survivor.start("warrior", "limestone")
-	var picker := CardPicker.new()
+	var picker := SurvivorPicker.new()  # (choix de carte v2 du Survivant, lot SVX-2)
 	add_child(picker)
 	picker.offer("Choisis ton arme ou ta première compétence", SurvivorCards.first_offer(), func(): return SurvivorCards.first_offer())
 	await _settle()
@@ -71,7 +72,7 @@ func _tips_and_pad() -> void:
 	check("une fiche vue ne revient pas", picker.tip_id == "" and not picker._tip.visible)
 	picker._queue.clear()
 	picker._show_next()
-	# manette : cadre sur la 1re carte, croix droite, LB relance, RB passe
+	# manette : cadre sur la 1re carte, croix droite, X relance, B passe (lot SVX-2 ; LB garde, Y bannit : test_svx2)
 	Gamepad._set_active(true)
 	Run.apply_card(SurvivorCards.new_piece_card("head"))
 	Run.apply_card(SurvivorCards.spell_card(int(Run.class_data().skills[0].id)))
@@ -79,16 +80,16 @@ func _tips_and_pad() -> void:
 	await _settle()
 	await _settle()
 	check("manette : cadre doré sur la 1re carte", UiNav.cursor == picker._buttons[0])
-	check("manette : LB / RB écrits sur Relancer / Passer", picker._reroll.text.begins_with(Settings.pad_name(JOY_BUTTON_LEFT_SHOULDER)) and picker._skip.text.begins_with(Settings.pad_name(JOY_BUTTON_RIGHT_SHOULDER)))
+	check("manette : X / B dessinés sur Relancer / Passer", picker._key_label("reroll") == Settings.pad_name(JOY_BUTTON_X) and picker._key_label("skip") == Settings.pad_name(JOY_BUTTON_B))
 	await _tap(JOY_BUTTON_DPAD_RIGHT)
 	check("manette : croix droite -> 2e carte", UiNav.cursor == picker._buttons[1])
 	var used := Run.rerolls_used
-	await _tap(JOY_BUTTON_LEFT_SHOULDER)
-	check("manette : LB relance (relances %d -> %d)" % [used, Run.rerolls_used], Run.rerolls_used == used + 1 and picker.is_open())
+	await _tap(JOY_BUTTON_X)
+	check("manette : X relance (relances %d -> %d)" % [used, Run.rerolls_used], Run.rerolls_used == used + 1 and picker.is_open())
 	picker._opened_at -= CardPicker.CONFIRM_DELAY_MS
 	var g0 := Profile.gold
-	await _tap(JOY_BUTTON_RIGHT_SHOULDER)
-	check("manette : RB passe (or %d -> %d)" % [g0, Profile.gold], not picker.is_open() and Profile.gold > g0)
+	await _tap(JOY_BUTTON_B)
+	check("manette : B passe (or %d -> %d)" % [g0, Profile.gold], not picker.is_open() and Profile.gold > g0)
 	Gamepad._set_active(false)
 	picker.queue_free()
 	Run.finish("abandon")
@@ -116,7 +117,7 @@ func _render_states() -> void:
 	var n := int(OS.get_environment("SV5_STATES")) if OS.get_environment("SV5_STATES") != "" else 200
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5
-	var picker := CardPicker.new()
+	var picker := SurvivorPicker.new()
 	add_child(picker)
 	var cards_seen := 0
 	var empty: Array = []
@@ -157,7 +158,7 @@ func _render_states() -> void:
 			cards_seen += 1
 			types[String(c.type)] = int(types.get(String(c.type), 0)) + 1
 			var content: Control = b.get_meta("content")
-			var need := content.get_combined_minimum_size().y + 36.0 + CardPicker.FOOT_H - 18.0
+			var need := picker.needed_height(k)  # (carte v2 : bandeau, contenu, pied)
 			if content.get_child_count() < 3:
 				empty.append(String(c.type))
 			if need > cap + 0.5:

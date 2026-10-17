@@ -210,6 +210,34 @@ func _ready() -> void:
 	var trophy_card := _strip(Items.describe({"name": "Test", "slot": "trophy", "rarity": 3, "level": 10, "passive": Trophies.passive_for({"trophy": "agi", "level": 10}, 3)}, true))
 	check("passif d'un trophée de la run : garde son nom français", trophy_card.contains("✶ Passif — "))
 
+	# 5c. Survivant (lot SVX-2) : les mots du joueur (BIBLE § 12) : ni « run », ni « build », ni « set », ni « lobby »
+	var sv_texts: Array = [SurvivorGear.LOCK_TEXT]
+	for t in ["sv_piece", "sv_weapon", "sv_piece_up", "skill", "sv_evolution"]:
+		var fake := {"type": t, "item": {"set": "x"}, "offer": {"passives": [{"id": "ember"}]}}
+		sv_texts.append(SurvivorCards.ban_tip(fake))
+		sv_texts.append(SurvivorCards.ban_label(fake))
+	for t in SurvivorCards.FALLBACK:
+		var fc := SurvivorCards.fallback_card(String(t))
+		sv_texts.append(String(fc.title) + " " + String(fc.desc))
+	for p in Survivor.PALIERS:
+		sv_texts.append(String(p.name) + " " + String(p.rule) + " " + String(p.tip))
+	for id in ["sv_first", "sv_locked", "sv_tier"]:
+		sv_texts.append(String(Tutorial.card_spec(id).get("short", "")))
+	for k in ["weapon", "dot", "other", "set:x"]:
+		sv_texts.append(String(SurvivorLog.source(k).name))
+	var bp := SurvivorBuildPage.new()
+	sv_texts.append(bp.subtitle())
+	bp.free()
+	var sv_bad: Array = []
+	for t in sv_texts:
+		var low := String(t).to_lower()
+		for ch in ["'", "’", "(", ")", ":", ",", ".", "!", "?", ";", "«", "»", "·", "/", "\n", "-"]:
+			low = low.replace(ch, " ")
+		for w in low.split(" ", false):
+			if w in ["run", "runs", "build", "builds", "set", "sets", "lobby", "jce"]:
+				sv_bad.append("%s (« %s »)" % [w, String(t).left(60)])
+	check("Survivant : aucun « run / build / set / lobby » côté joueur %s" % str(sv_bad.slice(0, 4)), sv_bad.is_empty())
+
 	# 5e. Battle royale, lot BR-I3 : annonces, onomatopées, fiches, intentions, sons, aide du largage
 	var br_src := FileAccess.get_file_as_string("res://scripts/core/royale_director.gd") + FileAccess.get_file_as_string("res://scripts/ui/royale_hud.gd")
 	var br_rx := RegEx.create_from_string("(?:message\\.emit|push|feed|word)\\(\"([^\"]+)\"")

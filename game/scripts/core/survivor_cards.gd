@@ -440,7 +440,7 @@ static func _piece_tail(item: Dictionary) -> PackedStringArray:
 	var sid := String(item.get("set", ""))
 	if sid != "" and sid in SurvivorPool.sets():
 		var n := int(Items.set_counts(Profile.equipped).get(sid, 0))
-		out.append("[color=#66f28c]Set %s · %d / 5[/color]" % [SurvivorPool.panoply_name(sid), n + 1])
+		out.append("[color=#66f28c]Panoplie %s · %d / 5[/color]" % [SurvivorPool.panoply_name(sid), n + 1])
 	for p in item.get("sv_passives", []):
 		out.append("[color=#ffd36b]Passif : %s[/color]" % Cards.effect_line(String(p.id), float(p.get("power", 1.0))))
 	var jet := ("[color=#ffd36b]★ Jet parfait[/color]" if SurvivorGear.is_perfect(item) else "Jet %d / %d" % [
@@ -542,7 +542,7 @@ static func fallback_card(t: String) -> Dictionary:
 			return {"type": t, "id": t, "sv_key": "fb:" + t, "title": "Soin", "subtitle": "Repli",
 				"desc": "Rend un tiers de tes PV.", "icon": "res://assets/ui/status/regen.png"}
 	return {"type": "sv_reroll", "id": "sv_reroll", "sv_key": "fb:sv_reroll", "title": "Bonne fortune", "subtitle": "Repli",
-		"desc": "+1 relance pour la run.", "icon": "res://assets/ui/status/flow.png"}
+		"desc": "+1 relance pour la partie.", "icon": "res://assets/ui/status/flow.png"}
 
 
 # --- premier choix -----------------------------------------------------------------------------------------------------------
@@ -762,7 +762,7 @@ static func can_ban(card: Dictionary) -> bool:
 static func ban_label(card: Dictionary) -> String:
 	match String(card.get("type", "")):
 		"sv_piece":
-			return "Bannir le set" if String(card.item.get("set", "")) != "" else "Bannir"
+			return "Bannir la panoplie" if String(card.item.get("set", "")) != "" else "Bannir"
 		"sv_piece_up", "sv_weapon_up":
 			return "Bannir ce passif"
 	return "Bannir"
@@ -772,13 +772,13 @@ static func ban_label(card: Dictionary) -> String:
 static func ban_tip(card: Dictionary) -> String:
 	match String(card.get("type", "")):
 		"sv_piece":
-			return "Les pièces de ce set ne seront plus proposées pendant la run." if String(card.item.get("set", "")) != "" \
-				else "Cette pièce ne sera plus proposée pendant la run."
+			return "Les pièces de cette panoplie ne seront plus proposées de la partie." if String(card.item.get("set", "")) != "" \
+				else "Cette pièce ne sera plus proposée de la partie."
 		"sv_weapon":
-			return "Ce type d'arme ne sera plus proposé pendant la run."
+			return "Ce type d'arme ne sera plus proposé de la partie."
 		"sv_piece_up", "sv_weapon_up":
-			return "Ce passif ne sera plus proposé pendant la run ; l'amélioration en tire un autre."
-	return "Cette carte ne sera plus proposée pendant la run ; une autre la remplace."
+			return "Ce passif ne sera plus proposé de la partie ; l'amélioration en tire un autre."
+	return "Cette carte ne sera plus proposée de la partie ; une autre la remplace."
 
 
 ## Bannit [param card] ; renvoie la carte de remplacement ({} : aucune).

@@ -173,8 +173,6 @@ func _build() -> void:
 	_left.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_left)
 	_build_objectives(root)
-	if Survivor.active:
-		_sv_hud = SurvivorHud.attach(_obj_panel, director)  # Survivant : frise des 20 minutes, rage du boss (lot S5)
 	MenaceBadge.attach(_left, director)  # « Menace ×1,2 · Pacte » sous les objectifs (passe P12)
 	QuestBadge.attach(_left, self)  # la quête en cours, discrète (passe M5)
 	_build_tutorial(root)
@@ -284,6 +282,8 @@ func _build() -> void:
 	get_viewport().size_changed.connect(_apply_hud_prefs)
 	if Royale.active:
 		_royale = RoyaleHud.attach(self, root)
+	elif Survivor.active:
+		_sv_hud = SurvivorHud.attach(self, root, director)  # Survivant : HUD v2 (lot SVX-2 : XP pleine largeur, chrono et frise, collection, vie)
 	elif Duel.active:
 		HitArc.attach(root, player)  # arc de coup reçu en Duel et en Arènes aussi (lot BR-I1)
 
@@ -754,6 +754,8 @@ func _refresh_skills() -> void:
 		slot.icon = null if s.is_empty() else UiTheme.texture(String(s.icon))
 		slot.rank = Run.skill_rank(int(s.id)) if not s.is_empty() else 1
 		slot.level_badge = slot.rank if Survivor.active and not s.is_empty() else 0  # Survivant : niveau 1 à 10 en chiffre
+		slot.chain_slots = Run.MAX_CHAIN if Survivor.active and not s.is_empty() else 0  # Survivant : grille 4 × 3 (lot SVX-2)
+		slot.key_sticker = Survivor.active
 		slot.chain_icons = Run.chain_of(i).map(func(e): return UiTheme.texture(String(Run.skill_def(int(e.id)).get("icon", ""))))
 		if s.is_empty():
 			slot.tooltip_text = "Emplacement libre"
@@ -1080,7 +1082,7 @@ func _update_drop_hint() -> void:
 ## à zéro ; le record de la run et le record absolu en dessous.
 func _update_damage_counter(delta: float) -> void:
 	var now := Run.combo_now()
-	if Duel.active or Royale.active or now <= 0.0:  # en duel il n'a pas de sens (les coups sont plafonnés) ; Battle royale : le fil des éliminations
+	if Duel.active or Royale.active or Survivor.active or now <= 0.0:  # (Survivant, lot SVX-2 : bruit face à une horde) ; en duel il n'a pas de sens (les coups sont plafonnés) ; Battle royale : le fil des éliminations
 		_dmg_box.modulate.a = move_toward(_dmg_box.modulate.a, 0.0, delta * 2.0)
 		_dmg_shown = 0.0
 		return

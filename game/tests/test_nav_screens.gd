@@ -356,9 +356,9 @@ func _ready() -> void:
 	sv_page.set_anchors_preset(Control.PRESET_FULL_RECT)
 	sv_layer.add_child(sv_page)
 	sv_page.refresh()
-	await probe("Survivant : page Build", 0.9)
+	await probe("Survivant : page Équipement", 0.9)
 	sv_layer.queue_free()
-	var sv_pick := CardPicker.new()
+	var sv_pick := SurvivorPicker.new()  # (choix de carte v2 : cartes, panneau, barre Relancer / Bannir / Garder / Passer, lot SVX-2)
 	world.add_child(sv_pick)
 	sv_pick.offer("Choisis ton arme ou ta première compétence", SurvivorCards.first_offer(), func(): return SurvivorCards.first_offer())
 	await get_tree().create_timer(0.5, true).timeout
@@ -389,7 +389,7 @@ func _ready() -> void:
 	await probe("bilan de Survie", 0.9)
 	r.queue_free()
 	get_tree().paused = false
-	# lot S6 : le bilan du Survivant (Rejouer, Changer de classe, Retour au lobby)
+	# lot S6 : le bilan du Survivant (Rejouer, Changer de classe, Menu principal ; blocs v2 du lot SVX-2)
 	Run.survivor = true
 	SurvivorRewards.last = {"res": "victoire", "tier": 1, "time": 1260.0, "guardians": 3, "boss": true, "kills": 800, "title": "Survivant", "new_title": true,
 		"chests": [{"id": "win", "type": "look_epic", "text": "Vaincre le boss", "kind": "first"}], "build": SurvivorRewards.build()}

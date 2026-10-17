@@ -238,7 +238,7 @@ static func item_locked(item: Dictionary) -> bool:
 
 
 ## Texte du verrou (infobulle, bouton).
-const LOCK_TEXT := "Gardée toute la run"
+const LOCK_TEXT := "Gardée toute la partie"
 
 
 ## Porte [param item] pour toute la run (emplacement verrouillé) ; faux si l'emplacement est déjà pris. Ses passifs

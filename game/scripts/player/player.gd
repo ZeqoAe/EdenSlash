@@ -1594,6 +1594,8 @@ func _hit_monster(m: Combatant, dir: Vector3, action: Dictionary, is_skill: bool
 	var is_crit := randf() < (mcrit if magic else crit) + float(action.get("crit_bonus", 0.0))
 	var hit_atk := (basic_matk if magic else basic_atk) if action.get("basic", false) else (matk if magic else atk)  # compétences : arme principale
 	var dmg := hit_atk * mult * randf_range(0.92, 1.08) * damage_dealt_mult() * (1.0 + crit_dmg if is_crit else 1.0) * flow_mult() * dmg_mult
+	var prev_tag := SurvivorLog.tag  # dégâts par source du Survivant (lot SVX-2) : ce sort ou l'arme
+	SurvivorLog.tag = ("skill:%d" % int(action.skill_id)) if action.has("skill_id") else ("weapon" if action.get("basic", false) else prev_tag)
 	if mon and (mon.is_elite or mon.is_boss):
 		dmg *= elite_mult
 	elif execute > 0.0 and m.hp - dmg <= m.max_hp * execute:
@@ -1608,6 +1610,7 @@ func _hit_monster(m: Combatant, dir: Vector3, action: Dictionary, is_skill: bool
 		if not foe:
 			Profile.record_max("best_hit", round(dmg * m.damage_taken_mult() * 100.0 / (100.0 + maxf(m.defense, 0.0))))
 		m.take_damage(dmg, self, is_crit)
+	SurvivorLog.tag = prev_tag
 	# effet d'impact d'Eden (limité à quelques cibles par coup pour la lisibilité)
 	var fx_hits := int(action.get("fx_count", 0))
 	if fx_hits < 3:

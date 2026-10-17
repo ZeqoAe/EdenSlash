@@ -132,6 +132,12 @@ Lancement direct : `world.tscn -- --survivor`. Tests `test_sv1` à `test_sv8` ; 
 changer un réglage demande de refaire les mesures (`tools/sim_survivor.py`).
 S9 (`R_S9.md`) : 12 sorts au plus (`Survivor.SPELL_MAX` = la grille 4 × 3, poids des améliorations borné par `spell_up_norm`) ;
 orbes : sol plein = la nouvelle reprend l'orbe la plus loin (`XpOrbs.spawn`) ; collecte réelle mesurée par `--extra=--human-magnet`, `test_sv9`.
+SVX-2 (`R_SVX2.md`) : interface v2. HUD `ui/survivor_hud.gd` (XP pleine largeur, chrono et frise au centre, collection de la partie,
+vie en jauge, grille 4 × 3 et touches dessinées, `SurvivorMoments` : « Niveau ! », évolution, boss) ; choix de carte `ui/survivor_picker.gd`
+(`SurvivorPicker extends CardPicker`, créé par `World` en Survivant : cartes papier `SurvivorCardView.build_v2`, Maj = carte complète,
+panneau « Ton équipement » avec `hero_preview`, barre Relancer / Bannir / Garder / Passer en mode visée) ; dégâts par source
+`core/survivor_log.gd` (`SurvivorLog.tag` posé par `Player._hit_monster` et `Procs.run`) ; pause « Équipement » (« Qui fait le travail ») ;
+bilan `ui/survivor_bilan.gd`. Plus de « run / build / set » côté joueur. Tests `test_svx2`, captures `shot_svx2`.
 
 ### Boss et bibliothèque
 `core/boss_library.gd` + `data/bosses.json` (48 boss, 6 par zone), mécaniques = briques `ai/boss_bricks.gd` (29, 10 familles)

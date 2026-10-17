@@ -142,6 +142,10 @@ class SkillSlot extends Control:
 	var chain_zone := Vector2(0.55, 0.9)
 	var queued_main := false  # un appui gardé attend le coup affiché sur la case
 	var queued_icons := 0  # appuis gardés pour les icônes d'enchaînement qui suivent
+	## Survivant (lot SVX-2) : cases d'enchaînement toujours dessinées (vides : trame), la grille 4 × 3 se lit d'un coup.
+	var chain_slots := 0
+	## Survivant (lot SVX-2) : la touche en pastille autocollante (papier, contour d'encre, lettre à l'encre).
+	var key_sticker := false
 	var left := 0.0
 	var fraction := 0.0
 	var _flash := 0.0
@@ -216,6 +220,14 @@ class SkillSlot extends Control:
 			draw_line(Vector2(cx, br.position.y - 2.0), Vector2(cx, br.end.y + 2.0), Color.WHITE, 2.0)
 			draw_rect(br.grow(1.5), UiTheme.GOLD_DIM, false, 1.0)
 		var icons_y := -42.0 if chain_bar >= 0.0 else -24.0
+		for i in range(chain_icons.size(), chain_slots):
+			# Survivant : place d'enchaînement libre, tramée (jamais « — »)
+			var er := Rect2(4.0 + i * 24.0, icons_y, 21.0, 21.0)
+			draw_rect(er.grow(1.0), Color(UiTheme.color("encre.500"), 0.85))
+			for dy in [6.0, 13.0]:
+				for dx in [6.0, 13.0]:
+					draw_circle(er.position + Vector2(dx + (3.0 if dy > 10.0 else 0.0), dy), 1.2, Color(1, 1, 1, 0.22))
+			draw_rect(er.grow(1.0), Color(UiTheme.color("encre.100"), 0.35), false, 1.5)
 		for i in chain_icons.size():
 			var cr := Rect2(4.0 + i * 24.0, icons_y, 21.0, 21.0)
 			draw_rect(cr.grow(1.0), Color(0.05, 0.04, 0.09, 0.95))
@@ -252,8 +264,23 @@ class SkillSlot extends Control:
 			var font := UiTheme.bold_font()
 			var w := maxf(24.0, font.get_string_size(key_text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTheme.MIN_TEXT).x + 10.0)
 			var badge := Rect2(c.x - w * 0.5, size.y - 11.0, w, 22.0)
-			draw_style_box(_badge, badge)
-			HudWidgets.text_center(self, key_text, badge.get_center(), font, UiTheme.MIN_TEXT, UiTheme.GOLD, 0)
+			if key_sticker:
+				# touche dessinée (lot SVX-2) : pastille papier, contour d'encre, ombre dure, lettre à l'encre
+				var ink := UiTheme.color("encre.700")
+				var pill := StyleBoxFlat.new()
+				pill.bg_color = UiTheme.color("papier.100")
+				pill.border_color = ink
+				pill.set_border_width_all(2)
+				pill.set_corner_radius_all(11)
+				pill.shadow_color = ink
+				pill.shadow_size = 1
+				pill.shadow_offset = Vector2(0, 2)
+				pill.anti_aliasing = true
+				draw_style_box(pill, badge)
+				HudWidgets.text_center(self, key_text, badge.get_center() + Vector2(0, -0.5), font, UiTheme.MIN_TEXT, ink, 0)
+			else:
+				draw_style_box(_badge, badge)
+				HudWidgets.text_center(self, key_text, badge.get_center(), font, UiTheme.MIN_TEXT, UiTheme.GOLD, 0)
 
 
 ## Sorts d'autres cases gardés par la mémoire des touches : 2 pastilles avec l'icône et la touche,
