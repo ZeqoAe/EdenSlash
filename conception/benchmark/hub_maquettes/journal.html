@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Journal des quêtes v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.tab { display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border: 3px solid var(--encre); border-bottom: 0; border-radius: 12px 12px 0 0;
+  background: var(--papier-200); font-weight: 800; font-size: 17px; position: relative; gap: 6px; }
+.tab.on { height: 48px; background: var(--mandarine); color: #fff; -webkit-text-stroke: 3px var(--encre); paint-order: stroke fill; }
+.q { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; font-weight: 800; font-size: 16px; }
+.q.sel { background: var(--lagon-f); outline: 3px solid #fff; }
+.q .r { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.mini { width: 34px; height: 34px; border-radius: 10px; font-size: 17px; box-shadow: 0 3px 0 var(--encre); }
+.step { display: flex; flex-direction: column; align-items: center; gap: 4px; font-weight: 900; font-size: 14px; width: 96px; }
+</style></head><body>
+<div class="nav"><a href="index.html">Index</a><a href="lobby.html">Menu principal</a><a href="hud.html">HUD en partie</a><a href="journal.html">Journal des quêtes</a><a href="succes.html">Succès</a></div>
+<div class="stage menu" id="st">
+  <div style="position:absolute;left:40px;top:26px"><span class="title" style="font-size:40px">Journal</span>
+    <span class="muted" style="font-weight:800;margin-left:14px;font-size:17px">maîtrise et apparences, rien d'obligatoire</span></div>
+  <div style="position:absolute;right:40px;top:30px" class="btn small">✕ Fermer <span class="key b">B</span></div>
+  <!-- onglets -->
+  <div style="position:absolute;left:52px;top:98px" class="row"><span class="key k">LB</span>
+    <span class="tab on">Aujourd'hui <span class="dot fraise" style="position:static;transform:none;min-width:22px;height:22px;font-size:12px">2</span></span>
+    <span class="tab">Cette semaine</span><span class="tab">Classes</span><span class="tab">Série</span><span class="tab">Terminées</span><span class="key k">RB</span></div>
+
+  <!-- liste -->
+  <div class="sticker" style="left:40px;top:146px;width:760px;height:560px;padding:18px">
+    <div class="sticker" style="position:relative;left:0;top:0;box-shadow:5px 5px 0 var(--encre);padding:12px 14px;background:var(--soleil-c)">
+      <div class="row"><div class="tile soleil">🎯</div><div><div class="pop" style="font-size:20px">Défi du jour</div>
+        <div style="font-weight:700;font-size:15px">Survie, une seule vie · monstres plus résistants · or ×2</div></div>
+        <span class="chip pomme" style="margin-left:auto">✓ fait</span></div>
+    </div>
+    <div class="well" style="margin-top:18px;padding:8px">
+      <div class="q sel"><span class="check no"></span>⚔ Gagner 2 duels<div class="r"><span class="num">1 / 2</span><div class="tile amethyste mini">★</div><span class="chip soleil">📌 suivie</span></div></div>
+      <div class="q"><span class="check no"></span>🏰 Finir un donjon sans dégât de zone<div class="r"><span class="num">0 / 1</span><div class="tile lagon mini">🎁</div></div></div>
+      <div class="q"><span class="check">✓</span><span class="muted">🎁 Ouvrir 5 coffres de la carte</span><div class="r"><span class="chip pomme">gagné</span></div></div>
+    </div>
+    <div class="row" style="margin-top:18px;justify-content:space-between">
+      <div style="font-weight:800;font-size:16px">Contrat de classe · <b>Voleur</b> : Vaincre 100 monstres en Survie <span class="num">64 / 100</span></div>
+      <span class="chip lagon">maîtrise</span></div>
+    <div class="gauge lagon" style="margin-top:8px"><i style="width:64%"></i></div>
+    <div class="muted" style="margin-top:22px;font-weight:700;font-size:15px;max-width:480px">Nouvelles quêtes dans <b class="num" style="color:var(--encre)">6 h 12</b> · une relance par jour · une quête ratée revient demain, sans perte.</div>
+  </div>
+
+  <!-- détail -->
+  <div class="sticker" style="left:840px;top:146px;width:720px;height:560px;padding:22px 24px">
+    <div class="ptitle">Gagner 2 duels</div>
+    <div class="row" style="margin-top:6px"><span class="chip">Où : Jouer › Duel › Libre ou Ligue</span><span class="chip lagon">≈ 6 min</span></div>
+    <div style="margin-top:16px;font-weight:700;font-size:17px;line-height:1.45">Deux victoires en duel, à l'arme ou équipé. Les duels de la Ligue comptent aussi.</div>
+    <div class="row" style="margin-top:16px;font-weight:900"><span class="num" style="font-size:22px">1 / 2</span><div class="gauge" style="flex:1"><i style="width:50%"></i></div></div>
+    <div style="margin-top:22px;font-weight:900">Récompense</div>
+    <div class="well row" style="margin-top:8px;padding:12px;gap:14px">
+      <div class="tile amethyste">★</div><div><div style="font-weight:900">+250 maîtrise</div><div class="muted" style="font-size:14px;font-weight:700">à la classe la plus en retard : Clerc</div></div>
+    </div>
+    <div class="row" style="margin-top:26px;gap:14px">
+      <span class="btn lagon">Y aller <span class="key y">Y</span></span>
+      <span class="btn">📌 Suivie dans le HUD <span class="key x">X</span></span>
+      <span class="btn small">↻ Relancer (1)</span>
+    </div>
+  </div>
+
+  <!-- série -->
+  <div class="sticker trame" style="left:40px;top:736px;width:1520px;height:130px;padding:16px 22px">
+    <div class="ptitle" style="font-size:22px">Série · 5 jours</div>
+    <div class="row" style="justify-content:space-between;margin-top:4px">
+      <div class="step"><div class="tile pomme">✓</div>3 jours</div>
+      <div style="flex:1;margin:0 -6px" class="gauge pomme"><i style="width:50%"></i></div>
+      <div class="step"><div class="tile lagon">🎁</div>7 jours</div>
+      <div style="flex:1" class="gauge"><i style="width:0"></i></div>
+      <div class="step"><div class="tile amethyste">✨</div>14 jours</div>
+      <div style="flex:1" class="gauge"><i style="width:0"></i></div>
+      <div class="step"><div class="tile mandarine">🎁</div>30 · titre</div>
+      <div style="flex:1" class="gauge"><i style="width:0"></i></div>
+      <div class="step"><div class="tile soleil">👑</div>100 · titre</div>
+      <div style="width:260px;font-weight:700;font-size:14px;margin-left:16px" class="muted">Un jour manqué est pardonné. Au-delà, la série retombe au dernier cadeau gagné, jamais à zéro.</div>
+    </div>
+  </div>
+
+  <div class="note" style="left:1000px;top:24px;max-width:360px">Le Journal s'ouvre de partout (<b>J</b>, bouton du menu principal, « Aujourd'hui », bilan) au lieu d'être une activité dans Jouer.</div>
+  <div class="note" style="left:560px;top:520px;max-width:220px">Récompense <b>auto-créditée</b> (pas de clic « réclamer » par quête) : la ligne passe à « gagné » avec une petite fête.</div>
+  <div class="note" style="left:1300px;top:600px;max-width:250px"><b>Y aller</b> ouvre la page de l'activité avec les bons réglages (Genshin : « Naviguer », Lost Ark : « Localiser »).</div>
+</div>
+<script>function fit(){const s=document.getElementById('st');const k=Math.min(1,(window.innerWidth-8)/1600);s.style.transform='scale('+k+')';document.body.style.height=(900*k+60)+'px'}window.onresize=fit;fit();</script>
+</body></html>

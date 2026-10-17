@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HUD en partie v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.slot { width: 64px; height: 64px; border: 3px solid var(--encre); border-radius: 14px; position: relative; display: flex; align-items: center; justify-content: center;
+  font-size: 30px; background: linear-gradient(135deg, var(--lagon-c) 0 45%, var(--lagon) 45%); box-shadow: 0 4px 0 var(--encre-900); }
+.slot .k { position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%); }
+.slot .cd { position: absolute; inset: 0; border-radius: 11px; background: conic-gradient(rgba(18,12,36,.72) 0 var(--p), transparent var(--p)); }
+.slot .t { position: absolute; font-weight: 900; font-size: 22px; color: #fff; -webkit-text-stroke: 4px var(--encre); paint-order: stroke fill; }
+.slot.ready { outline: 4px solid #fff; box-shadow: 0 0 0 7px var(--soleil), 0 4px 0 var(--encre-900); }
+.slot.empty { background: repeating-linear-gradient(45deg, rgba(255,248,236,.14) 0 5px, transparent 5px 10px), var(--encre-500); }
+.buff { width: 36px; height: 36px; border: 3px solid var(--encre); border-radius: 10px; position: relative; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+.buff.good { background: var(--pomme-c); } .buff.bad { background: var(--fraise-c); }
+.buff span { position: absolute; bottom: -9px; right: -8px; font-size: 12px; font-weight: 900; background: var(--papier); border: 2px solid var(--encre); border-radius: 6px; padding: 0 3px; }
+.feed { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; padding: 4px 10px 4px 6px; border-radius: 12px; }
+.tele { position: absolute; border-radius: 50%; border: 2px solid #FFF3E0; background: radial-gradient(rgba(255,138,31,.35) 0 var(--r), rgba(255,138,31,.15) var(--r)); }
+</style></head><body>
+<div class="nav"><a href="index.html">Index</a><a href="lobby.html">Menu principal</a><a href="hud.html">HUD en partie</a><a href="journal.html">Journal des quêtes</a><a href="succes.html">Succès</a></div>
+<div class="stage run" id="st">
+  <!-- scène -->
+  <div class="tele" style="left:880px;top:300px;width:220px;height:220px;--r:58%"></div>
+  <div style="position:absolute;left:960px;top:330px;font-size:90px">🍄</div>
+  <div style="position:absolute;left:740px;top:430px;font-size:80px">🧝</div>
+  <div style="position:absolute;left:836px;top:404px;font-size:44px;transform:rotate(35deg);color:var(--soleil)">➤</div>
+  <div style="position:absolute;left:700px;top:370px" class="pop out">Critique !</div>
+  <div style="position:absolute;left:1000px;top:286px;font-weight:900;font-size:26px" class="out num">1 284</div>
+
+  <!-- haut gauche : objectifs + quête suivie -->
+  <div class="hudpanel" style="left:24px;top:22px;width:370px;padding:10px 14px">
+    <div class="row" style="justify-content:space-between"><span class="pop" style="font-size:17px">Monts Calcaires</span><span class="num" style="font-size:22px">⏳ 09:42</span></div>
+    <div class="row muted" style="font-weight:700;font-size:15px;justify-content:space-between"><span>Carte 1 / 3 · Sceaux <b style="color:#fff">1 / 3</b></span><span>52 or · 0 clé</span></div>
+    <div style="border-top:2px solid var(--encre-300);margin:8px 0 6px"></div>
+    <div class="row" style="font-size:15px;font-weight:800"><span class="chip soleil" style="padding:0 6px">★</span>Vaincre 10 élites<span class="num" style="margin-left:auto">7 / 10</span></div>
+    <div class="gauge" style="height:12px;margin-top:5px;border-width:2px"><i style="width:70%"></i></div>
+    <div class="muted" style="font-size:14px;font-weight:700;margin-top:6px">Tab : tous les objectifs · la quête suivie se choisit au Journal</div>
+  </div>
+
+  <!-- haut centre : cible -->
+  <div class="hudpanel" style="left:560px;top:22px;width:480px;padding:8px 14px">
+    <div class="row" style="justify-content:space-between;font-weight:900;font-size:16px"><span>Grand champignon rocheux <span class="chip mandarine" style="font-size:12px">élite</span></span><span class="num">niv. 4</span></div>
+    <div class="gauge fraise" style="height:20px;margin-top:5px"><i style="width:58%;box-shadow:40px 0 0 0 rgba(255,248,236,.6)"></i></div>
+    <div class="row" style="margin-top:6px;gap:6px"><div class="buff bad" style="width:28px;height:28px;font-size:14px">🔥<span>3</span></div><span class="muted" style="font-size:14px;font-weight:700">Brûlure · bientôt : <b style="color:#fff">Onde de choc</b></span></div>
+  </div>
+
+  <!-- haut droite : mini-carte -->
+  <div style="position:absolute;right:28px;top:20px;width:210px;height:210px;border-radius:50%;border:4px solid var(--encre);box-shadow:5px 5px 0 var(--encre-900);
+    background:radial-gradient(circle at 50% 50%,#C3D98A 0 40%,#A5BC6A 41% 100%)">
+    <div style="position:absolute;left:96px;top:96px;font-size:20px">▲</div>
+    <div style="position:absolute;left:150px;top:60px" class="chip soleil">⚑</div>
+    <div style="position:absolute;left:40px;top:130px" class="chip fraise">☠</div>
+    <div style="position:absolute;left:92px;top:-14px" class="chip">N</div>
+  </div>
+  <div style="position:absolute;right:30px;top:238px" class="row legend"><span class="key k">M</span>carte <span class="key k">+</span><span class="key k">−</span>zoom</div>
+
+  <!-- notification unique (pile, une à la fois) -->
+  <div class="sticker" style="left:24px;top:260px;width:370px;padding:10px 14px;background:var(--pomme-c)">
+    <div class="row"><span class="check">✓</span><div><div style="font-weight:900">Quête accomplie</div><div style="font-size:15px;font-weight:700">Ouvrir 5 coffres de la carte · maîtrise du Voleur</div></div></div>
+  </div>
+
+  <!-- fil de butin (droite) -->
+  <div style="position:absolute;right:24px;top:300px;width:360px;display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+    <div class="feed" style="background:rgba(46,36,80,.85);color:#fff;border:3px solid var(--encre)"><div class="tile amethyste" style="width:36px;height:36px;font-size:18px;border-radius:10px">👢</div>
+      Bottes du vent <span class="chip pomme">▲ meilleures</span><span class="key k">G</span></div>
+    <div class="feed" style="background:rgba(46,36,80,.70);color:#fff"><div class="tile lagon" style="width:30px;height:30px;font-size:15px;border-radius:9px">💎</div>+3 cristaux</div>
+    <div class="feed" style="background:rgba(46,36,80,.55);color:#fff"><div class="tile soleil" style="width:30px;height:30px;font-size:15px;border-radius:9px">🪙</div>+40 or</div>
+  </div>
+
+  <!-- bas : buffs, vie, sorts, niveau -->
+  <div style="position:absolute;left:470px;top:676px" class="row"><div class="buff good">🛡<span>12</span></div><div class="buff good">⚡<span>4</span></div></div>
+  <div style="position:absolute;left:1036px;top:676px" class="row"><div class="buff bad">🐌<span>2</span></div></div>
+  <div style="position:absolute;left:470px;top:726px;width:660px">
+    <div class="row"><span class="pop out" style="font-size:20px">Vie</span><div class="gauge fraise" style="flex:1;height:26px"><i style="width:82%"></i></div><span class="num out" style="font-size:24px">1 010 / 1 232</span></div>
+    <div class="row" style="margin-top:12px;gap:12px;justify-content:center">
+      <div class="slot" style="background:linear-gradient(135deg,var(--fraise-c) 0 45%,var(--fraise) 45%)">🧪<span class="key k k" style="position:absolute;bottom:-12px">C</span><span class="dot fraise" style="right:-12px;top:-12px;min-width:24px;height:24px;font-size:12px">2</span></div>
+      <div class="slot ready">⚔<span class="key k" style="position:absolute;bottom:-12px">1</span></div>
+      <div class="slot" style="--p:65%">🌀<div class="cd"></div><span class="t">4</span><span class="key k" style="position:absolute;bottom:-12px">2</span></div>
+      <div class="slot empty"><span class="key k" style="position:absolute;bottom:-12px">3</span></div>
+      <div class="slot empty"><span class="key k" style="position:absolute;bottom:-12px">4</span></div>
+      <div class="slot" style="background:linear-gradient(135deg,var(--pomme-c) 0 45%,var(--pomme) 45%)">💨<span class="key k" style="position:absolute;bottom:-12px">Maj</span></div>
+    </div>
+    <div class="row" style="margin-top:20px"><span class="pop out" style="font-size:18px">Niv. 8</span><div class="gauge lagon" style="flex:1;height:14px"><i style="width:44%"></i></div><span class="chip">Assisté</span></div>
+  </div>
+  <div class="version">Eden Slash v0.1.256</div>
+
+  <!-- annotations -->
+  <div class="note" style="left:420px;top:120px">1. <b>Quête suivie</b> sous les objectifs (FFXIV : liste des devoirs, WoW : suivi d'objectifs). Une seule, choisie au Journal ; sinon la plus avancée.</div>
+  <div class="note" style="left:1080px;top:110px">2. <b>Cible</b> : PV avec trace claire des dégâts, effets avec durée, prochaine attaque nommée (FFXIV : barre d'incantation).</div>
+  <div class="note" style="left:24px;top:360px">3. <b>Une notification à la fois</b>, file par priorité (danger &gt; quête &gt; butin), jamais deux bandeaux superposés.</div>
+  <div class="note" style="left:1210px;top:470px">4. <b>Fil de butin</b> : rareté = couleur de case, ▲ si meilleur, touche pour équiper ; la ligne s'efface en 6 s.</div>
+  <div class="note" style="left:24px;top:600px;max-width:330px">5. <b>Barre d'action</b> : cases autocollantes, touche dessinée sous chaque case, case vide tramée (jamais « — »), recharge en camembert + chiffre, lueur soleil à la disponibilité. Le globe « RUN 44 % » devient une barre de niveau. Vie en barre large (lisible à 3 m sur une télé).</div>
+  <div class="note" style="left:1210px;top:600px;max-width:330px">6. <b>Paramètres › Interface en partie</b> : 3 profils (Complet, Épuré, Télé / manette), taille et opacité du HUD, compteur de dégâts masquable, mini-carte fixe ou tournante.</div>
+</div>
+<script>function fit(){const s=document.getElementById('st');const k=Math.min(1,(window.innerWidth-8)/1600);s.style.transform='scale('+k+')';document.body.style.height=(900*k+60)+'px'}window.onresize=fit;fit();</script>
+</body></html>

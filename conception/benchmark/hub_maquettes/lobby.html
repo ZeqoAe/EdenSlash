@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Menu principal v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css"></head><body>
+<div class="nav"><a href="index.html">Index</a><a href="lobby.html">Menu principal</a><a href="hud.html">HUD en partie</a><a href="journal.html">Journal des quêtes</a><a href="succes.html">Succès</a></div>
+<div class="stage" id="st">
+  <!-- décor : le monde clair du jeu, le héros posé dans la zone -->
+  <div style="position:absolute;left:880px;top:330px;font-size:250px;filter:drop-shadow(8px 8px 0 rgba(34,26,58,.25))">🧝</div>
+  <div style="position:absolute;left:640px;top:250px;font-size:90px;opacity:.85">🏡</div><div style="position:absolute;left:1180px;top:230px;font-size:110px;opacity:.85">🏰</div>
+
+  <!-- logo -->
+  <div style="position:absolute;left:46px;top:26px"><span class="title" style="font-size:56px">Eden Slash</span><span style="font-size:22px;margin-left:6px">✦</span></div>
+
+  <!-- rail de gauche -->
+  <div style="position:absolute;left:46px;top:150px;width:330px;display:flex;flex-direction:column;gap:16px">
+    <div class="btn primary" style="width:330px;justify-content:flex-start;padding-left:22px">⚔ Jouer <span class="kb key k" style="margin-left:auto;font-size:12px">Entrée</span></div>
+    <div class="btn lagon small focus" style="width:330px;justify-content:flex-start;height:46px">↻ Continuer : Survie · Époque II</div>
+    <div class="btn" style="width:330px;justify-content:flex-start">🛡 Héros<span class="dot mandarine" style="right:-12px;top:-10px">!</span></div>
+    <div class="btn" style="width:330px;justify-content:flex-start">🎁 Coffres<span class="dot fraise" style="right:-12px;top:-10px">3</span></div>
+    <div class="btn" style="width:330px;justify-content:flex-start">⚒ Atelier<span class="dot pomme" style="right:-12px;top:-10px">✓</span></div>
+    <div class="btn" style="width:330px;justify-content:flex-start">📖 Carnet<span class="dot mandarine" style="right:-12px;top:-10px">1</span></div>
+    <div class="row" style="gap:12px"><div class="btn small" style="width:159px">⚙ Paramètres</div><div class="btn small" style="width:159px">Quitter</div></div>
+  </div>
+
+  <!-- carte du héros (haut droite) -->
+  <div class="sticker" style="left:1176px;top:30px;width:390px;height:134px;padding:12px 14px">
+    <div class="row"><div class="tile soleil">🪓</div>
+      <div><div class="pop" style="font-size:20px">Aya <span class="chip amethyste" style="font-family:'M PLUS Rounded 1c';font-size:13px">« Faucheur »</span></div>
+        <div class="muted" style="font-weight:700;font-size:15px">Guerrier · maîtrise 14</div></div>
+      <span class="chip" style="margin-left:auto;font-size:13px">▼</span></div>
+    <div class="row" style="margin-top:8px;font-size:15px;font-weight:800">Équipement <span class="num">6 / 9</span>
+      <div class="gauge" style="flex:1;height:16px"><i style="width:66%"></i></div><span class="num">PE 1 840</span></div>
+  </div>
+
+  <!-- Aujourd'hui (quêtes du jour, série) -->
+  <div class="sticker trame" style="left:1176px;top:206px;width:390px;height:296px;padding:22px 16px 12px">
+    <div class="ptitle" style="font-size:22px">Aujourd'hui</div>
+    <div class="row" style="justify-content:space-between;font-weight:800;font-size:15px"><span>🔥 Série <span class="num">5</span> jours</span><span class="muted">cadeau au 7<sup>e</sup> jour</span></div>
+    <div class="gauge" style="margin:6px 0 10px"><i style="width:71%"></i></div>
+    <div class="well" style="padding:8px 10px;display:flex;flex-direction:column;gap:7px;font-size:15px;font-weight:700">
+      <div class="row"><span class="check">✓</span>Défi du jour : Survie, une seule vie<span class="chip pomme" style="margin-left:auto">fait</span></div>
+      <div class="row"><span class="check no"></span>Gagner 2 duels<span class="num" style="margin-left:auto">1 / 2</span></div>
+      <div class="row"><span class="check no"></span>Donjon sans dégât de zone<span class="num" style="margin-left:auto">0 / 1</span></div>
+    </div>
+    <div class="row" style="margin-top:10px;justify-content:space-between"><span class="legend muted" style="max-width:230px">Rien d'obligatoire : une quête ratée revient demain.</span><span class="btn small">Journal <span class="key k">J</span></span></div>
+  </div>
+
+  <!-- Ta quête : bulle du conseil (Compass v2) -->
+  <div class="bubble tail-r" style="left:430px;top:612px;width:640px;height:206px">
+    <div class="row" style="gap:8px"><span class="pop out" style="font-size:24px;transform:rotate(-3deg);display:inline-block">Ta quête</span>
+      <span class="chip lagon">Guerrier</span><span class="chip">pour l'équipement optimal</span></div>
+    <div class="row" style="margin-top:10px">
+      <div class="tile amethyste">🛡</div>
+      <div style="flex:1"><div style="font-weight:900;font-size:20px">Panoplie Rocheuse <span class="num">2 / 6</span></div>
+        <div class="muted" style="font-weight:700;font-size:15px">Donjon du Grand champignon : son coffre propose 3 pièces de la panoplie</div></div>
+      <span class="btn lagon" style="height:48px">Y aller <span class="key y">Y</span></span>
+    </div>
+    <div class="row" style="margin-top:12px;font-size:15px;font-weight:800"><span class="muted">Ou bien :</span>
+      <span class="chip fraise">🎁 3 coffres à ouvrir</span><span class="chip soleil">⚒ une pièce peut monter à la Forge</span></div>
+  </div>
+  <div style="position:absolute;left:1060px;top:740px;font-size:56px">🦉</div>
+
+  <!-- zone et prochaine récompense (bas gauche) -->
+  <div class="sticker" style="left:46px;top:704px;width:340px;height:114px;padding:12px 14px">
+    <div class="row"><div style="width:96px;height:70px;border:3px solid var(--encre);border-radius:12px;background:linear-gradient(#CCDEF3 0 45%,#ACB47F 45%)"></div>
+      <div><div class="pop" style="font-size:18px">Monts Calcaires</div><div class="muted" style="font-size:15px;font-weight:700">zone du menu · changer ▸</div></div></div>
+  </div>
+
+  <!-- nouveauté : une seule bulle à la fois -->
+  <div class="sticker" style="left:520px;top:30px;width:520px;height:70px;padding:10px 14px;background:var(--mandarine-c)">
+    <div class="row"><span class="dot fraise" style="position:static;transform:rotate(8deg)">!</span>
+      <div style="font-weight:800;font-size:17px">Nouveau : la Tour est ouverte. Deux cartes de sort gagnées.</div><span class="btn small" style="margin-left:auto">Voir</span></div>
+  </div>
+
+  <!-- bourse + aide manette + version -->
+  <div class="sticker" style="left:1176px;top:760px;width:390px;height:58px;padding:8px 14px;box-shadow:5px 5px 0 var(--encre)">
+    <div class="row" style="font-weight:800;font-size:16px;justify-content:space-between"><span>🏅 <span class="num">2 400</span> insignes</span><span>💎 <span class="num">520</span> cristaux</span><span class="num muted">08:12</span></div>
+  </div>
+  <div style="position:absolute;left:46px;top:842px" class="row legend"><span class="key a">A</span>Valider <span class="key b">B</span>Retour <span class="key y">Y</span>Ta quête <span class="key x">X</span>Journal</div>
+  <div class="version">Eden Slash v0.1.256</div>
+
+  <!-- annotations -->
+  <div class="note" style="left:400px;top:150px">1. <b>Jouer</b> = seul primaire soleil. Sous lui, <b>Continuer</b> relance la dernière activité avec ses réglages (comme le gros bouton de Brawl Stars, la file de FFXIV).</div>
+  <div class="note" style="left:400px;top:262px">2. <b>Pastilles</b> sur chaque entrée : « ! » nouveauté (mandarine), compteur (fraise), action possible (pomme). Elles s'éteignent quand on a vu.</div>
+  <div class="note" style="left:640px;top:470px">3. <b>Ta quête</b> en bulle (une seule bulle par écran) : le pourquoi, un bouton qui mène à la page, deux autres choix. Jamais une obligation.</div>
+  <div class="note" style="left:1176px;top:528px">4. <b>Aujourd'hui</b> : les 3 quêtes et la série, visibles sans ouvrir Jouer › Quêtes (Genshin : commissions 2 / 4 au menu).</div>
+</div>
+<script>function fit(){const s=document.getElementById('st');const k=Math.min(1,(window.innerWidth-8)/1600);s.style.transform='scale('+k+')';document.body.style.height=(900*k+60)+'px'}window.onresize=fit;fit();</script>
+</body></html>

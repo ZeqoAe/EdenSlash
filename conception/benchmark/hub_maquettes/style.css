@@ -1,0 +1,94 @@
+/* Croquis maison « hub, HUD, quêtes » v2 (BM-HUB, 17/10/2026). DA : conception/art/BIBLE.md v2, valeurs de art/tokens.json.
+   Cadre fixe 1600 × 900 (réduit à la largeur de la fenêtre). Aucun asset tiers : formes CSS et emoji de remplacement
+   (dans le jeu : les vraies icônes du jeu dans nos cases autocollantes). Polices : Mochiy Pop One + M PLUS Rounded 1c (OFL). */
+:root {
+  --encre-900: #120C24; --encre: #221A3A; --encre-500: #2E2450; --encre-300: #6B5E86; --encre-100: #C9BFEA;
+  --papier: #FFF8EC; --papier-200: #FFEBC8; --papier-300: #E9DFCB; --blanc: #FFFFFF;
+  --soleil: #FFC928; --soleil-c: #FFE27A; --soleil-f: #D9900B;
+  --mandarine: #FF8A1F; --mandarine-c: #FFB566; --mandarine-f: #C85F08;
+  --pomme: #8FD62E; --pomme-c: #C3F07A; --pomme-f: #4F8F10;
+  --lagon: #22B8F0; --lagon-c: #86DDFF; --lagon-f: #0B7DB5;
+  --amethyste: #B43BEB; --amethyste-c: #DC92FF; --amethyste-f: #7A1DB0;
+  --fraise: #FF4D6D; --fraise-c: #FF9DB0; --fraise-f: #C21E43;
+  --gain: #3E7F0A;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #CCDEF3; font-family: "M PLUS Rounded 1c", sans-serif; color: var(--encre); }
+.nav { padding: 10px 16px; font-weight: 800; font-size: 15px; }
+.nav a { color: var(--lagon-f); margin-right: 14px; }
+.stage { width: 1600px; height: 900px; position: relative; overflow: hidden; transform-origin: top left;
+  background: linear-gradient(180deg, #CCDEF3 0%, #DCE8F4 38%, #ACB47F 39%, #B9BE8C 62%, #CEBFA7 63%, #D8CBB4 100%); }
+.stage.run { background: radial-gradient(ellipse at 50% 50%, #B8C987 0%, #A9B878 55%, #9AAA6B 100%); }
+.stage.menu { background: linear-gradient(180deg, #CCDEF3 0%, #E3ECF6 100%); }
+.note { position: absolute; font-size: 13px; line-height: 1.3; background: #fff; border: 2px dashed var(--fraise); border-radius: 10px;
+  padding: 4px 8px; color: var(--fraise-f); max-width: 250px; z-index: 50; font-weight: 700; }
+.note b { color: var(--encre); }
+
+/* matières */
+.sticker { background: var(--papier); border: 3px solid var(--encre); border-radius: 18px; box-shadow: 7px 7px 0 var(--encre); position: absolute; }
+.sticker.trame { background-image: radial-gradient(rgba(34,26,58,.10) 1.2px, transparent 1.3px); background-size: 7px 7px;
+  background-color: var(--papier); background-position: 0 0; }
+.well { background: var(--encre-500); color: var(--papier); border: 3px solid var(--encre); border-radius: 14px; }
+.hudpanel { position: absolute; background: rgba(46,36,80,.88); color: var(--papier); border: 3px solid var(--encre); border-radius: 14px;
+  box-shadow: 4px 4px 0 var(--encre-900); }
+.title { font-family: "Mochiy Pop One", sans-serif; transform: rotate(-3deg); display: inline-block; color: var(--blanc);
+  -webkit-text-stroke: 7px var(--encre); paint-order: stroke fill; letter-spacing: .03em; }
+.ptitle { position: absolute; top: -26px; left: 22px; font-family: "Mochiy Pop One", sans-serif; font-size: 26px; color: #fff;
+  -webkit-text-stroke: 5px var(--encre); paint-order: stroke fill; transform: rotate(-3deg); letter-spacing: .03em; }
+.pop { font-family: "Mochiy Pop One", sans-serif; }
+.num { font-weight: 900; font-variant-numeric: tabular-nums; }
+.out { color: #fff; -webkit-text-stroke: 3px var(--encre); paint-order: stroke fill; }
+.muted { color: var(--encre-300); }
+.well .muted, .hudpanel .muted { color: var(--encre-100); }
+
+/* boutons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 52px; padding: 0 18px; font-weight: 800; font-size: 19px;
+  border: 3px solid var(--encre); border-radius: 14px; box-shadow: 0 5px 0 var(--encre); position: relative; color: var(--encre);
+  background: linear-gradient(var(--blanc) 0 12%, var(--papier) 12% 62%, var(--papier-300) 62%); }
+.btn::before { content: ""; position: absolute; left: 10px; top: 6px; width: 16px; height: 6px; background: #fff; border-radius: 4px; transform: rotate(-12deg); opacity: .9; }
+.btn.primary { height: 64px; font-family: "Mochiy Pop One", sans-serif; font-size: 26px; color: #fff; -webkit-text-stroke: 5px var(--encre); paint-order: stroke fill;
+  background: linear-gradient(var(--soleil-c) 0 12%, var(--soleil) 12% 62%, var(--soleil-f) 62%); }
+.btn.lagon { background: linear-gradient(var(--lagon-c) 0 12%, var(--lagon) 12% 62%, var(--lagon-f) 62%); color: #fff; -webkit-text-stroke: 3px var(--encre); paint-order: stroke fill; }
+.btn.pomme { background: linear-gradient(var(--pomme-c) 0 12%, var(--pomme) 12% 62%, var(--pomme-f) 62%); color: #fff; -webkit-text-stroke: 3px var(--encre); paint-order: stroke fill; }
+.btn.small { height: 38px; font-size: 16px; padding: 0 12px; box-shadow: 0 4px 0 var(--encre); border-radius: 12px; }
+.btn.focus { outline: 6px solid #fff; box-shadow: 0 0 0 9px var(--lagon-f), 0 5px 0 var(--encre); transform: translateY(-3px); }
+.btn.off { background: repeating-linear-gradient(45deg, #DCD6E6 0 6px, #CFC8DC 6px 12px); color: #6F6787; border-color: var(--encre-300); }
+
+/* pastilles, touches, jauges */
+.dot { position: absolute; min-width: 30px; height: 30px; padding: 0 7px; border: 3px solid var(--encre); border-radius: 10px; box-shadow: 0 3px 0 var(--encre);
+  font-weight: 900; font-size: 15px; color: #fff; -webkit-text-stroke: 3px var(--encre); paint-order: stroke fill; display: flex; align-items: center;
+  justify-content: center; transform: rotate(8deg); }
+.dot.fraise { background: var(--fraise); } .dot.mandarine { background: var(--mandarine); } .dot.pomme { background: var(--pomme); }
+.key { display: inline-flex; min-width: 26px; height: 26px; padding: 0 4px; border-radius: 50%; border: 3px solid var(--encre); align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 900; color: #fff; -webkit-text-stroke: 2px var(--encre); paint-order: stroke fill; }
+.key.a { background: var(--pomme); } .key.b { background: var(--fraise); } .key.x { background: var(--lagon); } .key.y { background: var(--soleil); }
+.key.k { background: var(--papier); color: var(--encre); -webkit-text-stroke: 0; border-radius: 7px; }
+.chip { display: inline-flex; align-items: center; gap: 5px; border: 2px solid var(--encre); border-radius: 10px; padding: 1px 8px; font-size: 14px; font-weight: 800;
+  background: var(--papier); color: var(--encre); }
+.chip.soleil { background: var(--soleil-c); } .chip.pomme { background: var(--pomme-c); } .chip.lagon { background: var(--lagon-c); }
+.chip.amethyste { background: var(--amethyste-c); } .chip.mandarine { background: var(--mandarine-c); } .chip.fraise { background: var(--fraise-c); }
+.gauge { height: 18px; border: 3px solid var(--encre); border-radius: 12px; background: var(--encre-500); overflow: hidden; position: relative; }
+.gauge i { position: absolute; left: 0; top: 0; bottom: 0; border-right: 3px solid var(--encre);
+  background: linear-gradient(var(--c1, var(--soleil-c)) 0 35%, var(--c2, var(--soleil)) 35%); }
+.gauge.pomme i { --c1: var(--pomme-c); --c2: var(--pomme); } .gauge.fraise i { --c1: var(--fraise-c); --c2: var(--fraise); }
+.gauge.lagon i { --c1: var(--lagon-c); --c2: var(--lagon); } .gauge.amethyste i { --c1: var(--amethyste-c); --c2: var(--amethyste); }
+.tile { width: 54px; height: 54px; border: 3px solid var(--encre); border-radius: 14px; box-shadow: 0 4px 0 var(--encre); display: flex; align-items: center;
+  justify-content: center; font-size: 28px; position: relative;
+  background: linear-gradient(135deg, var(--t1, var(--lagon-c)) 0 45%, var(--t2, var(--lagon)) 45%); }
+.tile.soleil { --t1: var(--soleil-c); --t2: var(--soleil); } .tile.pomme { --t1: var(--pomme-c); --t2: var(--pomme); }
+.tile.amethyste { --t1: var(--amethyste-c); --t2: var(--amethyste); } .tile.mandarine { --t1: var(--mandarine-c); --t2: var(--mandarine); }
+.tile.fraise { --t1: var(--fraise-c); --t2: var(--fraise); } .tile.gris { --t1: #DCD6E6; --t2: #B9B2C9; }
+.tile.vide { background: repeating-linear-gradient(45deg, rgba(255,248,236,.12) 0 5px, transparent 5px 10px), var(--encre-500); box-shadow: none; }
+.bubble { position: absolute; background: var(--papier); border: 3px solid var(--encre); border-radius: 18px; box-shadow: 5px 5px 0 var(--encre); padding: 12px 16px; }
+.bubble::after { content: ""; position: absolute; width: 22px; height: 22px; background: var(--papier); border-right: 3px solid var(--encre);
+  border-bottom: 3px solid var(--encre); transform: rotate(45deg); }
+.row { display: flex; align-items: center; gap: 10px; }
+.check { width: 26px; height: 26px; border: 3px solid var(--encre); border-radius: 8px; background: var(--pomme); color: #fff; font-weight: 900;
+  display: inline-flex; align-items: center; justify-content: center; -webkit-text-stroke: 2px var(--encre); paint-order: stroke fill; font-size: 16px; }
+.check.no { background: var(--papier-200); }
+.version { position: absolute; right: 12px; bottom: 8px; font-size: 13px; font-weight: 800; background: var(--papier); border: 2px solid var(--encre);
+  border-radius: 8px; padding: 1px 8px; }
+.legend { font-size: 14px; font-weight: 700; }
+.bubble.tail-r::after { right: -15px; top: 130px; transform: rotate(-45deg); }
+.bubble.tail-b::after { left: 40px; bottom: -15px; transform: rotate(45deg); }
+.bubble.tail-t::after { left: 40px; top: -15px; transform: rotate(-135deg); }

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Succès et titres v2</title>
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.tab { display: inline-flex; align-items: center; height: 40px; padding: 0 14px; border: 3px solid var(--encre); border-bottom: 0; border-radius: 12px 12px 0 0;
+  background: var(--papier-200); font-weight: 800; font-size: 16px; position: relative; gap: 6px; }
+.tab.on { height: 48px; background: var(--mandarine); color: #fff; -webkit-text-stroke: 3px var(--encre); paint-order: stroke fill; }
+.cat { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; font-weight: 800; font-size: 16px; position: relative; }
+.cat.sel { background: var(--lagon-f); outline: 3px solid #fff; }
+.cat .n { margin-left: auto; }
+.card { background: var(--papier); border: 3px solid var(--encre); border-radius: 14px; box-shadow: 4px 4px 0 var(--encre); padding: 10px 12px; }
+.ms { display: flex; flex-direction: column; align-items: center; gap: 2px; font-weight: 900; font-size: 13px; position: absolute; top: 22px; transform: translateX(-50%); }
+.ach { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-bottom: 2px dashed var(--papier-300); }
+</style></head><body>
+<div class="nav"><a href="index.html">Index</a><a href="lobby.html">Menu principal</a><a href="hud.html">HUD en partie</a><a href="journal.html">Journal des quêtes</a><a href="succes.html">Succès</a></div>
+<div class="stage menu" id="st">
+  <div style="position:absolute;left:40px;top:26px"><span class="title" style="font-size:40px">Carnet</span></div>
+  <div style="position:absolute;right:40px;top:30px" class="btn small">✕ Fermer <span class="key b">B</span></div>
+  <div style="position:absolute;left:240px;top:48px;transform:scale(.92);transform-origin:left center" class="row"><span class="key k">LB</span><span class="tab">Ensemble</span>
+    <span class="tab on">Succès <span class="dot fraise" style="position:static;transform:none;min-width:22px;height:22px;font-size:12px">1</span></span>
+    <span class="tab">Titres</span><span class="tab">Collection</span><span class="tab">Cartes</span><span class="tab">Trophées</span><span class="tab">Registre</span><span class="key k">RB</span></div>
+
+  <!-- piste des points -->
+  <div class="sticker trame" style="left:40px;top:96px;width:1520px;height:134px;padding:12px 22px">
+    <div class="row" style="justify-content:space-between"><span class="pop" style="font-size:20px">Points de succès <span class="num">340</span></span>
+      <span class="muted" style="font-weight:800">prochain cadeau à <b class="num" style="color:var(--encre)">500</b> : coffre d'aura rare</span></div>
+    <div style="position:relative;margin-top:8px">
+      <div class="gauge" style="height:16px"><i style="width:34%"></i></div>
+      <div class="ms" style="left:10%"><div class="tile pomme mini" style="width:32px;height:32px;font-size:15px;border-radius:9px">✓</div>100</div>
+      <div class="ms" style="left:25%"><div class="tile pomme mini" style="width:32px;height:32px;font-size:15px;border-radius:9px">✓</div>250</div>
+      <div class="ms" style="left:50%"><div class="tile amethyste mini" style="width:32px;height:32px;font-size:15px;border-radius:9px">✨</div>500</div>
+      <div class="ms" style="left:75%"><div class="tile mandarine mini" style="width:32px;height:32px;font-size:15px;border-radius:9px">🎁</div>750</div>
+      <div class="ms" style="left:95%"><div class="tile soleil mini" style="width:32px;height:32px;font-size:15px;border-radius:9px">👑</div>1 000</div>
+    </div>
+  </div>
+
+  <!-- catégories -->
+  <div class="sticker" style="left:40px;top:262px;width:330px;height:610px;padding:14px">
+    <div class="well" style="padding:8px;display:flex;flex-direction:column;gap:4px">
+      <div class="cat sel">⭐ Résumé</div>
+      <div class="cat">📌 Suivis <span class="n num">2</span></div>
+      <div class="cat">🗺 Survie et époques <span class="n num">9 / 16</span><span class="dot mandarine" style="right:-14px;top:-4px;min-width:22px;height:22px;font-size:12px">!</span></div>
+      <div class="cat">🏰 Donjons et Tour <span class="n num">3 / 8</span></div>
+      <div class="cat">⚔ Affrontements <span class="n num">4 / 10</span></div>
+      <div class="cat">🧭 Survivant <span class="n num">1 / 6</span></div>
+      <div class="cat">🎒 Collection <span class="n num">2 / 6</span></div>
+      <div class="cat">❓ Secrets <span class="n num">0 / 4</span></div>
+    </div>
+    <div style="margin-top:12px" class="row"><span class="chip" style="flex:1;height:34px">🔎 Chercher un succès…</span></div>
+  </div>
+
+  <!-- résumé -->
+  <div class="sticker" style="left:400px;top:262px;width:760px;height:610px;padding:22px 18px">
+    <div class="ptitle" style="font-size:22px">Presque finis</div>
+    <div class="row" style="gap:12px;margin-top:4px">
+      <div class="card" style="flex:1"><div class="row"><div class="tile fraise mini" style="width:40px;height:40px;font-size:20px">☠</div><b>Terreur des boss</b></div>
+        <div class="row" style="margin-top:6px"><div class="gauge" style="flex:1;height:14px"><i style="width:85%"></i></div><span class="num">17 / 20</span></div>
+        <div class="row" style="margin-top:6px;font-size:14px;font-weight:800"><span class="chip amethyste">titre « Terreur des boss »</span><span class="chip">+25</span></div></div>
+      <div class="card" style="flex:1"><div class="row"><div class="tile lagon mini" style="width:40px;height:40px;font-size:20px">🏰</div><b>Mi-chemin</b></div>
+        <div class="row" style="margin-top:6px"><div class="gauge" style="flex:1;height:14px"><i style="width:80%"></i></div><span class="num">40 / 50</span></div>
+        <div class="row" style="margin-top:6px;font-size:14px;font-weight:800"><span class="chip">+15</span><span class="chip soleil">📌 suivi</span></div></div>
+    </div>
+    <div style="margin-top:22px;font-weight:900;font-size:18px">Derniers obtenus</div>
+    <div class="well" style="margin-top:8px;padding:4px 10px">
+      <div class="ach" style="border-color:var(--encre-300)"><div class="tile soleil mini" style="width:40px;height:40px;font-size:20px">🏆</div><div><b>Époque II gagnée</b><div class="muted" style="font-size:14px;font-weight:700">Gagner l'époque II · 17/10</div></div><span class="chip pomme" style="margin-left:auto">+20</span></div>
+      <div class="ach" style="border-color:var(--encre-300)"><div class="tile pomme mini" style="width:40px;height:40px;font-size:20px">💨</div><div><b>Insaisissable</b><div class="muted" style="font-size:14px;font-weight:700">Esquiver 100 attaques · 16/10</div></div><span class="chip pomme" style="margin-left:auto">+10</span></div>
+      <div class="ach" style="border:0"><div class="tile gris mini" style="width:40px;height:40px;font-size:20px">❓</div><div><b>???</b><div class="muted" style="font-size:14px;font-weight:700">Indice : un boss de la Tour n'aime pas la lumière.</div></div><span class="chip" style="margin-left:auto">secret</span></div>
+    </div>
+    <div class="row" style="margin-top:18px;gap:12px"><span class="btn small lagon">Voir la catégorie <span class="key a">A</span></span><span class="btn small">📌 Suivre <span class="key x">X</span></span></div>
+  </div>
+
+  <!-- titres -->
+  <div class="sticker" style="left:1190px;top:262px;width:370px;height:610px;padding:22px 16px">
+    <div class="ptitle" style="font-size:22px">Titres</div>
+    <div class="card row" style="margin-top:6px;background:var(--papier-200)"><div class="tile soleil">🪓</div><div><b class="pop">Aya</b> <span class="chip amethyste">« Faucheur »</span><div class="muted" style="font-size:14px;font-weight:700">vu au menu, au bilan et en duel</div></div></div>
+    <div class="well" style="margin-top:14px;padding:8px;display:flex;flex-direction:column;gap:6px;font-weight:800;font-size:15px">
+      <div class="row" style="padding:4px 6px"><span class="check">✓</span>Faucheur<span class="chip pomme" style="margin-left:auto">porté</span></div>
+      <div class="row" style="padding:4px 6px"><span class="check">✓</span>Conquérant<span class="chip" style="margin-left:auto">porter</span></div>
+      <div class="row" style="padding:4px 6px"><span class="check">✓</span>Bronze<span class="chip" style="margin-left:auto">porter</span></div>
+      <div class="row muted" style="padding:4px 6px">🔒 Roi de la Tour<span style="margin-left:auto;font-size:13px">étage 200</span></div>
+      <div class="row muted" style="padding:4px 6px">🔒 Régulier<span style="margin-left:auto;font-size:13px">série de 30 jours</span></div>
+    </div>
+  </div>
+
+  <div class="note" style="left:1210px;top:660px;max-width:330px">Jamais de pourcentage : des compteurs (17 / 20) et des cadeaux (GW2 : « points jusqu'au prochain cadeau »).</div>
+  <div class="note" style="left:400px;top:820px;max-width:740px"><b>Points de succès</b> → piste de cadeaux cosmétiques. <b>Suivre</b> met le succès dans « Aujourd'hui » et dans le HUD (GW2 : liste de suivi, WoW : suivi d'objectifs). Secrets avec indice.</div>
+</div>
+<script>function fit(){const s=document.getElementById('st');const k=Math.min(1,(window.innerWidth-8)/1600);s.style.transform='scale('+k+')';document.body.style.height=(900*k+60)+'px'}window.onresize=fit;fit();</script>
+</body></html>
