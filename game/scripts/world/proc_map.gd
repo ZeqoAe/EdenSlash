@@ -152,6 +152,8 @@ func generate_scenery(seed_value: int, with_minimap := false) -> void:
 
 ## Dangers permanents de la salle du boss : [{pos, style, radius}] (posés par le directeur).
 var arena_hazards: Array = []
+## Arène : rayon (m) d'un centre parfaitement plat (0 : relief doux partout ; L'Échiquier y trace son plateau, lot AC-V).
+var arena_flat := 0.0
 
 
 ## Arène du boss : cuvette circulaire fermée par des falaises. [param layout] :
@@ -166,7 +168,10 @@ func generate_arena(seed_value: int, layout := "ring") -> void:
 	for j in n:
 		for i in n:
 			var d := Vector2(i * STEP, j * STEP).distance_to(c)
-			heights[j * n + i] = 0.4 * _noise.get_noise_2d(i * 3.0, j * 3.0) + pow(maxf(0.0, d - 26.0) / 12.0, 2.0) * 14.0
+			var bump := 0.4 * _noise.get_noise_2d(i * 3.0, j * 3.0)
+			if arena_flat > 0.0:
+				bump *= smoothstep(arena_flat, arena_flat + 6.0, d)
+			heights[j * n + i] = bump + pow(maxf(0.0, d - 26.0) / 12.0, 2.0) * 14.0
 	_splat = Image.create(n - 1, n - 1, false, Image.FORMAT_RGBA8)
 	for j in n - 1:
 		for i in n - 1:

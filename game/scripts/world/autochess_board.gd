@@ -50,6 +50,24 @@ const RIM_FOE := Color(0.38, 0.20, 0.26)
 const PLINTH := Color(0.06, 0.06, 0.14)
 ## Étoiles : bronze, argent, or.
 const STAR_COLORS := [Color(0.88, 0.62, 0.38), Color(0.86, 0.91, 1.0), Color(0.98, 0.80, 0.30)]
+## Lot AC-V : plateau tracé sur le sol d'une arène (AutochessArena) : cases plates en filigrane (fond bleu nuit
+## translucide, bord doré lumineux), sans socle ; elles s'allument en préparation et s'estompent au combat (light_up).
+const ARENA_FILL_A := 0.62  # opacité du fond des cases, allumées
+const ARENA_RIM_A := 0.95  # opacité du bord doré
+const ARENA_RIM_GLOW := 0.45  # lueur du bord, allumé
+const ARENA_DIM := 0.22  # éclat des cases pendant le combat
+const ARENA_FADE := 0.6  # s
+const ARENA_RIM_W := 0.13  # m : largeur du filet doré
+
+## Style « arène » (à poser avant l'entrée dans l'arbre).
+var arena_style := false
+## Éclat des cases (1 : préparation, ARENA_DIM : combat) : opacité du fond et du filet, lueur.
+var glow_level := 1.0:
+	set(v):
+		glow_level = clampf(v, 0.0, 1.0)
+		if arena_style and is_inside_tree():
+			_paint()
+var _glow_tween: Tween
 
 var level := 1:
 	set(v):
@@ -70,6 +88,7 @@ var _tiles := {}  # "c,r" -> [dessus, bord] (MeshInstance3D) ; « e:c,r » pour 
 var _figures := {}  # uid -> Node3D
 var _next_uid := 1
 var _count_label: Label3D
+var _count_cap: Label3D
 var _hover: Dictionary = {}
 var _held: Dictionary = {}
 var _held_at := Vector3.ZERO
@@ -82,18 +101,24 @@ func _init() -> void:
 
 
 func _ready() -> void:
-	_build_plinth()
+	if arena_style:
+		_build_arena_marks()
+	else:
+		_build_plinth()
 	for r in ROWS * 2:
 		for c in COLS:
 			_build_tile(c, r)
 	bench = AutochessBench.new()
 	add_child(bench)
+	if arena_style:
+		_flatten_bench()
 	_count_label = _label("", 64, UiTheme.GOLD)
 	_count_label.position = Vector3(LANE_X, 1.25, -1.2)
 	add_child(_count_label)
 	var cap := _label("Héros placés", 36, UiTheme.MUTED)
 	cap.position = Vector3(LANE_X, 0.6, -1.2)
 	add_child(cap)
+	_count_cap = cap
 	_refresh_count()
 	set_strategist(Profile.selected_class, Profile.hero_name)
 	_paint()
@@ -479,14 +504,142 @@ func _paint() -> void:
 		_tint(parts[1], rim, glow)
 	if bench:
 		bench.paint(_hover, _held, self)
+	if arena_style:
+		_arena_fade()
 
 
 static func _tint(mi: MeshInstance3D, col: Color, glow: float) -> void:
 	var m := mi.material_override as StandardMaterial3D
-	m.albedo_color = col
+	m.albedo_color = Color(col, m.albedo_color.a)  # l'opacité reste celle du style (cases en filigrane : AC-V)
 	m.emission_enabled = glow > 0.0
 	m.emission = col
 	m.emission_energy_multiplier = glow * 0.9
+
+
+# --- style « arène » (lot AC-V) --------------------------------------------------------------------------------------
+## Allume (préparation) ou estompe (combat) les cases tracées au sol ; [param instant] : sans transition.
+func light_up(on: bool, instant := false) -> void:
+	if _glow_tween != null and _glow_tween.is_valid():
+		_glow_tween.kill()
+	var goal := 1.0 if on else ARENA_DIM
+	for l in [_count_label, _count_cap]:
+		if l != null:
+			l.visible = on  # « Héros placés » : en préparation seulement
+	if instant or not is_inside_tree():
+		glow_level = goal
+		return
+	_glow_tween = create_tween()
+	_glow_tween.tween_property(self, "glow_level", goal, ARENA_FADE)
+
+
+## Opacité et lueur des cases selon glow_level (après _tint, qui garde l'opacité) ; case visée : pleine lumière.
+func _arena_fade() -> void:
+	var pads: Array = _tiles.values()
+	if bench:
+		pads += bench._pads + bench._item_pads
+	for parts in pads:
+		var fill := (parts[0] as MeshInstance3D).material_override as StandardMaterial3D
+		var rim := (parts[1] as MeshInstance3D).material_override as StandardMaterial3D
+		fill.albedo_color.a = ARENA_FILL_A * glow_level
+		rim.albedo_color.a = ARENA_RIM_A * maxf(glow_level, 0.35)
+		if not rim.emission_enabled:  # visée ou tenue : _tint l'a déjà fait briller
+			rim.emission_enabled = true
+			rim.emission = Color(rim.albedo_color, 1.0)
+			rim.emission_energy_multiplier = ARENA_RIM_GLOW * glow_level
+
+
+## Matériau translucide d'une case tracée au sol.
+static func _arena_mat(col: Color, alpha: float) -> StandardMaterial3D:
+	var m := _mat(Color(col, alpha))
+	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	m.roughness = 1.0
+	m.metallic_specular = 0.0
+	m.cull_mode = BaseMaterial3D.CULL_DISABLED  # faces plates : visibles quel que soit le sens des triangles
+	return m
+
+
+## Hexagone plat (pointe vers ±Z), face vers le haut ; [param inner] > 0 : seulement le filet entre inner et [param r].
+static func flat_hex_mesh(r: float, inner := 0.0) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_normal(Vector3.UP)
+	for k in 6:
+		var a0 := TAU * float(k) / 6.0
+		var a1 := TAU * float(k + 1) / 6.0
+		var o0 := Vector3(sin(a0), 0.0, cos(a0)) * r
+		var o1 := Vector3(sin(a1), 0.0, cos(a1)) * r
+		if inner <= 0.0:
+			for v in [Vector3.ZERO, o0, o1]:
+				st.add_vertex(v)
+		else:
+			var i0 := Vector3(sin(a0), 0.0, cos(a0)) * inner
+			var i1 := Vector3(sin(a1), 0.0, cos(a1)) * inner
+			for v in [i0, o0, o1, i0, o1, i1]:
+				st.add_vertex(v)
+	return st.commit()
+
+
+## Case plate : [fond, filet] juste au niveau TOP (rayon [param r]) ; mêmes rôles que les prismes du socle.
+func _flat_pad(p: Vector3, r: float, fill: Color, rim_col: Color) -> Array:
+	var rim := MeshInstance3D.new()
+	rim.mesh = flat_hex_mesh(r, r - ARENA_RIM_W)
+	rim.material_override = _arena_mat(rim_col, ARENA_RIM_A)
+	rim.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	rim.position = Vector3(p.x, TOP - 0.004, p.z)
+	var top := MeshInstance3D.new()
+	top.mesh = flat_hex_mesh(r - ARENA_RIM_W - 0.02)
+	top.material_override = _arena_mat(fill, ARENA_FILL_A)
+	top.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	top.position = Vector3(p.x, TOP - 0.006, p.z)
+	return [top, rim]
+
+
+## Cercle doré et ligne de partage tracés au sol (le socle n'existe pas dans l'arène).
+func _build_arena_marks() -> void:
+	var ring := MeshInstance3D.new()
+	ring.mesh = flat_ring_mesh(PLINTH_R + 0.05, PLINTH_R - 0.07)
+	ring.material_override = _arena_mat(UiTheme.GOLD_DIM, 0.8)
+	ring.position.y = TOP - 0.008
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(ring)
+	var line := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = Vector3(float(COLS) * HEX_W + 1.6, 0.01, 0.07)
+	line.mesh = bm
+	line.position = Vector3(0.0, TOP - 0.008, 0.0)
+	line.material_override = _arena_mat(UiTheme.GOLD_DIM, 0.85)
+	line.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(line)
+
+
+## Anneau plat (face vers le haut) entre [param inner] et [param r].
+static func flat_ring_mesh(r: float, inner: float, seg := 96) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_normal(Vector3.UP)
+	for k in seg:
+		var a0 := TAU * float(k) / float(seg)
+		var a1 := TAU * float(k + 1) / float(seg)
+		var d0 := Vector3(sin(a0), 0.0, cos(a0))
+		var d1 := Vector3(sin(a1), 0.0, cos(a1))
+		for v in [d0 * inner, d0 * r, d1 * r, d0 * inner, d1 * r, d1 * inner]:
+			st.add_vertex(v)
+	return st.commit()
+
+
+## Bancs : les prismes d'AutochessBench remplacés par des cases plates (mêmes rôles : [fond, filet]).
+func _flatten_bench() -> void:
+	for item in [false, true]:
+		var list: Array = bench._item_pads if item else bench._pads
+		for i in list.size():
+			var old: Array = list[i]
+			var p := (old[0] as Node3D).position
+			for n in old:
+				(n as Node).queue_free()
+			var pad := _flat_pad(p, AutochessBench.ITEM_R if item else AutochessBench.SLOT_R, TILE_BENCH, RIM)
+			bench.add_child(pad[1])
+			bench.add_child(pad[0])
+			list[i] = pad
 
 
 func _refresh_count() -> void:
@@ -532,6 +685,12 @@ func _build_tile(c: int, wr: int) -> void:
 	var foe := wr >= ROWS
 	var own := Vector2i(COLS - 1 - c, wr - ROWS) if foe else Vector2i(c, ROWS - 1 - wr)
 	var p := cell_position(own.x, own.y, foe)
+	if arena_style:
+		var pad := _flat_pad(p, HEX_R * 0.97, TILE_FOE if foe else TILE_MINE, RIM_FOE if foe else RIM)
+		add_child(pad[1])
+		add_child(pad[0])
+		_tiles[("e:" if foe else "") + key(own.x, own.y)] = pad
+		return
 	var rim := hex_node(HEX_R * 0.98, TILE_H, RIM_FOE if foe else RIM)
 	rim.position = Vector3(p.x, TILE_H * 0.5 - 0.02, p.z)
 	add_child(rim)

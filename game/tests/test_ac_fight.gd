@@ -44,6 +44,7 @@ func _ready() -> void:
 	var hub := _hub()
 	await _test_fights()
 	await _test_parallel()
+	await _test_arena()
 	await _test_draw_speed()
 	await _test_fallback()
 	await _test_game()
@@ -317,6 +318,41 @@ func _test_parallel() -> void:
 	check("plateau regardé seul rendu (les autres cachés)", shown_ok)
 	dir.watch(2)
 	check("watch(2) : le combat 2 est rendu, le 1 caché", bool(dir.arenas[2].shown) and not bool(dir.arenas[1].shown))
+	_plain_ms = med
+
+
+# --- Lot AC-V : les mêmes 80 unités, plateau regardé dans l'arène du Duel (décor, plateau tracé au sol) -------------------
+var _plain_ms := 0.0
+
+
+func _test_arena() -> void:
+	dir.fallback_ms = 0.0
+	dir.set_speed(1.0)
+	var arena := AutochessArena.new()
+	add_child(arena)
+	arena.build(AutochessArena.biome_for(1), 5)
+	var board := AutochessBoard.new()
+	board.arena_style = true
+	add_child(board)
+	dir.view = board
+	var fights: Array = []
+	for i in 4:
+		fights.append(_fight(_team(10, 5, 0.3), _team(10, 5, 0.3), 500 + i))
+	phys_ms = []
+	_measure = true
+	var res: Array = await _round(fights, 0)
+	_measure = false
+	var med := _median(phys_ms)
+	print("[ac_fight] arène : 80 unités, image physique médiane %.2f ms (sans arène %.2f ms)" % [med, _plain_ms])
+	check("arène du Duel : combats finis, unités sur le plateau regardé (%d)" % res.size(), res.size() == 4
+		and (dir.arenas[0].origin as Vector3).is_equal_approx(board.global_position))
+	check("arène du Duel : budget d'image tenu (médiane %.2f ms, sans arène %.2f ms)" % [med, _plain_ms],
+		med > 0.0 and med < AutochessDirector.FALLBACK_MS and med < _plain_ms * 1.5 + 2.0)
+	dir.clear()
+	dir.view = null
+	board.queue_free()
+	arena.queue_free()
+	await get_tree().process_frame
 
 
 # --- Égalité à 45 s, Fureur à 30 s, vitesse ×2 -------------------------------------------------------------------------

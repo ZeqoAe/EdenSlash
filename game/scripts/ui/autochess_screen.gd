@@ -5,6 +5,10 @@ extends Node3D
 ## et la partie (AC-B : Autochess) contre 7 stratèges au hasard (Autochess.RandomStrategist) avec le combat provisoire
 ## (Autochess.power_fight, montré COMBAT_SHOW s) : une partie complète se joue déjà de bout en bout, souris ou manette.
 ## Les lots suivants remplacent les stratèges (AC-D), le combat (AC-E / AC-C) et l'entrée / la fin (AC-I).
+## Lot AC-V (mise en scène) : tout se joue dans l'arène du Duel (AutochessArena : décor, ciel, musique du duel ; le plateau
+## y est tracé au sol, AutochessBoard.arena_style) ; le combat est le vrai combat (AutochessDirector, plateau du joueur
+## regardé dans l'arène, les autres cachés), caméra large du combat (AutochessArena.combat_camera) ; durées réduites
+## (config « fast », tests) : combat de données instantané (même couche d'effets).
 ##   godot --path game res://scenes/autochess.tscn [-- --seed=N --ac-resume --autoplay]
 ## Commandes : manette (UiNav sur le plateau et les panneaux, A prend / pose / achète, X maintenu vend, Y Prêt, LB XP,
 ## RB boutique, LT actualiser, RT verrou, Start pause) ; clavier 1-5 achète, D actualise, F XP, V verrou, E vend,
@@ -41,6 +45,15 @@ var foe := -1
 var autoplay := false
 var fast := false
 var save_path := Autochess.SAVE_PATH
+## Lot AC-V : l'arène, le directeur du vrai combat, le combat du joueur (indice dans game.fights, son camp).
+var arena: AutochessArena
+var director: AutochessDirector
+var real := false  # la manche en cours se joue en vrai (sinon : combat de données)
+var real_combat := true  # config « real » (par défaut : vrai sauf durées réduites) : combats montrés en vrai
+var my_fight := -1
+var my_side := 0
+var _real_done := false
+var _stage_built := -1
 
 var _ui: CanvasLayer
 var _top: CanvasLayer
@@ -64,6 +77,7 @@ func _ready() -> void:
 	autoplay = bool(cfg.get("autoplay", false))
 	fast = bool(cfg.get("fast", false))
 	save_path = String(cfg.get("save_path", Autochess.SAVE_PATH))
+	real_combat = bool(cfg.get("real", not fast))
 	var seed_ := int(cfg.get("seed", 0))
 	var resume := bool(cfg.get("resume", false))
 	for a in OS.get_cmdline_user_args():
@@ -75,11 +89,17 @@ func _ready() -> void:
 			autoplay = true
 	_build_world()
 	board = AutochessBoard.new()
+	board.arena_style = true  # tracé au sol de l'arène (AC-V)
 	add_child(board)
 	camera = Camera3D.new()
+	camera.far = 600.0
 	add_child(camera)
 	camera.current = true
 	board.frame_camera(camera, 0)
+	director = AutochessDirector.new()  # mode scellé tant que l'écran est ouvert
+	director.view = board
+	add_child(director)
+	director.round_finished.connect(func(_res): _real_done = true)
 	cursor = AutochessCursor.new()
 	add_child(cursor)
 	cursor.setup(board, camera)
@@ -102,7 +122,9 @@ func _ready() -> void:
 	board.unit_sold.connect(_on_sold)
 	board.item_given.connect(_on_item)
 	board.placement_refused.connect(func(why: String): hud.toast(why))
-	cursor.zoom_changed.connect(func(_z): _dirty = true)
+	cursor.zoom_changed.connect(func(_z):
+		_dirty = true
+		arena.prep_camera(camera, camera.global_transform, true))  # la molette prend la main sur l'arrivée de la caméra
 	hud.reroll_pressed.connect(_reroll)
 	hud.xp_pressed.connect(_buy_xp)
 	hud.lock_pressed.connect(_lock)
@@ -138,6 +160,8 @@ func new_game(seed_: int, resume := false) -> void:
 		game = Autochess.new()
 		game.save_path = save_path
 		game.start(seed_, strats)
+	game.fight = _data_fight  # combats non montrés (durées réduites) : la même couche d'effets, instantanée (AC-V)
+	_stage_built = -1
 	game.changed.connect(func(_pi): _dirty = true)
 	_make_identities()
 	hud.players.identities = identities
@@ -176,6 +200,7 @@ func name_of(pi: int) -> String:
 # --- déroulé --------------------------------------------------------------------------------------------------------
 func _enter_prep() -> void:
 	phase = "prep"
+	_arena_prep()
 	_cr_done = -1.0
 	timer_total = game.prep_time()
 	timer = AUTOPLAY_PREP if autoplay else timer_total
@@ -293,10 +318,86 @@ func _start_combat() -> void:
 			_combat_text = "Combat contre les monstres"
 	hud.set_mode("combat")
 	hud.set_combat(_combat_text, 0.0, speed)
+	_arena_combat()
+
+
+# --- arène et vrai combat (lot AC-V) --------------------------------------------------------------------------------
+## Préparation dans l'arène : combat de la manche effacé, cases allumées, décor de l'étape, caméra du plateau,
+## modèles de la manche suivante préchargés.
+func _arena_prep() -> void:
+	real = false
+	my_fight = -1
+	if director != null:
+		director.clear()
+	board.light_up(true, fast or autoplay)
+	if game.stage != _stage_built:
+		_stage_built = game.stage
+		arena.build(AutochessArena.biome_for(game.stage), game.seed_value + game.stage)
+	arena.global_position = board.global_position
+	camera.fov = 42.0
+	arena.prep_camera(camera, _prep_pose(), fast or autoplay or not camera.is_inside_tree())
+	if not fast:
+		AutochessDirector.prepare(game)
+
+
+## Pose de la caméra du plateau (AutochessBoard.frame_camera, zoom du curseur), sans la poser.
+func _prep_pose() -> Transform3D:
+	var probe := Camera3D.new()
+	add_child(probe)
+	board.frame_camera(probe, cursor.zoom if cursor != null else 0)
+	var t := probe.global_transform
+	probe.free()
+	return t
+
+
+## Début du combat : le combat du joueur se joue en vrai dans l'arène (sauf durées réduites) ; cases estompées, caméra large.
+func _arena_combat() -> void:
+	my_fight = _fight_of(me)
+	my_side = 1 if my_fight >= 0 and int(game.fights[my_fight].a) != me else 0
+	board.light_up(false, fast or autoplay)
+	real = AutochessDirector.real_combat and real_combat and my_fight >= 0
+	if not real:
+		return
+	_real_done = false
+	director.set_speed(float(speed))
+	director.begin(game.fights, my_fight)
+	arena.global_position = board.global_position
+	arena.combat_camera(camera, my_side)
+
+
+## Combat de la manche où joue le stratège [param pi] (-1 : aucun).
+func _fight_of(pi: int) -> int:
+	for i in game.fights.size():
+		var f: Dictionary = game.fights[i]
+		if int(f.a) == pi or int(f.b) == pi:
+			return i
+	return -1
+
+
+## Regarde le combat [param i] de la manche : l'arène et la caméra le suivent.
+func _watch_fight(i: int) -> void:
+	if not real or i < 0 or i >= director.arenas.size():
+		return
+	director.watch(i)
+	arena.global_position = board.global_position
+	arena.cam_yaw = 0.0 if i != my_fight else (180.0 if my_side == 1 else 0.0)
+	_watch_changed(i)
+
+
+## Combat de données (durées réduites et combats non montrés) : AutochessDirector.data_fight.
+func _data_fight(board_a: Array, board_b: Array, fctx: Dictionary) -> Dictionary:
+	return AutochessDirector.data_fight(board_a, board_b, fctx)
+
+
+func _watch_changed(_i: int) -> void:
+	pass
 
 
 func _resolve_combat() -> void:
-	game.run_fights()
+	if real:
+		game.finish_combat(director.results.duplicate(true))
+	else:
+		game.run_fights()
 	hud.players.record(game)
 	var p: Dictionary = game.players[me]
 	var last: Dictionary = p.last
@@ -337,6 +438,9 @@ func _next_round() -> void:
 
 func _show_end() -> void:
 	phase = "over"
+	if director != null and director.running:
+		director.clear()
+	real = false
 	cursor.enabled = false
 	choice.visible = false
 	carousel.visible = false
@@ -364,11 +468,16 @@ func _process(delta: float) -> void:
 			if timer <= 0.0:
 				_end_prep()
 		"combat":
-			_phase_t += delta * speed
-			hud.set_combat(_combat_text, _phase_t / maxf(_phase_len, 0.01), speed)
 			hud.set_timer(0.0, 0.0)
-			if _phase_t >= _phase_len:
-				_resolve_combat()
+			if real:
+				hud.set_combat(_combat_text, _fight_time() / AutochessDirector.draw_at(), speed)
+				if _real_done:
+					_resolve_combat()
+			else:
+				_phase_t += delta * speed
+				hud.set_combat(_combat_text, _phase_t / maxf(_phase_len, 0.01), speed)
+				if _phase_t >= _phase_len:
+					_resolve_combat()
 		"recap":
 			_phase_t += delta
 			if _phase_t >= _phase_len:
@@ -520,7 +629,16 @@ func _ready_pressed() -> void:
 
 func _toggle_speed() -> void:
 	speed = 2 if speed == 1 else 1
+	if director != null:
+		director.set_speed(float(speed))  # Engine.time_scale pendant le vrai combat seulement
 	hud.set_combat(_combat_text, _phase_t / maxf(_phase_len, 0.01), speed)
+
+
+## Temps du combat regardé (s de combat).
+func _fight_time() -> float:
+	if not real or director.arenas.is_empty():
+		return 0.0
+	return float(director.arenas[clampi(director.watched, 0, director.arenas.size() - 1)].t)
 
 
 func _on_placed(u: Dictionary, _from: Dictionary, to: Dictionary) -> void:
@@ -589,6 +707,9 @@ func _on_carousel_pick(k: int) -> void:
 
 
 func _scout(pi: int) -> void:
+	if phase == "combat" and real:
+		_watch_fight(_fight_of(pi))  # pendant le vrai combat : regarder un autre combat dans l'arène (AC-V)
+		return
 	if phase != "prep":
 		return
 	if pi == me or pi == scouted or not bool(game.players[pi].alive):
@@ -726,36 +847,8 @@ func _unhandled_input(ev: InputEvent) -> void:
 
 
 # --- décor ----------------------------------------------------------------------------------------------------------
-## Fond bleu nuit, lumière, sol sombre (comme la démonstration du plateau).
+## L'arène du Duel autour du plateau (AutochessArena, lot AC-V : décor de l'étape posé à chaque préparation), musique du duel.
 func _build_world() -> void:
-	var env := Environment.new()
-	env.background_mode = Environment.BG_COLOR
-	env.background_color = Color(0.035, 0.04, 0.10)
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.55, 0.58, 0.85)
-	env.ambient_light_energy = 0.75
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.glow_enabled = true
-	env.glow_intensity = 0.5
-	var we := WorldEnvironment.new()
-	we.environment = env
-	add_child(we)
-	var sun := DirectionalLight3D.new()
-	sun.rotation = Vector3(deg_to_rad(-58.0), deg_to_rad(-28.0), 0.0)
-	sun.light_energy = 1.15
-	sun.light_color = Color(1.0, 0.95, 0.86)
-	sun.shadow_enabled = true
-	add_child(sun)
-	var floor_ := MeshInstance3D.new()
-	var cm := CylinderMesh.new()
-	cm.top_radius = AutochessData.ARENA_RADIUS + 25.0
-	cm.bottom_radius = cm.top_radius
-	cm.height = 0.2
-	cm.radial_segments = 64
-	floor_.mesh = cm
-	floor_.position.y = -0.6
-	var m := StandardMaterial3D.new()
-	m.albedo_color = Color(0.045, 0.05, 0.12)
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	floor_.material_override = m
-	add_child(floor_)
+	arena = AutochessArena.new()
+	add_child(arena)
+	Music.play(Music.DUEL)

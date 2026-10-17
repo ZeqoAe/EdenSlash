@@ -53,35 +53,35 @@ func _ready() -> void:
 	var mirror_ok := true
 	for r in B.ROWS:
 		for c in B.COLS:
-			var a := B.cell_position(c, r)
-			var e := B.cell_position(c, r, true)
+			var a := AutochessBoard.cell_position(c, r)
+			var e := AutochessBoard.cell_position(c, r, true)
 			mirror_ok = mirror_ok and absf(a.x + e.x) < 0.001 and absf(a.z + e.z) < 0.001 and a.z > 0.0 and e.z < 0.0
 	check("miroir : la case (c, r) adverse est la case (c, r) tournée d'un demi-tour", mirror_ok)
-	check("cases de 2 m (voisines d'une même rangée)", absf(B.cell_position(1, 0).x - B.cell_position(0, 0).x - 2.0) < 0.001)
-	check("rangée 0 = ligne de front (la plus proche du centre)", B.cell_position(3, 0).z < B.cell_position(3, 3).z)
+	check("cases de 2 m (voisines d'une même rangée)", absf(AutochessBoard.cell_position(1, 0).x - AutochessBoard.cell_position(0, 0).x - 2.0) < 0.001)
+	check("rangée 0 = ligne de front (la plus proche du centre)", AutochessBoard.cell_position(3, 0).z < AutochessBoard.cell_position(3, 3).z)
 	check("47 cases au curseur (28 + banc 9 + objets 10)", board.all_slots().size() == 47)
 
 	# 2. placement limité au niveau
 	board.set_state({"level": 3, "board": {"0,0": _u("warrior"), "3,1": _u("knight", 2), "6,3": _u("thief")},
 		"bench": [_u("hunter"), _u("cleric"), {}, {}, {}, {}, {}, {}, {}], "items": ["lame", "arc"]})
 	check("état posé : 3 sur le plateau, cap 3", board.board_count() == 3 and board.cap() == 3)
-	check("du banc vers une case libre, plateau plein : refusé", not board.move(B.bench_slot(0), B.board_slot(2, 2)) and refused.size() == 1)
+	check("du banc vers une case libre, plateau plein : refusé", not board.move(B.bench_slot(0), AutochessBoard.board_slot(2, 2)) and refused.size() == 1)
 	check("texte du refus en français, court", String(refused[0]).begins_with("Plateau plein") and String(refused[0]).length() < 60)
 	placed.clear()
-	check("du banc vers une case occupée : échange permis", board.move(B.bench_slot(0), B.board_slot(0, 0)))
+	check("du banc vers une case occupée : échange permis", board.move(B.bench_slot(0), AutochessBoard.board_slot(0, 0)))
 	check("échange : deux signaux unit_placed", placed.size() == 2 and String(placed[0][0].id) == "hunter" and String(placed[1][0].id) == "warrior")
 	check("échange : le Guerrier est au banc, le Chasseur au front", String(board.unit_at(B.bench_slot(0)).id) == "warrior"
-		and String(board.unit_at(B.board_slot(0, 0)).id) == "hunter" and board.board_count() == 3)
-	check("du plateau vers le banc libre : une place se libère", board.move(B.board_slot(6, 3), B.bench_slot(4)) and board.board_count() == 2)
-	check("puis du banc vers le plateau : permis", board.move(B.bench_slot(1), B.board_slot(2, 2)) and board.board_count() == 3)
-	check("sur le plateau : déplacement libre", board.move(B.board_slot(2, 2), B.board_slot(5, 0)) and board.unit_at(B.board_slot(2, 2)).is_empty())
+		and String(board.unit_at(AutochessBoard.board_slot(0, 0)).id) == "hunter" and board.board_count() == 3)
+	check("du plateau vers le banc libre : une place se libère", board.move(AutochessBoard.board_slot(6, 3), B.bench_slot(4)) and board.board_count() == 2)
+	check("puis du banc vers le plateau : permis", board.move(B.bench_slot(1), AutochessBoard.board_slot(2, 2)) and board.board_count() == 3)
+	check("sur le plateau : déplacement libre", board.move(AutochessBoard.board_slot(2, 2), AutochessBoard.board_slot(5, 0)) and board.unit_at(AutochessBoard.board_slot(2, 2)).is_empty())
 	board.level = 4
-	check("niveau 4 : une place de plus", board.move(B.bench_slot(4), B.board_slot(1, 3)) and board.board_count() == 4)
+	check("niveau 4 : une place de plus", board.move(B.bench_slot(4), AutochessBoard.board_slot(1, 3)) and board.board_count() == 4)
 	board.crowns = 1
 	check("Couronne : +1 place", board.cap() == 5)
 	board.crowns = 0
-	check("vers la moitié adverse ou hors grille : refusé", not board.move(B.board_slot(0, 0), B.board_slot(0, 4))
-		and not board.move(B.board_slot(0, 0), {"zone": "board", "col": 7, "row": 0}) and not board.move(B.bench_slot(0), B.bench_slot(9)))
+	check("vers la moitié adverse ou hors grille : refusé", not board.move(AutochessBoard.board_slot(0, 0), AutochessBoard.board_slot(0, 4))
+		and not board.move(AutochessBoard.board_slot(0, 0), {"zone": "board", "col": 7, "row": 0}) and not board.move(B.bench_slot(0), B.bench_slot(9)))
 	check("case vide : rien ne bouge", not board.move(B.bench_slot(8), B.bench_slot(7)))
 
 	# 3. banc plein
@@ -90,25 +90,25 @@ func _ready() -> void:
 		if (st.bench[i] as Dictionary).is_empty():
 			board.add_to_bench(_u("magician"))
 	check("banc plein : plus de place", board.first_free_bench() == -1 and board.add_to_bench(_u("ranger")) == -1)
-	check("banc plein : un échange plateau ↔ banc reste permis", board.move(B.board_slot(0, 0), B.bench_slot(8)) and board.board_count() == 4)
+	check("banc plein : un échange plateau ↔ banc reste permis", board.move(AutochessBoard.board_slot(0, 0), B.bench_slot(8)) and board.board_count() == 4)
 
 	# 4. vente : l'unité part, ses objets reviennent au banc d'objets
 	board.set_state({"level": 3, "board": {"2,1": _u("knight", 2, ["lame", "transe"])}, "bench": [_u("warrior", 3)], "items": []})
 	sold.clear()
-	var v := board.sell_value(B.board_slot(2, 1))
+	var v := board.sell_value(AutochessBoard.board_slot(2, 1))
 	check("prix de vente = AutochessData.sell_value", v == AutochessData.sell_value(int(AutochessData.unit("knight").cost), 2))
-	check("vente : unit_sold et case vide", board.sell(B.board_slot(2, 1)) and sold.size() == 1 and board.board_count() == 0)
+	check("vente : unit_sold et case vide", board.sell(AutochessBoard.board_slot(2, 1)) and sold.size() == 1 and board.board_count() == 0)
 	check("vente : objets rendus au banc d'objets", board.item_at(B.items_slot(0)) == "lame" and board.item_at(B.items_slot(1)) == "transe")
-	check("vendre une case vide : rien", not board.sell(B.board_slot(2, 1)))
+	check("vendre une case vide : rien", not board.sell(AutochessBoard.board_slot(2, 1)))
 
 	# 5. objets : au héros visé, trois au plus
 	board.set_state({"level": 3, "board": {"3,0": _u("warrior", 1, ["lame", "arc"])}, "bench": [], "items": ["baton", "larme", "", "", "", "", "", "", "", ""]})
-	check("objet donné au héros", board.move(B.items_slot(0), B.board_slot(3, 0)) and given.size() == 1
-		and (board.unit_at(B.board_slot(3, 0)).items as Array).size() == 3 and board.item_at(B.items_slot(0)) == "")
-	check("quatrième objet : refusé", not board.move(B.items_slot(1), B.board_slot(3, 0)))
-	check("objet sur une case vide : refusé", not board.move(B.items_slot(1), B.board_slot(4, 0)))
+	check("objet donné au héros", board.move(B.items_slot(0), AutochessBoard.board_slot(3, 0)) and given.size() == 1
+		and (board.unit_at(AutochessBoard.board_slot(3, 0)).items as Array).size() == 3 and board.item_at(B.items_slot(0)) == "")
+	check("quatrième objet : refusé", not board.move(B.items_slot(1), AutochessBoard.board_slot(3, 0)))
+	check("objet sur une case vide : refusé", not board.move(B.items_slot(1), AutochessBoard.board_slot(4, 0)))
 	check("objets : échange sur le banc d'objets", board.move(B.items_slot(1), B.items_slot(5)) and board.item_at(B.items_slot(5)) == "larme")
-	check("une unité ne va pas sur le banc d'objets", not board.move(B.board_slot(3, 0), B.items_slot(2)))
+	check("une unité ne va pas sur le banc d'objets", not board.move(AutochessBoard.board_slot(3, 0), B.items_slot(2)))
 
 	# 6. aucune unité hors plateau : cases invalides écartées vers le banc, figurines à leur case
 	board.set_state({"level": 9, "board": {"0,0": _u("warrior"), "9,9": _u("knight"), "2,5": _u("thief"), "3,-1": _u("cleric"), "x": _u("hunter")},
@@ -121,8 +121,8 @@ func _ready() -> void:
 	var homes: Array = []
 	for r in B.ROWS:
 		for c in B.COLS:
-			homes.append(B.cell_position(c, r))
-			homes.append(B.cell_position(c, r, true))
+			homes.append(AutochessBoard.cell_position(c, r))
+			homes.append(AutochessBoard.cell_position(c, r, true))
 	for i in AutochessData.BENCH_SIZE:
 		homes.append(AutochessBench.slot_position(i))
 	var figs := board.get_children().filter(func(n): return n.has_meta("home") and not n.is_queued_for_deletion())
@@ -137,7 +137,7 @@ func _ready() -> void:
 	board.set_state({"level": 4, "crowns": 0, "board": [{"uid": 900, "id": "warrior", "stars": 2, "items": [], "cell": [2, 0]},
 		{"uid": 901, "id": "knight", "stars": 1, "items": [], "cell": [9, 0]}], "bench": [null, {"uid": 902, "id": "thief", "stars": 1, "items": []}, null],
 		"items": ["lame"]})
-	check("état de la partie (AC-B) lu tel quel", String(board.unit_at(B.board_slot(2, 0)).id) == "warrior" and int(board.unit_at(B.board_slot(2, 0)).uid) == 900
+	check("état de la partie (AC-B) lu tel quel", String(board.unit_at(AutochessBoard.board_slot(2, 0)).id) == "warrior" and int(board.unit_at(AutochessBoard.board_slot(2, 0)).uid) == 900
 		and String(board.unit_at(B.bench_slot(1)).id) == "thief" and board.board_count() == 1 and String(board.unit_at(B.bench_slot(0)).id) == "knight")
 	board.set_enemy([{"uid": 950, "id": "cleric", "stars": 1, "items": [], "cell": [0, 0]}])
 	check("adversaire en liste (AC-B) : en miroir", board.enemy.size() == 1 and not board.enemy.get("0,0", {}).is_empty())
@@ -199,19 +199,19 @@ func _ready() -> void:
 	check("clic sur une unité : tenue", AutochessBoard.same_slot(cursor.held, B.bench_slot(0)))
 	await _frames()
 	check("unité tenue : zone « Vendre » visible avec son prix", cursor._sell.visible and cursor._sell_text.text.contains("+1 or"))
-	_click(B.board_slot(4, 2))
-	check("clic sur une case libre : posée", cursor.held.is_empty() and String(board.unit_at(B.board_slot(4, 2)).id) == "knight" and placed.size() == 1)
+	_click(AutochessBoard.board_slot(4, 2))
+	check("clic sur une case libre : posée", cursor.held.is_empty() and String(board.unit_at(AutochessBoard.board_slot(4, 2)).id) == "knight" and placed.size() == 1)
 	_click(B.bench_slot(1))
-	_click(B.board_slot(5, 2))
+	_click(AutochessBoard.board_slot(5, 2))
 	check("deuxième unité posée : plateau plein (3 / 3)", board.board_count() == 3 and cursor.held.is_empty())
 	board.add_to_bench(_u("thief"))
 	refused.clear()
 	_click(B.bench_slot(0))
-	_click(B.board_slot(6, 2))
+	_click(AutochessBoard.board_slot(6, 2))
 	check("plateau plein : refusé, l'unité reste en main", refused.size() == 1 and AutochessBoard.same_slot(cursor.held, B.bench_slot(0)))
 	check("B (annuler) : reposée", cursor.cancel() and cursor.held.is_empty() and String(board.unit_at(B.bench_slot(0)).id) == "thief")
 	# glisser-déposer : du plateau vers le banc, puis vers la zone « Vendre »
-	_drag(B.board_slot(4, 2), cursor.control_of(B.bench_slot(5)).get_global_rect().get_center())
+	_drag(AutochessBoard.board_slot(4, 2), cursor.control_of(B.bench_slot(5)).get_global_rect().get_center())
 	check("glisser-déposer : plateau → banc", String(board.unit_at(B.bench_slot(5)).id) == "knight")
 	sold.clear()
 	_press(B.bench_slot(5))
@@ -241,9 +241,54 @@ func _ready() -> void:
 	check("X tenu 0,5 s : vendue", sold.size() == 1 and String(sold[0][0].id) == "cleric")
 	cursor.enabled = false
 	check("curseur coupé (combat) : cases cachées", not cursor.control_of(B.bench_slot(0)).is_visible_in_tree())
+	await _test_arena_style()
 
 	print("\n%s : %d échec(s)" % ["TEST AC BOARD", fails])
 	get_tree().quit(1 if fails > 0 else 0)
+
+
+## Lot AC-V : plateau tracé au sol de l'arène (AutochessArena) : sans socle, cases plates au niveau des pieds, juste
+## au-dessus du sol aplani, mêmes cases et même miroir ; elles s'allument et s'estompent.
+func _test_arena_style() -> void:
+	var arena := AutochessArena.new()
+	add_child(arena)
+	arena.build(AutochessArena.biome_for(1), 3)
+	var ab := AutochessBoard.new()
+	ab.arena_style = true
+	add_child(ab)
+	ab.set_state({"level": 3, "board": {"3,0": _u("warrior")}, "bench": [_u("cleric")]})
+	await _frames(2)
+	var pads: Array = ab._tiles.values() + ab.bench._pads + ab.bench._item_pads
+	var flat := pads.size() == 56 + 9 + 10
+	for parts in pads:
+		for n in parts:
+			if not (n as MeshInstance3D).mesh is ArrayMesh or absf((n as Node3D).position.y - AutochessBoard.TOP) > 0.01:
+				flat = false
+	check("arène : 75 cases plates au niveau des pieds (sans socle)", flat and ab.find_children("*", "MeshInstance3D", false, false).all(
+		func(m): return not ((m as MeshInstance3D).mesh is CylinderMesh and ((m as MeshInstance3D).mesh as CylinderMesh).top_radius > 10.0)))
+	var g := Vector3(0, AutochessArena.GROUND, 0)
+	var ground_ok := true
+	for p in [Vector3.ZERO, AutochessBoard.cell_position(0, 3), AutochessBoard.cell_position(6, 3, true), AutochessBench.slot_position(8),
+			AutochessBench.item_position(4)]:
+		var h: float = arena.map.height_at(p.x + arena.map.size * 0.5, p.z + arena.map.size * 0.5) + AutochessArena.GROUND
+		if absf(h - g.y) > 0.005:
+			ground_ok = false
+	check("arène : sol aplani sous le plateau et les bancs, cases 2 cm au-dessus", ground_ok and AutochessArena.GROUND < AutochessBoard.TOP)
+	check("arène : hors du groupe « map » (pas de chemins pour les unités)", not arena.map.is_in_group("map"))
+	check("arène : mêmes cases que le socle (miroir compris)", ab.cell_world_position(2, 1, true).is_equal_approx(AutochessBoard.cell_position(2, 1, true)))
+	var fill := (ab._tiles["3,0"][0] as MeshInstance3D).material_override as StandardMaterial3D
+	var lit := fill.albedo_color.a
+	ab.light_up(false, true)
+	var dim := fill.albedo_color.a
+	ab.light_up(true, true)
+	check("arène : cases allumées en préparation (%.2f), estompées au combat (%.2f)" % [lit, dim], lit > 0.4 and dim < lit * 0.5 and is_equal_approx(fill.albedo_color.a, lit))
+	ab.set_cursor(AutochessBoard.board_slot(3, 0))
+	check("arène : la case visée brille (bord doré)", (ab._tiles["3,0"][1].material_override as StandardMaterial3D).emission_energy_multiplier >= 0.8)
+	check("arène : décor de l'étape (biome %s, puis %s)" % [AutochessArena.biome_for(1), AutochessArena.biome_for(2)],
+		AutochessArena.biome_for(1) == "arid" and AutochessArena.biome_for(2) != "arid" and arena.biome == "arid")
+	ab.queue_free()
+	arena.queue_free()
+	await _frames(2)
 
 
 func _center(s: Dictionary) -> Vector2:
