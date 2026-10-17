@@ -267,6 +267,13 @@ Carte (CO-B, `R_CO_B.md`) : `ProcMap.generate_colisee(graine, n)` (arènes en gr
 `world/colisee_arena.gd` (`ColiseeArena.build_all`, `spawn_point`, `set_shown`), anneau de feu `world/colisee_ring.gd` (`ColiseeRing.STEPS`, `radius_at`, signal
 `warned`, `Combatant.heal_taken` dehors) + `shaders/colisee_ring.gdshader`, fleurs `world/colisee_flower.gd` ; test `test_co_b`, captures `tests/shot_co_map.tscn`.
 
+### Les Deux Voies (MOBA 4 contre 4, en cours ; « Bientôt », caché)
+Étude `conception/benchmark/MOBA.md` (spécification § 7, lots MB-0 à MB-K, croquis `moba_maquettes/`), essai `R_MB0.md` (budgets § 6).
+Règles (MB-A, `R_MB_A.md`) : `core/moba_data.gd` (`MobaData` : réglages en tête, XP / or / primes / réapparition, niveau attendu
+`expected_level`, héros de référence `ref_hero` = unité de dégâts des structures `ref_auto`, sbires `MINIONS` / `minion_stats`, tours, camps,
+objectifs, 40 objets `ITEMS` (`text` sans %, `tip` chiffré), profil `RULES` enregistré par `ensure_rules`) ; kits `data/moba_kits.json`
+générés par `tools/moba_kits.py` (3 cases + ultime ; `--check`), lus par `MobaData.kit` ; fiche `TeamMatch.MODES.moba` ; test `test_mb_data`.
+
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à
   paliers `armory_price`, puits `SHOP_CHESTS`, leçon de maîtrise) ; participation `Run.INSIGNIA_BASE` ; JcJ plafonné au jour

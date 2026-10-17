@@ -50,7 +50,9 @@ const FFA_BASE := 100
 const MODES := {
 	"colisee": {"name": "Le Colisée", "kind": "teams", "teams": 6, "size": 3, "rules": "colisee", "act": "colisee",
 		"arenas": true, "win_places": 3},
-	"moba": {"name": "Les Deux Voies", "kind": "objective", "teams": 2, "size": 4, "rules": "moba", "act": "moba"},
+	# (lot MB-A : règles dans MobaData, directeur MobaDirector ; potions de la boutique, touches C / V)
+	"moba": {"name": "Les Deux Voies", "kind": "objective", "teams": 2, "size": 4, "rules": "moba", "act": "moba",
+		"director": "res://scripts/core/moba_director.gd", "potions": true},
 	"assault": {"name": "L'Assaut", "kind": "objective", "teams": 2, "size": 4, "rules": "assault", "act": "assault",
 		"rounds_to_win": 7},
 }

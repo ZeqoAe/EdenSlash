@@ -1,0 +1,2583 @@
+{
+ "_doc": "Kits des Deux Voies : généré par tools/moba_kits.py depuis data/classes.json (ne pas modifier à la main).",
+ "absolute_arrow": {
+  "slots": [
+   {
+    "main": 50095,
+    "chains": [
+     56115,
+     56111
+    ]
+   },
+   {
+    "main": 50096,
+    "chains": [
+     56113,
+     56112
+    ]
+   },
+   {
+    "main": 50097,
+    "chains": [
+     56114,
+     50168
+    ]
+   },
+   {
+    "main": 50100,
+    "chains": [
+     50098
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50100,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 3,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "adjudicator": {
+  "slots": [
+   {
+    "main": 50102,
+    "chains": [
+     50169,
+     50109
+    ]
+   },
+   {
+    "main": 50103,
+    "chains": [
+     50878,
+     50876
+    ]
+   },
+   {
+    "main": 50877,
+    "chains": [
+     50882,
+     50106
+    ]
+   },
+   {
+    "main": 50170,
+    "chains": [
+     50108
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50170,
+   "kind": "support",
+   "cooldown": 80.0,
+   "power": 1.6
+  },
+  "family": 4,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "annihilator": {
+  "slots": [
+   {
+    "main": 50086,
+    "chains": [
+     50091,
+     50165
+    ]
+   },
+   {
+    "main": 50088,
+    "chains": [
+     50093,
+     50750
+    ]
+   },
+   {
+    "main": 50092,
+    "chains": [
+     50748,
+     50090
+    ]
+   },
+   {
+    "main": 50753,
+    "chains": [
+     50746
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50753,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 3,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "arch_elementalist": {
+  "slots": [
+   {
+    "main": 50126,
+    "chains": [
+     50767,
+     50176
+    ]
+   },
+   {
+    "main": 50127,
+    "chains": [
+     50766,
+     50765
+    ]
+   },
+   {
+    "main": 50128,
+    "chains": [
+     50132,
+     50130
+    ]
+   },
+   {
+    "main": 50774,
+    "chains": [
+     50769
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50774,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 5,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": false
+  }
+ },
+ "archimage": {
+  "slots": [
+   {
+    "main": 50118,
+    "chains": [
+     50124,
+     56095
+    ]
+   },
+   {
+    "main": 50119,
+    "chains": [
+     50125,
+     50174
+    ]
+   },
+   {
+    "main": 56096,
+    "chains": [
+     50173,
+     50120
+    ]
+   },
+   {
+    "main": 50123,
+    "chains": [
+     50121
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50123,
+   "kind": "support",
+   "cooldown": 82.8,
+   "power": 1.6
+  },
+  "family": 4,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "assassin": {
+  "slots": [
+   {
+    "main": 50058,
+    "chains": [
+     56002,
+     60056
+    ]
+   },
+   {
+    "main": 50059,
+    "chains": [
+     50157,
+     56004
+    ]
+   },
+   {
+    "main": 56001,
+    "chains": [
+     56007,
+     50057
+    ]
+   },
+   {
+    "main": 56003,
+    "chains": [
+     50061
+    ]
+   }
+  ],
+  "ult": {
+   "id": 56003,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 2,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "asura": {
+  "slots": [
+   {
+    "main": 50064,
+    "chains": [
+     50070,
+     50829
+    ]
+   },
+   {
+    "main": 50067,
+    "chains": [
+     50827,
+     50065
+    ]
+   },
+   {
+    "main": 50831,
+    "chains": [
+     50066,
+     50068
+    ]
+   },
+   {
+    "main": 50837,
+    "chains": [
+     50069
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50837,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 2,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "bard": {
+  "slots": [
+   {
+    "main": 50026,
+    "chains": [
+     50110,
+     50028
+    ]
+   },
+   {
+    "main": 50027,
+    "chains": [
+     50113,
+     50114
+    ]
+   },
+   {
+    "main": 50111,
+    "chains": [
+     50115,
+     50116
+    ]
+   },
+   {
+    "main": 50112,
+    "chains": [
+     50172
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50112,
+   "kind": "support",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 4,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "battlefield_poet": {
+  "slots": [
+   {
+    "main": 50110,
+    "chains": [
+     50703,
+     50710
+    ]
+   },
+   {
+    "main": 50111,
+    "chains": [
+     50113,
+     50114
+    ]
+   },
+   {
+    "main": 50704,
+    "chains": [
+     50115,
+     50116
+    ]
+   },
+   {
+    "main": 50112,
+    "chains": [
+     50172
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50112,
+   "kind": "support",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 4,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "berserker": {
+  "slots": [
+   {
+    "main": 50036,
+    "chains": [
+     50688,
+     50691
+    ]
+   },
+   {
+    "main": 50037,
+    "chains": [
+     50694,
+     50687
+    ]
+   },
+   {
+    "main": 50689,
+    "chains": [
+     50038,
+     50151
+    ]
+   },
+   {
+    "main": 60053,
+    "chains": [
+     50042
+    ]
+   }
+  ],
+  "ult": {
+   "id": 60053,
+   "kind": "offense",
+   "cooldown": 64.0,
+   "power": 1.6
+  },
+  "family": 1,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "black_blade": {
+  "slots": [
+   {
+    "main": 50463,
+    "chains": [
+     56180,
+     56181
+    ]
+   },
+   {
+    "main": 50464,
+    "chains": [
+     56179,
+     50469
+    ]
+   },
+   {
+    "main": 50468,
+    "chains": [
+     50467,
+     50462
+    ]
+   },
+   {
+    "main": 56182,
+    "chains": [
+     50470
+    ]
+   }
+  ],
+  "ult": {
+   "id": 56182,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 5,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": false
+  }
+ },
+ "blade_acrobat": {
+  "slots": [
+   {
+    "main": 50071,
+    "chains": [
+     50726,
+     50719
+    ]
+   },
+   {
+    "main": 50072,
+    "chains": [
+     50721,
+     50720
+    ]
+   },
+   {
+    "main": 60058,
+    "chains": [
+     50161,
+     50073
+    ]
+   },
+   {
+    "main": 50077,
+    "chains": [
+     50723
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50077,
+   "kind": "offense",
+   "cooldown": 90.0,
+   "power": 1.6
+  },
+  "family": 2,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "blade_dancer": {
+  "slots": [
+   {
+    "main": 50016,
+    "chains": [
+     50071,
+     50161
+    ]
+   },
+   {
+    "main": 50017,
+    "chains": [
+     50072,
+     50073
+    ]
+   },
+   {
+    "main": 50020,
+    "chains": [
+     60058,
+     50019
+    ]
+   },
+   {
+    "main": 50077,
+    "chains": [
+     50018
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50077,
+   "kind": "offense",
+   "cooldown": 90.0,
+   "power": 1.6
+  },
+  "family": 2,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "blade_master": {
+  "slots": [
+   {
+    "main": 50181,
+    "chains": [
+     50188,
+     50186
+    ]
+   },
+   {
+    "main": 50184,
+    "chains": [
+     50185,
+     50182
+    ]
+   },
+   {
+    "main": 50921,
+    "chains": [
+     50923,
+     50183
+    ]
+   },
+   {
+    "main": 50187,
+    "chains": [
+     50925
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50187,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 2,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "chronologist": {
+  "slots": [
+   {
+    "main": 50134,
+    "chains": [
+     50139,
+     56070
+    ]
+   },
+   {
+    "main": 50135,
+    "chains": [
+     56068,
+     50140
+    ]
+   },
+   {
+    "main": 56071,
+    "chains": [
+     56072,
+     50136
+    ]
+   },
+   {
+    "main": 50178,
+    "chains": [
+     50137
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50178,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 5,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": false
+  }
+ },
+ "cleric": {
+  "slots": [
+   {
+    "main": 50026,
+    "chains": [
+     50169,
+     50102
+    ]
+   },
+   {
+    "main": 50027,
+    "chains": [
+     50109,
+     50028
+    ]
+   },
+   {
+    "main": 50103,
+    "chains": [
+     50106,
+     50108
+    ]
+   },
+   {
+    "main": 50170,
+    "chains": [
+     50029
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50170,
+   "kind": "support",
+   "cooldown": 80.0,
+   "power": 1.6
+  },
+  "family": 4,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "conjurer": {
+  "slots": [
+   {
+    "main": 50142,
+    "chains": [
+     50918,
+     50917
+    ]
+   },
+   {
+    "main": 50143,
+    "chains": [
+     50915,
+     50916
+    ]
+   },
+   {
+    "main": 50144,
+    "chains": [
+     50148,
+     50920
+    ]
+   },
+   {
+    "main": 50145,
+    "chains": [
+     50919
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50145,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 5,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": false
+  }
+ },
+ "dark_envoy": {
+  "slots": [
+   {
+    "main": 50142,
+    "chains": [
+     50905,
+     50904
+    ]
+   },
+   {
+    "main": 50143,
+    "chains": [
+     50903,
+     50148
+    ]
+   },
+   {
+    "main": 50144,
+    "chains": [
+     50179,
+     50897
+    ]
+   },
+   {
+    "main": 50145,
+    "chains": [
+     50146
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50145,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 5,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": false
+  }
+ },
+ "dawnbreaker": {
+  "slots": [
+   {
+    "main": 50051,
+    "chains": [
+     56026,
+     56027
+    ]
+   },
+   {
+    "main": 50052,
+    "chains": [
+     50156,
+     50050
+    ]
+   },
+   {
+    "main": 56028,
+    "chains": [
+     56025,
+     56024
+    ]
+   },
+   {
+    "main": 56030,
+    "chains": [
+     50055
+    ]
+   }
+  ],
+  "ult": {
+   "id": 56030,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 1,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": true
+  }
+ },
+ "demon_tamer": {
+  "slots": [
+   {
+    "main": 50134,
+    "chains": [
+     56063,
+     56053
+    ]
+   },
+   {
+    "main": 50135,
+    "chains": [
+     56062,
+     56061
+    ]
+   },
+   {
+    "main": 50139,
+    "chains": [
+     50140,
+     56058
+    ]
+   },
+   {
+    "main": 50178,
+    "chains": [
+     50136
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50178,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 5,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": false
+  }
+ },
+ "devil_hunter": {
+  "slots": [
+   {
+    "main": 50078,
+    "chains": [
+     50868,
+     50874
+    ]
+   },
+   {
+    "main": 50079,
+    "chains": [
+     50083,
+     50080
+    ]
+   },
+   {
+    "main": 50082,
+    "chains": [
+     50871,
+     50163
+    ]
+   },
+   {
+    "main": 50164,
+    "chains": [
+     50870
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50164,
+   "kind": "offense",
+   "cooldown": 64.0,
+   "power": 1.6
+  },
+  "family": 3,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": false
+  }
+ },
+ "dragon_knight": {
+  "slots": [
+   {
+    "main": 50011,
+    "chains": [
+     50446,
+     50445
+    ]
+   },
+   {
+    "main": 50012,
+    "chains": [
+     50449,
+     50444
+    ]
+   },
+   {
+    "main": 50015,
+    "chains": [
+     50447,
+     50448
+    ]
+   },
+   {
+    "main": 50453,
+    "chains": [
+     50013
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50453,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 1,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "dragon_rider": {
+  "slots": [
+   {
+    "main": 50444,
+    "chains": [
+     50453,
+     56164
+    ]
+   },
+   {
+    "main": 50445,
+    "chains": [
+     56165,
+     50449
+    ]
+   },
+   {
+    "main": 50446,
+    "chains": [
+     56162,
+     56166
+    ]
+   },
+   {
+    "main": 56163,
+    "chains": [
+     50447
+    ]
+   }
+  ],
+  "ult": {
+   "id": 56163,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 1,
+  "has": {
+   "mobility": false,
+   "control": false,
+   "heal": true
+  }
+ },
+ "dragon_soul": {
+  "slots": [
+   {
+    "main": 50445,
+    "chains": [
+     56153,
+     56155
+    ]
+   },
+   {
+    "main": 50446,
+    "chains": [
+     50453,
+     50449
+    ]
+   },
+   {
+    "main": 56156,
+    "chains": [
+     50444,
+     50447
+    ]
+   },
+   {
+    "main": 56154,
+    "chains": [
+     50448
+    ]
+   }
+  ],
+  "ult": {
+   "id": 56154,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 1,
+  "has": {
+   "mobility": true,
+   "control": false,
+   "heal": true
+  }
+ },
+ "druid": {
+  "slots": [
+   {
+    "main": 50118,
+    "chains": [
+     56081,
+     56079
+    ]
+   },
+   {
+    "main": 50119,
+    "chains": [
+     50124,
+     56087
+    ]
+   },
+   {
+    "main": 56086,
+    "chains": [
+     56082,
+     50123
+    ]
+   },
+   {
+    "main": 56083,
+    "chains": [
+     50125
+    ]
+   }
+  ],
+  "ult": {
+   "id": 56083,
+   "kind": "support",
+   "cooldown": 68.4,
+   "power": 1.6
+  },
+  "family": 4,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "elegant_dancer": {
+  "slots": [
+   {
+    "main": 50071,
+    "chains": [
+     50731,
+     50161
+    ]
+   },
+   {
+    "main": 50072,
+    "chains": [
+     50073,
+     50733
+    ]
+   },
+   {
+    "main": 60058,
+    "chains": [
+     50074,
+     50075
+    ]
+   },
+   {
+    "main": 50077,
+    "chains": [
+     50076
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50077,
+   "kind": "offense",
+   "cooldown": 90.0,
+   "power": 1.6
+  },
+  "family": 2,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "engineer": {
+  "slots": [
+   {
+    "main": 50021,
+    "chains": [
+     50091,
+     50165
+    ]
+   },
+   {
+    "main": 50022,
+    "chains": [
+     50093,
+     50090
+    ]
+   },
+   {
+    "main": 50025,
+    "chains": [
+     50088,
+     50086
+    ]
+   },
+   {
+    "main": 50092,
+    "chains": [
+     50087
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50092,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 3,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "equilibrian": {
+  "slots": [
+   {
+    "main": 50102,
+    "chains": [
+     50885,
+     50888
+    ]
+   },
+   {
+    "main": 50103,
+    "chains": [
+     50169,
+     50109
+    ]
+   },
+   {
+    "main": 50886,
+    "chains": [
+     50106,
+     50108
+    ]
+   },
+   {
+    "main": 50170,
+    "chains": [
+     50104
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50170,
+   "kind": "support",
+   "cooldown": 80.0,
+   "power": 1.6
+  },
+  "family": 4,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "executioner": {
+  "slots": [
+   {
+    "main": 50043,
+    "chains": [
+     50809,
+     50817
+    ]
+   },
+   {
+    "main": 50044,
+    "chains": [
+     50811,
+     50810
+    ]
+   },
+   {
+    "main": 50045,
+    "chains": [
+     50154,
+     50046
+    ]
+   },
+   {
+    "main": 50813,
+    "chains": [
+     50047
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50813,
+   "kind": "offense",
+   "cooldown": 70.0,
+   "power": 1.6
+  },
+  "family": 1,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "glacier_knight": {
+  "slots": [
+   {
+    "main": 50043,
+    "chains": [
+     50818,
+     50819
+    ]
+   },
+   {
+    "main": 50044,
+    "chains": [
+     50820,
+     50154
+    ]
+   },
+   {
+    "main": 50826,
+    "chains": [
+     50046,
+     50047
+    ]
+   },
+   {
+    "main": 50045,
+    "chains": [
+     50048
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50045,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 1,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": false
+  }
+ },
+ "holy_arrow": {
+  "slots": [
+   {
+    "main": 50095,
+    "chains": [
+     56121,
+     56120
+    ]
+   },
+   {
+    "main": 50096,
+    "chains": [
+     56122,
+     56119
+    ]
+   },
+   {
+    "main": 50097,
+    "chains": [
+     50168,
+     50098
+    ]
+   },
+   {
+    "main": 50100,
+    "chains": [
+     50099
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50100,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 3,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "hunter": {
+  "slots": [
+   {
+    "main": 50021,
+    "chains": [
+     50083,
+     50080
+    ]
+   },
+   {
+    "main": 50078,
+    "chains": [
+     50163,
+     50022
+    ]
+   },
+   {
+    "main": 50082,
+    "chains": [
+     50079,
+     50085
+    ]
+   },
+   {
+    "main": 50164,
+    "chains": [
+     50081
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50164,
+   "kind": "offense",
+   "cooldown": 64.0,
+   "power": 1.6
+  },
+  "family": 3,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": false
+  }
+ },
+ "illusionist": {
+  "slots": [
+   {
+    "main": 50031,
+    "chains": [
+     50139,
+     50032
+    ]
+   },
+   {
+    "main": 50033,
+    "chains": [
+     50134,
+     50140
+    ]
+   },
+   {
+    "main": 50035,
+    "chains": [
+     50135,
+     50034
+    ]
+   },
+   {
+    "main": 50178,
+    "chains": [
+     50136
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50178,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 5,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "inquisitor": {
+  "slots": [
+   {
+    "main": 50021,
+    "chains": [
+     50943,
+     50947
+    ]
+   },
+   {
+    "main": 50022,
+    "chains": [
+     50948,
+     50944
+    ]
+   },
+   {
+    "main": 50025,
+    "chains": [
+     53002,
+     50946
+    ]
+   },
+   {
+    "main": 50945,
+    "chains": [
+     50023
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50945,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 3,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": false
+  }
+ },
+ "kage": {
+  "slots": [
+   {
+    "main": 50057,
+    "chains": [
+     56017,
+     60056
+    ]
+   },
+   {
+    "main": 50058,
+    "chains": [
+     50157,
+     56018
+    ]
+   },
+   {
+    "main": 50059,
+    "chains": [
+     50061,
+     56020
+    ]
+   },
+   {
+    "main": 56016,
+    "chains": [
+     50060
+    ]
+   }
+  ],
+  "ult": {
+   "id": 56016,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 2,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "knight": {
+  "slots": [
+   {
+    "main": 50011,
+    "chains": [
+     50043,
+     50154
+    ]
+   },
+   {
+    "main": 50012,
+    "chains": [
+     50044,
+     50013
+    ]
+   },
+   {
+    "main": 50045,
+    "chains": [
+     50014,
+     50046
+    ]
+   },
+   {
+    "main": 50015,
+    "chains": [
+     50047
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50015,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 1,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": false
+  }
+ },
+ "life_worshipper": {
+  "slots": [
+   {
+    "main": 50110,
+    "chains": [
+     50713,
+     50113
+    ]
+   },
+   {
+    "main": 50111,
+    "chains": [
+     50114,
+     50115
+    ]
+   },
+   {
+    "main": 50718,
+    "chains": [
+     50116,
+     50172
+    ]
+   },
+   {
+    "main": 50112,
+    "chains": [
+     50711
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50112,
+   "kind": "support",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 4,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "light_blade": {
+  "slots": [
+   {
+    "main": 50463,
+    "chains": [
+     56187,
+     56193
+    ]
+   },
+   {
+    "main": 50464,
+    "chains": [
+     56191,
+     50468
+    ]
+   },
+   {
+    "main": 56199,
+    "chains": [
+     50469,
+     50467
+    ]
+   },
+   {
+    "main": 56189,
+    "chains": [
+     56196
+    ]
+   }
+  ],
+  "ult": {
+   "id": 56189,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 5,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "luminary": {
+  "slots": [
+   {
+    "main": 50031,
+    "chains": [
+     50469,
+     50467
+    ]
+   },
+   {
+    "main": 50033,
+    "chains": [
+     50464,
+     50463
+    ]
+   },
+   {
+    "main": 50035,
+    "chains": [
+     50032,
+     50462
+    ]
+   },
+   {
+    "main": 50468,
+    "chains": [
+     50470
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50468,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 5,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "magician": {
+  "slots": [
+   {
+    "main": 50031,
+    "chains": [
+     50127,
+     50176
+    ]
+   },
+   {
+    "main": 50033,
+    "chains": [
+     50032,
+     50132
+    ]
+   },
+   {
+    "main": 50035,
+    "chains": [
+     50126,
+     50130
+    ]
+   },
+   {
+    "main": 50128,
+    "chains": [
+     50034
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50128,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 5,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "martial_artist": {
+  "slots": [
+   {
+    "main": 50017,
+    "chains": [
+     50064,
+     50067
+    ]
+   },
+   {
+    "main": 50020,
+    "chains": [
+     50065,
+     50016
+    ]
+   },
+   {
+    "main": 50066,
+    "chains": [
+     50019,
+     50018
+    ]
+   },
+   {
+    "main": 50070,
+    "chains": [
+     50068
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50070,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 2,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "master_fencer": {
+  "slots": [
+   {
+    "main": 50181,
+    "chains": [
+     50188,
+     50937
+    ]
+   },
+   {
+    "main": 50184,
+    "chains": [
+     50939,
+     50186
+    ]
+   },
+   {
+    "main": 50936,
+    "chains": [
+     50185,
+     50935
+    ]
+   },
+   {
+    "main": 50187,
+    "chains": [
+     50182
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50187,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 2,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "mecha_ares": {
+  "slots": [
+   {
+    "main": 50086,
+    "chains": [
+     50739,
+     50741
+    ]
+   },
+   {
+    "main": 50088,
+    "chains": [
+     50737,
+     50091
+    ]
+   },
+   {
+    "main": 50092,
+    "chains": [
+     50165,
+     50093
+    ]
+   },
+   {
+    "main": 50744,
+    "chains": [
+     50090
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50744,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 3,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "orator": {
+  "slots": [
+   {
+    "main": 50424,
+    "chains": [
+     56141,
+     56139
+    ]
+   },
+   {
+    "main": 50425,
+    "chains": [
+     50432,
+     50430
+    ]
+   },
+   {
+    "main": 56140,
+    "chains": [
+     50431,
+     60057
+    ]
+   },
+   {
+    "main": 50426,
+    "chains": [
+     50427
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50426,
+   "kind": "support",
+   "cooldown": 70.8,
+   "power": 1.6
+  },
+  "family": 4,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": true
+  }
+ },
+ "paladin": {
+  "slots": [
+   {
+    "main": 50050,
+    "chains": [
+     56039,
+     50156
+    ]
+   },
+   {
+    "main": 50051,
+    "chains": [
+     56038,
+     56040
+    ]
+   },
+   {
+    "main": 50052,
+    "chains": [
+     50055,
+     56035
+    ]
+   },
+   {
+    "main": 56037,
+    "chains": [
+     50053
+    ]
+   }
+  ],
+  "ult": {
+   "id": 56037,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 1,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "psalmist": {
+  "slots": [
+   {
+    "main": 50424,
+    "chains": [
+     56131,
+     56132
+    ]
+   },
+   {
+    "main": 50425,
+    "chains": [
+     50430,
+     50431
+    ]
+   },
+   {
+    "main": 50432,
+    "chains": [
+     60057,
+     50427
+    ]
+   },
+   {
+    "main": 50426,
+    "chains": [
+     50428
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50426,
+   "kind": "support",
+   "cooldown": 70.8,
+   "power": 1.6
+  },
+  "family": 4,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "rakshasa": {
+  "slots": [
+   {
+    "main": 50064,
+    "chains": [
+     50070,
+     50067
+    ]
+   },
+   {
+    "main": 50065,
+    "chains": [
+     50838,
+     50845
+    ]
+   },
+   {
+    "main": 50844,
+    "chains": [
+     50840,
+     50066
+    ]
+   },
+   {
+    "main": 50839,
+    "chains": [
+     50068
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50839,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 2,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "ranger": {
+  "slots": [
+   {
+    "main": 50021,
+    "chains": [
+     50095,
+     50168
+    ]
+   },
+   {
+    "main": 50022,
+    "chains": [
+     50096,
+     50025
+    ]
+   },
+   {
+    "main": 50097,
+    "chains": [
+     50023,
+     50024
+    ]
+   },
+   {
+    "main": 50100,
+    "chains": [
+     50098
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50100,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 3,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "reaver": {
+  "slots": [
+   {
+    "main": 50943,
+    "chains": [
+     50945,
+     50947
+    ]
+   },
+   {
+    "main": 50951,
+    "chains": [
+     50948,
+     50944
+    ]
+   },
+   {
+    "main": 50953,
+    "chains": [
+     50955,
+     53002
+    ]
+   },
+   {
+    "main": 50957,
+    "chains": [
+     50946
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50957,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 3,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "rifleteer": {
+  "slots": [
+   {
+    "main": 50943,
+    "chains": [
+     50966,
+     50965
+    ]
+   },
+   {
+    "main": 50944,
+    "chains": [
+     50947,
+     50948
+    ]
+   },
+   {
+    "main": 50946,
+    "chains": [
+     50969,
+     50960
+    ]
+   },
+   {
+    "main": 50945,
+    "chains": [
+     53002
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50945,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 3,
+  "has": {
+   "mobility": false,
+   "control": false,
+   "heal": false
+  }
+ },
+ "sage": {
+  "slots": [
+   {
+    "main": 50026,
+    "chains": [
+     50425,
+     50424
+    ]
+   },
+   {
+    "main": 50027,
+    "chains": [
+     50430,
+     50426
+    ]
+   },
+   {
+    "main": 50432,
+    "chains": [
+     50431,
+     60057
+    ]
+   },
+   {
+    "main": 50028,
+    "chains": [
+     50029
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50028,
+   "kind": "support",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 4,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "samurai": {
+  "slots": [
+   {
+    "main": 50016,
+    "chains": [
+     50188,
+     50184
+    ]
+   },
+   {
+    "main": 50020,
+    "chains": [
+     50186,
+     50185
+    ]
+   },
+   {
+    "main": 50181,
+    "chains": [
+     50182,
+     50183
+    ]
+   },
+   {
+    "main": 50187,
+    "chains": [
+     50017
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50187,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 2,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "shaman": {
+  "slots": [
+   {
+    "main": 50026,
+    "chains": [
+     50119,
+     50118
+    ]
+   },
+   {
+    "main": 50027,
+    "chains": [
+     50123,
+     50125
+    ]
+   },
+   {
+    "main": 50124,
+    "chains": [
+     50174,
+     50173
+    ]
+   },
+   {
+    "main": 50028,
+    "chains": [
+     50029
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50028,
+   "kind": "support",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 4,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "shielder": {
+  "slots": [
+   {
+    "main": 50036,
+    "chains": [
+     50696,
+     50695
+    ]
+   },
+   {
+    "main": 50037,
+    "chains": [
+     50698,
+     50702
+    ]
+   },
+   {
+    "main": 50697,
+    "chains": [
+     50701,
+     50038
+    ]
+   },
+   {
+    "main": 60053,
+    "chains": [
+     50151
+    ]
+   }
+  ],
+  "ult": {
+   "id": 60053,
+   "kind": "offense",
+   "cooldown": 64.0,
+   "power": 1.6
+  },
+  "family": 1,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "stormcaster": {
+  "slots": [
+   {
+    "main": 50126,
+    "chains": [
+     50176,
+     50777
+    ]
+   },
+   {
+    "main": 50127,
+    "chains": [
+     50785,
+     50776
+    ]
+   },
+   {
+    "main": 50128,
+    "chains": [
+     50132,
+     50780
+    ]
+   },
+   {
+    "main": 50779,
+    "chains": [
+     50130
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50779,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 5,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": false
+  }
+ },
+ "templar": {
+  "slots": [
+   {
+    "main": 50011,
+    "chains": [
+     50156,
+     50051
+    ]
+   },
+   {
+    "main": 50012,
+    "chains": [
+     50050,
+     50013
+    ]
+   },
+   {
+    "main": 50052,
+    "chains": [
+     50055,
+     50053
+    ]
+   },
+   {
+    "main": 50015,
+    "chains": [
+     50056
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50015,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 1,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "thief": {
+  "slots": [
+   {
+    "main": 50057,
+    "chains": [
+     50017,
+     60056
+    ]
+   },
+   {
+    "main": 50016,
+    "chains": [
+     50157,
+     50059
+    ]
+   },
+   {
+    "main": 50020,
+    "chains": [
+     50061,
+     50019
+    ]
+   },
+   {
+    "main": 50058,
+    "chains": [
+     50060
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50058,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 2,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "trainer": {
+  "slots": [
+   {
+    "main": 50078,
+    "chains": [
+     50850,
+     50851
+    ]
+   },
+   {
+    "main": 50079,
+    "chains": [
+     50083,
+     50080
+    ]
+   },
+   {
+    "main": 50082,
+    "chains": [
+     50163,
+     50085
+    ]
+   },
+   {
+    "main": 50164,
+    "chains": [
+     50081
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50164,
+   "kind": "offense",
+   "cooldown": 64.0,
+   "power": 1.6
+  },
+  "family": 3,
+  "has": {
+   "mobility": false,
+   "control": true,
+   "heal": true
+  }
+ },
+ "warlock": {
+  "slots": [
+   {
+    "main": 50031,
+    "chains": [
+     50142,
+     50032
+    ]
+   },
+   {
+    "main": 50033,
+    "chains": [
+     50148,
+     50144
+    ]
+   },
+   {
+    "main": 50035,
+    "chains": [
+     50143,
+     50179
+    ]
+   },
+   {
+    "main": 50145,
+    "chains": [
+     50034
+    ]
+   }
+  ],
+  "ult": {
+   "id": 50145,
+   "kind": "offense",
+   "cooldown": 60.0,
+   "power": 1.6
+  },
+  "family": 5,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ },
+ "warrior": {
+  "slots": [
+   {
+    "main": 50012,
+    "chains": [
+     50011,
+     50036
+    ]
+   },
+   {
+    "main": 50015,
+    "chains": [
+     50038,
+     50151
+    ]
+   },
+   {
+    "main": 50037,
+    "chains": [
+     50013,
+     50042
+    ]
+   },
+   {
+    "main": 60053,
+    "chains": [
+     50014
+    ]
+   }
+  ],
+  "ult": {
+   "id": 60053,
+   "kind": "offense",
+   "cooldown": 64.0,
+   "power": 1.6
+  },
+  "family": 1,
+  "has": {
+   "mobility": true,
+   "control": true,
+   "heal": false
+  }
+ }
+}

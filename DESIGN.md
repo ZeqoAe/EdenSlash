@@ -57,6 +57,7 @@ insignes de participation `Run.INSIGNIA_BASE` 25 ; plus d'enclume en Survie (pas
   - Ruée des boss et Siège sur la bibliothèque (passe M6, nuit du 15/10)
   - Battle royale (passe M1, 0.1.201 ; mode codé en 0.1.161, idée 9 de `conception/IDEES_EN_VRAC.md`)
   - L'Échiquier (autochess, `conception/autochess/SPEC.md` ; entrée et fin : lot AC-I)
+  - Les Deux Voies (étude `conception/benchmark/MOBA.md`, en cours : lots MB-A à MB-K)
   - Le Colisée (étude `conception/benchmark/ARENA.md`, en cours : lots CO-A à CO-L)
 - **Partie D — Économie et progression**
   - Joaillerie et forge (comme dans Eden)
@@ -1295,6 +1296,19 @@ rapports `R_AC_*` ; ici, ce que le mode est dans le jeu.
   d'apparence seulement (`Quests._roll_reward`, comme le Survivant).
 - **Fiches** (à la 1re rencontre, dans l'écran du mode) : « Achète et place » (boutique, intérêts), « Trois copies, une
   étoile », « Traits et atouts » ; rangées au Guide, chapitre Modes, sous L'Échiquier.
+
+## Les Deux Voies (étude `conception/benchmark/MOBA.md`, en cours : lots MB-A à MB-K)
+
+Mode scellé, 4 contre 4 joué seul contre des IA scriptées, sur une carte à deux voies et une jungle : détruire le Cœur adverse.
+Les règles complètes sont celles de l'étude (§ 7) ; ici, ce qui est codé (le mode reste « Bientôt » tant qu'il n'est pas jouable
+de bout en bout).
+- **Règles** (lot MB-A, `R_MB_A.md`, `core/moba_data.gd`) : niveaux de partie 1 à 12 (fiche d'un héros de la classe au niveau 30 à
+  85) ; XP 120 à 520 par niveau ; or de départ 500 puis 2 par seconde ; réapparition 7 à 29 s (plus longue dès 15:00, encore plus
+  à la Marée de 18:00) ; vagues toutes les 30 s dès 0:40 ; Gardien 3:00, Colosse 9:00, fin au temps 25:00. Les sbires et les tours
+  suivent la partie : leur force est une part de celle d'un héros au niveau attendu à cet instant. 40 objets en boutique (une phrase
+  par objet, les chiffres en infobulle).
+- **Kits** : chaque classe joue 3 sorts + un ultime tirés de ses propres sorts (un déplacement, un contrôle et, pour la Ferveur, un
+  soin quand la classe en a), avec leurs enchaînements ; l'ultime recharge en 60 à 90 s et frappe plus fort.
 
 ## Le Colisée (étude `conception/benchmark/ARENA.md`, en cours : lots CO-A à CO-L)
 
