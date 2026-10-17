@@ -68,16 +68,18 @@ static func box(tone: String, pad := Vector2(12, 6), shadow := 4, radius := 14, 
 	return UiTheme.sticker(tone, opts)
 
 
-## Rectangle arrondi « autocollant » dessiné à la main : ombre dure, fond, contour.
+## Rectangle arrondi « autocollant » dessiné à la main : ombre dure, fond, contour ; l'encre suit l'opacité du fond
+## (un autocollant qui s'efface ne laisse pas son ombre seule, lot BR-I3).
 static func draw_sticker(ci: CanvasItem, rect: Rect2, fill: Color, radius := 12.0, shadow := 3.0, border := 3.0) -> void:
 	var sb := StyleBoxFlat.new()
 	sb.set_corner_radius_all(int(radius))
 	sb.anti_aliasing = true
+	var ink := Color(INK, fill.a)
 	if shadow > 0.0:
-		sb.bg_color = INK
+		sb.bg_color = ink
 		ci.draw_style_box(sb, Rect2(rect.position + Vector2(shadow, shadow), rect.size))
 	sb.bg_color = fill
-	sb.border_color = INK
+	sb.border_color = ink
 	sb.set_border_width_all(int(border))
 	ci.draw_style_box(sb, rect)
 
@@ -153,6 +155,72 @@ static func draw_key(ci: CanvasItem, center: Vector2, key: String, size := 15) -
 		ci.draw_string_outline(f, Vector2(r.position.x, center.y + size * 0.36), key, HORIZONTAL_ALIGNMENT_CENTER, w, size, 4, INK)
 	ci.draw_string(f, Vector2(r.position.x, center.y + size * 0.36), key, HORIZONTAL_ALIGNMENT_CENTER, w, size, tc)
 	return r
+
+
+## Couleurs adaptées aux daltoniens (réglage interface/colorblind, lot BR-I3) : le danger passe en mandarine et le « sûr »
+## (plus faible que toi, gain) en lagon, la paire orange / bleu que distinguent les trois formes courantes de daltonisme ;
+## les formes (▲ ▼, arcs, pointillés) ne changent jamais.
+static func colorblind() -> bool:
+	return bool(Settings.get_v("interface", "colorblind"))
+
+
+## Tons du danger (coup reçu, plus fort que toi, mis à prix sur toi) : fraise, ou mandarine pour les daltoniens.
+static func danger() -> Array:
+	return MANDARIN if colorblind() else STRAWBERRY
+
+
+## Tons du « sûr » (plus faible que toi, gain) : pomme, ou lagon pour les daltoniens.
+static func safe() -> Array:
+	return LAGOON if colorblind() else APPLE
+
+
+## Ligne de texte avec des touches entre crochets (« [Espace] Sauter · [Maj] Piqué ») découpée en morceaux
+## [{key: bool, s: texte}] : les touches sont dessinées en pastilles (Bible § 6), le reste en texte.
+static func key_parts(text: String) -> Array:
+	var out: Array = []
+	var rest := text
+	while rest != "":
+		var a := rest.find("[")
+		var b := rest.find("]", a + 1) if a >= 0 else -1
+		if a < 0 or b < 0:
+			out.append({"key": false, "s": rest})
+			break
+		if a > 0:
+			out.append({"key": false, "s": rest.substr(0, a)})
+		out.append({"key": true, "s": rest.substr(a + 1, b - a - 1)})
+		rest = rest.substr(b + 1)
+	return out
+
+
+## Largeur d'une ligne à touches dessinées (voir [method draw_key_line]).
+static func key_line_width(text: String, size := 17) -> float:
+	var w := 0.0
+	var f := text_font()
+	for p in key_parts(text):
+		if bool(p.key):
+			w += maxf(float(size) + 13.0, num_font().get_string_size(String(p.s), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 14.0) + 6.0
+		else:
+			w += f.get_string_size(String(p.s), HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	return w
+
+
+## Dessine la ligne [param text] à partir de [param left] (milieu vertical [param left].y) : touches en pastilles, texte
+## [param color] (encre sur papier par défaut, sans contour) ; renvoie la largeur dessinée.
+static func draw_key_line(ci: CanvasItem, left: Vector2, text: String, size := 17, color := INK) -> float:
+	var x := left.x
+	var f := text_font()
+	for p in key_parts(text):
+		var s := String(p.s)
+		if bool(p.key):
+			var w := maxf(float(size) + 13.0, num_font().get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x + 14.0)
+			draw_key(ci, Vector2(x + 3.0 + w * 0.5, left.y), s, size)
+			x += w + 6.0
+		else:
+			if color.get_luminance() > 0.6:
+				ci.draw_string_outline(f, Vector2(x, left.y + size * 0.36), s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, outline_for(size) * 2, INK)
+			ci.draw_string(f, Vector2(x, left.y + size * 0.36), s, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
+			x += f.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	return x - left.x
 
 
 ## Couleurs [clair, base, foncé] de la famille de la classe [param cid] (Bible § 3) ; lilas-gris si elle est inconnue.

@@ -382,6 +382,8 @@ static func note_fight(src: Combatant, dst: Combatant, now: float, dmg := 0.0) -
 		stats.last_hit = {"name": src.display_name.get_slice(" ·", 0), "cid": cid, "lv": src.level, "dmg": dmg, "at": now,
 			"move": String(move.get("name", "")) if String(move.get("name", "")) != "" else "Attaque de base", "icon": String(move.get("icon", "")),
 			"id": src.get_instance_id()}
+	if not (src is Player) and not (dst is Player) and is_instance_valid(dst):
+		RoyaleCues.heard(dst.global_position, "fight")  # (lot BR-I3 : « Voir les sons », combat entre deux autres héros)
 	var k := _pair(src, dst)
 	var f: Array = fights.get(k, [now, now])
 	if now - float(f[1]) > FIGHT_GAP:

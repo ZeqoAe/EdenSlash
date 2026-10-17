@@ -8,6 +8,10 @@ extends Control
 ## - par-dessus le monde : flèches (zone sûre, héros proches hors de la vue, repère : RoyaleEdge) et arc de coup reçu (HitArc) ;
 ## - repère personnel (RoyalePing) : clic molette au sol, L3 à la manette (devant le héros) ;
 ## - grande carte v2 (RoyaleMap), ouverte seule pendant le vol.
+## Lot BR-I3 (backlog P1-P2) : cadre de cible v2 (RoyaleTarget), annonces centrales une à la fois et onomatopées
+## (RoyaleAnnounce, par le crochet de Hud.show_message), aide du largage à touches dessinées et altimètre (RoyaleDropHint),
+## « Voir les sons » (RoyaleCues), son et ambiance (RoyaleAmbience), chiffres sobres et retours de coups (RoyaleCombat),
+## premiers pas du mode (TIPS), « Niveau max » de l'anneau (rythme des récompenses).
 ## Posé par Hud (Hud._build) quand Royale.active ; aucune règle de jeu ne change. Coût mesuré par `test_bri1` (`tick`).
 
 const COL_W := 230.0  # largeur de la colonne de droite (celle de la mini-carte)
@@ -15,6 +19,14 @@ const COL_X := -246.0  # comme la mini-carte (Hud._build_minimap)
 const COL_Y := 252.0  # sous la mini-carte
 const FEED_MAX := 4
 const FEED_W := 340.0  # le fil déborde à gauche de la colonne : une élimination tient sur une ligne
+## Premiers pas du mode (backlog P1 n° 15) : une fiche par moment, une fois par profil (records.royale_tips) ; ≤ 125 signes.
+const TIPS := {
+	"chute": {"title": "Le largage", "icon": "speed", "body": "Dirige ta chute vers ton repère. Piqué pour descendre vite, planeur pour finir en douceur. Personne ne frappe en l'air."},
+	"anneau": {"title": "L'anneau", "icon": "clock", "body": "Dehors, l'anneau violet te ronge. Chaque anneau relève le niveau maximal : reste dedans et monte de niveau."},
+	"butin": {"title": "Les dépouilles", "icon": "chest", "body": "Un héros tombé laisse une dépouille : fouille-la. « Tout le meilleur » prend d'un coup ce qui te sert."},
+}
+
+static var current: RoyaleHud  # (moments signalés par le directeur : RoyaleHud.moment)
 
 var hud: Hud
 var player: Player
@@ -38,6 +50,17 @@ var _feed: VBoxContainer
 var _feed_sig := ""
 var _ride_opened := false  # la carte s'est ouverte d'office pour ce vol
 var _was_riding := false
+var target: RoyaleTarget
+var announce: RoyaleAnnounce
+var drop_hint: RoyaleDropHint
+var cues: RoyaleCues
+var ambience: RoyaleAmbience
+var _hooked := {}  # héros scripté (id) -> signaux branchés
+var _hook_t := 0.0
+var _cap_phase := -1  # anneau pour lequel « Niveau max » a été annoncé
+var tips_shown: Array = []  # fiches montrées dans cette partie (tests)
+## Pile des fiches du mode : à gauche, au milieu de l'écran (à droite, la colonne de la mini-carte et le fil sont pris).
+var tips_cards: InfoCard
 
 
 ## Pose le HUD du Battle royale sur [param h] (après Hud._build).
@@ -57,11 +80,16 @@ static func attach(h: Hud, root: Control) -> RoyaleHud:
 	root.move_child(r.edge, 1)
 	r.edge.setup(r.player, r.director)
 	r.arc = HitArc.attach(root, r.player)
+	r.cues = RoyaleCues.new()  # « Voir les sons » : sous les panneaux, comme les flèches
+	root.add_child(r.cues)
+	root.move_child(r.cues, 2)
+	r.cues.setup(r.player, r.director)
 	root.add_child(r)
 	r._build(h)
 	r.map = RoyaleMap.new()
 	root.add_child(r.map)  # au-dessus de tout le HUD
 	r.map.setup(r.player, r.director)
+	current = r
 	return r
 
 
@@ -139,6 +167,29 @@ func _build(h: Hud) -> void:
 	_feed.custom_minimum_size = Vector2(FEED_W, 0)
 	_feed.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_feed)
+	# lot BR-I3 : cadre de cible, aide du largage, annonces (au-dessus du reste du HUD), ambiance
+	target = RoyaleTarget.new()
+	add_child(target)
+	drop_hint = RoyaleDropHint.new()
+	add_child(drop_hint)
+	drop_hint.setup(player, director)
+	announce = RoyaleAnnounce.new()
+	announce.player = player
+	add_child(announce)
+	RoyaleCombat.announce = announce
+	ambience = RoyaleAmbience.new()
+	ambience.setup(player, director)
+	add_child(ambience)
+	player.leveled_up.connect(_on_level_up)
+	tips_cards = InfoCard.in_control(self)
+	var box: Control = tips_cards.get("_box")
+	box.anchor_left = 0.0
+	box.anchor_right = 0.0
+	box.offset_left = 14.0
+	box.offset_right = 14.0 + InfoCard.W
+	box.offset_top = -130.0  # (sous l'objectif et le fil de butin, au-dessus de l'aide du largage)
+	box.offset_bottom = -130.0
+	box.grow_horizontal = Control.GROW_DIRECTION_END
 
 
 func _rd() -> RoyaleDirector:
@@ -161,7 +212,7 @@ func _process(delta: float) -> void:
 
 
 ## Mise à jour d'une image (textes seulement s'ils changent) ; mesurée par test_bri1.
-func tick(_delta: float) -> void:
+func tick(delta: float) -> void:
 	var rd := _rd()
 	if rd == null or player == null:
 		visible = false
@@ -173,9 +224,24 @@ func tick(_delta: float) -> void:
 	_update_feed(rd)
 	_feed.position.y = _col.position.y + _col.size.y + 8.0  # (sous la barre de l'anneau)
 	_update_ride(rd)
-	_cover(map.is_open and map.visible)
+	var covered: bool = map.is_open and map.visible
+	_update_target(rd, covered)
 	var hint = hud.get("_drop_box")
-	edge.bottom_extra = 120.0 if hint != null and hint.visible else 0.0  # (les flèches restent au-dessus de l'aide du largage)
+	if hint != null:
+		(hint as CanvasItem).visible = false  # (lot BR-I3 : remplacée par RoyaleDropHint, touches dessinées)
+	# récapitulatif de mort ouvert : il dit déjà le retour, et rien ne passe derrière lui
+	var recap_open: bool = rd.recap_view != null and is_instance_valid(rd.recap_view) and rd.recap_view.is_card_open()
+	drop_hint.update(covered or recap_open)
+	announce.visible = not recap_open
+	_cover(covered)
+	edge.bottom_extra = 120.0 if drop_hint.line.visible else 0.0  # (les flèches restent au-dessus de l'aide du largage)
+	if player.is_dead and String(announce.current.get("kind", "")) in ["danger", "bounty_me"]:
+		announce.clear()  # (un avertissement pour le joueur n'a plus de sens une fois tombé)
+	_hook_t -= delta
+	if _hook_t <= 0.0:
+		_hook_t = 0.5
+		_hook_heroes(rd)
+		_tips(rd)
 
 
 # --- objectif court -----------------------------------------------------------------------------------
@@ -344,10 +410,124 @@ func _cover(open: bool) -> void:
 	if holder != null:
 		holder.visible = not open
 	if open:
+		target.visible = false
+		announce.clear()
+	cues.visible = not open
+	if open:
 		for key in ["_left", "_target_box", "_action_root"]:  # (Hud les remet à chaque image)
 			var c = hud.get(key)
 			if c != null:
 				(c as CanvasItem).visible = false
+
+
+# --- cadre de cible (lot BR-I3) ------------------------------------------------------------------------------
+## Même cible que le cadre commun de Hud (verrouillée, sinon le héros le plus proche ; rien pendant un choix de carte),
+## montrée dans le cadre v2 ; le cadre commun est caché.
+func _update_target(rd: RoyaleDirector, covered: bool) -> void:
+	var box = hud.get("_target_box")
+	var t: Combatant = null
+	if box != null and (box as CanvasItem).visible and not covered and not rd.spectating:
+		var ref = hud.get("_target_ref")
+		t = (ref as WeakRef).get_ref() as Combatant if ref is WeakRef else null
+	if box != null:
+		(box as CanvasItem).visible = false
+	target.show_target(t, player, rd.bounty)
+
+
+# --- annonces, moments, retours (lot BR-I3) -------------------------------------------------------------------
+## Crochet de Hud.show_message : vrai si le message devient une annonce centrale (sinon Hud le garde : fil de butin).
+func announce_message(text: String, duration: float) -> bool:
+	if map_open() and not text.begins_with("Hors de l'anneau"):
+		return true  # (la grande carte du vol dit déjà tout)
+	return announce.push(text, duration)
+
+
+## Moment signalé par le directeur : « gold_chest » (coffre doré ou largage ouvert : rayons et étincelles).
+static func moment(kind: String) -> void:
+	if current == null or not is_instance_valid(current):
+		return
+	match kind:
+		"gold_chest":
+			var at := current._hero_screen()
+			UiFeel.ring(at, 30.0)
+			UiFeel.sparkle(at, 6, ["soleil", "papier", "soleil", "mandarine"], 24.0)
+			current.announce.word("Trésor !", RoyaleHudStyle.SUN)
+
+
+## Position du héros à l'écran (repère de la fenêtre, pour UiFeel).
+func _hero_screen() -> Vector2:
+	var cam := get_viewport().get_camera_3d()
+	if cam == null or player == null or cam.is_position_behind(player.global_position):
+		return get_viewport_rect().size * 0.5
+	return cam.unproject_position(player.global_position + Vector3.UP * 1.6)
+
+
+func _on_level_up(level: int) -> void:
+	var rd := _rd()
+	if rd == null or player.is_dead:
+		return
+	announce.word("Niveau !", RoyaleHudStyle.APPLE)
+	# rythme des récompenses : au plafond de l'anneau, le joueur sait quand il pourra remonter
+	var ph := int(rd.ring.get("phase", 0)) if not rd.ring.is_empty() else 0
+	if level >= Royale.level_cap_now and _cap_phase != ph:
+		_cap_phase = ph
+		var nxt := Royale.level_cap(ph + 1)
+		if nxt > Royale.level_cap_now:
+			announce.push("Niveau max !\nLe prochain anneau ouvre le niveau %d" % nxt, 2.5)
+		else:
+			announce.push("Niveau max !\nTu es au sommet", 2.5)
+
+
+## Branche les héros scriptés (nouveaux et revenants) : coups donnés par le joueur, éliminations.
+func _hook_heroes(rd: RoyaleDirector) -> void:
+	for a in rd.ais:
+		if not is_instance_valid(a) or _hooked.has(a.get_instance_id()):
+			continue
+		_hooked[a.get_instance_id()] = true
+		a.damaged.connect(RoyaleCombat.on_hero_damaged.bind(a, player))
+		a.died.connect(_on_hero_died)
+
+
+func _on_hero_died(who: Combatant, killer: Combatant) -> void:
+	if killer != player or not is_instance_valid(who):
+		return
+	announce.word("K.O. !", RoyaleHudStyle.danger())
+	RoyaleAmbience.cue("ko")
+	var cam := get_viewport().get_camera_3d()
+	if cam != null and not cam.is_position_behind(who.global_position):
+		var at := cam.unproject_position(who.global_position + Vector3.UP * 1.4)
+		UiFeel.ring(at, 26.0)
+		UiFeel.sparkle(at, 4, ["fraise", "soleil", "papier", "lagon"], 18.0)
+
+
+# --- premiers pas du mode (backlog P1 n° 15) -------------------------------------------------------------------
+func _tips(rd: RoyaleDirector) -> void:
+	if player.autoplay or bool(Profile.tutorial.get("cards_off", false)):
+		return
+	if tips_cards.count() > 0 or map_open() or get_tree().paused:
+		return
+	var j := rd.jump
+	if j != null and j.airborne(player) and not j.on_board(player):
+		show_tip("chute")
+	elif rd.phase == "fight" and not rd.spectating and not player.is_dead:
+		if rd.elapsed > 4.0:
+			show_tip("anneau")
+		if rd.kill_feed.size() > 0:
+			show_tip("butin")
+
+
+## Montre la fiche [param id] (TIPS) si ce profil ne l'a jamais vue ; vrai si elle est montrée.
+func show_tip(id: String) -> bool:
+	var seen: Array = Profile.records.get("royale_tips", [])
+	if id in seen or not TIPS.has(id):
+		return false
+	seen.append(id)
+	Profile.records["royale_tips"] = seen  # (gardé à la fin de la partie : Profile.reload_keep_records)
+	tips_shown.append(id)
+	var t: Dictionary = TIPS[id]
+	tips_cards.add_card({"id": "royale_" + id, "icon": String(t.icon), "title": String(t.title), "body": String(t.body),
+		"duration": 9.0, "kicker": "Battle royale", "buttons": [{"label": "Compris", "kind": "primary"}]})
+	return true
 
 
 # --- largage : carte d'office ------------------------------------------------------------------------------

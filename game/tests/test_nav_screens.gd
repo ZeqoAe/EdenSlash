@@ -226,6 +226,12 @@ func _ready() -> void:
 	for t in lobby._settings._pages.size():
 		lobby._settings.show_page(t)
 		await probe("Paramètres : page %d (%s)" % [t, lobby._settings._tab_buttons[t].text], 0.95)
+	# lot BR-I3 : la section « Accessibilité » (Voir les sons, couleurs pour daltoniens, vibration en combat) est atteignable
+	var acc_rows := 0
+	for l in lobby._settings.find_children("*", "Label", true, false):
+		if (l as Label).text in ["Voir les sons", "Couleurs pour daltoniens", "Vibration en combat"]:
+			acc_rows += 1
+	check("Paramètres : section Accessibilité (%d réglages)" % acc_rows, acc_rows == 3)
 	# Touches : un saut de groupe à la croix gauche (de la touche au bouton de son groupe) et retour
 	lobby._settings.show_page(2)
 	await get_tree().process_frame

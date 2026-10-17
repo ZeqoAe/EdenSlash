@@ -127,7 +127,9 @@ const DEFAULTS := {
 		# curseur de souris (CursorSets) et réticule de visée en jeu (AimReticle) ; valeur inconnue = défaut
 		"cursor_set": "classic", "reticle": "dot", "reticle_size": 1.0, "reticle_color": "gold",
 		# ressenti du clic (UiFeel) ; ui_skin : peau des panneaux (« sticker » ; « night » = option technique, sans ligne)
-		"ui_reduce_motion": false, "ui_vibration": true, "ui_fx": 1.0, "ui_skin": "sticker"},
+		"ui_reduce_motion": false, "ui_vibration": true, "ui_fx": 1.0, "ui_skin": "sticker",
+		# accessibilité (lot BR-I3) : « Voir les sons », couleurs adaptées aux daltoniens, vibration des coups en combat
+		"sound_cues": false, "colorblind": false, "combat_vibration": true},
 }
 
 ## Modes de jeu prêts à l'emploi (réglages du menu Contrôles).

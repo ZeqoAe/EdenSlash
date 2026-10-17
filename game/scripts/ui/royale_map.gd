@@ -696,8 +696,45 @@ static func minimap_overlay(mm: Minimap, w2s: Callable) -> void:
 			var b: Vector2 = w2s.call(Vector3(goal.x, 0, goal.y))
 			mm.draw_line(a, b, RoyaleHudStyle.INK, 5.0, true)
 			mm.draw_dashed_line(a, b, RoyaleHudStyle.AMETHYST[0], 3.0, 7.0)
+	_minimap_places(mm, w2s, rd)
 	if RoyalePing.has():
 		var sp: Vector2 = w2s.call(RoyalePing.pos)
 		if not mm._inside(sp):
 			sp = mm._clamp_edge(sp, mm.size * 0.5)
 		_pin(mm, sp + Vector2(0, 6.0), 6.5 if not mm.big else 9.0)
+
+
+## Lieux nommés sur la mini-carte (lot BR-I3) : un rond à la couleur de leur richesse, et le nom des 3 plus proches du
+## héros quand il tient dans le disque (petits caractères contourés d'encre ; le lieu où il se trouve en lagon).
+const MINI_NAMES := 3
+
+
+static func _minimap_places(mm: Minimap, w2s: Callable, rd: RoyaleDirector) -> void:
+	var places: Array = RoyalePing.places(rd)
+	if places.is_empty():
+		return
+	var me := mm.player.global_position
+	var here := rd.place_at(me)
+	var c := mm.size * 0.5
+	var lim := minf(mm.size.x, mm.size.y) * 0.5
+	var named: Array = places.duplicate()
+	named.sort_custom(func(a, b): return me.distance_to(a.get("pos", Vector3.ZERO)) < me.distance_to(b.get("pos", Vector3.ZERO)))
+	named = named.slice(0, MINI_NAMES)
+	var f := RoyaleHudStyle.text_font()
+	var fs := UiTheme.MIN_TEXT
+	for pl in places:
+		var sp: Vector2 = w2s.call(pl.get("pos", Vector3.ZERO))
+		if sp.distance_to(c) > lim - 8.0:
+			continue
+		var stars := clampi(int(pl.get("stars", 0)), 0, 3)
+		mm.draw_circle(sp, 6.0, RoyaleHudStyle.INK)
+		mm.draw_circle(sp, 4.0, [RoyaleHudStyle.PAPER, RoyaleHudStyle.LAGOON[1], RoyaleHudStyle.AMETHYST[1], RoyaleHudStyle.SUN[1]][stars])
+		if not pl in named:
+			continue
+		var label := String(pl.get("name", ""))
+		var w := f.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var at := sp + Vector2(-w * 0.5, -10.0)
+		if at.distance_to(c) > lim - 14.0 or (at + Vector2(w, 0)).distance_to(c) > lim - 14.0:
+			continue  # (le nom sortirait du disque)
+		var col := RoyaleHudStyle.LAGOON[0] if not here.is_empty() and String(here.get("name", "")) == label else RoyaleHudStyle.WHITE
+		RoyaleHudStyle.draw_text(mm, at, label, fs, col, f)

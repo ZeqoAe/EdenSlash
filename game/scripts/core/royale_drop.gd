@@ -198,14 +198,11 @@ func plan(n: int, rng: RandomNumberGenerator) -> Array:
 				best_s = s
 				best = c
 		if best.is_empty():
-			# aucun coffre libre à portée : un point au sol sous le vol, à l'instant prévu
-			var jt := float(slots[i])
-			var under := Vector2(a.x, a.z) + u * SPEED * jt + Vector2(-u.y, u.x) * rng.randf_range(-40.0, 40.0)
-			var g: Vector3 = d.map.ground_at(under.x, under.y)
-			if g == Vector3.INF:
-				g = Vector3(under.x, d.map.height_at(under.x, under.y), under.y)
-			out.append({"target": g, "jump_t": jt})
-			taken.append(g)
+			# aucun coffre libre à portée : un point au sol sous le vol, le plus loin possible des autres (lot BR-I3 :
+			# avant, un point tiré au hasard sans regarder les autres tombait parfois à 8-15 m d'un héros, test_royale)
+			var fb := _free_spot(float(slots[i]), u, reach, taken, rng.randf_range(-1.0, 1.0))
+			out.append(fb)
+			taken.append(fb.target)
 			continue
 		# atterrir à côté du coffre, du côté du vol (pas dessus)
 		var off: Vector2 = -(best.dir as Vector2).normalized() * 2.5 if (best.dir as Vector2).length() > 0.5 else Vector2(2.5, 0)
@@ -214,6 +211,46 @@ func plan(n: int, rng: RandomNumberGenerator) -> Array:
 		out.append({"target": tp, "jump_t": maxf(open_t, float(best.jump_t) - 0.6)})
 		taken.append(tp)
 	return out
+
+
+## Écart visé entre deux points de saut (comme pour les coffres) ; au-delà, un point plus proche de son instant de saut
+## vaut mieux qu'un point encore plus isolé.
+const SPREAD := 55.0
+
+
+## Point de saut sans coffre (lot BR-I3) : sur une grille de la bande atteignable sous le vol (instants de saut entre
+## l'ouverture des portes et la fin, écart latéral dans [param reach]), celui qui est le plus loin des points déjà pris
+## ([param taken], plafonné à SPREAD), puis le plus proche de l'instant prévu [param slot_t] ; [param jitter] (-1 à 1,
+## tiré à la graine) décale la grille d'un tirage à l'autre. Toujours au sol et dans la carte. {target, jump_t}
+func _free_spot(slot_t: float, u: Vector2, reach: float, taken: Array, jitter: float) -> Dictionary:
+	var open_t := Royale.COUNTDOWN + 0.5
+	var last_t := maxf(open_t, duration - 0.5)
+	var side := Vector2(-u.y, u.x)
+	var bnd: Rect2 = d.map.bounds.grow(-12.0)
+	var best := {}
+	var best_s := -INF
+	var lat := reach * 0.7
+	for k in 25:
+		var jt := lerpf(open_t, last_t, (float(k) + 0.5 + jitter * 0.4) / 25.0)
+		for m in 7:
+			var off := lerpf(-lat, lat, float(m) / 6.0) + jitter * lat * 0.12
+			var q := Vector2(a.x, a.z) + u * SPEED * jt + side * off
+			if not bnd.has_point(q):
+				continue
+			var gap := SPREAD
+			for o in taken:
+				gap = minf(gap, Vector2((o as Vector3).x - q.x, (o as Vector3).z - q.y).length())
+			var s := gap * 10.0 - absf(jt - slot_t) * 0.35 - absf(off) * 0.01
+			if s > best_s:
+				best_s = s
+				best = {"q": q, "jump_t": jt}
+	if best.is_empty():  # (vol hors de la carte : jamais en pratique) le point sous l'aigle à l'instant prévu
+		best = {"q": (Vector2(a.x, a.z) + u * SPEED * slot_t).clamp(bnd.position, bnd.end), "jump_t": slot_t}
+	var q: Vector2 = best.q
+	var g: Vector3 = d.map.ground_at(q.x, q.y)
+	if g == Vector3.INF:
+		g = Vector3(q.x, d.map.height_at(q.x, q.y), q.y)
+	return {"target": g, "jump_t": float(best.jump_t)}
 
 
 func update(delta: float) -> void:

@@ -187,6 +187,30 @@ func _ready() -> void:
 	var trophy_card := _strip(Items.describe({"name": "Test", "slot": "trophy", "rarity": 3, "level": 10, "passive": Trophies.passive_for({"trophy": "agi", "level": 10}, 3)}, true))
 	check("passif d'un trophée de la run : garde son nom français", trophy_card.contains("✶ Passif — "))
 
+	# 5e. Battle royale, lot BR-I3 : annonces, onomatopées, fiches, intentions, sons, aide du largage
+	var br_src := FileAccess.get_file_as_string("res://scripts/core/royale_director.gd") + FileAccess.get_file_as_string("res://scripts/ui/royale_hud.gd")
+	var br_rx := RegEx.create_from_string("(?:message\\.emit|push|feed|word)\\(\"([^\"]+)\"")
+	var br_texts: Array = []
+	for m in br_rx.search_all(br_src):
+		br_texts.append(m.get_string(1).replace("\\n", " "))
+	for id in RoyaleHud.TIPS:
+		br_texts.append(String(RoyaleHud.TIPS[id].title) + " : " + String(RoyaleHud.TIPS[id].body))
+	for k in RoyaleDirector.INTENT:
+		br_texts.append(String(RoyaleDirector.INTENT[k]))
+	for k in RoyaleCues.KINDS:
+		br_texts.append(String(RoyaleCues.KINDS[k][0]))
+	var br_bad: Array = []
+	for t in br_texts:
+		_note("Battle royale (annonces, fiches)", String(t))
+		var low := String(t).to_lower()
+		for ch in ["'", "’", "(", ")", ":", ",", ".", "!", "?", ";", "«", "»", "·", "/", "-"]:
+			low = low.replace(ch, " ")
+		for brw in low.split(" ", false):
+			if brw in ["run", "runs", "build", "builds", "lobby", "spawn", "loot", "ping"]:
+				br_bad.append("%s (« %s »)" % [brw, String(t).left(60)])
+	check("Battle royale : %d annonces et fiches, ni « run / build / lobby / spawn / loot / ping » %s" % [br_texts.size(), str(br_bad.slice(0, 4))],
+		br_texts.size() > 20 and br_bad.is_empty())
+
 	# 6. bilan : tout texte signalé
 	var total := 0
 	for src in flagged:

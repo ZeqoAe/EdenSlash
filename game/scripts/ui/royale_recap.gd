@@ -19,7 +19,7 @@ var card: PanelContainer
 var watch_button: Button
 var results_button: Button
 var _bar: PanelContainer
-var _bar_label: Label
+var _bar_line: RoyaleKeyLine  # (lot BR-I3 : touches dessinées en pastilles)
 var _countdown: Label
 var _t := 0.0
 
@@ -128,10 +128,11 @@ func _build_bar(root: Control) -> void:
 	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(bottom)
 	_bar = PanelContainer.new()
-	_bar.add_theme_stylebox_override("panel", RoyaleStyle.box(RoyaleStyle.PAPER, 14, 4, Vector2(16, 6)))
+	_bar.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bottom.add_child(_bar)
-	_bar_label = RoyaleStyle.label(_bar, "", 17, RoyaleStyle.INK, "bold", 0)
+	_bar_line = RoyaleKeyLine.new()
+	_bar.add_child(_bar_line)
 	_bar.visible = false
 
 
@@ -175,7 +176,7 @@ func _process(delta: float) -> void:
 	var spect := director != null and is_instance_valid(director) and bool(director.get("spectating")) and String(director.get("phase")) != "over"
 	_bar.visible = spect and not revive_mode()
 	if _bar.visible:
-		_bar_label.text = bar_text()
+		_bar_line.set_text(bar_text())
 	# la carte se replie seule au bout de 12 s (la vue reste au spectateur)
 	if not revive_mode() and is_card_open() and _t > 12.0:
 		watch()
@@ -199,7 +200,7 @@ func bar_text() -> String:
 		who = "%s · niv. %d" % [(w as Combatant).display_name.get_slice(" ·", 0), int(st.get("lv", (w as Combatant).level))]
 	var prev := Settings.pad_name(JOY_BUTTON_LEFT_SHOULDER) if Gamepad.active else Settings.action_label("move_left", 1)
 	var next := Settings.pad_name(JOY_BUTTON_RIGHT_SHOULDER) if Gamepad.active else Settings.action_label("move_right", 1)
-	return "[%s] ◀   Tu regardes : %s   ▶ [%s]     [%s] son équipement     [%s] bilan" % [prev, who, next,
+	return "[%s] ◀  Tu regardes : %s  ▶ [%s]    [%s] son équipement    [%s] bilan" % [prev, who, next,
 		Settings.action_label("interact", 1), Settings.action_label("pause", 1)]
 
 

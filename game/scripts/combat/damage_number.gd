@@ -92,6 +92,8 @@ static func spawn(target: Node3D, amount: float, crit: bool, on_player: bool, do
 	var mode := String(Settings.get_v("interface", "damage_numbers"))
 	if mode == "off" or (mode == "dealt" and on_player) or (mode == "crit" and not crit and not on_player):
 		return
+	if Royale.active and RoyaleCombat.number(target, amount, crit, on_player, dot):
+		return  # Battle royale : un nombre sobre par cible et par rafale (lot BR-I3)
 	if not on_player:
 		if alive >= (MAX_ALIVE_CRIT if crit else MAX_ALIVE):
 			return  # mêlée dense : l'écran reste lisible

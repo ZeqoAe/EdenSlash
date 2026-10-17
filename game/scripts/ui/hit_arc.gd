@@ -76,8 +76,8 @@ func screen_angle(src: Vector3) -> float:
 func _buzz() -> void:
 	if not Gamepad.active or Input.get_connected_joypads().is_empty():
 		return
-	if not bool((Settings.data.get("interface", {}) as Dictionary).get("ui_vibration", true)):
-		return
+	if not bool(Settings.get_v("interface", "combat_vibration")):
+		return  # (lot BR-I3 : réglage « Vibration en combat », à part de celle des menus)
 	Input.start_joy_vibration(0, 0.0, 0.35, 0.09)  # (faible, fort, durée) : coup reçu (Bible § 7)
 
 
@@ -109,12 +109,13 @@ func _draw() -> void:
 		var grow := 1.0 + 0.12 * clampf(t / 0.12, 0.0, 1.0)  # petit élan vers l'extérieur à l'arrivée
 		var a := float(arc.angle)
 		var rr := r * grow
+		var tones := RoyaleHudStyle.danger()  # (fraise ; mandarine pour les daltoniens, lot BR-I3)
 		draw_arc(center, rr, a - SPREAD, a + SPREAD, 28, Color(RoyaleHudStyle.INK, 0.9 * alpha), (WIDTH + 6.0) * k, true)
-		draw_arc(center, rr, a - SPREAD * 0.97, a + SPREAD * 0.97, 28, Color(RoyaleHudStyle.STRAWBERRY[1], alpha), WIDTH * k, true)
-		draw_arc(center, rr - WIDTH * k * 0.22, a - SPREAD * 0.8, a + SPREAD * 0.8, 24, Color(RoyaleHudStyle.STRAWBERRY[0], 0.85 * alpha), 3.0 * k, true)
+		draw_arc(center, rr, a - SPREAD * 0.97, a + SPREAD * 0.97, 28, Color(tones[1], alpha), WIDTH * k, true)
+		draw_arc(center, rr - WIDTH * k * 0.22, a - SPREAD * 0.8, a + SPREAD * 0.8, 24, Color(tones[0], 0.85 * alpha), 3.0 * k, true)
 		# pointe vers l'extérieur, au milieu de l'arc : on lit d'où vient le coup
 		var d := Vector2.RIGHT.rotated(a)
 		var tip := center + d * (rr + WIDTH * k * 1.6)
 		var base := center + d * (rr + WIDTH * k * 0.2)
 		var side := d.orthogonal() * WIDTH * k * 0.9
-		RoyaleHudStyle.draw_inked_polygon(self, PackedVector2Array([tip, base + side, base - side]), Color(RoyaleHudStyle.STRAWBERRY[1], alpha), 2.0)
+		RoyaleHudStyle.draw_inked_polygon(self, PackedVector2Array([tip, base + side, base - side]), Color(tones[1], alpha), 2.0)

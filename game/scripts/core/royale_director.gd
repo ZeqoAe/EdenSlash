@@ -116,7 +116,7 @@ func setup(director: RunDirector) -> void:
 	jump.landed.connect(_on_landed)
 	_build_walls()
 	d.zone_changed.emit({"name": "Battle royale · %s" % d.zone.get("name", ""), "levels": [1, Royale.LEVEL_CAP]})
-	d.message.emit("Battle royale\n%d héros, un seul survivant. Saute au-dessus d'un coffre !" % Royale.PLAYERS, 4.0)
+	d.message.emit("Battle royale !\n%d héros, un seul survivant : choisis où sauter" % Royale.PLAYERS, 4.0)
 	d.world._offer("Ton arme de %s : choisis sa variante" % String(GameData.weapon_type(Run.weapon_type()).get("name", "classe")).to_lower(),
 		RoyaleLoot.start_weapon_cards(d.start_weapon_cards()))  # lot BR3 : armes du Survivant (jet, passif fixe)
 	if p.autoplay:
@@ -176,6 +176,21 @@ func _tag(r: ClassRival) -> void:
 	l.visibility_range_end = 35.0
 	l.text = "%s · niv. %d" % [r.display_name, r.level]
 	r.add_child(l)
+	# lot BR-I3 (backlog P1 n° 16 et 17) : au-dessus de la plaque, la force relative (▲ plus fort que toi, ▼ plus faible)
+	# et, pour les scriptés Facile et Normal, leur intention (pille, chasse, fuit…)
+	var f := Label3D.new()
+	f.name = "RoyaleForce"
+	f.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	f.no_depth_test = true
+	f.fixed_size = true
+	f.pixel_size = 0.0011
+	f.font_size = 24
+	f.outline_size = 9
+	f.outline_modulate = RoyaleHudStyle.INK
+	f.position = Vector3(0, 3.1, 0)
+	f.offset = Vector2(0, 46)
+	f.visibility_range_end = 35.0
+	r.add_child(f)
 
 
 func _build_walls() -> void:
@@ -238,7 +253,7 @@ func update(delta: float) -> void:
 			if jump != null:
 				jump.land_all()
 			phase = "fight"
-			d.message.emit("Tout le monde est au sol : l'anneau démarre !", 2.0)
+			d.message.emit("Tous au sol !\nL'anneau démarre", 2.0)
 	elif phase == "fight":
 		elapsed += delta
 		d.time = elapsed
@@ -284,15 +299,28 @@ func update(delta: float) -> void:
 func _announce_ring() -> void:
 	match String(ring.state):
 		"shrink":
-			d.message.emit("L'anneau se referme !", 2.5)
+			d.message.emit("L'anneau se resserre !\nRejoins le cercle blanc", 2.5)
+			var wall := _wall_point(d.player.global_position)  # (lot BR-I3 : « Voir les sons »)
+			if wall != Vector3.INF:
+				RoyaleCues.heard(wall, "ring")
 		"final":
-			d.message.emit("DERNIER CERCLE : les dégâts explosent", 3.0)
+			d.message.emit("Dernier cercle !\nLes dégâts montent vite", 3.0)
 		"hold":
 			if int(ring.phase) > 0:
-				d.message.emit("Anneau %d/%d : nouvelle zone marquée en blanc\nNiveau maximal : %d" % [int(ring.phase) + 1,
+				d.message.emit("Anneau %d / %d\nNiveau max %d ! Nouvelle zone en blanc" % [int(ring.phase) + 1,
 					Royale.PHASES.size() - 1, Royale.level_cap_now], 3.0)
 			else:
-				d.message.emit("Un premier anneau se refermera bientôt : surveille la carte", 3.0)
+				d.message.emit("Premier anneau\nIl se refermera bientôt : surveille la carte", 3.0)
+
+
+## Point du mur de l'anneau le plus proche de [param pos] (au sol) ; Vector3.INF sans anneau.
+func _wall_point(pos: Vector3) -> Vector3:
+	if ring.is_empty():
+		return Vector3.INF
+	var c: Vector2 = ring.center
+	var q := Vector2(pos.x, pos.z)
+	var w := c + ((q - c).normalized() if q.distance_to(c) > 0.1 else Vector2.RIGHT) * float(ring.radius)
+	return Vector3(w.x, pos.y, w.y)
 
 
 ## Texte de l'objectif (HUD).
@@ -512,6 +540,31 @@ func _refresh_tag(r: ClassRival) -> void:
 	tag.text = "%s%s · niv. %d\nPV %s" % ["★ " if marked else "", r.display_name, r.level, Hud._big_number(ceilf(r.hp))]  # (lot BR-I2 : pas de pourcentage)
 	tag.modulate = Color(1.0, 0.82, 0.3) if marked else Color.WHITE
 	tag.visibility_range_end = 120.0 if marked else 35.0
+	var fl := r.get_node_or_null("RoyaleForce") as Label3D
+	if fl != null:
+		var line := plate_line(r)
+		fl.text = String(line[0])
+		fl.modulate = line[1]
+		fl.visibility_range_end = tag.visibility_range_end
+
+
+## Intention d'un héros scripté selon son ordre (st.mode) : montrée au-dessus des scriptés Facile et Normal (lot BR-I3).
+const INTENT := {"L": "pille", "O": "pille", "W": "attend le largage", "B": "pille", "F": "attaque", "H": "chasse", "E": "fuit",
+	"R": "rejoint l'anneau"}
+
+
+## Ligne au-dessus de la plaque de [param r] : [texte, couleur] (« ▲ chasse », « ▼ fuit », « pille »…).
+func plate_line(r: ClassRival) -> Array:
+	var ratio := RoyaleTarget.force_of(r, d.player) if d.player != null and is_instance_valid(d.player) else 1.0
+	var fl := RoyaleTarget.force_label(ratio)
+	var arrow := String(fl[0]).get_slice(" ", 0) if String(fl[0]).begins_with("▲") or String(fl[0]).begins_with("▼") else ""
+	if d.player == null or not is_instance_valid(d.player) or d.player.is_dead:
+		arrow = ""  # (spectateur : la force se compare au joueur, qui n'est plus là)
+	var st: Dictionary = r.get_meta("royale", {})
+	var intent := String(INTENT.get(String(st.get("mode", "")), "")) if int(st.get("diff", 3)) <= 1 else ""
+	var text := " ".join([arrow, intent].filter(func(x): return x != ""))
+	var col: Color = (fl[1] as Array)[0] if arrow != "" else RoyaleHudStyle.PAPER
+	return [text, col]
 
 
 func _fight(r: ClassRival, foe: Combatant) -> void:
@@ -633,6 +686,7 @@ func _ai_open(r: ClassRival, chest: Interactable) -> void:
 	_claims.erase(chest)
 	Royale.ai_open_chest(r, tier)
 	Sfx.event_at(d, chest.global_position, "chest", -8.0)
+	RoyaleCues.heard(chest.global_position, "chest")  # (lot BR-I3 : « Voir les sons »)
 	if tier == Royale.DROP_TIER:
 		d.message.emit("%s s'empare du largage" % r.display_name.get_slice(" ·", 0), 2.0)
 
@@ -673,6 +727,9 @@ func _on_ai_died(who: Combatant, killer: Combatant) -> void:
 	var tag := who.get_node_or_null("RoyaleTag") as Label3D
 	if tag:
 		tag.visible = false
+	var force_tag := who.get_node_or_null("RoyaleForce") as Label3D
+	if force_tag:
+		force_tag.visible = false
 	var was_bounty := who == bounty
 	var name := who.display_name.get_slice(" ·", 0)
 	var line := "%s est éliminé par l'anneau" % name
@@ -700,7 +757,7 @@ func _on_ai_died(who: Combatant, killer: Combatant) -> void:
 		line += " : il reviendra"
 	feed(line)
 	if not spectating and not back:
-		d.message.emit("%d restant%s" % [left, "s" if left > 1 else ""], 1.6)
+		d.message.emit("%d héros restant%s" % [left, "s" if left > 1 else ""], 1.6)
 	if randf() < 0.7 or was_bounty:
 		d._drop_potion(who.global_position, Potions.roll_kind())
 	_fall(who)  # lot BR3 : ses pièces tombent (sauf l'arme), sa dépouille garde sa fiche
@@ -753,7 +810,7 @@ func _update_bounty() -> void:
 		d.message.emit("Tu es mis à prix !\nTous les héros voient où tu es", 3.0)
 		timeline_add("bounty")
 	else:
-		d.message.emit("%s est mis à prix\nÉlimine-le : un niveau de plus" % best.display_name.get_slice(" ·", 0), 3.0)
+		d.message.emit("Mis à prix !\n%s : élimine-le, un niveau de plus" % best.display_name.get_slice(" ·", 0), 3.0)
 	for a in ais:
 		if is_instance_valid(a) and not a.is_dead:
 			_refresh_tag(a)
@@ -805,7 +862,7 @@ func player_down(killer: Combatant = null) -> void:
 	timeline_add("down", "%de" % left)
 	if left <= 2:
 		_finish(left)  # un seul héros restant : il a gagné
-		d.message.emit("Éliminé ! Tu termines %de sur %d" % [left, Royale.PLAYERS], 3.0)
+		d.message.emit("Éliminé !\nTu termines %de sur %d" % [left, Royale.PLAYERS], 3.0)
 		return
 	spectating = true
 	watched = killer if killer != null and is_instance_valid(killer) and not killer.is_dead else null
@@ -950,7 +1007,7 @@ func _finish(place: int) -> void:
 			a.passive = true
 			a.goal = Vector3.INF
 	if place == 1:
-		d.message.emit("VICTOIRE ! Dernier debout", 3.0)
+		d.message.emit("Victoire !\nDernier debout", 3.0)
 	elif spectating and winner != null:
 		d.message.emit("%s remporte la partie" % winner.display_name.get_slice(" ·", 0), 3.0)
 	d.player.autoplay_target = Vector3.INF
@@ -1119,7 +1176,7 @@ func _restock() -> void:
 		placed += 1
 	_restocks += 1
 	if placed > 0:
-		d.message.emit("De nouveaux coffres tombent dans l'anneau", 2.5)
+		d.message.emit("Nouveaux coffres\nIls tombent dans l'anneau", 2.5)
 
 
 ## Coffre de la qualité [param tier] posé en [param pos] (le même que ceux de la carte, ProcMap.make_royale_chest).
@@ -1170,7 +1227,7 @@ func _announce_drop() -> void:
 	tw.tween_callback(func():
 		mark.queue_free()
 		it.set_aura_visible(true))
-	d.message.emit("Largage dans %d s : le meilleur coffre de la partie\nRepère doré sur la carte" % int(Royale.DROP_DELAY), 3.5)
+	d.message.emit("Largage !\nDans %d s : le meilleur coffre, étoile dorée sur la carte" % int(Royale.DROP_DELAY), 3.5)
 	Sfx.ui("chest", -6.0)
 
 
@@ -1184,6 +1241,7 @@ func _update_drops() -> void:
 		it.used = false
 		Vfx.ring(d, dr.pos + Vector3.UP * 0.2, 6.0, Color(1.0, 0.85, 0.35, 0.9))
 		Sfx.event_at(d, dr.pos, "chest", 0.0)
+		RoyaleCues.heard(dr.pos, "drop")
 		d.message.emit("Le largage a atterri !", 2.0)
 
 
@@ -1212,6 +1270,8 @@ func open_chest(it: Interactable) -> void:
 	Run.chests_total += 1
 	Profile.record_add("chests", 1)
 	d.message.emit("%s ouvert" % it.title, 1.5)
+	if tier >= 2:
+		RoyaleHud.moment("gold_chest")  # (lot BR-I3 : rayons de soleil, Bible § 7 « coffre doré »)
 	if tier == Royale.DROP_TIER:
 		feed("Tu t'empares du largage")
 		timeline_add("drop")
@@ -1367,8 +1427,8 @@ func clock_text() -> String:
 			var left := ceili(float(ring.left))
 			return "Anneau %d/%d · se referme dans %s" % [n, Royale.PHASES.size() - 1, "%d:%02d" % [left / 60, left % 60] if left >= 60 else "%d s" % left]
 		"shrink":
-			return "Anneau %d/%d · RESSERREMENT" % [n, Royale.PHASES.size() - 1]
-	return "DERNIER CERCLE"
+			return "Anneau %d/%d · il se resserre" % [n, Royale.PHASES.size() - 1]
+	return "Dernier cercle"  # (lot BR-I3 : plus de majuscules criées)
 
 
 ## Lignes du panneau d'objectifs (HUD).

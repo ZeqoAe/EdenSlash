@@ -173,6 +173,10 @@ BR-I2 (`conception/royale/R_BRI2.md`) : lieux nommés `ProcMap.places` / `Royale
 BR-I1 (`conception/royale/R_BRI1.md`) : HUD v2 `ui/royale_hud.gd` (posé par `Hud._build` : objectif court, tuiles, anneau, fil), flèches `ui/royale_edge.gd`, arc de coup
 reçu `ui/hit_arc.gd` (signal `Combatant.damaged`, aussi en Duel), repère `ui/royale_ping.gd` (action `ping` : clic molette / L3), grande carte `ui/royale_map.gd` (ouverte
 seule pendant le vol, A = Sauter), dessin `ui/royale_hud_style.gd` ; test `test_bri1` (coût du HUD ≤ 0,3 ms), captures `shot_bri1` (`BRI1_RES`).
+BR-I3 (`conception/royale/R_BRI3.md`) : annonces une à la fois `ui/royale_announce.gd` (crochet `Hud.show_message`, file à priorités, onomatopées),
+cadre de cible v2 `ui/royale_target.gd` (force ▲ ▼), aide du largage et altimètre `ui/royale_drop_hint.gd`, « Voir les sons » `ui/royale_cues.gd`, ambiance
+synthétisée `ui/royale_ambience.gd`, chiffres sobres `ui/royale_combat.gd` (crochet `DamageNumber.spawn`), réglages `interface/sound_cues`, `colorblind`,
+`combat_vibration` ; points de saut écartés (`RoyaleDrop._free_spot`) ; test `test_bri3`, captures `shot_bri3` (`BRI3_RES`).
 Équilibre (lot BR1, `conception/royale/R_BR1.md`) : échelle 0,055 du profil `royale`, `Royale.kill_xp` (écart de niveau), `LEVEL_CAPS` par
 anneau, force des scriptés (`AI_GEAR_SCALE`, `ai_level_factor`), `AI_EXCLUDED` ; mesures : `tools/royale_duel_probe.tscn` (durée d'un duel par
 niveau et équipement, `--tournament`, essais `--scale=` / `--caps=`) et les lignes `[royale] élimination` / `[royale] force` du pilote.

@@ -1164,6 +1164,8 @@ func show_prompt(text: String) -> void:
 
 func show_message(text: String, duration: float) -> void:
 	text = text.replace("<Boss> ", "").replace("<Duel> ", "")  # (les noms de combattants portent une étiquette interne)
+	if _royale != null and _royale.announce_message(text, duration):
+		return  # Battle royale : annonces centrales une à la fois, DA v2 (lot BR-I3, RoyaleAnnounce)
 	for pre in FEED_PREFIXES:
 		if text.begins_with(pre) and not text.contains("\n"):
 			feed(text)

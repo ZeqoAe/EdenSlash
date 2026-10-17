@@ -4,13 +4,14 @@ extends Node
 ## godot --path game res://tests/shot_br4.tscn
 
 var world: Node
+var _tag := ""  # suffixe des fichiers quand BR4_RES est donnée (« _720 »)
 
 
 func _shot(name: String) -> void:
 	await RenderingServer.frame_post_draw
 	DirAccess.make_dir_recursive_absolute("user://shots")
-	get_viewport().get_texture().get_image().save_png("user://shots/br4_%s.png" % name)
-	print("[shot] br4_%s" % name)
+	get_viewport().get_texture().get_image().save_png("user://shots/br4_%s%s.png" % [name, _tag])
+	print("[shot] br4_%s%s %dx%d" % [name, _tag, get_viewport().get_visible_rect().size.x, get_viewport().get_visible_rect().size.y])
 
 
 func _cards() -> void:
@@ -32,8 +33,10 @@ func _ready() -> void:
 	var sz := Vector2i(1600, 900)
 	if res.contains("x"):
 		sz = Vector2i(int(res.get_slice("x", 0)), int(res.get_slice("x", 1)))
+		_tag = "_%d" % sz.y
+	Settings.reset_all()  # (avant la taille : il applique la résolution des réglages, lot BR-I3)
 	DisplayServer.window_set_size(sz)
-	Settings.reset_all()
+	get_window().size = sz
 	Profile.reset_all()
 	Royale.difficulty = 1
 	Royale.start("magician")
