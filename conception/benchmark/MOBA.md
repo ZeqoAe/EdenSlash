@@ -433,7 +433,7 @@ regardées, BIBLE v2 + `UiTheme` v2 / `UiFeel`, aucun mot anglais côté joueur.
 
 | Lot | Contenu | Dépend de | Jours | Test / acceptation |
 |---|---|---|---|---|
-| **MB-0** | Essai technique : scène plate 200 × 120, 8 `ClassRival` qui se battent, 48 sbires qui marchent sur 2 courbes, 10 tours qui tirent ; mesures fenêtré 1600 × 900 et sans rendu ; **go / no-go** et budget par unité | — | 2 | p95 < 16,6 ms ou plan de réduction chiffré |
+| **MB-0** | Essai technique : scène plate 200 × 120, 8 `ClassRival` qui se battent, 48 sbires qui marchent sur 2 courbes, 10 tours qui tirent ; mesures fenêtré 1600 × 900 et sans rendu ; **go / no-go** et budget par unité ; **fait : GO avec conditions, `R_MB0.md`** | — | 2 | p95 < 16,6 ms ou plan de réduction chiffré |
 | **MB-A** | `MobaData` (réglages, tables or / XP / réapparition, 40 objets, camps, objectifs), kits générés des 60 classes, profil `moba`, `Modes.sealed()` | — | 2 | `test_mb_data` : 60 kits valides, 40 objets, recettes cohérentes, aucun texte avec « % » |
 | **MB-B** | Carte (scène fixe ou `ProcMap.generate_moba`), voies, maillage précuit, buissons, rochers, bases, décor | MB-0, MB-A | 3 | captures `map_shots` ; trajets de base à base 28-32 s |
 | **MB-C** | Tours, Cœur, sbires, vagues, protections, victoire ; état `Moba` et directeur `MobaDirector` | MB-B | 4 | `test_mb_lanes` : 20 min de vagues seules sans chute ; un camp ×1,2 fait tomber T1 vers 8-10 min |

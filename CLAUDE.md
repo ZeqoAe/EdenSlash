@@ -378,6 +378,7 @@ captures `tests/shot_hub1.tscn`. `records.news` / `last_activity` = état de men
 | `python tools/journal_report.py` | règles de décision du journal de run (voir « Journal de run ») |
 | `res://tools/perf_ui.tscn` | performances headless (`PERF_ARGS`, voir « Performances ») |
 | `res://tools/gen_profiles.tscn` | profils « opti » du duel (voir « Duel (JcJ) ») |
+| `python tools/moba_probe.py` | coût d'image des Deux Voies (MB-0, `R_MB0.md` : GO ; banc `res://tools/moba_probe.tscn`, `--preset=base\|opt`, `--decor=<biome>`) ; budgets à tenir par MB-B à MB-J |
 
 ## IA d'entraînement (apprentissage par renforcement)
 Arène `game/scenes/ml_arena.tscn` (`game/scripts/ml/`) pilotée par Python (`ia/`, voir
