@@ -35,6 +35,8 @@ static func _material(color: Color) -> StandardMaterial3D:
 
 ## Arc horizontal (portée [param radius], ouverture [param arc] en degrés) devant [param fwd].
 static func slash(parent: Node, pos: Vector3, fwd: Vector3, radius: float, arc: float, color := Color(1.0, 0.85, 0.6, 0.9)) -> void:
+	if NetEvents.on:
+		NetEvents.emit(NetEvents.SLASH, parent, [pos, fwd, radius, arc, color])  # (lot NET-A) Mode amis : l'hôte rejoue l'effet chez ses amis
 	if Vfx.muted(parent):
 		return
 	var mesh := ImmediateMesh.new()
@@ -72,6 +74,8 @@ static func slash(parent: Node, pos: Vector3, fwd: Vector3, radius: float, arc: 
 
 ## Onde circulaire au sol (tourbillons, buffs).
 static func ring(parent: Node, pos: Vector3, radius: float, color := Color(1.0, 0.75, 0.3, 0.8)) -> void:
+	if NetEvents.on:
+		NetEvents.emit(NetEvents.RING, parent, [pos, radius, color])  # (lot NET-A) Mode amis : l'hôte rejoue l'effet chez ses amis
 	if Vfx.muted(parent):
 		return
 	var mesh := ImmediateMesh.new()
@@ -154,6 +158,8 @@ static func shockwave(parent: Node, pos: Vector3, radius: float, color := Color(
 
 ## Éclair de lumière bref à l'impact (billboard qui grossit et s'efface).
 static func flash(parent: Node, pos: Vector3, size: float, color := Color(1.0, 0.9, 0.6)) -> void:
+	if NetEvents.on:
+		NetEvents.emit(NetEvents.FLASH, parent, [pos, size, color])  # (lot NET-A) Mode amis : l'hôte rejoue l'effet chez ses amis
 	if Vfx.muted(parent) or Settings.fx_particles() == "off":
 		return
 	if parent == null or not parent.is_inside_tree():
@@ -195,6 +201,8 @@ static func _radial() -> Texture2D:
 
 ## Petite gerbe d'étincelles à l'impact.
 static func spark(parent: Node, pos: Vector3, color := Color(1.0, 0.9, 0.6), crit := false) -> void:
+	if NetEvents.on:
+		NetEvents.emit(NetEvents.SPARK, parent, [pos, color, crit])  # (lot NET-A) Mode amis : l'hôte rejoue l'effet chez ses amis
 	if Vfx.muted(parent) or Settings.fx_particles() == "off":
 		return
 	if parent == null or not parent.is_inside_tree():

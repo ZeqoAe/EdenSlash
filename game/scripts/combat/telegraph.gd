@@ -62,6 +62,8 @@ static var _hatch_shader: Shader
 
 
 static func spawn(parent: Node, pos: Vector3, yaw: float, props: Dictionary) -> Telegraph:
+	if NetEvents.on:
+		NetEvents.emit(NetEvents.TELE, parent, [pos, yaw, props])  # (lot NET-A) Mode amis : l'hôte rejoue l'effet chez ses amis
 	var t := Telegraph.new()
 	for k in props:
 		t.set(k, props[k])

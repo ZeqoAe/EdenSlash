@@ -118,6 +118,8 @@ const DEFAULTS := {
 	"camera": {"rotate_speed": 1.0, "invert_y": false, "distance": 15.0, "shake": 1.0, "action_turn": 1.0},
 	# L'Échiquier (lot ACX-2) : préparation sans minuteur, noms au-dessus des héros en combat, bilan de manche à chaque fois
 	"autochess": {"no_timer": false, "names": false, "recap_always": false, "planned": [], "guide_done": false},  # planned, guide_done : lot ACX-3
+	# Mode amis (lot NET-A) : « Jouer ensemble » à l'écran titre, port d'hôte, dernière adresse rejointe, héros de l'arène
+	"net": {"friends": false, "port": 24680, "join": "", "class": ""},
 	# dev_mode : écran de test (F10), réservé aux tests
 	"interface": {"damage_numbers": "all", "hit_stop": true, "show_fps": false, "move_marker": true, "attack_zone": false, "dev_mode": false,
 		"tower_unlock_all": true, "perfect_hint": true, "pad_labels": "auto", "compass": true,
@@ -165,6 +167,7 @@ var save_path := SAVE_PATH
 func _ready() -> void:
 	if not OS.get_cmdline_user_args().is_empty() or " ".join(OS.get_cmdline_args()).contains("res://tests/"):
 		save_path = TEST_SAVE_PATH
+	save_path = NetLaunch.user_path(save_path)  # (lot NET-A) --profil=<nom> : réglages de cette instance
 	UiTheme.apply_global()
 	if DisplayServer.get_name() != "headless":  # réticule de visée en jeu : un calque au-dessus de tout
 		var layer := CanvasLayer.new()

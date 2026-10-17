@@ -82,6 +82,8 @@ static func _pop(label: Label3D, big: float) -> Tween:
 
 ## Texte flottant (ESQUIVE, SAUT, RENVOI...).
 static func spawn_text(target: Node3D, text: String, color: Color) -> void:
+	if NetEvents.on:
+		NetEvents.emit(NetEvents.TEXT, target, [text, color])  # (lot NET-A) Mode amis : l'hôte rejoue l'effet chez ses amis
 	if Vfx.muted(target):
 		return
 	if not target.is_inside_tree():
@@ -122,6 +124,8 @@ static func spawn_text(target: Node3D, text: String, color: Color) -> void:
 
 
 static func spawn(target: Node3D, amount: float, crit: bool, on_player: bool, dot := false, capped := false) -> void:
+	if NetEvents.on:
+		NetEvents.emit(NetEvents.DMG, target, [amount, crit, on_player, dot, capped])  # (lot NET-A) Mode amis : l'hôte rejoue l'effet chez ses amis
 	if Vfx.muted(target):
 		return
 	if not target.is_inside_tree():

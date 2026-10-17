@@ -19,9 +19,13 @@ var _saves: Control  # fenêtre Jouer
 var _saves_title: Label
 var _saves_body: VBoxContainer
 var _armed := -1  # emplacement à écraser (2e clic)
+var friends: Button  # « Jouer ensemble » (Mode amis, lot NET-A), visible si le réglage est actif
 
 
 func _ready() -> void:
+	if NetLaunch.requested():  # (lot NET-A) EdenSlash.exe --host / --join=<adresse> : droit à l'arène entre amis
+		get_tree().change_scene_to_file.call_deferred(NetLaunch.SCENE)
+		return
 	if not OS.get_cmdline_user_args().is_empty():
 		get_tree().change_scene_to_file.call_deferred(LOBBY)
 		return
@@ -79,6 +83,11 @@ func _build_ui() -> void:
 	var play := MenuWidgets.gold_button("Jouer", 38, Vector2(440, 86))
 	play.pressed.connect(_open_saves)
 	_main.add_child(play)
+	friends = MenuWidgets.paper_button("Jouer ensemble", 20, Vector2(440, 54))  # (lot NET-A) Mode amis, réglage « net/friends »
+	friends.pressed.connect(func(): get_tree().change_scene_to_file(NetLaunch.SCENE))
+	friends.visible = bool(Settings.get_v("net", "friends"))
+	Settings.changed.connect(_on_settings_changed)
+	_main.add_child(friends)
 	for spec in [["Paramètres", func(): _settings.open()], ["Quitter", func(): get_tree().quit()]]:
 		var b := MenuWidgets.paper_button(spec[0], 20, Vector2(440, 54))  # boutons papier sur la scène (UIK1)
 		b.pressed.connect(spec[1])
@@ -282,6 +291,10 @@ func _new(i: int) -> void:
 
 func _go() -> void:
 	get_tree().change_scene_to_file.call_deferred(LOBBY)
+
+
+func _on_settings_changed() -> void:
+	friends.visible = bool(Settings.get_v("net", "friends"))
 
 
 func _unhandled_input(event: InputEvent) -> void:

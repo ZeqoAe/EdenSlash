@@ -337,6 +337,10 @@ func _test_title() -> void:
 	add_child(title)
 	await get_tree().create_timer(1.5).timeout
 	check("écran titre : illustrations du titre et du menu chargées", title.bg_title.texture != null and title.bg_menu.texture != null)
+	check("écran titre : « Jouer ensemble » caché sans le Mode amis (lot NET-A)", title.friends != null and not title.friends.visible)
+	Settings.set_v("net", "friends", true)
+	check("écran titre : « Jouer ensemble » avec le Mode amis", title.friends.visible)
+	Settings.set_v("net", "friends", false)
 	title._open_saves()
 	await _frames()
 	check("Jouer : continuer, charger, nouvelle partie", title._saves.visible and title._saves_body.get_child_count() >= 3 and not title._center.visible)

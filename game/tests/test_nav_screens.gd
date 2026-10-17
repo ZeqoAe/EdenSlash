@@ -509,6 +509,13 @@ func _ready() -> void:
 	await probe("écran titre")
 	title._open_saves()
 	await probe("écran titre : sauvegardes")
+	# lot NET-A : menu « Jouer ensemble » de l'arène entre amis (Mode amis)
+	title.queue_free()
+	var net: Node = load("res://scenes/net_arena.tscn").instantiate()
+	add_child(net)
+	await get_tree().create_timer(0.5).timeout
+	await probe("Jouer ensemble")
+	net.queue_free()
 	Gamepad.active = false
 	print("TOUT EST OK (0 échec(s))" if fails == 0 else "ÉCHECS : %d" % fails)
 	get_tree().quit(fails)

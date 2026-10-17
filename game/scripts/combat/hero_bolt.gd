@@ -33,6 +33,8 @@ var _spin: Node3D  # étoile de lancer : tourne sur elle-même
 
 
 static func fire(p: Player, pos: Vector3, direction: Vector3, act: Dictionary) -> HeroBolt:
+	if NetEvents.on:
+		NetEvents.emit(NetEvents.BOLT, p, [pos, direction, act])  # (lot NET-A) Mode amis : l'hôte rejoue l'effet chez ses amis
 	var b := HeroBolt.new()
 	b.shooter = p
 	b.action = act

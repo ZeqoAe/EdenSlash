@@ -773,18 +773,18 @@ func select_weapon_type(wtype: String) -> void:
 ## Fichier de l'emplacement [param i] (les tests ont leurs propres fichiers).
 func slot_path(i: int) -> String:
 	if _test:
-		return TEST_SAVE_PATH if i == 1 else "user://profile_test_%d.json" % i
-	return SAVE_PATH if i == 1 else "user://profile_%d.json" % i
+		return NetLaunch.user_path(TEST_SAVE_PATH if i == 1 else "user://profile_test_%d.json" % i)
+	return NetLaunch.user_path(SAVE_PATH if i == 1 else "user://profile_%d.json" % i)  # (lot NET-A) --profil=<nom> : une sauvegarde par instance
 
 
 func last_slot() -> int:
-	var p := LAST_SLOT_PATH if not _test else "user://last_slot_test.txt"
+	var p := NetLaunch.user_path(LAST_SLOT_PATH if not _test else "user://last_slot_test.txt")
 	var txt := SafeFile.read(p, func(t): return t.strip_edges().is_valid_int())
 	return clampi(int(txt.strip_edges()), 1, SLOT_COUNT) if txt != "" else 1
 
 
 func _remember_slot() -> void:
-	SafeFile.write(LAST_SLOT_PATH if not _test else "user://last_slot_test.txt", str(slot), func(t): return t.strip_edges().is_valid_int())
+	SafeFile.write(NetLaunch.user_path(LAST_SLOT_PATH if not _test else "user://last_slot_test.txt"), str(slot), func(t): return t.strip_edges().is_valid_int())
 
 
 func slot_exists(i: int) -> bool:

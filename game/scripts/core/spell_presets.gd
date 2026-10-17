@@ -19,7 +19,7 @@ static var _loaded := false
 
 
 static func _path() -> String:
-	return TEST_PATH if DevEdits.is_test() else PATH
+	return NetLaunch.user_path(TEST_PATH if DevEdits.is_test() else PATH)  # (lot NET-A) une instance, ses préréglages
 
 
 static func _load() -> void:

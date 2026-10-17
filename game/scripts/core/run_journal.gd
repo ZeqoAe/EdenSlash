@@ -30,7 +30,7 @@ static var last_line: Dictionary = {}  # dernière ligne écrite (tests)
 
 
 static func path() -> String:
-	return "user://journal_test.jsonl" if Settings.save_path == Settings.TEST_SAVE_PATH else "user://journal.jsonl"
+	return NetLaunch.user_path("user://journal_test.jsonl" if Settings.save_path.get_file() == Settings.TEST_SAVE_PATH.get_file() else "user://journal.jsonl")
 
 
 static func mode_name() -> String:

@@ -312,6 +312,21 @@ Verlet), `auto` + `steps` (auto-attaque de classe, `Player._class_auto`), formes
 poses procédurales `player/proc_pose.gd` (SkeletonModifier3D). Planches d'animations : `tools/anim_sheet.tscn`. Test `test_chr1` ;
 captures `tests/shot_chr1.tscn` (sortie hors dépôt : les images de ce design restent dans `C:\AI\chr1\`).
 
+### Jouer ensemble (Mode amis, multijoueur, en cours ; étude `conception/benchmark/NETWORK.md`, lots NET-A à NET-M)
+Hôte autoritaire sur ENet en paquets bruts (aucun `@rpc`, l'API multijoueur de l'arbre n'est pas touchée) : `core/net/` — `NetProtocol`
+(format versionné `PROTOCOL` + `Version.NUMBER` : autre version refusée ; entrées 17-29 o, instantané 6 + 34 o par héros), `NetSession`
+(socle : envoi, retard / pertes simulés, mesures, départ propre BYE), `NetHost` (héros d'un ami = vrai `Player` à sa fiche piloté par un `BotInput`),
+`NetClient` (fantômes `NetGhost` interpolés 100 ms dans le passé, pas encore de prédiction : NET-C), `NetEvents` (effets, chiffres, zones,
+sons, projectiles : une ligne `if NetEvents.on:` en tête de `EdenFx.play`, `Vfx.slash/ring/flash/spark`, `DamageNumber.spawn/_text`,
+`Telegraph.spawn`, `Sfx.play_at`, `HeroBolt.fire` ; faux hors session), `NetIntent` (entrées locales, pilote), `NetLaunch` (arguments).
+Arène d'essai `scenes/net_arena.tscn` (`world/net_arena.gd`, `ui/net_panel.gd`, `ui/net_overlay.gd` : F11 détail réseau ; `Training.active`
+pendant la scène : aucune sauvegarde) ; entrée : réglage « Mode amis (expérimental) » (`net/friends`) -> « Jouer ensemble » à l'écran titre,
+ou `Jouer_ensemble.bat`. **Arguments SANS `--`** (sinon profil de test) : `--host`, `--join=<adresse[:port]>`, `--profil=<nom>` (sauvegarde,
+réglages, préréglages et journal dans `user://instances/<nom>/` : deux instances sur un PC), `--net-class/-name/-pilot/-secs/-report/-lag/-loss/
+-snap/-shot/-bind/-version`. Mesures `python tools/net_a.py` (vraie arène, N clients, processeur et mémoire) ; prototype NET-0 `tools/net_probe.py`
+(`game/tools/net_probe.tscn`, jetable). Test `test_net_a` (vrais clients lancés par le test : refus de version, pilote, départ, hôte qui ferme).
+Rapport et consignes pour les amis : `conception/benchmark/R_NET_A.md`.
+
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à
   paliers `armory_price`, puits `SHOP_CHESTS`, leçon de maîtrise) ; participation `Run.INSIGNIA_BASE` ; JcJ plafonné au jour
@@ -446,6 +461,7 @@ captures `tests/shot_hub1.tscn`. `records.news` / `last_activity` = état de men
 | `res://tools/perf_ui.tscn` | performances headless (`PERF_ARGS`, voir « Performances ») |
 | `res://tools/gen_profiles.tscn` | profils « opti » du duel (voir « Duel (JcJ) ») |
 | `python tools/moba_probe.py` | coût d'image des Deux Voies (MB-0, `R_MB0.md` : GO ; banc `res://tools/moba_probe.tscn`, `--preset=base\|opt`, `--decor=<biome>`) ; budgets à tenir par MB-B à MB-J |
+| `python tools/net_a.py` | Mode amis : hôte + N clients sur cette machine (`--pilot --secs 20 --headless`, `--lag 150 --loss 5`, `--shots`) ; prototype NET-0 : `tools/net_probe.py` |
 
 ## IA d'entraînement (apprentissage par renforcement)
 Arène `game/scenes/ml_arena.tscn` (`game/scripts/ml/`) pilotée par Python (`ia/`, voir

@@ -669,6 +669,7 @@ func _build_camera_page() -> void:
 		["all", "Tous"], ["reduced", "Réduits de moitié"], ["off", "Aucun"]])
 	_section(v, "Développement")
 	_check(v, "Mode dev (F10)", "interface", "dev_mode", "Objets, ressources, progression et actions en run, pour tester.")
+	_check(v, "Mode amis (expérimental)", "net", "friends", "Ajoute « Jouer ensemble » à l'écran titre : une arène d'essai pour jouer à plusieurs (réseau local ou Tailscale).")
 
 
 ## Curseur de souris et réticule de visée (CursorSets, AimReticle) : aperçu direct à droite de chaque réglage.
