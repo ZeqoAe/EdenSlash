@@ -2,22 +2,22 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dtdhiq2p47kg1"
-path="res://.godot/imported/battlefield.jpg-600433080713e2b723dfe54c6326dbaa.ctex"
+uid="uid://d3l5fgmdoxled"
+path="res://.godot/imported/fin_etoiles.jpg-34ca28c3c74fa3f582fcda0ecd7ca597.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/activities/battlefield.jpg"
-dest_files=["res://.godot/imported/battlefield.jpg-600433080713e2b723dfe54c6326dbaa.ctex"]
+source_file="res://assets/ui/backdrops/fin_etoiles.jpg"
+dest_files=["res://.godot/imported/fin_etoiles.jpg-34ca28c3c74fa3f582fcda0ecd7ca597.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
-compress/lossy_quality=0.7
+compress/lossy_quality=0.8
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1

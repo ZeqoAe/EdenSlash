@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://s58jglcrdv10"
-path="res://.godot/imported/arena3.jpg-0b79e542959109978eba116e4dce092c.ctex"
+uid="uid://dex2a3f12uqgo"
+path="res://.godot/imported/rush.jpg-77bfdf3c85b8b61bd94f0d4d472db1ba.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/activities/arena3.jpg"
-dest_files=["res://.godot/imported/arena3.jpg-0b79e542959109978eba116e4dce092c.ctex"]
+source_file="res://assets/ui/activities/rush.jpg"
+dest_files=["res://.godot/imported/rush.jpg-77bfdf3c85b8b61bd94f0d4d472db1ba.ctex"]
 
 [params]
 

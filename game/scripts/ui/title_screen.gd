@@ -1,12 +1,17 @@
 extends Node3D
-## Écran titre : les maps des zones défilent en fond (survol 3D) ; gros bouton Jouer
+## Écran titre : une illustration en fond (lot ILL-2 : « titre », puis « menu » quand la fenêtre Jouer s'ouvre) ; gros bouton Jouer
 ## (continuer, charger une partie, nouvelle partie sur l'un des 3 emplacements),
 ## Paramètres, Quitter. Les lancements avec arguments (tests, captures) vont droit au lobby.
-## Aucun texte superflu : le décor défile, les trois boutons suffisent.
+## Aucun texte superflu : le décor, le logo et les trois boutons suffisent.
 
 const LOBBY := "res://scenes/lobby.tscn"
+const BG_TITLE := "res://assets/ui/backdrops/titre.jpg"
+const BG_MENU := "res://assets/ui/backdrops/menu.jpg"
 
-var backdrop: MapBackdrop
+var bg_title: TextureRect  # (tests) l'illustration de l'écran titre
+var bg_menu: TextureRect  # celle de la fenêtre Jouer, en fondu par-dessus
+var _bg_tween: Tween
+var _veils: Array[Control] = []  # voiles du titre (cachés quand la fenêtre Jouer a son illustration)
 var _settings: SettingsMenu
 var _main: VBoxContainer
 var _center: Control
@@ -20,9 +25,6 @@ func _ready() -> void:
 	if not OS.get_cmdline_user_args().is_empty():
 		get_tree().change_scene_to_file.call_deferred(LOBBY)
 		return
-	backdrop = MapBackdrop.new()
-	add_child(backdrop)
-	backdrop.fly_over(GameData.zones.map(func(z): return String(z.id)))
 	_build_ui()
 	_settings = SettingsMenu.new()
 	add_child(_settings)
@@ -31,6 +33,11 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
+	var art := CanvasLayer.new()  # les illustrations, sous l'interface
+	art.layer = 0
+	add_child(art)
+	bg_title = _bg(art, BG_TITLE, 1.0)
+	bg_menu = _bg(art, BG_MENU, 0.0)
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	var root := Control.new()
@@ -44,35 +51,30 @@ func _build_ui() -> void:
 		grad.fill_from = Vector2(0, 0)
 		grad.fill_to = Vector2(0, 1)
 		grad.gradient = Gradient.new()
-		grad.gradient.set_color(0, Color(0.02, 0.01, 0.06, 0.55 if top else 0.0))
-		grad.gradient.set_color(1, Color(0.02, 0.01, 0.06, 0.0 if top else 0.7))
+		grad.gradient.set_color(0, Color(0.05, 0.02, 0.1, 0.34 if top else 0.0))
+		grad.gradient.set_color(1, Color(0.05, 0.02, 0.1, 0.0 if top else 0.62))
 		g.texture = grad
 		g.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		g.stretch_mode = TextureRect.STRETCH_SCALE
 		g.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		g.set_anchors_preset(Control.PRESET_TOP_WIDE if top else Control.PRESET_BOTTOM_WIDE)
 		if top:
-			g.offset_bottom = 300
+			g.offset_bottom = 340
 		else:
 			g.offset_top = -380
 		root.add_child(g)
-	var center := VBoxContainer.new()
+		_veils.append(g)
+	# le logo dans le ciel, en haut au centre ; les boutons en bas à gauche, hors du héros et du royaume
+	var center := Control.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	center.alignment = BoxContainer.ALIGNMENT_CENTER
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	center.add_theme_constant_override("separation", 0)
 	root.add_child(center)
 	_center = center
 	var logo := MenuWidgets.logo(center, 104, true)
-	logo.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0, 110)
-	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	center.add_child(gap)
+	logo.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 44)
 	_main = VBoxContainer.new()
 	_main.alignment = BoxContainer.ALIGNMENT_CENTER
 	_main.add_theme_constant_override("separation", 14)
-	_main.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	center.add_child(_main)
 	var play := MenuWidgets.gold_button("Jouer", 38, Vector2(440, 86))
 	play.pressed.connect(_open_saves)
@@ -81,11 +83,33 @@ func _build_ui() -> void:
 		var b := MenuWidgets.glass_button(spec[0], 20, Vector2(440, 54))
 		b.pressed.connect(spec[1])
 		_main.add_child(b)
-	var bottom_gap := Control.new()
-	bottom_gap.custom_minimum_size = Vector2(0, 60)
-	bottom_gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	center.add_child(bottom_gap)
+	_main.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 72)
 	_build_saves(root)
+
+
+## Illustration plein cadre (recadrée, jamais déformée) ; [param alpha] 0 : cachée, pour le fondu.
+func _bg(parent: Node, path: String, alpha: float) -> TextureRect:
+	var img := TextureRect.new()
+	img.texture = load(path)
+	img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	img.set_anchors_preset(Control.PRESET_FULL_RECT)
+	img.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	img.modulate.a = alpha
+	parent.add_child(img)
+	return img
+
+
+## La fenêtre Jouer passe sur l'illustration du menu (fondu) ; en revenir remet celle du titre.
+func _fade_menu(on: bool) -> void:
+	for v in _veils:
+		v.visible = not on
+	if bg_menu == null:
+		return
+	if _bg_tween != null and _bg_tween.is_valid():
+		_bg_tween.kill()
+	_bg_tween = create_tween()
+	_bg_tween.tween_property(bg_menu, "modulate:a", 1.0 if on else 0.0, 0.35)
 
 
 # --- fenêtre Jouer : continuer, charger, nouvelle partie -----------------------------------
@@ -95,7 +119,7 @@ func _build_saves(root: Control) -> void:
 	_saves.visible = false
 	root.add_child(_saves)
 	var dim := ColorRect.new()
-	dim.color = Color(0.02, 0.01, 0.06, 0.55)
+	dim.color = Color(0.05, 0.02, 0.1, 0.22)  # (l'illustration du menu reste claire)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_saves.add_child(dim)
 	var cc := CenterContainer.new()
@@ -122,12 +146,14 @@ func _build_saves(root: Control) -> void:
 
 
 func _open_saves() -> void:
+	_fade_menu(true)
 	_saves.visible = true
 	_center.visible = false
 	_show_root()
 
 
 func _close_saves() -> void:
+	_fade_menu(false)
 	_saves.visible = false
 	_center.visible = true
 
@@ -254,7 +280,6 @@ func _new(i: int) -> void:
 
 
 func _go() -> void:
-	backdrop.release()
 	get_tree().change_scene_to_file.call_deferred(LOBBY)
 
 

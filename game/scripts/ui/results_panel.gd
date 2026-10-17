@@ -133,10 +133,15 @@ func show_spec(spec: Dictionary) -> void:
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
+	var art := backdrop_art(spec)  # lot ILL-2 : fond illustré selon le résultat, sous le voile
+	if art != null:
+		root.add_child(art)
 	var dim := ColorRect.new()
 	dim.color = Color(0.02, 0.01, 0.05, 0.9)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.add_child(dim)
+	if art != null:  # le voile garde sa couleur ; son opacité devient celle du fond illustré
+		dim.modulate.a = minf(1.0, BACKDROP_VEIL / maxf(dim.color.a, 0.01))
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.add_child(center)
@@ -658,3 +663,55 @@ func _input(event: InputEvent) -> void:
 	if _animating and event.is_pressed() and not event.is_echo() \
 			and (event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton):
 		finish_now()  # sans consommer l'événement : un bouton dégelé garde son clic
+
+## Fonds illustrés du bilan (lot ILL-2) : un par résultat, 1600 × 900, sous un voile ([constant BACKDROP_VEIL]) ; le panneau
+## reste opaque, le fond se voit autour. Nom : [code]spec.bg[/code] s'il est donné, sinon [method backdrop_key].
+const BACKDROP := "res://assets/ui/backdrops/fin_%s.jpg"
+const BACKDROP_KEYS := ["victoire", "defaite", "record", "boss", "egalite", "etoiles"]
+const BACKDROP_VEIL := 0.45
+
+
+## Fond du bilan : défaite (ton « lose »), égalité (ton neutre : extraction), sinon pour une victoire une étoile d'époque gagnée,
+## un record battu (ligne « Nouveau record » ou note « Record ! »), un boss tombé avec son butin en cases, ou la victoire simple.
+static func backdrop_key(spec: Dictionary) -> String:
+	var bg := String(spec.get("bg", ""))
+	if bg in BACKDROP_KEYS:
+		return bg
+	var tone := String(spec.get("tone", "info"))
+	if tone == "lose":
+		return "defaite"
+	if tone != "win":
+		return "egalite"
+	for s in spec.get("stars", []):
+		if s is Dictionary and bool((s as Dictionary).get("new", false)):
+			return "etoiles"
+	for r in spec.get("gained", []):
+		if r is Dictionary and String((r as Dictionary).get("text", "")).begins_with("Étoile"):
+			return "etoiles"
+	for n in spec.get("notes", []):
+		if String(n).begins_with("Record"):
+			return "record"
+	for r in spec.get("gained", []):
+		if r is Dictionary and String((r as Dictionary).get("text", "")).to_lower().contains("record"):
+			return "record"
+	if not (spec.get("loot", []) as Array).is_empty():
+		return "boss"
+	return "victoire"
+
+
+## Le fond du bilan, plein cadre (recadré), qui apparaît en fondu ; null si l'image manque.
+static func backdrop_art(spec: Dictionary) -> TextureRect:
+	var path := BACKDROP % backdrop_key(spec)
+	if not ResourceLoader.exists(path):
+		return null
+	var img := TextureRect.new()
+	img.name = "Backdrop"
+	img.texture = load(path)
+	img.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	img.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	img.set_anchors_preset(Control.PRESET_FULL_RECT)
+	img.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	img.modulate.a = 0.0
+	img.ready.connect(func():
+		img.create_tween().tween_property(img, "modulate:a", 1.0, 0.6))
+	return img

@@ -1,7 +1,7 @@
 class_name Activities
 extends RefCounted
-## Activités du menu Jouer (lobby) : étiquettes illustrées (écrans de chargement d'Eden,
-## assets/ui/activities/), rangées en JcE et JcJ. Un clic ouvre la page de l'activité (ses
+## Activités du menu Jouer (lobby) : étiquettes illustrées (une image 960 × 320 par activité,
+## assets/ui/activities/, lot ILL-2), rangées en JcE et JcJ. Un clic ouvre la page de l'activité (ses
 ## réglages, puis Lancer) dans le même panneau. Les activités pas encore faites sont
 ## affichées « Bientôt » : leur page dit ce qui est prévu.
 
@@ -13,8 +13,8 @@ const LIST := [
 	{"id": "survival", "row": "adventure", "group": "pve", "name": "Survie", "sub": "Horde, coffres et boss", "gain": "Maîtrise, insignes, pièces", "gives": ["piece", "mastery", "insignia", "stars"],
 		"desc": "Explore la carte, tiens face à la horde, bats le boss."},
 	# Survivant (conception/survivor) : sans verrou ni lien avec la progression, ouvert à tous (Survivor.READY, lot S8) ;
-	# illustration provisoire : l'écran de la Survie retourné, au crépuscule (une image dédiée est à faire, session locale)
-	{"id": "survivor", "row": "adventure", "img": "survivor", "group": "pve", "name": "Survivant", "sub": "Tout se gagne aux cartes", "gain": "Apparences, titres", "gives": ["look", "title"],
+	# illustrations : lot ILL-2, une image par activité (assets/ui/activities/<id>.jpg), clé facultative "img" pour en partager une
+	{"id": "survivor", "row": "adventure", "group": "pve", "name": "Survivant", "sub": "Tout se gagne aux cartes", "gain": "Apparences, titres", "gives": ["look", "title"],
 		"desc": "Vingt minutes, une carte : arme, pièces et sorts se gagnent aux cartes."},
 	{"id": "dungeon", "row": "adventure", "unlock": "dungeons", "group": "pve", "name": "Donjons", "sub": "Choisis ton boss et ton butin", "gain": "Panoplies, plans, cristaux", "gives": ["panoply", "plan", "crystal", "fortify"],
 		"desc": "Quatre salles, un boss."},
@@ -22,24 +22,23 @@ const LIST := [
 		"desc": "Une carte et un coffre par étage, des duels de toutes les classes."},
 	# Quêtes (lot HUB-1, question 1 de l'étude BM-HUB) : sorties de Jouer, elles sont le Journal (touche L, « Aujourd'hui »
 	# au menu principal) ; l'entrée reste pour ses textes et son verrou (fil d'éveil « daily »)
-	{"id": "quests", "row": "", "unlock": "daily", "img": "training", "group": "pve", "tag": "Chaque jour", "name": "Quêtes", "sub": "Du jour, de la semaine et de classe", "gain": "Maîtrise, apparences", "gives": ["mastery", "look"],
+	{"id": "quests", "row": "", "unlock": "daily", "group": "pve", "tag": "Chaque jour", "name": "Quêtes", "sub": "Du jour, de la semaine et de classe", "gain": "Maîtrise, apparences", "gives": ["mastery", "look"],
 		"desc": ""},
-	{"id": "trials", "row": "challenge", "img": "training", "group": "pve", "name": "Épreuves de maîtrise", "sub": "Leçons chronométrées", "soon": true, "gain": "Médailles, maîtrise", "gives": ["mastery"],
+	{"id": "trials", "row": "challenge", "group": "pve", "name": "Épreuves de maîtrise", "sub": "Leçons chronométrées", "soon": true, "gain": "Médailles, maîtrise", "gives": ["mastery"],
 		"desc": "Une leçon par famille de classes, au chrono : bronze, argent, or."},
-	{"id": "rush", "row": "challenge", "unlock": "rush", "img": "dungeon", "group": "pve", "name": "Ruée des boss", "sub": "Les 8 boss à la suite", "gain": "Titres, cristaux, coffres", "gives": ["fortify", "stone", "crystal", "title"],
+	{"id": "rush", "row": "challenge", "unlock": "rush", "group": "pve", "name": "Ruée des boss", "sub": "Les 8 boss à la suite", "gain": "Titres, cristaux, coffres", "gives": ["fortify", "stone", "crystal", "title"],
 		"desc": "Les huit boss à la suite, une carte entre deux."},
-	{"id": "siege", "row": "challenge", "unlock": "siege", "img": "arena3", "group": "pvp", "tag": "JcE + JcJ", "name": "Le Siège", "sub": "Vagues, boss, chacun pour soi", "gain": "Apparence légendaire, cristaux", "gives": ["formula", "crystal", "look"],
+	{"id": "siege", "row": "challenge", "unlock": "siege", "group": "pvp", "tag": "JcE + JcJ", "name": "Le Siège", "sub": "Vagues, boss, chacun pour soi", "gain": "Apparence légendaire, cristaux", "gives": ["formula", "crystal", "look"],
 		"desc": "5 vagues, un boss, puis chacun pour soi. Le dernier debout gagne."},
 	# L'Échiquier (autochess, lot AC-I) : scellé et ouvert à tous comme le Survivant (rien du compte n'y change la force) ;
-	# en tête des Affrontements, seule activité ouverte de la rangée sur un compte neuf. Illustration provisoire : un vrai
-	# combat du mode dans l'arène (tools : capture sans interface) ; une image dédiée est à faire.
-	{"id": "autochess", "row": "versus", "img": "autochess", "group": "pvp", "tag": "Stratégie", "name": "L'Échiquier", "sub": "8 stratèges, une seule couronne", "gain": "Apparences, titres", "gives": ["look", "title"],
+	# en tête des Affrontements, seule activité ouverte de la rangée sur un compte neuf.
+	{"id": "autochess", "row": "versus", "group": "pvp", "tag": "Stratégie", "name": "L'Échiquier", "sub": "8 stratèges, une seule couronne", "gain": "Apparences, titres", "gives": ["look", "title"],
 		"desc": "Recrute des héros, place-les sur le plateau et regarde-les se battre."},
 	{"id": "duel", "row": "versus", "unlock": "duel_free", "group": "pvp", "name": "Duel", "sub": "1 contre 1, à l'arme ou équipé", "gain": "Rangs, titres, maîtrise", "gives": ["rank", "title", "mastery", "spirit"],
 		"desc": "Un héros adverse, piloté par l'IA, à armes égales ou avec ton build."},
-	{"id": "arenas", "row": "versus", "unlock": "arenas", "img": "arena2", "group": "pvp", "name": "Arènes", "sub": "2 contre 2 ou 3 contre 3", "gain": "Titres, maîtrise", "gives": ["title", "mastery", "insignia"],
+	{"id": "arenas", "row": "versus", "unlock": "arenas", "group": "pvp", "name": "Arènes", "sub": "2 contre 2 ou 3 contre 3", "gain": "Titres, maîtrise", "gives": ["title", "mastery", "insignia"],
 		"desc": "Toi et tes alliés IA contre une équipe IA."},
-	{"id": "royale", "row": "versus", "unlock": "royale", "img": "battlefield", "group": "pvp", "name": "Battle royale", "sub": "8 héros, un seul survivant", "gain": "Coffre d'apparence, titre, maîtrise", "gives": ["look", "title", "mastery"],
+	{"id": "royale", "row": "versus", "unlock": "royale", "group": "pvp", "name": "Battle royale", "sub": "8 héros, un seul survivant", "gain": "Coffre d'apparence, titre, maîtrise", "gives": ["look", "title", "mastery"],
 		"desc": ""},
 	{"id": "training", "row": "", "group": "", "name": "Zone d'entraînement", "sub": "Sorts, armes et cartes, sans enjeu", "gain": "Rien (banc d'essai)",
 		"desc": ""},
@@ -120,6 +119,8 @@ static func card(a: Dictionary, size := Vector2(0, 118), is_new := false, advise
 	if lock != null:
 		lock.title = t  # le cadenas se place au-dessus du nom
 	var st := Hud._label(tv, _short_condition(String(a.unlock)) if is_locked else sub_text(a), 13, Color(0.92, 0.9, 0.98, 0.95))
+	st.add_theme_constant_override("outline_size", 3)
+	st.add_theme_color_override("font_outline_color", Color(0.02, 0.02, 0.08, 0.85))
 	if is_locked:
 		st.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # la condition tient sur deux lignes plutôt que d'être coupée
 	else:
@@ -226,7 +227,8 @@ static func _art(parent: Control, a: Dictionary, shade: float, inset := 3.0) -> 
 	g.fill_to = Vector2(0, 1)
 	g.gradient = Gradient.new()
 	g.gradient.set_color(0, Color(0, 0, 0, 0.0))
-	g.gradient.add_point(0.45, Color(0.02, 0.02, 0.08, 0.15))
+	g.gradient.add_point(0.4, Color(0.02, 0.02, 0.08, 0.12))
+	g.gradient.add_point(0.72, Color(0.02, 0.02, 0.08, 0.55 * shade / 0.86))  # (lot ILL-2 : voile plus tôt, le sous-titre se lit sur les images claires)
 	g.gradient.set_color(g.gradient.get_point_count() - 1, Color(0.02, 0.02, 0.08, shade))
 	s.texture = g
 	s.expand_mode = TextureRect.EXPAND_IGNORE_SIZE

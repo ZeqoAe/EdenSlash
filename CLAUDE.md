@@ -71,6 +71,9 @@ idées du joueur : `conception/IDEES_EN_VRAC.md`.
 d'action épinglé `_pin` / `_pin_go`), verrous du fil d'éveil `core/unlocks.gd` (`Profile.unlocked_features`, mode dev = tout ouvert).
 Une activité nouvelle : entrée dans `Activities.LIST` + image + page du lobby + `QuestPool.ACTS` + `ResourceHelp` / `gives` + cas
 dans `Compass` si elle change la quête + `test_nav_screens`. Les activités « Bientôt » sont cachées. Mode courant : `Modes.current()`.
+Illustrations (lot ILL-2, `conception/art/R_ILL2.md`) : carte d'activité = `assets/ui/activities/<id>.jpg` (960 × 320, nom = `id`, clé `img` facultative) ; fonds
+`assets/ui/backdrops/` : `titre` (écran titre), `menu` (fenêtre Jouer du titre ; le lobby garde sa scène 3D), `fin_*` choisis par `ResultsPanel.backdrop_key`
+(ou `bg` dans la description du bilan) ; images ≤ 400 Ko, fonds importés avec perte (`compress/mode=1`) ; captures `tests/shot_ill2.tscn`.
 
 | Activité | Rôle unique (`gives`) | Ouverture | Entrée | Détail |
 |---|---|---|---|---|

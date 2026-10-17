@@ -335,7 +335,7 @@ func _test_title() -> void:
 	var title: Node = load("res://scenes/title.tscn").instantiate()
 	add_child(title)
 	await get_tree().create_timer(1.5).timeout
-	check("écran titre : map de fond générée", title.backdrop.map != null and title.backdrop.map.is_inside_tree())
+	check("écran titre : illustrations du titre et du menu chargées", title.bg_title.texture != null and title.bg_menu.texture != null)
 	title._open_saves()
 	await _frames()
 	check("Jouer : continuer, charger, nouvelle partie", title._saves.visible and title._saves_body.get_child_count() >= 3 and not title._center.visible)
