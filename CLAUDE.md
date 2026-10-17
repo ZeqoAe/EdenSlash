@@ -321,6 +321,16 @@ post_hit, heal_in, status_time) ; `Procs` reste au `Player`) ; directeur : écon
 passifs), `apply_level`, `start_recall` (X), boutique à 14 m de la fontaine, `hud_data()`, interface de test (P, Ctrl + Z, Ctrl + 1/2/3),
 `--moba-auto`, `--moba-perf` (scripts de l'image p95, µs par héros), ligne `[moba] bilan {json}` ; mesures `python tools/moba_ai_games.py`
 (exécutable SANS console pour le temps CPU) ; tests `test_mb_hero`, `test_mb_shop`.
+Jungle et objectifs (MB-F, `R_MB_F.md`) : `core/moba_jungle.gd` (`MobaJungle`, monté par `MobaDirector._build_jungle`, `--moba-jungle=0` : sans) :
+8 camps de `ai/moba_camp.gd` (`MobaCamp` : neutre = `ffa_id` `MobaData.NEUTRAL_FFA` 99, ne vise que les agresseurs de son camp, laisse 12 m / 18 m et
+remise à zéro, recyclé, endormi sans héros à 22 m), Source (recharges) / Braise (coups qui brûlent et ralentissent : ligne gardée `MobaJungle.on_hit` de
+`Combatant.take_damage`) ; Gardien 3:00 et Colosse 9:00 = boss de `BossLibrary.spawn` (la jungle tient lieu de directeur : `_spawn_monster`, `message` ;
+`ctx.bricks` = `MobaJungle.pit_bricks` : ni invocation, ni arène, ni bourrasque ; fureur du Colosse tenue par la jungle) ; Sceau (`MobaJungle.dealt_mult`
+dans `Combatant.damage_dealt_mult`, PV suivis par `tend_hero`), Bannière (`MobaMinion.banner_mult`, sièges compris, `recall_time`) ; Marée (`MobaData.wave` :
+géant de plus ; `TIDE_WAVE_EVERY` 30 : 20 s faisait tomber des T1 à vagues égales) ; décision aux points `Moba.decide` (structures, Cœur, objectifs, or
+`Moba.team_gold`, sbires ; `decided_by`, `score`) ; interface IA `camps_alive` / `camp_list` / `objectives_state` / `buffs_of` ; héros hors directeur :
+`guests`. Sonde `--moba-probe=cible:héros:niveau[:essais]` (`tools/moba_obj_probe.gd`), `--moba-clock=S` ; test `test_mb_objectives`. Tout ce qui est créé au
+chargement tire dans le hasard global : la suite des sbires d'une graine de mesure change (R_MB_F § 4).
 ### L'Assaut (4 contre 4 tactique, en cours ; « Bientôt », caché)
 Étude `conception/benchmark/TACTIQUE.md` (spécification § 7, lots TAC-0 à TAC-14, plans masse `tactique_maquettes/plan_*.svg`). Socle (TAC-0, `R_TAC_0.md`) :
 `core/assault.gd` (`Assault` : profil `RULES` enregistré par `ensure_rules`, machine de manche pure achat → manche → pose / désamorçage → fin, mi-temps,

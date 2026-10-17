@@ -233,10 +233,16 @@ func _update_attack(_delta: float) -> void:
 ## Dégâts d'un coup sur [param target] : héros = attaque (sa défense s'applique), sbire = part d'un mêlée, structure = unités.
 func hit_amount(target: Combatant) -> float:
 	if target is MobaMinion:
-		return vs_minion * director.minion_aura(self)
+		return vs_minion * director.minion_aura(self) * banner_mult()
 	if target is MobaStructure:
 		return struct_units
-	return atk * director.minion_aura(self)
+	return atk * director.minion_aura(self) * banner_mult()
+
+
+## Bannière du Colosse (lot MB-F, MobaJungle.minion_aura) : × 1,5 près d'un héros allié qui la porte (sièges compris :
+## MobaStructure.take_units).
+func banner_mult() -> float:
+	return MobaJungle.current.minion_aura(self) if MobaJungle.active else 1.0
 
 
 func deal(target: Combatant) -> void:

@@ -133,28 +133,66 @@ const PROTECT_MULT := 0.34  # − 66 % de dégâts subis sans sbire ennemi proch
 const TOWER_AT := [0.11, 0.30]  # T2, T1 : part de la voie depuis sa base
 const BOLT_SPEED := 28.0
 
-# --- jungle et objectifs (§ 7.4, § 7.5 ; joués par le lot MB-F) -----------------------------------------------------------
-## Camps neutres : n'attaquent que qui les a frappés, laisse de 12 m (reviennent et regagnent tous leurs PV).
+# --- jungle et objectifs (§ 7.4, § 7.5 ; lot MB-F, MobaJungle, rapport R_MB_F.md) ------------------------------------------
+## Camps neutres (MobaCamp) : n'attaquent que qui les a frappés, laisse de 12 m (reviennent et regagnent tous leurs PV).
+## ids : monstres du camp (Forêt de l'arc-en-ciel) ; hits : PV en auto-attaques d'un héros au niveau attendu à l'apparition
+## (comme les sbires : MINIONS « hits ») ; atk : part des PV d'un héros retirée par un coup (après sa défense) ; scale :
+## taille du modèle ; secs : temps visé pour un jungler seul (étude § 7.5 : petit camp ≈ 12 s au niveau 2, buff ≈ 20 s).
+## Calibrage du lot MB-F (R_MB_F § 3) : sonde --moba-probe (héros scriptés au niveau visé contre le camp, 6 essais).
 const CAMPS := {
 	"source": {"name": "Source", "kind": "buff", "color": "lagon", "monsters": 1, "secs": 20.0, "respawn": 150.0,
 		"effect": "cdr", "buff_time": 90.0, "buff": {"cdr": 0.2}, "xp": "camp_buff", "gold": 100,
-		"text": "Tes recharges sont plus rapides."},
+		"ids": [56032], "hits": 24.0, "atk": 0.035, "scale": 1.7, "status": "moba_source",
+		"text": "Tes recharges sont plus rapides.", "tip": "−20 % de recharge pendant 90 s"},
 	"braise": {"name": "Braise", "kind": "buff", "color": "fraise", "monsters": 1, "secs": 20.0, "respawn": 150.0,
 		"effect": "burn_slow", "buff_time": 90.0, "buff": {"burn": 2.0, "chill": 1.0}, "xp": "camp_buff", "gold": 100,
-		"text": "Tes auto-attaques brûlent et ralentissent."},
+		"ids": [56030], "hits": 24.0, "atk": 0.04, "scale": 1.9, "status": "moba_braise",
+		"text": "Tes coups brûlent et ralentissent.", "tip": "brûlure 2 s et ralenti 1 s, une fois par seconde et par cible, pendant 90 s"},
 	"petit": {"name": "Petit camp", "kind": "small", "color": "pomme", "monsters": 2, "secs": 12.0, "respawn": 90.0,
-		"xp": "camp_small", "gold": 60, "text": "De l'or et de l'expérience pour la jungle."},
+		"xp": "camp_small", "gold": 60, "ids": [56024, 56023], "hits": 11.0, "atk": 0.02, "scale": 1.0,
+		"text": "De l'or et de l'expérience pour la jungle."},
 }
 const CAMP_LEASH := 12.0
-## Objectifs de la rivière : boss de la bibliothèque (BossLibrary.spawn), tirés à la graine de la partie.
+## Camp neutre : son propre chacun-pour-soi (R_MODE0, piège 8) : les héros des deux équipes le frappent, il ne frappe que ses
+## agresseurs (ses zones touchent tout ce qui s'y trouve) ; tous les neutres partagent ce numéro (ils ne se frappent pas).
+const NEUTRAL_FFA := 99
+## Un camp sans héros à CAMP_WAKE m dort (ni physique ni animation, R_MB0 § 5 : 25 m) ; les petits camps sont à 20 m de l'axe
+## des voies : à 30 m, les héros de voie les tenaient éveillés (6 neutres éveillés en moyenne, R_MB_F § 5).
+const CAMP_WAKE := 22.0
+## Laisse des objectifs : 18 m autour du centre de leur fosse (8 m de rayon).
+const OBJ_LEASH := 18.0
+## Remise à zéro : le camp revient à RESET_SPEED × sa vitesse, sans prendre de coups, et regagne tous ses PV.
+const RESET_SPEED := 1.8
+## Objectifs de la rivière : boss de la bibliothèque (BossLibrary.spawn), tirés à la graine de la partie parmi ceux qui
+## ont assez de briques jouables dans une fosse (bricks) : ni invocations (aucune création de modèle en partie, R_MB0 § 6),
+## ni boucliers à invoquer, ni arène qui se resserre ni bourrasque (elles débordent sur les voies) ([constant BOSS_BANNED]).
+## lib_tier : palier de la bibliothèque (rythme des briques, BossLibrary.PACE) ; tier : palier de l'étude (1 = Gardien,
+## 3 = Colosse) ; ref_level : niveau de partie des héros visé par la spécification (PV en auto-attaques de ce héros, ou du
+## héros attendu s'il est plus fort) ; atk : part des PV d'un héros par coup (× la brique, plafonné à hit_cap).
 const OBJECTIVES := {
 	"guardian": {"name": "Gardien", "at": GUARDIAN_AT, "respawn": 180.0, "tier": 1, "secs": 25.0, "xp": "guardian",
-		"reward": "seal", "color": "mandarine", "text": "Un Sceau pour toute l'équipe : un peu plus de dégâts et de PV."},
+		"reward": "seal", "color": "mandarine", "lib_tier": 0, "bricks": 2, "ref_level": 5.0, "heroes": 4, "hits": 140.0,
+		"atk": 0.05, "hit_cap": 0.22, "text": "Un Sceau pour toute l'équipe : un peu plus de dégâts et de PV.",
+		"tip": "+4 % de dégâts et de PV pour toute la partie, 3 Sceaux au plus"},
 	"colossus": {"name": "Colosse", "at": COLOSSUS_AT, "respawn": 240.0, "tier": 3, "secs": 45.0, "fury_at": 90.0,
-		"xp": "colossus", "reward": "banner", "color": "amethyste", "text": "La Bannière : les sbires proches de toi grandissent."},
+		"xp": "colossus", "reward": "banner", "color": "amethyste", "lib_tier": 1, "bricks": 3, "ref_level": 10.0, "heroes": 4,
+		"hits": 255.0, "atk": 0.07, "hit_cap": 0.25, "text": "La Bannière : les sbires proches de toi grandissent.",
+		"tip": "150 s : sbires alliés à 12 m × 1,5 (coups et sièges), rappel en 3 s"},
 }
+## Bourrasque (gale) : elle repousse les héros hors de la laisse (le boss se remettait à zéro en boucle, R_MB_F § 3) et son
+## anneau de 45 m touchait les voies.
+const BOSS_BANNED := {"families": ["summon", "arena"], "types": ["totems", "crystals", "gale"]}
 const SEAL := {"dmg": 0.04, "hp": 0.04, "max": 3}
-const BANNER := {"time": 150.0, "minion_mult": 1.5, "radius": 12.0, "recall": 3.0}
+const BANNER := {"time": 150.0, "minion_mult": 1.5, "radius": 12.0, "recall": 3.0, "scale": 1.2, "status": "moba_banner"}
+## Marée finale (TIDE_AT) : un géant de plus par vague sur chaque voie, Cœurs vulnérables même si leurs T2 tiennent
+## (MobaStructure.invulnerable), réapparition × 1,5. Vagues resserrées : TIDE_WAVE_EVERY s entre deux vagues à la Marée ;
+## 20 s mesurées (R_MB_F § 4) : des vagues égales font tomber une T1 bleue avant 20:00 dans 2 parties sur 3 (test_mb_lanes) ;
+## gardé à 30 s (aucun resserrement) en attendant la mesure des parties complètes (MB-J, --moba-tune=tide_every:20).
+const TIDE_WAVE_EVERY := 30.0
+const TIDE_GIANTS := 1
+## Annonces de fin : la Marée TIDE_WARN s avant, la fin au temps END_WARN s avant.
+const TIDE_WARN := 30.0
+const END_WARN := 60.0
 
 # --- boutique : 40 objets (§ 7.7 ; appliqués par le lot MB-D) -------------------------------------------------------------
 ## Valeurs en part de la fiche de base de la classe au niveau de partie (« atk » 0,10 = 10 % de l'attaque de base).
@@ -417,21 +455,45 @@ static func minion_stats(kind: String, t: float, mult := 1.0) -> Dictionary:
 		"vs_minion": melee_hp * float(m.minion) * mult, "struct": float(m.struct) * mult}
 
 
+## Force d'un monstre de camp [param camp] (clé de [constant CAMPS]) apparu à l'instant [param t] : {hp, atk} (comme
+## [method minion_stats] : relative au héros attendu à cet instant).
+static func camp_stats(camp: String, t: float) -> Dictionary:
+	var c: Dictionary = CAMPS[camp]
+	var ref := ref_hero(expected_level(t))
+	return {"hp": float(c.hits) * float(ref.auto), "atk": float(ref.hp) * float(c.atk) * (100.0 + maxf(float(ref.def), 0.0)) / 100.0}
+
+
+## Force d'un objectif [param key] (clé de [constant OBJECTIVES]) apparu à l'instant [param t] : {hp, atk, level} ; le héros
+## de référence est celui du niveau visé par l'étude (« ref_level ») ou le héros attendu s'il est plus fort (un Gardien qui
+## revient à 12:00 reste un combat d'équipe).
+static func objective_stats(key: String, t: float) -> Dictionary:
+	var o: Dictionary = OBJECTIVES[key]
+	var lv := maxf(float(o.ref_level), expected_level(t))
+	var ref := ref_hero(lv)
+	return {"hp": float(o.hits) * float(ref.auto), "atk": float(ref.hp) * float(o.atk) * (100.0 + maxf(float(ref.def), 0.0)) / 100.0,
+		"level": sheet_level(floori(lv))}
+
+
 ## Composition de la vague n° [param n] (1 = la première) à l'instant [param t] ; [param giants] géants en plus (T2
-## adverse tombée, Marée).
+## adverse tombée) ; dès la Marée (TIDE_AT), TIDE_GIANTS géants de plus (lot MB-F).
 static func wave(n: int, t: float, giants := 0) -> Array:
 	var out: Array = WAVE.duplicate()
 	var every := RAM_EVERY_LATE if t >= RAM_LATE_AT else RAM_EVERY
 	if n > 0 and n % every == 0:
 		out.append("ram")
-	for _i in giants:
+	for _i in giants + (TIDE_GIANTS if t >= TIDE_AT else 0):
 		out.append("giant")
 	return out
 
 
-## Instant d'apparition de la vague n° [param n].
+## Instant d'apparition de la vague n° [param n] : toutes les WAVE_EVERY s, puis toutes les TIDE_WAVE_EVERY s à partir de la
+## première vague de la Marée (lot MB-F : les vagues se resserrent).
 static func wave_time(n: int) -> float:
-	return FIRST_WAVE + WAVE_EVERY * (n - 1)
+	var t := FIRST_WAVE + WAVE_EVERY * (n - 1)
+	if t < TIDE_AT:
+		return t
+	var n0 := ceili((TIDE_AT - FIRST_WAVE) / WAVE_EVERY) + 1  # première vague de la Marée (n° 36 : 18:10)
+	return FIRST_WAVE + WAVE_EVERY * (n0 - 1) + Moba.tune("tide_every", TIDE_WAVE_EVERY) * (n - n0)
 
 
 # --- kits -------------------------------------------------------------------------------------------
@@ -548,4 +610,15 @@ static func validate() -> Array:
 		for mid in MINIONS[kind].ids:
 			if GameData.monster(int(mid)).is_empty():
 				bad.append("sbire %s : monstre %d inconnu" % [kind, mid])
+	for camp in CAMPS:
+		if (CAMPS[camp].ids as Array).size() != int(CAMPS[camp].monsters):
+			bad.append("camp %s : %d monstres attendus" % [camp, int(CAMPS[camp].monsters)])
+		for mid in CAMPS[camp].ids:
+			if GameData.monster(int(mid)).is_empty():
+				bad.append("camp %s : monstre %d inconnu" % [camp, mid])
+		if "%" in String(CAMPS[camp].text):
+			bad.append("pourcentage dans le texte du camp " + camp)
+	for key in OBJECTIVES:
+		if "%" in String(OBJECTIVES[key].text):
+			bad.append("pourcentage dans le texte de l'objectif " + key)
 	return bad

@@ -27,6 +27,13 @@ static var how := ""  # « core » (Cœur détruit), « time » (fin au temps), 
 static var structures_down := [0, 0]
 static var minion_kills := [0, 0]
 static var hero_kills := [0, 0]
+## Lot MB-F : objectifs pris (Gardien, Colosse) et camps de la jungle vidés par camp ; or total de chaque équipe (tenu par
+## le lot MB-D, lu par la décision au temps) ; raison de la décision (« structures », « cœur », « objectifs », « or »,
+## « sbires », « égalité »).
+static var objectives_taken := [0, 0]
+static var neutral_kills := [0, 0]
+static var team_gold := [0, 0]
+static var decided_by := ""
 ## Une ligne par événement marquant : {t, type, side, …} (tour tombée, Cœur, élimination).
 static var events: Array = []
 
@@ -65,6 +72,10 @@ static func reset() -> void:
 	structures_down = [0, 0]
 	minion_kills = [0, 0]
 	hero_kills = [0, 0]
+	objectives_taken = [0, 0]
+	neutral_kills = [0, 0]
+	team_gold = [0, 0]
+	decided_by = ""
 	events = []
 
 
@@ -112,6 +123,12 @@ static func args_options(args: PackedStringArray) -> Dictionary:
 			o["stop"] = a.get_slice("=", 1)
 		elif a == "--moba-perf":
 			o["perf"] = true
+		elif a.begins_with("--moba-jungle="):
+			o["jungle"] = a.get_slice("=", 1) != "0"  # (lot MB-F : 0 = sans jungle ni objectifs)
+		elif a.begins_with("--moba-probe="):
+			o["probe"] = a.get_slice("=", 1)  # (lot MB-F : sonde des camps et objectifs, tools/moba_obj_probe.gd)
+		elif a.begins_with("--moba-clock="):
+			o["clock"] = float(a.get_slice("=", 1))  # (lot MB-F : partie commencée à cet instant)
 		elif a == "--moba-auto":
 			o["auto"] = true  # (lot MB-D) le joueur choisit ses enchaînements et achète tout seul
 		elif a.begins_with("--moba-tune="):
@@ -171,22 +188,41 @@ static func tower_streak(streak: int) -> float:
 	return minf(1.0 + float(MobaData.TOWER.streak) * maxi(streak - 1, 0), float(MobaData.TOWER.streak_max))
 
 
-## Décision à la fin au temps : plus de structures détruites, puis Cœur le moins entamé ([param core_hp] : part restante
-## [bleu, rouge]), puis or total ([param gold]), puis sbires tués ; -1 si tout est égal.
-static func decide(core_hp: Array, gold: Array = [0, 0]) -> int:
+## Décision à la fin au temps (aux points) : plus de structures détruites, puis Cœur le moins entamé ([param core_hp] : part
+## restante [bleu, rouge]), puis objectifs pris (Gardien, Colosse : lot MB-F), puis or total ([param gold] ; vide : celui
+## tenu par le lot MB-D, [member team_gold]), puis sbires tués ; -1 si tout est égal. La raison est gardée dans
+## [member decided_by].
+static func decide(core_hp: Array, gold: Array = []) -> int:
+	var g: Array = gold if not gold.is_empty() else team_gold
+	var w := -1
+	decided_by = "égalité"
 	if structures_down[0] != structures_down[1]:
-		return 0 if structures_down[0] > structures_down[1] else 1
-	if absf(float(core_hp[0]) - float(core_hp[1])) > 0.001:
-		return 0 if float(core_hp[0]) > float(core_hp[1]) else 1
-	if int(gold[0]) != int(gold[1]):
-		return 0 if int(gold[0]) > int(gold[1]) else 1
-	if minion_kills[0] != minion_kills[1]:
-		return 0 if minion_kills[0] > minion_kills[1] else 1
-	return -1
+		w = 0 if structures_down[0] > structures_down[1] else 1
+		decided_by = "structures"
+	elif absf(float(core_hp[0]) - float(core_hp[1])) > 0.001:
+		w = 0 if float(core_hp[0]) > float(core_hp[1]) else 1
+		decided_by = "cœur"
+	elif objectives_taken[0] != objectives_taken[1]:
+		w = 0 if objectives_taken[0] > objectives_taken[1] else 1
+		decided_by = "objectifs"
+	elif int(g[0]) != int(g[1]):
+		w = 0 if int(g[0]) > int(g[1]) else 1
+		decided_by = "or"
+	elif minion_kills[0] != minion_kills[1]:
+		w = 0 if minion_kills[0] > minion_kills[1] else 1
+		decided_by = "sbires"
+	return w
+
+
+## Points d'une équipe à l'instant (tableau du HUD, décision au temps) : structures détruites, objectifs pris, or, sbires.
+static func score(side: int) -> Dictionary:
+	return {"structures": int(structures_down[side]), "objectives": int(objectives_taken[side]), "gold": int(team_gold[side]),
+		"minions": int(minion_kills[side]), "camps": int(neutral_kills[side])}
 
 
 ## Résumé d'une ligne (mesures, --auto-quit).
 static func summary() -> String:
-	return "vainqueur %s (%s) à %d:%02d ; structures %d-%d ; sbires %d-%d ; éliminations %d-%d" % [
-		["bleu", "rouge"][winner] if winner >= 0 else "aucun", how, int(t) / 60, int(t) % 60, structures_down[0], structures_down[1],
-		minion_kills[0], minion_kills[1], hero_kills[0], hero_kills[1]]
+	return "vainqueur %s (%s%s) à %d:%02d ; structures %d-%d ; sbires %d-%d ; éliminations %d-%d ; objectifs %d-%d ; camps %d-%d" % [
+		["bleu", "rouge"][winner] if winner >= 0 else "aucun", how, (", " + decided_by) if how == "time" else "", int(t) / 60, int(t) % 60,
+		structures_down[0], structures_down[1], minion_kills[0], minion_kills[1], hero_kills[0], hero_kills[1],
+		objectives_taken[0], objectives_taken[1], neutral_kills[0], neutral_kills[1]]

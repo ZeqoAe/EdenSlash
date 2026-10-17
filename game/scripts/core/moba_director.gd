@@ -27,7 +27,7 @@ const GRID := 8.0
 const HERO_THINK := 0.4
 const LOD_EVERY := 0.5
 const SPAWN_PER_FRAME := 4
-const POOL := {"melee": 18, "ranged": 12, "ram": 4, "giant": 3}  # sbires créés au chargement, par camp
+const POOL := {"melee": 22, "ranged": 15, "ram": 5, "giant": 8}  # sbires créés au chargement, par camp (Marée, lot MB-F : vagues resserrées, géants)
 const KIND_HERO := 1
 const KIND_MINION := 2
 const KIND_STRUCT := 4
@@ -60,6 +60,8 @@ var level_now := 1
 var ended := false
 var measured := false  # option « until » atteinte
 var watch_target: Node3D
+## Jungle neutre et objectifs (lot MB-F) : camps, Gardien, Colosse, Sceaux, Bannière, Marée (null : option jungle = false).
+var jungle: MobaJungle
 ## Mesures : sbires créés pendant la partie (hors chargement), apparitions sautées (plafond), unités vivantes.
 var stats := {"created_live": 0, "created_load": 0, "skipped": 0, "spawned": 0, "max_alive": 0, "shots": 0}
 var _grid: Dictionary = {}
@@ -109,6 +111,7 @@ func setup(director: RunDirector) -> void:
 	MobaItems.begin(self)  # (avant les héros : la fiche du joueur lit ses objets)
 	_setup_player()
 	_spawn_heroes()
+	_build_jungle()  # (lot MB-F : après les héros)
 	_build_hud()
 	_bolt_parent = Node3D.new()
 	_bolt_parent.name = "MobaBolts"
@@ -117,6 +120,7 @@ func setup(director: RunDirector) -> void:
 		mode, heroes.size(), structures.size(), int(stats.created_load), map.nav_source])
 	d.zone_changed.emit({"name": TeamMatch.title(), "levels": [1, MobaData.LEVEL_MAX]})
 	Music.play_zone(Run.zone_id)
+	_skip_clock(float(spec.get("clock", 0.0)))  # (lot MB-F : mesures et tests, --moba-clock=S)
 	TeamMatch.start_round()
 	TeamMatch.set_phase("fight")
 	if d.world.rig != null:
@@ -387,6 +391,25 @@ func _spawn_heroes() -> void:
 			r.damaged.connect(_on_hero_damaged.bind(r))
 			if mode == "watch" and side == 0 and watch_target != null and d.world.rig != null and d.world.rig.target == watch_target:
 				d.world.rig.target = r
+
+
+## Jungle neutre et objectifs (lot MB-F, MobaJungle) : tout créé au chargement ; option « jungle » = false : sans.
+func _build_jungle() -> void:
+	if not bool(TeamMatch.spec.get("jungle", true)):
+		return
+	jungle = MobaJungle.new()
+	add_child(jungle)
+	jungle.setup(self)
+
+
+## Partie commencée à l'instant [param c] (s, mesures et tests) : vagues déjà parties comptées, pas rejouées.
+func _skip_clock(c: float) -> void:
+	if c <= 0.0:
+		return
+	Moba.t = c
+	while MobaData.wave_time(wave_n + 1) <= c:
+		wave_n += 1
+	next_wave = MobaData.wave_time(wave_n + 1)
 
 
 func _pick_class(fams: Array, taken: Array) -> String:

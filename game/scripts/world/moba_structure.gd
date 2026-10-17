@@ -256,6 +256,8 @@ func invulnerable() -> bool:
 func take_units(units: float, source: Combatant = null) -> void:
 	if is_dead:
 		return
+	if source is MobaMinion:
+		units *= (source as MobaMinion).banner_mult()  # (lot MB-F) Bannière du Colosse : sièges × 1,5
 	var d := Moba.structure_damage(units, kind, tier, director.minion_near(self), invulnerable(), Moba.t)
 	taken.minion += d
 	_apply(d, source, false)

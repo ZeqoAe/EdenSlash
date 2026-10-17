@@ -1348,6 +1348,14 @@ de bout en bout).
   éliminations (prime plus grosse sur une série), des aides et des tours. La boutique ouvre à la fontaine et pendant la mort :
   6 places, une paire de bottes, les recettes ne coûtent que la différence, un achat s'annule tant qu'on reste à la base, une vente
   rend 70 %. Les objets valent pour le joueur comme pour les IA. Rappel : 6 s sans bouger ni être touché.
+- **Jungle et objectifs** (lot MB-F, `R_MB_F.md`) : dès 1:30, 4 camps par moitié (Source, Braise, 2 petits) ; un camp ne frappe
+  que ceux qui l'ont frappé et revient à son point, PV pleins, si on l'entraîne trop loin. Source : recharges plus rapides 90 s ;
+  Braise : les coups brûlent et ralentissent 90 s ; éliminer un héros qui les porte les lui prend. Gardien (3:00, revient 3 min après)
+  et Colosse (9:00, revient 4 min après) : boss de la bibliothèque avec leurs mécaniques, tirés à chaque partie ; le Gardien donne un
+  Sceau à l'équipe (un peu plus de dégâts et de PV pour toute la partie, 3 au plus), le Colosse la Bannière (150 s : les sbires
+  proches des porteurs grandissent et frappent plus fort, rappel en 3 s) ; le Colosse s'impatiente si le combat dure. Marée finale à
+  18:00 : un géant de plus par vague, les Cœurs deviennent vulnérables. À 25:00 : structures détruites, puis Cœur le moins entamé,
+  puis objectifs pris, puis or.
 ## Le Colisée (étude `conception/benchmark/ARENA.md`, en cours : lots CO-A à CO-L)
 
 Mode scellé, joué seul contre des IA scriptées : 6 trios (Classique ; Éclair 4 trios ; Grand tournoi 8 trios si la sonde de

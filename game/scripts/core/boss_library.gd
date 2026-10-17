@@ -139,7 +139,8 @@ static func hp(id: String, level: int, tier: int, rush := false) -> float:
 ##   hp (PV imposés ; sinon hp()), hp_mult (alliés, trio…), atk_mult ;
 ##   main (défaut true : devient le boss de la salle, director._boss, cible des invocations) ;
 ##   lieutenant (true : mini-boss, une seule brique sans invocation, PV LIEUTENANT_HP) ;
-##   hit_cap (part des PV max du héros qu'un coup retire au plus ; défaut HIT_CAP, la Tour : Tower.BOSS_HIT_CAP).
+##   hit_cap (part des PV max du héros qu'un coup retire au plus ; défaut HIT_CAP, la Tour : Tower.BOSS_HIT_CAP) ;
+##   bricks (briques normalisées imposées ; défaut bricks_of : Les Deux Voies, MobaJungle.pit_bricks).
 static func spawn(id: String, tier: int, ctx: Dictionary) -> Monster:
 	var def := get_def(id)
 	var d = ctx.get("director")
@@ -162,7 +163,7 @@ static func spawn(id: String, tier: int, ctx: Dictionary) -> Monster:
 		d._boss = m
 	if m.brain == null:
 		return m
-	var list := bricks_of(id, tier)
+	var list: Array = ctx.get("bricks", bricks_of(id, tier))  # (Les Deux Voies, lot MB-F : briques choisies pour la fosse)
 	if lieutenant:
 		var calm := list.filter(func(b): return BossBricks.family_of(String(b.type)) != "summon" and String(b.kind) == "every")
 		list = calm.slice(0, 1)

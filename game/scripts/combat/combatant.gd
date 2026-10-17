@@ -108,6 +108,10 @@ const STATUS_INFO := {
 	"t_predator": {"name": "Prédateur", "color": Color(1.0, 0.5, 0.4)},
 	"t_parry": {"name": "Contre parfait", "color": Color(1.0, 0.85, 0.5)},
 	"t_survive": {"name": "Instinct de survie", "color": Color(0.6, 1.0, 0.7)},
+	# bonus de la jungle des Deux Voies (lot MB-F, MobaJungle)
+	"moba_source": {"name": "Source", "color": Color(0.35, 0.8, 1.0)},
+	"moba_braise": {"name": "Braise", "color": Color(1.0, 0.42, 0.38)},
+	"moba_banner": {"name": "Bannière du Colosse", "color": Color(0.75, 0.45, 0.95)},
 }
 ## Dégâts par seconde des effets sur la durée, en part de l'attaque de la source.
 const DOT_FACTOR := {"bleed": 0.15, "burn": 0.25, "poison": 0.2}
@@ -237,6 +241,8 @@ func damage_taken_mult() -> float:
 
 func damage_dealt_mult() -> float:
 	var m := (0.7 if has_status("scar") else 1.0) * (1.25 if has_status("fury") else 1.0)
+	if MobaJungle.active:
+		m *= MobaJungle.dealt_mult(self)  # (Les Deux Voies, lot MB-F) Sceaux du Gardien
 	return m * ColiseeAugments.dealt_mult(self) if ColiseeAugments.active else m  # (Le Colisée, lot CO-E) Lame affûtée
 
 
@@ -459,6 +465,8 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 	damaged.emit(dmg, source)
 	if AssaultCombat.on():
 		AssaultCombat.on_hit(source, self, dot)  # (L'Assaut, lot TAC-4) invisibilité brisée, cible du Tireur révélée
+	if MobaJungle.active:
+		MobaJungle.on_hit(source, self, dot)  # (Les Deux Voies, lot MB-F) Braise : les coups brûlent et ralentissent
 	if not dot and has_status("sleep"):
 		statuses.erase("sleep")  # un coup réveille
 		statuses_changed.emit()
