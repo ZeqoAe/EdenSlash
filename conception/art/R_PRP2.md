@@ -91,7 +91,8 @@ nouveaux essais : lance, canon). Tout le détail : `prp/mesures.json`, journal b
   battement (bouge, et immobile avec « Réduire les animations »), Héros > Apparence (Arme, Dos), `Archive.skins` / `chosen_skin`, dos
   débloqué par la collection, coffres d'apparence (`Rewards.roll_look`), Collection, vitrine (refus, achat, prix, pas de second achat,
   onglet construit).
-- `test_texts_fr`, `test_nav_screens`, `test_pages`, `check_scripts` : voir la ligne du lot dans `CHANGELOG.md` (résultat au moment de l'envoi).
+- Sur une copie propre de HEAD (`run_tests.py -j 1`) : **`test_prp_looks`, `test_texts_fr`, `test_nav_screens`, `test_pages` verts** ;
+  `check_scripts.py --head` vert (540 scripts).
 - Captures `tests/shot_prp2.tscn` (`PRP2_RES=1280x720`) regardées : la page Apparence, la vitrine, la vue du jeu et les 24 gros plans.
 
 ## Limites, honnêtement
