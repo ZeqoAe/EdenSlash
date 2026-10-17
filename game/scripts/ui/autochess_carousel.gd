@@ -1,6 +1,6 @@
 class_name AutochessCarousel
 extends Control
-## L'Échiquier (lot AC-G) : le choix partagé (manches x-4, SPEC §5.6, §7.1) : « Prends ton héros ». 9 cartes en anneau
+## L'Échiquier (lot AC-G, habillage v2 du lot ACX-1 : autocollants papier sur voile d'encre) : le choix partagé (manches x-4, SPEC §5.6, §7.1) : « Prends ton héros ». 9 cartes en anneau
 ## (unité + composant porté), l'ordre des stratèges en haut (PV les plus bas d'abord) ; les choix des autres apparaissent
 ## un à un (« Pris par … ») ; à ton tour, 10 s pour choisir (sinon la première carte libre est prise d'office, par l'écran).
 ## L'écran pilote le rythme (reveal) et appelle Autochess.choose ; ce panneau ne fait qu'afficher et prévenir (picked).
@@ -22,7 +22,7 @@ func _init() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var dim := ColorRect.new()
-	dim.color = Color(0.02, 0.02, 0.07, 0.72)
+	dim.color = Color(AutochessHud.INK, 0.55)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(dim)
@@ -38,7 +38,7 @@ func _init() -> void:
 	var mid := PanelContainer.new()
 	mid.name = "Middle"
 	mid.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	mid.add_theme_stylebox_override("panel", AutochessHud.box(Color(AutochessHud.BG, 0.85), Color(UiTheme.GOLD_DIM, 0.7), 1, 14, 26, 10))
+	mid.add_theme_stylebox_override("panel", AutochessHud.paper_panel(7.0, 26.0, 10.0))
 	add_child(mid)
 	var mv := VBoxContainer.new()
 	mv.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -46,13 +46,14 @@ func _init() -> void:
 	mv.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mv.custom_minimum_size.x = 260
 	mid.add_child(mv)
-	_title = AutochessHud.lbl("Prends ton héros", 28, UiTheme.GOLD, "title")
+	_title = AutochessHud.pop_lbl("Prends ton héros", 28)
+	_title.rotation = deg_to_rad(-3.0)
 	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mv.add_child(_title)
-	info = AutochessHud.lbl("", 17, UiTheme.TEXT, "bold")
+	info = AutochessHud.ink_lbl("", 17, AutochessHud.INK, 800)
 	info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mv.add_child(info)
-	timer_label = AutochessHud.lbl("", 26, UiTheme.GOLD, "title")
+	timer_label = AutochessHud.pop_lbl("", 28, AutochessHud.candy("soleil"))
 	timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	mv.add_child(timer_label)
 	visible = false
@@ -102,10 +103,14 @@ func refresh(g: Autochess, revealed: int, my_turn: bool, me: int) -> void:
 		var cur := k == mini(revealed, order.size() - 1) and revealed < order.size()
 		var pc := PanelContainer.new()
 		pc.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var border := UiTheme.GOLD if cur else (Color(UiTheme.GOLD, 0.4) if pi == me else Color(0, 0, 0, 0))
-		pc.add_theme_stylebox_override("panel", AutochessHud.box(Color(0.08, 0.09, 0.2, 0.9), border, 2 if border.a > 0.0 else 0, 6, 8, 3))
-		var l := AutochessHud.lbl("%s  %d" % [_name(pi) if pi != me else "Toi", int(p.hp)], 14,
-			UiTheme.MUTED if k < revealed else UiTheme.TEXT, "bold")
+		var psb := AutochessHud.sticker(AutochessHud.candy("soleil", 0) if pi == me else AutochessHud.PAPER, 10.0, 3.0, 3.0 if cur else 2.0, 8.0, 2.0)
+		if cur:
+			psb.border_color = AutochessHud.candy("lagon", 2)
+		pc.add_theme_stylebox_override("panel", psb)
+		if k < revealed:
+			pc.modulate = Color(1, 1, 1, 0.6)
+		var l := AutochessHud.ink_lbl("%s  %d" % [_name(pi) if pi != me else "Toi", int(p.hp)], 14,
+			AutochessHud.INK_300 if k < revealed else AutochessHud.INK, 800)
 		pc.add_child(l)
 		_strip.add_child(pc)
 	_layout()
@@ -119,22 +124,37 @@ func _card(k: int, o: Dictionary) -> Button:
 	var id := String(o.id)
 	var d := AutochessData.unit(id)
 	var cost := int(d.get("cost", 1))
-	var col := AutochessBoard.cost_color(cost)
 	var b := Button.new()
 	b.name = "AcCarouselCard_%d" % k
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = CARD
 	b.size = CARD
 	b.pressed.connect(func(): picked.emit(k))
-	var n := AutochessHud.box(Color(0.07, 0.08, 0.19, 0.97), col.darkened(0.1), 2, 10, 0, 0)
-	n.border_width_top = 6
-	var hv := n.duplicate() as StyleBoxFlat
-	hv.border_color = UiTheme.GOLD
-	hv.bg_color = Color(0.11, 0.12, 0.27, 0.98)
-	for st in ["normal", "focus", "disabled"]:
+	b.set_meta("ui_feel", "card")
+	var n := AutochessHud.sticker(AutochessHud.PAPER, 14.0, 5.0, 3.0, 0.0, 0.0)
+	var hv := AutochessHud.sticker(Color.WHITE, 14.0, 8.0, 3.0, 0.0, 0.0)
+	var pr := AutochessHud.sticker(AutochessHud.PAPER_300, 14.0, 1.0, 3.0, 0.0, 0.0)
+	var dis := AutochessHud.sticker(AutochessHud.GRAY, 14.0, 2.0, 3.0, 0.0, 0.0)
+	for st in ["normal", "focus"]:
 		b.add_theme_stylebox_override(st, n)
+	b.add_theme_stylebox_override("disabled", dis)
 	b.add_theme_stylebox_override("hover", hv)
-	b.add_theme_stylebox_override("pressed", hv)
+	b.add_theme_stylebox_override("pressed", pr)
+	var band := Panel.new()
+	band.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	band.anchor_right = 1.0
+	band.offset_left = 3.0
+	band.offset_right = -3.0
+	band.offset_top = 3.0
+	band.offset_bottom = 12.0
+	var bs := StyleBoxFlat.new()
+	bs.bg_color = AutochessHud.cost_candy(cost)
+	bs.corner_radius_top_left = 10
+	bs.corner_radius_top_right = 10
+	bs.border_color = AutochessHud.INK
+	bs.border_width_bottom = 2
+	band.add_theme_stylebox_override("panel", bs)
+	b.add_child(band)
 	b.tooltip_text = "%s\n%s" % [String(AutochessData.item(String(o.component)).get("name", "")),
 		String(AutochessData.item(String(o.component)).get("tip", ""))]
 	var m := MarginContainer.new()
@@ -142,7 +162,7 @@ func _card(k: int, o: Dictionary) -> Button:
 	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for s in ["left", "right"]:
 		m.add_theme_constant_override("margin_" + s, 8)
-	m.add_theme_constant_override("margin_top", 9)
+	m.add_theme_constant_override("margin_top", 16)
 	m.add_theme_constant_override("margin_bottom", 6)
 	b.add_child(m)
 	var v := VBoxContainer.new()
@@ -153,14 +173,18 @@ func _card(k: int, o: Dictionary) -> Button:
 	h.add_theme_constant_override("separation", 6)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(h)
+	var tile := PanelContainer.new()
+	tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tile.add_theme_stylebox_override("panel", AutochessHud.sticker(AutochessHud.cost_candy(cost, 0), 9.0, 0.0, 2.0, 1.0, 1.0))
+	h.add_child(tile)
 	var ic := TextureRect.new()
 	ic.texture = UiTheme.texture(String(GameData.class_data(id).get("icon", "")))
 	ic.custom_minimum_size = Vector2(36, 36)
 	ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	h.add_child(ic)
-	var nm := AutochessHud.lbl(AutochessData.unit_name(id), 15, UiTheme.TEXT, "bold")
+	tile.add_child(ic)
+	var nm := AutochessHud.ink_lbl(AutochessData.unit_name(id), 15, AutochessHud.INK, 900)
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nm.max_lines_visible = 2
@@ -174,14 +198,18 @@ func _card(k: int, o: Dictionary) -> Button:
 	cic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	cic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	cic.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	comp.add_child(cic)
-	var cl := AutochessHud.lbl(String(AutochessData.item(String(o.component)).get("name", "")), 14, UiTheme.GOLD)
+	var ct := PanelContainer.new()  # icône claire du composant : sur une tuile d'encre
+	ct.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ct.add_theme_stylebox_override("panel", AutochessHud.sticker(AutochessHud.INK_500, 6.0, 0.0, 2.0, 1.0, 1.0))
+	ct.add_child(cic)
+	comp.add_child(ct)
+	var cl := AutochessHud.ink_lbl(String(AutochessData.item(String(o.component)).get("name", "")), 14, AutochessHud.candy("lagon", 2), 800)
 	cl.clip_text = true
 	cl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	comp.add_child(cl)
 	v.add_child(comp)
-	var tk := AutochessHud.lbl("", 14, UiTheme.MUTED)
+	var tk := AutochessHud.ink_lbl("", 14, AutochessHud.candy("fraise", 2), 900)
 	tk.name = "Taken"
 	tk.clip_text = true
 	tk.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS

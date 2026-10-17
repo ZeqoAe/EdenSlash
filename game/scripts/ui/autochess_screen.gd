@@ -416,14 +416,105 @@ func _arena_prep() -> void:
 		AutochessDirector.prepare(game)
 
 
-## Pose de la caméra du plateau (AutochessBoard.frame_camera, zoom du curseur), sans la poser.
+## Pose de la caméra du plateau (AutochessBoard.frame_camera, zoom du curseur), sans la poser. Zoom de base : le plateau,
+## le banc et le banc d'objets sont cadrés au plus grand dans ce que le cadre laisse libre (lot ACX-1, _fit_board).
 func _prep_pose() -> Transform3D:
 	var probe := Camera3D.new()
 	add_child(probe)
-	board.frame_camera(probe, cursor.zoom if cursor != null else 0)
+	var z := cursor.zoom if cursor != null else 0
+	board.frame_camera(probe, z)
+	if z == 0 and hud != null:
+		_fit_board(probe)
 	var t := probe.global_transform
 	probe.free()
 	return t
+
+
+## Cadrage du plateau (lot ACX-1) : la caméra de AutochessBoard.frame_camera garde son angle ; elle avance (ou recule) et
+## glisse dans son plan pour que les 8 rangées, le banc et le banc d'objets tiennent au plus grand entre les panneaux du
+## cadre (frise, traits, stratèges, boutique et onglet de l'or), avec une marge.
+func _fit_board(cam: Camera3D) -> void:
+	var ext := board_points()
+	var vs := get_viewport().get_visible_rect().size
+	var avoid: Array = _frame_guess(vs)
+	var free := Rect2(Vector2(AutochessHud.s(AutochessHud.MARGIN + AutochessHud.SIDE_W), AutochessHud.s(8.0 + AutochessHud.TOP_H)),
+		Vector2.ZERO)
+	free.end = Vector2(vs.x - free.position.x, vs.y - AutochessHud.BOTTOM_GAP - AutochessHud.s(AutochessHud.SHOP_H + 38.0))
+	var base := cam.global_transform
+	var at := board.to_global(Vector3(-0.6, 0.0, 3.6))
+	var back := base.origin - at
+	var best := base
+	var f := 1.45
+	while f >= 0.8:
+		var t := Transform3D(base.basis, at + back / f)
+		cam.global_transform = t
+		# recentrer le cadre projeté sur la zone libre (deux passes : la perspective déplace un peu le centre)
+		for _pass in 2:
+			var bb := _proj_box(cam, ext)
+			var off := free.get_center() - bb.get_center()
+			var dist := (cam.global_position - at).length()
+			var px := 2.0 * dist * tan(deg_to_rad(cam.fov) * 0.5) / vs.y  # m par px au point visé
+			t.origin += t.basis.x * (-off.x * px) + t.basis.y * (off.y * px)
+			cam.global_transform = t
+		if _fits(cam, ext, avoid, vs):
+			best = t
+			break
+		f -= 0.025
+	cam.global_transform = best
+
+
+## Points du monde qui bornent le plateau (bords des 8 rangées, banc, banc d'objets, têtes des figurines) : cadrage, tests.
+func board_points() -> Array:
+	var pts: Array = []
+	for r in AutochessBoard.ROWS:
+		for c in [0, AutochessBoard.COLS - 1]:
+			pts.append(board.to_global(AutochessBoard.cell_position(c, r)))
+			pts.append(board.to_global(AutochessBoard.cell_position(c, r, true)))
+	for i in [0, AutochessData.BENCH_SIZE - 1]:
+		pts.append(board.to_global(board.slot_position(AutochessBoard.bench_slot(i))))
+	for i in AutochessData.ITEM_BENCH_SIZE:
+		pts.append(board.to_global(board.slot_position(AutochessBoard.items_slot(i))))
+	var ext: Array = []
+	for p in pts:
+		for d in [Vector3(1.0, 0, 0), Vector3(-1.0, 0, 0), Vector3(0, 0, 1.0), Vector3(0, 0, -1.0), Vector3(0, 1.6, 0)]:
+			ext.append((p as Vector3) + d)
+	return ext
+
+
+## Rectangles du cadre en préparation, calculés (les conteneurs ne sont pas encore posés à la 1re préparation) ; la colonne
+## des traits compte sur toute sa hauteur possible.
+func _frame_guess(vs: Vector2) -> Array:
+	var pad := AutochessHud.s(10.0)
+	var side := AutochessHud.s(AutochessHud.MARGIN + AutochessHud.SIDE_W) + pad
+	var col_top := AutochessHud.s(AutochessHud.TOP_Y)
+	var players_h := AutochessHud.s(60.0) + AutochessData.PLAYERS * AutochessHud.s(AutochessPlayers.ROW_H + 2.0) + pad
+	var foot := AutochessHud.BOTTOM_GAP + AutochessHud.s(AutochessHud.SHOP_H + 38.0) + pad
+	var top_w := AutochessHud.s(600.0)
+	return [Rect2(Vector2((vs.x - top_w) * 0.5, 0), Vector2(top_w, AutochessHud.s(8.0 + AutochessHud.TOP_H) + pad)),
+		Rect2(Vector2(0, col_top - pad), Vector2(side, vs.y - col_top - foot + pad)),
+		Rect2(Vector2(vs.x - side, col_top - pad), Vector2(side, players_h)),
+		Rect2(Vector2(0, vs.y - foot), Vector2(vs.x, foot))]
+
+
+static func _proj_box(cam: Camera3D, pts: Array) -> Rect2:
+	var bb := Rect2(cam.unproject_position(pts[0]), Vector2.ZERO)
+	for p in pts:
+		bb = bb.expand(cam.unproject_position(p))
+	return bb
+
+
+static func _fits(cam: Camera3D, pts: Array, avoid: Array, vs: Vector2) -> bool:
+	var screen := Rect2(Vector2(4, 4), vs - Vector2(8, 8))
+	for p in pts:
+		if cam.is_position_behind(p):
+			return false
+		var q := cam.unproject_position(p)
+		if not screen.has_point(q):
+			return false
+		for a in avoid:
+			if (a as Rect2).has_point(q):
+				return false
+	return true
 
 
 ## Début du combat : le combat du joueur se joue en vrai dans l'arène (sauf durées réduites) ; cases estompées, caméra large.
@@ -656,6 +747,7 @@ func _process(delta: float) -> void:
 	hud.set_holding(not cursor.held.is_empty() and String(cursor.held.get("zone", "")) != "items")
 	hud.set_overlay(choice.visible or carousel.visible, carousel.visible)
 	_update_card()
+	_update_highlight()
 	match phase:
 		"prep":
 			if not _paused:
@@ -741,29 +833,43 @@ func _tick_carousel(delta: float) -> void:
 	carousel.refresh(game, _cr_revealed, mine, me)
 
 
-## Fiche d'unité : ce que vise la manette (case, carte de la boutique) ou la souris.
+## Fiche d'unité : ce que vise la manette (case, carte de la boutique) ou la souris, en bulle près de la cible (lot ACX-1 :
+## la colonne des traits reste toujours visible). Survol d'un trait ou d'une carte de la boutique : _update_highlight.
 func _update_card() -> void:
 	var card := hud.unit_card
 	if phase == "combat" and real:
 		card.hide_card()
 		hud.traits.visible = false  # le compteur de dégâts prend la colonne (AC-V)
 		return
+	hud.traits.visible = true
 	if phase == "over" or game == null or choice.visible or carousel.visible:
 		card.hide_card()
-		hud.traits.visible = true
 		return
 	var s: Dictionary = {}
-	var shop_id := ""
+	var shop_i := -1
+	var target := Rect2()
 	if Gamepad.active and UiNav.nav_on():
 		var c: Control = UiNav.cursor if UiNav.cursor != null and is_instance_valid(UiNav.cursor) else null
 		if c != null and c.has_meta("ac_slot"):
 			s = c.get_meta("ac_slot")
+			target = UiNav.rect_of(c)
 		elif c != null and c.has_meta("ac_shop"):
-			shop_id = String(c.get_meta("unit_id", ""))
+			shop_i = int(c.get_meta("ac_shop"))
 	elif hud.shop.hovered >= 0 and hud.shop.cards[hud.shop.hovered].is_visible_in_tree():
-		shop_id = String((hud.shop.cards[hud.shop.hovered] as Control).get_meta("unit_id", ""))
+		shop_i = hud.shop.hovered
 	elif cursor.enabled:
 		s = cursor.slot
+		var sc: Control = cursor.control_of(s) if not s.is_empty() else null
+		if sc != null:
+			target = sc.get_global_rect()
+	var shop_id := ""
+	if shop_i >= 0:
+		var sb: Control = hud.shop.cards[shop_i]
+		shop_id = String(sb.get_meta("unit_id", ""))
+		target = sb.get_global_rect()
+		var tab: Control = hud._gold_tab
+		if tab.is_visible_in_tree():  # la bulle passe au-dessus de l'onglet de l'or
+			target = target.merge(Rect2(Vector2(target.position.x, tab.get_global_rect().position.y), Vector2(target.size.x, 1.0)))
 	if not s.is_empty() and String(s.get("zone", "")) == "items":
 		var it := board.item_at(s)
 		if it != "":
@@ -776,7 +882,46 @@ func _update_card() -> void:
 		card.show_unit({"id": shop_id, "stars": 1, "items": []}, _counts, true)
 	else:
 		card.hide_card()
-	hud.traits.visible = not card.visible
+	if card.visible and target.size != Vector2.ZERO:
+		card.place_near(target, hud.frame_rects())
+
+
+## Lot ACX-1 : survol (souris) ou cadre de la manette sur un trait de la colonne → ses unités (plateau, banc) s'entourent
+## de lagon et ses cartes de boutique aussi ; sur une carte de la boutique → les copies déjà possédées s'illuminent et la
+## colonne montre les traits qui monteraient (« 2 → 3 »).
+func _update_highlight() -> void:
+	var t := ""
+	var shop_id := ""
+	if phase == "prep" and game != null and not choice.visible and not carousel.visible and cursor.held.is_empty():
+		if Gamepad.active and UiNav.nav_on():
+			var c: Control = UiNav.cursor if UiNav.cursor != null and is_instance_valid(UiNav.cursor) else null
+			if c != null and c.has_meta("ac_trait"):
+				t = String(c.get_meta("ac_trait"))
+			elif c != null and c.has_meta("ac_shop"):
+				shop_id = String(c.get_meta("unit_id", ""))
+		elif hud.traits.hovered != "":
+			t = hud.traits.hovered
+		elif hud.shop.hovered >= 0 and hud.shop.cards[hud.shop.hovered].is_visible_in_tree():
+			shop_id = String((hud.shop.cards[hud.shop.hovered] as Control).get_meta("unit_id", ""))
+	var uids: Array = []
+	var rising: Array = []
+	if t != "":
+		for u in game.units_of(me):
+			if Autochess.unit_traits(u).has(t):
+				uids.append(int(u.uid))
+	elif shop_id != "":
+		var placed := false
+		for u in game.units_of(me):
+			if String(u.id) == shop_id:
+				uids.append(int(u.uid))
+		for u in game.players[me].board:
+			placed = placed or String(u.id) == shop_id
+		if not placed:
+			rising = (AutochessData.unit(shop_id).get("traits", []) as Array).duplicate()
+	board.mark_units(uids)
+	hud.shop.mark_trait(t)
+	hud.traits.set_marked(t)
+	hud.traits.preview(rising)
 
 
 # --- actions --------------------------------------------------------------------------------------------------------

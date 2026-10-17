@@ -94,6 +94,9 @@ var _held: Dictionary = {}
 var _held_at := Vector3.ZERO
 var _walk_target := STRATEGIST_HOME
 var _flash := 0.0
+var _marked := {}  # uid -> true : unités mises en avant (lot ACX-1, mark_units)
+var _mark_mesh: Mesh
+var _mark_mat: Material
 
 
 func _init() -> void:
@@ -862,6 +865,53 @@ func _sync_figures() -> void:
 			_figures[id] = fig
 		fig.set_meta("home", want[id][1])
 		fig.set_meta("uid", int(u.uid))
+	_apply_marks()
+
+
+## Lot ACX-1 : unités mises en avant (survol d'un trait ou d'une carte de la boutique) : anneau lagon épais et lumineux sous
+## leur figurine, au plateau comme au banc. [param uids] : unités du joueur ([] : aucune).
+func mark_units(uids: Array) -> void:
+	var want := {}
+	for u in uids:
+		want[int(u)] = true
+	if want == _marked:
+		return
+	_marked = want
+	_apply_marks()
+
+
+## Figurines du joueur actuellement mises en avant (tests).
+func marked_count() -> int:
+	var n := 0
+	for id in _figures:
+		var ring: Node3D = (_figures[id] as Node3D).get_node_or_null("AcMark")
+		if int(id) > 0 and ring != null and ring.visible:
+			n += 1
+	return n
+
+
+func _apply_marks() -> void:
+	for id in _figures:
+		var fig: Node3D = _figures[id]
+		var on := int(id) > 0 and _marked.has(int(id))
+		var ring: MeshInstance3D = fig.get_node_or_null("AcMark")
+		if on and ring == null:
+			ring = MeshInstance3D.new()
+			ring.name = "AcMark"
+			if _mark_mesh == null:
+				var tm := TorusMesh.new()
+				tm.inner_radius = 0.98
+				tm.outer_radius = 1.18
+				tm.rings = 40
+				_mark_mesh = tm
+				_mark_mat = _mat(Color("22b8f0"), true)
+			ring.mesh = _mark_mesh
+			ring.material_override = _mark_mat
+			ring.position.y = 0.06
+			ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			fig.add_child(ring)
+		if ring != null:
+			ring.visible = on
 
 
 ## Figurine d'une unité (uid), ou null.

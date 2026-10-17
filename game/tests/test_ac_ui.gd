@@ -187,8 +187,8 @@ func _ready() -> void:
 		(g.unit_at(0, Vector2i(3, 1)).items as Array).has("lame") and (p.items as Array).is_empty())
 	screen.cursor._set_slot(AutochessBoard.board_slot(3, 1), "keys")
 	await _frames(3)
-	check("fiche d'unité au survol de la case", screen.hud.unit_card.visible and screen.hud.unit_card.shown_key().begins_with("u:%s" % u0.id)
-		and not screen.hud.traits.visible)
+	check("fiche d'unité au survol de la case, les traits restent visibles (ACX-1)", screen.hud.unit_card.visible
+		and screen.hud.unit_card.shown_key().begins_with("u:%s" % u0.id) and screen.hud.traits.visible)
 	bad = _english(fr, screen.hud.unit_card)
 	check("fiche d'unité en français" + ("" if bad.is_empty() else " : " + str(bad)), bad.is_empty())
 	screen.cursor._set_slot(AutochessBoard.bench_slot(8), "keys")
@@ -269,6 +269,10 @@ func _ready() -> void:
 		guard += 1
 		await get_tree().process_frame
 	check("manche suivante : %s" % g.round_key(), screen.phase == "prep" and g.round_key() != rk)
+	rk = g.round_key()
+	# durées de la manche à l'échelle réelle (combat montré 3 s, bilan 3 s) : sous charge, une image dure assez longtemps
+	# pour que les durées réduites enchaînent combat, bilan et préparation suivante entre deux vérifications (ACX-1)
+	screen.fast = false
 	screen.hud.ready_button.pressed.emit()
 	await _frames()
 	check("bouton Prêt : combat de la manche %s" % rk, screen.phase in ["combat", "recap"])
@@ -281,6 +285,7 @@ func _ready() -> void:
 			saw_banner = true
 		await get_tree().process_frame
 	check("bilan de manche : bandeau Victoire / Défaite", saw_banner)
+	screen.fast = true
 
 	# --- atout (2-1) ----------------------------------------------------------------------------------------------
 	check("on atteint 2-1", await _goto(2, 1))

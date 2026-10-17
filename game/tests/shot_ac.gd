@@ -60,8 +60,13 @@ func _ready() -> void:
 		get_window().size = res
 		await get_tree().process_frame
 		if screen:
+			# le bilan de fin du tour précédent met l'arbre en pause (ResultsPanel) : sans ce retour, la 2e passe
+			# (1600 × 900) restait bloquée à la manche 1-1 (le pilote ne tournait plus)
+			screen._close_results()
+			screen.recap.close()
 			screen.queue_free()
 			await get_tree().process_frame
+		get_tree().paused = false
 		Gamepad._set_active(false)
 		AutochessScreen.config = {"seed": 21, "save_path": "", "fast": true}
 		screen = load("res://scenes/autochess.tscn").instantiate()
