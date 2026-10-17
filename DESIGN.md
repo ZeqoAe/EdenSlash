@@ -452,7 +452,9 @@ les pièces : × 0,09 × 1,08^(niveau − 1), passe E6), son enchantement, son p
 - **Force des monstres** : PV × `Epochs.MAP_MULT` de la carte (M′, remplace l'ancien multiplicateur par époque), dégâts ×
   `MAP_ATK` (monstres) ou `BOSS_ATK` (boss), × montée dans le temps de la carte (`Epochs.TIME_RAMP` 2 % par minute, au plus
   `TIME_RAMP_MAX` ; pas pour le boss). Défense des monstres plafonnée à celle du niveau `DEF_LEVEL` (18 / 28 / 38) : au-delà, ×1,1
-  par niveau annulait les coups du héros. Valeurs et mesures : `R_H4a.md`. `Epochs.OLD_CAPS` / `OLD_MONSTER_MULT` (modèle
+  par niveau annulait les coups du héros. Les dégâts sur la durée (zones, poisons) ne passent pas par la défense du héros : à haut
+  niveau ils dominent, d'où `BOSS_ATK` bas aux époques III-IV. Miroir du boss : un coup renvoyé retire au plus 12 % des PV max du
+  héros (`Monster.REFLECT_CAP` ; au niveau 90 un coup du héros vaut plusieurs fois ses PV). Valeurs et mesures : `R_H4a.md`. `Epochs.OLD_CAPS` / `OLD_MONSTER_MULT` (modèle
   d'avant) restent pour les outils seulement.
 - **Boss** : PV fixes (voir « Boss : PV fixes ») au niveau du boss : `Epochs.boss_hp(époque, carte, niveau)` = PV de référence
   (`BOSS_HP_MAP` × `BOSS_HP_EPOCH` × `BOSS_HP_ADJ` × M′ / ancien multiplicateur) × 1,1^(niveau − plafond d'avant − 1). Un compte

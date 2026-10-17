@@ -52,6 +52,39 @@ III 9,6 / 14,7 / 3,7 ; IV 43 / 71 / 34. Sonde (coups évités 0,5) après : PV m
 sur 5), II 2,2 / 2,4 / 4,1, III 3,6 / 12 / 5,5, IV 4,5 / 6,2 / 5,1 (tous morts) : époques I-II presque réglées ; aux époques III-IV
 les dégâts ne baissent presque plus avec `BOSS_ATK` (coups de 0,3 à 1 PV max : mécaniques des boss, à voir au sous-lot suivant).
 
+## Réglage (sous-lot 2, 0.1.254)
+
+Causes trouvées (traces des coups reçus par le héros, sonde) : (1) les **dégâts sur la durée** (zones, poisons) ne passent pas par la
+défense du héros, qui vaut ≈ 15 000 au niveau 80 (un coup ordinaire n'en garde que 0,7 %) : une zone d'un boss d'époque IV retirait
+136 % des PV ; (2) le **miroir** du boss renvoie 60 % d'un coup du héros, qui au niveau 90 vaut plusieurs fois ses PV : plafonné à
+12 % des PV max en Aventure (`Monster.REFLECT_CAP`) ; (3) le pilote frappe 2 à 3 fois moins que la sonde : un combat long croise la
+**rage du boss** (2:30 en 1re carte), qui le tue. D'où des dégâts bas aux époques II-IV et des PV de boss réduits en 1re carte.
+
+| Table (I / II / III / IV × cartes 1-2-3) | Valeurs |
+|---|---|
+| `MAP_MULT` (PV) | I 0,35 / 1,3 / 2,1 ; II 4,4 / 7 / 24 ; III 46 / 121 / 25 ; IV 410 / 450 / 290 |
+| `MAP_ATK` (dégâts des monstres) | I 0,35 / 0,22 / 1,2 ; II 0,25 / 0,3 / 0,45 ; III 1,4 / 1,0 / 0,12 ; IV 1,1 / 0,6 / 0,5 |
+| `BOSS_ATK` (dégâts des boss) | I 0,35 / 0,22 / 1,2 ; II 0,15 / 0,18 / 0,27 ; III 0,6 / 0,42 / 0,05 ; IV 0,33 / 0,18 / 0,15 |
+| `BOSS_HP_ADJ` | I 1 / 1 / 1 ; II 0,6 / 1 / 1 ; III 0,8 / 1 / 1 ; IV 0,7 / 0,6 / 0,45 |
+
+Pilote (`--rush 4`, coups évités 0,5, 5 classes × 3 graines ; héros au haut de la bande, pièces de la carte à +5 ; cartes 2-3 :
+`--start-run` 17 / 27) — **boss battu** (cible 50-70 % ; retard de 10 niveaux ≈ 25 %) :
+
+| Carte | Équipement | Carte tenue | Boss battu |
+|---|---|---|---|
+| I-1 | compte neuf (niveau 1, départ) | 87 % | **53 %** (sans `--rush` ; atteint 53 %) |
+| I-2 | I-2 +5, niveau 33 | 100 % | **53 %** |
+| I-2 | **retard** (I-1 +5), niveau 33 | 87 % | **27 %** |
+| I-3 | I-3 +5, niveau 43 | 93 % | **60 %** |
+| II-1 | II-1 +5, niveau 48 | 100 % | 7 à 27 % (deux séries, avant `BOSS_HP_ADJ` 0,6) |
+| III-2 | III-2 +5, niveau 70 | 100 % | 47 % |
+| IV-1 | **retard** (III-3 +5), niveau 80 | 87 % | 53 % (avant `BOSS_HP_ADJ` 0,7 → inchangé ; trop facile) |
+| IV-3 | IV-3 +5, niveau 90 | 100 % | 33 % (avant `BOSS_HP_ADJ` 0,45 : combats de ≈ 400 s, rage) |
+
+Époque I réglée (compte neuf, équipement correct, retard). Époques II-IV : dans le bon sens mais pas mesurées après les derniers
+réglages des PV de boss (`BOSS_HP_ADJ`) : à confirmer au pilote (lot H4b), ainsi que II-2, II-3, III-1, III-3, IV-2 (jamais
+mesurées au pilote) et la carte IV-1 en retard, trop facile.
+
 ## Tests
 `test_h4a` (nouveau, 35 vérifications : tables, règles de la partie, coffres et port, vraie carte, autres modes). Adaptés en gardant
 leur intention : `test_p9`, `test_p11` (PV au niveau du boss ; croissants d'une époque à l'autre, 3e carte au-dessus de la 1re),
@@ -61,7 +94,9 @@ leur intention : `test_p9`, `test_p11` (PV au niveau du boss ; croissants d'une 
 `test_journal`, `test_texts_fr`.
 
 ## Reste / pièges
-- Réglage fin (H4b) : `BOSS_ATK` et `MAP_ATK` par carte au pilote, retard d'équipement (≈ 25 %), époques entières.
+- Réglage fin (H4b) : confirmer au pilote les époques II-IV (voir « Réglage ») ; `MAP_ATK` aux époques III-IV est bas (les dégâts
+  ordinaires ne passent plus la défense du héros) : la pression de la carte vient des dégâts sur la durée ; le simulateur de
+  progression (`progression_sim --heros`) garde les M′ du document (ses indices ignorent la défense) : à recaler sur les tables du jeu.
 - Chasseur au compte neuf : meurt vers 4-6 min sur I-1 dans toutes les séries (les autres classes tiennent) : à regarder (classe).
 - Le pilote ne prend pas le portail : une run complète ne se mesure pas ; `--stage` + `--start-run` (cartes des niveaux d'avant).
 - `Run.hero_level` en Aventure n'est plus recopié de `Player.level` : un outil qui pose `player.level` pour régler la puissance doit poser

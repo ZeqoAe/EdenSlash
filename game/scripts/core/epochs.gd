@@ -40,21 +40,21 @@ const MAP_MULT := [
 	[0.35, 1.3, 2.1],
 	[4.4, 7.0, 24.0],
 	[46.0, 121.0, 25.0],
-	[410.0, 770.0, 290.0],
+	[410.0, 450.0, 290.0],
 ]
 ## Dégâts des monstres de chaque carte (lot H4a) : M′ règle les PV (temps pour tuer, sonde boss_ttk) ; les dégâts ont leur
 ## table, car les PV et la défense du héros montent plus vite que ses dégâts avec le niveau. BOSS_ATK : dégâts des boss.
 const MAP_ATK := [
 	[0.35, 0.22, 1.2],
-	[0.6, 0.8, 1.9],
-	[9.6, 14.7, 3.7],
-	[43.0, 71.0, 34.0],
+	[0.25, 0.3, 0.45],
+	[1.4, 1.0, 0.12],
+	[1.1, 0.6, 0.5],
 ]
 const BOSS_ATK := [
 	[0.35, 0.22, 1.2],
-	[0.6, 0.8, 1.9],
-	[9.6, 14.7, 3.7],
-	[43.0, 71.0, 34.0],
+	[0.15, 0.18, 0.27],
+	[0.6, 0.42, 0.05],
+	[0.33, 0.18, 0.15],
 ]
 ## Montée des monstres dans le temps de chaque carte (lot H4a) : le héros ne prend plus de niveau pendant la carte (seules
 ## les cartes le font grandir) ; PV et dégâts des monstres qui apparaissent × (1 + TIME_RAMP)^minutes, au plus TIME_RAMP_MAX
@@ -90,12 +90,13 @@ const BOSS_HP_MAP := [80000.0, 370000.0, 1750000.0]
 ## Facteur d'époque des PV du boss : les dégâts d'une bonne run grandissent avec l'équipement du hub de l'époque
 ## (mesurés au pilote, combats longs : ×1 / ×1,7-2,4 / ×3,9-4,9 / ×3,9-6,9 selon la carte).
 const BOSS_HP_EPOCH := [1.0, 2.0, 4.0, 5.5]
-## Réglage par carte des PV des boss (lot H4a, mesuré au pilote : R_H4a.md).
+## Réglage par carte des PV des boss (lot H4a, mesuré au pilote : R_H4a.md) : le pilote automatique frappe 2 à 3 fois moins
+## que la sonde ; un combat trop long croise la rage du boss (2:30 à la 1re carte), qui tue.
 const BOSS_HP_ADJ := [
 	[1.0, 1.0, 1.0],
-	[1.0, 1.0, 1.0],
-	[1.0, 1.0, 1.0],
-	[1.0, 1.0, 1.0],
+	[0.6, 1.0, 1.0],
+	[0.8, 1.0, 1.0],
+	[0.7, 0.6, 0.45],
 ]
 ## Rage du boss (passe P11) : après BOSS_RAGE_AT[carte] secondes dans l'arène, les dégâts du boss suivent les paliers de
 ## la rage de la carte (RunDirector.RAGE_TIERS, une minute par palier : ×1,1, ×2, ×11, ×101). Environ deux fois le

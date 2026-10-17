@@ -549,6 +549,10 @@ func message_reflect() -> void:
 var shielded := false
 
 
+## Aventure : part des PV max du héros qu'un coup renvoyé par le miroir du boss retire au plus (lot H4a).
+const REFLECT_CAP := 0.12
+
+
 func take_damage(amount: float, source: Combatant = null, crit := false, dot := false) -> void:
 	if shielded:
 		if not dot and randf() < 0.3:
@@ -556,7 +560,11 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 		return
 	# miroir du boss : renvoie 60 % des dégâts au héros
 	if brain and brain.reflecting and source is Player and not dot:
-		source.take_damage(amount * 0.6, self, false, true)
+		var back := amount * 0.6
+		if Epochs.adventure():
+			# lot H4a : au niveau 90 un coup du héros vaut plusieurs fois ses PV ; le renvoi en retire au plus REFLECT_CAP
+			back = minf(back, source.max_hp * REFLECT_CAP)
+		source.take_damage(back, self, false, true)
 		DamageNumber.spawn_text(source, "RENVOI", Color(1.0, 0.75, 0.3))
 		amount *= 0.2
 	super.take_damage(amount, source, crit, dot)
