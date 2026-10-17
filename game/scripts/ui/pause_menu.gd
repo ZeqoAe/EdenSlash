@@ -114,6 +114,10 @@ static func leave_texts() -> Dictionary:
 		return {"button": "Quitter l'entraînement", "title": "Quitter l'entraînement ?", "text": "Rien de l'entraînement n'est gardé.", "ok": "Quitter"}
 	if Royale.active:
 		return {"button": "Abandonner la partie", "title": "Abandonner le Battle royale ?", "text": "Tu termines dernier (%de). Seules les récompenses de cette place sont gardées." % Royale.PLAYERS, "ok": "Abandonner"}
+	if Duel.active and Duel.mode in ["arena2", "arena3"]:  # (lot HUD-2 : les Arènes ont leurs mots, pas ceux du duel)
+		return {"button": "Abandonner l'arène", "title": "Abandonner l'arène ?", "text": "La rencontre compte comme perdue pour ton équipe.", "ok": "Abandonner"}
+	if Duel.active and Duel.mode == "gauntlet":
+		return {"button": "Abandonner le Gantelet", "title": "Abandonner le Gantelet ?", "text": "Le Gantelet compte comme perdu.", "ok": "Abandonner"}
 	if Duel.active:
 		return {"button": "Abandonner le duel", "title": "Abandonner le duel ?", "text": "Le duel compte comme perdu.", "ok": "Abandonner"}
 	if Tower.active:

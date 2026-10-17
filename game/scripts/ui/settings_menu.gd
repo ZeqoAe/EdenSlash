@@ -605,6 +605,8 @@ func _build_display_page() -> void:
 		[0.75, "75 %"], [0.85, "85 %"], [1.0, "100 %"], [1.1, "110 %"], [1.25, "125 %"], [1.5, "150 %"]])
 	# lot HUB-1, P0-9 : le HUD en partie a sa propre taille et son opacité (les menus gardent la taille de l'interface)
 	_section(v, "HUD en partie")
+	# lot HUD-2 (BM-HUB P1-3) : profils prêts à l'emploi avant tout éditeur libre
+	_option(v, "Profil du HUD", "interface", "hud_profile", HudV2.PROFILES.map(func(p): return [p, HudV2.PROFILE_NAMES[p], HudV2.PROFILE_HINTS[p]]))
 	_slider(v, "Taille du HUD", "interface", "hud_scale", 0.8, 1.4, 0.05, func(x): return "%d %%" % roundi(x * 100),
 		"Agrandit ou réduit tout le HUD en partie (vie, sorts, objectifs, mini-carte), sans toucher aux menus.")
 	_slider(v, "Opacité du HUD", "interface", "hud_opacity", 0.4, 1.0, 0.05, func(x): return "%d %%" % roundi(x * 100),

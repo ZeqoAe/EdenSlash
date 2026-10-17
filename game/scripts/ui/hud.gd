@@ -1,11 +1,16 @@
 class_name Hud
 extends CanvasLayer
-## HUD de la run, style or sur indigo (UiTheme) :
-## - bas : orbe de vie, 4 compétences (recharge circulaire), esquive, orbe d'expérience
-##   (niveau au centre) ; buffs à gauche et debuffs à droite au-dessus ;
-## - haut gauche : objectifs repliés (zone, chrono, sceaux), dépliés avec [Tab] et quelques
-##   secondes à chaque découverte ;
-## - haut centre : cible (PV, niveau, effets) ; haut droite : mini-carte ronde.
+## HUD de la partie, DA v2 « autocollant » (lot HUD-2, croquis BM-HUB `hub_maquettes/hud.html`, pièces dans HudV2) :
+## - bas : cases de sorts autocollantes (2 potions, 4 sorts, esquive, arme rangée), touche dessinée sous chaque case,
+##   barre de niveau lagon à droite (au lieu du globe) et niveau d'aide, jauge de vie large dessous ; effets positifs
+##   au-dessus à gauche, négatifs à droite ;
+## - haut gauche (pile) : objectifs repliés (zone, chrono, sceaux), dépliés avec [Tab] et quelques secondes à chaque
+##   découverte, Menace, quête suivie, Premiers pas ;
+## - haut centre : cible (PV, niveau, effets), ou la barre de boss v2 (BossBar) ; bandeau d'annonce dessous ;
+## - droite (colonne) : mini-carte ronde au cadre papier, compteur de dégâts, carte de notification (file HudNotices),
+##   fil du butin : chacun sous le précédent, jamais sur la barre d'action (_layout_right) ;
+## - profils Standard / Compact / Minimal, taille et opacité (Paramètres > Affichage > HUD en partie).
+## Le Battle royale (RoyaleHud) et le Survivant (SurvivorHud) posent leurs modules par-dessus à la fin de _build.
 
 const ACCENT := UiTheme.GOLD
 const PANEL := Color(0.07, 0.06, 0.12, 0.82)
@@ -16,8 +21,8 @@ var player: Player
 var director: RunDirector
 var minimap: Minimap
 
-var _hp_orb: HudWidgets.Orb
-var _xp_orb: HudWidgets.Orb
+var _hp_orb: HudV2.LifeGauge  # jauge de vie (nom d'avant gardé : le Survivant la masque, des tests la lisent)
+var _xp_orb: HudV2.LevelBar  # barre de niveau (au lieu du globe)
 var _slots: Array[HudWidgets.SkillSlot] = []
 var _dodge: HudWidgets.SkillSlot
 var _swap: HudWidgets.SkillSlot  # arme rangée : « Changer d'arme » (passe N2), visible avec une arme secondaire
@@ -66,7 +71,7 @@ var _target_ref: WeakRef
 var _center_label: Label  # titre du bandeau d'annonce
 var _center_sub: Label  # détail du bandeau (2e ligne et suivantes)
 var _banner: PanelContainer
-const BANNER_SIDE := 270.0  # place gardée de chaque côté du bandeau d'annonce (mini-carte à droite, lot DNG-1)
+const BANNER_SIDE := 390.0  # place gardée de chaque côté du bandeau d'annonce : la pile de gauche et la mini-carte (lots DNG-1, HUD-2)
 const BANNER_MAX := 1000.0
 var _feed: VBoxContainer  # fil de butin (à gauche) : petites lignes qui s'effacent
 ## Messages qui vont dans le fil de butin plutôt que dans le bandeau (début du texte).
@@ -92,6 +97,15 @@ var _root: Control
 var _sv_hud: SurvivorHud  # Survivant : frise des 20 minutes (null ailleurs)
 var _royale: RoyaleHud  # Battle royale : HUD d'état v2, flèches, repère, grande carte (lot BR-I1 ; null ailleurs)
 var _boss_bar: BossBar  # barre de boss v2, frise « À venir », annonces à 3 niveaux (lot DNG-2)
+var _map_holder: Control  # support de la mini-carte ronde (haut droite)
+var _loot: VBoxContainer  # colonne du fil du butin à droite (lot HUD-2) ; Battle royale et Survivant : null (fil dans la pile de gauche)
+var _cards_top := -1.0  # haut de la carte de notification posé par _layout_right
+var _dmg_room := true  # le compteur de dégâts a sa place (une carte de notification passe avant lui sur un petit écran)
+const DMG_H := 96.0  # hauteur gardée pour le compteur de dégâts dans la colonne de droite
+const FEED_LINE_H := 38.0  # hauteur d'une ligne du fil du butin (avec l'écart)
+const FEED_TONES := {"Butin": "soleil", "Coffre": "soleil", "Clé": "mandarine", "Une clé": "mandarine", "Cristal": "lagon",
+	"Potion": "fraise", "Équipé": "pomme", "Rangé": "pomme"}
+static var _feed_style: StyleBox
 
 
 func setup(p: Player, d: RunDirector) -> void:
@@ -111,6 +125,7 @@ func setup(p: Player, d: RunDirector) -> void:
 	director.message.connect(show_message)
 	director.better_item.connect(show_better)
 	Run.weapon_bagged.connect(show_bagged)  # (l'échange d'arme, lui, reste discret : éclair, son et case de l'arme rangée)
+	player.weapon_swapped.connect(func(_off): _swap._flash = 1.0)  # (lot HUD-2) la case de l'arme rangée s'éclaire à l'échange
 	_on_hp(player.hp, player.max_hp)
 	_on_xp(player.xp, GameData.xp_to_next(player.level), player.level)
 	_refresh_skills()
@@ -184,69 +199,66 @@ func _build() -> void:
 	_build_action_bar(root)
 
 	# --- messages (centre) ---
-	# bandeau d'annonce : haut de l'écran, titre + détail sur une bande sombre
+	# bandeau d'annonce : haut de l'écran, titre + détail dans un autocollant d'encre (lot HUD-2 : même famille que les
+	# annonces de boss HudAlert ; contour d'encre, ombre dure, titre en Mochiy contouré)
 	_banner = PanelContainer.new()
-	var band := StyleBoxEmpty.new()  # le fond est un dégradé qui s'efface sur les côtés (il ne coupe pas l'écran en deux)
-	_banner.add_theme_stylebox_override("panel", band)
+	_banner.add_theme_stylebox_override("panel", UiTheme.sticker("nuit", {"radius": 16, "shadow": 5, "pad": Vector2(26, 8),
+		"gloss": false, "cel_top": 0.0, "cel_bottom": 0.0}))
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_banner.offset_left = -300
-	_banner.offset_right = 300
+	_banner.offset_left = -230
+	_banner.offset_right = 230
 	_banner.offset_top = 122
-	_banner.custom_minimum_size = Vector2(600, 0)
+	_banner.custom_minimum_size = Vector2(460, 0)
 	root.add_child(_banner)
-	var fade := GradientTexture2D.new()
-	fade.fill = GradientTexture2D.FILL_LINEAR
-	fade.fill_from = Vector2(0.0, 0.0)
-	fade.fill_to = Vector2(1.0, 0.0)
-	fade.gradient = Gradient.new()
-	fade.gradient.colors = PackedColorArray([Color(0.03, 0.02, 0.06, 0.0), Color(0.03, 0.02, 0.06, 0.78), Color(0.03, 0.02, 0.06, 0.78), Color(0.03, 0.02, 0.06, 0.0)])
-	fade.gradient.offsets = PackedFloat32Array([0.0, 0.22, 0.78, 1.0])
-	var bg := TextureRect.new()
-	bg.texture = fade
-	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	bg.stretch_mode = TextureRect.STRETCH_SCALE
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_banner.add_child(bg)
-	var bm := MarginContainer.new()
-	bm.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for side in ["left", "right"]:
-		bm.add_theme_constant_override("margin_" + side, 70)
-	bm.add_theme_constant_override("margin_top", 8)
-	bm.add_theme_constant_override("margin_bottom", 12)
-	_banner.add_child(bm)
 	var bv := VBoxContainer.new()
 	bv.add_theme_constant_override("separation", 2)
 	bv.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bm.add_child(bv)
+	_banner.add_child(bv)
 	_center_label = _label(bv, "", 30, ACCENT)
 	_center_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UiTheme.title(_center_label, 30)
-	_center_sub = _label(bv, "", 17, Color(0.93, 0.9, 0.98))
+	_center_sub = _label(bv, "", 17, UiTheme.color("papier.100"))
+	_center_sub.add_theme_font_override("font", UiTheme.bold_font())
+	_center_sub.add_theme_color_override("font_outline_color", UiTheme.color("encre.700"))
 	_center_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_center_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_center_sub.custom_minimum_size = Vector2(460, 0)
 	_banner.modulate.a = 0.0
-	# fil de butin (gauche, sous les objectifs et les premiers pas)
+	# fil du butin (lot HUD-2) : colonne de droite, sous la carte de notification (Diablo, WoW : une ligne par trouvaille,
+	# case de couleur) ; Battle royale et Survivant : dans la pile de gauche comme avant (leur colonne de droite est prise)
 	_feed = VBoxContainer.new()
 	_feed.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_feed.add_theme_constant_override("separation", 4)
+	_feed.add_theme_constant_override("separation", 6)
 	_feed.custom_minimum_size = Vector2(PANEL_W, 0)
-	_left.add_child(_feed)
+	if Royale.active or Survivor.active:
+		_left.add_child(_feed)
+	else:
+		_loot = _feed
+		_feed.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		_feed.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		_feed.offset_left = -(PANEL_W + 16.0)
+		_feed.offset_right = -16.0
+		_feed.offset_top = 260.0
+		root.add_child(_feed)
 
-	# --- invite d'interaction ([F] Ouvrir...) ---
+	# --- invite d'interaction ([F] Ouvrir...) : autocollant papier, texte à l'encre ---
 	_prompt_box = PanelContainer.new()
-	_prompt_box.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.06, 0.04, 0.1, 0.9), UiTheme.GOLD, 2, 18))
+	_prompt_box.add_theme_stylebox_override("panel", UiTheme.sticker("papier", {"radius": 14, "shadow": 4, "pad": Vector2(18, 6),
+		"gloss": false, "cel_top": 0.0, "cel_bottom": 0.0}))
 	_prompt_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_prompt_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_prompt_box.position = Vector2(0, -270)
 	root.add_child(_prompt_box)
-	_prompt = _label(_prompt_box, "", 20, Color.WHITE)
+	_prompt = _label(_prompt_box, "", 20, UiTheme.color("encre.700"))
+	_prompt.add_theme_font_override("font", UiTheme.bold_font())
+	_prompt.add_theme_constant_override("outline_size", 0)
 	_prompt_box.visible = false
 
 	_better_box = PanelContainer.new()
-	_better_box.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.05, 0.1, 0.06, 0.92), Color(0.45, 1.0, 0.5), 2, 12))
+	_better_box.add_theme_stylebox_override("panel", UiTheme.sticker("nuit", {"radius": 14, "shadow": 4, "pad": Vector2(14, 8),
+		"gloss": false, "cel_top": 0.0, "cel_bottom": 0.0, "ink": UiTheme.color("bonbon.pomme.fonce")}))
 	_better_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_better_box.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_better_box.custom_minimum_size = Vector2(420, 0)
@@ -265,8 +277,8 @@ func _build() -> void:
 	_better_box.visible = false
 
 	_arrow = _label(root, "▲", 36, ACCENT)
-	_arrow.add_theme_constant_override("outline_size", 8)
-	_arrow.add_theme_color_override("font_outline_color", Color(0.1, 0.05, 0.15))
+	_arrow.add_theme_constant_override("outline_size", 9)
+	_arrow.add_theme_color_override("font_outline_color", UiTheme.color("encre.700"))
 	_arrow.pivot_offset = Vector2(13, 25)
 	_arrow.visible = false
 
@@ -310,6 +322,7 @@ func _build_tutorial(root: Control) -> void:
 	var skip := Button.new()
 	skip.text = "Passer"
 	skip.focus_mode = Control.FOCUS_NONE
+	UiTheme.style_button(skip, "papier", UiTheme.MIN_TEXT, {"shadow": 3, "pad": Vector2(10, 1), "gloss": false})
 	skip.pressed.connect(func():
 		Tutorial.skip_steps()
 		_steps_panel.visible = false)
@@ -317,7 +330,7 @@ func _build_tutorial(root: Control) -> void:
 	_steps_text = _label(v, "", 16, Color.WHITE)
 	_steps_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_steps_text.custom_minimum_size = Vector2(PANEL_W - 36.0, 0)
-	_cards = InfoCard.in_control(root)  # sous le compteur de dégâts cumulés (il finit vers y = 370)
+	_cards = InfoCard.in_control(root)  # colonne de droite : posée sous la mini-carte et le compteur de dégâts par _layout_right
 	notices = HudNotices.new(_cards, banner_up)
 
 
@@ -469,8 +482,8 @@ func _update_objectives() -> void:
 	_obj_chevron.visible = has_objectives
 	var chests_total: int = director.map.chests.size() if director.map and "chests" in director.map else 0
 	var sig := "%s|%s|%d|%d|%d" % [director.state, director.dungeon_found, director.seals, director.chests_opened, director.shrines_captured]
-	if _obj_signature != "" and sig != _obj_signature:
-		_obj_show_until = _clock + OBJECTIVE_AUTO_SHOW  # nouvelle découverte : on déplie un instant
+	if _obj_signature != "" and sig != _obj_signature and HudV2.shows("auto_open"):
+		_obj_show_until = _clock + OBJECTIVE_AUTO_SHOW  # nouvelle découverte : on déplie un instant (profil Standard)
 	_obj_signature = sig
 	var open := has_objectives and (_obj_pinned or _clock < _obj_show_until)
 	_obj_details.visible = open
@@ -530,6 +543,7 @@ func _build_minimap(root: Control) -> void:
 	holder.size = Vector2(230, 230)
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(holder)
+	_map_holder = holder
 	var mask := Control.new()  # découpe ronde : seuls les pixels du disque sont gardés
 	mask.size = holder.size
 	mask.clip_children = CanvasItem.CLIP_CHILDREN_ONLY
@@ -542,46 +556,37 @@ func _build_minimap(root: Control) -> void:
 	minimap.size = holder.size
 	mask.add_child(minimap)
 	minimap.setup(player, director)
-	var ring := Control.new()
+	var ring := HudV2.MapRing.new()  # cadre papier (lot HUD-2) au lieu des anneaux dorés
 	ring.size = holder.size
-	ring.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ring.draw.connect(func():
-		var c := ring.size * 0.5
-		var r := ring.size.x * 0.5 - 6.0
-		ring.draw_arc(c, r, 0.0, TAU, 128, Color(0.04, 0.02, 0.07, 0.95), 7.0, true)
-		ring.draw_arc(c, r, 0.0, TAU, 128, UiTheme.GOLD, 2.5, true)
-		ring.draw_arc(c, r + 4.0, 0.0, TAU, 128, UiTheme.GOLD_DIM, 1.2, true)
-		for k in 8:
-			var a := TAU * k / 8.0
-			HudWidgets.diamond(ring, c + Vector2(cos(a), sin(a)) * r, 5.0 if k % 2 == 0 else 3.0, UiTheme.GOLD))
 	holder.add_child(ring)
-	# compteur de dégâts cumulés : à droite, sous la mini-carte
+	# compteur de dégâts cumulés : à droite, sous la mini-carte (chiffre soleil en Mochiy contouré d'encre, jauge des 3 s)
+	var ink := UiTheme.color("encre.700")
 	_dmg_box = VBoxContainer.new()
 	_dmg_box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_dmg_box.position = Vector2(-260, 268)
+	_dmg_box.position = Vector2(-260, 256)
 	_dmg_box.grow_horizontal = Control.GROW_DIRECTION_BEGIN  # (lot DNG-1 : un grand nombre l'élargit vers la gauche, jamais hors de l'écran)
 	_dmg_box.custom_minimum_size = Vector2(240, 0)
 	_dmg_box.alignment = BoxContainer.ALIGNMENT_END
+	_dmg_box.add_theme_constant_override("separation", 2)
 	_dmg_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(_dmg_box)
-	var cap := _label(_dmg_box, "DÉGÂTS CUMULÉS", UiTheme.MIN_TEXT, Color(1, 0.85, 0.5, 0.9))
+	var cap := _label(_dmg_box, "Dégâts cumulés", UiTheme.MIN_TEXT + 1, UiTheme.color("papier.100"))
 	cap.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_dmg_value = _label(_dmg_box, "", 40, Color(1, 0.92, 0.6))
+	_dmg_value = _label(_dmg_box, "", 36, UiTheme.color("bonbon.soleil.clair"))
 	_dmg_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_dmg_value.add_theme_font_override("font", UiTheme.title_font())
-	_dmg_value.add_theme_constant_override("outline_size", 8)
-	_dmg_value.add_theme_color_override("font_outline_color", Color(0.15, 0.05, 0.02))
-	_dmg_value.pivot_offset = Vector2(240, 30)
+	UiTheme.title(_dmg_value, 36, UiTheme.color("bonbon.soleil.clair"))
+	_dmg_value.pivot_offset = Vector2(240, 26)
 	_dmg_bar = ColorRect.new()
-	_dmg_bar.color = Color(1, 0.75, 0.3, 0.85)
-	_dmg_bar.custom_minimum_size = Vector2(240, 3)
+	_dmg_bar.color = UiTheme.color("bonbon.soleil.base")
+	_dmg_bar.custom_minimum_size = Vector2(240, 4)
 	_dmg_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_dmg_box.add_child(_dmg_bar)
-	_dmg_best = _label(_dmg_box, "", UiTheme.MIN_TEXT, Color(1, 1, 1, 0.7))
+	_dmg_best = _label(_dmg_box, "", UiTheme.MIN_TEXT, UiTheme.color("papier.100"))
 	_dmg_best.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	for l in [cap, _dmg_best]:
-		l.add_theme_constant_override("outline_size", 5)
-		l.add_theme_color_override("font_outline_color", Color(0.08, 0.04, 0.02, 0.9))
+		l.add_theme_font_override("font", UiTheme.bold_font())
+		l.add_theme_constant_override("outline_size", 6)
+		l.add_theme_color_override("font_outline_color", ink)
 	_dmg_box.modulate.a = 0.0
 
 	_fps_label = _label(root, "", UiTheme.MIN_TEXT, Color(1, 1, 1, 0.6))
@@ -611,9 +616,9 @@ func _build_target(root: Control) -> void:
 	_target_bars = bars
 	bars.custom_minimum_size = Vector2(0, 18)
 	v.add_child(bars)
-	_target_trail = _bar(bars, Color(1, 0.9, 0.75, 0.6), 18)
+	_target_trail = _bar(bars, Color(UiTheme.color("papier.100"), 0.75), 18)  # trace claire des dégâts
 	_target_trail.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_target_bar = _bar(bars, Color(0.86, 0.18, 0.24), 18)
+	_target_bar = _bar(bars, UiTheme.color("bonbon.fraise.base"), 18)
 	_target_bar.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_target_bar.add_theme_stylebox_override("background", StyleBoxEmpty.new())
 	# boss : repère de la 2e phase (à mi-vie, il entre en fureur), deux encoches dorées en haut et en bas de la grande
@@ -649,6 +654,18 @@ func _build_target(root: Control) -> void:
 
 
 # --- barre d'action (bas) ----------------------------------------------------------------
+## Repères de la barre d'action v2 (lot HUD-2) dans son cadre de 900 × 196 ancré en bas au centre (haut à 204 px du bas).
+const SLOT := 62.0
+const SLOT_Y := 96.0  # haut des cases (au-dessus : effets, puis les icônes d'enchaînement et la barre du bon timing)
+const POTION_X := 96.0
+const SKILL_X := 216.0
+const SKILL_STEP := 72.0
+const LEVEL_X := 630.0  # barre de niveau (pastille, jauge) et niveau d'aide
+const LIFE_X := 96.0
+const LIFE_W := 724.0
+const LIFE_Y := 172.0  # jauge de vie, sous les touches dessinées
+
+
 func _build_action_bar(root: Control) -> void:
 	var bottom := Control.new()
 	bottom.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
@@ -657,71 +674,65 @@ func _build_action_bar(root: Control) -> void:
 	bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(bottom)
 	_action_root = bottom
-	var bar := Panel.new()
-	bar.add_theme_stylebox_override("panel", UiTheme.panel_box())
-	bar.position = Vector2(150, 104)
-	bar.size = Vector2(600, 82)
-	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bottom.add_child(bar)
-	_hp_orb = HudWidgets.Orb.new()
-	_hp_orb.position = Vector2(30, 56)
-	_hp_orb.size = Vector2(136, 136)
-	_hp_orb.pulse_low = true
-	bottom.add_child(_hp_orb)
-	_xp_orb = HudWidgets.Orb.new()
-	_xp_orb.position = Vector2(734, 56)
-	_xp_orb.size = Vector2(136, 136)
-	_xp_orb.top_color = Color(1.0, 0.85, 0.4)
-	_xp_orb.bottom_color = Color(0.55, 0.32, 0.04)
-	_xp_orb.caption = "NIVEAU"
-	_xp_orb.big_font = UiTheme.title_font()
-	_xp_orb.big_size = 38
-	bottom.add_child(_xp_orb)
-	var x0 := 266.0
+	# lot HUD-2 (croquis BM-HUB, P0-8) : plus de panneau ni de globes ; rangée de cases autocollantes (potions, sorts,
+	# esquive, arme rangée) avec la touche dessinée dessous, barre de niveau à droite, vie en jauge large tout en bas
+	# (comme le Survivant : les icônes d'enchaînement, au-dessus des cases, ne la cachent jamais). Repères dans 900 × 196.
+	for i in 2:
+		var ps := HudWidgets.PotionSlot.new()
+		ps.position = Vector2(POTION_X + i * 56.0, SLOT_Y + 6.0)
+		ps.size = Vector2(50, 50)
+		bottom.add_child(ps)
+		_potion_slots.append(ps)
 	for i in 4:
 		var s := HudWidgets.SkillSlot.new()
-		s.position = Vector2(x0 + i * 76.0, 114)
-		s.size = Vector2(62, 62)
+		s.position = Vector2(SKILL_X + i * SKILL_STEP, SLOT_Y)
+		s.size = Vector2(SLOT, SLOT)
 		bottom.add_child(s)
 		_slots.append(s)
+	var after := SKILL_X + 4 * SKILL_STEP
 	_dodge = HudWidgets.SkillSlot.new()
 	_dodge.round = true
 	_dodge.empty = false
 	_dodge.icon = UiTheme.texture("res://assets/ui/status/haste.png")
-	_dodge.position = Vector2(x0 + 4 * 76.0 + 10.0, 120)
-	_dodge.size = Vector2(50, 50)
+	_dodge.position = Vector2(after, SLOT_Y + 3.0)
+	_dodge.size = Vector2(56, 56)
 	_dodge.tooltip_text = "Esquive (invulnérable)"
 	bottom.add_child(_dodge)
-	_swap = HudWidgets.SkillSlot.new()
+	_swap = HudWidgets.SkillSlot.new()  # arme rangée (lot N2) : s'éclaire à chaque échange
 	_swap.round = true
 	_swap.empty = false
-	_swap.position = Vector2(x0 + 4 * 76.0 + 14.0, 62)
-	_swap.size = Vector2(42, 42)
+	_swap.ready_tone = "lagon"
+	_swap.position = Vector2(after + 66.0, SLOT_Y + 9.0)
+	_swap.size = Vector2(44, 44)
 	_swap.visible = false
 	bottom.add_child(_swap)
-	for i in 2:
-		var ps := HudWidgets.PotionSlot.new()
-		ps.position = Vector2(174 + i * 50.0, 138)
-		ps.size = Vector2(46, 46)
-		bottom.add_child(ps)
-		_potion_slots.append(ps)
-	_assist_label = Hud._label(bottom, "", UiTheme.MIN_TEXT, Color.WHITE)
-	_assist_label.add_theme_font_override("font", UiTheme.bold_font())
-	_assist_label.position = Vector2(158, 114)
-	_assist_label.size = Vector2(104, 22)
-	_assist_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_assist_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_queue_strip = HudWidgets.QueueStrip.new()
-	_queue_strip.position = Vector2(x0 + 4 * 76.0 + 70.0, 126)
+	_queue_strip.position = Vector2(after, SLOT_Y - 34.0)
 	bottom.add_child(_queue_strip)
+	_xp_orb = HudV2.LevelBar.new()
+	_xp_orb.position = Vector2(LEVEL_X, SLOT_Y + 2.0)
+	_xp_orb.size = Vector2(LIFE_X + LIFE_W - LEVEL_X, 50)
+	bottom.add_child(_xp_orb)
+	_assist_label = Hud._label(bottom, "", UiTheme.MIN_TEXT, Color.WHITE)  # niveau d'aide (« Assisté ») : étiquette à droite de la pastille
+	_assist_label.add_theme_font_override("font", UiTheme.bold_font())
+	_assist_label.add_theme_color_override("font_outline_color", UiTheme.color("encre.700"))
+	_assist_label.add_theme_constant_override("outline_size", 5)
+	_assist_label.position = Vector2(LEVEL_X + 92.0, SLOT_Y + 4.0)
+	_assist_label.size = Vector2(LIFE_X + LIFE_W - LEVEL_X - 92.0, 24)
+	_assist_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_assist_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hp_orb = HudV2.LifeGauge.new()
+	_hp_orb.position = Vector2(LIFE_X, LIFE_Y)
+	_hp_orb.size = Vector2(LIFE_W, HudV2.LifeGauge.H)
+	bottom.add_child(_hp_orb)
 	_buff_row = HudWidgets.StatusRow.new(true)
-	_buff_row.position = Vector2(30, 0)
-	_buff_row.size = Vector2(400, 54)
+	_buff_row.position = Vector2(150, 0)
+	_buff_row.size = Vector2(296, 54)
 	bottom.add_child(_buff_row)
 	_debuff_row = HudWidgets.StatusRow.new(false)
 	_debuff_row.alignment = BoxContainer.ALIGNMENT_END
-	_debuff_row.position = Vector2(470, 0)
-	_debuff_row.size = Vector2(400, 54)
+	_debuff_row.position = Vector2(454, 0)
+	_debuff_row.size = Vector2(LIFE_X + LIFE_W - 454.0, 54)
 	bottom.add_child(_debuff_row)
 
 
@@ -758,7 +769,7 @@ func _refresh_skills() -> void:
 		slot.rank = Run.skill_rank(int(s.id)) if not s.is_empty() else 1
 		slot.level_badge = slot.rank if Survivor.active and not s.is_empty() else 0  # Survivant : niveau 1 à 10 en chiffre
 		slot.chain_slots = Run.MAX_CHAIN if Survivor.active and not s.is_empty() else 0  # Survivant : grille 4 × 3 (lot SVX-2)
-		slot.key_sticker = Survivor.active
+		slot.key_sticker = true  # touche dessinée en pastille sous chaque case (lot SVX-2, partout depuis HUD-2)
 		slot.chain_icons = Run.chain_of(i).map(func(e): return UiTheme.texture(String(Run.skill_def(int(e.id)).get("icon", ""))))
 		if s.is_empty():
 			slot.tooltip_text = "Emplacement libre"
@@ -779,7 +790,8 @@ func _process(delta: float) -> void:
 		return
 	_clock += delta
 	notices.tick()
-	if not _feed_wait.is_empty() and not banner_up():
+	_layout_right()
+	if not _feed_wait.is_empty() and not banner_up() and _feed_room() > 0:
 		var waiting := _feed_wait.duplicate()
 		_feed_wait.clear()
 		for t in waiting:
@@ -835,7 +847,8 @@ func _process(delta: float) -> void:
 	_queue_strip.set_items(waiting)
 	var lv := Settings.assist_level()
 	var info: Dictionary = Settings.ASSIST.get(lv, {})
-	_assist_label.text = String(info.get("tag", "")) if not Royale.active else ""  # (Battle royale : pas de mot technique)
+	# niveau d'aide en mots du jeu (« Assisté », « Pilote auto » ; lot HUD-2) ; rien en Manuel ; Battle royale : pas de mot technique
+	_assist_label.text = String(info.get("name", "")) if String(info.get("tag", "")) != "" and not Royale.active else ""
 	_assist_label.add_theme_color_override("font_color", info.get("color", Color.WHITE))
 	var dc := player.dodge_cooldown()
 	_dodge.set_cooldown(dc.x, dc.y)
@@ -1092,7 +1105,9 @@ func _update_drop_hint() -> void:
 ## à zéro ; le record de la run et le record absolu en dessous.
 func _update_damage_counter(delta: float) -> void:
 	var now := Run.combo_now()
-	if Duel.active or Royale.active or Survivor.active or now <= 0.0:  # (Survivant, lot SVX-2 : bruit face à une horde) ; en duel il n'a pas de sens (les coups sont plafonnés) ; Battle royale : le fil des éliminations
+	if not _dmg_room and _dmg_allowed():
+		_dmg_box.modulate.a = 0.0  # une carte a pris sa place (petit écran) : il s'efface tout de suite, sans la chevaucher
+	if not _dmg_allowed() or not _dmg_room or now <= 0.0:  # (profil, place dans la colonne de droite : lot HUD-2)
 		_dmg_box.modulate.a = move_toward(_dmg_box.modulate.a, 0.0, delta * 2.0)
 		_dmg_shown = 0.0
 		return
@@ -1104,7 +1119,58 @@ func _update_damage_counter(delta: float) -> void:
 	_dmg_value.text = _big_number(_dmg_shown)
 	_dmg_bar.custom_minimum_size.x = 240.0 * Run.combo_left()
 	var best := maxf(Run.combo_best, float(Profile.records.get("best_combo", 0.0)))
-	_dmg_best.text = "record %s" % _big_number(best) if best <= Run.combo_best else "record %s  ·  run %s" % [_big_number(best), _big_number(Run.combo_best)]
+	_dmg_best.text = "record %s" % _big_number(best) if best <= Run.combo_best else "record %s  ·  partie %s" % [_big_number(best), _big_number(Run.combo_best)]
+
+
+## Le compteur de dégâts a-t-il un sens ici ? Pas en duel (coups plafonnés), ni en Battle royale (fil des éliminations), ni
+## au Survivant (bruit face à une horde, lot SVX-2) ; seulement dans le profil Standard (lot HUD-2).
+func _dmg_allowed() -> bool:
+	return not (Duel.active or Royale.active or Survivor.active) and HudV2.shows("dmg")
+
+
+## Colonne de droite (lot HUD-2) : mini-carte, compteur de dégâts, carte de notification, fil du butin, chacun sous le
+## précédent et jamais sur la barre d'action. Sur un petit écran, une carte passe avant le compteur de dégâts (il s'efface
+## le temps qu'elle est là) et le fil du butin attend qu'il y ait la place (Hud.feed). Battle royale : sa propre colonne.
+func _layout_right() -> void:
+	if _royale != null or _map_holder == null or _cards == null:
+		return
+	var limit := _action_root.position.y - 6.0  # haut de la barre d'action (ses effets compris)
+	var y := _map_holder.offset_top + (_map_holder.size.y + 14.0 if _map_holder.visible else 0.0)
+	var card_h := _cards._box.size.y if _cards.count() > 0 else 0.0
+	var dmg_h := maxf(DMG_H, _dmg_box.size.y + 8.0)
+	_dmg_room = _dmg_allowed() and (card_h <= 0.0 or y + dmg_h + card_h <= limit)
+	if _dmg_room:
+		if not is_equal_approx(_dmg_box.offset_top, y):
+			_dmg_box.offset_top = y
+			_dmg_box.offset_bottom = y
+		y += dmg_h
+	if not is_equal_approx(y, _cards_top):
+		_cards_top = y
+		_cards.place(y, 14.0, false)
+	if _loot != null:
+		var top := y + (card_h + 10.0 if card_h > 0.0 else 0.0)
+		if not is_equal_approx(_loot.offset_top, top):
+			_loot.offset_top = top
+			_loot.offset_bottom = top
+		# une carte arrivée après le butin : les lignes qui n'ont plus la place se cachent (les plus anciennes d'abord)
+		var room := _feed_room()
+		var n := _feed.get_child_count()
+		var changed := false
+		for i in n:
+			var c := _feed.get_child(i) as CanvasItem
+			if c.visible != (i >= n - room):
+				c.visible = i >= n - room
+				changed = true
+		if changed:
+			_feed.reset_size()
+
+
+## Lignes du fil du butin qui ont la place (profil, colonne de droite) ; 0 : la ligne attend (ou n'est pas montrée).
+func _feed_room() -> int:
+	if _loot == null:
+		return 3 if Royale.active else HudV2.loot_lines()  # (pile de gauche : comme avant)
+	var limit := _action_root.position.y - 6.0
+	return mini(HudV2.loot_lines(), maxi(0, int((limit - _loot.offset_top + 6.0) / FEED_LINE_H)))
 
 
 static func _big_number(v: float) -> String:
@@ -1220,7 +1286,7 @@ func _center_banner() -> void:
 func _fit_banner() -> void:
 	var vw := get_viewport().get_visible_rect().size.x if is_inside_tree() else 1600.0
 	var room := clampf(vw - 2.0 * BANNER_SIDE, 460.0, BANNER_MAX)
-	var inner := room - 140.0  # marges du bandeau (70 de chaque côté)
+	var inner := room - 60.0  # marges de l'autocollant (26 de chaque côté, contour compris ; lot HUD-2)
 	var font := _center_label.get_theme_font("font")
 	var fs := _center_label.get_theme_font_size("font_size")
 	var wide := font != null and font.get_string_size(_center_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > inner
@@ -1252,6 +1318,8 @@ func hide_banner() -> void:
 
 ## Le bandeau d'annonce (danger, boss, rage) est-il affiché ? Les cartes et le butin attendent (HudNotices, P0-7).
 func banner_up() -> bool:
+	if _msg_tween != null and _msg_tween.is_valid() and _msg_tween.is_running():
+		return true  # (lot HUD-2 : dès l'annonce, avant même que son fondu d'entrée ne la montre)
 	return _banner != null and is_instance_valid(_banner) and _banner.modulate.a > 0.05
 
 
@@ -1260,7 +1328,9 @@ func banner_up() -> bool:
 func _apply_hud_prefs() -> void:
 	if _root == null or not is_instance_valid(_root):
 		return
-	var s := clampf(float(Settings.get_v("interface", "hud_scale")), 0.7, 1.5)
+	var s := clampf(float(Settings.get_v("interface", "hud_scale")) * HudV2.scale_of(), 0.6, 1.5)  # (× profil Compact, lot HUD-2)
+	if _map_holder != null and not Royale.active:
+		_map_holder.visible = HudV2.shows("minimap")  # profil Minimal : la grande carte reste sur sa touche
 	if is_equal_approx(s, 1.0):
 		_root.scale = Vector2.ONE
 		_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1275,16 +1345,42 @@ func _apply_hud_prefs() -> void:
 ## Ligne du fil de butin (3 au plus, la plus récente en bas), effacée après quelques secondes ; elle attend la fin du
 ## bandeau d'annonce (une seule chose à lire à la fois, P0-7).
 func feed(text: String, color := Color(1.0, 0.88, 0.55)) -> void:
-	if banner_up():
+	var room := _feed_room()
+	if HudV2.loot_lines() <= 0 and not Royale.active:
+		return  # profil Minimal : pas de fil du butin (lot HUD-2)
+	if banner_up() or room <= 0:
 		_feed_wait.append([text, color])
+		while _feed_wait.size() > 6:
+			_feed_wait.pop_front()
 		return
+	# ligne autocollante (lot HUD-2) : puits d'encre contouré, case de couleur du genre de trouvaille, texte papier
+	if _feed_style == null:
+		_feed_style = UiTheme.sticker("nuit", {"radius": 12, "shadow": 3, "pad": Vector2(8, 3), "gloss": false, "cel_top": 0.0, "cel_bottom": 0.0})
 	var box := PanelContainer.new()
-	box.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.04, 0.03, 0.08, 0.72), Color(color, 0.45), 1, 6))
+	box.add_theme_stylebox_override("panel", _feed_style)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var l := _label(box, text, 15, color)
+	box.size_flags_horizontal = Control.SIZE_SHRINK_END if _loot != null else Control.SIZE_SHRINK_BEGIN
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(row)
+	var tone := ""
+	for pre in FEED_TONES:
+		if text.begins_with(pre):
+			tone = FEED_TONES[pre]
+	var tab := Panel.new()
+	tab.custom_minimum_size = Vector2(16, 16)
+	tab.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	tab.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tab.add_theme_stylebox_override("panel", HudWidgets.box(UiTheme.color("bonbon.%s.base" % tone) if tone != "" else color, 5, 2, UiTheme.color("encre.900")))
+	row.add_child(tab)
+	var l := _label(row, text, 15, UiTheme.color("papier.100"))
+	l.add_theme_font_override("font", UiTheme.bold_font())
+	l.add_theme_color_override("font_outline_color", UiTheme.color("encre.700"))
 	l.clip_text = true
+	l.custom_minimum_size.x = minf(PANEL_W - 44.0, l.get_theme_font("font").get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 2.0)
 	_feed.add_child(box)
-	while _feed.get_child_count() > 3:
+	while _feed.get_child_count() > maxi(room, 1):
 		var old := _feed.get_child(0)
 		_feed.remove_child(old)
 		old.queue_free()
@@ -1317,28 +1413,20 @@ func _on_player_hit(amount: float, source: Combatant) -> void:
 
 
 func _on_hp(hp: float, max_hp: float) -> void:
-	_hp_orb.set_value(hp / maxf(max_hp, 1.0))
-	_hp_orb.caption = "VIE"
-	_hp_orb.big_text = str(int(hp))
-	_hp_orb.small_text = "/ %d" % int(max_hp)
-	_hp_orb.tooltip_text = "Vie : %d / %d" % [hp, max_hp]
+	_hp_orb.set_hp(hp, max_hp)
 
 
+## Barre de niveau (lot HUD-2, P0-8 : au lieu du globe) ; aucun pourcentage permanent, il reste dans l'infobulle.
 func _on_xp(xp: int, xp_next: int, level: int) -> void:
 	var ratio := float(xp) / maxf(float(xp_next), 1.0)
 	if _last_level != 0 and level > _last_level:
-		_xp_orb.flash = 1.0  # montée de niveau : éclat doré
-	_xp_orb.value = clampf(ratio, 0.0, 1.0)
-	_xp_orb.trail = _xp_orb.value
+		_xp_orb.flash = 1.0  # montée de niveau : éclat soleil
 	_last_level = level
-	_xp_orb.big_text = str(level)
-	_xp_orb.small_text = "%d %%" % floori(ratio * 100.0) if not Royale.active else ""  # (Battle royale : pas de pourcentage à l'écran)
-	_xp_orb.tooltip_text = "Niveau %d\nExpérience : %d / %d (%d %%)" % [level, xp, xp_next, floori(ratio * 100.0)]
-	_xp_orb.small_text = ""  # (lot HUB-1, P0-8 : aucun pourcentage permanent ; il reste dans l'infobulle)
+	_xp_orb.set_level(ratio, level)
+	_xp_orb.tooltip_text = "Niveau %d\nExpérience : %s / %s (%d %%)" % [level, _big_number(xp), _big_number(xp_next), floori(ratio * 100.0)]
 	if Epochs.adventure():
-		# lot H4a : le niveau de run ne donne que des cartes ; le héros se bat à son niveau de héros
-		_xp_orb.caption = "PARTIE"
-		_xp_orb.tooltip_text = "Niveau de partie %d : chaque niveau donne une carte.\nTon héros se bat au niveau %d.\nExpérience : %d / %d" % [level, Run.hero_level, xp, xp_next]
+		# lot H4a : le niveau de la partie ne donne que des cartes ; le héros se bat à son niveau de héros
+		_xp_orb.tooltip_text = "Niveau de partie %d : chaque niveau donne une carte.\nTon héros se bat au niveau %d.\nExpérience : %s / %s" % [level, Run.hero_level, _big_number(xp), _big_number(xp_next)]
 
 
 # --- fabrique de widgets ---
@@ -1369,11 +1457,11 @@ static func _label(parent: Control, text: String, size: int, color: Color) -> La
 	var l := Label.new()
 	l.text = text
 	if size >= 26:
-		l.add_theme_font_override("font", UiTheme.title_font())  # grands titres en Cinzel
+		l.add_theme_font_override("font", UiTheme.title_font())  # grands titres en Mochiy Pop One
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_constant_override("outline_size", 4)
-	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
+	l.add_theme_color_override("font_outline_color", UiTheme.color("encre.700"))  # contour d'encre, jamais de noir (bible § 3)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(l)
 	return l
@@ -1385,12 +1473,19 @@ func _bar(parent: Control, color: Color, height: int) -> ProgressBar:
 	b.step = 0.0
 	b.custom_minimum_size = Vector2(0, height)
 	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# jauge autocollante (lot HUD-2, bible § 5) : creux d'encre 500 contouré d'encre, remplissage net
 	var bg := StyleBoxFlat.new()
-	bg.bg_color = Color(0, 0, 0, 0.55)
+	bg.bg_color = UiTheme.color("encre.500")
+	bg.border_color = UiTheme.color("encre.700")
+	bg.set_border_width_all(3)
 	bg.set_corner_radius_all(height / 2)
+	bg.anti_aliasing = true
 	var fg := StyleBoxFlat.new()
 	fg.bg_color = color
 	fg.set_corner_radius_all(height / 2)
+	fg.border_color = Color(0, 0, 0, 0)
+	fg.set_border_width_all(3)  # (le remplissage reste dans le contour d'encre)
+	fg.anti_aliasing = true
 	b.add_theme_stylebox_override("background", bg)
 	b.add_theme_stylebox_override("fill", fg)
 	parent.add_child(b)

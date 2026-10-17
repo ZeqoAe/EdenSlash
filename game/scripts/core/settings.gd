@@ -124,6 +124,7 @@ const DEFAULTS := {
 		"boss_timeline": true,  # frise « À venir » des combats de boss (lot DNG-2)
 		# HUD en partie (lot HUB-1, P0-9) : taille et opacité, à part de la taille de l'interface (display.ui_scale)
 		"hud_scale": 1.0, "hud_opacity": 1.0,
+		"hud_profile": "standard",  # profil du HUD : standard, compact, minimal (lot HUD-2, HudV2.PROFILES)
 		"fx_spells": "all", "fx_auras": "all", "fx_particles": "all", "fx_intensity": 1.0,
 		# curseur de souris (CursorSets) et réticule de visée en jeu (AimReticle) ; valeur inconnue = défaut
 		"cursor_set": "classic", "reticle": "dot", "reticle_size": 1.0, "reticle_color": "gold",

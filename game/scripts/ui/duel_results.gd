@@ -63,8 +63,9 @@ func show_results(won: bool, score: String, opponent: String, diff: int, total: 
 		"tiles": [
 			[score, "manches", ("Durée des manches : " + ", ".join(times)) if not times.is_empty() else ""],
 			["À l'arme" if Duel.bare else "Équipé", "niveau %d" % Duel.level],
-			["%d %%" % roundi(PvpCaps.best_dealt * 100.0), "plus gros coup", "Part des PV de l'adversaire retirée en un coup"],
-			["%d %%" % roundi(PvpCaps.best_taken * 100.0), "plus gros coup reçu", "Part de tes PV retirée en un coup"],
+			# (lot HUD-2 : le pourcentage n'est que dans l'infobulle)
+			[RunPage.hit_word(PvpCaps.best_dealt), "plus gros coup", "Part des PV de l'adversaire retirée en un coup : %d %%" % roundi(PvpCaps.best_dealt * 100.0)],
+			[RunPage.hit_word(PvpCaps.best_taken), "plus gros coup reçu", "Part de tes PV retirée en un coup : %d %%" % roundi(PvpCaps.best_taken * 100.0)],
 			wins_tile,
 		],
 		"gained": rep.gained,

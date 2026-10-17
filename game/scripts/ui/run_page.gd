@@ -91,6 +91,8 @@ func refresh() -> void:
 	var total := Run.all_skills().size()
 	if _skills_title:
 		_skills_title.text = ("Compétences (%d / %d)" if Royale.active else "Compétences de la partie (%d / %d)") % [total, Survivor.SPELL_MAX if Survivor.active else Run.MAX_SKILLS * (1 + Run.MAX_CHAIN)]
+		if Duel.active:
+			_skills_title.text = "Tes sorts"  # (duel, Arènes, Gantelet : les sorts du préréglage, aucune carte ne s'y ajoute ; lot HUD-2)
 	if _skills_title:
 		_skills_title.tooltip_text = "Glisse un sort sur un autre pour échanger leurs places (touches et enchaînements)"
 		_skills_title.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -111,7 +113,8 @@ func refresh() -> void:
 				free.visible = false
 				_free_rows.append(free)
 	if Run.skills.size() < Run.MAX_SKILLS:
-		_row(_skills, "", "Case %d libre" % (Run.skills.size() + 1), "", UiTheme.MUTED, 0, 52, Vector2i(-1, -1), "Les compétences s'obtiennent avec les cartes de niveau")
+		_row(_skills, "", "Case %d libre" % (Run.skills.size() + 1), "", UiTheme.MUTED, 0, 52, Vector2i(-1, -1),
+			"Les sorts du duel viennent de ton préréglage (Héros > Sorts)" if Duel.active else "Les compétences s'obtiennent avec les cartes de niveau")
 	# armes : auto-attaque et améliorations de la run
 	ItemWidgets.section(_skills, "Armes", 15)
 	for slot in (["weapon"] if Survivor.active or Royale.active else ["weapon", "offhand"]):  # (Survivant, Battle royale : pas d'arme secondaire)
@@ -123,7 +126,7 @@ func refresh() -> void:
 		var mt := WeaponAttacks.mods_text(ws, Run.weapon_ups.get(slot, {}))
 		_row(_skills, String(it.get("icon", GameData.weapon_type(String(ws.wtype)).get("icon", ""))),
 			"%s : %s" % ["Arme principale" if slot == "weapon" else "Arme secondaire", WeaponAttacks.variant_label(it) if not it.is_empty() else ws.name],
-			String(ws.desc) + ("\n" + mt if mt != "" else "\nPas encore améliorée (cartes d'amélioration d'arme)."), UiTheme.GOLD)
+			String(ws.desc) + ("\n" + mt if mt != "" else ("" if Duel.active else "\nPas encore améliorée (cartes d'amélioration d'arme).")), UiTheme.GOLD)
 	for ch in _cards.get_children():
 		ch.queue_free()
 	# trophées : collection de la run, tous actifs (le Battle royale n'en donne pas : passe M1)
@@ -147,14 +150,17 @@ Total : " + Cards.total_text(p, Run.power(pid)) if not (p.get("stat", {}) as Dic
 	for ch in _stats.get_children():
 		ch.queue_free()
 	var secs := (Time.get_ticks_msec() - Run.started_at) / 1000
+	var tips := {}  # infobulles des tuiles (indice -> texte) : les pourcentages n'y sont que là (bible § 12)
 	var tiles := [[str(player.level if player else Run.max_level), "niveau"], ["%d:%02d" % [secs / 60, secs % 60], "durée"],
 			[str(Run.kills), "monstres"], [str(Run.elites), "élites"], [str(Run.gold), "or gagné"], [str(Run.loot.size()), "objets"]]
 	if Duel.active:
 		# duel, Arènes, Gantelet (passe M7) : ni monstres, ni or, ni objets ; le score et les coups
 		var t := int(PvpCaps.elapsed)
 		tiles = [[str(Duel.level), "niveau"], ["%d - %d" % [Duel.wins, Duel.losses], "manches"], ["%d:%02d" % [t / 60, t % 60], "manche %d" % Duel.round_n],
-			["%d %%" % roundi(PvpCaps.best_dealt * 100.0), "coup porté"], ["%d %%" % roundi(PvpCaps.best_taken * 100.0), "coup reçu"],
+			[hit_word(PvpCaps.best_dealt), "coup porté"], [hit_word(PvpCaps.best_taken), "coup reçu"],
 			["À l'arme" if Duel.bare else "Équipé", Duel.mode_title().to_lower() if Duel.mode != "free" else "duel libre"]]
+		tips = {3: "Part des PV de l'adversaire retirée en un coup : %d %%" % roundi(PvpCaps.best_dealt * 100.0),
+			4: "Part de tes PV retirée en un coup : %d %%" % roundi(PvpCaps.best_taken * 100.0)}
 	var rd = _royale()
 	if rd != null:
 		# Battle royale (passe M1) : ni monstres, ni or, ni objets ; les chiffres de la partie
@@ -162,14 +168,26 @@ Total : " + Cards.total_text(p, Run.power(pid)) if not (p.get("stat", {}) as Dic
 		tiles = [[str(player.level if player else 1), "niveau"], ["%d:%02d" % [t / 60, t % 60], "durée"],
 			["%d / %d" % [rd.alive_count(), Royale.PLAYERS], "en vie"], [str(Royale.kills), "éliminations"],
 			[str(rd.chests_opened), "coffres"], [str(Potions.count("heal")), "soins"]]
-	for e in tiles:
-		ResultsPanel.tile(_stats, String(e[0]), String(e[1]), "", false, 100.0)
+	for i in tiles.size():
+		ResultsPanel.tile(_stats, String(tiles[i][0]), String(tiles[i][1]), String(tips.get(i, "")), false, 100.0)
 	_bag_title.visible = not Profile.bag.is_empty() and not Duel.active  # (duel : rien ne se ramasse ni ne se boit)
 	_bag.visible = _bag_title.visible
 	var parts: PackedStringArray = []
 	for k in Profile.bag.keys():
 		parts.append("[img=20x20]%s[/img] %s ×%d" % [Craft.icon(k), Craft.label(k), Profile.bag_count(k)])
 	_bag.text = "\n".join(parts)
+
+
+## Le plus gros coup d'un duel en mots (lot HUD-2 : pas de pourcentage dans le texte permanent ; le chiffre est dans
+## l'infobulle) : part des PV max retirée en un coup, que les règles du duel plafonnent (PvpCaps).
+static func hit_word(share: float) -> String:
+	if share <= 0.0:
+		return "Aucun"
+	if share < 0.05:
+		return "Léger"
+	if share < 0.1:
+		return "Moyen"
+	return "Lourd" if share < 0.14 else "Plafond"
 
 
 ## Directeur du Battle royale de la partie en cours (null hors Battle royale).

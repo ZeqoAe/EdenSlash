@@ -149,6 +149,13 @@ func _game_shots() -> void:
 	world.pause_menu.open()
 	await _shot("22_arene_pause")
 	world.pause_menu.close()
+	# (lot HUD-2) la pause doit être refermée avant les captures suivantes : sinon le HUD reste caché sous elle
+	await get_tree().process_frame
+	if world.pause_menu.is_open():
+		world.pause_menu.close()
+	get_tree().paused = false
+	await get_tree().process_frame
+	print("[m7] pause refermée : %s, HUD visible : %s" % [not world.pause_menu.is_open(), world.hud._root.visible])
 	var dd: DuelDirector = world.director.duel
 	world.player.take_damage(1e9, null, false)
 	await _shot("23_arene_joueur_tombe", 1.5)

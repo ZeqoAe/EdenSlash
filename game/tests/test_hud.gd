@@ -73,12 +73,12 @@ func _ready() -> void:
 	hud._unhandled_input(ev)
 	await _frames()
 	check("touche Objectifs : repliés (chevron ▾)", not hud._obj_details.visible and hud._obj_chevron.text == "▾")
-	check("pile de gauche : objectifs, premiers pas et fil de butin dans une seule colonne", hud._obj_panel.get_parent() == hud._left and hud._steps_panel.get_parent() == hud._left and hud._feed.get_parent() == hud._left)
+	check("pile de gauche : objectifs et premiers pas dans une seule colonne ; fil du butin à droite (lot HUD-2)", hud._obj_panel.get_parent() == hud._left and hud._steps_panel.get_parent() == hud._left and hud._feed == hud._loot)
 	world.director.seals += 1
 	await _frames()
 	check("découverte : dépliés quelques secondes", hud._obj_details.visible)
 	# combo et orbes
-	check("orbe d'expérience : niveau affiché", hud._xp_orb.big_text == str(player.level))
+	check("barre de niveau : niveau affiché", hud._xp_orb.big_text == str(player.level))
 	world.pause_menu.open()
 	await _frames()
 	check("HUD masqué sous le menu pause", not hud._root.visible)

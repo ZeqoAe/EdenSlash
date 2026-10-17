@@ -323,7 +323,11 @@ captures `tests/shot_hub1.tscn`. `records.news` / `last_activity` = état de men
 - **Objets** : `Items.describe(item, detailed)` et `ItemWidgets.item_card` (Maj déplie, comparaison ▲ / ▼).
 - **HUD** `ui/hud.gd` (pile `_left`, Premiers pas et fiches seulement en Survie ; lot HUB-1 : une carte à la fois par la file `HudNotices`
   `ui/hud_notices.gd` (danger > quête > nouveauté > butin, rien sous le bandeau), quête suivie `QuestBadge.pick`, taille / opacité `hud_scale` /
-  `hud_opacity` (Paramètres > Affichage) par `_apply_hud_prefs`), pause `ui/pause_menu.gd`, Guide F1 `ui/guide.gd`
+  `hud_opacity` (Paramètres > Affichage) par `_apply_hud_prefs` ; DA v2, lot HUD-2, `conception/hub/R_HUD2.md` : pièces `ui/hud_v2.gd`
+  (`HudV2.LifeGauge` vie large sous les cases, `LevelBar` au lieu du globe, `MapRing` cadre papier, profils `HudV2.PROFILES` Standard / Compact /
+  Minimal = `interface.hud_profile`), cases autocollantes à touche dessinée `HudWidgets.SkillSlot`, colonne de droite `Hud._layout_right`
+  (mini-carte, compteur, carte de notification, fil du butin : jamais sur la barre d'action), brouillard au papier `Minimap.fog_material` ;
+  test `test_hud2`, captures `shot_hud2`), pause `ui/pause_menu.gd`, Guide F1 `ui/guide.gd`
   (seule aide du jeu, 6 onglets), accueil `ui/welcome.gd`, tutoriel `core/tutorial.gd`, Paramètres `ui/settings_menu.gd`.
 - **Curseurs** (K1, `R_K1.md`) : `ui/cursor_sets.gd` (`CursorSets.LIST`, 9 jeux dessinés par `tools/make_cursors.py` en 32 / 48 px, points chauds générés
   `cursor_hotspots.gd`, posés par `Settings` via `Input.set_custom_mouse_cursor`), réticule de visée `ui/aim_reticle.gd` (visée Curseur / Action), aperçu `cursor_preview.gd` ; test `test_k1`.

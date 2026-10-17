@@ -43,11 +43,40 @@ var zoom := 2.0  # pixels écran par mètre (mini-carte)
 const ARENA_METERS := 200.0  # une carte plus petite est une arène (duel, Tour, donjon, boss) : elle tient entière dans la mini-carte
 
 
+## Brouillard « au papier » (lot HUD-2) : le brouillard de guerre est une image noire à transparence ; ce petit shader peint
+## en papier ce qui est dessiné avec la teinte repère FOG_KEY (le brouillard), le reste est dessiné comme d'habitude.
+const FOG_KEY := Color(1, 0, 1, 1)
+static var _fog_material: ShaderMaterial
+
+
+static func fog_material() -> ShaderMaterial:
+	if _fog_material == null:
+		var sh := Shader.new()
+		sh.code = """shader_type canvas_item;
+uniform vec4 fog_tint : source_color;
+varying float fog;
+varying float alpha;
+void vertex() {
+	fog = (COLOR.r > 0.99 && COLOR.g < 0.01 && COLOR.b > 0.99) ? 1.0 : 0.0;
+	alpha = COLOR.a;
+}
+void fragment() {
+	if (fog > 0.5) {
+		COLOR = vec4(fog_tint.rgb, texture(TEXTURE, UV).a * fog_tint.a * alpha);
+	}
+}"""
+		_fog_material = ShaderMaterial.new()
+		_fog_material.shader = sh
+		_fog_material.set_shader_parameter("fog_tint", UiTheme.color("papier.300"))
+	return _fog_material
+
+
 func setup(p: Player, d: RunDirector) -> void:
 	player = p
 	director = d
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	clip_contents = true
+	material = Minimap.fog_material()
 
 
 func _process(_delta: float) -> void:
@@ -80,12 +109,14 @@ func _draw() -> void:
 		center_img = Vector2(tex.get_width(), tex.get_height()) * 0.5
 	# repère : image -> écran (rotation selon la caméra sur la mini-carte)
 	var xf := Transform2D(yaw, c) * Transform2D(0.0, Vector2.ONE * scale_, 0.0, Vector2.ZERO) * Transform2D(0.0, -center_img)
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.05, 0.05, 0.08, 0.92))
+	# carte « au papier » (lot HUD-2) : hors de la carte et sous le brouillard, du papier crème tramé d'encre, pas du noir
+	var paper := UiTheme.color("papier.300")
+	draw_rect(Rect2(Vector2.ZERO, size), paper)
 	draw_set_transform_matrix(xf)
 	draw_texture(tex, Vector2.ZERO)
 	var fog: Texture2D = director.fog_texture()
 	if fog:
-		draw_texture_rect(fog, Rect2(Vector2.ZERO, Vector2(tex.get_width(), tex.get_height())), false, Color(0.05, 0.05, 0.08, 1.0))
+		draw_texture_rect(fog, Rect2(Vector2.ZERO, Vector2(tex.get_width(), tex.get_height())), false, FOG_KEY)  # (peint en papier, fog_material)
 	draw_set_transform_matrix(Transform2D.IDENTITY)
 
 	var w2s := func(p: Vector3) -> Vector2: return xf * (Vector2(p.x, p.z) * ppm)
@@ -151,15 +182,21 @@ func _draw() -> void:
 	var f := player.forward()
 	var dir := xf.basis_xform(Vector2(f.x, f.z)).normalized()
 	var side := Vector2(-dir.y, dir.x)
-	draw_colored_polygon(PackedVector2Array([hp + dir * 8.0, hp - dir * 5.0 + side * 5.0, hp - dir * 2.0, hp - dir * 5.0 - side * 5.0]), Color.WHITE)
+	var arrow := PackedVector2Array([hp + dir * 8.0, hp - dir * 5.0 + side * 5.0, hp - dir * 2.0, hp - dir * 5.0 - side * 5.0])
+	var rim := arrow.duplicate()
+	rim.append(arrow[0])
+	draw_polyline(rim, UiTheme.color("encre.700"), 3.0, true)  # contour d'encre : lisible sur le papier comme sur l'herbe
+	draw_colored_polygon(arrow, Color.WHITE)
 	if not round:
 		draw_rect(Rect2(Vector2.ONE * 1.5, size - Vector2.ONE * 3.0), UiTheme.color("encre.700"), false, 3.0)  # contour d'encre (bible § 5)
 	if big:
 		_draw_legend()
 	if not big:
-		var north := c + xf.basis_xform(Vector2(0, -1)).normalized() * (minf(size.x, size.y) * 0.5 - 12.0)
-		draw_circle(north, 9.0, Color(0.1, 0.08, 0.14, 0.9))
-		draw_string(get_theme_default_font(), north + Vector2(-5, 5), "N", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1, 0.9, 0.6))
+		# nord : pastille papier contourée d'encre, lettre à l'encre (lot HUD-2)
+		var north := c + xf.basis_xform(Vector2(0, -1)).normalized() * (minf(size.x, size.y) * 0.5 - 17.0)
+		draw_circle(north, 10.5, UiTheme.color("encre.700"))
+		draw_circle(north, 8.5, UiTheme.color("papier.100"))
+		HudV2.ink_text(self, UiTheme.number_font(), "N", north.x, north.y + 5.0, 13, UiTheme.color("encre.700"))
 
 
 ## Cercle de rayon [param r] m autour de [param c] (x, z) sur la carte ; seuls les points visibles sont tracés.
@@ -193,8 +230,7 @@ func _draw_legend() -> void:
 	var font := get_theme_default_font()
 	var row := 24.0
 	var box := Rect2(Vector2(10, size.y - 16 - row * kinds.size()), Vector2(206, row * kinds.size() + 8))
-	draw_rect(box, Color(0.04, 0.03, 0.08, 0.7))
-	draw_rect(box, Color(0.98, 0.78, 0.35, 0.5), false, 1.0)
+	HudV2.round_rect(self, box, Color(UiTheme.color("encre.500"), 0.88), 12, 3, UiTheme.color("encre.700"))  # puits d'encre (lot HUD-2)
 	for i in kinds.size():
 		var k: String = kinds[i][0]
 		var p := box.position + Vector2(18, 16 + row * i)

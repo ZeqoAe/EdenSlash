@@ -4,9 +4,9 @@ extends PanelContainer
 ## l'autre en rouge, les héros à terre grisés. Entre deux manches, le tableau de la manche : dégâts infligés de chacun
 ## et ses K.O. (DuelDirector.board). Le cadre de cible du haut ne montre qu'un adversaire : ici on voit tout le monde.
 
-const W := 300.0
-const ALLY := Color(0.45, 0.75, 1.0)
-const FOE := Color(1.0, 0.45, 0.4)
+const W := 360.0  # largeur de la pile de gauche (Hud.PANEL_W)
+const ALLY := Color("86ddff")  # lagon clair (lot HUD-2 : couleurs de la bible)
+const FOE := Color("ff9db0")  # fraise clair
 
 var duel: DuelDirector
 var _box: VBoxContainer
@@ -19,7 +19,10 @@ func setup(director: DuelDirector) -> void:
 	duel = director
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	custom_minimum_size = Vector2(W, 0)
-	add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.05, 0.04, 0.1, 0.78), UiTheme.GOLD_DIM, 1, 8))
+	# puits d'encre translucide contouré, comme la quête suivie (lot HUD-2)
+	var sb := UiTheme.well_style(Vector2(10, 6), 14)
+	sb.bg_color = Color(UiTheme.color("encre.500"), 0.88)
+	add_theme_stylebox_override("panel", sb)
 	_box = VBoxContainer.new()
 	_box.add_theme_constant_override("separation", 3)
 	_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -57,19 +60,32 @@ func _add_row(c: Combatant, mine: bool) -> void:
 	var cid := String(c.get("class_id") if c is Player else c.get("cid"))
 	var name := HeroLook.name_or("Toi") if c == duel.d.player else String(GameData.class_data(cid).get("name_fr", cid))
 	var n := Hud._label(h, name, 14, ALLY if mine else FOE)
+	n.add_theme_font_override("font", UiTheme.bold_font())
 	n.custom_minimum_size = Vector2(118, 0)
 	n.clip_text = true
 	var bar := ProgressBar.new()
 	bar.show_percentage = false
-	bar.custom_minimum_size = Vector2(0, 10)
+	bar.custom_minimum_size = Vector2(0, 12)
 	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var col := ALLY if mine else FOE
-	bar.add_theme_stylebox_override("fill", UiTheme.flat_box(col.darkened(0.15), col, 1, 4, false))
-	bar.add_theme_stylebox_override("background", UiTheme.flat_box(Color(0.08, 0.07, 0.12, 0.9), Color(0.25, 0.22, 0.32), 1, 4, false))
+	# jauge autocollante : creux d'encre contouré, remplissage lagon (ton camp) ou fraise (l'autre)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = UiTheme.color("bonbon.lagon.base" if mine else "bonbon.fraise.base")
+	fill.set_corner_radius_all(6)
+	fill.border_color = Color(0, 0, 0, 0)
+	fill.set_border_width_all(2)
+	fill.anti_aliasing = true
+	var back := StyleBoxFlat.new()
+	back.bg_color = UiTheme.color("encre.900")
+	back.border_color = UiTheme.color("encre.900")
+	back.set_border_width_all(2)
+	back.set_corner_radius_all(6)
+	back.anti_aliasing = true
+	bar.add_theme_stylebox_override("fill", fill)
+	bar.add_theme_stylebox_override("background", back)
 	h.add_child(bar)
-	var num := Hud._label(h, "", 14, UiTheme.MUTED)
+	var num := Hud._label(h, "", 14, UiTheme.color("papier.100"))
 	num.custom_minimum_size = Vector2(54, 0)
 	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_rows.append({"node": c, "bar": bar, "name": n, "num": num})
