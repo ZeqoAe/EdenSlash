@@ -35,6 +35,9 @@ const RULES := {
 	"kill_gold": 200, "assist_gold": 50, "plant_gold": 300, "defuse_gold": 200,
 	# héros : fiche normalisée (niveau, comme le Duel à l'arme), sites (rayon de pose, m), portée de désamorçage (m)
 	"level": 50, "site_radius": 5.0, "defuse_range": 1.8,
+	# Charge (lot TAC-3) : ramassée en passant à moins de pickup_radius m ; l'explosion emporte les héros à moins de
+	# blast_radius m (ils ne survivent pas à la manche) ; player_carry : le joueur porte la Charge quand il attaque
+	"pickup_radius": 1.5, "blast_radius": 9.0,
 }
 ## Formats : options de partie qui remplacent les règles (Éclair : premier à 4, 7 manches, mi-temps après 3, la 7e décide).
 const FORMATS := {
@@ -380,7 +383,7 @@ static func _match_winner(last: int) -> int:
 	return -1
 
 
-## Héros vivant qui porte la Charge par défaut (lot TAC-3 : un objet porté, lâché, ramassé) : le 1er attaquant debout.
+## Premier attaquant debout (le porteur est choisi par le directeur au lot TAC-3 : AssaultDirector._pick_carrier).
 static func default_carrier() -> String:
 	var a := alive_keys(attack)
 	return String(a[0]) if not a.is_empty() else ""
@@ -482,6 +485,11 @@ static func args_options(args: PackedStringArray) -> Dictionary:
 			o["win"] = int(a.trim_prefix("--assault-win="))
 		elif a.begins_with("--assault-half="):
 			o["half"] = int(a.trim_prefix("--assault-half="))
+		elif a.begins_with("--assault-rule="):
+			# (lot TAC-3, mesures) toute règle de RULES : --assault-rule=buy_time:2 (nombre), plusieurs fois permis
+			var kv := a.trim_prefix("--assault-rule=").split(":", true, 1)
+			if kv.size() == 2 and RULES.has(kv[0]):
+				o[kv[0]] = float(kv[1]) if kv[1].is_valid_float() else kv[1]
 	return o
 
 

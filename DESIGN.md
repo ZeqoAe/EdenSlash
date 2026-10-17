@@ -1360,6 +1360,12 @@ empêche ou la désamorce ; une vie par manche, or entre les manches. Ce qui est
   où il a été vu. Ce que ton héros ne voit pas est assombri. Murs et murets arrêtent les coups, les zones au sol demandent de
   voir le point visé. On entend les pas (course) à 14 m, les esquives à 18 m, les coups et les sorts à 24 m, la pose et le
   désamorçage partout : « Voir les sons » est activé dans ce mode. L'IA ne sait que ce que son équipe voit et entend.
+- **La Charge** (lot TAC-3) : un attaquant la porte (toi quand tu attaques ; sinon un allié qui n'ouvre pas), on la voit sur son
+  dos ; à sa mort elle tombe à ses pieds et un attaquant la ramasse en passant ([G] pour la lâcher toi-même). L'Attaque sait
+  toujours où elle est ; la Défense seulement si elle voit l'endroit, ou une fois posée. Pose 4 s et désamorçage 7 s (repris à
+  la moitié si on l'a dépassée) annulés par un pas, un coup, un sort, une esquive ou un contrôle subi. Après la pose : 40 s de
+  bips qui accélèrent, « 10 secondes ! », puis l'explosion emporte tout héros à moins de 9 m. « Ouf ! » si l'on désamorce à
+  moins d'une seconde.
 
 # Partie D — Économie et progression
 

@@ -293,6 +293,10 @@ invisible 5 m, brumes `smokes` —, adversaires non vus cachés (`visible`, mini
 `last_seen`, `heard_since`, `los`, signaux `spotted` / `lost` / `heard`) ; coups qui testent le décor (`blocks_zone` dans `Telegraph._resolve`, `blocks_shot` dans
 `Player._resolve_area`, `blocks_segment` dans `HeroBolt` / `Projectile`, tous gardés par `AssaultVision.current`) ; ciblage honnête de `ClassRival`
 (`_hostile_pool` / `_can_target` filtrés, poste rejoint sans cible en vue) ; « Voir les sons » `ui/assault_cues.gd` ; test `test_tac2`.
+Charge (TAC-3, `R_TAC_3.md`) : `world/assault_charge.gd` (`AssaultCharge` : portée sur le dos du porteur, au sol, posée ; bips `beep_interval`, explosion, désamorçage) ;
+directeur : `_pick_carrier` (toi si tu attaques, sinon pas celui qui ouvre), `_drop_charge` (mort du porteur, [G]), `_try_pickup` (1,5 m), `charge_seen` (Défense : seulement si elle
+voit l'endroit), `markers()` (mini-carte, via `RunDirector.markers` en état « team »), `_interrupted` (un contrôle annule pose et désamorçage), `blasted` (explosion 9 m) ;
+`--assault-rule=clé:valeur` ; mesures IA contre IA `python tools/assault_games.py --games 8 -j 2 [--win 4 --rule buy_time:2]` ; test `test_tac3`.
 
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à

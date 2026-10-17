@@ -9,8 +9,14 @@ extends Node
 ## simple du lot TAC-0), format, diff_allies / diff_foes (0-3), watch (vrai : le joueur regarde 8 IA), first_attack,
 ## seed, speed (Engine.time_scale, mesures), allies / foes (classes imposées), et toute règle de Assault.RULES.
 ##
+## Charge (lot TAC-3, R_TAC_3.md) : objet AssaultCharge porté par un attaquant (_pick_carrier), lâché à sa mort ou par [G],
+## ramassé en passant (pickup_radius), posé (pose annulée par un pas, un coup, un sort, une esquive ou un contrôle subi),
+## bips qui accélèrent, explosion qui emporte les héros proches (blast_radius), désamorçage sauvegardé à la moitié ; la
+## Défense ne voit la Charge au sol que si elle voit l'endroit (charge_seen) ; mini-carte : markers().
+##
 ## IA (lot TAC-0, provisoire) : un agent minimal par héros scripté (_agent) — les attaquants vont ensemble au site de la
 ## manche, le porteur pose quand rien ne le menace, les défenseurs tiennent 2-2 puis reprennent le site de la Charge ;
+## Charge au sol : l'attaquant le plus proche va la ramasser, un défenseur qui la voit va la garder ;
 ## dès qu'un adversaire est assez proche, ClassRival combat. Le stratège d'équipe et la perception honnête : lot TAC-6
 ## (la perception de ce que l'équipe voit et entend est fournie par AssaultVision, lot TAC-2).
 
@@ -31,8 +37,16 @@ var watch := false
 var barrier := true
 var diffs := [2, 2]
 var rng := RandomNumberGenerator.new()
-## Charge (lot TAC-0 provisoire ; lot TAC-3 : objet porté, lâché, ramassé, bips) : porteur, pose et désamorçage en cours.
+## Charge (lot TAC-3, AssaultCharge) : l'objet (porté, au sol, posé), son porteur ("" : au sol ou posée), pose et
+## désamorçage en cours. Le porteur est choisi au début de chaque manche (_pick_carrier : toi si tu attaques, sinon un
+## attaquant scripté qui n'ouvre pas) ; il la lâche à sa mort ([G] pour le joueur) et un attaquant la ramasse en passant.
+var charge: AssaultCharge
 var carrier := ""
+## Héros pris dans l'explosion de la manche (ils ne « survivent » pas : lot TAC-5, ce qu'on garde).
+var blasted: Array = []
+var _ten_said := false
+var _defuse_said := false
+var _fuse_at_defuse := INF
 var plant_by := ""
 var plant_t := 0.0
 var defuse_by := ""
@@ -45,7 +59,6 @@ var _prompt := ""
 ## Dégâts de la manche : victime -> {auteur: dégâts} (aides : >= 30 % des PV de la victime).
 var _dmg: Dictionary = {}
 var _markers: Node3D
-var _charge_mark: Node3D
 ## Vue d'équipe, brouillard, voile et bruits (lot TAC-2) ; « Voir les sons » de ton équipe.
 var vision: AssaultVision
 var cues: AssaultCues
@@ -126,7 +139,7 @@ func _at(m: ProcMap, dx: float, dz: float) -> Vector3:
 	return p
 
 
-## Repères des sites (disque soleil et lettre) ; la Charge posée (lot TAC-3 : son vrai modèle, ses bips).
+## Repères des sites (disque soleil et lettre) ; la Charge a son propre nœud (AssaultCharge, lot TAC-3).
 func _build_markers() -> void:
 	_markers = Node3D.new()
 	_markers.name = "AssaultMarkers"
@@ -254,8 +267,9 @@ func _start_round() -> void:
 	defuse_by = ""
 	defuse_t = 0.0
 	charge_pos = Vector3.INF
-	if is_instance_valid(_charge_mark):
-		_charge_mark.queue_free()
+	blasted = []
+	_ten_said = false
+	_defuse_said = false
 	target_site = Assault.SITES[rng.randi() % 2]
 	for t in 2:
 		for i in 4:
@@ -276,13 +290,17 @@ func _start_round() -> void:
 			r.passive = true  # derrière la barrière pendant l'achat
 			heroes[key] = r
 			_watch_hero(r, key)
-	carrier = Assault.default_carrier()
+	_new_charge()
 	TeamMatch.start_round()
 	TeamMatch.set_phase("countdown")
 	if d.world.rig != null:
 		d.world.rig.target = d.player if not watch else _first_alive(0)
 	var side := Assault.side_name(0)
-	d.message.emit("Manche %d · %s · %d - %d" % [Assault.round_n, side, int(Assault.score[0]), int(Assault.score[1])], 2.5)
+	var goal_txt := "pose la Charge en A ou en B" if Assault.attack == 0 else "défends A et B"
+	if carrier == player_key and player_key != "":
+		goal_txt = "tu portes la Charge : pose-la en A ou en B"
+	d.message.emit("Manche %d · %s · %d - %d\n%s" % [Assault.round_n, side, int(Assault.score[0]), int(Assault.score[1]),
+		goal_txt], 2.5)
 	if _verbose():
 		print("[assault] manche %d : équipe 0 en %s, site visé %s, or moyen %d / %d" % [Assault.round_n, side.to_lower(),
 			target_site, _avg_gold(0), _avg_gold(1)])
@@ -359,7 +377,7 @@ func _ko(vk: String, killer: Combatant) -> void:
 	if v != null:
 		TeamMatch.note_ko(v, killer)
 	if vk == carrier:
-		carrier = ""  # (lot TAC-3 : la Charge tombe au sol et se ramasse)
+		_drop_charge(v.global_position if v != null else charge.global_position, "fall")  # la Charge tombe et se ramasse
 	if vk == plant_by:
 		plant_by = ""
 		plant_t = 0.0
@@ -391,9 +409,8 @@ func update(delta: float) -> void:
 	_handle(Assault.tick(delta))
 	if _ended:
 		return
+	_update_charge(delta)
 	if Assault.phase in ["live", "planted"]:
-		if carrier == "" or not Assault.alive.get(carrier, false):
-			carrier = Assault.default_carrier()
 		_agent_t -= delta
 		if _agent_t <= 0.0:
 			_agent_t = AGENT_EVERY
@@ -458,12 +475,16 @@ func _handle(ev: Array) -> void:
 				d.message.emit("C'est parti !", 1.2)
 				UiFeel.cue("ui_go", -8.0)
 			"planted":
-				_drop_charge_mark(charge_pos)
+				charge.plant_at(charge_pos, String(e.site), Assault.num("fuse"))
 				d.message.emit("Charge posée en %s !" % String(e.site), 2.5)
+				UiFeel.cue("ui_banner", -6.0, 1.0, [0.3, 0.2, 0.15])
 			"explode":
-				d.message.emit("La Charge explose !", 2.0)
+				_explode()
 			"defused":
-				d.message.emit("Charge désamorcée !", 2.0)
+				charge.defuse()
+				var close := _fuse_at_defuse < 1.0
+				d.message.emit("Ouf ! Charge désamorcée !" if close else "Charge désamorcée !", 2.0)
+				UiFeel.cue("ui_star" if close else "ui_notify", -6.0)
 			"round_end":
 				_end_round(e)
 			"next":
@@ -537,7 +558,7 @@ func view_hero() -> Combatant:
 	if player_key != "" and not p.is_dead:
 		return p
 	var t = d.world.rig.target if d.world.rig != null else null
-	if t is Combatant and is_instance_valid(t) and not (t as Combatant).is_dead and t != p:
+	if is_instance_valid(t) and t is Combatant and not (t as Combatant).is_dead and t != p:
 		return t
 	return _first_alive(0)
 
@@ -572,6 +593,12 @@ func _goal_for(key: String, t: int) -> Vector3:
 		if t == Assault.defense() and key == _defuser():
 			return charge_pos  # (le désamorceur s'arrête à moins de 1,2 m : dans la portée de désamorçage)
 		return _ground(charge_pos + off * 1.6)
+	if charge != null and charge.state == "ground":
+		# (lot TAC-3) Charge au sol : l'attaquant le plus proche va la ramasser ; un défenseur qui la voit va la garder
+		if t == Assault.attack and key == _fetcher():
+			return charge.global_position
+		if t == Assault.defense() and key == _guard():
+			return _ground(charge.global_position + off * 2.5)
 	if t == Assault.attack:
 		if key == carrier:
 			return _ground(site_pos(target_site))
@@ -601,7 +628,8 @@ func _defuser() -> String:
 func _ai_actions(delta: float) -> void:
 	if Assault.phase == "live":
 		var c := hero(carrier) as ClassRival
-		if c != null and not c.is_dead and site_at(c.global_position) != "" and engaged_foe(c, THREAT) == null and not c.is_disabled():
+		if c != null and not c.is_dead and site_at(c.global_position) != "" and engaged_foe(c, THREAT) == null \
+				and not _interrupted(c) and c._state != "attack":
 			if plant_by != carrier:
 				plant_by = carrier
 				plant_t = 0.0
@@ -613,7 +641,8 @@ func _ai_actions(delta: float) -> void:
 	elif Assault.phase == "planted":
 		if defuse_by != "" and defuse_by != player_key:
 			var dh := hero(defuse_by) as ClassRival
-			if dh == null or dh.is_dead or dh.is_disabled() or _dist2(dh.global_position, charge_pos) > Assault.num("defuse_range") + 0.4:
+			if dh == null or dh.is_dead or _interrupted(dh) or dh._state == "attack" \
+					or _dist2(dh.global_position, charge_pos) > Assault.num("defuse_range") + 0.4:
 				_stop_defuse()
 			else:
 				_progress_defuse(dh, delta)
@@ -621,7 +650,8 @@ func _ai_actions(delta: float) -> void:
 		if defuse_by == "":
 			for k in Assault.alive_keys(Assault.defense()):
 				var r := hero(String(k)) as ClassRival
-				if r != null and _dist2(r.global_position, charge_pos) <= Assault.num("defuse_range") and engaged_foe(r, THREAT) == null:
+				if r != null and _dist2(r.global_position, charge_pos) <= Assault.num("defuse_range") and engaged_foe(r, THREAT) == null \
+						and not _interrupted(r):
 					defuse_by = String(k)
 					defuse_t = Assault.defuse_resume(defuse_t, _defuse_full())
 					r.goal = r.global_position
@@ -635,11 +665,12 @@ func _dist2(a: Vector3, b: Vector3) -> float:
 func _progress_plant(c: Combatant, delta: float) -> void:
 	_charge_noise(c, "plant", plant_t, delta)
 	plant_t += delta
-	if plant_t >= Assault.num("plant_time"):
+	if plant_t >= _plant_full(key_of(c)):
 		charge_pos = _ground(c.global_position)
 		var s := site_at(c.global_position)
 		plant_by = ""
 		plant_t = 0.0
+		carrier = ""
 		_handle(Assault.plant(s, key_of(c)))
 
 
@@ -650,18 +681,36 @@ func _charge_noise(c: Combatant, kind: String, done: float, delta: float) -> voi
 		_plant_noise_t = 1.5
 		if vision != null:
 			vision.noise(c.global_position, kind, Assault.team_of(key_of(c)), INF)
+	if kind == "defuse" and not _defuse_said and player_key != "" and Assault.team_of(player_key) == Assault.attack:
+		_defuse_said = true
+		d.message.emit("Ils désamorcent la Charge !", 1.8)
 
 
-func _defuse_full() -> float:
-	return Assault.num("defuse_time")
+## Durée de la pose pour [param key] (plant_time ; lot TAC-5 : les Gants de sapeur la raccourcissent).
+func _plant_full(key := "") -> float:
+	return Assault.num("plant_time") * _tool_mult(key, "plant")
+
+
+## Durée du désamorçage (defuse_time ; lot TAC-5 : les Pinces d'acier la raccourcissent) pour celui qui désamorce.
+func _defuse_full(key := "") -> float:
+	var k := key if key != "" else defuse_by
+	return Assault.num("defuse_time") * _tool_mult(k, "defuse")
+
+
+## Multiplicateur d'outil de [param key] pour [param what] (« plant », « defuse ») : 1 sans outil (achats : lot TAC-5).
+func _tool_mult(key: String, what: String) -> float:
+	if key == "" or not has_method("tool_mult"):
+		return 1.0
+	return float(call("tool_mult", key, what))
 
 
 func _progress_defuse(c: Combatant, delta: float) -> void:
 	_charge_noise(c, "defuse", defuse_t, delta)
 	defuse_t += delta
-	if defuse_t >= _defuse_full():
+	if defuse_t >= _defuse_full(key_of(c)):
 		var k := key_of(c)
 		_stop_defuse()
+		_fuse_at_defuse = Assault.t  # (« Ouf ! » à moins d'une seconde)
 		_handle(Assault.defuse(k))
 
 
@@ -671,9 +720,21 @@ func _stop_defuse() -> void:
 	defuse_by = ""
 
 
+## Pose et désamorçage annulés par un contrôle subi (renversé, gelé, endormi, terreur, immobilisé : TACTIQUE § 7.2, 7.6).
+func _interrupted(c: Combatant) -> bool:
+	if c == null or c.is_dead:
+		return true
+	if c.is_disabled():
+		return true
+	for s in ["fear", "root"]:
+		if c.has_status(s):
+			return true
+	return c is Player and (c as Player)._state == "stun"
+
+
 ## Le joueur pose (porteur, dans un site) ou désamorce (Défense, près de la Charge) en maintenant [Interagir] immobile ;
-## un pas, un coup, un sort, une esquive ou un contrôle subi annulent (les dégâts seuls, non). Au pilote (--autoplay), il
-## maintient dès qu'il est en place.
+## un pas, un coup, un sort, une esquive ou un contrôle subi annulent (les dégâts seuls, non). Porteur hors d'un site : [G]
+## lâche la Charge (pour un allié). Au pilote (--autoplay), il maintient dès qu'il est en place.
 func _player_actions(delta: float) -> void:
 	var prompt := ""
 	var p := d.player
@@ -681,18 +742,27 @@ func _player_actions(delta: float) -> void:
 		_set_prompt("")
 		return
 	var held := Input.is_action_pressed("interact") or p.autoplay
-	var still := Vector2(p.velocity.x, p.velocity.z).length() < 0.6 and not p._state in ["attack", "skill", "dodge", "stun"]
+	var still := Vector2(p.velocity.x, p.velocity.z).length() < 0.6 and not p._state in ["attack", "skill", "dodge", "stun"] \
+		and not _interrupted(p)
+	var key_f := Settings.action_label("interact", 1)
+	if Assault.phase == "live" and carrier == player_key and site_at(p.global_position) == "":
+		prompt = "Tu portes la Charge · [%s] la lâcher" % Settings.action_label("quick_equip", 1)
+		if Input.is_action_just_pressed("quick_equip") and not p.autoplay:
+			_drop_charge(p.global_position + p.forward() * 1.2, "drop")
+			prompt = ""
 	if Assault.phase == "live" and carrier == player_key and site_at(p.global_position) != "":
-		prompt = "[F] Poser la Charge · %.0f s" % Assault.num("plant_time")
+		prompt = "[%s] Poser la Charge · %.0f s" % [key_f, _plant_full(player_key)]
 		if held and still:
 			plant_by = player_key
-			prompt = "Pose… %.1f s" % maxf(Assault.num("plant_time") - plant_t, 0.0)
+			prompt = "Pose… %.1f s" % maxf(_plant_full(player_key) - plant_t, 0.0)
 			_progress_plant(p, delta)
 		elif plant_by == player_key:
 			plant_by = ""
 			plant_t = 0.0
 	elif Assault.phase == "planted" and Assault.team_of(player_key) == Assault.defense() and _dist2(p.global_position, charge_pos) <= Assault.num("defuse_range"):
-		prompt = "[F] Désamorcer · %.0f s" % Assault.num("defuse_time")
+		prompt = "[%s] Désamorcer · %.0f s" % [key_f, _defuse_full(player_key)]
+		if defuse_t > 0.0 and defuse_by == "":
+			prompt += " · reprend à %.1f s" % defuse_t
 		if held and still and (defuse_by == "" or defuse_by == player_key):
 			if defuse_by == "":
 				defuse_by = player_key
@@ -711,23 +781,188 @@ func _set_prompt(text: String) -> void:
 		d.prompt_changed.emit(text)
 
 
-func _drop_charge_mark(at: Vector3) -> void:
-	_charge_mark = Node3D.new()
-	_charge_mark.name = "Charge"
-	_markers.add_child(_charge_mark)
-	var mi := MeshInstance3D.new()
-	var s := SphereMesh.new()
-	s.radius = 0.45
-	s.height = 0.9
-	mi.mesh = s
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = UiTheme.color("bonbon.soleil.base")
-	mat.emission_enabled = true
-	mat.emission = UiTheme.color("bonbon.soleil.base")
-	mat.emission_energy_multiplier = 2.0
-	mi.material_override = mat
-	_charge_mark.add_child(mi)
-	_charge_mark.global_position = at + Vector3.UP * 0.5
+# --- la Charge (lot TAC-3) -------------------------------------------------------------------------
+
+## Nouvelle Charge de la manche, sur le dos du porteur choisi.
+func _new_charge() -> void:
+	if is_instance_valid(charge):
+		charge.queue_free()
+	for k in heroes:
+		var h := hero(String(k))
+		if h != null and h.has_node("AssaultChargePack"):
+			h.get_node("AssaultChargePack").free()  # (le joueur garde son nœud d'une manche à l'autre)
+	charge = AssaultCharge.new()
+	_markers.add_child(charge)
+	carrier = _pick_carrier()
+	var c := hero(carrier)
+	if c != null:
+		charge.carry(c)
+	else:
+		charge.drop_at(_ground(layout.spawns.attack.pos))
+		carrier = ""
+
+
+## Porteur de la manche : toi si tu attaques (option player_carry, vrai par défaut), sinon l'attaquant scripté au meilleur
+## score de porteur (jamais celui qui ouvre : _carrier_score).
+func _pick_carrier() -> String:
+	var keys: Array = Assault.alive_keys(Assault.attack)
+	if keys.is_empty():
+		return ""
+	if player_key != "" and player_key in keys and bool(TeamMatch.spec.get("player_carry", true)):
+		return player_key
+	var best := ""
+	var bs := -INF
+	for k in keys:
+		if String(k) == player_key:
+			continue
+		var s := _carrier_score(String(k))
+		if s > bs:
+			bs = s
+			best = String(k)
+	return best
+
+
+## Score de porteur : pas le premier de l'équipe (il ouvre), puis le rôle tactique (lot TAC-4 : role_of), puis l'ordre.
+func _carrier_score(key: String) -> float:
+	var i := int(key.right(1))
+	var s := -2.0 if i == 0 else 0.0
+	if has_method("role_of"):
+		s += float({"soutien": 3, "controleur": 2, "tireur": 2, "rempart": 1, "ouvreur": -3}.get(String(call("role_of", key)), 0))
+	return s - i * 0.1
+
+
+## La Charge tombe en [param at] : porteur à terre ([param why] « fall ») ou lâchée ([param why] « drop »).
+func _drop_charge(at: Vector3, why: String) -> void:
+	if charge == null or charge.state != "carried":
+		carrier = ""
+		return
+	var was := carrier
+	carrier = ""
+	if plant_by == was:
+		plant_by = ""
+		plant_t = 0.0
+	charge.drop_at(_ground(at))
+	if was == player_key and why == "drop":
+		d.message.emit("Tu lâches la Charge", 1.5)
+	elif player_key != "" and Assault.team_of(player_key) == Assault.attack:
+		d.message.emit("La Charge est tombée !", 1.8)
+	if _verbose():
+		print("[assault] la Charge tombe (%s, %s) en (%.0f, %.0f)" % [was, why, at.x, at.z])
+
+
+## Ramassage en passant : un attaquant debout à moins de pickup_radius m de la Charge au sol la prend.
+func _try_pickup() -> void:
+	var r := Assault.num("pickup_radius")
+	for k in Assault.alive_keys(Assault.attack):
+		var h := hero(String(k))
+		if h == null or h.is_dead or _dist2(h.global_position, charge.global_position) > r:
+			continue
+		carrier = String(k)
+		charge.carry(h)
+		if carrier == player_key:
+			d.message.emit("Tu ramasses la Charge", 1.5)
+			UiFeel.cue("ui_equip", -8.0)
+		elif player_key != "" and Assault.team_of(player_key) == Assault.attack:
+			d.message.emit("%s ramasse la Charge" % h.display_name.get_slice(" · ", 0), 1.5)
+		if _verbose():
+			print("[assault] %s ramasse la Charge" % carrier)
+		return
+
+
+## Chaque image : ramassage, mèche et bips, la Charge au sol montrée à qui la voit, annonce des 10 dernières secondes.
+func _update_charge(delta: float) -> void:
+	if charge == null:
+		return
+	if Assault.phase == "live" and charge.state == "carried" and (hero(carrier) == null or hero(carrier).is_dead):
+		var at := charge.holder.global_position if is_instance_valid(charge.holder) else charge.global_position
+		_drop_charge(at, "fall")
+	if Assault.phase == "live" and charge.state == "ground":
+		_try_pickup()
+	charge.update(delta, Assault.t if Assault.phase == "planted" else 0.0)
+	charge.set_shown(charge.state != "ground" or charge_seen(view_team()))
+	if Assault.phase == "planted" and not _ten_said and Assault.t <= 10.0:
+		_ten_said = true
+		d.message.emit("10 secondes !", 1.5)
+		UiFeel.cue("ui_tick", -6.0, 1.3)
+
+
+## Équipe dont l'écran montre la vue (celle du héros regardé).
+func view_team() -> int:
+	var v := view_hero()
+	var t := TeamMatch.team_of(v) if v != null else 0
+	return t if t >= 0 else 0
+
+
+## L'équipe [param t] voit-elle la Charge ? L'Attaque toujours ; la Défense, posée (position connue de tous), ou au sol si
+## l'un de ses héros debout voit l'endroit ; portée, avec son porteur (s'il est vu).
+func charge_seen(t: int) -> bool:
+	if charge == null:
+		return false
+	if t == Assault.attack or charge.state in ["planted", "defused", "exploded"]:
+		return true
+	if charge.state == "carried":
+		return vision != null and is_instance_valid(charge.holder) and vision.sees(t, charge.holder)
+	if vision == null:
+		return true
+	for h in TeamMatch.alive(t):
+		var c := h as Combatant
+		if _dist2(c.global_position, charge.global_position) <= AssaultVision.RANGE and vision.los(c.global_position, charge.global_position):
+			return true
+	return false
+
+
+## Repères de la mini-carte (RunDirector.markers, état « team ») : la Charge, si l'équipe regardée la voit.
+func markers() -> Array:
+	if charge == null or charge.state in ["defused", "exploded"] or not charge_seen(view_team()):
+		return []
+	var at := charge.global_position
+	if charge.state == "carried" and is_instance_valid(charge.holder):
+		at = charge.holder.global_position
+	return [[at, "drop"]]
+
+
+## Attaquant scripté qui va ramasser la Charge au sol : le plus proche.
+func _fetcher() -> String:
+	return _nearest(Assault.attack, charge.global_position, true)
+
+
+## Défenseur scripté qui garde la Charge au sol quand sa Défense la voit : le plus proche.
+func _guard() -> String:
+	if not charge_seen(Assault.defense()):
+		return ""
+	return _nearest(Assault.defense(), charge.global_position, true)
+
+
+func _nearest(t: int, at: Vector3, ai_only: bool) -> String:
+	var best := ""
+	var bd := INF
+	for k in Assault.alive_keys(t):
+		if ai_only and String(k) == player_key:
+			continue
+		var h := hero(String(k))
+		if h == null:
+			continue
+		var dd := _dist2(h.global_position, at)
+		if dd < bd:
+			bd = dd
+			best = String(k)
+	return best
+
+
+## La mèche est au bout : explosion ; tout héros à moins de blast_radius m est emporté (il ne « survit » pas à la manche).
+func _explode() -> void:
+	d.message.emit("La Charge explose !", 2.0)
+	UiFeel.cue("ui_banner", -2.0, 0.8, [0.8, 0.6, 0.5])
+	if charge == null:
+		return
+	charge.explode()
+	var r := Assault.num("blast_radius")
+	for k in heroes.keys():
+		var h := hero(String(k))
+		if h == null or h.is_dead or _dist2(h.global_position, charge.global_position) > r:
+			continue
+		blasted.append(String(k))
+		h.take_damage(h.max_hp * 50.0, null, false, true)
 
 
 # --- joueur à terre, abandon, fin ------------------------------------------------------------------

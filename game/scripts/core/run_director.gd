@@ -1711,6 +1711,8 @@ func markers() -> Array:
 	var out: Array = []
 	if state == "royale":
 		return royale.markers()
+	if state == "team" and is_instance_valid(team) and team.has_method("markers"):
+		return team.markers()  # (lot TAC-3) repères du mode d'équipes : la Charge de L'Assaut
 	if state in ["boss", "cleared"]:
 		return out
 	for k in _found:
