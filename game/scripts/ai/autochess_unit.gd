@@ -63,8 +63,8 @@ const PROTECT_M := 3.0  # m : une cible d'arrière-ligne est protégée si 2 mê
 const TANK_GUARD_BONUS := 3.0  # score : le tank prend l'ennemi qui frappe un allié fragile (presque toujours)
 const RETREAT_TIME := 1.5
 const RETREAT_GAP := 8.0
-const MELEE_SLOT := 0.85  # part de l'allonge visée par une mêlée (au contact)
-const LEAD_TIME := 0.45  # s : une zone visée est posée où les ennemis seront (préparation du sort)
+const MELEE_SLOT := 0.9  # part de l'allonge visée par une mêlée (au contact)
+const LEAD_TIME := 0.45  # s : zone posée où les ennemis seront (détail « lead », coupé : 45 % contre la version sans)
 const SAMPLE_EVERY := 0.25  # s : relevés du banc d'essai (inactivité, portée)
 const IDLE_AFTER := 3.0  # s sans action (coup, sort, soin) : inactive
 
@@ -137,7 +137,7 @@ func on(k: String) -> bool:
 
 ## Détail [param k] d'un comportement [param main] (banc d'essai : « full,-hop ») : actif avec lui, sauf s'il est coupé.
 ## roles : hop (bond de recul), dive (plongée), line (soigneurs derrière la ligne) ; target : focus, guard (tank) ;
-## spells : lead (zone posée où les ennemis seront).
+## spells : lead (zone posée où les ennemis seront : mesuré perdant, coupé par défaut, « full,lead » pour l'essayer).
 func sub(main: String, k: String) -> bool:
 	return on(main) and bool(ai.get(k, true))
 
@@ -1136,7 +1136,7 @@ func _engaged_mates() -> int:
 ## Meilleure place d'un sort parmi les ennemis [param foes] : chaque ennemi et, pour une zone visée, le milieu de chaque
 ## paire ; seulement les places à la portée du sort ({ok, aim, count}).
 func best_aim(sk: Dictionary, foes: Array) -> Dictionary:
-	var lt := LEAD_TIME if sub("spells", "lead") else 0.0
+	var lt := LEAD_TIME if on("spells") and bool(ai.get("lead", false)) else 0.0  # coupé par défaut : perdant au banc
 	var at: Array = []  # places des ennemis à l'impact (vitesse du moment)
 	for f in foes:
 		var c := f as Combatant
