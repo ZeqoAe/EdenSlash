@@ -8,6 +8,7 @@ extends CanvasLayer
 ##   détaillé s'ouvre par-dessus ;
 ## - Apparence : HeroPages.AppearancePage (tenue, tête, dos, auras, apparence d'arme) ;
 ## - Cartes : HeroPages.CardsPage ;
+## - Titres (lot GX-5) : TitlesPage (titre porté sous le nom, tous les titres et comment les obtenir) ;
 ## - « ? » : ouvre le Guide sur ses formules (le Guide est la seule aide du jeu).
 ## Échap : ferme la fenêtre ouverte par-dessus, sinon revient au menu.
 
@@ -16,12 +17,13 @@ signal closed
 ## La classe se choisit avec la carte en haut à droite (menu par famille) : elle vaut pour toutes
 ## les sections (préréglages d'équipement, apparence, talents).
 const SECTIONS := [["equipment", "Équipement", "equipment"], ["class", "Classe", "class"],
-	["appearance", "Apparence", "jewel"], ["cards", "Cartes", "stats"]]
+	["appearance", "Apparence", "jewel"], ["titles", "Titres", "ico_res_title"], ["cards", "Cartes", "stats"]]
 
 var page: InventoryPage
 var talents: TalentsPage
 var appearance: HeroPages.AppearancePage
 var cards: HeroPages.CardsPage
+var titles: TitlesPage  # lot GX-5
 var grimoire: Grimoire
 var back_text := "Retour au menu"
 var zone_texture: Texture2D  # (plus affichée ; le lobby la renseigne encore)
@@ -29,6 +31,7 @@ var pause_game := false
 var current := "equipment"
 var _root: Control
 var _title: Label
+var _worn_title: Label  # lot GX-5 : le titre porté, sous le nom
 var _class_icon: TextureRect
 var _class_name: Label
 var _class_level: Label
@@ -102,8 +105,9 @@ func _ready() -> void:
 	talents.class_bar = false
 	appearance = HeroPages.AppearancePage.new()
 	cards = HeroPages.CardsPage.new()
+	titles = TitlesPage.new()
 	talents.open_grimoire = func(cid, skill_id := 0): grimoire.open(cid, skill_id)
-	for k in [["equipment", page], ["class", talents], ["appearance", appearance], ["cards", cards]]:
+	for k in [["equipment", page], ["class", talents], ["appearance", appearance], ["titles", titles], ["cards", cards]]:
 		var p: Control = k[1]
 		p.set_anchors_preset(Control.PRESET_FULL_RECT)
 		p.visible = false
@@ -113,6 +117,7 @@ func _ready() -> void:
 	grimoire = Grimoire.new()
 	add_child(grimoire)
 	page.preset_changed.connect(refresh)
+	titles.changed.connect(refresh)
 	_root.visible = false
 
 
@@ -136,13 +141,26 @@ func _build_top(parent: Control) -> void:
 	back.pressed.connect(close_ui)
 	top.add_child(back)
 	top.add_child(InventoryPage.gold_icon("class", 54))
+	var names := VBoxContainer.new()  # lot GX-5 : le nom, puis le titre porté
+	names.add_theme_constant_override("separation", -4)
+	names.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(names)
 	_title = Label.new()
 	_title.text = "Héros"
 	_title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	UiTheme.title(_title, 42, UiTheme.GOLD)
 	_title.set_meta("ink_keep", true)  # titre autocollant contouré (UIK1)
-	top.add_child(_title)
-	top.add_child(HeroLevelGauge.new(16, 140.0))  # niveau de héros du compte (lot H1)
+	names.add_child(_title)
+	_worn_title = Hud._label(names, "", 15, UiTheme.color("texte.sur-papier-2", UiTheme.MUTED))
+	_worn_title.add_theme_font_override("font", UiTheme.bold_font())
+	_worn_title.mouse_filter = Control.MOUSE_FILTER_STOP
+	_worn_title.tooltip_text = "Titre porté : Héros > Titres"
+	_worn_title.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			show_section("titles"))
+	var gauge := HeroLevelGauge.new(16, 140.0)  # niveau de héros du compte (lot H1)
+	gauge.show_milestone = true  # lot GX-5 : le prochain jalon (titre, apparences)
+	top.add_child(gauge)
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(sp)
@@ -289,7 +307,7 @@ func _guide_open() -> bool:
 	return false
 
 
-## LB / RB : section suivante ou précédente (Équipement, Classe, Apparence, Cartes).
+## LB / RB : section suivante ou précédente (Équipement, Classe, Apparence, Titres, Cartes).
 func step_page(delta: int) -> void:
 	var ids: Array = SECTIONS.map(func(x): return String(x[0]))
 	var i := ids.find(current)
@@ -306,6 +324,8 @@ func refresh() -> void:
 	_class_icon.texture = UiTheme.texture(String(cd.get("icon", "")))
 	_title.text = HeroLook.name_or("Héros")
 	_title.add_theme_font_size_override("font_size", 42 if _title.text.length() <= 8 else 30)  # un long nom tient à 1280 px
+	_worn_title.text = "« %s »" % Profile.title if Profile.title != "" else ""
+	_worn_title.visible = _worn_title.text != ""
 	_creator_button.visible = not Profile.in_run
 	# sous 1500 px de large, l'icône seule (l'infobulle nomme le bouton) : la carte de la classe reste dans l'écran
 	_creator_button.text = "  Personnage" if get_viewport().get_visible_rect().size.x >= 1500.0 else ""

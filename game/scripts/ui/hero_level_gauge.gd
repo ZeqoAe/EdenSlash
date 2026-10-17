@@ -8,6 +8,9 @@ var _bar: ProgressBar
 var _font_size := 14
 var _bar_w := 150.0
 var _prefix := "Niv."
+## Lot GX-5 : affiche le prochain jalon (« ★ 25 ») à droite de la barre ; son détail est dans l'infobulle.
+var show_milestone := false
+var _mile: Label
 
 
 ## [param prefix] : « Niv. » (écran Héros) ou « Héros niv. » (badge de classe du lobby : ne pas le prendre pour la maîtrise).
@@ -33,6 +36,10 @@ func _init(font_size := 14, bar_width := 150.0, prefix := "Niv.") -> void:
 	_bar.add_theme_stylebox_override("background", UiTheme.flat_box(Color(0.03, 0.03, 0.08, 0.9), MenuWidgets.LINE, 1, 4, false))
 	_bar.add_theme_stylebox_override("fill", UiTheme.flat_box(UiTheme.GOLD, UiTheme.GOLD, 0, 4, false))
 	add_child(_bar)
+	_mile = Hud._label(self, "", maxi(_font_size - 2, 12), UiTheme.MUTED)
+	_mile.add_theme_font_override("font", UiTheme.bold_font())
+	_mile.mouse_filter = Control.MOUSE_FILTER_PASS
+	_mile.visible = false
 
 
 func _enter_tree() -> void:
@@ -63,3 +70,7 @@ func refresh() -> void:
 	tooltip_text = HeroLevel.tooltip()
 	_label.tooltip_text = tooltip_text
 	_bar.tooltip_text = tooltip_text
+	var m := HeroLevel.next_milestone()
+	_mile.visible = show_milestone and not m.is_empty()
+	_mile.text = "★ %d" % int(m.get("level", 0))
+	_mile.tooltip_text = HeroLevel.next_milestone_line()

@@ -3,7 +3,9 @@ extends CarnetPages.ScrollPage
 ## Registre de l'équipement (Carnet, lot E3) : pour chaque classe, sa puissance d'équipement face à la
 ## puissance attendue, l'arme du bon type, les pièces (celles de départ ne comptent pas), la panoplie de donjon
 ## et celle des Esprits, les pièces à +10, les gemmes, les enchantements, et une ligne « Il manque : … → activité ».
-## Les moins équipées d'abord ; un clic sur une classe débloquée ouvre son équipement.
+## Les moins équipées d'abord. Lot GX-5 (Registre v2) : un clic sur une classe déplie sa fiche : son profil de stats (les
+## stats qui comptent, ★), tout ce qui lui manque (et où l'obtenir), la comparaison avec ses classes voisines (arbre et
+## profil), « Voir l'équipement ».
 
 const FILTERS := ["Débloquées", "Toutes", "À équiper"]
 const STATUS_COLORS := [Color(0.62, 0.6, 0.7), Color(1.0, 0.62, 0.45), Color(1.0, 0.82, 0.4), Color(0.55, 1.0, 0.6), Color(1.0, 0.84, 0.25)]
@@ -11,6 +13,8 @@ const ICON := 40.0
 
 var _filter := 0
 var _profile := ""  # "" : tous les profils
+var _open := ""  # lot GX-5 : classe dont la fiche est dépliée
+var _open_card: Control  # sa carte (la page défile jusqu'à elle)
 
 
 func subtitle() -> String:
@@ -24,7 +28,7 @@ func refresh() -> void:
 	for e in all:
 		opened.append(Progression.class_unlocked(String(e.cid)))
 	var locks: Array = ["armory", "pantheon", "dungeons", "forge", "tower", "siege"].map(func(u): return Unlocks.is_open(u))
-	if unchanged([all, opened, locks, _filter, _profile, GearPower.target_level(), view_size()]):
+	if unchanged([all, opened, locks, _filter, _profile, GearPower.target_level(), view_size(), _open]):
 		return
 	clear()
 	var n_ok := all.filter(func(e): return int(e.status) >= ClassGear.STATUS_EQUIPPED).size()
@@ -163,12 +167,112 @@ func _row(e: Dictionary) -> void:
 	pad.add_theme_constant_override("margin_left", int(ICON) + 14)
 	pad.add_child(need)
 	v.add_child(pad)
-	if open:
-		pc.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		pc.tooltip_text = "Voir l'équipement de la classe"
-		pc.gui_input.connect(func(ev: InputEvent):
-			if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
-				_open_class(cid))
+	# lot GX-5 : un clic déplie (ou replie) la fiche de la classe
+	pc.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	pc.tooltip_text = "Replier la fiche" if _open == cid else "Profil, ce qui manque, classes voisines"
+	pc.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			toggle(cid))
+	if _open == cid:
+		_open_card = pc
+		_detail(v, e)
+
+
+## Déplie la fiche de [param cid] (la replie si elle l'était).
+func toggle(cid: String) -> void:
+	_open = "" if _open == cid else cid
+	_open_card = null
+	Sfx.ui("click")
+	refresh()
+	_scroll_to_open.call_deferred()
+
+
+## La fiche dépliée en haut de la zone qui défile (elle est souvent sous le bord à 720 px).
+func _scroll_to_open() -> void:
+	await get_tree().process_frame
+	var sc := _box.get_parent() as ScrollContainer
+	if sc != null and is_instance_valid(_open_card) and _open_card.is_inside_tree():
+		sc.scroll_vertical = int(_open_card.position.y)
+
+
+## Fiche dépliée (lot GX-5) : profil de stats, tout ce qui manque, comparaison avec les voisines, « Voir l'équipement ».
+func _detail(v: VBoxContainer, e: Dictionary) -> void:
+	var cid := String(e.cid)
+	var pad := MarginContainer.new()
+	pad.add_theme_constant_override("margin_left", int(ICON) + 14)
+	pad.add_theme_constant_override("margin_top", 4)
+	v.add_child(pad)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 6)
+	pad.add_child(box)
+	# profil de stats
+	var pr := HFlowContainer.new()
+	pr.add_theme_constant_override("h_separation", 8)
+	pr.add_theme_constant_override("v_separation", 4)
+	box.add_child(pr)
+	var pl := Hud._label(pr, "Profil " + ClassGear.profile_line(cid) + " :", 14, UiTheme.MUTED)
+	pl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	pl.mouse_filter = Control.MOUSE_FILTER_PASS
+	pl.tooltip_text = String(ClassGear.profile(cid).get("desc", ""))
+	for st in ClassGear.top_stats(cid, 5):
+		var star := float(st[1]) >= 1.2
+		var chip := PanelContainer.new()
+		chip.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.16, 0.12, 0.28, 0.95), UiTheme.GOLD if star else UiTheme.GOLD_DIM, 2, 9))
+		chip.tooltip_text = "Compte beaucoup pour cette classe" if star else "Compte pour cette classe"
+		chip.mouse_filter = Control.MOUSE_FILTER_PASS
+		pr.add_child(chip)
+		var cl := Hud._label(chip, ("★ " if star else "") + ClassGear.stat_label(String(st[0])), 14, UiTheme.GOLD if star else UiTheme.TEXT)
+		cl.add_theme_font_override("font", UiTheme.bold_font())
+		cl.mouse_filter = Control.MOUSE_FILTER_PASS
+	# ce qui manque, tout
+	var miss := ClassGear.missing(cid, e)
+	var ml := RichTextLabel.new()
+	ml.bbcode_enabled = true
+	ml.fit_content = true
+	ml.scroll_active = false
+	ml.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	ml.add_theme_font_size_override("normal_font_size", 14)
+	ml.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var lines: PackedStringArray = ["[b]Ce qui manque[/b]"]
+	if miss.is_empty():
+		lines.append("[color=#8cff99]Rien : équipement optimal.[/color]")
+	for m in miss:
+		var shut := String(m.unlock) != "" and not Unlocks.is_open(String(m.unlock))
+		lines.append("[color=#c7c2db]•  %s  →  [/color][color=#%s]%s[/color]%s" % [m.text, UiTheme.GOLD.to_html(false), m.activity, "[color=#8a86a0]  (verrouillé)[/color]" if shut else ""])
+	ml.text = "
+".join(lines)
+	box.add_child(ml)
+	# classes voisines : même tableau, une ligne chacune
+	var nb := ClassGear.neighbours(cid, 2)
+	if not nb.is_empty():
+		var grid := GridContainer.new()
+		grid.columns = 6
+		grid.add_theme_constant_override("h_separation", 18)
+		grid.add_theme_constant_override("v_separation", 2)
+		box.add_child(grid)
+		for h in ["Classes voisines", "PE", "Pièces", "+10", "Gemmes", "État"]:
+			Hud._label(grid, h, 12, UiTheme.MUTED)
+		var rows: Array = [e]
+		var m := ClassGear.vault_map()
+		for o in nb:
+			rows.append(ClassGear.entry(String(o), m))
+		for r in rows:
+			var me := String(r.cid) == cid
+			var nm := Hud._label(grid, ClassGear.class_label(String(r.cid)), 14, UiTheme.GOLD if me else UiTheme.TEXT)
+			nm.add_theme_font_override("font", UiTheme.bold_font())
+			Hud._label(grid, GearPower.fmt(int(r.pe)), 14, UiTheme.TEXT)
+			Hud._label(grid, "%d / %d" % [int(r.filled) - int(r.base), Items.SLOTS.size()], 14, UiTheme.TEXT)
+			Hud._label(grid, "%d / %d" % [int(r.plus10), Items.SLOTS.size()], 14, UiTheme.TEXT)
+			Hud._label(grid, "%d / %d" % [int(r.gems), int(r.gem_max)], 14, UiTheme.TEXT)
+			Hud._label(grid, String(ClassGear.STATUS[int(r.status)]), 14, STATUS_COLORS[int(r.status)])
+		for i in range(1, rows.size()):
+			var cl := Hud._label(box, ClassGear.compare_line(cid, String(rows[i].cid), e, rows[i]), 14, UiTheme.MUTED)
+			cl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if Progression.class_unlocked(cid) and not Profile.in_run:
+		var go := ForgeWidgets.candy_button("Voir l'équipement  ›", "lagon", 15, 38)
+		go.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		go.pressed.connect(_open_class.bind(cid))
+		box.add_child(go)
 
 
 ## Petit compteur : intitulé discret au-dessus, valeur (verte quand c'est complet).

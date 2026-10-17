@@ -32,7 +32,7 @@ func _ready() -> void:
 	_chips = CarnetPages.chips(left, ["Tes coffres", "Boutique"], 0, _set_shop)
 	_all_btn = MenuWidgets.glass_button("Ouvrir tout", 16, Vector2(0, 42))
 	_all_btn.tooltip_text = "Ouvre d'un coup tous les coffres sans choix, puis affiche un récapitulatif. Les coffres de set restent à ouvrir un par un."
-	_all_btn.pressed.connect(func(): open_many(Profile.reward_chests.filter(func(c): return not Rewards.is_choice(c))))
+	_all_btn.pressed.connect(ask_open_all)  # lot GX-5 : confirmation (ce qui s'ouvre, ce qui reste), puis récapitulatif
 	left.add_child(_all_btn)
 	var sc := ScrollContainer.new()
 	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -291,6 +291,82 @@ func open_chest(chest: Dictionary) -> void:
 	_stage.open()
 
 
+## « Ouvrir tout » (lot GX-5) : une carte dit ce qui va s'ouvrir (par genre) et ce qui reste (coffres à choix), puis
+## [method open_many]. Un seul coffre : ouvert tout de suite.
+func ask_open_all() -> InfoCard.Ask:
+	var todo := Profile.reward_chests.filter(func(c): return not Rewards.is_choice(c))
+	if todo.size() <= 1:
+		open_many(todo)
+		return null
+	return InfoCard.ask(self, "Ouvrir %d coffres ?" % todo.size(), open_all_text(Profile.reward_chests), "Tout ouvrir", func(): open_many(todo), false)
+
+
+## Texte de la confirmation : un genre par ligne (« Coffre de forge ×12 »), les coffres à choix gardés, où va le contenu.
+static func open_all_text(chests: Array) -> String:
+	var by := {}
+	var kinds: Array = []
+	var kept := 0
+	for c in chests:
+		if not Rewards.ORDER.has(c.type):
+			continue
+		if Rewards.is_choice(c):
+			kept += 1
+			continue
+		var k := Rewards.kind_of(c)
+		if not by.has(k):
+			by[k] = 0
+			kinds.append(k)
+		by[k] = int(by[k]) + 1
+	kinds.sort_custom(func(a, b): return Rewards.kind_rank(a) < Rewards.kind_rank(b))
+	var lines: PackedStringArray = []
+	for k in kinds:
+		lines.append("%s ×%d" % [Rewards.kind_name(k), int(by[k])])
+	if kept > 0:
+		lines.append("")
+		lines.append("%d coffre%s à choix reste%s : on y choisit une pièce sur trois." % [kept, "s" if kept > 1 else "", "nt" if kept > 1 else ""])
+	lines.append("")
+	lines.append("Objets au coffre commun, fournitures à ta réserve : rien n'est vendu ni démonté.")
+	return "
+".join(lines)
+
+
+## Récapitulatif d'une ouverture en masse (BBCode) : les raretés (objets et apparences), les pièces meilleures pour la
+## classe affichée, les nouvelles apparences, puis les fournitures (Rewards.summary).
+static func recap_text(got: Dictionary) -> String:
+	var counts := {}
+	for x in (got.get("items", []) as Array) + (got.get("looks", []) as Array):
+		var r := clampi(int(x.get("rarity", 0)), 0, Items.RARITIES.size() - 1)
+		counts[r] = int(counts.get(r, 0)) + 1
+	var parts: PackedStringArray = []
+	for r in range(Items.RARITIES.size() - 1, -1, -1):
+		if counts.has(r):
+			parts.append("[color=#%s]%d %s[/color]" % [(Items.RARITIES[r].color as Color).to_html(false), int(counts[r]), rarity_word(r, int(counts[r]))])
+	var lines: PackedStringArray = []
+	if not parts.is_empty():
+		lines.append(" · ".join(parts))
+	var better := 0
+	for it in got.get("items", []):
+		if String(it.get("slot", "")) in Items.SLOTS and HeroLevel.can_wear(it) and Items.profile_gain(it) > 0.0:
+			better += 1
+	if better > 0:
+		lines.append("[color=#8cff99]▲ %d pièce%s meilleure%s pour %s[/color]" % [better, "s" if better > 1 else "", "s" if better > 1 else "",
+			ClassGear.class_label(Profile.selected_class)])
+	var looks := (got.get("looks", []) as Array).size()
+	if looks > 0:
+		lines.append("%d nouvelle%s apparence%s : Héros > Apparence" % [looks, "s" if looks > 1 else "", "s" if looks > 1 else ""])
+	lines.append("[color=#e6d7ff]%s[/color]" % Rewards.summary(got))
+	return "
+".join(lines)
+
+
+## « légendaire » / « légendaires », « spécial » / « spéciaux ».
+static func rarity_word(r: int, n: int) -> String:
+	var w := String(Items.RARITIES[clampi(r, 0, Items.RARITIES.size() - 1)].name).to_lower()
+	if n <= 1:
+		return w
+	return "spéciaux" if w == "spécial" else w + "s"
+
+
 ## Ouvre plusieurs coffres sans choix d'un coup : une seule présentation, puis le récapitulatif.
 func open_many(chests: Array) -> void:
 	var todo := chests.filter(func(c): return not Rewards.is_choice(c) and Profile.reward_chests.has(c))
@@ -303,12 +379,12 @@ func open_many(chests: Array) -> void:
 	_open_btn.visible = false
 	_title.text = "%d coffres ouverts" % int(got.opened) if int(got.opened) > 1 else "Coffre ouvert"
 	_title.add_theme_color_override("font_color", UiTheme.GOLD)
-	_detail.text = "[color=#e6d7ff]%s[/color]" % Rewards.summary(got)
+	_detail.text = recap_text(got)  # lot GX-5 : raretés, pièces meilleures, apparences, fournitures
 	_detail.tooltip_text = "Les objets vont au coffre commun, les fournitures à ta réserve."
 	_stage.custom_minimum_size.y = STAGE_COMPACT
 	_stage.show_chest(Color(1.0, 0.86, 0.3))
 	Sfx.ui("confirm")
-	_show_loot(got, int(got.opened) == 1)  # plusieurs coffres : pas de fiche d'office, un clic sur un objet l'affiche
+	_show_loot(got, int(got.opened) == 1, int(got.opened) > 1)  # plusieurs coffres : pas de fiche d'office, révélation par rareté
 	refresh()
 
 
@@ -341,9 +417,16 @@ func _clear() -> void:
 
 ## Contenu d'un coffre ouvert : une case par objet ou fourniture, qui apparaissent l'une
 ## après l'autre ; la fiche du premier objet en dessous.
-func _show_loot(got: Dictionary, first_card := true) -> void:
+func _show_loot(got: Dictionary, first_card := true, by_rarity := false) -> void:
 	_clear()
 	var tiles: Array = []
+	if by_rarity:
+		# lot GX-5 (BIBLE « Récompense ») : en masse, les plus rares d'abord dans la liste, révélées en dernier (montée)
+		got = got.duplicate()
+		for key in ["looks", "items"]:
+			var arr: Array = (got.get(key, []) as Array).duplicate()
+			arr.sort_custom(func(a, b): return int(a.get("rarity", 0)) > int(b.get("rarity", 0)))
+			got[key] = arr
 	for x in got.get("looks", []):
 		# apparence débloquée : grande case à la couleur de sa rareté
 		var col: Color = Items.RARITIES[clampi(int(x.get("rarity", 0)), 0, Items.RARITIES.size() - 1)].color
@@ -383,12 +466,13 @@ func _show_loot(got: Dictionary, first_card := true) -> void:
 			tiles.append(_supply_tile(UiTheme.texture(Craft.icon(k)), "%s ×%d" % [Craft.label(k), int(got.supplies[k])]))
 	if int(got.get("crystal", 0)) > 0:
 		tiles.append(_supply_tile(UiTheme.texture(Items.material_icon("crystal")), "%d cristaux" % int(got.crystal)))
+	var step := minf(0.12, 2.4 / maxf(float(tiles.size()), 1.0))  # lot GX-5 : beaucoup de cases : la révélation reste courte
 	for i in tiles.size():
 		var tile: Control = tiles[i]
 		_loot.add_child(tile)
 		tile.modulate.a = 0.0
 		var tw := tile.create_tween()
-		tw.tween_interval(0.12 * i)
+		tw.tween_interval(step * (tiles.size() - 1 - i if by_rarity else i))
 		tw.tween_callback(func():
 			tile.pivot_offset = tile.size * 0.5
 			tile.scale = Vector2.ONE * 0.6

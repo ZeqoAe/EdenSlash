@@ -940,6 +940,8 @@ func _menu_duel() -> void:
 			Duel.difficulty = _duel_diff
 			DuelPrep.open(self, func(): _show_menu("duel")))
 		row.add_child(prep)
+	if not Duel.bare:
+		PresetPick.add(_foot, "duel", func(): _show_menu("duel"))  # lot GX-5 : duel équipé, le préréglage compte
 	var go := MenuWidgets.gold_button("S'inscrire au duel", 22, Vector2(0, 58))
 	go.disabled = not Duel.is_ready(cid)
 	go.tooltip_text = "" if not go.disabled else "Règle d'abord les points marqués ✘"
@@ -1053,6 +1055,7 @@ func _menu_tower_floors() -> void:
 		info.pressed.connect(func(): TowerPages.info_popup(_sub, Tower.spec(fl, diff)))
 		h.add_child(info)
 	TowerPages.legend(_sub)
+	PresetPick.add(_foot, "tower", func(): _show_menu("tower_floors"))  # lot GX-5
 	var go := MenuWidgets.gold_button("Commencer à l'étage %d" % _tower_sel, 22, Vector2(0, 58))
 	go.disabled = not Tower.unlocked(_tower_sel, diff)
 	go.pressed.connect(_start_tower.bind(diff, _tower_sel))
@@ -1946,6 +1949,7 @@ func _menu_survival() -> void:
 		if _heroic >= 3:
 			var cons: Array = Epochs.heroic_mods(_heroic).map(func(m): return String(Modifiers.LIST[m].text))
 			Hud._label(_sub, "Contraintes : " + " · ".join(cons), 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	PresetPick.add(_foot, "survival", func(): _show_menu("survival"))  # lot GX-5 : le préréglage porté, épinglé au-dessus de « Lancer »
 	var go := MenuWidgets.gold_button("Lancer la partie", 22, Vector2(0, 56))
 	go.pressed.connect(_launch)
 	_pin(go)
@@ -2237,6 +2241,8 @@ func _pe_gauge(need: int, label := "") -> void:
 ## La difficulté choisie est ouverte : la jauge de la première plus dure qui ne l'est pas encore (passe P6), pour que la prochaine
 ## marche à gravir se voie sans cliquer dessus. [param siege] : la PE exigée est celle du Siège.
 func _pe_next(zid: String, siege: bool) -> void:
+	var page := _current
+	PresetPick.add(_foot, page, func(): _show_menu(page))  # lot GX-5 : Donjons, Ruée, Siège : le préréglage porté, épinglé au-dessus du bouton
 	var ok_now := Siege.power_ok(zid, _dg_diff) if siege else Dungeons.power_ok(zid, _dg_diff)
 	if not ok_now:
 		return  # la jauge de la difficulté choisie dit déjà ce qui manque

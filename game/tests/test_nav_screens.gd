@@ -134,6 +134,11 @@ func _ready() -> void:
 	Profile.reward_chests.append(Rewards.make("forge", 60, false, "scroll"))
 	chests_page.refresh()
 	await probe("Coffres : liste variée, pastilles et Ouvrir tout")
+	var open_all := chests_page.ask_open_all()  # lot GX-5 : confirmation de « Ouvrir tout »
+	await probe("Coffres : « Ouvrir tout », confirmation", 0.8)
+	if open_all:
+		open_all._finish(false)
+	await get_tree().process_frame
 	Profile.reward_chests.clear()
 	lobby._chests.close_ui()
 	lobby._archive.open(0)
@@ -158,6 +163,8 @@ func _ready() -> void:
 			reg_i = i
 	lobby._archive.open(reg_i)
 	await probe("Carnet : Registre de l'équipement", 0.8)
+	lobby._archive.page(reg_i).toggle(Profile.selected_class)  # lot GX-5 : fiche dépliée (profil, ce qui manque, voisines)
+	await probe("Carnet : Registre, fiche dépliée", 0.8)
 	lobby._archive.page(reg_i)._open_class(Profile.selected_class)
 	check("Registre : une classe ouvre Héros > Équipement", lobby._hero.is_open() and not lobby._archive.is_open())
 	lobby._hero.close_ui()
@@ -189,6 +196,10 @@ func _ready() -> void:
 	if not forge_items.is_empty():
 		lobby._workshop.page(2).grid.select_item(forge_items[0])
 		await probe("Atelier : Forge avec une pièce choisie", 0.8)
+		lobby._workshop.page(2).bench = "report"  # lot GX-5 : établi Reporter
+		lobby._workshop.page(2)._on_selection()
+		await probe("Atelier : Forge, établi Reporter", 0.8)
+		lobby._workshop.page(2).bench = "upgrade"
 	lobby._workshop.close_ui()
 	lobby._show_menu("rush")
 	await probe("lobby : Ruée des boss", 0.8)
@@ -253,6 +264,8 @@ func _ready() -> void:
 	lobby._hero.talents.show_sub("spells")
 	lobby._hero.show_section("appearance")
 	await probe("Héros : apparence", 0.8)
+	lobby._hero.show_section("titles")  # lot GX-5
+	await probe("Héros : titres", 0.8)
 	lobby._hero.show_section("cards")
 	await probe("Héros : cartes", 0.8)
 	lobby._hero.close_ui()

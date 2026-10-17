@@ -24,6 +24,11 @@ var _sub_buttons := {}  # id -> Button
 var _sub_pages := {}  # id -> Control
 var _points: Label
 var _reset: Button
+var _undo: Button  # lot GX-5 : annule « Tout reprendre »
+var _search: LineEdit  # lot GX-5 : recherche dans l'arbre
+var _sealed: Label  # lot GX-5 : mode scellé (Survivant, Battle royale…) : les talents n'y comptent pas
+var _tree: TreeView  # lot GX-5 : l'arbre et ses liens de prérequis
+var _cells := {}  # id du talent -> cellule (VBox) de l'arbre
 var _grid: GridContainer
 var _board: BoardView
 var _synergy: RichTextLabel
@@ -62,6 +67,9 @@ func _ready() -> void:
 	_lesson = MenuWidgets.glass_button("", 15, Vector2(0, 34))
 	_lesson.pressed.connect(_buy_lesson)
 	head.add_child(_lesson)
+	_sealed = Hud._label(head, "Mode à part : talents et certificats n'y comptent pas", 15, UiTheme.MUTED)
+	_sealed.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_sealed.visible = false
 	# parcours de maîtrise
 	var tp := PanelContainer.new()
 	tp.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.07, 0.06, 0.13, 0.95), UiTheme.GOLD_DIM, 1, 10))
@@ -95,17 +103,43 @@ func _ready() -> void:
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tb.add_child(sp)
+	# lot GX-5 : recherche dans l'arbre (nom et effet), seulement sur l'onglet Talents
+	_search = LineEdit.new()
+	_search.placeholder_text = "Chercher un talent"
+	_search.clear_button_enabled = true
+	_search.custom_minimum_size = Vector2(190, 38)
+	_search.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_search.text_changed.connect(func(_t): _apply_search())
+	tb.add_child(_search)
+	# points libres : toujours visibles, quel que soit le sous-onglet (un clic ouvre l'arbre)
 	_points = Hud._label(tb, "", 16, UiTheme.GOLD)
+	_points.add_theme_font_override("font", UiTheme.bold_font())
 	_points.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_points.mouse_filter = Control.MOUSE_FILTER_PASS
-	_points.tooltip_text = "Paliers : 15, 20, 25, 30 puis 35 points dépensés ouvrent les colonnes de droite."
+	_points.mouse_filter = Control.MOUSE_FILTER_STOP
+	_points.tooltip_text = "2 points par niveau de maîtrise. Les colonnes de droite s'ouvrent à 15, 20, 25, 30 puis 35 points placés."
+	_points.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			show_sub("talents"))
 	_reset = Button.new()
-	_reset.text = "Réinitialiser"
+	_reset.text = "Tout reprendre"
+	_reset.tooltip_text = "Rend tous les points de la classe, gratuitement. « Annuler » remet l'arbre d'avant."
 	_reset.focus_mode = Control.FOCUS_NONE
 	_reset.pressed.connect(func():
 		Profile.reset_talents(_cls())
+		Sfx.ui("confirm")
 		refresh())
+	UiTheme.style_button(_reset, "papier", 15)
 	tb.add_child(_reset)
+	_undo = Button.new()
+	_undo.text = "Annuler"
+	_undo.tooltip_text = "Remet les points comme avant « Tout reprendre »."
+	_undo.focus_mode = Control.FOCUS_NONE
+	_undo.pressed.connect(func():
+		if Profile.undo_talent_reset(_cls()):
+			Sfx.ui("confirm")
+		refresh())
+	UiTheme.style_button(_undo, "lagon", 15)
+	tb.add_child(_undo)
 	_build_spells_page()
 	_build_talents_page()
 	_build_certs_page()
@@ -157,11 +191,16 @@ func _build_talents_page() -> void:
 	var cc := CenterContainer.new()
 	cc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(cc)
+	# lot GX-5 : l'arbre dessine ses liens (prérequis) sous les cases ; la 1re rangée dit le palier de chaque colonne
+	_tree = TreeView.new()
+	_tree.page = self
+	cc.add_child(_tree)
 	_grid = GridContainer.new()
 	_grid.columns = 8
-	_grid.add_theme_constant_override("h_separation", 16)
-	_grid.add_theme_constant_override("v_separation", 14)
-	cc.add_child(_grid)
+	_grid.add_theme_constant_override("h_separation", 28)
+	_grid.add_theme_constant_override("v_separation", 10)
+	_tree.add_child(_grid)
+	_grid.sort_children.connect(_tree.queue_redraw)
 
 
 func _build_certs_page() -> void:
@@ -249,8 +288,10 @@ func show_sub(id: String) -> void:
 		b.add_theme_color_override("font_color", Color(0.12, 0.08, 0.02) if on else Color(0.92, 0.88, 0.8))
 		b.add_theme_color_override("font_pressed_color", Color(0.12, 0.08, 0.02))
 		b.add_theme_color_override("font_hover_pressed_color", Color(0.12, 0.08, 0.02))
-	_points.visible = sub == "talents"
+	_points.visible = true  # lot GX-5 : les points libres se lisent depuis les trois sous-onglets
 	_reset.visible = sub == "talents"
+	_undo.visible = sub == "talents" and Profile.can_undo_talents(_cls())
+	_search.visible = sub == "talents"
 
 
 func refresh() -> void:
@@ -272,19 +313,46 @@ func refresh() -> void:
 	_bar.tooltip_text = "Points de maîtrise de la classe : chaque run en rapporte."
 	_refresh_lesson(c)
 	var free := Profile.talent_points(c) - Profile.talent_spent(c)
-	_points.text = "Points de talent : %d / %d" % [free, Profile.talent_points(c)]
+	_points.text = points_text(free, Profile.talent_spent(c))
+	_points.add_theme_color_override("font_color", UiTheme.color("texte.sur-papier", UiTheme.TEXT) if free > 0 else UiTheme.color("texte.sur-papier-2", UiTheme.MUTED))
 	_sub_buttons["talents"].text = "Talents" + ("  (%d)" % free if free > 0 else "")
+	_reset.disabled = Profile.talent_spent(c) == 0
+	var narrow := get_viewport().get_visible_rect().size.x < 1500.0  # 1280 × 720 : la rangée des sous-onglets tient dans l'écran
+	for sb in _sub_buttons.values():
+		(sb as Button).custom_minimum_size.x = 118.0 if narrow else 170.0
+	_search.custom_minimum_size.x = 140.0 if narrow else 190.0
+	_search.placeholder_text = "Chercher" if narrow else "Chercher un talent"
+	_reset.text = "Reprendre" if narrow else "Tout reprendre"
+	_points.add_theme_font_size_override("font_size", 14 if narrow else 16)
+	_sealed.visible = Profile.in_run and Modes.sealed()
 	_refresh_track(c, lvl)
 	_refresh_spells(c)
 	for x in _grid.get_children():
 		_grid.remove_child(x)
 		x.queue_free()
+	_cells.clear()
 	var tree: Dictionary = GameData.talents.get(c, {})
-	for row in tree.get("rows", []):
+	var rows: Array = tree.get("rows", [])
+	var cols := 0
+	for row in rows:
+		cols = maxi(cols, (row as Array).size())
+	_grid.columns = maxi(cols, 1)
+	for col in cols:
+		_grid.add_child(_tier_head(rows, col))
+	for row in rows:
 		for cell in row:
 			_grid.add_child(_cell(cell, tree))
+	_tree.queue_redraw()
+	_apply_search()
 	_refresh_certs()
 	show_sub(sub)
+
+
+## « 3 points libres · 14 placés » (ou « Tous tes points sont placés »).
+static func points_text(free: int, spent: int) -> String:
+	if free <= 0:
+		return "Tous tes points sont placés (%d)" % spent if spent > 0 else "Aucun point de talent"
+	return "%d point%s libre%s · %d placé%s" % [free, "s" if free > 1 else "", "s" if free > 1 else "", spent, "s" if spent > 1 else ""]
 
 
 ## Leçon de maîtrise : seulement pour une classe en retard sur la meilleure du compte.
@@ -412,9 +480,10 @@ func _refresh_track(c: String, lvl: int) -> void:
 
 # --- talents ----------------------------------------------------------------------------------
 func _cell(cell, tree: Dictionary) -> Control:
+	var cs := _cell_size()
 	if cell == null:
 		var e := Control.new()
-		e.custom_minimum_size = Vector2(CELL, CELL + 18)
+		e.custom_minimum_size = Vector2(cs, cs + 18)
 		return e
 	var c := _cls()
 	var id := int(cell.id)
@@ -424,7 +493,7 @@ func _cell(cell, tree: Dictionary) -> Control:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 2)
 	var b := ItemWidgets.TipButton.new()
-	b.custom_minimum_size = Vector2(CELL, CELL)
+	b.custom_minimum_size = Vector2(cs, cs)
 	b.focus_mode = Control.FOCUS_NONE
 	var ic := TextureRect.new()
 	ic.texture = UiTheme.texture(String(t.get("icon", "")))
@@ -438,35 +507,138 @@ func _cell(cell, tree: Dictionary) -> Control:
 	ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(ic)
 	var open := block == "" or rank > 0
-	var sb := UiTheme.flat_box(Color(0.12, 0.1, 0.2, 0.95), UiTheme.GOLD if rank > 0 else (UiTheme.GOLD_DIM if open else Color(0.3, 0.28, 0.38)), 2, 6)
+	var full := rank >= int(cell.max)
+	# lot GX-5 : bord soleil = points placés, lagon = un point peut aller ici, gris = fermé
+	var border: Color = UiTheme.GOLD if rank > 0 else (UiTheme.color("bonbon.lagon.base", Color("2fc3ff")) if block == "" else (UiTheme.GOLD_DIM if open else Color(0.3, 0.28, 0.38)))
+	var sb := UiTheme.flat_box(Color(0.12, 0.1, 0.2, 0.95), border, 3 if (rank > 0 or block == "") else 2, 10)
 	b.add_theme_stylebox_override("normal", sb)
-	b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.18, 0.14, 0.28, 1.0), UiTheme.GOLD, 2, 6))
+	b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.18, 0.14, 0.28, 1.0), UiTheme.GOLD, 3, 10))
+	b.add_theme_stylebox_override("pressed", sb)
 	if not open:
 		b.modulate = Color(0.45, 0.45, 0.5)
 	b.tooltip_text = " "
 	b.tip = _talent_tip(c, id, t, rank, block)
+	b.set_meta("pad_x", "−1 point")  # manette : X = clic droit (retirer un point)
 	b.pressed.connect(func():
 		if Profile.add_talent(c, id):
+			Sfx.ui("confirm")
 			refresh())
+	b.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_RIGHT:
+			if Profile.remove_talent(c, id):
+				Sfx.ui("cancel")
+				refresh())
 	v.add_child(b)
-	var l := Hud._label(v, "%d / %d" % [rank, int(cell.max)], 13, UiTheme.GOLD if rank > 0 else UiTheme.MUTED)
+	var l := Hud._label(v, "%d / %d" % [rank, int(cell.max)], 14, (UiTheme.GOLD if not full else CarnetPages.GREEN) if rank > 0 else UiTheme.MUTED)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.add_theme_font_override("font", UiTheme.bold_font())
+	v.set_meta("talent_text", ItemWidgets.ItemGrid._plain(("%s %s" % [t.get("name", ""), t.get("desc", "")]).to_lower()))
+	v.set_meta("req", int(cell.req))
+	v.set_meta("req_pts", int(cell.req_pts))
+	_cells[id] = v
 	return v
 
 
-func _talent_tip(_c: String, _id: int, t: Dictionary, rank: int, block: String) -> String:
+## En-tête d'une colonne de l'arbre : le nombre de points à placer pour l'ouvrir (rien pour les colonnes ouvertes d'office).
+func _tier_head(rows: Array, col: int) -> Control:
+	var need := 0
+	for row in rows:
+		if col < (row as Array).size() and row[col] != null:
+			need = maxi(need, int(row[col].get("spent", 0)))
+	var box := CenterContainer.new()
+	box.custom_minimum_size = Vector2(_cell_size(), 26)
+	if need <= 0:
+		return box
+	var spent := Profile.talent_spent(_cls())
+	var ok := spent >= need
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 4)
+	h.mouse_filter = Control.MOUSE_FILTER_PASS
+	h.tooltip_text = "Colonne ouverte : %d points placés." % need if ok else "S'ouvre à %d points placés dans l'arbre (encore %d)." % [need, need - spent]
+	box.add_child(h)
+	if not ok:
+		Ico.mark(h, "lock", 14)
+	var l := Hud._label(h, "%d pts" % need, 14, CarnetPages.GREEN if ok else UiTheme.MUTED)
+	l.add_theme_font_override("font", UiTheme.bold_font())
+	l.mouse_filter = Control.MOUSE_FILTER_PASS
+	return box
+
+
+## Taille d'une case de l'arbre : plus petite sous 800 px de haut (l'arbre tient dans 1280×720).
+func _cell_size() -> float:
+	return float(CELL) if get_viewport() == null or get_viewport().get_visible_rect().size.y >= 800.0 else 70.0
+
+
+## Recherche (nom ou effet, sans accents ni casse) : les cases qui ne répondent pas pâlissent.
+func _apply_search() -> void:
+	if _search == null:
+		return
+	var q := ItemWidgets.ItemGrid._plain(_search.text.strip_edges().to_lower())
+	for id in _cells:
+		var v: Control = _cells[id]
+		if is_instance_valid(v):
+			v.modulate.a = 1.0 if q == "" or String(v.get_meta("talent_text", "")).contains(q) else 0.22
+	if _tree:
+		_tree.queue_redraw()
+
+
+## Effet d'un talent [param t] au rang [param rank] : « +4 % de défense » (« +1 % de défense par niveau » × 4).
+static func effect_at(t: Dictionary, rank: int) -> String:
+	var desc := String(t.get("desc", ""))
+	if rank <= 0:
+		return "aucun effet"
+	if not desc.contains(" par niveau"):
+		return desc  # talent à un seul niveau : son texte est l'effet
 	var eff: Dictionary = t.get("effect", {})
+	var per := float(eff.get("per_level", 0.0))
+	var v := per * rank * (1.0 if String(eff.get("type", "")) == "skill_duration" else 100.0)
+	var rx := RegEx.new()
+	rx.compile("([+\\-−])(\\d+(?:[.,]\\d+)?)")
+	var m := rx.search(desc)
+	var txt := desc.replace(" par niveau", "")
+	if m == null:
+		return txt
+	var num := str(roundi(v)) if is_equal_approx(v, roundf(v)) else ("%.1f" % v).replace(".", ",")
+	return txt.substr(0, m.get_start()) + m.get_string(1) + num + txt.substr(m.get_end())
+
+
+func _talent_tip(c: String, _id: int, t: Dictionary, rank: int, block: String) -> String:
 	var lines: PackedStringArray = []
 	var icon := String(t.get("icon", ""))
+	var mx := int(t.get("max", 1))
 	lines.append(("[img=40x40]%s[/img]  " % icon if icon != "" else "") + "[font_size=19][b]%s[/b][/font_size]" % t.get("name", ""))
-	lines.append("[color=#b8b4c8]Niveau %d / %d[/color]" % [rank, int(t.get("max", 1))])
-	lines.append("[b]%s[/b]" % t.get("desc", ""))
-	if rank > 0 and eff.get("type", "") in ["stat", "skill_dmg", "skill_cd"]:
-		lines.append("[color=#7fe08a]Actuellement : %s%d %%[/color]" % ["-" if eff.type == "skill_cd" else "+", roundi(float(eff.per_level) * rank * 100)])
-	elif rank > 0 and eff.get("type", "") == "skill_duration":
-		lines.append("[color=#7fe08a]Actuellement : +%d s[/color]" % roundi(float(eff.per_level) * rank))
-	lines.append("[color=#ff9a7a]%s[/color]" % block if block != "" else "[color=#ffcf6b]Clic : +1 point[/color]")
-	return "\n".join(lines)
+	lines.append("[color=#b8b4c8]Niveau %d / %d[/color]" % [rank, mx])
+	# lot GX-5 : l'effet chiffré avant / après en tête
+	if mx > 1:
+		lines.append("Maintenant : [b]%s[/b]" % effect_at(t, rank))
+		if rank < mx:
+			lines.append("[color=#7fe08a]Avec un point de plus : [b]%s[/b][/color]" % effect_at(t, rank + 1))
+		lines.append("[color=#b8b4c8]%s · niveau %d : %s[/color]" % [t.get("desc", ""), mx, effect_at(t, mx)])
+	else:
+		lines.append("[b]%s[/b]" % t.get("desc", ""))
+		lines.append("[color=#7fe08a]Acquis[/color]" if rank > 0 else "")
+	var cell := Profile._talent_cell(c, _id)
+	if int(cell.get("req", 0)) > 0:
+		var rt: Dictionary = GameData.talents.get(c, {}).get("talents", {}).get(str(int(cell.req)), {})
+		var ok := Profile.talent_rank(c, cell.req) >= int(cell.req_pts)
+		lines.append("[color=#%s]Demande : %s niveau %d %s[/color]" % ["7fe08a" if ok else "ff9a7a", rt.get("name", "?"), int(cell.req_pts), "✓" if ok else "✗"])
+	if int(cell.get("spent", 0)) > 0:
+		var ok2 := Profile.talent_spent(c) >= int(cell.spent)
+		lines.append("[color=#%s]Colonne : %d points placés %s[/color]" % ["7fe08a" if ok2 else "ff9a7a", int(cell.spent), "✓" if ok2 else "✗"])
+	if block == "":
+		lines.append("[color=#ffcf6b]Clic : +1 point[/color]")
+	elif block == "niveau maximal":
+		lines.append("[color=#7fe08a]Niveau maximal[/color]")
+	else:
+		lines.append("[color=#ff9a7a]%s[/color]" % (block.left(1).to_upper() + block.substr(1)))
+	if rank > 0:
+		var rb := Profile.talent_remove_block(c, _id)
+		lines.append("[color=#ffcf6b]Clic droit : −1 point (gratuit)[/color]" if rb == "" else "[color=#b8b4c8]Clic droit impossible : %s[/color]" % rb)
+	var out: PackedStringArray = []
+	for x in lines:
+		if x != "":
+			out.append(x)
+	return "\n".join(out)
 
 
 # --- certificats -----------------------------------------------------------------------------
@@ -582,6 +754,44 @@ class CertChip extends ItemWidgets.TipButton:
 		prev.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		set_drag_preview(prev)
 		return {"cert": key}
+
+
+## Lot GX-5 : l'arbre de talents (une GridContainer dedans) dessine sous ses cases les liens de prérequis : de la case
+## demandée vers celle qui la demande, pomme quand le prérequis est tenu, gris sinon, avec le niveau demandé au milieu.
+class TreeView extends MarginContainer:
+	var page: TalentsPage
+
+	func _draw() -> void:
+		if page == null:
+			return
+		var c := page._cls()
+		var origin := get_global_rect().position
+		var font := UiTheme.bold_font()
+		for id in page._cells:
+			var v: Control = page._cells[id]
+			var req := int(v.get_meta("req", 0))
+			if req <= 0 or not page._cells.has(req) or not is_instance_valid(v):
+				continue
+			var from_v: Control = page._cells[req]
+			if from_v.get_child_count() == 0 or v.get_child_count() == 0:
+				continue
+			var a := (from_v.get_child(0) as Control).get_global_rect()
+			var z := (v.get_child(0) as Control).get_global_rect()
+			var p0 := Vector2(a.end.x, a.get_center().y) - origin
+			var p1 := Vector2(z.position.x, z.get_center().y) - origin
+			if absf(a.get_center().y - z.get_center().y) > 4.0:  # autre rangée : du bas (ou du haut) de la case demandée
+				p0 = Vector2(a.get_center().x, a.end.y if z.get_center().y > a.get_center().y else a.position.y) - origin
+			var ok := Profile.talent_rank(c, req) >= int(v.get_meta("req_pts", 0))
+			var alpha := minf(v.modulate.a, from_v.modulate.a)
+			var col := Color(CarnetPages.GREEN, alpha) if ok else Color(0.42, 0.4, 0.52, alpha)
+			draw_line(p0, p1, Color(0.13, 0.1, 0.23, alpha), 8.0, true)  # contour d'encre
+			draw_line(p0, p1, col, 4.0, true)
+			var mid := (p0 + p1) * 0.5
+			draw_circle(mid, 10.0, Color(0.13, 0.1, 0.23, alpha))
+			draw_circle(mid, 8.0, col)
+			var txt := str(int(v.get_meta("req_pts", 0)))
+			var sz := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12)
+			draw_string(font, mid + Vector2(-sz.x * 0.5, 4.5), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.13, 0.1, 0.23, alpha))
 
 
 ## Plateau 1-2-1-2-1 : cases, liens colorés entre certificats de même couleur.

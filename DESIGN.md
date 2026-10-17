@@ -164,14 +164,31 @@ Vitalité, Posture du chasseur, Désarmé (ne peut plus attaquer), Ange gardien 
   vides ; un préréglage qui garde son nom d'origine ne montre que son numéro). « Gérer » : pour chaque autre préréglage « Copier
   ici » et « Comparer » (PE de chacun, emplacement par emplacement ce qui change, « Passer à »), noms d'usage en un clic (Survie,
   Donjons, Tour, Duel, Essai), **tenue liée** (clé `look` du préréglage : tenue, tête, dos, auras, couleurs reviennent quand on
-  le reprend ; aucune stat). Panoplie : la plus portée, même sans bonus (« 3 / 6 · bonus à 4 », paliers au survol). Manette : la
+  le reprend ; aucune stat). **Sur la page d'une activité** (lot GX-5, Q6) : Survie, Donjons, Ruée, Siège, Tour et Duel équipé
+  ont une rangée « Équipement » épinglée au-dessus du bouton de lancement (les préréglages qui ont des pièces ; l'actif en
+  mandarine ; ★ sur celui dont le nom d'usage va avec l'activité ; PE en infobulle) : un clic le rend actif et la page se refait
+  (PE, estimation) (`ui/preset_pick.gd`). Rien en partie ni pour les modes scellés. Panoplie : la plus portée, même sans bonus (« 3 / 6 · bonus à 4 », paliers au survol). Manette : la
   barre d'aide dessine X (« Équiper » dans le sac, « Retirer » sur la poupée, meta `pad_x`). Avant GX-4 : un clic change, « Gérer » copie l'équipement
   porté vers un autre préréglage ou renomme ; `EquipmentPage.PresetBar.extra_actions` reçoit les actions
   ajoutées plus tard, ex. « Équiper le meilleur »). La fiche d'objet est cachée sans sélection ; une pièce
   choisie montre la pièce portée à côté (▲ / ▼ en %, puissance d'équipement). Pas de préréglages ni de Forge
   dans le menu pause de la Survie.
 - **Classe** : maîtrise et parcours toujours visibles, puis trois sous-onglets Sorts (un clic ouvre le Grimoire
-  sur le sort), Talents (points et « Réinitialiser » seulement ici), Certificats (plateau, bonus, liste).
+  sur le sort), Talents, Certificats (plateau, bonus, liste). **Talents v2** (lot GX-5) : les points libres se lisent depuis
+  les trois sous-onglets (« 3 points libres · 14 placés », un clic ouvre l'arbre) ; l'arbre dit au-dessus de chaque colonne
+  combien de points placés l'ouvrent (« 15 pts », cadenas tant qu'il en manque) et dessine ses prérequis (lien pomme quand il
+  est tenu, gris sinon, le niveau demandé au milieu) ; bord lagon = un point peut aller ici. Infobulle : l'effet **maintenant** et
+  **avec un point de plus** (« +4 % de défense » → « +5 % »), l'effet au niveau maximal, le prérequis et la colonne (✓ / ✗).
+  **Réaffecter sans punition** : clic droit (X à la manette) = −1 point, gratuit, refusé seulement si un talent plus loin en
+  a besoin (`Profile.remove_talent`, `talent_set_valid` : l'arbre doit pouvoir se rebâtir point par point) ; « Tout reprendre »
+  rend tous les points (gratuit) et « Annuler » remet l'arbre d'avant tant qu'aucun point n'a été replacé. Recherche par nom
+  ou effet (les autres cases pâlissent). Mode scellé (Survivant, Battle royale, Échiquier) : la page le dit, les talents n'y
+  comptent toujours pas (`Modes.sealed()`, lot H2, inchangé).
+- **Titres** (lot GX-5, étude BM-GEAR Q9) : une section de l'écran Héros (entre Apparence et Cartes) : le titre porté sous le
+  nom du héros (en-tête de Héros, badge du lobby), « N'en porter aucun », tous les titres du jeu rangés par source (niveau de
+  héros, succès, Survie, Donjons, Tour, Ruée, Siège, Duel et Arènes, Panthéon, Quêtes, Survivant, Battle royale, Échiquier) avec la
+  phrase qui dit comment l'obtenir, filtres Obtenus / À obtenir et recherche (`core/titles.gd`, `ui/titles_page.gd`). Un titre ne
+  donne aucune stat. Le Carnet > Succès garde sa rangée de titres.
 - **Apparence** : « Débloqués uniquement » activé par défaut (compteur « 1 / 122 », « 121 à découvrir »).
 - Plus aucune mention du jeu d'origine (« Eden Eternal : … » sur sorts et talents, niveaux d'Eden) ; la
   description d'un sort n'est plus répétée sous « Effets » ; LB / RB changent de section ; « ? » ouvre le Guide
@@ -212,8 +229,13 @@ Vitalité, Posture du chasseur, Désarmé (ne peut plus attaquer), Ange gardien 
   donjon x / 6, Esprits x / 6, pièces à +10, gemmes, enchantements ; état (À commencer, À compléter, À renforcer,
   Équipée = 9 vraies pièces et PE ≥ 70 % de l'attendue, Optimale = panoplie 6, tout à +10, serti, enchanté) et une ligne
   « Il manque : … → activité » (arme / pièces / niveau → Survie puis Armurerie, panoplie → Donjons ou Panthéon, +10 →
-  Forge, gemmes → la Tour, enchantements → le Siège). Moins équipées d'abord ; un clic ouvre l'équipement de la classe.
-  Lobby : « N / 60 classes équipées » dans le pied de page (un clic ouvre le Registre).
+  Forge, gemmes → la Tour, enchantements → le Siège). Moins équipées d'abord. Lobby : « N / 60 classes équipées » dans le pied
+  de page (un clic ouvre le Registre). **Registre v2** (lot GX-5) : un clic sur une classe déplie sa fiche : son profil de
+  stats (« Rempart · armure de plates · dégâts physiques » et les 5 stats qui comptent le plus, ★ dès un poids de 1,2,
+  `ClassGear.top_stats`), **tout ce qui lui manque** dans l'ordre conseillé avec l'activité de chaque manque (`ClassGear.missing`),
+  la **comparaison avec ses classes voisines** (celles de son arbre de déblocage, puis celles de son profil : PE, pièces, +10,
+  gemmes, état ; « Le Paladin a 2 400 PE de plus, même profil : ses pièces t'iraient », `ClassGear.neighbours` / `compare_line`)
+  et « Voir l'équipement ».
 
 ## Niveau de héros (lot H1, 0.1.230 ; conception `conception/progression/NIVEAU_HEROS.md`)
 
@@ -228,6 +250,13 @@ Un niveau **du compte**, de 1 à 90, partagé par les 60 classes ; il ne redesce
 - **Affichage** : badge de classe du lobby (« Héros niv. 34 » + barre fine), en-tête de l'écran Héros (« Niv. 34 »), détail en
   infobulle ; bilan, bloc Gagné : « Niveau de héros 34 → 35 · +1 niveau » (ou « XP de héros · +N ») et l'annonce « Ton héros
   passe au niveau 35. ».
+- **Jalons** (lot GX-5, étude BM-GEAR P1) : niveaux 10, 25, 50, 75 et 90, chacun un **titre et des coffres d'apparence, rien
+  d'autre** (aucune stat, aucune ressource de puissance) : 10 « Aventurier » + coffre d'apparence rare, 25 « Baroudeur » + coffre
+  d'aura rare, 50 « Héros aguerri » + coffre d'apparence mythique, 75 « Héros de renom » + coffre d'apparence légendaire, 90
+  « Héros sans égal » + coffres d'apparence et d'aura légendaires (`HeroLevel.MILESTONES`, donnés une fois au passage du niveau,
+  `records.hero_miles`, coffres au menu Coffres). La jauge de l'écran Héros montre le prochain (« ★ 75 », détail en infobulle) ;
+  le Journal a un onglet « Niveau de héros » (les 5 jalons, obtenus ou « encore N niveaux ») ; le bilan dit « Jalon du niveau 25 :
+  … » ; un compte déjà haut reçoit les siens au menu principal (une carte, une fois).
 - **Comptes d'avant** (migration une fois, idempotente) : niveau de départ = max(barème des époques gagnées : aucune → meilleur
   niveau de run plafonné à 35, I → 43, II → 60, III → 75, IV → 85 + 1 par rang héroïque fini ; 90 avec un donjon Mythique fini ;
   niveau de la plus haute pièce portée dans le préréglage actif de chaque classe, pièces de départ exclues). Aucune pièce n'est
@@ -1298,6 +1327,14 @@ rapports `R_AC_*` ; ici, ce que le mode est dans le jeu.
   pierres de chance en option (les plus petites d'abord). Pendant : la barre de forge par essai (« Cran 7 / 22 »), « Arrêter »
   (après l'essai en cours). Faute de cristaux ou de parchemin, la séance s'arrête proprement (ce qui est monté le reste) ; une
   pièce sans parchemin est sautée, les autres continuent. Le coût de la Forge ne change pas.
+- **Reporter le +N** (lot GX-5, étude BM-GEAR Q2 « oui, à −2 crans ») : 7e établi de la Forge. La pièce choisie (la neuve) prend le
+  +N d'une autre pièce du même emplacement (armes entre elles), de niveau égal ou plus bas, **moins 2 crans** (+7 → +5), avec les
+  stats bonus des paliers gardés (+4, +6, +8) ; l'ancienne revient à +0 (persévérance et jets en attente effacés des deux).
+  **Prix** : les cristaux des crans reçus comme si chaque essai réussissait (`Forge.report_cost` = `upgrade_crystals`), sans
+  parchemin, sans échec. Refusé : en partie, pièce gardée (verrou), source sous +3, rien à gagner, pièce de niveau plus bas.
+  Confirmation avec ce que devient chaque pièce, le prix et les préréglages qui utilisent l'ancienne. Mesure (`progression_sim
+  --report-cost=…`, 12 comptes, 50 h, 2 graines) : gratuit, l'équipement 80-90 correct venait à 28,4-28,6 h (sous la cible de
+  30 h) ; au prix des crans sans échec, 30,9-31,9 h (sans Reporter : 30,4-32,2 h).
 - **Réajuster** (Atelier et marchand) : le nouveau jet d'une stat bonus est posé à côté de l'ancien (`item.reroll`) ; le joueur
   garde **l'ancien ou le nouveau** (`Forge.reforge_choose`), au même prix ; tant qu'il n'a pas choisi, la pièce garde l'ancien.
 - Les fournitures tombent des monstres (4 %, 7 % en rage), des élites (35 %), des boss (3),
@@ -1471,7 +1508,11 @@ chacune avec son rôle :
   statistiques des deux variantes d'une arme) sont dites une fois sous la rangée.
 - **Coffres** (menu Coffres) : une ligne par genre, c'est-à-dire par type et par spécialité (« Coffre de forge »,
   « Coffre de forge · parchemins », « Coffre de joaillier · formules »…), une pastille d'icône par type en plus de la
-  couleur, « Ouvrir tout (N) », une phrase sans chiffre par genre (le détail du contenu est dans l'infobulle).
+  couleur, « Ouvrir tout (N) », une phrase sans chiffre par genre (le détail du contenu est dans l'infobulle). **« Ouvrir
+  tout »** (lot GX-5) : d'abord une carte qui dit ce qui va s'ouvrir (un genre par ligne, « ×N »), que les coffres à choix
+  restent à ouvrir un par un et que rien n'est vendu ni démonté ; puis un récapitulatif : les raretés obtenues (la plus haute
+  d'abord), « ▲ N pièces meilleures pour <classe> », les nouvelles apparences et les fournitures ; les cases apparaissent par
+  rareté montante (la plus rare en dernier, révélation de 2,4 s au plus). Un seul coffre : ouvert sans carte.
 - **Roulette** : chaque case promet l'apparence qu'elle donnera (`Wheel.board`, tirée à chaque lancer, gardée dans la
   sauvegarde, jamais deux fois la même, remplacée si le joueur l'a obtenue entre-temps), visible dans la roue et dans la
   liste « Gains ». Le lancer donne l'apparence de la case désignée, pitié comprise ; le gain s'affiche en grand 3 s.

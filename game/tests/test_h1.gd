@@ -246,7 +246,8 @@ func _test_migration() -> void:
 	check("pièce portée de niveau %d (époque I gagnée) : niveau %d" % [int(e.level), mini(int(e.level), 90)], lv == maxi(43, mini(int(e.level), 90)))
 	check("la pièce reste portée, aucune pièce portée au-dessus du niveau", Profile.presets.magician.sets[1].slots.get("chest", "") == "h1_chest"
 		and HeroLevel.highest_worn() <= lv)
-	check("message une seule fois", HeroLevel.take_note() == "Ton héros est niveau %d. Il garde ce niveau dans toutes les classes." % lv
+	check("message une seule fois (avec les jalons franchis, lot GX-5)", HeroLevel.take_note().begins_with("Ton héros est niveau %d. Il garde ce niveau dans toutes les classes.
+Jalons du niveau de héros : titre « Aventurier »" % lv)
 		and HeroLevel.take_note() == "")
 	var t := HeroLevel.total()
 	HeroLevel.add_xp(50.0)

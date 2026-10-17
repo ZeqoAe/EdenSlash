@@ -1,9 +1,10 @@
 class_name ForgeBench
 extends MerchantPages.ForgePage
-## Atelier > Forge : un seul panneau pour tout ce qui se fait sur une pièce, rangé en six établis : Améliorer
+## Atelier > Forge : un seul panneau pour tout ce qui se fait sur une pièce, rangé en sept établis : Améliorer
 ## (fortification +1 à +10, sans rétrogradation, avec persévérance et « Viser +N », lot GX-2), Enchanter, Gemmes (percer,
-## sertir, fusionner), Polir (qualité), Réajuster (relancer une stat bonus, puis garder l'ancien ou le nouveau jet) et
-## Démonter (cristaux). La pièce choisie à gauche ; à droite, ses lignes « avant → après », le
+## sertir, fusionner), Polir (qualité), Réajuster (relancer une stat bonus, puis garder l'ancien ou le nouveau jet), Reporter
+## (lot GX-5 : le +N d'une ancienne pièce du même emplacement sur la neuve, moins 2 crans, sans échec) et Démonter (cristaux).
+## La pièce choisie à gauche ; à droite, ses lignes « avant → après », le
 ## coût en cristaux (en rouge s'il en manque) et l'action en bas. Chaque action passe par la barre de forge : elle
 ## se remplit pendant 0,8 à 1,6 s, puis le verdict s'affiche : pomme « Réussi », lagon « Raté » quand l'échec remplit la
 ## persévérance (il avance, il ne punit pas), fraise pour un refus. Le hasard est
@@ -16,10 +17,12 @@ const BENCHES := [
 	["gems", "Gemmes", "gem", 1.0],
 	["polish", "Polir", "new", 1.2],
 	["reforge", "Réajuster", "all", 1.0],
+	["report", "Reporter", "upgrade", 1.0],  # lot GX-5 : le +N d'une ancienne pièce sur la neuve, moins 2 crans
 	["dismantle", "Démonter", "dismantle", 0.8],
 ]
 ## Mots d'un résultat qui le rendent « raté » (bandeau rouge).
-const FAIL_WORDS := ["Raté :", "Échec", "échec", "pas mieux", "Pas assez", "Il faut", "Aucun", "Aucune", "Déjà", "introuvable", "Pas d'emplacement", "maximale", "ne change pas", "brisent"]
+const FAIL_WORDS := ["Raté :", "Échec", "échec", "pas mieux", "Pas assez", "Il faut", "Aucun", "Aucune", "Déjà", "introuvable", "Pas d'emplacement", "maximale", "ne change pas", "brisent",
+	"Rien à gagner", "La pièce qui donne", "Au menu principal", "Choisis une autre"]
 
 ## Stats montrées dans le tableau « avant → après » d'une amélioration.
 const MAIN_STATS := 4
@@ -138,6 +141,8 @@ func show_detail(sel: Array) -> void:
 			_polish(it)
 		"reforge":
 			_reforge(it)
+		"report":
+			_report(it)
 		"dismantle":
 			_dismantle(it)
 
@@ -154,7 +159,7 @@ func _head_text(it: Dictionary) -> String:
 	return "\n".join(Array(Items.describe(it).split("\n")).slice(0, 3))
 
 
-## Rangée des six établis (construite une fois).
+## Rangée des sept établis (construite une fois).
 func _build_tabs() -> Control:
 	var row := HFlowContainer.new()
 	row.add_theme_constant_override("h_separation", 6)
@@ -496,6 +501,62 @@ func _roll_value(it: Dictionary, s: String) -> float:
 		if String(r[0]) == s:
 			return float(r[1]) * (1.0 if s in Items.PERCENT_STATS else Items._level_k(Items.power_level(it)))
 	return float(it.get("affixes", {}).get(s, 0.0))
+
+
+## Reporter (lot GX-5) : la pièce choisie reçoit le +N d'une autre pièce du même emplacement, moins 2 crans, sans échec ni
+## parchemin (le prix des crans en cristaux) ; ses stats bonus des paliers gardés suivent ; l'autre revient à +0. Les sources
+## possibles, la plus haute d'abord.
+func _report(it: Dictionary) -> void:
+	var up := int(it.get("upgrade", 0))
+	if Profile.in_run:
+		detail.text = _head_text(it) + "
+
+[color=#c8c8d4]Reporter se fait au menu principal.[/color]"
+		return
+	var src := Forge.report_sources(it)
+	if src.is_empty():
+		detail.text = _head_text(it) + "
+
+" + ba_table([["Amélioration", "+%d" % up, "—", 0]]) 			+ "
+
+[color=#c8c8d4]Aucune pièce de cet emplacement ne peut lui donner plus que +%d.
+Une pièce à +7 donne +5 à la neuve, puis revient à +0. Sans échec ni parchemin.[/color]" % up
+		return
+	var best: Dictionary = src[0]
+	var target := Forge.report_target(best)
+	var have := (it.get("up_rolls", []) as Array).size()
+	var keep := (best.get("up_rolls", []) as Array).filter(func(r): return r is Array and r.size() >= 3 and int(r[2]) <= target).size()
+	var rows: Array = [["Amélioration", "+%d" % up, "+%d" % target, 1], ["Stats bonus", str(have), str(keep), signi(keep - have)]]
+	detail.text = _head_text(it) + "
+
+" + ba_table(rows) + "
+
+" + cost_line(Forge.report_cost(best, it)) 		+ "
+
+[color=#c8c8d4]La pièce qui donne revient à +0 (%d crans perdus au report).[/color]" % Forge.REPORT_LOSS
+	for s in src.slice(0, 4):
+		var sv: Dictionary = s
+		var nm := Items.display_name(sv).trim_prefix("+%d " % int(sv.get("upgrade", 0)))
+		var pb := ItemWidgets.action_button(actions, "Prendre le +%d de %s%s → +%d · %s" % [int(sv.get("upgrade", 0)), nm, " (portée)" if _worn(sv) else "",
+			Forge.report_target(sv), MerchantPages.price_words(Forge.report_cost(sv, it))], _ask_report.bind(sv, it))  # la confirmation d'abord, la barre ensuite
+		pb.disabled = not Profile.can_afford(Forge.report_cost(sv, it))
+		if pb.disabled:
+			pb.tooltip_text = "Il te manque %s." % MerchantPages.price_words({"crystal": int(Forge.report_cost(sv, it).crystal) - Profile.amount("crystal")})
+	_note("Sans échec ni parchemin : la neuve prend le +N moins %d crans et les stats bonus des paliers gardés." % Forge.REPORT_LOSS)
+
+
+## Confirmation du report (la pièce qui donne revient à +0 : irréversible), puis la barre de forge.
+func _ask_report(src: Dictionary, dst: Dictionary) -> InfoCard.Ask:
+	var users := Profile.item_users(String(src.get("uid", "")))
+	var text := "« %s » passe de +%d à +%d.
+« %s » revient de +%d à +0.%s
+
+Prix : %s (tu en as %s)." % [String(dst.get("name", "")), int(dst.get("upgrade", 0)),
+		Forge.report_target(src), String(src.get("name", "")), int(src.get("upgrade", 0)),
+		("
+Elle sert au préréglage : %s." % ", ".join(users)) if not users.is_empty() else "",
+		MerchantPages.price_words(Forge.report_cost(src, dst)), GearPower.fmt(Profile.amount("crystal"))]
+	return InfoCard.ask(self, "Reporter le +%d ?" % int(src.get("upgrade", 0)), text, "Reporter", func(): _run(func(): done(Forge.report(src, dst), 2.4)), false)
 
 
 func _dismantle(it: Dictionary) -> void:

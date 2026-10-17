@@ -42,6 +42,17 @@ const MYTHIC_DIFF := 2  # Dungeons.DIFF_NAMES : Mythique
 const KEY := "hero_xp"
 const KEY_START := "hero_start"  # niveau donné par la migration (rapport, tests)
 const KEY_NOTE := "hero_note"  # 1 : message de migration à montrer au lobby ; 2 : montré
+## Jalons du niveau de héros (lot GX-5, étude BM-GEAR P1) : un titre et des coffres d'apparence, rien d'autre (aucune stat,
+## aucune ressource de puissance). Donnés une fois, au passage du niveau ([method claim_milestones], clé `KEY_MILES`).
+const MILESTONES := [
+	{"level": 10, "title": "Aventurier", "chests": ["look_rare"]},
+	{"level": 25, "title": "Baroudeur", "chests": ["aura_rare"]},
+	{"level": 50, "title": "Héros aguerri", "chests": ["look_epic"]},
+	{"level": 75, "title": "Héros de renom", "chests": ["look_legend"]},
+	{"level": 90, "title": "Héros sans égal", "chests": ["look_legend", "aura_legend"]},
+]
+const KEY_MILES := "hero_miles"  # niveaux des jalons déjà donnés
+const MILESTONE_CHEST_LEVEL := 20  # niveau des coffres d'apparence (il ne change que la zone d'origine, comme les quêtes)
 
 class Events extends RefCounted:
 	signal xp_changed(total: float)
@@ -128,7 +139,9 @@ static func tooltip() -> String:
 		head += " · %s / %s XP" % [_n(xp_in_level()), _n(xp_needed())]
 	else:
 		head += " · niveau maximal"
-	return head + "\nCommun à toutes tes classes. Il monte en battant des monstres en Survie, Donjons, Tour, Ruée et Siège."
+	var nxt := next_milestone_line()  # lot GX-5 : le prochain jalon
+	return head + "\nCommun à toutes tes classes. Il monte en battant des monstres en Survie, Donjons, Tour, Ruée et Siège." \
+		+ ("\nProchain jalon · " + nxt if nxt != "" else "")
 
 
 static func _n(v: float) -> String:
@@ -197,8 +210,62 @@ static func add_xp(amount: float) -> float:
 	var a := level_for(before)
 	var b := level_for(after)
 	if b > a:
+		claim_milestones()
 		events.level_up.emit(a, b)
 	return after - before
+
+
+# --- jalons (lot GX-5) -------------------------------------------------------------------------
+## Jalons atteints et pas encore donnés : titre et coffres d'apparence (rangés dans le menu Coffres). Idempotent ; renvoie les
+## jalons donnés maintenant (pour le bilan) et les garde dans [member last_miles].
+static var last_miles: Array = []
+
+
+static func claim_milestones() -> Array:
+	var lv := level()
+	var got: Array = (Profile.records.get(KEY_MILES, []) as Array).map(func(x): return int(x)) if Profile.records.get(KEY_MILES) is Array else []
+	var fresh: Array = []
+	for m in MILESTONES:
+		if lv < int(m.level) or int(m.level) in got:
+			continue
+		got.append(int(m.level))
+		Profile.add_title(String(m.title))
+		for c in m.chests:
+			Profile.chest_add(String(c), MILESTONE_CHEST_LEVEL)
+		fresh.append(m)
+	if not fresh.is_empty():
+		Profile.records[KEY_MILES] = got
+		last_miles.append_array(fresh)
+	return fresh
+
+
+## Le jalon du niveau [param lv] a-t-il été donné ?
+static func milestone_claimed(lv: int) -> bool:
+	var got: Variant = Profile.records.get(KEY_MILES, [])
+	return got is Array and (got as Array).map(func(x): return int(x)).has(lv)
+
+
+## Prochain jalon au-dessus du niveau actuel ({} au-delà du dernier).
+static func next_milestone() -> Dictionary:
+	var lv := level()
+	for m in MILESTONES:
+		if int(m.level) > lv:
+			return m
+	return {}
+
+
+## Ce que donne un jalon : « titre « Baroudeur » · coffre d'aura rare ».
+static func milestone_text(m: Dictionary) -> String:
+	var parts: PackedStringArray = ["titre « %s »" % String(m.title)]
+	for c in m.chests:
+		parts.append(String(Rewards.TYPES.get(String(c), {}).get("name", c)).to_lower())
+	return " · ".join(parts)
+
+
+## Ligne de la jauge : « Niv. 25 : titre « Baroudeur » · coffre d'aura rare » ("" au-delà du dernier jalon).
+static func next_milestone_line() -> String:
+	var m := next_milestone()
+	return "" if m.is_empty() else "Niv. %d : %s" % [int(m.level), milestone_text(m)]
 
 
 # --- bilan -------------------------------------------------------------------------------------
@@ -215,6 +282,9 @@ static func decorate(spec: Dictionary) -> Dictionary:
 	if up > 0:
 		var notes: Array = (out.get("notes", []) as Array).duplicate()
 		notes.append("Ton héros passe au niveau %d." % int(last.to))
+		for m in last_miles:  # lot GX-5 : jalons franchis pendant la partie
+			notes.append("Jalon du niveau %d : %s (menu Coffres)." % [int(m.level), milestone_text(m)])
+		last_miles.clear()
 		out["notes"] = notes
 	return out
 
@@ -360,7 +430,13 @@ static func activity_line(activity_level: int) -> String:
 ## Message de migration (une fois, au lobby) : "" s'il n'y en a pas (ou plus).
 static func take_note() -> String:
 	ensure()
+	var miles := claim_milestones()  # lot GX-5 : un compte déjà haut reçoit ses jalons au menu principal
+	last_miles.clear()
+	var miles_text := ""
+	if not miles.is_empty():
+		miles_text = "Jalon%s du niveau de héros : %s. Coffres rangés dans le menu Coffres." % ["s" if miles.size() > 1 else "",
+			", ".join(miles.map(func(m): return "titre « %s »" % String(m.title)))]
 	if int(Profile.records.get(KEY_NOTE, 0)) != 1:
-		return ""
+		return miles_text
 	Profile.records[KEY_NOTE] = 2
-	return "Ton héros est niveau %d. Il garde ce niveau dans toutes les classes." % level()
+	return "Ton héros est niveau %d. Il garde ce niveau dans toutes les classes." % level() + ("\n" + miles_text if miles_text != "" else "")

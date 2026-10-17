@@ -23,6 +23,9 @@ extends Node
 ## légendaires à +0 : sans la Forge) ;
 ##   --even      (lot H56) le joueur suit la boussole (Compass._forge_step : la pièce la moins montée d'abord) : toutes les pièces
 ##               à +EVEN_FIRST avant d'en monter une plus haut ; sans le drapeau, chaque pièce va à +10 dans l'ordre des emplacements.
+##   --report    (lot GX-5) « Reporter le +N » : une pièce neuve prend le +N de celle qu'elle remplace moins Forge.REPORT_LOSS
+##               crans (Forge.report_target) quand c'est mieux que le sien ; l'ancienne repart à +0 ; prix du jeu : les cristaux
+##               des crans sans échec (Forge.report_cost) ; essais : --report-cost=free (gratuit) / scroll (un parchemin par cran).
 ## dungeon_0 (1er donjon Normal). Colonne H : -- --refonte --hubvalue --decote --mult=0.85,1.3,2.3,4.4 (12 comptes, 50 h ≈ 10 min).
 ##
 ## Lot H7 (niveau de héros, conception/progression/NIVEAU_HEROS.md §1.3, §1.4, §5 ; rapport R_H7.md) : modèle du jeu À VENIR
@@ -105,7 +108,19 @@ var hubvalue := "--hubvalue" in OS.get_cmdline_user_args()
 var decote := "--decote" in OS.get_cmdline_user_args()
 var boss_plans := "--bossplans" in OS.get_cmdline_user_args()  # lot A4 (voir l'en-tête)
 var even := "--even" in OS.get_cmdline_user_args()  # lot H56 (voir l'en-tête)
+var report := "--report" in OS.get_cmdline_user_args() or _arg("--report-cost=") != ""  # lot GX-5 (voir l'en-tête)
+var report_cost := _arg("--report-cost=") if _arg("--report-cost=") != "" else "crystal"  # crystal (le jeu), free, scroll
 const EVEN_FIRST := 5
+
+
+## Valeur de l'argument « --clé=valeur » ("" s'il manque) ; lot GX-5.
+static func _arg(prefix: String) -> String:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with(prefix):
+			return a.trim_prefix(prefix)
+	return ""
+
+
 var plan_rng := RandomNumberGenerator.new()  # tirages du coffre de plans à part : les autres tirages restent ceux de la série sans
 var diff_ratios: Array = GearPower.DIFF_RATIO.duplicate()
 ## Donjon sans salles de remplissage (refonte, lot A2) ; approximation de PR1 du plan par boss (plan après un donjon déjà fini).
@@ -870,7 +885,40 @@ func _wear(acc: Dictionary, slot: String, piece: Dictionary) -> void:
 	for g in old.get("sockets", []):
 		if g is Dictionary:
 			_add_bag(acc, Craft.gem_key(String(g.type), int(g.tier)), 1)
+	if report and not old.is_empty() and not old.get("starter", false) and Forge.report_target(old) > int(piece.get("upgrade", 0)) 			and _report_pay(acc, piece, Forge.report_target(old)):
+		var t := Forge.report_target(old)  # lot GX-5 : le +N suit la pièce neuve, moins 2 crans
+		piece["upgrade"] = t
+		piece["up_rolls"] = (old.get("up_rolls", []) as Array).filter(func(r): return r is Array and r.size() >= 3 and int(r[2]) <= t)
+		acc["reports"] = int(acc.get("reports", 0)) + 1
 	acc.gear[slot] = piece
+
+
+## Lot GX-5 : prix d'un report de +[param t] sur [param piece] selon --report-cost (payé s'il le peut ; false sinon).
+func _report_pay(acc: Dictionary, piece: Dictionary, t: int) -> bool:
+	match report_cost:
+		"crystal":
+			var c := Forge.upgrade_crystals(Craft._item_level(piece), int(piece.get("upgrade", 0)), t)
+			if int(acc.crystals) < c:
+				return false
+			acc.crystals = int(acc.crystals) - c
+			acc.spent_crystals = int(acc.spent_crystals) + c
+		"scroll":
+			var kind := Craft.fortify_kind(piece)
+			var need := t - int(piece.get("upgrade", 0))
+			var keys: Array = acc.bag.keys().filter(func(k): return String(k).begins_with("fortify:%s:" % kind) and int(String(k).split(":")[2]) >= Craft._item_level(piece))
+			keys.sort_custom(func(a, b): return int(String(a).split(":")[2]) < int(String(b).split(":")[2]))
+			var have := 0
+			for k in keys:
+				have += int(acc.bag[k])
+			if have < need:
+				return false
+			for k in keys:
+				var take := mini(need, int(acc.bag[k]))
+				_add_bag(acc, String(k), -take)
+				need -= take
+				if need <= 0:
+					break
+	return true
 
 
 func _enchant(acc: Dictionary, it: Dictionary) -> void:

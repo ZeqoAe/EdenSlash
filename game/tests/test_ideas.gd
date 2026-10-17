@@ -218,7 +218,7 @@ func _test_forge() -> void:
 	fb.refresh()
 	fb.grid.select_item(it)
 	await get_tree().process_frame
-	check("forge : six établis proposés", ForgeBench.BENCHES.size() == 6 and _button_with(fb, "Améliorer") != null and _button_with(fb, "Démonter") != null)
+	check("forge : sept établis proposés (Reporter, lot GX-5)", ForgeBench.BENCHES.size() == 7 and _button_with(fb, "Améliorer") != null and _button_with(fb, "Démonter") != null)
 	var up0 := int(it.get("upgrade", 0))
 	var b := _button_with(fb, "Fortifier")
 	check("forge : un bouton Fortifier est proposé avec le parchemin du sac", b != null)

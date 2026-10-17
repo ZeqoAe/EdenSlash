@@ -1040,8 +1040,92 @@ func add_talent(cls: String, id) -> bool:
 
 
 func reset_talents(cls: String) -> void:
+	if talents.has(cls) and not (talents[cls] as Dictionary).is_empty():
+		_talent_undo[cls] = (talents[cls] as Dictionary).duplicate()  # lot GX-5 : « Annuler » rend l'arbre d'avant
 	talents.erase(cls)
 	save_profile()
+
+
+# --- talents v2 (lot GX-5) : réaffecter sans punition ----------------------------------------------------------
+## Arbre d'avant la dernière réinitialisation, par classe (le temps de la séance : rien n'est sauvegardé).
+var _talent_undo := {}
+
+
+## Une réinitialisation de [param cls] peut-elle être annulée ?
+func can_undo_talents(cls: String) -> bool:
+	return _talent_undo.has(cls)
+
+
+## Annule la dernière réinitialisation de [param cls] si l'arbre est encore vide (sinon on garde ce qui a été refait).
+func undo_talent_reset(cls: String) -> bool:
+	if not _talent_undo.has(cls):
+		return false
+	var old: Dictionary = _talent_undo[cls]
+	_talent_undo.erase(cls)
+	if talent_spent(cls) > 0 or not talent_set_valid(cls, old):
+		return false
+	talents[cls] = old.duplicate()
+	save_profile()
+	return true
+
+
+## Les rangs [param ranks] (id -> rang) sont-ils un arbre que l'on peut bâtir point par point ? On ajoute un point dès
+## qu'il est permis (palier de points dépensés, prérequis), jusqu'à tout placer : ajouter un point n'en interdit jamais
+## un autre, donc l'ordre ne compte pas.
+func talent_set_valid(cls: String, ranks: Dictionary) -> bool:
+	var want := {}
+	var total := 0
+	for k in ranks:
+		var n := int(ranks[k])
+		if n <= 0:
+			continue
+		var c := _talent_cell(cls, k)
+		if c.is_empty() or n > int(c.max):
+			return false
+		want[str(int(k))] = n
+		total += n
+	if total > talent_points(cls):
+		return false
+	var have := {}
+	var spent := 0
+	var moved := true
+	while moved and spent < total:
+		moved = false
+		for k in want:
+			var c := _talent_cell(cls, k)
+			while int(have.get(k, 0)) < int(want[k]) and spent >= int(c.get("spent", 0)) \
+					and (int(c.req) <= 0 or int(have.get(str(int(c.req)), 0)) >= int(c.req_pts)):
+				have[k] = int(have.get(k, 0)) + 1
+				spent += 1
+				moved = true
+	return spent == total
+
+
+## Pourquoi un point ne peut pas être retiré de [param id] ("" si possible) : un talent plus loin dans l'arbre en a besoin.
+func talent_remove_block(cls: String, id) -> String:
+	var r := talent_rank(cls, id)
+	if r <= 0:
+		return "aucun point placé"
+	var after: Dictionary = (talents.get(cls, {}) as Dictionary).duplicate()
+	after[str(int(id))] = r - 1
+	if talent_set_valid(cls, after):
+		return ""
+	return "un talent plus loin dans l'arbre en a besoin"
+
+
+## Retire un point de [param id] (gratuit) ; false si un autre talent en dépend.
+func remove_talent(cls: String, id) -> bool:
+	if talent_remove_block(cls, id) != "":
+		return false
+	var k := str(int(id))
+	var r := talent_rank(cls, id) - 1
+	if r <= 0:
+		talents[cls].erase(k)
+	else:
+		talents[cls][k] = r
+	_talent_undo.erase(cls)
+	save_profile()
+	return true
 
 
 ## Certificats débloqués (toutes classes) : [{key, cls, passif}].

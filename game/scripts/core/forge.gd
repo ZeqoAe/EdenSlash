@@ -381,3 +381,84 @@ static func fuse_all() -> Dictionary:
 		if d > 0:
 			parts.append("%s ×%d" % [Craft.label(String(k)), d])
 	return {"count": n, "text": "%s : %s" % [GearPower.plural(n, "fusion", "fusions"), ", ".join(parts)]}
+
+
+# --- Reporter le +N (lot GX-5, étude BM-GEAR Q2 : « oui, à −2 crans ») ---------------------------------------------
+## Une pièce neuve (de niveau égal ou plus haut) du même emplacement prend le +N de l'ancienne moins REPORT_LOSS crans, avec ses stats bonus des paliers
+## gardés (+4, +6, +8 au plus) ; l'ancienne revient à +0. Prix : les cristaux des crans reçus comme si chaque essai réussissait
+## (`report_cost`, sans parchemin ni échec) ; mesuré par `progression_sim --report-cost=crystal` (R_GX5 : gratuit, l'équipement
+## 80-90 correct venait 2 à 4 h trop tôt, sous les 30 h). Au hub seulement ; une pièce gardée (verrou) ne donne rien.
+const REPORT_LOSS := 2
+const REPORT_MIN := REPORT_LOSS + 1  # une pièce sous +3 n'a rien à reporter
+
+
+## Même famille d'emplacement : armes entre elles (tous types), sinon le même emplacement.
+static func report_same_slot(a: Dictionary, b: Dictionary) -> bool:
+	return String(a.get("slot", "")) == String(b.get("slot", "")) and String(a.get("slot", "")) in Items.SLOTS
+
+
+## +N que [param dst] aurait en prenant celui de [param src].
+static func report_target(src: Dictionary) -> int:
+	return maxi(0, int(src.get("upgrade", 0)) - REPORT_LOSS)
+
+
+## Pourquoi [param src] ne peut pas donner son +N à [param dst] ("" si possible).
+static func report_block(src: Dictionary, dst: Dictionary) -> String:
+	if Profile.in_run:
+		return "Au menu principal seulement."
+	if src.is_empty() or dst.is_empty() or String(src.get("uid", "")) == String(dst.get("uid", "")):
+		return "Choisis une autre pièce."
+	if Items.is_unique(dst) or not report_same_slot(src, dst):
+		return "Il faut une pièce du même emplacement."
+	if src.get("locked", false):
+		return "La pièce qui donne est gardée (verrou)."
+	if Items.required_level(dst) < Items.required_level(src):
+		return "Il faut une pièce neuve de niveau %d ou plus." % Items.required_level(src)
+	if int(src.get("upgrade", 0)) < REPORT_MIN:
+		return "La pièce qui donne doit être à +%d au moins." % REPORT_MIN
+	if report_target(src) <= int(dst.get("upgrade", 0)):
+		return "Rien à gagner : +%d moins %d crans ne dépasse pas +%d." % [int(src.get("upgrade", 0)), REPORT_LOSS, int(dst.get("upgrade", 0))]
+	return ""
+
+
+## Prix du report de [param src] sur [param dst] : {"crystal": n} (les crans reçus sans échec, au niveau de la neuve).
+static func report_cost(src: Dictionary, dst: Dictionary) -> Dictionary:
+	return {"crystal": upgrade_crystals(Craft._item_level(dst), int(dst.get("upgrade", 0)), maxi(report_target(src), int(dst.get("upgrade", 0))))}
+
+
+## Pièces du hub (portées et coffre commun) qui peuvent donner leur +N à [param dst], la plus haute d'abord.
+static func report_sources(dst: Dictionary) -> Array:
+	var out: Array = []
+	if Profile.in_run:
+		return out
+	for it in Profile.equipped.values() + Profile.inventory:
+		if it is Dictionary and report_block(it, dst) == "":
+			out.append(it)
+	out.sort_custom(func(a, b): return int(a.get("upgrade", 0)) > int(b.get("upgrade", 0)))
+	return out
+
+
+## Reporte le +N de [param src] sur [param dst] ; renvoie le message (refus : la raison).
+static func report(src: Dictionary, dst: Dictionary) -> String:
+	var why := report_block(src, dst)
+	if why != "":
+		return why
+	if not Profile.pay(report_cost(src, dst)):
+		return "Pas assez de cristaux."
+	var target := report_target(src)
+	var rolls: Array = []
+	for r in src.get("up_rolls", []):
+		if r is Array and r.size() >= 3 and int(r[2]) <= target:
+			rolls.append((r as Array).duplicate())
+	dst["upgrade"] = target
+	dst["up_rolls"] = rolls
+	for k in ["pity", "pity_n", "reroll"]:
+		dst.erase(k)
+		src.erase(k)
+	src["upgrade"] = 0
+	src.erase("up_rolls")
+	Profile._sync_vault()
+	Profile.changed.emit()
+	Profile.save_profile()
+	return "Reporté : %s passe à +%d%s ; %s revient à +0." % [String(dst.get("name", "")), target,
+		(" avec %d stat%s bonus" % [rolls.size(), "s" if rolls.size() > 1 else ""]) if not rolls.is_empty() else "", String(src.get("name", ""))]

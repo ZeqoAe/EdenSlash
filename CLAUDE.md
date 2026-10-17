@@ -292,6 +292,12 @@ annulable ; « Le meilleur ▲N » (`PresetBar.best_plan`) ; `RunDirector.plan_b
 **Tout monter, préréglages** (lot GX-4, `R_GX4.md`) : Forge « Tout monter à +5 » (`Forge.even_pieces` / `plan_even` / `even_step` / `even_all`, séance
 `ForgeBench._even_*` annulable) ; gemmes `Craft.remove_gem` / `gem_value_text`, `Forge.fuse_all` ; `Profile.PRESETS_PER_CLASS` 5 (`_class_presets` complète),
 `preset_gear`, tenue liée (clé `look`), `PresetBar.compare_plan` ; recherche `ItemGrid.enable_search` / `name_matches` ; X dessiné (meta `pad_x`, `UiNav.x_hint`) ; `test_gx4`, `shot_gx4`.
+**Talents v2, titres, Registre v2, jalons, Reporter** (lot GX-5, `R_GX5.md`) : talents (`Profile.remove_talent` / `talent_set_valid` / `undo_talent_reset`,
+`TalentsPage.effect_at`, arbre `TalentsPage.TreeView`, points toujours visibles) ; titres `core/titles.gd` (`Titles.catalog` : toutes les sources, une
+source nouvelle s'y ajoute) + Héros > Titres `ui/titles_page.gd` ; Registre (`ClassGear.top_stats` / `missing` / `neighbours` / `compare_line`, fiche dépliée) ;
+coffres `ChestsPage.ask_open_all` / `recap_text` ; jalons `HeroLevel.MILESTONES` (titres et coffres d'apparence seulement, `records.hero_miles`, onglet
+« Niveau de héros » du Journal) ; préréglage sur la page d'une activité `ui/preset_pick.gd` (épinglé au-dessus du bouton) ; Forge > Reporter
+(`Forge.report*`, +N − 2 sur une pièce neuve, prix = crans sans échec `Forge.report_cost` : mesuré, gratuit passait sous 30 h ; `progression_sim --report-cost=…`) ; `test_gx5`, `shot_gx5`.
 **Modes scellés** (lot H2, `R_H2.md`) : `Modes.sealed()` (Survivant, Battle royale) coupe talents, certificats, plateau, archive, auras,
 sorts fermés par la maîtrise et cartes à débloquer (`Run.passive_stats` / `skill_talent` / `roll_cards` / `certificate_pool`,
 `Player.recalc_stats` / `knock_immune`) ; tout nouvel effet du compte en combat passe par ce test ; `test_h2`, `hl_probe --sealed`.

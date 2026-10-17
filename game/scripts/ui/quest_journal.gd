@@ -12,7 +12,8 @@ extends PageScreen
 ## [/codeblock]
 
 const LAYER := 32  # au-dessus des écrans du menu (5), de la pause (15), des Paramètres et du bilan (30)
-const TABS := [["day", "Aujourd'hui"], ["week", "Cette semaine"], ["class", "Classes"], ["series", "Série"], ["done", "Terminées"]]
+const TABS := [["day", "Aujourd'hui"], ["week", "Cette semaine"], ["class", "Classes"], ["series", "Série"], ["done", "Terminées"],
+	["hero", "Niveau de héros"]]  # lot GX-5 : jalons du niveau de héros (onglet ajouté à la fin)
 const COL_W := 980.0
 
 var on_go := Callable()  # Callable(go: Dictionary) : « Y aller » (vide en partie : le bouton n'est pas proposé)
@@ -124,6 +125,8 @@ class JournalPage extends Control:
 				return "Un jour d'absence pardonné"
 			"done":
 				return "Ce que tu as accompli"
+			"hero":
+				return "Jalons : titres et apparences"
 		return ""
 
 	func refresh() -> void:
@@ -134,6 +137,10 @@ class JournalPage extends Control:
 			_col.remove_child(c)
 			c.queue_free()
 		_col.custom_minimum_size.x = minf(COL_W, get_viewport().get_visible_rect().size.x - 120.0)
+		if kind == "hero":  # lot GX-5 : ouvert dès le départ (le niveau de héros ne dépend pas des quêtes)
+			_hero_page()
+			_restore_scroll.call_deferred(keep)
+			return
 		if not Quests.enabled():
 			var l := Hud._label(_col, Unlocks.lock_text("daily"), 17, UiTheme.MUTED)
 			l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -196,6 +203,27 @@ class JournalPage extends Control:
 	func _restore_scroll(v: int) -> void:
 		if is_instance_valid(_scroll):
 			_scroll.scroll_vertical = v
+
+	## Lot GX-5 : le niveau de héros et ses jalons (10, 25, 50, 75, 90) : ce que chacun donne, donné ou à venir.
+	func _hero_page() -> void:
+		var lv := HeroLevel.level()
+		QuestsPage._section(_col, "Niveau de héros %d" % lv, "Commun à toutes tes classes. Chaque jalon donne un titre et des apparences, rien d'autre.")
+		var g := HeroLevelGauge.new(17, 360.0)
+		g.show_milestone = true
+		_col.add_child(g)
+		QuestsPage._section(_col, "Jalons")
+		for m in HeroLevel.MILESTONES:
+			var got := HeroLevel.milestone_claimed(int(m.level)) or lv >= int(m.level)
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 10)
+			_col.add_child(row)
+			Ico.mark(row, "quest_done" if got else "quest_todo", 18)
+			var t := Hud._label(row, "Niveau %d : %s" % [int(m.level), HeroLevel.milestone_text(m)], 16, UiTheme.MUTED if got else UiTheme.TEXT)
+			t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			var left := Hud._label(row, "obtenu" if got else "encore %d niveau%s" % [int(m.level) - lv, "x" if int(m.level) - lv > 1 else ""], 14, CarnetPages.GREEN if got else UiTheme.MUTED)
+			left.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_note("Il monte en battant des monstres en Survie, Donjons, Tour, Ruée et Siège. Les titres se portent dans Héros > Titres ; les coffres vont au menu Coffres.")
 
 	func _note(text: String) -> void:
 		var l := Hud._label(_col, text, 14, UiTheme.MUTED)

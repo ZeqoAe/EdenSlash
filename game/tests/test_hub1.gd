@@ -204,7 +204,7 @@ func _test_journal() -> void:
 	var went := [{}]
 	var j := QuestJournal.open_on(self, 0, func(g): went[0] = g, func(_c): pass)
 	await _frames(3)
-	check("Journal : ouvert, 5 onglets", j.is_open() and j.page_count() == 5)
+	check("Journal : ouvert, 6 onglets (Niveau de héros, lot GX-5)", j.is_open() and j.page_count() == 6)
 	var page: Control = j.page(0)
 	var buttons := _buttons(page)
 	var pins := buttons.filter(func(b): return String(b.text).contains("Suivre"))

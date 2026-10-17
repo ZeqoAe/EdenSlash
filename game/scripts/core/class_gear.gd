@@ -529,6 +529,111 @@ static func hero_capped(pe: float) -> bool:
 	return hl < GearPower.target_level() and pe >= EQUIPPED_RATIO * float(GearPower.expected(hl))
 
 
+# --- Registre v2 (lot GX-5) ------------------------------------------------------------------
+## Stats qui comptent le plus pour [param cid] : [[stat, poids]] triées par poids (★ dès 1,2), [param n] au plus.
+static func top_stats(cid: String, n := 5) -> Array:
+	var w: Dictionary = profile(cid).get("weights", {})
+	var keys := w.keys().filter(func(k): return float(w[k]) >= 1.0 and (Items.STAT_NAMES.has(k) or Items.EXTRA_STAT_NAMES.has(k)))
+	keys.sort_custom(func(a, b): return _heavier(a, b, w))
+	var out: Array = []
+	var labels := {}
+	for k in keys:
+		var lab := stat_label(String(k))
+		if labels.has(lab):
+			continue  # « def » et « def_pct » : une seule « Défense »
+		labels[lab] = true
+		out.append([String(k), float(w[k])])
+		if out.size() >= n:
+			break
+	return out
+
+
+static func _heavier(a, b, w: Dictionary) -> bool:
+	if not is_equal_approx(float(w[a]), float(w[b])):
+		return float(w[a]) > float(w[b])
+	return String(a) < String(b)
+
+
+## Nom court d'une stat pour le Registre (« Défense », « PV max »).
+static func stat_label(stat: String) -> String:
+	return String(Items.STAT_NAMES.get(stat, Items.EXTRA_STAT_NAMES.get(stat, stat)))
+
+
+## Profil en une ligne : « Rempart · armure de plates · dégâts physiques ».
+static func profile_line(cid: String) -> String:
+	var p := profile(cid)
+	if p.is_empty():
+		return ""
+	return "%s · armure de %s · dégâts %s" % [String(p.get("name", "")), String(p.get("armor", "")), "magiques" if String(p.get("dmg", "phys")) == "mag" else "physiques"]
+
+
+## Tout ce qui manque à [param cid], dans l'ordre où le Registre le conseille : [{text, activity, unlock}] (la fiche [param e]
+## d'[method entry] ne dit que le premier). Vide : équipement optimal.
+static func missing(cid: String, e: Dictionary = {}) -> Array:
+	if e.is_empty():
+		e = entry(cid)
+	var out: Array = []
+	if not Progression.class_unlocked(cid):
+		return [{"text": "la classe", "activity": Progression.mission_text(cid), "unlock": ""}]
+	var slots := Items.SLOTS.size()
+	var g := gear_of(cid)
+	var wname := String(GameData.weapon_type(Items.default_weapon_type(cid)).get("name", "")).to_lower()
+	if String(e.weapon_state) != "ok":
+		out.append({"text": "une arme (%s)%s" % [wname, " : celle de départ" if String(e.weapon_state) == "base" else ""], "activity": "Survie, puis Atelier", "unlock": "armory"})
+	var empty: Array = []
+	for s in Items.SLOTS:
+		if s == "weapon":
+			continue
+		var it: Dictionary = g.get(s, {})
+		if it.is_empty() or it.get("starter", false):
+			empty.append(String(Items.SLOT_NAMES.get(s, s)))
+	if not empty.is_empty():
+		out.append({"text": "%s (%s)" % [_plural(empty.size(), "pièce"), ", ".join(empty)], "activity": "Survie, puis Atelier", "unlock": "armory"})
+	if float(e.ratio) < EQUIPPED_RATIO:
+		if hero_capped(float(e.pe)):
+			out.append({"text": "du niveau de héros (tu es niveau %d)" % HeroLevel.level(), "activity": "Monte ton niveau de héros en Survie", "unlock": ""})
+		else:
+			out.append({"text": "des pièces de plus haut niveau (PE %s / %s)" % [GearPower.fmt(int(e.pe)), GearPower.fmt(int(e.expected))], "activity": "Survie, puis Atelier", "unlock": "armory"})
+	if maxi(int(e.arch), int(e.spirits)) < PANOPLY:
+		out.append({"text": "une panoplie complète (%d / %d)" % [maxi(int(e.arch), int(e.spirits)), PANOPLY], "activity": "Donjons ou Panthéon", "unlock": "dungeons"})
+	if int(e.plus10) < slots:
+		out.append({"text": _plural(slots - int(e.plus10), "pièce") + " à monter à +10", "activity": "Forge", "unlock": "forge"})
+	if int(e.gems) < int(e.gem_max):
+		out.append({"text": "%s à sertir" % _plural(int(e.gem_max) - int(e.gems), "gemme"), "activity": "La Tour, puis Forge", "unlock": "tower"})
+	if int(e.enchants) < slots:
+		out.append({"text": "%s à enchanter" % _plural(slots - int(e.enchants), "pièce"), "activity": "Le Siège, puis Forge", "unlock": "siege"})
+	return out
+
+
+## Classes voisines de [param cid] pour la comparaison du Registre : celles de son arbre (déblocage), puis celles de son
+## profil de stats (leurs pièces lui vont), débloquées d'abord ; [param n] au plus.
+static func neighbours(cid: String, n := 2) -> Array:
+	var tree := Economy.tree_neighbours(cid)
+	var same := classes_of(profile_id(cid)).filter(func(c): return c != cid and not c in tree)
+	var all: Array = tree + same
+	var open := all.filter(func(c): return Progression.class_unlocked(String(c)))
+	var shut := all.filter(func(c): return not Progression.class_unlocked(String(c)))
+	return (open + shut).slice(0, n)
+
+
+## Phrase de comparaison de [param cid] avec la voisine [param other] (fiches [param a], [param b] d'[method entry]).
+static func compare_line(cid: String, other: String, a: Dictionary, b: Dictionary) -> String:
+	var same := profile_id(cid) == profile_id(other)
+	var d := int(b.pe) - int(a.pe)
+	var who := class_label(other)
+	if not Progression.class_unlocked(other):
+		return "%s : classe à débloquer (%s)." % [who, Progression.mission_text(other)]
+	if d > 0 and same:
+		return "%s a %s PE de plus, même profil : ses pièces t'iraient (Héros > Gérer > Appliquer à la famille)." % [who, GearPower.fmt(d)]
+	if d > 0:
+		return "%s a %s PE de plus, profil %s : ses pièces comptent d'autres stats." % [who, GearPower.fmt(d), profile_name(profile_id(other))]
+	if d < 0 and same:
+		return "%s a %s PE de moins, même profil : tes pièces lui iraient." % [who, GearPower.fmt(-d)]
+	if d < 0:
+		return "%s a %s PE de moins." % [who, GearPower.fmt(-d)]
+	return "%s : même puissance d'équipement." % who
+
+
 ## Fiches des 60 classes (ordre de data/classes.json).
 static func entries() -> Array:
 	var m := vault_map()
