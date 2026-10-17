@@ -171,7 +171,7 @@ func _save_quit() -> void:
 	Run.finish(SurvivorSave.RESULT)
 	Profile.end_run_survival()
 	get_tree().paused = false
-	get_tree().change_scene_to_file.call_deferred("res://scenes/lobby.tscn")
+	LoadScreen.to_lobby(get_tree())  # (lot PERF-1 : écran de chargement)
 
 
 # --- équipement --------------------------------------------------------------------------------------------------------

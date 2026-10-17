@@ -129,7 +129,7 @@ func buttons_for(got: Dictionary) -> Array:
 		"primary": true, "call": _replay.bind(got)}
 	var menu := {"text": "Retour au menu", "call": func():
 		get_tree().paused = false
-		get_tree().change_scene_to_file("res://scenes/lobby.tscn")}
+		LoadScreen.to_lobby(get_tree())}
 	var train := practice_target(got)
 	var out: Array = [replay]
 	if retry_boss(got):
@@ -168,7 +168,7 @@ func _replay(got: Dictionary) -> void:
 		Tower.start_siege(Profile.selected_class, zid, diff, Dungeons.last_allies)
 	else:
 		Tower.start_dungeon(Profile.selected_class, zid, diff, Dungeons.last_allies, String(got.get("boss", "")))
-	get_tree().change_scene_to_file("res://scenes/world.tscn")
+	LoadScreen.go(get_tree(), "res://scenes/world.tscn")
 
 
 ## « Ce tirage encore » : la graine et les boss d'avant de ce tirage (RushBoard.replay), puis la Ruée.
@@ -181,13 +181,13 @@ func _replay_draw(seed: int, prev: int, diff: int) -> void:
 		Rush._cache.clear()
 	Profile.save_profile()
 	Tower.start_dungeon(Profile.selected_class, Dungeons.RUSH, diff, Dungeons.last_allies)
-	get_tree().change_scene_to_file("res://scenes/world.tscn")
+	LoadScreen.go(get_tree(), "res://scenes/world.tscn")
 
 
 func _practice(bid: String, diff: int) -> void:
 	get_tree().paused = false
 	BossPractice.start(Profile.selected_class, bid, diff)
-	get_tree().change_scene_to_file("res://scenes/world.tscn")
+	LoadScreen.go(get_tree(), "res://scenes/world.tscn")
 
 
 ## « Autre boss » : le menu principal s'ouvre directement sur la page Donjons (sur ce boss : la liste est dessous).
@@ -196,7 +196,7 @@ func _other_boss(bid: String) -> void:
 	if BossLibrary.has(bid):
 		DungeonPage.sel = bid
 	DungeonPage.lobby_request = "dungeon"
-	get_tree().change_scene_to_file("res://scenes/lobby.tscn")
+	LoadScreen.to_lobby(get_tree())
 
 
 ## « Dégâts au boss : Prêtre en tête (48 %), dernier coup : toi » ("" : rien à dire).
@@ -215,7 +215,7 @@ static func siege_board_line(rows: Array) -> String:
 func _retry(zid: String, diff: int, bid: String) -> void:
 	get_tree().paused = false
 	Tower.start_dungeon(Profile.selected_class, zid, diff, Dungeons.last_allies, bid, Dungeons.ROOMS.size())
-	get_tree().change_scene_to_file("res://scenes/world.tscn")
+	LoadScreen.go(get_tree(), "res://scenes/world.tscn")
 
 
 ## Tuile du temps : contre le record de [param key] s'il y en a un pour cette partie, sinon la durée de la partie.

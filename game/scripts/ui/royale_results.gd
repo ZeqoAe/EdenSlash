@@ -70,7 +70,7 @@ func show_results(place: int, kills: int, level: int, chests: int, secs: float, 
 			{"text": "Rejouer", "primary": true, "call": func():
 				get_tree().paused = false
 				Royale.start(Profile.selected_class)
-				get_tree().change_scene_to_file("res://scenes/world.tscn")},
+				LoadScreen.go(get_tree(), "res://scenes/world.tscn")},
 			{"text": "Menu principal", "call": func(): Royale.leave(get_tree())},
 		],
 	})

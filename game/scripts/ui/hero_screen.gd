@@ -280,10 +280,12 @@ func show_section(id: String) -> void:
 		"help":
 			_open_guide()
 		_:
+			var hint: CanvasLayer = LoadScreen.hint_first(self, "section:" + id) if is_open() else null  # (lot PERF-1 : 1re ouverture, Classe…)
 			current = id
 			for k in _pages:
 				_pages[k].visible = k == current
 			refresh()
+			LoadScreen.hint_done(hint)
 	for k in _nav:
 		_nav[k].set_pressed_no_signal(k == current)
 

@@ -85,4 +85,4 @@ static func leave(tree: SceneTree, go := true) -> void:
 	DungeonPage.lobby_request = "dungeon"
 	tree.paused = false
 	if go:  # (tests : false, la scène reste)
-		tree.change_scene_to_file.call_deferred("res://scenes/lobby.tscn")
+		LoadScreen.to_lobby(tree)

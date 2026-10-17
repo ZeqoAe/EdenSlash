@@ -62,10 +62,21 @@ func _play(tree: SceneTree, work: Callable) -> void:
 	var was_paused := tree.paused
 	_playing = true
 	tree.paused = true
+	# lot PERF-1 : sur le noir, les pastilles de chargement (la génération de la carte fige l'image ; jamais de noir muet)
+	var dots := UiTheme.Loading.new("Chargement de la carte…")
+	dots.set_anchors_preset(Control.PRESET_CENTER)
+	dots.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	dots.grow_vertical = Control.GROW_DIRECTION_BOTH
+	dots.modulate.a = 0.0
+	_rect.add_child(dots)
+	_rect.mouse_default_cursor_shape = Control.CURSOR_BUSY
 	var tw := create_tween()
 	tw.tween_property(_rect, "color:a", 1.0, OUT)
+	tw.parallel().tween_property(dots, "modulate:a", 1.0, OUT)
 	await tw.finished
+	await tree.process_frame  # (l'image avec les pastilles est affichée avant le calcul)
 	work.call()
+	dots.queue_free()
 	await tree.process_frame
 	await tree.process_frame
 	_playing = false

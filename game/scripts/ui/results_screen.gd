@@ -280,7 +280,7 @@ func _replay() -> void:
 		Survivor.start(Run.class_id, Survivor.zone_id, Survivor.palier)  # même classe, même zone, même palier
 	else:
 		Run.start_survival(Profile.selected_class, epoch)
-	get_tree().change_scene_to_file("res://scenes/world.tscn")
+	LoadScreen.go(get_tree(), "res://scenes/world.tscn")
 
 
 ## Survivant : retour au lobby sur la page du mode, avec le choix de classe ouvert.
@@ -292,4 +292,4 @@ func _change_class() -> void:
 func _finish() -> void:
 	Profile.end_run_survival()
 	get_tree().paused = false
-	get_tree().change_scene_to_file("res://scenes/lobby.tscn")
+	LoadScreen.to_lobby(get_tree())

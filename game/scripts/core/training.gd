@@ -77,7 +77,7 @@ static func leave(tree: SceneTree) -> void:
 	Profile.bag = {}
 	Profile._lobby_view()
 	tree.paused = false
-	tree.change_scene_to_file.call_deferred("res://scenes/lobby.tscn")
+	LoadScreen.to_lobby(tree)
 
 
 ## Change de classe sans quitter l'entraînement (la scène est relancée).
@@ -88,4 +88,4 @@ static func restart(cid: String, tree: SceneTree) -> void:
 	Profile._lobby_view()
 	start(cid)
 	tree.paused = false
-	tree.change_scene_to_file.call_deferred("res://scenes/world.tscn")
+	LoadScreen.go(tree, "res://scenes/world.tscn")

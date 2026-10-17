@@ -609,6 +609,15 @@ sources du tirage) ; `Profile.collected` / `outfit_unlocked` passent par un inde
 (profil, réglages, dernier emplacement, rivaux, préréglages de sorts, dev_edits) passe par `SafeFile.write/read` (`.tmp` relu et validé, ancien fichier gardé en `.bak`, repli
 automatique et message sobre au lobby si le fichier principal est abîmé) ; un nouveau fichier de sauvegarde doit faire de même.
 
+**Chargements (lot PERF-1, `conception/nuit_15_10/R_PERF1.md`)** : tout changement de scène passe par `LoadScreen.go(tree, scène, étapes)` ou
+`LoadScreen.to_lobby(tree)` (`ui/load_screen.gd` : voile, autocollant « Chargement », barre réelle, astuce, curseur d'attente ; scène lue en tâche
+de fond, étapes une par image, jeu en pause puis pause d'avant rendue au changement) ; `test_perf1` refuse tout `change_scene_to_file` ailleurs et
+toute image de plus de 300 ms sans indicateur. Calcul long à la 1re ouverture d'une page : `LoadScreen.hint_first(nœud, clé)` / `hint_done` (pastille
+dessinée tout de suite par `force_draw`). Préparations en tâche de fond : `EdenFx.warm_class`, `ProcMap.warm_models` (`user://warm_models.json`),
+`BossPortrait._prefetch`, `MapBackdrop.prepare`. Mesures en fenêtre : `python tools/perf_loads.py` (sonde `tools/load_probe.tscn`, 3 passages,
+temps CPU du fil principal, à-coups avec compilations de shaders, `--shots` : captures des écrans de chargement) ; Échiquier : `tools/ac_ready_probe.tscn`
+(coût de « Prêt » manche par manche ; `AutochessDirector` crée les unités au fil des images, budget `SPAWN_BUDGET_MS`, fichiers lus en tâche de fond).
+
 ## Noms français (lot U10)
 `data/names_fr.json` (anglais exact -> français : objets, panoplies, monstres, zones, apparences) est appliqué UNE fois par
 `NamesFr.apply` (appelé par `GameData._ready`) : `name` devient français, l'original reste dans `name_en`. Pièce éveillée : `GameData.is_awakened(e)`

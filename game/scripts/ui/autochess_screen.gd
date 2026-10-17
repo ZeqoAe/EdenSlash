@@ -1782,7 +1782,7 @@ func _quit() -> void:
 	get_tree().paused = false
 	if AutochessRewards.has_snapshot():
 		AutochessRewards.restore_hub()  # partie laissée en cours (reprise possible) : le hub est remis tel quel
-	get_tree().change_scene_to_file("res://scenes/lobby.tscn")
+	LoadScreen.to_lobby(get_tree())
 
 
 # --- fiches de découverte (lot AC-I) ----------------------------------------------------------------------------------

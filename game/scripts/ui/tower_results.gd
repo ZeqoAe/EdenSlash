@@ -71,7 +71,7 @@ func show_results(result: String, floor_reached: int, got: Dictionary) -> void:
 func _restart(from: int) -> void:
 	get_tree().paused = false
 	Tower.start(Profile.selected_class, Tower.difficulty, from)
-	get_tree().change_scene_to_file("res://scenes/world.tscn")
+	LoadScreen.go(get_tree(), "res://scenes/world.tscn")
 
 
 ## Étage de reprise proposé après une chute ou un arrêt : le palier de reprise (début du bloc de 10 du record) s'il est plus

@@ -76,7 +76,7 @@ func show_results(won: bool, score: String, opponent: String, diff: int, total: 
 			{"text": replay_text, "primary": true, "call": func():
 				get_tree().paused = false
 				Duel.replay()
-				get_tree().change_scene_to_file("res://scenes/world.tscn")},
+				LoadScreen.go(get_tree(), "res://scenes/world.tscn")},
 			{"text": "Retour au menu", "call": func(): Duel.leave(get_tree())},
 		],
 	})

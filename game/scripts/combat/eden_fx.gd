@@ -189,7 +189,88 @@ static func hit_scale(fx_name: String, radius: float) -> float:
 	return fit_scale(fx_name, radius, GameData.HERO_SCALE * 1.2, 0.5, 1.5)
 
 
+## Lot PERF-1 : effets préparés en tâche de fond (WorkerThreadPool) : nom -> id de tâche ; résultat [scène, données,
+## {chemin de texture: Texture2D}] ou null (la tâche n'a rien pu préparer : _load refait alors son chemin habituel).
+static var _jobs := {}
+static var _job_out := {}
+static var _job_lock := Mutex.new()
+
+
+## Lot PERF-1 : les effets des sorts de la classe [param cid] (lancement et impact) et des coups communs se préparent en
+## tâche de fond dès que le héros existe : le premier sort lancé n'attend plus la lecture de son .fx.json, de son .glb et de
+## ses textures (à-coups de 50 à 120 ms mesurés en arène 3 contre 3). Rien ne change à l'effet joué.
+static func warm_class(cid: String) -> void:
+	var names: Array = ["s00341", "s00141", "s00541"]
+	for s in GameData.class_data(cid).get("skills", []):
+		var fx = s.get("fx", {}) if s is Dictionary else {}
+		if fx is Dictionary:
+			names.append(String(fx.get("cast", "")))
+			names.append(String(fx.get("hit", "")))
+	warm(names)
+
+
+## Prépare en tâche de fond les effets [param names] (ceux déjà chargés ou en cours sont ignorés).
+static func warm(names: Array) -> void:
+	if DisplayServer.get_name() == "headless":
+		return  # (serveur sans écran, tests : rien à gagner, et son rendu factice ne crée pas de maillages hors du fil principal)
+	_drain(false)
+	for nm in names:
+		var name := String(nm)
+		if name == "" or _cache.has(name) or _jobs.has(name):
+			continue
+		_jobs[name] = WorkerThreadPool.add_task(_warm_job.bind(name), false, "EdenFx.warm")
+
+
+static func _warm_job(name: String) -> void:
+	var out = null
+	var js := "res://assets/fx/%s.fx.json" % name
+	if FileAccess.file_exists(js):
+		var data = JSON.parse_string(FileAccess.get_file_as_string(js))
+		if data is Dictionary:
+			var glb := "res://assets/fx/%s.glb" % String(data.get("glb", name))
+			var scene: PackedScene = load(glb) as PackedScene if ResourceLoader.exists(glb) else null
+			if scene != null:
+				var texs := {}
+				var mats = data.get("materials", {})
+				for info in (mats.values() if mats is Dictionary else []):
+					if not info is Dictionary:
+						continue
+					var paths: Array = [String(info.get("tex", ""))]
+					for key in ["dark", "detail"]:
+						if info.get(key) is Dictionary:
+							paths.append(String(info[key].get("tex", "")))
+					for t in paths:
+						var p: String = "res://assets/fx/" + String(t)
+						if t != "" and not texs.has(p) and ResourceLoader.exists(p):
+							texs[p] = load(p)
+				out = [scene, data, texs]
+	_job_lock.lock()
+	_job_out[name] = out
+	_job_lock.unlock()
+
+
+## Range dans le cache les tâches finies ([param name] : attend la sienne si elle tourne encore) ; vrai si [param name] y est.
+static func _drain(wait_all: bool, name := "") -> bool:
+	for k in _jobs.keys():
+		if k != name and not wait_all and not WorkerThreadPool.is_task_completed(_jobs[k]):
+			continue
+		WorkerThreadPool.wait_for_task_completion(_jobs[k])
+		_jobs.erase(k)
+		_job_lock.lock()
+		var r = _job_out.get(k)
+		_job_out.erase(k)
+		_job_lock.unlock()
+		if r != null and not _cache.has(k):
+			for p in r[2]:
+				if not _tex_cache.has(p):
+					_tex_cache[p] = r[2][p]
+			_cache[k] = [r[0], r[1]]
+	return name != "" and _cache.has(name)
+
+
 static func _load(name: String) -> bool:
+	if _jobs.has(name):
+		_drain(false, name)  # (préparé en tâche de fond : repris tel quel, sinon chargé comme d'habitude ci-dessous)
 	if _cache.has(name):
 		return _cache[name] != null
 	var js := "res://assets/fx/%s.fx.json" % name

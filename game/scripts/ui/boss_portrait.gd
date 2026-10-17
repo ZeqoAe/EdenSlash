@@ -107,6 +107,7 @@ func _request() -> void:
 		return
 	_waiting[model_key] = [self]
 	_queue.append([model_key, String(get_meta("tex_name", ""))])
+	_prefetch(model_key, String(get_meta("tex_name", "")))
 	_pump(get_tree())
 
 
@@ -140,12 +141,33 @@ static func _pump(tree: SceneTree) -> void:
 	_pump(tree)
 
 
+## Lot PERF-1 : le modèle et la texture d'un médaillon demandé se chargent tout de suite en tâche de fond (la page Donjons
+## en demande 48 d'un coup : chargés un à un sur le fil principal, ils faisaient des images de 80 à 100 ms pendant 4 à 5 s).
+static func _prefetch(key: String, tex_name: String) -> void:
+	for p in ["res://assets/monsters/%s/%s.glb" % [key, key], "res://assets/monsters/textures/%s.png" % tex_name]:
+		if ResourceLoader.exists(p) and not ResourceLoader.has_cached(p) \
+				and ResourceLoader.load_threaded_get_status(p) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			ResourceLoader.load_threaded_request(p)
+
+
+## Attend la fin du chargement en tâche de fond de [param p] (s'il a été demandé) ; renvoie la ressource (gardée le temps
+## du rendu : EdenModel la retrouve alors dans le cache sans relire le disque).
+static func _fetched(tree: SceneTree, p: String) -> Resource:
+	while ResourceLoader.load_threaded_get_status(p) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		await tree.process_frame
+	if ResourceLoader.load_threaded_get_status(p) == ResourceLoader.THREAD_LOAD_LOADED:
+		return ResourceLoader.load_threaded_get(p)
+	return null
+
+
 ## Rendu du modèle [param key] (assets/monsters/<key>/<key>.glb) dans une SubViewport posée hors de l'écran, puis copie de l'image.
 static func _render(tree: SceneTree, key: String, tex_name: String) -> Texture2D:
 	var glb := "res://assets/monsters/%s/%s.glb" % [key, key]
 	if not ResourceLoader.exists(glb):
 		return null
 	var tex_path := "res://assets/monsters/textures/%s.png" % tex_name
+	var _held_glb: Resource = await _fetched(tree, glb)  # (PERF-1 : chargés en tâche de fond, gardés le temps du rendu)
+	var _held_tex: Resource = await _fetched(tree, tex_path)
 	var vp := SubViewport.new()
 	vp.size = Vector2i(RENDER_PX, RENDER_PX)
 	vp.own_world_3d = true

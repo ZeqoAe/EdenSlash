@@ -41,6 +41,10 @@ const HALF_X := 7.5  # m : demi-largeur du plateau (bords des cases, 7 colonnes 
 const HALF_Z := 7.2  # m : demi-profondeur (8 rangées de 1,73 m + pointe des hexagones)
 const FLOOR_Y := AutochessBoard.TOP  # dessus des cases : pieds des unités
 const SPAWN_PER_FRAME := 3  # plateaux cachés : unités créées par image (création 18-48 ms par unité, R_AC2 §5 ; voir prepare)
+## Lot PERF-1 (retour du joueur : gel à l'appui sur « Prêt ») : temps de création par image, au moins une unité. Le plateau
+## regardé ne se crée plus d'un bloc dans l'image de Prêt (10 à 20 unités : 340-390 ms mesurés) : une unité ou deux par
+## image, cachées, et les figurines de la préparation restent à l'écran jusqu'au départ du combat regardé.
+const SPAWN_BUDGET_MS := 6.0
 const TICK := 0.05  # s : pas de la couche d'effets
 const FALLBACK_MS := 20.0  # image plus longue que ça…
 const FALLBACK_AFTER := 2.0  # … pendant ce temps (s réelles) : plateaux cachés finis par le combat de données
@@ -62,6 +66,9 @@ var running := false
 var fallback_ms := FALLBACK_MS  ## 0 : jamais de repli
 var fallback_after := FALLBACK_AFTER
 var spawn_per_frame := SPAWN_PER_FRAME
+## Lot PERF-1 : apparition étalée (budget SPAWN_BUDGET_MS, fichiers lus en tâche de fond, plateau regardé compris). Faux sur
+## un serveur sans écran (tests, bancs) : begin crée le plateau regardé tout de suite, comme avant.
+var spread_spawn := DisplayServer.get_name() != "headless"
 var base_origin := Vector3.ZERO  ## place du combat regardé (celle du plateau affiché s'il y en a un)
 var budget_frames: Array = []  ## durée des images (ms réelles) pendant la manche : mesure du budget
 var _queue: Array = []  # [arène, camp, indice] à créer
@@ -116,7 +123,6 @@ func begin(fights: Array, watch := 0) -> void:
 		if _view_home == Vector3.INF:
 			_view_home = view.global_position
 		base_origin = _view_home
-		view.show_figures(false)
 	var slot := 1
 	for i in fights.size():
 		var origin := base_origin
@@ -138,8 +144,18 @@ func begin(fights: Array, watch := 0) -> void:
 			for k in (a.fight_boards[side] as Array).size():
 				_queue.append([a, side, k])
 	_queue.sort_custom(func(x, y): return bool(x[0].shown) and not bool(y[0].shown))
-	_spawn_some(INF, true)
-	_frame_camera()
+	if not spread_spawn:
+		_spawn_some(INF, true)
+	else:
+		# (PERF-1) modèles de chaque unité (monstres compris) lus en tâche de fond tout de suite ; une unité n'est créée
+		# qu'une fois ses fichiers lus (sinon sa lecture figeait l'image : 115-245 ms par monstre)
+		for e in _queue:
+			var a: Dictionary = e[0]
+			var paths := unit_paths(a.fight_boards[e[1]][e[2]], int(a.seed) + int(a.ctx.sides[e[1]][e[2]]))
+			for path in paths:
+				_request(String(path))
+			e.append(paths)
+	_frame_camera()  # (PERF-1, spread_spawn : _physics_process crée les unités au fil des images, le plateau regardé d'abord)
 
 
 ## Lot ACX-2 : « Passer » : tous les combats encore en cours (le regardé compris) sont finis tout de suite par le combat
@@ -181,6 +197,8 @@ func watch(i: int) -> void:
 			for n in a.nodes[side]:
 				if is_instance_valid(n):
 					(n as AutochessUnit).set_shown(on)
+	if view != null and is_instance_valid(view):
+		view.show_figures(false)  # (PERF-1 : sinon tenues jusqu'au départ du 1er plateau regardé)
 	_frame_camera()
 
 
@@ -214,6 +232,31 @@ func clear() -> void:
 
 ## Préchargement (pendant la préparation) des modèles des unités de la partie [param g] : corps, tenues et armes des
 ## classes de tous les plateaux et bancs, chargés sur un fil du moteur ; l'apparition du combat ne lit plus le disque.
+## Lot PERF-1 : fichiers que lit la création d'une unité (classe : corps, tenues, armes ; monstre de [param pick] : modèle et
+## texture), comme AutochessUnit.setup_unit.
+static func unit_paths(u: Dictionary, pick: int) -> Array:
+	var id := String(u.get("id", ""))
+	if id == "":
+		var m := monster_entry(u, pick)
+		return ["res://assets/monsters/%s/%s.glb" % [m.model, m.model], "res://assets/monsters/textures/%s.png" % String(m.get("texture", ""))]
+	var cls := GameData.class_data(id)
+	var paths: Array = [String(cls.get("body_model", cls.get("model", "")))] + (cls.get("parts", []) as Array)
+	var w: Dictionary = EdenModel.weapon_entry(cls, "")
+	for k in w:
+		if w[k] is String and String(w[k]).ends_with(".glb"):
+			paths.append(String(w[k]))
+	return paths
+
+
+## Demande la lecture en tâche de fond de [param path] (rien s'il est déjà en mémoire ou en cours) ; vrai si demandée.
+static func _request(path: String) -> bool:
+	if path == "" or not ResourceLoader.exists(path) or ResourceLoader.has_cached(path):
+		return false
+	if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+		return false
+	return ResourceLoader.load_threaded_request(path) == OK
+
+
 static func prepare(g: Autochess) -> int:
 	var ids := {}
 	for p in g.players:
@@ -293,15 +336,22 @@ func _build_bounds(root: Node3D) -> void:
 
 func _spawn_some(budget: float, shown_only := false) -> void:
 	var n := 0
-	while not _queue.is_empty() and n < budget:
+	var t0 := Time.get_ticks_usec()
+	while not _queue.is_empty() and n < budget and (n == 0 or not spread_spawn or float(Time.get_ticks_usec() - t0) / 1000.0 < SPAWN_BUDGET_MS):
 		var e: Array = _queue[0]
 		var a: Dictionary = e[0]
 		if shown_only and not a.shown:
 			break
+		if e.size() > 3 and not a.done and (e[3] as Array).any(func(p): return ResourceLoader.load_threaded_get_status(String(p)) == ResourceLoader.THREAD_LOAD_IN_PROGRESS):
+			break  # (PERF-1) ses fichiers se lisent encore en tâche de fond : à une image suivante
 		_queue.pop_front()
 		if a.done:
 			continue
 		_spawn_unit(a, int(e[1]), int(e[2]))
+		if e.size() > 3:
+			for path in e[3]:
+				if ResourceLoader.load_threaded_get_status(String(path)) == ResourceLoader.THREAD_LOAD_LOADED:
+					ResourceLoader.load_threaded_get(String(path))  # (la tâche rend la ressource : plus rien ne la retient pour rien)
 		n += 1
 		a["pending"] = int(a.pending) - 1
 		if int(a.pending) <= 0:
@@ -320,6 +370,8 @@ func _spawn_unit(a: Dictionary, side: int, k: int) -> void:
 	var cell: Array = u.cell
 	var local := AutochessBoard.cell_position(int(cell[0]), int(cell[1]), side == 1)
 	(a.root as Node3D).add_child(n)
+	if a.shown and not a.running:
+		n.visible = false  # (PERF-1 : montrées toutes ensemble au départ du combat, voir _start_arena)
 	n.global_position = (a.origin as Vector3) + Vector3(local.x, FLOOR_Y, local.z)
 	n.rotation.y = PI if side == 0 else 0.0  # face à l'adversaire (les modèles regardent vers +Z)
 	a.nodes[side].append(n)
@@ -327,6 +379,13 @@ func _spawn_unit(a: Dictionary, side: int, k: int) -> void:
 
 
 func _start_arena(a: Dictionary) -> void:
+	if a.shown:  # (PERF-1) le plateau regardé est complet : ses unités remplacent les figurines de la préparation
+		for side in 2:
+			for u in a.nodes[side]:
+				if is_instance_valid(u):
+					(u as AutochessUnit).visible = (u as AutochessUnit).ac_shown
+		if view != null and is_instance_valid(view):
+			view.show_figures(false)
 	a["running"] = true
 	a["t"] = 0.0
 	on_effects(a, AutochessEffects.start(a.ctx))

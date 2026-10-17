@@ -317,7 +317,7 @@ func _start_training() -> void:
 	if backdrop:
 		backdrop.release()
 	Training.start(Profile.selected_class)
-	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	LoadScreen.go(get_tree(), RUN_SCENE)
 
 
 ## Duel : quatre onglets — libre, Ligue, Panthéon et Gantelet (1 contre 2 ou 3, équipé).
@@ -418,7 +418,7 @@ func _start_team(mode: String, allies: Array, foes: Array) -> void:
 	if backdrop:
 		backdrop.release()
 	Duel.start(Profile.selected_class, String(foes[0]), _team_diff)
-	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	LoadScreen.go(get_tree(), RUN_SCENE)
 
 
 ## Choix du cerveau d'IA qui pilote le premier adversaire d'une équipe (les autres restent scriptés).
@@ -550,7 +550,7 @@ func _start_royale() -> void:
 	RoyalePage.apply()  # modificateur, partie personnalisée et graine (lot BR-R1)
 	Royale.difficulty = _royale_diff
 	Royale.start(Profile.selected_class)
-	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	LoadScreen.go(get_tree(), RUN_SCENE)
 
 
 ## L'Échiquier (lot AC-I) : le mode en trois lignes, la difficulté des sept stratèges IA (fermées : leur condition), les
@@ -717,7 +717,7 @@ func _start_autochess(resume := false, extra := {}) -> void:
 		cfg["seed"] = absi(_ac_seed.text.strip_edges().to_int())
 	cfg.merge(extra, true)
 	AutochessScreen.config = cfg
-	get_tree().change_scene_to_file.call_deferred(AC_SCENE)
+	LoadScreen.go(get_tree(), AC_SCENE)
 
 
 func _duel_tabs() -> void:
@@ -811,7 +811,7 @@ func _start_ranked(mode: String, brain: String) -> void:
 		if backdrop:
 			backdrop.release()
 		Duel.start(Profile.selected_class, opp, diff)
-		get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+		LoadScreen.go(get_tree(), RUN_SCENE)
 	var restore := func(): Duel.restore_free()
 	_queue_duel("Panthéon" if mode == "pantheon" else "Ligue", "%s · à l'arme" % ("Défi d'un cerveau d'IA" if mode == "pantheon" else "Duel classé"), opp, Pantheon.LEVEL, diff, launch, restore)
 
@@ -965,7 +965,7 @@ func _start_duel() -> void:
 		if backdrop:
 			backdrop.release()
 		Duel.start(Profile.selected_class, _duel_opp, diff)
-		get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+		LoadScreen.go(get_tree(), RUN_SCENE)
 	_queue_duel("Duel libre", "Duel libre · %s" % ("à l'arme" if Duel.bare else "équipé"), opp, lv, diff, launch)
 
 
@@ -1074,14 +1074,14 @@ func _start_tower(diff := 1, from := 1) -> void:
 	if backdrop:
 		backdrop.release()
 	Tower.start(Profile.selected_class, diff, from)
-	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	LoadScreen.go(get_tree(), RUN_SCENE)
 
 
 func _start_run() -> void:
 	if backdrop:
 		backdrop.release()
 	Run.start_survival(Profile.selected_class, clampi(_epoch, 1, Epochs.unlocked()), _heroic)
-	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	LoadScreen.go(get_tree(), RUN_SCENE)
 
 
 # --- décor 3D : la map de la zone, le héros au premier plan ---------------------------------
@@ -1784,6 +1784,7 @@ func _show_menu(id: String) -> void:
 	if act != "" and NewsDots.activity_new(act):
 		NewsDots.see("act:" + act)  # (lot HUB-1, P0-1) l'activité est vue : sa pastille s'éteint
 	_scroll_keep = int(_scroll.scroll_vertical) if _scroll != null and id != "" and id == _shown_page else 0
+	var hint: CanvasLayer = LoadScreen.hint_first(self, "menu:" + id) if id != "" else null  # (lot PERF-1 : 1re ouverture, page Donjons…)
 	_shown_page = id
 	_current = id
 	if _sub_panel:
@@ -1836,6 +1837,7 @@ func _show_menu(id: String) -> void:
 		"quit":
 			_menu_quit()
 	_place_right_col()
+	LoadScreen.hint_done(hint)
 
 
 func _sub_title(t: String) -> void:
@@ -2134,7 +2136,7 @@ func _resume_survivor() -> void:
 	if backdrop:
 		backdrop.release()
 	if SurvivorSave.resume():
-		get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+		LoadScreen.go(get_tree(), RUN_SCENE)
 	else:
 		_launching = false
 		_show_menu("survivor")
@@ -2171,7 +2173,7 @@ func _start_survivor_daily() -> void:
 	if backdrop:
 		backdrop.release()
 	SurvivorDaily.start()
-	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	LoadScreen.go(get_tree(), RUN_SCENE)
 
 
 ## Survivant (lot S5) : le mode en trois idées, une icône et quelques mots chacune.
@@ -2209,7 +2211,7 @@ func _start_survivor() -> void:
 	if backdrop:
 		backdrop.release()
 	Survivor.start(Profile.selected_class, _sv_zone, clampi(_sv_palier, 1, Survivor.top_palier()))
-	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	LoadScreen.go(get_tree(), RUN_SCENE)
 
 
 ## Zone d'entraînement : description, puis Entrer.
@@ -2235,7 +2237,7 @@ func _start_challenge(cid: String) -> void:
 		backdrop.release()
 	Profile.selected_class = cid
 	Challenge.start(cid)
-	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	LoadScreen.go(get_tree(), RUN_SCENE)
 
 
 ## Donjons : un par zone (ouvert quand son boss est battu en Survie), trois difficultés, jusqu'à deux alliés IA.
@@ -2434,7 +2436,7 @@ func _start_siege() -> void:
 	Dungeons.last_allies = allies
 	LastActivity.record("siege", {"zone": _dg_zone, "diff": _dg_diff, "allies": allies})
 	Tower.start_siege(Profile.selected_class, _dg_zone, _dg_diff, allies)
-	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	LoadScreen.go(get_tree(), RUN_SCENE)
 
 
 ## Choix des alliés IA d'un donjon ou de la Ruée.
@@ -2556,7 +2558,7 @@ func _start_rush() -> void:
 	Dungeons.last_allies = allies
 	LastActivity.record("rush", {"diff": _dg_diff, "allies": allies})
 	Tower.start_dungeon(Profile.selected_class, Dungeons.RUSH, _dg_diff, allies)
-	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	LoadScreen.go(get_tree(), RUN_SCENE)
 
 
 ## « S'entraîner » (lot DNG-3) : la salle du boss [param bid], sans rien gagner ni perdre (BossPractice).
@@ -2567,7 +2569,7 @@ func _start_practice(bid: String, diff: int) -> void:
 	if backdrop:
 		backdrop.release()
 	BossPractice.start(Profile.selected_class, bid, diff)
-	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	LoadScreen.go(get_tree(), RUN_SCENE)
 
 
 func _start_dungeon() -> void:
@@ -2580,7 +2582,7 @@ func _start_dungeon() -> void:
 	Dungeons.last_allies = allies
 	LastActivity.record("dungeon", {"zone": _dg_zone, "diff": _dg_diff, "allies": allies, "sel": DungeonPage.sel})
 	Tower.start_dungeon(Profile.selected_class, _dg_zone, _dg_diff, allies, DungeonPage.sel)
-	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	LoadScreen.go(get_tree(), RUN_SCENE)
 
 
 ## Activité à venir : ce qui est prévu.
@@ -2601,7 +2603,7 @@ func _menu_quit() -> void:
 	_sub_title("Quitter")
 	_row("Écran titre", "Changer de sauvegarde, nouvelle partie", "save", func():
 		backdrop.release()
-		get_tree().change_scene_to_file.call_deferred(TITLE_SCENE))
+		LoadScreen.go(get_tree(), TITLE_SCENE))
 	_row("Quitter le jeu", "Ta progression est sauvegardée", "quit", func(): get_tree().quit())
 
 

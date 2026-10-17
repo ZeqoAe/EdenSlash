@@ -522,4 +522,4 @@ static func leave(tree: SceneTree) -> void:
 	if active:
 		finish(PLAYERS)
 	tree.paused = false
-	tree.change_scene_to_file.call_deferred("res://scenes/lobby.tscn")
+	LoadScreen.to_lobby(tree)

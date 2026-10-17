@@ -121,6 +121,39 @@ func show_zone(zone_id: String, with_minimap := false) -> void:
 	zone_shown.emit(zone)
 
 
+## Zone que le lobby montrera (celle du profil, ou le Calcaire si elle est fermée : comme Lobby._build_scene).
+static func lobby_zone() -> String:
+	return Profile.selected_zone if Profile.zone_unlocked(Profile.selected_zone) else "limestone"
+
+
+## Lot PERF-1 : génère d'avance, dans le cache, la map du décor de [param zone_id] (écran de chargement : une image à elle
+## seule, la barre avance avant la scène suivante) ; show_zone la reprend telle quelle (mêmes appels, même graine). Rien si
+## elle y est déjà. La map naît sous un nœud caché, posé à la racine le temps de la générer.
+static func prepare(zone_id: String, with_minimap := true) -> void:
+	var biome := String(GameData.zone(zone_id).get("biome", "limestone"))
+	var key := "%s:%d" % [biome, SEED]
+	var cached = _cache.get(key)
+	if cached != null and is_instance_valid(cached):
+		return
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null:
+		return
+	var host := Node3D.new()
+	host.name = "MapBackdropPrepare"
+	host.visible = false
+	tree.root.add_child(host)
+	var m := ProcMap.new()
+	m.biome = biome
+	host.add_child(m)
+	m.generate_scenery(SEED, with_minimap)
+	host.remove_child(m)
+	host.queue_free()
+	_cache[key] = m
+	_order.erase(key)
+	_order.append(key)
+	_trim_cache()
+
+
 ## Écran titre : survol des zones [param zone_ids], l'une après l'autre.
 func fly_over(zone_ids: Array) -> void:
 	_fly = true

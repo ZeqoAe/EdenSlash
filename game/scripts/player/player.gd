@@ -156,6 +156,7 @@ func _ready() -> void:
 	if not foe:
 		class_id = Run.class_id if Run.active else Profile.selected_class
 	cls = GameData.class_data(class_id)
+	EdenFx.warm_class(class_id)  # (lot PERF-1 : effets de ses sorts préparés en tâche de fond)
 	display_name = cls.get("name_fr", "Héros")
 	if not foe and Profile.hero_name != "":
 		display_name = Profile.hero_name  # le héros du joueur porte son nom (création de personnage)

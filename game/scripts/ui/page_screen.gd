@@ -240,6 +240,8 @@ func current_page() -> int:
 func show_page(i: int) -> void:
 	var before := _current
 	_current = clampi(i, 0, _pages.size() - 1)
+	# lot PERF-1 : 1re ouverture d'une page (construction jusqu'à 1 s : Collection, Roulette) : « Chargement… » à l'écran
+	var hint: CanvasLayer = LoadScreen.hint_first(self, "page:%d" % _current) if is_open() else null
 	if before != _current and is_open():
 		UiFeel.slide_in(_pages[_current], signi(_current - before))
 	for k in _pages.size():
@@ -248,6 +250,7 @@ func show_page(i: int) -> void:
 	refresh()
 	_update_subtitle()
 	page_changed.emit(_current)
+	LoadScreen.hint_done(hint)
 
 
 func set_title(t: String, sub := "") -> void:

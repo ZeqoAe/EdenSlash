@@ -591,6 +591,11 @@ func _free_point_once(min_dist: float, margin: float) -> Vector2:
 
 func _build_heights(with_border: bool) -> void:
 	heights.resize(n * n)
+	# lot PERF-1 : un plateau trop loin (au-delà de son plus grand rayon possible, bruit compris) ne touche pas le sommet :
+	# on saute son bruit. Mêmes opérations dans le même ordre pour les autres : hauteurs identiques au bit près.
+	var pls: Array = []  # [centre, rayon, hauteur, distance au-delà de laquelle rien ne change]
+	for pl in plateaus:
+		pls.append([pl.c, float(pl.r), float(pl.h), float(pl.r) * (1.0 + 0.18 * 1.5) + PLATEAU_RAMP])
 	for j in n:
 		for i in n:
 			var x := i * STEP
@@ -601,11 +606,14 @@ func _build_heights(with_border: bool) -> void:
 				if d < 50.0:
 					h += pow((50.0 - d) / 50.0, 2.0) * 30.0
 			# plateaux (et une cuvette sur trois) au bord irrégulier
-			for pl in plateaus:
-				var dd := Vector2(x, z).distance_to(pl.c)
-				var r: float = float(pl.r) * (1.0 + 0.18 * _noise2.get_noise_2d(x * 0.7, z * 0.7))
+			var pxz := Vector2(x, z)
+			for pl in pls:
+				var dd := pxz.distance_to(pl[0])
+				if dd >= pl[3]:
+					continue
+				var r: float = float(pl[1]) * (1.0 + 0.18 * _noise2.get_noise_2d(x * 0.7, z * 0.7))
 				if dd < r + PLATEAU_RAMP:
-					h += float(pl.h) * (1.0 - smoothstep(r, r + PLATEAU_RAMP, dd))
+					h += float(pl[2]) * (1.0 - smoothstep(r, r + PLATEAU_RAMP, dd))
 			heights[j * n + i] = h
 
 
@@ -736,19 +744,31 @@ func _paint_splat() -> void:
 							var w := 1.0 - clampf(Vector2(di, dj).length() / 2.4, 0.0, 1.0)
 							road_mask[j * (n - 1) + i] = maxf(road_mask[j * (n - 1) + i], w)
 				t += 1.0
+	# lot PERF-1 : un camp ne salit le sol qu'à moins de 9 m, un sanctuaire à moins de 8 m (au-delà, sa part vaut 0 et
+	# maxf la laisse) : seuls ceux dont le carré de 9 m (8 m) contient le pixel sont testés. Même valeur au bit près.
+	var spots: Array = []  # [centre, rayon du carré, poids, début, fin du fondu]
+	for camp in camps:
+		spots.append([Vector2(camp.pos.x, camp.pos.z), 9.0, 0.7, 4.0, 9.0])
+	for sh in shrine_spots:
+		spots.append([Vector2(sh.pos.x, sh.pos.z), 8.0, 0.6, 6.0, 8.0])
+	var vil := Vector2(village.x, village.z)
 	for j in n - 1:
+		var z := j * STEP
+		var row: Array = []  # ceux qui touchent la ligne
+		var zf := Vector2(0.0, z).y  # (même arrondi qu'en Vector2)
+		for sp in spots:
+			if absf(zf - (sp[0] as Vector2).y) < float(sp[1]):
+				row.append(sp)
 		for i in n - 1:
 			var x := i * STEP
-			var z := j * STEP
 			var g2 := smoothstep(0.0, 0.35, _noise2.get_noise_2d(x * 0.5, z * 0.5))
 			var dirt := smoothstep(0.25, 0.6, _noise.get_noise_2d(x * 2.0 + 100.0, z * 2.0))
 			var p := Vector2(x, z)
-			if p.distance_to(Vector2(village.x, village.z)) < 18.0:
+			if p.distance_to(vil) < 18.0:
 				dirt = maxf(dirt, 0.85)
-			for camp in camps:
-				dirt = maxf(dirt, 0.7 * (1.0 - smoothstep(4.0, 9.0, p.distance_to(Vector2(camp.pos.x, camp.pos.z)))))
-			for sh in shrine_spots:
-				dirt = maxf(dirt, 0.6 * (1.0 - smoothstep(6.0, 8.0, p.distance_to(Vector2(sh.pos.x, sh.pos.z)))))
+			for sp in row:
+				if absf(p.x - (sp[0] as Vector2).x) < float(sp[1]):
+					dirt = maxf(dirt, float(sp[2]) * (1.0 - smoothstep(float(sp[3]), float(sp[4]), p.distance_to(sp[0]))))
 			_splat.set_pixel(i, j, Color(g2, dirt, road_mask[j * (n - 1) + i], 0.0))
 
 
@@ -828,6 +848,36 @@ func _normal(i: int, j: int) -> Vector3:
 
 # --- décor -------------------------------------------------------------------------------
 static var _model_meshes := {}  # modèle -> [[Mesh, Transform3D local]]
+
+
+## Lot PERF-1 : modèles de décor déjà vus (user://warm_models.json, simple cache : effacé, il se refait) chargés en tâche
+## de fond au retour au lobby : la 1re carte d'une partie ne lit plus ses ~150 modèles sur le fil principal (4 à 5 s de
+## lectures mesurées sur une machine chargée, 1,4 s ensuite). Le fichier gagne les modèles des cartes de la session.
+const WARM_FILE := "user://warm_models.json"
+static var _warm_started := false
+
+
+static func warm_models() -> void:
+	var names := {}
+	var prev: Variant = JSON.parse_string(FileAccess.get_file_as_string(WARM_FILE)) if FileAccess.file_exists(WARM_FILE) else null
+	if prev is Array:
+		for x in prev:
+			names[String(x)] = true
+	for k in _model_meshes:
+		names[String(k)] = true
+	if names.size() > ((prev as Array).size() if prev is Array else 0):
+		var w := FileAccess.open(WARM_FILE, FileAccess.WRITE)
+		if w:
+			w.store_string(JSON.stringify(names.keys()))
+			w.close()
+	if _warm_started or DisplayServer.get_name() == "headless":
+		return  # (serveur sans écran, tests : son rendu factice ne crée pas de maillages hors du fil principal)
+	_warm_started = true
+	for nm in names:
+		var path := "res://assets/maps/objects/%s.glb" % String(nm)
+		if not _model_meshes.has(nm) and ResourceLoader.exists(path) and not ResourceLoader.has_cached(path) \
+				and ResourceLoader.load_threaded_get_status(path) == ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
+			ResourceLoader.load_threaded_request(path)
 
 
 ## Maillages d'un modèle de décor (matériaux convertis au style du jeu).

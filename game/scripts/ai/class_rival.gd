@@ -96,6 +96,7 @@ func setup(class_id: String, lvl: int, diff := 1, hp_scale := 1.0, n_skills := 4
 	_charges = float(cfg.charges)
 	_skills = (cls.get("skills", []) as Array).filter(func(s): return String(s.kind) != "buff" and String(s.kind) != "heal").slice(0, clampi(n_skills, 0, 4))
 	_support = (cls.get("skills", []) as Array).filter(func(s): return String(s.kind) == "buff" or String(s.kind) == "heal")
+	EdenFx.warm_class(cid)  # (lot PERF-1 : effets de ses sorts préparés en tâche de fond)
 
 
 ## Allié IA du joueur (lot 12) : même héros scripté, mais du camp du joueur. Il vise les monstres,

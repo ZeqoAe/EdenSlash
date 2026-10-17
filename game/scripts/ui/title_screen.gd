@@ -84,7 +84,7 @@ func _build_ui() -> void:
 	play.pressed.connect(_open_saves)
 	_main.add_child(play)
 	friends = MenuWidgets.paper_button("Jouer ensemble", 20, Vector2(440, 54))  # (lot NET-A) Mode amis, réglage « net/friends »
-	friends.pressed.connect(func(): get_tree().change_scene_to_file(NetLaunch.SCENE))
+	friends.pressed.connect(func(): LoadScreen.go(get_tree(), NetLaunch.SCENE))  # (lot PERF-1 : écran de chargement)
 	friends.visible = bool(Settings.get_v("net", "friends"))
 	Settings.changed.connect(_on_settings_changed)
 	_main.add_child(friends)
@@ -290,7 +290,7 @@ func _new(i: int) -> void:
 
 
 func _go() -> void:
-	get_tree().change_scene_to_file.call_deferred(LOBBY)
+	LoadScreen.to_lobby(get_tree())  # (lot PERF-1 : écran de chargement, décor préparé à part)
 
 
 func _on_settings_changed() -> void:
