@@ -228,6 +228,8 @@ func is_open() -> bool:
 
 
 func open(i := -1) -> void:
+	if not _root.visible:
+		UiFeel.page_sound(true)
 	if not _root.visible and not UiFeel.reduce_motion:
 		_root.modulate.a = 0.0
 		var tw := _root.create_tween()
@@ -244,6 +246,7 @@ func close_ui() -> void:
 	if not is_open():
 		return
 	_root.visible = false
+	UiFeel.page_sound(false)
 	if pause_game:
 		get_tree().paused = false
 	closed.emit()

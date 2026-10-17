@@ -276,6 +276,9 @@ captures `tests/shot_hub1.tscn`. `records.news` / `last_activity` = état de men
 - **Création de personnage** (C1, `R_C1.md`) : `core/hero_look.gd` (nom, coiffure, couleurs ; `Profile.hero_name / hero_look / hero_made`),
   écran `ui/hero_creator.gd` (après l'accueil, Héros > « Personnage ») ; tout modèle du héros du joueur passe le visage à
   `EdenModel.instantiate_hero(..., look)` (et `Player._dress_model`). Masque des iris : `tools/gen_eye_mask.py`. Test `test_c1`, captures `shot_c1`.
+- **Sons d'interface** (SND-1, `conception/art/R_SND1.md`) : bibliothèque maison synthétisée `game/assets/sfx/ui/` (46 WAV, refaits par
+  `python tools/art/snd_synth.py [--preview]`, planche `conception/art/snd/index.md`), noms `ui_*` de `Sfx.UI` (liste = variantes,
+  `Sfx.reward(rareté)`), même sonie pour tous : le dB de l'appel fait la hiérarchie (`UiFeel.SOUNDS`) ; aucun son d'un autre jeu ; test `test_snd1`.
 - Rapports : `R_U1` à `R_U10`, `R_P1`, `R_P3`, `R_P8`.
 
 ### Outils de mesure et de test

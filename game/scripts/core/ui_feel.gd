@@ -17,12 +17,15 @@ extends CanvasLayer
 
 const MAX_GROW_PX := 10.0  # un grand contrôle (ligne pleine largeur) ne grossit jamais de plus de 10 px
 const BUSY := 40  # au-delà de 40 boutons visibles, pas de particules (bible § 7)
-## Sons d'interface : [nom Sfx, dB, hauteur]. Sons provisoires pris dans ceux du jeu en attendant le département SND.
+## Sons d'interface : [nom Sfx, dB, hauteur]. Bibliothèque SND-1 (game/assets/sfx/ui/, tools/art/snd_synth.py) : chaque
+## fichier est à la même sonie de référence, ces dB font la hiérarchie de la bible (§ 7) ; survol, focus, appui et
+## relâchement ont 3 variantes tirées au hasard (Sfx), hauteur ±3 % en plus ; jamais deux fois le même en 40 ms (Sfx.ui).
 const SOUNDS := {
-	"hover": ["ui_hover", -26.0, 1.6], "focus": ["ui_focus", -22.0, 1.45], "press": ["ui_press", -14.0, 0.85],
-	"release": ["ui_release", -12.0, 1.15], "primary": ["ui_primary", -9.0, 1.0], "deny": ["ui_deny", -14.0, 0.7],
-	"tab": ["ui_tab", -16.0, 1.0], "toggle_on": ["ui_toggle", -16.0, 1.3], "toggle_off": ["ui_toggle", -16.0, 1.0],
-	"swoosh": ["ui_swoosh", -14.0, 1.1], "equip": ["ui_equip", -12.0, 1.0], "reward": ["ui_reward", -6.0, 1.0],
+	"hover": ["ui_hover", -26.0, 1.0], "focus": ["ui_focus", -24.0, 1.0], "press": ["ui_press", -15.0, 1.0],
+	"release": ["ui_release", -13.0, 1.0], "primary": ["ui_primary", -9.0, 1.0], "deny": ["ui_deny", -13.0, 1.0],
+	"tab": ["ui_tab", -16.0, 1.0], "toggle_on": ["ui_toggle_on", -16.0, 1.0], "toggle_off": ["ui_toggle_off", -17.0, 1.0],
+	"swoosh": ["ui_swoosh", -15.0, 1.0], "equip": ["ui_equip", -12.0, 1.0], "reward": ["ui_reward", -6.0, 1.0],
+	"open": ["ui_open", -17.0, 1.0], "close": ["ui_close", -19.0, 1.0],
 }
 ## Vibrations (faible, fort, durée s), d'après les jetons.
 const VIB := {"focus": [0.06, 0.0, 0.025], "press": [0.18, 0.0, 0.04], "primary": [0.25, 0.12, 0.07],
@@ -486,8 +489,16 @@ func _sound(name: String) -> void:
 		return
 	if name == "hover" and not Gamepad.menu_mode():
 		return
+	if (name == "hover" or name == "focus") and Time.get_ticks_msec() - Sfx.last_ui_ms < 40:
+		return  # un tic de survol ne se pose jamais sur un autre son d'interface
 	var s: Array = SOUNDS[name]
 	Sfx.ui(String(s[0]), float(s[1]), float(s[2]) * randf_range(0.97, 1.03))
+
+
+## Page ou fenêtre qui s'ouvre ([param open]) ou se ferme (PageScreen) : souffle + pincé ; joué au relâchement du
+## bouton qui l'ouvre, il prend la place de son « clic » (_sound_late).
+func page_sound(open: bool) -> void:
+	_sound("open" if open else "close")
 
 
 ## Son du relâchement, seulement si l'écran n'a pas déjà joué le sien (validation, coffre…) à cet instant.
