@@ -30,6 +30,7 @@ var _work_col: Control  # colonne « Qui fait le travail »
 var _work: VBoxContainer
 var _work_toggle: Button
 var work_open := true
+var _save_btn: Button  # (lot SVX-4, SV-Q4) « Sauver et quitter »
 
 
 func _ready() -> void:
@@ -92,6 +93,7 @@ func _ready() -> void:
 	_sets.add_theme_constant_override("separation", 6)
 	col.add_child(_sets)
 	ItemWidgets.action_button(c, "▶  Reprendre", func(): resume_requested.emit(), 0, true)
+	_save_btn = ItemWidgets.action_button(c, "Sauver et quitter", _save_quit)
 	# 4. qui fait le travail (dégâts par source, 30 dernières secondes)
 	var d := ItemWidgets.panel(self, 0)
 	_work_col = d.get_parent() as Control
@@ -149,6 +151,27 @@ func refresh() -> void:
 	_refresh_passives()
 	_refresh_sets()
 	_refresh_work()
+	if _save_btn != null:
+		var why := SurvivorSave.blocked(_director())
+		_save_btn.disabled = why != ""
+		_save_btn.tooltip_text = why if why != "" else "La partie est gardée telle quelle ; « Reprendre la partie » à la page du mode la relance (une seule sauvegarde)."
+
+
+func _director() -> RunDirector:
+	var w := get_tree().current_scene if is_inside_tree() else null
+	return w.get("director") as RunDirector if w != null and w.get("director") != null else null
+
+
+## (lot SVX-4, SV-Q4) Sauver et quitter : la partie est écrite (SurvivorSave), puis le menu principal, sans bilan.
+func _save_quit() -> void:
+	var d := _director()
+	if not SurvivorSave.save(d):
+		UiFeel.deny(_save_btn)
+		return
+	Run.finish(SurvivorSave.RESULT)
+	Profile.end_run_survival()
+	get_tree().paused = false
+	get_tree().change_scene_to_file.call_deferred("res://scenes/lobby.tscn")
 
 
 # --- équipement --------------------------------------------------------------------------------------------------------

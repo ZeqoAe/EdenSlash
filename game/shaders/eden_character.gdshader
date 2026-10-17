@@ -27,6 +27,9 @@ uniform vec3 tint = vec3(1.0);
 uniform float use_eye = 0.0;
 uniform sampler2D eye_mask : filter_linear_mipmap;
 uniform vec3 eye_color = vec3(1.0);
+// horde contrastée (lot SVX-4, accessibilité du Survivant) : les monstres de la horde plus sombres et ternes ; le héros, les
+// élites, les gardiens et les zones de danger gardent leurs couleurs (palette à trois tons, BM-SURV § 2)
+instance uniform float horde_shade = 0.0;
 
 void fragment() {
 	vec4 t = texture(albedo_tex, UV) * albedo_color;
@@ -55,5 +58,9 @@ void fragment() {
 		discard;
 	}
 	ALBEDO = mix(vec3(dot(t.rgb, vec3(0.299, 0.587, 0.114))), t.rgb, saturation);
+	if (horde_shade > 0.0) {
+		vec3 g = vec3(dot(ALBEDO, vec3(0.299, 0.587, 0.114)));
+		ALBEDO = mix(ALBEDO, mix(g, ALBEDO, 0.35) * 0.5, horde_shade);
+	}
 	ROUGHNESS = 0.6;
 }

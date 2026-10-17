@@ -21,6 +21,10 @@
 | Sorts (S9) | **12 au plus** (`Survivor.SPELL_MAX`) : la grille entière de la Survie, 4 cases × le sort et ses 2 enchaînements (retour du joueur : « 6 au lieu des douze ») ; au-delà de 6 sorts, les améliorations de sort se partagent le poids de 6 (`spell_up_norm`) ; §5 « 6 sorts » remplacé | `SurvivorCards.candidates` |
 | Orbes (S9) | Sol plein (300 orbes) : la nouvelle orbe apparaît sous le monstre et reprend l'orbe oubliée la plus loin du héros (avant : ajoutée à la plus proche, souvent loin derrière : « plus d'orbes » vers 15 min) | `XpOrbs.spawn`, `R_S9.md` |
 | Lobby | Page du mode : trois idées, classe, **sélecteur de palier** (le plus haut gagné par défaut, les fermés grisés avec leur condition), coffres d'apparence du palier choisi, zone, Lancer | `ui/lobby.gd` `_menu_survivor` |
+| Faveurs (SVX-4) | Une faveur de départ au choix (une règle et sa contrepartie), deux ouvertes d'office, les autres par les défis du mode ; jamais les gardiens ni le boss | `core/survivor_favors.gd` |
+| Pièces maudites (SVX-4) | 1 pièce tirée sur 15 : jet parfait, bonus et contrepartie écrits sur la carte ; jamais l'arme | `SurvivorGear.CURSES` |
+| Boutique du gardien (SVX-4) | Après chaque gardien : 4 cartes, Garder gratuit, relance qui renchérit, achats qui renchérissent ; coffres plus chers avec le temps ; « Passer » moins payé au-delà de 3 000 or | `core/survivor_shop.gd` |
+| Confort (SVX-4) | Partie du jour, prolongations après le boss (records seulement), choix regroupés (option), Sauver et quitter / Reprendre, fiches du Codex ; accessibilité dédiée (nombres, effets, sous-titres, horde contrastée, vitesse hors records) ; coup du boss final ≤ 35 % des PV max | `R_SVX4.md` |
 
 Demande du joueur (15/10, mot pour mot dans le brief de l'orchestrateur) : à côté de la Survie actuelle (progression,
 découverte du stuff, équipement du hub), un **vrai mode survivor à une seule boucle** où **tout passe par les cartes** :

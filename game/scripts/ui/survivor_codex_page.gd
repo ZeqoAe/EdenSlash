@@ -10,7 +10,7 @@ extends PageScreen
 
 const LAYER := 32
 const TABS := [["evo", "Évolutions"], ["weapons", "Armes"], ["sets", "Panoplies"], ["monsters", "Bestiaire"],
-	["records", "Records"], ["defis", "Défis"]]
+	["records", "Records"], ["defis", "Défis"], ["spells", "Sorts"]]  # (lot SVX-4 : « Sorts » ajouté en fin, fiches d'arme et de sort)
 
 
 func _init() -> void:
@@ -110,6 +110,8 @@ class CodexTab extends ScrollContainer:
 				return "Records de %s, palier par palier." % String(GameData.class_data(Profile.selected_class).get("name_fr", ""))
 			"defis":
 				return "Défis du mode : des titres, jamais de puissance."
+			"spells":
+				return "Les sorts de %s : un clic ouvre la fiche." % String(GameData.class_data(Profile.selected_class).get("name_fr", ""))
 		return ""
 
 	func refresh() -> void:
@@ -128,6 +130,8 @@ class CodexTab extends ScrollContainer:
 				_records()
 			"defis":
 				_defis()
+			"spells":
+				_spells()
 
 	func _grid(cols: int) -> GridContainer:
 		var g := GridContainer.new()
@@ -227,9 +231,10 @@ class CodexTab extends ScrollContainer:
 			for e in list:
 				names.append(("✔ " if String(e.key) in c.weapons else "· ") + String(e.name))
 			var tip := "\n".join(names)
-			_cell(g, String(GameData.weapon_type(String(wt)).get("icon", "")), "%s  %d / %d" % [String(list[0].type_name), have.size(), list.size()],
+			var cell := _cell(g, String(GameData.weapon_type(String(wt)).get("icon", "")), "%s  %d / %d" % [String(list[0].type_name), have.size(), list.size()],
 				", ".join(PackedStringArray(have.map(func(e): return String(e.name)))) if not have.is_empty() else "Jamais portée",
-				2 if have.size() == list.size() else (1 if not have.is_empty() else 0), tip)
+				2 if have.size() == list.size() else (1 if not have.is_empty() else 0), tip + "\nClic : la fiche de l'arme")
+			cell.gui_input.connect(_on_cell_input.bind("weapon", String(wt)))  # (lot SVX-4, SV-Q6) fiche de l'arme
 
 	func _sets() -> void:
 		var c := SurvivorCodex.state()
@@ -269,8 +274,8 @@ class CodexTab extends ScrollContainer:
 			Hud._label(p, String(m.get("name", "?")) if seen else "?", UiTheme.MIN_TEXT, UiTheme.TEXT if seen else UiTheme.MUTED)
 
 	func _records() -> void:
-		var g := _grid(6)
-		for h in ["Palier", "Victoire la plus rapide", "Survie la plus longue", "Niveau", "Dégâts", "Monstres"]:
+		var g := _grid(SurvivorRecords.KEYS.size() + 1)
+		for h in ["Palier", "Victoire la plus rapide", "Survie la plus longue", "Niveau", "Dégâts", "Monstres", "Prolongation"]:
 			var l := Hud._label(g, h, UiTheme.MIN_TEXT, UiTheme.GOLD)
 			l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		for p in range(1, Survivor.PALIERS.size() + 1):
@@ -299,6 +304,20 @@ class CodexTab extends ScrollContainer:
 			flow.add_child(p)
 			Hud._label(p, ("✔ " if ok else "") + String(GameData.class_data(String(cid)).get("name_fr", cid)), UiTheme.MIN_TEXT, UiTheme.TEXT if ok else UiTheme.MUTED)
 
+	## (lot SVX-4, SV-Q6) Les sorts de la classe choisie : une case chacun ; clic : la fiche.
+	func _spells() -> void:
+		var g := _grid(_cols())
+		for sk in GameData.class_data(Profile.selected_class).get("skills", []):
+			var d: Dictionary = sk
+			var cell := _cell(g, String(d.get("icon", "")), String(d.get("name", "?")), SurvivorCardView.fr(String(d.get("desc", "")).trim_prefix(String(d.get("name", "")) + " : ")), 2,
+				"Clic : la fiche du sort")
+			cell.gui_input.connect(_on_cell_input.bind("spell", str(int(d.get("id", 0)))))
+
+	func _on_cell_input(ev: InputEvent, kind: String, id: String) -> void:
+		if ev is InputEventMouseButton and ev.pressed and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+			Fiche.open_on(self, kind, id)
+			accept_event()
+
 	func _defis() -> void:
 		var done := SurvivorRecords.defis_done()
 		var g := _grid(2 if _cols() < 4 else 3)
@@ -323,3 +342,122 @@ class CodexTab extends ScrollContainer:
 			var a := Hud._label(g2, String(r[0]), 15, UiTheme.MUTED)
 			a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			Hud._label(g2, String(r[1]), 15, UiTheme.TEXT)
+
+
+
+## Fiche d'arme ou de sort (lot SVX-4, BM-SURV SV-Q6, comme les fiches de l'aide F1) : fenêtre papier sur le Codex, l'icône du
+## jeu, ce que fait la chose, ses variantes ou ses paliers et les évolutions qu'elle ouvre ; Fermer ou Échap.
+class Fiche extends CanvasLayer:
+	var _box: VBoxContainer
+
+	static func open_on(from: Node, kind: String, id: String) -> Fiche:
+		var f := Fiche.new()
+		f.layer = SurvivorCodexPage.LAYER + 2
+		f.process_mode = Node.PROCESS_MODE_ALWAYS
+		var host: Node = from.get_tree().current_scene if from.get_tree().current_scene != null else from.get_tree().root
+		host.add_child(f)
+		f._build(kind, id)
+		return f
+
+	func _build(kind: String, id: String) -> void:
+		var root := Control.new()
+		root.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(root)
+		var dim := ColorRect.new()
+		UiTheme.veil(dim, 0.55)
+		dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+		dim.gui_input.connect(_on_dim)
+		root.add_child(dim)
+		var center := CenterContainer.new()
+		center.set_anchors_preset(Control.PRESET_FULL_RECT)
+		center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		root.add_child(center)
+		var panel := PanelContainer.new()
+		UiTheme.paper(panel, 7, Vector2(26, 20))
+		panel.custom_minimum_size = Vector2(620, 0)
+		center.add_child(panel)
+		_box = VBoxContainer.new()
+		_box.add_theme_constant_override("separation", 10)
+		panel.add_child(_box)
+		var data := weapon_sheet(id) if kind == "weapon" else spell_sheet(int(id))
+		var head := HBoxContainer.new()
+		head.add_theme_constant_override("separation", 12)
+		_box.add_child(head)
+		var tr := TextureRect.new()
+		tr.texture = UiTheme.texture(String(data.icon)) if String(data.icon) != "" else null
+		tr.custom_minimum_size = Vector2(64, 64)
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		head.add_child(tr)
+		var t := Label.new()
+		t.text = String(data.title)
+		UiTheme.title(t, 26)
+		t.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		head.add_child(t)
+		var body := RichTextLabel.new()
+		body.bbcode_enabled = true
+		body.fit_content = true
+		body.scroll_active = false
+		body.custom_minimum_size = Vector2(568, 0)
+		body.add_theme_font_override("normal_font", UiTheme.label_font())
+		body.add_theme_font_override("bold_font", UiTheme.bold_font())
+		body.add_theme_font_size_override("normal_font_size", 16)
+		body.add_theme_font_size_override("bold_font_size", 16)
+		body.add_theme_color_override("default_color", UiTheme.color("encre.700"))
+		body.text = "\n".join(data.lines)
+		_box.add_child(body)
+		var close := Button.new()
+		close.text = "Fermer"
+		UiTheme.style_button(close, "papier", 18)
+		close.custom_minimum_size = Vector2(200, 46)
+		close.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		close.pressed.connect(queue_free)
+		_box.add_child(close)
+		UiNav.focus(close)
+
+	func _on_dim(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed:
+			queue_free()
+
+	func _unhandled_input(event: InputEvent) -> void:
+		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("pause"):
+			queue_free()
+			get_viewport().set_input_as_handled()
+
+	## Fiche d'un type d'arme : ses auto-attaques (variantes, effet à +4), son évolution.
+	static func weapon_sheet(wt: String) -> Dictionary:
+		var c := SurvivorCodex.state()
+		var lines: PackedStringArray = []
+		var vs := WeaponAttacks.variants(wt)
+		for i in vs.size():
+			var v: Dictionary = vs[i]
+			var worn: bool = ("%s:%d" % [wt, i]) in c.weapons
+			lines.append("[b]%s %s[/b] : %s" % ["✔" if worn else "·", String(v.get("name", "")), SurvivorCardView.fr(String(v.get("desc", "")))])
+			if v.has("sig"):
+				lines.append("     ★ À +4 : %s" % SurvivorCardView.fr(WeaponAttacks.sig_text(v)))
+		lines.append("")
+		lines.append("Chaque amélioration d'arme : +2 et une amélioration de l'auto-attaque (jusqu'à +10).")
+		for d in SurvivorEvo.all():
+			if String(d.get("kind", "")) == "weapon" and wt in (d.get("wtypes", []) as Array):
+				var known: bool = String(d.id) in c.evo or String(d.id) in c.evo_seen
+				lines.append("[b]◆ Évolution : %s[/b] · %s" % [String(d.name) if known else "?", SurvivorEvo.recipe_text(String(d.id)) if known else "arme à +6 et un passif à découvrir"])
+		return {"title": String(GameData.weapon_type(wt).get("name", wt)), "icon": String(GameData.weapon_type(wt).get("icon", "")), "lines": lines}
+
+	## Fiche d'un sort de la classe choisie : ce qu'il fait, sa recharge, ses paliers (5 et 10), les évolutions de sort.
+	static func spell_sheet(id: int) -> Dictionary:
+		var d: Dictionary = {}
+		for sk in GameData.class_data(Profile.selected_class).get("skills", []):
+			if int(sk.get("id", -1)) == id:
+				d = sk
+		var c := SurvivorCodex.state()
+		var lines: PackedStringArray = [SurvivorCardView.fr(String(d.get("desc", "")).trim_prefix(String(d.get("name", "")) + " : "))]
+		if float(d.get("cooldown", 0.0)) > 0.0:
+			lines.append("Recharge : %s s" % Cards._num(float(d.get("cooldown", 0.0))))
+		lines.append("")
+		lines.append("Niveau 1 à 10 : chaque amélioration renforce le sort ; le niveau 5 est au moins épique, le niveau 10 légendaire.")
+		lines.append("Au niveau 10, avec le bon passif, il peut évoluer :")
+		for e in SurvivorEvo.all():
+			if String(e.get("kind", "")) == "spell":
+				var known: bool = String(e.id) in c.evo or String(e.id) in c.evo_seen
+				lines.append("[b]◆ %s[/b] · %s" % [String(e.name) if known else "?", SurvivorCardView.fr(String(e.get("desc", ""))) if known else "une recette à découvrir"])
+		return {"title": String(d.get("name", "?")), "icon": String(d.get("icon", "")), "lines": lines}

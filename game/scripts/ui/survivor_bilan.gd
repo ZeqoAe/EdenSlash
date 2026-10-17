@@ -68,6 +68,15 @@ static func _records_and_chests(box: VBoxContainer, r: ResultsPanel) -> void:
 		lines.append("%s : %s  (avant %s)" % [String(e.text), SurvivorRecords.fmt(String(e.key), float(e.new)), SurvivorRecords.fmt(String(e.key), float(e.old))])
 	if bool(rec.get("first_win", false)):
 		lines.push_front("Première victoire avec cette classe  ·  %d / %d classes" % [int(rec.get("won", 1)), GameData.classes.size()])
+	# (lot SVX-4) partie du jour, prolongations, vitesse du jeu
+	if bool(last.get("daily", false)):
+		var rk := int(last.get("daily_rank", 0))
+		lines.push_front(("Partie du jour : %de place du tableau" % rk) if rk > 0 else "Partie du jour : hors du tableau des 5 meilleures")
+	var endless := float(SurvivorRewards.stats.get("endless", 0.0))
+	if endless > 0.0:
+		lines.append("Prolongations : %s tenues" % SurvivorDirector.clock(endless))
+	if not is_equal_approx(float(last.get("speed", 1.0)), 1.0):
+		lines.append("Vitesse du jeu × %s : records et partie du jour non comptés" % String.num(float(last.speed), 1).replace(".", ","))
 	var defis: Array = rec.get("defis", [])
 	var chests: Array = (last.get("chests", []) as Array).filter(func(g): return g.has("ref"))
 	var news: Array = SurvivorCodex.last_new

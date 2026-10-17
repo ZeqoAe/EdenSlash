@@ -39,7 +39,8 @@ static func reset() -> void:
 ## Suivi de la run : appelé par SurvivorDirector.update.
 static func track(sv: SurvivorDirector) -> void:
 	stats = {"time": sv.d.time, "guardians": sv.guardians_killed(), "total": SurvivorDirector.guardian_total(), "arena": sv.arena_at >= 0.0,
-		"early": sv.early_seconds(), "arena_at": sv.arena_at, "ttk": sv.guardians.map(func(e): return float(e.ttk))}
+		"early": sv.early_seconds(), "arena_at": sv.arena_at, "ttk": sv.guardians.map(func(e): return float(e.ttk)),
+		"endless": sv.endless_secs}
 
 
 # --- plafonds ----------------------------------------------------------------------------------------------------------
@@ -150,6 +151,10 @@ static func settle(res: String, counted_kills: int, tier := -1) -> void:
 	# (lot SVX-3) Codex, records et défis du mode : écrits dans le même état (rien du compte)
 	var news := SurvivorCodex.settle(st, res, tier)
 	var recs := SurvivorRecords.settle(st, res, tier)
+	# (lot SVX-4) partie du jour : tableau des 5 meilleures (jamais à une autre vitesse du jeu que ×1)
+	var daily := SurvivorDaily.active
+	var drank := SurvivorDaily.settle(st, res) if is_equal_approx(Survivor.speed, 1.0) else 0
+	SurvivorDaily.active = false
 	Profile.records[KEY] = st
 	var title := ""
 	var new_title := false
@@ -160,7 +165,8 @@ static func settle(res: String, counted_kills: int, tier := -1) -> void:
 	last = {"res": res, "tier": tier, "time": float(stats.get("time", 0.0)), "guardians": int(stats.get("guardians", 0)),
 		"guardians_total": int(stats.get("total", GUARDIANS)),
 		"boss": res == "victoire" or bool(stats.get("arena", false)), "kills": counted_kills, "chests": given, "title": title,
-		"new_title": new_title, "opened": opened, "build": build(), "codex": news, "records": recs}
+		"new_title": new_title, "opened": opened, "build": build(), "codex": news, "records": recs,
+		"daily": daily, "daily_rank": drank, "favor": SurvivorFavors.current_name(), "speed": Survivor.speed}
 
 
 # --- bilan : le build final -------------------------------------------------------------------------------------------

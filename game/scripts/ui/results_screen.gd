@@ -54,6 +54,10 @@ func survivor_spec() -> Dictionary:
 	var zone := String(GameData.zone(Survivor.zone_id).get("name", Survivor.zone_id))
 	var tier := int(last.get("tier", Survivor.palier))
 	var sub := "%s · Survivant · palier %s · %s · %s" % [HeroLook.who(Run.class_id), Survivor.numeral(tier), zone, SurvivorDirector.clock(float(last.get("time", 0.0)))]
+	if String(last.get("favor", "")) != "":
+		sub += " · faveur « %s »" % String(last.favor)  # (lot SVX-4) faveur de départ
+	if bool(last.get("daily", false)):
+		sub = "Partie du jour · " + sub
 	var won := Run.result == "victoire"
 	var boss := "vaincu" if won else ("atteint" if bool(last.get("boss", false)) else "—")
 	var kept := survivor_chest_rows(last)

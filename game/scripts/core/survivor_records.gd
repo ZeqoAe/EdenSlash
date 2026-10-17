@@ -10,9 +10,9 @@ extends RefCounted
 ## Défis (« defis », ids accomplis) : objectifs internes au mode, vérifiés à la fin de chaque partie ; certains donnent un
 ## titre (cosmétique, listé dans SurvivorRewards.TITLES). Jamais de puissance, jamais de monnaie du compte.
 
-const KEYS := ["win", "time", "level", "dmg", "kills"]
+const KEYS := ["win", "time", "level", "dmg", "kills", "endless"]
 const NAMES := {"win": "Victoire la plus rapide", "time": "Survie la plus longue", "level": "Plus haut niveau",
-	"dmg": "Plus de dégâts", "kills": "Plus de monstres vaincus"}
+	"dmg": "Plus de dégâts", "kills": "Plus de monstres vaincus", "endless": "Plus longue prolongation"}
 
 ## Défis : id, text (ce qu'il faut faire), title (titre gagné, "" : aucun). Vérifiés par [method _done].
 const DEFIS := [
@@ -78,7 +78,7 @@ static func defis_done() -> Array:
 ## Valeur affichée d'un record (« 21:34 », « 1,2 M », « 48 »).
 static func fmt(key: String, v: float) -> String:
 	match key:
-		"win", "time":
+		"win", "time", "endless":
 			return SurvivorDirector.clock(v)
 		"dmg":
 			return SurvivorBilan.short_number(v)
@@ -93,6 +93,8 @@ static func run_values(res: String) -> Dictionary:
 		out["win"] = t
 	else:
 		out["time"] = t
+	if float(SurvivorRewards.stats.get("endless", 0.0)) > 0.0:
+		out["endless"] = float(SurvivorRewards.stats.endless)  # (lot SVX-4) prolongations après le boss
 	return out
 
 
@@ -106,8 +108,8 @@ static func settle(st: Dictionary, res: String, tier: int) -> Dictionary:
 	var vals := run_values(res)
 	var recs: Array = []
 	for k in KEYS:
-		if not vals.has(k):
-			continue
+		if not vals.has(k) or not is_equal_approx(Survivor.speed, 1.0):
+			continue  # (lot SVX-4) une partie à une autre vitesse du jeu que ×1 ne touche pas aux records
 		var v := float(vals[k])
 		if v <= 0.0:
 			continue

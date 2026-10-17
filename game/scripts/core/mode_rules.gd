@@ -97,6 +97,12 @@ const SURVIVOR := {
 	# coffres mesurés au pilote, 39 et 12 : 1 run sur 23) ; puissance d'un passif de pièce (1 = une
 	# carte commune)
 	"armor_pref": 2.0, "set_damp": 0.17, "set_damp_from": 3, "passive_power": 1.0,
+	# lot SVX-4 : une pièce sur curse_every est maudite (SV-R2) ; boutique du gardien (SV-R3, SurvivorShop) : offres, prix d'une
+	# carte (base + par niveau), relance (base + par niveau, × shop_reroll_step à chaque relance) ; « Passer » rapporte moins
+	# au-delà de skip_gold_full or en poche ; coffres plus chers avec le temps (+ chest_per_min par minute de carte)
+	"curse_every": Survivor.CURSE_EVERY, "shop_offers": SurvivorShop.OFFERS, "shop_price": SurvivorShop.PRICE,
+	"shop_reroll": SurvivorShop.REROLL, "shop_reroll_step": SurvivorShop.REROLL_STEP, "skip_gold_full": SurvivorShop.SKIP_FULL,
+	"chest_per_min": SurvivorShop.CHEST_PER_MIN, "boss_hit_cap": Survivor.BOSS_HIT_CAP,
 	# héros, monstres, gardiens, boss, butin, garde-fous : valeurs mesurées au lot S7, documentées en tête de core/survivor.gd
 	"xp_start": Survivor.XP_START, "xp_end": Survivor.XP_END, "xp_until": Survivor.XP_UNTIL, "xp_late": Survivor.XP_LATE,
 	"xp_late_at": Survivor.XP_LATE_AT, "resurrections": 1, "opening": Survivor.OPENING, "hard_waves_from": Survivor.HARD_WAVES_FROM,

@@ -171,17 +171,55 @@ func _show_cards(cards: Array) -> void:
 
 
 ## Un choix de plus dans la file : « N autres en attente » se met à jour sous le titre du choix ouvert.
+## Choix regroupés (lot SVX-4, BM-SURV SV-Q3 : réglage interface/sv_group_choices) : une montée de niveau ne met plus le jeu en
+## pause ; elle attend dans la file (pastille « N choix en attente » du HUD) et s'ouvre quand le joueur le veut (touche des
+## objectifs, Tab / croix gauche). Un coffre ouvert passe devant et ouvre la file avec lui.
 func offer(title: String, cards: Array, reroll := Callable(), own_rerolls := -1) -> void:
 	var was_open := is_open()
-	super.offer(title, cards.filter(func(c): return not (c as Dictionary).is_empty()), reroll, own_rerolls)
+	var list := cards.filter(func(c): return not (c as Dictionary).is_empty())
+	if list.is_empty():
+		return
+	if grouping() and not was_open:
+		if String(title).begins_with("Niveau "):
+			_queue.append([title, list, reroll, own_rerolls, true])
+			return
+		if not _queue.is_empty():
+			_queue.push_front([title, list, reroll, own_rerolls])
+			_show_next()
+			return
+	super.offer(title, list, reroll, own_rerolls)
 	if was_open and is_open():
 		_split_title()
 
 
+## Choix regroupés en cours (réglage, Survivant, ni pilote ni aide « Bot »).
+static func grouping() -> bool:
+	return Survivor.active and bool(Settings.get_v("interface", "sv_group_choices")) and not Settings.auto_cards()
+
+
+## Choix en attente (fermés) : la pastille du HUD.
+func held() -> int:
+	return 0 if is_open() else _queue.size()
+
+
+## Ouvre les choix en attente (touche des objectifs, ou le HUD).
+func open_held() -> bool:
+	if is_open() or _queue.is_empty():
+		return false
+	_show_next()
+	return true
+
+
 ## Le titre brut du choix qui s'ouvre (« Niveau 14 ! Choisis une carte ») est gardé : une relance redessine le même.
+## Un choix qui a attendu (choix regroupés) et dont une carte n'est plus valable (emplacement pris, sort monté entre-temps) est
+## tiré de nouveau (lot SVX-4).
 func _show_next() -> void:
 	if not _queue.is_empty():
 		_raw_title = String(_queue[0][0])
+		var it: Array = _queue[0]
+		if it.size() > 4 and bool(it[4]) and (it[2] as Callable).is_valid() \
+				and (it[1] as Array).any(func(c): return SurvivorCards.FAMILY.get(String(c.get("type", "")), "") != "fallback" and not SurvivorCards.still_valid(c)):
+			it[1] = (it[2] as Callable).call()
 	super._show_next()
 
 
@@ -463,6 +501,9 @@ func _choose(i: int) -> void:
 
 func _input(event: InputEvent) -> void:
 	if not _root.visible:
+		if not _queue.is_empty() and event.is_action_pressed("objectives") and not get_tree().paused:
+			open_held()  # (lot SVX-4) choix regroupés : on les ouvre quand on veut
+			get_viewport().set_input_as_handled()
 		return
 	if event is InputEventKey and (event as InputEventKey).keycode == KEY_SHIFT and not event.is_echo():
 		set_detail(event.pressed)
@@ -558,12 +599,18 @@ class Band extends Control:
 		SurvivorHud.round_rect(self, local, UiTheme.color("bonbon.pomme.base") if kept else ink, 8, 2, ink)
 		SurvivorHud.ink_text(self, font, tag, 0.0, 5.0, 12, Color.WHITE, 3 if kept else 0)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		# ce qu'est la carte (blanc contouré d'encre), coupé avant l'étiquette
+		# forme de la rareté (lot SVX-4, accessibilité : jamais la couleur seule), puis ce qu'est la carte (blanc contouré
+		# d'encre), coupé avant l'étiquette
+		var rank := SurvivorCardView.shape_rank(card)
+		var x0 := 46.0
+		if rank >= 0:
+			SurvivorCardView.draw_shape(self, Vector2(54.0, 24.0), 6.0, rank)
+			x0 = 66.0
 		var text := SurvivorCardView.band_text(card)
-		var room := tr.position.x - 46.0 - 6.0
+		var room := tr.position.x - x0 - 6.0
 		while font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x > room and text.length() > 4:
 			text = text.left(text.length() - 2) + "…"
-		SurvivorHud.ink_text(self, font, text, 46.0, 29.0, 15, Color.WHITE, 5, -1)
+		SurvivorHud.ink_text(self, font, text, x0, 29.0, 15, Color.WHITE, 5, -1)
 
 
 # --- panneau « Ton équipement » -------------------------------------------------------------------------------------------------

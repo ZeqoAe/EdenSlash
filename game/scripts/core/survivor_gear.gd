@@ -40,6 +40,22 @@ const WEAPON_PASSIVES := ["heavy_finisher", "combo_flow", "incantation", "multis
 	"long_reach", "wide_arc", "precision", "swift_blade", "deep_wounds"]
 ## Statistiques à unité entière ou déjà plafonnées : plafond du passif = son max (sinon 1,5 × max).
 const WHOLE_STATS := ["proj", "pierce", "bounce", "area"]
+## Pièces maudites (lot SVX-4, BM-SURV SV-R2) : une pièce tirée sur curse_every (profil « survivor ») porte une malédiction
+## (champ `sv_curse`) : jet parfait, un gros bonus et sa contrepartie, écrits sur la carte (la contrepartie en fraise) ; la pièce
+## est gardée à vie, la malédiction aussi. Jamais l'arme (le premier choix reste simple), jamais hors du Survivant.
+## Effets sur le héros (apply_curses, crochet Survivor.cap_hero, avant les plafonds du mode) : dmg (dégâts ×), hp (PV max ×),
+## atk_speed (vitesse d'attaque +), defense (défense ×), move (vitesse de déplacement ×), crit_dmg (dégâts critiques +), area
+## (zone des sorts +), cdr (recharge : négatif = plus longue), pickup (rayon de ramassage ×). Valeurs mesurées : R_SVX4.
+const CURSES := {
+	"avide": {"name": "Lame avide", "bonus": {"dmg": 0.3}, "malus": {"hp": -0.25}},
+	"titan": {"name": "Fardeau du titan", "bonus": {"hp": 0.5}, "malus": {"move": -0.15}},
+	"fievre": {"name": "Hâte fébrile", "bonus": {"atk_speed": 0.3}, "malus": {"defense": -0.4}},
+	"main_lourde": {"name": "Main lourde", "bonus": {"crit_dmg": 0.6}, "malus": {"atk_speed": -0.15}},
+	"cyclope": {"name": "Œil du cyclope", "bonus": {"area": 0.25}, "malus": {"cdr": -0.15}},
+	"aimant": {"name": "Aimant brisé", "bonus": {"dmg": 0.2}, "malus": {"pickup": -0.4}},
+}
+const CURSE_STAT_NAMES := {"dmg": "dégâts", "hp": "PV max", "atk_speed": "vitesse d'attaque", "defense": "défense",
+	"move": "vitesse", "crit_dmg": "dégâts critiques", "area": "zone des sorts", "cdr": "recharge des sorts", "pickup": "ramassage"}
 
 static var _rng := RandomNumberGenerator.new()
 static var _seeded := false
@@ -126,7 +142,86 @@ static func from_eden(e: Dictionary, rng: RandomNumberGenerator = null) -> Dicti
 	item["upgrade"] = 0
 	var fp := fixed_passive(e)
 	item["sv_passives"] = [{"id": fp, "at": 0, "power": Survivor.rule("passive_power")}] if fp != "" else []
+	maybe_curse(item, rng)
 	return item
+
+
+# --- pièces maudites (lot SVX-4, SV-R2) ------------------------------------------------------------------------------
+## Maudit [param item] une fois sur curse_every (Survivant seulement, jamais l'arme) : malédiction tirée, jet parfait.
+static func maybe_curse(item: Dictionary, rng: RandomNumberGenerator = null) -> void:
+	var every := Survivor.rule("curse_every")
+	if not Survivor.active or every <= 0.0 or String(item.get("slot", "")) == "weapon" or item.has("wtype"):
+		return
+	var r := _r(rng)
+	if r.randf() >= 1.0 / every:
+		return
+	curse(item, String(CURSES.keys()[r.randi() % CURSES.size()]))
+
+
+## Pose la malédiction [param id] sur [param item] (tests, tirage) : jet parfait.
+static func curse(item: Dictionary, id: String) -> void:
+	if not CURSES.has(id):
+		return
+	item["sv_curse"] = id
+	item["quality"] = Survivor.rule("perfect_quality")
+
+
+## Malédictions portées (ids, une par pièce maudite).
+static func curses_worn() -> Array:
+	var out: Array = []
+	for it in Profile.equipped.values():
+		if (it as Dictionary).has("sv_curse") and CURSES.has(String(it.sv_curse)):
+			out.append(String(it.sv_curse))
+	return out
+
+
+## Effet cumulé des malédictions portées : {clé : somme des parts}.
+static func curse_totals() -> Dictionary:
+	var out := {}
+	for id in curses_worn():
+		var c: Dictionary = CURSES[id]
+		for part in [c.bonus, c.malus]:
+			for k in part:
+				out[k] = float(out.get(k, 0.0)) + float(part[k])
+	return out
+
+
+## Applique les malédictions portées au héros [param p] (crochet de Survivor.cap_hero, Survivant seulement).
+static func apply_curses(p: Object) -> void:
+	var t := curse_totals()
+	if t.is_empty():
+		return
+	p.dmg_mult = maxf(0.1, float(p.dmg_mult) * (1.0 + float(t.get("dmg", 0.0))))
+	p.max_hp = maxf(1.0, float(p.max_hp) * (1.0 + float(t.get("hp", 0.0))))
+	p.atk_speed = maxf(0.3, float(p.atk_speed) + float(t.get("atk_speed", 0.0)))
+	p.defense = maxf(0.0, float(p.defense) * (1.0 + float(t.get("defense", 0.0))))
+	p.move_mult = maxf(0.3, float(p.move_mult) * (1.0 + float(t.get("move", 0.0))))
+	p.crit_dmg = float(p.crit_dmg) + float(t.get("crit_dmg", 0.0))
+	p.area_mult = maxf(0.3, float(p.area_mult) + float(t.get("area", 0.0)))
+	p.cdr = clampf(float(p.cdr) + float(t.get("cdr", 0.0)), -0.5, 0.5)
+	p.pickup_mult = maxf(0.2, float(p.pickup_mult) * (1.0 + float(t.get("pickup", 0.0))))
+
+
+## Texte d'une part de malédiction : « +30 % dégâts », « PV max −25 % » (sur la carte : les nombres sont le choix).
+static func curse_part_text(part: Dictionary, bonus: bool) -> String:
+	var out: PackedStringArray = []
+	for k in part:
+		var v := float(part[k])
+		var name := String(CURSE_STAT_NAMES.get(k, k))
+		if k == "cdr":
+			v = -v  # (recharge : une part négative allonge la recharge)
+		var pct := "%d %%" % roundi(absf(v) * 100.0)
+		out.append(("+%s %s" % [pct, name]) if bonus else ("%s %s%s" % [name.substr(0, 1).to_upper() + name.substr(1), "+" if v > 0.0 else "−", pct]))
+	return " · ".join(out)
+
+
+## {name, bonus, malus} de la malédiction de [param item] ({} : pièce saine).
+static func curse_info(item: Dictionary) -> Dictionary:
+	var id := String(item.get("sv_curse", ""))
+	if not CURSES.has(id):
+		return {}
+	var c: Dictionary = CURSES[id]
+	return {"id": id, "name": String(c.name), "bonus": curse_part_text(c.bonus, true), "malus": curse_part_text(c.malus, false)}
 
 
 ## Pièce venue d'ailleurs (coffre du Battle royale) faite pièce « à la Survivant » : rareté, niveau et stats gardés,

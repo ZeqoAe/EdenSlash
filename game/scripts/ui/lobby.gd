@@ -1817,6 +1817,8 @@ func _show_menu(id: String) -> void:
 			_menu_royale()
 		"autochess":
 			_menu_autochess()
+		"assault":
+			AssaultPage.build(self)  # (lot TAC-8 : page du mode ; cachée du menu hors mode dev tant qu'Assault.READY est faux)
 		"colisee":
 			ColiseePage.build(self)  # (lot CO-C : page minimale, activité cachée hors mode dev tant que Colisee.READY est faux)
 		"rush":
@@ -1999,14 +2001,17 @@ func _menu_survivor() -> void:
 	_activity_head("survivor")
 	_activity_desc("survivor")
 	_survivor_overview()  # (lot S5) le mode en trois idées, puis la classe
+	_survivor_resume()  # (lot SVX-4) partie sauvée
 	_section("Classe")
 	var cr := _row(String(GameData.class_data(Profile.selected_class).get("name_fr", Profile.selected_class)), "Changer de classe", "class", func(): pass, 56.0)
 	cr.pressed.connect(func(): HeroPages.class_menu(cr, Profile.selected_class, func(id: String):
 		_select_class(id)
 		_show_menu("survivor")))
 	_survivor_tiers()
+	_survivor_favors()  # (lot SVX-4) faveur de départ
 	_survivor_rewards(_sv_palier)
 	SurvivorCodexPage.lobby_card(_sub, _sv_palier, self)  # (lot SVX-3) records, classes gagnées, défis, Codex du mode
+	_survivor_daily()  # (lot SVX-4) partie du jour
 	_section("Zone")
 	var zones := Survivor.zones()
 	if not _sv_zone in zones:
@@ -2078,6 +2083,97 @@ func _survivor_tiers() -> void:
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.mouse_filter = Control.MOUSE_FILTER_STOP
 	l.tooltip_text = String(cur.tip)
+
+
+## Survivant (lot SVX-4, BM-SURV SV-R1) : la faveur de départ (une règle de plus et sa contrepartie), au choix ; deux sont
+## ouvertes d'office, les défis du mode ouvrent les autres (le cadenas dit lequel).
+func _survivor_favors() -> void:
+	_section("Faveur", "Une règle de plus pour la partie, avec sa contrepartie. Les défis du mode en ouvrent d'autres.")
+	var cur := SurvivorFavors.chosen()
+	var g := GridContainer.new()
+	g.columns = 2
+	g.add_theme_constant_override("h_separation", 8)
+	g.add_theme_constant_override("v_separation", 8)
+	_sub.add_child(g)
+	for f in SurvivorFavors.LIST:
+		var id := String(f.id)
+		var open := SurvivorFavors.is_open(id)
+		var b := MenuWidgets.glass_button(String(f.name), 16, Vector2(0, 42))
+		Ico.lock(b, not open)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.disabled = not open
+		b.tooltip_text = ("%s\n%s" % [String(f.rule), SurvivorFavors.tip(id)]) if open else SurvivorFavors.unlock_text(id)
+		if id == cur:
+			b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.14, 0.11, 0.24, 0.96), UiTheme.GOLD, 2, 12))
+			b.add_theme_color_override("font_color", UiTheme.GOLD)
+		elif not open:
+			b.add_theme_color_override("font_disabled_color", UiTheme.MUTED)
+		b.pressed.connect(_pick_favor.bind(id))
+		g.add_child(b)
+	var fd := SurvivorFavors.get_def(cur)
+	var l := Hud._label(_sub, "%s · %s" % [String(fd.get("name", "")), String(fd.get("rule", ""))], 15, UiTheme.TEXT)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.mouse_filter = Control.MOUSE_FILTER_STOP
+	l.tooltip_text = SurvivorFavors.tip(cur)
+
+
+## Survivant (lot SVX-4, BM-SURV SV-Q4) : la partie sauvée (« Sauver et quitter » au menu pause), à reprendre là où elle était.
+func _survivor_resume() -> void:
+	var s := SurvivorSave.peek()
+	if s.is_empty():
+		return
+	_section("Partie en cours", "Ta partie sauvée t'attend là où tu l'as laissée. Une seule sauvegarde : elle s'efface à la reprise.")
+	var cid := String(s.get("class", ""))
+	_row("Reprendre la partie", "%s · palier %s · %s · niveau %d" % [String(GameData.class_data(cid).get("name_fr", cid)),
+		Survivor.numeral(int(s.get("palier", 1))), SurvivorDirector.clock(float(s.get("time", 0.0))), int(s.get("level", 1))], "continue",
+		_resume_survivor, 56.0)
+
+
+func _resume_survivor() -> void:
+	if _launching:
+		return
+	_launching = true
+	if backdrop:
+		backdrop.release()
+	if SurvivorSave.resume():
+		get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+	else:
+		_launching = false
+		_show_menu("survivor")
+
+
+func _pick_favor(id: String) -> void:
+	SurvivorFavors.choose(id)
+	Profile.save_profile()
+	_show_menu("survivor")
+
+
+## Survivant (lot SVX-4, BM-SURV SV-Q1) : la partie du jour (même zone, même classe, mêmes tirages pour tous) et le tableau
+## des cinq meilleures parties du jour sur ce profil.
+func _survivor_daily() -> void:
+	_section("Partie du jour", "Aujourd'hui, la même partie pour tous : zone, classe, carte et tirages. Palier I, sans faveur.")
+	var cid := SurvivorDaily.class_of()
+	var zd := GameData.zone(SurvivorDaily.zone_of())
+	_row("%s · %s" % [String(GameData.class_data(cid).get("name_fr", cid)), String(zd.get("name", ""))], "Jouer la partie du jour", "clock",
+		_start_survivor_daily, 56.0)
+	var runs := SurvivorDaily.board()
+	if runs.is_empty():
+		Hud._label(_sub, "Pas encore de partie du jour : ton score s'inscrit ici.", 15, UiTheme.MUTED)
+	for i in runs.size():
+		var e: Dictionary = runs[i]
+		var t := Hud._label(_sub, "%d.  %s  ·  %s" % [i + 1, String(GameData.class_data(String(e.get("class", ""))).get("name_fr", e.get("class", ""))),
+			SurvivorDaily.line(e)], 15, UiTheme.GOLD if i == 0 else UiTheme.TEXT)
+		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+
+func _start_survivor_daily() -> void:
+	if _launching:
+		return
+	_launching = true
+	if backdrop:
+		backdrop.release()
+	SurvivorDaily.start()
+	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
 ## Survivant (lot S5) : le mode en trois idées, une icône et quelques mots chacune.

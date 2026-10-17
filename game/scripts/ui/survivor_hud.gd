@@ -41,7 +41,22 @@ static func attach(h: Hud, root: Control, d: RunDirector) -> SurvivorHud:
 	s.director = d
 	root.add_child(s)
 	s._setup()
+	current = s
 	return s
+
+
+## HUD du Survivant en cours (sous-titres des alertes).
+static var current: SurvivorHud
+var captions: Captions
+var pending: Label  # (lot SVX-4, SV-Q3) « 3 choix en attente · Tab »
+
+
+## Sous-titre d'une alerte sonore (lot SVX-4, SV-A1 : réglage interface/alert_captions) : « ♪ Grondement : un gardien
+## approche », en bas au centre, trois au plus, 3,5 s chacun.
+static func caption(text: String) -> void:
+	if not bool(Settings.get_v("interface", "alert_captions")) or current == null or not is_instance_valid(current) or current.captions == null:
+		return
+	current.captions.add(text)
 
 
 func _init() -> void:
@@ -85,6 +100,19 @@ func _setup() -> void:
 	moments = SurvivorMoments.new()
 	moments.hud = hud
 	add_child(moments)
+	captions = Captions.new()
+	add_child(captions)
+	pending = Label.new()  # (lot SVX-4, SV-Q3) choix regroupés : pastille mandarine en tête de la pile de gauche
+	pending.add_theme_font_override("font", UiTheme.bold_font())
+	pending.add_theme_font_size_override("font_size", UiTheme.MIN_TEXT + 1)
+	pending.add_theme_color_override("font_color", Color.WHITE)
+	pending.add_theme_constant_override("outline_size", 4)
+	pending.add_theme_color_override("font_outline_color", UiTheme.color("encre.700"))
+	pending.add_theme_stylebox_override("normal", UiTheme.sticker("mandarine", {"shadow": 3, "radius": 10, "gloss": false, "pad": Vector2(12, 4)}))
+	pending.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	pending.visible = false
+	hud._left.add_child(pending)
+	hud._left.move_child(pending, 0)
 	if hud.player != null:
 		moments.player = hud.player
 		hud.player.leveled_up.connect(_on_level)
@@ -109,6 +137,11 @@ func _process(delta: float) -> void:
 	xp.set_xp(p.xp, GameData.xp_to_next(p.level), p.level)
 	hp.set_hp(p.hp, p.max_hp)
 	spells_label.text = "Sorts %d / %d" % [Run.all_skills().size(), Survivor.SPELL_MAX]
+	var w := hud.get_parent()
+	var held: int = w.cards.held() if w != null and w.get("cards") is SurvivorPicker else 0
+	pending.visible = held > 0
+	if held > 0:
+		pending.text = "%d choix en attente · %s" % [held, Settings.action_label("objectives", 1)]
 	_hook_cards()
 	_watch()
 	_layout()
@@ -598,3 +631,48 @@ class HpGauge extends Control:
 			var a := 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.012)
 			SurvivorHud.round_rect(self, r.grow(2.0), Color(0, 0, 0, 0), int(H * 0.5) + 2, 2, Color(UiTheme.color("bonbon.fraise.clair"), a))
 		SurvivorHud.ink_text(self, UiTheme.number_font(), _txt, r.get_center().x, r.position.y + 19.0, 15, Color.WHITE, 5)
+
+
+# --- sous-titres des alertes (lot SVX-4, SV-A1) --------------------------------------------------------------------------
+## Les alertes sonores écrites, en bas au centre au-dessus de la vie : « ♪ » + le son et ce qu'il annonce, pastille d'encre,
+## trois au plus (la plus récente en bas), chacune 3,5 s puis un fondu.
+class Captions extends Control:
+	const LIFE := 3.5
+	const MAX := 3
+	var lines: Array = []  # [{text, t}]
+
+	func _init() -> void:
+		set_anchors_preset(Control.PRESET_FULL_RECT)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		process_mode = Node.PROCESS_MODE_ALWAYS
+
+	func add(text: String) -> void:
+		for l in lines:
+			if String(l.text) == text:
+				l.t = 0.0  # (même alerte : on la rafraîchit, pas de doublon)
+				return
+		lines.append({"text": text, "t": 0.0})
+		while lines.size() > MAX:
+			lines.pop_front()
+		queue_redraw()
+
+	func _process(delta: float) -> void:
+		if lines.is_empty():
+			return
+		for l in lines:
+			l.t = float(l.t) + delta
+		lines = lines.filter(func(l): return float(l.t) < LIFE)
+		queue_redraw()
+
+	func _draw() -> void:
+		var font := UiTheme.bold_font()
+		var fs := UiTheme.MIN_TEXT + 1
+		var y := size.y - 196.0 - 34.0 * float(lines.size() - 1)
+		for l in lines:
+			var t := "♪  " + String(l.text)
+			var w := font.get_string_size(t, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 28.0
+			var a := clampf((LIFE - float(l.t)) / 0.4, 0.0, 1.0)
+			var r := Rect2(size.x * 0.5 - w * 0.5, y, w, 28.0)
+			SurvivorHud.round_rect(self, r, Color(UiTheme.color("encre.500"), 0.92 * a), 14, 2, Color(UiTheme.color("encre.700"), a))
+			SurvivorHud.ink_text(self, font, t, r.get_center().x, r.position.y + 20.0, fs, Color(UiTheme.color("papier.100"), a))
+			y += 34.0

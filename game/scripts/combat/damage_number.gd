@@ -104,7 +104,7 @@ static func spawn_text(target: Node3D, text: String, color: Color) -> void:
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
 	label.fixed_size = true
-	label.pixel_size = 0.0011
+	label.pixel_size = 0.0011 * size_mult()
 	label.font_size = 32
 	label.outline_size = 12
 	label.outline_modulate = Color(0.1, 0.05, 0.1)
@@ -151,7 +151,7 @@ static func spawn(target: Node3D, amount: float, crit: bool, on_player: bool, do
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
 	label.fixed_size = true
-	label.pixel_size = 0.0011
+	label.pixel_size = 0.0011 * size_mult()
 	var crowd := clampf(float(alive) / MAX_ALIVE_CRIT, 0.0, 1.0)  # mêlée dense : les chiffres rapetissent (les dégâts subis non)
 	label.font_size = 42 if on_player else (roundi(56.0 - 14.0 * crowd) if crit else (22 if dot else roundi(36.0 - 10.0 * crowd)))
 	label.outline_size = 14 if not dot else 9
@@ -212,7 +212,7 @@ static func _merge(target: Node3D, amount: float, crit: bool, on_player: bool) -
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
 	label.fixed_size = true
-	label.pixel_size = 0.0011
+	label.pixel_size = 0.0011 * size_mult()
 	label.outline_size = 12
 	label.outline_modulate = Color(0.1, 0.05, 0.1)
 	target.get_tree().current_scene.add_child(label)
@@ -284,3 +284,8 @@ func _follow(now: float) -> void:
 		var cam := get_viewport().get_camera_3d()
 		side = (cam.global_transform.basis.x if cam else Vector3.RIGHT) * TAKEN_SIDE
 	global_position = _anchor + side + Vector3.UP * ((TAKEN_UP if taken else 2.0) + minf(0.7, (now - _born) * 0.6))
+
+
+## Taille des nombres et textes flottants (lot SVX-4, SV-A1 : réglage interface/number_size, 0,8 / 1 / 1,3).
+static func size_mult() -> float:
+	return clampf(float(Settings.get_v("interface", "number_size")), 0.6, 1.6)

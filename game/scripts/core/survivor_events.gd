@@ -22,6 +22,8 @@ const AFFIXES := {
 	"invocateur": {"name": "Invocateur", "icon": "✚", "tone": "pomme"},
 }
 const GUARDIAN_AFFIXES := ["rapide", "explosif", "invocateur"]
+## (lot SVX-4, mesures : R_SVX4) le 1er gardien (5:00) sans modificateur.
+const GUARDIAN_FIRST_PLAIN := false
 const SPEED := 1.45
 const ARMOR_HP := 1.5
 const BLAST_RADIUS := 3.5
@@ -85,6 +87,7 @@ func tick() -> void:
 			_warned[e.id] = true
 			d.message.emit(String(e.warn) % int(CHASSEUR_TIME) if String(e.id) == "chasseur" else String(e.warn), 3.0)
 			Sfx.ui("rock", -8.0, 0.7)
+			SurvivorHud.caption("Bourdonnement : la nuée approche" if String(e.id) == "nuee" else "Cor de chasse : un chasseur te traque")
 		if d.time < float(e.t):
 			break
 		_next += 1
@@ -100,6 +103,9 @@ func _scan(d: RunDirector) -> void:
 		if m == null or m.is_dead or m.is_boss or m.has_meta("sv_affix"):
 			continue
 		if m.has_meta("sv_guardian"):
+			if GUARDIAN_FIRST_PLAIN and int(m.get_meta("sv_guardian")) == 0:
+				m.set_meta("sv_affix", "")  # (lot SVX-4) le 1er gardien n'a pas de modificateur : il apprend le combat de gardien
+				continue
 			var a: String = _guard_pool.pop_front() if not _guard_pool.is_empty() else GUARDIAN_AFFIXES.pick_random()
 			apply_affix(m, a)
 			d.message.emit("Gardien %s !\n%s" % [String(AFFIXES[a].name).to_lower(), affix_tip(a)], 2.5)
@@ -173,6 +179,7 @@ func _blast(pos: Vector3) -> void:
 	var d := sv.d
 	if d == null or not is_instance_valid(d) or d.player == null:
 		return
+	SurvivorHud.caption("Sifflement : une élite va exploser")
 	Telegraph.spawn(d, pos, 0.0, {"shape": "circle", "radius": BLAST_RADIUS, "delay": BLAST_DELAY,
 		"damage": d.player.max_hp * BLAST_PART, "color": Color("ff9a3c")})
 
@@ -185,6 +192,7 @@ func _summon(m: Monster) -> void:
 	for i in SUMMON_N:
 		d._spawn_monster(d._pick_monster(lvl), d._around(m.global_position, 3.0), lvl)
 	Vfx.ring(d.player, m.global_position, 3.0, Color(0.55, 0.9, 0.35, 0.9))
+	SurvivorHud.caption("Appel : une élite invoque des renforts")
 
 
 # --- événements ----------------------------------------------------------------------------------------------------------

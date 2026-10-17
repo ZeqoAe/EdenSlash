@@ -83,16 +83,16 @@ static func minutes() -> float:
 
 # --- état de la run (rangé dans Run : remis à zéro par Run.start) -----------------------------------------------------
 static func bans_left() -> int:
-	return maxi(0, int(Survivor.rule("bans")) - Run.bans_used)
+	return maxi(0, int(Survivor.rule("bans")) + SurvivorFavors.extra("bans") - Run.bans_used)
 
 
 static func rerolls_left() -> int:
-	return maxi(0, int(Survivor.rule("base_rerolls")) + int(Run.passive_stats().get("rerolls", 0)) - Run.rerolls_used)
+	return maxi(0, int(Survivor.rule("base_rerolls")) + SurvivorFavors.extra("rerolls") + int(Run.passive_stats().get("rerolls", 0)) - Run.rerolls_used)
 
 
-## Or donné par « Passer » (réglage skip_gold : 15 + 3 × niveau).
+## Or donné par « Passer » (réglage skip_gold : 15 + 3 × niveau) ; moins quand l'or déborde (lot SVX-4, SurvivorShop.skip_mult).
 static func skip_gold() -> int:
-	return roundi(Survivor.rule("skip_gold_base") + Survivor.rule("skip_gold_per_level") * Run.hero_level)
+	return roundi((Survivor.rule("skip_gold_base") + Survivor.rule("skip_gold_per_level") * Run.hero_level) * SurvivorShop.skip_mult())
 
 
 static func _banned(key: String) -> bool:
@@ -436,7 +436,10 @@ static func _piece_tail(item: Dictionary) -> PackedStringArray:
 		out.append("[color=#66f28c]Panoplie %s · %d / 5[/color]" % [SurvivorPool.panoply_name(sid), n + 1])
 	for p in item.get("sv_passives", []):
 		out.append("[color=#ffd36b]Passif : %s[/color]" % Cards.effect_line(String(p.id), float(p.get("power", 1.0))))
-	var jet := ("[color=#ffd36b]★ Jet parfait[/color]" if SurvivorGear.is_perfect(item) else "Jet %d / %d" % [
+	var cu := SurvivorGear.curse_info(item)
+	if not cu.is_empty():  # (lot SVX-4, SV-R2) pièce maudite : le bonus, puis sa contrepartie en fraise
+		out.append("[color=#ff8a9a]Maudite · %s : %s · %s[/color]" % [String(cu.name), String(cu.bonus), String(cu.malus)])
+	var jet :=("[color=#ffd36b]★ Jet parfait[/color]" if SurvivorGear.is_perfect(item) else "Jet %d / %d" % [
 		roundi(float(item.get("quality", 1.0)) * 100.0), roundi(Survivor.rule("perfect_quality") * 100.0)])
 	out.append("[color=#9a98a8]%s · 🔒 %s[/color]" % [jet, SurvivorGear.LOCK_TEXT.to_lower()])
 	return out
@@ -569,6 +572,8 @@ static func first_offer(n := 3) -> Array:
 
 ## Choix de départ (le jeu attend en pause) : une arme ou une compétence, obligatoire ; deux relances.
 static func start_offers(world: Node) -> void:
+	if not SurvivorSave.pending.is_empty():
+		return  # (lot SVX-4) partie reprise : l'arme et les sorts sont déjà là
 	world._offer("Choisis ton arme ou ta première compétence", first_offer(), func(): return first_offer())
 
 

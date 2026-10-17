@@ -213,6 +213,8 @@ func _ready() -> void:
 	await probe("lobby : L'Échiquier (difficultés, graine, Lancer)", 0.8)
 	lobby._show_menu("colisee")
 	await probe("lobby : Le Colisée (format, adversaires, Entrer)", 0.8)  # (lot CO-C : page minimale)
+	lobby._show_menu("assault")
+	await probe("lobby : L'Assaut (format, adversaires, alliés, carte, Lancer)", 0.8)  # (lot TAC-8)
 	# lot HUB-1 : les quêtes sont le Journal (écran à onglets) ; « quests » l'ouvre
 	Profile.unlocked_features.append("daily")
 	lobby._show_menu("quests")
@@ -443,8 +445,25 @@ func _ready() -> void:
 	# lot SVX-3 : Codex du Survivant (six onglets : Évolutions, Armes, Panoplies, Bestiaire, Records, Défis)
 	var cx := SurvivorCodexPage.open_on(world)
 	await probe("Survivant : Codex", 0.9)
+	var fiche := SurvivorCodexPage.Fiche.open_on(world, "weapon", "axe")  # (lot SVX-4) fiche d'arme du Codex
+	await get_tree().create_timer(0.3, true).timeout
+	await probe("Survivant : fiche d'arme du Codex", 0.9)
+	fiche.queue_free()
 	cx.close_ui()
 	cx.queue_free()
+	# lot SVX-4 : boutique du gardien (Acheter, Garder, Relancer, Continuer)
+	Survivor.start("warrior", "limestone", 1, "")
+	Run.apply_card(SurvivorCards.weapon_card())
+	Profile.gold = 3000
+	var shop := SurvivorShopUI.new()
+	world.add_child(shop)
+	shop.open_shop(300.0)
+	await get_tree().create_timer(0.4, true).timeout
+	await probe("Survivant : boutique du gardien", 0.9)
+	shop.close_shop()
+	shop.queue_free()
+	Run.finish("abandon")
+	Profile.end_run_survival()
 	Run.survivor = false
 	SurvivorRewards.reset()
 	get_tree().paused = false

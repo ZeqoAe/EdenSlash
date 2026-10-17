@@ -121,6 +121,8 @@ const GUARDIAN_HP := [50000.0, 440000.0, 1400000.0]
 const BOSS_HP := 6000000.0
 const BOSS_RAGE_AT := 240.0
 const BOSS_ATK := 1.4
+## Coup du boss final plafonné (lot SVX-4, SurvivorDirector._cap_boss) : part des PV max du héros au plus.
+const BOSS_HIT_CAP := 0.35
 ## Butin des monstres : potions seulement (part des monstres ordinaires, des élites).
 const POTION_DROP := [0.03, 0.3]
 ## Garde-fous du build : critique (physique et magique) plafonnée à CRIT_CAP, le surplus devient des dégâts critiques
@@ -138,6 +140,8 @@ const PASSIVE_CAP_MULT := 1.5
 ## a ses améliorations au moins PITY_TIER (et une carte forte garantie).
 const PITY_DRY := 3
 const PITY_TIER := "epic"
+## Pièces maudites (lot SVX-4, SV-R2, SurvivorGear.CURSES) : une pièce tirée sur CURSE_EVERY.
+const CURSE_EVERY := 15.0
 
 ## --- Paliers de difficulté I à V (lot S8, SPEC §8.5, conception/survivor/R_S8.md) -----------------------------------
 ## Chaque palier garde les règles du précédent et en ajoute UNE, lisible (`rule`, une phrase courte affichée au lobby ; le
@@ -184,6 +188,11 @@ static var dry := 0  # choix de niveau d'affilée sans carte forte (pitié de l'
 static var pity_given := 0  # offres garanties données dans la run (journal, mesures)
 static var _hub := {}  # instantané de la progression du compte (HUB_KEYS)
 static var lobby_request := ""  # bilan -> lobby : "class" ouvre la page du mode et le choix de classe (lu une fois par le lobby)
+## Vitesse du jeu de la partie (lot SVX-4, SV-A1 : réglage interface/sv_speed, ×0,8 / ×1 / ×1,2) : hors records, hors partie
+## du jour (SurvivorRecords, SurvivorDaily) ; posée par SurvivorDirector.update (Engine.time_scale), remise par finish.
+const SPEEDS := [0.8, 1.0, 1.2]
+static var speed := 1.0
+static var boss_down := false  # (lot SVX-4) boss final vaincu : la partie est gagnée (prolongations comprises)
 
 
 ## Remise à zéro (en tête de Run.start : tout autre mode lancé ensuite repart sans Survivant).
@@ -200,6 +209,11 @@ static func reset() -> void:
 	pity_given = 0
 	_hub = {}
 	SurvivorRewards.reset()
+	SurvivorShop.reset()  # (lot SVX-4) boutique du gardien
+	SurvivorFavors.current = ""
+	SurvivorDaily.active = false
+	speed = 1.0
+	boss_down = false
 
 
 ## Zones jouables : celles des époques de la Survie (8 décors) ; aucune ne demande de progression.
@@ -214,10 +228,18 @@ static func zones() -> Array:
 
 ## Lance un Survivant de la classe [param cid] dans la zone [param zone] au palier [param p] : héros niveau 1, sans arme,
 ## sans pièce, sans fourniture. La carte et le monde viennent ensuite (scène du jeu).
-static func start(cid: String, zone: String, p := 1) -> void:
+static func start(cid: String, zone: String, p := 1, favor := "-") -> void:
 	var z := zone if zone in zones() else String(zones()[0])
 	var stash: Dictionary = Profile.stash.duplicate(true)
+	# (lot SVX-4) faveur de départ : celle donnée, sinon celle choisie à la page du mode (--favor=<id> pour les mesures)
+	var fav := SurvivorFavors.chosen() if favor == "-" else favor
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--favor="):
+			fav = arg.trim_prefix("--favor=")
 	Run.start(cid)  # Survivor.reset(), puis Profile.begin_run : copies de l'équipement du hub, réserve dans le sac
+	SurvivorFavors.current = fav if not SurvivorFavors.get_def(fav).is_empty() else ""
+	Run.seed = 0  # (lot SVX-4) carte au hasard ; la partie du jour (SurvivorDaily.start) pose la sienne ensuite
+	speed = clampf(float(Settings.get_v("interface", "sv_speed")), SPEEDS[0], SPEEDS[SPEEDS.size() - 1])
 	Profile.stash = stash  # la réserve reste au hub (begin_run l'avait mise dans le sac du héros)
 	Profile.bag = {}
 	Potions.start_run()  # seulement les potions de départ de toute run
@@ -248,8 +270,11 @@ static func finish(res: String, counted_kills: int) -> Array:
 	RenderingServer.global_shader_parameter_set("hero_fade", 0.0)
 	Monster.attack_slots = 0
 	Monster.lite_height = 0.0
+	if not is_equal_approx(speed, 1.0):
+		Engine.time_scale = 1.0  # (lot SVX-4) vitesse du jeu remise
 	ModeRules.modifiers = []  # (règles du palier : rien ne suit le héros dans un autre mode)
-	SurvivorRewards.settle(res, counted_kills)
+	if res != SurvivorSave.RESULT:  # (lot SVX-4) partie sauvée pour plus tard : rien n'est réglé (elle reprendra)
+		SurvivorRewards.settle(res, counted_kills)
 	return moved
 
 
@@ -316,10 +341,11 @@ static func fallback_anim(cid: String, swing: int) -> String:
 ## en baisse jusqu'à xp_late au niveau xp_late_at et au-delà (lot S7).
 static func xp_mult(level: int) -> float:
 	var until := maxf(rule("xp_until"), 2.0)
+	var fav := SurvivorFavors.mult("xp")  # (lot SVX-4) faveur « Érudit »
 	if level <= until:
-		return lerpf(rule("xp_start"), rule("xp_end"), clampf((level - 1) / (until - 1.0), 0.0, 1.0))
+		return lerpf(rule("xp_start"), rule("xp_end"), clampf((level - 1) / (until - 1.0), 0.0, 1.0)) * fav
 	var late := maxf(rule("xp_late_at"), until + 1.0)
-	return lerpf(rule("xp_end"), rule("xp_late"), clampf((level - until) / (late - until), 0.0, 1.0))
+	return lerpf(rule("xp_end"), rule("xp_late"), clampf((level - until) / (late - until), 0.0, 1.0)) * fav
 
 
 ## Niveau maximal du héros : aucun plafond par carte (SPEC §8.1), seulement celui des monstres et des pièces (90,
@@ -332,6 +358,9 @@ static func level_cap(default: int) -> int:
 ## magique plafonnées à crit_cap, le surplus le plus grand devient des dégâts critiques (× crit_overflow) ; dégâts
 ## critiques, vitesses d'attaque et d'incantation plafonnés (voir CRIT_CAP en tête de fichier).
 static func cap_hero(p: Object) -> void:
+	if active:
+		SurvivorGear.apply_curses(p)  # (lot SVX-4) pièces maudites : bonus et contrepartie, avant les plafonds
+		SurvivorFavors.apply_hero(p)  # (lot SVX-4) faveur de départ (Canon de verre, Course folle…)
 	var cap := rule("crit_cap")
 	if not active or cap <= 0.0:
 		return

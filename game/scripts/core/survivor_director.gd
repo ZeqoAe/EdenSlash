@@ -137,11 +137,14 @@ static func spawn_plan(t: float) -> Dictionary:
 	var ramp := clampf(t / maxf(float(opening[2]), 1.0), 0.0, 1.0)
 	var ease := lerpf(float(opening[0]), 1.0, ramp)
 	var ease_hp := lerpf(float(opening[1]), 1.0, ramp)
+	var horde := SurvivorFavors.mult("horde")  # (lot SVX-4) faveur « Horde affamée »
 	return {
 		"minute": mins,
-		"alive_max": int(r("alive_final", Survivor.ALIVE_FINAL)) if final else roundi(lerpf(float(r("alive_start", Survivor.ALIVE[0])), float(r("alive_end", Survivor.ALIVE[1])), k)),
+		# (la faveur ne dépasse jamais la horde finale : coût mesuré au lot SVX-1 jusqu'à 290 vivants)
+		"alive_max": roundi(minf((float(r("alive_final", Survivor.ALIVE_FINAL)) if final else lerpf(float(r("alive_start", Survivor.ALIVE[0])), float(r("alive_end", Survivor.ALIVE[1])), k)) * horde,
+			maxf(float(r("alive_final", Survivor.ALIVE_FINAL)), float(r("alive_end", Survivor.ALIVE[1]))))),
 		"pack_every": float(pack_every[1]) if final else lerpf(float(pack_every[0]), float(pack_every[1]), k),
-		"pack_size": roundi(lerpf(float(pack_size[0]), float(pack_size[1]), 1.0 if final else k)),
+		"pack_size": roundi(lerpf(float(pack_size[0]), float(pack_size[1]), 1.0 if final else k) * horde),
 		"wave_every": lerpf(float(wave_every[0]), float(wave_every[1]), k),
 		"pace": lerpf(float(pace[0]), float(pace[1]), k),
 		"elite_every": 0.0 if t < elites_from else float(elite_every[1] if t >= Survivor.BOSS_OPEN_AT else elite_every[0]),
@@ -182,6 +185,8 @@ func start_message() -> String:
 
 ## Chaque image, en exploration comme dans l'arène : chronologie, défis, journal minute par minute.
 func update(delta: float) -> void:
+	if not SurvivorSave.pending.is_empty() and d.player != null and d.map != null:
+		SurvivorSave.apply(self)  # (lot SVX-4, SV-Q4) partie reprise : temps, héros, gardiens, carte
 	if not _cam_done and d.world != null and d.world.get("rig") != null:
 		_cam_done = true  # (lot SVX-1) caméra plus haute : la horde se voit autour du héros
 		d.world.rig.distance = minf(28.0, float(d.world.rig.distance) * Survivor.CAM_ZOOM)
@@ -197,11 +202,23 @@ func update(delta: float) -> void:
 	if events == null:
 		events = SurvivorEvents.new(self)
 	events.tick()
+	_update_endless(delta)
+	if d.player != null and d.player.is_dead != _was_dead:
+		_was_dead = d.player.is_dead
+		if _was_dead:  # (lot SVX-4, mesures) ce qui a fait tomber le héros : dégâts subis par source depuis le début
+			var c := RunJournal.counters
+			print("[sv] chute à %s (%s) · subis monstres %d · élites %d · boss %d · autres %d · pv_max %d" % [clock(d.time), d.state,
+				roundi(float(c.get("dmg_taken_normal", 0.0))), roundi(float(c.get("dmg_taken_elite", 0.0))), roundi(float(c.get("dmg_taken_boss", 0.0))),
+				roundi(float(c.get("dmg_taken_autre", 0.0))), roundi(d.player.max_hp)])
+	if not is_equal_approx(Survivor.speed, 1.0) and is_equal_approx(Engine.time_scale, 1.0) and not d.player.autoplay:
+		Engine.time_scale = Survivor.speed  # (lot SVX-4, SV-A1) vitesse du jeu (reposée après un arrêt sur image)
 	if d.state != "explore":
 		return
 	_update_challenges()
+	_update_guardian_shop()
 	if d.player.autoplay:
 		_pilot_shop()
+		_pilot_push()
 	while _next < _events.size() and d.time >= float(_events[_next].t):
 		var ev: Dictionary = _events[_next]
 		if ev.id == "boss" and not _can_force():
@@ -214,6 +231,7 @@ func _fire(ev: Dictionary) -> void:
 	match String(ev.id):
 		"guardian_warn":
 			d.message.emit("Un gardien approche !\nIl surgit dans %d secondes" % int(GUARDIAN_WARN), 3.0)
+			SurvivorHud.caption("Grondement : un gardien approche")
 		"guardian":
 			spawn_guardian(int(ev.n))
 			if int(ev.n) == Survivor.GUARDIAN_TIMES.size() - 1 and bool(Survivor.tier_rule("twin")):
@@ -223,6 +241,7 @@ func _fire(ev: Dictionary) -> void:
 			d.message.emit("Le portail du boss est ouvert !\nEntre quand tu veux : le boss arrive à 20:00", 4.0)
 		"final_horde":
 			d.message.emit("Le boss arrive dans 1:00 !\nLa horde se déchaîne", 4.0)
+			SurvivorHud.caption("Cor de guerre : le boss arrive dans 1:00")
 			var sp := _squads()
 			if sp != null:
 				sp._event("encircle", d.time / 60.0, false)  # encerclement annoncé (cercles au sol), rôles mélangés
@@ -377,7 +396,7 @@ func hard_cap(default: int) -> int:
 
 ## Or d'un monstre vaincu (× RunDirector, avant Run.add_gold) : la part de la horde pour un monstre ordinaire.
 func kill_gold(m: Monster) -> float:
-	return horde_share(3) if m.has_meta("sv_horde") else 1.0
+	return (horde_share(3) if m.has_meta("sv_horde") else 1.0) * SurvivorFavors.mult("gold")
 
 
 ## Niveaux de détail de la horde (toutes les LOD_EVERY s) : réflexion à chaque image près du héros, une sur 2 puis une
@@ -403,11 +422,16 @@ func _update_lod(delta: float) -> void:
 		rows.append([Vector2(mo.global_position.x - hero.x, mo.global_position.z - hero.z).length(), mo])
 	rows.sort_custom(func(a, b): return float(a[0]) < float(b[0]))
 	var full := int(r("lod_full", Survivor.LOD_FULL))
+	var contrast := bool(Settings.get_v("interface", "horde_contrast"))
 	for i in rows.size():
 		var dist := float(rows[i][0])
 		var mo: Monster = rows[i][1]
 		# chaque image : les LOD_FULL plus proches à moins de LOD_NEAR m ; une sur 2 jusqu'à LOD_FAR m ; une sur 4 au-delà
 		set_lod(mo, 0 if dist < near and i < full else (1 if dist < far else 2))
+		if contrast != bool(mo.get_meta("sv_shade", false)) and mo.model != null:
+			mo.set_meta("sv_shade", contrast)  # (lot SVX-4, SV-A1) horde contrastée : plus sombre et terne (shader eden_character)
+			for gi in mo.model.find_children("*", "GeometryInstance3D", true, false):
+				(gi as GeometryInstance3D).set_instance_shader_parameter("horde_shade", 0.8 if contrast else 0.0)
 		var sh := dist < shadow
 		if sh != bool(mo.get_meta("sv_shadow", true)) and mo.model != null:
 			mo.set_meta("sv_shadow", sh)
@@ -527,6 +551,10 @@ func scale_monster(m: Monster, boss: bool) -> bool:
 			var k := MonsterScaling.capped(power, Menace.hp_mult() * greed_k, greed_k)
 			m.max_hp *= k.x
 			m.atk *= k.y
+		# (lot SVX-4) faveur de départ : monstres ordinaires et élites (jamais gardiens ni boss)
+		m.max_hp *= SurvivorFavors.mult("m_hp")
+		m.atk *= SurvivorFavors.mult("m_atk")
+		m.move_speed *= SurvivorFavors.mult("m_speed")
 	m.hp = m.max_hp
 	return true
 
@@ -579,7 +607,7 @@ static func final_boss_hp() -> float:
 ## secondaire, ni sceau ; seulement des potions (Survivor.POTION_DROP : monstre, élite).
 func on_monster_died(m: Monster) -> bool:
 	var drop: Array = r("potion_drop", Survivor.POTION_DROP)
-	if not m.is_boss and randf() < float(drop[1] if m.is_elite else drop[0]) * kill_gold(m):
+	if not m.is_boss and randf() < float(drop[1] if m.is_elite else drop[0]) * (horde_share(3) if m.has_meta("sv_horde") else 1.0):
 		d._drop_potion(m.global_position, Potions.roll_kind())
 	return true
 
@@ -604,6 +632,7 @@ func spawn_guardian(n: int) -> GiantMonster:
 	Sfx.event_at(d, at, "rock", 2.0)
 	Vfx.shockwave(d.player, at, 8.0, Color(1.0, 0.4, 0.2))
 	d.message.emit("UN GARDIEN SURGIT !\nVaincs-le : un coffre de gardien t'attend", 3.5)
+	SurvivorHud.caption("Fracas : un gardien surgit")
 	print("[sv] gardien %d à %s · niveau %d · PV %d · Menace %s" % [n + 1, clock(d.time), lvl, roundi(g.max_hp), Menace.mult_text()])
 	return g
 
@@ -621,6 +650,35 @@ func _on_guardian_died(n: int, g: GiantMonster) -> void:
 	print("[sv] gardien %d vaincu en %.0f s" % [n + 1, ttk])
 	d.message.emit("GARDIEN VAINCU !\nOuvre son coffre", 3.0)
 	offer_box(GUARDIAN_BOX, "Coffre du gardien : choisis une carte")
+	shop_pending = true  # (lot SVX-4, SV-R3) la boutique du gardien s'ouvre une fois le coffre choisi
+
+
+## Boutique du gardien (lot SVX-4, SV-R3) : ouverte dès que le choix du coffre du gardien est fait (aucun choix de carte
+## ouvert) ; le pilote automatique y achète seul (SurvivorShop.pilot), un joueur a son écran (SurvivorShopUI).
+var shop_pending := false
+var shop_ui: SurvivorShopUI
+
+
+func _update_guardian_shop() -> void:
+	if not shop_pending or d.world == null:
+		return
+	var cards = d.world.get("cards")
+	if cards != null and cards.is_open():
+		return
+	shop_pending = false
+	if d.player.autoplay or Settings.auto_cards():
+		SurvivorShop.open()
+		SurvivorShop.pilot()  # (aide « Bot » : la boutique se fait seule, comme les cartes)
+		var n := SurvivorShop.bought
+		SurvivorShop.close(d.time)
+		if not d.player.autoplay:
+			d.message.emit("Boutique du gardien : %d carte%s achetée%s" % [n, "s" if n > 1 else "", "s" if n > 1 else ""], 2.5)
+		d.player.recalc_stats()
+		return
+	if shop_ui == null or not is_instance_valid(shop_ui):
+		shop_ui = SurvivorShopUI.new()
+		d.world.add_child(shop_ui)
+	shop_ui.open_shop(d.time)
 
 
 ## Gardiens vaincus.
@@ -666,9 +724,9 @@ static func box_title(box: String) -> String:
 	return String(BOXES.get(box, {}).get("name", ""))
 
 
-## Prix relatif d'un coffre du Survivant (× RunDirector.chest_price).
+## Prix relatif d'un coffre du Survivant (× RunDirector.chest_price) ; plus cher avec le temps (lot SVX-4, SurvivorShop.chest_mult).
 static func box_price(box: String) -> float:
-	return float(BOXES.get(box, {}).get("price", 1.0))
+	return float(BOXES.get(box, {}).get("price", 1.0)) * SurvivorShop.chest_mult(SurvivorCards.minutes()) * SurvivorFavors.mult("chest")
 
 
 ## Lieux : l'enclume donne +2 gratuit sur une pièce portée (chacune une fois) ; la stèle du défi donne un coffre doré.
@@ -750,20 +808,25 @@ var _pilot_goal := Vector3.INF
 func pilot_target() -> Vector3:
 	if d.player == null or not d.player.autoplay or d.state != "explore" or d.map == null:
 		return Vector3.INF
-	if d.time < _pilot_t:
-		return _pilot_goal
+	if d.time >= _pilot_t:
+		_pilot_choose()
+	return _pilot_waypoint()
+
+
+func _pilot_choose() -> void:
 	_pilot_t = d.time + PILOT_RETARGET
 	_pilot_goal = Vector3.INF
+	_pilot_it = null
 	var p := d.player.global_position
 	for e in guardians:  # (lot SVX-1) un gardien en vie : le pilote va le combattre (sinon il frappait la horde qui l'entoure)
 		if float(e.ttk) < 0.0:
 			for node in d.get_tree().get_nodes_in_group("monsters"):
 				if node is GiantMonster and node.has_meta("sv_guardian") and not (node as Monster).is_dead:
 					_pilot_goal = (node as Node3D).global_position
-					return _pilot_goal
+					return
 	var best := INF
 	for it in d.map.interactables:
-		if not is_instance_valid(it) or it.used:
+		if not is_instance_valid(it) or it.used or _pilot_skip.has(it):
 			continue
 		var ok := false
 		if it.kind == "chest":
@@ -773,7 +836,92 @@ func pilot_target() -> Vector3:
 		if ok and d._flat(p, it.global_position) < best:
 			best = d._flat(p, it.global_position)
 			_pilot_goal = it.global_position
-	return _pilot_goal
+			_pilot_it = it
+
+
+## Le pilote suit le chemin de navigation vers son but (lot SVX-4, mesures ; avant : la ligne droite, bloquée par les falaises
+## et les rochers : sur certaines cartes il n'atteignait presque aucun coffre). Un but sans chemin est abandonné.
+const PILOT_WP_EVERY := 0.3
+var _pilot_it: Node = null
+var _pilot_skip := {}  # lieux sans chemin (jamais repris)
+var _wp := Vector3.INF
+var _wp_t := 0.0
+var _wp_goal := Vector3.INF
+
+
+func _pilot_waypoint() -> Vector3:
+	if _pilot_goal == Vector3.INF:
+		return Vector3.INF
+	if d.time < _wp_t and _pilot_goal.distance_to(_wp_goal) < 1.0:
+		return _wp
+	_wp_t = d.time + PILOT_WP_EVERY
+	_wp_goal = _pilot_goal
+	_wp = _pilot_goal
+	var from := d.player.global_position
+	var path: PackedVector3Array = d.map.path_between(from, _pilot_goal) if d.map.has_method("path_between") else PackedVector3Array()
+	if path.size() < 2:
+		return _wp
+	var end := path[path.size() - 1]
+	if Vector2(end.x - _pilot_goal.x, end.z - _pilot_goal.z).length() > 5.0 and _pilot_it != null:
+		_pilot_skip[_pilot_it] = true  # (pas de chemin jusqu'au lieu : il en choisit un autre)
+		_pilot_t = 0.0
+		return _wp
+	for pt in path:
+		if Vector2(pt.x - from.x, pt.z - from.z).length() > 1.6:
+			_wp = pt
+			break
+	return _wp
+
+
+## Percée du pilote (lot SVX-4, mesures) : le pilote ne frappe qu'à moins de --fight m ; dans une horde dense il y a
+## toujours un monstre à portée, il restait donc sur place et n'atteignait plus les coffres (mesuré au lot SVX-1 : les parties
+## perdues vers 5:00 avaient 2 pièces et 0 coffre à 3:00, l'or intact). En route vers un but, il avance une part de chaque
+## PILOT_CYCLE s sans s'arrêter (selon le profil) ; s'il ne se rapproche pas de son but de 2 m en PILOT_STUCK s, il passe en
+## force PILOT_PUSH s, comme un joueur qui fend la horde.
+const PILOT_STUCK := 2.0
+const PILOT_PUSH := 4.0
+const PILOT_CYCLE := 4.0
+const PILOT_MOVE := 0.55
+var _push_goal := Vector3.INF
+var _push_best := INF
+var _push_check := 0.0
+var _push_until := -1.0
+var _fight_base := -1.0
+
+
+func _pilot_push() -> void:
+	if _fight_base < 0.0:
+		_fight_base = Run.test_fight_range
+	var goal := d.player.autoplay_target
+	# en route vers un but, le pilote avance PILOT_MOVE du temps sans s'arrêter pour frapper (cycle de PILOT_CYCLE s), le même pour
+	# tous les profils (essai d'une part selon le profil : le « bon » joueur tuait moins, niveau 34-37 à 20:00 au lieu de 41)
+	var moving := goal != Vector3.INF and fmod(d.time, PILOT_CYCLE) < PILOT_CYCLE * PILOT_MOVE
+	if d.time < _push_until or moving:
+		Run.test_fight_range = 0.0
+		if not moving:
+			return
+	else:
+		Run.test_fight_range = _fight_base
+	if goal == Vector3.INF:
+		_push_goal = Vector3.INF
+		return
+	var dist := d._flat(d.player.global_position, goal)
+	if goal.distance_to(_push_goal) > 1.0:
+		_push_goal = goal
+		_push_best = dist
+		_push_check = d.time + PILOT_STUCK
+	elif dist < _push_best - 2.0:
+		_push_best = dist
+		_push_check = d.time + PILOT_STUCK
+	elif d.time > _push_check:
+		_push_until = d.time + PILOT_PUSH
+		_push_best = dist
+		_push_check = _push_until + PILOT_STUCK
+		pushes += 1
+
+
+var pushes := 0  # percées du pilote (journal)
+var _was_dead := false
 
 
 ## Prix d'une carte de marchand au niveau du héros (MerchantUI.roll_offers : 50 à 70 + 14 par niveau).
@@ -831,7 +979,16 @@ func setup_boss(boss: Monster) -> void:
 	boss.hp = boss.max_hp
 	if int(Survivor.tier_rule("bricks")) > 0:
 		_add_boss_bricks.call_deferred(boss, int(Survivor.tier_rule("bricks")))  # après BossBrain.setup (mécaniques de la zone)
+	_cap_boss.call_deferred(boss)
 	print("[sv] boss %s · PV %d (× Menace %s) · niveau %d" % [boss.display_name.trim_prefix("<Boss> "), roundi(boss_hp), Menace.mult_text(), boss.level])
+
+
+## Coup du boss final plafonné (lot SVX-4) : jamais plus de boss_hit_cap des PV max du héros d'un seul coup (comme les gardiens,
+## 30 %, et les boss de la bibliothèque, 40 %). Mesuré avant (« [sv] chute ») : le boss retirait 110 000 à 120 000 PV en 14-26 s à
+## des héros +10 de 25 000 à 40 000 PV, même au profil « bon ».
+func _cap_boss(boss: Monster) -> void:
+	if is_instance_valid(boss) and boss.brain != null and "hit_cap" in boss.brain:
+		boss.brain.hit_cap = float(r("boss_hit_cap", Survivor.BOSS_HIT_CAP))
 
 
 ## Paliers IV et V : [param n] mécaniques de plus pour le boss final (Survivor.EXTRA_BRICKS, d'une famille qu'il n'a pas),
@@ -874,10 +1031,81 @@ func boss_rage_at() -> float:
 ## Boss vaincu : une seule carte, la run est gagnée (bilan après 6 s, en pause pendant un choix de carte).
 func on_boss_killed() -> bool:
 	d.state = "cleared"
+	Survivor.boss_down = true
 	print("[sv] boss vaincu à %s (%.0f s dans l'arène), niveau %d" % [clock(d.time), d.time - arena_at, d.player.level])
 	d.message.emit("Boss vaincu !\nTu as survécu", 4.0)
-	_finish_later()
+	if d.player.autoplay or Settings.auto_cards() or "--auto-quit" in OS.get_cmdline_user_args():
+		_finish_later()
+	else:
+		_offer_endless()  # (lot SVX-4, SV-Q2) prolongations proposées
 	return true
+
+
+# --- prolongations (lot SVX-4, BM-SURV SV-Q2) -------------------------------------------------------------------------
+## Après la victoire, « Continuer » : la horde revient sans fin dans l'arène, plus forte de minute en minute (PV × ENDLESS_HP,
+## dégâts × ENDLESS_ATK par minute, meutes plus grosses) ; rien de plus à gagner : seulement le record « Plus longue
+## prolongation ». La première chute (le héros se relève, la partie s'arrête) ou « Abandonner » au menu clôt la partie, gagnée.
+const ENDLESS_EVERY := 2.2
+const ENDLESS_PACK := 10
+const ENDLESS_HP := 1.15
+const ENDLESS_ATK := 1.08
+const ENDLESS_ALIVE := 160
+var endless := false
+var endless_at := -1.0
+var endless_secs := 0.0
+var _endless_t := 0.0
+
+
+func _offer_endless() -> void:
+	await d.get_tree().create_timer(2.5, false).timeout
+	if not is_instance_valid(d) or not Run.active or d.world == null:
+		return
+	d.get_tree().paused = true
+	InfoCard.ask(d.world, "Prolongations ?", "La horde revient sans fin, de plus en plus forte. Rien de plus à gagner : seulement le record de la plus longue prolongation. Ta première chute clôt la partie, gagnée.",
+		"Continuer", start_endless, false, "Terminer", _end_now)
+
+
+func _end_now() -> void:
+	d.get_tree().paused = CardPicker.pause_held(d.get_tree())
+	if is_instance_valid(d):
+		d.boss_defeated.emit()
+
+
+## Lance les prolongations (tests : directement).
+func start_endless() -> void:
+	d.get_tree().paused = CardPicker.pause_held(d.get_tree())
+	endless = true
+	endless_at = d.time
+	d.player.add_status("angel", 1.0e6)  # (la chute qui clôt les prolongations relève le héros)
+	d.message.emit("PROLONGATIONS !\nTiens le plus longtemps possible", 3.0)
+	SurvivorLog.moment(d.time, "Prolongations", "event")
+
+
+func _update_endless(delta: float) -> void:
+	if not endless:
+		return
+	endless_secs = d.time - endless_at
+	if not d.player.has_status("angel") or d.player.is_dead:
+		endless = false
+		print("[sv] prolongations : %.0f s" % endless_secs)
+		d.message.emit("Fin des prolongations : %s tenues" % clock(endless_secs), 3.0)
+		d.boss_defeated.emit()
+		return
+	_endless_t -= delta
+	if _endless_t > 0.0 or _alive() >= ENDLESS_ALIVE:
+		return
+	_endless_t = ENDLESS_EVERY
+	var mins := endless_secs / 60.0
+	var lvl := mini(MAX_LEVEL, monster_level(0) + int(mins * 2.0))
+	var c := d._ring_point(12.0, 18.0)
+	if c == Vector3.INF:
+		return
+	for i in ENDLESS_PACK + int(mins * 2.0):
+		var m: Monster = d._spawn_monster(d._pick_monster(lvl), d._around(c, 4.0), lvl)
+		if m != null:
+			m.max_hp *= pow(ENDLESS_HP, mins)
+			m.hp = m.max_hp
+			m.atk *= pow(ENDLESS_ATK, mins)
 
 
 func _finish_later() -> void:
@@ -943,9 +1171,10 @@ func _sample_minute() -> void:
 		"taken": roundi(damage_taken()), "max_hp": roundi(d.player.max_hp), "gear_index": snappedf(gear_idx, 0.01),
 		"power": [snappedf(power.x, 0.01), snappedf(power.y, 0.01)], "pity": Survivor.pity_given}
 	_minutes.append(row)
-	print("[sv] %02d:00 · %s · niveau %d · PV %d %% · monstres %d (niv. %d, PV ×%.2f, dégâts ×%.2f) · tués %d · Menace %d · or %d · sorts %d · pièces %d · cartes %d · subis %d · pv_max %d · indice %.2f · puissance ×%.2f/×%.2f · pitié %d%s" % [
+	print("[sv] %02d:00 · %s · niveau %d · PV %d %% · monstres %d (niv. %d, PV ×%.2f, dégâts ×%.2f) · tués %d · Menace %d · or %d · sorts %d · pièces %d · cartes %d · subis %d · pv_max %d · indice %.2f · puissance ×%.2f/×%.2f · pitié %d · percées %d · boutique %d · maudites %d%s" % [
 		m, d.state, row.level, roundi(float(row.hp) * 100.0), row.alive, row.mlvl, row.hp_mult, row.atk_mult, row.kills, row.menace,
 		row.gold, row.skills, row.pieces, row.cards, row.taken, row.max_hp, gear_idx, power.x, power.y, Survivor.pity_given,
+		pushes, SurvivorShop.spent, SurvivorGear.curses_worn().size(),
 		(" · boss PV %d %%" % roundi(100.0 * d._boss.hp / maxf(d._boss.max_hp, 1.0))) if d.state == "boss" and is_instance_valid(d._boss) else ""])
 	print("[sv-build] " + build_line())
 	var dn := maxf(float(_dens.n), 1.0)

@@ -888,8 +888,19 @@ func _test_survivor_screens() -> void:
 		await _frames(3)
 		if cx._right.get_global_rect().end.x > 1281.0 or cx.page(i).get_global_rect().end.x > 1281.0 or cx.page(i).get_global_rect().end.y > 721.0:
 			cx_bad.append(String(SurvivorCodexPage.TABS[i][1]))
-	check("Survivant, Codex : en-tête et six onglets dans 1280 × 720 %s" % [cx_bad], cx_bad.is_empty())
+	check("Survivant, Codex : en-tête et onglets dans 1280 × 720 %s" % [cx_bad], cx_bad.is_empty())
 	cx.queue_free()
+	# lot SVX-4 : la boutique du gardien tient dans 1280 × 720 (quatre offres, Acheter / Garder, barre)
+	Profile.gold = 3000
+	var shop := SurvivorShopUI.new()
+	add_child(shop)
+	shop.open_shop(300.0)
+	await _frames(4)
+	var shop_ok: bool = shop._cols.all(func(c): return vr.encloses((c.buy as Button).get_global_rect()) and vr.encloses((c.keep as Button).get_global_rect())) \
+		and vr.encloses(shop._reroll.get_global_rect()) and vr.encloses(shop._go.get_global_rect())
+	check("Survivant, boutique du gardien : offres et barre dans 1280 × 720", shop_ok and not shop._cols.is_empty())
+	shop.close_shop()
+	shop.queue_free()
 	Run.finish("abandon")
 	Profile.end_run_survival()
 	get_tree().paused = false

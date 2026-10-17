@@ -90,6 +90,8 @@ func _steer(delta: float) -> void:
 
 
 func shake(amount: float) -> void:
+	if Settings.get_v("interface", "calm_fx") == true:
+		return  # (lot SVX-4, SV-A1) « Réduire effets et secousses » : l'écran ne tremble plus
 	_shake = maxf(_shake, amount * float(Settings.get_v("camera", "shake")))
 
 

@@ -227,7 +227,8 @@ func _victory_run() -> void:
 	if g:
 		g.take_damage(g.max_hp * 10.0 + 1e7, w.player)
 	await _wait(0.5)
-	check("gardien 1 vaincu : or, la Menace ne monte pas", d.sv.guardians_killed() == 1 and Profile.gold > gold0 and Menace.level == 0)
+	# (lot SVX-4 : la boutique du gardien s'ouvre ensuite ; le pilote y dépense son or, compté à part)
+	check("gardien 1 vaincu : or, la Menace ne monte pas", d.sv.guardians_killed() == 1 and Profile.gold + SurvivorShop.spent > gold0 and Menace.level == 0)
 	# gardien 2 à 10:00, sous Menace ×1,2
 	Menace.level = 1
 	d.time = 599.6

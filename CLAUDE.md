@@ -149,6 +149,12 @@ y retombe, jamais en Survie ; `hint`, `paths`, coffre du gardien) ; Codex `core/
 « Records et Codex » de la page du mode) ; records et défis `core/survivor_records.gd` (titres : `SurvivorRewards.mode_titles()`) ; tout dans
 `records["sv_rewards"]` ; élites à modificateur, gardiens variés, Nuée 7:30 et Chasseur 12:30 `core/survivor_events.gd` (`SurvivorDirector.events`) ;
 bilan : coffres « Ouvrir mes coffres », `_fit_bilan` (1280 × 720) ; fondu d'arrivée sous le choix de carte (`ScreenFade.REVEAL_LAYER`). `test_svx3`, `shot_svx3`.
+SVX-4 (`R_SVX4.md`) : faveurs `core/survivor_favors.gd` (`SurvivorFavors`, page du mode, `--favor=<id>`), pièces maudites (`SurvivorGear.CURSES`,
+1 sur `CURSE_EVERY`), boutique du gardien `core/survivor_shop.gd` + `ui/survivor_shop_ui.gd` (après chaque gardien), partie du jour `core/survivor_daily.gd`,
+reprise `core/survivor_save.gd` (« Sauver et quitter » / « Reprendre la partie »), prolongations (`SurvivorDirector.start_endless`), choix regroupés
+(`SurvivorPicker.grouping`), fiches du Codex (`SurvivorCodexPage.Fiche`, onglet Sorts), accessibilité (réglages `number_size`, `calm_fx`, `alert_captions`,
+`horde_contrast`, `sv_speed`, `sv_group_choices` ; `SurvivorHud.caption`). Pilote de mesure : chemin de navigation, avance 55 % du temps vers ses coffres
+(`PILOT_MOVE`), percées, ligne « [sv] chute » ; coup du boss final plafonné (`BOSS_HIT_CAP`). `test_svx4`, `shot_svx4`.
 
 ### Boss et bibliothèque
 `core/boss_library.gd` + `data/bosses.json` (48 boss, 6 par zone), mécaniques = briques `ai/boss_bricks.gd` (29, 10 familles)

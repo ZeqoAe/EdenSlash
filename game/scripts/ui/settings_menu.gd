@@ -651,6 +651,15 @@ func _build_camera_page() -> void:
 	_slider(v, "Intensité des zones de danger", "interface", "tele_intensity", Telegraph.INTENSITY_MIN, Telegraph.INTENSITY_MAX, 0.05,
 		func(x): return "%d %%" % roundi(x * 100), "Plus haut, les zones se voient mieux ; plus bas, on voit mieux le combat dedans.")
 	_check(v, "Vibration en combat", "interface", "combat_vibration", "À la manette, une courte vibration aux coups donnés et reçus, au saut et à l'atterrissage.")
+	# lot SVX-4 (BM-SURV SV-A1, SV-Q3) : lisibilité et confort, pensés pour la horde du Survivant
+	var nums := "Taille des nombres de dégâts et des textes qui s'envolent des coups."
+	_option(v, "Taille des nombres", "interface", "number_size", [[0.8, "Petits", nums], [1.0, "Normaux", nums], [1.3, "Grands", nums]])
+	_check(v, "Réduire effets et secousses", "interface", "calm_fx", "L'écran ne tremble plus, moitié moins d'étincelles, boutons et moments sans rebond. Les zones de danger ne changent jamais.")
+	_check(v, "Sous-titres des alertes", "interface", "alert_captions", "Survivant : chaque alerte sonore (gardien, nuée, chasseur, explosion, renforts) s'écrit en bas de l'écran.")
+	_check(v, "Horde contrastée", "interface", "horde_contrast", "Survivant : les monstres de la horde plus sombres et ternes ; ton héros, les élites, les gardiens et le danger gardent leurs couleurs.")
+	var spd := "Survivant : tout le jeu un peu plus lent ou plus vif. Autre chose que × 1 : ni record ni partie du jour."
+	_option(v, "Vitesse du jeu (Survivant)", "interface", "sv_speed", [[0.8, "× 0,8", spd], [1.0, "× 1", spd], [1.2, "× 1,2", spd]])
+	_check(v, "Choix de cartes regroupés", "interface", "sv_group_choices", "Survivant : une montée de niveau ne met plus le jeu en pause ; les choix attendent et s'ouvrent quand tu veux (touche des objectifs).")
 	_section(v, "Menus")
 	_check(v, "Réduire les animations", "interface", "ui_reduce_motion", "Boutons et fenêtres sans rebond ni étincelles. Les sons et la vibration restent.")
 	_check(v, "Vibration manette", "interface", "ui_vibration", "Une courte vibration à chaque clic et à chaque pas du cadre dans les menus.")

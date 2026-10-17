@@ -56,7 +56,7 @@ func _ready() -> void:
 
 
 func read_settings() -> void:
-	reduce_motion = bool(Settings.get_v("interface", "ui_reduce_motion"))
+	reduce_motion = bool(Settings.get_v("interface", "ui_reduce_motion")) or bool(Settings.get_v("interface", "calm_fx"))  # (lot SVX-4)
 	vibration = bool(Settings.get_v("interface", "ui_vibration"))
 	intensity = clampf(float(Settings.get_v("interface", "ui_fx")), 0.0, 1.5)
 	if not UiTheme.skin_forced:  # --ui-skin=… (essais, captures) l'emporte sur le réglage caché

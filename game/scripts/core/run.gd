@@ -196,6 +196,8 @@ func start_survival(cid: String, ep: int, rank := 0) -> void:
 func finish(res: String) -> void:
 	if not active:
 		return
+	if survivor and Survivor.boss_down:
+		res = "victoire"  # (lot SVX-4) Survivant : après le boss (prolongations), quitter ou tomber garde la victoire
 	active = false
 	result = res
 	var map_min := RunJournal.map_minutes()  # temps de la carte en cours (avant que le journal la close)
@@ -204,7 +206,8 @@ func finish(res: String) -> void:
 		# Survivant : aucun lien avec la progression du compte (ni maîtrise, ni insignes, ni records) ; le hub est
 		# remis tel qu'au départ, puis ses seules récompenses (SurvivorRewards, lot S6)
 		Survivor.finish(res, mini(kills, KILL_CAP_PER_MAP))
-		Quests.end_run("survivor", res == "victoire", SurvivorRewards.quest_extra())  # après la remise du hub (quêtes, passe M5)
+		if res != SurvivorSave.RESULT:  # (lot SVX-4) partie sauvée pour plus tard : ni quête ni récompense (elle reprendra)
+			Quests.end_run("survivor", res == "victoire", SurvivorRewards.quest_extra())  # après la remise du hub (quêtes, passe M5)
 		Profile.save_profile()
 		return
 	Profile.record_max("best_combo", combo_best)

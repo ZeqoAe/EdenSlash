@@ -936,6 +936,15 @@ d'apparence (lot S6). Socle (S1, 0.1.194) :
   (× 0,25) ; 2 → 12 monstres frappent en même temps au plus ; gardien en vie = horde calmée (pas de vague) ; gardiens 50 000 /
   440 000 / 1 400 000. Lisibilité : un nombre de dégâts par cible (30 à l'écran au plus), sorts du héros à 40 % d'opacité au plus,
   héros contouré, décor tramé dans 4 m autour du héros, barre de cible pour les élites, géants et boss seulement.
+- **Faveurs, malédictions, boutique, confort** (lot SVX-4, `conception/survivor/R_SVX4.md`) : une **faveur de départ** au choix à la page du mode
+  (une règle et sa contrepartie : Horde affamée, Canon de verre, Chasse au trésor, Course folle, Bonne étoile, Érudit ; deux ouvertes d'office,
+  les autres par les défis du mode ; jamais les gardiens ni le boss) ; une pièce sur 15 **maudite** (jet parfait, gros bonus et contrepartie
+  écrite, jamais l'arme) ; **boutique du gardien** après chaque gardien (4 cartes, Garder gratuit, relance × 1,5, chaque achat + 15 %),
+  coffres plus chers avec le temps, « Passer » moins payé quand l'or déborde ; **partie du jour** (même zone, classe, carte et tirages pour
+  tous, tableau des 5 meilleures) ; **prolongations** après le boss (horde sans fin, record seulement, la partie reste gagnée) ; **choix
+  regroupés** (option) ; **Sauver et quitter** / **Reprendre** (une sauvegarde, effacée à la reprise) ; fiches d'arme et de sort au Codex ;
+  accessibilité : taille des nombres, effets et secousses réduits, sous-titres des alertes, horde contrastée, vitesse du jeu × 0,8 / 1 / 1,2
+  (hors records), forme de la rareté sur chaque carte. Coup du boss final plafonné à 35 % des PV max du héros.
 - **Pièces et arme** (S2, `core/survivor_pool.gd`, `core/survivor_gear.gd`) : pool = les 13 sets d'Eden de niveau 90 (tête,
   torse, jambes, gants, bottes ; 5 en plates, 5 en cuir, 3 en tissu), plus les pièces de niveau 90 hors set pour la cape, le
   collier et la bague ; armes des 17 types (modèles de niveau 90). Stats d'origine de la pièce, puissance = niveau du héros (90

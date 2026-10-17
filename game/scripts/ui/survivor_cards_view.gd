@@ -480,6 +480,50 @@ static func tones_of(card: Dictionary) -> Array:
 	return UiTheme.tones(name)
 
 
+## Forme de la rareté (lot SVX-4, BM-SURV SV-A1 : la rareté ne repose jamais sur la seule couleur) : 0 rond (commun), 1 triangle
+## (spécial), 2 carré (rare), 3 losange (épique), 4 hexagone (mythique), 5 étoile (légendaire) ; -1 : carte sans rareté.
+static func shape_rank(card: Dictionary) -> int:
+	var t := String(card.get("type", ""))
+	if card.has("item") and t in ["sv_piece", "sv_weapon"]:
+		return clampi(int(card.item.get("rarity", 0)), 0, 5)
+	if t == "sv_evolution":
+		return 5
+	if card.has("tier"):
+		return int({"common": 0, "rare": 2, "epic": 3, "legendary": 5}.get(String(card.tier), 0))
+	return -1
+
+
+## Dessine la forme [param rank] (shape_rank) centrée sur [param c], rayon [param r] : blanche contourée d'encre.
+static func draw_shape(ci: CanvasItem, c: Vector2, r: float, rank: int) -> void:
+	if rank < 0:
+		return
+	var pts := PackedVector2Array()
+	match rank:
+		0:
+			ci.draw_circle(c, r + 2.0, UiTheme.color("encre.700"))
+			ci.draw_circle(c, r, Color.WHITE)
+			return
+		1:
+			for i in 3:
+				pts.append(c + Vector2.from_angle(-PI * 0.5 + TAU * i / 3.0) * (r * 1.25))
+		2:
+			for v in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
+				pts.append(c + v * (r * 0.85))
+		3:
+			for i in 4:
+				pts.append(c + Vector2.from_angle(-PI * 0.5 + TAU * i / 4.0) * (r * 1.2))
+		4:
+			for i in 6:
+				pts.append(c + Vector2.from_angle(TAU * i / 6.0) * (r * 1.1))
+		_:
+			for i in 10:
+				pts.append(c + Vector2.from_angle(-PI * 0.5 + TAU * i / 10.0) * (r * (1.3 if i % 2 == 0 else 0.6)))
+	var out := pts.duplicate()
+	out.append(pts[0])
+	ci.draw_colored_polygon(pts, Color.WHITE)
+	ci.draw_polyline(out, UiTheme.color("encre.700"), 2.0, true)
+
+
 ## Étiquette autocollante de famille (« PIÈCE », « ARME », « SORT », « ÉVOLUTION », « BONUS »).
 static func family_label(card: Dictionary) -> String:
 	match String(card.get("type", "")):
@@ -567,7 +611,12 @@ static func build_v2(v: VBoxContainer, card: Dictionary, tones: Array) -> void:
 			else:
 				for p in item.get("sv_passives", []):
 					_box_v2(v, "Passif · " + String(Boons.get_def(String(p.id)).get("name", p.id)), fr(effect_text(String(p.id), float(p.get("power", 1.0)))), "soleil")
-				_line_v2(v, _stats_text(item, 2), ink, 1)
+				var cu := SurvivorGear.curse_info(item)
+				if not cu.is_empty():  # (lot SVX-4, SV-R2) pièce maudite : bonus et contrepartie, encadré fraise
+					_box_v2(v, "Maudite · " + String(cu.name), "%s\n%s" % [String(cu.bonus), String(cu.malus)],
+						"amethyste" if bool(Settings.get_v("interface", "colorblind")) else "fraise")  # (daltoniens : jamais rouge à côté du vert)
+				else:
+					_line_v2(v, _stats_text(item, 2), ink, 1)
 			var jet := "★ Jet parfait" if SurvivorGear.is_perfect(item) else "Jet %d / %d" % [roundi(float(item.get("quality", 1.0)) * 100.0), roundi(Survivor.rule("perfect_quality") * 100.0)]
 			_line_v2(v, jet, UiTheme.color("bonbon.soleil.fonce") if SurvivorGear.is_perfect(item) else dim, 1)
 		"sv_piece_up", "sv_weapon_up":

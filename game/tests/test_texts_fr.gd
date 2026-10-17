@@ -225,6 +225,14 @@ func _ready() -> void:
 		sv_texts.append(String(Tutorial.card_spec(id).get("short", "")))
 	for k in ["weapon", "dot", "other", "set:x"]:
 		sv_texts.append(String(SurvivorLog.source(k).name))
+	# (lot SVX-4) faveurs, pièces maudites, partie du jour, sauvegarde
+	for f in SurvivorFavors.LIST:
+		sv_texts.append("%s %s %s %s" % [String(f.name), String(f.rule), SurvivorFavors.tip(String(f.id)), SurvivorFavors.unlock_text(String(f.id))])
+	for id in SurvivorGear.CURSES:
+		var cu := SurvivorGear.curse_info({"sv_curse": id})
+		sv_texts.append("%s %s %s" % [String(cu.name), String(cu.bonus), String(cu.malus)])
+	sv_texts.append(SurvivorDaily.line({"res": "victoire", "time": 1300.0, "level": 40, "kills": 9000}))
+	sv_texts.append(SurvivorSave.blocked(null))
 	var bp := SurvivorBuildPage.new()
 	sv_texts.append(bp.subtitle())
 	bp.free()

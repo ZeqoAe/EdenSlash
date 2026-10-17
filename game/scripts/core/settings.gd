@@ -134,7 +134,12 @@ const DEFAULTS := {
 		# ressenti du clic (UiFeel) ; ui_skin : peau des panneaux (« sticker » ; « night » = option technique, sans ligne)
 		"ui_reduce_motion": false, "ui_vibration": true, "ui_fx": 1.0, "ui_skin": "sticker",
 		# accessibilité (lot BR-I3) : « Voir les sons », couleurs adaptées aux daltoniens, vibration des coups en combat
-		"sound_cues": false, "colorblind": false, "combat_vibration": true},
+		"sound_cues": false, "colorblind": false, "combat_vibration": true,
+		# accessibilité et confort du Survivant (lot SVX-4, BM-SURV SV-A1, SV-Q3) : taille des nombres de dégâts (0,8 / 1 / 1,3),
+		# effets et secousses réduits, sous-titres des alertes sonores, horde contrastée, vitesse du jeu (hors records), choix
+		# de cartes regroupés (on les ouvre quand on veut)
+		"number_size": 1.0, "calm_fx": false, "alert_captions": false, "horde_contrast": false, "sv_speed": 1.0,
+		"sv_group_choices": false},
 }
 
 ## Modes de jeu prêts à l'emploi (réglages du menu Contrôles).
@@ -218,7 +223,10 @@ func fx_factor(kind: String, mine: int) -> float:
 
 ## Étincelles, poussière et éclairs d'impact : « all », « reduced » (moitié) ou « off ».
 func fx_particles() -> String:
-	return String(get_v("interface", "fx_particles"))
+	var v := String(get_v("interface", "fx_particles"))
+	if v == "all" and get_v("interface", "calm_fx") == true:
+		return "reduced"  # (lot SVX-4, SV-A1) « Réduire effets et secousses » : étincelles réduites de moitié
+	return v
 
 
 func apply_preset(id: String) -> void:

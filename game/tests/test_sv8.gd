@@ -266,7 +266,7 @@ func _visible() -> void:
 	check("Survivor.READY : visible hors mode dev", Survivor.READY and Survivor.visible() and not Activities.hidden(a))
 	check("activité sans verrou, rangée Aventure, 2e après la Survie", not a.has("unlock") and String(a.row) == "adventure"
 		and Activities.LIST.filter(func(x): return String(x.row) == "adventure")[1].id == "survivor")
-	check("illustration propre au mode (différente de la Survie)", String(a.img) == "survivor" and ResourceLoader.exists(Activities.IMG % "survivor"))
+	check("illustration propre au mode (différente de la Survie)", String(a.get("img", a.id)) == "survivor" and ResourceLoader.exists(Activities.IMG % "survivor"))  # (« img » facultatif depuis ILL-2)
 	check("quêtes du Survivant tirables (porte « survivor » ouverte)", QuestPool.gate_ok("survivor"))
 	var blocks: Array = Guide.blocks_for("modes")
 	var b: Array = blocks.filter(func(x): return String(x.id) == "mode_survivor")
