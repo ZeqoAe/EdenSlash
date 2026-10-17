@@ -29,10 +29,13 @@ et cloner ce qui fait la qualité des références, pas les copier. Un mode « f
 | L'Échiquier (autochess) | Teamfight Tactics (Riot), Dota Underlords, Hearthstone Battlegrounds, Super Auto Pets, Auto Chess, TFT mobile |
 | Battle royale | Fortnite, Apex Legends, Super Animal Royale, Spellbreak, Brawl Stars (Showdown), Realm Royale |
 | Survivant | Vampire Survivors, Brotato, Halls of Torment, Megabonk, Risk of Rain 2, Hades (cartes de run) |
-| Aventure / progression / butin | Diablo IV, Path of Exile, Hades, Monster Hunter, Genshin Impact (artefacts), Lost Ark, Destiny 2 (puissance) |
-| Donjons / bibliothèque de boss | Monster Hunter, Final Fantasy XIV (raids), Elden Ring, Dauntless, Genshin (domaines) |
-| La Tour / Ruée / Siège | Hades, Honkai Star Rail (Simulated Universe), Diablo (Grandes Failles), Cuphead, Slay the Spire (étages) |
+| Aventure / progression / butin | **MMORPG et RPG d'action en ligne** : World of Warcraft, Final Fantasy XIV, Lost Ark, Guild Wars 2, Black Desert, MapleStory, Elder Scrolls Online ; ARPG : Diablo IV, Path of Exile ; Genshin Impact, Wuthering Waves, Tower of Fantasy |
+| Donjons / Tour / Ruée / Siège | **MMORPG** : WoW (donjons, raids, Mythic+), FFXIV (donjons, raids, Deep Dungeon, Duty Finder), Lost Ark (abysses, raids), Guild Wars 2 (donjons, fractales), Elder Scrolls Online (arènes, épreuves) ; Genshin (domaines, Abîme spiralé), Hades |
 | Duel / Ligue / Panthéon / Arènes | Brawlhalla, Street Fighter 6 (classement), LoL Arena (atouts, duos), Smash, Rocket League (rangs), Hearthstone (ladder) |
-| Quêtes / méta-progression | Genshin (quotidiennes), Fortnite (passe et défis), Hades (Miroir), Brawl Stars |
-| Hub / lobby / menus / HUD | Genshin, Honkai Star Rail, Persona 5, Hades, Fortnite, Brawl Stars, Wuthering Waves |
-| Héros / équipement / forge | Diablo IV, Path of Exile, Lost Ark, Genshin, Monster Hunter |
+| Quêtes / méta-progression | **MMORPG** : FFXIV (quêtes quotidiennes, Rôles, Journal), WoW (succès, quotidiennes, réputations), Lost Ark (tâches quotidiennes, passeport), GW2 (succès, récompenses quotidiennes) ; Genshin (commissions), Fortnite (passe), Hades (Miroir) |
+| Hub / lobby / menus / HUD | **MMORPG** : WoW (capitale, barres d'action, journal, carte), FFXIV (HUD modulable, menus), Lost Ark, GW2, MapleStory, Black Desert (menu principal) ; Genshin, Honkai Star Rail, Persona 5, Hades, Brawl Stars |
+| Héros / équipement / forge | **MMORPG** : WoW (personnage, talents, enchantements, transmogrification, sertissage), FFXIV (matérias, artisanat, ensembles), Lost Ark (transcendance, gemmes, renforcement), Black Desert (renforcement), MapleStory (potentiel, étoiles) ; Diablo IV, Path of Exile, Genshin (artefacts) |
+
+**Précision du joueur (17/10)** : pour les modes de progression (Aventure, Donjons, Tour, Ruée, Siège, Quêtes, hub, Héros / équipement / forge),
+s'inspirer des **MMORPG** (structure des écrans, profondeur des systèmes, confort), **sans** le côté corvée : pas de quêtes obligatoires, pas de
+« bash » de monstres inutile (décision du 16/10 : le farm doit être intéressant par ses activités et son système de progression).
