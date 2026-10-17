@@ -220,7 +220,10 @@ func _test_forge() -> void:
 	await get_tree().process_frame
 	check("forge : sept établis proposés (Reporter, lot GX-5)", ForgeBench.BENCHES.size() == 7 and _button_with(fb, "Améliorer") != null and _button_with(fb, "Démonter") != null)
 	var up0 := int(it.get("upgrade", 0))
-	var b := _button_with(fb, "Fortifier")
+	# lot GX-2 : « Fortifier jusqu'à +N » (essais enchaînés, plusieurs parchemins) est rangé avant « Fortifier · prix »
+	# (un essai, un parchemin) : on vise le bouton d'un seul essai.
+	check("forge : « Fortifier jusqu'à +N » proposé à côté de l'essai simple (lot GX-2)", _button_with(fb, "Fortifier jusqu'à") != null)
+	var b := _button_with(fb, "Fortifier ·")
 	check("forge : un bouton Fortifier est proposé avec le parchemin du sac", b != null)
 	if b:
 		b.pressed.emit()

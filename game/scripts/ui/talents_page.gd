@@ -28,6 +28,10 @@ var _undo: Button  # lot GX-5 : annule « Tout reprendre »
 var _search: LineEdit  # lot GX-5 : recherche dans l'arbre
 var _sealed: Label  # lot GX-5 : mode scellé (Survivant, Battle royale…) : les talents n'y comptent pas
 var _tree: TreeView  # lot GX-5 : l'arbre et ses liens de prérequis
+var _advise: Button  # lot GX-6 : « Conseillé » (aperçu avant / après, puis annulable)
+var _focus: Label  # lot GX-6 : « Pensé pour Rempart : PV max, Dégâts, Défense »
+var _load_btns: Array = []  # lot GX-6 : les 3 chargements nommés de la classe
+var _load_dialog: LoadDialog
 var _cells := {}  # id du talent -> cellule (VBox) de l'arbre
 var _grid: GridContainer
 var _board: BoardView
@@ -132,7 +136,7 @@ func _ready() -> void:
 	tb.add_child(_reset)
 	_undo = Button.new()
 	_undo.text = "Annuler"
-	_undo.tooltip_text = "Remet les points comme avant « Tout reprendre »."
+	_undo.tooltip_text = "Remet les points comme avant (« Tout reprendre », « Conseillé » ou un chargement)."
 	_undo.focus_mode = Control.FOCUS_NONE
 	_undo.pressed.connect(func():
 		if Profile.undo_talent_reset(_cls()):
@@ -188,6 +192,34 @@ func _build_spells_page() -> void:
 
 func _build_talents_page() -> void:
 	var v := _sub_panel("talents")
+	# lot GX-6 : build conseillé et chargements nommés, au-dessus de l'arbre
+	var ar := HBoxContainer.new()
+	ar.add_theme_constant_override("separation", 10)
+	v.add_child(ar)
+	_advise = Button.new()
+	_advise.text = "Conseillé"
+	_advise.focus_mode = Control.FOCUS_NONE
+	_advise.custom_minimum_size = Vector2(0, 36)
+	_advise.pressed.connect(_ask_advised)
+	UiTheme.style_button(_advise, "lagon", 15)
+	ar.add_child(_advise)
+	_focus = Hud._label(ar, "", 14, UiTheme.MUTED)
+	_focus.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_focus.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_focus.clip_text = true
+	_focus.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	var ll := Hud._label(ar, "Chargements", 14, UiTheme.MUTED)
+	ll.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for i in Profile.TALENT_LOADS:
+		var b := Button.new()
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(150, 36)
+		b.clip_text = true
+		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		b.pressed.connect(open_load.bind(i))
+		UiTheme.style_button(b, "papier", 14)
+		ar.add_child(b)
+		_load_btns.append(b)
 	var cc := CenterContainer.new()
 	cc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	v.add_child(cc)
@@ -344,6 +376,7 @@ func refresh() -> void:
 			_grid.add_child(_cell(cell, tree))
 	_tree.queue_redraw()
 	_apply_search()
+	_refresh_advice(c, narrow)
 	_refresh_certs()
 	show_sub(sub)
 
@@ -639,6 +672,210 @@ func _talent_tip(c: String, _id: int, t: Dictionary, rank: int, block: String) -
 		if x != "":
 			out.append(x)
 	return "\n".join(out)
+
+
+# --- build conseillé et chargements (lot GX-6) -------------------------------------------------------
+func _refresh_advice(c: String, narrow: bool) -> void:
+	var pts := Profile.talent_points(c)
+	var same := Profile.talent_norm(Profile.talents.get(c, {})) == Profile.advised_talents(c)
+	_advise.disabled = pts <= 0 or same
+	_advise.text = "Conseillé ✓" if same and pts > 0 else "Conseillé"
+	if pts <= 0:
+		_advise.tooltip_text = "Aucun point de talent : monte la maîtrise de la classe."
+	elif same:
+		_advise.tooltip_text = "Tes points suivent déjà l'arbre conseillé."
+	else:
+		_advise.tooltip_text = "Place tes %d points selon l'arbre conseillé de la classe. Aperçu avant / après d'abord, puis « Annuler » si besoin." % pts
+	_focus.text = TalentBuild.focus_line(c)
+	_focus.tooltip_text = "L'arbre conseillé suit le profil de la classe (Registre) : ses stats ★ d'abord, puis les sorts renforcés du bout de l'arbre."
+	_focus.mouse_filter = Control.MOUSE_FILTER_PASS
+	var loads := Profile.talent_loads_of(c)
+	for i in _load_btns.size():
+		var b: Button = _load_btns[i]
+		var e: Dictionary = loads[i]
+		b.custom_minimum_size.x = 120.0 if narrow else 150.0
+		b.text = "%d · %s" % [i + 1, String(e.name)] if not e.is_empty() else "%d · vide" % (i + 1)
+		b.modulate = Color.WHITE if not e.is_empty() else Color(1, 1, 1, 0.75)
+		if e.is_empty():
+			b.tooltip_text = "Emplacement libre. Clic : y enregistrer ton arbre actuel."
+		else:
+			b.tooltip_text = "« %s » : %d points. Clic : charger, renommer, remplacer ou effacer." % [String(e.name), _sum(e.ranks)]
+
+
+static func _sum(r: Dictionary) -> int:
+	var n := 0
+	for k in r:
+		n += int(r[k])
+	return n
+
+
+## Texte de l'aperçu avant / après de [param after] sur l'arbre actuel.
+func preview_text(c: String, after: Dictionary) -> String:
+	var lines := TalentBuild.compare_lines(c, Profile.talents.get(c, {}), after)
+	return "Avant → après\n%s\n\nTes points placés sont remplacés. « Annuler » remet l'arbre d'avant." % "\n".join(lines)
+
+
+## « Conseillé » : aperçu avant / après, puis l'arbre conseillé posé (annulable).
+func _ask_advised() -> void:
+	var c := _cls()
+	var adv := Profile.advised_talents(c)
+	InfoCard.ask(self, "Arbre conseillé · %d points" % _sum(adv), preview_text(c, adv), "Placer ces points", _apply_ranks.bind(c, adv), false, "Garder mon arbre")
+
+
+func _apply_ranks(c: String, r: Dictionary) -> void:
+	if Profile.apply_talents(c, r):
+		Sfx.ui("confirm")
+	refresh()
+
+
+## Ouvre la fiche du chargement [param slot] (charger, renommer, enregistrer l'arbre actuel, effacer).
+func open_load(slot: int) -> void:
+	if is_instance_valid(_load_dialog):
+		_load_dialog.queue_free()
+	_load_dialog = LoadDialog.new(self, slot)
+	add_child(_load_dialog)
+
+
+## Pose le chargement [param slot] après un aperçu avant / après.
+func ask_load(slot: int) -> void:
+	var c := _cls()
+	var e: Dictionary = Profile.talent_loads_of(c)[slot]
+	if e.is_empty() or Profile.talent_load_block(c, slot) != "":
+		return
+	InfoCard.ask(self, "Charger « %s »" % String(e.name), preview_text(c, e.ranks), "Charger", _apply_load.bind(c, slot), false, "Garder mon arbre")
+
+
+func _apply_load(c: String, slot: int) -> void:
+	if Profile.load_talent_load(c, slot):
+		Sfx.ui("confirm")
+	refresh()
+
+
+## Fiche d'un chargement : son nom (modifiable), ce qu'il contient, et les gestes possibles.
+class LoadDialog extends CanvasLayer:
+	var page: TalentsPage
+	var slot := 0
+	var name_edit: LineEdit
+	var _root: Control
+	var _closed := false
+
+	func _init(p: TalentsPage, i: int) -> void:
+		page = p
+		slot = i
+		layer = InfoCard.LAYER
+		process_mode = Node.PROCESS_MODE_ALWAYS
+		_root = Control.new()
+		_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(_root)
+		var dim := ColorRect.new()
+		UiTheme.veil(dim, 0.45)
+		dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+		dim.gui_input.connect(_on_dim)
+		_root.add_child(dim)
+		var center := CenterContainer.new()
+		center.set_anchors_preset(Control.PRESET_FULL_RECT)
+		center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_root.add_child(center)
+		var panel := PanelContainer.new()
+		UiTheme.paper(panel, 7, Vector2(26, 20))
+		panel.custom_minimum_size = Vector2(460, 0)
+		center.add_child(panel)
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 10)
+		panel.add_child(v)
+		var c := page._cls()
+		var e: Dictionary = Profile.talent_loads_of(c)[slot]
+		var t := Label.new()
+		t.text = "Chargement %d" % (slot + 1)
+		UiTheme.title(t, 22)
+		t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.add_child(t)
+		name_edit = LineEdit.new()
+		name_edit.max_length = Profile.TALENT_LOAD_NAME_MAX
+		name_edit.placeholder_text = "Nom (Donjons, Duel…)"
+		name_edit.text = String(e.get("name", ""))
+		name_edit.custom_minimum_size = Vector2(0, 38)
+		v.add_child(name_edit)
+		var info := Label.new()
+		info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		info.custom_minimum_size = Vector2(400, 0)
+		info.add_theme_font_size_override("font_size", 15)
+		info.add_theme_color_override("font_color", UiTheme.TEXT)
+		v.add_child(info)
+		var mine := Profile.talent_norm(Profile.talents.get(c, {}))
+		if e.is_empty():
+			info.text = "Emplacement libre." + ("" if not mine.is_empty() else "\nPlace d'abord des points dans l'arbre.")
+		else:
+			var block := Profile.talent_load_block(c, slot)
+			info.text = "%d points · surtout %s" % [TalentsPage._sum(e.ranks), TalentBuild.main_stats(c, e.ranks)] + ("" if block == "" else "\nImpossible à charger : %s." % block)
+		var row := HBoxContainer.new()
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_theme_constant_override("separation", 8)
+		v.add_child(row)
+		if not e.is_empty():
+			var lb := _btn(row, "Charger", "soleil", _load)
+			lb.disabled = Profile.talent_load_block(c, slot) != "" or Profile.talent_norm(e.ranks) == mine
+		var sv := _btn(row, "Enregistrer ici" if e.is_empty() else "Remplacer par l'arbre actuel", "lagon", _save)
+		sv.disabled = mine.is_empty()
+		var row2 := HBoxContainer.new()
+		row2.alignment = BoxContainer.ALIGNMENT_CENTER
+		row2.add_theme_constant_override("separation", 8)
+		v.add_child(row2)
+		if not e.is_empty():
+			_btn(row2, "Renommer", "papier", _rename)
+			_btn(row2, "Effacer", "papier", _clear)
+		_btn(row2, "Fermer", "papier", close)
+
+	func _ready() -> void:
+		UiNav.focus(name_edit)
+
+	func _btn(parent: Control, text: String, tone: String, cb: Callable) -> Button:
+		var b := Button.new()
+		b.text = text
+		b.custom_minimum_size = Vector2(0, 38)
+		b.pressed.connect(cb)
+		UiTheme.style_button(b, tone, 15)
+		parent.add_child(b)
+		return b
+
+	func _on_dim(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed:
+			close()
+
+	func _input(event: InputEvent) -> void:
+		if _closed:
+			return
+		if event.is_action_pressed("ui_cancel") or (event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_B):
+			get_viewport().set_input_as_handled()
+			close()
+
+	func close() -> void:
+		if _closed:
+			return
+		_closed = true
+		queue_free()
+		page.refresh()
+
+	func _load() -> void:
+		var p := page
+		var i := slot
+		close()
+		p.ask_load(i)
+
+	func _save() -> void:
+		if Profile.save_talent_load(page._cls(), slot, name_edit.text):
+			Sfx.ui("confirm")
+		close()
+
+	func _rename() -> void:
+		if Profile.rename_talent_load(page._cls(), slot, name_edit.text):
+			Sfx.ui("confirm")
+		close()
+
+	func _clear() -> void:
+		if Profile.clear_talent_load(page._cls(), slot):
+			Sfx.ui("cancel")
+		close()
 
 
 # --- certificats -----------------------------------------------------------------------------

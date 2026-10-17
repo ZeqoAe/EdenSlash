@@ -259,6 +259,11 @@ func _ready() -> void:
 	await probe("Héros : classe, sorts", 0.8)
 	lobby._hero.talents.show_sub("talents")
 	await probe("Héros : classe, talents", 0.8)
+	lobby._hero.talents.open_load(0)  # lot GX-6 : fiche d'un chargement de talents (nom, enregistrer, fermer)
+	await probe("Héros : talents, fiche d'un chargement", 0.8)
+	if is_instance_valid(lobby._hero.talents._load_dialog):
+		lobby._hero.talents._load_dialog.close()
+	await get_tree().process_frame
 	lobby._hero.talents.show_sub("certs")
 	await probe("Héros : classe, certificats", 0.8)
 	lobby._hero.talents.show_sub("spells")

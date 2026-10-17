@@ -66,6 +66,7 @@ var stash := {}  # réserve de fournitures gardées (extraction, victoire), empo
 var expertise := {}  # classe -> points d'expertise (gagnés à chaque run)
 var last_shared := {}  # part de l'arbre du dernier gain d'expertise : classe -> points (bilan, non sauvegardé)
 var talents := {}  # classe -> {id talent (String): niveau}
+var talent_loads := {}  # lot GX-6 : classe -> [{name, ranks}] × TALENT_LOADS (chargements nommés ; {} = emplacement vide)
 var certificates: Array = []  # certificats équipés : "classe/id_passif"
 var unlocked_classes: Array = []  # classes débloquées par mission (le Guerrier l'est d'emblée)
 var records := {}  # records cumulés de toutes les runs (missions) : kills, healed, best_hit...
@@ -221,6 +222,7 @@ func load_profile() -> void:
 	expertise = d.get("expertise", {})
 	stash = Craft.migrate_bag(d.get("stash", {}))
 	talents = d.get("talents", {})
+	talent_loads = d.get("talent_loads", {}) if d.get("talent_loads", {}) is Dictionary else {}
 	certificates = d.get("certificates", [])
 	records = d.get("records", {})
 	if d.has("unlocked_classes"):
@@ -355,7 +357,7 @@ func save_profile() -> void:
 	var d := {"selected_class": selected_class, "vault": vault, "loadout": loadout, "presets": presets,
 		"unlocked_zones": unlocked_zones, "selected_zone": selected_zone, "starter_trophy": starter_trophy,
 		"crystals": int(materials.get("crystal", 0)), "reward_chests": reward_chests,
-		"expertise": expertise, "talents": talents, "certificates": certificates, "stash": stash,
+		"expertise": expertise, "talents": talents, "talent_loads": talent_loads, "certificates": certificates, "stash": stash,
 		"unlocked_classes": unlocked_classes, "records": records, "cert_board": cert_board,
 		"archive": archive, "skins": skins, "outfits": outfits, "owned_outfits": owned_outfits, "unlocked_cards": unlocked_cards, "collection": collection, "worn": worn, "dev": dev, "saved_at": Time.get_datetime_string_from_system(false, true),
 		"runs_done": runs_done, "runs_won": runs_won, "best_level": best_level,
@@ -876,6 +878,7 @@ func _clear() -> void:
 	selected_zone = "limestone"
 	expertise = {}
 	talents = {}
+	talent_loads = {}
 	certificates = []
 	cert_board = ["", "", "", "", "", "", ""]
 	unlocked_classes = []
@@ -925,6 +928,7 @@ func reset_all() -> void:
 	selected_zone = "limestone"
 	expertise = {}
 	talents = {}
+	talent_loads = {}
 	certificates = []
 	cert_board = ["", "", "", "", "", "", ""]
 	unlocked_classes = []
@@ -1042,6 +1046,7 @@ func add_talent(cls: String, id) -> bool:
 func reset_talents(cls: String) -> void:
 	if talents.has(cls) and not (talents[cls] as Dictionary).is_empty():
 		_talent_undo[cls] = (talents[cls] as Dictionary).duplicate()  # lot GX-5 : « Annuler » rend l'arbre d'avant
+		_talent_undo_after[cls] = {}
 	talents.erase(cls)
 	save_profile()
 
@@ -1053,18 +1058,24 @@ var _talent_undo := {}
 
 ## Une réinitialisation de [param cls] peut-elle être annulée ?
 func can_undo_talents(cls: String) -> bool:
-	return _talent_undo.has(cls)
+	return _talent_undo.has(cls) and talent_norm(talents.get(cls, {})) == _talent_undo_after.get(cls, {})
 
 
-## Annule la dernière réinitialisation de [param cls] si l'arbre est encore vide (sinon on garde ce qui a été refait).
+## Annule la dernière réinitialisation de [param cls] (ou « Conseillé », un chargement : lot GX-6) si l'arbre est encore
+## celui qu'elle a posé (sinon on garde ce qui a été refait).
 func undo_talent_reset(cls: String) -> bool:
 	if not _talent_undo.has(cls):
 		return false
 	var old: Dictionary = _talent_undo[cls]
+	var after: Dictionary = _talent_undo_after.get(cls, {})
 	_talent_undo.erase(cls)
-	if talent_spent(cls) > 0 or not talent_set_valid(cls, old):
+	_talent_undo_after.erase(cls)
+	if talent_norm(talents.get(cls, {})) != after or not talent_set_valid(cls, old):
 		return false
-	talents[cls] = old.duplicate()
+	if old.is_empty():
+		talents.erase(cls)
+	else:
+		talents[cls] = old.duplicate()
 	save_profile()
 	return true
 
@@ -1126,6 +1137,119 @@ func remove_talent(cls: String, id) -> bool:
 	_talent_undo.erase(cls)
 	save_profile()
 	return true
+
+
+# --- build conseillé et chargements (lot GX-6) ---------------------------------------------------------------------
+const TALENT_LOADS := 3
+const TALENT_LOAD_NAME_MAX := 18
+## Arbre posé par la dernière action annulable (« Tout reprendre » : vide ; « Conseillé », chargement : l'arbre posé) ;
+## « Annuler » ne vaut que tant que l'arbre est encore celui-là.
+var _talent_undo_after := {}
+
+
+## Rangs sans les zéros, clés en texte (pour comparer deux arbres).
+static func talent_norm(ranks: Dictionary) -> Dictionary:
+	var out := {}
+	for k in ranks:
+		if int(ranks[k]) > 0:
+			out[str(int(k))] = int(ranks[k])
+	return out
+
+
+## Build conseillé de [param cls] avec ses points actuels (TalentBuild : les N premiers points de l'ordre conseillé).
+func advised_talents(cls: String) -> Dictionary:
+	return TalentBuild.ranks(cls, talent_points(cls))
+
+
+## Pose l'arbre [param ranks] sur [param cls] s'il se bâtit avec les points de la classe ; « Annuler » rend l'arbre d'avant.
+func apply_talents(cls: String, ranks: Dictionary) -> bool:
+	var r := talent_norm(ranks)
+	if not talent_set_valid(cls, r):
+		return false
+	var old := talent_norm(talents.get(cls, {}))
+	if old == r:
+		return true
+	_talent_undo[cls] = old
+	_talent_undo_after[cls] = r.duplicate()
+	if r.is_empty():
+		talents.erase(cls)
+	else:
+		talents[cls] = r
+	save_profile()
+	return true
+
+
+## Les 3 chargements de [param cls] : [{name, ranks}] ({} = vide).
+func talent_loads_of(cls: String) -> Array:
+	var raw = talent_loads.get(cls, [])
+	var out: Array = []
+	for i in TALENT_LOADS:
+		var e = raw[i] if raw is Array and i < (raw as Array).size() else {}
+		out.append({"name": String(e.get("name", "")), "ranks": talent_norm(e.get("ranks", {}))} if e is Dictionary and e.get("ranks", {}) is Dictionary and not talent_norm(e.get("ranks", {})).is_empty() else {})
+	return out
+
+
+## Nom propre d'un chargement (« Chargement 2 » s'il est vide).
+static func talent_load_name(name: String, slot: int) -> String:
+	var n := name.strip_edges().replace("\n", " ")
+	return n.left(TALENT_LOAD_NAME_MAX) if n != "" else "Chargement %d" % (slot + 1)
+
+
+## Enregistre l'arbre actuel de [param cls] dans l'emplacement [param slot] (0-2) sous [param name] ; false si l'arbre est vide.
+func save_talent_load(cls: String, slot: int, name := "") -> bool:
+	var r := talent_norm(talents.get(cls, {}))
+	if slot < 0 or slot >= TALENT_LOADS or r.is_empty():
+		return false
+	var all := talent_loads_of(cls)
+	all[slot] = {"name": talent_load_name(name, slot), "ranks": r}
+	talent_loads[cls] = all
+	save_profile()
+	return true
+
+
+## Renomme un chargement rempli.
+func rename_talent_load(cls: String, slot: int, name: String) -> bool:
+	var all := talent_loads_of(cls)
+	if slot < 0 or slot >= TALENT_LOADS or (all[slot] as Dictionary).is_empty():
+		return false
+	all[slot]["name"] = talent_load_name(name, slot)
+	talent_loads[cls] = all
+	save_profile()
+	return true
+
+
+## Vide un emplacement.
+func clear_talent_load(cls: String, slot: int) -> bool:
+	var all := talent_loads_of(cls)
+	if slot < 0 or slot >= TALENT_LOADS or (all[slot] as Dictionary).is_empty():
+		return false
+	all[slot] = {}
+	talent_loads[cls] = all
+	save_profile()
+	return true
+
+
+## Pourquoi un chargement ne peut pas être posé ("" si possible).
+func talent_load_block(cls: String, slot: int) -> String:
+	var all := talent_loads_of(cls)
+	if slot < 0 or slot >= TALENT_LOADS or (all[slot] as Dictionary).is_empty():
+		return "emplacement vide"
+	var r: Dictionary = all[slot].ranks
+	var n := 0
+	for k in r:
+		n += int(r[k])
+	if n > talent_points(cls):
+		return "demande %d points, tu en as %d" % [n, talent_points(cls)]
+	if not talent_set_valid(cls, r):
+		return "cet arbre ne se bâtit plus"
+	return ""
+
+
+## Pose le chargement [param slot] (annulable comme « Tout reprendre »).
+func load_talent_load(cls: String, slot: int) -> bool:
+	if talent_load_block(cls, slot) != "":
+		return false
+	return apply_talents(cls, talent_loads_of(cls)[slot].ranks)
 
 
 ## Certificats débloqués (toutes classes) : [{key, cls, passif}].

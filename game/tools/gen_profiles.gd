@@ -1,10 +1,13 @@
 extends Node
 ## Profils types « opti » (data/build_profiles.json) pour le duel :
 ##   godot --headless --path game res://tools/gen_profiles.tscn
+##   … -- --talents-only : ne réécrit que les talents des profils « opti » (build conseillé, lot GX-6), pièces gardées
+##   (Godot réécrit les nombres entiers du fichier en flottants : sans effet en jeu, mais un gros diff ; R_GX6)
 ## Pour chaque classe de base (STYLES) et chaque niveau de LEVELS : équipement d'Eden du type
 ## d'armure du style, tout en légendaire +10, choisi avec ses bonus de set ; paliers, 2 gemmes
 ## royales et enchantement au plus haut niveau permis par la pièce, choisis un par un ;
-## 7 certificats (et leur place sur le plateau) ; maîtrise entière.
+## 7 certificats (et leur place sur le plateau) ; maîtrise entière : les 80 points du build conseillé
+## (TalentBuild, lot GX-6 ; avant : tous les talents au maximum, 164 à 240 points, plus qu'un héros n'en a).
 ## Les classes éveillées reprennent exactement le build de leur classe de base (mêmes pièces,
 ## certificats…) : seuls leurs sorts (ceux de la classe) et leur arbre de maîtrise changent, et
 ## l'arme si elles n'utilisent pas le même type d'arme (Protecteur, Paladin).
@@ -84,6 +87,10 @@ var _cert_cache := {}
 func _ready() -> void:
 	var t0 := Time.get_ticks_msec()
 	var only := OS.get_cmdline_user_args()  # essai : -- <classe de base> (rien n'est enregistré)
+	if "--talents-only" in only:
+		_talents_only()
+		get_tree().quit()
+		return
 	var by_base := {}  # classe de base -> {niveau: profil}
 	for cid in STYLES:
 		if not only.is_empty() and not cid in only:
@@ -107,6 +114,24 @@ func _ready() -> void:
 			_report(b)
 	print("%d profils générés en %d s" % [made.size(), (Time.get_ticks_msec() - t0) / 1000])
 	get_tree().quit()
+
+
+## Lot GX-6 : les talents des profils « opti » remis au build conseillé (80 points), le reste du fichier tel quel.
+func _talents_only() -> void:
+	var path := RivalBuilds.PATH
+	var d = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not d is Array:
+		push_error("profils illisibles : " + path)
+		return
+	var n := 0
+	for b in d:
+		if b is Dictionary and String(b.get("auto", "")) == TAG:
+			b["talents"] = _talents(String(b.get("class", "")))
+			n += 1
+	var f := FileAccess.open(path, FileAccess.WRITE)
+	f.store_string(JSON.stringify(d, "\t"))
+	f.close()
+	print("%s : talents de %d profils « %s » remis au build conseillé" % [path, n, TAG])
 
 
 func _ascending() -> Array:
@@ -153,7 +178,7 @@ func _setup(cid: String, lv: int) -> void:
 
 func _build(cid: String, lv: int, certs: Array) -> Dictionary:
 	_setup(cid, lv)
-	var talents := _max_talents(cid)
+	var talents := _talents(cid)
 	var t0 := _talent_stats(cid, talents)
 	var fixed := _add(t0, _certs_total(certs))
 	var lo := _choose_gear(cid, fixed)
@@ -174,7 +199,7 @@ func _awakened(aid: String, base: Dictionary) -> Dictionary:
 	var lv := int(b.level)
 	b["class"] = aid
 	b["name"] = "%s niv. %d · %s" % [GameData.class_data(aid).get("name_fr", aid), lv, TAG]
-	b["talents"] = _max_talents(aid)
+	b["talents"] = _talents(aid)
 	b["spells"] = Duel.grid12([])
 	var old: Dictionary = b.gear.get("weapon", {})
 	var wt := Items.default_weapon_type(aid)
@@ -198,13 +223,8 @@ func _awakened(aid: String, base: Dictionary) -> Dictionary:
 
 
 # --- maîtrise et certificats ------------------------------------------------------------------
-func _max_talents(cid: String) -> Dictionary:
-	var out := {}
-	for row in GameData.talents.get(cid, {}).get("rows", []):
-		for c in row:
-			if c != null:
-				out[str(int(c.id))] = int(c.max)
-	return out
+func _talents(cid: String) -> Dictionary:
+	return TalentBuild.ranks(cid, TalentBuild.MAX_POINTS)
 
 
 func _talent_stats(cid: String, talents: Dictionary) -> Dictionary:

@@ -333,6 +333,10 @@ source nouvelle s'y ajoute) + Héros > Titres `ui/titles_page.gd` ; Registre (`C
 coffres `ChestsPage.ask_open_all` / `recap_text` ; jalons `HeroLevel.MILESTONES` (titres et coffres d'apparence seulement, `records.hero_miles`, onglet
 « Niveau de héros » du Journal) ; préréglage sur la page d'une activité `ui/preset_pick.gd` (épinglé au-dessus du bouton) ; Forge > Reporter
 (`Forge.report*`, +N − 2 sur une pièce neuve, prix = crans sans échec `Forge.report_cost` : mesuré, gratuit passait sous 30 h ; `progression_sim --report-cost=…`) ; `test_gx5`, `shot_gx5`.
+**Arbre de talents conseillé et chargements** (lot GX-6, `R_GX6.md`) : `core/talent_build.gd` (`TalentBuild.order` : 80 points par classe, chaque préfixe
+bâtissable ; `ranks(classe, N)`, valeur au profil `ClassGear` et ★, `compare_lines`, `focus_line`) ; `Profile.advised_talents` / `apply_talents` (« Annuler » tant
+que l'arbre est celui posé) ; 3 chargements nommés par classe, clé `talent_loads` (`save_` / `load_` / `rename_` / `clear_talent_load`) ; page Talents :
+« Conseillé » (aperçu avant / après) et fiche `TalentsPage.LoadDialog`. Profils « opti » = ces 80 points (`gen_profiles`, `-- --talents-only`, mesuré au duel) ; `test_gx6`, `shot_gx6`.
 **Modes scellés** (lot H2, `R_H2.md`) : `Modes.sealed()` (Survivant, Battle royale) coupe talents, certificats, plateau, archive, auras,
 sorts fermés par la maîtrise et cartes à débloquer (`Run.passive_stats` / `skill_talent` / `roll_cards` / `certificate_pool`,
 `Player.recalc_stats` / `knock_immune`) ; tout nouvel effet du compte en combat passe par ce test ; `test_h2`, `hl_probe --sealed`.
