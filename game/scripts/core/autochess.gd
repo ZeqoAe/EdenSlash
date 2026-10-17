@@ -59,6 +59,8 @@ var last_rarity := ""
 var next_uid := 1
 var history: Array = []  # une ligne par combat (tests de déterminisme, journal)
 var _limbo: Dictionary = {}  # unité reçue banc plein, absorbée par la fusion
+## Lot ACX-2 : pile d'annulation des stratèges humains (le jeu est solo : aucun abus possible), voir undo().
+var _undo: Dictionary = {}  # pi -> [{label, player, pool, rng}]
 
 
 # --- Lancement ----------------------------------------------------------------------------------------------------
@@ -316,6 +318,7 @@ func _effect_param(p: Dictionary, effect: String, key: String, default: Variant)
 # --- Déroulé ------------------------------------------------------------------------------------------------------
 func _begin_prep() -> void:
 	phase = "prep"
+	_undo.clear()
 	fights.clear()
 	results.clear()
 	var kind := round_kind()
@@ -351,6 +354,7 @@ func _begin_prep() -> void:
 func end_prep() -> bool:
 	if phase != "prep":
 		return false
+	_undo.clear()
 	_auto_resolve_all()
 	_finish_carousel()
 	for pi in alive_ids():
@@ -478,6 +482,7 @@ func buy(pi: int, slot: int) -> bool:
 	var cost := AutochessPool.cost_of(id)
 	if int(p.gold) < cost or not can_receive(pi, id):
 		return false
+	var snap := _snapshot(pi)
 	p.shop[slot] = ""
 	if not _add_unit(pi, _make_unit(id, 1, 1)):
 		p.shop[slot] = id
@@ -489,6 +494,7 @@ func buy(pi: int, slot: int) -> bool:
 	if every > 0 and int(p.buys) % every == 0 and pool.take(id) == 1:
 		if not _add_unit(pi, _make_unit(id, 1, 1)):
 			pool.give(id)
+	_push_undo(pi, "buy", snap)
 	changed.emit(pi)
 	return true
 
@@ -499,7 +505,9 @@ func sell(pi: int, uid: int) -> bool:
 	var u := find_unit(pi, uid)
 	if u.is_empty():
 		return false
+	var snap := _snapshot(pi)
 	_sell_unit(players[pi], u)
+	_push_undo(pi, "sell", snap)
 	changed.emit(pi)
 	return true
 
@@ -515,6 +523,7 @@ func reroll(pi: int) -> bool:
 		p.stats.gold_spent = int(p.stats.gold_spent) + AutochessData.REROLL_COST
 	else:
 		return false
+	_undo.erase(pi)  # jamais d'annulation au-delà d'une actualisation (la boutique ne se repêche pas)
 	p.stats.rerolls = int(p.stats.rerolls) + 1
 	_refresh_shop(p)
 	changed.emit(pi)
@@ -527,6 +536,7 @@ func buy_xp(pi: int) -> bool:
 	var p: Dictionary = players[pi]
 	if int(p.level) >= int(p.max_level) or int(p.gold) < AutochessData.XP_BUY_COST:
 		return false
+	_undo.erase(pi)
 	p.gold = int(p.gold) - AutochessData.XP_BUY_COST
 	p.stats.gold_spent = int(p.stats.gold_spent) + AutochessData.XP_BUY_COST
 	p.stats.xp_bought = int(p.stats.xp_bought) + 1
@@ -551,6 +561,7 @@ func place(pi: int, uid: int, cell: Vector2i) -> bool:
 	var u := find_unit(pi, uid)
 	if u.is_empty():
 		return false
+	var snap := _snapshot(pi)
 	var other := unit_at(pi, cell)
 	if _board_index(p, uid) >= 0:  # déjà sur le plateau
 		if not other.is_empty():
@@ -568,6 +579,7 @@ func place(pi: int, uid: int, cell: Vector2i) -> bool:
 			p.bench[slot] = other
 		u["cell"] = [cell.x, cell.y]
 		(p.board as Array).append(u)
+	_push_undo(pi, "move", snap)
 	changed.emit(pi)
 	return true
 
@@ -584,6 +596,7 @@ func to_bench(pi: int, uid: int, slot := -1) -> bool:
 		slot = _free_bench(p)
 	if slot < 0 or slot >= AutochessData.BENCH_SIZE:
 		return false
+	var snap := _snapshot(pi)
 	var other: Variant = p.bench[slot]
 	var k := _board_index(p, uid)
 	if k >= 0:
@@ -599,6 +612,7 @@ func to_bench(pi: int, uid: int, slot := -1) -> bool:
 		var from := _bench_index(p, uid)
 		p.bench[from] = other
 		p.bench[slot] = u
+	_push_undo(pi, "move", snap)
 	changed.emit(pi)
 	return true
 
@@ -614,6 +628,7 @@ func equip(pi: int, item_idx: int, uid: int) -> bool:
 	var u := find_unit(pi, uid)
 	if u.is_empty():
 		return false
+	var snap := _snapshot(pi)
 	var it := String(p.items[item_idx])
 	(p.items as Array).remove_at(item_idx)
 	if it == "marteau_reforge":
@@ -624,6 +639,7 @@ func equip(pi: int, item_idx: int, uid: int) -> bool:
 	elif not _equip_raw(pi, u, it):
 		(p.items as Array).insert(item_idx, it)
 		return false
+	_push_undo(pi, "item", snap)
 	changed.emit(pi)
 	return true
 
@@ -635,6 +651,7 @@ func choose(pi: int, idx: int) -> bool:
 	var c := pending(pi)
 	if c.is_empty() or idx < 0 or idx >= (c.options as Array).size():
 		return false
+	_undo.erase(pi)  # un choix est définitif (et le choix partagé fait jouer les autres)
 	_resolve(pi, idx)
 	_carousel_continue()
 	changed.emit(pi)
@@ -646,10 +663,65 @@ func reroll_choice(pi: int) -> bool:
 	var c := pending(pi)
 	if c.is_empty() or String(c.kind) != "atout" or int(c.rerolls) <= 0:
 		return false
+	_undo.erase(pi)
 	c.options = _augment_options(players[pi], c.options)
 	c.rerolls = int(c.rerolls) - 1
 	changed.emit(pi)
 	return true
+
+
+# --- Annuler (lot ACX-2) ------------------------------------------------------------------------------------------
+## Le jeu est solo : la dernière action de préparation d'un stratège humain s'annule (achat, vente, déplacement, objet
+## donné), jusqu'à UNDO_MAX fois. Jamais une actualisation, un achat d'XP ni un choix (la pile est vidée), ni d'une
+## préparation à l'autre. L'état revient exactement (or, boutique, banc, plateau, objets, réserve partagée, hasard de la
+## partie : un Emblème refait propose les mêmes traits) ; le verrou de la boutique et la meta du stratège restent.
+const UNDO_MAX := 12
+
+
+## Actions annulables du stratège [param pi], la dernière en tête : « buy », « sell », « move », « item ».
+func undo_list(pi: int) -> Array:
+	var out: Array = []
+	for e in _undo.get(pi, []):
+		out.push_front(String(e.label))
+	return out
+
+
+func can_undo(pi: int) -> bool:
+	return phase == "prep" and not (_undo.get(pi, []) as Array).is_empty()
+
+
+## Annule la dernière action de [param pi] ; renvoie son genre (« buy »…), "" s'il n'y a rien à annuler.
+func undo(pi: int) -> String:
+	if not can_undo(pi):
+		return ""
+	var e: Dictionary = (_undo[pi] as Array).pop_back()
+	var p: Dictionary = players[pi]
+	var keep := {"locked": p.locked, "meta": p.meta, "human": p.human}
+	p.clear()
+	p.merge((e.player as Dictionary).duplicate(true))
+	for k in keep:
+		p[k] = keep[k]
+	pool.from_dict(e.pool)
+	rng.state = int(e.rng)
+	changed.emit(pi)
+	return String(e.label)
+
+
+func _snapshot(pi: int) -> Dictionary:
+	if not bool(players[pi].get("human", false)):
+		return {}
+	return {"player": (players[pi] as Dictionary).duplicate(true), "pool": pool.to_dict(), "rng": rng.state}
+
+
+func _push_undo(pi: int, label: String, snap: Dictionary) -> void:
+	if snap.is_empty() or phase != "prep":
+		return
+	snap["label"] = label
+	var st: Array = _undo.get(pi, [])
+	st.append(snap)
+	while st.size() > UNDO_MAX:
+		st.pop_front()
+	_undo[pi] = st
 
 
 # --- Unités, fusion, objets ---------------------------------------------------------------------------------------

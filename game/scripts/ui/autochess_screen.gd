@@ -18,6 +18,14 @@ extends Node3D
 ## AutochessRewards.finish (hub remis, coffres d'apparence, titres, quêtes) puis le bilan commun (AutochessResults :
 ## Rejouer, Statistiques, Retour au lobby). Fiches de découverte ac_shop / ac_stars / ac_traits à la 1re rencontre.
 ##   godot --path game res://scenes/autochess.tscn -- --ac-diff=1 [--seed=N --autoplay --auto-quit]  (ligne « [autochess] fin »)
+## Lot ACX-2 (rapport conception/autochess/R_ACX2.md) : annuler (Ctrl+Z / Retour arrière / bouton Vue : achat, vente,
+## déplacement, objet ; Autochess.undo), vente confirmée (maintien 0,6 s ou « Vendre ? » pour un héros précieux),
+## raccourcis W (banc ↔ plateau), Q / R (stratège ou combat précédent / suivant), Espace (retour à son combat) ; combat
+## lisible (barres pomme / fraise, objets sous la barre, noms au survol, nom des sorts, chiffres sobres), vitesse ×1 / ×2 /
+## ×3 (1, 2, 3), vraie pause, Passer (P, X : fin au combat de données) ; bilan de manche NON bloquant (bandeau
+## AutochessRecap.RoundStrip + [Détail]) ; moments manga (AutochessMoment : « Combat ! », victoire / défaite, ★★ / ★★★,
+## objet complet, niveau, éliminations) ; réglages (Settings « autochess » : sans minuteur, noms, bilan toujours) ;
+## spectateur après élimination (« Regarder la fin » en ×2, Bilan à tout moment, place et récompenses fixées à la chute).
 
 const COMBAT_SHOW := 3.0  # s (×1) : combat provisoire montré avant le bilan (power_fight est instantané)
 const OPENING_RECAP := 0.6  # s : manches sans combat (ouverture, choix partagé)
@@ -92,6 +100,27 @@ var _cr_done := -1.0
 var _items_before: Array = []
 var _trig := [false, false]
 var _combat_text := ""
+## Lot ACX-2 : moments manga, bandeau de manche non bloquant, spectateur après élimination.
+const RECAP_REAL := 1.8  # s : courte pause après un vrai combat (le bandeau dure plus longtemps et ne bloque rien)
+const SPEC_PREP := 0.7  # s : préparation montrée au spectateur (les stratèges décident d'office)
+const SPEC_SPEED := 2
+var moments: AutochessMoment
+var strip: AutochessRecap.RoundStrip
+var spectating := false
+var _out_card := false  # « Tu es éliminé » ouvert : le déroulé attend
+var _got: Dictionary = {}  # récompenses fixées à l'élimination (spectateur)
+var _got_done := false
+var _final_info: Dictionary = {}  # ce que la fin retient (fixé à l'élimination : le spectateur n'y change rien)
+var _alive_prev: Array = []
+var _hover_unit: AutochessUnit
+var _spec_watch := -1  # stratège regardé par le spectateur
+var _speed_before := 1
+var _last_ctx: Dictionary = {}
+var _last_side := 0
+var _last_head := ""
+var _last_line := ""
+var _last_col := Color.WHITE
+var _last_names: Array = []
 
 
 func _ready() -> void:
@@ -170,6 +199,7 @@ func _ready() -> void:
 	meter.position = Vector2(16.0, AutochessHud.COMBAT_TOP)
 	meter.visible = false
 	_ui.add_child(meter)
+	meter.set_collapsed(true)  # replié par défaut (lot ACX-2, étude BM-AUTO §7.2) : l'onglet « Dégâts ▸ » l'ouvre
 	var rl := CanvasLayer.new()
 	rl.name = "AcRecapLayer"
 	rl.layer = AutochessCursor.LAYER + 3  # au-dessus des choix : la manette n'y voit que le bilan
@@ -187,7 +217,27 @@ func _ready() -> void:
 		choice.visible = false
 		hud.choice_button.visible = true)
 	carousel.picked.connect(_on_carousel_pick)
+	# lot ACX-2 : annuler, pause, passer, bandeau de manche, moments, vente confirmée, réglages
+	hud.undo_pressed.connect(_undo)
+	hud.pause_pressed.connect(_pause)
+	hud.skip_pressed.connect(_skip)
+	strip = AutochessRecap.RoundStrip.new()
+	_ui.add_child(strip)
+	strip.detail_pressed.connect(_open_detail)
+	var ml := CanvasLayer.new()
+	ml.name = "AcMomentsLayer"
+	ml.layer = AutochessCursor.LAYER + 4  # au-dessus de tout le mode, sans prendre la souris
+	add_child(ml)
+	moments = AutochessMoment.new()
+	ml.add_child(moments)
+	cursor.confirm_sell = _confirm_sell
+	AutochessUnit.show_names = bool(opt("names"))
 	new_game(seed_ if seed_ != 0 else randi(), resume)
+
+
+## Réglage de l'Échiquier (Settings, section « autochess » : no_timer, names, recap_always).
+static func opt(key: String) -> bool:
+	return bool(Settings.get_v("autochess", key)) if Settings.get_v("autochess", key) != null else false
 
 
 ## Nouvelle partie (ou reprise de la partie sauvegardée si [param resume] et qu'il y en a une).
@@ -215,6 +265,20 @@ func new_game(seed_: int, resume := false) -> void:
 	game.fight = _data_fight  # combats non montrés (durées réduites) : la même couche d'effets, instantanée (AC-V)
 	game_stats = AutochessStats.new_game_stats()
 	_stage_built = -1
+	if spectating:
+		speed = _speed_before
+	spectating = false
+	_out_card = false
+	_got = {}
+	_got_done = false
+	_final_info = {}
+	_spec_watch = -1
+	_alive_prev = game.alive_ids()
+	AutochessDirector.viewer = me
+	if moments != null:
+		moments.clear_all()
+	if strip != null:
+		strip.hide_now()
 	game.changed.connect(func(_pi): _dirty = true)
 	_make_identities()
 	hud.players.identities = identities
@@ -279,26 +343,41 @@ func _enter_prep() -> void:
 	_cr_done = -1.0
 	timer_total = game.prep_time()
 	timer = AUTOPLAY_PREP if autoplay else timer_total
-	cursor.enabled = true
+	if spectating:
+		timer_total = 0.0
+		timer = SPEC_PREP
+	elif opt("no_timer") and not autoplay:
+		timer_total = 0.0  # préparation sans minuteur (réglage) : Prêt seulement ; le minuteur et sa barre disparaissent
+		timer = 1.0e9
+	cursor.enabled = not spectating
 	board.show_figures(true)
 	board.set_enemy({})
 	scouted = -1
 	foe = -1
-	hud.set_mode("prep")
+	hud.set_mode("combat" if spectating else "prep")
 	_sync()
+	if spectating:
+		return
 	if autoplay:
 		_pilot.decide(game, me)
 	var inc: Dictionary = game.players[me].income
 	if int(inc.get("total", 0)) > 0:
 		var parts: Array = ["%d de base" % int(inc.base)]
+		var plots: Array = [[parts[0], "lilas"]]
 		if int(inc.interest) > 0:
 			parts.append("%d d'intérêts" % int(inc.interest))
+			plots.append([parts[-1], "pomme"])
 		if int(inc.streak) > 0:
 			parts.append("%d de série" % int(inc.streak))
+			plots.append([parts[-1], "mandarine"])
 		if int(inc.bonus) > 0:
 			parts.append("%d d'atout" % int(inc.bonus))
-		hud.show_banner(String(AutochessHud.KIND_NAMES.get(game.round_kind(), "")), "+%d or" % int(inc.total),
-			" · ".join(parts), UiTheme.GOLD, 2.0)
+			plots.append([parts[-1], "soleil"])
+		if strip.visible:
+			strip.add_income(int(inc.total), plots)  # le bandeau de la manche finie dit aussi le revenu (un seul bandeau)
+		else:
+			hud.show_banner(String(AutochessHud.KIND_NAMES.get(game.round_kind(), "")), "+%d or" % int(inc.total),
+				" · ".join(parts), UiTheme.GOLD, 2.0)
 	_open_choices()
 	_tip_check()
 
@@ -395,6 +474,10 @@ func _start_combat() -> void:
 	hud.set_mode("combat")
 	hud.set_combat(_combat_text, 0.0, speed)
 	_arena_combat()
+	if not fast and not autoplay and not spectating:
+		var guard := game.round_kind() == "gardien"
+		moments.banner("Gardien !" if guard else "Combat !", "fraise" if guard else "lagon", "", "confirm", -10.0, 0.8,
+			[0.15, 0.1, 0.08], 0.45)
 
 
 # --- arène et vrai combat (lot AC-V) --------------------------------------------------------------------------------
@@ -522,15 +605,18 @@ func _arena_combat() -> void:
 	my_fight = _fight_of(me)
 	my_side = 1 if my_fight >= 0 and int(game.fights[my_fight].a) != me else 0
 	board.light_up(false, fast or autoplay)
-	real = AutochessDirector.real_combat and real_combat and my_fight >= 0
+	var watch_i := my_fight
+	if spectating:
+		watch_i = _spectator_fight()
+	real = AutochessDirector.real_combat and real_combat and watch_i >= 0
 	if not real:
 		return
 	_real_done = false
 	director.set_speed(float(speed))
-	director.begin(game.fights, my_fight)
+	director.begin(game.fights, watch_i)
 	arena.global_position = board.global_position
 	arena.combat_camera(camera, my_side)
-	_watch_changed(my_fight)
+	_watch_changed(watch_i)
 	meter.visible = true
 
 
@@ -627,37 +713,167 @@ func _resolve_combat() -> void:
 		else:
 			gained.append(AutochessUnitCard.item_name(String(it)))
 	var detail := ("Butin : " + ", ".join(gained)) if not gained.is_empty() else ""
+	phase = "recap"
+	_phase_t = 0.0
+	_phase_len = 0.05 if fast or autoplay else (RECAP_REAL if real else AutochessData.ROUND_RECAP)
+	_announce_eliminations()
+	if spectating or not bool(p.alive) and res == "":
+		_dirty = true
+		return
+	# lot ACX-2 : bandeau non bloquant (résultat, PV, or, butin) + moment manga ; le bilan complet sur [Détail]
+	var head := ""
+	var tone := "lilas"
+	var line := ""
 	match res:
 		"victoire":
 			var gold := int(last.get("gold", 0))
-			hud.show_banner("Victoire", "+%d or" % gold if gold > 0 else "", detail, UiTheme.GOLD)
+			head = "Victoire"
+			tone = "pomme"
+			line = "+%d or" % gold if gold > 0 else ""
 		"defaite":
-			hud.show_banner("Défaite", "−%d PV" % int(last.get("damage", 0)), detail, UiTheme.DEBUFF)
+			head = "Défaite"
+			tone = "fraise"
+			line = "−%d PV" % int(last.get("damage", 0))
 		"egalite":
-			hud.show_banner("Égalité", "−%d PV" % int(last.get("damage", 0)), detail, UiTheme.MUTED)
-	phase = "recap"
-	_phase_t = 0.0
-	_phase_len = 0.05 if fast or autoplay else AutochessData.ROUND_RECAP
-	if real and not autoplay and not rctx.is_empty():
-		# bilan de la manche (« Qui a compté ? ») à la place du bandeau : même résultat en tête
-		var parts := hud.banner_text().split("|")
-		hud._banner.visible = false
-		var col := UiTheme.GOLD if res == "victoire" else (UiTheme.DEBUFF if res == "defaite" else UiTheme.MUTED)
-		var line := " · ".join(Array(parts.slice(1)).filter(func(x): return String(x) != ""))
-		recap.open_round(rctx, my_side, parts[0] if parts.size() > 0 and parts[0] != "" else "Bilan du combat", line, col,
-			_fight_names(my_fight, my_side) if my_fight >= 0 else [name_of(me), ""])
+			head = "Égalité"
+			line = "−%d PV" % int(last.get("damage", 0))
+	if detail != "":
+		line = (line + " · " if line != "" else "") + detail
+	var col := UiTheme.GOLD if res == "victoire" else (UiTheme.DEBUFF if res == "defaite" else UiTheme.MUTED)
+	_last_ctx = rctx
+	_last_side = my_side
+	_last_head = head if head != "" else "Bilan du combat"
+	_last_line = line
+	_last_col = col
+	_last_names = _fight_names(my_fight, my_side) if my_fight >= 0 else [name_of(me), ""]
+	if head != "":
+		strip.show_result(head, tone, line, not rctx.is_empty())
+		if not fast and not autoplay:
+			if res == "victoire":
+				moments.banner("Victoire !", "pomme", line, "confirm", -6.0, 1.15, [0.3, 0.2, 0.14], 0.6)
+			elif res == "defaite":
+				moments.banner("Défaite", "fraise", line, "error", -10.0, 0.75, [0.1, 0.4, 0.16], 0.55)
+	if real and not autoplay and not rctx.is_empty() and opt("recap_always"):
+		_open_detail()  # réglage « Toujours montrer le bilan » : l'ancien bilan, qui retient la manche suivante
 	_dirty = true
 
 
+## [Détail] du bandeau : le bilan complet de la dernière manche jouée (meilleur héros, barres, totaux).
+func _open_detail() -> void:
+	if _last_ctx.is_empty():
+		return
+	recap.open_round(_last_ctx, _last_side, _last_head, _last_line, _last_col, _last_names)
+
+
+## Stratèges tombés pendant la manche : vignette « Daphné · 7e » (les autres) ; toi : la fin ou le spectateur (_next_round).
+func _announce_eliminations() -> void:
+	var now := game.alive_ids()
+	for pi in _alive_prev:
+		if not int(pi) in now and int(pi) != me:
+			var cid := String(identities[int(pi)].class_id) if int(pi) < identities.size() else ""
+			moments.elimination(name_of(int(pi)), int(game.players[int(pi)].place),
+				UiTheme.texture(String(GameData.class_data(cid).get("icon", ""))))
+	_alive_prev = now
+
+
 func _next_round() -> void:
-	if game.is_over() or not bool(game.players[me].alive):
+	if game.is_over():
 		_show_end()
+		return
+	if not bool(game.players[me].alive) and not spectating:
+		if autoplay or fast or auto_quit:
+			_show_end()  # pilote, tests : la fin tout de suite (comme avant le spectateur)
+		else:
+			_eliminated()
 		return
 	game.next_round()
 	if game.is_over():
 		_show_end()
 		return
 	_enter_prep()
+
+
+# --- spectateur (lot ACX-2, étude BM-AUTO §6 n° 14) -----------------------------------------------------------------
+## Tu es éliminé : ta place et tes récompenses sont fixées tout de suite (AutochessRewards.finish, hub remis, partie
+## gardée effacée) ; « Regarder la fin » (combats des autres en ×2, Bilan à tout moment) ou « Bilan ».
+func _eliminated() -> void:
+	phase = "out"
+	_out_card = true
+	_fix_rewards()
+	cursor.enabled = false
+	var place := int(game.players[me].place)
+	moments.banner("Éliminé", "fraise", AutochessPlayers.place_text(place), "error", -8.0, 0.6, [0.0, 0.45, 0.25], 0.9)
+	cards.add_card({"id": "ac_out", "title": "Tu es éliminé · %s" % AutochessPlayers.place_text(place),
+		"body": "Ta place est gardée. Tu peux regarder la fin de la partie, ou voir ton bilan.",
+		"buttons": [{"label": "Regarder la fin", "kind": "primary", "cb": _start_spectating},
+			{"label": "Bilan", "kind": "plain", "cb": _out_to_end}],
+		"on_close": _out_closed})
+
+
+func _out_to_end() -> void:
+	_out_card = false
+	_show_end()
+
+
+## Carte « Tu es éliminé » fermée sans choisir (croix, Échap) : le bilan.
+func _out_closed(how: String) -> void:
+	if how != "button" and _out_card and phase == "out":
+		_out_to_end()
+
+
+## Récompenses et fin de la partie pour toi, une seule fois (élimination, abandon, fin) ; la partie n'est plus sauvegardée.
+func _fix_rewards() -> void:
+	if _got_done:
+		return
+	_got_done = true
+	_track()
+	_final_info = end_info()
+	_got = AutochessRewards.finish(_final_info) if diff >= 0 else {}
+	Autochess.clear_save(save_path)
+	game.save_path = ""  # la suite (spectateur) ne se reprend pas
+
+
+func _start_spectating() -> void:
+	_out_card = false
+	spectating = true
+	_speed_before = speed
+	speed = SPEC_SPEED
+	_spec_watch = _leader()
+	hud.toast("Tu regardes la fin · Bilan : Échap")
+	game.next_round()
+	if game.is_over():
+		_show_end()
+		return
+	_enter_prep()
+
+
+## Stratège en tête (le plus de PV), regardé par défaut.
+func _leader() -> int:
+	var best := -1
+	for pi in game.alive_ids():
+		if best < 0 or int(game.players[pi].hp) > int(game.players[best].hp):
+			best = int(pi)
+	return best
+
+
+## Combat montré au spectateur : celui du stratège regardé (s'il joue encore), sinon le premier.
+func _spectator_fight() -> int:
+	if _spec_watch < 0 or not bool(game.players[_spec_watch].alive):
+		_spec_watch = _leader()
+	var i := _fight_of(_spec_watch)
+	return i if i >= 0 else (0 if not game.fights.is_empty() else -1)
+
+
+## Spectateur : stratège regardé suivant ([param d] = ±1), Q / R ou clic sur sa ligne.
+func _spec_step(d: int) -> void:
+	var alive := game.alive_ids()
+	if alive.is_empty():
+		return
+	var k := alive.find(_spec_watch)
+	_spec_watch = int(alive[posmod(k + d, alive.size())])
+	if phase == "combat" and real:
+		_watch_fight(_fight_of(_spec_watch))
+	hud.toast("Tu regardes %s" % name_of(_spec_watch))
 
 
 func _show_end() -> void:
@@ -672,18 +888,47 @@ func _show_end() -> void:
 	cards.dismiss_all()
 	var p: Dictionary = game.players[me]
 	var place := int(p.place) if int(p.place) > 0 else 1
-	_track()
-	var info := end_info()
-	var got: Dictionary = AutochessRewards.finish(info) if diff >= 0 else {}
-	Autochess.clear_save(save_path)  # éliminé avant la fin des autres : la partie gardée n'a plus lieu d'être (ni de reprise du combat perdu)
+	_fix_rewards()  # éliminé avant la fin des autres : la partie gardée n'a plus lieu d'être (ni de reprise du combat perdu)
+	var info := _final_info
+	var got: Dictionary = _got
+	if spectating:
+		speed = _speed_before
+		spectating = false
+	moments.clear_all()
+	strip.hide_now()
 	hud.set_mode("over")
 	print("[autochess] fin : place %d, manches %d (%s), difficulté %d, %d s, coffres %d, titres %d" % [place, game.rounds_played,
 		game.round_key(), diff, int(_played), (got.get("chests", []) as Array).size(), (got.get("titles", []) as Array).size()])
 	results = AutochessResults.new()
 	add_child(results)
-	results.show_results(info, game_stats, got, {"replay": _replay, "stats": _results_stats, "back": _quit})
+	results.show_results(info, game_stats, got, {"replay": _replay, "stats": _results_stats, "back": _quit}, podium())
 	if auto_quit:
 		get_tree().quit()
+
+
+## Podium des 8 stratèges pour le bilan (lot ACX-2) : nom, classe, place (vivants : rang du moment, par PV), trait principal.
+func podium() -> Array:
+	var out: Array = []
+	var alive := game.alive_ids()
+	alive.sort_custom(func(a, b): return int(game.players[a].hp) > int(game.players[b].hp))
+	for pi in AutochessData.PLAYERS:
+		var p: Dictionary = game.players[pi]
+		var place := int(p.place) if int(p.place) > 0 else alive.find(pi) + 1
+		var best := ""
+		var top := 0
+		var counts := game.trait_counts(pi) if bool(p.alive) else {}
+		if counts.is_empty():
+			for u in p.get("final_board", []):
+				for t in Autochess.unit_traits(u):
+					counts[t] = int(counts.get(t, 0)) + 1
+		for t in counts:
+			if int(counts[t]) > top:
+				top = int(counts[t])
+				best = String(AutochessData.TRAITS.get(t, {}).get("name", ""))
+		out.append({"name": name_of(pi), "class_id": String(identities[pi].class_id) if pi < identities.size() else "",
+			"place": maxi(place, 1), "trait": best, "me": pi == me})
+	out.sort_custom(func(a, b): return int(a.place) < int(b.place))
+	return out
 
 
 ## Ce que la fin de partie retient (bilan, récompenses, quêtes).
@@ -748,6 +993,8 @@ func _process(delta: float) -> void:
 	hud.set_overlay(choice.visible or carousel.visible, carousel.visible)
 	_update_card()
 	_update_highlight()
+	hud.undo_button.visible = phase == "prep" and game.can_undo(me) and not spectating
+	_update_hover_names()
 	match phase:
 		"prep":
 			if not _paused:
@@ -842,8 +1089,8 @@ func _update_card() -> void:
 		hud.traits.visible = false  # le compteur de dégâts prend la colonne (AC-V)
 		return
 	hud.traits.visible = true
-	if phase == "over" or game == null or choice.visible or carousel.visible:
-		card.hide_card()
+	if phase == "over" or game == null or choice.visible or carousel.visible or not cursor.held.is_empty():
+		card.hide_card()  # (lot ACX-2 : héros en main → la zone « Vendre » et l'aperçu des traits parlent, pas la fiche)
 		return
 	var s: Dictionary = {}
 	var shop_i := -1
@@ -905,6 +1152,15 @@ func _update_highlight() -> void:
 			shop_id = String((hud.shop.cards[hud.shop.hovered] as Control).get_meta("unit_id", ""))
 	var uids: Array = []
 	var rising: Array = []
+	# lot ACX-2 : héros du banc tenu (pas encore sur le plateau) → aperçu de ses traits dans la colonne (« Ombre 2 → 3 »)
+	if phase == "prep" and game != null and not cursor.held.is_empty() and String(cursor.held.get("zone", "")) == "bench":
+		var hu := board.unit_at(cursor.held)
+		if not hu.is_empty():
+			var on_board := false
+			for u in game.players[me].board:
+				on_board = on_board or String(u.id) == String(hu.id)
+			if not on_board:
+				rising = (AutochessData.unit(String(hu.id)).get("traits", []) as Array).duplicate()
 	if t != "":
 		for u in game.units_of(me):
 			if Autochess.unit_traits(u).has(t):
@@ -929,6 +1185,79 @@ func _can_act() -> bool:
 	return phase == "prep" and not choice.visible and not carousel.visible and bool(game.players[me].alive)
 
 
+## Noms des unités au survol pendant le combat (lot ACX-2 : aucun nom par défaut, BM-AUTO §7.2) : l'unité la plus
+## proche de la souris (60 px au plus) montre son nom.
+func _update_hover_names() -> void:
+	var best: AutochessUnit = null
+	if phase == "combat" and real and not Gamepad.active and camera != null and director.watched < director.arenas.size():
+		var m := get_viewport().get_mouse_position()
+		var best_d := AutochessHud.s(60.0)
+		var a: Dictionary = director.arenas[director.watched]
+		for side in 2:
+			for n in a.nodes[side]:
+				if not is_instance_valid(n) or (n as AutochessUnit).is_dead:
+					continue
+				var wp := (n as Node3D).global_position + Vector3.UP * 1.4
+				if camera.is_position_behind(wp):
+					continue
+				var d := camera.unproject_position(wp).distance_to(m)
+				if d < best_d:
+					best_d = d
+					best = n
+	if best != _hover_unit:
+		if is_instance_valid(_hover_unit):
+			_hover_unit.set_name_shown(false)
+		_hover_unit = best
+		if best != null:
+			best.set_name_shown(true)
+
+
+## Étoiles de chaque unité du joueur (uid -> étoiles) et objets complets portés : avant / après une action (moments).
+func _stars_map() -> Dictionary:
+	var out := {}
+	for u in game.units_of(me):
+		out[int(u.uid)] = int(u.stars)
+	return out
+
+
+func _full_items() -> Dictionary:
+	var out := {}
+	for u in game.units_of(me):
+		var n := 0
+		for it in u.items:
+			if not AutochessData.COMPONENTS.has(String(it)):
+				n += 1
+		out[int(u.uid)] = n
+	return out
+
+
+## Position à l'écran au-dessus de la figurine [param uid] (moments), centre de l'écran sinon.
+func _figure_point(uid: int) -> Vector2:
+	var f := board.figure(uid)
+	var vs := get_viewport().get_visible_rect().size
+	if f == null or camera == null:
+		return vs * 0.5
+	var wp := f.global_position + Vector3.UP * 2.2
+	return camera.unproject_position(wp) if not camera.is_position_behind(wp) else vs * 0.5
+
+
+## Fusions de la dernière action ([param before] : _stars_map d'avant) : ★★ = éclat sur la figurine, ★★★ = bannière.
+func _star_moments(before: Dictionary) -> void:
+	if fast or autoplay:
+		return
+	board.set_state(game.players[me])  # figurines à jour (la fusion vient d'avoir lieu)
+	for u in game.units_of(me):
+		var uid := int(u.uid)
+		var was := int(before.get(uid, 0))
+		var now := int(u.stars)
+		if now >= 3 and was < 3:
+			moments.banner("Trois étoiles !", "soleil", AutochessData.unit_name(String(u.id)), "level_up", -6.0, 1.0,
+				[0.35, 0.5, 0.25], 0.9)
+			UiFeel.confetti(_figure_point(uid), 24)
+		elif now == 2 and was < 2:
+			moments.burst(_figure_point(uid), "★★ !", "soleil", "confirm", -6.0, 1.25, [0.25, 0.15, 0.08])
+
+
 func _buy(slot: int) -> void:
 	if phase != "prep":
 		return
@@ -936,8 +1265,10 @@ func _buy(slot: int) -> void:
 	var id := String(p.shop[slot]) if slot < (p.shop as Array).size() else ""
 	if id == "":
 		return
+	var before := _stars_map()
 	if game.buy(me, slot):
 		Sfx.ui("confirm", -8.0)
+		_star_moments(before)
 		_dirty = true
 		_tip_check()
 		return
@@ -962,6 +1293,10 @@ func _buy_xp() -> void:
 	if game.buy_xp(me):
 		if int(p.level) > lv:
 			hud.toast("Niveau %d : une place de plus sur le plateau" % int(p.level))
+			if not fast and not autoplay:
+				var r := hud.xp_button.get_global_rect()
+				moments.burst(Vector2(r.get_center().x, r.position.y - AutochessHud.s(24.0)), "Niveau %d !" % int(p.level), "lagon",
+					"confirm", -6.0, 1.1, [0.2, 0.1, 0.07])
 	elif lv >= int(p.max_level):
 		hud.toast("Niveau maximal")
 	else:
@@ -978,11 +1313,110 @@ func _ready_pressed() -> void:
 		_end_prep()
 
 
+## Vitesse du combat : ×1 → ×2 → ×3 → ×1 (lot ACX-2 : ×3 ; touches 1, 2, 3 pendant le combat).
 func _toggle_speed() -> void:
-	speed = 2 if speed == 1 else 1
+	_set_speed(speed % 3 + 1)
+
+
+func _set_speed(v: int) -> void:
+	speed = clampi(v, 1, 3)
 	if director != null:
 		director.set_speed(float(speed))  # Engine.time_scale pendant le vrai combat seulement
 	hud.set_combat(_combat_text, _phase_t / maxf(_phase_len, 0.01), speed)
+
+
+## Passer le combat (lot ACX-2, BM-AUTO §6 n° 11) : fin tout de suite au combat de données (même couche d'effets, à
+## partir de l'état du moment : « résultat calculé »).
+func _skip() -> void:
+	if phase != "combat":
+		return
+	if real:
+		director.skip()
+	else:
+		_phase_t = _phase_len
+
+
+## Annuler la dernière action de préparation (lot ACX-2) : Autochess.undo (achat, vente, déplacement, objet donné).
+func _undo() -> void:
+	if not _can_act() or spectating:
+		return
+	cursor.cancel()
+	var what := game.undo(me)
+	if what == "":
+		hud.toast("Rien à annuler")
+		return
+	hud.toast(String({"buy": "Achat annulé", "sell": "Vente annulée", "move": "Déplacement annulé",
+		"item": "Objet repris"}.get(what, "Annulé")))
+	UiFeel.cue("ui_tab", -10.0, 0.9)
+	_dirty = true
+
+
+## Vente d'un héros précieux sans maintien (curseur) : « Vendre ? » d'abord (BIBLE §6 : destructif = confirmation).
+func _confirm_sell(s: Dictionary) -> void:
+	var u := board.unit_at(s)
+	if u.is_empty() or phase != "prep":
+		return
+	var items := (u.get("items", []) as Array).size()
+	var text := "+%d or%s. Annulable ensuite (Ctrl+Z)." % [board.sell_value(s), " · ses objets reviennent au banc" if items > 0 else ""]
+	InfoCard.ask(self, "Vendre %s %s ?" % [AutochessData.unit_name(String(u.id)), "★".repeat(clampi(int(u.stars), 1, 3))], text,
+		"Vendre", _sell_slot.bind(s), true)
+
+
+func _sell_slot(s: Dictionary) -> void:
+	if phase == "prep" and not board.unit_at(s).is_empty():
+		board.sell(s)
+
+
+## Raccourci W : le héros sous le curseur passe du banc au plateau (première case libre de sa place) ou l'inverse.
+func _swap_bench_board() -> void:
+	if not _can_act():
+		return
+	var s := cursor.slot
+	var u := board.unit_at(s) if not s.is_empty() else {}
+	if u.is_empty():
+		return
+	var uid := int(u.get("uid", 0))
+	if String(s.zone) == "bench":
+		var cell := game.free_cell(me, String(AutochessData.unit(String(u.id)).get("place", "milieu")))
+		if game.players[me].board.size() >= game.board_cap(me) or cell.x < 0:
+			hud.toast("Plateau plein")
+			return
+		game.place(me, uid, cell)
+	elif String(s.zone) == "board":
+		if not game.to_bench(me, uid):
+			hud.toast("Banc plein")
+			return
+	_dirty = true
+
+
+## Q / R : plateau du stratège précédent / suivant (préparation), combat précédent / suivant (combat), stratège regardé
+## (spectateur).
+func _cycle_view(d: int) -> void:
+	if spectating:
+		_spec_step(d)
+		return
+	var others: Array = game.alive_ids().filter(func(x): return int(x) != me)
+	if others.is_empty():
+		return
+	if phase == "combat" and real:
+		var n := director.arenas.size()
+		if n > 1:
+			var i := posmod(director.watched + d, n)
+			_watch_fight(i)
+		return
+	if phase != "prep":
+		return
+	var k := others.find(scouted)
+	var next := int(others[posmod(k + d, others.size())]) if k >= 0 else int(others[0 if d > 0 else others.size() - 1])
+	_scout(next)
+
+
+## Espace en combat : retour à son propre combat s'il en regarde un autre, sinon la vitesse.
+func _space_combat() -> void:
+	if real and my_fight >= 0 and director.watched != my_fight:
+		_watch_fight(my_fight)
+	else:
+		_toggle_speed()
 
 
 ## Temps du combat regardé (s de combat).
@@ -1007,7 +1441,8 @@ func _on_sold(u: Dictionary, _from: Dictionary) -> void:
 	if phase == "prep":
 		var gold := int(game.players[me].gold)
 		if game.sell(me, int(u.get("uid", 0))):
-			hud.toast("+%d or" % (int(game.players[me].gold) - gold))
+			hud.toast("+%d or · Ctrl+Z pour annuler" % (int(game.players[me].gold) - gold) if not Gamepad.active
+				else "+%d or · %s pour annuler" % [int(game.players[me].gold) - gold, Settings.pad_name(JOY_BUTTON_BACK)])
 			Sfx.ui("gold", -6.0)
 	_dirty = true
 
@@ -1015,8 +1450,14 @@ func _on_sold(u: Dictionary, _from: Dictionary) -> void:
 func _on_item(it: String, u: Dictionary, _from: Dictionary) -> void:
 	if phase == "prep":
 		var idx := (game.players[me].items as Array).find(it)
+		var before := _full_items()
 		if idx < 0 or not game.equip(me, idx, int(u.get("uid", 0))):
 			hud.toast("Cet objet ne va pas sur ce héros")
+		elif not fast and not autoplay:
+			var uid := int(u.get("uid", 0))
+			if int(_full_items().get(uid, 0)) > int(before.get(uid, 0)) and AutochessData.COMPONENTS.has(it):
+				board.set_state(game.players[me])
+				moments.burst(_figure_point(uid), "Objet complet !", "amethyste", "confirm", -5.0, 1.35, [0.25, 0.2, 0.1])
 	_dirty = true
 
 
@@ -1027,8 +1468,10 @@ func _on_choice(i: int) -> void:
 		return
 	var kind := String(c.kind)
 	var opt: Variant = (c.options as Array)[i] if i < (c.options as Array).size() else null
+	var before := _stars_map()
 	if not game.choose(me, i):
 		return
+	_star_moments(before)
 	match kind:
 		"ouverture", "heros":
 			hud.toast("%s rejoint ton banc" % AutochessData.unit_name(String(opt)))
@@ -1058,6 +1501,8 @@ func _on_carousel_pick(k: int) -> void:
 
 
 func _scout(pi: int) -> void:
+	if spectating and pi >= 0 and bool(game.players[pi].alive):
+		_spec_watch = pi  # le spectateur suit ce stratège (combat suivant compris)
 	if phase == "combat" and real:
 		_watch_fight(_fight_of(pi))  # pendant le vrai combat : regarder un autre combat dans l'arène (AC-V)
 		return
@@ -1094,14 +1539,75 @@ func _pause() -> void:
 	if _paused or phase == "over":
 		return
 	_paused = true
+	if phase == "combat" or phase == "recap":
+		get_tree().paused = true  # vraie pause (lot ACX-2) : le combat s'arrête aussi
+	var buttons: Array = [{"label": "Reprendre", "kind": "primary"}]
+	if spectating or phase == "out":
+		buttons.append({"label": "Bilan", "kind": "plain", "cb": _out_to_end})
+	else:
+		buttons.append({"label": "Réglages", "kind": "plain", "cb": _options_card})
+	buttons.append({"label": "Menu principal", "kind": "plain", "cb": _quit})
+	if not spectating and phase != "out":
+		buttons.append({"label": "Abandonner", "kind": "link", "cb": _ask_abandon})
 	cards.add_card({"id": "pause", "title": "Pause",
-		"body": "La partie est gardée au début de chaque manche.",
-		"buttons": [
-			{"label": "Reprendre", "kind": "primary"},
-			{"label": "Quitter", "kind": "plain", "cb": _quit},
-			{"label": "Abandonner", "kind": "link", "cb": _ask_abandon},
-		],
-		"on_close": func(_how): _paused = false})
+		"body": "Tu regardes la fin de la partie : ta place est gardée." if spectating
+			else "La partie est gardée au début de chaque manche.",
+		"buttons": buttons, "on_close": _unpause})
+
+
+var _opt_open := false  # la carte des réglages est (ou va être) ouverte : la pause continue
+
+
+func _unpause(_how := "") -> void:
+	if _opt_open:
+		return  # les réglages s'ouvrent à la place de la pause : elle continue
+	_paused = false
+	get_tree().paused = false
+
+
+## Réglages de l'Échiquier (lot ACX-2) : une ligne par réglage, le bouton bascule et la carte se refait.
+func _options_card() -> void:
+	_paused = true
+	_opt_open = true
+	var on_off := func(k: String) -> String: return "oui" if opt(k) else "non"
+	cards.add_card({"id": "ac_options", "title": "Réglages de l'Échiquier",
+		"lines": ["Préparation sans minuteur : %s" % on_off.call("no_timer"), "Noms au-dessus des héros : %s" % on_off.call("names"),
+			"Bilan à chaque manche : %s" % on_off.call("recap_always")],
+		"buttons": [{"label": "Minuteur", "kind": "plain", "cb": _toggle_opt.bind("no_timer")},
+			{"label": "Noms", "kind": "plain", "cb": _toggle_opt.bind("names")},
+			{"label": "Bilan", "kind": "plain", "cb": _toggle_opt.bind("recap_always")},
+			{"label": "Fermer", "kind": "primary", "cb": func(): _opt_reopen = false}],
+		"on_close": _options_closed})
+
+
+var _opt_reopen := false
+
+
+func _toggle_opt(key: String) -> void:
+	set_opt(key, not opt(key))
+	_opt_reopen = true
+
+
+func _options_closed(_how: String) -> void:
+	if _opt_reopen:
+		_opt_reopen = false
+		_options_card.call_deferred()  # la carte se refait avec la nouvelle valeur
+		return
+	_opt_open = false
+	_paused = false
+	get_tree().paused = false
+
+
+## Change un réglage de l'Échiquier (gardé dans les Paramètres) ; sans minuteur : le minuteur en cours disparaît.
+func set_opt(key: String, on: bool) -> void:
+	Settings.set_v("autochess", key, on)
+	match key:
+		"names":
+			AutochessUnit.show_names = on
+		"no_timer":
+			if phase == "prep" and not autoplay and not spectating:
+				timer_total = 0.0 if on else game.prep_time()
+				timer = 1.0e9 if on else timer_total
 
 
 func _ask_abandon() -> void:
@@ -1133,6 +1639,9 @@ func _tip_check() -> void:
 			spec["duration"] = 20.0
 			spec["buttons"] = [{"label": "Compris", "kind": "primary"},
 				{"label": "Guide", "kind": "plain", "cb": func(): Guide.open_on(self, id)}]
+			if id == "ac_shop" and not opt("no_timer"):
+				# lot ACX-2 (BM-AUTO Q10) : le réglage « sans minuteur » proposé à la 1re partie, dans la fiche de la boutique
+				spec["buttons"].append({"label": "Jouer sans minuteur", "kind": "link", "cb": set_opt.bind("no_timer", true)})
 			cards.add_card(spec)
 			return
 
@@ -1179,6 +1688,14 @@ func _input(ev: InputEvent) -> void:
 		JOY_BUTTON_START:
 			_pause()
 			get_viewport().set_input_as_handled()
+		JOY_BUTTON_BACK:
+			if _can_act():
+				_undo()  # lot ACX-2 : bouton Vue = annuler
+				get_viewport().set_input_as_handled()
+		JOY_BUTTON_X:
+			if phase == "combat":
+				_skip()  # lot ACX-2 : passer le combat (le curseur de cases est coupé en combat)
+				get_viewport().set_input_as_handled()
 
 
 ## Gâchettes : gauche = actualiser, droite = verrou (sur le front de l'appui).
@@ -1207,8 +1724,24 @@ func _unhandled_input(ev: InputEvent) -> void:
 			_on_choice(k - KEY_1)
 		get_viewport().set_input_as_handled()
 		return
+	if phase == "combat" and k in [KEY_1, KEY_2, KEY_3]:
+		_set_speed(k - KEY_1 + 1)  # lot ACX-2 : 1, 2, 3 = vitesse en combat
+		get_viewport().set_input_as_handled()
+		return
 	var used := true
 	match k:
+		KEY_Z when ke.ctrl_pressed:
+			_undo()
+		KEY_BACKSPACE:
+			_undo()
+		KEY_W:
+			_swap_bench_board()
+		KEY_Q:
+			_cycle_view(-1)
+		KEY_R:
+			_cycle_view(1)
+		KEY_P:
+			_skip()
 		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5:
 			if _can_act():
 				_buy(k - KEY_1)
@@ -1225,7 +1758,7 @@ func _unhandled_input(ev: InputEvent) -> void:
 			if phase == "prep" and _can_act():
 				_end_prep()
 			elif phase == "combat":
-				_toggle_speed()
+				_space_combat()
 		KEY_ESCAPE:
 			_pause()
 		_:

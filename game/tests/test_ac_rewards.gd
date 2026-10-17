@@ -2,7 +2,7 @@ extends Node
 ## L'Échiquier, lot AC-I : récompenses (coffres d'apparence par place, une fois par difficulté puis par jour, titres de
 ## victoire et d'exploit), ouverture des difficultés, quêtes (apparence seulement), puis une partie complète au pilote en
 ## durées réduites lancée comme le lobby la lance : mode scellé pendant la partie, hub et profil du compte intacts après,
-## bilan commun (Rejouer, Statistiques, Retour au lobby), sauvegarde effacée ; reprise d'une partie gardée (même difficulté,
+## bilan commun (Rejouer, Statistiques, Menu principal), sauvegarde effacée ; reprise d'une partie gardée (même difficulté,
 ## mêmes stratèges IA).
 ## godot --headless --path game res://tests/test_ac_rewards.tscn
 
@@ -212,8 +212,8 @@ func _test_game() -> void:
 	check("partie complète au pilote (%s, place %d, %.0f s)" % [screen.game.round_key(), place, (Time.get_ticks_msec() - t0) / 1000.0],
 		screen.phase == "over" and place >= 1)
 	await _frames(3)
-	check("bilan commun ouvert : Rejouer, Statistiques, Retour au lobby", screen.results != null and is_instance_valid(screen.results)
-		and screen.results.buttons.map(func(b): return b.text) == ["Rejouer", "Statistiques", "Retour au lobby"])
+	check("bilan commun ouvert : Rejouer, Statistiques, Menu principal", screen.results != null and is_instance_valid(screen.results)
+		and screen.results.buttons.map(func(b): return b.text) == ["Rejouer", "Statistiques", "Menu principal"])
 	check("bilan : cinq tuiles (place, manches, dégâts, meilleure unité, durée)", screen.results != null and _tiles(screen.results) == 5)
 	var plan_n := (AutochessRewards.last.get("chests", []) as Array).size()
 	check("récompenses de la place %d : %d coffre(s), %d titre(s)" % [place, plan_n, (AutochessRewards.last.get("titles", []) as Array).size()],

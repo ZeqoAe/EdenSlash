@@ -510,6 +510,20 @@ func _sound_late(name: String) -> void:
 	_sound(name)
 
 
+## Moment d'un écran (étoiles, victoire, élimination… : lot ACX-2) : son [param sfx] (nom Sfx, [param db], hauteur
+## [param pitch]) et vibration [param vib] = [faible, fort, s] ([] : aucune) ; respecte l'intensité et la vibration réglées.
+func cue(sfx: String, db := -8.0, pitch := 1.0, vib: Array = []) -> void:
+	if intensity > 0.0 and sfx != "":
+		Sfx.ui(sfx, db, pitch * randf_range(0.98, 1.02))
+	if vib.size() < 3 or not vibration or not Gamepad.active:
+		return
+	var pads := Input.get_connected_joypads()
+	if pads.is_empty():
+		return
+	var k := clampf(intensity, 0.3, 1.2)
+	Input.start_joy_vibration(int(pads[0]), clampf(float(vib[0]) * k, 0.0, 1.0), clampf(float(vib[1]) * k, 0.0, 1.0), float(vib[2]))
+
+
 func _vibrate(kind: String) -> void:
 	if not vibration or not Gamepad.active or not VIB.has(kind) or not Gamepad.menu_mode():
 		return

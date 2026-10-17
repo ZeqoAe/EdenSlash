@@ -29,8 +29,13 @@ signal fury_started(index: int)  ## la « Fureur » (mort subite) commence sur c
 static var active := false
 ## Vrai combat (sinon le lanceur peut jouer la manche par data_fight, instantané).
 static var real_combat := true
-## Vitesse du combat (×1 / ×2), gardée entre les parties.
+## Vitesse du combat (×1 / ×2 / ×3), gardée entre les parties.
 static var speed := 1.0
+## Lot ACX-2 : stratège qui regarde (le joueur) : ses unités ont des barres pomme, l'adversaire fraise, quel que soit
+## le camp (a ou b) du combat ; dans un combat des autres, le camp a est pomme. -1 : camp a toujours pomme.
+static var viewer := 0
+## Lot ACX-2 : chiffres sobres (BIBLE §10) : un coup sous cette part des PV max de la cible s'écrit petit et estompé.
+const SMALL_HIT := 0.06
 
 const HALF_X := 7.5  # m : demi-largeur du plateau (bords des cases, 7 colonnes de 2 m + décalage d'une demi-case)
 const HALF_Z := 7.2  # m : demi-profondeur (8 rangées de 1,73 m + pointe des hexagones)
@@ -137,7 +142,27 @@ func begin(fights: Array, watch := 0) -> void:
 	_frame_camera()
 
 
-## Vitesse du combat (×1 / ×2) : Engine.time_scale pendant le combat seulement.
+## Lot ACX-2 : « Passer » : tous les combats encore en cours (le regardé compris) sont finis tout de suite par le combat
+## de données (même couche d'effets, à partir de leur état du moment) ; round_finished part dans la foulée.
+func skip() -> void:
+	if not running:
+		return
+	for a in arenas:
+		if not a.done:
+			finish_by_data(a)
+	if running and arenas.all(func(x): return x.done):
+		_finish_round()
+
+
+## Camp [param side] du combat [param a] vu par le stratège qui regarde (viewer) : vrai = « le sien » (barres pomme).
+static func is_mine(a: Dictionary, side: int) -> bool:
+	var f: Dictionary = a.get("fight", {})
+	if viewer >= 0 and int(f.get("b", -2)) == viewer:
+		return side == 1
+	return side == 0
+
+
+## Vitesse du combat (×1 / ×2 / ×3) : Engine.time_scale pendant le combat seulement.
 func set_speed(s: float) -> void:
 	speed = clampf(s, 0.25, 4.0)
 	if running:
@@ -442,14 +467,18 @@ func on_effects(a: Dictionary, fx: Array) -> void:
 		match kind:
 			"damage":
 				if dst != null and a.shown and float(e.amount) >= 1.0:
-					DamageNumber.spawn(dst, float(e.amount), false, dst.ac_side == 0, bool(e.get("proc", false)))
+					# chiffres sobres (lot ACX-2) : critiques en grand, coups modestes petits et estompés, rouges sur les siens
+					var crit := bool(e.get("crit", false))
+					var small := not crit and float(e.amount) < dst.max_hp * SMALL_HIT
+					DamageNumber.spawn(dst, float(e.amount), crit, is_mine(a, dst.ac_side) and not small,
+						small or bool(e.get("proc", false)))
 					dst._on_damaged(float(e.amount), null)
 			"heal":
-				if dst != null and a.shown and float(e.amount) >= dst.max_hp * 0.02:
-					DamageNumber.spawn_text(dst, "+%d" % int(round(float(e.amount))), Color(0.5, 1.0, 0.55))
+				if dst != null and a.shown and float(e.amount) >= dst.max_hp * 0.04:
+					DamageNumber.spawn_text(dst, "+%d" % int(round(float(e.amount))), AutochessHud.candy("pomme", 0))
 			"dodge", "parry":
 				if dst != null and a.shown:
-					DamageNumber.spawn_text(dst, "ESQUIVE" if kind == "dodge" else "PARADE", Color(0.7, 1.0, 0.7))
+					DamageNumber.spawn_text(dst, "Esquive" if kind == "dodge" else "Parade", AutochessHud.candy("lagon", 0))
 			"cc":
 				if dst != null and not dst.is_dead:
 					dst.ac_stun(String(e.get("kind", "stun")), float(e.get("dur", 0.5)))

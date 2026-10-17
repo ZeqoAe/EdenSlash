@@ -15,6 +15,8 @@ extends Control
 ## polices (pop_font, round_font), paper_panel(), sticker() (petites pièces : tuiles, pastilles, lignes), well(), gauge(),
 ## lbl() / ink_lbl() / pop_lbl() / panel_title(), button(), key_chip(), draw_star(). Tailles : référence 1600 × 900, × k
 ## (0,8 à 1280 × 720), texte jamais sous 13 px.
+## Lot ACX-2 : [Annuler] au bout de l'onglet de l'or (visible s'il y a une action à annuler : Ctrl+Z / Retour arrière,
+## bouton Vue de la manette) ; au combat, Pause et Passer à côté de la vitesse (×1 / ×2 / ×3) ; touches dessinées.
 
 signal reroll_pressed
 signal xp_pressed
@@ -25,6 +27,9 @@ signal choice_pressed
 signal replay_pressed
 signal back_pressed
 signal stats_pressed  ## bilan de la partie (lot AC-V)
+signal undo_pressed  ## annuler la dernière action (lot ACX-2)
+signal pause_pressed  ## pause (combat compris : lot ACX-2)
+signal skip_pressed  ## passer le combat (fin au simulateur : lot ACX-2)
 
 # --- palette v2 (conception/art/tokens.json) --------------------------------------------------------------------
 const INK := Color("221a3a")  # encre 700 : contours, texte sur papier, ombres dures
@@ -87,6 +92,9 @@ var choice_button: Button
 var replay_button: Button
 var back_button: Button
 var stats_button: Button
+var undo_button: Button
+var pause_button: Button
+var skip_button: Button
 var odds: OddsBar
 var streak: Flame
 var income_chip: Label
@@ -553,12 +561,27 @@ func _build_bottom() -> void:
 	_combat_bar = gauge(ProgressBar.new(), candy("soleil"), 10.0)
 	_combat_bar.max_value = 1.0
 	cv.add_child(_combat_bar)
-	speed_button = button("Vitesse ×1", "plain", 40.0, "", "Y")
+	pause_button = button("Pause", "plain", 40.0, "Échap", "Start")
+	pause_button.name = "AcPause"
+	pause_button.custom_minimum_size.x = s(120)
+	pause_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	pause_button.tooltip_text = "Tout s'arrête, combat compris."
+	pause_button.pressed.connect(func(): pause_pressed.emit())
+	_combat_row.add_child(pause_button)
+	speed_button = button("Vitesse ×1", "plain", 40.0, "1 2 3", "Y")
 	speed_button.name = "AcSpeed"
 	speed_button.custom_minimum_size.x = s(150)
 	speed_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	speed_button.tooltip_text = "×1, ×2 ou ×3 (gardée entre les parties)."
 	speed_button.pressed.connect(func(): speed_pressed.emit())
 	_combat_row.add_child(speed_button)
+	skip_button = button("Passer", "soft", 40.0, "P", "X")
+	skip_button.name = "AcSkip"
+	skip_button.custom_minimum_size.x = s(130)
+	skip_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	skip_button.tooltip_text = "Fin du combat tout de suite : résultat calculé."
+	skip_button.pressed.connect(func(): skip_pressed.emit())
+	_combat_row.add_child(skip_button)
 	# l'or, au centre, en onglet soleil au-dessus de la boutique : intérêts, série, revenu de la prochaine manche
 	_gold_tab = PanelContainer.new()
 	_gold_tab.name = "AcGold"
@@ -597,6 +620,13 @@ func _build_bottom() -> void:
 	income_chip.add_theme_stylebox_override("normal", sticker(PAPER, 10.0, 0.0, 2.0, 6.0, 0.0))
 	income_chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	gh.add_child(income_chip)
+	undo_button = button("Annuler · Ctrl+Z", "plain", 28.0)  # touche écrite dans le bouton (_update_keys) : l'onglet est bas
+	undo_button.name = "AcUndo"
+	undo_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	undo_button.tooltip_text = "Annule le dernier achat, la dernière vente ou le dernier déplacement."
+	undo_button.pressed.connect(func(): undo_pressed.emit())
+	undo_button.visible = false
+	gh.add_child(undo_button)
 	# petits avis : bulle papier sous le bandeau
 	_toast_box = PanelContainer.new()
 	_toast_box.name = "AcToast"
@@ -888,7 +918,8 @@ func _update_keys() -> void:
 	_keys_pad = pad
 	var lt := "LT" if Settings.pad_name(JOY_BUTTON_LEFT_SHOULDER) == "LB" else "L2"
 	var rt := "RT" if lt == "LT" else "R2"
-	for b in [xp_button, reroll_button, lock_button, ready_button, speed_button]:
+	undo_button.text = "Annuler · %s" % (Settings.pad_name(JOY_BUTTON_BACK) if pad else "Ctrl+Z")
+	for b in [xp_button, reroll_button, lock_button, ready_button, speed_button, pause_button, skip_button]:
 		var kl: Label = (b as Button).get_node_or_null("Key")
 		if kl == null:
 			continue
@@ -902,6 +933,12 @@ func _update_keys() -> void:
 				pk = Settings.pad_name(JOY_BUTTON_LEFT_SHOULDER)
 			"Y":
 				pk = Settings.pad_name(JOY_BUTTON_Y)
+			"X":
+				pk = Settings.pad_name(JOY_BUTTON_X)
+			"Start":
+				pk = Settings.pad_name(JOY_BUTTON_START)
+			"Vue":
+				pk = Settings.pad_name(JOY_BUTTON_BACK)
 		set_key_chip(kl, pk if pad else String(b.get_meta("key", "")), pad)
 
 

@@ -277,14 +277,17 @@ func _ready() -> void:
 	await _frames()
 	check("bouton Prêt : combat de la manche %s" % rk, screen.phase in ["combat", "recap"])
 	var saw_banner := false
+	var saw_recap := false
 	guard = 0
 	while screen.phase != "prep" and guard < 600:
 		guard += 1
-		if screen.hud.banner_text().begins_with("Victoire") or screen.hud.banner_text().begins_with("Défaite") \
-				or screen.hud.banner_text().begins_with("Égalité"):
+		var st := screen.strip.text()  # lot ACX-2 : bandeau non bloquant (AutochessRecap.RoundStrip)
+		if st.begins_with("Victoire") or st.begins_with("Défaite") or st.begins_with("Égalité"):
 			saw_banner = true
+		saw_recap = saw_recap or screen.recap.visible
 		await get_tree().process_frame
-	check("bilan de manche : bandeau Victoire / Défaite", saw_banner)
+	check("bilan de manche : bandeau Victoire / Défaite (non bloquant)", saw_banner)
+	check("bilan de manche : le bilan complet ne s'ouvre pas tout seul (Détail l'ouvre)", not saw_recap)
 	screen.fast = true
 
 	# --- atout (2-1) ----------------------------------------------------------------------------------------------
@@ -377,7 +380,7 @@ func _ready() -> void:
 		guard += 1
 		await get_tree().process_frame
 	check("partie jouée jusqu'au bout au pilote (%s, place %d)" % [g.round_key(), int(p.place)], screen.phase == "over" and int(p.place) >= 1)
-	# lot AC-I : la fin passe par le bilan commun (AutochessResults : Rejouer, Statistiques, Retour au lobby)
+	# lot AC-I : la fin passe par le bilan commun (AutochessResults : Rejouer, Statistiques, Menu principal)
 	await get_tree().create_timer(ResultsPanel.LOCK_SECS + 0.2).timeout
 	var res: AutochessResults = screen.results
 	check("fin : bilan commun, ta place, Rejouer, Statistiques et Retour", res != null and res.buttons.size() == 3

@@ -96,6 +96,14 @@ func _ready() -> void:
 		if unit_cell.x >= 0:
 			screen.cursor._set_slot(AutochessBoard.board_slot(unit_cell.x, unit_cell.y), "keys")
 		await _shot("1_preparation")
+		# lot ACX-2 : un achat, le bouton Annuler au bout de l'onglet de l'or
+		for i in AutochessData.SHOP_SIZE:
+			if String(p.shop[i]) != "" and screen.game.buy(0, i):
+				break
+		screen._sync()
+		await _shot("1b_annuler")
+		screen.game.undo(0)
+		screen._sync()
 		# fiche d'un objet du banc d'objets
 		(p.items as Array).append("executeur")
 		screen._sync()
@@ -150,8 +158,11 @@ func _ready() -> void:
 		screen.fast = false
 		screen.real_combat = true
 		screen._end_prep()
-		await get_tree().create_timer(2.0).timeout
+		await get_tree().create_timer(0.05).timeout
+		await _shot("7a_banniere_combat")
+		await get_tree().create_timer(1.3).timeout
 		await _shot("7_combat")
+		screen.meter.set_collapsed(false)
 		var frames: Array = []
 		var t0 := Time.get_ticks_msec()
 		while screen.phase == "combat" and Time.get_ticks_msec() - t0 < 60000:
@@ -169,6 +180,7 @@ func _ready() -> void:
 			print("[shot] combat rendu dans l'arène : image médiane %.1f ms, p95 %.1f ms (%d images)" % [frames[frames.size() / 2],
 				frames[int(frames.size() * 0.95)], frames.size()])
 		await _shot("8_bilan")
+		screen._open_detail()  # lot ACX-2 : le bilan complet sur [Détail] (le bandeau ne bloque plus rien)
 		if screen.recap.visible:
 			Gamepad._set_active(true)
 			screen.recap.step_page(1)
@@ -177,6 +189,15 @@ func _ready() -> void:
 			Gamepad._set_active(false)
 			screen.recap.close()
 		screen.real_combat = false
+		screen.fast = true
+		# lot ACX-2 : élimination, carte « Tu es éliminé » (spectateur), puis la fin
+		while screen.phase != "prep" and screen.phase != "over":
+			await get_tree().process_frame
+		p.hp = 0
+		g._eliminate_dead()
+		screen.fast = false
+		screen._next_round()
+		await _shot("9a_elimine")
 		screen.fast = true
 		# fin de partie
 		screen._show_end()

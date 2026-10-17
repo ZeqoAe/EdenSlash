@@ -6,6 +6,8 @@ extends PanelContainer
 ## Boucliers : clic, A, Tab ou LB / RB (UiNav, groupe « tab_screens ») ; repliable (bouton du titre). Chiffres :
 ## AutochessStats (compteurs de la couche d'effets). Les lignes (Row) et les onglets servent aussi au bilan
 ## (AutochessRecap). Rapport : conception/autochess/R_AC_V.md.
+## DA v2 (lot ACX-2) : panneau papier, lignes dans un puits d'encre, onglet choisi en mandarine (BIBLE §5-6) ; replié par
+## défaut pendant le combat (l'écran : étude BM-AUTO §7.2), son onglet « Dégâts ▸ » reste visible.
 
 signal tab_changed(tab: String)
 
@@ -34,7 +36,7 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	custom_minimum_size.x = W
 	add_to_group("tab_screens")
-	add_theme_stylebox_override("panel", AutochessHud.box(AutochessHud.BG_SOFT, UiTheme.GOLD_DIM, 2, 10, 10, 8))
+	add_theme_stylebox_override("panel", AutochessHud.paper_panel(6.0, 10.0, 8.0, 16.0))
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -51,13 +53,25 @@ func _init() -> void:
 	v.add_child(_body)
 	var row := tab_row(_tabs, func(t: String): set_tab(t))
 	_body.add_child(row)
+	var well := PanelContainer.new()
+	well.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var ws := AutochessHud.well(12.0, 2.0)
+	ws.content_margin_left = 6
+	ws.content_margin_right = 6
+	ws.content_margin_top = 5
+	ws.content_margin_bottom = 5
+	well.add_theme_stylebox_override("panel", ws)
+	_body.add_child(well)
+	var wv := VBoxContainer.new()
+	wv.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	well.add_child(wv)
 	_rows_box = VBoxContainer.new()
 	_rows_box.add_theme_constant_override("separation", 2)
 	_rows_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_body.add_child(_rows_box)
-	_empty = AutochessHud.lbl("", 14, UiTheme.MUTED)
+	wv.add_child(_rows_box)
+	_empty = AutochessHud.lbl("", 14, AutochessHud.INK_100)
 	_empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_body.add_child(_empty)
+	wv.add_child(_empty)
 	set_tab(tab)
 
 
@@ -80,15 +94,16 @@ static func tab_row(out: Array, pick: Callable) -> HBoxContainer:
 	return h
 
 
-## Onglet choisi en or, les autres discrets.
+## Onglet choisi en mandarine (texte blanc contouré), les autres en papier 200 (BIBLE §5 « Onglet »).
 static func paint_tabs(buttons: Array, current: String) -> void:
 	for b in buttons:
 		var on := String((b as Button).get_meta("tab", "")) == current
-		var col := UiTheme.GOLD if on else UiTheme.MUTED
-		for k in ["font_color", "font_hover_color", "font_pressed_color"]:
+		var col := Color.WHITE if on else AutochessHud.INK
+		for k in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 			(b as Button).add_theme_color_override(k, col)
-		var sb := AutochessHud.box(Color(0.14, 0.13, 0.28, 0.96) if on else Color(0.09, 0.1, 0.23, 0.9),
-			UiTheme.GOLD if on else Color(UiTheme.GOLD_DIM, 0.5), 2, 8, 8, 2)
+		(b as Button).add_theme_constant_override("outline_size", 4 if on else 0)
+		(b as Button).add_theme_color_override("font_outline_color", AutochessHud.INK)
+		var sb := AutochessHud.sticker(AutochessHud.candy("mandarine") if on else AutochessHud.PAPER_200, 10.0, 3.0 if on else 0.0, 2.0, 6.0, 1.0)
 		for st in ["normal", "focus", "hover", "pressed"]:
 			(b as Button).add_theme_stylebox_override(st, sb)
 
@@ -203,7 +218,7 @@ class Row extends Control:
 		icon = UiTheme.texture(AutochessStats.icon_path(String(e.id)))
 		alive = bool(e.alive)
 		mvp = is_mvp
-		extra = ("MVP ×%d" % int(e.mvp)) if int(e.get("mvp", 0)) > 0 else ""
+		extra = ("meilleur ×%d" % int(e.mvp)) if int(e.get("mvp", 0)) > 0 else ""
 		var tip := "%s : %s" % [label, AutochessStats.num(value)]
 		if t == "dealt" and value > 0.0:
 			tip += "\nAuto-attaques %s · sorts %s · autres %s" % [AutochessStats.num(e.split[0]), AutochessStats.num(e.split[1]),
@@ -219,7 +234,7 @@ class Row extends Control:
 		var col := AutochessTeamBars.MINE if mine else AutochessTeamBars.FOE
 		var a := 1.0 if alive else 0.55
 		var pic := Rect2(1.0, 2.0, h - 4.0, h - 4.0)
-		draw_rect(pic, Color(0.04, 0.04, 0.1, 0.9))
+		draw_rect(pic, AutochessHud.INK_900)
 		if icon != null:
 			draw_texture_rect(icon, pic.grow(-2.0), false, Color(1, 1, 1, a))
 		draw_rect(pic, Color(cost_col, a), false, 2.0)
@@ -238,7 +253,7 @@ class Row extends Control:
 			UiTheme.GOLD if mvp else name_col)
 		draw_string(font, Vector2(w - nw - 2.0, 15.0), num, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(col.lightened(0.25), a))
 		var bar := Rect2(x0, h - 10.0, w - x0 - 2.0, 6.0)
-		draw_rect(bar, Color(0.08, 0.08, 0.14, 0.9))
+		draw_rect(bar, AutochessHud.INK_900)
 		if parts.is_empty():
 			draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(ratio, 0.0, 1.0), bar.size.y)), Color(col, a))
 		else:

@@ -4,11 +4,12 @@ extends PanelContainer
 ## (TeamBars) : à gauche ton nom et tes unités, à droite l'adversaire ; une pastille par unité (icône de la classe dans un
 ## cadre de la couleur de son coût, étoiles, PV et mana, grisée à terre) ; au centre le chronomètre de la manche, l'étape,
 ## la « Fureur » annoncée et la vitesse. Lit le contexte de la couche d'effets du combat regardé (AutochessEffects).
-## Rapport : conception/autochess/R_AC_V.md.
+## Rapport : conception/autochess/R_AC_V.md. DA v2 (lot ACX-2) : autocollant papier, pastilles contourées d'encre, PV pomme
+## (toi) / fraise (adversaire) comme les barres au-dessus des unités, mana lagon, chronomètre en Mochiy.
 
-const MINE := Color(0.35, 0.9, 0.45)  # comme les barres au-dessus des unités (AutochessUnit.SIDE_COLORS)
-const FOE := Color(0.95, 0.3, 0.28)
-const MANA := Color(0.35, 0.62, 1.0)
+const MINE := Color("8fd62e")  # pomme : comme les barres au-dessus des unités (AutochessUnit.SIDE_COLORS)
+const FOE := Color("ff4d6d")  # fraise
+const MANA := Color("22b8f0")  # lagon
 const CHIP := Vector2(38, 62)
 const CHIP_MIN := 24.0
 const CENTER_W := 132.0
@@ -29,7 +30,7 @@ var _key := ""
 func _init() -> void:
 	name = "AcTeamBars"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_theme_stylebox_override("panel", AutochessHud.box(AutochessHud.BG_SOFT, UiTheme.GOLD_DIM, 2, 12, 14, 6))
+	add_theme_stylebox_override("panel", AutochessHud.paper_panel(6.0, 14.0, 6.0, 16.0))
 	anchor_left = 0.5
 	anchor_right = 0.5
 	offset_top = 6.0
@@ -42,7 +43,7 @@ func _init() -> void:
 		var v := VBoxContainer.new()
 		v.add_theme_constant_override("separation", 2)
 		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var n := AutochessHud.lbl("", 16, UiTheme.GOLD if k == 0 else FOE, "bold")
+		var n := AutochessHud.ink_lbl("", 16, AutochessHud.GAIN if k == 0 else AutochessHud.LOSS, 900)
 		n.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if k == 0 else HORIZONTAL_ALIGNMENT_RIGHT
 		n.clip_text = true
 		v.add_child(n)
@@ -69,13 +70,15 @@ func _center() -> Control:
 	top.add_theme_constant_override("separation", 6)
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	c.add_child(top)
-	_timer = AutochessHud.lbl("0:00", 28, UiTheme.TEXT, "title")
+	_timer = AutochessHud.pop_lbl("0:00", 28, AutochessHud.INK)
 	_timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	top.add_child(_timer)
-	_speed = AutochessHud.lbl("×2", 16, UiTheme.GOLD, "bold")
+	_speed = AutochessHud.ink_lbl("×2", 15, AutochessHud.INK, 900)
+	_speed.add_theme_stylebox_override("normal", AutochessHud.sticker(AutochessHud.candy("soleil"), 9.0, 0.0, 2.0, 6.0, 0.0))
+	_speed.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_speed.tooltip_text = "Vitesse du combat"
 	top.add_child(_speed)
-	_sub = AutochessHud.lbl("", 14, UiTheme.MUTED)
+	_sub = AutochessHud.ink_lbl("", 14, AutochessHud.INK_300, 800)
 	_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	c.add_child(_sub)
 	return c
@@ -127,9 +130,9 @@ func _rebuild() -> void:
 func set_clock(t: float, speed: float, stage_text: String) -> void:
 	_timer.text = "%d:%02d" % [int(t) / 60, int(t) % 60]
 	var fury := t >= AutochessData.SUDDEN_AT
-	_timer.add_theme_color_override("font_color", UiTheme.DEBUFF if fury else UiTheme.TEXT)
+	_timer.add_theme_color_override("font_color", AutochessHud.LOSS if fury else AutochessHud.INK)
 	_sub.text = "Fureur" if fury else stage_text
-	_sub.add_theme_color_override("font_color", UiTheme.DEBUFF if fury else UiTheme.MUTED)
+	_sub.add_theme_color_override("font_color", AutochessHud.LOSS if fury else AutochessHud.INK_300)
 	_sub.tooltip_text = "Les coups font de plus en plus mal, les soins faiblissent." if fury else ""
 	_speed.visible = speed > 1.0
 	_speed.text = "×%d" % int(speed)
@@ -178,10 +181,10 @@ class Chip extends Control:
 		var w := size.x
 		var star_h := 13.0
 		var pic := Rect2(1.0, star_h, w - 2.0, w - 2.0)
-		draw_rect(pic, Color(0.04, 0.04, 0.1, 0.9))
+		draw_rect(pic.grow(1.0), AutochessHud.INK)
+		draw_rect(pic, cost_col if alive else AutochessHud.GRAY)
 		if icon != null:
-			draw_texture_rect(icon, pic.grow(-2.0), false, Color(1, 1, 1, 1.0 if alive else 0.3))
-		draw_rect(pic, Color(cost_col, 1.0 if alive else 0.35), false, 2.0)
+			draw_texture_rect(icon, pic.grow(-3.0), false, Color(1, 1, 1, 1.0 if alive else 0.3))
 		if not alive:
 			draw_line(pic.position + Vector2(5, 5), pic.end - Vector2(5, 5), Color(UiTheme.DEBUFF, 0.85), 2.0)
 			draw_line(Vector2(pic.end.x - 5, pic.position.y + 5), Vector2(pic.position.x + 5, pic.end.y - 5), Color(UiTheme.DEBUFF, 0.85), 2.0)
@@ -193,7 +196,8 @@ class Chip extends Control:
 		draw_string(font, Vector2((w - sw) * 0.5, star_h - 2.0), st, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
 			AutochessBoard.STAR_COLORS[clampi(stars, 1, 3) - 1])
 		var y := pic.end.y + 2.0
-		draw_rect(Rect2(1.0, y, w - 2.0, 5.0), Color(0.08, 0.08, 0.13, 0.95))
+		draw_rect(Rect2(0.0, y - 1.0, w, 12.0), AutochessHud.INK)
+		draw_rect(Rect2(1.0, y, w - 2.0, 5.0), AutochessHud.INK_500)
 		draw_rect(Rect2(1.0, y, (w - 2.0) * hp, 5.0), AutochessTeamBars.MINE if mine else AutochessTeamBars.FOE)
-		draw_rect(Rect2(1.0, y + 6.0, w - 2.0, 3.0), Color(0.08, 0.08, 0.13, 0.95))
+		draw_rect(Rect2(1.0, y + 6.0, w - 2.0, 3.0), AutochessHud.INK_500)
 		draw_rect(Rect2(1.0, y + 6.0, (w - 2.0) * mana, 3.0), AutochessTeamBars.MANA)

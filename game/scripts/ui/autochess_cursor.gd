@@ -8,6 +8,9 @@ extends CanvasLayer
 ##     X maintenu 0,5 s vend. Si UiNav ne navigue pas (héros en jeu), le curseur lit lui-même la croix, le stick et A.
 ##   - Souris : clic pour prendre puis clic pour poser, ou glisser-déposer ; déposer sur « Vendre » vend ; molette = zoom.
 ##   - Clavier : flèches, Entrée prend / pose, Échap annule, E vend.
+## Lot ACX-2 : vente confirmée (BIBLE §6 « destructif ») : X ou E maintenus 0,6 s (anneau qui se remplit dans la zone
+## « Vendre », fraise) ; un héros de 2 étoiles ou plus, ou qui porte des objets, vendu d'un coup (E bref, déposé sur
+## « Vendre ») passe par confirm_sell (l'écran demande « Vendre ? ») ; toute vente s'annule ensuite (Retour arrière).
 ## Les panneaux de préparation (boutique, AC-G) se posent sur le même calque (LAYER) : la croix passe alors du banc à la
 ## boutique sans réglage. Le curseur ne touche à aucune donnée : il appelle AutochessBoard.move / sell, qui préviennent.
 
@@ -15,7 +18,7 @@ signal hovered(slot: Dictionary, unit: Dictionary)  ## case sous le curseur (fic
 signal zoom_changed(zoom: int)
 
 const LAYER := 6
-const SELL_HOLD := 0.5  # s : X maintenu pour vendre
+const SELL_HOLD := 0.6  # s : X (ou E) maintenu pour vendre (BIBLE §6 : maintien 0,6 s, anneau qui se remplit)
 const DRAG_PX := 12.0
 const REPEAT_FIRST := 0.32
 const REPEAT_NEXT := 0.11
@@ -39,6 +42,11 @@ var slot: Dictionary = {}  # case sous le curseur
 var held: Dictionary = {}  # case d'origine de ce qui est tenu ({} : rien)
 var zoom := 0
 var sell_progress := 0.0  # 0 à 1 pendant que X est maintenu
+## Lot ACX-2 : vente d'un héros précieux (★★ et plus, ou avec objets) sans maintien : Callable(case) qui demande d'abord
+## (l'écran) ; vide : vendu tout de suite.
+var confirm_sell := Callable()
+var _e_down := false
+var _e_t := 0.0
 
 var _root: Control
 var _ctrls := {}  # slot_id -> Control
@@ -46,6 +54,7 @@ var _sell: PanelContainer
 var _sell_text: Label
 var _sell_hint: Label
 var _sell_bar: ProgressBar
+var _sell_ring: SellRing
 var _press_at := Vector2.INF
 var _press_slot: Dictionary = {}
 var _dragging := false
@@ -223,14 +232,27 @@ func cancel() -> bool:
 	held = {}
 	_dragging = false
 	_x_down = false
+	_e_down = false
 	sell_progress = 0.0
 	return had
 
 
-## Vend l'unité tenue, sinon celle sous le curseur ; vrai si vendue.
-func sell_current() -> bool:
+## Héros précieux (vente à confirmer) : 2 étoiles ou plus, ou des objets portés.
+func precious(s: Dictionary) -> bool:
+	var u := board.unit_at(s) if board != null and not s.is_empty() else {}
+	return not u.is_empty() and (int(u.get("stars", 1)) >= 2 or not (u.get("items", []) as Array).is_empty())
+
+
+## Vend l'unité tenue, sinon celle sous le curseur ; vrai si vendue. [param confirmed] : maintien fait ou déjà confirmé
+## (sinon un héros précieux passe par confirm_sell).
+func sell_current(confirmed := false) -> bool:
 	var from := held if not held.is_empty() and String(held.zone) != "items" else slot
 	if not enabled or from.is_empty() or board.unit_at(from).is_empty():
+		return false
+	if not confirmed and confirm_sell.is_valid() and precious(from):
+		var at := from.duplicate()
+		cancel()
+		confirm_sell.call(at)
 		return false
 	var ok := board.sell(from)
 	if ok:
@@ -389,7 +411,12 @@ func _unhandled_input(ev: InputEvent) -> void:
 			KEY_ENTER, KEY_KP_ENTER:
 				activate()
 			KEY_E:
-				sell_current()
+				var from := held if not held.is_empty() and String(held.zone) != "items" else slot
+				if precious(from) and confirm_sell.is_valid():
+					_e_down = true  # maintenu 0,6 s : vendu ; relâché avant : « Vendre ? » (_process)
+					sell_progress = 0.0
+				else:
+					sell_current()
 			_:
 				used = false
 		if used:
@@ -425,10 +452,20 @@ func _process(delta: float) -> void:
 		if Input.is_joy_button_pressed(0, JOY_BUTTON_X):
 			sell_progress = minf(1.0, sell_progress + delta / SELL_HOLD)
 			if sell_progress >= 1.0:
-				sell_current()
+				sell_current(true)
 		else:
 			_x_down = false
 			sell_progress = 0.0
+	if _e_down:
+		if Input.is_key_pressed(KEY_E):
+			sell_progress = minf(1.0, sell_progress + delta / SELL_HOLD)
+			if sell_progress >= 1.0:
+				_e_down = false
+				sell_current(true)
+		else:
+			_e_down = false
+			sell_progress = 0.0
+			sell_current()  # relâché avant la fin : la vente se confirme d'abord (confirm_sell)
 	var at3 := Vector3.INF
 	if not held.is_empty() and _source == "mouse" and not Gamepad.active:
 		at3 = _ground(get_viewport().get_mouse_position())
@@ -492,57 +529,96 @@ func _place_controls() -> void:
 
 
 func _build_sell() -> void:
+	# lot ACX-2 : autocollant fraise (BIBLE §6 « destructif »), prix en Mochiy, touche dessinée, anneau du maintien
 	_sell = PanelContainer.new()
 	_sell.name = "SellZone"
 	_sell.mouse_filter = Control.MOUSE_FILTER_STOP
-	_sell.add_theme_stylebox_override("panel", UiTheme.panel_box(26, 10))
+	_sell.add_theme_stylebox_override("panel", AutochessHud.sticker(AutochessHud.candy("fraise"), 18.0, 7.0, 3.0, 26.0, 8.0))
 	_sell.anchor_left = 0.5
 	_sell.anchor_right = 0.5
 	_sell.anchor_top = 1.0
 	_sell.anchor_bottom = 1.0
-	_sell.offset_left = -170.0
-	_sell.offset_right = 170.0
-	_sell.offset_top = -112.0
-	_sell.offset_bottom = -24.0
+	_sell.offset_left = -AutochessHud.s(190.0)
+	_sell.offset_right = AutochessHud.s(190.0)
+	_sell.offset_top = -AutochessHud.BOTTOM_GAP - AutochessHud.s(112.0)
+	_sell.offset_bottom = -AutochessHud.BOTTOM_GAP - AutochessHud.s(14.0)
 	_sell.gui_input.connect(_on_sell_input)
+	var h := HBoxContainer.new()
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_theme_constant_override("separation", roundi(AutochessHud.s(14)))
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sell.add_child(h)
+	_sell_ring = SellRing.new()
+	_sell_ring.custom_minimum_size = Vector2.ONE * AutochessHud.s(48.0)
+	_sell_ring.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(_sell_ring)
 	var box := VBoxContainer.new()
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.add_theme_constant_override("separation", 2)
+	box.add_theme_constant_override("separation", 0)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_sell.add_child(box)
-	_sell_text = Label.new()
+	h.add_child(box)
+	_sell_text = AutochessHud.pop_lbl("", 26)
 	_sell_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_sell_text.add_theme_font_override("font", UiTheme.title_font())
-	_sell_text.add_theme_font_size_override("font_size", 24)
-	_sell_text.add_theme_color_override("font_color", UiTheme.GOLD)
 	box.add_child(_sell_text)
-	_sell_hint = Label.new()
+	_sell_hint = AutochessHud.ink_lbl("", 15, Color.WHITE, 800)
 	_sell_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_sell_hint.add_theme_font_override("font", UiTheme.body_font())
-	_sell_hint.add_theme_font_size_override("font_size", 15)
-	_sell_hint.add_theme_color_override("font_color", UiTheme.MUTED)
+	_sell_hint.add_theme_constant_override("outline_size", 4)
+	_sell_hint.add_theme_color_override("font_outline_color", AutochessHud.INK)
 	box.add_child(_sell_hint)
-	_sell_bar = ProgressBar.new()
-	_sell_bar.show_percentage = false
-	_sell_bar.custom_minimum_size = Vector2(0, 6)
+	_sell_bar = ProgressBar.new()  # (gardée pour les tests : même valeur que l'anneau)
 	_sell_bar.max_value = 1.0
+	_sell_bar.visible = false
 	_sell_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_sell_bar.add_theme_stylebox_override("background", UiTheme.flat_box(Color(UiTheme.INK, 0.8), UiTheme.GOLD_DIM, 1, 3, false))
-	_sell_bar.add_theme_stylebox_override("fill", UiTheme.flat_box(UiTheme.GOLD, UiTheme.GOLD, 0, 3, false))
 	box.add_child(_sell_bar)
 	_sell.visible = false
 	add_child(_sell)
 
 
-## Zone « Vendre » : visible pendant qu'une unité est tenue ou que X est maintenu.
+## Zone « Vendre » : visible pendant qu'une unité est tenue ou que X / E est maintenu.
 func _refresh_sell() -> void:
 	var from := held if not held.is_empty() else slot
 	var unit_held := not held.is_empty() and String(held.zone) != "items"
-	var show := unit_held or (_x_down and not board.unit_at(from).is_empty())
+	var holding := _x_down or _e_down
+	var show := unit_held or (holding and not board.unit_at(from).is_empty())
 	_sell.visible = show
 	if not show:
 		return
-	_sell_text.text = "Vendre  ·  +%d or" % board.sell_value(from)
-	_sell_hint.text = ("Maintiens " + Settings.pad_name(JOY_BUTTON_X)) if Gamepad.active else ("Touche E" if _source == "keys" else "Dépose ici")
-	_sell_bar.visible = _x_down
+	_sell_text.text = "Vendre · +%d or" % board.sell_value(from)
+	var pad := Settings.pad_name(JOY_BUTTON_X)
+	if Gamepad.active:
+		_sell_hint.text = "Maintiens %s" % pad
+	elif _source == "keys" or _e_down:
+		_sell_hint.text = "Maintiens E"
+	else:
+		_sell_hint.text = "Dépose ici"
 	_sell_bar.value = sell_progress
+	_sell_ring.progress = sell_progress if holding else 0.0
+	_sell_ring.key = pad if Gamepad.active else "E"
+	_sell_ring.pad = Gamepad.active
+	_sell_ring.queue_redraw()
+
+
+## Anneau du maintien : pastille de touche au centre (X lagon à la manette, E papier au clavier), arc blanc qui se remplit.
+class SellRing extends Control:
+	var progress := 0.0
+	var key := "E"
+	var pad := false
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var c := size * 0.5
+		var r := minf(size.x, size.y) * 0.5 - 3.0
+		draw_circle(c, r, AutochessHud.INK)
+		draw_circle(c, r - 3.0, AutochessHud.candy("lagon") if pad and key in ["X", "□"] else AutochessHud.PAPER)
+		if progress > 0.0:
+			draw_arc(c, r - 1.5, -PI * 0.5, -PI * 0.5 + TAU * progress, 40, Color.WHITE, 5.0, true)
+		var f := AutochessHud.round_font(900)
+		var fsz := AutochessHud.fs(18)
+		var tw := f.get_string_size(key, HORIZONTAL_ALIGNMENT_LEFT, -1, fsz)
+		var pos := c + Vector2(-tw.x * 0.5, fsz * 0.36)
+		var light := pad and key in ["X", "□"]
+		if light:
+			draw_string_outline(f, pos, key, HORIZONTAL_ALIGNMENT_LEFT, -1, fsz, 4, AutochessHud.INK)
+		draw_string(f, pos, key, HORIZONTAL_ALIGNMENT_LEFT, -1, fsz, Color.WHITE if light else AutochessHud.INK)

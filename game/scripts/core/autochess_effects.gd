@@ -551,6 +551,7 @@ static func resolve(ctx: Dictionary, hit: Dictionary) -> Dictionary:
 	out["landed"] = true
 	if out.crit and not a.is_empty():
 		a.stats["crits"] += 1
+	hit["crit_hit"] = out.crit  # (lot ACX-2 : l'événement « damage » le dit, pour les chiffres du combat montré)
 	out["dealt"] = deal(ctx, src, dst, amount, hit)
 	if hit.attack and not hit.proc and not a.is_empty():
 		a.stats["dealt_attack"] += float(out.dealt)
@@ -593,7 +594,7 @@ static func deal(ctx: Dictionary, src: int, dst: int, amount: float, hit: Dictio
 		if String(hit.tag) == "zone":
 			a.stats["zone_dealt"] += lost
 	emit(ctx, {"type": "damage", "src": src, "dst": dst, "amount": lost, "kind": hit.kind, "tag": hit.tag,
-		"proc": hit.proc})
+		"proc": hit.proc, "crit": bool(hit.get("crit_hit", false))})
 	if lost > 0.0:
 		var pct := lost / maxf(float(d.hp_max), 1.0) * 100.0
 		gain_mana(ctx, dst, minf(pct * AutochessData.MANA_PER_HP_PCT, AutochessData.MANA_PER_HIT_CAP), "coup")

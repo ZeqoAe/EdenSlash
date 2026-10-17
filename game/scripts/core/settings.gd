@@ -116,6 +116,8 @@ const DEFAULTS := {
 		"auto_skills": [false, false, false, false], "auto_target": "any", "auto_combo": false, "auto_move": false, "auto_cards": false,
 		"key_memory": true, "hold_chain": true},
 	"camera": {"rotate_speed": 1.0, "invert_y": false, "distance": 15.0, "shake": 1.0, "action_turn": 1.0},
+	# L'Échiquier (lot ACX-2) : préparation sans minuteur, noms au-dessus des héros en combat, bilan de manche à chaque fois
+	"autochess": {"no_timer": false, "names": false, "recap_always": false},
 	# dev_mode : écran de test (F10), réservé aux tests
 	"interface": {"damage_numbers": "all", "hit_stop": true, "show_fps": false, "move_marker": true, "attack_zone": false, "dev_mode": false,
 		"tower_unlock_all": true, "perfect_hint": true, "pad_labels": "auto", "compass": true,

@@ -31,6 +31,11 @@ extends ClassRival
 ## dans fight.ai (banc d'essai).
 ##
 ## Contrat avec le directeur (ne pas changer) : setup_unit, sync, ac_die, ac_stun, ac_stop, set_shown, ac_stats.
+##
+## Lecture du combat (lot ACX-2, BIBLE v2 §10, étude BM-AUTO §7.2) : au-dessus de chaque unité une barre courte contourée
+## d'encre (PV pomme pour le stratège qui regarde, fraise pour l'adversaire, quel que soit le camp : AutochessDirector.is_mine ;
+## trace claire des dégâts ; mana lagon), ses étoiles à gauche, ses objets en mini-cases sous la barre ; AUCUN nom par défaut
+## (show_names, ou set_name_shown au survol) ; le nom du sort s'affiche brièvement quand il part (_spell_pop).
 
 const RETARGET_EVERY := 1.0 / AutochessData.AI_DECISIONS_PER_S  # s : décision de cible et de sort (SPEC §4.1 : 4 fois par seconde)
 const ZONE_WAIT := AutochessData.AI_ZONE_WAIT  # s : une zone attend au plus ça une meilleure occasion (2 cibles)
@@ -39,10 +44,15 @@ const HEAL_WAIT := AutochessData.AI_HEAL_WAIT  # s : le soigneur attend qu'un al
 const HEAL_URGENT := 0.45  # part de PV sous laquelle un allié est soigné tout de suite
 const HEAL_RANGE_MIN := 8.5  # m : portée des soins au moins (soigneurs de mêlée compris)
 const CHAIN_FACTOR := 0.6  # ★3 : dégâts du 2e sort (sans mana) en part du sort signature
-const BAR_SIZE := Vector2(1.7, 0.3)  # m : barres de PV (haut) et de mana (bas) au-dessus de l'unité
+const BAR_SIZE := Vector2(1.9, 0.34)  # m : barres de PV (haut) et de mana (bas) au-dessus de l'unité
 const BAR_Y := 2.75
-const SIDE_COLORS := [Color(0.35, 0.9, 0.45), Color(0.95, 0.3, 0.28)]  # PV : son camp vert, l'adversaire rouge
-const MANA_COLOR := Color(0.35, 0.62, 1.0)
+const SIDE_COLORS := [Color("8fd62e"), Color("ff4d6d")]  # PV : les siens pomme, l'adversaire fraise (bonbons de la BIBLE)
+const MANA_COLOR := Color("22b8f0")  # lagon
+const INK := Color("221a3a")
+const TRAIL_SPEED := 0.55  # part de la barre par seconde : la trace claire des dégâts rattrape les PV
+const ITEM_M := 0.34  # m : côté d'une mini-case d'objet sous la barre
+## Noms au-dessus des unités (réglage « Noms au-dessus des héros » de l'Échiquier) ; sinon au survol seulement.
+static var show_names := false
 const MONSTER_NAMES := {"sbire": "Sbire", "elite": "Élite"}
 const GUARDIAN_NAME := "Gardien"
 
@@ -100,6 +110,12 @@ var _ac_base_speed := 6.2
 var _ac_monster: Dictionary = {}  # monstre d'Eden (modèle) des manches de monstres et du gardien
 var _ac_bar: MeshInstance3D
 var _ac_name: Label3D
+var _ac_stars: Label3D
+var _ac_items: Array = []  # Sprite3D des objets (mini-cases)
+var _name_hover := false
+var _trail := 1.0
+var _trail_ms := 0
+var _spell_label: Label3D
 var _plan: Dictionary = {}  # sort décidé à la dernière décision : {ok, aim, heal_to, count}
 var _plan_at := -10.0
 var _sample_at := 0.0
@@ -258,7 +274,7 @@ func _ready_monster() -> void:
 	_attack_ready_at = 1.0
 
 
-## Barres de PV et de mana (une seule surface, face caméra) et nom court avec les étoiles.
+## Barres de PV et de mana (une seule surface, face caméra), étoiles à gauche, objets sous la barre, nom caché.
 func _make_overhead() -> void:
 	_ac_bar = MeshInstance3D.new()
 	var q := QuadMesh.new()
@@ -267,21 +283,93 @@ func _make_overhead() -> void:
 	_ac_bar.material_override = bar_material()
 	_ac_bar.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_ac_bar.position.y = BAR_Y
-	_ac_bar.set_instance_shader_parameter("hp_color", SIDE_COLORS[clampi(ac_side, 0, 1)])
+	var mine := AutochessDirector.is_mine(ac_arena, ac_side) if not ac_arena.is_empty() else ac_side == 0
+	_ac_bar.set_instance_shader_parameter("hp_color", SIDE_COLORS[0 if mine else 1])
 	add_child(_ac_bar)
-	_ac_name = Label3D.new()
-	_ac_name.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_ac_name.no_depth_test = true
-	_ac_name.fixed_size = true
-	_ac_name.pixel_size = 0.0007
-	_ac_name.font_size = 24
-	_ac_name.outline_size = 8
-	_ac_name.position.y = BAR_Y + 0.38
-	var st := "" if not _ac_monster.is_empty() else "★".repeat(clampi(stars(), 1, 3)) + " "
-	_ac_name.text = st + unit_label()
-	_ac_name.modulate = AutochessBoard.STAR_COLORS[clampi(stars(), 1, 3) - 1] if _ac_monster.is_empty() else Color(0.9, 0.85, 0.8)
+	_ac_name = _overhead_label(22, true)
+	_ac_name.position.y = BAR_Y + 0.4
+	_ac_name.text = unit_label()
 	add_child(_ac_name)
+	if _ac_monster.is_empty():
+		# étoiles à gauche de la barre (bronze / argent / or), à la taille de la barre (pas de taille fixe)
+		_ac_stars = Label3D.new()
+		_ac_stars.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_ac_stars.no_depth_test = true
+		_ac_stars.render_priority = 3
+		_ac_stars.pixel_size = 0.0062
+		_ac_stars.font_size = 46
+		_ac_stars.outline_size = 14
+		_ac_stars.outline_modulate = INK
+		_ac_stars.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_ac_stars.offset = Vector2(-(BAR_SIZE.x * 0.5 + 0.04) / _ac_stars.pixel_size, 0.0)
+		_ac_stars.text = "★".repeat(clampi(stars(), 1, 3))
+		_ac_stars.modulate = AutochessBoard.STAR_COLORS[clampi(stars(), 1, 3) - 1]
+		_ac_stars.position.y = BAR_Y
+		add_child(_ac_stars)
+		_make_item_cases()
+	set_name_shown(false)
 	_refresh_bar()
+
+
+## Mini-cases des objets portés, sous la barre, côte à côte face à la caméra (Sprite3D, décalage dans le plan de l'image).
+func _make_item_cases() -> void:
+	var items: Array = ac_unit.get("items", [])
+	var n := mini(items.size(), AutochessData.MAX_ITEMS_PER_UNIT)
+	for k in n:
+		var tex: Texture2D = AutochessUnitCard.item_icon(String(items[k]))
+		if tex == null:
+			continue
+		var sp := Sprite3D.new()
+		sp.texture = tex
+		sp.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		sp.no_depth_test = true
+		sp.render_priority = 3
+		sp.shaded = false
+		sp.pixel_size = ITEM_M / maxf(float(tex.get_height()), 1.0)
+		sp.offset = Vector2((float(k) - float(n - 1) * 0.5) * (ITEM_M + 0.05) / sp.pixel_size, 0.0)
+		sp.position.y = BAR_Y - BAR_SIZE.y * 0.5 - ITEM_M * 0.5 - 0.04
+		add_child(sp)
+		_ac_items.append(sp)
+
+
+func _overhead_label(size: int, fixed: bool) -> Label3D:
+	var l := Label3D.new()
+	l.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	l.no_depth_test = true
+	l.fixed_size = fixed
+	l.pixel_size = 0.0007
+	l.font = UiTheme.bold_font()
+	l.font_size = size
+	l.outline_size = 9
+	l.outline_modulate = INK
+	l.render_priority = 4
+	return l
+
+
+## Nom au-dessus de l'unité : réglage show_names, ou survol / visée ([param on]).
+func set_name_shown(on: bool) -> void:
+	_name_hover = on
+	if _ac_name:
+		_ac_name.visible = (show_names or on) and not is_dead and ac_shown
+
+
+## Nom du sort qui part (lot ACX-2) : petit, blanc contouré d'encre, au-dessus de la barre, 1 s ; un seul à la fois.
+func _spell_pop(text: String) -> void:
+	if text == "" or not ac_shown or not is_inside_tree():
+		return
+	if is_instance_valid(_spell_label):
+		_spell_label.queue_free()
+	var l := _overhead_label(21, true)
+	l.text = text
+	var mine := AutochessDirector.is_mine(ac_arena, ac_side)
+	l.modulate = AutochessHud.candy("lagon", 0) if mine else AutochessHud.candy("fraise", 0)
+	l.position.y = BAR_Y + 0.55
+	add_child(l)
+	_spell_label = l
+	var tw := l.create_tween()
+	tw.tween_property(l, "position:y", BAR_Y + 0.95, 1.0).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(l, "modulate:a", 0.0, 0.3).set_delay(0.7)
+	tw.tween_callback(l.queue_free)
 
 
 ## Matériau commun des barres : une surface face caméra, PV en haut, mana en bas (paramètres par instance).
@@ -293,30 +381,43 @@ static func bar_material() -> ShaderMaterial:
 shader_type spatial;
 render_mode unshaded, depth_test_disabled, cull_disabled, shadows_disabled;
 instance uniform float hp_frac = 1.0;
+instance uniform float trail_frac = 1.0;
 instance uniform float mana_frac = 0.0;
-instance uniform vec4 hp_color : source_color = vec4(0.35, 0.9, 0.45, 1.0);
-uniform vec4 mana_color : source_color = vec4(0.35, 0.62, 1.0, 1.0);
+instance uniform vec4 hp_color : source_color = vec4(0.56, 0.84, 0.18, 1.0);
+uniform vec4 mana_color : source_color = vec4(0.13, 0.72, 0.94, 1.0);
+uniform vec4 ink : source_color = vec4(0.133, 0.102, 0.227, 1.0);
+uniform vec4 hollow : source_color = vec4(0.18, 0.141, 0.314, 1.0);
 void vertex() {
 	MODELVIEW_MATRIX = VIEW_MATRIX * mat4(INV_VIEW_MATRIX[0], INV_VIEW_MATRIX[1], INV_VIEW_MATRIX[2], MODEL_MATRIX[3]);
 }
 void fragment() {
+	// deux jauges contourées d'encre (BIBLE §5 : creux encre-500, remplissage en deux tons nets, trace claire des dégâts)
 	vec2 uv = UV;
-	float edge = 0.03;
-	vec3 col = vec3(0.03, 0.03, 0.06);
+	float ex = 0.022;
+	vec3 col = ink.rgb;
 	float a = 0.0;
 	if (uv.y < 0.62) {
-		a = 0.9;
+		a = 1.0;
 		vec2 p = vec2(uv.x, uv.y / 0.62);
-		if (p.x > edge && p.x < 1.0 - edge && p.y > 0.12 && p.y < 0.88) {
-			float f = (p.x - edge) / (1.0 - 2.0 * edge);
-			col = f <= hp_frac ? hp_color.rgb : vec3(0.12, 0.1, 0.12);
+		if (p.x > ex && p.x < 1.0 - ex && p.y > 0.16 && p.y < 0.84) {
+			float f = (p.x - ex) / (1.0 - 2.0 * ex);
+			if (f <= hp_frac) {
+				col = p.y < 0.42 ? mix(hp_color.rgb, vec3(1.0), 0.32) : hp_color.rgb;
+			} else if (f <= trail_frac) {
+				col = vec3(1.0, 0.97, 0.92);
+			} else {
+				col = hollow.rgb;
+			}
+			if (abs(f - hp_frac) < 0.012 && hp_frac < 0.995) {
+				col = ink.rgb;  // bord droit d'encre du remplissage
+			}
 		}
 	} else if (uv.y > 0.7) {
-		a = 0.9;
+		a = 1.0;
 		vec2 p = vec2(uv.x, (uv.y - 0.7) / 0.3);
-		if (p.x > edge && p.x < 1.0 - edge && p.y > 0.2 && p.y < 0.8) {
-			float f = (p.x - edge) / (1.0 - 2.0 * edge);
-			col = f <= mana_frac ? mana_color.rgb : vec3(0.08, 0.09, 0.14);
+		if (p.x > ex && p.x < 1.0 - ex && p.y > 0.26 && p.y < 0.74) {
+			float f = (p.x - ex) / (1.0 - 2.0 * ex);
+			col = f <= mana_frac ? mana_color.rgb : hollow.rgb;
 		}
 	}
 	ALBEDO = col;
@@ -336,6 +437,7 @@ func set_shown(on: bool) -> void:
 	visible = on
 	if anim:
 		anim.active = on
+	set_name_shown(_name_hover)
 
 
 # --- Miroir de la couche d'effets ---------------------------------------------------------------------------------------
@@ -360,7 +462,13 @@ func _refresh_bar() -> void:
 	var ctx := _ctx()
 	if ctx.is_empty():
 		return
-	_ac_bar.set_instance_shader_parameter("hp_frac", clampf(hp / maxf(max_hp, 1.0), 0.0, 1.0))
+	var hpf := clampf(hp / maxf(max_hp, 1.0), 0.0, 1.0)
+	var now := Time.get_ticks_msec()
+	var dt := clampf(float(now - _trail_ms) / 1000.0, 0.0, 0.25) if _trail_ms > 0 else 0.0
+	_trail_ms = now
+	_trail = maxf(hpf, move_toward(_trail, hpf, TRAIL_SPEED * dt))
+	_ac_bar.set_instance_shader_parameter("hp_frac", hpf)
+	_ac_bar.set_instance_shader_parameter("trail_frac", _trail)
 	var need := AutochessEffects.mana_needed(ctx, ac_fid)
 	_ac_bar.set_instance_shader_parameter("mana_frac", clampf(AutochessEffects.mana(ctx, ac_fid) / maxf(need, 1.0), 0.0, 1.0) if need < INF else 0.0)
 
@@ -382,10 +490,9 @@ func ac_die(killer: Combatant = null) -> void:
 	hp = 0.0
 	_ac = {}
 	_refresh_bar()
-	if _ac_bar:
-		_ac_bar.visible = false
-	if _ac_name:
-		_ac_name.visible = false
+	for n in [_ac_bar, _ac_name, _ac_stars, _spell_label] + _ac_items:
+		if n != null and is_instance_valid(n):
+			(n as Node3D).visible = false
 	clear_ffa()
 	_on_death(killer)
 	died.emit(self, killer)
@@ -1346,6 +1453,8 @@ func _begin_action(sk: Dictionary, mode: String, heal_to: AutochessUnit, aim := 
 	var yaw := atan2(to.x, to.z)
 	if heal_to == null or heal_to != self:
 		face_direction(to, 1.0, 100.0)
+	if ac_shown and not sk.is_empty() and mode != "auto":
+		_spell_pop(String(sk.get("name", "")))
 	if ac_shown and not sk.is_empty():
 		var cast_fx := String(sk.get("fx", {}).get("cast", ""))
 		EdenFx.play(self, cast_fx, global_position, yaw, EdenFx.cast_scale(cast_fx, sk, float(sk.get("radius", 0.0))), self)
@@ -1498,7 +1607,7 @@ func take_damage(amount: float, source: Combatant = null, _crit := false, dot :=
 		return
 	if is_invulnerable() and not dot:
 		if ac_shown:
-			DamageNumber.spawn_text(self, "ESQUIVE", Color(0.7, 1.0, 0.7))
+			DamageNumber.spawn_text(self, "Esquive", AutochessHud.candy("lagon", 0))
 		return
 	if src._tg_type != "":
 		src.ac_stats[src._tg_type + "_hits"] += 1
