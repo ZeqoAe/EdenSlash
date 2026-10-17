@@ -53,12 +53,45 @@ const HP0 := 0.5
 const HP_GROWTH := 1.12
 const ATK0 := 0.5
 const ATK_GROWTH := 1.07
-const ALIVE := [18, 110]
-const PACK_EVERY := [6.0, 1.8]
-const PACK_SIZE := [3, 12]
+const ALIVE := [30, 230]
+const PACK_EVERY := [2.5, 0.8]
+const PACK_SIZE := [6, 16]
 const PACK_SPLIT := 7.0
-const WAVE_EVERY := [45.0, 25.0]
-const SPAWN_PACE := [0.7, 0.7]
+const WAVE_EVERY := [40.0, 22.0]
+const SPAWN_PACE := [1.0, 2.0]
+## Horde (lot SVX-1, conception/survivor/R_SVX1.md ; avant : ALIVE 18 → 110, meutes de 3 → 12 toutes les 6 → 1,8 s, arrivées à
+## 24-31 m hors de la vue, monstres de la taille du héros : 0 à 4 monstres à l'écran à 2:30 et 5:00 au pilote). Horde finale
+## (19:00) : ALIVE_FINAL vivants. Monstres ordinaires × HORDE_SCALE en taille (élites × HORDE_SCALE_ELITE), arrivées à
+## HORDE_RING m (à l'écran) annoncées par une croix au sol HORDE_MARK s avant (SpawnMark), plafonds par rôle de SpawnDirector
+## × HORDE_ROLE_CAP. Une horde plus dense est compensée monstre par monstre (la courbe par minute, la puissance selon
+## l'équipement et les paliers ne changent pas) : PV × HORDE_SHARE[0], dégâts × [1], expérience × [2], or et potions × [3].
+const ALIVE_FINAL := 290
+const HORDE_SCALE := 0.6
+const HORDE_SCALE_ELITE := 0.85
+const HORDE_HEIGHT := 0.8  # (et jamais plus haut que 0,8 × le héros : yacks, golems)
+const HORDE_RING := [13.0, 19.0]
+const HORDE_MARK := 0.8
+const HORDE_ROLE_CAP := 3.5
+const HORDE_SHARE := [0.45, 0.6, 0.35, 0.25]
+## Places d'attaque : au plus ATTACK_SLOTS[0] (à 0:00) → [1] (à 20:00) monstres de la horde frappent en même temps
+## (Monster.attack_slots, suivi par SurvivorDirector.spawn_plan) ; les autres attendent au contact. Une horde dense entoure
+## le héros sans multiplier les coups reçus (mesuré avec 8 places dès 0:00 : morts avant 6:00 au pilote débutant et moyen).
+const ATTACK_SLOTS := [2, 12]
+## Coût de la horde (même mesure) : monstres ordinaires sans collision physique (Monster.lite) ; les LOD_FULL plus proches
+## à moins de LOD_NEAR m réfléchissent à chaque image, les autres une image sur 2 jusqu'à LOD_FAR m, une sur 4 au-delà ;
+## ombre portée à moins de SHADOW_NEAR m.
+const LOD_FULL := 40  # (au plus : les plus proches)
+const LOD_NEAR := 6.0
+const LOD_FAR := 18.0
+const SHADOW_NEAR := 16.0
+## Caméra : distance de départ × CAM_ZOOM en Survivant (la horde se voit à 15 m autour du héros ; la molette reste libre).
+const CAM_ZOOM := 1.2
+## Lisibilité du chaos (lot SVX-1, SV-H2) : décor tramé à moitié dans FOLIAGE_FADE m autour du héros (shader du décor,
+## paramètre global hero_fade) ; effets des sorts du héros à FX_OPACITY au plus, puis adoucis quand ils s'empilent (EdenFx) ;
+## nombres de dégâts fusionnés par cible, NUMBERS_MAX à l'écran au plus (DamageNumber) ; héros contouré (HeroOutline).
+const FOLIAGE_FADE := 4.0
+const FX_OPACITY := 0.4
+const NUMBERS_MAX := 30
 const ELITES_FROM := 480.0
 const ELITE_EVERY := [40.0, 20.0]
 ## Ouverture (le héros part nu, niveau 1, parfois sans arme) : dégâts des monstres × OPENING[0] et PV × OPENING[1] à 0:00,
@@ -66,7 +99,7 @@ const ELITE_EVERY := [40.0, 20.0]
 ## HARD_WAVES_FROM s, élites des camps dès CAMPS_FROM s. Mesuré avant : 4 runs sur 15 perdues avant 2:30 (élites de camp et
 ## escorte dans la 1re minute), puis 5 sur 10 sans elles (50 monstres la 1re minute, le héros nu en tue 20 à 30).
 const OPENING := [0.3, 0.6, 180.0]
-const FIRST_WAVE := 75.0
+const FIRST_WAVE := 60.0
 const HARD_WAVES_FROM := 240.0
 const CAMPS_FROM := 180.0
 ## Puissance des monstres selon l'équipement de la RUN (pas du hub : le Survivant n'en a pas) : indice d'équipement
@@ -154,6 +187,10 @@ static var lobby_request := ""  # bilan -> lobby : "class" ouvre la page du mode
 ## Remise à zéro (en tête de Run.start : tout autre mode lancé ensuite repart sans Survivant).
 static func reset() -> void:
 	active = false
+	RenderingServer.global_shader_parameter_set("hero_fade", 0.0)  # (décor tramé autour du héros : Survivant seulement)
+	Monster.attack_slots = 0  # (places d'attaque de la horde : Survivant seulement)
+	Monster.lite_height = 0.0
+	Monster.attacking = 0
 	bans_used = 0
 	picks = {}
 	since = {}
@@ -206,6 +243,9 @@ static func finish(res: String, counted_kills: int) -> Array:
 	var moved := restore_hub()
 	Profile.bag = {}
 	active = false
+	RenderingServer.global_shader_parameter_set("hero_fade", 0.0)
+	Monster.attack_slots = 0
+	Monster.lite_height = 0.0
 	ModeRules.modifiers = []  # (règles du palier : rien ne suit le héros dans un autre mode)
 	SurvivorRewards.settle(res, counted_kills)
 	return moved

@@ -69,8 +69,9 @@ func _curve() -> void:
 	check("fin de l'ouverture : la courbe seule", near(p3.atk_mult, Survivor.ATK0 * pow(Survivor.ATK_GROWTH, float(Survivor.OPENING[2]) / 60.0)))
 	check("pas de vague dure (élite) avant %d s, puis oui" % int(Survivor.HARD_WAVES_FROM),
 		not SurvivorDirector.spawn_plan(Survivor.HARD_WAVES_FROM - 1.0).hard and SurvivorDirector.spawn_plan(Survivor.HARD_WAVES_FROM).hard)
-	check("vivants %d → %d" % [SurvivorDirector.spawn_plan(0.0).alive_max, SurvivorDirector.spawn_plan(1200.0).alive_max],
-		int(p0.alive_max) == int(Survivor.ALIVE[0]) and int(SurvivorDirector.spawn_plan(1200.0).alive_max) == int(Survivor.ALIVE[1]))
+	check("vivants %d → %d, horde finale %d" % [SurvivorDirector.spawn_plan(0.0).alive_max, SurvivorDirector.spawn_plan(1139.0).alive_max, SurvivorDirector.spawn_plan(1200.0).alive_max],
+		int(p0.alive_max) == int(Survivor.ALIVE[0]) and absi(int(SurvivorDirector.spawn_plan(1139.0).alive_max) - int(lerpf(Survivor.ALIVE[0], Survivor.ALIVE[1], 1139.0 / 1200.0))) <= 1
+		and int(SurvivorDirector.spawn_plan(1200.0).alive_max) == Survivor.ALIVE_FINAL)
 	var lv20 := int(SurvivorDirector.spawn_plan(1200.0).level)
 	check("monstres de niveau %d à 20:00 (le héros vise 38 ± 4)" % lv20, lv20 >= 34 and lv20 <= 42)
 	check("gardiens : PV fixes croissants, boss au-dessus", SurvivorDirector.guardian_hp(0) < SurvivorDirector.guardian_hp(1)

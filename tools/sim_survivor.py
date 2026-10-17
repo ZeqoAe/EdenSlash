@@ -7,6 +7,8 @@ journaux bruts et résume minute par minute.
     python tools/sim_survivor.py --reparse <dossier>          # relit des journaux déjà faits
     python tools/sim_survivor.py --project <copie>/game ...   # mesure une copie propre (run_tests.preparer_copie)
 
+Horde (lot SVX-1) : le pilote se bat seulement à moins de --pilot-fight m (2 par défaut ; 4 avant la horde, il ne quittait plus
+la mêlée pour les coffres) ; lignes [sv-dens] (monstres à moins de 15 m, à l'écran, vivants : moyenne et maximum par minute).
 Collecte réelle (lot S9) : --extra=--human-magnet donne au pilote la zone de collecte d'un joueur (sinon 40 m : il ne va
 pas chercher les orbes) ; lignes [sv-xp] (orbes au sol, reprises, expérience lâchée / ramassée).
 Profils de joueur (--human : part des coups évités, SPEC §8.4) : débutant 0,3, moyen 0,5, bon 0,7. Le pilote prend ses
@@ -43,7 +45,7 @@ def run_one(job):
     log = os.path.join(out_dir, tag + ".log")
     cmd = [a.godot, "--headless", "--fixed-fps", "60", "--path", a.project, "res://scenes/world.tscn", "--", "--survivor", "--autoplay",
            "--auto-quit", "--class=" + cls, "--seed=%d" % seed, "--human=%s" % human, "--quit-at=%d" % a.quit_at,
-           "--palier=%d" % palier] + (a.extra.split() if a.extra else [])
+           "--palier=%d" % palier, "--fight=%s" % a.pilot_fight] + (a.extra.split() if a.extra else [])
     with open(log, "w", encoding="utf-8", errors="replace") as f:
         try:
             subprocess.run(cmd, env=env, stdout=f, stderr=subprocess.STDOUT, timeout=a.timeout)
@@ -73,6 +75,11 @@ def parse(log):
     r["xp"] = {}
     for m in re.finditer(r"\[sv-xp\] (\d+):00 · niveau \d+ · au sol (\d+) · posées \d+ · reprises (\d+) · xp lâchée (\d+) · ramassée (\d+)", out):
         r["xp"][int(m.group(1))] = {"ground": int(m.group(2)), "recycled": int(m.group(3)), "in": int(m.group(4)), "got": int(m.group(5))}
+    # densité de la horde (lot SVX-1) : moyenne et maximum par minute, à moins de 15 m et à l'écran
+    r["dens"] = {}
+    for m in re.finditer(r"\[sv-dens\] (\d+):00 · \w+ · près ([\d.]+) \(max (\d+)\) · écran ([\d.]+) \(max (\d+)\) · vivants ([\d.]+) \(max (\d+)\)", out):
+        r["dens"][int(m.group(1))] = {"near": float(m.group(2)), "near_max": int(m.group(3)), "screen": float(m.group(4)),
+                                      "screen_max": int(m.group(5)), "alive": float(m.group(6)), "alive_max": int(m.group(7))}
     for m in re.finditer(r"\[sv\] gardien (\d) vaincu en (\d+) s", out):
         r["guardians"][int(m.group(1))] = int(m.group(2))
     r["gold_spent"] = sum(int(x) for x in re.findall(r"\[sv\] pilote : marchand à [\d:]+, (\d+) or", out))
@@ -139,6 +146,13 @@ def summary(res):
     if coll:
         print("expérience ramassée / lâchée (médiane) : %d %% ; orbes reprises (sol plein) : %s" % (
             round(100 * statistics.median(coll)), [r["xp"][max(r["xp"])]["recycled"] for r in res if r.get("xp")]))
+    if any(r.get("dens") for r in res):
+        print("densité (médiane des runs) minute : à moins de 15 m moy/max · à l'écran moy/max · vivants")
+        for mi in (1, 2, 3, 5, 8, 10, 12, 15, 18, 19, 20):
+            rows = [r["dens"][mi] for r in res if mi in r.get("dens", {})]
+            if rows:
+                print("  %2d:00  %5.1f / %3d · %5.1f / %3d · %5.1f" % (mi, med([x["near"] for x in rows]), med([x["near_max"] for x in rows]),
+                      med([x["screen"] for x in rows]), med([x["screen_max"] for x in rows]), med([x["alive"] for x in rows])))
     deaths = sorted(r.get("t", 0) for r in res if r.get("res") == "defaite")
     print("défaites : %d, minutes de mort : %s" % (len(deaths), [round(t / 60.0, 1) for t in deaths]))
     for r in res:
@@ -236,6 +250,7 @@ def main():
     ap.add_argument("--godot", default=GODOT)
     ap.add_argument("--out", default="")
     ap.add_argument("--extra", default="")
+    ap.add_argument("--pilot-fight", dest="pilot_fight", default="2.0", help="SVX-1 : le pilote se bat seulement à moins de N m (sinon il va à son but : coffres, marchands) ; avant la horde : 4")
     ap.add_argument("--reparse", default="")
     ap.add_argument("--json", default="")
     a = ap.parse_args()

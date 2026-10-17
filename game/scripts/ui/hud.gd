@@ -899,6 +899,8 @@ func _update_target() -> void:
 		t = boss
 	if t == null:
 		t = player.nearest_monster(9.0)
+	if t != null and not SurvivorDirector.shows_target_bar(t):
+		t = null  # Survivant (lot SVX-1) : face à une horde, la barre ne sert qu'aux élites, géants et boss
 	if _boss_bar != null and _boss_bar.show_for(t, director):  # boss : barre de boss v2 (lot DNG-2)
 		_target_box.visible = false
 		return

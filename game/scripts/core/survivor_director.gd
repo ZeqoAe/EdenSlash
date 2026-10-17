@@ -51,6 +51,7 @@ const FINAL_HORDE := 30  # monstres de la horde finale, en anneau autour du hér
 const CHALLENGE_GOLD := [40, 12]  # stèle du défi réussie : or (base + par niveau), et un coffre doré gratuit
 const MSG_THROTTLE := 3.0  # secondes entre deux messages répétés (portail fermé, enclume vide)
 const POWER_SAMPLE := 2.0  # s entre deux mesures de l'équipement de la run (puissance des monstres)
+const GUARDIAN_CALM := 0.5  # plafond de vivants × pendant le combat d'un gardien (lot SVX-1)
 
 var d: RunDirector
 var _next := 0  # prochain événement de la chronologie
@@ -86,6 +87,9 @@ func _init(director: RunDirector) -> void:
 	Menace.level = maxi(Menace.level, int(Survivor.tier_rule("menace")))
 	if d.world and "revives_left" in d.world:
 		d.world.revives_left = int(Survivor.tier_rule("revives"))
+	# horde (lot SVX-1) : places d'attaque (remises à 0 par Survivor.reset / finish)
+	Monster.attacking = 0
+	Monster.attack_slots = int(spawn_plan(0.0).attack_slots)
 
 
 ## Règle du profil « survivor » (ModeRules, modifiable en mode dev) ; [param fallback] si la clé n'y est pas.
@@ -128,12 +132,13 @@ static func spawn_plan(t: float) -> Dictionary:
 	var pace: Array = r("spawn_pace", Survivor.SPAWN_PACE)
 	var elites_from := float(r("elites_from", Survivor.ELITES_FROM))
 	var opening: Array = r("opening", Survivor.OPENING)
+	var slots: Array = r("attack_slots", Survivor.ATTACK_SLOTS)
 	var ramp := clampf(t / maxf(float(opening[2]), 1.0), 0.0, 1.0)
 	var ease := lerpf(float(opening[0]), 1.0, ramp)
 	var ease_hp := lerpf(float(opening[1]), 1.0, ramp)
 	return {
 		"minute": mins,
-		"alive_max": roundi(lerpf(float(r("alive_start", Survivor.ALIVE[0])), float(r("alive_end", Survivor.ALIVE[1])), 1.0 if final else k)),
+		"alive_max": int(r("alive_final", Survivor.ALIVE_FINAL)) if final else roundi(lerpf(float(r("alive_start", Survivor.ALIVE[0])), float(r("alive_end", Survivor.ALIVE[1])), k)),
 		"pack_every": float(pack_every[1]) if final else lerpf(float(pack_every[0]), float(pack_every[1]), k),
 		"pack_size": roundi(lerpf(float(pack_size[0]), float(pack_size[1]), 1.0 if final else k)),
 		"wave_every": lerpf(float(wave_every[0]), float(wave_every[1]), k),
@@ -144,6 +149,7 @@ static func spawn_plan(t: float) -> Dictionary:
 		"atk_mult": float(r("atk0", Survivor.ATK0)) * pow(float(r("atk_growth", Survivor.ATK_GROWTH)), mins) * pk * ease,
 		"hard": t >= float(r("hard_waves_from", Survivor.HARD_WAVES_FROM)),
 		"final": final,
+		"attack_slots": roundi(lerpf(float(slots[0]), float(slots[1]), 1.0 if final else k)),
 	}
 
 
@@ -174,7 +180,17 @@ func start_message() -> String:
 
 
 ## Chaque image, en exploration comme dans l'arène : chronologie, défis, journal minute par minute.
-func update(_delta: float) -> void:
+func update(delta: float) -> void:
+	if not _cam_done and d.world != null and d.world.get("rig") != null:
+		_cam_done = true  # (lot SVX-1) caméra plus haute : la horde se voit autour du héros
+		d.world.rig.distance = minf(28.0, float(d.world.rig.distance) * Survivor.CAM_ZOOM)
+		RenderingServer.global_shader_parameter_set("hero_fade", Survivor.FOLIAGE_FADE)  # décor tramé autour du héros
+		_ensure_height()
+	_outline_t -= delta
+	if _outline_t <= 0.0 and d.player != null:
+		_outline_t = 1.0  # (un modèle rhabillé par une pièce perd son contour : remis chaque seconde)
+		HeroOutline.apply(d.player.model)
+	_sample_density(delta)
 	_sample_minute()
 	SurvivorRewards.track(self)  # suivi pour les récompenses de fin (S6)
 	if d.state != "explore":
@@ -249,6 +265,12 @@ func update_spawns(delta: float) -> bool:
 	var plan := spawn_plan(d.time)
 	var cap := int(plan.alive_max)
 	var alive := _alive()
+	Monster.attack_slots = int(plan.attack_slots)
+	var calm := guardians.any(func(e): return float(e.ttk) < 0.0)
+	if calm:
+		# (lot SVX-1) gardien en vie : la horde se calme (moitié moins de meutes, plafond × GUARDIAN_CALM) ; mesuré sans :
+		# gardiens vaincus en 120-300 s au lieu de 30-90, le héros débutant tombait pendant le combat
+		cap = roundi(cap * GUARDIAN_CALM)
 	_despawn_t -= delta
 	if _despawn_t <= 0.0:
 		_despawn_t = 2.0
@@ -256,19 +278,20 @@ func update_spawns(delta: float) -> bool:
 			alive -= d._despawn_far()
 	_update_camps()
 	_update_power(delta)
+	_update_lod(delta)
 	var sp = _squads()  # composant de spawn de P15 (escouades mélangées par rôle, anneau espacé) s'il est là
 	if sp != null:
 		sp.pace = float(plan.pace)  # budget des événements (encerclement, escorte, ruée, tenaille)
 		sp.tick(delta)  # soigneurs, secteurs qui refroidissent, mesures
 	_pack_t -= delta
 	if _pack_t <= 0.0:
-		_pack_t = float(plan.pack_every)
+		_pack_t = float(plan.pack_every) * (2.0 if calm else 1.0)
 		if alive < cap:
 			var budget := float(mini(int(plan.pack_size), cap - alive))
 			if sp != null and budget >= float(r("pack_split", Survivor.PACK_SPLIT)):
 				# deux escouades mélangées de deux côtés (angle d'or, MIN_GAP_DEG) plutôt qu'un gros groupe
 				var a: float = sp.pack(budget * 0.55, monster_level(0))
-				sp.spawn_squad(sp._pick_squad(), budget * 0.45, monster_level(0), [a] if a != INF else [])
+				sp.spawn_squad(sp._pick_squad(), budget * 0.45, monster_level(0), [a] if a != INF else [], sp.ring)
 			elif sp != null:
 				sp.pack(budget, monster_level(0))
 			else:
@@ -305,7 +328,92 @@ func update_spawns(delta: float) -> bool:
 func _squads() -> SpawnDirector:
 	if d.spawner == null or SpawnDirector.legacy:
 		return null
+	if not _sp_ready:
+		# horde (lot SVX-1) : plus de monstres par rôle, arrivées à l'écran annoncées par une croix au sol
+		_sp_ready = true
+		d.spawner.role_cap_mult = float(r("horde_role_cap", Survivor.HORDE_ROLE_CAP))
+		d.spawner.ring = r("horde_ring", Survivor.HORDE_RING)
+		d.spawner.mark_time = float(r("horde_mark", Survivor.HORDE_MARK))
 	return d.spawner
+
+
+var _sp_ready := false
+var _cam_done := false
+var _outline_t := 0.0
+
+
+# --- horde (lot SVX-1) ------------------------------------------------------------------------------------------------
+## Monstre ordinaire de la horde (ni boss, ni élite, ni géant, ni gardien) : plus petit, sans collision physique, part de
+## PV, de dégâts, d'expérience et d'or réduite (Survivor.HORDE_SHARE).
+static func is_horde(m: Monster, boss: bool) -> bool:
+	return not boss and not m.is_boss and not m.is_elite and not (m is GiantMonster) and not m.has_meta("sv_guardian")
+
+
+## Barre de cible du HUD (lot SVX-1, SV-H2) : face à une horde, seulement pour les élites, géants, gardiens et boss.
+static func shows_target_bar(t: Object) -> bool:
+	if not Survivor.active or not (t is Monster):
+		return true
+	var m := t as Monster
+	return m.is_boss or m.is_elite or m is GiantMonster
+
+
+## Part [param i] (0 PV, 1 dégâts, 2 expérience, 3 or et potions) d'un monstre de la horde.
+static func horde_share(i: int) -> float:
+	var s: Array = r("horde_share", Survivor.HORDE_SHARE)
+	return float(s[i]) if i < s.size() else 1.0
+
+
+## Plafond de monstres vivants du directeur (RunDirector._hard_cap) : celui du plan de la minute, avec la marge des vagues ;
+## dans l'arène, celui de la Survie ([param default]).
+func hard_cap(default: int) -> int:
+	if d.state != "explore":
+		return default
+	return int(spawn_plan(d.time).alive_max) + 40
+
+
+## Or d'un monstre vaincu (× RunDirector, avant Run.add_gold) : la part de la horde pour un monstre ordinaire.
+func kill_gold(m: Monster) -> float:
+	return horde_share(3) if m.has_meta("sv_horde") else 1.0
+
+
+## Niveaux de détail de la horde (toutes les LOD_EVERY s) : réflexion à chaque image près du héros, une sur 2 puis une
+## sur 4 plus loin (animation au même rythme), ombre portée seulement de près (Monster.lod, Monster.lite).
+const LOD_EVERY := 0.2
+var _lod_t := 0.0
+
+
+func _update_lod(delta: float) -> void:
+	_lod_t -= delta
+	if _lod_t > 0.0 or d.player == null:
+		return
+	_lod_t = LOD_EVERY
+	var near := float(r("lod_near", Survivor.LOD_NEAR))
+	var far := float(r("lod_far", Survivor.LOD_FAR))
+	var shadow := float(r("shadow_near", Survivor.SHADOW_NEAR))
+	var hero := d.player.global_position
+	var rows: Array = []
+	for node in d.get_tree().get_nodes_in_group("monsters"):
+		var mo := node as Monster
+		if mo == null or not mo.lite or mo.is_dead:
+			continue
+		rows.append([Vector2(mo.global_position.x - hero.x, mo.global_position.z - hero.z).length(), mo])
+	rows.sort_custom(func(a, b): return float(a[0]) < float(b[0]))
+	var full := int(r("lod_full", Survivor.LOD_FULL))
+	for i in rows.size():
+		var dist := float(rows[i][0])
+		var mo: Monster = rows[i][1]
+		# chaque image : les LOD_FULL plus proches à moins de LOD_NEAR m ; une sur 2 jusqu'à LOD_FAR m ; une sur 4 au-delà
+		set_lod(mo, 0 if dist < near and i < full else (1 if dist < far else 2))
+		var sh := dist < shadow
+		if sh != bool(mo.get_meta("sv_shadow", true)) and mo.model != null:
+			mo.set_meta("sv_shadow", sh)
+			for gi in mo.model.find_children("*", "GeometryInstance3D", true, false):
+				(gi as GeometryInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if sh else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+
+## Niveau de détail [param lod] du monstre [param mo] (sa réflexion et son animation ralentissent avec, Monster.lod).
+static func set_lod(mo: Monster, lod: int) -> void:
+	mo.lod = lod
 
 
 ## Puissance des monstres selon l'équipement de la run (MonsterScaling, voir Survivor.POWER_BAND) : mesurée toutes les
@@ -397,6 +505,18 @@ func scale_monster(m: Monster, boss: bool) -> bool:
 		m.max_hp = guardian_hp(int(m.get_meta("sv_guardian")))
 	elif not boss:
 		m.max_hp *= float(plan.hp_mult)
+		if is_horde(m, boss):
+			# horde (lot SVX-1) : plus petit, sans collision physique, sa part de PV, de dégâts et d'expérience
+			m.set_meta("sv_horde", true)
+			m.lite = true
+			_ensure_height()
+			_soft_body(m)
+			m.max_hp *= horde_share(0)
+			m.atk *= horde_share(1)
+			m.xp_reward = maxi(1, roundi(m.xp_reward * horde_share(2)))
+			_shrink(m, float(r("horde_scale", Survivor.HORDE_SCALE)))
+		elif m.is_elite:
+			_shrink(m, float(r("horde_scale_elite", Survivor.HORDE_SCALE_ELITE)))
 		if d.state == "explore" and not (m is GiantMonster):
 			# équipement de la run au-dessus / en dessous de la bande attendue (lissé, plafonné avec Menace et pacte)
 			var greed_k := RunDirector.GREED_MONSTERS if d.greed else 1.0
@@ -405,6 +525,39 @@ func scale_monster(m: Monster, boss: bool) -> bool:
 			m.atk *= k.y
 	m.hp = m.max_hp
 	return true
+
+
+## Le héros traverse la horde (lot SVX-1) : un monstre ordinaire ne le bloque plus (il est repoussé hors de son corps,
+## Monster._lite_move) ; mesuré avant : dans une foule de 60 monstres, le héros restait coincé (moins de coffres atteints,
+## mort au premier gardien). Élites, géants et boss le bloquent toujours.
+func _soft_body(m: Monster) -> void:
+	var p := d.player
+	if p == null:
+		return
+	p.add_collision_exception_with(m)
+	m.tree_exiting.connect(func():
+		if is_instance_valid(p):
+			p.remove_collision_exception_with(m))
+
+
+## Hauteur maximale des monstres de la horde (Monster.lite_height) : HORDE_HEIGHT × la hauteur du héros, posée dès que
+## son modèle existe (avant le premier monstre).
+func _ensure_height() -> void:
+	if Monster.lite_height > 0.0:
+		return
+	var h := Monster.rig_height(d.player.model) if d.player != null and d.player.model != null else 0.0
+	Monster.lite_height = (h if h > 0.5 else HERO_HEIGHT) * float(r("horde_height", Survivor.HORDE_HEIGHT))
+
+
+const HERO_HEIGHT := 1.4  # m : héros mesuré (os le plus haut), si son modèle n'est pas encore là
+
+
+## Taille du monstre × [param k] (avant son entrée en scène : le modèle et son rayon de collision suivent).
+static func _shrink(m: Monster, k: float) -> void:
+	if is_equal_approx(k, 1.0):
+		return
+	m.data = m.data.duplicate()
+	m.data["scale"] = float(m.data.get("scale", 1.0)) * k
 
 
 ## PV fixes du gardien [param n] (0, 1, 2) × palier, avant la Menace (SPEC §8.2) : jamais d'après le héros.
@@ -422,7 +575,7 @@ static func final_boss_hp() -> float:
 ## secondaire, ni sceau ; seulement des potions (Survivor.POTION_DROP : monstre, élite).
 func on_monster_died(m: Monster) -> bool:
 	var drop: Array = r("potion_drop", Survivor.POTION_DROP)
-	if not m.is_boss and randf() < float(drop[1] if m.is_elite else drop[0]):
+	if not m.is_boss and randf() < float(drop[1] if m.is_elite else drop[0]) * kill_gold(m):
 		d._drop_potion(m.global_position, Potions.roll_kind())
 	return true
 
@@ -785,11 +938,54 @@ func _sample_minute() -> void:
 		row.gold, row.skills, row.pieces, row.cards, row.taken, row.max_hp, gear_idx, power.x, power.y, Survivor.pity_given,
 		(" · boss PV %d %%" % roundi(100.0 * d._boss.hp / maxf(d._boss.max_hp, 1.0))) if d.state == "boss" and is_instance_valid(d._boss) else ""])
 	print("[sv-build] " + build_line())
+	var dn := maxf(float(_dens.n), 1.0)
+	row["near"] = snappedf(float(_dens.near) / dn, 0.1)
+	row["screen"] = snappedf(float(_dens.screen) / dn, 0.1)
+	print("[sv-dens] %02d:00 · %s · près %.1f (max %d) · écran %.1f (max %d) · vivants %.1f (max %d)" % [m, d.state, float(_dens.near) / dn,
+		int(_dens.near_max), float(_dens.screen) / dn, int(_dens.screen_max), float(_dens.alive) / dn, int(_dens.alive_max)])
+	_dens = {"n": 0, "near": 0, "near_max": 0, "screen": 0, "screen_max": 0, "alive": 0, "alive_max": 0}
 	if d.orbs != null:  # expérience (lot S9) : orbes au sol, posées, reprises (sol plein), lâchée / ramassée / reprise
 		var o: Dictionary = d.orbs.stats
 		print("[sv-xp] %02d:00 · niveau %d · au sol %d · posées %d · reprises %d · xp lâchée %d · ramassée %d · reprise %d" % [
 			m, d.player.level, d.orbs.count(), int(o.spawned), int(o.recycled), roundi(float(o.xp_in)), roundi(float(o.xp_got)),
 			roundi(float(o.xp_recycled))])
+
+
+## Densité de la horde (lot SVX-1) : chaque seconde, monstres vivants, à moins de DENSITY_NEAR m du héros et à l'écran
+## (cône de la caméra) ; moyenne et maximum par minute (ligne « [sv-dens] », journal : near, screen).
+const DENSITY_NEAR := 15.0
+var _dens := {"n": 0, "near": 0, "near_max": 0, "screen": 0, "screen_max": 0, "alive": 0, "alive_max": 0}
+var _dens_t := 0.0
+
+
+func _sample_density(delta: float) -> void:
+	_dens_t -= delta
+	if _dens_t > 0.0 or d.player == null:
+		return
+	_dens_t = 1.0
+	var c := density_now()
+	_dens.n = int(_dens.n) + 1
+	for k in ["near", "screen", "alive"]:
+		_dens[k] = int(_dens[k]) + int(c[k])
+		_dens[k + "_max"] = maxi(int(_dens[k + "_max"]), int(c[k]))
+
+
+## Monstres vivants maintenant : {alive, near (à moins de DENSITY_NEAR m), screen (dans le champ de la caméra)}.
+func density_now() -> Dictionary:
+	var hero := d.player.global_position
+	var cam := d.get_viewport().get_camera_3d()
+	var out := {"alive": 0, "near": 0, "screen": 0}
+	for node in d.get_tree().get_nodes_in_group("monsters"):
+		var mo := node as Monster
+		if mo == null or mo.is_dead:
+			continue
+		out.alive += 1
+		var p := mo.global_position
+		if Vector2(p.x - hero.x, p.z - hero.z).length() < DENSITY_NEAR:
+			out.near += 1
+		if cam and cam.is_position_in_frustum(p + Vector3.UP * 0.5):
+			out.screen += 1
+	return out
 
 
 ## Cartes prises dans la run : cartes du Survivant (arme, pièces, améliorations, évolutions, repli) + niveaux de sorts

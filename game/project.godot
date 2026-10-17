@@ -56,3 +56,7 @@ hero_world={
 "type": "vec3",
 "value": Vector3(0, -1000, 0)
 }
+hero_fade={
+"type": "float",
+"value": 0.0
+}

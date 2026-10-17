@@ -94,6 +94,12 @@ var d: RunDirector
 var squads: Array = SQUADS
 var events: Dictionary = EVENTS
 var pace := PACE  # budget × pace (le Survivant peut l'augmenter avec le temps)
+## Horde du Survivant (lot SVX-1) ; les valeurs par défaut sont celles de la Survie (rien n'y change) : plafond de vivants
+## par rôle × role_cap_mult ; anneau d'arrivée des escouades (m) ; mark_time > 0 : chaque monstre d'une escouade est annoncé
+## par une croix au sol (SpawnMark) mark_time s avant d'apparaître, à l'écran, au lieu d'arriver hors de la vue.
+var role_cap_mult := 1.0
+var ring: Array = RING
+var mark_time := 0.0
 static var ablate: Array = []  # mesures de réglage (--spawn-ablate=) : traits de rôle coupés
 var power_on := false  # PV et dégâts selon l'équipement (Survie ; le Survivant décide pour lui)
 var power := Vector2.ONE  # coefficients lissés [PV, dégâts]
@@ -174,7 +180,7 @@ func tick(delta: float) -> void:
 ## Une meute : escouade mélangée tirée au hasard (SQUADS) de [param budget] points (1 = un monstre ordinaire) au niveau
 ## [param level], arrivant hors écran du côté le moins servi. Renvoie l'angle utilisé (INF : rien posé).
 func pack(budget: float, level: int) -> float:
-	return spawn_squad(_pick_squad(), budget, level)
+	return spawn_squad(_pick_squad(), budget, level, [], ring)
 
 
 ## Une vague : événement dur (encerclement annoncé, élite escortée) ou léger (ruée d'essaim, tenaille), dimensionné
@@ -286,9 +292,14 @@ func compose(squad: Dictionary, budget: float) -> Array:
 ## Rôle [param r] s'il est dans la zone et sous son plafond, sinon un remplaçant ("" : aucun).
 func _available(r: String, alive: Dictionary) -> String:
 	for cand in [r, "melee", "swarm", "charger", "ranged"]:
-		if _by_role.has(cand) and int(alive.get(cand, 0)) < int(ROLES[cand].max):
+		if _by_role.has(cand) and int(alive.get(cand, 0)) < role_cap(cand):
 			return cand
 	return ""
+
+
+## Plafond de monstres vivants du rôle [param r] (ROLES.max × role_cap_mult).
+func role_cap(r: String) -> int:
+	return roundi(float(ROLES[r].max) * role_cap_mult)
 
 
 ## Monstres vivants par rôle.
@@ -325,12 +336,12 @@ func species_for(roles: Array) -> Array:
 
 
 ## Fait apparaître une escouade ; renvoie l'angle utilisé (INF : aucun point valide). [param avoid] : angles déjà pris.
-func spawn_squad(squad: Dictionary, budget: float, level: int, avoid: Array = [], ring: Array = RING) -> float:
+func spawn_squad(squad: Dictionary, budget: float, level: int, avoid: Array = [], p_ring: Array = RING) -> float:
 	var roles := compose(squad, budget)
 	if roles.is_empty():
 		return INF
 	var a := _pick_angle(avoid)
-	var c := _point(a, float(ring[0]), float(ring[1]))
+	var c := _point(a, float(p_ring[0]), float(p_ring[1]))
 	if c == Vector3.INF:
 		return INF
 	_spawn_group(roles, c, level)
@@ -339,12 +350,23 @@ func spawn_squad(squad: Dictionary, budget: float, level: int, avoid: Array = []
 	return a
 
 
-## Pose les monstres [param roles] autour de [param c] : tireurs et soigneurs un peu en retrait, essaim serré.
-func _spawn_group(roles: Array, c: Vector3, level: int) -> void:
+## Pose les monstres [param roles] autour de [param c] : tireurs et soigneurs un peu en retrait, essaim serré. Avec
+## mark_time (Survivant) et [param marked] : une croix au sol à chaque place, les monstres y surgissent mark_time s après.
+func _spawn_group(roles: Array, c: Vector3, level: int, marked := true) -> void:
 	var ids := species_for(roles)
 	var out := (c - d.player.global_position)
 	out.y = 0.0
 	out = out.normalized()
+	if mark_time > 0.0 and marked:
+		var spots: Array = []
+		for i in mini(ids.size(), d._room()):
+			var at := c + out * (4.0 if role_of(ids[i]) in ["ranged", "support"] else 0.0)
+			spots.append(d._around(at, 2.5 + 0.35 * ids.size()))
+			SpawnMark.mark(d, spots[-1], mark_time)
+		_later(func():
+			for i in mini(spots.size(), d._room()):
+				d._spawn_monster(ids[i], spots[i], level), mark_time)
+		return
 	for i in mini(ids.size(), d._room()):
 		var role := role_of(ids[i])
 		var at := c + out * (4.0 if role in ["ranged", "support"] else 0.0)
@@ -359,7 +381,7 @@ func pick_any(_level: int) -> int:
 	var total := 0.0
 	var pool := {}
 	for r in weights:
-		if _by_role.has(r) and int(alive.get(r, 0)) < int(ROLES[r].max):
+		if _by_role.has(r) and int(alive.get(r, 0)) < role_cap(r):
 			pool[r] = weights[r]
 			total += float(weights[r])
 	if pool.is_empty():
@@ -406,7 +428,7 @@ func _event(kind: String, minutes: float, rage: bool) -> void:
 				# cercle d'arrivée qui se remplit (sans dégâts) jusqu'à l'apparition du groupe
 				Telegraph.spawn(d, c, 0.0, {"shape": "circle", "radius": 2.6, "delay": WARN_TIME, "damage": 0.0, "small": true, "color": WARN_COLOR})
 				_later(func():
-					_spawn_group(roles, c, lvl)
+					_spawn_group(roles, c, lvl, false)  # (déjà annoncé par le cercle)
 					if elite and d._room() > 0:
 						d._spawn_monster(d._elites.pick_random(), d._around(c, 2.0), lvl))
 			if not d._elites.is_empty():
@@ -414,7 +436,7 @@ func _event(kind: String, minutes: float, rage: bool) -> void:
 		"escort":
 			d.message.emit("Une élite et son escorte arrivent !", 2.2)
 			var a := _pick_angle([])
-			var c := _point(a, RING[0], RING[1])
+			var c := _point(a, float(ring[0]), float(ring[1]))
 			if c == Vector3.INF:
 				return
 			d._spawn_monster(d._elites.pick_random(), c, lvl)
@@ -425,7 +447,7 @@ func _event(kind: String, minutes: float, rage: bool) -> void:
 			d.message.emit("Ruée d'essaim !", 1.6)
 			var taken: Array = []
 			for k in 3:
-				var a := spawn_squad({"id": "ruee", "roles": {"swarm": 4, "melee": 2}}, (6.0 + minutes) * 0.75 * pace, maxi(1, lvl - 2), taken)
+				var a := spawn_squad({"id": "ruee", "roles": {"swarm": 4, "melee": 2}}, (6.0 + minutes) * 0.75 * pace, maxi(1, lvl - 2), taken, ring)
 				if a != INF:
 					taken.append(a)
 		_:  # pincer
@@ -434,7 +456,7 @@ func _event(kind: String, minutes: float, rage: bool) -> void:
 			var budget := (6.0 + minutes) * 0.8 * pace
 			for k in 2:
 				var ang := a + PI * k + randf_range(-0.4, 0.4)
-				var c := _point(ang, RING[0] - 2.0, RING[1])
+				var c := _point(ang, float(ring[0]) - 2.0, float(ring[1]))
 				if c == Vector3.INF:
 					continue
 				_spawn_group(compose(_pick_squad(), budget), c, lvl)
@@ -442,10 +464,10 @@ func _event(kind: String, minutes: float, rage: bool) -> void:
 					ArrivalMarker.mark(d, c, Color(1.0, 0.85, 0.35))
 
 
-## Arrivée annoncée : [param f] après WARN_TIME, si la carte est toujours en cours.
-func _later(f: Callable) -> void:
+## Arrivée annoncée : [param f] après [param delay] s (WARN_TIME par défaut), si la carte est toujours en cours.
+func _later(f: Callable, delay := WARN_TIME) -> void:
 	_pending += 1
-	d.get_tree().create_timer(WARN_TIME, false).timeout.connect(func():
+	d.get_tree().create_timer(delay, false).timeout.connect(func():
 		_pending -= 1
 		if is_instance_valid(d) and d.state in ["explore", "rage"] and d.player and not d.player.is_dead:
 			f.call())

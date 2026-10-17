@@ -8,6 +8,8 @@ render_mode cull_back;
 
 global uniform vec2 hero_screen;      // position du héros à l'écran (0..1)
 global uniform float hero_depth;      // distance caméra -> héros
+global uniform vec3 hero_world;       // position du héros (monde)
+global uniform float hero_fade;       // > 0 (Survivant, lot SVX-1) : décor tramé à moitié dans ce rayon (m) autour du héros
 uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic;
 uniform vec4 albedo_color : source_color = vec4(1.0);
 uniform float alpha_cutoff = 0.0;     // 0 = opaque
@@ -42,6 +44,14 @@ void fragment() {
 	if (depth < hero_depth - 1.5) {
 		float fade = 1.0 - smoothstep(hole_radius * 0.6, hole_radius, length(d));
 		if (fade > bayer4(FRAGCOORD.xy)) {
+			discard;
+		}
+	}
+	// feuillage translucide autour du héros (Survivant) : au-dessus de ses pieds, dans hero_fade m, une trame à moitié
+	if (hero_fade > 0.0) {
+		vec3 wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+		float near_hero = 1.0 - smoothstep(hero_fade * 0.7, hero_fade, length(wp.xz - hero_world.xz));
+		if (wp.y > hero_world.y + 0.3 && near_hero * 0.55 > bayer4(FRAGCOORD.xy)) {
 			discard;
 		}
 	}

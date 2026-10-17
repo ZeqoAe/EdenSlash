@@ -69,6 +69,8 @@ func _ready() -> void:
 	var tex := "res://assets/monsters/textures/%s.png" % data.texture
 	var s := float(data.scale) * GameData.MONSTER_SCALE * (1.6 if is_boss else (1.25 if is_elite else 1.0))
 	setup_model(base + ".glb", tex if ResourceLoader.exists(tex) else "", s)
+	if lite and lite_height > 0.0:
+		_cap_height()
 	_base_scale = model.scale
 	for a in ["attack01", "attack02", "attack03"]:
 		if has_anim(a):
@@ -91,10 +93,51 @@ func _ready() -> void:
 	create_tween().tween_property(model, "position:y", 0.0, 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	play("battle01" if has_anim("battle01") else "stand01")
 	_attack_ready_at = randf_range(0.5, 1.5)
+	if lite and anim:
+		anim.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL  # (horde : voir _physics_process)
 	if is_boss:
 		brain = BossBrain.new()
 		brain.boss = self
 		add_child(brain)
+
+
+## Hauteur maximale d'un monstre de la horde (m, 0 : aucune ; posée par SurvivorDirector d'après le héros) : un modèle
+## d'origine très grand (yack, golem) est ramené à cette hauteur, rayon et collision compris.
+static var lite_height := 0.0
+static var _model_h := {}  # modèle -> hauteur du modèle à l'échelle 1
+
+
+func _cap_height() -> void:
+	var key := String(data.get("model", ""))
+	if not _model_h.has(key):
+		_model_h[key] = rig_height(model) / maxf(model.scale.y, 0.001)
+	var h := float(_model_h[key]) * model.scale.y
+	if h <= lite_height or h <= 0.0:
+		return
+	var k := lite_height / h
+	model.scale *= k
+	radius = maxf(radius * k, 0.25)
+	for c in get_children():
+		if c is CollisionShape3D and (c as CollisionShape3D).shape is CapsuleShape3D:
+			var cap := (c as CollisionShape3D).shape as CapsuleShape3D
+			cap.radius = radius
+			cap.height = maxf(radius * 2.0, cap.height * k)
+			(c as CollisionShape3D).position.y = cap.height * 0.5
+
+
+## Hauteur d'un modèle d'Eden (m, échelle du modèle comprise) : l'os le plus haut du squelette au repos (les boîtes des
+## maillages animés d'Eden sont couchées : leur hauteur n'est pas fiable) ; sans squelette, la boîte.
+static func rig_height(root: Node3D) -> float:
+	var top := 0.0
+	var found := false
+	for s: Skeleton3D in root.find_children("*", "Skeleton3D", true, false):
+		var xf := EdenModel._relative_xform(root, s)
+		for i in s.get_bone_count():
+			top = maxf(top, (xf * s.get_bone_global_rest(i)).origin.y)
+			found = true
+	if not found:
+		top = EdenModel.bounds(root).end.y
+	return top * root.scale.y
 
 
 var brain: BossBrain
@@ -198,11 +241,52 @@ func _refresh_status_label() -> void:
 	_status_label.modulate = STATUS_INFO[shown[0]].color if not shown.is_empty() else Color.WHITE
 
 
+## Horde (lot SVX-1, Survivant seulement ; ailleurs les deux restent à leur valeur par défaut, rien ne change) :
+## [member lite] : déplacement sans collision physique (position intégrée, posée sur le relief de la carte, le héros n'est
+## jamais traversé ; le chemin de navigation contourne déjà le décor), écartement entre voisins borné (SEP_LITE_*) et
+## animation avancée à la main une image physique sur 2 (sur 4, sur 8 au loin) ; [member lod] : 0 = réfléchit à chaque
+## image physique, 1 = une image sur 2, 2 = une sur 4 (la marche reste fluide : la position avance à chaque image). Posés
+## par SurvivorDirector selon la distance au héros. Mesuré (250 monstres serrés, R_SVX1) : l'écartement complet coûtait
+## 20 ms par image physique, l'animation 10 ms.
+var lite := false
+var lod := 0
+const SEP_LITE_CELL := 1.25  # m : cases de la grille d'écartement de la horde
+const SEP_LITE_MAX := 8  # voisins examinés au plus par monstre
+static var _lgrid := {}
+static var _lgrid_frame := -1
+var _anim_acc := 0.0
+var _sep_push := Vector3.ZERO
+## Places d'attaque (horde du Survivant) : au plus attack_slots monstres « lite » frappent en même temps, les autres
+## attendent leur tour au contact (0 : sans limite, partout ailleurs). Remis à zéro par SurvivorDirector.
+static var attack_slots := 0
+static var attacking := 0
+var _slot := false
+var _lod_acc := 0.0
+var _lod_phase := randi() % 4
+var _height_ok := -1  # la carte donne son relief (ProcMap.height_at) : -1 pas encore vu
+
+
 func _physics_process(delta: float) -> void:
+	if lite and anim and anim.callback_mode_process == AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL:
+		_anim_acc += delta
+		if (Engine.get_physics_frames() + _lod_phase) % (2 << lod) == 0:
+			anim.advance(_anim_acc)
+			_anim_acc = 0.0
+	if lod > 0:
+		_lod_acc += delta
+		if (Engine.get_physics_frames() + _lod_phase) % (2 if lod == 1 else 4) != 0:
+			if lite:
+				_lite_move(delta)
+			return
+		delta = _lod_acc
+		_lod_acc = 0.0
+	elif _lod_acc > 0.0:
+		_lod_acc = 0.0
 	_time += delta
 	_state_time += delta
 	tick_statuses(delta)
-	apply_gravity(delta)
+	if not lite:
+		apply_gravity(delta)
 	_retarget_t -= delta
 	if _retarget_t <= 0.0:
 		_retarget_t = 0.5
@@ -219,14 +303,16 @@ func _physics_process(delta: float) -> void:
 				anim.speed_scale = 0.0  # figé dans la glace
 		else:
 			play("hurt01" if has_anim("hurt01") else "stand01", 0.1)
-		move_and_slide()
+		if not lite:
+			move_and_slide()
 		return
 	if anim and anim.speed_scale == 0.0:
 		anim.speed_scale = 1.0
 	if is_dead:
 		velocity.x = 0.0
 		velocity.z = 0.0
-		move_and_slide()
+		if not lite:
+			move_and_slide()
 		return
 
 	var desired := Vector3.ZERO
@@ -249,7 +335,12 @@ func _physics_process(delta: float) -> void:
 
 	if _time < _dash_until:
 		desired = _dash_vel
-	desired += _separation() * 1.8
+	if lite:
+		if lod > 0 or (Engine.get_physics_frames() + _lod_phase) % 2 == 0:
+			_sep_push = _separation_lite()  # (horde : une image sur 2 suffit, la poussée reste entre-temps)
+		desired += _sep_push * 1.8
+	else:
+		desired += _separation() * 1.8
 	if has_status("chill"):
 		desired *= 0.55
 	if has_status("root"):
@@ -263,12 +354,55 @@ func _physics_process(delta: float) -> void:
 	_knock = _knock.move_toward(Vector3.ZERO, 14.0 * delta)
 	velocity.x = desired.x + _knock.x
 	velocity.z = desired.z + _knock.z
+	if lite:
+		_lite_move(delta)
+		return
 	move_and_slide()
 
 
+## Marche de la horde (voir [member lite]) : la vitesse de l'image appliquée sans collision, le monstre posé sur le relief
+## (ProcMap.height_at) et repoussé hors du corps du héros.
+func _lite_move(delta: float) -> void:
+	if is_dead:
+		return
+	var p := global_position + Vector3(velocity.x, 0.0, velocity.z) * delta
+	if is_instance_valid(_player):
+		var to := p - _player.global_position
+		to.y = 0.0
+		var min_d := radius + _player.radius
+		var l := to.length()
+		if l < min_d and l > 0.001:
+			p += to / l * (min_d - l)
+	if _height_ok < 0:
+		_height_ok = 1 if _map != null and _map.has_method("height_at") else 0
+	if _height_ok == 1:
+		p.y = lerpf(p.y, _map.height_at(p.x, p.z), clampf(delta * 15.0, 0.0, 1.0))
+	global_position = p
+
+
 func _set_state(s: String) -> void:
+	if _slot and s != "attack":
+		_slot = false
+		attacking = maxi(0, attacking - 1)
 	_state = s
 	_state_time = 0.0
+
+
+func _exit_tree() -> void:
+	if _slot:  # (monstre retiré en pleine attaque : sa place se libère)
+		_slot = false
+		attacking = maxi(0, attacking - 1)
+
+
+## Une place d'attaque est libre (toujours vrai hors de la horde du Survivant) ; la prend si oui.
+func _take_slot() -> bool:
+	if not lite or attack_slots <= 0:
+		return true
+	if attacking >= attack_slots:
+		return false
+	_slot = true
+	attacking += 1
+	return true
 
 
 ## Cibles possibles : les héros (le joueur et ses alliés) ; un allié du joueur vise les monstres.
@@ -348,7 +482,7 @@ func _update_chase(delta: float) -> Vector3:
 	to.y = 0.0
 	face_direction(to, delta, 10.0)
 	if to.length() <= _attack_range():
-		if _time >= _attack_ready_at and not _attacks.is_empty() and not has_status("disarm") and not has_status("fear"):
+		if _time >= _attack_ready_at and not _attacks.is_empty() and not has_status("disarm") and not has_status("fear") and _take_slot():
 			_start_attack()
 			return Vector3.ZERO
 		# les tireurs gardent leurs distances, les autres collent le héros
@@ -531,6 +665,44 @@ func _separation() -> Vector3:
 	return push
 
 
+## Écartement de la horde (voir [member lite]) : grille fine construite une fois par image physique, SEP_LITE_MAX voisins
+## examinés au plus (dans une foule serrée, l'écartement complet regardait 200 voisins par monstre).
+func _separation_lite() -> Vector3:
+	var f := Engine.get_physics_frames()
+	if f != _lgrid_frame:
+		_lgrid_frame = f
+		_lgrid.clear()
+		for node in get_tree().get_nodes_in_group("monsters"):
+			var p: Vector3 = (node as Node3D).global_position
+			var k := Vector2i(floori(p.x / SEP_LITE_CELL), floori(p.z / SEP_LITE_CELL))
+			if _lgrid.has(k):
+				_lgrid[k].append(node)
+			else:
+				_lgrid[k] = [node]
+	var push := Vector3.ZERO
+	var seen := 0
+	var c := Vector2i(floori(global_position.x / SEP_LITE_CELL), floori(global_position.z / SEP_LITE_CELL))
+	for off in SEP_LITE_CELLS:  # sa case d'abord, puis les voisines
+		for node in _lgrid.get(c + off, []):
+			if node == self or not is_instance_valid(node):
+				continue
+			var o := node as Monster
+			var to := global_position - o.global_position
+			to.y = 0.0
+			var min_d := radius + o.radius
+			var dd := to.length()
+			if dd < min_d and dd > 0.001:
+				push += to / dd * (min_d - dd)
+			seen += 1
+			if seen >= SEP_LITE_MAX:
+				return push
+	return push
+
+
+const SEP_LITE_CELLS := [Vector2i(0, 0), Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1), Vector2i(1, 1),
+	Vector2i(-1, -1), Vector2i(1, -1), Vector2i(-1, 1)]
+
+
 func knockback(impulse: Vector3) -> void:
 	if is_boss or is_elite:
 		impulse *= 0.2
@@ -591,6 +763,10 @@ func _on_death(_killer: Combatant) -> void:
 	if is_instance_valid(_telegraph):
 		_telegraph.queue_free()  # un monstre mort ne frappe plus
 	_set_state("dead")
+	if lite:
+		lod = 0  # (horde du Survivant) l'animation de mort à pleine cadence
+		if anim:
+			anim.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_IDLE
 	remove_from_group("monsters")
 	collision_layer = 0
 	collision_mask = GameData.PHYS_WORLD

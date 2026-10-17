@@ -678,6 +678,8 @@ func _spawn_pack(count: int, level: int, min_d: float, max_d: float) -> void:
 
 ## Plafond de monstres vivants de l'état en cours.
 func _hard_cap() -> int:
+	if sv:
+		return sv.hard_cap(int(MAX_ALIVE.get(state, MAX_ALIVE.explore)))  # Survivant : la horde (lot SVX-1)
 	return int(MAX_ALIVE.get(state, MAX_ALIVE.explore))
 
 
@@ -805,7 +807,7 @@ func _on_monster_died(who: Combatant, _killer: Combatant) -> void:
 		message.emit("Clé obtenue (%d)" % Profile.keys, 1.8)
 		if m.carries_seal:
 			world._offer("Gardien vaincu ! Choisis une carte", Run.roll_cards(3), func(): return Run.roll_cards(3))
-	Run.add_gold(roundi((1 + m.level * KILL_GOLD * (KILL_GOLD_ELITE if m.is_elite else 1.0)) * (GREED_GOLD if greed else 1.0)),
+	Run.add_gold(roundi((1 + m.level * KILL_GOLD * (KILL_GOLD_ELITE if m.is_elite else 1.0)) * (GREED_GOLD if greed else 1.0) * (sv.kill_gold(m) if sv else 1.0)),
 		"boss" if m.is_boss else ("elites" if m.is_elite else "monstres"))
 	if sv and sv.on_monster_died(m):
 		if m == _boss:

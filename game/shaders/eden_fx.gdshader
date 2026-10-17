@@ -48,6 +48,8 @@ uniform float core = 2.0;
 // Teinture (auras) : rgb = couleur voulue, a = force (0 : couleurs d'origine). La couleur
 // remplace la teinte en gardant les nuances (clair / sombre) de l'effet.
 uniform vec4 tint = vec4(1.0, 1.0, 1.0, 0.0);
+// Opacité d'ensemble (0 à 1) : 1 partout, sauf les sorts du héros en Survivant (EdenFx.opacity).
+uniform float opacity = 1.0;
 
 // Transformation « 3ds Max » de Gamebryo (NiTextureTransform::MAX_TRANSFORM) : autour du centre de la
 // texture, rotation puis échelle, puis décalage [param off] (non tourné : une texture tournée d'un quart
@@ -133,4 +135,7 @@ void fragment() {
 		ALBEDO = max(c, 0.0) * a * fade;
 		ALPHA = clamp(a, 0.0, 1.0) * fade;
 	}
+	// opacité plafonnée (Survivant, lot SVX-1 : sorts du héros à 40 % au plus) ; alpha prémultiplié : tout est mis à l'échelle
+	ALBEDO *= opacity;
+	ALPHA *= opacity;
 }

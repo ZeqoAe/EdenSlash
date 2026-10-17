@@ -116,19 +116,23 @@ func _unit() -> void:
 	var p10 := SurvivorDirector.spawn_plan(600.0)
 	var p20 := SurvivorDirector.spawn_plan(1199.0)
 	print("   courbe : 0:00 %s\n   10:00 %s\n   20:00 %s" % [p0, p10, p20])
-	check("vivants : 18 au départ, 110 à 20:00", int(p0.alive_max) == 18 and int(p20.alive_max) == 110)
+	# (horde du lot SVX-1 : réglages en tête de core/survivor.gd, ALIVE, PACK_*)
+	check("vivants : %d au départ, %d à 20:00, %d pendant la horde finale" % [int(Survivor.ALIVE[0]), int(Survivor.ALIVE[1]), Survivor.ALIVE_FINAL],
+		int(p0.alive_max) == int(Survivor.ALIVE[0]) and absi(int(SurvivorDirector.spawn_plan(1139.0).alive_max) - int(lerpf(Survivor.ALIVE[0], Survivor.ALIVE[1], 1139.0 / 1200.0))) <= 1
+		and int(p20.alive_max) == Survivor.ALIVE_FINAL)
 	# (réglages du lot S7 : courbe et ouverture en tête de core/survivor.gd)
 	check("PV des monstres : ouverture ×%.2f au départ, ×1,55 à 10:00, ×4,8 à 20:00" % float(p0.hp_mult), is_equal_approx(float(p0.hp_mult), Survivor.HP0 * Survivor.OPENING[1])
 		and absf(float(p10.hp_mult) - Survivor.HP0 * pow(Survivor.HP_GROWTH, 10.0)) < 0.02 and absf(float(p20.hp_mult) - Survivor.HP0 * pow(Survivor.HP_GROWTH, 1199.0 / 60.0)) < 0.1)
 	check("dégâts des monstres : ouverture ×%.2f → ×1,93" % float(p0.atk_mult), is_equal_approx(float(p0.atk_mult), Survivor.ATK0 * Survivor.OPENING[0])
 		and absf(float(p20.atk_mult) - Survivor.ATK0 * pow(Survivor.ATK_GROWTH, 1199.0 / 60.0)) < 0.03)
-	check("meutes toutes les 6 s de %d monstres, puis 1,8 s de 12" % int(Survivor.PACK_SIZE[0]), is_equal_approx(float(p0.pack_every), 6.0) and int(p0.pack_size) == int(Survivor.PACK_SIZE[0])
-		and absf(float(p20.pack_every) - 1.8) < 0.05 and int(p20.pack_size) == 12)
+	check("meutes toutes les %.1f s de %d monstres, puis %.1f s de %d" % [float(Survivor.PACK_EVERY[0]), int(Survivor.PACK_SIZE[0]), float(Survivor.PACK_EVERY[1]), int(Survivor.PACK_SIZE[1])],
+		is_equal_approx(float(p0.pack_every), float(Survivor.PACK_EVERY[0])) and int(p0.pack_size) == int(Survivor.PACK_SIZE[0])
+		and absf(float(p20.pack_every) - float(Survivor.PACK_EVERY[1])) < 0.05 and int(p20.pack_size) == int(Survivor.PACK_SIZE[1]))
 	check("élites : aucune avant 8:00, toutes les 40 s, 20 s après 15:00", float(p0.elite_every) == 0.0 and float(SurvivorDirector.spawn_plan(479.0).elite_every) == 0.0
 		and float(p10.elite_every) == 40.0 and float(SurvivorDirector.spawn_plan(901.0).elite_every) == 20.0)
 	check("niveau des monstres : 1 + 1,8 par minute (37 à 20:00)", int(p0.level) == 1 and int(SurvivorDirector.spawn_plan(1200.0).level) == 37)
 	check("au-delà de 20:00 (renforts de l'arène) : la courbe de 20:00", is_equal_approx(float(SurvivorDirector.spawn_plan(1500.0).hp_mult), float(SurvivorDirector.spawn_plan(1200.0).hp_mult)))
-	check("horde finale : densité maximale à 19:00", SurvivorDirector.spawn_plan(1141.0).final and int(SurvivorDirector.spawn_plan(1141.0).alive_max) == 110)
+	check("horde finale : densité maximale à 19:00", SurvivorDirector.spawn_plan(1141.0).final and int(SurvivorDirector.spawn_plan(1141.0).alive_max) == Survivor.ALIVE_FINAL)
 	check("gardiens à PV fixes : %s" % str(Survivor.GUARDIAN_HP), SurvivorDirector.guardian_hp(0) == G[0] and SurvivorDirector.guardian_hp(1) == G[1]
 		and SurvivorDirector.guardian_hp(2) == G[2])
 	check("boss final à PV fixes : %d" % int(B), SurvivorDirector.final_boss_hp() == B)

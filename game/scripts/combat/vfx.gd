@@ -73,11 +73,17 @@ static func ring(parent: Node, pos: Vector3, radius: float, color := Color(1.0, 
 	_spawn(parent, mesh, pos + Vector3.UP * 0.15, Color(1, 1, 1, color.a), 0.4, 1.3)
 
 
+## Survivant (lot SVX-1) : les effets du héros restent pâles (Survivor.FX_OPACITY au plus) ; 1 ailleurs.
+static func _dim(parent: Node) -> float:
+	return Survivor.FX_OPACITY if Survivor.active and parent is Player and not (parent as Player).foe else 1.0
+
+
 static func _spawn(parent: Node, mesh: Mesh, pos: Vector3, color: Color, life: float, grow: float) -> void:
 	if parent == null or not parent.is_inside_tree():
 		return
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
+	color.a *= _dim(parent)
 	mi.material_override = _material(color)
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	parent.get_tree().current_scene.add_child(mi)
@@ -141,7 +147,7 @@ static func flash(parent: Node, pos: Vector3, size: float, color := Color(1.0, 0
 	var q := QuadMesh.new()
 	q.size = Vector2(size, size)
 	mi.mesh = q
-	var m := _material(Color(color.r * 1.6, color.g * 1.6, color.b * 1.6, 0.7))
+	var m := _material(Color(color.r * 1.6, color.g * 1.6, color.b * 1.6, 0.7 * _dim(parent)))
 	m.vertex_color_use_as_albedo = false
 	m.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
 	m.albedo_texture = _radial()

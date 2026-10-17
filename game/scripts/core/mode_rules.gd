@@ -105,7 +105,13 @@ const SURVIVOR := {
 	"atk_growth": Survivor.ATK_GROWTH, "alive_start": Survivor.ALIVE[0], "alive_end": Survivor.ALIVE[1],
 	"pack_every": Survivor.PACK_EVERY, "pack_size": Survivor.PACK_SIZE, "pack_split": Survivor.PACK_SPLIT,
 	"wave_every": Survivor.WAVE_EVERY, "spawn_pace": Survivor.SPAWN_PACE, "elites_from": Survivor.ELITES_FROM,
-	"elite_every": Survivor.ELITE_EVERY, "power_band": Survivor.POWER_BAND, "power_hp": Survivor.POWER_HP,
+	"elite_every": Survivor.ELITE_EVERY,
+	# horde (lot SVX-1) : vivants de la horde finale, taille, anneau d'arrivée et croix, plafonds par rôle, part de chaque monstre
+	# [PV, dégâts, expérience, or] ; coût : distances des niveaux de détail et des ombres
+	"alive_final": Survivor.ALIVE_FINAL, "horde_scale": Survivor.HORDE_SCALE, "horde_scale_elite": Survivor.HORDE_SCALE_ELITE, "horde_height": Survivor.HORDE_HEIGHT,
+	"horde_ring": Survivor.HORDE_RING, "horde_mark": Survivor.HORDE_MARK, "horde_role_cap": Survivor.HORDE_ROLE_CAP,
+	"horde_share": Survivor.HORDE_SHARE, "attack_slots": Survivor.ATTACK_SLOTS, "lod_full": Survivor.LOD_FULL, "lod_near": Survivor.LOD_NEAR, "lod_far": Survivor.LOD_FAR, "shadow_near": Survivor.SHADOW_NEAR,
+	"power_band": Survivor.POWER_BAND, "power_hp": Survivor.POWER_HP,
 	"power_atk": Survivor.POWER_ATK, "guardian_hp": Survivor.GUARDIAN_HP, "boss_hp": Survivor.BOSS_HP,
 	"boss_rage_at": Survivor.BOSS_RAGE_AT, "boss_atk": Survivor.BOSS_ATK, "potion_drop": Survivor.POTION_DROP, "crit_cap": Survivor.CRIT_CAP,
 	"crit_overflow": Survivor.CRIT_OVERFLOW, "crit_dmg_cap": Survivor.CRIT_DMG_CAP,

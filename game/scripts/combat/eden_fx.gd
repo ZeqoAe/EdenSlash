@@ -59,6 +59,12 @@ static func play(parent: Node, name: String, pos: Vector3, yaw := 0.0, scale_ :=
 	fx.fx_name = name
 	fx.follow = p_follow
 	fx.alpha_mul = k * float(Settings.get_v("interface", "fx_intensity"))  # impact visuel réglable
+	if Survivor.active and _owner_scope(parent) == 1:
+		# Survivant (lot SVX-1) : les sorts du héros restent pâles (le danger se lit par-dessus), plus pâles quand ils s'empilent
+		fx.opacity = survivor_opacity()
+		fx.mine = true
+		_mine_live += 1
+		fx.tree_exiting.connect(func(): _mine_live -= 1)
 	parent.get_tree().current_scene.add_child(fx)
 	fx.global_transform = Transform3D(Basis(Vector3.UP, yaw).scaled(Vector3.ONE * scale_), pos)
 	if p_follow:
@@ -85,6 +91,29 @@ static func attach(parent: Node3D, name: String, scale_ := 1.0, dark := false, p
 	fx.scale = Vector3.ONE * scale_
 	parent.add_child(fx)
 	return fx
+
+
+## Survivant (lot SVX-1, SV-H2) : opacité d'ensemble d'un sort du héros (shader : « opacity », 1 ailleurs) ; plafond
+## Survivor.FX_OPACITY, divisé par (1 + STACK_SOFTEN × effets du héros déjà à l'écran), × REDUCED si « Réduire les effets »
+## (particules réduites ou coupées, animations réduites), jamais sous OPACITY_MIN. Les télégraphes ennemis n'en dépendent pas.
+const STACK_SOFTEN := 0.12
+const REDUCED := 0.6
+const OPACITY_MIN := 0.12
+static var _mine_live := 0
+var opacity := 1.0
+var mine := false  # sort du héros en Survivant (opacité plafonnée)
+
+
+static func survivor_opacity() -> float:
+	var k := Survivor.FX_OPACITY / (1.0 + STACK_SOFTEN * maxf(0.0, float(_mine_live)))
+	if reduced_effects():
+		k *= REDUCED
+	return clampf(k, OPACITY_MIN, Survivor.FX_OPACITY)
+
+
+## Option d'accessibilité « Réduire les effets » : étincelles réduites ou coupées, ou animations réduites.
+static func reduced_effects() -> bool:
+	return Settings.fx_particles() != "all" or Settings.get_v("interface", "ui_reduce_motion") == true
 
 
 ## Opacité des auras : effets d'Eden faits pour la ville, atténués pour garder le combat lisible.
@@ -202,7 +231,7 @@ func _ready() -> void:
 			_legacy = 1 if RenderingServer.get_current_rendering_method() == "gl_compatibility" else 0
 		if _legacy == 1:
 			_mats[name] = [_legacy_material(src, info), info]
-			(_mats[name][0] as StandardMaterial3D).albedo_color.a *= alpha_mul
+			(_mats[name][0] as StandardMaterial3D).albedo_color.a *= alpha_mul * opacity
 			mi.material_override = _mats[name][0]
 			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			if info.has("tex"):
@@ -213,6 +242,9 @@ func _ready() -> void:
 		var m := ShaderMaterial.new()
 		m.shader = SHADER
 		m.set_shader_parameter("tint", tint)
+		if opacity < 1.0:
+			m.set_shader_parameter("opacity", opacity)
+			m.render_priority = -1  # (sous les télégraphes ennemis, priorité 1)
 		var add: bool = info.get("blend", "mix") == "add"
 		m.set_shader_parameter("additive", 1.0 if add else 0.0)
 		m.set_shader_parameter("use_vertex_color", 1.0 if bool(info.get("vcol", true)) else 0.0)
