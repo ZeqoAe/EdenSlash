@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lobby bronze et émail</title>
+<!-- Maquette (non jouable) du lobby dans la piste « bronze et émail », sur une vraie vue du jeu sans interface.
+     Rendu : msedge --headless=new --screenshot=maquette_lobby.png --window-size=1600,900 maquette_lobby.html -->
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@700;800&family=Alegreya+Sans:wght@500;700;800&display=block" rel="stylesheet">
+<style>
+:root{--n950:#0C0B11;--n900:#12101A;--n800:#1B1824;--n700:#25212F;--n600:#302B3C;--n500:#4A4458;--p100:#ECE4D2;--p300:#B4AC9C;--p500:#8A8374;
+--b800:#4A3418;--b700:#6E4F27;--b500:#A57B42;--or400:#D9AE5C;--or300:#E6C27A;--or200:#F3DDA5;--eb500:#1F4E79;--eb300:#4F86B8;--es500:#1F6E6A;--es300:#4FA59C;--g500:#8E2A31}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1600px;height:900px;overflow:hidden;background:#000}
+body{position:relative;font:500 17px/1.4 "Alegreya Sans",sans-serif;font-variant-numeric:lining-nums tabular-nums;color:var(--p100);background:url(lobby_fond.jpg) center/cover}
+.veil{position:absolute;inset:0 auto 0 0;width:820px;background:linear-gradient(90deg,rgba(12,11,17,.86) 0,rgba(12,11,17,.70) 38%,rgba(12,11,17,.32) 68%,rgba(12,11,17,0) 100%)}
+.ch{--c:6px;clip-path:polygon(var(--c) 0,calc(100% - var(--c)) 0,100% var(--c),100% calc(100% - var(--c)),calc(100% - var(--c)) 100%,var(--c) 100%,0 calc(100% - var(--c)),0 var(--c))}
+.plate{position:relative;isolation:isolate;--b:1px}
+.plate::before{content:"";position:absolute;inset:var(--b);z-index:-1;background:var(--fill);clip-path:inherit}
+.logo{position:absolute;left:64px;top:48px}
+.logo h1{font:800 66px/1 "Alegreya SC",serif;letter-spacing:.03em;color:var(--or400);
+  text-shadow:0 1px 0 var(--or200),0 3px 0 var(--b800),0 6px 18px rgba(0,0,0,.65)}
+.logo .rule{display:flex;align-items:center;gap:10px;margin-top:14px;width:330px}
+.logo .rule::before{content:"";width:40px;height:1px;background:var(--b500)}
+.logo .rule::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--b500),transparent)}
+.logo .rule i{width:26px;height:8px;background:linear-gradient(90deg,var(--es500),var(--es300),var(--es500));clip-path:polygon(0 50%,22% 0,78% 0,100% 50%,78% 100%,22% 100%);outline:1px solid var(--b500)}
+nav{position:absolute;left:48px;top:236px;width:400px;display:flex;flex-direction:column;gap:2px}
+nav a{display:flex;align-items:center;height:58px;padding:0 20px 0 24px;font:800 28px/1 "Alegreya SC",serif;letter-spacing:.03em;color:var(--p100);text-decoration:none;position:relative}
+nav a.on{background:linear-gradient(90deg,rgba(48,43,60,.95),rgba(37,33,47,.6) 70%,transparent);color:var(--or200)}
+nav a.on::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;background:linear-gradient(180deg,var(--eb300),var(--eb500))}
+nav a.on::after{content:"";position:absolute;right:24px;width:10px;height:10px;border-right:2px solid var(--or400);border-top:2px solid var(--or400);transform:rotate(45deg)}
+nav a.off{color:var(--p500)}
+nav a small{font:700 15px "Alegreya Sans";color:var(--p500);letter-spacing:0;margin-left:14px;display:flex;align-items:center;gap:6px}
+nav a .badge{margin-left:14px;font:800 15px "Alegreya Sans";color:#1A1208;background:var(--or400);height:22px;min-width:22px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;clip-path:polygon(3px 0,calc(100% - 3px) 0,100% 3px,100% calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,0 calc(100% - 3px),0 3px)}
+.lock{display:inline-block;width:9px;height:8px;border:2px solid currentColor;border-bottom:none;border-radius:5px 5px 0 0;position:relative;top:-3px}
+.lock::after{content:"";position:absolute;left:-3px;top:6px;width:11px;height:8px;background:currentColor}
+nav .sep{height:1px;margin:10px 24px;background:linear-gradient(90deg,var(--n500),transparent)}
+.hero{position:absolute;right:40px;top:36px;width:360px;--c:8px;--b:1px;background:linear-gradient(180deg,var(--or300),var(--b500) 30%,var(--b700));--fill:linear-gradient(180deg,rgba(37,33,47,.96),rgba(27,24,36,.96));padding:14px 16px 16px;display:flex;gap:14px}
+.portrait{width:64px;height:64px;--c:5px;background:linear-gradient(135deg,#E1B154,#8A5A1E);display:flex;align-items:center;justify-content:center;flex:none}
+.portrait span{font:800 30px "Alegreya SC";color:#2A1A08}
+.hero .nm{font:800 24px/1 "Alegreya SC";letter-spacing:.03em;color:var(--p100)}
+.hero .meta{font-size:15px;color:var(--p300);margin:4px 0 8px}
+.hero .fam{display:inline-block;width:8px;height:8px;background:#C9973F;transform:rotate(45deg);margin-right:8px;position:relative;top:-1px}
+.xp{height:8px;width:100%;--c:3px;background:var(--b700);position:relative}
+.xp::before{content:"";position:absolute;inset:1px;background:var(--n950);clip-path:inherit}
+.xp i{position:absolute;left:1px;top:1px;bottom:1px;width:38%;background:linear-gradient(180deg,#F0CD84,#D9AE5C 50%,#9A7234)}
+.xpl{display:flex;justify-content:space-between;font:700 15px "Alegreya Sans";color:var(--p300);margin-top:5px;font-variant-numeric:tabular-nums}
+.notice{position:absolute;right:420px;top:48px;display:flex;align-items:center;gap:12px;padding:10px 18px 10px 15px;--c:5px;--b:1px;background:var(--b700);--fill:rgba(12,11,17,.82)}
+.notice .dot{width:10px;height:10px;transform:rotate(45deg);background:var(--or400);box-shadow:0 0 8px rgba(217,174,92,.6)}
+.notice b{color:var(--or200);font-weight:700}
+.zone{position:absolute;left:48px;bottom:40px;width:640px;height:104px;--c:8px;--b:1px;background:linear-gradient(180deg,var(--b500),var(--b700));--fill:linear-gradient(180deg,rgba(37,33,47,.95),rgba(27,24,36,.95));display:flex;align-items:center;gap:18px;padding:12px 20px 12px 12px}
+.zone .th{width:128px;height:80px;--c:5px;background:url(lobby_fond.jpg) 70% 40%/600px auto;flex:none}
+.zone .k{font:700 15px "Alegreya Sans";color:var(--p500);letter-spacing:.06em;text-transform:uppercase}
+.zone .z{font:800 24px/1.1 "Alegreya SC";letter-spacing:.03em}
+.zone .div{width:1px;align-self:stretch;background:linear-gradient(180deg,transparent,var(--n500),transparent)}
+.zone .rw{flex:1}
+.zone .rw .l{display:flex;justify-content:space-between;color:var(--p300);font-size:15px;font-variant-numeric:tabular-nums}
+.bar{height:10px;margin:8px 0 6px;--c:3px;background:var(--b700);position:relative}
+.bar::before{content:"";position:absolute;inset:1px;background:var(--n950);clip-path:inherit}
+.bar i{position:absolute;left:1px;top:1px;bottom:1px;width:62%;background:linear-gradient(180deg,#F0CD84,#D9AE5C 50%,#9A7234)}
+.zone .s{font-size:14px;color:var(--p500)}
+.purse{position:absolute;right:40px;bottom:40px;display:flex;align-items:center;gap:22px;height:52px;padding:0 20px;--c:6px;--b:1px;background:var(--b700);--fill:rgba(12,11,17,.84);font:700 19px "Alegreya Sans";font-variant-numeric:tabular-nums}
+.ins{width:16px;height:20px;background:linear-gradient(180deg,var(--or300),var(--b500));clip-path:polygon(0 0,100% 0,100% 62%,50% 100%,0 62%)}
+.cry{width:16px;height:18px;background:linear-gradient(135deg,#BFE6F0,#4FA59C 55%,#1F6E6A);clip-path:polygon(50% 0,100% 35%,80% 100%,20% 100%,0 35%)}
+.purse span{display:flex;align-items:center;gap:8px}
+.purse .v{width:1px;height:24px;background:var(--n500)}
+.hint{position:absolute;right:40px;bottom:104px;font:700 15px "Alegreya Sans";color:var(--p100);display:flex;gap:16px;padding:6px 12px;background:rgba(12,11,17,.65)}
+.key{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;margin-right:6px;font:800 15px "Alegreya Sans";color:var(--n950);background:var(--p300);border-radius:11px}
+.ver{position:absolute;right:12px;bottom:8px;font:700 15px "Alegreya Sans";color:rgba(236,228,210,.7);text-shadow:0 1px 2px #000}
+</style>
+</head>
+<body>
+<div class="veil"></div>
+<div class="logo"><h1>Eden Slash</h1><div class="rule"><i></i></div></div>
+<nav>
+  <a class="on">Jouer</a>
+  <a>Héros</a>
+  <a>Coffres<span class="badge">6</span></a>
+  <a>Atelier</a>
+  <a class="off">Carnet<small><span class="lock"></span>après ta première Survie</small></a>
+  <div class="sep"></div>
+  <a style="font-size:22px;height:46px">Paramètres</a>
+  <a style="font-size:22px;height:46px">Quitter</a>
+</nav>
+<div class="notice plate ch"><span class="dot"></span><span><b>2 400 insignes</b> : une pièce t'attend à l'Armurerie</span></div>
+<div class="hero plate ch">
+  <div class="portrait ch"><span>G</span></div>
+  <div style="flex:1">
+    <div class="nm">Guerrier</div>
+    <div class="meta"><span class="fam"></span>Rempart · Hache · maîtrise 14</div>
+    <div class="xp ch"><i></i></div>
+    <div class="xpl"><span>Héros niv. 60</span><span>3 120 / 8 200</span></div>
+  </div>
+</div>
+<div class="zone plate ch">
+  <div class="th ch"></div>
+  <div><div class="k">Zone</div><div class="z">Monts Calcaires</div></div>
+  <div class="div"></div>
+  <div class="rw"><div class="l"><span>Prochaine récompense</span><span>124 / 200</span></div><div class="bar ch"><i></i></div><div class="s">Maîtrise niv. 2 : la Ruée des boss</div></div>
+</div>
+<div class="hint"><span><span class="key">RS</span>tourner</span><span><span class="key">RT</span>zoom</span></div>
+<div class="purse plate ch"><span><i class="ins"></i>2 400</span><span class="v"></span><span><i class="cry"></i>520</span><span class="v"></span><span style="color:var(--p300)">0 / 60 classes équipées</span></div>
+<div class="ver">Eden Slash v0.1.256</div>
+</body>
+</html>

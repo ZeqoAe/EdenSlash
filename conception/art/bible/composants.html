@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kit bronze et émail</title>
+<!-- Planche de référence de la bible (conception/art/BIBLE.md) : chaque composant dans tous ses états,
+     dessiné en CSS pur avec les jetons de tokens.json, pour que UIK puisse le reproduire en StyleBox / shader.
+     Rendu en PNG : msedge --headless=new --screenshot=composants.png --window-size=1664,1360 composants.html -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@700;800&family=Alegreya+Sans:wght@500;700;800&display=block" rel="stylesheet">
+<style>
+:root{
+  --nuit-950:#0C0B11; --nuit-900:#12101A; --nuit-800:#1B1824; --nuit-700:#25212F; --nuit-600:#302B3C; --nuit-500:#4A4458;
+  --p100:#ECE4D2; --p300:#B4AC9C; --p500:#8A8374; --pdes:#7D7768;
+  --b800:#4A3418; --b700:#6E4F27; --b500:#A57B42; --or400:#D9AE5C; --or300:#E6C27A; --or200:#F3DDA5;
+  --eb700:#163A5C; --eb500:#1F4E79; --eb300:#4F86B8; --es500:#1F6E6A; --es300:#4FA59C;
+  --g700:#5E1B21; --g500:#8E2A31; --g300:#C5525A;
+  --danger:#E2685E; --succes:#7CC79A; --info:#7FB2E5; --pv:#C8343F; --pvtrace:#F0B0A0;
+  --r-commun:#BDB7AA; --r-special:#74C462; --r-rare:#5B9BEA; --r-epique:#B07AE8; --r-mythique:#EC8840; --r-legendaire:#F2C94C;
+  --rb-commun:#6E6A60; --rb-special:#2F6B2A; --rb-rare:#24508F; --rb-epique:#5A2E8C; --rb-mythique:#8C3F12; --rb-legendaire:#8A6A12;
+  --grain:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='256' height='256'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .9 0'/></filter><rect width='256' height='256' filter='url(%23n)'/></svg>");
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--nuit-950);color:var(--p100);font:500 17px/1.4 "Alegreya Sans",sans-serif;font-variant-numeric:lining-nums tabular-nums;padding:32px;width:1600px}
+h1{font:800 36px/1.1 "Alegreya SC",serif;color:var(--or400);letter-spacing:.04em}
+h2{font:700 22px/1.2 "Alegreya SC",serif;color:var(--or400);letter-spacing:.04em;margin:0 0 12px}
+.lead{color:var(--p300);margin:6px 0 24px;max-width:1100px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.cell{padding:20px 24px 24px;background:var(--nuit-900);position:relative}
+.cap{font:700 15px/1.2 "Alegreya Sans";color:var(--p500);letter-spacing:.06em;text-transform:uppercase;margin-top:8px;text-align:center}
+.row{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+/* --- chanfrein : polygone commun, --c = taille du coin coupé --- */
+.ch{--c:6px;clip-path:polygon(var(--c) 0,calc(100% - var(--c)) 0,100% var(--c),100% calc(100% - var(--c)),calc(100% - var(--c)) 100%,var(--c) 100%,0 calc(100% - var(--c)),0 var(--c))}
+/* plaque = bordure (fond de l'élément) + remplissage (::before) en retrait de --b */
+.plate{position:relative;--b:1px;isolation:isolate}
+.plate::before{content:"";position:absolute;inset:var(--b);z-index:-1;background:var(--fill);
+  clip-path:polygon(calc(var(--c) - var(--b)*.6) 0,calc(100% - var(--c) + var(--b)*.6) 0,100% calc(var(--c) - var(--b)*.6),100% calc(100% - var(--c) + var(--b)*.6),calc(100% - var(--c) + var(--b)*.6) 100%,calc(var(--c) - var(--b)*.6) 100%,0 calc(100% - var(--c) + var(--b)*.6),0 calc(var(--c) - var(--b)*.6))}
+/* --- boutons --- */
+.btn{--c:5px;height:44px;min-width:150px;padding:0 20px;display:inline-flex;align-items:center;justify-content:center;font:700 19px "Alegreya Sans";color:var(--p100);
+  background:linear-gradient(180deg,var(--b500),var(--b700));--fill:linear-gradient(180deg,var(--nuit-600),var(--nuit-700) 55%,#211D2A);}
+.btn.hover{background:linear-gradient(180deg,var(--or300),var(--b500));--fill:linear-gradient(180deg,#3A3448,var(--nuit-600) 60%,#2A2535);color:#FFF7E6}
+.btn.press{background:linear-gradient(180deg,var(--b700),var(--b500));--fill:linear-gradient(0deg,var(--nuit-600),#1A1722);transform:translateY(1px);color:var(--or200)}
+.btn.off{background:var(--nuit-500);--fill:var(--nuit-800);color:var(--pdes)}
+.btn.focus{outline:none;filter:drop-shadow(0 0 0 transparent)}
+.focuswrap{--c:9px;--b:2px;display:inline-block;padding:5px;background:var(--or200);--fill:var(--nuit-900);filter:drop-shadow(0 0 6px rgba(243,221,165,.40))}
+.prim{--c:6px;height:56px;min-width:260px;display:inline-flex;align-items:center;justify-content:center;padding:0 28px;font:800 22px "Alegreya SC",serif;letter-spacing:.04em;color:#1A1208;
+  background:linear-gradient(180deg,var(--or200),var(--b700));--fill:linear-gradient(180deg,#E3BC70 0%,#C99A50 48%,#A57B42 52%,#B58A4B 100%);text-shadow:0 1px 0 rgba(255,240,200,.45)}
+.prim.hover{--fill:linear-gradient(180deg,#F0CD84 0%,#D9AE5C 48%,#B88C4A 52%,#C99A50 100%)}
+.prim.press{--fill:linear-gradient(0deg,#E3BC70 0%,#B58A4B 100%);transform:translateY(1px)}
+.prim.off{background:var(--nuit-500);--fill:var(--nuit-700);color:var(--pdes);text-shadow:none}
+.dang{--fill:linear-gradient(180deg,var(--g300) -40%,var(--g500) 50%,var(--g700));background:linear-gradient(180deg,var(--g300),var(--g700))}
+.ghost{height:44px;padding:0 6px;display:inline-flex;align-items:center;font:700 19px "Alegreya Sans";color:var(--p300);border-bottom:1px solid transparent}
+.ghost.hover{color:var(--or200);border-bottom-color:var(--b500)}
+.lock{display:inline-block;width:12px;height:12px;margin-right:8px;border:2px solid currentColor;border-top-left-radius:6px;border-top-right-radius:6px;border-bottom:none;position:relative;top:-4px}
+.lock::after{content:"";position:absolute;left:-4px;top:8px;width:16px;height:10px;background:currentColor}
+/* --- onglets : rail gravé, l'actif est une plaque surélevée avec un filet d'émail --- */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--b700);padding:0 8px;position:relative}
+.tab{height:40px;padding:0 18px;display:flex;align-items:center;font:700 19px "Alegreya Sans";color:var(--p300);position:relative}
+.tab.hover{color:var(--p100)}
+.tab.hover::after{content:"";position:absolute;left:18px;right:18px;bottom:-1px;height:1px;background:var(--b500)}
+.tab.on{color:var(--or200);background:linear-gradient(180deg,var(--nuit-600),var(--nuit-700));clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 6px,100% 100%,0 100%,0 6px)}
+.tab.on::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:linear-gradient(90deg,var(--eb500),var(--eb300) 50%,var(--eb500))}
+.tab .n{font:700 15px "Alegreya Sans";color:var(--p500);margin-left:8px;font-variant-numeric:tabular-nums}
+.pad{font:800 15px "Alegreya Sans";color:var(--nuit-950);background:var(--p300);padding:1px 6px;margin:0 8px;clip-path:polygon(3px 0,calc(100% - 3px) 0,100% 3px,100% calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,0 calc(100% - 3px),0 3px)}
+/* --- cases d'objet --- */
+.slot{--c:4px;--b:2px;width:64px;height:64px;display:flex;align-items:center;justify-content:center;position:relative;
+  background:var(--rc);--fill:radial-gradient(circle at 50% 38%,#2A2535 0,#15121C 70%)}
+.slot img{width:56px;height:56px;object-fit:cover;filter:saturate(.95)}
+.slot .lv{position:absolute;right:3px;bottom:3px;font:800 15px/1 "Alegreya Sans";color:var(--p100);background:rgba(12,11,17,.85);padding:2px 4px 1px;font-variant-numeric:tabular-nums}
+.slot .rivet{position:absolute;width:5px;height:5px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff8,var(--rc) 60%)}
+.slot.empty{--rc:var(--nuit-500)}
+.slot.empty svg{opacity:.28}
+.slot.leg{--b:3px;box-shadow:none}
+.slotwrap{display:flex;flex-direction:column;align-items:center;gap:2px;width:84px}
+.slotwrap .cap{margin-top:4px;font-size:14px;text-transform:none;letter-spacing:0}
+.glowleg{filter:drop-shadow(0 0 6px rgba(251,231,166,.35))}
+/* --- jauges --- */
+.gauge{position:relative;height:18px;width:420px;--c:4px;background:linear-gradient(180deg,var(--b500),var(--b800));--b:2px;--fill:#0C0B11}
+.gauge .t,.gauge .f{position:absolute;top:2px;bottom:2px;left:4px}
+.gauge .t{background:var(--pvtrace);opacity:.9}
+.gauge .f{background:linear-gradient(180deg,#E4535C 0,var(--pv) 45%,#8E1F28 100%)}
+.gauge .shine{position:absolute;left:4px;right:4px;top:2px;height:5px;background:linear-gradient(180deg,rgba(255,255,255,.18),transparent)}
+.gauge.xp .f{background:linear-gradient(180deg,#F0CD84,#D9AE5C 50%,#9A7234)}
+.gauge.boss{height:22px;width:640px}
+.gauge.boss .tick{position:absolute;top:2px;bottom:2px;width:2px;background:rgba(12,11,17,.9)}
+.cap-end{position:absolute;top:-3px;width:10px;height:calc(100% + 6px);background:linear-gradient(180deg,var(--or300),var(--b700));clip-path:polygon(50% 0,100% 30%,100% 70%,50% 100%,0 70%,0 30%)}
+.glabel{display:flex;justify-content:space-between;width:420px;font:700 15px "Alegreya Sans";color:var(--p300);margin-bottom:4px;font-variant-numeric:tabular-nums}
+.glabel b{color:var(--p100);font-size:17px}
+/* --- fenêtre --- */
+.win{--c:10px;--b:2px;padding:0;background:linear-gradient(180deg,var(--or300),var(--b500) 20%,var(--b700) 80%,var(--b800));
+  --fill:linear-gradient(180deg,#1F1B29,var(--nuit-800) 30%,#17141F);filter:drop-shadow(0 6px 18px rgba(0,0,0,.55));width:100%}
+.win .inner{position:relative;margin:5px;padding:20px 24px 24px;border:1px solid var(--b700);
+  clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)}
+.win .inner::after{content:"";position:absolute;inset:0;background:var(--grain);opacity:.035;pointer-events:none;mix-blend-mode:screen}
+.cart{display:flex;align-items:center;gap:14px;margin:-20px -24px 16px;padding:14px 24px 12px;background:linear-gradient(180deg,rgba(165,123,66,.10),transparent);border-bottom:1px solid var(--b700);position:relative}
+.cart h3{font:800 28px/1 "Alegreya SC",serif;color:var(--or400);letter-spacing:.04em}
+.cart .sub{color:var(--p300);font-size:17px;margin-top:2px}
+.close{--c:4px;margin-left:auto;width:36px;height:36px;display:flex;align-items:center;justify-content:center;background:var(--b500);--fill:var(--nuit-700);--b:1px}
+.close svg{width:14px;height:14px}
+.inlay{position:absolute;top:-1px;width:28px;height:4px;background:linear-gradient(90deg,var(--es500),var(--es300),var(--es500))}
+/* séparateur */
+.sep{height:1px;background:linear-gradient(90deg,transparent,var(--nuit-500) 24px,var(--nuit-500) calc(100% - 24px),transparent);margin:16px 0}
+.sep.orn{height:9px;background:none;display:flex;align-items:center;gap:10px}
+.sep.orn::before,.sep.orn::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent,var(--b500))}
+.sep.orn::after{background:linear-gradient(90deg,var(--b500),transparent)}
+.sep.orn i{width:22px;height:7px;background:var(--b500);clip-path:polygon(0 50%,25% 0,75% 0,100% 50%,75% 100%,25% 100%)}
+.sep.orn i::after{content:""}
+/* infobulle */
+.tip{--c:4px;--b:1px;width:360px;padding:14px 16px;background:var(--b500);--fill:rgba(12,11,17,.97)}
+.tip .nm{font:800 22px/1.15 "Alegreya Sans";color:var(--r-epique)}
+.tip .meta{font:700 15px "Alegreya Sans";color:var(--p300);margin:2px 0 8px;letter-spacing:.02em}
+.tip .ln{display:flex;justify-content:space-between;font-size:17px;line-height:1.5;font-variant-numeric:tabular-nums}
+.tip .ln b{font-weight:700}
+.up{color:var(--succes)} .down{color:var(--danger)}
+.tip .foot{margin-top:10px;padding-top:8px;border-top:1px solid var(--nuit-500);display:flex;gap:16px;color:var(--p300);font-size:14px}
+.key{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;margin-right:6px;font:800 15px "Alegreya Sans";color:var(--nuit-950);background:var(--p300);border-radius:11px}
+/* carte d'activité */
+.act{--c:6px;--b:1px;width:300px;height:170px;position:relative;background:var(--b500);--fill:#000}
+.act .img{position:absolute;inset:1px;background-size:cover;background-position:center;clip-path:inherit}
+.act .scr{position:absolute;inset:1px;background:linear-gradient(180deg,transparent 35%,rgba(12,11,17,.85) 100%)}
+.act .txt{position:absolute;left:16px;right:16px;bottom:12px}
+.act .tt{font:800 24px/1 "Alegreya SC",serif;letter-spacing:.03em;color:var(--p100);text-shadow:0 2px 6px #000}
+.act .st{font-size:14px;color:var(--p300);margin-top:4px}
+.act.lockd .img{filter:grayscale(.8) brightness(.55)}
+.act.lockd .tt{color:var(--p300)}
+.act .chip{position:absolute;top:10px;left:10px;font:800 15px "Alegreya Sans";padding:2px 8px;color:var(--p100);background:rgba(12,11,17,.75);border-left:3px solid var(--eb300)}
+.act .gives{position:absolute;top:10px;right:10px;display:flex;gap:4px}
+.act .gives i{width:22px;height:22px;background:rgba(12,11,17,.75);border:1px solid var(--b700);display:block;clip-path:polygon(3px 0,calc(100% - 3px) 0,100% 3px,100% calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,0 calc(100% - 3px),0 3px)}
+.act .lk{position:absolute;right:12px;bottom:14px;display:flex;align-items:center;gap:6px;color:var(--p300);font:700 15px "Alegreya Sans"}
+/* badge, interrupteur */
+.badge{--c:3px;display:inline-flex;align-items:center;height:22px;padding:0 8px;font:800 15px "Alegreya Sans";letter-spacing:.04em;color:var(--p100);background:var(--eb500)}
+.badge.new{background:var(--g500)}
+.badge.num{background:var(--or400);color:#1A1208;min-width:22px;justify-content:center}
+.sw{width:56px;height:28px;border-radius:14px;background:var(--nuit-700);border:2px solid var(--nuit-500);position:relative}
+.sw::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;top:3px;left:4px;background:var(--p300)}
+.sw.on{background:var(--eb500);border-color:var(--b500)}
+.sw.on::after{left:30px;background:var(--or200)}
+.num{font-variant-numeric:tabular-nums}
+.note{color:var(--p500);font-size:14px;margin-top:10px}
+</style>
+</head>
+<body>
+<h1>Bronze et émail : planche des composants</h1>
+<p class="lead">Référence de la bible (jetons de <code>tokens.json</code>). Coins coupés, jamais arrondis ; métal en dégradé vertical ; émail en incrustation fine ; une seule lueur (le focus manette). Chaque état diffère par au moins deux indices (couleur + forme ou position).</p>
+
+<div class="grid">
+  <div class="cell">
+    <h2>Boutons</h2>
+    <div class="row" style="align-items:center">
+      <div><div class="btn plate ch">Équiper</div><div class="cap">normal</div></div>
+      <div><div class="btn plate ch hover">Équiper</div><div class="cap">survol</div></div>
+      <div><div class="btn plate ch press">Équiper</div><div class="cap">pressé</div></div>
+      <div><div class="focuswrap plate ch"><div class="btn plate ch hover">Équiper</div></div><div class="cap">focus manette</div></div>
+    </div>
+    <div class="row" style="margin-top:16px;align-items:center">
+      <div><div class="btn plate ch off"><span class="lock"></span>Verrouillé</div><div class="cap">désactivé</div></div>
+      <div><div class="btn plate ch dang">Démonter</div><div class="cap">destructif</div></div>
+      <div><div class="ghost">Annuler</div><div class="cap">tertiaire</div></div>
+      <div><div class="ghost hover">Annuler</div><div class="cap">tertiaire survol</div></div>
+    </div>
+    <div class="row" style="margin-top:20px;align-items:center">
+      <div><div class="prim plate ch">Lancer la partie</div><div class="cap">primaire (un par écran)</div></div>
+      <div><div class="prim plate ch hover">Lancer la partie</div><div class="cap">survol</div></div>
+      <div><div class="prim plate ch off">Lancer la partie</div><div class="cap">désactivé</div></div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <h2>Onglets</h2>
+    <div class="tabs">
+      <span class="pad">LB</span>
+      <div class="tab on">Équipement</div>
+      <div class="tab hover">Classe<span class="n">28</span></div>
+      <div class="tab">Apparence</div>
+      <div class="tab">Cartes</div>
+      <span class="pad">RB</span>
+    </div>
+    <p class="note">Actif : plaque surélevée + filet d'émail bleu de 3 px + texte or-200. Survol : texte clair + trait de bronze. Les autres : texte seul sur le rail. Jamais une rangée de boîtes identiques.</p>
+    <h2 style="margin-top:20px">Badges, interrupteur, séparateurs</h2>
+    <div class="row" style="align-items:center">
+      <span class="badge ch">Défi</span><span class="badge ch new">Nouveau</span><span class="badge ch num">6</span>
+      <span class="sw"></span><span class="sw on"></span>
+    </div>
+    <div class="sep"></div>
+    <div class="sep orn"><i></i></div>
+    <p class="note">Filet simple entre deux blocs ; filet orné seulement sous un titre d'écran ou de bilan.</p>
+  </div>
+
+  <div class="cell">
+    <h2>Cases d'objet (rareté = couleur + forme)</h2>
+    <div class="row">
+      <div class="slotwrap"><div class="slot plate ch empty"><svg viewBox="0 0 48 48" width="40" height="40"><path d="M24 4 L28 30 L24 34 L20 30 Z M14 30 H34 V33 H14 Z M22 34 H26 V42 H22 Z" fill="#ECE4D2"/></svg></div><div class="cap">vide</div></div>
+      <div class="slotwrap"><div class="slot plate ch" style="--rc:var(--rb-commun)"><img src="icone_epee.jpg" alt="Épée"><span class="lv">12</span></div><div class="cap">Commun</div></div>
+      <div class="slotwrap"><div class="slot plate ch" style="--rc:var(--r-special)"><img src="icone_epee.jpg" alt="Épée"><span class="lv">18</span></div><div class="cap">Spécial</div></div>
+      <div class="slotwrap"><div class="slot plate ch" style="--rc:var(--r-rare)"><img src="icone_epee.jpg" alt="Épée"><span class="rivet" style="left:3px;top:3px"></span><span class="lv">25</span></div><div class="cap">Rare</div></div>
+      <div class="slotwrap"><div class="slot plate ch" style="--rc:var(--r-epique)"><img src="icone_epee.jpg" alt="Épée"><span class="rivet" style="left:3px;top:3px"></span><span class="rivet" style="right:3px;top:3px"></span><span class="lv">31</span></div><div class="cap">Épique</div></div>
+      <div class="slotwrap"><div class="slot plate ch" style="--rc:linear-gradient(135deg,var(--r-mythique),var(--rb-mythique))"><img src="icone_epee.jpg" alt="Épée"><span class="rivet" style="left:3px;top:3px;--rc:var(--r-mythique)"></span><span class="rivet" style="right:3px;top:3px;--rc:var(--r-mythique)"></span><span class="rivet" style="left:3px;bottom:3px;--rc:var(--r-mythique)"></span><span class="lv">40</span></div><div class="cap">Mythique</div></div>
+      <div class="slotwrap glowleg"><div class="slot plate ch leg" style="--rc:linear-gradient(135deg,#FBE7A6,var(--r-legendaire) 40%,var(--rb-legendaire))"><img src="icone_epee.jpg" alt="Épée"><span class="lv">50</span></div><div class="cap">Légendaire</div></div>
+    </div>
+    <p class="note">Creux : dégradé radial sombre (la case est enfoncée). Niveau en chiffres tabulaires sur une plaque. Rivets : 0 / 0 / 1 / 2 / 3 / bordure de 3 px + lueur lente. Un daltonien lit la rareté sans la couleur.</p>
+  </div>
+
+  <div class="cell">
+    <h2>Jauges</h2>
+    <div class="glabel"><span>Vie</span><span><b>842</b> / 1 232</span></div>
+    <div class="gauge plate ch"><div class="t" style="width:78%"></div><div class="f" style="width:66%"></div><div class="shine"></div></div>
+    <p class="note">Trace claire des dégâts récents (fond 400 ms après le coup), reflet de 5 px en haut, embout de métal.</p>
+    <div class="glabel" style="margin-top:12px"><span>Maîtrise 14</span><span><b>160</b> / 1 240</span></div>
+    <div class="gauge xp plate ch" style="height:12px"><div class="f" style="width:13%;top:2px;bottom:2px"></div></div>
+    <div class="glabel" style="margin-top:16px;width:640px"><span style="font:800 18px 'Alegreya SC';color:var(--p100)">Grand champignon rocheux</span><span>niv. 4</span></div>
+    <div class="gauge boss plate ch"><div class="t" style="width:71%"></div><div class="f" style="width:64%"></div><div class="tick" style="left:25%"></div><div class="tick" style="left:50%"></div><div class="tick" style="left:75%"></div><div class="shine"></div></div>
+  </div>
+
+  <div class="cell">
+    <h2>Fenêtre</h2>
+    <div class="win plate ch">
+      <div class="inner">
+        <span class="inlay" style="left:24px"></span><span class="inlay" style="right:24px"></span>
+        <div class="cart">
+          <div><h3>Forge</h3><div class="sub">Améliorer, enchanter, sertir</div></div>
+          <div class="close plate ch"><svg viewBox="0 0 14 14"><path d="M2 2 L12 12 M12 2 L2 12" stroke="#B4AC9C" stroke-width="2" stroke-linecap="square"/></svg></div>
+        </div>
+        <p style="color:var(--p300)">Double filet de bronze (2 px dehors, 1 px dedans, 3 px d'écart), coins coupés de 10 px, deux incrustations d'émail sarcelle sur le haut, grain de 3,5 %, ombre portée large. La fenêtre est le seul élément à double filet.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <h2>Infobulle et carte d'activité</h2>
+    <div class="row">
+      <div class="tip plate ch">
+        <div class="nm">Lame des Marées</div>
+        <div class="meta">Épée · Épique · niv. 31</div>
+        <div class="ln"><span>Attaque</span><b class="num">+212 <span class="up">▲ 18</span></b></div>
+        <div class="ln"><span>Force</span><b class="num">+14</b></div>
+        <div class="ln"><span>Critique</span><b class="num">+6 <span class="down">▼ 2</span></b></div>
+        <div class="foot"><span><span class="key">A</span>Équiper</span><span><span class="key">Y</span>Comparer</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="act plate ch"><div class="img" style="background-image:url(../g1_test/survivant.jpg)"></div><div class="scr"></div><span class="chip">Aventure</span><span class="gives"><i></i><i></i></span><div class="txt"><div class="tt">Survivant</div><div class="st">Tout se gagne aux cartes</div></div></div>
+        <div class="act plate ch lockd"><div class="img" style="background-image:url(../g1_test/battle_royale.jpg)"></div><div class="scr"></div><div class="txt"><div class="tt">Battle royale</div><div class="st">Rang Argent de la Ligue</div></div><span class="lk"><span class="lock"></span></span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

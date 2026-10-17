@@ -1,0 +1,290 @@
+[
+ {
+  "name": "a_kit_0",
+  "prompt": "Fantasy RPG game user interface kit presentation sheet: one window frame, two buttons, one square inventory slot, one horizontal health bar and one sword icon neatly arranged, illuminated manuscript style, aged vellum parchment with hand-inked sepia lines, real gold leaf accents, lapis lazuli blue and vermilion red details, slightly irregular hand-drawn edges, subtle paper grain, crafted by a master illustrator, flat front orthographic view, isolated on a dark walnut wood background, no text, no letters, no numbers",
+  "seed": 7100,
+  "width": 1536,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "a_kit_1",
+  "prompt": "Fantasy RPG game user interface kit presentation sheet: one window frame, two buttons, one square inventory slot, one horizontal health bar and one sword icon neatly arranged, illuminated manuscript style, aged vellum parchment with hand-inked sepia lines, real gold leaf accents, lapis lazuli blue and vermilion red details, slightly irregular hand-drawn edges, subtle paper grain, crafted by a master illustrator, flat front orthographic view, isolated on a dark walnut wood background, no text, no letters, no numbers",
+  "seed": 7101,
+  "width": 1536,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "a_cadre_0",
+  "prompt": "An empty ornate window frame for a fantasy game menu, illuminated manuscript style, aged vellum parchment with hand-inked sepia lines, real gold leaf accents, lapis lazuli blue and vermilion red details, slightly irregular hand-drawn edges, subtle paper grain, crafted by a master illustrator, ornaments only in the four corners, plain calm center panel, front orthographic view, isolated on a dark walnut wood background, no text, no letters",
+  "seed": 7110,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "a_cadre_1",
+  "prompt": "An empty ornate window frame for a fantasy game menu, illuminated manuscript style, aged vellum parchment with hand-inked sepia lines, real gold leaf accents, lapis lazuli blue and vermilion red details, slightly irregular hand-drawn edges, subtle paper grain, crafted by a master illustrator, ornaments only in the four corners, plain calm center panel, front orthographic view, isolated on a dark walnut wood background, no text, no letters",
+  "seed": 7111,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "a_bouton_0",
+  "prompt": "A single wide horizontal game menu button plate, illuminated manuscript style, aged vellum parchment with hand-inked sepia lines, real gold leaf accents, lapis lazuli blue and vermilion red details, slightly irregular hand-drawn edges, subtle paper grain, crafted by a master illustrator, small ornaments at both ends, empty center, front orthographic view, isolated on a dark walnut wood background, no text, no letters",
+  "seed": 7120,
+  "width": 1280,
+  "height": 512,
+  "style": false
+ },
+ {
+  "name": "a_bouton_1",
+  "prompt": "A single wide horizontal game menu button plate, illuminated manuscript style, aged vellum parchment with hand-inked sepia lines, real gold leaf accents, lapis lazuli blue and vermilion red details, slightly irregular hand-drawn edges, subtle paper grain, crafted by a master illustrator, small ornaments at both ends, empty center, front orthographic view, isolated on a dark walnut wood background, no text, no letters",
+  "seed": 7121,
+  "width": 1280,
+  "height": 512,
+  "style": false
+ },
+ {
+  "name": "a_case_0",
+  "prompt": "A single square inventory item slot for a fantasy RPG, illuminated manuscript style, aged vellum parchment with hand-inked sepia lines, real gold leaf accents, lapis lazuli blue and vermilion red details, slightly irregular hand-drawn edges, subtle paper grain, crafted by a master illustrator, empty dark center, small corner ornaments, front orthographic view, isolated on a dark walnut wood background, no text",
+  "seed": 7130,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "a_case_1",
+  "prompt": "A single square inventory item slot for a fantasy RPG, illuminated manuscript style, aged vellum parchment with hand-inked sepia lines, real gold leaf accents, lapis lazuli blue and vermilion red details, slightly irregular hand-drawn edges, subtle paper grain, crafted by a master illustrator, empty dark center, small corner ornaments, front orthographic view, isolated on a dark walnut wood background, no text",
+  "seed": 7131,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "a_jauge_0",
+  "prompt": "A single horizontal health bar for a fantasy game HUD, illuminated manuscript style, aged vellum parchment with hand-inked sepia lines, real gold leaf accents, lapis lazuli blue and vermilion red details, slightly irregular hand-drawn edges, subtle paper grain, crafted by a master illustrator, frame with end caps, filled two thirds with glowing crimson red liquid, front orthographic view, isolated on a dark walnut wood background, no text, no numbers",
+  "seed": 7140,
+  "width": 1536,
+  "height": 512,
+  "style": false
+ },
+ {
+  "name": "a_jauge_1",
+  "prompt": "A single horizontal health bar for a fantasy game HUD, illuminated manuscript style, aged vellum parchment with hand-inked sepia lines, real gold leaf accents, lapis lazuli blue and vermilion red details, slightly irregular hand-drawn edges, subtle paper grain, crafted by a master illustrator, frame with end caps, filled two thirds with glowing crimson red liquid, front orthographic view, isolated on a dark walnut wood background, no text, no numbers",
+  "seed": 7141,
+  "width": 1536,
+  "height": 512,
+  "style": false
+ },
+ {
+  "name": "a_epee_0",
+  "prompt": "A game inventory icon of a single longsword, diagonal, illuminated manuscript style, aged vellum parchment with hand-inked sepia lines, real gold leaf accents, lapis lazuli blue and vermilion red details, slightly irregular hand-drawn edges, subtle paper grain, crafted by a master illustrator, strong silhouette, centered, isolated on a dark walnut wood background, no text, no letters",
+  "seed": 7150,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "a_epee_1",
+  "prompt": "A game inventory icon of a single longsword, diagonal, illuminated manuscript style, aged vellum parchment with hand-inked sepia lines, real gold leaf accents, lapis lazuli blue and vermilion red details, slightly irregular hand-drawn edges, subtle paper grain, crafted by a master illustrator, strong silhouette, centered, isolated on a dark walnut wood background, no text, no letters",
+  "seed": 7151,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "b_kit_0",
+  "prompt": "Fantasy RPG game user interface kit presentation sheet: one window frame, two buttons, one square inventory slot, one horizontal health bar and one sword icon neatly arranged, patinated antique bronze with champlevé enamel inlays in deep midnight blue and teal, hand-engraved metal, small chamfered corners, softly worn polished edges, warm rim light, crafted by a master jeweler, flat front orthographic view, isolated on a plain black background, no text, no letters, no numbers",
+  "seed": 7100,
+  "width": 1536,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "b_kit_1",
+  "prompt": "Fantasy RPG game user interface kit presentation sheet: one window frame, two buttons, one square inventory slot, one horizontal health bar and one sword icon neatly arranged, patinated antique bronze with champlevé enamel inlays in deep midnight blue and teal, hand-engraved metal, small chamfered corners, softly worn polished edges, warm rim light, crafted by a master jeweler, flat front orthographic view, isolated on a plain black background, no text, no letters, no numbers",
+  "seed": 7101,
+  "width": 1536,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "b_cadre_0",
+  "prompt": "An empty ornate window frame for a fantasy game menu, patinated antique bronze with champlevé enamel inlays in deep midnight blue and teal, hand-engraved metal, small chamfered corners, softly worn polished edges, warm rim light, crafted by a master jeweler, ornaments only in the four corners, plain calm center panel, front orthographic view, isolated on a plain black background, no text, no letters",
+  "seed": 7110,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "b_cadre_1",
+  "prompt": "An empty ornate window frame for a fantasy game menu, patinated antique bronze with champlevé enamel inlays in deep midnight blue and teal, hand-engraved metal, small chamfered corners, softly worn polished edges, warm rim light, crafted by a master jeweler, ornaments only in the four corners, plain calm center panel, front orthographic view, isolated on a plain black background, no text, no letters",
+  "seed": 7111,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "b_bouton_0",
+  "prompt": "A single wide horizontal game menu button plate, patinated antique bronze with champlevé enamel inlays in deep midnight blue and teal, hand-engraved metal, small chamfered corners, softly worn polished edges, warm rim light, crafted by a master jeweler, small ornaments at both ends, empty center, front orthographic view, isolated on a plain black background, no text, no letters",
+  "seed": 7120,
+  "width": 1280,
+  "height": 512,
+  "style": false
+ },
+ {
+  "name": "b_bouton_1",
+  "prompt": "A single wide horizontal game menu button plate, patinated antique bronze with champlevé enamel inlays in deep midnight blue and teal, hand-engraved metal, small chamfered corners, softly worn polished edges, warm rim light, crafted by a master jeweler, small ornaments at both ends, empty center, front orthographic view, isolated on a plain black background, no text, no letters",
+  "seed": 7121,
+  "width": 1280,
+  "height": 512,
+  "style": false
+ },
+ {
+  "name": "b_case_0",
+  "prompt": "A single square inventory item slot for a fantasy RPG, patinated antique bronze with champlevé enamel inlays in deep midnight blue and teal, hand-engraved metal, small chamfered corners, softly worn polished edges, warm rim light, crafted by a master jeweler, empty dark center, small corner ornaments, front orthographic view, isolated on a plain black background, no text",
+  "seed": 7130,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "b_case_1",
+  "prompt": "A single square inventory item slot for a fantasy RPG, patinated antique bronze with champlevé enamel inlays in deep midnight blue and teal, hand-engraved metal, small chamfered corners, softly worn polished edges, warm rim light, crafted by a master jeweler, empty dark center, small corner ornaments, front orthographic view, isolated on a plain black background, no text",
+  "seed": 7131,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "b_jauge_0",
+  "prompt": "A single horizontal health bar for a fantasy game HUD, patinated antique bronze with champlevé enamel inlays in deep midnight blue and teal, hand-engraved metal, small chamfered corners, softly worn polished edges, warm rim light, crafted by a master jeweler, frame with end caps, filled two thirds with glowing crimson red liquid, front orthographic view, isolated on a plain black background, no text, no numbers",
+  "seed": 7140,
+  "width": 1536,
+  "height": 512,
+  "style": false
+ },
+ {
+  "name": "b_jauge_1",
+  "prompt": "A single horizontal health bar for a fantasy game HUD, patinated antique bronze with champlevé enamel inlays in deep midnight blue and teal, hand-engraved metal, small chamfered corners, softly worn polished edges, warm rim light, crafted by a master jeweler, frame with end caps, filled two thirds with glowing crimson red liquid, front orthographic view, isolated on a plain black background, no text, no numbers",
+  "seed": 7141,
+  "width": 1536,
+  "height": 512,
+  "style": false
+ },
+ {
+  "name": "b_epee_0",
+  "prompt": "A game inventory icon of a single longsword, diagonal, patinated antique bronze with champlevé enamel inlays in deep midnight blue and teal, hand-engraved metal, small chamfered corners, softly worn polished edges, warm rim light, crafted by a master jeweler, strong silhouette, centered, isolated on a plain black background, no text, no letters",
+  "seed": 7150,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "b_epee_1",
+  "prompt": "A game inventory icon of a single longsword, diagonal, patinated antique bronze with champlevé enamel inlays in deep midnight blue and teal, hand-engraved metal, small chamfered corners, softly worn polished edges, warm rim light, crafted by a master jeweler, strong silhouette, centered, isolated on a plain black background, no text, no letters",
+  "seed": 7151,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "c_kit_0",
+  "prompt": "Fantasy RPG game user interface kit presentation sheet: one window frame, two buttons, one square inventory slot, one horizontal health bar and one sword icon neatly arranged, carved dark slate stone with a chiseled bevel and thin inlaid crystal veins glowing pale cyan and soft violet, cold moonlight, matte stone texture, sharp clean facets, crafted by a master stonemason, flat front orthographic view, isolated on a plain black background, no text, no letters, no numbers",
+  "seed": 7100,
+  "width": 1536,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "c_kit_1",
+  "prompt": "Fantasy RPG game user interface kit presentation sheet: one window frame, two buttons, one square inventory slot, one horizontal health bar and one sword icon neatly arranged, carved dark slate stone with a chiseled bevel and thin inlaid crystal veins glowing pale cyan and soft violet, cold moonlight, matte stone texture, sharp clean facets, crafted by a master stonemason, flat front orthographic view, isolated on a plain black background, no text, no letters, no numbers",
+  "seed": 7101,
+  "width": 1536,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "c_cadre_0",
+  "prompt": "An empty ornate window frame for a fantasy game menu, carved dark slate stone with a chiseled bevel and thin inlaid crystal veins glowing pale cyan and soft violet, cold moonlight, matte stone texture, sharp clean facets, crafted by a master stonemason, ornaments only in the four corners, plain calm center panel, front orthographic view, isolated on a plain black background, no text, no letters",
+  "seed": 7110,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "c_cadre_1",
+  "prompt": "An empty ornate window frame for a fantasy game menu, carved dark slate stone with a chiseled bevel and thin inlaid crystal veins glowing pale cyan and soft violet, cold moonlight, matte stone texture, sharp clean facets, crafted by a master stonemason, ornaments only in the four corners, plain calm center panel, front orthographic view, isolated on a plain black background, no text, no letters",
+  "seed": 7111,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "c_bouton_0",
+  "prompt": "A single wide horizontal game menu button plate, carved dark slate stone with a chiseled bevel and thin inlaid crystal veins glowing pale cyan and soft violet, cold moonlight, matte stone texture, sharp clean facets, crafted by a master stonemason, small ornaments at both ends, empty center, front orthographic view, isolated on a plain black background, no text, no letters",
+  "seed": 7120,
+  "width": 1280,
+  "height": 512,
+  "style": false
+ },
+ {
+  "name": "c_bouton_1",
+  "prompt": "A single wide horizontal game menu button plate, carved dark slate stone with a chiseled bevel and thin inlaid crystal veins glowing pale cyan and soft violet, cold moonlight, matte stone texture, sharp clean facets, crafted by a master stonemason, small ornaments at both ends, empty center, front orthographic view, isolated on a plain black background, no text, no letters",
+  "seed": 7121,
+  "width": 1280,
+  "height": 512,
+  "style": false
+ },
+ {
+  "name": "c_case_0",
+  "prompt": "A single square inventory item slot for a fantasy RPG, carved dark slate stone with a chiseled bevel and thin inlaid crystal veins glowing pale cyan and soft violet, cold moonlight, matte stone texture, sharp clean facets, crafted by a master stonemason, empty dark center, small corner ornaments, front orthographic view, isolated on a plain black background, no text",
+  "seed": 7130,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "c_case_1",
+  "prompt": "A single square inventory item slot for a fantasy RPG, carved dark slate stone with a chiseled bevel and thin inlaid crystal veins glowing pale cyan and soft violet, cold moonlight, matte stone texture, sharp clean facets, crafted by a master stonemason, empty dark center, small corner ornaments, front orthographic view, isolated on a plain black background, no text",
+  "seed": 7131,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "c_jauge_0",
+  "prompt": "A single horizontal health bar for a fantasy game HUD, carved dark slate stone with a chiseled bevel and thin inlaid crystal veins glowing pale cyan and soft violet, cold moonlight, matte stone texture, sharp clean facets, crafted by a master stonemason, frame with end caps, filled two thirds with glowing crimson red liquid, front orthographic view, isolated on a plain black background, no text, no numbers",
+  "seed": 7140,
+  "width": 1536,
+  "height": 512,
+  "style": false
+ },
+ {
+  "name": "c_jauge_1",
+  "prompt": "A single horizontal health bar for a fantasy game HUD, carved dark slate stone with a chiseled bevel and thin inlaid crystal veins glowing pale cyan and soft violet, cold moonlight, matte stone texture, sharp clean facets, crafted by a master stonemason, frame with end caps, filled two thirds with glowing crimson red liquid, front orthographic view, isolated on a plain black background, no text, no numbers",
+  "seed": 7141,
+  "width": 1536,
+  "height": 512,
+  "style": false
+ },
+ {
+  "name": "c_epee_0",
+  "prompt": "A game inventory icon of a single longsword, diagonal, carved dark slate stone with a chiseled bevel and thin inlaid crystal veins glowing pale cyan and soft violet, cold moonlight, matte stone texture, sharp clean facets, crafted by a master stonemason, strong silhouette, centered, isolated on a plain black background, no text, no letters",
+  "seed": 7150,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ },
+ {
+  "name": "c_epee_1",
+  "prompt": "A game inventory icon of a single longsword, diagonal, carved dark slate stone with a chiseled bevel and thin inlaid crystal veins glowing pale cyan and soft violet, cold moonlight, matte stone texture, sharp clean facets, crafted by a master stonemason, strong silhouette, centered, isolated on a plain black background, no text, no letters",
+  "seed": 7151,
+  "width": 1024,
+  "height": 1024,
+  "style": false
+ }
+]
