@@ -1,0 +1,178 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="'M PLUS Rounded 1c', 'Nunito', sans-serif">
+  <!-- Maquette maison BM-DNG (17/10/2026) : page « Donjons » v2 dans la DA « autocollant manga » (BIBLE v2, tokens.json v2).
+       Aucun élément tiers. Les portraits et icônes sont des EMPLACEMENTS (on y posera les icônes et rendus du jeu). -->
+  <defs>
+    <style>
+      .t { fill: #221A3A; font-size: 17px; }
+      .t2 { fill: #6B5E86; font-size: 15px; }
+      .te { fill: #FFF8EC; font-size: 17px; }
+      .te2 { fill: #C9BFEA; font-size: 15px; }
+      .tw { fill: #FFFFFF; stroke: #221A3A; stroke-width: 4; paint-order: stroke; font-weight: 800; }
+      .pop { font-family: 'Mochiy Pop One', 'M PLUS Rounded 1c', sans-serif; }
+      .b { font-weight: 800; }
+      .note { fill: #C21E45; font-size: 14px; font-weight: 700; }
+    </style>
+    <pattern id="trame" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#221A3A" opacity="0.18"/></pattern>
+  </defs>
+
+  <!-- fond : menu principal clair (scène du jeu floutée = aplat) -->
+  <rect width="1600" height="900" fill="#CCDEF3"/>
+  <rect y="560" width="1600" height="340" fill="#ACB47F"/>
+
+  <!-- ===== panneau papier ===== -->
+  <rect x="47" y="57" width="1506" height="800" rx="18" fill="#221A3A"/>
+  <rect x="40" y="50" width="1506" height="800" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+  <rect x="43" y="676" width="1500" height="171" rx="16" fill="url(#trame)"/>
+  <!-- titre à cheval sur le bord, incliné -3° -->
+  <g transform="rotate(-3 210 52)">
+    <rect x="76" y="22" width="260" height="58" rx="14" fill="#B43BEB" stroke="#221A3A" stroke-width="3"/>
+    <text x="206" y="62" text-anchor="middle" class="tw pop" style="font-size:34px">Donjons</text>
+  </g>
+  <text x="360" y="84" class="t2">Choisis ton boss, ton butin et ton défi</text>
+
+  <!-- ===== colonne gauche : liste en puits d'encre ===== -->
+  <rect x="70" y="110" width="560" height="716" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+  <!-- filtres en pastilles -->
+  <g font-size="15">
+    <rect x="86" y="124" width="150" height="36" rx="12" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+    <text x="161" y="148" text-anchor="middle" class="tw" style="font-size:15px">Pièce : Gants</text>
+    <rect x="246" y="124" width="170" height="36" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/>
+    <text x="331" y="148" text-anchor="middle" class="t" style="font-size:15px">Toutes panoplies</text>
+    <rect x="426" y="124" width="190" height="36" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/>
+    <text x="521" y="148" text-anchor="middle" class="t" style="font-size:15px">Toutes mécaniques</text>
+  </g>
+  <!-- en-tête de zone -->
+  <text x="88" y="190" class="te2 b">Monts Calcaires · niv. 14</text>
+  <line x1="300" y1="185" x2="610" y2="185" stroke="#6B5E86" stroke-width="2"/>
+
+  <!-- tuile de boss (répétée) : portrait, nom, 2 emplacements, étoiles par difficulté, pastilles de familles -->
+  <g id="tuile">
+    <rect x="86" y="200" width="528" height="84" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <rect x="96" y="210" width="64" height="64" rx="12" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/>
+    <text x="128" y="250" text-anchor="middle" class="t2" style="font-size:12px">portrait</text>
+    <text x="172" y="232" class="t b">Galerie de Kozbane</text>
+    <text x="172" y="256" class="t2">Tête · Gants · Lame sanglante</text>
+    <!-- pastilles de familles de mécaniques (couleur = famille) -->
+    <circle cx="180" cy="272" r="7" fill="#FF4D6D" stroke="#221A3A" stroke-width="2"/>
+    <circle cx="198" cy="272" r="7" fill="#22B8F0" stroke="#221A3A" stroke-width="2"/>
+    <circle cx="216" cy="272" r="7" fill="#B43BEB" stroke="#221A3A" stroke-width="2"/>
+    <!-- médailles N / H / M -->
+    <g font-size="13" font-weight="800">
+      <circle cx="500" cy="242" r="15" fill="#8FD62E" stroke="#221A3A" stroke-width="3"/><text x="500" y="247" text-anchor="middle" class="tw" style="font-size:13px">N</text>
+      <circle cx="538" cy="242" r="15" fill="#FFC928" stroke="#221A3A" stroke-width="3"/><text x="538" y="247" text-anchor="middle" class="tw" style="font-size:13px">H</text>
+      <circle cx="576" cy="242" r="15" fill="#E9DFCB" stroke="#6B5E86" stroke-width="3"/><text x="576" y="247" text-anchor="middle" fill="#6B5E86" style="font-size:13px">M</text>
+    </g>
+    <text x="538" y="275" text-anchor="middle" class="t2" style="font-size:13px">★★☆ · 4:12</text>
+  </g>
+  <!-- tuile sélectionnée : lagon + liseré -->
+  <rect x="80" y="294" width="540" height="96" rx="16" fill="none" stroke="#FFFFFF" stroke-width="6"/>
+  <rect x="86" y="300" width="528" height="84" rx="14" fill="#86DDFF" stroke="#0B7DB5" stroke-width="4"/>
+  <rect x="96" y="310" width="64" height="64" rx="12" fill="#B43BEB" stroke="#221A3A" stroke-width="3"/>
+  <text x="128" y="350" text-anchor="middle" fill="#FFF" style="font-size:12px">portrait</text>
+  <text x="172" y="332" class="t b">Grotte de Latif</text>
+  <text x="172" y="356" class="t">Tête · Gants · Phénix</text>
+  <circle cx="180" cy="372" r="7" fill="#FF4D6D" stroke="#221A3A" stroke-width="2"/>
+  <circle cx="198" cy="372" r="7" fill="#FF8A1F" stroke="#221A3A" stroke-width="2"/>
+  <circle cx="216" cy="372" r="7" fill="#22B8F0" stroke="#221A3A" stroke-width="2"/>
+  <g>
+    <circle cx="500" cy="342" r="15" fill="#E9DFCB" stroke="#6B5E86" stroke-width="3"/><text x="500" y="347" text-anchor="middle" fill="#6B5E86" style="font-size:13px" font-weight="800">N</text>
+    <circle cx="538" cy="342" r="15" fill="#E9DFCB" stroke="#6B5E86" stroke-width="3"/><text x="538" y="347" text-anchor="middle" fill="#6B5E86" style="font-size:13px" font-weight="800">H</text>
+    <circle cx="576" cy="342" r="15" fill="#E9DFCB" stroke="#6B5E86" stroke-width="3"/><text x="576" y="347" text-anchor="middle" fill="#6B5E86" style="font-size:13px" font-weight="800">M</text>
+  </g>
+  <!-- pastille « Vedette de la semaine » -->
+  <g transform="rotate(8 590 304)"><rect x="548" y="290" width="84" height="26" rx="10" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/><text x="590" y="309" text-anchor="middle" class="tw" style="font-size:13px">Vedette</text></g>
+
+  <use href="#tuile" y="200"/>
+  <!-- tuile verrouillée : grise tramée + cadenas + condition écrite -->
+  <rect x="86" y="500" width="528" height="84" rx="14" fill="#E9DFCB" stroke="#6B5E86" stroke-width="3"/>
+  <rect x="86" y="500" width="528" height="84" rx="14" fill="url(#trame)"/>
+  <rect x="96" y="510" width="64" height="64" rx="12" fill="#C9BFEA" stroke="#6B5E86" stroke-width="3"/>
+  <path d="M120 540 v-8 a8 8 0 0 1 16 0 v8" fill="none" stroke="#6B5E86" stroke-width="3"/><rect x="115" y="540" width="26" height="20" rx="4" fill="#6B5E86"/>
+  <text x="172" y="532" fill="#6F6787" style="font-size:17px" font-weight="800">Camp du Surveillant</text>
+  <text x="172" y="556" fill="#6F6787" style="font-size:15px">Bats Wushu en Survie pour l'ouvrir</text>
+  <text x="88" y="620" class="te2 b">Forêt des Chutes · niv. 25</text>
+  <line x1="300" y1="615" x2="610" y2="615" stroke="#6B5E86" stroke-width="2"/>
+  <use href="#tuile" y="430"/>
+  <text x="350" y="812" text-anchor="middle" class="te2">48 boss · 9 / 48 vaincus · 3 plans à trouver</text>
+
+  <!-- ===== colonne droite : fiche du boss choisi ===== -->
+  <!-- bandeau portrait : rendu du boss sur rayons de soleil (comme les fonds d'icônes) -->
+  <rect x="660" y="110" width="860" height="230" rx="16" fill="#B43BEB" stroke="#221A3A" stroke-width="3"/>
+  <g opacity="0.25" fill="#FFFFFF">
+    <path d="M840 225 L700 110 L760 110 Z"/><path d="M840 225 L820 110 L880 110 Z"/><path d="M840 225 L940 110 L1000 110 Z"/>
+    <path d="M840 225 L660 200 L660 250 Z"/><path d="M840 225 L700 340 L760 340 Z"/><path d="M840 225 L940 340 L1000 340 Z"/>
+  </g>
+  <ellipse cx="840" cy="230" rx="110" ry="96" fill="#DC92FF" stroke="#221A3A" stroke-width="3"/>
+  <text x="840" y="236" text-anchor="middle" fill="#221A3A" style="font-size:15px">rendu 3D du boss (tourne)</text>
+  <g transform="rotate(-3 1200 170)">
+    <text x="980" y="170" class="tw pop" style="font-size:34px">Latif</text>
+    <text x="980" y="204" class="tw" style="font-size:20px">Roi du ciel · niveau 36</text>
+  </g>
+  <text x="980" y="250" fill="#FFFFFF" stroke="#221A3A" stroke-width="3" paint-order="stroke" style="font-size:17px" font-weight="700">« Le ciel tombe sur ceux qui restent immobiles. »</text>
+  <text x="980" y="300" fill="#FFF8EC" style="font-size:15px">Vaincu 0 fois · meilleur temps — · plan à obtenir</text>
+
+  <!-- mécaniques : pastilles icône + nom + conseil court (le conseil est la ligne permanente) -->
+  <text x="664" y="380" class="t b" style="font-size:22px">Mécaniques</text>
+  <g>
+    <rect x="664" y="394" width="276" height="74" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <rect x="674" y="404" width="54" height="54" rx="12" fill="#FF4D6D" stroke="#221A3A" stroke-width="3"/>
+    <text x="740" y="424" class="t b">Pluie de météores</text>
+    <text x="740" y="448" class="t2">bouge sous les météores</text>
+    <rect x="952" y="394" width="276" height="74" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <rect x="962" y="404" width="54" height="54" rx="12" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+    <text x="1028" y="424" class="t b">Bourrasque</text>
+    <text x="1028" y="448" class="t2">reviens vers lui</text>
+    <rect x="1240" y="394" width="276" height="74" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <rect x="1250" y="404" width="54" height="54" rx="12" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+    <text x="1316" y="424" class="t b">Marque</text>
+    <text x="1316" y="448" class="t2">elle se fige : sors-en</text>
+  </g>
+
+  <!-- difficulté : onglets (actif mandarine, dépasse) -->
+  <text x="664" y="508" class="t b" style="font-size:22px">Difficulté</text>
+  <rect x="664" y="522" width="200" height="48" rx="12" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/>
+  <text x="764" y="553" text-anchor="middle" class="tw" style="font-size:19px">Normal · 35</text>
+  <rect x="872" y="530" width="200" height="40" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/>
+  <text x="972" y="556" text-anchor="middle" class="t" style="font-size:17px">Héroïque · 50</text>
+  <rect x="1080" y="530" width="200" height="40" rx="12" fill="#E9DFCB" stroke="#6B5E86" stroke-width="3"/>
+  <path d="M1102 548 v-5 a6 6 0 0 1 12 0 v5" fill="none" stroke="#6B5E86" stroke-width="2.5"/><rect x="1098" y="548" width="20" height="14" rx="3" fill="#6B5E86"/>
+  <text x="1190" y="556" text-anchor="middle" fill="#6F6787" style="font-size:17px">Mythique · 90</text>
+  <!-- jauge de PE + estimation -->
+  <rect x="664" y="584" width="616" height="24" rx="12" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+  <rect x="667" y="587" width="560" height="18" rx="9" fill="#8FD62E"/>
+  <line x1="1050" y1="580" x2="1050" y2="612" stroke="#221A3A" stroke-width="3"/>
+  <text x="1050" y="630" text-anchor="middle" class="t2" style="font-size:13px">conseillée</text>
+  <rect x="1296" y="580" width="220" height="34" rx="12" fill="#8FD62E" stroke="#221A3A" stroke-width="3"/>
+  <text x="1406" y="603" text-anchor="middle" class="tw" style="font-size:17px">Équilibré</text>
+  <text x="664" y="652" class="t2">Ta puissance 11 980 · conseillée 10 530 (infobulle : le détail)</text>
+
+  <!-- butin probable : vraies cases, possédé coché, garanti marqué -->
+  <text x="664" y="692" class="t b" style="font-size:22px">Butin</text>
+  <g>
+    <rect x="664" y="704" width="64" height="64" rx="14" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/><text x="696" y="741" text-anchor="middle" class="tw" style="font-size:13px">Tête</text>
+    <rect x="738" y="704" width="64" height="64" rx="14" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/><text x="770" y="741" text-anchor="middle" class="tw" style="font-size:13px">Gants</text>
+    <circle cx="796" cy="708" r="11" fill="#8FD62E" stroke="#221A3A" stroke-width="3"/><path d="M790 708 l4 4 l7 -8" stroke="#221A3A" stroke-width="3" fill="none"/>
+    <text x="816" y="728" class="t">3 pièces au choix, jamais en double</text>
+    <text x="816" y="752" class="t2">Gants déjà possédés : on te proposera la Tête</text>
+    <rect x="1120" y="704" width="64" height="64" rx="14" fill="#FFC928" stroke="#221A3A" stroke-width="3"/><text x="1152" y="741" text-anchor="middle" class="tw" style="font-size:13px">Plan</text>
+    <g transform="rotate(-6 1250 712)"><rect x="1192" y="698" width="118" height="28" rx="10" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/><text x="1251" y="718" text-anchor="middle" class="tw" style="font-size:13px">Garanti 1re fois</text></g>
+    <text x="1196" y="752" class="t2">+ 30 cristaux</text>
+  </g>
+  <!-- modificateur de la semaine, optionnel -->
+  <rect x="1330" y="690" width="186" height="78" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+  <text x="1423" y="714" text-anchor="middle" class="te2" style="font-size:13px">Défi de la semaine</text>
+  <text x="1423" y="738" text-anchor="middle" class="te b">Boss enragés</text>
+  <text x="1423" y="758" text-anchor="middle" fill="#C3F07A" style="font-size:13px">facultatif · cristaux +40</text>
+
+  <!-- bouton primaire soleil, épinglé -->
+  <rect x="917" y="795" width="440" height="64" rx="14" fill="#221A3A"/>
+  <rect x="912" y="790" width="440" height="64" rx="14" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+  <rect x="912" y="790" width="440" height="10" rx="5" fill="#FFE27A"/>
+  <rect x="928" y="798" width="16" height="6" rx="3" fill="#FFFFFF" transform="rotate(-12 936 801)"/>
+  <text x="1132" y="832" text-anchor="middle" class="tw pop" style="font-size:24px">Entrer : Grotte de Latif</text>
+  <circle cx="886" cy="822" r="16" fill="#8FD62E" stroke="#221A3A" stroke-width="3"/><text x="886" y="828" text-anchor="middle" class="tw" style="font-size:15px">A</text>
+  <text x="1380" y="828" class="t2" style="font-size:14px">Alliés IA : 2 (réglage)</text>
+
+  <!-- annotations -->
+  <text x="70" y="890" class="note">Maquette BM-DNG : portrait, mécaniques en icônes + conseil, butin en cases, difficulté en onglets, record, défi facultatif.</text>
+</svg>

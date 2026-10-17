@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="'M PLUS Rounded 1c', 'Nunito', sans-serif">
+  <!-- Maquette maison BM-DNG (17/10/2026) : Carnet > onglet « Rencontres » (journal des 48 boss) v2. DA « autocollant manga ».
+       Aucun élément tiers. Portraits = emplacements (rendus du jeu). -->
+  <defs>
+    <style>
+      .t { fill: #221A3A; font-size: 17px; }
+      .t2 { fill: #6B5E86; font-size: 15px; }
+      .te { fill: #FFF8EC; font-size: 17px; }
+      .te2 { fill: #C9BFEA; font-size: 14px; }
+      .tw { fill: #FFFFFF; stroke: #221A3A; stroke-width: 4; paint-order: stroke; font-weight: 800; }
+      .pop { font-family: 'Mochiy Pop One', 'M PLUS Rounded 1c', sans-serif; }
+      .b { font-weight: 800; }
+      .note { fill: #C21E45; font-size: 14px; font-weight: 700; }
+    </style>
+    <pattern id="trame" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#221A3A" opacity="0.18"/></pattern>
+    <g id="vu"><rect width="64" height="64" rx="14" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/></g>
+    <g id="bat"><rect width="64" height="64" rx="14" fill="#B43BEB" stroke="#221A3A" stroke-width="3"/><circle cx="56" cy="8" r="11" fill="#8FD62E" stroke="#221A3A" stroke-width="3"/><path d="M51 8 l4 4 l6 -8" stroke="#221A3A" stroke-width="3" fill="none"/></g>
+    <g id="cache"><rect width="64" height="64" rx="14" fill="#E9DFCB" stroke="#6B5E86" stroke-width="3"/><rect width="64" height="64" rx="14" fill="url(#trame)"/><text x="32" y="42" text-anchor="middle" fill="#6B5E86" style="font-size:26px" font-weight="800">?</text></g>
+  </defs>
+  <rect width="1600" height="900" fill="#CCDEF3"/>
+
+  <rect x="47" y="57" width="1506" height="800" rx="18" fill="#221A3A"/>
+  <rect x="40" y="50" width="1506" height="800" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+  <!-- onglets du Carnet : « Rencontres » ajouté À LA FIN (CarnetPages.tabs(), la Collection garde son indice) ; l'actif mandarine dépasse -->
+  <g>
+    <rect x="80" y="18" width="150" height="40" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="155" y="44" text-anchor="middle" class="t">…</text>
+    <rect x="240" y="18" width="150" height="40" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="315" y="44" text-anchor="middle" class="t">Collection</text>
+    <rect x="400" y="18" width="150" height="40" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="475" y="44" text-anchor="middle" class="t">…</text>
+    <rect x="560" y="10" width="190" height="48" rx="12" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/><text x="655" y="42" text-anchor="middle" class="tw" style="font-size:19px">Rencontres</text>
+  </g>
+
+  <!-- ===== grille des 48 boss par zone (6 par ligne) ===== -->
+  <rect x="70" y="80" width="560" height="740" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+  <text x="88" y="112" class="te b">Monts Calcaires</text><text x="610" y="112" text-anchor="end" class="te2">4 / 6 vaincus</text>
+  <use href="#bat" x="88" y="124"/><use href="#bat" x="176" y="124"/><use href="#bat" x="264" y="124"/><use href="#bat" x="352" y="124"/><use href="#vu" x="440" y="124"/><use href="#cache" x="528" y="124"/>
+  <text x="88" y="226" class="te b">Forêt des Chutes</text><text x="610" y="226" text-anchor="end" class="te2">2 / 6</text>
+  <use href="#bat" x="88" y="238"/><use href="#bat" x="176" y="238"/><use href="#vu" x="264" y="238"/><use href="#cache" x="352" y="238"/><use href="#cache" x="440" y="238"/><use href="#cache" x="528" y="238"/>
+  <!-- sélection -->
+  <rect x="258" y="232" width="76" height="76" rx="18" fill="none" stroke="#FFFFFF" stroke-width="5"/>
+  <rect x="261" y="235" width="70" height="70" rx="16" fill="none" stroke="#0B7DB5" stroke-width="3"/>
+  <text x="88" y="340" class="te b">Baie du Béluga</text><text x="610" y="340" text-anchor="end" class="te2">1 / 6</text>
+  <use href="#bat" x="88" y="352"/><use href="#vu" x="176" y="352"/><use href="#cache" x="264" y="352"/><use href="#cache" x="352" y="352"/><use href="#cache" x="440" y="352"/><use href="#cache" x="528" y="352"/>
+  <text x="88" y="454" class="te2">… 5 autres zones (défilement)</text>
+  <!-- légende -->
+  <use href="#bat" x="88" y="700" transform="translate(0 0)"/>
+  <text x="164" y="738" class="te2">vaincu</text>
+  <use href="#vu" x="240" y="700"/><text x="316" y="738" class="te2">rencontré</text>
+  <use href="#cache" x="420" y="700"/><text x="496" y="738" class="te2">à découvrir</text>
+  <text x="350" y="800" text-anchor="middle" class="te2">7 / 48 vaincus · 29 / 29 mécaniques vues : 12</text>
+
+  <!-- ===== fiche du boss ===== -->
+  <rect x="660" y="80" width="860" height="200" rx="16" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/>
+  <ellipse cx="800" cy="180" rx="100" ry="84" fill="#FFB566" stroke="#221A3A" stroke-width="3"/>
+  <text x="800" y="186" text-anchor="middle" class="t" style="font-size:14px">rendu 3D (tourner, zoomer)</text>
+  <g transform="rotate(-3 1150 130)">
+    <text x="930" y="134" class="tw pop" style="font-size:32px">Buster</text>
+    <text x="930" y="166" class="tw" style="font-size:18px">Brute de la clairière · Forêt des Chutes</text>
+  </g>
+  <text x="930" y="214" fill="#FFFFFF" stroke="#221A3A" stroke-width="3" paint-order="stroke" style="font-size:16px" font-weight="700">Rencontré dans : Survie, Tour (étage 30), Ruée</text>
+  <text x="930" y="244" fill="#FFF8EC" style="font-size:15px">Panoplie Œil du faucon · Tête, Gants</text>
+
+  <!-- mécaniques : vues (détail) / pas encore vues (silhouette + nom seul) -->
+  <text x="664" y="320" class="t b" style="font-size:22px">Mécaniques</text>
+  <rect x="664" y="334" width="420" height="70" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+  <rect x="674" y="343" width="52" height="52" rx="12" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/>
+  <text x="738" y="362" class="t b">Ruée · 3 charges</text><text x="738" y="386" class="t2">écarte-toi de l'axe ; vue 14 fois</text>
+  <rect x="1096" y="334" width="420" height="70" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+  <rect x="1106" y="343" width="52" height="52" rx="12" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+  <text x="1170" y="362" class="t b">Barrière (70 %, 35 %)</text><text x="1170" y="386" class="t2">brise-la en 12 s sinon il se soigne</text>
+  <rect x="664" y="414" width="420" height="70" rx="14" fill="#E9DFCB" stroke="#6B5E86" stroke-width="3"/>
+  <rect x="664" y="414" width="420" height="70" rx="14" fill="url(#trame)"/>
+  <rect x="674" y="423" width="52" height="52" rx="12" fill="#C9BFEA" stroke="#6B5E86" stroke-width="3"/>
+  <text x="738" y="442" fill="#6F6787" style="font-size:17px" font-weight="800">Rage (30 %)</text><text x="738" y="466" fill="#6F6787" style="font-size:15px">pas encore vue : amène-le sous 30 %</text>
+  <text x="1100" y="452" class="t2" style="font-size:14px">Le conseil reste lisible avant d'entrer :</text>
+  <text x="1100" y="472" class="t2" style="font-size:14px">« vue » ajoute le compteur et la démo.</text>
+
+  <!-- records par difficulté (puits) -->
+  <text x="664" y="524" class="t b" style="font-size:22px">Tes records</text>
+  <rect x="664" y="538" width="852" height="150" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+  <g font-size="16">
+    <text x="690" y="570" class="te2">Difficulté</text><text x="900" y="570" class="te2">Victoires</text><text x="1060" y="570" class="te2">Meilleur temps</text><text x="1260" y="570" class="te2">Étoiles</text>
+    <text x="690" y="604" class="te b">Normal</text><text x="900" y="604" class="te">12</text><text x="1060" y="604" class="te">1:41</text><text x="1260" y="604" fill="#FFC928" font-weight="800">★★★</text>
+    <text x="690" y="636" class="te b">Héroïque</text><text x="900" y="636" class="te">3</text><text x="1060" y="636" class="te">2:58</text><text x="1260" y="636" fill="#FFC928" font-weight="800">★★☆</text>
+    <text x="690" y="668" fill="#6F6787" font-weight="800">Mythique</text><text x="900" y="668" fill="#6F6787">—</text><text x="1060" y="668" fill="#6F6787">PE requise 55 800</text><text x="1260" y="668" fill="#6F6787">☆☆☆</text>
+  </g>
+  <!-- actions -->
+  <rect x="669" y="725" width="330" height="64" rx="14" fill="#221A3A"/>
+  <rect x="664" y="720" width="330" height="64" rx="14" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+  <text x="829" y="760" text-anchor="middle" class="tw pop" style="font-size:20px">Aller à son donjon</text>
+  <rect x="1010" y="720" width="240" height="64" rx="14" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+  <text x="1130" y="759" text-anchor="middle" class="tw" style="font-size:18px">S'entraîner</text>
+  <text x="1270" y="746" class="t2" style="font-size:14px">salle d'essai sans butin,</text>
+  <text x="1270" y="766" class="t2" style="font-size:14px">héros invincible au choix</text>
+
+  <text x="40" y="880" class="note">Maquette BM-DNG : 48 fiches (vaincu / rencontré / à découvrir), mécaniques vues avec compteur, records par difficulté, raccourcis donjon et entraînement.</text>
+</svg>
