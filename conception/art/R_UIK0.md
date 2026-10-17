@@ -1,7 +1,9 @@
 # R_UIK0 : socle de la refonte graphique (UIK + TYP + ANI), 17/10/2026
 
 Piste B « autocollant manga » (décision du joueur), `BIBLE.md` v2. Planche : `tests/shot_uik0.tscn` → `user://shots/uik0/`
-(papier à gauche, puits d'encre des écrans actuels à droite, 1280×720 et 1600×900). Test : `tests/test_uik0.tscn` (54 contrôles).
+(papier à gauche, puits d'encre des écrans actuels à droite, 1280×720 et 1600×900). Test : `tests/test_uik0.tscn`.
+Captures : `uik0/planche_1600x900.jpg` (à regarder d'abord, à comparer à `pistes/b_kit.jpg`), `uik0/planche_1280x720.jpg`,
+`uik0/planche_nuit_1280x720.jpg` (peau technique), `uik0/lobby_jouer_1600x900.jpg`, `uik0/lobby_neuf_1280x720.jpg`, `uik0/parametres_1280x720.jpg`.
 
 ## En place
 | Brique | Fichiers | Contenu |

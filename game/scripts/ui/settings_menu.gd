@@ -830,7 +830,8 @@ func _slider(parent: Control, text: String, section: String, key: String, lo: fl
 		val.text = fmt.call(x)
 		Settings.set_v(section, key, x))
 	_refreshers.append(func():
-		s.set_value_no_signal(float(Settings.get_v(section, key)))
+		var cur: Variant = Settings.get_v(section, key)
+		s.set_value_no_signal(float(cur) if cur != null else clampf(1.0, lo, hi))  # réglage absent de Settings.DEFAULTS : 1 (100 %)
 		val.text = fmt.call(s.value))
 	return s
 

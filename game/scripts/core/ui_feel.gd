@@ -132,7 +132,8 @@ var _down: Control  # contrôle appuyé
 
 ## Survol : relu à chaque image (souris déplacée, liste qui défile, contrôle qui apparaît sous la souris).
 func _track_hover() -> void:
-	var h := target_of(get_viewport().gui_get_hovered_control())
+	var vp := get_viewport()
+	var h := target_of(vp.gui_get_hovered_control()) if vp != null else null
 	if _hot != null and not is_instance_valid(_hot):
 		_hot = null
 	if h == _hot:
@@ -432,7 +433,7 @@ func _process(delta: float) -> void:
 	if _focused != null and (not is_instance_valid(_focused) or UiNav.cursor != _focused or not UiNav.shown):
 		var old := _focused
 		_focused = null
-		if is_instance_valid(old) and not old.get_global_rect().has_point(old.get_global_mouse_position()):
+		if is_instance_valid(old) and old.is_inside_tree() and not old.get_global_rect().has_point(old.get_global_mouse_position()):
 			_exit(old)  # le cadre de la manette est parti ailleurs (onglet changé, menu fermé)
 	if _effects.is_empty():
 		return
