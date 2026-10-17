@@ -411,6 +411,8 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 		hp = max_hp
 	if Training.active and source and source.team == Team.PLAYER and team != Team.PLAYER:
 		Training.record(dmg)
+	if self is Player:
+		HitLog.note(self, dmg, source, dot)  # « Ce qui t'a battu » (lot DNG-1)
 	health_changed.emit(hp, max_hp)
 	damaged.emit(dmg, source)
 	if not dot and has_status("sleep"):

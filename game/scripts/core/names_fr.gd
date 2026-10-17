@@ -67,6 +67,16 @@ static func _rename(list: Array, section: String) -> void:
 			e["name"] = lookup(section, n)
 
 
+## Texte libre (intro de boss) écrit avec le nom anglais du monstre [param m] : le nom français à la place (lot DNG-1 :
+## « Doubledoor, hôte de la magie… » -> « Double-porte, hôte de la magie… »).
+static func fr_text(text: String, m: Dictionary) -> String:
+	var en := String(m.get("name_en", ""))
+	var fr := String(m.get("name", ""))
+	if en == "" or fr == "" or en == fr or not text.contains(en):
+		return text
+	return text.replace(en, fr)
+
+
 ## Traduit en place les noms chargés par GameData (monstres, zones, équipement, panoplies, apparences).
 static func apply(gd: Node) -> void:
 	for id in gd.monsters:
@@ -82,6 +92,9 @@ static func apply(gd: Node) -> void:
 		if dg.has("name") and not dg.has("name_en"):
 			dg["name_en"] = String(dg.name)
 			dg["name"] = lookup("zones", String(dg.name))
+		if dg.has("intro"):
+			for k in ["boss", "pet"]:
+				dg["intro"] = fr_text(String(dg.intro), gd.monsters.get(int(dg.get(k, 0)), {}))
 	_rename(gd.eden_items, "items")
 	for sid in gd.eden_sets:
 		var s: Dictionary = gd.eden_sets[sid]

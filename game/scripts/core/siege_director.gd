@@ -153,6 +153,7 @@ func _spawn_hazards() -> void:
 
 # --- boucle -----------------------------------------------------------------------------------
 func update(delta: float) -> void:
+	BestTimes.tick(delta)  # temps de la partie (lot DNG-1)
 	match phase:
 		"fight":
 			_update_fight(delta)

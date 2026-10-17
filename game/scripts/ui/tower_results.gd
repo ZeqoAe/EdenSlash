@@ -1,6 +1,8 @@
 class_name TowerResults
 extends ResultsPanel
-## Bilan de fin d'ascension de la Tour : étage atteint, record, maîtrise gagnée, butin gardé.
+## Bilan de fin d'ascension de la Tour : étage atteint, record, maîtrise gagnée, butin gardé. Lot DNG-1 : temps des tranches de
+## 10 étages contre leur record (BestTimes), objets des coffres en cases, « Ce qui t'a battu » après une chute (HitLog), et
+## « Reprendre » au palier de reprise (Tower.checkpoint) quand il est plus haut que l'étage de départ.
 
 const TITLES := {"victoire": "SOMMET DE LA TOUR !", "defaite": "CHUTE DANS LA TOUR", "abandon": "ASCENSION ARRÊTÉE"}
 
@@ -31,7 +33,15 @@ func show_results(result: String, floor_reached: int, got: Dictionary) -> void:
 		build.append("%s r%d" % [Run.skill_def(int(e.id)).get("name", "?"), int(e.rank)])
 	for id in Run.passives:
 		build.append("%s ×%d" % [Run.passive_def(String(id)).get("name", id), int(Run.passives[id])])
-	show_spec({
+	var buttons: Array = [
+		{"text": "Rejouer (étage %d, %s)" % [Tower.start_floor, diff], "primary": true, "call": _restart.bind(Tower.start_floor)},
+		{"text": "Retour au lobby", "call": func(): Tower.leave(get_tree())},
+	]
+	var resume := resume_floor(result)
+	if resume > 0:
+		buttons[0].primary = false
+		buttons.push_front({"text": "Reprendre (étage %d)" % resume, "primary": true, "call": _restart.bind(resume)})
+	var spec := {
 		"title": TITLES.get(result, "FIN DE L'ASCENSION"),
 		"tone": "win" if result == "victoire" else "lose",
 		"subtitle": "%s · %s" % [cls.get("name_fr", ""), diff],
@@ -40,20 +50,41 @@ func show_results(result: String, floor_reached: int, got: Dictionary) -> void:
 			[str(int(got.get("best", 0))), "record %s" % diff.to_lower()],
 			[str(heroes), "héros battus"],
 			[str(int(got.get("bosses", 0))), "boss vaincus"],
-			[Run.duration_text(), "durée"],
+			[BestTimes.fmt(BestTimes.clock) if BestTimes.clock > 0.5 else Run.duration_text(), "durée"],
 			[str(Run.kills), "monstres"],
 		],
+		"notes": BestTimes.record_notes(),
+		"loot": loot_of(Tower.found),
 		"gained": gained,
 		"kept": kept,
 		"lost": [row("Build de l'ascension", "", "Sorts, cartes et équipement de la Tour", "equipment")],
 		"quest": Compass.after("tower", {"crystals": int(got.get("crystals", 0)), "looks": int(got.get("looks", 0))}),
 		"footnote": ("Build : " + "  ·  ".join(build)) if not build.is_empty() else "",
-		"buttons": [
-			{"text": "Rejouer (étage %d, %s)" % [Tower.start_floor, diff], "primary": true, "call": func():
-				get_tree().paused = false
-				Tower.start(Profile.selected_class, Tower.difficulty, Tower.start_floor)
-				get_tree().change_scene_to_file("res://scenes/world.tscn")},
-			{"text": "Retour au lobby", "call": func(): Tower.leave(get_tree())},
-		],
-	})
+		"buttons": buttons,
+	}
+	if result == "defaite" and HitLog.died():
+		spec["defeat"] = HitLog.report()
+	show_spec(spec)
 	print("[tour] fin : %s, étage %d, record %d, %d objet(s) gardés, coffre commun : %d objet(s)" % [result, floor_reached, int(got.get("best", 0)), int(got.get("items", 0)), Profile.inventory.size()])
+
+
+func _restart(from: int) -> void:
+	get_tree().paused = false
+	Tower.start(Profile.selected_class, Tower.difficulty, from)
+	get_tree().change_scene_to_file("res://scenes/world.tscn")
+
+
+## Étage de reprise proposé après une chute ou un arrêt : le palier de reprise (début du bloc de 10 du record) s'il est plus
+## haut que l'étage de départ de l'ascension (une chute à l'étage 12 partie du 1 propose l'étage 11) ; 0 sinon.
+static func resume_floor(result: String) -> int:
+	if result == "victoire":
+		return 0
+	var cp := Tower.checkpoint()
+	return cp if cp > Tower.start_floor and Tower.unlocked(cp, Tower.difficulty) else 0
+
+
+## Objets des coffres de l'ascension en cases, les meilleurs d'abord (rareté, puis niveau).
+static func loot_of(items: Array) -> Array:
+	var list := items.duplicate()
+	list.sort_custom(func(a, b): return int(a.get("rarity", 0)) * 1000 + int(a.get("level", 0)) > int(b.get("rarity", 0)) * 1000 + int(b.get("level", 0)))
+	return list.map(func(it): return loot_entry(it))

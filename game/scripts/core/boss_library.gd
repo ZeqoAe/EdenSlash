@@ -118,7 +118,7 @@ static func mechanic_names(id: String) -> Array:
 static func intro(id: String) -> String:
 	var d := get_def(id)
 	if String(d.get("intro", "")) != "":
-		return String(d.intro)
+		return NamesFr.fr_text(String(d.intro), GameData.monsters.get(int(d.get("monster", 0)), {}))  # (jamais le nom anglais)
 	var hint := BossBricks.hint_of(String(brick_types(id)[0])) if not brick_types(id).is_empty() else ""
 	return (hint.left(1).to_upper() + hint.substr(1) + " !") if hint != "" else short_name(id)
 
@@ -156,6 +156,7 @@ static func spawn(id: String, tier: int, ctx: Dictionary) -> Monster:
 	var h := float(ctx.get("hp", hp(id, level, tier))) * float(ctx.get("hp_mult", 1.0)) * (LIEUTENANT_HP if lieutenant else 1.0)
 	m.max_hp = h
 	m.hp = h
+	Encounters.met(id, m, lieutenant)  # journal des rencontres (lot DNG-1)
 	if bool(ctx.get("main", not lieutenant)):
 		d._boss = m
 	if m.brain == null:

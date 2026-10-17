@@ -14,6 +14,9 @@ extends CanvasLayer
 ##     "kept": [...], "lost": [...],                      # butin gardé ; ce qui reste dans la partie
 ##     "build": [...],                                    # (Survivant) le build final : mêmes lignes, bloc bleu
 ##     "footnote": "",
+##     "stars": [{"label": "Le boss tombe", "done": true, "new": true, "tip": ""}],   # objectifs ★ / ☆ (lot DNG-1)
+##     "loot": [ResultsPanel.loot_entry(objet)],          # butin montré en cases (pièce, niveau, rareté) ; "missing" : la ligne dessous
+##     "defeat": HitLog.report(),                         # « Ce qui t'a battu » (coups des 8 dernières secondes, conseil) ; "defeat_note"
 ##     "buttons": [{"text": "Rejouer", "primary": true, "call": func(): ...}, {"text": "Retour au lobby", "call": ...}],
 ## })
 ## [/codeblock]
@@ -46,6 +49,16 @@ var _tweens: Array = []
 var _best: Dictionary = {}  # la ligne mise en avant (la même instance que dans la description)
 var _best_box: PanelContainer
 var _quest_box: PanelContainer  # la ligne « Pour ta quête » (spec.quest)
+var _panel: PanelContainer
+var defeat_box: PanelContainer  # (tests) le bloc « Ce qui t'a battu »
+var loot_box: Control  # (tests) le butin en cases
+var _title: Label
+var _orn: Control
+var _footnote: Label
+var _loot_row: Control
+var _defeat_note: Label
+## Hauteur minimale de la liste des blocs (elle défile en dessous) ; sous cette place, le bilan se resserre (_compact).
+const MIN_LIST := 110.0
 var _animating := false
 var _col_index := 0  # colonne en cours de construction (décale la montée des nombres)
 
@@ -131,6 +144,7 @@ func show_spec(spec: Dictionary) -> void:
 	panel.add_theme_stylebox_override("panel", UiTheme.panel_box(34, 24))
 	panel.custom_minimum_size = Vector2(WIDTH, 0)
 	center.add_child(panel)
+	_panel = panel
 	_body = VBoxContainer.new()
 	_body.add_theme_constant_override("separation", 12)
 	panel.add_child(_body)
@@ -141,9 +155,11 @@ func show_spec(spec: Dictionary) -> void:
 	t.text = String(spec.get("title", ""))
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_body.add_child(t)
+	_title = t
 	var orn := MenuWidgets.Ornament.new()
 	orn.custom_minimum_size = Vector2(0, 18)
 	_body.add_child(orn)
+	_orn = orn
 	if String(spec.get("subtitle", "")) != "":
 		var s := Hud._label(_body, String(spec.subtitle), 22, UiTheme.TEXT)
 		s.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -162,6 +178,12 @@ func show_spec(spec: Dictionary) -> void:
 			var tl := tile(tr, String(d[0]), String(d[1]), String(d[2]) if d.size() > 2 else "", d.size() > 3 and bool(d[3]), 118.0 if tiles.size() > 4 else 150.0)
 			_appear(tl, 0.04 * i)
 			_register_count((tl.get_child(0) as Control).get_child(0) as Label, String(d[0]), 0.15 + 0.07 * i)
+	if not (spec.get("stars", []) as Array).is_empty():
+		_add_stars(spec.stars)
+	if not (spec.get("defeat", {}) as Dictionary).is_empty():
+		_add_defeat(spec.defeat, String(spec.get("defeat_note", "")))
+	if not (spec.get("loot", []) as Array).is_empty() or String(spec.get("missing", "")) != "":
+		_add_loot(spec.get("loot", []), String(spec.get("missing", "")))
 	_build_columns(spec)
 	if String(spec.get("quest", "")) != "":
 		_add_quest(String(spec.quest))
@@ -170,6 +192,7 @@ func show_spec(spec: Dictionary) -> void:
 		f.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		f.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		f.custom_minimum_size = Vector2(WIDTH - 90.0, 0)
+		_footnote = f
 	_build_buttons(spec.get("buttons", []))
 	_fit.call_deferred()
 	_start_animation()
@@ -324,12 +347,174 @@ func _add_quest(text: String) -> void:
 
 
 func _fit() -> void:
+	# la liste prend la place qui reste (mesurée : titre, tuiles, blocs du lot DNG-1, quête, boutons) : une fenêtre de 720 px
+	# la raccourcit (elle défile) ; s'il ne reste pas MIN_LIST, le bilan se resserre d'abord (_compact)
+	var vh := get_viewport().get_visible_rect().size.y
+	if _scroll != null:
+		_scroll.custom_minimum_size.y = 0.0
+	for step in 5:
+		if vh - _other_height() - 36.0 >= (MIN_LIST if _scroll != null else 0.0):
+			break
+		_compact(step)
 	if _scroll == null:
 		return
 	var inner := _scroll.get_child(0) as Control
-	# la liste prend la place qui reste : une fenêtre de 720 px la raccourcit (elle défile), la ligne de quête lui prend 50 px
-	var room := clampf(get_viewport().get_visible_rect().size.y - 450.0 - (50.0 if _quest_box != null else 0.0), 170.0, 400.0)
+	var room := clampf(vh - _other_height() - 36.0, MIN_LIST, 400.0)
 	_scroll.custom_minimum_size.y = minf(inner.get_combined_minimum_size().y, room)
+
+
+func _other_height() -> float:
+	return _panel.get_combined_minimum_size().y if _panel != null else 450.0
+
+
+## Le bilan se resserre, étape [param step] (fenêtre basse, bilan riche) : titre plus petit et sans ornement, sans note de
+## bas de page, sans les cases du butin (il est aussi dans « Gardé »), sans la note de meilleur pourcentage, notes réduites à une.
+func _compact(step: int) -> void:
+	match step:
+		0:
+			_body.add_theme_constant_override("separation", 6)
+			if _orn != null:
+				_orn.visible = false
+			if _title != null:
+				_title.add_theme_font_size_override("font_size", 36)
+		1:
+			if _footnote != null:
+				_footnote.visible = false
+		2:
+			if _loot_row != null:
+				_loot_row.visible = false
+		3:
+			if _defeat_note != null:
+				_defeat_note.visible = false
+		4:
+			var seen := 0
+			for c in _body.get_children():
+				if c is Label and c != _title and c != _footnote and (c as Label).get_theme_color("font_color") == UiTheme.GOLD:
+					seen += 1
+					if seen > 1:
+						c.visible = false
+
+
+# --- blocs du lot DNG-1 : objectifs, butin en cases, « Ce qui t'a battu » ---------------------
+## Case de butin d'un vrai objet (pièce, niveau, rareté ; l'infobulle le décrit).
+static func loot_entry(item: Dictionary) -> Dictionary:
+	var slot := String(item.get("slot", ""))
+	return {"name": Items.display_name(item), "sub": "%s · Nv %d" % [String(Items.SLOT_NAMES.get(slot, slot)), int(item.get("level", 1))],
+		"rarity": int(item.get("rarity", 0)), "tip": Items.describe(item, false) if item.has("base") else "", "item": item}
+
+
+func _add_stars(list: Array) -> void:
+	var h := HBoxContainer.new()
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.add_theme_constant_override("separation", 22)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body.add_child(h)
+	for s in list:
+		var done := bool(s.get("done", false))
+		var l := Hud._label(h, "%s %s%s" % ["★" if done else "☆", String(s.get("label", "")), " · nouvelle" if bool(s.get("new", false)) else ""], 18,
+			UiTheme.GOLD if done else UiTheme.MUTED)
+		if String(s.get("tip", "")) != "":
+			l.tooltip_text = String(s.tip)
+			l.mouse_filter = Control.MOUSE_FILTER_PASS
+	_appear(h, 0.1)
+
+
+func _add_loot(list: Array, missing: String) -> void:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body.add_child(v)
+	loot_box = v
+	if not list.is_empty():
+		var h := HBoxContainer.new()
+		h.alignment = BoxContainer.ALIGNMENT_CENTER
+		h.add_theme_constant_override("separation", 10)
+		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(h)
+		_loot_row = h
+		var shown := list.slice(0, 5)
+		for e in shown:
+			var col: Color = Items.RARITIES[clampi(int(e.get("rarity", 0)), 0, Items.RARITIES.size() - 1)].color
+			var p := PanelContainer.new()
+			p.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.06, 0.05, 0.11, 0.95), col, 2, 8, false))
+			p.custom_minimum_size = Vector2(170, 0)
+			if String(e.get("tip", "")) != "":
+				p.tooltip_text = String(e.tip)
+			else:
+				p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			h.add_child(p)
+			var c := VBoxContainer.new()
+			c.add_theme_constant_override("separation", 0)
+			c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			p.add_child(c)
+			var n := Hud._label(c, String(e.get("name", "")), 15, col.lightened(0.2))
+			n.add_theme_font_override("font", UiTheme.bold_font())
+			n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			n.custom_minimum_size = Vector2(150, 0)
+			n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			var sub := Hud._label(c, String(e.get("sub", "")), UiTheme.MIN_TEXT, UiTheme.MUTED)
+			sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		if list.size() > shown.size():
+			Hud._label(h, "+%d" % (list.size() - shown.size()), 20, UiTheme.MUTED).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if missing != "":
+		var m := Hud._label(v, missing, 16, KEPT)
+		m.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		m.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		m.custom_minimum_size = Vector2(WIDTH - 90.0, 0)
+	_appear(v, 0.15)
+
+
+## « Ce qui t'a battu » : les coups des dernières secondes (HitLog.report), la mécanique fautive et son conseil.
+func _add_defeat(rep: Dictionary, note: String) -> void:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.12, 0.04, 0.05, 0.92), Color(LOSE, 0.75), 1, 10, false))
+	p.custom_minimum_size = Vector2(WIDTH - 90.0, 0)
+	p.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_body.add_child(p)
+	defeat_box = p
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 4)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.add_child(v)
+	var head := HBoxContainer.new()
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(head)
+	var t := Hud._label(head, "CE QUI T'A BATTU", 17, LOSE)
+	t.add_theme_font_override("font", UiTheme.bold_font())
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var hits := int(rep.get("hits", 0))
+	Hud._label(head, "les %d dernières secondes · %d coup%s" % [roundi(float(rep.get("window", HitLog.WINDOW))), hits, "s" if hits > 1 else ""],
+		UiTheme.MIN_TEXT, UiTheme.MUTED)
+	for l in defeat_lines(rep):
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(h)
+		var a := Hud._label(h, String(l.text), 16, UiTheme.TEXT)
+		a.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		a.clip_text = true
+		var b := Hud._label(h, String(l.value), 17, LOST)
+		b.add_theme_font_override("font", UiTheme.bold_font())
+	if String(rep.get("tip", "")) != "":
+		var tip := Hud._label(v, String(rep.tip), 16, UiTheme.GOLD)
+		tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		tip.custom_minimum_size = Vector2(WIDTH - 130.0, 0)
+	if note != "":
+		_defeat_note = Hud._label(v, note, UiTheme.MIN_TEXT, UiTheme.MUTED)
+	_appear(p, 0.1)
+
+
+## Lignes du bloc « Ce qui t'a battu » : {text (« Pluie de météores · Latif »), value (« −48 % PV · coup final »)}.
+static func defeat_lines(rep: Dictionary) -> Array:
+	var out: Array = []
+	for l in rep.get("lines", []):
+		var mech := String(l.get("mech", ""))
+		var text := ("%s · %s" % [mech, String(l.name)]) if mech != "" else String(l.name)
+		if int(l.get("count", 1)) > 1:
+			text += " (×%d)" % int(l.count)
+		out.append({"text": text, "value": "−%s PV%s" % [HitLog.pct(float(l.share)), " · coup final" if bool(l.get("final", false)) else ""]})
+	return out
 
 
 func _appear(c: Control, delay: float) -> void:

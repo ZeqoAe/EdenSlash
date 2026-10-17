@@ -148,6 +148,11 @@ Détail : DESIGN « Bibliothèque de boss et donjons à la carte », `R_M2.md`, 
 - **Ruée** : `core/rush.gd` (8 boss tirés à graine, modificateurs), `core/rush_director.gd`. **Siège** : `core/siege.gd`
   (`Siege.boss_for`, `POWER_RATIO`), `core/siege_director.gd`, chacun pour soi (`Combatant.set_ffa`). Pages : jauge de PE
   `Lobby._pe_gauge`, estimation `ui/difficulty_panel.gd` (`Rush.ADVISED`, `Siege.ADVISED`). Rapport `R_M6.md`.
+- **Après-combat** (lot DNG-1, `conception/dungeons/R_DNG1.md`) : « Ce qui t'a battu » `core/hit_log.gd` (`HitLog.note` depuis `Combatant.take_damage`,
+  mécanique fautive par `BossBrain.note_cast` / `blame`, conseils `HitLog.TIPS` des 29 briques), records `core/best_times.gd` (`records.best_times`, horloge
+  `BestTimes.clock`), journal des rencontres (données seules) `core/encounters.gd` (`records.encounters`, `Encounters.card` / `all` pour le futur onglet du
+  Carnet) : tout s'écrit par `commit` après `Profile.reload_keep_records` ; bilans : spec `defeat` / `loot` / `stars` / `missing` de `ResultsPanel` (se resserre
+  en 1280×720), « Réessayer le boss » (`Tower.start_dungeon(…, from_room)`), « Reprendre (étage N) » (`TowerResults.resume_floor`) ; test `test_dng1`.
 
 ### Duel, Arènes, Battle royale
 Règles opérationnelles dans la section « Duel (JcJ) » plus bas. Ligue `core/league.gd` (rangs Bronze à Platine), Panthéon

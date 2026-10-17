@@ -41,6 +41,8 @@ var _curse := ""  # malédiction de l'étage (Tower.CURSES), "" sinon
 var _elites_alive: Array = []  # élites de l'étage (objectif)
 var _lieutenant: Monster  # lieutenant de la salle d'un donjon (objectif)
 var _elites_next := 0  # élites de la salle d'un donjon encore à venir (une à la fois, lot A2)
+var _block_from := -1  # Tour : 1er étage de la tranche de 10 en cours, montée dans cette partie (temps record, lot DNG-1)
+var _block_t0 := 0.0
 
 
 func setup(director: RunDirector) -> void:
@@ -134,6 +136,9 @@ func begin(f: int) -> void:
 	_lieutenant = null
 	_elites_next = 0
 	var tower := not Tower.is_dungeon()  # la Tour elle-même (pas un donjon, la Ruée ni le Siège)
+	if tower and (f - 1) % 10 == 0:
+		_block_from = f
+		_block_t0 = BestTimes.clock
 	if Tower.is_duel_floor(f):
 		left = 0
 		_spawn_rival(f, lvl)
@@ -433,6 +438,7 @@ func alive() -> int:
 
 
 func update(delta: float) -> void:
+	BestTimes.tick(delta)  # temps de la partie (lot DNG-1 : records)
 	match phase:
 		"fight":
 			_update_fight(delta)
@@ -499,6 +505,8 @@ func _update_fight(delta: float) -> void:
 func _cleared() -> void:
 	var f := Tower.floor_n
 	Tower.reached = f
+	if not Tower.is_dungeon() and f % 10 == 0 and _block_from == f - 9:
+		BestTimes.note(BestTimes.tower_key(Tower.difficulty, f / 10 - 1), "Étages %d-%d" % [f - 9, f], BestTimes.clock - _block_t0)
 	d.player.heal(d.player.max_hp * 0.1)
 	if _curse != "":
 		Tower.cursed_cleared += 1  # cristaux en plus à la fin de l'ascension

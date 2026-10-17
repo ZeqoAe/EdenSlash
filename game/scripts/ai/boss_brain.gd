@@ -41,6 +41,7 @@ var _stagger := 0.0
 var _brick_t: Array = []
 var _thresholds_done := {}
 var _totems: Array = []
+var _casts: Array = []  # [[instant (HitLog.clock), type]] : dernières mécaniques et attaques lancées (« Ce qui t'a battu »)
 const KIT := ["slams", "charge", "cleave", "barrage", "nova"]
 
 
@@ -136,6 +137,32 @@ func _physics_process(delta: float) -> void:
 		_cooldown = 1.0  # attaque tirée absente du jeu de base de ce boss : il frappe au corps à corps
 
 
+## Mécanique ou attaque de base [param type] lancée maintenant : journal des coups (HitLog) et des rencontres (Encounters).
+func note_cast(type: String) -> void:
+	_casts.append([HitLog.clock(), type])
+	if _casts.size() > 8:
+		_casts.pop_front()
+	if is_instance_valid(boss) and boss.has_meta("boss_id"):
+		Encounters.saw(String(boss.get_meta("boss_id")), type)
+
+
+## La mécanique responsable d'un coup de ce boss reçu maintenant : la dernière lancée dont la fenêtre (HitLog.window_of)
+## couvre cet instant ; [param dot] (dégâts continus) : d'abord une mécanique qui laisse une zone au sol. "" : aucune.
+func blame(dot := false) -> String:
+	var now := HitLog.clock()
+	if dot:
+		for i in range(_casts.size() - 1, -1, -1):
+			var c: Array = _casts[i]
+			if String(c[1]) in HitLog.DOT_BRICKS and now - float(c[0]) <= HitLog.window_of(String(c[1])):
+				return String(c[1])
+	for i in range(_casts.size() - 1, -1, -1):
+		var c: Array = _casts[i]
+		var w := HitLog.window_of(String(c[1]))
+		if w > 0.0 and now - float(c[0]) <= w:
+			return String(c[1])
+	return ""
+
+
 func _speed() -> float:
 	return 0.75 if _phase2 else 1.0
 
@@ -203,6 +230,7 @@ func _start_reflect() -> void:
 
 # --- attaques -----------------------------------------------------------------------
 func _cast_slams() -> void:
+	note_cast("slams")
 	var delay := 1.3 * _speed()
 	_begin("magic01", 0.5 * 3 + delay)
 	for i in 3:
@@ -214,6 +242,7 @@ func _cast_slams() -> void:
 
 
 func _cast_charge() -> void:
+	note_cast("charge")
 	var delay := 1.0 * _speed()
 	var to := boss._player.global_position - boss.global_position
 	to.y = 0.0
@@ -228,6 +257,7 @@ func _cast_charge() -> void:
 
 
 func _cast_cleave() -> void:
+	note_cast("cleave")
 	var delay := 0.8 * _speed()
 	var to := boss._player.global_position - boss.global_position
 	boss.face_direction(to, 1.0, 100.0)
@@ -236,6 +266,7 @@ func _cast_cleave() -> void:
 
 
 func _cast_barrage() -> void:
+	note_cast("barrage")
 	var delay := 0.7 * _speed()
 	var to := boss._player.global_position - boss.global_position
 	to.y = 0.0
@@ -256,6 +287,7 @@ func _cast_barrage() -> void:
 
 
 func _cast_nova() -> void:
+	note_cast("nova")
 	_nova_timer = 14.0
 	var delay := 1.6 * _speed()
 	Telegraph.spawn(boss, boss.global_position, 0.0, {"shape": "ring", "radius": 12.0, "inner": 3.0, "delay": delay, "damage": _dmg(2.0), "source": boss, "jumpable": true, "stun_time": 1.5})
@@ -352,6 +384,8 @@ func _summon(ids: Array, count: int, dist: float, elite := false) -> Array:
 		var p := boss.global_position + Vector3(cos(a), 0, sin(a)) * dist
 		var m = director.summon_for_boss(int(ids.pick_random()) if not ids.is_empty() else 0, p, elite)
 		if m != null:
+			if not _casts.is_empty() and m is Node:
+				(m as Node).set_meta("boss_brick", String(_casts.back()[1]))  # « Ce qui t'a battu » : la mécanique qui l'appelle
 			out.append(m)
 	return out
 

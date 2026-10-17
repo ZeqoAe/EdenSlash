@@ -131,7 +131,8 @@ static var cursed_cleared := 0  # étages maudits franchis pendant l'ascension (
 ## Lance l'ascension avec la classe [param cid], en [param diff], à l'étage [param from].
 ## Lance le donjon de la zone [param zid] en difficulté [param diff] avec les alliés IA [param ally_ids] ; [param boss_id] :
 ## le boss de la bibliothèque choisi (donjon à la carte), par défaut celui de la zone.
-static func start_dungeon(cid: String, zid: String, diff: int, ally_ids: Array, boss_id := "") -> void:
+## [param from_room] > 1 : « Réessayer le boss » (lot DNG-1) : la partie reprend à cette salle, une carte tirée par salle sautée.
+static func start_dungeon(cid: String, zid: String, diff: int, ally_ids: Array, boss_id := "", from_room := 1) -> void:
 	start(cid, 1, 1)
 	dungeon = zid
 	rush = zid == Dungeons.RUSH
@@ -147,6 +148,14 @@ static func start_dungeon(cid: String, zid: String, diff: int, ally_ids: Array, 
 	if Run.skills.is_empty():
 		for s in (Run.class_data().get("skills", []) as Array).slice(0, 4):
 			Run.skills.append({"id": int(s.id), "rank": 1})
+	if from_room > 1 and not rush:
+		start_floor = clampi(from_room, 1, Dungeons.ROOMS.size())
+		floor_n = start_floor
+		reached = start_floor - 1
+		for i in start_floor - 1:
+			var pick: Array = Run.roll_cards(1)
+			if not pick.is_empty():
+				Run.apply_card(pick[0])
 
 
 ## Lance Le Siège de la zone [param zid] : deux alliés IA (complétés au hasard), cinq vagues, le boss, le chacun pour soi.
@@ -173,6 +182,9 @@ static func start(cid: String, diff := 1, from := 1) -> void:
 	reached = start_floor - 1
 	found = []
 	cursed_cleared = 0
+	HitLog.reset()  # lot DNG-1 : coups reçus, temps et rencontres de la partie
+	BestTimes.reset()
+	Encounters.reset()
 	Run.start(cid)
 	# le préréglage d'équipement de la classe sert de base (Profile.begin_run) ; une arme
 	# commune s'il n'y en a pas
@@ -784,6 +796,8 @@ static func finish() -> Dictionary:
 	Profile.gold = 0
 	Profile.keys = 0
 	Profile.bag = {}
+	BestTimes.commit()  # après le rechargement du profil (lot DNG-1)
+	Encounters.commit()
 	for it in found:
 		Profile.vault.append(it)  # le coffre commun (l'inventaire du lobby en est tiré)
 	var old := best()
@@ -841,6 +855,13 @@ static func _finish_dungeon() -> Dictionary:
 	Profile.bag = {}
 	var rew := {}
 	var was_rush := rush
+	if victory and start_floor == 1 and not was_siege:  # temps complet (lot DNG-1) : pas une reprise au boss
+		if was_rush:
+			BestTimes.note(BestTimes.rush_key(Rush.seed, diff), "Tirage n° %d" % Rush.seed, BestTimes.clock)
+		elif BossLibrary.has(bid):
+			BestTimes.note(BestTimes.dungeon_key(bid, diff), Dungeons.dungeon_name(bid), BestTimes.clock)
+	BestTimes.commit()  # après le rechargement du profil (lot DNG-1)
+	Encounters.commit()
 	if was_siege:
 		rew = Siege.settle(zid, diff, reached, sg_outcome)  # des cristaux dès les premières vagues
 	elif was_rush:
@@ -863,6 +884,7 @@ static func _finish_dungeon() -> Dictionary:
 	var rank := Siege.rank
 	Siege.reset()
 	return {"dungeon": true, "rush": was_rush, "siege": was_siege, "outcome": sg_outcome, "rank": rank, "victory": victory, "rooms": reached,
+		"start_room": start_floor, "rush_seed": Rush.seed if was_rush else 0,
 		"xp": xp, "levels": lv, "reward": rew, "zone": zid, "diff": diff, "boss": bid}
 
 

@@ -64,6 +64,8 @@ var _target_ref: WeakRef
 var _center_label: Label  # titre du bandeau d'annonce
 var _center_sub: Label  # détail du bandeau (2e ligne et suivantes)
 var _banner: PanelContainer
+const BANNER_SIDE := 270.0  # place gardée de chaque côté du bandeau d'annonce (mini-carte à droite, lot DNG-1)
+const BANNER_MAX := 1000.0
 var _feed: VBoxContainer  # fil de butin (à gauche) : petites lignes qui s'effacent
 ## Messages qui vont dans le fil de butin plutôt que dans le bandeau (début du texte).
 const FEED_PREFIXES := ["Butin", "Clé", "Une clé", "Coffre", "Coffre ouvragé", "Coffre doré", "Équipé", "Rangé", "Cristal", "Potion"]
@@ -548,6 +550,7 @@ func _build_minimap(root: Control) -> void:
 	_dmg_box = VBoxContainer.new()
 	_dmg_box.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	_dmg_box.position = Vector2(-260, 268)
+	_dmg_box.grow_horizontal = Control.GROW_DIRECTION_BEGIN  # (lot DNG-1 : un grand nombre l'élargit vers la gauche, jamais hors de l'écran)
 	_dmg_box.custom_minimum_size = Vector2(240, 0)
 	_dmg_box.alignment = BoxContainer.ALIGNMENT_END
 	_dmg_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1151,11 +1154,13 @@ func show_message(text: String, duration: float) -> void:
 	var lines := text.split("\n", false, 1)
 	_center_label.text = lines[0] if not lines.is_empty() else ""
 	_center_sub.text = lines[1] if lines.size() > 1 else ""
+	_fit_banner()
 	_center_sub.visible = lines.size() > 1
 	if _msg_tween:
 		_msg_tween.kill()
 	_banner.modulate.a = 0.0
 	_banner.reset_size()
+	_center_banner()
 	_banner.pivot_offset = _banner.get_combined_minimum_size() * 0.5
 	_settle_banner()
 	_banner.scale = Vector2(1.06, 1.06)
@@ -1167,12 +1172,38 @@ func show_message(text: String, duration: float) -> void:
 	_msg_tween.chain().tween_property(_banner, "modulate:a", 0.0, 0.5)
 
 
+## Bandeau centré sur l'écran quelle que soit sa largeur (reset_size garde le bord gauche, lot DNG-1).
+func _center_banner() -> void:
+	var w := maxf(_banner.size.x, _banner.get_combined_minimum_size().x)
+	_banner.offset_left = -w * 0.5
+	_banner.offset_right = w * 0.5
+
+
+## Largeur du bandeau d'annonce (lot DNG-1) : jamais plus que l'espace entre la mini-carte et le bord gauche, centré ; un
+## titre trop long (une intro de boss en une ligne) passe à la ligne au lieu de sortir de l'écran.
+func _fit_banner() -> void:
+	var vw := get_viewport().get_visible_rect().size.x if is_inside_tree() else 1600.0
+	var room := clampf(vw - 2.0 * BANNER_SIDE, 460.0, BANNER_MAX)
+	var inner := room - 140.0  # marges du bandeau (70 de chaque côté)
+	var font := _center_label.get_theme_font("font")
+	var fs := _center_label.get_theme_font_size("font_size")
+	var wide := font != null and font.get_string_size(_center_label.text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > inner
+	_center_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if wide else TextServer.AUTOWRAP_OFF
+	_center_label.custom_minimum_size.x = inner if wide else 0.0
+	_center_sub.custom_minimum_size.x = minf(460.0, inner)
+	var sub_font := _center_sub.get_theme_font("font")
+	var sub_wide := sub_font != null and sub_font.get_string_size(_center_sub.text, HORIZONTAL_ALIGNMENT_LEFT, -1, _center_sub.get_theme_font_size("font_size")).x > inner
+	if sub_wide:
+		_center_sub.custom_minimum_size.x = inner
+
+
 ## Un conteneur grandit tout seul mais ne rétrécit pas : le texte à renvoyer à la ligne se mesure à la largeur du
 ## bandeau, qu'on ne connaît qu'une image plus tard ; on le recale alors (sinon un grand vide sous le titre).
 func _settle_banner() -> void:
 	await get_tree().process_frame
 	if is_instance_valid(_banner):
 		_banner.reset_size()
+		_center_banner()
 		_banner.pivot_offset = _banner.size * 0.5
 
 

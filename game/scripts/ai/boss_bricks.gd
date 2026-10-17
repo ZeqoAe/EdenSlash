@@ -134,6 +134,7 @@ static func hint_of(type: String) -> String:
 ## Lance la brique [param br] (normalisée) pour le cerveau [param b] ; true : le boss est occupé (incantation).
 static func run(b: BossBrain, br: Dictionary) -> bool:
 	var p: Dictionary = br.get("p", {})
+	b.note_cast(String(br.get("type", "")))  # journal des coups et des rencontres (lot DNG-1)
 	match String(br.get("type", "")):
 		"puddles": return _puddles(b, p)
 		"meteors": return _meteors(b, p)

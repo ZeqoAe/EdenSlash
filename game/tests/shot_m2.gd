@@ -55,7 +55,7 @@ func _ready() -> void:
 	p.dev_invincible = true
 	world.cards._queue.clear()
 	world.cards._show_next()
-	d.tower.begin(4)
+	d.tower.begin(Dungeons.ROOMS.size())  # salle du boss (3 salles depuis le lot A2 : « Salle 3/3 »)
 	d.tower.phase = "done"  # salle figée : retirer les boss ne termine pas le donjon
 	await get_tree().create_timer(0.5).timeout
 	var center: Vector3 = d.tower._center
