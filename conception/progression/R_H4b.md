@@ -33,11 +33,11 @@ même héros (I-2 : I-1 +5 ; II-1 : I-3 +0 ; III-2 : II-3 +5 ; IV-1 : III-2 +5 ;
 | II-2 | 70 % | 15 % | 100 % | — |
 | II-3 | 60 % | 0 % | 100 % | 50 % |
 | III-1 | 65-75 % (deux séries) | 0-5 % | 100 % | — |
-| III-2 | 60 % | 0 % | 100 % | (en cours à l'envoi) |
+| III-2 | 60 % | 0 % | 100 % | 50 % |
 | III-3 | 65 % | 20 % | 100 % | — |
-| IV-1 | 65 % | 20 % | 95 % | (en cours à l'envoi) |
+| IV-1 | 65 % | 20 % | 95 % | — (série arrêtée : machine saturée) |
 | IV-2 | 65 % | 5 % | 80 % (héros 90 : 5 niveaux d'avance seulement) | — |
-| IV-3 | 75 % | 15 % | 85 % | (en cours à l'envoi) |
+| IV-3 | 75 % | 15 % | 85 % | — |
 
 Avant (HEAD 0.1.254, sonde 10 combats) : correct I-1 100 %, I-2 50, I-3 50, II-1 90, II-2 90, II-3 70, III-1 100, III-2 90, III-3 90,
 IV-1 80, IV-2 90, IV-3 70 ; compte neuf sur I-1 à l'aide Bot 95 % (0,5) / 85 % (0,3).
@@ -60,7 +60,8 @@ face au guerrier, plus de dégâts subis par minute à distance) : **à traiter 
 | `MAP_MULT`, `BOSS_HP_MAP`, `BOSS_HP_EPOCH`, rage | — | inchangés (PV fixes par carte, rage 2:30 / 3:00 / 4:00) |
 
 `MAP_ATK` suit `BOSS_ATK` là où la sonde a été réglée avec `--atk-scale` (les renforts du boss en profitent) ; la carte n'en devient
-pas mortelle : 0 mort sur la carte en 30 parties entières (I-2, II-1, II-3).
+pas mortelle : 0 mort sur la carte en 40 parties entières (I-2, II-1, II-3, III-2). Parties entières (aide Bot) : 30-60 %,
+un peu sous la sonde (boss atteint à 6 min, avec moins de cartes et de trophées qu'une « bonne run »).
 
 ## Progression sur 50 h (`progression_sim --heros --refonte --plans=boss --hubvalue --bossplans`, 12 comptes, guerrier)
 
