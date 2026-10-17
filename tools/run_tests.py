@@ -84,6 +84,10 @@ def preparer_copie(snap: Path) -> Path:
     # Remise de l'état de HEAD : fichiers suivis modifiés / supprimés -> contenu de HEAD ; ajoutés ou non suivis -> retirés.
     modifies = [p for p in git("diff", "--name-only", "-z", "--no-renames", "HEAD", "--", "game").split("\0") if p]
     non_suivis = [p for p in git("ls-files", "--others", "--exclude-standard", "-z", "--", "game").split("\0") if p]
+    # L'index peut être en retard sur HEAD (plusieurs sessions commitent par un index temporaire) : un fichier
+    # absent de l'index mais présent dans HEAD n'est PAS un fichier non suivi, il faut le garder.
+    dans_head = set(p for p in git("ls-tree", "-r", "-z", "--name-only", "HEAD", "--", "game").split("\0") if p)
+    non_suivis = [p for p in non_suivis if p not in dans_head]
     rendus = retires = 0
     for p in modifies:
         cible = snap / p
