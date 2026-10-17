@@ -8,6 +8,9 @@
 - Études comparatives par mode (`conception/benchmark/METHODE.md`) : images tierces hors dépôt (`C:\AI\benchmark_refs`), dépôt GitHub public ; modes de progression inspirés des MMORPG sans la corvée.
 - 3 activités à ajouter ensuite : Arena façon LoL, MOBA 4v4, mode tactique 4v4 (bombe façon CS / Valorant ou objectifs façon Overwatch) : étude → spécification → lots.
 
+- **Style visuel choisi (17/10)** : LoRA `eden_style_v0b` à l'intensité **0,5** (celui qui donne « les plus beaux personnages ») ; modèle de base SDXL, entraînement local (~30 min), RunPod inutile pour le style (15 $ de crédit gardés pour des générations lourdes éventuelles). Scripts `tools/art/` (`train_lora.py`, `gen_with_lora.py`, `lora_dataset.py`), rapport `conception/art/lora/R_LORA.md`.
+- Quota : surveiller `get_usage` à chaque vague ; viser 4 à 6 agents en parallèle ; deux semaines de délai (fin du mois), pas de course.
+
 ## Terminé et poussé (versions 0.1.214 → 0.1.256 et plus)
 Battle royale BR1-BR5 ; Survivant S9 (12 sorts, orbes) ; N2 (deux armes, plus d'enclume) ; refonte Aventure A1-A5, A7, H1-H4a, H7 ; C1 (création de personnage) ; K1 (curseurs) ; T1 (tests) ; L'Échiquier AC-A à AC-J, AC-I ; DV1 (intégration continue, `check_scripts`) ; NT1 (hub Notion) ; G1 (ComfyUI) ; DA v1 / v2 (bible, tokens, pistes) ; études BM-BR, BM-AUTO, BM-SURV.
 
