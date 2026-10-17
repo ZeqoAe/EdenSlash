@@ -46,6 +46,7 @@ var delay := 1.2
 var damage := 100.0
 var source: Combatant
 var stun_time := 0.0  # étourdit le héros touché
+var applies: Dictionary = {}  # (L'Assaut, lot TAC-4) effets du sort d'un héros scripté posés sur qui est touché
 var crit := false  # coup critique (adversaire de duel)
 var jumpable := false  # onde au sol : évitée si le héros est en l'air
 var small := false  # attaque de monstre ordinaire : annonce plus discrète
@@ -359,6 +360,7 @@ func _resolve() -> void:
 			if target.has_method("is_invulnerable") and target.is_invulnerable():
 				continue
 			target.take_damage(damage, src, crit)
+			_apply_effects(target, src)
 			hit = true
 			continue
 		var dodged_by_jump := jumpable and player.is_airborne() and player.global_position.y > global_position.y + 0.4
@@ -373,6 +375,7 @@ func _resolve() -> void:
 			Quests.event("zone_hit")  # quête « sans dégât de zone » (passe M5)
 			if stun_time > 0.0:
 				player.stun(stun_time)
+			_apply_effects(player, src)
 			hit = true
 	resolved.emit(hit)
 	# éclat final puis disparition
@@ -385,6 +388,19 @@ func _resolve() -> void:
 	var tw := create_tween()
 	tw.tween_property(flash.material_override, "albedo_color:a", 0.0, 0.25)
 	tw.tween_callback(queue_free)
+
+
+## Effets du sort (applies) sur [param target] touché : le héros joueur est renversé par stun / freeze / sleep (Player.stun),
+## le reste passe par add_status (règles de contrôle du mode : AssaultCombat). Vide hors de L'Assaut.
+func _apply_effects(target: Combatant, src: Combatant) -> void:
+	if applies.is_empty() or target.is_dead:
+		return
+	for s in applies:
+		var d := float(applies[s])
+		if target is Player and String(s) in ["stun", "freeze", "sleep"]:
+			(target as Player).stun(d)
+		else:
+			target.add_status(String(s), d, src)
 
 
 ## Le point (monde) est-il dans la zone ?

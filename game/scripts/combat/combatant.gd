@@ -76,6 +76,7 @@ const STATUS_INFO := {
 	"imm_fear": {"name": "Insensible à la terreur", "color": Color(0.8, 0.85, 1.0)},
 	"imm_root": {"name": "Insensible à l'immobilisation", "color": Color(0.8, 0.85, 1.0)},
 	"imm_disarm": {"name": "Insensible au désarmement", "color": Color(0.8, 0.85, 1.0)},
+	"imm_cc": {"name": "Insensible aux contrôles", "color": Color(0.8, 0.85, 1.0)},  # (L'Assaut, lot TAC-4 : insensibilité commune)
 	# bonus d'attribut au lancement des sorts (cartes d'amélioration)
 	"spell_str": {"name": "Force du sort", "color": Color(1.0, 0.65, 0.45)},
 	"spell_agi": {"name": "Agilité du sort", "color": Color(0.6, 1.0, 0.8)},
@@ -132,6 +133,8 @@ func cc_refused(status: String) -> bool:
 func _cc_gate(status: String, duration: float) -> bool:
 	if not status in CC_TYPES:
 		return true
+	if AssaultCombat.on():
+		return AssaultCombat.cc_gate(self, status, duration)  # (L'Assaut, lot TAC-4) insensibilité commune aux contrôles durs
 	if cc_refused(status):
 		if has_status("imm_" + status) and not has_status(status) and clock - _cc_msg_at > 2.0:
 			_cc_msg_at = clock
@@ -144,6 +147,8 @@ func _cc_gate(status: String, duration: float) -> bool:
 func add_status(status: String, duration: float, source: Combatant = null) -> void:
 	if ColiseeAugments.active:
 		duration = ColiseeAugments.status_time(self, status, duration, source)  # (Le Colisée, lot CO-E) Ancre
+	if AssaultCombat.on():
+		duration = AssaultCombat.status_duration(self, status, duration)  # (L'Assaut, lot TAC-4) contrôles et invisibilité bornés
 	if duration <= 0.0:
 		return
 	if not _cc_gate(status, duration):
@@ -221,6 +226,8 @@ func damage_taken_mult() -> float:
 		m *= 0.5
 	if has_status("resolve"):
 		m *= 0.85
+	if AssaultCombat.on():
+		m = AssaultCombat.taken_mult(self, m)  # (L'Assaut, lot TAC-4) boucliers affaiblis, jamais sous le plancher
 	return m
 
 
@@ -409,6 +416,8 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 	var pvp := hvh and PvpCaps.active()
 	if pvp:
 		amount *= PvpCaps.damage_mult(self, source)  # duel : échelle propre (PvpCaps)
+		if AssaultCombat.on():
+			amount *= AssaultCombat.hit_mult(source, self)  # (L'Assaut, lot TAC-4) chute de portée, prise à revers
 	elif hvh:
 		amount *= hero_vs_hero_factor(maxi(level, source.level))
 	# la défense réduit en pourcentage (100 déf = -50 %) : les petits coups restent dangereux ;
@@ -436,6 +445,8 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 		HitLog.note(self, dmg, source, dot)  # « Ce qui t'a battu » (lot DNG-1)
 	health_changed.emit(hp, max_hp)
 	damaged.emit(dmg, source)
+	if AssaultCombat.on():
+		AssaultCombat.on_hit(source, self, dot)  # (L'Assaut, lot TAC-4) invisibilité brisée, cible du Tireur révélée
 	if not dot and has_status("sleep"):
 		statuses.erase("sleep")  # un coup réveille
 		statuses_changed.emit()
@@ -480,6 +491,8 @@ func heal(amount: float) -> void:
 	if PvpCaps.active():
 		amount *= PvpCaps.heal_mult()
 	amount *= heal_taken
+	if AssaultCombat.on():
+		amount = AssaultCombat.heal_amount(self, amount)  # (L'Assaut, lot TAC-4) soins plafonnés par manche
 	var before := hp
 	hp = minf(max_hp, hp + amount)
 	if team == Team.PLAYER and Run.active:

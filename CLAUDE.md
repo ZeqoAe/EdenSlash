@@ -325,6 +325,13 @@ Charge (TAC-3, `R_TAC_3.md`) : `world/assault_charge.gd` (`AssaultCharge` : port
 directeur : `_pick_carrier` (toi si tu attaques, sinon pas celui qui ouvre), `_drop_charge` (mort du porteur, [G]), `_try_pickup` (1,5 m), `charge_seen` (Défense : seulement si elle
 voit l'endroit), `markers()` (mini-carte, via `RunDirector.markers` en état « team »), `_interrupted` (un contrôle annule pose et désamorçage), `blasted` (explosion 9 m) ;
 `--assault-rule=clé:valeur` ; mesures IA contre IA `python tools/assault_games.py --games 8 -j 2 [--win 4 --rule buy_time:2]` ; test `test_tac3`.
+Kits et combat (TAC-4, `R_TAC_4.md`) : `tools/assault_kits.py` -> `data/assault_kits.json` (rôle tactique d'après `autochess_units.json`, 4 cases : signature gratuite, cases 2 et 3
+à prix selon leur nature, ultime à 7 points et zone × 1,3 ; `--check`) ; `core/assault_combat.gd` (`AssaultCombat.on()` garde tout : contrôles × 0,5 + plafonds `cc_caps`, insensibilité
+commune `imm_cc`, ténacité, invisibilité 2,5 s, boucliers bornés, soins plafonnés `heal_cap` (Soutien : moitié, `AssaultCombat.healer`), chute de portée, prise à revers, révélation
+du Tireur `AssaultVision.reveal`, `arm_rival`, `set_role`, `sheet`) branché dans `Combatant` (`_cc_gate`, `add_status`, `take_damage`, `damage_taken_mult`, `heal`), `Player`
+(`stun`, `recalc_stats`, `_heal_action`, `skill_radius`), `ClassRival` (soins, `applies` des sorts), `Telegraph._apply_effects`, `Monster` (ralenti) ; règles chiffrées dans
+`Assault.RULES` (échelle 0,6, coup 30 %, rafale 45 % + 5 %, acharnement dès 12 s) ; sonde `godot --headless --fixed-fps 60 --path game res://tools/assault_duel_probe.tscn
+[-- --duels=60 --focus=25 --diff=1 --same-role --scale= --hit= --burst= --basic= --press=]` ; `tools/assault_games.py` lit aussi la ligne `[assault] mesure` (rôles, temps de survie) ; test `test_tac4`.
 
 ### Classes maison (lot CHR-1, `conception/art/R_CHR1.md`, limites : `conception/art/CHR.md`)
 `data/classes_custom.json` -> `GameData.custom_classes` (à part : `GameData.classes` reste les 60 d'Eden, aucun tirage des modes à IA,

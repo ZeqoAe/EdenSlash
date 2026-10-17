@@ -342,7 +342,7 @@ func _physics_process(delta: float) -> void:
 	else:
 		desired += _separation() * 1.8
 	if has_status("chill"):
-		desired *= 0.55
+		desired *= AssaultCombat.chill_speed() if AssaultCombat.on() else 0.55  # (L'Assaut, lot TAC-4 : ralenti borné)
 	if has_status("root"):
 		desired = Vector3.ZERO
 	elif has_status("fear") and _player_alive():

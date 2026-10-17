@@ -57,6 +57,9 @@ var seen: Array = [{}, {}]  # équipe -> {id d'instance: héros qui le voit}
 var last: Array = [{}, {}]  # équipe -> {id: {pos, t, who}}
 var noises: Array = [[], []]  # équipe -> bruits entendus
 var smokes: Array = []  # [{pos: Vector2 (monde xz), r, until}] : brumes (lot TAC-5), coupent la vue
+## Héros révélés à une équipe même sans ligne de vue (lot TAC-4 : cible du Tireur ; TAC-5 : Œil de chouette, piège) :
+## équipe -> {id d'instance: [jusqu'à (temps de la vision), révélé par]}.
+var reveals: Array = [{}, {}]
 var grass: Array = []  # Rect2 (monde xz)
 var viewer: Combatant  # héros dont on dessine le voile (le joueur, ou celui que l'on regarde)
 var view_team := 0
@@ -189,6 +192,16 @@ static func blocks_zone(tg: Node3D, src: Combatant, target: Combatant) -> bool:
 	return blocks_shot(o, target.global_position)
 
 
+## Révèle [param c] à l'équipe [param team] pendant [param secs] s (vu « par » [param by] : dernière position, contour).
+func reveal(team: int, c: Combatant, secs: float, by: Combatant = null) -> void:
+	if team < 0 or team >= reveals.size() or c == null or not is_instance_valid(c):
+		return
+	var id := c.get_instance_id()
+	var until := time + secs
+	if float((reveals[team] as Dictionary).get(id, [0.0])[0]) < until:
+		reveals[team][id] = [until, by]
+
+
 func sees(team: int, c: Combatant) -> bool:
 	return team >= 0 and team < seen.size() and c != null and (seen[team] as Dictionary).has(c.get_instance_id())
 
@@ -239,6 +252,8 @@ static func perceives(c: Combatant, target: Combatant) -> bool:
 func perceived(t: int, c: Combatant, x: Combatant) -> bool:
 	if x == null or not is_instance_valid(x):
 		return false
+	if c.has_status("blind"):
+		return false  # (lot TAC-5) ébloui par un Éclat aveuglant : il perd sa cible
 	return sees(t, x) or c.global_position.distance_to(x.global_position) <= TOUCH
 
 
@@ -300,6 +315,12 @@ func _team_vision() -> void:
 				if can_see(v, ec):
 					now[ec.get_instance_id()] = v
 					break
+			var rv = (reveals[t] as Dictionary).get(ec.get_instance_id())
+			if rv != null and float(rv[0]) > time and not now.has(ec.get_instance_id()) and not mine.is_empty():
+				now[ec.get_instance_id()] = rv[1] if is_instance_valid(rv[1]) else mine[0]  # (lot TAC-4) révélé
+		for id in (reveals[t] as Dictionary).keys():
+			if float(reveals[t][id][0]) <= time:
+				reveals[t].erase(id)
 		for id in now:
 			if not (seen[t] as Dictionary).has(id):
 				spotted.emit(t, instance_from_id(id), now[id])
@@ -334,7 +355,8 @@ func _listen() -> void:
 			var r := c as ClassRival
 			if r._time < r._dash_until:
 				kind = "dodge"
-		if kind == "" and Vector2(c.velocity.x, c.velocity.z).length() > RUN_SPEED:
+		var quiet := float(c.get_meta("assault_quiet", RUN_SPEED))  # (lot TAC-5) Bottes feutrées : pas silencieux plus vite
+		if kind == "" and not c.has_status("silent") and Vector2(c.velocity.x, c.velocity.z).length() > quiet:
 			kind = "steps"
 		if kind != "" and time >= float(_noise_at.get(id, 0.0)):
 			_noise_at[id] = time + (0.5 if kind == "steps" else 0.3)

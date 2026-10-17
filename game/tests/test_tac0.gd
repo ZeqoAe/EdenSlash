@@ -40,9 +40,10 @@ func _rules_and_mode() -> void:
 	check("mode courant assault, type objectif, scellé, JcJ", Modes.current() == "assault" and Modes.kind() == "objective"
 		and Modes.sealed() and Modes.is_pvp() and Modes.hero_match())
 	check("ni Duel.active ni Royale.active (piège 1 de R_MODE0)", not Duel.active and not Royale.active)
-	check("règles de combat du profil : échelle 0,13, coup ≤ 25 %, rafale ≤ 55 %", ModeRules.profile_name() == "assault"
-		and is_equal_approx(PvpCaps.damage_scale(), 0.13) and is_equal_approx(ModeRules.num("hit_cap"), 0.25)
-		and is_equal_approx(ModeRules.num("burst_cap"), 0.55))
+	check("règles de combat du profil (Assault.RULES, mesurées au lot TAC-4)", ModeRules.profile_name() == "assault"
+		and is_equal_approx(PvpCaps.damage_scale(), float(Assault.RULES.dmg_scale))
+		and is_equal_approx(ModeRules.num("hit_cap"), float(Assault.RULES.hit_cap))
+		and is_equal_approx(ModeRules.num("burst_cap"), float(Assault.RULES.burst_cap)))
 	check("ni potions, ni cartes de niveau, ni journal, ni sauvegarde", not TeamMatch.allows("potions")
 		and not TeamMatch.allows("level_cards") and not TeamMatch.allows("journal") and not TeamMatch.allows("save"))
 	DevEdits.data["modes"] = {"assault": {"round_time": 77.0}}

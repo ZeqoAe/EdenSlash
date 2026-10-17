@@ -1391,6 +1391,15 @@ empêche ou la désamorce ; une vie par manche, or entre les manches. Ce qui est
   la moitié si on l'a dépassée) annulés par un pas, un coup, un sort, une esquive ou un contrôle subi. Après la pose : 40 s de
   bips qui accélèrent, « 10 secondes ! », puis l'explosion emporte tout héros à moins de 9 m. « Ouf ! » si l'on désamorce à
   moins d'une seconde.
+- **Kits et rôles** (lot TAC-4) : chaque classe joue 4 sorts tirés de ses sorts par des règles (le sort de dégâts le plus
+  rapide, gratuit ; la mobilité ou un second sort de dégâts ; l'utilité de la classe selon son rôle ; un ultime chargé en
+  jouant, à la zone plus large), sans enchaînement, et l'un des 5 rôles : Rempart (plus de vie, contrôles plus courts),
+  Ouvreur (une esquive de plus, plus fort sur qui ne l'a pas vu venir), Tireur (porte plus loin, révèle sa cible), Contrôleur
+  (utilitaires moins chers), Soutien (ses soins pèsent moins dans la limite).
+- **Une vie par manche** (lot TAC-4) : un duel dure une dizaine de secondes, personne ne tombe en moins de quatre secondes
+  même pris à trois ; contrôles deux fois plus courts et plafonnés, puis insensible à tout contrôle dur un moment ; invisibilité
+  brève, brisée par un coup, interdite à qui porte, pose ou désamorce la Charge ; boucliers moins forts ; soins limités à un peu
+  plus de la moitié de la vie par manche ; les coups de très loin portent moins.
 
 # Partie D — Économie et progression
 

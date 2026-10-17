@@ -327,7 +327,9 @@ func _support_tick() -> void:
 				if c != null and not c.is_dead and c.hp < c.max_hp * 0.5 and (low == null or c.hp / c.max_hp < low.hp / low.max_hp):
 					low = c
 			if low != null:
+				AssaultCombat.healer = self  # (L'Assaut, lot TAC-4) les soins d'un Soutien pèsent moitié dans le plafond
 				low.heal(low.max_hp * clampf(float(s.get("heal", 0.25)), 0.1, 0.5))
+				AssaultCombat.healer = null
 				Vfx.ring(low, low.global_position, 2.0, Color(0.5, 1.0, 0.55, 0.9))
 				_support_ready_at = _time + maxf(float(s.get("cooldown", 12.0)), 6.0)
 				return
@@ -814,6 +816,8 @@ func _start_attack() -> void:
 	var rng := float(act.get("range", 0.0))
 	var at := global_position
 	var props := {"delay": delay, "damage": dmg, "source": self, "crit": is_crit}
+	if not sk.is_empty() and AssaultCombat.on():
+		props["applies"] = sk.get("applies", {})  # (L'Assaut, lot TAC-4) ses contrôles touchent (règles du mode : AssaultCombat)
 	if has_meta("mist_double"):
 		props.merge({"color": Telegraph.PLAYER_COLOR, "small": true})  # double de brume (lot CHR-1) : zone bleue du camp du joueur
 	if kind == "ground":

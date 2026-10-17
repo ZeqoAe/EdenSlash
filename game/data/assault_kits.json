@@ -1,0 +1,2163 @@
+{
+ "_doc": "Kits de L'Assaut : générés par tools/assault_kits.py depuis data/classes.json et data/autochess_units.json (ne pas modifier à la main : règles et EXCEPTIONS dans le script).",
+ "absolute_arrow": {
+  "role": "tireur",
+  "family": 3,
+  "slots": [
+   {
+    "id": 50096,
+    "name": "Pilonnage",
+    "nature": "damage",
+    "kind": "bolt",
+    "free": true
+   },
+   {
+    "id": 50097,
+    "name": "Bond d'esquive",
+    "nature": "mobility",
+    "kind": "blink",
+    "price": 200
+   },
+   {
+    "id": 50098,
+    "name": "Charge",
+    "nature": "buff",
+    "kind": "buff",
+    "price": 250
+   },
+   {
+    "id": 50100,
+    "name": "Flèche de terreur",
+    "nature": "control",
+    "kind": "bolt",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "adjudicator": {
+  "role": "soutien",
+  "family": 4,
+  "slots": [
+   {
+    "id": 50102,
+    "name": "Sanction de lumière",
+    "nature": "damage",
+    "kind": "bolt",
+    "free": true
+   },
+   {
+    "id": 50877,
+    "name": "Pluie de météores sacrés",
+    "nature": "damage",
+    "kind": "ground",
+    "price": 250
+   },
+   {
+    "id": 50170,
+    "name": "Lumière divine",
+    "nature": "heal",
+    "kind": "heal",
+    "price": 300
+   },
+   {
+    "id": 50169,
+    "name": "Marteau de discipline",
+    "nature": "damage",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "annihilator": {
+  "role": "tireur",
+  "family": 3,
+  "slots": [
+   {
+    "id": 50090,
+    "name": "Bombe d'huile",
+    "nature": "damage",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 50091,
+    "name": "Poudre noire",
+    "nature": "damage",
+    "kind": "ground",
+    "price": 250
+   },
+   {
+    "id": 50092,
+    "name": "Bombe gluante",
+    "nature": "control",
+    "kind": "ground",
+    "price": 300
+   },
+   {
+    "id": 50753,
+    "name": "Canon satellite",
+    "nature": "control",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "arch_elementalist": {
+  "role": "controleur",
+  "family": 5,
+  "slots": [
+   {
+    "id": 50126,
+    "name": "Éclair",
+    "nature": "damage",
+    "kind": "bolt",
+    "free": true
+   },
+   {
+    "id": 50132,
+    "name": "Surcharge",
+    "nature": "damage",
+    "kind": "bolt",
+    "price": 250
+   },
+   {
+    "id": 50128,
+    "name": "Tempête de neige",
+    "nature": "control",
+    "kind": "ground",
+    "price": 300
+   },
+   {
+    "id": 50774,
+    "name": "Dragon à neuf têtes",
+    "nature": "damage",
+    "kind": "fan",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "archimage": {
+  "role": "soutien",
+  "family": 4,
+  "slots": [
+   {
+    "id": 50124,
+    "name": "Cyclone verdoyant",
+    "nature": "damage",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 56095,
+    "name": "Baiser du marais",
+    "nature": "damage",
+    "kind": "bolt",
+    "price": 250
+   },
+   {
+    "id": 50125,
+    "name": "Bénédiction de la nature",
+    "nature": "heal",
+    "kind": "heal",
+    "price": 300
+   },
+   {
+    "id": 56096,
+    "name": "Contre-attaque de l'élu",
+    "nature": "damage",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "assassin": {
+  "role": "ouvreur",
+  "family": 2,
+  "slots": [
+   {
+    "id": 56007,
+    "name": "Marche nocturne",
+    "nature": "damage",
+    "kind": "spin",
+    "free": true
+   },
+   {
+    "id": 50057,
+    "name": "Attaque éclair",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50059,
+    "name": "Confinement mortel",
+    "nature": "control",
+    "kind": "cone",
+    "price": 300
+   },
+   {
+    "id": 56003,
+    "name": "Entailles mortelles",
+    "nature": "damage",
+    "kind": "flurry",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "asura": {
+  "role": "ouvreur",
+  "family": 2,
+  "slots": [
+   {
+    "id": 50064,
+    "name": "Coup dévastateur",
+    "nature": "damage",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50831,
+    "name": "Poing du tyran",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50827,
+    "name": "Poing plongeant",
+    "nature": "control",
+    "kind": "cone",
+    "price": 300
+   },
+   {
+    "id": 50837,
+    "name": "Brise-roi",
+    "nature": "control",
+    "kind": "cone",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "bard": {
+  "role": "soutien",
+  "family": 4,
+  "slots": [
+   {
+    "id": 50026,
+    "name": "Séisme",
+    "nature": "control",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 50111,
+    "name": "Métal brûlant",
+    "nature": "damage",
+    "kind": "ground",
+    "price": 250
+   },
+   {
+    "id": 50112,
+    "name": "Musique de vie",
+    "nature": "heal",
+    "kind": "heal",
+    "price": 300
+   },
+   {
+    "id": 50027,
+    "name": "Tornade",
+    "nature": "damage",
+    "kind": "spin",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "battlefield_poet": {
+  "role": "soutien",
+  "family": 4,
+  "slots": [
+   {
+    "id": 50703,
+    "name": "Trille de flammes",
+    "nature": "damage",
+    "kind": "bolt",
+    "free": true
+   },
+   {
+    "id": 50111,
+    "name": "Métal brûlant",
+    "nature": "damage",
+    "kind": "ground",
+    "price": 250
+   },
+   {
+    "id": 50112,
+    "name": "Musique de vie",
+    "nature": "heal",
+    "kind": "heal",
+    "price": 300
+   },
+   {
+    "id": 50704,
+    "name": "Métal sombre",
+    "nature": "damage",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "berserker": {
+  "role": "ouvreur",
+  "family": 1,
+  "slots": [
+   {
+    "id": 50036,
+    "name": "Attaque sanglante",
+    "nature": "damage",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50037,
+    "name": "Poing de colère",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50042,
+    "name": "Intimidation",
+    "nature": "control",
+    "kind": "spin",
+    "price": 300
+   },
+   {
+    "id": 60053,
+    "name": "Lacération",
+    "nature": "damage",
+    "kind": "spin",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "black_blade": {
+  "role": "ouvreur",
+  "family": 5,
+  "slots": [
+   {
+    "id": 50467,
+    "name": "Taille noire",
+    "nature": "damage",
+    "kind": "flurry",
+    "free": true
+   },
+   {
+    "id": 50462,
+    "name": "Fente de lumière",
+    "nature": "damage",
+    "kind": "bolt",
+    "price": 250
+   },
+   {
+    "id": 50468,
+    "name": "Formation du silence",
+    "nature": "control",
+    "kind": "ground",
+    "price": 300
+   },
+   {
+    "id": 56182,
+    "name": "Brise-démon",
+    "nature": "damage",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "blade_acrobat": {
+  "role": "ouvreur",
+  "family": 2,
+  "slots": [
+   {
+    "id": 50071,
+    "name": "Superstar",
+    "nature": "damage",
+    "kind": "flurry",
+    "free": true
+   },
+   {
+    "id": 50073,
+    "name": "Charme éclatant",
+    "nature": "damage",
+    "kind": "spin",
+    "price": 250
+   },
+   {
+    "id": 60058,
+    "name": "Danse hypnotique",
+    "nature": "control",
+    "kind": "spin",
+    "price": 300
+   },
+   {
+    "id": 50077,
+    "name": "Saut de ballet",
+    "nature": "mobility",
+    "kind": "blink",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "blade_dancer": {
+  "role": "ouvreur",
+  "family": 2,
+  "slots": [
+   {
+    "id": 50016,
+    "name": "Coup sec",
+    "nature": "control",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50071,
+    "name": "Superstar",
+    "nature": "damage",
+    "kind": "flurry",
+    "price": 250
+   },
+   {
+    "id": 60058,
+    "name": "Danse hypnotique",
+    "nature": "control",
+    "kind": "spin",
+    "price": 300
+   },
+   {
+    "id": 50077,
+    "name": "Saut de ballet",
+    "nature": "mobility",
+    "kind": "blink",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "blade_master": {
+  "role": "ouvreur",
+  "family": 2,
+  "slots": [
+   {
+    "id": 50183,
+    "name": "Entaille en croix",
+    "nature": "damage",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50181,
+    "name": "Hirondelle déchue",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50927,
+    "name": "Barque de Ganryu",
+    "nature": "buff",
+    "kind": "buff",
+    "price": 250
+   },
+   {
+    "id": 50187,
+    "name": "Lame d'Asura",
+    "nature": "damage",
+    "kind": "fan",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "chronologist": {
+  "role": "controleur",
+  "family": 5,
+  "slots": [
+   {
+    "id": 50134,
+    "name": "Stalactite mortelle",
+    "nature": "damage",
+    "kind": "bolt",
+    "free": true
+   },
+   {
+    "id": 56070,
+    "name": "Ralentissement temporel",
+    "nature": "damage",
+    "kind": "ground",
+    "price": 250
+   },
+   {
+    "id": 56071,
+    "name": "Hypnose temporelle",
+    "nature": "control",
+    "kind": "ground",
+    "price": 300
+   },
+   {
+    "id": 50178,
+    "name": "Aérolithe",
+    "nature": "control",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "cleric": {
+  "role": "soutien",
+  "family": 4,
+  "slots": [
+   {
+    "id": 50102,
+    "name": "Sanction de lumière",
+    "nature": "damage",
+    "kind": "bolt",
+    "free": true
+   },
+   {
+    "id": 50027,
+    "name": "Tornade",
+    "nature": "damage",
+    "kind": "spin",
+    "price": 250
+   },
+   {
+    "id": 50170,
+    "name": "Lumière divine",
+    "nature": "heal",
+    "kind": "heal",
+    "price": 300
+   },
+   {
+    "id": 50169,
+    "name": "Marteau de discipline",
+    "nature": "damage",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "conjurer": {
+  "role": "controleur",
+  "family": 5,
+  "slots": [
+   {
+    "id": 50918,
+    "name": "Tonnerre hanté",
+    "nature": "control",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 50917,
+    "name": "Dragon de foudre",
+    "nature": "damage",
+    "kind": "ground",
+    "price": 250
+   },
+   {
+    "id": 50916,
+    "name": "Venin du ver de glace",
+    "nature": "control",
+    "kind": "bolt",
+    "price": 300
+   },
+   {
+    "id": 50145,
+    "name": "Menaces de mort",
+    "nature": "control",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "dark_envoy": {
+  "role": "controleur",
+  "family": 5,
+  "slots": [
+   {
+    "id": 50897,
+    "name": "Marque de mort",
+    "nature": "damage",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 50148,
+    "name": "Sentence de mort",
+    "nature": "damage",
+    "kind": "bolt",
+    "price": 250
+   },
+   {
+    "id": 50903,
+    "name": "Impact de la nuit",
+    "nature": "control",
+    "kind": "bolt",
+    "price": 300
+   },
+   {
+    "id": 50145,
+    "name": "Menaces de mort",
+    "nature": "control",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "dawnbreaker": {
+  "role": "ouvreur",
+  "family": 1,
+  "slots": [
+   {
+    "id": 50052,
+    "name": "Coup de bouclier",
+    "nature": "control",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 56028,
+    "name": "Taille puissante",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50156,
+    "name": "Marteau du tonnerre",
+    "nature": "control",
+    "kind": "spin",
+    "price": 300
+   },
+   {
+    "id": 56030,
+    "name": "Renaissance du sang",
+    "nature": "damage",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "demon_tamer": {
+  "role": "controleur",
+  "family": 5,
+  "slots": [
+   {
+    "id": 56058,
+    "name": "Asservissement",
+    "nature": "damage",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 56061,
+    "name": "Invasion des chimères",
+    "nature": "damage",
+    "kind": "bolt",
+    "price": 250
+   },
+   {
+    "id": 56062,
+    "name": "Chute des chimères",
+    "nature": "control",
+    "kind": "ground",
+    "price": 300
+   },
+   {
+    "id": 50178,
+    "name": "Aérolithe",
+    "nature": "control",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "devil_hunter": {
+  "role": "tireur",
+  "family": 3,
+  "slots": [
+   {
+    "id": 50867,
+    "name": "Marque de tir",
+    "nature": "damage",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 50078,
+    "name": "Tir en chaîne",
+    "nature": "damage",
+    "kind": "bolt",
+    "price": 250
+   },
+   {
+    "id": 50082,
+    "name": "Bombe flash",
+    "nature": "control",
+    "kind": "ground",
+    "price": 300
+   },
+   {
+    "id": 50164,
+    "name": "Pluie empoisonnée",
+    "nature": "damage",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "dragon_knight": {
+  "role": "rempart",
+  "family": 1,
+  "slots": [
+   {
+    "id": 50011,
+    "name": "Impact profond",
+    "nature": "control",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50445,
+    "name": "Coup de queue du drake",
+    "nature": "damage",
+    "kind": "cone",
+    "price": 250
+   },
+   {
+    "id": 50014,
+    "name": "Déclaration de colère",
+    "nature": "buff",
+    "kind": "buff",
+    "price": 250
+   },
+   {
+    "id": 50453,
+    "name": "Flamme noire cachée",
+    "nature": "damage",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "dragon_rider": {
+  "role": "rempart",
+  "family": 1,
+  "slots": [
+   {
+    "id": 50445,
+    "name": "Coup de queue du drake",
+    "nature": "damage",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50446,
+    "name": "Dévoreur infernal",
+    "nature": "damage",
+    "kind": "fan",
+    "price": 250
+   },
+   {
+    "id": 56167,
+    "name": "Colère du dragon",
+    "nature": "buff",
+    "kind": "buff",
+    "price": 250
+   },
+   {
+    "id": 56163,
+    "name": "Lance dans l'âme",
+    "nature": "damage",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "dragon_soul": {
+  "role": "rempart",
+  "family": 1,
+  "slots": [
+   {
+    "id": 50445,
+    "name": "Coup de queue du drake",
+    "nature": "damage",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 56156,
+    "name": "Retour du dragon caché",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 56159,
+    "name": "Possession draconique",
+    "nature": "shield",
+    "kind": "buff",
+    "price": 300
+   },
+   {
+    "id": 56154,
+    "name": "Terreur du dragon de feu",
+    "nature": "damage",
+    "kind": "cone",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "druid": {
+  "role": "soutien",
+  "family": 4,
+  "slots": [
+   {
+    "id": 50124,
+    "name": "Cyclone verdoyant",
+    "nature": "damage",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 56087,
+    "name": "Pouvoir de métamorphose",
+    "nature": "damage",
+    "kind": "ground",
+    "price": 250
+   },
+   {
+    "id": 56083,
+    "name": "Source de vie",
+    "nature": "heal",
+    "kind": "heal",
+    "price": 300
+   },
+   {
+    "id": 56086,
+    "name": "Protection de la nature",
+    "nature": "damage",
+    "kind": "spin",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "elegant_dancer": {
+  "role": "ouvreur",
+  "family": 2,
+  "slots": [
+   {
+    "id": 50071,
+    "name": "Superstar",
+    "nature": "damage",
+    "kind": "flurry",
+    "free": true
+   },
+   {
+    "id": 50073,
+    "name": "Charme éclatant",
+    "nature": "damage",
+    "kind": "spin",
+    "price": 250
+   },
+   {
+    "id": 60058,
+    "name": "Danse hypnotique",
+    "nature": "control",
+    "kind": "spin",
+    "price": 300
+   },
+   {
+    "id": 50077,
+    "name": "Saut de ballet",
+    "nature": "mobility",
+    "kind": "blink",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "engineer": {
+  "role": "tireur",
+  "family": 3,
+  "slots": [
+   {
+    "id": 50021,
+    "name": "Tir précis",
+    "nature": "damage",
+    "kind": "bolt",
+    "free": true
+   },
+   {
+    "id": 50022,
+    "name": "Perforation",
+    "nature": "damage",
+    "kind": "bolt",
+    "price": 250
+   },
+   {
+    "id": 50086,
+    "name": "Artillerie lourde",
+    "nature": "control",
+    "kind": "bolt",
+    "price": 300
+   },
+   {
+    "id": 50092,
+    "name": "Bombe gluante",
+    "nature": "control",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "equilibrian": {
+  "role": "soutien",
+  "family": 4,
+  "slots": [
+   {
+    "id": 50102,
+    "name": "Sanction de lumière",
+    "nature": "damage",
+    "kind": "bolt",
+    "free": true
+   },
+   {
+    "id": 50886,
+    "name": "Faux silencieuse",
+    "nature": "damage",
+    "kind": "ground",
+    "price": 250
+   },
+   {
+    "id": 50170,
+    "name": "Lumière divine",
+    "nature": "heal",
+    "kind": "heal",
+    "price": 300
+   },
+   {
+    "id": 50169,
+    "name": "Marteau de discipline",
+    "nature": "damage",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "executioner": {
+  "role": "ouvreur",
+  "family": 1,
+  "slots": [
+   {
+    "id": 50809,
+    "name": "Estoc sanguinaire",
+    "nature": "damage",
+    "kind": "flurry",
+    "free": true
+   },
+   {
+    "id": 50817,
+    "name": "Estoc à la main",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50045,
+    "name": "Sceau des lames",
+    "nature": "control",
+    "kind": "spin",
+    "price": 300
+   },
+   {
+    "id": 50813,
+    "name": "Garde de la lame",
+    "nature": "mobility",
+    "kind": "blink",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "glacier_knight": {
+  "role": "rempart",
+  "family": 1,
+  "slots": [
+   {
+    "id": 50818,
+    "name": "Estoc de glace",
+    "nature": "damage",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50820,
+    "name": "Limite de l'épée de glace",
+    "nature": "damage",
+    "kind": "spin",
+    "price": 250
+   },
+   {
+    "id": 50823,
+    "name": "Protection glacée",
+    "nature": "shield",
+    "kind": "buff",
+    "price": 300
+   },
+   {
+    "id": 50045,
+    "name": "Sceau des lames",
+    "nature": "control",
+    "kind": "spin",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "holy_arrow": {
+  "role": "tireur",
+  "family": 3,
+  "slots": [
+   {
+    "id": 50096,
+    "name": "Pilonnage",
+    "nature": "damage",
+    "kind": "bolt",
+    "free": true
+   },
+   {
+    "id": 50097,
+    "name": "Bond d'esquive",
+    "nature": "mobility",
+    "kind": "blink",
+    "price": 200
+   },
+   {
+    "id": 50098,
+    "name": "Charge",
+    "nature": "buff",
+    "kind": "buff",
+    "price": 250
+   },
+   {
+    "id": 50100,
+    "name": "Flèche de terreur",
+    "nature": "control",
+    "kind": "bolt",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "hunter": {
+  "role": "tireur",
+  "family": 3,
+  "slots": [
+   {
+    "id": 50021,
+    "name": "Tir précis",
+    "nature": "damage",
+    "kind": "bolt",
+    "free": true
+   },
+   {
+    "id": 50078,
+    "name": "Tir en chaîne",
+    "nature": "damage",
+    "kind": "bolt",
+    "price": 250
+   },
+   {
+    "id": 50082,
+    "name": "Bombe flash",
+    "nature": "control",
+    "kind": "ground",
+    "price": 300
+   },
+   {
+    "id": 50164,
+    "name": "Pluie empoisonnée",
+    "nature": "damage",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "illusionist": {
+  "role": "controleur",
+  "family": 5,
+  "slots": [
+   {
+    "id": 50031,
+    "name": "Bombe de feu",
+    "nature": "damage",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 50035,
+    "name": "Saut dimensionnel",
+    "nature": "mobility",
+    "kind": "blink",
+    "price": 200
+   },
+   {
+    "id": 50033,
+    "name": "Frisson de l'hiver",
+    "nature": "control",
+    "kind": "cone",
+    "price": 300
+   },
+   {
+    "id": 50178,
+    "name": "Aérolithe",
+    "nature": "control",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "inquisitor": {
+  "role": "tireur",
+  "family": 3,
+  "slots": [
+   {
+    "id": 50021,
+    "name": "Tir précis",
+    "nature": "damage",
+    "kind": "bolt",
+    "free": true
+   },
+   {
+    "id": 50022,
+    "name": "Perforation",
+    "nature": "damage",
+    "kind": "bolt",
+    "price": 250
+   },
+   {
+    "id": 50025,
+    "name": "Tir aux genoux",
+    "nature": "control",
+    "kind": "bolt",
+    "price": 300
+   },
+   {
+    "id": 50945,
+    "name": "Impact infernal",
+    "nature": "damage",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "kage": {
+  "role": "ouvreur",
+  "family": 2,
+  "slots": [
+   {
+    "id": 56016,
+    "name": "Ombre : lien mortel",
+    "nature": "damage",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50057,
+    "name": "Attaque éclair",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50059,
+    "name": "Confinement mortel",
+    "nature": "control",
+    "kind": "cone",
+    "price": 300
+   },
+   {
+    "id": 50058,
+    "name": "Embuscade",
+    "nature": "damage",
+    "kind": "cone",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "knight": {
+  "role": "rempart",
+  "family": 1,
+  "slots": [
+   {
+    "id": 50011,
+    "name": "Impact profond",
+    "nature": "control",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50043,
+    "name": "Attaque continue",
+    "nature": "damage",
+    "kind": "flurry",
+    "price": 250
+   },
+   {
+    "id": 50046,
+    "name": "Intrépide",
+    "nature": "shield",
+    "kind": "buff",
+    "price": 300
+   },
+   {
+    "id": 50015,
+    "name": "Cyclone de combat",
+    "nature": "damage",
+    "kind": "spin",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "life_worshipper": {
+  "role": "soutien",
+  "family": 4,
+  "slots": [
+   {
+    "id": 50110,
+    "name": "Bombe vocale",
+    "nature": "control",
+    "kind": "bolt",
+    "free": true
+   },
+   {
+    "id": 50111,
+    "name": "Métal brûlant",
+    "nature": "damage",
+    "kind": "ground",
+    "price": 250
+   },
+   {
+    "id": 50112,
+    "name": "Musique de vie",
+    "nature": "heal",
+    "kind": "heal",
+    "price": 300
+   },
+   {
+    "id": 50718,
+    "name": "Voix du tonnerre",
+    "nature": "damage",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "light_blade": {
+  "role": "ouvreur",
+  "family": 5,
+  "slots": [
+   {
+    "id": 50467,
+    "name": "Taille noire",
+    "nature": "damage",
+    "kind": "flurry",
+    "free": true
+   },
+   {
+    "id": 56199,
+    "name": "Le dieu démon ébranle le ciel",
+    "nature": "mobility",
+    "kind": "blink",
+    "price": 200
+   },
+   {
+    "id": 50468,
+    "name": "Formation du silence",
+    "nature": "control",
+    "kind": "ground",
+    "price": 300
+   },
+   {
+    "id": 56189,
+    "name": "Jour saint",
+    "nature": "control",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "luminary": {
+  "role": "ouvreur",
+  "family": 5,
+  "slots": [
+   {
+    "id": 50031,
+    "name": "Bombe de feu",
+    "nature": "damage",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 50035,
+    "name": "Saut dimensionnel",
+    "nature": "mobility",
+    "kind": "blink",
+    "price": 200
+   },
+   {
+    "id": 50033,
+    "name": "Frisson de l'hiver",
+    "nature": "control",
+    "kind": "cone",
+    "price": 300
+   },
+   {
+    "id": 50468,
+    "name": "Formation du silence",
+    "nature": "control",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "magician": {
+  "role": "controleur",
+  "family": 5,
+  "slots": [
+   {
+    "id": 50031,
+    "name": "Bombe de feu",
+    "nature": "damage",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 50035,
+    "name": "Saut dimensionnel",
+    "nature": "mobility",
+    "kind": "blink",
+    "price": 200
+   },
+   {
+    "id": 50033,
+    "name": "Frisson de l'hiver",
+    "nature": "control",
+    "kind": "cone",
+    "price": 300
+   },
+   {
+    "id": 50128,
+    "name": "Tempête de neige",
+    "nature": "control",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "martial_artist": {
+  "role": "ouvreur",
+  "family": 2,
+  "slots": [
+   {
+    "id": 50016,
+    "name": "Coup sec",
+    "nature": "control",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50066,
+    "name": "Assaut chargé",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50065,
+    "name": "Répression",
+    "nature": "control",
+    "kind": "cone",
+    "price": 300
+   },
+   {
+    "id": 50070,
+    "name": "Cicatrice spirituelle",
+    "nature": "damage",
+    "kind": "cone",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "master_fencer": {
+  "role": "ouvreur",
+  "family": 2,
+  "slots": [
+   {
+    "id": 50932,
+    "name": "Souffle suspendu",
+    "nature": "damage",
+    "kind": "spin",
+    "free": true
+   },
+   {
+    "id": 50181,
+    "name": "Hirondelle déchue",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50936,
+    "name": "Éclipse",
+    "nature": "control",
+    "kind": "fan",
+    "price": 300
+   },
+   {
+    "id": 50187,
+    "name": "Lame d'Asura",
+    "nature": "damage",
+    "kind": "fan",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "mecha_ares": {
+  "role": "tireur",
+  "family": 3,
+  "slots": [
+   {
+    "id": 50740,
+    "name": "Missiles automatiques",
+    "nature": "damage",
+    "kind": "spin",
+    "free": true
+   },
+   {
+    "id": 50090,
+    "name": "Bombe d'huile",
+    "nature": "damage",
+    "kind": "ground",
+    "price": 250
+   },
+   {
+    "id": 50092,
+    "name": "Bombe gluante",
+    "nature": "control",
+    "kind": "ground",
+    "price": 300
+   },
+   {
+    "id": 50744,
+    "name": "Anéantissement total",
+    "nature": "control",
+    "kind": "spin",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "orator": {
+  "role": "soutien",
+  "family": 4,
+  "slots": [
+   {
+    "id": 50425,
+    "name": "Marteau d'inspiration",
+    "nature": "damage",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 56140,
+    "name": "Marteau démoniaque",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50426,
+    "name": "Aura : protection du marteau",
+    "nature": "heal",
+    "kind": "heal",
+    "price": 300
+   },
+   {
+    "id": 56141,
+    "name": "Marteau du premier roi",
+    "nature": "damage",
+    "kind": "cone",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "paladin": {
+  "role": "rempart",
+  "family": 1,
+  "slots": [
+   {
+    "id": 56040,
+    "name": "Coup de bouclier furieux",
+    "nature": "damage",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 56039,
+    "name": "Marteau de tonnerre",
+    "nature": "damage",
+    "kind": "ground",
+    "price": 250
+   },
+   {
+    "id": 56036,
+    "name": "Bouclier sacré",
+    "nature": "shield",
+    "kind": "buff",
+    "price": 300
+   },
+   {
+    "id": 56037,
+    "name": "Marteau du châtiment",
+    "nature": "control",
+    "kind": "cone",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "psalmist": {
+  "role": "soutien",
+  "family": 4,
+  "slots": [
+   {
+    "id": 56132,
+    "name": "Marteau aux six ailes",
+    "nature": "damage",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50425,
+    "name": "Marteau d'inspiration",
+    "nature": "damage",
+    "kind": "cone",
+    "price": 250
+   },
+   {
+    "id": 50426,
+    "name": "Aura : protection du marteau",
+    "nature": "heal",
+    "kind": "heal",
+    "price": 300
+   },
+   {
+    "id": 56131,
+    "name": "Marteau de l'archange",
+    "nature": "damage",
+    "kind": "cone",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "rakshasa": {
+  "role": "ouvreur",
+  "family": 2,
+  "slots": [
+   {
+    "id": 50064,
+    "name": "Coup dévastateur",
+    "nature": "damage",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50840,
+    "name": "Poing de l'ombre du dragon",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50065,
+    "name": "Répression",
+    "nature": "control",
+    "kind": "cone",
+    "price": 300
+   },
+   {
+    "id": 50839,
+    "name": "Vague du dragon de feu",
+    "nature": "damage",
+    "kind": "fan",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "ranger": {
+  "role": "tireur",
+  "family": 3,
+  "slots": [
+   {
+    "id": 50021,
+    "name": "Tir précis",
+    "nature": "damage",
+    "kind": "bolt",
+    "free": true
+   },
+   {
+    "id": 50097,
+    "name": "Bond d'esquive",
+    "nature": "mobility",
+    "kind": "blink",
+    "price": 200
+   },
+   {
+    "id": 50025,
+    "name": "Tir aux genoux",
+    "nature": "control",
+    "kind": "bolt",
+    "price": 300
+   },
+   {
+    "id": 50100,
+    "name": "Flèche de terreur",
+    "nature": "control",
+    "kind": "bolt",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "reaver": {
+  "role": "tireur",
+  "family": 3,
+  "slots": [
+   {
+    "id": 50946,
+    "name": "Spirale perçante",
+    "nature": "damage",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 50951,
+    "name": "Destination finale",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50953,
+    "name": "Chaîne de fureur",
+    "nature": "control",
+    "kind": "spin",
+    "price": 300
+   },
+   {
+    "id": 50957,
+    "name": "Moisson des âmes",
+    "nature": "damage",
+    "kind": "cone",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "rifleteer": {
+  "role": "tireur",
+  "family": 3,
+  "slots": [
+   {
+    "id": 50946,
+    "name": "Spirale perçante",
+    "nature": "damage",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 50943,
+    "name": "Chaîne d'âme",
+    "nature": "damage",
+    "kind": "fan",
+    "price": 250
+   },
+   {
+    "id": 50950,
+    "name": "Posture de chasse",
+    "nature": "buff",
+    "kind": "buff",
+    "price": 250
+   },
+   {
+    "id": 50945,
+    "name": "Impact infernal",
+    "nature": "damage",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "sage": {
+  "role": "soutien",
+  "family": 4,
+  "slots": [
+   {
+    "id": 50026,
+    "name": "Séisme",
+    "nature": "control",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 50425,
+    "name": "Marteau d'inspiration",
+    "nature": "damage",
+    "kind": "cone",
+    "price": 250
+   },
+   {
+    "id": 50028,
+    "name": "Soin",
+    "nature": "heal",
+    "kind": "heal",
+    "price": 300
+   },
+   {
+    "id": 50027,
+    "name": "Tornade",
+    "nature": "damage",
+    "kind": "spin",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "samurai": {
+  "role": "ouvreur",
+  "family": 2,
+  "slots": [
+   {
+    "id": 50183,
+    "name": "Entaille en croix",
+    "nature": "damage",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50181,
+    "name": "Hirondelle déchue",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50016,
+    "name": "Coup sec",
+    "nature": "control",
+    "kind": "cone",
+    "price": 300
+   },
+   {
+    "id": 50187,
+    "name": "Lame d'Asura",
+    "nature": "damage",
+    "kind": "fan",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "shaman": {
+  "role": "soutien",
+  "family": 4,
+  "slots": [
+   {
+    "id": 50124,
+    "name": "Cyclone verdoyant",
+    "nature": "damage",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 50119,
+    "name": "Rage des tempêtes",
+    "nature": "damage",
+    "kind": "ground",
+    "price": 250
+   },
+   {
+    "id": 50028,
+    "name": "Soin",
+    "nature": "heal",
+    "kind": "heal",
+    "price": 300
+   },
+   {
+    "id": 50027,
+    "name": "Tornade",
+    "nature": "damage",
+    "kind": "spin",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "shielder": {
+  "role": "rempart",
+  "family": 1,
+  "slots": [
+   {
+    "id": 50036,
+    "name": "Attaque sanglante",
+    "nature": "damage",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50037,
+    "name": "Poing de colère",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50700,
+    "name": "Rugissement inspirant",
+    "nature": "shield",
+    "kind": "buff",
+    "price": 300
+   },
+   {
+    "id": 60053,
+    "name": "Lacération",
+    "nature": "damage",
+    "kind": "spin",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "stormcaster": {
+  "role": "controleur",
+  "family": 5,
+  "slots": [
+   {
+    "id": 50126,
+    "name": "Éclair",
+    "nature": "damage",
+    "kind": "bolt",
+    "free": true
+   },
+   {
+    "id": 50132,
+    "name": "Surcharge",
+    "nature": "damage",
+    "kind": "bolt",
+    "price": 250
+   },
+   {
+    "id": 50128,
+    "name": "Tempête de neige",
+    "nature": "control",
+    "kind": "ground",
+    "price": 300
+   },
+   {
+    "id": 50779,
+    "name": "Attraction vers le bas",
+    "nature": "damage",
+    "kind": "spin",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "templar": {
+  "role": "rempart",
+  "family": 1,
+  "slots": [
+   {
+    "id": 50011,
+    "name": "Impact profond",
+    "nature": "control",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50012,
+    "name": "Coup destructeur",
+    "nature": "damage",
+    "kind": "cone",
+    "price": 250
+   },
+   {
+    "id": 50155,
+    "name": "Bouclier de lumière",
+    "nature": "shield",
+    "kind": "buff",
+    "price": 300
+   },
+   {
+    "id": 50015,
+    "name": "Cyclone de combat",
+    "nature": "damage",
+    "kind": "spin",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "thief": {
+  "role": "ouvreur",
+  "family": 2,
+  "slots": [
+   {
+    "id": 50016,
+    "name": "Coup sec",
+    "nature": "control",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50057,
+    "name": "Attaque éclair",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50059,
+    "name": "Confinement mortel",
+    "nature": "control",
+    "kind": "cone",
+    "price": 300
+   },
+   {
+    "id": 50058,
+    "name": "Embuscade",
+    "nature": "damage",
+    "kind": "cone",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "trainer": {
+  "role": "tireur",
+  "family": 3,
+  "slots": [
+   {
+    "id": 50858,
+    "name": "Tir en saut",
+    "nature": "damage",
+    "kind": "bolt",
+    "free": true
+   },
+   {
+    "id": 50857,
+    "name": "Marque de chasse",
+    "nature": "damage",
+    "kind": "ground",
+    "price": 250
+   },
+   {
+    "id": 50082,
+    "name": "Bombe flash",
+    "nature": "control",
+    "kind": "ground",
+    "price": 300
+   },
+   {
+    "id": 50164,
+    "name": "Pluie empoisonnée",
+    "nature": "damage",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "warlock": {
+  "role": "controleur",
+  "family": 5,
+  "slots": [
+   {
+    "id": 50031,
+    "name": "Bombe de feu",
+    "nature": "damage",
+    "kind": "ground",
+    "free": true
+   },
+   {
+    "id": 50035,
+    "name": "Saut dimensionnel",
+    "nature": "mobility",
+    "kind": "blink",
+    "price": 200
+   },
+   {
+    "id": 50033,
+    "name": "Frisson de l'hiver",
+    "nature": "control",
+    "kind": "cone",
+    "price": 300
+   },
+   {
+    "id": 50145,
+    "name": "Menaces de mort",
+    "nature": "control",
+    "kind": "ground",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ },
+ "warrior": {
+  "role": "rempart",
+  "family": 1,
+  "slots": [
+   {
+    "id": 50011,
+    "name": "Impact profond",
+    "nature": "control",
+    "kind": "cone",
+    "free": true
+   },
+   {
+    "id": 50037,
+    "name": "Poing de colère",
+    "nature": "mobility",
+    "kind": "dash",
+    "price": 200
+   },
+   {
+    "id": 50041,
+    "name": "Rugissement de fer",
+    "nature": "shield",
+    "kind": "buff",
+    "price": 300
+   },
+   {
+    "id": 60053,
+    "name": "Lacération",
+    "nature": "damage",
+    "kind": "spin",
+    "ult": true,
+    "points": 7,
+    "radius_mult": 1.3
+   }
+  ]
+ }
+}

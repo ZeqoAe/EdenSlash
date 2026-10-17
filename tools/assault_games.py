@@ -49,8 +49,14 @@ def one(seed: int, a) -> dict:
         rounds.append({"seed": seed, "n": int(m.group(1)), "winner": int(m.group(2)), "side": m.group(3),
                        "how": m.group(4), "time": float(m.group(5))})
     fin = FIN.search(out)
-    extra = [l for l in out.splitlines() if l.startswith("[assault] mesure")]
-    return {"seed": seed, "rounds": rounds, "done": fin is not None, "extra": extra}
+    measure = {}
+    for l in out.splitlines():
+        if l.startswith("[assault] mesure "):
+            try:
+                measure = json.loads(l[len("[assault] mesure "):])
+            except ValueError:
+                pass
+    return {"seed": seed, "rounds": rounds, "done": fin is not None, "extra": [], "measure": measure}
 
 
 def main() -> int:
@@ -95,6 +101,24 @@ def main() -> int:
     print("façons : " + ", ".join("%s %d (%.0f %%)" % (k, v, 100.0 * v / len(rounds)) for k, v in sorted(hows.items())))
     print("durée des manches : médiane %.1f s, 10e %.1f s, 90e %.1f s" % (statistics.median(times), times[len(times) // 10],
                                                                          times[min(len(times) - 1, len(times) * 9 // 10)]))
+    # mesures du directeur (lot TAC-4) : rôles et temps de survie des héros tombés
+    roles, surv = {}, []
+    for r in res:
+        m = r.get("measure") or {}
+        surv += [float(x) for x in m.get("survival", [])]
+        for k, v in (m.get("roles") or {}).items():
+            e = roles.setdefault(k, {"kills": 0, "deaths": 0, "assists": 0, "n": 0})
+            for f in e:
+                e[f] += int(v.get(f, 0))
+    if roles:
+        print("rôles (éliminations / morts par héros et par partie, rapport) :")
+        for k, e in sorted(roles.items()):
+            n = max(1, e["n"])
+            print("   %-10s %4.1f / %4.1f  (%.2f)" % (k, e["kills"] / n, e["deaths"] / n, e["kills"] / max(1, e["deaths"])))
+    if surv:
+        surv.sort()
+        print("temps de survie d'un héros tombé (premier coup à pleine vie -> chute) : médiane %.1f s, 10e %.1f s, plus court %.2f s, "
+              "sous 3,5 s : %d sur %d" % (statistics.median(surv), surv[len(surv) // 10], surv[0], sum(1 for x in surv if x < 3.5), len(surv)))
     return 0
 
 

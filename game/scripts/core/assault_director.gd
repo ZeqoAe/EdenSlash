@@ -67,6 +67,9 @@ var _ended := false
 ## Événements de la machine vus par le directeur (tests, mesures).
 var events: Array = []
 var round_lines: Array = []
+## Mesures du combat (lot TAC-4) : temps de survie de chaque héros tombé, du premier coup reçu à pleine vie jusqu'à la chute (s).
+var survival: Array = []
+var _hurt_t0: Dictionary = {}
 ## Coups entre équipiers relevés (doit rester à 0 : aucun tir ami).
 var friendly_hits := 0
 
@@ -234,6 +237,8 @@ func _compose_teams(spec: Dictionary) -> void:
 	p.level = lv
 	Run.hero_level = lv
 	Run.max_level = lv
+	if not watch:
+		AssaultCombat.set_role(p, AssaultCombat.role_of_class(Run.class_id))  # (lot TAC-4) rôle tactique et passif
 	p.recalc_stats()
 	p.hp = p.max_hp
 	if watch:
@@ -260,6 +265,7 @@ func _start_round() -> void:
 	for tm in TeamMatch.teams:
 		tm.members = (tm.members as Array).filter(func(c): return is_instance_valid(c))  # (héros libérés de la manche passée)
 	_dmg = {}
+	_hurt_t0 = {}
 	PvpCaps.board = {}
 	PvpCaps.elapsed = 0.0
 	plant_by = ""
@@ -283,8 +289,10 @@ func _start_round() -> void:
 				p.heal(p.max_hp)
 				p.skill_ready_at.clear()
 				p.statuses.clear()
+				p.set_meta("assault_healed", 0.0)  # (lot TAC-4) plafond de soins remis à chaque manche
 				continue
 			var r := TeamMatch.make_hero(String(classes[key]), int(Assault.num("level")), int(diffs[t]), t)
+			AssaultCombat.arm_rival(r, String(classes[key]), owned_slots(key))  # (lot TAC-4) kit tactique, rôle et passifs
 			d.add_child(r)
 			r.global_position = at + Vector3.UP * 0.4
 			r.passive = true  # derrière la barrière pendant l'achat
@@ -355,6 +363,8 @@ func _on_damaged(amount: float, src: Combatant, victim: Combatant) -> void:
 	if not _dmg.has(vk):
 		_dmg[vk] = {}
 	_dmg[vk][sk] = float(_dmg[vk].get(sk, 0.0)) + amount
+	if victim.hp + amount >= victim.max_hp * 0.98 or not _hurt_t0.has(vk):
+		_hurt_t0[vk] = TeamMatch.elapsed  # (lot TAC-4) premier coup reçu à pleine vie : début du temps de survie
 	if src != null and is_instance_valid(src):
 		PvpCaps.board_add(src, "dealt", amount)
 
@@ -376,6 +386,8 @@ func _ko(vk: String, killer: Combatant) -> void:
 			assists.append(a)
 	if v != null:
 		TeamMatch.note_ko(v, killer)
+		if _hurt_t0.has(vk) and kk != "":
+			survival.append(snappedf(TeamMatch.elapsed - float(_hurt_t0[vk]), 0.01))
 	if vk == carrier:
 		_drop_charge(v.global_position if v != null else charge.global_position, "fall")  # la Charge tombe et se ramasse
 	if vk == plant_by:
@@ -822,7 +834,18 @@ func _pick_carrier() -> String:
 	return best
 
 
-## Score de porteur : pas le premier de l'équipe (il ouvre), puis le rôle tactique (lot TAC-4 : role_of), puis l'ordre.
+## Rôle tactique du héros [param key] (lot TAC-4, data/assault_kits.json) : rempart, ouvreur, tireur, controleur, soutien.
+func role_of(key: String) -> String:
+	return AssaultCombat.role_of_class(String(classes.get(key, "")))
+
+
+## Cases du kit que [param key] possède cette manche (0 signature, 1 et 2 achetées, 3 ultime) : lot TAC-4, les trois
+## premières (achat complet) ; lot TAC-5 : selon ses achats et ses points d'ultime.
+func owned_slots(_key: String) -> Array:
+	return [0, 1, 2]
+
+
+## Score de porteur : pas le premier de l'équipe (il ouvre), puis le rôle tactique (role_of), puis l'ordre.
 func _carrier_score(key: String) -> float:
 	var i := int(key.right(1))
 	var s := -2.0 if i == 0 else 0.0
@@ -879,11 +902,27 @@ func _update_charge(delta: float) -> void:
 	if Assault.phase == "live" and charge.state == "ground":
 		_try_pickup()
 	charge.update(delta, Assault.t if Assault.phase == "planted" else 0.0)
+	_mark_busy()
 	charge.set_shown(charge.state != "ground" or charge_seen(view_team()))
 	if Assault.phase == "planted" and not _ten_said and Assault.t <= 10.0:
 		_ten_said = true
 		d.message.emit("10 secondes !", 1.5)
 		UiFeel.cue("ui_tick", -6.0, 1.3)
+
+
+## Qui porte, pose ou désamorce la Charge ne peut pas devenir invisible (lot TAC-4, AssaultCombat.status_duration) ; s'il
+## l'était, l'invisibilité tombe.
+func _mark_busy() -> void:
+	for k in heroes:
+		var h := hero(String(k))
+		if h == null:
+			continue
+		var busy := String(k) == carrier or String(k) == plant_by or String(k) == defuse_by
+		if busy != bool(h.get_meta("assault_busy", false)):
+			h.set_meta("assault_busy", busy)
+		if busy and h.statuses.has("invisible"):
+			h.statuses.erase("invisible")
+			h.statuses_changed.emit()
 
 
 ## Équipe dont l'écran montre la vue (celle du héros regardé).
@@ -1007,6 +1046,8 @@ func _finish(forfeit := false) -> void:
 	var line := "[assault] fin : %s %s, %s, %.0f s" % ["victoire" if won else "défaite", "(abandon)" if forfeit else "",
 		Assault.summary(), TeamMatch.elapsed]
 	print(line)
+	if _verbose():
+		print("[assault] mesure " + JSON.stringify(measure()))
 	if _perf_on and not perf.is_empty():
 		print(perf_line())
 		perf.clear()
@@ -1027,6 +1068,20 @@ func _finish(forfeit := false) -> void:
 func _exit_tree() -> void:
 	if _perf_on and not perf.is_empty():
 		print(perf_line())  # (arrêt par --quit-at : la mesure de la manche en cours)
+
+
+## Mesures de la partie (lots TAC-4 / TAC-5, tools/assault_games.py) : éliminations, morts et aides par rôle tactique, temps de
+## survie des héros tombés (s), or moyen.
+func measure() -> Dictionary:
+	var roles := {}
+	for k in Assault.stats:
+		var r := role_of(String(k))
+		var e: Dictionary = roles.get(r, {"kills": 0, "deaths": 0, "assists": 0, "n": 0})
+		for f in ["kills", "deaths", "assists"]:
+			e[f] = int(e[f]) + int(Assault.stats[k][f])
+		e["n"] = int(e["n"]) + 1
+		roles[r] = e
+	return {"roles": roles, "survival": survival, "history": Assault.history.map(func(h): return [int(h.attack), int(h.winner), String(h.how)])}
 
 
 ## Médianes et 90e centiles de la mesure d'image (--assault-perf).

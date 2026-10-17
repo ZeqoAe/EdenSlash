@@ -19,10 +19,15 @@ extends RefCounted
 ## Règles de départ (TACTIQUE § 7.2, 7.3, 7.6 ; recommandations validées par le joueur). Combat (PvpCaps) : valeurs de
 ## départ de l'étude, à mesurer par la sonde du lot TAC-4.
 const RULES := {
-	# combat entre héros (PvpCaps, ModeRules) : un 1 contre 1 de 7 à 10 s, jamais mort en moins de ~3,5 s depuis la pleine vie
-	"dmg_scale": 0.13, "basic_mult": 0.8, "heal_mult": 0.30, "max_mitigation": PvpCaps.MAX_MITIGATION,
-	"pressure_start": 100000.0, "pressure_step": PvpCaps.PRESSURE_STEP, "pct_weight": 1.0,
-	"hit_cap": 0.25, "burst_cap": 0.55, "burst_window": 2.0, "burst_excess": 0.2, "caps": PvpCaps.CAPS,
+	# combat entre héros (PvpCaps, ModeRules) : un 1 contre 1 de 7 à 10 s, jamais mort en moins de ~3,5 s depuis la pleine vie.
+	# Mesuré au lot TAC-4 (tools/assault_duel_probe, R_TAC_4 § 3) : valeurs de l'étude (échelle 0,13, coup 25 %, rafale 55 %
+	# + 20 %) -> duel médian 37,8 s ; retenu : échelle 0,6, coup 30 % (au-delà le temps de duel ne baisse plus : les coups
+	# portés sont plafonnés, la durée tient au nombre de coups qui touchent), auto-attaque ×1, rafale 45 % sur 2 s et 5 % du
+	# reste (focus à 3 sur 1 : 3,7 s au plus court), acharnement léger dès 12 s (×2 toutes les 6 s : la traîne des duels
+	# d'esquiveurs) -> duel médian 8,4 s en Normal, 12 s en Difficile
+	"dmg_scale": 0.6, "basic_mult": 1.0, "heal_mult": 0.30, "max_mitigation": PvpCaps.MAX_MITIGATION,
+	"pressure_start": 12.0, "pressure_step": 6.0, "pct_weight": 1.0,
+	"hit_cap": 0.30, "burst_cap": 0.45, "burst_window": 2.0, "burst_excess": 0.05, "caps": PvpCaps.CAPS,
 	# partie : premier à 7, 12 manches au plus, mi-temps après 6 ; prolongation à 6-6 par blocs de 2, 2 manches d'écart,
 	# après 3 blocs une manche décisive (côté tiré au sort)
 	"win": 7, "max_rounds": 12, "half": 6, "overtime": true, "ot_block": 2, "ot_blocks": 3,
@@ -38,6 +43,19 @@ const RULES := {
 	# Charge (lot TAC-3) : ramassée en passant à moins de pickup_radius m ; l'explosion emporte les héros à moins de
 	# blast_radius m (ils ne survivent pas à la manche) ; player_carry : le joueur porte la Charge quand il attaque
 	"pickup_radius": 1.5, "blast_radius": 9.0,
+	# rééquilibrage pour une vie (lot TAC-4, AssaultCombat ; TACTIQUE § 7.6) : contrôles × cc_mult puis plafond par type,
+	# insensibilité commune cc_immunity s après tout contrôle dur, ralenti de chill_slow au plus ; invisibilité invis_max s ;
+	# dégâts subis jamais sous min_taken (barrière, mur du titan) ; soins reçus plafonnés à heal_cap des PV max par manche ;
+	# coups venus de plus de falloff_at m × falloff (Tireur : tireur_falloff_at) ; ultime : zone × ult_radius
+	"cc_mult": 0.5, "cc_caps": {"stun": 1.0, "freeze": 1.0, "sleep": 1.0, "fear": 1.2, "root": 1.2, "disarm": 1.5, "chill": 2.0},
+	"cc_immunity": 2.5, "chill_slow": 0.3, "invis_max": 2.5, "min_taken": 0.6, "barrier_taken": 0.8, "titan_taken": 0.7,
+	"heal_cap": 0.6, "falloff_at": 16.0, "falloff": 0.75, "tireur_falloff_at": 20.0, "ult_radius": 1.3,
+	# passifs des 5 rôles tactiques (§ 7.6) : PV et ténacité du Rempart, esquive de plus de l'Ouvreur, prise à revers (cible qui
+	# ne l'a pas vu depuis backstab_after s), cible du Tireur révélée reveal_time s
+	"role_hp": {"rempart": 1.2}, "role_tenacity": {"rempart": 0.2}, "ouvreur_dodges": 1, "backstab": 0.2, "backstab_after": 3.0,
+	"reveal_time": 1.5,
+	# effets des objets (lot TAC-5) lus par AssaultCombat : Enduit amer (soins reçus −), Fiole de garde (dégâts subis −)
+	"bitter_cut": 0.4, "guard_cut": 0.25,
 }
 ## Formats : options de partie qui remplacent les règles (Éclair : premier à 4, 7 manches, mi-temps après 3, la 7e décide).
 const FORMATS := {
@@ -389,9 +407,12 @@ static func default_carrier() -> String:
 	return String(a[0]) if not a.is_empty() else ""
 
 
-## Kit tactique de la classe [param cid] (lot TAC-4 : data/assault_kits.json) : 4 sorts, sans enchaînement. En attendant,
-## les 4 premiers sorts de dégâts ou de contrôle de la classe (ceux de ClassRival), soins et renforts en dernier.
+## Kit tactique de la classe [param cid] (lot TAC-4 : data/assault_kits.json, AssaultCombat) : 4 sorts, sans enchaînement
+## (signature, case 2, case 3, ultime). Sans kit (classe nouvelle) : les 4 premiers sorts de dégâts ou de contrôle.
 static func kit_for(cid: String) -> Array:
+	var ids := AssaultCombat.kit_ids(cid)
+	if ids.size() == 4:
+		return ids
 	var all: Array = GameData.class_data(cid).get("skills", [])
 	var main := all.filter(func(s): return not String(s.kind) in ["buff", "heal"])
 	var rest := all.filter(func(s): return String(s.kind) in ["buff", "heal"])
@@ -489,7 +510,7 @@ static func args_options(args: PackedStringArray) -> Dictionary:
 			# (lot TAC-3, mesures) toute règle de RULES : --assault-rule=buy_time:2 (nombre), plusieurs fois permis
 			var kv := a.trim_prefix("--assault-rule=").split(":", true, 1)
 			if kv.size() == 2 and RULES.has(kv[0]):
-				o[kv[0]] = float(kv[1]) if kv[1].is_valid_float() else kv[1]
+				o[kv[0]] = float(kv[1]) if kv[1].is_valid_float() else (JSON.parse_string(kv[1]) if kv[1].begins_with("{") else kv[1])
 	return o
 
 

@@ -414,6 +414,8 @@ func recalc_stats() -> void:
 	pvp_capped = PvpCaps.apply(self) if PvpCaps.active() else []  # duel : plafonds JcJ
 	if ColiseeAugments.active and not foe:
 		ColiseeAugments.sheet(self)  # (Le Colisée, lots CO-E / CO-F) atouts et enclumes de stat
+	if AssaultCombat.on() and not foe:
+		AssaultCombat.sheet(self)  # (L'Assaut, lot TAC-4) passif de rôle, achats de la manche
 	procs = Items.gear_procs(foe_gear) if own else ([] if bare else Run.passive_procs() + Run.trophy_procs() + Profile.equipment_procs())
 	hp = clampf(max_hp * ratio, 1.0, max_hp)
 	health_changed.emit(hp, max_hp)
@@ -1014,6 +1016,8 @@ func skill_reach(s: Dictionary) -> float:
 ## la zone d'effet élargit les cercles et les cônes.
 func skill_radius(s: Dictionary) -> float:
 	var r := float(s.get("radius", 0.0))
+	if AssaultCombat.on():
+		r *= AssaultCombat.radius_mult(self, s)  # (L'Assaut, lot TAC-4) ultime du kit : zone plus large
 	return r * (reach_mult if String(s.get("kind", "")) in ["fan", "line", "dash"] else area_mult)
 
 
@@ -1553,7 +1557,9 @@ func _heal_action(action: Dictionary) -> void:
 	var amount := max_hp * float(action.get("heal", 0.0)) * heal_power
 	if amount <= 0.0:
 		return
+	AssaultCombat.healer = self  # (L'Assaut, lot TAC-4) les soins d'un Soutien pèsent moitié dans le plafond
 	heal(amount)
+	AssaultCombat.healer = null
 	DamageNumber.spawn_text(self, "+%d" % roundi(amount), Color(0.5, 1.0, 0.55))
 	Vfx.ring(self, global_position, 2.4, Color(0.5, 1.0, 0.6, 0.9))
 
@@ -2199,6 +2205,8 @@ func knock_immune() -> bool:
 func stun(t: float) -> void:
 	if is_dead or _state == "stun":
 		return
+	if AssaultCombat.on():
+		t = AssaultCombat.cc_duration(self, "stun", t)  # (L'Assaut, lot TAC-4) contrôles réduits et plafonnés
 	if knock_immune():
 		DamageNumber.spawn_text(self, "INÉBRANLABLE", Color(0.8, 0.9, 1.0))
 		return
