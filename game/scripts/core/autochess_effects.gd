@@ -76,7 +76,7 @@ const STAT_ACC_KEYS := ["hp", "hp_pct", "atk_pct", "as_pct", "spell_pct", "mana_
 	"dodge", "range", "dmg_taken", "mana_max_pct", "heal_taken", "armor_pen", "parry", "scale"]
 const STAT_NAMES := ["dealt", "dealt_spell", "dealt_proc", "zone_dealt", "taken", "healed", "heal_done", "shielded",
 	"blocked", "mana_gained", "mana_lost", "casts", "attacks", "hits", "crits", "dodges", "parries", "cc_done", "cc_taken",
-	"kills", "executes"]
+	"kills", "executes", "dealt_attack"]  # dealt_attack : dégâts des auto-attaques (statistiques, lot AC-V)
 
 
 # --- Contexte ------------------------------------------------------------------------------------------------------
@@ -552,6 +552,8 @@ static func resolve(ctx: Dictionary, hit: Dictionary) -> Dictionary:
 	if out.crit and not a.is_empty():
 		a.stats["crits"] += 1
 	out["dealt"] = deal(ctx, src, dst, amount, hit)
+	if hit.attack and not hit.proc and not a.is_empty():
+		a.stats["dealt_attack"] += float(out.dealt)
 	if out.crit and not a.is_empty() and a.alive:
 		_fire(ctx, "critique", {"src": src, "dst": dst, "hit": hit})
 	return out

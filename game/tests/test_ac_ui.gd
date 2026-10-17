@@ -379,7 +379,18 @@ func _ready() -> void:
 	r = reach()
 	seen = r[0]
 	check("manette : Rejouer et Retour atteignables", seen.has(screen.hud.replay_button) and seen.has(screen.hud.back_button))
+	check("manette : Statistiques atteignable (AC-V)", seen.has(screen.hud.stats_button))
 	Gamepad.active = false
+	# lot AC-V : bilan de la partie (cumul de tes héros, manche après manche)
+	var acc: Dictionary = screen.game_stats
+	check("statistiques de la partie : %d manches, %d classes" % [int(acc.get("rounds", 0)), (acc.get("units", {}) as Dictionary).size()],
+		int(acc.get("rounds", 0)) > 3 and not (acc.get("units", {}) as Dictionary).is_empty())
+	screen.hud.stats_button.pressed.emit()
+	await _frames(2)
+	check("bouton Statistiques : bilan de la partie ouvert", screen.recap.visible and screen.recap.mode == "game" and not screen.recap.shown_rows().is_empty())
+	bad = _english(fr, screen.recap)
+	check("bilan de la partie en français" + ("" if bad.is_empty() else " : " + str(bad)), bad.is_empty())
+	screen.recap.close()
 	screen.autoplay = false
 	screen.hud.replay_button.pressed.emit()
 	await _frames(3)

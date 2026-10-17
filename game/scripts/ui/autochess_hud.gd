@@ -17,6 +17,7 @@ signal speed_pressed
 signal choice_pressed
 signal replay_pressed
 signal back_pressed
+signal stats_pressed  ## bilan de la partie (lot AC-V)
 
 const BG := Color(0.055, 0.065, 0.16, 0.95)
 const BG_SOFT := Color(0.05, 0.06, 0.15, 0.82)
@@ -25,6 +26,10 @@ const SHOP_H := 130.0  # hauteur du panneau de la boutique
 const BOTTOM_GAP := 40.0  # sous la boutique : barre d'aide de la manette, numéro de version
 const SIDE_W := 236.0
 const TOP_Y := 74.0
+## Combat (lot AC-V) : la frise laisse la place aux barres d'équipe (AutochessTeamBars), les colonnes descendent dessous,
+## le pied se réduit au bouton de vitesse (l'arène reste dégagée).
+const COMBAT_TOP := 108.0
+const COMBAT_BAR_H := 56.0
 const KIND_NAMES := {"ouverture": "Ouverture", "monstres": "Monstres", "jcj": "Combat de stratèges",
 	"choix": "Choix partagé", "gardien": "Gardien"}
 
@@ -40,6 +45,7 @@ var speed_button: Button
 var choice_button: Button
 var replay_button: Button
 var back_button: Button
+var stats_button: Button
 var mode := "prep"
 
 var _top: PanelContainer
@@ -414,6 +420,12 @@ func _build_end() -> void:
 	replay_button.custom_minimum_size.x = 160
 	replay_button.pressed.connect(func(): replay_pressed.emit())
 	row.add_child(replay_button)
+	stats_button = button("Statistiques", "plain", 42.0)
+	stats_button.name = "AcStats"
+	stats_button.custom_minimum_size.x = 160
+	stats_button.tooltip_text = "Ce que tes héros ont fait pendant la partie."
+	stats_button.pressed.connect(func(): stats_pressed.emit())
+	row.add_child(stats_button)
 	back_button = button("Retour", "plain", 42.0)
 	back_button.name = "AcBack"
 	back_button.custom_minimum_size.x = 160
@@ -483,6 +495,11 @@ func set_mode(m: String) -> void:
 	_bottom.visible = m != "over"
 	if m != "over":
 		_end.visible = false
+	var fight := m == "combat"
+	_top.visible = not fight
+	_combat_text.get_parent().visible = not fight  # combat : chronomètre et noms dans les barres d'équipe (AC-V)
+	_bottom.offset_top = -BOTTOM_GAP - (COMBAT_BAR_H if fight else SHOP_H)
+	players.offset_top = COMBAT_TOP if fight else TOP_Y
 
 
 func set_combat(text: String, progress: float, speed: float) -> void:
@@ -493,7 +510,7 @@ func set_combat(text: String, progress: float, speed: float) -> void:
 
 ## Les cartes de choix sont ouvertes : la fiche d'unité se cache ; [param top] : la frise aussi (choix partagé).
 func set_overlay(on: bool, top := false) -> void:
-	_top.visible = not (on and top)
+	_top.visible = not (on and top) and mode != "combat"
 	if on:
 		unit_card.hide_card()
 

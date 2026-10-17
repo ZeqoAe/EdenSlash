@@ -22,7 +22,7 @@ func _shot(name: String) -> void:
 ## Contrôles visibles des calques de l'interface : dans l'écran, et les panneaux du cadre sans chevauchement.
 func _check_overflow(name: String) -> void:
 	var vr := Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size)
-	for layer in [screen._ui, screen._top]:
+	for layer in [screen._ui, screen._top, screen.recap.get_parent()]:
 		for c in layer.find_children("*", "Control", true, false):
 			var ctl := c as Control
 			if not ctl.is_visible_in_tree() or ctl.size.x < 2.0 or ctl.modulate.a < 0.05:
@@ -36,7 +36,7 @@ func _check_overflow(name: String) -> void:
 				overflow += 1
 	var hud := screen.hud
 	var panels := {"traits": hud.traits, "fiche": hud.unit_card, "stratèges": hud.players, "haut": hud._top,
-		"bas": hud._bottom, "or": hud._gold_tab}
+		"bas": hud._bottom, "or": hud._gold_tab, "équipes": screen.team_bars, "compteur": screen.meter}
 	var keys := panels.keys()
 	for i in keys.size():
 		for j in range(i + 1, keys.size()):
@@ -141,16 +141,37 @@ func _ready() -> void:
 		g._finish_carousel()
 		screen._dirty = true
 		await get_tree().process_frame
-		# combat montré, puis bilan de manche
+		# vrai combat dans l'arène (lot AC-V), puis bilan de manche
 		screen.fast = false
+		screen.real_combat = true
 		screen._end_prep()
-		await get_tree().create_timer(1.2).timeout
+		await get_tree().create_timer(2.0).timeout
 		await _shot("7_combat")
-		guard = 0
-		while screen.phase == "combat" and guard < 1000:
-			guard += 1
+		var frames: Array = []
+		var t0 := Time.get_ticks_msec()
+		while screen.phase == "combat" and Time.get_ticks_msec() - t0 < 60000:
+			var u0 := Time.get_ticks_usec()
 			await get_tree().process_frame
+			frames.append((Time.get_ticks_usec() - u0) / 1000.0)
+			if frames.size() == 360:
+				await _shot("7b_melee")
+			if frames.size() == 700:
+				screen.meter.set_tab("heal")
+				await _shot("7c_compteur_soins")
+				screen.meter.set_tab("dealt")
+		frames.sort()
+		if not frames.is_empty():
+			print("[shot] combat rendu dans l'arène : image médiane %.1f ms, p95 %.1f ms (%d images)" % [frames[frames.size() / 2],
+				frames[int(frames.size() * 0.95)], frames.size()])
 		await _shot("8_bilan")
+		if screen.recap.visible:
+			Gamepad._set_active(true)
+			screen.recap.step_page(1)
+			UiNav.focus(screen.recap.continue_button)
+			await _shot("8b_bilan_subis_manette")
+			Gamepad._set_active(false)
+			screen.recap.close()
+		screen.real_combat = false
 		screen.fast = true
 		# fin de partie
 		screen._show_end()
@@ -158,6 +179,9 @@ func _ready() -> void:
 		UiNav.focus(screen.hud.replay_button)
 		await _shot("9_fin")
 		Gamepad._set_active(false)
+		screen._open_game_stats()
+		await _shot("9b_statistiques")
+		screen.recap.close()
 	AutochessScreen.config = {}
 	print("[shot] débords : %d" % overflow)
 	get_tree().quit()

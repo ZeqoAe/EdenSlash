@@ -182,6 +182,7 @@ même couche d'effets et même fiche que le vrai, réglages `TUNE` calés sur lu
 Stratèges IA (AC-D, `R_AC_D.md`) : `core/autochess_ai.gd` (`AutochessAi.make(difficulté, tempérament, graine)`, `lineup` = les 8 stratèges, `restore` après reprise ; 4 difficultés × 3 tempéraments, actions publiques seules, plan et hasard dans `meta`) ; banc `tools/autochess_ai_games.tscn` (`--setup`, `--fight=power|effects|sim`, `--a=` réglages d'essai) ; test `test_ac_ai`.
 IA de combat (AC-U, `R_AC_U.md`) : `ai/autochess_unit.gd` (comportements `roles` / `target` / `spells` / `dodge`, `retreat` coupé ; `ai_full`, `naive`, `fight.ai`) ;
 banc `tools/autochess_ai_bench.tscn` (`--ai=full --vs=naive`, 240 miroirs : 99 %) ; test `test_ac_unit_ai` ; un changement d'IA se mesure au banc avant d'être gardé.
+Mise en scène (AC-V, `R_AC_V.md`) : arène du Duel `world/autochess_arena.gd` (`AutochessArena` : décor par étape, plateau `arena_style` tracé au sol, caméra du combat), vrai combat dans l'écran (`config.real`), barres d'équipe `ui/autochess_team_bars.gd`, compteur `ui/autochess_meter.gd`, bilans de manche et de partie `ui/autochess_recap.gd`, chiffres `core/autochess_stats.gd` (compteurs de la couche) ; test `test_ac_stats`.
 
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à

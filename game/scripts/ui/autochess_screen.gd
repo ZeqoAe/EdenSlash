@@ -54,6 +54,14 @@ var my_fight := -1
 var my_side := 0
 var _real_done := false
 var _stage_built := -1
+## Lot AC-V : HUD par-dessus l'arène (barres d'équipe, compteur de dégâts) et statistiques façon TFT (bilan de manche,
+## bilan de partie : cumul AutochessStats de tes héros, gardé le temps de la partie).
+var team_bars: AutochessTeamBars
+var meter: AutochessMeter
+var recap: AutochessRecap
+var game_stats := {}
+var _data_ctx: Dictionary = {}  # contexte d'effets du combat du joueur, en combat de données
+const RECAP_HOLD := 20.0  # s : le bilan de manche ouvert retient la manche suivante au plus ce temps
 
 var _ui: CanvasLayer
 var _top: CanvasLayer
@@ -134,6 +142,20 @@ func _ready() -> void:
 		_choice_hidden = false
 		_open_choices())
 	hud.replay_pressed.connect(func(): new_game(randi(), false))
+	hud.stats_pressed.connect(_open_game_stats)
+	team_bars = AutochessTeamBars.new()
+	team_bars.visible = false
+	_ui.add_child(team_bars)
+	meter = AutochessMeter.new()
+	meter.position = Vector2(16.0, AutochessHud.COMBAT_TOP)
+	meter.visible = false
+	_ui.add_child(meter)
+	var rl := CanvasLayer.new()
+	rl.name = "AcRecapLayer"
+	rl.layer = AutochessCursor.LAYER + 3  # au-dessus des choix : la manette n'y voit que le bilan
+	add_child(rl)
+	recap = AutochessRecap.new()
+	rl.add_child(recap)
 	hud.back_pressed.connect(_quit)
 	hud.shop.buy_requested.connect(_buy)
 	hud.traits.detail_requested.connect(_trait_card)
@@ -161,6 +183,7 @@ func new_game(seed_: int, resume := false) -> void:
 		game.save_path = save_path
 		game.start(seed_, strats)
 	game.fight = _data_fight  # combats non montrés (durées réduites) : la même couche d'effets, instantanée (AC-V)
+	game_stats = AutochessStats.new_game_stats()
 	_stage_built = -1
 	game.changed.connect(func(_pi): _dirty = true)
 	_make_identities()
@@ -363,6 +386,8 @@ func _arena_combat() -> void:
 	director.begin(game.fights, my_fight)
 	arena.global_position = board.global_position
 	arena.combat_camera(camera, my_side)
+	_watch_changed(my_fight)
+	meter.visible = true
 
 
 ## Combat de la manche où joue le stratège [param pi] (-1 : aucun).
@@ -385,19 +410,65 @@ func _watch_fight(i: int) -> void:
 
 
 ## Combat de données (durées réduites et combats non montrés) : AutochessDirector.data_fight.
+## Le contexte du combat du joueur est gardé pour ses statistiques.
 func _data_fight(board_a: Array, board_b: Array, fctx: Dictionary) -> Dictionary:
-	return AutochessDirector.data_fight(board_a, board_b, fctx)
+	var r := AutochessStats.data_fight(board_a, board_b, fctx)
+	if int(fctx.get("a", -2)) == me or int(fctx.get("b", -2)) == me:
+		_data_ctx = r.ctx
+	return r.result
 
 
-func _watch_changed(_i: int) -> void:
-	pass
+## Barres d'équipe et compteur sur le combat [param i] (vu du camp du joueur si c'est le sien).
+func _watch_changed(i: int) -> void:
+	if i < 0 or i >= director.arenas.size():
+		return
+	var side := my_side if i == my_fight else 0
+	var ctx: Dictionary = director.arenas[i].ctx
+	team_bars.show_fight(ctx, side, _fight_names(i, side))
+	meter.show_fight(ctx, side)
+
+
+## Noms des deux camps du combat [param i] vu du camp [param side] : [ce camp, l'autre].
+func _fight_names(i: int, side: int) -> Array:
+	var f: Dictionary = game.fights[i]
+	var a := int(f.a)
+	var b := int(f.b)
+	var other := "Monstres"
+	if String(f.kind) == "gardien":
+		other = "Gardien"
+	elif b >= 0:
+		other = name_of(b)
+	elif int(f.get("ghost_of", -1)) >= 0:
+		other = "Écho de %s" % name_of(int(f.ghost_of))
+	var names := [name_of(a), other]
+	return names if side == 0 else [names[1], names[0]]
+
+
+## Contexte d'effets du combat du joueur qui vient de finir ({} : aucun).
+func _round_ctx() -> Dictionary:
+	if real:
+		return director.arenas[my_fight].ctx if my_fight >= 0 and my_fight < director.arenas.size() else {}
+	return _data_ctx
+
+
+## Bilan de la partie (fin de partie, bouton Statistiques).
+func _open_game_stats() -> void:
+	var p: Dictionary = game.players[me]
+	var place := int(p.place) if int(p.place) > 0 else 1
+	recap.open_game(game_stats, "Bilan de la partie", "%s · %d manches gagnées" % [AutochessPlayers.place_text(place), int(p.stats.won)],
+		name_of(me))
 
 
 func _resolve_combat() -> void:
+	_data_ctx = {}
 	if real:
 		game.finish_combat(director.results.duplicate(true))
 	else:
 		game.run_fights()
+	var rctx := _round_ctx()
+	AutochessStats.add_round(game_stats, rctx, my_side)
+	team_bars.visible = false
+	meter.visible = false
 	hud.players.record(game)
 	var p: Dictionary = game.players[me]
 	var last: Dictionary = p.last
@@ -422,6 +493,14 @@ func _resolve_combat() -> void:
 	phase = "recap"
 	_phase_t = 0.0
 	_phase_len = 0.05 if fast or autoplay else AutochessData.ROUND_RECAP
+	if real and not autoplay and not rctx.is_empty():
+		# bilan de la manche (« Qui a compté ? ») à la place du bandeau : même résultat en tête
+		var parts := hud.banner_text().split("|")
+		hud._banner.visible = false
+		var col := UiTheme.GOLD if res == "victoire" else (UiTheme.DEBUFF if res == "defaite" else UiTheme.MUTED)
+		var line := " · ".join(Array(parts.slice(1)).filter(func(x): return String(x) != ""))
+		recap.open_round(rctx, my_side, parts[0] if parts.size() > 0 and parts[0] != "" else "Bilan du combat", line, col,
+			_fight_names(my_fight, my_side) if my_fight >= 0 else [name_of(me), ""])
 	_dirty = true
 
 
@@ -471,6 +550,7 @@ func _process(delta: float) -> void:
 			hud.set_timer(0.0, 0.0)
 			if real:
 				hud.set_combat(_combat_text, _fight_time() / AutochessDirector.draw_at(), speed)
+				team_bars.set_clock(_fight_time(), float(speed), "Étape %d · manche %d" % [game.stage, game.round_i])
 				if _real_done:
 					_resolve_combat()
 			else:
@@ -480,7 +560,10 @@ func _process(delta: float) -> void:
 					_resolve_combat()
 		"recap":
 			_phase_t += delta
-			if _phase_t >= _phase_len:
+			if recap.visible and recap.mode == "round" and _phase_t < RECAP_HOLD:
+				pass  # le bilan de manche ouvert retient la manche suivante (A / B le ferme)
+			elif _phase_t >= _phase_len:
+				recap.close()
 				_next_round()
 	_poll_triggers()
 
@@ -543,6 +626,10 @@ func _tick_carousel(delta: float) -> void:
 ## Fiche d'unité : ce que vise la manette (case, carte de la boutique) ou la souris.
 func _update_card() -> void:
 	var card := hud.unit_card
+	if phase == "combat" and real:
+		card.hide_card()
+		hud.traits.visible = false  # le compteur de dégâts prend la colonne (AC-V)
+		return
 	if phase == "over" or game == null or choice.visible or carousel.visible:
 		card.hide_card()
 		hud.traits.visible = true
