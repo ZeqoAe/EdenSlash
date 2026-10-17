@@ -78,7 +78,7 @@ dans `Compass` si elle change la quête + `test_nav_screens`. Les activités « 
 | Survivant | apparences, titres (aucun lien avec le compte) | dès le départ | `core/survivor*.gd` | `conception/survivor/SPEC.md` |
 | Donjons | panoplies, plans, cristaux, parchemins | époque I gagnée (A2) | `core/dungeons.gd`, `ui/dungeon_page.gd` | DESIGN « Bibliothèque de boss » |
 | La Tour | cristaux, gemmes, apparences | époque I gagnée | `core/tower.gd`, `tower_director.gd` | DESIGN « La Tour » |
-| Quêtes | maîtrise des classes en retard, apparences (lot A5) | 3 Survies | `core/quests.gd`, `ui/quests_page.gd` | DESIGN « Quêtes » |
+| Quêtes (Journal, hors de Jouer) | maîtrise des classes en retard, apparences (lot A5) | 3 Survies | `core/quests.gd`, `ui/quest_journal.gd` | DESIGN « Quêtes », `conception/hub/R_HUB1.md` |
 | Ruée des boss | parchemins, pierres, cristaux, titres | époque II (entrée `rush`) | `core/rush.gd`, `rush_director.gd` | DESIGN « Ruée et Siège » |
 | Le Siège | formules, cristaux, apparences | époque II (Normal sans PE) | `core/siege.gd`, `siege_director.gd` | DESIGN « Ruée et Siège » |
 | Duel (Libre, Ligue, Panthéon, Gantelet) | rangs, titres, maîtrise, Esprits | 1er duelliste de la Tour | `core/duel.gd`, `league.gd`, `pantheon.gd` | section « Duel » ci-dessous |
@@ -245,6 +245,12 @@ sorts fermés par la maîtrise et cartes à débloquer (`Run.passive_stats` / `s
 `core/quest_pool.gd`, état `Profile.records.quests`, carte du HUD `ui/quest_badge.gd`, contrats de classe `core/contracts.gd`,
 Défi du jour `core/challenge.gd`. Boussole du lobby `core/compass.gd` (`Compass.advice()`, ligne « Ta quête » `Compass.after`),
 pastilles `ui/gain_chips.gd`. Détail : DESIGN « Quêtes », « La quête commune se voit » ; `R_M5.md`, `R_P6.md`.
+Lot HUB-1 (backlog P0 de `conception/benchmark/HUB_HUD_QUETES.md`, `conception/hub/R_HUB1.md`) : les quêtes sont le **Journal**
+(`ui/quest_journal.gd`, `QuestJournal.open_on` : 5 onglets, « Y aller », épingle `Quests.toggle_pin` / `pinned` ; touche `journal` = L, menu, pause,
+bilan ; `_show_menu("quests")` l'ouvre), bloc « Aujourd'hui » `ui/today_panel.gd`, boussole v2 `Compass.advices(n)` (familles différentes, le
+premier = `advice()`) dans la bulle `ui/compass_bubble.gd` + étiquette « Conseillé » de Jouer, « Continuer » `core/last_activity.gd`
+(`Lobby._continue_last`), pastilles de nouveauté `core/news_dots.gd` (`records.news`, migration « tout vu ») + `ui/news_dot.gd` ; test `test_hub1`,
+captures `tests/shot_hub1.tscn`. `records.news` / `last_activity` = état de menu (hors comparaison du hub des modes scellés).
 
 ### Interface : composants communs
 - **Navigation manette** `core/ui_nav.gd` (voir « Manette et menus ») ; écrans plein cadre `ui/page_screen.gd` (`PageScreen`,
@@ -259,9 +265,11 @@ pastilles `ui/gain_chips.gd`. Détail : DESIGN « Quêtes », « La quête commu
 - **Petites cartes** `ui/info_card.gd` (aucune fenêtre native : `InfoCard.in_layer` / `in_control`, `add_card`, confirmation
   destructive `InfoCard.ask`) ; fiches `Tutorial.CARDS` (`short` ≤ 125 signes, `icon`, `chapter`).
 - **Choix de carte** : tout passe par `world._offer` → `ui/card_picker.gd` (un clic choisit, pause tenue `PAUSE_GROUP`,
-  `CardPicker.auto_pick` pour l'aide « Bot » et `--autoplay`).
+  `CardPicker.auto_pick` pour l'aide « Pilote automatique » et `--autoplay`).
 - **Objets** : `Items.describe(item, detailed)` et `ItemWidgets.item_card` (Maj déplie, comparaison ▲ / ▼).
-- **HUD** `ui/hud.gd` (pile `_left`, Premiers pas et fiches seulement en Survie), pause `ui/pause_menu.gd`, Guide F1 `ui/guide.gd`
+- **HUD** `ui/hud.gd` (pile `_left`, Premiers pas et fiches seulement en Survie ; lot HUB-1 : une carte à la fois par la file `HudNotices`
+  `ui/hud_notices.gd` (danger > quête > nouveauté > butin, rien sous le bandeau), quête suivie `QuestBadge.pick`, taille / opacité `hud_scale` /
+  `hud_opacity` (Paramètres > Affichage) par `_apply_hud_prefs`), pause `ui/pause_menu.gd`, Guide F1 `ui/guide.gd`
   (seule aide du jeu, 6 onglets), accueil `ui/welcome.gd`, tutoriel `core/tutorial.gd`, Paramètres `ui/settings_menu.gd`.
 - **Curseurs** (K1, `R_K1.md`) : `ui/cursor_sets.gd` (`CursorSets.LIST`, 9 jeux dessinés par `tools/make_cursors.py` en 32 / 48 px, points chauds générés
   `cursor_hotspots.gd`, posés par `Settings` via `Input.set_custom_mouse_cursor`), réticule de visée `ui/aim_reticle.gd` (visée Curseur / Action), aperçu `cursor_preview.gd` ; test `test_k1`.

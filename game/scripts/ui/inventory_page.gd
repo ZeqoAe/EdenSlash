@@ -827,7 +827,7 @@ func _refresh_detail() -> void:
 			"keys": "Ouvre un coffre de la carte sans payer.",
 			"gold": "Coffres de la carte, marchands ambulants, amélioration +1 à +10 (Forge)."}.get(key, ""))
 		_d_flavor.text = "[color=#9a98a8]%s[/color]" % ("Fournitures : gardées à l'extraction ou à la victoire, perdues si le héros tombe." if String(e.kind) == "stack" else
-			("Gardés entre les runs (on les obtient en démontant des objets)." if key == "crystal" else "Perdus en fin de run : à dépenser !"))
+			("Gardés entre les parties (on les obtient en démontant des objets)." if key == "crystal" else "Perdus en fin de partie : à dépenser !"))
 		_d_set.text = "[b]Utilisation[/b]\n[color=#c8c8d4]%s[/color]" % ("Forge : gemmes, formules d'enchantement, parchemins de fortification, pierres de sûreté ; fusion de 3 gemmes identiques." if String(e.kind) == "stack" else "Voir l'aide « ? » : Monnaies.")
 		for b in [_b_equip, _b_dismantle]:
 			b.disabled = true
@@ -873,7 +873,7 @@ func _refresh_detail() -> void:
 		_b_equip.tooltip_text = HeroLevel.lock_text(it)
 	if it.slot == "trophy":
 		_b_equip.disabled = true  # ancien trophée : les trophées se trouvent pendant la run (collection)
-		_b_equip.tooltip_text = "Les trophées ne s'équipent plus : jusqu'à %d par run, trouvés dans les coffres de trophée." % Run.MAX_TROPHIES
+		_b_equip.tooltip_text = "Les trophées ne s'équipent plus : jusqu'à %d par partie, trouvés dans les coffres de trophée." % Run.MAX_TROPHIES
 	var off: Dictionary = Profile.equipped.get("offhand", {})
 	_b_offhand.visible = it.slot == "weapon" and worn_slot != "offhand" and (worn_slot != "weapon" or Profile.can_be_main(off))
 	_b_offhand.text = "Échanger" if worn_slot == "weapon" else "Secondaire"
@@ -888,7 +888,7 @@ func _refresh_detail() -> void:
 		_b_offhand.visible = false
 	_b_upgrade.disabled = false
 	var up := "Amélioration maximale" if int(it.get("upgrade", 0)) >= Items.MAX_UPGRADE else "Prochain niveau : %d %% de réussite" % roundi(Craft.success_chance(it) * 100.0)
-	_b_upgrade.tooltip_text = up if Profile.in_run else up + "\nHors run : fournitures de ta réserve, or remplacé par des cristaux (1 pour %d or)." % Forge.GOLD_PER_CRYSTAL
+	_b_upgrade.tooltip_text = up if Profile.in_run else up + "\nHors partie : fournitures de ta réserve, or remplacé par des cristaux (1 pour %d or)." % Forge.GOLD_PER_CRYSTAL
 	var users := Profile.item_users(String(it.get("uid", ""))) if not Profile.in_run else []
 	_b_dismantle.tooltip_text = "Retire d'abord l'objet." if equipped else (("Attention : utilisé par le préréglage de " + ", ".join(users)) if not users.is_empty() else "")
 	_b_dismantle.text = "Confirmer ?" if _armed_dismantle else "Démonter"
@@ -1103,7 +1103,7 @@ func _show_stat_detail() -> void:
 			lines.append("\n[color=#f5c75a][b]%s[/b][/color]" % String(row[0]).replace("—", "").strip_edges())
 		else:
 			lines.append("%s : [b]%s[/b]" % [row[0], row[1]])
-	var extra := "" if player else "\n\n[color=#9a98a8]Hors run : héros niveau %d avec l'équipement porté, les talents, les certificats et la collection.[/color]" % _level()
+	var extra := "" if player else "\n\n[color=#9a98a8]Hors partie : héros niveau %d avec l'équipement porté, les talents, les certificats et la collection.[/color]" % _level()
 	InfoDialog.open(self, "Statistiques — %s" % GameData.class_data(_cls()).get("name_fr", ""), "\n".join(lines).strip_edges() + extra)
 
 

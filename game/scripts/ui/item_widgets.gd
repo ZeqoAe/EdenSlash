@@ -213,7 +213,7 @@ class Wallet extends HBoxContainer:
 			ic.custom_minimum_size = Vector2(26, 26)
 			ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			ic.tooltip_text = {"gold": "Or (perdu en fin de run)", "keys": "Clés (perdues en fin de run)", "crystal": "Cristaux (gardés)"}[k]
+			ic.tooltip_text = {"gold": "Or (perdu en fin de partie)", "keys": "Clés (perdues en fin de partie)", "crystal": "Cristaux (gardés)"}[k]
 			ic.mouse_filter = Control.MOUSE_FILTER_PASS
 			add_child(ic)
 			var l := Hud._label(self, "0", 16, Color(1.0, 0.85, 0.35) if k == "gold" else Color.WHITE)

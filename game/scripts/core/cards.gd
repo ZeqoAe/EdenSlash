@@ -221,7 +221,7 @@ static func skill_upgrade_lines(cur: Dictionary, up: Dictionary) -> PackedString
 ## atteint en run), objectif, texte]. Modifiable par l'éditeur de cartes (champ « unlock »).
 const UNLOCK := {
 	"lingering": ["kills", 500, "Vaincre %d monstres"],
-	"scholar": ["best_level", 12, "Atteindre le niveau %d en run"],
+	"scholar": ["best_level", 12, "Atteindre le niveau %d en partie"],
 	"recall": ["chests", 5, "Ouvrir %d coffres de la carte"],
 	"volatile": ["kills", 1000, "Vaincre %d monstres"],
 	"shockwave": ["elite_kills", 10, "Vaincre %d élites"],

@@ -4,7 +4,7 @@ extends ResultsPanel
 ## lobby ou nouvelle run. Les autres modes ont leur bilan (Duel, Tour, Donjon, Royale) sur le même
 ## composant (ResultsPanel).
 
-const TITLES := {"victoire": "VICTOIRE !", "defaite": "DÉFAITE", "abandon": "RUN ABANDONNÉE", "extraction": "EXTRACTION RÉUSSIE"}
+const TITLES := {"victoire": "VICTOIRE !", "defaite": "DÉFAITE", "abandon": "PARTIE ABANDONNÉE", "extraction": "EXTRACTION RÉUSSIE"}
 
 
 func show_results() -> void:
@@ -34,7 +34,7 @@ func spec() -> Dictionary:
 		"quest": Compass.after("survival", {"unlocked": Run.unlocked_epoch, "seen": Run.seen_items.size()}),
 		"buttons": [
 			{"text": "Rejouer (%s)" % epoch_name, "primary": true, "disabled": not Run.survival or Run.epoch > Epochs.unlocked(), "call": _replay},
-			{"text": "Retour au lobby", "call": _finish},
+			{"text": "Retour au menu", "call": _finish},
 		],
 	}
 
@@ -71,7 +71,7 @@ func survivor_spec() -> Dictionary:
 		"buttons": [
 			{"text": "Rejouer", "primary": true, "call": _replay},
 			{"text": "Changer de classe", "call": _change_class},
-			{"text": "Retour au lobby", "call": _finish},
+			{"text": "Retour au menu", "call": _finish},
 		],
 	}
 
@@ -245,7 +245,7 @@ static func insignia_notes() -> Array:
 	if Run.kills < 10:
 		notes.append("Vaincs 10 monstres : +%d de participation." % Run.INSIGNIA_BASE)
 	if Run.stage <= 1 and not Run.insignia_parts.is_empty() and int(Run.insignia_parts.get("participation", 0)) < Run.INSIGNIA_BASE * (2 if Run.kills >= 10 else 1):
-		notes.append("Run courte : participation selon le temps passé sur la 1re carte.")
+		notes.append("Partie courte : participation selon le temps passé sur la 1re carte.")
 	if Run.kills > Run.KILL_CAP_PER_MAP * maxi(Run.stage, 1):
 		notes.append("Monstres comptés : %d par carte au plus." % Run.KILL_CAP_PER_MAP)
 	return notes

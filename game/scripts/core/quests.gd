@@ -680,9 +680,9 @@ static func act_name(q: Dictionary) -> String:
 	return String(QuestPool.ACTS.get(String(def_of(q).get("act", "")), {}).get("name", ""))
 
 
-## Où mène la quête (boussole) : la page de l'activité.
+## Où mène la quête (boussole, « Y aller » du Journal) : la page de l'activité.
 static func go_of(q: Dictionary) -> Dictionary:
-	return QuestPool.ACTS.get(String(def_of(q).get("act", "")), {}).get("go", {"menu": "quests"})
+	return QuestPool.ACTS.get(String(def_of(q).get("act", "")), {}).get("go", {"journal": true})
 
 
 # --- progression en direct (HUD) -----------------------------------------------------------------------------
@@ -777,7 +777,7 @@ static func report_line() -> String:
 	return ""
 
 
-## Texte sous « Quêtes » sur l'étiquette de la page Jouer.
+## Texte court du jour (bloc « Aujourd'hui » du menu, Journal).
 static func card_sub() -> String:
 	if not enabled():
 		return ""
@@ -808,7 +808,49 @@ static func hint() -> Dictionary:
 		return {}
 	var act := act_name(best)
 	return {"text": "Quête : %s → %s" % [title(best), act] if act != "" and act != "Toutes" else "Quête : %s" % title(best),
-		"tip": "Tes quêtes du jour et de la semaine sont dans Jouer > Quêtes.", "go": go_of(best), "nearly": best_ratio >= 0.5}
+		"tip": "Tes quêtes du jour et de la semaine sont dans le Journal (%s)." % Settings.action_label("journal", 1), "go": go_of(best), "nearly": best_ratio >= 0.5}
+
+
+# --- quête suivie (lot HUB-1, P0-5 / P0-6) ----------------------------------------------------------------------
+## La quête épinglée dans le Journal est celle que montre le HUD (sinon la plus avancée de l'activité jouée). Clé
+## « daily|<id> » ou « weekly|<id> » dans `state().pin` ; une quête accomplie ou renouvelée n'est plus suivie (rien à migrer).
+static func pin_key(period: String, q: Dictionary) -> String:
+	return "%s|%s" % [period, String(q.get("id", ""))]
+
+
+static func is_pinned(period: String, q: Dictionary) -> bool:
+	return enabled() and String(state().get("pin", "")) == pin_key(period, q)
+
+
+## Épingle (ou désépingle) la quête ; renvoie vrai si elle est maintenant suivie.
+static func toggle_pin(period: String, q: Dictionary) -> bool:
+	var st := state()
+	var k := pin_key(period, q)
+	st["pin"] = "" if String(st.get("pin", "")) == k else k
+	_save()
+	return String(st.pin) == k
+
+
+## La quête suivie, pas encore faite : {q, period} ou {}.
+static func pinned() -> Dictionary:
+	if not enabled():
+		return {}
+	var st := state()
+	var k := String(st.get("pin", ""))
+	if k == "":
+		return {}
+	for period in ["daily", "weekly"]:
+		for q in st.get(period, []):
+			if pin_key(period, q) == k:
+				return {} if bool(q.done) else {"q": q, "period": period}
+	return {}
+
+
+## Temps avant les nouvelles quêtes du jour (minuit), en clair : « 6 h 12 », « 25 min ».
+static func renew_text() -> String:
+	var t := Time.get_time_dict_from_system()
+	var left := maxi(1, 24 * 60 - (int(t.hour) * 60 + int(t.minute)))
+	return "%d h %02d" % [left / 60, left % 60] if left >= 60 else "%d min" % left
 
 
 # --- défis de classe (contrats) --------------------------------------------------------------------------------

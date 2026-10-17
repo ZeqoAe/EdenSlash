@@ -484,7 +484,7 @@ class AppearancePage extends HBoxContainer:
 		var b := Profile.aura_stats(cid)
 		for st in b:
 			parts.append(Items.stat_text(st, b[st]))
-		return "[color=#7fe08a]%s en run[/color]" % ", ".join(parts) if not parts.is_empty() else ""
+		return "[color=#7fe08a]%s en partie[/color]" % ", ".join(parts) if not parts.is_empty() else ""
 
 	static func _box(on: bool, ok: bool) -> StyleBoxFlat:
 		return UiTheme.flat_box(Color(0.08, 0.06, 0.13, 0.95), UiTheme.GOLD if on else (UiTheme.GOLD_DIM if ok else Color(0.25, 0.23, 0.3)), 3 if on else 2, 8)
@@ -622,7 +622,7 @@ class CardsPage extends HBoxContainer:
 		_count.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		_count.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_count.mouse_filter = Control.MOUSE_FILTER_PASS
-		_count.tooltip_text = "Cartes communes : pour toutes les classes. Cartes de classe : seulement en run de cette classe, elles renforcent un sort. Certificats : posés sur le plateau (Classe > Certificats), ils sont acquis dès le début de la run. Les verrouillées se débloquent pour toujours avec leur exploit. Pendant le choix : Bannir retire une carte de la run, Garder la repropose au choix suivant (3 fois chacun par run)."
+		_count.tooltip_text = "Cartes communes : pour toutes les classes. Cartes de classe : seulement en partie de cette classe, elles renforcent un sort. Certificats : posés sur le plateau (Classe > Certificats), ils sont acquis dès le début de la partie. Les verrouillées se débloquent pour toujours avec leur exploit. Pendant le choix : Bannir retire une carte de la partie, Garder la repropose au choix suivant (3 fois chacun par partie)."
 		_filter = OptionButton.new()
 		for t in ["Toutes", "Communes", "De la classe", "À débloquer"]:
 			_filter.add_item(t)

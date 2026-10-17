@@ -101,7 +101,7 @@ const ACTS := {
 	"royale": {"name": "Battle royale", "go": {"menu": "royale"}},
 	"autochess": {"name": "L'Échiquier", "go": {"menu": "autochess"}},
 	"lobby": {"name": "Coffres", "go": {"chests": true}},
-	"any": {"name": "Toutes", "go": {"menu": "quests"}},
+	"any": {"name": "Toutes", "go": {"menu": "play"}},  # (lot HUB-1 : « Y aller » d'une quête de variété : le menu Jouer)
 }
 
 

@@ -511,7 +511,7 @@ func _test_page() -> void:
 	box2.queue_free()
 	# l'étiquette de la page Jouer
 	var a := Activities.get_def("quests")
-	check("activité : « Quêtes » dans la rangée Défis, ouverte par le fil « daily »", a.row == "challenge" and a.unlock == "daily" and Activities.get_def("mastery").is_empty())
+	check("activité : « Quêtes » sortie de Jouer (lot HUB-1 : c'est le Journal), ouverte par le fil « daily »", a.row == "" and a.unlock == "daily" and Activities.get_def("mastery").is_empty())
 	check("activité : sous-titre dynamique (%s)" % Activities.sub_text(a), Activities.sub_text(a).contains("sur 3"))
 	_set_daily(["sv_kills"])
 	Quests.state().daily[0]["done"] = true

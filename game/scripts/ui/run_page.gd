@@ -25,7 +25,7 @@ func _ready() -> void:
 	add_theme_constant_override("separation", 16)
 	# compétences
 	var a := ItemWidgets.panel(self, 0, true)
-	_skills_title = ItemWidgets.section(a, "Compétences" if Royale.active else "Compétences de la run")
+	_skills_title = ItemWidgets.section(a, "Compétences" if Royale.active else "Compétences de la partie")
 	var sa := ScrollContainer.new()
 	sa.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	sa.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -55,7 +55,7 @@ func _ready() -> void:
 	_stats.add_theme_constant_override("v_separation", 8)
 	c.add_child(_stats)
 	_bag_title = ItemWidgets.section(c, "Sac")
-	_bag_title.tooltip_text = "Fournitures de la run : gemmes, parchemins, ciseaux et pierres"
+	_bag_title.tooltip_text = "Fournitures de la partie : gemmes, parchemins, ciseaux et pierres"
 	_bag_title.mouse_filter = Control.MOUSE_FILTER_PASS
 	_bag = ItemWidgets.rich(c, 15)
 	var acts := VBoxContainer.new()
@@ -69,7 +69,7 @@ func _ready() -> void:
 	ItemWidgets.action_button(row, "Paramètres", func(): settings_requested.emit()).size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if not (Training.active or Duel.active or Tower.active or Royale.active or Survivor.active):  # (Survivant : pas d'extraction)
 		var ex := ItemWidgets.action_button(acts, "S'extraire", func(): extract_requested.emit())
-		ex.tooltip_text = "Quitte la carte en gardant la run : compte 10 s sans être touché%s" % [" (touche %s)" % Settings.action_label("extract", 1) if InputMap.has_action("extract") else ""]
+		ex.tooltip_text = "Quitte la carte en gardant la partie : compte 10 s sans être touché%s" % [" (touche %s)" % Settings.action_label("extract", 1) if InputMap.has_action("extract") else ""]
 	ItemWidgets.action_button(acts, PauseMenu.leave_texts().button, func(): lobby_requested.emit())
 	ItemWidgets.action_button(acts, "Quitter le jeu", func(): quit_requested.emit())
 
@@ -90,7 +90,7 @@ func refresh() -> void:
 	# 4 cases, chacune avec ses 2 enchaînements : 12 sorts en tout
 	var total := Run.all_skills().size()
 	if _skills_title:
-		_skills_title.text = ("Compétences (%d / %d)" if Royale.active else "Compétences de la run (%d / %d)") % [total, Survivor.SPELL_MAX if Survivor.active else Run.MAX_SKILLS * (1 + Run.MAX_CHAIN)]
+		_skills_title.text = ("Compétences (%d / %d)" if Royale.active else "Compétences de la partie (%d / %d)") % [total, Survivor.SPELL_MAX if Survivor.active else Run.MAX_SKILLS * (1 + Run.MAX_CHAIN)]
 	if _skills_title:
 		_skills_title.tooltip_text = "Glisse un sort sur un autre pour échanger leurs places (touches et enchaînements)"
 		_skills_title.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -130,7 +130,7 @@ func refresh() -> void:
 	if not Royale.active:
 		ItemWidgets.section(_cards, "Trophées (%d / %d)" % [Run.trophies.size(), Run.MAX_TROPHIES], 15)
 	if Run.trophies.is_empty() and not Royale.active:
-		_row(_cards, "", "Aucun trophée", "", UiTheme.MUTED, 0, 0, Vector2i(-1, -1), "Coffres et sanctuaires : jusqu'à %d trophées par run, tous d'effets différents, tous actifs" % Run.MAX_TROPHIES)
+		_row(_cards, "", "Aucun trophée", "", UiTheme.MUTED, 0, 0, Vector2i(-1, -1), "Coffres et sanctuaires : jusqu'à %d trophées par partie, tous d'effets différents, tous actifs" % Run.MAX_TROPHIES)
 	for t in Run.trophies:
 		_row(_cards, String(t.get("icon", "")), "✔ %s · %s" % [String(t.get("passive", {}).get("name", "")), Items.display_name(t)],
 			String(t.get("passive", {}).get("desc", "")), Color(0.5, 1.0, 0.55), 0, 40)

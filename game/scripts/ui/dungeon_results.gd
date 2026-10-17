@@ -83,7 +83,7 @@ func show_results(got: Dictionary) -> void:
 			else:
 				Tower.start_dungeon(Profile.selected_class, zid, diff, Dungeons.last_allies, bid)
 			get_tree().change_scene_to_file("res://scenes/world.tscn")},
-		{"text": "Retour au lobby", "call": func():
+		{"text": "Retour au menu", "call": func():
 			get_tree().paused = false
 			get_tree().change_scene_to_file("res://scenes/lobby.tscn")},
 	]

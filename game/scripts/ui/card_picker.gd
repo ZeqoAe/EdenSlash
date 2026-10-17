@@ -494,7 +494,7 @@ func _add_ban_keep(v: Container, card: Dictionary, i: int) -> void:
 		v.add_child(row)
 		var ban := Button.new()
 		ban.text = "%s (%d)" % [SurvivorCards.ban_label(card), SurvivorCards.bans_left()] if sv else "Bannir (%d)" % (Cards.BANS_PER_RUN - Run.bans_used)
-		ban.tooltip_text = SurvivorCards.ban_tip(card) if sv else "Cette carte ne sera plus proposée pendant la run ; une autre la remplace."
+		ban.tooltip_text = SurvivorCards.ban_tip(card) if sv else "Cette carte ne sera plus proposée pendant la partie ; une autre la remplace."
 		ban.focus_mode = Control.FOCUS_NONE
 		ban.add_theme_font_size_override("font_size", UiTheme.MIN_TEXT)
 		ban.disabled = not SurvivorCards.can_ban(card) if sv else (Run.bans_used >= Cards.BANS_PER_RUN or String(card.type) in ["upgrade", "weapon_up"])

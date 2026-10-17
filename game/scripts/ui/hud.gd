@@ -28,6 +28,8 @@ var _steps_panel: PanelContainer
 var _steps_head: Label
 var _steps_text: Label
 var _cards: InfoCard  # fiche de découverte : une petite carte à droite, sous le compteur de dégâts
+var notices: HudNotices  # file unique des cartes (lot HUB-1, P0-7) : une à la fois, danger > quête > nouveauté > butin
+var _feed_wait: Array = []  # lignes de butin qui attendent la fin du bandeau d'annonce (P0-7)
 var _buff_row: HudWidgets.StatusRow
 var _debuff_row: HudWidgets.StatusRow
 var _durations := {}  # "cible:effet" -> [fin, durée totale]
@@ -277,6 +279,9 @@ func _build() -> void:
 	root.add_child(_big_map)
 	_big_map.setup(player, director)
 	add_child(root)
+	_apply_hud_prefs()  # taille et opacité du HUD (lot HUB-1, P0-9)
+	Settings.changed.connect(_apply_hud_prefs)
+	get_viewport().size_changed.connect(_apply_hud_prefs)
 	if Royale.active:
 		_royale = RoyaleHud.attach(self, root)
 	elif Duel.active:
@@ -310,6 +315,7 @@ func _build_tutorial(root: Control) -> void:
 	_steps_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_steps_text.custom_minimum_size = Vector2(PANEL_W - 36.0, 0)
 	_cards = InfoCard.in_control(root)  # sous le compteur de dégâts cumulés (il finit vers y = 370)
+	notices = HudNotices.new(_cards, banner_up)
 
 
 ## Manette : L3 ferme la fiche de découverte, R3 ouvre le Guide à son chapitre (en jeu B reste à l'action).
@@ -337,7 +343,7 @@ func _update_tutorial() -> void:
 		var s := Tutorial.current_step()
 		_steps_head.text = Tutorial.progress_text()
 		_steps_text.text = Tutorial.step_text(s)
-	if _cards.count() == 0 and director != null and not director.state in ["boss", "duel", "tower", "royale"] and _survival_mode():
+	if notices.idle() and director != null and not director.state in ["boss", "duel", "tower", "royale"] and _survival_mode():
 		var id := Tutorial.take_card()
 		if id != "":
 			_show_card(id)
@@ -354,7 +360,7 @@ func _show_card(id: String) -> void:
 				Profile.save_profile()}]
 	if Gamepad.active:
 		spec["hint"] = "%s : compris · %s : Guide" % [Settings.pad_name(JOY_BUTTON_LEFT_STICK), Settings.pad_name(JOY_BUTTON_RIGHT_STICK)]
-	_cards.add_card(spec)
+	notices.push("news", spec)  # (P0-7 : par la file unique, après les quêtes et jamais sous le bandeau)
 
 
 func _build_objectives(root: Control) -> void:
@@ -767,6 +773,12 @@ func _process(delta: float) -> void:
 	if not _root.visible:
 		return
 	_clock += delta
+	notices.tick()
+	if not _feed_wait.is_empty() and not banner_up():
+		var waiting := _feed_wait.duplicate()
+		_feed_wait.clear()
+		for t in waiting:
+			feed(String(t[0]), t[1])
 	_refresh_potions()
 	_update_damage_counter(delta)
 	_update_kill_feed()
@@ -955,6 +967,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _pad_card_input(event):
 		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("journal") and not Training.active:
+		# Journal des quêtes (lot HUB-1, P0-5) : le jeu attend qu'on le referme ; ni « Y aller » ni Défi du jour en partie
+		get_viewport().set_input_as_handled()
+		QuestJournal.open_on(get_parent(), 0, Callable(), Callable(), true)
 		return
 	if event.is_action_pressed("map") and _royale != null:
 		_royale.toggle_map()  # Battle royale : grande carte v2 (lot BR-I1)
@@ -1214,15 +1231,41 @@ func hide_banner() -> void:
 	_banner.modulate.a = 0.0
 
 
-## Ligne du fil de butin (5 au plus, la plus récente en bas), effacée après quelques secondes.
+## Le bandeau d'annonce (danger, boss, rage) est-il affiché ? Les cartes et le butin attendent (HudNotices, P0-7).
+func banner_up() -> bool:
+	return _banner != null and is_instance_valid(_banner) and _banner.modulate.a > 0.05
+
+
+## Taille et opacité du HUD (Paramètres > Affichage > HUD en partie, lot HUB-1 P0-9), à part de la taille de l'interface :
+## la racine du HUD est posée à la taille de l'écran divisée par l'échelle, puis agrandie ; les ancres restent justes.
+func _apply_hud_prefs() -> void:
+	if _root == null or not is_instance_valid(_root):
+		return
+	var s := clampf(float(Settings.get_v("interface", "hud_scale")), 0.7, 1.5)
+	if is_equal_approx(s, 1.0):
+		_root.scale = Vector2.ONE
+		_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	else:
+		_root.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		_root.position = Vector2.ZERO
+		_root.size = get_viewport().get_visible_rect().size / s
+		_root.scale = Vector2(s, s)
+	_root.modulate.a = clampf(float(Settings.get_v("interface", "hud_opacity")), 0.35, 1.0)
+
+
+## Ligne du fil de butin (3 au plus, la plus récente en bas), effacée après quelques secondes ; elle attend la fin du
+## bandeau d'annonce (une seule chose à lire à la fois, P0-7).
 func feed(text: String, color := Color(1.0, 0.88, 0.55)) -> void:
+	if banner_up():
+		_feed_wait.append([text, color])
+		return
 	var box := PanelContainer.new()
 	box.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.04, 0.03, 0.08, 0.72), Color(color, 0.45), 1, 6))
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var l := _label(box, text, 15, color)
 	l.clip_text = true
 	_feed.add_child(box)
-	while _feed.get_child_count() > 5:
+	while _feed.get_child_count() > 3:
 		var old := _feed.get_child(0)
 		_feed.remove_child(old)
 		old.queue_free()
@@ -1252,10 +1295,11 @@ func _on_xp(xp: int, xp_next: int, level: int) -> void:
 	_xp_orb.big_text = str(level)
 	_xp_orb.small_text = "%d %%" % floori(ratio * 100.0) if not Royale.active else ""  # (Battle royale : pas de pourcentage à l'écran)
 	_xp_orb.tooltip_text = "Niveau %d\nExpérience : %d / %d (%d %%)" % [level, xp, xp_next, floori(ratio * 100.0)]
+	_xp_orb.small_text = ""  # (lot HUB-1, P0-8 : aucun pourcentage permanent ; il reste dans l'infobulle)
 	if Epochs.adventure():
 		# lot H4a : le niveau de run ne donne que des cartes ; le héros se bat à son niveau de héros
-		_xp_orb.caption = "RUN"
-		_xp_orb.tooltip_text = "Run %d : chaque niveau donne une carte.\nTon héros se bat au niveau %d.\nExpérience : %d / %d" % [level, Run.hero_level, xp, xp_next]
+		_xp_orb.caption = "PARTIE"
+		_xp_orb.tooltip_text = "Niveau de partie %d : chaque niveau donne une carte.\nTon héros se bat au niveau %d.\nExpérience : %d / %d" % [level, Run.hero_level, xp, xp_next]
 
 
 # --- fabrique de widgets ---

@@ -29,81 +29,181 @@ const LADDER := [
 ]
 
 
-static func _make(id: String, text: String, go: Dictionary, tip := "", icon := "") -> Dictionary:
-	return {"id": id, "text": text, "tip": tip, "icon": icon, "go": go}
+static func _make(id: String, text: String, go: Dictionary, tip := "", icon := "", family := "") -> Dictionary:
+	return {"id": id, "text": text, "tip": tip, "icon": icon, "go": go, "family": family if family != "" else id}
 
 
 ## Le conseil du moment ; {} en partie. [param in_bilan] : au bilan d'une partie (le profil est encore « en partie » : l'équipement
 ## du coffre commun n'est pas lu, seul l'état du hub compte).
 static func advice(in_bilan := false) -> Dictionary:
+	var list := advices(1, in_bilan)
+	return {} if list.is_empty() else list[0]
+
+
+## Boussole v2 (lot HUB-1, P0-3) : les [param n] premiers conseils qui s'appliquent, de familles différentes (un seul
+## conseil d'équipement, un seul de quête…), dans l'ordre de la boussole ; le premier est toujours [method advice]. La bulle
+## « Ta quête » du menu principal montre le premier avec son pourquoi (tip) et propose les deux autres (« Ou bien : »).
+## Les règles sont évaluées une à une, et seulement jusqu'à en avoir [param n].
+static func advices(n := 3, in_bilan := false) -> Array:
 	if Profile.in_run and not in_bilan:
-		return {}
+		return []
 	if Profile.runs_done <= 0 and Profile.seen_gear.is_empty():
-		return _make("first_run", "Lance ta première Survie pour tout ouvrir", {"menu": "survival"},
-			"La Survie donne les pièces, les insignes et la maîtrise. Les coffres, l'Atelier et le Carnet s'ouvrent après.", "piece")
-	var cid := Profile.selected_class
-	var cname := ClassGear.class_label(cid)
-	var missing := missing_slots(cid)
-	var armory := Unlocks.is_open("armory")
-	if armory and not missing.is_empty():
-		var spare := spare_slot(cid, missing) if not Profile.in_run else ""
-		if spare != "":
-			return _make("equip_spare", "%s : une pièce t'attend dans ton coffre" % cname, {"hero": "equipment"},
-				"Une pièce qui te manquait est dans ton coffre commun : Héros > Équipement, ou « Équiper le meilleur ».", "piece")
-		var buy := affordable_piece(cid, missing)
-		if not buy.is_empty():
-			return _make("buy_piece", "%s : une pièce est achetable" % GearPower.plural(Profile.insignia, "insigne"),
-				{"workshop": 0}, "Armurerie : %s à %s insignes (tu en as %s)." % [String(SLOT_NOUN.get(buy.slot, "une pièce")), GearPower.fmt(int(buy.price)), GearPower.fmt(Profile.insignia)], "insignia")
+		return [_make("first_run", "Lance ta première Survie pour tout ouvrir", {"menu": "survival"},
+			"La Survie donne les pièces, les insignes et la maîtrise. Les coffres, l'Atelier et le Carnet s'ouvrent après.", "piece", "gear")]
+	var c := {"in_bilan": in_bilan, "cid": Profile.selected_class}
+	c["cname"] = ClassGear.class_label(String(c.cid))
+	c["missing"] = missing_slots(String(c.cid))
+	c["armory"] = Unlocks.is_open("armory")
+	var out: Array = []
+	var fams := {}
+	for rule in RULES:
+		var a: Dictionary = Callable(Compass, rule).call(c)
+		if a.is_empty() or fams.has(String(a.family)):
+			continue
+		fams[String(a.family)] = true
+		out.append(a)
+		if out.size() >= n:
+			break
+	return out
+
+
+## Les règles, dans l'ordre (le premier conseil qui s'applique est celui de toujours, passe P6).
+const RULES := ["_r_spare", "_r_buy", "_r_chests", "_r_quest_near", "_r_start_gear", "_r_find_piece", "_r_level_up",
+	"_r_panoply", "_r_forge", "_r_gems", "_r_enchants", "_r_ladder", "_r_quest", "_r_other_class"]
+
+
+static func _entry(c: Dictionary) -> Dictionary:
+	if not c.has("e"):
+		c["e"] = ClassGear.entry(String(c.cid))
+	return c.e
+
+
+static func _qh(c: Dictionary) -> Dictionary:
+	if not c.has("qh"):
+		c["qh"] = Quests.hint() if not bool(c.in_bilan) else {}
+	return c.qh
+
+
+static func _r_spare(c: Dictionary) -> Dictionary:
+	if not c.armory or (c.missing as Array).is_empty() or Profile.in_run:
+		return {}
+	if spare_slot(String(c.cid), c.missing) == "":
+		return {}
+	return _make("equip_spare", "%s : une pièce t'attend dans ton coffre" % c.cname, {"hero": "equipment"},
+		"Une pièce qui te manquait est dans ton coffre commun : Héros > Équipement, ou « Équiper le meilleur ».", "piece", "gear")
+
+
+static func _r_buy(c: Dictionary) -> Dictionary:
+	if not c.armory or (c.missing as Array).is_empty():
+		return {}
+	var buy := affordable_piece(String(c.cid), c.missing)
+	if buy.is_empty():
+		return {}
+	return _make("buy_piece", "%s : une pièce est achetable" % GearPower.plural(Profile.insignia, "insigne"),
+		{"workshop": 0}, "Armurerie : %s à %s insignes (tu en as %s)." % [String(SLOT_NOUN.get(buy.slot, "une pièce")), GearPower.fmt(int(buy.price)), GearPower.fmt(Profile.insignia)], "insignia", "gear")
+
+
+static func _r_chests(_c: Dictionary) -> Dictionary:
 	var n_chests := Profile.reward_chests.size()
-	if n_chests > 0 and Unlocks.is_open("chests"):
-		return _make("chests", "%s à ouvrir" % GearPower.plural(n_chests, "coffre"), {"chests": true},
-			"Les coffres de récompense attendent dans Coffres : pièces, fournitures, apparences.", "look")
-	var qh := Quests.hint() if not in_bilan else {}
-	if not qh.is_empty() and bool(qh.nearly):
-		return _make("quest_near", String(qh.text), qh.go, String(qh.tip), "stars")  # une quête presque finie (passe M5)
-	var e := ClassGear.entry(cid)
-	if int(e.filled) == 0:
-		return _make("start_gear", "%s : choisis la classe dans Héros pour recevoir son équipement" % cname, {"hero": "class"},
-			"L'équipement de départ est remis au premier choix de la classe.", "piece")
-	if not missing.is_empty():
-		var slot := String(missing[0])
-		var more := missing.size() - 1
-		var tip := "Les coffres d'emplacement de la Survie révèlent des pièces : achète-les ensuite à l'Armurerie." \
-			+ (("\nIl manque aussi : %s." % ", ".join(missing.slice(1).map(func(s): return String(Items.SLOT_NAMES.get(s, s)).to_lower()))) if more > 0 else "")
-		return _make("find_piece", "%s : il te manque %s → Survie" % [cname, String(SLOT_NOUN.get(slot, "une pièce"))], {"menu": "survival"}, tip, "piece")
-	if float(e.ratio) < ClassGear.EQUIPPED_RATIO:
-		return _make("level_up_gear", "%s : il faut des pièces de plus haut niveau → Armurerie" % cname,
-			{"workshop": 0} if armory else {"menu": "survival"},
-			"Les époques suivantes de la Survie révèlent des pièces plus puissantes. Les actuelles se montent à la Forge.", "piece")
-	var panoply := maxi(int(e.arch), int(e.spirits))
-	if panoply < ClassGear.PANOPLY:
-		var next := _panoply_step(cid, e)
-		if not next.is_empty():
-			return next
-	if int(e.plus10) < Items.SLOTS.size():
-		var forge := _forge_step(cid, e)
-		if not forge.is_empty():
-			return forge
-	if int(e.gems) < int(e.gem_max):
-		if Unlocks.is_open("tower"):
-			return _make("gems", "%s : des gemmes à sertir → Tour" % cname, {"menu": "tower"},
-				"La Tour donne des gemmes tous les dix étages. Forge > Gemmes pour les sertir.", "gem")
-		return ladder_step("tower")
-	if int(e.enchants) < Items.SLOTS.size():
-		if Unlocks.is_open("siege"):
-			return _make("enchants", "%s : des enchantements → Siège" % cname, {"menu": "siege"},
-				"Le Siège donne les formules hautes. Forge > Enchanter pour les poser.", "formula")
-		return ladder_step("siege")
-	var step := next_ladder()
-	if not step.is_empty():
-		return step
-	if not qh.is_empty():
-		return _make("quest", String(qh.text), qh.go, String(qh.tip), "stars")  # les quêtes du jour (passe M5)
-	var other := lagging_class(cid)
+	if n_chests <= 0 or not Unlocks.is_open("chests"):
+		return {}
+	return _make("chests", "%s à ouvrir" % GearPower.plural(n_chests, "coffre"), {"chests": true},
+		"Les coffres de récompense attendent dans Coffres : pièces, fournitures, apparences.", "look")
+
+
+static func _r_quest_near(c: Dictionary) -> Dictionary:
+	var qh := _qh(c)
+	if qh.is_empty() or not bool(qh.nearly):
+		return {}
+	return _make("quest_near", String(qh.text), qh.go, String(qh.tip), "stars", "quest")  # une quête presque finie (passe M5)
+
+
+static func _r_start_gear(c: Dictionary) -> Dictionary:
+	if int(_entry(c).filled) != 0:
+		return {}
+	return _make("start_gear", "%s : choisis la classe dans Héros pour recevoir son équipement" % c.cname, {"hero": "class"},
+		"L'équipement de départ est remis au premier choix de la classe.", "piece", "gear")
+
+
+static func _r_find_piece(c: Dictionary) -> Dictionary:
+	var missing: Array = c.missing
+	if missing.is_empty():
+		return {}
+	var slot := String(missing[0])
+	var more := missing.size() - 1
+	var tip := "Les coffres d'emplacement de la Survie révèlent des pièces : achète-les ensuite à l'Armurerie." \
+		+ (("\nIl manque aussi : %s." % ", ".join(missing.slice(1).map(func(s): return String(Items.SLOT_NAMES.get(s, s)).to_lower()))) if more > 0 else "")
+	return _make("find_piece", "%s : il te manque %s → Survie" % [c.cname, String(SLOT_NOUN.get(slot, "une pièce"))], {"menu": "survival"}, tip, "piece", "gear")
+
+
+static func _r_level_up(c: Dictionary) -> Dictionary:
+	if not (c.missing as Array).is_empty() or float(_entry(c).ratio) >= ClassGear.EQUIPPED_RATIO:
+		return {}
+	return _make("level_up_gear", "%s : il faut des pièces de plus haut niveau → Armurerie" % c.cname,
+		{"workshop": 0} if c.armory else {"menu": "survival"},
+		"Les époques suivantes de la Survie révèlent des pièces plus puissantes. Les actuelles se montent à la Forge.", "piece", "gear")
+
+
+static func _r_panoply(c: Dictionary) -> Dictionary:
+	var e := _entry(c)
+	if maxi(int(e.arch), int(e.spirits)) >= ClassGear.PANOPLY:
+		return {}
+	return _panoply_step(String(c.cid), e)
+
+
+static func _r_forge(c: Dictionary) -> Dictionary:
+	var e := _entry(c)
+	if int(e.plus10) >= Items.SLOTS.size():
+		return {}
+	return _forge_step(String(c.cid), e)
+
+
+static func _r_gems(c: Dictionary) -> Dictionary:
+	var e := _entry(c)
+	if int(e.gems) >= int(e.gem_max):
+		return {}
+	if Unlocks.is_open("tower"):
+		return _make("gems", "%s : des gemmes à sertir → Tour" % c.cname, {"menu": "tower"},
+			"La Tour donne des gemmes tous les dix étages. Forge > Gemmes pour les sertir.", "gem")
+	return ladder_step("tower")
+
+
+static func _r_enchants(c: Dictionary) -> Dictionary:
+	var e := _entry(c)
+	if int(e.enchants) >= Items.SLOTS.size():
+		return {}
+	if Unlocks.is_open("siege"):
+		return _make("enchants", "%s : des enchantements → Siège" % c.cname, {"menu": "siege"},
+			"Le Siège donne les formules hautes. Forge > Enchanter pour les poser.", "formula")
+	return ladder_step("siege")
+
+
+static func _r_ladder(_c: Dictionary) -> Dictionary:
+	return next_ladder()
+
+
+static func _r_quest(c: Dictionary) -> Dictionary:
+	var qh := _qh(c)
+	if qh.is_empty():
+		return {}
+	return _make("quest", String(qh.text), qh.go, String(qh.tip), "stars", "quest")  # les quêtes du jour (passe M5)
+
+
+static func _r_other_class(c: Dictionary) -> Dictionary:
+	var other := lagging_class(String(c.cid))
 	if other != "":
-		return _make("other_class", "%s est équipé : prépare %s" % [cname, ClassGear.class_label(other)], {"registry": true},
-			"Le Registre de l'équipement montre où en sont les 60 classes.", "piece")
-	return _make("done", "Équipement complet : rien d'autre à chercher", {"registry": true}, "Le Registre de l'équipement le confirme.", "stars")
+		return _make("other_class", "%s est équipé : prépare %s" % [c.cname, ClassGear.class_label(other)], {"registry": true},
+			"Le Registre de l'équipement montre où en sont les 60 classes.", "piece", "class")
+	return _make("done", "Équipement complet : rien d'autre à chercher", {"registry": true}, "Le Registre de l'équipement le confirme.", "stars", "class")
+
+
+## L'activité de Jouer où mène le conseil [param a] ("" : un écran, pas une activité) : l'étiquette « Conseillé ».
+static func activity_of(a: Dictionary) -> String:
+	var go: Dictionary = a.get("go", {})
+	if not go.has("menu"):
+		return ""
+	var m := String(go.menu)
+	return String({"zones": "survival", "tower_floors": "tower"}.get(m, m))
 
 
 ## Emplacements sans pièce du coffre (vides ou tenus par une pièce de départ) de la classe, l'arme d'abord.
@@ -211,7 +311,7 @@ static func _forge_step(cid: String, e: Dictionary) -> Dictionary:
 static func ladder_step(unlock: String) -> Dictionary:
 	for l in LADDER:
 		if String(l[0]) == unlock or (unlock == "rush" and String(l[0]) == "siege") or (unlock in ["tower", "dungeons"] and String(l[0]) == "forge"):
-			return _make("ladder_" + String(l[0]), String(l[1]), l[2], Unlocks.condition(String(l[0])), "rank")
+			return _make("ladder_" + String(l[0]), String(l[1]), l[2], Unlocks.condition(String(l[0])), "rank", "ladder")
 	return {}
 
 

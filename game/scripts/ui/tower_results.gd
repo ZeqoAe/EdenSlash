@@ -35,7 +35,7 @@ func show_results(result: String, floor_reached: int, got: Dictionary) -> void:
 		build.append("%s ×%d" % [Run.passive_def(String(id)).get("name", id), int(Run.passives[id])])
 	var buttons: Array = [
 		{"text": "Rejouer (étage %d, %s)" % [Tower.start_floor, diff], "primary": true, "call": _restart.bind(Tower.start_floor)},
-		{"text": "Retour au lobby", "call": func(): Tower.leave(get_tree())},
+		{"text": "Retour au menu", "call": func(): Tower.leave(get_tree())},
 	]
 	var resume := resume_floor(result)
 	if resume > 0:

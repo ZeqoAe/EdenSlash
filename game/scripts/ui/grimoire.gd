@@ -348,7 +348,7 @@ func _refresh_detail() -> void:
 			var p: Dictionary = _selected.data
 			var icon := String(p.get("icon", Boons.ICONS.get(p.get("id", ""), "")))
 			_detail.text = ("[img=64x64]%s[/img]\n" % icon if icon != "" else "") + "[font_size=17]" + SpellInfo.passive_bbcode(p) + "[/font_size]" + \
-				"\n\n[color=#c8c8d4]Certificat : à poser sur le plateau (Classe > Certificats) pour l'avoir dès le début de la run.[/color]"
+				"\n\n[color=#c8c8d4]Certificat : à poser sur le plateau (Classe > Certificats) pour l'avoir dès le début de la partie.[/color]"
 
 
 ## Attaque actuelle du héros (physique ou magique) pour chiffrer les dégâts, sinon estimation niveau 1.

@@ -1,14 +1,15 @@
 class_name QuestsPage
 extends RefCounted
-## Page « Quêtes » du lobby (Jouer > Défis, passe M5) : la série, les trois quêtes du jour (dont le Défi du jour, qui se
-## lance d'ici), les deux de la semaine et les défis de la classe choisie. Une ligne = une consigne, sa jauge et sa
-## récompense en pastilles ; tout détail est en infobulle. La page est remplie dans la boîte [param box] du lobby
-## (`Lobby._menu_quests`) ; [param on_launch] reçoit la classe du Défi du jour, [param on_changed] redessine la page.
+## Lignes des quêtes (passe M5) : la série, les trois quêtes du jour (dont le Défi du jour, qui se lance d'ici), les deux
+## de la semaine et les défis de la classe choisie. Une ligne = une consigne, sa jauge et sa récompense en pastilles ; tout
+## détail est en infobulle. Depuis le lot HUB-1, les quêtes vivent dans le Journal (QuestJournal, touche L) qui reprend ces
+## lignes avec, en plus ([param opts]), « Y aller » et l'épingle « Suivre » ; [method fill] remplit encore une boîte d'un coup.
+## [param on_launch] reçoit la classe du Défi du jour, [param on_changed] redessine la page.
 
 const ROW_BG := Color(0.07, 0.06, 0.14, 0.82)
 
 
-static func fill(box: VBoxContainer, on_launch: Callable, on_changed: Callable) -> void:
+static func fill(box: VBoxContainer, on_launch: Callable, on_changed: Callable, opts := {}) -> void:
 	if not Quests.enabled():
 		return
 	var st := Quests.state()
@@ -16,10 +17,10 @@ static func fill(box: VBoxContainer, on_launch: Callable, on_changed: Callable) 
 	_section(box, "Aujourd'hui · %s" % date_fr(Quests.today()), "Trois quêtes par jour, le Défi du jour compris. Une quête accomplie prolonge la série.")
 	var daily: Array = st.daily
 	for i in daily.size():
-		box.add_child(_row(daily[i], i, "daily", on_launch, on_changed))
+		box.add_child(_row(daily[i], i, "daily", on_launch, on_changed, opts))
 	_section(box, "Cette semaine", "Deux grandes quêtes, jusqu'à dimanche soir.")
 	for i in (st.weekly as Array).size():
-		box.add_child(_row(st.weekly[i], i, "weekly", on_launch, on_changed))
+		box.add_child(_row(st.weekly[i], i, "weekly", on_launch, on_changed, opts))
 	var cls := Profile.selected_class
 	_section(box, "Défis de classe · %s" % ClassGear.class_label(cls), "Ils se remplissent à chaque Survie avec cette classe, puis sont remplacés.")
 	for c in Quests.class_challenges(cls):
@@ -35,12 +36,13 @@ static func date_fr(iso: String) -> String:
 	return "%d %s" % [int(p[2]), months[int(p[1]) - 1]]
 
 
-static func _section(box: Control, text: String, tip := "") -> void:
+static func _section(box: Control, text: String, tip := "") -> Label:
 	var l := Hud._label(box, text, 15, UiTheme.GOLD)
 	l.add_theme_font_override("font", UiTheme.bold_font())
 	if tip != "":
 		l.mouse_filter = Control.MOUSE_FILTER_STOP
 		l.tooltip_text = tip
+	return l
 
 
 # --- la série --------------------------------------------------------------------------------------------------
@@ -121,7 +123,9 @@ static func _chips(parent: Control, chips: Array) -> void:
 		h.add_child(chip)
 
 
-static func _row(q: Dictionary, index: int, period: String, on_launch: Callable, on_changed: Callable) -> Control:
+## Une quête ; [param opts] (Journal, lot HUB-1) : « go » (Callable(go: Dictionary) : « Y aller »), « pin » (vrai : l'épingle
+## « Suivre » qui choisit la quête du HUD).
+static func _row(q: Dictionary, index: int, period: String, on_launch: Callable, on_changed: Callable, opts := {}) -> Control:
 	var done: bool = bool(q.done)
 	var p := PanelContainer.new()
 	p.add_theme_stylebox_override("panel", _box(ROW_BG, Color(UiTheme.BUFF, 0.5) if done else Color(Color(0.38, 0.38, 0.58), 0.85)))
@@ -154,10 +158,30 @@ static func _row(q: Dictionary, index: int, period: String, on_launch: Callable,
 			if Quests.reroll(index):
 				on_changed.call())
 		top.add_child(rr)
+	if bool(opts.get("pin", false)) and not done:
+		var pinned := Quests.is_pinned(period, q)
+		var pb := MenuWidgets.glass_button("★ Suivie" if pinned else "☆ Suivre", 14, Vector2(100, 34))
+		pb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		pb.tooltip_text = "Ne plus la suivre dans le HUD" if pinned else "La suivre dans le HUD pendant les parties"
+		if pinned:
+			pb.add_theme_color_override("font_color", UiTheme.GOLD)
+		pb.pressed.connect(func():
+			Quests.toggle_pin(period, q)
+			on_changed.call())
+		top.add_child(pb)
+	var go_cb: Callable = opts.get("go", Callable())
+	var where := Quests.go_of(q)
+	if go_cb.is_valid() and not done and not where.has("journal"):
+		var gb := MenuWidgets.gold_button("Y aller", 15, Vector2(100, 34))
+		gb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var an := Quests.act_name(q)
+		gb.tooltip_text = ("Ouvre la page de l'activité : %s" % an) if not an in ["", "Toutes"] else "Ouvre le menu Jouer"
+		gb.pressed.connect(func(): go_cb.call(where))
+		top.add_child(gb)
 	if int(q.t) > 1:
 		_progress(v, Quests.live_progress(q) if not done else int(q.t), int(q.t))
-	if String(Quests.def_of(q).get("special", "")) == "challenge" and not done:
-		v.add_child(_launchers(on_launch))
+	if String(Quests.def_of(q).get("special", "")) == "challenge" and not done and on_launch.is_valid():
+		v.add_child(_launchers(on_launch))  # (en partie, le Journal n'a pas de lanceur : on_launch vide)
 	return p
 
 

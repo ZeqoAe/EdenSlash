@@ -12,10 +12,11 @@ const TEST_SAVE_PATH := "user://settings_test.cfg"
 const ACTIONS := [
 	["move_forward", "Avancer"], ["move_back", "Reculer"], ["move_left", "Aller à gauche"],
 	["move_right", "Aller à droite"], ["attack", "Attaquer (clic principal)"],
-	["move_order", "Déplacer / attaquer (mode RTS)"], ["jump", "Sauter"], ["dodge", "Esquive"],
+	["move_order", "Déplacer / attaquer (clic droit)"], ["jump", "Sauter"], ["dodge", "Esquive"],
 	["skill_1", "Compétence 1"], ["skill_2", "Compétence 2"], ["skill_3", "Compétence 3"],
 	["skill_4", "Compétence 4"], ["interact", "Interagir"], ["map", "Carte"],
 	["objectives", "Afficher les objectifs"], ["pause", "Menu / pause"],
+	["journal", "Journal des quêtes"],
 	["camera_rotate", "Tourner la caméra (maintenu)"], ["unstuck", "Se débloquer"], ["help", "Aide"],
 	["feedback", "Signaler un problème"], ["extract", "S'extraire (10 s)"], ["quick_equip", "Équiper l'objet trouvé"],
 	["potion_1", "Potion de soin"], ["potion_2", "Potion d'effet"], ["swap_weapon", "Changer d'arme"],
@@ -43,6 +44,7 @@ const DEFAULT_BINDS := {
 	"interact": [{"k": KEY_F}],
 	"map": [{"k": KEY_M}],
 	"objectives": [{"k": KEY_TAB}],
+	"journal": [{"k": KEY_L}],  # Journal des quêtes (lot HUB-1) : partout, menu, partie, bilan (J est déjà une attaque)
 	"pause": [{"k": KEY_ESCAPE}],
 	"camera_rotate": [{"m": MOUSE_BUTTON_RIGHT}],
 	"unstuck": [{"k": KEY_F4}],
@@ -117,6 +119,8 @@ const DEFAULTS := {
 	# dev_mode : écran de test (F10), réservé aux tests
 	"interface": {"damage_numbers": "all", "hit_stop": true, "show_fps": false, "move_marker": true, "attack_zone": false, "dev_mode": false,
 		"tower_unlock_all": true, "perfect_hint": true, "pad_labels": "auto", "compass": true,
+		# HUD en partie (lot HUB-1, P0-9) : taille et opacité, à part de la taille de l'interface (display.ui_scale)
+		"hud_scale": 1.0, "hud_opacity": 1.0,
 		"fx_spells": "all", "fx_auras": "all", "fx_particles": "all", "fx_intensity": 1.0,
 		# curseur de souris (CursorSets) et réticule de visée en jeu (AimReticle) ; valeur inconnue = défaut
 		"cursor_set": "classic", "reticle": "dot", "reticle_size": 1.0, "reticle_color": "gold",
@@ -132,13 +136,13 @@ const PRESETS := {
 		"game": {"move_mode": "keyboard", "aim_mode": "cursor", "attack_mode": "manual"}},
 	"arpg": {"name": "Souris (ARPG)", "desc": "Clic gauche (maintenu) pour se déplacer vers le curseur, clic sur un monstre pour l'attaquer, compétences au clavier vers la souris.",
 		"game": {"move_mode": "click", "aim_mode": "cursor", "attack_mode": "auto"}},
-	"rts": {"name": "RTS / MOBA", "desc": "Clic droit pour se déplacer ou attaquer un monstre, compétences au clavier vers la souris, caméra au clic molette.",
+	"rts": {"name": "Clic droit (stratégie)", "desc": "Clic droit pour se déplacer ou attaquer un monstre, compétences au clavier vers la souris, caméra au clic molette.",
 		"game": {"move_mode": "rts", "aim_mode": "cursor", "attack_mode": "auto"}},
 	"action": {"name": "Action (vue de dos)", "desc": "ZQSD pour se déplacer, le héros regarde le curseur et la caméra tourne derrière lui quand le curseur s'écarte du centre. Molette : du plan rapproché à la vue large.",
 		"game": {"move_mode": "keyboard", "aim_mode": "action", "attack_mode": "manual"}},
 	"relax": {"name": "Détente", "desc": "ZQSD pour se déplacer : attaque de base, compétences et enchaînements se lancent seuls sur les monstres à portée (sans annulation parfaite).",
 		"game": {"move_mode": "keyboard", "aim_mode": "nearest", "attack_mode": "auto", "auto_skills": [true, true, true, true], "auto_combo": true}},
-	"bot": {"name": "Bot (tout automatique)", "desc": "Le héros se déplace, frappe et enchaîne ses sorts tout seul (ton préréglage de sorts), sans annulation parfaite ; bouger toi-même reprend la main.",
+	"bot": {"name": "Pilote automatique", "desc": "Le héros se déplace, frappe et enchaîne ses sorts tout seul (ton préréglage de sorts), sans annulation parfaite ; bouger toi-même reprend la main.",
 		"game": {"move_mode": "keyboard", "aim_mode": "nearest", "attack_mode": "auto", "auto_skills": [true, true, true, true],
 			"auto_combo": true, "auto_move": true, "auto_cards": true}},
 }
@@ -278,7 +282,7 @@ const ASSIST := {
 		"desc": "Mémoire des touches (3 appuis gardés), tenir la touche enchaîne, anneau d'annonce de l'annulation parfaite. Les sorts, le déplacement et l'esquive restent à toi."},
 	"relax": {"name": "Détente", "tag": "SORTS AUTO", "color": Color(0.45, 0.7, 1.0),
 		"desc": "Attaque de base, sorts et enchaînements partent seuls sur les monstres à portée. Tu te déplaces et tu esquives ; l'annulation parfaite, plus puissante, reste à la main."},
-	"bot": {"name": "Bot", "tag": "BOT", "color": Color(0.75, 0.55, 1.0),
+	"bot": {"name": "Pilote auto", "tag": "PILOTE AUTO", "color": Color(0.75, 0.55, 1.0),
 		"desc": "Comme Détente, et le héros se déplace et choisit seul ses cartes et son équipement. Bouger toi-même reprend la main."},
 }
 

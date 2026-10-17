@@ -82,7 +82,7 @@ func _ready() -> void:
 	add_child(lobby)
 	await get_tree().create_timer(2.0).timeout
 	await _shot("00_lobby")
-	for id in ["play", "survival", "training", "dungeon", "arenas", "royale", "rush", "siege", "trials", "quests", "tower", "tower_floors", "duel", "quit"]:
+	for id in ["play", "survival", "training", "dungeon", "arenas", "royale", "rush", "siege", "trials", "tower", "tower_floors", "duel", "quit"]:
 		lobby._show_menu(id)
 		await _shot("01_menu_" + id)
 	for t in ["league", "pantheon", "gauntlet"]:
@@ -120,6 +120,11 @@ func _ready() -> void:
 		lobby._settings.open(i)
 		await _shot("06_params_%d" % i)
 	lobby._settings.close_ui()
+	var jr: QuestJournal = lobby._open_journal()  # lot HUB-1 : le Journal des quêtes, onglet par onglet
+	for i in jr.page_count():
+		jr.show_page(i)
+		await _shot("08_journal_%d" % i)
+	jr.close_ui()
 	var g := Guide.open_on(lobby)
 	for i in g.page_count():
 		g.show_page(i)

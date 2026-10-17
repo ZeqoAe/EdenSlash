@@ -314,6 +314,8 @@ static func hub_view(k: String, v: Variant) -> Variant:
 			var r: Dictionary = (v as Dictionary).duplicate(true)
 			r.erase(KEY)
 			r.erase("quests")
+			r.erase("news")  # (lot HUB-1 : pastilles vues et « Continuer » : état du menu, pas progression du compte)
+			r.erase("last_activity")
 			r.erase("quests_done")  # (une quête accomplie par la partie : permis, elle ne donne que de l'apparence)
 			r.erase("quest_series_best")
 			return r

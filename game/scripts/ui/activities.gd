@@ -20,7 +20,9 @@ const LIST := [
 		"desc": "Quatre salles, un boss."},
 	{"id": "tower", "row": "adventure", "unlock": "tower", "group": "pve", "name": "La Tour", "sub": "200 étages, une seule vie", "gain": "Cristaux, gemmes, apparences", "gives": ["crystal", "gem", "look"],
 		"desc": "Une carte et un coffre par étage, des duels de toutes les classes."},
-	{"id": "quests", "row": "challenge", "unlock": "daily", "img": "training", "group": "pve", "tag": "Chaque jour", "name": "Quêtes", "sub": "Du jour, de la semaine et de classe", "gain": "Maîtrise, apparences", "gives": ["mastery", "look"],
+	# Quêtes (lot HUB-1, question 1 de l'étude BM-HUB) : sorties de Jouer, elles sont le Journal (touche L, « Aujourd'hui »
+	# au menu principal) ; l'entrée reste pour ses textes et son verrou (fil d'éveil « daily »)
+	{"id": "quests", "row": "", "unlock": "daily", "img": "training", "group": "pve", "tag": "Chaque jour", "name": "Quêtes", "sub": "Du jour, de la semaine et de classe", "gain": "Maîtrise, apparences", "gives": ["mastery", "look"],
 		"desc": ""},
 	{"id": "trials", "row": "challenge", "img": "training", "group": "pve", "name": "Épreuves de maîtrise", "sub": "Leçons chronométrées", "soon": true, "gain": "Médailles, maîtrise", "gives": ["mastery"],
 		"desc": "Une leçon par famille de classes, au chrono : bronze, argent, or."},
@@ -70,18 +72,22 @@ static func get_def(id: String) -> Dictionary:
 
 
 ## Étiquette cliquable : l'illustration, un voile sombre en bas, le nom, le sous-titre et
-## une pastille (JcE, JcJ, Bientôt).
-static func card(a: Dictionary, size := Vector2(0, 118)) -> Button:
+## une pastille (JcE, JcJ, Bientôt). Lot HUB-1 : [param is_new] pose la pastille « ! » (activité ouverte, jamais visitée),
+## [param advised] l'étiquette « Conseillé » (la bulle « Ta quête » y mène).
+static func card(a: Dictionary, size := Vector2(0, 118), is_new := false, advised := false) -> Button:
 	var b := Button.new()
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = size
 	b.clip_contents = true
 	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	var soon: bool = a.get("soon", false) or locked(a)
-	var n := UiTheme.flat_box(Color(0.08, 0.07, 0.16, 1.0), UiTheme.GOLD_DIM if not soon else Color(0.35, 0.32, 0.42), 2, 12)
-	var hv := UiTheme.flat_box(Color(0.12, 0.1, 0.22, 1.0), Color(1, 0.92, 0.62), 3, 12)
-	hv.shadow_color = Color(UiTheme.GOLD, 0.45)
+	# carte autocollante (bible § 5-6, UIK1) : contour d'encre 3 px, coins 16 ; survol : liseré soleil et lueur ; le
+	# ressenti « carte » d'UiFeel la fait monter et pencher de 1°
+	var n := UiTheme.flat_box(UiTheme.color("encre.500"), UiTheme.color("encre.700") if not soon else UiTheme.color("encre.300"), 3, 16, false)
+	var hv := UiTheme.flat_box(UiTheme.color("encre.500"), UiTheme.color("bonbon.soleil.base"), 3, 16, false)
+	hv.shadow_color = Color(UiTheme.color("bonbon.soleil.clair"), 0.55)
 	hv.shadow_size = 10
+	b.set_meta("ui_feel", "card")
 	b.add_theme_stylebox_override("normal", n)
 	b.add_theme_stylebox_override("hover", hv)
 	b.add_theme_stylebox_override("pressed", hv)
@@ -126,7 +132,7 @@ static func card(a: Dictionary, size := Vector2(0, 118)) -> Button:
 	if gc != null:
 		gc.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 		gc.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-		gc.offset_right = -8
+		gc.offset_right = -8 if not is_new else -36  # (la pastille de nouveauté prend le coin)
 		gc.offset_top = 8
 		b.add_child(gc)
 	var ch := Hud._label(b, "›", 34, Color(1, 0.98, 0.92, 0.9 if not soon else 0.4))
@@ -134,6 +140,10 @@ static func card(a: Dictionary, size := Vector2(0, 118)) -> Button:
 	ch.offset_left = -26
 	ch.offset_bottom = -8
 	ch.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	if is_new and not soon:
+		NewsDot.attach(b, [], false, Vector2(8, 8)).set_text("!")
+	if advised and not soon:
+		advised_tag(b)
 	return b
 
 
@@ -145,10 +155,31 @@ static func _short_condition(id: String) -> String:
 	return c.trim_suffix(".")
 
 
+## Étiquette autocollante « Conseillé » (lot HUB-1, P0-3) sur la carte de l'activité où mène la bulle « Ta quête ».
+## Couleurs : jetons v2 bonbon.soleil.base et encre.700 (à reprendre par UiTheme v2).
+static func advised_tag(card_button: Control) -> Control:
+	var p := PanelContainer.new()
+	var sb := UiTheme.flat_box(Color("#FFC928"), Color("#221A3A"), 2, 8, false)
+	sb.content_margin_left = 8
+	sb.content_margin_right = 8
+	sb.content_margin_top = 1
+	sb.content_margin_bottom = 2
+	p.add_theme_stylebox_override("panel", sb)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	p.rotation_degrees = -3.0
+	p.position = Vector2(10, 34)
+	var l := Hud._label(p, "Conseillé", 13, Color("#221A3A"))
+	l.add_theme_font_override("font", UiTheme.bold_font())
+	l.add_theme_constant_override("outline_size", 0)
+	p.name = "AdvisedTag"
+	card_button.add_child(p)
+	return p
+
+
 ## Bandeau en tête de la page d'une activité : l'illustration et son nom.
 static func banner(a: Dictionary) -> Control:
 	var p := PanelContainer.new()
-	p.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.06, 0.05, 0.12, 1.0), UiTheme.GOLD_DIM, 2, 12))
+	p.add_theme_stylebox_override("panel", UiTheme.flat_box(UiTheme.color("encre.500"), UiTheme.color("encre.700"), 3, 16, false))
 	p.custom_minimum_size = Vector2(0, 150)
 	p.clip_contents = true
 	var holder := Control.new()

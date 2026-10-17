@@ -82,6 +82,8 @@ func _hub() -> String:
 				v = (v as Dictionary).duplicate(true)
 				v.erase(SurvivorRewards.KEY)
 				v.erase("quests")
+				v.erase("news")  # (lot HUB-1 : pastilles vues et « Continuer » : état du menu, pas progression du compte)
+				v.erase("last_activity")
 			"extra_titles":
 				v = (v as Array).filter(func(t): return not String(t) in SurvivorRewards.TITLES)
 		parts.append("%s=%s" % [k, _norm(v)])

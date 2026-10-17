@@ -168,7 +168,7 @@ func roll_offers() -> Array:
 		var base: int = {"skill": 60, "upgrade": 50, "passive": 70}.get(c.type, 60)
 		out.append({"card": c, "price": int(base + 14 * lvl)})
 	out.append({"keys": 1, "price": 45 + 8 * lvl, "card": {"type": "key", "title": "Clé ×1", "subtitle": "Ouvre un coffre de la carte sans payer",
-		"desc": "Une clé ouvre n'importe quel coffre de la carte (son prix en or monte à chaque coffre ouvert). Perdue en fin de run.", "icon": Items.material_icon("keys")}})
+		"desc": "Une clé ouvre n'importe quel coffre de la carte (son prix en or monte à chaque coffre ouvert). Perdue en fin de partie.", "icon": Items.material_icon("keys")}})
 	var lv := director.supply_level(lvl) if director else lvl  # Survie : fournitures au niveau des pièces de la carte
 	var flv := Craft.fortify_level_at(lv)
 	out.append(_supply_offer(Craft.fortify_key(["power", "guard"].pick_random(), flv), 2, 30 + 5 * lvl))

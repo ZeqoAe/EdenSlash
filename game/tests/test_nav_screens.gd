@@ -56,14 +56,15 @@ func _ready() -> void:
 	add_child(lobby)
 	await get_tree().create_timer(1.5).timeout
 	await probe("lobby : menu de gauche")
-	check("lobby : la boussole montre un conseil cliquable", lobby._compass.visible and lobby._compass.text != "" and not lobby._compass_go.is_empty())
+	# lot HUB-1 : la boussole est la bulle « Ta quête » ; _compass est son bouton « Y aller »
+	check("lobby : la boussole montre un conseil cliquable", lobby._compass.is_visible_in_tree() and lobby._compass.text != "" and not lobby._compass_go.is_empty())
 	check("lobby : la boussole est un contrôle atteignable à la manette", UiNav.candidates().has(lobby._compass))
 	# P10 : l'option « Afficher la boussole d'objectif » (activée par défaut) la masque aussitôt
 	check("réglage « boussole » activé par défaut", Settings.show_compass())
 	Settings.set_v("interface", "compass", false)
-	check("boussole masquée par le réglage, et plus un contrôle de navigation", not lobby._compass.visible and not UiNav.candidates().has(lobby._compass))
+	check("boussole masquée par le réglage, et plus un contrôle de navigation", not lobby._compass.is_visible_in_tree() and not UiNav.candidates().has(lobby._compass))
 	Settings.set_v("interface", "compass", true)
-	check("boussole de retour quand le réglage est remis", lobby._compass.visible and lobby._compass.text != "")
+	check("boussole de retour quand le réglage est remis", lobby._compass.is_visible_in_tree() and lobby._compass.text != "")
 	# P8 : petites cartes d'information : au-dessus de tout, navigables, B les ferme sans perdre le cadre
 	var prev_ctl: Control = lobby._menu["play"]
 	UiNav.cursor = prev_ctl
@@ -183,8 +184,16 @@ func _ready() -> void:
 	await probe("lobby : Battle royale", 0.8)
 	lobby._show_menu("autochess")
 	await probe("lobby : L'Échiquier (difficultés, graine, Lancer)", 0.8)
+	# lot HUB-1 : les quêtes sont le Journal (écran à onglets) ; « quests » l'ouvre
+	Profile.unlocked_features.append("daily")
 	lobby._show_menu("quests")
-	await probe("lobby : Quêtes (relance, Défi du jour)", 0.8)
+	await probe("Journal : Aujourd'hui (épingles, Y aller, relance, Défi du jour)", 0.8)
+	for i in range(1, lobby._journal.page_count()):
+		lobby._journal.show_page(i)
+		await probe("Journal : onglet %d" % i, 0.8)
+	lobby._journal.close_ui()
+	lobby._refresh_ui()
+	await probe("lobby : Aujourd'hui et la bulle « Ta quête » (quêtes ouvertes)")
 	lobby._show_menu("siege")
 	await probe("lobby : Le Siège", 0.8)
 	lobby._show_menu("dungeon")

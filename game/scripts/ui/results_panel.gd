@@ -341,6 +341,12 @@ func _add_quest(text: String) -> void:
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if Quests.enabled():  # lot HUB-1, P0-5 : le Journal s'ouvre aussi depuis le bilan (bouton ou sa touche)
+		var jb := MenuWidgets.glass_button("Journal (%s)" % Settings.action_label("journal", 1), 15, Vector2(0, 34))
+		jb.tooltip_text = "Tes quêtes : ce qui a avancé, la série, ce qui reste aujourd'hui"
+		jb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		jb.pressed.connect(open_journal)
+		h.add_child(jb)
 	_body.add_child(p)
 	_quest_box = p
 	_appear(p, 0.8)
@@ -639,7 +645,16 @@ func _flash_best(with_sound: bool) -> void:
 	tw.tween_property(_best_box, "self_modulate", Color.WHITE, 0.6)
 
 
+## Le Journal des quêtes par-dessus le bilan (lot HUB-1) : sans « Y aller » (le bilan garde la main).
+func open_journal() -> QuestJournal:
+	return QuestJournal.open_on(self, 0)
+
+
 func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("journal") and Quests.enabled() and QuestJournal.find_open(self) == null:
+		get_viewport().set_input_as_handled()
+		open_journal()
+		return
 	if _animating and event.is_pressed() and not event.is_echo() \
 			and (event is InputEventKey or event is InputEventMouseButton or event is InputEventJoypadButton):
 		finish_now()  # sans consommer l'événement : un bouton dégelé garde son clic

@@ -85,7 +85,7 @@ func _insignia_cases() -> void:
 	Run.insignia_gain = Economy.survival_insignia(1, 12, 0, 1, false, 1.0)
 	var tip := ResultsScreen.insignia_tip()
 	check("insignes : run courte au prorata (+%d), expliquée : %s" % [Run.insignia_gain, tip.replace("\n", " | ")],
-		Run.insignia_gain == 5 and tip.contains("Participation : +5") and tip.contains("Run courte"))
+		Run.insignia_gain == 5 and tip.contains("Participation : +5") and tip.contains("Partie courte"))
 	# victoire d'époque II avec défi et autel : victoire, cartes 2 et 3, bonus du défi, autel ; somme = total
 	Run.start_survival("warrior", 2)
 	Run.stage = 3
@@ -104,7 +104,7 @@ func _insignia_cases() -> void:
 		sum += int(l[1])
 	check("insignes : victoire, cartes 2 et 3, boss de carte, défi et autel, somme exacte (%d / %d) : %s" % [sum, Run.insignia_gain, tip.replace("\n", " | ")],
 		sum == Run.insignia_gain and tip.contains("Victoire : +120") and tip.contains("Cartes 2 et 3 atteintes : +70") and tip.contains("3 boss de carte vaincus : +45")
-		and tip.contains("Défi du jour : +") and tip.contains("Autel de la fortune : +40") and not tip.contains("Run courte"))
+		and tip.contains("Défi du jour : +") and tip.contains("Autel de la fortune : +40") and not tip.contains("Partie courte"))
 	# moins de 10 monstres : la participation dit quoi faire
 	Run.start_survival("warrior", 1)
 	Run.kills = 3
@@ -148,8 +148,8 @@ func _survival() -> void:
 	check("Survie : coffres de la run listés (forge · parchemins ×2, apparence)", txt.has("Coffre de forge · parchemins") and txt.has("Coffre d'apparence rare") and spec.kept.any(func(r): return r.text == "Coffre de forge · parchemins" and r.value == "×2"))
 	check("Survie : l'or reste dans la run (bloc Perdu)", spec.lost.any(func(r): return r.text == "Or" and r.value == "90"))
 	check("Survie : fournitures perdues en défaite, gardées en victoire", ResultsScreen.lost_rows(true).all(func(r): return r.text != "Fournitures") and ResultsScreen.kept_rows(false).all(func(r): return r.text != "Fournitures"))
-	check("Survie : deux boutons, Rejouer en or", spec.buttons.size() == 2 and spec.buttons[0].primary and spec.buttons[1].text == "Retour au lobby")
-	check("Survie : « Retour au lobby » gelé à l'ouverture (anti-appui)", rs.buttons.size() == 2 and rs.buttons[1].disabled)
+	check("Survie : deux boutons, Rejouer en or", spec.buttons.size() == 2 and spec.buttons[0].primary and spec.buttons[1].text == "Retour au menu")
+	check("Survie : « Retour au menu » gelé à l'ouverture (anti-appui)", rs.buttons.size() == 2 and rs.buttons[1].disabled)
 	await get_tree().create_timer(ResultsPanel.LOCK_SECS + 0.3, true).timeout
 	check("Survie : boutons actifs après le délai", not rs.buttons[1].disabled)
 	check("Survie : le bilan met le jeu en pause et se déclare au HUD", get_tree().paused and get_tree().get_nodes_in_group("results_panel").size() == 1)
@@ -309,11 +309,11 @@ func _pause_and_hud() -> void:
 	check("pause : Échap / B annule la confirmation", not world.pause_menu._confirm.visible)
 	run_page.lobby_requested.emit()
 	await get_tree().process_frame
-	check("pause : « Abandonner » demande aussi confirmation", world.pause_menu._confirm.visible and world.pause_menu._confirm._title.text == "Abandonner la run ?")
+	check("pause : « Abandonner » demande aussi confirmation", world.pause_menu._confirm.visible and world.pause_menu._confirm._title.text == "Abandonner la partie ?")
 	world.pause_menu.close()
 	check("pause : fermer la pause ferme la confirmation", not world.pause_menu._confirm.visible)
 	check("pause : « ? Aide » dans l'en-tête, deux pages seulement", world.pause_menu._help_button != null and world.pause_menu._screen.page_count() == 2)
 	var lt: Dictionary = PauseMenu.leave_texts()
-	check("pause : textes d'abandon de la Survie", lt.button == "Abandonner la run" and lt.ok == "Abandonner")
+	check("pause : textes d'abandon de la Survie", lt.button == "Abandonner la partie" and lt.ok == "Abandonner")
 	world.queue_free()
 	await get_tree().process_frame

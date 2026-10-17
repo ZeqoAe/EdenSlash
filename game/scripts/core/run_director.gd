@@ -186,7 +186,7 @@ func start(p: Player) -> void:
 	if sv and sv.start_message() != "":
 		message.emit(sv.start_message(), 4.5)
 	elif Run.survival:
-		message.emit("%s · %s\nTu pars avec ton équipement du hub : les coffres de la carte le remplacent le temps de la run, puis trouve le donjon" % [zone.name, Epochs.get_def(Run.epoch).name], 4.5)
+		message.emit("%s · %s\nTu pars avec ton équipement du hub : les coffres de la carte le remplacent le temps de la partie, puis trouve le donjon" % [zone.name, Epochs.get_def(Run.epoch).name], 4.5)
 	else:
 		message.emit("%s\nCasse tout, ouvre les coffres, forge ton équipement, puis trouve le donjon" % zone.name, 3.5)
 

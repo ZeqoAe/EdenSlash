@@ -102,8 +102,8 @@ static func add_insignia(gain: int, stages: int) -> int:
 static func tooltip(pact_now: bool) -> String:
 	var lines: PackedStringArray = []
 	if level > 0:
-		lines.append("Menace %d / %d : PV des monstres et des boss %s jusqu'à la fin de la run." % [level, MAX, mult_text()])
-		lines.append("Insignes de fin de run +%d %%." % roundi(INSIGNIA_PER_LEVEL * 100.0 * level))
+		lines.append("Menace %d / %d : PV des monstres et des boss %s jusqu'à la fin de la partie." % [level, MAX, mult_text()])
+		lines.append("Insignes de fin de partie +%d %%." % roundi(INSIGNIA_PER_LEVEL * 100.0 * level))
 		if level >= MAX:
 			lines.append("Menace au maximum : les géants ne la font plus monter.")
 	if pact_now:

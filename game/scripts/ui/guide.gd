@@ -11,7 +11,7 @@ extends PageScreen
 const CHAPTERS := [
 	["controls", "Commandes", "Touches et premiers pas"],
 	["cards", "Cartes", "Sorts, cartes et trophées"],
-	["run", "Survie", "Une run et ce que tu en gardes"],
+	["run", "Survie", "Une partie et ce que tu en gardes"],
 	["gear", "Équipement", "Acquérir et améliorer"],
 	["modes", "Modes", "À quoi sert chaque activité"],
 	["details", "Détails", "Les formules, pour les curieux"],
@@ -211,15 +211,15 @@ static func blocks_for(id: String) -> Array:
 				"Certaines cartes demandent de la maîtrise ou un exploit.",
 				"Héros > Cartes les montre toutes, avec ce qui te manque."])})
 		"run":
-			out.append({"id": "survival", "title": "Une run de Survie", "text": bullets([
+			out.append({"id": "survival", "title": "Une partie de Survie", "text": bullets([
 				"Tu pars au niveau 1 avec ton équipement du hub.",
 				"Une époque = 3 cartes. Sur chacune : casse tout, ouvre les coffres, réunis 3 sceaux sur les gardiens d'élite, puis bats le boss du donjon.",
 				"Battre le boss de la 3e carte ouvre l'époque suivante."])})
 			for cid in RUN_ORDER:
 				out.append(_card_block(String(cid)))
 			out.append({"id": "progress", "title": "Ce qui progresse", "text": bullets([
-				"[b]Maîtrise[/b] : chaque run en donne à ta classe. Elle ouvre des sorts, des certificats et, avec le temps, les autres classes.",
-				"[b]Insignes[/b] : donnés à la fin de chaque run, même perdue. Ils s'échangent contre des pièces à l'Armurerie.",
+				"[b]Maîtrise[/b] : chaque partie en donne à ta classe. Elle ouvre des sorts, des certificats et, avec le temps, les autres classes.",
+				"[b]Insignes[/b] : donnés à la fin de chaque partie, même perdue. Ils s'échangent contre des pièces à l'Armurerie.",
 				"[b]Étoiles[/b] : trois par époque. Après l'époque IV, les rangs héroïques durcissent la Survie et la rendent plus généreuse."])})
 		"gear":
 			out.append(_card_block("hub_gear"))

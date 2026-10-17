@@ -34,7 +34,7 @@ func setup(p: Player) -> void:
 		_screen.add_page("Build", build)
 	_run = RunPage.new()
 	_run.player = player
-	_screen.add_page("Partie" if Royale.active else "Run", _run)  # (lot BR-I2 : pas de « run » au Battle royale)
+	_screen.add_page("Partie", _run)  # (lot BR-I2 : pas de « run » au Battle royale)
 	if not Survivor.active:
 		_equip = InventoryPage.new()
 		_equip.player = player
@@ -46,6 +46,14 @@ func setup(p: Player) -> void:
 	_help_button.custom_minimum_size = Vector2(0, 40)
 	_help_button.pressed.connect(open_guide)
 	_screen.add_header_control(_help_button)
+	# Journal des quêtes (lot HUB-1, P0-5) : par-dessus la pause (Échap le ferme d'abord, la pause reste)
+	var journal := Button.new()
+	journal.text = "Journal (%s)" % Settings.action_label("journal", 1)
+	journal.tooltip_text = "Tes quêtes du jour et de la semaine. « Suivre » choisit celle du HUD."
+	journal.focus_mode = Control.FOCUS_NONE
+	journal.custom_minimum_size = Vector2(0, 40)
+	journal.pressed.connect(open_journal)
+	_screen.add_header_control(journal)
 	_run.resume_requested.connect(close)
 	_run.extract_requested.connect(func():
 		close()
@@ -55,7 +63,7 @@ func setup(p: Player) -> void:
 	_run.lobby_requested.connect(func():
 		var t := leave_texts()
 		_confirm.ask(t.title, t.text, t.ok, func(): abandon_requested.emit()))
-	_run.quit_requested.connect(func(): _confirm.ask("Quitter le jeu ?", "La partie en cours sera perdue." if Royale.active else "La run en cours sera perdue.", "Quitter le jeu", func(): get_tree().quit()))
+	_run.quit_requested.connect(func(): _confirm.ask("Quitter le jeu ?", "La partie en cours sera perdue.", "Quitter le jeu", func(): get_tree().quit()))
 	_run.grimoire_requested.connect(func(): grimoire.open())
 	_run.settings_requested.connect(func(): settings.open())
 	# par-dessus l'écran (Échap les ferme d'abord)
@@ -77,6 +85,11 @@ func open_guide() -> Guide:
 	return Guide.open_on(host, "details")
 
 
+## Le Journal des quêtes par-dessus la pause (sans « Y aller » : on est en partie).
+func open_journal() -> QuestJournal:
+	return QuestJournal.open_on(_screen, 0)
+
+
 func open(page := -1) -> void:
 	_screen.set_title("Pause", "%s · niveau %d · %s" % [Run.class_data().get("name_fr", ""), player.level, Run.duration_text()])
 	_screen.show_wallet(not Royale.active and not Duel.active)  # Battle royale, duel : ni or, ni clés, ni cristaux (passes M1, M7)
@@ -89,6 +102,9 @@ func close() -> void:
 		settings.close()
 	if grimoire.is_open():
 		grimoire.close_ui()
+	var j := QuestJournal.find_open(_screen)
+	if j != null:
+		j.close_ui()
 	_screen.close_ui()
 
 
@@ -103,7 +119,7 @@ static func leave_texts() -> Dictionary:
 	if Tower.active:
 		var what := "le siège" if Tower.siege else ("le donjon" if Tower.is_dungeon() else "la Tour")
 		return {"button": "Quitter %s" % what, "title": "Quitter %s ?" % what, "text": "Les récompenses déjà gagnées sont gardées.", "ok": "Quitter"}
-	return {"button": "Abandonner la run", "title": "Abandonner la run ?", "text": "L'or, les clés et les fournitures seront perdus.\nLes coffres ramassés et les insignes sont gardés.", "ok": "Abandonner"}
+	return {"button": "Abandonner la partie", "title": "Abandonner la partie ?", "text": "L'or, les clés et les fournitures seront perdus.\nLes coffres ramassés et les insignes sont gardés.", "ok": "Abandonner"}
 
 
 ## Confirmation dans le style du jeu (au-dessus de tout, Échap ou B = annuler) : petit dialogue `InfoCard.ask`.

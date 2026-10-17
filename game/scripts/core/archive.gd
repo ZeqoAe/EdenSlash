@@ -172,7 +172,7 @@ static func refusal(item: Dictionary) -> String:
 	if item.is_empty():
 		return "Choisis un objet."
 	if Profile.in_run:
-		return "On n'archive qu'entre les runs (au lobby)."
+		return "On n'archive qu'entre les parties (au menu principal)."
 	if int(item.get("rarity", 0)) < Items.ARCHIVE_MIN_RARITY:
 		return "Seuls les objets mythiques (orange) et légendaires (or) s'archivent."
 	if not item.has("eden") or not GameData.eden_by_id.get(int(item.eden), {}).has("arch"):
@@ -237,7 +237,7 @@ static func collection_text(x: Dictionary) -> String:
 		var parts: PackedStringArray = []
 		for s in x.aura.stat:
 			parts.append(Items.stat_text(s, x.aura.stat[s]))
-		lines.append("[color=#ffd76a]✶ Aura (%s) : %s pendant les runs[/color]" % [AURA_KINDS.get(String(x.aura.kind), "aura"), ", ".join(parts)])
+		lines.append("[color=#ffd76a]✶ Aura (%s) : %s pendant les parties[/color]" % [AURA_KINDS.get(String(x.aura.kind), "aura"), ", ".join(parts)])
 		lines.append("[color=#c8c8d4]Une pierre étoilée et une pierre de lune se portent ensemble (Héros > Apparence).[/color]")
 	elif x.has("skin"):
 		lines.append("[color=#c8c8d4]Apparence d'arme : à choisir dans Héros > Apparence (%s).[/color]" % (

@@ -83,13 +83,13 @@ static func _table(head: Array, rows: Array) -> String:
 
 func _money() -> String:
 	var t := _h("Monnaies et coffres")
-	t += _note("Une époque = 3 cartes. Tu pars avec ton équipement du hub ; les coffres de la carte en proposent d'autres, le temps de la run. Le boss vaincu ouvre un portail vers la carte suivante : tu gardes ton niveau, tes cartes, ton or et tes clés.")
-	t += _table(["Monnaie", "Où l'obtenir", "À quoi elle sert", "En fin de run"], [
+	t += _note("Une époque = 3 cartes. Tu pars avec ton équipement du hub ; les coffres de la carte en proposent d'autres, le temps de la partie. Le boss vaincu ouvre un portail vers la carte suivante : tu gardes ton niveau, tes cartes, ton or et tes clés.")
+	t += _table(["Monnaie", "Où l'obtenir", "À quoi elle sert", "En fin de partie"], [
 		["[b]Or[/b]", "Jarres, caisses, tas d'or, monstres, défis, vente aux marchands", "Coffres de la carte (le prix monte à chaque coffre), marchands", "[color=#ff9a7a]perdu[/color]"],
 		["[b]Clés[/b]", "Élites (1 chacune), débris, sanctuaires des clés, marchands", "Ouvrir n'importe quel coffre de la carte sans payer", "[color=#ff9a7a]perdues[/color]"],
-		["[b]Insignes[/b]", "Fin de run, même perdue : 25 de participation, puis selon les cartes parcourues, les monstres et les élites, bonus en cas de victoire", "Armurerie (Atelier) : acheter les pièces découvertes dans les coffres ; elles partent avec toi en Survie", "[color=#7fe08a]gardés[/color]"],
+		["[b]Insignes[/b]", "Fin de partie, même perdue : 25 de participation, puis selon les cartes parcourues, les monstres et les élites, bonus en cas de victoire", "Armurerie (Atelier) : acheter les pièces découvertes dans les coffres ; elles partent avec toi en Survie", "[color=#7fe08a]gardés[/color]"],
 		["[b]Fournitures[/b]", "Caisses, cristaux, jarres, défis, autels du scribe (parchemins, gemmes, pierres, enchantements)", "Forge du hub : améliorer, sertir, enchanter", "gardées en cas de victoire ou d'extraction"],
-		["[b]Cartes, trophées[/b]", "Niveaux, coffres de sort, de passif, de certificat et de trophée, sanctuaires, marchands", "Ton build de la run (12 trophées au plus)", "la run seulement"],
+		["[b]Cartes, trophées[/b]", "Niveaux, coffres de sort, de passif, de certificat et de trophée, sanctuaires, marchands", "Ton build de la partie (12 trophées au plus)", "la partie seulement"],
 		["[b]Coffres de récompense[/b]", "Boss (coffre d'apparence), stèles du défi, autel de la fortune", "Menu Coffres", "[color=#7fe08a]toujours gardés[/color]"],
 	])
 	t += _sub("Sur la carte")
@@ -119,7 +119,7 @@ func _attributes() -> String:
 
 func _hero() -> String:
 	var t := _h("Statistiques du héros")
-	t += _note("« Niveau » : niveau du héros pendant la run. « Classe » : coefficients propres à chaque classe.")
+	t += _note("« Niveau » : niveau du héros pendant la partie. « Classe » : coefficients propres à chaque classe.")
 	t += _table(["Statistique", "Formule"], [
 		["PV max", "(PV du niveau × coef. classe + 2 × For + 1,5 × Sag) × (1 + PV % cartes, équipement et buffs) + PV de l'équipement"],
 		["Attaque physique", "(45 × 1,1^(niveau − 1) × coef. classe + att. physique de l'équipement + 0,6 × For) × (1 + attaque % des cartes)"],
@@ -137,7 +137,7 @@ func _hero() -> String:
 		["Vitesse de déplacement", "100 % + classe + équipement + cartes (+30 % Sanctuaire, +30 % Hâte)"],
 		["Zone, portée", "100 % + cartes + équipement (taille des sorts et allonge des coups)"],
 	])
-	t += _note("Les talents, certificats de maîtrise et cartes de la run ajoutent leurs bonus en % dans ces formules.")
+	t += _note("Les talents, certificats de maîtrise et cartes de la partie ajoutent leurs bonus en % dans ces formules.")
 	return t
 
 
@@ -226,7 +226,7 @@ func _gear() -> String:
 func _live() -> String:
 	var t := _h("Tes valeurs")
 	if player == null or not is_instance_valid(player):
-		return t + _note("Pendant une run (menu pause), cette section montre les statistiques de ton héros et ce que vaut un point de chaque attribut pour lui.")
+		return t + _note("Pendant une partie (menu pause), cette section montre les statistiques de ton héros et ce que vaut un point de chaque attribut pour lui.")
 	var p := player
 	var rows: Array = []
 	for r in p.stat_sheet():

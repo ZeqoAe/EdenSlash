@@ -10,7 +10,7 @@ const TEMPLATES := [
 	{"id": "elites", "text": "Vaincre %d élites", "target": 15, "reward": 500, "counter": "elites", "max": false},
 	{"id": "chests", "text": "Ouvrir %d coffres de la carte", "target": 20, "reward": 500, "counter": "chests", "max": false},
 	{"id": "perfects", "text": "Réussir %d annulations parfaites", "target": 25, "reward": 600, "counter": "perfects", "max": false},
-	{"id": "levels", "text": "Atteindre le niveau %d en une run", "target": 25, "reward": 600, "counter": "max_level", "max": true},
+	{"id": "levels", "text": "Atteindre le niveau %d en une partie", "target": 25, "reward": 600, "counter": "max_level", "max": true},
 	{"id": "wins", "text": "Gagner %d Survie", "target": 1, "reward": 800, "counter": "wins", "max": false},
 ]
 

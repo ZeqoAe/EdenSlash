@@ -64,8 +64,14 @@ var _reward_nums: Label
 var _footer: Label
 var _info_bar: Control  # pied de page (insignes, cristaux, heure) : le panneau central lui laisse la place
 var _gear_band: Label  # « 3 / 60 classes équipées » (Registre de l'équipement)
-var _compass: Button  # la boussole : un conseil, une ligne cliquable en haut de l'écran (Compass)
+var _compass: Button  # la boussole : le bouton « Y aller » de la bulle « Ta quête » (Compass, lot HUB-1 P0-3)
 var _compass_go := {}
+var _continue: MenuWidgets.SideButton  # « Continuer : <activité> » sous Jouer (lot HUB-1, P0-2)
+var _right_col: VBoxContainer  # colonne de droite (lot HUB-1) : « Aujourd'hui » (P0-4) et la bulle « Ta quête » (P0-3)
+var _today: TodayPanel
+var _bubble: CompassBubble
+var _advices: Array = []  # Compass.advices(3) du moment : la bulle et l'étiquette « Conseillé » de Jouer
+var _journal: QuestJournal  # Journal des quêtes (P0-5), créé à la première ouverture
 var _gear_sep: VSeparator
 var _clock: Label
 var _snapshot: Texture2D
@@ -295,6 +301,7 @@ func _launch() -> void:
 	if _launching:
 		return
 	_launching = true
+	LastActivity.record("survival", {"epoch": clampi(_epoch, 1, Epochs.unlocked()), "heroic": _heroic})
 	_start_run()
 
 
@@ -302,6 +309,7 @@ func _start_training() -> void:
 	if _launching:
 		return
 	_launching = true
+	LastActivity.record("training")
 	if backdrop:
 		backdrop.release()
 	Training.start(Profile.selected_class)
@@ -397,6 +405,7 @@ func _start_team(mode: String, allies: Array, foes: Array) -> void:
 	if _launching or foes.is_empty():
 		return
 	Duel.save_free()  # (passe M7) les réglages du duel libre reviennent au retour au lobby
+	LastActivity.record("arenas" if mode.begins_with("arena") else "duel", {"tab": _duel_tab})
 	Duel.mode = mode
 	Duel.pilot = _team_brain if MlDuelPilot.available().any(func(b): return b[0] == _team_brain) else ""
 	Duel.rival_build = {}
@@ -554,6 +563,7 @@ func _start_royale() -> void:
 	if _launching or not Unlocks.is_open("royale"):
 		return
 	_launching = true
+	LastActivity.record("royale", {"diff": _royale_diff})
 	if backdrop:
 		backdrop.release()
 	Royale.difficulty = _royale_diff
@@ -680,6 +690,7 @@ func _start_autochess(resume := false, extra := {}) -> void:
 	if backdrop:
 		backdrop.release()
 	var cfg := {"diff": clampi(_ac_diff, 0, AutochessData.DIFFICULTIES.size() - 1), "resume": resume}
+	LastActivity.record("autochess", {"diff": int(cfg.diff)})
 	if is_instance_valid(_ac_seed) and _ac_seed.text.strip_edges().is_valid_int():
 		cfg["seed"] = absi(_ac_seed.text.strip_edges().to_int())
 	cfg.merge(extra, true)
@@ -765,6 +776,7 @@ func _start_ranked(mode: String, brain: String) -> void:
 	pool.sort()
 	var opp := String(pool[randi() % pool.size()])
 	Duel.save_free()  # (passe M7) rendus à l'annulation de la file ou au retour au lobby, plus seulement à l'annulation
+	LastActivity.record("duel", {"tab": _duel_tab})
 	Duel.mode = mode
 	Duel.bare = true
 	Duel.bare_level = Pantheon.LEVEL
@@ -921,6 +933,7 @@ func _start_duel() -> void:
 		return
 	var opp := String(Duel.rival_build.get("class", _duel_opp)) if not Duel.rival_build.is_empty() else _duel_opp
 	var diff := _duel_diff
+	LastActivity.record("duel", {"tab": "free"})
 	var lv := Duel.bare_level if Duel.bare else Duel.gear_level()
 	var launch := func():
 		_launching = true
@@ -1031,6 +1044,7 @@ func _start_tower(diff := 1, from := 1) -> void:
 	if _launching:
 		return
 	_launching = true
+	LastActivity.record("tower", {"diff": diff, "from": from})
 	if backdrop:
 		backdrop.release()
 	Tower.start(Profile.selected_class, diff, from)
@@ -1092,6 +1106,10 @@ var _test_orbit: Array = []
 ## Caméra autour du héros, dans le décor (hors des menus) : glisser pour tourner, molette pour
 ## zoomer, clic droit glissé pour monter ou descendre, double-clic pour revenir à la vue de départ.
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("journal") and not _launching and not _screen_open():
+		get_viewport().set_input_as_handled()
+		_open_journal()  # Journal des quêtes (lot HUB-1, P0-5), touche L par défaut
+		return
 	if backdrop == null or _screen_open():
 		_orbit_drag = 0
 		return
@@ -1119,8 +1137,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## Un écran plein écran (Héros, Collection, Coffres, Paramètres, mode dev) est-il ouvert ?
 func _screen_open() -> bool:
-	for n in [_hero, _archive, _workshop, _chests, _settings]:
-		if n and n.has_method("is_open") and n.is_open():
+	for n in [_hero, _archive, _workshop, _chests, _settings, _journal]:
+		if n and is_instance_valid(n) and n.has_method("is_open") and n.is_open():
 			return true
 	return Dev.is_open() if Dev.has_method("is_open") else false
 
@@ -1164,13 +1182,24 @@ func _build_ui() -> void:
 	var top := 150.0 if compact else 196.0
 	var left := VBoxContainer.new()
 	left.position = Vector2(44, top)
-	left.add_theme_constant_override("separation", 8 if compact else 12)
+	left.add_theme_constant_override("separation", 6 if compact else 12)
 	root.add_child(left)
 	for m in MENU:
 		var b := MenuWidgets.SideButton.new(m[1], m[2], 48.0 if compact else 60.0)
 		b.pressed.connect(_on_menu.bind(String(m[0])))
 		left.add_child(b)
 		_menu[m[0]] = b
+		if m[0] == "play":
+			# lot HUB-1, P0-2 : la dernière activité et ses réglages en un clic (LastActivity) ; cachée tant que rien n'a été lancé
+			_continue = MenuWidgets.SideButton.new("Continuer", "continue", 40.0 if compact else 46.0)
+			_continue.pressed.connect(_continue_last)
+			_continue.visible = false
+			var cl := _continue.get("_label") as Label
+			if cl != null:
+				cl.clip_text = true
+				cl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+				cl.add_theme_font_size_override("font_size", UiTheme.MIN_TEXT)  # (le libellé entier tient à 1280 comme à 1600)
+			left.add_child(_continue)
 	# sous-menu central
 	var sp := PanelContainer.new()
 	sp.add_theme_stylebox_override("panel", MenuWidgets.glass(14))
@@ -1347,6 +1376,8 @@ func _build_ui() -> void:
 	_hero = HeroScreen.new(6)
 	add_child(_hero)
 	_hero.closed.connect(func():
+		if _hero.current == "appearance":
+			NewsDots.see_group("hero.look")
 		if _launching:
 			return
 		_show_hero()  # classe, arme ou apparence ont pu changer
@@ -1359,61 +1390,157 @@ func _build_ui() -> void:
 	_workshop.add_header_control(WorkshopPurse.new())  # insignes et cristaux, quel que soit l'onglet
 	_chests = _screen("Coffres", [["Coffres", ChestsPage.new()], ["Roulette", WheelPage.new()]])
 	_chests.set_title("Coffres")  # le sous-titre vient de chaque onglet (ChestsPage / WheelPage .subtitle())
+	_tab_dots()
 	_settings = SettingsMenu.new()
 	add_child(_settings)
 	_refresh_ui()
 
 
-## La boussole : une pastille cliquable à gauche du badge de classe (jamais sur les pages) ; le texte se recalcule dans _refresh_ui.
+## Colonne de droite du menu principal (lot HUB-1), sous le badge de classe : le bloc « Aujourd'hui » (P0-4 : série, trois
+## quêtes du jour, Journal) puis la bulle « Ta quête » (P0-3 : boussole v2, le pourquoi, « Y aller », deux autres choix).
+## Recalculée dans _refresh_ui ; cachée quand une page du menu la recouvrirait.
 func _build_compass(root: Control) -> void:
-	var b := Button.new()
-	b.focus_mode = Control.FOCUS_NONE
-	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	b.expand_icon = true
-	b.add_theme_font_size_override("font_size", 15)
-	b.add_theme_constant_override("icon_max_width", 22)
-	b.add_theme_constant_override("h_separation", 10)
-	b.add_theme_color_override("font_color", UiTheme.TEXT)
-	b.add_theme_color_override("font_hover_color", Color(1, 0.96, 0.8))
-	b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(MenuWidgets.GLASS, 0.78), Color(UiTheme.GOLD_DIM, 0.8), 1, 20, false))
-	b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.13, 0.12, 0.26, 0.95), UiTheme.GOLD, 2, 20, false))
-	b.add_theme_stylebox_override("pressed", UiTheme.flat_box(Color(0.13, 0.12, 0.26, 0.95), UiTheme.GOLD, 2, 20, false))
-	b.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	b.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	b.offset_right = -396  # à gauche du badge de classe
-	b.offset_top = 44
-	b.offset_bottom = 84
-	b.visible = false
-	b.pressed.connect(func(): _compass_open(_compass_go))
-	root.add_child(b)
-	_compass = b
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 10)
+	col.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	col.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	col.offset_left = -(CompassBubble.W + 28.0)
+	col.offset_right = -28
+	col.offset_top = 116
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(col)
+	_right_col = col
+	_today = TodayPanel.new()
+	_today.open_journal.connect(func(tab: int): _open_journal(tab))
+	col.add_child(_today)
+	_bubble = CompassBubble.new()
+	_bubble.go.connect(_compass_open)
+	col.add_child(_bubble)
+	_compass = _bubble.go_button
 
 
-## Met à jour la boussole : le conseil du moment (Compass.advice), ou rien hors du lobby.
+## Met à jour la boussole (Compass.advices : la bulle « Ta quête » et ses deux autres choix) et le bloc « Aujourd'hui ».
 func _refresh_compass() -> void:
-	if _compass == null:
+	if _bubble == null:
 		return
-	if not Settings.show_compass():
-		_compass.visible = false
+	_advices = Compass.advices(3) if Settings.show_compass() else []
+	var vp := get_viewport().get_visible_rect().size
+	_bubble.show_advices(_advices, vp.y < 840.0)
+	_compass_go = _advices[0].go if not _advices.is_empty() else {}
+	_today.refresh()
+	_place_right_col()
+	_place_right_col.call_deferred()  # (le badge prend sa taille une image plus tard)
+
+
+## La colonne de droite reste sous le badge de classe ; une page du menu qui irait jusqu'à elle la cache.
+func _place_right_col() -> void:
+	if _right_col == null:
 		return
-	var adv := Compass.advice()
-	_compass.visible = not adv.is_empty()
-	if adv.is_empty():
+	var vp := get_viewport().get_visible_rect().size
+	var page_end := 372.0 + (PLAY_W if _current == "play" else PANEL_W) + 36.0
+	_right_col.visible = _current == "" or page_end <= vp.x - CompassBubble.W - 28.0
+	if _badge != null:
+		_right_col.offset_top = maxf(118.0, _badge.get_rect().end.y + 12.0)
+
+
+## Le Journal des quêtes (lot HUB-1, P0-5) sur l'onglet [param tab] : « Y aller » mène aux pages du menu, le Défi du jour
+## se lance d'ici ; à sa fermeture, le menu se met à jour (pastilles, Aujourd'hui, boussole).
+func _open_journal(tab := 0) -> QuestJournal:
+	var fresh := _journal == null or not is_instance_valid(_journal)
+	_journal = QuestJournal.open_on(self, tab, _compass_open, _start_challenge)
+	if fresh:
+		_journal.closed.connect(func():
+			if not _launching:
+				_refresh_ui())
+	return _journal
+
+
+## Pastilles de nouveauté des onglets (lot HUB-1, P0-1) : Héros > Apparence, Carnet > Succès, Atelier > Plans de donjon
+## (et la coche de Fabriquer quand une pièce est achetable) ; un onglet ouvert éteint la sienne.
+func _tab_dots() -> void:
+	var nav = _hero.get("_nav")
+	if nav is Dictionary and (nav as Dictionary).has("appearance"):
+		NewsDot.attach(nav.appearance, ["hero.look"])
+		(nav.appearance as Button).pressed.connect(func(): NewsDots.see_group("hero.look"))
+	for e in [[_archive, 1, "carnet.succes"], [_workshop, 1, "workshop.plan"]]:
+		var sc: PageScreen = e[0]
+		var tabs = sc.get("_tab_buttons")
+		if tabs is Array and (tabs as Array).size() > int(e[1]):
+			NewsDot.attach(tabs[int(e[1])], [String(e[2])])
+		var idx := int(e[1])
+		var grp := String(e[2])
+		sc.page_changed.connect(func(i: int):
+			if i == idx:
+				NewsDots.see_group(grp))
+	var wt = _workshop.get("_tab_buttons")
+	if wt is Array and not (wt as Array).is_empty():
+		var d := NewsDot.attach(wt[0], ["workshop"])
+		d.with_action = true
+		d.refresh()
+
+
+## « Continuer » (lot HUB-1, P0-2) : relance la dernière activité avec ses réglages ; si elle n'est plus ouverte (verrou,
+## PE requise), sa page s'ouvre et dit pourquoi. Duel et Arènes passent par leur page (inscription, file).
+func _continue_last() -> void:
+	var last := LastActivity.last()
+	if last.is_empty() or _launching:
 		return
-	_compass_go = adv.go
-	_compass.text = String(adv.text)
-	_compass.tooltip_text = "%s\n%s" % [adv.text, adv.tip] if String(adv.tip) != "" else String(adv.text)
-	_compass.icon = ResourceHelp.icon(String(adv.icon)) if ResourceHelp.has(String(adv.icon)) else MenuWidgets.icon("pin")
-	var font := _compass.get_theme_font("font")
-	var want := font.get_string_size(_compass.text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15).x + 70.0
-	var room := get_viewport().get_visible_rect().size.x - 396.0 - 490.0  # entre le logo et le badge
-	var w := clampf(want, 140.0, maxf(room, 140.0))
-	_compass.custom_minimum_size.x = w
-	_compass.offset_right = -396.0
-	_compass.offset_left = -396.0 - w
-	_compass.size = Vector2(w, 40)
+	var id := String(last.id)
+	var o: Dictionary = last.get("opts", {})
+	match id:
+		"survival":
+			_epoch = clampi(int(o.get("epoch", _epoch)), 1, Epochs.unlocked())
+			_heroic = clampi(int(o.get("heroic", 0)), 0, Epochs.HEROIC_MAX)
+			_launch()
+		"survivor":
+			_sv_zone = String(o.get("zone", _sv_zone))
+			_sv_palier = int(o.get("palier", _sv_palier))
+			if Survivor.palier_open(_sv_palier) and _sv_zone in Survivor.zones():
+				_start_survivor()
+		"dungeon", "siege":
+			_dg_zone = String(o.get("zone", _dg_zone))
+			_dg_diff = int(o.get("diff", _dg_diff))
+			_dg_allies = ((o.get("allies", []) as Array) + ["", ""]).slice(0, 2)
+			if id == "dungeon":
+				DungeonPage.sel = String(o.get("sel", DungeonPage.sel))
+				_start_dungeon()
+			else:
+				_start_siege()
+		"rush":
+			_dg_diff = int(o.get("diff", _dg_diff))
+			_dg_allies = ((o.get("allies", []) as Array) + ["", ""]).slice(0, 2)
+			_start_rush()
+		"tower":
+			if Unlocks.is_open("tower"):
+				_start_tower(int(o.get("diff", 1)), int(o.get("from", 1)))
+		"royale":
+			_royale_diff = int(o.get("diff", _royale_diff))
+			_start_royale()
+		"autochess":
+			_ac_diff = int(o.get("diff", _ac_diff))
+			_start_autochess()
+		"training":
+			_start_training()
+		"challenge":
+			_open_journal(0)
+			return
+		"duel", "arenas":
+			_duel_tab = String(o.get("tab", _duel_tab))
+	if not _launching:
+		_show_menu(id)  # pas relancée : sa page (réglages, condition d'ouverture)
+
+
+func _refresh_continue() -> void:
+	if _continue == null:
+		return
+	var last := LastActivity.last()
+	_continue.visible = not last.is_empty()
+	if last.is_empty():
+		return
+	var cl := _continue.get("_label") as Label
+	if cl != null:
+		cl.text = "Continuer : %s" % String(last.label)
+	_continue.tooltip_text = "Relance « %s » avec les mêmes réglages" % String(last.label)
 
 
 ## Le clic de la boussole : ouvre la page décrite par [param go] (voir Compass).
@@ -1426,6 +1553,8 @@ func _compass_open(go: Dictionary) -> void:
 		_chests.open(0)
 	elif go.has("registry"):
 		_open_registry()
+	elif go.has("journal"):
+		_open_journal()
 	elif go.has("hero"):
 		_open_hero(String(go.hero))
 	elif go.has("menu"):
@@ -1627,6 +1756,13 @@ func _fit_scroll() -> void:
 
 
 func _show_menu(id: String) -> void:
+	if id == "quests":
+		_show_menu("")  # (lot HUB-1) les quêtes ne sont plus une page de Jouer : c'est le Journal
+		_open_journal()
+		return
+	var act := Compass.activity_of({"go": {"menu": id}})
+	if act != "" and NewsDots.activity_new(act):
+		NewsDots.see("act:" + act)  # (lot HUB-1, P0-1) l'activité est vue : sa pastille s'éteint
 	_scroll_keep = int(_scroll.scroll_vertical) if _scroll != null and id != "" and id == _shown_page else 0
 	_shown_page = id
 	_current = id
@@ -1677,6 +1813,7 @@ func _show_menu(id: String) -> void:
 			_menu_duel()
 		"quit":
 			_menu_quit()
+	_place_right_col()
 
 
 func _sub_title(t: String) -> void:
@@ -1715,7 +1852,9 @@ func _menu_play() -> void:
 
 
 func _activity_card(a: Dictionary, size := Vector2(345, 112)) -> Button:
-	var c := Activities.card(a, size)
+	var open := not Activities.locked(a)
+	var advised := open and not _advices.is_empty() and Compass.activity_of(_advices[0]) == String(a.id)
+	var c := Activities.card(a, size, open and NewsDots.activity_new(String(a.id)), advised)
 	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if Activities.locked(a):
 		c.tooltip_text = Unlocks.lock_text(String(a.unlock))  # grisée : la condition dit comment l'ouvrir
@@ -1724,6 +1863,8 @@ func _activity_card(a: Dictionary, size := Vector2(345, 112)) -> Button:
 		c.pressed.connect(_show_menu.bind(String(a.id)))
 		if String(a.get("row", "")) != "":
 			c.tooltip_text = "Donne : %s" % String(a.get("gain", "")).to_lower()
+			if advised:
+				c.tooltip_text = "Conseillé : %s\n%s" % [String(_advices[0].text), c.tooltip_text]
 	return c
 
 
@@ -1792,7 +1933,7 @@ func _menu_survival() -> void:
 		if _heroic >= 3:
 			var cons: Array = Epochs.heroic_mods(_heroic).map(func(m): return String(Modifiers.LIST[m].text))
 			Hud._label(_sub, "Contraintes : " + " · ".join(cons), 13, UiTheme.MUTED).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var go := MenuWidgets.gold_button("Lancer la run", 22, Vector2(0, 56))
+	var go := MenuWidgets.gold_button("Lancer la partie", 22, Vector2(0, 56))
 	go.pressed.connect(_launch)
 	_pin(go)
 
@@ -1946,6 +2087,7 @@ func _start_survivor() -> void:
 	if _launching:
 		return
 	_launching = true
+	LastActivity.record("survivor", {"zone": _sv_zone, "palier": clampi(_sv_palier, 1, Survivor.top_palier())})
 	if backdrop:
 		backdrop.release()
 	Survivor.start(Profile.selected_class, _sv_zone, clampi(_sv_palier, 1, Survivor.top_palier()))
@@ -1970,6 +2112,7 @@ func _start_challenge(cid: String) -> void:
 	if _launching:
 		return
 	_launching = true
+	LastActivity.record("challenge")
 	if backdrop:
 		backdrop.release()
 	Profile.selected_class = cid
@@ -2166,6 +2309,7 @@ func _start_siege() -> void:
 		backdrop.release()
 	var allies: Array = _dg_allies.filter(func(c): return String(c) != "")
 	Dungeons.last_allies = allies
+	LastActivity.record("siege", {"zone": _dg_zone, "diff": _dg_diff, "allies": allies})
 	Tower.start_siege(Profile.selected_class, _dg_zone, _dg_diff, allies)
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
@@ -2285,6 +2429,7 @@ func _start_rush() -> void:
 		backdrop.release()
 	var allies: Array = _dg_allies.filter(func(c): return String(c) != "")
 	Dungeons.last_allies = allies
+	LastActivity.record("rush", {"diff": _dg_diff, "allies": allies})
 	Tower.start_dungeon(Profile.selected_class, Dungeons.RUSH, _dg_diff, allies)
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
@@ -2297,6 +2442,7 @@ func _start_dungeon() -> void:
 		backdrop.release()
 	var allies: Array = _dg_allies.filter(func(c): return String(c) != "")
 	Dungeons.last_allies = allies
+	LastActivity.record("dungeon", {"zone": _dg_zone, "diff": _dg_diff, "allies": allies, "sel": DungeonPage.sel})
 	Tower.start_dungeon(Profile.selected_class, _dg_zone, _dg_diff, allies, DungeonPage.sel)
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
@@ -2375,6 +2521,10 @@ func _refresh_ui() -> void:
 	_reward_text.text = ("Maîtrise niv. %d : %s" % [lvl + 1, String(next[0].name) if not next.is_empty() else "+2 points de talent"]) if lvl < Profile.EXPERTISE_MAX else "Maîtrise maximale"
 	_reward_nums.text = ("%s / %s" % [GearPower.fmt(roundi(prog.x)), GearPower.fmt(roundi(prog.y))]) if lvl < Profile.EXPERTISE_MAX else ""
 	_dev_button.visible = Dev.enabled()
+	for mid in ["play", "hero", "workshop", "collection"]:  # pastilles de nouveauté (lot HUB-1, P0-1)
+		if _menu.has(mid):
+			_menu[mid].set_badge(NewsDots.menu_badge(mid) if mid in ["play", "hero"] or Unlocks.is_open(_menu_unlock(mid)) else "")
+	_refresh_continue()
 	var n_chests := Profile.reward_chests.size()
 	_menu.chests.set_badge((("%d" % n_chests if n_chests > 0 else "") + (" ★" if Wheel.free_left() > 0 else "")) if Unlocks.is_open("chests") else "")
 	var crystals := int(Profile.materials.get("crystal", 0))
@@ -2405,6 +2555,8 @@ func _screen(t: String, pages: Array) -> PageScreen:
 func _open_hero(section := "") -> void:
 	_hero.zone_texture = _snapshot
 	_hero.open(section)
+	if section == "appearance":
+		NewsDots.see_group("hero.look")
 
 
 ## Création de personnage (HeroCreator) ; à la fermeture, le héros du lobby et le badge suivent.

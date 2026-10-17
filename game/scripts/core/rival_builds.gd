@@ -286,7 +286,7 @@ static func auto_fill(b: Dictionary) -> void:
 static func apply_to_hero(b: Dictionary) -> String:
 	var cid := String(b.get("class", "warrior"))
 	if Profile.in_run:
-		return "Hors run seulement."
+		return "Hors partie seulement."
 	Profile.selected_class = cid
 	Profile._lobby_view()
 	var made := items(b, int(b.get("level", 20)))

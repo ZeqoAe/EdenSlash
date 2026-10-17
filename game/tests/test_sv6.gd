@@ -83,6 +83,8 @@ func _hub() -> String:
 				v = (v as Dictionary).duplicate(true)
 				v.erase(SurvivorRewards.KEY)
 				v.erase("quests")  # (l'état des quêtes est tiré à la demande par le système de quêtes, pas par le Survivant)
+				v.erase("news")  # (lot HUB-1 : pastilles vues et « Continuer » : état du menu, pas progression du compte)
+				v.erase("last_activity")
 				v.erase("quests_done")  # (une quête du Survivant accomplie par la partie : permis, elle ne donne que de l'apparence)
 				v.erase("quest_series_best")
 			"extra_titles":
@@ -249,8 +251,8 @@ func _bilan() -> void:
 		check("%s : build : arme, pièces 3 / 8, sorts (%s)" % [res, names], b.size() >= 4 and b[0].icon == "weapon" and b[1].text == "Pièces" and b[1].value == "3 / 8"
 			and names.has(String(Run.class_data().skills[0].name)) and b.any(func(x): return x.value == "niv. 4"))
 		check("%s : le détail des pièces au survol (tête +6)" % res, String(b[1].tip).contains("Tête : +6"))
-		check("%s : boutons Rejouer, Changer de classe, Retour au lobby" % res, spec.buttons.size() == 3 and spec.buttons[0].text == "Rejouer" and spec.buttons[0].primary
-			and spec.buttons[1].text == "Changer de classe" and spec.buttons[2].text == "Retour au lobby")
+		check("%s : boutons Rejouer, Changer de classe, Retour au menu" % res, spec.buttons.size() == 3 and spec.buttons[0].text == "Rejouer" and spec.buttons[0].primary
+			and spec.buttons[1].text == "Changer de classe" and spec.buttons[2].text == "Retour au menu")
 		rs.free()
 		Profile.end_run_survival()
 		Quests.set_day("2026-10-%d" % (21 + ["victoire", "defaite", "abandon"].find(res)))
