@@ -31,6 +31,10 @@ const SPAWN_PER_FRAME := 3
 const FALLBACK_MS := 33.0
 const FALLBACK_AFTER := 3.0
 const FALLBACK_GRACE := 5.0
+## Page de préparation (lot CO-F, page minimale de test ; l'écran complet : lot CO-G) : montrée hors pilote automatique
+## et hors mode sans écran quand le joueur a un choix à faire ; la préparation dure alors celle du format.
+static var prep_ui := true
+var prep_page: Node = null
 ## Arène des héros au repos : aucune (ffa_foes ne les voit jamais).
 const PARK := 1000
 const FOLLOW_SWITCH := 2.0  # s après la fin de ton combat avant de regarder ailleurs
@@ -95,6 +99,9 @@ func setup(director: RunDirector) -> void:
 	d._place_player(arenas[0].spawn_point(0, 0, map))
 	d.zone_changed.emit({"name": TeamMatch.title(), "levels": [Colisee.LEVEL, Colisee.LEVEL]})
 	_log("partie : %s, %d équipes, difficulté %s, trios %s" % [g.format, g.n, Colisee.DIFFS[g.diff], str(g.classes)])
+	ColiseeAugments.start()  # (lots CO-E / CO-F) atouts, or, enclumes, sorts : une construction par héros
+	if ColiseeBuild.all_of(g).is_empty():
+		ColiseeAnvil.setup(g)
 	_begin_round()
 
 
@@ -137,6 +144,8 @@ func _log(s: String) -> void:
 func _begin_round() -> void:
 	_clear_heroes()
 	var r := g.next_round()
+	ColiseeAugments.reset_round()
+	ColiseeAnvil.round_start(g, d.player.autoplay or probe)  # (lots CO-E / CO-F) or, offres ; les IA choisissent
 	TeamMatch.start_round()
 	TeamMatch.set_phase("prep")
 	fights = []
@@ -170,6 +179,7 @@ func _begin_round() -> void:
 	_done_t = -1.0
 	phase = "prep"
 	_t = 0.0 if probe else (PREP_AUTO if d.player.autoplay else PREP)
+	_open_prep_page()
 	PvpCaps.board = {}
 	var f: Dictionary = fights[watched]
 	var vs := "%s contre %s" % [TeamMatch.team_name(int(f.a)), TeamMatch.team_name(int(f.b))]
@@ -205,6 +215,7 @@ func _place_player_for_round() -> void:
 		p.statuses.clear()
 		p.heal_taken = 1.0
 		p.arena_id = int(fights[mine].index)
+		_apply_player_build()
 		p.visible = true
 		p.set_physics_process(true)
 		(fights[mine].heroes[0] as Array).append(p)
@@ -237,13 +248,18 @@ func _spawn_some(budget: float, shown_only := false) -> void:
 func _spawn_hero(f: Dictionary, side: int, j: int, t: int) -> void:
 	var cid := String(g.classes[t][j])
 	var arena: ColiseeArena = f.arena
-	var r := TeamMatch.make_hero(cid, Colisee.LEVEL, int(g.team_diffs[t]), t, int(f.index))
+	var gb := ColiseeBuild.of(g, t, j)
+	var r := TeamMatch.make_hero(cid, Colisee.LEVEL, int(g.team_diffs[t]), t, int(f.index), gb.gear if gb != null else {})
 	r.passive = true
 	add_child(r)
 	r.global_position = arena.spawn_point(side, j, map) + Vector3.UP * 0.4
 	r.look_at(Vector3(arena.center.x, r.global_position.y, arena.center.z), Vector3.UP)
 	r.rotate_y(PI)
 	r.died.connect(_on_down.bind(r))
+	var bd := ColiseeBuild.of(g, t, j)
+	if bd != null:  # (lots CO-E / CO-F) sa construction : atouts, bonus, sorts gagnés
+		ColiseeAugments.apply_hero(r, bd, ColiseeBuild.team_of(g, t))
+		ColiseeAnvil.grant_spells(r, bd)
 	(f.heroes[side] as Array).append(r)
 	f.max_hp[side] = float(f.max_hp[side]) + r.max_hp
 	f.pending = int(f.pending) - 1
@@ -278,7 +294,10 @@ func update(delta: float) -> void:
 	_t -= delta
 	match phase:
 		"prep":
+			if _player_ready():
+				_t = minf(_t, 0.2)  # (lot CO-F) le joueur est prêt
 			if _t <= 0.0 and _ready_to_fight():
+				_end_prep()
 				phase = "countdown"
 				_t = 0.2 if probe else Colisee.COUNTDOWN
 				TeamMatch.set_phase("countdown")
@@ -310,6 +329,13 @@ func _start_fights() -> void:
 	TeamMatch.set_phase("fight")
 	PvpCaps.elapsed = 0.0
 	_slow = 0.0
+	for f in fights:  # (PV max relus : la fiche a pu changer pendant la préparation)
+		for side in 2:
+			f.max_hp[side] = 0.0
+			for c in f.heroes[side]:
+				if is_instance_valid(c):
+					f.max_hp[side] = float(f.max_hp[side]) + (c as Combatant).max_hp
+	ColiseeAugments.begin_fight(self, fights)  # (lot CO-E) Bouclier d'entrée, Ombre jumelle, fleurs
 	for f in fights:
 		for side in 2:
 			for c in f.heroes[side]:
@@ -325,6 +351,7 @@ func _alive(f: Dictionary, side: int) -> Array:
 
 
 func _fight_tick(delta: float, frame: float) -> void:
+	ColiseeAugments.tick(delta)  # (lot CO-E)
 	# repli : images trop longues pendant FALLBACK_AFTER s réelles -> combats cachés résolus au tableau
 	if not probe and fallback and PvpCaps.elapsed > FALLBACK_GRACE and frame > 0.0:
 		if frame > FALLBACK_MS:
@@ -357,6 +384,7 @@ func _fight_tick(delta: float, frame: float) -> void:
 		elif float(f.t) >= Colisee.FIGHT_TIME:
 			_end_fight(f, -1)
 	if fights.all(func(x): return x.done):
+		ColiseeAugments.end_fight()
 		phase = "recap"
 		_t = RECAP
 		TeamMatch.set_phase("recap")
@@ -463,6 +491,7 @@ func _finish() -> void:
 	print("[colisee] fin : place %d / %d (%s), %d manches, %.1f min réelles, %.1f min de jeu, replis au tableau %d" % [place, g.n,
 		"victoire" if bool(res.won) else "défaite", g.round_n, minutes, TeamMatch.elapsed / 60.0, fallbacks])
 	Vfx.hidden_arenas = {}
+	ColiseeAugments.stop()
 	Colisee.finish()  # TeamMatch.end() avant toute récompense (piège 11 de R_MODE0) ; récompenses : lot CO-H
 	if "--auto-quit" in OS.get_cmdline_user_args():
 		get_tree().quit()
@@ -474,6 +503,40 @@ func _finish() -> void:
 		"subtitle": "Le Colisée · %s" % Colisee.FORMATS[g.format].name,
 		"tiles": [["%d / %d" % [place, g.n], "place"], [str(g.round_n), "manches"], [str(int(g.round_wins[0])), "manches gagnées"]],
 		"buttons": [{"text": "Menu principal", "primary": true, "call": _to_lobby}]})
+
+
+# --- préparation (lots CO-E / CO-F) -------------------------------------------------------------------------------------
+
+## Construction du joueur posée sur son héros (atouts, bonus, pièces portées par Profile.equipped).
+func _apply_player_build() -> void:
+	var pb := ColiseeBuild.player_build(g)
+	if pb != null and pb.is_player:
+		ColiseeAugments.apply_hero(d.player, pb, ColiseeBuild.team_of(g, TeamMatch.player_team))
+
+
+func _player_ready() -> bool:
+	var pb := ColiseeBuild.player_build(g)
+	return prep_page != null and is_instance_valid(prep_page) and pb != null and pb.ready
+
+
+func _open_prep_page() -> void:
+	var pb := ColiseeBuild.player_build(g)
+	if not prep_ui or probe or d.player.autoplay or DisplayServer.get_name() == "headless" or pb == null:
+		return
+	if TeamMatch.is_out(TeamMatch.player_team):
+		return
+	_t = maxf(_t, float(g.fmt.get("prep", 30.0)))
+	prep_page = ColiseePrepPage.open(d.world, g, pb, d.player)
+
+
+## Fin de la préparation : ce qui attend encore le joueur prend la meilleure option ; sa fiche est refaite.
+func _end_prep() -> void:
+	ColiseeAnvil.auto_finish(g)
+	if prep_page != null and is_instance_valid(prep_page):
+		prep_page.queue_free()
+	prep_page = null
+	if d.player.arena_id != PARK:
+		_apply_player_build()
 
 
 func _to_lobby() -> void:
@@ -641,6 +704,7 @@ func abandon() -> void:
 	_log("abandon")
 	_clear_heroes()
 	Vfx.hidden_arenas = {}
+	ColiseeAugments.stop()
 	phase = "done"
 	Colisee.finish()
 	if "--auto-quit" in OS.get_cmdline_user_args():
@@ -652,3 +716,4 @@ func abandon() -> void:
 
 func _exit_tree() -> void:
 	Vfx.hidden_arenas = {}
+	ColiseeAugments.stop()

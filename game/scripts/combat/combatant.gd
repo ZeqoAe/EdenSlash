@@ -142,6 +142,8 @@ func _cc_gate(status: String, duration: float) -> bool:
 
 
 func add_status(status: String, duration: float, source: Combatant = null) -> void:
+	if ColiseeAugments.active:
+		duration = ColiseeAugments.status_time(self, status, duration, source)  # (Le Colisée, lot CO-E) Ancre
 	if duration <= 0.0:
 		return
 	if not _cc_gate(status, duration):
@@ -223,7 +225,8 @@ func damage_taken_mult() -> float:
 
 
 func damage_dealt_mult() -> float:
-	return (0.7 if has_status("scar") else 1.0) * (1.25 if has_status("fury") else 1.0)
+	var m := (0.7 if has_status("scar") else 1.0) * (1.25 if has_status("fury") else 1.0)
+	return m * ColiseeAugments.dealt_mult(self) if ColiseeAugments.active else m  # (Le Colisée, lot CO-E) Lame affûtée
 
 
 ## Immobilisé (renversé, gelé ou endormi) : ni déplacement ni attaque.
@@ -400,6 +403,8 @@ static func is_hero(c: Combatant) -> bool:
 func take_damage(amount: float, source: Combatant = null, crit := false, dot := false) -> void:
 	if is_dead:
 		return
+	if ColiseeAugments.active:
+		amount = ColiseeAugments.pre_hit(self, source, amount, dot)  # (Le Colisée, lot CO-E) bonus des atouts
 	var hvh := source != null and source != self and is_hero(self) and is_hero(source)
 	var pvp := hvh and PvpCaps.active()
 	if pvp:
@@ -417,6 +422,10 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 		dmg = _burst_limit(dmg)
 		capped = dmg < before - 0.5  # le coup a atteint le plafond : affiché en gris
 		PvpCaps.note_hit(source, self, dmg)
+	if ColiseeAugments.active:
+		dmg = ColiseeAugments.absorb(self, source, dmg, dot)  # (Le Colisée, lot CO-E) boucliers, Deuxième souffle, dégâts vrais
+		if dmg <= 0.0:
+			return
 	hp = maxf(0.0, hp - dmg)
 	# entraînement : héros invincible, ennemis invincibles ou mannequin (les dégâts s'affichent)
 	if immortal or (Training.active and (Training.hero_god if team == Team.PLAYER else Training.enemies_immortal)):
@@ -439,6 +448,8 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 		is_dead = true
 		_on_death(source)
 		died.emit(self, source)
+	if ColiseeAugments.active:
+		ColiseeAugments.post_hit(self, source, dmg, dot)  # (Le Colisée, lot CO-E) effets au coup et au K.O.
 
 
 ## Pas de mort en un coup : les dégâts reçus sur la fenêtre (2 s) ne dépassent pas burst_cap des PV

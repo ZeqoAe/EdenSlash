@@ -272,6 +272,16 @@ cachés : héros invisibles, `anim.active` faux, `Vfx.hidden_arenas` + `Vfx.mute
 repli au tableau (33 ms cumulés 3 s, `--co-nofallback`) ; `watch` / `next_watch`, caméra sur un allié ; `probe` pour la sonde). Lancement direct
 `world.tscn -- --colisee [--co-format= --co-diff=0..4 --co-seed=]`, page minimale `ui/colisee_page.gd` (activité « colisee » cachée hors mode dev) ;
 sonde `tools/colisee_probe.tscn -- --teams=6|8` (avec `--fixed-fps 60`), mesures `tests/co_mesures.json` ; test `test_co_c`.
+Atouts (CO-E, `R_CO_E.md`) : `core/colisee_augments.gd` (`ColiseeAugments` : 32 atouts `LIST` Argent / Or / Éclat — `text` une phrase sans chiffre,
+`tip` chiffré, `ico`, `roles`, `params` —, offres notées `make_offer` / `reroll` / `score` / `choose_augment` / `offer_dicts`, `take` (recette Braise + Givre + Foudre
+= Tempête, Pacte de sang, Maître des sorts), couche de combat `active` lue par 5 crochets de `Combatant` (`pre_hit`, `absorb`, `post_hit`, `dealt_mult`,
+`status_time`) et `Player.recalc_stats` (`sheet`), `apply_hero` à chaque apparition, `begin_fight` / `tick` / `end_fight` / `stop` ; plafonds `DEALT_CAP`,
+`TAKEN_FLOOR`, `HP_CAP`) ; banc IA contre IA `tools/colisee_aug_bench.tscn` (trio contre le même trio, `--hz=30` avec `--fixed-fps 30`) +
+`python tools/colisee_aug_report.py` (top 3 relatif) ; test `test_co_e`. Économie (CO-F, `R_CO_F.md`) : `core/colisee_build.gd` (`ColiseeBuild.of(g, t, j)` :
+or, atouts, pièces — le joueur : `Profile.equipped` —, bonus, sorts), `core/colisee_anvil.gd` (`ColiseeAnvil` : `INCOME`, enclumes Stat / Pièce (`RoyaleLoot`) /
+Panoplie (`SurvivorPool`) / Éclat offerte, `sell` / `resale`, sorts des manches 3 et 6, `round_start` / `ai_prep` / `auto_finish`, point d'extension `coach`
+et appel dynamique de `ColiseeCoach.choose_augment` / `choose_anvil`) ; page minimale `ui/colisee_prep_page.gd` (hors pilote, hors headless) ;
+test `test_co_f`, capture `tests/shot_co_prep.tscn`.
 
 ### Les Deux Voies (MOBA 4 contre 4, en cours ; « Bientôt », caché)
 Étude `conception/benchmark/MOBA.md` (spécification § 7, lots MB-0 à MB-K, croquis `moba_maquettes/`), essai `R_MB0.md` (budgets § 6).

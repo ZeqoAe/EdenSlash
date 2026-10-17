@@ -407,6 +407,8 @@ func recalc_stats() -> void:
 	if PvpCaps.active():
 		PvpCaps.soften(self)  # duel équipé : bonus en % ramenés avant les plafonds
 	pvp_capped = PvpCaps.apply(self) if PvpCaps.active() else []  # duel : plafonds JcJ
+	if ColiseeAugments.active and not foe:
+		ColiseeAugments.sheet(self)  # (Le Colisée, lots CO-E / CO-F) atouts et enclumes de stat
 	procs = Items.gear_procs(foe_gear) if own else ([] if bare else Run.passive_procs() + Run.trophy_procs() + Profile.equipment_procs())
 	hp = clampf(max_hp * ratio, 1.0, max_hp)
 	health_changed.emit(hp, max_hp)

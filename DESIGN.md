@@ -1341,6 +1341,15 @@ performances le permet), une seule couronne. Les règles complètes sont celles 
   le sien (les autres se jouent pour de vrai, sans rien montrer). Un combat finit quand un trio est à terre, ou à 85 s. Si tu tombes,
   tes alliés continuent et la caméra les suit ; ton combat fini, elle passe à un combat encore en cours. Le **Grand tournoi** (8 trios)
   est ouvert : la mesure de performances le permet (24 héros aussi fluides que 18).
+- **Atouts** (lot CO-E, `R_CO_E.md`) : 32, en trois raretés (Argent, Or, Éclat) ; offres aux manches 1, 4, 7 et 10 : trois cartes de la
+  même rareté, aux thèmes différents, choisies parmi les mieux notées pour ta classe (jamais une carte faite pour un autre rôle) ;
+  3 relances pour la partie (une carte à la fois), 6 atouts au plus ; au temps écoulé, la mieux notée. Braise, Givre et Foudre fusionnent
+  en **Tempête** (leurs effets × 1,5, deux places libérées). Garde-fous : bonus de dégâts cumulés × 1,6 au plus, dégâts reçus × 0,75 au
+  moins, PV en plus + 70 % au plus, et les plafonds du coup (15 %) et de la rafale (35 % sur 2 s) après. Relève éclair attend la relève.
+- **Or, enclumes, sorts** (lot CO-F, `R_CO_F.md`) : 10 or par manche, +3 pour une victoire, +2 par K.O. (3 au plus) ; enclume de stat (6),
+  de pièce (12 : un emplacement vide d'abord, jamais d'arme), de panoplie (20, offerte à la manche 3), d'éclat (offerte à la manche 9 :
+  pièces légendaires) : on garde une option parmi trois. Revente au prix payé pendant la préparation, à moitié ensuite ; un bonus
+  de stat s'annule pendant la préparation. Un sort de plus aux manches 3 et 6 (un parmi trois de ta classe, en enchaînement d'une touche).
 
 ## L'Assaut (étude `conception/benchmark/TACTIQUE.md`, en cours : lots TAC-0 à TAC-14)
 
