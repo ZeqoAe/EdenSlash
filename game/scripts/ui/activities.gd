@@ -40,6 +40,11 @@ const LIST := [
 		"desc": "Toi et tes alliés IA contre une équipe IA."},
 	{"id": "royale", "row": "versus", "unlock": "royale", "group": "pvp", "name": "Battle royale", "sub": "8 héros, un seul survivant", "gain": "Coffre d'apparence, titre, maîtrise", "gives": ["look", "title", "mastery"],
 		"desc": ""},
+	# L'Assaut (lots TAC-0 à TAC-14, conception/benchmark/TACTIQUE.md) : 4 contre 4, scellé ; « Bientôt » (caché) tant que
+	# le mode n'est pas jouable de bout en bout (achat, HUD, IA d'équipe, bilan) ; lancement direct : world.tscn -- --assault
+	{"id": "assault", "row": "versus", "group": "pvp", "tag": "4 contre 4", "name": "L'Assaut", "sub": "Pose la Charge, une vie par manche",
+		"soon": true, "gain": "Apparences, titres", "gives": ["look", "title"],
+		"desc": "Attaque ou défends deux sites : une vie par manche, de l'or entre les manches."},
 	{"id": "training", "row": "", "group": "", "name": "Zone d'entraînement", "sub": "Sorts, armes et cartes, sans enjeu", "gain": "Rien (banc d'essai)",
 		"desc": ""},
 ]

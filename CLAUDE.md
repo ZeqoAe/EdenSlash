@@ -274,6 +274,13 @@ Règles (MB-A, `R_MB_A.md`) : `core/moba_data.gd` (`MobaData` : réglages en tê
 objectifs, 40 objets `ITEMS` (`text` sans %, `tip` chiffré), profil `RULES` enregistré par `ensure_rules`) ; kits `data/moba_kits.json`
 générés par `tools/moba_kits.py` (3 cases + ultime ; `--check`), lus par `MobaData.kit` ; fiche `TeamMatch.MODES.moba` ; test `test_mb_data`.
 
+### L'Assaut (4 contre 4 tactique, en cours ; « Bientôt », caché)
+Étude `conception/benchmark/TACTIQUE.md` (spécification § 7, lots TAC-0 à TAC-14, plans masse `tactique_maquettes/plan_*.svg`). Socle (TAC-0, `R_TAC_0.md`) :
+`core/assault.gd` (`Assault` : profil `RULES` enregistré par `ensure_rules`, machine de manche pure achat → manche → pose / désamorçage → fin, mi-temps,
+prolongation 2 d'écart + manche décisive, format Éclair, or de manche `give` / `spend` / `next_loss_gold`, `launch` / `finish` scellés, `args_options`),
+`core/assault_director.gd` (`AssaultDirector` : carte, 8 héros recréés à chaque manche, pose / désamorçage, agent IA provisoire, bilan provisoire ; `hero(clé)`
+car les scriptés tombés sont libérés) ; direct `world.tscn -- --assault [--assault-watch --assault-map= --assault-diff= --autoplay --auto-quit --trace]` ; test `test_tac0`.
+
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à
   paliers `armory_price`, puits `SHOP_CHESTS`, leçon de maîtrise) ; participation `Run.INSIGNIA_BASE` ; JcJ plafonné au jour

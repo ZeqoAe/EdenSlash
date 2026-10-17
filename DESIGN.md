@@ -59,6 +59,7 @@ insignes de participation `Run.INSIGNIA_BASE` 25 ; plus d'enclume en Survie (pas
   - L'Échiquier (autochess, `conception/autochess/SPEC.md` ; entrée et fin : lot AC-I)
   - Les Deux Voies (étude `conception/benchmark/MOBA.md`, en cours : lots MB-A à MB-K)
   - Le Colisée (étude `conception/benchmark/ARENA.md`, en cours : lots CO-A à CO-L)
+  - L'Assaut (étude `conception/benchmark/TACTIQUE.md`, en cours : lots TAC-0 à TAC-14)
 - **Partie D — Économie et progression**
   - Joaillerie et forge (comme dans Eden)
   - Équipement
@@ -1326,6 +1327,20 @@ performances le permet), une seule couronne. Les règles complètes sont celles 
   s'abriter des tirs, 1 ou 2 **fleurs de vie** (15 % des PV et une barrière de 4 s au premier qui passe, repousse en 20 s). **Anneau de
   feu** : 22 m, puis 16 m à 25 s, 11 m à 40 s, 6 m à 55 s, 3 m à 70 s ; chaque resserrement est annoncé 4 s avant (prochain anneau en
   pointillés) ; dehors on perd 5 % de ses PV par seconde, un peu plus à chaque seconde, et les soins reçus sont divisés par deux.
+
+## L'Assaut (étude `conception/benchmark/TACTIQUE.md`, en cours : lots TAC-0 à TAC-14)
+
+Mode scellé, 4 contre 4 (toi et 3 alliés IA contre 4 IA) : l'Attaque pose une Charge sur l'un de deux sites, la Défense l'en
+empêche ou la désamorce ; une vie par manche, or entre les manches. Ce qui est codé (lot TAC-0, `R_TAC_0.md`) :
+- **Partie** : premier à 7 en 12 manches, mi-temps après 6 (on change de côté, 800 d'or chacun) ; à 6-6, prolongation par blocs
+  de 2 manches à 4 000 d'or fixes jusqu'à 2 manches d'écart, puis une manche décisive. Format Éclair : premier à 4 en 7 manches.
+- **Manche** : 20 s d'achat (25 à la 1re de chaque moitié), 1:40 de manche ; pose 4 s immobile dans un site, mèche de 40 s,
+  désamorçage 7 s avec un point de sauvegarde à la moitié. Une équipe à terre perd (après la pose, l'Attaque à terre laisse
+  encore la Défense désamorcer) ; au temps, la Défense gagne.
+- **Or** : victoire 2 400 ; défaite 1 500, 1 900, 2 300 puis 2 700 (une victoire fait redescendre la série d'un cran) ;
+  élimination 200, aide 50 ; pose +300 à chaque attaquant ; désamorçage +200 ; un attaquant vivant quand le temps s'écoule sans
+  pose n'a pas de prime ; plafond 7 000.
+- **Héros** : niveau 50, l'arme de la classe, aucune pièce ni talent ; 4 sorts (kit provisoire, kits tactiques au lot TAC-4).
 
 # Partie D — Économie et progression
 

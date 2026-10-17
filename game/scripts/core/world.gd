@@ -18,6 +18,7 @@ extends Node3D
 ##   --goto=dungeon|shrine|merchant|chest   place le héros près de ce lieu
 ##   --shot-prefix=nom     préfixe des captures (lancements en parallèle)
 ##   --tower               lance la Tour (--tower-floor=N : à l'étage N, --tower-diff=0..3)
+##   --assault             lance L'Assaut (lot TAC-0 ; options : Assault.args_options)
 
 const REVIVES_PER_RUN := 1
 
@@ -144,6 +145,8 @@ func _ready() -> void:
 			if Run.skills.is_empty():
 				for sk in Run.class_data().get("skills", []).slice(0, 4):
 					Run.skills.append({"id": int(sk.id), "rank": 1})
+		elif "--assault" in OS.get_cmdline_user_args():
+			Assault.launch(Profile.selected_class, Assault.args_options(OS.get_cmdline_user_args()))  # L'Assaut (lot TAC-0)
 		elif "--royale" in OS.get_cmdline_user_args():
 			for arg in OS.get_cmdline_user_args():  # test : Battle royale (--royale-diff=0..3)
 				if arg.begins_with("--royale-diff="):
