@@ -42,6 +42,10 @@ test_controls, test_cards, test_progress (et ceux ajoutés depuis). Après l'ajo
 script avec `class_name`, lancer une fois `--import` pour mettre à jour le cache des classes.
 Toute la suite d'un coup : `python tools/run_tests.py [-j 4] [-r 3] [mot du test...]` (copie propre de HEAD, un dossier utilisateur par
 exécution, tableau vert / rouge ; `-r 3` cherche les tests instables ; `--reuse` garde la copie, `--live` teste le dossier de travail).
+Compilation (lot DV1, `conception/nuit_15_10/R_DV1.md`) : `python tools/check_scripts.py` (≈ 1 min, sans import, cache des `class_name` recalculé ;
+`--head` pour HEAD) avant tout envoi, aussi lancé par `Envoyer.bat` ; lint informatif `python tools/lint.py` (`.gdlintrc`, jamais de `gdformat` en masse).
+Intégration continue `.github/workflows/controle.yml` (onglet Actions, résumé en tableau) : à chaque push de `game/` ou `tools/`, compilation + lint +
+12 tests rapides (`TESTS_RAPIDES`, 15 min au plus) ; suite complète sur demande et le dimanche. Tourne sous Linux : casse des chemins `res://` exacte.
 Intégration (passe P4, `conception/nuit_15_10/R_P4.md`) : `test_p4_flow` (hub de bout en bout, sans changer de scène),
 `test_p4_activities` (chaque activité lancée depuis le lobby, jouée, bilan, retour ; ~7 min ; `-- duel,tower` pour un
 sous-ensemble) et `test_p4_migration` (vieilles sauvegardes ; `P4_REAL_SAVES=<dossier>` charge aussi de vrais profils).

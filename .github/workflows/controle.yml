@@ -1,0 +1,231 @@
+# Intégration continue d'Eden Slash (lot DV1, conception/nuit_15_10/R_DV1.md).
+# À chaque envoi sur la branche de travail (fichiers de game/ ou tools/) :
+#   1. « Scripts »  : chaque script GDScript compile (tools/check_scripts.py, sans les assets) + lint informatif ;
+#   2. « Import »   : cache de game/.godot (assets importés), refait seulement quand un asset change ;
+#   3. « Tests rapides » : scènes chargées + une douzaine de tests courts (tools/run_tests.py), 15 min au plus.
+# Sur demande (onglet Actions > Contrôle > Run workflow) et chaque dimanche à 3 h (heure de Paris) : toute la suite.
+name: Contrôle
+
+on:
+  push:
+    branches: [claude/optimistic-gauss-p2g2pq]
+    paths: ["game/**", "tools/**", ".github/**", ".gdlintrc"]
+  workflow_dispatch:
+    inputs:
+      filtres:
+        description: "Mots des tests à lancer, séparés par des espaces (vide = toute la suite)"
+        required: false
+        default: ""
+  schedule:
+    - cron: "0 1 * * 0"
+
+# Un nouvel envoi annule le contrôle encore en cours de la même branche ; la suite complète n'est jamais annulée.
+concurrency:
+  group: controle-${{ github.ref }}-${{ github.event_name == 'push' && 'push' || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: "4.7.2"
+  GODOT_SHA512: "9aa00f7a605200940bce3027a567b782f49bd8e940dd06ae9e987bd65aee1b1467edd56ed84fcdcbdd44354bf613bdbb4e5d2913e925850368e150c59ed54c65"
+  # La tâche planifiée part de la branche par défaut : elle teste quand même la branche de travail.
+  REF: ${{ github.event_name == 'schedule' && 'claude/optimistic-gauss-p2g2pq' || github.sha }}
+  TESTS_RAPIDES: "test_build test_hud test_controls test_cards test_progress test_texts_fr test_names_fr test_items test_quests test_compass test_journal test_tooltips"
+  PYTHONUTF8: "1"
+
+jobs:
+  scripts:
+    name: Scripts (compilation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.REF }}
+          filter: blob:none
+          sparse-checkout: |
+            .github
+            tools
+            game/scripts
+            game/tests
+            game/tools
+            game/scenes
+            game/shaders
+      - uses: ./.github/actions/godot
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          sha512: ${{ env.GODOT_SHA512 }}
+      - name: Chaque script compile
+        run: python3 tools/check_scripts.py --github
+      - name: Lint gdlint (informatif, jamais bloquant)
+        if: always()
+        continue-on-error: true
+        run: |
+          python3 -m pip install -q --user gdtoolkit==4.5.0
+          GDLINT="$HOME/.local/bin/gdlint" python3 tools/lint.py --github --json "$RUNNER_TEMP/lint.json"
+
+  import:
+    name: Import des assets (cache)
+    runs-on: ubuntu-latest
+    timeout-minutes: 150   # la toute première fois seulement (cache vide) ; ensuite moins d'une minute
+    outputs:
+      key: ${{ steps.cle.outputs.key }}
+    steps:
+      - name: Arbre du dépôt (sans les fichiers)
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.REF }}
+          path: meta
+          filter: blob:none
+          sparse-checkout: .github
+      - name: Clé du cache = empreinte des assets importables
+        id: cle
+        working-directory: meta
+        run: |
+          h=$( { git ls-tree -r HEAD -- game | grep -E '\.(import|png|jpe?g|webp|svg|bmp|tga|exr|hdr|glb|gltf|bin|obj|fbx|ogg|wav|mp3|ttf|otf|woff2?)$' ; git ls-tree HEAD game/project.godot ; } | sha256sum | cut -c1-24)
+          echo "key=import-${GODOT_VERSION}-$h" >> "$GITHUB_OUTPUT"
+      - name: Cache déjà à jour ?
+        id: present
+        uses: actions/cache/restore@v4
+        with:
+          path: game/.godot
+          key: ${{ steps.cle.outputs.key }}
+          lookup-only: true
+      - if: steps.present.outputs.cache-hit != 'true'
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.REF }}
+      - name: Cache précédent (import partiel)
+        if: steps.present.outputs.cache-hit != 'true'
+        uses: actions/cache/restore@v4
+        with:
+          path: game/.godot
+          key: ${{ steps.cle.outputs.key }}
+          restore-keys: import-${{ env.GODOT_VERSION }}-
+      - if: steps.present.outputs.cache-hit != 'true'
+        uses: ./.github/actions/godot
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          sha512: ${{ env.GODOT_SHA512 }}
+      - name: Import (--import)
+        id: imp
+        if: steps.present.outputs.cache-hit != 'true'
+        run: |
+          start=$(date +%s)
+          code=0
+          timeout 135m "$GODOT" --headless --path game --import > "$RUNNER_TEMP/import.log" 2>&1 || code=$?
+          duree=$(( ($(date +%s) - start) / 60 ))
+          echo "Import en $duree min (code $code) ; $(grep -c '^ERROR' "$RUNNER_TEMP/import.log" || true) ligne(s) ERROR"
+          if [ "$code" = "124" ] || [ ! -f game/.godot/global_script_class_cache.cfg ]; then
+            echo "complet=false" >> "$GITHUB_OUTPUT"
+            echo "### Import des assets INACHEVÉ après $duree min : relancer, il reprendra là où il en est" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "complet=true" >> "$GITHUB_OUTPUT"
+            echo "### Import des assets : $duree min, $(du -sh game/.godot | cut -f1)" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Enregistrement du cache
+        if: steps.imp.outputs.complet == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: game/.godot
+          key: ${{ steps.cle.outputs.key }}
+      - name: Enregistrement de l'import inachevé (repris à la prochaine exécution)
+        if: steps.imp.outputs.complet == 'false'
+        uses: actions/cache/save@v4
+        with:
+          path: game/.godot
+          key: import-${{ env.GODOT_VERSION }}-partiel-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Import inachevé
+        if: steps.imp.outputs.complet == 'false'
+        run: exit 1
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journal-import
+          path: ${{ runner.temp }}/import.log
+          retention-days: 7
+
+  tests:
+    name: Tests rapides
+    if: github.event_name == 'push'
+    needs: [scripts, import]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.REF }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: game/.godot
+          key: ${{ needs.import.outputs.key }}
+          fail-on-cache-miss: true
+      - uses: ./.github/actions/godot
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          sha512: ${{ env.GODOT_SHA512 }}
+      - name: Import (rattrapage)
+        run: timeout 8m "$GODOT" --headless --path game --import > "$RUNNER_TEMP/import.log" 2>&1 || true
+      - name: Scènes et scripts dans le projet importé
+        run: python3 tools/check_scripts.py --projet game --scenes --github
+      - name: Tests rapides
+        env:
+          TMPDIR: ${{ runner.temp }}/rt
+        run: |
+          mkdir -p "$TMPDIR"
+          python3 tools/run_tests.py --live -j 3 --timeout-x 0.5 $TESTS_RAPIDES
+      - name: Tableau
+        if: always()
+        run: python3 tools/ci_summary.py "$RUNNER_TEMP/rt" "Tests rapides"
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journaux-tests
+          path: |
+            ${{ runner.temp }}/rt/**/logs/
+            ${{ runner.temp }}/rt/**/rapport.json
+          retention-days: 7
+
+  complete:
+    name: Suite complète
+    if: github.event_name != 'push'
+    needs: [scripts, import]
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.REF }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: game/.godot
+          key: ${{ needs.import.outputs.key }}
+          fail-on-cache-miss: true
+      - uses: ./.github/actions/godot
+        with:
+          version: ${{ env.GODOT_VERSION }}
+          sha512: ${{ env.GODOT_SHA512 }}
+      - name: Import (rattrapage)
+        run: timeout 8m "$GODOT" --headless --path game --import > "$RUNNER_TEMP/import.log" 2>&1 || true
+      - name: Scènes et scripts dans le projet importé
+        run: python3 tools/check_scripts.py --projet game --scenes --github
+      - name: Toute la suite
+        env:
+          TMPDIR: ${{ runner.temp }}/rt
+          FILTRES: ${{ inputs.filtres }}
+        run: |
+          mkdir -p "$TMPDIR"
+          python3 tools/run_tests.py --live -j 2 --timeout-x 1.5 $FILTRES
+      - name: Tableau
+        if: always()
+        run: python3 tools/ci_summary.py "$RUNNER_TEMP/rt" "Suite complète"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: journaux-tests
+          path: |
+            ${{ runner.temp }}/rt/**/logs/
+            ${{ runner.temp }}/rt/**/rapport.json
+          retention-days: 14

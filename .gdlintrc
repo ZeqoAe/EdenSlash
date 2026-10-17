@@ -1,0 +1,56 @@
+# Réglages de gdlint (GDScript Toolkit 4.5.0) pour Eden Slash : lint INFORMATIF (jamais bloquant).
+# Rapport : python tools/lint.py (installe gdtoolkit dans ~/.eden_tools/gdtoolkit_venv avec --installer).
+# Ne jamais lancer gdformat sur tout le dépôt : plusieurs sessions éditent les mêmes fichiers.
+# Règles trop bruyantes pour la base existante : désactivées (disable) ou desserrées (lignes 160 signes,
+# tabulation comptée 4, fichiers 2 500 lignes, 10 retours par fonction).
+class-definitions-order:
+- tools
+- classnames
+- extends
+- docstrings
+- signals
+- enums
+- consts
+- staticvars
+- exports
+- pubvars
+- prvvars
+- onreadypubvars
+- onreadyprvvars
+- others
+class-load-variable-name: (([A-Z][a-z0-9]*)+|_?[a-z][a-z0-9]*(_[a-z0-9]+)*)
+class-name: ([A-Z][a-z0-9]*)+
+class-variable-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*
+comparison-with-itself: null
+constant-name: _?[A-Z][A-Z0-9]*(_[A-Z0-9]+)*
+disable:
+- class-definitions-order
+- max-public-methods
+- no-elif-return
+- no-else-return
+duplicated-load: null
+enum-element-name: '[A-Z][A-Z0-9]*(_[A-Z0-9]+)*'
+enum-name: ([A-Z][a-z0-9]*)+
+excluded_directories: !!set
+  .git: null
+  .godot: null
+  Godot: null
+expression-not-assigned: null
+function-argument-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*
+function-arguments-number: 10
+function-name: (_on_([A-Z][a-z0-9]*)+(_[a-z0-9]+)*|_?[a-z][a-z0-9]*(_[a-z0-9]+)*)
+function-preload-variable-name: ([A-Z][a-z0-9]*)+
+function-variable-name: '[a-z][a-z0-9]*(_[a-z0-9]+)*'
+load-constant-name: (([A-Z][a-z0-9]*)+|_?[A-Z][A-Z0-9]*(_[A-Z0-9]+)*)
+loop-variable-name: _?[a-z][a-z0-9]*(_[a-z0-9]+)*
+max-file-lines: 2500
+max-line-length: 160
+max-public-methods: 20
+max-returns: 10
+mixed-tabs-and-spaces: null
+signal-name: '[a-z][a-z0-9]*(_[a-z0-9]+)*'
+sub-class-name: _?([A-Z][a-z0-9]*)+
+tab-characters: 4
+trailing-whitespace: null
+unnecessary-pass: null
+unused-argument: null

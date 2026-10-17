@@ -1,0 +1,40 @@
+name: Godot (version fixée)
+description: Télécharge Godot pour Linux (version fixée, somme SHA-512 vérifiée, mis en cache) et exporte GODOT.
+inputs:
+  version:
+    description: Version de Godot (sans « -stable »)
+    required: true
+  sha512:
+    description: SHA-512 de Godot_v<version>-stable_linux.x86_64.zip (fichier SHA512-SUMS.txt de la version)
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Cache de Godot
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ~/godot
+        key: godot-linux-${{ inputs.version }}-${{ inputs.sha512 }}
+    - name: Téléchargement de Godot ${{ inputs.version }}
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        V: ${{ inputs.version }}
+        SHA: ${{ inputs.sha512 }}
+      run: |
+        set -euo pipefail
+        mkdir -p ~/godot && cd ~/godot
+        zip="Godot_v${V}-stable_linux.x86_64.zip"
+        curl -fsSL --retry 3 -o "$zip" "https://github.com/godotengine/godot-builds/releases/download/${V}-stable/${zip}"
+        echo "${SHA}  ${zip}" | sha512sum -c -
+        unzip -q "$zip" && rm "$zip"
+    - name: Variable GODOT
+      shell: bash
+      env:
+        V: ${{ inputs.version }}
+      run: |
+        exe="$HOME/godot/Godot_v${V}-stable_linux.x86_64"
+        chmod +x "$exe"
+        echo "GODOT=$exe" >> "$GITHUB_ENV"
+        "$exe" --version
