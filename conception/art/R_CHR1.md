@@ -46,7 +46,7 @@ Icônes : 5 pictogrammes de la DA (autocollant d'encre et de bonbon), faits par 
 | `player/player.gd` | auto-attaque de classe (`auto`, étapes `steps` : mult, zone, tour, pose, poussée), formes de sort branchées sur `NinjaArts`, arme cachée, `ClassLook` à l'habillage, portée de visée de l'ultime ; **rien ne change pour une classe sans ces clés** |
 | `combat/hero_bolt.gd`, `core/eden_model.gd`, `ai/class_rival.gd` | style « shuriken » ; `ClassLook` dans les aperçus et sur les doubles ; zone bleue des doubles |
 | `tools/anim_sheet.tscn` | planches d'animations du corps commun (impacts, bandes, `--pose=`) : l'outil qui a servi à choisir les gestes |
-| `tests/test_chr1.tscn`, `tests/shot_chr1.tscn` | test (50 contrôles) ; captures (`CHR1_MODE=look|compare|fight|uv`, sortie hors dépôt) |
+| `tests/test_chr1.tscn`, `tests/shot_chr1.tscn` | test (42 contrôles) ; captures (`CHR1_MODE=look|compare|fight|uv`, sortie hors dépôt) |
 
 **Pourquoi à part des 60 classes** : `GameData.classes` est parcouru par 60 endroits (tirages des Arènes, du Siège, de la Battle royale,
 de l'Échiquier, du Panthéon, listes et tests « 60 classes »). La classe maison n'y entre pas : aucun mode à IA ne la tire, aucune
@@ -77,13 +77,16 @@ tuer le boss en s) : étage 30 : 59,8 (Voleur 42,0, Kage 92,4, Artiste martial 1
 reste, avec `TowerBalance` (`data/tower_solo.json` ne la connaît pas : multiplicateur 1).
 
 ## Tests
-- `test_chr1` (nouveau, **vert**, 50 contrôles) : données à part (60 classes intactes), sélecteur, ouverte, noms français, icônes,
+- `test_chr1` (nouveau, **vert**, 42 contrôles) : données à part (60 classes intactes), sélecteur, ouverte, noms français, icônes,
   apparence (bandeau, mèches, rubans, teintures, traits du visage ; un Guerrier n'a rien de tout cela), dans un vrai monde : arme
   cachée, taï-jutsu à 3 étapes (3e coup ×1,9 en coup de pied retourné, reprise au 1er coup), les 4 sorts touchent, 2 doubles
   apparaissent puis disparaissent, ultime retardé par la charge, Artiste martial inchangé ; lobby et Héros (5 sections) ouverts avec la classe.
 - `test_texts_fr` étendu aux classes maison (sorts, cartes de classe) : **vert**.
-- Avant l'envoi : `check_scripts.py --head`, `test_chr1`, `test_texts_fr`, `test_ico1`, `test_names_fr`, `test_nav_screens`,
-  `test_pages`, `test_skills` sur une copie de HEAD (résultats en fin de rapport).
+- Sur une copie de HEAD (`run_tests.py -j 2`) : **8 verts sur 8** (`test_build`, `test_chr1`, `test_ico1`, `test_names_fr`,
+  `test_nav_screens`, `test_pages`, `test_skills`, `test_texts_fr`) ; `check_scripts.py --head` **vert** (584 scripts).
+- Piège rencontré (pour la coordination) : avec l'index partagé périmé, `run_tests.py` prend les fichiers commités par index
+  temporaire pour des fichiers « non suivis » et **les retire de sa copie** (65 fichiers de HEAD manquants, dont ceux du lot et ceux de
+  NET-0 / MB-B) : il faut remettre les fichiers de `git ls-tree HEAD` absents de la copie, puis `--reuse`.
 
 ## Limites honnêtes du prototype
 - **De près**, les mèches sont des cônes nets et le bandeau un anneau lisse : à la caméra du jeu, la silhouette se lit.
