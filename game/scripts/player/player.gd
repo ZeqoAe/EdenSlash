@@ -341,6 +341,8 @@ func recalc_stats() -> void:
 			ps[k] = float(ps.get(k, 0.0)) + float(eq[k])
 	var ratio := hp / max_hp if max_hp > 0.0 else 1.0
 	var base: Dictionary = cls.get("base", {})
+	if not own and Epochs.adventure():
+		base = ClassBalance.adventure_base(class_id, base)  # lot CLS-1 : classes relevées au plancher de leur famille
 	# attributs d'Eden : base de la classe + croissance par niveau + équipement, × talents
 	attrs = {}
 	var ab: Dictionary = cls.get("attributes", {}).get("base", {})
@@ -388,6 +390,9 @@ func recalc_stats() -> void:
 	dmg_mult = maxf(0.1, 1.0 + ps.get("dmg_pct", 0.0) + eq.get("dmg_pct", 0.0))
 	if Tower.active and not Tower.is_dungeon() and not foe and bot == null:
 		dmg_mult *= TowerBalance.solo_mult(Run.class_id)  # la Tour, seul : les classes aux dégâts faibles rattrapées (passe M8)
+	if not own and Epochs.adventure():
+		dmg_mult *= ClassBalance.mult(class_id, "dmg_mult")  # lot CLS-1 : kit en retard face aux boss de l'Aventure
+		max_hp *= ClassBalance.mult(class_id, "hp_mult")
 	elite_mult = 1.0 + ps.get("elite_dmg", 0.0) + eq.get("elite_dmg", 0.0)
 	basic_mult = 1.0 + ps.get("basic_dmg", 0.0) + eq.get("basic_dmg", 0.0)
 	extra_proj = int(floorf(ps.get("proj", 0.0) + eq.get("proj", 0.0) + 0.001))

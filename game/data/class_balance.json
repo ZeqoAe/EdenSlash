@@ -1,0 +1,11 @@
+{
+ "note": "Lot CLS-1 : réglages des classes face aux boss de l'Aventure (ClassBalance, Aventure seulement). Clés de la base (hp, def, atk…) : remplacent la « base » de data/classes.json ; hp_mult, dmg_mult : multiplicateurs (1 à 1,5). Mesures avant / après : conception/progression/R_CLS1.md (tools/boss_ttk.py --same-seeds --by-class, tools/sim_survie.py --bot --hub new --by-class).",
+ "adventure": {
+  "hunter": {"hp": 1.1, "atk": 1.0, "def": 3.0, "why": "compte neuf : 2 boss d'I-1 sur 10 (les autres classes de départ 7 à 9) ; plancher des tireurs (attaque 1, défense 3) et PV du plus solide d'entre eux (1,1) ; avant PV 0,85, attaque 0,95, défense 0"},
+  "asura": {"dmg_mult": 1.3, "why": "0 boss sur 10 (médiane des familles 59 %) : kit de mêlée au contact, DPS face aux boss 0,6 à 0,8 de la médiane"},
+  "rakshasa": {"dmg_mult": 1.3, "why": "1 boss sur 10 : même famille et même kit de départ que l'Asura"},
+  "conjurer": {"dmg_mult": 1.2, "why": "3 boss sur 10 : DPS 0,8 de la médiane, combats longs croisés par la rage du boss"},
+  "devil_hunter": {"dmg_mult": 1.2, "hp_mult": 1.2, "why": "3 boss sur 10 : tombe vite aux époques I-II (PV 1, attaque magique d'un arc)"},
+  "luminary": {"dmg_mult": 1.2, "hp_mult": 1.15, "why": "3 boss sur 10 : DPS correct mais meurt avant la fin"}
+ }
+}

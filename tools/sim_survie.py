@@ -27,10 +27,13 @@ def run_one(job):
     cls, seed, a, idx = job
     env = dict(os.environ)
     env["EDEN_PROFILE"] = "user://sim_%d_%s_%d.json" % (os.getpid(), cls, idx)
+    if a.userdir:
+        env["APPDATA"] = os.path.join(a.userdir, "j%d" % (idx % max(a.jobs, 1)))  # dossier utilisateur à part (lot CLS-1)
+        os.makedirs(env["APPDATA"], exist_ok=True)
     # --bot (lot H4b) : l'aide « Bot » du jeu joue (déplacement, attaques, sorts, enchaînements, cartes) au lieu du pilote de
     # mesure, et le héros entre dans l'arène du boss à --boss-after (sans marcher jusqu'au donjon)
     pilot = ["--bot-mode", "--boss-at=%d" % a.boss_after] if a.bot else ["--autoplay", "--boss-after=%d" % a.boss_after]
-    cmd = [GODOT, "--headless", "--fixed-fps", "60", "--path", GAME, "res://scenes/world.tscn", "--"] + pilot + [
+    cmd = [GODOT, "--headless", "--fixed-fps", "60", "--path", a.game or GAME, "res://scenes/world.tscn", "--"] + pilot + [
            "--auto-quit", "--class=" + cls, "--hub=" + a.hub, "--epoch=%d" % a.epoch, "--seed=%d" % seed, "--quit-at=%d" % a.quit_at, "--human=%s" % a.human, "--fight=%s" % a.fight] + (["--rush=%s" % a.rush] if a.rush else []) + (a.extra.split() if a.extra else [])
     if a.hero_level:
         cmd.append("--hero-level=%d" % a.hero_level)
@@ -123,6 +126,9 @@ def main():
     ap.add_argument("--extra", default="", help="arguments en plus pour le jeu (ex. « --no-cape » : coffres de cape remplacés)")
     ap.add_argument("--bot", action="store_true", help="lot H4b : l'aide « Bot » du jeu (sensation d'un joueur) au lieu du pilote ; boss à --boss-after")
     ap.add_argument("--human", default="0", help="part des coups évités par un joueur humain (0 : le bot brut, 0.3 débutant, 0.5 bon joueur)")
+    ap.add_argument("--game", default="", help="dossier du projet (copie propre de HEAD ; défaut : game/ du dépôt)")
+    ap.add_argument("--userdir", default="", help="dossier utilisateur à part (APPDATA détourné, un par processus)")
+    ap.add_argument("--by-class", action="store_true", help="lot CLS-1 : boss battus et morts par classe")
     a = ap.parse_args()
     jobs = []
     for cls in a.classes.split(","):
@@ -139,6 +145,12 @@ def main():
     print("=> %d runs : boss atteint %d (%.0f %%), boss battu %d (%.0f %%)" % (n, reached, 100.0 * reached / n, won, 100.0 * won / n))
     alive = sum(1 for r in res if r.get("t", 0) >= 420 or r.get("boss"))
     print("=> survit au moins 7 min (ou atteint le boss) : %d (%.0f %%)" % (alive, 100.0 * alive / n))
+    if a.by_class:
+        for cls in a.classes.split(","):
+            rs = [r for r in res if r["cls"] == cls]
+            fights = sorted(r["boss_fight"] for r in rs if "boss_fight" in r)
+            print("   %-16s boss battu %d / %d, atteint %d, combat médian %s s" % (cls, sum(1 for r in rs if r.get("won_boss")), len(rs),
+                  sum(1 for r in rs if r.get("boss")), fights[len(fights) // 2] if fights else "-"))
     spawn_summary(res)
     supplies_summary(res)
 

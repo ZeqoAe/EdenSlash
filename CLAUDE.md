@@ -115,6 +115,10 @@ Illustrations (lot ILL-2, `conception/art/R_ILL2.md`) : carte d'activité = `ass
   `Epochs.BOSS_RAGE_AT` (2:30 / 3:00 / 4:00) ; mécaniques `ai/boss_brain.gd`. Équilibre par carte (H4b, `R_H4b.md`) : `BOSS_HP_ADJ`, `BOSS_ATK`,
   `MAP_ATK`, mesurés à l'aide « Bot » (`boss_ttk.py --scenarios bande,bande-10,bande+10 --human 0.5 --repeat 2`, `sim_survie.py --bot`) ;
   `progression_sim --heros` lit `HERO_GAME_MULT` (recalé par `hl_probe --calage`), jamais `Epochs.MAP_MULT`.
+- **Classes face aux boss** (CLS-1, `R_CLS1.md`) : `core/class_balance.gd` + `data/class_balance.json` (`ClassBalance` : base de la classe
+  relevée au plancher de sa famille, `hp_mult` / `dmg_mult` 1 à 1,5), appliqué par `Player.recalc_stats` en Aventure et au héros du joueur
+  seulement (jamais duel, Tour, Donjons, scellés, IA ; `data/classes.json` inchangé) ; un réglage se mesure avant / après sur le même code
+  (`boss_ttk.py --same-seeds --by-class`, compte neuf `sim_survie.py --bot --hub new --by-class`) ; test `test_cls1`.
 - Mode farm façon Megabonk : objets à casser `world/breakables.gd`, sites, plateaux, autels (fortune `core/fortune.gd`).
   Vues de la carte : `res://tools/map_shots.tscn -- <graine> [zone]` ; test `tests/test_farm.tscn`.
 - Détail : DESIGN « Boucle de jeu et Survie », « Apparition des monstres », « Pacte, géants et Menace », « Boss : PV fixes ».
@@ -461,7 +465,7 @@ captures `tests/shot_hub1.tscn`. `records.news` / `last_activity` = état de men
 | `python tools/sim_survie.py` | Survie au pilote automatique en parallèle (`--hub new\|E.C.N.G`, `--human`), test `test_gear_run` |
 | `res://tools/progression_sim.tscn` | compte neuf de bout en bout avec les vraies formules (`--probe`, `--mult=`, `--gates`, `--trace`), bornes `test_e6` ; refonte Aventure (A7, `R_A7.md`) : `--refonte [--plans=boss] --hubvalue --decote`, jalons `kit80_ok` / `kit90_ok` / `kit90_opti` / `dungeon_0` ; niveau de héros (H7, `R_H7.md`) : `--heros [--hero-level=N --xp=a,g --mep= --mapmult=]`, bandes, `MAP_MULT`, port selon H, jalons `hero10`…`hero90` |
 | `res://tools/hl_probe.tscn` | sonde du niveau de héros : puissance par carte et M′ suggéré, retard dans la bande (`--talents` : talents et certificats) |
-| `python tools/boss_ttk.py` | temps pour tuer les boss (sonde `res://tools/boss_ttk.tscn`, `--dungeons`, `--human`), test `test_p11` |
+| `python tools/boss_ttk.py` | temps pour tuer les boss (sonde `res://tools/boss_ttk.tscn`, `--dungeons`, `--human`), test `test_p11` ; par classe (CLS-1) : `--classes all --by-class --same-seeds --json --game <copie> --userdir <dossier>` |
 | `python tools/sim_survivor.py` | Survivant au pilote (`--palier 1,2,…`, `--probe --fight` : sonde `tools/sv_build_probe.tscn`) |
 | `res://tools/sv_set_sim.tscn`, `sv_cards_sim.tscn` | tirages des panoplies et des cartes du Survivant |
 | `res://tools/tower_run.tscn`, `m8_tower.tscn`, `python tools/m8_matrix.py` | Tour (`--pilot=bot`, `--dodge`), facteurs par classe |

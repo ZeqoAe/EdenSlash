@@ -121,6 +121,10 @@ Données : `tools/build_classes.py` (sorts, icônes et effets d'Eden, tenues, ar
 | Clerc | Sceptre W301–304 | hybride, PV ×1,1 | zones sacrées, **soins**, régénération, barrière |
 | Magicien | Bâton W601–604 | **à distance** (projectile 12 m), attaque ×1,15, PV ×0,8 | zones de feu/glace/foudre, téléportation |
 
+Équilibre face aux boss de l'Aventure (lot CLS-1, `conception/progression/R_CLS1.md`) : `data/class_balance.json` relève, en Aventure
+seulement, la base d'une classe au plancher de sa famille (Chasseur : PV 1,1, attaque 1, défense 3) ou multiplie ses dégâts / PV (Asura,
+Rakshasa ×1,3 ; Conjurateur, Chasseur de démons, Luminaire ×1,2) ; le duel, la Tour et les modes scellés gardent `data/classes.json`.
+
 Types de compétences du moteur : `dash`, `spin`, `cone`, `fan`, `flurry`, `line`, `buff`, et
 `bolt` (projectile : volée, dispersion, perforation), `ground` (zone au sol à l'endroit visé),
 `heal` (soin en % des PV), `blink` (téléportation sans traverser les murs).

@@ -5,15 +5,20 @@
     python tools/boss_ttk.py --epochs 1 --scenarios rush,bonne --human 0.5   # le héros encaisse et peut mourir
     python tools/boss_ttk.py --scenarios bande,bande-10 --pure              # lot H4a : héros au haut de la bande de chaque carte
     python tools/boss_ttk.py --scenarios bande,bande-10,bande+10 --human 0.5 --repeat 4   # lot H4b : % de boss battus par carte
+    python tools/boss_ttk.py --scenarios bande --epochs 1,2 --stages 1 --human 0.5 --repeat 4 --same-seeds --by-class --classes all
+        --game <copie>/game --userdir <dossier> --json mesures.json   # lot CLS-1 : puissance relative des 60 classes (une ligne)
 
 Scénarios (niveau, cartes, trophées, part des emplacements trouvés en run, emplacements passés à l'enclume, par carte) :
   rush    : boss atteint tôt, presque rien ramassé ;
   moyenne : run ordinaire ;
   bonne   : carte exploitée (niveau plafond, cartes, trophées, coffres, enclume) ;
   doree   : bonne run + équipement du hub optimisé de l'époque.
+Compte neuf (lot CLS-1) : la partie entière, `tools/sim_survie.py --bot --hub new --by-class` (la sonde ne refait pas sa run).
 Équipement du hub d'un joueur qui joue cette époque (scénarios rush / moyenne / bonne) : HUB ; run dorée : HUB_GOLD.
 """
 import argparse
+import json
+import math
 import os
 import re
 import statistics
@@ -52,15 +57,19 @@ DUNGEON_ZONES = ["limestone", "wetlands", "blackflame", "rush"]
 
 
 def run_one(job):
-    sc, ep, st, cls, a, idx = job
+    sc, ep, st, cls, a, idx, rep = job
+    sd = a.seed + (rep * 7919 + ep * 131 + st * 17 if a.same_seeds else idx)  # --same-seeds : même graine pour toutes les classes
     env = dict(os.environ)
     env["EDEN_PROFILE"] = "user://sim_ttk_%d_%d.json" % (os.getpid(), idx)
-    cmd = [GODOT, "--headless", "--fixed-fps", "60", "--path", GAME, "res://tools/boss_ttk.tscn", "--"]
+    if a.userdir:
+        env["APPDATA"] = os.path.join(a.userdir, "j%d" % (idx % max(a.jobs, 1)))  # dossier utilisateur à part (lot CLS-1)
+        os.makedirs(env["APPDATA"], exist_ok=True)
+    cmd = [GODOT, "--headless", "--fixed-fps", "60", "--path", a.game or GAME, "res://tools/boss_ttk.tscn", "--"]
     if sc.startswith("donjon"):
         # ep = indice de zone (DUNGEON_ZONES), st = difficulté + 1 ; « donjon » : équipement attendu, « donjon+ » : sur-équipé
         hub = DUNGEON_HUB[st - 1][1 if sc.endswith("+") else 0]
         cmd += ["--mode=dungeon", "--zone=" + DUNGEON_ZONES[ep - 1], "--diff=%d" % (st - 1), "--class=" + cls, "--hub=" + hub,
-                "--cards=3", "--seed=%d" % (a.seed + idx), "--max=%d" % a.max]
+                "--cards=3", "--seed=%d" % sd, "--max=%d" % a.max]
         if DUNGEON_ZONES[ep - 1] == "rush":
             cmd.append("--floor=4")
     elif sc.startswith("bande"):
@@ -73,12 +82,12 @@ def run_one(job):
         else:
             hub = BAND_LATE[(ep, st)]
         cmd += ["--epoch=%d" % ep, "--stage=%d" % st, "--class=" + cls, "--hub=" + hub, "--level=%d" % lv, "--cards=%d" % cards,
-                "--trophies=%d" % tro, "--finds=%s" % (finds if sc == "bande" else 0.0), "--anvil=0", "--seed=%d" % (a.seed + idx), "--max=%d" % a.max]
+                "--trophies=%d" % tro, "--finds=%s" % (finds if sc == "bande" else 0.0), "--anvil=0", "--seed=%d" % sd, "--max=%d" % a.max]
     else:
         lv, cards, tro, finds, anvil = SCENARIOS[sc][st - 1]
         hub = HUB_GOLD[ep] if sc == "doree" else HUB[ep]
         cmd += ["--epoch=%d" % ep, "--stage=%d" % st, "--class=" + cls, "--hub=" + hub, "--level=%d" % lv, "--cards=%d" % cards,
-                "--trophies=%d" % tro, "--finds=%s" % finds, "--anvil=%d" % anvil, "--seed=%d" % (a.seed + idx), "--max=%d" % a.max]
+                "--trophies=%d" % tro, "--finds=%s" % finds, "--anvil=%d" % anvil, "--seed=%d" % sd, "--max=%d" % a.max]
     if a.human:
         cmd.append("--human=%s" % a.human)
     if a.extra:
@@ -101,6 +110,35 @@ def run_one(job):
     return r
 
 
+def print_by_class(res):
+    """Lot CLS-1 : une ligne par classe, tous scénarios confondus (boss battus, morts, DPS et PV rapportés à la médiane
+    des classes du même cas : époque, carte, scénario). Indice = DPS relatif / dégâts subis relatifs (temps pour mourir sur
+    temps pour tuer, moyenne géométrique des combats) : moins bruité que tué / mort (avec --human)."""
+    cases = {}
+    for r in res:
+        if "ttk" in r:
+            cases.setdefault((r["sc"], r["ep"], r["st"]), []).append(r)
+    med = {k: (statistics.median(x["dps"] for x in v), statistics.median(x["pv"] for x in v),
+               statistics.median(max(x.get("taken", 0.01), 0.01) for x in v)) for k, v in cases.items()}
+    rows = {}
+    for k, v in cases.items():
+        for r in v:
+            d = rows.setdefault(r["cls"], {"n": 0, "won": 0, "dead": 0, "dps": [], "pv": [], "taken": [], "idx": []})
+            d["n"] += 1
+            d["won"] += r["res"] == "tué"
+            d["dead"] += r["res"] == "mort"
+            d["dps"].append(r["dps"] / max(med[k][0], 1))
+            d["pv"].append(r["pv"] / max(med[k][1], 1))
+            if "taken" in r:
+                d["taken"].append(r["taken"])
+            d["idx"].append(math.log(max(r["dps"], 1) / max(med[k][0], 1) / (max(r.get("taken", 0.01), 0.01) / med[k][2])))
+    print("\nPar classe (DPS et PV : rapport à la médiane des classes du même cas)")
+    print("%-18s %7s %6s %6s %6s %7s %7s" % ("classe", "battus", "morts", "DPS", "PV", "subis", "indice"))
+    for c, d in sorted(rows.items(), key=lambda kv: (kv[1]["won"] / kv[1]["n"], statistics.median(kv[1]["dps"]))):
+        print("%-18s %3d/%-3d %6d %6.2f %6.2f %7.2f %7.2f" % (c, d["won"], d["n"], d["dead"], statistics.median(d["dps"]),
+              statistics.median(d["pv"]), statistics.median(d["taken"]) if d["taken"] else -1, math.exp(sum(d["idx"]) / len(d["idx"]))))
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenarios", default="rush,moyenne,bonne,doree")
@@ -115,9 +153,18 @@ def main():
     ap.add_argument("--pure", action="store_true", help="boss sans mécaniques de salle : DPS du héros seul")
     ap.add_argument("--repeat", type=int, default=1, help="lot H4b : combats par classe et par carte (graines différentes)")
     ap.add_argument("--extra", default="", help="arguments en plus pour la sonde (ex. « --boss-scale=0.8 », lot H4a)")
+    ap.add_argument("--game", default="", help="dossier du projet (copie propre de HEAD ; défaut : game/ du dépôt)")
+    ap.add_argument("--userdir", default="", help="dossier utilisateur à part (APPDATA détourné, un par processus)")
+    ap.add_argument("--by-class", action="store_true", help="lot CLS-1 : tableau par classe (boss battus, morts, DPS, PV, subis)")
+    ap.add_argument("--same-seeds", action="store_true", help="lot CLS-1 : graine selon la carte et la répétition seulement "
+                    "(toutes les classes, avant / après un réglage : mêmes combats ; un même cas rejoué donne le même résultat)")
+    ap.add_argument("--json", default="", help="écrit les résultats bruts (liste de combats) dans ce fichier")
     ap.add_argument("--dungeons", action="store_true", help="donjons et Ruée : scénarios donjon (attendu) et donjon+ (sur-équipé), "
                     "époques = zones (1 Limestone, 2 Wetlands, 3 Blackflame, 4 Ruée), cartes = difficulté + 1")
     a = ap.parse_args()
+    if a.classes == "all":
+        with open(os.path.join(a.game or GAME, "data", "classes.json"), encoding="utf-8") as f:
+            a.classes = ",".join(sorted(json.load(f)))
     if a.dungeons and a.scenarios == ap.get_default("scenarios"):
         a.scenarios = "donjon,donjon+"
     jobs = []
@@ -126,11 +173,16 @@ def main():
             for st in map(int, a.stages.split(",")):
                 for _r in range(a.repeat):
                     for cls in a.classes.split(","):
-                        jobs.append((sc, ep, st, cls, a, len(jobs)))
+                        jobs.append((sc, ep, st, cls, a, len(jobs), _r))
     with ThreadPoolExecutor(max_workers=a.jobs) as ex:
         res = list(ex.map(run_one, jobs))
     for r in res:
         print(" ", r)
+    if a.json:
+        with open(a.json, "w", encoding="utf-8") as f:
+            json.dump(res, f, ensure_ascii=False, indent=0)
+    if a.by_class:
+        print_by_class(res)
     print("\nTTK médian (s) [tués / runs] · PV du boss · DPS médian%s" % ("" if not a.human else " · coups évités %s" % a.human))
     for sc in a.scenarios.split(","):
         for ep in map(int, a.epochs.split(",")):
