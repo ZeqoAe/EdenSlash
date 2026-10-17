@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Échiquier v2 · Atout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=M+PLUS+Rounded+1c:wght@500;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.veil { position: absolute; inset: 0; background: rgba(34,26,58,.45); }
+.aug { position: absolute; top: 200px; width: 300px; height: 390px; border: 3px solid var(--encre); border-radius: 20px; box-shadow: 8px 8px 0 var(--encre); text-align: center; padding: 18px; }
+.aug .med { width: 120px; height: 120px; margin: 10px auto 12px; border-radius: 50%; border: 3px solid var(--encre); background: var(--papier); font-size: 60px; line-height: 112px; position: relative; }
+.aug .nm { font-family: "Mochiy Pop One"; font-size: 25px; color: #fff; -webkit-text-stroke: 5px var(--encre); paint-order: stroke fill; }
+.aug .tx { margin-top: 10px; background: var(--papier); border: 3px solid var(--encre); border-radius: 14px; padding: 10px; font-size: 18px; font-weight: 800; }
+.aug .tag { position: absolute; top: -16px; left: 50%; transform: translateX(-50%) rotate(-4deg); }
+.rays { position: absolute; inset: -30px; border-radius: 50%; background: repeating-conic-gradient(rgba(255,255,255,.7) 0 6deg, transparent 6deg 20deg); z-index: -1; }
+.carousel { position: absolute; left: 1080px; top: 640px; width: 480px; padding: 12px; font-size: 14px; }
+.order { display: flex; gap: 4px; margin: 6px 0; } .order span { padding: 2px 6px; border: 2px solid var(--encre); border-radius: 8px; font-weight: 800; background: var(--papier-200); }
+.order .me { background: var(--soleil); }
+.stamp { display: inline-block; transform: rotate(-8deg); border: 3px solid var(--fraise-f); color: var(--fraise-f); font-weight: 900; padding: 0 6px; border-radius: 8px; }
+</style></head>
+<body>
+<div class="nav">Échiquier v2 · croquis : <a href="preparation.html">Préparation</a><a href="combat.html">Combat</a><a href="choix.html">Atout et choix partagé</a><a href="bilans.html">Bilans</a></div>
+<div class="stage" id="stage">
+  <div class="veil"></div>
+  <div style="position:absolute;left:0;right:0;top:70px;text-align:center"><span class="title" style="font-size:40px">Choisis un atout</span>
+    <div style="color:#fff;font-weight:800;margin-top:10px;font-size:18px">Rareté Or · il reste toute la partie</div></div>
+
+  <div class="aug" style="left:300px;background:linear-gradient(var(--soleil-c) 0 12%, var(--soleil) 12% 62%, var(--soleil-f) 62%)">
+    <span class="chip tag" style="background:var(--lagon-c)">Économie</span>
+    <div class="med">🐷</div><div class="nm">Intérêts composés</div><div class="tx">Tes intérêts peuvent doubler.</div></div>
+  <div class="aug" style="left:650px;top:180px;background:linear-gradient(var(--soleil-c) 0 12%, var(--soleil) 12% 62%, var(--soleil-f) 62%);transform:rotate(-1.5deg)">
+    <span class="chip tag" style="background:var(--fraise-c)">Combat</span>
+    <div class="med"><div class="rays"></div>👑</div><div class="nm">Chef de guerre</div><div class="tx">Ton héros le plus cher est plus fort.</div>
+    <div style="margin-top:10px;font-size:14px;background:var(--encre-500);color:var(--papier);border:3px solid var(--encre);border-radius:10px;padding:6px">+30 PV et attaque en pourcentage (détail au survol seulement)</div></div>
+  <div class="aug" style="left:1000px;background:linear-gradient(var(--soleil-c) 0 12%, var(--soleil) 12% 62%, var(--soleil-f) 62%)">
+    <span class="chip tag" style="background:var(--fraise-c)">Combat</span>
+    <div class="med">🛡️</div><div class="nm">Garde du corps</div><div class="tx">Tes deux héros de tête reçoivent un bouclier.</div></div>
+
+  <div style="position:absolute;left:0;right:0;top:640px;display:flex;gap:16px;justify-content:center">
+    <div class="btn lagon">↻ Relancer · 1 <span class="key x" style="margin-left:6px">X</span></div>
+    <div class="btn">Voir le plateau <span class="key y" style="margin-left:6px">Y</span></div>
+  </div>
+  <div class="note" style="left:40px;top:220px">Argent = lagon clair · Or = soleil · Éclat = améthyste + rayons tournants. Icône du jeu dans le médaillon (ici des emoji de remplacement).</div>
+
+  <div class="carousel sticker">
+    <b>Choix partagé (même grammaire) :</b>
+    <div class="order"><span>Daphné</span><span>Élouan</span><span class="me">Toi · À toi ! 10</span><span>Aliénor</span><span>…</span></div>
+    9 cartes en anneau (icône, nom, composant) ; carte prise : tampon <span class="stamp">Pris par Daphné</span> ; figurines 3D sur l'anneau en P2.
+  </div>
+</div>
+<script>
+function fit(){ const s = Math.min(1, (window.innerWidth-8)/1600); const st=document.getElementById('stage'); st.style.transform=`scale(${s})`; document.body.style.height=(900*s+60)+'px'; }
+addEventListener('resize', fit); fit();
+</script>
+</body></html>

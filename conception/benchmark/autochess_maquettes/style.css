@@ -1,0 +1,54 @@
+/* Croquis maison de l'Échiquier v2 (BM-AUTO, 17/10/2026). DA : conception/art/BIBLE.md v2, valeurs de tokens.json.
+   Cadre fixe 1600 × 900, réduit à la largeur de la fenêtre. Aucun asset tiers : formes CSS et emoji de remplacement. */
+:root {
+  --encre-900: #120C24; --encre: #221A3A; --encre-500: #2E2450; --encre-300: #6B5E86; --encre-100: #C9BFEA;
+  --papier: #FFF8EC; --papier-200: #FFEBC8; --papier-300: #E9DFCB; --blanc: #FFFFFF;
+  --soleil: #FFC928; --soleil-c: #FFE27A; --soleil-f: #D9900B;
+  --mandarine: #FF8A1F; --mandarine-c: #FFB566; --mandarine-f: #C85F08;
+  --pomme: #8FD62E; --pomme-c: #C3F07A; --pomme-f: #4F8F10;
+  --lagon: #22B8F0; --lagon-c: #86DDFF; --lagon-f: #0B7DB5;
+  --amethyste: #B43BEB; --amethyste-c: #DC92FF; --amethyste-f: #7A1DB0;
+  --fraise: #FF4D6D; --fraise-c: #FF9DB0; --fraise-f: #C21E43;
+  --c1: #B9B2C9; --c2: var(--pomme); --c3: var(--lagon); --c4: var(--amethyste); --c5: var(--soleil);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #CCDEF3; font-family: "M PLUS Rounded 1c", sans-serif; color: var(--encre); }
+.nav { padding: 10px 16px; font-weight: 800; }
+.nav a { color: var(--lagon-f); margin-right: 14px; }
+.stage { width: 1600px; height: 900px; position: relative; overflow: hidden; transform-origin: top left;
+  background: radial-gradient(ellipse at 50% 45%, #E6D9B8 0%, #CEBFA7 55%, #ACB47F 100%); }
+.note { position: absolute; font-size: 13px; background: #fff; border: 2px dashed var(--fraise); border-radius: 10px; padding: 4px 8px;
+  color: var(--fraise-f); max-width: 260px; z-index: 50; }
+.sticker { background: var(--papier); border: 3px solid var(--encre); border-radius: 18px; box-shadow: 7px 7px 0 var(--encre); }
+.well { background: var(--encre-500); color: var(--papier); border: 3px solid var(--encre); border-radius: 14px; }
+.title { font-family: "Mochiy Pop One", sans-serif; transform: rotate(-3deg); display: inline-block; color: var(--blanc);
+  -webkit-text-stroke: 5px var(--encre); paint-order: stroke fill; letter-spacing: .03em; }
+.pop { font-family: "Mochiy Pop One", sans-serif; }
+.num { font-weight: 900; font-variant-numeric: tabular-nums; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 52px; padding: 0 18px; font-weight: 800; font-size: 19px;
+  border: 3px solid var(--encre); border-radius: 14px; box-shadow: 0 5px 0 var(--encre); background: linear-gradient(var(--blanc) 0 12%, var(--papier) 12% 62%, var(--papier-300) 62%);
+  position: relative; }
+.btn.lagon { background: linear-gradient(var(--lagon-c) 0 12%, var(--lagon) 12% 62%, var(--lagon-f) 62%); color: #fff; -webkit-text-stroke: 3px var(--encre); paint-order: stroke fill; }
+.btn.primary { height: 64px; font-family: "Mochiy Pop One", sans-serif; font-size: 26px; color: #fff; -webkit-text-stroke: 5px var(--encre); paint-order: stroke fill;
+  background: linear-gradient(var(--soleil-c) 0 12%, var(--soleil) 12% 62%, var(--soleil-f) 62%); }
+.btn.fraise { background: linear-gradient(var(--fraise-c) 0 12%, var(--fraise) 12% 62%, var(--fraise-f) 62%); color: #fff; -webkit-text-stroke: 3px var(--encre); paint-order: stroke fill; }
+.btn::before { content: ""; position: absolute; left: 10px; top: 6px; width: 16px; height: 6px; background: #fff; border-radius: 4px; transform: rotate(-12deg); opacity: .9; }
+.key { display: inline-flex; width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--encre); align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 900; color: #fff; -webkit-text-stroke: 2px var(--encre); paint-order: stroke fill; }
+.key.a { background: var(--pomme); } .key.b { background: var(--fraise); } .key.x { background: var(--lagon); } .key.y { background: var(--soleil); }
+.kb { position: absolute; top: -10px; right: -8px; background: var(--papier); border: 2px solid var(--encre); border-radius: 6px; font-size: 12px; font-weight: 900;
+  padding: 0 5px; color: var(--encre); -webkit-text-stroke: 0; }
+.chip { display: inline-flex; align-items: center; gap: 4px; border: 2px solid var(--encre); border-radius: 10px; padding: 1px 7px; font-size: 14px; font-weight: 800; }
+.hex { width: 30px; height: 34px; clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%); display: flex; align-items: center; justify-content: center;
+  font-weight: 900; color: #fff; -webkit-text-stroke: 3px var(--encre); paint-order: stroke fill; }
+.board { position: absolute; left: 330px; top: 110px; width: 940px; height: 560px; }
+.cell { position: absolute; width: 104px; height: 90px; clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+  background: rgba(255,248,236,.45); }
+.cell.enemy { background: rgba(255,157,176,.25); }
+.cell.ok { background: rgba(134,221,255,.75); }
+.unit { position: absolute; width: 64px; text-align: center; font-size: 34px; transform: translate(-50%, -70%); }
+.bar { height: 9px; border: 2px solid var(--encre); border-radius: 6px; background: var(--encre-500); overflow: hidden; display: flex; }
+.bar i { display: block; height: 100%; }
+.stars { font-size: 12px; color: var(--soleil); -webkit-text-stroke: 1px var(--encre); }
+.mini-items { display: flex; gap: 2px; justify-content: center; margin-top: 2px; }
+.mini-items b { width: 14px; height: 14px; border: 2px solid var(--encre); border-radius: 4px; display: block; }

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Échiquier v2 · Bilans</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=M+PLUS+Rounded+1c:wght@500;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.ribbon { position: absolute; left: 420px; top: 20px; width: 760px; height: 92px; display: flex; align-items: center; gap: 18px; padding: 0 18px; }
+.plots { display: flex; gap: 6px; font-size: 13px; font-weight: 800; }
+.plots span { white-space: nowrap; border: 2px solid var(--encre); border-radius: 8px; padding: 1px 6px; background: var(--papier-200); }
+.elim { position: absolute; right: 24px; top: 140px; width: 230px; padding: 10px; display: flex; gap: 10px; align-items: center; }
+.end { position: absolute; left: 230px; top: 170px; width: 1140px; height: 700px; padding: 22px 28px; }
+.place { font-family: "Mochiy Pop One"; font-size: 88px; color: #fff; -webkit-text-stroke: 9px var(--encre); paint-order: stroke fill; line-height: 1; }
+.podium { display: flex; gap: 8px; margin-top: 14px; }
+.pod { flex: 1; text-align: center; padding: 8px 4px; border-radius: 14px; font-size: 14px; font-weight: 800; }
+.tiles { display: flex; gap: 10px; margin-top: 14px; }
+.tile { flex: 1; text-align: center; padding: 10px; }
+.tile .v { font-size: 26px; font-weight: 900; color: var(--soleil); }
+.team { display: flex; gap: 10px; margin-top: 14px; align-items: flex-end; }
+.team div { width: 70px; text-align: center; font-size: 34px; } .team .stars { font-size: 13px; width: auto; }
+.conf { position: absolute; width: 12px; height: 18px; border: 2px solid var(--encre); border-radius: 3px; }
+</style></head>
+<body>
+<div class="nav">Échiquier v2 · croquis : <a href="preparation.html">Préparation</a><a href="combat.html">Combat</a><a href="choix.html">Atout et choix partagé</a><a href="bilans.html">Bilans</a></div>
+<div class="stage" id="stage">
+  <div class="ribbon sticker">
+    <span class="title" style="font-size:34px;-webkit-text-stroke-color:var(--encre);color:var(--pomme)">Victoire</span>
+    <div style="flex:1"><div class="num" style="font-size:22px">+6 or</div><div class="plots"><span>5 base</span><span>+1 intérêts</span><span>🔥 +1 série</span><span>+1 victoire</span></div></div>
+    <div class="btn" style="height:44px">Détail</div>
+  </div>
+  <div class="note" style="left:1190px;top:30px">Bandeau 2,5 s, non bloquant (la manche suivante démarre) ; « Détail » = le bilan actuel (MVP, barres par camp).</div>
+
+  <div class="elim sticker"><div style="font-size:34px;filter:grayscale(1);transform:rotate(12deg)">🙂</div><div><b>Daphné</b> est éliminée<br><span class="pop" style="font-size:20px;color:var(--fraise-f)">7e</span></div></div>
+
+  <div class="note" style="left:240px;top:122px;border-color:var(--lagon-f);color:var(--lagon-f)">Deux états sur une page : en haut, le bandeau d'une manche ; dessous, l'écran de fin.</div>
+  <div class="end sticker">
+    <div style="display:flex;align-items:center;gap:28px">
+      <div class="place">1re</div>
+      <div><span class="title" style="font-size:44px;color:var(--soleil)">Victoire !</span><div style="font-weight:800;color:var(--encre-300);margin-top:6px">Champion · seul en lice sur 8 stratèges · 27 min</div></div>
+    </div>
+    <div class="podium" id="pod"></div>
+    <div class="team"><b style="align-self:center;margin-right:8px">Ton équipe finale</b><div>🛡️<div class="stars">★★★</div></div><div>🗡️<div class="stars">★★</div></div><div>🗡️<div class="stars">★★</div></div><div>🎸<div class="stars">★★</div></div><div>🔮<div class="stars">★★</div></div><div>👑<div class="stars">★</div></div><div>🏹<div class="stars">★★</div></div></div>
+    <div class="tiles"><div class="tile well"><div class="v">24</div>manches</div><div class="tile well"><div class="v">31 402</div>dégâts</div><div class="tile well"><div class="v">Voleur</div>meilleure unité</div><div class="tile well"><div class="v">Ombre 6</div>trait principal</div></div>
+    <div style="display:flex;gap:14px;margin-top:16px;align-items:center"><b>Gagné :</b><span class="chip" style="background:var(--mandarine-c)">🎁 Coffre légendaire · nouveau</span><span class="chip" style="background:var(--soleil-c)">Titre « Grand tacticien »</span></div>
+    <div style="display:flex;gap:16px;margin-top:22px"><div class="btn primary" style="width:320px">Rejouer</div><div class="btn" style="width:260px">Statistiques</div><div class="btn" style="width:260px">Menu principal</div></div>
+  </div>
+  <div class="note" style="left:20px;top:560px">Mot « lobby » retiré (BIBLE : menu principal). Podium des 8 + équipe finale (SPEC §7.1, pas encore faits).</div>
+</div>
+<script>
+const P=[['Toi','1re','var(--soleil)'],['Corentin','2e','var(--papier-200)'],['Héloïse','3e','var(--papier-200)'],['Aliénor','4e','var(--papier-200)'],['Ysolde','5e','var(--papier-300)'],['Perceval','6e','var(--papier-300)'],['Daphné','7e','var(--papier-300)'],['Élouan','8e','var(--papier-300)']];
+document.getElementById('pod').innerHTML=P.map(p=>`<div class="pod" style="background:${p[2]};border:3px solid var(--encre)"><div style="font-size:26px">🙂</div>${p[0]}<br><span class="pop">${p[1]}</span></div>`).join('');
+const st=document.getElementById('stage'); const cols=['var(--soleil)','var(--mandarine)','var(--pomme)','var(--lagon)','var(--amethyste)'];
+for(let i=0;i<24;i++){const c=document.createElement('div');c.className='conf';c.style.left=(260+Math.random()*1080)+'px';c.style.top=(140+Math.random()*120)+'px';c.style.background=cols[i%5];c.style.transform=`rotate(${Math.random()*90}deg)`;st.appendChild(c);}
+function fit(){ const s = Math.min(1, (window.innerWidth-8)/1600); st.style.transform=`scale(${s})`; document.body.style.height=(900*s+60)+'px'; }
+addEventListener('resize', fit); fit();
+</script>
+</body></html>

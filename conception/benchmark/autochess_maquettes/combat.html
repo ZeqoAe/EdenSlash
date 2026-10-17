@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Échiquier v2 · Combat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=M+PLUS+Rounded+1c:wght@500;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.teams { position: absolute; left: 380px; top: 12px; width: 840px; height: 86px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
+.pills { display: flex; gap: 5px; }
+.pill { width: 40px; } .pill .ic { height: 38px; border: 3px solid var(--encre); border-radius: 10px; text-align: center; font-size: 22px; line-height: 32px; background: var(--papier-200); }
+.pill.dead .ic { opacity: .35; } .pill .bar { margin-top: 3px; height: 7px; }
+.side { position: absolute; right: 18px; top: 120px; width: 170px; padding: 8px; }
+.srow { display: flex; align-items: center; gap: 6px; height: 40px; font-weight: 800; }
+.srow .st { margin-left: auto; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--encre); text-align: center; line-height: 18px; font-size: 12px; }
+.meter { position: absolute; left: 18px; top: 120px; padding: 8px 14px; font-weight: 900; }
+.ctrl { position: absolute; right: 30px; bottom: 24px; display: flex; gap: 10px; }
+.u { position: absolute; transform: translate(-50%,-100%); text-align: center; width: 70px; }
+.u .fig { font-size: 40px; }
+.u .hpb { display: flex; align-items: center; gap: 3px; }
+.u .bar { flex: 1; height: 12px; flex-direction: column; }
+.u .bar i { width: 100%; }
+.dmg { position: absolute; font-weight: 900; font-size: 22px; color: #fff; -webkit-text-stroke: 3px var(--encre); paint-order: stroke fill; }
+.crit { font-family: "Mochiy Pop One"; font-size: 30px; color: var(--soleil); }
+.banner { position: absolute; left: 560px; top: 330px; font-size: 64px; }
+.lines { position: absolute; left: 420px; top: 300px; width: 760px; height: 170px; background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,.65) 0 2deg, transparent 2deg 12deg); opacity: .5; border-radius: 50%; }
+</style></head>
+<body>
+<div class="nav">Échiquier v2 · croquis : <a href="preparation.html">Préparation</a><a href="combat.html">Combat</a><a href="choix.html">Atout et choix partagé</a><a href="bilans.html">Bilans</a></div>
+<div class="stage" id="stage" style="background:radial-gradient(ellipse at 50% 50%, #E8E1C9 0%, #CEBFA7 60%, #ACB47F 100%)">
+  <div class="teams sticker">
+    <div><b style="color:var(--pomme-f)">Aelis</b><div class="pills" id="pa"></div></div>
+    <div style="text-align:center"><div class="pop num" style="font-size:34px">0:24</div><div style="font-size:13px;color:var(--encre-300)">Étape 3 · manche 3</div></div>
+    <div style="text-align:right"><b style="color:var(--fraise-f)">Perceval</b><div class="pills" id="pb"></div></div>
+  </div>
+  <div class="meter sticker">Dégâts ▸</div>
+  <div class="note" style="left:18px;top:180px">Compteur replié par défaut ; ouvert : 4 onglets (Dégâts, Subis, Soins, Boucliers), comme aujourd'hui.</div>
+  <div class="side sticker" id="side"></div>
+  <div class="note" style="right:20px;top:520px">Statut des autres combats : … en cours, ✔ gagné, ✖ perdu.</div>
+
+  <div class="lines"></div>
+  <div class="banner title">Combat !</div>
+  <div class="note" style="left:640px;top:430px">Bannière 0,8 s au début (Mochiy incliné, traits de vitesse), puis plus rien au centre.</div>
+
+  <div id="units"></div>
+  <div class="dmg" style="left:760px;top:520px">38</div>
+  <div class="dmg crit" style="left:900px;top:470px">Critique ! 212</div>
+  <div class="dmg" style="left:640px;top:600px;color:var(--pomme)">+64</div>
+  <div class="note" style="left:1000px;top:640px">Aucun nom au-dessus des héros (survol = bulle). Objets en 3 mini-cases sous la barre. Toi = pomme, adversaire = fraise, toujours.</div>
+
+  <div class="ctrl"><div class="btn">⏸</div><div class="btn lagon">×2</div><div class="btn">Passer ⏭</div></div>
+  <div class="note" style="right:30px;bottom:96px">Passer : fin calculée (infobulle « résultat calculé »).</div>
+</div>
+<script>
+const A = ['🛡️','🗡️','🗡️','🎸','🔮','🏹'], B = ['🪓','🛡️','🔥','🏹','❄️'];
+const pill = (e,d,side)=>`<div class="pill ${d?'dead':''}"><div class="ic">${e}</div><div class="bar"><i style="width:${d?0:60+Math.random()*40}%;background:${side?'var(--fraise)':'var(--pomme)'}"></i></div></div>`;
+document.getElementById('pa').innerHTML = A.map((e,i)=>pill(e,i==2,0)).join('');
+document.getElementById('pb').innerHTML = B.map((e,i)=>pill(e,i<2,1)).join('');
+const S = [['Corentin','…'],['Héloïse','✔'],['Aliénor','✖'],['Toi','…'],['Ysolde','✔'],['Perceval','…'],['Élouan','✖'],['Daphné','…']];
+document.getElementById('side').innerHTML = S.map(s=>`<div class="srow">🙂 ${s[0]}<span class="st" style="background:${s[1]=='✔'?'var(--pomme)':s[1]=='✖'?'var(--fraise)':'var(--papier-200)'}">${s[1]}</span></div>`).join('');
+const U = [[600,560,'🛡️',2,0,['var(--lagon)','var(--soleil)']],[700,640,'🗡️',2,0,['var(--fraise)']],[820,600,'🎸',1,0,[]],[560,690,'🔮',1,0,['var(--amethyste)']],[480,620,'🏹',1,0,[]],
+  [760,450,'🪓',2,1,['var(--soleil)']],[880,420,'🔥',1,1,[]],[980,470,'🏹',1,1,['var(--lagon)']]];
+document.getElementById('units').innerHTML = U.map(u=>`<div class="u" style="left:${u[0]}px;top:${u[1]}px">
+  <div class="hpb"><span class="stars">${'★'.repeat(u[3])}</span><div class="bar"><i style="height:65%;width:${50+Math.random()*50}%;background:${u[4]?'var(--fraise)':'var(--pomme)'}"></i><i style="height:35%;width:${Math.random()*100}%;background:var(--lagon)"></i></div></div>
+  <div class="mini-items">${u[5].map(c=>`<b style="background:${c}"></b>`).join('')}</div><div class="fig">${u[2]}</div></div>`).join('');
+function fit(){ const s = Math.min(1, (window.innerWidth-8)/1600); const st=document.getElementById('stage'); st.style.transform=`scale(${s})`; document.body.style.height=(900*s+60)+'px'; }
+addEventListener('resize', fit); fit();
+</script>
+</body></html>

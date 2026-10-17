@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Échiquier v2 · Préparation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=M+PLUS+Rounded+1c:wght@500;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.top { position: absolute; left: 500px; top: 14px; width: 600px; white-space: nowrap; height: 70px; display: flex; align-items: center; gap: 14px; padding: 0 16px; }
+.frise { display: flex; gap: 6px; align-items: center; }
+.frise span { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--encre); background: var(--papier-300); font-size: 10px; text-align: center; line-height: 14px; }
+.frise .done { background: var(--pomme); } .frise .now { background: var(--soleil); width: 24px; height: 24px; }
+.frise .boss { background: var(--fraise); } .frise .aug { background: var(--soleil-c); }
+.traits { position: absolute; left: 18px; top: 110px; width: 230px; padding: 12px; }
+.trow { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-weight: 800; font-size: 16px; }
+.trow .plots { margin-left: auto; display: flex; gap: 3px; }
+.trow .plots i { width: 9px; height: 9px; border: 2px solid var(--encre); border-radius: 50%; background: var(--papier-300); }
+.trow .plots i.on { background: var(--soleil); }
+.trow.off { opacity: .55; }
+.trow.hover { outline: 3px solid var(--lagon-f); outline-offset: 2px; border-radius: 8px; }
+.players { position: absolute; right: 18px; top: 110px; width: 236px; padding: 10px; }
+.prow { display: flex; align-items: center; gap: 7px; height: 52px; padding: 0 6px; border-radius: 10px; }
+.prow.me { background: var(--soleil-c); border: 2px solid var(--encre); }
+.prow.next { border: 3px solid var(--fraise); }
+.prow .pic { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--encre); background: var(--lagon-c); text-align: center; line-height: 28px; }
+.prow .who { flex: 1; font-weight: 800; font-size: 15px; }
+.prow .hist { display: flex; gap: 2px; margin-top: 2px; } .prow .hist i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--encre); }
+.w { background: var(--pomme); } .l { background: var(--fraise); }
+.foot { position: absolute; left: 150px; right: 150px; bottom: 16px; height: 156px; display: flex; align-items: center; gap: 16px; padding: 0 16px; }
+.xp { width: 110px; height: 110px; border-radius: 50%; border: 3px solid var(--encre); box-shadow: 0 5px 0 var(--encre);
+  background: conic-gradient(var(--pomme) 0 30%, var(--encre-500) 30% 100%); display: flex; align-items: center; justify-content: center; position: relative; }
+.xp .in { width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--encre); background: var(--lagon); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; -webkit-text-stroke: 3px var(--encre); paint-order: stroke fill; }
+.odds { display: flex; height: 12px; width: 110px; border: 2px solid var(--encre); border-radius: 6px; overflow: hidden; margin-top: 8px; }
+.card { width: 178px; height: 124px; border: 3px solid var(--encre); border-radius: 14px; background: var(--papier); box-shadow: 0 5px 0 var(--encre); position: relative; overflow: visible; }
+.card .band { height: 12px; border-bottom: 3px solid var(--encre); border-radius: 10px 10px 0 0; }
+.card .icon { position: absolute; left: 10px; top: 22px; width: 52px; height: 52px; border: 3px solid var(--encre); border-radius: 12px; font-size: 30px; text-align: center; line-height: 46px; }
+.card .name { position: absolute; left: 70px; top: 20px; font-weight: 900; font-size: 15px; line-height: 1.05; width: 100px; }
+.card .tt { position: absolute; left: 70px; top: 58px; display: flex; gap: 4px; flex-wrap: wrap; width: 100px; }
+.card .cost { position: absolute; right: -8px; bottom: -8px; width: 38px; height: 38px; border-radius: 50%; border: 3px solid var(--encre); background: var(--soleil); font-weight: 900;
+  color: #fff; -webkit-text-stroke: 3px var(--encre); paint-order: stroke fill; text-align: center; line-height: 32px; font-size: 19px; }
+.card .copies { position: absolute; left: 10px; bottom: 8px; font-size: 14px; letter-spacing: 2px; }
+.card.star { box-shadow: 0 5px 0 var(--encre), 0 0 0 6px var(--soleil-c); }
+.card.star::after { content: "★"; position: absolute; left: -12px; top: -14px; font-size: 30px; color: var(--soleil); -webkit-text-stroke: 3px var(--encre); paint-order: stroke fill; transform: rotate(-12deg); }
+.up { color: var(--pomme-f); font-weight: 900; }
+.gold { position: absolute; left: 50%; transform: translateX(-50%); top: -34px; display: flex; align-items: center; gap: 8px; padding: 4px 14px; background: var(--soleil);
+  border: 3px solid var(--encre); border-radius: 14px 14px 0 0; font-size: 26px; z-index: 3; top: -48px; }
+.gold i { width: 11px; height: 11px; border-radius: 50%; border: 2px solid var(--encre); background: var(--papier); display: inline-block; }
+.gold i.on { background: var(--pomme); }
+.bubble { position: absolute; left: 610px; top: 250px; width: 300px; padding: 12px; z-index: 5; }
+.bubble::after { content: ""; position: absolute; left: 40px; bottom: -18px; width: 24px; height: 24px; background: var(--papier); border-right: 3px solid var(--encre); border-bottom: 3px solid var(--encre); transform: rotate(45deg); }
+.paint { position: absolute; left: 1150px; top: 520px; font-family: "Mochiy Pop One"; font-size: 46px; color: rgba(34,26,58,.35); transform: rotate(-8deg); }
+.card .tt .chip { font-size: 12px; padding: 0 5px; }
+</style></head>
+<body>
+<div class="nav">Échiquier v2 · croquis : <a href="preparation.html">Préparation</a><a href="combat.html">Combat</a><a href="choix.html">Atout et choix partagé</a><a href="bilans.html">Bilans</a></div>
+<div class="stage" id="stage">
+  <div class="top sticker">
+    <div class="frise"><span class="done"></span><span class="done"></span><span class="now"></span><span class="aug">★</span><span></span><span>◆</span><span></span><span class="boss"></span></div>
+    <div style="flex:1"><div class="pop" style="font-size:20px">Étape 3 · manche 3</div><div style="font-size:14px;color:var(--encre-300)">Combat de stratèges</div></div>
+    <div class="num pop" style="font-size:34px">18</div>
+  </div>
+
+  <div class="traits sticker">
+    <div class="title" style="font-size:24px">Traits</div>
+    <div class="trow hover"><div class="hex" style="background:var(--mandarine)">3</div>Ombre<div class="plots"><i class="on"></i><i></i><i></i></div></div>
+    <div class="trow"><div class="hex" style="background:var(--lagon-c)">2</div>Tranchant<div class="plots"><i class="on"></i><i></i><i></i></div></div>
+    <div class="trow"><div class="hex" style="background:var(--lagon-c)">2</div>Chœur<div class="plots"><i class="on"></i><i></i><i></i></div></div>
+    <div class="trow off"><div class="hex" style="background:var(--amethyste)">2</div>Arcane <span class="up">→ 3</span><div class="plots"><i></i><i></i><i></i></div></div>
+    <div class="trow off"><div class="hex" style="background:var(--lagon)">1</div>Ferveur<div class="plots"><i></i><i></i><i></i></div></div>
+    <div class="trow off"><div class="hex" style="background:var(--lagon-c)">1</div>Estoc<div class="plots"><i></i><i></i><i></i></div></div>
+  </div>
+  <div class="note" style="left:20px;top:400px">Traits TOUJOURS visibles. Survol d'Ombre : ses 3 unités ont un anneau lagon (plateau, banc, boutique).</div>
+
+  <div class="players sticker">
+    <div class="title" style="font-size:24px">Stratèges</div>
+    <div id="plist"></div>
+  </div>
+  <div class="note" style="right:22px;top:600px">Bord fraise = adversaire probable. Survol : niveau, 2 traits, valeur d'équipe, 2 derniers combats.</div>
+
+  <div class="board" id="board"></div>
+  <div class="paint">5 / 6</div>
+  <div class="note" style="left:1120px;top:470px">Compte peint au sol (soleil quand une place reste libre).</div>
+
+  <div class="bubble sticker">
+    <div style="display:flex;gap:10px;align-items:center"><div style="font-size:30px">🗡️</div><div><b style="font-size:18px">Voleur</b> <span class="stars">★★</span><br><span style="font-size:14px;color:var(--encre-300)">Assassin · avant</span></div></div>
+    <div style="margin:6px 0;font-size:15px">Ombre 3 / 6 · Tranchant 2 / 4<br>Embuscade : plonge sur la cible la plus fragile.</div>
+    <div style="font-size:13px;color:var(--encre-300)">Encore 12 en réserve · <b style="color:var(--lagon-f)">[Viser]</b></div>
+  </div>
+
+  <div class="foot sticker" style="position:absolute">
+    <div style="display:flex;flex-direction:column;align-items:center">
+      <div class="xp"><div class="in"><span class="pop" style="font-size:22px">XP</span><span class="num" style="font-size:16px">4 or</span></div>
+        <span class="chip" style="position:absolute;bottom:-6px;right:-6px;background:var(--encre);color:#fff">6</span><span class="kb">F</span></div>
+      <div class="odds"><i style="width:30%;background:var(--c1)"></i><i style="width:40%;background:var(--c2)"></i><i style="width:25%;background:var(--c3)"></i><i style="width:5%;background:var(--c4)"></i></div>
+    </div>
+    <div style="display:flex;gap:14px;position:relative;flex:1;justify-content:center">
+      <div class="gold"><span>🪙</span><span class="num pop">37</span><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><span title="série">🔥3</span></div>
+      <div id="shop" style="display:flex;gap:14px"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px;width:170px">
+      <div style="display:flex;gap:8px"><div class="btn lagon" style="flex:1">↻ 2<span class="kb">D</span></div><div class="btn" style="width:56px">🔒<span class="kb">V</span></div></div>
+      <div class="btn primary">Prêt<span class="kb">Espace</span></div>
+    </div>
+  </div>
+  <div class="note" style="left:160px;top:640px">Barre des taux : 5 couleurs de coût, % en infobulle seulement.</div>
+  <div class="note" style="left:640px;top:612px">★ = l'achat fait monter une étoile ; flèche pomme = trait qui monte.</div>
+</div>
+<script>
+const C = {1:'var(--c1)',2:'var(--c2)',3:'var(--c3)',4:'var(--c4)',5:'var(--c5)'};
+const shop = [
+  {n:'Voleur', i:'🗡️', c:1, t:[['Ombre','var(--mandarine)',1],['Tranchant','var(--lagon-c)']], cp:'★★◇', star:true},
+  {n:'Dompteur', i:'🐾', c:2, t:[['Traque','var(--pomme)'],['Tir','var(--lagon-c)']], cp:'◇◇◇'},
+  {n:'Maître des chimères', i:'🔮', c:3, t:[['Arcane','var(--amethyste)',1],['Malédiction','var(--lagon-c)']], cp:'◇◇◇'},
+  {n:'Protecteur', i:'🛡️', c:2, t:[['Rempart','var(--soleil)'],['Escrime','var(--lagon-c)']], cp:'◇◇◇'},
+  {n:'Barde', i:'🎸', c:1, t:[['Ferveur','var(--lagon)'],['Chœur','var(--lagon-c)']], cp:'★◇◇'},
+];
+document.getElementById('shop').innerHTML = shop.map((s,k)=>`<div class="card ${s.star?'star':''}">
+  <div class="band" style="background:${C[s.c]}"></div><div class="icon" style="background:${C[s.c]}">${s.i}</div>
+  <div class="name">${s.n}</div><div class="tt">${s.t.map(t=>`<span class="chip" style="background:${t[1]}">${t[2]?'<span class="up">▲</span>':''}${t[0]}</span>`).join('')}</div>
+  <div class="copies">${s.cp}</div><div class="cost">${s.c}</div><span class="kb" style="right:30px">${k+1}</span></div>`).join('');
+const P = [['Corentin',96,'wwwlww'],['Héloïse',93,'wlwwww'],['Aliénor',92,'lwwlww'],['Aelis (toi)',84,'llwwlw','me'],['Ysolde',84,'wwllwl'],['Perceval',78,'lwlwll','next'],['Élouan',74,'lllwll'],['Daphné',73,'wllllw']];
+document.getElementById('plist').innerHTML = P.map((p,i)=>`<div class="prow ${p[3]||''}"><b>${i+1}</b><div class="pic">🙂</div>
+  <div class="who">${p[0]}<div class="bar" style="width:100px"><i style="width:${p[1]}%;background:${p[1]>80?'var(--pomme)':'var(--soleil)'}"></i></div><div class="hist">${[...p[2]].map(x=>`<i class="${x}"></i>`).join('')}</div></div>
+  <span class="num pop" style="font-size:20px">${p[1]}</span></div>`).join('');
+const b = document.getElementById('board'); let h = '';
+for (let r=0;r<8;r++) for (let c=0;c<7;c++) {
+  const x = c*112 + (r%2)*56 + 70, y = r*62 + 10;
+  const ok = r>=4 && ((r==5&&c==2)||(r==6&&c==4)||(r==4&&c==1));
+  h += `<div class="cell ${r<4?'enemy':''} ${ok?'ok':''}" style="left:${x}px;top:${y}px"></div>`;
+}
+const units = [[5,1,'🗡️',2,true],[5,3,'🛡️',1],[6,2,'🎸',1],[7,4,'🔮',1],[4,5,'🗡️',1,true]];
+for (const u of units) { const x=u[1]*112+(u[0]%2)*56+70+52, y=u[0]*62+10+45;
+  h += `<div class="unit" style="left:${x}px;top:${y}px">${u[4]?'<div style="position:absolute;inset:6px -4px -4px;border:4px solid var(--lagon);border-radius:50%"></div>':''}${u[2]}<div class="stars">${'★'.repeat(u[3])}</div></div>`; }
+// banc
+for (let k=0;k<9;k++) h += `<div class="cell" style="left:${k*100+20}px;top:${8*62+4}px;width:88px;height:76px;background:rgba(255,235,200,.8)"></div>`;
+b.innerHTML = h;
+function fit(){ const s = Math.min(1, (window.innerWidth-8)/1600); const st=document.getElementById('stage'); st.style.transform=`scale(${s})`; document.body.style.height=(900*s+60)+'px'; }
+addEventListener('resize', fit); fit();
+</script>
+</body></html>
