@@ -7,6 +7,10 @@ extends HBoxContainer
 ## gemmes, enchantements). Les plans pas encore trouvés se voient en silhouette (« Plans à découvrir »), avec l'époque
 ## et la carte où les trouver. Filtres : statut, emplacement, époque, classe. Les noms internes (`_buy`, `_on_buy`,
 ## états « buy » / « owned » / « locked ») restent ceux d'avant : seuls les textes lus par le joueur changent.
+## Fabriquer v2 (lot GX-2) : vue par défaut « paliers » : à gauche les douze cartes (x / 9 pièces du kit fabriquées, « ta
+## bande » en lagon), au centre la poupée du kit de la classe pour ce palier (fabriquée / plan connu et prix / plan à
+## trouver et où), « Fabriquer les N plans connus » (confirmation du coût) ; à droite la fiche, « il en manque N ≈ X
+## cartes de Survie » et « Fabriquer et porter ». Le catalogue filtrable d'avant reste derrière « Catalogue complet ».
 
 const COLS := 12
 const ROWS := 7
@@ -38,6 +42,26 @@ var _page := 0
 var _sel := -1  # id d'Eden de la pièce choisie
 var _filters_ready := false
 var _just_bought := false
+## Lot GX-2 : vue « tiers » (paliers, défaut) ou « catalog » ; palier choisi (époque, carte) ; widgets de la vue.
+var view := "tiers"
+var _tier := Vector2i.ZERO
+var _tier_list: VBoxContainer
+var _tier_buttons := {}
+var _kit_box: VBoxContainer
+var _kit_grid: GridContainer
+var _kit_title: Label
+var _kit_sub: Label
+var _kit_all: Button
+var _kit_miss: Label
+var _kit: Array = []
+var _bar: HBoxContainer
+var _holder: Control
+var _view_btn: Button
+var _tier_col: Control
+var _head: Label
+var _wear: Button
+## Tests : « Fabriquer les N plans connus » sans la carte de confirmation.
+static var skip_confirm := false
 
 
 func subtitle() -> String:
@@ -89,16 +113,38 @@ func _grid_rows() -> int:
 func _ready() -> void:
 	add_theme_constant_override("separation", 14)
 	Completion.warm_armory.call_deferred()  # le catalogue vient du cache disque, sinon se calcule par tranches pendant l'affichage (P2)
+	# 1) colonne des paliers (lot GX-2)
+	var col := ItemWidgets.panel(self, 250.0 if _narrow() else 300.0)
+	var th := Hud._label(col, "Paliers", 20, UiTheme.GOLD)
+	th.add_theme_font_override("font", UiTheme.title_font())
+	var tsc := ScrollContainer.new()
+	tsc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	tsc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	col.add_child(tsc)
+	_tier_list = VBoxContainer.new()
+	_tier_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tier_list.add_theme_constant_override("separation", 6)
+	tsc.add_child(_tier_list)
+	_tier_col = col.get_parent()
+	# 2) centre : la poupée du palier, ou le catalogue
 	var left := ItemWidgets.panel(self, 0, true)
 	var hh := HBoxContainer.new()
 	left.add_child(hh)
 	var head := Hud._label(hh, "Fabriquer", 20, UiTheme.GOLD)
 	head.add_theme_font_override("font", UiTheme.title_font())
 	head.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_head = head
 	_count = Hud._label(hh, "", 18, UiTheme.TEXT)
+	_count.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_view_btn = ForgeWidgets.candy_button("Catalogue complet", "nuit", 14, 34)
+	_view_btn.tooltip_text = "Tous les plans, avec des filtres (statut, emplacement, époque, classe)."
+	_view_btn.pressed.connect(func(): set_view("catalog" if view == "tiers" else "tiers"))
+	hh.add_child(_view_btn)
+	_build_kit_box(left)
 	var bar := HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 6)
 	left.add_child(bar)
+	_bar = bar
 	_f_status = _option(bar, STATUSES.map(func(s): return String(s[1])))
 	_f_slot = _option(bar, ["Emplacement"])
 	_f_epoch = _option(bar, ["Époque"])
@@ -115,6 +161,7 @@ func _ready() -> void:
 	holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.add_child(holder)
+	_holder = holder
 	_grid = GridContainer.new()
 	_grid.columns = _grid_cols()
 	_grid.add_theme_constant_override("h_separation", 6)
@@ -125,7 +172,7 @@ func _ready() -> void:
 	_empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_empty.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var right := ItemWidgets.panel(self, 420)
+	var right := ItemWidgets.panel(self, 360.0 if _narrow() else 420.0)
 	_right = right.get_parent()
 	var sc := ScrollContainer.new()
 	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -137,9 +184,41 @@ func _ready() -> void:
 	sc.add_child(_detail_box)
 	_short = Hud._label(right, "", 15, UiTheme.DEBUFF)
 	_short.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_buy = MenuWidgets.gold_button("Fabriquer", 20, Vector2(0, 52))
+	_buy = MenuWidgets.gold_button("Fabriquer", 20, Vector2(0, 46 if _short_screen() else 52))
 	_buy.pressed.connect(_on_buy)
 	right.add_child(_buy)
+	_wear = ForgeWidgets.candy_button("Fabriquer et porter", "lagon", 17, 40 if _short_screen() else 44)
+	_wear.pressed.connect(func(): _on_buy(true))
+	right.add_child(_wear)
+	set_view(view)
+
+
+## Vue « paliers » : titre du palier, ligne du kit, la grille 3 × 3, la légende, puis « Fabriquer les N plans connus ».
+func _build_kit_box(parent: Control) -> void:
+	_kit_box = VBoxContainer.new()
+	_kit_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_kit_box.add_theme_constant_override("separation", 6)
+	parent.add_child(_kit_box)
+	_kit_title = Hud._label(_kit_box, "", 22, ForgeWidgets.TEXTE)
+	_kit_title.add_theme_font_override("font", UiTheme.bold_font())
+	_kit_sub = Hud._label(_kit_box, "", 15, ForgeWidgets.TEXTE_2)
+	var cc := CenterContainer.new()
+	cc.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_kit_box.add_child(cc)
+	_kit_grid = GridContainer.new()
+	_kit_grid.columns = 3
+	_kit_grid.add_theme_constant_override("h_separation", 22)
+	_kit_grid.add_theme_constant_override("v_separation", 2 if _short_screen() else 8)
+	cc.add_child(_kit_grid)
+	var leg := Hud._label(_kit_box, "Pleine : fabriquée · voilée : plan connu · « ? » : plan à trouver", 14, ForgeWidgets.TEXTE_2)
+	leg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	leg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_kit_all = ForgeWidgets.candy_button("", "lagon", 17, 40 if _short_screen() else 46)
+	_kit_all.pressed.connect(_on_kit_all)
+	_kit_box.add_child(_kit_all)
+	_kit_miss = Hud._label(_kit_box, "", 14, ForgeWidgets.TEXTE_2)
+	_kit_miss.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_kit_miss.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 
 
 func _option(parent: Control, labels: Array) -> OptionButton:
@@ -207,7 +286,13 @@ func refresh() -> void:
 		return
 	_build_all()
 	_ensure_filters()
-	_apply()
+	if view == "tiers":
+		_count.text = "%s / %s plans" % [GearPower.fmt(Completion.armory_done()), GearPower.fmt(maxi(Completion.armory_done(), Completion.armory_total()))]
+		if _tier == Vector2i.ZERO:
+			_tier = default_tier()
+		_show_tier()
+	else:
+		_apply()
 
 
 ## Tout le catalogue avec l'état de chaque pièce : « buy » (plan trouvé, à fabriquer), « owned » (fabriquée), « locked » (plan à découvrir).
@@ -351,6 +436,7 @@ func _show_detail() -> void:
 	_short.add_theme_color_override("font_color", UiTheme.DEBUFF)
 	var row := _row_of(_sel)
 	_buy.visible = not row.is_empty() and row.state != "locked"
+	_wear.visible = false
 	if row.is_empty():
 		return
 	if row.state == "locked":
@@ -361,7 +447,7 @@ func _show_detail() -> void:
 	r.fit_content = true
 	r.scroll_active = false
 	r.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-	r.text = Items.describe(it) + _compare_text(it)
+	r.text = Items.describe(it, false) + _compare_text(it)  # fiche d'achat : sans « prochaine amélioration » ni niveau de puissance (GX-2)
 	var place := Completion.plan_place(int(row.id))
 	if place != "":
 		var pl := Hud._label(_detail_box, "Plan trouvé : %s" % place, 15, UiTheme.MUTED)
@@ -373,13 +459,21 @@ func _show_detail() -> void:
 		_buy.disabled = true
 		if not Profile.equipped.values().any(func(w): return int(w.get("eden", -1)) == int(row.id)):
 			var lock := HeroLevel.lock_text(it)
-			_short.text = lock if lock != "" else "À équiper : Héros > Équipement"  # la fabrication ne la pose pas : le dernier pas du parcours
+			_short.text = lock if lock != "" else "Fabriquée : tu peux la porter"
 			_short.add_theme_color_override("font_color", UiTheme.BUFF if lock == "" else UiTheme.DEBUFF)
+			_wear.visible = lock == "" and Profile.can_be_main(it) if String(it.slot) == "weapon" else lock == ""
+			_wear.text = "Porter"
+			_wear.disabled = false
 	else:
 		_buy.text = "Fabriquer · %s insignes" % GearPower.fmt(p)
 		_buy.disabled = Profile.insignia < p
+		var wear_lock := HeroLevel.lock_text(it)
+		_wear.visible = true
+		_wear.text = "Fabriquer et porter"
+		_wear.disabled = Profile.insignia < p or wear_lock != ""
+		_wear.tooltip_text = wear_lock if wear_lock != "" else "La pièce rejoint aussitôt ton équipement (l'ancienne va au coffre commun)."
 		if Profile.insignia < p:
-			_short.text = "Il te manque %s insignes" % GearPower.fmt(p - Profile.insignia)
+			_short.text = "Il te manque %s insignes ≈ %s" % [GearPower.fmt(p - Profile.insignia), GearPower.plural(Economy.maps_for(p - Profile.insignia), "carte de Survie", "cartes de Survie")]
 		elif HeroLevel.wear_block(it) > 0:
 			_short.text = "À porter au niveau %d · tu es niveau %d" % [HeroLevel.wear_block(it), HeroLevel.level()]  # fabriquer reste permis
 			_short.add_theme_color_override("font_color", UiTheme.MUTED)
@@ -407,11 +501,7 @@ func _compare_text(it: Dictionary) -> String:
 	var worn: Dictionary = Profile.equipped.get(String(it.get("slot", "")), {})
 	if worn.is_empty():
 		return "\n\n[color=#c8c8d4]Emplacement libre.[/color]"
-	var c := Items.compare_to_equipped(it)
-	var dpe := GearPower.delta_if_equipped(it)
-	var out := "\n\n[b][color=%s]%s %+d %%[/color][/b]   [color=%s]PE %s%s[/color]" % ["#7fe08a" if c >= 0 else "#ff7a7a",
-		"▲ Meilleur" if c >= 0.02 else ("▼ Moins bien" if c <= -0.02 else "≈ Équivalent"), roundi(c * 100.0),
-		"#7fe08a" if dpe >= 0 else "#ff7a7a", "+" if dpe >= 0 else "", GearPower.fmt(dpe)]
+	var out := "\n\n" + FabricationPage.verdict_text(it)  # le mot et l'écart de PE, sans pourcentage (lot GX-2)
 	var a := Items.stats(worn)
 	var b := Items.stats(it)
 	var deltas: Array = []
@@ -437,20 +527,35 @@ func _compare_text(it: Dictionary) -> String:
 	return out
 
 
-func _on_buy() -> void:
+## Fabrique la pièce choisie ; [param wear] : « Fabriquer et porter » (ou « Porter » une pièce déjà fabriquée).
+func _on_buy(wear := false) -> void:
 	var row := _row_of(_sel)
-	if row.is_empty() or row.state != "buy":
+	if row.is_empty():
+		return
+	if row.state == "owned" and wear:
+		for it in Profile.inventory:
+			if int(it.get("eden", -1)) == int(row.id):
+				var ok := HeroLevel.lock_text(it) == "" and Profile.equip(it)
+				refresh()
+				_say(("Portée : %s" % Items.display_name(it)) if ok else HeroLevel.lock_text(it), UiTheme.BUFF if ok else UiTheme.DEBUFF)
+				return
+		return
+	if row.state != "buy":
 		return
 	var e: Dictionary = row.e
 	var p := price(e)
 	if owned(int(e.id)) or Profile.insignia < p:
 		return
 	Profile.insignia -= p
-	Profile.add_item(make(e))
+	var it := make(e)
+	Profile.add_item(it)
+	var msg := ForgeWidgets.wear_new(it) if wear else ""
 	Profile.save_profile()
 	Sfx.ui("confirm")
 	_just_bought = true
 	refresh()
+	if msg != "":
+		_say(msg, UiTheme.BUFF if msg.begins_with("Fabriqué et porté") else UiTheme.MUTED)
 
 
 ## Case d'un plan pas encore découvert : un « ? », son emplacement et son niveau (rien de plus : pas de spoiler).
@@ -478,3 +583,331 @@ class Silhouette extends Button:
 			HudWidgets.text_center(self, slot_name, Vector2(size.x * 0.5, size.y - 9.0), font, 11, Color(1, 1, 1, 0.55), 3)
 		if level > 0 and size.x < 100.0:
 			HudWidgets.text_center(self, str(level), Vector2(size.x - 11.0, 11.0), font, 11, Color(1, 1, 1, 0.55), 3)
+
+
+# --- Fabriquer v2 (lot GX-2) : paliers, poupée du palier, palier entier -----------------------------------------------
+## Les neuf emplacements du kit d'un palier (ceux de la PE), dans l'ordre de la poupée (3 × 3).
+const KIT_SLOTS := ["weapon", "head", "chest", "legs", "gloves", "boots", "back", "necklace", "ring"]
+## Pièces de chaque palier : « époque|carte|emplacement|type d'arme » -> modèles d'Eden (tirages des coffres, gardés).
+static var _pool_cache := {}
+
+
+## Modèles d'Eden que les coffres d'emplacement de la carte [param stage] de l'époque [param ep] proposent pour
+## [param slot] (arme : du type [param wtype]).
+static func tier_pool(ep: int, stage: int, slot: String, wtype: String) -> Array:
+	var key := "%d|%d|%s|%s" % [ep, stage, slot, wtype if slot == "weapon" else ""]
+	if not _pool_cache.has(key):
+		var box := "jewel" if slot in ["ring", "necklace"] else slot
+		_pool_cache[key] = SlotChests.pool(box, ep, stage, wtype if slot == "weapon" else "").filter(func(e): return String(e.get("slot", "")) == slot)
+	return _pool_cache[key]
+
+
+## Kit du palier (époque [param ep], carte [param stage]) pour la classe [param cid] : neuf entrées {slot, state, e} ;
+## state : « owned » (une pièce du palier fabriquée), « buy » (plan connu : la meilleure pour la classe), « locked » (plan à
+## trouver). [param owned] / [param seen] : ids possédés / découverts (calculés au besoin).
+static func kit(ep: int, stage: int, cid: String, owned = null, seen = null) -> Array:
+	var have: Dictionary = owned if owned is Dictionary else owned_ids()
+	var known: Dictionary = seen if seen is Dictionary else _seen_ids()
+	var prof := ClassGear.profile(cid)
+	var wtype := Items.default_weapon_type(cid)
+	var out: Array = []
+	for slot in KIT_SLOTS:
+		var cands := tier_pool(ep, stage, slot, wtype)
+		var entry := {"slot": slot, "state": "locked", "e": cands[0] if not cands.is_empty() else {}}
+		# la meilleure pièce connue du palier pour la classe : fabriquée, ou plan à fabriquer s'il est meilleur
+		var best := -1.0
+		for e in cands:
+			var got := have.has(int(e.id))
+			if not got and not known.has(int(e.id)):
+				continue
+			var r := Items.rating(make(e), prof) * (1.0001 if got else 1.0)  # à note égale, la pièce déjà fabriquée
+			if r > best:
+				best = r
+				entry = {"slot": slot, "state": "owned" if got else "buy", "e": e}
+		out.append(entry)
+	return out
+
+
+## Pièces du palier fabriquées (emplacements du kit qui ont au moins une pièce du palier), sans calcul de note.
+static func kit_done(ep: int, stage: int, cid: String, owned: Dictionary) -> int:
+	var wtype := Items.default_weapon_type(cid)
+	var n := 0
+	for slot in KIT_SLOTS:
+		if tier_pool(ep, stage, slot, wtype).any(func(e): return owned.has(int(e.id))):
+			n += 1
+	return n
+
+
+static func _seen_ids() -> Dictionary:
+	var out := {}
+	for id in Profile.seen_gear:
+		out[int(id)] = true
+	return out
+
+
+## Palier de « ta bande » : la plus haute carte dont la bande de niveau contient le niveau de héros.
+static func band_tier(hl: int) -> Vector2i:
+	var best := Vector2i(1, 1)
+	for ep in range(1, Epochs.count() + 1):
+		for st in range(1, 4):
+			var b := Epochs.band(ep, st)
+			if hl >= b.x:
+				best = Vector2i(ep, st)
+	return best
+
+
+## Palier montré à l'ouverture : « ta bande » s'il y a un plan connu à y fabriquer, sinon le plus haut palier qui en a
+## un (fabriquer, c'est l'action de la page), sinon « ta bande ».
+static func default_tier() -> Vector2i:
+	var band := band_tier(HeroLevel.level())
+	var have := owned_ids()
+	var known := _seen_ids()
+	var wtype := Items.default_weapon_type(Profile.selected_class)
+	var best := Vector2i.ZERO
+	for ep in range(1, Epochs.count() + 1):
+		for st in range(1, 4):
+			for slot in KIT_SLOTS:
+				var pool := tier_pool(ep, st, slot, wtype)
+				if pool.any(func(e): return known.has(int(e.id))) and not pool.any(func(e): return have.has(int(e.id))):
+					if Vector2i(ep, st) == band:
+						return band
+					best = Vector2i(ep, st)
+					break
+	return best if best != Vector2i.ZERO else band
+
+
+## « II-2 » : le palier en court.
+static func tier_code(ep: int, stage: int) -> String:
+	return "%s-%d" % [String(Epochs.get_def(ep).name).trim_prefix("Époque "), stage]
+
+
+static func tier_zone(ep: int, stage: int) -> String:
+	var zid := Epochs.zone(ep, stage)
+	return String(GameData.zone(zid).get("name", zid))
+
+
+## Paliers au prix des plans connus et pas encore fabriqués du kit : [ids], total en insignes.
+static func kit_to_craft(entries: Array) -> Dictionary:
+	var ids: Array = []
+	var total := 0
+	var tiers := Economy.owned_tiers()
+	for k in entries:
+		if String(k.state) == "buy":
+			ids.append(int(k.e.id))
+			total += Economy.armory_price(k.e, tiers)
+	return {"ids": ids, "total": total}
+
+
+## Fabrique les pièces [param ids] (plans connus) tant que les insignes suffisent ; renvoie les pièces fabriquées.
+static func craft_ids(ids: Array) -> Array:
+	var made: Array = []
+	for id in ids:
+		var e: Dictionary = GameData.eden_by_id.get(int(id), {})
+		if e.is_empty() or owned(int(id)) or not (int(id) in Profile.seen_gear):
+			continue
+		var p := price(e)
+		if Profile.insignia < p or Profile.inventory.size() >= Profile.INVENTORY_MAX:
+			break
+		Profile.insignia -= p
+		var it := make(e)
+		Profile.add_item(it)
+		made.append(it)
+	if not made.is_empty():
+		Profile.save_profile()
+	return made
+
+
+## Colonne des paliers : les douze cartes, jauge des pièces fabriquées du kit (x / 9), « ta bande » en lagon.
+func _fill_tiers() -> void:
+	for c in _tier_list.get_children():
+		_tier_list.remove_child(c)
+		c.queue_free()
+	var have := owned_ids()
+	var cid := Profile.selected_class
+	var band := band_tier(HeroLevel.level())
+	for ep in range(1, Epochs.count() + 1):
+		for st in range(1, 4):
+			var t := Vector2i(ep, st)
+			var done := kit_done(ep, st, cid, have)
+			var closed := ep > Epochs.unlocked()
+			var on := t == _tier
+			var b := ForgeWidgets.candy_button("", "mandarine" if on else ("lagon" if t == band else "nuit"), 15, 52 if not _short_screen() else 44)
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.text = "%s %s%s" % [tier_code(ep, st), tier_zone(ep, st), "  · ta bande" if t == band else ""]
+			b.tooltip_text = "%s · %s · %s%s" % [Epochs.get_def(ep).name, tier_zone(ep, st), Epochs.band_text(ep, st),
+				" · époque encore fermée" if closed else ""]
+			if closed and not on:
+				b.modulate = Color(1, 1, 1, 0.6)
+			var g := ProgressBar.new()
+			g.min_value = 0
+			g.max_value = KIT_SLOTS.size()
+			g.value = done
+			g.show_percentage = false
+			g.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			g.anchor_left = 0.0
+			g.anchor_right = 1.0
+			g.anchor_top = 1.0
+			g.anchor_bottom = 1.0
+			g.offset_left = 12
+			g.offset_right = -64
+			g.offset_top = -14
+			g.offset_bottom = -7
+			g.add_theme_stylebox_override("background", ForgeWidgets.box(ForgeWidgets.ENCRE, ForgeWidgets.ENCRE, 4, 1, 0))
+			g.add_theme_stylebox_override("fill", ForgeWidgets.box(ForgeWidgets.POMME, ForgeWidgets.ENCRE, 4, 1, 0))
+			b.add_child(g)
+			var n := Label.new()
+			n.text = "%d / %d%s" % [done, KIT_SLOTS.size(), " ✓" if done >= KIT_SLOTS.size() else ""]
+			n.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			n.add_theme_font_size_override("font_size", 13)
+			n.add_theme_color_override("font_color", ForgeWidgets.POMME_CLAIR if done >= KIT_SLOTS.size() else ForgeWidgets.TEXTE_2)
+			n.add_theme_color_override("font_outline_color", ForgeWidgets.ENCRE)
+			n.add_theme_constant_override("outline_size", 3)
+			n.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			n.anchor_left = 1.0
+			n.anchor_right = 1.0
+			n.anchor_top = 1.0
+			n.anchor_bottom = 1.0
+			n.offset_left = -60
+			n.offset_right = -8
+			n.offset_top = -22
+			n.offset_bottom = -2
+			b.add_child(n)
+			b.pressed.connect(func():
+				_tier = t
+				_sel = -1
+				_show_tier())
+			_tier_list.add_child(b)
+			_tier_buttons[t] = b
+
+
+## La poupée du palier choisi : neuf grandes cases (pleine = fabriquée, voilée = plan connu avec son prix, « ? » = plan
+## à trouver avec le lieu), puis « Fabriquer les N plans connus ».
+func _show_tier() -> void:
+	if _kit_grid == null:
+		return
+	if _tier == Vector2i.ZERO:
+		_tier = band_tier(HeroLevel.level())
+	_cells.clear()
+	_fill_tiers()
+	for c in _kit_grid.get_children():
+		_kit_grid.remove_child(c)
+		c.queue_free()
+	var cid := Profile.selected_class
+	_kit = kit(_tier.x, _tier.y, cid)
+	var done := kit_done(_tier.x, _tier.y, cid, owned_ids())  # emplacements qui ont une pièce du palier (comme la jauge)
+	_kit_title.text = "%s · %s" % [tier_zone(_tier.x, _tier.y), Epochs.band_text(_tier.x, _tier.y).to_lower()]
+	_kit_sub.text = "Kit %s · %s · %d fabriquées sur %d" % [_class_de(cid), String(GameData.weapon_type(Items.default_weapon_type(cid)).get("name", "")),
+		done, KIT_SLOTS.size()]
+	var cell_px := 84.0 if _short_screen() else 104.0
+	var first_buy := -1
+	var first_any := -1
+	for k in _kit:
+		var e: Dictionary = k.e
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 2)
+		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_kit_grid.add_child(v)
+		var slot_name := String(Items.SLOT_NAMES.get(k.slot, k.slot))
+		var cell: Control
+		var cap := ""
+		if e.is_empty() or k.state == "locked":
+			var sil := Silhouette.new(cell_px)
+			sil.slot_name = ""
+			sil.level = int(e.get("level", 0)) if not e.is_empty() else 0
+			sil.tooltip_text = "Plan à trouver : %s" % (Completion.plan_place(int(e.id)) if not e.is_empty() else "aucun coffre")
+			cell = sil
+			var where := Completion.plan_place(int(e.id)) if not e.is_empty() else ""
+			cap = "%s · %s" % [slot_name, where.get_slice(" · ", 1) if where != "" else "à trouver"]
+		else:
+			var s := ItemWidgets.ItemSlot.new(cell_px)
+			s.set_item(make(e))
+			s.wear_check = true
+			s.show_compare = false  # verdict au profil de la classe dans la fiche (le ▲ générique pouvait le contredire)
+			s.dim = k.state == "buy"
+			s.badge = "✓" if k.state == "owned" else ""
+			cell = s
+			cap = ("%s ✓" % slot_name) if k.state == "owned" else "%s · %s" % [slot_name, GearPower.fmt(price(e))]
+			if k.state == "buy" and first_buy < 0:
+				first_buy = int(e.id)
+		if not e.is_empty():
+			if first_any < 0:
+				first_any = int(e.id)
+			cell.set("selected", int(e.id) == _sel)
+			cell.pressed.connect(_select.bind(int(e.id)))
+			if not _row_of(int(e.id)).is_empty():
+				_cells[int(e.id)] = cell
+		cell.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		v.add_child(cell)
+		var l := Hud._label(v, cap, 14, ForgeWidgets.POMME_CLAIR if k.state == "owned" else (ForgeWidgets.TEXTE if k.state == "buy" else ForgeWidgets.TEXTE_2))
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.clip_text = true
+		l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		l.custom_minimum_size = Vector2(cell_px + 56.0, 0)
+	if not _kit.any(func(k): return not k.e.is_empty() and int(k.e.id) == _sel):
+		_sel = first_buy if first_buy >= 0 else first_any
+		for id in _cells:
+			_cells[id].set("selected", int(id) == _sel)
+	var todo := kit_to_craft(_kit)
+	var n: int = (todo.ids as Array).size()
+	_kit_all.visible = n > 0
+	_kit_all.text = "Fabriquer %s · %s insignes" % ["le plan connu" if n == 1 else "les %d plans connus" % n, GearPower.fmt(int(todo.total))]
+	_kit_all.disabled = Profile.insignia < int(todo.total)
+	_kit_miss.text = Economy.missing_text(int(todo.total)) if n > 0 else ("Kit complet." if done >= KIT_SLOTS.size() else "Aucun plan connu à fabriquer : les coffres de ces cartes en révèlent.")
+	_kit_miss.add_theme_color_override("font_color", ItemWidgets.LOCK_TEXT if _kit_all.disabled and n > 0 else ForgeWidgets.TEXTE_2)
+	_right.visible = _sel >= 0
+	_show_detail()
+
+
+static func _class_de(cid: String) -> String:
+	var n := String(GameData.class_data(cid).get("name_fr", cid))
+	return ("de l'" if n.substr(0, 1).to_lower() in ["a", "e", "é", "è", "i", "o", "u", "h"] else "du ") + n
+
+
+## « Fabriquer les N plans connus » : confirmation du coût, puis fabrication.
+func _on_kit_all() -> void:
+	var todo := kit_to_craft(_kit)
+	var ids: Array = todo.ids
+	if ids.is_empty() or Profile.insignia < int(todo.total):
+		return
+	var go := func():
+		var made := craft_ids(ids)
+		Sfx.ui("confirm")
+		_just_bought = true
+		refresh()
+		_say("%s · %s" % [GearPower.plural(made.size(), "pièce fabriquée", "pièces fabriquées"), GearPower.plural(int(todo.total), "insigne")], UiTheme.BUFF)
+	if skip_confirm:
+		go.call()
+		return
+	InfoCard.ask(self, "Fabriquer %s ?" % GearPower.plural(ids.size(), "pièce"), "Coût : %s insignes. Il t'en restera %s." % [
+		GearPower.fmt(int(todo.total)), GearPower.fmt(Profile.insignia - int(todo.total))], "Fabriquer", go, false)
+
+
+func _say(text: String, col: Color) -> void:
+	_short.text = text
+	_short.add_theme_color_override("font_color", col)
+
+
+func _narrow() -> bool:
+	return get_viewport().get_visible_rect().size.x < 1500.0
+
+
+func _short_screen() -> bool:
+	return get_viewport().get_visible_rect().size.y < 840.0
+
+
+## Deux vues : « tiers » (paliers et poupée, défaut) et « catalog » (la grille filtrable de tous les plans).
+func set_view(v: String) -> void:
+	view = v
+	if _bar == null:
+		return
+	var tiers := view == "tiers"
+	_tier_col.visible = tiers  # le catalogue reprend toute la largeur (sa grille tient alors en 1280 × 720)
+	_kit_box.visible = tiers
+	_bar.visible = not tiers
+	_holder.visible = not tiers
+	_view_btn.text = "Catalogue complet" if tiers else "Retour aux paliers"
+	_head.text = "Fabriquer" if not tiers else "Kit du palier"
+	if tiers:
+		_show_tier()
+	else:
+		_apply()

@@ -1229,11 +1229,17 @@ rapports `R_AC_*` ; ici, ce que le mode est dans le jeu.
   Explosion musculaire (armes et gants) ; Légèreté, Compréhension, Rééducation, Récupération
   (armures). Lv1 à Lv5 selon le niveau du butin, objet de niveau (Lv-1)×10 minimum ;
   un enchantement par objet (le nouveau remplace l'ancien).
-- **Amélioration à risque** : réussite 100 % jusqu'à +3, puis 90 / 80 / 70 / 60 / 50 / 40 /
-  30 % jusqu'à +10. Chaque réussite : stats de base +10 % et **une stat aléatoire** (doublée
-  aux paliers +4, +6, +8, +10). Échec : matériaux perdus ; vers +6 et au-delà, l'objet perd un
-  niveau (et sa dernière stat aléatoire). **Pierre de chance** : +10 % (3 max par essai).
-  **Pierre de protection** : pas de perte de niveau. Coût : **de l'or seulement**.
+- **Forge sans punition** (lot GX-2 ; étude `conception/benchmark/HEROS_EQUIPEMENT_PROGRESSION.md` §4, Q1) : réussite
+  assurée jusqu'à +2 à +5 selon le parchemin, puis 95 / 90 / 80 / 70 / 60 / 50 / 40 / 30 %. Chaque réussite : stats de base +10 %
+  et, aux paliers +4, +6, +8, +10, **une stat bonus** au hasard. **Un échec ne coûte que l'essai** (parchemin, or ou cristaux) :
+  **plus jamais de niveau perdu**. Il remplit la **persévérance** de la pièce (`item.pity` : + (1 − chance) × 0,5, au moins 0,25 : au pire 5 essais par cran) et monte la
+  chance de 10 % de la base (`item.pity_n`, plafond × 1,5) ; jauge pleine = réussite assurée ; tout repart de zéro à la réussite
+  (au pire 5 essais pour un cran à 40 %, 4 pour +10). Les pierres d'Eden sont des **pierres de chance** (+5 à +100 %, une par
+  essai, même icône). Le parchemin béni : un essai gratuit. **Viser +N** : coût attendu et au pire (`Craft.plan_upgrade`, sans
+  pierre, persévérance comprise), puis « Fortifier jusqu'à +N » enchaîne les essais et s'arrête à chaque palier à stat bonus.
+  La piste des 10 crans montre les paliers d'avance ; chance, persévérance et conséquence d'un échec sont écrites avant l'appui.
+- **Réajuster** (Atelier et marchand) : le nouveau jet d'une stat bonus est posé à côté de l'ancien (`item.reroll`) ; le joueur
+  garde **l'ancien ou le nouveau** (`Forge.reforge_choose`), au même prix ; tant qu'il n'a pas choisi, la pièce garde l'ancien.
 - Les fournitures tombent des monstres (4 %, 7 % en rage), des élites (35 %), des boss (3),
   des coffres (1, meilleur en rage) et se vendent chez les marchands ambulants. Tout se fait
   dans la **Forge** (fiche d'un objet pendant la run).
@@ -1254,9 +1260,10 @@ chacune avec son rôle :
 
 - Un coffre porte une spécialité (`focus`) : « parchemins » (2-3 puissance, 2-4 garde), « pierres » (4 pierres rares
   en plus), « gemmes » (3 gemmes d'un rang de plus), « formules » (3 formules au niveau le plus haut, 1 gemme).
-- **Cristaux = optimiser** : hors run, `Forge.GOLD_PER_CRYSTAL` passe de 25 à **125** (1 cristal pour 125 or). Une
-  pièce de niveau 85 à +10 coûte ≈ 750 cristaux si chaque tentative réussit, ≈ 1 300 avec des pierres de
-  protection : **4 à 5 clears Mythiques**. Un donjon Normal (30 cristaux) paie un +3 ou +4 sur une pièce de niveau 30.
+- **Cristaux = optimiser** : hors run, `Forge.GOLD_PER_CRYSTAL` passe de 25 à 125, puis **108** au lot GX-2 (Forge sans
+  punition : le coût **attendu** reste celui d'avant). Une pièce de niveau 85 à +10 coûte ≈ 870 cristaux si chaque tentative
+  réussit, **≈ 1 610 en moyenne** (avant : ≈ 1 615 avec des pierres de protection), au pire ≈ 3 830 : **6 à 8 clears
+  Mythiques**. Un donjon Normal (30 cristaux) paie un +3 sur une pièce de niveau 30. Mesures : `conception/progression/R_GX2.md`.
 - Le démontage rend 1 à 3 cristaux (avant : 1 à 8) et un coffre de forge 2 à 3 au niveau 30 (avant : 3 à 9) : un
   cristal vaut 5 fois plus d'or, ils restent un complément. Le coffre de trophées n'existe plus.
 
@@ -1336,7 +1343,16 @@ chacune avec son rôle :
   Carnet : la catégorie « Plans » compte les plans découverts.
 - **Plans de donjon** (ex-Fabrication, `ui/fabrication_page.gd`, lot A1) : un plan par boss (48, compteur « x / 48 plans ») ; avec le
   plan : l'un des 2 emplacements du boss + « Fabriquer · N insignes » (ce qu'il manque en rouge) ; sans plan, donjon ouvert : « Il tombe
-  en battant <boss> » ; donjons fermés : une ligne ; sans aucun plan : bandeau d'état vide.
+  en battant <boss> » ; donjons fermés : une ligne ; sans aucun plan : bandeau d'état vide. Lot GX-2 : les 2 emplacements en onglets ;
+  **la pièce se voit avant d'être fabriquée** (case, rareté, emplacement, niveau, verdict « Meilleure pour <classe> » + écart de PE,
+  3 stats ; Maj sur la case : la carte complète) et c'est elle qui est fabriquée (`FabricationPage.preview`) ; **« Fabriquer et
+  porter »** (grisé, raison écrite, si le niveau de héros est trop bas) ; « Il te manque N insignes ≈ X cartes de Survie ».
+- **Fabriquer v2** (lot GX-2) : vue par défaut **par paliers** : colonne des 12 cartes (« II-2 Volcan d'Avila », jauge x / 9 du kit
+  fabriqué, « ta bande » en lagon), **poupée du kit du palier** pour la classe (9 cases : pleine = fabriquée, voilée = plan connu avec
+  son prix, « ? » = plan à trouver avec la carte ; pour chaque emplacement, la meilleure pièce du palier pour le profil de la classe),
+  **« Fabriquer les N plans connus · total »** (carte de confirmation du coût ; « il en manque N ≈ X cartes de Survie » sinon), fiche
+  avec « Fabriquer et porter » (ou « Porter » une pièce déjà fabriquée). Une carte de Survie ≈ le tiers d'une victoire type de
+  l'époque ouverte (`Economy.insignia_per_map`). Le catalogue filtrable reste derrière « Catalogue complet ».
 - **Forge** (`ui/forge_bench.gd`) : un panneau, six établis en haut, la pièce et son tableau **avant → après** (stats principales, qualité,
   cristaux), le coût en cristaux (rouge s'il en manque), la barre de verdict compacte et l'action principale en bas. Prix en mots
   (`MerchantPages.price_words`). La fusion de gemmes garde l'ancien taux (`Forge.FUSE_GOLD_PER_CRYSTAL` 25, `Forge.fuse_price` : 2 à 7

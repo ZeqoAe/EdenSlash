@@ -6,11 +6,14 @@ extends RefCounted
 ##   objet, niveau d'objet minimum 25 à 70 selon le niveau de la formule) ;
 ## - fortification +1 → +10 : chaque tentative consomme un parchemin de puissance (armes) ou de
 ##   garde (armures) d'un niveau au moins égal à celui de l'objet, plus de l'or ; réussite
-##   assurée jusqu'à +2 à +5 selon le parchemin, puis chances décroissantes ; un échec vers +6
-##   ou plus fait redescendre l'objet d'un niveau ;
-## - pierres de sûreté d'Eden (une par tentative, consommée quel que soit le résultat) : elles
-##   protègent toutes l'objet et ajoutent +5 % à +100 % de réussite ;
-## - parchemin béni (création du jeu) : une tentative gratuite (ni parchemin ni or) et protégée.
+##   assurée jusqu'à +2 à +5 selon le parchemin, puis chances décroissantes ;
+## - Forge sans punition (lot GX-2) : un échec ne coûte que l'essai (parchemin, or ou cristaux), jamais un
+##   niveau ; chaque échec remplit la jauge de PERSÉVÉRANCE de la pièce (item.pity, (1 − chance) × PITY_PER_FAIL, au moins PITY_MIN) et
+##   monte la chance de PITY_STEP de la base (item.pity_n, plafond PITY_STEP_MAX) ; jauge pleine = réussite assurée ;
+##   tout se remet à zéro à la réussite (au pire 5 essais pour un cran, 4 pour +10) ; [method plan_upgrade] :
+##   coût attendu et coût au pire pour viser +N ;
+## - pierres d'Eden (une par tentative, consommée quel que soit le résultat) : pierres de chance, +5 % à +100 % ;
+## - parchemin béni (création du jeu) : une tentative gratuite (ni parchemin ni or).
 ## Les consommables sont rangés dans Profile.bag (clé -> quantité), butin de la run.
 
 const MAX_SOCKETS := 2
@@ -59,21 +62,29 @@ const FORTIFY_LEVELS := [20, 30, 40, 50, 60, 70, 80, 90, 100]
 
 ## Pierres de sûreté d'Eden : [from, to] = niveaux d'amélioration actuels acceptés.
 const STONES := {
-	"safety": {"name": "Pierre de sûreté", "eden": "Safety Stone", "bonus": 0.05, "from": 2, "to": 9, "rarity": 1, "icon": "i00528"},
-	"lucky": {"name": "Pierre de sûreté chanceuse", "eden": "Lucky Safety Stone", "bonus": 0.10, "from": 2, "to": 9, "rarity": 2, "icon": "i00529"},
+	"safety": {"name": "Pierre de chance", "eden": "Safety Stone", "bonus": 0.05, "from": 2, "to": 9, "rarity": 1, "icon": "i00528"},
+	"lucky": {"name": "Pierre de grande chance", "eden": "Lucky Safety Stone", "bonus": 0.10, "from": 2, "to": 9, "rarity": 2, "icon": "i00529"},
 	"citrine": {"name": "Pierre halcyon citrine", "eden": "Citrine Halcyon Safety Stone", "bonus": 0.50, "from": 2, "to": 9, "rarity": 3, "icon": "i01202"},
 	"viridian": {"name": "Pierre halcyon viridienne", "eden": "Viridian Halcyon Safety Stone", "bonus": 0.75, "from": 3, "to": 6, "rarity": 3, "icon": "i01009"},
 	"ultramarine": {"name": "Pierre halcyon outremer", "eden": "Ultramarine Halcyon Safety Stone", "bonus": 0.75, "from": 7, "to": 8, "rarity": 3, "icon": "i01010"},
 	"coral": {"name": "Pierre halcyon corail", "eden": "Coral Halcyon Safety Stone", "bonus": 0.75, "from": 9, "to": 9, "rarity": 3, "icon": "i01011"},
 	"sublime": {"name": "Pierre sublime sanguine", "eden": "Sanguine Sublime Safety Stone", "bonus": 1.0, "from": 2, "to": 9, "rarity": 4, "icon": "i11145"},
 }
-## Parchemin béni (création du jeu) : tentative gratuite et protégée.
+## Parchemin béni (création du jeu) : tentative gratuite.
 const BLESSED := "blessed"
 const BLESSED_ICON := "i00311"
 
 ## Chances de réussite de base pour atteindre +1 … +10 (le parchemin assure les premiers).
 const UPGRADE_CHANCE := [1.0, 1.0, 0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3]
-const DOWNGRADE_FROM := 6  # un échec vers +6 ou plus fait perdre un niveau (sauf pierre ou parchemin béni)
+## Persévérance (lot GX-2) : part de la chance ratée versée dans la jauge à chaque échec ; bonus de chance par échec
+## (part de la chance de base) et son plafond. Plus aucune rétrogradation (l'ancien DOWNGRADE_FROM 6 est supprimé).
+const PITY_PER_FAIL := 0.5
+const PITY_STEP := 0.1
+const PITY_STEP_MAX := 0.5
+## Jauge pleine à ce seuil (les sommes de flottants s'arrêtent parfois à 0,99999).
+const PITY_FULL := 0.999
+## Remplissage minimal par échec : au pire 5 essais pour n'importe quel cran (un cran à 90 % ne traîne pas 12 essais).
+const PITY_MIN := 0.25
 const UPGRADE_POOL_WEAPON := ["patk", "matk", "crit", "atk_speed", "str", "agi", "int"]
 const UPGRADE_POOL_ARMOR := ["hp", "def", "str", "agi", "int", "wis", "lck"]
 const UPGRADE_ROLL := {
@@ -155,13 +166,11 @@ static func _describe_base(key: String) -> String:
 				FORTIFY[p[1]].what, lv, fortify_safe(p[1], lv)]
 		"stone":
 			var s: Dictionary = STONES[p[1]]
-			var txt := "Protège l'objet pendant la fortification : il ne redescend pas en cas d'échec."
-			if float(s.bonus) > 0.0:
-				txt += "\nRéussite +%d %%." % roundi(float(s.bonus) * 100.0)
+			var txt := "Pierre de chance : la tentative de fortification réussit plus souvent (+%d %%)." % roundi(float(s.bonus) * 100.0)
 			txt += "\nUtilisable de +%d à +%d → +%d. Une pierre par tentative, détruite quel que soit le résultat." % [int(s.from), int(s.to), int(s.to) + 1]
 			return txt
 		"blessed":
-			return "Une tentative de fortification sans parchemin ni or, protégée : l'objet ne redescend pas. Peut s'accompagner d'une pierre de sûreté."
+			return "Une tentative de fortification gratuite : ni parchemin, ni or, ni cristaux. Peut s'accompagner d'une pierre de chance."
 		"drill":
 			return "Perce un emplacement de gemme (2 max ; le 2e réussit à 70 %)."
 		"potion":
@@ -427,56 +436,126 @@ static func stone_usable(item: Dictionary, key: String) -> bool:
 	return up >= int(STONES[p[1]].from) and up <= int(STONES[p[1]].to)
 
 
-## Chance de réussite de la prochaine tentative avec la pierre [param stone] et le parchemin
-## [param scroll] ("" : le parchemin qu'il faudrait ; BLESSED : parchemin béni).
-static func success_chance(item: Dictionary, stone := "", scroll := "") -> float:
-	var up := int(item.get("upgrade", 0))
+## Chance de base du prochain cran (le parchemin [param scroll] assure les premiers ; "" : celui qu'il faudrait), sans
+## pierre ni persévérance.
+static func base_chance(item: Dictionary, scroll := "", up := -1) -> float:
+	if up < 0:
+		up = int(item.get("upgrade", 0))
 	if up >= Items.MAX_UPGRADE:
 		return 0.0
-	var c := float(UPGRADE_CHANCE[up])
 	if scroll == "":
 		scroll = fortify_key(fortify_kind(item), fortify_level_for(item))
 	var safe := 3
 	if scroll.begins_with("fortify:"):
 		var p := scroll.split(":")
 		safe = fortify_safe(p[1], int(p[2]))
-	if up + 1 <= safe:
-		c = 1.0
-	if stone != "" and stone_usable(item, stone):
-		c += float(STONES[stone.split(":")[1]].bonus)
-	return minf(1.0, c)
+	return 1.0 if up + 1 <= safe else float(UPGRADE_CHANCE[up])
 
 
-## Ce qu'un échec coûterait (texte).
-static func failure_text(item: Dictionary, protected := false) -> String:
-	var target := int(item.get("upgrade", 0)) + 1
-	if target >= DOWNGRADE_FROM and not protected:
-		return "l'objet redescend à +%d" % maxi(0, target - 2)
-	return "l'objet reste à +%d" % (target - 1)
+## Jauge de persévérance de la pièce (0 à 1 : pleine = réussite assurée) et échecs depuis la dernière réussite.
+static func pity(item: Dictionary) -> float:
+	return clampf(float(item.get("pity", 0.0)), 0.0, 1.0)
+
+
+static func pity_fails(item: Dictionary) -> int:
+	return maxi(0, int(item.get("pity_n", 0)))
+
+
+## Chance d'un essai : base × (1 + bonus de [param fails] échecs) + pierre ; jauge [param gauge] pleine : assurée.
+static func _chance_with(base: float, fails: int, gauge: float, stone_bonus := 0.0) -> float:
+	if base >= 1.0 or gauge >= PITY_FULL:
+		return 1.0
+	return minf(1.0, base * (1.0 + minf(PITY_STEP * fails, PITY_STEP_MAX)) + stone_bonus)
+
+
+## Chance de réussite de la prochaine tentative avec la pierre [param stone] et le parchemin
+## [param scroll] ("" : le parchemin qu'il faudrait ; BLESSED : parchemin béni), persévérance comprise.
+static func success_chance(item: Dictionary, stone := "", scroll := "") -> float:
+	if int(item.get("upgrade", 0)) >= Items.MAX_UPGRADE:
+		return 0.0
+	var bonus := float(STONES[stone.split(":")[1]].bonus) if stone != "" and stone_usable(item, stone) else 0.0
+	return _chance_with(base_chance(item, scroll), pity_fails(item), pity(item), bonus)
+
+
+## Part de jauge qu'un échec à la chance [param c] verse : (1 − c) × PITY_PER_FAIL, au moins PITY_MIN.
+static func fill(c: float) -> float:
+	return maxf((1.0 - c) * PITY_PER_FAIL, PITY_MIN)
+
+
+## Ce qu'un échec ajouterait à la jauge de persévérance (0 si la réussite est assurée).
+static func pity_gain(item: Dictionary, stone := "", scroll := "") -> float:
+	var c := success_chance(item, stone, scroll)
+	return 0.0 if c >= 1.0 else fill(c)
+
+
+## Essais au plus avant la réussite assurée du prochain cran (sans pierre) : 1 si elle l'est déjà.
+static func tries_max(item: Dictionary, scroll := "") -> int:
+	return int(_tries(base_chance(item, scroll), pity_fails(item), pity(item)).y)
+
+
+## Essais attendus (x) et au pire (y) pour un cran de chance de base [param base], depuis [param fails] échecs et
+## une jauge à [param gauge] (sans pierre).
+static func _tries(base: float, fails: int, gauge: float) -> Vector2:
+	var alive := 1.0
+	var expected := 0.0
+	var n := 0
+	while n < 100:
+		n += 1
+		var c := _chance_with(base, fails, gauge)
+		expected += alive
+		if c >= 1.0:
+			break
+		alive *= 1.0 - c
+		gauge += fill(c)
+		fails += 1
+	return Vector2(expected, n)
+
+
+## Viser +[param target] depuis l'état de la pièce (sa persévérance pour le cran en cours, puis jauge vide) avec le
+## parchemin qu'il faut, sans pierre : {steps, tries, tries_max, cost (attendu), cost_max, scrolls, scrolls_max}. Les coûts
+## sont des dictionnaires de Forge.price (or en partie, cristaux hors partie) ; parchemins : un par essai.
+static func plan_upgrade(item: Dictionary, target: int) -> Dictionary:
+	var up := int(item.get("upgrade", 0))
+	target = clampi(target, up, Items.MAX_UPGRADE)
+	var tries := 0.0
+	var worst := 0
+	var cost := {}
+	var cost_max := {}
+	var tmp := item.duplicate()
+	for u in range(up, target):
+		tmp["upgrade"] = u
+		var t := _tries(base_chance(tmp, "", u), pity_fails(item) if u == up else 0, pity(item) if u == up else 0.0)
+		tries += t.x
+		worst += int(t.y)
+		var price := Forge.price(int(Items.upgrade_cost(tmp).gold))
+		for k in price:
+			cost[k] = float(cost.get(k, 0.0)) + float(price[k]) * t.x
+			cost_max[k] = int(cost_max.get(k, 0)) + int(price[k]) * int(t.y)
+	for k in cost:
+		cost[k] = ceili(float(cost[k]) - 0.001)
+	return {"steps": target - up, "tries": tries, "tries_max": worst, "cost": cost, "cost_max": cost_max,
+		"scrolls": ceili(tries - 0.001), "scrolls_max": worst}
+
+
+## Ce qu'un échec coûterait (texte) : jamais un niveau (lot GX-2), seulement l'essai.
+static func failure_text(item: Dictionary, _protected := false) -> String:
+	return "la pièce reste à +%d, la persévérance monte" % int(item.get("upgrade", 0))
 
 
 ## Tentative de fortification : {ok, text, stat, value}. Parchemin, pierre et or sont consommés
-## par l'appelant (Profile.upgrade_item) ; une pierre ou le parchemin béni protègent l'objet.
+## par l'appelant (Profile.upgrade_item). Un échec remplit la persévérance de la pièce (jamais de niveau perdu).
 static func upgrade(item: Dictionary, stone := "", scroll := "") -> Dictionary:
 	if Items.is_unique(item):
 		return {"ok": false, "error": true, "text": Items.UNIQUE_TEXT}
 	var chance := success_chance(item, stone, scroll)
-	var protect := stone != "" or scroll == BLESSED
 	var target := int(item.get("upgrade", 0)) + 1
 	if randf() < chance:
 		return _upgrade_success(item, target)
-	if target >= DOWNGRADE_FROM and not protect and int(item.upgrade) > 0:
-		var lost := int(item.upgrade)
-		item.upgrade = lost - 1
-		# un palier perdu (+4, +6…) emporte sa stat bonus
-		var rolls: Array = item.get("up_rolls", [])
-		for i in range(rolls.size() - 1, -1, -1):
-			if (rolls[i].size() > 2 and int(rolls[i][2]) == lost) or (rolls[i].size() <= 2 and i == rolls.size() - 1):
-				rolls.remove_at(i)
-				break
-		return {"ok": false, "text": "Échec… l'objet redescend à +%d." % int(item.upgrade)}
-	var saved := protect and target >= DOWNGRADE_FROM
-	return {"ok": false, "text": "Échec. %s" % (("%s a protégé l'objet." % ("Le parchemin béni" if stone == "" else label(stone))) if saved else "L'objet est intact.")}
+	item["pity"] = minf(1.0, pity(item) + fill(chance))
+	item["pity_n"] = pity_fails(item) + 1
+	var left := tries_max(item, scroll if scroll != BLESSED else "")
+	return {"ok": false, "pity": true, "text": "Raté : la pièce reste à +%d. %s" % [target - 1,
+		"Réussite assurée au prochain essai." if left <= 1 else "Persévérance : réussite assurée dans %d essais au plus." % left]}
 
 
 ## Amélioration réussie d'office (enclume de la carte) : +1 sans parchemin ni or, sans risque.
@@ -491,6 +570,8 @@ static func upgrade_free(item: Dictionary) -> Dictionary:
 
 static func _upgrade_success(item: Dictionary, target: int) -> Dictionary:
 	item.upgrade = target
+	item.erase("pity")  # la persévérance vaut pour le cran réussi : la jauge repart à zéro
+	item.erase("pity_n")
 	if not target in Items.MILESTONES:
 		# entre les paliers : +10 % des stats de l'objet, pas de stat bonus
 		return {"ok": true, "stat": "", "value": 0.0, "text": "Réussite ! +%d : stats de l'objet +10 %%" % target}

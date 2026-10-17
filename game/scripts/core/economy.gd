@@ -67,6 +67,27 @@ static func survival_insignia_per_hour(ep: int) -> int:
 	return roundi(survival_insignia(3, SURVIVAL_KILLS, SURVIVAL_ELITES, ep, true) * 60.0 / SURVIVAL_MINUTES)
 
 
+## Lot GX-2 (« il en manque N ≈ X cartes ») : insignes d'une carte de Survie, le tiers d'une victoire type de l'époque
+## [param ep] (-1 : la plus haute ouverte, Epochs.unlocked).
+static func insignia_per_map(ep := -1) -> int:
+	var e := clampi(ep if ep > 0 else Epochs.unlocked(), 1, Epochs.count())
+	return maxi(1, roundi(survival_insignia(3, SURVIVAL_KILLS, SURVIVAL_ELITES, e, true) / 3.0))
+
+
+## Cartes de Survie qu'il faut, à peu près, pour gagner [param n] insignes (au moins 1).
+static func maps_for(n: int, ep := -1) -> int:
+	return maxi(1, ceili(float(n) / float(insignia_per_map(ep))))
+
+
+## « il en manque 37 ≈ 1 carte de Survie » : ce qui manque pour un prix de [param price] insignes ("" s'il ne manque rien).
+static func missing_text(price: int) -> String:
+	var miss := price - Profile.insignia
+	if miss <= 0:
+		return ""
+	var m := maps_for(miss)
+	return "il en manque %s ≈ %s" % [GearPower.fmt(miss), GearPower.plural(m, "carte de Survie", "cartes de Survie")]
+
+
 # --- Armurerie à paliers ---------------------------------------------------------------------------------------
 ## Prix d'une pièce de plus d'un palier déjà entamé (part du prix plein).
 const TIER_REPEAT := 0.15

@@ -60,23 +60,24 @@ func _ready() -> void:
 		tries += 1
 	check("katana amélioré en +8 (%d essais, protégé) : stats bonus aux paliers +4, +6, +8 seulement" % tries, int(w.upgrade) == 8 and (w.up_rolls as Array).size() == 3)
 	check("stat aléatoire gagnée à chaque réussite", Items.stats(w).has(String(w.up_rolls[0][0])))
-	# échecs sans protection : l'objet peut redescendre (statistique sur 400 essais vers +6)
+	# lot GX-2 : plus jamais de niveau perdu ; un échec remplit la persévérance (statistique sur 400 essais vers +6 et +10)
 	var downs := 0
-	var protected_downs := 0
+	var fails6 := 0
 	for i in 400:
 		var t := Items.generate(5, 0.0, "chest")
 		t.upgrade = 5
 		t["up_rolls"] = [["hp", 1.0], ["hp", 1.0], ["hp", 1.0], ["hp", 1.0], ["hp", 1.0]]
-		Craft.upgrade(t)
-		if int(t.upgrade) == 4:
+		var r := Craft.upgrade(t)
+		if int(t.upgrade) < 5 or (t.up_rolls as Array).size() < 5:
 			downs += 1
-		var t2 := Items.generate(5, 0.0, "chest")
-		t2.upgrade = 5
-		Craft.upgrade(t2, Craft.stone_key("safety"))
-		if int(t2.upgrade) == 4:
-			protected_downs += 1
-	check("vers +6 sans protection : ~30 %% de pertes de niveau (%d / 400)" % downs, downs > 80 and downs < 160)
-	check("pierre de sûreté : aucune perte (%d)" % protected_downs, protected_downs == 0)
+		if not bool(r.ok):
+			fails6 += 1
+		var t9 := Items.generate(5, 0.0, "chest")
+		t9.upgrade = 9
+		Craft.upgrade(t9)
+		if int(t9.upgrade) < 9:
+			downs += 1
+	check("vers +6 et +10 sans pierre : aucune perte de niveau ni de stat bonus (%d), des échecs quand même (%d / 400)" % [downs, fails6], downs == 0 and fails6 > 80 and fails6 < 160)
 	# pierres d'Eden : bonus et niveaux d'emploi
 	var t9 := Items.generate(5, 0.0, "chest")
 	t9.upgrade = 9
@@ -85,7 +86,7 @@ func _ready() -> void:
 	check("pierre halcyon viridienne : inutilisable à +9", not Craft.stone_usable(t9, Craft.stone_key("viridian")))
 	check("pierre sublime : 100 %", Craft.success_chance(t9, Craft.stone_key("sublime")) >= 1.0)
 	check("parchemin de garde Lv20 : réussite assurée jusqu'à +5", Craft.fortify_safe("guard", 20) == 5 and Craft.fortify_safe("power", 70) == 2)
-	# parchemin béni : gratuit (ni parchemin ni or) et protégé
+	# parchemin béni : gratuit (ni parchemin ni or)
 	var tb := Items.generate(5, 0.0, "chest")
 	tb.upgrade = 7
 	Profile.add_bag(Craft.BLESSED, 30)

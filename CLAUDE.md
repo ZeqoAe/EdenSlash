@@ -201,8 +201,11 @@ comme le Survivant, coffres d'apparence plafonnés, titres, `Quests.end_run("aut
   paliers `armory_price`, puits `SHOP_CHESTS`, leçon de maîtrise) ; participation `Run.INSIGNIA_BASE` ; JcJ plafonné au jour
   (`League.win_insignia`, `royale_insignia`). Seule la Survie en donne (lot A5, `R_A5.md` : cartes et boss de
   carte surtout, monstres / 40), plus le JcJ plafonné ; les quêtes ne paient que maîtrise et apparences.
-- **Cristaux = optimiser** (Forge) : `Forge.GOLD_PER_CRYSTAL` 125 hors run ; sources hors Survie `core/activity_loot.gd`
+- **Cristaux = optimiser** (Forge) : `Forge.GOLD_PER_CRYSTAL` 108 hors run ; sources hors Survie `core/activity_loot.gd`
   (Donjons, Ruée, Siège, Tour : cristaux et coffres de forge / du joaillier au niveau de l'activité).
+- **Forge sans punition, Fabriquer v2** (lot GX-2, `conception/progression/R_GX2.md`) : persévérance par pièce (`item.pity`, plus de
+  rétrogradation), « Viser +N » (`Craft.plan_upgrade`), Réajuster au choix (`Forge.reforge_choose`) ; Fabriquer par paliers (poupée du kit
+  `GearShopPage.kit`, palier entier), Plans de donjon avec aperçu (`FabricationPage.preview`) ; widgets `ui/forge_widgets.gd` ; `test_gx2`.
 - **Fournitures** (parchemins, gemmes, formules, pierres) : coffres de matières (`core/rewards.gd`, `focus`), en Survie au niveau
   des pièces de la carte (`RunDirector.supply_level`), gemmes `Craft.gem_run_factor`.
 - Où l'obtenir / où le dépenser : `core/resource_help.gd`. Détail : DESIGN « Économie et progression » ; rapports `R_E1`, `R_E2`,

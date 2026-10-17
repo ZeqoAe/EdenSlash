@@ -6,6 +6,8 @@ extends VBoxContainer
 ## rareté suivent la meilleure difficulté finie contre ce boss (Dungeons.plan_diff) : mythique, légendaire une fois
 ## battu en Mythique. Prix : Economy.base_price d'une pièce du niveau du donjon à cette rareté (le prix plein de
 ## l'Armurerie). Les anciens plans par zone sont convertis par Dungeons.migrate_plans (appelée par known / craft).
+## Lot GX-2 : la pièce se voit AVANT d'être fabriquée (icône, rareté, niveau requis, stats, verdict face à la pièce portée) ;
+## l'aperçu ([method preview]) est la pièce même que le bouton fabrique ; « Fabriquer et porter » l'équipe aussitôt.
 
 
 ## Boss d'un plan : [param key] est un id de boss, ou une zone (son boss d'origine, comme les anciens plans « plan_<zone> »).
@@ -45,8 +47,32 @@ static func cost(key: String) -> int:
 	return Economy.base_price({"level": level_of(key), "rarity": rarity_of(key)})
 
 
-## Fabrique une pièce de la panoplie du boss [param key] à l'emplacement [param slot] ; {"error": raison} si le plan
-## manque, si l'emplacement n'est pas celui du boss, si les insignes ne suffisent pas ou si l'inventaire est plein.
+## Aperçus déjà tirés (boss|emplacement|niveau|rareté|classe -> pièce) : ce qui est montré est ce qui sera fabriqué.
+static var _previews := {}
+
+
+## La pièce que le plan de [param key] fabriquerait à l'emplacement [param slot] (même tirage jusqu'à la fabrication).
+static func preview(key: String, slot: String) -> Dictionary:
+	var bid := resolve(key)
+	var k := "%s|%s|%d|%d|%s" % [bid, slot, level_of(bid), rarity_of(bid), Profile.selected_class]
+	if not _previews.has(k):
+		_previews[k] = _make(bid, slot)
+	return _previews[k]
+
+
+static func _make(bid: String, slot: String) -> Dictionary:
+	var rar := rarity_of(bid)
+	# modèle d'Eden du niveau du donjon (et non de la zone choisie au lobby) ; arme du type de la classe choisie
+	var lv := level_of(bid)
+	var tpl := Items.eden_template(slot, Items.default_weapon_type(Profile.selected_class), lv, rar)
+	var it := Items.from_template(tpl, lv, rar) if not tpl.is_empty() else Items.generate(lv, 1.0, slot, Profile.selected_class, rar, "", rar)
+	it["archetype"] = String(BossLibrary.loot(bid).archetype)
+	return it
+
+
+## Fabrique une pièce de la panoplie du boss [param key] à l'emplacement [param slot] (la pièce de [method preview]) ;
+## {"error": raison} si le plan manque, si l'emplacement n'est pas celui du boss, si les insignes ne suffisent pas ou si
+## l'inventaire est plein.
 static func craft(key: String, slot: String) -> Dictionary:
 	var bid := resolve(key)
 	if not BossLibrary.has(bid) or not Dungeons.has_plan(bid):
@@ -58,16 +84,22 @@ static func craft(key: String, slot: String) -> Dictionary:
 		return {"error": "Il te faut %s." % insignia_text(c)}
 	if Profile.inventory.size() >= Profile.INVENTORY_MAX:
 		return {"error": "Coffre commun plein."}
-	var rar := rarity_of(bid)
-	# modèle d'Eden du niveau du donjon (et non de la zone choisie au lobby) ; arme du type de la classe choisie
-	var lv := level_of(bid)
-	var tpl := Items.eden_template(slot, Items.default_weapon_type(Profile.selected_class), lv, rar)
-	var it := Items.from_template(tpl, lv, rar) if not tpl.is_empty() else Items.generate(lv, 1.0, slot, Profile.selected_class, rar, "", rar)
-	it["archetype"] = String(BossLibrary.loot(bid).archetype)
+	var shown := preview(bid, slot)
+	var it := shown.duplicate(true)
+	it["uid"] = "%d_%d" % [Time.get_ticks_usec(), randi() % 100000]
+	_previews.erase(_previews.find_key(shown))  # la prochaine fabrication tire une nouvelle pièce
 	Profile.insignia -= c
 	Profile.add_item(it)
 	Profile.save_profile()
 	return it
+
+
+## Fabrique puis porte la pièce si le niveau de héros le permet ; renvoie le message (ou {"error"} comme [method craft]).
+static func craft_and_wear(key: String, slot: String) -> Dictionary:
+	var it := craft(key, slot)
+	if it.has("error"):
+		return it
+	return {"item": it, "text": ForgeWidgets.wear_new(it)}
 
 
 ## Le mot « insignes » avec son nombre (accord compris).
@@ -191,7 +223,9 @@ func _box(grid: GridContainer, got: bool, arch_id: String) -> VBoxContainer:
 	return v
 
 
-## Un plan trouvé : le donjon, sa panoplie, l'emplacement à choisir et le bouton « Fabriquer · N insignes ».
+## Un plan trouvé (lot GX-2) : le donjon et sa panoplie, l'emplacement à choisir, puis la pièce elle-même AVANT de la
+## fabriquer (case, rareté, niveau requis, stats, verdict face à la pièce portée ; Maj sur la case : la carte complète),
+## et deux actions : « Fabriquer · N insignes » et « Fabriquer et porter ».
 func _card(bid: String) -> void:
 	var arch := String(BossLibrary.loot(bid).archetype)
 	var v := _box(_grid, true, arch)
@@ -203,39 +237,114 @@ func _card(bid: String) -> void:
 	title_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	Hud._label(top, "Panoplie %s" % String(Items.SETS.get(arch, {}).get("name", "")), 15, Items.SET_COLOR)
 	var slots := slots_of(bid)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	v.add_child(row)
-	var ob := OptionButton.new()
-	ob.focus_mode = Control.FOCUS_NONE
-	ob.custom_minimum_size = Vector2(130, 40)
-	for s in slots:
-		ob.add_item(String(Items.SLOT_NAMES.get(s, s)))
-	ob.selected = clampi(int(_pick.get(bid, 0)), 0, slots.size() - 1)
-	ob.item_selected.connect(func(i): _pick[bid] = i)
-	row.add_child(ob)
+	var idx := clampi(int(_pick.get(bid, 0)), 0, slots.size() - 1)
+	var slot := String(slots[idx])
+	# les emplacements du boss : des onglets (souris et manette), l'aperçu suit
+	var srow := HBoxContainer.new()
+	srow.add_theme_constant_override("separation", 6)
+	v.add_child(srow)
+	for i in slots.size():
+		var on := i == idx
+		var sb := ForgeWidgets.candy_button(String(Items.SLOT_NAMES.get(slots[i], slots[i])), "mandarine" if on else "nuit", 15, 34)
+		sb.custom_minimum_size.x = 110
+		var at := i
+		sb.pressed.connect(func():
+			_pick[bid] = at
+			refresh())
+		srow.add_child(sb)
+	var it := preview(bid, slot)
+	var prow := HBoxContainer.new()
+	prow.add_theme_constant_override("separation", 12)
+	v.add_child(prow)
+	var cell := ItemWidgets.ItemSlot.new(76.0)
+	cell.set_item(it)
+	cell.wear_check = true
+	cell.show_compare = false  # le verdict écrit (profil de la classe) suffit : pas de ▲ générique qui le contredise
+	cell.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	prow.add_child(cell)
+	var txt := ItemWidgets.rich(prow, 15)
+	txt.fit_content = true
+	txt.scroll_active = false
+	txt.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	txt.text = preview_text(it)
+	var lock := HeroLevel.lock_text(it)
+	if lock != "":
+		Hud._label(v, lock + " · fabriquer reste permis", 14, ItemWidgets.LOCK_TEXT).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	var c := cost(bid)
 	var have := Profile.insignia
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	v.add_child(row)
 	var b := MenuWidgets.gold_button("Fabriquer · %s" % insignia_text(c), 16, Vector2(0, 40))
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.disabled = have < c
-	b.pressed.connect(func():
-		var r := craft(bid, String(slots[ob.selected]))
-		if r.has("error"):
-			_msg.add_theme_color_override("font_color", UiTheme.DEBUFF)
-			_msg.text = String(r.error)
-		else:
-			Sfx.ui("confirm")
-			_msg.add_theme_color_override("font_color", UiTheme.BUFF)
-			_msg.text = "Fabriqué : %s (dans ton coffre commun)" % Items.display_name(r)
-		refresh())
+	b.pressed.connect(func(): _do_craft(bid, slot, false))
 	row.add_child(b)
-	var info := "Pièce %s, niveau %d" % ["légendaire" if rarity_of(bid) == Items.LEGENDARY else "mythique", level_of(bid)]
+	var bw := ForgeWidgets.candy_button("Fabriquer et porter", "lagon", 16, 40)
+	bw.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bw.disabled = have < c or lock != ""
+	bw.tooltip_text = lock if lock != "" else "La pièce rejoint aussitôt ton équipement (l'ancienne va au coffre commun)."
+	bw.pressed.connect(func(): _do_craft(bid, slot, true))
+	row.add_child(bw)
+	var info := "Plan légendaire" if rarity_of(bid) == Items.LEGENDARY else "Plan mythique · légendaire après une victoire en Mythique"
 	if have < c:
-		info += " · il te manque %s" % insignia_text(c - have)
+		info = "Il te manque %s ≈ %s" % [insignia_text(c - have), GearPower.plural(Economy.maps_for(c - have), "carte de Survie", "cartes de Survie")]
 	var il := Hud._label(v, info, 15, UiTheme.DEBUFF if have < c else UiTheme.MUTED)
-	il.tooltip_text = "Niveau du donjon à ta meilleure difficulté contre ce boss ; légendaire après une victoire en Mythique."
+	il.tooltip_text = "La pièce est au niveau du donjon à ta meilleure difficulté contre ce boss ; légendaire après une victoire en Mythique."
 	il.mouse_filter = Control.MOUSE_FILTER_PASS
+	il.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+
+func _do_craft(bid: String, slot: String, wear: bool) -> void:
+	var r := craft_and_wear(bid, slot) if wear else craft(bid, slot)
+	if r.has("error"):
+		_msg.add_theme_color_override("font_color", UiTheme.DEBUFF)
+		_msg.text = String(r.error)
+	else:
+		Sfx.ui("confirm")
+		_msg.add_theme_color_override("font_color", UiTheme.BUFF)
+		_msg.text = String(r.text) if wear else "Fabriqué : %s (dans ton coffre commun)" % Items.display_name(r)
+	refresh()
+
+
+## Aperçu d'une pièce à fabriquer (BBCode court) : nom, « rareté · emplacement · niveau », verdict face à la pièce
+## portée (le mot et l'écart de PE ; pas de pourcentage), puis ses trois plus fortes stats.
+static func preview_text(it: Dictionary) -> String:
+	var r: Dictionary = Items.RARITIES[clampi(int(it.get("rarity", 0)), 0, Items.RARITIES.size() - 1)]
+	var lines: PackedStringArray = ["[b][color=#%s]%s[/color][/b]" % [Items.color_of(it).to_html(false), Items.display_name(it)],
+		"[color=#c9bfea]%s · %s · niveau %d[/color]" % [String(r.name), String(Items.SLOT_NAMES.get(it.slot, it.slot)), int(it.get("level", 1))]]
+	lines.append(verdict_text(it))
+	var st := Items.stats(it)
+	var keys: Array = st.keys()
+	keys.sort_custom(func(a, b):
+		var pa: bool = a in Items.PERCENT_STATS
+		var pb: bool = b in Items.PERCENT_STATS
+		return (not pa and pb) if pa != pb else float(st[a]) > float(st[b]))
+	var parts: PackedStringArray = []
+	for k in keys.slice(0, 3):
+		parts.append("%s [b]%s[/b]" % [Forge.stat_name(String(k)), MerchantPages.ForgePage.stat_num(String(k), float(st[k]))])
+	if not parts.is_empty():
+		lines.append("   ".join(parts))
+	return "\n".join(lines)
+
+
+## Verdict d'une pièce face à celle que la classe porte au même emplacement : le mot d'après le profil de stats de la
+## classe (Items.rating), le chiffre d'après la PE (étude BM-GEAR, Q4) : « ▲ Meilleure pour Guerrier  PE +621 ».
+static func verdict_text(it: Dictionary) -> String:
+	var worn: Dictionary = Profile.equipped.get(String(it.get("slot", "")), {})
+	if worn.is_empty():
+		return "[color=#c3f07a]Emplacement libre[/color]"
+	var cid := Profile.selected_class
+	var prof := ClassGear.profile(cid)
+	var c := Items.compare_to_equipped(it)
+	if not prof.is_empty():
+		var old := Items.rating(worn, prof)
+		c = (Items.rating(it, prof) - old) / maxf(absf(old), 0.0001)
+	var dpe := GearPower.delta_if_equipped(it)
+	var who := " pour " + String(GameData.class_data(cid).get("name_fr", cid)) if not prof.is_empty() else ""
+	var word := ("▲ Meilleure" if c >= 0.02 else ("▼ Moins bonne" if c <= -0.02 else "≈ Équivalente")) + who
+	return "[b][color=%s]%s[/color][/b]  [color=%s]PE %s%s[/color]" % ["#c3f07a" if c >= 0.02 else ("#ff9db0" if c <= -0.02 else "#c9bfea"), word,
+		"#c3f07a" if dpe >= 0 else "#ff9db0", "+" if dpe >= 0 else "−", GearPower.fmt(absi(dpe))]
 
 
 ## Un plan pas encore trouvé (donjon ouvert) : le donjon, ses emplacements, et qui le donne.

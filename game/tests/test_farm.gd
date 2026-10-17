@@ -238,6 +238,7 @@ func _test_armory() -> void:
 	Profile.seen_gear = [int(it.eden)]
 	Profile.insignia = 500
 	var page := GearShopPage.new()
+	page.view = "catalog"  # le catalogue filtrable (la vue par paliers du lot GX-2 : test_gx2)
 	add_child(page)
 	await get_tree().process_frame
 	page.refresh()

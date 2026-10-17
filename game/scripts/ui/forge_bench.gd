@@ -1,10 +1,12 @@
 class_name ForgeBench
 extends MerchantPages.ForgePage
 ## Atelier > Forge : un seul panneau pour tout ce qui se fait sur une pièce, rangé en six établis : Améliorer
-## (fortification +1 à +10), Enchanter, Gemmes (percer, sertir, fusionner), Polir (qualité), Réajuster (relancer
-## une stat bonus) et Démonter (cristaux). La pièce choisie à gauche ; à droite, ses lignes « avant → après », le
+## (fortification +1 à +10, sans rétrogradation, avec persévérance et « Viser +N », lot GX-2), Enchanter, Gemmes (percer,
+## sertir, fusionner), Polir (qualité), Réajuster (relancer une stat bonus, puis garder l'ancien ou le nouveau jet) et
+## Démonter (cristaux). La pièce choisie à gauche ; à droite, ses lignes « avant → après », le
 ## coût en cristaux (en rouge s'il en manque) et l'action en bas. Chaque action passe par la barre de forge : elle
-## se remplit pendant 0,8 à 1,6 s, puis le verdict s'affiche, vert « Réussi » ou rouge « Raté ». Le hasard est
+## se remplit pendant 0,8 à 1,6 s, puis le verdict s'affiche : pomme « Réussi », lagon « Raté » quand l'échec remplit la
+## persévérance (il avance, il ne punit pas), fraise pour un refus. Le hasard est
 ## tiré au moment du clic (aucune règle changée) : l'animation est un habillage, la logique reste celle de
 ## Profile / Craft / Forge.
 
@@ -17,7 +19,7 @@ const BENCHES := [
 	["dismantle", "Démonter", "dismantle", 0.8],
 ]
 ## Mots d'un résultat qui le rendent « raté » (bandeau rouge).
-const FAIL_WORDS := ["Échec", "échec", "pas mieux", "Pas assez", "Il faut", "Aucun", "Aucune", "Déjà", "introuvable", "Pas d'emplacement", "maximale", "ne change pas", "brisent"]
+const FAIL_WORDS := ["Raté :", "Échec", "échec", "pas mieux", "Pas assez", "Il faut", "Aucun", "Aucune", "Déjà", "introuvable", "Pas d'emplacement", "maximale", "ne change pas", "brisent"]
 
 ## Stats montrées dans le tableau « avant → après » d'une amélioration.
 const MAIN_STATS := 4
@@ -189,15 +191,20 @@ func _bench_upgrade(it: Dictionary) -> void:
 	var sa := Items.stats(after, false)
 	# les quatre stats principales : les plus fortes, celles en pourcentage seulement s'il en manque
 	var keys: Array = Items.base_stats(it).keys().filter(func(s): return sb.has(s))
+	var main_n := MAIN_STATS if not (Craft.base_chance(it) < 1.0 and _narrow_h()) else 2  # 720 px : place pour la persévérance
 	keys.sort_custom(func(a, b):
 		var pa: bool = a in Items.PERCENT_STATS
 		var pb: bool = b in Items.PERCENT_STATS
 		return (not pa and pb) if pa != pb else float(sb[a]) > float(sb[b]))
-	for s in keys.slice(0, MAIN_STATS):
+	for s in keys.slice(0, main_n):
 		rows.append([Items.STAT_NAMES.get(s, Items.EXTRA_STAT_NAMES.get(s, s)), stat_num(s, float(sb[s])), stat_num(s, float(sa[s])), 1])
 	if (up + 1) in Items.MILESTONES:
 		rows.append(["Stat bonus", "—", "+1 au hasard", 1])
 	detail.text = _head_text(it) + "\n\n" + ba_table(rows) + "\n\n" + (cost_line(cost) if not cost.is_empty() else "[color=#c8c8d4]Coût[/color]   [b]gratuit[/b]")
+
+
+func _narrow_h() -> bool:
+	return get_viewport().get_visible_rect().size.y < 840.0
 
 
 func _bench_enchant(it: Dictionary) -> void:
@@ -238,19 +245,33 @@ func _reforge(it: Dictionary) -> void:
 	var rc := Forge.reforge_cost(it)
 	var stats := Forge.reforgeable(it)
 	var rows: Array = []
+	var pending := Forge.reforge_pending(it)
+	if not pending.is_empty():
+		# le jet est tiré : l'ancien et le nouveau côte à côte, le joueur garde l'un des deux
+		var d := float(pending.new) - float(pending.old)
+		rows.append([Forge.stat_name(String(pending.stat)), Forge.reroll_text(it, float(pending.old)), Forge.reroll_text(it, float(pending.new)), signi(int(signf(d)))])
+		detail.text = _head_text(it) + "\n\n" + ba_table(rows)
+		reroll_choice(it)
+		return
 	for stat in stats:
 		var s: String = stat
-		var cur := float(it.base[s]) if it.has("base") and it.base.has(s) else float(it.get("affixes", {}).get(s, 0.0))
-		var k := 1.0 if s in Items.PERCENT_STATS or not it.has("base") else Items._level_k(Items.power_level(it))
-		rows.append([Items.STAT_NAMES.get(s, Items.EXTRA_STAT_NAMES.get(s, s)), Items.stat_text(s, cur * k), "nouveau jet", 0])
-		button("Réajuster %s · %s" % [Items.STAT_NAMES.get(s, Items.EXTRA_STAT_NAMES.get(s, s)), MerchantPages.price_words(rc)],
+		rows.append([Forge.stat_name(s), Items.stat_text(s, _roll_value(it, s)), "nouveau jet", 0])
+		button("Réajuster %s · %s" % [Forge.stat_name(s), MerchantPages.price_words(rc)],
 			func(): done(Forge.reforge(it, s)), Profile.can_afford(rc))
 	detail.text = _head_text(it)
 	if stats.is_empty():
 		detail.text += "\n\n[color=#c8c8d4]Pas de stat bonus à réajuster : elles viennent des paliers +4, +6, +8 et +10.[/color]"
 		return
 	detail.text += "\n\n" + ba_table(rows) + "\n\n" + cost_line(rc)
-	_note("Le nouveau jet remplace l'ancien, en mieux ou en moins bien.")
+	_note("Après le tirage, tu gardes l'ancien jet ou le nouveau.")
+
+
+## Valeur affichée d'une stat réajustable : stat bonus d'amélioration (suit la puissance de la pièce) ou affixe.
+func _roll_value(it: Dictionary, s: String) -> float:
+	for r in it.get("up_rolls", []):
+		if String(r[0]) == s:
+			return float(r[1]) * (1.0 if s in Items.PERCENT_STATS else Items._level_k(Items.power_level(it)))
+	return float(it.get("affixes", {}).get(s, 0.0))
 
 
 func _dismantle(it: Dictionary) -> void:
@@ -283,6 +304,17 @@ func _dismantle(it: Dictionary) -> void:
 func button(text: String, cb: Callable, enabled := true, accent := false) -> Button:
 	var plain := text.begins_with("☑") or text.begins_with("☐") or text.begins_with("Confirmer : démonter") or text.begins_with("Démonter ·")
 	var b := ItemWidgets.action_button(_pinned if accent and _pinned else actions, text, cb if plain else func(): _run(cb), 0, accent)
+	b.disabled = not enabled
+	return b
+
+
+## « Viser +N » (lot GX-2) : dans la zone épinglée, juste au-dessus de « Fortifier », toujours visible.
+func _aim_parent() -> Control:
+	return _pinned if _pinned else actions
+
+
+func button_in(parent: Control, text: String, cb: Callable, enabled := true) -> Button:
+	var b := ItemWidgets.action_button(parent, text, func(): _run(cb))
 	b.disabled = not enabled
 	return b
 
@@ -322,7 +354,7 @@ func _disable(n: Node) -> void:
 
 func done(msg: String, duration := 2.0) -> void:
 	_got_verdict = true
-	_bar.verdict(not _is_fail(msg), msg)
+	_bar.verdict(not _is_fail(msg), msg, msg.contains("Raté :"))
 	super.done(msg, duration)
 
 
@@ -398,12 +430,13 @@ class ForgeBar extends PanelContainer:
 			_dots += delta * 4.0
 			_title.text = "Forge en cours" + ".".repeat(int(_dots) % 4)
 
-	func verdict(ok: bool, text: String) -> void:
+	## [param soft] : un échec de la Forge qui remplit la persévérance (lagon : il avance, il ne punit pas).
+	func verdict(ok: bool, text: String, soft := false) -> void:
 		_working = false
 		visible = true
 		_bar.value = 1.0
-		var col := Color(0.35, 0.95, 0.45) if ok else Color(1.0, 0.4, 0.38)
-		_style(Color(0.05, 0.2, 0.08, 0.97) if ok else Color(0.24, 0.05, 0.06, 0.97), col)
+		var col := ForgeWidgets.POMME if ok else (ForgeWidgets.LAGON if soft else ForgeWidgets.FRAISE)
+		_style(Color(0.05, 0.2, 0.08, 0.97) if ok else (Color(0.03, 0.14, 0.24, 0.97) if soft else Color(0.24, 0.05, 0.06, 0.97)), col)
 		_title.text = "RÉUSSI" if ok else "RATÉ"
 		_title.add_theme_color_override("font_color", col)
 		_bar.add_theme_stylebox_override("fill", UiTheme.flat_box(col.darkened(0.25), col, 1, 5, false))

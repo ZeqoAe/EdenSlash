@@ -11,8 +11,8 @@ extends RefCounted
 ##   et pierres rares ;
 ## - Siège : formules d'enchantement hautes (niveau 1-9 selon le niveau du siège) ;
 ## - Tour : cristaux et gemmes (un coffre de gemmes tous les 10 étages montés, un coffre de forge tous les 50).
-## Cible de la Forge : un clear Mythique ≈ 170 à 270 cristaux ; une pièce niveau 85 à +10 ≈ 750 cristaux
-## (`Forge.upgrade_crystals`), soit 4 à 5 clears.
+## Cible de la Forge : un clear Mythique ≈ 170 à 270 cristaux ; une pièce niveau 85 à +10 ≈ 870 cristaux si tout
+## réussit (`Forge.upgrade_crystals`), ≈ 1 600 en moyenne avec les échecs (lot GX-2, `Craft.plan_upgrade`).
 
 ## Cristaux d'un donjon terminé (Normal, Héroïque, Mythique).
 const DUNGEON_CRYSTALS := [30, 90, 170]

@@ -41,7 +41,7 @@ func _test_costs() -> void:
 	var normal := ActivityLoot.dungeon_crystals(0)
 	check("un donjon Normal paie un petit +N (au moins +3) sur une pièce niveau 30", Forge.upgrade_crystals(30, 0, 3) <= normal)
 	check("mais pas un +10", Forge.upgrade_crystals(30, 0, 10) > normal * 5)
-	check("hors run, 1 cristal pour 125 or", Forge.price(1250) == {"crystal": 10})
+	check("hors run, 1 cristal pour %d or (lot GX-2 : 108)" % Forge.GOLD_PER_CRYSTAL, Forge.price(Forge.GOLD_PER_CRYSTAL * 10) == {"crystal": 10})
 
 
 func _levels_of(chests: Array) -> Array:

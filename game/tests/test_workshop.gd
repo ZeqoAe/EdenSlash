@@ -58,6 +58,7 @@ func _test_armory() -> void:
 	Profile.equipped = {}
 	Profile.add_item(GearShopPage.make(GameData.eden_by_id[int(legs[0].id)]))  # déjà achetée
 	var page := GearShopPage.new()
+	page.view = "catalog"  # le catalogue filtrable (la vue par paliers du lot GX-2 est testée par test_gx2)
 	add_child(page)
 	await get_tree().process_frame
 	page.refresh()
@@ -182,7 +183,7 @@ func _test_fabrication() -> void:
 	page.refresh()
 	await get_tree().process_frame
 	var b2 := _button_with(page, "Fabriquer")
-	check("fabrication : trop peu d'insignes : bouton grisé, ce qui manque dit", b2 != null and b2.disabled and _label_with(page, "il te manque 5 insignes") != null)
+	check("fabrication : trop peu d'insignes : bouton grisé, ce qui manque dit", b2 != null and b2.disabled and _label_with(page, "Il te manque 5 insignes") != null)
 	check("fabrication : accord de « insigne »", FabricationPage.insignia_text(1) == "1 insigne" and FabricationPage.insignia_text(2) == "2 insignes")
 	page.queue_free()
 	await get_tree().process_frame
@@ -209,14 +210,14 @@ func _test_forge() -> void:
 	check("forge : avant → après (amélioration +2 → +3)", fb.detail.text.contains("+2") and fb.detail.text.contains("+3") and fb.detail.text.contains("→"))
 	check("forge : quatre stats au plus dans le tableau", fb.detail.text.count("→") <= ForgeBench.MAIN_STATS + 2)
 	check("forge : le coût en cristaux est visible (tu en as 500)", fb.detail.text.contains("Coût") and fb.detail.text.contains("crist") and fb.detail.text.contains("tu en as 500"))
-	var up := _button_with(fb, "Fortifier")
+	var up := _button_with(fb, "Fortifier ·")
 	check("forge : le bouton d'action est rangé en bas (zone épinglée)", up != null and up.get_parent() == fb._pinned)
 	check("forge : le prix est en mots", up != null and up.text.contains("crist") and not up.text.contains("crist."))
 	# pas assez de cristaux : le coût passe en rouge et le bouton se grise
 	Profile.materials["crystal"] = 0
 	fb._on_selection()
 	await get_tree().process_frame
-	var up0 := _button_with(fb, "Fortifier")
+	var up0 := _button_with(fb, "Fortifier ·")
 	check("forge : sans cristaux, le coût est en rouge et l'action grisée", fb.detail.text.contains("#ff7a7a") and up0 != null and up0.disabled)
 	Profile.materials["crystal"] = 500
 	# établis : chacun parle de ce qu'il fait

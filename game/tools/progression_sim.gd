@@ -19,6 +19,7 @@ extends Node
 ##   --bossplans  coffre de plans du boss de chaque carte finie (lot A4) : la meilleure (sur sa valeur) de 3 pièces non
 ##               découvertes du palier (SlotChests.plan_candidates) ; tout découvert : Run.PLAN_INSIGNIA insignes.
 ## Jalons : kit80_ok (9 pièces ≥ 78, légendaires, +5), kit90_ok (≥ 86), kit90_opti (≥ 86, +10, gemmes ≥ 4, ench. ≥ 7),
+## kit80_p8 / kit80_p10 (lot GX-2 : le rythme de la Forge, 9 pièces ≥ 78 à +8 / +10),
 ## dungeon_0 (1er donjon Normal). Colonne H : -- --refonte --hubvalue --decote --mult=0.85,1.3,2.3,4.4 (12 comptes, 50 h ≈ 10 min).
 ##
 ## Lot H7 (niveau de héros, conception/progression/NIVEAU_HEROS.md §1.3, §1.4, §5 ; rapport R_H7.md) : modèle du jeu À VENIR
@@ -106,7 +107,7 @@ const ZONE_PLAN_CHANCE := 0.1
 ## Décote de palier : plancher du facteur (une pièce très sous le palier compte au moins pour la moitié de son niveau).
 const DECOTE_FLOOR := 0.5
 ## Jalons d'équipement : [clé, niveau d'Eden minimal des 9 pièces, +N minimal, rang des 2 gemmes (-1 : sans), enchantement].
-const KIT_GOALS := [["kit80_ok", 78, 5, -1, 0], ["kit90_ok", 86, 5, -1, 0], ["kit90_opti", 86, 10, 4, 7]]
+const KIT_GOALS := [["kit80_ok", 78, 5, -1, 0], ["kit90_ok", 86, 5, -1, 0], ["kit90_opti", 86, 10, 4, 7], ["kit80_p8", 78, 8, -1, 0], ["kit80_p10", 78, 10, -1, 0]]
 const GEAR_SLOTS := ["weapon", "chest", "legs", "head", "gloves", "boots", "back", "necklace", "ring"]
 
 ## Lot H7 : niveau de héros (voir l'en-tête ; valeurs de NIVEAU_HEROS.md §1.3-§1.4).
@@ -810,13 +811,13 @@ func workshop(acc: Dictionary) -> void:
 			if not blessed and int(acc.crystals) < cost:
 				break
 			var stone := ""
-			if int(it.upgrade) + 1 >= Craft.DOWNGRADE_FROM:
+			# lot GX-2 : plus de rétrogradation, le joueur n'attend plus de pierre (la persévérance de la pièce, item.pity,
+			# finit toujours le cran) ; il pose une pierre de chance quand il en a une
+			if Craft.base_chance(it) < 1.0:
 				for s in ["stone:sublime", "stone:citrine", "stone:ultramarine", "stone:coral", "stone:viridian", "stone:lucky", "stone:safety"]:
 					if int(acc.bag.get(s, 0)) > 0 and Craft.stone_usable(it, s):
 						stone = s
 						break
-				if stone == "" and not blessed:
-					break  # le joueur moyen ne risque pas de redescendre : il attend une pierre
 			if blessed:
 				_add_bag(acc, Craft.BLESSED, -1)
 				Craft.upgrade(it, stone, Craft.BLESSED)
@@ -1047,7 +1048,7 @@ func print_report(res: Dictionary, skill: String) -> void:
 			", plafond d'époque" if epochcap else "", ", synchronisé" if sync else ""])
 	var keys := ["epoch_1", "epoch_2", "epoch_3", "epoch_4", "dungeon_1", "dungeon_2", "kit_1", "kit_2", "kit_3", "kit_4",
 			"open_dungeon_1", "open_dungeon_1_all", "open_dungeon_2", "open_dungeon_2_all", "open_siege_1", "open_siege_2",
-			"open_rush_1", "open_rush_2", "legend_60", "legend_90", "dungeon_0", "kit80_ok", "kit90_ok", "kit90_opti"]
+			"open_rush_1", "open_rush_2", "legend_60", "legend_90", "dungeon_0", "kit80_ok", "kit90_ok", "kit90_opti", "kit80_p8", "kit80_p10"]
 	if heros:
 		for lv in HERO_MARKS:
 			keys.append("hero%d" % lv)
