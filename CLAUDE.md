@@ -332,6 +332,12 @@ du Tireur `AssaultVision.reveal`, `arm_rival`, `set_role`, `sheet`) branché dan
 (`stun`, `recalc_stats`, `_heal_action`, `skill_radius`), `ClassRival` (soins, `applies` des sorts), `Telegraph._apply_effects`, `Monster` (ralenti) ; règles chiffrées dans
 `Assault.RULES` (échelle 0,6, coup 30 %, rafale 45 % + 5 %, acharnement dès 12 s) ; sonde `godot --headless --fixed-fps 60 --path game res://tools/assault_duel_probe.tscn
 [-- --duels=60 --focus=25 --diff=1 --same-role --scale= --hit= --burst= --basic= --press=]` ; `tools/assault_games.py` lit aussi la ligne `[assault] mesure` (rôles, temps de survie) ; test `test_tac4`.
+Économie et achat (TAC-5, `R_TAC_5.md`) : `core/assault_items.gd` (`AssaultItems` : 26 objets + sorts 2 et 3 du kit, prix, limites du paquetage, inventaire de manche gardé
+si l'on survit, `buy` / `sell` (revente au prix payé pendant la phase) / `sell_all` / `rebuy` / `advised`, plan d'équipe `team_plan` full / eco / force, `ai_buy`) ; `world/assault_gadgets.gd`
+(`AssaultGadgets.use` / `drink` : brume, éclat, feu, bombe, chouette, clochette, piège, barricade, leurre, silence ; fioles) ; écran `ui/assault_shop.gd` (`AssaultShop`, « tab_screens »,
+onglets LB / RB ou Q / E, clic / A acheter, clic droit / X revendre, [T] conseillé, [R] racheter, [B] fermer / rouvrir, cartes qui défilent en 1280 × 720) ; directeur : `shop_*`,
+`_buy_phase_start`, `_apply_kit` (dégâts d'arme, bouclier `assault_shield` absorbé par `AssaultCombat.absorb`, outils), `owned_slots` (sorts achetés, ultime à 7 points `ult_pts`),
+`can_cast` / `on_cast` (`Player.use_skill`), `_round_inventory` (qui tombe perd tout), touches [C] fiole, [V] / [X] utilitaires ; objets des IA `_ai_items` ; captures `tests/shot_tac5.tscn` ; test `test_tac5`.
 
 ### Classes maison (lot CHR-1, `conception/art/R_CHR1.md`, limites : `conception/art/CHR.md`)
 `data/classes_custom.json` -> `GameData.custom_classes` (à part : `GameData.classes` reste les 60 d'Eden, aucun tirage des modes à IA,

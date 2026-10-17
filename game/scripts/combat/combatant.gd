@@ -77,6 +77,8 @@ const STATUS_INFO := {
 	"imm_root": {"name": "Insensible à l'immobilisation", "color": Color(0.8, 0.85, 1.0)},
 	"imm_disarm": {"name": "Insensible au désarmement", "color": Color(0.8, 0.85, 1.0)},
 	"imm_cc": {"name": "Insensible aux contrôles", "color": Color(0.8, 0.85, 1.0)},  # (L'Assaut, lot TAC-4 : insensibilité commune)
+	"blind": {"name": "Ébloui", "color": Color(1.0, 1.0, 0.9)},  # (L'Assaut, lot TAC-5 : Éclat aveuglant)
+	"bitter": {"name": "Enduit amer", "color": Color(0.75, 0.6, 0.35)},  # (L'Assaut, lot TAC-5 : soins reçus gâchés)
 	# bonus d'attribut au lancement des sorts (cartes d'amélioration)
 	"spell_str": {"name": "Force du sort", "color": Color(1.0, 0.65, 0.45)},
 	"spell_agi": {"name": "Agilité du sort", "color": Color(0.6, 1.0, 0.8)},
@@ -435,7 +437,7 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 		dmg = ColiseeAugments.absorb(self, source, dmg, dot)  # (Le Colisée, lot CO-E) boucliers, Deuxième souffle, dégâts vrais
 		if dmg <= 0.0:
 			return
-	hp = maxf(0.0, hp - dmg)
+	hp = maxf(0.0, hp - (AssaultCombat.absorb(self, dmg) if AssaultCombat.on() else dmg))  # (L'Assaut, lot TAC-5) bouclier d'abord
 	# entraînement : héros invincible, ennemis invincibles ou mannequin (les dégâts s'affichent)
 	if immortal or (Training.active and (Training.hero_god if team == Team.PLAYER else Training.enemies_immortal)):
 		hp = max_hp

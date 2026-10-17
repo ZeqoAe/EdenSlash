@@ -115,6 +115,22 @@ def main() -> int:
         for k, e in sorted(roles.items()):
             n = max(1, e["n"])
             print("   %-10s %4.1f / %4.1f  (%.2f)" % (k, e["kills"] / n, e["deaths"] / n, e["kills"] / max(1, e["deaths"])))
+    # plans d'achat (lot TAC-5) : part de chaque plan, victoire de l'équipe selon son plan
+    plans, pw = {}, {}
+    for r in res:
+        m = r.get("measure") or {}
+        hist = m.get("history", [])
+        for i, p in enumerate(m.get("plans", [])):
+            for t in (0, 1):
+                plans[p[2 + t]] = plans.get(p[2 + t], 0) + 1
+                if i < len(hist):
+                    e = pw.setdefault(p[2 + t], [0, 0])
+                    e[1] += 1
+                    e[0] += 1 if int(hist[i][1]) == t else 0
+    if plans:
+        tot = sum(plans.values())
+        print("plans d'achat : " + ", ".join("%s %.0f %% (gagne %d / %d)" % (k, 100.0 * v / tot, pw.get(k, [0, 0])[0], pw.get(k, [0, 0])[1])
+                                              for k, v in sorted(plans.items())))
     if surv:
         surv.sort()
         print("temps de survie d'un héros tombé (premier coup à pleine vie -> chute) : médiane %.1f s, 10e %.1f s, plus court %.2f s, "

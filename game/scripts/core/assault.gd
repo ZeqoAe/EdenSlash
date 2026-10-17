@@ -56,6 +56,8 @@ const RULES := {
 	"reveal_time": 1.5,
 	# effets des objets (lot TAC-5) lus par AssaultCombat : Enduit amer (soins reçus −), Fiole de garde (dégâts subis −)
 	"bitter_cut": 0.4, "guard_cut": 0.25,
+	# ultime (lot TAC-5) : points pour le lancer (élimination, chute, pose, désamorçage : un chacun)
+	"ult_points": 7,
 }
 ## Formats : options de partie qui remplacent les règles (Éclair : premier à 4, 7 manches, mi-temps après 3, la 7e décide).
 const FORMATS := {

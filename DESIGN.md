@@ -1400,6 +1400,14 @@ empêche ou la désamorce ; une vie par manche, or entre les manches. Ce qui est
   même pris à trois ; contrôles deux fois plus courts et plafonnés, puis insensible à tout contrôle dur un moment ; invisibilité
   brève, brisée par un coup, interdite à qui porte, pose ou désamorce la Charge ; boucliers moins forts ; soins limités à un peu
   plus de la moitié de la vie par manche ; les coups de très loin portent moins.
+- **Achat** (lot TAC-5) : 20 s au début de chaque manche, le monde reste visible. Le sort 1 est gratuit ; les sorts 2 et 3 de
+  ta classe s'achètent (200 à 350 selon leur nature) ; l'ultime se charge en jouant (7 points : élimination, chute, pose,
+  désamorçage). Arme affûtée ou de maître, arme d'appoint, enduit amer ; gilet ou cuirasse (un bouclier qui encaisse avant
+  la vie, réparable) ; 10 utilitaires (2 sortes, 4 charges, 2 du même au plus : brume, éclat aveuglant, pot de feu, bombe
+  d'éclats, œil de chouette, clochette, piège, barricade de glace, leurre, poudre de silence) ; une fiole (soin, hâte, garde,
+  clarté) ; un outil (Pinces en Défense, Gants en Attaque, Talisman, Bottes feutrées). Ce qu'on achète se revend au même prix
+  pendant la phase ; on le garde si l'on survit, on perd tout en tombant. « Achat conseillé », « Racheter », et la colonne de
+  l'équipe : le plan des alliés (achat complet, on économise, on force) et ce qui leur manque.
 
 # Partie D — Économie et progression
 

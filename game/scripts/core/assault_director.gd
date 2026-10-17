@@ -101,6 +101,7 @@ func setup(director: RunDirector) -> void:
 		if spec.has(k):
 			o[k] = spec[k]
 	Assault.begin(keys, o)
+	AssaultItems.reset_all(Assault.members[0] + Assault.members[1])  # (lot TAC-5) paquetages de la partie
 	d.zone_changed.emit({"name": TeamMatch.title(), "levels": [int(Assault.num("level")), int(Assault.num("level"))]})
 	_start_round()
 
@@ -312,6 +313,7 @@ func _start_round() -> void:
 	if _verbose():
 		print("[assault] manche %d : équipe 0 en %s, site visé %s, or moyen %d / %d" % [Assault.round_n, side.to_lower(),
 			target_site, _avg_gold(0), _avg_gold(1)])
+	_buy_phase_start()  # (lot TAC-5) plans d'équipe, achats des IA, écran d'achat
 
 
 func _avg_gold(t: int) -> int:
@@ -356,6 +358,8 @@ func _first_alive(t: int) -> Combatant:
 func _on_damaged(amount: float, src: Combatant, victim: Combatant) -> void:
 	var vk := key_of(victim)
 	var sk := key_of(src)
+	if vk != "" and (victim.hp + amount >= victim.max_hp * 0.98 or not _hurt_t0.has(vk)):
+		_hurt_t0[vk] = TeamMatch.elapsed  # (lots TAC-4 / TAC-5) premier coup reçu à pleine vie, objets compris : début du temps de survie
 	if vk == "" or sk == "" or vk == sk:
 		return
 	if Assault.team_of(vk) == Assault.team_of(sk):
@@ -363,8 +367,6 @@ func _on_damaged(amount: float, src: Combatant, victim: Combatant) -> void:
 	if not _dmg.has(vk):
 		_dmg[vk] = {}
 	_dmg[vk][sk] = float(_dmg[vk].get(sk, 0.0)) + amount
-	if victim.hp + amount >= victim.max_hp * 0.98 or not _hurt_t0.has(vk):
-		_hurt_t0[vk] = TeamMatch.elapsed  # (lot TAC-4) premier coup reçu à pleine vie : début du temps de survie
 	if src != null and is_instance_valid(src):
 		PvpCaps.board_add(src, "dealt", amount)
 
@@ -384,6 +386,9 @@ func _ko(vk: String, killer: Combatant) -> void:
 	for a in _dmg.get(vk, {}):
 		if a != kk and float(_dmg[vk][a]) >= cap:
 			assists.append(a)
+	_add_ult(vk)  # (lot TAC-5) points d'ultime : la chute et l'élimination
+	if kk != "":
+		_add_ult(kk)
 	if v != null:
 		TeamMatch.note_ko(v, killer)
 		if _hurt_t0.has(vk) and kk != "":
@@ -421,6 +426,7 @@ func update(delta: float) -> void:
 	_handle(Assault.tick(delta))
 	if _ended:
 		return
+	_items_tick(delta)
 	_update_charge(delta)
 	if Assault.phase in ["live", "planted"]:
 		_agent_t -= delta
@@ -484,6 +490,9 @@ func _handle(ev: Array) -> void:
 					if h is ClassRival:
 						(h as ClassRival).passive = false
 				TeamMatch.set_phase("fight")
+				_close_shop()  # (lot TAC-5) la manche commence : l'écran d'achat se ferme, le paquetage s'applique
+				for k in heroes:
+					_apply_kit(String(k))
 				d.message.emit("C'est parti !", 1.2)
 				UiFeel.cue("ui_go", -8.0)
 			"planted":
@@ -507,6 +516,7 @@ func _handle(ev: Array) -> void:
 
 func _end_round(e: Dictionary) -> void:
 	var w := int(e.winner)
+	_round_inventory()  # (lot TAC-5) qui tombe perd son paquetage
 	for k in heroes:
 		var h := hero(String(k))
 		if h is ClassRival:
@@ -591,6 +601,8 @@ func _agent(key: String) -> void:
 	if r == null or r.is_dead:
 		return
 	var t := Assault.team_of(key)
+	_ai_ult_check(r, key)  # (lot TAC-5) ultime parti, objets
+	_ai_items(r, key)
 	if engaged_foe(r) != null and key != plant_by and key != defuse_by:
 		r.goal = Vector3.INF
 		return
@@ -683,6 +695,7 @@ func _progress_plant(c: Combatant, delta: float) -> void:
 		plant_by = ""
 		plant_t = 0.0
 		carrier = ""
+		_add_ult(key_of(c))  # (lot TAC-5) un point d'ultime à la pose
 		_handle(Assault.plant(s, key_of(c)))
 
 
@@ -723,6 +736,7 @@ func _progress_defuse(c: Combatant, delta: float) -> void:
 		var k := key_of(c)
 		_stop_defuse()
 		_fuse_at_defuse = Assault.t  # (« Ouf ! » à moins d'une seconde)
+		_add_ult(k)  # (lot TAC-5) un point d'ultime au désamorçage
 		_handle(Assault.defuse(k))
 
 
@@ -839,10 +853,15 @@ func role_of(key: String) -> String:
 	return AssaultCombat.role_of_class(String(classes.get(key, "")))
 
 
-## Cases du kit que [param key] possède cette manche (0 signature, 1 et 2 achetées, 3 ultime) : lot TAC-4, les trois
-## premières (achat complet) ; lot TAC-5 : selon ses achats et ses points d'ultime.
-func owned_slots(_key: String) -> Array:
-	return [0, 1, 2]
+## Cases du kit que [param key] possède cette manche (0 signature, 1 et 2 achetées, 3 ultime) : la signature, les sorts
+## achetés (AssaultItems) et l'ultime à 7 points (lot TAC-5).
+func owned_slots(key: String) -> Array:
+	var out: Array = [0]
+	for s in AssaultItems.inv(key).spells:
+		out.append(int(s))
+	if ult_points(key) >= int(Assault.num("ult_points")):
+		out.append(3)
+	return out
 
 
 ## Score de porteur : pas le premier de l'équipe (il ouvre), puis le rôle tactique (role_of), puis l'ordre.
@@ -1004,6 +1023,392 @@ func _explode() -> void:
 		h.take_damage(h.max_hp * 50.0, null, false, true)
 
 
+# --- achats, objets et ultime (lot TAC-5) ----------------------------------------------------------
+
+## Chaque image : fioles de soin en cours ; pendant l'achat, [B] (ou la croix à gauche) rouvre l'écran ; en manche, les
+## touches d'objets du joueur.
+func _items_tick(delta: float) -> void:
+	for k in heroes:
+		var h := hero(String(k))
+		if h != null:
+			AssaultGadgets.tick_potion(h, delta)
+	if player_key == "" or d.player.is_dead:
+		return
+	if Assault.phase == "buy":
+		var b := Input.is_physical_key_pressed(KEY_B) or Input.is_action_pressed("objectives")
+		if b and not _shop_key_was and (not is_instance_valid(shop) or not shop.visible):
+			_open_shop()
+		_shop_key_was = b
+		_set_prompt("" if is_instance_valid(shop) and shop.visible else "[B] Achat · %d s" % int(maxf(Assault.t, 0.0)))
+	elif Assault.phase in ["live", "planted"]:
+		_player_items()
+
+
+
+## Points d'ultime de chaque héros (toute la partie) : élimination, chute, pose, désamorçage (+1 chacun, 7 au plus).
+var ult_pts: Dictionary = {}
+var shop: AssaultShop
+var _shop_layer: CanvasLayer
+var _deny_ms := 0
+var _shop_key_was := false
+var _round_gold: Dictionary = {}
+## Plans d'achat de chaque manche (mesures) : [manche, équipe qui attaque, plan 0, plan 1, or moyen 0, or moyen 1].
+var plan_log: Array = []
+
+
+func ult_points(key: String) -> int:
+	return int(ult_pts.get(key, 0))
+
+
+func _add_ult(key: String, n := 1) -> void:
+	if key == "" or Assault.team_of(key) < 0:
+		return
+	var cap := int(Assault.num("ult_points"))
+	var before := ult_points(key)
+	ult_pts[key] = mini(before + n, cap)
+	if before < cap and ult_points(key) >= cap:
+		if key == player_key:
+			d.message.emit("Ultime prêt !", 1.5)
+			UiFeel.cue("ui_star", -8.0)
+		elif Assault.phase in ["live", "planted"] and hero(key) is ClassRival:
+			_arm(key)
+
+
+## Contexte d'achat de [param key] (AssaultItems) : classe, rôle, côté.
+func shop_ctx(key: String) -> Dictionary:
+	return {"cid": String(classes.get(key, "")), "role": role_of(key),
+		"side": "attack" if Assault.team_of(key) == Assault.attack else "defense"}
+
+
+## Multiplicateur d'outil (Gants de sapeur pour la pose, Pinces d'acier pour le désamorçage).
+func tool_mult(key: String, what: String) -> float:
+	var t := String(AssaultItems.inv(key).tool)
+	if what == "plant" and t == "gants":
+		return AssaultItems.TOOL_PLANT
+	if what == "defuse" and t == "pinces":
+		return AssaultItems.TOOL_DEFUSE
+	return 1.0
+
+
+## Le joueur peut-il lancer le sort de la case [param slot] ? (Player.use_skill par AssaultCombat.can_cast) Pas pendant
+## l'achat ; cases 2 et 3 achetées ; ultime à 7 points.
+func can_cast(p: Player, slot: int) -> bool:
+	if Assault.phase == "buy":
+		return false
+	var key := key_of(p)
+	if key == "" or slot in owned_slots(key):
+		return true
+	if Time.get_ticks_msec() - _deny_ms > 800:
+		_deny_ms = Time.get_ticks_msec()
+		var txt := "ULTIME %d / %d" % [ult_points(key), int(Assault.num("ult_points"))] if slot == 3 else "À ACHETER"
+		DamageNumber.spawn_text(p, txt, UiTheme.color("bonbon.fraise.base"))
+		UiFeel.cue("ui_deny", -10.0)
+	return false
+
+
+## Sort lancé par le joueur : l'ultime consomme ses points.
+func on_cast(p: Player, slot: int) -> void:
+	if slot == 3:
+		ult_pts[key_of(p)] = 0
+
+
+## Héros scripté [param key] armé de ses cases possédées (kit, rôle) ; l'ultime prêt peut partir tout de suite.
+func _arm(key: String) -> void:
+	var r := hero(key) as ClassRival
+	if r == null:
+		return
+	var cid := String(classes.get(key, ""))
+	AssaultCombat.arm_rival(r, cid, owned_slots(key))
+	r._skill_ready.erase(AssaultCombat.ult_id(cid))
+
+
+## Effets du paquetage de [param key] sur son héros : arme (dégâts), bouclier (armure), outil (Talisman, Bottes), enduit ;
+## pour un scripté, ses cases de sorts.
+func _apply_kit(key: String) -> void:
+	var h := hero(key)
+	if h == null:
+		return
+	var v := AssaultItems.inv(key)
+	var dmg := float(AssaultItems.LIST.get(String(v.weapon), {}).get("dmg", 1.0))
+	h.set_meta("assault_tenacity_item", AssaultItems.TALISMAN if String(v.tool) == "talisman" else 0.0)
+	h.set_meta("assault_quiet", Player.BASE_SPEED * AssaultItems.QUIET_SPEED if String(v.tool) == "bottes" else AssaultVision.RUN_SPEED)
+	h.set_meta("assault_coat", int(v.coat))
+	if h is ClassRival:
+		var r := h as ClassRival
+		if not r.has_meta("assault_base_atk"):
+			r.set_meta("assault_base_atk", r.atk)
+		r.atk = float(r.get_meta("assault_base_atk")) * dmg
+		_arm(key)
+	elif h is Player:
+		h.set_meta("assault_dmg_mult", dmg)
+		if bool(v.weapon2):
+			if (Profile.equipped.get("offhand", {}) as Dictionary).is_empty():
+				Profile.equipped["offhand"] = _offhand_for(String(classes.get(key, "")))  # Arme d'appoint : [Changer d'arme]
+		elif Profile.equipped.has("offhand"):
+			Profile.equipped.erase("offhand")
+			(h as Player).hand_off = false
+		(h as Player).recalc_stats()
+	h.set_meta("assault_shield", float(v.shield) * h.max_hp)
+
+
+## Début de la phase d'achat : paquetages remis à zéro à la mi-temps et en prolongation, plans d'équipe, achats des IA,
+## écran d'achat du joueur (au pilote : l'achat conseillé).
+func _buy_phase_start() -> void:
+	var keys: Array = Assault.members[0] + Assault.members[1]
+	var half := int(Assault.num("half"))
+	if Assault.round_n == half + 1 or (Assault.in_overtime() and Assault.ot_rounds == 1):
+		AssaultItems.reset_all(keys)
+	for k in keys:
+		AssaultItems.new_phase(String(k))
+		_round_gold[String(k)] = Assault.gold(String(k))
+	for t in 2:
+		AssaultItems.plans[t] = AssaultItems.team_plan(t)
+	plan_log.append([Assault.round_n, Assault.attack, AssaultItems.plans[0], AssaultItems.plans[1], _avg_gold(0), _avg_gold(1)])
+	for k in keys:
+		if String(k) != player_key:
+			AssaultItems.ai_buy(String(k), AssaultItems.plans[Assault.team_of(String(k))], shop_ctx(String(k)))
+		_apply_kit(String(k))
+	if player_key != "":
+		if d.player.autoplay:
+			shop_advised()
+		else:
+			_open_shop()
+	if _verbose():
+		print("[assault] achats : plans %s / %s, or après achats %d / %d" % [AssaultItems.plans[0], AssaultItems.plans[1],
+			_avg_gold(0), _avg_gold(1)])
+
+
+func _open_shop() -> void:
+	if player_key == "" or watch:
+		return
+	if _shop_layer == null:
+		_shop_layer = CanvasLayer.new()
+		_shop_layer.name = "AssaultShopLayer"
+		_shop_layer.layer = 30
+		d.add_child(_shop_layer)
+	if is_instance_valid(shop):
+		shop.open()
+		return
+	shop = AssaultShop.new()
+	_shop_layer.add_child(shop)
+	shop.setup(self, player_key)
+
+
+func _close_shop() -> void:
+	if is_instance_valid(shop):
+		shop.queue_free()
+	shop = null
+
+
+## Fin de manche : un héros tombé (ou emporté par l'explosion) perd son paquetage ; un survivant garde le reste de son bouclier.
+func _round_inventory() -> void:
+	for k in heroes.keys():
+		var key := String(k)
+		var h := hero(key)
+		if not bool(Assault.alive.get(key, false)) or key in blasted or h == null or h.is_dead:
+			AssaultItems.lose(key)
+			continue
+		var v := AssaultItems.inv(key)
+		if String(v.armor) != "":
+			v.shield = clampf(float(h.get_meta("assault_shield", 0.0)) / maxf(h.max_hp, 1.0), 0.0, 1.0)
+		v.coat = int(h.get_meta("assault_coat", 0))
+
+
+## Arme d'appoint (lot TAC-5) : une arme commune d'un autre type que celle de la classe, au niveau de la fiche (système des
+## deux armes, Player.swap_weapon) ; elle ne vit que le temps de la partie (Profile.equipped est la copie de la run).
+func _offhand_for(cid: String) -> Dictionary:
+	var own := String(GameData.class_data(cid).get("weapon_type", ""))
+	var types: Array = SlotChests.weapon_types().filter(func(w): return String(w) != own)
+	if types.is_empty():
+		return {}
+	var wt := String(types[rng.randi() % types.size()])
+	return Items.generate(int(Assault.num("level")), 0.0, "weapon", cid, 0, wt, 0)
+
+
+# API de l'écran d'achat (AssaultShop) : toujours pour le joueur.
+
+func shop_buy(id: String) -> bool:
+	var ok := AssaultItems.buy(player_key, id, shop_ctx(player_key))
+	if ok:
+		_apply_kit(player_key)
+	return ok
+
+
+func shop_sell(id: String) -> bool:
+	var ok := AssaultItems.sell(player_key, id)
+	if ok:
+		_apply_kit(player_key)
+	return ok
+
+
+func shop_sell_all() -> int:
+	var n := AssaultItems.sell_all(player_key)
+	_apply_kit(player_key)
+	return n
+
+
+func shop_rebuy() -> Array:
+	var got := AssaultItems.rebuy(player_key, shop_ctx(player_key))
+	_apply_kit(player_key)
+	return got
+
+
+func shop_advised() -> Array:
+	var out: Array = []
+	for id in AssaultItems.advised(player_key, shop_ctx(player_key)):
+		if AssaultItems.buy(player_key, String(id), shop_ctx(player_key)):
+			out.append(id)
+	_apply_kit(player_key)
+	return out
+
+
+## Lignes de la colonne « L'équipe » : nom, classe, rôle, or, état (« ✔ prêt » ou ce qui manque).
+func team_rows(t: int) -> Array:
+	var out: Array = []
+	for k in Assault.members[t]:
+		var key := String(k)
+		var cid := String(classes.get(key, ""))
+		var nm := "Toi" if key == player_key else String(GameData.class_data(cid).get("name_fr", cid))
+		if key == player_key:
+			nm += " · " + String(GameData.class_data(cid).get("name_fr", cid))
+		var miss := AssaultItems.missing_for_full(key) if (AssaultItems.inv(key).now as Array).is_empty() else 0
+		var status := "en cours" if key == player_key else ("✔ prêt" if miss == 0 or AssaultItems.plans[t] == "eco" else "Il lui manque %d" % miss)
+		out.append({"key": key, "name": nm, "role": role_of(key), "gold": Assault.gold(key), "status": status})
+	return out
+
+
+# Utilitaires et fioles en manche.
+
+## Utilitaire n° [param i] (0 ou 1, dans l'ordre d'achat) de [param key] lancé vers [param at].
+func use_util(key: String, i: int, at: Vector3) -> bool:
+	var v := AssaultItems.inv(key)
+	var ids: Array = (v.utils as Dictionary).keys().filter(func(u): return int(v.utils[u]) > 0)
+	if i >= ids.size():
+		return false
+	return _use_util_id(key, String(ids[i]), at)
+
+
+func _use_util_id(key: String, id: String, at: Vector3) -> bool:
+	var v := AssaultItems.inv(key)
+	if int(v.utils.get(id, 0)) <= 0:
+		return false
+	if not AssaultGadgets.use(self, hero(key), id, at):
+		return false
+	v.utils[id] = int(v.utils[id]) - 1
+	if int(v.utils[id]) <= 0:
+		(v.utils as Dictionary).erase(id)
+	if _verbose():
+		print("[assault] %s lance %s" % [key, id])
+	return true
+
+
+func use_fiole(key: String) -> bool:
+	var v := AssaultItems.inv(key)
+	if String(v.fiole) == "" or not AssaultGadgets.drink(self, hero(key), String(v.fiole)):
+		return false
+	v.fiole = ""
+	return true
+
+
+## Touches du joueur en manche : [C] fiole, [V] utilitaire 1, [X] utilitaire 2 (vers le point visé).
+func _player_items() -> void:
+	var p := d.player
+	if p.autoplay or p.is_dead:
+		return
+	var aim := p._skill_aim()
+	if aim == Vector3.INF:
+		aim = p.global_position + p.forward() * 8.0
+	if Input.is_action_just_pressed("potion_1"):
+		use_fiole(player_key)
+	if Input.is_action_just_pressed("potion_2"):
+		use_util(player_key, 0, aim)
+	if Input.is_action_just_pressed("extract"):
+		use_util(player_key, 1, aim)
+
+
+## Objets d'un héros scripté (règles simples, en attendant le stratège du lot TAC-6) : fiole de soin sous 40 % des PV, de
+## garde en combat sous 60 %, de clarté sous contrôle, de hâte en route ; bombe, feu ou éclat sur l'adversaire combattu
+## (5-14 m) ; brume pour fuir sous 35 % ; chouette près du site visé ; clochette et piège à son poste en Défense.
+func _ai_items(r: ClassRival, key: String) -> void:
+	var v := AssaultItems.inv(key)
+	var f := engaged_foe(r)
+	if String(v.fiole) != "":
+		var drink := false
+		match String(v.fiole):
+			"soin":
+				drink = r.hp < r.max_hp * 0.4 and not r.has_meta("assault_potion")
+			"garde":
+				drink = f != null and r.hp < r.max_hp * 0.6
+			"clarte":
+				drink = _interrupted(r)
+			"hate":
+				drink = f == null and Assault.round_time > 3.0 and Assault.team_of(key) == Assault.attack
+		if drink:
+			use_fiole(key)
+	if (v.utils as Dictionary).is_empty() or float(r.get_meta("assault_util_at", 0.0)) > TeamMatch.elapsed:
+		return
+	for u in (v.utils as Dictionary).keys():
+		var at := Vector3.INF
+		match String(u):
+			"bombe", "feu", "eclat":
+				if f != null and _dist2(r.global_position, f.global_position) >= 4.0 and _dist2(r.global_position, f.global_position) <= 14.0:
+					at = f.global_position
+			"brume", "barricade":
+				if f != null and r.hp < r.max_hp * 0.35:
+					at = r.global_position + (f.global_position - r.global_position).normalized() * 2.5
+			"chouette":
+				if f == null and Assault.team_of(key) == Assault.attack and _dist2(r.global_position, site_pos(target_site)) < 22.0:
+					at = site_pos(target_site)
+			"clochette", "piege":
+				if Assault.team_of(key) == Assault.defense() and Assault.round_time > 2.0 and f == null and r.goal != Vector3.INF \
+						and _dist2(r.global_position, r.goal) < 3.0:
+					at = r.global_position
+			"silence":
+				if f == null and Assault.team_of(key) == Assault.attack and _dist2(r.global_position, site_pos(target_site)) < 25.0:
+					at = r.global_position
+		if at != Vector3.INF and _use_util_id(key, String(u), at):
+			r.set_meta("assault_util_at", TeamMatch.elapsed + 3.0)
+			return
+
+
+## L'ultime d'un scripté est parti : ses points retombent à 0, il est réarmé sans lui.
+func _ai_ult_check(r: ClassRival, key: String) -> void:
+	if not 3 in owned_slots(key):
+		return
+	var uid := AssaultCombat.ult_id(String(classes.get(key, "")))
+	if float(r._skill_ready.get(uid, 0.0)) > r._time:
+		ult_pts[key] = 0
+		_arm(key)
+
+
+## Clochette ou piège déclenché par [param c] (équipe [param t] prévenue, avec le lieu).
+func gadget_alarm(kind: String, c: Combatant, t: int) -> void:
+	if t != TeamMatch.player_team or player_key == "":
+		return
+	var place := ""
+	if map != null and map.has_method("place_name"):
+		place = String(map.call("place_name", c.global_position))
+	d.message.emit(("Alarme" if kind == "clochette" else "Piège") + (" · " + place if place != "" else "") + " !", 1.6)
+
+
+## Le joueur ébloui : voile blanc qui s'efface en 1,2 s.
+func gadget_blind(c: Combatant) -> void:
+	if c != d.player or player_key == "":
+		return
+	var layer := CanvasLayer.new()
+	layer.layer = 25
+	d.add_child(layer)
+	var r := ColorRect.new()
+	r.color = Color(1, 1, 1, 0.92)
+	r.set_anchors_preset(Control.PRESET_FULL_RECT)
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(r)
+	var tw := r.create_tween()
+	tw.tween_interval(0.5)
+	tw.tween_property(r, "color:a", 0.0, 0.7)
+	tw.tween_callback(layer.queue_free)
+
+
 # --- joueur à terre, abandon, fin ------------------------------------------------------------------
 
 ## Le joueur tombe (world.gd) : K.O. compté, la caméra suit un allié debout (spectateur : lot TAC-8).
@@ -1037,6 +1442,7 @@ func _finish(forfeit := false) -> void:
 	if _ended:
 		return
 	_ended = true
+	_close_shop()
 	d.world._ended = true
 	d.world.pause_menu.close()
 	var w := Assault.winner
@@ -1081,7 +1487,8 @@ func measure() -> Dictionary:
 			e[f] = int(e[f]) + int(Assault.stats[k][f])
 		e["n"] = int(e["n"]) + 1
 		roles[r] = e
-	return {"roles": roles, "survival": survival, "history": Assault.history.map(func(h): return [int(h.attack), int(h.winner), String(h.how)])}
+	return {"roles": roles, "survival": survival, "plans": plan_log,
+		"history": Assault.history.map(func(h): return [int(h.attack), int(h.winner), String(h.how)])}
 
 
 ## Médianes et 90e centiles de la mesure d'image (--assault-perf).

@@ -214,6 +214,10 @@ static func on_hit(src: Combatant, dst: Combatant, dot: bool) -> void:
 	if not dot and dst.statuses.has("invisible"):
 		dst.statuses.erase("invisible")
 		dst.statuses_changed.emit()
+	if not dot and src != null and is_instance_valid(src) and src != dst and int(src.get_meta("assault_coat", 0)) > 0:
+		src.set_meta("assault_coat", int(src.get_meta("assault_coat")) - 1)  # (lot TAC-5) Enduit amer : soins de la cible gâchés
+		dst.statuses["bitter"] = dst.clock + 4.0
+		dst.statuses_changed.emit()
 	if src != null and is_instance_valid(src) and role(src) == "tireur" and AssaultVision.active():
 		var t := TeamMatch.team_of(src)
 		if t >= 0:
@@ -244,6 +248,29 @@ static func heal_amount(c: Combatant, amount: float) -> float:
 		eff = room / k
 	c.set_meta("assault_healed", used + eff * k)
 	return eff
+
+
+## Bouclier d'armure (lot TAC-5, Gilet / Cuirasse : méta assault_shield en PV) : il encaisse avant la vie ; rend le reste.
+static func absorb(c: Combatant, dmg: float) -> float:
+	var s := float(c.get_meta("assault_shield", 0.0))
+	if s <= 0.0 or dmg <= 0.0:
+		return dmg
+	var take := minf(s, dmg)
+	c.set_meta("assault_shield", s - take)
+	return dmg - take
+
+
+## Le joueur peut-il lancer la case [param slot] ? (Player.use_skill) Le directeur décide (achats, ultime, phase d'achat).
+static func can_cast(p: Player, slot: int) -> bool:
+	var d = TeamMatch.director
+	return d == null or not is_instance_valid(d) or not d.has_method("can_cast") or bool(d.call("can_cast", p, slot))
+
+
+## Après un sort du joueur (Player.use_skill) : l'ultime consomme ses points.
+static func on_cast(p: Player, slot: int) -> void:
+	var d = TeamMatch.director
+	if d != null and is_instance_valid(d) and d.has_method("on_cast"):
+		d.call("on_cast", p, slot)
 
 
 ## Part du plafond de soins de la manche encore disponible (0-1 : la jauge du HUD, lot TAC-7).

@@ -1746,6 +1746,8 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 	var s := skill_in_slot(slot)
 	if s.is_empty() or cooldown_left(slot) > 0.0:
 		return
+	if AssaultCombat.on() and not foe and not AssaultCombat.can_cast(self, slot):
+		return  # (L'Assaut, lot TAC-5) sort à acheter, ultime pas chargé, ou phase d'achat
 	skill_ready_at[int(s.id)] = _time + skill_cooldown(s)
 	if not foe and bot == null:
 		Tutorial.event("skill")
@@ -1753,6 +1755,8 @@ func use_skill(slot: int, forced_aim := Vector3.INF) -> void:
 			Tutorial.event("chain_open")
 	_cast_skill(s, slot, 0, forced_aim)
 	_chain_open(slot, 0)
+	if AssaultCombat.on() and not foe:
+		AssaultCombat.on_cast(self, slot)  # (L'Assaut, lot TAC-5) l'ultime consomme ses points
 
 
 ## Enchaînements en cours, un par case (indépendants : on peut ouvrir la chaîne de la case 1,
