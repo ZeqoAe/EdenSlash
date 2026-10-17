@@ -251,7 +251,7 @@ func _refresh() -> void:
 		var need := Progression.skill_level_of(_class_id, int(s.id))
 		var locked := not Progression.skill_unlocked(_class_id, int(s.id))
 		if locked:
-			label += "   🔒 maîtrise %d" % need
+			label += "   · maîtrise %d" % need
 		var b := _entry(_skills_grid, String(s.get("icon", "")), label, {"kind": "skill", "data": s})
 		var sd: Dictionary = s
 		b.set_drag_forwarding(func(_at): return _drag_spell(b, sd, Vector2i(-1, -1)), Callable(), Callable())

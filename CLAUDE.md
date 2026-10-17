@@ -328,6 +328,7 @@ captures `tests/shot_hub1.tscn`. `records.news` / `last_activity` = état de men
   `UiTheme.section_header`, `empty_state`, `Loading` ; fond flou `UiTheme.blur_material` / `veil` (pause et écrans à pages en partie,
   choix de carte, confirmations) ; `UiFeel.screen_in` (ouverture), `number` (nombres qui défilent), rangées « row » ; `slide_in` glisse par
   les marges d'ancrage ; raretés des cartes, passifs, coffres et mini-carte = `Items.RARITIES`. Test `test_uik2`, captures `shot_uik2`.
+- **Pictogrammes maison** (ICO-1, `conception/art/R_ICO1.md`) : `ui/ico.gd` (`Ico.tex(id, px)`, `Ico.mark` / `Ico.lock` / `Ico.state`, `Ico.of_boss`) lit `assets/ui/icons/ico_<id>.png` (128 et `_64`), fabriqués par `tools/art/ico_gen.py` (SVG -> moteur ; `ico_defs_*.py`, planche `conception/art/ico/planche.jpg`) : plus d'emoji ni de symbole en texte pour un cadenas, une coche, une étape ; une mécanique de boss = `boss_<brique>` ; un statut sans icône = `st_<effet>` ; test `test_ico1`.
 - Rapports : `R_U1` à `R_U10`, `R_P1`, `R_P3`, `R_P8`.
 
 ### Outils de mesure et de test

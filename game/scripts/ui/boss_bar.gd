@@ -97,7 +97,7 @@ static func tone_of(type: String) -> String:
 
 
 static func icon_of(type: String) -> Texture2D:
-	var own := Ico.tex("boss_" + type, 40)  # un pictogramme par mécanique (lot ICO-1) ; à défaut, l'icône d'état du jeu
+	var own := Ico.of_boss(type)  # un pictogramme par mécanique (lot ICO-1, « boss_hit » si inconnue) ; à défaut, l'icône d'état
 	if own != null:
 		return own
 	return UiTheme.texture("res://assets/ui/status/%s.png" % String(TYPE_ICON.get(type, "fury")))
