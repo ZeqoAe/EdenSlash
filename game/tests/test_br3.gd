@@ -2,7 +2,7 @@ extends Node
 ## Lot BR3 (Battle royale) : règles des coffres (une pièce par emplacement vide, jamais d'arme, pièce de remplacement
 ## seulement nettement meilleure, améliorations du Survivant une fois l'équipement complet), cartes de sorts sans
 ## technique d'arme, héros scriptés (remplissage puis améliorations, jamais de pièce moins bonne), pièces lâchées à la
-## mort (sauf l'arme), ramassage, fiche d'équipement d'un héros tombé et du héros suivi en spectateur.
+## mort (sauf l'arme ; lot BR-I2 : dans une dépouille), ramassage, fiche d'équipement d'un héros tombé et du héros suivi en spectateur.
 ## godot --headless --path game res://tests/test_br3.tscn
 
 var fails := 0
@@ -237,11 +237,11 @@ func _test_world() -> void:
 	await get_tree().physics_frame
 	world.cards._queue.clear()
 	world.cards._show_next()  # (le niveau gagné a ouvert un choix de carte)
-	check("héros éliminé : %d pièces au sol (sauf l'arme)" % (rd.ground.size() - g0), rd.ground.size() - g0 == expect and expect > 0 \
-		and rd.ground.all(func(n): return String(n.get_meta("item").slot) != "weapon"))
 	var rems: Array = d.map.interactables.filter(func(it): return is_instance_valid(it) and it.kind == "remains")
+	check("héros éliminé : ses %d pièces dans sa dépouille (sauf l'arme ; lot BR-I2 : un seul sac)" % expect, rd.ground.size() - g0 == 1 and expect > 0 \
+		and RoyaleLoot.bag_items(rd.ground.back()).size() == expect and RoyaleLoot.bag_items(rd.ground.back()).all(func(it): return String(it.slot) != "weapon"))
 	check("une dépouille garde sa fiche (niveau, classe, pièces)", rems.size() == 1 and rd.fallen.size() == 1 and (rd.fallen[0].gear as Dictionary).size() == gear.size())
-	check("invites : dépouille et pièce au sol", rems.size() == 1 and String(rems[0].prompt()).contains("équipement") and String(rd.ground[0].prompt()).contains("Prendre"))
+	check("invite de la dépouille : la fouiller", rems.size() == 1 and String(rems[0].prompt()).contains("Fouiller"))
 	# fiche d'équipement : ouverte près de la dépouille, jeu en pause, 9 emplacements, B / Échap la ferme
 	rd.interact(rems[0])
 	await get_tree().process_frame
@@ -249,35 +249,36 @@ func _test_world() -> void:
 	check("fiche ouverte, jeu en pause, 9 emplacements", sh != null and sh.is_open() and get_tree().paused and sh.slot_buttons.size() == 9)
 	if sh != null:
 		var any_drop := ""
-		for s in sh.rec.drops:
-			any_drop = String(s)
-		check("fiche : où est chaque pièce (« %s »)" % sh.where(any_drop), any_drop == "" or sh.where(any_drop).begins_with("Au sol"))
+		for it in RoyaleLoot.bag_items(rems[0]):
+			any_drop = String(it.slot)
+		check("fiche : où est chaque pièce (« %s »)" % sh.where(any_drop), any_drop == "" or sh.where(any_drop).begins_with("Dans sa dépouille"))
 		var esc := InputEventAction.new()
 		esc.action = "ui_cancel"
 		esc.pressed = true
 		sh._input(esc)
 		check("Échap ferme la fiche, le jeu reprend", not sh.is_open() and not get_tree().paused)
 		await get_tree().process_frame
-	# le joueur prend une pièce au sol : portée tout de suite, pièce du Survivant
+	# le joueur prend une pièce de la dépouille : portée tout de suite, pièce du Survivant
 	var node: Interactable = rd.ground[0]
-	var it: Dictionary = node.get_meta("item")
-	rd.interact(node)
-	check("pièce ramassée : portée (%s), faite pièce du Survivant" % String(it.slot), is_same(Profile.equipped.get(String(it.slot)), it) and bool(it.get("sv", false)) \
-		and not rd.ground.has(node))
+	var it: Dictionary = RoyaleLoot.bag_items(node)[0]
+	rd._player_take(node, it)
+	check("pièce prise : portée (%s), faite pièce du Survivant" % String(it.slot), is_same(Profile.equipped.get(String(it.slot)), it) and bool(it.get("sv", false)) \
+		and not RoyaleLoot.bag_items(node).any(func(x): return is_same(x, it)))
 	# un héros scripté prend une pièce au sol meilleure que la sienne
 	var taker: ClassRival = rd.ais[2]
 	var tst: Dictionary = taker.get_meta("royale")
 	var target: Interactable = null
 	for n in rd.ground:
-		if is_instance_valid(n) and RoyaleLoot.better(n.get_meta("item"), tst.gear, String(tst.cid), int(tst.lv)):
+		if is_instance_valid(n) and not RoyaleLoot.bag_upgrades(n, tst.gear, String(tst.cid), int(tst.lv)).is_empty():
 			target = n
 			break
 	if target != null:
-		var titem: Dictionary = target.get_meta("item")
+		var titem: Dictionary = RoyaleLoot.bag_upgrades(target, tst.gear, String(tst.cid), int(tst.lv))[0]
 		taker.global_position = target.global_position
-		rd.ring = Royale.ring_at(0.0, rd.centers)  # (toute la carte : la pièce est dans l'anneau)
+		rd.ring = Royale.ring_at(0.0, rd.centers)  # (toute la carte : la dépouille est dans l'anneau)
 		var busy := rd._ai_ground(taker, taker.global_position)
-		check("héros scripté : ramasse la pièce tombée (%s)" % String(titem.slot), busy and is_same(tst.gear.get(String(titem.slot)), titem) and not rd.ground.has(target))
+		check("héros scripté : prend la pièce dans la dépouille (%s)" % String(titem.slot), busy and is_same(tst.gear.get(String(titem.slot)), titem)
+			and not RoyaleLoot.bag_items(target).any(func(x): return is_same(x, titem)))
 	# mort du joueur : ses pièces tombent, il garde son arme ; en spectateur, [F] montre l'équipement du héros suivi
 	Profile.equipped["weapon"] = SurvivorGear.adopt(Items.generate(2, 0.0, "weapon", "magician"))
 	RoyaleLoot.wear(SurvivorGear.adopt(Items.generate(3, 0.0, "boots", "magician")))
@@ -291,8 +292,9 @@ func _test_world() -> void:
 	p.take_damage(1e9, killer, false)
 	await get_tree().physics_frame
 	await get_tree().physics_frame
-	check("joueur tombé : %d pièces au sol sur %d, il garde son arme (mort %s, phase %s, équipé %s)" % [rd.ground.size() - g1, worn_n, p.is_dead, rd.phase,
-		Profile.equipped.keys()], rd.ground.size() - g1 == worn_n \
+	var own: Array = RoyaleLoot.bag_items(rd.ground.back()) if rd.ground.size() > g1 else []
+	check("joueur tombé : %d pièces sur %d dans sa dépouille, il garde son arme (mort %s, phase %s, équipé %s)" % [own.size(), worn_n, p.is_dead, rd.phase,
+		Profile.equipped.keys()], rd.ground.size() - g1 == 1 and own.size() == worn_n \
 		and Profile.equipped.keys() == ["weapon"])
 	if rd.spectating and rd.watched != null and is_instance_valid(rd.watched):
 		var ev := InputEventAction.new()

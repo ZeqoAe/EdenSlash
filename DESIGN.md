@@ -1140,7 +1140,16 @@ doit se lire avant de lancer ; la Ruée et le Siège puisent dans la bibliothèq
   seule). Il n'a pas de place tant qu'il doit revenir (compté en vie). Chaque héros ne compte qu'**une fois** au compteur
   d'éliminations (sa première chute) ; l'expérience et les PV de l'élimination sont donnés à chaque fois. Même règle pour
   les héros scriptés. Après 2 min, ou à la 2e chute : mort définitive.
-- Éliminé : on regarde la fin (spectateur) ou on ouvre le bilan ; la place est fixée à la mort.
+- Éliminé : on regarde la fin (spectateur) ou on ouvre le bilan ; la place est fixée à la mort. **Lot BR-I2** : un
+  récapitulatif s'affiche (qui t'a éliminé, classe et niveau, coup de grâce et ses dégâts, PV qui lui restaient, tes dégâts
+  donnés / reçus, temps survécu ; « Regarder » / « Bilan ») ; le spectateur suit le tueur, LB / RB (◀ ▶ au clavier) change
+  de héros, [F] son équipement. Tombé avant 2 min : le récapitulatif dit « Retour dans N s » (plus de ligne dans le fil).
+- **Lieux nommés (lot BR-I2)** : 6 à 8 par carte (`ProcMap.places`, `RoyaleDirector.places()`), chacun autour d'un décor
+  (ruines, tour, arche, ossements, mine, campement, marché) avec un nom français (« Ruines du col », « Mine d'éclats »…),
+  une richesse ★ / ★★ / ★★★ (un ★★★, trois ★★, le reste ★) et ses coffres en couronne (★ : 3 dont 1 rare ; ★★ : 4 dont
+  2 rares et 1 doré ; ★★★ : 6 dont 2 rares et 2 dorés), **pris sur les 64 coffres de la carte : mêmes totaux** (38 / 18 / 8).
+  Du **couvert** dans chaque lieu : deux murets et un gros rocher (deux rochers au large des ruines), jamais cassables.
+  Atterrir dans un lieu l'annonce (« Tu atterris aux Ruines du col »).
 - **Équipement (lot BR3, 0.1.216, retour du joueur : « je ne veux pas qu'elles changent », « finir avec 5 arcs »)** :
   `core/royale_loot.gd`. L'arme de départ (une des deux variantes de l'arme de la classe) est **gardée toute la partie** :
   aucun coffre ne propose d'arme. Un coffre propose d'abord **une pièce par emplacement vide** (3 au plus, emplacements
@@ -1152,7 +1161,8 @@ doit se lire avant de lancer ; la Ruée et le Siège puisent dans la bibliothèq
   +2 (+4 en légendaire) jusqu'à +10, passif tiré et montré aux paliers +6 / +8 / +10, jet relevé dès rare ; l'amélioration
   de l'arme porte aussi celle de l'auto-attaque. Rareté des améliorations par coffre : bois / argent / or / largage =
   chance 0 / 0,3 / 0,6 / 1,2, au moins commune / commune / rare / épique. Passifs sans objet ici (Cadavres explosifs,
-  Aimant) bannis d'office. Relance : une par coffre ; ni « Passer », ni bannir, ni garder (propres au Survivant).
+  Aimant ; lot BR-I2 : tous ceux qui parlent de monstres ou d'élimination, Élan meurtrier, Œil du chasseur, Exécuteur,
+  Lame statique, Éclat glacial, Lame du phénix) bannis d'office, en pièce comme en carte de niveau. Relance : une par coffre ; ni « Passer », ni bannir, ni garder (propres au Survivant).
 - Montées de niveau : sorts et bonus seulement (aucune carte d'arme ni de pièce, plus de technique d'arme : elle vient de
   l'amélioration de l'arme) ; l'amélioration de sort est celle du Survivant (niveau 1 à 10, niveau 5 au moins épique, 10
   légendaire).
@@ -1163,12 +1173,19 @@ doit se lire avant de lancer ; la Ruée et le Siège puisent dans la bibliothèq
   des cartes de montée de niveau qu'ils ne tirent pas : au même niveau, leur force √(PV × frappe) face au joueur au pilote
   revient à celle de 0.1.214 (Hardcore 1,1 / 1,2 / 1,1 aux niveaux 1-5 / 6-10 / 11-15 ; Normal 0,7 / 0,7 / 0,7), elle
   était tombée à 1,0 / 0,9 / 0,8 et 0,6 / 0,5 / 0,5 avec les cartes du Survivant (lot BR3).
-- **À la mort** (joueur compris) : toutes les pièces tombent au sol **sauf l'arme** (repère lumineux à la couleur de la
-  rareté, nom de près) ; [F] « Prendre » : la pièce est portée, l'ancienne reste au sol à sa place (ses passifs quittent la
-  run). Un héros scripté s'arrête pour une pièce meilleure que la sienne à moins de 35 m dans l'anneau.
-- **Inspection** : la dépouille d'un héros garde sa fiche ; [F] près d'elle ouvre la fiche d'équipement (9 emplacements,
-  carte de chaque pièce comparée à la tienne, « au sol » / « déjà ramassée » / arme gardée) ; en spectateur, [F] montre
-  l'équipement du héros suivi. Jeu en pause pendant la fiche ; B / Échap la ferme.
+- **À la mort** (joueur compris) : toutes les pièces **sauf l'arme** restent dans la **dépouille** du héros (lot BR-I2 : un
+  seul sac, un seul faisceau à la couleur de sa meilleure pièce, au lieu d'une colonne par pièce). [F] « Fouiller » ouvre la
+  **fenêtre de pile** : ses 9 emplacements, ▲ / ▼ face à ta pièce, « Prendre » (la pièce est portée, la tienne rejoint la
+  dépouille : au plus une pièce par emplacement) et « Tout le meilleur » (X, [G] : toutes celles qui battent les tiennes).
+  Un héros scripté s'arrête pour une pièce meilleure que la sienne dans une dépouille à moins de 35 m dans l'anneau.
+- **Inspection** : la même fenêtre sert de fiche (dépouille vide, héros suivi en spectateur : 9 emplacements, carte de chaque
+  pièce comparée à la tienne, « dans sa dépouille » / « déjà prise » / arme gardée). Jeu en pause pendant la fenêtre (partie
+  solo, comme le choix de carte) ; B / Échap la ferme.
+- **Bilan v2 (lot BR-I2)** : bandeau incliné « N°1 · Victoire ! » ou « Place N », confettis à la victoire, tuiles (place,
+  éliminations, dégâts, niveau, coffres, durée), chronologie de la partie (saut, 1re élimination, largage, mise à prix,
+  retour, fin : `Royale.stats`), Gagné / Gardé (dont le coffre d'apparence), « Rejouer » et « Menu principal ».
+- **Couleurs (lot BR-I2)** : coffres au code de rareté de la Bible (commun lilas-gris, rare lagon, doré soleil, largage soleil
+  clair), les mêmes sur la mini-carte ; plaques des scriptés en PV (plus de pourcentage).
 
 ## L'Échiquier (autochess, `conception/autochess/SPEC.md` ; entrée et fin : lot AC-I, rapport `conception/autochess/R_AC_I.md`)
 

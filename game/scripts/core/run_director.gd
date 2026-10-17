@@ -399,7 +399,10 @@ func _update_discovery() -> void:
 func _update_interactions() -> void:
 	var best: Interactable = null
 	var best_d := INF
-	for it in map.interactables:
+	var pool: Array = []
+	if not (player.is_dead and state == "royale"):  # (lot BR-I2 : pas d'invite en spectateur)
+		pool = map.interactables
+	for it in pool:
 		if not is_instance_valid(it) or it.used:
 			continue
 		var d := _flat(player.global_position, it.global_position)

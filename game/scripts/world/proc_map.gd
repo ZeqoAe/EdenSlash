@@ -59,6 +59,26 @@ const CHEST_TIER_COUNTS := [0, 9, 3]
 const ROYALE_CHEST_COUNT := 64
 const ROYALE_TIER_COUNTS := [0, 18, 8]
 var royale := false
+## Battle royale, lieux nommés (lot BR-I2) : 6 à 8 par carte, chacun autour d'un décor (ruines, tour, mine…), plus riche
+## en coffres (★ à ★★★, pris sur les 64 coffres de la carte : mêmes totaux par qualité) et avec du couvert (murets, gros
+## rochers, jamais cassables). [{name, at (« aux Ruines du col »), kind, pos, stars, radius, cover: [{q, type, yaw}]}]
+var places: Array = []
+const PLACE_COUNT := [6, 8]
+const PLACE_RADIUS := 24.0
+## Coffres d'un lieu selon sa richesse (★, ★★, ★★★) : [nombre, dont rares, dont dorés].
+const PLACE_CHESTS := [[3, 1, 0], [4, 2, 1], [6, 2, 2]]
+## Richesse des lieux d'une carte, dans l'ordre (un ★★★, trois ★★, le reste ★), puis mélangée.
+const PLACE_STARS := [3, 2, 2, 2]
+## Noms des lieux par décor : [nom, « à » + nom].
+const PLACE_NAMES := {
+	"ruins": [["Ruines du col", "aux Ruines du col"], ["Ruines moussues", "aux Ruines moussues"], ["Vieux fort", "au Vieux fort"]],
+	"tower": [["Tour de guet", "à la Tour de guet"], ["Tour du vent", "à la Tour du vent"]],
+	"arch": [["Arche du géant", "à l'Arche du géant"], ["Porte de pierre", "à la Porte de pierre"]],
+	"bones": [["Combe aux os", "à la Combe aux os"], ["Champ d'ossements", "au Champ d'ossements"]],
+	"mine": [["Mine abandonnée", "à la Mine abandonnée"], ["Mine d'éclats", "à la Mine d'éclats"]],
+	"camp": [["Camp des bûcherons", "au Camp des bûcherons"], ["Camp des brumes", "au Camp des brumes"]],
+	"market": [["Marché perdu", "au Marché perdu"], ["Halle aux saules", "à la Halle aux saules"]],
+}
 ## Lieux utilisables une fois (le directeur de run gère leur effet).
 const STATIONS := {
 	"anvil": {"count": 3, "title": "Enclume", "model": "uc340", "scale": 1.0, "col": 1.4},
@@ -99,12 +119,17 @@ func generate_royale(seed_value: int) -> void:
 	_build_chests()
 	_build_stations()
 	_build_sites()
+	_build_royale_cover()
 	_scatter_props()
 	_scatter_breakables()
 	GrassField.create(self)
 	_build_minimap()
 	_setup_navigation()
 	info.events = [{"type": "REVIVE", "pos": [start.x, start.y, start.z]}]
+	for pl in places:
+		var q: Vector3 = pl.pos
+		q.y = height_at(q.x, q.z)
+		pl["pos"] = q
 
 
 func generate_run(seed_value: int) -> void:
@@ -261,7 +286,10 @@ func _place_pois() -> void:
 		var p := _free_point(70.0, 80.0)
 		if p != Vector2.INF:
 			plateaus.append({"c": p, "r": rng.randf_range(14.0, 26.0), "h": rng.randf_range(4.5, 8.0) * (1.0 if k % 3 != 2 else -0.6)})
-	for k in (ROYALE_CHEST_COUNT if royale else CHEST_COUNT):
+	var fixed := {}  # coffre -> qualité imposée (Battle royale : coffres des lieux nommés, lot BR-I2)
+	if royale:
+		_place_royale_places(fixed)
+	for k in (ROYALE_CHEST_COUNT - chests.size() if royale else CHEST_COUNT):
 		var p := _free_point(22.0 if royale else 30.0, 40.0)
 		if p != Vector2.INF:
 			chests.append(Vector3(p.x, 0, p.y))
@@ -270,13 +298,15 @@ func _place_pois() -> void:
 	var far := {}
 	for k in chests.size():
 		far[k] = Vector2(chests[k].x, chests[k].z).distance_to(s2) + rng.randf() * 120.0
-	var order: Array = range(chests.size())
+	var order: Array = range(chests.size()).filter(func(k): return not fixed.has(k))
 	order.sort_custom(func(a, b): return float(far[a]) > float(far[b]))
 	chest_tiers.resize(chests.size())
 	chest_tiers.fill(0)
+	for k in fixed:
+		chest_tiers[k] = int(fixed[k])
 	var at := 0
 	for tier in [2, 1]:
-		for k in int((ROYALE_TIER_COUNTS if royale else CHEST_TIER_COUNTS)[tier]):
+		for k in int((ROYALE_TIER_COUNTS if royale else CHEST_TIER_COUNTS)[tier]) - fixed.values().count(tier):
 			if at < order.size():
 				chest_tiers[order[at]] = tier
 				at += 1
@@ -322,13 +352,107 @@ func _place_pois() -> void:
 		var tier := clampi(int(p.distance_to(s2) / 90.0), 0, 3)
 		camps.append({"pos": Vector3(p.x, 0, p.y), "tier": tier, "elite": k < 4})
 		_occupied.append([p, 9.0])
-	# lieux de décor
-	for k in SITE_COUNT:
+	# lieux de décor (Battle royale : les lieux nommés en sont déjà)
+	for k in SITE_COUNT - places.size():
 		var p := _free_point(26.0, 36.0)
 		if p == Vector2.INF:
 			continue
 		sites.append({"pos": Vector3(p.x, 0, p.y), "kind": SITE_KINDS[k % SITE_KINDS.size()], "yaw": rng.randf() * TAU})
 		_occupied.append([p, 14.0])
+
+
+## Battle royale (lot BR-I2) : les lieux nommés, loin les uns des autres et hors des plateaux ; chacun reçoit son décor
+## (un lieu de décor de son type), ses coffres en couronne (PLACE_CHESTS, qualités notées dans [param fixed]) et son couvert.
+func _place_royale_places(fixed: Dictionary) -> void:
+	places.clear()
+	var n := rng.randi_range(int(PLACE_COUNT[0]), int(PLACE_COUNT[1]))
+	var kinds: Array = PLACE_NAMES.keys()
+	var stars: Array = PLACE_STARS.duplicate()
+	while stars.size() < n:
+		stars.append(1)
+	for arr in [kinds, stars]:  # mélange tiré de la graine de la carte (une carte = les mêmes lieux)
+		for i in range(arr.size() - 1, 0, -1):
+			var j := rng.randi_range(0, i)
+			var tmp = arr[i]
+			arr[i] = arr[j]
+			arr[j] = tmp
+	var taken := {}
+	for i in n:
+		var p := Vector2.INF
+		for gap in [110.0, 85.0, 60.0]:
+			p = _place_spot(gap)
+			if p != Vector2.INF:
+				break
+		if p == Vector2.INF:
+			break
+		var kind := String(kinds[i % kinds.size()])
+		var names: Array = PLACE_NAMES[kind]
+		var pick: Array = names[rng.randi() % names.size()]
+		for k in names.size():
+			if not taken.has(String(pick[0])):
+				break
+			pick = names[(names.find(pick) + 1) % names.size()]
+		taken[String(pick[0])] = true
+		var s := int(stars[i])
+		var place := {"name": String(pick[0]), "at": String(pick[1]), "kind": kind, "pos": Vector3(p.x, 0, p.y), "stars": s,
+			"radius": PLACE_RADIUS, "cover": []}
+		places.append(place)
+		sites.append({"pos": Vector3(p.x, 0, p.y), "kind": kind, "yaw": rng.randf() * TAU})
+		_occupied.append([p, 14.0])
+		# coffres en couronne autour du décor : les dorés d'abord, puis les rares
+		var def: Array = PLACE_CHESTS[clampi(s - 1, 0, PLACE_CHESTS.size() - 1)]
+		var a0 := rng.randf() * TAU
+		var count := int(def[0])
+		for c in count:
+			var a := a0 + TAU * float(c) / float(count) + rng.randf_range(-0.15, 0.15)
+			var q := p + Vector2(cos(a), sin(a)) * rng.randf_range(15.0, 18.5)
+			chests.append(Vector3(q.x, 0, q.y))
+			_occupied.append([q, 6.0])
+			fixed[chests.size() - 1] = 2 if c < int(def[2]) else (1 if c < int(def[2]) + int(def[1]) else 0)
+		# couvert entre les coffres : deux murets et un gros rocher (les ruines ont déjà leurs murs : deux rochers au large)
+		var cover_n := 2 if kind == "ruins" else 3
+		for c in cover_n:
+			var a := a0 + TAU * (float(c) + 0.5) / float(cover_n) + rng.randf_range(-0.2, 0.2)
+			var r := 21.0 if kind == "ruins" else rng.randf_range(10.5, 12.0)
+			var q := p + Vector2(cos(a), sin(a)) * r
+			var type := "rock" if kind == "ruins" or c == cover_n - 1 else "wall"
+			(place.cover as Array).append({"q": q, "type": type, "yaw": -a + PI * 0.5})
+			_occupied.append([q, 5.0])
+
+
+## Centre d'un lieu nommé : à [param gap] m au moins des autres, loin des bords et des plateaux (Vector2.INF : aucun).
+func _place_spot(gap: float) -> Vector2:
+	for attempt in 160:
+		var p := Vector2(rng.randf_range(70.0, size - 70.0), rng.randf_range(70.0, size - 70.0))
+		if places.any(func(o): return Vector2(o.pos.x, o.pos.z).distance_to(p) < gap):
+			continue
+		if plateaus.any(func(pl): return (pl.c as Vector2).distance_to(p) < float(pl.r) + 30.0):
+			continue
+		if _occupied.any(func(o): return p.distance_to(o[0]) < 30.0 + float(o[1]) * 0.5):
+			continue
+		return p
+	return Vector2.INF
+
+
+## Couvert des lieux nommés du Battle royale : murets de pierre (collision en boîte) et gros rochers, jamais cassables.
+func _build_royale_cover() -> void:
+	if places.is_empty():
+		return
+	var holder := Node3D.new()
+	holder.name = "Cover"
+	add_child(holder)
+	var batch := {}
+	for pl in places:
+		for cv in pl.cover:
+			var q: Vector2 = cv.q
+			var pos := Vector3(q.x, height_at(q.x, q.y), q.y)
+			if String(cv.type) == "wall":
+				_add_instance(batch, {"model": ["ub201", "ub201_2", "ub201_3"][rng.randi() % 3], "scale": [1.05, 1.15]}, pos - Vector3.UP * 0.2, false, float(cv.yaw))
+				_add_box_collider(pos, Vector3(3.6, 2.2, 0.6), float(cv.yaw))
+			else:
+				var rock: Dictionary = PropCatalog.ROCKS[rng.randi() % 6]  # (les six gros rochers : ud001 à ud006)
+				_add_instance(batch, rock, pos - Vector3.UP * 0.4, true, INF, 1.5)
+	_flush_batches(batch, holder)
 
 
 ## Point libre à distance des lieux existants, loin des bords ; la carte étant pleine, l'écart
@@ -928,14 +1052,17 @@ const CHEST_LOOKS := [
 
 
 ## Coffres du Battle royale (passe BR2) : de vrais coffres au trésor (le tonneau « Coffre secret » d'Eden n'y sert plus), la
-## couleur de leur aura suit la qualité : commun (blanc bleuté, bois et acier), rare (rouge, acier gravé), doré (or) et
-## largage (or éclatant, grand faisceau). Les couleurs sont celles des repères de la mini-carte (Minimap.ICONS).
+## couleur de leur aura suit la qualité, au code de rareté de la Bible (lot BR-I2, `conception/art/BIBLE.md` § 3) : commun
+## (lilas-gris, bois et acier), rare (lagon, acier gravé), doré (soleil, plus d'étincelles) et largage (soleil clair, grand
+## faisceau). Les mêmes couleurs marquent les coffres sur la mini-carte (ROYALE_ICONS, Minimap.icon_color).
 const ROYALE_LOOKS := [
-	{"title": "Coffre commun", "model": "uc020", "scale": 2.4, "col": Color(0.72, 0.88, 1.0), "beam": 14.0, "halo": 3.3, "sparks": 3},
-	{"title": "Coffre rare", "model": "uc008", "scale": 1.7, "col": Color(1.0, 0.42, 0.33), "beam": 19.0, "halo": 3.4, "sparks": 5},
-	{"title": "Coffre doré", "model": "uc007", "scale": 1.9, "col": Color(1.0, 0.86, 0.3), "beam": 28.0, "halo": 3.8, "sparks": 8},
-	{"title": "Largage", "model": "uc009", "scale": 2.8, "col": Color(1.0, 0.95, 0.55), "beam": 60.0, "halo": 5.0, "sparks": 12},
+	{"title": "Coffre commun", "model": "uc020", "scale": 2.4, "col": Color("c9c3d6"), "beam": 14.0, "halo": 3.3, "sparks": 3},
+	{"title": "Coffre rare", "model": "uc008", "scale": 1.7, "col": Color("22b8f0"), "beam": 19.0, "halo": 3.4, "sparks": 5},
+	{"title": "Coffre doré", "model": "uc007", "scale": 1.9, "col": Color("ffc928"), "beam": 28.0, "halo": 3.8, "sparks": 12},
+	{"title": "Largage", "model": "uc009", "scale": 2.8, "col": Color("ffe27a"), "beam": 60.0, "halo": 5.0, "sparks": 14},
 ]
+## Repères de la mini-carte du Battle royale (Minimap.icon_color) : les couleurs des coffres ci-dessus.
+const ROYALE_ICONS := {"chest": Color("c9c3d6"), "chest1": Color("22b8f0"), "chest2": Color("ffc928"), "drop": Color("ffe27a")}
 
 
 ## Battle royale : caisses, tonneaux et sacs du décor des lieux (ils ressemblaient trop à un coffre ou à du butin).

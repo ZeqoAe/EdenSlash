@@ -144,6 +144,7 @@ static func start(cid: String) -> void:
 	Run.start(cid)  # Profile.begin_run : copie du profil, rien n'est écrit tant que active
 	for id in RoyaleLoot.NO_PASSIVES:
 		Run.banned.append("passive:" + String(id))  # (lot BR3 : passifs de pièce sans objet ici)
+		Run.banned.append(String(id))  # (lot BR-I2 : ni en carte de montée de niveau, Run.roll_cards)
 	Run.survival = true  # départ sans équipement, les pièces des coffres sont portées tout de suite
 	Run.epoch = 1
 	zone_id = String(Epochs.zone(randi_range(1, mini(4, Epochs.count())), 1))
@@ -155,6 +156,7 @@ static func start(cid: String) -> void:
 	Profile.bag = {}
 	Potions.start_run()
 	PvpCaps.reset_stats()
+	reset_stats()  # (lot BR-I2 : récapitulatif de mort, bilan)
 	level_cap_now = level_cap(0)
 	fights = {}
 	Run.changed.emit()
@@ -342,10 +344,44 @@ static func _pair(a: Combatant, b: Combatant) -> String:
 	return "%d-%d" % [mini(x, y), maxi(x, y)]
 
 
-## Coup entre deux héros (PvpCaps.note_hit) à l'instant [param now].
-static func note_fight(src: Combatant, dst: Combatant, now: float) -> void:
+## Partie du joueur (lot BR-I2), pour le récapitulatif de mort et le bilan :
+##   dealt / taken : dégâts donnés et reçus entre héros ;
+##   last_hit : dernier coup reçu d'un héros {name, cid, lv, move (sort ou « Attaque de base »), icon, dmg, at (horloge)} ;
+##   timeline : moments de la partie [{kind (jump, land, kill, drop, bounty, revive, down, win), t (secondes depuis le départ
+##   de l'aigle), text}], un seul de chaque sorte (sauf revive), dans l'ordre.
+static var stats: Dictionary = {}
+
+
+static func reset_stats() -> void:
+	stats = {"dealt": 0.0, "taken": 0.0, "last_hit": {}, "timeline": []}
+
+
+## Moment de la partie (voir [member stats]) ; vrai s'il est noté (un seul de chaque sorte, sauf les retours).
+static func timeline_add(kind: String, t: float, text := "") -> bool:
+	if stats.is_empty():
+		reset_stats()
+	var tl: Array = stats.timeline
+	if kind != "revive" and tl.any(func(e): return String(e.kind) == kind):
+		return false
+	tl.append({"kind": kind, "t": t, "text": text})
+	return true
+
+
+## Coup entre deux héros (PvpCaps.note_hit) à l'instant [param now], de [param dmg] PV (déjà plafonné).
+static func note_fight(src: Combatant, dst: Combatant, now: float, dmg := 0.0) -> void:
 	if src == null or dst == null or not is_instance_valid(src) or src == dst:
 		return
+	if stats.is_empty():
+		reset_stats()
+	if src is Player and not (src as Player).foe:
+		stats.dealt = float(stats.dealt) + dmg
+	elif dst is Player and not (dst as Player).foe:
+		stats.taken = float(stats.taken) + dmg
+		var move: Dictionary = src.get_meta("move", {})
+		var cid := String(src.get_meta("royale", {}).get("cid", ""))
+		stats.last_hit = {"name": src.display_name.get_slice(" ·", 0), "cid": cid, "lv": src.level, "dmg": dmg, "at": now,
+			"move": String(move.get("name", "")) if String(move.get("name", "")) != "" else "Attaque de base", "icon": String(move.get("icon", "")),
+			"id": src.get_instance_id()}
 	var k := _pair(src, dst)
 	var f: Array = fights.get(k, [now, now])
 	if now - float(f[1]) > FIGHT_GAP:

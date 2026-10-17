@@ -25,7 +25,7 @@ func _ready() -> void:
 	add_theme_constant_override("separation", 16)
 	# compétences
 	var a := ItemWidgets.panel(self, 0, true)
-	_skills_title = ItemWidgets.section(a, "Compétences de la run")
+	_skills_title = ItemWidgets.section(a, "Compétences" if Royale.active else "Compétences de la run")
 	var sa := ScrollContainer.new()
 	sa.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	sa.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -90,7 +90,7 @@ func refresh() -> void:
 	# 4 cases, chacune avec ses 2 enchaînements : 12 sorts en tout
 	var total := Run.all_skills().size()
 	if _skills_title:
-		_skills_title.text = "Compétences de la run (%d / %d)" % [total, Survivor.SPELL_MAX if Survivor.active else Run.MAX_SKILLS * (1 + Run.MAX_CHAIN)]
+		_skills_title.text = ("Compétences (%d / %d)" if Royale.active else "Compétences de la run (%d / %d)") % [total, Survivor.SPELL_MAX if Survivor.active else Run.MAX_SKILLS * (1 + Run.MAX_CHAIN)]
 	if _skills_title:
 		_skills_title.tooltip_text = "Glisse un sort sur un autre pour échanger leurs places (touches et enchaînements)"
 		_skills_title.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -114,7 +114,7 @@ func refresh() -> void:
 		_row(_skills, "", "Case %d libre" % (Run.skills.size() + 1), "", UiTheme.MUTED, 0, 52, Vector2i(-1, -1), "Les compétences s'obtiennent avec les cartes de niveau")
 	# armes : auto-attaque et améliorations de la run
 	ItemWidgets.section(_skills, "Armes", 15)
-	for slot in (["weapon"] if Survivor.active else ["weapon", "offhand"]):  # (Survivant : pas d'arme secondaire)
+	for slot in (["weapon"] if Survivor.active or Royale.active else ["weapon", "offhand"]):  # (Survivant, Battle royale : pas d'arme secondaire)
 		var ws := Run.weapon_spec(slot)
 		var it: Dictionary = Profile.equipped.get(slot, {})
 		if ws.is_empty():
@@ -134,7 +134,7 @@ func refresh() -> void:
 	for t in Run.trophies:
 		_row(_cards, String(t.get("icon", "")), "✔ %s · %s" % [String(t.get("passive", {}).get("name", "")), Items.display_name(t)],
 			String(t.get("passive", {}).get("desc", "")), Color(0.5, 1.0, 0.55), 0, 40)
-	ItemWidgets.section(_cards, "Cartes de build et passifs", 15)
+	ItemWidgets.section(_cards, "Passifs" if Royale.active else "Cartes de build et passifs", 15)
 	if Run.passives.is_empty():
 		Hud._label(_cards, "Aucune carte", UiTheme.MIN_TEXT, UiTheme.MUTED)
 	for pid in Run.passives:

@@ -746,6 +746,8 @@ func _start_attack() -> void:
 	var act: Dictionary
 	var anim_name: String
 	var mult: float
+	if Royale.active:
+		set_meta("move", {"name": String(sk.get("name", "")), "icon": String(sk.get("icon", ""))})  # (lot BR-I2 : récapitulatif de mort)
 	if not sk.is_empty():
 		_skill_ready[int(sk.id)] = _time + float(sk.cooldown) * float(cfg.skill_cd)
 		act = sk

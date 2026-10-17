@@ -227,7 +227,7 @@ func _modes() -> void:
 	var r := RoyaleResults.new()
 	add_child(r)
 	r.show_results(1, 3, 9, 7, 400.0, {"text": ["+120 insignes (victoire, 3 éliminations)"]})
-	check("Royale : même composant, Rejouer + Retour", r is ResultsPanel and r.buttons.size() == 2 and r.buttons[1].text == "Retour au lobby")
+	check("Royale : même composant, Rejouer + Menu principal", r is ResultsPanel and r.buttons.size() == 2 and r.buttons[1].text == "Menu principal")
 	await _clear()
 	var rr := ResultsPanel.reward_row("+90 insignes (place 3)")
 	check("récompenses en texte : « +90 insignes (place 3) » devient Insignes +90", rr.text == "Insignes" and rr.value == "+90" and rr.tip == "Place 3" and ResultsPanel.reward_row("Coffre rare").text == "Coffre rare")

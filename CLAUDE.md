@@ -158,6 +158,8 @@ Battle royale : `core/royale.gd`, `core/royale_director.gd` (`RoyaleDirector.BRA
 Largage et réanimation (lot BR4) : `core/royale_drop.gd` (aigle, saut, chute, planeur ; héros en l'air hors du groupe « ffa », physique
 coupée ; `RoyaleDirector.phase` « drop » puis « fight » : `elapsed` part au dernier atterrissage, `clock` dès le vol) ; retour une fois
 avant `Royale.REVIVE_WINDOW` (`RoyaleDirector.revives`, `_revive_player` / `_revive_ai`, arme seule) ; test `test_br4`, captures `shot_br4`.
+BR-I2 (`conception/royale/R_BRI2.md`) : lieux nommés `ProcMap.places` / `RoyaleDirector.places()` (cartes), dépouille = un sac `RoyaleLoot.make_bag` + fenêtre de pile
+`ui/royale_gear_sheet.gd`, récapitulatif et spectateur `ui/royale_recap.gd`, bilan v2 `ui/royale_results.gd` (`Royale.stats`), briques DA `ui/royale_style.gd` ; test `test_bri2`, captures `shot_m1`.
 Équilibre (lot BR1, `conception/royale/R_BR1.md`) : échelle 0,055 du profil `royale`, `Royale.kill_xp` (écart de niveau), `LEVEL_CAPS` par
 anneau, force des scriptés (`AI_GEAR_SCALE`, `ai_level_factor`), `AI_EXCLUDED` ; mesures : `tools/royale_duel_probe.tscn` (durée d'un duel par
 niveau et équipement, `--tournament`, essais `--scale=` / `--caps=`) et les lignes `[royale] élimination` / `[royale] force` du pilote.

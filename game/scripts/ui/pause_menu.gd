@@ -34,7 +34,7 @@ func setup(p: Player) -> void:
 		_screen.add_page("Build", build)
 	_run = RunPage.new()
 	_run.player = player
-	_screen.add_page("Run", _run)
+	_screen.add_page("Partie" if Royale.active else "Run", _run)  # (lot BR-I2 : pas de « run » au Battle royale)
 	if not Survivor.active:
 		_equip = InventoryPage.new()
 		_equip.player = player
@@ -55,7 +55,7 @@ func setup(p: Player) -> void:
 	_run.lobby_requested.connect(func():
 		var t := leave_texts()
 		_confirm.ask(t.title, t.text, t.ok, func(): abandon_requested.emit()))
-	_run.quit_requested.connect(func(): _confirm.ask("Quitter le jeu ?", "La run en cours sera perdue.", "Quitter le jeu", func(): get_tree().quit()))
+	_run.quit_requested.connect(func(): _confirm.ask("Quitter le jeu ?", "La partie en cours sera perdue." if Royale.active else "La run en cours sera perdue.", "Quitter le jeu", func(): get_tree().quit()))
 	_run.grimoire_requested.connect(func(): grimoire.open())
 	_run.settings_requested.connect(func(): settings.open())
 	# par-dessus l'écran (Échap les ferme d'abord)

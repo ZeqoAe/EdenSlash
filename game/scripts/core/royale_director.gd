@@ -71,6 +71,7 @@ var _breaker: ClassRival = null  # héros scripté qui casse un objet (sinon : l
 ## Spectateur (passe M1) : le joueur éliminé regarde la fin de la partie ; Échap / B ouvre le bilan.
 var spectating := false
 var watched: Combatant = null
+var recap_view: RoyaleRecap = null  # récapitulatif de mort et bandeau du spectateur (lot BR-I2)
 var _down_at := -1.0
 ## Largages (passe M1) : {node: Interactable, land: secondes de combat, pos}
 var drops: Array = []
@@ -225,6 +226,7 @@ func update(delta: float) -> void:
 	if phase != "over":
 		clock += delta
 		PvpCaps.elapsed = clock
+		Royale.stats["clock"] = clock  # (lot BR-I2 : longueur de la chronologie du bilan)
 	if jump != null:
 		jump.update(delta)
 	_tick_revives(delta)
@@ -507,7 +509,7 @@ func _refresh_tag(r: ClassRival) -> void:
 	if tag == null:
 		return
 	var marked := r == bounty
-	tag.text = "%s%s · niv. %d\n%d %%" % ["★ " if marked else "", r.display_name, r.level, roundi(r.hp / r.max_hp * 100.0)]
+	tag.text = "%s%s · niv. %d\nPV %s" % ["★ " if marked else "", r.display_name, r.level, Hud._big_number(ceilf(r.hp))]  # (lot BR-I2 : pas de pourcentage)
 	tag.modulate = Color(1.0, 0.82, 0.3) if marked else Color.WHITE
 	tag.visibility_range_end = 120.0 if marked else 35.0
 
@@ -684,6 +686,7 @@ func _on_ai_died(who: Combatant, killer: Combatant) -> void:
 			line = "Tu élimines %s" % name
 			if first:
 				Profile.record_add("kills", 1)
+				timeline_add("kill", name)  # (lot BR-I2 : la première seulement)
 		elif killer is ClassRival and killer.has_meta("royale"):
 			var kst: Dictionary = killer.get_meta("royale")
 			kst.kills = int(kst.get("kills", 0)) + (1 if first else 0)
@@ -748,6 +751,7 @@ func _update_bounty() -> void:
 	bounty = best
 	if best == d.player:
 		d.message.emit("Tu es mis à prix !\nTous les héros voient où tu es", 3.0)
+		timeline_add("bounty")
 	else:
 		d.message.emit("%s est mis à prix\nÉlimine-le : un niveau de plus" % best.display_name.get_slice(" ·", 0), 3.0)
 	for a in ais:
@@ -778,6 +782,7 @@ func player_down(killer: Combatant = null) -> void:
 	left += pending_ais()  # (lot BR4 : ceux qui vont revenir sont encore en jeu)
 	_place = left
 	_down_at = elapsed
+	var recap := death_recap(killer, left)  # (lot BR-I2 : avant que le vainqueur ne se soigne)
 	_fall_player()  # lot BR3 : tes pièces tombent au sol (sauf l'arme)
 	if killer != null and is_instance_valid(killer) and killer != d.player:
 		_log_kill(killer, d.player)
@@ -793,9 +798,11 @@ func player_down(killer: Combatant = null) -> void:
 		_player_revived = true
 		_down_at = -1.0
 		revives.append({"st": {}, "player": true, "t": Royale.REVIVE_DELAY})
-		feed("Tu es éliminé : tu reviendras")
+		recap["revive"] = true
+		_show_recap(recap)  # (lot BR-I2 : qui t'a eu, et le compte à rebours du retour ; plus de ligne « tu reviendras » dans le fil)
 		return
 	feed("Tu es éliminé (%de)" % left)
+	timeline_add("down", "%de" % left)
 	if left <= 2:
 		_finish(left)  # un seul héros restant : il a gagné
 		d.message.emit("Éliminé ! Tu termines %de sur %d" % [left, Royale.PLAYERS], 3.0)
@@ -803,8 +810,8 @@ func player_down(killer: Combatant = null) -> void:
 	spectating = true
 	watched = killer if killer != null and is_instance_valid(killer) and not killer.is_dead else null
 	d.player.autoplay_target = Vector3.INF
-	d.message.emit("Éliminé ! Tu termines %de sur %d\nTu regardes la fin · [%s] : bilan" % [left, Royale.PLAYERS, Settings.action_label("pause", 1)], 4.0)
 	_update_spectator()
+	_show_recap(recap)  # lot BR-I2 : récapitulatif, puis le spectateur suit le tueur (◀ ▶ pour changer)
 
 
 ## Spectateur : la caméra suit un héros encore en vie (celui qui t'a éliminé, puis le mieux placé).
@@ -839,8 +846,81 @@ func _unhandled_input(event: InputEvent) -> void:
 	# spectateur : Échap / B ouvre le bilan (pas le menu pause : il n'y a plus rien à y faire)
 	if spectating and phase != "over" and (event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel")):
 		get_viewport().set_input_as_handled()
-		_finish(_place)
-		_end_t = 0.01
+		request_results()
+		return
+	# spectateur (lot BR-I2) : LB / RB (◀ ▶ au clavier) change de héros regardé
+	if spectating and phase != "over":
+		var step := 0
+		if event is InputEventJoypadButton and (event as InputEventJoypadButton).pressed:
+			match (event as InputEventJoypadButton).button_index:
+				JOY_BUTTON_LEFT_SHOULDER:
+					step = -1
+				JOY_BUTTON_RIGHT_SHOULDER:
+					step = 1
+		elif event is InputEventKey and event.is_action_pressed("move_left"):
+			step = -1
+		elif event is InputEventKey and event.is_action_pressed("move_right"):
+			step = 1
+		if step != 0:
+			get_viewport().set_input_as_handled()
+			spectate_step(step)
+
+
+## Spectateur : bilan tout de suite (Échap / B, bouton « Bilan » du récapitulatif).
+func request_results() -> void:
+	if not spectating or phase == "over":
+		return
+	_finish(_place)
+	_end_t = 0.01
+
+
+## Spectateur : héros suivant (+1) ou précédent (-1) parmi ceux encore en vie.
+func spectate_step(dir: int) -> void:
+	var alive: Array = ais.filter(func(a): return is_instance_valid(a) and not a.is_dead)
+	if alive.is_empty():
+		return
+	var i := alive.find(watched)
+	watched = alive[wrapi(i + dir, 0, alive.size())] if i >= 0 else alive[0]
+	_update_spectator()
+	Sfx.ui("click", -10.0)
+
+
+## Récapitulatif de mort (lot BR-I2) : place, tueur (nom, classe, niveau, PV restants), coup de grâce (Royale.stats.last_hit
+## s'il vient de lui), dégâts donnés et reçus, temps survécu. Sans tueur (ou lui-même) : l'anneau.
+func death_recap(killer: Combatant, place: int) -> Dictionary:
+	var r := {"place": place, "dealt": float(Royale.stats.get("dealt", 0.0)), "taken": float(Royale.stats.get("taken", 0.0)), "survived": elapsed,
+		"name": "", "cid": "", "lv": 0, "killer_hp": -1, "move": "", "dmg": 0.0}
+	if killer != null and is_instance_valid(killer) and killer != d.player:
+		var st: Dictionary = killer.get_meta("royale", {})
+		r.name = killer.display_name.get_slice(" ·", 0)
+		r.cid = String(st.get("cid", ""))
+		r.lv = int(st.get("lv", killer.level))
+		r.killer_hp = maxi(1, ceili(killer.hp))
+		var lh: Dictionary = Royale.stats.get("last_hit", {})
+		if int(lh.get("id", 0)) == killer.get_instance_id():
+			r.move = String(lh.get("move", ""))
+			r.dmg = float(lh.get("dmg", 0.0))
+	return r
+
+
+## Montre le récapitulatif [param recap] (un seul à la fois).
+func _show_recap(recap: Dictionary) -> void:
+	_close_recap()
+	if "--auto-quit" in OS.get_cmdline_user_args():
+		return  # (mesures au pilote : pas d'interface)
+	recap_view = RoyaleRecap.open(d.world, self, recap)
+	recap_view.results_requested.connect(request_results)
+
+
+func _close_recap() -> void:
+	if recap_view != null and is_instance_valid(recap_view):
+		recap_view.close()
+	recap_view = null
+
+
+## Moment de la partie pour la chronologie du bilan (Royale.stats.timeline), à l'horloge du largage.
+func timeline_add(kind: String, text := "") -> void:
+	Royale.timeline_add(kind, clock, text)
 
 
 ## Temps écoulé sans vainqueur (ne devrait pas arriver : le dernier cercle tue) : le plus de PV l'emporte.
@@ -857,6 +937,11 @@ func _finish(place: int) -> void:
 		return
 	phase = "over"
 	_place = place
+	_close_recap()
+	if place == 1:
+		timeline_add("win", "N°1")
+	else:
+		timeline_add("down", "%de" % place)  # (déjà noté s'il est tombé avant : une seule fois)
 	var winner: Combatant = null
 	for a in ais:
 		if is_instance_valid(a):
@@ -929,6 +1014,8 @@ func _revive_player() -> void:
 		d.world.rig.target = p
 	feed("Tu reviens dans la partie")
 	d.message.emit("De retour !\nPlus de seconde chance", 2.5)
+	_close_recap()
+	timeline_add("revive")
 
 
 func _revive_ai(st: Dictionary) -> void:
@@ -979,6 +1066,13 @@ func revive_point() -> Vector3:
 func _on_landed(c: Combatant) -> void:
 	if c is ClassRival:
 		_refresh_tag(c as ClassRival)
+	if c == d.player and not c.has_meta("revive_shield"):
+		var pl := place_at(c.global_position)  # lot BR-I2 : le lieu nommé où l'on atterrit
+		if not pl.is_empty():
+			d.message.emit("Tu atterris %s\n%s" % [String(pl.at), "★".repeat(int(pl.stars))], 2.5)
+			timeline_add("jump", String(pl.name))
+		else:
+			timeline_add("jump", "")
 	if not c.has_meta("revive_shield"):
 		return
 	c.remove_meta("revive_shield")
@@ -1120,6 +1214,7 @@ func open_chest(it: Interactable) -> void:
 	d.message.emit("%s ouvert" % it.title, 1.5)
 	if tier == Royale.DROP_TIER:
 		feed("Tu t'empares du largage")
+		timeline_add("drop")
 	# lot BR3 : une pièce par emplacement vide, puis des améliorations des pièces portées (l'arme de départ est gardée)
 	var roll := func() -> Array:
 		return RoyaleLoot.player_cards(tier, p.level)
@@ -1203,6 +1298,41 @@ func markers() -> Array:
 	return out
 
 
+## Lieux nommés de la carte (lot BR-I2, ProcMap.places) pour la mini-carte et la grande carte : [{name, at, kind, pos,
+## stars (1 à 3 : richesse du butin), radius, aimed (héros scriptés encore en l'air qui y atterrissent)}].
+func places() -> Array:
+	var out: Array = []
+	if d == null or not is_instance_valid(d.map):
+		return out
+	for pl in d.map.places:
+		var e: Dictionary = (pl as Dictionary).duplicate()
+		e.erase("cover")
+		var c := Vector2(e.pos.x, e.pos.z)
+		var n := 0
+		if jump != null:
+			for r in jump.riders:
+				var t: Vector3 = jump.riders[r].target
+				if r != d.player and jump.airborne(r) and t != Vector3.INF and Vector2(t.x, t.z).distance_to(c) <= float(e.radius) + 10.0:
+					n += 1
+		e["aimed"] = n
+		out.append(e)
+	return out
+
+
+## Lieu nommé qui contient [param pos] ({} : aucun).
+func place_at(pos: Vector3) -> Dictionary:
+	if d == null or not is_instance_valid(d.map):
+		return {}
+	var best: Dictionary = {}
+	var bd := INF
+	for pl in d.map.places:
+		var dd := Vector2(pl.pos.x - pos.x, pl.pos.z - pos.z).length()
+		if dd <= float(pl.radius) + 12.0 and dd < bd:
+			bd = dd
+			best = pl
+	return best
+
+
 ## Cible du pilote automatique (tests) : le largage s'il est proche, sinon le coffre le plus proche dans l'anneau.
 func farm_target() -> Vector3:
 	var pp := d.player.global_position
@@ -1210,8 +1340,8 @@ func farm_target() -> Vector3:
 	if not dr.is_empty() and not _outside(dr.pos, 0.85) and Vector2(dr.pos.x - pp.x, dr.pos.z - pp.z).length() < 90.0:
 		return dr.pos
 	var gp := _ground_for(Profile.equipped, Run.class_id, d.player.level, pp, 40.0)  # pièce tombée meilleure que la sienne (lot BR3)
-	if gp != null:
-		return gp.global_position
+	if not gp.is_empty():
+		return (gp.bag as Node3D).global_position
 	var best := Vector3.INF
 	var bd := INF
 	for it in _chests:
@@ -1247,9 +1377,7 @@ func objective_lines() -> Array[String]:
 	var out: Array[String] = []
 	if spectating:
 		var who := watched.display_name.get_slice(" ·", 0) if watched != null and is_instance_valid(watched) else "—"
-		out.append("◉ Tu regardes %s" % who)
-		out.append("◇ [%s] : son équipement" % Settings.action_label("interact", 1))
-		out.append("◇ [%s] : bilan de la partie" % Settings.action_label("pause", 1))
+		out.append("◉ Tu regardes %s" % who)  # (les touches sont sur le bandeau du spectateur, RoyaleRecap)
 		return out
 	if phase == "drop":
 		out.append("◆ Saute au-dessus d'un coffre")
@@ -1310,10 +1438,10 @@ func _log_force() -> void:
 # --- équipement des héros tombés (lot BR3) ------------------------------------------------------------
 ## Un héros scripté s'arrête pour une pièce tombée meilleure que la sienne à moins de GROUND_SIGHT m.
 const GROUND_SIGHT := 35.0
-## Héros tombés : {name, cid, lv, kills, place, gear (emplacement -> pièce à sa mort), drops (emplacement -> pièce au
-## sol), remains (Interactable : sa dépouille), node_id}.
+## Héros tombés : {name, cid, lv, kills, place, gear (emplacement -> pièce à sa mort), bag (Interactable : sa dépouille, où
+## sont ses pièces sauf l'arme, RoyaleLoot.make_bag), node_id} ; le joueur tombé a aussi la sienne (own : vrai).
 var fallen: Array = []
-## Pièces au sol (Interactable « gear_drop », RoyaleLoot.make_drop).
+## Dépouilles qui contiennent encore des pièces, ou vides (lot BR-I2 : un sac par héros tombé, plus de pièces éparpillées).
 var ground: Array = []
 var _sheet: RoyaleGearSheet = null
 
@@ -1325,26 +1453,27 @@ func record_of(r: Combatant) -> Dictionary:
 			return f
 	var st: Dictionary = r.get_meta("royale", {})
 	return {"name": r.display_name.get_slice(" ·", 0), "cid": String(st.get("cid", "")), "lv": int(st.get("lv", r.level)),
-		"kills": int(st.get("kills", 0)), "place": int(st.get("place", 0)), "gear": st.get("gear", {}), "drops": {}}
+		"kills": int(st.get("kills", 0)), "place": int(st.get("place", 0)), "gear": st.get("gear", {})}
 
 
-## Ouvre la fiche d'équipement [param rec] (une seule à la fois).
+## Ouvre la fiche d'équipement [param rec] (une seule à la fois) ; avec une dépouille et le joueur debout : la fenêtre de
+## pile (prendre une pièce, tout le meilleur).
 func inspect(rec: Dictionary) -> void:
 	if rec.is_empty() or (_sheet != null and is_instance_valid(_sheet) and _sheet.is_open()):
 		return
-	_sheet = RoyaleGearSheet.open(d.world, rec)
+	var take := Callable()
+	if rec.get("bag") != null and is_instance_valid(rec.bag) and not d.player.is_dead and phase != "over":
+		take = func(item: Dictionary): _player_take(rec.bag, item)
+	_sheet = RoyaleGearSheet.open(d.world, rec, take)
 
 
-## [F] près d'une dépouille (sa fiche) ou d'une pièce au sol (la prendre) : RunDirector._interact.
+## [F] près d'une dépouille : sa fenêtre de pile (RunDirector._interact).
 func interact(it: Interactable) -> void:
-	match it.kind:
-		"remains":
-			inspect(it.get_meta("record", {}))
-		"gear_drop" when not d.player.is_dead:
-			_player_take(it)
+	if it.kind == "remains":
+		inspect(it.get_meta("record", {}))
 
 
-## Un héros scripté tombe : ses pièces (sauf l'arme) au sol autour de lui ; sa dépouille garde sa fiche.
+## Un héros scripté tombe : sa dépouille garde ses pièces (sauf l'arme) et sa fiche.
 func _fall(who: Combatant) -> void:
 	if not who.has_meta("royale") or not is_instance_valid(d.map):
 		return
@@ -1355,109 +1484,93 @@ func _fall(who: Combatant) -> void:
 	rec["lv"] = int(st.lv)
 	rec["kills"] = int(st.get("kills", 0))
 	rec["node_id"] = who.get_instance_id()
-	var pos := who.global_position
-	rec["drops"] = _scatter(RoyaleLoot.drops_of(st.gear), pos)
-	var rem := Interactable.new()
-	rem.setup("remains", String(rec.name), "", "", 1.0, 2.4)
-	rem.set_meta("record", rec)
-	rem.set_meta("prompt", "[F] Voir son équipement — %s" % String(rec.name))
-	d.map.add_child(rem)
-	rem.global_position = pos
-	rem.add_beam(Color(0.78, 0.74, 1.0), 5.0)
-	for tag in rem.get_children():
-		if tag is Label3D:
-			(tag as Label3D).visibility_range_end = 12.0  # (nom de la dépouille : de près, comme les pièces)
-	d.map.interactables.append(rem)
-	rec["remains"] = rem
-	fallen.append(rec)
+	_drop_bag(rec, RoyaleLoot.drops_of(st.gear), who.global_position, "Dépouille %s" % of_name(String(rec.name)))
 
 
-## Le joueur tombe : ses pièces portées (sauf l'arme) restent au sol, à prendre par les autres.
+## « de Paladin », « d'Ingénieur » (élision devant une voyelle).
+static func of_name(name: String) -> String:
+	var first := name.substr(0, 1).to_lower()
+	return ("d'" if first in ["a", "e", "i", "o", "u", "y", "é", "è", "ê", "â", "î", "ô", "œ"] else "de ") + name
+
+
+## Le joueur tombe : ses pièces portées (sauf l'arme) restent dans sa dépouille, à prendre par les autres (ou par lui à
+## son retour).
 func _fall_player() -> void:
 	var items := RoyaleLoot.drops_of(Profile.equipped)
 	if items.is_empty() or not is_instance_valid(d.map):
 		return
-	RoyaleLoot.strip(items)  # (leurs passifs quittent la run)
-	_scatter(items, d.player.global_position)
+	var rec := {"name": "Ta dépouille", "title": "Ta dépouille", "own": true, "cid": Run.class_id, "lv": d.player.level, "kills": Royale.kills,
+		"place": maxi(_place, 1), "gear": Profile.equipped.duplicate()}
+	RoyaleLoot.strip(items)  # (leurs passifs quittent la partie)
+	_drop_bag(rec, items, d.player.global_position, "Ta dépouille")
 
 
-## Pose [param items] au sol autour de [param pos] ; renvoie emplacement -> Interactable.
-func _scatter(items: Array, pos: Vector3) -> Dictionary:
-	var out := {}
-	var spots := RoyaleLoot.spread(d.map, pos, items.size())
-	for i in items.size():
-		var node := RoyaleLoot.make_drop(d.map, items[i], spots[i])
-		d.map.interactables.append(node)
-		ground.append(node)
-		out[String(items[i].slot)] = node
-	return out
+func _drop_bag(rec: Dictionary, items: Array, pos: Vector3, title: String) -> void:
+	var bag := RoyaleLoot.make_bag(d.map, items, pos, title)
+	bag.set_meta("record", rec)
+	rec["bag"] = bag
+	d.map.interactables.append(bag)
+	ground.append(bag)
+	fallen.append(rec)
 
 
-func _take_drop(node: Interactable) -> void:
-	ground.erase(node)
-	d.map.interactables.erase(node)
-	node.used = true
-	node.queue_free()
-
-
-## Le joueur prend la pièce au sol [param node] : elle est portée, la sienne (s'il en avait une) reste à sa place.
-func _player_take(node: Interactable) -> void:
-	if not is_instance_valid(node) or node.used:
+## Le joueur prend [param it] dans la dépouille [param bag] : elle est portée tout de suite (pièce du Survivant : jet
+## ramené entre 100 et 120, passif fixe), la sienne rejoint la dépouille.
+func _player_take(bag: Interactable, it: Dictionary) -> void:
+	if not is_instance_valid(bag) or not RoyaleLoot.bag_items(bag).any(func(x): return is_same(x, it)):
 		return
-	var it: Dictionary = node.get_meta("item")
-	var at := node.global_position
-	_take_drop(node)
-	# pièce du Survivant (jet ramené entre 100 et 120, passif fixe) ; celle de l'emplacement reste au sol à sa place
+	RoyaleLoot.bag_take(bag, it)
 	var worn := RoyaleLoot.wear(SurvivorGear.adopt(it, null, true))
-	if not worn.is_empty():
-		_scatter([worn], at)
+	RoyaleLoot.bag_put(bag, worn)
 	Sfx.ui("pickup", -6.0)
 	d.message.emit("Pièce portée : %s" % Items.display_name(it), 1.6)
 
 
-## Pièce au sol la plus proche de [param pos] (moins de [param reach] m, dans l'anneau) qui bat celle de son
-## emplacement dans [param gear] ; null : aucune.
-func _ground_for(gear: Dictionary, cid: String, lv: int, pos: Vector3, reach: float) -> Interactable:
-	var best: Interactable = null
+## Pièce d'une dépouille proche de [param pos] (moins de [param reach] m, dans l'anneau) qui bat celle de son emplacement
+## dans [param gear] (la plus proche dépouille, son meilleur gain) : {bag, item} ; {} : aucune.
+func _ground_for(gear: Dictionary, cid: String, lv: int, pos: Vector3, reach: float) -> Dictionary:
+	var best := {}
 	var bd := reach
-	for n in ground:
-		if not is_instance_valid(n) or n.used:
+	for bag in ground:
+		if not is_instance_valid(bag) or RoyaleLoot.bag_items(bag).is_empty():
 			continue
-		var dd := Vector2(n.global_position.x - pos.x, n.global_position.z - pos.z).length()
-		if dd < bd and not _outside(n.global_position, 0.9) and RoyaleLoot.better(n.get_meta("item"), gear, cid, lv):
+		var dd := Vector2(bag.global_position.x - pos.x, bag.global_position.z - pos.z).length()
+		if dd >= bd or _outside(bag.global_position, 0.9):
+			continue
+		var ups := RoyaleLoot.bag_upgrades(bag, gear, cid, lv)
+		if not ups.is_empty():
 			bd = dd
-			best = n
+			best = {"bag": bag, "item": ups[0]}
 	return best
 
 
-## Héros scripté : va prendre une pièce tombée meilleure que la sienne, proche ; vrai s'il s'en occupe.
+## Héros scripté : va prendre dans une dépouille proche une pièce meilleure que la sienne ; vrai s'il s'en occupe.
 func _ai_ground(r: ClassRival, pos: Vector3) -> bool:
 	var st: Dictionary = r.get_meta("royale")
-	var n := _ground_for(st.gear, String(st.cid), int(st.lv), pos, GROUND_SIGHT)
-	if n == null:
+	var pick := _ground_for(st.gear, String(st.cid), int(st.lv), pos, GROUND_SIGHT)
+	if pick.is_empty():
 		return false
-	if Vector2(n.global_position.x - pos.x, n.global_position.z - pos.z).length() > RoyaleLoot.PICK_RANGE + 0.6:
+	var bag: Interactable = pick.bag
+	if Vector2(bag.global_position.x - pos.x, bag.global_position.z - pos.z).length() > RoyaleLoot.PICK_RANGE + 0.6:
 		_release(r)
-		r.goal = n.global_position
+		r.goal = bag.global_position
 		st["mode"] = "G"
 		return true
-	var it: Dictionary = n.get_meta("item")
+	var it: Dictionary = pick.item
 	var worn: Dictionary = st.gear.get(String(it.slot), {})
-	var at := n.global_position
-	_take_drop(n)
+	RoyaleLoot.bag_take(bag, it)
 	st.gear[String(it.slot)] = it
-	if not worn.is_empty():
-		_scatter([worn], at)
+	RoyaleLoot.bag_put(bag, worn)
 	Royale.refresh_ai(r)
 	r.goal = Vector3.INF
 	st["mode"] = "O"
 	return true
 
 
-## Pilote automatique : prend en passant une pièce tombée meilleure que la sienne.
+## Pilote automatique : prend en passant une pièce meilleure que la sienne dans une dépouille.
 func _autoplay_pickup() -> void:
 	if ground.is_empty() or d.player.is_dead:
 		return
-	var n := _ground_for(Profile.equipped, Run.class_id, d.player.level, d.player.global_position, RoyaleLoot.PICK_RANGE)
-	if n != null:
-		_player_take(n)
+	var pick := _ground_for(Profile.equipped, Run.class_id, d.player.level, d.player.global_position, RoyaleLoot.PICK_RANGE + 0.6)
+	if not pick.is_empty():
+		_player_take(pick.bag, pick.item)

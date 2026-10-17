@@ -28,6 +28,13 @@ const LEGEND := [["dungeon", "Donjon"], ["merchant", "Marchand"], ["shrine", "Sa
 	["well", "Fontaine de vie"], ["magnet", "Pierre d'aimant"], ["greed", "Autel de cupidité"], ["challenge", "Stèle du défi"], ["fortune", "Autel de la fortune"], ["giant", "Autel du géant"],
 	["drop", "Largage"], ["bounty", "Héros mis à prix"]]
 
+
+## Couleur du repère [param kind] ; Battle royale : coffres au code de rareté de la Bible (ProcMap.ROYALE_ICONS, lot BR-I2).
+static func icon_color(kind: String) -> Color:
+	if Royale.active and ProcMap.ROYALE_ICONS.has(kind):
+		return ProcMap.ROYALE_ICONS[kind]
+	return ICONS.get(kind, Color.WHITE)
+
 var player: Player
 var director: RunDirector
 var big := false
@@ -91,7 +98,7 @@ func _draw() -> void:
 	var k := 1.5 if big else 1.0
 	for m in director.markers():
 		var sp: Vector2 = w2s.call(m[0])
-		var col: Color = ICONS.get(m[1], Color.WHITE)
+		var col: Color = icon_color(String(m[1]))
 		if not _inside(sp):
 			if String(m[1]).begins_with("chest"):
 				continue
@@ -189,7 +196,7 @@ func _draw_legend() -> void:
 	for i in kinds.size():
 		var k: String = kinds[i][0]
 		var p := box.position + Vector2(18, 16 + row * i)
-		var col: Color = ICONS.get(k, Color.WHITE)
+		var col: Color = icon_color(k)
 		if k.begins_with("chest"):
 			var r := 4.0 if k == "chest" else 5.5
 			draw_rect(Rect2(p - Vector2(r, r), Vector2(r, r) * 2.0), col)
