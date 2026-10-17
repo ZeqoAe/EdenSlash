@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="'M PLUS Rounded 1c', 'Nunito', sans-serif">
+  <!-- Maquette maison BM-SURV (17/10/2026) : bilan du Survivant v2, DA « autocollant manga ». Aucun élément tiers. -->
+  <defs>
+    <style>
+      .t { fill: #221A3A; }
+      .tw { fill: #FFFFFF; stroke: #221A3A; stroke-width: 5; paint-order: stroke; font-weight: 800; }
+      .pop { font-family: 'Mochiy Pop One', 'M PLUS Rounded 1c', sans-serif; }
+      .p { fill: #FFF8EC; }
+      .s { fill: #C9BFEA; }
+      .note { fill: #C21E45; font-size: 14px; font-weight: 700; }
+    </style>
+    <pattern id="trame" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#221A3A" opacity="0.18"/></pattern>
+  </defs>
+  <rect width="1600" height="900" fill="#CCDEF3"/>
+  <!-- traits de vitesse derrière le titre (événement) -->
+  <g stroke="#FFFFFF" stroke-width="4" opacity="0.8">
+    <line x1="800" y1="80" x2="560" y2="10"/><line x1="800" y1="80" x2="640" y2="0"/><line x1="800" y1="80" x2="960" y2="0"/>
+    <line x1="800" y1="80" x2="1040" y2="10"/><line x1="800" y1="80" x2="480" y2="60"/><line x1="800" y1="80" x2="1120" y2="60"/>
+  </g>
+  <text x="800" y="104" text-anchor="middle" class="tw pop" font-size="56" fill="#FFC928" transform="rotate(-3 800 104)">Victoire !</text>
+  <text x="800" y="146" text-anchor="middle" class="t" font-size="19" font-weight="700">Magicien · Palier II · Baie du Béluga · 22:41</text>
+  <!-- record -->
+  <g transform="translate(1090 40) rotate(6)"><rect x="0" y="0" width="230" height="46" rx="14" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/>
+    <text x="115" y="31" text-anchor="middle" class="tw" font-size="18">Nouveau record !</text></g>
+
+  <!-- panneau papier -->
+  <rect x="47" y="177" width="1506" height="604" rx="18" fill="#221A3A"/>
+  <rect x="40" y="170" width="1506" height="604" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+
+  <!-- 1. Tuiles -->
+  <g font-weight="800">
+    <g transform="translate(64 192)"><rect width="168" height="78" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/><text x="84" y="44" text-anchor="middle" class="p pop" font-size="28">31</text><text x="84" y="66" text-anchor="middle" class="s" font-size="14">niveau</text></g>
+    <g transform="translate(244 192)"><rect width="168" height="78" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/><text x="84" y="44" text-anchor="middle" class="p pop" font-size="28">2 812</text><text x="84" y="66" text-anchor="middle" class="s" font-size="14">monstres</text></g>
+    <g transform="translate(424 192)"><rect width="168" height="78" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/><text x="84" y="44" text-anchor="middle" class="p pop" font-size="28">3 / 3</text><text x="84" y="66" text-anchor="middle" class="s" font-size="14">gardiens</text></g>
+    <g transform="translate(604 192)"><rect width="168" height="78" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/><text x="84" y="44" text-anchor="middle" class="p pop" font-size="28">1:48</text><text x="84" y="66" text-anchor="middle" class="s" font-size="14">boss</text></g>
+  </g>
+
+  <!-- 2. Frise de la partie : niveau par minute + événements -->
+  <g transform="translate(64 290)">
+    <rect width="708" height="200" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+    <text x="16" y="28" class="p" font-size="17" font-weight="800">Ta partie minute par minute</text>
+    <polyline points="30,170 90,150 150,130 210,118 270,104 330,92 390,82 450,74 510,64 570,58 630,52 690,48" fill="none" stroke="#8FD62E" stroke-width="4"/>
+    <polyline points="30,170 90,166 150,160 210,150 270,140 330,124 390,110 450,96 510,84 570,70 630,58 690,44" fill="none" stroke="#FF4D6D" stroke-width="3" stroke-dasharray="6 5"/>
+    <g stroke="#221A3A" stroke-width="2.5">
+      <circle cx="190" cy="186" r="9" fill="#8FD62E"/><circle cx="350" cy="186" r="9" fill="#8FD62E"/><circle cx="510" cy="186" r="9" fill="#8FD62E"/>
+      <rect x="660" y="176" width="20" height="20" rx="5" fill="#B43BEB"/>
+    </g>
+    <text x="440" y="28" fill="#C3F07A" font-size="14" font-weight="800">— niveau</text>
+    <text x="530" y="28" fill="#FF9DB0" font-size="14" font-weight="800">- - force des monstres</text>
+  </g>
+
+  <!-- 3. Dégâts par source (le « pourquoi » de la victoire) -->
+  <g transform="translate(64 506)">
+    <rect width="708" height="252" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+    <text x="16" y="28" class="p" font-size="17" font-weight="800">Qui a fait le travail</text>
+    <g font-size="15" font-weight="700">
+      <rect x="16" y="44" width="40" height="40" rx="10" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+      <text x="68" y="70" class="p">Marteau de l'Ion (arme)</text><rect x="300" y="54" width="300" height="20" rx="10" fill="#FFC928" stroke="#221A3A" stroke-width="2"/><text x="690" y="70" text-anchor="end" class="p">41</text>
+      <rect x="16" y="94" width="40" height="40" rx="10" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+      <text x="68" y="120" class="p">Impact profond</text><rect x="300" y="104" width="200" height="20" rx="10" fill="#22B8F0" stroke="#221A3A" stroke-width="2"/><text x="690" y="120" text-anchor="end" class="p">27</text>
+      <rect x="16" y="144" width="40" height="40" rx="10" fill="#B43BEB" stroke="#221A3A" stroke-width="3"/>
+      <text x="68" y="170" class="p">Cadavres explosifs (passif)</text><rect x="300" y="154" width="120" height="20" rx="10" fill="#B43BEB" stroke="#221A3A" stroke-width="2"/><text x="690" y="170" text-anchor="end" class="p">16</text>
+      <rect x="16" y="194" width="40" height="40" rx="10" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/>
+      <text x="68" y="220" class="p">Séisme (évolution)</text><rect x="300" y="204" width="90" height="20" rx="10" fill="#FF8A1F" stroke="#221A3A" stroke-width="2"/><text x="690" y="220" text-anchor="end" class="p">12</text>
+    </g>
+    <text x="692" y="28" text-anchor="end" fill="#C9BFEA" font-size="13">part des dégâts · survol : total et DPS</text>
+  </g>
+
+  <!-- 4. Ton équipement final (grille de cases) -->
+  <g transform="translate(796 192)">
+    <rect width="730" height="298" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+    <text x="16" y="28" class="p" font-size="17" font-weight="800">Ton équipement final</text>
+    <g stroke="#221A3A" stroke-width="3">
+      <rect x="16" y="44" width="150" height="70" rx="14" fill="#FFC928"/>
+      <rect x="180" y="44" width="70" height="70" rx="14" fill="#B43BEB"/><rect x="260" y="44" width="70" height="70" rx="14" fill="#22B8F0"/>
+      <rect x="340" y="44" width="70" height="70" rx="14" fill="#FF8A1F"/><rect x="420" y="44" width="70" height="70" rx="14" fill="#8FD62E"/>
+      <rect x="500" y="44" width="70" height="70" rx="14" fill="#B43BEB"/><rect x="580" y="44" width="70" height="70" rx="14" fill="#C9C3D6"/>
+      <rect x="660" y="44" width="56" height="70" rx="14" fill="url(#trame)"/>
+    </g>
+    <g class="tw" font-size="14"><text x="24" y="64">+10</text><text x="186" y="64">+10</text><text x="266" y="64">+6</text><text x="346" y="64">+8</text><text x="426" y="64">+4</text><text x="506" y="64">+2</text><text x="586" y="64">+0</text></g>
+    <text x="16" y="146" class="p" font-size="15">◆ Tempête 5 / 5 accomplie · ★ 1 jet parfait · 2 pièces à +10</text>
+    <text x="16" y="176" class="s" font-size="15">Sorts : Impact profond 10 · Cyclone 7 · Bombe 4 · +3 autres</text>
+    <text x="16" y="206" class="s" font-size="15">Évolution : Séisme · Passifs éveillés : 9</text>
+    <!-- découvertes de la partie (codex du mode) -->
+    <rect x="16" y="226" width="698" height="56" rx="12" fill="#FFE27A" stroke="#221A3A" stroke-width="3"/>
+    <text x="32" y="260" class="t" font-size="16" font-weight="800">Nouveau au Codex : évolution « Séisme » · passif « Onde de choc »</text>
+  </g>
+
+  <!-- 5. Récompenses : coffres d'apparence qui s'ouvrent -->
+  <g transform="translate(796 506)">
+    <rect width="730" height="252" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+    <text x="16" y="28" class="p" font-size="17" font-weight="800">Gardé</text>
+    <g stroke="#221A3A" stroke-width="3">
+      <rect x="16" y="46" width="120" height="120" rx="16" fill="#C9C3D6"/><rect x="152" y="46" width="120" height="120" rx="16" fill="#22B8F0"/>
+      <rect x="288" y="46" width="120" height="120" rx="16" fill="#FFC928"/>
+    </g>
+    <g stroke="#FFFFFF" stroke-width="3" opacity="0.9"><line x1="348" y1="106" x2="348" y2="40"/><line x1="348" y1="106" x2="410" y2="70"/><line x1="348" y1="106" x2="286" y2="70"/></g>
+    <g class="tw" font-size="14"><text x="76" y="190" text-anchor="middle">commun</text><text x="212" y="190" text-anchor="middle">rare</text><text x="348" y="190" text-anchor="middle">légendaire</text></g>
+    <text x="432" y="80" class="p" font-size="16" font-weight="800">Titre : « Survivant II »</text>
+    <text x="432" y="110" class="p" font-size="16">Palier III ouvert !</text>
+    <text x="432" y="140" class="s" font-size="15">Défi du jour : 2e sur tes</text>
+    <text x="432" y="162" class="s" font-size="15">5 meilleures parties</text>
+    <text x="16" y="232" class="s" font-size="14">Les coffres s'ouvrent un par un (70 ms de décalage, signature par rareté).</text>
+  </g>
+
+  <!-- boutons -->
+  <g transform="translate(300 800)">
+    <rect x="6" y="6" width="380" height="72" rx="18" fill="#221A3A"/><rect width="380" height="72" rx="18" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+    <text x="190" y="47" text-anchor="middle" class="tw pop" font-size="26">Rejouer</text>
+  </g>
+  <g transform="translate(704 806)"><rect x="5" y="5" width="280" height="60" rx="16" fill="#221A3A"/><rect width="280" height="60" rx="16" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <text x="140" y="38" text-anchor="middle" class="t" font-size="19" font-weight="800">Changer de classe</text></g>
+  <g transform="translate(1004 806)"><rect x="5" y="5" width="280" height="60" rx="16" fill="#221A3A"/><rect width="280" height="60" rx="16" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <text x="140" y="38" text-anchor="middle" class="t" font-size="19" font-weight="800">Menu principal</text></g>
+</svg>

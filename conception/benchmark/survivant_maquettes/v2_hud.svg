@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="'M PLUS Rounded 1c', 'Nunito', sans-serif">
+  <!-- Maquette maison BM-SURV (17/10/2026) : HUD du Survivant v2 dans la DA « autocollant manga » (BIBLE v2).
+       Aucun élément tiers. Le décor est une teinte plate « monde clair » ; les cases d'icônes sont des emplacements. -->
+  <defs>
+    <style>
+      .ink { fill: none; stroke: #221A3A; stroke-width: 3; }
+      .t { fill: #221A3A; font-size: 17px; }
+      .tw { fill: #FFFFFF; stroke: #221A3A; stroke-width: 4; paint-order: stroke; font-weight: 800; }
+      .pop { font-family: 'Mochiy Pop One', 'M PLUS Rounded 1c', sans-serif; }
+      .small { font-size: 14px; }
+      .note { fill: #C21E45; font-size: 14px; font-weight: 700; }
+    </style>
+    <pattern id="trame" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#221A3A" opacity="0.18"/></pattern>
+  </defs>
+
+  <!-- monde clair (scène de jeu) -->
+  <rect width="1600" height="900" fill="#ACB47F"/>
+  <path d="M0 520 C 300 470, 600 600, 1600 500 L1600 900 L0 900 Z" fill="#CEBFA7" opacity="0.7"/>
+  <!-- horde schématique : anneau de monstres ronds autour du héros -->
+  <g fill="#FF8A1F" stroke="#221A3A" stroke-width="2">
+    <circle cx="560" cy="380" r="13"/><circle cx="590" cy="350" r="13"/><circle cx="625" cy="330" r="13"/><circle cx="1010" cy="360" r="13"/>
+    <circle cx="1045" cy="390" r="13"/><circle cx="1060" cy="430" r="13"/><circle cx="540" cy="560" r="13"/><circle cx="575" cy="600" r="13"/>
+    <circle cx="1030" cy="600" r="13"/><circle cx="990" cy="630" r="13"/><circle cx="700" cy="660" r="13"/><circle cx="910" cy="300" r="13"/>
+  </g>
+  <g fill="#22B8F0" stroke="#221A3A" stroke-width="2">
+    <circle cx="520" cy="470" r="13"/><circle cx="1085" cy="500" r="13"/><circle cx="800" cy="690" r="13"/><circle cx="760" cy="290" r="13"/>
+  </g>
+  <!-- élite : plus gros, couronne, contour épais -->
+  <circle cx="1120" cy="300" r="26" fill="#B43BEB" stroke="#221A3A" stroke-width="4"/>
+  <path d="M1104 270 l6 -14 l6 10 l4 -12 l4 12 l6 -10 l6 14 z" fill="#FFC928" stroke="#221A3A" stroke-width="2"/>
+  <!-- orbes d'expérience -->
+  <g fill="#8FD62E" stroke="#221A3A" stroke-width="1.5"><circle cx="700" cy="420" r="5"/><circle cx="720" cy="560" r="5"/><circle cx="880" cy="400" r="5"/><circle cx="905" cy="575" r="5"/></g>
+  <!-- télégraphe ennemi : bord net clair + intérieur fraise 35 % -->
+  <circle cx="1000" cy="520" r="70" fill="#FF4D6D" fill-opacity="0.3" stroke="#FFFFFF" stroke-width="2"/>
+  <!-- héros + contour de silhouette toujours visible -->
+  <ellipse cx="800" cy="500" rx="46" ry="16" fill="none" stroke="#FFC928" stroke-width="3"/>
+  <rect x="784" y="440" width="32" height="56" rx="14" fill="#2E2450" stroke="#FFFFFF" stroke-width="3"/>
+  <!-- onomatopée de montée de niveau (600 ms) -->
+  <text x="800" y="420" text-anchor="middle" class="tw pop" font-size="30" transform="rotate(-3 800 420)">Niveau !</text>
+  <!-- nombres de dégâts : normal / critique -->
+  <text x="610" y="365" class="tw" font-size="20">412</text>
+  <text x="1028" y="340" class="tw pop" font-size="26" fill="#FFC928">1 830 !</text>
+
+  <!-- 1. BARRE D'EXPÉRIENCE pleine largeur (signature du genre) -->
+  <rect x="16" y="14" width="1568" height="22" rx="11" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+  <rect x="19" y="17" width="980" height="16" rx="8" fill="#8FD62E"/>
+  <rect x="19" y="17" width="980" height="5" rx="2" fill="#C3F07A"/>
+  <rect x="999" y="17" width="3" height="16" fill="#221A3A"/>
+  <g transform="translate(16 6)"><rect x="0" y="0" width="98" height="38" rx="12" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+    <text x="49" y="27" text-anchor="middle" class="tw pop" font-size="20">Niv. 24</text></g>
+
+  <!-- 2. CHRONO + FRISE DES 20 MINUTES au centre haut -->
+  <g transform="translate(560 48)">
+    <rect x="6" y="6" width="480" height="92" rx="18" fill="#221A3A"/>
+    <rect x="0" y="0" width="480" height="92" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <rect x="0" y="70" width="480" height="22" rx="0" fill="url(#trame)" opacity="0.6"/>
+    <text x="240" y="40" text-anchor="middle" class="pop" font-size="34" fill="#221A3A">12:34</text>
+    <text x="240" y="40" dx="92" class="small" fill="#6B5E86">avant le boss</text>
+    <!-- frise : 0 → 20:00, gardiens à 5/10/15, portail 15, boss -->
+    <rect x="24" y="56" width="432" height="14" rx="7" fill="#2E2450" stroke="#221A3A" stroke-width="2"/>
+    <rect x="26" y="58" width="270" height="10" rx="5" fill="#FFC928"/>
+    <g stroke="#221A3A" stroke-width="2.5">
+      <circle cx="132" cy="63" r="11" fill="#8FD62E"/><circle cx="240" cy="63" r="11" fill="#8FD62E"/>
+      <circle cx="348" cy="63" r="11" fill="#FF4D6D"/><rect x="440" y="50" width="26" height="26" rx="7" fill="#B43BEB"/>
+    </g>
+    <text x="132" y="68" text-anchor="middle" class="small" fill="#221A3A" font-weight="800">✓</text>
+    <text x="240" y="68" text-anchor="middle" class="small" fill="#221A3A" font-weight="800">✓</text>
+    <text x="348" y="68" text-anchor="middle" class="small tw" font-size="13">!</text>
+    <text x="453" y="68" text-anchor="middle" class="tw" font-size="13">B</text>
+  </g>
+  <!-- annonce sous la frise, 4 s puis s'efface -->
+  <g transform="translate(600 154)"><rect x="0" y="0" width="400" height="40" rx="14" fill="#FF4D6D" stroke="#221A3A" stroke-width="3"/>
+    <text x="200" y="27" text-anchor="middle" class="tw pop" font-size="19">Gardien dans 0:10 !</text></g>
+
+  <!-- 3. RESSOURCES de la run (haut gauche, sous la barre) : une ligne -->
+  <g transform="translate(16 52)">
+    <rect x="0" y="0" width="300" height="44" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+    <circle cx="26" cy="22" r="11" fill="#FFC928" stroke="#221A3A" stroke-width="2.5"/><text x="44" y="29" fill="#FFF8EC" font-size="18" font-weight="800">1 240</text>
+    <rect x="108" y="12" width="20" height="20" rx="5" fill="#86DDFF" stroke="#221A3A" stroke-width="2.5"/><text x="134" y="29" fill="#FFF8EC" font-size="18" font-weight="800">2</text>
+    <circle cx="176" cy="22" r="10" fill="#FF4D6D" stroke="#221A3A" stroke-width="2.5"/><text x="192" y="29" fill="#FFF8EC" font-size="18" font-weight="800">3 418</text>
+  </g>
+  <text x="20" y="118" class="note">Or · clés · monstres vaincus</text>
+
+  <!-- 4. COLLECTION DE LA RUN (colonne gauche, style « boons ») : arme, 8 emplacements, panoplie -->
+  <g transform="translate(16 130)">
+    <rect x="5" y="5" width="132" height="330" rx="16" fill="#221A3A"/>
+    <rect x="0" y="0" width="132" height="330" rx="16" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <!-- arme -->
+    <rect x="12" y="12" width="108" height="56" rx="12" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/>
+    <text x="66" y="48" text-anchor="middle" class="tw" font-size="18">Arme +6</text>
+    <!-- 8 cases 2 x 4 -->
+    <g stroke="#221A3A" stroke-width="3">
+      <rect x="12" y="78" width="50" height="50" rx="12" fill="#B43BEB"/><rect x="70" y="78" width="50" height="50" rx="12" fill="#22B8F0"/>
+      <rect x="12" y="136" width="50" height="50" rx="12" fill="#FFC928"/><rect x="70" y="136" width="50" height="50" rx="12" fill="#8FD62E"/>
+      <rect x="12" y="194" width="50" height="50" rx="12" fill="#B43BEB"/><rect x="70" y="194" width="50" height="50" rx="12" fill="url(#trame)"/>
+      <rect x="12" y="252" width="50" height="50" rx="12" fill="#C9C3D6"/><rect x="70" y="252" width="50" height="50" rx="12" fill="url(#trame)"/>
+    </g>
+    <g class="tw" font-size="13"><text x="16" y="94">+8</text><text x="74" y="94">+2</text><text x="16" y="152">+10</text><text x="74" y="152">+4</text><text x="16" y="210">+6</text><text x="16" y="268">+0</text></g>
+    <!-- pastilles d'éveil -->
+    <g fill="#FFC928" stroke="#221A3A" stroke-width="1.5"><circle cx="24" cy="120" r="4"/><circle cx="34" cy="120" r="4"/><circle cx="24" cy="178" r="4"/><circle cx="34" cy="178" r="4"/><circle cx="44" cy="178" r="4"/><circle cx="24" cy="236" r="4"/></g>
+    <text x="66" y="322" text-anchor="middle" fill="#4F8F10" font-size="14" font-weight="800">◆ Tempête 3 / 5</text>
+  </g>
+  <!-- passifs actifs : icônes rondes avec total -->
+  <g transform="translate(16 474)">
+    <g stroke="#221A3A" stroke-width="3"><circle cx="22" cy="22" r="20" fill="#22B8F0"/><circle cx="66" cy="22" r="20" fill="#FF8A1F"/><circle cx="110" cy="22" r="20" fill="#8FD62E"/>
+      <circle cx="22" cy="68" r="20" fill="#B43BEB"/><circle cx="66" cy="68" r="20" fill="#FFC928"/><circle cx="110" cy="68" r="20" fill="url(#trame)"/></g>
+    <g class="tw" font-size="12"><text x="30" y="40">×2</text><text x="74" y="40">×3</text><text x="74" y="86">×1</text></g>
+    <text x="110" y="74" text-anchor="middle" fill="#221A3A" font-size="13" font-weight="800">+7</text>
+  </g>
+  <text x="20" y="600" class="note">Survol / Maj : carte complète</text>
+
+  <!-- 5. MINI-CARTE (haut droite) avec coffres, autels, gardien -->
+  <g transform="translate(1394 52)">
+    <circle cx="95" cy="95" r="95" fill="#221A3A"/><circle cx="92" cy="92" r="92" fill="#C3F07A" stroke="#221A3A" stroke-width="4"/>
+    <g stroke="#221A3A" stroke-width="2"><rect x="40" y="60" width="12" height="10" rx="2" fill="#FFC928"/><rect x="120" y="130" width="12" height="10" rx="2" fill="#FFC928"/>
+      <circle cx="140" cy="60" r="7" fill="#B43BEB"/><circle cx="60" cy="135" r="9" fill="#FF4D6D"/></g>
+    <path d="M92 84 l8 16 l-8 -4 l-8 4 z" fill="#FFFFFF" stroke="#221A3A" stroke-width="2"/>
+  </g>
+  <!-- Menace -->
+  <g transform="translate(1430 252)"><rect x="0" y="0" width="150" height="36" rx="12" fill="#C21E45" stroke="#221A3A" stroke-width="3" transform="rotate(4 75 18)"/>
+    <text x="75" y="25" text-anchor="middle" class="tw" font-size="17">Menace 2</text></g>
+
+  <!-- 6. BAS : vie (jauge), sorts 4 cases + enchaînements, potion -->
+  <g transform="translate(470 790)">
+    <rect x="6" y="6" width="660" height="96" rx="18" fill="#221A3A"/>
+    <rect x="0" y="0" width="660" height="96" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <!-- vie en jauge large, trace claire des dégâts -->
+    <rect x="16" y="12" width="628" height="22" rx="11" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+    <rect x="19" y="15" width="430" height="16" rx="8" fill="#FF9DB0"/>
+    <rect x="19" y="15" width="390" height="16" rx="8" fill="#FF4D6D"/>
+    <text x="330" y="30" text-anchor="middle" class="tw" font-size="15">8 412 / 12 000</text>
+    <!-- 4 cases de sorts, chiffre du niveau, pastilles d'enchaînements -->
+    <g stroke="#221A3A" stroke-width="3">
+      <rect x="120" y="42" width="46" height="46" rx="12" fill="#FFC928"/><rect x="176" y="42" width="46" height="46" rx="12" fill="#22B8F0"/>
+      <rect x="232" y="42" width="46" height="46" rx="12" fill="#FF8A1F"/><rect x="288" y="42" width="46" height="46" rx="12" fill="url(#trame)"/>
+    </g>
+    <g class="tw" font-size="13"><text x="148" y="58">10</text><text x="208" y="58">7</text><text x="264" y="58">3</text></g>
+    <g fill="#B43BEB" stroke="#221A3A" stroke-width="1.5"><circle cx="132" cy="82" r="4"/><circle cx="142" cy="82" r="4"/><circle cx="188" cy="82" r="4"/></g>
+    <!-- potion, esquive -->
+    <rect x="360" y="42" width="46" height="46" rx="12" fill="#FF4D6D" stroke="#221A3A" stroke-width="3"/><text x="383" y="72" text-anchor="middle" class="tw" font-size="15">2</text>
+    <rect x="416" y="42" width="46" height="46" rx="23" fill="#86DDFF" stroke="#221A3A" stroke-width="3"/>
+    <text x="16" y="72" fill="#6B5E86" font-size="15" font-weight="800">Sorts 6 / 12</text>
+  </g>
+  <text x="472" y="780" class="note">Vie en jauge large (pas de rond) · niveau du sort sur la case · points = enchaînements</text>
+
+  <!-- légende de la maquette -->
+  <g transform="translate(1180 620)">
+    <rect x="0" y="0" width="404" height="150" rx="14" fill="#FFF8EC" stroke="#C21E45" stroke-width="2" stroke-dasharray="6 4"/>
+    <text x="14" y="26" class="note">Maquette BM-SURV · HUD v2 (non contractuelle)</text>
+    <text x="14" y="50" class="t small">1 XP pleine largeur · 2 chrono + frise au centre</text>
+    <text x="14" y="72" class="t small">3 or / clés / tués · 4 collection de la run à gauche</text>
+    <text x="14" y="94" class="t small">5 mini-carte avec coffres, autels, gardien · Menace</text>
+    <text x="14" y="116" class="t small">6 vie + sorts en bas · héros contouré au-dessus de tout</text>
+    <text x="14" y="138" class="t small">Élite : plus grosse, couronne, contour épais</text>
+  </g>
+</svg>
