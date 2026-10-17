@@ -1,0 +1,39 @@
+{
+ "id": "prp_baton_ecume",
+ "nom": "Bâton d'écume",
+ "emplacement": "weapon",
+ "emplacement_nom": "Arme (apparence)",
+ "type_arme": "staff",
+ "type_nom": "Bâton",
+ "rarete": 3,
+ "rarete_nom": "Épique",
+ "fichier": "prp_baton_ecume.glb",
+ "accroche": {
+  "os": "Bip01 R Hand",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": "nœuds W1 (base de la lame) et W2 (pointe)"
+ },
+ "mesures": {
+  "triangles": 7680,
+  "sommets": 3820,
+  "ko": 586,
+  "dimensions": [
+   0.642,
+   0.318,
+   1.748
+  ],
+  "texture": 1024,
+  "composantes": 8,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": "inclinaison corrigée 14°"
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 104,
+  "prompt": "a single long magic staff, white wooden shaft with golden rings, top ends in a spiral curl holding a big glowing lagoon blue orb, two small white feather wings near the top",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

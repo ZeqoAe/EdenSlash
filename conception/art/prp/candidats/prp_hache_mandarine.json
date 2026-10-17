@@ -1,0 +1,39 @@
+{
+ "id": "prp_hache_mandarine",
+ "nom": "Hache mandarine",
+ "emplacement": "weapon",
+ "emplacement_nom": "Arme (apparence)",
+ "type_arme": "axe",
+ "type_nom": "Hache",
+ "rarete": 1,
+ "rarete_nom": "Spécial",
+ "fichier": "prp_hache_mandarine.glb",
+ "accroche": {
+  "os": "Bip01 R Hand",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": "nœuds W1 (base de la lame) et W2 (pointe)"
+ },
+ "mesures": {
+  "triangles": 7680,
+  "sommets": 3840,
+  "ko": 588,
+  "dimensions": [
+   0.701,
+   0.232,
+   1.54
+  ],
+  "texture": 1024,
+  "composantes": 8,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": "inclinaison corrigée 11°"
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 108,
+  "prompt": "a single battle axe weapon, one big rounded tangerine orange crescent blade on one side with a cream edge, straight wooden handle with teal wrapping, small golden cap on top",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

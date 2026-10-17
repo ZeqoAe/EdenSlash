@@ -1,0 +1,39 @@
+{
+ "id": "prp_sceptre_amethyste",
+ "nom": "Sceptre d'améthyste",
+ "emplacement": "weapon",
+ "emplacement_nom": "Arme (apparence)",
+ "type_arme": "scepter",
+ "type_nom": "Sceptre",
+ "rarete": 4,
+ "rarete_nom": "Mythique",
+ "fichier": "prp_sceptre_amethyste.glb",
+ "accroche": {
+  "os": "Bip01 R Hand",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": "nœuds W1 (base de la lame) et W2 (pointe)"
+ },
+ "mesures": {
+  "triangles": 7680,
+  "sommets": 3300,
+  "ko": 748,
+  "dimensions": [
+   0.714,
+   0.262,
+   1.234
+  ],
+  "texture": 1024,
+  "composantes": 8,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": "inclinaison corrigée 9°"
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 104,
+  "prompt": "a single short royal scepter, golden handle, top ornament is a big purple amethyst star crystal inside a golden crescent moon ring, small pink gem at the bottom",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

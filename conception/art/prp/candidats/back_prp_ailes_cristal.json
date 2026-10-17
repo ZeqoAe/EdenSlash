@@ -1,0 +1,39 @@
+{
+ "id": "back_prp_ailes_cristal",
+ "nom": "Ailes de cristal",
+ "emplacement": "back",
+ "emplacement_nom": "Dos",
+ "type_arme": "",
+ "type_nom": "Ailes",
+ "rarete": 4,
+ "rarete_nom": "Mythique",
+ "fichier": "back_prp_ailes_cristal.glb",
+ "accroche": {
+  "os": "Bip01 Spine1",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": ""
+ },
+ "mesures": {
+  "triangles": 11520,
+  "sommets": 5632,
+  "ko": 806,
+  "dimensions": [
+   1.113,
+   0.828,
+   2.0
+  ],
+  "texture": 1024,
+  "composantes": 14,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": ""
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 104,
+  "prompt": "a single pair of crystal wings seen from the back, symmetrical, spread wide, made of large faceted amethyst purple crystal shards with golden joints",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

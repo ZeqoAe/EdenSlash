@@ -1,0 +1,39 @@
+{
+ "id": "prp_marteau_pre",
+ "nom": "Marteau des prés",
+ "emplacement": "weapon",
+ "emplacement_nom": "Arme (apparence)",
+ "type_arme": "hammer",
+ "type_nom": "Marteau",
+ "rarete": 2,
+ "rarete_nom": "Rare",
+ "fichier": "prp_marteau_pre.glb",
+ "accroche": {
+  "os": "Bip01 R Hand",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": "nœuds W1 (base de la lame) et W2 (pointe)"
+ },
+ "mesures": {
+  "triangles": 7680,
+  "sommets": 3834,
+  "ko": 452,
+  "dimensions": [
+   1.029,
+   0.49,
+   1.699
+  ],
+  "texture": 1024,
+  "composantes": 2,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": "inclinaison corrigée 6°"
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 102,
+  "prompt": "a single cute war hammer, big rounded apple green barrel-shaped hammer head with golden bands and a small white flower, long wooden handle with cream wrapping",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

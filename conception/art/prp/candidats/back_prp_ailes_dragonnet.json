@@ -1,0 +1,39 @@
+{
+ "id": "back_prp_ailes_dragonnet",
+ "nom": "Ailes de dragonnet",
+ "emplacement": "back",
+ "emplacement_nom": "Dos",
+ "type_arme": "",
+ "type_nom": "Ailes",
+ "rarete": 3,
+ "rarete_nom": "Épique",
+ "fichier": "back_prp_ailes_dragonnet.glb",
+ "accroche": {
+  "os": "Bip01 Spine1",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": ""
+ },
+ "mesures": {
+  "triangles": 11520,
+  "sommets": 5706,
+  "ko": 791,
+  "dimensions": [
+   1.283,
+   0.61,
+   2.202
+  ],
+  "texture": 1024,
+  "composantes": 12,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": ""
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 110,
+  "prompt": "a pair of bat-like dragon wings only, no body, seen from the back, symmetrical, spread wide, strawberry red and pink membranes stretched between golden bony fingers with small claws",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

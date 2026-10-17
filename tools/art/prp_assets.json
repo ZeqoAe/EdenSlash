@@ -1,0 +1,249 @@
+{
+ "_lisezmoi": "Lot PRP-1 : fiches des objets 3D (tools/art/prp_pipeline.py). 'graine' = variante retenue (null : choix automatique) ; 'graines' = variantes générées. Les dimensions viennent des armes du jeu (médiane par type, os de la main) : 'longueur' en unités de l'os, 'prise' = part de la longueur sous la main (null : détectée à la garde).",
+ "types": {
+  "sword": {
+   "nom": "Épée",
+   "longueur": 1.16,
+   "prise": null,
+   "w1": 0.36,
+   "w2": 1.0,
+   "os": "Bip01 R Hand"
+  },
+  "greatsword": {
+   "nom": "Espadon",
+   "longueur": 2.01,
+   "prise": null,
+   "w1": 0.31,
+   "w2": 1.0,
+   "os": "Bip01 R Hand"
+  },
+  "katana": {
+   "nom": "Katana",
+   "longueur": 1.93,
+   "prise": null,
+   "w1": 0.32,
+   "w2": 1.0,
+   "os": "Bip01 R Hand"
+  },
+  "axe": {
+   "nom": "Hache",
+   "longueur": 1.54,
+   "prise": 0.13,
+   "w1": 0.0,
+   "w2": 1.0,
+   "os": "Bip01 R Hand"
+  },
+  "hammer": {
+   "nom": "Marteau",
+   "longueur": 1.7,
+   "prise": 0.16,
+   "w1": 0.04,
+   "w2": 1.0,
+   "os": "Bip01 R Hand"
+  },
+  "staff": {
+   "nom": "Bâton",
+   "longueur": 1.75,
+   "prise": 0.41,
+   "w1": 0.02,
+   "w2": 1.0,
+   "os": "Bip01 R Hand"
+  },
+  "scepter": {
+   "nom": "Sceptre",
+   "longueur": 1.23,
+   "prise": 0.26,
+   "w1": 0.0,
+   "w2": 1.0,
+   "os": "Bip01 R Hand"
+  },
+  "spear": {
+   "nom": "Lance",
+   "longueur": 2.59,
+   "prise": 0.2,
+   "w1": 0.11,
+   "w2": 0.97,
+   "os": "Bip01 R Hand"
+  },
+  "wings": {
+   "nom": "Ailes",
+   "envergure": 2.2,
+   "os": "Bip01 Spine1"
+  }
+ },
+ "assets": [
+  {
+   "id": "prp_epee_menthe",
+   "nom": "Lame de menthe",
+   "emplacement": "weapon",
+   "type": "sword",
+   "rarete": 2,
+   "prompt": "a single straight longsword weapon, long mint green crystal blade with white edges, golden cross guard with a small pink heart gem, pink grip, round gold pommel",
+   "negatif": "flowers, leaves, particles, sparkles, heart shape blade, dagger",
+   "graines": [
+    105,
+    106,
+    107,
+    108,
+    109,
+    110
+   ],
+   "graine": 108,
+   "avis": "Silhouette nette ; liseré clair au tranchant."
+  },
+  {
+   "id": "prp_espadon_aurore",
+   "nom": "Espadon de l'aurore",
+   "emplacement": "weapon",
+   "type": "greatsword",
+   "rarete": 5,
+   "prompt": "a single huge two-handed greatsword, very broad white and sunny yellow blade with golden sun engravings, wide golden winged cross guard with an orange gem, long white grip, big gold pommel",
+   "graine": 104,
+   "avis": "Garde ajourée bien rendue ; la plus lisible de loin."
+  },
+  {
+   "id": "prp_epee_cerisier",
+   "nom": "Lame des cerisiers",
+   "emplacement": "weapon",
+   "type": "sword",
+   "rarete": 3,
+   "prompt": "a single katana sword, long slightly curved pale pink steel blade with a white edge, round golden tsuba guard, white and lilac wrapped long handle",
+   "negatif": "flowers, petals, branch, tree, scabbard, sheath, ring",
+   "graines": [
+    108
+   ],
+   "graine": 108,
+   "avis": "Lame nette, poignée fine (katana demandé)."
+  },
+  {
+   "id": "prp_hache_mandarine",
+   "nom": "Hache mandarine",
+   "emplacement": "weapon",
+   "type": "axe",
+   "rarete": 1,
+   "prompt": "a single battle axe weapon, one big rounded tangerine orange crescent blade on one side with a cream edge, straight wooden handle with teal wrapping, small golden cap on top",
+   "negatif": "pickaxe, double blade, hammer",
+   "graines": [
+    105,
+    106,
+    107,
+    108,
+    109,
+    110
+   ],
+   "graine": 108,
+   "avis": "Hache double très lisible ; tête épaisse."
+  },
+  {
+   "id": "prp_marteau_pre",
+   "nom": "Marteau des prés",
+   "emplacement": "weapon",
+   "type": "hammer",
+   "rarete": 2,
+   "prompt": "a single cute war hammer, big rounded apple green barrel-shaped hammer head with golden bands and a small white flower, long wooden handle with cream wrapping",
+   "graine": 102,
+   "avis": "Bonne silhouette ; disque plat sous le manche."
+  },
+  {
+   "id": "prp_baton_ecume",
+   "nom": "Bâton d'écume",
+   "emplacement": "weapon",
+   "type": "staff",
+   "rarete": 3,
+   "prompt": "a single long magic staff, white wooden shaft with golden rings, top ends in a spiral curl holding a big glowing lagoon blue orb, two small white feather wings near the top",
+   "graine": 104,
+   "avis": "Anneau et orbe nets ; plumes un peu fondues."
+  },
+  {
+   "id": "prp_sceptre_amethyste",
+   "nom": "Sceptre d'améthyste",
+   "emplacement": "weapon",
+   "type": "scepter",
+   "rarete": 4,
+   "prompt": "a single short royal scepter, golden handle, top ornament is a big purple amethyst star crystal inside a golden crescent moon ring, small pink gem at the bottom",
+   "graine": 104,
+   "avis": "Le plus détaillé ; gemme facettée lisible."
+  },
+  {
+   "id": "prp_lance_fraise",
+   "nom": "Lance royale fraise",
+   "emplacement": "weapon",
+   "type": "spear",
+   "rarete": 2,
+   "prompt": "a single spear weapon, big strawberry red leaf-shaped metal spearhead on top with a golden collar, thick sturdy white shaft with red and gold rings, chunky toy-like proportions",
+   "negatif": "fruit, strawberry, berries, feather, leaves, flowers",
+   "graines": [
+    111,
+    112,
+    113,
+    114,
+    115,
+    116
+   ],
+   "graine": 113,
+   "avis": "Sceptre-lance, pointe en bas ; 1re version écartée."
+  },
+  {
+   "id": "back_prp_ailes_aube",
+   "nom": "Ailes de l'aube",
+   "emplacement": "back",
+   "type": "wings",
+   "rarete": 5,
+   "envergure": 2.3,
+   "prompt": "a single pair of large angel wings seen from the back, symmetrical, spread wide, white and gold feathers, lagoon blue tips",
+   "graine": 103,
+   "avis": "Plumes nettes, deux ailes séparées ; belle lecture de dos."
+  },
+  {
+   "id": "back_prp_ailes_dragonnet",
+   "nom": "Ailes de dragonnet",
+   "emplacement": "back",
+   "type": "wings",
+   "rarete": 3,
+   "envergure": 2.2,
+   "prompt": "a pair of bat-like dragon wings only, no body, seen from the back, symmetrical, spread wide, strawberry red and pink membranes stretched between golden bony fingers with small claws",
+   "negatif": "dragon, creature, head, tail, body, animal, character, eyes",
+   "graines": [
+    105,
+    106,
+    107,
+    108,
+    109,
+    110
+   ],
+   "graine": 110,
+   "avis": "Membranes lisibles ; petite tête de dragon au centre du dos."
+  },
+  {
+   "id": "back_prp_ailes_papillon",
+   "nom": "Ailes de papillon lagon",
+   "emplacement": "back",
+   "type": "wings",
+   "rarete": 2,
+   "envergure": 1.9,
+   "prompt": "a pair of fairy butterfly wings only, seen from the back, symmetrical, spread wide, lagoon blue and turquoise wings with white spots and golden outlines, small golden clasp in the middle",
+   "graines": [
+    105,
+    106,
+    107,
+    108,
+    109,
+    110
+   ],
+   "negatif": "insect, butterfly body, antennae, head, legs, eyes",
+   "graine": 107,
+   "avis": "Très fidèle à l'image ; contours dorés."
+  },
+  {
+   "id": "back_prp_ailes_cristal",
+   "nom": "Ailes de cristal",
+   "emplacement": "back",
+   "type": "wings",
+   "rarete": 4,
+   "envergure": 2.0,
+   "prompt": "a single pair of crystal wings seen from the back, symmetrical, spread wide, made of large faceted amethyst purple crystal shards with golden joints",
+   "graine": 104,
+   "avis": "Le plus massif (0,83 d'épaisseur) ; très lisible de loin."
+  }
+ ]
+}

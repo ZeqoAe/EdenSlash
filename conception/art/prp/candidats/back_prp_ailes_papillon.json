@@ -1,0 +1,39 @@
+{
+ "id": "back_prp_ailes_papillon",
+ "nom": "Ailes de papillon lagon",
+ "emplacement": "back",
+ "emplacement_nom": "Dos",
+ "type_arme": "",
+ "type_nom": "Ailes",
+ "rarete": 2,
+ "rarete_nom": "Rare",
+ "fichier": "back_prp_ailes_papillon.glb",
+ "accroche": {
+  "os": "Bip01 Spine1",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": ""
+ },
+ "mesures": {
+  "triangles": 11520,
+  "sommets": 5740,
+  "ko": 726,
+  "dimensions": [
+   1.142,
+   0.416,
+   1.9
+  ],
+  "texture": 1024,
+  "composantes": 2,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": ""
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 107,
+  "prompt": "a pair of fairy butterfly wings only, seen from the back, symmetrical, spread wide, lagoon blue and turquoise wings with white spots and golden outlines, small golden clasp in the middle",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}
