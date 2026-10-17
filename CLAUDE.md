@@ -273,6 +273,10 @@ Règles (MB-A, `R_MB_A.md`) : `core/moba_data.gd` (`MobaData` : réglages en tê
 `expected_level`, héros de référence `ref_hero` = unité de dégâts des structures `ref_auto`, sbires `MINIONS` / `minion_stats`, tours, camps,
 objectifs, 40 objets `ITEMS` (`text` sans %, `tip` chiffré), profil `RULES` enregistré par `ensure_rules`) ; kits `data/moba_kits.json`
 générés par `tools/moba_kits.py` (3 cases + ultime ; `--check`), lus par `MobaData.kit` ; fiche `TeamMatch.MODES.moba` ; test `test_mb_data`.
+Carte (MB-B, `R_MB_B.md`) : `world/moba_map.gd` (`MobaMap extends ProcMap`, `generate_moba` : aire 200 × 120 m, miroir x -> −x, disposition
+`moba` (Cœurs, fontaines, tours, camps, fosses, buissons `bush_at`, rochers, arbres), voies denses `lane_wp` / `lane_point` / `lane_progress`) ;
+maillage précuit `assets/maps/moba/navmesh.res` (tampon `LAYOUT_VERSION` : recuire par `tools/moba_map_tool.tscn -- --bake` à tout changement
+de géométrie), `nav_ready()` à attendre avant un chemin ou `quit()` ; vues `-- --res=1280x720 --shots=<dossier>` ; test `test_mb_map`.
 
 ### L'Assaut (4 contre 4 tactique, en cours ; « Bientôt », caché)
 Étude `conception/benchmark/TACTIQUE.md` (spécification § 7, lots TAC-0 à TAC-14, plans masse `tactique_maquettes/plan_*.svg`). Socle (TAC-0, `R_TAC_0.md`) :

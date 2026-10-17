@@ -1310,6 +1310,10 @@ de bout en bout).
   par objet, les chiffres en infobulle).
 - **Kits** : chaque classe joue 3 sorts + un ultime tirés de ses propres sorts (un déplacement, un contrôle et, pour la Ferveur, un
   soin quand la classe en a), avec leurs enchaînements ; l'ultime recharge en 60 à 90 s et frappe plus fort.
+- **Carte** (lot MB-B, `R_MB_B.md`) : aire de 200 × 120 m fermée par des coteaux boisés ; bases aux deux bouts (sol et liseré aux
+  couleurs de l'équipe) ; Voie du Soleil en haut, Voie des Brumes en bas (30 s de Cœur à Cœur en courant) ; jungle de rochers, arbres
+  et buissons ; rivière au gué partout praticable, avec la fosse du Colosse côté Soleil et celle du Gardien côté Brumes ; 4 camps par
+  moitié. La carte est la même à chaque partie, en miroir : chaque équipe a la Voie du Soleil en haut.
 
 ## Le Colisée (étude `conception/benchmark/ARENA.md`, en cours : lots CO-A à CO-L)
 
