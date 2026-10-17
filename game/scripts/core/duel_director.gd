@@ -184,6 +184,7 @@ func update(delta: float) -> void:
 			var n := ceili(_t)
 			if n != ceili(_t + delta) and n > 0:
 				d.message.emit(str(n), 0.8)
+				UiFeel.cue("ui_tick", -8.0)  # compte à rebours (lot SND-2)
 			if _t <= 0.0:
 				phase = "fight"
 				for f in _foes:
@@ -197,6 +198,7 @@ func update(delta: float) -> void:
 				if is_instance_valid(_pilot):
 					_pilot.set_physics_process(true)
 				d.message.emit("COMBAT !", 1.0)
+				UiFeel.cue("ui_go", -8.0)
 		"between":
 			if _t <= 0.0:
 				Duel.round_n += 1

@@ -215,6 +215,76 @@ func show_spec(spec: Dictionary) -> void:
 	_start_animation()
 	if String(spec.get("tone", "")) == "win":
 		_celebrate.call_deferred()
+	for m in moments(spec):
+		if float(m[0]) <= 0.0:
+			_moment(String(m[1]), float(m[2]))
+		else:  # (minuteur lié au bilan : s'il est fermé avant, l'accent ne se joue pas)
+			get_tree().create_timer(float(m[0]), true).timeout.connect(_moment.bind(String(m[1]), float(m[2])))
+
+
+const MOMENT_FROM := 1.5  # (lot SND-2) premier accent, s après l'ouverture du bilan
+const MOMENT_GAP := 1.0  # entre deux accents
+const MOMENT_MAX := 3  # accents au plus
+
+
+func _moment(sfx: String, db: float) -> void:
+	UiFeel.cue(sfx, db)
+
+
+## Sons du bilan (lot SND-2), [délai s, nom Sfx, dB] dans l'ordre : le résultat d'abord (victoire, ou défaite douce ; un
+## bilan neutre se tait), puis au plus [constant MOMENT_MAX] accents, un à la fois, dans l'ordre record battu, étoile
+## gagnée, butin (son de la plus haute rareté) et niveau de héros gagné. Les sons propres à un mode (coffres du Battle
+## royale, de l'Échiquier) restent les leurs. Joués par UiFeel.cue : respectent l'intensité et le volume réglés.
+static func moments(spec: Dictionary) -> Array:
+	var out: Array = []
+	var tone := String(spec.get("tone", "info"))
+	if tone == "win":
+		out.append([0.0, "ui_victory", -6.0])
+	elif tone == "lose":
+		out.append([0.0, "ui_defeat", -8.0])
+	var accents: Array = []
+	if has_record(spec):
+		accents.append(["ui_record", -8.0])
+	if has_new_star(spec):
+		accents.append(["ui_star", -8.0])
+	var loot: Array = spec.get("loot", [])
+	if not loot.is_empty():
+		var best := 0
+		for e in loot:
+			best = maxi(best, int((e as Dictionary).get("rarity", 0)))
+		accents.append([Sfx.reward(best), -9.0])
+	for n in spec.get("notes", []):
+		if String(n).begins_with("Ton héros passe au niveau"):
+			accents.append(["ui_level_up", -9.0])
+			break
+	for i in mini(accents.size(), MOMENT_MAX):
+		out.append([MOMENT_FROM + MOMENT_GAP * i, accents[i][0], accents[i][1]])
+	return out
+
+
+## Un record battu : tuile « … · Record ! », note « Record ! … » ou ligne « Nouveau record ».
+static func has_record(spec: Dictionary) -> bool:
+	for t in spec.get("tiles", []):
+		if t is Array and (t as Array).size() > 1 and String(t[1]).contains("Record !"):
+			return true
+	for n in spec.get("notes", []):
+		if String(n).begins_with("Record"):
+			return true
+	for r in spec.get("gained", []):
+		if r is Dictionary and String((r as Dictionary).get("text", "")).to_lower().contains("record"):
+			return true
+	return false
+
+
+## Une étoile gagnée : objectif ★ marqué « nouvelle » ou ligne « Étoile … ».
+static func has_new_star(spec: Dictionary) -> bool:
+	for s in spec.get("stars", []):
+		if s is Dictionary and bool((s as Dictionary).get("new", false)):
+			return true
+	for r in spec.get("gained", []):
+		if r is Dictionary and String((r as Dictionary).get("text", "")).begins_with("Étoile"):
+			return true
+	return false
 
 
 ## Victoire : confettis des bonbons depuis le titre (UiFeel : 24 au plus, coupés avec « Réduire les animations ») ; un

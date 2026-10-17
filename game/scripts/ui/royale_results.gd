@@ -186,7 +186,6 @@ func _confetti() -> void:
 		tw.tween_property(c, "position:y", c.position.y + fall, 1.2).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 		tw.tween_property(c, "rotation", c.rotation + randf_range(-4.0, 4.0), 1.2)
 		tw.tween_property(c, "modulate:a", 0.0, 0.5).set_delay(0.7)
-	Sfx.ui("confirm", -8.0)
 
 
 ## La chronologie prend sa place : les blocs Gagné / Gardé défilent un peu plus tôt (1280×720).

@@ -476,7 +476,7 @@ func _start_combat() -> void:
 	_arena_combat()
 	if not fast and not autoplay and not spectating:
 		var guard := game.round_kind() == "gardien"
-		moments.banner("Gardien !" if guard else "Combat !", "fraise" if guard else "lagon", "", "confirm", -10.0, 0.8,
+		moments.banner("Gardien !" if guard else "Combat !", "fraise" if guard else "lagon", "", "ui_banner" if guard else "confirm", -10.0, 0.8,
 			[0.15, 0.1, 0.08], 0.45)
 
 
@@ -1251,11 +1251,11 @@ func _star_moments(before: Dictionary) -> void:
 		var was := int(before.get(uid, 0))
 		var now := int(u.stars)
 		if now >= 3 and was < 3:
-			moments.banner("Trois étoiles !", "soleil", AutochessData.unit_name(String(u.id)), "level_up", -6.0, 1.0,
+			moments.banner("Trois étoiles !", "soleil", AutochessData.unit_name(String(u.id)), "ui_star", -6.0, 1.0,
 				[0.35, 0.5, 0.25], 0.9)
 			UiFeel.confetti(_figure_point(uid), 24)
 		elif now == 2 and was < 2:
-			moments.burst(_figure_point(uid), "★★ !", "soleil", "confirm", -6.0, 1.25, [0.25, 0.15, 0.08])
+			moments.burst(_figure_point(uid), "★★ !", "soleil", "ui_star", -9.0, 1.2, [0.25, 0.15, 0.08])
 
 
 func _buy(slot: int) -> void:
@@ -1296,7 +1296,7 @@ func _buy_xp() -> void:
 			if not fast and not autoplay:
 				var r := hud.xp_button.get_global_rect()
 				moments.burst(Vector2(r.get_center().x, r.position.y - AutochessHud.s(24.0)), "Niveau %d !" % int(p.level), "lagon",
-					"confirm", -6.0, 1.1, [0.2, 0.1, 0.07])
+					"ui_level_up", -10.0, 1.0, [0.2, 0.1, 0.07])
 	elif lv >= int(p.max_level):
 		hud.toast("Niveau maximal")
 	else:

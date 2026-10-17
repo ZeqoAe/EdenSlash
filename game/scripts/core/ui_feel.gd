@@ -532,6 +532,19 @@ func cue(sfx: String, db := -8.0, pitch := 1.0, vib: Array = []) -> void:
 	Input.start_joy_vibration(int(pads[0]), clampf(float(vib[0]) * k, 0.0, 1.0), clampf(float(vib[1]) * k, 0.0, 1.0), float(vib[2]))
 
 
+## Comme [method cue], [param delay] s plus tard (une suite de moments : bilan, coffre) ; le minuteur tourne en pause.
+func cue_later(delay: float, sfx: String, db := -8.0, pitch := 1.0) -> void:
+	if delay <= 0.0:
+		cue(sfx, db, pitch)
+		return
+	get_tree().create_timer(delay, true).timeout.connect(cue.bind(sfx, db, pitch))
+
+
+## Son de récompense d'une pièce de rareté [param rarity] (Sfx.reward : 0 commun … 5 légendaire), après [param delay] s.
+func reward_cue(rarity: int, db := -8.0, delay := 0.0) -> void:
+	cue_later(delay, Sfx.reward(rarity), db)
+
+
 func _vibrate(kind: String) -> void:
 	if not vibration or not Gamepad.active or not VIB.has(kind) or not Gamepad.menu_mode():
 		return

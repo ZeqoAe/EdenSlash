@@ -399,6 +399,11 @@ func _show_loot(got: Dictionary, first_card := true) -> void:
 		tw.set_parallel()
 		tw.tween_property(tile, "modulate:a", 1.0, 0.2)
 		tw.tween_property(tile, "scale", Vector2.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	var best := -1  # son de la plus haute rareté du contenu (lot SND-2), une fois les cases posées
+	for x in got.get("looks", []) + got.get("items", []):
+		best = maxi(best, int(x.get("rarity", 0)))
+	if best >= 0:
+		UiFeel.reward_cue(best, -9.0, 0.3)
 	var items: Array = got.get("items", [])
 	if first_card and not items.is_empty():
 		_show_card(items[0])

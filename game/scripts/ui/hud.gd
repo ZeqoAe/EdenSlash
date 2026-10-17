@@ -99,6 +99,7 @@ func setup(p: Player, d: RunDirector) -> void:
 	director = d
 	_build()
 	player.health_changed.connect(_on_hp)
+	player.damaged.connect(_on_player_hit)
 	player.xp_changed.connect(_on_xp)
 	player.skills_changed.connect(_refresh_skills)
 	Settings.changed.connect(_refresh_skills)
@@ -1143,6 +1144,9 @@ func show_bagged(item: Dictionary) -> void:
 ## Objet ramassé meilleur que la pièce portée : 8 s pour l'équiper avec [G].
 func show_better(item: Dictionary) -> void:
 	better_item = item
+	if not Royale.active and Time.get_ticks_msec() - _better_ms > 1500:  # son de rareté (lot SND-2), pas deux de suite
+		_better_ms = Time.get_ticks_msec()
+		UiFeel.reward_cue(int(item.get("rarity", 0)), -10.0)
 	_better_until = Time.get_ticks_msec() / 1000.0 + 8.0
 	var c := Items.compare_to_equipped(item)
 	_better_label.text = "[img=34x34]%s[/img]  [b][color=#%s]%s[/color][/b]  [color=#7fe08a]▲ %+d %%[/color]\n[color=#c8c8d4]Meilleur que ta pièce portée — [b]%s[/b] : équiper[/color]" % [
@@ -1288,6 +1292,26 @@ func feed(text: String, color := Color(1.0, 0.88, 0.55)) -> void:
 	tw.tween_interval(3.5)
 	tw.tween_property(box, "modulate:a", 0.0, 0.6)
 	tw.tween_callback(box.queue_free)
+
+
+## Coup reçu léger (lot SND-2) : un « thud » feutré, ni pour les petits tics de dégâts continus (moins de [constant HIT_MIN] des
+## PV max) ni pour les gros coups (plus de [constant HIT_MAX], le jeu les fait déjà sentir), au plus un toutes les 0,45 s.
+const HIT_MIN := 0.012
+const HIT_MAX := 0.30
+const HIT_GAP_MS := 450
+var _hit_ms := -1000
+var _better_ms := -10000
+
+
+func _on_player_hit(amount: float, source: Combatant) -> void:
+	var ratio := amount / maxf(player.max_hp, 1.0)
+	if source == null or player.is_dead or ratio < HIT_MIN or ratio > HIT_MAX:
+		return
+	var now := Time.get_ticks_msec()
+	if now - _hit_ms < HIT_GAP_MS:
+		return
+	_hit_ms = now
+	UiFeel.cue("ui_hit", -10.0)
 
 
 func _on_hp(hp: float, max_hp: float) -> void:

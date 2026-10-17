@@ -313,6 +313,7 @@ captures `tests/shot_hub1.tscn`. `records.news` / `last_activity` = état de men
 - **Sons d'interface** (SND-1, `conception/art/R_SND1.md`) : bibliothèque maison synthétisée `game/assets/sfx/ui/` (46 WAV, refaits par
   `python tools/art/snd_synth.py [--preview]`, planche `conception/art/snd/index.md`), noms `ui_*` de `Sfx.UI` (liste = variantes,
   `Sfx.reward(rareté)`), même sonie pour tous : le dB de l'appel fait la hiérarchie (`UiFeel.SOUNDS`) ; aucun son d'un autre jeu ; test `test_snd1`.
+  Branchés (SND-2, `R_SND2.md`) : bilans par `ResultsPanel.moments` (victoire / défaite douce, record, étoile, butin par rareté, niveau de héros), coffres, forge, compte à rebours du duel, coup reçu léger (`Hud.HIT_*`), or de vente ; `UiFeel.cue` / `cue_later` / `reward_cue`, compteur `Sfx.played` ; test `test_snd2`.
 - Rapports : `R_U1` à `R_U10`, `R_P1`, `R_P3`, `R_P8`.
 
 ### Outils de mesure et de test

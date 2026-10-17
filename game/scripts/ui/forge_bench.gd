@@ -355,7 +355,19 @@ func _disable(n: Node) -> void:
 func done(msg: String, duration := 2.0) -> void:
 	_got_verdict = true
 	_bar.verdict(not _is_fail(msg), msg, msg.contains("Raté :"))
+	UiFeel.cue(verdict_sound(msg), -9.0)
 	super.done(msg, duration)
+
+
+## Son du verdict (lot SND-2) : forge réussie, forge ratée (échec du tirage), ou « bonk » d'une demande refusée (pas assez
+## de cristaux, rien à faire…).
+static func verdict_sound(msg: String) -> String:
+	if not _is_fail(msg):
+		return "ui_forge_ok"
+	for w in ["Raté :", "Échec", "échec", "pas mieux", "brisent"]:
+		if msg.contains(w):
+			return "ui_forge_fail"
+	return "ui_deny"
 
 
 static func _is_fail(msg: String) -> bool:

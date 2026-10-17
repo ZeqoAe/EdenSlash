@@ -9,6 +9,7 @@ static var _cache := {}
 static var volume_db := 0.0
 static var _last_ui := {}  # son d'interface -> instant (pas deux fois dans la même image)
 static var last_ui_ms := -1000  # dernier son d'interface joué (UiFeel n'en ajoute pas un second au même instant)
+static var played := {}  # nom -> nombre de lectures acceptées par Sfx.ui (compteur des tests, lot SND-2)
 
 ## Sons d'interface et de jeu, par rôle. Les UI0xx du client n'ont pas de nom : choisis d'après
 ## leur durée et leur force (clic court, coup bref, fanfare longue) ; à changer ici si l'un ne
@@ -109,6 +110,7 @@ static func ui(name: String, vol := 0.0, pitch := 1.0) -> void:
 		return
 	_last_ui[name] = now
 	last_ui_ms = now
+	played[name] = int(played.get(name, 0)) + 1
 	var stream := _stream(_pick(name))
 	if stream == null:
 		return

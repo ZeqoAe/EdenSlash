@@ -165,6 +165,8 @@ class SellPage extends ItemPage:
 				_confirm_at = -10.0
 				var items := sel.duplicate()
 				var got := Profile.disassemble_many(items) if recycle else Profile.sell_many(items)
+				if int(got.get("gold", 0)) > 0:
+					UiFeel.cue("ui_coin", -10.0)  # or gagné (lot SND-2)
 				grid.clear_selection()
 				done("%s %s : %s" % [GearPower.plural(items.size(), "objet"), ("désassemblé" if items.size() < 2 else "désassemblés") if recycle else ("vendu" if items.size() < 2 else "vendus"), ItemWidgets.materials_text(got, true)]), true, true)
 
