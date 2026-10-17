@@ -230,6 +230,27 @@ static func _forge_crystals(lv: int) -> Vector2i:
 	return Vector2i(1 + lv / 30, 2 + lv / 30)
 
 
+## Lot H56 (rythme de l'équipement, R_H56.md) : un coffre de forge tombé en Survie (clé « src » = SRC_ADVENTURE, posée par
+## RunDirector._drop_reward_chest) donne en plus 1 cristal par ADVENTURE_CRYSTALS_STEP niveaux au-dessus du niveau
+## ADVENTURE_CRYSTALS_FROM : rien à l'époque I, +0 à +3 à l'époque II, +5 à +8 à la III, +10 à +13 à la IV (niveau 90 : 17-18
+## au lieu de 4-5). Il manquait le +5 des dernières pièces 80-90 (progression_sim : 3 à 30 cristaux en réserve à 30-36 h).
+## Les coffres des activités ne changent pas (ils restent la vraie source : une victoire de l'époque IV en donne
+## ≈ 115 / h au lieu de 30, un Donjon Normal 180, un Héroïque 540).
+const SRC_ADVENTURE := "adventure"
+const ADVENTURE_CRYSTALS_FROM := 50
+const ADVENTURE_CRYSTALS_STEP := 3
+
+
+## Cristaux [min, max] du coffre de forge [param chest] (aperçu et ouverture : la même règle).
+static func forge_crystals(chest: Dictionary) -> Vector2i:
+	var lv := int(chest.get("plevel", 1))
+	var r := _forge_crystals(lv)
+	if String(chest.get("src", "")) == SRC_ADVENTURE and lv > ADVENTURE_CRYSTALS_FROM:
+		var b := (lv - ADVENTURE_CRYSTALS_FROM) / ADVENTURE_CRYSTALS_STEP
+		r += Vector2i(b, b)
+	return r
+
+
 ## Rang des gemmes d'un coffre du joaillier de niveau [param lv] (0 brut … 4 royal) : le niveau du coffre / 12,
 ## un rang de plus pour un coffre « gemmes » (Tour, Ruée), un de moins pour un coffre « formules » (Siège).
 static func gem_tier(lv: int, focus: String) -> int:
@@ -247,12 +268,12 @@ static func preview(chest: Dictionary) -> String:
 			match String(chest.get("focus", "")):
 				"scroll":
 					return "2-3 parchemins de puissance et 2-4 de garde (niveau %d), 1-2 pierres de sûreté, 1 pierre de chance, 2 pierres, parfois des ciseaux (50 %%) et un parchemin béni (20 %%), %d-%d cristaux." % [
-						Craft.fortify_level_at(lv), _forge_crystals(lv).x, _forge_crystals(lv).y]
+						Craft.fortify_level_at(lv), forge_crystals(chest).x, forge_crystals(chest).y]
 				"stone":
 					return "1 parchemin de puissance et 1 de garde (niveau %d), 2 pierres de sûreté, 1 pierre de chance, 4 pierres choisies parmi les plus rares, %d-%d cristaux." % [
-						Craft.fortify_level_at(lv), _forge_crystals(lv).x, _forge_crystals(lv).y]
+						Craft.fortify_level_at(lv), forge_crystals(chest).x, forge_crystals(chest).y]
 			return "1-2 parchemins de puissance et 1-3 de garde (niveau %d), 1-2 pierres de sûreté, 1 pierre de chance, 2 pierres, parfois des ciseaux (50 %%) et un parchemin béni (20 %%), %d-%d cristaux." % [
-				Craft.fortify_level_at(lv), _forge_crystals(lv).x, _forge_crystals(lv).y]
+				Craft.fortify_level_at(lv), forge_crystals(chest).x, forge_crystals(chest).y]
 		"jewel":
 			match String(chest.get("focus", "")):
 				"gem":
@@ -373,7 +394,8 @@ static func open(chest: Dictionary) -> Dictionary:
 				got.supplies["drill"] = 1
 			if randf() < 0.2:
 				got.supplies[Craft.BLESSED] = 1
-			got.crystal = randi_range(_forge_crystals(lv).x, _forge_crystals(lv).y)
+			var fc := forge_crystals(chest)
+			got.crystal = randi_range(fc.x, fc.y)
 		"jewel":
 			var focus := String(chest.get("focus", ""))
 			var tier := gem_tier(lv, focus)

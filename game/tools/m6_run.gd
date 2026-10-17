@@ -8,6 +8,7 @@ extends Node
 ## « PV max perdus » par étape (dégâts subis × la part non évitée --human, rapportés aux PV max). Comme la sonde boss_ttk, les
 ## totems et les cristaux de soin sont cassés après 8 s (un joueur les casse ; l'aide « Bot » ne vise que le boss).
 ## --legacy=1 : la Ruée d'avant M6 (boss des zones, renforts) pour comparer. Lignes « [m6run] … ». Profil jetable (APPDATA).
+## --hero-level=N (lot H5) : niveau de héros du profil (défaut 90) ; sous le niveau de l'activité, le héros s'y bat à son niveau.
 
 const TOTEM_TIME := 8.0
 
@@ -22,6 +23,7 @@ var rush_seed := 0
 var mods: Array = []
 var legacy := false
 var immortal := false
+var hero_lv := 90  # --hero-level=N (lot H5) : niveau de héros ; 90 = toujours au niveau de l'activité (mesures d'avant H5)
 
 
 func _ready() -> void:
@@ -42,9 +44,11 @@ func _ready() -> void:
 			"mods": mods = Array(kv[1].split(","))
 			"legacy": legacy = kv[1] == "1"
 			"immortal": immortal = kv[1] == "1"
+			"hero-level": hero_lv = clampi(int(kv[1]), 1, HeroLevel.MAX_LEVEL)
 	Settings.reset_all(false)
 	Profile.selected_class = cid
 	Profile.records["epochs_cleared"] = 4
+	Profile.records[HeroLevel.KEY] = HeroLevel.total_for(hero_lv)  # lot H5 : niveau de héros du profil de mesure
 	if hub != "new":
 		Profile.install_gear(StarterGear.scenario(hub, cid))
 	var pe := GearPower.hero_power()

@@ -19,7 +19,11 @@ const SET_STEP := 0.06
 ## 61 000 équipement complet). Héroïque s'ouvre vers l'époque III (zone la plus basse) puis zone après zone jusqu'à
 ## l'époque IV ; Mythique (niveau 90 : 55 800) après l'époque IV, équipement amélioré. Avant : 0,55 / 0,8 ouvraient
 ## tout le Mythique dès l'époque II gagnée (un équipement d'époque I à +10 y suffisait).
-const DIFF_RATIO := [0.0, 3.6, 3.1]
+## Lot H56 (rythme, R_H56.md) : 3,6 / 3,1 → 3,4 / 2,9 : avec le niveau de héros, le Mythique (niveau 90 : 52 200) s'ouvrait vers
+## 34-36 h, après l'équipement 80-90 correct qu'il devait aider à monter ; il s'ouvre maintenant vers l'époque IV gagnée
+## (29-30 h). Héroïque 3,4 : celui de Blackflame (niveau 75 : 52 020) reste sous le Mythique, la 1re zone vers l'époque III. La PE conseillée
+## (Dungeons.ADVISED 3,8 / 3,3) ne change pas : à l'entrée, l'estimation dit « Difficile ».
+const DIFF_RATIO := [0.0, 3.4, 2.9]
 ## Rapport minimal pour qu'un coffre puisse donner une pièce légendaire (sinon : mythique). Passe P5 : 1,8 (coffre de
 ## niveau 40 : vers l'époque II gagnée ; niveau 90 : vers l'époque III gagnée). Avant : 0,5, ouvert dès l'époque I.
 const LEGEND_RATIO := 1.8

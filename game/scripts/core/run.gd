@@ -189,6 +189,7 @@ func start_survival(cid: String, ep: int, rank := 0) -> void:
 	zone_id = Epochs.zone(epoch, 1)
 	start_zone = zone_id
 	hero_level = HeroLevel.level()  # lot H4a : on joue au niveau de héros (l'XP de la partie n'est versée qu'au bilan)
+	HitLog.reset()  # lot H6 : « Ce qui t'a battu » au bilan de la Survie
 	changed.emit()
 
 

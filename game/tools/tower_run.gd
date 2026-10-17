@@ -6,6 +6,7 @@ extends Node
 ##         --hub=E.C.N.G [--human=0.5] [--max=1800] [--seed=1]
 ## --dodge : le pilote sort des zones rouges annoncées (PilotDodge, passe M8). --god : héros invincible (temps pour tuer). --hub : équipement du hub (StarterGear.scenario, « new » : compte neuf) ; --human : part des coups évitée (Run.test_taken).
 ## Une ligne « [tour-étage] » par étage, puis « [tour] » (bilan). Profil jetable (EDEN_PROFILE).
+## --hero-level=N (lot H5) : niveau de héros du profil (défaut 90) ; sous le niveau de l'étage, le héros s'y bat à son niveau.
 
 var from := 1
 var floors := 10
@@ -14,6 +15,7 @@ var cid := "warrior"
 var hub := "new"
 var human := 0.5
 var max_t := 1800.0
+var hero_lv := 90  # --hero-level=N (lot H5) : niveau de héros ; 90 = toujours au niveau de l'étage (mesures d'avant H5)
 var _taken := 0.0
 var _hp_last := 0.0
 
@@ -32,8 +34,10 @@ func _ready() -> void:
 			"human": human = float(kv[1])
 			"max": max_t = float(kv[1])
 			"seed": seed(int(kv[1]))
+			"hero-level": hero_lv = clampi(int(kv[1]), 1, HeroLevel.MAX_LEVEL)
 	Settings.reset_all(false)
 	Profile.selected_class = cid
+	Profile.records[HeroLevel.KEY] = HeroLevel.total_for(hero_lv)  # lot H5 : niveau de héros du profil de mesure
 	Profile.save_profile()
 	if hub != "new":
 		Profile.install_gear(StarterGear.scenario(hub, cid))

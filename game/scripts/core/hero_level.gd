@@ -19,6 +19,9 @@ extends RefCounted
 ##   s'équipe au hub que si le niveau de héros ≥ N (`Profile.equip`, `ClassGear.best_gear`).
 ## - Aventure (lot H4a) : le héros s'y bat à ce niveau (`Run.hero_level`, fixé au départ de la partie : stats de base,
 ##   pièces à leur niveau) ; monstres au niveau du héros borné par la bande de la carte (`Epochs.BANDS`).
+## - Activités (lot H5 : Donjons, Tour, Ruée, Siège) : le héros s'y bat au niveau de l'activité s'il l'a atteint, sinon à
+##   son niveau de héros ([method combat_level] : jamais plus haut que lui, jamais ramené plus bas) ; monstres, boss, butin et
+##   PE requise restent ceux de l'activité.
 
 const MAX_LEVEL := 90
 const NEED_BASE := 105.0
@@ -335,6 +338,23 @@ static func lock_line(item: Dictionary) -> String:
 	if Profile.slot_of(item) != "":
 		return "\n\n[color=#ffb070]%s. Déjà portée : elle reste.[/color]" % t
 	return "\n\n[color=#ff7a7a][b]%s[/b][/color]" % t
+
+
+## Lot H5 : niveau de combat du héros dans une activité de niveau [param activity_level] (Donjons, Tour, Ruée, Siège) :
+## celui de l'activité si le niveau de héros l'atteint (au-delà de 90, la Tour garde son niveau pour un héros 90), sinon le
+## niveau de héros (synchronisation vers le bas seulement, NIVEAU_HEROS §6 Q2). Un héros au niveau suffisant : rien ne change.
+static func combat_level(activity_level: int) -> int:
+	var lv := level()
+	return activity_level if lv >= mini(activity_level, MAX_LEVEL) else maxi(lv, 1)
+
+
+## Lot H5 : ligne des pages d'activité quand le héros est sous le niveau de l'activité ("" sinon) :
+## « Niveau 46 · ton héros est niveau 38 : il s'y bat à son niveau ».
+static func activity_line(activity_level: int) -> String:
+	var hl := combat_level(activity_level)
+	if hl >= activity_level:
+		return ""
+	return "Niveau %d · ton héros est niveau %d : il s'y bat à son niveau" % [activity_level, hl]
 
 
 ## Message de migration (une fois, au lobby) : "" s'il n'y en a pas (ou plus).

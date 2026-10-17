@@ -52,7 +52,7 @@ static func fill(lobby) -> void:
 	sub.add_child(_diff_tabs(lobby, zid, diff))
 	# lot A2 : PE requise (Héroïque, Mythique) ou conseillée (Normal), estimation et récompenses, comme la Ruée et le Siège
 	DifficultyPanel.add(sub, Dungeons.power_required(zid, diff), Dungeons.advised(zid, diff), rewards(sel, diff),
-		FAR_NORMAL if diff == 0 else "")
+		FAR_NORMAL if diff == 0 else "", Dungeons.level(zid, diff))
 	lobby._pe_next(zid, false)
 	var rec := records_line(sel, diff)
 	if rec != "":

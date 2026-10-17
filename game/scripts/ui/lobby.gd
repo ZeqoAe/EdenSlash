@@ -2168,7 +2168,8 @@ func _dungeon_pickers(menu: String, siege: bool) -> void:
 			_show_menu(menu))
 		dr.add_child(b)
 	if siege:  # passe M6 : PE requise ou conseillée, estimation, récompenses, avertissement
-		DifficultyPanel.add(_sub, Siege.power_required(_dg_zone, _dg_diff), Siege.advised(_dg_zone, _dg_diff), DifficultyPanel.siege_rewards(_dg_zone, _dg_diff))
+		DifficultyPanel.add(_sub, Siege.power_required(_dg_zone, _dg_diff), Siege.advised(_dg_zone, _dg_diff), DifficultyPanel.siege_rewards(_dg_zone, _dg_diff),
+			"", Siege.level(_dg_zone, _dg_diff))
 	else:
 		_pe_gauge(Dungeons.power_required(_dg_zone, _dg_diff))
 	_pe_next(_dg_zone, siege)
@@ -2350,7 +2351,8 @@ func _menu_rush() -> void:
 			_dg_diff = di
 			_show_menu("rush"))
 		dr.add_child(b)
-	DifficultyPanel.add(_sub, Dungeons.power_required(Dungeons.RUSH, _dg_diff), Rush.advised(_dg_diff), DifficultyPanel.rush_rewards(_dg_diff, Rush.chosen()))
+	DifficultyPanel.add(_sub, Dungeons.power_required(Dungeons.RUSH, _dg_diff), Rush.advised(_dg_diff), DifficultyPanel.rush_rewards(_dg_diff, Rush.chosen()),
+		"", Dungeons.rush_level(Dungeons.rush_floors(), _dg_diff))
 	_pe_next(Dungeons.RUSH, false)
 	_rush_lineup()
 	_rush_mods()

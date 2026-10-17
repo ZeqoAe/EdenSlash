@@ -262,6 +262,11 @@ Détail : DESIGN « Économie et progression » ; `R_E3.md`, `R_E6.md`, `R_P5.md
 migration `ensure`), jauge `ui/hero_level_gauge.gd` ; stats et monstres : lots H4-H5 (`conception/progression/NIVEAU_HEROS.md`, `R_H1.md`).
 Port des pièces (H3, `R_H3.md`) : `Items.required_level`, `HeroLevel.wear_block` / `lock_text` / `lock_line` (hub seulement ; départ,
 Survivant, Battle royale et trouvailles de run exemptés) ; `Profile.equip(item, force)` renvoie false si refusé ; case rouge `ItemSlot.wear_check` ; `test_h3`, `shot_h3`.
+Activités (H5, `R_H56.md`) : `HeroLevel.combat_level(niveau)` (Donjons, Tour, Ruée, Siège : niveau de l'activité si le héros l'a, sinon le sien ;
+monstres, butin et PE requise inchangés), ligne des pages `DifficultyPanel.add(…, level)` ; outils `dungeon_run` / `tower_run` / `m6_run --hero-level=N`
+(défaut 90). Rythme (H56) : `Rewards.forge_crystals` (coffres de forge de la Survie, clé `src`), `GearPower.DIFF_RATIO` 3,4 / 2,9 ; `progression_sim
+--even` (le joueur suit la boussole : +5 partout d'abord), jalon `kit80_base`. H6 : « Ce qui t'a battu » au bilan de la Survie, succès `lvl_25/50/90`
+sur le niveau de héros, fiche `two_levels`, boussole « → Survie, carte II-2 » (`Compass.map_for_hero`) ; `test_h56`.
 **Objectifs, fiche v2, sac** (lot GX-3, `R_GX3.md`) : `core/goals.gd` (`Goals` : `records.goals`, 1 épinglé + 5 suivis, ids d'Eden ou
 `plan_<boss>:<emplacement>`, `status` = ce qui manque et `go`, premier conseil de la boussole `Compass._r_goal`), barre `ui/goal_bar.gd` (Héros, Fabriquer,
 Plans de donjon), « ★ Objectif » et filtre « ★ Objectifs » ; fiche `Items.describe(item, detailed, worn)` (verdict `Items.verdict` au profil × niveau,

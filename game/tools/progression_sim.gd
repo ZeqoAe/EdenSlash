@@ -19,7 +19,10 @@ extends Node
 ##   --bossplans  coffre de plans du boss de chaque carte finie (lot A4) : la meilleure (sur sa valeur) de 3 pièces non
 ##               découvertes du palier (SlotChests.plan_candidates) ; tout découvert : Run.PLAN_INSIGNIA insignes.
 ## Jalons : kit80_ok (9 pièces ≥ 78, légendaires, +5), kit90_ok (≥ 86), kit90_opti (≥ 86, +10, gemmes ≥ 4, ench. ≥ 7),
-## kit80_p8 / kit80_p10 (lot GX-2 : le rythme de la Forge, 9 pièces ≥ 78 à +8 / +10),
+## kit80_p8 / kit80_p10 (lot GX-2 : le rythme de la Forge, 9 pièces ≥ 78 à +8 / +10), kit80_base (lot H56 : les 9 pièces ≥ 78
+## légendaires à +0 : sans la Forge) ;
+##   --even      (lot H56) le joueur suit la boussole (Compass._forge_step : la pièce la moins montée d'abord) : toutes les pièces
+##               à +EVEN_FIRST avant d'en monter une plus haut ; sans le drapeau, chaque pièce va à +10 dans l'ordre des emplacements.
 ## dungeon_0 (1er donjon Normal). Colonne H : -- --refonte --hubvalue --decote --mult=0.85,1.3,2.3,4.4 (12 comptes, 50 h ≈ 10 min).
 ##
 ## Lot H7 (niveau de héros, conception/progression/NIVEAU_HEROS.md §1.3, §1.4, §5 ; rapport R_H7.md) : modèle du jeu À VENIR
@@ -101,6 +104,8 @@ var plans_by_boss := "--plans=boss" in OS.get_cmdline_user_args()
 var hubvalue := "--hubvalue" in OS.get_cmdline_user_args()
 var decote := "--decote" in OS.get_cmdline_user_args()
 var boss_plans := "--bossplans" in OS.get_cmdline_user_args()  # lot A4 (voir l'en-tête)
+var even := "--even" in OS.get_cmdline_user_args()  # lot H56 (voir l'en-tête)
+const EVEN_FIRST := 5
 var plan_rng := RandomNumberGenerator.new()  # tirages du coffre de plans à part : les autres tirages restent ceux de la série sans
 var diff_ratios: Array = GearPower.DIFF_RATIO.duplicate()
 ## Donjon sans salles de remplissage (refonte, lot A2) ; approximation de PR1 du plan par boss (plan après un donjon déjà fini).
@@ -109,7 +114,7 @@ const ZONE_PLAN_CHANCE := 0.1
 ## Décote de palier : plancher du facteur (une pièce très sous le palier compte au moins pour la moitié de son niveau).
 const DECOTE_FLOOR := 0.5
 ## Jalons d'équipement : [clé, niveau d'Eden minimal des 9 pièces, +N minimal, rang des 2 gemmes (-1 : sans), enchantement].
-const KIT_GOALS := [["kit80_ok", 78, 5, -1, 0], ["kit90_ok", 86, 5, -1, 0], ["kit90_opti", 86, 10, 4, 7], ["kit80_p8", 78, 8, -1, 0], ["kit80_p10", 78, 10, -1, 0]]
+const KIT_GOALS := [["kit80_ok", 78, 5, -1, 0], ["kit90_ok", 86, 5, -1, 0], ["kit90_opti", 86, 10, 4, 7], ["kit80_p8", 78, 8, -1, 0], ["kit80_p10", 78, 10, -1, 0], ["kit80_base", 78, 0, -1, 0]]
 const GEAR_SLOTS := ["weapon", "chest", "legs", "head", "gloves", "boots", "back", "necklace", "ring"]
 
 ## Lot H7 : niveau de héros (voir l'en-tête ; valeurs de NIVEAU_HEROS.md §1.3-§1.4).
@@ -574,7 +579,9 @@ func _map_loot(acc: Dictionary, ep: int, stage: int, minutes: float, bag: Dictio
 	var n_chests := roundi(CHESTS_PER_MAP * part + rng.randf() - 0.5)
 	for i in maxi(n_chests, 0):
 		var t := "forge" if rng.randf() < 0.6 else "jewel"
-		_open_chest(acc, Rewards.make(t, supply if t == "forge" else gem_lv, false))
+		var rc := Rewards.make(t, supply if t == "forge" else gem_lv, false)
+		rc["src"] = Rewards.SRC_ADVENTURE  # lot H56 : coffre tombé en Survie (Rewards.forge_crystals)
+		_open_chest(acc, rc)
 
 
 ## Lot A4, --bossplans : coffre de plans du boss de la carte : 3 pièces non découvertes du palier tirées au hasard, le joueur
@@ -787,46 +794,48 @@ func note_kits(acc: Dictionary) -> void:
 func workshop(acc: Dictionary) -> void:
 	if int(acc.cleared) < 1:
 		return
-	for slot in Items.SLOTS:
-		var it: Dictionary = acc.gear.get(slot, {})
-		if it.is_empty():
-			continue
-		_gems(acc, it)
-		_enchant(acc, it)
-		var guard := 40
-		while int(it.get("upgrade", 0)) < Items.MAX_UPGRADE and guard > 0:
-			guard -= 1
-			var scroll := ""
-			var kind := Craft.fortify_kind(it)
-			for k in acc.bag:
-				var p := String(k).split(":")
-				if p[0] == "fortify" and p[1] == kind and int(p[2]) >= Craft._item_level(it) and int(acc.bag[k]) > 0 \
-						and (scroll == "" or int(p[2]) < int(scroll.split(":")[2])):
-					scroll = String(k)
-			var blessed := int(acc.bag.get(Craft.BLESSED, 0)) > 0 and int(it.upgrade) >= 5
-			if scroll == "" and not blessed:
-				break
-			var cost := int(Forge.price(int(Items.upgrade_cost(it).gold)).get("crystal", 0))
-			if not blessed and int(acc.crystals) < cost:
-				break
-			var stone := ""
-			# lot GX-2 : plus de rétrogradation, le joueur n'attend plus de pierre (la persévérance de la pièce, item.pity,
-			# finit toujours le cran) ; il pose une pierre de chance quand il en a une
-			if Craft.base_chance(it) < 1.0:
-				for s in ["stone:sublime", "stone:citrine", "stone:ultramarine", "stone:coral", "stone:viridian", "stone:lucky", "stone:safety"]:
-					if int(acc.bag.get(s, 0)) > 0 and Craft.stone_usable(it, s):
-						stone = s
-						break
-			if blessed:
-				_add_bag(acc, Craft.BLESSED, -1)
-				Craft.upgrade(it, stone, Craft.BLESSED)
-			else:
-				_add_bag(acc, scroll, -1)
-				acc.crystals = int(acc.crystals) - cost
-				acc.spent_crystals = int(acc.spent_crystals) + cost
-				Craft.upgrade(it, stone, scroll)
-			if stone != "":
-				_add_bag(acc, stone, -1)
+	for cap in ([EVEN_FIRST, Items.MAX_UPGRADE] if even else [Items.MAX_UPGRADE]):  # --even : +5 partout d'abord (lot H56)
+		for slot in Items.SLOTS:
+			var it: Dictionary = acc.gear.get(slot, {})
+			if it.is_empty():
+				continue
+			if cap == Items.MAX_UPGRADE or not even:
+				_gems(acc, it)
+				_enchant(acc, it)
+			var guard := 40
+			while int(it.get("upgrade", 0)) < cap and guard > 0:
+				guard -= 1
+				var scroll := ""
+				var kind := Craft.fortify_kind(it)
+				for k in acc.bag:
+					var p := String(k).split(":")
+					if p[0] == "fortify" and p[1] == kind and int(p[2]) >= Craft._item_level(it) and int(acc.bag[k]) > 0 \
+							and (scroll == "" or int(p[2]) < int(scroll.split(":")[2])):
+						scroll = String(k)
+				var blessed := int(acc.bag.get(Craft.BLESSED, 0)) > 0 and int(it.upgrade) >= 5
+				if scroll == "" and not blessed:
+					break
+				var cost := int(Forge.price(int(Items.upgrade_cost(it).gold)).get("crystal", 0))
+				if not blessed and int(acc.crystals) < cost:
+					break
+				var stone := ""
+				# lot GX-2 : plus de rétrogradation, le joueur n'attend plus de pierre (la persévérance de la pièce, item.pity,
+				# finit toujours le cran) ; il pose une pierre de chance quand il en a une
+				if Craft.base_chance(it) < 1.0:
+					for s in ["stone:sublime", "stone:citrine", "stone:ultramarine", "stone:coral", "stone:viridian", "stone:lucky", "stone:safety"]:
+						if int(acc.bag.get(s, 0)) > 0 and Craft.stone_usable(it, s):
+							stone = s
+							break
+				if blessed:
+					_add_bag(acc, Craft.BLESSED, -1)
+					Craft.upgrade(it, stone, Craft.BLESSED)
+				else:
+					_add_bag(acc, scroll, -1)
+					acc.crystals = int(acc.crystals) - cost
+					acc.spent_crystals = int(acc.spent_crystals) + cost
+					Craft.upgrade(it, stone, scroll)
+				if stone != "":
+					_add_bag(acc, stone, -1)
 
 
 func _gems(acc: Dictionary, it: Dictionary) -> void:
@@ -1047,7 +1056,7 @@ func print_report(res: Dictionary, skill: String) -> void:
 			", plafond d'époque" if epochcap else "", ", synchronisé" if sync else ""])
 	var keys := ["epoch_1", "epoch_2", "epoch_3", "epoch_4", "dungeon_1", "dungeon_2", "kit_1", "kit_2", "kit_3", "kit_4",
 			"open_dungeon_1", "open_dungeon_1_all", "open_dungeon_2", "open_dungeon_2_all", "open_siege_1", "open_siege_2",
-			"open_rush_1", "open_rush_2", "legend_60", "legend_90", "dungeon_0", "kit80_ok", "kit90_ok", "kit90_opti", "kit80_p8", "kit80_p10"]
+			"open_rush_1", "open_rush_2", "legend_60", "legend_90", "dungeon_0", "kit80_ok", "kit90_ok", "kit90_opti", "kit80_p8", "kit80_p10", "kit80_base"]
 	if heros:
 		for lv in HERO_MARKS:
 			keys.append("hero%d" % lv)

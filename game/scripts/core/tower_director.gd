@@ -107,10 +107,13 @@ func begin(f: int) -> void:
 	_center.y = d.map.height_at(_center.x, _center.z)
 	var p := d.player
 	var lvl := Tower.level_for(f)
-	p.level = lvl
-	Run.hero_level = lvl
+	var hl := HeroLevel.combat_level(lvl)  # lot H5 : jamais plus haut que le niveau de héros (monstres : niveau de l'étage)
+	p.level = hl
+	Run.hero_level = hl
 	Run.max_level = lvl
 	p.recalc_stats()
+	if hl < lvl and f == Tower.start_floor:
+		d.message.emit("Ton héros (niveau %d) se bat à son niveau : cette partie est de niveau %d." % [hl, lvl], 3.5)
 	if f == Tower.start_floor or (Tower.is_boss_floor(f - 1) and not Tower.rush):
 		p.heal(p.max_hp)
 	else:
@@ -120,7 +123,7 @@ func begin(f: int) -> void:
 	_place_allies()
 	d.zone_changed.emit({"name": "La Tour · %s" % z.name, "levels": [lvl, lvl]})
 	if p.autoplay:
-		print("[tour] étage %d · niveau %d · PV %d · équipement %d pièce(s)" % [f, lvl, int(p.hp), Profile.equipped.size()])
+		print("[tour] étage %d · niveau %d · héros %d · PV %d · équipement %d pièce(s)" % [f, lvl, hl, int(p.hp), Profile.equipped.size()])
 	phase = "fight"
 	_spawn_t = 1.5
 	_adds_t = BOSS_ADDS_EVERY

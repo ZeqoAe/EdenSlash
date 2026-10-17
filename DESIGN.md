@@ -14,7 +14,7 @@ Chiffres clés vérifiés dans le code (16/10, 0.1.212 ; lot H4a) : Aventure au 
 (I-1 1-23 … IV-3 80-90) × `Epochs.MAP_MULT` (remplace `MONSTER_MULT`) ; boss de
 la Survie `Epochs.BOSS_HP_MAP` 80 000 / 370 000 / 1 750 000 × `BOSS_HP_EPOCH` 1 / 2 / 4 / 5,5 au niveau de référence, × 1,1 par niveau du boss, rage du boss `BOSS_RAGE_AT`
 2:30 / 3:00 / 4:00 ; rage de la carte `RunDirector.RAGE_TIERS` ×1,1 / 2 / 11 / 101 ; Menace +20 % de PV par cran, plafond 5
-(`Menace.STEP`, `MAX`) ; verrous de PE `GearPower.DIFF_RATIO` 0 / 3,6 / 3,1, `Siege.POWER_RATIO` 0 / 4 / 3,4, `LEGEND_RATIO` 1,8 ;
+(`Menace.STEP`, `MAX`) ; verrous de PE `GearPower.DIFF_RATIO` 0 / 3,4 / 2,9 (lot H56), `Siege.POWER_RATIO` 0 / 4 / 3,4, `LEGEND_RATIO` 1,8 ;
 insignes de participation `Run.INSIGNIA_BASE` 25 ; plus d'enclume en Survie (passe N2) ; boss hors Survie
 `Dungeons.boss_hp` = 106 000 × 1,09^(niveau − 15) × [1 ; 3,4 ; 2,5] ; Survivant : paliers `Survivor.PALIERS` I à V,
 `palier_mult` 1 / 1,45 / 1,7 / 1,75 / 2,1 (`ModeRules`), boss 6 000 000 PV (`Survivor.BOSS_HP`), dégâts ×1,4 (`BOSS_ATK`).
@@ -240,8 +240,18 @@ Un niveau **du compte**, de 1 à 90, partagé par les 60 classes ; il ne redesce
     Registre ; la retirer demande une confirmation (« Tu ne pourras la remettre qu'au niveau 60. »).
   - Fabriquer : permis au-dessus du niveau (préparer la suite), « À porter au niveau 53 · tu es niveau 34 » ; filtre « Portables ».
 - **Aventure** (lot H4a) : le héros s'y bat à son niveau de héros, les cartes ont des bandes de niveau (voir « Aventure au niveau
-  de héros », partie B). Pas encore branché : activités à min(niveau, niveau de l'activité) (H5). Talents et certificats restent à
-  la maîtrise de la classe.
+  de héros », partie B). Talents et certificats restent à la maîtrise de la classe.
+- **Activités** (lot H5, `R_H56.md`) : Donjons, Tour, Ruée et Siège gardent leur niveau (monstres, boss, butin, PE requise) ; le
+  héros s'y bat au niveau de l'activité s'il l'a atteint, sinon à son niveau de héros (`HeroLevel.combat_level` : jamais remonté,
+  jamais ramené plus bas ; au-delà de 90, la Tour garde son niveau pour un héros 90). La page dit « Niveau 46 · ton héros est
+  niveau 38 : il s'y bat à son niveau » (`DifficultyPanel`), la Tour l'annonce au départ ; leurs trouvailles en partie suivent ce
+  niveau de combat (`Items.generate`). Héros au niveau de l'activité : rien ne change.
+- **Rythme de l'équipement** (lot H56) : les coffres de forge tombés en Survie donnent 1 cristal de plus par 3 niveaux au-dessus
+  du niveau 50 (`Rewards.forge_crystals` : 17-18 au niveau 90 au lieu de 4-5 ; coffres des activités inchangés) et les verrous
+  Héroïque / Mythique passent à 3,4 / 2,9 (PE conseillée inchangée) : équipement 80-90 correct vers 32-36 h (voir `R_H56.md`).
+- **Bilan de la Survie** (lot H6) : « Ce qui t'a battu » après une défaite (`HitLog`, comme les Donjons et le Survivant) ; succès
+  « Aguerri », « Légende vivante » et « Héros accompli » aux niveaux de héros 25 / 50 / 90 ; fiche « Deux niveaux » (Guide >
+  Équipement) ; la boussole nomme la carte où trouver une pièce portable (« → Survie, carte II-2 »).
 - **Modes scellés** (lot H2, `Modes.sealed()`) : en **Survivant** et en **Battle royale**, le héros ne joue qu'avec sa partie
   (niveau, cartes et pièces de la run). Rien du compte ne s'applique en combat : ni talents (stats et sorts), ni certificats
   (plateau et ses liens, insensibilité aux renversements, cartes de certificat), ni archive, ni aura ; tout le kit de la classe et

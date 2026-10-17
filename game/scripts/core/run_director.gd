@@ -911,7 +911,10 @@ func _drop_reward_chest(pos: Vector3, level: int, boss: bool) -> void:
 	var t := Rewards.roll_type(boss)
 	if Run.survival and not t in ["forge", "jewel"]:
 		t = "forge" if randf() < 0.6 else "jewel"  # Survie : de quoi optimiser au hub (l'équipement s'y achète)
-	drop.item = Rewards.loot_item(Rewards.make(t, supply_level(level) if t == "forge" else gem_level(level), boss))
+	var chest := Rewards.make(t, supply_level(level) if t == "forge" else gem_level(level), boss)
+	if Epochs.adventure():
+		chest["src"] = Rewards.SRC_ADVENTURE  # lot H56 : cristaux en plus aux coffres de forge hauts (Rewards.forge_crystals)
+	drop.item = Rewards.loot_item(chest)
 	drop.on_picked = func(item): message.emit("%s ! Rangé dans le menu Coffres (jamais perdu)" % item.name, 2.5)
 	add_child(drop)
 	var p := pos + Vector3(randf_range(-1.5, 1.5), 0, randf_range(-1.5, 1.5))

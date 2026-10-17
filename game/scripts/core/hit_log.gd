@@ -6,7 +6,8 @@ extends RefCounted
 ## (nom français, part des PV max), le coup final et le conseil de la mécanique fautive (TIPS, une phrase par brique de
 ## BossBricks et par attaque de base de BossBrain). L'attribution d'un coup de boss à sa mécanique : la dernière lancée dont
 ## la fenêtre couvre l'instant du coup (BossBrain.blame) ; une invocation porte la brique qui l'a appelée (meta « boss_brick »).
-## Remis à zéro au début de chaque partie de la Tour, des Donjons, de la Ruée et du Siège (Tower.start).
+## Remis à zéro au début de chaque partie de la Tour, des Donjons, de la Ruée et du Siège (Tower.start) et de la Survie
+## (Run.start_survival, lot H6 : bloc du bilan de la Survie).
 ##
 ## API : HitLog.reset() · HitLog.note(victime, dégâts, source, dot) · HitLog.report([secondes]) -> {lines, killer, brick, tip,
 ##   total, hits, window} · HitLog.tip_for(type) · HitLog.mech_name(type) · HitLog.window_of(type).

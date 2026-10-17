@@ -116,6 +116,11 @@ const CARDS := {
 	"hub_gear": {"title": "Équipement du hub", "on": "", "version": "0.1.173", "chapter": "gear",
 		"short": "Tu pars avec l'équipement porté au hub. Après la partie, il est exactement comme avant.", "icon": "armor",
 		"lines": ["Tu pars avec l'équipement que tu portes au hub : pièces, +N, gemmes, enchantements.", "Les trouvailles de coffre le remplacent le temps de la partie.", "Après la partie, ton équipement est exactement comme avant."]},
+	"two_levels": {"title": "Deux niveaux", "on": "", "version": "0.1.283", "chapter": "gear",
+		"short": "Le niveau de héros donne tes stats et dit ce que tu portes. Le niveau de run ne donne que des cartes.", "icon": "class",
+		"lines": ["Niveau de héros (1 à 90) : commun à toutes tes classes, il ne redescend jamais. Une pièce de niveau 60 se porte au niveau 60.",
+			"Niveau de run : il repart de 1 à chaque partie et ne donne que des cartes.",
+			"Donjons, Tour, Ruée et Siège : sous leur niveau, ton héros s'y bat au sien."]},
 }
 
 

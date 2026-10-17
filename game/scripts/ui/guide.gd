@@ -212,17 +212,19 @@ static func blocks_for(id: String) -> Array:
 				"Héros > Cartes les montre toutes, avec ce qui te manque."])})
 		"run":
 			out.append({"id": "survival", "title": "Une partie de Survie", "text": bullets([
-				"Tu pars au niveau 1 avec ton équipement du hub.",
+				"Ton héros se bat à son niveau de héros, avec ton équipement du hub. Le niveau de run repart de 1 : il ne donne que des cartes.",
 				"Une époque = 3 cartes. Sur chacune : casse tout, ouvre les coffres, réunis 3 sceaux sur les gardiens d'élite, puis bats le boss du donjon.",
 				"Battre le boss de la 3e carte ouvre l'époque suivante."])})
 			for cid in RUN_ORDER:
 				out.append(_card_block(String(cid)))
 			out.append({"id": "progress", "title": "Ce qui progresse", "text": bullets([
+				"[b]Niveau de héros[/b] : 1 à 90, commun à toutes tes classes. Il monte en battant des monstres en Survie, Donjons, Tour, Ruée et Siège. Il donne tes stats et dit quelles pièces tu peux porter.",
 				"[b]Maîtrise[/b] : chaque partie en donne à ta classe. Elle ouvre des sorts, des certificats et, avec le temps, les autres classes.",
 				"[b]Insignes[/b] : donnés à la fin de chaque partie, même perdue. Ils s'échangent contre des pièces à l'Armurerie.",
 				"[b]Étoiles[/b] : trois par époque. Après l'époque IV, les rangs héroïques durcissent la Survie et la rendent plus généreuse."])})
 		"gear":
 			out.append(_card_block("hub_gear"))
+			out.append(_card_block("two_levels"))
 			out.append({"id": "armory", "title": "Armurerie : les insignes", "text": bullets([
 				"Atelier > Armurerie. Chaque pièce vue dans un coffre de Survie peut s'y acheter avec des insignes.",
 				"Une pièce achetée se porte tout de suite au hub, donc dès ta prochaine Survie."]) + _lock("armory")})

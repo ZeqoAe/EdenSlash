@@ -23,7 +23,7 @@ func spec() -> Dictionary:
 	if Run.heroic_rank > 0:
 		sub += " · rang héroïque %d" % Run.heroic_rank
 	var kept := Run.result in ["victoire", "extraction"]
-	return {
+	var out := {
 		"title": TITLES.get(Run.result, "FIN"),
 		"tone": "win" if Run.result == "victoire" else ("info" if Run.result == "extraction" else "lose"),
 		"subtitle": sub,
@@ -39,6 +39,9 @@ func spec() -> Dictionary:
 			{"text": "Retour au menu", "call": _finish},
 		],
 	}
+	if Run.result == "defaite" and HitLog.died():
+		out["defeat"] = HitLog.report()  # « Ce qui t'a battu » (lot H6 : comme les Donjons et le Survivant)
+	return out
 
 
 ## Bilan d'un Survivant (lot S6 ; v2 lot SVX-2, maquette v2_bilan.svg) : « Classe · Survivant · palier · zone · durée »,

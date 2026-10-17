@@ -27,8 +27,9 @@ const LIST := [
 	{"id": "heal_5k", "name": "Main guérisseuse", "desc": "Soigner 5 000 PV.", "c": "healed", "n": 5000, "title": ""},
 	{"id": "hit_1500", "name": "Gros frappeur", "desc": "Infliger un coup de 1 500 dégâts.", "c": "best_hit", "n": 1500, "title": ""},
 	{"id": "hit_10k", "name": "Coup de tonnerre", "desc": "Infliger un coup de 10 000 dégâts.", "c": "best_hit", "n": 10000, "title": "Coup de tonnerre"},
-	{"id": "lvl_25", "name": "Aguerri", "desc": "Atteindre le niveau 25 en partie.", "c": "best_level", "n": 25, "title": ""},
-	{"id": "lvl_50", "name": "Légende vivante", "desc": "Atteindre le niveau 50 en partie.", "c": "best_level", "n": 50, "title": "Légende"},
+	{"id": "lvl_25", "name": "Aguerri", "desc": "Atteindre le niveau de héros 25.", "c": "hero_level", "n": 25, "title": ""},
+	{"id": "lvl_50", "name": "Légende vivante", "desc": "Atteindre le niveau de héros 50.", "c": "hero_level", "n": 50, "title": "Légende"},
+	{"id": "lvl_90", "name": "Héros accompli", "desc": "Atteindre le niveau de héros 90.", "c": "hero_level", "n": 90, "title": "Héros accompli"},
 	{"id": "epoch_1", "name": "Époque I gagnée", "desc": "Vaincre le boss de la 3e carte de l'époque I.", "c": "epochs", "n": 1, "title": ""},
 	{"id": "epoch_2", "name": "Époque II gagnée", "desc": "Gagner l'époque II.", "c": "epochs", "n": 2, "title": ""},
 	{"id": "epoch_4", "name": "Maître des époques", "desc": "Gagner l'époque IV.", "c": "epochs", "n": 4, "title": "Maître des époques"},
@@ -62,6 +63,8 @@ static func value(c: String) -> float:
 			return float(Profile.runs_won)
 		"best_level":
 			return float(Profile.best_level)
+		"hero_level":
+			return float(HeroLevel.level())  # lot H6 : niveau de héros du compte (lvl_25 / lvl_50 : ids gardés)
 		"epochs":
 			return float(Profile.records.get("epochs_cleared", 0))
 		"tower_best":

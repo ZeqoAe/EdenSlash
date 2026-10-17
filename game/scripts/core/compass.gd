@@ -139,9 +139,20 @@ static func _r_find_piece(c: Dictionary) -> Dictionary:
 		return {}
 	var slot := String(missing[0])
 	var more := missing.size() - 1
-	var tip := "Les coffres d'emplacement de la Survie révèlent des plans : fabrique les pièces ensuite à l'Atelier." \
+	var t := map_for_hero()
+	var tip := ("Carte %s (%s, niveau %d-%d) : ses coffres d'emplacement révèlent des plans à ton niveau. Fabrique les pièces ensuite à l'Atelier." % [
+		GearShopPage.tier_code(t.x, t.y), GearShopPage.tier_zone(t.x, t.y), Epochs.band(t.x, t.y).x, Epochs.band(t.x, t.y).y]) \
 		+ (("\nIl manque aussi : %s." % ", ".join(missing.slice(1).map(func(s): return String(Items.SLOT_NAMES.get(s, s)).to_lower()))) if more > 0 else "")
-	return _make("find_piece", "%s : il te manque %s → Survie" % [c.cname, String(SLOT_NOUN.get(slot, "une pièce"))], {"menu": "survival"}, tip, "piece", "gear")
+	return _make("find_piece", "%s : il te manque %s → Survie, carte %s" % [c.cname, String(SLOT_NOUN.get(slot, "une pièce")), GearShopPage.tier_code(t.x, t.y)],
+		{"menu": "survival"}, tip, "piece", "gear")
+
+
+## Lot A8 : la carte de la Survie à jouer pour des pièces portables : la plus haute dont la bande de niveau commence au niveau
+## de héros ou en dessous, dans les époques ouvertes (sinon la dernière carte ouverte). Vector2i(époque, carte).
+static func map_for_hero() -> Vector2i:
+	var t := GearShopPage.band_tier(HeroLevel.level())
+	var top := Epochs.unlocked()
+	return t if t.x <= top else Vector2i(top, 3)
 
 
 static func _r_level_up(c: Dictionary) -> Dictionary:

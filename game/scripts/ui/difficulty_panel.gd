@@ -4,6 +4,7 @@ extends RefCounted
 ## (ou la PE conseillée en Normal, qui n'en demande pas) et la tienne sur une jauge (celle de la passe P5), une estimation
 ## sobre (VERDICTS : la tienne rapportée à la PE conseillée, mesurée au pilote), les récompenses de la difficulté et, quand
 ## elle est trop haute pour toi, un avertissement d'une phrase. La difficulté reste permise : on sait à quoi s'attendre.
+## Lot H5 : [param level] (niveau de l'activité) : sous ce niveau, le héros s'y bat à son niveau de héros (ligne en fraise).
 
 ## [rapport minimal à la PE conseillée, nom, couleur, conseil (infobulle)]
 const VERDICTS := [
@@ -31,7 +32,7 @@ static func verdict(have: int, advised: int) -> Array:
 ## Ajoute le bloc à [param parent] : PE requise [param need] (0 : aucune), PE conseillée [param advised], récompenses
 ## [param rewards] (courtes, « 272 cristaux »…) ; [param far_hint] remplace l'avertissement « Hors de portée » (Donjons en
 ## Normal : il n'y a pas de difficulté plus basse, mais un donjon plus bas). Renvoie le nom de l'estimation.
-static func add(parent: Control, need: int, advised: int, rewards: Array, far_hint := "") -> String:
+static func add(parent: Control, need: int, advised: int, rewards: Array, far_hint := "", level := 0) -> String:
 	var have := GearPower.hero_power()
 	var v := verdict(have, advised)
 	var box := VBoxContainer.new()
@@ -64,6 +65,12 @@ static func add(parent: Control, need: int, advised: int, rewards: Array, far_hi
 	bar.add_theme_stylebox_override("fill", fill)
 	bar.add_theme_stylebox_override("background", bg)
 	box.add_child(bar)
+	var lvl_line := HeroLevel.activity_line(level) if level > 0 else ""
+	if lvl_line != "":
+		var hl := Hud._label(box, lvl_line, 14, UiTheme.DEBUFF)
+		hl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		hl.mouse_filter = Control.MOUSE_FILTER_STOP
+		hl.tooltip_text = "Tes stats y sont celles de ton niveau de héros, les monstres gardent le leur. Le niveau de héros monte en Survie, Donjons, Tour, Ruée et Siège."
 	if not rewards.is_empty():
 		var rw := Hud._label(box, "Récompenses : " + " · ".join(rewards), 14, UiTheme.MUTED)
 		rw.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

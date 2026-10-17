@@ -51,8 +51,9 @@ func setup(director: RunDirector) -> void:
 	_center.y = d.map.height_at(_center.x, _center.z)
 	var p := d.player
 	var lvl := Tower.level_for(1)
-	p.level = lvl
-	Run.hero_level = lvl
+	var hl := HeroLevel.combat_level(lvl)  # lot H5 : jamais plus haut que le niveau de héros
+	p.level = hl
+	Run.hero_level = hl
 	Run.max_level = lvl
 	p.recalc_stats()
 	p.heal(p.max_hp)

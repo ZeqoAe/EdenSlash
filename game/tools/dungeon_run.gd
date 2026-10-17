@@ -4,6 +4,7 @@ extends Node
 ##   godot --headless --fixed-fps 60 --path game res://tools/dungeon_run.tscn -- --boss=latif --diff=0 --class=warrior
 ##         --hub=E.C.N.G [--human=0.5] [--max=1500] [--seed=1] [--god=1]
 ## --human : part des coups évitée (Run.test_taken) ; sans : 0,5. --god=1 : héros invincible (durée pure des salles, lot A2).
+## --hero-level=N (lot H5) : niveau de héros du profil (défaut 90) ; sous le niveau du donjon, le héros s'y bat à son niveau.
 ## Ligne lue : « [donjon] … » (salles = secondes écoulées à l'entrée de chaque salle). Profil jetable (EDEN_PROFILE).
 
 var boss := "latif"
@@ -13,6 +14,7 @@ var hub := "new"
 var human := 0.5
 var max_t := 1500.0
 var god := false
+var hero_lv := 90  # --hero-level=N (lot H5) : niveau de héros ; 90 = toujours au niveau du donjon (mesures d'avant H5)
 var _taken := 0.0
 var _hp_last := 0.0
 var _room_t: Array = []
@@ -31,9 +33,11 @@ func _ready() -> void:
 			"human": human = float(kv[1])
 			"max": max_t = float(kv[1])
 			"seed": seed(int(kv[1]))
+			"hero-level": hero_lv = clampi(int(kv[1]), 1, HeroLevel.MAX_LEVEL)
 			"god": god = kv[1] != "0"
 	Settings.reset_all(false)
 	Profile.selected_class = cid
+	Profile.records[HeroLevel.KEY] = HeroLevel.total_for(hero_lv)  # lot H5 : niveau de héros du profil de mesure
 	Profile.save_profile()
 	if hub != "new":
 		Profile.install_gear(StarterGear.scenario(hub, cid))
