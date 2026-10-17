@@ -33,7 +33,8 @@ Aucune règle de jeu ne change ; mode scellé inchangé.
 
 ## Décisions
 - Repère sur **L3** (libre en Battle royale ; R3 est « Changer d'arme », sans objet ici mais gardé libre pour test_n2)
-  et **clic molette** ; à bord, X pose le repère (lagon = couleur du repère), A saute (consigne), Y garde son saut.
+  et **clic molette** (un clic sans glisser, 0.1.264 : en mode « clic droit », le clic molette maintenu tourne la caméra) ;
+  à bord, X pose le repère (lagon = couleur du repère), A saute (consigne), Y garde son saut.
 - La carte **ne met pas le jeu en pause** (comme avant) ; au sol, à la manette, le stick droit mène le curseur et la
   caméra attend (`CameraRig.allow_input`), rendue à la fermeture.
 - Flèches posées dans un cadre qui évite les panneaux (objectif, colonne de droite, barre d'action ; aide du largage

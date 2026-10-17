@@ -89,6 +89,25 @@ func _pad(button: JoyButton) -> void:
 	await get_tree().process_frame
 
 
+## Appui du bouton [param button] en [param from], relâché en [param to].
+func _mouse(button: MouseButton, from: Vector2, to: Vector2) -> void:
+	var ev := InputEventMouseButton.new()
+	ev.button_index = button
+	ev.pressed = true
+	ev.position = from
+	ev.global_position = from
+	Input.parse_input_event(ev)
+	await get_tree().process_frame
+	var up := InputEventMouseButton.new()
+	up.button_index = button
+	up.pressed = false
+	up.position = to
+	up.global_position = to
+	Input.parse_input_event(up)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+
 static func _inside(outer: Rect2, inner: Rect2) -> bool:
 	return outer.grow(0.5).encloses(inner)
 
@@ -267,8 +286,21 @@ func _test_fight(rd: RoyaleDirector, hud: Hud, rh: RoyaleHud) -> void:
 	var spot := RoyalePing.ground(rd.d.map, p.global_position.x, p.global_position.z) + Vector3(7, 0, 0).rotated(Vector3.UP, cam2.global_rotation.y)
 	spot = RoyalePing.ground(rd.d.map, spot.x, spot.z)
 	var hit := RoyalePing.under_cursor(cam2, cam2.unproject_position(spot), rd.d.map)
+	if hit == Vector3.INF:
+		print("[bri1] rayon raté : caméra %s · point %s · écran %s · derrière %s" % [str(cam2.global_position), str(spot), str(cam2.unproject_position(spot)), str(cam2.is_position_behind(spot))])
 	check("clic molette : point du sol sous le curseur (écart %.1f m)" % Vector2(hit.x - spot.x, hit.z - spot.z).length(),
 		hit != Vector3.INF and Vector2(hit.x - spot.x, hit.z - spot.z).length() < 1.5)
+	# clic molette : un clic pose le repère sous la souris ; un glisser (caméra du mode « clic droit ») n'en pose pas
+	var keep := RoyalePing.pos
+	RoyalePing.reset()
+	var at := cam2.unproject_position(spot)
+	await _mouse(MOUSE_BUTTON_MIDDLE, at, at + Vector2(40, 10))
+	check("clic molette glissé : pas de repère", not RoyalePing.has())
+	await _mouse(MOUSE_BUTTON_MIDDLE, at, at + Vector2(2, 1))
+	check("clic molette : repère sous la souris (écart %.1f m)" % (Vector2(RoyalePing.pos.x - spot.x, RoyalePing.pos.z - spot.z).length() if RoyalePing.has() else -1.0),
+		RoyalePing.has() and Vector2(RoyalePing.pos.x - spot.x, RoyalePing.pos.z - spot.z).length() < 2.0)
+	RoyalePing.reset()
+	RoyalePing.toggle(keep)
 	_place(p, RoyalePing.pos)
 	await _frames(2)
 	rh.edge.compute()

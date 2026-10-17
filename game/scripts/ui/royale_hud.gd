@@ -367,14 +367,31 @@ func _update_ride(rd: RoyaleDirector) -> void:
 
 
 # --- repère personnel ------------------------------------------------------------------------------------
+## Souris : un clic sans glisser (en mode « clic droit », le clic molette maintenu tourne la caméra : pas de repère alors).
+const PING_CLICK_PX := 8.0
+const PING_CLICK_MS := 400
+var _ping_down := Vector2.INF
+var _ping_down_ms := 0
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if get_tree().paused or not event.is_action_pressed("ping"):
+	if get_tree().paused or not event.is_action("ping"):
 		return
 	var rd := _rd()
 	if rd == null or rd.spectating or player.is_dead:
 		return
-	get_viewport().set_input_as_handled()
-	place_ping(event)
+	if event is InputEventMouseButton:
+		var mb := event as InputEventMouseButton
+		if mb.pressed:
+			_ping_down = mb.position
+			_ping_down_ms = Time.get_ticks_msec()
+		elif _ping_down != Vector2.INF and mb.position.distance_to(_ping_down) < PING_CLICK_PX and Time.get_ticks_msec() - _ping_down_ms < PING_CLICK_MS:
+			_ping_down = Vector2.INF
+			place_ping(event)
+		return  # (la caméra garde son glisser)
+	if event.is_pressed() and not event.is_echo():
+		get_viewport().set_input_as_handled()
+		place_ping(event)
 
 
 ## Repère : sur la grande carte (curseur), sous la souris (clic molette) ou devant le héros (manette).
@@ -386,7 +403,7 @@ func place_ping(event: InputEvent = null) -> void:
 	var m: Node = director.map
 	var p := Vector3.INF
 	if event is InputEventMouseButton:
-		p = RoyalePing.under_cursor(get_viewport().get_camera_3d(), get_viewport().get_mouse_position(), m)
+		p = RoyalePing.under_cursor(get_viewport().get_camera_3d(), (event as InputEventMouseButton).position, m)
 	if p == Vector3.INF:
 		p = RoyalePing.ahead_of(player, m)
 	RoyalePing.toggle(p, _rd())
