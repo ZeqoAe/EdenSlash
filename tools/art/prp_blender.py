@@ -127,10 +127,26 @@ bm.from_mesh(hi.data)
 bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
 bm.to_mesh(hi.data)
 bm.free()
+# socle plat (ombre de l'image devenue une plaque sous l'objet : sac, guitare) : on coupe le bas sur « cut_bottom » de la hauteur
+if P.get("cut_bottom"):
+    zs = [v.co.z for v in hi.data.vertices]
+    z_cut = min(zs) + P["cut_bottom"] * (max(zs) - min(zs))
+    bm = bmesh.new()
+    bm.from_mesh(hi.data)
+    bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.calc_center_median().z < z_cut], context="FACES")
+    bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+    bm.to_mesh(hi.data)
+    bm.free()
+    REM.append("socle coupé")
 # petits morceaux (éclats, poussière de reconstruction) : retirés
 isl, comp = islands(hi)
 total_area = sum(a for _, a in isl)
 small = {i for i, (n, a) in enumerate(isl) if a < 0.004 * total_area}
+if P.get("single") and isl:
+    # une seule pièce (lance) : Pixal3D double parfois un objet très fin (deux hampes côte à côte) ; on garde la plus grande
+    best = max(range(len(isl)), key=lambda i: isl[i][1])
+    small = {i for i in range(len(isl)) if i != best}
+    REM.append("plus grande pièce gardée")
 if small:
     bm = bmesh.new()
     bm.from_mesh(hi.data)
@@ -190,7 +206,12 @@ if KIND == "weapon":
     # (bout le plus large) en haut. Sinon demi-tour autour de Y (la largeur reste sur X).
     lo_z, hi_z = co[:, 2].min(), co[:, 2].max()
     prof = profile(co, lo_z, hi_z)
-    if P.get("grip") is None:
+    sens = P.get("sens") or ""
+    if sens == "image":
+        flip = False  # canon, grimoire : le haut de l'image est le haut de l'arme (Pixal3D le garde)
+    elif sens == "large_bas":
+        flip = prof[75:].mean() > prof[:25].mean()  # guitare : la caisse (bout le plus large) en bas
+    elif P.get("grip") is None:
         flip = 5 + int(np.argmax(prof[5:95])) > 50
     else:
         flip = prof[75:].mean() < prof[:25].mean()
@@ -238,7 +259,10 @@ else:
     cx = (co[:, 0].min() + co[:, 0].max()) / 2
     cz = (co[:, 2].min() + co[:, 2].max()) / 2
     front = co[:, 1].max()  # point le plus proche du dos
-    apply(Matrix.Translation(Vector((0.10 - cx, -0.08 - front, -cz))))
+    # centre à « haut » au-dessus de l'os (ailes 0,10 ; halo plus haut, derrière les épaules), « recul » = écart au dos
+    UP, GAP = P.get("up", 0.10), P.get("gap", 0.0)
+    apply(Matrix.Translation(Vector((UP - cx, -0.08 - GAP - front, -cz))))
+    co = co + np.array([UP - cx, -0.08 - GAP - front, -cz])
     depth = np.ptp(co[:, 1])
     if depth > 0.6 * P["span"]:
         REM.append("ailes très épaisses")
@@ -344,7 +368,7 @@ bt = nt.nodes.new("ShaderNodeTexImage")
 bt.image = baked
 nt.links.new(bt.outputs["Color"], bsdf.inputs["Base Color"])
 bsdf.inputs["Metallic"].default_value = 0.0
-bsdf.inputs["Roughness"].default_value = 0.85
+bsdf.inputs["Roughness"].default_value = 1.0  # mat (PRP-2) : le shader du jeu ne lit que la couleur
 nt.nodes.active = bt
 lo.data.materials.clear()
 lo.data.materials.append(mat_lo)
@@ -362,6 +386,56 @@ tb = time.time()
 bpy.ops.object.bake(type="EMIT", use_selected_to_active=True, cage_extrusion=0.01 * size,
                     max_ray_distance=0.04 * size, margin=8)
 log(f"cuisson {TEX} px en {time.time() - tb:.1f} s")
+
+
+def _hsv(rgb):
+    mx, mn = rgb.max(2), rgb.min(2)
+    d = mx - mn
+    s = np.where(mx > 1e-6, d / np.maximum(mx, 1e-6), 0.0)
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    dd = np.maximum(d, 1e-6)
+    h = np.where(mx == r, ((g - b) / dd) % 6, np.where(mx == g, (b - r) / dd + 2, (r - g) / dd + 4)) / 6.0
+    return np.where(d > 1e-6, h, 0.0), s, mx
+
+
+def _rgb(h, s, v):
+    i = np.floor(h * 6).astype(int) % 6
+    f = h * 6 - np.floor(h * 6)
+    p, q, t = v * (1 - s), v * (1 - s * f), v * (1 - s * (1 - f))
+    out = np.zeros(h.shape + (3,), np.float32)
+    for k, (a, b, c) in enumerate(((v, t, p), (q, v, p), (p, v, t), (p, q, v), (t, p, v), (v, p, q))):
+        m = i == k
+        out[m, 0], out[m, 1], out[m, 2] = a[m], b[m], c[m]
+    return out
+
+
+def _median(a, r=2):
+    hh, ww = a.shape
+    pad = np.pad(a, r, mode="edge")
+    return np.median(np.stack([pad[r + dy:r + dy + hh, r + dx:r + dx + ww] for dy in range(-r, r + 1) for dx in range(-r, r + 1)]), 0)
+
+
+def flatten(img):
+    """Aplats (PRP-2) : la texture SDXL a des reflets « jouet verni » (traînées blanches, dégradés brillants) là où les armes
+    d'Eden ont 2-3 tons nets. Valeur lissée (médiane 5×5) et ramenée vers 5 paliers, reflets écrasés au-dessus de 0,82,
+    saturation des reflets rendue (médiane voisine) : la couleur et la teinte restent, le vernis part."""
+    w_, h_ = img.size
+    a = np.empty(w_ * h_ * 4, np.float32)
+    img.pixels.foreach_get(a)
+    a = a.reshape(h_, w_, 4)
+    h, s, v = _hsv(a[:, :, :3])
+    vm, sm = _median(v, 3), _median(s, 3)
+    v1 = 0.25 * v + 0.75 * vm
+    v1 = np.where(v1 > 0.78, 0.78 + (v1 - 0.78) * 0.3, v1)
+    v1 = 0.7 * v1 + 0.3 * np.round(v1 * 5) / 5
+    s1 = np.clip(np.maximum(s, 0.9 * sm) * 1.05, 0, 1)
+    a[:, :, :3] = np.clip(_rgb(h, s1, np.clip(v1, 0, 1)), 0, 1)
+    img.pixels.foreach_set(a.ravel())
+
+
+if P.get("flat", True):
+    flatten(baked)
+    REM.append("aplats")
 baked.pack()
 
 # --- EdenRoot, W1 / W2 ---------------------------------------------------------------------------------------------
@@ -381,6 +455,32 @@ if KIND == "weapon":
 
 bpy.data.objects.remove(hi)
 
+# --- ailes animées (PRP-2) : deux moitiés AileG (côté -Z de l'os) et AileD (+Z), origine à la charnière (milieu du dos) ;
+# le jeu les fait battre par une rotation autour de l'axe X de l'os (haut du dos), voir PrpWingFlap
+halves = []
+if KIND == "back" and P.get("flap"):
+    bpy.context.view_layer.update()
+    mw = lo.matrix_world.copy()
+    hinge_y = max(v.co.y for v in lo.data.vertices)
+    hinge_x = P.get("up", 0.10)
+    for name, keep_pos in (("AileD", True), ("AileG", False)):
+        o = lo.copy()
+        o.data = lo.data.copy()
+        o.name = o.data.name = name
+        sc.collection.objects.link(o)
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        bm.faces.ensure_lookup_table()
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if (f.calc_center_median().z >= 0) != keep_pos], context="FACES")
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context="VERTS")
+        bmesh.ops.translate(bm, verts=bm.verts, vec=Vector((-hinge_x, -hinge_y, 0)))
+        bm.to_mesh(o.data)
+        bm.free()
+        o.parent = root
+        o.matrix_parent_inverse = Matrix.Identity(4)
+        o.location = (hinge_x, hinge_y, 0)
+        halves.append(o)
+
 # --- 4. contrôles et export ----------------------------------------------------------------------------------------
 tp = topo(lo)
 isl, _ = islands(lo)
@@ -391,7 +491,7 @@ tris = sum(len(p.vertices) - 2 for p in lo.data.polygons)
 
 def export(path):
     bpy.ops.object.select_all(action="DESELECT")
-    for o in extra:
+    for o in (([root] + halves) if halves else extra):
         o.select_set(True)
     bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True, export_yup=False,
                               export_image_format="JPEG", export_jpeg_quality=88, export_apply=True,
@@ -426,6 +526,8 @@ met = {"id": P["id"], "triangles": tris, "triangles_brut": raw_tris, "sommets": 
        "verdict": ", ".join(verdict) if verdict else "ok", "remarques": ", ".join(REM), "retopo": RETOPO}
 if KIND == "weapon":
     met.update({"w1": round(w1, 3), "w2": round(w2, 3)})
+if halves:
+    met["battement"] = [o.name for o in halves]
 log(f"{tris} triangles, {kb} Ko, dimensions {dims}, {tp['non_manifold']} arêtes non-manifold, {tp['bords']} bords, "
     f"{parts} grandes composantes -> {met['verdict']}")
 
@@ -494,6 +596,29 @@ sun.rotation_euler = (cam.location - ctr).to_track_quat("Z", "Y").to_euler()
 sun.rotation_euler.rotate_axis("X", math.radians(-35))
 sun.rotation_euler.rotate_axis("Y", math.radians(25))
 sc.render.filepath = os.path.join(P["render_dir"], P["id"] + "_vue.png")
+bpy.ops.render.render(write_still=True)
+
+# --- rendu pour l'icône (PRP-2) : fond transparent, arme en diagonale (poignée en bas à gauche, pointe en haut à droite,
+# comme les icônes d'armes du jeu), dos vu de derrière ; la tuile autocollante est posée par prp_pipeline.py icon
+sc.render.film_transparent = True
+sc.render.resolution_x = sc.render.resolution_y = 512
+if KIND == "weapon":
+    root.rotation_euler = (0, math.radians(45), 0)
+    view = Vector((0.12, -1.0, 0.1)).normalized()
+else:
+    root.rotation_euler = (0, math.radians(-90), 0)
+    view = Vector((0.0, -1.0, 0.12)).normalized()
+bpy.context.view_layer.update()
+pts = [lo.matrix_world @ Vector(c) for c in lo.bound_box]
+ctr = sum(pts, Vector()) / 8
+rad = max((p - ctr).length for p in pts)
+cam.location = ctr + view * rad * 4
+cam.rotation_euler = (ctr - cam.location).to_track_quat("-Z", "Y").to_euler()
+cam.data.ortho_scale = rad * (1.62 if KIND == "weapon" else 2.0)
+sun.rotation_euler = (cam.location - ctr).to_track_quat("Z", "Y").to_euler()
+sun.rotation_euler.rotate_axis("X", math.radians(-35))
+sun.rotation_euler.rotate_axis("Y", math.radians(25))
+sc.render.filepath = os.path.join(P["render_dir"], P["id"] + "_icone.png")
 bpy.ops.render.render(write_still=True)
 
 met["secondes"] = round(time.time() - T0, 1)

@@ -14,24 +14,24 @@
   "traine": "nœuds W1 (base de la lame) et W2 (pointe)"
  },
  "mesures": {
-  "triangles": 7680,
-  "sommets": 3832,
-  "ko": 556,
+  "triangles": 2880,
+  "sommets": 1440,
+  "ko": 168,
   "dimensions": [
-   0.814,
-   0.911,
-   2.586
+   0.239,
+   0.236,
+   2.582
   ],
-  "texture": 1024,
-  "composantes": 5,
+  "texture": 512,
+  "composantes": 4,
   "aretes_non_manifold": 0,
   "verdict": "ok",
-  "remarques": ""
+  "remarques": "plus grande pièce gardée, aplats"
  },
  "source": {
   "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
-  "graine_image": 113,
-  "prompt": "a single spear weapon, big strawberry red leaf-shaped metal spearhead on top with a golden collar, thick sturdy white shaft with red and gold rings, chunky toy-like proportions",
+  "graine_image": 124,
+  "prompt": "a single short chunky toy spear, thick straight cylindrical pole with white and red stripes, big strawberry red leaf-shaped spearhead with a golden collar on the top end, the spearhead points straight up, simple bold shapes",
   "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
   "nettoyage": "tools/art/prp_blender.py"
  },

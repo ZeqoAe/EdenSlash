@@ -1,7 +1,8 @@
 # PRP : chaîne de production des objets 3D (armes, ailes de dos)
 
 Département PRP (`ORGANISATION.md`). Procédure reproductible « idée -> image -> objet 3D -> nettoyage Blender -> GLB + fiche »,
-éprouvée par le lot PRP-1 (`R_PRP1.md`, planche `prp/planche.jpg`). **Aucun asset n'entre dans `game/` sans validation du joueur.**
+éprouvée par le lot PRP-1 (`R_PRP1.md`, planche `prp/planche.jpg`) et reprise par le lot PRP-2 (`R_PRP2.md`, planche `prp/planche2.jpg`) qui
+a mis 24 créations dans le jeu (étape `game`).
 
 ## Vue d'ensemble
 | Étape | Outil | Commande (`C:\AI\venv_comfy\Scripts\python.exe tools/art/prp_pipeline.py …`) | Sortie | Temps mesuré |
@@ -12,7 +13,10 @@ Département PRP (`ORGANISATION.md`). Procédure reproductible « idée -> image
 | 3. Objet 3D | Pixal3D (ComfyUI, workflow `image_to_3d_pixal3d`) | `mesh` | `C:\AI\prp1_raw\mesh\<id>_hi.glb` (≈ 150 000 faces, textures 2048) | 2 min 30 à 4 min (2 min 52 en moyenne) |
 | 4. Nettoyage | Blender 5.2 en arrière-plan (`tools/art/prp_blender.py`) | `clean` | `conception/art/prp/candidats/<id>.glb` + `<id>.json`, aperçu `render\<id>_vue.png` | 15 s de calcul (20 s à 2 min avec démarrage et aperçu, processeur partagé) |
 | 5. Contrôle | Godot 4.7.2, projet de brouillon `C:\AI\prp1_godot` | `godot` | `render\<id>_godot.png` (sur le héros), `<id>_distance.png` (caméra du jeu), `godot_controle.txt` | 30 s pour 12 |
-| 6. Planche | Pillow | `sheet` | `conception/art/prp/planche.jpg` (≤ 500 Ko), `prp/mesures.json` | 2 s |
+| 6. Icônes | Pillow (rendu Blender de l'étape 4) | `icon` | `render\<id>_icone128.png` / `_icone64.png` (tuile autocollante) | 1 s |
+| 7. Planche | Pillow | `sheet` | `conception/art/prp/planche2.jpg` (≤ 500 Ko, objets seuls), `prp/mesures.json` | 2 s |
+| 8. Jeu | copie + table | `game` | `game/assets/weapons/prp/<id>.glb`, `game/assets/player/outfits/back_prp_*.glb` (+ `.import` : textures en Basis Universal), `game/assets/ui/items/<id>.png` (128) et `<id>_64.png`, `game/data/prp_looks.json` | 1 s |
+| — | lecture des GLB du jeu | `measure` | longueur, prise, W1 / W2 médianes par type d'arme (remplit `types`) | 2 s |
 
 `all` enchaîne tout ; chaque étape est reprenable (un résultat présent n'est pas refait ; `--force` pour le refaire).
 Journal brut de toutes les mesures (temps, VRAM de la carte avant / au plus haut) : `C:\AI\prp1_raw\mesures.jsonl`.
@@ -36,13 +40,20 @@ Journal brut de toutes les mesures (temps, VRAM de la carte avant / au plus haut
 - Export : GLB sans conversion d'axes (`export_yup=False`) ; `EdenRoot` porte une rotation de -90° sur X pour qu'un visualiseur glTF
   montre l'objet debout (le jeu l'annule). Texture JPEG 1024 (qualité 88), ramenée à 512 si le GLB dépasse 1,5 Mo.
 
-## Budgets (mission PRP-1)
+## Budgets (PRP-2, décision de la coordination : 20 héros en Battle royale)
 | | Triangles | Poids | Texture |
 |---|---|---|---|
-| Arme | ≤ 8 000 (visé 7 680) | ≤ 1,5 Mo | 1024² couleur seule |
-| Ailes | ≤ 12 000 (visé 11 520) | ≤ 1,5 Mo | 1024² couleur seule |
-Pour mémoire, les armes du jeu font 300 à 1 000 triangles, 12 à 30 Ko, texture 512². Nos pièces sont 10 fois plus fines : à garder pour
-l'apparence (vitrine, gros plan du lobby) ; une version « en partie » à 2 000 triangles est possible (`"triangles": 2000` dans la fiche).
+| Arme | ≤ 3 000 (visé 2 880) | ≤ 600 Ko | 512² couleur seule, aplats |
+| Ailes, dos | ≤ 5 000 la paire (visé 4 800) | ≤ 600 Ko | 512² couleur seule, aplats |
+PRP-1 visait 8 000 / 12 000 et 1024². Les armes du jeu font 300 à 1 000 triangles, 12 à 30 Ko, texture 512². Une fiche peut demander
+moins (`"triangles": 2000`). Mesure de coût en jeu : `res://tools/prp_perf.tscn` (20 héros, aucun / ailes d'Eden / maison).
+
+**Aplats** (`flatten`, PRP-2) : la texture SDXL a des reflets « jouet verni ». Après la cuisson : valeur lissée (médiane 7×7) et tirée
+vers 5 paliers, reflets écrasés au-dessus de 0,78, saturation des reflets rendue d'après les voisins ; métal 0, rugosité 1.
+**Ailes battantes** (`"battement": true` sur le type `wings`) : la paire est coupée en deux moitiés `AileG` (-Z de l'os) et `AileD` (+Z),
+origine à la charnière (milieu du dos) ; `EdenModel.dress` leur pose `PrpWingFlap` (repli de 14° vers l'arrière, 1,9 s ; immobiles avec
+« Réduire les animations »).
+**Dos non ailés** : types `halo` (centre 0,5 au-dessus de l'os, derrière les épaules, 0,25 derrière le dos) et `pack` (sac collé au dos) : `haut`, `recul`.
 
 ## Réglages et pourquoi
 **Image** (`prp_pipeline.py`, en tête) : 832×1216 (armes) ou 1216×832 (ailes), 30 pas, `dpmpp_2m karras`, cfg 6,5, LoRA à 0,5.
@@ -101,6 +112,14 @@ UV, cuisson 2048). Sur-échantillonnage **1536** pour les armes (objets fins), *
 4. Rejeter si le verdict n'est pas « ok », si la silhouette ne se lit pas sur `<id>_distance.png`, ou si l'aperçu montre des taches grises
    (fond pris pour l'objet), un objet coupé ou une forme fondue.
 
-## Type de pièce non encore géré
-Arc (os de la main gauche, corde fine : la 3D la perd), gantelets, canon, guitare, grimoire, faux-fusil, rapière : ajouter le type dans
-`types` (longueur et prise mesurées comme ci-dessus) ; l'arc demandera une corde refaite à la main (2 triangles) dans Blender.
+## Types de pièce
+Gérés : épée, espadon, katana, hache, marteau, bâton, sceptre, lance (PRP-1) ; dague, rapière, bâton de métal, guitare (caisse en bas :
+`"sens": "large_bas"`), canon, grimoire (`"sens": "image"` : le haut de l'image est gardé) (PRP-2). Pas encore : arc (os de la main
+gauche, corde fine : la 3D la perd ; corde à refaire à la main dans Blender), gantelets (deux pièces), faux-fusil.
+
+## Entrer dans le jeu (étape `game`)
+`prp_assets.json` -> `game/data/prp_looks.json` (numéro de collection fixe = 990001 + rang de la fiche : **ajouter à la fin**, ne jamais
+réordonner ; `"garder": false` pour retirer une pièce). `PrpLooks.install` (au chargement de `GameData`) en fait des trésors de collection
+(arme : catégorie 4 avec `skin` ; dos : catégorie 2 + cosmétique `back`) : Héros > Apparence, coffres d'apparence, Collection et la
+Vitrine du menu Coffres (prix en insignes par rareté, `PrpLooks.PRICES`) les prennent seuls. Après une nouvelle pièce : `--import`
+(textures en Basis Universal), puis `res://tests/test_prp_looks.tscn`.

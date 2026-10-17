@@ -1,0 +1,39 @@
+{
+ "id": "back_prp_sac_lapin",
+ "nom": "Sac lapin",
+ "emplacement": "back",
+ "emplacement_nom": "Dos",
+ "type_arme": "",
+ "type_nom": "Sac à dos",
+ "rarete": 0,
+ "rarete_nom": "Commun",
+ "fichier": "back_prp_sac_lapin.glb",
+ "accroche": {
+  "os": "Bip01 Spine1",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": ""
+ },
+ "mesures": {
+  "triangles": 4800,
+  "sommets": 3510,
+  "ko": 276,
+  "dimensions": [
+   0.637,
+   0.566,
+   0.618
+  ],
+  "texture": 512,
+  "composantes": 644,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": "socle coupé, ailes très épaisses, aplats"
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 104,
+  "prompt": "a single cute small backpack shaped like a round white bunny head with two long upright ears, pastel pink inner ears, strawberry red buckle straps, front view, symmetrical",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

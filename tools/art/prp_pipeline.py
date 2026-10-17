@@ -8,8 +8,11 @@ eden_style_v0b et les modèles Pixal3D (voir conception/art/g1_test/LISEZMOI.md)
   C:\\AI\\venv_comfy\\Scripts\\python.exe tools/art/prp_pipeline.py images  [--only id,id]   # 4 graines par objet + détourage
   ...                                         mesh    [--only id,id]   # Pixal3D sur la graine retenue -> GLB brut (150 000 faces)
   ...                                         clean   [--only id,id]   # Blender : retopo légère, repère de l'os, matériau, GLB + fiche
+  ...                                         icon    [--only id,id]   # icônes 128 et 64 px (tuile autocollante, couleur de rareté)
   ...                                         godot                    # contrôle d'import et rendu sur le héros (Godot 4.7, projet de brouillon)
-  ...                                         sheet                    # planche de contact conception/art/prp/planche.jpg
+  ...                                         sheet                    # planche de contact conception/art/prp/planche2.jpg
+  ...                                         game    [--only id,id]   # GLB + icônes dans game/, table game/data/prp_looks.json
+  ...                                         measure                  # longueur et prise médianes des armes du jeu, par type
   ...                                         all     [--only id,id]   # tout à la suite
 
 Fiches des objets (prompt, type, rareté, dimensions par type) : tools/art/prp_assets.json. Sorties brutes : C:\\AI\\prp1_raw
@@ -53,8 +56,9 @@ LEAD = {"weapon": "edenstyle, (single object:1.3), vertical, pointing straight u
 
 # --- 3D (Pixal3D, workflow G1) -------------------------------------------------------------------------------------
 UPSAMPLE = {"weapon": 1536, "back": 1024}  # objets fins : 1536 (G1) ; ailes = grandes surfaces : 1024 (VRAM)
-BUDGET = {"weapon": 8000, "back": 12000}   # triangles au plus (mission)
-MAX_KB = 1536                              # poids d'un GLB au plus
+BUDGET = {"weapon": 3000, "back": 5000}    # triangles au plus (PRP-2 : 20 héros en Battle royale ; PRP-1 : 8 000 / 12 000)
+MAX_KB = 600                               # poids d'un GLB au plus (PRP-1 : 1 536)
+TEX = 512                                  # texture de couleur (les armes du jeu : 512)
 
 
 def load_assets(only=None):
@@ -301,13 +305,20 @@ def step_clean(types, assets, force=False):
         kind = a["emplacement"]
         t = types[a["type"]]
         params = {"src": os.path.join(RAW, "mesh", a["id"] + "_hi.glb"), "dst": dst, "kind": kind, "type": a["type"],
-                  "tri_max": int(a.get("triangles", BUDGET[kind]) * 0.96), "tex": int(a.get("texture", 1024)),
+                  "tri_max": int(a.get("triangles", BUDGET[kind]) * 0.96), "tex": int(a.get("texture", TEX)),
                   "max_kb": MAX_KB, "render_dir": rd, "id": a["id"],
                   "metrics": os.path.join(rd, a["id"] + "_metrics.json")}
         if kind == "weapon":
-            params.update({"length": t["longueur"], "grip": t["prise"], "w1": t["w1"], "w2": t["w2"]})
+            params.update({"length": t["longueur"], "grip": t["prise"], "w1": t["w1"], "w2": t["w2"], "sens": t.get("sens")})
         else:
-            params.update({"span": a.get("envergure", t["envergure"])})
+            params.update({"span": a.get("envergure", t["envergure"]), "up": t.get("haut", 0.10), "gap": t.get("recul", 0.0),
+                           "flap": bool(t.get("battement"))})
+        if a.get("une_piece"):
+            params["single"] = True  # Pixal3D a doublé l'objet fin : on garde la plus grande pièce
+        if a.get("couper_bas"):
+            params["cut_bottom"] = float(a["couper_bas"])  # socle plat né de l'ombre de l'image
+        if t.get("voxel"):
+            params["voxel_res"] = int(t["voxel"])  # objet compact (sac) : 1/900 donnait 4 millions de faces, irréductibles
         pj = os.path.join(rd, a["id"] + "_params.json")
         with open(pj, "w", encoding="utf-8") as f:
             json.dump(params, f, ensure_ascii=False, indent=1)
@@ -343,7 +354,7 @@ def write_card(a, t, met):
         "accroche": {"os": t["os"], "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
                      "traine": "nœuds W1 (base de la lame) et W2 (pointe)" if a["emplacement"] == "weapon" else ""},
         "mesures": {k: met[k] for k in ("triangles", "sommets", "ko", "dimensions", "texture", "composantes",
-                                         "aretes_non_manifold", "verdict", "remarques") if k in met},
+                                         "aretes_non_manifold", "verdict", "remarques", "battement") if k in met},
         "source": {"image": "SDXL base 1.0 + LoRA eden_style_v0b à %.1f" % STRENGTH, "graine_image": seed,
                    "prompt": a["prompt"], "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
                    "nettoyage": "tools/art/prp_blender.py"},
@@ -411,69 +422,283 @@ def step_godot(types, assets, force=False):
 # 5. Planche de contact et mesures
 # ---------------------------------------------------------------------------------------------------------------------
 def step_sheet(types, assets, force=False):
+    """Planche PRP-2 (conception/art/prp/planche2.jpg, <= 500 Ko) : pour chaque création, l'objet seul (aperçu toon,
+    fond du ciel du jeu), son icône, son nom, sa rareté, son type et ses mesures. Aucun rendu du héros d'Eden."""
     from PIL import Image, ImageDraw, ImageFont
     rd = os.path.join(RAW, "render")
-    cw, chh = 420, 470
-    cols = 4
+    cw, chh, cols = 330, 400, 6
     rows = (len(assets) + cols - 1) // cols
-    sheet = Image.new("RGB", (cw * cols, 56 + chh * rows), (34, 26, 58))
+    sheet = Image.new("RGB", (cw * cols, 70 + chh * rows), (34, 26, 58))
     d = ImageDraw.Draw(sheet)
     try:
-        big = ImageFont.truetype("arialbd.ttf", 22)
+        big = ImageFont.truetype("arialbd.ttf", 24)
         font = ImageFont.truetype("arialbd.ttf", 17)
         small = ImageFont.truetype("arial.ttf", 13)
     except OSError:
         big = font = small = ImageFont.load_default()
-    d.text((14, 14), "PRP-1 : 8 apparences d'armes et 4 ailes de dos (candidats, rien dans le jeu)", fill=(255, 248, 236), font=big)
-    colors = [(217, 212, 228), (143, 214, 46), (34, 184, 240), (196, 107, 245), (255, 138, 31), (255, 201, 40)]
-    summary = []
+    nw = sum(1 for a in assets if a["emplacement"] == "weapon")
+    d.text((16, 12), f"PRP-2 : {len(assets)} créations maison dans le jeu ({nw} armes, {len(assets) - nw} dos) - "
+                     "armes <= 3 000 triangles, dos <= 5 000, texture 512, aplats", fill=(255, 248, 236), font=big)
+    d.text((16, 44), "Héros > Apparence > Arme / Dos ; coffres d'apparence ; Coffres > Vitrine (insignes). Aucune stat.",
+           fill=(200, 192, 220), font=small)
     meas = {r["id"]: r for r in summarize(assets)}
     for i, a in enumerate(assets):
-        x, y = cw * (i % cols), 56 + chh * (i // cols)
-        with open(os.path.join(rd, a["id"] + "_metrics.json"), encoding="utf-8") as f:
+        x, y = cw * (i % cols), 70 + chh * (i // cols)
+        mp = os.path.join(rd, a["id"] + "_metrics.json")
+        if not os.path.isfile(mp):
+            continue
+        with open(mp, encoding="utf-8") as f:
             met = json.load(f)
-        col = colors[a["rarete"]]
+        col = RARITY_RGB[a["rarete"]]
         d.rounded_rectangle((x + 6, y + 4, x + cw - 6, y + chh - 6), 14, fill=(255, 248, 236), outline=col, width=4)
         main = Image.open(os.path.join(rd, a["id"] + "_vue.png")).convert("RGB")
-        main.thumbnail((290, 290))
-        sheet.paste(main, (x + 14, y + 40))
-        # colonne de droite : sur le héros (Godot), à la distance de la caméra du jeu, image source
-        rx = x + cw - 126
-        for k, (suffix, label, yy, size) in enumerate((("_godot.png", "sur le héros", 30, 112),
-                                                      ("_distance.png", "taille réelle en jeu", 162, 112),
-                                                      ("", "image source", 290, 52))):
-            pth = os.path.join(rd, a["id"] + suffix) if suffix else                 os.path.join(RAW, "img", f"{a['id']}_s{chosen_seed(a)}_iso.png")
-            if os.path.isfile(pth):
-                im = flat(pth, (204, 222, 243))
-                im.thumbnail((size, size))
-                sheet.paste(im, (rx, y + yy + 16))
-            d.text((rx, y + yy), label, fill=(110, 103, 135), font=small)
-        d.text((x + 16, y + 12), a["nom"], fill=(34, 26, 58), font=font)
+        main.thumbnail((250, 250))
+        sheet.paste(main, (x + (cw - main.width) // 2, y + 40))
+        ic = os.path.join(rd, a["id"] + "_icone128.png")
+        if os.path.isfile(ic):
+            im = Image.open(ic).convert("RGBA")
+            im.thumbnail((76, 76))
+            sheet.paste(im, (x + cw - 92, y + 214), im)
+        d.text((x + 16, y + 12), a["nom"], fill=INK, font=font)
         d.text((x + cw - 16, y + 14), RARITY[a["rarete"]], fill=tuple(int(c * 0.7) for c in col), font=small, anchor="ra")
         t = types[a["type"]]
         verdict = met["verdict"]
-        lines = [f"{t['nom']} · {met['triangles']} triangles · {met['ko']} Ko · texture {met['texture']}",
-                 f"{met['dimensions'][0]:.2f} × {met['dimensions'][1]:.2f} × {met['dimensions'][2]:.2f} (repère de l'os)",
-                 "Image %s s · 3D %s · VRAM %s Go · Blender %s s" % (
-                     round(sum(i["secondes"] for i in meas.get(a["id"], {}).get("images", [])) /
-                           len(meas[a["id"]]["images"]), 1) if meas.get(a["id"], {}).get("images") else "≈ 13",
-                     fmt_min(meas.get(a["id"], {}).get("3d", {}).get("secondes")),
-                     meas.get(a["id"], {}).get("3d", {}).get("vram_carte_max_go", "?"),
-                     round(meas.get(a["id"], {}).get("blender", {}).get("secondes", 0))),
-                 ("Contrôles OK" if verdict == "ok" else "À REVOIR : " + verdict) + (" · " + met["remarques"] if met.get("remarques") else ""),
-                 a.get("avis", "")]
+        three = meas.get(a["id"], {}).get("3d", {}).get("secondes")
+        lines = [f"{t['nom']} · {met['triangles']} triangles · {met['ko']} Ko",
+                 f"texture {met['texture']} · {met['dimensions'][0]:.2f} × {met['dimensions'][1]:.2f} × {met['dimensions'][2]:.2f}",
+                 ("ailes battantes (2 moitiés)" if met.get("battement") else ("Blender %s s" % round(met.get("secondes", 0))))
+                 + (" · 3D " + fmt_min(three) if three else ""),
+                 "Contrôles OK" if verdict == "ok" else "À REVOIR : " + verdict,
+                 (a.get("avis", "") or "")[:44]]
         for k, ln in enumerate(lines):
-            color = (34, 26, 58) if k < 3 else ((62, 127, 10) if verdict == "ok" else (200, 40, 60)) if k == 3 else (11, 125, 181)
-            d.text((x + 16, y + 350 + 18 * k), ln, fill=color, font=small)
-        summary.append({"id": a["id"], **{k: met.get(k) for k in ("triangles", "ko", "verdict")}})
-    out = os.path.join(OUT, "planche.jpg")
+            color = INK if k < 3 else ((62, 127, 10) if verdict == "ok" else (200, 40, 60)) if k == 3 else (11, 125, 181)
+            d.text((x + 16, y + 296 + 18 * k), ln, fill=color, font=small)
+    out = os.path.join(OUT, "planche2.jpg")
     q = 88
     while True:
         sheet.save(out, quality=q, optimize=True, progressive=True)
-        if os.path.getsize(out) <= 500 * 1024 or q <= 50:
+        if os.path.getsize(out) <= 500 * 1024 or q <= 40:
             break
         q -= 6
     print(f"[planche] {out} ({os.path.getsize(out) // 1024} Ko, qualité {q})")
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# 6. Icônes (PRP-2) : tuile autocollante comme les icônes d'objets du jeu (bible § 1 et § 9) : carré très arrondi, dégradé
+#    clair en haut à gauche -> couleur de rareté en bas à droite, rayons derrière le sujet, reflet blanc sur l'arête haute,
+#    sujet contouré d'encre ; étoile à 4 branches pour mythique et légendaire. 128 et 64 px.
+# ---------------------------------------------------------------------------------------------------------------------
+RARITY_RGB = [(217, 212, 228), (143, 214, 46), (34, 184, 240), (196, 107, 245), (255, 138, 31), (255, 201, 40)]
+INK = (34, 26, 58)
+
+
+def sticker_icon(src, rarity, size=256):
+    import numpy as np
+    from PIL import Image, ImageDraw, ImageFilter
+    col = np.array(RARITY_RGB[rarity], np.float32)
+    light = col + (255 - col) * 0.72
+    yy, xx = np.mgrid[0:size, 0:size] / (size - 1)
+    t = np.clip((xx + yy) / 2, 0, 1)[..., None]
+    tile = light * (1 - t) + col * t
+    # rayons de soleil (12 secteurs clairs, centre un peu au-dessus du milieu)
+    ang = np.arctan2(yy - 0.46, xx - 0.5)
+    rays = (np.cos(ang * 12) > 0.35).astype(np.float32)[..., None]
+    tile = tile + (255 - tile) * rays * 0.22
+    tile = Image.fromarray(np.clip(tile, 0, 255).astype(np.uint8), "RGB").convert("RGBA")
+    mask = Image.new("L", (size, size), 0)
+    r = int(size * 0.2)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, size - 1, size - 1), r, fill=255)
+    out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    out.paste(tile, (0, 0), mask)
+    d = ImageDraw.Draw(out)
+    # liseré foncé de la rareté et reflet blanc sur l'arête haute
+    dark = tuple(int(c * 0.55) for c in RARITY_RGB[rarity])
+    d.rounded_rectangle((2, 2, size - 3, size - 3), r, outline=dark + (255,), width=max(3, size // 64))
+    d.rounded_rectangle((size * 0.16, size * 0.06, size * 0.6, size * 0.12), size * 0.03, fill=(255, 255, 255, 120))
+    # sujet : rendu Blender (fond transparent) recadré, contour d'encre et ombre douce
+    sub = Image.open(src).convert("RGBA")
+    bb = sub.getchannel("A").point(lambda v: 255 if v > 24 else 0).getbbox()
+    if bb:
+        sub = sub.crop(bb)
+    inner = int(size * 0.8)
+    sub.thumbnail((inner, inner), Image.LANCZOS)
+    ow = max(3, size // 48)
+    canvas = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    canvas.paste(sub, ((size - sub.width) // 2, (size - sub.height) // 2), sub)
+    a = canvas.getchannel("A").point(lambda v: 255 if v > 40 else 0)
+    ring = a.filter(ImageFilter.MaxFilter(2 * ow + 1))
+    shadow = ring.filter(ImageFilter.GaussianBlur(size / 64))
+    sh = Image.new("RGBA", (size, size), INK + (0,))
+    sh.putalpha(shadow.point(lambda v: int(v * 0.45)))
+    out.alpha_composite(sh, (max(1, size // 64), max(2, size // 40)))
+    ink = Image.new("RGBA", (size, size), INK + (0,))
+    ink.putalpha(ring)
+    out.alpha_composite(ink)
+    out.alpha_composite(canvas)
+    if rarity >= 4:  # étoile à 4 branches en haut à gauche
+        cx, cy, rr = size * 0.2, size * 0.22, size * 0.09
+        star = [(cx, cy - rr), (cx + rr * 0.22, cy - rr * 0.22), (cx + rr, cy), (cx + rr * 0.22, cy + rr * 0.22),
+                (cx, cy + rr), (cx - rr * 0.22, cy + rr * 0.22), (cx - rr, cy), (cx - rr * 0.22, cy - rr * 0.22)]
+        ImageDraw.Draw(out).polygon(star, fill=(255, 255, 255, 235), outline=INK + (255,))
+    final = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    final.paste(out, (0, 0), mask)  # le carré arrondi découpe tout (contour du sujet compris)
+    return final
+
+
+def step_icon(types, assets, force=False):
+    from PIL import Image
+    rd = os.path.join(RAW, "render")
+    for a in assets:
+        src = os.path.join(rd, a["id"] + "_icone.png")
+        if not os.path.isfile(src):
+            print(f"[icône] {a['id']} : pas de rendu (refaire clean)")
+            continue
+        big = sticker_icon(src, int(a["rarete"]), 256)
+        for px in (128, 64):
+            big.resize((px, px), Image.LANCZOS).save(os.path.join(rd, f"{a['id']}_icone{px}.png"), optimize=True)
+        print(f"[icône] {a['id']}")
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# 7. Entrée dans le jeu (PRP-2) : GLB, icônes et table game/data/prp_looks.json (lue par PrpLooks au chargement)
+# ---------------------------------------------------------------------------------------------------------------------
+GAME = os.path.join(ROOT, "game")
+NUM0 = 990001  # numéro de collection = NUM0 + rang dans prp_assets.json (ajouter à la fin : les numéros restent)
+PRICES = [120, 160, 220, 400, 700, 1000]  # = PrpLooks.PRICES (insignes, vitrine)
+# textures intégrées en Basis Universal (gltf/embedded_image_handling=2) : aucun fichier d'image à côté du GLB
+GLB_IMPORT = "\n".join([
+    '[remap]', '', 'importer="scene"', 'importer_version=1', 'type="PackedScene"', '', '[deps]', '',
+    'source_file="res://%s"', '', '[params]', '',
+    'nodes/root_type=""', 'nodes/root_name=""', 'nodes/root_script=null', 'mesh_library/use_node_names_as_mesh_names=false',
+    'array_mesh/deduplicate_surfaces=true', 'nodes/apply_root_scale=true', 'nodes/root_scale=1.0',
+    'nodes/import_as_skeleton_bones=false', 'nodes/use_name_suffixes=true', 'nodes/use_node_type_suffixes=true',
+    'meshes/ensure_tangents=false', 'meshes/generate_lods=true', 'meshes/create_shadow_meshes=true', 'meshes/light_baking=1',
+    'meshes/lightmap_texel_size=0.2', 'meshes/force_disable_compression=false', 'skins/use_named_skins=true',
+    'animation/import=false', 'animation/fps=30', 'animation/trimming=false', 'animation/remove_immutable_tracks=true',
+    'animation/import_rest_as_RESET=false', 'import_script/path=""', 'materials/extract=0', 'materials/extract_format=0',
+    'materials/extract_path=""', '_subresources={}', 'gltf/naming_version=2', 'gltf/embedded_image_handling=2',
+    'gltf/texture_map_mode=1', ''])
+
+
+def game_paths(a):
+    glb = ("assets/weapons/prp/%s.glb" if a["emplacement"] == "weapon" else "assets/player/outfits/%s.glb") % a["id"]
+    return glb, "assets/ui/items/%s.png" % a["id"], "assets/ui/items/%s_64.png" % a["id"]  # les id portent déjà « prp »
+
+
+def step_game(types, assets, force=False):
+    _, all_assets = load_assets(None)
+    rd = os.path.join(RAW, "render")
+    todo = {a["id"] for a in assets}
+    looks = []
+    for i, a in enumerate(all_assets):
+        card_p = os.path.join(CAND, a["id"] + ".json")
+        if a.get("garder") is False or not os.path.isfile(card_p):
+            continue
+        with open(card_p, encoding="utf-8") as f:
+            card = json.load(f)
+        if card["mesures"].get("verdict") != "ok":
+            print(f"[jeu] {a['id']} écarté : {card['mesures'].get('verdict')}")
+            continue
+        glb, icon, icon64 = game_paths(a)
+        if a["id"] in todo:
+            os.makedirs(os.path.dirname(os.path.join(GAME, glb)), exist_ok=True)
+            shutil.copy2(os.path.join(CAND, a["id"] + ".glb"), os.path.join(GAME, glb))
+            imp = os.path.join(GAME, glb + ".import")
+            if not os.path.isfile(imp):
+                with open(imp, "w", encoding="utf-8", newline="\n") as f:
+                    f.write(GLB_IMPORT % glb)
+            for px, dst in ((128, icon), (64, icon64)):
+                shutil.copy2(os.path.join(rd, f"{a['id']}_icone{px}.png"), os.path.join(GAME, dst))
+        e = {"id": a["id"], "num": NUM0 + i, "slot": a["emplacement"], "name": a["nom"], "rarity": int(a["rarete"]),
+             "model": "res://" + glb, "icon": "res://" + icon, "icon_64": "res://" + icon64,
+             "price": PRICES[int(a["rarete"])], "triangles": card["mesures"]["triangles"], "ko": card["mesures"]["ko"]}
+        if a["emplacement"] == "weapon":
+            e["wtype"] = a["type"]
+            e["bone"] = types[a["type"]]["os"]
+        else:
+            e["kind"] = a["type"]
+            e["flap"] = bool(card["mesures"].get("battement"))
+        looks.append(e)
+    out = {"_lisezmoi": "Créations maison (lots PRP-1 / PRP-2), écrit par tools/art/prp_pipeline.py game depuis "
+                        "tools/art/prp_assets.json et les fiches conception/art/prp/candidats/<id>.json ; lu par PrpLooks "
+                        "(scripts/core/prp_looks.gd). num = numéro de collection (fixe), price = insignes (vitrine).",
+           "looks": looks}
+    with open(os.path.join(GAME, "data", "prp_looks.json"), "w", encoding="utf-8", newline="\n") as f:
+        json.dump(out, f, ensure_ascii=False, indent=1)
+    print(f"[jeu] {len(looks)} créations dans game/data/prp_looks.json")
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Mesure des armes du jeu (longueur et prise médianes par type, repère de l'os) : de quoi remplir « types »
+# ---------------------------------------------------------------------------------------------------------------------
+def _node_matrix(n):
+    import numpy as np
+    if "matrix" in n:
+        return np.array(n["matrix"]).reshape(4, 4).T
+    t = np.eye(4)
+    if "scale" in n:
+        t = np.diag(list(n["scale"]) + [1]) @ t
+    if "rotation" in n:
+        x, y, z, w = n["rotation"]
+        r = np.eye(4)
+        r[:3, :3] = [[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+                     [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+                     [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]]
+        t = r @ t
+    if "translation" in n:
+        tr = np.eye(4)
+        tr[:3, 3] = n["translation"]
+        t = tr @ t
+    return t
+
+
+def glb_points(path):
+    """Sommets d'un GLB dans le repère de l'os (EdenRoot remis à l'identité, comme EdenModel) et nœuds W1 / W2."""
+    import struct
+    import numpy as np
+    with open(path, "rb") as f:
+        b = f.read()
+    jl = struct.unpack("<I", b[12:16])[0]
+    js = json.loads(b[20:20 + jl])
+    bl = struct.unpack("<I", b[20 + jl:24 + jl])[0]
+    binb = b[28 + jl:28 + jl + bl]
+    pts, marks = [], {}
+
+    def walk(i, m, under):
+        n = js["nodes"][i]
+        if n.get("name") == "EdenRoot":
+            m, under = np.eye(4), True
+        else:
+            m = m @ _node_matrix(n)
+        if under and n.get("name") in ("W1", "W2"):
+            marks[n["name"]] = m[:3, 3]
+        if under and "mesh" in n:
+            for pr in js["meshes"][n["mesh"]]["primitives"]:
+                acc = js["accessors"][pr["attributes"]["POSITION"]]
+                bv = js["bufferViews"][acc["bufferView"]]
+                v = np.frombuffer(binb, np.float32, acc["count"] * 3, bv.get("byteOffset", 0) + acc.get("byteOffset", 0))
+                pts.append((m @ np.c_[v.reshape(-1, 3), np.ones(acc["count"])].T).T[:, :3])
+        for c in n.get("children", []):
+            walk(c, m, under)
+    for r in js["scenes"][0]["nodes"]:
+        walk(r, np.eye(4), False)
+    return np.concatenate(pts), marks
+
+
+def step_measure(types, assets, force=False):
+    import numpy as np
+    with open(os.path.join(GAME, "data", "weapon_types.json"), encoding="utf-8") as f:
+        wt = json.load(f)
+    for k, v in wt.items():
+        rows = []
+        for w in v.get("weapons", []):
+            p, mk = glb_points(os.path.join(GAME, w["model"].replace("res://", "")))
+            lo, hi = p.min(0), p.max(0)
+            ln = hi[2] - lo[2]
+            rows.append([ln, -lo[2] / ln] + [(mk[n][2] - lo[2]) / ln if n in mk else float("nan") for n in ("W1", "W2")])
+        a = np.array(rows)
+        print(f"[mesure] {k:10s} longueur {np.median(a[:, 0]):.2f}  prise {np.median(a[:, 1]):.2f}  "
+              f"W1 {np.nanmedian(a[:, 2]):.2f}  W2 {np.nanmedian(a[:, 3]):.2f}")
 
 
 def fmt_min(sec):
@@ -505,13 +730,14 @@ def summarize(assets):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("step", choices=["images", "mesh", "clean", "godot", "sheet", "all"])
+    ap.add_argument("step", choices=["images", "mesh", "clean", "godot", "icon", "sheet", "game", "measure", "all"])
     ap.add_argument("--only", help="ids séparés par des virgules")
     ap.add_argument("--force", action="store_true", help="refaire même si le résultat existe")
     a = ap.parse_args()
     types, assets = load_assets(a.only)
-    steps = {"images": step_images, "mesh": step_mesh, "clean": step_clean, "godot": step_godot, "sheet": step_sheet}
-    order = ["images", "mesh", "clean", "godot", "sheet"] if a.step == "all" else [a.step]
+    steps = {"images": step_images, "mesh": step_mesh, "clean": step_clean, "godot": step_godot, "icon": step_icon,
+             "sheet": step_sheet, "game": step_game, "measure": step_measure}
+    order = ["images", "mesh", "clean", "icon", "godot", "sheet"] if a.step == "all" else [a.step]
     for s in order:
         if s == "sheet" and a.only:
             types, assets = load_assets(None)

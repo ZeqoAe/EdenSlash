@@ -233,6 +233,8 @@ static func collection_text(x: Dictionary) -> String:
 			cat = "%s · %s" % [c[2], c[1]]
 	var lines := ["[img=52x52]%s[/img]  [font_size=20][b][color=#%s]%s[/color][/b][/font_size]" % [x.icon, Items.RARITIES[clampi(int(x.get("rarity", 0)), 0, 5)].color.to_html(false), x.name],
 		"[color=#9a98a8]%s[/color]" % cat]
+	if x.has("prp"):
+		lines.append("[color=#c8c8d4]Création maison, sans effet sur les stats. Coffres d'apparence ou Vitrine (menu Coffres).[/color]")
 	if x.has("aura"):
 		var parts: PackedStringArray = []
 		for s in x.aura.stat:

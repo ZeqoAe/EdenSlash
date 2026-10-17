@@ -1,0 +1,39 @@
+{
+ "id": "prp_grimoire_etoile",
+ "nom": "Grimoire étoilé",
+ "emplacement": "weapon",
+ "emplacement_nom": "Arme (apparence)",
+ "type_arme": "grimoire",
+ "type_nom": "Grimoire",
+ "rarete": 5,
+ "rarete_nom": "Légendaire",
+ "fichier": "prp_grimoire_etoile.glb",
+ "accroche": {
+  "os": "Bip01 R Hand",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": "nœuds W1 (base de la lame) et W2 (pointe)"
+ },
+ "mesures": {
+  "triangles": 2880,
+  "sommets": 1060,
+  "ko": 240,
+  "dimensions": [
+   0.543,
+   0.234,
+   0.752
+  ],
+  "texture": 512,
+  "composantes": 23,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": "inclinaison corrigée 8°, aplats"
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 103,
+  "prompt": "a single thick closed magic spell book standing upright, amethyst purple cover with golden corners, a big golden star emblem with a pink gem in the middle of the cover, golden clasp",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

@@ -1,5 +1,5 @@
 {
- "_lisezmoi": "Lot PRP-1 : fiches des objets 3D (tools/art/prp_pipeline.py). 'graine' = variante retenue (null : choix automatique) ; 'graines' = variantes générées. Les dimensions viennent des armes du jeu (médiane par type, os de la main) : 'longueur' en unités de l'os, 'prise' = part de la longueur sous la main (null : détectée à la garde).",
+ "_lisezmoi": "Lots PRP-1 / PRP-2 : fiches des objets 3D (tools/art/prp_pipeline.py). 'graine' = variante retenue (null : choix automatique) ; 'graines' = variantes générées. Les dimensions viennent des armes du jeu (médiane des 4 modèles par type, os de la main, mesurées par tools/art/prp_pipeline.py measure) : 'longueur' en unités de l'os, 'prise' = part de la longueur sous la main (null : détectée à la garde), 'sens' : 'large_bas' = bout le plus large en bas (guitare), 'image' = sens de l'image gardé. Dos : 'envergure' (largeur), 'haut' (centre au-dessus de l'os), 'recul' (écart au dos), 'battement' (ailes coupées en deux moitiés AileG / AileD animées par le jeu).",
  "types": {
   "sword": {
    "nom": "Épée",
@@ -63,12 +63,79 @@
    "prise": 0.2,
    "w1": 0.11,
    "w2": 0.97,
-   "os": "Bip01 R Hand"
+   "os": "Bip01 R Hand",
+   "sens": "image"
   },
   "wings": {
    "nom": "Ailes",
    "envergure": 2.2,
+   "os": "Bip01 Spine1",
+   "battement": true
+  },
+  "dagger": {
+   "nom": "Dague",
+   "longueur": 0.91,
+   "prise": null,
+   "w1": 0.33,
+   "w2": 1.0,
+   "os": "Bip01 R Hand"
+  },
+  "rapier": {
+   "nom": "Rapière",
+   "longueur": 1.33,
+   "prise": null,
+   "w1": 0.39,
+   "w2": 1.0,
+   "os": "Bip01 R Hand"
+  },
+  "rod": {
+   "nom": "Bâton de métal",
+   "longueur": 1.2,
+   "prise": 0.19,
+   "w1": 0.0,
+   "w2": 1.0,
+   "os": "Bip01 R Hand"
+  },
+  "guitar": {
+   "nom": "Guitare",
+   "longueur": 1.5,
+   "prise": 0.54,
+   "w1": 0.0,
+   "w2": 1.0,
+   "os": "Bip01 R Hand",
+   "sens": "large_bas"
+  },
+  "cannon": {
+   "nom": "Canon",
+   "longueur": 1.36,
+   "prise": 0.26,
+   "w1": 0.34,
+   "w2": 0.97,
+   "os": "Bip01 R Hand"
+  },
+  "grimoire": {
+   "nom": "Grimoire",
+   "longueur": 0.76,
+   "prise": 0.46,
+   "w1": 0.04,
+   "w2": 0.97,
+   "os": "Bip01 R Hand",
+   "sens": "image"
+  },
+  "halo": {
+   "nom": "Halo",
+   "envergure": 1.15,
+   "haut": 0.5,
+   "recul": 0.25,
    "os": "Bip01 Spine1"
+  },
+  "pack": {
+   "nom": "Sac à dos",
+   "envergure": 0.62,
+   "haut": 0.02,
+   "recul": 0.0,
+   "os": "Bip01 Spine1",
+   "voxel": 300
   }
  },
  "assets": [
@@ -103,7 +170,7 @@
   },
   {
    "id": "prp_epee_cerisier",
-   "nom": "Lame des cerisiers",
+   "nom": "Lame de pétale",
    "emplacement": "weapon",
    "type": "sword",
    "rarete": 3,
@@ -113,7 +180,7 @@
     108
    ],
    "graine": 108,
-   "avis": "Lame nette, poignée fine (katana demandé)."
+   "avis": "Épée droite à lame rose (le katana demandé au lot PRP-1 n'est pas venu : nom adapté)."
   },
   {
    "id": "prp_hache_mandarine",
@@ -170,18 +237,20 @@
    "emplacement": "weapon",
    "type": "spear",
    "rarete": 2,
-   "prompt": "a single spear weapon, big strawberry red leaf-shaped metal spearhead on top with a golden collar, thick sturdy white shaft with red and gold rings, chunky toy-like proportions",
-   "negatif": "fruit, strawberry, berries, feather, leaves, flowers",
+   "prompt": "a single short chunky toy spear, thick straight cylindrical pole with white and red stripes, big strawberry red leaf-shaped spearhead with a golden collar on the top end, the spearhead points straight up, simple bold shapes",
+   "negatif": "fruit, strawberry, berries, feather, leaves, flowers, trident, scepter, orb, sphere, gem on top, short, axe, halberd, upside down",
    "graines": [
-    111,
-    112,
-    113,
-    114,
-    115,
-    116
+    124,
+    131,
+    132,
+    133,
+    134,
+    135,
+    136
    ],
-   "graine": 113,
-   "avis": "Sceptre-lance, pointe en bas ; 1re version écartée."
+   "graine": 124,
+   "avis": "",
+   "une_piece": true
   },
   {
    "id": "back_prp_ailes_aube",
@@ -244,6 +313,228 @@
    "prompt": "a single pair of crystal wings seen from the back, symmetrical, spread wide, made of large faceted amethyst purple crystal shards with golden joints",
    "graine": 104,
    "avis": "Le plus massif (0,83 d'épaisseur) ; très lisible de loin."
+  },
+  {
+   "id": "prp_dague_lagon",
+   "nom": "Dague du lagon",
+   "emplacement": "weapon",
+   "type": "dagger",
+   "rarete": 2,
+   "prompt": "a single short dagger, wide leaf-shaped lagoon blue crystal blade with a white edge, small golden curved cross guard, wrapped white grip, round teal gem pommel",
+   "negatif": "knife set, kitchen knife, scabbard, sheath, flowers, sparkles",
+   "graines": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106
+   ],
+   "graine": 101
+  },
+  {
+   "id": "prp_rapiere_soleil",
+   "nom": "Rapière solaire",
+   "emplacement": "weapon",
+   "type": "rapier",
+   "rarete": 3,
+   "prompt": "a single elegant rapier sword, long thin straight sunny yellow blade, ornate golden swept cup hilt guard with curls, small orange gem, white grip, round gold pommel",
+   "negatif": "scabbard, sheath, flowers, sparkles, curved blade, dagger",
+   "graines": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106
+   ],
+   "graine": 102
+  },
+  {
+   "id": "prp_crosse_jade",
+   "nom": "Crosse de jade",
+   "emplacement": "weapon",
+   "type": "rod",
+   "rarete": 4,
+   "prompt": "a single short metal magic rod, silver and apple green metal shaft with golden rings, the top is a big apple green crystal cluster held by golden claws, small golden cap at the bottom",
+   "negatif": "flowers, leaves, tree, sparkles, long staff, wings",
+   "graines": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106
+   ],
+   "graine": 102
+  },
+  {
+   "id": "prp_guitare_mandarine",
+   "nom": "Guitare fraise",
+   "emplacement": "weapon",
+   "type": "guitar",
+   "rarete": 3,
+   "prompt": "a single cute electric guitar instrument standing upright, tangerine orange star-shaped body at the bottom, long cream white neck pointing straight up, golden tuning head at the top, pink pickguard, golden strings",
+   "negatif": "violin, cello, ukulele, multiple guitars, amplifier, music notes",
+   "graines": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106
+   ],
+   "graine": 103,
+   "couper_bas": 0.05
+  },
+  {
+   "id": "prp_canon_nuage",
+   "nom": "Canon lagon",
+   "emplacement": "weapon",
+   "type": "cannon",
+   "rarete": 1,
+   "prompt": "a single cute toy hand cannon, one straight thick lagoon blue cylindrical barrel standing vertical with a wide golden bell-shaped muzzle at the top, white rings, small cream handle sticking out on the side near the bottom, simple bold shapes",
+   "negatif": "pistol, rifle, revolver, wheels, cart, cannonballs, smoke, explosion, tank, multiple barrels, horizontal",
+   "graines": [
+    131,
+    132,
+    133,
+    134,
+    135,
+    136
+   ],
+   "graine": 136
+  },
+  {
+   "id": "prp_grimoire_etoile",
+   "nom": "Grimoire étoilé",
+   "emplacement": "weapon",
+   "type": "grimoire",
+   "rarete": 5,
+   "prompt": "a single thick closed magic spell book standing upright, amethyst purple cover with golden corners, a big golden star emblem with a pink gem in the middle of the cover, golden clasp",
+   "negatif": "open book, pages flying, bookshelf, many books, scroll, candle",
+   "graines": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106
+   ],
+   "graine": 103
+  },
+  {
+   "id": "back_prp_ailes_phenix",
+   "nom": "Ailes de phénix",
+   "emplacement": "back",
+   "type": "wings",
+   "rarete": 4,
+   "envergure": 2.3,
+   "prompt": "a single pair of large phoenix wings only, seen from the back, symmetrical, spread wide, feathers in a sunny yellow to tangerine orange and red gradient, golden feather tips",
+   "negatif": "bird, body, head, tail, fire, flames, particles, character, eyes",
+   "graines": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106
+   ],
+   "graine": 101
+  },
+  {
+   "id": "back_prp_ailes_feuillage",
+   "nom": "Ailes de feuillage",
+   "emplacement": "back",
+   "type": "wings",
+   "rarete": 2,
+   "envergure": 2.0,
+   "prompt": "a pair of fairy wings made of large apple green leaves only, seen from the back, symmetrical, spread wide, cream leaf veins, small golden clasp in the middle",
+   "negatif": "tree, branch, flower, insect, body, head, character",
+   "graines": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106
+   ],
+   "graine": 106
+  },
+  {
+   "id": "back_prp_ailes_coeur",
+   "nom": "Ailes de cœur",
+   "emplacement": "back",
+   "type": "wings",
+   "rarete": 3,
+   "envergure": 1.9,
+   "prompt": "a pair of rounded fairy wings only, seen from the back, symmetrical, four rounded lobes, pastel pink and strawberry red with white heart patterns and golden outlines",
+   "negatif": "insect body, antennae, head, legs, butterfly body, character, eyes",
+   "graines": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106
+   ],
+   "graine": 103
+  },
+  {
+   "id": "back_prp_ailes_horloger",
+   "nom": "Ailes d'horloger",
+   "emplacement": "back",
+   "type": "wings",
+   "rarete": 1,
+   "envergure": 2.1,
+   "prompt": "a pair of mechanical wings only, seen from the back, symmetrical, spread wide, made of large flat golden metal feather plates and cream gears, a lagoon blue gem in the middle",
+   "negatif": "bird, body, head, robot, character, eyes, clock face",
+   "graines": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106
+   ],
+   "graine": 102
+  },
+  {
+   "id": "back_prp_halo_soleil",
+   "nom": "Halo solaire",
+   "emplacement": "back",
+   "type": "halo",
+   "rarete": 4,
+   "prompt": "a single round golden sun halo, a flat circular ring with short pointed sun rays all around it, sunny yellow and gold, small tangerine gems on the ring, front view, symmetrical",
+   "negatif": "face, sun with face, person, character, flower, clock, coin, shield",
+   "graines": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106
+   ],
+   "graine": 104
+  },
+  {
+   "id": "back_prp_sac_lapin",
+   "nom": "Sac lapin",
+   "emplacement": "back",
+   "type": "pack",
+   "rarete": 0,
+   "prompt": "a single cute small backpack shaped like a round white bunny head with two long upright ears, pastel pink inner ears, strawberry red buckle straps, front view, symmetrical",
+   "negatif": "real rabbit, animal body, legs, person, character, school bag",
+   "graines": [
+    101,
+    102,
+    103,
+    104,
+    105,
+    106
+   ],
+   "graine": 104,
+   "couper_bas": 0.09
   }
  ]
 }

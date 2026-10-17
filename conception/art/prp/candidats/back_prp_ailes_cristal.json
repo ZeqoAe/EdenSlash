@@ -14,19 +14,23 @@
   "traine": ""
  },
  "mesures": {
-  "triangles": 11520,
-  "sommets": 5632,
-  "ko": 806,
+  "triangles": 4800,
+  "sommets": 2272,
+  "ko": 309,
   "dimensions": [
-   1.113,
+   1.118,
    0.828,
-   2.0
+   2.001
   ],
-  "texture": 1024,
+  "texture": 512,
   "composantes": 14,
   "aretes_non_manifold": 0,
   "verdict": "ok",
-  "remarques": ""
+  "remarques": "aplats",
+  "battement": [
+   "AileD",
+   "AileG"
+  ]
  },
  "source": {
   "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",

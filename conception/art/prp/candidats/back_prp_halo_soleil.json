@@ -1,0 +1,39 @@
+{
+ "id": "back_prp_halo_soleil",
+ "nom": "Halo solaire",
+ "emplacement": "back",
+ "emplacement_nom": "Dos",
+ "type_arme": "",
+ "type_nom": "Halo",
+ "rarete": 4,
+ "rarete_nom": "Mythique",
+ "fichier": "back_prp_halo_soleil.glb",
+ "accroche": {
+  "os": "Bip01 Spine1",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": ""
+ },
+ "mesures": {
+  "triangles": 4800,
+  "sommets": 1810,
+  "ko": 358,
+  "dimensions": [
+   0.957,
+   0.277,
+   1.159
+  ],
+  "texture": 512,
+  "composantes": 34,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": "aplats"
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 104,
+  "prompt": "a single round golden sun halo, a flat circular ring with short pointed sun rays all around it, sunny yellow and gold, small tangerine gems on the ring, front view, symmetrical",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

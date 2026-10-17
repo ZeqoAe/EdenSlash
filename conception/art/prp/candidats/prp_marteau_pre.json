@@ -14,19 +14,19 @@
   "traine": "nœuds W1 (base de la lame) et W2 (pointe)"
  },
  "mesures": {
-  "triangles": 7680,
-  "sommets": 3834,
-  "ko": 452,
+  "triangles": 2880,
+  "sommets": 1434,
+  "ko": 160,
   "dimensions": [
-   1.029,
-   0.49,
-   1.699
+   1.025,
+   0.488,
+   1.701
   ],
-  "texture": 1024,
+  "texture": 512,
   "composantes": 2,
   "aretes_non_manifold": 0,
   "verdict": "ok",
-  "remarques": "inclinaison corrigée 6°"
+  "remarques": "inclinaison corrigée 6°, aplats"
  },
  "source": {
   "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",

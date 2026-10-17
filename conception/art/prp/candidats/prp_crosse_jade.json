@@ -1,0 +1,39 @@
+{
+ "id": "prp_crosse_jade",
+ "nom": "Crosse de jade",
+ "emplacement": "weapon",
+ "emplacement_nom": "Arme (apparence)",
+ "type_arme": "rod",
+ "type_nom": "Bâton de métal",
+ "rarete": 4,
+ "rarete_nom": "Mythique",
+ "fichier": "prp_crosse_jade.glb",
+ "accroche": {
+  "os": "Bip01 R Hand",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": "nœuds W1 (base de la lame) et W2 (pointe)"
+ },
+ "mesures": {
+  "triangles": 2880,
+  "sommets": 1416,
+  "ko": 176,
+  "dimensions": [
+   0.373,
+   0.326,
+   1.201
+  ],
+  "texture": 512,
+  "composantes": 9,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": "inclinaison corrigée 7°, aplats"
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 102,
+  "prompt": "a single short metal magic rod, silver and apple green metal shaft with golden rings, the top is a big apple green crystal cluster held by golden claws, small golden cap at the bottom",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

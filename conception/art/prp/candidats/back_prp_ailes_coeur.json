@@ -1,0 +1,43 @@
+{
+ "id": "back_prp_ailes_coeur",
+ "nom": "Ailes de cœur",
+ "emplacement": "back",
+ "emplacement_nom": "Dos",
+ "type_arme": "",
+ "type_nom": "Ailes",
+ "rarete": 3,
+ "rarete_nom": "Épique",
+ "fichier": "back_prp_ailes_coeur.glb",
+ "accroche": {
+  "os": "Bip01 Spine1",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": ""
+ },
+ "mesures": {
+  "triangles": 4800,
+  "sommets": 2052,
+  "ko": 338,
+  "dimensions": [
+   1.11,
+   0.422,
+   1.89
+  ],
+  "texture": 512,
+  "composantes": 19,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": "aplats",
+  "battement": [
+   "AileD",
+   "AileG"
+  ]
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 103,
+  "prompt": "a pair of rounded fairy wings only, seen from the back, symmetrical, four rounded lobes, pastel pink and strawberry red with white heart patterns and golden outlines",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

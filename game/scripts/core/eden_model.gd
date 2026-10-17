@@ -272,6 +272,9 @@ static func dress(model: Node3D, glb_path: String, group := "") -> void:
 		for mi in part.find_children("*", "MeshInstance3D", true, false):
 			mi.set_meta("part", glb_path)
 		att.add_child(part)
+		# ailes maison (PRP-2) : deux moitiés qui battent doucement (PrpWingFlap)
+		if part.find_child("AileG", true, false) != null and part.find_child("AileD", true, false) != null:
+			part.add_child(PrpWingFlap.new())
 		return
 	# os propres à la pièce (manches, rubans...) : ajoutés au squelette, au repos
 	var src := part.find_child("Skeleton3D", true, false) as Skeleton3D

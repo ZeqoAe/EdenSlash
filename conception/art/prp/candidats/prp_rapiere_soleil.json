@@ -1,0 +1,39 @@
+{
+ "id": "prp_rapiere_soleil",
+ "nom": "Rapière solaire",
+ "emplacement": "weapon",
+ "emplacement_nom": "Arme (apparence)",
+ "type_arme": "rapier",
+ "type_nom": "Rapière",
+ "rarete": 3,
+ "rarete_nom": "Épique",
+ "fichier": "prp_rapiere_soleil.glb",
+ "accroche": {
+  "os": "Bip01 R Hand",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": "nœuds W1 (base de la lame) et W2 (pointe)"
+ },
+ "mesures": {
+  "triangles": 2880,
+  "sommets": 1422,
+  "ko": 193,
+  "dimensions": [
+   0.384,
+   0.128,
+   1.329
+  ],
+  "texture": 512,
+  "composantes": 1,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": "inclinaison corrigée 9°, retournée (pointe en haut), aplats"
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 102,
+  "prompt": "a single elegant rapier sword, long thin straight sunny yellow blade, ornate golden swept cup hilt guard with curls, small orange gem, white grip, round gold pommel",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

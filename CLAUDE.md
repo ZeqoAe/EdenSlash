@@ -366,6 +366,11 @@ captures `tests/shot_hub1.tscn`. `records.news` / `last_activity` = état de men
   choix de carte, confirmations) ; `UiFeel.screen_in` (ouverture), `number` (nombres qui défilent), rangées « row » ; `slide_in` glisse par
   les marges d'ancrage ; raretés des cartes, passifs, coffres et mini-carte = `Items.RARITIES`. Test `test_uik2`, captures `shot_uik2`.
 - **Pictogrammes maison** (ICO-1, `conception/art/R_ICO1.md`) : `ui/ico.gd` (`Ico.tex(id, px)`, `Ico.mark` / `Ico.lock` / `Ico.state`, `Ico.of_boss`) lit `assets/ui/icons/ico_<id>.png` (128 et `_64`), fabriqués par `tools/art/ico_gen.py` (SVG -> moteur ; `ico_defs_*.py`, planche `conception/art/ico/planche.jpg`) : plus d'emoji ni de symbole en texte pour un cadenas, une coche, une étape ; une mécanique de boss = `boss_<brique>` ; un statut sans icône = `st_<effet>` ; test `test_ico1`.
+- **Créations maison** (PRP-2, `conception/art/R_PRP2.md`) : 24 apparences (14 armes, 10 dos) modelées par la chaîne `tools/art/prp_pipeline.py`
+  (`conception/art/PRP.md`, étape `game`) ; `core/prp_looks.gd` (`PrpLooks.install` au chargement de GameData : `data/prp_looks.json` -> trésors
+  de collection 990001+, arme cat. 4 avec `skin`, dos cat. 2 + cosmétique `back` en tête de liste ; aucune stat) ; GLB `assets/weapons/prp/`,
+  `assets/player/outfits/back_prp_*.glb`, icônes `assets/ui/items/<id>.png` ; ailes battantes `world/prp_wing_flap.gd` (coupées par « Réduire
+  les animations ») ; Vitrine = 3e onglet du menu Coffres (`PrpLooks.PRICES`) ; test `test_prp_looks`, coût `tools/prp_perf.tscn`, captures `shot_prp2`.
 - Rapports : `R_U1` à `R_U10`, `R_P1`, `R_P3`, `R_P8`.
 
 ### Outils de mesure et de test

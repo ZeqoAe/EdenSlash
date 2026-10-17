@@ -1,0 +1,43 @@
+{
+ "id": "back_prp_ailes_horloger",
+ "nom": "Ailes d'horloger",
+ "emplacement": "back",
+ "emplacement_nom": "Dos",
+ "type_arme": "",
+ "type_nom": "Ailes",
+ "rarete": 1,
+ "rarete_nom": "Spécial",
+ "fichier": "back_prp_ailes_horloger.glb",
+ "accroche": {
+  "os": "Bip01 Spine1",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": ""
+ },
+ "mesures": {
+  "triangles": 4800,
+  "sommets": 3066,
+  "ko": 329,
+  "dimensions": [
+   1.251,
+   0.531,
+   2.109
+  ],
+  "texture": 512,
+  "composantes": 549,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": "aplats",
+  "battement": [
+   "AileD",
+   "AileG"
+  ]
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 102,
+  "prompt": "a pair of mechanical wings only, seen from the back, symmetrical, spread wide, made of large flat golden metal feather plates and cream gears, a lagoon blue gem in the middle",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

@@ -111,6 +111,8 @@ func _ready() -> void:
 		t = _lap("index du catalogue", t)
 		NamesFr.apply(self)  # noms français (data/names_fr.json) : avant les modifications du mode dev
 		t = _lap("NamesFr.apply (noms français)", t)
+		PrpLooks.install(self)  # créations maison (data/prp_looks.json) : apparences d'armes et dos, déjà en français
+		t = _lap("PrpLooks.install (créations maison)", t)
 		DevEdits.load_and_apply()  # modifications du mode dev (data/dev_edits.json)
 		t = _lap("DevEdits.load_and_apply", t)
 

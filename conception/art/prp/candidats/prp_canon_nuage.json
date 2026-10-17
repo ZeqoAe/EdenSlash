@@ -1,0 +1,39 @@
+{
+ "id": "prp_canon_nuage",
+ "nom": "Canon lagon",
+ "emplacement": "weapon",
+ "emplacement_nom": "Arme (apparence)",
+ "type_arme": "cannon",
+ "type_nom": "Canon",
+ "rarete": 1,
+ "rarete_nom": "Spécial",
+ "fichier": "prp_canon_nuage.glb",
+ "accroche": {
+  "os": "Bip01 R Hand",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": "nœuds W1 (base de la lame) et W2 (pointe)"
+ },
+ "mesures": {
+  "triangles": 2880,
+  "sommets": 1418,
+  "ko": 165,
+  "dimensions": [
+   0.545,
+   0.468,
+   1.358
+  ],
+  "texture": 512,
+  "composantes": 5,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": "inclinaison corrigée 21°, aplats"
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 136,
+  "prompt": "a single cute toy hand cannon, one straight thick lagoon blue cylindrical barrel standing vertical with a wide golden bell-shaped muzzle at the top, white rings, small cream handle sticking out on the side near the bottom, simple bold shapes",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

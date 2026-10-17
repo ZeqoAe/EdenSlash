@@ -17,6 +17,7 @@ var _card_box: CenterContainer
 var _card_scroll: ScrollContainer  # fiche de l'objet choisi : visible seulement quand il y en a une
 var _all_btn: Button
 var _shop := false  # panneau de gauche : la boutique d'insignes au lieu de la liste des coffres
+var _vitrine := false  # panneau de gauche : la vitrine des créations maison (PrpLooks), achat direct en insignes
 var _shop_note: Label
 var _chips: HFlowContainer
 var _current: Dictionary = {}  # coffre à choix en cours
@@ -29,7 +30,7 @@ const STAGE_COMPACT := 110.0  # une fois ouvert : de la place pour le contenu et
 func _ready() -> void:
 	add_theme_constant_override("separation", 16)
 	var left := ItemWidgets.panel(self, 560)
-	_chips = CarnetPages.chips(left, ["Tes coffres", "Boutique"], 0, _set_shop)
+	_chips = CarnetPages.chips(left, ["Tes coffres", "Boutique", "Vitrine"], 0, _set_shop)
 	_all_btn = MenuWidgets.glass_button("Ouvrir tout", 16, Vector2(0, 42))
 	_all_btn.tooltip_text = "Ouvre d'un coup tous les coffres sans choix, puis affiche un récapitulatif. Les coffres de set restent à ouvrir un par un."
 	_all_btn.pressed.connect(ask_open_all)  # lot GX-5 : confirmation (ce qui s'ouvre, ce qui reste), puis récapitulatif
@@ -97,12 +98,15 @@ func refresh() -> void:
 		_preview(Profile.reward_chests.filter(func(c): return Rewards.ORDER.has(c.type))
 			.reduce(func(a, c): return c if a.is_empty() or Rewards.kind_rank(Rewards.kind_of(c)) < Rewards.kind_rank(Rewards.kind_of(a)) else a, {}))
 	var openable := Profile.reward_chests.filter(func(c): return not Rewards.is_choice(c)).size()
-	_all_btn.visible = openable > 0 and not _shop
+	_all_btn.visible = openable > 0 and not _shop and not _vitrine
 	_all_btn.text = "Ouvrir tout (%d)" % openable
 	for c in _list.get_children():
 		c.queue_free()
 	if _shop:
 		_fill_shop()
+		return
+	if _vitrine:
+		_fill_vitrine()
 		return
 	var by := {}  # un groupe par type et par spécialité : « forge » et « forge · parchemins » restent distincts
 	for ch in Profile.reward_chests:
@@ -123,6 +127,7 @@ func refresh() -> void:
 ## Bascule entre la liste des coffres et la boutique (coffres d'apparence et d'auras contre des insignes).
 func _set_shop(index: int) -> void:
 	_shop = index == 1
+	_vitrine = index == 2
 	for i in _chips.get_child_count():
 		(_chips.get_child(i) as Button).set_pressed_no_signal(i == index)
 	refresh()
@@ -172,6 +177,74 @@ func _shop_row(type: String) -> Control:
 			refresh()
 			if _shop_note != null:
 				_shop_note.text = "%s ajouté à Tes coffres." % String(t.name)
+				_shop_note.visible = true)
+	h.add_child(b)
+	return p
+
+
+## Vitrine : les créations maison (armes et dos modelés pour le jeu), chacune à son prix en insignes ; aucune stat.
+func _fill_vitrine() -> void:
+	var head := Hud._label(_list, GearPower.plural(Profile.insignia, "insigne"), 17, UiTheme.GOLD)
+	head.tooltip_text = "Gagnés en Survie. Les créations sont aussi dans les coffres d'apparence."
+	head.mouse_filter = Control.MOUSE_FILTER_PASS
+	_shop_note = Hud._label(_list, "", 14, UiTheme.BUFF)
+	_shop_note.visible = false
+	var all := PrpLooks.shop_entries()
+	if all.is_empty():
+		UiTheme.empty_state(_list, "La vitrine est vide pour l'instant.", "chest")
+		return
+	for x in all:
+		_list.add_child(_vitrine_row(x))
+
+
+func _vitrine_row(x: Dictionary) -> Control:
+	var col: Color = Items.RARITIES[clampi(int(x.get("rarity", 0)), 0, 5)].color
+	var got := PrpLooks.owned(x)
+	var price := PrpLooks.price(x)
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", InventoryPage.card_box())
+	p.set_meta("report", "Vitrine : %s (%s)" % [String(x.name), String(x.code)])
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 12)
+	p.add_child(h)
+	var ic := ItemWidgets.TipButton.new()
+	ic.custom_minimum_size = Vector2(58, 58)
+	ic.focus_mode = Control.FOCUS_NONE
+	ic.expand_icon = true
+	ic.icon = UiTheme.texture(String(x.icon))
+	ic.tip = Archive.collection_text(x)
+	ic.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	ic.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.06, 0.05, 0.1, 0.95), col, 2, 10))
+	h.add_child(ic)
+	var v := VBoxContainer.new()
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	v.add_theme_constant_override("separation", 0)
+	h.add_child(v)
+	var n := Hud._label(v, String(x.name), 18, col.lightened(0.25))
+	n.add_theme_font_override("font", UiTheme.bold_font())
+	n.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var d := Hud._label(v, "%s · %s" % [PrpLooks.kind_text(x), "obtenue" if got else GearPower.plural(price, "insigne")], 13, UiTheme.MUTED)
+	d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var b := MenuWidgets.glass_button("Obtenue" if got else "Acheter", 16, Vector2(110, 44))
+	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	b.disabled = not PrpLooks.can_buy(x)
+	var short := price - Profile.insignia
+	b.tooltip_text = "Déjà dans ta collection" if got else ("Il te manque %s" % GearPower.plural(short, "insigne") if short > 0 else "À porter dans Héros > Apparence")
+	b.pressed.connect(func():
+		if PrpLooks.buy(x):
+			Sfx.ui("confirm")
+			_shown = {}
+			_current = {}
+			_title.text = "Ajoutée à ta collection"
+			_title.add_theme_color_override("font_color", UiTheme.GOLD)
+			_detail.text = "[color=#a8a2b8]À porter dans Héros > Apparence[/color]"
+			_open_btn.visible = false
+			_stage.custom_minimum_size.y = STAGE_COMPACT
+			_show_loot({"looks": [x]})
+			refresh()
+			if _shop_note != null:
+				_shop_note.text = "%s ajoutée à ta collection." % String(x.name)
 				_shop_note.visible = true)
 	h.add_child(b)
 	return p

@@ -1,0 +1,43 @@
+{
+ "id": "back_prp_ailes_phenix",
+ "nom": "Ailes de phénix",
+ "emplacement": "back",
+ "emplacement_nom": "Dos",
+ "type_arme": "",
+ "type_nom": "Ailes",
+ "rarete": 4,
+ "rarete_nom": "Mythique",
+ "fichier": "back_prp_ailes_phenix.glb",
+ "accroche": {
+  "os": "Bip01 Spine1",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": ""
+ },
+ "mesures": {
+  "triangles": 4800,
+  "sommets": 2240,
+  "ko": 353,
+  "dimensions": [
+   1.454,
+   0.554,
+   2.297
+  ],
+  "texture": 512,
+  "composantes": 23,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": "aplats",
+  "battement": [
+   "AileD",
+   "AileG"
+  ]
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 101,
+  "prompt": "a single pair of large phoenix wings only, seen from the back, symmetrical, spread wide, feathers in a sunny yellow to tangerine orange and red gradient, golden feather tips",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

@@ -1,6 +1,6 @@
 {
  "id": "prp_epee_cerisier",
- "nom": "Lame des cerisiers",
+ "nom": "Lame de pétale",
  "emplacement": "weapon",
  "emplacement_nom": "Arme (apparence)",
  "type_arme": "sword",
@@ -14,19 +14,19 @@
   "traine": "nœuds W1 (base de la lame) et W2 (pointe)"
  },
  "mesures": {
-  "triangles": 7680,
-  "sommets": 3842,
-  "ko": 370,
+  "triangles": 2880,
+  "sommets": 1442,
+  "ko": 137,
   "dimensions": [
    0.318,
-   0.1,
+   0.101,
    1.158
   ],
-  "texture": 1024,
+  "texture": 512,
   "composantes": 1,
   "aretes_non_manifold": 0,
   "verdict": "ok",
-  "remarques": "inclinaison corrigée 6°, retournée (pointe en haut)"
+  "remarques": "inclinaison corrigée 6°, retournée (pointe en haut), aplats"
  },
  "source": {
   "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",

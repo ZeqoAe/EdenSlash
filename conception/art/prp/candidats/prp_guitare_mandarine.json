@@ -1,0 +1,39 @@
+{
+ "id": "prp_guitare_mandarine",
+ "nom": "Guitare mandarine",
+ "emplacement": "weapon",
+ "emplacement_nom": "Arme (apparence)",
+ "type_arme": "guitar",
+ "type_nom": "Guitare",
+ "rarete": 3,
+ "rarete_nom": "Épique",
+ "fichier": "prp_guitare_mandarine.glb",
+ "accroche": {
+  "os": "Bip01 R Hand",
+  "repere": "repère de l'os ; nœud EdenRoot remis à l'identité au chargement (EdenModel)",
+  "traine": "nœuds W1 (base de la lame) et W2 (pointe)"
+ },
+ "mesures": {
+  "triangles": 2880,
+  "sommets": 1328,
+  "ko": 182,
+  "dimensions": [
+   0.495,
+   0.367,
+   1.498
+  ],
+  "texture": 512,
+  "composantes": 16,
+  "aretes_non_manifold": 0,
+  "verdict": "ok",
+  "remarques": "inclinaison corrigée 12°, aplats"
+ },
+ "source": {
+  "image": "SDXL base 1.0 + LoRA eden_style_v0b à 0.5",
+  "graine_image": 103,
+  "prompt": "a single cute electric guitar instrument standing upright, tangerine orange star-shaped body at the bottom, long cream white neck pointing straight up, golden tuning head at the top, pink pickguard, golden strings",
+  "objet_3d": "Pixal3D (ComfyUI, workflow image_to_3d_pixal3d)",
+  "nettoyage": "tools/art/prp_blender.py"
+ },
+ "licence": "généré pour Eden Slash (SDXL CreativeML Open RAIL++-M, Pixal3D / TRELLIS.2 MIT) ; aucun modèle ni texture tiers"
+}

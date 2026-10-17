@@ -364,7 +364,7 @@ class AppearancePage extends HBoxContainer:
 		_preview.show_hero(cid, _shown_code if _shown_code != "" else Profile.weapon_code())
 
 	func _refresh_costumes(cid: String) -> void:
-		_grid.columns = 5
+		_grid.columns = _grid_cols()
 		var list := GameData.cosmetics.filter(func(c): return cat_of(c) == _cat)
 		var owned := list.filter(func(c): return Profile.outfit_unlocked(String(c.id)))
 		_count.text = "%d / %d débloqués" % [owned.size(), list.size()]
@@ -380,13 +380,17 @@ class AppearancePage extends HBoxContainer:
 				if not Profile.outfit_unlocked(String(c.id)) and _match(c):
 					_grid.add_child(_cell(c, cid))
 
+	## Colonnes de la grille des tenues / dos / auras : 5 cases de 110 px débordaient à 1280×720 (PRP-2), 4 sous 1500 px.
+	func _grid_cols() -> int:
+		return 5 if get_viewport().get_visible_rect().size.x >= 1500.0 else 4
+
 	## Filtre de recherche (nom).
 	func _match(c: Dictionary) -> bool:
 		var q := _search.text.strip_edges().to_lower()
 		return q == "" or String(c.get("name", "")).to_lower().contains(q)
 
 	func _refresh_auras(cid: String) -> void:
-		_grid.columns = 5
+		_grid.columns = _grid_cols()
 		var got := GameData.auras.filter(func(x): return Profile.collected(x))
 		_count.text = "%d / %d débloquées" % [got.size(), GameData.auras.size()]
 		_hint.text = "%d à découvrir : %s" % [GameData.auras.size() - got.size(), LOOK_FROM] if got.size() < GameData.auras.size() else ""
@@ -414,7 +418,9 @@ class AppearancePage extends HBoxContainer:
 		if GameData.weapon_types.has(mine):
 			n += _weapon_row(mine, true)
 		# apparences d'armes de la collection : obtenues d'abord, puis les autres (verrouillées)
-		var skins := GameData.collection.filter(func(x): return x.has("skin"))
+		# créations maison (PrpLooks) d'abord, puis les apparences d'origine
+		var all_skins := GameData.collection.filter(func(x): return x.has("skin"))
+		var skins := all_skins.filter(func(x): return x.has("prp")) + all_skins.filter(func(x): return not x.has("prp"))
 		var got := skins.filter(func(x): return Profile.collected(x))
 		var t := Hud._label(_grid, "Apparences · %d / %d" % [got.size(), skins.size()], 16, UiTheme.GOLD)
 		t.add_theme_font_override("font", UiTheme.bold_font())
@@ -443,7 +449,9 @@ class AppearancePage extends HBoxContainer:
 		row.add_theme_constant_override("separation", 8)
 		_grid.add_child(row)
 		var lbl := Hud._label(row, String(GameData.weapon_types[wt].name) + ("  (portée)" if worn else ""), 16, UiTheme.GOLD if worn else Color(0.92, 0.9, 1.0))
-		lbl.custom_minimum_size = Vector2(150, 0)
+		lbl.custom_minimum_size = Vector2(150 if _grid_cols() == 5 else 84, 0)  # 1280 : nom sur deux lignes, la rangée tient
+		if _grid_cols() < 5:
+			lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		row.add_child(_skin_cell(wt, -1, {}))
 		var ws := Archive.skins(wt).filter(func(sk): return not GameData.skin_by_code.has(String(sk.code)))
