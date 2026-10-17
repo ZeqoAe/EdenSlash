@@ -10,19 +10,18 @@ const DIFF_ROWS := 5
 
 
 # --- textes --------------------------------------------------------------------------------
-## Comparaison avec la pièce portée au même emplacement ("" si identique ou rien de porté) : verdict et écart de PE,
-## puis une ligne par différence (▲ vert : gagné, ▼ rouge : perdu). [param detailed] faux : les 5 plus fortes seulement.
+## Comparaison avec la pièce portée au même emplacement ("" si identique ou rien de porté). Lot GX-3 : sur la carte
+## courte, le verdict et les écarts ▲ / ▼ sont déjà sur les lignes de la carte (Items.describe) : il ne reste que le nom de
+## la pièce portée ; la carte complète (Maj) ajoute le verdict avec l'écart au profil et une ligne par différence.
 static func compare_text(item: Dictionary, worn, detailed := true) -> String:
 	if worn == null or not (worn is Dictionary) or worn.is_empty() or is_same(worn, item) or String(worn.get("uid", "")) == String(item.get("uid", "-")):
 		return ""
 	var slot := String(item.get("slot", ""))
 	var head := "[color=#8a86a0]Porté : %s[/color]" % Items.display_name(worn)
+	if not detailed:
+		return "\n\n%s" % head
 	if slot in Items.SLOTS:
-		var c := Items.compare_to_equipped(item)
-		var dpe := GearPower.delta_if_equipped(item)
-		head += "\n[b][color=%s]%s %s%d %%[/color][/b]   [color=%s]PE %s%s[/color]" % [
-			"#c8c8d4" if absf(c) < 0.02 else ("#7fe08a" if c > 0.0 else "#ff7a7a"), "▲ Meilleur" if c >= 0.02 else ("▼ Moins bien" if c <= -0.02 else "≈ Équivalent"),
-			"+" if c >= 0.0 else "", roundi(c * 100.0), "#7fe08a" if dpe >= 0 else "#ff7a7a", "+" if dpe >= 0 else "", GearPower.fmt(dpe)]
+		head += "\n" + Items.verdict_line(item, worn, true)
 	return "\n\n%s\n%s\n%s" % [Items.SEPARATOR, head, diff_text(
 		Items.stats(worn), Items.stats(item), slot, detailed,
 		Items._level_k(Items.power_level(item)))]
@@ -151,38 +150,45 @@ static func item_card(item: Dictionary, extra := "", mode := -1) -> Control:
 ## Texte complet de la carte d'[param item] (BBCode) : carte, comparaison avec la pièce portée au même emplacement
 ## (une arme d'un autre type que la classe : avec l'arme secondaire), [param extra].
 static func card_text(item: Dictionary, extra := "", detailed := false) -> String:
+	var worn = worn_for(item)
+	var hint := "" if detailed else "\n\n[color=#6c6882]Maj : détails[/color]"
+	# lot GX-3 : la carte compare dès qu'elle parle d'une pièce d'équipement ({} : emplacement libre)
+	var ctx = (worn if worn is Dictionary else {}) if String(item.get("slot", "")) in Items.SLOTS else null
+	return Items.describe(item, detailed, ctx) + compare_text(item, worn, detailed) + extra + hint
+
+
+## Pièce portée là où irait [param item] (une arme d'un autre type que la classe : l'arme secondaire), null sinon.
+static func worn_for(item: Dictionary):
 	var slot := String(item.get("slot", ""))
 	var worn = Profile.equipped.get(slot, null)
 	if slot == "weapon" and not Profile.can_be_main(item) and not (Survivor.active or Royale.active):
 		worn = Profile.equipped.get("offhand", null)
-	var hint := "" if detailed else "\n\n[color=#6c6882]Maj : détails[/color]"
-	return Items.describe(item, detailed) + compare_text(item, worn, detailed) + extra + hint
+	return worn
 
 
-class ItemCard extends PanelContainer:
+## Carte d'objet v2 (lot GX-3, DA v2) : autocollant d'encre (contour, ombre dure) avec un bandeau de la couleur de la
+## rareté ; la pièce portée au même emplacement, réduite, est posée à côté (mêmes lignes, alignées en haut).
+class ItemCard extends HBoxContainer:
 	var item: Dictionary
 	var extra := ""
 	var auto := true
 	var detailed := false
 	var _label: RichTextLabel
+	var _worn_card: Control
 
 	func _init(it: Dictionary, ex := "", mode := -1) -> void:
 		item = it
 		extra = ex
 		auto = mode < 0
-		var sb := UiTheme.flat_box(Color(0.05, 0.04, 0.09, 0.97), Items.color_of(it), 2, 10)
-		sb.set_content_margin_all(14)
-		add_theme_stylebox_override("panel", sb)
-		_label = RichTextLabel.new()
-		_label.bbcode_enabled = true
-		_label.fit_content = true
-		_label.scroll_active = false
-		_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		_label.custom_minimum_size = Vector2(400, 0)
-		_label.size = Vector2(400, 0)
-		_label.add_theme_font_size_override("normal_font_size", 15)
-		_label.add_theme_font_size_override("bold_font_size", 16)
-		add_child(_label)
+		alignment = BoxContainer.ALIGNMENT_BEGIN
+		add_theme_constant_override("separation", 8)
+		_label = ItemWidgets._card_panel(self, it, 400.0, "")
+		var worn = ItemWidgets.worn_for(it)
+		if worn is Dictionary and not worn.is_empty() and not is_same(worn, it) and String(worn.get("uid", "")) != String(it.get("uid", "-")) \
+				and String(it.get("slot", "")) in Items.SLOTS:
+			var wl := ItemWidgets._card_panel(self, worn, 300.0, "Portée")
+			wl.text = Items.describe(worn, false)
+			_worn_card = wl.get_parent().get_parent()
 		detailed = mode == 1 or (auto and Input.is_key_pressed(KEY_SHIFT))
 		_refresh()
 
@@ -198,6 +204,49 @@ class ItemCard extends PanelContainer:
 		if d != detailed:
 			detailed = d
 			_refresh()
+
+
+## Panneau d'une carte d'objet (DA v2) : autocollant d'encre, bandeau de rareté en haut ([param caption] dessus : « Portée »),
+## puis le texte ; renvoie le RichTextLabel (texte à remplir).
+static func _card_panel(parent: Control, it: Dictionary, width: float, caption: String) -> RichTextLabel:
+	var p := PanelContainer.new()
+	var sb := UiTheme.sticker("nuit", {"shadow": 4, "radius": 14, "gloss": false, "cel_top": 0.0, "cel_bottom": 0.0, "pad": Vector2(14, 10)})
+	p.add_theme_stylebox_override("panel", sb)
+	p.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	parent.add_child(p)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	p.add_child(v)
+	var band := PanelContainer.new()
+	var bs := UiTheme.flat_box(Items.color_of(it), UiTheme.color("encre.900", UiTheme.INK), 2, 6, false)
+	bs.content_margin_left = 8
+	bs.content_margin_right = 8
+	bs.content_margin_top = 0
+	bs.content_margin_bottom = 0
+	band.add_theme_stylebox_override("panel", bs)
+	band.custom_minimum_size = Vector2(0, 8 if caption == "" else 22)
+	v.add_child(band)
+	if caption != "":
+		var cl := Label.new()
+		cl.text = caption
+		cl.add_theme_font_override("font", UiTheme.bold_font())
+		cl.add_theme_font_size_override("font_size", UiTheme.MIN_TEXT)
+		cl.add_theme_color_override("font_color", Color.WHITE)
+		cl.add_theme_color_override("font_outline_color", UiTheme.color("encre.900", UiTheme.INK))
+		cl.add_theme_constant_override("outline_size", 4)
+		band.add_child(cl)
+	var l := RichTextLabel.new()
+	l.bbcode_enabled = true
+	l.fit_content = true
+	l.scroll_active = false
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size = Vector2(width, 0)
+	l.size = Vector2(width, 0)
+	l.add_theme_font_size_override("normal_font_size", 15)
+	l.add_theme_font_size_override("bold_font_size", 16)
+	l.add_theme_color_override("default_color", UiTheme.TEXT)
+	v.add_child(l)
+	return l
 
 
 # --- bourse --------------------------------------------------------------------------------
@@ -264,6 +313,36 @@ class CardButton extends Button:
 		return ItemWidgets.item_card(item) if not item.is_empty() else null
 
 
+# --- marques des cases (lot GX-3) ---------------------------------------------------------------------
+## Cadenas d'une pièce gardée : anse et corps soleil contourés d'encre, centré en [param c].
+static func draw_lock(ci: CanvasItem, c: Vector2, k := 1.0) -> void:
+	var ink := ForgeWidgets.ENCRE
+	ci.draw_arc(c + Vector2(0, -2.0 * k), 4.2 * k, PI, TAU, 12, ink, 4.0 * k, true)
+	ci.draw_arc(c + Vector2(0, -2.0 * k), 4.2 * k, PI, TAU, 12, ForgeWidgets.SOLEIL_CLAIR, 1.8 * k, true)
+	var body := Rect2(c + Vector2(-6.0, -1.0) * k, Vector2(12.0, 9.0) * k)
+	ci.draw_rect(body.grow(1.5 * k), ink)
+	ci.draw_rect(body, ForgeWidgets.SOLEIL)
+	ci.draw_rect(Rect2(body.position + Vector2(5.0, 3.0) * k, Vector2(2.0, 3.0) * k), ink)
+
+
+## Pastille « neuf » (mandarine, inclinée, BIBLE § 5) centrée en [param c].
+static func draw_new(ci: CanvasItem, c: Vector2) -> void:
+	var font := UiTheme.bold_font()
+	var txt := "neuf"
+	var w := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x + 10.0
+	ci.draw_set_transform(c, deg_to_rad(-8.0), Vector2.ONE)
+	var r := Rect2(Vector2(-w * 0.5, -7.0), Vector2(w, 14.0))
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = ForgeWidgets.MANDARINE
+	sb.border_color = ForgeWidgets.ENCRE
+	sb.set_border_width_all(2)
+	sb.set_corner_radius_all(7)
+	ci.draw_style_box(sb, r)
+	ci.draw_string_outline(font, Vector2(-w * 0.5 + 5.0, 4.0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, 3, ForgeWidgets.ENCRE)
+	ci.draw_string(font, Vector2(-w * 0.5 + 5.0, 4.0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color.WHITE)
+	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
 # --- case d'objet ---------------------------------------------------------------------------
 ## Pièce au-dessus du niveau de héros (lot H3) : fond rouge sombre, icône éteinte, niveau requis en rouge.
 const LOCK_BG := Color(0.3, 0.05, 0.07, 0.95)
@@ -285,8 +364,11 @@ class ItemSlot extends Button:
 	var on_drop: Callable  # func(data)
 	var card_extra: Callable  # func(item) -> String : lignes ajoutées à la carte au survol
 	var card_text := ""  # carte au survol entièrement fournie (trésors de collection)
-	var show_compare := false  # ▲ / ▼ : mieux ou moins bien que la pièce portée
+	var show_compare := false  # ▲ / ▼ : mieux ou moins bien que la pièce portée (au profil de la classe, lot GX-3)
 	var wear_check := false  # lot H3 : pièce au-dessus du niveau de héros en rouge (coffre, équipement, fabrication, coffres)
+	var marks := true  # lot GX-3 : cadenas (gardée), pastille « neuf », ★ (pièce d'un objectif)
+	var better := false  # lot GX-3 : case de la poupée dont le sac a mieux (▲ pomme)
+	var goal := false  # lot GX-3 : ★ forcée (plan visé, aperçu d'un objectif)
 
 	func _init(size_px := 64.0) -> void:
 		custom_minimum_size = Vector2(size_px, size_px)
@@ -317,8 +399,12 @@ class ItemSlot extends Button:
 			return ItemWidgets.tip_card(card_text + extra, Items.color_of(item))
 		if for_text != Items.display_name(item):
 			extra += "\n\n[color=#c8c8d4]%s[/color]" % for_text  # consigne propre à la case
-		if wear_check:
-			extra = HeroLevel.lock_line(item) + extra
+		if wear_check and not String(item.get("slot", "")) in Items.SLOTS:
+			extra = HeroLevel.lock_line(item) + extra  # (pièce d'équipement : le niveau requis est dans la carte, lot GX-3)
+		if marks and Profile.is_locked(item):
+			extra += "\n[color=#ffd76a]Gardée : jamais démontée[/color]"
+		if marks and Profile.mark_seen(item):
+			queue_redraw.call_deferred()  # regardée : plus « neuf »
 		return ItemWidgets.item_card(item, extra)
 
 	func _gui_input(event: InputEvent) -> void:
@@ -366,18 +452,29 @@ class ItemSlot extends Button:
 		var up := int(item.get("upgrade", 0))
 		if up > 0:
 			HudWidgets.text_center(self, "+%d" % up, Vector2(size.x - 13.0, 11.0), font, 13, Color(1, 0.88, 0.45), 4)
+		var locked := marks and Profile.is_locked(item)
 		if item.has("set") and (req == 0 or badge == ""):
-			HudWidgets.diamond(self, Vector2(9, 9), 5.0, Items.SET_COLOR)
+			HudWidgets.diamond(self, Vector2(21 if locked else 9, 9), 5.0, Items.SET_COLOR)
+		if locked:
+			ItemWidgets.draw_lock(self, Vector2(10, 10), 1.0)
 		var sockets: Array = item.get("sockets", [])
 		for i in sockets.size():
 			var p := Vector2(9.0 + i * 11.0, size.y - 9.0)
 			draw_circle(p, 4.5, Color(0, 0, 0, 0.8))
 			draw_circle(p, 3.2, Color(0.75, 0.55, 1.0) if sockets[i] != null else Color(0.35, 0.33, 0.4))
 		if show_compare and item.has("slot") and req == 0:
-			var c := Items.compare_to_equipped(item)
+			var c := Items.profile_gain(item)
 			if absf(c) >= 0.02:
 				HudWidgets.text_center(self, "▲" if c > 0 else "▼", Vector2(size.x - 10.0, 12.0), font, 14,
 					Color(0.45, 1.0, 0.5) if c > 0 else Color(1.0, 0.45, 0.4), 4)
+		if better:  # case de la poupée : le sac a mieux (lot GX-3)
+			HudWidgets.text_center(self, "▲", Vector2(size.x - 10.0, 12.0 if up <= 0 else 26.0), font, 15, ForgeWidgets.POMME, 4)
+		if marks and (goal or Goals.is_goal_item(item)):
+			var sp := Vector2(11.0, size.y - (21.0 if not (item.get("sockets", []) as Array).is_empty() else 11.0))
+			ForgeWidgets.star(self, sp, 9.0, ForgeWidgets.ENCRE)
+			ForgeWidgets.star(self, sp, 7.0, ForgeWidgets.SOLEIL)
+		if marks and Profile.is_new(item) and size.x >= 44.0:
+			ItemWidgets.draw_new(self, Vector2(size.x * 0.5, 9.0))
 		if req > 0:  # le niveau requis, en rouge (en haut à gauche si un badge occupe le bas)
 			var at := Vector2(size.x - 11.0, size.y - 9.0) if badge == "" else Vector2(13.0, 11.0)
 			HudWidgets.text_center(self, str(req), at, font, 12, ItemWidgets.LOCK_TEXT, 4)

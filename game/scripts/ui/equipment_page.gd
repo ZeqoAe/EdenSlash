@@ -137,6 +137,68 @@ class PresetBar extends HBoxContainer:
 		_pop.position = Vector2i(int(clampf(r.end.x - _pop.size.x, 8.0, vp.x - _pop.size.x - 8.0)), int(r.end.y + 6.0))
 		_pop.popup()
 
+	## Ce que « Équiper le meilleur » changerait pour [param cid] : [{slot, old, new}] (emplacements de la poupée, dans l'ordre).
+	static func best_plan(cid: String) -> Array:
+		if Profile.in_run or Modes.sealed() or ClassGear.profile(cid).is_empty():
+			return []
+		var cur := ClassGear.gear_of(cid)
+		var best := ClassGear.best_gear(cid)
+		if not best.has("weapon") and cur.has("weapon"):
+			best["weapon"] = cur.weapon
+		var out: Array = []
+		for slot in Items.SLOTS + ["offhand"]:
+			var a: Dictionary = cur.get(slot, {})
+			var b: Dictionary = best.get(slot, {})
+			if String(a.get("uid", "")) != String(b.get("uid", "")) and not b.is_empty():
+				out.append({"slot": slot, "old": a, "new": b})
+		return out
+
+	## Aperçu de « Le meilleur » (comme l'équipement recommandé des MMORPG) : actuel → recommandé, puis Appliquer.
+	func _open_best() -> void:
+		var plan := best_plan(_cid)
+		if plan.is_empty():
+			return
+		var a := InfoCard.ask(self, "Le meilleur pour %s" % ClassGear.class_label(_cid),
+			"%s, d'après le profil %s." % [GearPower.plural(plan.size(), "pièce change", "pièces changent"), ClassGear.profile_name(ClassGear.profile_id(_cid))],
+			"Appliquer", func(): changed.emit(ClassGear.equip_best(_cid)), false)
+		a.ok_button.text = "Appliquer"
+		var list := VBoxContainer.new()
+		list.add_theme_constant_override("separation", 4)
+		for row in plan.slice(0, 10):
+			list.add_child(_best_row(row))
+		var v := a.title_label.get_parent()
+		v.add_child(list)
+		v.move_child(list, v.get_child_count() - 2)
+		var pe := Profile.equipped.duplicate()
+		for row in plan:
+			pe[row.slot] = row.new
+		var d := GearPower.hero_power(pe) - GearPower.hero_power()
+		var pl := Hud._label(v, "Puissance d'équipement %s%s" % ["+" if d >= 0 else "−", GearPower.fmt(absi(d))], 16, ForgeWidgets.GAIN if d >= 0 else ForgeWidgets.PERTE)
+		pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.move_child(pl, v.get_child_count() - 2)
+
+	## Ligne de l'aperçu : emplacement, pièce actuelle → pièce recommandée (cases avec leur carte au survol).
+	static func _best_row(row: Dictionary) -> Control:
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", 8)
+		var n := Hud._label(h, String(InventoryPage.SLOT_CAPTIONS.get(row.slot, Items.SLOT_NAMES.get(row.slot, row.slot))), UiTheme.MIN_TEXT, UiTheme.MUTED)
+		n.custom_minimum_size = Vector2(120, 0)
+		n.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		for k in ["old", "new"]:
+			var s := ItemWidgets.ItemSlot.new(40.0)
+			s.set_item(row[k])
+			s.placeholder = "vide" if (row[k] as Dictionary).is_empty() else ""
+			s.disabled = (row[k] as Dictionary).is_empty()
+			h.add_child(s)
+			if k == "old":
+				Hud._label(h, "→", 18, UiTheme.TEXT).size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var nm := Hud._label(h, Items.display_name(row.new), UiTheme.MIN_TEXT, Items.color_of(row.new))
+		nm.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		nm.custom_minimum_size = Vector2(200, 0)
+		nm.clip_text = true
+		nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		return h
+
 	func _entry(text: String, cb: Callable) -> Button:
 		var b := Button.new()
 		b.text = text

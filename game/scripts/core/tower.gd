@@ -799,6 +799,7 @@ static func finish() -> Dictionary:
 	BestTimes.commit()  # après le rechargement du profil (lot DNG-1)
 	Encounters.commit()
 	for it in found:
+		Profile.mark_new(it)  # pastille « Nouveau » dans le sac (lot GX-3)
 		Profile.vault.append(it)  # le coffre commun (l'inventaire du lobby en est tiré)
 	var old := best()
 	Profile.record_max(record_key(difficulty), reached)

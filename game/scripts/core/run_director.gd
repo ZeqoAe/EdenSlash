@@ -1580,13 +1580,31 @@ static func item_card(it: Dictionary, type: String) -> Dictionary:
 		return {"type": "trophy", "id": String(it.get("uid", "")), "item": it, "title": Items.display_name(it),
 			"subtitle": "Trophée · %s · niv. %d" % [String(it.get("passive", {}).get("name", "")), int(it.get("level", 0))],
 			"desc": head + "\n[color=#ffd36b]%s[/color]" % String(it.get("passive", {}).get("desc", "")), "icon": String(it.get("icon", "")), "color": Items.color_of(it)}
-	var cmp_txt := "[color=#7dff8a]Emplacement libre[/color]" if cmp >= 1.0 else ("[color=#7dff8a]▲ +%d %%[/color] sur ta pièce" % roundi(cmp * 100.0)
-		if cmp > 0.005 else ("[color=#ff8a7d]▼ %d %%[/color] sur ta pièce" % roundi(cmp * 100.0) if cmp < -0.005 else "Comme ta pièce"))
+	# lot GX-3 : le mot au profil de la classe, sans pourcentage ; « Nouveau plan » (choisir la pièce découvre son plan)
+	cmp = Items.profile_gain(it) if cmp < 1.0 else cmp
+	var cmp_txt := "[color=#7dff8a]Emplacement libre[/color]" if cmp >= 1.0 else ("[color=#7dff8a]▲ Meilleure que ta pièce[/color]"
+		if cmp >= 0.02 else ("[color=#ff8a7d]▼ Moins bonne que ta pièce[/color]" if cmp <= -0.02 else "Comme ta pièce"))
+	var plan := plan_badge(it)
+	if plan != "":
+		cmp_txt = plan + "  ·  " + cmp_txt
 	var r := clampi(int(it.get("rarity", 0)), 0, Items.RARITIES.size() - 1)
 	return {"type": type, "id": String(it.get("uid", "")), "item": it, "title": Items.display_name(it),
 		"subtitle": "%s · %s · niv. %d" % [String(GameData.weapon_type(Items.weapon_type_of(it)).get("name", "Arme")) if it.slot == "weapon" else Items.SLOT_NAMES.get(it.slot, it.slot),
 			Items.RARITIES[r].name, int(it.get("level", 0))],
 		"desc": cmp_txt + "\n" + "\n".join(lines), "icon": String(it.get("icon", "")), "color": Items.color_of(it)}
+
+
+## Lot GX-3 (P0-7) : pastille de plan d'une pièce proposée en Survie (choisir la pièce, c'est découvrir son plan) :
+## « ★ Objectif ! » (la pièce d'un objectif), « ✦ Nouveau plan » (mandarine), « Plan connu » (gris) ; "" hors Survie.
+static func plan_badge(it: Dictionary) -> String:
+	if not Run.survival or Run.survivor or Royale.active or not it.has("eden") or String(it.get("slot", "")) == "trophy":
+		return ""
+	var id := int(it.eden)
+	if Goals.has(Goals.piece_id(id)) and not id in Profile.seen_gear:
+		return "[color=#ffd76a][b]★ Ton objectif ![/b][/color]"
+	if id in Profile.seen_gear or id in Run.seen_items or id in Run.seen_family or id in Run.boss_plans:
+		return "[color=#9a98a8]Plan connu[/color]"
+	return "[color=#ffa04a][b]✦ Nouveau plan[/b][/color]"
 
 
 ## Autel du scribe : parchemins d'enchantement du niveau de la carte (Survie : de ses pièces, plafonnés par époque :

@@ -134,7 +134,7 @@ func _row(e: Dictionary) -> void:
 		+ ("\n%s au-dessus de ton niveau de héros (gardée%s)" % [_plural(int(e.over), "pièce"), "s" if int(e.over) > 1 else ""] if int(e.get("over", 0)) > 0 else ""))
 	_count(nums, "Panoplie", "%d / %d" % [int(e.arch), ClassGear.PANOPLY], int(e.arch) >= ClassGear.PANOPLY,
 		("Panoplie de donjon : %s" % e.arch_name) if String(e.arch_name) != "" else "Panoplie de donjon (Donjons, fabrication)")
-	_count(nums, "Esprits", "%d / %d" % [int(e.spirits), ClassGear.PANOPLY], int(e.spirits) >= ClassGear.PANOPLY, "Panoplie des Esprits (Panthéon, Armurerie)")
+	_count(nums, "Esprits", "%d / %d" % [int(e.spirits), ClassGear.PANOPLY], int(e.spirits) >= ClassGear.PANOPLY, "Panoplie des Esprits (Panthéon, puis Atelier)")
 	_count(nums, "+10", "%d / %d" % [int(e.plus10), slots], int(e.plus10) >= slots, "Pièces montées à +10 (Forge)")
 	_count(nums, "Gemmes", "%d / %d" % [int(e.gems), int(e.gem_max)], int(e.gems) >= int(e.gem_max), "Gemmes serties (Forge)")
 	_count(nums, "Enchant.", "%d / %d" % [int(e.enchants), slots], int(e.enchants) >= slots, "Pièces enchantées (Forge)")

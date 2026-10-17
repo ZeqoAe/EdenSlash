@@ -136,7 +136,7 @@ func _survival() -> void:
 	await get_tree().process_frame
 	var spec := rs.spec()
 	var txt := _texts(spec)
-	check("Survie : un seul bloc « Insignes » et une seule ligne de pièces (plus de doublon) : %s" % [txt], txt.count("Insignes") == 1 and txt.count("Pièces découvertes") == 1)
+	check("Survie : un seul bloc « Insignes » et une seule ligne de plans, nommés (lot GX-3) : %s" % [txt], txt.count("Insignes") == 1 and txt.filter(func(t): return String(t).begins_with("Plans : ")).size() == 1)
 	check("Survie : défaite (ton rouge), titre et sous-titre", spec.title == "DÉFAITE" and spec.tone == "lose" and String(spec.subtitle).contains("Époque I"))
 	check("Survie : insignes gardés = ceux de la run", spec.kept[0].value == "+%d" % Run.insignia_gain and Run.insignia_gain >= 25)
 	var tip := String(spec.kept[0].tip)

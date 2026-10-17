@@ -17,7 +17,8 @@ const ROWS := 7
 const CELL := 70.0
 ## Statuts affichables : [id, libellé].
 ## « wear » (lot H3) : les plans trouvés que le niveau de héros permet de porter (fabriquer au-dessus reste permis).
-const STATUSES := [["buy", "À fabriquer"], ["owned", "Fabriquées"], ["locked", "Plans à découvrir"], ["all", "Tous"], ["wear", "Portables"]]
+const STATUSES := [["buy", "À fabriquer"], ["owned", "Fabriquées"], ["locked", "Plans à découvrir"], ["all", "Tous"], ["wear", "Portables"],
+	["goal", "★ Objectifs"]]
 
 var _f_status: OptionButton
 var _f_slot: OptionButton
@@ -60,6 +61,7 @@ var _view_btn: Button
 var _tier_col: Control
 var _head: Label
 var _wear: Button
+var _goal_bar: GoalBar  # lot GX-3 : l'objectif épinglé, en haut de la colonne des paliers
 ## Tests : « Fabriquer les N plans connus » sans la carte de confirmation.
 static var skip_confirm := false
 
@@ -117,6 +119,10 @@ func _ready() -> void:
 	var col := ItemWidgets.panel(self, 250.0 if _narrow() else 300.0)
 	var th := Hud._label(col, "Paliers", 20, UiTheme.GOLD)
 	th.add_theme_font_override("font", UiTheme.title_font())
+	_goal_bar = GoalBar.new(true)
+	_goal_bar.narrow = true
+	col.add_child(_goal_bar)
+	col.move_child(_goal_bar, 0)
 	var tsc := ScrollContainer.new()
 	tsc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	tsc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -286,6 +292,7 @@ func refresh() -> void:
 		return
 	_build_all()
 	_ensure_filters()
+	_refresh_goal()
 	if view == "tiers":
 		_count.text = "%s / %s plans" % [GearPower.fmt(Completion.armory_done()), GearPower.fmt(maxi(Completion.armory_done(), Completion.armory_total()))]
 		if _tier == Vector2i.ZERO:
@@ -330,6 +337,9 @@ func _apply() -> void:
 		if status == "wear":
 			if r.state == "locked" or int(r.level) > hl:
 				return false
+		elif status == "goal":
+			if not Goals.has(Goals.piece_id(int(r.id))):
+				return false
 		elif status != "all" and r.state != status:
 			return false
 		if slot != "" and r.slot != slot:
@@ -339,7 +349,7 @@ func _apply() -> void:
 		if wtype != "" and r.slot == "weapon" and String(r.e.get("wtype", "")) != wtype:
 			return false
 		return true)
-	var kk := "k1" if status in ["all", "wear"] else "k0"
+	var kk := "k1" if status in ["all", "wear", "goal"] else "k0"
 	_rows.sort_custom(func(a, b): return a[kk] < b[kk])
 	var per := _grid_cols() * _grid_rows()
 	var pages := maxi(1, ceili(_rows.size() / float(per)))
@@ -386,6 +396,7 @@ func _fill_grid(per: int) -> void:
 			var sil := Silhouette.new(CELL)
 			sil.slot_name = String(Items.SLOT_NAMES.get(row.slot, row.slot))
 			sil.level = int(row.level)
+			sil.goal = Goals.has(Goals.piece_id(int(row.id)))
 			sil.tooltip_text = "Plan pas encore découvert"
 			cell = sil
 		else:
@@ -417,6 +428,8 @@ func _empty_text() -> String:
 			return "Tous les plans sont découverts."
 		"wear":
 			return "Aucun plan à ton niveau pour l'instant."
+		"goal":
+			return "Aucun objectif.\nChoisis une pièce puis « ★ Objectif » : ce qui manque s'affiche dans Héros et ici."
 	return "Aucun plan pour ces filtres."
 
 
@@ -453,6 +466,8 @@ func _show_detail() -> void:
 		var pl := Hud._label(_detail_box, "Plan trouvé : %s" % place, 15, UiTheme.MUTED)
 		pl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		pl.tooltip_text = "La première carte dont un coffre propose cette pièce."
+	if row.state != "owned":
+		_goal_button(int(row.id))
 	var p := price(row.e)
 	if row.state == "owned":
 		_buy.text = "Dans ton coffre"
@@ -494,6 +509,64 @@ func _detail_locked(row: Dictionary) -> void:
 		var lab := Hud._label(_detail_box, l, 16, UiTheme.MUTED)
 		lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		lab.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_goal_button(int(row.id))
+
+
+## Lot GX-3 (P0-6) : « ★ Objectif » : suivre (et épingler) la pièce [param id] ; le bouton dit si elle est déjà suivie.
+func _goal_button(id: int) -> void:
+	var gid := Goals.piece_id(id)
+	var on := Goals.has(gid)
+	var b := ForgeWidgets.candy_button("★ Objectif suivi" if on else "★ Objectif", "mandarine" if on else "nuit", 16, 40 if _short_screen() else 44)
+	b.tooltip_text = "Ne plus suivre cette pièce." if on else "Viser cette pièce : ce qui manque (plan, insignes, niveau) s'affiche dans Héros et en haut de cette page."
+	b.pressed.connect(func():
+		_say(Goals.toggle(gid), UiTheme.BUFF)
+		_refresh_goal()
+		_show_detail()
+		_mark_cells())
+	_detail_box.add_child(b)
+
+
+## ★ sur les cases du palier et du catalogue (objectifs).
+func _mark_cells() -> void:
+	for id in _cells:
+		var c: Control = _cells[id]
+		if c is Silhouette:
+			(c as Silhouette).goal = Goals.has(Goals.piece_id(int(id)))
+		c.queue_redraw()
+
+
+func _refresh_goal() -> void:
+	if is_instance_valid(_goal_bar):
+		_goal_bar.refresh()
+
+
+## Ouvre la page sur l'objectif [param gid] (barre d'objectif, « Fabriquer ») : son palier et sa pièce choisie.
+func show_goal(gid: String) -> void:
+	if Goals.is_dungeon(gid) or not GameData.eden_by_id.has(int(gid)):
+		return
+	var id := int(gid)
+	var e: Dictionary = GameData.eden_by_id[id]
+	var wtype := Items.default_weapon_type(Profile.selected_class)
+	var found := Vector2i.ZERO
+	if String(e.get("slot", "")) in KIT_SLOTS:
+		for ep in range(1, Epochs.count() + 1):  # le premier palier dont la poupée propose la pièce
+			for st in range(1, 4):
+				if found != Vector2i.ZERO:
+					continue
+				for x in tier_pool(ep, st, String(e.slot), wtype):
+					if int(x.id) == id:
+						found = Vector2i(ep, st)
+	if view != "tiers" or found == Vector2i.ZERO:
+		set_view("catalog")
+		_f_status.select(STATUSES.size() - 1)
+		_apply()
+		_select(id)
+		return
+	_tier = found
+	_sel = id
+	_show_tier()
+	if _sel != id and _row_of(id).size() > 0:
+		_select(id)
 
 
 ## Comparaison courte avec la pièce portée au même emplacement : le verdict et les trois plus gros écarts.
@@ -563,6 +636,7 @@ class Silhouette extends Button:
 	var selected := false
 	var slot_name := ""
 	var level := 0
+	var goal := false  # lot GX-3 : plan d'un objectif (★)
 
 	func _init(px := 70.0) -> void:
 		custom_minimum_size = Vector2(px, px)
@@ -583,6 +657,9 @@ class Silhouette extends Button:
 			HudWidgets.text_center(self, slot_name, Vector2(size.x * 0.5, size.y - 9.0), font, 11, Color(1, 1, 1, 0.55), 3)
 		if level > 0 and size.x < 100.0:
 			HudWidgets.text_center(self, str(level), Vector2(size.x - 11.0, 11.0), font, 11, Color(1, 1, 1, 0.55), 3)
+		if goal:
+			ForgeWidgets.star(self, Vector2(12, 12), 9.0, ForgeWidgets.ENCRE)
+			ForgeWidgets.star(self, Vector2(12, 12), 7.0, ForgeWidgets.SOLEIL)
 
 
 # --- Fabriquer v2 (lot GX-2) : paliers, poupée du palier, palier entier -----------------------------------------------
@@ -614,6 +691,10 @@ static func kit(ep: int, stage: int, cid: String, owned = null, seen = null) -> 
 	for slot in KIT_SLOTS:
 		var cands := tier_pool(ep, stage, slot, wtype)
 		var entry := {"slot": slot, "state": "locked", "e": cands[0] if not cands.is_empty() else {}}
+		for e in cands:  # lot GX-3 : un plan à trouver qui est un objectif se montre (★) plutôt qu'un autre du palier
+			if Goals.has(Goals.piece_id(int(e.id))):
+				entry.e = e
+				break
 		# la meilleure pièce connue du palier pour la classe : fabriquée, ou plan à fabriquer s'il est meilleur
 		var best := -1.0
 		for e in cands:
@@ -814,6 +895,7 @@ func _show_tier() -> void:
 			var sil := Silhouette.new(cell_px)
 			sil.slot_name = ""
 			sil.level = int(e.get("level", 0)) if not e.is_empty() else 0
+			sil.goal = not e.is_empty() and Goals.has(Goals.piece_id(int(e.id)))
 			sil.tooltip_text = "Plan à trouver : %s" % (Completion.plan_place(int(e.id)) if not e.is_empty() else "aucun coffre")
 			cell = sil
 			var where := Completion.plan_place(int(e.id)) if not e.is_empty() else ""

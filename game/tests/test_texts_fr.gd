@@ -162,6 +162,29 @@ func _ready() -> void:
 	for t in Achievements.titles():
 		_note("titre", String(t))
 
+	# 4b. lot GX-3 : objectifs (ce qui manque, conseil), pastilles du sac, verdicts, pastilles de plan
+	var gx3_wt := Items.default_weapon_type("warrior")
+	var gpool := GearShopPage.tier_pool(1, 1, "head", gx3_wt)
+	if not gpool.is_empty():
+		var gid := Goals.piece_id(int(gpool[0].id))
+		Goals.follow(gid)
+		for st in [[false, 0], [true, 0], [true, 100000]]:
+			Profile.seen_gear = [int(gpool[0].id)] if bool(st[0]) else []
+			Profile.insignia = int(st[1])
+			var s := Goals.status(gid)
+			_note("objectif", String(s.line))
+			for step in s.steps:
+				_note("objectif (étape)", String(step.text))
+			_note("objectif (boussole)", String(Goals.advice().get("text", "")))
+		Goals.unfollow(gid)
+		Profile.seen_gear = []
+		Profile.insignia = 0
+	for c in InventoryPage.CHIPS:
+		_note("sac (pastille)", String(c[1]) + " : " + String(c[2]))
+	var vw := Items.generate(30, 0.5, "chest", "warrior", 3, "", 5)
+	_note("verdict", _strip(Items.verdict_line(vw, Items.generate(10, 0.5, "chest", "warrior", 1, "", 5), true)))
+	_note("verdict", _strip(Items.verdict_line(vw, {}, false)))
+
 	# 5. apparences et collection (noms) : comptés, signalés seulement pour le bilan
 	var cos_bad := 0
 	for c in GameData.cosmetics:

@@ -68,7 +68,7 @@ static func advices(n := 3, in_bilan := false) -> Array:
 
 
 ## Les règles, dans l'ordre (le premier conseil qui s'applique est celui de toujours, passe P6).
-const RULES := ["_r_spare", "_r_buy", "_r_chests", "_r_quest_near", "_r_start_gear", "_r_find_piece", "_r_level_up",
+const RULES := ["_r_goal", "_r_spare", "_r_buy", "_r_chests", "_r_quest_near", "_r_start_gear", "_r_find_piece", "_r_level_up",
 	"_r_panoply", "_r_forge", "_r_gems", "_r_enchants", "_r_ladder", "_r_quest", "_r_other_class"]
 
 
@@ -82,6 +82,14 @@ static func _qh(c: Dictionary) -> Dictionary:
 	if not c.has("qh"):
 		c["qh"] = Quests.hint() if not bool(c.in_bilan) else {}
 	return c.qh
+
+
+## Lot GX-3 (P0-6) : l'objectif épinglé d'abord (Goals : la pièce visée, ce qui manque, où aller).
+static func _r_goal(_c: Dictionary) -> Dictionary:
+	var a := Goals.advice()
+	if a.is_empty():
+		return {}
+	return _make("goal", String(a.text), a.go, String(a.tip), "piece", "goal")
 
 
 static func _r_spare(c: Dictionary) -> Dictionary:
@@ -99,8 +107,8 @@ static func _r_buy(c: Dictionary) -> Dictionary:
 	var buy := affordable_piece(String(c.cid), c.missing)
 	if buy.is_empty():
 		return {}
-	return _make("buy_piece", "%s : une pièce est achetable" % GearPower.plural(Profile.insignia, "insigne"),
-		{"workshop": 0}, "Armurerie : %s à %s insignes (tu en as %s)." % [String(SLOT_NOUN.get(buy.slot, "une pièce")), GearPower.fmt(int(buy.price)), GearPower.fmt(Profile.insignia)], "insignia", "gear")
+	return _make("buy_piece", "%s : une pièce à fabriquer" % GearPower.plural(Profile.insignia, "insigne"),
+		{"workshop": 0}, "Atelier > Fabriquer : %s à %s insignes (tu en as %s)." % [String(SLOT_NOUN.get(buy.slot, "une pièce")), GearPower.fmt(int(buy.price)), GearPower.fmt(Profile.insignia)], "insignia", "gear")
 
 
 static func _r_chests(_c: Dictionary) -> Dictionary:
@@ -131,7 +139,7 @@ static func _r_find_piece(c: Dictionary) -> Dictionary:
 		return {}
 	var slot := String(missing[0])
 	var more := missing.size() - 1
-	var tip := "Les coffres d'emplacement de la Survie révèlent des pièces : achète-les ensuite à l'Armurerie." \
+	var tip := "Les coffres d'emplacement de la Survie révèlent des plans : fabrique les pièces ensuite à l'Atelier." \
 		+ (("\nIl manque aussi : %s." % ", ".join(missing.slice(1).map(func(s): return String(Items.SLOT_NAMES.get(s, s)).to_lower()))) if more > 0 else "")
 	return _make("find_piece", "%s : il te manque %s → Survie" % [c.cname, String(SLOT_NOUN.get(slot, "une pièce"))], {"menu": "survival"}, tip, "piece", "gear")
 
@@ -139,7 +147,10 @@ static func _r_find_piece(c: Dictionary) -> Dictionary:
 static func _r_level_up(c: Dictionary) -> Dictionary:
 	if not (c.missing as Array).is_empty() or float(_entry(c).ratio) >= ClassGear.EQUIPPED_RATIO:
 		return {}
-	return _make("level_up_gear", "%s : il faut des pièces de plus haut niveau → Armurerie" % c.cname,
+	if ClassGear.hero_capped(float(_entry(c).pe)):  # lot GX-3 : l'équipement suit déjà le niveau du héros
+		return _make("level_up_hero", "%s : monte ton niveau de héros → Survie" % c.cname, {"menu": "survival"},
+			"Tes pièces sont au niveau de ton héros : les plus hautes ne se porteraient pas encore. Chaque partie de Survie fait monter le niveau.", "piece", "gear")
+	return _make("level_up_gear", "%s : il faut des pièces de plus haut niveau → Atelier" % c.cname,
 		{"workshop": 0} if c.armory else {"menu": "survival"},
 		"Les époques suivantes de la Survie révèlent des pièces plus puissantes. Les actuelles se montent à la Forge.", "piece", "gear")
 
@@ -234,13 +245,15 @@ static func spare_slot(cid: String, missing: Array) -> String:
 
 
 ## La pièce découverte la moins chère qui comble un emplacement manquant et que les insignes paient : {slot, price} ou {}.
+## Lot GX-3 : seulement une pièce portable au niveau de héros (fabriquer une pièce qu'on ne peut pas porter ne comble rien).
 static func affordable_piece(cid: String, missing: Array) -> Dictionary:
 	var tiers := Economy.owned_tiers()
 	var wtype := Items.default_weapon_type(cid)
 	var best := {}
+	var hl := HeroLevel.wear_level()
 	for id in Profile.seen_gear:
 		var e: Dictionary = GameData.eden_by_id.get(int(id), {})
-		if e.is_empty():
+		if e.is_empty() or int(e.get("level", 0)) > hl:
 			continue
 		var slot := String(e.get("slot", ""))
 		if not slot in missing or (slot == "weapon" and String(e.get("wtype", "")) != wtype):
@@ -352,7 +365,7 @@ static func after(mode: String, got: Dictionary = {}) -> String:
 				parts.append("%s ouverte : de nouvelles activités" % String(got.unlocked))
 			var seen := int(got.get("seen", 0))
 			if seen > 0:
-				parts.append("%s à l'Armurerie" % GearPower.plural(seen, "pièce", "pièces"))
+				parts.append("%s : Atelier > Fabriquer" % GearPower.plural(seen, "plan découvert", "plans découverts"))
 		"dungeon", "rush":
 			if String(got.get("plan", "")) != "":
 				parts.append("plan obtenu : Atelier > Plans de donjon")
@@ -377,7 +390,7 @@ static func after(mode: String, got: Dictionary = {}) -> String:
 				parts.append("apparence gagnée : Héros > Apparence")
 		"duel":
 			if bool(got.get("spirit", false)):
-				parts.append("Esprits %d / %d : la pièce se rachète à l'Armurerie" % [spirit_count(), ClassGear.PANOPLY])
+				parts.append("Esprits %d / %d : la pièce se refabrique à l'Atelier" % [spirit_count(), ClassGear.PANOPLY])
 			if bool(got.get("promoted", false)):
 				parts.append("rang %s atteint" % String(got.get("rank_name", League.rank_name())))
 			elif League.rank_index() < League.RANKS.size() - 1 and Unlocks.is_open("league"):

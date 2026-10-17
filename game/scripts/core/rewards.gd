@@ -402,6 +402,7 @@ static func choose(chest: Dictionary, index: int) -> Dictionary:
 
 static func _give(got: Dictionary) -> void:
 	for it in got.items:
+		Profile.mark_new(it)  # pastille « Nouveau » dans le sac (lot GX-3)
 		Profile.inventory.append(it)  # hors run : l'inventaire affiché = le coffre commun
 	for k in got.supplies:
 		if int(got.supplies[k]) > 0:

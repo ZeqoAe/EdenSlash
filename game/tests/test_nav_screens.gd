@@ -168,6 +168,10 @@ func _ready() -> void:
 	Profile.seen_gear = SlotChests.pool("head", 1, 1).slice(0, 4).map(func(e): return int(e.id))
 	lobby._workshop.page(0).refresh()
 	await probe("Atelier : Armurerie avec des pièces découvertes (filtres, pages, achat)", 0.8)
+	# lot GX-3 : objectif épinglé (barre en tête des paliers, « ★ Objectif » dans la fiche)
+	Goals.follow(Goals.piece_id(int(Profile.seen_gear[0])))
+	lobby._workshop.page(0).refresh()
+	await probe("Atelier : Fabriquer avec un objectif (barre d'objectif, ★ Objectif)", 0.8)
 	Profile.seen_gear = []
 	lobby._workshop.show_page(1)
 	await probe("Atelier : Fabrication", 0.8)
@@ -210,6 +214,21 @@ func _ready() -> void:
 	lobby._hero.page.preset_bar._open_menu()
 	await probe("Héros : menu « Gérer » des préréglages", 0.8)
 	lobby._hero.page.preset_bar._pop.hide()
+	# lot GX-3 : barre d'objectif, pastilles du sac (« Inutiles » : démontage en masse), « Le meilleur ▲N »
+	lobby._hero.page.refresh()
+	await probe("Héros : équipement avec l'objectif épinglé", 0.8)
+	lobby._hero.page._chip = "useless"
+	lobby._hero.page._refresh_grid()
+	await probe("Héros : pastille « Inutiles »", 0.8)
+	lobby._hero.page._chip = ""
+	lobby._hero.page._refresh_grid()
+	if not EquipmentPage.PresetBar.best_plan(Profile.selected_class).is_empty():
+		lobby._hero.page.preset_bar._open_best()
+		await probe("Héros : aperçu « Le meilleur » (Annuler, Appliquer)", 0.8)
+		for c in lobby._hero.page.preset_bar.get_children():
+			if c is InfoCard.Ask:
+				c._finish(false)
+		await get_tree().process_frame
 	lobby._open_hero("class")
 	await probe("Héros : classe, sorts", 0.8)
 	lobby._hero.talents.show_sub("talents")

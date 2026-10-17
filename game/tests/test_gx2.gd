@@ -47,6 +47,7 @@ func _ready() -> void:
 	_test_reforge()
 	await _test_forge_ui()
 	_test_save()
+	_test_verdict_levels()
 	await _test_dungeon_plans()
 	await _test_shop_v2()
 	Training.active = true
@@ -215,6 +216,25 @@ func _test_save() -> void:
 	var old := _piece(40, 7)
 	old.erase("pity")
 	check("vieille pièce sans jauge : jauge vide", Craft.pity(old) == 0.0 and Craft.pity_fails(old) == 0)
+
+
+## Lot GX-3 : le verdict « Meilleure / Moins bonne pour <classe> » compare la valeur au profil × le niveau (comme « Équiper
+## le meilleur ») : une pièce de niveau 1 n'est jamais « meilleure » qu'une pièce de niveau 40 de même rareté.
+func _test_verdict_levels() -> void:
+	Profile.reset_all()
+	Profile.selected_class = "warrior"
+	Profile.records[HeroLevel.KEY] = HeroLevel.total_for(90) + 1.0
+	var high := Items.generate(40, 0.0, "chest", "warrior", Items.MYTHIC, "", Items.MYTHIC)
+	high["quality"] = 1.0
+	var low := high.duplicate(true)  # la même pièce, au niveau 1 et de meilleure qualité : sa note seule est plus haute
+	low["uid"] = "gx3_low"
+	low["level"] = 1
+	low["plevel"] = 1
+	low.erase("eden")
+	low["quality"] = 1.2
+	Profile.install_gear({"chest": high})
+	check("verdict (GX-3) : une pièce de niveau 1 n'est pas « meilleure » qu'une de niveau %d" % int(high.level),
+		String(Items.verdict(low, Profile.equipped.chest).tone) == "loss" and FabricationPage.verdict_text(low).contains("Moins bonne"))
 
 
 # --- Plans de donjon : voir la pièce avant de la fabriquer ----------------------------------------------------------

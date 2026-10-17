@@ -249,6 +249,11 @@ Détail : DESIGN « Économie et progression » ; `R_E3.md`, `R_E6.md`, `R_P5.md
 migration `ensure`), jauge `ui/hero_level_gauge.gd` ; stats et monstres : lots H4-H5 (`conception/progression/NIVEAU_HEROS.md`, `R_H1.md`).
 Port des pièces (H3, `R_H3.md`) : `Items.required_level`, `HeroLevel.wear_block` / `lock_text` / `lock_line` (hub seulement ; départ,
 Survivant, Battle royale et trouvailles de run exemptés) ; `Profile.equip(item, force)` renvoie false si refusé ; case rouge `ItemSlot.wear_check` ; `test_h3`, `shot_h3`.
+**Objectifs, fiche v2, sac** (lot GX-3, `R_GX3.md`) : `core/goals.gd` (`Goals` : `records.goals`, 1 épinglé + 5 suivis, ids d'Eden ou
+`plan_<boss>:<emplacement>`, `status` = ce qui manque et `go`, premier conseil de la boussole `Compass._r_goal`), barre `ui/goal_bar.gd` (Héros, Fabriquer,
+Plans de donjon), « ★ Objectif » et filtre « ★ Objectifs » ; fiche `Items.describe(item, detailed, worn)` (verdict `Items.verdict` au profil × niveau,
+jamais de % hors Maj) ; clés d'objet `locked` (jamais démontée, `Profile.is_locked`) et `new` ; `InventoryPage.useless_items` + démontage en masse
+annulable ; « Le meilleur ▲N » (`PresetBar.best_plan`) ; `RunDirector.plan_badge` (« Nouveau plan ») ; `test_gx3`, `shot_gx3`.
 **Modes scellés** (lot H2, `R_H2.md`) : `Modes.sealed()` (Survivant, Battle royale) coupe talents, certificats, plateau, archive, auras,
 sorts fermés par la maîtrise et cartes à débloquer (`Run.passive_stats` / `skill_talent` / `roll_cards` / `certificate_pool`,
 `Player.recalc_stats` / `knock_immune`) ; tout nouvel effet du compte en combat passe par ce test ; `test_h2`, `hl_probe --sealed`.

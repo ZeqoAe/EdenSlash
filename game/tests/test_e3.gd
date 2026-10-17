@@ -79,7 +79,7 @@ func _test_rating() -> void:
 func _test_registry_new() -> void:
 	var e := ClassGear.entry("warrior")
 	check("compte neuf : le Guerrier porte l'équipement de départ (« base »)", int(e.base) == 8 and int(e.status) == 1)
-	check("compte neuf : il manque des pièces → Survie, puis Armurerie", String(e.activity) == "Survie, puis Armurerie" and String(e.need).contains("pièce"))
+	check("compte neuf : il manque des pièces → Survie, puis Atelier", String(e.activity) == "Survie, puis Atelier" and String(e.need).contains("pièce"))
 	var locked := ClassGear.entry("light_blade")
 	check("classe verrouillée : à commencer, il manque la classe → sa mission (%s)" % locked.activity, int(locked.status) == 0 and String(locked.need) == "la classe" and String(locked.activity).begins_with("Maîtrise"))
 	var never := ClassGear.entry("thief")
@@ -251,7 +251,7 @@ func _test_registry_full() -> void:
 	var cid := "warrior"
 	Profile.best_level = 100
 	var e2 := ClassGear.entry(cid)
-	check("niveau visé très haut : à renforcer → Armurerie (%d %%)" % roundi(float(e2.ratio) * 100), int(e2.status) == 2 and String(e2.activity) == "Survie, puis Armurerie")
+	check("niveau visé très haut : à renforcer → Atelier (%d %%)" % roundi(float(e2.ratio) * 100), int(e2.status) == 2 and String(e2.activity) == "Survie, puis Atelier")
 	for s in Profile.equipped:
 		var it: Dictionary = Profile.equipped[s]
 		it["upgrade"] = Items.MAX_UPGRADE

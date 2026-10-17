@@ -138,8 +138,8 @@ func _test_items() -> void:
 	slot.set_item(ring)
 	var card: Control = slot._make_custom_tooltip(slot.tooltip_text)
 	add_child(card)
-	var rtl: RichTextLabel = card.get_child(0)
-	check("carte au survol : nom, stats, qualité", rtl.text.contains(String(ring.name)) and rtl.text.contains("Qualité"))
+	var rtl: RichTextLabel = card.find_children("*", "RichTextLabel", true, false)[0]  # carte v2 (lot GX-3) : panneaux autocollants
+	check("carte au survol : nom, stats, PE (la qualité derrière Maj)", rtl.text.contains(String(ring.name)) and rtl.text.contains("PE ") and Items.describe(ring, true).contains("Qualité"))
 	card.queue_free()
 	slot.free()
 
@@ -655,6 +655,8 @@ func _test_run_screens() -> void:
 	eq._equip(it)
 	check("équiper depuis la page", is_same(Profile.equipped.get(it.slot), it))
 	check("pause > Héros : ni préréglages (la classe est fixée) ni Forge en Survie", not eq.preset_bar.visible and (not Run.survival or not eq._b_upgrade.visible))
+	eq._select({"kind": "item", "item": it})
+	check("pause > Héros : ni objectif, ni pastilles du sac, ni cadenas en partie (lot GX-3)", not eq._goal_bar.visible and not eq._chip_row.visible and not eq._b_lock.visible and not eq._best_btn.visible)
 	eq._unequip(it.slot)
 	check("retirer depuis la page", not Profile.equipped.has(it.slot) or not is_same(Profile.equipped.get(it.slot), it))
 	check("pause : deux pages (Run, Héros), l'aide est un bouton", screen.page_count() == 2)

@@ -210,6 +210,12 @@ func _test_inventory_page() -> void:
 		if c is ItemWidgets.ItemSlot and is_same(c.item, high):
 			cell_locked = c.wear_check
 	check("grille : la case signale le niveau requis", cell_locked)
+	# lot GX-3 : la carte d'objet dit le niveau requis à la place du verdict ; « Le meilleur » ne propose que du portable
+	var card := ItemWidgets.card_text(high, "", false)
+	check("carte (v2) : « Niveau N requis · tu es niveau 10 » à la place du verdict", card.contains("Niveau %d requis · tu es niveau 10" % Items.required_level(high)) and not card.contains("Meilleure pour"))
+	check("« Le meilleur ▲N » : jamais une pièce au-dessus du niveau", not EquipmentPage.PresetBar.best_plan("warrior").any(func(r): return is_same(r.new, high)))
+	page._preview_stats(high)
+	check("stats au survol : rien pour une pièce trop haute (les intitulés restent)", String(page._stat_deltas.hp.text) == "PV")
 	# pièce portée au-dessus du niveau : la retirer demande une confirmation
 	Profile.install_gear({"boots": _piece("boots", 70)})
 	_set_level(10)

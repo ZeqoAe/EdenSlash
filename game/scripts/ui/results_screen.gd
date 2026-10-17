@@ -171,7 +171,14 @@ static func kept_rows(supplies_kept: bool) -> Array:
 		out.append(row("Plan trouvé : %s" % String(e.get("name", "?")), String(Items.SLOT_NAMES.get(String(e.get("slot", "")), "")),
 			"Se fabrique à l'Atelier avec des insignes", "equipment"))
 	if not Run.seen_items.is_empty():
-		out.append(row("Pièces découvertes", str(Run.seen_items.size()), "À acheter à l'Armurerie avec des insignes", "equipment"))
+		# lot GX-3 (P0-7, P0-10) : les plans nommés (3 au plus), l'objectif d'abord
+		var found := Goals.found_in(Run.seen_items + Run.boss_plans)
+		for g in found:
+			out.push_front(row("★ Objectif : plan trouvé", String(g), "Il se fabrique à l'Atelier : la barre d'objectif te le rappelle.", "equipment"))
+		var names: Array = Run.seen_items.slice(0, 3).map(func(id): return String(GameData.eden_by_id.get(int(id), {}).get("name", "?")))
+		var more := Run.seen_items.size() - names.size()
+		out.append(row("Plans : %s%s" % [", ".join(names), (" + %d" % more) if more > 0 else ""], str(Run.seen_items.size()),
+			"Plans découverts : ces pièces se fabriquent à l'Atelier avec des insignes.", "equipment"))
 	out.append_array(chest_rows(Run.new_reward_chests()))
 	if supplies_kept and supplies() > 0:
 		out.append(row("Fournitures", str(supplies()), "Elles rejoignent ta réserve : parchemins, pierres, gemmes et formules se dépensent à la Forge.", "gem"))

@@ -837,23 +837,123 @@ static func stat_rows(item: Dictionary) -> Array:
 	return rows
 
 
-static func _row_text(r: Dictionary, size := 0) -> String:
-	var bonus := ("  [color=%s]%s[/color]" % ["#7fe08a" if r.bonus_ok else "#ff7a7a", r.bonus]) if r.bonus != "" else ""
+## Ligne d'une statistique. [param size] > 0 : la statistique principale, en gros. [param delta] : écart avec la pièce
+## portée (lot GX-3 : ▲ / ▼ sur la ligne même) ; [param star] : la stat compte pour le profil de la classe (★) ;
+## [param bonus] faux : sans l'écart dû à la qualité et à l'amélioration (carte courte).
+static func _row_text(r: Dictionary, size := 0, delta := "", star := false, bonus := true) -> String:
+	var bon := ("  [color=%s]%s[/color]" % ["#7fe08a" if r.bonus_ok else "#ff7a7a", r.bonus]) if r.bonus != "" and bonus else ""
 	var pct := ("  [color=#9fd0ff]%s[/color]" % r.pct) if r.pct != "" else ""
 	var name_col := "#9fd0ff" if r.aff else "#e6e4ee"
+	var d := ("  " + delta) if delta != "" else ""
 	if size > 0:
-		return "[font_size=%d][b]%s[/b][/font_size]  [color=%s]%s[/color]%s%s" % [size, r.val, name_col, r.name, bonus, pct]
-	return "[color=%s]%s[/color]  [b]%s[/b]%s%s" % [name_col, r.name, r.val, bonus, pct]
+		return "[font_size=%d][b]%s[/b][/font_size]  [color=%s]%s[/color]%s%s%s" % [size, r.val, name_col, r.name, bon, pct, d]
+	return "%s[color=%s]%s[/color]  [b]%s[/b]%s%s%s" % ["[color=#ffd76a]★[/color] " if star else "", name_col, r.name, r.val, bon, pct, d]
+
+
+## Classe dont on lit le profil de stats (infobulles, verdicts) : celle de la partie, sinon celle affichée au hub.
+static func view_class() -> String:
+	return Run.class_id if Profile.in_run and Run.class_id != "" else Profile.selected_class
+
+
+## Stats « qui comptent » pour le profil de la classe (poids ≥ 1,2 : ★ sur la carte).
+const STAR_WEIGHT := 1.2
+
+
+## Verdict d'une pièce face à [param worn] (lot GX-3, étude BM-GEAR Q4 : le profil de la classe pour le mot, la PE pour le
+## chiffre ; jamais de pourcentage dans le texte permanent) : {word, tone (« gain », « same », « loss », « free »), gain
+## (écart relatif au profil, pour Maj), dpe (écart de PE)}.
+static func verdict(item: Dictionary, worn: Dictionary) -> Dictionary:
+	var dpe := GearPower.delta_if_equipped(item) if String(item.get("slot", "")) in SLOTS else 0
+	if worn.is_empty():
+		return {"word": "Emplacement libre", "tone": "free", "gain": 1.0, "dpe": dpe}
+	var cid := view_class()
+	var prof := ClassGear.profile(cid)
+	var c := _gain(item, worn, prof)
+	var who := (" pour " + String(GameData.class_data(cid).get("name_fr", cid))) if not prof.is_empty() else ""
+	var tone := "gain" if c >= 0.02 else ("loss" if c <= -0.02 else "same")
+	var word: String = String({"gain": "▲ Meilleure", "loss": "▼ Moins bonne", "same": "≈ Équivalente"}[tone]) + who
+	return {"word": word, "tone": tone, "gain": c, "dpe": dpe}
+
+
+const TONE_COLORS := {"gain": "#c3f07a", "free": "#c3f07a", "same": "#c9bfea", "loss": "#ff9db0"}
+
+
+## Écart relatif avec la pièce portée au même emplacement, au profil de la classe (▲ / ▼ des cases ; 1 : emplacement libre ;
+## 0 : la pièce est portée ou ne s'équipe pas). Même règle que [method verdict], sans le calcul de PE (léger : une grille entière).
+static func profile_gain(item: Dictionary) -> float:
+	var slot := String(item.get("slot", ""))
+	if not slot in SLOTS:
+		return 0.0
+	var worn: Dictionary = Profile.equipped.get(slot, {})
+	if slot == "weapon" and not Profile.can_be_main(item) and not (Survivor.active or Royale.active):
+		worn = Profile.equipped.get("offhand", {})
+	if worn.is_empty():
+		return 1.0
+	if is_same(worn, item) or String(worn.get("uid", "")) == String(item.get("uid", "-")):
+		return 0.0
+	return _gain(item, worn, ClassGear.profile(view_class()))
+
+
+## Écart relatif de valeur pour le profil [param prof] : la note pondérée × l'échelle de niveau de la PE (GearPower.item_power,
+## comme « Équiper le meilleur ») ; la note seule est rapportée au niveau de la pièce et ne compare pas deux niveaux.
+static func _gain(item: Dictionary, worn: Dictionary, prof: Dictionary) -> float:
+	var old := float(GearPower.item_power(worn, prof))
+	return (float(GearPower.item_power(item, prof)) - old) / maxf(absf(old), 1.0)
+
+
+## Ligne du verdict (BBCode) ; [param detailed] : l'écart au profil en plus (le seul pourcentage, derrière Maj).
+static func verdict_line(item: Dictionary, worn: Dictionary, detailed := false) -> String:
+	var v := verdict(item, worn)
+	var col := String(TONE_COLORS[v.tone])
+	var pe := "[color=%s]PE %s%s[/color]" % ["#c3f07a" if int(v.dpe) >= 0 else "#ff9db0", "+" if int(v.dpe) >= 0 else "−", GearPower.fmt(absi(int(v.dpe)))]
+	var more := ("   [color=#8a86a0]%+d %% au profil[/color]" % roundi(float(v.gain) * 100.0)) if detailed and v.tone != "free" else ""
+	return "[b][color=%s]%s[/color][/b]   %s%s" % [col, v.word, pe, more]
+
+
+## Écart d'une statistique avec la pièce portée : « ▲ +120 » / « ▼ −3 % » (BBCode), "" si nul.
+static func _delta_text(k: String, now: float, before: float) -> String:
+	var d := now - before
+	var pct: bool = k in PERCENT_STATS
+	var shown := roundi(d * 100.0) if pct else roundi(d)
+	if shown == 0:
+		return ""
+	return "[color=%s]%s %s%s%s[/color]" % ["#c3f07a" if d > 0 else "#ff9db0", "▲" if d > 0 else "▼", "+" if d > 0 else "−", fmt_num(absi(shown)), " %" if pct else ""]
+
+
+## Provenance d'une pièce (lot GX-3) : « Plan ✓ · Époque I · Monts Calcaires », « Plan à trouver : … », « Panoplie de donjon :
+## Atelier > Plans de donjon » ; "" si rien d'utile (pièce du Survivant, trophée, pièce hors des coffres).
+static func source_line(item: Dictionary) -> String:
+	if item.get("sv", false) or String(item.get("slot", "")) == "trophy":
+		return ""
+	if String(item.get("archetype", "")) != "" and SETS.has(String(item.archetype)):
+		return "Se fabrique : Atelier > Plans de donjon"
+	if not item.has("eden"):
+		return ""
+	var id := int(item.eden)
+	var place := Completion.plan_place(id) if not Completion._armory_ids.is_empty() else ""
+	if id in Profile.seen_gear:
+		return "Plan ✓" + ((" · " + place) if place != "" else " · se fabrique à l'Atelier")
+	if place != "":
+		return "Plan à trouver : " + place
+	return ""
 
 
 ## Bloc d'une panoplie : titre avec le nombre de pièces portées, puis les paliers (tous, ou seulement le prochain).
-static func _set_block(sid: String, title: String, detailed: bool) -> Array:
+## [param with_item] : pièce regardée, pas encore portée (lot GX-3 : « 1 / 6 → 2 avec celle-ci »).
+static func _set_block(sid: String, title: String, detailed: bool, with_item: Dictionary = {}) -> Array:
 	var tiers := set_tiers(sid)
 	if tiers.is_empty():
 		return []
 	var worn := int(set_counts(Profile.equipped).get(sid, 0))
 	var sc := SET_COLOR.to_html(false)
-	var out := ["", "[color=#%s]◆ %s  [b]%d / %d[/b][/color]" % [sc, title, worn, int(tiers.max())]]
+	var after := ""
+	if not with_item.is_empty() and String(with_item.get("slot", "")) in SLOTS and Profile.slot_of(with_item) == "":
+		var g := Profile.equipped.duplicate()
+		g[String(with_item.slot)] = with_item
+		var n := int(set_counts(g).get(sid, 0))
+		if n > worn:
+			after = "  [color=#c3f07a]→ %d avec celle-ci[/color]" % n
+	var out := ["", "[color=#%s]◆ %s  [b]%d / %d[/b][/color]%s" % [sc, title, worn, int(tiers.max()), after]]
 	var shown_next := false
 	for n in tiers:
 		var active: bool = worn >= int(n)
@@ -879,9 +979,16 @@ static func card_name(item: Dictionary) -> String:
 	return n
 
 
-## Carte d'un objet en BBCode. [param detailed] faux : la carte courte (statistique principale, 5 lignes,
-## passif, gemmes, panoplie) ; vrai : tout (bonus d'amélioration, paliers de panoplie, puissance de la pièce).
-static func describe(item: Dictionary, detailed := true) -> String:
+## Lignes de stats montrées en entier sur la carte courte (les stats ★ de la classe d'abord ; le reste sur une ligne grise).
+const CARD_STAR_ROWS := 3
+
+
+## Carte d'un objet en BBCode. [param detailed] faux : la carte courte (statistique principale, 3 stats ★ de la classe et le
+## reste sur une ligne, passif, gemmes, panoplie, provenance) ; vrai : tout (qualité, bonus d'amélioration, paliers de
+## panoplie, puissance de la pièce). [param worn] (lot GX-3) : la pièce portée au même emplacement ({} : emplacement libre ;
+## la pièce elle-même : elle est portée) : verdict au profil de la classe et écart de PE en tête (ou le niveau requis en
+## fraise), écarts ▲ / ▼ sur chaque ligne ; null : pas de comparaison (boutique, archive…).
+static func describe(item: Dictionary, detailed := true, worn = null) -> String:
 	var r: Dictionary = RARITIES[clampi(int(item.get("rarity", 0)), 0, RARITIES.size() - 1)]
 	var col := color_of(item).to_html(false)
 	var icon := String(item.get("icon", ""))
@@ -889,38 +996,61 @@ static func describe(item: Dictionary, detailed := true) -> String:
 	var q := float(item.get("quality", 1.0))
 	var up := int(item.get("upgrade", 0))
 	var lvl := int(item.get("level", 0))
+	var armor := armor_type(item)
 	var lines := ["%s[font_size=21][b][color=#%s]%s[/color][/b][/font_size]" % [
 			"[img=52x52]%s[/img]  " % icon if icon != "" else "", col, card_name(item)],
-		"[color=#%s]%s[/color] · %s%s" % [col, ("Éveillé" if item.get("awakened", false) else r.name), _weapon_or_slot(item),
-			(" · niveau %d" % lvl) if lvl > 0 else ""]]
+		"[color=#%s]%s[/color] · %s%s%s" % [col, ("Éveillé" if item.get("awakened", false) else r.name), _weapon_or_slot(item),
+			(" · niveau %d" % lvl) if lvl > 0 else "", (" · " + armor) if armor != "" else ""]]
 	var bits: PackedStringArray = []
 	if slot != "trophy":
 		bits.append("[color=#ffd76a][b]PE %s[/b][/color]" % GearPower.fmt(GearPower.item_power(item)))
-	bits.append("Qualité [color=%s]%d %%[/color]" % ["#7fe08a" if q >= 1.0 else "#ff9a7a", roundi(q * 100.0)])
+	if detailed or slot == "trophy":
+		bits.append("Qualité [color=%s]%d %%[/color]" % ["#7fe08a" if q >= 1.0 else "#ff9a7a", roundi(q * 100.0)])
 	lines.append(" · ".join(bits))
+	# lot GX-3 : verdict face à la pièce portée (ou le niveau requis, en fraise, à sa place)
+	var cmp: Dictionary = {}
+	if worn is Dictionary and slot in SLOTS:
+		var self_worn: bool = (not (worn as Dictionary).is_empty() and (is_same(worn, item) or String(worn.get("uid", "")) == String(item.get("uid", "-")))) \
+			or Profile.slot_of(item) != ""
+		var req := HeroLevel.wear_block(item)
+		if req > 0 and not self_worn:
+			lines.append("[b][color=#ff9db0]Niveau %d requis · tu es niveau %d[/color][/b]" % [req, HeroLevel.wear_level()])
+		elif req > 0:
+			lines.append("[color=#ffb070]Niveau %d requis · déjà portée, elle reste[/color]" % req)
+		elif not self_worn:
+			lines.append(verdict_line(item, worn, detailed))
+		if not self_worn and not (worn as Dictionary).is_empty():
+			cmp = stats(worn)
 	lines.append(SEPARATOR)
-	# statistique principale en gros, puis les lignes secondaires
+	# statistique principale en gros, puis les lignes secondaires (★ : celles qui comptent pour la classe)
 	var rows := stat_rows(item)
+	var st_all := stats(item)
 	var main := main_stat_key(item, stats(item, false))
 	var mi := rows.find_custom(func(x): return x.k == main)
+	var weights: Dictionary = ClassGear.profile(view_class()).get("weights", {})
+	var dl := func(k: String) -> String: return _delta_text(k, float(st_all.get(k, 0.0)), float(cmp.get(k, 0.0))) if not cmp.is_empty() else ""
 	if mi >= 0:
-		lines.append(_row_text(rows[mi], 30))
+		lines.append(_row_text(rows[mi], 30, dl.call(String(rows[mi].k)), false, detailed))
 		rows.remove_at(mi)
-	var hidden := 0
-	if not detailed and rows.size() > CARD_ROWS:
-		var order := range(rows.size())
-		order.sort_custom(func(a, b): return float(rows[a].w) > float(rows[b].w))
-		var keep := order.slice(0, CARD_ROWS)
-		var kept: Array = []
-		for i in rows.size():
-			if i in keep:
-				kept.append(rows[i])
-		hidden = rows.size() - kept.size()
-		rows = kept
+	rows.sort_custom(func(a, b): return float(weights.get(a.k, 1.0)) * float(a.w) > float(weights.get(b.k, 1.0)) * float(b.w))
+	var rest: Array = []
+	if not detailed and rows.size() > CARD_STAR_ROWS:
+		rest = rows.slice(CARD_STAR_ROWS)
+		rows = rows.slice(0, CARD_STAR_ROWS)
 	for row in rows:
-		lines.append(_row_text(row))
-	if hidden > 0:
-		lines.append("[color=#8a86a0]+ %d autre%s statistique%s[/color]" % [hidden, "s" if hidden > 1 else "", "s" if hidden > 1 else ""])
+		lines.append(_row_text(row, 0, dl.call(String(row.k)), float(weights.get(row.k, 1.0)) >= STAR_WEIGHT, detailed))
+	if not rest.is_empty():
+		var parts: PackedStringArray = []
+		for row in rest:
+			parts.append("%s %s" % [row.name, row.val])
+		lines.append("[color=#8a86a0]Aussi : %s[/color]" % " · ".join(parts))
+	# stats que la pièce portée a et pas celle-ci (perdues en l'échangeant)
+	var lost: PackedStringArray = []
+	for k in cmp:
+		if not st_all.has(k) and float(cmp[k]) != 0.0:
+			lost.append("%s %s" % [STAT_NAMES.get(k, EXTRA_STAT_NAMES.get(k, k)), _delta_text(String(k), 0.0, float(cmp[k]))])
+	if not lost.is_empty():
+		lines.append("[color=#8a86a0]En moins :[/color] %s" % "  ".join(lost))
 	if item.has("passive"):
 		lines.append("")
 		# passif d'Eden : son nom d'origine est un libellé anglais sans intérêt (souvent le nom de la pièce), seul l'effet est écrit
@@ -962,11 +1092,16 @@ static func describe(item: Dictionary, detailed := true) -> String:
 	# panoplies : celle de la pièce, puis l'archétype de donjon
 	var sid := String(item.get("set", ""))
 	var sdef := set_def(sid)
+	var with_item: Dictionary = item if worn is Dictionary else {}
 	if not sdef.is_empty():
-		lines.append_array(_set_block(sid, "Panoplie %s" % sdef.name, detailed))
+		lines.append_array(_set_block(sid, "Panoplie %s" % sdef.name, detailed, with_item))
 	var arch := String(item.get("archetype", ""))
 	if SETS.has(arch):
-		lines.append_array(_set_block(arch, "Panoplie de donjon · %s" % SETS[arch].name, detailed))
+		lines.append_array(_set_block(arch, "Panoplie de donjon · %s" % SETS[arch].name, detailed, with_item))
+	var src := source_line(item) if worn is Dictionary or detailed else ""
+	if src != "":
+		lines.append("")
+		lines.append("[color=#86ddff]%s[/color]" % src)
 	if detailed:
 		var foot: Array = []
 		if up < MAX_UPGRADE and not Run.active and not is_unique(item):

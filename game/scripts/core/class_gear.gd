@@ -499,11 +499,14 @@ static func entry(cid: String, by_uid: Dictionary = {}) -> Dictionary:
 	elif filled == 0 and not cid in Profile.starter_done:
 		need = ["l'équipement de départ", "Héros : choisir la classe", ""]  # offert au premier choix de la classe
 	elif not has_w:
-		need = ["une arme (%s)" % wname, "Survie, puis Armurerie", "armory"]
+		need = ["une arme (%s)" % wname, "Survie, puis Atelier", "armory"]
 	elif filled < slots or base > 0:
-		need = [_plural(slots - filled + base, "pièce") + " à trouver", "Survie, puis Armurerie", "armory"]
+		need = [_plural(slots - filled + base, "pièce") + " à trouver", "Survie, puis Atelier", "armory"]
+	elif float(e.ratio) < EQUIPPED_RATIO and hero_capped(float(e.pe)):
+		# lot GX-3 : l'équipement est déjà au niveau du héros ; les pièces plus hautes ne se porteraient pas
+		need = ["du niveau de héros (tu es niveau %d)" % HeroLevel.level(), "Monte ton niveau de héros en Survie", ""]
 	elif float(e.ratio) < EQUIPPED_RATIO:
-		need = ["des pièces de plus haut niveau", "Survie, puis Armurerie", "armory"]
+		need = ["des pièces de plus haut niveau", "Survie, puis Atelier", "armory"]
 	elif panoply < PANOPLY:
 		need = (["la panoplie des Esprits (%d / %d)" % [spirits, PANOPLY], "Panthéon", "pantheon"] if spirits > int(e.arch)
 			else ["une panoplie de donjon (%d / %d)" % [int(e.arch), PANOPLY], "Donjons", "dungeons"])
@@ -517,6 +520,13 @@ static func entry(cid: String, by_uid: Dictionary = {}) -> Dictionary:
 	e["activity"] = need[1]
 	e["unlock"] = need[2]
 	return e
+
+
+## Lot GX-3 : la PE [param pe] est « correcte » pour le niveau de héros, mais pas pour le niveau de référence du Registre (le
+## meilleur niveau atteint en partie) : ce qui manque, c'est le niveau de héros (les pièces plus hautes ne se portent pas).
+static func hero_capped(pe: float) -> bool:
+	var hl := HeroLevel.level()
+	return hl < GearPower.target_level() and pe >= EQUIPPED_RATIO * float(GearPower.expected(hl))
 
 
 ## Fiches des 60 classes (ordre de data/classes.json).

@@ -206,11 +206,12 @@ static func report_win(id: String, class_id: String) -> Dictionary:
 	var out := {"piece": {}, "chests": [], "title": "", "awake": false, "text": []}
 	if first:
 		var piece := make_piece(b, class_id)
+		Profile.mark_new(piece)  # pastille « Nouveau » dans le sac (lot GX-3)
 		Profile.vault.append(piece)
 		out.piece = piece
 		out.text.append("Pièce de la panoplie des Esprits : %s" % String(piece.name))
 		_reveal(i)  # à l'Armurerie pour toutes les classes
-		out.text.append("Armes des Esprits de tous les types : à l'Armurerie" if String(b.slot) == "weapon" else "Rachetable à l'Armurerie")
+		out.text.append("Armes des Esprits de tous les types : Atelier > Fabriquer" if String(b.slot) == "weapon" else "Se refabrique à l'Atelier")
 		Profile.chest_add(String(b.look), LEVEL)
 		out.chests.append(String(b.look))
 		if String(b.aura) != "":

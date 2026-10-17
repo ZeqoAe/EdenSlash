@@ -13,7 +13,7 @@ const LIST := {
 	"training": {"name": "Zone d'entraînement", "cond": "", "legacy": true},
 	"collection": {"name": "Carnet", "cond": "Termine une première Survie (quelle que soit l'issue).", "legacy": true},
 	"chests": {"name": "Coffres", "cond": "Ramasse un premier coffre de récompense ou termine une Survie.", "legacy": true},
-	"armory": {"name": "Atelier : Armurerie", "cond": "Découvre une première pièce dans un coffre de la Survie.", "legacy": true},
+	"armory": {"name": "Atelier : Fabriquer", "cond": "Découvre une première pièce dans un coffre de la Survie.", "legacy": true},
 	"certificates": {"name": "Plateau des certificats", "cond": "Atteins la maîtrise 3 d'une classe.", "legacy": true},
 	"daily": {"name": "Quêtes", "cond": "Termine 3 Survies.", "legacy": true},
 	"forge": {"name": "Atelier : Forge et Réserve", "cond": "Gagne l'époque I (boss de la 3e carte).", "legacy": true},

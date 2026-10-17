@@ -435,7 +435,7 @@ func _show_card(it: Dictionary) -> void:
 		c.queue_free()
 	_card_scroll.visible = not it.is_empty()
 	if not it.is_empty():
-		_card_box.add_child(ItemWidgets.item_card(it, HeroLevel.lock_line(it)))
+		_card_box.add_child(ItemWidgets.item_card(it))  # le niveau requis est écrit dans la carte (lot GX-3)
 
 
 func _show_choices(chest: Dictionary) -> void:

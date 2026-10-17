@@ -54,7 +54,7 @@ func _test_states() -> void:
 	Profile.insignia = 5000
 	a = Compass.advice()
 	check("2. avec des insignes : une pièce est achetable (%s)" % a.get("id", "?"), String(a.get("id", "")) == "buy_piece" and a.go.get("workshop", -1) == 0)
-	check("2. le texte donne les insignes (%s)" % a.get("text", ""), String(a.text).contains("5 000 insignes") and String(a.text).contains("achetable"))
+	check("2. le texte donne les insignes (%s)" % a.get("text", ""), String(a.text).contains("5 000 insignes") and String(a.text).contains("à fabriquer"))
 	# 3. des coffres à ouvrir (rien d'achetable)
 	Profile.insignia = 0
 	Profile.reward_chests.append(Rewards.make("gear", 20))
@@ -153,7 +153,7 @@ func _test_after() -> void:
 	Profile.runs_done = 3
 	_see(["head"])
 	var l := Compass.after("survival", {"unlocked": "Époque II", "seen": 3})
-	check("bilan Survie : époque et pièces découvertes (%s)" % l, l.contains("Époque II") and l.contains("3 pièces"))
+	check("bilan Survie : époque et plans découverts (%s)" % l, l.contains("Époque II") and l.contains("3 plans découverts") and not l.contains("Armurerie"))
 	check("bilan Survie : deux gains, pas de suite (ligne courte)", not l.contains("›"))
 	l = Compass.after("survival", {"seen": 2})
 	check("bilan Survie : un seul gain, la suite suit (%s)" % l, l.contains("›"))

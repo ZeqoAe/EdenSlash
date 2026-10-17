@@ -18,7 +18,7 @@ const RIGHT_SLOTS := ["offhand", "back", "gloves", "boots", "ring"]
 const SLOT_CAPTIONS := {"weapon": "Arme principale", "offhand": "Arme secondaire", "necklace": "Collier"}
 const FAMILIES := [["all", "Tous", "all"], ["weapon", "Armes", "weapon"], ["armor", "Armures", "armor"],
 	["acc", "Accessoires", "ring"], ["cons", "Fournitures", "potion"], ["mat", "Matériaux", "gem"], ["misc", "Divers", "misc"]]
-const SORTS := ["Rareté", "Niveau", "Nom", "Type", "Amélioration"]
+const SORTS := ["Rareté", "Niveau", "Nom", "Type", "Amélioration", "Pour ma classe"]
 const COLUMNS := 9
 const COLUMNS_NARROW := 6  # fenêtre étroite (1280 px) : la grille ne doit pas pousser la page hors de l'écran
 const CELL := 66.0
@@ -70,6 +70,29 @@ var _b_upgrade: Button
 var _b_dismantle: Button
 var _armed_dismantle := false
 var _msg: Label
+# lot GX-3 : objectif, pastilles de filtre, démontage en masse, cadenas, aperçu des stats au survol
+const CHIPS := [["class", "Ma classe", "Les pièces que ta classe peut porter (arme de son type)."],
+	["wear", "Portables", "Les pièces de ton niveau de héros."],
+	["new", "Nouveautés", "Les pièces arrivées depuis ta dernière visite (pastille « neuf »)."],
+	["kept", "Gardées", "Les pièces au cadenas : jamais démontées."],
+	["useless", "Inutiles", "Moins bonnes que d'autres pièces du coffre pour tous les profils de classe, sans amélioration ni gemme, ni portées ni dans un préréglage, ni gardées."]]
+var _chip := ""
+var _chip_row: HBoxContainer
+var _chip_buttons := {}
+var _mass_btn: Button
+var _undo_btn: Button
+var _undo := {}  # dernier démontage en masse de la séance : {items, gained}
+var _b_lock: Button
+var _goal_bar: GoalBar
+var _gate: Label
+var _hover := {}  # pièce survolée dans le sac : écarts des stats du héros
+var _base_stats := {}
+var _stat_deltas := {}  # clé -> Label (écart de la pièce survolée)
+var _d_verdict: RichTextLabel
+var _best_btn: Button
+var _useless: Array = []
+var _useless_dirty := true
+var _best := {}  # ClassGear.best_gear de la classe affichée (▲ sur les cases de la poupée)
 
 
 static func gold_icon(name: String, px := 22.0) -> TextureRect:
@@ -84,7 +107,7 @@ static func gold_icon(name: String, px := 22.0) -> TextureRect:
 	return t
 
 
-## Cadre des grands panneaux : bleu nuit translucide, double liseré doré.
+## Cadre des grands panneaux : bleu nuit translucide, double liseré doré (autres écrans ; l'Équipement a frame_v2).
 static func frame_box(radius := 12, alpha := 0.9) -> StyleBoxFlat:
 	var sb := UiTheme.flat_box(Color(0.05, 0.05, 0.13, alpha), Color(0.78, 0.6, 0.3, 0.9), 2, radius)
 	sb.content_margin_left = 16
@@ -104,6 +127,23 @@ static func card_box(active := false) -> StyleBoxFlat:
 	sb.content_margin_right = 12
 	sb.content_margin_top = 8
 	sb.content_margin_bottom = 8
+	return sb
+
+
+## Cadre des panneaux de l'Équipement (DA v2, lot GX-3) : autocollant d'encre (contour, ombre dure), sans filet doré.
+static func frame_v2(shadow := 6, pad := Vector2(14, 12)) -> StyleBox:
+	var sb := UiTheme.sticker("nuit", {"shadow": shadow, "radius": 16, "gloss": false, "cel_top": 0.0, "cel_bottom": 0.0, "pad": pad})
+	sb.content_margin_top = pad.y
+	sb.content_margin_bottom = pad.y + shadow
+	return sb
+
+
+## Petite carte de l'Équipement (DA v2) : puits d'encre plus sombre, contour d'encre ; [param tone] : un bonbon (choisie…).
+static func card_v2(tone := "") -> StyleBox:
+	if tone != "":
+		return UiTheme.sticker(tone, {"shadow": 3, "radius": 12, "gloss": false, "cel_top": 0.0, "cel_bottom": 0.3, "pad": Vector2(12, 4)})
+	var sb := UiTheme.well_style(Vector2(12, 6), 12)
+	sb.bg_color = Color("231b40")
 	return sb
 
 
@@ -134,8 +174,8 @@ func _exit_tree() -> void:
 # --- centre : préréglages, héros, équipement, panoplie, statistiques -----------------------------------
 func _build_center() -> void:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", frame_box())
-	panel.custom_minimum_size = Vector2(520 if _narrow() else 540, 0)
+	panel.add_theme_stylebox_override("panel", frame_v2())
+	panel.custom_minimum_size = Vector2(470 if _narrow() else 540, 0)  # 1280 px : la colonne du sac garde sa grille de 6 (lot GX-3)
 	add_child(panel)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6 if _short() else 10)
@@ -172,12 +212,24 @@ func _build_center() -> void:
 	pv.add_theme_constant_override("separation", -4)
 	pw.add_child(pv)
 	Hud._label(pv, "Puissance d'équipement", 14, UiTheme.TEXT)
+	var prow := HBoxContainer.new()
+	prow.add_theme_constant_override("separation", 12)
+	pv.add_child(prow)
 	_power = Label.new()
 	UiTheme.title(_power, 24 if _short() else 30, UiTheme.GOLD)
-	pv.add_child(_power)
+	prow.add_child(_power)
+	# lot GX-3 : à quoi sert ce chiffre (la difficulté de donjon suivante et l'écart)
+	_gate = Hud._label(prow, "", UiTheme.MIN_TEXT, UiTheme.MUTED)
+	_gate.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_gate.mouse_filter = Control.MOUSE_FILTER_PASS
+	# lot GX-3 (P0-8) : « Le meilleur ▲N » sort de « Gérer » : combien de pièces il change, la liste avant / après, puis Appliquer
+	_best_btn = ForgeWidgets.candy_button("", "lagon", 15, 38)
+	_best_btn.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_best_btn.pressed.connect(func(): preset_bar._open_best())
+	pw.add_child(_best_btn)
 	# panoplie active
 	var set_card := PanelContainer.new()
-	set_card.add_theme_stylebox_override("panel", card_box())
+	set_card.add_theme_stylebox_override("panel", card_v2())
 	v.add_child(set_card)
 	var sh := HBoxContainer.new()
 	sh.add_theme_constant_override("separation", 8)
@@ -193,7 +245,8 @@ func _build_center() -> void:
 	sh.add_child(see)
 	# 5 statistiques principales
 	var stats := PanelContainer.new()
-	stats.add_theme_stylebox_override("panel", card_box())
+	stats.add_theme_stylebox_override("panel", card_v2())
+	stats.tooltip_text = "Survole une pièce du sac : l'écart qu'elle ferait sur ton héros s'affiche ici."
 	v.add_child(stats)
 	var srow := HBoxContainer.new()
 	srow.add_theme_constant_override("separation", 4)
@@ -207,9 +260,14 @@ func _build_center() -> void:
 		var cv2 := VBoxContainer.new()
 		cv2.add_theme_constant_override("separation", -3)
 		cell.add_child(cv2)
-		Hud._label(cv2, String(s[1]), 12, UiTheme.MUTED)
-		_stat_vals[s[0]] = Hud._label(cv2, "", 19, UiTheme.TEXT)
-		_stat_vals[s[0]].add_theme_font_override("font", UiTheme.bold_font())
+		# l'intitulé laisse la place à l'écart de la pièce survolée (lot GX-3 : « ▲+120 », la colonne ne s'élargit pas)
+		_stat_deltas[s[0]] = Hud._label(cv2, String(s[1]), 12, UiTheme.MUTED)
+		_stat_deltas[s[0]].set_meta("title", String(s[1]))
+		_stat_vals[s[0]] = Label.new()
+		_stat_vals[s[0]].add_theme_font_size_override("font_size", 19 if not _narrow() else 17)
+		_stat_vals[s[0]].add_theme_color_override("font_color", UiTheme.TEXT)
+		_stat_vals[s[0]].add_theme_font_override("font", UiTheme.number_font())
+		cv2.add_child(_stat_vals[s[0]])
 	var det := _small_button("Détail", _show_stat_detail)
 	det.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	det.tooltip_text = "Toutes les statistiques du héros"
@@ -293,17 +351,7 @@ func _small_button(text: String, cb: Callable) -> Button:
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = Vector2(0, 34)
-	b.add_theme_font_size_override("font_size", 13)
-	b.add_theme_font_override("font", UiTheme.bold_font())
-	var n := UiTheme.flat_box(Color(0.1, 0.08, 0.16, 0.95), UiTheme.GOLD_DIM, 1, 6, false)
-	n.content_margin_left = 12
-	n.content_margin_right = 12
-	b.add_theme_stylebox_override("normal", n)
-	var h := UiTheme.flat_box(Color(0.3, 0.22, 0.08, 1.0), UiTheme.GOLD, 1, 6, false)
-	h.content_margin_left = 12
-	h.content_margin_right = 12
-	b.add_theme_stylebox_override("hover", h)
-	b.add_theme_stylebox_override("pressed", h)
+	UiTheme.style_button(b, "nuit", UiTheme.MIN_TEXT, {"shadow": 3})  # DA v2 (lot GX-3)
 	b.pressed.connect(cb)
 	return b
 
@@ -311,14 +359,19 @@ func _small_button(text: String, cb: Callable) -> Button:
 # --- droite : familles, recherche, grille, fiche --------------------------------------------
 func _build_right() -> void:
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", frame_box())
+	panel.add_theme_stylebox_override("panel", frame_v2())
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	add_child(panel)
 	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 10)
+	v.add_theme_constant_override("separation", 6 if _short() else 8)
 	panel.add_child(v)
+	# lot GX-3 : l'objectif épinglé (pièce visée, ce qui manque, « Y aller »), hors partie
+	_goal_bar = GoalBar.new(_narrow())
+	_goal_bar.narrow = _narrow()
+	_goal_bar.visible = not Profile.in_run
+	v.add_child(_goal_bar)
 	var fams := HBoxContainer.new()
-	fams.add_theme_constant_override("separation", 6)
+	fams.add_theme_constant_override("separation", 4)
 	v.add_child(fams)
 	for f in FAMILIES:
 		var b := Button.new()
@@ -328,15 +381,13 @@ func _build_right() -> void:
 		b.expand_icon = false
 		# icône à gauche du nom (centrée, Godot la dessine sous le texte) ; seule, au centre
 		b.icon_alignment = HORIZONTAL_ALIGNMENT_LEFT if b.text != "" else HORIZONTAL_ALIGNMENT_CENTER
-		b.add_theme_constant_override("icon_max_width", 15 if not _narrow() else 20)
+		b.add_theme_constant_override("icon_max_width", 15 if not _narrow() else 18)
 		b.add_theme_constant_override("h_separation", 4)
 		b.focus_mode = Control.FOCUS_NONE
 		b.toggle_mode = true
-		b.custom_minimum_size = Vector2(0, 38)
+		b.custom_minimum_size = Vector2(0, 36)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.clip_text = true
-		b.add_theme_font_size_override("font_size", 11)
-		b.add_theme_font_override("font", UiTheme.bold_font())
 		var id := String(f[0])
 		b.pressed.connect(func():
 			_family = id
@@ -345,11 +396,12 @@ func _build_right() -> void:
 		fams.add_child(b)
 		_fam_buttons[id] = b
 	var filters := HBoxContainer.new()
-	filters.add_theme_constant_override("separation", 10)
+	filters.add_theme_constant_override("separation", 8)
 	v.add_child(filters)
 	var sbox := PanelContainer.new()
-	sbox.add_theme_stylebox_override("panel", card_box())
+	sbox.add_theme_stylebox_override("panel", card_v2())
 	sbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sbox.custom_minimum_size = Vector2(110, 0)
 	filters.add_child(sbox)
 	var shb := HBoxContainer.new()
 	sbox.add_child(shb)
@@ -373,9 +425,46 @@ func _build_right() -> void:
 	_sort = OptionButton.new()
 	for s in SORTS:
 		_sort.add_item("Trier : " + s)
-	_sort.custom_minimum_size = Vector2(170, 0)
+	_sort.fit_to_longest_item = false  # 1280 px : la rangée ne pousse plus la colonne hors de l'écran (lot GX-3)
+	_sort.clip_text = true
+	_sort.custom_minimum_size = Vector2(150 if _narrow() else 190, 0)
+	_sort.add_theme_font_size_override("font_size", UiTheme.MIN_TEXT)
 	_sort.item_selected.connect(func(_i): _refresh_grid())
 	filters.add_child(_sort)
+	# lot GX-3 : pastilles de filtre et actions en masse (hors partie)
+	_chip_row = HBoxContainer.new()
+	_chip_row.add_theme_constant_override("separation", 4)
+	_chip_row.visible = not Profile.in_run
+	v.add_child(_chip_row)
+	for c in CHIPS:
+		var cb := Button.new()
+		cb.text = String(c[1])
+		cb.tooltip_text = String(c[2])
+		cb.toggle_mode = true
+		cb.focus_mode = Control.FOCUS_NONE
+		cb.clip_text = true
+		cb.custom_minimum_size = Vector2(0, 30)
+		cb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		UiTheme.style_button(cb, "nuit", 13, {"shadow": 2, "selected_tone": "mandarine", "pad": Vector2(4, 2)})
+		var cid := String(c[0])
+		cb.pressed.connect(func():
+			_chip = "" if _chip == cid else cid
+			_slot_filter = ""
+			_refresh_grid())
+		_chip_row.add_child(cb)
+		_chip_buttons[cid] = cb
+	var mass := HBoxContainer.new()
+	mass.add_theme_constant_override("separation", 6)
+	v.add_child(mass)
+	_mass_btn = ForgeWidgets.candy_button("", "fraise", 15, 34)
+	_mass_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_mass_btn.tooltip_text = "Démonte d'un coup les pièces inutiles (jamais une pièce gardée, portée, dans un préréglage ou la meilleure de sa case)."
+	_mass_btn.pressed.connect(_on_mass_dismantle)
+	mass.add_child(_mass_btn)
+	_undo_btn = ForgeWidgets.candy_button("Annuler le démontage", "lagon", 15, 34)
+	_undo_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_undo_btn.pressed.connect(_on_undo_dismantle)
+	mass.add_child(_undo_btn)
 	_msg = Hud._label(v, "", 14, UiTheme.BUFF)
 	_msg.visible = false
 	_empty = Hud._label(v, "", 14, UiTheme.MUTED)
@@ -394,10 +483,8 @@ func _build_right() -> void:
 
 func _build_detail(parent: Control) -> void:
 	_d_card = PanelContainer.new()
-	var sb := frame_box(10, 0.95)
-	sb.border_color = UiTheme.GOLD
-	_d_card.add_theme_stylebox_override("panel", sb)
-	_d_card.custom_minimum_size = Vector2(0, 286)
+	_d_card.add_theme_stylebox_override("panel", card_v2())
+	_d_card.custom_minimum_size = Vector2(0, 250 if _short() else 286)
 	_d_card.visible = false  # rien de choisi : la grille prend toute la place
 	parent.add_child(_d_card)
 	var cv := VBoxContainer.new()
@@ -437,6 +524,16 @@ func _build_detail(parent: Control) -> void:
 	_d_badge_label = Hud._label(_d_badge, "", 12, Color.WHITE)
 	_d_level = Hud._label(tv, "", 17, UiTheme.TEXT)
 	_d_level.add_theme_font_override("font", UiTheme.bold_font())
+	# 1280 px (lot GX-3) : la colonne « Pièce portée » se replie ; le verdict passe sous le niveau
+	_d_verdict = RichTextLabel.new()
+	_d_verdict.bbcode_enabled = true
+	_d_verdict.fit_content = true
+	_d_verdict.scroll_active = false
+	_d_verdict.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_d_verdict.add_theme_font_size_override("normal_font_size", UiTheme.MIN_TEXT)
+	_d_verdict.add_theme_font_size_override("bold_font_size", UiTheme.MIN_TEXT)
+	_d_verdict.visible = _narrow()
+	tv.add_child(_d_verdict)
 	_d_stats = ItemWidgets.rich(left, 14)
 	_d_stats.fit_content = true  # sa hauteur suit les statistiques : jamais de barre de défilement
 	_d_stats.scroll_active = false
@@ -448,10 +545,11 @@ func _build_detail(parent: Control) -> void:
 	var right := VBoxContainer.new()
 	right.custom_minimum_size = Vector2(280, 0)
 	right.add_theme_constant_override("separation", 8)
+	right.visible = not _narrow()  # 1280 px : la fiche reste dans la colonne (lot GX-3)
 	h.add_child(right)
 	# la pièce portée à côté de celle qu'on regarde
 	_d_cmp = PanelContainer.new()
-	_d_cmp.add_theme_stylebox_override("panel", card_box())
+	_d_cmp.add_theme_stylebox_override("panel", frame_v2(3, Vector2(10, 6)))
 	right.add_child(_d_cmp)
 	var cmv := VBoxContainer.new()
 	cmv.add_theme_constant_override("separation", 4)
@@ -477,46 +575,38 @@ func _build_detail(parent: Control) -> void:
 	_d_cmp_verdict.scroll_active = false
 	_d_cmp_verdict.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	var setp := PanelContainer.new()
-	setp.add_theme_stylebox_override("panel", card_box())
+	setp.add_theme_stylebox_override("panel", frame_v2(3, Vector2(10, 6)))
 	setp.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	right.add_child(setp)
 	_d_set = ItemWidgets.rich(setp, 13)
 	var acts := HBoxContainer.new()
-	acts.add_theme_constant_override("separation", 10)
+	acts.add_theme_constant_override("separation", 6 if _narrow() else 10)
 	cv.add_child(acts)
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	spacer.size_flags_stretch_ratio = 0.6
-	acts.add_child(spacer)
 	_b_equip = _action(acts, "Équiper", "", _on_equip, true)
+	_b_equip.size_flags_stretch_ratio = 1.5  # « Niveau 70 requis » tient dans le bouton (lot GX-3)
 	_b_offhand = _action(acts, "Secondaire", "", _on_offhand)
 	_b_offhand.tooltip_text = "Arme secondaire : elle ne frappe pas seule ; « Changer d'arme » la met en main en plein combat."
 	_b_upgrade = _action(acts, "Forge", "upgrade", _on_upgrade)
+	# lot GX-3 : cadenas (L) : une pièce gardée ne se démonte jamais, ni seule ni en masse
+	_b_lock = _action(acts, "Garder", "", _on_lock)
 	_b_dismantle = _action(acts, "Démonter", "dismantle", _on_dismantle)
 
 
 func _action(parent: Control, text: String, icon_name: String, cb: Callable, accent := false) -> Button:
 	var b := Button.new()
 	b.text = text
-	if icon_name != "":
+	if icon_name != "" and not _narrow():  # 1280 px : le texte seul tient dans le bouton (lot GX-3)
 		b.icon = MenuWidgets.icon(icon_name)
 		b.expand_icon = false
 		b.add_theme_constant_override("icon_max_width", 18)
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(0, 44)
+	b.custom_minimum_size = Vector2(0, 40 if _short() else 44)
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	b.clip_text = true
-	b.add_theme_font_size_override("font_size", 14)
-	b.add_theme_font_override("font", UiTheme.bold_font())
-	var n := UiTheme.flat_box(Color(0.36, 0.26, 0.08, 1.0) if accent else Color(0.09, 0.08, 0.16, 0.95),
-		UiTheme.GOLD if accent else UiTheme.GOLD_DIM, 2 if accent else 1, 8, false)
-	b.add_theme_stylebox_override("normal", n)
-	var hv := UiTheme.flat_box(Color(0.5, 0.36, 0.1, 1.0) if accent else Color(0.22, 0.17, 0.08, 1.0), Color(1, 0.9, 0.6), 2, 8, false)
-	b.add_theme_stylebox_override("hover", hv)
-	b.add_theme_stylebox_override("pressed", hv)
-	var d := UiTheme.flat_box(Color(0.07, 0.06, 0.1, 0.8), Color(0.3, 0.27, 0.35), 1, 8, false)
-	b.add_theme_stylebox_override("disabled", d)
-	b.add_theme_color_override("font_color", Color(1, 0.95, 0.85))
+	# DA v2 (lot GX-3) : action principale soleil, démonter fraise, le reste en puits d'encre
+	UiTheme.style_button(b, "soleil" if accent else ("fraise" if icon_name == "dismantle" else "nuit"), 15, {"shadow": 3, "pad": Vector2(6, 2)})
+	if accent or icon_name == "dismantle":
+		b.add_theme_font_override("font", UiTheme.bold_font())  # Mochiy reste au bouton primaire de l'écran
 	b.pressed.connect(cb)
 	parent.add_child(b)
 	return b
@@ -622,6 +712,13 @@ static func entry_display(e: Dictionary) -> Dictionary:
 
 func _sorted(list: Array) -> Array:
 	var mode := _sort.selected
+	if mode == 5:  # lot GX-3 : « Pour ma classe » : la valeur de la pièce au profil de la classe (les pièces d'abord)
+		var prof := ClassGear.profile(_cls())
+		var pairs: Array = []
+		for e in list:
+			pairs.append([GearPower.item_power(e.item, prof) if String(e.kind) == "item" and String(e.item.get("slot", "")) in Items.SLOTS else -1, e])
+		pairs.sort_custom(func(a, b): return int(a[0]) > int(b[0]))
+		return pairs.map(func(x): return x[1])
 	list.sort_custom(func(a, b):
 		var ka: Array
 		var kb: Array
@@ -669,13 +766,36 @@ Elle ouvre les difficultés Héroïque et Mythique des donjons et les butins lé
 	var sets := Items.active_set_bonuses(Profile.set_gear())
 	_set_text.text = ("%s · %d pièces" % [Items.set_def(sets[-1].set).get("name", ""), int(sets[-1].pieces)]) if not sets.is_empty() else "Aucune panoplie active"
 	_set_text.add_theme_color_override("font_color", UiTheme.TEXT if not sets.is_empty() else UiTheme.MUTED)
-	var p := _stats_player()
-	var mag := String(cd.get("dmg_type", "phys")) == "mag"
-	_stat_vals.hp.text = str(roundi(p.max_hp))
-	_stat_vals.atk.text = str(roundi(p.matk if mag else p.atk))
-	_stat_vals.def.text = str(roundi(p.defense))
-	_stat_vals.speed.text = str(roundi(p.atk_speed * 100.0))
-	_stat_vals.agi.text = str(roundi(float(p.attrs.get("agi", 0.0))))
+	_useless_dirty = true
+	_base_stats = _hero_stats(_stats_player())
+	for k in _stat_vals:
+		_stat_vals[k].text = str(roundi(float(_base_stats[k])))
+	_hover = {}
+	_clear_deltas()
+	# lot GX-3 : la difficulté de donjon suivante et l'écart de PE ; ▲ sur les cases de la poupée quand le coffre a mieux
+	var gate := next_gate()
+	_gate.visible = not gate.is_empty() and not Profile.in_run
+	if _gate.visible:
+		var gap := int(gate.need) - GearPower.hero_power()
+		if gap <= 0:
+			_gate.text = "%s ✓" % gate.name
+		elif _narrow():
+			_gate.text = "%s : −%s" % [gate.name, GearPower.fmt(gap)]
+		else:
+			_gate.text = "%s à %s · −%s" % [gate.name, GearPower.fmt(int(gate.need)), GearPower.fmt(gap)]
+		_gate.tooltip_text = "PE requise pour la difficulté %s du donjon ouvert le plus facile : %s." % [String(gate.name), GearPower.fmt(int(gate.need))]
+	_best = ClassGear.best_gear(cid) if not Profile.in_run and not Modes.sealed() else {}
+	var plan := EquipmentPage.PresetBar.best_plan(cid)
+	_best_btn.visible = not plan.is_empty()
+	_best_btn.text = ("Meilleur ▲%d" if _narrow() else "Le meilleur ▲%d") % plan.size()
+	_best_btn.tooltip_text = "Pour chaque emplacement, la meilleure pièce du coffre pour le profil %s : la liste avant de l'appliquer." % ClassGear.profile_name(ClassGear.profile_id(cid))
+	for slot in _doll:
+		var b: Dictionary = _best.get(slot, {})
+		var cur: Dictionary = Profile.equipped.get(slot, {})
+		_doll[slot].better = not b.is_empty() and String(b.get("uid", "")) != String(cur.get("uid", "")) and (cur.is_empty() or Items.profile_gain(b) >= 0.02)
+	if is_instance_valid(_goal_bar):
+		_goal_bar.visible = not Profile.in_run
+		_goal_bar.refresh()
 	for id in _fam_buttons:
 		_fam_buttons[id].set_pressed_no_signal(id == _family)
 		_style_family(_fam_buttons[id], id == _family)
@@ -683,18 +803,69 @@ Elle ouvre les difficultés Héroïque et Mythique des donjons et les butins lé
 	_refresh_detail()
 
 
+## Les 5 statistiques montrées sous la poupée, pour le héros [param p].
+func _hero_stats(p: Player) -> Dictionary:
+	var mag := String(GameData.class_data(_cls()).get("dmg_type", "phys")) == "mag"
+	return {"hp": p.max_hp, "atk": p.matk if mag else p.atk, "def": p.defense, "speed": p.atk_speed * 100.0, "agi": float(p.attrs.get("agi", 0.0))}
+
+
+## Lot GX-3 (P0-9) : l'écart que ferait la pièce survolée [param it] sur les statistiques du héros (hors partie ; {} : rien).
+func _preview_stats(it: Dictionary) -> void:
+	if Profile.in_run or player != null:
+		return
+	if it.is_empty() or not String(it.get("slot", "")) in Items.SLOTS or _is_equipped(it) or HeroLevel.wear_block(it) > 0:
+		_hover = {}
+		_clear_deltas()
+		return
+	if is_same(_hover, it):
+		return
+	_hover = it
+	var slot := "offhand" if String(it.slot) == "weapon" and not Profile.can_be_main(it) else String(it.slot)
+	var orig := Profile.equipped
+	var tmp := orig.duplicate()
+	tmp[slot] = it
+	Profile.equipped = tmp
+	var after := _hero_stats(_stats_player())
+	Profile.equipped = orig
+	_stats_player()
+	for k in _stat_deltas:
+		var d := roundi(float(after[k]) - float(_base_stats.get(k, 0.0)))
+		_stat_deltas[k].text = String(_stat_deltas[k].get_meta("title")) if d == 0 else ("▲ +%s" % GearPower.fmt(d) if d > 0 else "▼ −%s" % GearPower.fmt(-d))
+		_stat_deltas[k].add_theme_color_override("font_color", UiTheme.MUTED if d == 0 else (ForgeWidgets.GAIN if d > 0 else ForgeWidgets.PERTE))
+
+
+func _clear_deltas() -> void:
+	for k in _stat_deltas:
+		_stat_deltas[k].text = String(_stat_deltas[k].get_meta("title"))
+		_stat_deltas[k].add_theme_color_override("font_color", UiTheme.MUTED)
+
+
+## La difficulté de donjon suivante que la PE ouvre : {name, need} (Héroïque, puis Mythique ; la plus facile des donjons
+## ouverts) ; {} si aucun donjon n'est ouvert ou tout est ouvert.
+static func next_gate() -> Dictionary:
+	var zones := Dungeons.zone_ids().filter(func(z): return Dungeons.is_open(String(z)))
+	if zones.is_empty():
+		return {}
+	for d in [1, 2]:
+		var need := -1
+		for z in zones:
+			var n := Dungeons.power_required(String(z), d)
+			if need < 0 or n < need:
+				need = n
+		if need > GearPower.hero_power() or d == 2:
+			return {"name": ["Normal", "Héroïque", "Mythique"][d], "need": need}
+	return {}
+
+
 func _style_family(b: Button, on: bool) -> void:
-	var sb := UiTheme.flat_box(Color(0.62, 0.45, 0.14, 1.0) if on else Color(0.08, 0.07, 0.16, 0.92),
-		UiTheme.GOLD if on else Color(0.45, 0.36, 0.22, 0.8), 1, 7, false)
-	sb.content_margin_left = 6
-	sb.content_margin_right = 6
-	b.add_theme_stylebox_override("normal", sb)
-	b.add_theme_stylebox_override("pressed", sb)
-	b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.3, 0.22, 0.09, 1.0), UiTheme.GOLD, 1, 7, false))
-	b.add_theme_color_override("font_color", Color(0.12, 0.08, 0.02) if on else Color(0.92, 0.88, 0.8))
-	b.add_theme_color_override("font_pressed_color", Color(0.12, 0.08, 0.02))
-	b.add_theme_color_override("icon_normal_color", Color(0.12, 0.08, 0.02) if on else ICON_GOLD)
-	b.add_theme_color_override("icon_pressed_color", Color(0.12, 0.08, 0.02))
+	if b.has_meta("fam_on") and bool(b.get_meta("fam_on")) == on:
+		return  # déjà habillé (DA v2, lot GX-3 : onglet actif mandarine, les autres en puits d'encre)
+	b.set_meta("fam_on", on)
+	UiTheme.style_button(b, "mandarine" if on else "nuit", 13, {"shadow": 2, "pad": Vector2(4, 2)})
+	b.add_theme_font_override("font", UiTheme.bold_font())
+	b.add_theme_stylebox_override("pressed", b.get_theme_stylebox("normal"))
+	b.add_theme_color_override("icon_normal_color", Color.WHITE if on else ICON_GOLD)
+	b.add_theme_color_override("icon_pressed_color", Color.WHITE)
 
 
 func _refresh_grid() -> void:
@@ -706,11 +877,27 @@ func _refresh_grid() -> void:
 	var q := _search.text.strip_edges().to_lower()
 	var all := _entries()
 	var list := all.filter(func(e): return (_family == "all" or family_of(e) == _family) and (q == "" or entry_name(e).to_lower().contains(q)))
+	# lot GX-3 : pastilles de filtre
+	if _useless_dirty:
+		_useless = useless_items() if not Profile.in_run else []
+		_useless_dirty = false
+	var useless := _useless
+	if _chip != "":
+		list = list.filter(func(e): return _chip_ok(e, useless))
 	if _slot_filter != "":
 		list = all.filter(func(e): return String(e.kind) == "item" and String(e.item.slot) == _item_slot(_slot_filter) and (q == "" or entry_name(e).to_lower().contains(q)))
 		list.sort_custom(func(a, b): return EquipmentPage._power_of(a.item) > EquipmentPage._power_of(b.item))
 	else:
 		list = _sorted(list)
+	for id in _chip_buttons:
+		_chip_buttons[id].set_pressed_no_signal(id == _chip)
+	_chip_buttons["useless"].text = "Inutiles · %d" % useless.size() if not useless.is_empty() else "Inutiles"
+	var n_new := Profile.inventory.filter(func(x): return Profile.is_new(x)).size()
+	_chip_buttons["new"].text = "Nouveautés · %d" % n_new if n_new > 0 else "Nouveautés"
+	_mass_btn.visible = _chip == "useless" and not useless.is_empty() and not Profile.in_run
+	_mass_btn.text = "Démonter les %s" % GearPower.plural(useless.size(), "pièce inutile", "pièces inutiles")
+	_undo_btn.visible = not _undo.is_empty() and not Profile.in_run
+	_mass_btn.get_parent().visible = _mass_btn.visible or _undo_btn.visible
 	_count.text = GearPower.plural(list.size(), "objet") if list.size() == all.size() else "%d / %d" % [list.size(), all.size()]
 	_slot_chip.visible = _slot_filter != ""
 	_slot_chip.text = "%s ✕" % Items.SLOT_NAMES.get(_slot_filter, "")
@@ -738,15 +925,147 @@ func _cell(e: Dictionary) -> Control:
 	s.wear_check = String(e.kind) == "item"
 	s.badge = ("%d" % int(e.count)) if e.has("count") else ""
 	if String(e.kind) == "item" and not Profile.in_run and not Profile.item_users(String(e.item.uid)).is_empty():
-		s.badge = "★"
+		s.badge = "P"  # dans un préréglage (le ★ est celui des objectifs, lot GX-3)
 	s.selected = _same(e, _selected)
 	s.can_drop = func(data): return data.source == "equipped"
 	s.on_drop = func(data): _unequip(String(data.slot))
 	s.pressed.connect(func(): _select(e))
+	if String(e.kind) == "item":  # survol : l'écart sur les stats du héros (lot GX-3)
+		s.mouse_entered.connect(func(): _preview_stats(e.item))
+		s.mouse_exited.connect(func(): _preview_stats({}))
 	s.activated.connect(func():
 		if String(e.kind) == "item":
 			_equip(e.item))
 	return s
+
+
+# --- lot GX-3 : pastilles, pièces inutiles, démontage en masse, cadenas -----------------------------------------------
+## L'entrée [param e] passe la pastille choisie ([member _chip]) ; [param useless] : useless_items().
+func _chip_ok(e: Dictionary, useless: Array) -> bool:
+	if String(e.kind) != "item":
+		return false
+	var it: Dictionary = e.item
+	match _chip:
+		"class":
+			return String(it.slot) in Items.SLOTS and (String(it.slot) != "weapon" or Items.weapon_type_of(it) == Items.default_weapon_type(_cls()))
+		"wear":
+			return String(it.slot) in Items.SLOTS and HeroLevel.can_wear(it)
+		"new":
+			return Profile.is_new(it)
+		"kept":
+			return Profile.is_locked(it)
+		"useless":
+			return useless.any(func(x): return is_same(x, it))
+	return true
+
+
+## Pièces « inutiles » du coffre commun : ni gardées (cadenas), ni portées, ni dans un préréglage d'une classe, ni
+## améliorées, serties ou enchantées, ni la pièce d'un objectif, ni la meilleure de leur emplacement (arme : de leur type)
+## pour l'un des profils de classe ou pour la PE. Ce sont les seules que « Démonter les N pièces inutiles » touche.
+static func useless_items() -> Array:
+	if Profile.in_run:
+		return []
+	var used := {}
+	for cls in Profile.presets:
+		for s in Profile.presets[cls].get("sets", []):
+			for uid in (s.get("slots", {}) as Dictionary).values():
+				used[String(uid)] = true
+	for it in Profile.equipped.values():
+		used[String(it.get("uid", ""))] = true
+	var all := Profile.all_items().filter(func(it): return String(it.get("slot", "")) in Items.SLOTS)
+	# la meilleure de chaque case pour chaque profil (et pour la PE commune) reste
+	var keep := {}
+	var profiles: Array = [{}]
+	for pid in ClassGear.profile_ids():
+		var p: Dictionary = (ClassGear.data().profiles[pid] as Dictionary).duplicate()
+		p["id"] = pid
+		profiles.append(p)
+	for prof in profiles:
+		var best := {}
+		for it in all:
+			var key := String(it.slot) + ("|" + Items.weapon_type_of(it) if String(it.slot) == "weapon" else "")
+			var r := float(GearPower.item_power(it, prof))  # valeur au profil × niveau (comme « Équiper le meilleur »)
+			if not best.has(key) or r > float(best[key][0]):
+				best[key] = [r, it]
+		for key in best:
+			keep[String(best[key][1].get("uid", ""))] = true
+	var out: Array = []
+	for it in Profile.inventory:
+		var uid := String(it.get("uid", ""))
+		var gems := 0
+		for g in it.get("sockets", []):
+			if g is Dictionary:
+				gems += 1
+		if not String(it.get("slot", "")) in Items.SLOTS or Profile.is_locked(it) or used.has(uid) or keep.has(uid) \
+				or int(it.get("upgrade", 0)) > 0 or it.has("enchant") or it.get("sv", false) or gems > 0 or Goals.is_goal_item(it):
+			continue
+		if Items.profile_gain(it) > 0.0:
+			continue  # mieux que la pièce portée de la classe affichée : jamais « inutile »
+		out.append(it)
+	return out
+
+
+## « Démonter les N pièces inutiles » : confirmation (ce que ça rend), puis démontage ; annulable pendant la séance.
+func _on_mass_dismantle() -> void:
+	var list := useless_items()
+	if list.is_empty():
+		return
+	var total := {}
+	for it in list:
+		var y := Items.disassemble_yield(it)
+		for k in y:
+			total[k] = int(total.get(k, 0)) + int(y[k])
+	var go := func(): _mass_dismantle(list)
+	if skip_confirm:
+		go.call()
+		return
+	InfoCard.ask(self, "Démonter %s ?" % GearPower.plural(list.size(), "pièce", "pièces"),
+		"Elles rendent %s. Jamais une pièce gardée, portée, dans un préréglage ou la meilleure de sa case. Annulable tant que tu restes ici." % ItemWidgets.materials_text(total, true),
+		"Démonter", go)
+
+
+## Tests : démontage en masse sans la carte de confirmation.
+static var skip_confirm := false
+
+
+func _mass_dismantle(list: Array) -> void:
+	var got := Profile.disassemble_many(list.filter(func(it): return not Profile.is_locked(it)))
+	_undo = {"items": list, "gained": got}
+	_selected = {}
+	refresh()
+	_say("%s démontées : %s" % [GearPower.plural(list.size(), "pièce", "pièces"), ItemWidgets.materials_text(got, true)])
+
+
+func _on_undo_dismantle() -> void:
+	if _undo.is_empty():
+		return
+	var ok := Profile.undo_disassemble(_undo.items, _undo.gained)
+	var n: int = (_undo.items as Array).size()
+	_undo = {}
+	refresh()
+	_say("Démontage annulé : %s de retour." % GearPower.plural(n, "pièce", "pièces") if ok else "Trop tard : les cristaux ont déjà servi.", UiTheme.BUFF if ok else ItemWidgets.LOCK_TEXT)
+
+
+## Cadenas de la pièce choisie (bouton « Garder », touche L).
+func _on_lock() -> void:
+	if _selected.get("kind", "") != "item":
+		return
+	var it: Dictionary = _selected.item
+	Profile.set_locked(it, not Profile.is_locked(it))
+	_armed_dismantle = false
+	_useless_dirty = true
+	_refresh_grid()
+	_refresh_detail()
+	_say("Gardée : elle ne sera jamais démontée." if Profile.is_locked(it) else "Cadenas retiré.")
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	if not is_visible_in_tree() or not (event is InputEventKey) or not event.pressed or event.echo:
+		return
+	if event.keycode == KEY_L and not event.ctrl_pressed and _selected.get("kind", "") == "item" and not Profile.in_run \
+			and not (get_viewport().gui_get_focus_owner() is LineEdit):
+		_on_lock()
+		get_viewport().set_input_as_handled()
 
 
 func _empty_cell() -> Control:
@@ -769,6 +1088,8 @@ func _select(e: Dictionary) -> void:
 	_selected = e
 	_armed_dismantle = false
 	_say("")
+	if e.get("kind", "") == "item":
+		Profile.mark_seen(e.item)  # regardée : plus « neuf » (lot GX-3)
 	for c in _grid.get_children():
 		if c is StackSlot:
 			c.selected = _same(c.entry, e)
@@ -832,6 +1153,7 @@ func _refresh_detail() -> void:
 		for b in [_b_equip, _b_dismantle]:
 			b.disabled = true
 		_b_offhand.visible = false
+		_b_lock.visible = false
 		# gemmes : la Forge propose la fusion
 		_b_upgrade.disabled = not (Profile.in_run and String(e.kind) == "stack" and key.begins_with("gem"))
 		_b_upgrade.tooltip_text = "Fusion de 3 gemmes identiques (Forge)"
@@ -860,7 +1182,7 @@ func _refresh_detail() -> void:
 	if not Profile.in_run:
 		var users := Profile.item_users(String(it.uid))
 		if not users.is_empty():
-			fl.append("★ Utilisé par : " + ", ".join(users))
+			fl.append("Préréglage : " + ", ".join(users))
 	_d_flavor.text = "[i][color=#b8b4c8]%s[/color][/i]" % "\n".join(fl)
 	_d_set.text = _set_bbcode(it)
 	_refresh_compare(it, equipped)
@@ -892,6 +1214,20 @@ func _refresh_detail() -> void:
 	var users := Profile.item_users(String(it.get("uid", ""))) if not Profile.in_run else []
 	_b_dismantle.tooltip_text = "Retire d'abord l'objet." if equipped else (("Attention : utilisé par le préréglage de " + ", ".join(users)) if not users.is_empty() else "")
 	_b_dismantle.text = "Confirmer ?" if _armed_dismantle else "Démonter"
+	# lot GX-3 : cadenas
+	var locked := Profile.is_locked(it)
+	_b_lock.visible = not Profile.in_run and String(it.slot) != "trophy"
+	_b_lock.text = "Gardée" if locked else "Garder"
+	_b_lock.tooltip_text = "Gardée : jamais démontée, ni seule ni en masse. Clic (ou L) : retirer le cadenas." if locked \
+		else "Garder (L) : la pièce ne pourra plus être démontée, ni seule ni en masse."
+	if not _b_lock.has_meta("locked_tone") or bool(_b_lock.get_meta("locked_tone")) != locked:
+		_b_lock.set_meta("locked_tone", locked)
+		UiTheme.style_button(_b_lock, "lagon" if locked else "nuit", 15, {"shadow": 3, "pad": Vector2(6, 2)})
+	if locked:
+		_b_dismantle.disabled = true
+		_b_dismantle.tooltip_text = "Pièce gardée : retire d'abord le cadenas."
+	else:
+		_b_dismantle.disabled = equipped
 
 
 ## Pièce portée à l'emplacement où irait [param it] (l'arme d'un autre type que la classe va en secondaire).
@@ -904,6 +1240,7 @@ func _compare_target(it: Dictionary) -> Dictionary:
 ## Carte « Pièce portée » : la pièce en place et ce que change l'échange (mieux ou moins bien, puissance).
 func _refresh_compare(it: Dictionary, equipped: bool) -> void:
 	_d_cmp.visible = not equipped
+	_d_verdict.text = ""
 	if equipped:
 		return
 	var worn := _compare_target(it)
@@ -914,19 +1251,19 @@ func _refresh_compare(it: Dictionary, equipped: bool) -> void:
 		_d_cmp_name.text = "Emplacement libre"
 		_d_cmp_name.add_theme_color_override("font_color", UiTheme.MUTED)
 		_d_cmp_level.text = ""
-		txt = "[b][color=#7fe08a]▲ Nouvelle[/color][/b]"
 	else:
 		_d_cmp_name.text = Items.display_name(worn)
 		_d_cmp_name.add_theme_color_override("font_color", Items.color_of(worn))
 		_d_cmp_level.text = "Niv. %d%s" % [int(worn.level), ("   +%d" % int(worn.get("upgrade", 0))) if int(worn.get("upgrade", 0)) > 0 else ""]
-		var wr := Items.rating(worn)
-		var c := (Items.rating(it) - wr) / maxf(wr, 0.01)
-		txt = "[b][color=%s]%s %+d %%[/color][/b]" % ["#7fe08a" if c >= 0.0 else "#ff7a7a",
-			"▲" if c >= 0.02 else ("▼" if c <= -0.02 else "≈"), roundi(c * 100.0)]
+	# lot GX-3 : le mot au profil de la classe, le chiffre en PE (jamais de pourcentage)
+	var v := Items.verdict(it, worn)
+	txt = "[b][color=%s]%s[/color][/b]" % [String(Items.TONE_COLORS[v.tone]), String(v.word).replace(" pour ", "\npour ") if _narrow() else String(v.word)]
 	if String(it.slot) in Items.SLOTS and not (it.slot == "weapon" and not Profile.can_be_main(it)):
-		var dpe := GearPower.delta_if_equipped(it)
-		txt += "   [color=%s]Puissance %s%s[/color]" % ["#7fe08a" if dpe >= 0 else "#ff7a7a", "+" if dpe >= 0 else "", GearPower.fmt(dpe)]
+		var dpe := int(v.dpe)
+		txt += "\n[color=%s]PE %s%s[/color]" % ["#c3f07a" if dpe >= 0 else "#ff9db0", "+" if dpe >= 0 else "−", GearPower.fmt(absi(dpe))]
 	_d_cmp_verdict.text = txt
+	if HeroLevel.wear_block(it) == 0:
+		_d_verdict.text = txt.replace("\npour ", " pour ").replace("\n", "   ")
 
 
 ## Statistiques de l'objet comparées à la pièce portée (écart en vert / rouge).
@@ -939,7 +1276,7 @@ func _stats_compare(it: Dictionary, equipped: bool) -> String:
 		if not k in keys:
 			keys.append(k)
 	var cells: PackedStringArray = []
-	for k in keys.slice(0, 8):
+	for k in keys.slice(0, 6 if _short() else 8):  # 720 px : la grille du sac garde deux rangées (lot GX-3)
 		var v := float(st.get(k, 0.0))
 		var pct: bool = k in Items.PERCENT_STATS
 		var name := String(Items.STAT_NAMES.get(k, Items.EXTRA_STAT_NAMES.get(k, k)))
@@ -949,7 +1286,7 @@ func _stats_compare(it: Dictionary, equipped: bool) -> String:
 			var dv := v - float(wst.get(k, 0.0))
 			if absf(dv) > 0.0001:
 				var dtxt := ("%+d %%" % roundi(dv * 100.0)) if pct else ("%+d" % roundi(dv))
-				diff = "  [color=%s](%s)[/color]" % ["#7fe08a" if dv > 0 else "#ff7a7a", dtxt]
+				diff = "  [color=%s]%s %s[/color]" % ["#c3f07a" if dv > 0 else "#ff9db0", "▲" if dv > 0 else "▼", dtxt]  # lot GX-3 : plus de parenthèses
 		cells.append("[cell][color=#c8c8d4]%s[/color]  [b]%s[/b]%s[/cell]" % [name, val, diff])
 	if cells.size() % 2 == 1:
 		cells.append("[cell] [/cell]")
@@ -1039,7 +1376,7 @@ func _on_offhand() -> void:
 
 
 func _on_dismantle() -> void:
-	if _selected.get("kind", "") != "item" or _is_equipped(_selected.item):
+	if _selected.get("kind", "") != "item" or _is_equipped(_selected.item) or Profile.is_locked(_selected.item):
 		return
 	if not _armed_dismantle:
 		_armed_dismantle = true

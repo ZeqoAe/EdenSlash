@@ -45,7 +45,7 @@ static func add(parent: Control, need: int, advised: int, rewards: Array, far_hi
 	var l := Hud._label(row, line, 15, UiTheme.TEXT)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.mouse_filter = Control.MOUSE_FILTER_STOP
-	l.tooltip_text = "Puissance d'équipement (PE).%s Conseillée : %s.\nPour la monter : des pièces de plus haut niveau à l'Armurerie, puis +N, gemmes et enchantements à la Forge." % [
+	l.tooltip_text = "Puissance d'équipement (PE).%s Conseillée : %s.\nPour la monter : des pièces de plus haut niveau à fabriquer à l'Atelier, puis +N, gemmes et enchantements à la Forge." % [
 		(" Requise pour entrer : %s." % GearPower.fmt(need)) if need > 0 else "", GearPower.fmt(advised)]
 	row.add_child(_chip(String(v[0]), v[1], String(v[2])))
 	var bar := ProgressBar.new()

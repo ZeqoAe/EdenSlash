@@ -1153,8 +1153,43 @@ func bag_keys(prefix: String) -> Array:
 func add_item(item: Dictionary) -> bool:
 	if inventory.size() >= INVENTORY_MAX:
 		return false
+	if not in_run:
+		mark_new(item)  # lot GX-3 : pastille « Nouveau » dans le sac du hub (fabriquée, coffre, récompense)
 	inventory.append(item)
 	changed.emit()
+	return true
+
+
+# --- verrou et « Nouveau » (lot GX-3, P0-2 de l'étude BM-GEAR) ---------------------------------------------------------
+## Clés de l'objet lui-même (aucun champ du profil) : « locked » = gardée (jamais démontée ni vendue, ni en masse ni à
+## l'unité), « new » = arrivée au coffre commun depuis la dernière fois qu'on l'a regardée.
+func is_locked(item) -> bool:
+	return item is Dictionary and bool(item.get("locked", false))
+
+
+func set_locked(item: Dictionary, on: bool) -> void:
+	if on:
+		item["locked"] = true
+	else:
+		item.erase("locked")
+	save_profile()
+
+
+func is_new(item) -> bool:
+	return item is Dictionary and bool(item.get("new", false))
+
+
+## Pastille « Nouveau » sur une pièce qui arrive au coffre commun hors partie (pas sur les trophées ni les pièces de départ).
+func mark_new(item: Dictionary) -> void:
+	if String(item.get("slot", "")) != "trophy" and not item.get("starter", false):
+		item["new"] = true
+
+
+## La pièce a été regardée : plus de pastille « Nouveau » (renvoie true si elle en avait une).
+func mark_seen(item) -> bool:
+	if not is_new(item):
+		return false
+	(item as Dictionary).erase("new")
 	return true
 
 
@@ -1176,6 +1211,7 @@ func equip(item: Dictionary, force := false) -> bool:
 		return equip_offhand(item, force)  # arme d'un autre type : seulement en arme secondaire
 	if not force and HeroLevel.wear_block(item) > 0:
 		return false
+	item.erase("new")  # portée : plus « Nouveau » (lot GX-3)
 	inventory.erase(item)
 	if equipped.has(slot):
 		inventory.append(equipped[slot])
@@ -1253,6 +1289,8 @@ func disassemble_many(items: Array) -> Dictionary:
 func _convert(items: Array, selling: bool) -> Dictionary:
 	var total := {}
 	for it in items:
+		if is_locked(it):
+			continue  # lot GX-3 : une pièce gardée (cadenas) ne se démonte ni ne se vend, même en masse
 		var y := Items.sell_value(it) if selling else Items.disassemble_yield(it)
 		for k in y:
 			total[k] = int(total.get(k, 0)) + int(y[k])
@@ -1260,6 +1298,21 @@ func _convert(items: Array, selling: bool) -> Dictionary:
 	gain(total)
 	save_profile()
 	return total
+
+
+## Annule un démontage de la séance (lot GX-3) : les pièces reviennent au coffre, ce qu'elles avaient rendu est repris.
+## false (rien n'est fait) si ce qu'elles ont rendu a déjà été dépensé.
+func undo_disassemble(items: Array, gained: Dictionary) -> bool:
+	for k in gained:
+		if amount(k) < int(gained[k]):
+			return false
+	for k in gained:
+		set_amount(k, amount(k) - int(gained[k]))
+	for it in items:
+		if not inventory.any(func(x): return is_same(x, it)):
+			inventory.append(it)
+	save_profile()
+	return true
 
 
 func gain(res: Dictionary) -> void:

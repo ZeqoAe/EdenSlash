@@ -115,6 +115,7 @@ var _banner: VBoxContainer
 var _count: Label
 var _msg: Label
 var _pick := {}  # boss -> indice de l'emplacement choisi
+var _goal_bar: GoalBar
 
 
 func subtitle() -> String:
@@ -132,6 +133,8 @@ func _ready() -> void:
 	_count = Hud._label(hh, "", 18, UiTheme.TEXT)
 	_count.tooltip_text = ResourceHelp.tip("plan")
 	_count.mouse_filter = Control.MOUSE_FILTER_PASS
+	_goal_bar = GoalBar.new()  # lot GX-3 : l'objectif épinglé (ce qui manque en pastilles)
+	panel.add_child(_goal_bar)
 	var sc := ScrollContainer.new()
 	sc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -168,6 +171,8 @@ func refresh() -> void:
 		return
 	var have := known()
 	_count.text = "%d / %d plans" % [have.size(), Dungeons.plan_total()]
+	if is_instance_valid(_goal_bar):
+		_goal_bar.refresh()
 	for box in [_banner, _grid, _todo_grid]:
 		for ch in box.get_children():
 			box.remove_child(ch)
@@ -286,6 +291,18 @@ func _card(bid: String) -> void:
 	bw.tooltip_text = lock if lock != "" else "La pièce rejoint aussitôt ton équipement (l'ancienne va au coffre commun)."
 	bw.pressed.connect(func(): _do_craft(bid, slot, true))
 	row.add_child(bw)
+	# lot GX-3 (P0-6) : viser cette pièce (★ Objectif)
+	var gid := Goals.dungeon_id(bid, slot)
+	var on := Goals.has(gid)
+	var gb := ForgeWidgets.candy_button("★", "mandarine" if on else "nuit", 18, 40)
+	gb.custom_minimum_size.x = 48
+	gb.tooltip_text = "Objectif suivi : clic pour ne plus le suivre." if on else "★ Objectif : viser cette pièce (ce qui manque s'affiche dans Héros et dans l'Atelier)."
+	gb.pressed.connect(func():
+		_msg.add_theme_color_override("font_color", UiTheme.BUFF)
+		_msg.text = Goals.toggle(gid)
+		refresh())
+	row.add_child(gb)
+	cell.goal = on
 	var info := "Plan légendaire" if rarity_of(bid) == Items.LEGENDARY else "Plan mythique · légendaire après une victoire en Mythique"
 	if have < c:
 		info = "Il te manque %s ≈ %s" % [insignia_text(c - have), GearPower.plural(Economy.maps_for(c - have), "carte de Survie", "cartes de Survie")]
@@ -293,6 +310,17 @@ func _card(bid: String) -> void:
 	il.tooltip_text = "La pièce est au niveau du donjon à ta meilleure difficulté contre ce boss ; légendaire après une victoire en Mythique."
 	il.mouse_filter = Control.MOUSE_FILTER_PASS
 	il.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+
+
+## Ouvre la page sur l'objectif [param gid] (« plan_<boss>:<emplacement> ») : l'emplacement visé est choisi sur sa carte.
+func show_goal(gid: String) -> void:
+	if not Goals.is_dungeon(gid):
+		return
+	var bid := gid.trim_prefix(Goals.DUNGEON).get_slice(":", 0)
+	var i := slots_of(bid).find(gid.get_slice(":", 1))
+	if i >= 0:
+		_pick[bid] = i
+	refresh()
 
 
 func _do_craft(bid: String, slot: String, wear: bool) -> void:
@@ -336,10 +364,7 @@ static func verdict_text(it: Dictionary) -> String:
 		return "[color=#c3f07a]Emplacement libre[/color]"
 	var cid := Profile.selected_class
 	var prof := ClassGear.profile(cid)
-	var c := Items.compare_to_equipped(it)
-	if not prof.is_empty():
-		var old := Items.rating(worn, prof)
-		c = (Items.rating(it, prof) - old) / maxf(absf(old), 0.0001)
+	var c := Items._gain(it, worn, prof)  # lot GX-3 : la valeur au profil × le niveau (la note seule ne compare pas deux niveaux)
 	var dpe := GearPower.delta_if_equipped(it)
 	var who := " pour " + String(GameData.class_data(cid).get("name_fr", cid)) if not prof.is_empty() else ""
 	var word := ("▲ Meilleure" if c >= 0.02 else ("▼ Moins bonne" if c <= -0.02 else "≈ Équivalente")) + who
