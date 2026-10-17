@@ -41,10 +41,14 @@ Aucune règle de jeu ni réglage mesuré touché (`tests/ac_mesures.json` intact
 ## Mesures (test `test_acx1`, 34 vérifications)
 | | 1600 × 900 | 1280 × 720 |
 |---|---|---|
-| cadre au repos (préparation) | 23 % de l'écran (cible ≤ 30 %) | 25 % |
+| cadre au repos (préparation) | 24 % de l'écran (cible ≤ 30 %) | 26 % |
 | plateau + banc + objets (cadre projeté) | 60 % × 65 % de l'écran, hors des panneaux | 58 % × 64 % |
 | contrôles hors de l'écran | 0 | 0 |
-Image médiane du vrai combat (`shot_ac`, arène) : 6,1 à 6,2 ms (avant : 6,3 à 6,9 ms), p95 ≈ 12-16 ms : pas de régression.
+Image médiane du vrai combat (`shot_ac`, arène, fenêtre) : 6,1 à 6,6 ms (avant : 6,3 à 6,9 ms), p95 ≈ 10-16 ms : pas de régression.
+Tests verts (copie propre de HEAD + ce lot) : `test_acx1`, `test_ac_ui`, `test_ac_board`, `test_ac_game`, `test_ac_ai`, `test_ac_effects`,
+`test_ac_rewards`, `test_ac_stats`, `test_ac_sim_real`, `test_ac_unit_ai`, `test_ac_data`, `test_nav_screens`, `test_texts_fr`.
+`test_ac_fight` (budget d'image headless : 54 à 144 ms) et `test_ac_sim` (écart 34 %) échouent aussi sur HEAD sans ce lot pendant la
+mesure : machine partagée chargée (une vingtaine de Godot d'autres sessions) ; aucun des deux n'utilise l'écran ni le cadre.
 
 ## Décisions
 - Bulle plutôt que panneau droit en manette (proposé par l'étude) : les stratèges restent atteignables à la croix, et la bulle suit le cadre.

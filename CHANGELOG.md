@@ -276,3 +276,4 @@ dans `game/scripts/core/version.gd` et ici.
 | 0.1.265 | Refonte graphique, socle UIK0 (suite) : deux erreurs de script corrigées (curseur de Paramètres sans valeur par défaut, survol d'un bouton retiré de l'écran), captures de contrôle du socle | session UIK0 |
 | 0.1.266 | L'Échiquier, lot ACX-1 : nouvelle interface autocollant (traits toujours visibles, fiche en bulle, boutique v2 avec étoile et traits qui montent, taux de boutique, série, revenu de la prochaine manche, plateau plus grand) | session ACX-1 |
 | 0.1.267 | Lot DNG-1 (suite) : test_dng1 stable (le coup fatal du héros est répété s'il tombe pendant une esquive) | session DNG-1 |
+| 0.1.268 | L'Échiquier, lot ACX-1 : rapport complété (mesures et tests) | session ACX-1 |
