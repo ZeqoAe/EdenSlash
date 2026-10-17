@@ -1,0 +1,59 @@
+{
+ "config": {
+  "modele": {
+   "base": "C:/AI/ComfyUI/models/checkpoints/sd_xl_base_1.0.safetensors"
+  },
+  "donnees": {
+   "images": "C:/AI/lora_data/eden_style_v0b/img",
+   "resolution": 1024,
+   "batch": 1,
+   "repetitions": 1,
+   "bucket_no_upscale": true,
+   "keep_tokens": 1
+  },
+  "reseau": {
+   "rang": 32,
+   "alpha": 16,
+   "unet_seulement": true
+  },
+  "entrainement": {
+   "pas": 2000,
+   "sauver_tous_les": 500,
+   "lr": 0.0001,
+   "optimiseur": "AdamW8bit",
+   "planning": "cosine",
+   "echauffement": 100,
+   "precision": "bf16",
+   "precision_sauvegarde": "bf16",
+   "min_snr_gamma": 5,
+   "graine": 42,
+   "fp8_base": false
+  },
+  "sortie": {
+   "dossier": "C:/AI/lora_out/eden_style_v0b",
+   "nom": "eden_style_v0b"
+  }
+ },
+ "versions": {
+  "python": "3.12.8",
+  "torch": "2.11.0+cu128",
+  "cuda": "12.8",
+  "gpu": "NVIDIA GeForce RTX 5070",
+  "accelerate": "1.15.0",
+  "transformers": "5.17.0",
+  "diffusers": "0.40.0",
+  "bitsandbytes": "0.50.2",
+  "safetensors": "0.8.0",
+  "sd-scripts": "690ea7f 2026-09-24 19:34:44 +0900"
+ },
+ "vram_avant_mib": 2518,
+ "code_sortie": 0,
+ "duree_s": 3463,
+ "vram_max_mib": 11836,
+ "vram_max_note": "mémoire de toute la carte (bureau et autres programmes compris), relevée toutes les 5 s",
+ "perte": {
+  "debut": 0.1059,
+  "milieu": 0.0959,
+  "fin": 0.0937
+ }
+}

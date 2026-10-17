@@ -89,8 +89,7 @@ def run(host, wf, out_dir, name, timeout):
 def grid(rows, cols, cells, out_path, thumb_w=384):
     """cells[(r, c)] = chemin ; rows / cols = libellés."""
     from PIL import Image, ImageDraw, ImageFont
-    first = Image.open(next(iter(cells.values())))
-    tw, th = thumb_w, int(thumb_w * first.height / first.width)
+    tw = th = thumb_w  # case carrée : chaque image y tient entière (formats mélangés)
     lw, hh = 260, 40
     sheet = Image.new("RGB", (lw + tw * len(cols), hh + th * len(rows)), (24, 22, 32))
     d = ImageDraw.Draw(sheet)
@@ -114,7 +113,9 @@ def grid(rows, cols, cells, out_path, thumb_w=384):
         for c in range(len(cols)):
             p = cells.get((r, c))
             if p:
-                sheet.paste(Image.open(p).convert("RGB").resize((tw, th), Image.LANCZOS), (lw + c * tw, y))
+                im = Image.open(p).convert("RGB")
+                im.thumbnail((tw, th), Image.LANCZOS)
+                sheet.paste(im, (lw + c * tw + (tw - im.width) // 2, y + (th - im.height) // 2))
     sheet.save(out_path, quality=88)
     return out_path
 
@@ -137,7 +138,22 @@ def main():
     ap.add_argument("--out", default=".")
     ap.add_argument("--grid", action="store_true", help="planche : lignes = prompt x graine, colonnes = intensités")
     ap.add_argument("--timeout", type=int, default=900)
+    ap.add_argument("--regrid", action="store_true", help="refaire seulement la planche d'après <out>/generation.jsonl")
     a = ap.parse_args()
+    if a.regrid:
+        rows, cols, cells = [], [], {}
+        with open(os.path.join(a.out, "generation.jsonl"), encoding="utf-8") as f:
+            for line in f:
+                info = json.loads(line)
+                row = info["name"].rsplit("_l", 1)[0]
+                col = "sans LoRA" if info["strength"] == 0 else f"LoRA {info['strength']:g}"
+                if row not in rows:
+                    rows.append(row)
+                if col not in cols:
+                    cols.append(col)
+                cells[(rows.index(row), cols.index(col))] = info["file"]
+        print("planche :", grid(rows, cols, cells, os.path.join(a.out, "planche.jpg")))
+        return 0
 
     os.makedirs(a.out, exist_ok=True)
     lora_name = install_lora(a.lora)
