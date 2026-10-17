@@ -306,6 +306,15 @@ sbires et des tours, appel à l'aide, réapparition, fontaine, fin) ; `world/mob
 unités × 100, protections, réparation par tiers), `ai/moba_minion.gd` (horde, recyclé, coup sans zone rouge), `world/moba_bolt.gd`, `ai/moba_rival.gd`
 (IA simple de voie en attendant MB-E ; niveau = niveau attendu en attendant MB-D) ; direct `world.tscn -- --moba` ; activité « moba » cachée (« Bientôt ») ;
 test `test_mb_lanes` (relance le jeu en `--fixed-fps 60 --moba-speed=4` : 20 min de vagues égales sans chute, × 1,2 : T1 adverse vers 9 min).
+Héros et boutique (MB-D, `R_MB_D.md`) : `core/moba_hero.gd` (`MobaHero` : un état par héros dans `MobaDirector.info` — niveau 1-12 par XP, or,
+objets, potions, K / M / A, série, rappel, enchaînements débloqués (2-4 / 6-8 au choix non bloquant `pending`, 5 ultime, 9 le sien),
+achats annulables ; règles pures du partage, du rattrapage, des aides ; `view()`), `core/moba_items.gd` (`MobaItems` : boutique (recette,
+annuler, vendre, potions, parcours `route` adapté, `next_step`, `auto_shop`), stats `sheet` (ligne gardée de `Player.recalc_stats`) /
+`sheet_rival`, effets déclenchés des 40 objets sur tout héros : 5 lignes gardées `MobaItems.active` dans `Combatant` (pre_hit, absorb,
+post_hit, heal_in, status_time) ; `Procs` reste au `Player`) ; directeur : économie (`on_minion_down`, `on_hero_down`, `reward_camp`,
+passifs), `apply_level`, `start_recall` (X), boutique à 14 m de la fontaine, `hud_data()`, interface de test (P, Ctrl + Z, Ctrl + 1/2/3),
+`--moba-auto`, `--moba-perf` (scripts de l'image p95, µs par héros), ligne `[moba] bilan {json}` ; mesures `python tools/moba_ai_games.py`
+(exécutable SANS console pour le temps CPU) ; tests `test_mb_hero`, `test_mb_shop`.
 ### L'Assaut (4 contre 4 tactique, en cours ; « Bientôt », caché)
 Étude `conception/benchmark/TACTIQUE.md` (spécification § 7, lots TAC-0 à TAC-14, plans masse `tactique_maquettes/plan_*.svg`). Socle (TAC-0, `R_TAC_0.md`) :
 `core/assault.gd` (`Assault` : profil `RULES` enregistré par `ensure_rules`, machine de manche pure achat → manche → pose / désamorçage → fin, mi-temps,
@@ -496,6 +505,7 @@ captures `tests/shot_hub1.tscn`. `records.news` / `last_activity` = état de men
 | `res://tools/perf_ui.tscn` | performances headless (`PERF_ARGS`, voir « Performances ») |
 | `res://tools/gen_profiles.tscn` | profils « opti » du duel (voir « Duel (JcJ) ») |
 | `python tools/moba_probe.py` | coût d'image des Deux Voies (MB-0, `R_MB0.md` : GO ; banc `res://tools/moba_probe.tscn`, `--preset=base\|opt`, `--decor=<biome>`) ; budgets à tenir par MB-B à MB-J |
+| `python tools/moba_ai_games.py` | parties IA contre IA des Deux Voies (MB-D / MB-E : `--projet <copie> -n 20 --diff 3 [--perf]`, temps CPU par image, morts sous tour, camps de la jungle) |
 | `python tools/net_a.py` | Mode amis : hôte + N clients sur cette machine (`--pilot --secs 20 --headless`, `--lag 150 --loss 5`, `--shots`) ; prototype NET-0 : `tools/net_probe.py` |
 
 ## IA d'entraînement (apprentissage par renforcement)

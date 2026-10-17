@@ -12,7 +12,8 @@ extends RefCounted
 ## Options (TeamMatch.spec, posées par launch) : diff (0-3, les deux équipes) ou diff_allies / diff_foes ; heroes (« all » :
 ## 8 héros ; « none » : vagues seules, mesures et test_mb_lanes ; « watch » : 8 IA, le joueur regarde) ; power ([bleu, rouge] :
 ## force des sbires, essais « un camp × 1,2 ») ; seed ; speed (Engine.time_scale, mesures) ; until (s : fin de la mesure) ;
-## allies / foes (classes imposées) ; role (poste du joueur, indice de MobaData.ROLES) ; perf (mesure du coût de l'image).
+## allies / foes (classes imposées) ; role (poste du joueur, indice de MobaData.ROLES) ; perf (mesure du coût de l'image) ;
+## auto (lot MB-D : choix de niveau et achats automatiques du joueur).
 
 const DIRECTOR := "res://scripts/core/moba_director.gd"
 const ZONE := "rainbowfall"
@@ -56,6 +57,7 @@ static func launch(cid: String, o := {}) -> void:
 
 static func reset() -> void:
 	active = false
+	MobaItems.stop()
 	opts = {}
 	t = 0.0
 	winner = -1
@@ -70,6 +72,7 @@ static func reset() -> void:
 static func finish() -> void:
 	TeamMatch.end()
 	active = false
+	MobaItems.stop()
 	Engine.time_scale = 1.0
 	Run.active = false
 	Profile.in_run = false
@@ -109,6 +112,8 @@ static func args_options(args: PackedStringArray) -> Dictionary:
 			o["stop"] = a.get_slice("=", 1)
 		elif a == "--moba-perf":
 			o["perf"] = true
+		elif a == "--moba-auto":
+			o["auto"] = true  # (lot MB-D) le joueur choisit ses enchaînements et achète tout seul
 		elif a.begins_with("--moba-tune="):
 			var tn := {}
 			for kv in a.get_slice("=", 1).split(","):

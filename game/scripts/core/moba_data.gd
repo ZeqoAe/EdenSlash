@@ -188,7 +188,7 @@ const ITEMS := [
 		"text": "Tu cours plus vite.", "tip": "+8 % de vitesse de déplacement"},
 	{"id": "lame_braise", "name": "Lame de braise", "type": "attaque", "price": 2400, "recipe": ["lame_courte", "oeil_faucon"],
 		"stats": {"atk": 0.15, "crit": 0.10}, "proc": {"trigger": "crit", "effect": "burn", "chance": 1.0, "cd": 1.0},
-		"text": "Tes critiques brûlent.", "tip": "+15 % d'attaque, +10 points de critique ; un critique enflamme la cible"},
+		"text": "Tes critiques brûlent.", "tip": "+15 % d'attaque, +10 points de critique ; un critique enflamme la cible 3 s (ses soins reçus baissent de 40 %)"},
 	{"id": "croc_chasseur", "name": "Croc du chasseur", "type": "attaque", "price": 2300, "recipe": ["lame_courte", "croc_vampire"],
 		"stats": {"atk": 0.15, "lifesteal": 0.06}, "proc": {"trigger": "kill_hero", "effect": "heal", "heal": 0.15, "cd": 5.0},
 		"text": "Éliminer un héros te soigne.", "tip": "+15 % d'attaque, +6 % de vol de vie ; une élimination rend 15 % des PV"},

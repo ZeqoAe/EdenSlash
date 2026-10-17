@@ -10,10 +10,16 @@ extends Node
 ## image physique ; aucune recherche par groupes) ; le « camp » d'une unité = son ffa_id (TeamMatch : 100 + équipe) ; les
 ## sbires et les structures ne sont pas membres de TeamMatch (ClassRival._teammates ne voit que les héros, piège 8 de R_MB0).
 ##
-## IA des héros (provisoire, lot MB-E à venir) : toutes les 0,4 s, cible = héros adverse proche, sinon sbire, sinon structure
-## assiégeable (au moins 2 sbires alliés sous elle) ; jamais sous une tour adverse qui n'a pas de sbire allié à frapper ;
-## rentre à la fontaine sous 30 % de PV ; sinon se tient 4 m derrière le front de sa vague. Niveau des héros (en attendant
-## l'XP du lot MB-D) : le niveau attendu à cet instant (MobaData.expected_level).
+## Héros en partie (lot MB-D, R_MB_D.md) : un MobaHero par héros ([member info]) ; XP et or des sbires (dernier coup,
+## partage à 15 m, rattrapage : [method on_minion_down]), des éliminations (primes, série, premier sang, aides :
+## [method on_hero_down]), des structures ([method on_structure_down]) et des camps ([method reward_camp], lot MB-F) ;
+## or et XP passifs ; niveaux 1-12 (fiche refaite, enchaînements, ultime au niveau 5 : [method apply_level]) ; choix de
+## niveau non bloquant (Ctrl + 1 / 2 / 3) ; réapparition selon le niveau du héros ; rappel (X, 6 s, coupé par un coup ou un
+## pas : [method start_recall]) ; boutique ouverte à la fontaine et pendant la mort (MobaItems ; P achète l'étape
+## conseillée, Ctrl + Z annule) ; données d'affichage [method hud_data] (le HUD complet est le lot MB-H).
+##
+## IA des héros (provisoire en MB-C, remplacée au lot MB-E par MobaHeroAi) : toutes les 0,4 s, cible = héros adverse
+## proche, sinon sbire, sinon structure assiégeable ; jamais sous une tour adverse qui n'a pas de sbire allié à frapper.
 ##
 ## Options : voir Moba (TeamMatch.spec). Lignes : [moba] …
 
@@ -32,8 +38,13 @@ var rng := RandomNumberGenerator.new()
 var mode := "all"  # all | none | watch
 var player: Player
 var heroes: Array = []  # héros en jeu (le joueur compris s'il joue)
-## héros -> {side, role, lane, cid, respawn_at, home, think, deaths, kills}
+## héros -> MobaHero (camp, poste, voie, classe, niveau, XP, or, objets, éliminations, réapparition, rappel…)
 var info: Dictionary = {}
+var first_blood := false
+var _player_state := ""  # (le joueur lance un sort : effets « skill_cast » des objets)
+var _hud: Label
+var _hud_t := 0.0
+var _econ_t := 0.0
 var structures: Array = []
 var cores: Array = [null, null]
 var minions: Array = []  # sbires en jeu (vivants ou mourants)
@@ -60,6 +71,10 @@ var _resheet: Array = []  # héros dont la fiche est à refaire (un par image)
 var _bolt_parent: Node3D
 var _perf := false
 var _perf_from := 60.0
+var _perf_started := false
+var _perf_frames := 0  # images physiques mesurées (après _perf_from)
+var _phys_t0 := 0
+var _logic_ms: Array = []  # temps des scripts de chaque image physique (marques en tête et en queue)
 var _last_us := 0
 var _frame_ms: Array = []
 var _phys_ms: Array = []
@@ -76,6 +91,9 @@ func setup(director: RunDirector) -> void:
 		seed(int(spec.seed))  # (mesures : les sbires tirent leur décalage et leur pas au hasard global)
 	mode = String(spec.get("heroes", "all"))
 	_perf = bool(spec.get("perf", false))
+	if _perf:
+		_marks()
+		_perf_from = float(spec.get("perf_from", _perf_from))
 	if spec.has("speed"):
 		Engine.time_scale = float(spec.speed)
 	Monster.attack_slots = 0  # (réglages statiques de la horde du Survivant : jamais ici)
@@ -88,8 +106,10 @@ func setup(director: RunDirector) -> void:
 	MobaData.warm_ref()
 	_build_structures()
 	_prewarm()
+	MobaItems.begin(self)  # (avant les héros : la fiche du joueur lit ses objets)
 	_setup_player()
 	_spawn_heroes()
+	_build_hud()
 	_bolt_parent = Node3D.new()
 	_bolt_parent.name = "MobaBolts"
 	add_child(_bolt_parent)
@@ -236,16 +256,69 @@ func _waves() -> void:
 		n += 1
 
 
-## Sbire tombé : compté pour le camp du tueur.
+## Sbire tombé : compté pour le camp du tueur ; XP partagée entre les héros adverses à 15 m (le tueur compris) ; or :
+## 100 % au dernier coup d'un héros, 60 % à chaque autre héros proche, 50 % à chacun si un sbire ou une tour l'achève ;
+## rattrapage + 30 % sous la moyenne adverse de 2 niveaux.
 func on_minion_down(m: MobaMinion, killer: Combatant) -> void:
 	var ks := side_of(killer)
 	if ks >= 0 and ks != m.side:
 		Moba.minion_kills[ks] += 1
+	var gs := 1 - m.side
+	var kh: Combatant = killer if killer != null and is_instance_valid(killer) and info.has(killer) and ks == gs else null
+	var near := units_near(gs, m.global_position, MobaData.SHARE_RADIUS, KIND_HERO)
+	if kh != null and not kh in near:
+		near.append(kh)
+	if near.is_empty():
+		return
+	var xp_each := MobaHero.minion_xp_each(m.kind, near.size())
+	var avg := avg_level(m.side)
+	for u in near:
+		var hs: MobaHero = info.get(u)
+		if hs == null:
+			continue
+		var c := MobaHero.catchup(hs.level, avg)
+		_xp(hs, xp_each * c)
+		hs.add_gold(MobaHero.minion_gold(m.kind, "last" if u == kh else ("near" if kh != null else "stray")) * c)
+	if kh != null:
+		info[kh].cs += 1
 
 
-## Bonus de force d'un sbire (Étendard des voies, Bannière du Colosse : lots MB-D et MB-F).
-func minion_aura(_m: MobaMinion) -> float:
-	return 1.0
+## Niveau moyen des héros du camp [param side].
+func avg_level(side: int) -> float:
+	var s := 0.0
+	var n := 0
+	for h in heroes:
+		var hs: MobaHero = info[h]
+		if hs.side == side:
+			s += hs.level
+			n += 1
+	return s / n if n > 0 else 1.0
+
+
+## Camp de la jungle tombé (lot MB-F) : XP et or de son genre (MobaData.CAMPS) au héros qui l'achève (sinon au héros du
+## camp le plus proche à 15 m).
+func reward_camp(kind: String, at: Vector3, killer: Combatant) -> void:
+	var c: Dictionary = MobaData.CAMPS.get(kind, {})
+	if c.is_empty():
+		return
+	var hs: MobaHero = info.get(killer) if killer != null and is_instance_valid(killer) else null
+	if hs == null:
+		for side in 2:
+			var n := _nearest(at, units_near(side, at, MobaData.SHARE_RADIUS, KIND_HERO))
+			if n != null:
+				hs = info.get(n)
+				break
+	if hs == null:
+		return
+	_xp(hs, float(MobaData.XP_GAIN.get(String(c.xp), 0)))
+	hs.add_gold(float(c.get("gold", 0)))
+	hs.camps += 1
+	hs.camp_times.append(snappedf(Moba.t, 0.1))
+
+
+## Bonus de force d'un sbire : Étendard des voies d'un héros allié proche (Bannière du Colosse : lot MB-F).
+func minion_aura(m: MobaMinion) -> float:
+	return MobaItems.minion_aura(m, m.side) if MobaItems.active else 1.0
 
 
 # --- héros ---------------------------------------------------------------------------------------
@@ -267,11 +340,15 @@ func _setup_player() -> void:
 	var cid := Run.class_id
 	var fam := int(GameData.class_data(cid).get("family", 1))
 	var role := int(spec.get("role", MobaData.role_for_family(fam)))
-	_set_level(player, 1)
+	var hs := MobaHero.new(player, 0, role, cid)
+	hs.is_player = true
+	hs.difficulty = clampi(int(spec.get("diff_allies", spec.get("diff", 2))), 0, 3)
+	hs.auto_pick = bool(spec.get("auto", false)) or player.autoplay
 	TeamMatch.add(player, 0)
 	heroes.append(player)
-	info[player] = {"side": 0, "role": role, "lane": int(MobaData.ROLES[role].lane), "cid": cid, "respawn_at": -1.0,
-		"home": false, "think": 0.0, "deaths": 0, "kills": 0}
+	info[player] = hs
+	Profile.bag[Potions.key("heal")] = MobaData.START_POTIONS  # (mode scellé : le sac est vide au lancement)
+	apply_level(hs)
 	d._place_player(map.moba.fountains[0])
 	player.damaged.connect(_on_hero_damaged.bind(player))
 
@@ -296,11 +373,17 @@ func _spawn_heroes() -> void:
 				cid = _pick_class(MobaData.ROLES[role].families, taken)
 			taken.append(cid)
 			var r := MobaRival.make(self, cid, 1, int(diffs[side]), side)
+			var hs := MobaHero.new(r, side, role, cid)
+			hs.difficulty = int(diffs[side])
+			hs.auto_pick = true
+			hs.prefer = _ai_prefer(cid)
+			hs.think = rng.randf() * HERO_THINK
+			r.hero = hs
+			info[r] = hs
 			add_child(r)
 			r.global_position = _fountain_spot(side, heroes.size())
 			heroes.append(r)
-			info[r] = {"side": side, "role": role, "lane": int(MobaData.ROLES[role].lane), "cid": cid, "respawn_at": -1.0,
-				"home": false, "think": rng.randf() * HERO_THINK, "deaths": 0, "kills": 0}
+			apply_level(hs)
 			r.damaged.connect(_on_hero_damaged.bind(r))
 			if mode == "watch" and side == 0 and watch_target != null and d.world.rig != null and d.world.rig.target == watch_target:
 				d.world.rig.target = r
@@ -339,64 +422,160 @@ func side_of(c) -> int:
 	return -1
 
 
-## Niveau de partie [param lv] d'un héros (en attendant l'XP du lot MB-D : le niveau attendu).
-func _set_level(h: Combatant, lv: int) -> void:
+## Niveau de partie du héros [param hs] posé sur son nœud : fiche d'un héros de sa classe à son niveau (objets compris),
+## sorts débloqués (cases 1-3, enchaînements choisis, ultime au niveau 5 à sa recharge et sa puissance de partie, son
+## enchaînement au niveau 9).
+func apply_level(hs: MobaHero) -> void:
+	var h := hs.node
+	if h == null or not is_instance_valid(h):
+		return
+	hs.stats = MobaItems.totals(hs)
 	if h is MobaRival:
-		(h as MobaRival).resheet(lv)
-		if lv >= 5 and not (h as MobaRival).ult_on:
-			(h as MobaRival).set_kit(true)
+		var r := h as MobaRival
+		r.resheet(hs.level)
+		r.set_kit(hs.ult)
+		r.health_changed.emit(r.hp, r.max_hp)
 	elif h is Player:
 		var p := h as Player
 		var ratio := p.hp / p.max_hp if p.max_hp > 0.0 and not p.is_dead else 1.0
-		p.level = MobaData.sheet_level(lv)
+		p.level = MobaData.sheet_level(hs.level)
 		Run.hero_level = p.level
 		Run.max_level = p.level
+		_player_kit(hs)
 		p.recalc_stats()
 		p.hp = p.max_hp * ratio
 		p.health_changed.emit(p.hp, p.max_hp)
-		if lv >= 5 and Run.skills.size() < 4:
-			var ult := int(MobaData.kit(Run.class_id).get("ult", {}).get("id", 0))
-			if ult > 0:
-				Run.skills.append({"id": ult, "rank": 1})
-				Run.changed.emit()
+
+
+## Sorts du joueur (Run.skills / Run.chains) d'après ce que son niveau a débloqué ; l'ultime à sa recharge de partie
+## (clé « cd » de Run : multiplicateur de recharge) et sa puissance (clé « dmg »).
+func _player_kit(hs: MobaHero) -> void:
+	var u := hs.kit_unlocked()
+	var k := MobaData.kit(hs.cid)
+	var sk: Array = []
+	for id in u.mains:
+		var e := {"id": int(id), "rank": 1}
+		if int(id) == int(u.ult) and bool(u.ult_on):
+			var base := float(Run.skill_def(int(id)).get("cooldown", 0.0))
+			var cd := float(k.get("ult", {}).get("cooldown", base))
+			if base > 0.0:
+				e["cd"] = 1.0 - cd / base
+			e["dmg"] = float(k.get("ult", {}).get("power", 1.0)) - 1.0
+		sk.append(e)
+	Run.skills = sk
+	var ch := {}
+	for slot in u.chains:
+		ch[int(slot)] = (u.chains[slot] as Array).map(func(x): return {"id": int(x), "rank": 1})
+	Run.chains = ch
+	Run.changed.emit()
+
+
+## XP gagnée par [param hs] ; un niveau gagné refait sa fiche (une par image) et annonce le choix au joueur.
+func _xp(hs: MobaHero, amount: float) -> void:
+	var up := hs.add_xp(amount)
+	if up <= 0:
+		return
+	if not hs.node in _resheet:
+		_resheet.append(hs.node)
+	level_now = maxi(level_now, hs.level)
+	if hs.is_player and mode == "all":
+		var lv := hs.level
+		var what := MobaHero.unlock_at(lv)
+		var msg := "Niveau %d !" % lv
+		if not hs.pending.is_empty():
+			msg += "\nCtrl + 1 / 2 / 3 : un enchaînement"
+		elif what == "ult":
+			msg += "\nUltime débloqué"
+		d.message.emit(msg, 2.2)
 
 
 func _levels() -> void:
-	var lv := clampi(floori(MobaData.expected_level(Moba.t)), 1, MobaData.LEVEL_MAX)
-	if lv > level_now:
-		level_now = lv
-		_resheet = heroes.duplicate()
 	if not _resheet.is_empty():
 		var h = _resheet.pop_front()
-		if is_instance_valid(h):
-			_set_level(h, level_now)
+		if is_instance_valid(h) and info.has(h):
+			apply_level(info[h])
 
 
-## Coup d'un héros sur un héros adverse : appel à l'aide des sbires et des tours de la victime.
+## Choix de niveau (non bloquant) : débloque l'enchaînement suivant de la case [param slot] (0-2) pour [param h].
+func choose_chain(h: Combatant, slot: int) -> bool:
+	var hs: MobaHero = info.get(h)
+	if hs == null or not hs.choose(slot):
+		return false
+	apply_level(hs)
+	return true
+
+
+## Coup d'un héros sur un héros adverse : appel à l'aide des sbires et des tours de la victime ; rappel coupé.
 func _on_hero_damaged(_amount: float, source: Combatant, victim: Combatant) -> void:
+	var vs: MobaHero = info.get(victim)
+	if vs != null:
+		vs.last_combat = Moba.t
+		if vs.recalling():
+			_cancel_recall(vs)
 	if source != null and info.has(source) and side_of(source) != side_of(victim):
 		_help[source] = {"t": Moba.t, "pos": victim.global_position}
+		if vs != null:
+			vs.note_damager(source, Moba.t)
 
 
+## Héros tombé : réapparition selon son niveau ; prime au tueur (série, premier sang ; à défaut le dernier héros adverse
+## qui l'a frappé dans les 10 s), aide partagée, XP de l'élimination partagée entre le tueur et les aides ; effets des
+## objets « kill_hero ».
 func on_hero_down(h: Combatant, killer: Combatant) -> void:
 	if not info.has(h):
 		return
-	var inf: Dictionary = info[h]
-	inf.deaths = int(inf.deaths) + 1
-	inf.respawn_at = Moba.t + MobaData.respawn_time(level_now, Moba.t)
-	inf.home = false
+	var vs: MobaHero = info[h]
+	var t := Moba.t
+	vs.deaths += 1
+	vs.respawn_at = t + MobaData.respawn_time(vs.level, t)
+	vs.home = false
+	vs.recall_left = -1.0
 	TeamMatch.note_ko(h, killer)
-	var ks := side_of(killer)
-	if ks >= 0 and ks != int(inf.side):
-		Moba.hero_kills[ks] += 1
-		if info.has(killer):
-			info[killer].kills = int(info[killer].kills) + 1
-	Moba.note("ko", int(inf.side), {"who": String(inf.cid)})
+	var kh: Combatant = killer if killer != null and is_instance_valid(killer) and info.has(killer) and side_of(killer) != vs.side else null
+	if kh == null:
+		kh = vs.last_damager(t)
+	var ks: MobaHero = info.get(kh) if kh != null else null
+	_note_death(vs, killer, kh)
+	if ks != null:
+		Moba.hero_kills[ks.side] += 1
+		var bounty := MobaData.kill_bounty(vs.streak, not first_blood)
+		first_blood = true
+		ks.kills += 1
+		ks.streak += 1
+		ks.add_gold(bounty)
+		var helpers: Array = []
+		for a in vs.assisters(t, kh):
+			var hs: MobaHero = info.get(a)
+			if hs != null and hs.side != vs.side:
+				helpers.append(hs)
+		var parts := helpers.size() + 1
+		_xp(ks, float(MobaData.hero_xp(vs.level)) / parts)
+		for hs in helpers:
+			hs.assists += 1
+			hs.add_gold(MobaHero.assist_gold(helpers.size()))
+			_xp(hs, float(MobaData.hero_xp(vs.level)) / parts)
+		MobaItems.on_kill(ks, helpers)
+	vs.streak = 0
+	vs.damagers.clear()
+	Moba.note("ko", vs.side, {"who": vs.cid, "by": ks.cid if ks != null else ""})
+
+
+## Journal de la mort (mesures du lot MB-E) : sous une tour adverse, tuée par une tour, un sbire ou un héros.
+func _note_death(vs: MobaHero, killer: Combatant, kh: Combatant) -> void:
+	var p := vs.node.global_position
+	var under := false
+	for s in structures:
+		if not s.is_dead and s.side != vs.side and p.distance_to(s.global_position) <= s.range_m + 1.0:
+			under = true
+	var heroes_near := enemies_near(vs.side, p, 15.0, KIND_HERO).size()
+	var by := "héros" if killer != null and info.has(killer) else ("tour" if killer is MobaStructure else ("sbire" if killer is MobaMinion else "autre"))
+	vs.death_log.append({"t": snappedf(Moba.t, 0.1), "by": by, "under_tower": under, "heroes_near": heroes_near,
+		"hero_hit": kh != null, "hp_lvl": vs.level})
 
 
 func _respawns() -> void:
 	for h in heroes:
-		var inf: Dictionary = info[h]
+		var inf: MobaHero = info[h]
 		if not h.is_dead or float(inf.respawn_at) < 0.0 or Moba.t < float(inf.respawn_at):
 			continue
 		inf.respawn_at = -1.0
@@ -421,24 +600,242 @@ func _fountains(delta: float) -> void:
 			h.health_changed.emit(h.hp, h.max_hp)
 
 
+# --- héros : économie, boutique, rappel (lot MB-D) -----------------------------------------------------
+
+## Chaque image : or et XP passifs, boutique ouverte à la fontaine (annuler s'efface en la quittant), rappel, hors combat
+## (Cœur de pierre, Bottes du vent), recharges des potions de l'IA, sorts du joueur (« skill_cast »).
+func _heroes_tick(delta: float) -> void:
+	var t := Moba.t
+	var gold := MobaData.PASSIVE_GOLD * delta if t >= MobaData.FIRST_WAVE else 0.0
+	var xp := float(MobaData.XP_GAIN.per_second) * delta
+	for h in heroes:
+		var hs: MobaHero = info[h]
+		hs.add_gold(gold)
+		if hs.level < MobaData.LEVEL_MAX:
+			_xp(hs, xp)
+		for g in hs.potion_cd:
+			hs.potion_cd[g] = maxf(0.0, float(hs.potion_cd[g]) - delta)
+		var shop: bool = not h.is_dead and h.global_position.distance_to(map.moba.fountains[hs.side]) <= MobaHero.SHOP_RADIUS
+		if hs.in_shop and not shop and not h.is_dead:
+			MobaItems.leave_shop(hs)
+		hs.in_shop = shop
+		if h.is_dead:
+			continue
+		if hs.recalling():
+			hs.recall_left -= delta
+			var moved: bool = h.global_position.distance_to(hs.recall_from) > 0.8
+			if moved:
+				_cancel_recall(hs)
+			elif hs.recall_left <= 0.0:
+				_finish_recall(hs)
+		var ooc := not hs.in_combat(t)
+		if ooc != hs.ooc:
+			hs.ooc = ooc
+			if MobaItems.stat(hs, "ooc_move") > 0.0:
+				MobaItems.refresh(hs)
+		var regen := MobaItems.stat(hs, "ooc_regen")
+		if ooc and regen > 0.0 and h.hp < h.max_hp:
+			h.hp = minf(h.max_hp, h.hp + h.max_hp * regen * delta)
+			h.health_changed.emit(h.hp, h.max_hp)
+	if player != null and info.has(player):
+		var st: String = player._state
+		if st == "skill" and _player_state != "skill":
+			MobaItems.on_cast(info[player])
+		_player_state = st
+
+
+## Rappel (« S'extraire », X) : 6 s sans bouger ni être touché, puis la fontaine. false si refusé (mort, déjà à la base).
+func start_recall(h: Combatant) -> bool:
+	var hs: MobaHero = info.get(h)
+	if hs == null or h.is_dead or hs.recalling() or hs.in_shop:
+		return false
+	hs.recall_left = MobaData.RECALL_TIME
+	hs.recall_from = h.global_position
+	if h is MobaRival:
+		var r := h as MobaRival
+		r.goal = Vector3.INF
+		r._player = null
+		r.passive = true
+		r.velocity = Vector3.ZERO
+	elif hs.is_player and mode == "all":
+		d.message.emit("Retour à la fontaine…", 1.5)
+	return true
+
+
+func _cancel_recall(hs: MobaHero) -> void:
+	hs.recall_left = -1.0
+	if hs.node is MobaRival:
+		(hs.node as MobaRival).passive = false
+	elif hs.is_player and mode == "all":
+		d.message.emit("Retour coupé", 1.2)
+
+
+func _finish_recall(hs: MobaHero) -> void:
+	hs.recall_left = -1.0
+	hs.recalls += 1
+	var at := _fountain_spot(hs.side, heroes.find(hs.node))
+	var h := hs.node
+	if h is MobaRival:
+		var r := h as MobaRival
+		r.passive = false
+		r.global_position = at
+		r.velocity = Vector3.ZERO
+		r.goal = Vector3.INF
+	elif h is Player:
+		d._place_player(at)
+	hs.in_shop = true
+
+
+## Potion de soin d'un héros IA (35 % des PV, 20 s de recharge, comme Potions) ; false si rien.
+func ai_potion(hs: MobaHero) -> bool:
+	if int(hs.potions.get("heal", 0)) <= 0 or float(hs.potion_cd.heal) > 0.0 or hs.node.is_dead:
+		return false
+	hs.potions.heal = int(hs.potions.heal) - 1
+	hs.potion_cd.heal = Potions.COOLDOWN
+	hs.node.heal(hs.node.max_hp * Potions.HEAL_PCT)
+	Vfx.ring(hs.node, hs.node.global_position, 2.2, Color(0.4, 1.0, 0.5, 0.8))
+	return true
+
+
+## Familles de l'équipe adverse de [param hs] (parcours d'objets adapté).
+func foe_families(hs: MobaHero) -> Array:
+	var out: Array = []
+	for h in heroes:
+		var o: MobaHero = info[h]
+		if o.side != hs.side:
+			out.append(o.family)
+	return out
+
+
+## Ordre des cases quand l'IA choisit ses enchaînements : la case dont le 1er enchaînement frappe le plus fort d'abord.
+func _ai_prefer(cid: String) -> Array:
+	var k := MobaData.kit(cid)
+	var by := {}
+	for s in GameData.class_data(cid).get("skills", []):
+		by[int(s.id)] = s
+	var score := {}
+	for i in 3:
+		var ch: Array = k.get("slots", [])[i].chains if (k.get("slots", []) as Array).size() > i else []
+		var v := 0.0
+		for id in ch:
+			var s: Dictionary = by.get(int(id), {})
+			v += float(s.get("mult", 1.0)) * maxf(1.0, float(s.get("radius", 1.0))) + float(s.get("heal", 0.0)) * 10.0
+		score[i] = v
+	var order := [0, 1, 2]
+	order.sort_custom(func(a, b): return float(score[a]) > float(score[b]))
+	return order
+
+
+# --- données d'affichage (lot MB-H) ----------------------------------------------------------------
+
+## Tout ce qu'un HUD affiche pour le héros [param h] (le joueur par défaut) : MobaHero.view + parcours conseillé, objet
+## conseillé (prix, or), tableau des 8 héros (niveau, K / M / A, mort et réapparition), temps, score.
+func hud_data(h: Combatant = null) -> Dictionary:
+	if h == null:
+		h = player
+	var hs: MobaHero = info.get(h)
+	if hs == null:
+		return {}
+	var v := hs.view(Moba.t)
+	var r := MobaItems.route(hs, foe_families(hs))
+	v["route"] = r
+	v["advice"] = MobaItems.advice(hs, r)
+	v["time"] = Moba.t
+	v["score"] = [Moba.hero_kills[0], Moba.hero_kills[1]]
+	var board: Array = []
+	for x in heroes:
+		var o: MobaHero = info[x]
+		board.append({"cid": o.cid, "side": o.side, "role": o.role, "level": o.level, "kda": [o.kills, o.deaths, o.assists],
+			"dead": x.is_dead, "respawn_in": maxf(0.0, o.respawn_at - Moba.t) if x.is_dead else 0.0, "items": o.items.duplicate()})
+	v["board"] = board
+	return v
+
+
+## Interface minimale de test (le HUD du mode est le lot MB-H) : une ligne d'état en haut à gauche.
+func _build_hud() -> void:
+	if mode != "all" or DisplayServer.get_name() == "headless":
+		return
+	var layer := CanvasLayer.new()
+	layer.layer = 5
+	add_child(layer)
+	_hud = Label.new()
+	_hud.position = Vector2(16, 120)
+	_hud.add_theme_font_size_override("font_size", 16)
+	_hud.add_theme_color_override("font_outline_color", Color(0.1, 0.1, 0.15))
+	_hud.add_theme_constant_override("outline_size", 6)
+	layer.add_child(_hud)
+
+
+func _update_hud(delta: float) -> void:
+	if _hud == null:
+		return
+	_hud_t -= delta
+	if _hud_t > 0.0:
+		return
+	_hud_t = 0.25
+	var v := hud_data()
+	if v.is_empty():
+		return
+	var names: Array = (v.items as Array).map(func(id): return String(MobaData.item(String(id)).name))
+	var lines := ["Niveau %d · XP %d / %d · Or %d · %d / %d / %d" % [v.level, int(v.xp), int(v.xp_next), int(v.gold), v.kda[0], v.kda[1], v.kda[2]],
+		"Objets : %s" % (", ".join(names) if not names.is_empty() else "aucun")]
+	if not (v.pending as Dictionary).is_empty():
+		lines.append("Choix de niveau : Ctrl + %s" % " / ".join((v.pending.options as Array).map(func(s): return str(int(s) + 1))))
+	if not (v.advice as Dictionary).is_empty():
+		lines.append("Conseil : %s %d / %d%s" % [v.advice.name, int(v.advice.gold), int(v.advice.cost), " (P : acheter)" if bool(v.shop_open) else ""])
+	if bool(v.shop_open):
+		lines.append("Boutique ouverte · Ctrl + Z : annuler")
+	if float(v.recall) >= 0.0:
+		lines.append("Retour : %d %%" % roundi(float(v.recall) * 100.0))
+	_hud.text = "\n".join(lines)
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	var k := event as InputEventKey
+	if k == null or not k.pressed or k.echo or mode != "all" or ended or player == null or not info.has(player):
+		return
+	var hs: MobaHero = info[player]
+	if k.ctrl_pressed and k.physical_keycode in [KEY_1, KEY_2, KEY_3]:
+		if choose_chain(player, k.physical_keycode - KEY_1):
+			d.message.emit("Enchaînement débloqué", 1.2)
+		get_viewport().set_input_as_handled()
+	elif k.ctrl_pressed and k.physical_keycode == KEY_Z:
+		if MobaItems.undo(hs):
+			d.message.emit("Achat annulé", 1.0)
+		get_viewport().set_input_as_handled()
+	elif k.physical_keycode == KEY_P:
+		var id := MobaItems.next_step(hs, MobaItems.route(hs, foe_families(hs)))
+		if id != "" and MobaItems.buy(hs, id):
+			d.message.emit("%s acheté" % String(MobaData.item(id).name), 1.2)
+		elif not MobaItems.shop_open(hs):
+			d.message.emit("La boutique ouvre à la fontaine.", 1.2)
+		get_viewport().set_input_as_handled()
+
+
 # --- IA simple des héros (lot MB-E à venir) ----------------------------------------------------------
 
 func _think_all(delta: float) -> void:
 	for h in heroes:
 		if h.is_dead:
 			continue
-		var inf: Dictionary = info[h]
+		var inf: MobaHero = info[h]
 		inf.think = float(inf.think) - delta
 		if inf.think > 0.0:
 			continue
 		inf.think = HERO_THINK
+		if inf.recalling():
+			continue
+		if inf.in_shop and (h is MobaRival or (h as Player).autoplay or inf.auto_pick):
+			MobaItems.auto_shop(inf, MobaItems.route(inf, foe_families(inf), inf.difficulty >= 2))
 		if h is MobaRival:
+			if h.hp < h.max_hp * 0.45 and not inf.in_shop:
+				ai_potion(inf)
 			_think(h as MobaRival, inf)
 		elif h is Player and (h as Player).autoplay:
 			(h as Player).autoplay_target = _home_or_lane(h, inf)
 
 
-func _think(h: MobaRival, inf: Dictionary) -> void:
+func _think(h: MobaRival, inf: MobaHero) -> void:
 	var side := int(inf.side)
 	var p := h.global_position
 	var enemy_core: MobaStructure = cores[1 - side]
@@ -484,7 +881,7 @@ func _weakest(list: Array) -> Combatant:
 	return best
 
 
-func _home_or_lane(h: Combatant, inf: Dictionary) -> Vector3:
+func _home_or_lane(h: Combatant, inf: MobaHero) -> Vector3:
 	if h.hp < h.max_hp * 0.25:
 		return map.moba.fountains[int(inf.side)]
 	return _lane_goal(h, inf)
@@ -492,7 +889,7 @@ func _home_or_lane(h: Combatant, inf: Dictionary) -> Vector3:
 
 ## Place d'un héros sans adversaire : 4 m derrière le front de sa vague (jamais plus loin que sa T1 si la vague est chez
 ## lui), hors de portée d'une tour adverse sans sbires alliés ; le jungler soutient la voie la plus en retard.
-func _lane_goal(_h: Combatant, inf: Dictionary) -> Vector3:
+func _lane_goal(_h: Combatant, inf: MobaHero) -> Vector3:
 	var side := int(inf.side)
 	var li := int(inf.lane)
 	if li < 0:
@@ -694,7 +1091,11 @@ func _physics_process(delta: float) -> void:
 	_levels()
 	_respawns()
 	_fountains(delta)
+	_heroes_tick(delta)
 	_think_all(delta)
+	_update_hud(delta)
+	if mode == "all" and player != null and not player.is_dead and Input.is_action_just_pressed("extract"):
+		start_recall(player)
 	_front_t -= delta
 	if _front_t <= 0.0:
 		_front_t = 0.5
@@ -719,7 +1120,7 @@ func _physics_process(delta: float) -> void:
 			int(Performance.get_monitor(Performance.OBJECT_NODE_COUNT)), bolts_live])
 	if Moba.t >= MobaData.END_AT:
 		var hp := [cores[0].hp / cores[0].max_hp, cores[1].hp / cores[1].max_hp]
-		_finish(Moba.decide(hp), "time")
+		_finish(Moba.decide(hp, team_gold()), "time")
 		return
 	var until := float(TeamMatch.spec.get("until", 0.0))
 	if until > 0.0 and Moba.t >= until and not measured:
@@ -727,6 +1128,15 @@ func _physics_process(delta: float) -> void:
 		_report("mesure")
 		if "--auto-quit" in OS.get_cmdline_user_args():
 			get_tree().quit()
+
+
+## Or gagné par camp ([bleu, rouge] : décision à la fin au temps).
+func team_gold() -> Array:
+	var g := [0, 0]
+	for h in heroes:
+		var hs: MobaHero = info[h]
+		g[hs.side] += int(hs.gold_earned)
+	return g
 
 
 ## Loin de la caméra, les sbires réfléchissent une image sur 2 (au-delà de 35 m) ou sur 4 (70 m).
@@ -761,6 +1171,11 @@ func update(_delta: float) -> void:
 func on_structure_down(s: MobaStructure, _killer: Combatant) -> void:
 	var by := 1 - s.side
 	Moba.structures_down[by] += 1
+	if s.kind == "tower":
+		var bounty := float(MobaData.BOUNTY.get("t%d" % s.tier, 0))
+		for h in heroes:
+			if (info[h] as MobaHero).side == by:
+				(info[h] as MobaHero).add_gold(bounty)  # (prime de tour : à chacun du camp)
 	Moba.note(s.kind, s.side, {"lane": s.lane, "tier": s.tier})
 	print("[moba] %s tombe à %d:%02d" % [s.display_name, int(Moba.t) / 60, int(Moba.t) % 60])
 	if s.kind == "tower" and s.tier == 2:
@@ -784,8 +1199,68 @@ func _report(what: String) -> void:
 	var line := "[moba] %s : %s ; vagues %d ; sbires apparus %d (créés en partie %d, sautés %d, vivants au plus %d) ; tirs %d ; PV %s" % [
 		what, Moba.summary(), wave_n, int(stats.spawned), int(stats.created_live), int(stats.skipped), int(stats.max_alive), int(stats.shots), " ".join(hp)]
 	print(line)
+	for h in heroes:
+		var hs: MobaHero = info[h]
+		print("[moba] héros %s%d %s niv %d xp %d or %d (gagné %d) objets %d [%s] %d/%d/%d sbires %d rappels %d" % ["BR"[hs.side], hs.role,
+			hs.cid, hs.level, int(hs.xp), int(hs.gold), int(hs.gold_earned), hs.items.size(), ",".join(hs.items), hs.kills, hs.deaths,
+			hs.assists, hs.cs, hs.recalls])
+	var sheet := []
+	for h in heroes:
+		var hs: MobaHero = info[h]
+		sheet.append({"side": hs.side, "role": hs.role, "cid": hs.cid, "diff": hs.difficulty, "level": hs.level, "gold": int(hs.gold_earned),
+			"items": hs.items.size(), "k": hs.kills, "d": hs.deaths, "a": hs.assists, "cs": hs.cs, "camps": hs.camps,
+			"camp_times": hs.camp_times, "recalls": hs.recalls, "deaths": hs.death_log})
+	print("[moba] bilan " + JSON.stringify({"what": what, "t": snappedf(Moba.t, 0.1), "winner": Moba.winner, "how": Moba.how,
+		"structures": Moba.structures_down, "kills": Moba.hero_kills, "heroes": sheet}))
 	if _perf:
 		print("[moba] image : %s ; sbires vivants : %s" % [JSON.stringify(_stats(_frame_ms)), JSON.stringify(_stats(_alive_samples))])
+		print("[moba] logique : %s" % JSON.stringify(_stats(_logic_ms)))
+		var hc := []
+		for h in heroes:
+			if h is MobaRival:
+				var r := h as MobaRival
+				var hs: MobaHero = info[h]
+				var ai_us := float(hs.ai.get("cost_us")) if hs.ai != null else 0.0
+				var n := maxf(1.0, float(r.cost_n))
+				hc.append([snappedf((float(r.cost_us) + ai_us) / n, 0.1), snappedf(ai_us / n, 0.1)])
+		print("[moba] héros µs : %s" % JSON.stringify(hc))
+		print("[moba] mesure fin images=%d" % _perf_frames)
+
+
+## Mesure (--moba-perf) : deux marques autour de tous les scripts de l'image physique (priorités extrêmes).
+class _Mark extends Node:
+	var cb: Callable
+
+	func _physics_process(_d: float) -> void:
+		cb.call()
+
+
+func _marks() -> void:
+	var a := _Mark.new()
+	a.process_physics_priority = -1000000
+	a.cb = func(): _phys_t0 = Time.get_ticks_usec()
+	add_child(a)
+	var b := _Mark.new()
+	b.process_physics_priority = 1000000
+	b.cb = _mark_end
+	add_child(b)
+
+
+func _mark_end() -> void:
+	if ended or Moba.t < _perf_from:
+		return
+	if not _perf_started:
+		_perf_started = true
+		print("[moba] mesure début")
+		for h in heroes:
+			if h is MobaRival:
+				(h as MobaRival).cost_us = 0
+				(h as MobaRival).cost_n = 0
+				var hs: MobaHero = info[h]
+				if hs.ai != null:
+					hs.ai.set("cost_us", 0)
+	_perf_frames += 1
+	_logic_ms.append((Time.get_ticks_usec() - _phys_t0) / 1000.0)
 
 
 static func _stats(a: Array) -> Dictionary:
@@ -820,6 +1295,7 @@ func _finish(w: int, how: String) -> void:
 	if ended:
 		return
 	ended = true
+	MobaItems.stop()
 	Moba.winner = w
 	Moba.how = how
 	d.world._ended = true

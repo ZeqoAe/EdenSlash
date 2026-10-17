@@ -151,6 +151,8 @@ func add_status(status: String, duration: float, source: Combatant = null) -> vo
 		duration = ColiseeAugments.status_time(self, status, duration, source)  # (Le Colisée, lot CO-E) Ancre
 	if AssaultCombat.on():
 		duration = AssaultCombat.status_duration(self, status, duration)  # (L'Assaut, lot TAC-4) contrôles et invisibilité bornés
+	if MobaItems.active:
+		duration = MobaItems.status_time(self, status, duration)  # (Les Deux Voies, lot MB-D) ténacité des objets
 	if duration <= 0.0:
 		return
 	if not _cc_gate(status, duration):
@@ -414,6 +416,8 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 		return
 	if ColiseeAugments.active:
 		amount = ColiseeAugments.pre_hit(self, source, amount, dot)  # (Le Colisée, lot CO-E) bonus des atouts
+	if MobaItems.active:
+		amount = MobaItems.pre_hit(self, source, amount, dot)  # (Les Deux Voies, lot MB-D) objets : pénétration, exécution, épines…
 	var hvh := source != null and source != self and is_hero(self) and is_hero(source)
 	var pvp := hvh and PvpCaps.active()
 	if pvp:
@@ -435,6 +439,10 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 		PvpCaps.note_hit(source, self, dmg)
 	if ColiseeAugments.active:
 		dmg = ColiseeAugments.absorb(self, source, dmg, dot)  # (Le Colisée, lot CO-E) boucliers, Deuxième souffle, dégâts vrais
+		if dmg <= 0.0:
+			return
+	if MobaItems.active:
+		dmg = MobaItems.absorb(self, dmg)  # (Les Deux Voies, lot MB-D) boucliers des objets
 		if dmg <= 0.0:
 			return
 	hp = maxf(0.0, hp - (AssaultCombat.absorb(self, dmg) if AssaultCombat.on() else dmg))  # (L'Assaut, lot TAC-5) bouclier d'abord
@@ -463,6 +471,8 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 		died.emit(self, source)
 	if ColiseeAugments.active:
 		ColiseeAugments.post_hit(self, source, dmg, dot)  # (Le Colisée, lot CO-E) effets au coup et au K.O.
+	if MobaItems.active:
+		MobaItems.post_hit(self, source, dmg, crit, dot)  # (Les Deux Voies, lot MB-D) effets déclenchés des objets
 
 
 ## Pas de mort en un coup : les dégâts reçus sur la fenêtre (2 s) ne dépassent pas burst_cap des PV
@@ -493,6 +503,8 @@ func heal(amount: float) -> void:
 	if PvpCaps.active():
 		amount *= PvpCaps.heal_mult()
 	amount *= heal_taken
+	if MobaItems.active:
+		amount = MobaItems.heal_in(self, amount)  # (Les Deux Voies, lot MB-D) soins reçus, soin d'un allié
 	if AssaultCombat.on():
 		amount = AssaultCombat.heal_amount(self, amount)  # (L'Assaut, lot TAC-4) soins plafonnés par manche
 	var before := hp

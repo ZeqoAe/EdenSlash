@@ -1333,6 +1333,12 @@ de bout en bout).
   doucement jusqu'au haut du tiers de PV où elle est : une poussée tenue gagne des tiers pour de bon, un sbire égaré ne l'use pas.
   Des vagues égales ne font tomber aucune tour en 20 min ; des sbires 20 % plus forts font tomber la première tour vers 9 min.
   Détruire le Cœur gagne ; à 25:00, le plus de structures détruites l'emporte.
+- **Héros en partie et boutique** (lot MB-D, `R_MB_D.md`) : chaque héros monte du niveau 1 à 12 avec l'XP des sbires proches, des
+  éliminations et du temps ; aux niveaux 2-4 puis 6-8 il choisit (sans que le jeu s'arrête) quelle case reçoit un enchaînement ;
+  l'ultime arrive au niveau 5. L'or vient du temps, des sbires (tout au dernier coup, une bonne part aux alliés proches), des
+  éliminations (prime plus grosse sur une série), des aides et des tours. La boutique ouvre à la fontaine et pendant la mort :
+  6 places, une paire de bottes, les recettes ne coûtent que la différence, un achat s'annule tant qu'on reste à la base, une vente
+  rend 70 %. Les objets valent pour le joueur comme pour les IA. Rappel : 6 s sans bouger ni être touché.
 ## Le Colisée (étude `conception/benchmark/ARENA.md`, en cours : lots CO-A à CO-L)
 
 Mode scellé, joué seul contre des IA scriptées : 6 trios (Classique ; Éclair 4 trios ; Grand tournoi 8 trios si la sonde de

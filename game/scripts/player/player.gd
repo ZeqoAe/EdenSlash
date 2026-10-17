@@ -414,6 +414,8 @@ func recalc_stats() -> void:
 	pvp_capped = PvpCaps.apply(self) if PvpCaps.active() else []  # duel : plafonds JcJ
 	if ColiseeAugments.active and not foe:
 		ColiseeAugments.sheet(self)  # (Le Colisée, lots CO-E / CO-F) atouts et enclumes de stat
+	if MobaItems.active and not foe:
+		MobaItems.sheet(self)  # (Les Deux Voies, lot MB-D) objets de la boutique
 	if AssaultCombat.on() and not foe:
 		AssaultCombat.sheet(self)  # (L'Assaut, lot TAC-4) passif de rôle, achats de la manche
 	procs = Items.gear_procs(foe_gear) if own else ([] if bare else Run.passive_procs() + Run.trophy_procs() + Profile.equipment_procs())
