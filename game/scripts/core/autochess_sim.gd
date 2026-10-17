@@ -29,22 +29,23 @@ const HALF_Y := AutochessDirector.HALF_Z - AutochessData.BOARD_MARGIN
 const CHAIN_FACTOR := AutochessUnit.CHAIN_FACTOR  # ★3 : 2e sort à 60 %
 const ZONE_WAIT := AutochessData.AI_ZONE_WAIT
 const HEAL_WAIT := AutochessData.AI_HEAL_WAIT
-## Réglages du moteur simplifié, calés sur le vrai combat (R_AC_C.md). Valeurs mesurées sur le squelette d'AC-E.
+## Réglages du moteur simplifié, calés sur le vrai combat (R_AC_C.md ; recalés par AC-J sur l'IA d'AC-U et dmg_scale 0,12 :
+## R_AC_J.md, accord 92-93 %, écart de durée 3-4 %, rythmes des coups et touches par sort au vrai).
 static var TUNE := {
 	"speed": ClassRival.DIFF[AutochessData.UNIT_DIFF].speed,  # m/s : course (× stat « move »)
 	"auto_hit": 0.4,  # s : de l'élan à l'impact d'une auto-attaque (ClassRival cfg.tele)
-	"auto_lock": 1.8,  # s : durée d'une auto-attaque menée au bout (immobile ; animation et élan)
+	"auto_lock": 1.5,  # s : durée d'une auto-attaque menée au bout (immobile ; animation et élan)
 	"auto_cancel": ClassRival.DIFF[AutochessData.UNIT_DIFF].cancel,  # chance de couper la fin du coup après l'impact
 	"spell_hit": 0.5,  # s : de l'élan à l'impact d'un sort (annonce rouge)
 	"spell_lock": 1.2,  # s : durée d'un sort (immobile)
 	"spell_gap": 0.25,  # s : attente après un sort
-	"zone_dodge": 0.7,  # chance qu'une cible prise dans une zone en sorte (esquive de l'IA, charges comprises)
+	"zone_dodge": 0.6,  # chance qu'une cible prise dans une zone en sorte (esquive de l'IA, charges comprises)
 	"reach_k": 0.95,  # allonge utile (AutochessUnit._attack_range)
 	"hit_slack": 1.2,  # m : une auto-attaque touche si la cible est encore à allonge + rayon + ça à l'impact
 	"focus_hp": 16.0,  # score de cible = distance + focus_hp × part de PV (ClassRival en équipe, Difficile)
 	"inertia": 2.5,  # m : on garde sa cible à score presque égal
 	"assassin_back": 4.0,  # m : bonus de l'assassin pour l'arrière-ligne (rôles simples)
-	"move_fudge": 0.85,  # part de la course vraiment utile (détours, contournements, collisions)
+	"move_fudge": 1.0,  # part de la course vraiment utile (détours, contournements, collisions)
 }
 
 static var _skills := {}  # id -> [sort signature, 2e sort]
