@@ -28,6 +28,11 @@ const LIST := [
 		"desc": "Les huit boss à la suite, une carte entre deux."},
 	{"id": "siege", "row": "challenge", "unlock": "siege", "img": "arena3", "group": "pvp", "tag": "JcE + JcJ", "name": "Le Siège", "sub": "Vagues, boss, chacun pour soi", "gain": "Apparence légendaire, cristaux", "gives": ["formula", "crystal", "look"],
 		"desc": "5 vagues, un boss, puis chacun pour soi. Le dernier debout gagne."},
+	# L'Échiquier (autochess, lot AC-I) : scellé et ouvert à tous comme le Survivant (rien du compte n'y change la force) ;
+	# en tête des Affrontements, seule activité ouverte de la rangée sur un compte neuf. Illustration provisoire : un vrai
+	# combat du mode dans l'arène (tools : capture sans interface) ; une image dédiée est à faire.
+	{"id": "autochess", "row": "versus", "img": "autochess", "group": "pvp", "tag": "Stratégie", "name": "L'Échiquier", "sub": "8 stratèges, une seule couronne", "gain": "Apparences, titres", "gives": ["look", "title"],
+		"desc": "Recrute des héros, place-les sur le plateau et regarde-les se battre."},
 	{"id": "duel", "row": "versus", "unlock": "duel_free", "group": "pvp", "name": "Duel", "sub": "1 contre 1, à l'arme ou équipé", "gain": "Rangs, titres, maîtrise", "gives": ["rank", "title", "mastery", "spirit"],
 		"desc": "Un héros adverse, piloté par l'IA, à armes égales ou avec ton build."},
 	{"id": "arenas", "row": "versus", "unlock": "arenas", "img": "arena2", "group": "pvp", "name": "Arènes", "sub": "2 contre 2 ou 3 contre 3", "gain": "Titres, maîtrise", "gives": ["title", "mastery", "insignia"],

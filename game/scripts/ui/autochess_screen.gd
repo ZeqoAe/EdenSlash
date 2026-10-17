@@ -13,6 +13,11 @@ extends Node3D
 ## Commandes : manette (UiNav sur le plateau et les panneaux, A prend / pose / achète, X maintenu vend, Y Prêt, LB XP,
 ## RB boutique, LT actualiser, RT verrou, Start pause) ; clavier 1-5 achète, D actualise, F XP, V verrou, E vend,
 ## Espace Prêt, Échap pause ; souris : clic ou glisser-déposer. Rapport : conception/autochess/R_AC_G.md.
+## Lot AC-I (entrée et fin) : lancé depuis le lobby avec config.diff (0 Recrue … 3 Légende ; stratèges AutochessAi, mélange
+## de la difficulté), la difficulté et les exploits vivent dans players[me].meta.aci (sauvegardés avec la partie). Fin :
+## AutochessRewards.finish (hub remis, coffres d'apparence, titres, quêtes) puis le bilan commun (AutochessResults :
+## Rejouer, Statistiques, Retour au lobby). Fiches de découverte ac_shop / ac_stars / ac_traits à la 1re rencontre.
+##   godot --path game res://scenes/autochess.tscn -- --ac-diff=1 [--seed=N --autoplay --auto-quit]  (ligne « [autochess] fin »)
 
 const COMBAT_SHOW := 3.0  # s (×1) : combat provisoire montré avant le bilan (power_fight est instantané)
 const OPENING_RECAP := 0.6  # s : manches sans combat (ouverture, choix partagé)
@@ -24,8 +29,11 @@ const AI_NAMES := ["Aldric", "Bérénice", "Corentin", "Daphné", "Élouan", "Fa
 	"Perceval", "Mélisende", "Tristan", "Aliénor", "Baudouin"]
 
 static var speed := 1  # vitesse du combat montré (×1 / ×2), gardée entre les parties
-## Réglages de lancement (tests, AC-I) : seed, resume, save_path, autoplay, fast (durées réduites).
+## Réglages de lancement (tests, AC-I) : seed, resume, save_path, autoplay, fast (durées réduites), real, diff (0-3 :
+## stratèges AutochessAi et récompenses ; absent : stratèges au hasard, sans récompense), auto_quit.
 static var config := {}
+## Fiches de découverte de l'écran (Tutorial.CARDS), dans l'ordre où elles peuvent venir.
+const TIPS := ["ac_shop", "ac_stars", "ac_traits"]
 
 var game: Autochess
 var board: AutochessBoard
@@ -45,6 +53,12 @@ var foe := -1
 var autoplay := false
 var fast := false
 var save_path := Autochess.SAVE_PATH
+## Lot AC-I : difficulté (-1 : stratèges au hasard, sans récompense), fin de partie (bilan commun), durée jouée.
+var diff := -1
+var auto_quit := false
+var results: AutochessResults
+var _pilot: Variant = null  # stratège du pilote automatique (Vétéran quand les adversaires sont des AutochessAi)
+var _played := 0.0  # s de partie (temps réel, pauses exclues), gardées dans meta.aci.secs
 ## Lot AC-V : l'arène, le directeur du vrai combat, le combat du joueur (indice dans game.fights, son camp).
 var arena: AutochessArena
 var director: AutochessDirector
@@ -86,6 +100,8 @@ func _ready() -> void:
 	fast = bool(cfg.get("fast", false))
 	save_path = String(cfg.get("save_path", Autochess.SAVE_PATH))
 	real_combat = bool(cfg.get("real", not fast))
+	diff = int(cfg.get("diff", -1))
+	auto_quit = bool(cfg.get("auto_quit", false))
 	var seed_ := int(cfg.get("seed", 0))
 	var resume := bool(cfg.get("resume", false))
 	for a in OS.get_cmdline_user_args():
@@ -95,6 +111,10 @@ func _ready() -> void:
 			resume = true
 		elif a == "--autoplay":
 			autoplay = true
+		elif a.begins_with("--ac-diff="):
+			diff = clampi(int(a.get_slice("=", 1)), 0, AutochessData.DIFFICULTIES.size() - 1)
+		elif a == "--auto-quit":
+			auto_quit = true
 	_build_world()
 	board = AutochessBoard.new()
 	board.arena_style = true  # tracé au sol de l'arène (AC-V)
@@ -141,7 +161,7 @@ func _ready() -> void:
 	hud.choice_pressed.connect(func():
 		_choice_hidden = false
 		_open_choices())
-	hud.replay_pressed.connect(func(): new_game(randi(), false))
+	hud.replay_pressed.connect(_replay)
 	hud.stats_pressed.connect(_open_game_stats)
 	team_bars = AutochessTeamBars.new()
 	team_bars.visible = false
@@ -172,16 +192,26 @@ func _ready() -> void:
 
 ## Nouvelle partie (ou reprise de la partie sauvegardée si [param resume] et qu'il y en a une).
 func new_game(seed_: int, resume := false) -> void:
-	var strats: Array = [null]
-	for i in AutochessData.PLAYERS - 1:
-		strats.append(Autochess.RandomStrategist.new())
 	game = null
 	if resume:
-		game = Autochess.load_game(save_path, strats)
+		game = Autochess.load_game(save_path, [])
+		if game != null:
+			var saved: Dictionary = (game.players[me].get("meta", {}) as Dictionary).get("aci", {})
+			diff = int(saved.get("diff", diff))
+			_played = float(saved.get("secs", 0.0))
+			game.set_strategists(_resumed_strategists(game))
 	if game == null:
 		game = Autochess.new()
 		game.save_path = save_path
-		game.start(seed_, strats)
+		game.start(seed_, _lineup(seed_))
+		_played = 0.0
+	var meta: Dictionary = game.players[me].meta
+	if not meta.get("aci") is Dictionary:
+		meta["aci"] = {"diff": diff, "flags": {}, "secs": _played}
+		game.save()  # la difficulté est gardée dès la 1re préparation (la reprise retrouve les mêmes stratèges)
+	_pilot = AutochessAi.make(1, "econome", game.seed_value) if diff >= 0 else Autochess.RandomStrategist.new()
+	if diff >= 0 and not AutochessRewards.has_snapshot():
+		AutochessRewards.begin()  # hub intact : remis tel quel à la fin (mode scellé)
 	game.fight = _data_fight  # combats non montrés (durées réduites) : la même couche d'effets, instantanée (AC-V)
 	game_stats = AutochessStats.new_game_stats()
 	_stage_built = -1
@@ -194,6 +224,28 @@ func new_game(seed_: int, resume := false) -> void:
 	_choice_hidden = false
 	hud.set_mode("prep")
 	_enter_prep()
+
+
+## Les 8 stratèges d'une nouvelle partie : 7 AutochessAi au mélange de la difficulté, sinon 7 stratèges au hasard (tests).
+func _lineup(seed_: int) -> Array:
+	if diff >= 0:
+		return AutochessAi.lineup(diff, seed_, me)
+	var strats: Array = []
+	for i in AutochessData.PLAYERS:
+		strats.append(null if i == me else Autochess.RandomStrategist.new())
+	return strats
+
+
+## Stratèges d'une partie reprise : les IA refaites d'après leur meta (AutochessAi.restore) ; le joueur reste le joueur.
+func _resumed_strategists(g: Autochess) -> Array:
+	var out: Array = AutochessAi.restore(g) if diff >= 0 else []
+	out.resize(AutochessData.PLAYERS)
+	for i in AutochessData.PLAYERS:
+		if i == me:
+			out[i] = null
+		elif out[i] == null:
+			out[i] = Autochess.RandomStrategist.new()
+	return out
 
 
 func _make_identities() -> void:
@@ -235,7 +287,7 @@ func _enter_prep() -> void:
 	hud.set_mode("prep")
 	_sync()
 	if autoplay:
-		Autochess.RandomStrategist.new().decide(game, me)
+		_pilot.decide(game, me)
 	var inc: Dictionary = game.players[me].income
 	if int(inc.get("total", 0)) > 0:
 		var parts: Array = ["%d de base" % int(inc.base)]
@@ -248,6 +300,7 @@ func _enter_prep() -> void:
 		hud.show_banner(String(AutochessHud.KIND_NAMES.get(game.round_kind(), "")), "+%d or" % int(inc.total),
 			" · ".join(parts), UiTheme.GOLD, 2.0)
 	_open_choices()
+	_tip_check()
 
 
 ## Ouvre le choix en attente du joueur (atout, ouverture, objet… ou choix partagé), sinon ferme les cartes.
@@ -467,6 +520,7 @@ func _resolve_combat() -> void:
 		game.run_fights()
 	var rctx := _round_ctx()
 	AutochessStats.add_round(game_stats, rctx, my_side)
+	_track()
 	team_bars.visible = false
 	meter.visible = false
 	hud.players.record(game)
@@ -523,16 +577,80 @@ func _show_end() -> void:
 	cursor.enabled = false
 	choice.visible = false
 	carousel.visible = false
+	recap.close()
+	cards.dismiss_all()
 	var p: Dictionary = game.players[me]
 	var place := int(p.place) if int(p.place) > 0 else 1
-	hud.show_end(place, "Manches gagnées : %d\nOr dépensé : %d" % [int(p.stats.won), int(p.stats.gold_spent)])
-	print("[autochess] fin : place %d, manches %d (%s)" % [place, game.rounds_played, game.round_key()])
+	_track()
+	var info := end_info()
+	var got: Dictionary = AutochessRewards.finish(info) if diff >= 0 else {}
+	Autochess.clear_save(save_path)  # éliminé avant la fin des autres : la partie gardée n'a plus lieu d'être (ni de reprise du combat perdu)
+	hud.set_mode("over")
+	print("[autochess] fin : place %d, manches %d (%s), difficulté %d, %d s, coffres %d, titres %d" % [place, game.rounds_played,
+		game.round_key(), diff, int(_played), (got.get("chests", []) as Array).size(), (got.get("titles", []) as Array).size()])
+	results = AutochessResults.new()
+	add_child(results)
+	results.show_results(info, game_stats, got, {"replay": _replay, "stats": _results_stats, "back": _quit})
+	if auto_quit:
+		get_tree().quit()
+
+
+## Ce que la fin de partie retient (bilan, récompenses, quêtes).
+func end_info() -> Dictionary:
+	var p: Dictionary = game.players[me]
+	var meta: Dictionary = p.meta.get("aci", {})
+	return {"diff": maxi(diff, 0), "place": int(p.place) if int(p.place) > 0 else 1, "stage": game.stage, "hp": int(p.hp), "rerolls": int(p.stats.rerolls),
+		"rounds": game.rounds_played + 1, "rounds_won": int(p.stats.won), "secs": _played, "abandoned": bool(p.get("abandoned", false)),
+		"flags": (meta.get("flags", {}) as Dictionary).duplicate()}
+
+
+## Exploits de plateau (AutochessRewards.track) et durée jouée, gardés dans meta.aci (sauvegardés avec la partie).
+func _track() -> void:
+	if game == null:
+		return
+	var meta: Dictionary = game.players[me].meta
+	if not meta.get("aci") is Dictionary:
+		meta["aci"] = {"diff": diff, "flags": {}, "secs": 0.0}
+	var flags: Dictionary = meta.aci.get("flags", {})
+	AutochessRewards.track(game, me, flags)
+	meta.aci["flags"] = flags
+	meta.aci["secs"] = _played
+
+
+## Bilan : Rejouer (même difficulté, nouvelle graine).
+func _replay() -> void:
+	_close_results()
+	new_game(randi(), false)
+
+
+## Bilan : Statistiques (bilan détaillé d'AC-V) ; le bilan revient quand on le ferme.
+func _results_stats() -> void:
+	if results == null:
+		return
+	results.visible = false
+	(results.get_child(0) as Control).visible = false
+	get_tree().paused = false
+	_open_game_stats()
+	recap.closed.connect(func():
+		if is_instance_valid(results) and phase == "over":
+			results.visible = true
+			(results.get_child(0) as Control).visible = true
+			get_tree().paused = true, CONNECT_ONE_SHOT)
+
+
+func _close_results() -> void:
+	get_tree().paused = false
+	if is_instance_valid(results):
+		results.queue_free()
+	results = null
 
 
 # --- boucle ---------------------------------------------------------------------------------------------------------
 func _process(delta: float) -> void:
 	if game == null:
 		return
+	if phase != "over" and not _paused:
+		_played += delta / maxf(Engine.time_scale, 0.01)
 	if _dirty:
 		_sync()
 	hud.set_holding(not cursor.held.is_empty() and String(cursor.held.get("zone", "")) != "items")
@@ -676,6 +794,7 @@ func _buy(slot: int) -> void:
 	if game.buy(me, slot):
 		Sfx.ui("confirm", -8.0)
 		_dirty = true
+		_tip_check()
 		return
 	if int(p.gold) < AutochessPool.cost_of(id):
 		hud.toast("Pas assez d'or")
@@ -851,7 +970,44 @@ func _ask_abandon() -> void:
 
 
 func _quit() -> void:
+	get_tree().paused = false
+	if AutochessRewards.has_snapshot():
+		AutochessRewards.restore_hub()  # partie laissée en cours (reprise possible) : le hub est remis tel quel
 	get_tree().change_scene_to_file("res://scenes/lobby.tscn")
+
+
+# --- fiches de découverte (lot AC-I) ----------------------------------------------------------------------------------
+## Fiche de la 1re rencontre (boutique, deux copies d'une unité, trait actif ou atout), une à la fois, en préparation.
+func _tip_check() -> void:
+	if phase != "prep" or cards == null or cards.count() > 0 or autoplay:
+		return
+	for id in TIPS:
+		if Tutorial.card_pending(id) and _tip_due(id):
+			Tutorial.mark_seen(id)
+			var spec := Tutorial.card_spec(id)
+			spec["duration"] = 20.0
+			spec["buttons"] = [{"label": "Compris", "kind": "primary"},
+				{"label": "Guide", "kind": "plain", "cb": func(): Guide.open_on(self, id)}]
+			cards.add_card(spec)
+			return
+
+
+func _tip_due(id: String) -> bool:
+	var p: Dictionary = game.players[me]
+	match id:
+		"ac_shop":
+			return game.round_kind() != "ouverture" and not (p.shop as Array).all(func(s): return String(s) == "")
+		"ac_stars":
+			var seen := {}
+			for u in game.units_of(me):
+				if int(u.stars) >= 2:
+					return true
+				seen[String(u.id)] = int(seen.get(String(u.id), 0)) + 1
+				if int(seen[String(u.id)]) >= 2:
+					return true
+		"ac_traits":
+			return not game.active_traits(me).is_empty() or String(game.pending(me).get("kind", "")) == "atout"
+	return false
 
 
 # --- entrées --------------------------------------------------------------------------------------------------------

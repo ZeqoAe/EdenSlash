@@ -285,6 +285,11 @@ static func after(mode: String, got: Dictionary = {}) -> String:
 		"royale":
 			if int(got.get("looks", 0)) > 0:
 				parts.append("apparence de prestige gagnée : Héros > Apparence")
+		"autochess":
+			if int(got.get("looks", 0)) > 0:
+				parts.append("coffre d'apparence : menu Coffres")
+			if int(got.get("titles", 0)) > 0:
+				parts.append("titre à porter : Carnet > Succès et titres")
 	var line := " · ".join(parts.slice(0, 2))  # deux gains au plus : la ligne reste lisible
 	var next := advice(true)
 	if parts.size() < 2 and not next.is_empty() and String(next.id) != "first_run":

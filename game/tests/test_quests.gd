@@ -71,7 +71,7 @@ func _test_pool() -> void:
 	var acts := {}
 	for d in QuestPool.LIST:
 		acts[d.act] = true
-	var wanted := ["survival", "survivor", "dungeon", "tower", "rush", "siege", "duel", "arenas", "gauntlet", "royale", "lobby"]
+	var wanted := ["survival", "survivor", "dungeon", "tower", "rush", "siege", "duel", "arenas", "gauntlet", "royale", "autochess", "lobby"]
 	check("pool : couvre toutes les activités (%s)" % ", ".join(acts.keys()), wanted.all(func(a): return acts.has(a)))
 	_reset()
 	var titles_ok := true

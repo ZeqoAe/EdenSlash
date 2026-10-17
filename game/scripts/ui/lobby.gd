@@ -561,6 +561,132 @@ func _start_royale() -> void:
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 
+## L'Échiquier (lot AC-I) : le mode en trois lignes, la difficulté des sept stratèges IA (fermées : leur condition), les
+## coffres d'apparence et titres de la difficulté choisie, les records, une graine facultative ; Lancer (épinglé) et
+## Reprendre s'il y a une partie gardée. Mode scellé : aucune condition de progression.
+const AC_SCENE := "res://scenes/autochess.tscn"
+const AC_DIFF_LINES := ["Des débutants : ils dépensent tout et changent souvent d'avis.", "Des joueurs solides qui gardent leur or.",
+	"Ils lisent ton plateau et assemblent leurs objets.", "Les meilleurs stratèges : chaque pièce d'or compte."]
+var _ac_diff := -1  # -1 : celle de la dernière partie, sinon la plus haute ouverte par les parties
+var _ac_seed: LineEdit
+
+
+func _menu_autochess() -> void:
+	_activity_head("autochess")
+	for line in ["Recrute des héros et place-les : ils se battent seuls.", "Trois copies font une étoile ; les traits s'activent à plusieurs.",
+			"Huit stratèges, 100 PV chacun : le dernier en lice gagne."]:
+		var l := Hud._label(_sub, "•  " + line, 15, UiTheme.TEXT)
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if _ac_diff < 0 or not AutochessRewards.diff_open(_ac_diff):
+		var last := int(AutochessRewards.last.get("diff", -1))
+		_ac_diff = last if last >= 0 and AutochessRewards.diff_open(last) else AutochessRewards.top_open(false)
+	_section("Difficulté", "La force des sept stratèges IA. Gagne en Vétéran puis en Champion pour ouvrir les suivantes.")
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 8)
+	_sub.add_child(h)
+	for d in AutochessData.DIFFICULTIES.size():
+		var open := AutochessRewards.diff_open(d)
+		var b := MenuWidgets.glass_button(AutochessRewards.diff_name(d) if open else "🔒 " + AutochessRewards.diff_name(d), 16, Vector2(0, 44))
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.disabled = not open
+		b.tooltip_text = String(AC_DIFF_LINES[d]) if open else AutochessRewards.diff_condition(d)
+		if d == _ac_diff:
+			b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.14, 0.11, 0.24, 0.96), UiTheme.GOLD, 2, 12))
+			b.add_theme_color_override("font_color", UiTheme.GOLD)
+		elif not open:
+			b.add_theme_color_override("font_disabled_color", UiTheme.MUTED)
+		var dd := d
+		b.pressed.connect(func():
+			_ac_diff = dd
+			_show_menu("autochess"))
+		h.add_child(b)
+	var dl := Hud._label(_sub, String(AC_DIFF_LINES[_ac_diff]), 15, UiTheme.MUTED)
+	dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_section("Coffres d'apparence", "Chaque place donne son coffre une fois par difficulté ; ensuite, un coffre commun et un coffre rare au plus par jour.")
+	for g in AutochessRewards.board(_ac_diff):
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		_sub.add_child(row)
+		var mark := Hud._label(row, "✔" if bool(g.done) else "◇", 15, UiTheme.GOLD if bool(g.done) else UiTheme.MUTED)
+		mark.custom_minimum_size = Vector2(18, 0)
+		var t := Hud._label(row, String(g.text) + ("  ·  titre « %s »" % String(g.title) if String(g.title) != "" else ""), 15, UiTheme.TEXT)
+		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var c: Dictionary = Rewards.TYPES[String(g.type)]
+		var n := Hud._label(row, String(c.name).trim_prefix("Coffre d'apparence "), 15, c.color)
+		n.tooltip_text = String(c.name)
+		n.mouse_filter = Control.MOUSE_FILTER_STOP
+		var gap := Control.new()  # la rareté ne touche pas la barre de défilement
+		gap.custom_minimum_size = Vector2(10, 0)
+		row.add_child(gap)
+	var ex := AutochessRewards.exploits()
+	var ex_done := ex.filter(func(e): return bool(e.done)).size()
+	var exl := Hud._label(_sub, "Exploits : %d / %d titres" % [ex_done, ex.size()], 15, UiTheme.TEXT)
+	exl.mouse_filter = Control.MOUSE_FILTER_STOP
+	exl.tooltip_text = "\n".join(ex.map(func(e): return "%s %s : %s" % ["✔" if bool(e.done) else "◇", String(e.title), String(e.text)]))
+	var games := AutochessRewards.count("games")
+	var best := AutochessRewards.best()
+	var rec := Hud._label(_sub, "Parties : %d · top 4 : %d · victoires : %d · meilleure place : %s" % [games, AutochessRewards.count("top4"),
+		AutochessRewards.count("wins"), AutochessPlayers.place_text(best) if best > 0 else "—"], 14, Color(0.6, 0.85, 1.0))
+	rec.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	var sr := HBoxContainer.new()
+	sr.add_theme_constant_override("separation", 10)
+	_sub.add_child(sr)
+	var sl := Hud._label(sr, "Graine", 15, UiTheme.TEXT)
+	sl.mouse_filter = Control.MOUSE_FILTER_STOP
+	sl.tooltip_text = "Même graine : mêmes boutiques et mêmes adversaires. Vide : au hasard."
+	var keep := _ac_seed.text if is_instance_valid(_ac_seed) else ""
+	_ac_seed = LineEdit.new()
+	_ac_seed.placeholder_text = "au hasard"
+	_ac_seed.text = keep
+	_ac_seed.max_length = 9
+	_ac_seed.custom_minimum_size = Vector2(160, 36)
+	_ac_seed.tooltip_text = sl.tooltip_text
+	sr.add_child(_ac_seed)
+	var save := _ac_saved()
+	if not save.is_empty():
+		var res := MenuWidgets.gold_button("Reprendre la partie", 22, Vector2(0, 52))
+		res.tooltip_text = "%s · manche %s · %d PV" % [AutochessRewards.diff_name(int(save.diff)), String(save.round), int(save.hp)]
+		res.pressed.connect(_start_autochess.bind(true))
+		_pin(res)
+	var go := MenuWidgets.gold_button("Lancer l'Échiquier", 22, Vector2(0, 52)) if save.is_empty() \
+		else MenuWidgets.glass_button("Nouvelle partie", 18, Vector2(0, 44))
+	go.pressed.connect(func():
+		if _ac_saved().is_empty():
+			_start_autochess(false)
+		else:
+			InfoCard.ask(self, "Nouvelle partie ?", "La partie en cours sera perdue.", "Nouvelle partie", _start_autochess.bind(false), true))
+	_pin(go)
+
+
+## Partie gardée (user://autochess_save.json) : {diff, round (« 3-2 »), hp} ; {} s'il n'y en a pas.
+func _ac_saved() -> Dictionary:
+	var txt := SafeFile.read(Autochess.SAVE_PATH)
+	if txt == "":
+		return {}
+	var d: Variant = JSON.parse_string(txt)
+	if not d is Dictionary or (d.get("players", []) as Array).is_empty():
+		return {}
+	var me: Dictionary = d.players[0]
+	return {"diff": int(me.get("meta", {}).get("aci", {}).get("diff", 0)), "round": "%d-%d" % [int(d.get("stage", 1)), int(d.get("round", 1))],
+		"hp": int(me.get("hp", 0))}
+
+
+## Lance l'Échiquier ([param resume] : la partie gardée) ; [param extra] : réglages de plus pour AutochessScreen.config (tests).
+func _start_autochess(resume := false, extra := {}) -> void:
+	if _launching:
+		return
+	_launching = true
+	if backdrop:
+		backdrop.release()
+	var cfg := {"diff": clampi(_ac_diff, 0, AutochessData.DIFFICULTIES.size() - 1), "resume": resume}
+	if is_instance_valid(_ac_seed) and _ac_seed.text.strip_edges().is_valid_int():
+		cfg["seed"] = absi(_ac_seed.text.strip_edges().to_int())
+	cfg.merge(extra, true)
+	AutochessScreen.config = cfg
+	get_tree().change_scene_to_file.call_deferred(AC_SCENE)
+
+
 func _duel_tabs() -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
@@ -1533,6 +1659,8 @@ func _show_menu(id: String) -> void:
 			_menu_arenas()
 		"royale":
 			_menu_royale()
+		"autochess":
+			_menu_autochess()
 		"rush":
 			_menu_rush()
 		"siege":

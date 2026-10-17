@@ -32,6 +32,7 @@ const ROLES := {
 	"duel": "Un contre un contre l'IA, à l'arme ou équipé. Monte la Ligue, puis affronte le Panthéon et son équipement.",
 	"arenas": "Deux contre deux ou trois contre trois, avec des alliés IA. Titres et maîtrise.",
 	"royale": "Huit héros, un seul survivant. Apparences de prestige et titre.",
+	"autochess": "[ul]Huit stratèges, un seul gagnant : recrute des héros, place-les, ils se battent seuls.\nTrois copies font une étoile ; les traits s'activent à plusieurs ; trois atouts dans la partie.\nQuatre difficultés. Un mode à part : il donne des apparences et des titres, rien d'autre.[/ul]",
 	"training": "Teste tes sorts, tes armes et tes cartes sans rien risquer.",
 }
 
@@ -250,6 +251,9 @@ static func blocks_for(id: String) -> Array:
 				if Activities.locked(a):
 					txt += _lock_line(String(a.unlock))
 				out.append({"id": "mode_" + String(a.id), "title": String(a.name), "text": txt})
+				if String(a.id) == "autochess":  # ses fiches de découverte (lot AC-I), juste sous le mode
+					for cid in ["ac_shop", "ac_stars", "ac_traits"]:
+						out.append(_card_block(cid))
 			out.append({"id": "chests", "title": "Coffres et roulette", "text": bullets([
 				"Les coffres de récompense (boss, défis, autel) s'ouvrent dans le menu Coffres.",
 				"La roulette du jour ne donne que des apparences."])})

@@ -83,6 +83,8 @@ func _hub() -> String:
 				v = (v as Dictionary).duplicate(true)
 				v.erase(SurvivorRewards.KEY)
 				v.erase("quests")  # (l'état des quêtes est tiré à la demande par le système de quêtes, pas par le Survivant)
+				v.erase("quests_done")  # (une quête du Survivant accomplie par la partie : permis, elle ne donne que de l'apparence)
+				v.erase("quest_series_best")
 			"extra_titles":
 				v = (v as Array).filter(func(t): return not String(t) in SurvivorRewards.TITLES)
 		parts.append("%s=%s" % [k, _norm(v)])

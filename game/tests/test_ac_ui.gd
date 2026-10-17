@@ -372,27 +372,33 @@ func _ready() -> void:
 		guard += 1
 		await get_tree().process_frame
 	check("partie jouée jusqu'au bout au pilote (%s, place %d)" % [g.round_key(), int(p.place)], screen.phase == "over" and int(p.place) >= 1)
-	check("fin : ta place, Rejouer et Retour", screen.hud.is_end_shown() and screen.hud.replay_button.is_visible_in_tree()
-		and screen.hud.back_button.is_visible_in_tree())
+	# lot AC-I : la fin passe par le bilan commun (AutochessResults : Rejouer, Statistiques, Retour au lobby)
+	await get_tree().create_timer(ResultsPanel.LOCK_SECS + 0.2).timeout
+	var res: AutochessResults = screen.results
+	check("fin : bilan commun, ta place, Rejouer, Statistiques et Retour", res != null and res.buttons.size() == 3
+		and res.buttons.all(func(b): return b.is_visible_in_tree() and not b.disabled))
+	bad = _english(fr, res)
+	check("bilan de fin en français" + ("" if bad.is_empty() else " : " + str(bad)), bad.is_empty())
 	Gamepad.active = true
 	await _frames(2)
 	r = reach()
 	seen = r[0]
-	check("manette : Rejouer et Retour atteignables", seen.has(screen.hud.replay_button) and seen.has(screen.hud.back_button))
-	check("manette : Statistiques atteignable (AC-V)", seen.has(screen.hud.stats_button))
+	check("manette : Rejouer, Statistiques et Retour atteignables", res != null and res.buttons.all(func(b): return seen.has(b)))
 	Gamepad.active = false
 	# lot AC-V : bilan de la partie (cumul de tes héros, manche après manche)
 	var acc: Dictionary = screen.game_stats
 	check("statistiques de la partie : %d manches, %d classes" % [int(acc.get("rounds", 0)), (acc.get("units", {}) as Dictionary).size()],
 		int(acc.get("rounds", 0)) > 3 and not (acc.get("units", {}) as Dictionary).is_empty())
-	screen.hud.stats_button.pressed.emit()
+	res.buttons[1].pressed.emit()
 	await _frames(2)
 	check("bouton Statistiques : bilan de la partie ouvert", screen.recap.visible and screen.recap.mode == "game" and not screen.recap.shown_rows().is_empty())
 	bad = _english(fr, screen.recap)
 	check("bilan de la partie en français" + ("" if bad.is_empty() else " : " + str(bad)), bad.is_empty())
 	screen.recap.close()
+	await _frames(2)
+	check("Statistiques fermées : le bilan revient", res.visible)
 	screen.autoplay = false
-	screen.hud.replay_button.pressed.emit()
+	res.buttons[0].pressed.emit()
 	await _frames(3)
 	check("Rejouer : nouvelle partie à 1-1", screen.game != g and screen.game.round_key() == "1-1" and screen.phase == "prep"
 		and screen.choice.visible)

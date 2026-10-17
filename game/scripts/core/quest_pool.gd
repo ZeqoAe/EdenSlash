@@ -6,7 +6,7 @@ extends RefCounted
 ## Champs d'une entrée :
 ##   id      identifiant stable (enregistré dans la sauvegarde)
 ##   act     activité qui fait avancer la quête : survival, survivor, dungeon, tower, rush, siege, duel, arenas, gauntlet,
-##           royale, lobby (menu Coffres), any (n'importe quelle activité, pour les quêtes de variété)
+##           royale, autochess, lobby (menu Coffres), any (n'importe quelle activité, pour les quêtes de variété)
 ##   text    consigne, avec un %d (la cible), un %s (classe ou époque du paramètre) ou rien
 ##   stat    ce qui est compté dans le bilan d'une partie (voir Quests.stat_of) ; mode : sum (additionné), best (le meilleur
 ##           d'une partie), distinct (valeurs différentes vues, `of` = act ou class)
@@ -75,6 +75,11 @@ const LIST := [
 		"d": 1, "w": 3, "tier": 2, "min": 12, "need": "royale"},
 	{"id": "ry_kills", "act": "royale", "text": "Éliminer %d héros en Battle royale", "stat": "pkills", "mode": "sum", "d": 4, "w": 15, "tier": 2, "min": 12, "need": "royale"},
 	{"id": "ry_win", "act": "royale", "text": "Gagner une Battle royale", "stat": "win", "mode": "sum", "d": 0, "w": 1, "tier": 3, "min": 14, "need": "royale"},
+	# --- L'Échiquier (lot AC-I : mode scellé, récompenses d'apparence seulement, voir Quests._roll_reward) -------------
+	{"id": "ac_top4", "act": "autochess", "text": "Finir dans les 4 premiers à l'Échiquier", "stat": "run", "mode": "sum", "when": {"max_place": 4},
+		"d": 1, "w": 3, "tier": 2, "min": 25},
+	{"id": "ac_rounds", "act": "autochess", "text": "Gagner %d manches à l'Échiquier", "stat": "rounds_won", "mode": "sum", "d": 12, "w": 50, "tier": 1, "min": 25},
+	{"id": "ac_win", "act": "autochess", "text": "Gagner une partie de l'Échiquier", "stat": "ac_first", "mode": "sum", "d": 0, "w": 1, "tier": 3, "min": 30},
 	# --- Menu Coffres ----------------------------------------------------------------------------------------------
 	{"id": "lb_chests", "act": "lobby", "text": "Ouvrir %d coffres de récompense", "stat": "chest_open", "mode": "sum", "d": 4, "w": 15, "tier": 1, "min": 3, "gate": "chests"},
 	# --- Variété ---------------------------------------------------------------------------------------------------
@@ -94,6 +99,7 @@ const ACTS := {
 	"arenas": {"name": "Arènes", "go": {"menu": "arenas"}},
 	"gauntlet": {"name": "Gantelet", "go": {"menu": "duel", "tab": "gauntlet"}},
 	"royale": {"name": "Battle royale", "go": {"menu": "royale"}},
+	"autochess": {"name": "L'Échiquier", "go": {"menu": "autochess"}},
 	"lobby": {"name": "Coffres", "go": {"chests": true}},
 	"any": {"name": "Toutes", "go": {"menu": "quests"}},
 }

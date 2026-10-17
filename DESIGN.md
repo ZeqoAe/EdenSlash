@@ -56,6 +56,7 @@ insignes de participation `Run.INSIGNIA_BASE` 25 ; plus d'enclume en Survie (pas
   - La Tour : types d'étage (passe M3, nuit du 15/10)
   - Ruée des boss et Siège sur la bibliothèque (passe M6, nuit du 15/10)
   - Battle royale (passe M1, 0.1.201 ; mode codé en 0.1.161, idée 9 de `conception/IDEES_EN_VRAC.md`)
+  - L'Échiquier (autochess, `conception/autochess/SPEC.md` ; entrée et fin : lot AC-I)
 - **Partie D — Économie et progression**
   - Joaillerie et forge (comme dans Eden)
   - Équipement
@@ -1168,6 +1169,34 @@ doit se lire avant de lancer ; la Ruée et le Siège puisent dans la bibliothèq
 - **Inspection** : la dépouille d'un héros garde sa fiche ; [F] près d'elle ouvre la fiche d'équipement (9 emplacements,
   carte de chaque pièce comparée à la tienne, « au sol » / « déjà ramassée » / arme gardée) ; en spectateur, [F] montre
   l'équipement du héros suivi. Jeu en pause pendant la fiche ; B / Échap la ferme.
+
+## L'Échiquier (autochess, `conception/autochess/SPEC.md` ; entrée et fin : lot AC-I, rapport `conception/autochess/R_AC_I.md`)
+
+Les règles de la partie (8 stratèges, boutique, étoiles, traits, atouts, objets, combats) sont celles de la SPEC et des
+rapports `R_AC_*` ; ici, ce que le mode est dans le jeu.
+- **Activité** « L'Échiquier » (`Activities.LIST`, rangée Affrontements, **en tête** : seule activité de la rangée ouverte sur
+  un compte neuf). Ouverte dès le départ, **scellée** (`Modes.sealed()` pendant la partie) : rien du compte n'y change la
+  force, et rien de la partie ne touche au compte. Pastilles : apparences, titres.
+- **Page du lobby** : le mode en trois lignes, la difficulté des sept stratèges IA (Recrue, Vétéran ouvertes ; Champion
+  après un top 4 en Vétéran ; Légende après une victoire en Champion ; mode dev : tout), les coffres de la difficulté
+  (✔ gagnés), les exploits (au survol), les records (parties, top 4, victoires, meilleure place), une graine facultative
+  (même graine : mêmes boutiques, mêmes adversaires), Lancer ; **Reprendre la partie** quand une partie est gardée
+  (`user://autochess_save.json`, écrite au début de chaque préparation) ; « Nouvelle partie » demande alors confirmation.
+- **Fin de partie** : le bilan commun (`ResultsPanel`) : place, manches, dégâts de tes héros, meilleure unité, durée ; « Gagné »
+  (coffres, titres) ; Rejouer (même difficulté), Statistiques (bilan détaillé de la partie), Retour au lobby.
+- **Récompenses** (`core/autochess_rewards.gd`, seulement des apparences et des titres) : top 4 -> coffre d'apparence commun,
+  top 2 -> rare, 1re place -> mythique (légendaire en Champion et Légende) + titre de victoire (Stratège, Tacticien,
+  Grand tacticien, Maître de l'Échiquier), **une fois par difficulté** ; ensuite au plus un commun (top 4) et un rare (top 2)
+  par jour, toutes difficultés. Titres d'exploit, une fois : Trois étoiles (unité de coût 4-5 à ★3), Pur sang (trait de
+  famille à 9), Invaincu (victoire à 70 PV ou plus), Frugal (victoire sans actualiser la boutique). Abandon : la place du
+  moment, comptée seulement à partir de l'étape 4 (sinon ni coffre ni quête). Élimination : la partie gardée est effacée.
+  Ni insignes, ni maîtrise, ni matières, ni XP de héros.
+- **Hub intact** : instantané de la progression du compte au lancement (`Survivor.HUB_KEYS`), remis avant d'écrire les
+  récompenses (comme le Survivant).
+- **Quêtes** : `ac_top4` (finir dans les 4 premiers), `ac_rounds` (manches gagnées), `ac_win` (hebdomadaire) ; récompense
+  d'apparence seulement (`Quests._roll_reward`, comme le Survivant).
+- **Fiches** (à la 1re rencontre, dans l'écran du mode) : « Achète et place » (boutique, intérêts), « Trois copies, une
+  étoile », « Traits et atouts » ; rangées au Guide, chapitre Modes, sous L'Échiquier.
 
 # Partie D — Économie et progression
 

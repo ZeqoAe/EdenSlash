@@ -80,6 +80,7 @@ dans `Compass` si elle change la quête + `test_nav_screens`. Les activités « 
 | Duel (Libre, Ligue, Panthéon, Gantelet) | rangs, titres, maîtrise, Esprits | 1er duelliste de la Tour | `core/duel.gd`, `league.gd`, `pantheon.gd` | section « Duel » ci-dessous |
 | Arènes 2v2 / 3v3 | titres, maîtrise, insignes | rang Or de la Ligue | `core/duel_director.gd` | `R_M7.md` |
 | Battle royale | apparences, titres, maîtrise | rang Argent de la Ligue | `core/royale.gd`, `royale_director.gd` | DESIGN « Battle royale » |
+| L'Échiquier | apparences, titres (scellé : aucun lien avec le compte) | dès le départ | `ui/autochess_screen.gd`, `core/autochess*.gd` | DESIGN « L'Échiquier », section ci-dessous |
 
 Épreuves de maîtrise : « Bientôt » (pas de moteur de leçons). Zone d'entraînement : `core/training.gd`.
 
@@ -184,6 +185,10 @@ IA de combat (AC-U, `R_AC_U.md`) : `ai/autochess_unit.gd` (comportements `roles`
 banc `tools/autochess_ai_bench.tscn` (`--ai=full --vs=naive`, 240 miroirs : 99 %) ; test `test_ac_unit_ai` ; un changement d'IA se mesure au banc avant d'être gardé.
 Mise en scène (AC-V, `R_AC_V.md`) : arène du Duel `world/autochess_arena.gd` (`AutochessArena` : décor par étape, plateau `arena_style` tracé au sol, caméra du combat), vrai combat dans l'écran (`config.real`), barres d'équipe `ui/autochess_team_bars.gd`, compteur `ui/autochess_meter.gd`, bilans de manche et de partie `ui/autochess_recap.gd`, chiffres `core/autochess_stats.gd` (compteurs de la couche) ; test `test_ac_stats`.
 Mesure et calibrage (AC-J, `R_AC_J.md`) : parties entre IA `tools/autochess_games.tscn` (`--setup=echelle|l7r|r7l|pilote|legendes`, une ligne JSON par partie) + `python tools/autochess_report.py` (top 4 relatif, méta, écarts au §9 ; `--run`) ; réglages mesurés : mana par rôle `AutochessData.ROLE_MANA`, traits, `dmg_scale` 0,11 ; `tests/ac_mesures.json` relu par `test_ac_sim_real` (tout réglage refait la mesure).
+Entrée et fin (AC-I, `R_AC_I.md`) : activité en tête des Affrontements, page `Lobby._menu_autochess` (difficulté, graine, Reprendre) -> `_start_autochess` ->
+`AutochessScreen.config` (+ diff 0-3 : stratèges `AutochessAi.lineup`, gardée dans `players[0].meta.aci` ; auto_quit) ; fin : `AutochessRewards.finish` (hub remis
+comme le Survivant, coffres d'apparence plafonnés, titres, `Quests.end_run("autochess")`) puis bilan commun `ui/autochess_results.gd` ; fiches `ac_shop` /
+`ac_stars` / `ac_traits` ; direct `scenes/autochess.tscn -- --ac-diff=1 [--autoplay --auto-quit]` ; test `test_ac_rewards`.
 
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à

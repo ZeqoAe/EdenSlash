@@ -181,6 +181,8 @@ func _ready() -> void:
 	await probe("lobby : Ruée des boss", 0.8)
 	lobby._show_menu("royale")
 	await probe("lobby : Battle royale", 0.8)
+	lobby._show_menu("autochess")
+	await probe("lobby : L'Échiquier (difficultés, graine, Lancer)", 0.8)
 	lobby._show_menu("quests")
 	await probe("lobby : Quêtes (relance, Défi du jour)", 0.8)
 	lobby._show_menu("siege")
@@ -285,6 +287,11 @@ func _ready() -> void:
 	await probe("Échiquier : premier héros (4 cartes, Voir le plateau)", 0.95)
 	ac.choice.chosen.emit(0)
 	await probe("Échiquier : préparation (cases, boutique, boutons, stratèges)", 0.95)
+	ac.game.abandon(0)  # lot AC-I : le bilan de fin (Rejouer, Statistiques, Retour au lobby)
+	ac._show_end()
+	await get_tree().create_timer(ResultsPanel.LOCK_SECS + 0.3).timeout
+	await probe("Échiquier : bilan de fin", 0.95)
+	get_tree().paused = false
 	ac.queue_free()
 	AutochessScreen.config = {}
 	await get_tree().process_frame

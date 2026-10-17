@@ -3,11 +3,12 @@ extends Node
 ## jouée quelques secondes en pilote automatique, terminée, son bilan est lu et « Retour au lobby » est pressé.
 ## Le pilote vit dans la racine (il survit aux changements de scène). Console : chercher ensuite ERROR / SCRIPT ERROR.
 ## godot --headless --path game res://tests/test_p4_activities.tscn [-- survival,survivor,training,tower,dungeon0,dungeon1,dungeon2,rush,siege,
-##   duel,league,pantheon,gauntlet,arena2,arena3,royale,challenge]
+##   duel,league,pantheon,gauntlet,arena2,arena3,royale,challenge,autochess]
+## L'Échiquier (lot AC-I) a son propre écran (scenes/autochess.tscn, pas le monde) : partie rapide au pilote, bilan, Rejouer, retour.
 
 const LOBBY := "res://scenes/lobby.tscn"
 const ALL := ["survival+r", "survival_win", "survivor+r", "training", "tower+r", "dungeon0+r", "dungeon1", "dungeon2", "rush+r", "siege+r", "duel+r", "league",
-	"pantheon", "gauntlet", "arena2+r", "arena3", "royale+r", "challenge"]
+	"pantheon", "gauntlet", "arena2+r", "arena3", "royale+r", "challenge", "autochess+r"]
 const HARD_LIMIT := 1500.0  # secondes : au-delà, le pilote s'arrête en échec
 
 var fails := 0
@@ -91,7 +92,8 @@ func _results() -> ResultsPanel:
 
 
 func _clean_state() -> bool:
-	return not Run.active and not Duel.active and not Tower.active and not Training.active and not Royale.active and not get_tree().paused
+	return not Run.active and not Duel.active and not Tower.active and not Training.active and not Royale.active and not get_tree().paused \
+		and not AutochessDirector.active
 
 
 func _reset_modes() -> void:
@@ -169,6 +171,8 @@ func _activity(act_in: String) -> Dictionary:
 	var out := {"ok": false, "note": ""}
 	var lobby := _scene()
 	_reset_modes()
+	if act == "autochess":
+		return await _autochess(lobby, replay)
 	var dev: bool = act in ["dungeon1", "dungeon2", "rush", "siege", "royale", "arena2", "arena3", "gauntlet"]
 	if dev:
 		Settings.set_v("interface", "dev_mode", true)  # (puissance d'équipement exigée par ces activités)
@@ -299,6 +303,52 @@ func _activity(act_in: String) -> Dictionary:
 	elif not _clean_state():
 		out.note = "état non remis à zéro (Run %s Duel %s Tour %s Royale %s pause %s)" % [Run.active, Duel.active, Tower.active, Royale.active, get_tree().paused]
 	_check_after(act, out)
+	return out
+
+
+# --- L'Échiquier (lot AC-I) ------------------------------------------------------------------------------------------
+func _is_autochess() -> bool:
+	return _scene() is AutochessScreen and (_scene() as AutochessScreen).game != null
+
+
+## Page du lobby, Lancer (durées réduites, pilote), partie complète, bilan commun, Rejouer (si demandé), Retour au lobby.
+func _autochess(lobby: Node, replay: bool) -> Dictionary:
+	var out := {"ok": false, "note": ""}
+	lobby._show_menu("autochess")
+	await _wait(0.3)
+	lobby._ac_diff = 0
+	lobby._start_autochess(false, {"fast": true, "autoplay": true, "save_path": "user://p4_autochess.json", "seed": 4})
+	if not await _until(_is_autochess, 40.0, "écran de l'Échiquier"):
+		out.note = "l'écran ne se charge pas"
+		return out
+	check("autochess : mode scellé pendant la partie (Modes.current = %s)" % Modes.current(), Modes.current() == "autochess" and Modes.sealed())
+	for k in (2 if replay else 1):
+		var screen: AutochessScreen = _scene()
+		if not await _until(func(): return screen.phase == "over" and screen.results != null, 600.0, "fin de partie"):
+			out.note = "partie inachevée (%s)" % screen.game.round_key()
+			return out
+		await _wait(ResultsPanel.LOCK_SECS + 1.8)
+		var panel: ResultsPanel = screen.results
+		out["boutons"] = panel.buttons.map(func(b): return b.text)
+		out["place"] = int(screen.game.players[0].place)
+		if k == 0 and replay:
+			panel.buttons[0].pressed.emit()
+			await _wait(0.5)
+			out["rejouer"] = screen.game.round_key() == "1-1" and screen.phase == "prep"
+			if not bool(out.rejouer):
+				out.note = "« Rejouer » ne relance pas la partie"
+				return out
+			screen.autoplay = true
+			continue
+		panel.buttons[panel.buttons.size() - 1].pressed.emit()
+	var home: bool = await _until(_is_lobby, 40.0, "retour au lobby")
+	await _wait(0.6)
+	out.ok = home and _clean_state() and int(AutochessRewards.count("games")) >= 1
+	if not home:
+		out.note = "pas de retour au lobby"
+	elif not _clean_state():
+		out.note = "état non remis à zéro (Échiquier %s, pause %s)" % [AutochessDirector.active, get_tree().paused]
+	AutochessScreen.config = {}
 	return out
 
 

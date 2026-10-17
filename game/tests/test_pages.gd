@@ -389,7 +389,7 @@ func _test_lobby() -> void:
 	get_tree().root.size = Vector2i(1600, 900)
 	await _frames()
 	var screen_h: float = lobby.get_viewport().get_visible_rect().size.y
-	for pid in ["survival", "dungeon", "siege", "duel", "royale", "arenas", "rush", "tower", "tower_floors", "mastery", "training"]:
+	for pid in ["survival", "dungeon", "siege", "duel", "royale", "autochess", "arenas", "rush", "tower", "tower_floors", "mastery", "training"]:
 		lobby._show_menu(pid)
 		await _frames()
 		await _frames()
