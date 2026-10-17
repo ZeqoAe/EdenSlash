@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="'M PLUS Rounded 1c', 'Nunito', sans-serif">
+  <!-- Croquis maison BM-ARENA (17/10/2026) : Colisée v2, phase de préparation (manche 4, choix d'atout en attente).
+       DA « autocollant manga » (conception/art/BIBLE.md v2, valeurs de tokens.json). Aucun élément tiers : formes simples,
+       les carrés arrondis marqués « icône » sont des emplacements pour les icônes du jeu. Cadre 1600 × 900. -->
+  <defs>
+    <style>
+      .t { fill: #221A3A; font-size: 17px; }
+      .tp { fill: #FFF8EC; font-size: 17px; }
+      .tw { fill: #FFFFFF; stroke: #221A3A; stroke-width: 4; paint-order: stroke; font-weight: 800; }
+      .pop { font-family: 'Mochiy Pop One', 'M PLUS Rounded 1c', sans-serif; }
+      .b { font-weight: 800; }
+      .s { font-size: 15px; }
+      .num { font-weight: 900; font-variant-numeric: tabular-nums; }
+      .note { fill: #C21E43; font-size: 14px; font-weight: 700; }
+    </style>
+    <pattern id="trame" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#221A3A" opacity="0.18"/></pattern>
+  </defs>
+
+  <!-- scène : la plateforme de l'équipe au bord de l'arène (monde clair) -->
+  <rect width="1600" height="900" fill="#CCDEF3"/>
+  <ellipse cx="800" cy="620" rx="760" ry="300" fill="#ACB47F"/>
+  <ellipse cx="800" cy="600" rx="520" ry="190" fill="#CEBFA7"/>
+  <ellipse cx="800" cy="600" rx="520" ry="190" fill="none" stroke="#FF8A1F" stroke-width="5" stroke-dasharray="18 12" opacity="0.7"/>
+  <!-- piliers (couvert) -->
+  <g fill="#E9DFCB" stroke="#221A3A" stroke-width="3">
+    <rect x="520" y="520" width="34" height="70" rx="8"/><rect x="1046" y="520" width="34" height="70" rx="8"/>
+    <rect x="640" y="660" width="34" height="70" rx="8"/><rect x="926" y="660" width="34" height="70" rx="8"/>
+  </g>
+  <!-- fleur de soin -->
+  <circle cx="800" cy="600" r="22" fill="#8FD62E" stroke="#221A3A" stroke-width="3"/><circle cx="800" cy="600" r="8" fill="#FFE27A"/>
+  <!-- ton trio sur la plateforme -->
+  <g stroke="#221A3A" stroke-width="3">
+    <circle cx="730" cy="520" r="26" fill="#FFC928"/><circle cx="800" cy="500" r="26" fill="#22B8F0"/><circle cx="870" cy="520" r="26" fill="#B43BEB"/>
+  </g>
+  <text x="800" y="465" text-anchor="middle" class="tw s">Toi</text>
+  <!-- mannequin d'essai -->
+  <rect x="1180" y="560" width="30" height="60" rx="10" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/>
+  <text x="1195" y="645" text-anchor="middle" class="t s">mannequin</text>
+
+  <!-- HAUT, CENTRE : frise de la partie -->
+  <g transform="translate(490,18)">
+    <rect width="620" height="76" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <text x="24" y="34" class="t b pop" font-size="20">Manche 4 · Préparation</text>
+    <text x="24" y="60" class="t s">Atout · Enclumes · Décret</text>
+    <!-- pictos des manches : ● combat, ★ atout, ◆ décret -->
+    <g transform="translate(330,16)" stroke="#221A3A" stroke-width="2">
+      <circle cx="0" cy="8" r="8" fill="#8FD62E"/><circle cx="22" cy="8" r="8" fill="#FF4D6D"/><circle cx="44" cy="8" r="8" fill="#8FD62E"/>
+      <path d="M66 0 l3 6 6 1 -4 4 1 6 -6 -3 -6 3 1 -6 -4 -4 6 -1z" fill="#FFC928"/>
+      <circle cx="88" cy="8" r="8" fill="#FFF8EC"/><circle cx="110" cy="8" r="8" fill="#FFF8EC"/>
+      <rect x="124" y="1" width="14" height="14" transform="rotate(45 131 8)" fill="#B43BEB"/>
+    </g>
+    <text x="600" y="54" text-anchor="end" class="num" font-size="34" fill="#221A3A">0:21</text>
+    <rect x="330" y="46" width="160" height="12" rx="6" fill="#2E2450" stroke="#221A3A" stroke-width="2"/>
+    <rect x="330" y="46" width="96" height="12" rx="6" fill="#22B8F0"/>
+  </g>
+
+  <!-- DROITE : classement des 6 équipes (la ligne « prochain » apparaît après le tirage) -->
+  <g transform="translate(1330,18)">
+    <rect width="252" height="430" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <text x="18" y="34" class="t b pop" font-size="18">Équipes</text>
+    <g transform="translate(12,50)">
+      <!-- une ligne : blason couleur, nom, PV d'équipe, frise des 4 dernières manches -->
+      <g>
+        <rect width="228" height="56" rx="12" fill="#FFE27A" stroke="#221A3A" stroke-width="3"/>
+        <circle cx="24" cy="28" r="15" fill="#FFC928" stroke="#221A3A" stroke-width="3"/><text x="24" y="34" text-anchor="middle" class="tw" font-size="14">★</text>
+        <text x="48" y="24" class="t b s">Toi · Soleils</text>
+        <rect x="48" y="32" width="120" height="12" rx="6" fill="#2E2450"/><rect x="48" y="32" width="96" height="12" rx="6" fill="#8FD62E"/>
+        <text x="216" y="44" text-anchor="end" class="t num s">80</text>
+      </g>
+      <g transform="translate(0,64)">
+        <rect width="228" height="56" rx="12" fill="#FFF8EC" stroke="#FF4D6D" stroke-width="4"/>
+        <circle cx="24" cy="28" r="15" fill="#FF4D6D" stroke="#221A3A" stroke-width="3"/>
+        <text x="48" y="24" class="t b s">Fraises</text>
+        <rect x="48" y="32" width="120" height="12" rx="6" fill="#2E2450"/><rect x="48" y="32" width="72" height="12" rx="6" fill="#FFC928"/>
+        <text x="216" y="44" text-anchor="end" class="t num s">60</text>
+        <g transform="translate(150,-8) rotate(8)"><rect width="78" height="22" rx="10" fill="#FF4D6D" stroke="#221A3A" stroke-width="3"/><text x="39" y="16" text-anchor="middle" class="tw" font-size="12">prochain</text></g>
+      </g>
+      <g transform="translate(0,128)">
+        <rect width="228" height="56" rx="12" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+        <circle cx="24" cy="28" r="15" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+        <text x="48" y="24" class="t b s">Lagons</text>
+        <rect x="48" y="32" width="120" height="12" rx="6" fill="#2E2450"/><rect x="48" y="32" width="120" height="12" rx="6" fill="#8FD62E"/>
+        <text x="216" y="44" text-anchor="end" class="t num s">100</text>
+      </g>
+      <g transform="translate(0,192)">
+        <rect width="228" height="56" rx="12" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+        <circle cx="24" cy="28" r="15" fill="#8FD62E" stroke="#221A3A" stroke-width="3"/>
+        <text x="48" y="24" class="t b s">Pommes</text>
+        <rect x="48" y="32" width="120" height="12" rx="6" fill="#2E2450"/><rect x="48" y="32" width="48" height="12" rx="6" fill="#FF4D6D"/>
+        <text x="216" y="44" text-anchor="end" class="t num s">40</text>
+      </g>
+      <g transform="translate(0,256)">
+        <rect width="228" height="56" rx="12" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+        <circle cx="24" cy="28" r="15" fill="#B43BEB" stroke="#221A3A" stroke-width="3"/>
+        <text x="48" y="24" class="t b s">Améthystes</text>
+        <rect x="48" y="32" width="120" height="12" rx="6" fill="#2E2450"/><rect x="48" y="32" width="84" height="12" rx="6" fill="#8FD62E"/>
+        <text x="216" y="44" text-anchor="end" class="t num s">70</text>
+      </g>
+      <g transform="translate(0,320)">
+        <rect width="228" height="56" rx="12" fill="url(#trame)" stroke="#6B5E86" stroke-width="3"/>
+        <circle cx="24" cy="28" r="15" fill="#B9B2C9" stroke="#6B5E86" stroke-width="3"/>
+        <text x="48" y="24" fill="#6F6787" class="b s">Mandarines</text>
+        <text x="48" y="44" fill="#6F6787" class="s">éliminés · 6e</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- GAUCHE : ton trio (portraits, rôle, atouts déjà pris en pastilles) -->
+  <g transform="translate(18,18)">
+    <rect width="300" height="300" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <text x="18" y="34" class="t b pop" font-size="18">Ton trio</text>
+    <g transform="translate(14,50)">
+      <g>
+        <rect width="272" height="74" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+        <rect x="8" y="8" width="58" height="58" rx="12" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/><text x="37" y="43" text-anchor="middle" class="tw" font-size="11">icône</text>
+        <text x="76" y="28" class="tp b s">Toi · Magicien</text>
+        <text x="76" y="48" class="tp s" opacity="0.8">Arcane · 5 sorts</text>
+        <g transform="translate(76,54)" stroke="#221A3A" stroke-width="2"><rect width="16" height="16" rx="4" fill="#FFC928"/><rect x="20" width="16" height="16" rx="4" fill="#C9BFEA"/></g>
+      </g>
+      <g transform="translate(0,82)">
+        <rect width="272" height="74" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+        <rect x="8" y="8" width="58" height="58" rx="12" fill="#FFC928" stroke="#221A3A" stroke-width="3"/><text x="37" y="43" text-anchor="middle" class="tw" font-size="11">icône</text>
+        <text x="76" y="28" class="tp b s">Chevalier (IA)</text>
+        <text x="76" y="48" class="tp s" opacity="0.8">Rempart · choisit…</text>
+      </g>
+      <g transform="translate(0,164)">
+        <rect width="272" height="74" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+        <rect x="8" y="8" width="58" height="58" rx="12" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/><text x="37" y="43" text-anchor="middle" class="tw" font-size="11">icône</text>
+        <text x="76" y="28" class="tp b s">Clerc (IA)</text>
+        <text x="76" y="48" class="tp s" opacity="0.8">Ferveur · ✔ prêt</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- BAS : pied de préparation (or, enclumes, sorts, Prêt) -->
+  <g transform="translate(220,742)">
+    <rect width="1160" height="140" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <rect x="7" y="7" width="1160" height="140" rx="18" fill="#221A3A" opacity="0.0"/>
+    <!-- or -->
+    <g transform="translate(20,-26) rotate(-3)">
+      <rect width="150" height="48" rx="14" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+      <circle cx="26" cy="24" r="12" fill="#FFE27A" stroke="#221A3A" stroke-width="3"/>
+      <text x="96" y="34" text-anchor="middle" class="tw num" font-size="26">34</text>
+    </g>
+    <text x="20" y="54" class="t b">Enclumes</text>
+    <g transform="translate(20,66)">
+      <g><rect width="190" height="60" rx="14" fill="#E9DFCB" stroke="#221A3A" stroke-width="3"/>
+        <text x="14" y="26" class="t b s">Stat</text><text x="14" y="48" class="t s">1 parmi 3</text>
+        <g transform="translate(130,16)"><rect width="46" height="28" rx="10" fill="#FFC928" stroke="#221A3A" stroke-width="3"/><text x="23" y="20" text-anchor="middle" class="tw num" font-size="15">6</text></g></g>
+      <g transform="translate(204,0)"><rect width="190" height="60" rx="14" fill="#86DDFF" stroke="#221A3A" stroke-width="3"/>
+        <text x="14" y="26" class="t b s">Pièce</text><text x="14" y="48" class="t s">case vide d'abord</text>
+        <g transform="translate(130,16)"><rect width="46" height="28" rx="10" fill="#FFC928" stroke="#221A3A" stroke-width="3"/><text x="23" y="20" text-anchor="middle" class="tw num" font-size="15">12</text></g></g>
+      <g transform="translate(408,0)"><rect width="190" height="60" rx="14" fill="#DC92FF" stroke="#221A3A" stroke-width="3"/>
+        <text x="14" y="26" class="t b s">Panoplie</text><text x="14" y="48" class="t s">2 / 4 pièces</text>
+        <g transform="translate(130,16)"><rect width="46" height="28" rx="10" fill="#FFC928" stroke="#221A3A" stroke-width="3"/><text x="23" y="20" text-anchor="middle" class="tw num" font-size="15">20</text></g></g>
+    </g>
+    <!-- sorts : 4 + 2 places qui s'ouvrent -->
+    <text x="660" y="54" class="t b">Sorts</text>
+    <g transform="translate(660,66)" stroke="#221A3A" stroke-width="3">
+      <rect width="50" height="50" rx="12" fill="#22B8F0"/><rect x="56" width="50" height="50" rx="12" fill="#22B8F0"/>
+      <rect x="112" width="50" height="50" rx="12" fill="#22B8F0"/><rect x="168" width="50" height="50" rx="12" fill="#22B8F0"/>
+      <rect x="224" width="50" height="50" rx="12" fill="#FFB566"/>
+      <rect x="280" width="50" height="50" rx="12" fill="url(#trame)" stroke="#6B5E86"/>
+    </g>
+    <text x="660" y="134" class="s" fill="#6B5E86">5e place ouverte (manche 3) · 6e à la manche 6</text>
+    <!-- Prêt -->
+    <g transform="translate(1012,38)">
+      <rect y="5" width="130" height="64" rx="14" fill="#221A3A"/>
+      <rect width="130" height="64" rx="14" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+      <rect x="10" y="6" width="16" height="6" rx="3" fill="#fff" transform="rotate(-12 18 9)"/>
+      <text x="65" y="42" text-anchor="middle" class="tw pop" font-size="26">Prêt</text>
+    </g>
+  </g>
+
+  <!-- l'atout en attente : bulle qui s'ouvre au centre (voir v2_choix_atout.svg) -->
+  <g transform="translate(660,150) rotate(-2)">
+    <rect width="280" height="70" rx="16" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+    <text x="140" y="44" text-anchor="middle" class="tw pop" font-size="24">Choisis un atout !</text>
+    <circle cx="268" cy="8" r="14" fill="#FF4D6D" stroke="#221A3A" stroke-width="3"/><text x="268" y="14" text-anchor="middle" class="tw" font-size="16">!</text>
+  </g>
+
+  <!-- notes de conception -->
+  <text x="340" y="360" class="note">Le monde reste visible : panneaux au bord, ≤ 30 % de l'écran.</text>
+  <text x="340" y="380" class="note">Préparation 30 s ; finit dès que les 3 héros sont prêts (IA : 2-6 s).</text>
+  <text x="1080" y="476" class="note">Tirage connu au début de la préparation :</text>
+  <text x="1080" y="494" class="note">« prochain » en fraise ; survol = trio, atouts, 2 derniers combats.</text>
+  <text x="240" y="690" class="note">Coûts en pastille soleil, raretés aux couleurs de la BIBLE ; aucun pourcentage (détail en infobulle).</text>
+</svg>
