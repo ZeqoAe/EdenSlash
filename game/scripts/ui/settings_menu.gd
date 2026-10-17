@@ -40,7 +40,7 @@ const KEY_GROUPS := [
 	["Déplacement", ["move_forward", "move_back", "move_left", "move_right", "jump", "dodge"]],
 	["Combat", ["attack", "move_order", "swap_weapon", "potion_1", "potion_2"]],
 	["Sorts", ["skill_1", "skill_2", "skill_3", "skill_4"]],
-	["Interface", ["interact", "map", "objectives", "pause", "camera_rotate", "unstuck", "help", "feedback", "extract", "quick_equip"]],
+	["Interface", ["interact", "map", "objectives", "journal", "pause", "camera_rotate", "unstuck", "help", "feedback", "extract", "quick_equip"]],
 ]
 
 
@@ -603,6 +603,12 @@ func _build_display_page() -> void:
 	_option(v, "Anticrénelage (MSAA)", "display", "msaa", [[0, "Désactivé"], [2, "2×"], [4, "4×"], [8, "8×"]])
 	_option(v, "Taille de l'interface", "display", "ui_scale", [
 		[0.75, "75 %"], [0.85, "85 %"], [1.0, "100 %"], [1.1, "110 %"], [1.25, "125 %"], [1.5, "150 %"]])
+	# lot HUB-1, P0-9 : le HUD en partie a sa propre taille et son opacité (les menus gardent la taille de l'interface)
+	_section(v, "HUD en partie")
+	_slider(v, "Taille du HUD", "interface", "hud_scale", 0.8, 1.4, 0.05, func(x): return "%d %%" % roundi(x * 100),
+		"Agrandit ou réduit tout le HUD en partie (vie, sorts, objectifs, mini-carte), sans toucher aux menus.")
+	_slider(v, "Opacité du HUD", "interface", "hud_opacity", 0.4, 1.0, 0.05, func(x): return "%d %%" % roundi(x * 100),
+		"Plus bas, le HUD laisse mieux voir le combat derrière lui.")
 
 
 # --- page Son --------------------------------------------------------------------------------------------
@@ -631,6 +637,11 @@ func _build_camera_page() -> void:
 	_check(v, "Afficher la boussole d'objectif", "interface", "compass", "Dans le menu principal, une pastille te dit la prochaine chose utile à faire.")
 	_check(v, "Marqueur des clics de déplacement", "interface", "move_marker", "Un repère au sol à l'endroit où tu as cliqué pour te déplacer.")
 	_check(v, "Zone de mes attaques au sol", "interface", "attack_zone", "Montre en bleu la zone des sorts que tu lances, pour apprendre leur portée.")
+	_section(v, "Menus")
+	_check(v, "Réduire les animations", "interface", "ui_reduce_motion", "Boutons et fenêtres sans rebond ni étincelles. Les sons et la vibration restent.")
+	_check(v, "Vibration manette", "interface", "ui_vibration", "Une courte vibration à chaque clic et à chaque pas du cadre dans les menus.")
+	_slider(v, "Intensité des effets d'interface", "interface", "ui_fx", 0.0, 1.5, 0.05, func(x): return "%d %%" % roundi(x * 100),
+		"Force du rebond des boutons, des étincelles et des sons des menus.")
 	_build_cursor_rows(v)
 	_section(v, "Effets visuels")
 	var who := [["all", "Tout afficher"], ["dim_others", "Atténuer ceux des autres"], ["hide_others", "Masquer ceux des autres"],

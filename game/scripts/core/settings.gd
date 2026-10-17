@@ -116,7 +116,9 @@ const DEFAULTS := {
 		"tower_unlock_all": true, "perfect_hint": true, "pad_labels": "auto", "compass": true,
 		"fx_spells": "all", "fx_auras": "all", "fx_particles": "all", "fx_intensity": 1.0,
 		# curseur de souris (CursorSets) et réticule de visée en jeu (AimReticle) ; valeur inconnue = défaut
-		"cursor_set": "classic", "reticle": "dot", "reticle_size": 1.0, "reticle_color": "gold"},
+		"cursor_set": "classic", "reticle": "dot", "reticle_size": 1.0, "reticle_color": "gold",
+		# ressenti du clic (UiFeel) ; ui_skin : peau des panneaux (« sticker » ; « night » = option technique, sans ligne)
+		"ui_reduce_motion": false, "ui_vibration": true, "ui_fx": 1.0, "ui_skin": "sticker"},
 }
 
 ## Modes de jeu prêts à l'emploi (réglages du menu Contrôles).

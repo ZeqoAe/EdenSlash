@@ -20,6 +20,7 @@ config/features=PackedStringArray("4.7", "Forward Plus")
 Settings="*res://scripts/core/settings.gd"
 Gamepad="*res://scripts/core/gamepad.gd"
 UiNav="*res://scripts/core/ui_nav.gd"
+UiFeel="*res://scripts/core/ui_feel.gd"
 GameData="*res://scripts/core/game_data.gd"
 Profile="*res://scripts/core/profile.gd"
 Run="*res://scripts/core/run.gd"

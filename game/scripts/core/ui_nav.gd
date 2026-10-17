@@ -1,7 +1,8 @@
 extends CanvasLayer
 ## Navigation de tous les menus à la manette (autoload UiNav). Quand la dernière entrée vient de la
 ## manette et qu'on est dans un menu (jeu en pause, lobby, écran titre) :
-##   - croix directionnelle ou stick gauche : déplace le curseur (un cadre doré) vers le contrôle le
+##   - croix directionnelle ou stick gauche : déplace le curseur (un anneau lagon liseré de blanc, qui glisse en
+##     120 ms d'un contrôle à l'autre et respire ; bible de style § 6-7) vers le contrôle le
 ##     plus proche dans cette direction, parmi ceux de l'écran du dessus (calque le plus haut) ;
 ##   - A (Croix) : valide (un vrai clic de souris au centre du contrôle, donc rien à réécrire dans
 ##     les écrans) ; gauche / droite sur un curseur : règle les curseurs de volume, etc. ;
@@ -33,6 +34,10 @@ var _held := {}  # direction -> temps avant répétition
 var _last_center := Vector2(200, 200)
 var _popup_ctl: OptionButton
 var _pulse := 0.0
+var _frame_rect := Rect2()  # cadre affiché (glisse vers celui du curseur)
+var _frame_snap := true  # le prochain cadre se pose sans glisser (il vient d'apparaître)
+var _ring_white := StyleBoxFlat.new()
+var _ring_lagon := StyleBoxFlat.new()
 
 
 func _ready() -> void:
@@ -50,6 +55,14 @@ func _ready() -> void:
 	add_child(_bar)
 	_frame.visible = false
 	_bar.visible = false
+	for sb in [_ring_white, _ring_lagon]:
+		sb.draw_center = false
+		sb.set_corner_radius_all(18)
+		sb.anti_aliasing = true
+	_ring_white.border_color = Color.WHITE
+	_ring_white.set_border_width_all(6)
+	_ring_lagon.border_color = UiTheme.color("bonbon.lagon.fonce", Color(0.04, 0.49, 0.71))
+	_ring_lagon.set_border_width_all(3)
 
 
 ## La navigation à la manette est active : dernière entrée = manette, dans un menu, curseur libre coupé.
@@ -152,7 +165,10 @@ func pick_default() -> void:
 
 
 func _set_cursor(c: Control) -> void:
+	var prev := cursor if cursor != null and is_instance_valid(cursor) else null
 	cursor = c
+	if prev != c:
+		UiFeel.nav_focus(c, prev)  # survol, tic de focus et vibration légère (ressenti du clic)
 	_last_center = rect_of(c).get_center()
 	var p: Node = c.get_parent()
 	while p != null:
@@ -357,7 +373,12 @@ func _process(delta: float) -> void:
 		free_mode = false  # la souris reprend la main : retour à la navigation au cadre
 	if not menu or free_mode:
 		shown = false  # le cadre ne revient qu'après un nouveau mouvement de croix / stick
+	var was_visible := _frame.visible
 	_frame.visible = menu and shown and cursor != null
+	if not _frame.visible:
+		_frame_snap = true
+	elif not was_visible:
+		_frame_snap = true
 	_bar.visible = menu
 	if not menu:
 		cursor = null
@@ -513,11 +534,23 @@ func _draw_glyph(n: String, x: float, cy: float) -> float:
 	return w
 
 
+## Cadre de focus (bible § 6) : liseré blanc de 6 px et anneau lagon foncé de 3 px, coins ronds ; il glisse d'un contrôle
+## à l'autre (120 ms, sortie cubique) et respire doucement ; « Réduire les animations » : il saute et ne respire pas.
 func _draw_frame() -> void:
 	if cursor == null or not is_instance_valid(cursor) or not cursor.is_visible_in_tree():
 		return
-	var r := rect_of(cursor).grow(4.0)
-	var a := 0.75 + 0.25 * sin(_pulse * 7.0)
-	_frame.draw_rect(r, Color(1.0, 0.85, 0.35, 0.10 * a))
-	_frame.draw_rect(r, Color(1.0, 0.88, 0.4, a), false, 3.0)
-	_frame.draw_rect(r.grow(3.0), Color(1.0, 1.0, 1.0, 0.25 * a), false, 1.5)
+	var target := rect_of(cursor).grow(5.0)
+	var calm := UiFeel.reduce_motion
+	if _frame_snap or calm or _frame_rect.size == Vector2.ZERO:
+		_frame_rect = target
+		_frame_snap = false
+	else:
+		var k := 1.0 - exp(-get_process_delta_time() * 28.0)
+		_frame_rect = Rect2(_frame_rect.position.lerp(target.position, k), _frame_rect.size.lerp(target.size, k))
+	var breath := 0.0 if calm else 1.5 * (0.5 + 0.5 * sin(_pulse * 4.2))
+	var r := _frame_rect.grow(breath)
+	var rad := clampi(int(minf(r.size.y, r.size.x) * 0.5), 6, 18)
+	_ring_white.set_corner_radius_all(rad + 3)
+	_ring_lagon.set_corner_radius_all(rad)
+	_frame.draw_style_box(_ring_white, r.grow(3.0))
+	_frame.draw_style_box(_ring_lagon, r)

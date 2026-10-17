@@ -5,6 +5,8 @@ extends CanvasLayer
 ## Une page est un Control ; si elle a une méthode refresh(), elle est appelée à
 ## l'ouverture et au changement d'onglet. Si elle a une méthode subtitle() -> String, le
 ## texte renvoyé remplace le sous-titre de l'écran tant que cette page est affichée.
+## Ressenti (UiFeel) : onglets autocollants (variation « PageTab » du thème : l'actif en mandarine), contenu qui glisse
+## de 24 px dans le sens du changement d'onglet, fondu à l'ouverture.
 
 signal closed
 signal page_changed(index: int)
@@ -128,7 +130,8 @@ func add_page(name: String, page: Control) -> int:
 	b.text = name
 	b.toggle_mode = true
 	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_font_override("font", UiTheme.title_font())
+	b.theme_type_variation = &"PageTab"  # Mochiy, autocollant ; l'onglet actif en mandarine (UiTheme)
+	b.set_meta("ui_feel", "tab")
 	b.pressed.connect(show_page.bind(i))
 	_tabs.add_child(b)
 	_tab_buttons.append(b)
@@ -165,7 +168,10 @@ func current_page() -> int:
 
 
 func show_page(i: int) -> void:
+	var before := _current
 	_current = clampi(i, 0, _pages.size() - 1)
+	if before != _current and is_open():
+		UiFeel.slide_in(_pages[_current], signi(_current - before))
 	for k in _pages.size():
 		_pages[k].visible = k == _current
 		_tab_buttons[k].set_pressed_no_signal(k == _current)
@@ -222,6 +228,11 @@ func is_open() -> bool:
 
 
 func open(i := -1) -> void:
+	if not _root.visible and not UiFeel.reduce_motion:
+		_root.modulate.a = 0.0
+		var tw := _root.create_tween()
+		tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+		tw.tween_property(_root, "modulate:a", 1.0, 0.12)
 	_root.visible = true
 	if pause_game:
 		get_tree().paused = true

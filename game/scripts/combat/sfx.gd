@@ -6,6 +6,7 @@ extends RefCounted
 static var _cache := {}
 static var volume_db := 0.0
 static var _last_ui := {}  # son d'interface -> instant (pas deux fois dans la même image)
+static var last_ui_ms := -1000  # dernier son d'interface joué (UiFeel n'en ajoute pas un second au même instant)
 
 ## Sons d'interface et de jeu, par rôle. Les UI0xx du client n'ont pas de nom : choisis d'après
 ## leur durée et leur force (clic court, coup bref, fanfare longue) ; à changer ici si l'un ne
@@ -20,6 +21,19 @@ const UI := {
 	"station": "UI056.wav",  # lieu utilisé (enclume, autel…)
 	"wood": ["HitWood01.wav", "HitWood02.wav"],  # jarre, caisse, tonneau cassés
 	"rock": "HitRock01.wav",  # cristal brisé
+	"error": "HitWood01.wav",  # action refusée
+	# interface (UiFeel, bible de style § 7) : sons provisoires du jeu, hauteur réglée par UiFeel, en attendant SND
+	"ui_hover": "UI004.wav",  # « tic » de survol
+	"ui_focus": "UI004.wav",  # tic du cadre de la manette
+	"ui_press": "UI004.wav",  # « pop » d'appui
+	"ui_release": "UI004.wav",  # « clic » de relâchement
+	"ui_primary": "UI007.wav",  # bouton primaire relâché
+	"ui_deny": "HitWood01.wav",  # « bonk » : bouton désactivé
+	"ui_tab": "Itemtake01.wav",  # changement d'onglet
+	"ui_toggle": "UI004.wav",  # interrupteur
+	"ui_swoosh": "atks001.wav",  # carte d'activité
+	"ui_equip": "Itemtake01.wav",  # pièce équipée
+	"ui_reward": "ct001.wav",  # récompense
 }
 
 
@@ -48,8 +62,8 @@ static func event_at(parent: Node, pos: Vector3, name: String, vol := 0.0) -> vo
 	play_at(parent, pos, _pick(name), vol, 0.08)
 
 
-## Son d'interface [param name] (UI), non spatialisé, même pendant la pause.
-static func ui(name: String, vol := 0.0) -> void:
+## Son d'interface [param name] (UI), non spatialisé, même pendant la pause ; [param pitch] : hauteur (1 = normale).
+static func ui(name: String, vol := 0.0, pitch := 1.0) -> void:
 	if Vfx.silent:
 		return
 	var tree := Engine.get_main_loop() as SceneTree
@@ -59,11 +73,13 @@ static func ui(name: String, vol := 0.0) -> void:
 	if now - int(_last_ui.get(name, -1000)) < 40:
 		return
 	_last_ui[name] = now
+	last_ui_ms = now
 	var stream := _stream(_pick(name))
 	if stream == null:
 		return
 	var p := AudioStreamPlayer.new()
 	p.stream = stream
+	p.pitch_scale = pitch
 	p.volume_db = vol + volume_db
 	p.process_mode = Node.PROCESS_MODE_ALWAYS
 	tree.current_scene.add_child(p)

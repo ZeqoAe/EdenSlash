@@ -40,6 +40,7 @@ const TOKENS := "res://data/ui_tokens.json"
 
 ## Peau des panneaux : « sticker » (papier crème, défaut) ou « night » (option technique).
 static var skin := "sticker"
+static var skin_forced := false  # peau imposée par --ui-skin=… (le réglage caché ne la change plus)
 ## Grands panneaux dessinés par le shader (sinon StickerBox, sans shader).
 static var use_shader := true
 static var _textures := {}
@@ -527,6 +528,7 @@ static func apply_global() -> void:
 	for a in OS.get_cmdline_user_args() + OS.get_cmdline_args():
 		if String(a).begins_with("--ui-skin="):
 			skin = String(a).trim_prefix("--ui-skin=")
+			skin_forced = true
 	var body := body_font()
 	ThemeDB.fallback_font = body
 	ThemeDB.fallback_font_size = 16

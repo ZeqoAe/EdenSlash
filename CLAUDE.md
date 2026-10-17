@@ -234,6 +234,11 @@ pastilles `ui/gain_chips.gd`. Détail : DESIGN « Quêtes », « La quête commu
 ### Interface : composants communs
 - **Navigation manette** `core/ui_nav.gd` (voir « Manette et menus ») ; écrans plein cadre `ui/page_screen.gd` (`PageScreen`,
   sous-titre `subtitle()`, `_fit_header`) ; thème `ui/ui_theme.gd` (`UiTheme.Switch`, `MIN_TEXT`) ; widgets `ui/menu_widgets.gd`.
+- **Style « autocollant manga »** (`conception/art/BIBLE.md`, socle `conception/art/R_UIK0.md`) : `UiTheme` v2 lit `data/ui_tokens.json` (`color`, `tok`, `dur`,
+  `tones`) ; boîtes `StickerBox` (`sticker`, `button_states`, `style_button`), panneau papier `StickerPanel` (shader `ui_sticker`) + `UiTheme.scope`
+  (textes encre, boutons papier), variations `ToggleButton` / `PageTab` ; polices Mochiy Pop One (`title_font`) et M PLUS Rounded 1c (`body_font`…,
+  `tools/art/fonts_subset.py`). **Ressenti du clic** `core/ui_feel.gd` (autoload `UiFeel`) : tout BaseButton sans branchement (survol, appui, rebond,
+  refus, sons `Sfx.ui`, vibration), genre par meta `ui_feel` (`primary`, `tab`, `slot`, `card`, `off`) ; planche `tests/shot_uik0.tscn`, test `test_uik0`.
 - **Bilans** : un seul composant `ui/results_panel.gd` (`ResultsPanel.show_spec` : titre, tuiles, Gagné / Gardé / Perdu, boutons),
   étendu par `ResultsScreen`, `DuelResults`, `TowerResults`, `DungeonResults`, `RoyaleResults`.
 - **Petites cartes** `ui/info_card.gd` (aucune fenêtre native : `InfoCard.in_layer` / `in_control`, `add_card`, confirmation
@@ -321,14 +326,14 @@ Le journal réel n'avait que 2 cartes de Survie à la passe E6 (`R_E6.md`) : rel
 par style et par époque (les réglages d'époque actuels viennent des simulations `progression_sim`, `sim_survie`, `boss_ttk`).
 
 ## Manette et menus
-`core/ui_nav.gd` (autoload UiNav) fait naviguer TOUS les menus à la manette : cadre doré qui saute au contrôle le plus proche dans la direction
+`core/ui_nav.gd` (autoload UiNav) fait naviguer TOUS les menus à la manette : anneau lagon qui glisse vers le contrôle le plus proche dans la direction
 (parmi ceux du calque le plus haut), A = vrai clic de souris au centre, B = Échap, X = clic droit, LB/RB = onglets (`tab_screens`, `step_page`,
 TabContainer), Y = curseur libre. Aucun écran à adapter : un nouveau menu fait de Button/BaseButton est navigable tout seul (un panneau
 cliquable doit avoir un signal `gui_input` relié). Test d'atteignabilité : `tests/test_nav_screens.tscn` (ajouter les nouveaux écrans).
 Le cadre n'apparaît qu'après un mouvement de croix / stick (`UiNav.shown`, `reveal()` ; A le montre sans valider) ; l'aide est une barre de
 3 icônes en bas à gauche (A Valider · B Retour · LB/RB Onglets, `hint_items()`), seulement quand `Gamepad.active`. Saut explicite : meta
 `nav_left|right|up|down` sur un contrôle. Paramètres (0.1.167) = `SettingsMenu extends PageScreen` : lignes titre / contrôle, interrupteurs
-`UiTheme.Switch`, infobulle fixe en pied (meta `hint`), plancher de texte `UiTheme.MIN_TEXT` (14) et `UiTheme.text_size()`.
+`UiTheme.Switch`, infobulle fixe en pied (meta `hint`), plancher de texte `UiTheme.MIN_TEXT` (14 en M PLUS Rounded, ≈ 15 de Nunito : `R_UIK0`) et `UiTheme.text_size()`.
 Écrans à pages : doivent tenir dans 1280×720 (colonnes et panneaux réduits sous 1500 px de large, cf. `PageScreen._fit_header`,
 `InventoryPage._narrow`) ; vérifier avec `tests/shot_p1.tscn` (`P1_STATE=neuf|avance P1_RES=1280x720`, lignes `[débord]` = contrôle hors écran).
 Manette réassignable : `Settings.pad_binds` (`pad_bind`, `pad_label`, `pad_layout` xbox/ps), Paramètres > Touches > Manette. Export pour
