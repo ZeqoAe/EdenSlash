@@ -1,0 +1,100 @@
+{
+  "$schema_note": "Jetons v2 : la DA existante du jeu (icônes de sorts et de classes, monstres, héros chibi) appliquée à l'interface. Format proche des Design Tokens W3C ($value, $type, $description). Référence 1600x900 ; à 1280x720 multiplier les px par 0,8 sans descendre sous typo.taille.min. Source des couleurs : bible/palette_reelle.png (mesures sur game/assets). Lu par UiTheme v2 et importable dans Figma (Tokens Studio).",
+  "version": "2.0.0",
+  "piste": "autocollant-manga",
+  "couleur": {
+    "encre": {
+      "900": {"$value": "#120C24", "$type": "color", "$description": "encre la plus noire : contour du HUD sur fond sombre"},
+      "700": {"$value": "#221A3A", "$type": "color", "$description": "ENCRE : contour de tout élément (3 px), texte sur papier (15,6:1), ombre dure. Mesurée sur les cadres des icônes d'état (#1A0E23, #1E233A)"},
+      "500": {"$value": "#2E2450", "$type": "color", "$description": "puits sombres (listes, grilles, tuiles de bilan) dans un panneau papier"},
+      "300": {"$value": "#6B5E86", "$type": "color", "$description": "texte secondaire sur papier (5,6:1)"},
+      "100": {"$value": "#C9BFEA", "$type": "color", "$description": "texte secondaire sur encre-500"}
+    },
+    "papier": {
+      "blanc": {"$value": "#FFFFFF", "$type": "color", "$description": "reflets, découpe d'autocollant, texte sur couleur vive (avec contour d'encre)"},
+      "100": {"$value": "#FFF8EC", "$type": "color", "$description": "fond des panneaux (papier crème chaud)"},
+      "200": {"$value": "#FFEBC8", "$type": "color", "$description": "onglets inactifs, bande d'ombre des boutons clairs"},
+      "300": {"$value": "#E9DFCB", "$type": "color", "$description": "aplat d'ombre cel des boutons papier (bas 38 %)"}
+    },
+    "bonbon": {
+      "$description": "les 5 teintes des fonds d'icônes (mesurées : saturation 0,8, valeur 0,8 à 1) ; chaque teinte a clair (reflet), base (aplat) et foncé (ombre cel, bord). Ce sont aussi les couleurs des familles de classes.",
+      "soleil": {"clair": {"$value": "#FFE27A", "$type": "color"}, "base": {"$value": "#FFC928", "$type": "color"}, "fonce": {"$value": "#D9900B", "$type": "color"}, "famille": "rempart", "role": "action principale, or, récompense"},
+      "mandarine": {"clair": {"$value": "#FFB566", "$type": "color"}, "base": {"$value": "#FF8A1F", "$type": "color"}, "fonce": {"$value": "#C85F08", "$type": "color"}, "famille": "ombre", "role": "onglet actif, mythique, nouveauté"},
+      "pomme": {"clair": {"$value": "#C3F07A", "$type": "color"}, "base": {"$value": "#8FD62E", "$type": "color"}, "fonce": {"$value": "#4F8F10", "$type": "color"}, "famille": "traque", "role": "gain, validation, interrupteur allumé"},
+      "lagon": {"clair": {"$value": "#86DDFF", "$type": "color"}, "base": {"$value": "#22B8F0", "$type": "color"}, "fonce": {"$value": "#0B7DB5", "$type": "color"}, "famille": "ferveur", "role": "FOCUS manette, sélection, action douce, information"},
+      "amethyste": {"clair": {"$value": "#DC92FF", "$type": "color"}, "base": {"$value": "#B43BEB", "$type": "color"}, "fonce": {"$value": "#7A1DB0", "$type": "color"}, "famille": "arcane", "role": "épique, magie, stratégie"},
+      "fraise": {"clair": {"$value": "#FF9DB0", "$type": "color"}, "base": {"$value": "#FF4D6D", "$type": "color"}, "fonce": {"$value": "#C21E45", "$type": "color"}, "famille": null, "role": "vie, danger, alerte, pastille de compteur"}
+    },
+    "rarete": {
+      "$description": "même code que les icônes du jeu ; base = aplat de la case, clair = reflet (14 % haut), fonce = ombre cel (34 % bas)",
+      "commun": {"clair": "#ECE8F4", "base": "#C9C3D6", "fonce": "#8E86A6"},
+      "special": {"ref": "bonbon.pomme"},
+      "rare": {"ref": "bonbon.lagon"},
+      "epique": {"ref": "bonbon.amethyste"},
+      "mythique": {"ref": "bonbon.mandarine"},
+      "legendaire": {"ref": "bonbon.soleil", "eclat": "#FFFFFF", "$description": "+ rayons de soleil tournants (comme le fond des icônes de sorts) et une étoile autocollant"}
+    },
+    "texte": {
+      "sur-papier": {"$value": "#221A3A", "$type": "color"},
+      "sur-papier-2": {"$value": "#6B5E86", "$type": "color"},
+      "sur-encre": {"$value": "#FFF8EC", "$type": "color"},
+      "sur-encre-2": {"$value": "#C9BFEA", "$type": "color"},
+      "sur-bonbon": {"$value": "#FFFFFF", "$type": "color", "$description": "toujours avec un contour d'encre (2 à 4 px) : le contraste vient du contour"},
+      "gain-sur-papier": {"$value": "#3E7F0A", "$type": "color"},
+      "gain-sur-encre": {"$value": "#C3F07A", "$type": "color"},
+      "perte-sur-papier": {"$value": "#C21E45", "$type": "color"},
+      "perte-sur-encre": {"$value": "#FF9DB0", "$type": "color"},
+      "desactive": {"$value": "#6F6787", "$type": "color"}
+    },
+    "monde": {
+      "$description": "couleurs mesurées dans les scènes (pour les fonds flous et les voiles)",
+      "ciel": "#CCDEF3", "herbe": "#ACB47F", "chemin": "#CEBFA7", "voile-bilan": "#221A3A59", "voile-modale": "#221A3A8C"
+    }
+  },
+  "typo": {
+    "famille": {
+      "titre": {"$value": "Mochiy Pop One", "$type": "fontFamily", "$description": "SIL OFL 1.1 (Mochiypop Project Authors), une graisse ; titres, logo, boutons primaires, chiffres héros ; toujours avec contour d'encre"},
+      "texte": {"$value": "M PLUS Rounded 1c", "$type": "fontFamily", "$description": "SIL OFL 1.1 (M+ Fonts Project, Coji Morishita) ; 500 texte, 700 libellés, 800 boutons, 900 chiffres ; à sous-ensembler (latin + latin-ext) pour le poids"}
+    },
+    "taille": {
+      "min": {"$value": 15, "$type": "dimension", "$description": "plancher du texte permanent (UiTheme.MIN_TEXT)"},
+      "legende": 15, "texte": 17, "bouton": 19, "sous-titre": 22, "titre-panneau": 26, "titre-ecran": 34, "affiche": 56, "logo": 74, "chiffre-hud": 26, "chiffre-heros": 44
+    },
+    "contour": {
+      "$description": "épaisseur du contour d'encre (Label.outline_size, en px) selon la taille ; approche +0,03 em quand il y a un contour",
+      "15-19": 3, "22-26": 5, "34": 7, "44-56": 9, "74": 12
+    },
+    "interligne": {"titre": 1.1, "texte": 1.4}
+  },
+  "espace": {"1": 4, "2": 8, "3": 12, "4": 16, "5": 20, "6": 24, "7": 32, "8": 48, "gouttiere-ecran": 40},
+  "forme": {
+    "rayon": {"panneau": 18, "carte": 16, "bouton": 14, "case": 14, "onglet-haut": 12, "badge": 10, "puits": 14, "pilule": 999},
+    "contour": {"standard": 3, "petit": 2, "focus-blanc": 6, "focus-lagon": 3},
+    "ombre-dure": {"$description": "ombre d'autocollant : décalage vertical, sans flou, couleur encre-700", "bouton": 5, "bouton-survol": 8, "panneau": 7, "case": 4, "carte": 6, "badge": 3},
+    "ombre-douce": {"$description": "seulement sous les panneaux posés sur la scène 3D", "y": 14, "flou": 24, "couleur": "#221A3A", "opacite": 0.25},
+    "cel": {"$description": "aplat en deux tons à bord net, comme l'ombrage des personnages", "reflet-haut": 0.12, "ombre-bas": 0.38},
+    "brillance": {"$description": "trait blanc de reflet en haut à gauche des boutons et cases", "largeur": 16, "hauteur": 6, "rotation-deg": -12, "opacite": 0.9},
+    "trame": {"$description": "trame manga (points) dans les ombres des panneaux et des états désactivés", "pas-px": 7, "point-px": 1.3, "opacite": 0.13},
+    "inclinaison": {"$description": "rotation des éléments « collés » (titres, pastilles, étiquettes de rôle)", "titre-deg": -3, "pastille-deg": 8, "etiquette-deg": -4}
+  },
+  "taille-composant": {
+    "bouton-hauteur": {"petit": 44, "normal": 52, "primaire": 64},
+    "onglet-hauteur": {"inactif": 40, "actif": 48},
+    "case": {"petite": 56, "normale": 72, "grande": 96},
+    "jauge-hauteur": {"fine": 16, "normale": 24, "hud": 28, "boss": 30},
+    "cible-min-souris": 36, "cible-min-manette": 48
+  },
+  "mouvement": {
+    "duree": {"appui": 60, "relache": 220, "survol-entree": 90, "survol-sortie": 140, "focus-saut": 120, "refus": 240, "apparition": 200, "page": 260, "recompense": 520, "compteur": 800, "infobulle-delai": 300},
+    "courbe": {
+      "sortie": {"$value": [0.22, 0.61, 0.36, 1.0], "godot": "TRANS_CUBIC, EASE_OUT"},
+      "ressort": {"$value": [0.34, 1.56, 0.64, 1.0], "godot": "TRANS_BACK, EASE_OUT", "$description": "relâchement, survol, apparition (dépassement 8 à 12 %)"},
+      "elastique": {"godot": "TRANS_ELASTIC, EASE_OUT", "$description": "récompenses seulement"},
+      "appui": {"$value": [0.4, 0.0, 1.0, 1.0], "godot": "TRANS_QUAD, EASE_IN"}
+    },
+    "echelle": {"survol": 1.04, "appui-x": 1.06, "appui-y": 0.9, "relache-x": 0.97, "relache-y": 1.05, "repos": 1.0},
+    "decalage": {"survol-y": -3, "appui-y": 5}
+  },
+  "son": {"$description": "dB relatifs à la musique ; hauteur aléatoire ±3 % à chaque lecture", "survol": -26, "focus": -22, "appui": -14, "relache": -12, "primaire": -9, "refus": -14, "onglet": -16, "recompense": -6},
+  "vibration": {"$description": "Input.start_joy_vibration(appareil, faible, fort, durée s)", "focus": [0.06, 0.0, 0.025], "appui": [0.18, 0.0, 0.04], "primaire": [0.25, 0.12, 0.07], "refus": [0.0, 0.35, 0.09], "recompense": [0.3, 0.45, 0.18]}
+}

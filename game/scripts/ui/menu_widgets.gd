@@ -1,7 +1,9 @@
 class_name MenuWidgets
 extends RefCounted
 ## Éléments des menus (écran titre, menu principal) : logo, boutons à icône du menu
-## de gauche, lignes de sous-menu (titre, sous-titre, chevron), panneaux translucides.
+## de gauche, lignes de sous-menu (titre, sous-titre, chevron), panneaux.
+## Style « autocollant manga » (UiTheme v2, bible § 5-6) : boutons du menu et lignes en papier (peau « sticker »,
+## textes et icônes à l'encre) ou nuit, bouton primaire soleil, boutons secondaires nuit, panneaux = puits d'encre.
 ## Icônes de traits blancs (assets/ui/icons, tools/make_menu_icons.py), teintées.
 
 const ICONS := "res://assets/ui/icons/%s.png"
@@ -14,26 +16,52 @@ static func icon(name: String) -> Texture2D:
 	return UiTheme.texture(ICONS % name)
 
 
-## Panneau translucide à bord doré.
+## Peau papier (« sticker ») : boutons du menu et lignes clairs, textes à l'encre.
+static func paper() -> bool:
+	return UiTheme.skin != "night"
+
+
+## Puits d'encre (contour d'encre, ombre dure) ; [param border] autre que GOLD_DIM : liseré de mise en avant.
 static func glass(radius := 12, border := UiTheme.GOLD_DIM, alpha := 0.84) -> StyleBoxFlat:
-	var sb := UiTheme.flat_box(Color(GLASS, alpha), border, 2, radius)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(UiTheme.color("encre.500"), maxf(alpha, 0.9))
+	sb.border_color = UiTheme.color("encre.900") if border == UiTheme.GOLD_DIM else border
+	sb.set_border_width_all(3)
+	sb.set_corner_radius_all(radius + 2)
+	sb.anti_aliasing = true
+	sb.shadow_color = Color(UiTheme.color("encre.900"), 0.85)
+	sb.shadow_size = 1
+	sb.shadow_offset = Vector2(0, 5)
 	sb.set_content_margin_all(14)
 	return sb
 
 
-## Logo « EDEN SLASH » avec son filet orné.
+## Couleur des textes des boutons du menu et des lignes : encre sur papier, papier sur nuit ([param secondary] : plus doux).
+static func ink_text(secondary := false) -> Color:
+	if paper():
+		return UiTheme.color("encre.300") if secondary else UiTheme.color("encre.700")
+	return UiTheme.MUTED if secondary else UiTheme.TEXT
+
+
+## Teinte des icônes blanches du menu sur le fond des boutons.
+static func ink_tint() -> Color:
+	return UiTheme.color("encre.700") if paper() else ICON_TINT
+
+
+## Logo « Eden Slash » (Mochiy en casse mixte, plus étroite que les capitales de Cinzel : même encombrement) avec son filet.
 static func logo(parent: Control, size := 72, centered := false) -> VBoxContainer:
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 0)
 	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(v)
 	var t := Label.new()
-	t.text = "EDEN SLASH"
-	UiTheme.title(t, size)
-	t.add_theme_color_override("font_outline_color", Color(0.18, 0.08, 0.02))
-	t.add_theme_constant_override("outline_size", maxi(6, size / 7))
-	t.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.6))
-	t.add_theme_constant_override("shadow_offset_y", 4)
+	t.text = "Eden Slash"
+	size = int(size * 0.92)
+	UiTheme.title(t, size)  # Mochiy soleil, contour d'encre épais, ombre dure d'encre (autocollant)
+	t.add_theme_color_override("font_shadow_color", UiTheme.color("encre.700"))
+	t.add_theme_constant_override("shadow_offset_x", 0)
+	t.add_theme_constant_override("shadow_offset_y", maxi(3, size / 14))
+	t.add_theme_constant_override("shadow_outline_size", UiTheme.outline_for(size))
 	v.add_child(t)
 	var orn := Ornament.new()
 	orn.custom_minimum_size = Vector2(size * 6.4, 14)
@@ -46,7 +74,7 @@ static func logo(parent: Control, size := 72, centered := false) -> VBoxContaine
 	return v
 
 
-## Filet doré avec un losange au centre.
+## Filet soleil contouré d'encre avec une étincelle à 4 branches au centre (comme les icônes du jeu).
 class Ornament extends Control:
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -54,11 +82,18 @@ class Ornament extends Control:
 	func _draw() -> void:
 		var y := size.y * 0.5
 		var c := size.x * 0.5
-		draw_line(Vector2(size.x * 0.04, y), Vector2(c - 14, y), Color(UiTheme.GOLD, 0.9), 2.0, true)
-		draw_line(Vector2(c + 14, y), Vector2(size.x * 0.96, y), Color(UiTheme.GOLD, 0.9), 2.0, true)
-		draw_colored_polygon(PackedVector2Array([Vector2(c, y - 7), Vector2(c + 9, y), Vector2(c, y + 7), Vector2(c - 9, y)]), UiTheme.GOLD)
-		draw_circle(Vector2(size.x * 0.04, y), 2.5, UiTheme.GOLD)
-		draw_circle(Vector2(size.x * 0.96, y), 2.5, UiTheme.GOLD)
+		var ink := UiTheme.color("encre.700")
+		for seg in [[size.x * 0.06, c - 16.0], [c + 16.0, size.x * 0.94]]:
+			draw_line(Vector2(seg[0], y), Vector2(seg[1], y), ink, 6.0, true)
+			draw_line(Vector2(seg[0], y), Vector2(seg[1], y), UiTheme.GOLD, 2.5, true)
+		var star := PackedVector2Array()
+		var out := PackedVector2Array()
+		for i in 8:
+			var a := PI * 0.25 * float(i) - PI * 0.5
+			star.append(Vector2(c, y) + Vector2(cos(a), sin(a)) * (9.0 if i % 2 == 0 else 3.0))
+			out.append(Vector2(c, y) + Vector2(cos(a), sin(a)) * (12.0 if i % 2 == 0 else 5.0))
+		draw_colored_polygon(out, ink)
+		draw_colored_polygon(star, Color.WHITE)
 
 
 ## Bouton du menu de gauche : icône, texte, chevron quand il est choisi.
@@ -72,6 +107,7 @@ class SideButton extends Button:
 	var _chevron: Label
 	var _badge: PanelContainer
 	var _badge_label: Label
+	var _style_key := ""
 
 	func _init(text_value: String, icon_name: String, height := 62.0) -> void:
 		focus_mode = Control.FOCUS_NONE
@@ -100,13 +136,15 @@ class SideButton extends Button:
 		_label.size_flags_vertical = Control.SIZE_FILL
 		h.add_child(_label)
 		# pastille de notification (coffres à ouvrir…)
-		_badge = PanelContainer.new()
-		_badge.add_theme_stylebox_override("panel", UiTheme.flat_box(Color(0.72, 0.16, 0.16), Color(1, 0.86, 0.72), 1, 11, false))
+		_badge = PanelContainer.new()  # pastille fraise contourée d'encre (bible § 5)
+		_badge.add_theme_stylebox_override("panel", UiTheme.sticker("fraise", {"shadow": 2, "radius": 10, "gloss": false, "pad": Vector2(7, 0)}))
 		_badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_badge.visible = false
-		_badge_label = Hud._label(_badge, "", 14, Color(1, 0.97, 0.92))
-		_badge_label.add_theme_font_override("font", UiTheme.bold_font())
+		_badge_label = Hud._label(_badge, "", 14, Color.WHITE)
+		_badge_label.add_theme_font_override("font", UiTheme.number_font())
+		_badge_label.add_theme_constant_override("outline_size", 3)
+		_badge_label.add_theme_color_override("font_outline_color", UiTheme.color("encre.700"))
 		h.add_child(_badge)
 		_chevron = Label.new()
 		_chevron.text = "›"
@@ -117,6 +155,8 @@ class SideButton extends Button:
 		h.add_child(_chevron)
 		mouse_entered.connect(_restyle)
 		mouse_exited.connect(_restyle)
+		button_down.connect(_place)
+		button_up.connect(_place)
 		_restyle()
 
 	## Pastille à droite du texte ("" : aucune).
@@ -127,18 +167,33 @@ class SideButton extends Button:
 	func _restyle() -> void:
 		if _label == null:
 			return
-		var hover := is_hovered()
-		var sb := UiTheme.flat_box(Color(0.1, 0.09, 0.2, 0.92) if selected else Color(MenuWidgets.GLASS, 0.8 if not hover else 0.92),
-			UiTheme.GOLD if selected else (UiTheme.GOLD_DIM if hover else MenuWidgets.LINE), 3 if selected else (2 if hover else 1), 12)
-		if selected:
-			sb.shadow_color = Color(UiTheme.GOLD, 0.45)
-			sb.shadow_size = 10
-		for st in ["normal", "hover", "pressed", "disabled", "focus"]:
-			add_theme_stylebox_override(st, sb)
-		_label.add_theme_color_override("font_color", Color(1, 0.96, 0.86) if selected or hover else UiTheme.TEXT)
-		_icon.modulate = UiTheme.GOLD if selected else MenuWidgets.ICON_TINT
+		var paper := MenuWidgets.paper()
+		var tone := "lagon" if selected else ("papier" if paper else "nuit")
+		var key := tone + str(disabled)
+		if key != _style_key:  # les boîtes ne changent qu'avec l'état choisi (le survol est dans la boîte « hover »)
+			_style_key = key
+			var st := UiTheme.button_states(tone, {"shadow": 4, "pad": Vector2(0, 0)})
+			for k in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+				add_theme_stylebox_override(k, st[k])
+			add_theme_stylebox_override("focus", StyleBoxEmpty.new())
+		var ink := UiTheme.color("encre.700")
+		var col := ink if (paper or selected) else UiTheme.TEXT
+		if disabled:
+			col = UiTheme.color("texte.desactive")
+		_label.add_theme_color_override("font_color", col)
+		_icon.modulate = col
 		_chevron.visible = selected
-		_chevron.add_theme_color_override("font_color", UiTheme.GOLD)
+		_chevron.add_theme_color_override("font_color", ink)
+		_place()
+
+	## Le contenu suit la face de l'autocollant : monte de 3 px au survol, descend sur l'ombre à l'appui.
+	func _place() -> void:
+		if get_child_count() == 0:
+			return
+		var y := 4.0 if is_pressed() and not toggle_mode else (-3.0 if is_hovered() and not disabled else 0.0)
+		var box := get_child(0) as Control
+		box.offset_top = y
+		box.offset_bottom = y - 4.0
 
 
 ## Ligne de sous-menu : icône, titre, sous-titre, chevron. [param height] est la hauteur minimale :
@@ -148,8 +203,9 @@ class RowButton extends Button:
 	var _title: Label
 	var _sub: Label
 	var _icon: TextureRect
-	var _box: StyleBoxFlat
-	var _hover_box: StyleBoxFlat
+	var _box: StyleBox
+	var _hover_box: StyleBox
+	var _states := {}
 	var _base_h := 72.0
 	var _content: HBoxContainer
 
@@ -157,16 +213,18 @@ class RowButton extends Button:
 		focus_mode = Control.FOCUS_NONE
 		_base_h = height
 		custom_minimum_size = Vector2(0, height)
-		_box = UiTheme.flat_box(Color(0.07, 0.08, 0.17, 0.9), MenuWidgets.LINE, 1, 10, false)
-		_hover_box = UiTheme.flat_box(Color(0.13, 0.12, 0.26, 0.96), UiTheme.GOLD_DIM, 2, 10, false)
-		add_theme_stylebox_override("normal", _box)
-		add_theme_stylebox_override("hover", _hover_box)
-		add_theme_stylebox_override("pressed", _hover_box)
-		add_theme_stylebox_override("disabled", _box)
+		# autocollant papier (ou nuit) : contour d'encre, deux tons, ombre dure de 4 px
+		_states = UiTheme.button_states("papier" if MenuWidgets.paper() else "nuit", {"shadow": 4, "radius": 14})
+		_box = _states.normal
+		_hover_box = _states.hover
+		for k in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+			add_theme_stylebox_override(k, _states[k])
+		add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 		var h := HBoxContainer.new()
 		h.set_anchors_preset(Control.PRESET_FULL_RECT)
 		h.offset_left = 16
 		h.offset_right = -16
+		h.offset_bottom = -4.0  # l'ombre dure
 		h.add_theme_constant_override("separation", 16)
 		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(h)
@@ -175,7 +233,7 @@ class RowButton extends Button:
 		if icon_name != "":
 			_icon = TextureRect.new()
 			_icon.texture = MenuWidgets.icon(icon_name) if not icon_name.begins_with("res://") else UiTheme.texture(icon_name)
-			_icon.modulate = MenuWidgets.ICON_TINT if not icon_name.begins_with("res://") else Color.WHITE
+			_icon.modulate = MenuWidgets.ink_tint() if not icon_name.begins_with("res://") else Color.WHITE
 			_icon.custom_minimum_size = Vector2(height * 0.5, height * 0.5)
 			_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -188,15 +246,23 @@ class RowButton extends Button:
 		v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		h.add_child(v)
-		_title = Hud._label(v, title_text, 18, UiTheme.TEXT)
+		_title = Hud._label(v, title_text, 18, MenuWidgets.ink_text())
 		_title.add_theme_font_override("font", UiTheme.bold_font())
-		_sub = Hud._label(v, sub_text, 13, UiTheme.MUTED)
+		_sub = Hud._label(v, sub_text, 13, MenuWidgets.ink_text(true))
+		_sub.add_theme_font_override("font", UiTheme.label_font())
 		_sub.visible = sub_text != ""
 		_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		_sub.custom_minimum_size.x = 120.0  # une largeur minimale pour que le retour à la ligne se calcule
-		var ch := Hud._label(h, "›", 30, UiTheme.TEXT)
+		var ch := Hud._label(h, "›", 30, MenuWidgets.ink_text())
 		ch.add_theme_font_override("font", UiTheme.bold_font())
 		ch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		if MenuWidgets.paper():  # texte à l'encre sur papier : pas de contour (Hud._label en met un pour les fonds sombres)
+			for l in [_title, _sub, ch]:
+				l.add_theme_constant_override("outline_size", 0)
+		mouse_entered.connect(_place)
+		mouse_exited.connect(_place)
+		button_down.connect(_place)
+		button_up.connect(_place)
 
 	func set_texts(title_text: String, sub_text: String) -> void:
 		_title.text = title_text
@@ -211,48 +277,39 @@ class RowButton extends Button:
 		if absf(custom_minimum_size.y - want) > 0.5:
 			custom_minimum_size.y = want
 
-	## Ligne choisie (classe, zone) : cadre doré.
+	## Le contenu suit la face de l'autocollant : monte de 3 px au survol, descend sur l'ombre à l'appui.
+	func _place() -> void:
+		var y := 4.0 if is_pressed() else (-3.0 if is_hovered() and not disabled else 0.0)
+		_content.offset_top = y
+		_content.offset_bottom = y - 4.0
+
+	## Ligne choisie (classe, zone) : autocollant lagon (sélection), textes à l'encre.
 	func mark(on: bool) -> void:
-		var sb := UiTheme.flat_box(Color(0.14, 0.11, 0.24, 0.96), UiTheme.GOLD, 2, 10, false) if on else _box
-		add_theme_stylebox_override("normal", sb)
-		_title.add_theme_color_override("font_color", UiTheme.GOLD if on else UiTheme.TEXT)
+		var st: Dictionary = UiTheme.button_states("lagon", {"shadow": 4, "radius": 14}) if on else _states
+		add_theme_stylebox_override("normal", st.normal)
+		add_theme_stylebox_override("hover", st.hover)
+		var ink := UiTheme.color("encre.700")
+		_title.add_theme_color_override("font_color", ink if on else MenuWidgets.ink_text())
+		_sub.add_theme_color_override("font_color", UiTheme.color("encre.900") if on else MenuWidgets.ink_text(true))
 
 
-## Gros bouton doré (Jouer, Lancer).
+## Gros bouton primaire (Jouer, Lancer) : autocollant soleil, Mochiy blanc contouré d'encre, ressenti « primaire ».
 static func gold_button(text: String, font_size := 30, min_size := Vector2(420, 80)) -> Button:
 	var b := Button.new()
 	b.pressed.connect(func(): Sfx.ui("confirm", -6.0))
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = min_size
-	b.add_theme_font_override("font", UiTheme.title_font())
-	b.add_theme_font_size_override("font_size", font_size)
-	var n := UiTheme.flat_box(Color(0.42, 0.27, 0.07, 0.96), UiTheme.GOLD, 3, 14)
-	n.shadow_color = Color(UiTheme.GOLD, 0.35)
-	n.shadow_size = 12
-	var hv := UiTheme.flat_box(Color(0.58, 0.38, 0.1, 1.0), Color(1, 0.92, 0.62), 3, 14)
-	hv.shadow_color = Color(UiTheme.GOLD, 0.6)
-	hv.shadow_size = 18
-	b.add_theme_stylebox_override("normal", n)
-	b.add_theme_stylebox_override("hover", hv)
-	b.add_theme_stylebox_override("pressed", hv)
-	b.add_theme_color_override("font_color", Color(1, 0.96, 0.86))
-	b.add_theme_color_override("font_hover_color", Color(1, 1, 0.95))
-	b.add_theme_color_override("font_outline_color", Color(0.2, 0.1, 0.0))
-	b.add_theme_constant_override("outline_size", 6)
+	UiTheme.style_button(b, "soleil", font_size, {"shadow": 5})
 	return b
 
 
-## Bouton secondaire translucide.
+## Bouton secondaire : autocollant nuit (texte clair contouré), lisible sur les puits d'encre des pages.
 static func glass_button(text: String, font_size := 20, min_size := Vector2(320, 52)) -> Button:
 	var b := Button.new()
 	b.pressed.connect(func(): Sfx.ui("click", -8.0))
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = min_size
-	b.add_theme_font_override("font", UiTheme.bold_font())
-	b.add_theme_font_size_override("font_size", font_size)
-	b.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(MenuWidgets.GLASS, 0.82), MenuWidgets.LINE, 1, 12))
-	b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.13, 0.12, 0.26, 0.95), UiTheme.GOLD_DIM, 2, 12))
-	b.add_theme_stylebox_override("pressed", UiTheme.flat_box(Color(0.13, 0.12, 0.26, 0.95), UiTheme.GOLD, 2, 12))
+	UiTheme.style_button(b, "nuit", font_size)
 	return b
