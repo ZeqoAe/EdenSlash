@@ -1,0 +1,571 @@
+{
+ "nom": "eden_style_v0b",
+ "declencheur": "edenstyle",
+ "note": "Version demandée par le joueur (17/10) : la DA du jeu (très colorée, anime / manga) apprise sur nos héros, monstres, icônes et illustrations. Sources : 'studio' = tools/art/godot/lora_studio.gd sur une copie propre de HEAD (héros 832x1216 au repos, bustes et monstres 1024x1024) ; 'icones' = planche 8x8 de 64 icônes de game/assets/ui (agrandies 2x, Lanczos) ; 'carte' = game/assets/ui/activities. Exclus : vues où un arbre cache le sujet, héros trop petits (arme géante dans le cadre), doublons de tenue, monstres en morceaux flottants.",
+ "images": [
+  {
+   "src": "studio",
+   "file": "heros_absolute_arrow_blackflame.png",
+   "caption": "edenstyle, chibi girl with dark brown curly pigtails, navy jacket, grey scarf, dark shorts and boots, holding an orange and green bow, full body, village under a deep red sky behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_adjudicator_arid.png",
+   "caption": "edenstyle, chibi girl with light brown braided hair, white sleeveless dress, white gloves and boots, holding a silver mace, full body, orange desert village behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_arch_elementalist_wetlands.png",
+   "caption": "edenstyle, chibi girl in an orange hooded robe with a black horn, white and gold trim, holding a jeweled staff, full body, green wetland village behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_assassin_delphi.png",
+   "caption": "edenstyle, chibi girl with long straight black hair, tight black and pink armor, high boots, holding a golden cross-shaped dagger, full body, sunny forest village behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_asura_beluga.png",
+   "caption": "edenstyle, chibi girl with red bob hair, yellow and black crop top, yellow shorts, holding a huge red and white mechanical gauntlet, full body, seaside village and stone road behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_bard_wetlands.png",
+   "caption": "edenstyle, chibi girl with olive braided hair, frilly white blouse with a black ribbon, maroon jacket, layered patterned skirt, holding a guitar, full body, green wetland village behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_black_blade_avila.png",
+   "caption": "edenstyle, chibi girl with long black hair, black gothic outfit, holding a large sword with a purple crystal blade and an orange guard, full body, volcanic village at dusk behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_blade_acrobat_avila.png",
+   "caption": "edenstyle, chibi girl with long brown hair, red and gold harlequin outfit, red cape, holding a white curved sword, full body, volcanic village at dusk behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_blade_master_rainbowfall.png",
+   "caption": "edenstyle, chibi girl with long black hair, black outfit with red straps and chains, holding a blue and gold sword, full body, forest village behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_dark_envoy_limestone.png",
+   "caption": "edenstyle, chibi girl with red hair and a side ponytail, navy dress with a pink bow, holding a spiked silver hammer, full body, green meadow village behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_dawnbreaker_delphi.png",
+   "caption": "edenstyle, chibi girl with short dark grey hair, red off-shoulder dress, holding a short orange sword, full body, sunny forest village behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_demon_tamer_wetlands.png",
+   "caption": "edenstyle, chibi girl with dark purple hair and a curled strand, black and purple outfit with gold chains, holding a large grey book, full body, green wetland village behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_druid_arid.png",
+   "caption": "edenstyle, chibi girl with long green braided hair, green and gold dress with diamond patterns, holding a staff, full body, orange desert village behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_engineer_avila.png",
+   "caption": "edenstyle, chibi girl with dark brown curly hair, black jacket, holding a big red and pink mechanical cannon, full body, volcanic village at dusk behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_luminary_rainbowfall.png",
+   "caption": "edenstyle, chibi girl with long grey hair, black choker, blue and black ruffled gothic dress, holding a purple-handled sword, full body, forest village behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_psalmist_beluga.png",
+   "caption": "edenstyle, chibi girl with grey braided hair, white crop top, orange belt, holding a crystal-tipped scepter, full body, seaside village and stone road behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_ranger_blackflame.png",
+   "caption": "edenstyle, chibi girl with dark brown curly hair, brown jacket, green scarf, shorts and boots, holding a bow, full body, village under a deep red sky behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_samurai_limestone.png",
+   "caption": "edenstyle, chibi girl with long black hair, red black and gold armored outfit, holding a curved katana with an orange guard, full body, green meadow village behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_shaman_delphi.png",
+   "caption": "edenstyle, chibi girl with green hair, green and gold dress, holding a staff with a big glowing blue orb, full body, sunny forest village behind"
+  },
+  {
+   "src": "studio",
+   "file": "heros_trainer_avila.png",
+   "caption": "edenstyle, chibi girl with dark brown curly hair, black off-shoulder top, green and purple patterned skirt, holding a green curved bow, full body, volcanic village at dusk behind"
+  },
+  {
+   "src": "studio",
+   "file": "buste_absolute_arrow_arid.png",
+   "caption": "edenstyle, chibi girl with grey curly hair, big blue eyes, blue jacket and grey scarf, close-up portrait, head and shoulders, orange desert village behind"
+  },
+  {
+   "src": "studio",
+   "file": "buste_adjudicator_limestone.png",
+   "caption": "edenstyle, chibi girl with light brown braided hair, big blue eyes, white frilly top, close-up portrait, head and shoulders, green meadow village behind"
+  },
+  {
+   "src": "studio",
+   "file": "buste_arch_elementalist_blackflame.png",
+   "caption": "edenstyle, chibi girl with black hair in an orange horned hood, big blue eyes, close-up portrait, head and shoulders, village under a deep red sky behind"
+  },
+  {
+   "src": "studio",
+   "file": "buste_bard_wetlands.png",
+   "caption": "edenstyle, chibi girl with olive braided hair, big blue eyes, white blouse with a black ribbon, red tattoo on the arm, close-up portrait, head and shoulders, green wetland village behind"
+  },
+  {
+   "src": "studio",
+   "file": "buste_battlefield_poet_rainbowfall.png",
+   "caption": "edenstyle, chibi girl with red braided hair, big blue eyes, white blouse with a black ribbon, close-up portrait, head and shoulders, forest village behind"
+  },
+  {
+   "src": "studio",
+   "file": "buste_demon_tamer_wetlands.png",
+   "caption": "edenstyle, chibi girl with dark purple hair and a curled strand, big blue eyes, black and gold collar, close-up portrait, head and shoulders, green wetland village behind"
+  },
+  {
+   "src": "studio",
+   "file": "buste_druid_avila.png",
+   "caption": "edenstyle, chibi girl with green hair, big blue eyes, green and gold outfit, close-up portrait, head and shoulders, volcanic village at dusk behind"
+  },
+  {
+   "src": "studio",
+   "file": "buste_illusionist_avila.png",
+   "caption": "edenstyle, chibi girl with dark purple hair and a side ponytail, big blue eyes, black and gold outfit, close-up portrait, head and shoulders, volcanic village at dusk behind"
+  },
+  {
+   "src": "studio",
+   "file": "buste_ranger_arid.png",
+   "caption": "edenstyle, chibi girl with dark brown curly hair, big blue eyes, green scarf and brown jacket, close-up portrait, head and shoulders, orange desert village behind"
+  },
+  {
+   "src": "studio",
+   "file": "buste_thief_beluga.png",
+   "caption": "edenstyle, chibi girl with long dark grey hair, big blue eyes, black outfit, close-up portrait, head and shoulders, seaside village and stone road behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_56004_wetlands.png",
+   "caption": "edenstyle, colorful stone golem beast with shell-like armor plates, monster, full body, green wetland village behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_56025_avila.png",
+   "caption": "edenstyle, lily flower creature with a purple bloom and root legs, monster, full body, volcanic village at dusk behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_56037_delphi.png",
+   "caption": "edenstyle, fat purple ogre with a green mushroom cap and an orange belly, monster, full body, sunny forest village behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_56058_blackflame.png",
+   "caption": "edenstyle, small goblin in a green hood and red and yellow clothes, grinning, monster, full body, village under a deep red sky behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_56064_limestone.png",
+   "caption": "edenstyle, blue shark-headed mage in a pink and blue robe, monster, full body, green meadow village behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_56070_rainbowfall.png",
+   "caption": "edenstyle, yellow tentacle plant monster with a big red petal, monster, full body, forest village behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_56076_beluga.png",
+   "caption": "edenstyle, blue fish-man warrior with green armor, monster, full body, seaside village and stone road behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_56082_wetlands.png",
+   "caption": "edenstyle, floating blue eyeball monster covered with red eyes, long tentacles, monster, full body, green wetland village behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_56104_avila.png",
+   "caption": "edenstyle, pale horned lion beast with a green mane, roaring, monster, full body, volcanic village at dusk behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_56139_blackflame.png",
+   "caption": "edenstyle, red armored ant lion with a spiral shell and purple eggs, monster, full body, village under a deep red sky behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_56151_rainbowfall.png",
+   "caption": "edenstyle, white and red griffin beast with a curved beak, monster, full body, forest village behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_56157_beluga.png",
+   "caption": "edenstyle, pale green spiky dinosaur beast, monster, full body, seaside village and stone road behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_56163_wetlands.png",
+   "caption": "edenstyle, blue owl spreading its wings, monster, full body, green wetland village behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_56175_arid.png",
+   "caption": "edenstyle, small knight with a horned helmet and red armor, monster, full body, orange desert village behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_57513_blackflame.png",
+   "caption": "edenstyle, purple lily flower creature with root legs, monster, full body, village under a deep red sky behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_57539_beluga.png",
+   "caption": "edenstyle, crystal jellyfish monster with a yellow crystal crown and one eye, monster, full body, seaside village and stone road behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_57581_delphi.png",
+   "caption": "edenstyle, pink hermit crab with a spiked purple shell, monster, full body, sunny forest village behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_57593_limestone.png",
+   "caption": "edenstyle, blue armored lizard knight, monster, full body, green meadow village behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_57599_rainbowfall.png",
+   "caption": "edenstyle, black knight with a red plume, red cape and silver armor, monster, full body, forest village behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_58359_beluga.png",
+   "caption": "edenstyle, yellow mossy stone beast with a shaggy mane, monster, full body, seaside village and stone road behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_58470_arid.png",
+   "caption": "edenstyle, giant pink mushroom with stubby legs, monster, full body, orange desert village behind"
+  },
+  {
+   "src": "studio",
+   "file": "monstre_58502_delphi.png",
+   "caption": "edenstyle, old scientist with white hair, red goggles and a white lab coat, monster, full body, sunny forest village behind"
+  },
+  {
+   "src": "icones",
+   "file": "icones_armes.png",
+   "icons": [
+    "game/assets/ui/items/w62505.png",
+    "game/assets/ui/items/w52102.png",
+    "game/assets/ui/items/w33708.png",
+    "game/assets/ui/items/w50103.png",
+    "game/assets/ui/items/w32804.png",
+    "game/assets/ui/items/w23903.png",
+    "game/assets/ui/items/w63502.png",
+    "game/assets/ui/items/w32401.png",
+    "game/assets/ui/items/w16706.png",
+    "game/assets/ui/items/w11003.png",
+    "game/assets/ui/items/w31001.png",
+    "game/assets/ui/items/w50705.png",
+    "game/assets/ui/items/w52404.png",
+    "game/assets/ui/items/w31102.png",
+    "game/assets/ui/items/w61502.png",
+    "game/assets/ui/items/w34704.png",
+    "game/assets/ui/items/w51403.png",
+    "game/assets/ui/items/w20902.png",
+    "game/assets/ui/items/w63903.png",
+    "game/assets/ui/items/w13007.png",
+    "game/assets/ui/items/w21001.png",
+    "game/assets/ui/items/w25608.png",
+    "game/assets/ui/items/w21306.png",
+    "game/assets/ui/items/w62905.png",
+    "game/assets/ui/items/w64403.png",
+    "game/assets/ui/items/w27401.png",
+    "game/assets/ui/items/w40106.png",
+    "game/assets/ui/items/w63501.png",
+    "game/assets/ui/items/w20305.png",
+    "game/assets/ui/items/w13302.png",
+    "game/assets/ui/items/w33902.png",
+    "game/assets/ui/items/w51903.png",
+    "game/assets/ui/items/w14604.png",
+    "game/assets/ui/items/w61606.png",
+    "game/assets/ui/items/w60503.png",
+    "game/assets/ui/items/w71203.png",
+    "game/assets/ui/items/w21005.png",
+    "game/assets/ui/items/w51808.png",
+    "game/assets/ui/items/w61604.png",
+    "game/assets/ui/items/w40306.png",
+    "game/assets/ui/items/w10702.png",
+    "game/assets/ui/items/w53009.png",
+    "game/assets/ui/items/w50305.png",
+    "game/assets/ui/items/w64802.png",
+    "game/assets/ui/items/w11805.png",
+    "game/assets/ui/items/w41107.png",
+    "game/assets/ui/items/w11803.png",
+    "game/assets/ui/items/w60604.png",
+    "game/assets/ui/items/w50404.png",
+    "game/assets/ui/items/w70201.png",
+    "game/assets/ui/items/w10205.png",
+    "game/assets/ui/items/w51706.png",
+    "game/assets/ui/items/w30605.png",
+    "game/assets/ui/items/w20104.png",
+    "game/assets/ui/items/w64201.png",
+    "game/assets/ui/items/w27408.png",
+    "game/assets/ui/items/w62706.png",
+    "game/assets/ui/items/w41403.png",
+    "game/assets/ui/items/w12703.png",
+    "game/assets/ui/items/w31603.png",
+    "game/assets/ui/items/w13105.png",
+    "game/assets/ui/items/w31906.png",
+    "game/assets/ui/items/w25505.png",
+    "game/assets/ui/items/w71303.png"
+   ],
+   "caption": "edenstyle, game icon sheet, 8 by 8 grid of fantasy weapon icons, swords, staffs, bows, guns and books, each on a dark grey rounded tile"
+  },
+  {
+   "src": "icones",
+   "file": "icones_armures.png",
+   "icons": [
+    "game/assets/ui/items/a50005.png",
+    "game/assets/ui/items/a20108.png",
+    "game/assets/ui/items/a20096.png",
+    "game/assets/ui/items/a20107.png",
+    "game/assets/ui/items/a50042.png",
+    "game/assets/ui/items/a10019.png",
+    "game/assets/ui/items/a10081.png",
+    "game/assets/ui/items/a30032.png",
+    "game/assets/ui/items/a10110.png",
+    "game/assets/ui/items/a50050.png",
+    "game/assets/ui/items/a20002.png",
+    "game/assets/ui/items/a10116.png",
+    "game/assets/ui/items/a10040.png",
+    "game/assets/ui/items/a10123.png",
+    "game/assets/ui/items/a10001.png",
+    "game/assets/ui/items/a50046.png",
+    "game/assets/ui/items/a20118.png",
+    "game/assets/ui/items/a20120.png",
+    "game/assets/ui/items/a40038.png",
+    "game/assets/ui/items/a10092.png",
+    "game/assets/ui/items/a10124.png",
+    "game/assets/ui/items/a00005.png",
+    "game/assets/ui/items/a00026.png",
+    "game/assets/ui/items/a40023.png",
+    "game/assets/ui/items/a60030.png",
+    "game/assets/ui/items/a00010.png",
+    "game/assets/ui/items/a20063.png",
+    "game/assets/ui/items/a40019.png",
+    "game/assets/ui/items/a20066.png",
+    "game/assets/ui/items/a30019.png",
+    "game/assets/ui/items/a00028.png",
+    "game/assets/ui/items/a40011.png",
+    "game/assets/ui/items/a10054.png",
+    "game/assets/ui/items/a10111.png",
+    "game/assets/ui/items/a10085.png",
+    "game/assets/ui/items/a00039.png",
+    "game/assets/ui/items/a40021.png",
+    "game/assets/ui/items/a60028.png",
+    "game/assets/ui/items/a40004.png",
+    "game/assets/ui/items/a20072.png",
+    "game/assets/ui/items/a00011.png",
+    "game/assets/ui/items/a30012.png",
+    "game/assets/ui/items/a20112.png",
+    "game/assets/ui/items/a20092.png",
+    "game/assets/ui/items/a30046.png",
+    "game/assets/ui/items/a10023.png",
+    "game/assets/ui/items/a20030.png",
+    "game/assets/ui/items/a40012.png",
+    "game/assets/ui/items/a60010.png",
+    "game/assets/ui/items/a60014.png",
+    "game/assets/ui/items/a60024.png",
+    "game/assets/ui/items/a20126.png",
+    "game/assets/ui/items/a40058.png",
+    "game/assets/ui/items/a20024.png",
+    "game/assets/ui/items/a10046.png",
+    "game/assets/ui/items/a10053.png",
+    "game/assets/ui/items/a10030.png",
+    "game/assets/ui/items/a30041.png",
+    "game/assets/ui/items/a10009.png",
+    "game/assets/ui/items/a50045.png",
+    "game/assets/ui/items/a10061.png",
+    "game/assets/ui/items/a50012.png",
+    "game/assets/ui/items/a60021.png",
+    "game/assets/ui/items/a20098.png"
+   ],
+   "caption": "edenstyle, game icon sheet, 8 by 8 grid of fantasy armor and clothing icons, helmets, boots, gloves, belts, robes and hats, each on a dark grey rounded tile"
+  },
+  {
+   "src": "icones",
+   "file": "icones_sorts.png",
+   "icons": [
+    "game/assets/ui/skills/e0786.png",
+    "game/assets/ui/skills/e0805.png",
+    "game/assets/ui/skills/e0047.png",
+    "game/assets/ui/skills/e0462.png",
+    "game/assets/ui/skills/e0943.png",
+    "game/assets/ui/skills/e0096.png",
+    "game/assets/ui/skills/e0801.png",
+    "game/assets/ui/skills/e0716.png",
+    "game/assets/ui/skills/e0916.png",
+    "game/assets/ui/skills/e1017.png",
+    "game/assets/ui/skills/e0076.png",
+    "game/assets/ui/skills/j530.png",
+    "game/assets/ui/skills/e0088.png",
+    "game/assets/ui/skills/j534.png",
+    "game/assets/ui/skills/e0707.png",
+    "game/assets/ui/skills/e0680.png",
+    "game/assets/ui/skills/j505.png",
+    "game/assets/ui/skills/e0731.png",
+    "game/assets/ui/skills/e0464.png",
+    "game/assets/ui/skills/e0772.png",
+    "game/assets/ui/skills/e1024.png",
+    "game/assets/ui/skills/e0901.png",
+    "game/assets/ui/skills/e0677.png",
+    "game/assets/ui/skills/j564.png",
+    "game/assets/ui/skills/e0924.png",
+    "game/assets/ui/skills/e1078.png",
+    "game/assets/ui/skills/e0976.png",
+    "game/assets/ui/skills/e0079.png",
+    "game/assets/ui/skills/e0996.png",
+    "game/assets/ui/skills/e0673.png",
+    "game/assets/ui/skills/e0684.png",
+    "game/assets/ui/skills/e1020.png",
+    "game/assets/ui/skills/e0807.png",
+    "game/assets/ui/skills/e0606.png",
+    "game/assets/ui/skills/e0854.png",
+    "game/assets/ui/skills/e0025.png",
+    "game/assets/ui/skills/j706.png",
+    "game/assets/ui/skills/e1083.png",
+    "game/assets/ui/skills/e0946.png",
+    "game/assets/ui/skills/e0051.png",
+    "game/assets/ui/skills/e0818.png",
+    "game/assets/ui/skills/e0539.png",
+    "game/assets/ui/skills/j569.png",
+    "game/assets/ui/skills/e0686.png",
+    "game/assets/ui/skills/e0802.png",
+    "game/assets/ui/skills/e0858.png",
+    "game/assets/ui/skills/e0542.png",
+    "game/assets/ui/skills/e0666.png",
+    "game/assets/ui/skills/e0784.png",
+    "game/assets/ui/skills/e0963.png",
+    "game/assets/ui/skills/e0846.png",
+    "game/assets/ui/skills/e0984.png",
+    "game/assets/ui/skills/e0109.png",
+    "game/assets/ui/skills/e1088.png",
+    "game/assets/ui/skills/e0006.png",
+    "game/assets/ui/skills/e0609.png",
+    "game/assets/ui/skills/j559.png",
+    "game/assets/ui/skills/e0569.png",
+    "game/assets/ui/skills/e0986.png",
+    "game/assets/ui/skills/e1000.png",
+    "game/assets/ui/skills/e0977.png",
+    "game/assets/ui/skills/e1043.png",
+    "game/assets/ui/skills/e0252.png",
+    "game/assets/ui/skills/j515.png"
+   ],
+   "caption": "edenstyle, game icon sheet, 8 by 8 grid of glossy skill icons, simple symbols and silhouettes on bright yellow, green, blue, orange and purple square tiles"
+  },
+  {
+   "src": "icones",
+   "file": "icones_talents.png",
+   "icons": [
+    "game/assets/ui/talents/e0900.png",
+    "game/assets/ui/talents/e0817.png",
+    "game/assets/ui/talents/e0785.png",
+    "game/assets/ui/talents/e0139.png",
+    "game/assets/ui/talents/e0549.png",
+    "game/assets/ui/talents/e0448.png",
+    "game/assets/ui/talents/e0364.png",
+    "game/assets/ui/talents/e0083.png",
+    "game/assets/ui/talents/e0809.png",
+    "game/assets/ui/talents/e0619.png",
+    "game/assets/ui/talents/e0602.png",
+    "game/assets/ui/talents/e0392.png",
+    "game/assets/ui/talents/e0180.png",
+    "game/assets/ui/talents/e0452.png",
+    "game/assets/ui/talents/e0227.png",
+    "game/assets/ui/talents/e0863.png",
+    "game/assets/ui/talents/e1082.png",
+    "game/assets/ui/talents/e0142.png",
+    "game/assets/ui/talents/e0155.png",
+    "game/assets/ui/talents/e0287.png",
+    "game/assets/ui/talents/e0814.png",
+    "game/assets/ui/talents/e0556.png",
+    "game/assets/ui/talents/e0992.png",
+    "game/assets/ui/talents/e0384.png",
+    "game/assets/ui/talents/e0228.png",
+    "game/assets/ui/talents/e0153.png",
+    "game/assets/ui/talents/e0789.png",
+    "game/assets/ui/talents/e0884.png",
+    "game/assets/ui/talents/e0403.png",
+    "game/assets/ui/talents/e1038.png",
+    "game/assets/ui/talents/e0157.png",
+    "game/assets/ui/talents/e0717.png",
+    "game/assets/ui/talents/e0297.png",
+    "game/assets/ui/talents/e0756.png",
+    "game/assets/ui/talents/e0186.png",
+    "game/assets/ui/talents/e0887.png",
+    "game/assets/ui/talents/e0188.png",
+    "game/assets/ui/talents/e0368.png",
+    "game/assets/ui/talents/e0886.png",
+    "game/assets/ui/talents/e0447.png",
+    "game/assets/ui/talents/e0454.png",
+    "game/assets/ui/talents/e0659.png",
+    "game/assets/ui/talents/e0629.png",
+    "game/assets/ui/talents/e0891.png",
+    "game/assets/ui/talents/e0948.png",
+    "game/assets/ui/talents/e0739.png",
+    "game/assets/ui/talents/e0723.png",
+    "game/assets/ui/talents/e0077.png",
+    "game/assets/ui/talents/e0871.png",
+    "game/assets/ui/talents/e0621.png",
+    "game/assets/ui/talents/e0209.png",
+    "game/assets/ui/talents/e0161.png",
+    "game/assets/ui/talents/e1009.png",
+    "game/assets/ui/talents/e0480.png",
+    "game/assets/ui/talents/e0583.png",
+    "game/assets/ui/talents/e0579.png",
+    "game/assets/ui/talents/e0292.png",
+    "game/assets/ui/talents/e0609.png",
+    "game/assets/ui/talents/e0302.png",
+    "game/assets/ui/talents/e0428.png",
+    "game/assets/ui/talents/e0838.png",
+    "game/assets/ui/talents/e0479.png",
+    "game/assets/ui/talents/e0771.png",
+    "game/assets/ui/talents/e0299.png"
+   ],
+   "caption": "edenstyle, game icon sheet, 8 by 8 grid of glossy talent icons, simple symbols and silhouettes on bright yellow, green, blue and purple square tiles"
+  },
+  {
+   "src": "carte",
+   "file": "autochess.jpg",
+   "caption": "edenstyle, chaotic battle of small chibi heroes on a grass field, colorful magic effects, purple and orange spell flashes, floating health bars"
+  },
+  {
+   "src": "carte",
+   "file": "arena3.jpg",
+   "caption": "edenstyle, crystal cavern interior, giant glowing pink and red crystals, blue ice light, stone pillars, magical arena"
+  },
+  {
+   "src": "carte",
+   "file": "duel.jpg",
+   "caption": "edenstyle, giant armored knight statue between two flaming braziers, red and white banners, marble pillars, temple interior"
+  },
+  {
+   "src": "carte",
+   "file": "tower.jpg",
+   "caption": "edenstyle, tall white stone lighthouse tower with a beam of light, dark stormy clouds, night sky, low angle"
+  }
+ ]
+}

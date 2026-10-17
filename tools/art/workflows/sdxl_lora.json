@@ -1,0 +1,46 @@
+{
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {"title": "MODEL"},
+    "inputs": {"ckpt_name": "sd_xl_base_1.0.safetensors"}
+  },
+  "2": {
+    "class_type": "LoraLoader",
+    "_meta": {"title": "LORA"},
+    "inputs": {"model": ["1", 0], "clip": ["1", 1], "lora_name": "eden_style_v0.safetensors",
+               "strength_model": 1.0, "strength_clip": 1.0}
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "_meta": {"title": "PROMPT"},
+    "inputs": {"text": "", "clip": ["2", 1]}
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "_meta": {"title": "NEGATIVE"},
+    "inputs": {"text": "", "clip": ["2", 1]}
+  },
+  "5": {
+    "class_type": "EmptyLatentImage",
+    "_meta": {"title": "SIZE"},
+    "inputs": {"width": 1216, "height": 832, "batch_size": 1}
+  },
+  "6": {
+    "class_type": "KSampler",
+    "_meta": {"title": "SAMPLER"},
+    "inputs": {
+      "model": ["2", 0], "positive": ["3", 0], "negative": ["4", 0], "latent_image": ["5", 0],
+      "seed": 1, "steps": 30, "cfg": 6.5, "sampler_name": "dpmpp_2m", "scheduler": "karras", "denoise": 1.0
+    }
+  },
+  "7": {
+    "class_type": "VAEDecode",
+    "_meta": {"title": "DECODE"},
+    "inputs": {"samples": ["6", 0], "vae": ["1", 2]}
+  },
+  "8": {
+    "class_type": "SaveImage",
+    "_meta": {"title": "SAVE"},
+    "inputs": {"images": ["7", 0], "filename_prefix": "eden/img"}
+  }
+}

@@ -1,0 +1,8 @@
+[
+  {"name": "chevaliere", "prompt": "edenstyle, chibi girl with long silver hair, white and gold knight armor, holding a big sword, full body, green meadow village behind", "width": 832, "height": 1216},
+  {"name": "mage_garcon", "prompt": "edenstyle, chibi boy with short blond hair, blue mage robe and a pointy hat, holding a wooden staff, full body, forest village behind", "width": 832, "height": 1216},
+  {"name": "buste", "prompt": "edenstyle, chibi girl with pink twin tails, big blue eyes, red and white outfit, close-up portrait, head and shoulders, seaside village behind", "width": 1024, "height": 1024},
+  {"name": "dragon", "prompt": "edenstyle, small ice dragon monster with blue crystal spikes, monster, full body, snowy village behind", "width": 1024, "height": 1024},
+  {"name": "potions", "prompt": "edenstyle, game icon sheet, 4 by 4 grid of fantasy potion and gem icons, each on a dark grey rounded tile", "width": 1024, "height": 1024},
+  {"name": "village", "prompt": "edenstyle, aerial view of a snowy mountain village with round cottages and pine trees", "width": 1216, "height": 832}
+]

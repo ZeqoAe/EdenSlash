@@ -1,0 +1,67 @@
+{
+  "nom": "eden_style_v0",
+  "declencheur": "edenstyle",
+  "note": "Légendes écrites à la main (contenu, pas le style : le style se range sous le mot-clé). Sources : 'carte' = game/assets/ui/activities (960x320) ; 'capture' = tools/art/godot/lora_capture.gd sur une copie propre de HEAD (1216x832). Exclues : blackflame_combat et delphi_combat (aucun monstre, sol vide), delphi_paysage (arbre en panneau devant la caméra), wetlands_heros2 (même classe qu'arid_heros2).",
+  "images": [
+    {"src": "carte", "file": "arena2.jpg", "caption": "edenstyle, grand throne hall interior, long red carpet, rows of stone knight statues holding swords, hanging red banners, chandelier, warm candle light, symmetrical view"},
+    {"src": "carte", "file": "arena3.jpg", "caption": "edenstyle, crystal cavern interior, giant glowing pink and red crystals, blue ice light, stone pillars, magical arena"},
+    {"src": "carte", "file": "autochess.jpg", "caption": "edenstyle, chaotic battle of small chibi heroes on a grass field, colorful magic effects, purple and orange spell flashes, floating health bars"},
+    {"src": "carte", "file": "battlefield.jpg", "caption": "edenstyle, stone castle walls with round crenellated towers, pine trees, green hills, aerial view, bright daylight"},
+    {"src": "carte", "file": "duel.jpg", "caption": "edenstyle, giant armored knight statue between two flaming braziers, red and white banners, marble pillars, temple interior"},
+    {"src": "carte", "file": "dungeon.jpg", "caption": "edenstyle, dark dungeon throne room, stone walls, torches, red and purple banners, candles, gloomy warm light"},
+    {"src": "carte", "file": "survival.jpg", "caption": "edenstyle, green meadow with pine trees and flowers, small wooden house in the distance, soft hills, sunny day, wide landscape"},
+    {"src": "carte", "file": "survivor.jpg", "caption": "edenstyle, meadow with pine trees and a wooden house at dusk, everything tinted orange and sepia, dry grass, wide landscape"},
+    {"src": "carte", "file": "tower.jpg", "caption": "edenstyle, tall white stone lighthouse tower with a beam of light, dark stormy clouds, night sky, low angle"},
+    {"src": "carte", "file": "training.jpg", "caption": "edenstyle, green rolling hills, round wooden door in a stone wall, stone statue of a warrior, small village below, sunny sky"},
+
+    {"src": "capture", "file": "limestone_paysage.png", "caption": "edenstyle, dirt path through a green meadow toward a small village of round cottages, golden autumn tree, pine trees, distant hazy mountains"},
+    {"src": "capture", "file": "limestone_aerien.png", "caption": "edenstyle, aerial view of a small fantasy village with round orange cottages, winding dirt paths, green meadow, scattered trees and fences"},
+    {"src": "capture", "file": "limestone_heros.png", "caption": "edenstyle, chibi heroine with brown curly hair, green and purple dress, holding a large green curved bow, standing on a dirt path, village and trees behind"},
+    {"src": "capture", "file": "limestone_heros2.png", "caption": "edenstyle, small chibi heroine with long black hair, dark purple outfit, standing on a stone path in a green meadow, hills behind"},
+    {"src": "capture", "file": "limestone_combat.png", "caption": "edenstyle, top-down game view, chibi hero with a red weapon fighting a red mushroom creature, a white stone golem and a shaggy yak on a cracked dirt path"},
+    {"src": "capture", "file": "limestone_monstre.png", "caption": "edenstyle, shaggy white yak monster with curled horns, standing on a grass field, village in the distance"},
+
+    {"src": "capture", "file": "rainbowfall_paysage.png", "caption": "edenstyle, forest clearing with thin tall trees, dirt path, small village of cottages in the distance, soft green light"},
+    {"src": "capture", "file": "rainbowfall_aerien.png", "caption": "edenstyle, aerial view of a forest village with round cottages, dirt paths, green grass, light morning haze"},
+    {"src": "capture", "file": "rainbowfall_heros.png", "caption": "edenstyle, chibi heroine with long black hair, purple and black outfit, holding a large ornate shield, forest path behind"},
+    {"src": "capture", "file": "rainbowfall_heros2.png", "caption": "edenstyle, chibi heroine with green hair, green robe, holding a staff with a glowing blue orb, forest meadow, thin trees"},
+    {"src": "capture", "file": "rainbowfall_combat.png", "caption": "edenstyle, top-down game view, chibi hero on a forest dirt path surrounded by small flower creatures and a clover sprite"},
+    {"src": "capture", "file": "rainbowfall_monstre.png", "caption": "edenstyle, purple imp monster with a pink head and big eyes, standing in a forest meadow, thin trees"},
+
+    {"src": "capture", "file": "beluga_paysage.png", "caption": "edenstyle, stone path through green grass toward a seaside village, palm tree, tall green tower, bright sky"},
+    {"src": "capture", "file": "beluga_aerien.png", "caption": "edenstyle, aerial view of a seaside village, pale sand and green grass, winding stone path, palm trees, light haze"},
+    {"src": "capture", "file": "beluga_heros.png", "caption": "edenstyle, chibi heroine with red hair, red and gold armor, holding a long crimson spear, stone road, palm tree behind"},
+    {"src": "capture", "file": "beluga_heros2.png", "caption": "edenstyle, chibi heroine with blue hair, blue dress, holding a long red spear, green meadow, palm trees"},
+    {"src": "capture", "file": "beluga_combat.png", "caption": "edenstyle, top-down game view, chibi hero on a grey stone road fighting pink and white creatures, green grass on both sides"},
+    {"src": "capture", "file": "beluga_monstre.png", "caption": "edenstyle, humanoid siren monster with orange hair and a purple skirt, standing on green grass, palm tree, blue sky"},
+
+    {"src": "capture", "file": "wetlands_paysage.png", "caption": "edenstyle, misty green hills, dirt path, pink flowers, small village in the distance, soft green haze"},
+    {"src": "capture", "file": "wetlands_aerien.png", "caption": "edenstyle, aerial view of a village in green wetlands, round cottages, muddy paths, thick green haze"},
+    {"src": "capture", "file": "wetlands_heros.png", "caption": "edenstyle, chibi heroine with brown curly hair, green and purple dress, holding a green curved bow, misty green hills behind"},
+    {"src": "capture", "file": "wetlands_combat.png", "caption": "edenstyle, top-down game view, chibi swordsman fighting a red rock creature, a teal crystal monster and a golden lizard on dark green grass"},
+    {"src": "capture", "file": "wetlands_monstre.png", "caption": "edenstyle, golden lizard warrior monster holding a mace, standing on a green hill, misty sky"},
+
+    {"src": "capture", "file": "avila_paysage.png", "caption": "edenstyle, dark volcanic plain, dead leafless trees, dry yellow shrubs, village in the distance, red dusk sky"},
+    {"src": "capture", "file": "avila_aerien.png", "caption": "edenstyle, aerial view of a village on dark volcanic ground, orange lava-colored patches, dry shrubs"},
+    {"src": "capture", "file": "avila_heros.png", "caption": "edenstyle, chibi heroine with brown hair, black and red dress, holding a red lute, dead trees, red dusk sky"},
+    {"src": "capture", "file": "avila_heros2.png", "caption": "edenstyle, chibi heroine with brown hair and dark armor, holding a long silver sword, volcanic ground, dead trees, red sky"},
+    {"src": "capture", "file": "avila_combat.png", "caption": "edenstyle, top-down game view, chibi hero fighting a red mechanical monster, a pink spider and a small demon on dark volcanic ground"},
+    {"src": "capture", "file": "avila_monstre.png", "caption": "edenstyle, red spiky crab spider monster, volcanic ground, dead trees, red dusk sky"},
+
+    {"src": "capture", "file": "arid_paysage.png", "caption": "edenstyle, desert landscape of orange sand dunes, cactus, dry shrubs, small village on the horizon, pale sky"},
+    {"src": "capture", "file": "arid_aerien.png", "caption": "edenstyle, aerial view of a desert village, orange sand, round cottages, dead trees, warm haze"},
+    {"src": "capture", "file": "arid_heros.png", "caption": "edenstyle, chibi heroine with long black hair, black and purple outfit, holding a huge dark tower shield, desert village and cactus behind"},
+    {"src": "capture", "file": "arid_heros2.png", "caption": "edenstyle, chibi heroine with brown hair, holding a pink mechanical device, orange desert sand, dry bushes"},
+    {"src": "capture", "file": "arid_combat.png", "caption": "edenstyle, top-down game view, chibi hero in green fighting a red bird and a dark armored creature on orange sand"},
+    {"src": "capture", "file": "arid_monstre.png", "caption": "edenstyle, dark armored beast monster with white claws, orange desert, cactus, pale sky"},
+
+    {"src": "capture", "file": "delphi_aerien.png", "caption": "edenstyle, aerial view of a forest village, round cottages, green grass, dirt paths, soft green haze"},
+    {"src": "capture", "file": "delphi_heros.png", "caption": "edenstyle, chibi heroine with brown hair, white top, holding a huge hammer, dirt path, leafy tree behind"},
+    {"src": "capture", "file": "delphi_heros2.png", "caption": "edenstyle, chibi heroine with brown hair, holding a green curved bow, green meadow, round trees, warm light"},
+
+    {"src": "capture", "file": "blackflame_paysage.png", "caption": "edenstyle, dark plain with baobab trees and dry shrubs, village in the distance, deep red sky"},
+    {"src": "capture", "file": "blackflame_aerien.png", "caption": "edenstyle, aerial view of a village on dark earth, baobab trees, dry shrubs, warm dim light"},
+    {"src": "capture", "file": "blackflame_heros.png", "caption": "edenstyle, chibi heroine with short grey hair holding a giant hammer, baobab trees, deep red sky"},
+    {"src": "capture", "file": "blackflame_heros2.png", "caption": "edenstyle, chibi heroine with long black hair, tiger-striped outfit, holding a curved sword, baobab trees, red sky"}
+  ]
+}
