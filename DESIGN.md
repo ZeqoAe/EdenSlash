@@ -1308,6 +1308,10 @@ performances le permet), une seule couronne. Les règles complètes sont celles 
   18,9 min (Classique), 11,8 min (Éclair).
 - **Trios** : trois familles différentes, aucune classe deux fois dans la partie ; héros à la fiche « à l'arme » niveau 60 ; ton
   équipement, ton or et ton sac sont mis de côté pendant la partie (rien du compte n'y change la force).
+- **Arènes** (lot CO-B, `R_CO_B.md`) : une par combat, cuvettes plates de 24 m de rayon séparées par des falaises ; 4 piliers pour
+  s'abriter des tirs, 1 ou 2 **fleurs de vie** (15 % des PV et une barrière de 4 s au premier qui passe, repousse en 20 s). **Anneau de
+  feu** : 22 m, puis 16 m à 25 s, 11 m à 40 s, 6 m à 55 s, 3 m à 70 s ; chaque resserrement est annoncé 4 s avant (prochain anneau en
+  pointillés) ; dehors on perd 5 % de ses PV par seconde, un peu plus à chaque seconde, et les soins reçus sont divisés par deux.
 
 # Partie D — Économie et progression
 

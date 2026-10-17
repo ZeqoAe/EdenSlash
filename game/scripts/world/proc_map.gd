@@ -247,6 +247,96 @@ func generate_arena(seed_value: int, layout := "ring") -> void:
 	_setup_navigation()
 
 
+## Le Colisée (lot CO-B, conception/benchmark/R_CO_B.md) : une arène par combat simultané, chacune une cuvette plate de
+## COLISEE_FLAT m de rayon fermée par des falaises (comme generate_arena), posées en grille à COLISEE_SPACING m les unes
+## des autres dans la même carte ; entre deux arènes la falaise monte à plus de 40 m (impossible à franchir, rien ne se voit
+## d'une arène à l'autre). Par arène : COLISEE_PILLARS piliers (couvert contre les tirs) à 11 m du centre, 1 ou 2 fleurs de
+## vie (ColiseeFlower, posées par le directeur aux points [member colisee_arenas].flowers), 4 torches, un anneau de rochers.
+## [member colisee_arenas] : [{index, name, kind, center, pillars: [Vector3], flowers: [Vector3]}].
+const COLISEE_SPACING := 120.0
+const COLISEE_FLAT := 24.0
+const COLISEE_WALL := 26.0
+const COLISEE_PILLARS := 4
+const COLISEE_PILLAR_R := 11.0
+## Noms et particularités (les particularités elles-mêmes : lot CO-L, P2 ; ici le nom et la clé seulement).
+const COLISEE_KINDS := [["prairie", "Prairie"], ["ruines", "Ruines"], ["desert", "Désert"], ["glace", "Glace"], ["volcan", "Volcan"],
+	["bosquet", "Bosquet"], ["cirque", "Cirque"], ["lagune", "Lagune"]]
+var colisee_arenas: Array = []
+
+
+func generate_colisee(seed_value: int, count := 6) -> void:
+	count = clampi(count, 1, COLISEE_KINDS.size())
+	var cols := 2 if count <= 4 else 3
+	var rows := ceili(float(count) / cols)
+	_setup("mine" if biome == "limestone" else biome, COLISEE_SPACING * maxi(cols, rows), seed_value)
+	map_id = "colisee"
+	var centers: Array = []
+	for k in count:
+		centers.append(Vector2(COLISEE_SPACING * (k % cols + 0.5), COLISEE_SPACING * (int(k / cols) + 0.5)))
+	_build_heights(false)
+	for j in n:
+		for i in n:
+			var p := Vector2(i * STEP, j * STEP)
+			var d := INF
+			for c in centers:
+				d = minf(d, p.distance_to(c))
+			var bump := 0.4 * _noise.get_noise_2d(i * 3.0, j * 3.0) * smoothstep(COLISEE_FLAT, COLISEE_FLAT + 6.0, d)
+			heights[j * n + i] = bump + minf(pow(maxf(0.0, d - COLISEE_WALL) / 12.0, 2.0) * 14.0, 48.0)
+	_splat = Image.create(n - 1, n - 1, false, Image.FORMAT_RGBA8)
+	for j in n - 1:
+		for i in n - 1:
+			var p := Vector2(i * STEP, j * STEP)
+			var d := INF
+			for c in centers:
+				d = minf(d, p.distance_to(c))
+			# piste claire à 14 m et rond du centre (repères de l'anneau de feu)
+			var mark := 1.0 if absf(d - 14.0) < 1.2 or d < 1.6 else 0.0
+			_splat.set_pixel(i, j, Color(0.5 + 0.5 * _noise2.get_noise_2d(i * 4.0, j * 4.0), 0.0, mark, 0.0))
+	start = Vector3(centers[0].x, 0, centers[0].y + 9.0)
+	start.y = height_at(start.x, start.z)
+	_build_terrain()
+	var props := Node3D.new()
+	add_child(props)
+	var batch := {}
+	colisee_arenas = []
+	for k in count:
+		var c: Vector2 = centers[k]
+		var cy := height_at(c.x, c.y)
+		for r in 14:
+			var a := TAU * r / 14.0
+			var p := Vector3(c.x + cos(a) * 30.0, 0, c.y + sin(a) * 30.0)
+			p.y = height_at(p.x, p.z)
+			_add_instance(batch, PropCatalog.pick(_rocks.slice(0, 6), rng), p, false)
+		for r in 4:
+			var a := TAU * r / 4.0 + PI * 0.25
+			var t := Vector3(c.x + cos(a) * 23.0, 0, c.y + sin(a) * 23.0)
+			t.y = height_at(t.x, t.z)
+			_torch(t)
+		var pillars: Array = []
+		var turn := rng.randf() * TAU
+		for r in COLISEE_PILLARS:
+			var a := turn + TAU * r / COLISEE_PILLARS
+			var p := Vector3(c.x + cos(a) * COLISEE_PILLAR_R, 0, c.y + sin(a) * COLISEE_PILLAR_R)
+			p.y = height_at(p.x, p.z)
+			# piliers = les deux premiers rochers du biome (de gros blocs à collision ; les suivants comptent des os et des
+			# cratères décoratifs, et les rochers communs sont moussus : verts sur le sable)
+			_add_instance(batch, PropCatalog.pick(_rocks.slice(0, 2), rng), p, true, INF, 1.2)
+			pillars.append(p)
+		# fleurs de vie : entre deux piliers, une de chaque côté (une seule dans la moitié des arènes)
+		var flowers: Array = []
+		for r in (2 if k % 2 == 0 else 1):
+			var a := turn + TAU / (COLISEE_PILLARS * 2.0) + PI * r
+			var f := Vector3(c.x + cos(a) * 7.5, 0, c.y + sin(a) * 7.5)
+			f.y = height_at(f.x, f.z)
+			flowers.append(f)
+		var kind: Array = COLISEE_KINDS[k]
+		colisee_arenas.append({"index": k, "kind": kind[0], "name": kind[1], "center": Vector3(c.x, cy, c.y), "pillars": pillars,
+			"flowers": flowers})
+	_flush_batches(batch, props)
+	_build_minimap()
+	_setup_navigation()
+
+
 func _setup(theme_name: String, p_size: float, seed_value: int) -> void:
 	add_to_group("map")
 	if THEMES.has(theme_name):
@@ -1419,7 +1509,7 @@ func _build_minimap() -> void:
 	var dirt := Color(0.72, 0.6, 0.42)
 	var road := Color(0.86, 0.78, 0.55)
 	var rock := Color(0.55, 0.5, 0.48)
-	if map_id == "arena":
+	if map_id in ["arena", "colisee"]:
 		grass = Color(0.55, 0.45, 0.35)
 		grass2 = grass
 	for y in MINIMAP_RES:

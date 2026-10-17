@@ -263,6 +263,9 @@ Machine de partie sans scène (CO-A, `R_CO_A.md`) : `core/colisee.gd` (`Colisee`
 `locked`, barème, appariement tournant à 2 manches d'avance, exempt, égalités, éliminations simultanées, trios `compose_teams`, `simulate` « au tableau »,
 `resolve_board`, profil `PROFILE` enregistré au lancement par `register_rules` — jamais dans `ModeRules.PROFILES` —, `begin` / `finish`, partie en cours
 `Colisee.game`) ; le directeur rend les éliminations de `report` à `TeamMatch.eliminate` dans le même ordre ; `READY` faux = activité cachée hors mode dev ; test `test_co_a`.
+Carte (CO-B, `R_CO_B.md`) : `ProcMap.generate_colisee(graine, n)` (arènes en grille à 120 m, plates sur 24 m, falaises, 4 piliers, fleurs ; `colisee_arenas`),
+`world/colisee_arena.gd` (`ColiseeArena.build_all`, `spawn_point`, `set_shown`), anneau de feu `world/colisee_ring.gd` (`ColiseeRing.STEPS`, `radius_at`, signal
+`warned`, `Combatant.heal_taken` dehors) + `shaders/colisee_ring.gdshader`, fleurs `world/colisee_flower.gd` ; test `test_co_b`, captures `tests/shot_co_map.tscn`.
 
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à

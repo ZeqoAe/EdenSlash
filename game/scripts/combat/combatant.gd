@@ -314,6 +314,8 @@ var ffa_id := -1
 ## Arène (lot MODE-0, TeamMatch : combats simultanés du Colisée à 300 m) : -1 = partout (tous les modes d'avant). Un
 ## combattant d'arène >= 0 ne voit et ne frappe que sa propre arène (ffa_foes, hostile_heroes, hostile_targets).
 var arena_id := -1
+## Soins reçus × (1 partout ; 0,5 hors de l'anneau de feu du Colisée, lot CO-B, ColiseeRing).
+var heal_taken := 1.0
 
 
 ## Même arène (ou l'un des deux est « partout ») : seul filtre d'arène du jeu.
@@ -466,6 +468,7 @@ func heal(amount: float) -> void:
 		amount = float(Modifiers.apply("heal_mult", amount, ModeRules.modifiers))  # « soins reçus ÷ 2 »
 	if PvpCaps.active():
 		amount *= PvpCaps.heal_mult()
+	amount *= heal_taken
 	var before := hp
 	hp = minf(max_hp, hp + amount)
 	if team == Team.PLAYER and Run.active:
