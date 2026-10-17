@@ -41,7 +41,17 @@ func show_results(got: Dictionary) -> void:
 		var st: Array = rw0.stars
 		var fresh: Array = rw0.get("new_stars", [])
 		stars = Siege.STARS.map(func(s): return {"label": String(s.name), "done": String(s.id) in st, "new": String(s.id) in fresh, "tip": String(s.tip)})
+	var ds: Dictionary = got.get("dstars", {})
+	if not siege and not rush and BossLibrary.has(bid) and victory:
+		stars = DungeonStars.spec_rows(bid, diff, ds)  # étoiles du donjon (lot DNG-3)
 	notes.append_array(BestTimes.record_notes())
+	notes.append_array(RushBoard.lines(got.get("rush_rank", {})))  # classement local du tirage (lot DNG-3)
+	if siege:
+		var lead := siege_board_line(got.get("siege_board", []))
+		if lead != "":
+			notes.append(lead)
+	if int(got.get("reliefs", 0)) > 0 and victory and not siege:
+		notes.append("Relève utilisée : %d fois" % int(got.reliefs))
 	var cls := Run.class_data()
 	var gained: Array = [row("Maîtrise %s" % cls.get("name_fr", ""), "+%d" % int(got.get("xp", 0)), "", "expertise")]
 	var kept: Array = []
@@ -54,6 +64,10 @@ func show_results(got: Dictionary) -> void:
 			kept.append(row("Plan de donjon", BossLibrary.short_name(String(r.plan).trim_prefix(Dungeons.PLAN_PREFIX)), ResourceHelp.tip("plan"), "equipment"))
 		if String(r.get("title", "")) != "":
 			gained.append(row("Titre « %s »" % String(r.title), "", "", "user"))
+	for t in ds.get("titles", []):
+		gained.append(row("Titre « %s »" % String(t), "", "Palier d'étoiles de donjon.", "user"))
+	if not (ds.get("chests", []) as Array).is_empty():
+		kept.append_array(chest_rows(ds.chests))
 	var quest := {}
 	if victory or rush or siege:
 		var rw: Dictionary = got.get("reward", {})
@@ -68,6 +82,8 @@ func show_results(got: Dictionary) -> void:
 		time_key = BestTimes.rush_key(int(got.rush_seed), diff)
 	elif not rush and not siege and bid != "":
 		time_key = BestTimes.dungeon_key(bid, diff)
+	elif siege:
+		time_key = BestTimes.siege_key(zid, diff)  # boss du Siège abattu (lot DNG-3)
 	var tiles: Array = [progress, [Dungeons.DIFF_NAMES[diff], "difficulté"], [str(Run.max_level), "niveau"], _time_tile(time_key),
 		[str(Run.kills), "monstres"], [str(Run.elites), "élites"]]
 	var boss_e := BestTimes.entry(BestTimes.boss_key("dungeon", bid, diff)) if bid != "" and not rush else {}
@@ -75,22 +91,7 @@ func show_results(got: Dictionary) -> void:
 		tiles[4] = BestTimes.tile(boss_e, 0.0, "boss")
 	if rush and int(rw0.get("seed", 0)) > 0:
 		tiles = tiles.slice(0, 4) + [["n° %d" % int(rw0.seed), "tirage"], [str((rw0.get("mods", []) as Array).size()), "modificateurs"]]
-	var buttons: Array = [
-		{"text": "Rejouer (la Ruée)" if rush else ("Rejouer (même siège)" if siege else "Rejouer (même donjon)"), "primary": true, "call": func():
-			get_tree().paused = false
-			if siege:
-				Tower.start_siege(Profile.selected_class, zid, diff, Dungeons.last_allies)
-			else:
-				Tower.start_dungeon(Profile.selected_class, zid, diff, Dungeons.last_allies, bid)
-			get_tree().change_scene_to_file("res://scenes/world.tscn")},
-		{"text": "Retour au menu", "call": func():
-			get_tree().paused = false
-			get_tree().change_scene_to_file("res://scenes/lobby.tscn")},
-	]
-	if retry_boss(got):
-		# chute dans la salle du boss (lot DNG-1) : on reprend devant lui, une carte tirée par salle sautée
-		buttons[0].primary = false
-		buttons.push_front({"text": "Réessayer le boss", "primary": true, "call": _retry.bind(zid, diff, bid)})
+	var buttons := buttons_for(got)
 	var spec := {
 		"title": title,
 		"tone": "win" if victory else "lose",
@@ -110,6 +111,105 @@ func show_results(got: Dictionary) -> void:
 		spec["defeat"] = rep
 		spec["defeat_note"] = low_note(bid if bid != "" else String(rep.get("boss", "")))
 	show_spec(spec)
+
+
+## Boutons du bilan (3 au plus, la largeur du bilan) — lot DNG-3, maquette v2_bilan.svg :
+##   donjon gagné ou chute avant le boss : Rejouer · Autre boss · Retour au menu ;
+##   chute devant le boss : Réessayer le boss · S'entraîner · Retour au menu ;
+##   Ruée gagnée : Rejouer (nouveau tirage) · Ce tirage encore · Retour ; Ruée perdue : Rejouer (même tirage) · S'entraîner · Retour ;
+##   Siège : Rejouer · (S'entraîner après une chute devant le boss) · Retour.
+func buttons_for(got: Dictionary) -> Array:
+	var victory := bool(got.get("victory", false))
+	var siege := bool(got.get("siege", false))
+	var rush := bool(got.get("rush", false))
+	var zid := String(got.get("zone", ""))
+	var diff := int(got.get("diff", 0))
+	var bid := String(got.get("boss", ""))
+	var replay := {"text": "Rejouer (même siège)" if siege else ("Rejouer (même donjon)" if not rush else ("Rejouer (nouveau tirage)" if victory else "Rejouer (même tirage)")),
+		"primary": true, "call": _replay.bind(got)}
+	var menu := {"text": "Retour au menu", "call": func():
+		get_tree().paused = false
+		get_tree().change_scene_to_file("res://scenes/lobby.tscn")}
+	var train := practice_target(got)
+	var out: Array = [replay]
+	if retry_boss(got):
+		# chute dans la salle du boss (lot DNG-1) : on reprend devant lui, une carte tirée par salle sautée
+		replay.primary = false
+		out = [{"text": "Réessayer le boss", "primary": true, "call": _retry.bind(zid, diff, bid)}]
+	if rush and victory and int(got.get("rush_seed", 0)) > 0:
+		var rr: Dictionary = got.get("rush_rank", {})
+		out.append({"text": "Ce tirage encore", "call": _replay_draw.bind(int(got.rush_seed), int(rr.get("prev", -1)), diff),
+			"tip": "Les mêmes huit boss, dans le même ordre : bats ton temps."})
+	elif train != "" and not victory:
+		out.append({"text": "S'entraîner", "call": _practice.bind(train, diff), "tip": "La salle de %s, sans rien gagner ni perdre." % BossLibrary.short_name(train)})
+	elif not rush and not siege:
+		out.append({"text": "Autre boss", "call": _other_boss.bind(bid)})
+	out.append(menu)
+	return out.slice(0, 3)
+
+
+## Boss à travailler en « S'entraîner » après une chute : celui du donjon (devant lui), sinon celui qui t'a battu ("" : aucun).
+static func practice_target(got: Dictionary) -> String:
+	if bool(got.get("victory", false)) or not HitLog.died():
+		return ""
+	var bid := String(got.get("boss", ""))
+	if BossLibrary.has(bid) and retry_boss(got):
+		return bid
+	var rep := HitLog.report()
+	var b := String(rep.get("boss", ""))
+	return b if BossLibrary.has(b) and BossPractice.can_start(b) else ""
+
+
+func _replay(got: Dictionary) -> void:
+	get_tree().paused = false
+	var zid := String(got.get("zone", ""))
+	var diff := int(got.get("diff", 0))
+	if bool(got.get("siege", false)):
+		Tower.start_siege(Profile.selected_class, zid, diff, Dungeons.last_allies)
+	else:
+		Tower.start_dungeon(Profile.selected_class, zid, diff, Dungeons.last_allies, String(got.get("boss", "")))
+	get_tree().change_scene_to_file("res://scenes/world.tscn")
+
+
+## « Ce tirage encore » : la graine et les boss d'avant de ce tirage (RushBoard.replay), puis la Ruée.
+func _replay_draw(seed: int, prev: int, diff: int) -> void:
+	get_tree().paused = false
+	if prev >= 0:
+		RushBoard.replay(seed, prev)
+	else:
+		Profile.records["rush_seed"] = seed
+		Rush._cache.clear()
+	Profile.save_profile()
+	Tower.start_dungeon(Profile.selected_class, Dungeons.RUSH, diff, Dungeons.last_allies)
+	get_tree().change_scene_to_file("res://scenes/world.tscn")
+
+
+func _practice(bid: String, diff: int) -> void:
+	get_tree().paused = false
+	BossPractice.start(Profile.selected_class, bid, diff)
+	get_tree().change_scene_to_file("res://scenes/world.tscn")
+
+
+## « Autre boss » : le menu principal s'ouvre directement sur la page Donjons (sur ce boss : la liste est dessous).
+func _other_boss(bid: String) -> void:
+	get_tree().paused = false
+	if BossLibrary.has(bid):
+		DungeonPage.sel = bid
+	DungeonPage.lobby_request = "dungeon"
+	get_tree().change_scene_to_file("res://scenes/lobby.tscn")
+
+
+## « Dégâts au boss : Prêtre en tête (48 %), dernier coup : toi » ("" : rien à dire).
+static func siege_board_line(rows: Array) -> String:
+	if rows.is_empty() or float(rows[0].get("dmg", 0.0)) <= 0.0:
+		return ""
+	var lead: Dictionary = rows[0]
+	var last := ""
+	for r in rows:
+		if bool(r.get("last", false)):
+			last = String(r.name)
+	return "Dégâts au boss : %s en tête (%d %%)%s" % ["toi" if bool(lead.me) else String(lead.name), roundi(float(lead.share) * 100.0),
+		(" · dernier coup : %s" % ("toi" if last == "Toi" else last)) if last != "" else ""]
 
 
 func _retry(zid: String, diff: int, bid: String) -> void:

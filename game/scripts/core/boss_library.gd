@@ -157,6 +157,7 @@ static func spawn(id: String, tier: int, ctx: Dictionary) -> Monster:
 	m.max_hp = h
 	m.hp = h
 	Encounters.met(id, m, lieutenant)  # journal des rencontres (lot DNG-1)
+	Relief.on_boss(lieutenant)  # relève rendue à chaque boss (lot DNG-3)
 	if bool(ctx.get("main", not lieutenant)):
 		d._boss = m
 	if m.brain == null:

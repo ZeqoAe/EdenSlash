@@ -191,6 +191,10 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--menu="):  # test : sous-menu ouvert (play, zones, tower, duel)
 			_show_menu(arg.trim_prefix("--menu="))
+	if DungeonPage.lobby_request != "":  # bilan d'un donjon (« Autre boss ») ou fin d'un entraînement (lot DNG-3) : la page Donjons
+		var page := DungeonPage.lobby_request
+		DungeonPage.lobby_request = ""
+		_show_menu(page)
 	if Survivor.lobby_request == "class":  # bilan du Survivant, « Changer de classe » : la page du mode et le choix de classe
 		Survivor.lobby_request = ""
 		_show_menu("survivor")
@@ -2384,6 +2388,7 @@ func _menu_rush() -> void:
 		"", Dungeons.rush_level(Dungeons.rush_floors(), _dg_diff))
 	_pe_next(Dungeons.RUSH, false)
 	_rush_lineup()
+	RushBoard.page_block(self)  # lot DNG-3 : classement local du tirage, tes tirages les plus rapides
 	_rush_mods()
 	_dungeon_allies_picker()
 	var go := MenuWidgets.gold_button("Lancer la Ruée", 22, Vector2(0, 58))
@@ -2455,6 +2460,17 @@ func _start_rush() -> void:
 	Dungeons.last_allies = allies
 	LastActivity.record("rush", {"diff": _dg_diff, "allies": allies})
 	Tower.start_dungeon(Profile.selected_class, Dungeons.RUSH, _dg_diff, allies)
+	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
+
+
+## « S'entraîner » (lot DNG-3) : la salle du boss [param bid], sans rien gagner ni perdre (BossPractice).
+func _start_practice(bid: String, diff: int) -> void:
+	if _launching or not BossPractice.can_start(bid):
+		return
+	_launching = true
+	if backdrop:
+		backdrop.release()
+	BossPractice.start(Profile.selected_class, bid, diff)
 	get_tree().change_scene_to_file.call_deferred(RUN_SCENE)
 
 

@@ -549,6 +549,13 @@ func _on_player_died(_who: Combatant, _killer: Combatant) -> void:
 	if Tower.active and Tower.siege:
 		director.tower.player_down()  # Le Siège : une seule vie ; le directeur annonce la fin et le rang
 		return
+	if Tower.active and BossPractice.active:
+		hud.show_message("K.O. (entraînement) : tu te relèves", 1.5)  # lot DNG-3 : rien n'est perdu
+		await get_tree().create_timer(1.0).timeout
+		player.respawn(player.global_position)
+		return
+	if Tower.active and Relief.try_save(self, player):
+		return  # lot DNG-3 : relève (une par boss en Normal et Héroïque, la Tour sauf Hardcore)
 	if Tower.active:
 		# la Tour : une seule vie
 		hud.show_message("Tu es tombé à l'étage %d…" % Tower.floor_n, 2.5)
@@ -609,6 +616,11 @@ func duel_end(won: bool) -> void:
 ## Fin de l'ascension (défaite, abandon, sommet) : record et expertise, puis le bilan.
 func tower_end(result: String) -> void:
 	if _ended:
+		return
+	if BossPractice.active:
+		_ended = true  # « S'entraîner » (lot DNG-3) : ni bilan ni butin, retour à la page Donjons
+		pause_menu.close()
+		BossPractice.leave(get_tree())
 		return
 	_ended = true
 	pause_menu.close()

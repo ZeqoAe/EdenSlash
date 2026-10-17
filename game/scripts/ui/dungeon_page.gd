@@ -12,8 +12,13 @@ extends RefCounted
 ##   - les filtres et la liste par zone : tuiles avec médaillon, emplacements, familles de mécaniques et médailles N / H / M ;
 ##   - les alliés IA, puis le bouton épinglé « Entrer : … » (Tower.start_dungeon avec le boss choisi).
 ## État gardé entre deux ouvertures (sel, filtres).
+## Lot DNG-3 : objectifs ★ du donjon (DungeonStars, temps affiché à l'avance), « S'entraîner » (BossPractice), et
+## [member lobby_request] : un bilan (« Autre boss ») ou la fin d'un entraînement rouvre le menu principal sur cette page.
 
 static var sel := ""  # boss (donjon) choisi
+static var lobby_request := ""  # bilan -> menu principal : page à ouvrir (« dungeon »), lue une fois par le lobby
+static var stars_cells: Array = []  # (tests) objectifs affichés
+static var practice_button: Button  # (tests)
 static var f_slot := ""
 static var f_arch := ""
 static var f_family := ""
@@ -57,6 +62,10 @@ static func fill(lobby) -> void:
 	var rec := records_line(sel, diff)
 	if rec != "":
 		_line(sub, rec, UiTheme.MUTED)
+	# --- objectifs et entraînement (lot DNG-3) ---------------------------------------------------------
+	lobby._section("Objectifs  %s" % DungeonStars.glyphs(sel, diff), "Facultatifs : ils ne changent jamais le butin. Des paliers d'étoiles donnent des titres et des coffres d'apparence.")
+	sub.add_child(stars_row(sel, diff))
+	sub.add_child(_practice_row(lobby, sel, diff, is_open))
 	# --- butin --------------------------------------------------------------------------------
 	lobby._section("Butin", "Chaque victoire : un coffre de trois pièces au choix parmi ces emplacements, à la panoplie du donjon, plus des matières et des cristaux. Sans limite : refais-le autant que tu veux.")
 	sub.add_child(_loot(sel))
@@ -128,6 +137,52 @@ static func records_line(bid: String, diff: int) -> String:
 	if f > 0.0:
 		parts.append("donjon %s" % BestTimes.fmt(f))
 	return ("Tes records en %s : %s" % [String(Dungeons.DIFF_NAMES[diff]), " · ".join(parts)]) if not parts.is_empty() else ""
+
+
+## Les trois objectifs du donjon en autocollants (soleil : tenu ; papier : à faire), le temps écrit à l'avance (lot DNG-3).
+static func stars_row(bid: String, diff: int) -> Control:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	stars_cells = []
+	var have := DungeonStars.got(bid, diff)
+	for i in DungeonStars.STARS.size():
+		var done := String(DungeonStars.STARS[i].id) in have
+		var p := PanelContainer.new()
+		p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		p.add_theme_stylebox_override("panel", UiTheme.sticker("soleil" if done else "papier", {"radius": 12, "shadow": 3, "pad": Vector2(8, 4),
+			"gloss": false, "cel_top": 0.0, "cel_bottom": 0.0}))
+		p.mouse_filter = Control.MOUSE_FILTER_STOP
+		p.tooltip_text = DungeonStars.star_tip(i, bid, diff)
+		p.set_meta("done", done)
+		row.add_child(p)
+		var t := ("★ " if done else "☆ ") + DungeonStars.star_name(i, bid, diff)
+		var l := _white(p, t, 15) if done else _ink_label(p, t, 15, true)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		stars_cells.append(p)
+	return row
+
+
+## « S'entraîner » : la salle du boss sans rien gagner ni perdre (BossPractice), et le prochain palier d'étoiles.
+static func _practice_row(lobby, bid: String, diff: int, is_open: bool) -> Control:
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", 10)
+	var b := Button.new()
+	b.text = "S'entraîner contre %s" % BossLibrary.short_name(bid)
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(0, 40)
+	UiTheme.style_button(b, "lagon" if is_open else "gris", 15, {"radius": 12, "shadow": 4, "pad": Vector2(12, 4), "trame": not is_open})
+	b.disabled = not is_open
+	b.tooltip_text = "Sa salle, ses mécaniques à rejouer à volonté, héros invincible au choix. Rien n'est gagné ni perdu." if is_open else Dungeons.condition(Dungeons.boss_zone(bid))
+	var d := diff if Dungeons.power_ok(Dungeons.boss_zone(bid), diff) else 0
+	b.pressed.connect(func(): lobby._start_practice(bid, d))
+	h.add_child(b)
+	practice_button = b
+	var nl := DungeonStars.next_line()
+	if nl != "":
+		var l := _line(h, nl, UiTheme.MUTED)
+		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return h
 
 
 static func _arch_name(a: String) -> String:

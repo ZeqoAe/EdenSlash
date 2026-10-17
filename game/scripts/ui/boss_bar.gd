@@ -6,7 +6,7 @@ extends Control
 ##     bibliothèque, rage du boss de la Survie) ;
 ##   - jauge épaisse (creux d'encre, remplissage fraise en deux tons, trace claire des dégâts, bord droit d'encre) avec les
 ##     **seuils réels** du cerveau (BossBrain.thresholds : la fureur à mi-vie et les briques « at »), une pastille de la couleur
-##     de la famille sous chaque encoche, la part des PV au centre ;
+##     de la famille sous chaque encoche, les PV qui restent au centre (« 1,24 M PV » : aucun pourcentage permanent, lot DNG-3) ;
 ##   - dessous, les pastilles des mécaniques du boss (l'active cerclée de blanc) et la ligne d'incantation mandarine
 ##     (« Pluie de météores · bouge ! ») tant qu'une mécanique est en cours.
 ## Elle ne cache jamais le boss : s'il passe derrière elle, elle s'efface à moitié ; s'il sort de la vue, une flèche soleil au
@@ -55,6 +55,7 @@ var panel: PanelContainer  # (tests) la barre elle-même
 var row: HBoxContainer  # (tests) pastilles des mécaniques et ligne d'incantation
 var timeline: BossTimeline
 var alert: HudAlert
+var extra: DngHud  # (lot DNG-3)
 var arrow: Label  # flèche au bord de l'écran quand le boss est hors de la vue
 var boss_ref: WeakRef
 var _portrait: BossPortrait
@@ -80,6 +81,7 @@ static func attach(root: Control, p_hud: Hud) -> BossBar:
 	root.add_child(b.timeline)
 	b.alert = HudAlert.new()
 	root.add_child(b.alert)
+	b.extra = DngHud.attach(root, p_hud)  # lot DNG-3 : relève, fil des temps de la Ruée, tableau du Siège, entraînement
 	return b
 
 
@@ -137,6 +139,17 @@ static func pill(text: String, tone: String, size := 14, tilt := 8.0) -> Label:
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	l.resized.connect(func(): l.pivot_offset = l.size * 0.5)
 	return l
+
+
+## PV du boss au centre de la jauge (lot DNG-3) : « 1,24 M PV », « 845 k PV », « 920 PV » (la règle de l'interface : pas de
+## pourcentage dans le texte permanent ; les seuils réels restent dessinés par les encoches).
+static func hp_text(hp: float) -> String:
+	var v := maxf(hp, 0.0)
+	if v >= 1.0e6:
+		return ("%.2f M PV" % (v / 1.0e6)).replace(".", ",")
+	if v >= 1.0e4:
+		return "%d k PV" % ceili(v / 1000.0)
+	return "%d PV" % ceili(v)
 
 
 static func diff_pill_text() -> Array:
@@ -352,7 +365,7 @@ func _refresh(m: Monster) -> void:
 	else:
 		_gauge.trail = ratio
 	_gauge.shielded = m.shielded or (brain != null and brain.barrier_left > 0.0)
-	_gauge.text = "%d %%" % ceili(ratio * 100.0) if ratio > 0.0 else "0 %"
+	_gauge.text = hp_text(m.hp)  # (lot DNG-3 : les PV qui restent, en valeur lisible ; aucun pourcentage permanent au HUD)
 	var marks: Array = []
 	if brain != null:
 		for th in brain.thresholds():
@@ -428,7 +441,11 @@ func _build_for(m: Monster) -> void:
 func _update_fury(m: Monster) -> void:
 	var txt := ""
 	var f: Dictionary = m.brain.fury() if m.brain != null else {}
-	if not f.is_empty():
+	var sg = director.tower if director != null and Tower.siege and "tower" in director else null
+	if sg != null and sg.has_method("fury_left") and director.get("_boss") == m:
+		# le Siège (lot DNG-3) : sa fureur à 6 minutes, sur la barre comme l'Impatience
+		txt = "Fureur %s" % BestTimes.fmt(sg.fury_left()) if not sg.is_enraged() else "En fureur"
+	elif not f.is_empty():
 		txt = "Fureur %s" % BestTimes.fmt(float(f.left)) if float(f.left) > 0.0 else "Fureur ×%d" % int(f.steps)
 	elif director != null and Run.survival and director.has_method("boss_rage_tier") and director.get("_boss") == m:
 		var tier: int = director.boss_rage_tier()

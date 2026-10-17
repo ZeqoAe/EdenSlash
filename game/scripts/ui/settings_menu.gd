@@ -644,6 +644,12 @@ func _build_camera_page() -> void:
 	_section(v, "Accessibilité")
 	_check(v, "Voir les sons", "interface", "sound_cues", "Battle royale : un arc autour du héros montre d'où vient un son important (coffre, combat, pas, anneau), avec son nom.")
 	_check(v, "Couleurs pour daltoniens", "interface", "colorblind", "Le danger passe en orange et le « plus faible » en bleu, au lieu du rouge et du vert. Les formes ▲ ▼ restent.")
+	# lot DNG-3 (BM-DNG P1-11) : zones d'attaque des boss ; les formes ne changent jamais (hachures = danger, pointillés = sûr)
+	var tele_hint := "Zones d'attaque des boss et des élites. Les hachures disent « danger », les pointillés « sûr », quelle que soit la couleur."
+	_option(v, "Couleur des zones de danger", "interface", "tele_palette", [["auto", "Auto (suit « daltoniens »)", tele_hint]] +
+		Telegraph.PALETTES.map(func(p): return [p[0], p[1], tele_hint]))
+	_slider(v, "Intensité des zones de danger", "interface", "tele_intensity", Telegraph.INTENSITY_MIN, Telegraph.INTENSITY_MAX, 0.05,
+		func(x): return "%d %%" % roundi(x * 100), "Plus haut, les zones se voient mieux ; plus bas, on voit mieux le combat dedans.")
 	_check(v, "Vibration en combat", "interface", "combat_vibration", "À la manette, une courte vibration aux coups donnés et reçus, au saut et à l'atterrissage.")
 	_section(v, "Menus")
 	_check(v, "Réduire les animations", "interface", "ui_reduce_motion", "Boutons et fenêtres sans rebond ni étincelles. Les sons et la vibration restent.")

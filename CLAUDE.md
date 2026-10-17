@@ -178,6 +178,10 @@ immense peinte par son bord ; l'aspect seul). Les ajouts au cerveau sont en lect
   `BestTimes.clock`), journal des rencontres (données seules) `core/encounters.gd` (`records.encounters`, `Encounters.card` / `all` pour le futur onglet du
   Carnet) : tout s'écrit par `commit` après `Profile.reload_keep_records` ; bilans : spec `defeat` / `loot` / `stars` / `missing` de `ResultsPanel` (se resserre
   en 1280×720), « Réessayer le boss » (`Tower.start_dungeon(…, from_room)`), « Reprendre (étage N) » (`TowerResults.resume_floor`) ; test `test_dng1`.
+- **Confort P1** (lot DNG-3, `conception/dungeons/R_DNG3.md`) : étoiles de donjon `core/dungeon_stars.gd` (`dgs_<boss>_<diff>`, temps affiché `par`, paliers =
+  titres et coffres d'apparence seulement), relève `core/relief.gd` (une par boss, Normal / Héroïque et Tour sauf Hardcore ; jamais pour `Player.autoplay` :
+  mesures intactes ; `Relief.enabled = false` dans un test de chute), « S'entraîner » `core/boss_practice.gd` (rien n'est écrit), Siège `core/siege_score.gd`,
+  Ruée `core/rush_board.gd` (`rush_board`, « Rejouer ce tirage »), HUD `ui/dng_hud.gd` (posé par `BossBar.attach`), palette `Telegraph.PALETTES` ; `test_dng3`.
 
 ### Duel, Arènes, Battle royale
 Règles opérationnelles dans la section « Duel (JcJ) » plus bas. Ligue `core/league.gd` (rangs Bronze à Platine), Panthéon

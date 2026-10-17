@@ -77,6 +77,7 @@ func _make_ally(cid: String) -> ClassRival:
 		a.apply_build(b, Tower.level_for(1))
 	d.add_child(a)
 	a.died.connect(func(_w, _k): d.message.emit("Un allié est tombé : %s" % a.display_name, 2.5))
+	a.died.connect(func(_w, _k): DungeonStars.ally_fell = true)  # étoile « Personne ne tombe » manquée (lot DNG-3)
 	return a
 
 
@@ -507,6 +508,11 @@ func _update_fight(delta: float) -> void:
 
 func _cleared() -> void:
 	var f := Tower.floor_n
+	if BossPractice.active and Tower.is_boss_floor(f):
+		# « S'entraîner » (lot DNG-3) : le boss vaincu revient à pleine vie, la salle ne finit jamais
+		d.message.emit("Vaincu ! Il revient pour un nouvel essai", 2.5)
+		_spawn_boss(Tower.zone_for(f), Tower.level_for(f))
+		return
 	Tower.reached = f
 	if not Tower.is_dungeon() and f % 10 == 0 and _block_from == f - 9:
 		BestTimes.note(BestTimes.tower_key(Tower.difficulty, f / 10 - 1), "Étages %d-%d" % [f - 9, f], BestTimes.clock - _block_t0)

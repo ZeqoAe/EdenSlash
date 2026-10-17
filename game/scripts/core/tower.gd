@@ -156,6 +156,7 @@ static func start_dungeon(cid: String, zid: String, diff: int, ally_ids: Array, 
 			var pick: Array = Run.roll_cards(1)
 			if not pick.is_empty():
 				Run.apply_card(pick[0])
+	Relief.arm()  # lot DNG-3 : la relève du départ (Normal et Héroïque)
 
 
 ## Lance Le Siège de la zone [param zid] : deux alliés IA (complétés au hasard), cinq vagues, le boss, le chacun pour soi.
@@ -185,6 +186,10 @@ static func start(cid: String, diff := 1, from := 1) -> void:
 	HitLog.reset()  # lot DNG-1 : coups reçus, temps et rencontres de la partie
 	BestTimes.reset()
 	Encounters.reset()
+	BossPractice.active = false  # lot DNG-3 : entraînement, relève, étoiles et tableau du Siège de la partie
+	Relief.reset()
+	DungeonStars.reset()
+	SiegeScore.reset()
 	Run.start(cid)
 	# le préréglage d'équipement de la classe sert de base (Profile.begin_run) ; une arme
 	# commune s'il n'y en a pas
@@ -196,6 +201,7 @@ static func start(cid: String, diff := 1, from := 1) -> void:
 	Profile.keys = 0
 	if start_floor > 1:
 		_resume_kit()
+	Relief.arm()  # (la Tour : Facile à Difficile ; un donjon la règle à nouveau)
 	Profile.changed.emit()
 
 
@@ -856,19 +862,27 @@ static func _finish_dungeon() -> Dictionary:
 	Profile.bag = {}
 	var rew := {}
 	var was_rush := rush
+	var rush_seed := Rush.seed
+	var rush_rank := {}
 	if victory and start_floor == 1 and not was_siege:  # temps complet (lot DNG-1) : pas une reprise au boss
 		if was_rush:
 			BestTimes.note(BestTimes.rush_key(Rush.seed, diff), "Tirage n° %d" % Rush.seed, BestTimes.clock)
+			rush_rank = RushBoard.add(Rush.seed, diff, BestTimes.clock, Rush.mods, int(Profile.records.get("rush_prev", 0)))  # lot DNG-3
 		elif BossLibrary.has(bid):
 			BestTimes.note(BestTimes.dungeon_key(bid, diff), Dungeons.dungeon_name(bid), BestTimes.clock)
+	if was_siege and SiegeScore.boss_time > 0.0:  # lot DNG-3 : le Siège a ses temps (vagues + boss, puis le boss seul)
+		BestTimes.note(BestTimes.siege_key(zid, diff), "Le Siège", SiegeScore.boss_time)
 	BestTimes.commit()  # après le rechargement du profil (lot DNG-1)
 	Encounters.commit()
+	var dstars := {}
 	if was_siege:
 		rew = Siege.settle(zid, diff, reached, sg_outcome)  # des cristaux dès les premières vagues
 	elif was_rush:
 		rew = Dungeons.rush_reward(reached, diff)  # des cristaux même si la Ruée s'arrête avant la fin
 	elif victory:
 		rew = Dungeons.reward(zid, diff, bid)
+		# étoiles du donjon (lot DNG-3) : jamais requises pour le butin ; paliers = titres et coffres d'apparence
+		dstars = DungeonStars.score(bid, diff, true, start_floor == 1, BestTimes.clock, Relief.used)
 	var xp := (reached * 40 + (150 if victory else 0)) * (1 + diff)
 	var lv := Profile.add_expertise(cid, xp)
 	Quests.end_run("siege" if was_siege else ("rush" if was_rush else "dungeon"), victory, {"rooms": reached, "reached": reached, "diff": diff,
@@ -885,7 +899,8 @@ static func _finish_dungeon() -> Dictionary:
 	var rank := Siege.rank
 	Siege.reset()
 	return {"dungeon": true, "rush": was_rush, "siege": was_siege, "outcome": sg_outcome, "rank": rank, "victory": victory, "rooms": reached,
-		"start_room": start_floor, "rush_seed": Rush.seed if was_rush else 0,
+		"start_room": start_floor, "rush_seed": rush_seed if was_rush else 0, "rush_rank": rush_rank, "dstars": dstars,
+		"reliefs": Relief.used, "siege_board": SiegeScore.rows() if was_siege else [],
 		"xp": xp, "levels": lv, "reward": rew, "zone": zid, "diff": diff, "boss": bid}
 
 

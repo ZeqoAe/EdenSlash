@@ -47,6 +47,11 @@ static func rush_key(seed: int, diff: int) -> String:
 	return "rush:%d:%d" % [seed, diff]
 
 
+## Boss du Siège de la zone [param zid] abattu (de son apparition à sa chute, trois héros), à la difficulté [param diff] (lot DNG-3).
+static func siege_key(zid: String, diff: int) -> String:
+	return "siege:%s:%d" % [zid, diff]
+
+
 # --- lecture ------------------------------------------------------------------------------------
 static func table() -> Dictionary:
 	var t = Profile.records.get(KEY, {})

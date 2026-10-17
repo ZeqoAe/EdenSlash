@@ -15,6 +15,7 @@ func check(label: String, ok: bool) -> void:
 
 func _ready() -> void:
 	Training.active = false
+	Relief.enabled = false  # (lot DNG-3) ces chutes doivent finir la partie : la relève a son test (test_dng3)
 	Settings.reset_all()
 	Profile.reset_all()
 	_test_hitlog()
@@ -268,8 +269,8 @@ func _test_dungeon_fall() -> void:
 	check("chute : bilan du donjon", panel is DungeonResults)
 	if panel != null:
 		check("« Ce qui t'a battu » au bilan d'échec", panel.defeat_box != null)
-		check("« Réessayer le boss » en premier, puis Rejouer et Retour (%s)" % [panel.buttons.map(func(b): return b.text)], panel.buttons.size() == 3
-			and panel.buttons[0].text == "Réessayer le boss" and panel.buttons[1].text == "Rejouer (même donjon)")
+		check("« Réessayer le boss » en premier, puis S'entraîner et Retour (lot DNG-3) (%s)" % [panel.buttons.map(func(b): return b.text)], panel.buttons.size() == 3
+			and panel.buttons[0].text == "Réessayer le boss" and panel.buttons[1].text == "S'entraîner")
 		var k: Dictionary = HitLog.report().get("killer", {})
 		check("coup final : Pluie de météores de Mori, part bornée aux PV restants (%s)" % [k], String(k.get("brick", "")) == "meteors" and String(k.get("name", "")) == BossLibrary.short_name("mori") and float(k.get("share", 9.0)) <= 1.0)
 		check("part de PV laissée au boss notée (%.2f, attendu %.2f)" % [float(Encounters.last_low.get("mori", -1.0)), left],

@@ -14,10 +14,19 @@ extends Node3D
 ##   - un son court à l'armement des zones de boss (Sfx « tele_arm »).
 ## Les annonces discrètes (small : monstres ordinaires, arrivées, zones du héros) et les traits de projectiles gardent le
 ## dessin simple. Seul l'aspect change : formes, délais, dégâts et règles de touche sont ceux d'avant.
+## Lot DNG-3 (accessibilité, BM-DNG P1-11) : la couleur du danger se règle (Paramètres > Caméra & interface : fraise, mandarine,
+## améthyste ; « auto » suit « Couleurs pour daltoniens »), l'intensité aussi (voile et hachures) ; les formes, elles, ne changent
+## jamais (hachures = danger, pointillés = sûr).
 
 signal resolved(hit: bool)
 
 const COLOR := Color("ff4d6d")  # fraise (bible § 3 : danger)
+## Couleurs du danger au choix (réglage interface/tele_palette) : [clé, nom, couleur].
+const PALETTES := [["fraise", "Fraise (rouge)", Color("ff4d6d")], ["mandarine", "Mandarine (orange)", Color("ff8a1f")],
+	["amethyste", "Améthyste (violet)", Color("b43beb")]]
+const INTENSITY_MIN := 0.6
+const INTENSITY_MAX := 1.5
+const ALPHA_CAP := 0.5  # même à l'intensité la plus haute, l'intérieur reste transparent (on voit le héros dedans)
 const PLAYER_COLOR := Color(0.25, 0.6, 1.0)  # zone des attaques du héros (option)
 const SAFE_COLOR := Color("8fd62e")  # pomme
 const INK := Color("221a3a")
@@ -62,6 +71,30 @@ static func spawn(parent: Node, pos: Vector3, yaw: float, props: Dictionary) -> 
 	return t
 
 
+## Clé de la palette du danger en vigueur : le réglage, ou « auto » (mandarine avec « Couleurs pour daltoniens », sinon fraise).
+static func palette_key() -> String:
+	var k := String(Settings.get_v("interface", "tele_palette")) if Settings != null else "auto"
+	for p in PALETTES:
+		if String(p[0]) == k:
+			return k
+	return "mandarine" if Settings != null and bool(Settings.get_v("interface", "colorblind")) else "fraise"
+
+
+## Couleur du danger des télégraphes v2 (et du mur d'arène, des zones du Siège).
+static func danger_color() -> Color:
+	var k := palette_key()
+	for p in PALETTES:
+		if String(p[0]) == k:
+			return p[2]
+	return COLOR
+
+
+## Intensité des zones (réglage interface/tele_intensity, 1 = celle de la bible) : × l'opacité du voile, des hachures et du cœur.
+static func intensity() -> float:
+	var v = Settings.get_v("interface", "tele_intensity") if Settings != null else 1.0
+	return clampf(float(v) if v != null else 1.0, INTENSITY_MIN, INTENSITY_MAX)
+
+
 func _ready() -> void:
 	add_to_group("telegraphs")  # les héros scriptés en équipe les lisent pour esquiver (ClassRival._read_zones, passe M7)
 	safe = damage <= 0.0 and color.g > 0.75 and color.r < 0.6
@@ -70,6 +103,8 @@ func _ready() -> void:
 	if not v2:
 		_ready_simple()
 		return
+	if not safe and color.is_equal_approx(COLOR):
+		color = danger_color()  # palette réglable (lot DNG-3) ; une couleur imposée par la mécanique reste la sienne
 	wide = not safe and ((shape == "ring" and radius >= WIDE_RING) or (shape == "circle" and radius >= WIDE_CIRCLE))
 	var body := MeshInstance3D.new()
 	body.mesh = _shape_mesh(1.0)
@@ -94,7 +129,7 @@ func _ready() -> void:
 	if not wide:
 		_fill = MeshInstance3D.new()
 		_fill.mesh = body.mesh
-		_fill.material_override = _mat_color(SAFE_COLOR if safe else color, 0.16 if safe else FILL_ALPHA)
+		_fill.material_override = _mat_color(SAFE_COLOR if safe else color, minf((0.16 if safe else FILL_ALPHA) * intensity(), ALPHA_CAP))
 		_fill.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_fill.position.y = 0.006
 		_fill.scale = Vector3(0.01, 1, 0.01) if shape != "line" else Vector3(1, 1, 0.01)
@@ -179,9 +214,12 @@ func _hatch_mat() -> ShaderMaterial:
 	m.render_priority = 1
 	m.set_shader_parameter("tint", Color(color, 1.0))
 	_hatch = m
+	var k := intensity()  # (lot DNG-3) intensité réglable ; 1 = les valeurs de la bible
+	m.set_shader_parameter("base_alpha", minf(0.06 * k, ALPHA_CAP))
+	m.set_shader_parameter("hatch_alpha", minf(0.24 * k, ALPHA_CAP))
 	if wide:
-		m.set_shader_parameter("base_alpha", 0.1)
-		m.set_shader_parameter("hatch_alpha", 0.24)
+		m.set_shader_parameter("base_alpha", minf(0.1 * k, ALPHA_CAP))
+		m.set_shader_parameter("hatch_alpha", minf(0.24 * k, ALPHA_CAP))
 		m.set_shader_parameter("inner_r", inner if shape == "ring" else 0.0)
 		m.set_shader_parameter("fade_len", 5.0)
 	return m

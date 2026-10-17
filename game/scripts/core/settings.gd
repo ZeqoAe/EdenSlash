@@ -122,6 +122,7 @@ const DEFAULTS := {
 	"interface": {"damage_numbers": "all", "hit_stop": true, "show_fps": false, "move_marker": true, "attack_zone": false, "dev_mode": false,
 		"tower_unlock_all": true, "perfect_hint": true, "pad_labels": "auto", "compass": true,
 		"boss_timeline": true,  # frise « À venir » des combats de boss (lot DNG-2)
+		"tele_palette": "auto", "tele_intensity": 1.0,  # couleur et intensité des zones de danger (lot DNG-3, Telegraph.PALETTES)
 		# HUD en partie (lot HUB-1, P0-9) : taille et opacité, à part de la taille de l'interface (display.ui_scale)
 		"hud_scale": 1.0, "hud_opacity": 1.0,
 		"hud_profile": "standard",  # profil du HUD : standard, compact, minimal (lot HUD-2, HudV2.PROFILES)

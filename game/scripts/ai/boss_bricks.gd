@@ -590,9 +590,11 @@ static func _shrink(b: BossBrain, p: Dictionary) -> bool:
 	return false
 
 
-## Mur de l'arène : anneau rouge (de son rayon jusqu'au bord) qui se resserre puis s'ouvre ; dehors, des dégâts par
-## demi-seconde. Toujours visible : une bande rouge et un liseré vif au rayon courant.
+## Mur de l'arène : anneau mandarine (de son rayon jusqu'au bord) qui se resserre puis s'ouvre ; dehors, des dégâts par
+## demi-seconde. Toujours visible : une bande mandarine et un liseré clair au rayon courant.
 class ArenaWall extends Node3D:
+	const WALL_COLOR := Color("ff8a1f")  # mandarine (jetons de la bible : bonbon.mandarine.base)
+	const WALL_EDGE := Color("ffb566")  # liseré : bonbon.mandarine.clair
 	var brain: BossBrain
 	var r_from := 21.0
 	var r_to := 9.0
@@ -610,7 +612,7 @@ class ArenaWall extends Node3D:
 		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		m.cull_mode = BaseMaterial3D.CULL_DISABLED
-		m.albedo_color = Color(Telegraph.COLOR, 0.22)
+		m.albedo_color = Color(WALL_COLOR, 0.22)  # anneau mandarine (spec v2 des télégraphes, lot DNG-3 : couleur seule)
 		m.render_priority = 1
 		_band = MeshInstance3D.new()
 		_band.mesh = _ring_mesh(1.0, 3.0)
@@ -618,7 +620,7 @@ class ArenaWall extends Node3D:
 		_band.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(_band)
 		var em := m.duplicate() as StandardMaterial3D
-		em.albedo_color = Color(1.0, 0.35, 0.2, 0.9)
+		em.albedo_color = Color(WALL_EDGE, 0.9)
 		_edge = MeshInstance3D.new()
 		_edge.mesh = _ring_mesh(1.0, 1.02)
 		_edge.material_override = em

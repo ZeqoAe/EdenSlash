@@ -144,7 +144,8 @@ func _test_telegraphs() -> void:
 	check("danger immense (anneau de 45 m autour du sûr) : seul le bord du sûr est peint, aucun écran plein", d.wide and d._fill == null and d._hatch != null
 		and float(d._hatch.get_shader_parameter("fade_len")) > 0.0)
 	check("annonces discrètes, zones du héros, traits de projectiles : dessin simple", not e.v2 and not f.v2 and not g.v2)
-	check("intérieur : 35 % d'opacité au plus (cœur + hachures)", Telegraph.FILL_ALPHA <= 0.35 and a._hatch.get_shader_parameter("hatch_alpha") == null)
+	check("intérieur : 35 % d'opacité au plus (cœur + hachures)", Telegraph.FILL_ALPHA <= 0.35
+		and float(a._hatch.get_shader_parameter("hatch_alpha")) + float(a._hatch.get_shader_parameter("base_alpha")) <= 0.35)  # (intensité réglable, lot DNG-3 : 100 % par défaut)
 	check("couleur du danger : fraise de la bible", Telegraph.COLOR.is_equal_approx(UiTheme.color("bonbon.fraise.base")))
 	for t in made:
 		if is_instance_valid(t):
@@ -194,6 +195,8 @@ func _test_hud_boss() -> void:
 		check("%dx%d : barre et pastilles dans l'écran (%s, %s)" % [res.x, res.y, pr, rr], _in(pr, vp) and _in(rr, vp))
 		check("%dx%d : ni sur la pile de gauche ni sur la mini-carte" % [res.x, res.y], pr.position.x >= 14.0 + Hud.PANEL_W - 1.0 and pr.end.x <= vp.x - 246.0 + 1.0)
 		check("%dx%d : une encoche par seuil réel (%d)" % [res.x, res.y, bar._gauge.marks.size()], bar._gauge.marks.size() == boss.brain.thresholds().size() and bar._gauge.marks.size() >= 1)
+		check("%dx%d : PV en valeur lisible au centre, aucun pourcentage permanent (« %s »)" % [res.x, res.y, bar._gauge.text],
+			not bar._gauge.text.contains("%") and bar._gauge.text == BossBar.hp_text(boss.hp) and bar._gauge.text.ends_with(" PV"))
 		var tl := bar.timeline
 		check("%dx%d : frise « À venir » affichée, %d lignes, dans l'écran et au-dessus de la barre de sorts" % [res.x, res.y, tl.rows_shown],
 			tl.visible and tl.rows_shown >= 2 and _in(tl.get_global_rect(), vp) and tl.get_global_rect().end.y <= vp.y - 204.0)

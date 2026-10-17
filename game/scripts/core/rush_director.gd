@@ -32,6 +32,7 @@ func _spawn_boss(z: Dictionary, lvl: int) -> void:
 		return
 	_boss.xp_reward = 0
 	_adds_on = false
+	boss_t0 = BestTimes.clock  # fil des temps (lot DNG-3)
 	if _boss.brain and Rush.pace_mult() < 1.0:
 		_boss.brain.pace *= Rush.pace_mult()  # Boss enragés : mécaniques plus fréquentes
 	d.message.emit("Boss %d / %d · %s\n%s" % [f, Tower.top(), BossLibrary.full_name(bid), BossLibrary.intro(bid)], 4.5)
@@ -73,3 +74,35 @@ func sub_text() -> String:
 ## Horloge du HUD : « Boss 3/8 ».
 func clock_text() -> String:
 	return "Boss %d/%d" % [Tower.floor_n, Tower.top()]
+
+
+# --- Ruée chronométrée (lot DNG-3, BM-DNG P1-10) ----------------------------------------------------
+var boss_t0 := 0.0  # BestTimes.clock à l'apparition du boss en cours
+
+
+## Fil des temps : une ligne par boss du tirage, {n, name, state ("done", "now", "next"), t (s), best (record d'avant, 0 :
+## aucun), new (record battu ou premier temps)}. Les boss vaincus d'après BestTimes (boss:rush:<boss>:<diff>), celui en cours à
+## l'horloge de la partie, les suivants par leur nom (« ??? » à l'aveugle).
+func trail() -> Array:
+	var out: Array = []
+	var f := Tower.floor_n
+	var diff := Tower.dungeon_diff
+	for i in range(1, Tower.top() + 1):
+		var bid := Rush.boss_at(i)
+		var row := {"n": i, "name": Rush.shown_name(i, f), "state": "next", "t": 0.0, "best": BestTimes.best(BestTimes.boss_key("rush", bid, diff)), "new": false}
+		if i < f or (i == f and (not is_instance_valid(_boss) or _boss.is_dead) and phase != "fight"):
+			var e := BestTimes.entry(BestTimes.boss_key("rush", bid, diff))
+			row.state = "done"
+			row.t = float(e.get("t", 0.0))
+			row.best = float(e.get("best", row.best))
+			row.new = bool(e.get("new", false))
+		elif i == f:
+			row.state = "now"
+			row.t = maxf(0.0, BestTimes.clock - boss_t0) if is_instance_valid(_boss) else 0.0
+		out.append(row)
+	return out
+
+
+## Temps total de la Ruée en cours et record du tirage (0 : aucun).
+func total_and_best() -> Array:
+	return [BestTimes.clock, BestTimes.best(BestTimes.rush_key(Rush.seed, Tower.dungeon_diff))]

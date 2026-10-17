@@ -17,6 +17,7 @@ var _enrage_next := 0.0
 var _rest_t := 0.0
 var _ffa_t := 0.0  # secondes depuis la mort du boss
 var _wall: MeshInstance3D
+var _edge: MeshInstance3D  # liseré au sol de l'anneau (lot DNG-3)
 var _ring_r := Siege.RING_FROM
 var _core: Interactable
 var _orb: Node3D  # lueur au-dessus de celui qui porte le cœur
@@ -26,6 +27,7 @@ var _hazards_done := false
 var _sd: SpawnDirector  # compositions par rôle (passe P15)
 var _angle := randf() * TAU  # direction de la dernière escouade (angle d'or)
 var _event_left := -1  # monstres restant à faire venir quand l'événement de la vague part (-1 : déjà parti)
+var _warned := false  # « Fureur dans 1 minute ! » déjà annoncée (lot DNG-3)
 
 ## Événement de chaque vague (1 à 5), lancé quand il reste ~55 % des monstres à faire venir : les vagues d'élites (3, 5) ont un
 ## événement léger (leur lieutenant fait le pic), les vagues de monstres un dur (mesuré : élite escortée + lieutenant en vague 3 =
@@ -60,6 +62,7 @@ func setup(director: RunDirector) -> void:
 	p.set_torch(true)
 	d._place_player(d.map.start)
 	Potions.start_run()  # 2 potions de soin au départ (Tower.start vide la réserve)
+	SiegeScore.hero(p, "me", true)  # tableau des trois (lot DNG-3) ; les alliés s'inscrivent dans _make_ally
 	_spawn_allies()
 	_sd = SpawnDirector.new(d)
 	_sd._verbose = false
@@ -89,7 +92,7 @@ func begin(f: int) -> void:
 		_spawn_hazards()
 		var bid := String(_boss.get_meta("boss_id", ""))
 		var intro := BossLibrary.intro(bid) if bid != "" else String(Tower.zone_for(f).get("dungeon", {}).get("intro", ""))
-		d.message.emit("BOSS : %s\nFureur dans %d min · évite les zones rouges" % [_boss.display_name.trim_prefix("<Boss> "), int(Siege.ENRAGE_AT / 60.0)], 4.0)
+		d.message.emit("BOSS : %s\nFureur dans %d min · évite les zones hachurées" % [_boss.display_name.trim_prefix("<Boss> "), int(Siege.ENRAGE_AT / 60.0)], 4.0)
 		if intro != "":
 			d.get_tree().create_timer(4.2).timeout.connect(func(): d.message.emit(intro, 3.5))
 		return
@@ -114,8 +117,10 @@ func _spawn_siege_boss(lvl: int) -> void:
 			"atk_mult": Tower.monster_atk_mult(Tower.floor_n, -1, true)})
 	if _boss == null:
 		_spawn_boss(Tower.zone_for(Tower.floor_n), lvl)  # (bibliothèque vide : le boss de la zone, comme avant)
+		SiegeScore.track(_boss, true)
 		return
 	_boss.xp_reward = 0
+	SiegeScore.track(_boss, true)  # dégâts de chacun, dernier coup, temps du boss (lot DNG-3)
 
 
 ## Lieutenant de la vague [param f] (vagues d'élites) : un autre boss de la zone, une mécanique, compté dans la vague.
@@ -130,6 +135,7 @@ func _spawn_wave_lieutenant(f: int, lvl: int) -> String:
 	if m == null:
 		return ""
 	m.xp_reward = 0
+	SiegeScore.track(m, false)
 	ArrivalMarker.mark(d, at, Color(1.0, 0.3, 0.2))
 	return BossLibrary.short_name(lid)
 
@@ -137,10 +143,15 @@ func _spawn_wave_lieutenant(f: int, lvl: int) -> String:
 ## Allié IA (TowerDirector) : sa chute pendant les vagues ou le boss manque l'objectif « Personne ne tombe ».
 func _make_ally(cid: String) -> ClassRival:
 	var a := super._make_ally(cid)
-	a.died.connect(func(_w, _k):
-		if phase in ["fight", "cards", "rest"]:
-			Siege.ally_fell = true)
+	SiegeScore.hero(a, cid)
+	a.died.connect(_on_ally_down.bind(a))
 	return a
+
+
+func _on_ally_down(_w, _k, a: ClassRival) -> void:
+	SiegeScore.fall(a)
+	if phase in ["fight", "cards", "rest"]:
+		Siege.ally_fell = true
 
 
 ## Dangers permanents de l'arène du boss (lave, poison, givre…), comme dans la salle du boss de la Survie.
@@ -208,15 +219,15 @@ func _update_boss(delta: float, lvl: int) -> void:
 		_adds_t = BOSS_ADDS_EVERY
 		for i in 3:
 			_spawn(d._pick_monster(lvl), _ring(6.0, 12.0), maxi(1, lvl - 1))
-	if not _enraged and _wave_t >= Siege.ENRAGE_AT - 60.0 and _msg_t <= 0.0:
-		_msg_t = 1.0
-		d.message.emit("Le boss entre en fureur dans 1 minute !", 2.5)
+	if not _enraged and _wave_t >= Siege.ENRAGE_AT - 60.0 and not _warned:
+		_warned = true  # (lot DNG-3 : une seule annonce, en alerte critique sous la barre du boss)
+		d.message.emit("Fureur dans 1 minute !", 2.5)
 	if not _enraged and _wave_t >= Siege.ENRAGE_AT:
 		_enraged = true
 		_boss.enrage()
 		_boss.atk *= 1.4
 		_enrage_next = _wave_t + Siege.ENRAGE_STEP
-		d.message.emit("%s est en FUREUR ! Ses coups ne feront que grandir." % _boss.display_name, 3.5)
+		d.message.emit("Trêve : il est en fureur !", 3.5)  # (lot DNG-3 : la trêve annoncée, BM-DNG P1-9 ; 28 signes au plus)
 	elif _enraged and _wave_t >= _enrage_next:
 		_enrage_next += Siege.ENRAGE_STEP
 		_boss.atk *= 1.15
@@ -404,7 +415,7 @@ func _make_ring() -> void:
 	var cyl := CylinderMesh.new()
 	cyl.top_radius = 1.0
 	cyl.bottom_radius = 1.0
-	cyl.height = 26.0
+	cyl.height = 4.0  # (lot DNG-3 : une palissade basse ; haute de 26 m, vue du dehors elle teintait tout l'écran)
 	cyl.radial_segments = 72
 	cyl.cap_top = false
 	cyl.cap_bottom = false
@@ -415,12 +426,27 @@ func _make_ring() -> void:
 	m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	m.cull_mode = BaseMaterial3D.CULL_DISABLED
 	m.disable_fog = true
-	m.albedo_color = Color(1.0, 0.3, 0.2, 0.3)
+	m.albedo_color = Color(BossBricks.ArenaWall.WALL_COLOR, 0.3)  # mandarine, comme le mur d'arène des boss (lot DNG-3)
 	_wall.material_override = m
 	_wall.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	d.map.add_child(_wall)
-	_wall.global_position = _center + Vector3.UP * 12.0
+	_wall.global_position = _center + Vector3.UP * 2.0
 	_wall.scale = Vector3(_ring_r, 1.0, _ring_r)
+	# liseré au sol : où passe la limite, même quand la caméra regarde de haut (lot DNG-3)
+	_edge = MeshInstance3D.new()
+	var tor := TorusMesh.new()
+	tor.inner_radius = 0.975
+	tor.outer_radius = 1.0
+	tor.rings = 96
+	_edge.mesh = tor
+	var em := m.duplicate() as StandardMaterial3D
+	em.blend_mode = BaseMaterial3D.BLEND_MODE_MIX
+	em.albedo_color = Color(BossBricks.ArenaWall.WALL_EDGE, 0.9)
+	_edge.material_override = em
+	_edge.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	d.map.add_child(_edge)
+	_edge.global_position = _center + Vector3.UP * 0.15
+	_edge.scale = Vector3(_ring_r, 0.05, _ring_r)
 
 
 func _make_core() -> void:
@@ -481,6 +507,8 @@ func _update_ring(delta: float) -> void:
 	_ring_r = lerpf(Siege.RING_FROM, Siege.RING_TO, k)
 	if is_instance_valid(_wall):
 		_wall.scale = Vector3(_ring_r, 1.0, _ring_r)
+	if is_instance_valid(_edge):
+		_edge.scale = Vector3(_ring_r, 0.05, _ring_r)
 	if phase == "ring" and _ffa_t >= Siege.TRUCE:
 		_begin_ffa()
 	if phase == "ffa":
@@ -557,6 +585,7 @@ func player_down() -> void:
 	if phase == "done":
 		return
 	var in_ffa := phase in ["ring", "ffa"]
+	SiegeScore.fall(d.player)
 	if in_ffa:
 		Siege.outcome = "eliminated"
 		Siege.rank = 1 + _alive_allies().size()
@@ -583,9 +612,26 @@ func clock_text() -> String:
 			return "Chacun pour soi"
 		"done":
 			return "Fin du siège"
+	# lot DNG-3 : l'horloge dit ce qu'elle compte (« Boss 5:59 » ressemblait à un temps de combat)
 	if Tower.is_boss_floor(Tower.floor_n):
-		return "BOSS" if _enraged else "Boss %d:%02d" % [int(maxf(0.0, Siege.ENRAGE_AT - _wave_t)) / 60, int(maxf(0.0, Siege.ENRAGE_AT - _wave_t)) % 60]
-	return "Vague %d/%d" % [Tower.floor_n, Siege.WAVES]
+		return "Boss · en fureur" if _enraged else "Boss · fureur dans %s" % BestTimes.fmt(fury_left())
+	return "Vague %d/%d · %s" % [Tower.floor_n, Siege.WAVES, BestTimes.fmt(BestTimes.clock)]
+
+
+## Secondes avant la fureur du boss (0 : en fureur, ou pas de boss) ; lu par la barre de boss (pastille « Fureur 5:59 »).
+func fury_left() -> float:
+	if _enraged or not Tower.is_boss_floor(Tower.floor_n) or not is_instance_valid(_boss) or _boss.is_dead:
+		return 0.0
+	return maxf(0.0, Siege.ENRAGE_AT - _wave_t)
+
+
+func is_enraged() -> bool:
+	return _enraged
+
+
+## L'objectif « Avant sa fureur » est encore tenable (le boss n'est pas en fureur).
+func fast_ok() -> bool:
+	return not _enraged
 
 
 ## Sous-ligne du HUD : l'arène, la difficulté et, avant la chute du boss, les alliés debout (objectif « Personne ne tombe »).
