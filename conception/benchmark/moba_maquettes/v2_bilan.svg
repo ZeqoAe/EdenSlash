@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="'M PLUS Rounded 1c', 'Nunito', sans-serif">
+  <!-- Croquis maison BM-MOBA (17/10/2026) : bilan des « Deux Voies » sur le composant commun ResultsPanel. Bandeau, tableau
+       des 8 héros (K / M / A, or, dégâts aux héros, aux tours, soins), courbe de l'écart d'or avec les moments (objectifs,
+       tours, éliminations groupées), MVP de chaque camp, Gagné / Gardé, Rejouer. Aucun pourcentage dans le texte permanent.
+       DA « autocollant manga » (BIBLE v2). Aucun élément tiers. -->
+  <defs>
+    <style>
+      .t { fill: #221A3A; font-size: 17px; }
+      .t2 { fill: #6B5E86; font-size: 15px; }
+      .te { fill: #FFF8EC; font-size: 15px; }
+      .te2 { fill: #C9BFEA; font-size: 13px; }
+      .tw { fill: #FFFFFF; stroke: #221A3A; stroke-width: 4; paint-order: stroke; font-weight: 800; }
+      .pop { font-family: 'Mochiy Pop One', 'M PLUS Rounded 1c', sans-serif; }
+      .b { font-weight: 800; }
+      .num { font-weight: 900; font-variant-numeric: tabular-nums; }
+    </style>
+  </defs>
+  <rect width="1600" height="900" fill="#ACB47F"/>
+  <g stroke="#FFFFFF" stroke-width="3" opacity=".5">
+    <line x1="800" y1="90" x2="400" y2="-40"/><line x1="800" y1="90" x2="1200" y2="-40"/><line x1="800" y1="90" x2="1500" y2="60"/><line x1="800" y1="90" x2="100" y2="60"/>
+  </g>
+  <rect x="86" y="96" width="1440" height="790" rx="20" fill="#221A3A"/>
+  <rect x="80" y="90" width="1440" height="790" rx="20" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+  <g transform="rotate(-3 800 70)">
+    <rect x="520" y="30" width="560" height="80" rx="20" fill="#FFC928" stroke="#221A3A" stroke-width="4"/>
+    <text x="800" y="86" text-anchor="middle" class="tw pop" style="font-size:42px">Victoire !</text>
+  </g>
+  <text x="800" y="140" text-anchor="middle" class="t2">Le Cœur rouge est tombé · 16:42 · Normal</text>
+
+  <!-- tableau des héros -->
+  <rect x="110" y="160" width="900" height="420" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+  <g class="te2" style="font-size:13px">
+    <text x="300" y="188">K / M / A</text><text x="420" y="188">or</text><text x="520" y="188">héros</text>
+    <text x="620" y="188">tours</text><text x="710" y="188">soins</text><text x="800" y="188">objets</text>
+  </g>
+  <!-- bleus -->
+  <g transform="translate(126 200)">
+    <rect width="868" height="38" rx="10" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+    <circle cx="22" cy="19" r="14" fill="#FFC928" stroke="#221A3A" stroke-width="2"/>
+    <text x="44" y="25" class="tw" style="font-size:15px">Toi · 12</text>
+    <text x="174" y="25" class="tw num" style="font-size:15px">6 / 2 / 8</text>
+    <text x="294" y="25" class="tw num" style="font-size:15px">7 420</text>
+    <rect x="390" y="12" width="80" height="14" rx="7" fill="#2E2450"/><rect x="390" y="12" width="80" height="14" rx="7" fill="#FFC928"/>
+    <rect x="490" y="12" width="70" height="14" rx="7" fill="#2E2450"/><rect x="490" y="12" width="40" height="14" rx="7" fill="#FF8A1F"/>
+    <rect x="580" y="12" width="70" height="14" rx="7" fill="#2E2450"/>
+    <g stroke="#221A3A" stroke-width="2"><rect x="672" y="7" width="24" height="24" rx="6" fill="#8FD62E"/><rect x="700" y="7" width="24" height="24" rx="6" fill="#B43BEB"/><rect x="728" y="7" width="24" height="24" rx="6" fill="#B43BEB"/><rect x="756" y="7" width="24" height="24" rx="6" fill="#22B8F0"/></g>
+    <rect x="800" y="6" width="58" height="26" rx="8" fill="#FFC928" stroke="#221A3A" stroke-width="2"/><text x="829" y="25" text-anchor="middle" class="tw" style="font-size:13px">MVP</text>
+  </g>
+  <g transform="translate(126 244)" class="te">
+    <rect width="868" height="38" rx="10" fill="#2E2450" stroke="#4A3F70" stroke-width="2"/>
+    <text x="44" y="25">Clerc · 10</text><text x="174" y="25" class="num">0 / 3 / 13</text><text x="294" y="25" class="num">5 210</text>
+    <rect x="390" y="12" width="80" height="14" rx="7" fill="#4A3F70"/><rect x="390" y="12" width="22" height="14" rx="7" fill="#FFC928"/>
+    <rect x="490" y="12" width="70" height="14" rx="7" fill="#4A3F70"/><rect x="490" y="12" width="8" height="14" rx="7" fill="#FF8A1F"/>
+    <rect x="580" y="12" width="70" height="14" rx="7" fill="#4A3F70"/><rect x="580" y="12" width="66" height="14" rx="7" fill="#8FD62E"/>
+  </g>
+  <g transform="translate(126 288)" class="te">
+    <rect width="868" height="38" rx="10" fill="#2E2450" stroke="#4A3F70" stroke-width="2"/>
+    <text x="44" y="25">Chevalier · 11</text><text x="174" y="25" class="num">2 / 4 / 7</text><text x="294" y="25" class="num">6 080</text>
+    <rect x="390" y="12" width="80" height="14" rx="7" fill="#4A3F70"/><rect x="390" y="12" width="44" height="14" rx="7" fill="#FFC928"/>
+    <rect x="490" y="12" width="70" height="14" rx="7" fill="#4A3F70"/><rect x="490" y="12" width="70" height="14" rx="7" fill="#FF8A1F"/>
+  </g>
+  <g transform="translate(126 332)" class="te">
+    <rect width="868" height="38" rx="10" fill="#2E2450" stroke="#4A3F70" stroke-width="2"/>
+    <text x="44" y="25">Ninja · 11</text><text x="174" y="25" class="num">8 / 3 / 5</text><text x="294" y="25" class="num">7 010</text>
+    <rect x="390" y="12" width="80" height="14" rx="7" fill="#4A3F70"/><rect x="390" y="12" width="70" height="14" rx="7" fill="#FFC928"/>
+    <rect x="490" y="12" width="70" height="14" rx="7" fill="#4A3F70"/><rect x="490" y="12" width="20" height="14" rx="7" fill="#FF8A1F"/>
+  </g>
+  <line x1="126" y1="388" x2="994" y2="388" stroke="#C9BFEA" stroke-width="2" stroke-dasharray="8 6"/>
+  <g transform="translate(126 400)" class="te">
+    <rect width="868" height="38" rx="10" fill="#FF9DB0" stroke="#221A3A" stroke-width="3" opacity=".9"/>
+    <text x="44" y="25" fill="#221A3A" class="b">Chasseur · 11</text><text x="174" y="25" fill="#221A3A" class="num">5 / 6 / 3</text><text x="294" y="25" fill="#221A3A" class="num">6 300</text>
+    <rect x="800" y="6" width="58" height="26" rx="8" fill="#FFF8EC" stroke="#221A3A" stroke-width="2"/><text x="829" y="25" text-anchor="middle" class="t b" style="font-size:12px">MVP</text>
+  </g>
+  <text x="560" y="470" text-anchor="middle" class="te2">… 3 autres lignes rouges (Barde, Gladiateur, Mage noir)</text>
+  <text x="560" y="560" text-anchor="middle" class="te2">Survol d'une barre : le chiffre exact (infobulle)</text>
+
+  <!-- courbe de l'écart d'or -->
+  <rect x="1030" y="160" width="460" height="420" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+  <text x="1050" y="192" class="t b">Écart d'or</text>
+  <line x1="1050" y1="380" x2="1470" y2="380" stroke="#221A3A" stroke-width="2"/>
+  <path d="M1050 380 L1100 372 L1150 390 L1200 410 L1250 395 L1300 360 L1350 330 L1400 300 L1450 250 L1470 240" fill="none" stroke="#22B8F0" stroke-width="5" stroke-linejoin="round"/>
+  <g stroke="#221A3A" stroke-width="2">
+    <circle cx="1150" cy="390" r="9" fill="#FF8A1F"/><circle cx="1300" cy="360" r="9" fill="#FF8A1F"/>
+    <circle cx="1400" cy="300" r="10" fill="#B43BEB"/><rect x="1342" y="322" width="16" height="16" rx="4" fill="#FF4D6D"/>
+  </g>
+  <g class="t2" style="font-size:12px">
+    <text x="1112" y="418">Gardien (rouge)</text><text x="1262" y="345">Gardien (toi)</text><text x="1380" y="282">Colosse</text>
+  </g>
+  <text x="1050" y="450" class="t2" style="font-size:13px">Tournant : le Colosse à 13:10 (4 contre 2)</text>
+  <text x="1050" y="474" class="t2" style="font-size:13px">Ta plus belle action : 3 éliminations en 6 s</text>
+  <rect x="1050" y="500" width="420" height="60" rx="12" fill="#2E2450"/>
+  <text x="1070" y="526" class="te b" style="font-size:14px">Conseil pour la prochaine</text>
+  <text x="1070" y="548" class="te2">Tu es mort 2 fois sous leur T2 : attends la vague.</text>
+
+  <!-- Gagné / Gardé + boutons -->
+  <rect x="110" y="600" width="900" height="120" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+  <text x="130" y="630" class="b" fill="#FFC928" style="font-size:16px">GAGNÉ</text>
+  <text x="130" y="660" class="te">★ Maîtrise du Magicien · +120</text>
+  <text x="130" y="688" class="te">◆ Coffre d'apparence (rare) · titre « Gardien des voies »</text>
+  <text x="620" y="630" class="b" fill="#C3F07A" style="font-size:16px">GARDÉ</text>
+  <text x="620" y="660" class="te">Insignes · +60 (plafond du jour)</text>
+  <text x="620" y="688" class="te2">Rien de la partie n'est gardé (mode scellé)</text>
+  <rect x="1030" y="600" width="460" height="120" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+  <text x="1050" y="636" class="t b" style="font-size:15px">Série : 3 victoires en Normal</text>
+  <text x="1050" y="664" class="t2" style="font-size:14px">Difficile s'ouvre pour les récompenses rares</text>
+
+  <rect x="470" y="760" width="320" height="70" rx="18" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+  <text x="630" y="806" text-anchor="middle" class="tw pop" style="font-size:26px">Rejouer</text>
+  <rect x="810" y="766" width="220" height="58" rx="16" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+  <text x="920" y="802" text-anchor="middle" class="t b">Statistiques</text>
+  <rect x="1050" y="766" width="220" height="58" rx="16" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+  <text x="1160" y="802" text-anchor="middle" class="t b">Menu principal</text>
+</svg>

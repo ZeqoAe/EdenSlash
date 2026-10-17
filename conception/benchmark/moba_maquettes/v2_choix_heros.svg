@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="'M PLUS Rounded 1c', 'Nunito', sans-serif">
+  <!-- Croquis maison BM-MOBA (17/10/2026) : choix des héros des « Deux Voies ». On choisit d'abord un poste (4 postes),
+       puis une classe (les 60, filtrées par famille conseillée) ; les alliés IA complètent sans doublon de famille ;
+       l'équipe adverse se dévoile au fil du choix. Pas de minuteur par défaut (partie solo). Kit de la partie visible avant de valider.
+       DA « autocollant manga » (BIBLE v2). Aucun élément tiers. -->
+  <defs>
+    <style>
+      .t { fill: #221A3A; font-size: 17px; }
+      .t2 { fill: #6B5E86; font-size: 15px; }
+      .te { fill: #FFF8EC; font-size: 16px; }
+      .te2 { fill: #C9BFEA; font-size: 14px; }
+      .tw { fill: #FFFFFF; stroke: #221A3A; stroke-width: 4; paint-order: stroke; font-weight: 800; }
+      .pop { font-family: 'Mochiy Pop One', 'M PLUS Rounded 1c', sans-serif; }
+      .b { font-weight: 800; }
+    </style>
+    <pattern id="trame" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#221A3A" opacity="0.22"/></pattern>
+  </defs>
+  <rect width="1600" height="900" fill="#CCDEF3"/>
+  <rect y="640" width="1600" height="260" fill="#ACB47F"/>
+  <g transform="rotate(-3 300 50)">
+    <rect x="40" y="16" width="520" height="60" rx="16" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+    <text x="300" y="58" text-anchor="middle" class="tw pop" style="font-size:30px">Choisis ton poste</text>
+  </g>
+  <text x="1560" y="52" text-anchor="end" class="t2">Les Deux Voies · Normal · pas de minuteur</text>
+
+  <!-- équipe bleue (gauche) -->
+  <g transform="translate(40 110)">
+    <rect width="380" height="500" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <text x="20" y="36" class="b" fill="#0B7DB5" style="font-size:20px">Ton équipe</text>
+    <g transform="translate(16 56)">
+      <rect width="348" height="96" rx="14" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+      <circle cx="48" cy="48" r="34" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+      <text x="96" y="40" class="tw" style="font-size:18px">Toi · Voie du Soleil</text>
+      <text x="96" y="70" class="tw" style="font-size:15px">Magicien (Arcane) — à valider</text>
+    </g>
+    <g transform="translate(16 164)">
+      <rect width="348" height="96" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+      <circle cx="48" cy="48" r="34" fill="#8FD62E" stroke="#221A3A" stroke-width="3"/>
+      <text x="96" y="40" class="t b">Soutien · Clerc</text><text x="96" y="68" class="t2">IA · Ferveur · avec toi au Soleil</text>
+    </g>
+    <g transform="translate(16 272)">
+      <rect width="348" height="96" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+      <circle cx="48" cy="48" r="34" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+      <text x="96" y="40" class="t b">Brumes · Chevalier</text><text x="96" y="68" class="t2">IA · Rempart · seul en voie</text>
+    </g>
+    <g transform="translate(16 380)">
+      <rect width="348" height="96" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+      <circle cx="48" cy="48" r="34" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/>
+      <text x="96" y="40" class="t b">Jungle · Ninja</text><text x="96" y="68" class="t2">IA · Ombre · chasse et aide</text>
+    </g>
+  </g>
+
+  <!-- centre : postes + grille des classes -->
+  <g transform="translate(450 110)">
+    <rect width="700" height="500" rx="18" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+    <g transform="translate(20 20)">
+      <rect width="156" height="56" rx="14" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/><text x="78" y="35" text-anchor="middle" class="tw" style="font-size:15px">Soleil · tir</text>
+      <rect x="166" width="156" height="56" rx="14" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="244" y="35" text-anchor="middle" class="t b" style="font-size:15px">Soutien</text>
+      <rect x="332" width="156" height="56" rx="14" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="410" y="35" text-anchor="middle" class="t b" style="font-size:15px">Brumes</text>
+      <rect x="498" width="156" height="56" rx="14" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="576" y="35" text-anchor="middle" class="t b" style="font-size:15px">Jungle</text>
+    </g>
+    <text x="24" y="110" class="te2">Conseillé : Traque ou Arcane (tir de loin). Toutes les classes restent permises.</text>
+    <!-- grille 8 × 3 (aperçu) -->
+    <g transform="translate(24 128)" stroke="#221A3A" stroke-width="3">
+      <rect width="72" height="72" rx="14" fill="#B43BEB"/><rect x="82" width="72" height="72" rx="14" fill="#B43BEB"/>
+      <rect x="164" width="72" height="72" rx="14" fill="#B43BEB"/><rect x="246" width="72" height="72" rx="14" fill="#B43BEB"/>
+      <rect x="328" width="72" height="72" rx="14" fill="#B43BEB"/><rect x="410" width="72" height="72" rx="14" fill="#B43BEB"/>
+      <rect x="492" width="72" height="72" rx="14" fill="#B43BEB"/><rect x="574" width="72" height="72" rx="14" fill="#B43BEB"/>
+      <rect y="82" width="72" height="72" rx="14" fill="#8FD62E"/><rect x="82" y="82" width="72" height="72" rx="14" fill="#8FD62E"/>
+      <rect x="164" y="82" width="72" height="72" rx="14" fill="#8FD62E"/><rect x="246" y="82" width="72" height="72" rx="14" fill="#8FD62E"/>
+      <rect x="328" y="82" width="72" height="72" rx="14" fill="#8FD62E"/><rect x="410" y="82" width="72" height="72" rx="14" fill="#8FD62E"/>
+      <rect x="492" y="82" width="72" height="72" rx="14" fill="#8FD62E"/><rect x="574" y="82" width="72" height="72" rx="14" fill="#8FD62E"/>
+      <rect y="164" width="72" height="72" rx="14" fill="#9A93AE"/><rect x="82" y="164" width="72" height="72" rx="14" fill="#9A93AE"/>
+      <rect x="164" y="164" width="72" height="72" rx="14" fill="#9A93AE"/><rect x="246" y="164" width="72" height="72" rx="14" fill="#9A93AE"/>
+    </g>
+    <rect x="20" y="124" width="80" height="80" rx="16" fill="none" stroke="#FFFFFF" stroke-width="5"/>
+    <text x="350" y="388" text-anchor="middle" class="te2">gris = déjà pris (une classe une seule fois par partie)</text>
+    <!-- kit de la partie -->
+    <rect x="20" y="404" width="660" height="80" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <text x="40" y="432" class="t b" style="font-size:15px">Kit de la partie</text>
+    <g transform="translate(40 442)" stroke="#221A3A" stroke-width="2">
+      <rect width="32" height="32" rx="8" fill="#FFC928"/><rect x="40" width="32" height="32" rx="8" fill="#FF8A1F"/>
+      <rect x="80" width="32" height="32" rx="8" fill="#22B8F0"/><rect x="120" width="32" height="32" rx="8" fill="#B43BEB"/>
+    </g>
+    <text x="210" y="462" class="t2" style="font-size:14px">3 sorts + ultime (niv. 5) · « Mon kit » : ton préréglage de Duel</text>
+  </g>
+
+  <!-- équipe rouge (droite) : se dévoile -->
+  <g transform="translate(1180 110)">
+    <rect width="380" height="500" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <text x="20" y="36" class="b" fill="#C21E45" style="font-size:20px">En face</text>
+    <g transform="translate(16 56)"><rect width="348" height="96" rx="14" fill="#FF9DB0" stroke="#221A3A" stroke-width="3"/>
+      <circle cx="48" cy="48" r="34" fill="#8FD62E" stroke="#221A3A" stroke-width="3"/><text x="96" y="40" class="t b">Chasseur</text><text x="96" y="68" class="t2">Traque · Soleil</text></g>
+    <g transform="translate(16 164)"><rect width="348" height="96" rx="14" fill="#FF9DB0" stroke="#221A3A" stroke-width="3"/>
+      <circle cx="48" cy="48" r="34" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/><text x="96" y="40" class="t b">Barde</text><text x="96" y="68" class="t2">Ferveur · soutien</text></g>
+    <g transform="translate(16 272)"><rect width="348" height="96" rx="14" fill="#E9DFCB" stroke="#221A3A" stroke-width="3"/><rect width="348" height="96" rx="14" fill="url(#trame)"/>
+      <text x="174" y="56" text-anchor="middle" class="t2">choisit…</text></g>
+    <g transform="translate(16 380)"><rect width="348" height="96" rx="14" fill="#E9DFCB" stroke="#221A3A" stroke-width="3"/><rect width="348" height="96" rx="14" fill="url(#trame)"/>
+      <text x="174" y="56" text-anchor="middle" class="t2">?</text></g>
+  </g>
+
+  <!-- bas : difficulté, valider -->
+  <g transform="translate(450 650)">
+    <rect width="700" height="96" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <text x="24" y="40" class="t b" style="font-size:16px">Adversaires</text>
+    <g transform="translate(24 52)" class="t b" style="font-size:13px">
+      <rect width="86" height="30" rx="10" fill="#FFEBC8" stroke="#221A3A" stroke-width="2"/><text x="43" y="20" text-anchor="middle">Facile</text>
+      <rect x="94" width="86" height="30" rx="10" fill="#22B8F0" stroke="#221A3A" stroke-width="2"/><text x="137" y="20" text-anchor="middle" fill="#FFF">Normal</text>
+      <rect x="188" width="86" height="30" rx="10" fill="#FFEBC8" stroke="#221A3A" stroke-width="2"/><text x="231" y="20" text-anchor="middle">Difficile</text>
+      <rect x="282" width="86" height="30" rx="10" fill="#FFEBC8" stroke="#221A3A" stroke-width="2"/><text x="325" y="20" text-anchor="middle">Hardcore</text>
+    </g>
+    <rect x="430" y="18" width="250" height="62" rx="16" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+    <text x="555" y="58" text-anchor="middle" class="tw pop" style="font-size:24px">Valider</text>
+  </g>
+  <text x="800" y="790" text-anchor="middle" class="t2">Alliés : même difficulté que les adversaires (réglable : « Alliés plus forts » pour débuter).</text>
+</svg>

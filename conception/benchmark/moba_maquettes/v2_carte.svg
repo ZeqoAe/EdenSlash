@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000" font-family="'M PLUS Rounded 1c', 'Nunito', sans-serif">
+  <!-- Croquis maison BM-MOBA (17/10/2026) : carte « Les Deux Voies » (4 contre 4), vue de dessus, échelle 1 m = 6,5 px.
+       Repère du jeu : x de -100 à 100 m (gauche → droite), z de -60 à 60 m (haut → bas). DA « autocollant manga » (BIBLE v2).
+       Aucun élément tiers : formes et textes maison. -->
+  <defs>
+    <style>
+      .t { fill: #221A3A; font-size: 17px; }
+      .t2 { fill: #6B5E86; font-size: 15px; }
+      .tw { fill: #FFFFFF; stroke: #221A3A; stroke-width: 4; paint-order: stroke; font-weight: 800; }
+      .pop { font-family: 'Mochiy Pop One', 'M PLUS Rounded 1c', sans-serif; }
+      .b { font-weight: 800; }
+      .lane { fill: none; stroke: #CEBFA7; stroke-width: 70; stroke-linecap: round; stroke-linejoin: round; }
+      .laneb { fill: none; stroke: #221A3A; stroke-width: 76; stroke-linecap: round; stroke-linejoin: round; opacity: .18; }
+      .ink { stroke: #221A3A; stroke-width: 3; }
+    </style>
+    <pattern id="trame" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#221A3A" opacity="0.18"/></pattern>
+    <pattern id="herbe" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M2 10 L4 4 L6 10 M7 11 L9 5 L11 11" stroke="#4F8F10" stroke-width="1.6" fill="none"/></pattern>
+  </defs>
+
+  <!-- fond papier + titre -->
+  <rect width="1600" height="1000" fill="#FFF8EC"/>
+  <rect x="0" y="880" width="1600" height="120" fill="url(#trame)"/>
+  <g transform="rotate(-3 300 40)">
+    <rect x="40" y="10" width="520" height="58" rx="16" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+    <text x="300" y="50" text-anchor="middle" class="tw pop" style="font-size:30px">Les Deux Voies · la carte</text>
+  </g>
+  <text x="1560" y="46" text-anchor="end" class="t2">200 × 120 m · base à base ≈ 30 s de course (6,5 m/s)</text>
+
+  <!-- terrain : herbe claire, contour d'encre -->
+  <rect x="120" y="70" width="1360" height="800" rx="40" fill="#ACB47F" stroke="#221A3A" stroke-width="4"/>
+  <rect x="120" y="70" width="1360" height="800" rx="40" fill="url(#herbe)" opacity=".35"/>
+
+  <!-- jungle : sous-bois plus sombre (zones praticables entre les voies) -->
+  <path d="M420 250 L1180 250 L1290 470 L1180 690 L420 690 L310 470 Z" fill="#8E9A63" stroke="#221A3A" stroke-width="3" opacity=".9"/>
+  <!-- murs / rochers de la jungle (couvert, non cassables) -->
+  <g fill="#6B5E86" stroke="#221A3A" stroke-width="3">
+    <rect x="560" y="300" width="70" height="120" rx="20"/>
+    <rect x="560" y="520" width="70" height="120" rx="20"/>
+    <rect x="970" y="300" width="70" height="120" rx="20"/>
+    <rect x="970" y="520" width="70" height="120" rx="20"/>
+    <rect x="420" y="430" width="90" height="80" rx="20"/>
+    <rect x="1090" y="430" width="90" height="80" rx="20"/>
+  </g>
+
+  <!-- rivière -->
+  <path d="M800 150 C 760 260, 840 360, 800 470 C 760 580, 840 680, 800 790" fill="none" stroke="#221A3A" stroke-width="64" stroke-linecap="round" opacity=".25"/>
+  <path d="M800 150 C 760 260, 840 360, 800 470 C 760 580, 840 680, 800 790" fill="none" stroke="#86DDFF" stroke-width="56" stroke-linecap="round"/>
+
+  <!-- voies -->
+  <polyline class="laneb" points="267,430 397,184 1203,184 1333,430"/>
+  <polyline class="lane" points="267,430 397,184 1203,184 1333,430"/>
+  <polyline class="laneb" points="267,510 397,756 1203,756 1333,510"/>
+  <polyline class="lane" points="267,510 397,756 1203,756 1333,510"/>
+  <text x="800" y="130" text-anchor="middle" class="tw pop" style="font-size:24px">Voie du Soleil (duo)</text>
+  <text x="800" y="830" text-anchor="middle" class="tw pop" style="font-size:24px">Voie des Brumes (solo)</text>
+
+  <!-- buissons (cachent un héros à plus de 3 m) -->
+  <g fill="#4F8F10" stroke="#221A3A" stroke-width="3" opacity=".95">
+    <ellipse cx="730" cy="215" rx="46" ry="18"/><ellipse cx="870" cy="153" rx="46" ry="18"/>
+    <ellipse cx="730" cy="725" rx="46" ry="18"/><ellipse cx="870" cy="787" rx="46" ry="18"/>
+    <ellipse cx="700" cy="470" rx="40" ry="20"/><ellipse cx="900" cy="470" rx="40" ry="20"/>
+    <ellipse cx="330" cy="300" rx="22" ry="40"/><ellipse cx="1270" cy="640" rx="22" ry="40"/>
+  </g>
+
+  <!-- bases : fontaine + Cœur (le Cœur tire sur les intrus) -->
+  <g>
+    <circle cx="228" cy="470" r="92" fill="#86DDFF" stroke="#221A3A" stroke-width="4" opacity=".55"/>
+    <circle cx="176" cy="470" r="34" fill="#FFFFFF" stroke="#221A3A" stroke-width="3"/>
+    <text x="176" y="476" text-anchor="middle" class="t b" style="font-size:13px">fontaine</text>
+    <polygon points="250,420 290,470 250,520 210,470" fill="#22B8F0" stroke="#221A3A" stroke-width="4"/>
+    <polygon points="250,432 278,470 250,470" fill="#86DDFF"/>
+    <text x="250" y="560" text-anchor="middle" class="tw" style="font-size:17px">Cœur bleu</text>
+
+    <circle cx="1372" cy="470" r="92" fill="#FF9DB0" stroke="#221A3A" stroke-width="4" opacity=".55"/>
+    <circle cx="1424" cy="470" r="34" fill="#FFFFFF" stroke="#221A3A" stroke-width="3"/>
+    <text x="1424" y="476" text-anchor="middle" class="t b" style="font-size:13px">fontaine</text>
+    <polygon points="1350,420 1390,470 1350,520 1310,470" fill="#FF4D6D" stroke="#221A3A" stroke-width="4"/>
+    <polygon points="1350,432 1378,470 1350,470" fill="#FF9DB0"/>
+    <text x="1350" y="560" text-anchor="middle" class="tw" style="font-size:17px">Cœur rouge</text>
+  </g>
+
+  <!-- tours : T1 (extérieure), T2 (intérieure) ; anneau = portée 9 m -->
+  <g stroke="#221A3A" stroke-width="3">
+    <!-- bleues -->
+    <circle cx="618" cy="184" r="58" fill="#22B8F0" opacity=".14"/><circle cx="371" cy="236" r="58" fill="#22B8F0" opacity=".14"/>
+    <circle cx="618" cy="756" r="58" fill="#22B8F0" opacity=".14"/><circle cx="371" cy="704" r="58" fill="#22B8F0" opacity=".14"/>
+    <rect x="602" y="166" width="32" height="36" rx="8" fill="#22B8F0"/><rect x="355" y="218" width="32" height="36" rx="8" fill="#22B8F0"/>
+    <rect x="602" y="738" width="32" height="36" rx="8" fill="#22B8F0"/><rect x="355" y="686" width="32" height="36" rx="8" fill="#22B8F0"/>
+    <!-- rouges -->
+    <circle cx="982" cy="184" r="58" fill="#FF4D6D" opacity=".14"/><circle cx="1229" cy="236" r="58" fill="#FF4D6D" opacity=".14"/>
+    <circle cx="982" cy="756" r="58" fill="#FF4D6D" opacity=".14"/><circle cx="1229" cy="704" r="58" fill="#FF4D6D" opacity=".14"/>
+    <rect x="966" y="166" width="32" height="36" rx="8" fill="#FF4D6D"/><rect x="1213" y="218" width="32" height="36" rx="8" fill="#FF4D6D"/>
+    <rect x="966" y="738" width="32" height="36" rx="8" fill="#FF4D6D"/><rect x="1213" y="686" width="32" height="36" rx="8" fill="#FF4D6D"/>
+  </g>
+  <g class="tw" style="font-size:14px" text-anchor="middle">
+    <text x="618" y="230">T1</text><text x="371" y="282">T2</text><text x="618" y="802">T1</text><text x="371" y="664">T2</text>
+    <text x="982" y="230">T1</text><text x="1229" y="282">T2</text><text x="982" y="802">T1</text><text x="1229" y="664">T2</text>
+  </g>
+
+  <!-- camps de la jungle : Source (lagon), Braise (fraise), petits camps (papier) -->
+  <g stroke="#221A3A" stroke-width="3">
+    <circle cx="507" cy="372" r="24" fill="#22B8F0"/><circle cx="507" cy="568" r="24" fill="#FF4D6D"/>
+    <circle cx="672" cy="330" r="16" fill="#FFF8EC"/><circle cx="672" cy="610" r="16" fill="#FFF8EC"/>
+    <circle cx="1093" cy="568" r="24" fill="#22B8F0"/><circle cx="1093" cy="372" r="24" fill="#FF4D6D"/>
+    <circle cx="928" cy="610" r="16" fill="#FFF8EC"/><circle cx="928" cy="330" r="16" fill="#FFF8EC"/>
+  </g>
+  <g class="tw" style="font-size:13px" text-anchor="middle">
+    <text x="507" y="412">Source</text><text x="507" y="608">Braise</text>
+    <text x="1093" y="608">Source</text><text x="1093" y="412">Braise</text>
+  </g>
+
+  <!-- objectifs de la rivière -->
+  <g>
+    <circle cx="800" cy="345" r="46" fill="#B43BEB" stroke="#221A3A" stroke-width="4"/>
+    <circle cx="800" cy="345" r="62" fill="none" stroke="#221A3A" stroke-width="3" stroke-dasharray="10 6"/>
+    <text x="800" y="351" text-anchor="middle" class="tw pop" style="font-size:16px">Colosse</text>
+    <text x="800" y="420" text-anchor="middle" class="tw" style="font-size:14px">9:00 · revient 4:00</text>
+    <circle cx="800" cy="595" r="38" fill="#FF8A1F" stroke="#221A3A" stroke-width="4"/>
+    <circle cx="800" cy="595" r="54" fill="none" stroke="#221A3A" stroke-width="3" stroke-dasharray="10 6"/>
+    <text x="800" y="601" text-anchor="middle" class="tw pop" style="font-size:15px">Gardien</text>
+    <text x="800" y="668" text-anchor="middle" class="tw" style="font-size:14px">3:00 · revient 3:00</text>
+  </g>
+
+  <!-- trajets des vagues (flèches) -->
+  <g fill="#221A3A">
+    <polygon points="470,176 490,184 470,192"/><polygon points="1130,176 1110,184 1130,192"/>
+    <polygon points="470,748 490,756 470,764"/><polygon points="1130,748 1110,756 1130,764"/>
+  </g>
+
+  <!-- échelle -->
+  <g>
+    <rect x="150" y="840" width="130" height="10" fill="#221A3A"/>
+    <rect x="150" y="840" width="65" height="10" fill="#FFF8EC" stroke="#221A3A" stroke-width="2"/>
+    <text x="215" y="834" text-anchor="middle" class="t2" style="font-size:13px">20 m</text>
+  </g>
+
+  <!-- légende (bas) -->
+  <g transform="translate(40 895)">
+    <rect width="1520" height="90" rx="16" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+    <rect x="20" y="22" width="22" height="24" rx="6" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+    <text x="52" y="40" fill="#FFF8EC" font-size="15">Tour (9 m de portée ; T2 frappe plus fort)</text>
+    <polygon points="370,22 386,34 370,46 354,34" fill="#FF4D6D" stroke="#221A3A" stroke-width="3"/>
+    <text x="396" y="40" fill="#FFF8EC" font-size="15">Cœur : à détruire pour gagner</text>
+    <circle cx="660" cy="34" r="12" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+    <text x="680" y="40" fill="#FFF8EC" font-size="15">Source : recharges plus rapides</text>
+    <circle cx="935" cy="34" r="12" fill="#FF4D6D" stroke="#221A3A" stroke-width="3"/>
+    <text x="955" y="40" fill="#FFF8EC" font-size="15">Braise : coups qui brûlent et ralentissent</text>
+    <ellipse cx="1285" cy="34" rx="20" ry="9" fill="#4F8F10" stroke="#221A3A" stroke-width="3"/>
+    <text x="1312" y="40" fill="#FFF8EC" font-size="15">Buisson (cache)</text>
+    <text x="20" y="74" fill="#C9BFEA" font-size="14">Rôles : Soleil = Traque ou Arcane + Ferveur ; Brumes = Rempart ; jungle = Ombre. Vagues toutes les 30 s dès 0:40. Rochers gris = couvert non cassable (bloque les tirs).</text>
+  </g>
+</svg>
