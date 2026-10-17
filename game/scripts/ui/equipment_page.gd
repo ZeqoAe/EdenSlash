@@ -237,7 +237,7 @@ class HeroPreview extends SubViewportContainer:
 		var env := WorldEnvironment.new()
 		env.environment = Environment.new()
 		env.environment.background_mode = Environment.BG_COLOR
-		env.environment.background_color = Color(0.06, 0.05, 0.11)
+		env.environment.background_color = Color(0.2, 0.16, 0.34)  # encre 500 (bible : jamais de fond noir ; les auras restent visibles)
 		env.environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 		env.environment.ambient_light_color = Color(0.8, 0.76, 0.86)
 		env.environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC

@@ -116,10 +116,8 @@ func refresh() -> void:
 	kinds.sort_custom(func(a, b): return Rewards.kind_rank(a) < Rewards.kind_rank(b))
 	for k in kinds:
 		_list.add_child(_row(k, by[k]))
-	if Profile.reward_chests.is_empty():
-		var empty := Hud._label(_list, "Aucun coffre pour l'instant.\nLes boss, les donjons et la Tour en donnent.", 16, UiTheme.MUTED)
-		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	if Profile.reward_chests.is_empty():  # état vide illustré (UIK2) : la phrase dit où en trouver
+		UiTheme.empty_state(_list, "Aucun coffre pour l'instant.\nLes boss, les donjons et la Tour en donnent.", "chest")
 
 
 ## Bascule entre la liste des coffres et la boutique (coffres d'apparence et d'auras contre des insignes).

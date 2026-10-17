@@ -305,7 +305,8 @@ static func gold_button(text: String, font_size := 30, min_size := Vector2(420, 
 	b.text = text
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = min_size
-	UiTheme.style_button(b, "soleil", font_size, {"shadow": 5})
+	# petit primaire (« Y aller » d'une ligne) : ombre de 3 px, sinon la face est trop basse pour Mochiy contouré (UIK2)
+	UiTheme.style_button(b, "soleil", font_size, {"shadow": 5 if min_size.y >= 44.0 else 3})
 	return b
 
 

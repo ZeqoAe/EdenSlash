@@ -60,7 +60,7 @@ func _ready() -> void:
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_root)
 	var dim := ColorRect.new()
-	dim.color = Color(0.02, 0.01, 0.05, 0.9)
+	UiTheme.veil(dim, 0.9)  # écran derrière flouté sous un voile d'encre (bible § 2, UIK2)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(dim)
 	var cc := CenterContainer.new()

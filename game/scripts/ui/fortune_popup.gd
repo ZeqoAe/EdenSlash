@@ -36,7 +36,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	get_tree().paused = true
 	var dim := ColorRect.new()
-	dim.color = Color(0.02, 0.01, 0.05, 0.72)
+	UiTheme.veil(dim, 0.72)  # écran derrière flouté sous un voile d'encre (bible § 2, UIK2)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(dim)
 	var panel := PanelContainer.new()

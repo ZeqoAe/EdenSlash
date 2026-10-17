@@ -331,6 +331,9 @@ func is_open() -> bool:
 
 
 func open(section := "") -> void:
+	if not _root.visible:  # même ouverture que les écrans à pages (UIK2) : souffle, fondu, feuille en ressort
+		UiFeel.page_sound(true)
+		UiFeel.screen_in(_root, [_root.get_child(1), _root.get_child(2)])
 	_root.visible = true
 	if pause_game:
 		get_tree().paused = true
@@ -341,6 +344,7 @@ func close_ui() -> void:
 	if not is_open():
 		return
 	_root.visible = false
+	UiFeel.page_sound(false)
 	if pause_game:
 		get_tree().paused = false
 	closed.emit()

@@ -341,7 +341,7 @@ func _refresh_spells(c: String) -> void:
 		b.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.22, 0.16, 0.08, 1.0), UiTheme.GOLD, 2, 8, false))
 		if not ok:
 			b.modulate = Color(0.55, 0.55, 0.6)
-			b.text += "   🔒 maîtrise %d" % Progression.skill_level_of(c, int(s.id))
+			b.text += "\n🔒 maîtrise %d" % Progression.skill_level_of(c, int(s.id))  # condition sur sa ligne : jamais abrégée (UIK2)
 		var tip := SpellInfo.skill_bbcode(s, 1)
 		if s.get("shared", false):
 			tip = "[color=#9fd0ff]Sort partagé (classe d'origine)[/color]\n" + tip

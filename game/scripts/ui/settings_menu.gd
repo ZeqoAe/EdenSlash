@@ -738,20 +738,20 @@ func _section(parent: Control, text: String) -> void:
 		gap.custom_minimum_size = Vector2(0, 12)
 		parent.add_child(gap)
 	var l := _text(parent, text, 20, ACCENT)
-	l.add_theme_font_override("font", UiTheme.bold_font())
+	UiTheme.title(l, 20, UiTheme.color("bonbon.soleil.base"))  # en-tête de section : Mochiy soleil contouré (UIK2)
 	var line := ColorRect.new()
-	line.color = Color(UiTheme.GOLD_DIM, 0.45)
-	line.custom_minimum_size = Vector2(0, 1)
+	line.color = Color(UiTheme.color("encre.100"), 0.22)  # (plus de filet doré)
+	line.custom_minimum_size = Vector2(0, 2)
 	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(line)
 
 
 func _row_box(hot: bool) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(1, 1, 1, 0.06) if hot else Color(1, 1, 1, 0.0)
-	sb.border_color = Color(UiTheme.GOLD_DIM, 0.28)
+	sb.bg_color = Color(UiTheme.color("bonbon.lagon.base"), 0.14) if hot else Color(1, 1, 1, 0.0)  # survol : lagon (UIK2)
+	sb.border_color = Color(UiTheme.color("encre.100"), 0.14)
 	sb.border_width_bottom = 1
-	sb.set_corner_radius_all(4)
+	sb.set_corner_radius_all(10)
 	sb.content_margin_left = 14
 	sb.content_margin_right = 10
 	sb.content_margin_top = 4

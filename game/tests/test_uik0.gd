@@ -259,7 +259,9 @@ func _ready() -> void:
 	print("[uik0] UiFeel sur un écran de 300 nœuds : %.0f µs" % feel_us)
 	check("UiFeel : < 0,3 ms pour un écran de 300 nœuds", feel_us < 300.0)
 	var ci := RenderingServer.canvas_item_create()
+	UiTheme.legacy_boxes = true  # (UIK2 : flat_box est passé à la DA ; la mesure compare au bouton d'avant)
 	var old := UiTheme.flat_box(Color(0.14, 0.11, 0.24, 0.96), UiTheme.GOLD_DIM, 2, 8)  # bouton d'avant (0.1.256)
+	UiTheme.legacy_boxes = false
 	var draw_us := INF
 	var old_us := INF
 	for k in 5:

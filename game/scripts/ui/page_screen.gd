@@ -6,7 +6,9 @@ extends CanvasLayer
 ## l'ouverture et au changement d'onglet. Si elle a une méthode subtitle() -> String, le
 ## texte renvoyé remplace le sous-titre de l'écran tant que cette page est affichée.
 ## Ressenti (UiFeel) : onglets autocollants (variation « PageTab » du thème : l'actif en mandarine), contenu qui glisse
-## de 24 px dans le sens du changement d'onglet, fondu à l'ouverture.
+## de 24 px dans le sens du changement d'onglet ; à l'ouverture, fondu et feuille qui se pose en ressort (UIK2).
+## En partie (pause, Guide, Journal, marchand) : la scène floutée sous un voile d'encre derrière la feuille (bible § 2),
+## feuille en retrait sur un grand écran pour que le jeu se voie autour ; au menu principal, le fond clair du ciel.
 
 signal closed
 signal page_changed(index: int)
@@ -25,6 +27,10 @@ var _content: Control
 var _wallet: ItemWidgets.Wallet
 var _right: HBoxContainer
 var _current := 0
+var _bg: TextureRect  # fond clair (menu principal)
+var _blur: ColorRect  # scène floutée (en partie)
+var _frame: Panel  # feuille de papier
+var _sheet: VBoxContainer  # en-tête + pages, posé sur la feuille
 
 
 func _init(screen_title := "", layer_index := 20) -> void:
@@ -53,7 +59,16 @@ func _ready() -> void:
 	bg.stretch_mode = TextureRect.STRETCH_SCALE
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(bg)
+	_bg = bg
+	_blur = ColorRect.new()  # en partie : le jeu flouté derrière (UiTheme.blur_material), à la place du fond clair
+	_blur.color = Color.WHITE
+	_blur.material = UiTheme.blur_material()
+	_blur.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_blur.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_blur.visible = false
+	_root.add_child(_blur)
 	var frame := Panel.new()
+	_frame = frame
 	frame.set_anchors_preset(Control.PRESET_FULL_RECT)
 	frame.offset_left = 10
 	frame.offset_top = 10
@@ -71,6 +86,7 @@ func _ready() -> void:
 	v.offset_bottom = -22
 	v.add_theme_constant_override("separation", 10)
 	_root.add_child(v)
+	_sheet = v
 	# en-tête : titre, onglets, bourse, fermer
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 18)
@@ -173,7 +189,8 @@ func _fit_header() -> void:
 		b.remove_theme_font_override("font")
 	# l'en-tête ne déborde jamais (UIK1) : Mochiy (titres) est large ; si les onglets ne tiennent pas, ils passent en
 	# M PLUS Rounded 800, puis sans largeur minimale, puis en 14 px
-	var room := get_viewport().get_visible_rect().size.x - 56.0
+	_place_sheet(wide)
+	var room := get_viewport().get_visible_rect().size.x - 2.0 * (_frame.offset_left + 18.0)
 	var head := _tbox.get_parent() as Control
 	for step in 3:
 		if head == null or head.get_combined_minimum_size().x <= room:
@@ -184,6 +201,26 @@ func _fit_header() -> void:
 				b.custom_minimum_size.x = 0.0
 			if step >= 2:
 				b.add_theme_font_size_override("font_size", 14)
+
+
+## En partie, la scène floutée derrière la feuille ; sur un grand écran (≥ 1500 px), la feuille en retrait (34 / 22 px)
+## pour que le jeu se voie autour. À 1280 × 720 les marges restent de 10 px (les pages tiennent, shot_p1).
+func _place_sheet(wide: bool) -> void:
+	if _frame == null:
+		return
+	var in_game := Profile.in_run or pause_game
+	_blur.visible = in_game
+	_bg.visible = not in_game
+	var mx := 34.0 if in_game and wide else 10.0
+	var my := 22.0 if in_game and wide else 10.0
+	_frame.offset_left = mx
+	_frame.offset_right = -mx
+	_frame.offset_top = my
+	_frame.offset_bottom = -my
+	_sheet.offset_left = mx + 18.0
+	_sheet.offset_right = -(mx + 18.0)
+	_sheet.offset_top = my + 10.0
+	_sheet.offset_bottom = -(my + 12.0)
 
 
 ## Page suivante (+1) ou précédente (-1) : L1 / R1 (LB / RB) à la manette.
@@ -263,11 +300,8 @@ func is_open() -> bool:
 func open(i := -1) -> void:
 	if not _root.visible:
 		UiFeel.page_sound(true)
-	if not _root.visible and not UiFeel.reduce_motion:
-		_root.modulate.a = 0.0
-		var tw := _root.create_tween()
-		tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
-		tw.tween_property(_root, "modulate:a", 1.0, 0.12)
+		_fit_header()  # (fond flou ou clair selon qu'une partie est en cours)
+		UiFeel.screen_in(_root, [_frame, _sheet])  # fondu, feuille qui se pose en ressort (même geste que le Héros)
 	_root.visible = true
 	if pause_game:
 		get_tree().paused = true

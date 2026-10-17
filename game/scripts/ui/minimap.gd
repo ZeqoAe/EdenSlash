@@ -3,24 +3,24 @@ extends Control
 ## Mini-carte de la map générée : rendu du terrain, brouillard de guerre,
 ## lieux découverts, monstres, chemin vers le donjon. Grande carte avec [M].
 
-const ICONS := {
-	"merchant": Color(1.0, 1.0, 1.0),
-	"dungeon": Color(0.85, 0.35, 1.0),
-	"chest": Color(0.72, 0.88, 1.0),  # blanc bleuté, comme l'aura des coffres communs
-	"shrine": Color(0.55, 1.0, 0.6),
-	"anvil": Color(1.0, 0.6, 0.3),
-	"scribe": Color(0.6, 0.75, 1.0),
-	"well": Color(0.5, 1.0, 0.7),
-	"magnet": Color(0.3, 1.0, 0.95),
-	"greed": Color(1.0, 0.82, 0.3),
-	"fortune": Color(1.0, 0.6, 0.95),
-	"giant": Color(1.0, 0.38, 0.22),
-	"challenge": Color(1.0, 0.35, 0.3),
-	"chest1": Color(1.0, 0.45, 0.35),
-	"chest2": Color(1.0, 0.95, 0.4),
-	"fort": Color(1.0, 0.35, 0.25),
-	"drop": Color(1.0, 0.85, 0.35),  # Battle royale : largage
-	"bounty": Color(1.0, 0.3, 0.25),  # Battle royale : héros mis à prix
+const ICONS := {  # bonbons de la bible (lot UIK2) ; teintes gardées proches des repères du monde
+	"merchant": Color("fff8ec"),
+	"dungeon": Color("dc92ff"),  # améthyste clair
+	"chest": Color("ece8f4"),  # commun : lilas-gris clair, comme l'aura des coffres communs
+	"shrine": Color("c3f07a"),  # pomme clair
+	"anvil": Color("ffb566"),  # mandarine clair
+	"scribe": Color("86ddff"),  # lagon clair
+	"well": Color("8fd62e"),  # pomme
+	"magnet": Color("22b8f0"),  # lagon
+	"greed": Color("ffc928"),  # soleil
+	"fortune": Color("ff9db0"),  # fraise clair
+	"giant": Color("ff8a1f"),  # mandarine
+	"challenge": Color("ff4d6d"),  # fraise
+	"chest1": Color("ff4d6d"),  # coffre ouvragé (rouge dans le monde) : fraise
+	"chest2": Color("ffc928"),  # coffre doré : soleil
+	"fort": Color("ff4d6d"),
+	"drop": Color("ffe27a"),  # Battle royale : largage
+	"bounty": Color("ff4d6d"),  # Battle royale : héros mis à prix
 }
 ## Légende de la grande carte : [type, nom].
 const LEGEND := [["dungeon", "Donjon"], ["merchant", "Marchand"], ["shrine", "Sanctuaire"], ["fort", "Fort d'élite (sceau)"],
@@ -93,7 +93,7 @@ func _draw() -> void:
 	for p in director.route:
 		var sp: Vector2 = w2s.call(p)
 		if _inside(sp):
-			draw_circle(sp, 1.8, Color(1.0, 0.85, 0.35, 0.9))
+			draw_circle(sp, 1.8, Color(UiTheme.color("bonbon.soleil.clair"), 0.9))
 	# lieux connus (grande carte : icônes agrandies, elles sont petites sur 680 px)
 	var k := 1.5 if big else 1.0
 	for m in director.markers():
@@ -139,11 +139,11 @@ func _draw() -> void:
 		if not _inside(sp):
 			continue
 		if mo.is_boss:
-			draw_circle(sp, 5.5, Color(0.8, 0.3, 1.0))
+			draw_circle(sp, 5.5, UiTheme.color("bonbon.amethyste.base"))
 		elif mo.is_elite:
-			draw_circle(sp, 4.0, Color(1.0, 0.6, 0.15))
+			draw_circle(sp, 4.0, UiTheme.color("bonbon.mandarine.base"))
 		else:
-			draw_circle(sp, 2.3, Color(0.95, 0.25, 0.25))
+			draw_circle(sp, 2.3, UiTheme.color("bonbon.fraise.base"))
 	if Royale.active:
 		RoyaleMap.minimap_overlay(self, w2s)  # ligne vers la zone sûre, repère personnel (lot BR-I1)
 	# héros
@@ -153,7 +153,7 @@ func _draw() -> void:
 	var side := Vector2(-dir.y, dir.x)
 	draw_colored_polygon(PackedVector2Array([hp + dir * 8.0, hp - dir * 5.0 + side * 5.0, hp - dir * 2.0, hp - dir * 5.0 - side * 5.0]), Color.WHITE)
 	if not round:
-		draw_rect(Rect2(Vector2.ONE, size - Vector2.ONE * 2.0), Color(0.98, 0.78, 0.35, 0.8), false, 2.0)
+		draw_rect(Rect2(Vector2.ONE * 1.5, size - Vector2.ONE * 3.0), UiTheme.color("encre.700"), false, 3.0)  # contour d'encre (bible § 5)
 	if big:
 		_draw_legend()
 	if not big:

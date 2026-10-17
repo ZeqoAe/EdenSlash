@@ -14,7 +14,9 @@ extends RefCounted
 
 # --- couleurs historiques (API gardée ; valeurs rapprochées des jetons v2) -------------------------
 const GOLD := Color("ffc928")  # bonbon soleil (action, récompense)
-const GOLD_DIM := Color("c99a3c")
+## Ancien « or terni » des liserés et filets (76 usages) : depuis UIK2, le lilas d'encre 100 (bible § 3 : plus de liseré
+## or, filets et repères discrets en lilas ; une boîte flat_box à ce contour prend un contour d'encre).
+const GOLD_DIM := Color("c9bfea")
 const INK := Color("120c24")  # encre 900
 const PANEL_BG := Color(0.18, 0.141, 0.314, 0.94)  # encre 500
 const TEXT := Color("fff8ec")  # papier 100 (texte sur encre)
@@ -339,7 +341,7 @@ class StickerBox extends StyleBox:
 			var t := face.grow(-maxf(float(border) + 1.0, float(radius) * 0.45))
 			if t.size.x > 2.0 and t.size.y > 2.0:
 				RenderingServer.canvas_item_add_texture_rect(ci, t, UiTheme._dots.get_rid(), true, Color(ink, 0.9))
-		if gloss and face.size.x > 40.0 and face.size.y > 22.0:
+		if gloss and face.size.x > 40.0 and face.size.y >= 36.0:  # (UIK2 : sur une ligne basse, le trait mordait le texte)
 			var p := face.position + Vector2(float(border) + 7.0, float(border) + 3.0)
 			RenderingServer.canvas_item_add_set_transform(ci, Transform2D(deg_to_rad(-12.0), p))
 			_flat_gloss.draw(ci, Rect2(0, 0, minf(16.0, face.size.x * 0.12), 5.0))
@@ -902,22 +904,244 @@ static func panel_box(margin_h := 16, margin_v := 12) -> StyleBox:
 	return sb
 
 
+## Boîte des écrans d'avant la DA v2 (165 appels : tuiles, fiches, rangées, fenêtres, badges du HUD). Depuis UIK2, les
+## couleurs d'avant sont traduites dans la DA (bible § 2-5) sans toucher aux écrans : tuile autocollante d'encre
+## (da_fill, da_border) : fonds presque noirs → encre (plus claire que le puits où elle est posée), liseré or ou gris →
+## contour d'encre de 2-3 px, fond brun « choisi » → lagon contouré d'encre (sélection), coins arrondis (≥ 10), ombre
+## dure d'encre au lieu de l'ombre floue noire (aussi sous une tuile pleine : relief d'autocollant de 3 px). Les couleurs
+## vives (rareté, accent, jauges) sont gardées.
+## [member legacy_boxes] (essais, captures avant / après) rend les boîtes d'avant.
+static var legacy_boxes := false
+
+
 static func flat_box(bg: Color, border := GOLD_DIM, width := 2, radius := 8, shadow := true) -> StyleBoxFlat:
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = bg
-	sb.border_color = border
-	sb.set_border_width_all(width)
-	sb.set_corner_radius_all(radius)
 	sb.anti_aliasing = true
-	if shadow:
-		sb.shadow_color = Color(0, 0, 0, 0.45)
-		sb.shadow_size = 5
-		sb.shadow_offset = Vector2(0, 2)
 	sb.content_margin_left = 10
 	sb.content_margin_right = 10
 	sb.content_margin_top = 6
 	sb.content_margin_bottom = 6
+	if legacy_boxes:
+		sb.bg_color = bg
+		sb.border_color = border
+		sb.set_border_width_all(width)
+		sb.set_corner_radius_all(radius)
+		if shadow:
+			sb.shadow_color = Color(0, 0, 0, 0.45)
+			sb.shadow_size = 5
+			sb.shadow_offset = Vector2(0, 2)
+		return sb
+	var sel := _da_selected(bg)
+	var fill := da_fill(bg)
+	sb.bg_color = fill
+	var frame := shadow and radius >= 12 and border.is_equal_approx(GOLD)  # fenêtre à liseré or : contour d'encre
+	sb.border_color = da_border(border, fill, frame, sel)
+	var w := width
+	if width > 0 and border.a > 0.05:
+		w = 3 if width >= 2 or sel else 2  # contour d'encre : jamais sous 2 px (bible § 5)
+	sb.set_border_width_all(w)
+	sb.set_corner_radius_all(radius if radius < 6 else (radius + 4 if radius < 10 else maxi(radius, 14)))
+	if shadow and fill.a >= 0.8:
+		sb.shadow_color = Color(color("encre.900"), 0.9)  # ombre dure d'autocollant (décalée, sans flou)
+		sb.shadow_size = 1
+		sb.shadow_offset = Vector2(0, 4)
+	elif shadow:
+		sb.shadow_color = Color(color("encre.900"), 0.3)  # panneau léger posé sur la scène : ombre douce d'encre
+		sb.shadow_size = 6
+		sb.shadow_offset = Vector2(0, 3)
+	elif fill.a >= 0.85 and radius >= 6 and w >= 2:
+		sb.shadow_color = Color(color("encre.900"), 0.75)  # tuile, case, jauge : relief d'autocollant (bible § 5)
+		sb.shadow_size = 1
+		sb.shadow_offset = Vector2(0, 3)
 	return sb
+
+
+## Fond brun doré d'un élément « choisi » des écrans d'avant (onglet, classe, préréglage actif).
+static func _da_selected(c: Color) -> bool:
+	return c.a > 0.3 and c.h * 360.0 >= 22.0 and c.h * 360.0 <= 50.0 and c.s >= 0.55 and c.v >= 0.18 and c.v <= 0.62
+
+
+## Fond d'une boîte d'avant dans la DA : les fonds d'encre presque noirs passent à l'encre de la bible (plus clairs que le
+## puits d'encre 500 où la plupart sont posés ; l'écart entre repos et survol est gardé), un fond brun « choisi » passe au
+## lagon de la sélection (clair ou foncé selon le texte prévu dessus), un fond teinté sombre garde sa teinte sans être noir ;
+## couleurs vives, papier et jetons inchangés.
+static func da_fill(c: Color) -> Color:
+	if c.a <= 0.0 or c.is_equal_approx(Color(color("encre.500"), c.a)):
+		return c
+	if _da_selected(c):  # choisi : lagon (bible § 3) ; clair sous un texte foncé, foncé sous un texte clair
+		return Color(color("bonbon.lagon.base") if c.v >= 0.4 else color("bonbon.lagon.fonce"), maxf(c.a, 0.95))
+	if c.v > 0.45:
+		return c
+	var hue := c.h * 360.0
+	if c.s < 0.3 or (hue >= 200.0 and hue <= 300.0):  # encre (nuit bleutée, violette, gris sombre)
+		var t := clampf((c.v - 0.04) / 0.36, 0.0, 1.0)
+		return Color(Color("342a5c").lerp(Color("4c3f7d"), t), c.a)
+	if c.v < 0.24:  # teinte sombre (alerte, gain, or terni) : gardée, sans noir
+		return Color.from_hsv(c.h, minf(c.s, 0.6), 0.24 + c.v * 0.4, c.a)
+	return c
+
+
+## Contour d'une boîte d'avant : liseré or terni, gris, lilas ou blanc voilé → encre (900 sur fond sombre, 700 sur clair) ;
+## or vif d'un élément choisi → lagon (sélection, bible § 3) ; fenêtre à liseré or ([param frame]) → encre ; couleurs vives
+## (rareté, accent) gardées.
+static func da_border(b: Color, fill: Color, frame := false, selected := false) -> Color:
+	if b.a <= 0.05:
+		return b
+	var ink := color("encre.900") if fill.get_luminance() < 0.5 else color("encre.700")
+	if frame:
+		return ink
+	if selected:
+		return color("encre.700")  # le fond lagon dit déjà la sélection : contour d'encre
+	if b.v < 0.32:
+		return b  # déjà de l'encre
+	var hue := b.h * 360.0
+	var dull_gold := hue >= 25.0 and hue <= 55.0 and b.s >= 0.25 and (b.v < 0.86 or b.a < 0.9)
+	if dull_gold or b.s < 0.28:
+		return Color(ink, 1.0)
+	return b  # couleur vive (rareté, accent, famille) : gardée, même voilée
+
+
+# --- composants des pages intérieures (UIK2) ----------------------------------------------
+## En-tête de section d'une page (bible § 4 : titre de panneau) : Mochiy, soleil contouré d'encre, et à droite un
+## compteur (M PLUS 900) ; renvoie la rangée. Sur le papier, le titre garde son soleil contouré (meta ink_keep).
+static func section_header(parent: Control, text: String, counter := "", size := 24) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	parent.add_child(row)
+	var t := Label.new()
+	t.text = text
+	title(t, size, color("bonbon.soleil.base"))
+	t.set_meta("ink_keep", true)
+	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(t)
+	if counter != "":
+		var c := Label.new()
+		c.text = counter
+		c.add_theme_font_override("font", number_font())
+		c.add_theme_font_size_override("font_size", maxi(size - 4, MIN_TEXT))
+		c.add_theme_color_override("font_color", TEXT)
+		c.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(c)
+	return row
+
+
+## État vide (bible § 6) : une icône dans une tuile bonbon, une phrase, une action facultative ([param action] + [param cb]).
+## [param icon] : nom d'un pictogramme d'assets/ui/icons (« chest ») ou chemin res:// ; la phrase dit quoi faire.
+static func empty_state(parent: Control, text: String, icon := "", action := "", cb := Callable(), tone := "lagon") -> VBoxContainer:
+	var v := VBoxContainer.new()
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_theme_constant_override("separation", 12)
+	v.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	v.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	v.custom_minimum_size = Vector2(0, 220)
+	v.set_meta("empty_state", true)
+	parent.add_child(v)
+	if icon != "":
+		var tile := PanelContainer.new()
+		tile.add_theme_stylebox_override("panel", sticker(tone, {"shadow": 5, "radius": 18, "pad": Vector2(14, 12)}))
+		tile.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tile.rotation_degrees = -4.0  # étiquette collée (bible § 5)
+		tile.resized.connect(func(): tile.pivot_offset = tile.size * 0.5)
+		v.add_child(tile)
+		var tr := TextureRect.new()
+		tr.texture = texture(icon if icon.begins_with("res://") else "res://assets/ui/icons/%s.png" % icon)
+		tr.custom_minimum_size = Vector2(44, 44)
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tr.set_meta("ink_keep", true)
+		tile.add_child(tr)
+	var l := Label.new()
+	l.text = text
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.add_theme_font_override("font", label_font())
+	l.add_theme_font_size_override("font_size", 17)
+	l.add_theme_color_override("font_color", TEXT)
+	v.add_child(l)  # (largeur : celle de la colonne ; la phrase passe à la ligne)
+	if action != "" and cb.is_valid():
+		var b := Button.new()
+		b.text = action
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(0, 46)
+		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		style_button(b, "lagon", 17)
+		b.pressed.connect(cb)
+		v.add_child(b)
+	return v
+
+
+## Chargement (bible § 7-8 : calme, une seule chose bouge) : trois pastilles bonbon qui sautent l'une après l'autre et une
+## phrase ; immobiles avec « Réduire les animations ».
+class Loading extends HBoxContainer:
+	var _dots: Control
+	var _t := 0.0
+
+	func _init(text := "Chargement…") -> void:
+		add_theme_constant_override("separation", 12)
+		alignment = BoxContainer.ALIGNMENT_CENTER
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		process_mode = Node.PROCESS_MODE_ALWAYS
+		_dots = Control.new()
+		_dots.custom_minimum_size = Vector2(54, 22)
+		_dots.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_dots.draw.connect(_paint)
+		add_child(_dots)
+		var l := Label.new()
+		l.text = text
+		l.add_theme_font_override("font", UiTheme.label_font())
+		l.add_theme_font_size_override("font_size", 16)
+		l.add_theme_color_override("font_color", UiTheme.MUTED)
+		add_child(l)
+
+	func _process(delta: float) -> void:
+		if is_visible_in_tree() and not UiFeel.reduce_motion:
+			_t += delta
+			_dots.queue_redraw()
+
+	func _paint() -> void:
+		var cols := ["soleil", "lagon", "fraise"]
+		for i in 3:
+			var hop := 0.0 if UiFeel.reduce_motion else maxf(sin((_t * 2.2 - float(i) * 0.22) * TAU), 0.0) * 6.0
+			var p := Vector2(9.0 + 18.0 * float(i), 13.0 - hop)
+			_dots.draw_circle(p, 7.5, UiTheme.color("encre.700"))
+			_dots.draw_circle(p, 5.0, UiTheme.color("bonbon.%s.base" % cols[i]))
+
+
+static var _blur_shader: Shader
+
+
+## Fond flou de la scène sous une fenêtre (pause, choix de carte : bible § 2, le jeu reste visible derrière, jamais de
+## fond noir plein) : matériau d'un ColorRect plein écran qui lit l'écran, le floute (niveau de mip [param lod]) et pose
+## un voile [param veil] (par défaut le voile des fenêtres, monde.voile-modale). Ne coûte qu'un rectangle par image.
+static func blur_material(veil := Color(0, 0, 0, -1.0), lod := 2.6) -> ShaderMaterial:
+	if _blur_shader == null:
+		_blur_shader = Shader.new()
+		_blur_shader.code = """shader_type canvas_item;
+uniform sampler2D screen_tex : hint_screen_texture, filter_linear_mipmap;
+uniform vec4 veil : source_color = vec4(0.133, 0.102, 0.227, 0.55);
+uniform float lod = 2.6;
+void fragment() {
+	vec3 c = textureLod(screen_tex, SCREEN_UV, lod).rgb;
+	COLOR = vec4(mix(c, veil.rgb, veil.a), 1.0);
+}
+"""
+	var m := ShaderMaterial.new()
+	m.shader = _blur_shader
+	var v := veil if veil.a >= 0.0 else color("monde.voile-modale", Color(0.133, 0.102, 0.227, 0.55))
+	m.set_shader_parameter("veil", v)
+	m.set_shader_parameter("lod", lod)
+	return m
+
+
+## Voile d'une fenêtre posée sur l'écran (confirmation, choix de classe, autel…) : l'écran derrière flouté sous un voile
+## d'encre (au lieu d'un rectangle presque noir) ; [param alpha] = force du voile d'avant, ramenée à 0,7 au plus pour que
+## l'écran se devine. Le rectangle garde ses clics (un clic à côté ferme toujours).
+static func veil(dim: ColorRect, alpha := 0.55) -> ColorRect:
+	dim.color = Color.WHITE
+	dim.material = blur_material(Color(color("encre.700"), clampf(alpha * 0.8, 0.35, 0.7)))
+	return dim
 
 
 ## Textures générées une fois : trame de points (désactivé), bouton rond des curseurs de réglage.

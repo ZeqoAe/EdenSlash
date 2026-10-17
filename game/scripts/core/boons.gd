@@ -20,10 +20,10 @@ extends RefCounted
 ## elles (WeaponAttacks : « Grandit avec »).
 
 const RARITY := {
-	"common": {"name": "Commune", "color": Color(0.85, 0.85, 0.88), "weight": 1.0},
-	"rare": {"name": "Rare", "color": Color(0.4, 0.7, 1.0), "weight": 0.6},
-	"epic": {"name": "Épique", "color": Color(0.78, 0.45, 1.0), "weight": 0.3},
-	"legendary": {"name": "Légendaire", "color": Color(1.0, 0.6, 0.15), "weight": 0.9},
+	"common": {"name": "Commune", "color": Color("d9d4e4"), "weight": 1.0},
+	"rare": {"name": "Rare", "color": Color("22b8f0"), "weight": 0.6},
+	"epic": {"name": "Épique", "color": Color("c46bf5"), "weight": 0.3},
+	"legendary": {"name": "Légendaire", "color": Color("ffc928"), "weight": 0.9},
 }
 
 const LIST := [

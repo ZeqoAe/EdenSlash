@@ -200,12 +200,16 @@ func refresh() -> void:
 func _empty_state() -> void:
 	var ic := TextureRect.new()
 	ic.texture = ResourceHelp.icon("plan")
-	ic.custom_minimum_size = Vector2(72, 72)
+	ic.custom_minimum_size = Vector2(48, 48)
 	ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	ic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	ic.modulate = Color(1, 1, 1, 0.55)
-	_banner.add_child(ic)
+	var tile := PanelContainer.new()  # état vide de la DA (UIK2, comme UiTheme.empty_state) : l'icône dans une tuile bonbon collée
+	tile.add_theme_stylebox_override("panel", UiTheme.sticker("lagon", {"shadow": 5, "radius": 18, "pad": Vector2(14, 12)}))
+	tile.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	tile.rotation_degrees = -4.0
+	tile.resized.connect(func(): tile.pivot_offset = tile.size * 0.5)
+	tile.add_child(ic)
+	_banner.add_child(tile)
 	var t := Hud._label(_banner, "Aucun plan pour l'instant", 22, UiTheme.GOLD)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var sub := "Bats un boss de donjon : son plan tombe à la première victoire." if Unlocks.is_open("dungeons") else Unlocks.condition("dungeons")

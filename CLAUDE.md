@@ -314,6 +314,11 @@ captures `tests/shot_hub1.tscn`. `records.news` / `last_activity` = état de men
   `python tools/art/snd_synth.py [--preview]`, planche `conception/art/snd/index.md`), noms `ui_*` de `Sfx.UI` (liste = variantes,
   `Sfx.reward(rareté)`), même sonie pour tous : le dB de l'appel fait la hiérarchie (`UiFeel.SOUNDS`) ; aucun son d'un autre jeu ; test `test_snd1`.
   Branchés (SND-2, `R_SND2.md`) : bilans par `ResultsPanel.moments` (victoire / défaite douce, record, étoile, butin par rareté, niveau de héros), coffres, forge, compte à rebours du duel, coup reçu léger (`Hud.HIT_*`), or de vente ; `UiFeel.cue` / `cue_later` / `reward_cue`, compteur `Sfx.played` ; test `test_snd2`.
+- **Finitions de la DA** (UIK2, `conception/art/R_UIK2.md`) : `UiTheme.flat_box` traduit les boîtes d'avant dans la DA (`da_fill` /
+  `da_border` : fonds d'encre, contour d'encre, choisi = lagon ; `legacy_boxes` pour comparer), `GOLD_DIM` = lilas ; composants
+  `UiTheme.section_header`, `empty_state`, `Loading` ; fond flou `UiTheme.blur_material` / `veil` (pause et écrans à pages en partie,
+  choix de carte, confirmations) ; `UiFeel.screen_in` (ouverture), `number` (nombres qui défilent), rangées « row » ; `slide_in` glisse par
+  les marges d'ancrage ; raretés des cartes, passifs, coffres et mini-carte = `Items.RARITIES`. Test `test_uik2`, captures `shot_uik2`.
 - Rapports : `R_U1` à `R_U10`, `R_P1`, `R_P3`, `R_P8`.
 
 ### Outils de mesure et de test

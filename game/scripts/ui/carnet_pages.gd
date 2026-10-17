@@ -123,14 +123,9 @@ class ScrollPage extends VBoxContainer:
 	func built() -> void:
 		_sig = _sig_next
 
-	## En-tête de page : titre à gauche, compteur doré à droite.
+	## En-tête de page : titre à gauche (Mochiy soleil contouré), compteur à droite (UiTheme.section_header, UIK2).
 	func heading(text: String, counter: String) -> void:
-		var row := HBoxContainer.new()
-		_box.add_child(row)
-		var t := Hud._label(row, text, 28, UiTheme.GOLD)
-		t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		if counter != "":
-			Hud._label(row, counter, 26, UiTheme.TEXT)
+		UiTheme.section_header(_box, text, counter, 26)
 
 	func bar(label: String, got: int, total: int, detail := "") -> void:
 		var row := HBoxContainer.new()
@@ -154,13 +149,9 @@ class ScrollPage extends VBoxContainer:
 		pb.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		return pb
 
-	## Message d'une page vide (état utile : dit quoi faire).
-	func empty(text: String) -> void:
-		var l := Hud._label(_box, text, 16, UiTheme.MUTED)
-		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.custom_minimum_size = Vector2(0, 240)
-		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	## Message d'une page vide (état utile : dit quoi faire) : icône dans une tuile bonbon, phrase (UiTheme.empty_state, UIK2).
+	func empty(text: String, icon := "collection") -> void:
+		UiTheme.empty_state(_box, text, icon).custom_minimum_size = Vector2(0, 240)
 
 	## Grille de deux colonnes de fiches.
 	func cards_grid() -> GridContainer:
@@ -360,8 +351,17 @@ class AchievementsPage extends ScrollPage:
 		Hud._label(top, "★" if own else "☆", 20, UiTheme.GOLD if own else UiTheme.MUTED)
 		var name_l := Hud._label(top, String(a.name), 17, UiTheme.GOLD if own else UiTheme.TEXT)
 		name_l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_l.clip_text = true  # (UIK2 : un nom et un titre longs ne poussent plus la grille hors de l'écran à 1280 px)
+		name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		name_l.size_flags_stretch_ratio = 1.6
 		if String(a.title) != "":
-			Hud._label(top, "titre « %s »" % a.title, 13, UiTheme.MUTED)
+			var tl := Hud._label(top, "titre « %s »" % a.title, 13, UiTheme.MUTED)
+			tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			tl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			tl.clip_text = true
+			tl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			tl.tooltip_text = tl.text
+			tl.mouse_filter = Control.MOUSE_FILTER_PASS
 		var d := Hud._label(v, String(a.desc), 14, UiTheme.MUTED)
 		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		if own:

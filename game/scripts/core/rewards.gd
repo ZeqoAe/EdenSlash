@@ -13,20 +13,22 @@ extends RefCounted
 ## l'activité qui les donne (parchemins, pierres, gemmes ou formules d'enchantement).
 
 ## [code]icon[/code] : pastille de la liste (menu Coffres), pour reconnaître un type sans se fier à sa seule couleur.
+## Couleurs : code des raretés de la bible (lot UIK2 : commun lilas-gris, spécial pomme, rare lagon, mythique mandarine,
+## légendaire soleil).
 const TYPES := {
-	"gear": {"name": "Coffre d'équipement", "desc": "Un objet mythique, parfois légendaire.", "color": Color(1.0, 0.55, 0.15), "icon": "weapon"},
-	"forge": {"name": "Coffre de forge", "desc": "Parchemins, pierres, ciseaux et cristaux.", "color": Color(0.85, 0.85, 0.9), "icon": "upgrade"},
-	"jewel": {"name": "Coffre de joaillier", "desc": "Gemmes et formules d'enchantement.", "color": Color(0.42, 0.9, 0.42), "icon": "gem"},
-	"set": {"name": "Coffre de set", "desc": "3 pièces d'un même set : tu en gardes une.", "color": Color(1.0, 0.84, 0.25), "icon": "armor"},
+	"gear": {"name": "Coffre d'équipement", "desc": "Un objet mythique, parfois légendaire.", "color": Color("ff8a1f"), "icon": "weapon"},
+	"forge": {"name": "Coffre de forge", "desc": "Parchemins, pierres, ciseaux et cristaux.", "color": Color("d9d4e4"), "icon": "upgrade"},
+	"jewel": {"name": "Coffre de joaillier", "desc": "Gemmes et formules d'enchantement.", "color": Color("8fd62e"), "icon": "gem"},
+	"set": {"name": "Coffre de set", "desc": "3 pièces d'un même set : tu en gardes une.", "color": Color("ffc928"), "icon": "armor"},
 	# coffres d'apparence (boss de Survie, paliers de la Tour) : une apparence au hasard, jamais
 	# un doublon ; leur qualité fixe la rareté de l'apparence
-	"look_common": {"name": "Coffre d'apparence commun", "desc": "Une apparence commune ou spéciale.", "color": Color(0.75, 0.8, 0.9), "icon": "collection"},
-	"look_rare": {"name": "Coffre d'apparence rare", "desc": "Une apparence rare ou épique.", "color": Color(0.4, 0.65, 1.0), "icon": "collection"},
-	"look_epic": {"name": "Coffre d'apparence mythique", "desc": "Une apparence mythique.", "color": Color(1.0, 0.55, 0.15), "icon": "collection"},
-	"look_legend": {"name": "Coffre d'apparence légendaire", "desc": "Une apparence légendaire.", "color": Color(1.0, 0.86, 0.3), "icon": "collection"},
+	"look_common": {"name": "Coffre d'apparence commun", "desc": "Une apparence commune ou spéciale.", "color": Color("d9d4e4"), "icon": "collection"},
+	"look_rare": {"name": "Coffre d'apparence rare", "desc": "Une apparence rare ou épique.", "color": Color("22b8f0"), "icon": "collection"},
+	"look_epic": {"name": "Coffre d'apparence mythique", "desc": "Une apparence mythique.", "color": Color("ff8a1f"), "icon": "collection"},
+	"look_legend": {"name": "Coffre d'apparence légendaire", "desc": "Une apparence légendaire.", "color": Color("ffc928"), "icon": "collection"},
 	# coffres d'auras (Panthéon) : une aura de la collection que tu n'as pas
-	"aura_rare": {"name": "Coffre d'aura rare", "desc": "Une aura rare.", "color": Color(0.45, 0.8, 1.0), "icon": "new"},
-	"aura_legend": {"name": "Coffre d'aura légendaire", "desc": "Une aura légendaire.", "color": Color(1.0, 0.7, 0.95), "icon": "new"},
+	"aura_rare": {"name": "Coffre d'aura rare", "desc": "Une aura rare.", "color": Color("22b8f0"), "icon": "new"},
+	"aura_legend": {"name": "Coffre d'aura légendaire", "desc": "Une aura légendaire.", "color": Color("ffc928"), "icon": "new"},
 }
 ## Plancher des pièces mythiques d'Eden (niveau 20-23) : un coffre d'équipement ne donne pas de pièce au-delà de
 ## max(son niveau, ce plancher) + 5.

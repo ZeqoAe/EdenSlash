@@ -11,10 +11,11 @@ extends CanvasLayer
 
 signal picked(card: Dictionary)
 
-const ACCENT := Color(0.98, 0.78, 0.35)
-## Couleur des cartes sans rareté (nouveau sort, enchaînement) : un vert menthe que ni le bleu rare, ni le violet épique,
-## ni l'orange légendaire ne confondent. Les autres cartes portent la couleur de leur rareté.
-const TYPE_COLORS := {"skill": Color(0.35, 0.95, 0.72), "chain": Color(0.55, 0.98, 0.85), "upgrade": Color(0.85, 0.85, 0.88), "weapon_up": Color(0.85, 0.85, 0.88), "passive": Color(0.85, 0.85, 0.88)}
+const ACCENT := Color("ffc928")  # soleil (bible § 3)
+## Couleur des cartes sans rareté (nouveau sort, enchaînement) : la pomme des gains (bible § 3), que ni le lagon rare, ni
+## l'améthyste épique, ni le soleil légendaire ne confondent. Les autres cartes portent la couleur de leur rareté
+## (Cards.TIERS, Boons.RARITY : code des icônes du jeu, lot UIK2) ; sans rareté : le lilas-gris du commun.
+const TYPE_COLORS := {"skill": Color("8fd62e"), "chain": Color("c3f07a"), "upgrade": Color("d9d4e4"), "weapon_up": Color("d9d4e4"), "passive": Color("d9d4e4")}
 const CONFIRM_DELAY_MS := 300  # cartes inertes juste après l'ouverture (clics en rafale)
 const VEIL_ALPHA := 0.45  # opacité des cartes pendant ce délai
 const MAX_STATS := 4  # lignes de statistiques d'une pièce (hors comparaison, set et passif)
@@ -62,7 +63,8 @@ func _ready() -> void:
 	_root = Control.new()
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var dim := ColorRect.new()
-	dim.color = Color(0.02, 0.01, 0.05, 0.72)
+	dim.color = Color.WHITE
+	dim.material = UiTheme.blur_material()  # le jeu flouté sous un voile d'encre, jamais de fond noir plein (bible § 2, UIK2)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(dim)
 	var center := CenterContainer.new()  # le bloc est centré quelle que soit la hauteur de l'écran (720 p compris)
@@ -88,24 +90,11 @@ func _ready() -> void:
 	_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_row.add_theme_constant_override("separation", 28)
 	v.add_child(_row)
-	var cd := StyleBoxFlat.new()
-	cd.bg_color = Color(0.2, 0.18, 0.28, 0.9)
-	cd.set_corner_radius_all(10)
 	_reroll = Button.new()
 	_reroll.custom_minimum_size = Vector2(200, 56)
 	_reroll.focus_mode = Control.FOCUS_NONE
 	_reroll.add_theme_font_size_override("font_size", 18)
-	var rs := StyleBoxFlat.new()
-	rs.bg_color = Color(0.16, 0.13, 0.26, 0.95)
-	rs.border_color = Color(0.6, 0.55, 0.85)
-	rs.set_border_width_all(2)
-	rs.set_corner_radius_all(10)
-	_reroll.add_theme_stylebox_override("normal", rs)
-	var rh := rs.duplicate() as StyleBoxFlat
-	rh.bg_color = Color(0.26, 0.2, 0.4)
-	_reroll.add_theme_stylebox_override("hover", rh)
-	_reroll.add_theme_stylebox_override("pressed", rh)
-	_reroll.add_theme_stylebox_override("disabled", cd)
+	UiTheme.style_button(_reroll, "lagon", 18)  # action douce autocollante (bible § 6)
 	_reroll.pressed.connect(_do_reroll)
 	_shared = RichTextLabel.new()
 	_shared.bbcode_enabled = true
@@ -360,16 +349,21 @@ func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 	b.custom_minimum_size = Vector2(320, 380)
 	b.focus_mode = Control.FOCUS_NONE
 	b.pivot_offset = b.custom_minimum_size * 0.5
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.09, 0.08, 0.15, 0.97)
+	var sb := StyleBoxFlat.new()  # carte d'encre bordée de sa rareté, ombre dure d'autocollant (bible § 5, UIK2)
+	sb.bg_color = Color(UiTheme.color("encre.500"), 0.98)
 	sb.border_color = col
-	sb.set_border_width_all(3)
-	sb.set_corner_radius_all(14)
+	sb.set_border_width_all(4)
+	sb.set_corner_radius_all(16)
+	sb.anti_aliasing = true
+	sb.shadow_color = Color(UiTheme.color("encre.900"), 0.9)
+	sb.shadow_size = 1
+	sb.shadow_offset = Vector2(0, 6)
 	if String(card.get("tier", "common")) in ["rare", "epic", "legendary"]:
 		sb.shadow_color = Color(col, 0.38)  # les cartes rares et mieux brillent
 		sb.shadow_size = 12
+		sb.shadow_offset = Vector2.ZERO
 	var hover := sb.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.16, 0.13, 0.25, 1.0)
+	hover.bg_color = Color("41356c")
 	hover.set_border_width_all(5)
 	b.add_theme_stylebox_override("normal", sb)
 	b.add_theme_stylebox_override("hover", hover)
@@ -420,7 +414,7 @@ func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 	badge.add_theme_font_size_override("font_size", 18)
 	badge.add_theme_font_override("font", UiTheme.bold_font())
 	badge.add_theme_color_override("font_color", Color(0.06, 0.04, 0.1))
-	badge.add_theme_stylebox_override("normal", UiTheme.flat_box(col, col.lightened(0.3), 1, 15, false))
+	badge.add_theme_stylebox_override("normal", UiTheme.flat_box(col, UiTheme.color("encre.700"), 2, 15, false))
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	top.add_child(badge)
 	var key := Label.new()
@@ -430,7 +424,7 @@ func _make_card(card: Dictionary, i: int, desc: String) -> Button:
 	key.add_theme_font_size_override("font_size", 17)
 	key.add_theme_font_override("font", UiTheme.bold_font())
 	key.add_theme_constant_override("outline_size", 4)
-	key.add_theme_color_override("font_outline_color", Color(0.04, 0.02, 0.08, 0.9))
+	key.add_theme_color_override("font_outline_color", UiTheme.color("encre.900"))
 	key.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	key.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	key.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -553,8 +547,38 @@ func _choose(i: int) -> void:
 	Run.kept = Run.kept.filter(func(k): return not (String(k.type) == String(card.type) and str(k.id) == str(card.id)))
 	Run.apply_card(card)
 	Sfx.ui("confirm", -3.0)
+	_fly_out(i)
 	picked.emit(card)
 	_show_next()
+
+
+## Carte choisie (bible § 7) : elle grossit en ressort (1,12) puis s'efface en montant, par-dessus le choix suivant ;
+## purement visuel (la carte est déjà prise), coupé par « Réduire les animations » et sans écran (tests).
+func _fly_out(i: int) -> void:
+	if UiFeel.reduce_motion or DisplayServer.get_name() == "headless" or i < 0 or i >= _buttons.size() or not is_instance_valid(_buttons[i]):
+		return
+	var b: Control = _buttons[i]
+	if not b.is_inside_tree():
+		return
+	var over := CanvasLayer.new()
+	over.layer = layer + 1
+	over.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(over)
+	var at := b.get_global_transform_with_canvas().origin
+	b.reparent(over, false)
+	b.position = at
+	b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	b.set_meta("ui_feel", "off")
+	var uf: Variant = b.get_meta("_uf_tw") if b.has_meta("_uf_tw") else null
+	if uf is Tween:
+		(uf as Tween).kill()  # le rebond du relâchement (UiFeel) laisse la place
+	b.pivot_offset = b.size * 0.5
+	var tw := over.create_tween()
+	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.tween_property(b, "scale", Vector2.ONE * 1.12, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.tween_property(b, "position:y", at.y - 60.0, 0.22).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tw.parallel().tween_property(b, "modulate:a", 0.0, 0.22)
+	tw.tween_callback(over.queue_free)
 
 
 ## Choix automatique (aide au combat « Bot », pilote automatique --autoplay) : jamais d'écran laissé ouvert.

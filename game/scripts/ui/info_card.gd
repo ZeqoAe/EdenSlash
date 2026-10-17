@@ -480,7 +480,7 @@ class Ask extends CanvasLayer:
 		_root.modulate.a = 0.0
 		add_child(_root)
 		var dim := ColorRect.new()
-		dim.color = Color(0.02, 0.01, 0.05, 0.55)
+		UiTheme.veil(dim, 0.55)  # écran derrière flouté sous un voile d'encre (bible § 2, UIK2)
 		dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 		dim.gui_input.connect(func(ev: InputEvent):
 			if ev is InputEventMouseButton and ev.pressed:

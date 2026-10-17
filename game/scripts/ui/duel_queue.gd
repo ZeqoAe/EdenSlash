@@ -473,8 +473,7 @@ func _build_recap() -> void:
 	_bar.add_theme_stylebox_override("fill", UiTheme.flat_box(Color(0.4, 0.8, 0.5), Color(0.6, 1.0, 0.7), 1, 6, false))
 	_bar.add_theme_stylebox_override("background", UiTheme.flat_box(Color(0.06, 0.05, 0.1), UiTheme.GOLD_DIM, 1, 6, false))
 	_body.add_child(_bar)
-	var pl := Hud._label(_body, "Chargement de l'arène et des effets des deux héros…", 14, UiTheme.MUTED)
-	pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_body.add_child(UiTheme.Loading.new("Chargement de l'arène et des effets des deux héros…"))  # pastilles qui sautent (UIK2)
 	var c := CenterContainer.new()
 	_body.add_child(c)
 	var ready := MenuWidgets.gold_button("Prêt", 20, Vector2(240, 46))

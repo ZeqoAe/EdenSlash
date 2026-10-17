@@ -88,7 +88,7 @@ func _ready() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
 	var dim := ColorRect.new()
-	dim.color = Color(0.02, 0.01, 0.05, 0.85)
+	UiTheme.veil(dim, 0.85)  # écran derrière flouté sous un voile d'encre (bible § 2, UIK2)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	dim.gui_input.connect(func(e):
 		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:

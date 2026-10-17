@@ -129,12 +129,7 @@ static func action_button(parent: Control, text: String, cb: Callable, min_w := 
 	b.custom_minimum_size = Vector2(min_w, 44)
 	b.add_theme_font_size_override("font_size", 17)
 	if accent:
-		var sb := UiTheme.flat_box(Color(0.42, 0.28, 0.08, 1.0), UiTheme.GOLD, 2, 8)
-		var hv := UiTheme.flat_box(Color(0.55, 0.37, 0.1, 1.0), Color(1, 0.9, 0.6), 2, 8)
-		b.add_theme_stylebox_override("normal", sb)
-		b.add_theme_stylebox_override("hover", hv)
-		b.add_theme_stylebox_override("pressed", hv)
-		b.add_theme_color_override("font_color", Color(1, 0.95, 0.85))
+		UiTheme.style_button(b, "lagon", 17)  # action mise en avant : autocollant lagon (bible § 6 : action douce ; le soleil reste au primaire de l'écran)
 	b.pressed.connect(cb)
 	parent.add_child(b)
 	return b
@@ -271,9 +266,12 @@ class Wallet extends HBoxContainer:
 			_labels[k] = l
 
 	func refresh() -> void:
-		for k in _labels:
-			var n := Profile.amount(k)
-			_labels[k].text = "%d %s" % [n, {"gold": "or", "keys": "clé" if n < 2 else "clés", "crystal": "cristal" if n < 2 else "cristaux"}[k]]
+		for k in _labels:  # un montant qui change défile jusqu'à sa nouvelle valeur (UiFeel.number, UIK2)
+			UiFeel.number(_labels[k], float(Profile.amount(k)), _fmt.bind(String(k)))
+
+	static func _fmt(x: float, k: String) -> String:
+		var n := roundi(x)
+		return "%d %s" % [n, {"gold": "or", "keys": "clé" if n < 2 else "clés", "crystal": "cristal" if n < 2 else "cristaux"}[k]]
 
 
 ## Carte d'infobulle riche (texte BBCode, cadre de couleur).
@@ -417,17 +415,25 @@ class ItemSlot extends Button:
 		var r := Rect2(Vector2.ZERO, size)
 		var col: Color = Items.color_of(item) if not item.is_empty() else Color(0.35, 0.3, 0.25)
 		var req := HeroLevel.wear_block(item) if wear_check else 0  # niveau de héros requis (0 : portable)
+		# case autocollante (bible § 5, UIK2) : contour d'encre, bord de la rareté, fond d'encre (plus de fond noir) ;
+		# choisie : bord lagon et lueur lagon (sélection) ; vide : bord d'encre clair
+		var ink := StyleBoxFlat.new()
+		ink.bg_color = UiTheme.color("encre.900")
+		ink.set_corner_radius_all(12)
+		ink.anti_aliasing = true
 		var bg := StyleBoxFlat.new()
-		bg.bg_color = Color(0.06, 0.05, 0.1, 0.95) if not is_hovered() else Color(0.13, 0.1, 0.2, 1.0)
+		bg.anti_aliasing = true
+		bg.bg_color = UiTheme.color("encre.500") if not is_hovered() else Color("41356c")
 		if req > 0:
 			bg.bg_color = ItemWidgets.LOCK_BG if not is_hovered() else ItemWidgets.LOCK_BG.lightened(0.12)
-		bg.border_color = UiTheme.GOLD if selected else (col if not item.is_empty() else Color(0.3, 0.26, 0.2, 0.8))
-		bg.set_border_width_all(3 if selected else 2)
-		bg.set_corner_radius_all(8)
+		bg.border_color = UiTheme.color("bonbon.lagon.base") if selected else (col if not item.is_empty() else UiTheme.color("encre.300"))
+		bg.set_border_width_all(3 if selected or not item.is_empty() else 2)
+		bg.set_corner_radius_all(10)
 		if selected:
-			bg.shadow_color = Color(UiTheme.GOLD, 0.5)
-			bg.shadow_size = 8
-		draw_style_box(bg, r)
+			ink.shadow_color = Color(UiTheme.color("bonbon.lagon.base"), 0.55)
+			ink.shadow_size = 8
+		draw_style_box(ink, r)
+		draw_style_box(bg, r.grow(-2.0))
 		if item.is_empty():
 			var gt := UiTheme.texture(ghost) if ghost != "" else null
 			if gt:
@@ -552,8 +558,11 @@ class ItemGrid extends VBoxContainer:
 		_grid.add_theme_constant_override("h_separation", 6)
 		_grid.add_theme_constant_override("v_separation", 6)
 		scroll.add_child(_grid)
-		_empty = Hud._label(self, "", 14, UiTheme.MUTED)
-		_empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var none := UiTheme.empty_state(self, "", "collection")  # état vide illustré (UIK2) : icône, phrase
+		none.custom_minimum_size = Vector2.ZERO
+		none.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		none.visible = false
+		_empty = none.get_child(none.get_child_count() - 1) as Label
 
 	func _option(parent: Control, labels: Array) -> OptionButton:
 		var o := OptionButton.new()
@@ -647,7 +656,7 @@ class ItemGrid extends VBoxContainer:
 				_grid.add_child(e)
 		_count.text = "%s%s" % [GearPower.plural(_shown.size(), "objet"), (" · %s" % GearPower.plural(_selection.size(), "sélectionné", "sélectionnés")) if multi and not _selection.is_empty() else ""]
 		_empty.text = _empty_text if _items.is_empty() else ""
-		_empty.visible = _items.is_empty()
+		(_empty.get_parent() as Control).visible = _items.is_empty()
 
 	func _sort_key(it: Dictionary, key: int) -> float:
 		match key:

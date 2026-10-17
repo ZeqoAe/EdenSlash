@@ -28,10 +28,19 @@ func _init() -> void:
 	refresh()
 
 
+## Un montant qui change (achat, fabrication) défile jusqu'à sa nouvelle valeur (UiFeel.number, UIK2).
 func refresh() -> void:
-	var c := Profile.amount("crystal")
-	_insignia.text = "%s insignes" % GearPower.fmt(Profile.insignia)
-	_crystals.text = "%s %s" % [GearPower.fmt(c), "cristal" if c < 2 else "cristaux"]
+	UiFeel.number(_insignia, float(Profile.insignia), _fmt_insignia)
+	UiFeel.number(_crystals, float(Profile.amount("crystal")), _fmt_crystals)
+
+
+static func _fmt_insignia(x: float) -> String:
+	return "%s insignes" % GearPower.fmt(roundi(x))
+
+
+static func _fmt_crystals(x: float) -> String:
+	var c := roundi(x)
+	return "%s %s" % [GearPower.fmt(c), "cristal" if c < 2 else "cristaux"]
 
 
 func _process(delta: float) -> void:

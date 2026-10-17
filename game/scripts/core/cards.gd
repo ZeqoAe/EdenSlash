@@ -11,10 +11,10 @@ extends RefCounted
 const MAX_LEVEL := 10
 ## Raretés tirées : nom, couleur, multiplicateur des bonus, poids du tirage.
 const TIERS := {
-	"common": {"name": "Commune", "color": Color(0.85, 0.85, 0.88), "mult": 1.0, "weight": 60.0},
-	"rare": {"name": "Rare", "color": Color(0.4, 0.7, 1.0), "mult": 1.5, "weight": 27.0},
-	"epic": {"name": "Épique", "color": Color(0.78, 0.45, 1.0), "mult": 2.2, "weight": 10.0},
-	"legendary": {"name": "Légendaire", "color": Color(1.0, 0.6, 0.15), "mult": 3.0, "weight": 3.0},
+	"common": {"name": "Commune", "color": Color("d9d4e4"), "mult": 1.0, "weight": 60.0},
+	"rare": {"name": "Rare", "color": Color("22b8f0"), "mult": 1.5, "weight": 27.0},
+	"epic": {"name": "Épique", "color": Color("c46bf5"), "mult": 2.2, "weight": 10.0},
+	"legendary": {"name": "Légendaire", "color": Color("ffc928"), "mult": 3.0, "weight": 3.0},
 }
 const TIER_ORDER := ["common", "rare", "epic", "legendary"]
 ## Améliorations de sort (par carte commune, × rareté) : dégâts, recharge, soins, durée des

@@ -10,7 +10,7 @@ static func open(anchor: Node, on_close: Callable) -> CanvasLayer:
 	var layer := CanvasLayer.new()
 	layer.layer = 60
 	var dim := ColorRect.new()
-	dim.color = Color(0.02, 0.01, 0.05, 0.7)
+	UiTheme.veil(dim, 0.7)  # écran derrière flouté sous un voile d'encre (bible § 2, UIK2)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	layer.add_child(dim)
 	var panel := PanelContainer.new()

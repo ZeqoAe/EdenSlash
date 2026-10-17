@@ -187,7 +187,9 @@ func _enter(c: Control, from_pad: bool) -> void:
 	if c is BaseButton and (c as BaseButton).toggle_mode:
 		_prepare_toggle(c as BaseButton)
 	var k := kind_of(c)
-	if k != "toggle":
+	if k == "row":
+		_row_hot(c, true)  # rangée : elle s'éclaire, rien ne bouge (UIK2)
+	elif k != "toggle":
 		var a := _amp(c)
 		_anim(c, Vector2.ONE * (1.0 + a), UiTheme.dur("survol-entree"), Tween.TRANS_BACK, Tween.EASE_OUT, -1.0 if k == "card" else 0.0)
 	_sound("focus" if from_pad else "hover")
@@ -196,7 +198,20 @@ func _enter(c: Control, from_pad: bool) -> void:
 func _exit(c: Control) -> void:
 	if _off(c) or (c == _focused and UiNav.shown):
 		return
+	if kind_of(c) == "row":
+		_row_hot(c, false)
 	_anim(c, Vector2.ONE, UiTheme.dur("survol-sortie"), Tween.TRANS_CUBIC, Tween.EASE_OUT, 0.0)
+
+
+## Rangée survolée ([param on]) ou quittée : éclairage en fondu (90 / 140 ms) ; la couleur reste avec « Réduire les animations ».
+func _row_hot(c: Control, on: bool) -> void:
+	var goal := ROW_HOT if on else Color.WHITE
+	if reduce_motion:
+		c.modulate = Color(goal, c.modulate.a)
+		return
+	var tw := c.create_tween()
+	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.tween_property(c, "modulate", Color(goal, c.modulate.a), UiTheme.dur("survol-entree" if on else "survol-sortie"))
 
 
 func _press(c: Control) -> void:
@@ -353,20 +368,59 @@ func pop_out(c: Control, then := Callable()) -> void:
 			then.call())
 
 
+## Écran plein cadre qui s'ouvre (PageScreen, Héros : même geste partout, lot UIK2) : fondu de [param root] (120 ms) et
+## feuilles [param sheets] qui se posent en ressort (0,985 → 1, durée « apparition ») autour du centre de l'écran.
+## Rien avec « Réduire les animations » (l'écran est là tout de suite).
+func screen_in(root: Control, sheets: Array = []) -> void:
+	if root == null or reduce_motion or not root.is_inside_tree():
+		return
+	root.modulate.a = 0.0
+	var tw := root.create_tween()
+	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.tween_property(root, "modulate:a", 1.0, 0.12)
+	var mid := root.get_viewport_rect().size * 0.5
+	for s in sheets:
+		var c := s as Control
+		if c == null:
+			continue
+		c.pivot_offset = mid - c.position
+		c.scale = Vector2.ONE * 0.985
+		tw.parallel().tween_property(c, "scale", Vector2.ONE, UiTheme.dur("apparition")).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## Rangée d'une liste qui n'est pas un bouton (meta « ui_feel » = « row », UiFeel.attach) : au survol elle s'éclaire un peu
+## (modulate, rien ne bouge : la liste reste alignée) ; voir _enter / _exit.
+const ROW_HOT := Color(1.1, 1.1, 1.14, 1.0)
+
+
 ## Contenu d'un onglet qui glisse de 24 px dans le sens du changement ([param dir] = ±1) en fondu (260 ms).
+## Les marges d'ancrage (offset_left / offset_right) glissent, pas la position : une page ancrée encore jamais posée (construite
+## à l'ouverture, Paramètres ouverts sur un onglet) gardait sinon une position périmée et restait décalée (UIK2) ; un
+## changement d'onglet rapide reprend depuis les marges d'origine.
 func slide_in(c: Control, dir: int) -> void:
 	if c == null or reduce_motion or dir == 0:
 		return
+	var prev: Variant = c.get_meta("_uf_slide_tw") if c.has_meta("_uf_slide_tw") else null
+	if prev is Tween and (prev as Tween).is_valid():
+		(prev as Tween).kill()
+		var o: Vector2 = c.get_meta("_uf_slide_off")
+		c.offset_left = o.x
+		c.offset_right = o.y
 	var free_pos := not (c.get_parent() is Container)
-	var x0 := c.position.x
+	var o0 := Vector2(c.offset_left, c.offset_right)
+	c.set_meta("_uf_slide_off", o0)
 	c.modulate.a = 0.0
 	var tw := c.create_tween()
 	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tw.set_parallel()
 	if free_pos:
-		c.position.x = x0 + 24.0 * float(dir)
-		tw.tween_property(c, "position:x", x0, UiTheme.dur("page")).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		var dx := 24.0 * float(dir)
+		c.offset_left = o0.x + dx
+		c.offset_right = o0.y + dx
+		tw.tween_property(c, "offset_left", o0.x, UiTheme.dur("page")).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_property(c, "offset_right", o0.y, UiTheme.dur("page")).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	tw.tween_property(c, "modulate:a", 1.0, UiTheme.dur("page") * 0.7)
+	c.set_meta("_uf_slide_tw", tw)
 
 
 ## Nombre qui monte de [param from] à [param to] dans [param label] (800 ms) ; [param fmt] met en forme (int par défaut).
@@ -383,6 +437,37 @@ func count(label: Label, from: float, to: float, fmt := Callable(), d := -1.0) -
 	var tw := label.create_tween()
 	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tw.tween_method(func(x: float): label.text = f.call(x), from, to, d if d > 0.0 else UiTheme.dur("compteur")).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+
+## Nombre tenu par [param label] (bourses, compteurs ; lot UIK2) : [param value] mis en forme par [param fmt]. S'il change
+## pendant que le label est visible, il défile de la valeur affichée à la nouvelle (500 ms, sortie : « les nombres qui
+## montent », bible § 7) au lieu de sauter ; le texte final est le même. Instantané au premier appel, sans écran (tests)
+## ou avec « Réduire les animations ». Un appel avec la même valeur ne touche à rien (rafraîchissement périodique).
+func number(label: Label, value: float, fmt: Callable, d := 0.5) -> void:
+	if label == null:
+		return
+	var had := label.has_meta("_uf_num")
+	if had and is_equal_approx(float(label.get_meta("_uf_num")), value):
+		return
+	label.set_meta("_uf_num", value)
+	var prev: Variant = label.get_meta("_uf_num_tw") if label.has_meta("_uf_num_tw") else null
+	if prev is Tween and (prev as Tween).is_valid():
+		(prev as Tween).kill()
+	var shown := float(label.get_meta("_uf_num_shown", value))
+	if not had or reduce_motion or not label.is_visible_in_tree() or DisplayServer.get_name() == "headless":
+		label.text = fmt.call(value)
+		label.set_meta("_uf_num_shown", value)
+		return
+	var tw := label.create_tween()
+	tw.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	tw.tween_method(_num_step.bind(label, fmt), shown, value, d).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	label.set_meta("_uf_num_tw", tw)
+
+
+func _num_step(x: float, label: Label, fmt: Callable) -> void:
+	if is_instance_valid(label):
+		label.text = fmt.call(x)
+		label.set_meta("_uf_num_shown", x)
 
 
 # --- particules (CPU, dessinées dans un seul Control) ------------------------------------
