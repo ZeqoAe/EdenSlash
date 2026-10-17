@@ -356,7 +356,7 @@ static func sticker(tone: String, opts := {}) -> StickerBox:
 	sb.square_bottom = bool(opts.get("square_bottom", false))
 	sb.cel_top = float(opts.get("cel_top", 0.12))
 	sb.cel_bottom = float(opts.get("cel_bottom", 0.38))
-	var pad: Vector2 = opts.get("pad", Vector2(14, 4))
+	var pad: Vector2 = opts.get("pad", Vector2(10, 4))  # mêmes marges que les boutons d'avant (pas de page plus large)
 	sb.content_margin_left = pad.x
 	sb.content_margin_right = pad.x
 	# la hauteur réservée ne dépend pas de l'état : le texte suit la face (monte au survol, descend à l'appui)
