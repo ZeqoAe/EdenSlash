@@ -280,6 +280,9 @@ générés par `tools/moba_kits.py` (3 cases + ultime ; `--check`), lus par `Mob
 prolongation 2 d'écart + manche décisive, format Éclair, or de manche `give` / `spend` / `next_loss_gold`, `launch` / `finish` scellés, `args_options`),
 `core/assault_director.gd` (`AssaultDirector` : carte, 8 héros recréés à chaque manche, pose / désamorçage, agent IA provisoire, bilan provisoire ; `hero(clé)`
 car les scriptés tombés sont libérés) ; direct `world.tscn -- --assault [--assault-watch --assault-map= --assault-diff= --autoplay --auto-quit --trace]` ; test `test_tac0`.
+Carte (TAC-1, `R_TAC_1.md`) : format `data/assault_maps/<id>.json` (murs, murets, terrasses + rampes, herbes, fontaine, sites, départs, lieux, postes d'IA),
+`world/assault_map.gd` (`AssaultMap.build` dans `ProcMap.generate_assault(id)` ; couches `SIGHT` / `SHOT` ; `floor_at` pour les terrasses ; `place_name`) ; carte
+`bourg` (`--assault-map=bourg`) ; aperçu `tools/assault_map_shots.tscn -- bourg --res=1600x900` ; test `test_tac1` (trajets mesurés contre le plan).
 
 ### Économie : insignes, cristaux, fournitures
 - **Insignes = acquérir** (Armurerie) : barème `core/economy.gd` (`INSIGNIA_PER_HOUR`, `survival_insignia_parts`, Armurerie à

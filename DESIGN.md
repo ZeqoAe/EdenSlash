@@ -1341,6 +1341,10 @@ empêche ou la désamorce ; une vie par manche, or entre les manches. Ce qui est
   élimination 200, aide 50 ; pose +300 à chaque attaquant ; désamorçage +200 ; un attaquant vivant quand le temps s'écoule sans
   pose n'a pas de prime ; plafond 7 000.
 - **Héros** : niveau 50, l'arme de la classe, aucune pièce ni talent ; 4 sorts (kit provisoire, kits tactiques au lot TAC-4).
+- **Carte « Le Bourg aux lanternes »** (lot TAC-1) : 84 × 100 m, deux sites (A au nord-ouest avec la terrasse du beffroi à +3 m,
+  B au nord-est sous le balcon à +2,5 m), une place à fontaine, une halle et son passage, des maisons qui coupent la vue,
+  des murets (on voit par-dessus, les coups au sol s'y arrêtent ; depuis une terrasse on tire par-dessus), deux carrés de
+  hautes herbes. Trajets : l'Attaque met 12 à 13 s pour un site, la Défense 5 à 6 s (7 s d'avance).
 
 # Partie D — Économie et progression
 

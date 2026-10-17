@@ -1,0 +1,97 @@
+{
+  "$description": "L'Assaut (lot TAC-1) : carte « Le Bourg aux lanternes », relevée sur le plan masse conception/benchmark/tactique_maquettes/plan_bourg.svg (7,6 px par mètre, origine au coin nord-ouest du plan). Mètres : x vers l'est, z vers le sud, rectangles [x0, z0, x1, z1]. walls = murs pleins (arrêtent vue, coups et sorts), low = murets (arrêtent les coups, pas la vue), heights = terrasses (h m) avec leur rampe (up = côté haut), grass = hautes herbes (cachent à plus de 3 m), props = décor qui arrête les coups (fontaine), sites = zones de pose, spawns = départs, places = noms des lieux (radar, annonces), positions = postes de l'IA (lot TAC-6 : angle à tenir).",
+  "id": "bourg",
+  "name": "Le Bourg aux lanternes",
+  "size": [84, 100],
+  "biome": "limestone",
+  "wall_height": 4.5,
+  "walls": [
+    {"rect": [0, 86, 14, 100], "kind": "house", "roof": "fraise"},
+    {"rect": [70, 86, 84, 100], "kind": "house", "roof": "lagon"},
+    {"rect": [14, 44, 28, 76], "kind": "house", "roof": "mandarine"},
+    {"rect": [56, 44, 70, 76], "kind": "house", "roof": "amethyste"},
+    {"rect": [30, 26, 40, 36], "kind": "house", "roof": "soleil", "name": "Halle"},
+    {"rect": [44, 26, 54, 36], "kind": "house", "roof": "soleil", "name": "Halle"},
+    {"rect": [0, 0, 30, 8], "kind": "house", "roof": "lagon"},
+    {"rect": [54, 0, 84, 6], "kind": "house", "roof": "fraise"},
+    {"rect": [28, 18, 31, 26], "kind": "wall"},
+    {"rect": [53, 18, 56, 24], "kind": "wall"},
+    {"rect": [0, 30, 2, 86], "kind": "wall"},
+    {"rect": [82, 30, 84, 86], "kind": "wall"},
+    {"rect": [41.4, 59.4, 42.6, 60.6], "kind": "statue", "name": "Statue de la fontaine"}
+  ],
+  "edges": {"thickness": 2.0, "height": 3.5},
+  "low": [
+    {"rect": [34, 52, 39, 53.2]},
+    {"rect": [45, 67, 50, 68.2]},
+    {"rect": [10, 18, 16, 19.2]},
+    {"rect": [19, 26, 20.2, 31]},
+    {"rect": [64, 22, 70, 23.2]},
+    {"rect": [73, 28, 74.2, 33]},
+    {"rect": [31, 79, 38, 80.2]},
+    {"rect": [46, 79, 53, 80.2]},
+    {"rect": [5, 58, 6.2, 64]},
+    {"rect": [77, 52, 78.2, 58]}
+  ],
+  "low_height": 1.2,
+  "props": [
+    {"circle": [42, 60, 2.6], "kind": "fountain", "h": 0.9}
+  ],
+  "heights": [
+    {"rect": [2, 9, 13, 18], "h": 3.0, "name": "Beffroi", "ramp": {"rect": [13, 10, 21, 14], "up": "w"}},
+    {"rect": [57, 36, 66, 43], "h": 2.5, "name": "Balcon", "ramp": {"rect": [49, 39.5, 57, 43], "up": "e"}}
+  ],
+  "grass": [
+    {"rect": [2, 34, 13, 46], "name": "Jardin"},
+    {"rect": [71, 64, 81, 73], "name": "Saules"}
+  ],
+  "sites": {
+    "A": {"rect": [4, 10, 28, 32], "plant": [18, 24]},
+    "B": {"rect": [58, 10, 82, 34], "plant": [70, 27]}
+  },
+  "spawns": {
+    "attack": {"rect": [30, 90, 54, 100]},
+    "defense": {"rect": [32, 0, 52, 10]}
+  },
+  "sanctuary": [42, 40, 4],
+  "places": [
+    {"name": "Site A", "pos": [16, 22]},
+    {"name": "Site B", "pos": [70, 22]},
+    {"name": "Ruelle ouest", "pos": [8, 66]},
+    {"name": "Jardin", "pos": [7, 41]},
+    {"name": "Place", "pos": [42, 72]},
+    {"name": "Carrefour", "pos": [42, 46]},
+    {"name": "Halle", "pos": [35, 38.5]},
+    {"name": "Passage", "pos": [42, 31]},
+    {"name": "Escalier", "pos": [23, 40]},
+    {"name": "Balcon", "pos": [62, 40]},
+    {"name": "Quai est", "pos": [77, 46]},
+    {"name": "Saules", "pos": [76, 69]},
+    {"name": "Beffroi", "pos": [7, 13]},
+    {"name": "Porte sud", "pos": [42, 85]},
+    {"name": "Allée du beffroi", "pos": [42, 18]},
+    {"name": "Arrière B", "pos": [77, 37]}
+  ],
+  "positions": [
+    {"name": "Beffroi", "pos": [8, 14], "look": [1, 1], "side": "defense", "site": "A"},
+    {"name": "Muret de l'escalier", "pos": [21, 29], "look": [0, 1], "side": "defense", "site": "A"},
+    {"name": "Coin de la halle", "pos": [27, 33], "look": [0, 1], "side": "defense", "site": "A"},
+    {"name": "Balcon", "pos": [62, 39], "look": [0, 1], "side": "defense", "site": "B"},
+    {"name": "Arrière B", "pos": [76, 33], "look": [0, 1], "side": "defense", "site": "B"},
+    {"name": "Muret du quai", "pos": [68, 21], "look": [-1, 1], "side": "defense", "site": "B"},
+    {"name": "Passage", "pos": [42, 22], "look": [0, 1], "side": "defense", "site": ""},
+    {"name": "Escalier", "pos": [22, 38], "look": [-1, -1], "side": "attack", "site": "A"},
+    {"name": "Jardin", "pos": [8, 40], "look": [1, -1], "side": "attack", "site": "A"},
+    {"name": "Quai est", "pos": [77, 44], "look": [-1, -1], "side": "attack", "site": "B"},
+    {"name": "Carrefour", "pos": [42, 44], "look": [0, -1], "side": "attack", "site": ""}
+  ],
+  "routes": {
+    "$description": "Trajets du plan (à 6,5 m/s) relevés par le lot TAC-1 sur le maillage de navigation (test_tac1) : [départ, arrivée, secondes du plan].",
+    "att_A": ["spawn:attack", "site:A", 12.5],
+    "att_B": ["spawn:attack", "site:B", 11.3],
+    "def_A": ["spawn:defense", "site:A", 4.5],
+    "def_B": ["spawn:defense", "site:B", 4.5],
+    "def_mid": ["spawn:defense", "place:Carrefour", 4.9],
+    "rot_AB": ["site:A", "site:B", 8.1]
+  }
+}

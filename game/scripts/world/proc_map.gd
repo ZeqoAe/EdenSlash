@@ -178,6 +178,20 @@ func generate_scenery(seed_value: int, with_minimap := false) -> void:
 		_build_minimap()
 
 
+## L'Assaut (lot TAC-1) : carte faite à la main d'après data/assault_maps/<id>.json (AssaultMap : murs, murets, terrasses,
+## herbes, sites, départs, lieux) ; [member assault] = sa description pour AssaultDirector ({} sur les autres cartes).
+var assault: Dictionary = {}
+
+
+func generate_assault(id: String) -> void:
+	AssaultMap.build(self, id)
+
+
+## Hauteur du sol praticable (terrasses et rampes de l'Assaut comprises) ; ailleurs [param ground_y].
+func floor_at(x: float, z: float, ground_y := 0.0) -> float:
+	return AssaultMap.floor_at(self, x, z) if not assault.is_empty() else ground_y
+
+
 ## Dangers permanents de la salle du boss : [{pos, style, radius}] (posés par le directeur).
 var arena_hazards: Array = []
 ## Arène : rayon (m) d'un centre parfaitement plat (0 : relief doux partout ; L'Échiquier y trace son plateau, lot AC-V).
