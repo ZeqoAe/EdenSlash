@@ -263,7 +263,7 @@ func _test_dungeon_fall() -> void:
 	p.take_damage(p.max_hp * 0.3 * (100.0 + p.defense) / 100.0, boss)
 	await get_tree().create_timer(0.3).timeout
 	boss.brain.note_cast("meteors")
-	p.take_damage(p.max_hp * 50.0, boss)
+	await _kill(p, boss)
 	var panel := await _panel(12.0)
 	check("chute : bilan du donjon", panel is DungeonResults)
 	if panel != null:
@@ -296,7 +296,7 @@ func _test_tower_fall() -> void:
 	for m in get_tree().get_nodes_in_group("monsters"):
 		foe = m
 		break
-	p.take_damage(p.max_hp * 50.0, foe)
+	await _kill(p, foe)
 	var panel := await _panel(12.0)
 	check("chute dans la Tour : bilan", panel is TowerResults)
 	if panel != null:
@@ -307,6 +307,15 @@ func _test_tower_fall() -> void:
 		_inside(panel, Vector2(1600, 900), "bilan de la Tour en 1600×900")
 	check("palier de reprise : étage 11 (record 11)", Tower.checkpoint() == 11 and TowerResults.resume_floor("defaite") == 11 and TowerResults.resume_floor("victoire") == 0)
 	await _close(world, panel)
+
+
+## Coup fatal au héros (une esquive ou un bouclier d'entrée peut l'ignorer : on recommence, test instable sinon).
+func _kill(p: Player, by: Combatant) -> void:
+	for i in 30:
+		if p.is_dead:
+			return
+		p.take_damage(p.max_hp * 50.0, by)
+		await get_tree().create_timer(0.2).timeout
 
 
 ## HUD de boss dans [param res] : barre du boss, bandeau d'annonce (intro très longue) et compteur de dégâts dans l'écran,
