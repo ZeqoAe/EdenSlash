@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Battle royale v2 : maquettes</title>
+<!-- Maquettes maison (étude BM-BR, 17/10/2026). Aucune image, icône ni texte tiers : formes CSS et textes originaux.
+     Couleurs = conception/art/tokens.json (v2), polices = BIBLE.md § 4. Chaque cadre = un écran à 1600×900, réduit à la largeur. -->
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&family=Mochiy+Pop+One&display=swap" rel="stylesheet">
+<style>
+:root{
+  --encre9:#120C24;--encre:#221A3A;--encre5:#2E2450;--encre3:#6B5E86;--encre1:#C9BFEA;
+  --papier:#FFF8EC;--papier2:#FFEBC8;--papier3:#E9DFCB;--blanc:#fff;
+  --soleil:#FFC928;--soleilC:#FFE27A;--soleilF:#D9900B;
+  --mand:#FF8A1F;--mandC:#FFB566;--mandF:#C85F08;
+  --pomme:#8FD62E;--pommeC:#C3F07A;--pommeF:#4F8F10;
+  --lagon:#22B8F0;--lagonC:#86DDFF;--lagonF:#0B7DB5;
+  --ame:#B43BEB;--ameC:#DC92FF;--ameF:#7A1DB0;
+  --fraise:#FF4D6D;--fraiseC:#FF9DB0;--fraiseF:#C21E45;
+  --commun:#C9C3D6;--communF:#8E86A6;
+  --ciel:#CCDEF3;--herbe:#ACB47F;--chemin:#CEBFA7;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#E9E4F2;color:var(--encre);font-family:"M PLUS Rounded 1c",sans-serif;font-weight:700}
+header{padding:24px 16px 8px;max-width:1640px;margin:auto}
+h1{font-family:"Mochiy Pop One";font-size:34px;margin:0;-webkit-text-stroke:0;transform:rotate(-2deg);display:inline-block}
+header p{max-width:900px;font-weight:500}
+.frame-wrap{max-width:1640px;margin:0 auto 40px;padding:0 16px}
+.frame-wrap h2{font-family:"Mochiy Pop One";font-size:22px;margin:24px 0 6px}
+.frame-wrap .note{font-weight:500;margin:0 0 10px;max-width:1100px}
+.scaler{width:100%;aspect-ratio:16/9;position:relative;overflow:hidden;border:3px solid var(--encre);border-radius:18px;box-shadow:7px 7px 0 var(--encre)}
+.screen{position:absolute;left:0;top:0;width:1600px;height:900px;transform-origin:0 0;overflow:hidden}
+/* décor du monde (clair, comme le jeu) */
+.world{position:absolute;inset:0;background:
+  radial-gradient(ellipse 380px 200px at 72% 64%,#9fae6e 0 60%,transparent 61%),
+  radial-gradient(ellipse 300px 140px at 22% 30%,#b9c08a 0 60%,transparent 61%),
+  linear-gradient(115deg,transparent 46%,var(--chemin) 46% 50%,transparent 50%),
+  var(--herbe)}
+.world.sky{background:linear-gradient(#CCDEF3,#e6eef8 45%,#b8c48c 46%,#9fae6e)}
+.out{position:absolute;inset:0;background:radial-gradient(circle 1500px at 20% 40%,transparent 62%,rgba(180,59,235,.32) 62.2%)}
+/* autocollant */
+.stk{background:var(--papier);border:3px solid var(--encre);border-radius:18px;box-shadow:5px 5px 0 var(--encre)}
+.well{background:var(--encre5);border:3px solid var(--encre);border-radius:14px;color:var(--papier)}
+.ink{color:var(--blanc);-webkit-text-stroke:5px var(--encre);paint-order:stroke fill}
+.ink3{color:var(--blanc);-webkit-text-stroke:3px var(--encre);paint-order:stroke fill}
+.mochi{font-family:"Mochiy Pop One";font-weight:400}
+.num{font-weight:900;font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border:3px solid var(--encre);border-radius:999px;box-shadow:3px 3px 0 var(--encre);font-weight:800}
+.key{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;border:3px solid var(--encre);font-weight:900;font-size:15px;color:#fff;-webkit-text-stroke:2px var(--encre);paint-order:stroke fill}
+.kA{background:var(--pomme)}.kB{background:var(--fraise)}.kX{background:var(--lagon)}.kY{background:var(--soleil)}
+.kk{display:inline-grid;place-items:center;min-width:30px;height:28px;padding:0 6px;border-radius:8px;border:3px solid var(--encre);background:var(--papier);font-weight:900;font-size:14px}
+/* HUD */
+.mm{position:absolute;right:26px;top:22px;width:270px;height:270px;border-radius:50%;border:4px solid var(--encre);box-shadow:5px 5px 0 var(--encre);
+  background:radial-gradient(circle at 46% 50%,transparent 0 37%,rgba(180,59,235,.35) 37.5%),radial-gradient(circle at 44% 48%,#b9c08a,#9fae6e);overflow:hidden}
+.mm .ring{position:absolute;border:3px solid #fff;border-radius:50%}
+.mm .me{position:absolute;left:150px;top:150px;width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:22px solid var(--lagon);filter:drop-shadow(0 0 0 var(--encre));transform:rotate(-30deg)}
+.mm .path{position:absolute;left:96px;top:118px;width:66px;border-top:4px dashed #fff;transform:rotate(30deg);transform-origin:0 0}
+.mm .dot{position:absolute;width:14px;height:14px;border-radius:4px;border:2px solid var(--encre)}
+.status{position:absolute;right:26px;top:304px;width:270px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.tile{padding:6px 4px 4px;text-align:center;border-radius:14px}
+.tile .v{font-size:26px;line-height:1}
+.tile .l{font-size:13px;font-weight:700;opacity:.9}
+.ringbar{position:absolute;right:26px;top:372px;width:270px;padding:8px 12px}
+.bar{height:16px;border:3px solid var(--encre);border-radius:12px;background:var(--encre5);overflow:hidden;position:relative}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-right:3px solid var(--encre)}
+.feed{position:absolute;right:26px;top:452px;width:330px;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.feed .pill{font-size:15px;background:var(--papier)}
+.cls{display:inline-block;width:20px;height:20px;border-radius:6px;border:2px solid var(--encre)}
+.bottom{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);display:flex;align-items:flex-end;gap:14px}
+.hp{width:430px;padding:10px 14px}
+.hpbar{height:28px;border:3px solid var(--encre);border-radius:12px;background:var(--encre5);position:relative;overflow:hidden}
+.hpbar .f{position:absolute;inset:0 22% 0 0;background:linear-gradient(var(--fraiseC) 0 22%,var(--fraise) 22% 66%,var(--fraiseF) 66%);border-right:3px solid var(--encre)}
+.hpbar .t{position:absolute;inset:0 15% 0 78%;background:#fff;opacity:.7}
+.hpbar .shield{position:absolute;left:0;top:0;height:9px;width:40%;background:var(--lagonC);border-bottom:3px solid var(--encre)}
+.slots{display:flex;gap:8px}
+.slot{width:74px;height:74px;border-radius:14px;border:3px solid var(--encre);box-shadow:4px 4px 0 var(--encre);position:relative;
+  background:repeating-radial-gradient(circle at 3px 3px,rgba(34,26,58,.14) 0 1.5px,transparent 2px 7px),var(--papier3)}
+.slot.on{background:linear-gradient(var(--ameC) 0 14%,var(--ame) 14% 64%,var(--ameF) 64%)}
+.slot.on2{background:linear-gradient(var(--lagonC) 0 14%,var(--lagon) 14% 64%,var(--lagonF) 64%)}
+.slot.on3{background:linear-gradient(var(--soleilC) 0 14%,var(--soleil) 14% 64%,var(--soleilF) 64%)}
+.slot .k{position:absolute;left:-8px;bottom:-10px}
+.slot .cd{position:absolute;inset:0;border-radius:11px;background:conic-gradient(rgba(34,26,58,.6) 0 40%,transparent 40%)}
+.slot .n{position:absolute;inset:0;display:grid;place-items:center;font-size:26px}
+.lvl{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;text-align:center;border:4px solid var(--encre);box-shadow:5px 5px 0 var(--encre);
+  background:conic-gradient(var(--pomme) 0 64%,var(--encre5) 64%)}
+.lvl div{width:92px;height:92px;border-radius:50%;background:var(--papier);border:3px solid var(--encre);display:grid;place-items:center;line-height:1}
+.hit{position:absolute;width:260px;height:60px;border-radius:50%;border-top:12px solid var(--fraise);opacity:.85;filter:drop-shadow(0 -2px 0 var(--encre))}
+.edge{position:absolute;display:flex;align-items:center;gap:8px}
+.arrow{width:0;height:0;border-top:16px solid transparent;border-bottom:16px solid transparent;border-left:28px solid var(--ame);filter:drop-shadow(3px 0 0 var(--encre)) drop-shadow(-3px 0 0 var(--encre))}
+.hero{position:absolute;width:56px;height:76px;border-radius:26px 26px 14px 14px;border:3px solid var(--encre);background:linear-gradient(#3b2f5c,#221A3A)}
+.plate{position:absolute;transform:translate(-50%,-100%);white-space:nowrap;font-size:15px}
+.ping{position:absolute;transform:translate(-50%,-100%);text-align:center}
+.ping .pin{width:34px;height:34px;margin:auto;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--lagon);border:3px solid var(--encre)}
+.beam{position:absolute;width:26px;border-radius:13px;opacity:.75}
+.toast{position:absolute;left:50%;transform:translateX(-50%) rotate(-3deg);text-align:center}
+.cap{position:absolute;font-size:13px;font-weight:800;background:var(--soleilC);border:2px solid var(--encre);border-radius:8px;padding:1px 7px;box-shadow:2px 2px 0 var(--encre)}
+.legend-num{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--soleilC);border:2px solid var(--encre);font-size:12px;font-weight:900;margin-right:4px}
+ol.legend{font-weight:500;max-width:1100px}
+/* grande carte */
+.bigmap{position:absolute;left:300px;top:70px;width:760px;height:760px;border-radius:22px;border:4px solid var(--encre);box-shadow:7px 7px 0 var(--encre);
+  background:radial-gradient(circle at 50% 50%,#b9c08a,#9fae6e);overflow:hidden}
+.poi{position:absolute;transform:translate(-50%,-50%);font-size:15px;font-weight:900;text-align:center}
+.poi b{display:block;width:16px;height:16px;margin:0 auto 2px;border-radius:5px;border:3px solid var(--encre);background:var(--papier)}
+.side{position:absolute;right:40px;top:70px;width:440px;padding:20px}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;height:56px;border:3px solid var(--encre);border-radius:14px;box-shadow:5px 5px 0 var(--encre);font-weight:900;font-size:19px;background:linear-gradient(#fff 0 12%,var(--papier) 12% 62%,var(--papier3) 62%)}
+.btn.pri{height:66px;font-family:"Mochiy Pop One";font-weight:400;font-size:24px;background:linear-gradient(var(--soleilC) 0 12%,var(--soleil) 12% 62%,var(--soleilF) 62%)}
+.btn.pri span{color:#fff;-webkit-text-stroke:5px var(--encre);paint-order:stroke fill}
+.rays{position:absolute;inset:-40%;background:repeating-conic-gradient(rgba(255,226,122,.45) 0 6deg,transparent 6deg 18deg);border-radius:50%}
+.card{width:300px;padding:14px;border-radius:18px;border:3px solid var(--encre);box-shadow:6px 6px 0 var(--encre);background:var(--papier)}
+.slotmini{width:64px;height:64px;border-radius:14px;border:3px solid var(--encre);box-shadow:3px 3px 0 var(--encre)}
+.up{color:var(--pommeF);font-weight:900}.dn{color:var(--fraiseF);font-weight:900}
+.conf{position:absolute;width:12px;height:18px;border:2px solid var(--encre);border-radius:3px}
+@media (max-width:700px){h1{font-size:26px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Battle royale v2 : maquettes</h1>
+  <p>Étude BM-BR (17/10/2026), dans la DA « autocollant manga » (<code>conception/art/BIBLE.md</code> v2). Six écrans, chacun dessiné à 1600×900 puis réduit.
+  Les numéros jaunes renvoient au backlog de <code>conception/benchmark/BATTLE_ROYALE.md</code>. Aucune image tierce : tout est en formes CSS.</p>
+</header>
+
+<!-- 1. HUD de combat -->
+<section class="frame-wrap">
+  <h2>1. HUD de combat</h2>
+  <p class="note">Bloc d'état unique sous la mini-carte (survivants, éliminations, niveau maximal), barre de l'anneau, flèche au bord de l'écran vers la zone sûre, arc de coup reçu, repère posé, fil des éliminations en pastilles avec la couleur de famille.</p>
+  <div class="scaler"><div class="screen">
+    <div class="world"></div><div class="out"></div>
+    <!-- héros et adversaires -->
+    <div class="hero" style="left:772px;top:420px"></div>
+    <div class="plate" style="left:800px;top:410px"><span class="pill" style="background:var(--lagonC);font-size:14px">Toi · niv. 12</span></div>
+    <div class="hit" style="left:690px;top:470px;transform:rotate(-38deg)"></div>
+    <div class="hero" style="left:1080px;top:300px;background:linear-gradient(#5a2140,#2d1030)"></div>
+    <div class="plate" style="left:1108px;top:290px"><span class="pill" style="background:var(--papier);font-size:14px"><span class="cls" style="background:var(--mand)"></span>Assassin · niv. 14 <span style="color:var(--fraiseF)">▲</span></span></div>
+    <div style="position:absolute;left:1066px;top:384px;width:84px;height:14px;border:3px solid var(--encre);border-radius:8px;background:var(--encre5);overflow:hidden"><i style="position:absolute;inset:0 35% 0 0;background:var(--fraise)"></i></div>
+    <div class="mochi ink" style="position:absolute;left:1010px;top:200px;font-size:30px;transform:rotate(-6deg)">Critique !</div>
+    <!-- repère posé -->
+    <div class="ping" style="left:470px;top:250px"><div class="pin"></div><div class="pill" style="margin-top:8px;background:var(--lagonC);font-size:14px">Ruines · 86 m</div></div>
+    <!-- flèche vers l'anneau -->
+    <div class="edge" style="left:40px;top:470px"><div class="arrow" style="transform:rotate(180deg)"></div><span class="pill" style="background:var(--ameC)">Zone sûre · 140 m</span></div>
+    <!-- haut gauche : rien d'autre que l'objectif court -->
+    <div class="stk" style="position:absolute;left:26px;top:22px;padding:10px 16px;width:420px">
+      <div class="mochi" style="font-size:20px;transform:rotate(-2deg)">Anneau 3 / 5</div>
+      <div style="font-weight:600;font-size:16px;margin-top:4px">★ Largage dans 12 s · repère doré sur la carte</div>
+    </div>
+    <!-- mini-carte -->
+    <div class="mm">
+      <div class="ring" style="left:40px;top:35px;width:200px;height:200px"></div>
+      <div class="ring" style="left:95px;top:80px;width:110px;height:110px;border-color:var(--soleilC);border-style:dashed"></div>
+      <div class="path"></div><div class="me"></div>
+      <div class="dot" style="left:60px;top:90px;background:var(--lagon)"></div>
+      <div class="dot" style="left:190px;top:160px;background:var(--ame)"></div>
+      <div class="dot" style="left:150px;top:60px;background:var(--soleil);border-radius:50%"></div>
+      <div style="position:absolute;left:200px;top:100px;font-size:22px" class="ink3">★</div>
+    </div>
+    <div class="status">
+      <div class="tile well"><div class="v num">5</div><div class="l">en vie</div></div>
+      <div class="tile well"><div class="v num">2</div><div class="l">élim.</div></div>
+      <div class="tile well"><div class="v num">12<span style="font-size:16px">/26</span></div><div class="l">niveau</div></div>
+    </div>
+    <div class="ringbar stk"><div style="display:flex;justify-content:space-between;font-weight:900;font-size:15px"><span>Se referme</span><span class="num">0:42</span></div>
+      <div class="bar" style="margin-top:4px"><i style="width:62%;background:linear-gradient(var(--ameC) 0 25%,var(--ame) 25%)"></i></div></div>
+    <div class="feed">
+      <div class="pill"><span class="cls" style="background:var(--pomme)"></span>Chasseur <span style="color:var(--fraiseF)">⚔</span> <span class="cls" style="background:var(--lagon)"></span>Prêtre</div>
+      <div class="pill" style="background:var(--soleilC)"><span class="cls" style="background:var(--lagon)"></span>Toi <span style="color:var(--fraiseF)">⚔</span> <span class="cls" style="background:var(--soleil)"></span>Paladin <b>+1 niv.</b></div>
+    </div>
+    <!-- bas -->
+    <div class="bottom">
+      <div class="hp stk">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="mochi" style="font-size:18px">Vie</span><span class="num" style="font-size:24px">1 540 <span style="font-size:15px;color:var(--encre3)">/ 1 980</span></span></div>
+        <div class="hpbar"><div class="f"></div><div class="t"></div><div class="shield"></div></div>
+        <div style="display:flex;gap:6px;margin-top:8px;align-items:center;font-size:14px">
+          <span class="slotmini" style="width:34px;height:34px;background:var(--fraiseC)"></span><b>×2</b>
+          <span style="margin-left:auto;color:var(--encre3)">Protection 2 s</span></div>
+      </div>
+      <div class="slots">
+        <div class="slot on"><div class="n ink3">1</div><span class="k kk">1</span></div>
+        <div class="slot on2"><div class="cd"></div><span class="k kk">2</span></div>
+        <div class="slot on3"><span class="k kk">3</span></div>
+        <div class="slot"><span class="k kk">4</span></div>
+        <div class="slot" style="width:60px;height:60px;align-self:flex-end;background:var(--pommeC)"><span class="k kk">Maj</span></div>
+      </div>
+      <div class="lvl"><div><span class="mochi" style="font-size:13px">niv.</span><span class="num" style="font-size:40px">12</span></div></div>
+    </div>
+    <span class="cap" style="left:1300px;top:300px">1</span><span class="cap" style="left:1300px;top:372px">1</span>
+    <span class="cap" style="left:700px;top:470px">2</span><span class="cap" style="left:40px;top:440px">1</span><span class="cap" style="left:420px;top:180px">3</span>
+    <span class="cap" style="left:1260px;top:452px">1</span>
+  </div></div>
+</section>
+
+<!-- 2. Largage -->
+<section class="frame-wrap">
+  <h2>2. Largage : choisir où sauter</h2>
+  <p class="note">Pendant le vol, la grande carte s'ouvre seule : trajet de l'aigle, lieux nommés avec la richesse de leur butin, repère posé d'un clic (ou A), et le temps restant. Le saut se fait ensuite avec la caméra de chute et un altimètre.</p>
+  <div class="scaler"><div class="screen">
+    <div class="world sky"></div>
+    <div class="bigmap">
+      <div style="position:absolute;left:-10%;top:52%;width:120%;border-top:5px dashed #fff;transform:rotate(-24deg)"></div>
+      <div class="ink3 mochi" style="position:absolute;left:560px;top:300px;font-size:34px;transform:rotate(-24deg)">➤</div>
+      <div class="poi" style="left:180px;top:170px"><b style="background:var(--soleil)"></b>Temple englouti<br><span style="font-weight:600;font-size:13px">★★★ butin</span></div>
+      <div class="poi" style="left:520px;top:150px"><b></b>Moulin</div>
+      <div class="poi" style="left:380px;top:400px"><b style="background:var(--lagon)"></b>Ruines du col<br><span style="font-weight:600;font-size:13px">★★ butin</span></div>
+      <div class="poi" style="left:620px;top:560px"><b></b>Village des saules</div>
+      <div class="poi" style="left:160px;top:600px"><b style="background:var(--lagon)"></b>Camp des bûcherons</div>
+      <div class="ping" style="left:380px;top:372px"><div class="pin"></div></div>
+      <div style="position:absolute;left:20px;bottom:16px;background:var(--papier)" class="pill">Molette : zoom · Clic / <span class="key kA">A</span> : repère</div>
+    </div>
+    <div class="side stk">
+      <div class="mochi" style="font-size:30px;transform:rotate(-3deg)">Où atterrir ?</div>
+      <div style="margin:14px 0 6px;font-weight:600">Saut automatique dans</div>
+      <div class="bar" style="height:22px"><i style="width:55%;background:var(--soleil)"></i></div>
+      <div class="num" style="font-size:22px;margin-top:4px">11 s</div>
+      <div class="well" style="padding:12px;margin:16px 0;font-weight:600">
+        <div>Ton repère : <b>Ruines du col</b></div><div style="color:var(--encre1);margin-top:4px">Atteignable en chute · 3 héros visent le Temple</div>
+      </div>
+      <div class="btn pri"><span>Sauter</span> <span class="key kY">Y</span></div>
+      <div style="display:flex;gap:10px;margin-top:12px"><div class="btn" style="flex:1;font-size:16px">Fermer la carte <span class="key kB">B</span></div></div>
+      <div style="margin-top:14px;font-weight:600;font-size:15px;color:var(--encre3)">À bord : 8 · Sautés : 2</div>
+    </div>
+    <span class="cap" style="left:310px;top:80px">4</span><span class="cap" style="left:1130px;top:80px">5</span>
+  </div></div>
+</section>
+
+<!-- 3. Butin au sol -->
+<section class="frame-wrap">
+  <h2>3. Butin : une dépouille, une fenêtre</h2>
+  <p class="note">Les pièces d'un héros éliminé restent groupées dans un sac au faisceau de la meilleure rareté (lecture de loin), avec une fenêtre de pile : comparaison ▲ / ▼ avec ta pièce, prise en un appui, pas de pause.</p>
+  <div class="scaler"><div class="screen">
+    <div class="world"></div>
+    <div class="beam" style="left:640px;top:120px;height:330px;background:linear-gradient(transparent,var(--soleil))"></div>
+    <div style="position:absolute;left:600px;top:430px;width:110px;height:60px;border-radius:50%;border:4px solid var(--soleil);box-shadow:0 0 0 3px var(--encre)"></div>
+    <div class="plate" style="left:655px;top:110px"><span class="pill" style="background:var(--papier)">Dépouille de Paladin · 8 pièces</span></div>
+    <div class="stk" style="position:absolute;left:820px;top:150px;width:560px;padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><span class="mochi" style="font-size:22px">Paladin · niv. 14</span><span class="pill" style="background:var(--papier2);font-size:14px">5e · 1 élim.</span></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px">
+        <div style="text-align:center"><div class="slotmini" style="margin:auto;background:var(--soleil);outline:4px solid var(--lagonF);outline-offset:3px"></div><span class="up">▲ mieux</span></div>
+        <div style="text-align:center"><div class="slotmini" style="margin:auto;background:var(--ame)"></div><span class="up">▲ mieux</span></div>
+        <div style="text-align:center"><div class="slotmini" style="margin:auto;background:var(--lagon)"></div><span class="dn">▼ moins</span></div>
+        <div style="text-align:center"><div class="slotmini" style="margin:auto;background:var(--commun)"></div><span class="dn">▼ moins</span></div>
+      </div>
+      <div class="well" style="margin-top:12px;padding:12px">
+        <div style="font-weight:900;color:var(--soleilC)">Plastron du Lion · Légendaire</div>
+        <div style="font-weight:600;margin-top:6px">Défense <span class="up" style="color:var(--pommeC)">+38 ▲</span> · PV <span style="color:var(--pommeC)">+120 ▲</span> · Agilité <span style="color:var(--fraiseC)">−3 ▼</span></div>
+        <div style="color:var(--encre1);font-size:14px;margin-top:4px">Remplace : Cuirasse du marais (rare)</div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <div class="btn" style="flex:1;background:linear-gradient(var(--pommeC) 0 12%,var(--pomme) 12% 62%,var(--pommeF) 62%)"><span class="ink3">Prendre</span> <span class="key kA">A</span></div>
+        <div class="btn" style="flex:1">Tout le meilleur <span class="key kX">X</span></div>
+      </div>
+    </div>
+    <span class="cap" style="left:560px;top:160px">8</span>
+  </div></div>
+</section>
+
+<!-- 4. Mort et spectateur -->
+<section class="frame-wrap">
+  <h2>4. Éliminé : qui, comment, et après</h2>
+  <p class="note">Récapitulatif court (le coup qui a tué, les dégâts donnés et reçus), puis spectateur : on suit d'abord celui qui t'a éliminé, LB / RB pour changer, [F] pour son équipement. Avant 2 min : le compte à rebours du retour remplace le spectateur.</p>
+  <div class="scaler"><div class="screen">
+    <div class="world" style="filter:saturate(.55) brightness(.9)"></div>
+    <div class="stk" style="position:absolute;left:50%;top:120px;transform:translateX(-50%);width:760px;padding:22px 26px">
+      <div class="mochi ink" style="font-size:44px;transform:rotate(-3deg);text-align:center">Éliminé · 4e</div>
+      <div style="display:flex;gap:16px;align-items:center;margin-top:16px">
+        <div class="slotmini" style="background:var(--mand);width:80px;height:80px"></div>
+        <div><div style="font-size:22px;font-weight:900">Assassin · niv. 14</div><div style="font-weight:600">Coup de grâce : <b>Lame de l'ombre</b> · 312</div></div>
+        <div style="margin-left:auto;background:var(--papier2)" class="pill">Il lui restait 410 PV</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:16px">
+        <div class="tile well"><div class="v num">3 410</div><div class="l">dégâts donnés</div></div>
+        <div class="tile well"><div class="v num">2 980</div><div class="l">dégâts reçus</div></div>
+        <div class="tile well"><div class="v num">6:12</div><div class="l">survécu</div></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:18px">
+        <div class="btn pri" style="flex:1.2"><span>Regarder</span> <span class="key kA">A</span></div>
+        <div class="btn" style="flex:1">Bilan <span class="key kB">B</span></div>
+      </div>
+    </div>
+    <div class="pill" style="position:absolute;left:50%;bottom:40px;transform:translateX(-50%);background:var(--papier);font-size:17px">
+      <span class="kk">LB</span> Tu regardes : Assassin <span class="kk">RB</span> · <span class="kk">F</span> son équipement</div>
+    <span class="cap" style="left:430px;top:120px">6</span>
+  </div></div>
+</section>
+
+<!-- 5. Bilan -->
+<section class="frame-wrap">
+  <h2>5. Bilan de victoire</h2>
+  <p class="note">Bandeau incliné en Mochiy, rayons et confettis des 5 bonbons, tuiles chiffrées, ligne de temps de la partie, gains séparés (Gagné / Gardé), Rejouer en bouton primaire.</p>
+  <div class="scaler"><div class="screen">
+    <div class="world sky"></div>
+    <div style="position:absolute;left:800px;top:190px;width:0;height:0"><div class="rays" style="inset:auto;position:absolute;width:900px;height:900px;left:-450px;top:-450px"></div></div>
+    <div class="conf" style="left:420px;top:90px;background:var(--fraise);transform:rotate(20deg)"></div>
+    <div class="conf" style="left:1150px;top:120px;background:var(--lagon);transform:rotate(-30deg)"></div>
+    <div class="conf" style="left:1250px;top:60px;background:var(--pomme)"></div>
+    <div class="conf" style="left:330px;top:200px;background:var(--soleil);transform:rotate(60deg)"></div>
+    <div class="conf" style="left:980px;top:40px;background:var(--ame);transform:rotate(-10deg)"></div>
+    <div style="position:absolute;left:50%;top:70px;transform:translateX(-50%) rotate(-4deg);padding:14px 60px;border:4px solid var(--encre);border-radius:20px;box-shadow:8px 8px 0 var(--encre);
+      background:linear-gradient(var(--soleilC) 0 14%,var(--soleil) 14% 64%,var(--soleilF) 64%)">
+      <span class="mochi ink" style="font-size:64px;-webkit-text-stroke:9px var(--encre)">N°1 · Victoire !</span></div>
+    <div class="stk" style="position:absolute;left:200px;top:250px;width:1200px;padding:22px">
+      <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px">
+        <div class="tile well"><div class="v num">1 / 8</div><div class="l">place</div></div>
+        <div class="tile well"><div class="v num">4</div><div class="l">éliminations</div></div>
+        <div class="tile well"><div class="v num">7 820</div><div class="l">dégâts</div></div>
+        <div class="tile well"><div class="v num">23</div><div class="l">niveau</div></div>
+        <div class="tile well"><div class="v num">11</div><div class="l">coffres</div></div>
+        <div class="tile well"><div class="v num">9:41</div><div class="l">durée</div></div>
+      </div>
+      <div style="margin:18px 0 6px;font-weight:900">La partie</div>
+      <div style="position:relative;height:56px">
+        <div class="bar" style="position:absolute;left:0;right:0;top:20px;height:14px"><i style="width:100%;background:linear-gradient(90deg,var(--lagon),var(--ame))"></i></div>
+        <span class="pill" style="position:absolute;left:4%;top:0;background:var(--papier2);font-size:13px">Saut</span>
+        <span class="pill" style="position:absolute;left:24%;top:0;background:var(--pommeC);font-size:13px">1re élim.</span>
+        <span class="pill" style="position:absolute;left:46%;top:0;background:var(--soleilC);font-size:13px">Largage</span>
+        <span class="pill" style="position:absolute;left:66%;top:0;background:var(--fraiseC);font-size:13px">Mis à prix</span>
+        <span class="pill" style="position:absolute;left:88%;top:0;background:var(--soleil);font-size:13px">N°1</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px">
+        <div class="well" style="padding:12px"><div style="color:var(--pommeC);font-weight:900">Gagné</div><div style="font-weight:600;margin-top:6px">+110 insignes · Coffre d'apparence rare · Maîtrise</div></div>
+        <div class="well" style="padding:12px"><div style="color:var(--lagonC);font-weight:900">Record</div><div style="font-weight:600;margin-top:6px">3e victoire · 1re avec le Paladin · Ligue royale : +46 points</div></div>
+      </div>
+      <div style="display:flex;gap:14px;margin-top:18px;justify-content:center">
+        <div class="btn pri" style="width:360px"><span>Rejouer</span> <span class="key kA">A</span></div>
+        <div class="btn" style="width:280px">Menu principal <span class="key kB">B</span></div>
+      </div>
+    </div>
+    <span class="cap" style="left:200px;top:230px">7</span>
+  </div></div>
+</section>
+
+<!-- 6. Page du mode -->
+<section class="frame-wrap">
+  <h2>6. Page du mode (menu Jouer)</h2>
+  <p class="note">Une idée par écran : la vue du jeu en grand, le modificateur du jour, la carte tirée, le rang de la saison, la difficulté en pastilles et un seul bouton primaire.</p>
+  <div class="scaler"><div class="screen" style="background:var(--ciel)">
+    <div class="stk" style="position:absolute;left:380px;top:140px;width:840px;padding:20px">
+      <div style="height:250px;border-radius:16px;border:3px solid var(--encre);background:linear-gradient(transparent 55%,rgba(34,26,58,.85)),linear-gradient(115deg,#b9c08a,#9fae6e 60%,var(--chemin));position:relative">
+        <span class="pill" style="position:absolute;left:16px;top:14px;background:var(--fraise);transform:rotate(-4deg)"><span class="ink3">JcJ</span></span>
+        <div class="mochi ink" style="position:absolute;left:20px;bottom:44px;font-size:40px;transform:rotate(-3deg)">Battle royale</div>
+        <div style="position:absolute;left:22px;bottom:14px;color:var(--papier);font-weight:700">8 héros, un seul debout</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px">
+        <div class="well" style="padding:10px"><div style="color:var(--encre1);font-size:14px">Carte du jour</div><div style="font-weight:900">Forêt des saules</div></div>
+        <div class="well" style="padding:10px"><div style="color:var(--encre1);font-size:14px">Modificateur</div><div style="font-weight:900">Pluie de météores</div></div>
+        <div class="well" style="padding:10px"><div style="color:var(--encre1);font-size:14px">Saison 1</div><div style="font-weight:900">Argent II · 340 pts</div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <span class="pill" style="background:var(--papier2)">Facile</span><span class="pill" style="background:var(--papier2)">Normal</span>
+        <span class="pill" style="background:var(--lagon)"><span class="ink3">Difficile</span></span><span class="pill" style="background:var(--papier2)">Hardcore</span>
+        <span style="margin-left:auto;font-weight:600;color:var(--encre3)">Victoires 3 · meilleur 1er</span>
+      </div>
+      <div class="btn pri" style="margin-top:16px"><span>Lancer le Battle royale</span></div>
+    </div>
+    <span class="cap" style="left:380px;top:120px">P1</span>
+  </div></div>
+</section>
+
+<script>
+// Met chaque écran 1600×900 à l'échelle de son cadre.
+function fit(){document.querySelectorAll('.scaler').forEach(s=>{const k=s.clientWidth/1600;s.querySelector('.screen').style.transform='scale('+k+')';});}
+addEventListener('resize',fit);fit();
+</script>
+</body>
+</html>
