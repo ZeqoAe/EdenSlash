@@ -1,0 +1,32 @@
+[
+  {
+    "name": "echiquier",
+    "seed": 1101,
+    "width": 1536, "height": 640,
+    "prompt": "A wise robed strategist seen from behind, standing before a huge golden hexagonal game board floating in the middle of a grand circular fantasy arena at dusk, tiny glowing hero figurines and monsters placed on the hexagon tiles, golden runes, tiers of empty stone stands, banners, midnight blue sky with stars"
+  },
+  {
+    "name": "survivant",
+    "seed": 2202,
+    "width": 1536, "height": 640,
+    "prompt": "A lone hero with a glowing golden sword standing on a small rocky hill in the center, surrounded on all sides by an endless horde of fantasy monsters (goblins, slimes, skeletons, wolves) charging from the darkness, magic sparks, dramatic rim light, dusk battlefield, midnight blue sky"
+  },
+  {
+    "name": "quetes",
+    "seed": 3303,
+    "width": 1536, "height": 640,
+    "prompt": "Still life of rolled parchment quest scrolls tied with ribbons and stamped with red and gold wax seals, an old fantasy map, a feather quill and an inkwell, a small glowing golden compass, on a dark wooden table in a cozy adventurers guild hall, warm candle light, blue night window in the background"
+  },
+  {
+    "name": "arenes_3v3",
+    "seed": 4404,
+    "width": 1536, "height": 640,
+    "prompt": "Two teams of three fantasy heroes facing each other inside a grand circular colosseum arena, left team in blue and silver armor, right team in red and gold armor, a knight, an archer and a mage on each side, glowing magic circle on the sand floor between them, crowds in the stands, banners, evening sky"
+  },
+  {
+    "name": "battle_royale",
+    "seed": 5505,
+    "width": 1536, "height": 640,
+    "prompt": "High aerial view of a lush fantasy island with forests, ruins and a small village, dozens of tiny heroes fighting each other across the land, a gigantic glowing blue magical storm wall closing in from the edges of the island, golden light beams where treasure chests fell, dramatic clouds"
+  }
+]
