@@ -37,11 +37,13 @@ l'**animation** 10 ms, `move_and_slide` l'essentiel du reste.
   ombres coupées au-delà de 16 m. Aucune instanciation par lots ni imposteur : la mesure ne l'a pas exigé (§3).
 - **Le héros traverse la horde** (`SurvivorDirector._soft_body`) : un monstre ordinaire ne bloque plus le héros (il est repoussé hors de
   son corps) ; élites, géants et boss le bloquent toujours. Sans ça, dans une foule de 60 monstres, le pilote ne rejoignait plus les coffres.
-- **Gardien en vie** : la horde se calme (plafond × 0,5, moitié moins de meutes) ; sans ça, gardiens vaincus en 120-300 s au pilote.
-- **Compensation** (la courbe par minute, la puissance selon l'équipement, les paliers, gardiens et boss ne changent pas) : part de
-  chaque monstre ordinaire PV × 0,45, dégâts × 0,6, expérience × 0,38, or et potions × 0,25 (`HORDE_SHARE`) et **places d'attaque** :
-  au plus 3 (0:00) → 12 (20:00) monstres frappent en même temps, les autres attendent au contact (`Monster.attack_slots`).
-  Ouverture dès la 1re minute : 1re meute à 3 s, 1re vague à 1:00.
+- **Gardien en vie** : la horde se calme (plafond × 0,5, moitié moins de meutes, pas de vague) ; le pilote de mesure va combattre le
+  gardien (`pilot_target`) : sans ça il frappait la horde qui l'entoure (gardiens en 120-300 s au lieu de 30-90).
+- **Compensation** (la courbe par minute, la puissance selon l'équipement, les paliers et le boss ne changent pas) : part de
+  chaque monstre ordinaire PV × 0,45, dégâts × 0,6, expérience × 0,33, or et potions × 0,25 (`HORDE_SHARE`) et **places d'attaque** :
+  au plus 2 (0:00) → 12 (20:00) monstres frappent en même temps, les autres attendent au contact (`Monster.attack_slots`).
+  La horde nourrit le héros (niveau 12 à 5:00 au lieu de 10) : **gardiens 2 et 3 × 2** (440 000 / 1 400 000 ; battus en 10-30 s sinon),
+  le gardien 1 reste à 50 000 (× 2, il tuait le joueur moyen vers 6:00). Ouverture : 1re meute à 3 s, 1re vague à 1:00.
 
 ## 2. Lisibilité (SV-H2)
 - **Nombres** (`combat/damage_number.gd`, Survivant seulement) : un seul nombre par cible, qui additionne les coups et grossit (texte
@@ -71,7 +73,28 @@ l'**animation** 10 ms, `move_and_slide` l'essentiel du reste.
 Rendu (fenêtre 1600 × 900, qualité haute) : GPU 2-5 ms à 250 monstres contre 3-7 ms pour la Survie à 110 ; 1 600 à 2 800 appels de dessin.
 Le budget d'image reste sous celui de la Survie.
 
-**Densité** (pilote, palier I, moyenne / maximum à moins de 15 m) et **victoires** : voir le lot de mesures final (§3 bis, envoi suivant).
+**Densité** (30 runs au pilote, palier I, `--pilot-fight 2`, moyenne / maximum de monstres à moins de 15 m du héros) :
+
+| minute | 1:00 | 2:00 | 3:00 | 5:00 | 10:00 | 15:00 | 19:00 | 20:00 |
+|---|---|---|---|---|---|---|---|---|
+| avant (S9) | 3 / 16 | 5 / 21 | 6 / 29 | 8 / 31 | 11 / 40 | 22 / 50 | 30 / 57 | 37 / 56 |
+| **après** | **11 / 24** | **28 / 49** | **32 / 58** | **38 / 70** | **39 / 81** | **45 / 98** | **69 / 99** | **84 / 199** |
+Vivants sur la carte au pic : 290 (horde finale) ; le pilote, qui tue vite, en garde 100-200 près de lui à 20:00 (« à l'écran » : la
+moitié en `--headless`, fenêtre factice ; en fenêtre, 95 % des monstres à moins de 15 m sont à l'écran avec la caméra × 1,2).
+
+**Équilibre** (`tests/sv7_mesures.json` refait : 30 runs au pilote, 5 classes × 2 graines × 3 profils, et 10 runs du pilote moyen avec
+la vraie collecte) :
+
+| | S9 (avant) | **SVX-1** | cible |
+|---|---|---|---|
+| victoire débutant / moyen / bon | 30 / 55 / 45 % | **0 / 40 / 30 %** | 10 / 35-50 / 65 |
+| niveau à 20:00 · durée d'une victoire | 40 · 21:54 | **40 · 21:25** | 38 ± 4 · ≤ 24:00 |
+| gardiens (médiane) · boss (pilote) | 58 s · 108 s | **33 s · 79 s** | 30-90 · 90-180 |
+| morts avant 3:00 (moyen) | 1 / 20 | **0 / 10** | ≤ 1 / 20 |
+| vraie collecte : niveau à 10 / 15 / 18 / 20 min · ramassé | 18 / 28 / 35 / 39 · 98 % | **20 / 29 / 34 / 39 · 95 %** | montée régulière |
+Le bon joueur sous le moyen et le débutant à 0 % : bruit de 10 runs par profil (lots intermédiaires : 20 / 50 / 60 %, 20 / 40 / 30 %) ;
+les morts du débutant tombent autour du gardien 1 (5:00-7:30). Avant ce lot final, huit lots de réglage de 15 à 30 runs (densité de
+l'ouverture, places d'attaque, part d'expérience, pilote qui se bat à 2 m, calme et PV des gardiens).
 
 Captures regardées (vraie partie au pilote, 1600 × 900, `SVX1_SHOTS`) : 0:45 ≈ 12 monstres autour du héros (avant : 0), 2:30 ≈ 24-35
 (avant : 4), 5:00 ≈ 34 (gardien : la horde se calme), 10:00 ≈ 70 ; nombres lisibles (un par cible, jamais l'un sur l'autre), sorts du
@@ -80,10 +103,15 @@ héros pâles, héros contouré, croix d'arrivée visibles, arbre près du héro
 ## 4. Tests
 `test_svx1` (nouveau : plan de la minute, compensation, rien hors du Survivant, nombres fusionnés et plafonnés, croix, opacité, barre
 de cible, vraie carte à 10:00 : densité, croix, places d'attaque, collisions, taille, niveaux de détail, ombres, contour, décor) ;
-`test_sv4`, `test_sv7` lisent désormais les constantes de la horde. Verts (copie propre de HEAD + ce lot) : test_svx1, test_sv1 à
+`test_sv4`, `test_sv7` lisent désormais les constantes de la horde ; `sv7_mesures.json` porte les réglages de la horde (`constants`). Verts (copie propre de HEAD + ce lot) : test_svx1, test_sv1 à
 test_sv9, test_p15, test_p9, test_farm, test_hud, test_m3, test_royale, test_build, test_cards.
 
 ## 5. Reste / pièges
+- Débutant 0 % et bon 30 % (cibles 10 et 65 %) : à lire au journal réel avant de retoucher ; leviers prêts (profil `survivor` de
+  `ModeRules`, mode dev) : `horde_share`, `attack_slots`, `guardian_hp`, `GUARDIAN_CALM`.
+- Monstres « lite » : ils traversent le décor si le chemin de navigation se trompe (rare) ; les élites, géants et boss restent physiques.
+- Le banc et les copies de mesure : l'index git réel est souvent en retard sur HEAD (sessions qui commitent par un index temporaire) ;
+  `run_tests.preparer_copie` retire alors des fichiers de HEAD pris pour « non suivis » : vérifier qu'une copie a bien tout HEAD.
 - Le pilote se bat seulement à moins de 2 m (`sim_survivor.py --pilot-fight`, 4 avant) : à 4 m, dans une horde, il ne quittait plus
   la mêlée pour les coffres (5 pièces au lieu de 9 à 5:00).
 - Les nombres « à l'écran » (`[sv-dens]`) sont faux en `--headless` (fenêtre factice) : seule la colonne « à moins de 15 m » vaut.

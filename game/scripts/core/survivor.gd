@@ -72,7 +72,7 @@ const HORDE_HEIGHT := 0.8  # (et jamais plus haut que 0,8 × le héros : yacks, 
 const HORDE_RING := [13.0, 19.0]
 const HORDE_MARK := 0.8
 const HORDE_ROLE_CAP := 3.5
-const HORDE_SHARE := [0.45, 0.6, 0.35, 0.25]
+const HORDE_SHARE := [0.45, 0.6, 0.33, 0.25]
 ## Places d'attaque : au plus ATTACK_SLOTS[0] (à 0:00) → [1] (à 20:00) monstres de la horde frappent en même temps
 ## (Monster.attack_slots, suivi par SurvivorDirector.spawn_plan) ; les autres attendent au contact. Une horde dense entoure
 ## le héros sans multiplier les coups reçus (mesuré avec 8 places dès 0:00 : morts avant 6:00 au pilote débutant et moyen).
@@ -115,7 +115,9 @@ const POWER_ATK := [0.9, 1.15]
 ## Dégâts du boss × BOSS_ATK × palier (et non la courbe des monstres ordinaires, ×1,93 à 20:00 : deux fois ceux du boss d'une
 ## carte de Survie ; le pilote moyen tombait en 30 s dans l'arène). S8 : 1 -> 1,4 : le pilote dépense désormais son or (coffres,
 ## marchands : ~85 cartes à 20:00 au lieu de 70) et battait le boss en 1:35 ; le débutant gagnait autant que le joueur moyen (60 %).
-const GUARDIAN_HP := [50000.0, 220000.0, 700000.0]
+## SVX-1 : gardiens 2 et 3 × 2 (220 000 / 700 000 avant) : la horde nourrit le héros (niveau 12 à 5:00 au lieu de 10) et le pilote
+## qui va combattre le gardien le battait en 10-30 s (cible 30-90) ; le gardien 1 reste à 50 000 (× 2, il tuait le joueur moyen vers 6:00).
+const GUARDIAN_HP := [50000.0, 440000.0, 1400000.0]
 const BOSS_HP := 6000000.0
 const BOSS_RAGE_AT := 240.0
 const BOSS_ATK := 1.4

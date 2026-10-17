@@ -926,6 +926,12 @@ d'apparence (lot S6). Socle (S1, 0.1.194) :
 - Règles chiffrées : profil `survivor` de `ModeRules` (modifiable en mode dev). **Visible et jouable par tous dès le départ**
   (`Survivor.READY`, lot S8) : activité de la rangée Aventure (2e, illustration provisoire `assets/ui/activities/survivor.jpg`),
   quêtes du Survivant tirables, nouveauté « Survivant » et entrée au Guide (chapitre Modes).
+- **Horde et lisibilité** (lot SVX-1, `conception/survivor/R_SVX1.md`) : 30 → 230 monstres vivants (290 à la horde finale de 19:00),
+  plus petits (× 0,6, jamais plus hauts que 0,8 × le héros), arrivées à l'écran annoncées par une croix au sol 0,8 s avant ; le héros
+  traverse les monstres ordinaires ; chacun porte une part des PV (× 0,45), des dégâts (× 0,6), de l'expérience (× 0,33) et de l'or
+  (× 0,25) ; 2 → 12 monstres frappent en même temps au plus ; gardien en vie = horde calmée (pas de vague) ; gardiens 50 000 /
+  440 000 / 1 400 000. Lisibilité : un nombre de dégâts par cible (30 à l'écran au plus), sorts du héros à 40 % d'opacité au plus,
+  héros contouré, décor tramé dans 4 m autour du héros, barre de cible pour les élites, géants et boss seulement.
 - **Pièces et arme** (S2, `core/survivor_pool.gd`, `core/survivor_gear.gd`) : pool = les 13 sets d'Eden de niveau 90 (tête,
   torse, jambes, gants, bottes ; 5 en plates, 5 en cuir, 3 en tissu), plus les pièces de niveau 90 hors set pour la cape, le
   collier et la bague ; armes des 17 types (modèles de niveau 90). Stats d'origine de la pièce, puissance = niveau du héros (90

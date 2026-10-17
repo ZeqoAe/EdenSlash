@@ -272,7 +272,7 @@ func update_spawns(delta: float) -> bool:
 	Monster.attack_slots = int(plan.attack_slots)
 	var calm := guardians.any(func(e): return float(e.ttk) < 0.0)
 	if calm:
-		# (lot SVX-1) gardien en vie : la horde se calme (moitié moins de meutes, plafond × GUARDIAN_CALM) ; mesuré sans :
+		# (lot SVX-1) gardien en vie : la horde se calme (moitié moins de meutes, pas de vague, plafond × GUARDIAN_CALM) ; mesuré sans :
 		# gardiens vaincus en 120-300 s au lieu de 30-90, le héros débutant tombait pendant le combat
 		cap = roundi(cap * GUARDIAN_CALM)
 	_despawn_t -= delta
@@ -300,7 +300,7 @@ func update_spawns(delta: float) -> bool:
 				sp.pack(budget, monster_level(0))
 			else:
 				_pack(int(budget), monster_level(0), 20.0, 28.0)
-	_wave_t -= delta
+	_wave_t -= 0.0 if calm else delta  # (pas de vague pendant le combat d'un gardien)
 	if _wave_t <= 0.0:
 		_wave_t = float(plan.wave_every)
 		_wave_hard = not _wave_hard and bool(plan.hard)  # (ouverture : seulement des vagues légères, sans élite)
@@ -755,6 +755,12 @@ func pilot_target() -> Vector3:
 	_pilot_t = d.time + PILOT_RETARGET
 	_pilot_goal = Vector3.INF
 	var p := d.player.global_position
+	for e in guardians:  # (lot SVX-1) un gardien en vie : le pilote va le combattre (sinon il frappait la horde qui l'entoure)
+		if float(e.ttk) < 0.0:
+			for node in d.get_tree().get_nodes_in_group("monsters"):
+				if node is GiantMonster and node.has_meta("sv_guardian") and not (node as Monster).is_dead:
+					_pilot_goal = (node as Node3D).global_position
+					return _pilot_goal
 	var best := INF
 	for it in d.map.interactables:
 		if not is_instance_valid(it) or it.used:
