@@ -168,11 +168,14 @@ func _test_world() -> void:
 		d._monster_level(0) == 23 and d._boss_level() == 24 and d.loot_level(99) == 23)
 	Run.hero_level = 10
 	check("butin jamais au-dessus du niveau de héros (%d pour 10)" % d.loot_level(99), d.loot_level(99) == 10)
-	var m := d._spawn_monster(d._pick_monster(10), p.global_position + Vector3(30, 0, 0), 20)
-	var want := float(GameData.monster_xp(p.level))
-	check("XP de run d'un monstre de niveau 20 : celle d'un monstre du niveau de run %d (%d ≈ %d)" % [p.level, m.xp_reward, roundi(want)],
-		absf(float(m.xp_reward) / maxf(want, 1.0) - 1.0) < 0.6)
+	var id := d._pick_monster(10)
+	# (un monstre déjà créé : sans rôle tiré au hasard, qui changerait aussi l'XP)
+	var m := d._spawn_monster(id, p.global_position + Vector3(30, 0, 0), 20, false, Monster.new())
+	var m5 := d._spawn_monster(id, p.global_position + Vector3(-30, 0, 0), 5, false, Monster.new())
+	check("XP de run : celle du niveau de run %d, pas du niveau de carte (même monstre niveau 20 / 5 : %d / %d)" % [p.level, m.xp_reward, m5.xp_reward],
+		absf(float(m.xp_reward) / maxf(float(m5.xp_reward), 1.0) - 1.0) < 0.05)
 	m.queue_free()
+	m5.queue_free()
 	Run.hero_level = 1
 	p.recalc_stats()
 	await get_tree().process_frame

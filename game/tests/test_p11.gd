@@ -100,8 +100,9 @@ func _test_boss_rage() -> void:
 func _test_probe() -> void:
 	var good := _probe(["--epoch=1", "--stage=1", "--class=warrior", "--hub=new", "--level=15", "--cards=16", "--trophies=4",
 		"--finds=0.7", "--anvil=1", "--seed=7", "--max=200"])
-	check("bonne run, carte 1 : boss tué en %.0f s (30 s à 2 min)" % float(good.get("ttk", -1.0)),
-		String(good.get("res", "")) == "tué" and float(good.ttk) >= 30.0 and float(good.ttk) <= 120.0)
+	# lot H4a : --level = niveau de héros ; la 1re carte est desserrée pour un compte neuf (M′ 0,35), un héros 15 la passe vite
+	check("bonne run, carte 1 : boss tué en %.0f s (15 s à 2 min)" % float(good.get("ttk", -1.0)),
+		String(good.get("res", "")) == "tué" and float(good.ttk) >= 15.0 and float(good.ttk) <= 120.0)
 	var at := Epochs.boss_rage_at(2)
 	var rush := _probe(["--epoch=1", "--stage=2", "--class=warrior", "--hub=new", "--level=17", "--cards=16", "--trophies=1",
 		"--finds=0.3", "--anvil=0", "--seed=7", "--max=%d" % int(at)])
