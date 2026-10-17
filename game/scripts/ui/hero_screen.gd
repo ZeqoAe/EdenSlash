@@ -55,13 +55,23 @@ func _ready() -> void:
 	grad.fill_from = Vector2(0.5, 0.45)
 	grad.fill_to = Vector2(1.15, 1.15)
 	grad.gradient = Gradient.new()
-	grad.gradient.set_color(0, Color(0.06, 0.05, 0.14, 1.0))
-	grad.gradient.set_color(1, Color(0.02, 0.02, 0.06, 1.0))
+	# fond clair et feuille de papier autocollant (UIK1, comme PageScreen) ; les pages gardent leurs puits d'encre
+	grad.gradient.set_color(0, UiTheme.color("papier.200"))
+	grad.gradient.set_color(1, UiTheme.color("monde.ciel", Color("ccdef3")).darkened(0.12))
 	bg.texture = grad
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg.stretch_mode = TextureRect.STRETCH_SCALE
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(bg)
+	var sheet := Panel.new()  # (UIK1)
+	sheet.set_anchors_preset(Control.PRESET_FULL_RECT)
+	sheet.offset_left = 6
+	sheet.offset_top = 6
+	sheet.offset_right = -6
+	sheet.offset_bottom = -6
+	sheet.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sheet.add_theme_stylebox_override("panel", UiTheme.panel_style(6))
+	_root.add_child(sheet)
 	var v := VBoxContainer.new()
 	v.set_anchors_preset(Control.PRESET_FULL_RECT)
 	v.offset_left = 18
@@ -72,7 +82,7 @@ func _ready() -> void:
 	_root.add_child(v)
 	_build_top(v)
 	var line := ColorRect.new()
-	line.color = Color(UiTheme.GOLD_DIM, 0.55)
+	line.color = Color(UiTheme.color("encre.700"), 0.18)  # (UIK1 : filet d'encre léger sur le papier)
 	line.custom_minimum_size = Vector2(0, 2)
 	v.add_child(line)
 	var body := HBoxContainer.new()
@@ -111,6 +121,7 @@ func _build_top(parent: Control) -> void:
 	top.add_theme_constant_override("separation", 18)
 	top.custom_minimum_size = Vector2(0, 74)
 	parent.add_child(top)
+	UiTheme.paper(top)  # en-tête sur le papier (UIK1) : textes à l'encre ; la carte de la classe reste un puits d'encre
 	var back := Button.new()
 	back.text = "  " + back_text
 	back.icon = MenuWidgets.icon("back")
@@ -121,8 +132,7 @@ func _build_top(parent: Control) -> void:
 	back.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	back.add_theme_font_override("font", UiTheme.bold_font())
 	back.add_theme_font_size_override("font_size", 16)
-	back.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.06, 0.05, 0.12, 0.9), UiTheme.GOLD_DIM, 2, 22, false))
-	back.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.25, 0.18, 0.07, 0.95), UiTheme.GOLD, 2, 22, false))
+	UiTheme.style_icon_button(back, "papier", 16, {"radius": 22})  # (UIK1)
 	back.pressed.connect(close_ui)
 	top.add_child(back)
 	top.add_child(InventoryPage.gold_icon("class", 54))
@@ -130,6 +140,7 @@ func _build_top(parent: Control) -> void:
 	_title.text = "Héros"
 	_title.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	UiTheme.title(_title, 42, UiTheme.GOLD)
+	_title.set_meta("ink_keep", true)  # titre autocollant contouré (UIK1)
 	top.add_child(_title)
 	top.add_child(HeroLevelGauge.new(16, 140.0))  # niveau de héros du compte (lot H1)
 	var sp := Control.new()
@@ -147,8 +158,7 @@ func _build_top(parent: Control) -> void:
 	_creator_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_creator_button.add_theme_font_override("font", UiTheme.bold_font())
 	_creator_button.add_theme_font_size_override("font_size", 16)
-	_creator_button.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.06, 0.05, 0.12, 0.9), UiTheme.GOLD_DIM, 2, 22, false))
-	_creator_button.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.25, 0.18, 0.07, 0.95), UiTheme.GOLD, 2, 22, false))
+	UiTheme.style_icon_button(_creator_button, "papier", 16, {"radius": 22})  # (UIK1)
 	_creator_button.pressed.connect(open_creator)
 	top.add_child(_creator_button)
 	_help_button = Button.new()
@@ -159,9 +169,8 @@ func _build_top(parent: Control) -> void:
 	_help_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_help_button.add_theme_font_override("font", UiTheme.title_font())
 	_help_button.add_theme_font_size_override("font_size", 26)
-	_help_button.add_theme_stylebox_override("normal", UiTheme.flat_box(Color(0.06, 0.05, 0.12, 0.9), UiTheme.GOLD_DIM, 2, 26, false))
-	_help_button.add_theme_stylebox_override("hover", UiTheme.flat_box(Color(0.25, 0.18, 0.07, 0.95), UiTheme.GOLD, 2, 26, false))
-	_help_button.add_theme_stylebox_override("pressed", UiTheme.flat_box(Color(0.32, 0.22, 0.07, 0.95), UiTheme.GOLD, 2, 26, false))
+	UiTheme.style_icon_button(_help_button, "lagon", 26, {"radius": 26, "pad": Vector2(4, 2)})  # aide : action douce (UIK1)
+	_help_button.add_theme_font_override("font", UiTheme.title_font())
 	_help_button.pressed.connect(_open_guide)
 	top.add_child(_help_button)
 	var cc := Button.new()  # carte de la classe : ouvre le sélecteur
@@ -212,6 +221,19 @@ func _build_side() -> void:
 		_nav[s[0]] = b
 
 
+## Pastille de nouveauté (NewsDot) sur le bouton de la section [param section] (« equipment », « appearance »…), lue
+## dans les groupes [param groups] de NewsDots. API officielle (au lieu de _nav).
+func set_tab_badge(section: String, groups: Array) -> NewsDot:
+	if not _nav.has(section):
+		return null
+	return NewsDot.attach(_nav[section], groups)
+
+
+## Bouton de la section [param section] (null s'il n'existe pas).
+func section_button(section: String) -> Button:
+	return _nav.get(section) as Button
+
+
 func _nav_button(text: String, icon_name: String) -> Button:
 	var b := Button.new()
 	b.text = "  " + text
@@ -224,22 +246,9 @@ func _nav_button(text: String, icon_name: String) -> Button:
 	b.custom_minimum_size = Vector2(0, 60)
 	b.add_theme_font_override("font", UiTheme.bold_font())
 	b.add_theme_font_size_override("font_size", 17)
-	var n := UiTheme.flat_box(Color(0.06, 0.05, 0.13, 0.88), Color(0.5, 0.4, 0.24, 0.85), 1, 10, false)
-	n.content_margin_left = 16
-	var on := UiTheme.flat_box(Color(0.32, 0.22, 0.07, 0.95), UiTheme.GOLD, 2, 10, false)
-	on.content_margin_left = 16
-	on.shadow_color = Color(UiTheme.GOLD, 0.45)
-	on.shadow_size = 8
-	var hov := UiTheme.flat_box(Color(0.18, 0.13, 0.07, 0.95), UiTheme.GOLD, 1, 10, false)
-	hov.content_margin_left = 16
-	b.add_theme_stylebox_override("normal", n)
-	b.add_theme_stylebox_override("hover", hov)
-	b.add_theme_stylebox_override("pressed", on)
-	b.add_theme_stylebox_override("hover_pressed", on)
-	b.add_theme_color_override("icon_normal_color", UiTheme.GOLD)
-	b.add_theme_color_override("icon_hover_color", Color(1, 0.92, 0.65))
-	b.add_theme_color_override("icon_pressed_color", Color(1, 0.92, 0.65))
-	b.add_theme_color_override("font_color", Color(1, 0.95, 0.85))
+	# entrée du menu de côté : autocollant papier, la section ouverte en lagon (UIK1, comme le menu principal)
+	UiTheme.style_icon_button(b, "papier", 17, {"pad": Vector2(16, 4)})
+	b.add_theme_font_override("font", UiTheme.bold_font())
 	return b
 
 

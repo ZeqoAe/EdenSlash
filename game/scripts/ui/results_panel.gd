@@ -137,7 +137,7 @@ func show_spec(spec: Dictionary) -> void:
 	if art != null:
 		root.add_child(art)
 	var dim := ColorRect.new()
-	dim.color = Color(0.02, 0.01, 0.05, 0.9)
+	dim.color = Color(UiTheme.color("encre.700"), 0.62)  # voile de bilan : la partie se devine derrière (bible)
 	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.add_child(dim)
 	if art != null:  # le voile garde sa couleur ; son opacité devient celle du fond illustré
@@ -146,7 +146,7 @@ func show_spec(spec: Dictionary) -> void:
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.add_child(center)
 	var panel := PanelContainer.new()
-	panel.add_theme_stylebox_override("panel", UiTheme.panel_box(34, 24))
+	UiTheme.paper(panel, 7, Vector2(34, 22))  # feuille papier ; tuiles et colonnes restent des puits d'encre (UIK1)
 	panel.custom_minimum_size = Vector2(WIDTH, 0)
 	center.add_child(panel)
 	_panel = panel
@@ -157,6 +157,7 @@ func show_spec(spec: Dictionary) -> void:
 	var tone: Color = {"win": WIN, "lose": LOSE, "info": INFO}.get(String(spec.get("tone", "info")), INFO)
 	var t := Label.new()
 	UiTheme.title(t, 50, tone)
+	t.set_meta("ink_keep", true)  # « Victoire ! » contouré d'encre, même sur le papier
 	t.text = String(spec.get("title", ""))
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_body.add_child(t)
@@ -201,6 +202,18 @@ func show_spec(spec: Dictionary) -> void:
 	_build_buttons(spec.get("buttons", []))
 	_fit.call_deferred()
 	_start_animation()
+	if String(spec.get("tone", "")) == "win":
+		_celebrate.call_deferred()
+
+
+## Victoire : confettis des bonbons depuis le titre (UiFeel : 24 au plus, coupés avec « Réduire les animations ») ; un
+## bilan qui a ses propres confettis (Battle royale : variable « confetti ») garde les siens.
+func _celebrate() -> void:
+	if get("confetti") is Array:
+		return
+	await get_tree().process_frame
+	if is_instance_valid(_title) and _title.is_inside_tree():
+		UiFeel.confetti(_title.get_global_transform_with_canvas() * (_title.size * 0.5))
 
 
 ## Les trois blocs côte à côte (un bloc sans ligne n'existe pas).
@@ -298,7 +311,7 @@ func _build_buttons(list: Array) -> void:
 	var locked: Array[Button] = []
 	for d in list:
 		var primary := bool(d.get("primary", false))
-		var b := MenuWidgets.gold_button(String(d.text), 24, Vector2(330, 62)) if primary else MenuWidgets.glass_button(String(d.text), 22, Vector2(300, 62))
+		var b := MenuWidgets.gold_button(String(d.text), 24, Vector2(330, 62)) if primary else MenuWidgets.paper_button(String(d.text), 22, Vector2(300, 62))
 		b.add_theme_stylebox_override("disabled", UiTheme.flat_box(Color(0.1, 0.09, 0.16, 0.8), Color(0.3, 0.28, 0.4), 1, 14 if primary else 12, false))
 		b.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.35))
 		var cb: Callable = d.get("call", Callable())

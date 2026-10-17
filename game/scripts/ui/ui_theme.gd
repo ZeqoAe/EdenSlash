@@ -242,6 +242,7 @@ class StickerBox extends StyleBox:
 	var gloss := true
 	var trame := false
 	var glow := Color(0, 0, 0, 0)  # lueur douce autour (bouton primaire survolé)
+	var rays := false  # rayons de soleil derrière (primaire survolé ; tournent d'un tour en 12 s quand le contrôle est redessiné)
 	var cel_top := 0.12
 	var cel_bottom := 0.38
 	var _flat_fill: StyleBoxFlat
@@ -308,6 +309,15 @@ class StickerBox extends StyleBox:
 		var base := Rect2(rect.position, rect.size - Vector2(0, depth))
 		var dy := clampf(float(lift), -8.0, depth)
 		var face := Rect2(base.position + Vector2(0, dy), base.size)
+		if rays:
+			var c0 := face.get_center()
+			var r := maxf(face.size.x, face.size.y) * 0.62
+			var turn := float(Time.get_ticks_msec() % 12000) / 12000.0 * TAU
+			for i in 12:
+				var a := turn + TAU * float(i) / 12.0
+				RenderingServer.canvas_item_add_polygon(ci, PackedVector2Array([c0,
+					c0 + Vector2(cos(a - 0.09), sin(a - 0.09)) * r, c0 + Vector2(cos(a + 0.09), sin(a + 0.09)) * r]),
+					PackedColorArray([Color(1, 0.95, 0.7, 0.32), Color(1, 0.95, 0.7, 0.0), Color(1, 0.95, 0.7, 0.0)]))
 		if _flat_glow != null:
 			_flat_glow.draw(ci, face)
 		# ombre dure (flou de 1 px) : décalée jusqu'au bas réservé, cachée quand la face s'est posée dessus
@@ -354,6 +364,7 @@ static func sticker(tone: String, opts := {}) -> StickerBox:
 	sb.gloss = bool(opts.get("gloss", true))
 	sb.trame = bool(opts.get("trame", false))
 	sb.glow = opts.get("glow", Color(0, 0, 0, 0))
+	sb.rays = bool(opts.get("rays", false))
 	sb.square_bottom = bool(opts.get("square_bottom", false))
 	sb.cel_top = float(opts.get("cel_top", 0.12))
 	sb.cel_bottom = float(opts.get("cel_bottom", 0.38))
@@ -377,6 +388,7 @@ static func button_states(tone: String, opts := {}) -> Dictionary:
 	hover_opts.lift = -3
 	if tone == "soleil":
 		hover_opts.glow = Color(color("bonbon.soleil.clair"), 0.55)
+		hover_opts.rays = true  # bible § 7 : rayons de soleil derrière le primaire survolé
 	var press_opts := opts.duplicate()
 	press_opts.lift = shadow
 	var dis_opts := opts.duplicate()
@@ -453,6 +465,22 @@ static func style_button(b: Button, tone := "papier", size := 0, opts := {}) -> 
 	return b
 
 
+## Bouton à icône du menu (pictogramme blanc d'assets/ui/icons) sur le papier : autocollant [param tone], icône à
+## l'encre (blanche sur un bonbon ou quand le bouton est choisi). Même API que style_button.
+static func style_icon_button(b: Button, tone := "papier", size := 0, opts := {}) -> Button:
+	style_button(b, tone, size, opts)
+	var ink := color("encre.700")
+	var light := tone != "papier" and tone != "papier2" and tone != "gris"
+	for k in ["icon_normal_color", "icon_hover_color", "icon_focus_color"]:
+		b.add_theme_color_override(k, Color.WHITE if light else ink)
+	for k in ["icon_pressed_color", "icon_hover_pressed_color"]:
+		b.add_theme_color_override(k, Color.WHITE if light else color("encre.900"))
+	if b.toggle_mode and not light:
+		b.add_theme_color_override("font_pressed_color", color("encre.900"))
+		b.add_theme_color_override("font_hover_pressed_color", color("encre.900"))
+	return b
+
+
 ## Panneau (fenêtre, carte) selon la peau : papier crème (sticker) ou nuit. [param shadow] ombre dure (7 = panneau).
 static func panel_style(shadow := 7, pad := Vector2(18, 14), radius := 18) -> StyleBox:
 	var night := skin == "night"
@@ -498,7 +526,7 @@ static func scope_theme() -> Theme:
 	var night := skin == "night"
 	var t := Theme.new()
 	t.default_font = body_font()
-	t.default_font_size = 17
+	t.default_font_size = 16  # même taille que le thème global : un panneau passé au papier ne s'élargit pas
 	var ink := color("encre.700")
 	t.set_color("font_color", "Label", color("papier.100") if night else ink)
 	t.set_color("font_outline_color", "Label", color("encre.900"))
@@ -519,6 +547,141 @@ static func scope_theme() -> Theme:
 	_theme_bars(t, night)
 	_scope_theme = t
 	return t
+
+
+# --- passage au papier (UIK1) -----------------------------------------------------------
+## Meta d'une zone papier (posée par paper()).
+const PAPER_META := "uik_paper"
+## Une zone papier a-t-elle déjà été posée ? Sinon UiFeel ne cherche même pas (coût nul ailleurs).
+static var paper_used := false
+
+
+## Passe un panneau d'écran existant au papier autocollant (bible § 2 : « clair dehors, encre dedans ») : panneau papier
+## contouré d'encre à ombre dure, thème papier (boutons papier, textes encre) et adaptation des textes déjà écrits pour un
+## fond d'encre : un texte clair posé sur le papier passe à l'encre (couleurs gardées mais foncées, contour retiré) ; un
+## texte posé dans un puits d'encre (panneau ou bouton sombre) reste clair. Les contrôles ajoutés plus tard sont adaptés
+## aussi (UiFeel les voit passer) ; une couleur changée par l'écran est réadaptée à son prochain dessin.
+## Aucune logique d'écran n'est touchée : l'appel remplace la boîte du panneau.
+static func paper(c: Control, shadow := 6, pad := Vector2(16, 14), radius := 18) -> Control:
+	if c is PanelContainer:
+		var sb := panel_style(shadow, pad, radius)
+		c.add_theme_stylebox_override("panel", sb)
+	c.theme = scope_theme()
+	c.set_meta(PAPER_META, true)
+	paper_used = true
+	ink_walk(c)
+	return c
+
+
+## Adapte tous les descendants de [param n] (textes, boutons, icônes de menu).
+static func ink_walk(n: Node) -> void:
+	for ch in n.get_children():
+		if ch is Control:
+			ink_watch(ch as Control)
+		ink_walk(ch)
+
+
+## Le nœud est-il dans une zone papier (jusqu'au calque) ?
+static func in_paper(n: Node) -> bool:
+	if not paper_used:
+		return false
+	var p := n.get_parent()
+	while p != null and not (p is CanvasLayer) and not (p is Window):
+		if p.has_meta(PAPER_META):
+			return true
+		p = p.get_parent()
+	return false
+
+
+## Surveille un contrôle d'une zone papier : sa couleur est adaptée à chaque dessin (texte d'encre sur papier, clair dans
+## un puits d'encre).
+static func ink_watch(c: Control) -> void:
+	if not (c is Label or c is Button or c is TextureRect or c is RichTextLabel) or c.has_meta("_ink"):
+		return
+	c.set_meta("_ink", true)
+	c.draw.connect(UiTheme._ink_fix.bind(c))
+	UiTheme._ink_fix.call_deferred(c)  # tout de suite (les couleurs posées juste après l'ajout comprises), puis à chaque dessin
+
+
+static func _ink_fix(c: Control) -> void:
+	if not is_instance_valid(c) or c.has_meta("ink_keep"):
+		return
+	var bg := _bg_color(c)
+	var on_light := bg.get_luminance() >= 0.5 and bg.s < 0.45  # papier, crème, gris clair (pas un bonbon : texte blanc contouré voulu)
+	if c is TextureRect:
+		var tr := c as TextureRect
+		if on_light and tr.texture != null and tr.texture.resource_path.contains("/ui/icons/") and tr.modulate.get_luminance() > 0.6:
+			tr.modulate = Color(color("encre.700"), tr.modulate.a)  # pictogrammes blancs du menu (modulate : redessiné seul)
+		return
+	var key := "default_color" if c is RichTextLabel else "font_color"
+	if on_light:
+		if c.has_theme_color_override(key):
+			var col := c.get_theme_color(key)
+			var fixed := on_paper(col)
+			if not fixed.is_equal_approx(col):
+				c.add_theme_color_override(key, fixed)
+				if c.has_theme_constant_override("outline_size") and c.get_theme_color("font_outline_color").get_luminance() < 0.3:
+					c.add_theme_constant_override("outline_size", 0)  # contour sombre d'un texte qui était clair
+				c.queue_redraw.call_deferred()  # (pendant un dessin, Godot ignore la demande d'un nouveau dessin)
+	elif not c.has_theme_color_override(key) and c.get_theme_color(key).get_luminance() < 0.3:
+		c.add_theme_color_override(key, TEXT)  # texte sans couleur propre dans un puits d'encre d'une zone papier
+		c.queue_redraw.call_deferred()
+
+
+## Fond sur lequel [param c] est posé : boîte du premier panneau ou bouton qui a un fond, en remontant ; papier si l'on
+## atteint la zone papier ; encre sinon.
+static func _bg_color(c: Control) -> Color:
+	var n: Node = c if c is Button else c.get_parent()
+	while n != null and not (n is CanvasLayer):
+		if n is Control:
+			var sb: StyleBox = null
+			if n is PanelContainer or n is Panel:
+				sb = (n as Control).get_theme_stylebox("panel")
+			elif n is Button:
+				sb = (n as Control).get_theme_stylebox("disabled" if (n as Button).disabled else "normal")
+			if sb is StickerBox:
+				return (sb as StickerBox).fill
+			if sb is StyleBoxFlat and (sb as StyleBoxFlat).draw_center and (sb as StyleBoxFlat).bg_color.a >= 0.45:
+				return (sb as StyleBoxFlat).bg_color
+			if n.has_meta(PAPER_META):
+				return color("papier.100")
+		n = n.get_parent()
+	return color("encre.500")
+
+
+static var _bb_color: RegEx
+
+
+## Texte BBCode écrit pour un fond d'encre, posé sur le papier : chaque [color=…] clair passe par on_paper (carte d'objet…).
+static func paper_bbcode(t: String) -> String:
+	if _bb_color == null:
+		_bb_color = RegEx.create_from_string("\\[color=([^\\]]+)\\]")
+	var out := ""
+	var at := 0
+	for m in _bb_color.search_all(t):
+		out += t.substr(at, m.get_start() - at)
+		var raw := m.get_string(1)
+		var c := Color.from_string(raw, Color(0, 0, 0, 0))
+		out += "[color=#%s]" % on_paper(c).to_html(c.a < 0.999) if c.a > 0.0 else m.get_string()
+		at = m.get_end()
+	return out + t.substr(at)
+
+
+## Couleur d'un texte clair (écrit pour un fond d'encre) posée sur le papier : blanc, crème et lilas → encre ; couleurs vives
+## gardées mais foncées (or → or brun, vert → gain, rouge → perte, autres teintes à 50 % de valeur) ; contraste ≥ 4,5:1.
+static func on_paper(col: Color) -> Color:
+	if col.a < 0.05 or col.get_luminance() < 0.45:
+		return col
+	if col.s < 0.3:
+		return Color(color("encre.700") if col.get_luminance() > 0.84 else color("encre.300"), col.a)
+	var h := col.h * 360.0
+	if h >= 30.0 and h < 65.0:
+		return Color(Color("8a5a00"), col.a)  # or, soleil
+	if h >= 65.0 and h < 170.0:
+		return Color(color("texte.gain-sur-papier"), col.a)
+	if h >= 330.0 or h < 12.0:
+		return Color(color("texte.perte-sur-papier"), col.a)
+	return Color.from_hsv(col.h, maxf(col.s, 0.8), 0.5, col.a)
 
 
 # --- thème global ------------------------------------------------------------------------

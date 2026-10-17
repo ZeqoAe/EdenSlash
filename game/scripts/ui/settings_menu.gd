@@ -691,15 +691,34 @@ func _page(title: String, hint := "") -> VBoxContainer:
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(left)
 	var col := VBoxContainer.new()
-	col.custom_minimum_size = Vector2(COL_W, 0)
+	col.custom_minimum_size = Vector2(_col_w(), 0)
 	col.add_theme_constant_override("separation", 2)
 	h.add_child(col)
+	# la colonne ne dépasse jamais la page (elle sortait de l'écran à droite, UIK1) : recalculée si la fenêtre change
+	_cols.append(col)
+	if not get_viewport().size_changed.is_connected(_fit_cols):
+		get_viewport().size_changed.connect(_fit_cols)
 	var right := Control.new()
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(right)
 	add_page(title, panel)
 	_page_hints.append(hint)
 	return col
+
+
+## Largeur de la colonne de réglages : COL_W au plus, jamais plus que la page (marges de l'écran 2 × 28, du panneau
+## 2 × 28, barre de défilement et liseré : 140 px).
+func _col_w() -> float:
+	return minf(float(COL_W), get_viewport().get_visible_rect().size.x - 140.0)
+
+
+var _cols: Array[Control] = []  # colonnes des pages (largeur suivie par _fit_cols)
+
+
+func _fit_cols() -> void:
+	for col in _cols:
+		if is_instance_valid(col):
+			col.custom_minimum_size.x = _col_w()
 
 
 ## Bouton discret : filet gris, or au survol (l'or est réservé à ce qui est choisi).

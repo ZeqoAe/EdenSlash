@@ -84,8 +84,11 @@ static func series_tip() -> String:
 
 
 # --- les lignes -------------------------------------------------------------------------------------------------
+## Ligne de quête : puits d'encre contouré (UIK1) ; une ligne mise en avant garde son liseré de couleur (or : quête faite).
 static func _box(bg: Color, border: Color) -> StyleBoxFlat:
-	var sb := UiTheme.flat_box(bg, border, 1, 10, false)
+	var ink := UiTheme.color("encre.900")
+	var accent := border.s > 0.3 and border.a > 0.7 and border.v > 0.9  # liseré vif voulu (or plein…), sinon encre
+	var sb := UiTheme.flat_box(UiTheme.color("encre.500") if bg.get_luminance() < 0.15 else bg, border if accent else ink, 3 if not accent else 2, 14, false)
 	sb.content_margin_left = 12
 	sb.content_margin_right = 12
 	sb.content_margin_top = 8

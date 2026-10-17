@@ -22,9 +22,7 @@ var _alt_head: Label
 
 func _init() -> void:
 	custom_minimum_size = Vector2(W, 0)
-	var sb := QuestsPage._box(Color(0.1, 0.08, 0.04, 0.92), Color(UiTheme.GOLD, 0.8))
-	sb.set_border_width_all(2)
-	add_theme_stylebox_override("panel", sb)
+	UiTheme.paper(self, 5, Vector2(12, 8), 16)  # bulle papier autocollant (UIK1, bible § 8 : avis du menu en bulle)
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 6)
@@ -85,7 +83,7 @@ func show_advices(list: Array, compact := false) -> void:
 	var others: Array = list.slice(1, 2 if compact else 3)
 	_alts.visible = not others.is_empty()
 	for a in others:
-		var b := MenuWidgets.glass_button("› " + String(a.text), 14, Vector2(0, 32))
+		var b := MenuWidgets.paper_button("› " + String(a.text), 14, Vector2(0, 32))
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.clip_text = true
 		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS

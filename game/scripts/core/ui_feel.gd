@@ -66,6 +66,9 @@ func read_settings() -> void:
 func _on_node_added(n: Node) -> void:
 	if n is BaseButton and (n as BaseButton).toggle_mode:
 		_prepare_toggle(n as BaseButton)
+	# zones papier (UiTheme.paper) : un texte ou un bouton ajouté plus tard est adapté à son fond
+	if UiTheme.paper_used and (n is Label or n is Button or n is TextureRect or n is RichTextLabel) and UiTheme.in_paper(n):
+		UiTheme.ink_watch(n as Control)
 
 
 # --- branchement ------------------------------------------------------------------------
@@ -95,6 +98,7 @@ func _sel_outline(c: BaseButton) -> void:
 	var want := so if c.button_pressed else 0
 	if c.get_theme_constant("outline_size") != want:
 		c.add_theme_constant_override("outline_size", want)
+		c.queue_redraw.call_deferred()  # (UIK1 : pendant un dessin, Godot ignore la demande d'un nouveau dessin)
 
 
 func kind_of(c: Control) -> String:
@@ -102,6 +106,8 @@ func kind_of(c: Control) -> String:
 		return String(c.get_meta("ui_feel"))
 	if c is UiTheme.Switch or c is CheckBox or c is CheckButton:
 		return "toggle"
+	if c is ItemWidgets.ItemSlot:
+		return "slot"  # case d'objet : 1,06 au survol, 0,92 à l'appui, « clac » d'équipement
 	if c.size.x >= 260.0 and c.size.y >= 200.0:
 		return "card"
 	return "button"
@@ -433,6 +439,8 @@ func _candy(n: String) -> Color:
 func _process(delta: float) -> void:
 	if enabled:
 		_track_hover()
+		if _hot != null and not reduce_motion and kind_of(_hot) == "primary":
+			_hot.queue_redraw()  # rayons de soleil qui tournent derrière le primaire survolé (StickerBox.rays)
 	if _focused != null and (not is_instance_valid(_focused) or UiNav.cursor != _focused or not UiNav.shown):
 		var old := _focused
 		_focused = null

@@ -187,7 +187,7 @@ class ItemCard extends HBoxContainer:
 		if worn is Dictionary and not worn.is_empty() and not is_same(worn, it) and String(worn.get("uid", "")) != String(it.get("uid", "-")) \
 				and String(it.get("slot", "")) in Items.SLOTS:
 			var wl := ItemWidgets._card_panel(self, worn, 300.0, "Portée")
-			wl.text = Items.describe(worn, false)
+			wl.text = UiTheme.paper_bbcode(Items.describe(worn, false))  # carte papier (UIK1)
 			_worn_card = wl.get_parent().get_parent()
 		detailed = mode == 1 or (auto and Input.is_key_pressed(KEY_SHIFT))
 		_refresh()
@@ -196,7 +196,7 @@ class ItemCard extends HBoxContainer:
 		set_process(auto)  # le moteur active _process à l'entrée dans l'arbre : seulement si Maj commande la carte
 
 	func _refresh() -> void:
-		_label.text = ItemWidgets.card_text(item, extra, detailed)
+		_label.text = UiTheme.paper_bbcode(ItemWidgets.card_text(item, extra, detailed))  # couleurs foncées sur le papier (UIK1)
 		reset_size()
 
 	func _process(_delta: float) -> void:
@@ -210,7 +210,7 @@ class ItemCard extends HBoxContainer:
 ## puis le texte ; renvoie le RichTextLabel (texte à remplir).
 static func _card_panel(parent: Control, it: Dictionary, width: float, caption: String) -> RichTextLabel:
 	var p := PanelContainer.new()
-	var sb := UiTheme.sticker("nuit", {"shadow": 4, "radius": 14, "gloss": false, "cel_top": 0.0, "cel_bottom": 0.0, "pad": Vector2(14, 10)})
+	var sb := UiTheme.sticker("papier", {"shadow": 4, "radius": 14, "gloss": false, "cel_top": 0.0, "cel_bottom": 0.0, "pad": Vector2(14, 10)})  # papier (UIK1)
 	p.add_theme_stylebox_override("panel", sb)
 	p.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	parent.add_child(p)
@@ -244,7 +244,7 @@ static func _card_panel(parent: Control, it: Dictionary, width: float, caption: 
 	l.size = Vector2(width, 0)
 	l.add_theme_font_size_override("normal_font_size", 15)
 	l.add_theme_font_size_override("bold_font_size", 16)
-	l.add_theme_color_override("default_color", UiTheme.TEXT)
+	l.add_theme_color_override("default_color", UiTheme.color("encre.700"))  # texte à l'encre sur le papier (UIK1)
 	v.add_child(l)
 	return l
 

@@ -80,7 +80,7 @@ func _build_ui() -> void:
 	play.pressed.connect(_open_saves)
 	_main.add_child(play)
 	for spec in [["Paramètres", func(): _settings.open()], ["Quitter", func(): get_tree().quit()]]:
-		var b := MenuWidgets.glass_button(spec[0], 20, Vector2(440, 54))
+		var b := MenuWidgets.paper_button(spec[0], 20, Vector2(440, 54))  # boutons papier sur la scène (UIK1)
 		b.pressed.connect(spec[1])
 		_main.add_child(b)
 	_main.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_LEFT, Control.PRESET_MODE_MINSIZE, 72)
@@ -126,7 +126,7 @@ func _build_saves(root: Control) -> void:
 	cc.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_saves.add_child(cc)
 	var p := PanelContainer.new()
-	p.add_theme_stylebox_override("panel", MenuWidgets.glass(16, UiTheme.GOLD_DIM, 0.94))
+	UiTheme.paper(p, 7, Vector2(22, 18))  # fenêtre papier autocollant (UIK1)
 	p.custom_minimum_size = Vector2(760, 0)
 	cc.add_child(p)
 	var v := VBoxContainer.new()
@@ -134,6 +134,7 @@ func _build_saves(root: Control) -> void:
 	p.add_child(v)
 	_saves_title = Label.new()
 	UiTheme.title(_saves_title, 30)
+	_saves_title.set_meta("ink_keep", true)  # titre autocollant contouré sur le papier (UIK1)
 	_saves_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(_saves_title)
 	var orn := MenuWidgets.Ornament.new()
@@ -165,7 +166,7 @@ func _clear_body() -> void:
 
 
 func _back_button(cb: Callable) -> void:
-	var b := MenuWidgets.glass_button("Retour", 18, Vector2(200, 46))
+	var b := MenuWidgets.paper_button("Retour", 18, Vector2(200, 46))
 	b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	b.pressed.connect(cb)
 	_saves_body.add_child(b)

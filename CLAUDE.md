@@ -284,6 +284,9 @@ captures `tests/shot_hub1.tscn`. `records.news` / `last_activity` = état de men
   (textes encre, boutons papier), variations `ToggleButton` / `PageTab` ; polices Mochiy Pop One (`title_font`) et M PLUS Rounded 1c (`body_font`…,
   `tools/art/fonts_subset.py`). **Ressenti du clic** `core/ui_feel.gd` (autoload `UiFeel`) : tout BaseButton sans branchement (survol, appui, rebond,
   refus, sons `Sfx.ui`, vibration), genre par meta `ui_feel` (`primary`, `tab`, `slot`, `card`, `off`) ; planche `tests/shot_uik0.tscn`, test `test_uik0`.
+- **Écrans en papier** (UIK1, `conception/art/R_UIK1.md`) : `UiTheme.paper(panneau)` passe un panneau au papier autocollant et adapte ses
+  textes clairs (encre sur papier, clairs dans un puits d'encre ; meta `ink_keep` pour un titre contouré) ; menu principal, titre, `PageScreen`,
+  Héros, bilans, `InfoCard` y sont ; pastilles d'onglet : `PageScreen.set_tab_badge` / `HeroScreen.set_tab_badge` (jamais `_tab_buttons` / `_nav`).
 - **Bilans** : un seul composant `ui/results_panel.gd` (`ResultsPanel.show_spec` : titre, tuiles, Gagné / Gardé / Perdu, boutons),
   étendu par `ResultsScreen`, `DuelResults`, `TowerResults`, `DungeonResults`, `RoyaleResults`.
 - **Petites cartes** `ui/info_card.gd` (aucune fenêtre native : `InfoCard.in_layer` / `in_control`, `add_card`, confirmation

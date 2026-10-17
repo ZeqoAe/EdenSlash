@@ -34,7 +34,7 @@ func _ready() -> void:
 	set_title("Journal", "Rien d'obligatoire : chaque quête rapporte, aucune ne bloque.")
 	# pastilles des onglets (lot HUB-1, P0-1) : quête accomplie ou nouvelles quêtes pas encore vues
 	for i in 2:
-		_dots.append(NewsDot.attach(_tab_buttons[i], ["journal.day" if i == 0 else "journal.week"]))
+		_dots.append(set_tab_badge(i, ["journal.day" if i == 0 else "journal.week"]))
 	page_changed.connect(_on_page)
 
 

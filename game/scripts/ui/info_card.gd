@@ -266,7 +266,7 @@ func _build(id: String, spec: Dictionary) -> Dictionary:
 	slot.modulate.a = 0.0
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_FULL_RECT)
-	panel.add_theme_stylebox_override("panel", UiTheme.panel_box(16, 12))
+	UiTheme.paper(panel, 5, Vector2(16, 12), 16)  # petite carte papier autocollant (UIK1)
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	slot.add_child(panel)
 	var row := HBoxContainer.new()
@@ -411,6 +411,11 @@ static func _small_button(text: String, kind: String, height := 30.0) -> Button:
 	b.custom_minimum_size = Vector2(0, height)
 	b.add_theme_font_override("font", UiTheme.bold_font())
 	b.add_theme_font_size_override("font_size", 15)
+	# autocollants (UIK1) : primaire soleil, danger fraise, discret papier ; le lien reste du texte seul
+	if kind != "link":
+		UiTheme.style_button(b, {"primary": "soleil", "danger": "fraise"}.get(kind, "papier"), 15, {"shadow": 3, "pad": Vector2(12, 1)})
+		b.pressed.connect(func(): Sfx.ui("click", -8.0))
+		return b
 	var n: StyleBoxFlat
 	var hv: StyleBoxFlat
 	match kind:
@@ -486,7 +491,7 @@ class Ask extends CanvasLayer:
 		center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_root.add_child(center)
 		var panel := PanelContainer.new()
-		panel.add_theme_stylebox_override("panel", UiTheme.panel_box(26, 20))
+		UiTheme.paper(panel, 7, Vector2(26, 20))  # fenêtre de confirmation papier (UIK1)
 		panel.custom_minimum_size = Vector2(440, 0)
 		center.add_child(panel)
 		var v := VBoxContainer.new()

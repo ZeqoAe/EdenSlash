@@ -44,26 +44,23 @@ func _ready() -> void:
 	grad.fill_from = Vector2(0.5, 0.35)
 	grad.fill_to = Vector2(1.1, 1.1)
 	grad.gradient = Gradient.new()
-	grad.gradient.set_color(0, Color(0.13, 0.09, 0.22, 1.0))
-	grad.gradient.set_color(1, Color(0.02, 0.01, 0.05, 0.99))
+	# fond : le ciel clair du monde (bible : jamais de fond sombre plein derrière un menu) ; cadre = feuille de papier
+	# autocollante, l'en-tête est posé dessus, les pages dans un puits d'encre (« clair dehors, encre dedans », UIK1)
+	grad.gradient.set_color(0, UiTheme.color("papier.200"))
+	grad.gradient.set_color(1, UiTheme.color("monde.ciel", Color("ccdef3")).darkened(0.12))
 	bg.texture = grad
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg.stretch_mode = TextureRect.STRETCH_SCALE
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(bg)
-	var frame := Panel.new()  # cadre doré tout autour de l'écran
+	var frame := Panel.new()
 	frame.set_anchors_preset(Control.PRESET_FULL_RECT)
 	frame.offset_left = 10
 	frame.offset_top = 10
 	frame.offset_right = -10
 	frame.offset_bottom = -10
 	frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var fs := StyleBoxFlat.new()
-	fs.bg_color = Color(0, 0, 0, 0)
-	fs.border_color = Color(UiTheme.GOLD_DIM, 0.8)
-	fs.set_border_width_all(2)
-	fs.set_corner_radius_all(14)
-	frame.add_theme_stylebox_override("panel", fs)
+	frame.add_theme_stylebox_override("panel", UiTheme.panel_style(7))
 	_root.add_child(frame)
 
 	var v := VBoxContainer.new()
@@ -78,6 +75,7 @@ func _ready() -> void:
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 18)
 	v.add_child(head)
+	UiTheme.paper(head)  # en-tête sur le papier : onglets papier (l'actif en mandarine), Fermer papier, textes à l'encre
 	var tbox := VBoxContainer.new()
 	tbox.add_theme_constant_override("separation", -2)
 	head.add_child(tbox)
@@ -85,6 +83,7 @@ func _ready() -> void:
 	_title_label = Label.new()
 	_title_label.text = title
 	UiTheme.title(_title_label, 32)
+	_title_label.set_meta("ink_keep", true)  # titre autocollant : soleil contouré d'encre, même sur le papier
 	tbox.add_child(_title_label)
 	_subtitle = Hud._label(tbox, "", 14, UiTheme.MUTED)
 	_subtitle.clip_text = true  # un sous-titre long est abrégé plutôt que de pousser l'écran hors de la fenêtre
@@ -107,13 +106,19 @@ func _ready() -> void:
 	close.pressed.connect(close_ui)
 	_right.add_child(close)
 	var line := ColorRect.new()
-	line.color = Color(UiTheme.GOLD_DIM, 0.6)
+	line.color = Color(UiTheme.color("encre.700"), 0.0)  # (le puits d'encre des pages fait la séparation)
 	line.custom_minimum_size = Vector2(0, 2)
 	v.add_child(line)
 	_content = Control.new()
 	_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	v.add_child(_content)
+	_content.clip_contents = true  # une page plus haute que sa place ne déborde jamais sur la feuille (Carnet > Registre, UIK1)
+	var well := Panel.new()  # puits d'encre sous les pages (une page sans panneau propre reste lisible)
+	well.set_anchors_preset(Control.PRESET_FULL_RECT)
+	well.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	well.add_theme_stylebox_override("panel", UiTheme.well_style(Vector2.ZERO, 18))
+	_content.add_child(well)
 	_root.visible = false
 	get_viewport().size_changed.connect(_fit_header)
 	_fit_header()
@@ -141,6 +146,17 @@ func add_page(name: String, page: Control) -> int:
 	return i
 
 
+## Pastille de nouveauté (NewsDot) sur l'onglet [param i], lue dans les groupes [param groups] de NewsDots ;
+## [param with_action] : coche pomme quand une action est possible. API officielle des onglets (au lieu de _tab_buttons).
+func set_tab_badge(i: int, groups: Array, with_action := false) -> NewsDot:
+	if i < 0 or i >= _tab_buttons.size():
+		return null
+	var d := NewsDot.attach(_tab_buttons[i], groups)
+	d.with_action = with_action
+	d.refresh()
+	return d
+
+
 ## En-tête adapté à la largeur de la fenêtre : à 1280 px, six onglets de 150 px et un titre de 340 px
 ## ne tiennent plus (la page entière débordait de l'écran) ; la largeur du titre ne dépend jamais de la page.
 func _fit_header() -> void:
@@ -149,8 +165,25 @@ func _fit_header() -> void:
 	var wide := get_viewport().get_visible_rect().size.x >= 1500.0
 	_tbox.custom_minimum_size.x = 340.0 if wide else 230.0
 	for b in _tab_buttons:
-		b.custom_minimum_size = Vector2(150.0 if wide else 0.0, 42.0)
-		b.add_theme_font_size_override("font_size", 17 if wide else 15)
+		var many := _tab_buttons.size() > 6  # sept onglets (Carnet > Rencontres, lot DNG-2) : sans largeur minimale, un cran plus petits
+		b.custom_minimum_size = Vector2(150.0 if wide and not many else 0.0, 42.0)
+		b.add_theme_font_size_override("font_size", (17 if wide else 15) - (1 if many else 0))
+		if many and not wide:
+			b.add_theme_font_override("font", UiTheme.bold_font())  # Mochiy est large : M PLUS Rounded 800 à 1280 px
+		b.remove_theme_font_override("font")
+	# l'en-tête ne déborde jamais (UIK1) : Mochiy (titres) est large ; si les onglets ne tiennent pas, ils passent en
+	# M PLUS Rounded 800, puis sans largeur minimale, puis en 14 px
+	var room := get_viewport().get_visible_rect().size.x - 56.0
+	var head := _tbox.get_parent() as Control
+	for step in 3:
+		if head == null or head.get_combined_minimum_size().x <= room:
+			break
+		for b in _tab_buttons:
+			b.add_theme_font_override("font", UiTheme.bold_font())
+			if step >= 1:
+				b.custom_minimum_size.x = 0.0
+			if step >= 2:
+				b.add_theme_font_size_override("font_size", 14)
 
 
 ## Page suivante (+1) ou précédente (-1) : L1 / R1 (LB / RB) à la manette.

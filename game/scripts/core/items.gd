@@ -54,12 +54,14 @@ const ATTRIBUTES := ["str", "agi", "int", "wis", "lck"]
 ## or légendaire. Seuls les mythiques et légendaires vont dans l'archive ; ils ne tombent
 ## que des boss (ou se fabriquent, pour les mythiques).
 const RARITIES := [
-	{"name": "Commun", "color": Color(0.86, 0.86, 0.86), "affixes": 0},
-	{"name": "Spécial", "color": Color(0.42, 0.9, 0.42), "affixes": 1},
-	{"name": "Rare", "color": Color(0.4, 0.66, 1.0), "affixes": 2},
-	{"name": "Épique", "color": Color(0.78, 0.45, 1.0), "affixes": 3},
-	{"name": "Mythique", "color": Color(1.0, 0.55, 0.15), "affixes": 3},
-	{"name": "Légendaire", "color": Color(1.0, 0.84, 0.25), "affixes": 4},
+	# couleurs = code des icônes du jeu (bible § 3, bonbons) : lilas-gris, pomme, lagon, améthyste, mandarine, soleil ; tons
+	# assez clairs pour un puits d'encre (sur le papier, UiTheme.on_paper les fonce)
+	{"name": "Commun", "color": Color("d9d4e4"), "affixes": 0},
+	{"name": "Spécial", "color": Color("8fd62e"), "affixes": 1},
+	{"name": "Rare", "color": Color("22b8f0"), "affixes": 2},
+	{"name": "Épique", "color": Color("c46bf5"), "affixes": 3},
+	{"name": "Mythique", "color": Color("ff8a1f"), "affixes": 3},
+	{"name": "Légendaire", "color": Color("ffc928"), "affixes": 4},
 ]
 const MYTHIC := 4
 const LEGENDARY := 5

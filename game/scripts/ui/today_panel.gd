@@ -20,7 +20,7 @@ var _dot: NewsDot
 
 func _init() -> void:
 	custom_minimum_size = Vector2(W, 0)
-	add_theme_stylebox_override("panel", QuestsPage._box(Color(0.06, 0.05, 0.13, 0.9), Color(UiTheme.GOLD_DIM, 0.85)))
+	UiTheme.paper(self, 5, Vector2(12, 8), 16)  # carte papier autocollant (UIK1) : textes à l'encre, compteurs foncés
 	mouse_filter = Control.MOUSE_FILTER_PASS
 	_box = VBoxContainer.new()
 	_box.add_theme_constant_override("separation", 6)
@@ -73,7 +73,7 @@ func refresh() -> void:
 	_renew.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_renew.mouse_filter = Control.MOUSE_FILTER_STOP
 	_renew.tooltip_text = "Nouvelles quêtes dans %s. Une quête ratée revient demain ; une relance par jour." % Quests.renew_text()
-	journal_button = MenuWidgets.glass_button("Journal (%s)" % Settings.action_label("journal", 1), 15, Vector2(140, 34))
+	journal_button = MenuWidgets.paper_button("Journal (%s)" % Settings.action_label("journal", 1), 15, Vector2(140, 34))
 	journal_button.tooltip_text = "Toutes les quêtes : du jour, de la semaine, de classe, la série"
 	journal_button.pressed.connect(func(): open_journal.emit(0))
 	foot.add_child(journal_button)

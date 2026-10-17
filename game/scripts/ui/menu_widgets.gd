@@ -102,6 +102,11 @@ class SideButton extends Button:
 		set(v):
 			selected = v
 			_restyle()
+	## Ton du bouton quand il n'est pas choisi ("" : papier ; « lagon » : action douce, comme « Continuer »).
+	var accent := "":
+		set(v):
+			accent = v
+			_restyle()
 	var _icon: TextureRect
 	var _label: Label
 	var _chevron: Label
@@ -168,7 +173,7 @@ class SideButton extends Button:
 		if _label == null:
 			return
 		var paper := MenuWidgets.paper()
-		var tone := "lagon" if selected else ("papier" if paper else "nuit")
+		var tone := "mandarine" if selected and accent != "" else ("lagon" if selected else (accent if accent != "" else ("papier" if paper else "nuit")))
 		var key := tone + str(disabled)
 		if key != _style_key:  # les boîtes ne changent qu'avec l'état choisi (le survol est dans la boîte « hover »)
 			_style_key = key
@@ -177,7 +182,7 @@ class SideButton extends Button:
 				add_theme_stylebox_override(k, st[k])
 			add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 		var ink := UiTheme.color("encre.700")
-		var col := ink if (paper or selected) else UiTheme.TEXT
+		var col := ink if (paper or selected or accent != "") else UiTheme.TEXT
 		if disabled:
 			col = UiTheme.color("texte.desactive")
 		_label.add_theme_color_override("font_color", col)
@@ -301,6 +306,13 @@ static func gold_button(text: String, font_size := 30, min_size := Vector2(420, 
 	b.focus_mode = Control.FOCUS_NONE
 	b.custom_minimum_size = min_size
 	UiTheme.style_button(b, "soleil", font_size, {"shadow": 5})
+	return b
+
+
+## Bouton secondaire papier (texte à l'encre) : sur la scène 3D ou sur un panneau papier (écran titre, bilans).
+static func paper_button(text: String, font_size := 20, min_size := Vector2(320, 52)) -> Button:
+	var b := glass_button(text, font_size, min_size)
+	UiTheme.style_button(b, "papier", font_size)
 	return b
 
 

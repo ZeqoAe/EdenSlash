@@ -77,16 +77,21 @@ func _draw() -> void:
 	var fs := 14 if text.length() < 2 else 12
 	var w := maxf(R * 2.0, font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x + 10.0)
 	var rect := Rect2(Vector2(size.x - w, 0.0), Vector2(w, R * 2.0))
+	# pastille autocollante (UIK1) : bonbon des jetons, contour d'encre, ombre dure de 2 px
+	var ink := UiTheme.color("encre.700", INK)
+	var fill: Color = {NEW: UiTheme.color("bonbon.mandarine.base", NEW), COUNT: UiTheme.color("bonbon.fraise.base", COUNT),
+		ACTION: UiTheme.color("bonbon.pomme.base", ACTION)}.get(tone, tone)
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = tone
-	sb.border_color = INK
+	sb.bg_color = fill
+	sb.border_color = ink
 	sb.set_border_width_all(2)
 	sb.set_corner_radius_all(int(R))
-	sb.shadow_color = Color(INK, 0.6)
+	sb.anti_aliasing = true
+	sb.shadow_color = ink
 	sb.shadow_offset = Vector2(0, 2)
-	sb.shadow_size = 0
+	sb.shadow_size = 1
 	draw_style_box(sb, rect)
 	var ts := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
 	var pos := rect.position + Vector2((rect.size.x - ts.x) * 0.5, (rect.size.y + font.get_ascent(fs) - font.get_descent(fs)) * 0.5)
-	draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, INK)
+	draw_string_outline(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, ink)
 	draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color.WHITE)

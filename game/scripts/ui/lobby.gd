@@ -1162,7 +1162,7 @@ func _build_ui() -> void:
 	var veil := TextureRect.new()
 	var grad := GradientTexture2D.new()
 	grad.gradient = Gradient.new()
-	grad.gradient.set_color(0, Color(0.02, 0.02, 0.07, 0.62))
+	grad.gradient.set_color(0, Color(0.02, 0.02, 0.07, 0.22))  # (UIK1 : menus papier contourés, plus besoin d'assombrir la scène)
 	grad.gradient.set_color(1, Color(0.02, 0.02, 0.07, 0.0))
 	veil.texture = grad
 	veil.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -1194,6 +1194,7 @@ func _build_ui() -> void:
 			_continue = MenuWidgets.SideButton.new("Continuer", "continue", 40.0 if compact else 46.0)
 			_continue.pressed.connect(_continue_last)
 			_continue.visible = false
+			_continue.accent = "lagon"  # action douce (bible) : se distingue des entrées du menu (UIK1)
 			var cl := _continue.get("_label") as Label
 			if cl != null:
 				cl.clip_text = true
@@ -1202,7 +1203,7 @@ func _build_ui() -> void:
 			left.add_child(_continue)
 	# sous-menu central
 	var sp := PanelContainer.new()
-	sp.add_theme_stylebox_override("panel", MenuWidgets.glass(14))
+	UiTheme.paper(sp, 6, Vector2(14, 14))  # panneau papier autocollant (UIK1) ; les puits d'encre de ses pages restent
 	sp.position = Vector2(372, top)
 	sp.custom_minimum_size = Vector2(PANEL_W, 0)
 	sp.visible = false
@@ -1226,7 +1227,7 @@ func _build_ui() -> void:
 	# badge de la classe (en haut à droite)
 	var badge := PanelContainer.new()
 	_badge = badge
-	badge.add_theme_stylebox_override("panel", MenuWidgets.glass(12))
+	UiTheme.paper(badge, 5, Vector2(14, 10), 16)
 	badge.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	badge.offset_left = -380
 	badge.offset_right = -28
@@ -1258,7 +1259,7 @@ func _build_ui() -> void:
 	bv.add_child(HeroLevelGauge.new(14, 130.0, "Héros niv."))  # niveau de héros du compte (lot H1)
 	# zone et prochaine récompense (en bas à gauche)
 	var zc := PanelContainer.new()
-	zc.add_theme_stylebox_override("panel", MenuWidgets.glass(14, UiTheme.GOLD, 0.88))
+	UiTheme.paper(zc, 5, Vector2(14, 10), 16)
 	zc.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	zc.offset_left = 44
 	zc.offset_right = 760 if get_viewport().get_visible_rect().size.x >= 1400.0 else 726  # 1280 : ne passe pas sous le pied de page
@@ -1310,7 +1311,7 @@ func _build_ui() -> void:
 	_reward_text = Hud._label(rv, "", 12, UiTheme.MUTED)
 	# sauvegarde, coffre commun et heure (en bas à droite)
 	var info := PanelContainer.new()
-	info.add_theme_stylebox_override("panel", MenuWidgets.glass(12, MenuWidgets.LINE))
+	UiTheme.paper(info, 5, Vector2(14, 8), 16)
 	info.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	info.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	info.offset_left = -400
@@ -1458,25 +1459,17 @@ func _open_journal(tab := 0) -> QuestJournal:
 ## Pastilles de nouveauté des onglets (lot HUB-1, P0-1) : Héros > Apparence, Carnet > Succès, Atelier > Plans de donjon
 ## (et la coche de Fabriquer quand une pièce est achetable) ; un onglet ouvert éteint la sienne.
 func _tab_dots() -> void:
-	var nav = _hero.get("_nav")
-	if nav is Dictionary and (nav as Dictionary).has("appearance"):
-		NewsDot.attach(nav.appearance, ["hero.look"])
-		(nav.appearance as Button).pressed.connect(func(): NewsDots.see_group("hero.look"))
+	if _hero.set_tab_badge("appearance", ["hero.look"]) != null:
+		_hero.section_button("appearance").pressed.connect(func(): NewsDots.see_group("hero.look"))
 	for e in [[_archive, 1, "carnet.succes"], [_workshop, 1, "workshop.plan"]]:
 		var sc: PageScreen = e[0]
-		var tabs = sc.get("_tab_buttons")
-		if tabs is Array and (tabs as Array).size() > int(e[1]):
-			NewsDot.attach(tabs[int(e[1])], [String(e[2])])
+		sc.set_tab_badge(int(e[1]), [String(e[2])])
 		var idx := int(e[1])
 		var grp := String(e[2])
 		sc.page_changed.connect(func(i: int):
 			if i == idx:
 				NewsDots.see_group(grp))
-	var wt = _workshop.get("_tab_buttons")
-	if wt is Array and not (wt as Array).is_empty():
-		var d := NewsDot.attach(wt[0], ["workshop"])
-		d.with_action = true
-		d.refresh()
+	_workshop.set_tab_badge(0, ["workshop"], true)
 
 
 ## « Continuer » (lot HUB-1, P0-2) : relance la dernière activité avec ses réglages ; si elle n'est plus ouverte (verrou,
