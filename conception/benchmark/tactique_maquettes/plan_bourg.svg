@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="'M PLUS Rounded 1c', 'Nunito', sans-serif">
+  <!-- Plan masse maison BM-TAC (17/10/2026), généré par un script de l'étude : carte « Le Bourg aux lanternes » du mode tactique. Aucun élément tiers. -->
+<defs>
+<pattern id="hach" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#FFEBC8"/><line x1="0" y1="0" x2="0" y2="10" stroke="#6B5E86" stroke-width="2" opacity="0.5"/></pattern>
+<pattern id="herbe" width="12" height="12" patternUnits="userSpaceOnUse"><rect width="12" height="12" fill="#8FD62E" fill-opacity="0.45"/><path d="M3 9 l2 -6 l2 6 M8 11 l1.5 -5 l1.5 5" stroke="#4F8F10" stroke-width="1.5" fill="none"/></pattern>
+<pattern id="trame" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#221A3A" opacity="0.14"/></pattern>
+<marker id="fl_att" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#FF8A1F" stroke="#221A3A" stroke-width="1"/></marker>
+<marker id="fl_def" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#0B7DB5" stroke="#221A3A" stroke-width="1"/></marker>
+<marker id="fl_rot" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#B43BEB" stroke="#221A3A" stroke-width="1"/></marker>
+</defs>
+<rect width="1600" height="900" fill="#E9DFCB"/>
+<rect width="1600" height="900" fill="url(#trame)"/>
+<g transform="rotate(-3 300 44)"><rect x="40" y="18" width="560" height="56" rx="16" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/><rect x="46" y="24" width="560" height="56" rx="16" fill="#221A3A" opacity="0.0"/><text x="62" y="58" font-family="Mochiy Pop One, M PLUS Rounded 1c, sans-serif" font-size="28" fill="#221A3A">Plan · Le Bourg aux lanternes</text></g>
+<rect x="57.0" y="103.0" width="638.4" height="760.0" rx="18" fill="#221A3A"/>
+<rect x="50.0" y="96.0" width="638.4" height="760.0" rx="18" fill="#DCE3B4" stroke="#221A3A" stroke-width="3"/>
+<rect x="50.0" y="96.0" width="638.4" height="760.0" fill="#E9DFCB" opacity="0.55"/>
+<rect x="65.2" y="164.4" width="83.6" height="68.4" fill="url(#hach)" stroke="#6B5E86" stroke-width="2" stroke-dasharray="6 4" rx="4"/>
+<rect x="483.2" y="369.6" width="68.4" height="53.2" fill="url(#hach)" stroke="#6B5E86" stroke-width="2" stroke-dasharray="6 4" rx="4"/>
+<rect x="65.2" y="354.4" width="83.6" height="91.2" fill="url(#herbe)" stroke="#4F8F10" stroke-width="2" rx="8"/>
+<rect x="589.6" y="582.4" width="76.0" height="68.4" fill="url(#herbe)" stroke="#4F8F10" stroke-width="2" rx="8"/>
+<rect x="80.4" y="172.0" width="182.4" height="167.2" fill="#FFC928" fill-opacity="0.32" stroke="#221A3A" stroke-width="3" stroke-dasharray="10 6" rx="10"/>
+<rect x="490.8" y="172.0" width="182.4" height="182.4" fill="#FFC928" fill-opacity="0.32" stroke="#221A3A" stroke-width="3" stroke-dasharray="10 6" rx="10"/>
+<rect x="293.2" y="96.0" width="152.0" height="76.0" fill="#22B8F0" fill-opacity="0.45" stroke="#221A3A" stroke-width="3" rx="8"/>
+<rect x="278.0" y="780.0" width="182.4" height="76.0" fill="#FF8A1F" fill-opacity="0.45" stroke="#221A3A" stroke-width="3" rx="8"/>
+<circle cx="369.2" cy="400.0" r="30.4" fill="#B43BEB" fill-opacity="0.30" stroke="#B43BEB" stroke-width="3" stroke-dasharray="5 4"/>
+<rect x="50.0" y="749.6" width="106.4" height="106.4" fill="#2E2450" stroke="#221A3A" stroke-width="3" rx="3"/>
+<rect x="582.0" y="749.6" width="106.4" height="106.4" fill="#2E2450" stroke="#221A3A" stroke-width="3" rx="3"/>
+<rect x="156.4" y="430.4" width="106.4" height="243.2" fill="#2E2450" stroke="#221A3A" stroke-width="3" rx="3"/>
+<rect x="475.6" y="430.4" width="106.4" height="243.2" fill="#2E2450" stroke="#221A3A" stroke-width="3" rx="3"/>
+<rect x="278.0" y="293.6" width="76.0" height="76.0" fill="#2E2450" stroke="#221A3A" stroke-width="3" rx="3"/>
+<rect x="384.4" y="293.6" width="76.0" height="76.0" fill="#2E2450" stroke="#221A3A" stroke-width="3" rx="3"/>
+<rect x="50.0" y="96.0" width="228.0" height="60.8" fill="#2E2450" stroke="#221A3A" stroke-width="3" rx="3"/>
+<rect x="460.4" y="96.0" width="228.0" height="45.6" fill="#2E2450" stroke="#221A3A" stroke-width="3" rx="3"/>
+<rect x="262.8" y="232.8" width="22.8" height="60.8" fill="#2E2450" stroke="#221A3A" stroke-width="3" rx="3"/>
+<rect x="452.8" y="232.8" width="22.8" height="45.6" fill="#2E2450" stroke="#221A3A" stroke-width="3" rx="3"/>
+<rect x="50.0" y="324.0" width="15.2" height="425.6" fill="#2E2450" stroke="#221A3A" stroke-width="3" rx="3"/>
+<rect x="673.2" y="324.0" width="15.2" height="425.6" fill="#2E2450" stroke="#221A3A" stroke-width="3" rx="3"/>
+<circle cx="369.2" cy="552.0" r="19.8" fill="#86DDFF" stroke="#221A3A" stroke-width="3"/>
+<rect x="308.4" y="491.2" width="38.0" height="9.1" fill="#C9BFEA" stroke="#221A3A" stroke-width="2" rx="2"/>
+<rect x="392.0" y="605.2" width="38.0" height="9.1" fill="#C9BFEA" stroke="#221A3A" stroke-width="2" rx="2"/>
+<rect x="126.0" y="232.8" width="45.6" height="9.1" fill="#C9BFEA" stroke="#221A3A" stroke-width="2" rx="2"/>
+<rect x="194.4" y="293.6" width="9.1" height="38.0" fill="#C9BFEA" stroke="#221A3A" stroke-width="2" rx="2"/>
+<rect x="536.4" y="263.2" width="45.6" height="9.1" fill="#C9BFEA" stroke="#221A3A" stroke-width="2" rx="2"/>
+<rect x="604.8" y="308.8" width="9.1" height="38.0" fill="#C9BFEA" stroke="#221A3A" stroke-width="2" rx="2"/>
+<rect x="285.6" y="696.4" width="53.2" height="9.1" fill="#C9BFEA" stroke="#221A3A" stroke-width="2" rx="2"/>
+<rect x="399.6" y="696.4" width="53.2" height="9.1" fill="#C9BFEA" stroke="#221A3A" stroke-width="2" rx="2"/>
+<rect x="88.0" y="536.8" width="9.1" height="45.6" fill="#C9BFEA" stroke="#221A3A" stroke-width="2" rx="2"/>
+<rect x="635.2" y="491.2" width="9.1" height="45.6" fill="#C9BFEA" stroke="#221A3A" stroke-width="2" rx="2"/>
+<path d="M369.2 810.4 L202.0 734.4 L110.8 658.4 L110.8 369.6 L156.4 278.4" fill="none" stroke="#FF8A1F" stroke-width="3.5" stroke-dasharray="9 6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#fl_att)" opacity="0.9"/>
+<path d="M369.2 810.4 L369.2 673.6 L369.2 460.8 L247.6 400.0 L171.6 293.6" fill="none" stroke="#FF8A1F" stroke-width="3.5" stroke-dasharray="9 6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#fl_att)" opacity="0.9"/>
+<path d="M369.2 810.4 L536.4 734.4 L627.6 673.6 L635.2 369.6 L582.0 293.6" fill="none" stroke="#FF8A1F" stroke-width="3.5" stroke-dasharray="9 6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#fl_att)" opacity="0.9"/>
+<path d="M369.2 780.0 L354.0 673.6 L384.4 476.0 L490.8 400.0 L566.8 308.8" fill="none" stroke="#FF8A1F" stroke-width="3.5" stroke-dasharray="9 6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#fl_att)" opacity="0.9"/>
+<path d="M369.2 141.6 L300.8 156.8 L247.6 172.0 L186.8 248.0" fill="none" stroke="#0B7DB5" stroke-width="3.5" stroke-dasharray="9 6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#fl_def)" opacity="0.9"/>
+<path d="M369.2 141.6 L437.6 156.8 L490.8 172.0 L551.6 248.0" fill="none" stroke="#0B7DB5" stroke-width="3.5" stroke-dasharray="9 6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#fl_def)" opacity="0.9"/>
+<path d="M369.2 156.8 L369.2 400.0" fill="none" stroke="#0B7DB5" stroke-width="3.5" stroke-dasharray="9 6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#fl_def)" opacity="0.9"/>
+<path d="M186.8 263.2 L278.0 210.0 L460.4 210.0 L551.6 278.4" fill="none" stroke="#B43BEB" stroke-width="3.5" stroke-dasharray="9 6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#fl_rot)" opacity="0.9"/>
+<path d="M110.8 552.0 L110.8 688.8 L202.0 719.2 L536.4 719.2 L635.2 688.8 L635.2 552.0" fill="none" stroke="#B43BEB" stroke-width="3.5" stroke-dasharray="9 6" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#fl_rot)" opacity="0.9"/>
+<text x="107.0" y="184.2" text-anchor="middle" font-size="13" font-weight="900" fill="#221A3A">+3 m</text>
+<text x="517.4" y="389.4" text-anchor="middle" font-size="13" font-weight="900" fill="#221A3A">+2,5 m</text>
+<text x="171.6" y="273.6" text-anchor="middle" font-family="Mochiy Pop One, M PLUS Rounded 1c, sans-serif" font-size="52" fill="#FFC928" stroke="#221A3A" stroke-width="6" paint-order="stroke">A</text>
+<text x="582.0" y="281.2" text-anchor="middle" font-family="Mochiy Pop One, M PLUS Rounded 1c, sans-serif" font-size="52" fill="#FFC928" stroke="#221A3A" stroke-width="6" paint-order="stroke">B</text>
+<text x="369.2" y="139.3" text-anchor="middle" font-size="16" font-weight="900" fill="#FFFFFF" stroke="#221A3A" stroke-width="4" paint-order="stroke">Défense</text>
+<text x="369.2" y="823.3" text-anchor="middle" font-size="16" font-weight="900" fill="#FFFFFF" stroke="#221A3A" stroke-width="4" paint-order="stroke">Attaque</text>
+<text x="369.2" y="406.1" text-anchor="middle" font-size="20" font-weight="900" fill="#FFFFFF" stroke="#221A3A" stroke-width="4" paint-order="stroke">P</text>
+<text x="110.8" y="597.6" text-anchor="middle" font-size="12" font-weight="800" font-style="italic" fill="#221A3A" stroke="#FFF8EC" stroke-width="4" paint-order="stroke">Ruelle ouest</text>
+<text x="103.2" y="407.6" text-anchor="middle" font-size="12" font-weight="800" font-style="italic" fill="#221A3A" stroke="#FFF8EC" stroke-width="4" paint-order="stroke">Jardin</text>
+<text x="369.2" y="643.2" text-anchor="middle" font-size="12" font-weight="800" font-style="italic" fill="#221A3A" stroke="#FFF8EC" stroke-width="4" paint-order="stroke">Place</text>
+<text x="369.2" y="445.6" text-anchor="middle" font-size="12" font-weight="800" font-style="italic" fill="#221A3A" stroke="#FFF8EC" stroke-width="4" paint-order="stroke">Carrefour</text>
+<text x="316.0" y="335.4" text-anchor="middle" font-size="12" font-weight="800" font-style="italic" fill="#221A3A" stroke="#FFF8EC" stroke-width="4" paint-order="stroke">Halle</text>
+<text x="369.2" y="278.4" text-anchor="middle" font-size="12" font-weight="800" font-style="italic" fill="#221A3A" stroke="#FFF8EC" stroke-width="4" paint-order="stroke">Passage</text>
+<text x="224.8" y="400.0" text-anchor="middle" font-size="12" font-weight="800" font-style="italic" fill="#221A3A" stroke="#FFF8EC" stroke-width="4" paint-order="stroke">Escalier</text>
+<text x="521.2" y="400.0" text-anchor="middle" font-size="12" font-weight="800" font-style="italic" fill="#221A3A" stroke="#FFF8EC" stroke-width="4" paint-order="stroke">Balcon</text>
+<text x="635.2" y="445.6" text-anchor="middle" font-size="12" font-weight="800" font-style="italic" fill="#221A3A" stroke="#FFF8EC" stroke-width="4" paint-order="stroke">Quai est</text>
+<text x="627.6" y="628.0" text-anchor="middle" font-size="12" font-weight="800" font-style="italic" fill="#221A3A" stroke="#FFF8EC" stroke-width="4" paint-order="stroke">Saules</text>
+<text x="103.2" y="202.4" text-anchor="middle" font-size="12" font-weight="800" font-style="italic" fill="#221A3A" stroke="#FFF8EC" stroke-width="4" paint-order="stroke">Beffroi</text>
+<text x="369.2" y="742.0" text-anchor="middle" font-size="12" font-weight="800" font-style="italic" fill="#221A3A" stroke="#FFF8EC" stroke-width="4" paint-order="stroke">Porte sud</text>
+<text x="369.2" y="232.8" text-anchor="middle" font-size="12" font-weight="800" font-style="italic" fill="#221A3A" stroke="#FFF8EC" stroke-width="4" paint-order="stroke">Allée du beffroi</text>
+<text x="635.2" y="377.2" text-anchor="middle" font-size="12" font-weight="800" font-style="italic" fill="#221A3A" stroke="#FFF8EC" stroke-width="4" paint-order="stroke">Arrière B</text>
+<g stroke="#221A3A" stroke-width="3"><line x1="50.0" y1="878.0" x2="126.0" y2="878.0"/><line x1="50.0" y1="872.0" x2="50.0" y2="884.0"/><line x1="126.0" y1="872.0" x2="126.0" y2="884.0"/></g><text x="136.0" y="883.0" font-size="14" font-weight="700" fill="#221A3A">10 m · carte 84 × 100 m</text>
+<rect x="735.4" y="103" width="841.6" height="760" rx="18" fill="#221A3A"/>
+<rect x="728.4" y="96" width="841.6" height="760" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+<text x="750.4" y="130" font-size="16" font-weight="700" fill="#221A3A">Carte d'apprentissage : deux sites, une place au</text>
+<text x="750.4" y="152" font-size="16" font-weight="700" fill="#221A3A">milieu, des maisons qui coupent la vue. Lisible</text>
+<text x="750.4" y="174" font-size="16" font-weight="700" fill="#221A3A">d'un coup d'œil, tous les rôles y ont leur coin.</text>
+<rect x="744.4" y="204" width="809.6" height="223" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+<text x="758.4" y="226" font-size="14" font-weight="900" fill="#C9BFEA">Trajet (à 6,5 m/s)</text><text x="1450.0" y="226" font-size="14" font-weight="900" fill="#C9BFEA">mètres</text><text x="1520.0" y="226" font-size="14" font-weight="900" fill="#C9BFEA">s</text>
+<rect x="758.4" y="236" width="12" height="12" rx="3" fill="#FF8A1F" stroke="#221A3A" stroke-width="1.5"/><text x="778.4" y="247" font-size="14" font-weight="700" fill="#FFF8EC">Attaque → A (ruelle)</text><text x="1450.0" y="247" font-size="14" font-weight="800" fill="#FFF8EC">91</text><text x="1520.0" y="247" font-size="14" font-weight="800" fill="#FFC928">14.0</text>
+<rect x="758.4" y="257" width="12" height="12" rx="3" fill="#FF8A1F" stroke="#221A3A" stroke-width="1.5"/><text x="778.4" y="268" font-size="14" font-weight="700" fill="#FFF8EC">Attaque → A (place)</text><text x="1450.0" y="268" font-size="14" font-weight="800" fill="#FFF8EC">81</text><text x="1520.0" y="268" font-size="14" font-weight="800" fill="#FFC928">12.5</text>
+<rect x="758.4" y="278" width="12" height="12" rx="3" fill="#FF8A1F" stroke="#221A3A" stroke-width="1.5"/><text x="778.4" y="289" font-size="14" font-weight="700" fill="#FFF8EC">Attaque → B (quai)</text><text x="1450.0" y="289" font-size="14" font-weight="800" fill="#FFF8EC">91</text><text x="1520.0" y="289" font-size="14" font-weight="800" fill="#FFC928">14.0</text>
+<rect x="758.4" y="299" width="12" height="12" rx="3" fill="#FF8A1F" stroke="#221A3A" stroke-width="1.5"/><text x="778.4" y="310" font-size="14" font-weight="700" fill="#FFF8EC">Attaque → B (place)</text><text x="1450.0" y="310" font-size="14" font-weight="800" fill="#FFF8EC">73</text><text x="1520.0" y="310" font-size="14" font-weight="800" fill="#FFC928">11.3</text>
+<rect x="758.4" y="320" width="12" height="12" rx="3" fill="#22B8F0" stroke="#221A3A" stroke-width="1.5"/><text x="778.4" y="331" font-size="14" font-weight="700" fill="#FFF8EC">Défense → A</text><text x="1450.0" y="331" font-size="14" font-weight="800" fill="#FFF8EC">29</text><text x="1520.0" y="331" font-size="14" font-weight="800" fill="#FFC928">4.5</text>
+<rect x="758.4" y="341" width="12" height="12" rx="3" fill="#22B8F0" stroke="#221A3A" stroke-width="1.5"/><text x="778.4" y="352" font-size="14" font-weight="700" fill="#FFF8EC">Défense → B</text><text x="1450.0" y="352" font-size="14" font-weight="800" fill="#FFF8EC">29</text><text x="1520.0" y="352" font-size="14" font-weight="800" fill="#FFC928">4.5</text>
+<rect x="758.4" y="362" width="12" height="12" rx="3" fill="#22B8F0" stroke="#221A3A" stroke-width="1.5"/><text x="778.4" y="373" font-size="14" font-weight="700" fill="#FFF8EC">Défense → Carrefour</text><text x="1450.0" y="373" font-size="14" font-weight="800" fill="#FFF8EC">32</text><text x="1520.0" y="373" font-size="14" font-weight="800" fill="#FFC928">4.9</text>
+<rect x="758.4" y="383" width="12" height="12" rx="3" fill="#DC92FF" stroke="#221A3A" stroke-width="1.5"/><text x="778.4" y="394" font-size="14" font-weight="700" fill="#FFF8EC">Rotation A ↔ B (allée)</text><text x="1450.0" y="394" font-size="14" font-weight="800" fill="#FFF8EC">53</text><text x="1520.0" y="394" font-size="14" font-weight="800" fill="#FFC928">8.1</text>
+<rect x="758.4" y="404" width="12" height="12" rx="3" fill="#DC92FF" stroke="#221A3A" stroke-width="1.5"/><text x="778.4" y="415" font-size="14" font-weight="700" fill="#FFF8EC">Rotation ruelle ↔ quai</text><text x="1450.0" y="415" font-size="14" font-weight="800" fill="#FFF8EC">106</text><text x="1520.0" y="415" font-size="14" font-weight="800" fill="#FFC928">16.3</text>
+<rect x="752.4" y="432" width="22" height="16" rx="4" fill="#FFC928" stroke="#221A3A" stroke-width="2"/>
+<text x="784.4" y="445" font-size="14" font-weight="700" fill="#221A3A">Site de pose (A, B)</text>
+<rect x="752.4" y="454" width="22" height="16" rx="4" fill="#FF8A1F" stroke="#221A3A" stroke-width="2"/>
+<text x="784.4" y="467" font-size="14" font-weight="700" fill="#221A3A">Départ de l'Attaque</text>
+<rect x="752.4" y="476" width="22" height="16" rx="4" fill="#22B8F0" stroke="#221A3A" stroke-width="2"/>
+<text x="784.4" y="489" font-size="14" font-weight="700" fill="#221A3A">Départ de la Défense</text>
+<rect x="752.4" y="498" width="22" height="16" rx="4" fill="#2E2450" stroke="#221A3A" stroke-width="2"/>
+<text x="784.4" y="511" font-size="14" font-weight="700" fill="#221A3A">Mur plein : arrête vue, coups, sorts</text>
+<rect x="752.4" y="520" width="22" height="16" rx="4" fill="#C9BFEA" stroke="#221A3A" stroke-width="2"/>
+<text x="784.4" y="533" font-size="14" font-weight="700" fill="#221A3A">Muret : arrête les coups au sol, pas la vue</text>
+<rect x="752.4" y="542" width="22" height="16" rx="4" fill="url(#hach)" stroke="#221A3A" stroke-width="2"/>
+<text x="784.4" y="555" font-size="14" font-weight="700" fill="#221A3A">Hauteur (+ m) : voit et tire par-dessus les murets</text>
+<rect x="752.4" y="564" width="22" height="16" rx="4" fill="url(#herbe)" stroke="#221A3A" stroke-width="2"/>
+<text x="784.4" y="577" font-size="14" font-weight="700" fill="#221A3A">Hautes herbes : cachent à plus de 3 m</text>
+<circle cx="763.4" cy="594" r="9" fill="#B43BEB" fill-opacity="0.35" stroke="#B43BEB" stroke-width="2.5"/>
+<text x="784.4" y="599" font-size="14" font-weight="700" fill="#221A3A">Sanctuaire P (format secondaire)</text>
+<text x="750.4" y="627" font-size="14" font-weight="600" fill="#6B5E86">La Défense arrive sur un site 7 à 9 s avant l’Attaque.</text>
+<text x="750.4" y="646" font-size="14" font-weight="600" fill="#6B5E86">Carrefour : Défense en 5 s, Attaque en 7 s.</text>
+<text x="750.4" y="665" font-size="14" font-weight="600" fill="#6B5E86">Plus longue vue dégagée : 24 m (ruelle ouest).</text>
+<text x="750.4" y="684" font-size="14" font-weight="600" fill="#6B5E86">Biome : village calcaire (maisons d'Eden en murs).</text>
+</svg>

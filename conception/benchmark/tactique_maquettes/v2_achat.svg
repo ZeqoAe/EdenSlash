@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="'M PLUS Rounded 1c', 'Nunito', sans-serif">
+  <!-- Maquette maison BM-TAC (17/10/2026) : phase d'achat de l'Assaut (20 s, le monde reste visible derrière). DA « autocollant manga »
+       (BIBLE v2). Aucun élément tiers ; les carrés colorés sont les emplacements des icônes du jeu (sorts, objets, classes). -->
+  <defs>
+    <style>
+      .t { fill: #221A3A; font-weight: 700; }
+      .tw { fill: #FFFFFF; stroke: #221A3A; stroke-width: 4; paint-order: stroke; font-weight: 900; }
+      .pop { font-family: 'Mochiy Pop One', 'M PLUS Rounded 1c', sans-serif; }
+      .note { fill: #C21E45; font-size: 14px; font-weight: 800; }
+    </style>
+    <pattern id="trame" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#221A3A" opacity="0.25"/></pattern>
+  </defs>
+  <!-- le monde derrière, flouté (aplat) : zone de départ et barrière -->
+  <rect width="1600" height="900" fill="#DCE3B4"/>
+  <rect x="0" y="0" width="1600" height="160" fill="#E9DFCB"/>
+  <rect x="0" y="150" width="1600" height="14" fill="#B43BEB" opacity="0.5"/>
+  <rect width="1600" height="900" fill="#2E2450" opacity="0.30"/>
+
+  <!-- titre et minuteur d'achat -->
+  <g transform="translate(60 26) rotate(-3)"><rect x="6" y="6" width="420" height="64" rx="18" fill="#221A3A"/>
+    <rect width="420" height="64" rx="18" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+    <text x="24" y="45" class="tw pop" font-size="32">Achat · Manche 8</text></g>
+  <g transform="translate(520 26)"><rect width="200" height="64" rx="18" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+    <text x="100" y="44" text-anchor="middle" class="pop" font-size="30" fill="#FFF8EC">0:14</text>
+    <rect x="16" y="52" width="168" height="6" rx="3" fill="#FFC928"/></g>
+  <g transform="translate(740 30)"><rect width="300" height="56" rx="16" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <circle cx="30" cy="28" r="18" fill="#FFC928" stroke="#221A3A" stroke-width="3"/><text x="30" y="34" text-anchor="middle" class="tw" font-size="15">or</text>
+    <text x="58" y="38" class="pop" font-size="26" fill="#221A3A">3 400</text>
+    <text x="190" y="25" class="t" font-size="12" fill="#6B5E86">après achats</text><text x="190" y="44" class="t" font-size="18" fill="#3E7F0A">1 650</text></g>
+
+  <!-- panneau principal -->
+  <g transform="translate(60 112)">
+    <rect x="7" y="7" width="1000" height="700" rx="20" fill="#221A3A"/>
+    <rect width="1000" height="700" rx="20" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <!-- onglets (LB / RB) -->
+    <g font-size="17" font-weight="800">
+      <rect x="24" y="-18" width="150" height="48" rx="12" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/><text x="99" y="13" text-anchor="middle" class="tw">Sorts</text>
+      <rect x="182" y="-8" width="140" height="40" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="252" y="18" text-anchor="middle" class="t">Arme</text>
+      <rect x="330" y="-8" width="140" height="40" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="400" y="18" text-anchor="middle" class="t">Armure</text>
+      <rect x="478" y="-8" width="160" height="40" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="558" y="18" text-anchor="middle" class="t">Utilitaires</text>
+      <rect x="646" y="-8" width="140" height="40" rx="12" fill="#FFEBC8" stroke="#221A3A" stroke-width="3"/><text x="716" y="18" text-anchor="middle" class="t">Fioles</text>
+      <circle cx="812" cy="12" r="15" fill="#FFF8EC" stroke="#221A3A" stroke-width="2.5"/><text x="812" y="17" text-anchor="middle" class="t" font-size="11">RB</text>
+    </g>
+    <text x="28" y="72" class="pop" font-size="22" fill="#221A3A">Tes sorts de la manche</text>
+    <text x="28" y="96" class="t" font-size="15" fill="#6B5E86">Gardés tant que tu survis. Le sort 1 est gratuit, l'ultime se charge en jouant.</text>
+
+    <!-- 4 cartes de sort -->
+    <g font-size="15">
+      <!-- 1 signature -->
+      <g transform="translate(28 120)"><rect width="220" height="250" rx="16" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+        <rect x="70" y="18" width="80" height="80" rx="18" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+        <text x="110" y="126" text-anchor="middle" class="t" font-size="18">Impact profond</text>
+        <text x="110" y="148" text-anchor="middle" class="t" font-size="13" fill="#6B5E86">Signature · cône, renverse</text>
+        <rect x="40" y="196" width="140" height="38" rx="12" fill="#8FD62E" stroke="#221A3A" stroke-width="3"/>
+        <text x="110" y="221" text-anchor="middle" class="tw" font-size="16">✔ Gratuit</text></g>
+      <!-- 2 achetée -->
+      <g transform="translate(264 120)"><rect width="220" height="250" rx="16" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+        <rect x="70" y="18" width="80" height="80" rx="18" fill="#B43BEB" stroke="#221A3A" stroke-width="3"/>
+        <text x="110" y="126" text-anchor="middle" class="t" font-size="18">Bond du rempart</text>
+        <text x="110" y="148" text-anchor="middle" class="t" font-size="13" fill="#6B5E86">Mobilité · saut sur une cible</text>
+        <rect x="40" y="196" width="140" height="38" rx="12" fill="#8FD62E" stroke="#221A3A" stroke-width="3"/>
+        <text x="110" y="221" text-anchor="middle" class="tw" font-size="16">✔ Gardé</text></g>
+      <!-- 3 à acheter, survol (monte, anneau lagon) -->
+      <g transform="translate(500 108)"><rect x="5" y="5" width="220" height="250" rx="16" fill="#221A3A"/>
+        <rect width="220" height="250" rx="16" fill="#FFF8EC" stroke="#0B7DB5" stroke-width="4"/>
+        <rect x="70" y="18" width="80" height="80" rx="18" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+        <text x="110" y="126" text-anchor="middle" class="t" font-size="18">Cri du titan</text>
+        <text x="110" y="148" text-anchor="middle" class="t" font-size="13" fill="#6B5E86">Contrôle · zone, ralentit</text>
+        <text x="110" y="176" text-anchor="middle" class="t" font-size="13" fill="#221A3A">Ralenti 1,5 s dans 5 m</text>
+        <rect x="40" y="196" width="140" height="38" rx="12" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+        <circle cx="64" cy="215" r="11" fill="#8FD62E" stroke="#221A3A" stroke-width="2"/><text x="64" y="220" text-anchor="middle" class="tw" font-size="12">A</text>
+        <text x="122" y="221" text-anchor="middle" class="tw" font-size="16">250 or</text></g>
+      <!-- 4 ultime -->
+      <g transform="translate(736 120)"><rect width="236" height="250" rx="16" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+        <rect x="78" y="18" width="80" height="80" rx="18" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/>
+        <text x="118" y="126" text-anchor="middle" font-size="18" font-weight="800" fill="#FFF8EC">Tourbillon d'acier</text>
+        <text x="118" y="148" text-anchor="middle" font-size="13" font-weight="700" fill="#C9BFEA">Ultime · ne s'achète pas</text>
+        <g fill="#FFC928" stroke="#221A3A" stroke-width="2"><circle cx="58" cy="186" r="8"/><circle cx="78" cy="186" r="8"/><circle cx="98" cy="186" r="8"/><circle cx="118" cy="186" r="8"/><circle cx="138" cy="186" r="8"/></g>
+        <g fill="#2E2450" stroke="#C9BFEA" stroke-width="2"><circle cx="158" cy="186" r="8"/><circle cx="178" cy="186" r="8"/></g>
+        <text x="118" y="226" text-anchor="middle" font-size="13" font-weight="700" fill="#C9BFEA">5 / 7 : élimination, pose, orbe</text></g>
+    </g>
+
+    <!-- rangée du bas : armure, arme, utilitaires choisis (récapitulatif) -->
+    <text x="28" y="414" class="pop" font-size="20" fill="#221A3A">Ton paquetage</text>
+    <g transform="translate(28 432)" font-size="14">
+      <g><rect width="180" height="110" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+        <rect x="14" y="14" width="44" height="44" rx="10" fill="#22B8F0" stroke="#221A3A" stroke-width="2.5"/>
+        <text x="68" y="34" font-weight="800" fill="#FFF8EC">Cuirasse</text><text x="68" y="52" font-weight="700" fill="#C9BFEA">bouclier lourd</text>
+        <text x="14" y="94" font-weight="800" fill="#FFC928">1 000 or</text></g>
+      <g transform="translate(194 0)"><rect width="180" height="110" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+        <rect x="14" y="14" width="44" height="44" rx="10" fill="#B43BEB" stroke="#221A3A" stroke-width="2.5"/>
+        <text x="68" y="34" font-weight="800" fill="#FFF8EC">Arme +2</text><text x="68" y="52" font-weight="700" fill="#C9BFEA">gardée</text>
+        <text x="14" y="94" font-weight="800" fill="#8FD62E">✔ déjà à toi</text></g>
+      <g transform="translate(388 0)"><rect width="180" height="110" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+        <rect x="14" y="14" width="44" height="44" rx="10" fill="#86DDFF" stroke="#221A3A" stroke-width="2.5"/>
+        <text x="68" y="34" font-weight="800" fill="#FFF8EC">Brume</text><text x="68" y="52" font-weight="700" fill="#C9BFEA">× 1 · voile</text>
+        <text x="14" y="94" font-weight="800" fill="#FFC928">200 or</text></g>
+      <g transform="translate(582 0)"><rect width="180" height="110" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+        <rect x="14" y="14" width="44" height="44" rx="10" fill="#FFE27A" stroke="#221A3A" stroke-width="2.5"/>
+        <text x="68" y="34" font-weight="800" fill="#FFF8EC">Éclat</text><text x="68" y="52" font-weight="700" fill="#C9BFEA">× 2 · éblouit</text>
+        <text x="14" y="94" font-weight="800" fill="#FFC928">2 × 150 or</text></g>
+      <g transform="translate(776 0)"><rect width="168" height="110" rx="14" fill="#E9DFCB" stroke="#6B5E86" stroke-width="3" stroke-dasharray="6 4"/>
+        <rect width="168" height="110" rx="14" fill="url(#trame)"/>
+        <text x="84" y="50" text-anchor="middle" font-weight="800" fill="#6B5E86">Case libre</text><text x="84" y="72" text-anchor="middle" font-weight="700" fill="#6B5E86">fiole ou kit</text></g>
+    </g>
+    <!-- boutons -->
+    <g transform="translate(28 584)">
+      <rect x="5" y="5" width="300" height="64" rx="16" fill="#221A3A"/>
+      <rect width="300" height="64" rx="16" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+      <text x="150" y="42" text-anchor="middle" class="tw pop" font-size="24">Achat conseillé</text>
+      <rect x="320" y="8" width="200" height="52" rx="14" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/><text x="420" y="41" text-anchor="middle" class="tw" font-size="18">Racheter [R]</text>
+      <rect x="534" y="8" width="200" height="52" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/><text x="634" y="41" text-anchor="middle" class="t" font-size="18">Tout revendre</text>
+      <rect x="748" y="8" width="196" height="52" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/><text x="846" y="41" text-anchor="middle" class="t" font-size="18">Offrir…</text>
+    </g>
+  </g>
+
+  <!-- colonne de l'équipe : plan commun et besoins des alliés IA -->
+  <g transform="translate(1100 112)">
+    <rect x="7" y="7" width="440" height="700" rx="20" fill="#221A3A"/>
+    <rect width="440" height="700" rx="20" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <text x="24" y="44" class="pop" font-size="22" fill="#221A3A">L'équipe</text>
+    <g transform="translate(24 64)"><rect width="392" height="74" rx="14" fill="#8FD62E" stroke="#221A3A" stroke-width="3"/>
+      <text x="196" y="32" text-anchor="middle" class="tw pop" font-size="22">Plan : achat complet</text>
+      <text x="196" y="58" text-anchor="middle" class="t" font-size="14">or de l'équipe 11 650 · tout le monde peut acheter</text></g>
+    <g font-size="15">
+      <g transform="translate(24 158)"><rect width="392" height="86" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+        <rect x="12" y="12" width="60" height="60" rx="14" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+        <text x="86" y="36" font-weight="800" fill="#FFF8EC">Toi · Guerrier</text><text x="86" y="60" font-weight="700" fill="#C9BFEA">Rempart · 3 400 or</text>
+        <text x="380" y="36" text-anchor="end" font-weight="800" fill="#FFC928">en cours</text></g>
+      <g transform="translate(24 254)"><rect width="392" height="86" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+        <rect x="12" y="12" width="60" height="60" rx="14" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+        <text x="86" y="36" font-weight="800" fill="#FFF8EC">Élouan · Chasseur</text><text x="86" y="60" font-weight="700" fill="#C9BFEA">Tireur · 4 100 or</text>
+        <text x="380" y="36" text-anchor="end" font-weight="800" fill="#8FD62E">✔ prêt</text></g>
+      <g transform="translate(24 350)"><rect width="392" height="86" rx="14" fill="#2E2450" stroke="#FF4D6D" stroke-width="3"/>
+        <rect x="12" y="12" width="60" height="60" rx="14" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+        <text x="86" y="36" font-weight="800" fill="#FFF8EC">Daphné · Clerc</text><text x="86" y="60" font-weight="700" fill="#FF9DB0">Soutien · 1 150 or</text>
+        <rect x="246" y="22" width="134" height="40" rx="12" fill="#FF4D6D" stroke="#221A3A" stroke-width="3"/><text x="313" y="48" text-anchor="middle" class="tw" font-size="14">Il lui manque 850</text></g>
+      <g transform="translate(24 446)"><rect width="392" height="86" rx="14" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+        <rect x="12" y="12" width="60" height="60" rx="14" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+        <text x="86" y="36" font-weight="800" fill="#FFF8EC">Noé · Kage</text><text x="86" y="60" font-weight="700" fill="#C9BFEA">Ouvreur · 3 000 or</text>
+        <text x="380" y="36" text-anchor="end" font-weight="800" fill="#8FD62E">✔ prêt</text></g>
+    </g>
+    <g transform="translate(24 556)"><rect width="392" height="56" rx="14" fill="#FFC928" stroke="#221A3A" stroke-width="3"/>
+      <text x="196" y="36" text-anchor="middle" class="tw" font-size="18">Offrir la cuirasse à Daphné · 1 000</text></g>
+    <g transform="translate(24 626)" font-size="15" font-weight="800">
+      <rect width="190" height="50" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/><text x="95" y="31" text-anchor="middle" fill="#221A3A">On économise</text>
+      <rect x="202" width="190" height="50" rx="14" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/><text x="297" y="31" text-anchor="middle" fill="#221A3A">On force l'achat</text>
+    </g>
+  </g>
+  <!-- notes -->
+  <g class="note"><text x="1100" y="852">① Les alliés IA disent leur plan et ce qui leur manque ;</text>
+    <text x="1100" y="872">    tu peux leur offrir un objet (comme le genre le permet).</text>
+    <text x="60" y="852">② « Achat conseillé » : ce que ferait un bon joueur de ta classe (A à la manette).</text>
+    <text x="60" y="872">③ Aucun pourcentage à l'écran : le détail chiffré est dans l'infobulle.</text></g>
+</svg>

@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" font-family="'M PLUS Rounded 1c', 'Nunito', sans-serif">
+  <!-- Maquette maison BM-TAC (17/10/2026) : après la mort dans une manche de l'Assaut. Récapitulatif de mort, spectateur d'un allié,
+       carte tactique où le joueur donne des ordres à ses alliés IA, « Prendre le relais ». DA « autocollant manga » (BIBLE v2). Aucun élément tiers. -->
+  <defs>
+    <style>
+      .t { fill: #221A3A; font-weight: 700; }
+      .tw { fill: #FFFFFF; stroke: #221A3A; stroke-width: 4; paint-order: stroke; font-weight: 900; }
+      .pop { font-family: 'Mochiy Pop One', 'M PLUS Rounded 1c', sans-serif; }
+      .note { fill: #C21E45; font-size: 14px; font-weight: 800; }
+    </style>
+    <pattern id="trame" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.2" fill="#221A3A" opacity="0.25"/></pattern>
+    <marker id="fl" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#22B8F0" stroke="#221A3A" stroke-width="1"/></marker>
+  </defs>
+  <!-- vue du spectateur derrière (désaturée) -->
+  <rect width="1600" height="900" fill="#DCE3B4"/>
+  <path d="M0 640 C 300 600, 500 760, 1600 700 L1600 900 L0 900 Z" fill="#CEBFA7" opacity="0.6"/>
+  <rect width="1600" height="900" fill="#6B5E86" opacity="0.35"/>
+
+  <!-- 1. récapitulatif de mort (haut-gauche, 6 s puis se replie) -->
+  <g transform="translate(30 24)">
+    <rect x="7" y="7" width="430" height="216" rx="18" fill="#221A3A"/>
+    <rect width="430" height="216" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <g transform="translate(18 14) rotate(-3)"><rect width="190" height="44" rx="14" fill="#FF4D6D" stroke="#221A3A" stroke-width="3"/>
+      <text x="95" y="31" text-anchor="middle" class="tw pop" font-size="22">Éliminé !</text></g>
+    <rect x="20" y="72" width="64" height="64" rx="14" fill="#FF8A1F" stroke="#221A3A" stroke-width="3"/>
+    <text x="98" y="94" class="t" font-size="18">par Kage · Ouvreur</text>
+    <text x="98" y="118" class="t" font-size="15" fill="#6B5E86">Lame d'ombre, dans le dos · 41 PV lui restent</text>
+    <rect x="20" y="148" width="190" height="52" rx="12" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+    <text x="115" y="172" text-anchor="middle" font-size="20" font-weight="900" fill="#FFF8EC">612</text><text x="115" y="192" text-anchor="middle" font-size="12" font-weight="700" fill="#C9BFEA">dégâts donnés</text>
+    <rect x="220" y="148" width="190" height="52" rx="12" fill="#2E2450" stroke="#221A3A" stroke-width="3"/>
+    <text x="315" y="172" text-anchor="middle" font-size="20" font-weight="900" fill="#FFF8EC">1 / 0</text><text x="315" y="192" text-anchor="middle" font-size="12" font-weight="700" fill="#C9BFEA">éliminations / aides</text>
+  </g>
+
+  <!-- 2. carte tactique (centre) : ouverte par [Tab] / Vue ; les alliés vivants, ce que l'équipe voit, les ordres -->
+  <g transform="translate(480 70)">
+    <rect x="8" y="8" width="640" height="640" rx="20" fill="#221A3A"/>
+    <rect width="640" height="640" rx="20" fill="#E9DFCB" stroke="#221A3A" stroke-width="3"/>
+    <g fill="#2E2450" stroke="#221A3A" stroke-width="2">
+      <rect x="0" y="0" width="200" height="54" rx="6"/><rect x="380" y="0" width="260" height="40" rx="6"/>
+      <rect x="120" y="290" width="120" height="250" rx="6"/><rect x="400" y="290" width="120" height="250" rx="6"/>
+      <rect x="230" y="190" width="80" height="70" rx="6"/><rect x="330" y="190" width="80" height="70" rx="6"/>
+      <rect x="0" y="560" width="110" height="80" rx="6"/><rect x="530" y="560" width="110" height="80" rx="6"/>
+    </g>
+    <rect x="30" y="70" width="180" height="160" rx="14" fill="#FFC928" fill-opacity="0.35" stroke="#221A3A" stroke-width="3" stroke-dasharray="8 5"/>
+    <rect x="430" y="70" width="180" height="170" rx="14" fill="#FFC928" fill-opacity="0.35" stroke="#221A3A" stroke-width="3" stroke-dasharray="8 5"/>
+    <text x="120" y="170" text-anchor="middle" class="tw pop" font-size="40">A</text><text x="520" y="174" text-anchor="middle" class="tw pop" font-size="40">B</text>
+    <!-- charge posée en B, minuteur -->
+    <g transform="translate(560 120)"><circle r="16" fill="#FFC928" stroke="#221A3A" stroke-width="3"/><circle r="26" fill="none" stroke="#FF4D6D" stroke-width="4" stroke-dasharray="120 60"/></g>
+    <!-- alliés vivants (lagon) + ordres en flèches -->
+    <g stroke="#221A3A" stroke-width="3"><circle cx="300" cy="320" r="13" fill="#22B8F0"/><circle cx="470" cy="270" r="13" fill="#22B8F0"/></g>
+    <path d="M300 320 L320 270 L440 230 L500 200" fill="none" stroke="#22B8F0" stroke-width="4" stroke-dasharray="10 6" marker-end="url(#fl)"/>
+    <text x="300" y="350" text-anchor="middle" class="tw" font-size="14">Élouan</text><text x="470" y="300" text-anchor="middle" class="tw" font-size="14">Noé</text>
+    <!-- ennemis vus / derniers vus -->
+    <circle cx="520" cy="110" r="12" fill="#FF4D6D" stroke="#221A3A" stroke-width="3"/>
+    <circle cx="600" cy="230" r="12" fill="none" stroke="#FF4D6D" stroke-width="3" stroke-dasharray="4 3"/><text x="600" y="235" text-anchor="middle" class="tw" font-size="13">?</text>
+    <!-- ton corps (croix) -->
+    <path d="M330 470 l20 20 M350 470 l-20 20" stroke="#221A3A" stroke-width="6"/><text x="340" y="520" text-anchor="middle" class="t" font-size="13">toi</text>
+    <!-- roue d'ordres ouverte sur Élouan -->
+    <g transform="translate(140 400)">
+      <circle r="92" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+      <circle r="34" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/><text y="6" text-anchor="middle" class="tw" font-size="14">Élouan</text>
+      <g font-size="14" font-weight="800" fill="#221A3A" text-anchor="middle">
+        <text x="0" y="-54">Va en B</text><text x="62" y="5">Reprise</text><text x="0" y="68">Recule</text><text x="-64" y="5">Tiens</text>
+      </g>
+      <path d="M-30 -42 A52 52 0 0 1 30 -42" fill="none" stroke="#0B7DB5" stroke-width="6"/>
+    </g>
+  </g>
+  <!-- légende des ordres -->
+  <g transform="translate(1150 70)">
+    <rect x="7" y="7" width="410" height="300" rx="18" fill="#221A3A"/>
+    <rect width="410" height="300" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <text x="22" y="40" class="pop" font-size="22" fill="#221A3A">Ordres à l'équipe</text>
+    <g font-size="15" font-weight="700" fill="#221A3A">
+      <text x="22" y="76">Va en A · Va en B · Va au repère</text>
+      <text x="22" y="104">Tiens ta place · Regroupez-vous</text>
+      <text x="22" y="132">Reprends le site (après la pose)</text>
+      <text x="22" y="160">Recule et garde ton équipement</text>
+      <text x="22" y="188">Économisez la prochaine manche</text>
+    </g>
+    <text x="22" y="226" font-size="14" font-weight="700" fill="#6B5E86">Les alliés IA suivent un ordre s'il reste</text>
+    <text x="22" y="246" font-size="14" font-weight="700" fill="#6B5E86">possible ; sinon ils répondent « Pas pour</text>
+    <text x="22" y="266" font-size="14" font-weight="700" fill="#6B5E86">l'instant » avec la raison.</text>
+  </g>
+  <g transform="translate(1150 390)">
+    <rect x="7" y="7" width="410" height="140" rx="18" fill="#221A3A"/>
+    <rect width="410" height="140" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <text x="22" y="40" class="pop" font-size="20" fill="#221A3A">Prendre le relais</text>
+    <text x="22" y="68" font-size="14" font-weight="700" fill="#6B5E86">Facile et Normal : joue un allié vivant jusqu'à</text>
+    <text x="22" y="88" font-size="14" font-weight="700" fill="#6B5E86">la fin de la manche (ses sorts, son or).</text>
+    <rect x="22" y="98" width="200" height="34" rx="12" fill="#FFC928" stroke="#221A3A" stroke-width="3"/><text x="122" y="121" text-anchor="middle" class="tw" font-size="15">Jouer Élouan · [Y]</text>
+  </g>
+
+  <!-- 3. bandeau du spectateur (bas-centre) -->
+  <g transform="translate(470 790)">
+    <rect x="6" y="6" width="660" height="70" rx="18" fill="#221A3A"/>
+    <rect width="660" height="70" rx="18" fill="#FFF8EC" stroke="#221A3A" stroke-width="3"/>
+    <text x="30" y="45" class="pop" font-size="26" fill="#221A3A">◀</text>
+    <rect x="70" y="10" width="50" height="50" rx="12" fill="#22B8F0" stroke="#221A3A" stroke-width="3"/>
+    <text x="134" y="34" class="t" font-size="18">Tu regardes : Élouan · Chasseur</text>
+    <text x="134" y="56" class="t" font-size="14" fill="#6B5E86">LB / RB : changer · [Tab] carte tactique · ordres</text>
+    <text x="630" y="45" text-anchor="end" class="pop" font-size="26" fill="#221A3A">▶</text>
+  </g>
+  <!-- minuteur de la charge en grand (haut-centre) -->
+  <g transform="translate(700 14)"><rect width="200" height="46" rx="16" fill="#FF4D6D" stroke="#221A3A" stroke-width="3"/>
+    <text x="100" y="32" text-anchor="middle" class="tw pop" font-size="20">Charge · 0:27</text></g>
+  <g class="note"><text x="30" y="290">① Pourquoi je suis mort : qui, avec quoi,</text><text x="30" y="308">    ce qui lui reste (6 s, puis replié).</text>
+    <text x="30" y="336">② Mort, tu restes utile : tu commandes</text><text x="30" y="354">    tes alliés IA sur la carte tactique.</text>
+    <text x="30" y="382">③ Le relais est un confort des difficultés</text><text x="30" y="400">    basses (option, désactivée en Expert).</text></g>
+</svg>
