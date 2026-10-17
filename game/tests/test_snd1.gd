@@ -19,7 +19,10 @@ var last: AudioStreamPlayer
 
 
 func _on_added(n: Node) -> void:
-	if n is AudioStreamPlayer:
+	if n is AudioStreamPlayer:  # la musique (autoload Music) ajoute aussi des lecteurs : seuls ceux de Sfx.ui comptent
+		var s := (n as AudioStreamPlayer).stream
+		if s == null or not s.resource_path.contains("assets/sfx/"):
+			return
 		played += 1
 		last = n as AudioStreamPlayer
 
@@ -75,12 +78,14 @@ func _ready() -> void:
 	# --- anti-répétition : pas deux fois le même son dans les 40 ms
 	await get_tree().process_frame
 	var n0 := played
+	var t0 := Time.get_ticks_msec()
 	Sfx.ui("ui_press", -15.0)
 	Sfx.ui("ui_press", -15.0)
 	check("même son deux fois de suite : un seul joué", played == n0 + 1)
-	await get_tree().create_timer(0.06, true, false, true).timeout
+	while Time.get_ticks_msec() - t0 < 60:
+		await get_tree().process_frame
 	Sfx.ui("ui_press", -15.0)
-	check("après 40 ms : rejoué", played == n0 + 2)
+	check("après 40 ms : rejoué (%d ms, %d -> %d)" % [Time.get_ticks_msec() - t0, n0, played], played == n0 + 2)
 	# --- volume « Effets sonores »
 	Settings.set_v("audio", "sfx", 0.5)
 	Settings.apply_all()
