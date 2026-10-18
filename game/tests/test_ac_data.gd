@@ -41,14 +41,14 @@ func _ready() -> void:
 	check("coûts : 10 / 15 / 15 / 10 / 10 unités (%s)" % str(by_cost), by_cost == {1: 10, 2: 15, 3: 15, 4: 10, 5: 10} and by_cost == A.UNITS_PER_COST)
 	var fam_ok := true
 	for f in A.family_traits():
-		fam_ok = fam_ok and int(by_trait.get(f, 0)) == 12
+		fam_ok = fam_ok and int(by_trait.get(f, 0)) == 13  # 12 de la famille + 1 unité pont d'une autre (lot ACX-4)
 		for c in range(1, 6):
 			fam_ok = fam_ok and int(fam_cost.get("%s/%d" % [f, c], 0)) == [2, 3, 3, 2, 2][c - 1]
-	check("12 unités par famille, 2 / 3 / 3 / 2 / 2 par coût", fam_ok and A.family_traits().size() == 5)
+	check("12 unités par famille (+ 1 pont), 2 / 3 / 3 / 2 / 2 par coût", fam_ok and A.family_traits().size() == 5)
 	var wpn_ok := A.weapon_traits().size() == 10
 	for w in A.weapon_traits():
 		wpn_ok = wpn_ok and int(by_trait.get(w, 0)) == 6
-	check("6 unités par trait d'arme (10 traits)", wpn_ok)
+	check("6 unités par style (10 styles)", wpn_ok)
 
 	# 2. chaque unité : traits, portée, rôle, sort signature et mana tirés du vrai code des classes
 	var bad: Array = []
@@ -59,7 +59,10 @@ func _ready() -> void:
 		var sk: Array = cd.skills
 		var idx := int(u.get("skill_index", -1))
 		var sig: Dictionary = sk[idx] if idx >= 0 and idx < sk.size() else {}
-		var ok: bool = u.traits == [A.FAMILY_TRAIT[int(cd.family)], A.WEAPON_TRAIT[wt]] \
+		var want: Array = [A.FAMILY_TRAIT[int(cd.family)], A.LINEAGE_STYLE[String(cd.get("parent", id))]]
+		if A.BRIDGES.has(id):
+			want.append(A.BRIDGES[id])
+		var ok: bool = u.traits == want \
 			and String(u.weapon_type) == wt and int(u.family) == int(cd.family) \
 			and int(u.range) == int(A.WEAPON_RANGE[wt]) and A.PLACES.has(String(u.place)) \
 			and A.ROLES.has(String(u.role)) and is_equal_approx(float(u.attack_range_m), A.reach_m(int(u.range))) \
@@ -76,11 +79,25 @@ func _ready() -> void:
 	check("fiches cohérentes avec classes.json (traits, portée, rôle, sort, mana, nom) %s" % str(bad), bad.is_empty())
 	var types_ok := true
 	for wt in GameData.weapon_types:
-		types_ok = types_ok and A.WEAPON_TRAIT.has(wt) and A.WEAPON_RANGE.has(wt)
+		types_ok = types_ok and A.WEAPON_RANGE.has(wt)
+	# lot ACX-4 : chaque style = 2 lignées de 2 familles différentes ; les 10 paires de familles, une fois chacune
+	var fam_pairs := {}
 	for t in A.weapon_traits():
-		for wt in A.TRAITS[t].weapons:
-			types_ok = types_ok and A.WEAPON_TRAIT[wt] == t
-	check("17 types d'arme regroupés en 10 traits (table des traits = WEAPON_TRAIT)", types_ok and A.WEAPON_TRAIT.size() == 17)
+		var lins: Array = A.TRAITS[t].lineages
+		types_ok = types_ok and lins.size() == 2
+		var fams: Array = []
+		for lin in lins:
+			types_ok = types_ok and A.LINEAGE_STYLE.get(lin, "") == t and units.has(lin)
+			fams.append(int(GameData.classes[lin].family))
+		fams.sort()
+		types_ok = types_ok and fams.size() == 2 and fams[0] != fams[1]
+		fam_pairs["%d-%d" % fams] = true
+	var bridge_fams := {}
+	for id in A.BRIDGES:
+		types_ok = types_ok and A.FAMILY_TRAIT[int(GameData.classes[id].family)] != A.BRIDGES[id] and int(units[id].cost) in [3, 4]
+		bridge_fams[A.BRIDGES[id]] = true
+	check("10 styles = les 10 paires de familles (2 lignées chacun) ; 5 ponts, un vers chaque famille",
+		types_ok and A.LINEAGE_STYLE.size() == 20 and fam_pairs.size() == 10 and A.BRIDGES.size() == 5 and bridge_fams.size() == 5)
 	var by_role := {}
 	for id in units:
 		by_role[units[id].role] = int(by_role.get(units[id].role, 0)) + 1

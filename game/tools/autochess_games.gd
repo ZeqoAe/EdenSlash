@@ -17,6 +17,8 @@ extends Node
 ##   --ai=clé:val,… réglages d'essai de toutes les IA (AutochessAi.tune)
 ##   --format=F     classique (défaut) | eclair (lot ACX-3, AutochessData.FORMATS)
 ##   --rule=R       règle du jour (AutochessData.DAY_RULES ; « day » : une par partie, à tour de rôle)
+##   --set=clé:json règle d'essai posée dans Autochess.rules (ex. --set=monster_waves:{"1-4":{"elites":1,"sbires":2}})
+##   --stop=E-M     arrête chaque partie en arrivant à la manche E-M (mesure de l'étape 1 : --stop=2-1)
 ## Ligne « [ac_games] » de bilan (parties, bloquées, secondes par partie).
 
 const DEFAULT_OUT := "user://autochess_games.jsonl"
@@ -30,6 +32,8 @@ var out_path := DEFAULT_OUT
 var ai_tune := {}
 var format := "classique"
 var day_rule := ""
+var rule_set := {}  # lot ACX-4 : --set=clé:json
+var stop_at := ""  # lot ACX-4 : --stop=2-1
 var stuck := 0
 var _fight := Callable()
 var _out: FileAccess
@@ -90,6 +94,12 @@ func _ready() -> void:
 				format = v
 			"rule":
 				day_rule = v
+			"set":
+				var kj := v.split(":", true, 1)
+				if kj.size() == 2:
+					rule_set[kj[0]] = JSON.parse_string(kj[1])
+			"stop":
+				stop_at = v
 	if not setup in SETUPS:
 		print("[ac_games] mise en place inconnue : %s (%s)" % [setup, ", ".join(SETUPS)])
 		get_tree().quit(1)
@@ -187,6 +197,8 @@ func play(gs: int, name: String) -> Dictionary:
 		keys.sort()
 		rule = String(keys[gs % keys.size()])
 	g.configure(format, rule)
+	for k in rule_set:
+		g.rules[k] = rule_set[k]
 	g.start(gs, recs, _fight)
 	var t_prep := 0.0
 	var t_recap := 0.0
@@ -197,9 +209,12 @@ func play(gs: int, name: String) -> Dictionary:
 	var pve := [0, 0]  # [manches de monstres / gardiens gagnées, jouées]
 	var last := {}  # stratège -> {board, traits, level} au dernier combat
 	var out_at := {}  # stratège -> [manche, minutes]
+	var pve1 := {}  # lot ACX-4 : stratège -> {« 1-2 » : [gagné 0/1, unités posées, coût total]} (monstres de l'étape 1)
 	var guard := 0
 	while not g.is_over() and guard < Autochess.MAX_ROUNDS * 3 + 10:
 		guard += 1
+		if stop_at != "" and g.phase == "prep" and g.round_key() == stop_at:
+			break
 		if g.phase == "prep":
 			t_prep += g.prep_time()
 			t_recap += AutochessData.ROUND_RECAP
@@ -225,6 +240,14 @@ func play(gs: int, name: String) -> Dictionary:
 				else:
 					pve[1] += 1
 					pve[0] += 1 if int(r.winner) == 0 else 0
+					if g.stage <= 1:
+						var fa := int(g.fights[i].a)
+						var cost := 0
+						for u in g.fights[i].board_a:
+							cost += AutochessPool.cost_of(String(u.get("id", ""))) * int(u.get("stars", 1))
+						if not pve1.has(fa):
+							pve1[fa] = {}
+						pve1[fa][g.round_key()] = [1 if int(r.winner) == 0 else 0, (g.fights[i].board_a as Array).size(), cost]
 			if not g.results.is_empty():
 				t_fight += longest
 				if g.round_kind() != "jcj":
@@ -233,7 +256,7 @@ func play(gs: int, name: String) -> Dictionary:
 			for p in g.players:
 				if not bool(p.alive) and not out_at.has(int(p.id)):
 					out_at[int(p.id)] = [g.round_key(), snappedf(now, 0.01), g.rounds_played]
-	if not g.is_over():
+	if not g.is_over() and stop_at == "":
 		stuck += 1
 		push_error("partie %d bloquée à %s" % [gs, g.round_key()])
 	var total := (t_prep + t_recap + t_fight) / 60.0
@@ -249,7 +272,7 @@ func play(gs: int, name: String) -> Dictionary:
 		players.append({"ai": rec.ai.label(), "d": rec.ai.difficulty, "t": rec.ai.temperament, "focal": bool(seats[pi][3]),
 			"place": int(p.place), "out": oa[0], "out_min": oa[1], "out_n": oa[2], "hp": int(p.hp), "level": rec.econ.level_end,
 			"board": l.get("board", []), "traits": l.get("traits", {}), "augs": p.augments, "offers": rec.offers,
-			"econ": rec.econ, "stats": p.stats, "s3": stars3})
+			"econ": rec.econ, "stats": p.stats, "s3": stars3, "pve1": pve1.get(pi, {})})
 	return {"v": Version.NUMBER, "setup": name, "seed": gs, "fight": fight_name, "format": g.format, "rule": g.day_rule, "rounds": g.rounds_played,
 		"last": g.round_key(), "min": {"prep": snappedf(t_prep / 60.0, 0.01), "recap": snappedf(t_recap / 60.0, 0.01),
 		"fight": snappedf(t_fight / 60.0, 0.01), "fight_pve": snappedf(t_fight_pve / 60.0, 0.01), "total": snappedf(total, 0.01)},

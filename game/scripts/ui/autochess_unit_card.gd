@@ -20,10 +20,15 @@ var _cost: Label
 var _role: Label
 var _body: VBoxContainer
 var _what := ""  # ce qui est montré (évite de tout refaire à chaque image)
+var _unit_id := ""  # héros montré (ligne « Viser » cliquable, lot ACX-4)
 var _tail_side := ""  # left, right, top, bottom : côté de la bulle où sort la queue ("" : aucune)
 var _tail_at := 0.0  # position de la queue le long de ce côté (px)
 
 static var _max_base := {}  # plus grandes valeurs de base (hp, atk) parmi les 60 classes
+
+
+## Lot ACX-4 : clic sur la ligne « Viser » de la fiche (planificateur), comme T ou le clic du stick droit.
+signal plan_clicked(id: String)
 
 
 func _init() -> void:
@@ -95,6 +100,7 @@ func show_unit(u: Dictionary, counts: Dictionary = {}, from_shop := false) -> vo
 	if key == _what and visible:
 		return
 	_what = key
+	_unit_id = id
 	custom_minimum_size.x = AutochessHud.s(W)
 	var d := AutochessData.unit(id)
 	if d.is_empty():
@@ -197,8 +203,14 @@ func show_unit(u: Dictionary, counts: Dictionary = {}, from_shop := false) -> vo
 	var pl := AutochessHud.ink_lbl("◎ Héros visé" if planned else ("Viser : stick droit" if Gamepad.active else "Viser : T"), 13,
 		AutochessHud.candy("fraise", 2) if planned else AutochessHud.INK_300, 800)
 	pl.name = "AcPlanLine"
-	pl.tooltip_text = "Planificateur : les héros visés sont marqués d'une cible dans la boutique (%d au plus)." % AutochessPlanner.MAX
-	pl.mouse_filter = Control.MOUSE_FILTER_PASS
+	pl.tooltip_text = "Planificateur : les héros visés sont marqués d'une cible dans la boutique (%d au plus). Clic : viser ou retirer." % AutochessPlanner.MAX
+	pl.mouse_filter = Control.MOUSE_FILTER_STOP
+	pl.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	pl.gui_input.connect(func(ev: InputEvent):
+		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed \
+				and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+			plan_clicked.emit(_unit_id)
+			pl.accept_event())
 	_body.add_child(pl)
 	visible = true
 	reset_size()
@@ -258,6 +270,38 @@ func show_item(id: String, have: Array = []) -> void:
 		r.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		r.custom_minimum_size.x = AutochessHud.s(W) - 26.0
 		_body.add_child(r)
+	visible = true
+	reset_size()
+
+
+## Lot ACX-4 : atout pris (enclume de la colonne gauche du plateau) : nom, rareté, une phrase ; chiffres en infobulle.
+func show_augment(id: String) -> void:
+	var key := "a:" + id
+	if key == _what and visible:
+		return
+	_what = key
+	_unit_id = ""
+	custom_minimum_size.x = AutochessHud.s(W)
+	var d := AutochessData.augment(id)
+	if d.is_empty():
+		hide_card()
+		return
+	_icon.texture = AutochessChoicePanel.augment_icon(id)
+	(_icon.get_parent() as PanelContainer).add_theme_stylebox_override("panel",
+		AutochessHud.sticker(AutochessHud.INK_500, 10.0, 0.0, 2.0, 2.0, 2.0))
+	_name.text = String(d.get("name", id))
+	_stars.text = ""
+	_cost.text = ""
+	_cost.remove_theme_stylebox_override("normal")
+	_set_panel(AutochessHud.INK)
+	_role.text = "Atout %s" % String(AutochessData.RARITY_NAMES.get(String(d.get("rarity", "")), ""))
+	_clear()
+	var s := AutochessHud.ink_lbl(String(d.get("short", "")), 15, AutochessHud.INK, 700)
+	s.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	s.custom_minimum_size.x = AutochessHud.s(W) - 26.0
+	s.tooltip_text = String(d.get("tip", ""))
+	s.mouse_filter = Control.MOUSE_FILTER_PASS
+	_body.add_child(s)
 	visible = true
 	reset_size()
 
@@ -322,6 +366,9 @@ func place_near(target: Rect2, avoid: Array) -> void:
 		["right", Vector2(target.position.x - gap - sz.x, mid.y - face_h * 0.5)],
 		["bottom", Vector2(mid.x - sz.x * 0.5, target.position.y - gap - face_h)],
 		["top", Vector2(mid.x - sz.x * 0.5, target.end.y + gap)],
+		# lot ACX-4 : à côté de la cible mais montant au-dessus d'elle (plateau d'objets en bas à gauche, boutique dessous)
+		["left", Vector2(target.end.x + gap, target.end.y - sz.y - 2.0)],
+		["right", Vector2(target.position.x - gap - sz.x, target.end.y - sz.y - 2.0)],
 	]
 	var best: Array = []
 	var best_cost := INF

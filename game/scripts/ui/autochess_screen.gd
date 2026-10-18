@@ -71,6 +71,8 @@ var daily := false
 var guide: AutochessGuide  # première partie guidée (null : finie, passée ou pilote automatique)
 var strikes: Array = []  # coups au stratège lancés (tests) : {from, to, damage, loser}
 var _card_id := ""  # héros montré par la fiche (planificateur : T, clic du stick droit)
+var _tray_sig := ""  # lot ACX-4 : plateau d'objets à rafraîchir
+var _card_args: Array = []  # [unité, de la boutique] montrée par la fiche (lot ACX-4 : remise à jour après « Viser »)
 var results: AutochessResults
 var _pilot: Variant = null  # stratège du pilote automatique (Vétéran quand les adversaires sont des AutochessAi)
 var _played := 0.0  # s de partie (temps réel, pauses exclues), gardées dans meta.aci.secs
@@ -186,6 +188,7 @@ func _ready() -> void:
 	add_child(_ui)
 	hud = AutochessHud.new()
 	_ui.add_child(hud)
+	cursor.use_item_tray(hud.item_tray.slots)  # lot ACX-4 : objets en icônes à gauche, enclumes des atouts sur le plateau
 	_top = CanvasLayer.new()
 	_top.name = "AcChoices"
 	_top.layer = AutochessCursor.LAYER + 2  # au-dessus du plateau : la manette ne voit que les cartes du choix
@@ -241,6 +244,9 @@ func _ready() -> void:
 	hud.undo_pressed.connect(_undo)
 	hud.pause_pressed.connect(_pause)
 	hud.skip_pressed.connect(_skip)
+	hud.shop_toggled.connect(_toggle_combat_shop)  # lot ACX-4 : boutique pendant le combat
+	hud.unit_card.plan_clicked.connect(func(_id): _plan_toggle())  # lot ACX-4 : ligne « Viser » cliquable
+	hud.bench_sell.connect(_bench_sell)
 	strip = AutochessRecap.RoundStrip.new()
 	_ui.add_child(strip)
 	strip.detail_pressed.connect(_open_detail)
@@ -495,7 +501,10 @@ func _start_combat() -> void:
 			if foe < 0:
 				foe = int(f.ghost_of)
 			var their: Array = f.board_b if int(f.a) == me else f.board_a
-			board.set_enemy(their, {"class_id": String(identities[foe].class_id), "name": name_of(foe)})
+			# lot ACX-4 (suite de PERF-1) : en vrai combat, le directeur cache les figurines et pose ses combattants ; les
+			# figurines adverses ne serviraient qu'une image (jusqu'à 98 ms) : seul le stratège adverse est posé
+			var shown := not (AutochessDirector.real_combat and real_combat and not spectating)
+			board.set_enemy(their if shown else [], {"class_id": String(identities[foe].class_id), "name": name_of(foe)})
 			_combat_text = ("Combat contre l'écho de %s" if int(f.b) < 0 and int(f.a) == me else "Combat contre %s") % name_of(foe)
 		elif kind == "gardien":
 			_combat_text = "Combat contre le gardien"
@@ -1105,6 +1114,10 @@ func _process(delta: float) -> void:
 	if _dirty:
 		_sync()
 	hud.set_holding(not cursor.held.is_empty() and String(cursor.held.get("zone", "")) != "items")
+	var tsig := "%s|%s" % [str(game.players[me].items), AutochessBoard.slot_id(cursor.held)]
+	if tsig != _tray_sig and hud.item_tray.visible:
+		_tray_sig = tsig
+		hud.item_tray.refresh(game.players[me].items, cursor.held)
 	hud.set_overlay(choice.visible or carousel.visible, carousel.visible)
 	_update_card()
 	_update_highlight()
@@ -1145,6 +1158,12 @@ func _sync() -> void:
 	if game == null:
 		return
 	board.set_state(game.players[me])
+	if phase == "combat" and real:
+		board.show_figures(false)  # lot ACX-4 : un héros acheté pendant le combat attend au banc, caché comme les autres
+	board.bench.anvil_mode = true  # lot ACX-4 : enclumes des atouts pris à la place de la colonne d'objets
+	board.bench.anvils = (game.players[me].augments as Array).duplicate()
+	board.bench.anvil_count = maxi((game.rule("augment_rounds", AutochessData.AUGMENT_ROUNDS) as Array).size(), board.bench.anvils.size())
+	_tray_sig = ""
 	_counts = game.trait_counts(me)
 	hud.refresh(game, me, foe, scouted)
 	if guide != null:
@@ -1210,6 +1229,10 @@ func _update_card() -> void:
 	if phase == "over" or game == null or choice.visible or carousel.visible or not cursor.held.is_empty():
 		card.hide_card()  # (lot ACX-2 : héros en main → la zone « Vendre » et l'aperçu des traits parlent, pas la fiche)
 		return
+	# lot ACX-4 (note du joueur : la fiche « apparaît et disparaît aussitôt ») : elle reste tant que la souris est dessus
+	# (lire ses infobulles, cliquer « Viser »), même si la souris a quitté le héros ou la carte qu'elle décrit.
+	if card.visible and not Gamepad.active and card.get_global_rect().grow(6.0).has_point(get_viewport().get_mouse_position()):
+		return
 	var s: Dictionary = {}
 	var shop_i := -1
 	var target := Rect2()
@@ -1227,6 +1250,8 @@ func _update_card() -> void:
 		var sc: Control = cursor.control_of(s) if not s.is_empty() else null
 		if sc != null:
 			target = sc.get_global_rect()
+	if not s.is_empty() and String(s.get("zone", "")) == "items" and hud.item_tray.is_visible_in_tree():
+		target = hud.item_tray.get_global_rect()  # lot ACX-4 : la fiche d'un objet sort à droite du plateau d'objets
 	var shop_id := ""
 	if shop_i >= 0:
 		var sb: Control = hud.shop.cards[shop_i]
@@ -1245,9 +1270,14 @@ func _update_card() -> void:
 	elif not s.is_empty() and not board.unit_at(s).is_empty():
 		card.show_unit(board.unit_at(s), _counts)
 		_card_id = String(board.unit_at(s).get("id", ""))
+		_card_args = [board.unit_at(s), false]
 	elif shop_id != "":
 		card.show_unit({"id": shop_id, "stars": 1, "items": []}, _counts, true)
 		_card_id = shop_id
+		_card_args = [{"id": shop_id, "stars": 1, "items": []}, true]
+	elif not Gamepad.active and phase == "prep" and _anvil_under_mouse() != "":
+		card.show_augment(_anvil_under_mouse())  # lot ACX-4 : enclume = atout pris
+		target = Rect2(get_viewport().get_mouse_position() - Vector2(18, 18), Vector2(36, 36))
 	else:
 		card.hide_card()
 	if card.visible and target.size != Vector2.ZERO:
@@ -1304,6 +1334,12 @@ func _update_highlight() -> void:
 	hud.traits.preview(rising)
 
 
+## Lot ACX-4 : atout de l'enclume sous la souris (« » : aucune).
+func _anvil_under_mouse() -> String:
+	var g := cursor._ground(get_viewport().get_mouse_position()) if cursor != null else Vector3.INF
+	return board.bench.anvil_at(g) if g != Vector3.INF else ""
+
+
 ## Composants du joueur (banc d'objets, puis composants seuls sur ses héros) : recettes de la fiche d'un composant.
 func have_components() -> Array:
 	var out: Array = []
@@ -1331,12 +1367,58 @@ func _plan_toggle() -> void:
 		hud.toast("%s n'est plus visé" % nm)
 	else:
 		hud.toast("%d héros visés au plus" % AutochessPlanner.MAX)
+	if hud.unit_card.visible and _card_args.size() == 2 and String((_card_args[0] as Dictionary).get("id", "")) == _card_id:
+		hud.unit_card.show_unit(_card_args[0], _counts, bool(_card_args[1]))  # la fiche reste et dit « Héros visé »
 	_dirty = true
 
 
 # --- actions --------------------------------------------------------------------------------------------------------
 func _can_act() -> bool:
 	return phase == "prep" and not choice.visible and not carousel.visible and bool(game.players[me].alive)
+
+
+## Lot ACX-4 (note du joueur) : acheter, actualiser, monter et vendre au banc restent permis pendant le combat et le bilan.
+func _can_shop() -> bool:
+	return phase in ["prep", "combat", "recap"] and not choice.visible and not carousel.visible \
+		and bool(game.players[me].alive) and not spectating
+
+
+## Boutique ouverte / repliée pendant le combat (bouton Boutique, B, RB).
+func _toggle_combat_shop() -> void:
+	if not phase in ["combat", "recap"] or not _can_shop():
+		return
+	hud.set_combat_shop(not hud.combat_shop)
+	UiFeel.cue("ui_tab", -10.0, 1.0)
+	_dirty = true
+
+
+## Vente d'un héros du banc depuis les vignettes du combat ; [param confirm] : demander d'abord (A, clic), sinon seulement
+## pour un héros précieux (2 étoiles ou plus, ou avec objets).
+func _bench_sell(uid: int, confirm: bool) -> void:
+	if not _can_shop():
+		return
+	var u := game.find_unit(me, uid)
+	if u.is_empty():
+		return
+	var precious := int(u.stars) >= 2 or not (u.get("items", []) as Array).is_empty()
+	var gain := AutochessData.sell_value(AutochessPool.cost_of(String(u.id)), int(u.stars))
+	if confirm or precious:
+		InfoCard.ask(self, "Vendre %s %s ?" % [AutochessData.unit_name(String(u.id)), "★".repeat(clampi(int(u.stars), 1, 3))],
+			"+%d or%s." % [gain, " · ses objets reviennent au banc" if not (u.get("items", []) as Array).is_empty() else ""],
+			"Vendre", _bench_sell_now.bind(uid), true)
+	else:
+		_bench_sell_now(uid)
+
+
+func _bench_sell_now(uid: int) -> void:
+	var u := game.find_unit(me, uid)
+	if u.is_empty() or not _can_shop():
+		return
+	var gain := AutochessData.sell_value(AutochessPool.cost_of(String(u.id)), int(u.stars))
+	if game.sell(me, uid):
+		hud.toast("%s vendu · +%d or" % [AutochessData.unit_name(String(u.id)), gain])
+		UiFeel.cue("confirm", -10.0, 0.9)
+		_dirty = true
 
 
 ## Noms des unités au survol pendant le combat (lot ACX-2 : aucun nom par défaut, BM-AUTO §7.2) : l'unité la plus
@@ -1413,7 +1495,7 @@ func _star_moments(before: Dictionary) -> void:
 
 
 func _buy(slot: int) -> void:
-	if phase != "prep":
+	if not _can_shop():
 		return
 	var p: Dictionary = game.players[me]
 	var id := String(p.shop[slot]) if slot < (p.shop as Array).size() else ""
@@ -1435,14 +1517,14 @@ func _buy(slot: int) -> void:
 
 
 func _reroll() -> void:
-	if phase != "prep":
+	if not _can_shop():
 		return
 	if not game.reroll(me):
 		hud.toast("Pas assez d'or")
 
 
 func _buy_xp() -> void:
-	if phase != "prep":
+	if not _can_shop():
 		return
 	var p: Dictionary = game.players[me]
 	var lv := int(p.level)
@@ -1460,8 +1542,9 @@ func _buy_xp() -> void:
 
 
 func _lock() -> void:
-	if phase == "prep":
+	if _can_shop():
 		game.toggle_lock(me)
+		_dirty = true
 
 
 func _ready_pressed() -> void:
@@ -1682,7 +1765,7 @@ func _trait_card(t: String) -> void:
 		return
 	var ths: Array = AutochessData.trait_thresholds(t).map(func(x): return str(int(x)))
 	cards.add_card({"id": "trait_" + t, "title": String(td.name),
-		"lines": [String(td.short), "Paliers : " + " · ".join(ths), String(td.tip)],
+		"lines": [String(td.short), "Paliers : " + " · ".join(ths), String(td.tip), AutochessData.trait_blurb(t, false)],
 		"buttons": [{"label": "Compris", "kind": "primary"}]})
 
 
@@ -1836,11 +1919,16 @@ func _input(ev: InputEvent) -> void:
 				_toggle_speed()
 			get_viewport().set_input_as_handled()
 		JOY_BUTTON_LEFT_SHOULDER:
-			if _can_act():
+			if _can_act() or (_can_shop() and hud.combat_shop):
 				_buy_xp()
 				get_viewport().set_input_as_handled()
 		JOY_BUTTON_RIGHT_SHOULDER:
-			if _can_act() and not hud.shop.cards.is_empty():
+			if phase in ["combat", "recap"] and _can_shop():  # lot ACX-4 : ouvre / replie la boutique du combat
+				_toggle_combat_shop()
+				if hud.combat_shop and not hud.shop.cards.is_empty():
+					UiNav.focus(hud.shop.cards[0])
+				get_viewport().set_input_as_handled()
+			elif _can_act() and not hud.shop.cards.is_empty():
 				UiNav.focus(hud.shop.cards[0])
 				get_viewport().set_input_as_handled()
 		JOY_BUTTON_START:
@@ -1865,7 +1953,7 @@ func _poll_triggers() -> void:
 		return
 	for k in 2:
 		var on := Input.get_joy_axis(0, JOY_AXIS_TRIGGER_LEFT if k == 0 else JOY_AXIS_TRIGGER_RIGHT) > TRIGGER_ON
-		if on and not _trig[k] and _can_act() and (cards == null or cards.count() == 0):
+		if on and not _trig[k] and (_can_act() or (_can_shop() and hud.combat_shop)) and (cards == null or cards.count() == 0):
 			if k == 0:
 				_reroll()
 			else:
@@ -1885,8 +1973,8 @@ func _unhandled_input(ev: InputEvent) -> void:
 			_on_choice(k - KEY_1)
 		get_viewport().set_input_as_handled()
 		return
-	if phase == "combat" and k in [KEY_1, KEY_2, KEY_3]:
-		_set_speed(k - KEY_1 + 1)  # lot ACX-2 : 1, 2, 3 = vitesse en combat
+	if phase == "combat" and k in [KEY_1, KEY_2, KEY_3] and not hud.combat_shop:
+		_set_speed(k - KEY_1 + 1)  # lot ACX-2 : 1, 2, 3 = vitesse en combat (boutique ouverte : achats, lot ACX-4)
 		get_viewport().set_input_as_handled()
 		return
 	var used := true
@@ -1906,17 +1994,21 @@ func _unhandled_input(ev: InputEvent) -> void:
 		KEY_T:
 			_plan_toggle()
 		KEY_1, KEY_2, KEY_3, KEY_4, KEY_5:
-			if _can_act():
+			if _can_shop():
 				_buy(k - KEY_1)
 		KEY_D:
-			if _can_act():
+			if _can_shop():
 				_reroll()
 		KEY_F:
-			if _can_act():
+			if _can_shop():
 				_buy_xp()
 		KEY_V:
-			if _can_act():
+			if _can_shop():
 				_lock()
+		KEY_B:
+			_toggle_combat_shop()  # lot ACX-4
+		KEY_E when hud.bench_strip.visible and hud.bench_strip.hovered_uid >= 0:
+			_bench_sell(hud.bench_strip.hovered_uid, false)
 		KEY_SPACE:
 			if phase == "prep" and _can_act():
 				_end_prep()

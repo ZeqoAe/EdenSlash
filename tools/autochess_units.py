@@ -6,7 +6,8 @@
 
 Source : game/data/classes.json (nom français, famille, type d'arme, lignée, sorts) et l'annexe A de la spécification
 (conception/autochess/ANNEXE_A_UNITES.md) pour le coût, le sort signature et le rôle, recopiés ci-dessous (COST, SIGNATURE, ROLE).
-Tout le reste est calculé : traits (famille + arme), portée et place d'après l'arme, allonge et distance préférée
+Tout le reste est calculé : traits (famille + style de la lignée, + famille d'un pont), portée et place d'après l'arme,
+allonge et distance préférée
 (lues par l'IA scriptée), type du sort signature, mana = recharge du sort × 10 (40 à 140), 2e sort (enchaînement ★3).
 Aucun cerveau neuronal dans ce mode (décision du joueur du 16/10) : toutes les unités sont pilotées par l'IA scriptée.
 Les valeurs sont provisoires (« provisional » : true) : le lot de mesure AC-J recale coûts et « sim_factor ».
@@ -23,13 +24,26 @@ OUT = ROOT / "game" / "data" / "autochess_units.json"
 
 # Famille du code (class_data.family) -> trait de famille (AutochessData.FAMILY_TRAIT).
 FAMILY_TRAIT = {1: "rempart", 2: "ombre", 3: "traque", 4: "ferveur", 5: "arcane"}
-# Type d'arme -> trait d'arme (AutochessData.WEAPON_TRAIT) : 17 types en 10 traits de 6 unités.
-WEAPON_TRAIT = {
-    "sword": "escrime", "bow": "tir", "staff": "elementaire", "katana": "tranchant", "dagger": "tranchant",
-    "axe": "fracas", "hammer": "fracas", "rapier": "estoc", "spear": "estoc", "cannon": "poudre", "gunscythe": "poudre",
-    "scepter": "choeur", "guitar": "choeur", "grimoire": "malediction", "rod": "malediction",
-    "greatsword": "impact", "cestus": "impact",
+# Lot ACX-4 (traits croisés, retour du joueur : « on veut toutes les classes jaunes ») : le 2e trait n'est plus celui de
+# l'arme mais un STYLE porté par la lignée (classe verte + ses 2 éveils : mêmes traits, coûts différents). Chaque style
+# réunit 2 lignées de 2 familles différentes : les 10 styles sont les 10 paires de familles (chaque famille partage un
+# style avec chacune des 4 autres ; AutochessData.LINEAGE_STYLE, ids des anciens traits d'arme gardés).
+LINEAGE_STYLE = {
+    "templar": "escrime", "blade_dancer": "escrime",          # Rempart + Ombre : parade et riposte (mêlée)
+    "knight": "estoc", "ranger": "estoc",                     # Rempart + Traque : percent les armures
+    "warrior": "fracas", "sage": "fracas",                    # Rempart + Ferveur : haches et marteaux qui étourdissent
+    "dragon_knight": "poudre", "warlock": "poudre",           # Rempart + Arcane : « Brasier », attaques qui explosent
+    "martial_artist": "impact", "luminary": "impact",         # Ombre + Arcane : coups qui s'accumulent
+    "thief": "tranchant", "hunter": "tranchant",              # Ombre + Traque : achèvent les proies
+    "samurai": "choeur", "bard": "choeur",                    # Ombre + Ferveur : « Harmonie », mana de toute l'équipe
+    "inquisitor": "malediction", "cleric": "malediction",     # Traque + Ferveur : affaiblissent les plus forts
+    "engineer": "tir", "illusionist": "tir",                  # Traque + Arcane : « Cadence », attaquent de plus en plus vite
+    "shaman": "elementaire", "magician": "elementaire",       # Ferveur + Arcane : sorts qui laissent une zone
 }
+# Unités ponts (AutochessData.BRIDGES) : un éveil de coût 3-4 par famille compte aussi pour une autre famille (cycle
+# Rempart -> Ombre -> Ferveur -> Arcane -> Traque -> Rempart), choisi pour que l'effet du trait lui serve.
+BRIDGES = {"executioner": "ombre", "elegant_dancer": "ferveur", "life_worshipper": "arcane", "demon_tamer": "traque",
+           "mecha_ares": "rempart"}
 # Portée en cases selon l'arme (AutochessData.WEAPON_RANGE) : mêlée 1, lance / faux-fusil 2,
 # sceptre / guitare / bâton de métal 3, arc / bâton / canon / grimoire 4.
 WEAPON_RANGE = {
@@ -136,6 +150,7 @@ def build() -> dict:
         wt = cd["weapon_type"]
         rng = WEAPON_RANGE[wt]
         fam = FAMILY_TRAIT[int(cd["family"])]
+        traits = [fam, LINEAGE_STYLE[cd.get("parent", cid)]] + ([BRIDGES[cid]] if cid in BRIDGES else [])
         role = ROLE[cid]
         reach = attack_range_m(rng)
         pref = ROLE_DISTANCE[role]
@@ -143,7 +158,7 @@ def build() -> dict:
             "name": cd["name_fr"],
             "cost": COST[cid],
             "family": int(cd["family"]),
-            "traits": [fam, WEAPON_TRAIT[wt]],
+            "traits": traits,
             "weapon_type": wt,
             "lineage": "verte" if cd["tier"] == "green" else "ascension",
             "parent": cd.get("parent", cid),
@@ -182,7 +197,10 @@ def main() -> int:
     print("%d unités écrites dans %s" % (len(units), OUT))
     print("coûts", sorted(Counter(u["cost"] for u in units.values()).items()))
     print("familles", sorted(Counter(u["traits"][0] for u in units.values()).items()))
-    print("armes", sorted(Counter(u["traits"][1] for u in units.values()).items()))
+    print("styles", sorted(Counter(u["traits"][1] for u in units.values()).items()))
+    print("ponts", sorted((k, u["traits"]) for k, u in units.items() if len(u["traits"]) > 2))
+    for t in sorted(set(LINEAGE_STYLE.values())):
+        print("  %-12s" % t, sorted((u["cost"], k) for k, u in units.items() if t in u["traits"]))
     print("rôles", sorted(Counter(u["role"] for u in units.values()).items()))
     print("sorts", sorted(Counter(u["spell_type"] for u in units.values()).items()))
     return 0

@@ -1,6 +1,6 @@
 {
- "_doc": "L'Échiquier (autochess), lot AC-J : chiffres de référence de la dernière mesure (conception/autochess/R_AC_J.md), relus par tests/test_ac_sim_real. Changer AutochessSim.TUNE, dmg_scale ou les données du mode demande de refaire la mesure et ce fichier. Lot ACX-3 (R_ACX3.md) : parties refaites avec les 45 atouts et les objets utilitaires (269 parties « echelle » ; l7r, r7l, pilote : chiffres d'AC-J), format Éclair à part (300 parties).",
- "version": "ACX-3",
+ "_doc": "L'Échiquier (autochess), lot AC-J : chiffres de référence de la dernière mesure (conception/autochess/R_AC_J.md), relus par tests/test_ac_sim_real. Changer AutochessSim.TUNE, dmg_scale ou les données du mode demande de refaire la mesure et ce fichier. Lot ACX-3 (R_ACX3.md) : parties refaites avec les 45 atouts et les objets utilitaires (269 parties « echelle » ; l7r, r7l, pilote : chiffres d'AC-J), format Éclair à part (300 parties). Lot ACX-4 (R_ACX4.md) : traits croisés (styles de lignée, ponts), IA par trait principal, 1-4 adoucie : 600 parties « echelle » (l7r, r7l, pilote refaits : 100 / 100 / 150), Éclair 200.",
+ "version": "ACX-4",
  "tune": {
   "auto_hit": 0.4,
   "auto_lock": 1.5,
@@ -82,40 +82,42 @@
  },
  "games": {
   "setup": "echelle",
-  "n": 269,
+  "n": 600,
   "check_games": 8,
   "check_seed": 9001,
-  "fight_median": 22.5,
-  "rounds": 33.5,
-  "minutes": 29.7,
-  "minutes_x2": 22.8,
+  "fight_median": 22.3,
+  "rounds": 34.2,
+  "minutes": 29.8,
+  "minutes_x2": 23.0,
   "ladder": [
-   7.14,
-   4.65,
-   3.19,
-   3.02
+   7.13,
+   4.68,
+   3.09,
+   3.1
   ],
-  "l7r_top4": 1.0,
-  "r7l_top4": 0.0,
-  "pilote_top4": 0.46,
-  "first_out_before_41": 0.11,
-  "draws": 0.008,
-  "meta_top_share": 0.3
+  "l7r_top4": 0.98,
+  "r7l_top4": 0.01,
+  "pilote_top4": 0.48,
+  "first_out_before_41": 0.03,
+  "draws": 0.005,
+  "meta_top_share": 0.17,
+  "meta_effective": 17.7,
+  "winners_6_same_family": 0.34
  },
  "eclair": {
   "setup": "echelle",
   "format": "eclair",
-  "n": 300,
-  "fight_median": 22.6,
-  "rounds": 18.4,
+  "n": 200,
+  "fight_median": 22.5,
+  "rounds": 18.6,
   "minutes": 14.4,
-  "minutes_x2": 10.6,
+  "minutes_x2": 10.7,
   "ladder": [
-   6.9,
-   4.58,
-   3.24,
-   3.28
+   6.94,
+   4.74,
+   3.13,
+   3.19
   ],
-  "meta_top_share": 0.18
+  "meta_top_share": 0.16
  }
 }

@@ -385,8 +385,10 @@ func _begin_prep() -> void:
 		p.ready = strategists[int(p.id)] != null
 		p.income = {}
 		_round_income(p)
+		_merge_deferred(int(p.id))
 		if not p.locked:
 			_refresh_shop(p)
+		p.locked = false  # lot ACX-4 (note du joueur) : le verrou ne vaut que pour UNE manche, il saute une fois servi
 	if kind == "ouverture":
 		for pi in alive_ids():
 			_offer(pi, {"kind": "ouverture", "options": _opening_options()})
@@ -522,6 +524,14 @@ func _can_act(pi: int) -> bool:
 	return phase == "prep" and pi >= 0 and pi < players.size() and players[pi].alive
 
 
+## Lot ACX-4 (note du joueur : « pendant le combat je veux pouvoir vendre mes héros et en acheter ») : la boutique (achat,
+## actualisation, XP, verrou) et la vente des héros du BANC restent ouvertes pendant le combat et le bilan de la manche.
+## Le plateau, lui, ne bouge pas avant la préparation suivante : un achat va au banc, une fusion qui toucherait un héros du
+## plateau attend la préparation (_merge_deferred) ; rien n'est annulable hors préparation (pile vidée au combat).
+func _can_shop(pi: int) -> bool:
+	return phase in ["prep", "combat", "recap"] and pi >= 0 and pi < players.size() and players[pi].alive
+
+
 ## Peut recevoir une unité ★1 [param id] : case de banc libre, ou la fusion l'absorbe (même banc plein).
 func can_receive(pi: int, id: String) -> bool:
 	var p: Dictionary = players[pi]
@@ -529,7 +539,7 @@ func can_receive(pi: int, id: String) -> bool:
 
 
 func buy(pi: int, slot: int) -> bool:
-	if not _can_act(pi) or slot < 0 or slot >= AutochessData.SHOP_SIZE:
+	if not _can_shop(pi) or slot < 0 or slot >= AutochessData.SHOP_SIZE:
 		return false
 	var p: Dictionary = players[pi]
 	var id := String(p.shop[slot])
@@ -556,10 +566,10 @@ func buy(pi: int, slot: int) -> bool:
 
 
 func sell(pi: int, uid: int) -> bool:
-	if not _can_act(pi):
+	if not _can_shop(pi):
 		return false
 	var u := find_unit(pi, uid)
-	if u.is_empty():
+	if u.is_empty() or (phase != "prep" and _board_index(players[pi], uid) >= 0):  # hors préparation : le banc seulement
 		return false
 	var snap := _snapshot(pi)
 	_sell_unit(players[pi], u)
@@ -569,7 +579,7 @@ func sell(pi: int, uid: int) -> bool:
 
 
 func reroll(pi: int) -> bool:
-	if not _can_act(pi):
+	if not _can_shop(pi):
 		return false
 	var p: Dictionary = players[pi]
 	if int(p.free_rerolls) > 0:
@@ -587,7 +597,7 @@ func reroll(pi: int) -> bool:
 
 
 func buy_xp(pi: int) -> bool:
-	if not _can_act(pi):
+	if not _can_shop(pi):
 		return false
 	var p: Dictionary = players[pi]
 	if int(p.level) >= int(p.max_level) or int(p.gold) < xp_cost():
@@ -601,9 +611,10 @@ func buy_xp(pi: int) -> bool:
 	return true
 
 
-## Verrou de la boutique (gratuit) : elle reste à la manche suivante tant qu'il est mis. Renvoie l'état.
+## Verrou de la boutique (gratuit) : elle reste la même à la manche suivante (une seule : le verrou saute au début de la
+## préparation suivante, lot ACX-4). Renvoie l'état.
 func toggle_lock(pi: int) -> bool:
-	if _can_act(pi):
+	if _can_shop(pi):
 		players[pi].locked = not players[pi].locked
 		changed.emit(pi)
 	return bool(players[pi].locked)
@@ -826,7 +837,7 @@ func _remove_unit(p: Dictionary, uid: int) -> void:
 
 func _count_star(p: Dictionary, id: String, stars: int) -> int:
 	var n := 0
-	for u in (p.board as Array) + (p.bench as Array):
+	for u in ((p.board as Array) if phase == "prep" else []) + (p.bench as Array):  # hors préparation : banc seul
 		if u != null and String(u.id) == id and int(u.stars) == stars:
 			n += 1
 	return n
@@ -861,7 +872,7 @@ func _add_unit(pi: int, u: Dictionary) -> bool:
 			p.bench[slot] = left
 			_merge(pi, String(u.id))
 			return true
-	if (p.board as Array).size() < board_cap(pi):
+	if phase == "prep" and (p.board as Array).size() < board_cap(pi):
 		var cell := free_cell(pi, String(AutochessData.unit(String(u.id)).get("place", "milieu")))
 		if cell.x >= 0:
 			u["cell"] = [cell.x, cell.y]
@@ -869,6 +880,16 @@ func _add_unit(pi: int, u: Dictionary) -> bool:
 			_merge(pi, String(u.id))
 			return true
 	return false
+
+
+## Lot ACX-4 : fusions laissées en attente pendant le combat (achats au banc d'un héros aussi posé sur le plateau).
+func _merge_deferred(pi: int) -> void:
+	var ids := {}
+	for u in (players[pi].board as Array) + (players[pi].bench as Array):
+		if u != null:
+			ids[String(u.id)] = true
+	for id in ids:
+		_merge(pi, String(id))
 
 
 ## Fusion automatique : 3 copies (★1 -> ★2, puis ★2 -> ★3) ; la nouvelle unité prend la place de l'exemplaire du plateau
@@ -879,7 +900,7 @@ func _merge(pi: int, id: String) -> void:
 		while true:
 			var need := _need(p, id, s)
 			var group: Array = []
-			for u in p.board:
+			for u in (p.board if phase == "prep" else []):  # lot ACX-4 : hors préparation, le plateau attend
 				if String(u.id) == id and int(u.stars) == s:
 					group.append(u)
 			for u in p.bench:
@@ -1385,7 +1406,7 @@ func guardian_mult(pi: int) -> float:
 func _pve_board(pi: int) -> Array:
 	if round_kind() == "gardien":
 		return [{"guardian": true, "stage": stage, "mult": guardian_mult(pi)}]
-	var wave: Dictionary = AutochessData.MONSTER_WAVES.get(round_key(), {"sbires": 2})
+	var wave: Dictionary = (rule("monster_waves", AutochessData.MONSTER_WAVES) as Dictionary).get(round_key(), {"sbires": 2})
 	var out: Array = []
 	for _k in int(wave.get("elites", 0)):
 		out.append({"monster": "elite"})

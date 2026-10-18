@@ -117,6 +117,10 @@ func _build_card(b: Button) -> void:
 	var mini := MiniStars.new()
 	mini.name = "Stars"
 	foot.add_child(mini)
+	var third := _chip()  # lot ACX-4 : 3e trait d'une unité pont, dans le pied de la carte (la hauteur ne change pas)
+	third.name = "Chip3"
+	third.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	foot.add_child(third)
 	var cost := CostBadge.new()
 	cost.name = "Cost"
 	b.add_child(cost)
@@ -200,6 +204,7 @@ func refresh(g: Autochess, pi: int) -> void:
 			(icon.get_parent() as Control).visible = false
 			nm.text = ""
 			tr.visible = false
+			(b.find_child("Chip3", true, false) as Control).visible = false
 			cost_b.cost = 0
 			cost_b.queue_redraw()
 			pips.need = 0
@@ -239,8 +244,8 @@ func refresh(g: Autochess, pi: int) -> void:
 		# tuiles de trait ; flèche quand l'achat ferait monter le trait d'un palier (héros pas encore sur le plateau)
 		var rising: Array = []
 		var tl: Array = d.get("traits", [])
-		for j in 2:
-			var chip: PanelContainer = tr.get_child(j)
+		for j in 3:
+			var chip: PanelContainer = tr.get_child(j) if j < 2 else b.find_child("Chip3", true, false)
 			chip.visible = j < tl.size()
 			if j >= tl.size():
 				continue

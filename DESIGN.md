@@ -1316,6 +1316,15 @@ rapports `R_AC_*` ; ici, ce que le mode est dans le jeu.
   d'apparence seulement (`Quests._roll_reward`, comme le Survivant).
 - **Fiches** (à la 1re rencontre, dans l'écran du mode) : « Achète et place » (boutique, intérêts), « Trois copies, une
   étoile », « Traits et atouts » ; rangées au Guide, chapitre Modes, sous L'Échiquier.
+- **Traits croisés** (lot ACX-4, retour du joueur « on veut toutes les classes jaunes ») : chaque héros a sa famille (origine,
+  seuils 3 / 6 / 9) et le style de sa lignée (seuils 2 / 4 / 6) ; une lignée (classe verte et ses deux éveils, coûts
+  différents) garde les mêmes traits, mais chaque style relie deux familles, et chaque famille partage un style avec chacune
+  des quatre autres. Cinq éveils de coût 3-4 sont des **ponts** (un 3e trait : la famille d'à côté). On gagne donc aussi
+  en mêlant deux couleurs ; un plateau d'une seule couleur n'est plus imposé par les traits.
+- **Confort** (notes du joueur, ACX-4) : le verrou de la boutique ne vaut que pour la prochaine manche ; la boutique (et la
+  vente au banc) reste ouverte pendant le combat, le plateau change à la préparation ; l'or se lit en sacs (aussi chez les
+  autres) ; les objets sont en icônes à gauche et la colonne du plateau montre les enclumes des atouts pris ; les monstres
+  de 1-4 sont une élite et deux sbires (on les bat avec trois héros).
 
 ## Les Deux Voies (étude `conception/benchmark/MOBA.md`, en cours : lots MB-A à MB-K)
 

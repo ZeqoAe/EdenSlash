@@ -86,6 +86,10 @@ var foe_strategist: Node3D
 
 var _tiles := {}  # "c,r" -> [dessus, bord] (MeshInstance3D) ; « e:c,r » pour la moitié adverse
 var _figures := {}  # uid -> Node3D
+## Lot ACX-4 (suite de PERF-1 : set_enemy jusqu'à 98 ms) : figurines ADVERSES créées au fil des images, ENEMY_BUDGET_MS par
+## image au plus (au moins une) ; celles du joueur restent immédiates (on les prend en main tout de suite).
+const ENEMY_BUDGET_MS := 6.0
+var _enemy_pending := false
 var _next_uid := 1
 var _count_label: Label3D
 var _count_cap: Label3D
@@ -850,6 +854,9 @@ func _sync_figures() -> void:
 		if not want.has(id):
 			(_figures[id] as Node3D).queue_free()
 			_figures.erase(id)
+	var t0 := Time.get_ticks_usec()
+	var made_foe := 0
+	_enemy_pending = false
 	for id in want:
 		var u: Dictionary = want[id][0]
 		var stars := clampi(int(u.get("stars", 1)), 1, 3)
@@ -857,8 +864,13 @@ func _sync_figures() -> void:
 		var fig: Node3D = _figures.get(id)
 		if fig != null and String(fig.get_meta("look", "")) != look:
 			fig.queue_free()
+			_figures.erase(id)
 			fig = null
+		if fig == null and bool(want[id][2]) and made_foe > 0 and float(Time.get_ticks_usec() - t0) / 1000.0 > ENEMY_BUDGET_MS:
+			_enemy_pending = true  # la suite à l'image suivante (_process)
+			continue
 		if fig == null:
+			made_foe += 1 if bool(want[id][2]) else 0
 			fig = make_figure(u, bool(want[id][2]))
 			fig.position = want[id][1]
 			add_child(fig)
@@ -926,6 +938,8 @@ func show_figures(on: bool) -> void:
 
 
 func _process(delta: float) -> void:
+	if _enemy_pending:
+		_sync_figures()
 	var held_uid := int(unit_at(_held).get("uid", 0)) if not _held.is_empty() else 0
 	for id in _figures:
 		var f: Node3D = _figures[id]

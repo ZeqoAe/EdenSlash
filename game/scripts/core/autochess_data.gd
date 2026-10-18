@@ -159,7 +159,9 @@ const CAROUSEL_WALK := 0.6
 ## Manches : étape 1 (apprend), puis 7 manches par étape. Types : ouverture, monstres, jcj, choix (partagé), gardien.
 const STAGE1_ROUNDS := ["ouverture", "monstres", "monstres", "monstres"]
 const STAGE_ROUNDS := ["jcj", "jcj", "jcj", "choix", "jcj", "jcj", "gardien"]
-const MONSTER_WAVES := {"1-2": {"sbires": 2}, "1-3": {"sbires": 3}, "1-4": {"elites": 2, "sbires": 2}}
+## Lot ACX-4 (note du joueur : « perdre contre les monstres du tout début avec 3 héros ») : 1-4 passe de 2 élites + 2 sbires
+## (41 % de victoires mesurées, Recrue 18 %) à 1 élite + 2 sbires (96 %, Recrue 89 % ; 300 parties arrêtées à 2-1).
+const MONSTER_WAVES := {"1-2": {"sbires": 2}, "1-3": {"sbires": 3}, "1-4": {"elites": 1, "sbires": 2}}
 const AUGMENT_ROUNDS := ["2-1", "3-2", "4-2"]
 const CAROUSEL_COSTS := {2: [1, 3], 3: [2, 4]}  # 4 et plus : CAROUSEL_COSTS_LATE
 const CAROUSEL_COSTS_LATE := [3, 5]
@@ -230,17 +232,27 @@ const TEMPERAMENTS := {
 }
 
 # --- Traits (§5.4) ------------------------------------------------------------------------------------------------
-## Famille du code (class_data.family) -> trait de famille ; type d'arme -> trait d'arme (17 types en 10 traits).
+## Famille du code (class_data.family) -> trait de famille (origine : 12 unités, 4 lignées).
 const FAMILY_TRAIT := {1: "rempart", 2: "ombre", 3: "traque", 4: "ferveur", 5: "arcane"}
-const WEAPON_TRAIT := {
-	"sword": "escrime", "bow": "tir", "staff": "elementaire", "katana": "tranchant", "dagger": "tranchant",
-	"axe": "fracas", "hammer": "fracas", "rapier": "estoc", "spear": "estoc", "cannon": "poudre", "gunscythe": "poudre",
-	"scepter": "choeur", "guitar": "choeur", "grimoire": "malediction", "rod": "malediction",
-	"greatsword": "impact", "cestus": "impact",
+## Lot ACX-4 (traits croisés, R_ACX4.md) : le 2e trait est un STYLE porté par la lignée (classe verte + ses 2 éveils, mêmes
+## traits, coûts différents) ; chaque style réunit 2 lignées de 2 familles différentes : les 10 styles sont les 10 paires de
+## familles, chaque famille partage un style avec chacune des 4 autres (plus de plateau « tout d'une couleur » forcé par les
+## traits). Ids et effets des anciens traits d'arme gardés (« kind » : « arme » = style, pour les sauvegardes et les atouts).
+## Recopié dans tools/autochess_units.py (test_ac_data compare).
+const LINEAGE_STYLE := {
+	"templar": "escrime", "blade_dancer": "escrime", "knight": "estoc", "ranger": "estoc",
+	"warrior": "fracas", "sage": "fracas", "dragon_knight": "poudre", "warlock": "poudre",
+	"martial_artist": "impact", "luminary": "impact", "thief": "tranchant", "hunter": "tranchant",
+	"samurai": "choeur", "bard": "choeur", "inquisitor": "malediction", "cleric": "malediction",
+	"engineer": "tir", "illusionist": "tir", "shaman": "elementaire", "magician": "elementaire",
 }
+## Unités ponts : un éveil de coût 3-4 par famille compte aussi pour une autre famille (3e trait ; cycle Rempart -> Ombre ->
+## Ferveur -> Arcane -> Traque -> Rempart).
+const BRIDGES := {"executioner": "ombre", "elegant_dancer": "ferveur", "life_worshipper": "arcane",
+	"demon_tamer": "traque", "mecha_ares": "rempart"}
 const FAMILY_THRESHOLDS := [3, 6, 9]
 const WEAPON_THRESHOLDS := [2, 4, 6]
-## Un trait : « kind » famille / arme, « scope » (porteurs : unités du trait ; equipe ; ennemis), « effect » (clé lue par
+## Un trait : « kind » famille / arme (= style, lot ACX-4), « lineages » (styles : les 2 lignées), « scope » (porteurs : unités du trait ; equipe ; ennemis), « effect » (clé lue par
 ## AC-H), « tiers » : paramètres de chaque palier (cumul déjà fait : le palier 2 donne ses valeurs, pas un ajout).
 const TRAITS := {
 	"rempart": {"name": "Rempart", "kind": "famille", "family": 1, "scope": "porteurs", "effect": "trait_rempart",
@@ -265,48 +277,48 @@ const TRAITS := {
 		"short": "Les sorts des Arcane frappent plus fort ; à neuf, le premier part deux fois.",
 		"tip": "Puissance des sorts des Arcane +70 / 130 / 200 % ; à 9 : le 1er sort de chaque Arcane est lancé deux fois.",
 		"tiers": [{"spell_pct": 0.70}, {"spell_pct": 1.30}, {"spell_pct": 2.00, "double_first": 1}]},
-	"escrime": {"name": "Escrime", "kind": "arme", "weapons": ["sword"], "scope": "porteurs", "effect": "trait_escrime",
+	"escrime": {"name": "Escrime", "kind": "arme", "lineages": ["templar", "blade_dancer"], "scope": "porteurs", "effect": "trait_escrime",
 		"short": "Bloquent des attaques et ripostent.",
 		"tip": "Parade de 5 / 10 / 18 % des attaques, riposte à 80 % de la frappe.",
 		"tiers": [{"parry": 0.05, "riposte": 0.8}, {"parry": 0.10, "riposte": 0.8}, {"parry": 0.18, "riposte": 0.8}]},
-	"tir": {"name": "Tir", "kind": "arme", "weapons": ["bow"], "scope": "porteurs", "effect": "trait_tir",
-		"short": "Tirent de plus en plus vite ; à six, les flèches traversent.",
-		"tip": "Vitesse d'attaque +15 / 35 / 60 % après 3 s de combat ; à 6 : les flèches traversent.",
+	"tir": {"name": "Cadence", "kind": "arme", "lineages": ["engineer", "illusionist"], "scope": "porteurs", "effect": "trait_tir",
+		"short": "Attaquent de plus en plus vite ; à six, leurs tirs traversent.",
+		"tip": "Vitesse d'attaque +15 / 35 / 60 % après 3 s de combat ; à 6 : leurs tirs traversent.",
 		"tiers": [{"after": 3.0, "as_pct": 0.15}, {"after": 3.0, "as_pct": 0.35}, {"after": 3.0, "as_pct": 0.60, "pierce": 1}]},
-	"elementaire": {"name": "Élémentaire", "kind": "arme", "weapons": ["staff"], "scope": "porteurs",
+	"elementaire": {"name": "Élémentaire", "kind": "arme", "lineages": ["shaman", "magician"], "scope": "porteurs",
 		"effect": "trait_elementaire",
 		"short": "Leurs sorts laissent une zone qui brûle ; à six, elle ralentit.",
 		"tip": "Le sort laisse une zone : 25 / 50 / 85 % de ses dégâts par seconde pendant 3 s ; à 6 : ralentit.",
 		"tiers": [{"zone_pct": 0.25, "dur": 3.0}, {"zone_pct": 0.50, "dur": 3.0}, {"zone_pct": 0.85, "dur": 3.0, "slow": 1}]},
-	"tranchant": {"name": "Tranchant", "kind": "arme", "weapons": ["katana", "dagger"], "scope": "porteurs",
+	"tranchant": {"name": "Tranchant", "kind": "arme", "lineages": ["thief", "hunter"], "scope": "porteurs",
 		"effect": "trait_tranchant",
 		"short": "Achèvent les ennemis presque vaincus.",
 		"tip": "Achèvent une cible sous 10 / 15 / 20 % de ses PV.",
 		"tiers": [{"execute_below": 0.10}, {"execute_below": 0.15}, {"execute_below": 0.20}]},
-	"fracas": {"name": "Fracas", "kind": "arme", "weapons": ["axe", "hammer"], "scope": "porteurs", "effect": "trait_fracas",
+	"fracas": {"name": "Fracas", "kind": "arme", "lineages": ["warrior", "sage"], "scope": "porteurs", "effect": "trait_fracas",
 		"short": "Étourdissent régulièrement leur cible.",
 		"tip": "Toutes les 4 / 3 / 2 attaques, étourdit 0,5 s.",
 		"tiers": [{"every": 4, "stun": 0.5}, {"every": 3, "stun": 0.5}, {"every": 2, "stun": 0.5}]},
-	"estoc": {"name": "Estoc", "kind": "arme", "weapons": ["rapier", "spear"], "scope": "porteurs", "effect": "trait_estoc",
+	"estoc": {"name": "Estoc", "kind": "arme", "lineages": ["knight", "ranger"], "scope": "porteurs", "effect": "trait_estoc",
 		"short": "Percent les armures.",
 		"tip": "Ignorent 5 / 15 / 30 % de la défense.",
 		"tiers": [{"armor_pen": 0.05}, {"armor_pen": 0.15}, {"armor_pen": 0.30}]},
-	"poudre": {"name": "Poudre", "kind": "arme", "weapons": ["cannon", "gunscythe"], "scope": "porteurs",
+	"poudre": {"name": "Brasier", "kind": "arme", "lineages": ["dragon_knight", "warlock"], "scope": "porteurs",
 		"effect": "trait_poudre",
 		"short": "Leurs attaques explosent autour de la cible.",
 		"tip": "Les attaques explosent à 1 case : 20 / 40 / 70 % des dégâts.",
 		"tiers": [{"radius": 1, "splash": 0.20}, {"radius": 1, "splash": 0.40}, {"radius": 1, "splash": 0.70}]},
-	"choeur": {"name": "Chœur", "kind": "arme", "weapons": ["scepter", "guitar"], "scope": "equipe", "effect": "trait_choeur",
+	"choeur": {"name": "Harmonie", "kind": "arme", "lineages": ["samurai", "bard"], "scope": "equipe", "effect": "trait_choeur",
 		"short": "Toute l'équipe regagne de la mana en continu.",
 		"tip": "Toute l'équipe gagne 3 / 6 / 10 mana par seconde.",
 		"tiers": [{"mana_per_s": 3}, {"mana_per_s": 6}, {"mana_per_s": 10}]},
-	"malediction": {"name": "Malédiction", "kind": "arme", "weapons": ["grimoire", "rod"], "scope": "ennemis",
+	"malediction": {"name": "Malédiction", "kind": "arme", "lineages": ["inquisitor", "cleric"], "scope": "ennemis",
 		"effect": "trait_malediction",
 		"short": "Affaiblissent les ennemis les plus forts.",
 		"tip": "À 3 s, les 2 / 4 / tous les ennemis les plus forts : attaque et défense −30 / 40 / 55 %.",
 		"tiers": [{"at": 3.0, "targets": 2, "down": 0.30}, {"at": 3.0, "targets": 4, "down": 0.40},
 			{"at": 3.0, "targets": 0, "down": 0.55}]},  # targets 0 : tous
-	"impact": {"name": "Impact", "kind": "arme", "weapons": ["greatsword", "cestus"], "scope": "porteurs",
+	"impact": {"name": "Impact", "kind": "arme", "lineages": ["martial_artist", "luminary"], "scope": "porteurs",
 		"effect": "trait_impact",
 		"short": "Chaque coup sur la même cible frappe plus fort.",
 		"tip": "Chaque coup sur la même cible : +7 / 11 / 16 % de dégâts (10 fois au plus).",
@@ -830,6 +842,37 @@ static func family_traits() -> Array:
 
 static func weapon_traits() -> Array:
 	return TRAITS.keys().filter(func(k): return String(TRAITS[k].kind) == "arme")
+
+
+## Lot ACX-4 : genre affiché d'un trait (« Famille » / « Style »).
+static func trait_kind_name(trait_id: String) -> String:
+	return "Famille" if String(TRAITS.get(trait_id, {}).get("kind", "")) == "famille" else "Style"
+
+
+## Familles reliées par un style (ses deux lignées) ; [] pour une famille.
+static func style_families(trait_id: String) -> Array:
+	var out: Array = []
+	for lin in TRAITS.get(trait_id, {}).get("lineages", []):
+		var f := String((unit(String(lin)).get("traits", [""]) as Array)[0])
+		if f != "" and not f in out:
+			out.append(f)
+	return out
+
+
+## Ligne d'explication d'un trait (fiche du trait, infobulle de la colonne) : genre, familles reliées, héros (coût croissant).
+static func trait_blurb(trait_id: String, full := true) -> String:
+	var ids := units_with_trait(trait_id)
+	if not full:  # version courte (fiche du trait) : genre et familles reliées
+		if String(TRAITS.get(trait_id, {}).get("kind", "")) == "famille":
+			var bridges: Array = ids.filter(func(id): return String((units()[id].traits as Array)[0]) != trait_id)
+			return "Famille : %d héros%s." % [ids.size() - bridges.size(), " + %s (pont)" % unit_name(String(bridges[0])) if bridges.size() == 1 else ""]
+		return "Style : relie %s (%d héros)." % [" et ".join(style_families(trait_id).map(func(f): return String(TRAITS[f].name))), ids.size()]
+	ids.sort_custom(func(a, b): return [int(units()[a].cost), unit_name(a)] < [int(units()[b].cost), unit_name(b)])
+	var names: Array = ids.map(func(id): return "%s (%d)" % [unit_name(id), int(units()[id].cost)])
+	if String(TRAITS.get(trait_id, {}).get("kind", "")) == "famille":
+		return "Famille · %s" % ", ".join(names)
+	var fams: Array = style_families(trait_id).map(func(f): return String(TRAITS[f].name))
+	return "Style %s · %s" % [" et ".join(fams), ", ".join(names)]
 
 
 # --- Objets -------------------------------------------------------------------------------------------------------

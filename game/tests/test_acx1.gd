@@ -124,7 +124,8 @@ func _ready() -> void:
 	var up_chip: Control = ((shop.cards[1] as Button).find_child("Traits", true, false) as Control).get_child(0)
 	check("boutique : Assassin fait monter Ombre (2 → 3, seuil) : flèche sur la tuile", (shop.info[1].rising as Array).has("ombre")
 		and (up_chip.find_child("Up", true, false) as Control).visible)
-	check("boutique : Tranchant (2 → 3, pas un seuil) : pas de flèche", not (shop.info[1].rising as Array).has("tranchant"))
+	# lot ACX-4 : le Samouraï n'est plus Tranchant (style Harmonie) : l'Assassin fait passer Tranchant de 1 à 2 (seuil)
+	check("boutique : Tranchant (1 → 2, seuil) : flèche aussi", (shop.info[1].rising as Array).has("tranchant"))
 	check("boutique : Voleur déjà sur le plateau : son trait ne monte pas", (shop.info[0].rising as Array).is_empty())
 	var chip_text := ((up_chip.find_child("Text", true, false)) as Label).text
 	check("tuile de trait : nom du trait (%s)" % chip_text, chip_text == "Ombre")
@@ -167,7 +168,7 @@ func _ready() -> void:
 		if ((tr.rows[t] as Control).find_child("Rising", true, false) as Control).visible:
 			rows_rising += 1
 	var ghost_n: int = tr._ghosts.get_child_count()
-	check("survol du Clerc : Ferveur et Chœur apparaissent en « 0 → 1 » (%d lignes fantômes)" % ghost_n, ghost_n == 2 and rows_rising == 0)
+	check("survol du Clerc : Ferveur et Malédiction apparaissent en « 0 → 1 » (%d lignes fantômes)" % ghost_n, ghost_n == 2 and rows_rising == 0)
 	shop.hovered = 1
 	await _frames(2)
 	var orow: Control = tr.rows.get("ombre")

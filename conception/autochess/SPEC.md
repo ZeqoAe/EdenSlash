@@ -48,7 +48,7 @@ esquive les zones rouges. Les manches « gardien » opposent ton escouade à un 
 | x-1 | **Ouverture** : choisis 1 héros de coût 1 parmi 4 (tous reçoivent le leur) | JcJ (atout en 2-1) |
 | x-2 | Monstres (2 sbires) | JcJ (atout en 3-2 et 4-2) |
 | x-3 | Monstres (3 sbires) | JcJ |
-| x-4 | Monstres (2 élites + 2 sbires) | **Choix partagé** (pas de combat) |
+| x-4 | Monstres (1 élite + 2 sbires ; 2 élites avant ACX-4) | **Choix partagé** (pas de combat) |
 | x-5 | — | JcJ |
 | x-6 | — | JcJ |
 | x-7 | — | **Gardien** : un boss de la bibliothèque |
@@ -300,6 +300,27 @@ choix : Argent 50 % / Or 35 % / Éclat 15 % (réglage ; jamais deux Éclats de s
 Texte permanent sans pourcentage : la carte dit « Tes unités ont plus de PV » et l'infobulle donne « +120 PV ».
 
 ### 5.4 Synergies : 15 traits (5 familles + 10 armes)
+
+> **Révisé par le lot ACX-4 (17-18/10, `R_ACX4.md`, retour du joueur : « les traits de la famille du Guerrier sont tellement
+> bons qu'on veut toutes les classes jaunes »)** : le 2e trait n'est plus celui de l'arme mais un **style porté par la
+> lignée** (classe verte + ses 2 éveils : mêmes traits, coûts différents) ; chaque style réunit **2 lignées de 2 familles**,
+> les 10 styles sont les 10 paires de familles (chaque famille partage un style avec chacune des 4 autres). Ids et effets des
+> 10 anciens traits d'arme gardés ; trois renommés (Tir → **Cadence**, Chœur → **Harmonie**, Poudre → **Brasier**).
+> 5 **unités ponts** (Exécuteur +Ombre, Danseuse envoûtante +Ferveur, Chantre de vie +Arcane, Maître des chimères +Traque,
+> Arès mécanique +Rempart) ont un 3e trait : la famille d'à côté. Table : `AutochessData.LINEAGE_STYLE` / `BRIDGES`.
+> | Style (2 / 4 / 6) | Lignées (familles) |
+> |---|---|
+> | Escrime | Templier (Rempart) + Danseuse de lames (Ombre) |
+> | Estoc | Chevalier (Rempart) + Rôdeur (Traque) |
+> | Fracas | Guerrier (Rempart) + Sage (Ferveur) |
+> | Brasier (ex-Poudre) | Chevalier dragon (Rempart) + Démoniste (Arcane) |
+> | Impact | Artiste martial (Ombre) + Luminaire (Arcane) |
+> | Tranchant | Voleur (Ombre) + Chasseur (Traque) |
+> | Harmonie (ex-Chœur) | Samouraï (Ombre) + Barde (Ferveur) |
+> | Malédiction | Inquisiteur (Traque) + Clerc (Ferveur) |
+> | Cadence (ex-Tir) | Ingénieur (Traque) + Illusionniste (Arcane) |
+> | Élémentaire | Chaman (Ferveur) + Magicien (Arcane) |
+> Le tableau des armes ci-dessous reste l'origine des effets (inchangés).
 Le brief parlait de 10 familles : le code en a **5** (`class_data.family`, 12 classes chacune : Guerrier, Voleur, Chasseur,
 Clerc, Magicien) et 20 lignées (une classe verte + 2 ascensions). **DÉCISION** : un trait de famille (seuils 3 / 6 / 9) +
 un trait d'arme, les 17 types regroupés en **10 traits de 6 unités** (seuils 2 / 4 / 6). Chaque unité a exactement 2 traits.

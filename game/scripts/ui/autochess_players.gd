@@ -9,6 +9,7 @@ extends PanelContainer
 ## deux derniers combats) et adversaire probable en préparation d'une manche JcJ (Autochess.likely_opponents : règle
 ## publique d'appariement seulement) : pastille fraise « prochain ? » sur les lignes candidates quand il en reste deux au
 ## plus, sinon « parmi … » dans ta propre bulle.
+## Lot ACX-4 (note du joueur, comme TFT) : l'or de chacun en rangée de sacs (AutochessHud.GoldBags) à côté de sa frise.
 
 signal scout_requested(pi: int)
 
@@ -83,7 +84,7 @@ func refresh(g: Autochess, me: int, foe := -1, scouted := -1) -> void:
 		if int(pa.hp) != int(pb.hp):
 			return int(pa.hp) > int(pb.hp)
 		return a < b)
-	var sig := "%s|%d|%d|%d" % [str(order.map(func(i): return [g.players[i].hp, g.players[i].alive, g.players[i].streak, g.players[i].level])), foe,
+	var sig := "%s|%d|%d|%d" % [str(order.map(func(i): return [g.players[i].hp, g.players[i].alive, g.players[i].streak, g.players[i].level, g.players[i].gold])), foe,
 		scouted, str(history).hash() + str(likely_all).hash() + str(fights).hash()]
 	if sig == _sig:
 		return
@@ -181,7 +182,21 @@ func _row(g: Autochess, pi: int, rank: int, me: int, foe: int, scouted: int) -> 
 	v.add_child(pb)
 	var fr := Frieze.new()
 	fr.results = history.get(pi, [])
-	v.add_child(fr)
+	var fl := HBoxContainer.new()  # lot ACX-4 : frise + sacs d'or
+	fl.add_theme_constant_override("separation", roundi(AutochessHud.s(4.0)))
+	fl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fr.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	fr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	fr.compact = alive
+	fr.custom_minimum_size.x = AutochessHud.s(5 * (2 * 2.8 + 2.0)) if alive else 0.0
+	fl.add_child(fr)
+	if alive:
+		var bags := AutochessHud.GoldBags.new(5.5)
+		bags.name = "AcBags"
+		bags.mouse_filter = Control.MOUSE_FILTER_IGNORE  # la bulle de la ligne dit l'or en chiffre
+		bags.set_gold(int(p.gold), g.interest_cap(pi))
+		fl.add_child(bags)
+	v.add_child(fl)
 	if pi in likely and foe < 0:
 		var nx := AutochessHud.ink_lbl("prochain ?", 11, Color.WHITE, 900)
 		nx.name = "AcNext"
@@ -221,7 +236,7 @@ func hover_lines(pi: int, me: int) -> Array:
 	if not bool(p.alive):
 		out.append(["Éliminé · %s place" % place_text(int(p.place)), "muted"])
 		return out
-	out.append(["Niveau %d · %d PV · série : %s" % [int(p.level), maxi(int(p.hp), 0), _streak_text(int(p.streak))], "ink"])
+	out.append(["Niveau %d · %d PV · %d or · série : %s" % [int(p.level), maxi(int(p.hp), 0), int(p.gold), _streak_text(int(p.streak))], "ink"])
 	var act := _g.active_traits(pi)
 	var counts := _g.trait_counts(pi)
 	var keys := act.keys()
@@ -296,18 +311,19 @@ class Row extends PanelContainer:
 ## Frise des dernières manches : une pastille contourée par manche (pomme : victoire, fraise : défaite, papier : égalité).
 class Frieze extends Control:
 	var results: Array = []
+	var compact := false  # lot ACX-4 : 5 dernières manches, pastilles plus petites (les sacs d'or sont à côté)
 
 	func _init() -> void:
 		custom_minimum_size = Vector2(0, AutochessHud.s(9.0))
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _draw() -> void:
-		var r := AutochessHud.s(3.6)
+		var r := AutochessHud.s(3.6 if not compact else 2.8)
 		var x := r + 1.0
-		for res in results:
+		for res in (results if not compact else results.slice(maxi(0, results.size() - 5))):
 			var col := AutochessHud.candy("pomme") if String(res) == "victoire" else \
 				(AutochessHud.candy("fraise") if String(res) == "defaite" else AutochessHud.PAPER)
 			var c := Vector2(x, size.y * 0.5)
 			draw_circle(c, r, col)
 			draw_arc(c, r, 0.0, TAU, 12, AutochessHud.INK, 1.3, true)
-			x += r * 2.0 + AutochessHud.s(3.0)
+			x += r * 2.0 + AutochessHud.s(3.0 if not compact else 2.0)

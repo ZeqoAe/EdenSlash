@@ -271,10 +271,10 @@ const TRAIT_CASES := {
 	"rempart": ["warrior", "assaut", "taken", "holder", -1], "ombre": ["thief", "sac_crit", "dealt", "holder", 1],
 	"traque": ["hunter", "loin", "dealt", "holder", 1], "ferveur": ["cleric", "assaut", "healed", "holder", 1],
 	"arcane": ["magician", "sac", "dealt_spell", "holder", 1], "escrime": ["templar", "assaut", "parries", "holder", 1],
-	"tir": ["hunter", "sac", "attacks", "holder", 1], "elementaire": ["magician", "sac", "zone_dealt", "holder", 1],
+	"tir": ["engineer", "sac", "attacks", "holder", 1], "elementaire": ["magician", "sac", "zone_dealt", "holder", 1],
 	"tranchant": ["thief", "sac_tres_bas", "executes", "holder", 1], "fracas": ["warrior", "sac", "cc_done", "holder", 1],
-	"estoc": ["knight", "sac_dur", "dealt", "holder", 1], "poudre": ["engineer", "sac", "dealt_proc", "holder", 1],
-	"choeur": ["cleric", "sac", "mana_gained", "holder", 1], "malediction": ["warlock", "assaut", "taken", "holder", -1],
+	"estoc": ["knight", "sac_dur", "dealt", "holder", 1], "poudre": ["warlock", "sac", "dealt_proc", "holder", 1],
+	"choeur": ["bard", "sac", "mana_gained", "holder", 1], "malediction": ["cleric", "assaut", "taken", "holder", -1],
 	"impact": ["martial_artist", "sac", "dealt", "holder", 1],
 }
 
@@ -315,8 +315,8 @@ func test_traits() -> void:
 	check("Traque à 6 : portée +1", float(traq.units[0].sheet.range) == float(AutochessData.unit("hunter").range) + 1.0)
 	var fv := AutochessEffects.context(fctx({"ferveur": 9}), [[mk("cleric", [3, 1])], bags()])
 	check("Ferveur à 9 : soins reçus +30 %", is_equal_approx(float(fv.units[0].sheet.heal_taken), 1.3))
-	var tir := sim([mk("hunter", [3, 1], [], {"range": 4.0, "no_spell": true})], [bag([3, 0]), bag([2, 1])], fctx({"tir": 6}), 6.0)
-	check("Tir à 6 : les flèches traversent (ennemi derrière touché)", float(tir.units[2].stats.taken) > 0.0)
+	var tir := sim([mk("engineer", [3, 1], [], {"range": 4.0, "no_spell": true})], [bag([3, 0]), bag([2, 1])], fctx({"tir": 6}), 6.0)
+	check("Cadence à 6 : les tirs traversent (ennemi derrière touché)", float(tir.units[2].stats.taken) > 0.0)
 	var el := sim([mk("magician", [3, 1])], bags(), fctx({"elementaire": 6}), 10.0)
 	check("Élémentaire à 6 : la zone ralentit", _has_buff(el, "zone_lente"))
 

@@ -34,12 +34,14 @@ const TEMPERS := ["econome", "relanceur", "montee_rapide"]
 ## Sens des synergies par difficulté (poids des traits dans la valeur d'un plateau).
 const TRAIT_SENSE := [0.15, 0.6, 1.0, 1.1]
 ## Valeur d'un palier de trait (en « unités ★1 de coût 1 ») : famille (3 / 6 / 9), arme (2 / 4 / 6).
-const TIER_VAL_FAMILY := [0.0, 0.8, 2.2, 4.5]
-const TIER_VAL_WEAPON := [0.0, 0.6, 1.6, 3.0]
+const TIER_VAL_FAMILY := [0.0, 0.8, 2.0, 3.8]  # lot ACX-4 : (avant 2,2 / 4,5)
+const TIER_VAL_WEAPON := [0.0, 0.7, 1.9, 3.6]  # lot ACX-4 : styles (2 familles) mieux notés
 ## Envie d'un trait : famille du plan, armes du plan, le reste.
-const DESIRE_FAMILY := 2.5
+const DESIRE_FAMILY := 2.0  # lot ACX-4 : (avant 2,5) moins de plateaux d'une couleur
 const DESIRE_WEAPON := 1.5
 const DESIRE_OTHER := 0.25
+## Lot ACX-4 : poids d'une unité dans la note d'un plan de style (6 unités, seuils 2 / 4 / 6) face à un plan de famille.
+const STYLE_PLAN := 1.3
 const ITEM_POWER := 0.15  # chaque objet porté : +15 % de puissance (comme le combat provisoire)
 const BUY_MIN := [0.0, 0.8, 0.9, 0.9]  # valeur minimale d'un achat
 const STRONG_BUY := 2.5  # achat fort (★2 complétée, place libre bien remplie) : permis sous la réserve d'or
@@ -373,15 +375,18 @@ func _set_plan(fam: String, weapons: Array) -> void:
 	_meta().erase("cands")
 
 
-## Note de chaque famille : unités possédées (puissance) − familles disputées par les autres (plateaux et bancs visibles).
+## Note de chaque plan : unités possédées (puissance) − traits disputés par les autres (plateaux et bancs visibles).
+## Lot ACX-4 (traits croisés) : un plan part d'un trait principal, famille OU style (« family » dans meta.plan, nom gardé
+## pour les sauvegardes) ; ses traits associés (« weapons ») sont alors les styles de la famille, ou les deux familles du
+## style. Un style ne compte que 6 unités contre 12 : sa note est ramenée à la même échelle (STYLE_PLAN).
 func _family_scores(read_others: bool) -> Dictionary:
 	var out := {}
-	for f in AutochessData.family_traits():
+	for f in AutochessData.TRAITS:
 		out[f] = 0.0
 	for u in _g.units_of(_pi):
-		var f := String(info(String(u.id)).traits[0])
-		if out.has(f):
-			out[f] = float(out[f]) + _power(u)
+		for f in info(String(u.id)).traits:
+			if out.has(f):
+				out[f] = float(out[f]) + _power(u) * (1.0 if String(AutochessData.TRAITS[f].kind) == "famille" else float(_k("style_plan", STYLE_PLAN)))
 	if read_others:
 		var weight := 1.2 if _g.stage <= 3 else 0.6
 		for q in _g.players:
@@ -391,29 +396,33 @@ func _family_scores(read_others: bool) -> Dictionary:
 			for u in (q.board as Array) + (q.bench as Array):
 				if u == null:
 					continue
-				var f := String(info(String(u.id)).traits[0])
-				if not seen.has(f):
-					seen[f] = {}
-				seen[f][String(u.id)] = true
+				for f in info(String(u.id)).traits:
+					if not seen.has(f):
+						seen[f] = {}
+					seen[f][String(u.id)] = true
 			for f in seen:
-				if out.has(f) and (seen[f] as Dictionary).size() >= 3:
+				var fam := String(AutochessData.TRAITS.get(f, {}).get("kind", "")) == "famille"
+				if out.has(f) and (seen[f] as Dictionary).size() >= (3 if fam else 2):
 					out[f] = float(out[f]) - weight
 	for f in out:
 		out[f] = float(out[f]) + rng.randf() * 0.05
 	return out
 
 
-## Traits d'arme les plus utiles à une famille : ceux de ses unités (pondérés par le coût) et des unités possédées.
+## Traits associés au trait principal [param fam] (famille ou style) : les autres traits de ses unités (pondérés par le
+## coût) et des unités possédées qui l'ont (lot ACX-4 : un style mène à ses deux familles, une famille à ses styles).
 func _plan_weapons(fam: String, n: int) -> Array:
 	var w := {}
 	for id in AutochessData.units_with_trait(fam):
-		var tr: Array = AutochessData.unit(String(id)).get("traits", [])
-		if tr.size() > 1:
-			w[String(tr[1])] = float(w.get(String(tr[1]), 0.0)) + 0.4 + 0.15 * AutochessPool.cost_of(String(id))
+		for t in AutochessData.unit(String(id)).get("traits", []):
+			if String(t) != fam:
+				w[String(t)] = float(w.get(String(t), 0.0)) + 0.4 + 0.15 * AutochessPool.cost_of(String(id))
 	for u in _g.units_of(_pi):
 		var tr: Array = AutochessData.unit(String(u.id)).get("traits", [])
-		if tr.size() > 1 and String(tr[0]) == fam:
-			w[String(tr[1])] = float(w.get(String(tr[1]), 0.0)) + 1.0
+		if fam in tr:
+			for t in tr:
+				if String(t) != fam:
+					w[String(t)] = float(w.get(String(t), 0.0)) + 1.0
 	var keys := w.keys()
 	keys.sort_custom(func(a, b): return float(w[a]) > float(w[b]))
 	return keys.slice(0, n)

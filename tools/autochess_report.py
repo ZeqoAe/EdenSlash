@@ -5,6 +5,7 @@ durées (combats, partie, 1re élimination, éliminations par manche), échelle 
 objets, atouts (place, top 4, top 4 relatif, taux de choix), méta (compositions gagnantes), économie, écarts aux cibles.
 
     python tools/autochess_report.py <fichiers .jsonl ou dossiers> [--min=30] [--json=resume.json] [--all]
+    python tools/autochess_report.py <...> [--data=<dossier game>]   (tables lues dans une autre copie du jeu : mesure « avant »)
     python tools/autochess_report.py --run=<dossier> [--games=2000] [--jobs=4] [--godot=exe] [--project=game]
         (--run : lance les parties en parallèle — echelle en --jobs morceaux + l7r, r7l, pilote, legendes à 200 —
          puis imprime le rapport ; --games = parties de la mise en place « echelle »)
@@ -47,8 +48,10 @@ def _block(text: str, name: str) -> str:
     return text[i:j]
 
 
-def load_names() -> dict:
-    text = DATA_GD.read_text(encoding="utf-8")
+def load_names(game_dir: Path | None = None) -> dict:
+    data_gd = (game_dir / "scripts" / "core" / "autochess_data.gd") if game_dir else DATA_GD
+    units_json = (game_dir / "data" / "autochess_units.json") if game_dir else UNITS_JSON
+    text = data_gd.read_text(encoding="utf-8")
     out = {"items": {}, "components": {}, "augments": {}, "traits": {}, "trait_kind": {}, "aug_rarity": {}}
     for m in re.finditer(r'^\t"(\w+)": \{"name": "([^"]+)"', _block(text, "ITEMS"), re.M):
         out["items"][m.group(1)] = m.group(2)
@@ -62,10 +65,11 @@ def load_names() -> dict:
     for m in re.finditer(r'^\t"(\w+)": \{"name": "([^"]+)", "kind": "(\w+)"', _block(text, "TRAITS"), re.M):
         out["traits"][m.group(1)] = m.group(2)
         out["trait_kind"][m.group(1)] = m.group(3)
-    units = json.loads(UNITS_JSON.read_text(encoding="utf-8"))["units"]
+    units = json.loads(units_json.read_text(encoding="utf-8"))["units"]
     out["units"] = {k: v.get("name", k) for k, v in units.items()}
     out["cost"] = {k: int(v.get("cost", 1)) for k, v in units.items()}
     out["role"] = {k: v.get("role", "") for k, v in units.items()}
+    out["family"] = {k: (v.get("traits") or [""])[0] for k, v in units.items()}  # famille d'origine (1er trait)
     return out
 
 
@@ -241,6 +245,8 @@ def analyse(games: list[dict], names: dict, min_n: int) -> dict:
     win_comps = Counter()
     win_fam = Counter()
     win_weap = Counter()
+    win_pair = Counter()  # lot ACX-4 : les deux traits principaux du 1er, quel que soit leur genre
+    mono = []  # part de la famille la plus présente sur le plateau du 1er
     s3 = []
     econ = defaultdict(lambda: defaultdict(list))
     for g in games:
@@ -285,6 +291,12 @@ def analyse(games: list[dict], names: dict, min_n: int) -> dict:
                 win_comps[f"{fam or '—'}+{wea or '—'}"] += 1
                 win_fam[fam or "—"] += 1
                 win_weap[wea or "—"] += 1
+                ranked = sorted(p["traits"].items(), key=lambda kv: (-(kv[1][0] if isinstance(kv[1], list) else kv[1]),
+                                                                     -(kv[1][1] if isinstance(kv[1], list) else 0), kv[0]))
+                win_pair["+".join(sorted(t for t, _ in ranked[:2])) or "—"] += 1
+                fams = Counter(names["family"].get(u[0], "") for u in p["board"])
+                if p["board"]:
+                    mono.append(max(fams.values()) / len(p["board"]))
             e = p["econ"]
             r = max(e["rounds"], 1)
             ec = econ[dk]
@@ -314,9 +326,16 @@ def analyse(games: list[dict], names: dict, min_n: int) -> dict:
                                  "pick_rate": picked[k] / offered[k] if offered[k] else 0.0} for k, v in augs.items()}
     nwin = sum(win_comps.values())
     ent = -sum((c / nwin) * math.log(c / nwin) for c in win_comps.values()) if nwin else 0.0
+    npair = sum(win_pair.values())
+    ent2 = -sum((c / npair) * math.log(c / npair) for c in win_pair.values()) if npair else 0.0
     res["meta"] = {"wins": nwin, "distinct": len(win_comps), "top": win_comps.most_common(8),
                    "top_share": win_comps.most_common(1)[0][1] / nwin if nwin else 0.0, "effective": math.exp(ent),
-                   "fam": win_fam.most_common(), "weap": win_weap.most_common()}
+                   "entropy": ent, "fam": win_fam.most_common(), "weap": win_weap.most_common(),
+                   "pair_top": win_pair.most_common(8), "pair_distinct": len(win_pair),
+                   "pair_share": win_pair.most_common(1)[0][1] / npair if npair else 0.0, "pair_effective": math.exp(ent2),
+                   "fam_top_share": win_fam.most_common(1)[0][1] / nwin if nwin else 0.0,
+                   "mono_mean": statistics.mean(mono) if mono else 0.0,
+                   "mono6": sum(1 for x in mono if x >= 0.75) / len(mono) if mono else 0.0}
     res["econ"] = {dk: {k: statistics.mean(v) if v else 0.0 for k, v in d.items()} for dk, d in econ.items()}
     res["s3_per_game"] = statistics.mean(s3) if s3 else 0.0
     res["leg_boards"] = leg_boards
@@ -498,7 +517,17 @@ def report(res: dict, names: dict, show_all: bool) -> tuple[str, list[str]]:
     L.append("")
     L.append("Familles des gagnants : " + ", ".join(f"{names['traits'].get(t, t)} {pct(n / max(me['wins'], 1))}" for t, n in me["fam"]))
     L.append("")
-    L.append("Armes des gagnants : " + ", ".join(f"{names['traits'].get(t, t)} {pct(n / max(me['wins'], 1))}" for t, n in me["weap"]))
+    L.append("Styles (traits d'arme) des gagnants : " + ", ".join(f"{names['traits'].get(t, t)} {pct(n / max(me['wins'], 1))}" for t, n in me["weap"]))
+    L.append("")
+    L.append(f"Entropie des compositions gagnantes : {f2(me['entropy'])} ; famille la plus fréquente chez les 1ers : "
+             f"{pct(me['fam_top_share'])} ; plateau du 1er pris dans une seule famille : {pct(me['mono_mean'])} en moyenne, "
+             f"{pct(me['mono6'])} des plateaux aux trois quarts d'une couleur.")
+    L.append("")
+    L.append(f"Paires de traits principaux du 1er (tous genres) : {me['pair_distinct']} distinctes (nombre effectif "
+             f"{f1(me['pair_effective'])}), la plus fréquente {pct(me['pair_share'])} : " + ", ".join(
+                 f"{' + '.join(names['traits'].get(t, t) for t in c.split('+'))} {n}" for c, n in me["pair_top"][:5]))
+    if me["fam_top_share"] > 0.25:
+        gaps.append(f"Une famille gagne {pct(me['fam_top_share'])} des parties (cible ≤ 25 %).")
     if me["top_share"] > 0.15:
         gaps.append(f"Méta resserrée : une composition gagne {pct(me['top_share'])} des parties.")
     L.append("")
@@ -549,6 +578,7 @@ def main() -> None:
     ap.add_argument("--jobs", type=int, default=4)
     ap.add_argument("--godot", default=os.environ.get("GODOT", str(Path.home() / "Godot" / "Godot_v4.7.2-stable_win64_console.exe")))
     ap.add_argument("--project", default=str(ROOT / "game"))
+    ap.add_argument("--data", help="dossier game/ dont lire les tables (noms, familles) ; défaut : ce dépôt")
     a = ap.parse_args()
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -559,7 +589,7 @@ def main() -> None:
     games = read_games(paths)
     if not games:
         sys.exit("aucune partie lue")
-    names = load_names()
+    names = load_names(Path(a.data) if a.data else None)
     res = analyse(games, names, a.min)
     text, gaps = report(res, names, a.all)
     print(text)

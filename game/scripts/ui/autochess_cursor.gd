@@ -13,6 +13,9 @@ extends CanvasLayer
 ## « Vendre ») passe par confirm_sell (l'écran demande « Vendre ? ») ; toute vente s'annule ensuite (Retour arrière).
 ## Les panneaux de préparation (boutique, AC-G) se posent sur le même calque (LAYER) : la croix passe alors du banc à la
 ## boutique sans réglage. Le curseur ne touche à aucune donnée : il appelle AutochessBoard.move / sell, qui préviennent.
+## Lot ACX-4 (note du joueur) : les objets sont dans un plateau d'icônes à gauche de l'écran (AutochessHud.ItemTray) ; ses
+## icônes deviennent les contrôles des cases « items » (use_item_tray : mêmes clics, glisser-déposer, croix et A), et la
+## colonne d'objets du plateau 3D montre les enclumes des atouts (AutochessBench.anvil_mode).
 
 signal hovered(slot: Dictionary, unit: Dictionary)  ## case sous le curseur (fiche d'unité d'AC-G) ; {} : hors du plateau
 signal zoom_changed(zoom: int)
@@ -64,6 +67,7 @@ var _repeat := 0.0
 var _last_mouse := Vector2(-1, -1)
 var _source := "mouse"  # qui a placé le curseur en dernier : mouse, keys, pad
 var _last_hover := "?"
+var _tray := false  # lot ACX-4 : cases « items » = icônes 2D du plateau d'objets (use_item_tray)
 
 
 func _init() -> void:
@@ -102,6 +106,43 @@ func control_of(s: Dictionary) -> Control:
 	return _ctrls.get(AutochessBoard.slot_id(s))
 
 
+## Lot ACX-4 : les cases « items » deviennent les [param ctrls] (10 icônes 2D, AutochessHud.ItemTray, rangées de 5) : ils
+## prennent les clics, le glisser-déposer et la navigation des anciennes cases 3D (retirées).
+func use_item_tray(ctrls: Array) -> void:
+	_tray = true
+	for i in mini(ctrls.size(), AutochessData.ITEM_BENCH_SIZE):
+		var s := AutochessBoard.items_slot(i)
+		var id := AutochessBoard.slot_id(s)
+		var old: Control = _ctrls.get(id)
+		if old != null and is_instance_valid(old) and not old.has_meta("ac_2d"):
+			old.queue_free()
+		var c: Control = ctrls[i]
+		c.set_meta("ac_slot", s)
+		c.set_meta("ac_2d", true)
+		c.mouse_filter = Control.MOUSE_FILTER_STOP
+		if not c.gui_input.is_connected(_on_cell_input):
+			c.gui_input.connect(_on_cell_input.bind(c))
+		_ctrls[id] = c
+	for id in _ctrls:
+		var c: Control = _ctrls[id]
+		for d in ["left", "right", "up", "down"]:
+			c.remove_meta("nav_" + d)
+		var n := neighbors(c.get_meta("ac_slot"))
+		for d in n:
+			c.set_meta("nav_" + String(d), _ctrls[AutochessBoard.slot_id(n[d])])
+
+
+## Case « items » de l'icône du plateau d'objets sous [param pos] ({} : aucune).
+func _tray_slot(pos: Vector2) -> Dictionary:
+	if not _tray:
+		return {}
+	for i in AutochessData.ITEM_BENCH_SIZE:
+		var c: Control = _ctrls.get(AutochessBoard.slot_id(AutochessBoard.items_slot(i)))
+		if c != null and c.is_visible_in_tree() and c.get_global_rect().has_point(pos):
+			return AutochessBoard.items_slot(i)
+	return {}
+
+
 # --- voisins (déplacement à la croix, aux flèches) -----------------------------------------------------------------
 ## Cases voisines de [param s] à l'écran (caméra de son côté : haut = vers l'adversaire) : {"left": case, ...}.
 ## Haut / bas sur le plateau : même colonne, rangée voisine (les rangées décalées font un léger zigzag, l'aller-retour
@@ -116,6 +157,8 @@ func neighbors(s: Dictionary) -> Dictionary:
 			var r := int(s.row)
 			if c > 0:
 				out["left"] = AutochessBoard.board_slot(c - 1, r)
+			elif _tray:
+				out["left"] = AutochessBoard.items_slot(AutochessData.ITEM_BENCH_SIZE - 1)
 			else:
 				out["left"] = _nearest(_item_column(1), board.slot_position(s), true)
 			if c < C - 1:
@@ -135,6 +178,16 @@ func neighbors(s: Dictionary) -> Dictionary:
 			if i < AutochessData.BENCH_SIZE - 1:
 				out["right"] = AutochessBoard.bench_slot(i + 1)
 			out["up"] = _nearest(_back_row(), board.slot_position(s), false)
+		"items" when _tray:  # plateau d'objets 2D : 2 rangées de 5
+			var i := int(s.index)
+			var col := i % 5
+			var row := i / 5
+			if col > 0:
+				out["left"] = AutochessBoard.items_slot(i - 1)
+			out["right"] = AutochessBoard.items_slot(i + 1) if col < 4 else AutochessBoard.board_slot(0, 0 if row == 0 else 1)
+			if row > 0:
+				out["up"] = AutochessBoard.items_slot(i - 5)
+			out["down"] = AutochessBoard.items_slot(i + 5) if row == 0 else AutochessBoard.bench_slot(0)
 		"items":
 			var i := int(s.index)
 			var col := i / 5
@@ -311,7 +364,7 @@ func _on_cell_input(ev: InputEvent, c: Control) -> void:
 			return
 		if mb.button_index != MOUSE_BUTTON_LEFT:
 			return
-		var at := screen_slot(pos)
+		var at: Dictionary = screen_slot(pos) if not c.has_meta("ac_2d") else c.get_meta("ac_slot")  # icône 2D : sa case
 		if at.is_empty() and mb.device == -1:
 			at = c.get_meta("ac_slot")  # clic simulé (UiNav) au centre de la case
 		if mb.pressed:
@@ -443,7 +496,9 @@ func _process(delta: float) -> void:
 		var m := get_viewport().get_mouse_position()
 		if m.distance_to(_last_mouse) > 1.0 or _dragging:
 			_last_mouse = m
-			var at := screen_slot(m)
+			var at := _tray_slot(m)
+			if at.is_empty():
+				at = screen_slot(m)
 			if not at.is_empty() or _source == "mouse":
 				slot = at
 				_source = "mouse"
@@ -512,6 +567,8 @@ func _poll_pad(delta: float) -> void:
 func _place_controls() -> void:
 	for id in _ctrls:
 		var c: Control = _ctrls[id]
+		if c.has_meta("ac_2d"):
+			continue  # icône du plateau d'objets : posée par son panneau
 		var s: Dictionary = c.get_meta("ac_slot")
 		var p := board.to_global(board.slot_position(s))
 		if camera.is_position_behind(p):

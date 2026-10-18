@@ -111,7 +111,7 @@
    "family": 3,
    "traits": [
     "traque",
-    "tir"
+    "tranchant"
    ],
    "weapon_type": "bow",
    "lineage": "verte",
@@ -137,7 +137,7 @@
    "family": 3,
    "traits": [
     "traque",
-    "poudre"
+    "tir"
    ],
    "weapon_type": "cannon",
    "lineage": "verte",
@@ -163,7 +163,7 @@
    "family": 4,
    "traits": [
     "ferveur",
-    "choeur"
+    "malediction"
    ],
    "weapon_type": "scepter",
    "lineage": "verte",
@@ -241,7 +241,7 @@
    "family": 5,
    "traits": [
     "arcane",
-    "malediction"
+    "poudre"
    ],
    "weapon_type": "rod",
    "lineage": "verte",
@@ -293,7 +293,7 @@
    "family": 1,
    "traits": [
     "rempart",
-    "estoc"
+    "poudre"
    ],
    "weapon_type": "spear",
    "lineage": "verte",
@@ -319,7 +319,7 @@
    "family": 1,
    "traits": [
     "rempart",
-    "escrime"
+    "fracas"
    ],
    "weapon_type": "sword",
    "lineage": "ascension",
@@ -345,7 +345,7 @@
    "family": 2,
    "traits": [
     "ombre",
-    "tranchant"
+    "choeur"
    ],
    "weapon_type": "katana",
    "lineage": "verte",
@@ -423,7 +423,7 @@
    "family": 3,
    "traits": [
     "traque",
-    "tir"
+    "estoc"
    ],
    "weapon_type": "bow",
    "lineage": "verte",
@@ -449,7 +449,7 @@
    "family": 3,
    "traits": [
     "traque",
-    "poudre"
+    "malediction"
    ],
    "weapon_type": "gunscythe",
    "lineage": "verte",
@@ -475,7 +475,7 @@
    "family": 3,
    "traits": [
     "traque",
-    "tir"
+    "tranchant"
    ],
    "weapon_type": "bow",
    "lineage": "ascension",
@@ -579,7 +579,7 @@
    "family": 5,
    "traits": [
     "arcane",
-    "malediction"
+    "tir"
    ],
    "weapon_type": "grimoire",
    "lineage": "verte",
@@ -631,7 +631,7 @@
    "family": 5,
    "traits": [
     "arcane",
-    "malediction"
+    "poudre"
    ],
    "weapon_type": "rod",
    "lineage": "ascension",
@@ -683,7 +683,8 @@
    "family": 1,
    "traits": [
     "rempart",
-    "estoc"
+    "estoc",
+    "ombre"
    ],
    "weapon_type": "rapier",
    "lineage": "ascension",
@@ -787,7 +788,7 @@
    "family": 2,
    "traits": [
     "ombre",
-    "tranchant"
+    "choeur"
    ],
    "weapon_type": "katana",
    "lineage": "ascension",
@@ -813,7 +814,8 @@
    "family": 3,
    "traits": [
     "traque",
-    "poudre"
+    "tir",
+    "rempart"
    ],
    "weapon_type": "cannon",
    "lineage": "ascension",
@@ -839,7 +841,7 @@
    "family": 3,
    "traits": [
     "traque",
-    "poudre"
+    "malediction"
    ],
    "weapon_type": "gunscythe",
    "lineage": "ascension",
@@ -865,7 +867,7 @@
    "family": 3,
    "traits": [
     "traque",
-    "tir"
+    "tranchant"
    ],
    "weapon_type": "bow",
    "lineage": "ascension",
@@ -917,7 +919,7 @@
    "family": 4,
    "traits": [
     "ferveur",
-    "choeur"
+    "malediction"
    ],
    "weapon_type": "scepter",
    "lineage": "ascension",
@@ -995,7 +997,8 @@
    "family": 5,
    "traits": [
     "arcane",
-    "malediction"
+    "tir",
+    "traque"
    ],
    "weapon_type": "grimoire",
    "lineage": "ascension",
@@ -1021,7 +1024,7 @@
    "family": 5,
    "traits": [
     "arcane",
-    "malediction"
+    "poudre"
    ],
    "weapon_type": "rod",
    "lineage": "ascension",
@@ -1073,7 +1076,7 @@
    "family": 1,
    "traits": [
     "rempart",
-    "estoc"
+    "poudre"
    ],
    "weapon_type": "spear",
    "lineage": "ascension",
@@ -1125,7 +1128,8 @@
    "family": 2,
    "traits": [
     "ombre",
-    "escrime"
+    "escrime",
+    "ferveur"
    ],
    "weapon_type": "sword",
    "lineage": "ascension",
@@ -1151,7 +1155,7 @@
    "family": 3,
    "traits": [
     "traque",
-    "poudre"
+    "malediction"
    ],
    "weapon_type": "gunscythe",
    "lineage": "ascension",
@@ -1177,7 +1181,7 @@
    "family": 3,
    "traits": [
     "traque",
-    "tir"
+    "estoc"
    ],
    "weapon_type": "bow",
    "lineage": "ascension",
@@ -1203,7 +1207,7 @@
    "family": 4,
    "traits": [
     "ferveur",
-    "choeur"
+    "malediction"
    ],
    "weapon_type": "scepter",
    "lineage": "ascension",
@@ -1229,7 +1233,8 @@
    "family": 4,
    "traits": [
     "ferveur",
-    "choeur"
+    "choeur",
+    "arcane"
    ],
    "weapon_type": "guitar",
    "lineage": "ascension",
@@ -1307,7 +1312,7 @@
    "family": 1,
    "traits": [
     "rempart",
-    "fracas"
+    "escrime"
    ],
    "weapon_type": "hammer",
    "lineage": "ascension",
@@ -1333,7 +1338,7 @@
    "family": 1,
    "traits": [
     "rempart",
-    "estoc"
+    "poudre"
    ],
    "weapon_type": "spear",
    "lineage": "ascension",
@@ -1385,7 +1390,7 @@
    "family": 2,
    "traits": [
     "ombre",
-    "tranchant"
+    "choeur"
    ],
    "weapon_type": "katana",
    "lineage": "ascension",
@@ -1411,7 +1416,7 @@
    "family": 3,
    "traits": [
     "traque",
-    "poudre"
+    "tir"
    ],
    "weapon_type": "cannon",
    "lineage": "ascension",
@@ -1437,7 +1442,7 @@
    "family": 3,
    "traits": [
     "traque",
-    "tir"
+    "estoc"
    ],
    "weapon_type": "bow",
    "lineage": "ascension",
@@ -1515,7 +1520,7 @@
    "family": 5,
    "traits": [
     "arcane",
-    "malediction"
+    "tir"
    ],
    "weapon_type": "grimoire",
    "lineage": "ascension",

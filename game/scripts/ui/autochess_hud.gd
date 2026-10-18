@@ -17,6 +17,9 @@ extends Control
 ## (0,8 à 1280 × 720), texte jamais sous 13 px.
 ## Lot ACX-2 : [Annuler] au bout de l'onglet de l'or (visible s'il y a une action à annuler : Ctrl+Z / Retour arrière,
 ## bouton Vue de la manette) ; au combat, Pause et Passer à côté de la vitesse (×1 / ×2 / ×3) ; touches dessinées.
+## Lot ACX-4 : l'or en sacs (GoldBags) ; au combat et au bilan, [Boutique] (B, RB) rouvre la boutique (achat, actualisation,
+## XP, verrou) avec le banc en vignettes au-dessus (BenchStrip : clic droit ou E pour vendre, A / clic : vendre après
+## confirmation) ; le plateau ne bouge pas avant la préparation.
 
 signal reroll_pressed
 signal xp_pressed
@@ -30,6 +33,8 @@ signal stats_pressed  ## bilan de la partie (lot AC-V)
 signal undo_pressed  ## annuler la dernière action (lot ACX-2)
 signal pause_pressed  ## pause (combat compris : lot ACX-2)
 signal skip_pressed  ## passer le combat (fin au simulateur : lot ACX-2)
+signal shop_toggled  ## boutique ouverte / fermée pendant le combat (lot ACX-4)
+signal bench_sell(uid: int, confirm: bool)  ## vente d'un héros du banc depuis les vignettes du combat (lot ACX-4)
 
 # --- palette v2 (conception/art/tokens.json) --------------------------------------------------------------------
 const INK := Color("221a3a")  # encre 700 : contours, texte sur papier, ombres dures
@@ -73,6 +78,7 @@ const TOP_Y := 80.0  # haut des colonnes
 ## le pied se réduit au bouton de vitesse (l'arène reste dégagée).
 const COMBAT_TOP := 108.0
 const COMBAT_BAR_H := 56.0
+const TRAY_H := 118.0  # lot ACX-4 : plateau d'objets en bas de la colonne gauche (2 rangées de 5 icônes)
 const KIND_NAMES := {"ouverture": "Ouverture", "monstres": "Monstres", "jcj": "Combat de stratèges",
 	"choix": "Choix partagé", "gardien": "Gardien"}
 
@@ -95,6 +101,11 @@ var stats_button: Button
 var undo_button: Button
 var pause_button: Button
 var skip_button: Button
+var shop_button: Button  # lot ACX-4 : boutique pendant le combat
+var shop_close_button: Button
+var bench_strip: BenchStrip
+var item_tray: ItemTray  # lot ACX-4 : objets en icônes à gauche (cases « items » du curseur)
+var combat_shop := false
 var odds: OddsBar
 var streak: Flame
 var income_chip: Label
@@ -116,7 +127,7 @@ var _xp_bar: ProgressBar
 var _xp_text: Label
 var _gold_tab: PanelContainer
 var _gold: Label
-var _interest: Interest
+var _interest: GoldBags  # lot ACX-4 : sacs d'or (ancienne rangée de pastilles d'intérêts)
 var _banner: PanelContainer
 var _banner_title: Label
 var _banner_line: Label
@@ -463,6 +474,15 @@ func _build_sides() -> void:
 	traits = AutochessTraitPanel.new()
 	traits.position = Vector2(s(MARGIN), s(TOP_Y))
 	add_child(traits)
+	item_tray = ItemTray.new()
+	item_tray.anchor_top = 1.0
+	item_tray.anchor_bottom = 1.0
+	item_tray.offset_left = s(MARGIN)
+	item_tray.offset_right = s(MARGIN) + s(SIDE_W)
+	item_tray.offset_bottom = -BOTTOM_GAP - s(SHOP_H) - s(22.0)
+	item_tray.offset_top = item_tray.offset_bottom - s(TRAY_H)
+	item_tray.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	add_child(item_tray)
 	players = AutochessPlayers.new()
 	players.anchor_left = 1.0
 	players.anchor_right = 1.0
@@ -582,6 +602,31 @@ func _build_bottom() -> void:
 	skip_button.tooltip_text = "Fin du combat tout de suite : résultat calculé."
 	skip_button.pressed.connect(func(): skip_pressed.emit())
 	_combat_row.add_child(skip_button)
+	shop_button = button("Boutique", "sun", 40.0, "B", "RB")
+	shop_button.name = "AcShopOpen"
+	shop_button.custom_minimum_size.x = s(150)
+	shop_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	shop_button.tooltip_text = "Acheter et vendre pendant le combat (le plateau change à la préparation)."
+	shop_button.pressed.connect(func(): shop_toggled.emit())
+	_combat_row.add_child(shop_button)
+	shop_close_button = button("Voir le combat", "plain", 40.0, "B", "RB")
+	shop_close_button.name = "AcShopClose"
+	shop_close_button.tooltip_text = "Replie la boutique."
+	shop_close_button.pressed.connect(func(): shop_toggled.emit())
+	shop_close_button.visible = false
+	rv.add_child(shop_close_button)
+	bench_strip = BenchStrip.new()
+	bench_strip.visible = false
+	bench_strip.anchor_left = 0.5
+	bench_strip.anchor_right = 0.5
+	bench_strip.anchor_top = 1.0
+	bench_strip.anchor_bottom = 1.0
+	bench_strip.offset_bottom = -BOTTOM_GAP - s(SHOP_H) - s(40.0)
+	bench_strip.offset_top = bench_strip.offset_bottom - s(64.0)
+	bench_strip.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	bench_strip.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	bench_strip.sell.connect(func(uid, confirm): bench_sell.emit(uid, confirm))
+	add_child(bench_strip)
 	# l'or, au centre, en onglet soleil au-dessus de la boutique : intérêts, série, revenu de la prochaine manche
 	_gold_tab = PanelContainer.new()
 	_gold_tab.name = "AcGold"
@@ -608,7 +653,8 @@ func _build_bottom() -> void:
 	_gold = pop_lbl("", 24)
 	_gold.name = "AcGoldValue"
 	gh.add_child(_gold)
-	_interest = Interest.new()
+	_interest = GoldBags.new(15.0)
+	_interest.name = "AcGoldBags"
 	_interest.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	gh.add_child(_interest)
 	streak = Flame.new()
@@ -757,19 +803,18 @@ func refresh(g: Autochess, me: int, foe := -1, scouted := -1) -> void:
 	reroll_button.tooltip_text = "Cinq nouvelles offres."
 	var locked := bool(p.locked)
 	lock_button.text = "Verrouillée" if locked else "Verrouiller"
-	lock_button.tooltip_text = "La boutique reste la même à la manche suivante." if not locked else "Clique pour la libérer."
+	lock_button.tooltip_text = "La boutique reste la même à la prochaine manche seulement." if not locked else "Gardée pour la prochaine manche seulement. Clique pour la libérer."
 	if int(locked) != _locked:
 		_locked = int(locked)
 		style_button(lock_button, "sun" if locked else "plain")
 	_gold.text = "%d" % int(p.gold)
 	var cap := g.interest_cap(me)
-	_interest.cap = cap
-	_interest.custom_minimum_size = Vector2(maxf(cap, 1) * s(13.0) + 4.0, s(26.0))
-	_interest.have = AutochessData.interest(int(p.gold), cap)
-	_interest.visible = cap > 0
-	_interest.queue_redraw()
-	_interest.tooltip_text = "Intérêts : +1 or par tranche de 10, %d au plus." % cap
+	_interest.set_gold(int(p.gold), cap)
+	_interest.tooltip_text = ("Un sac par tranche de 10 or ; chaque sac plein rapporte 1 or d'intérêts (%d au plus)." % cap) \
+		if cap > 0 else "Un sac par tranche de 10 or (aucun intérêt dans ce format)."
 	streak.set_streak(int(p.streak))
+	if bench_strip.visible:
+		bench_strip.refresh(p.bench)
 	_refresh_income(g, me, cap)
 	shop.refresh(g, me)
 	traits.refresh(g.trait_counts(me))
@@ -823,17 +868,30 @@ func set_timer(left: float, total: float) -> void:
 ## « prep » : boutique ; « combat » : boutique repliée ; « over » : fin de partie.
 func set_mode(m: String) -> void:
 	mode = m
-	_prep_row.visible = m == "prep"
-	_combat_row.visible = m != "prep"
-	_gold_tab.visible = m == "prep"
+	var shop_on := m == "prep" or (combat_shop and m in ["combat", "recap"])  # lot ACX-4 : boutique pendant le combat
+	_prep_row.visible = shop_on
+	_combat_row.visible = not shop_on
+	_gold_tab.visible = shop_on
+	ready_button.visible = m == "prep"
+	shop_close_button.visible = m != "prep"
+	item_tray.visible = m == "prep"
+	bench_strip.visible = shop_on and m != "prep"
 	_bottom.visible = m != "over"
 	if m != "over":
 		_end.visible = false
-	var fight := m == "combat"
+	var fight := m == "combat" and not shop_on
 	_top.visible = not fight
 	_combat_text.get_parent().visible = not fight  # combat : chronomètre et noms dans les barres d'équipe (AC-V)
 	_bottom.offset_top = -BOTTOM_GAP - (s(COMBAT_BAR_H) if fight else s(SHOP_H))
-	players.offset_top = COMBAT_TOP if fight else s(TOP_Y)
+	players.offset_top = COMBAT_TOP if m == "combat" else s(TOP_Y)
+	if m == "combat":
+		_top.visible = false
+
+
+## Lot ACX-4 : boutique ouverte ou repliée pendant le combat et le bilan de manche.
+func set_combat_shop(on: bool) -> void:
+	combat_shop = on
+	set_mode(mode)
 
 
 func set_combat(text: String, progress: float, speed: float) -> void:
@@ -852,14 +910,14 @@ func set_overlay(on: bool, top := false) -> void:
 ## Boutique masquée pendant qu'une unité est tenue (la zone « Vendre » du curseur apparaît à sa place).
 func set_holding(on: bool) -> void:
 	_bottom.visible = not on and mode != "over"
-	_gold_tab.visible = not on and mode == "prep"
+	_gold_tab.visible = not on and (mode == "prep" or (combat_shop and mode in ["combat", "recap"]))
 
 
 ## Rectangles occupés par le cadre au repos (préparation) : la bulle de la fiche les évite, la caméra cadre le plateau
 ## dans ce qui reste (AutochessScreen._fit_board).
 func frame_rects() -> Array:
 	var out: Array = []
-	for c in [_top, traits, players, _bottom, _gold_tab]:
+	for c in [_top, traits, players, _bottom, _gold_tab, item_tray]:
 		if (c as Control).is_visible_in_tree():
 			out.append((c as Control).get_global_rect())
 	return out
@@ -927,7 +985,7 @@ func _update_keys() -> void:
 	var lt := "LT" if Settings.pad_name(JOY_BUTTON_LEFT_SHOULDER) == "LB" else "L2"
 	var rt := "RT" if lt == "LT" else "R2"
 	undo_button.text = "Annuler · %s" % (Settings.pad_name(JOY_BUTTON_BACK) if pad else "Ctrl+Z")
-	for b in [xp_button, reroll_button, lock_button, ready_button, speed_button, pause_button, skip_button]:
+	for b in [xp_button, reroll_button, lock_button, ready_button, speed_button, pause_button, skip_button, shop_button, shop_close_button]:
 		var kl: Label = (b as Button).get_node_or_null("Key")
 		if kl == null:
 			continue
@@ -947,6 +1005,8 @@ func _update_keys() -> void:
 				pk = Settings.pad_name(JOY_BUTTON_START)
 			"Vue":
 				pk = Settings.pad_name(JOY_BUTTON_BACK)
+			"RB":
+				pk = Settings.pad_name(JOY_BUTTON_RIGHT_SHOULDER)
 		set_key_chip(kl, pk if pad else String(b.get_meta("key", "")), pad)
 
 
@@ -1050,22 +1110,227 @@ class Coin extends Control:
 		draw_arc(c, r * 0.58, 0.0, TAU, 20, AutochessHud.candy("soleil", 2), 2.0, true)
 
 
-## Intérêts : une pastille par tranche de 10 or, jusqu'au plafond (pomme = acquise).
-class Interest extends Control:
-	var have := 0
-	var cap := 5
+## Lot ACX-4 (note du joueur, comme TFT) : l'or en une rangée de sacs, un sac par tranche de 10 or (5 sacs, 10 avec
+## Intérêts composés), chacun plus ou moins rempli selon l'or ; un sac plein = +1 or d'intérêts (contour pomme). Sans
+## intérêts (Éclair) : les sacs se remplissent quand même, grisés. Aussi sur la ligne de chaque stratège (AutochessPlayers).
+class GoldBags extends Control:
+	var gold := 0
+	var cap := 5  # plafond d'intérêts (0 : aucun)
+	var bag := 13.0  # largeur d'un sac (px, avant l'échelle de l'interface)
 
-	func _init() -> void:
-		custom_minimum_size = Vector2(70, 26)
+	func _init(width := 13.0) -> void:
+		bag = width
 		mouse_filter = Control.MOUSE_FILTER_PASS
+		_fit()
+
+	func set_gold(g: int, c: int) -> void:
+		if g == gold and c == cap:
+			return
+		gold = g
+		cap = c
+		_fit()
+		queue_redraw()
+
+	func bags() -> int:
+		return maxi(cap, 5)
+
+	## Remplissage du sac [param i] (0 à 1).
+	func fill(i: int) -> float:
+		return clampf((float(gold) - 10.0 * i) / 10.0, 0.0, 1.0)
+
+	func _fit() -> void:
+		var w := AutochessHud.s(bag) * (0.8 if bags() > 5 else 1.0)
+		custom_minimum_size = Vector2(bags() * (w + AutochessHud.s(maxf(1.2, bag * 0.14))) + 2.0, w * 1.25)
 
 	func _draw() -> void:
-		var step := AutochessHud.s(13.0)
-		var r := AutochessHud.s(4.6)
-		for i in cap:
-			var c := Vector2(r + 2.0 + i * step, size.y * 0.5)
-			draw_circle(c, r, AutochessHud.candy("pomme") if i < have else AutochessHud.PAPER)
-			draw_arc(c, r, 0.0, TAU, 16, AutochessHud.INK, 1.6, true)
+		var n := bags()
+		var w := AutochessHud.s(bag) * (0.8 if n > 5 else 1.0)
+		var h := w * 1.15
+		var gap := AutochessHud.s(maxf(1.2, bag * 0.14))
+		var y0 := (size.y - h) * 0.5
+		var ink := AutochessHud.INK
+		for i in n:
+			var x0 := 1.0 + i * (w + gap)
+			var body := _sack(Vector2(x0, y0), w, h)
+			var f := fill(i)
+			var full := f >= 1.0 and i < cap
+			draw_colored_polygon(body, AutochessHud.PAPER)
+			if f > 0.0:
+				var top := y0 + h * (1.0 - 0.78 * f)  # le haut du sac (le col) ne se remplit pas
+				var clip := PackedVector2Array([Vector2(x0 - 1, top), Vector2(x0 + w + 1, top), Vector2(x0 + w + 1, y0 + h + 1),
+					Vector2(x0 - 1, y0 + h + 1)])
+				var col := AutochessHud.candy("soleil", 2)  # or foncé : lisible sur papier comme sur l'onglet soleil
+				if cap == 0:
+					col = AutochessHud.INK_300
+				for poly in Geometry2D.intersect_polygons(body, clip):
+					draw_colored_polygon(poly, col)
+			var outline := body.duplicate()
+			outline.append(body[0])
+			draw_polyline(outline, AutochessHud.candy("pomme", 2) if full else ink, 2.0 if full else 1.5, true)
+			# lien du col
+			draw_line(Vector2(x0 + w * 0.3, y0 + h * 0.24), Vector2(x0 + w * 0.7, y0 + h * 0.24), ink, 1.5, true)
+
+	## Contour d'un sac (col noué en haut, panse ronde en bas) dans la boîte [param o] × ([param w], [param h]).
+	static func _sack(o: Vector2, w: float, h: float) -> PackedVector2Array:
+		var pts := PackedVector2Array()
+		pts.append(o + Vector2(w * 0.32, 0.0))
+		pts.append(o + Vector2(w * 0.68, 0.0))
+		pts.append(o + Vector2(w * 0.6, h * 0.24))
+		var c := o + Vector2(w * 0.5, h * 0.64)
+		var rx := w * 0.5
+		var ry := h * 0.36
+		for k in range(0, 13):
+			var a := -PI * 0.28 + PI * 1.56 * k / 12.0
+			pts.append(c + Vector2(cos(a) * rx, sin(a) * ry))
+		pts.append(o + Vector2(w * 0.4, h * 0.24))
+		return pts
+
+
+## Lot ACX-4 (note du joueur) : les objets (composants, objets complets, outils) en icônes, 2 rangées de 5, en bas de la
+## colonne gauche ; chaque case est la case « items » du curseur (AutochessCursor.use_item_tray : clic pour prendre puis
+## clic sur un héros, glisser-déposer, croix et A). La case de l'objet tenu est cerclée de soleil.
+class ItemTray extends PanelContainer:
+	var slots: Array = []  # Control par case (10)
+	var _empty: Label
+
+	func _init() -> void:
+		name = "AcItemTray"
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_theme_stylebox_override("panel", AutochessHud.paper_panel(7.0, 10.0, 8.0))
+		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", roundi(AutochessHud.s(4.0)))
+		v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(v)
+		var head := HBoxContainer.new()
+		head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(head)
+		head.add_child(AutochessHud.panel_title("Objets", 20))
+		_empty = AutochessHud.ink_lbl("", 13, AutochessHud.INK_300, 700)
+		_empty.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		_empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		_empty.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		head.add_child(_empty)
+		var grid := GridContainer.new()
+		grid.columns = 5
+		grid.add_theme_constant_override("h_separation", roundi(AutochessHud.s(5.0)))
+		grid.add_theme_constant_override("v_separation", roundi(AutochessHud.s(5.0)))
+		grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(grid)
+		for i in AutochessData.ITEM_BENCH_SIZE:
+			var c := PanelContainer.new()
+			c.name = "AcItem_%d" % i
+			c.custom_minimum_size = Vector2.ONE * AutochessHud.s(34.0)
+			c.mouse_filter = Control.MOUSE_FILTER_STOP
+			c.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+			var ic := TextureRect.new()
+			ic.name = "Icon"
+			ic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			ic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			ic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			c.add_child(ic)
+			grid.add_child(c)
+			slots.append(c)
+
+	## [param items] : banc d'objets du stratège (10 ids ou « ») ; [param held] : case tenue par le curseur ({}).
+	func refresh(items: Array, held: Dictionary) -> void:
+		var n := 0
+		for i in slots.size():
+			var c: PanelContainer = slots[i]
+			var id := String(items[i]) if i < items.size() and items[i] != null else ""
+			n += 1 if id != "" else 0
+			var ic: TextureRect = c.get_node("Icon")
+			ic.texture = AutochessUnitCard.item_icon(id) if id != "" else null
+			var is_held := String(held.get("zone", "")) == "items" and int(held.get("index", -1)) == i
+			var comp := AutochessData.COMPONENTS.has(id)
+			var fill := AutochessHud.PAPER_300 if id == "" else (AutochessHud.candy("lagon", 0) if comp else AutochessHud.candy("soleil", 0))
+			var sb := AutochessHud.sticker(fill, 9.0, 0.0, 3.0 if is_held else 2.0, 2.0, 2.0)
+			if is_held:
+				sb.border_color = AutochessHud.candy("soleil", 2)
+			elif id == "":
+				sb.border_color = Color(AutochessHud.INK, 0.35)
+			c.add_theme_stylebox_override("panel", sb)
+			c.tooltip_text = ""  # la fiche de l'objet sort au survol (AutochessScreen._update_card)
+		_empty.text = "aucun" if n == 0 else "%d / %d" % [n, slots.size()]
+
+
+## Lot ACX-4 : le banc en vignettes pendant le combat (les figurines y sont cachées) : icône de classe sur la couleur du
+## coût, étoiles ; clic droit ou E (survol) : vendre (confirmation pour un héros précieux) ; clic ou A : vendre après
+## confirmation. Signal sell(uid, confirm).
+class BenchStrip extends PanelContainer:
+	signal sell(uid: int, confirm: bool)
+	var hovered_uid := -1
+	var slots: Array = []  # Button par case du banc
+	var _row: HBoxContainer
+
+	func _init() -> void:
+		name = "AcBenchStrip"
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		add_theme_stylebox_override("panel", AutochessHud.paper_panel(5.0, 10.0, 6.0, 14.0))
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", roundi(AutochessHud.s(6.0)))
+		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(h)
+		var t := AutochessHud.ink_lbl("Banc", 15, AutochessHud.INK_300, 900)
+		t.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		h.add_child(t)
+		_row = HBoxContainer.new()
+		_row.add_theme_constant_override("separation", roundi(AutochessHud.s(4.0)))
+		_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		h.add_child(_row)
+		for i in AutochessData.BENCH_SIZE:
+			var b := Button.new()
+			b.name = "AcBenchSlot_%d" % i
+			b.custom_minimum_size = Vector2(AutochessHud.s(48.0), AutochessHud.s(48.0))
+			b.focus_mode = Control.FOCUS_ALL
+			b.expand_icon = true
+			b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			b.set_meta("uid", -1)
+			var st := AutochessHud.ink_lbl("", 13, AutochessHud.candy("soleil", 2), 900)
+			st.name = "Stars"
+			st.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+			st.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			st.offset_top = -AutochessHud.s(16.0)
+			st.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			b.add_child(st)
+			b.pressed.connect(_on_press.bind(b))
+			b.gui_input.connect(_on_input.bind(b))
+			b.mouse_entered.connect(func(): hovered_uid = int(b.get_meta("uid", -1)))
+			b.mouse_exited.connect(func(): hovered_uid = -1 if hovered_uid == int(b.get_meta("uid", -1)) else hovered_uid)
+			_row.add_child(b)
+			slots.append(b)
+
+	func refresh(bench: Array) -> void:
+		for i in slots.size():
+			var b: Button = slots[i]
+			var u: Variant = bench[i] if i < bench.size() else null
+			var on := u != null
+			b.set_meta("uid", int(u.uid) if on else -1)
+			b.disabled = not on
+			b.icon = UiTheme.texture(String(GameData.class_data(String(u.id)).get("icon", ""))) if on else null
+			(b.get_node("Stars") as Label).text = "★".repeat(clampi(int(u.stars), 1, 3)) if on else ""
+			var cost := AutochessPool.cost_of(String(u.id)) if on else 1
+			var fill := AutochessHud.cost_candy(cost, 0) if on else AutochessHud.PAPER_300
+			for st in ["normal", "hover", "pressed", "disabled", "focus"]:
+				var sb := AutochessHud.sticker(fill if st != "hover" else AutochessHud.cost_candy(cost, 1), 10.0, 0.0,
+					3.0 if st in ["hover", "focus"] else 2.0, 3.0, 3.0)
+				if st == "focus":
+					sb.draw_center = false
+				b.add_theme_stylebox_override(st, sb)
+			b.tooltip_text = ("%s %s\nClic droit ou E : vendre (+%d or)." % [AutochessData.unit_name(String(u.id)),
+				"★".repeat(clampi(int(u.stars), 1, 3)), AutochessData.sell_value(cost, int(u.stars))]) if on else ""
+
+	func _on_press(b: Button) -> void:
+		var uid := int(b.get_meta("uid", -1))
+		if uid >= 0:
+			sell.emit(uid, true)
+
+	func _on_input(ev: InputEvent, b: Button) -> void:
+		if ev is InputEventMouseButton and (ev as InputEventMouseButton).pressed \
+				and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_RIGHT:
+			var uid := int(b.get_meta("uid", -1))
+			if uid >= 0:
+				sell.emit(uid, false)
+			b.accept_event()
 
 
 ## Flamme de série (2 victoires ou plus : mandarine ; 2 défaites ou plus : lagon), avec le nombre ; infobulle : l'or gagné.

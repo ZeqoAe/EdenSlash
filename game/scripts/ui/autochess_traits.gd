@@ -157,7 +157,7 @@ func _apply_preview() -> void:
 ## Lignes qui tiennent entre le haut de la colonne et la boutique.
 func max_rows() -> int:
 	var avail := get_viewport_rect().size.y - AutochessHud.s(AutochessHud.TOP_Y) - AutochessHud.BOTTOM_H * AutochessHud.k \
-		- AutochessHud.s(70.0)
+		- AutochessHud.s(70.0) - AutochessHud.s(AutochessHud.TRAY_H + 10.0)  # lot ACX-4 : plateau d'objets dessous
 	return maxi(4, floori(avail / AutochessHud.s(ROW_H + 2.0)))
 
 
@@ -179,7 +179,7 @@ func _row(t: String, n: int) -> Control:
 	row.custom_minimum_size.y = AutochessHud.s(ROW_H)
 	row.mouse_filter = Control.MOUSE_FILTER_STOP if not ghost else Control.MOUSE_FILTER_IGNORE
 	row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	row.tooltip_text = "%s\n%s" % [String(td.short), String(td.tip)]
+	row.tooltip_text = "%s\n%s\n%s" % [String(td.short), String(td.tip), AutochessData.trait_blurb(t)]
 	row.set_meta("tier", tier)
 	row.set_meta("count", n)
 	row.add_theme_stylebox_override("panel", AutochessHud.sticker(Color(0, 0, 0, 0), 10.0, 0.0, 0.0, 4.0, 1.0))

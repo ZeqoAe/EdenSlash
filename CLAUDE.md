@@ -267,6 +267,11 @@ Entrée et fin (AC-I, `R_AC_I.md`) : activité en tête des Affrontements, page 
 `AutochessScreen.config` (+ diff 0-3 : stratèges `AutochessAi.lineup`, gardée dans `players[0].meta.aci` ; auto_quit) ; fin : `AutochessRewards.finish` (hub remis
 comme le Survivant, coffres d'apparence plafonnés, titres, `Quests.end_run("autochess")`) puis bilan commun `ui/autochess_results.gd` ; fiches `ac_shop` /
 `ac_stars` / `ac_traits` ; direct `scenes/autochess.tscn -- --ac-diff=1 [--autoplay --auto-quit]` ; test `test_ac_rewards`.
+Traits croisés (ACX-4, `R_ACX4.md`) : 2e trait = **style de la lignée** (`AutochessData.LINEAGE_STYLE`, recopié dans `tools/autochess_units.py`) :
+10 styles = les 10 paires de familles ; 5 unités ponts à 3 traits (`BRIDGES`) ; l'IA planifie aussi par style (`meta.plan.family` = trait principal) ;
+mesure `autochess_report.py` (lignes « Entropie », « Paires », `--data=` pour lire une autre copie). Notes du joueur : verrou d'une manche, 1-4 = 1 élite + 2 sbires,
+boutique et vente au banc pendant le combat (`Autochess._can_shop`, fusions du plateau à la préparation), or en sacs (`AutochessHud.GoldBags`),
+objets en icônes à gauche (`ItemTray`, `AutochessCursor.use_item_tray`) et enclumes des atouts (`AutochessBench.anvil_mode`) ; test `test_acx4`, captures `shot_acx4`.
 
 ### Le Colisée (modes d'équipes, en cours ; étude `conception/benchmark/ARENA.md`, lots CO-A à CO-L)
 Machine de partie sans scène (CO-A, `R_CO_A.md`) : `core/colisee.gd` (`Colisee` : formats `FORMATS` Classique 6 × 3 / Éclair 4 × 3 / Grand tournoi 8 × 3
