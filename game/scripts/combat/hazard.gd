@@ -35,6 +35,7 @@ static func spawn(parent: Node, pos: Vector3, props: Dictionary) -> Hazard:
 
 
 func _ready() -> void:
+	add_to_group("hazards")  # (Les Deux Voies, lot MB-E : MobaRival s'écarte des flaques)
 	var st: Dictionary = STYLES.get(style, STYLES.lava)
 	_disc = MeshInstance3D.new()
 	var cyl := CylinderMesh.new()

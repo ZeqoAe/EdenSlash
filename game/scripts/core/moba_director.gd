@@ -18,8 +18,8 @@ extends Node
 ## pas : [method start_recall]) ; boutique ouverte à la fontaine et pendant la mort (MobaItems ; P achète l'étape
 ## conseillée, Ctrl + Z annule) ; données d'affichage [method hud_data] (le HUD complet est le lot MB-H).
 ##
-## IA des héros (provisoire en MB-C, remplacée au lot MB-E par MobaHeroAi) : toutes les 0,4 s, cible = héros adverse
-## proche, sinon sbire, sinon structure assiégeable ; jamais sous une tour adverse qui n'a pas de sbire allié à frapper.
+## IA des héros (lot MB-E, R_MB_E.md) : MobaHeroAi par héros scripté (hs.ai), une décision toutes les 0,2-0,5 s selon la
+## difficulté (poste, tours et sbires respectés, rappel, potions, achats) ; la micro reste celle de ClassRival.
 ##
 ## Options : voir Moba (TeamMatch.spec). Lignes : [moba] …
 
@@ -109,10 +109,18 @@ func setup(director: RunDirector) -> void:
 	_build_structures()
 	_prewarm()
 	MobaItems.begin(self)  # (avant les héros : la fiche du joueur lit ses objets)
+	for k in ["dmg_scale", "hit_cap", "burst_cap", "heal_mult"]:
+		if Moba.tune(k, -1.0) >= 0.0:  # (mesures : --moba-tune=dmg_scale:0.4 — profil « moba » d'essai)
+			var rr := MobaData.RULES.duplicate()
+			for kk in ["dmg_scale", "hit_cap", "burst_cap", "heal_mult"]:
+				rr[kk] = Moba.tune(kk, float(rr[kk]))
+			ModeRules.register("moba", rr)
+			break
 	_setup_player()
 	_spawn_heroes()
 	_build_jungle()  # (lot MB-F : après les héros)
 	_build_hud()
+	_probe_duel()
 	_bolt_parent = Node3D.new()
 	_bolt_parent.name = "MobaBolts"
 	add_child(_bolt_parent)
@@ -357,6 +365,22 @@ func _setup_player() -> void:
 	player.damaged.connect(_on_hero_damaged.bind(player))
 
 
+## Sonde du 1 contre 1 (lot MB-E, tools/moba_duel_probe.gd) : --moba-duel=<niveau> [--moba-duel-items=N].
+func _probe_duel() -> void:
+	var lv := 0
+	var n := 0
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--moba-duel="):
+			lv = int(a.get_slice("=", 1))
+		elif a.begins_with("--moba-duel-items="):
+			n = int(a.get_slice("=", 1))
+	if lv <= 0 or mode == "none":
+		return
+	var pr: Node = load("res://tools/moba_duel_probe.gd").new()
+	add_child(pr)
+	pr.call("start", self, lv, n)
+
+
 ## Équipes : une classe par poste (Brumes = Rempart, jungle = Ombre, tir = Traque ou Arcane, soutien = Ferveur), sans
 ## doublon ; le joueur prend le poste de sa famille (ou l'option « role »).
 func _spawn_heroes() -> void:
@@ -382,6 +406,7 @@ func _spawn_heroes() -> void:
 			hs.auto_pick = true
 			hs.prefer = _ai_prefer(cid)
 			hs.think = rng.randf() * HERO_THINK
+			hs.ai = MobaHeroAi.new(rng.randi())  # (lot MB-E : IA de poste)
 			r.hero = hs
 			info[r] = hs
 			add_child(r)
@@ -591,7 +616,7 @@ func _note_death(vs: MobaHero, killer: Combatant, kh: Combatant) -> void:
 		if not s.is_dead and s.side != vs.side and p.distance_to(s.global_position) <= s.range_m + 1.0:
 			under = true
 	var heroes_near := enemies_near(vs.side, p, 15.0, KIND_HERO).size()
-	var by := "héros" if killer != null and info.has(killer) else ("tour" if killer is MobaStructure else ("sbire" if killer is MobaMinion else "autre"))
+	var by := "hero" if killer != null and info.has(killer) else ("tower" if killer is MobaStructure else ("minion" if killer is MobaMinion else "other"))  # (ASCII : lu par les mesures)
 	vs.death_log.append({"t": snappedf(Moba.t, 0.1), "by": by, "under_tower": under, "heroes_near": heroes_near,
 		"hero_hit": kh != null, "hp_lvl": vs.level})
 
@@ -660,6 +685,10 @@ func _heroes_tick(delta: float) -> void:
 		if ooc and regen > 0.0 and h.hp < h.max_hp:
 			h.hp = minf(h.max_hp, h.hp + h.max_hp * regen * delta)
 			h.health_changed.emit(h.hp, h.max_hp)
+	_econ_t -= delta
+	if _econ_t <= 0.0:
+		_econ_t = 1.0
+		Moba.team_gold = team_gold()  # (décision aux points du lot MB-F)
 	if player != null and info.has(player):
 		var st: String = player._state
 		if st == "skill" and _player_state != "skill":
@@ -672,7 +701,8 @@ func start_recall(h: Combatant) -> bool:
 	var hs: MobaHero = info.get(h)
 	if hs == null or h.is_dead or hs.recalling() or hs.in_shop:
 		return false
-	hs.recall_left = MobaData.RECALL_TIME
+	var j = get("jungle")  # (lot MB-F : 3 s pour le porteur de la Bannière)
+	hs.recall_left = float(j.call("recall_time", h)) if j != null and is_instance_valid(j) and j.has_method("recall_time") else MobaData.RECALL_TIME
 	hs.recall_from = h.global_position
 	if h is MobaRival:
 		var r := h as MobaRival
@@ -835,7 +865,7 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-# --- IA simple des héros (lot MB-E à venir) ----------------------------------------------------------
+# --- IA des héros : MobaHeroAi (lot MB-E) ; pilote automatique du joueur ---------------------------------
 
 func _think_all(delta: float) -> void:
 	for h in heroes:
@@ -845,63 +875,18 @@ func _think_all(delta: float) -> void:
 		inf.think = float(inf.think) - delta
 		if inf.think > 0.0:
 			continue
+		if h is MobaRival and inf.ai != null:
+			inf.think = float(MobaHeroAi.THINK[clampi(inf.difficulty, 0, 3)])
+			if not inf.recalling():
+				(inf.ai as MobaHeroAi).think(self, inf, h as MobaRival)  # (lot MB-E : IA de poste)
+			continue
 		inf.think = HERO_THINK
 		if inf.recalling():
 			continue
 		if inf.in_shop and (h is MobaRival or (h as Player).autoplay or inf.auto_pick):
 			MobaItems.auto_shop(inf, MobaItems.route(inf, foe_families(inf), inf.difficulty >= 2))
-		if h is MobaRival:
-			if h.hp < h.max_hp * 0.45 and not inf.in_shop:
-				ai_potion(inf)
-			_think(h as MobaRival, inf)
-		elif h is Player and (h as Player).autoplay:
+		if h is Player and (h as Player).autoplay:
 			(h as Player).autoplay_target = _home_or_lane(h, inf)
-
-
-func _think(h: MobaRival, inf: MobaHero) -> void:
-	var side := int(inf.side)
-	var p := h.global_position
-	var enemy_core: MobaStructure = cores[1 - side]
-	if bool(inf.home):
-		if h.hp >= h.max_hp * 0.95:
-			inf.home = false
-		else:
-			h.goal = map.moba.fountains[side]
-			h._player = enemy_core
-			return
-	if h.hp < h.max_hp * 0.3:
-		inf.home = true
-		h.goal = map.moba.fountains[side]
-		h._player = enemy_core
-		return
-	var foes := enemies_near(side, p, 13.0, KIND_HERO)
-	var safe: Array = foes.filter(func(f): return not _tower_danger(f.global_position, side))
-	var target: Combatant = null
-	if not safe.is_empty():
-		target = h.pick_target(safe, h._player if h._player in safe else null)
-	if target == null:
-		var ms := enemies_near(side, p, 10.0, KIND_MINION).filter(func(f): return not _tower_danger(f.global_position, side))
-		if not ms.is_empty():
-			target = _weakest(ms)
-	if target == null:
-		for s in enemies_near(side, p, 16.0, KIND_STRUCT):
-			if not (s as MobaStructure).invulnerable() and _allied_minions_near(s.global_position, side, (s as MobaStructure).range_m) >= 2:
-				target = s
-				break
-	if target != null:
-		h.goal = Vector3.INF
-		h._player = target
-	else:
-		h.goal = _lane_goal(h, inf)
-		h._player = enemy_core
-
-
-func _weakest(list: Array) -> Combatant:
-	var best: Combatant = null
-	for c in list:
-		if best == null or c.hp < best.hp:
-			best = c
-	return best
 
 
 func _home_or_lane(h: Combatant, inf: MobaHero) -> Vector3:
@@ -1346,9 +1331,9 @@ func _finish(w: int, how: String) -> void:
 func _replay(cid: String) -> void:
 	get_tree().paused = false
 	Moba.launch(cid, {})
-	get_tree().change_scene_to_file.call_deferred("res://scenes/world.tscn")
+	LoadScreen.go(get_tree(), "res://scenes/world.tscn")  # (lot PERF-1 : écran de chargement)
 
 
 func _to_lobby() -> void:
 	get_tree().paused = false
-	get_tree().change_scene_to_file.call_deferred("res://scenes/lobby.tscn")
+	LoadScreen.to_lobby(get_tree())  # (lot PERF-1 : écran de chargement)

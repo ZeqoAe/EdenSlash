@@ -24,6 +24,10 @@ var ult_id := 0
 var avoid: Array = []
 var dive_ok := false
 var hold_ult := true  # l'ultime est gardé pour les héros (jamais sur un sbire)
+## Flaques au sol proches (Hazard, groupe « hazards » : briques des boss, Colosse) : [[centre, rayon]], revues 4 fois par seconde ;
+## jamais traversées, même en plongée ; dedans, il en sort d'une esquive (lecture de sa difficulté) ou en courant.
+var hazards: Array = []
+var _hz_t := 0.0
 var cost_us := 0  # (mesures : temps de son _physics_process, cumulé)
 var cost_n := 0
 
@@ -142,6 +146,10 @@ func _physics_process(delta: float) -> void:
 	if is_dead:
 		return  # (ni soutien ni lecture des zones pendant la mort)
 	var t0 := Time.get_ticks_usec()
+	_hz_t -= delta
+	if _hz_t <= 0.0:
+		_hz_t = 0.25
+		_scan_hazards()
 	super._physics_process(delta)
 	cost_us += Time.get_ticks_usec() - t0
 	cost_n += 1
@@ -173,6 +181,15 @@ func _start_attack() -> void:
 		_state_len = _hit_time + maxf(0.0, _state_len - _hit_time) / moba_aspd
 
 
+## (La cible peut avoir été retirée par l'IA de poste pendant le coup : rappel, changement de plan.)
+func _cancel_after_hit() -> void:
+	if _player == null or not is_instance_valid(_player):
+		_set_state("chase")
+		_end_of_hit()
+		return
+	super._cancel_after_hit()
+
+
 func _end_of_hit() -> void:
 	super._end_of_hit()
 	if moba_aspd > 1.0:
@@ -185,9 +202,21 @@ func _update_chase(delta: float) -> Vector3:
 
 
 func guard(v: Vector3) -> Vector3:
+	var p := global_position
+	for z in hazards:
+		var off: Vector3 = p - (z[0] as Vector3)
+		off.y = 0.0
+		var d := off.length()
+		var r := float(z[1])
+		if d < r:
+			return (off / maxf(d, 0.01)) * maxf(move_speed, travel_speed)
+		if d < r + 1.5 and d > 0.01:
+			var n := off / d
+			var inward := v.dot(n)
+			if inward < 0.0:
+				v -= n * inward
 	if avoid.is_empty() or dive_ok:
 		return v
-	var p := global_position
 	for z in avoid:
 		var off: Vector3 = p - (z[0] as Vector3)
 		off.y = 0.0
@@ -203,6 +232,29 @@ func guard(v: Vector3) -> Vector3:
 			if inward < 0.0:
 				v -= n * inward
 	return v
+
+
+## Flaques à 15 m (déjà actives ou qui le seront dans 0,3 s) ; dans l'une d'elles : esquive vers l'extérieur.
+func _scan_hazards() -> void:
+	hazards.clear()
+	var p := global_position
+	var inside := Vector3.ZERO
+	for n in get_tree().get_nodes_in_group("hazards"):
+		var hz := n as Hazard
+		if hz == null or hz.is_queued_for_deletion() or (hz.lifetime > 0.0 and hz._t > hz.lifetime - 0.3):
+			continue
+		if hz.source != null and is_instance_valid(hz.source) and hz.source.ffa_id == ffa_id and ffa_id >= 0:
+			continue  # (celles de son équipe ne le touchent pas)
+		var off := p - hz.global_position
+		off.y = 0.0
+		if off.length() > 15.0 + hz.radius:
+			continue
+		var r := hz.radius + radius + 0.4
+		hazards.append([hz.global_position, r])
+		if off.length() < r and hz._t > hz.grow - 0.3:
+			inside = off.normalized() if off.length() > 0.05 else -forward()
+	if inside != Vector3.ZERO and _state != "dead" and _can_dodge() and _time >= _dash_until and randf() < float(cfg.read):
+		_dodge(inside, false)
 
 
 ## Dans une zone interdite (mesures et IA).

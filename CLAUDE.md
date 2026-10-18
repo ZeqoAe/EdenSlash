@@ -321,6 +321,14 @@ post_hit, heal_in, status_time) ; `Procs` reste au `Player`) ; directeur : écon
 passifs), `apply_level`, `start_recall` (X), boutique à 14 m de la fontaine, `hud_data()`, interface de test (P, Ctrl + Z, Ctrl + 1/2/3),
 `--moba-auto`, `--moba-perf` (scripts de l'image p95, µs par héros), ligne `[moba] bilan {json}` ; mesures `python tools/moba_ai_games.py`
 (exécutable SANS console pour le temps CPU) ; tests `test_mb_hero`, `test_mb_shop`.
+IA par poste (MB-E, `R_MB_E.md`) : `ai/moba_hero_ai.gd` (`MobaHeroAi`, une par héros scripté dans `MobaHero.ai`, décision 0,5 / 0,35 / 0,25 / 0,2 s
+selon la difficulté ; pose la cible, le but, `MobaRival.avoid` (portée des tours adverses inoccupées : `MobaRival.guard` dévie la course),
+`dive_ok`, rappel, potions, achats `MobaItems.route`) : voie, soutien qui suit son tireur, jungle sur `MobaJungle.camps` (lu par `get("jungle")`,
+petits camps d'abord, pas de vol avant 4:00, camp bloqué laissé), fuite d'une tour qui le vise, jamais de rappel sous une tour ;
+échelle des dégâts entre héros du profil `moba` portée à 0,3 (sonde `tools/moba_duel_probe.gd` : `--moba-duel=<niveau>`) ; essai de profil
+`--moba-tune=dmg_scale:x` ; trace `--moba-trace-ai[=s]` ; test `test_mb_ai_role` (relance le jeu : camps et morts en Hardcore).
+Flaques des boss évitées (groupe « hazards », `MobaRival.hazards`, esquive pour en sortir) ; `Moba.team_gold` tenu chaque seconde par le
+directeur ; Rejouer / Menu principal par `LoadScreen` ; mesures : 20 parties Hardcore complètes, 0 mort sous une tour (`R_MB_E.md` § 4).
 Jungle et objectifs (MB-F, `R_MB_F.md`) : `core/moba_jungle.gd` (`MobaJungle`, monté par `MobaDirector._build_jungle`, `--moba-jungle=0` : sans) :
 8 camps de `ai/moba_camp.gd` (`MobaCamp` : neutre = `ffa_id` `MobaData.NEUTRAL_FFA` 99, ne vise que les agresseurs de son camp, laisse 12 m / 18 m et
 remise à zéro, recyclé, endormi sans héros à 22 m), Source (recharges) / Braise (coups qui brûlent et ralentissent : ligne gardée `MobaJungle.on_hit` de

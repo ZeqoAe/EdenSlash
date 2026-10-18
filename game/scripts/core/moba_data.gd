@@ -75,10 +75,11 @@ const ROLES := [
 const LANE_NAMES := ["Voie du Soleil", "Voie des Brumes"]
 
 # --- combat entre héros : profil « moba » de ModeRules (§ 7.3) -----------------------------------------------------------
-## Échelle 0,09 (Arènes 0,024 : manches de 30 à 90 s, trop long pour un échange en voie ; Battle royale 0,055) ; soins
+## Échelle 0,3 (lot MB-E, sonde tools/moba_duel_probe.gd : à 0,09 un 1 contre 1 égal durait 56-94 s en Difficile et plus de
+## 120 s en Hardcore ; à 0,3 : 10-44 s en Difficile, les plafonds par coup et par rafale bornent le reste) ; soins
 ## × 0,6 ; un coup ≤ 22 % des PV max, rafale ≤ 50 % sur 2 s ; pas d'acharnement (les objectifs font pression).
 const RULES := {
-	"dmg_scale": 0.09, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": 0.6, "max_mitigation": PvpCaps.MAX_MITIGATION,
+	"dmg_scale": 0.3, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": 0.6, "max_mitigation": PvpCaps.MAX_MITIGATION,
 	"pressure_start": 100000.0, "pressure_step": PvpCaps.PRESSURE_STEP, "pct_weight": 1.0, "sudden_after": 100000.0,
 	"hit_cap": 0.22, "burst_cap": 0.5, "burst_window": 2.0, "burst_excess": 0.25, "caps": PvpCaps.CAPS,
 }

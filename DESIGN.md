@@ -1348,6 +1348,12 @@ de bout en bout).
   éliminations (prime plus grosse sur une série), des aides et des tours. La boutique ouvre à la fontaine et pendant la mort :
   6 places, une paire de bottes, les recettes ne coûtent que la différence, un achat s'annule tant qu'on reste à la base, une vente
   rend 70 %. Les objets valent pour le joueur comme pour les IA. Rappel : 6 s sans bouger ni être touché.
+- **IA par poste** (lot MB-E, `R_MB_E.md`) : chaque héros IA joue son poste — la voie (derrière sa vague, il achève les sbires,
+  échange quand il est au moins aussi fort, recule sous sa tour sinon), le soutien (il suit son tireur et se place entre lui et la
+  menace), la jungle (petits camps d'abord, puis les deux camps à bonus, puis les petits revenus ; embuscade sur un héros affaibli).
+  Il ne passe jamais sous une tour adverse qu'aucun de ses sbires n'occupe et en sort dès qu'elle le vise ; il boit une potion,
+  rentre quand ses PV baissent et achète son parcours (adapté à l'équipe d'en face dès Difficile). Facile se trompe plus souvent
+  et oublie de rentrer acheter ; Hardcore ne se trompe jamais. Sur 20 parties Hardcore complètes : aucune mort sous une tour.
 - **Jungle et objectifs** (lot MB-F, `R_MB_F.md`) : dès 1:30, 4 camps par moitié (Source, Braise, 2 petits) ; un camp ne frappe
   que ceux qui l'ont frappé et revient à son point, PV pleins, si on l'entraîne trop loin. Source : recharges plus rapides 90 s ;
   Braise : les coups brûlent et ralentissent 90 s ; éliminer un héros qui les porte les lui prend. Gardien (3:00, revient 3 min après)

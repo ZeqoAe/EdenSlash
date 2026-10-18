@@ -156,8 +156,8 @@ func _rules_and_mode() -> void:
 		and int(TeamMatch.spec.size) == 4 and Modes.kind() == "objective" and Modes.current() == "moba")
 	check("mode scellé, combat entre héros, sans Duel ni Battle royale", Modes.sealed() and Modes.is_pvp() and Modes.hero_match()
 		and not Duel.active and not Royale.active)
-	check("profil de règles lu par PvpCaps : échelle 0,09, coup ≤ 22 %, rafale ≤ 50 %", ModeRules.profile_name() == "moba"
-		and is_equal_approx(PvpCaps.damage_scale(), 0.09) and is_equal_approx(ModeRules.num("hit_cap"), 0.22)
+	check("profil de règles lu par PvpCaps : échelle 0,3 (lot MB-E), coup ≤ 22 %, rafale ≤ 50 %", ModeRules.profile_name() == "moba"
+		and is_equal_approx(PvpCaps.damage_scale(), 0.3) and is_equal_approx(ModeRules.num("hit_cap"), 0.22)
 		and is_equal_approx(ModeRules.num("burst_cap"), 0.5))
 	check("fiche : directeur MobaDirector, potions permises", String(TeamMatch.spec.get("director", "")).ends_with("moba_director.gd")
 		and bool(TeamMatch.spec.get("potions", false)))
