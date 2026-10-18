@@ -413,7 +413,7 @@ static func after(mode: String, got: Dictionary = {}) -> String:
 		"royale":
 			if int(got.get("looks", 0)) > 0:
 				parts.append("apparence de prestige gagnée : Héros > Apparence")
-		"autochess":
+		"autochess", "assault":
 			if int(got.get("looks", 0)) > 0:
 				parts.append("coffre d'apparence : menu Coffres")
 			if int(got.get("titles", 0)) > 0:

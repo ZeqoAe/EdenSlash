@@ -3,12 +3,13 @@ extends Node
 ## jouée quelques secondes en pilote automatique, terminée, son bilan est lu et « Retour au lobby » est pressé.
 ## Le pilote vit dans la racine (il survit aux changements de scène). Console : chercher ensuite ERROR / SCRIPT ERROR.
 ## godot --headless --path game res://tests/test_p4_activities.tscn [-- survival,survivor,training,tower,dungeon0,dungeon1,dungeon2,rush,siege,
-##   duel,league,pantheon,gauntlet,arena2,arena3,royale,challenge,autochess]
+##   duel,league,pantheon,gauntlet,arena2,arena3,royale,challenge,autochess,assault]
+## L'Assaut (lot TAC-8) : lancé depuis sa page (mode dev, l'activité est encore cachée), abandon, bilan, Rejouer, retour.
 ## L'Échiquier (lot AC-I) a son propre écran (scenes/autochess.tscn, pas le monde) : partie rapide au pilote, bilan, Rejouer, retour.
 
 const LOBBY := "res://scenes/lobby.tscn"
 const ALL := ["survival+r", "survival_win", "survivor+r", "training", "tower+r", "dungeon0+r", "dungeon1", "dungeon2", "rush+r", "siege+r", "duel+r", "league",
-	"pantheon", "gauntlet", "arena2+r", "arena3", "royale+r", "challenge", "autochess+r"]
+	"pantheon", "gauntlet", "arena2+r", "arena3", "royale+r", "challenge", "autochess+r", "assault+r"]
 const HARD_LIMIT := 1500.0  # secondes : au-delà, le pilote s'arrête en échec
 
 var fails := 0
@@ -173,7 +174,7 @@ func _activity(act_in: String) -> Dictionary:
 	_reset_modes()
 	if act == "autochess":
 		return await _autochess(lobby, replay)
-	var dev: bool = act in ["dungeon1", "dungeon2", "rush", "siege", "royale", "arena2", "arena3", "gauntlet"]
+	var dev: bool = act in ["dungeon1", "dungeon2", "rush", "siege", "royale", "arena2", "arena3", "gauntlet", "assault"]
 	if dev:
 		Settings.set_v("interface", "dev_mode", true)  # (puissance d'équipement exigée par ces activités)
 	var zid := String(Dungeons.zone_ids()[0])
@@ -221,6 +222,9 @@ func _activity(act_in: String) -> Dictionary:
 			lobby._start_royale()
 		"challenge":
 			lobby._start_challenge("warrior")
+		"assault":
+			lobby._show_menu("assault")  # (lot TAC-8 : page du mode, puis « Lancer l'Assaut »)
+			AssaultPage.launch(lobby)
 		_:
 			_launch_extra(act, lobby)  # activités ajoutées par un test qui prolonge celui-ci (test_p18_modes)
 	if act in ["duel", "league", "pantheon"]:

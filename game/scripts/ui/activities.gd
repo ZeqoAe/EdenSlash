@@ -44,10 +44,10 @@ const LIST := [
 		"desc": "Toi et tes alliés IA contre une équipe IA."},
 	{"id": "royale", "row": "versus", "unlock": "royale", "group": "pvp", "name": "Battle royale", "sub": "8 héros, un seul survivant", "gain": "Coffre d'apparence, titre, maîtrise", "gives": ["look", "title", "mastery"],
 		"desc": ""},
-	# L'Assaut (lots TAC-0 à TAC-14, conception/benchmark/TACTIQUE.md) : 4 contre 4, scellé ; « Bientôt » (caché) tant que
-	# le mode n'est pas jouable de bout en bout (achat, HUD, IA d'équipe, bilan) ; lancement direct : world.tscn -- --assault
+	# L'Assaut (lots TAC-0 à TAC-14, conception/benchmark/TACTIQUE.md) : 4 contre 4, scellé ; caché du menu tant
+	# qu'Assault.READY est faux (mode dev : visible, lot TAC-8) ; lancement direct : world.tscn -- --assault
 	{"id": "assault", "row": "versus", "group": "pvp", "tag": "4 contre 4", "name": "L'Assaut", "sub": "Pose la Charge, une vie par manche",
-		"soon": true, "gain": "Apparences, titres", "gives": ["look", "title"],
+		"img": "arenas", "gain": "Apparences, titres", "gives": ["look", "title"],
 		"desc": "Attaque ou défends deux sites : une vie par manche, de l'or entre les manches."},
 	# Les Deux Voies (lots MB-A à MB-K, conception/benchmark/MOBA.md) : 4 contre 4 sur deux voies, scellé ; « Bientôt » (caché) tant
 	# que le mode n'est pas jouable de bout en bout (héros en partie, boutique, IA, HUD, bilan) ; lancement direct : world.tscn -- --moba
@@ -67,7 +67,8 @@ static func locked(a: Dictionary) -> bool:
 ## Activité absente du menu Jouer : le Survivant s'il redevenait un chantier (Survivor.READY faux, hors mode dev).
 static func hidden(a: Dictionary) -> bool:
 	var id := String(a.get("id", ""))
-	return (id == "survivor" and not Survivor.visible()) or (id == "colisee" and not Colisee.visible())  # (Colisée : lot CO-C)
+	return (id == "survivor" and not Survivor.visible()) or (id == "colisee" and not Colisee.visible()) \
+		or (id == "assault" and not Assault.visible())  # (Colisée : lot CO-C ; L'Assaut : lot TAC-8)
 
 
 ## Sous-titre d'une étiquette : fixe, sauf les Quêtes (combien sont faites aujourd'hui).

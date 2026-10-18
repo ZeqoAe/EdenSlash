@@ -69,6 +69,10 @@ const HOW := {"elim": "Élimination", "charge": "Charge", "defuse": "Désamorça
 const SITES := ["A", "B"]
 const PHASES := ["buy", "live", "planted", "end", "done"]
 
+## L'activité reste cachée du menu Jouer (« Bientôt ») tant que le mode n'est pas jouable de bout en bout (IA d'équipe) ;
+## le mode dev la montre (lot TAC-8, comme le Colisée).
+const READY := false
+
 static var active := false
 static var format := "assault"
 ## Règles de la partie (RULES + format + options), lues par [method rule].
@@ -120,6 +124,11 @@ static func rule(key: String) -> Variant:
 		return opts[key]
 	ensure_rules()
 	return ModeRules.rule(key, RULES.get(key), "assault")
+
+
+## L'activité est-elle montrée au menu Jouer ? (Assault.READY, ou le mode dev)
+static func visible() -> bool:
+	return READY or bool(Settings.get_v("interface", "dev_mode"))
 
 
 static func num(key: String) -> float:
@@ -517,7 +526,7 @@ static func args_options(args: PackedStringArray) -> Dictionary:
 
 
 ## Fin de partie : TeamMatch fermé AVANT toute écriture (piège 11 de R_MODE0), sauvegarde rechargée (rien du compte n'a
-## bougé), vitesse du jeu rendue. Les récompenses scellées et les quêtes viennent au lot TAC-8. Le score et la frise
+## bougé), vitesse du jeu rendue. Les récompenses scellées et les quêtes : AssaultRewards.finish (lot TAC-8), juste après. Le score et la frise
 ## restent lisibles (score, history, stats) jusqu'à la partie suivante.
 static func finish() -> void:
 	TeamMatch.end()

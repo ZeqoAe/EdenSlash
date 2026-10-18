@@ -1438,6 +1438,12 @@ empêche ou la désamorce ; une vie par manche, or entre les manches. Ce qui est
   crans, la fiole, les utilitaires et l'outil, le bouclier au-dessus de la vie ; sur la mini-carte, ce que voit ton équipe,
   les « ? » des derniers vus et les bruits ; dessous, le lieu où tu es et les éliminations. Annonces une à la fois
   (« 2 contre 4 ! », « À toi de jouer ! »), repère au clic molette, barrières d'encre aux départs pendant l'achat.
+- **Chute, fin de manche, bilan** (lot TAC-8) : quand tu tombes, une carte dit qui t'a eu et comment, puis tu regardes tes
+  alliés (◀ / ▶) et tu peux leur donner un ordre ([Tab] : va en A, en B, au repère, tiens ta place, regroupez-vous, recule ;
+  un allié qui se bat répond « pas pour l'instant »). Chaque fin de manche a sa carte de 5 s (comment, l'or gagné). Le bilan
+  montre la frise des manches, le tableau des 8 et le meilleur héros. Récompenses : apparences et titres seulement — un coffre
+  d'apparence par victoire selon la difficulté adverse (la première à chaque difficulté, puis 2 par jour), des titres
+  (Démineur, Dernier rempart, Sans une perte). L'activité reste cachée du menu tant que le mode n'est pas fini (mode dev : visible).
 
 # Partie D — Économie et progression
 

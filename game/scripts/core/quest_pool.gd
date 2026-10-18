@@ -89,6 +89,13 @@ const LIST := [
 		"d": 1, "w": 3, "tier": 2, "min": 25},
 	{"id": "ac_rounds", "act": "autochess", "text": "Gagner %d manches à l'Échiquier", "stat": "rounds_won", "mode": "sum", "d": 12, "w": 50, "tier": 1, "min": 25},
 	{"id": "ac_win", "act": "autochess", "text": "Gagner une partie de l'Échiquier", "stat": "ac_first", "mode": "sum", "d": 0, "w": 1, "tier": 3, "min": 30},
+	# --- L'Assaut (lot TAC-8 : mode scellé, apparences seulement ; tirées quand l'activité est montrée) ----------
+	{"id": "as_rounds", "act": "assault", "text": "Gagner %d manches à L'Assaut", "stat": "rounds_won", "mode": "sum", "d": 5, "w": 25, "tier": 1,
+		"min": 15, "gate": "assault"},
+	{"id": "as_charge", "act": "assault", "text": "Poser ou désamorcer la Charge %d fois", "stat": "charge_acts", "mode": "sum", "d": 2, "w": 8,
+		"tier": 2, "min": 15, "gate": "assault"},
+	{"id": "as_win", "act": "assault", "text": "Gagner une partie de L'Assaut", "stat": "win", "mode": "sum", "d": 0, "w": 1, "tier": 3, "min": 20,
+		"gate": "assault"},
 	# --- Menu Coffres ----------------------------------------------------------------------------------------------
 	{"id": "lb_chests", "act": "lobby", "text": "Ouvrir %d coffres de récompense", "stat": "chest_open", "mode": "sum", "d": 4, "w": 15, "tier": 1, "min": 3, "gate": "chests"},
 	# --- Variété ---------------------------------------------------------------------------------------------------
@@ -109,6 +116,7 @@ const ACTS := {
 	"gauntlet": {"name": "Gantelet", "go": {"menu": "duel", "tab": "gauntlet"}},
 	"royale": {"name": "Battle royale", "go": {"menu": "royale"}},
 	"autochess": {"name": "L'Échiquier", "go": {"menu": "autochess"}},
+	"assault": {"name": "L'Assaut", "go": {"menu": "assault"}},
 	"lobby": {"name": "Coffres", "go": {"chests": true}},
 	"any": {"name": "Toutes", "go": {"menu": "play"}},  # (lot HUB-1 : « Y aller » d'une quête de variété : le menu Jouer)
 }
@@ -139,6 +147,8 @@ static func gate_ok(gate: String) -> bool:
 	match gate:
 		"survivor":
 			return Survivor.visible()
+		"assault":
+			return Assault.visible()  # (lot TAC-8)
 		"epoch2":
 			return Epochs.unlocked() >= 2
 		"heroic":

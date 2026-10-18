@@ -50,7 +50,8 @@ func _rules_and_mode() -> void:
 	check("mode dev : une règle de manche se surcharge", is_equal_approx(Assault.num("round_time"), 77.0))
 	DevEdits.data["modes"] = {}
 	TeamMatch.end()
-	check("activité « L'Assaut » cachée (Bientôt) tant que le mode n'est pas jouable", bool(Activities.get_def("assault").get("soon", false)))
+	check("activité « L'Assaut » cachée hors mode dev tant que le mode n'est pas jouable (lot TAC-8)", Assault.READY
+		or bool(Settings.get_v("interface", "dev_mode")) or Activities.hidden(Activities.get_def("assault")))
 	var kit := Assault.kit_for("warrior")
 	var ids: Array = (GameData.class_data("warrior").get("skills", []) as Array).map(func(s): return int(s.id))
 	check("kit provisoire : 4 sorts de la classe (%s)" % str(kit), kit.size() == 4 and kit.all(func(id): return int(id) in ids))

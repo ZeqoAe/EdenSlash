@@ -1454,7 +1454,6 @@ func _finish(forfeit := false) -> void:
 	var w := Assault.winner
 	var won := w == TeamMatch.player_team
 	TeamMatch.finish([w, 1 - w] if w >= 0 else [])
-	var res := TeamMatch.result()
 	var line := "[assault] fin : %s %s, %s, %.0f s" % ["victoire" if won else "défaite", "(abandon)" if forfeit else "",
 		Assault.summary(), TeamMatch.elapsed]
 	print(line)
@@ -1463,18 +1462,18 @@ func _finish(forfeit := false) -> void:
 	if _perf_on and not perf.is_empty():
 		print(perf_line())
 		perf.clear()
-	var score := [int(Assault.score[0]), int(Assault.score[1])]
-	var rounds := Assault.round_n
-	var hist := Assault.history.duplicate(true)
+	var info := match_info(won, forfeit)
 	Assault.finish()  # TeamMatch.end() d'abord (piège 11), puis la sauvegarde rechargée
+	var got := AssaultRewards.finish(info)  # (lot TAC-8) coffres d'apparence, titres, quêtes, sauvegarde
 	if "--auto-quit" in OS.get_cmdline_user_args():
+		print("[assault] récompenses " + JSON.stringify(got))
 		get_tree().quit()
 		return
 	if not is_inside_tree():
 		return
-	var r := ResultsPanel.new()
+	var r := AssaultResults.new()  # (lot TAC-8) frise des manches, tableau des 8, Meilleur héros
 	d.world.add_child(r)
-	r.show_spec(results_spec(won, score, rounds, hist, forfeit, res))
+	r.show_results(info, got, {"replay": _replay_same.bind(info), "back": _to_lobby})
 
 
 func _exit_tree() -> void:

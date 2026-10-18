@@ -246,7 +246,7 @@ static func _roll_reward(d: Dictionary, period: String, index: int, r: RandomNum
 	if String(d.get("special", "")) == "challenge":
 		return {}  # la maîtrise ×2 et les 600 points du premier succès sont déjà ceux du défi
 	var tier := clampi(int(d.get("tier", 1)), 1, 3) - 1
-	if String(d.act) in ["survivor", "autochess"]:
+	if String(d.act) in ["survivor", "autochess", "assault"]:
 		# le Survivant et l'Échiquier n'ont aucun lien avec la progression du compte : seulement de l'apparence
 		return {"chest": "look_rare" if period == "weekly" else "look_common"}
 	if period == "weekly":

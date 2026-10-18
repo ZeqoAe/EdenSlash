@@ -70,7 +70,7 @@ static func tip(kind: String) -> String:
 	var k: Dictionary = KINDS.get(kind, {})
 	if k.is_empty():
 		return ""
-	return "%s\nOù en trouver : %s\nÀ quoi ça sert : %s" % [k.name, k.get, k.spend]
+	return "%s\nOù en trouver : %s\nÀ quoi ça sert : %s" % [k.name, get_text(kind), k.spend]
 
 
 ## Les deux lignes seules (sans le nom), à ajouter sous une description existante.
@@ -78,7 +78,15 @@ static func hint(kind: String) -> String:
 	var k: Dictionary = KINDS.get(kind, {})
 	if k.is_empty():
 		return ""
-	return "Où en trouver : %s\nÀ quoi ça sert : %s" % [k.get, k.spend]
+	return "Où en trouver : %s\nÀ quoi ça sert : %s" % [get_text(kind), k.spend]
+
+
+## Où l'obtenir, avec les activités cachées du menu quand elles sont montrées (L'Assaut, lot TAC-8).
+static func get_text(kind: String) -> String:
+	var t := String(KINDS.get(kind, {}).get("get", ""))
+	if kind in ["look", "title"] and Assault.visible():
+		t = t.trim_suffix(".") + ", L'Assaut."
+	return t
 
 
 ## Ressource d'une clé de réserve (Craft : « gem:ruby:2 », « fortify:power:60 »…), "" pour les autres.

@@ -331,7 +331,7 @@ géant de plus ; `TIDE_WAVE_EVERY` 30 : 20 s faisait tomber des T1 à vagues ég
 `Moba.team_gold`, sbires ; `decided_by`, `score`) ; interface IA `camps_alive` / `camp_list` / `objectives_state` / `buffs_of` ; héros hors directeur :
 `guests`. Sonde `--moba-probe=cible:héros:niveau[:essais]` (`tools/moba_obj_probe.gd`), `--moba-clock=S` ; test `test_mb_objectives`. Tout ce qui est créé au
 chargement tire dans le hasard global : la suite des sbires d'une graine de mesure change (R_MB_F § 4).
-### L'Assaut (4 contre 4 tactique, en cours ; « Bientôt », caché)
+### L'Assaut (4 contre 4 tactique, en cours ; caché hors mode dev tant qu'`Assault.READY` est faux)
 Étude `conception/benchmark/TACTIQUE.md` (spécification § 7, lots TAC-0 à TAC-14, plans masse `tactique_maquettes/plan_*.svg`). Socle (TAC-0, `R_TAC_0.md`) :
 `core/assault.gd` (`Assault` : profil `RULES` enregistré par `ensure_rules`, machine de manche pure achat → manche → pose / désamorçage → fin, mi-temps,
 prolongation 2 d'écart + manche décisive, format Éclair, or de manche `give` / `spend` / `next_loss_gold`, `launch` / `finish` scellés, `args_options`),
@@ -368,6 +368,10 @@ Charge `ChargeLine.state`, or `GoldBox`, cases à acheter et ultime `SlotMark.st
 repère) ; pile du haut recalée à chaque image (`_layout`) ; mini-carte `minimap_overlay` : vue de l'équipe, derniers vus, bruits), annonces `ui/assault_announce.gd`
 (crochet de `Hud.show_message`), barrières d'encre `world/assault_barrier.gd` ; directeur : bloc « HUD, mort, ordres et bilan » (`dmg_total`, `last_hits`, `ko_log`,
 `round_cards`, `ping`, `place_of`) ; captures `tests/shot_tac7.tscn` ; test `test_tac7`.
+Mort et bilan (TAC-8, `R_TAC_8.md`) : `ui/assault_recap.gd` (récapitulatif de chute, spectateur ◀ / ▶ ou LB / RB, ordres [Tab] -> `AssaultDirector.give_order`,
+`orders`, reposés après les agents par `_apply_orders`), bilan `ui/assault_results.gd` (frise des manches, tableau des 8, Meilleur héros), récompenses scellées
+`core/assault_rewards.gd` (coffre de victoire selon la difficulté, 2 par jour, titres), page `ui/assault_page.gd` (`Lobby._show_menu("assault")`), activité cachée
+tant qu'`Assault.READY` est faux (mode dev : visible), quêtes « assault » (porte `assault`) ; tests `test_tac8`, `test_p4_activities` (« assault+r »).
 
 ### Classes maison (lot CHR-1, `conception/art/R_CHR1.md`, limites : `conception/art/CHR.md`)
 `data/classes_custom.json` -> `GameData.custom_classes` (à part : `GameData.classes` reste les 60 d'Eden, aucun tirage des modes à IA,
