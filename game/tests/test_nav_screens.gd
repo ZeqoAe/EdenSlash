@@ -213,6 +213,8 @@ func _ready() -> void:
 	await probe("lobby : L'Échiquier (difficultés, graine, Lancer)", 0.8)
 	lobby._show_menu("colisee")
 	await probe("lobby : Le Colisée (format, adversaires, Entrer)", 0.8)  # (lot CO-C : page minimale)
+	lobby._show_menu("moba")
+	await probe("lobby : Les Deux Voies (poste, adversaires, Entrer)", 0.8)  # (lot MB-H : page minimale, activité « Bientôt »)
 	lobby._show_menu("assault")
 	await probe("lobby : L'Assaut (format, adversaires, alliés, carte, Lancer)", 0.8)  # (lot TAC-8)
 	# lot HUB-1 : les quêtes sont le Journal (écran à onglets) ; « quests » l'ouvre

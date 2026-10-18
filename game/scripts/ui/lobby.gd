@@ -1822,6 +1822,8 @@ func _show_menu(id: String) -> void:
 			AssaultPage.build(self)  # (lot TAC-8 : page du mode ; cachée du menu hors mode dev tant qu'Assault.READY est faux)
 		"colisee":
 			ColiseePage.build(self)  # (lot CO-C : page minimale, activité cachée hors mode dev tant que Colisee.READY est faux)
+		"moba":
+			MobaPage.build(self)  # (lot MB-H : page minimale ; l'activité reste « Bientôt » tant que Moba.READY est faux)
 		"rush":
 			_menu_rush()
 		"siege":

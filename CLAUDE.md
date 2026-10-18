@@ -323,7 +323,7 @@ achats annulables ; règles pures du partage, du rattrapage, des aides ; `view()
 annuler, vendre, potions, parcours `route` adapté, `next_step`, `auto_shop`), stats `sheet` (ligne gardée de `Player.recalc_stats`) /
 `sheet_rival`, effets déclenchés des 40 objets sur tout héros : 5 lignes gardées `MobaItems.active` dans `Combatant` (pre_hit, absorb,
 post_hit, heal_in, status_time) ; `Procs` reste au `Player`) ; directeur : économie (`on_minion_down`, `on_hero_down`, `reward_camp`,
-passifs), `apply_level`, `start_recall` (X), boutique à 14 m de la fontaine, `hud_data()`, interface de test (P, Ctrl + Z, Ctrl + 1/2/3),
+passifs), `apply_level`, `start_recall` (X), boutique à 14 m de la fontaine, `hud_data()` (lu par le HUD du lot MB-H),
 `--moba-auto`, `--moba-perf` (scripts de l'image p95, µs par héros), ligne `[moba] bilan {json}` ; mesures `python tools/moba_ai_games.py`
 (exécutable SANS console pour le temps CPU) ; tests `test_mb_hero`, `test_mb_shop`.
 IA par poste (MB-E, `R_MB_E.md`) : `ai/moba_hero_ai.gd` (`MobaHeroAi`, une par héros scripté dans `MobaHero.ai`, décision 0,5 / 0,35 / 0,25 / 0,2 s
@@ -334,6 +334,11 @@ petits camps d'abord, pas de vol avant 4:00, camp bloqué laissé), fuite d'une 
 `--moba-tune=dmg_scale:x` ; trace `--moba-trace-ai[=s]` ; test `test_mb_ai_role` (relance le jeu : camps et morts en Hardcore).
 Flaques des boss évitées (groupe « hazards », `MobaRival.hazards`, esquive pour en sortir) ; `Moba.team_gold` tenu chaque seconde par le
 directeur ; Rejouer / Menu principal par `LoadScreen` ; mesures : 20 parties Hardcore complètes, 0 mort sous une tour (`R_MB_E.md` § 4).
+HUD et écrans (MB-H, `R_MB_H.md`) : `ui/moba_hud.gd` (`MobaHud`, posé par `Hud._build` en mode « moba », crochet `Hud.show_message` : tableau 4 + 4, minuteurs
+d'objectifs, alliés et leur intention (`hs.ai.intent` si le coach la donne), mini-carte entière à brouillard (25 m, `is_seen`), fil, plots d'enchaînements et
+choix de niveau (Ctrl + 1/2/3, clic, [G] / → croix), rappel, or et objet conseillé, tableau des scores [Tab], mort, repères et roue → `core/moba_pings.gd` (pour MB-G),
+annonces une à la fois sur `HudAlert`), boutique `ui/moba_store.gd` (`MobaStore`, [P] ; Vue à la base : la partie attend, UiNav), bilan `ui/moba_results.gd`
+(`MobaResults` : raison `Moba.decided_by`, tableau des 8), page `ui/moba_page.gd` (`Moba.READY` faux : « Bientôt ») ; test `test_mb_hud` (coût ≤ 0,3 ms), captures `shot_mbh` (`MBH_RES`).
 Jungle et objectifs (MB-F, `R_MB_F.md`) : `core/moba_jungle.gd` (`MobaJungle`, monté par `MobaDirector._build_jungle`, `--moba-jungle=0` : sans) :
 8 camps de `ai/moba_camp.gd` (`MobaCamp` : neutre = `ffa_id` `MobaData.NEUTRAL_FFA` 99, ne vise que les agresseurs de son camp, laisse 12 m / 18 m et
 remise à zéro, recyclé, endormi sans héros à 22 m), Source (recharges) / Braise (coups qui brûlent et ralentissent : ligne gardée `MobaJungle.on_hit` de

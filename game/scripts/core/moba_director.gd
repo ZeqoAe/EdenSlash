@@ -15,8 +15,8 @@ extends Node
 ## [method on_hero_down]), des structures ([method on_structure_down]) et des camps ([method reward_camp], lot MB-F) ;
 ## or et XP passifs ; niveaux 1-12 (fiche refaite, enchaînements, ultime au niveau 5 : [method apply_level]) ; choix de
 ## niveau non bloquant (Ctrl + 1 / 2 / 3) ; réapparition selon le niveau du héros ; rappel (X, 6 s, coupé par un coup ou un
-## pas : [method start_recall]) ; boutique ouverte à la fontaine et pendant la mort (MobaItems ; P achète l'étape
-## conseillée, Ctrl + Z annule) ; données d'affichage [method hud_data] (le HUD complet est le lot MB-H).
+## pas : [method start_recall]) ; boutique ouverte à la fontaine et pendant la mort (MobaItems ; écran MobaStore) ;
+## données d'affichage [method hud_data], lues par le HUD du mode (MobaHud, lot MB-H : touches, boutique, bilan MobaResults).
 ##
 ## IA des héros (lot MB-E, R_MB_E.md) : MobaHeroAi par héros scripté (hs.ai), une décision toutes les 0,2-0,5 s selon la
 ## difficulté (poste, tours et sbires respectés, rappel, potions, achats) ; la micro reste celle de ClassRival.
@@ -42,8 +42,6 @@ var heroes: Array = []  # héros en jeu (le joueur compris s'il joue)
 var info: Dictionary = {}
 var first_blood := false
 var _player_state := ""  # (le joueur lance un sort : effets « skill_cast » des objets)
-var _hud: Label
-var _hud_t := 0.0
 var _econ_t := 0.0
 var structures: Array = []
 var cores: Array = [null, null]
@@ -119,7 +117,6 @@ func setup(director: RunDirector) -> void:
 	_setup_player()
 	_spawn_heroes()
 	_build_jungle()  # (lot MB-F : après les héros)
-	_build_hud()
 	_probe_duel()
 	_bolt_parent = Node3D.new()
 	_bolt_parent.name = "MobaBolts"
@@ -804,67 +801,6 @@ func hud_data(h: Combatant = null) -> Dictionary:
 	return v
 
 
-## Interface minimale de test (le HUD du mode est le lot MB-H) : une ligne d'état en haut à gauche.
-func _build_hud() -> void:
-	if mode != "all" or DisplayServer.get_name() == "headless":
-		return
-	var layer := CanvasLayer.new()
-	layer.layer = 5
-	add_child(layer)
-	_hud = Label.new()
-	_hud.position = Vector2(16, 120)
-	_hud.add_theme_font_size_override("font_size", 16)
-	_hud.add_theme_color_override("font_outline_color", Color(0.1, 0.1, 0.15))
-	_hud.add_theme_constant_override("outline_size", 6)
-	layer.add_child(_hud)
-
-
-func _update_hud(delta: float) -> void:
-	if _hud == null:
-		return
-	_hud_t -= delta
-	if _hud_t > 0.0:
-		return
-	_hud_t = 0.25
-	var v := hud_data()
-	if v.is_empty():
-		return
-	var names: Array = (v.items as Array).map(func(id): return String(MobaData.item(String(id)).name))
-	var lines := ["Niveau %d · XP %d / %d · Or %d · %d / %d / %d" % [v.level, int(v.xp), int(v.xp_next), int(v.gold), v.kda[0], v.kda[1], v.kda[2]],
-		"Objets : %s" % (", ".join(names) if not names.is_empty() else "aucun")]
-	if not (v.pending as Dictionary).is_empty():
-		lines.append("Choix de niveau : Ctrl + %s" % " / ".join((v.pending.options as Array).map(func(s): return str(int(s) + 1))))
-	if not (v.advice as Dictionary).is_empty():
-		lines.append("Conseil : %s %d / %d%s" % [v.advice.name, int(v.advice.gold), int(v.advice.cost), " (P : acheter)" if bool(v.shop_open) else ""])
-	if bool(v.shop_open):
-		lines.append("Boutique ouverte · Ctrl + Z : annuler")
-	if float(v.recall) >= 0.0:
-		lines.append("Retour : %d %%" % roundi(float(v.recall) * 100.0))
-	_hud.text = "\n".join(lines)
-
-
-func _unhandled_key_input(event: InputEvent) -> void:
-	var k := event as InputEventKey
-	if k == null or not k.pressed or k.echo or mode != "all" or ended or player == null or not info.has(player):
-		return
-	var hs: MobaHero = info[player]
-	if k.ctrl_pressed and k.physical_keycode in [KEY_1, KEY_2, KEY_3]:
-		if choose_chain(player, k.physical_keycode - KEY_1):
-			d.message.emit("Enchaînement débloqué", 1.2)
-		get_viewport().set_input_as_handled()
-	elif k.ctrl_pressed and k.physical_keycode == KEY_Z:
-		if MobaItems.undo(hs):
-			d.message.emit("Achat annulé", 1.0)
-		get_viewport().set_input_as_handled()
-	elif k.physical_keycode == KEY_P:
-		var id := MobaItems.next_step(hs, MobaItems.route(hs, foe_families(hs)))
-		if id != "" and MobaItems.buy(hs, id):
-			d.message.emit("%s acheté" % String(MobaData.item(id).name), 1.2)
-		elif not MobaItems.shop_open(hs):
-			d.message.emit("La boutique ouvre à la fontaine.", 1.2)
-		get_viewport().set_input_as_handled()
-
-
 # --- IA des héros : MobaHeroAi (lot MB-E) ; pilote automatique du joueur ---------------------------------
 
 func _think_all(delta: float) -> void:
@@ -1101,7 +1037,6 @@ func _physics_process(delta: float) -> void:
 	_fountains(delta)
 	_heroes_tick(delta)
 	_think_all(delta)
-	_update_hud(delta)
 	if mode == "all" and player != null and not player.is_dead and Input.is_action_just_pressed("extract"):
 		start_recall(player)
 	_front_t -= delta
@@ -1311,8 +1246,6 @@ func _finish(w: int, how: String) -> void:
 	TeamMatch.finish([w, 1 - w] if w >= 0 else [])
 	var won := w == TeamMatch.player_team and mode == "all"
 	_report("fin")
-	var tiles := [[str(Moba.structures_down[0]), "structures détruites", "", true], ["%d:%02d" % [int(Moba.t) / 60, int(Moba.t) % 60], "durée"],
-		[str(Moba.hero_kills[0]), "éliminations"]]
 	Moba.finish()  # TeamMatch.end() d'abord (piège 11), puis le profil rendu
 	if "--auto-quit" in OS.get_cmdline_user_args():
 		get_tree().quit()
@@ -1320,12 +1253,9 @@ func _finish(w: int, how: String) -> void:
 	if not is_inside_tree():
 		return
 	get_tree().paused = true
-	var r := ResultsPanel.new()
+	var r := MobaResults.new()  # (lot MB-H) bilan : raison de la décision, tableau des 8 héros
 	d.world.add_child(r)
-	r.show_spec({"title": "VICTOIRE !" if won else ("ABANDON" if how == "abandon" else "DÉFAITE"), "tone": "win" if won else "lose",
-		"subtitle": "Les Deux Voies", "tiles": tiles,
-		"buttons": [{"text": "Rejouer", "primary": true, "call": _replay.bind(Run.class_id)},
-			{"text": "Menu principal", "call": _to_lobby}]})
+	r.show_results(self, won, _replay.bind(Run.class_id), _to_lobby)
 
 
 func _replay(cid: String) -> void:

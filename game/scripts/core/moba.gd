@@ -17,6 +17,9 @@ extends RefCounted
 
 const DIRECTOR := "res://scripts/core/moba_director.gd"
 const ZONE := "rainbowfall"
+## Le mode est ouvert aux joueurs (lot MB-I) : tant que c'est faux, l'activité reste « Bientôt » (cachée du menu Jouer) ;
+## la page (MobaPage) et le lancement direct (world.tscn -- --moba) servent aux tests et au mode dev.
+const READY := false
 
 static var active := false
 static var opts: Dictionary = {}
@@ -60,6 +63,11 @@ static func launch(cid: String, o := {}) -> void:
 	active = true
 	opts = spec.duplicate(true)
 	Run.changed.emit()
+
+
+## L'activité se montre dans le menu Jouer (READY, ou le mode dev).
+static func visible() -> bool:
+	return READY or bool(Settings.get_v("interface", "dev_mode"))
 
 
 static func reset() -> void:

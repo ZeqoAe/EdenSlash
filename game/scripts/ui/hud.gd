@@ -96,6 +96,7 @@ var _low_hp: TextureRect
 var _root: Control
 var _sv_hud: SurvivorHud  # Survivant : frise des 20 minutes (null ailleurs)
 var _royale: RoyaleHud  # Battle royale : HUD d'état v2, flèches, repère, grande carte (lot BR-I1 ; null ailleurs)
+var _moba: MobaHud  # Les Deux Voies : tableau, mini-carte, alliés, boutique, annonces, mort (lot MB-H ; null ailleurs)
 var _assault: AssaultHud  # L'Assaut : score, Charge, or, cases achetées, mini-carte, mort et ordres (lots TAC-7 / TAC-8 ; null ailleurs)
 var _boss_bar: BossBar  # barre de boss v2, frise « À venir », annonces à 3 niveaux (lot DNG-2)
 var _map_holder: Control  # support de la mini-carte ronde (haut droite)
@@ -302,6 +303,8 @@ func _build() -> void:
 		_sv_hud = SurvivorHud.attach(self, root, director)  # Survivant : HUD v2 (lot SVX-2 : XP pleine largeur, chrono et frise, collection, vie)
 	elif Duel.active:
 		HitArc.attach(root, player)  # arc de coup reçu en Duel et en Arènes aussi (lot BR-I1)
+	elif Modes.current() == "moba":
+		_moba = MobaHud.attach(self, root)  # (lot MB-H) HUD des Deux Voies
 	elif Modes.current() == "assault":
 		_assault = AssaultHud.attach(self, root)  # (lot TAC-7) HUD de L'Assaut
 
@@ -1257,6 +1260,8 @@ func show_message(text: String, duration: float) -> void:
 	text = text.replace("<Boss> ", "").replace("<Duel> ", "")  # (les noms de combattants portent une étiquette interne)
 	if _boss_bar != null and _boss_bar.take_message(text, duration):
 		return  # annonce d'une mécanique du boss : alerte à 3 niveaux (HudAlert, lot DNG-2)
+	if _moba != null and _moba.announce_message(text, duration):
+		return  # Les Deux Voies : annonces du mode une à la fois (lot MB-H)
 	if _royale != null and _royale.announce_message(text, duration):
 		return  # Battle royale : annonces centrales une à la fois, DA v2 (lot BR-I3, RoyaleAnnounce)
 	if _assault != null and _assault.announce_message(text, duration):

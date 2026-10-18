@@ -93,11 +93,15 @@ const SPELL_ICONS := {"spell_str": "fury", "spell_agi": "haste", "spell_int": "k
 
 ## Effets de L'Assaut sans icône du jeu : pictogrammes maison (insensibilité commune, ébloui, enduit amer).
 const ASSAULT_ICO := {"cc": "st_resolve", "blind": "spark", "bitter": "st_bleed"}
+## Les Deux Voies (lot MB-H) : bonus des camps de la jungle et Bannière du Colosse (effets sans icône du jeu).
+const MOBA_ICO := {"moba_source": "hourglass", "moba_braise": "spark", "moba_banner": "crown"}
 
 
 static func icon(status: String) -> Texture2D:
 	if status.begins_with("imm_"):  # insensibilité à un contrôle : icône du contrôle
 		status = status.trim_prefix("imm_")
+	if MOBA_ICO.has(status):
+		return Ico.tex(String(MOBA_ICO[status]), 40)
 	if ASSAULT_ICO.has(status):  # (L'Assaut, lots TAC-4 / TAC-5 : effets sans icône du jeu ; lot TAC-7)
 		return Ico.tex(String(ASSAULT_ICO[status]), 40)
 	if Trophies.STATUSES.has(status):  # buffs des trophées : icône du buff le plus proche
