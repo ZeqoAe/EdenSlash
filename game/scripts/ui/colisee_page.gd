@@ -2,7 +2,7 @@ class_name ColiseePage
 extends RefCounted
 ## Page du Colisée dans le menu Jouer (lot CO-C : page minimale ; la page complète de l'étude ARENA § 6.11 — trio, alliés
 ## proposés, préréglage — vient au lot CO-G). De haut en bas : le mode en trois lignes, le format (Classique, Éclair, Grand
-## tournoi : ouvert par la sonde de performances, R_CO_C.md), la difficulté des trios IA (Facile à Hardcore, Mélange),
+## tournoi : ouvert par la sonde de performances, R_CO_C.md), la difficulté des trios IA (Recrue, Vétéran, Champion, Légende, Mélange),
 ## puis « Entrer au Colisée » épinglé. L'activité reste cachée du menu Jouer tant que Colisee.READY est faux (mode dev : visible).
 ## Construite par Lobby._show_menu("colisee") dans le panneau des pages (Lobby._sub) avec ses aides.
 
@@ -60,7 +60,7 @@ static func launch(lb) -> void:
 	if lb.backdrop:
 		lb.backdrop.release()
 	Colisee.begin(Profile.selected_class, format, diff)
-	lb.get_tree().change_scene_to_file.call_deferred("res://scenes/world.tscn")
+	LoadScreen.go(lb.get_tree(), "res://scenes/world.tscn")  # (lot PERF-1 : écran de chargement)
 
 
 static func _chip(text: String, selected: bool, size := 15) -> Button:

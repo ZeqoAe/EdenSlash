@@ -45,6 +45,14 @@ static var probe := false
 static var fallback := true
 ## Abandon sans changer de scène (outils de capture, tests).
 var abandon_stay := false
+## IA d'équipe (lot CO-D, R_CO_D.md) : un chef (ColiseeCoach) par camp et par combat, de niveau = difficulté du trio, sauf
+## [member coach_levels] (par équipe ; -1 : aucun chef, le héros scripté seul comme au lot CO-C). Banc tools/colisee_games :
+## [member watch_only] (le joueur au repos, son trio joué par 3 héros scriptés : parties IA contre IA), [member even_sheets]
+## (fiche égale à toutes les difficultés : sans le facteur ClassRival.DUEL_DIFF, seul le jeu compte), ligne JSON de la partie
+## à la fin (« [colisee] partie {…} »). Arguments : --co-watch, --co-even, --co-coach=a,b,…, --co-diffs=a,b,…
+static var coach_levels: Array = []
+static var watch_only := false
+static var even_sheets := false
 
 var d: RunDirector
 var g: Colisee
@@ -78,6 +86,7 @@ func setup(director: RunDirector) -> void:
 	started_ms = Time.get_ticks_msec()
 	if "--co-nofallback" in OS.get_cmdline_user_args():
 		fallback = false
+	_read_bench_args()
 	d.zone = GameData.zone(Run.zone_id)
 	map = ProcMap.new()
 	map.biome = String(d.zone.get("biome", "limestone"))
@@ -87,6 +96,9 @@ func setup(director: RunDirector) -> void:
 	d.map = map
 	d.world._apply_biome_env()
 	arenas = ColiseeArena.build_all(map, self)
+	for a in arenas:
+		for fl in (a as ColiseeArena).flowers:
+			(fl as ColiseeFlower).picked.connect(_on_flower.bind(int((a as ColiseeArena).index)))
 	prepare(g)
 	var p := d.player
 	p.level = Colisee.LEVEL
@@ -103,6 +115,43 @@ func setup(director: RunDirector) -> void:
 	if ColiseeBuild.all_of(g).is_empty():
 		ColiseeAnvil.setup(g)
 	_begin_round()
+
+
+## Réglages du banc IA contre IA lus sur la ligne de commande (voir [member coach_levels]) ; --co-watch tire aussi le trio
+## du joueur au hasard (aucune classe imposée).
+func _read_bench_args() -> void:
+	for arg in OS.get_cmdline_user_args():
+		if arg == "--co-watch" and not watch_only:
+			watch_only = true
+			g.classes = Colisee.compose_teams(g.n, "", g.rng)
+		elif arg == "--co-even":
+			even_sheets = true
+		elif arg.begins_with("--co-coach="):
+			coach_levels = Array(arg.trim_prefix("--co-coach=").split(",")).map(func(x): return int(x))
+		elif arg.begins_with("--co-diffs="):
+			var ds: Array = Array(arg.trim_prefix("--co-diffs=").split(",")).map(func(x): return clampi(int(x), 0, 3))
+			for t in g.n:
+				g.team_diffs[t] = int(ds[t % ds.size()])
+		elif arg.begins_with("--co-rule="):  # essai : réglage du profil « colisee » (clé:valeur, ex. dmg_scale:0.04)
+			var kv := arg.trim_prefix("--co-rule=").split(":")
+			var prof: Dictionary = (ModeRules._extra.get(Colisee.MODE, Colisee.PROFILE) as Dictionary).duplicate()
+			prof[kv[0]] = float(kv[1])
+			ModeRules._extra[Colisee.MODE] = prof
+		elif arg.begins_with("--co-tune="):  # essai : réglage du chef (clé de ColiseeCoach.LEVELS, ou attention)
+			var kv := arg.trim_prefix("--co-tune=").split(":")
+			if kv[0] == "attention":
+				ColiseeCoach.attention = float(kv[1])
+			elif kv[0] == "read_cap":
+				ColiseeCoach.read_cap = float(kv[1])
+			else:
+				ColiseeCoach.tune[kv[0]] = (kv[1] == "true") if kv[1] in ["true", "false"] else float(kv[1])
+
+
+## Niveau du chef de l'équipe [param t] (-1 : aucun chef).
+func coach_level(t: int) -> int:
+	if t >= 0 and t < coach_levels.size():
+		return int(coach_levels[t])
+	return int(g.team_diffs[t])
 
 
 ## Arènes de la carte : un combat par paire d'équipes (Classique 3, Éclair 2, Grand tournoi 4).
@@ -194,7 +243,8 @@ func _make_fight(k: int, a: int, b: int) -> Dictionary:
 	var arena: ColiseeArena = arenas[k]
 	arena.reset([])
 	return {"index": k, "arena": arena, "a": a, "b": b, "heroes": [[], []], "max_hp": [0.0, 0.0], "ko": [0, 0], "t": 0.0,
-		"done": false, "winner": -1, "result": {}, "mode": "real", "pending": Colisee.SIZE * 2}
+		"done": false, "winner": -1, "result": {}, "mode": "real", "pending": Colisee.SIZE * 2,
+		"coach": [null, null], "first_hit": -1.0, "out": [0.0, 0.0], "flowers": [0, 0], "ids": [[], []]}
 
 
 ## Le joueur : dans son combat (côté 0), ou au repos (exempt, éliminé) sans corps ni contrôle.
@@ -202,7 +252,7 @@ func _place_player_for_round() -> void:
 	var p := d.player
 	var mine := -1
 	for i in fights.size():
-		if int(fights[i].a) == TeamMatch.player_team:
+		if int(fights[i].a) == TeamMatch.player_team and not watch_only:
 			mine = i
 	if mine >= 0:
 		var arena: ColiseeArena = fights[mine].arena
@@ -219,6 +269,7 @@ func _place_player_for_round() -> void:
 		p.visible = true
 		p.set_physics_process(true)
 		(fights[mine].heroes[0] as Array).append(p)
+		(fights[mine].ids[0] as Array).append(p.get_instance_id())
 		fights[mine].max_hp[0] = float(fights[mine].max_hp[0]) + p.max_hp
 		fights[mine].pending = int(fights[mine].pending) - 1
 	else:
@@ -239,8 +290,8 @@ func _spawn_some(budget: float, shown_only := false) -> void:
 		var side := int(e[1])
 		var j := int(e[2])
 		var t := int(f.a) if side == 0 else int(f.b)
-		if t == TeamMatch.player_team and j == 0:
-			continue  # le joueur lui-même
+		if t == TeamMatch.player_team and j == 0 and not watch_only:
+			continue  # le joueur lui-même (banc IA contre IA : un héros scripté à sa place)
 		_spawn_hero(f, side, j, t)
 		n += 1
 
@@ -250,6 +301,11 @@ func _spawn_hero(f: Dictionary, side: int, j: int, t: int) -> void:
 	var arena: ColiseeArena = f.arena
 	var gb := ColiseeBuild.of(g, t, j)
 	var r := TeamMatch.make_hero(cid, Colisee.LEVEL, int(g.team_diffs[t]), t, int(f.index), gb.gear if gb != null else {})
+	if even_sheets:
+		var k := float(ClassRival.DUEL_DIFF[r.difficulty])  # (banc : fiche égale, sans le facteur de difficulté)
+		r.max_hp /= k
+		r.hp = r.max_hp
+		r.atk /= k
 	r.passive = true
 	add_child(r)
 	r.global_position = arena.spawn_point(side, j, map) + Vector3.UP * 0.4
@@ -261,6 +317,7 @@ func _spawn_hero(f: Dictionary, side: int, j: int, t: int) -> void:
 		ColiseeAugments.apply_hero(r, bd, ColiseeBuild.team_of(g, t))
 		ColiseeAnvil.grant_spells(r, bd)
 	(f.heroes[side] as Array).append(r)
+	(f.ids[side] as Array).append(r.get_instance_id())
 	f.max_hp[side] = float(f.max_hp[side]) + r.max_hp
 	f.pending = int(f.pending) - 1
 	_apply_shown(r, int(f.index) == watched)
@@ -341,6 +398,10 @@ func _start_fights() -> void:
 			for c in f.heroes[side]:
 				if is_instance_valid(c) and c is ClassRival:
 					(c as ClassRival).passive = false
+			var t := int(f.a) if side == 0 else int(f.b)
+			var lv := coach_level(t)
+			if lv >= 0:  # (lot CO-D) chef d'équipe du trio dans ce combat
+				f.coach[side] = ColiseeCoach.new(lv, f.arena, f.heroes[side], f.heroes[1 - side], side, g.rng.randi())
 	if not probe:
 		d.message.emit("COMBAT !", 1.0)
 		UiFeel.cue("ui_go", -8.0)
@@ -370,6 +431,12 @@ func _fight_tick(delta: float, frame: float) -> void:
 		var al_a := _alive(f, 0)
 		var al_b := _alive(f, 1)
 		(f.arena as ColiseeArena).tick(delta, al_a + al_b)
+		for side in 2:
+			if f.coach[side] != null:
+				var co := f.coach[side] as ColiseeCoach
+				co.period = ColiseeCoach.TICK if int(f.index) == watched else ColiseeCoach.TICK_HIDDEN
+				co.tick(delta)
+		_note_fight(f, delta, al_a, al_b)
 		al_a = _alive(f, 0)
 		al_b = _alive(f, 1)
 		if probe:
@@ -390,6 +457,35 @@ func _fight_tick(delta: float, frame: float) -> void:
 		TeamMatch.set_phase("recap")
 
 
+## Mesures du banc (lot CO-D) : premier coup entre les trios, secondes passées hors de l'anneau par camp.
+func _note_fight(f: Dictionary, delta: float, al_a: Array, al_b: Array) -> void:
+	var ring: ColiseeRing = (f.arena as ColiseeArena).ring
+	var lists := [al_a, al_b]
+	for side in 2:
+		for c in lists[side]:
+			if ring.is_outside(c):
+				f.out[side] = float(f.out[side]) + delta
+	if float(f.first_hit) < 0.0 and (_dealt(f, 0) > 0.0 or _dealt(f, 1) > 0.0):
+		f.first_hit = float(f.t)
+
+
+func _on_flower(c: Combatant, arena_index: int) -> void:
+	for f in fights:
+		if int(f.index) != arena_index or f.done:
+			continue
+		for side in 2:
+			if c in (f.heroes[side] as Array):
+				f.flowers[side] = int(f.flowers[side]) + 1
+
+
+## Dégâts infligés par le camp [param side] pendant le combat (tableau de manche PvpCaps.board).
+func _dealt(f: Dictionary, side: int) -> float:
+	var s := 0.0
+	for id in f.ids[side]:
+		s += float(PvpCaps.board.get(int(id), {}).get("dealt", 0.0))  # (par id : un héros tombé est libéré avant la fin)
+	return s
+
+
 ## Part des PV du camp [param side] encore debout (égalité au temps).
 func _left(f: Dictionary, side: int) -> float:
 	var s := 0.0
@@ -403,10 +499,13 @@ func _end_fight(f: Dictionary, winner: int) -> void:
 	f.winner = winner
 	f.result = {"a": int(f.a), "b": int(f.b), "winner": winner, "left_a": _left(f, 0), "left_b": _left(f, 1),
 		"ko_a": int(f.ko[0]), "ko_b": int(f.ko[1]), "time": snappedf(float(f.t), 0.1), "mode": f.mode}
+	f.result.merge(_bench_fields(f))
 	for side in 2:
 		for c in f.heroes[side]:
 			if is_instance_valid(c) and c is ClassRival:
 				(c as ClassRival).passive = true
+				(c as ClassRival).coach_order = {}
+		f.coach[side] = null
 	var mine := int(f.a) == TeamMatch.player_team
 	var w := int(f.result.get("winner", -1))
 	if w < 0:
@@ -424,6 +523,22 @@ func _end_fight(f: Dictionary, winner: int) -> void:
 	_log("combat %s contre %s : %s en %.1f s (%s, PV restants %.2f / %.2f, K.O. %d-%d)" % [TeamMatch.team_name(int(f.a)),
 		TeamMatch.team_name(int(f.b)), ("égalité" if w < 0 else TeamMatch.team_name(w)), float(f.t), f.mode,
 		float(f.result.left_a), float(f.result.left_b), int(f.ko[0]), int(f.ko[1])])
+
+
+## Champs de mesure d'un combat (banc tools/colisee_games, lot CO-D) : manche, difficultés, chefs, classes, premier coup,
+## dégâts, secondes dans le feu, fleurs prises, décisions des chefs.
+func _bench_fields(f: Dictionary) -> Dictionary:
+	var a := int(f.a)
+	var b := int(f.b)
+	var cs := []
+	for side in 2:
+		var co = f.coach[side]
+		cs.append((co as ColiseeCoach).stats.duplicate() if co != null else {})
+	return {"round": g.round_n, "arena": int(f.index), "diff_a": int(g.team_diffs[a]), "diff_b": int(g.team_diffs[b]),
+		"coach_a": coach_level(a), "coach_b": coach_level(b), "cls_a": g.classes[a], "cls_b": g.classes[b],
+		"first_hit": snappedf(float(f.first_hit), 0.1), "dealt_a": roundf(_dealt(f, 0)), "dealt_b": roundf(_dealt(f, 1)),
+		"out_a": snappedf(float(f.out[0]), 0.1), "out_b": snappedf(float(f.out[1]), 0.1), "flowers_a": int(f.flowers[0]),
+		"flowers_b": int(f.flowers[1]), "chef_a": cs[0], "chef_b": cs[1]}
 
 
 ## Repli « au tableau » d'un combat caché encore en cours (PV × frappe des héros debout).
@@ -490,6 +605,8 @@ func _finish() -> void:
 	var place := int(res.place)
 	print("[colisee] fin : place %d / %d (%s), %d manches, %.1f min réelles, %.1f min de jeu, replis au tableau %d" % [place, g.n,
 		"victoire" if bool(res.won) else "défaite", g.round_n, minutes, TeamMatch.elapsed / 60.0, fallbacks])
+	if _verbose():
+		print("[colisee] partie " + JSON.stringify(summary(minutes)))
 	Vfx.hidden_arenas = {}
 	ColiseeAugments.stop()
 	Colisee.finish()  # TeamMatch.end() avant toute récompense (piège 11 de R_MODE0) ; récompenses : lot CO-H
@@ -539,12 +656,29 @@ func _end_prep() -> void:
 		_apply_player_build()
 
 
+## Bilan de la partie pour le banc (une ligne JSON) : réglages, trios, places, durée, et tous les combats de la machine.
+func summary(real_minutes := 0.0) -> Dictionary:
+	var fams: Array = []
+	var levels: Array = []
+	for t in g.n:
+		fams.append((g.classes[t] as Array).map(func(c): return Duel.family_of(String(c))))
+		levels.append(coach_level(t))
+	var fights_out: Array = []
+	for h in g.history:
+		for r in h.results:
+			fights_out.append(r)
+	return {"seed": int(g.rng.seed), "format": g.format, "teams": g.n, "diffs": g.team_diffs, "coach": levels,
+		"even": even_sheets, "watch": watch_only, "classes": g.classes, "families": fams, "places": g.place, "rounds": g.round_n,
+		"game_min": snappedf(TeamMatch.elapsed / 60.0, 0.01), "real_min": snappedf(real_minutes, 0.01), "fallbacks": fallbacks,
+		"version": Version.NUMBER, "fights": fights_out}
+
+
 func _to_lobby() -> void:
 	Run.active = false
 	Profile.in_run = false
 	Profile.reload_keep_records()
 	get_tree().paused = false
-	get_tree().change_scene_to_file.call_deferred("res://scenes/lobby.tscn")
+	LoadScreen.to_lobby(get_tree())  # (lot PERF-1 : écran de chargement)
 
 
 # --- regarder ------------------------------------------------------------------------------------------------------------

@@ -45,13 +45,15 @@ const FIGHT_TIME := 85.0
 ## Fin de manche (bandeau) et transitions (estimation de la durée d'une partie).
 const RECAP := 2.5
 const TRANSITION := 8.0
-## Difficultés (ClassRival.DIFF 0-3) ; 4 = Mélange (une difficulté tirée par équipe adverse).
-const DIFFS := ["Facile", "Normal", "Difficile", "Hardcore", "Mélange"]
+## Difficultés (ClassRival.DIFF 0-3 et niveau du chef d'équipe ColiseeCoach, lot CO-D) ; 4 = Mélange (une difficulté tirée par
+## équipe adverse).
+const DIFFS := ["Recrue", "Vétéran", "Champion", "Légende", "Mélange"]
 ## Profil de règles « colisee » (ModeRules.register au lancement ; jamais au démarrage du jeu : test_mode0 vérifie qu'un mode
-## non enregistré lit les chiffres du duel). Échelle de départ = celle du duel à l'arme (à mesurer, lot CO-I) ; soins moitié ;
+## non enregistré lit les chiffres du duel). Échelle 0,045 (lot CO-D, R_CO_D.md : mesurée au banc tools/colisee_games avec les
+## chefs d'équipe, combats miroirs de 48 à 57 s de médiane de Recrue à Champion ; 0,030 au départ) ; soins moitié ;
 ## pas d'acharnement ni de mort subite (l'anneau de feu les remplace) ; bonus en % aux trois quarts.
 const PROFILE := {
-	"dmg_scale": 0.030, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": PvpCaps.HEAL_MULT * 0.5,
+	"dmg_scale": 0.045, "basic_mult": PvpCaps.BASIC_MULT, "heal_mult": PvpCaps.HEAL_MULT * 0.5,
 	"max_mitigation": PvpCaps.MAX_MITIGATION, "pressure_start": 100000.0, "pressure_step": PvpCaps.PRESSURE_STEP,
 	"pct_weight": 0.75, "sudden_after": 100000.0, "hit_cap": 0.15, "burst_cap": 0.35, "burst_window": 2.0, "burst_excess": 0.25,
 	"caps": PvpCaps.CAPS,

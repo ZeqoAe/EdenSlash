@@ -292,6 +292,11 @@ or, atouts, pièces — le joueur : `Profile.equipped` —, bonus, sorts), `core
 Panoplie (`SurvivorPool`) / Éclat offerte, `sell` / `resale`, sorts des manches 3 et 6, `round_start` / `ai_prep` / `auto_finish`, point d'extension `coach`
 et appel dynamique de `ColiseeCoach.choose_augment` / `choose_anvil`) ; page minimale `ui/colisee_prep_page.gd` (hors pilote, hors headless) ;
 test `test_co_f`, capture `tests/shot_co_prep.tscn`.
+IA d'équipe (CO-D, `R_CO_D.md`) : chef `ai/colisee_coach.gd` (`ColiseeCoach`, un par camp et par combat, niveau = difficulté Recrue / Vétéran / Champion /
+Légende, `LEVELS` ; ordre `ClassRival.coach_order` {target, goal, kind, safe_c, safe_r, react, slide, heal_at} lu par `pick_target`, `_update_chase`, `_dodge` ;
+attention partagée `ColiseeCoach.attention` / `read_cap` ; `choose_augment` / `choose_anvil` appelés par CO-E / CO-F ; relève `revive_fn` pour CO-J). Banc
+`python tools/colisee_games.py --setup lr|lr_even|chef2|jeu1|… [--format --diffs --coach --even] [-- --co-rule=clé:val --co-tune=clé:val]` (`world.tscn --
+--colisee --co-watch`, une ligne `[colisee] partie {…}` par partie) : un changement d'IA se mesure au banc avant d'être gardé ; test `test_co_d`.
 
 ### Les Deux Voies (MOBA 4 contre 4, en cours ; « Bientôt », caché)
 Étude `conception/benchmark/MOBA.md` (spécification § 7, lots MB-0 à MB-K, croquis `moba_maquettes/`), essai `R_MB0.md` (budgets § 6).

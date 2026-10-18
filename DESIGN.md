@@ -1391,6 +1391,14 @@ performances le permet), une seule couronne. Les règles complètes sont celles 
   de pièce (12 : un emplacement vide d'abord, jamais d'arme), de panoplie (20, offerte à la manche 3), d'éclat (offerte à la manche 9 :
   pièces légendaires) : on garde une option parmi trois. Revente au prix payé pendant la préparation, à moitié ensuite ; un bonus
   de stat s'annule pendant la préparation. Un sort de plus aux manches 3 et 6 (un parmi trois de ta classe, en enchaînement d'une touche).
+- **IA d'équipe** (lot CO-D, `R_CO_D.md`) : quatre difficultés, **Recrue, Vétéran, Champion, Légende** (tes alliés ont celle que tu choisis).
+  Chaque trio IA a un chef : à partir de Vétéran, une cible commune (Champion et Légende : le plus dangereux à abattre vite, le soigneur
+  d'abord) ; Champion et Légende protègent leur tireur et leur soigneur, ne partent pas seuls devant, prennent les fleurs de vie au bon
+  moment et se placent avant que l'anneau ne se resserre ; Légende frappe d'abord un adversaire immobilisé et attend un trio plus fort au
+  plus 10 s. Une Recrue ne fait que sortir du feu, tard. Visé par plusieurs adversaires à la fois, un héros IA esquive moins bien chaque
+  coup : le tir groupé paie. Les héros IA choisissent leurs atouts et leurs pièces selon leur rôle et leur trio. Mesures : Légende contre
+  Recrue à fiche égale 100 % des manches, trio Champion avec chef contre trio sans chef 72 % ; combats entre trios de même difficulté
+  de 48 à 57 s de médiane (Légende : 56 à 75 s, encore long) ; l'échelle des dégâts du mode passe de 0,030 à 0,045.
 
 ## L'Assaut (étude `conception/benchmark/TACTIQUE.md`, en cours : lots TAC-0 à TAC-14)
 

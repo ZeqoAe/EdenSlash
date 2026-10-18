@@ -296,6 +296,9 @@ const FOCUS := [0.0, 5.0, 8.0, 11.0]
 
 
 func pick_target(pool: Array, current = null) -> Combatant:
+	var ct = coach_order.get("target")  # (lot CO-D) cible donnée par le chef d'équipe du Colisée (ColiseeCoach)
+	if ct != null and is_instance_valid(ct) and not (ct as Combatant).is_dead and pool.has(ct):
+		return ct
 	if not _team_mode() or difficulty <= 0:
 		return super.pick_target(pool, current)
 	var best: Combatant = null
@@ -325,7 +328,7 @@ func _support_tick() -> void:
 			var low: Combatant = null
 			for n in heroes:
 				var c := n as Combatant
-				if c != null and not c.is_dead and c.hp < c.max_hp * 0.5 and (low == null or c.hp / c.max_hp < low.hp / low.max_hp):
+				if c != null and not c.is_dead and c.hp < c.max_hp * float(coach_order.get("heal_at", 0.5)) and (low == null or c.hp / c.max_hp < low.hp / low.max_hp):
 					low = c
 			if low != null:
 				AssaultCombat.healer = self  # (L'Assaut, lot TAC-4) les soins d'un Soutien pèsent moitié dans le plafond
@@ -465,6 +468,35 @@ var _zone_check_at := 0.0
 var _seen_zones := {}
 
 
+## Le Colisée (lot CO-D) : attention partagée. Visé par plusieurs adversaires à la fois (sources distinctes dans la dernière
+## seconde), il lit moins bien chaque coup : × ColiseeCoach.attention par adversaire de plus (0,6 : deux × 0,6, trois × 0,36).
+## Le tir groupé du chef d'équipe paie ; seul contre un, rien ne change. Hors du Colisée : toujours 1.
+var _attackers := {}  # id d'instance de la source -> dernier instant où elle le menaçait
+
+
+func _attention(src) -> float:
+	if coach_order.is_empty() and not (TeamMatch.active and arena_id >= 0):
+		return 1.0  # (hors du Colisée ; dans le Colisée, la règle vaut aussi pour un trio sans chef)
+	if is_instance_valid(src) and src != self:
+		_attackers[(src as Object).get_instance_id()] = _time
+	var n := 0
+	for k in _attackers.keys():
+		if _time - float(_attackers[k]) <= 1.0:
+			n += 1
+		else:
+			_attackers.erase(k)
+	return pow(ColiseeCoach.attention, maxi(0, n - 1))
+
+
+## Lecture d'un coup de [param src] : celle de sa difficulté seul contre un ; visé par plusieurs, au plus ColiseeCoach.read_cap,
+## × l'attention partagée (personne ne lit parfaitement trois adversaires à la fois).
+func _team_read(src) -> float:
+	var att := _attention(src)
+	if att >= 1.0:
+		return float(cfg.read)
+	return minf(float(cfg.read), ColiseeCoach.read_cap) * att
+
+
 func _read_zones() -> void:
 	if _time < _zone_check_at or is_invulnerable() or not _can_dodge():
 		return
@@ -485,7 +517,7 @@ func _read_zones() -> void:
 			continue
 		_seen_zones[iid] = true
 		var left := tg.delay - tg._t
-		if randf() > float(cfg.read) or left < float(cfg.react):
+		if randf() > _team_read(src) or left < float(cfg.react):
 			continue
 		var out := global_position - tg.global_position
 		out.y = 0.0
@@ -556,6 +588,8 @@ func _dodge(dir: Vector3, iframes := true) -> void:
 	if dir.length() < 0.1:
 		dir = -forward()
 	dir = dir.normalized()
+	if bool(coach_order.get("slide", false)):
+		dir = _coach_inside(dir)  # (lot CO-D) une esquive ne sort pas de l'anneau de feu
 	_charges -= 1.0
 	if not is_on_floor():
 		_air_dash = false
@@ -602,9 +636,106 @@ func _update_idle(delta: float) -> Vector3:
 	return v
 
 
+## Le Colisée, lot CO-D (R_CO_D.md) : ordre du chef d'équipe (ColiseeCoach.decide) : {target, goal, kind, safe_c, safe_r,
+## react, slide, heal_at} ; vide hors du Colisée (rien ne change ailleurs). Il rentre dans l'anneau de feu (après « react » s
+## dehors), longe son bord (« slide »), rejoint d'abord son point (« goal » : fleur, écart, attente du groupe) puis se bat.
+var coach_order: Dictionary = {}
+var _out_for := 0.0
+
+
+func _update_chase(delta: float) -> Vector3:
+	if coach_order.is_empty() or flee or goal != Vector3.INF or is_passive() or not _can_target():
+		return _chase_core(delta)
+	var esc := _coach_escape(delta)
+	if esc != Vector3.INF:
+		return esc
+	var g: Vector3 = coach_order.get("goal", Vector3.INF)
+	if g != Vector3.INF and not _coach_engaged():
+		return _coach_goal(delta, g)
+	return _coach_steer(_chase_core(delta))
+
+
+## Attente (« hold ») : il se bat si sa cible est à portée ; écart (« evade ») : il tire dès que son coup est prêt, puis
+## s'écarte entre deux coups ; fleur, relève : il y va d'abord.
+func _coach_engaged() -> bool:
+	var kind := String(coach_order.get("kind", ""))
+	if not kind in ["hold", "evade"]:
+		return false
+	var in_reach := global_position.distance_to(_player.global_position) <= _attack_range() + 0.5
+	return in_reach and (kind == "hold" or _time >= _attack_ready_at)
+
+
+## Hors du cercle sûr depuis « react » s : il y rentre (vitesse vers le centre) ; sinon Vector3.INF.
+func _coach_escape(delta: float) -> Vector3:
+	var sr := float(coach_order.get("safe_r", INF))
+	if sr >= 1000.0:
+		return Vector3.INF
+	var off: Vector3 = global_position - (coach_order.safe_c as Vector3)
+	off.y = 0.0
+	if off.length() <= sr:
+		_out_for = 0.0
+		return Vector3.INF
+	_out_for += delta
+	if _out_for < float(coach_order.get("react", 0.0)):
+		return Vector3.INF
+	var v := -off.normalized() * move_speed
+	face_direction(v, delta, 14.0)
+	if _time >= _dash_until and is_on_floor():
+		play(_anim("run", "move02"), 0.15)
+	return v
+
+
+## Près du bord, il ne s'en éloigne plus vers l'extérieur (« slide ») : il le longe.
+func _coach_steer(v: Vector3) -> Vector3:
+	var sr := float(coach_order.get("safe_r", INF))
+	if sr >= 1000.0 or not bool(coach_order.get("slide", false)):
+		return v
+	var off: Vector3 = global_position - (coach_order.safe_c as Vector3)
+	off.y = 0.0
+	var d := off.length()
+	if d < 0.01 or d < sr - 1.5:
+		return v
+	var out := off / d
+	if v.dot(out) > 0.0:
+		v -= out * v.dot(out)
+	return v
+
+
+func _coach_goal(delta: float, g: Vector3) -> Vector3:
+	var to := g - global_position
+	to.y = 0.0
+	if to.length() < 0.8:
+		face_direction(_player.global_position - global_position, delta, 10.0)
+		if _time >= _dash_until and is_on_floor():
+			play(_battle_anim(), 0.15)
+		return Vector3.ZERO
+	var step := _path_step(g)
+	face_direction(step, delta, 12.0)
+	if _time >= _dash_until and is_on_floor():
+		play(_anim("run", "move02"), 0.15)
+	return _coach_steer(step * move_speed)
+
+
+## Esquive qui sortirait du cercle sûr : renvoyée vers l'intérieur (composante sortante réfléchie).
+func _coach_inside(dir: Vector3) -> Vector3:
+	var sr := float(coach_order.get("safe_r", INF))
+	if sr >= 1000.0:
+		return dir
+	var c: Vector3 = coach_order.safe_c
+	var end := global_position + dir * DASH_SPEED * DASH_TIME - c
+	end.y = 0.0
+	if end.length() <= sr:
+		return dir
+	var out := global_position - c
+	out.y = 0.0
+	out = out.normalized() if out.length() > 0.01 else -dir
+	var d2 := dir - out * 2.0 * maxf(0.0, dir.dot(out))
+	return d2.normalized() if d2.length() > 0.1 else -out
+
+
 ## Placement : au corps-à-corps, il tourne autour du héros juste hors de sa portée et
 ## fonce dès que son coup est prêt ; à distance, il recule en gardant le héros à portée.
-func _update_chase(delta: float) -> Vector3:
+func _chase_core(delta: float) -> Vector3:
 	if is_passive() or not _can_target():
 		if goal != Vector3.INF and not is_passive() and AssaultVision.active():
 			return _update_goal(delta)  # (lot TAC-2, L'Assaut) personne en vue : il rejoint son poste
@@ -890,7 +1021,7 @@ func take_damage(amount: float, source: Combatant = null, crit := false, dot := 
 	super.take_damage(amount, source, crit, dot)
 	# touché sans l'avoir vu venir (flèche, sort) : sort du combo du héros
 	if not is_dead and not dot and not is_passive() and _react_at < 0.0 and _can_dodge() \
-			and randf() < 0.1 + 0.25 * difficulty and (_state != "attack" or randf() < float(cfg.cancel)):
+			and randf() < (0.1 + 0.25 * difficulty) * _attention(source) and (_state != "attack" or randf() < float(cfg.cancel)):
 		var away := global_position - (source.global_position if source else global_position - forward())
 		away.y = 0.0
 		_dodge(away.normalized().rotated(Vector3.UP, randf_range(-1.0, 1.0)))
